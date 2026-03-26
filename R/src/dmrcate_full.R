@@ -93,10 +93,11 @@ for (ci in seq_along(all_chromosomes)) {
   m_chunk <- log2(beta_chunk / (1 - beta_chunk))
   rm(beta_chunk)
 
-  # Filter: all selected samples must be non-NA, variance > 0
-  no_na <- rowSums(is.na(m_chunk)) == 0
+  # Filter: each group must have >= min_spg non-NA samples, variance > 0
+  case_non_na <- rowSums(!is.na(m_chunk[, 1:n_cases, drop = FALSE]))
+  ctrl_non_na <- rowSums(!is.na(m_chunk[, (n_cases + 1):(n_cases + n_controls), drop = FALSE]))
   rv <- apply(m_chunk, 1, var, na.rm = TRUE)
-  keep <- no_na & !is.na(rv) & (rv > 0)
+  keep <- case_non_na >= min_spg & ctrl_non_na >= min_spg & !is.na(rv) & (rv > 0)
   m_chunk <- m_chunk[keep, , drop = FALSE]
   if (nrow(m_chunk) < 1) next
 
@@ -141,11 +142,26 @@ region_probes <- data.frame(
   start = all_start[region_mask],
   t_stat = mod_t[region_mask],
   logFC = all_coef[region_mask],
+  raw_p_value = raw_p[region_mask],
   adj_p_value = adj_p[region_mask],
   stringsAsFactors = FALSE
 )
 
 if (nrow(region_probes) < 3) on_error(paste0("Too few probes in region (", nrow(region_probes), "). Need at least 3."))
+
+# Debug: write region probe details for backend concordance comparison
+debug_file <- file.path(dirname(h5_file), "r_dmr_debug.log")
+tryCatch({
+  sink(debug_file)
+  cat(sprintf("R eBayes: s2_prior=%.6e df_prior=%.4f n_probes=%d\n", s2_prior, df_prior, n_total))
+  cat(sprintf("R region: %d probes\n", nrow(region_probes)))
+  for (i in seq_len(nrow(region_probes))) {
+    cat(sprintf("  probe %d: pos=%d mod_t=%.6f rfdr=%.6e lfc=%.6f\n",
+        i-1, region_probes$start[i], region_probes$t_stat[i],
+        region_probes$adj_p_value[i], region_probes$logFC[i]))
+  }
+  sink()
+}, error = function(e) { try(sink(), silent=TRUE) })
 
 ###############################################################################
 # Step 5: Read beta values for diagnostic group means
@@ -185,7 +201,9 @@ if (length(filtered_mean_group1) != nrow(region_probes)) {
 # Step 6: Construct CpGannotated and run DMRCate
 ###############################################################################
 cpg_ranges <- GRanges(seqnames = region_probes$chr, ranges = IRanges(start = region_probes$start, width = 1))
+names(cpg_ranges) <- region_probes$probe_id
 mcols(cpg_ranges)$stat <- region_probes$t_stat
+mcols(cpg_ranges)$rawpval <- region_probes$raw_p_value
 mcols(cpg_ranges)$diff <- region_probes$logFC
 mcols(cpg_ranges)$ind.fdr <- region_probes$adj_p_value
 mcols(cpg_ranges)$is.sig <- region_probes$adj_p_value < fdr_cutoff
@@ -195,7 +213,49 @@ dmr_output <- tryCatch({
   suppressWarnings(suppressMessages(
     dmrcate(cpg_annotated, lambda = lambda, C = C_param)
   ))
-}, error = function(e) NULL)
+}, error = function(e) {
+  # Log the actual error for debugging
+  tryCatch({
+    sink(file.path(dirname(h5_file), "r_dmr_debug.log"), append = TRUE)
+    cat(sprintf("R DMRcate ERROR: %s\n", conditionMessage(e)))
+    sink()
+  }, error = function(e2) { try(sink(), silent=TRUE) })
+  NULL
+})
+
+# Debug: log DMRcate internal results
+tryCatch({
+  sink(debug_file, append = TRUE)
+  if (!is.null(dmr_output)) {
+    cat(sprintf("R DMRcate coords: %s\n", paste(dmr_output@coord, collapse=", ")))
+    cat(sprintf("R DMRcate no.cpgs: %s\n", paste(dmr_output@no.cpgs, collapse=", ")))
+    # Also log the smoothed FDR from dmrcate's internal computation
+    # Re-run fitParallel to get the smoothed p-values for logging
+    obj_df <- data.frame(weights = abs(region_probes$t_stat),
+        CHR = region_probes$chr, pos = region_probes$start,
+        is.sig = region_probes$adj_p_value < fdr_cutoff)
+    obj_df <- obj_df[order(obj_df$CHR, obj_df$pos), ]
+    sigma_k <- lambda / C_param
+    for (i in seq_len(nrow(obj_df))) {
+      X2_i <- obj_df$weights[i]^2
+      cat(sprintf("  R probe %d: pos=%d |t|=%.6f t^2=%.4f is.sig=%s\n",
+          i-1, obj_df$pos[i], obj_df$weights[i], X2_i, obj_df$is.sig[i]))
+    }
+    # Get smoothed p-values by calling KernelTest directly
+    pvals <- DMRcate:::KernelTest(pos = obj_df$pos, X2 = obj_df$weights^2, lambda = sigma_k, df = 1)
+    sfdr_r <- p.adjust(pvals, method = "BH")
+    nsig_r <- sum(obj_df$is.sig)
+    pcutoff_r <- sort(sfdr_r)[nsig_r]
+    cat(sprintf("R nsig=%d pcutoff=%.6e\n", nsig_r, pcutoff_r))
+    for (i in seq_len(length(pvals))) {
+      cat(sprintf("  R probe %d: smoothed_p=%.6e sfdr=%.6e sig=%s\n",
+          i-1, pvals[i], sfdr_r[i], sfdr_r[i] <= pcutoff_r))
+    }
+  } else {
+    cat("R DMRcate returned NULL\n")
+  }
+  sink()
+}, error = function(e) { try(sink(), silent=TRUE) })
 
 dmrs <- list()
 if (!is.null(dmr_output)) {

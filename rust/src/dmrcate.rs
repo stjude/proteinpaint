@@ -10,8 +10,8 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use hdf5::File;
 use hdf5::types::VarLenUnicode;
 use serde_json::{Value, json};
-use statrs::distribution::{ChiSquared, ContinuousCDF, StudentsT};
-use statrs::function::gamma::digamma;
+use statrs::distribution::{ContinuousCDF, StudentsT};
+use statrs::function::gamma::{digamma, gamma_ur, ln_gamma};
 use std::collections::HashMap;
 use std::io;
 use std::time::Instant;
@@ -96,6 +96,7 @@ struct ProbeStats {
     log_fc: f64,
     residual_var: f64,
     df_residual: f64,
+    stdev_unscaled: f64,
 }
 
 fn read_h5_metadata(file: &File) -> Result<(Vec<String>, Vec<usize>, Vec<String>, Vec<i64>, Vec<String>), String> {
@@ -148,7 +149,7 @@ fn process_chromosome(
     chr: &str,
     starts: &[i64],
     probe_ids: &[String],
-    _min_spg: usize,
+    min_spg: usize,
 ) -> Result<Vec<ProbeStats>, String> {
     let n_probes = row_end - row_start;
     if n_probes == 0 {
@@ -183,7 +184,7 @@ fn process_chromosome(
                     }
                 }
             }
-            if cv.len() != case_idx.len() || kv.len() != ctrl_idx.len() {
+            if cv.len() < min_spg || kv.len() < min_spg {
                 continue;
             }
             let to_m = |b: f64| {
@@ -207,6 +208,7 @@ fn process_chromosome(
             if !rv.is_finite() || rv <= 0.0 {
                 continue;
             }
+            let su = (1.0 / n1 + 1.0 / n2).sqrt();
             let idx = row_start + cs + lp;
             results.push(ProbeStats {
                 chr: chr.to_string(),
@@ -215,28 +217,68 @@ fn process_chromosome(
                 log_fc: mc - mk,
                 residual_var: rv,
                 df_residual: df,
+                stdev_unscaled: su,
             });
         }
     }
     Ok(results)
 }
 
-fn fit_f_dist(vars: &[f64], df: f64, debug_log: &str) -> (f64, f64) {
+fn fit_f_dist(vars: &[f64], dfs: &[f64], debug_log: &str) -> (f64, f64) {
     if vars.len() < 3 {
         return (1.0, 0.0);
     }
-    let z: Vec<f64> = vars.iter().map(|&v| v.ln()).collect();
-    let mz = z.iter().sum::<f64>() / z.len() as f64;
-    let vz = z.iter().map(|&zi| (zi - mz).powi(2)).sum::<f64>() / (z.len() as f64 - 1.0);
-    let tri_df = trigamma(df / 2.0);
-    let target = vz - tri_df;
-    // Debug to file (stderr causes run_rust to error)
+    // Match R's fitFDist pre-processing:
+    // 1. Filter to ok probes (finite df > 1e-15, finite var > -1e-15)
+    // 2. Clamp var to max(var, 0), then floor at 1e-5 * median(var)
+    let ok: Vec<usize> = (0..vars.len())
+        .filter(|&i| dfs[i].is_finite() && dfs[i] > 1e-15 && vars[i].is_finite() && vars[i] > -1e-15)
+        .collect();
+    if ok.len() < 3 {
+        return (1.0, 0.0);
+    }
+    let mut xv: Vec<f64> = ok.iter().map(|&i| vars[i].max(0.0)).collect();
+    let xdf: Vec<f64> = ok.iter().map(|&i| dfs[i]).collect();
+    // Median of variances
+    let mut sorted_v = xv.clone();
+    sorted_v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let median_v = if sorted_v.len() % 2 == 0 {
+        (sorted_v[sorted_v.len() / 2 - 1] + sorted_v[sorted_v.len() / 2]) / 2.0
+    } else {
+        sorted_v[sorted_v.len() / 2]
+    };
+    if median_v == 0.0 {
+        return (1.0, f64::INFINITY);
+    }
+    // Floor small variances at 1e-5 * median (matches R's fitFDist)
+    let floor = 1e-5 * median_v;
+    for v in &mut xv {
+        if *v < floor {
+            *v = floor;
+        }
+    }
+    let n = xv.len() as f64;
+    // e = log(var) + logmdigamma(df/2) where logmdigamma(a) = log(a) - digamma(a)
+    let e: Vec<f64> = xv
+        .iter()
+        .zip(xdf.iter())
+        .map(|(&v, &d)| v.ln() + (d / 2.0).ln() - digamma(d / 2.0))
+        .collect();
+    let me = e.iter().sum::<f64>() / n;
+    let ve = e.iter().map(|&ei| (ei - me).powi(2)).sum::<f64>() / (n - 1.0);
+    let mean_tri: f64 = xdf.iter().map(|&d| trigamma(d / 2.0)).sum::<f64>() / n;
+    let target = ve - mean_tri;
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(debug_log) {
         use std::io::Write;
         let _ = writeln!(
             f,
-            "fit_f_dist: mean_z={:.6} var_z={:.6} trigamma(df/2)={:.6e} target={:.6}",
-            mz, vz, tri_df, target
+            "fit_f_dist: n_ok={} median_var={:.6e} mean_e={:.6} var_e={:.6} mean_trigamma={:.6e} target={:.6}",
+            ok.len(),
+            median_v,
+            me,
+            ve,
+            mean_tri,
+            target
         );
     }
     let df0 = if target > 0.0 {
@@ -245,14 +287,71 @@ fn fit_f_dist(vars: &[f64], df: f64, debug_log: &str) -> (f64, f64) {
         f64::INFINITY
     };
     let s20 = if df0.is_finite() {
-        (mz - digamma(df / 2.0) + (df / 2.0).ln() + digamma(df0 / 2.0) - (df0 / 2.0).ln()).exp()
+        (me - (df0 / 2.0).ln() + digamma(df0 / 2.0)).exp()
     } else {
-        mz.exp()
+        xv.iter().sum::<f64>() / n
     };
     (s20, df0)
 }
 
-fn kernel_smooth(pos: &[i64], t: &[f64], lambda: f64, c: f64) -> Vec<f64> {
+/// Log of the upper regularized incomplete gamma function Q(a, x).
+/// Uses the continued fraction representation (Numerical Recipes / TOMS 708),
+/// evaluated via modified Lentz's method. Returns the result in log space
+/// so it never underflows, even for Q values as small as exp(-1e6).
+/// This matches R's pgamma(x, a, lower.tail=FALSE, log.p=TRUE).
+fn log_gamma_upper_cf(a: f64, x: f64) -> f64 {
+    // Q(a, x) = exp(-x + a*ln(x) - lgamma(a)) * h
+    // where h is the continued fraction. h is O(1/x) and well-behaved.
+    let eps = 3e-14;
+    let tiny = 1e-300;
+
+    let mut b = x + 1.0 - a;
+    let mut c = 1.0 / tiny;
+    let mut d = 1.0 / b;
+    let mut h = d;
+
+    for i in 1..=300 {
+        let an = -(i as f64) * (i as f64 - a);
+        b += 2.0;
+        d = an * d + b;
+        if d.abs() < tiny {
+            d = tiny;
+        }
+        c = b + an / c;
+        if c.abs() < tiny {
+            c = tiny;
+        }
+        d = 1.0 / d;
+        let del = d * c;
+        h *= del;
+        if (del - 1.0).abs() < eps {
+            break;
+        }
+    }
+
+    -x + a * x.ln() - ln_gamma(a) + h.ln()
+}
+
+/// Log chi-squared survival function: returns log P(X > x) for X ~ chi^2(df).
+/// Uses statrs gamma_ur for moderate tails, continued fraction in log space
+/// for extreme tails. Matches R's pchisq(x, df, lower.tail=FALSE, log.p=TRUE).
+fn log_chisq_sf(x: f64, df: f64) -> f64 {
+    if x <= 0.0 || !x.is_finite() {
+        return 0.0; // log(1) = 0
+    }
+    let a = df / 2.0;
+    let z = x / 2.0;
+    // For moderate tails, use statrs (accurate and fast)
+    let sf = gamma_ur(a, z);
+    if sf > 1e-300 {
+        return sf.ln();
+    }
+    // For extreme tails, use continued fraction in log space
+    log_gamma_upper_cf(a, z)
+}
+
+/// Kernel smoothing returning LOG p-values (not p-values) to avoid underflow.
+fn kernel_smooth_log(pos: &[i64], t: &[f64], lambda: f64, c: f64) -> Vec<f64> {
     let sigma = lambda / c;
     let max_d = (5.0 * sigma) as i64;
     let two_s2 = 2.0 * sigma * sigma;
@@ -273,20 +372,46 @@ fn kernel_smooth(pos: &[i64], t: &[f64], lambda: f64, c: f64) -> Vec<f64> {
             sk += w;
             skk += w * w;
         }
-        let p = if sk > 0.0 && skk > 0.0 {
+        let log_p = if sk > 0.0 && skk > 0.0 {
             let (exp, var) = (sk, 2.0 * skk);
             let (b, a) = (2.0 * exp * exp / var, var / (2.0 * exp));
             if b > 0.0 && a > 0.0 {
-                ChiSquared::new(b).map(|d| d.sf(sky / a)).unwrap_or(1.0)
+                log_chisq_sf(sky / a, b)
             } else {
-                1.0
+                0.0
             }
         } else {
-            1.0
+            0.0
         };
-        out.push(p);
+        out.push(log_p);
     }
     out
+}
+
+/// BH adjustment on log-scale p-values. Returns log-scale adjusted p-values.
+/// adj_log_p[i] = cummin(log_p[i] + ln(n) - ln(rank)) capped at 0 (= log(1))
+fn bh_adjust_log(log_pvalues: &[f64]) -> Vec<f64> {
+    let n = log_pvalues.len();
+    if n == 0 {
+        return vec![];
+    }
+    let ln_n = (n as f64).ln();
+    let mut idx: Vec<usize> = (0..n).collect();
+    // Sort descending (largest log p first = least significant)
+    idx.sort_by(|&a, &b| {
+        log_pvalues[b]
+            .partial_cmp(&log_pvalues[a])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    let mut adj = vec![0.0f64; n];
+    let mut cummin = 0.0f64; // log(1) = 0
+    for (rank_from_end, &i) in idx.iter().enumerate() {
+        let rank = n - rank_from_end; // 1-based rank from smallest
+        let v = log_pvalues[i] + ln_n - (rank as f64).ln();
+        cummin = cummin.min(v);
+        adj[i] = cummin.min(0.0); // cap at log(1) = 0
+    }
+    adj
 }
 
 fn build_dmrs(
@@ -300,11 +425,12 @@ fn build_dmrs(
     lambda: f64,
     min_cpgs: usize,
     min_db: Option<f64>,
+    check_direction: bool,
 ) -> Vec<Value> {
     let n = pos.len();
     let sig: Vec<usize> = (0..n)
         .filter(|&i| {
-            if fdr[i] >= cutoff {
+            if fdr[i] > cutoff {
                 return false;
             }
             if let Some(db) = min_db {
@@ -321,7 +447,8 @@ fn build_dmrs(
     let mut grp = vec![sig[0]];
     for k in 1..sig.len() {
         let (p, c) = (*grp.last().unwrap(), sig[k]);
-        if (lfc[c] >= 0.0) == (lfc[p] >= 0.0) && (pos[c] - pos[p]) <= lambda as i64 {
+        let same_dir = !check_direction || (lfc[c] >= 0.0) == (lfc[p] >= 0.0);
+        if same_dir && (pos[c] - pos[p]) <= lambda as i64 {
             grp.push(c);
         } else {
             groups.push(grp);
@@ -666,8 +793,6 @@ fn main() {
     if ci.len() < min_spg || ki.len() < min_spg {
         bail!("Not enough samples: case={}, control={}", ci.len(), ki.len());
     }
-    let su = (1.0 / ci.len() as f64 + 1.0 / ki.len() as f64).sqrt();
-
     let mut all: Vec<ProbeStats> = Vec::new();
     let mut pfx = 0usize;
     for (i, &cl) in chr_lens.iter().enumerate() {
@@ -700,21 +825,19 @@ fn main() {
         bail!("Too few probes after filtering ({})", all.len());
     }
 
-    let df = all[0].df_residual;
-    let (s20, df0) = fit_f_dist(&all.iter().map(|s| s.residual_var).collect::<Vec<_>>(), df, &debug_log);
+    let all_vars: Vec<f64> = all.iter().map(|s| s.residual_var).collect();
+    let all_dfs: Vec<f64> = all.iter().map(|s| s.df_residual).collect();
+    let (s20, df0) = fit_f_dist(&all_vars, &all_dfs, &debug_log);
     if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
         use std::io::Write;
         let _ = writeln!(
             f,
-            "eBayes: s2_prior={:.6e} df_prior={:.4} df_residual={:.1} n_probes={}",
+            "eBayes: s2_prior={:.6e} df_prior={:.4} n_probes={}",
             s20,
             df0,
-            df,
             all.len()
         );
     }
-    let df_tot = df + df0;
-    let tdist = StudentsT::new(0.0, 1.0, df_tot).unwrap_or_else(|_| StudentsT::new(0.0, 1.0, 100.0).unwrap());
     let mut mod_t = Vec::with_capacity(all.len());
     let mut raw_p = Vec::with_capacity(all.len());
     for s in &all {
@@ -723,7 +846,9 @@ fn main() {
         } else {
             s.residual_var
         };
-        let t = s.log_fc / (s2p.sqrt() * su);
+        let t = s.log_fc / (s2p.sqrt() * s.stdev_unscaled);
+        let df_tot = s.df_residual + df0;
+        let tdist = StudentsT::new(0.0, 1.0, df_tot).unwrap_or_else(|_| StudentsT::new(0.0, 1.0, 100.0).unwrap());
         mod_t.push(t);
         raw_p.push(2.0 * tdist.sf(t.abs()));
     }
@@ -780,9 +905,55 @@ fn main() {
         mg2.push(f64::NAN);
     }
 
-    let smoothed_raw = kernel_smooth(&rpos, &rt, lambda, c_param);
-    let sfdr = bh_adjust(&smoothed_raw);
-    let mut dmrs = build_dmrs(qchr, &rpos, &rfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, None);
+    // Kernel smoothing in log space to avoid underflow for extreme t-statistics
+    let log_smoothed = kernel_smooth_log(&rpos, &rt, lambda, c_param);
+    let log_sfdr = bh_adjust_log(&log_smoothed);
+    // Convert log FDR to linear for diagnostic output and Sig. CpGs track
+    let sfdr: Vec<f64> = log_sfdr.iter().map(|&v| v.exp()).collect();
+    // Adaptive threshold matching R's dmrcate(): select the same NUMBER of CpGs
+    // as are per-CpG significant, but ranked by smoothed FDR instead.
+    // Work in log space so extreme p-values maintain proper ordering.
+    let nsig = rfdr.iter().filter(|&&f| f < fdr_cut).count();
+    let adaptive_log_cut = if nsig > 0 && nsig <= log_sfdr.len() {
+        let mut sorted_log: Vec<f64> = log_sfdr.clone();
+        sorted_log.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        sorted_log[nsig - 1] // nsig-th smallest log FDR (most negative = most significant)
+    } else {
+        fdr_cut.ln()
+    };
+    // Build sig_fdr: probes with log_sfdr <= adaptive_log_cut get 0 (significant), others get 1
+    let sig_fdr: Vec<f64> = log_sfdr
+        .iter()
+        .map(|&v| if v <= adaptive_log_cut { 0.0 } else { 1.0 })
+        .collect();
+    // Debug
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
+        use std::io::Write;
+        let _ = writeln!(f, "--- DMR region debug ---");
+        let _ = writeln!(
+            f,
+            "nsig={} adaptive_log_cut={:.2} n_probes={}",
+            nsig,
+            adaptive_log_cut,
+            rpos.len()
+        );
+        for i in 0..rpos.len() {
+            let _ = writeln!(
+                f,
+                "  probe {}: pos={} mod_t={:.6} rfdr={:.6e} log_sfdr={:.2} selected={} lfc={:.6} mg1={:.4} mg2={:.4}",
+                i,
+                rpos[i],
+                rt[i],
+                rfdr[i],
+                log_sfdr[i],
+                sig_fdr[i] == 0.0,
+                rlfc[i],
+                mg1.get(i).unwrap_or(&f64::NAN),
+                mg2.get(i).unwrap_or(&f64::NAN)
+            );
+        }
+    }
+    let mut dmrs = build_dmrs(qchr, &rpos, &sig_fdr, &rlfc, &mg1, &mg2, 0.5, lambda, 2, None, false);
     for dmr in &mut dmrs {
         if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
             let min_sfdr = rpos
@@ -795,7 +966,46 @@ fn main() {
         }
     }
     if dmrs.is_empty() {
-        dmrs = build_dmrs(qchr, &rpos, &rfdr, &rlfc, &mg1, &mg2, fdr_cut, lambda, 2, Some(min_db));
+        dmrs = build_dmrs(
+            qchr,
+            &rpos,
+            &rfdr,
+            &rlfc,
+            &mg1,
+            &mg2,
+            fdr_cut,
+            lambda,
+            2,
+            Some(min_db),
+            true,
+        );
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
+            use std::io::Write;
+            let _ = writeln!(
+                f,
+                "DMR source: fallback (primary found 0 DMRs), fallback found {}",
+                dmrs.len()
+            );
+            for (di, d) in dmrs.iter().enumerate() {
+                let _ = writeln!(
+                    f,
+                    "  DMR {}: start={} stop={} no_cpgs={} direction={}",
+                    di, d["start"], d["stop"], d["no_cpgs"], d["direction"]
+                );
+            }
+        }
+    } else {
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
+            use std::io::Write;
+            let _ = writeln!(f, "DMR source: primary, found {} DMR(s)", dmrs.len());
+            for (di, d) in dmrs.iter().enumerate() {
+                let _ = writeln!(
+                    f,
+                    "  DMR {}: start={} stop={} no_cpgs={} direction={}",
+                    di, d["start"], d["stop"], d["no_cpgs"], d["direction"]
+                );
+            }
+        }
     }
 
     // LOESS curves for both groups
