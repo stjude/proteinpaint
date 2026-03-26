@@ -20,7 +20,12 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
-			authApi.mayAdjustFilter(req.query, ds, []) //we dont include terms to ensure that no additional filter is applied and we count all the samples
+			// !!! CRITICAL !!!
+			// - must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
+			// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option;
+			// - we dont include terms (3rd argument) to ensure that no additional filter is applied
+			// and we count all the samples (the response is aggregated)
+			authApi.mayAdjustFilter(req.query, ds, [])
 			//the response is aggregated, no identifiable information is included
 			//only if a filter is applied always request samples(panMB dataset). Profile and carereg have getAdditionalFilter but the samples are only filtered where needed
 			//This avoids requesting samples for the sjglobal datasets

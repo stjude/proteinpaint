@@ -53,6 +53,9 @@ export async function getData(q, ds, onlyChildren = false) {
 
 	try {
 		validateArg(q, ds)
+		// !!! CRITICAL !!!
+		// must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
+		// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option
 		authApi.mayAdjustFilter(q, ds, q.terms)
 		const data = await getSampleData(q, ds, onlyChildren)
 

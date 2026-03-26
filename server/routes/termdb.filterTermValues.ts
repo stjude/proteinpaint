@@ -75,6 +75,9 @@ async function getSamplesPerFilter(q, ds) {
 		//ignoreTermIds is used when building the user filter to exclude these terms from the filter
 		//When getting the samples per filter, is ok to not apply the user filter unless the filter is the facility term, in which case it must be applied
 		q.__protected__.ignoredTermIds.push(q.facilityTW.term.id)
+		// !!! CRITICAL !!!
+		// must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
+		// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option
 		authApi.mayAdjustFilter(q, ds, q.terms)
 	}
 	for (const id in q.filters) {

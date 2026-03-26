@@ -98,13 +98,18 @@ return an array of sample names passing through the filter
 
 // we need to pass a type and count by type to differentiate root samples from samples
 export async function get_samplecount(q, ds) {
-	authApi.mayAdjustFilter(q, ds, []) //we don't include terms to ensure that no additional filter is applied and we count all the samples
+	// !!! CRITICAL !!!
+	// must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
+	// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option;
+	// for the 3rd argument below, we don't include terms to ensure that no additional filter
+	// is applied and we count all the samples (the response contains only aggregated data)
+	authApi.mayAdjustFilter(q, ds, [])
 
 	/*
-must have q.filter (somehow it can either be str or {})
-as this is for showing number of samples pass a filter in header
-return a sample count of sample names passing through the filter
- */
+	must have q.filter (somehow it can either be str or {})
+	as this is for showing number of samples pass a filter in header
+	return a sample count of sample names passing through the filter
+  */
 	if (!q.filter) throw 'filter missing'
 
 	let j
