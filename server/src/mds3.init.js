@@ -1945,16 +1945,40 @@ export async function validate_query_proteome(ds, genome) {
 				if (!cohort.file) {
 					throw `Missing file in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
 				}
-				await processCohortFile(ds, assayName, cohortName, cohort)
+				await validateCohortFile(ds, assayName, cohortName, cohort)
 			}
 		} else {
 			throw `Invalid assay structure for "${assayName}". Must have .cohorts`
 		}
 	}
+
+	q.getCohort = proteomeDetails => {
+		const assay = proteomeDetails?.assay
+		const cohort = proteomeDetails?.cohort
+		if (!assay || !cohort) throw 'proteomeDetails.{assay,cohort} missing'
+		const cohortQuery = q.assays?.[assay]?.cohorts?.[cohort]
+		if (!cohortQuery) throw `queries.proteome.assays.${assay}.cohorts.${cohort} missing for the dataset`
+		return cohortQuery
+	}
+
+	q.find = async arg => {
+		const proteins = arg?.proteins
+		if (!Array.isArray(proteins) || proteins.length == 0) throw 'queries.proteome.find arg.proteins[] missing'
+		const cohortQuery = q.getCohort(arg?.proteomeDetails)
+		return findProteinsInCohort(cohortQuery, proteins)
+	}
+
+	q.get = async param => {
+		if (!param?.terms?.length) throw 'queries.proteome.get param.terms[] missing'
+		if (!param.proteomeDetails?.assay || !param.proteomeDetails?.cohort)
+			throw 'queries.proteome.get param.proteomeDetails.{assay,cohort} missing'
+		const cohortQuery = q.getCohort(param.proteomeDetails)
+		return getProteomeValuesFromCohort(ds, cohortQuery, param)
+	}
 }
 
-// Helper function to process cohort files for proteome assays
-async function processCohortFile(ds, assayName, cohortName, cohort) {
+// Helper function to validate cohort files for proteome assays
+async function validateCohortFile(ds, assayName, cohortName, cohort) {
 	if (!cohort.file.startsWith(serverconfig.tpmasterdir)) cohort.file = path.join(serverconfig.tpmasterdir, cohort.file)
 	// validate file exists
 	await utils.validate_txtfile(cohort.file)
@@ -1972,92 +1996,87 @@ async function processCohortFile(ds, assayName, cohortName, cohort) {
 		}
 		cohort.samples.push(sampleId)
 	}
+}
 
-	// add getters
-	cohort.find = async proteins => {
-		if (!cohort._proteins) {
-			const list = []
-			await utils.get_lines_txtfile({
-				args: [cohort.file],
-				callback: line => {
-					const cols = line.split('\t')
-					if (cols[0]?.startsWith('#Unique identifier')) return
-					const identifier = cols[0].trim()
-					const proteinName = cols[4].trim()
-					list.push(`${proteinName}: ${identifier}`)
-				}
-			})
-			cohort._proteins = list
-		}
-		const matches = []
-		for (const p of proteins) {
-			if (!p) continue
-			const lowerP = p.toLowerCase()
-			for (const entry of cohort._proteins) {
-				const proteinName = entry.split(':')[0]
-				if (proteinName.toLowerCase().includes(lowerP)) {
-					matches.push(entry)
-				}
+async function findProteinsInCohort(cohort, proteins) {
+	if (!cohort._proteins) {
+		const list = []
+		await utils.get_lines_txtfile({
+			args: [cohort.file],
+			callback: line => {
+				const cols = line.split('\t')
+				if (cols[0]?.startsWith('#Unique identifier')) return
+				const identifier = cols[0].trim()
+				const proteinName = cols[4].trim()
+				list.push(`${proteinName}: ${identifier}`)
+			}
+		})
+		cohort._proteins = list
+	}
+	const matches = []
+	for (const p of proteins) {
+		if (!p) continue
+		const lowerP = p.toLowerCase()
+		for (const entry of cohort._proteins) {
+			const proteinName = entry.split(':')[0]
+			if (proteinName.toLowerCase().includes(lowerP)) {
+				matches.push(entry)
 			}
 		}
-		return matches
+	}
+	return matches
+}
+
+async function getProteomeValuesFromCohort(ds, cohort, param) {
+	const limitSamples = await mayLimitSamples(param, cohort.samples, ds)
+	if (limitSamples?.size == 0) {
+		// got 0 sample after filtering, must still return expected structure with no data
+		return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 	}
 
-	cohort.get = async param => {
-		const limitSamples = await mayLimitSamples(param, cohort.samples, ds)
-		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, must still return expected structure with no data
-			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
-		}
-
-		const bySampleId = {}
-		const samples = cohort.samples || []
-		if (limitSamples) {
-			for (const sid of limitSamples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		} else {
-			for (const sid of samples) {
-				bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-			}
-		}
-
-		const term2sample2value = new Map()
-		for (const tw of param.terms) {
-			if (!tw) continue
-
-			const fullEntry = tw.term.name // this should be in format "proteinName: identifier"
-			const identifier = fullEntry.split(':')[1].trim()
-
-			if (!identifier) continue
-			// extract identifier only
-			const s2v = {}
-
-			await utils.get_lines_txtfile({
-				args: [cohort.file],
-				callback: line => {
-					const l = line.split('\t')
-					if (l[0]?.trim().toLowerCase() !== identifier.toLowerCase()) return
-
-					for (let i = 9; i < l.length; i++) {
-						const sampleId = cohort.samples[i - 9]
-						if (limitSamples && !limitSamples.has(sampleId)) continue
-						if (!l[i]) continue
-						const v = Number(l[i])
-						if (Number.isNaN(v)) throw 'exp value not number'
-						s2v[sampleId] = v
-					}
-				}
-			})
-			if (Object.keys(s2v).length) {
-				term2sample2value.set(tw.$id, s2v)
-			}
-		}
-		if (term2sample2value.size == 0) {
-			throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`
-		}
-		return { term2sample2value, byTermId: {}, bySampleId }
+	const bySampleId = {}
+	const samples = cohort.samples || []
+	if (limitSamples) {
+		for (const sid of limitSamples) bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+	} else {
+		for (const sid of samples) bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
 	}
+
+	const term2sample2value = new Map()
+	for (const tw of param.terms) {
+		if (!tw) continue
+
+		const fullEntry = tw.term.name
+		const identifier = fullEntry.split(':')[1]?.trim()
+		if (!identifier) continue
+
+		const s2v = {}
+		await utils.get_lines_txtfile({
+			args: [cohort.file],
+			callback: line => {
+				const l = line.split('\t')
+				if (l[0]?.trim().toLowerCase() !== identifier.toLowerCase()) return
+
+				for (let i = 9; i < l.length; i++) {
+					const sampleId = cohort.samples[i - 9]
+					if (limitSamples && !limitSamples.has(sampleId)) continue
+					if (!l[i]) continue
+					const v = Number(l[i])
+					if (Number.isNaN(v)) throw 'exp value not number'
+					s2v[sampleId] = v
+				}
+			}
+		})
+
+		if (Object.keys(s2v).length) {
+			term2sample2value.set(tw.$id, s2v)
+		}
+	}
+
+	if (term2sample2value.size == 0) {
+		throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`
+	}
+	return { term2sample2value, byTermId: {}, bySampleId }
 }
 
 // no longer used

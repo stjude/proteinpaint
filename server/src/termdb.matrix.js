@@ -242,15 +242,8 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			tw.term.type == DNA_METHYLATION ||
 			tw.term.type == WHOLE_PROTEOME_ABUNDANCE
 		) {
-			const assay = tw.term.proteomeDetails?.assay
-			const cohort = tw.term.proteomeDetails?.cohort
-			if (tw.term.type == WHOLE_PROTEOME_ABUNDANCE && (!assay || !cohort)) {
-				throw 'tw.term.proteomeDetails.{assay,cohort} missing'
-			}
 			const queryHandler =
-				tw.term.type == WHOLE_PROTEOME_ABUNDANCE
-					? q.ds.queries?.proteome?.assays?.[assay]?.cohorts?.[cohort]
-					: q.ds.queries?.[tw.term.type]
+				tw.term.type == WHOLE_PROTEOME_ABUNDANCE ? q.ds.queries?.proteome : q.ds.queries?.[tw.term.type]
 			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
@@ -263,7 +256,8 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				dataType: tw.term.type,
 				terms: [tw],
 				filter: q.filter,
-				filter0: q.filter0
+				filter0: q.filter0,
+				proteomeDetails: tw.term.proteomeDetails
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
