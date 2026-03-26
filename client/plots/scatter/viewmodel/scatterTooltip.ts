@@ -57,8 +57,8 @@ export class ScatterTooltip {
 		 * multiple times in the distance function.
 		 * Supply them as parameters.*/
 		const xMin = chart.xAxisScale.invert(0)
-		const xMax = chart.xAxisScale.invert(chart.width)
-		const yMin = chart.yAxisScale.invert(chart.height)
+		const xMax = chart.xAxisScale.invert(chart.width ?? this.scatter.settings.svgw)
+		const yMin = chart.yAxisScale.invert(chart.height ?? this.scatter.settings.svgh)
 		const yMax = chart.yAxisScale.invert(0)
 		const samples = chart.data.samples.filter(s => {
 			const dist = distance(s.x, s.y, s2.x, s2.y, chart, xMin, xMax, yMin, yMax)
