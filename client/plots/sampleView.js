@@ -139,7 +139,6 @@ class SampleView {
 			}
 			const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
 			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback)
-			alert(sampleName)
 			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
 
 			this.dom.downloadbt = sampleDiv
@@ -885,8 +884,6 @@ export function searchSampleInput(holder, samplesData, hasSampleAncestry, callba
 
 	// === Precompute Hierarchy labels once ===
 	const { childrenByParent, rootFor } = buildHierarchy(samplesData)
-	alert(JSON.stringify(Object.fromEntries(childrenByParent)))
-	alert(JSON.stringify(Object.fromEntries(rootFor)))
 	const sampleName = allSamples[0]
 	const input = holder
 		.append('input')
