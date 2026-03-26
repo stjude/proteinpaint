@@ -173,6 +173,12 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'profilePolar' }
 		},
 		{
+			label: 'Polar 2',
+			chartType: 'profilePolar2',
+			clickTo: self.prepPlot,
+			config: { chartType: 'profilePolar2' }
+		},
+		{
 			label: 'Barchart',
 			clickTo: self.prepPlot,
 			chartType: 'profileBarchart',
