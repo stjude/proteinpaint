@@ -3,8 +3,7 @@ import { NumericModes } from '#shared/terms.js'
 export function renderAssayAndCohortRadios({
 	holder,
 	assays,
-	selectedAssayKey,
-	selectedCohortKey,
+	selectedProteomeDetails,
 	onChange,
 	assayTitle = 'Assay Type',
 	cohortTitle = 'Cohort'
@@ -13,15 +12,17 @@ export function renderAssayAndCohortRadios({
 	if (!assayEntries.length) {
 		holder.append('div').attr('class', 'sja_sharp_border').style('padding', '8px').text('No proteome assays available.')
 		return {
-			getSelected: () => ({ assayKey: undefined, cohortKey: undefined })
+			getSelected: () => ({ assay: undefined, cohort: undefined })
 		}
 	}
+
+	const initialProteomeDetails = selectedProteomeDetails || {}
 
 	const assayRadioName = `sjpp-proteome-assay-${Math.random().toString().slice(-6)}`
 	const cohortRadioName = `sjpp-proteome-cohort-${Math.random().toString().slice(-6)}`
 
-	let selectedAssay = assays[selectedAssayKey] ? selectedAssayKey : assayEntries[0][0]
-	let selectedCohort = selectedCohortKey
+	let selectedAssay = assays[initialProteomeDetails.assay] ? initialProteomeDetails.assay : assayEntries[0][0]
+	let selectedCohort = initialProteomeDetails.cohort
 
 	holder.append('div').style('margin', '3px 5px').style('padding', '3px 5px').style('font-weight', 600).text(assayTitle)
 	const assayListDiv = holder.append('div').style('margin-bottom', '10px')
@@ -54,16 +55,16 @@ export function renderAssayAndCohortRadios({
 				selectedAssay = assayKey
 				selectedCohort = undefined
 				renderCohortOptions()
-				onChange?.({ assayKey: selectedAssay, cohortKey: selectedCohort })
+				onChange?.({ assay: selectedAssay, cohort: selectedCohort })
 			})
 		assayLabel.append('span').text(assayKey)
 	}
 
 	renderCohortOptions()
-	onChange?.({ assayKey: selectedAssay, cohortKey: selectedCohort })
+	onChange?.({ assay: selectedAssay, cohort: selectedCohort })
 
 	return {
-		getSelected: () => ({ assayKey: selectedAssay, cohortKey: selectedCohort })
+		getSelected: () => ({ assay: selectedAssay, cohort: selectedCohort })
 	}
 
 	function renderCohortOptions() {
@@ -80,7 +81,7 @@ export function renderAssayAndCohortRadios({
 		}
 
 		if (!selectedCohort || !assays[selectedAssay]?.cohorts?.[selectedCohort]) {
-			selectedCohort = cohorts.includes(selectedCohortKey) ? selectedCohortKey : cohorts[0]
+			selectedCohort = cohorts.includes(initialProteomeDetails.cohort) ? initialProteomeDetails.cohort : cohorts[0]
 		}
 
 		for (const cohortKey of cohorts) {
@@ -100,7 +101,7 @@ export function renderAssayAndCohortRadios({
 				.style('margin-right', '6px')
 				.on('change', () => {
 					selectedCohort = cohortKey
-					onChange?.({ assayKey: selectedAssay, cohortKey: selectedCohort })
+					onChange?.({ assay: selectedAssay, cohort: selectedCohort })
 				})
 
 			cohortLabel.append('span').text(cohortKey)
@@ -113,22 +114,20 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	const assays = chartsInstance.state.termdbConfig?.queries?.proteome?.assays || {}
 	const menuDiv = holder.append('div')
 
-	let selectedAssayKey
-	let selectedCohortKey
+	let selectedProteomeDetails
 	let launchOption
 
 	const syncLaunchButtonState = () => {
 		if (!launchOption) return
-		if (selectedCohortKey) launchOption.style('opacity', 1).style('pointer-events', 'auto')
+		if (selectedProteomeDetails?.cohort) launchOption.style('opacity', 1).style('pointer-events', 'auto')
 		else launchOption.style('opacity', 0.5).style('pointer-events', 'none')
 	}
 
 	renderAssayAndCohortRadios({
 		holder: menuDiv,
 		assays,
-		onChange: ({ assayKey, cohortKey }) => {
-			selectedAssayKey = assayKey
-			selectedCohortKey = cohortKey
+		onChange: proteomeDetails => {
+			selectedProteomeDetails = proteomeDetails
 			syncLaunchButtonState()
 		}
 	})
@@ -140,31 +139,29 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		.style('margin', '10px auto 10px')
 		.text('Select Protein')
 		.on('click', () => {
-			if (!selectedCohortKey) return
-			const assayCohortTitle = `${selectedAssayKey}: ${selectedCohortKey}`
+			if (!selectedProteomeDetails?.cohort) return
+			const { assay, cohort } = selectedProteomeDetails
+			const assayCohortTitle = `${assay}: ${cohort}`
 			const chart = {
 				label: 'Protein Abundance',
 				chartType: 'proteomeAbundance',
 				usecase: {
 					target: 'proteomeAbundance',
 					detail: 'term',
-					assayKey: selectedAssayKey,
-					cohortKey: selectedCohortKey,
-					label: `Assay: ${selectedAssayKey}; Cohort: ${selectedCohortKey}`
+					proteomeDetails: { assay, cohort },
+					label: `Assay: ${assay}; Cohort: ${cohort}`
 				},
 				processSelection: termlst => termlst,
 				updateActionBySelectedTerms: (action, termlst) => {
 					action.config.assayCohortTitle = assayCohortTitle
-					action.config.assayKey = selectedAssayKey
-					action.config.cohortKey = selectedCohortKey
+					const { assay, cohort } = selectedProteomeDetails
+					action.config.proteomeDetails = { assay, cohort }
 					action.config.filter = buildFilter(
-						chartsInstance.state.termdbConfig.queries.proteome.assays[selectedAssayKey].cohorts[selectedCohortKey]
-							.filter
+						chartsInstance.state.termdbConfig.queries.proteome.assays[assay].cohorts[cohort].filter
 					)
 					const twlst = termlst.map(term => {
 						const t = structuredClone(term)
-						t.assayKey = selectedAssayKey
-						t.cohortKey = selectedCohortKey
+						t.proteomeDetails = { assay, cohort }
 						return { term: t, q: { mode: NumericModes.continuous } }
 					})
 

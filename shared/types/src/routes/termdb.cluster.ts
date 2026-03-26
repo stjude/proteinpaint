@@ -4,7 +4,7 @@ import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
 import type { GeneExpressionTW } from '../terms/geneExpression.ts'
 import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
-import type { ProteomeAbundanceTW } from '../terms/proteomeAbundance.ts'
+import type { ProteomeAbundanceTW, ProteomeDetails } from '../terms/proteomeAbundance.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -55,10 +55,8 @@ export type TermdbClusterRequestProteomeAbundance = TermdbClusterRequestBase & {
 	terms: ProteomeAbundanceTW[]
 	/** perform z-score transformation on values */
 	zScoreTransformation?: string
-	/** assay key to specify which assay to use for the clustering */
-	assayKey: string
-	/** cohort key to specify which cohort to use for the clustering */
-	cohortKey: string
+	/** assay type and cohort for the selected proteome data */
+	proteomeDetails: ProteomeDetails
 }
 
 export type TermdbClusterRequest =

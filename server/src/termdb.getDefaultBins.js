@@ -33,9 +33,14 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				lst.push(value)
 			}
 		} else {
+			const assay = tw.term.proteomeDetails?.assay
+			const cohort = tw.term.proteomeDetails?.cohort
+			if (tw.term.type == WHOLE_PROTEOME_ABUNDANCE && (!assay || !cohort)) {
+				throw 'tw.term.proteomeDetails.{assay,cohort} missing'
+			}
 			const queryHandler =
 				tw.term.type == WHOLE_PROTEOME_ABUNDANCE
-					? ds.queries?.proteome?.assays?.[tw.term.assayKey]?.cohorts?.[tw.term.cohortKey]
+					? ds.queries?.proteome?.assays?.[assay]?.cohorts?.[cohort]
 					: ds.queries?.[tw.term.type]
 			if (!queryHandler) throw `term type ${tw.term.type} not supported by this dataset`
 			// this cache ignores filter, can lead to misleading result caused by different filter usage; also assumes that filter is infinite and impossible to cache

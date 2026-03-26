@@ -238,8 +238,13 @@ export class HierCluster extends Matrix {
 			filter0: state.filter0
 		}
 		if (state.config.dataType == 'proteomeAbundance') {
-			body.assayKey = state.config.assayKey
-			body.cohortKey = state.config.cohortKey
+			const assay = state.config.proteomeDetails?.assay
+			const cohort = state.config.proteomeDetails?.cohort
+			if (!assay || !cohort) throw 'state.config.proteomeDetails.{assay,cohort} missing'
+			body.proteomeDetails = {
+				assay,
+				cohort
+			}
 		}
 		return body
 	}
