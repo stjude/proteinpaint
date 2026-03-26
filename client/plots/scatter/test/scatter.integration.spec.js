@@ -1340,7 +1340,13 @@ tape('Disco plot and lollipop', test => {
 			.filter(d => d.sample === '3416')
 			.node()
 		const box = sampleWithMutDataFile.getBoundingClientRect()
-		sampleWithMutDataFile.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: box.x, clientY: box.y }))
+		sampleWithMutDataFile.dispatchEvent(
+			new MouseEvent('click', {
+				bubbles: true,
+				clientX: box.x + box.width / 2,
+				clientY: box.y + box.height / 2
+			})
+		)
 		const chordTexts = await detectGte({
 			elem: holder.node(),
 			selector: '.chord-text',
@@ -1357,23 +1363,27 @@ tape('Disco plot and lollipop', test => {
 		})
 		const label = [...chordTexts].find(c => c.__data__?.text === 'TP53')
 
-		const trackLabelsG = await detectGte({
-			elem: holder.node(),
-			selector: '[data-testid="sja_sample_menu_opener"]',
-			count: 2,
-			trigger: () => {
-				label.dispatchEvent(new MouseEvent('click'))
-			}
-		})
+		if (!label) {
+			test.failt('must have a TP53 gene label')
+		} else {
+			const trackLabelsG = await detectGte({
+				elem: holder.node(),
+				selector: '[data-testid="sja_sample_menu_opener"]',
+				count: 2,
+				trigger: () => {
+					label.dispatchEvent(new MouseEvent('click'))
+				}
+			})
 
-		await sleep(500)
-		const trackLabels = [...trackLabelsG[0].querySelectorAll('text')]
-		test.equal(
-			trackLabels.filter(t => t.innerHTML.includes('unknown data source')).length,
-			0,
-			'must not have an error after clicking a Disco plot gene label to launch a genome browser track'
-		)
-		if (test._ok) holder.remove()
-		test.end()
+			await sleep(500)
+			const trackLabels = [...trackLabelsG[0].querySelectorAll('text')]
+			test.equal(
+				trackLabels.filter(t => t.innerHTML.includes('unknown data source')).length,
+				0,
+				'must not have an error after clicking a Disco plot gene label to launch a genome browser track'
+			)
+			if (test._ok) holder.remove()
+			test.end()
+		}
 	}
 })
