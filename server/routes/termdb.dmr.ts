@@ -26,9 +26,9 @@ function init({ genomes }) {
 		try {
 			const q: TermdbDmrRequest = req.query
 			const genome = genomes[q.genome]
-			if (!genome) throw new Error(`Unknown genome "${q.genome}". Please check dataset configuration.`)
+			if (!genome) throw 'unknown genome'
 			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw new Error(`Dataset "${q.dslabel}" not found.`)
+			if (!ds) throw 'unknown ds'
 			if (!ds.queries?.dnaMethylation) throw new Error('This dataset does not support DNA methylation analysis.')
 
 			if (!Array.isArray(q.group1) || q.group1.length == 0)

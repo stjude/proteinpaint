@@ -1824,12 +1824,6 @@ async function validate_query_dnaMethylation(ds, genome) {
 					s2v[sampleId] = avg
 				}
 			}
-
-			console.log(
-				`[dnaMeth filter] totalProbes=${totalProbes}, kept=${_kept}, skipped=${_skipped}, resultSamples=${
-					Object.keys(s2v).length
-				}`
-			)
 			if (Object.keys(s2v).length) {
 				term2sample2value.set(tw.$id, s2v)
 			}
