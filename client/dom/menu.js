@@ -205,10 +205,13 @@ export class Menu {
 		if (width - x < middlex && x + p.width > width) this.d.style('left', null).style('right', width - x + 'px')
 		else this.d.style('left', x + 'px').style('right', null)
 
-		//does not fit to the bottom
-		if (!down && height - y < middley && y - window.scrollY - p.height > 0)
-			this.d.style('top', null).style('bottom', height - y + 'px')
-		else this.d.style('top', y + 'px').style('bottom', null)
+		// NOTE: always set the top position, not bottom which is not reliable when
+		// the body {position: 'relative'}, in case PP is embedded in an external portal
+		// with different css styles for <body> where sja_menu_divs are appended
+		if (!down && height - y < middley && y - window.scrollY > p.height) {
+			// does not fit to the bottom
+			this.d.style('top', `${y - p.height}px`).style('bottom', null)
+		} else this.d.style('top', y + 'px').style('bottom', null)
 		this.d.transition().style('opacity', 1)
 
 		if (elem) this.setTabNavigation(elem)

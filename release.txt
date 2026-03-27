@@ -1,1 +1,2 @@
-
+Fixes:
+- always set the tooltip top position instead of bottom to make it more reliable when an embedder's body position=relative
