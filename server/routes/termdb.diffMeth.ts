@@ -1,7 +1,6 @@
 import type { DiffMethRequest, DiffMethResponse, RouteApi } from '#types'
 import { diffMethPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
-import { get_ds_tdb } from '../src/termdb.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -25,8 +24,9 @@ function init({ genomes }) {
 		try {
 			const q = req.query
 			const genome = genomes[q.genome]
-			if (!genome) throw new Error(`Unknown genome "${q.genome}". Please check dataset configuration.`)
-			const [ds] = get_ds_tdb(genome, q)
+			if (!genome) throw 'unknown genome'
+			const ds = genome.datasets?.[q.dslabel]
+			if (!ds) throw 'unknown ds'
 
 			// Get confounding variable data if term wrappers are provided
 			let term_results: any = []
