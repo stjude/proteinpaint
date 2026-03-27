@@ -1805,12 +1805,10 @@ async function validate_query_dnaMethylation(ds, genome) {
 				const values = sampleidx2values.get(i)
 				if (!values?.length) continue // skip samples with no beta values
 				if (useM) {
-					// Convert each probe beta to M-value first, then average: mean(logit(beta))
-					const mValues = values.map(v => {
-						const clamped = Math.min(Math.max(v, 1e-6), 1 - 1e-6)
-						return Math.log2(clamped / (1 - clamped))
-					})
-					s2v[sampleId] = mValues.reduce((sum, m) => sum + m, 0) / mValues.length
+					// Average betas first, then convert to M-value: logit(mean(beta))
+					const avg = values.reduce((sum, v) => sum + v, 0) / values.length
+					const clamped = Math.min(Math.max(avg, 1e-6), 1 - 1e-6)
+					s2v[sampleId] = Math.log2(clamped / (1 - clamped))
 				} else {
 					s2v[sampleId] = values.reduce((sum, v) => sum + v, 0) / values.length
 				}
