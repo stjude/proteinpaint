@@ -1,2 +1,1 @@
-Fixes:
-- fix the launching of genome brwoser lollipop from a disco plot label click
+
