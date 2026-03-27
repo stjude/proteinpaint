@@ -1395,6 +1395,8 @@ export class TermdbVocab extends Vocab {
 			for (const t of body.scoreTerms) {
 				if (typeof t.maxScore != 'number') this.mayStripTwProps(t.maxScore)
 				this.mayStripTwProps(t.score)
+				delete t.score.$id
+				if (typeof t.maxScore != 'number') delete t.maxScore.$id
 			}
 		}
 		return await this.dofetch3('termdb/profilePolar2Scores', { body })
