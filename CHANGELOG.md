@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- always set the tooltip top position instead of bottom to make it more reliable when an embedder's body position=relative
+
 
 ## 2.180.1
 
