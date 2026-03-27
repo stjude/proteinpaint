@@ -5,12 +5,12 @@ import { getData } from '../src/termdb.matrix.js'
 /*
 Route for profilePolar2.
 
-Key difference from termdb.profileScores:
+Key differences from termdb.profileScores:
   - Client does NOT send facilityTW.
-  - Server derives the facility term id from activeCohort in __protected__:
-      activeCohort === 1 (FULL_COHORT)  → FUNIT
-      activeCohort === 0 (ABBREV_COHORT) → AUNIT
-  - Site data is queried at module level using getData(), same pattern as
+  - Server derives the facility term id by inspecting term ID prefixes already
+    present in the request (scoreTerms or filter), so no cohort-specific logic
+    is needed on the client side.
+  - Site data is queried server-side using getData(), same pattern as
     termdb.profileScores.ts getScoresData().
   - Always returns aggregated (median across all eligible sites) percentages.
 */
@@ -44,11 +44,30 @@ function init({ genomes }) {
 	}
 }
 
+/**
+ * Derives the cohort prefix from term IDs already present in the request.
+ * Primary source: scoreTerms (always present in the request).
+ * Fallback: filter term IDs (may be absent if no filters are applied).
+ * Term IDs share the same prefix as the facility term for a given cohort.
+ */
+function derivePrefix(query: any): string {
+	const firstScoreId = query.scoreTerms?.[0]?.score?.term?.id
+	if (firstScoreId?.startsWith('F')) return 'F'
+	if (firstScoreId?.startsWith('A')) return 'A'
+	for (const entry of query.filter?.lst || []) {
+		const id = entry.tvs?.term?.id
+		if (id?.startsWith('F')) return 'F'
+		if (id?.startsWith('A')) return 'A'
+	}
+	throw 'cannot determine cohort prefix from scoreTerms or filter term IDs'
+}
+
 async function getScores(query: any, ds: any) {
-	// 1. Derive facility term id server-side from activeCohort.
-	//    FULL_COHORT = 1 → prefix 'F', ABBREV_COHORT = 0 → prefix 'A'
-	const { activeCohort, clientAuthResult } = query.__protected__
-	const prefix = activeCohort === 1 ? 'F' : 'A'
+	// 1. Derive facility term id from term IDs already in the request.
+	//    scoreTerms and filter terms share the same cohort prefix as the facility term,
+	//    so no client-supplied facilityTW is needed.
+	const { activeCohort, clientAuthResult } = query.__protected__ // still needed for auth
+	const prefix = derivePrefix(query)
 	const facilityTermId = `${prefix}UNIT`
 
 	// Minimal term wrapper — getData will fill term.values, $id, etc.

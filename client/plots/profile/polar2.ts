@@ -42,9 +42,9 @@ class ProfilePolar2 extends profilePlot {
 	 * Override setControls() to fetch data from the dedicated polar2 route.
 	 * The base class setControls() builds filter UI and sets this.filter but
 	 * skips the data fetch for profilePolar2 (see profilePlot.ts).
-	 * This method then calls termdb/profilePolar2Scores which derives
-	 * facilityTW (FUNIT/AUNIT) server-side from activeCohort and returns
-	 * aggregated (median) percentages across all eligible sites.
+	 * This method calls termdb/profilePolar2Scores, which derives the facility
+	 * term server-side from the request data and returns aggregated (median)
+	 * percentages across all eligible sites.
 	 */
 	async setControls(additionalInputs: any[] = []) {
 		await super.setControls(additionalInputs)
@@ -52,17 +52,14 @@ class ProfilePolar2 extends profilePlot {
 	}
 
 	private async fetchAggregatedScores() {
-		const args: any = {
-			// Strip to only term id and q — server fills the rest via termjsonByOneid
-			scoreTerms: this.scoreTerms.map((t: any) => ({
-				score: { term: { id: t.score.term.id }, q: t.score.q },
-				maxScore: typeof t.maxScore === 'number' ? t.maxScore : { term: { id: t.maxScore.term.id }, q: t.maxScore.q }
-			})),
-			filterByUserSites: this.settings?.filterByUserSites
-		}
-		if (this.filter) args.filter = this.filter
-		// No facilityTW — the server derives FUNIT/AUNIT from activeCohort in __protected__
-		return this.app.vocabApi.getProfilePolar2Scores(args)
+		// Pass scoreTerms as-is — getProfilePolar2Scores calls mayStripTwProps on each tw,
+		// which strips unneeded client-only properties and reduces term to { id } only.
+		// No facilityTW — the server derives it from term ID prefixes in the request.
+		return this.app.vocabApi.getProfilePolar2Scores({
+			scoreTerms: this.scoreTerms,
+			filterByUserSites: this.settings?.filterByUserSites,
+			filter: this.filter
+		})
 	}
 
 	onMouseOut(event: MouseEvent) {
