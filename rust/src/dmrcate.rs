@@ -224,7 +224,7 @@ fn process_chromosome(
     Ok(results)
 }
 
-fn fit_f_dist(vars: &[f64], dfs: &[f64], debug_log: &str) -> (f64, f64) {
+fn fit_f_dist(vars: &[f64], dfs: &[f64]) -> (f64, f64) {
     if vars.len() < 3 {
         return (1.0, 0.0);
     }
@@ -268,19 +268,6 @@ fn fit_f_dist(vars: &[f64], dfs: &[f64], debug_log: &str) -> (f64, f64) {
     let ve = e.iter().map(|&ei| (ei - me).powi(2)).sum::<f64>() / (n - 1.0);
     let mean_tri: f64 = xdf.iter().map(|&d| trigamma(d / 2.0)).sum::<f64>() / n;
     let target = ve - mean_tri;
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(debug_log) {
-        use std::io::Write;
-        let _ = writeln!(
-            f,
-            "fit_f_dist: n_ok={} median_var={:.6e} mean_e={:.6} var_e={:.6} mean_trigamma={:.6e} target={:.6}",
-            ok.len(),
-            median_v,
-            me,
-            ve,
-            mean_tri,
-            target
-        );
-    }
     let df0 = if target > 0.0 {
         2.0 * trigamma_inverse(target)
     } else {
@@ -742,7 +729,6 @@ fn main() {
     let cachedir = p["cachedir"].as_str().unwrap_or("/tmp");
     let dmrcate_dir = format!("{}/dmrcate", cachedir);
     let _ = std::fs::create_dir_all(&dmrcate_dir);
-    let debug_log = format!("{}/dmrcate_debug.log", dmrcate_dir);
     let qchr = p["chr"].as_str().unwrap_or("");
     let (qstart, qstop) = (p["start"].as_i64().unwrap_or(0), p["stop"].as_i64().unwrap_or(0));
     let cases: Vec<&str> = p["case"]
@@ -812,12 +798,7 @@ fn main() {
             min_spg,
         ) {
             Ok(s) => all.extend(s),
-            Err(e) => {
-                if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
-                    use std::io::Write;
-                    let _ = writeln!(f, "Warning: {}: {}", chr_names[i], e);
-                }
-            }
+            Err(_e) => {}
         }
         pfx += cl;
     }
@@ -827,17 +808,7 @@ fn main() {
 
     let all_vars: Vec<f64> = all.iter().map(|s| s.residual_var).collect();
     let all_dfs: Vec<f64> = all.iter().map(|s| s.df_residual).collect();
-    let (s20, df0) = fit_f_dist(&all_vars, &all_dfs, &debug_log);
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
-        use std::io::Write;
-        let _ = writeln!(
-            f,
-            "eBayes: s2_prior={:.6e} df_prior={:.4} n_probes={}",
-            s20,
-            df0,
-            all.len()
-        );
-    }
+    let (s20, df0) = fit_f_dist(&all_vars, &all_dfs);
     let mut mod_t = Vec::with_capacity(all.len());
     let mut raw_p = Vec::with_capacity(all.len());
     for s in &all {
@@ -926,33 +897,6 @@ fn main() {
         .iter()
         .map(|&v| if v <= adaptive_log_cut { 0.0 } else { 1.0 })
         .collect();
-    // Debug
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
-        use std::io::Write;
-        let _ = writeln!(f, "--- DMR region debug ---");
-        let _ = writeln!(
-            f,
-            "nsig={} adaptive_log_cut={:.2} n_probes={}",
-            nsig,
-            adaptive_log_cut,
-            rpos.len()
-        );
-        for i in 0..rpos.len() {
-            let _ = writeln!(
-                f,
-                "  probe {}: pos={} mod_t={:.6} rfdr={:.6e} log_sfdr={:.2} selected={} lfc={:.6} mg1={:.4} mg2={:.4}",
-                i,
-                rpos[i],
-                rt[i],
-                rfdr[i],
-                log_sfdr[i],
-                sig_fdr[i] == 0.0,
-                rlfc[i],
-                mg1.get(i).unwrap_or(&f64::NAN),
-                mg2.get(i).unwrap_or(&f64::NAN)
-            );
-        }
-    }
     let mut dmrs = build_dmrs(qchr, &rpos, &sig_fdr, &rlfc, &mg1, &mg2, 0.5, lambda, 2, None, false);
     for dmr in &mut dmrs {
         if let (Some(s), Some(e)) = (dmr["start"].as_i64(), dmr["stop"].as_i64()) {
@@ -979,33 +923,6 @@ fn main() {
             Some(min_db),
             true,
         );
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
-            use std::io::Write;
-            let _ = writeln!(
-                f,
-                "DMR source: fallback (primary found 0 DMRs), fallback found {}",
-                dmrs.len()
-            );
-            for (di, d) in dmrs.iter().enumerate() {
-                let _ = writeln!(
-                    f,
-                    "  DMR {}: start={} stop={} no_cpgs={} direction={}",
-                    di, d["start"], d["stop"], d["no_cpgs"], d["direction"]
-                );
-            }
-        }
-    } else {
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&debug_log) {
-            use std::io::Write;
-            let _ = writeln!(f, "DMR source: primary, found {} DMR(s)", dmrs.len());
-            for (di, d) in dmrs.iter().enumerate() {
-                let _ = writeln!(
-                    f,
-                    "  DMR {}: start={} stop={} no_cpgs={} direction={}",
-                    di, d["start"], d["stop"], d["no_cpgs"], d["direction"]
-                );
-            }
-        }
     }
 
     // LOESS curves for both groups
