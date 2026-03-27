@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.180.1
 
 Fixes:
 - fix the launching of genome brwoser lollipop from a disco plot label click
