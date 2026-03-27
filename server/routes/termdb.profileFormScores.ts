@@ -52,11 +52,24 @@ async function getScoresDict(query, ds) {
 			const percents: { [key: string]: number } = getSCPercentsDict(d, data.samples)
 			term2Score[d.term.id] = percents
 		}
-	const facilityValue = data.sampleData?.[query.facilityTW.$id]
-	const termValue = query.facilityTW.term.values[facilityValue?.value]
-	const hospital = termValue?.label || termValue?.key
+	const { clientAuthResult, activeCohort } = query.__protected__
+	const isPublic = !clientAuthResult[activeCohort]?.role || clientAuthResult[activeCohort].role === 'public'
 
-	return { term2Score, sites: data.sites, hospital, n: data.sampleData ? 1 : data.samples.length }
+	// hospital is the individual facility name — only derive it for authenticated users
+	let hospital: string | undefined
+	if (!isPublic && data.sampleData) {
+		const facilityValue = data.sampleData[query.facilityTW.$id]
+		const termValue = query.facilityTW.term.values[facilityValue?.value]
+		hospital = termValue?.label || termValue?.key
+	}
+
+	return {
+		term2Score,
+		// Do not expose individual site IDs, names, or hospital to public-role users
+		sites: isPublic ? [] : data.sites,
+		hospital,
+		n: data.sampleData ? 1 : data.samples.length
+	}
 }
 
 function getDict(key, sample) {
