@@ -38,6 +38,33 @@ class ProfilePolar2 extends profilePlot {
 		this.plot()
 	}
 
+	/**
+	 * Override setControls() to fetch data from the dedicated polar2 route.
+	 * The base class setControls() builds filter UI and sets this.filter but
+	 * skips the data fetch for profilePolar2 (see profilePlot.ts).
+	 * This method then calls termdb/profilePolar2Scores which derives
+	 * facilityTW (FUNIT/AUNIT) server-side from activeCohort and returns
+	 * aggregated (median) percentages across all eligible sites.
+	 */
+	async setControls(additionalInputs: any[] = []) {
+		await super.setControls(additionalInputs)
+		this.data = await this.fetchAggregatedScores()
+	}
+
+	private async fetchAggregatedScores() {
+		const args: any = {
+			// Strip to only term id and q — server fills the rest via termjsonByOneid
+			scoreTerms: this.scoreTerms.map((t: any) => ({
+				score: { term: { id: t.score.term.id }, q: t.score.q },
+				maxScore: typeof t.maxScore === 'number' ? t.maxScore : { term: { id: t.maxScore.term.id }, q: t.maxScore.q }
+			})),
+			filterByUserSites: this.settings?.filterByUserSites
+		}
+		if (this.filter) args.filter = this.filter
+		// No facilityTW — the server derives FUNIT/AUNIT from activeCohort in __protected__
+		return this.app.vocabApi.getProfilePolar2Scores(args)
+	}
+
 	onMouseOut(event: MouseEvent) {
 		const target = event.target as HTMLElement
 		if (target.tagName === 'path') {
