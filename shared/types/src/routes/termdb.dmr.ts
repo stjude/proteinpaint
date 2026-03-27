@@ -77,7 +77,7 @@ export type DmrDiagnostic = {
 	/** Total elapsed time in milliseconds */
 	elapsed_ms?: number
 	/** Server-rendered track PNG as data URI (Rust backend only) */
-	track_png?: string
+	track_png?: string | null
 }
 
 export type TermdbDmrSuccessResponse = {
@@ -99,7 +99,7 @@ export type TermdbDmrSuccessResponse = {
 		/** hyper = case hypermethylated relative to control; hypo = opposite */
 		direction: 'hyper' | 'hypo'
 		/** Comma-separated gene symbols overlapping the DMR */
-		overlapping_genes?: string
+		overlapping_genes?: string | null
 	}[]
 	/** Diagnostic data: per-CpG probe means and statistics */
 	diagnostic?: DmrDiagnostic

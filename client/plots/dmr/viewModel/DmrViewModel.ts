@@ -18,7 +18,13 @@ export class DmrViewModel {
 		const sigCpgBedItems = this.makeSigCpgBedItems(dmrResult, settings, queryChr, queryStart, queryStop)
 
 		const xRange = (queryStop ?? 0) - (queryStart ?? 0)
-		const showLoess = !!(dmrResult.diagnostic?.loess && xRange <= settings.dmr.maxLoessRegion)
+		const loess = dmrResult.diagnostic?.loess
+		const showLoess = !!(
+			loess &&
+			loess.group1_fitted.length > 0 &&
+			loess.group2_fitted.length > 0 &&
+			xRange <= settings.dmr.maxLoessRegion
+		)
 
 		const betaTrackResult = dmrResult.diagnostic
 			? this.renderBetaTrack(dmrResult.diagnostic, config, settings.dmr.blockWidth, showLoess, queryStart, queryStop)
