@@ -1378,6 +1378,23 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb/profileScores', { body })
 	}
 
+	async getProfilePolar2Scores(args) {
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			...args
+		}
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		if (body.scoreTerms) {
+			body.scoreTerms = structuredClone(body.scoreTerms)
+			for (const t of body.scoreTerms) {
+				if (typeof t.maxScore != 'number') this.mayStripTwProps(t.maxScore)
+				this.mayStripTwProps(t.score)
+			}
+		}
+		return await this.dofetch3('termdb/profilePolar2Scores', { body })
+	}
+
 	async getProfileFormScores(args) {
 		const body = {
 			genome: this.vocab.genome,

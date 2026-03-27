@@ -99,7 +99,16 @@ async function getScores(query, ds) {
 		term2Score[d.score.term.id] = getPercentage(d, data.samples, data.sampleData)
 	}
 
-	return { term2Score, sites: data.sites, site: data.site, n: data.sampleData ? 1 : data.samples.length }
+	const { clientAuthResult, activeCohort } = query.__protected__
+	const isPublic = !clientAuthResult[activeCohort]?.role || clientAuthResult[activeCohort].role === 'public'
+
+	return {
+		term2Score,
+		// Do not expose individual site IDs or names to public-role users
+		sites: isPublic ? [] : data.sites,
+		site: isPublic ? undefined : data.site,
+		n: data.sampleData ? 1 : data.samples.length
+	}
 }
 
 function getPercentage(d, samples, sampleData) {

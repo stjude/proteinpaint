@@ -259,14 +259,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 
 			this.filter = this.config.filter || this.getFilter()
 
-			if (this.type != 'profileForms')
-				this.data = await this.app.vocabApi.getProfileScores({
-					scoreTerms: this.scoreTerms,
-					filter: this.filter,
-					facilityTW: this.config.facilityTW,
-					filterByUserSites: this.settings.filterByUserSites
-				})
-			else
+			if (this.type == 'profileForms')
 				this.data = await this.app.vocabApi.getProfileFormScores({
 					scoreTerms: this.scoreTerms,
 					scScoreTerms: this.scScoreTerms,
@@ -274,7 +267,16 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
-			if ('error' in this.data) throw this.data.error
+			else if (this.type != 'profilePolar2')
+				// profilePolar2 skips this fetch — its subclass setControls() calls
+				// the dedicated termdb/profilePolar2Scores route instead
+				this.data = await this.app.vocabApi.getProfileScores({
+					scoreTerms: this.scoreTerms,
+					filter: this.filter,
+					facilityTW: this.config.facilityTW,
+					filterByUserSites: this.settings.filterByUserSites
+				})
+			if (this.data && 'error' in this.data) throw this.data.error
 			this.sites = this.filteredTermValues[this.config.facilityTW.id]?.filter(s => !s.disabled && s.value)
 
 			if (this.settings[this.config.facilityTW?.term?.id])
