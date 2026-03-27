@@ -48,8 +48,9 @@ export async function extract_summary_terms(
 			SummaryType: {
 				type: 'object',
 				properties: {
-					term: { type: 'string', description: 'Name of 1st term' },
-					term2: { type: 'string', description: 'Name of 2nd term' },
+					term: { $ref: '#/definitions/tw', description: 'Name of 1st term' },
+					term2: { $ref: '#/definitions/tw', description: 'Name of 2nd term' },
+					term0: { $ref: '#/definitions/tw', description: 'Name of 3rd term' },
 					simpleFilter: {
 						type: 'array',
 						items: { $ref: '#/definitions/FilterTerm' },
@@ -63,6 +64,98 @@ export async function extract_summary_terms(
 					}
 				},
 				required: ['term', 'simpleFilter'],
+				additionalProperties: false
+			},
+			tw: {
+				type: 'object',
+				properties: {
+					term: {
+						$ref: '#/definitions/term',
+						description:
+							'Name of term which can be either a dictionary term or a gene term or a coordinate term or a metabolite term'
+					},
+					q: {
+						$ref: '#/definitions/q',
+						description:
+							'Optional query parameters to further specify the term, such as the mode and type of binning for a term'
+					}
+				},
+				required: ['term'],
+				additionalProperties: false
+			},
+			term: {
+				oneOf: [
+					{ $ref: '#/definitions/DictionaryTerm' },
+					{ $ref: '#/definitions/GeneTerm' },
+					{ $ref: '#/definitions/CoordinateTerm' },
+					{ $ref: '#/definitions/MetaboliteTerm' }
+				]
+			},
+			DictionaryTerm: {
+				type: 'object',
+				properties: {
+					dictionaryTerm: { type: 'string', description: 'Term that corresponds to dictionary terms in the dataset db' }
+				},
+				required: ['dictionaryTerm'],
+				additionalProperties: false
+			},
+			GeneTerm: {
+				type: 'object',
+				properties: {
+					gene: { type: 'string', description: 'Name of the gene' },
+					dataType: {
+						type: 'string',
+						enum: ['geneExp', 'proteome', 'variant', 'methylation'],
+						description: 'Data type of the gene term'
+					}
+				},
+				required: ['gene', 'dataType'],
+				additionalProperties: false
+			},
+			CoordinateTerm: {
+				type: 'object',
+				properties: {
+					chr: { type: 'string', description: 'Chromosome' },
+					start: { type: 'number', description: 'Start site' },
+					stop: { type: 'number', description: 'Stop site' },
+					dataType: {
+						type: 'string',
+						enum: ['meth', 'geneExp'],
+						description: 'Data type of the genomic coordinates'
+					}
+				},
+				required: ['chr', 'start', 'stop', 'dataType'],
+				additionalProperties: false
+			},
+			MetaboliteTerm: {
+				type: 'object',
+				properties: {
+					metabolite: { type: 'string', description: 'Name of the metabolite' },
+					dataType: {
+						type: 'string',
+						enum: ['metIntensity'],
+						description: 'Data type of the metabolite term'
+					}
+				},
+				required: ['metabolite', 'dataType'],
+				additionalProperties: false
+			},
+			q: {
+				type: 'object',
+				properties: {
+					mode: {
+						type: 'string',
+						enum: ['binary', 'discrete', 'continuous'],
+						description: 'Mode of the term'
+					},
+					type: {
+						type: 'string',
+						enum: ['custom-bin', 'regular-bin'],
+						description: 'Type of binning'
+					},
+					binCounts: { type: 'number', description: 'Number of bins' }
+				},
+				required: ['mode', 'type'],
 				additionalProperties: false
 			},
 			...FILTER_TERM_DEFINITIONS

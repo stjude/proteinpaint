@@ -59,14 +59,34 @@ export const ChatPayload: RoutePayload = {
 
 export type SummaryType = {
 	/** Name of 1st term */
-	term: string
+	term: tw
 	/** Name of 2nd term */
-	term2?: string
+	term2?: tw
+	/** Name of 3rd term */
+	term0?: tw
 	/** Optional simple filter terms */
 	simpleFilter: FilterTerm[]
 	/** Optional explicit child type requested by the user. If omitted, the logic of the data types picks the child type. */
 	childType?: 'violin' | 'boxplot' | 'sampleScatter' | 'barchart'
 }
+
+type tw = {
+	/** Name of term which can be either a dictionary term or a gene term or a coordinate term or a metabolite term */
+	term: term
+	/** Optional query parameters to further specify the term, such as the mode and type of binning for a term */
+	q?: { mode: 'binary' | 'discrete' | 'continuous'; type: 'custom-bin' | 'regular-bin'; binCounts?: number }
+}
+
+type term = DictionaryTerm | GeneTerm | CoordinateTerm | MetaboliteTerm
+
+/** term that corresponds to dictionary terms in the dataset db */
+type DictionaryTerm = { dictionaryTerm: string }
+/** Non-dictionary gene terms that specify the name of the gene and the data type (e.g. gene expression, proteomics, variants, methylation) */
+type GeneTerm = { gene: string; dataType: 'geneExp' | 'proteome' | 'variant' | 'methylation' } // Please check if "variant"/"methylation" matches PP terminology
+/** Coordinate term which accept genomic coordinates. Chr field corresponds to chromosome, start field corresponds to start site and stop field corresponds to stop site. dataType field corresponds to the data type of the genomic coordinates.  */
+type CoordinateTerm = { chr: string; start: number; stop: number; dataType: 'meth' | 'geneExp' } // Please check if "coordinateTerm" can also include gene Expression
+/** Metabolite term which specifies the name of the metabolite and the data type (e.g. metabolite intensity) */
+type MetaboliteTerm = { metabolite: string; dataType: 'metIntensity' }
 
 export type FilterTerm =
 	| CategoricalFilterTerm
