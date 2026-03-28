@@ -2,6 +2,8 @@ import { StoreApi, StoreBase, type AppApi, type RxStore } from '#rx'
 import { root_ID, custom_variables_ID } from './tree'
 import { getFilterItemByTag, findParent } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
+import { getAllowedTermTypesForUseCase, useCasesExcluded } from './TermTypeSearch.ts'
+import { typeGroup } from '#shared/terms.js'
 
 const defaultState = {
 	header_mode: 'search_only',
@@ -45,12 +47,17 @@ class TdbStore extends StoreBase implements RxStore {
 
 	defaultState = defaultState
 
+	useCasesExcluded = structuredClone(useCasesExcluded)
+
 	constructor(opts, api) {
 		super(opts)
 		this.type = 'store'
 		this.app = opts.app
 		this.api = api
 		this.state = this.copyMerge(this.toJson(defaultState), opts.state) // opts.state
+		this.state.allowedTermTypes = getAllowedTermTypesForUseCase(this.state, this.app)
+		this.state.termTypeGroup = typeGroup[this.state.allowedTermTypes[0]]
+
 		// use for assigning unique IDs where needed
 		// may be used later to simplify getting component state by type and id
 		this.prevGeneratedId = 0
