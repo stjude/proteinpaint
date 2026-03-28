@@ -177,7 +177,7 @@ export const useCasesExcluded = {
 	]
 }
 
-type Tab = {
+export type Tab = {
 	label: string // required by Tabs
 	termTypeGroup: string // required for comparing
 	termType: string
@@ -233,8 +233,7 @@ export class TermTypeSearch {
 		if (this.app.vocabApi.termdbConfig?.useCasesExcluded)
 			Object.assign(this.useCasesExcluded, this.app.vocabApi.termdbConfig?.useCasesExcluded)
 
-		const state = this.getState(appState)
-		const tabs: Tab[] = getAllowedTabs(state, this)
+		const tabs: Tab[] = getAllowedTabs(appState, this)
 		for (const tab of tabs) {
 			try {
 				if (!this.usesDefaultSearch(tab.termTypeGroup)) {
@@ -257,8 +256,8 @@ export class TermTypeSearch {
 				.on('click', () => this.selectTerms([]))
 		}
 
-		if (this.tabs.length == 0) throw 'No term types allowed for this use case'
-		this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
+		if (this.tabs.length == 0) throw 'No term types allowed for this use case' //console.log(260, 'TermTypeSearch.init() before app.dispatch()')
+		//this.app.dispatch({ type: 'set_term_type_group', value: this.tabs[0].termTypeGroup })
 
 		if (this.tabs.length == 1) return // only one tab (group of term type); return and do not show a lone tab
 
@@ -467,71 +466,13 @@ export type SearchHandlerOpts = {
 
 export function getAllowedTabs(state, self) {
 	const tabs: Tab[] = []
-	for (const type of self.types) {
-		if (type == TermTypes.SNP_LIST || type == TermTypes.SNP_LOCUS) {
-			// do not create tabs for snplst/snplocus terms as these
-			// terms do not have termdb search handlers
-			continue
-		}
-
+	for (const type of state.allowedTermTypes) {
 		const termTypeGroup = typeGroup[type]
-		if (!termTypeGroup) {
-			console.log(type)
-			throw new Error('should not happen: no group for a term type')
-		}
+
 		if (tabs.some(tab => tab.termTypeGroup == termTypeGroup)) {
 			// tab entry exists for this group (possible because multiple term types can match to same group)
 			continue
 		}
-
-		let label = termTypeGroup // label displayed on the tab for this group. might be customized as below
-		if (type == TermTypes.GENE_VARIANT) {
-			const labels: string[] = []
-			if (self.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
-			if (self.app.vocabApi.termdbConfig.queries.cnv) labels.push('CNV')
-			if (self.app.vocabApi.termdbConfig.queries.svfusion) labels.push('Fusion')
-			if (labels.length == 0) continue
-			label = labels.join('/')
-		}
-
-		/* based on usecase, determine if to allow group of this term type
-		- false: continue
-		- true: create tab entry
-		*/
-		if (state.usecase.target && self.useCasesExcluded[state.usecase.target]?.includes(termTypeGroup)) continue
-		if (state.usecase.target == 'regression') {
-			//regression snplst/snplocus cases will be handled when the search handler is added
-			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
-			if (type == TermTypes.GENE_VARIANT && state.usecase.detail != 'independent') continue
-			if (type == TermTypes.GENE_EXPRESSION && state.usecase.detail != 'independent') continue
-			if (type == TermTypes.DNA_METHYLATION && state.usecase.detail != 'independent') continue
-			if (type == TermTypes.SSGSEA && state.usecase.detail != 'independent') continue
-		}
-
-		if (state.usecase.target == 'sampleScatter') {
-			if (state.usecase.detail == 'numeric' && !numericTypes.has(type)) continue
-			//Limit the tree to only single cell types when use case is single cell
-			if (state.usecase?.specialCase?.type == 'singleCell') {
-				if (!isSingleCellTerm({ type })) continue
-			} else {
-				// not singlecell special case! in cohort mode, disallow sc terms
-				if (isSingleCellTerm({ type })) continue
-			}
-		}
-
-		if (
-			(state.usecase.target == 'survival' || state.usecase.target == 'cuminc') &&
-			termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES
-		) {
-			if (state.usecase.detail == 'term') continue
-		}
-
-		if (state.usecase.target == 'dataDownload') {
-			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
-		}
-
-		//////////////////////////////////////
-		// reaches here means the group for this term type will be shown!!
 
 		if (type == TermTypes.TERM_COLLECTION) {
 			const collections = self.app.vocabApi?.termdbConfig?.termCollections
@@ -540,7 +481,7 @@ export function getAllowedTabs(state, self) {
 			for (const c of collections) {
 				if (c.type != 'categorical' && c.type != 'numeric') throw new Error('tc.type not categorical/numeric')
 				// antipattern: term collection tab filtering by usecase can only be applied here, after loading its handler
-				switch (state.usecase.target) {
+				switch (state.usecase?.target) {
 					case 'dictionary':
 					case 'filter':
 					case 'matrix':
@@ -552,14 +493,86 @@ export function getAllowedTabs(state, self) {
 				}
 				tabs.push({
 					label: c.name,
-					callback: () => self.setTermTypeGroup(type, termTypeGroup, c),
 					termType: type,
-					termTypeGroup
+					termTypeGroup,
+					callback: () => self.setTermTypeGroup(type, termTypeGroup, c)
 				})
 			}
 		} else {
-			tabs.push({ label, callback: () => self.setTermTypeGroup(type, termTypeGroup), termType: type, termTypeGroup })
+			let label = termTypeGroup // label displayed on the tab for this group. might be customized as below
+			if (type == TermTypes.GENE_VARIANT) {
+				const labels: string[] = []
+				if (self.app.vocabApi.termdbConfig.queries.snvindel) labels.push('Mutation')
+				if (self.app.vocabApi.termdbConfig.queries.cnv) labels.push('CNV')
+				if (self.app.vocabApi.termdbConfig.queries.svfusion) labels.push('Fusion')
+				if (labels.length == 0) continue
+				label = labels.join('/')
+			}
+
+			tabs.push({
+				label,
+				termType: type,
+				termTypeGroup,
+				callback: () => self.setTermTypeGroup(type, termTypeGroup)
+			})
 		}
 	}
 	return tabs
+}
+
+export function getAllowedTermTypesForUseCase(state, app) {
+	const allowedTermTypes: string[] = []
+	const types = app.vocabApi.termdbConfig?.allowedTermTypes || ['categorical']
+
+	for (const type of types) {
+		if (type == TermTypes.SNP_LIST || type == TermTypes.SNP_LOCUS) {
+			// do not create tabs for snplst/snplocus terms as these
+			// terms do not have termdb search handlers
+			continue
+		}
+
+		const termTypeGroup = typeGroup[type]
+		if (!termTypeGroup) {
+			console.log(type)
+			throw new Error('should not happen: no group for a term type')
+		}
+		/* based on usecase, determine if to allow group of this term type
+		- false: continue
+		- true: create tab entry
+		*/
+		const { target, detail } = state.tree.usecase
+		if (target && useCasesExcluded[target]?.includes(termTypeGroup)) continue
+		if (target == 'regression') {
+			//regression snplst/snplocus cases will be handled when the search handler is added
+			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
+			if (type == TermTypes.GENE_VARIANT && detail != 'independent') continue
+			if (type == TermTypes.GENE_EXPRESSION && detail != 'independent') continue
+			if (type == TermTypes.DNA_METHYLATION && detail != 'independent') continue
+			if (type == TermTypes.SSGSEA && detail != 'independent') continue
+		}
+
+		if (target == 'sampleScatter') {
+			if (detail == 'numeric' && !numericTypes.has(type)) continue
+			//Limit the tree to only single cell types when use case is single cell
+			if (state.tree.usecase?.specialCase?.type == 'singleCell') {
+				if (!isSingleCellTerm({ type })) continue
+			} else {
+				// not singlecell special case! in cohort mode, disallow sc terms
+				if (isSingleCellTerm({ type })) continue
+			}
+		}
+
+		if ((target == 'survival' || target == 'cuminc') && termTypeGroup != TermTypeGroups.DICTIONARY_VARIABLES) {
+			if (detail == 'term') continue
+		}
+
+		if (target == 'dataDownload') {
+			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
+		}
+
+		//////////////////////////////////////
+		// reaches here means the group for this term type will be shown!!
+		allowedTermTypes.push(type)
+	}
+	return allowedTermTypes
 }
