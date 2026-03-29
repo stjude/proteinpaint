@@ -4,6 +4,10 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 	const controlLabels = state.config.controlLabels
 	if (!controlLabels) throw new Error('controls labels not found')
 
+	// Check if term is a numeric termCollection
+	const isNumericTermCollection = 
+		state.config.term?.term?.type === 'termCollection' && state.config.term.term.memberType === 'numeric'
+
 	const inputs: { [index: string]: any }[] = [
 		{
 			type: 'term',
@@ -23,7 +27,9 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			label: controlLabels.term2.label,
 			vocabApi: app.vocabApi,
 			numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
-			defaultQ4fillTW: term0_term2_defaultQ
+			defaultQ4fillTW: term0_term2_defaultQ,
+			// Hide term2 control when numeric termCollection is detected
+			getDisplayStyle: () => (isNumericTermCollection ? 'none' : '')
 		},
 		{
 			type: 'term',
@@ -37,7 +43,9 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			// it will create a separate violin-overlay group per unique float or integer value
 			// and there will nonsensical tens/hundreds of these charts based on the cohort size
 			numericEditMenuVersion: opts.numericEditMenuVersion || ['discrete'],
-			defaultQ4fillTW: term0_term2_defaultQ
+			defaultQ4fillTW: term0_term2_defaultQ,
+			// Hide term0 control when numeric termCollection is detected
+			getDisplayStyle: () => (isNumericTermCollection ? 'none' : '')
 		},
 		{
 			label: 'Order by',
