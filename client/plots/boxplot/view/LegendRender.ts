@@ -2,6 +2,11 @@ import type { LegendData, LegendItemEntry } from '../BoxPlotTypes'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
 import type { Div } from '../../../types/d3'
 
+// Constants for legend rendering
+const COLOR_SWATCH_SIZE = '12px'
+const COLOR_SWATCH_BORDER = '1px solid #ccc'
+const COLOR_SWATCH_MARGIN = '5px'
+
 /** Handles rendering legend items formatted
  * in the LegendDataMapper. */
 export class LegendRenderer {
@@ -33,12 +38,12 @@ export class LegendRenderer {
 			legendItem
 				.append('div')
 				.style('display', 'inline-block')
-				.style('width', '12px')
-				.style('height', '12px')
+				.style('width', COLOR_SWATCH_SIZE)
+				.style('height', COLOR_SWATCH_SIZE)
 				.style('background-color', item.color)
-				.style('margin-right', '5px')
+				.style('margin-right', COLOR_SWATCH_MARGIN)
 				.style('vertical-align', 'middle')
-				.style('border', '1px solid #ccc')
+				.style('border', COLOR_SWATCH_BORDER)
 		}
 		
 		if (item.isPlot) {

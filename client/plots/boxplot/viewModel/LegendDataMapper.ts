@@ -66,7 +66,7 @@ export class LegendDataMapper {
 
 	/** Create legend items for member terms in a numeric termCollection */
 	setMemberTermItems(charts: { [index: string]: BoxPlotChartEntry }): LegendItemEntry[] {
-		const memberTermMap = new Map<string, { key: string; color?: string }>()
+		const memberTermMap = new Map<string, { key: string; text: string; color?: string }>()
 		
 		// Collect all member terms from plots
 		Object.values(charts).forEach(chart => {
@@ -74,6 +74,9 @@ export class LegendDataMapper {
 				if (!memberTermMap.has(plot.key)) {
 					memberTermMap.set(plot.key, {
 						key: plot.key,
+						// Use the boxplot label which contains the member term name
+						// Remove sample count suffix if present (e.g., ", n=10")
+						text: plot.boxplot.label.replace(/,\s*n=\d+$/, ''),
 						color: plot.color
 					})
 				}
@@ -83,7 +86,7 @@ export class LegendDataMapper {
 		// Convert to legend items
 		return Array.from(memberTermMap.values()).map(term => ({
 			key: term.key,
-			text: term.key,
+			text: term.text,
 			isHidden: false,
 			isPlot: false,
 			color: term.color
