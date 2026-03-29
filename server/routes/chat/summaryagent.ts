@@ -42,9 +42,9 @@ export async function extract_summary_terms(
 			SummaryType: {
 				type: 'object',
 				properties: {
-					term: { $ref: '#/definitions/termwrapper', description: 'Name of 1st term' },
-					term2: { $ref: '#/definitions/termwrapper', description: 'Name of 2nd term' },
-					term0: { $ref: '#/definitions/termwrapper', description: 'Name of 3rd term' },
+					tw: { $ref: '#/definitions/termwrapper', description: 'Name of 1st term' },
+					tw2: { $ref: '#/definitions/termwrapper', description: 'Name of 2nd term' },
+					tw0: { $ref: '#/definitions/termwrapper', description: 'Name of 3rd term' },
 					simpleFilter: {
 						type: 'array',
 						items: { $ref: '#/definitions/FilterTerm' },
@@ -57,7 +57,7 @@ export async function extract_summary_terms(
 							'Optional explicit child type requested by the user. If omitted, the logic of the data types picks the child type.'
 					}
 				},
-				required: ['term', 'simpleFilter'],
+				required: ['tw', 'simpleFilter'],
 				additionalProperties: false
 			},
 			termwrapper: {
@@ -200,7 +200,7 @@ export async function extract_summary_terms(
 }
 
 function extract_term_name(
-	tw: term,
+	term: term,
 	ds: any,
 	geneFeatures: GeneDataTypeResult[]
 ): {
@@ -208,11 +208,11 @@ function extract_term_name(
 	text: string
 	category?: string
 } {
-	const termObj = tw
+	const termObj = term
 	let text = ''
 	let term_type: { id: string }
 	let category: string = ''
-	console.log('Extracting term name from termwrapper:', tw)
+	console.log('Extracting term name from termwrapper:', term)
 	if ('dictionaryTerm' in termObj) {
 		// Dictionary term
 		const term =
@@ -267,11 +267,11 @@ function validate_summary_response(response: string, ds: any, geneFeatures: Gene
 	const pp_plot_json: any = { chartType: 'summary' }
 	let text = ''
 	if (response_type.text) text = response_type.text
-	if (!response_type.term) {
+	if (!response_type.tw) {
 		text += 'term type is not present in summary output'
 		return { type: 'text', text: text }
 	}
-	const term1_validation = extract_term_name(response_type.term, ds, geneFeatures)
+	const term1_validation = extract_term_name(response_type.tw, ds, geneFeatures)
 	if (term1_validation?.text?.length > 0) {
 		text += term1_validation.text
 		return { type: 'text', text: text }
@@ -283,8 +283,8 @@ function validate_summary_response(response: string, ds: any, geneFeatures: Gene
 		pp_plot_json.category = term1_validation.category
 	}
 
-	if (response_type.term2) {
-		const term2_validation = extract_term_name(response_type.term2, ds, geneFeatures)
+	if (response_type.tw2) {
+		const term2_validation = extract_term_name(response_type.tw2, ds, geneFeatures)
 		if (term2_validation.text.length > 0) {
 			text += term2_validation.text
 			return { type: 'text', text: text }
@@ -297,8 +297,8 @@ function validate_summary_response(response: string, ds: any, geneFeatures: Gene
 		}
 	}
 
-	if (response_type.term0) {
-		const term0_validation = extract_term_name(response_type.term0, ds, geneFeatures)
+	if (response_type.tw0) {
+		const term0_validation = extract_term_name(response_type.tw0, ds, geneFeatures)
 		if (term0_validation.text.length > 0) {
 			text += term0_validation.text
 			return { type: 'text', text: text }

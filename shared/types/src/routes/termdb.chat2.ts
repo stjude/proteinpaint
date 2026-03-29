@@ -59,11 +59,11 @@ export const ChatPayload: RoutePayload = {
 
 export type SummaryType = {
 	/** Name of 1st term */
-	term: termwrapper
+	tw: termwrapper
 	/** Name of 2nd term */
-	term2?: termwrapper
+	tw2?: termwrapper
 	/** Name of 3rd term */
-	term0?: termwrapper
+	tw0?: termwrapper
 	/** Optional simple filter terms */
 	simpleFilter: FilterTerm[]
 	/** Optional explicit child type requested by the user. If omitted, the logic of the data types picks the child type. */
