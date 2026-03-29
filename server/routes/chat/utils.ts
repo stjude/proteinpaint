@@ -384,7 +384,7 @@ export function validate_term(response_term: string, ds: any, geneFeatures: Gene
 				text +=
 					'Gene ' +
 					gene_hit.gene +
-					' has methylation type. However, methylation data has plotting not been currently implemented'
+					' has methylation type. However, methylation data plotting has not been currently implemented'
 			} else {
 				// Should not happen since we only return known data types from getGeneDataTypes, but just in case
 				text += 'Gene ' + gene_hit.gene + ' has unknown data type: ' + gene_hit.dataType
