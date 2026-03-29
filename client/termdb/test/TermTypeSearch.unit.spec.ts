@@ -13,6 +13,7 @@ Tests:
 	getAllowedTabs() - term type group deduplication
 	getAllowedTabs() - GENE_VARIANT custom label generation
 	getAllowedTabs() - should throw for invalid term type without group
+	getAllowedTabs() - numeric termCollection should show up in dictionary usecase
 */
 
 /*************************
@@ -432,6 +433,38 @@ tape('getAllowedTabs() - callback execution', test => {
 
 	test.equal(tabs.length, 1, 'Should create one tab')
 	test.equal(typeof tabs[0].callback, 'function', 'Tab should have a callback function')
+
+	test.end()
+})
+
+tape('getAllowedTabs() - numeric termCollection should show up in dictionary usecase', test => {
+	const state = {
+		...getDefaultState(),
+		usecase: { target: 'dictionary', detail: '' }
+	}
+	const self = getMockSelf({
+		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.TERM_COLLECTION],
+		queries: {},
+		termCollections: [
+			{ name: 'Gene Expression Signature', type: 'numeric' },
+			{ name: 'Assay Availability', type: 'categorical' }
+		]
+	})
+
+	const tabs = getAllowedTabs(state, self)
+
+	test.equal(tabs.length, 2, 'Should create tabs for DICTIONARY_VARIABLES and numeric termCollection')
+	const collectionTabs = tabs.filter(t => t.termType == TermTypes.TERM_COLLECTION)
+	test.equal(collectionTabs.length, 1, 'Should create one tab for numeric termCollection')
+	test.equal(
+		collectionTabs[0].label,
+		'Gene Expression Signature',
+		'Should use termCollection name as label for numeric collection'
+	)
+	test.notOk(
+		tabs.some(t => t.label == 'Assay Availability'),
+		'Should exclude categorical termCollection in dictionary usecase'
+	)
 
 	test.end()
 })
