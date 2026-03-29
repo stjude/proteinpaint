@@ -235,6 +235,14 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.dom.loading.style('display', display)
 		}
 	}
+
+	/** Check if term is a numeric termCollection */
+	isNumericTermCollection() {
+		const config = this.state?.config
+		if (!config) return false
+		const t1 = config.term
+		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'numeric'
+	}
 }
 
 export const boxplotInit = getCompInit(TdbBoxplot)
