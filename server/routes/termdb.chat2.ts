@@ -10,13 +10,18 @@ import { extract_matrix_search_terms_from_query } from './chat/matrixagent.ts'
 import { extract_samplescatter_terms_from_query } from './chat/samplescatteragent.ts'
 import { extract_hiercluster_terms_from_query } from './chat/hierclusteragent.ts'
 import { classifyGeneDataType } from './chat/genedatatypeagent.ts'
-import { extractGenesFromPrompt, parse_dataset_db, parse_geneset_db, getGenesetNames } from './chat/utils.ts'
+import {
+	extractGenesFromPrompt,
+	parse_dataset_db,
+	parse_geneset_db,
+	getGenesetNames,
+	readJSONFile
+} from './chat/utils.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import path from 'path'
 import fs from 'fs'
-import { readJSONFile } from './chat/utils.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat2',
@@ -69,7 +74,8 @@ function init({ genomes }) {
 				ds,
 				genesetNames,
 				agentFiles,
-				aiFilesDir
+				aiFilesDir,
+				g
 			)
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
@@ -88,7 +94,8 @@ export async function run_chat_pipeline(
 	ds: any,
 	genesetNames: string[] = [],
 	agentFiles: string[],
-	aiFilesDir: string
+	aiFilesDir: string,
+	genome: any
 ) {
 	// Read main.json file
 	if (!fs.existsSync(path.join(aiFilesDir, 'main.json')))
@@ -214,7 +221,8 @@ export async function run_chat_pipeline(
 				testing,
 				genesetNames,
 				geneFeatures,
-				aiFilesDir
+				aiFilesDir,
+				genome
 			)
 			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time1))
 		} else if (classResult == 'lollipop') {
