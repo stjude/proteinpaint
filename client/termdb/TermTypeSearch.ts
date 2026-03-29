@@ -542,8 +542,6 @@ export function getAllowedTabs(state, self) {
 				// antipattern: term collection tab filtering by usecase can only be applied here, after loading its handler
 				switch (state.usecase.target) {
 					case 'dictionary':
-						if (c.type == 'numeric') continue // enable when violin is supported
-						break
 					case 'filter':
 					case 'matrix':
 					case 'facet':

@@ -503,9 +503,23 @@ export async function getPlotConfig(opts, app) {
 				// besides scatter, can support 2 continuous terms
 				config.childType = 'sampleScatter'
 			} else if (config.term?.term?.type == 'termCollection') {
-				// TODO: may need more logic later if more than one summary childType,
-				// besides barchart, can support discrete tw only
-				config.childType = config.term.term?.memberType == 'numeric' ? 'violin' : 'barchart'
+				if (config.term.term.memberType == 'categorical') {
+					config.childType = 'barchart' // ok to overwrite as it can only be barchart
+				} else if (config.term.term.memberType == 'numeric') {
+					if (config.childType) {
+						// already given.
+						if (config.childType == 'barchart') {
+							// wrong type, overwrite with default
+							config.childType = 'violin'
+						} else {
+							// do not overwrite e.g. if value is boxplot. though this is not further validated
+						}
+					} else {
+						config.childType = 'violin'
+					}
+				} else {
+					throw new Error('config.term.term.memberType not categorical or numeric')
+				}
 			} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
 				if (!discreteByContinuousPlots.has(config.childType)) {
 					// only change config.childType if the current value is not supported by discrete + continuous tw
