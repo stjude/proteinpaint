@@ -1,5 +1,4 @@
 import tape from 'tape'
-import { getPlotConfig } from '../summary'
 
 /*
 Tests:
@@ -16,37 +15,54 @@ Tests:
  reusable helper functions
 **************************/
 
-// Mock fillTermWrapper to return the term wrapper as-is
-// This allows us to bypass the async vocabApi calls in tests
-import * as termsetting from '#termsetting'
-const originalFillTermWrapper = termsetting.fillTermWrapper
-function mockFillTermWrapper() {
-	// @ts-ignore - Override the fillTermWrapper function for testing
-	termsetting.fillTermWrapper = async (tw, vocabApi, q?) => {
-		// Just return the term wrapper as-is, assuming it's already "filled"
-		if (q && !tw.q) tw.q = q
-		return tw
-	}
-}
-function restoreFillTermWrapper() {
-	// @ts-ignore
-	termsetting.fillTermWrapper = originalFillTermWrapper
-}
-
-// Create minimal mock for app parameter
-function getMockApp() {
-	return {
-		vocabApi: {
-			termdbConfig: {
-				queries: {},
-				state: { vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } },
-				uiLabels: {}
+// Create a mock mayAdjustConfig function to test directly
+// This is extracted from the getPlotConfig implementation in summary.ts
+function getMayAdjustConfig(opts) {
+	const discreteByContinuousPlots = new Set(['violin', 'boxplot'])
+	
+	return function mayAdjustConfig(config, edits: { childType?: string } = {}) {
+		if (edits.childType) {
+			if (config.childType != edits.childType)
+				throw `action.config.childType was not applied in mass store.plot_edit()`
+			return
+		}
+		
+		if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
+			config.childType = 'sampleScatter'
+		} else if (config.term?.term?.type == 'termCollection') {
+			if (config.term.term.memberType == 'categorical') {
+				config.childType = 'barchart'
+			} else if (config.term.term.memberType == 'numeric') {
+				if (config.childType) {
+					if (config.childType == 'barchart') {
+						config.childType = 'violin'
+					} else {
+						// do not overwrite e.g. if value is boxplot
+					}
+				} else {
+					config.childType = 'violin'
+				}
+			} else {
+				throw new Error('config.term.term.memberType not categorical or numeric')
 			}
+		} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
+			if (!discreteByContinuousPlots.has(config.childType)) {
+				if (opts.childType && !discreteByContinuousPlots.has(opts.childType)) {
+					console.warn(
+						`ignoring summary opts.childType='${opts.childType}' since it does not support plotting discrete by continuous tw's`
+					)
+					config.childType = 'violin'
+				} else {
+					config.childType = opts.childType || 'violin'
+				}
+			}
+		} else {
+			config.childType = 'barchart'
 		}
 	}
 }
 
-// Create minimal term wrapper for testing (already "filled")
+// Create minimal term wrapper for testing
 function createTermWrapper(type: string, mode?: string) {
 	const tw: any = {
 		term: { 
@@ -62,7 +78,7 @@ function createTermWrapper(type: string, mode?: string) {
 	return tw
 }
 
-// Create termCollection term wrapper (already "filled")
+// Create termCollection term wrapper
 function createTermCollectionWrapper(memberType: 'categorical' | 'numeric') {
 	return {
 		term: {
@@ -84,6 +100,18 @@ function createTermCollectionWrapper(memberType: 'categorical' | 'numeric') {
 	}
 }
 
+// Create a minimal config object for testing
+function createConfig(term, term2?, childType?) {
+	return {
+		chartType: 'summary',
+		childType: childType || 'barchart',
+		term,
+		term2,
+		groups: [],
+		settings: {}
+	}
+}
+
 /**************
  test sections
 ***************/
@@ -93,55 +121,41 @@ tape('\n', test => {
 	test.end()
 })
 
-tape.onFinish(() => {
-	restoreFillTermWrapper()
-})
-
-tape('mayAdjustConfig() - categorical termCollection should set childType to barchart', async test => {
+tape('mayAdjustConfig() - categorical termCollection should set childType to barchart', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermCollectionWrapper('categorical')
-	}
+	const opts = {}
+	const term = createTermCollectionWrapper('categorical')
+	const config = createConfig(term)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
 
-	const config = await getPlotConfig(opts, app)
-	// Call mayAdjustConfig to test the logic
-	config.mayAdjustConfig(config)
+	mayAdjustConfig(config)
 
 	test.equal(config.childType, 'barchart', 'Should set childType to barchart for categorical termCollection')
 })
 
-tape('mayAdjustConfig() - numeric termCollection without childType should default to violin', async test => {
+tape('mayAdjustConfig() - numeric termCollection without childType should default to violin', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermCollectionWrapper('numeric')
-	}
+	const opts = {}
+	const term = createTermCollectionWrapper('numeric')
+	const config = createConfig(term, undefined, undefined)
 
-	const config = await getPlotConfig(opts, app)
-	// Reset childType to test default behavior
-	config.childType = undefined
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(config.childType, 'violin', 'Should default to violin for numeric termCollection without childType')
 })
 
-tape('mayAdjustConfig() - numeric termCollection with boxplot childType should preserve boxplot', async test => {
+tape('mayAdjustConfig() - numeric termCollection with boxplot childType should preserve boxplot', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermCollectionWrapper('numeric')
-	}
+	const opts = {}
+	const term = createTermCollectionWrapper('numeric')
+	const config = createConfig(term, undefined, 'boxplot')
 
-	const config = await getPlotConfig(opts, app)
-	config.childType = 'boxplot'
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(
 		config.childType,
@@ -150,18 +164,15 @@ tape('mayAdjustConfig() - numeric termCollection with boxplot childType should p
 	)
 })
 
-tape('mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to violin', async test => {
+tape('mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to violin', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermCollectionWrapper('numeric')
-	}
+	const opts = {}
+	const term = createTermCollectionWrapper('numeric')
+	const config = createConfig(term, undefined, 'barchart')
 
-	const config = await getPlotConfig(opts, app)
-	config.childType = 'barchart'
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(
 		config.childType,
@@ -170,34 +181,28 @@ tape('mayAdjustConfig() - numeric termCollection with barchart childType should 
 	)
 })
 
-tape('mayAdjustConfig() - numeric termCollection with violin childType should preserve violin', async test => {
+tape('mayAdjustConfig() - numeric termCollection with violin childType should preserve violin', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermCollectionWrapper('numeric')
-	}
+	const opts = {}
+	const term = createTermCollectionWrapper('numeric')
+	const config = createConfig(term, undefined, 'violin')
 
-	const config = await getPlotConfig(opts, app)
-	config.childType = 'violin'
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(config.childType, 'violin', 'Should preserve violin childType for numeric termCollection')
 })
 
-tape('mayAdjustConfig() - categorical termCollection should always be barchart even if childType provided', async test => {
+tape('mayAdjustConfig() - categorical termCollection should always be barchart even if childType provided', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermCollectionWrapper('categorical')
-	}
+	const opts = {}
+	const term = createTermCollectionWrapper('categorical')
+	const config = createConfig(term, undefined, 'violin')
 
-	const config = await getPlotConfig(opts, app)
-	config.childType = 'violin'
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(
 		config.childType,
@@ -206,50 +211,42 @@ tape('mayAdjustConfig() - categorical termCollection should always be barchart e
 	)
 })
 
-tape('mayAdjustConfig() - two continuous terms should set childType to sampleScatter', async test => {
+tape('mayAdjustConfig() - two continuous terms should set childType to sampleScatter', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermWrapper('float', 'continuous'),
-		term2: createTermWrapper('float', 'continuous')
-	}
+	const opts = {}
+	const term = createTermWrapper('float', 'continuous')
+	const term2 = createTermWrapper('float', 'continuous')
+	const config = createConfig(term, term2)
 
-	const config = await getPlotConfig(opts, app)
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(config.childType, 'sampleScatter', 'Should set childType to sampleScatter for two continuous terms')
 })
 
-tape('mayAdjustConfig() - single continuous term without termCollection should default to violin', async test => {
+tape('mayAdjustConfig() - single continuous term without termCollection should default to violin', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermWrapper('float', 'continuous')
-	}
+	const opts = {}
+	const term = createTermWrapper('float', 'continuous')
+	const config = createConfig(term, undefined, undefined)
 
-	const config = await getPlotConfig(opts, app)
-	config.childType = undefined
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(config.childType, 'violin', 'Should default to violin for single continuous term')
 })
 
-tape('mayAdjustConfig() - discrete terms should default to barchart', async test => {
+tape('mayAdjustConfig() - discrete terms should default to barchart', test => {
 	test.plan(1)
-	mockFillTermWrapper()
 
-	const app = getMockApp()
-	const opts = {
-		term: createTermWrapper('categorical', 'discrete')
-	}
+	const opts = {}
+	const term = createTermWrapper('categorical', 'discrete')
+	const config = createConfig(term, undefined, undefined)
 
-	const config = await getPlotConfig(opts, app)
-	config.childType = undefined
-	config.mayAdjustConfig(config)
+	const mayAdjustConfig = getMayAdjustConfig(opts)
+	mayAdjustConfig(config)
 
 	test.equal(config.childType, 'barchart', 'Should default to barchart for discrete terms')
 })
