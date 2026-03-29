@@ -6,6 +6,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
 import * as d3 from 'd3'
 import { profilePlot, getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
+import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '#dom'
 
 /** TODO: profilePlot must extend RxComponent but file not tsc.
@@ -52,13 +53,15 @@ class ProfilePolar2 extends profilePlot {
 	}
 
 	private async fetchAggregatedScores() {
-		// Pass scoreTerms as-is — getProfilePolar2Scores calls mayStripTwProps on each tw,
-		// which strips unneeded client-only properties and reduces term to { id } only.
 		// No facilityTW — the server derives it from term ID prefixes in the request.
-		return this.app.vocabApi.getProfilePolar2Scores({
-			scoreTerms: this.scoreTerms,
-			filterByUserSites: this.settings?.filterByUserSites,
-			filter: this.filter
+		return dofetch3('termdb/profilePolar2Scores', {
+			body: {
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel,
+				scoreTerms: this.scoreTerms,
+				filterByUserSites: this.settings?.filterByUserSites,
+				filter: this.filter
+			}
 		})
 	}
 
