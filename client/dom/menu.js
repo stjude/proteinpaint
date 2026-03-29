@@ -307,19 +307,34 @@ export class Menu {
 					s.on('keyup.menu_tab_nav', event => {
 						if (event.key == 'Enter') elem.click()
 					})
-				}, renderWait)
+				}, renderWait) // wait for rendered elements to include enforced tabindex, before any triggered click()
 		}
 
 		let lastTabbedTime = Date.now()
+		function setLastTabbedTime(event) {
+			// navigating away from the first clickable element, if this triggers
+			// the blur of the first element then the 'onblur' timing should be very quick
+			if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
+		}
+		function focusOnLauncherElem(launcherElem) {
+			// detect if the blur is caused by something other than a tabbed navigation away from the first element
+			if (Date.now() - lastTabbedTime > tabWait) return
+			// do not trigger focusing back to firstFocusableChildElem or closing the tooltip
+			// if there is no activeElement or if it's inside the tooltip
+			if (
+				document.activeElement === document.body ||
+				this.dnode.contains(document.activeElement) ||
+				event.target?.closest('.sja_menu_div')?.ancestor_menus?.includes(this.dnode)
+			)
+				return
+			this.hide()
+			launcherElem.focus() // switch focus back to the clicked elem that launched the menu, when shift-tabbing from the first focusable child element
+		}
+
+		const tabWait = 100
 		firstFocusableChildElem
-			.on('keydown.menu_tab_nav', event => {
-				if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
-			})
-			.on('blur.menu_tab_nav', () => {
-				if (Date.now() - lastTabbedTime > renderWait) return
-				elem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
-				this.hide()
-			})
+			.on('keydown.menu_tab_nav', setLastTabbedTime)
+			.on('blur.menu_tab_nav', () => focusOnLauncherElem(elem))
 
 		const searchElem = elem.type === 'search' ? elem : elem.querySelector(`input[type='search']`)
 		if (!searchElem) {
@@ -337,14 +352,8 @@ export class Menu {
 					if (event.key == 'ArrowDown') {
 						clickableElems[0].focus()
 						d3select(clickableElems[0])
-							.on('keydown.menu_tab_nav', event => {
-								if (event.key == 'Tab' && event.shiftKey) lastTabbedTime = Date.now()
-							})
-							.on('blur.menu_tab_nav', () => {
-								if (Date.now() - lastTabbedTime > renderWait) return
-								searchElem.focus() // shift focus back to the clicked elem that launched the menu, when shift-tabbing from the firt focusable child element
-								this.hide()
-							})
+							.on('keydown.menu_tab_nav', setLastTabbedTime)
+							.on('blur.menu_tab_nav', () => focusOnLauncherElem(searchElem))
 					}
 				})
 			}

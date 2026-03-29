@@ -1,1 +1,2 @@
-
+Fixes:
+- improved logic of when to hide a tooltip after the first clickable element is blurred
