@@ -179,7 +179,10 @@ export class Model {
 					value: Math.max(...values)
 				}
 			} else {
-				// For other stats (mean, median, etc.), use average across member terms
+				// For other stats (mean, median, sd, variance, iqr), use average across member terms
+				// Note: This is a simplified aggregation. For strict statistical accuracy,
+				// these values should be recalculated from the raw data. However, for display
+				// purposes, averaging provides a reasonable approximation of the overall trend.
 				aggregated[key] = {
 					key: firstStat.key,
 					label: firstStat.label,
