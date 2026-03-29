@@ -36,8 +36,10 @@ export class LegendDataMapper {
 		if (this.config.term.term?.type === 'termCollection' && this.config.term.term.memberType === 'numeric') {
 			const memberTermItems = this.setMemberTermItems(charts)
 			if (memberTermItems.length > 0) {
+				// Use the termCollection name if available, otherwise default label
+				const legendLabel = this.config.term.term.name || 'Member Terms'
 				this.legendData.push({
-					label: 'Member Terms',
+					label: legendLabel,
 					items: memberTermItems
 				})
 			}
@@ -83,7 +85,8 @@ export class LegendDataMapper {
 			key: term.key,
 			text: term.key,
 			isHidden: false,
-			isPlot: false
+			isPlot: false,
+			color: term.color
 		}))
 	}
 

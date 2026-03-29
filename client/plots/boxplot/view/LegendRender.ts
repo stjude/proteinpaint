@@ -27,6 +27,20 @@ export class LegendRenderer {
 
 	addItem(item: LegendItemEntry, sectionDiv: Div) {
 		const legendItem = sectionDiv.append('div')
+		
+		// Add color swatch if color is provided
+		if (item.color) {
+			legendItem
+				.append('div')
+				.style('display', 'inline-block')
+				.style('width', '12px')
+				.style('height', '12px')
+				.style('background-color', item.color)
+				.style('margin-right', '5px')
+				.style('vertical-align', 'middle')
+				.style('border', '1px solid #ccc')
+		}
+		
 		if (item.isPlot) {
 			legendItem
 				.append('div')

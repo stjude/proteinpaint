@@ -83,13 +83,14 @@ export class Model {
 	/** Combine data from multiple member terms into a single BoxPlotResponse */
 	combineNumericTermCollectionData(results: any[], termCollection: any): BoxPlotResponse {
 		// Find the overall min/max across all member terms
-		let absMin = Number.POSITIVE_INFINITY
-		let absMax = Number.NEGATIVE_INFINITY
+		let absMin = Infinity
+		let absMax = -Infinity
 		const combinedCharts: any = {}
 		const allUncomputableValues: any[] = []
 
-		// Use the first member term's descriptive stats as overall stats
-		const descrStats = results[0]?.data.descrStats || {}
+		// Calculate aggregate descriptive statistics across all member terms
+		const allDescrStats = results.map(({ data }) => data.descrStats).filter(Boolean)
+		const descrStats = this.calculateAggregateStats(allDescrStats)
 
 		results.forEach(({ memberTerm, data }) => {
 			if (data.absMin !== undefined && data.absMin < absMin) absMin = data.absMin
@@ -132,13 +133,62 @@ export class Model {
 		})
 
 		return {
-			absMin: absMin === Number.POSITIVE_INFINITY ? undefined : absMin,
-			absMax: absMax === Number.NEGATIVE_INFINITY ? undefined : absMax,
+			absMin: absMin === Infinity ? undefined : absMin,
+			absMax: absMax === -Infinity ? undefined : absMax,
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
 			descrStats,
 			uncomputableValues: allUncomputableValues.length > 0 ? allUncomputableValues : null
 		}
+	}
+
+	/** Calculate aggregate descriptive statistics from multiple member terms */
+	calculateAggregateStats(allDescrStats: any[]): any {
+		if (allDescrStats.length === 0) return {}
+		if (allDescrStats.length === 1) return allDescrStats[0]
+
+		// Aggregate statistics across all member terms
+		const aggregated: any = {}
+		const statsKeys = Object.keys(allDescrStats[0] || {})
+
+		for (const key of statsKeys) {
+			const values = allDescrStats.map(stats => stats[key]?.value).filter(v => v !== undefined)
+			
+			if (values.length === 0) continue
+
+			const firstStat = allDescrStats[0][key]
+			if (key === 'total') {
+				// Sum totals across all member terms
+				aggregated[key] = {
+					key: firstStat.key,
+					label: firstStat.label,
+					value: values.reduce((sum, v) => sum + v, 0)
+				}
+			} else if (key === 'min') {
+				// Use minimum across all member terms
+				aggregated[key] = {
+					key: firstStat.key,
+					label: firstStat.label,
+					value: Math.min(...values)
+				}
+			} else if (key === 'max') {
+				// Use maximum across all member terms
+				aggregated[key] = {
+					key: firstStat.key,
+					label: firstStat.label,
+					value: Math.max(...values)
+				}
+			} else {
+				// For other stats (mean, median, etc.), use average across member terms
+				aggregated[key] = {
+					key: firstStat.key,
+					label: firstStat.label,
+					value: values.reduce((sum, v) => sum + v, 0) / values.length
+				}
+			}
+		}
+
+		return aggregated
 	}
 
 	setRequestOpts() {

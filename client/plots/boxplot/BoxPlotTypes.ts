@@ -81,6 +81,8 @@ export type LegendItemEntry = {
 	 * Descriptive stats report value after colon
 	 */
 	text: string
+	/** Optional color for the legend item (e.g., for member terms) */
+	color?: string
 }
 
 export type LegendData = { label: string; items: LegendItemEntry[] }[]
