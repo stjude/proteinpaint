@@ -69,9 +69,9 @@ const observer = new MutationObserver(function (mutationsList, observer) {
 			if (elem.getAttribute('tabindex') !== null) continue
 			const selem = d3select(elem)
 			if (
+				!selem.on('click') &&
 				!svgClickable.has(elem.tagName) &&
-				!clickableSjClasses.find(cls => elem.classList?.contains(cls)) &&
-				!selem.on('click')
+				!clickableSjClasses.find(cls => elem.classList?.contains(cls))
 			)
 				continue
 			//console.log(36, elem.tabIndex, elem.getAttribute('tabindex'))
