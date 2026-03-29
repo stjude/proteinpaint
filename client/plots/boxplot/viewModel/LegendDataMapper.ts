@@ -32,6 +32,17 @@ export class LegendDataMapper {
 	map(charts: { [index: string]: BoxPlotChartEntry }, uncomputableValues: { label: string; value: number }[]) {
 		const hiddenPlots = this.getHiddenPlots(charts)
 
+		// Add legend for numeric termCollection member terms
+		if (this.config.term.term?.type === 'termCollection' && this.config.term.term.memberType === 'numeric') {
+			const memberTermItems = this.setMemberTermItems(charts)
+			if (memberTermItems.length > 0) {
+				this.legendData.push({
+					label: 'Member Terms',
+					items: memberTermItems
+				})
+			}
+		}
+
 		if (this.config.term.term?.values) {
 			const term1Label = this.config.term2 ? this.config.term.term.name : 'Other categories'
 			const term1Data = this.setHiddenCategoryItems(this.config.term, term1Label, hiddenPlots, uncomputableValues || [])
@@ -49,6 +60,31 @@ export class LegendDataMapper {
 		}
 
 		return this.legendData
+	}
+
+	/** Create legend items for member terms in a numeric termCollection */
+	setMemberTermItems(charts: { [index: string]: BoxPlotChartEntry }): LegendItemEntry[] {
+		const memberTermMap = new Map<string, { key: string; color?: string }>()
+		
+		// Collect all member terms from plots
+		Object.values(charts).forEach(chart => {
+			chart.plots?.forEach(plot => {
+				if (!memberTermMap.has(plot.key)) {
+					memberTermMap.set(plot.key, {
+						key: plot.key,
+						color: plot.color
+					})
+				}
+			})
+		})
+
+		// Convert to legend items
+		return Array.from(memberTermMap.values()).map(term => ({
+			key: term.key,
+			text: term.key,
+			isHidden: false,
+			isPlot: false
+		}))
 	}
 
 	getHiddenPlots(charts: { [index: string]: BoxPlotChartEntry }) {
