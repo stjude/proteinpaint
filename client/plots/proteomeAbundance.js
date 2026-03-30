@@ -156,9 +156,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					action.config.assayCohortTitle = assayCohortTitle
 					const { assay, cohort } = selectedProteomeDetails
 					action.config.proteomeDetails = { assay, cohort }
-					action.config.filter = buildFilter(
-						chartsInstance.state.termdbConfig.queries.proteome.assays[assay].cohorts[cohort].filter
-					)
+					const cohortSelected = chartsInstance.state.termdbConfig.queries.proteome.assays[assay].cohorts[cohort]
+					if (cohortSelected.filter) action.config.filter = buildFilter(cohortSelected.filter)
 					const twlst = termlst.map(term => {
 						const t = structuredClone(term)
 						t.proteomeDetails = { assay, cohort }
@@ -168,6 +167,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					if (twlst.length == 1) {
 						action.config.chartType = 'summary'
 						action.config.term = twlst[0]
+						if (cohortSelected.overlayTerm) action.config.term2 = { term: structuredClone(cohortSelected.overlayTerm) }
 						return
 					}
 					if (twlst.length == 2) {

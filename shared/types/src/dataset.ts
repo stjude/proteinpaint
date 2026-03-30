@@ -711,6 +711,7 @@ export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 type CohortConfig = {
 	file: string
 	filter?: Tvs[]
+	overlayTerm?: BaseTerm
 }
 type AssayWithCohorts = {
 	cohorts: {
