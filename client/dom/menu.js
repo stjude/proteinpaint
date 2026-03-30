@@ -323,7 +323,7 @@ export class Menu {
 			// if there is no activeElement or if it's inside the tooltip
 			if (
 				document.activeElement === document.body ||
-				this.dnode.contains(document.activeElement) ||
+				tip.dnode.contains(document.activeElement) ||
 				event.target?.closest('.sja_menu_div')?.ancestor_menus?.includes(this.dnode)
 			)
 				return

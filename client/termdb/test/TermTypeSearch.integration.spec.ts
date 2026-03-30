@@ -32,11 +32,6 @@ function getDefaultState(overrides = {}) {
 		},
 		overrides
 	)
-
-	// below simulates what's done in the store constructor
-	// state.allowedTermTypes = getAllowedTermTypesForUseCase(state, app)
-	// below simulates what's done in TermTypeSearch.init()
-
 	return state
 }
 
@@ -47,6 +42,8 @@ async function getNewTermTypeSearch(opts: {
 	submit_lst?: (terms: any[]) => void
 }) {
 	const holder = d3s.select('body').append('div')
+
+	// need to supply a custom vocabApi to simplify testing
 	const vocabApi = await vocabInit({
 		vocab: {
 			genome: 'hg38-test',
@@ -55,6 +52,11 @@ async function getNewTermTypeSearch(opts: {
 	})
 	await vocabApi.getTermdbConfig()
 	if (opts.termdbConfig) Object.assign(vocabApi.termdbConfig, opts.termdbConfig)
+	// override the class getTermdbConfig() method to return the test-configured termdbConfig
+	vocabApi.getTermdbConfig = () => {
+		return vocabApi.termdbConfig as any
+	}
+
 	const app = await appInit({
 		debug: true,
 		holder,
