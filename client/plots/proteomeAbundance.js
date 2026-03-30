@@ -167,7 +167,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					if (twlst.length == 1) {
 						action.config.chartType = 'summary'
 						action.config.term = twlst[0]
-						if (cohortSelected.overlayTerm) action.config.term2 = { term: structuredClone(cohortSelected.overlayTerm) }
+						if (cohortSelected.overlayTerm) action.config.term2 = { term: structuredClone(cohortSelected.overlayTerm), q: {} }
 						return
 					}
 					if (twlst.length == 2) {
