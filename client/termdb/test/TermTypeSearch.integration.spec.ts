@@ -3,6 +3,7 @@ import * as d3s from 'd3-selection'
 import { TermTypeGroups, TermTypes } from '#shared/terms.js'
 import { appInit } from '../app.ts'
 import { vocabInit } from '../vocabulary'
+import { sleep } from '../../test/test.helpers.js'
 
 /*
 Tests:
@@ -131,9 +132,12 @@ tape('init() should throw when no term types are allowed', async test => {
 			allowedTermTypes: [TermTypes.SNP_LIST]
 		}
 	})
-	const errbar = holder.node().querySelector('.sja_errorbar')
-	test.equal(errbar.checkVisibility(), true, 'Should throw when all term types are filtered out')
-	test.true(errbar.innerText.includes('No term types allowed for this use case'), 'Should throw expected error message')
+	const errbar: HTMLElement | null | undefined = holder.node()?.querySelector('.sja_errorbar')
+	test.equal(errbar?.checkVisibility(), true, 'Should throw when all term types are filtered out')
+	test.true(
+		errbar?.innerText.includes('No term types allowed for this use case'),
+		'Should throw expected error message'
+	)
 	if (test['_ok']) holder.remove()
 	test.end()
 })
@@ -144,14 +148,14 @@ tape('init() should throw when TERM_COLLECTION lacks termdbConfig.termCollection
 			allowedTermTypes: [TermTypes.TERM_COLLECTION]
 		}
 	})
-	const errbar = holder.node().querySelector('.sja_errorbar')
+	const errbar: HTMLElement | null | undefined = holder.node()?.querySelector('.sja_errorbar')
 	test.equal(
-		errbar.checkVisibility(),
+		errbar?.checkVisibility(),
 		true,
 		'Should throw when TERM_COLLECTION is enabled without termCollections config'
 	)
 	test.true(
-		errbar.innerText.includes('No term types allowed for this use case'),
+		errbar?.innerText.includes('No term types allowed for this use case'),
 		'Should throw expected handler setup error for missing termCollections'
 	)
 	if (test['_ok']) holder.remove()
