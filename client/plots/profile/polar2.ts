@@ -50,6 +50,7 @@ class ProfilePolar2 extends profilePlot {
 	async setControls(additionalInputs: any[] = []) {
 		await super.setControls(additionalInputs)
 		this.data = await this.fetchAggregatedScores()
+		if (this.data && 'error' in this.data) throw this.data.error
 	}
 
 	private async fetchAggregatedScores() {
@@ -87,7 +88,8 @@ class ProfilePolar2 extends profilePlot {
 			const d = (target as any).__data__
 			const menu = this.tip.clear()
 			const percentage = this.getPercentage(d)
-			menu.d.text(`${d.module} ${percentage}%`)
+			const label = percentage == null ? 'N/A' : `${percentage}%`
+			menu.d.text(`${d.module} ${label}`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else {
 			this.onMouseOut(event)
@@ -193,7 +195,7 @@ class ProfilePolar2 extends profilePlot {
 			d.i = i
 			const color = d.score.term.color
 			const percentage = this.getPercentage(d)
-			rows.push([{ color, disabled: true }, { value: d.module }, { value: percentage }])
+			rows.push([{ color, disabled: true }, { value: d.module }, { value: percentage ?? 'N/A' }])
 			this.polarG
 				.append('g')
 				.append('path')
