@@ -1,2 +1,3 @@
 Fixes:
-- improved logic of when to hide a tooltip after the first clickable element is blurred
+- improved logic when hiding a tooltip after the first clickable element is blurred
+- prevent the unexpected closure of the parent GenesetEdit menu while clicking on a child MSigDb menu

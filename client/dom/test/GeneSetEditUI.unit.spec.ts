@@ -2,7 +2,6 @@ import { GeneSetEditUI } from '../GeneSetEdit/GeneSetEditUI'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { hg38, hg19 } from '../../test/testdata/genomes'
-import { detectGte } from '../../test/test.helpers'
 
 /*************************
  reusable helper functions
@@ -194,37 +193,5 @@ tape('Clear button', function (test) {
 	test.equal(ui.api.dom.submitBtn.property('disabled'), true, `Should disable submit button after clearing all genes`)
 
 	if (test['_ok']) ui.api.destroy()
-	test.end()
-})
-
-//Test works locally but fails on CI
-tape.skip('MSigDB gene set', async function (test) {
-	test.timeoutAfter(100)
-	const holder: any = getHolder()
-	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]
-	const ui = new GeneSetEditUI({
-		holder,
-		genome: hg38,
-		geneList,
-		callback: () => {
-			//Comment so ts-linter doesn't complain
-		},
-		vocabApi: {}
-	})
-
-	const options = await detectGte({
-		selector: '.termdiv',
-		target: ui.tip2.dnode,
-		count: 9,
-		trigger() {
-			ui.menuList.find(d => d.label.includes('MSigDB'))!.callback()
-		}
-	})
-	test.equal(options.length, 9, `Should display 9 MSigDB gene sets`)
-
-	if (test['_ok']) {
-		ui.tip2.hide()
-		ui.api.destroy()
-	}
 	test.end()
 })

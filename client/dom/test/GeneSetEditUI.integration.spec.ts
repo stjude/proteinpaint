@@ -3,6 +3,8 @@ import tape from 'tape'
 import { select } from 'd3-selection'
 import { hg38 } from '../../test/testdata/genomes'
 import { vocabInit } from '../../termdb/vocabulary'
+import { detectGte } from '../../test/test.helpers'
+import { Menu } from '../menu.js'
 
 /**
  * NOTE: Do not add tests that require the fasta file to be available.
@@ -68,5 +70,63 @@ tape('With .limitedGenesList', function (test) {
 	test.equal(pills[1].style.textDecoration, '', 'Should show the second gene pill normally.')
 
 	if (test['_ok']) ui.api.destroy()
+	test.end()
+})
+
+tape('MSigDB gene set', async function (test) {
+	test.timeoutAfter(200)
+	const holder: any = getHolder()
+	const btn = holder.append('button').html('test-only')
+	const tip = new Menu()
+	tip.TESTFOR = 'geneset'
+	tip.showunder(btn.node())
+	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]
+	// the geneset ui holder should not be tip.d root element itself, to test disappearing parent/ancestor tip
+	const uiHolder = tip.d.append('div')
+	const ui = new GeneSetEditUI({
+		holder: uiHolder,
+		genome: hg38,
+		geneList,
+		callback: () => {
+			//Comment so ts-linter doesn't complain
+		},
+		vocabApi: {}
+	})
+
+	const branches = await detectGte({
+		selector: '.termdiv',
+		target: ui.tip2.dnode,
+		count: 2,
+		trigger() {
+			ui.menuList.find(d => d.label.includes('MSigDB'))!.callback()
+		}
+	})
+
+	test.true(branches.length >= 2, `Should display >= 2 MSigDB branches`)
+
+	const options = await detectGte({
+		selector: '.ts_pill',
+		target: ui.tip2.dnode,
+		count: 9,
+		trigger() {
+			branches[0].querySelector('.termbtn').click()
+		}
+	})
+
+	test.true(options.length >= 9, `Should display >= 9 MSigDB gene sets from the first branch`)
+
+	const branchDiv = ui.tip2.dnode.querySelector('.termdiv').closest('div')
+	branchDiv.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	test.equal(
+		tip.dnode.checkVisibility(),
+		true,
+		'should not hide the parent menu after clicking on any part of the MSigDB menu UI'
+	)
+
+	if (test['_ok']) {
+		holder.remove()
+		ui.api.destroy()
+		tip.destroy()
+	}
 	test.end()
 })
