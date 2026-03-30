@@ -53,28 +53,35 @@ export class Model {
 			throw new Error('No member terms found in numeric termCollection')
 		}
 
-		// Make a request for each member term
-		const allResults = await Promise.all(
-			memberTerms.map(async (memberTerm: any) => {
-				// Create a term wrapper for this member term
-				const memberTw = {
-					term: memberTerm,
-					q: { mode: 'continuous' as const }
-				}
-				
-				const boxPlotDataArgs = {
-					...this.setRequestOpts(),
-					tw: memberTw
-				}
-				
-				const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
-					boxPlotDataArgs,
-					this.boxplot.api.getAbortSignal()
-				)
-				
-				return { memberTerm, data }
-			})
-		)
+		// Make requests for member terms in bounded-size batches to limit concurrency
+		const BATCH_SIZE = 5
+		const allResults: { memberTerm: any; data: BoxPlotResponse }[] = []
+
+		for (let i = 0; i < memberTerms.length; i += BATCH_SIZE) {
+			const batch = memberTerms.slice(i, i + BATCH_SIZE)
+			const batchResults = await Promise.all(
+				batch.map(async (memberTerm: any) => {
+					// Create a term wrapper for this member term
+					const memberTw = {
+						term: memberTerm,
+						q: { mode: 'continuous' as const }
+					}
+					
+					const boxPlotDataArgs = {
+						...this.setRequestOpts(),
+						tw: memberTw
+					}
+					
+					const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
+						boxPlotDataArgs,
+						this.boxplot.api.getAbortSignal()
+					)
+					
+					return { memberTerm, data }
+				})
+			)
+			allResults.push(...batchResults)
+		}
 
 		// Combine all results into a single response
 		return this.combineNumericTermCollectionData(allResults, termCollection)
