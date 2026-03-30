@@ -25,7 +25,8 @@ class MassSessionBtn {
 			copytip
 		}
 
-		this.dom.button.on('click', () => {
+		this.dom.button.on('click', event => {
+			event.stopPropagation()
 			this.dom.tip.clear()
 			this.showMenu()
 		})
@@ -37,6 +38,7 @@ class MassSessionBtn {
 
 	async showMenu() {
 		this.dom.tip.clear().d.style('padding', 0)
+		this.dom.tip.d.attr('id', 'sjpp-session-menu')
 		const gt = `<span style='margin-left: 24px; float: right'>&gt;</span>`
 		const options = [
 			{ label: `Open`, title: 'Recover a saved session', callback: this.open },
@@ -61,6 +63,7 @@ class MassSessionBtn {
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				this.dom.tip.clear().d.style('padding', '10px')
+				event.stopPropagation()
 				this.showBackBtn()
 				d.callback.call(this)
 			})
