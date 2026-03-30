@@ -479,64 +479,7 @@ export async function getPlotConfig(opts, app) {
 			sampleScatter: getDefaultScatterSettings(opts)
 		},
 		mayAdjustConfig(config, edits: { childType?: string } = {}) {
-			/*
-				when recovering from state rehydration:
-				- Mass store must call mayAdjustConfig(), if available, since the recovered state
-				may be partial such as from an example url. Even a previously saved "full" state
-				may still need to be filled or reshaped with new state config/settings.
-			*/
-
-			if (edits.childType) {
-				// no need to set config.childType if a value is already specified
-				// in an edits object (optional second argument), as processed by mass store
-				if (config.childType != edits.childType)
-					throw `action.config.childType was not applied in mass store.plot_edit()`
-				return
-			}
-			// config.childType may be stale, OR edits.childType may not be available,
-			// when the summary plot_edit is triggered by replacing a term, such as replacing
-			// categorical overlay with numeric, in which case the dispatched action might not
-			// know in advance what the chiltType should be. It is much more reliable and consistent
-			// to determine the default plots here, depending on the processed config.
-			if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
-				// TODO: may need more logic later if more than one summary childType,
-				// besides scatter, can support 2 continuous terms
-				config.childType = 'sampleScatter'
-			} else if (config.term?.term?.type == 'termCollection') {
-				if (config.term.term.memberType == 'categorical') {
-					config.childType = 'barchart' // ok to overwrite as it can only be barchart
-				} else if (config.term.term.memberType == 'numeric') {
-					if (config.childType) {
-						// already given.
-						if (config.childType == 'barchart') {
-							// wrong type, overwrite with default
-							config.childType = 'violin'
-						} else {
-							// do not overwrite e.g. if value is boxplot. though this is not further validated
-						}
-					} else {
-						config.childType = 'violin'
-					}
-				} else {
-					throw new Error('config.term.term.memberType not categorical or numeric')
-				}
-			} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
-				if (!discreteByContinuousPlots.has(config.childType)) {
-					// only change config.childType if the current value is not supported by discrete + continuous tw
-					if (opts.childType && !discreteByContinuousPlots.has(opts.childType)) {
-						console.warn(
-							`ignoring summary opts.childType='${opts.childType}' since it does not support plotting discrete by continuous tw's`
-						)
-						config.childType = 'violin'
-					} else {
-						config.childType = opts.childType || 'violin'
-					}
-				}
-			} else {
-				// TODO: may need more logic later if more than one summary childType,
-				// besides barchart, can support discrete tw only
-				config.childType = 'barchart'
-			}
+			return mayAdjustConfig(config, opts, edits)
 		}
 	}
 	//config.mayAdjustConfig(config)
@@ -549,3 +492,68 @@ export async function getPlotConfig(opts, app) {
 }
 
 const discreteByContinuousPlots = new Set(['violin', 'boxplot'])
+
+/**
+ * Adjusts the childType of a summary plot config based on the term types and modes.
+ * This is exported so it can be tested directly.
+ */
+export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}) {
+	/*
+		when recovering from state rehydration:
+		- Mass store must call mayAdjustConfig(), if available, since the recovered state
+		may be partial such as from an example url. Even a previously saved "full" state
+		may still need to be filled or reshaped with new state config/settings.
+	*/
+
+	if (edits.childType) {
+		// no need to set config.childType if a value is already specified
+		// in an edits object (optional second argument), as processed by mass store
+		if (config.childType != edits.childType)
+			throw `action.config.childType was not applied in mass store.plot_edit()`
+		return
+	}
+	// config.childType may be stale, OR edits.childType may not be available,
+	// when the summary plot_edit is triggered by replacing a term, such as replacing
+	// categorical overlay with numeric, in which case the dispatched action might not
+	// know in advance what the chiltType should be. It is much more reliable and consistent
+	// to determine the default plots here, depending on the processed config.
+	if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
+		// TODO: may need more logic later if more than one summary childType,
+		// besides scatter, can support 2 continuous terms
+		config.childType = 'sampleScatter'
+	} else if (config.term?.term?.type == 'termCollection') {
+		if (config.term.term.memberType == 'categorical') {
+			config.childType = 'barchart' // ok to overwrite as it can only be barchart
+		} else if (config.term.term.memberType == 'numeric') {
+			if (config.childType) {
+				// already given.
+				if (config.childType == 'barchart') {
+					// wrong type, overwrite with default
+					config.childType = 'violin'
+				} else {
+					// do not overwrite e.g. if value is boxplot. though this is not further validated
+				}
+			} else {
+				config.childType = 'violin'
+			}
+		} else {
+			throw new Error('config.term.term.memberType not categorical or numeric')
+		}
+	} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
+		if (!discreteByContinuousPlots.has(config.childType)) {
+			// only change config.childType if the current value is not supported by discrete + continuous tw
+			if (opts.childType && !discreteByContinuousPlots.has(opts.childType)) {
+				console.warn(
+					`ignoring summary opts.childType='${opts.childType}' since it does not support plotting discrete by continuous tw's`
+				)
+				config.childType = 'violin'
+			} else {
+				config.childType = opts.childType || 'violin'
+			}
+		}
+	} else {
+		// TODO: may need more logic later if more than one summary childType,
+		// besides barchart, can support discrete tw only
+		config.childType = 'barchart'
+	}
+}
