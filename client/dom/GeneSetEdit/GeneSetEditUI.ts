@@ -140,7 +140,8 @@ export class GeneSetEditUI {
 		this.termsAsListed = opts.termsAsListed
 		this.customInputs = opts.customInputs
 		this.geneList = structuredClone(opts.geneList || [])
-		this.tip2 = new Menu({ padding: '0px', parent_menu: opts.holder.node(), test: 'test' })
+		const parent_menu = opts.holder.node().closest('.sja_menu_div') || opts.holder.node()
+		this.tip2 = new Menu({ padding: '0px', parent_menu, test: 'test' })
 		this.updateName = true
 		this.minNumGenes = opts.minNumGenes || 0
 		if ('maxNumGenes' in opts) this.maxNumGenes = opts.maxNumGenes
@@ -251,7 +252,8 @@ export class GeneSetEditUI {
 			topMutatedGenesParams: [],
 			topVariablyExpressedGenesParams: [],
 			statColor2label: new Map(),
-			destroy() {
+			destroy: () => {
+				this.tip2.destroy()
 				opts.holder.remove()
 			}
 		}
