@@ -94,6 +94,7 @@ function helpBtnInit(opts) {
 	const self = {
 		plotTypes: [
 			'profilePolar',
+			'profilePolar2',
 			'profileBarchart',
 			'profileRadar',
 			'profileRadarFacility',
