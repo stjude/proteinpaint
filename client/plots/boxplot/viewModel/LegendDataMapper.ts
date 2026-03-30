@@ -15,7 +15,7 @@ export class LegendDataMapper {
 		const isTerm2 = config?.term2
 		const isTerm0 = config?.term0
 
-		if (config.term.q?.descrStats) {
+		if (config.term.term.type != 'termCollection' && config.term.q?.descrStats) {
 			this.legendData.push({
 				label: `Descriptive Statistics${isTerm2 ? `: ${config.term.term.name}` : ''}`,
 				items: this.setDescrStatItems(config.term.q.descrStats)
@@ -67,7 +67,7 @@ export class LegendDataMapper {
 	/** Create legend items for member terms in a numeric termCollection */
 	setMemberTermItems(charts: { [index: string]: BoxPlotChartEntry }): LegendItemEntry[] {
 		const memberTermMap = new Map<string, { key: string; text: string; color?: string }>()
-		
+
 		// Collect all member terms from plots
 		Object.values(charts).forEach(chart => {
 			chart.plots?.forEach(plot => {
