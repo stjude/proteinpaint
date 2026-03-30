@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getPlotConfig } from '../summary.ts'
+import { mayAdjustConfig } from '../summary.ts'
 
 /*
 Tests:
@@ -15,21 +15,6 @@ Tests:
 /*************************
  reusable helper functions
 **************************/
-
-// Create a mock vocabApi for getPlotConfig
-const mockVocabApi = {
-	getTermdbConfig: () => ({ uiLabels: {} }),
-	termdbConfig: { uiLabels: {} }
-}
-
-const mockApp = {
-	vocabApi: mockVocabApi
-}
-
-// Helper to get a config with mayAdjustConfig method
-async function getConfigWithMayAdjust(opts) {
-	return await getPlotConfig(opts, mockApp)
-}
 
 // Create minimal term wrapper for testing
 function createTermWrapper(type: string, mode?: string) {
@@ -90,39 +75,38 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('mayAdjustConfig() - categorical termCollection should set childType to barchart', async test => {
+tape('mayAdjustConfig() - categorical termCollection should set childType to barchart', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermCollectionWrapper('categorical')
-	const plotConfig = await getConfigWithMayAdjust({ term })
-	
-	// Create a test config to pass to mayAdjustConfig
 	const config = createConfig(term)
-	plotConfig.mayAdjustConfig(config)
+	
+	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'barchart', 'Should set childType to barchart for categorical termCollection')
 })
 
-tape('mayAdjustConfig() - numeric termCollection without childType should default to violin', async test => {
+tape('mayAdjustConfig() - numeric termCollection without childType should default to violin', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, undefined)
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'violin', 'Should default to violin for numeric termCollection without childType')
 })
 
-tape('mayAdjustConfig() - numeric termCollection with boxplot childType should preserve boxplot', async test => {
+tape('mayAdjustConfig() - numeric termCollection with boxplot childType should preserve boxplot', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, 'boxplot')
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(
 		config.childType,
@@ -131,14 +115,14 @@ tape('mayAdjustConfig() - numeric termCollection with boxplot childType should p
 	)
 })
 
-tape('mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to violin', async test => {
+tape('mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to violin', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, 'barchart')
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(
 		config.childType,
@@ -147,26 +131,26 @@ tape('mayAdjustConfig() - numeric termCollection with barchart childType should 
 	)
 })
 
-tape('mayAdjustConfig() - numeric termCollection with violin childType should preserve violin', async test => {
+tape('mayAdjustConfig() - numeric termCollection with violin childType should preserve violin', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, 'violin')
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'violin', 'Should preserve violin childType for numeric termCollection')
 })
 
-tape('mayAdjustConfig() - categorical termCollection should always be barchart even if childType provided', async test => {
+tape('mayAdjustConfig() - categorical termCollection should always be barchart even if childType provided', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermCollectionWrapper('categorical')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, 'violin')
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(
 		config.childType,
@@ -175,39 +159,39 @@ tape('mayAdjustConfig() - categorical termCollection should always be barchart e
 	)
 })
 
-tape('mayAdjustConfig() - two continuous terms should set childType to sampleScatter', async test => {
+tape('mayAdjustConfig() - two continuous terms should set childType to sampleScatter', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermWrapper('float', 'continuous')
 	const term2 = createTermWrapper('float', 'continuous')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, term2)
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'sampleScatter', 'Should set childType to sampleScatter for two continuous terms')
 })
 
-tape('mayAdjustConfig() - single continuous term without termCollection should default to violin', async test => {
+tape('mayAdjustConfig() - single continuous term without termCollection should default to violin', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermWrapper('float', 'continuous')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, undefined)
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'violin', 'Should default to violin for single continuous term')
 })
 
-tape('mayAdjustConfig() - discrete terms should default to barchart', async test => {
+tape('mayAdjustConfig() - discrete terms should default to barchart', test => {
 	test.plan(1)
 
+	const opts = {}
 	const term = createTermWrapper('categorical', 'discrete')
-	const plotConfig = await getConfigWithMayAdjust({ term })
 	const config = createConfig(term, undefined, undefined)
 
-	plotConfig.mayAdjustConfig(config)
+	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'barchart', 'Should default to barchart for discrete terms')
 })
