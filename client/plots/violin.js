@@ -348,7 +348,6 @@ class ViolinPlot extends PlotBase {
 			} else {
 				const args = this.validateArgs()
 				data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
-				if (data.descrStats) args.tw.q.descrStats = data.descrStats
 			}
 		} catch (e) {
 			this.toggleLoadingDiv('none')
@@ -381,6 +380,7 @@ class ViolinPlot extends PlotBase {
 	/** Get data for each member term in a numeric termCollection */
 	async getDataForNumericTermCollection() {
 		const termCollection = this.config.term
+		// Note: termlst uses abbreviated naming from external API contract
 		const memberTerms = termCollection.term.termlst || []
 		
 		if (!memberTerms.length) {
@@ -460,8 +460,9 @@ class ViolinPlot extends PlotBase {
 		return {
 			min: min === Infinity ? undefined : min,
 			max: max === -Infinity ? undefined : max,
-			// bins is used for overlay term binning configuration. Using first result's bins 
-			// as they should be consistent across member terms (configured at overlay term level)
+			// bins is used for overlay term binning configuration.
+			// Using first result's bins as they should be consistent across member terms
+			// (configured at overlay term level, not individual member term level).
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
 			descrStats: combinedDescrStats,
