@@ -19,15 +19,19 @@ export class DmrViewModel {
 
 		const xRange = (queryStop ?? 0) - (queryStart ?? 0)
 		const loess = dmrResult.diagnostic?.loess
-		const showLoess = !!(
-			loess &&
-			loess.group1_fitted.length > 0 &&
-			loess.group2_fitted.length > 0 &&
-			xRange <= settings.dmr.maxLoessRegion
-		)
+		const showLoess = !!(loess && loess.group1_fitted.length > 0 && loess.group2_fitted.length > 0)
+		const showDots = xRange <= settings.dmr.maxLoessRegion
 
 		const betaTrackResult = dmrResult.diagnostic
-			? this.renderBetaTrack(dmrResult.diagnostic, config, settings.dmr.blockWidth, showLoess, queryStart, queryStop)
+			? this.renderBetaTrack(
+					dmrResult.diagnostic,
+					config,
+					settings.dmr.blockWidth,
+					showLoess,
+					showDots,
+					queryStart,
+					queryStop
+			  )
 			: undefined
 
 		this.viewData = {
@@ -37,12 +41,14 @@ export class DmrViewModel {
 				dmrResult.dmrs,
 				sigCpgBedItems,
 				showLoess,
+				showDots,
 				betaTrackResult?.showCi ?? false
 			),
 			diagnostic: dmrResult.diagnostic,
 			dmrs: dmrResult.dmrs,
 			dmrBedItems,
-			showLoess
+			showLoess,
+			showDots
 		}
 	}
 
@@ -72,15 +78,16 @@ export class DmrViewModel {
 		dmrs: TermdbDmrSuccessResponse['dmrs'],
 		sigCpgBedItems: BedItem[],
 		showLoess: boolean,
+		showDots: boolean,
 		showCi: boolean
 	): LegendRow[] {
 		const { colors } = config.settings.dmr
 		const g1 = config.group1Name || 'Group 1'
 		const g2 = config.group2Name || 'Group 2'
-		const meansItems: LegendRow['items'] = [
-			{ text: `${g1} (control)`, color: colors.group1 },
-			{ text: `${g2} (case)`, color: colors.group2 }
-		]
+		const meansItems: LegendRow['items'] = []
+		if (showDots) {
+			meansItems.push({ text: `${g1} (control)`, color: colors.group1 }, { text: `${g2} (case)`, color: colors.group2 })
+		}
 		if (showLoess) {
 			const ciLabel = showCi ? ' + 95% CI' : ''
 			meansItems.push(
@@ -118,6 +125,7 @@ export class DmrViewModel {
 		config: DmrConfig,
 		blockWidth: number,
 		showLoess: boolean,
+		showDots: boolean,
 		queryStart?: number,
 		queryStop?: number
 	): { img: { minv: number; maxv: number; src: string }; showCi: boolean } | undefined {
@@ -201,7 +209,11 @@ export class DmrViewModel {
 			}
 		}
 
-		// Draw dots
+		// Draw dots (hidden for large regions where only LOESS is shown)
+		if (!showDots) {
+			ctx.globalAlpha = 1
+			return { img: { minv: 0, maxv: 1, src: canvas.toDataURL('image/png') }, showCi }
+		}
 		for (let i = 0; i < probes.positions.length; i++) {
 			const x = scaleX(probes.positions[i])
 			const isSig = probes.fdr[i] < fdr_cutoff

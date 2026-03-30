@@ -52,4 +52,6 @@ export type DmrViewData = {
 	dmrBedItems: BedItem[]
 	/** Whether LOESS curves are shown in the current view */
 	showLoess: boolean
+	/** Whether individual per-CpG dots are shown (false for large regions) */
+	showDots: boolean
 }
