@@ -263,10 +263,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 					q2.proteome.assays[assay].cohorts = {}
 					for (const cohort in q.proteome.assays[assay].cohorts) {
 						q2.proteome.assays[assay].cohorts[cohort] = {}
-						if ('filter' in q.proteome.assays[assay].cohorts[cohort]) {
-							q2.proteome.assays[assay].cohorts[cohort].filter = JSON.parse(
-								JSON.stringify(q.proteome.assays[assay].cohorts[cohort].filter)
-							)
+						const src = q.proteome.assays[assay].cohorts[cohort]
+						if ('filter' in src) {
+							q2.proteome.assays[assay].cohorts[cohort].filter = JSON.parse(JSON.stringify(src.filter))
+						}
+						if ('overlayTerm' in src) {
+							q2.proteome.assays[assay].cohorts[cohort].overlayTerm = JSON.parse(JSON.stringify(src.overlayTerm))
 						}
 					}
 				}
