@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getAllowedTabs, useCasesExcluded } from '../TermTypeSearch'
+import { getAllowedTermTypesForUseCase, getAllowedTabs, useCasesExcluded } from '../TermTypeSearch'
 import { TermTypeGroups, TermTypes } from '#shared/terms.js'
 
 /*
@@ -21,15 +21,18 @@ Tests:
 **************************/
 
 // Default state structure with usecase
-function getDefaultState() {
-	return {
-		vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
-		termTypeGroup: '',
-		usecase: { target: 'default', detail: 'term' },
-		submenu: { term: null },
-		selectedTerms: [],
-		termfilter: { filter0: null, filter: null }
-	}
+function getDefaultState(overrides = {}) {
+	return Object.assign(
+		{
+			vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
+			termTypeGroup: '',
+			usecase: { target: 'default', detail: 'term' },
+			submenu: { term: null },
+			selectedTerms: [],
+			termfilter: { filter0: null, filter: null }
+		},
+		overrides
+	)
 }
 
 // Create minimal mock for 'self' parameter needed by getAllowedTabs()
@@ -50,6 +53,16 @@ function getMockSelf(opts: { allowedTermTypes: string[]; queries?: any; termColl
 	}
 }
 
+function mockSelfAndState(opts = {}, stateOverrides = {}) {
+	const state = getDefaultState(stateOverrides)
+	const self = getMockSelf(opts)
+	// below simulates what's done in the store constructor
+	state.allowedTermTypes = getAllowedTermTypesForUseCase(state, self.app)
+	// below simulates what's done in TermTypeSearch.init()
+	self.types = state.allowedTermTypes
+	return { self, state }
+}
+
 /**************
  test sections
 ***************/
@@ -60,8 +73,7 @@ tape('\n', function (test) {
 })
 
 tape('getAllowedTabs() - basic tab creation for allowed term types', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.INTEGER],
 		queries: {}
 	})
@@ -75,17 +87,14 @@ tape('getAllowedTabs() - basic tab creation for allowed term types', test => {
 		'Both CATEGORICAL and INTEGER should map to DICTIONARY_VARIABLES group'
 	)
 	test.equal(tabs[0].label, TermTypeGroups.DICTIONARY_VARIABLES, 'Tab label should match term type group')
-
 	test.end()
 })
 
 tape('getAllowedTabs() - SNP_LIST and SNP_LOCUS exclusion', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [TermTypes.SNP_LIST, TermTypes.SNP_LOCUS, TermTypes.CATEGORICAL],
 		queries: {}
 	})
-
 	const tabs = getAllowedTabs(state, self)
 
 	test.equal(tabs.length, 1, 'Should exclude SNP_LIST and SNP_LOCUS from tabs')
@@ -95,14 +104,13 @@ tape('getAllowedTabs() - SNP_LIST and SNP_LOCUS exclusion', test => {
 })
 
 tape('getAllowedTabs() - usecase filtering for survival with detail=term', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'survival', detail: 'term' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY, TermTypes.GENE_EXPRESSION],
-		queries: {}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY, TermTypes.GENE_EXPRESSION],
+			queries: {}
+		},
+		{ usecase: { target: 'survival', detail: 'term' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -113,14 +121,13 @@ tape('getAllowedTabs() - usecase filtering for survival with detail=term', test 
 })
 
 tape('getAllowedTabs() - usecase filtering for cuminc with detail=term', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'cuminc', detail: 'term' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY, TermTypes.GENE_EXPRESSION],
-		queries: {}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY, TermTypes.GENE_EXPRESSION],
+			queries: {}
+		},
+		{ usecase: { target: 'cuminc', detail: 'term' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -131,16 +138,15 @@ tape('getAllowedTabs() - usecase filtering for cuminc with detail=term', test =>
 })
 
 tape('getAllowedTabs() - usecase filtering for regression with detail=independent', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'regression', detail: 'independent' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT, TermTypes.GENE_EXPRESSION, TermTypes.SNP],
-		queries: {
-			snvindel: { dt: 1 }
-		}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT, TermTypes.GENE_EXPRESSION, TermTypes.SNP],
+			queries: {
+				snvindel: { dt: 1 }
+			}
+		},
+		{ usecase: { target: 'regression', detail: 'independent' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -155,16 +161,15 @@ tape('getAllowedTabs() - usecase filtering for regression with detail=independen
 })
 
 tape('getAllowedTabs() - usecase filtering for regression with detail=outcome', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'regression', detail: 'outcome' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT, TermTypes.GENE_EXPRESSION],
-		queries: {
-			snvindel: { dt: 1 }
-		}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT, TermTypes.GENE_EXPRESSION],
+			queries: {
+				snvindel: { dt: 1 }
+			}
+		},
+		{ usecase: { target: 'regression', detail: 'outcome' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -179,16 +184,15 @@ tape('getAllowedTabs() - usecase filtering for regression with detail=outcome', 
 })
 
 tape('getAllowedTabs() - usecase filtering for dataDownload', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'dataDownload', detail: '' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.SNP, TermTypes.GENE_VARIANT],
-		queries: {
-			snvindel: { dt: 1 }
-		}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.SNP, TermTypes.GENE_VARIANT],
+			queries: {
+				snvindel: { dt: 1 }
+			}
+		},
+		{ usecase: { target: 'dataDownload', detail: '' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -201,14 +205,13 @@ tape('getAllowedTabs() - usecase filtering for dataDownload', test => {
 })
 
 tape('getAllowedTabs() - usecase filtering for sampleScatter with numeric detail', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'sampleScatter', detail: 'numeric' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.INTEGER, TermTypes.FLOAT, TermTypes.METABOLITE_INTENSITY],
-		queries: {}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.INTEGER, TermTypes.FLOAT, TermTypes.METABOLITE_INTENSITY],
+			queries: {}
+		},
+		{ usecase: { target: 'sampleScatter', detail: 'numeric' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -226,8 +229,7 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter with numeric detail
 })
 
 tape('getAllowedTabs() - term type group deduplication', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [
 			TermTypes.CATEGORICAL,
 			TermTypes.INTEGER,
@@ -251,8 +253,7 @@ tape('getAllowedTabs() - term type group deduplication', test => {
 })
 
 tape('getAllowedTabs() - GENE_VARIANT custom label generation with snvindel', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT],
 		queries: {
 			snvindel: { dt: 1 }
@@ -263,14 +264,13 @@ tape('getAllowedTabs() - GENE_VARIANT custom label generation with snvindel', te
 
 	const geneVariantTab = tabs.find(t => t.termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION)
 	test.ok(geneVariantTab, 'Should create tab for GENE_VARIANT')
-	test.equal(geneVariantTab!.label, 'Mutation', 'Should use "Mutation" label when only snvindel query is available')
+	test.equal(geneVariantTab?.label, 'Mutation', 'Should use "Mutation" label when only snvindel query is available')
 
 	test.end()
 })
 
 tape('getAllowedTabs() - GENE_VARIANT custom label generation with multiple queries', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT],
 		queries: {
 			snvindel: { dt: 1 },
@@ -284,7 +284,7 @@ tape('getAllowedTabs() - GENE_VARIANT custom label generation with multiple quer
 	const geneVariantTab = tabs.find(t => t.termTypeGroup == TermTypeGroups.MUTATION_CNV_FUSION)
 	test.ok(geneVariantTab, 'Should create tab for GENE_VARIANT')
 	test.equal(
-		geneVariantTab!.label,
+		geneVariantTab?.label,
 		'Mutation/CNV/Fusion',
 		'Should join all available labels with "/" when multiple queries are available'
 	)
@@ -293,8 +293,7 @@ tape('getAllowedTabs() - GENE_VARIANT custom label generation with multiple quer
 })
 
 tape('getAllowedTabs() - GENE_VARIANT without queries should skip tab creation', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.GENE_VARIANT],
 		queries: {}
 	})
@@ -312,14 +311,13 @@ tape('getAllowedTabs() - GENE_VARIANT without queries should skip tab creation',
 })
 
 tape('getAllowedTabs() - usecase exclusion using useCasesExcluded', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'matrix', detail: '' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.SINGLECELL_CELLTYPE],
-		queries: {}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.SINGLECELL_CELLTYPE],
+			queries: {}
+		},
+		{ usecase: { target: 'matrix', detail: '' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -330,18 +328,19 @@ tape('getAllowedTabs() - usecase exclusion using useCasesExcluded', test => {
 })
 
 tape('getAllowedTabs() - usecase filtering for sampleScatter with singleCell special case', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: {
-			target: 'sampleScatter',
-			detail: 'numeric',
-			specialCase: { type: 'singleCell' }
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.FLOAT, TermTypes.SINGLECELL_GENE_EXPRESSION, TermTypes.CATEGORICAL],
+			queries: {}
+		},
+		{
+			usecase: {
+				target: 'sampleScatter',
+				detail: 'numeric',
+				specialCase: { type: 'singleCell' }
+			}
 		}
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.FLOAT, TermTypes.SINGLECELL_GENE_EXPRESSION, TermTypes.CATEGORICAL],
-		queries: {}
-	})
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -355,17 +354,18 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter with singleCell spe
 })
 
 tape('getAllowedTabs() - usecase filtering for sampleScatter without singleCell special case', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: {
-			target: 'sampleScatter',
-			detail: 'numeric'
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.FLOAT, TermTypes.SINGLECELL_GENE_EXPRESSION, TermTypes.CATEGORICAL],
+			queries: {}
+		},
+		{
+			usecase: {
+				target: 'sampleScatter',
+				detail: 'numeric'
+			}
 		}
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.FLOAT, TermTypes.SINGLECELL_GENE_EXPRESSION, TermTypes.CATEGORICAL],
-		queries: {}
-	})
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -379,13 +379,11 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter without singleCell 
 })
 
 tape('getAllowedTabs() - should throw for invalid term type without group', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
-		allowedTermTypes: ['invalidTermType'],
-		queries: {}
-	})
-
 	try {
+		const { self, state } = mockSelfAndState({
+			allowedTermTypes: ['invalidTermType'],
+			queries: {}
+		})
 		getAllowedTabs(state, self)
 		test.fail('Should throw error for term type without group mapping')
 	} catch (e) {
@@ -396,19 +394,18 @@ tape('getAllowedTabs() - should throw for invalid term type without group', test
 })
 
 tape('getAllowedTabs() - usecase filtering for multiple exclusions', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'facet', detail: '' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [
-			TermTypes.CATEGORICAL,
-			TermTypes.METABOLITE_INTENSITY,
-			TermTypes.SINGLECELL_CELLTYPE,
-			TermTypes.GENE_EXPRESSION
-		],
-		queries: {}
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [
+				TermTypes.CATEGORICAL,
+				TermTypes.METABOLITE_INTENSITY,
+				TermTypes.SINGLECELL_CELLTYPE,
+				TermTypes.GENE_EXPRESSION
+			],
+			queries: {}
+		},
+		{ usecase: { target: 'facet', detail: '' } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 
@@ -423,8 +420,7 @@ tape('getAllowedTabs() - usecase filtering for multiple exclusions', test => {
 })
 
 tape('getAllowedTabs() - callback execution', test => {
-	const state = getDefaultState()
-	const self = getMockSelf({
+	const { self, state } = mockSelfAndState({
 		allowedTermTypes: [TermTypes.CATEGORICAL],
 		queries: {}
 	})
