@@ -21,8 +21,8 @@ Tests:
 **************************/
 
 // Default state structure with usecase
-function getDefaultState(overrides = {}) {
-	return Object.assign(
+function getDefaultState(overrides: { [key: string]: any } = {}) {
+	const state: { [key: string]: any } = Object.assign(
 		{
 			vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
 			termTypeGroup: '',
@@ -33,10 +33,17 @@ function getDefaultState(overrides = {}) {
 		},
 		overrides
 	)
+	return state
+}
+
+type MockSelfArg = {
+	allowedTermTypes: string[]
+	queries?: any
+	termCollections?: any[]
 }
 
 // Create minimal mock for 'self' parameter needed by getAllowedTabs()
-function getMockSelf(opts: { allowedTermTypes: string[]; queries?: any; termCollections?: any[] }) {
+function getMockSelf(opts: MockSelfArg) {
 	return {
 		types: opts.allowedTermTypes,
 		app: {
@@ -53,7 +60,7 @@ function getMockSelf(opts: { allowedTermTypes: string[]; queries?: any; termColl
 	}
 }
 
-function mockSelfAndState(opts = {}, stateOverrides = {}) {
+function mockSelfAndState(opts: MockSelfArg, stateOverrides = {}) {
 	const state = getDefaultState(stateOverrides)
 	const self = getMockSelf(opts)
 	// below simulates what's done in the store constructor

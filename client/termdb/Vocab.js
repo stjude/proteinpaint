@@ -2,6 +2,8 @@ import { dofetch3, isInSession, getRequiredAuth, getSavedToken, setTokenByDsRout
 import { isDictionaryType } from '#shared/terms.js'
 
 export class Vocab {
+	termdbConfig = {}
+
 	constructor(opts) {
 		this.app = opts.app
 		this.opts = opts

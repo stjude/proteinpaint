@@ -78,13 +78,12 @@ tape('MSigDB gene set', async function (test) {
 	const holder: any = getHolder()
 	const btn = holder.append('button').html('test-only')
 	const tip = new Menu()
-	tip.TESTFOR = 'geneset'
 	tip.showunder(btn.node())
 	const geneList: { gene: string }[] = [{ gene: 'KRAS' }, { gene: 'TP53' }]
 	// the geneset ui holder should not be tip.d root element itself, to test disappearing parent/ancestor tip
 	const uiHolder = tip.d.append('div')
 	const ui = new GeneSetEditUI({
-		holder: uiHolder,
+		holder: uiHolder as any,
 		genome: hg38,
 		geneList,
 		callback: () => {
@@ -115,10 +114,10 @@ tape('MSigDB gene set', async function (test) {
 
 	test.true(options.length >= 9, `Should display >= 9 MSigDB gene sets from the first branch`)
 
-	const branchDiv = ui.tip2.dnode.querySelector('.termdiv').closest('div')
-	branchDiv.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	const branchDiv = ui.tip2?.dnode?.querySelector('.termdiv')?.closest('div')
+	branchDiv?.dispatchEvent(new Event('mousedown', { bubbles: true }))
 	test.equal(
-		tip.dnode.checkVisibility(),
+		tip.dnode?.checkVisibility(),
 		true,
 		'should not hide the parent menu after clicking on any part of the MSigDB menu UI'
 	)
