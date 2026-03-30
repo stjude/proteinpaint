@@ -166,10 +166,20 @@ export class profileForms extends profilePlot {
 		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
 		this.categories = new Set<string>()
+
+		// Strip the common prefix (e.g. "General Laboratory Availability ")
+		//The name column in the SQLite terms table stores full names
+		const names = this.scoreTerms.filter(tw => tw.term.type == 'multivalue').map(tw => tw.term.name)
+		const commonPrefix = names.reduce((acc, name) => {
+			let i = 0
+			while (i < acc.length && acc[i] === name[i]) i++
+			return acc.slice(0, i)
+		}, names[0] || '')
+
 		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
 			const dict = this.getPercentageDict(tw) //get the dict with the counts for each category  for the list of samples
-			this.renderLikertBar(dict, y, 25, tw)
+			this.renderLikertBar(dict, y, 25, tw, commonPrefix)
 			y += step
 		}
 		y += step * 2
@@ -182,11 +192,20 @@ export class profileForms extends profilePlot {
 			.tickFormat(d => d + '%')
 		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
 		posAxisBottom(scaleG)
+		// Build legend order from first Likert term’s values, sorted by numeric code (same as renderLikertBar)
+		// so it matches bars; use case-insensitive mapping for key/label differences.
+		const firstTW = this.scoreTerms.find(tw => tw.term.type == 'multivalue')
+		const catUpperMap = new Map([...this.categories].map(c => [c.toUpperCase(), c]))
+		const orderedCategories: string[] = firstTW
+			? (Object.entries(firstTW.term.values as Record<string, { label: string }>)
+					.sort(([a], [b]) => Number(a) - Number(b))
+					.map(([, v]) => catUpperMap.get(v.label.toUpperCase()))
+					.filter((c): c is string => c !== undefined) as string[])
+			: [...this.categories]
 
 		const legendG = this.dom.legendG.attr('transform', `translate(100, ${y + 50})`)
 		let x = 0
-
-		for (const category of this.categories) {
+		for (const category of orderedCategories) {
 			this.drawLegendRect(x, 0, category, legendG)
 			x += 220
 		}
@@ -206,7 +225,12 @@ export class profileForms extends profilePlot {
 			const scTermId = tw.term.id.replace(/^POC/, '')
 			const scTW = this.id2SCTW[this.activePlot.name][scTermId]
 			const scPercents: { [key: string]: number } = this.getPercentageDict(scTW)
-			const scPercentKeys = Object.keys(scPercents).sort((a, b) => a.localeCompare(b))
+			// SC term stores raw categorical codes as keys (e.g. "1", "2").
+			// POC bar uses text labels as keys (e.g. "Yes", "No").
+			// Map SC codes to labels so scPercentKeys matches the POC bar's key format.
+			const scPercentKeys = Object.keys(scPercents)
+				.filter(k => scPercents[k] > 0)
+				.map(k => scTW.term.values?.[k]?.label || k)
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
 			showSCBar = scTotal > 1
 			this.renderYesNoBar(percents, y, step, scTotal == 1 ? scPercentKeys : [])
@@ -277,7 +301,7 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.activePlot.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any) {
+	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any, commonPrefix = '') {
 		const itemG = this.dom.mainG.append('g')
 		let total = 0
 		for (const key in dict) total += dict[key]
@@ -294,7 +318,10 @@ export class profileForms extends profilePlot {
 			const width = this.renderCategory(key, dict, itemG, x, height, total)
 			x += width
 		}
-		const text = getText(tw.term.name)
+		const strippedName = tw.term.name.startsWith(commonPrefix)
+			? tw.term.name.slice(commonPrefix.length).trim()
+			: tw.term.name
+		const text = getText(strippedName)
 		const textG = this.dom.svg.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
 		textG
 			.append('text')
@@ -360,13 +387,28 @@ export class profileForms extends profilePlot {
 				.attr('fill', color)
 				.datum({ key, value: percent })
 
-			if (scPercentKeys.includes(key))
+			if (scPercentKeys.includes(key)) {
+				const arrowX = x + width / 2
+				const arrowSize = 6
+				this.dom.mainG
+					.append('polygon')
+					.attr(
+						'points',
+						`${arrowX},${y} ${arrowX - arrowSize},${y - arrowSize * 1.5} ${arrowX + arrowSize},${y - arrowSize * 1.5}`
+					)
+					.attr('fill', '#c0392b')
+					.attr('pointer-events', 'none')
 				this.dom.mainG
 					.append('text')
-					.text('SC')
+					.text(`SC ${roundValueAuto(percent, true, 1)}%`)
 					.style('font-size', '0.7em')
-					.attr('x', x + width / 2 - 5)
-					.attr('y', y - 5)
+					.style('fill', '#c0392b')
+					.attr('font-weight', 'bold')
+					.attr('text-anchor', 'middle')
+					.attr('x', arrowX)
+					.attr('y', y - arrowSize * 1.5 - 3)
+					.attr('pointer-events', 'none')
+			}
 
 			x += width
 		}
@@ -397,8 +439,10 @@ export class profileForms extends profilePlot {
 	drawLegendRect(x, y, text, legendG, isYesNo = false) {
 		const key = text.toUpperCase()
 		const colorMap = this.state.termdbConfig.colorMap
-		const noAnswerColor = isYesNo ? 'url(#' + this.id + '_diagonalHatch)' : colorMap['*'][text]
-		const color = colorMap[this.module][key] || colorMap['*'][key] || noAnswerColor
+		// For Yes/No bars, use getColor() so the legend always matches the bar fill
+		const color = isYesNo
+			? this.getColor(text)
+			: colorMap[this.module][key] || colorMap['*'][key] || colorMap['*'][text]
 
 		const size = 20
 		const itemG = legendG.append('g').attr('transform', `translate(${x}, ${y})`)
@@ -412,6 +456,7 @@ export class profileForms extends profilePlot {
 			.attr('stroke', 'gray')
 			.attr('stroke-width', 0.5)
 			.attr('stroke-opacity', 0.5)
+			.attr('pointer-events', 'none')
 		itemG
 			.append('text')
 			.attr('transform', `translate(${size + 10}, ${y + size})`)
