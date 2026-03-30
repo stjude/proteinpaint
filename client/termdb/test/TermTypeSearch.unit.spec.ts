@@ -25,11 +25,8 @@ function getDefaultState(overrides: { [key: string]: any } = {}) {
 	const state: { [key: string]: any } = Object.assign(
 		{
 			vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
-			termTypeGroup: '',
-			usecase: { target: 'default', detail: 'term' },
-			submenu: { term: null },
-			selectedTerms: [],
-			termfilter: { filter0: null, filter: null }
+			tree: { usecase: { target: 'default', detail: 'term' } },
+			selectedTerms: []
 		},
 		overrides
 	)
@@ -116,7 +113,7 @@ tape('getAllowedTabs() - usecase filtering for survival with detail=term', test 
 			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY, TermTypes.GENE_EXPRESSION],
 			queries: {}
 		},
-		{ usecase: { target: 'survival', detail: 'term' } }
+		{ tree: { usecase: { target: 'survival', detail: 'term' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -133,7 +130,7 @@ tape('getAllowedTabs() - usecase filtering for cuminc with detail=term', test =>
 			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY, TermTypes.GENE_EXPRESSION],
 			queries: {}
 		},
-		{ usecase: { target: 'cuminc', detail: 'term' } }
+		{ tree: { usecase: { target: 'cuminc', detail: 'term' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -152,7 +149,7 @@ tape('getAllowedTabs() - usecase filtering for regression with detail=independen
 				snvindel: { dt: 1 }
 			}
 		},
-		{ usecase: { target: 'regression', detail: 'independent' } }
+		{ tree: { usecase: { target: 'regression', detail: 'independent' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -175,7 +172,7 @@ tape('getAllowedTabs() - usecase filtering for regression with detail=outcome', 
 				snvindel: { dt: 1 }
 			}
 		},
-		{ usecase: { target: 'regression', detail: 'outcome' } }
+		{ tree: { usecase: { target: 'regression', detail: 'outcome' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -198,7 +195,7 @@ tape('getAllowedTabs() - usecase filtering for dataDownload', test => {
 				snvindel: { dt: 1 }
 			}
 		},
-		{ usecase: { target: 'dataDownload', detail: '' } }
+		{ tree: { usecase: { target: 'dataDownload', detail: '' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -217,7 +214,7 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter with numeric detail
 			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.INTEGER, TermTypes.FLOAT, TermTypes.METABOLITE_INTENSITY],
 			queries: {}
 		},
-		{ usecase: { target: 'sampleScatter', detail: 'numeric' } }
+		{ tree: { usecase: { target: 'sampleScatter', detail: 'numeric' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -323,7 +320,7 @@ tape('getAllowedTabs() - usecase exclusion using useCasesExcluded', test => {
 			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.SINGLECELL_CELLTYPE],
 			queries: {}
 		},
-		{ usecase: { target: 'matrix', detail: '' } }
+		{ tree: { usecase: { target: 'matrix', detail: '' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -341,10 +338,12 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter with singleCell spe
 			queries: {}
 		},
 		{
-			usecase: {
-				target: 'sampleScatter',
-				detail: 'numeric',
-				specialCase: { type: 'singleCell' }
+			tree: {
+				usecase: {
+					target: 'sampleScatter',
+					detail: 'numeric',
+					specialCase: { type: 'singleCell' }
+				}
 			}
 		}
 	)
@@ -367,9 +366,11 @@ tape('getAllowedTabs() - usecase filtering for sampleScatter without singleCell 
 			queries: {}
 		},
 		{
-			usecase: {
-				target: 'sampleScatter',
-				detail: 'numeric'
+			tree: {
+				usecase: {
+					target: 'sampleScatter',
+					detail: 'numeric'
+				}
 			}
 		}
 	)
@@ -411,7 +412,7 @@ tape('getAllowedTabs() - usecase filtering for multiple exclusions', test => {
 			],
 			queries: {}
 		},
-		{ usecase: { target: 'facet', detail: '' } }
+		{ tree: { usecase: { target: 'facet', detail: '' } } }
 	)
 
 	const tabs = getAllowedTabs(state, self)
@@ -441,18 +442,17 @@ tape('getAllowedTabs() - callback execution', test => {
 })
 
 tape('getAllowedTabs() - numeric termCollection should show up in dictionary usecase', test => {
-	const state = {
-		...getDefaultState(),
-		usecase: { target: 'dictionary', detail: '' }
-	}
-	const self = getMockSelf({
-		allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.TERM_COLLECTION],
-		queries: {},
-		termCollections: [
-			{ name: 'Gene Expression Signature', type: 'numeric' },
-			{ name: 'Assay Availability', type: 'categorical' }
-		]
-	})
+	const { self, state } = mockSelfAndState(
+		{
+			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.TERM_COLLECTION],
+			queries: {},
+			termCollections: [
+				{ name: 'Gene Expression Signature', type: 'numeric' },
+				{ name: 'Assay Availability', type: 'categorical' }
+			]
+		},
+		{ tree: { usecase: { target: 'dictionary', detail: '' } } }
+	)
 
 	const tabs = getAllowedTabs(state, self)
 

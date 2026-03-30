@@ -209,6 +209,7 @@ export class TermTypeSearch {
 
 		if (this.tabs.length == 1) return // only one tab (group of term type); return and do not show a lone tab
 
+		// TODO: should not trigger Tabs.main() here, may move this code to TermTypeSearch.main() if there is no Tabs component yet
 		new Tabs({
 			holder: this.dom.holder,
 			tabsPosition: 'vertical',
@@ -354,7 +355,7 @@ export class TermTypeSearch {
 				genomeObj: this.genomeObj,
 				callback: term => this.selectTerm(term),
 				details,
-				usecase: this.app.getState().tree.usecase
+				usecase: this.state.usecase
 			})
 		}
 	}
@@ -427,7 +428,7 @@ export function getAllowedTabs(state, self) {
 			// special: one tab for each collection, if permitted by usecase
 			for (const c of collections) {
 				if (c.type != 'categorical' && c.type != 'numeric') throw new Error('tc.type not categorical/numeric')
-				switch (state.usecase?.target) {
+				switch (state.tree.usecase?.target) {
 					case 'dictionary':
 					case 'filter':
 					case 'matrix':
@@ -466,10 +467,11 @@ export function getAllowedTabs(state, self) {
 	return tabs
 }
 
+// state = app.getState()
 export function getAllowedTermTypesForUseCase(state, app) {
 	const allowedTermTypes: string[] = []
 	const types = app.vocabApi.termdbConfig?.allowedTermTypes || ['categorical']
-	const usecase = state.usecase || state.tree.usecase
+	const usecase = state.tree.usecase
 	const { target, detail } = usecase
 
 	for (const type of types) {

@@ -55,10 +55,6 @@ class TdbStore extends StoreBase implements RxStore {
 		this.app = opts.app
 		this.api = api
 		this.state = this.copyMerge(this.toJson(defaultState), opts.state) // opts.state
-		// always reset state.allowedTermTypes based on the current
-		this.state.allowedTermTypes = getAllowedTermTypesForUseCase(this.state, this.app)
-		this.state.termTypeGroup = typeGroup[this.state.allowedTermTypes[0]]
-
 		// use for assigning unique IDs where needed
 		// may be used later to simplify getting component state by type and id
 		this.prevGeneratedId = 0
@@ -95,6 +91,9 @@ class TdbStore extends StoreBase implements RxStore {
 
 	async init() {
 		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
+		// always reset state.allowedTermTypes based on the current
+		this.state.allowedTermTypes = getAllowedTermTypesForUseCase(this.state, this.app)
+		this.state.termTypeGroup = typeGroup[this.state.allowedTermTypes[0]]
 
 		// maybe no need to provide term filter at this query
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
