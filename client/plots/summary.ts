@@ -98,7 +98,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			{
 				childType: 'barchart',
 				label: 'Barchart',
-				isVisible: () => true,
+				isVisible: () => this.config?.term?.term?.type != 'termCollection',
 				disabled: () => false,
 				getConfig: async () => {
 					if (!this.config) return
@@ -121,13 +121,17 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				childType: 'violin',
 				label: 'Violin',
 				disabled: () => false,
-				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
+				isVisible: () =>
+					this.config?.term?.term?.type == 'termCollection' ||
+					isNumericTerm(this.config?.term?.term) ||
+					isNumericTerm(this.config?.term2?.term), // termCollection is not numeric, but the tab still needs to show
 				getConfig: async () => {
 					const term = this.config?.term
 					const term2 = this.config.term2
 
 					let _term, _term2
-					this.violinContTerm = isNumericTerm(term?.term) ? 'term' : 'term2'
+					this.violinContTerm =
+						this.config?.term?.term?.type == 'termCollection' || isNumericTerm(term?.term) ? 'term' : 'term2'
 
 					//If the first term was continuous or is coming as continuous
 					if ((this.violinContTerm && this.violinContTerm === 'term') || term.q?.mode == 'continuous') {
@@ -166,14 +170,18 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				childType: 'boxplot',
 				label: 'Boxplot',
 				disabled: () => false,
-				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
+				isVisible: () =>
+					this.config?.term?.term?.type == 'termCollection' ||
+					isNumericTerm(this.config?.term?.term) ||
+					isNumericTerm(this.config?.term2?.term),
 				getConfig: async () => {
 					const _term = this.config?.term
 					const _term2 = this.config.term2
 
 					let termMode = 'continuous',
 						term2Mode = 'discrete'
-					this.boxContTerm = isNumericTerm(_term?.term) ? 'term' : 'term2'
+					this.boxContTerm =
+						this.config?.term?.term?.type == 'termCollection' || isNumericTerm(_term?.term) ? 'term' : 'term2'
 
 					//If the first term was continuous or is coming as continuous
 					if ((this.boxContTerm && this.boxContTerm === 'term') || _term.q?.mode == 'continuous') {
@@ -508,8 +516,7 @@ export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}
 	if (edits.childType) {
 		// no need to set config.childType if a value is already specified
 		// in an edits object (optional second argument), as processed by mass store
-		if (config.childType != edits.childType)
-			throw `action.config.childType was not applied in mass store.plot_edit()`
+		if (config.childType != edits.childType) throw `action.config.childType was not applied in mass store.plot_edit()`
 		return
 	}
 	// config.childType may be stale, OR edits.childType may not be available,
