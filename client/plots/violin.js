@@ -339,11 +339,17 @@ class ViolinPlot extends PlotBase {
 		const existingMsg = this.dom.banner.style('display', 'none').select('span')
 		if (!existingMsg.empty()) existingMsg.remove()
 
-		const args = this.validateArgs()
+		// Check if we're dealing with a numeric termCollection
 		let data
 		try {
 			this.toggleLoadingDiv()
-			data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
+			if (this.isNumericTermCollection()) {
+				data = await this.getDataForNumericTermCollection()
+			} else {
+				const args = this.validateArgs()
+				data = await this.app.vocabApi.getViolinPlotData(args, null, this.api.getAbortSignal())
+				if (data.descrStats) args.tw.q.descrStats = data.descrStats
+			}
 		} catch (e) {
 			this.toggleLoadingDiv('none')
 			if (this.app.isAbortError(e)) return
@@ -355,7 +361,6 @@ class ViolinPlot extends PlotBase {
 			this.toggleLoadingDiv('none')
 			throw this.data.error
 		}
-		args.tw.q.descrStats = this.data.descrStats
 
 		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
 		setTimeout(
@@ -367,7 +372,99 @@ class ViolinPlot extends PlotBase {
 		this.toggleLoadingDiv('none')
 	}
 
-	validateArgs() {
+	/** Check if term is a numeric termCollection */
+	isNumericTermCollection() {
+		const t1 = this.config.term
+		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'numeric'
+	}
+
+	/** Get data for each member term in a numeric termCollection */
+	async getDataForNumericTermCollection() {
+		const termCollection = this.config.term
+		const memberTerms = termCollection.term.termlst || []
+		
+		if (!memberTerms.length) {
+			throw new Error('No member terms found in numeric termCollection')
+		}
+
+		// Make requests for member terms in bounded-size batches to limit concurrency
+		const BATCH_SIZE = 5
+		const allResults = []
+
+		for (let i = 0; i < memberTerms.length; i += BATCH_SIZE) {
+			const batch = memberTerms.slice(i, i + BATCH_SIZE)
+			const batchResults = await Promise.all(
+				batch.map(async (memberTerm) => {
+					// Create a term wrapper for this member term
+					const memberTw = {
+						term: memberTerm,
+						q: { mode: 'continuous' }
+					}
+					
+					const args = this.validateArgs(memberTw)
+					
+					const data = await this.app.vocabApi.getViolinPlotData(
+						args,
+						null,
+						this.api.getAbortSignal()
+					)
+					
+					return { memberTerm, data }
+				})
+			)
+			allResults.push(...batchResults)
+		}
+
+		// Combine all results into a single response
+		return this.combineNumericTermCollectionData(allResults, termCollection)
+	}
+
+	/** Combine data from multiple member terms into a single violin response */
+	combineNumericTermCollectionData(results, termCollection) {
+		// Find the overall min/max across all member terms
+		let min = Infinity
+		let max = -Infinity
+		const combinedCharts = {}
+
+		results.forEach(({ memberTerm, data }) => {
+			if (data.min !== undefined && data.min < min) min = data.min
+			if (data.max !== undefined && data.max > max) max = data.max
+
+			// For each chart in this member term's data
+			Object.entries(data.charts || {}).forEach(([chartId, chart]) => {
+				if (!combinedCharts[chartId]) {
+					combinedCharts[chartId] = {
+						chartId,
+						plots: [],
+						pvalues: chart.pvalues // Include pvalues if present
+					}
+				}
+
+				// Add this member term's plots to the combined chart
+				// Update the label to include the member term name
+				chart.plots.forEach((plot) => {
+					const updatedPlot = {
+						...plot,
+						label: memberTerm.name || memberTerm.id,
+						// Use member term color if available from propsByTermId
+						color: termCollection.term.propsByTermId?.[memberTerm.id]?.color || plot.color
+					}
+					combinedCharts[chartId].plots.push(updatedPlot)
+				})
+			})
+		})
+
+		return {
+			min: min === Infinity ? undefined : min,
+			max: max === -Infinity ? undefined : max,
+			bins: results[0]?.data.bins || {},
+			charts: combinedCharts,
+			descrStats: results[0]?.data.descrStats, // Use first member's descriptive stats as reference
+			uncomputableValues: null
+		}
+	}
+
+	validateArgs(memberTw = null) {
 		const { term, term2, term0, settings } = this.config
 		const s = this.settings
 		const arg = {
@@ -385,30 +482,30 @@ class ViolinPlot extends PlotBase {
 		}
 
 		if (this.opts.mode == 'minimal') {
-			arg.tw = term
+			arg.tw = memberTw || term
 			// assume a single term for minimal plot
 			if (term2 || term0) throw 'only a single term allowed for minimal plot'
-			if (term.q.mode == 'spline') {
+			if ((memberTw || term).q.mode == 'spline') {
 				/** FIXME bad design; should not modify setting or even plot state in runtime, 
 				instead supply this in constructor arg and generalize it beyond spline
 				// term may be cubic spline from regression analysis
 				// render knot values as vertical lines on the plot
 				*/
-				s.lines = term.q.knots.map(x => Number(x.value))
+				s.lines = (memberTw || term).q.knots.map(x => Number(x.value))
 			} else {
 				s.lines = []
 			}
-			if (term.q.scale) {
+			if ((memberTw || term).q.scale) {
 				// term may be scaled from regression analysis
 				// scale the data on the server-side
-				arg.scale = term.q.scale
+				arg.scale = (memberTw || term).q.scale
 			}
-		} else if (isNumericTerm(term.term) && term.q.mode === 'continuous') {
-			arg.tw = term
+		} else if (isNumericTerm((memberTw || term).term) && (memberTw || term).q.mode === 'continuous') {
+			arg.tw = memberTw || term
 			if (term2) arg.overlayTw = term2
 		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
 			arg.tw = term2
-			arg.overlayTw = term
+			arg.overlayTw = memberTw || term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
