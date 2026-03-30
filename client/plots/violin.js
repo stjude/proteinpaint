@@ -454,14 +454,49 @@ class ViolinPlot extends PlotBase {
 			})
 		})
 
+		// Calculate combined descriptive statistics across all member terms
+		const combinedDescrStats = this.calculateCombinedDescrStats(results)
+
 		return {
 			min: min === Infinity ? undefined : min,
 			max: max === -Infinity ? undefined : max,
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
-			descrStats: results[0]?.data.descrStats, // Use first member's descriptive stats as reference
+			descrStats: combinedDescrStats,
 			uncomputableValues: null
 		}
+	}
+
+	/** Calculate combined descriptive statistics from all member terms */
+	calculateCombinedDescrStats(results) {
+		const allDescrStats = results.map(({ data }) => data.descrStats).filter(Boolean)
+		
+		if (allDescrStats.length === 0) return undefined
+		if (allDescrStats.length === 1) return allDescrStats[0]
+
+		// For violin plots, descrStats is typically an object with properties like min, max, mean, etc.
+		// We'll create an aggregate that shows the overall min and max across all member terms
+		const firstStats = allDescrStats[0]
+		
+		// If descrStats is not in the expected format, just return the first one
+		if (typeof firstStats !== 'object' || !firstStats) {
+			return firstStats
+		}
+
+		// Create combined stats showing the range across all member terms
+		const combinedStats = { ...firstStats }
+		
+		// Update min and max to reflect the overall range
+		allDescrStats.forEach(stats => {
+			if (stats.min !== undefined && (combinedStats.min === undefined || stats.min < combinedStats.min)) {
+				combinedStats.min = stats.min
+			}
+			if (stats.max !== undefined && (combinedStats.max === undefined || stats.max > combinedStats.max)) {
+				combinedStats.max = stats.max
+			}
+		})
+
+		return combinedStats
 	}
 
 	validateArgs(memberTw = null) {
