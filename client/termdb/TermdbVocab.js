@@ -1272,16 +1272,17 @@ export class TermdbVocab extends Vocab {
 		// !!! do NOT modify the sample object or samples array
 		for (const sample of samples) {
 			const obj = {}
+			bySample.push(obj)
 			for (const attr of attributes) {
 				if (!('to' in attr)) attr.to = attr.from
 				if (!attr.convert) {
 					// do not convert, no need for server request
-					mayAppend(obj, attr.to, sample[attr.from])
+					mayAssign(obj, attr.to, sample[attr.from])
 					continue
 				}
 				if (sample._ref_?.[attr.to]) {
 					// can convert id using sample ref, no need for server request
-					mayAppend(obj, attr.to, sample._ref_[attr.to])
+					mayAssign(obj, attr.to, sample._ref_[attr.to])
 					continue
 				}
 				// this attr requires conversion;
@@ -1309,7 +1310,7 @@ export class TermdbVocab extends Vocab {
 				}).then(r => {
 					for (const v of inputs) {
 						for (const { sample, obj } of fromValMap[v]) {
-							mayAppend(obj, attr.to, r.mapping[v])
+							mayAssign(obj, attr.to, r.mapping[v])
 						}
 					}
 				})
@@ -1317,13 +1318,14 @@ export class TermdbVocab extends Vocab {
 		}
 
 		await Promise.all(promises)
-		return bySample
 
-		// may append mapping if not already present in bySample{}
-		function mayAppend(obj, key, value) {
+		// return non-empty sample mappings
+		return bySample.filter(d => Object.keys(d).length)
+
+		// assign sample mapping if not already present in bySample{}
+		function mayAssign(obj, key, value) {
 			if (!bySample.some(d => d[key] == value)) {
 				obj[key] = value
-				bySample.push(obj)
 			}
 		}
 	}
