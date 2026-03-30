@@ -108,7 +108,7 @@ async function getScores(query: any, ds: any) {
 		if (label.length > 50) label = label.slice(0, 47) + '...'
 		return { value: val, label }
 	})
-	if (userSites) {
+	if (userSites && query.filterByUserSites) {
 		// getData() already enforces access control via checkAccessToSampleData();
 		// this further narrows the site list to what the user is authorised to see
 		sites = sites.filter(s => userSites.includes(s.value))
@@ -119,7 +119,11 @@ async function getScores(query: any, ds: any) {
 	//    When only one site is accessible (sites.length == 1) the median of a
 	//    single value equals that value — identical to the old route's sampleData shortcut.
 	const samples: any[] = Object.values(raw.samples)
-	const eligibleSamples = userSites ? samples.filter(s => userSites.includes(s[facilityTW.$id].value)) : samples
+	// Only filter to userSites when filterByUserSites is explicitly enabled.
+	// When filterByUserSites is false, facilityTW is in ignoredTermIds so getData()
+	// returns all sites — median should be computed across all sites (global aggregate)
+	const eligibleSamples =
+		userSites && query.filterByUserSites ? samples.filter(s => userSites.includes(s[facilityTW.$id].value)) : samples
 
 	const term2Score: Record<string, number | null> = {}
 	for (const d of query.scoreTerms) {

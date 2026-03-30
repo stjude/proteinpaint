@@ -54,11 +54,15 @@ class ProfilePolar2 extends profilePlot {
 
 	private async fetchAggregatedScores() {
 		// No facilityTW — the server derives it from term ID prefixes in the request.
+		// scoreTerms stripped to { term: { id }, q } only — server fills the rest via termjsonByOneid.
 		return dofetch3('termdb/profilePolar2Scores', {
 			body: {
 				genome: this.state.vocab.genome,
 				dslabel: this.state.vocab.dslabel,
-				scoreTerms: this.scoreTerms,
+				scoreTerms: this.scoreTerms.map((t: any) => ({
+					score: { term: { id: t.score.term.id }, q: t.score.q },
+					maxScore: typeof t.maxScore === 'number' ? t.maxScore : { term: { id: t.maxScore.term.id }, q: t.maxScore.q }
+				})),
 				filterByUserSites: this.settings?.filterByUserSites,
 				filter: this.filter
 			}

@@ -453,7 +453,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					if (chartType == 'profileBarchart')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
-					else if (chartType == 'profilePolar')
+					else if (chartType == 'profilePolar' || chartType == 'profilePolar2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
 					else if (chartType.startsWith('profileRadar'))
@@ -462,7 +462,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					if (chartType == 'profileBarchart')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
-					else if (chartType == 'profilePolar')
+					else if (chartType == 'profilePolar' || chartType == 'profilePolar2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-full-profiledash.pdf'
 					else if (chartType.startsWith('profileRadar'))
