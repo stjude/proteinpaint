@@ -460,6 +460,8 @@ class ViolinPlot extends PlotBase {
 		return {
 			min: min === Infinity ? undefined : min,
 			max: max === -Infinity ? undefined : max,
+			// bins is used for overlay term binning configuration. Using first result's bins 
+			// as they should be consistent across member terms (configured at overlay term level)
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
 			descrStats: combinedDescrStats,

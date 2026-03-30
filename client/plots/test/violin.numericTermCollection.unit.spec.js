@@ -199,8 +199,33 @@ tape('combineNumericTermCollectionData() merges results correctly', function (te
 		}
 	]
 
-	// Create a mock violin instance with the combineNumericTermCollectionData method
+	// Create a mock violin instance with the methods
 	const violinInstance = {
+		calculateCombinedDescrStats: function (results) {
+			const allDescrStats = results.map(({ data }) => data.descrStats).filter(Boolean)
+			
+			if (allDescrStats.length === 0) return undefined
+			if (allDescrStats.length === 1) return allDescrStats[0]
+
+			const firstStats = allDescrStats[0]
+			
+			if (typeof firstStats !== 'object' || !firstStats) {
+				return firstStats
+			}
+
+			const combinedStats = { ...firstStats }
+			
+			allDescrStats.forEach(stats => {
+				if (stats.min !== undefined && (combinedStats.min === undefined || stats.min < combinedStats.min)) {
+					combinedStats.min = stats.min
+				}
+				if (stats.max !== undefined && (combinedStats.max === undefined || stats.max > combinedStats.max)) {
+					combinedStats.max = stats.max
+				}
+			})
+
+			return combinedStats
+		},
 		combineNumericTermCollectionData: function (results, termCollection) {
 			let min = Infinity
 			let max = -Infinity
@@ -230,12 +255,14 @@ tape('combineNumericTermCollectionData() merges results correctly', function (te
 				})
 			})
 
+			const combinedDescrStats = this.calculateCombinedDescrStats(results)
+
 			return {
 				min: min === Infinity ? undefined : min,
 				max: max === -Infinity ? undefined : max,
 				bins: results[0]?.data.bins || {},
 				charts: combinedCharts,
-				descrStats: results[0]?.data.descrStats,
+				descrStats: combinedDescrStats,
 				uncomputableValues: null
 			}
 		}
@@ -251,4 +278,67 @@ tape('combineNumericTermCollectionData() merges results correctly', function (te
 		'#FF0000',
 		'Should apply color from propsByTermId'
 	)
+})
+
+tape('calculateCombinedDescrStats() aggregates statistics correctly', function (test) {
+	test.plan(5)
+
+	// Create a mock violin instance with the method
+	const violinInstance = {
+		calculateCombinedDescrStats: function (results) {
+			const allDescrStats = results.map(({ data }) => data.descrStats).filter(Boolean)
+			
+			if (allDescrStats.length === 0) return undefined
+			if (allDescrStats.length === 1) return allDescrStats[0]
+
+			const firstStats = allDescrStats[0]
+			
+			if (typeof firstStats !== 'object' || !firstStats) {
+				return firstStats
+			}
+
+			const combinedStats = { ...firstStats }
+			
+			allDescrStats.forEach(stats => {
+				if (stats.min !== undefined && (combinedStats.min === undefined || stats.min < combinedStats.min)) {
+					combinedStats.min = stats.min
+				}
+				if (stats.max !== undefined && (combinedStats.max === undefined || stats.max > combinedStats.max)) {
+					combinedStats.max = stats.max
+				}
+			})
+
+			return combinedStats
+		}
+	}
+
+	// Test 1: Empty results should return undefined
+	const emptyResults = []
+	test.equal(violinInstance.calculateCombinedDescrStats(emptyResults), undefined, 'Should return undefined for empty results')
+
+	// Test 2: Single result should return that result's descrStats
+	const singleResult = [
+		{ data: { descrStats: { min: 10, max: 50, mean: 30 } } }
+	]
+	const singleStats = violinInstance.calculateCombinedDescrStats(singleResult)
+	test.deepEqual(singleStats, { min: 10, max: 50, mean: 30 }, 'Should return single result stats unchanged')
+
+	// Test 3: Multiple results should combine min/max correctly
+	const multipleResults = [
+		{ data: { descrStats: { min: 10, max: 50, mean: 30 } } },
+		{ data: { descrStats: { min: 5, max: 80, mean: 40 } } },
+		{ data: { descrStats: { min: 15, max: 60, mean: 35 } } }
+	]
+	const combinedStats = violinInstance.calculateCombinedDescrStats(multipleResults)
+	test.equal(combinedStats.min, 5, 'Should use minimum value across all results')
+	test.equal(combinedStats.max, 80, 'Should use maximum value across all results')
+
+	// Test 4: Results without descrStats should be filtered out
+	const mixedResults = [
+		{ data: { descrStats: { min: 10, max: 50 } } },
+		{ data: {} },
+		{ data: { descrStats: { min: 5, max: 80 } } }
+	]
+	const mixedStats = violinInstance.calculateCombinedDescrStats(mixedResults)
+	test.equal(mixedStats.min, 5, 'Should handle results without descrStats correctly')
 })
