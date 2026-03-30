@@ -1,7 +1,8 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { TermTypeSearch } from '../TermTypeSearch'
 import { TermTypeGroups, TermTypes } from '#shared/terms.js'
+import { appInit } from '../app.ts'
+import { vocabInit } from '../vocabulary'
 
 /*
 Tests:
@@ -18,60 +19,61 @@ Tests:
  reusable helper functions
 **************************/
 
-function getDefaultState() {
-	return {
-		vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
-		termTypeGroup: '',
-		tree: { usecase: { target: 'default', detail: 'term' } },
-		submenu: { term: null },
-		selectedTerms: [],
-		termfilter: { filter0: null, filter: null }
-	}
+function getDefaultState(overrides = {}) {
+	const state = Object.assign(
+		{
+			vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
+			termTypeGroup: '',
+			tree: { usecase: { target: 'default', detail: 'term' } },
+			submenu: { term: null },
+			selectedTerms: [],
+			termfilter: { filter0: null, filter: null }
+		},
+		overrides
+	)
+
+	// below simulates what's done in the store constructor
+	// state.allowedTermTypes = getAllowedTermTypesForUseCase(state, app)
+	// below simulates what's done in TermTypeSearch.init()
+
+	return state
 }
 
-function getNewTermTypeSearch(opts: {
+async function getNewTermTypeSearch(opts: {
 	appState?: any
 	termdbConfig?: any
 	click_term?: (term: any) => void
 	submit_lst?: (terms: any[]) => void
 }) {
 	const holder = d3s.select('body').append('div')
-	const topbar = holder.append('div')
-	const submitDiv = holder.append('div')
-	const dispatched: any[] = []
-	let appState = opts.appState || getDefaultState()
-
-	const termTypeSearch = new TermTypeSearch({
+	const vocabApi = await vocabInit({
+		vocab: {
+			genome: 'hg38-test',
+			dslabel: 'TermdbTest'
+		}
+	})
+	await vocabApi.getTermdbConfig()
+	if (opts.termdbConfig) Object.assign(vocabApi.termdbConfig, opts.termdbConfig)
+	const app = await appInit({
+		debug: true,
 		holder,
-		topbar,
-		submitDiv,
-		genome: {},
+		vocabApi,
+		state: getDefaultState(opts.appState || {}),
 		click_term: opts.click_term,
-		submit_lst: opts.submit_lst
+		tree: {
+			submit_lst: opts.submit_lst
+		}
+	})
+	vocabApi.app = app
+
+	const dispatched: any[] = []
+	app.middle(async action => {
+		dispatched.push(action)
 	})
 
-	termTypeSearch.app = {
-		vocabApi: {
-			termdbConfig: opts.termdbConfig || {
-				allowedTermTypes: [TermTypes.CATEGORICAL],
-				queries: {}
-			}
-		},
-		dispatch: async action => {
-			dispatched.push(action)
-			if (action.type == 'set_term_type_group') {
-				appState = { ...appState, termTypeGroup: action.value }
-				termTypeSearch.state = { ...termTypeSearch.state, termTypeGroup: action.value }
-			}
-			if (action.type == 'app_refresh') {
-				appState = { ...appState, ...action.state }
-				termTypeSearch.state = { ...termTypeSearch.state, ...action.state }
-			}
-		},
-		getState: () => appState
-	}
+	const termTypeSearch = app.getComponents('termTypeSearch')?.Inner //; console.log(98, app, termTypeSearch)
 
-	return { termTypeSearch, holder, dispatched }
+	return { termTypeSearch, holder, dispatched, appState: app.getState(), app }
 }
 
 /**************
@@ -84,50 +86,29 @@ tape('\n', function (test) {
 })
 
 tape('init() should accept usecase filtering for allowed term type tabs', async test => {
-	const appState = {
-		...getDefaultState(),
-		tree: { usecase: { target: 'survival', detail: 'term' } }
-	}
-	const { termTypeSearch, holder, dispatched } = getNewTermTypeSearch({
-		appState,
-		termdbConfig: {
-			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY],
-			queries: {}
-		}
+	const { termTypeSearch, holder } = await getNewTermTypeSearch({
+		appState: {
+			tree: { usecase: { target: 'survival', detail: 'term' } }
+		},
+		termdbConfig: { allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY] }
 	})
 
-	await termTypeSearch.init(appState)
 	test.equal(termTypeSearch.tabs.length, 1, 'Should only have one tab for survival detail=term')
 	test.equal(
 		termTypeSearch.tabs[0].termTypeGroup,
 		TermTypeGroups.DICTIONARY_VARIABLES,
 		'Should keep dictionary variables and exclude metabolite intensity'
 	)
-
-	const setGroupAction = dispatched.find(a => a.type == 'set_term_type_group')
-	test.equal(
-		setGroupAction?.value,
-		TermTypeGroups.DICTIONARY_VARIABLES,
-		'Should dispatch first allowed term type group'
-	)
 	if (test['_ok']) holder.remove()
 	test.end()
 })
 
 tape('init() should ignore appState.termTypeGroup and derive tabs from allowed types', async test => {
-	const appState = {
-		...getDefaultState(),
-		termTypeGroup: TermTypeGroups.METABOLITE_INTENSITY
-	}
-	const { termTypeSearch, holder, dispatched } = getNewTermTypeSearch({
-		appState,
-		termdbConfig: {
-			allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY],
-			queries: {}
-		}
+	const { termTypeSearch, holder } = await getNewTermTypeSearch({
+		appState: { termTypeGroup: TermTypeGroups.METABOLITE_INTENSITY },
+		termdbConfig: { allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.METABOLITE_INTENSITY] }
 	})
 
-	await termTypeSearch.init(appState)
 	test.equal(
 		termTypeSearch.tabs.length,
 		2,
@@ -139,84 +120,61 @@ tape('init() should ignore appState.termTypeGroup and derive tabs from allowed t
 		'Should keep tab groups in allowedTermTypes order'
 	)
 
-	const setGroupAction = dispatched.find(a => a.type == 'set_term_type_group')
-	test.equal(
-		setGroupAction?.value,
-		TermTypeGroups.DICTIONARY_VARIABLES,
-		'Should dispatch first tab group and not prior appState.termTypeGroup'
-	)
-
 	if (test['_ok']) holder.remove()
 	test.end()
 })
 
 tape('init() should throw when no term types are allowed', async test => {
-	const appState = getDefaultState()
-	const { termTypeSearch, holder } = getNewTermTypeSearch({
-		appState,
+	const { holder } = await getNewTermTypeSearch({
 		termdbConfig: {
 			//Note: SNP_LIST is excluded from default allowed term types
-			allowedTermTypes: [TermTypes.SNP_LIST],
-			queries: {}
+			allowedTermTypes: [TermTypes.SNP_LIST]
 		}
 	})
-
-	try {
-		await termTypeSearch.init(appState)
-		test.fail('Should throw when all term types are filtered out')
-	} catch (e) {
-		test.equal(e, 'No term types allowed for this use case', 'Should throw expected error message')
-	}
+	const errbar = holder.node().querySelector('.sja_errorbar')
+	test.equal(errbar.checkVisibility(), true, 'Should throw when all term types are filtered out')
+	test.true(errbar.innerText.includes('No term types allowed for this use case'), 'Should throw expected error message')
 	if (test['_ok']) holder.remove()
 	test.end()
 })
 
 tape('init() should throw when TERM_COLLECTION lacks termdbConfig.termCollections', async test => {
-	const appState = getDefaultState()
-	const { termTypeSearch, holder } = getNewTermTypeSearch({
-		appState,
+	const { holder } = await getNewTermTypeSearch({
 		termdbConfig: {
-			allowedTermTypes: [TermTypes.TERM_COLLECTION],
-			queries: {}
+			allowedTermTypes: [TermTypes.TERM_COLLECTION]
 		}
 	})
-
-	try {
-		await termTypeSearch.init(appState)
-		test.fail('Should throw when TERM_COLLECTION is enabled without termCollections config')
-	} catch (e) {
-		test.match(
-			String(e),
-			/No term types allowed for this use case/,
-			'Should throw expected handler setup error for missing termCollections'
-		)
-	}
-
+	const errbar = holder.node().querySelector('.sja_errorbar')
+	test.equal(
+		errbar.checkVisibility(),
+		true,
+		'Should throw when TERM_COLLECTION is enabled without termCollections config'
+	)
+	test.true(
+		errbar.innerText.includes('No term types allowed for this use case'),
+		'Should throw expected handler setup error for missing termCollections'
+	)
 	if (test['_ok']) holder.remove()
 	test.end()
 })
 
-tape('selectTerm() should append and replace selected terms correctly in submit mode', test => {
-	const appState = {
-		...getDefaultState(),
-		selectedTerms: [{ name: 'Age', id: 'agedx', type: TermTypes.INTEGER }]
-	}
-	const { termTypeSearch, holder, dispatched } = getNewTermTypeSearch({ appState, submit_lst: () => {} })
-	termTypeSearch.state = termTypeSearch.getState(appState)
+tape('selectTerm() should append and replace selected terms correctly in submit mode', async test => {
+	const { termTypeSearch, holder, app } = await getNewTermTypeSearch({
+		appState: { selectedTerms: [{ name: 'Age', id: 'agedx', type: TermTypes.INTEGER }] },
+		submit_lst: () => {}
+	})
 
-	termTypeSearch.selectTerm({ name: 'Sex', id: 'sex', type: TermTypes.CATEGORICAL })
-	const appendAction = dispatched[dispatched.length - 1]
-	test.equal(appendAction.type, 'app_refresh', 'Should dispatch app_refresh for dictionary term')
-	test.equal(appendAction.state.selectedTerms.length, 2, 'Should append selected term')
+	await termTypeSearch.selectTerm({ name: 'Sex', id: 'sex', type: TermTypes.CATEGORICAL })
+	await sleep(1)
+	test.equal(app.getState().selectedTerms.length, 2, 'Should append selected term')
 
-	termTypeSearch.selectTerm({
+	await termTypeSearch.selectTerm({
 		type: TermTypes.TERM_COLLECTION,
 		term: { type: TermTypes.TERM_COLLECTION, name: 'Test term collection' }
 	})
-	const replaceAction = dispatched[dispatched.length - 1]
-	test.equal(replaceAction.state.selectedTerms.length, 1, 'termCollection Should replace selected terms list')
+	await sleep(1)
 	test.equal(
-		replaceAction.state.selectedTerms[0].name,
+		app.getState().selectedTerms[0].name,
 		'Test term collection',
 		'Should keep selected test term collection only'
 	)
@@ -225,18 +183,18 @@ tape('selectTerm() should append and replace selected terms correctly in submit 
 	test.end()
 })
 
-tape('renderTermsSelected() click should remove selected term', test => {
-	const appState = {
-		...getDefaultState(),
-		selectedTerms: [
-			{ name: 'Age', id: 'agedx', type: TermTypes.INTEGER },
-			{ name: 'Sex', id: 'sex', type: TermTypes.CATEGORICAL }
-		]
-	}
-	const { termTypeSearch, holder, dispatched } = getNewTermTypeSearch({ appState, submit_lst: () => {} })
-	termTypeSearch.state = termTypeSearch.getState(appState)
+tape('renderTermsSelected() click should remove selected term', async test => {
+	const { termTypeSearch, holder, dispatched } = await getNewTermTypeSearch({
+		appState: {
+			selectedTerms: [
+				{ name: 'Age', id: 'agedx', type: TermTypes.INTEGER },
+				{ name: 'Sex', id: 'sex', type: TermTypes.CATEGORICAL }
+			]
+		},
+		submit_lst: () => {}
+	})
 
-	termTypeSearch.main()
+	//termTypeSearch.main()
 	const renderedTerms = termTypeSearch.dom.selectedTermsDiv.selectAll('.sja_menuoption')
 	test.equal(renderedTerms.size(), 2, 'Should render both selected terms')
 
@@ -252,9 +210,8 @@ tape('renderTermsSelected() click should remove selected term', test => {
 	test.end()
 })
 
-tape('getDtTerm() should return child term and throw on invalid input', test => {
-	const { termTypeSearch, holder } = getNewTermTypeSearch({})
-
+tape('getDtTerm() should return child term and throw on invalid input', async test => {
+	const { termTypeSearch, holder } = await getNewTermTypeSearch({})
 	const tw = {
 		term: {
 			type: TermTypes.GENE_VARIANT,

@@ -15,27 +15,31 @@ import { getWrappedTvslst } from './filter.js'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
-export const TermTypeGroups = {
-	DICTIONARY_VARIABLES: 'Dictionary Variables',
-	DNA_METHYLATION: 'DNA Methylation',
-	GENE_DEPENDENCY: 'Gene Dependency',
-	GENE_EXPRESSION: 'Gene Expression',
-	GSEA: 'GSEA',
-	METABOLITE_INTENSITY: 'Metabolite Intensity',
-	PROTEOME_ABUNDANCE: 'Whole Proteome Abundance',
-	MUTATION_CNV_FUSION: 'Mutation/CNV/Fusion',
-	MUTATION_SIGNATURE: 'Mutation Signature',
-	PROTEIN_EXPRESSION: 'Protein Expression',
-	SINGLECELL_CELLTYPE: 'Single-cell Cell Type',
-	SINGLECELL_GENE_EXPRESSION: 'Single-cell Gene Expression',
-	SNP: 'SNP Genotype',
-	SNP_LIST: 'SNP List',
-	SNP_LOCUS: 'SNP Locus',
-	SPLICE_JUNCTION: 'Splice Junction',
-	SSGSEA: 'Geneset Expression',
-	TERM_COLLECTION: 'Term Collection',
-	VARIANT_GENOTYPE: 'Variant Genotype'
+// 3/30/2026 - changed from literal object to a class with static properties
+// to make it easier for IDEs and tsc compiler to catch typos in consumer code
+export class TermTypeGroups {
+	static DICTIONARY_VARIABLES = 'Dictionary Variables'
+	static DNA_METHYLATION = 'DNA Methylation'
+	static GENE_DEPENDENCY = 'Gene Dependency'
+	static GENE_EXPRESSION = 'Gene Expression'
+	static GSEA = 'GSEA'
+	static METABOLITE_INTENSITY = 'Metabolite Intensity'
+	static PROTEOME_ABUNDANCE = 'Whole Proteome Abundance'
+	static MUTATION_CNV_FUSION = 'Mutation/CNV/Fusion'
+	static MUTATION_SIGNATURE = 'Mutation Signature'
+	static PROTEIN_EXPRESSION = 'Protein Expression'
+	static SINGLECELL_CELLTYPE = 'Single-cell Cell Type'
+	static SINGLECELL_GENE_EXPRESSION = 'Single-cell Gene Expression'
+	static SNP = 'SNP Genotype'
+	static SNP_LIST = 'SNP List'
+	static SNP_LOCUS = 'SNP Locus'
+	static SPLICE_JUNCTION = 'Splice Junction'
+	static SSGSEA = 'Geneset Expression'
+	static TERM_COLLECTION = 'Term Collection'
+	static VARIANT_GENOTYPE = 'Variant Genotype'
 }
+// freeze so that mutating any of the static properties above will throw at runtime
+Object.freeze(TermTypeGroups)
 
 export const defaultcolor = rgb('#8AB1D4').darker()
 export const default_text_color = rgb('#aaa').darker().darker()

@@ -55,6 +55,7 @@ class TdbStore extends StoreBase implements RxStore {
 		this.app = opts.app
 		this.api = api
 		this.state = this.copyMerge(this.toJson(defaultState), opts.state) // opts.state
+		// always reset state.allowedTermTypes based on the current
 		this.state.allowedTermTypes = getAllowedTermTypesForUseCase(this.state, this.app)
 		this.state.termTypeGroup = typeGroup[this.state.allowedTermTypes[0]]
 
