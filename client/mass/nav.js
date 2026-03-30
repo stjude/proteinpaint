@@ -289,11 +289,27 @@ function setRenderers(self) {
 
 		self.dom.subheader = Object.freeze({
 			// For either the COHORT or ABOUT tab
-			about: self.dom.subheaderDiv.append('div').style('display', 'none').attr('data-testid', 'sjpp-mass-about'),
-			search: self.dom.subheaderDiv.append('div').style('display', 'none'),
-			groups: self.dom.subheaderDiv.append('div').style('display', 'none'),
-			charts: self.dom.subheaderDiv.append('div').style('display', 'none'),
-			filter: self.dom.subheaderDiv.append('div').style('display', 'none')
+			about: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-about')
+				.style('display', 'none')
+				.attr('data-testid', 'sjpp-mass-about'),
+			search: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-search')
+				.style('display', 'none'),
+			groups: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-groups')
+				.style('display', 'none'),
+			charts: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-charts')
+				.style('display', 'none'),
+			filter: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-filter')
+				.style('display', 'none')
 			// cart: self.dom.subheaderDiv.append('div').style('display', 'none').html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
 		})
 
