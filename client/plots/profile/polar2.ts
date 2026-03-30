@@ -4,7 +4,7 @@ import type { ProfilePolarConfig, ProfilePolarDom } from './types/PolarTypes'
 import type { TableCell } from '#dom'
 import { getCompInit, copyMerge } from '#rx'
 import { fillTwLst } from '#termsetting'
-import * as d3 from 'd3'
+import { arc } from 'd3'
 import { profilePlot, getDefaultProfilePlotSettings, getProfilePlotConfig } from './profilePlot.js'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '#dom'
@@ -15,7 +15,7 @@ import { renderTable } from '#dom'
 class ProfilePolar2 extends profilePlot {
 	static type = 'profilePolar2'
 	readonly radius = 250
-	readonly arcGenerator = d3.arc().innerRadius(0)
+	readonly arcGenerator = arc().innerRadius(0)
 	angle!: number
 	polarG!: SvgG
 	declare legendG: SvgG
