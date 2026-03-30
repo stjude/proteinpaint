@@ -70,6 +70,7 @@ class Chat extends PlotBase implements RxComponent {
 				const body: ChatRequest = {
 					genome: this.app.vocabApi.vocab.genome,
 					dslabel: this.app.vocabApi.vocab.dslabel,
+					filter: this.app.vocabApi.state.termfilter?.filter,
 					prompt
 				}
 				event.target.value = '' // clear input
