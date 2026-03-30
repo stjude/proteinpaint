@@ -145,65 +145,14 @@ async function getScores(query: any, ds: any) {
  * Returns null when no samples have data for the term.
  */
 function computeMedianPercentage(d: any, samples: any[]): number | null {
-	const termId = d.score.term.id
-	const debugTerms = ['AX127', 'AX176']
-	const isDebug = debugTerms.includes(termId)
-
-	// Step 1: samples that have a score value (including 0)
-	const withScore = samples.filter(s => s[d.score.$id]?.value != null)
-
-	// Step 2: samples dropped by old polar's falsy filter (score === 0)
-	const zeroScoreSamples = samples.filter(s => s[d.score.$id]?.value === 0)
-
-	if (isDebug) {
-		console.log(`\n[polar2 DEBUG] term=${termId}`)
-		console.log(`  total samples : ${samples.length}`)
-		console.log(`  with score (!=null): ${withScore.length}`)
-		console.log(`  zero-score samples (would be dropped by old polar): ${zeroScoreSamples.length}`)
-	}
-
-	const percentages = withScore
-		.map(s => {
-			const maxScore = typeof d.maxScore === 'number' ? d.maxScore : s[d.maxScore.$id]?.value
-			const pct = maxScore ? (s[d.score.$id].value / maxScore) * 100 : null
-			if (isDebug) {
-				console.log(
-					`    score=${s[d.score.$id].value}  maxScore=${maxScore}  pct=${pct?.toFixed(2) ?? 'null (skipped)'}`
-				)
-			}
-			return pct
-		})
-		.filter((p): p is number => p !== null)
+	const percentages = samples
+		.filter(s => s[d.score.$id]?.value)
+		.map(s => (s[d.score.$id].value / (s[d.maxScore.$id]?.value || d.maxScore)) * 100)
 
 	if (percentages.length === 0) return null
 	percentages.sort((a, b) => a - b)
 
 	const mid = Math.floor(percentages.length / 2)
 	const median = percentages.length % 2 !== 0 ? percentages[mid] : (percentages[mid - 1] + percentages[mid]) / 2
-	const result = Math.round(median)
-
-	if (isDebug) {
-		// Simulate old polar: drop zero scores, recompute median
-		const oldPercentages = samples
-			.filter(s => s[d.score.$id]?.value) // old falsy filter — drops 0
-			.map(s => {
-				const maxScore = typeof d.maxScore === 'number' ? d.maxScore : s[d.maxScore.$id]?.value
-				return maxScore ? (s[d.score.$id].value / maxScore) * 100 : null
-			})
-			.filter((p): p is number => p !== null)
-		oldPercentages.sort((a, b) => a - b)
-		const oldMid = Math.floor(oldPercentages.length / 2)
-		const oldMedian =
-			oldPercentages.length % 2 !== 0
-				? oldPercentages[oldMid]
-				: (oldPercentages[oldMid - 1] + oldPercentages[oldMid]) / 2
-		const oldResult = Math.round(oldMedian)
-
-		console.log(`  sorted percentages (polar2): [${percentages.map(p => p.toFixed(1)).join(', ')}]`)
-		console.log(`  median (polar2) = ${result}`)
-		console.log(`  median (old polar, zeros excluded) = ${oldResult}`)
-		console.log(`  difference = ${result - oldResult}`)
-	}
-
-	return result
+	return Math.round(median)
 }
