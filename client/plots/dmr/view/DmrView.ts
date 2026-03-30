@@ -188,7 +188,7 @@ export class DmrView {
 				.style('color', '#888')
 				.style('font-size', '.8em')
 				.style('padding', '4px 0')
-				.text('Zoom in to see LOESS trend lines and confidence intervals.')
+				.text('Zoom in to see per-CpG dots.')
 		}
 	}
 }
