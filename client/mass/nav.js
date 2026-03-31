@@ -292,8 +292,7 @@ function setRenderers(self) {
 			about: self.dom.subheaderDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-about')
-				.style('display', 'none')
-				.attr('data-testid', 'sjpp-mass-about'),
+				.style('display', 'none'),
 			search: self.dom.subheaderDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-search')

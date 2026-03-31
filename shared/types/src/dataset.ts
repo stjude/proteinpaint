@@ -1820,7 +1820,7 @@ type MassNav = {
 	tabs?: {
 		/** supported keys: about, charts, groups, filter
 		invalid key is ignored
-		when dslabel is too long to show in about tab middl row or to define alternative label, 
+		when dslabel is too long to show in about tab middle row or to define alternative label, 
 		do .tabs:{about:{mid:'alt label'}} */
 		about?: MassNavAboutTabEntry
 		charts?: MassNavTabEntry

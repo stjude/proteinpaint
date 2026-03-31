@@ -19,7 +19,7 @@ NOTE: genome/hg38.test.js
 		- uses copyDataFilesFromRepo2Tp() to create <tp>/files/hg38/TermdbTest
 		  dir files or symlink, if the <tp> dir is writable
 		- will add a ProtectedTest entry as needed, to simplify the setup of 
-				serverconfig dataset entries in local dev ang github CI
+				serverconfig dataset entries in local dev and github CI
 */
 
 // MAF fields in bcf file, expressed as term objects
