@@ -139,7 +139,9 @@ export class ChartRender {
 			}
 
 			new BoxPlotToolTips(plot, g, dom.tip, settings.isVertical)
-			if (chart.plots.length > 1) {
+			if (this.app.opts?.state?.plots?.[0]?.term?.term?.type != 'termCollection' && chart.plots.length > 1) {
+				// FIXME quick fix to disable click menu for termCollection, until the functions will work
+
 				//Do not try to use the same tip for the menu as the tooltips.
 				//When the boxplots are rendered close together, the menu
 				//disappears to show the tooltip for the next boxplot.
