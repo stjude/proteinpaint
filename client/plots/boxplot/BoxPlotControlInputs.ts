@@ -5,8 +5,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 	if (!controlLabels) throw new Error('controls labels not found')
 
 	// Check if term is a numeric termCollection
-	const isNumericTermCollection = 
-		state.config.term?.term?.type === 'termCollection' && state.config.term.term.memberType === 'numeric'
+	const isNumericTermCollection = state.config.term?.term?.type === 'termCollection'
 
 	const inputs: { [index: string]: any }[] = [
 		{
@@ -16,7 +15,9 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			usecase: { target: 'boxplot', detail: 'term' },
 			label: controlLabels.term1?.label || renderTerm1Label,
 			vocabApi: app.vocabApi,
-			menuOptions: 'edit'
+			menuOptions: 'edit',
+			// Hide term1 control for termCollection; later reenable when tw edit menu works to allow choosing subset of member terms
+			getDisplayStyle: () => (isNumericTermCollection ? 'none' : '')
 		},
 		{
 			type: 'term',

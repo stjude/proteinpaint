@@ -235,22 +235,18 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.dom.loading.style('display', display)
 		}
 	}
-
-	/** Check if term is a numeric termCollection */
-	isNumericTermCollection() {
-		const config = this.state?.config
-		if (!config) return false
-		const t1 = config.term
-		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'numeric'
-	}
 }
 
 export const boxplotInit = getCompInit(TdbBoxplot)
 export const componentInit = boxplotInit
 
 export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
-	if (!opts.term) throw new Error('opts.term{} missing')
 	try {
+		if (!opts.term) throw new Error('opts.term{} missing')
+		if (opts.term.term?.type == 'termCollection') {
+			// TODO !! enable this check when the tsc err is resolved: Property 'memberType' does not exist on type 'NumericTermCollection | CategoricalTermCollection | SnpsTerm'
+			//if(opts.term.term.memberType!='numeric') throw new Error('opts.term.term is termCollection but memberType!=numeric')
+		}
 		await fillTermWrapper(opts.term, app.vocabApi)
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
