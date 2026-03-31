@@ -69,6 +69,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'survival':
 			return await import(`./survival/survival.js`)
 
+		case 'DEinput':
+			return await import(`./DEinput.ts`)
+
 		case 'table':
 			return await import(`./table.js`)
 
