@@ -14,6 +14,7 @@ export const routedTermTypes = new Set([
 	tt.FLOAT,
 	tt.GENE_VARIANT,
 	tt.GENE_EXPRESSION,
+	tt.ISOFORM_EXPRESSION,
 	tt.DATE,
 	tt.METABOLITE_INTENSITY,
 	tt.PROTEOME_ABUNDANCE,
@@ -99,6 +100,7 @@ export class TwRouter {
 			case 'integer':
 			case 'float':
 			case 'geneExpression':
+			case 'isoformExpression':
 			case 'metaboliteIntensity':
 			case 'proteomeAbundance':
 			case 'date':

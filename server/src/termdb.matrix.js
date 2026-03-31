@@ -13,6 +13,7 @@ import {
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
 	GENE_VARIANT,
+	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
@@ -237,6 +238,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			}
 		} else if (
 			tw.term.type == GENE_EXPRESSION ||
+			tw.term.type == ISOFORM_EXPRESSION ||
 			tw.term.type == METABOLITE_INTENSITY ||
 			tw.term.type == SSGSEA ||
 			tw.term.type == DNA_METHYLATION ||

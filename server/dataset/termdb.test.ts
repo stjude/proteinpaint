@@ -418,6 +418,11 @@ export default function (): Mds3 {
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5',
 				unit: 'FPKM'
 			},
+			isoformExpression: {
+				src: 'native',
+				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.isoform.tpm.h5',
+				unit: 'TPM'
+			},
 			ssGSEA: {
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.ssgsea.h5'
 			},

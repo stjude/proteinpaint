@@ -40,7 +40,7 @@ import { validate_correlationVolcano } from '#routes/correlationVolcano.ts'
 import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
-import { validate_query_geneExpression } from '#routes/termdb.cluster.ts'
+import { validate_query_geneExpression, validate_query_isoformExpression } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
@@ -169,6 +169,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_cnv(ds, genome)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
+		await validate_query_isoformExpression(ds, genome)
 		await validate_query_ssGSEA(ds, genome)
 		await validate_query_dnaMethylation(ds, genome)
 		await validate_query_metaboliteIntensity(ds, genome)
