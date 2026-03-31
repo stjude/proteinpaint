@@ -138,7 +138,7 @@ export class Model {
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
 			uncomputableValues: allUncomputableValues.length > 0 ? allUncomputableValues : null,
-			descrStats: { '': { key: '', label: '', value: 0 } } // dummy stat for avoiding tsc err and won't actually show
+			descrStats: {} // empty value needed per type def
 		}
 	}
 
