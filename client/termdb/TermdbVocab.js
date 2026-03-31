@@ -497,6 +497,54 @@ export class TermdbVocab extends Vocab {
 		return d
 	}
 
+	async getViolinBox(arg, _body = {}, signal = undefined) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		arg.tw = this.getTwMinCopy(arg.tw)
+		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
+		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
+
+		// Set chartType based on plotType argument
+		if (!arg.plotType) throw new Error('plotType is required: must be "violin" or "box"')
+		if (arg.plotType !== 'violin' && arg.plotType !== 'box') {
+			throw new Error('plotType must be either "violin" or "box"')
+		}
+
+		const body = Object.assign(
+			{
+				chartType: arg.plotType,
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				filter: arg.filter || this.state.termfilter?.filter,
+				filter0: this.state.termfilter?.filter0
+			},
+			arg
+		)
+
+		// Add violin-specific defaults
+		if (arg.plotType === 'violin') {
+			Object.assign(body, {
+				embedder: window.location.hostname,
+				devicePixelRatio: window.devicePixelRatio,
+				isKDE: 'isKDE' in arg ? arg.isKDE : true,
+				ticks: arg.ticks,
+				datasymbol: arg.datasymbol || 'rug',
+				orientation: arg.orientation || 'horizontal',
+				radius: arg.radius || 8,
+				svgw: arg.svgw || 200,
+				unit: arg.unit || 'abs'
+			})
+		}
+
+		// Merge additional body properties
+		Object.assign(body, _body)
+
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		const init = { headers, body, signal }
+		const data = await this.dofetch3('termdb/violinBox', init)
+		if (data.error) throw data.error
+		return data
+	}
+
 	async getPercentile(term, percentile_lst, termfilter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
