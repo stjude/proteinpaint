@@ -36,12 +36,12 @@ function init({ genomes }) {
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw new Error('invalid ds')
 
-			if (!q.chartType) throw new Error('chartType is required')
-			if (q.chartType !== 'violin' && q.chartType !== 'box') {
-				throw new Error('chartType must be either "violin" or "box"')
+			if (!q.plotType) throw new Error('plotType is required')
+			if (q.plotType !== 'violin' && q.plotType !== 'box') {
+				throw new Error('plotType must be either "violin" or "box"')
 			}
 
-			if (q.chartType === 'violin') {
+			if (q.plotType === 'violin') {
 				data = await getViolin(q, ds)
 			} else {
 				data = await getBoxPlot(q, ds)

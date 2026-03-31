@@ -7,7 +7,7 @@ import type { DescrStats } from './termdb.descrstats.ts'
 /**Unified request type for violin and boxplot */
 export type ViolinBoxRequest = {
 	/** Indicates the type of chart to render: 'violin' or 'box' */
-	chartType: 'violin' | 'box'
+	plotType: 'violin' | 'box'
 	/** main tw to fetch numeric data */
 	tw: TermWrapper
 	/** Reference label (i.e. short label) for the ds */
@@ -167,7 +167,7 @@ export const violinBoxPayload: RoutePayload = {
 		{
 			request: {
 				body: {
-					chartType: 'violin',
+					plotType: 'violin',
 					genome: 'hg38-test',
 					dslabel: 'TermdbTest',
 					tw: {
@@ -189,7 +189,7 @@ export const violinBoxPayload: RoutePayload = {
 		{
 			request: {
 				body: {
-					chartType: 'box',
+					plotType: 'box',
 					genome: 'hg38-test',
 					dslabel: 'TermdbTest',
 					tw: {

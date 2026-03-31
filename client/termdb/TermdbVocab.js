@@ -511,7 +511,7 @@ export class TermdbVocab extends Vocab {
 
 		const body = Object.assign(
 			{
-				chartType: arg.plotType,
+				plotType: arg.plotType,
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
 				filter: arg.filter || this.state.termfilter?.filter,
