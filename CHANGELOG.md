@@ -9,6 +9,8 @@ Features:
 
 Fixes:
 - always set the tooltip top position instead of bottom to make it more reliable when an embedder's body position=relative
+- improved logic when hiding a tooltip after the first clickable element is blurred
+- prevent the unexpected closure of the parent GenesetEdit menu while clicking on a child MSigDb menu
 
 
 ## 2.180.1
