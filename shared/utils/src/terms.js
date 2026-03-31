@@ -21,6 +21,7 @@ const DNA_METHYLATION = 'dnaMethylation'
 const FLOAT = 'float'
 const GENE_VARIANT = 'geneVariant'
 const GENE_EXPRESSION = 'geneExpression'
+const ISOFORM_EXPRESSION = 'isoformExpression'
 const INTEGER = 'integer'
 const METABOLITE_INTENSITY = 'metaboliteIntensity'
 const MULTIVALUE = 'multivalue'
@@ -37,6 +38,7 @@ const PROTEOME_ABUNDANCE = 'proteomeAbundance'
 const TermTypes = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
+	ISOFORM_EXPRESSION,
 	SSGSEA,
 	DNA_METHYLATION,
 	CATEGORICAL,
@@ -81,6 +83,7 @@ const typeGroup = {
 	[SNP_LIST]: TermTypeGroups.SNP_LIST,
 	[SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
+	[ISOFORM_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
 	[SSGSEA]: TermTypeGroups.SSGSEA,
 	[DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
@@ -94,6 +97,7 @@ const nonDictTypes = /* @__PURE__ */ new Set([
 	SNP_LIST,
 	SNP_LOCUS,
 	GENE_EXPRESSION,
+	ISOFORM_EXPRESSION,
 	SSGSEA,
 	DNA_METHYLATION,
 	GENE_VARIANT,
@@ -109,6 +113,7 @@ const numericTypes = /* @__PURE__ */ new Set([
 	INTEGER,
 	FLOAT,
 	GENE_EXPRESSION,
+	ISOFORM_EXPRESSION,
 	SSGSEA,
 	DNA_METHYLATION,
 	METABOLITE_INTENSITY,
@@ -150,6 +155,8 @@ function equals(t1, t2) {
 	switch (t1.type) {
 		case GENE_EXPRESSION:
 			return t1.gene == t2.gene
+		case ISOFORM_EXPRESSION:
+			return t1.isoform == t2.isoform
 		case SSGSEA:
 			return t1.id == t2.id
 		case DNA_METHYLATION:
@@ -215,6 +222,7 @@ const typeMap = {
 	float: 'Numerical',
 	integer: 'Numerical',
 	geneExpression: 'Gene Expression',
+	isoformExpression: 'Isoform Expression',
 	ssGSEA: 'Geneset Expression',
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
@@ -274,6 +282,7 @@ export {
 	GENE_EXPRESSION,
 	GENE_VARIANT,
 	INTEGER,
+	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
 	MULTIVALUE,
 	NumericModes,
