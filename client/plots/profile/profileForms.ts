@@ -184,6 +184,7 @@ export class profileForms extends profilePlot {
 		posAxisBottom(scaleG)
 		// Build legend order from first Likert term’s values, sorted by numeric code (same as renderLikertBar)
 		// so it matches bars; use case-insensitive mapping for key/label differences.
+		// Append any remaining categories from this.categories not already included to ensure the legend covers all rendered bar segments.
 		const firstTW = this.scoreTerms.find(tw => tw.term.type == 'multivalue')
 		const catUpperMap = new Map([...this.categories].map(c => [c.toUpperCase(), c]))
 		const orderedCategories: string[] = firstTW
@@ -192,6 +193,13 @@ export class profileForms extends profilePlot {
 					.map(([, v]) => catUpperMap.get(v.label.toUpperCase()))
 					.filter((c): c is string => c !== undefined) as string[])
 			: [...this.categories]
+		// Append any categories present in rendered bars but missing from firstTW.term.values
+		const orderedSet = new Set(orderedCategories.map(c => c.toUpperCase()))
+		for (const cat of this.categories) {
+			if (!orderedSet.has(cat.toUpperCase())) {
+				orderedCategories.push(cat)
+			}
+		}
 
 		const legendG = this.dom.legendG.attr('transform', `translate(100, ${y + 50})`)
 		let x = 0
