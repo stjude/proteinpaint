@@ -271,7 +271,10 @@ export class ScatterTooltip {
 				tdlabel.text(this.scatter.settings.itemLabel)
 				td.text(sample.sample || sample.cellId)
 				if ('sampleId' in sample && this.onClick) {
-					if (!this.scatter.opts.singleCellPlot && this.scatter.state.currentCohortChartTypes.includes('sampleView')) {
+					if (
+						!this.scatter.config?.singleCellPlot &&
+						this.scatter.state.currentCohortChartTypes.includes('sampleView')
+					) {
 						td.append('button')
 							.style('float', 'right')
 							.text('Sample view')
