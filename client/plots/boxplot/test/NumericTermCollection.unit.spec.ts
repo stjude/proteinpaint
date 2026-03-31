@@ -5,79 +5,6 @@ import { Model } from '../model/Model'
  * Tests for numeric termCollection support in boxplot
  */
 
-tape('Model.isNumericTermCollection() detection', function (test) {
-	test.plan(3)
-
-	// Test 1: Numeric termCollection should return true
-	const mockBoxplotWithNumericCollection = {
-		boxplot: {},
-		config: {
-			term: {
-				term: {
-					type: 'termCollection',
-					memberType: 'numeric',
-					termlst: [
-						{ id: 'gene1', name: 'Gene 1', type: 'float' },
-						{ id: 'gene2', name: 'Gene 2', type: 'float' }
-					]
-				}
-			},
-			settings: { boxplot: {} }
-		},
-		state: {},
-		app: {},
-		settings: {}
-	} as any
-
-	const model1 = new Model(mockBoxplotWithNumericCollection, mockBoxplotWithNumericCollection.config)
-	test.equal(model1.isNumericTermCollection(), true, 'Should detect numeric termCollection')
-
-	// Test 2: Regular numeric term should return false
-	const mockBoxplotWithRegularTerm = {
-		boxplot: {},
-		config: {
-			term: {
-				term: {
-					type: 'float',
-					id: 'agedx',
-					name: 'Age at Diagnosis'
-				}
-			},
-			settings: { boxplot: {} }
-		},
-		state: {},
-		app: {},
-		settings: {}
-	} as any
-
-	const model2 = new Model(mockBoxplotWithRegularTerm, mockBoxplotWithRegularTerm.config)
-	test.equal(model2.isNumericTermCollection(), false, 'Should not detect regular term as termCollection')
-
-	// Test 3: Categorical termCollection should return false
-	const mockBoxplotWithCategoricalCollection = {
-		boxplot: {},
-		config: {
-			term: {
-				term: {
-					type: 'termCollection',
-					memberType: 'categorical',
-					termlst: [
-						{ id: 'cat1', name: 'Category 1', type: 'categorical' },
-						{ id: 'cat2', name: 'Category 2', type: 'categorical' }
-					]
-				}
-			},
-			settings: { boxplot: {} }
-		},
-		state: {},
-		app: {},
-		settings: {}
-	} as any
-
-	const model3 = new Model(mockBoxplotWithCategoricalCollection, mockBoxplotWithCategoricalCollection.config)
-	test.equal(model3.isNumericTermCollection(), false, 'Should not detect categorical termCollection as numeric')
-})
-
 tape('Model.combineNumericTermCollectionData() merges results correctly', function (test) {
 	test.plan(4)
 
@@ -161,9 +88,5 @@ tape('Model.combineNumericTermCollectionData() merges results correctly', functi
 	test.equal(combined.absMin, 5, 'Should use minimum absMin from all results')
 	test.equal(combined.absMax, 100, 'Should use maximum absMax from all results')
 	test.equal(combined.charts.default.plots.length, 2, 'Should combine plots from all member terms')
-	test.equal(
-		combined.charts.default.plots[0].color,
-		'#FF0000',
-		'Should apply color from propsByTermId'
-	)
+	test.equal(combined.charts.default.plots[0].color, '#FF0000', 'Should apply color from propsByTermId')
 })

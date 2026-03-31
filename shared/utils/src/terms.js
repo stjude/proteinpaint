@@ -138,6 +138,10 @@ function isNonDictionaryType(type) {
 	if (!type) throw new Error('Type is not defined')
 	return nonDictTypes.has(type)
 }
+function isNumTermCollection(term) {
+	if (!term || !term.type) throw new Error('Term or term type is not defined')
+	return term.type === TERM_COLLECTION
+}
 function equals(t1, t2) {
 	if (!t1) throw new Error('First term is not defined ')
 	if (!t2) throw new Error('Second term is not defined ')
@@ -301,6 +305,7 @@ export {
 	isCategoricalTerm,
 	isDictionaryType,
 	isNonDictionaryType,
+	isNumTermCollection,
 	isNumericTerm,
 	isSingleCellTerm,
 	numericTypes,

@@ -1,12 +1,9 @@
 import { term0_term2_defaultQ, renderTerm1Label } from '../controls'
+import { isNumTermCollection } from '#shared/terms.js'
 
 export function setBoxPlotControlInputs(state: any, app: any, opts: any, getCharts: any, useDefaultSettings: boolean) {
 	const controlLabels = state.config.controlLabels
 	if (!controlLabels) throw new Error('controls labels not found')
-
-	// Check if term is a numeric termCollection
-	const isNumericTermCollection = 
-		state.config.term?.term?.type === 'termCollection' && state.config.term.term.memberType === 'numeric'
 
 	const inputs: { [index: string]: any }[] = [
 		{
@@ -16,7 +13,10 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			usecase: { target: 'boxplot', detail: 'term' },
 			label: controlLabels.term1?.label || renderTerm1Label,
 			vocabApi: app.vocabApi,
-			menuOptions: 'edit'
+			menuOptions: 'edit',
+			// Hide term1 control for termCollection; later reenable when tw edit menu works to allow choosing subset of member terms
+			// and take into account state changes.
+			getDisplayStyle: plot => (isNumTermCollection(plot.config.term?.term) ? 'none' : '')
 		},
 		{
 			type: 'term',
@@ -29,7 +29,8 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
 			defaultQ4fillTW: term0_term2_defaultQ,
 			// Hide term2 control when numeric termCollection is detected
-			getDisplayStyle: () => (isNumericTermCollection ? 'none' : '')
+			// and take into account state changes.
+			getDisplayStyle: plot => (isNumTermCollection(plot.config.term?.term) ? 'none' : '')
 		},
 		{
 			type: 'term',
@@ -45,7 +46,8 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			numericEditMenuVersion: opts.numericEditMenuVersion || ['discrete'],
 			defaultQ4fillTW: term0_term2_defaultQ,
 			// Hide term0 control when numeric termCollection is detected
-			getDisplayStyle: () => (isNumericTermCollection ? 'none' : '')
+			// and take into account state changes.
+			getDisplayStyle: plot => (isNumTermCollection(plot.config.term?.term) ? 'none' : '')
 		},
 		{
 			label: 'Order by',

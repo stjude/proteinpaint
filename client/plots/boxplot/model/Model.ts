@@ -25,11 +25,12 @@ export class Model {
 	}
 
 	async getData() {
-		// Check if we're dealing with a numeric termCollection
-		if (this.isNumericTermCollection()) {
+		if (this.config.term.term.type == 'termCollection') {
+			// special logic for termCollection
+			// FIXME avoid special logic! handle termCollection just like all others
 			return await this.getDataForNumericTermCollection()
 		}
-		
+
 		const boxPlotDataArgs = this.setRequestOpts()
 		const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
 			boxPlotDataArgs,
@@ -38,17 +39,13 @@ export class Model {
 		return data
 	}
 
-	/** Check if term is a numeric termCollection */
-	isNumericTermCollection() {
-		const t1 = this.config.term
-		return t1?.term?.type === 'termCollection' && t1.term.memberType === 'numeric'
-	}
-
-	/** Get data for each member term in a numeric termCollection */
+	/** Get data for each member term in a numeric termCollection 
+	FIXME delete!!
+	*/
 	async getDataForNumericTermCollection(): Promise<BoxPlotResponse> {
 		const termCollection = this.config.term
 		const memberTerms = termCollection.term.termlst || []
-		
+
 		if (!memberTerms.length) {
 			throw new Error('No member terms found in numeric termCollection')
 		}
@@ -66,17 +63,17 @@ export class Model {
 						term: memberTerm,
 						q: { mode: 'continuous' as const }
 					}
-					
+
 					const boxPlotDataArgs = {
 						...this.setRequestOpts(),
 						tw: memberTw
 					}
-					
+
 					const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
 						boxPlotDataArgs,
 						this.boxplot.api.getAbortSignal()
 					)
-					
+
 					return { memberTerm, data }
 				})
 			)
@@ -94,10 +91,6 @@ export class Model {
 		let absMax = -Infinity
 		const combinedCharts: any = {}
 		const allUncomputableValues: any[] = []
-
-		// Calculate aggregate descriptive statistics across all member terms
-		const allDescrStats = results.map(({ data }) => data.descrStats).filter(Boolean)
-		const descrStats = this.calculateAggregateStats(allDescrStats)
 
 		results.forEach(({ memberTerm, data }) => {
 			if (data.absMin !== undefined && data.absMin < absMin) absMin = data.absMin
@@ -144,61 +137,9 @@ export class Model {
 			absMax: absMax === -Infinity ? undefined : absMax,
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
-			descrStats,
-			uncomputableValues: allUncomputableValues.length > 0 ? allUncomputableValues : null
+			uncomputableValues: allUncomputableValues.length > 0 ? allUncomputableValues : null,
+			descrStats: {} // empty value needed per type def
 		}
-	}
-
-	/** Calculate aggregate descriptive statistics from multiple member terms */
-	calculateAggregateStats(allDescrStats: any[]): any {
-		if (allDescrStats.length === 0) return {}
-		if (allDescrStats.length === 1) return allDescrStats[0]
-
-		// Aggregate statistics across all member terms
-		const aggregated: any = {}
-		const statsKeys = Object.keys(allDescrStats[0] || {})
-
-		for (const key of statsKeys) {
-			const values = allDescrStats.map(stats => stats[key]?.value).filter(v => v !== undefined)
-			
-			if (values.length === 0) continue
-
-			const firstStat = allDescrStats[0][key]
-			if (key === 'total') {
-				// Sum totals across all member terms
-				aggregated[key] = {
-					key: firstStat.key,
-					label: firstStat.label,
-					value: values.reduce((sum, v) => sum + v, 0)
-				}
-			} else if (key === 'min') {
-				// Use minimum across all member terms
-				aggregated[key] = {
-					key: firstStat.key,
-					label: firstStat.label,
-					value: Math.min(...values)
-				}
-			} else if (key === 'max') {
-				// Use maximum across all member terms
-				aggregated[key] = {
-					key: firstStat.key,
-					label: firstStat.label,
-					value: Math.max(...values)
-				}
-			} else {
-				// For other stats (mean, median, sd, variance, iqr), use average across member terms
-				// Note: This is a simplified aggregation. For strict statistical accuracy,
-				// these values should be recalculated from the raw data. However, for display
-				// purposes, averaging provides a reasonable approximation of the overall trend.
-				aggregated[key] = {
-					key: firstStat.key,
-					label: firstStat.label,
-					value: values.reduce((sum, v) => sum + v, 0) / values.length
-				}
-			}
-		}
-
-		return aggregated
 	}
 
 	setRequestOpts() {
