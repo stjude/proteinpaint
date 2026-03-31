@@ -34,6 +34,7 @@ export class Model {
 		const boxPlotDataArgs = this.setRequestOpts()
 		const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
 			{ ...boxPlotDataArgs, plotType: 'box' },
+			{},
 			this.boxplot.api.getAbortSignal()
 		)
 		return data
@@ -71,6 +72,7 @@ export class Model {
 
 					const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
 						{ ...boxPlotDataArgs, plotType: 'box' },
+						{},
 						this.boxplot.api.getAbortSignal()
 					)
 
