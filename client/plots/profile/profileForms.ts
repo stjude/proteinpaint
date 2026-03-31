@@ -166,6 +166,26 @@ export class profileForms extends profilePlot {
 		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
 		this.categories = new Set<string>()
+
+		// First pass: render labels to measure max width
+		const labelPadding = 80
+		const tempG = this.dom.svg.append('g').style('visibility', 'hidden')
+		let maxLabelWidth = 0
+		for (const tw of this.scoreTerms) {
+			if (tw.term.type != 'multivalue') continue
+			const text = getText(tw.term.details || tw.term.name)
+			const tempText = tempG.append('text').style('font-size', '0.85em').text(text)
+			const w = (tempText.node() as SVGTextElement).getBBox().width
+			if (w > maxLabelWidth) maxLabelWidth = w
+		}
+		tempG.remove()
+		const shift = maxLabelWidth + labelPadding
+		this.dom.mainG.attr('transform', `translate(${shift}, ${this.shiftTop})`)
+		this.dom.gridG.attr('transform', `translate(${shift}, ${this.shiftTop})`)
+		this.filterG.attr('transform', `translate(${shift + this.settings.svgw + 60}, ${this.shiftTop + 40})`)
+		this.dom.svg.attr('width', shift + this.settings.svgw + 500)
+		this.shift = shift
+
 		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
 			const dict = this.getPercentageDict(tw) //get the dict with the counts for each category  for the list of samples
@@ -176,45 +196,75 @@ export class profileForms extends profilePlot {
 		const width = this.settings.svgw
 		const posScale = d3Linear()
 			.domain([0, 100])
-			.range([this.shift, this.shift + width])
+			.range([shift, shift + width])
 		const posAxisBottom = axisBottom(posScale)
 			.ticks(10)
 			.tickFormat(d => d + '%')
 		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
 		posAxisBottom(scaleG)
-		// Build legend order from first Likert term’s values, sorted by numeric code (same as renderLikertBar)
-		// so it matches bars; use case-insensitive mapping for key/label differences.
-		// Append any remaining categories from this.categories not already included to ensure the legend covers all rendered bar segments.
-		const firstTW = this.scoreTerms.find(tw => tw.term.type == 'multivalue')
-		const catUpperMap = new Map([...this.categories].map(c => [c.toUpperCase(), c]))
-		const orderedCategories: string[] = firstTW
-			? (Object.entries(firstTW.term.values as Record<string, { label: string }>)
-					.sort(([a], [b]) => Number(a) - Number(b))
-					.map(([, v]) => catUpperMap.get(v.label.toUpperCase()))
-					.filter((c): c is string => c !== undefined) as string[])
-			: [...this.categories]
-		// Append any categories present in rendered bars but missing from firstTW.term.values
-		const orderedSet = new Set(orderedCategories.map(c => c.toUpperCase()))
-		for (const cat of this.categories) {
-			if (!orderedSet.has(cat.toUpperCase())) {
-				orderedCategories.push(cat)
-			}
-		}
-
-		const legendG = this.dom.legendG.attr('transform', `translate(100, ${y + 50})`)
+		// Fixed legend display order for Likert categories
+		const likertLegendOrder = [
+			"I Don't Know",
+			'Do Not Know',
+			'No',
+			'Not Available',
+			'Not Applicable For My Role',
+			'Almost Never',
+			'Infrequently',
+			'Sometimes',
+			'Frequently',
+			'Almost Always'
+		]
+		const catUpperSet = new Set([...this.categories].map(c => c.toUpperCase()))
+		const orderedCategories: string[] = likertLegendOrder.filter(c => catUpperSet.has(c.toUpperCase()))
+		const colorMap = this.state.termdbConfig.colorMap
+		const legendG = this.dom.legendG.attr('transform', `translate(0, ${y + 50})`)
+		const rectSize = 14
+		const rectTextGap = 5
+		const itemGap = 12
 		let x = 0
 		for (const category of orderedCategories) {
-			this.drawLegendRect(x, 0, category, legendG)
-			x += 220
+			const key = category.toUpperCase()
+			const color = colorMap[this.module][key] || colorMap['*'][key] || colorMap['*'][category]
+			const itemG = legendG.append('g').attr('transform', `translate(${x}, 0)`)
+			itemG.append('rect').attr('width', rectSize).attr('height', rectSize).attr('fill', color)
+			const label = itemG
+				.append('text')
+				.attr('x', rectSize + rectTextGap)
+				.attr('y', rectSize / 2)
+				.attr('dominant-baseline', 'central')
+				.style('font-size', '0.8em')
+				.text(category)
+			x += rectSize + rectTextGap + (label.node() as SVGTextElement).getBBox().width + itemGap
 		}
 	}
 
 	renderYesNo() {
-		this.xAxisScale = d3Linear().domain([0, 100]).range([0, this.settings.svgw])
-		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 		const step = 30
 		const height = this.scoreTerms.length * step
 		this.dom.svg.attr('height', height * 3 + 200) //space for the sc, for the poc and between items
+
+		// First pass: render labels to measure max width
+		const labelPadding = 50
+		const tempG = this.dom.svg.append('g').style('visibility', 'hidden')
+		let maxLabelWidth = 0
+		for (const tw of this.scoreTerms) {
+			const text = getText(tw.term.name)
+			const tempText = tempG.append('text').style('font-size', '0.8em').text(text)
+			const w = (tempText.node() as SVGTextElement).getBBox().width
+			if (w > maxLabelWidth) maxLabelWidth = w
+		}
+		tempG.remove()
+		const shift = maxLabelWidth + labelPadding
+		this.dom.mainG.attr('transform', `translate(${shift}, ${this.shiftTop})`)
+		this.dom.gridG.attr('transform', `translate(${shift}, ${this.shiftTop})`)
+		this.dom.xAxisG.attr('transform', `translate(${shift}, ${this.shiftTop / 2})`)
+		this.filterG.attr('transform', `translate(${shift + this.settings.svgw + 60}, ${this.shiftTop + 40})`)
+		this.dom.svg.attr('width', shift + this.settings.svgw + 500)
+		this.shift = shift
+
+		this.xAxisScale = d3Linear().domain([0, 100]).range([0, this.settings.svgw])
+		this.dom.xAxisG.call(axisTop(this.xAxisScale))
 
 		let y = 0
 		let showSCBar = false
@@ -267,8 +317,7 @@ export class profileForms extends profilePlot {
 
 		let x = 0
 		for (const category of this.activePlot.categories) {
-			this.drawLegendRect(x, 0, category.name, this.dom.legendG, true)
-			x += 80
+			x += this.drawLegendRect(x, 0, category.name, this.dom.legendG, true)
 		}
 		let text = this.dom.legendG
 			.append('text')
@@ -288,9 +337,18 @@ export class profileForms extends profilePlot {
 		if (event.target.tagName == 'rect') {
 			const path = event.target
 			const d = path.__data__
+			if (!d?.value) return this.onMouseOut(event)
 			const menu = this.tip.clear()
 			const percent = roundValueAuto(d.value, true, 1)
-			menu.d.text(`${d.key}: ${percent}%`)
+			const row = menu.d.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '5px')
+			if (d.color)
+				row
+					.append('div')
+					.style('width', '12px')
+					.style('height', '12px')
+					.style('background-color', d.color)
+					.style('flex-shrink', '0')
+			row.append('span').text(`${d.key}: ${percent}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}
@@ -350,7 +408,7 @@ export class profileForms extends profilePlot {
 			.attr('stroke-width', 0.5)
 			.attr('stroke-opacity', 0.5)
 			.attr('fill', color)
-			.datum({ key: category, value: percent })
+			.datum({ key: category, value: percent, color })
 			.on('mouseover', event => this.onMouseOver(event))
 		if (showPercent)
 			itemG
@@ -380,7 +438,7 @@ export class profileForms extends profilePlot {
 				.attr('height', height)
 				.attr('stroke', 'gray')
 				.attr('fill', color)
-				.datum({ key, value: percent })
+				.datum({ key, value: percent, color })
 
 			if (scPercentKeys.includes(key)) {
 				const arrowX = x + width / 2
@@ -440,6 +498,7 @@ export class profileForms extends profilePlot {
 			: colorMap[this.module][key] || colorMap['*'][key] || colorMap['*'][text]
 
 		const size = 20
+		const gap = 15
 		const itemG = legendG.append('g').attr('transform', `translate(${x}, ${y})`)
 		itemG
 			.append('rect')
@@ -452,12 +511,14 @@ export class profileForms extends profilePlot {
 			.attr('stroke-width', 0.5)
 			.attr('stroke-opacity', 0.5)
 			.attr('pointer-events', 'none')
-		itemG
+		const label = itemG
 			.append('text')
-			.attr('transform', `translate(${size + 10}, ${size / 2})`)
+			.attr('transform', `translate(${size + gap}, ${size / 2})`)
 			.attr('dominant-baseline', 'central')
 			.style('font-size', '0.85em')
 			.text(text)
+		const labelWidth = (label.node() as SVGTextElement).getBBox().width
+		return size + gap + labelWidth + gap
 	}
 
 	showText(event, text, size = 110) {
