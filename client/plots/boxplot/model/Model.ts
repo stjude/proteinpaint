@@ -31,9 +31,8 @@ export class Model {
 			return await this.getDataForNumericTermCollection()
 		}
 
-		const boxPlotDataArgs = this.setRequestOpts()
 		const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
-			{ ...boxPlotDataArgs, plotType: 'box' },
+			this.setRequestOpts(),
 			{},
 			this.boxplot.api.getAbortSignal()
 		)
@@ -71,7 +70,7 @@ export class Model {
 					}
 
 					const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
-						{ ...boxPlotDataArgs, plotType: 'box' },
+						boxPlotDataArgs,
 						{},
 						this.boxplot.api.getAbortSignal()
 					)
@@ -146,6 +145,7 @@ export class Model {
 
 	setRequestOpts() {
 		const opts: { [index: string]: any } = {
+			plotType: 'box',
 			tw: this.getContinousTerm(),
 			filter: this.state.termfilter.filter,
 			filter0: this.state.termfilter.filter0,
