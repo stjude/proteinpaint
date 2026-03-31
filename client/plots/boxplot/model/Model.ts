@@ -32,8 +32,8 @@ export class Model {
 		}
 
 		const boxPlotDataArgs = this.setRequestOpts()
-		const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
-			boxPlotDataArgs,
+		const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
+			{ ...boxPlotDataArgs, plotType: 'box' },
 			this.boxplot.api.getAbortSignal()
 		)
 		return data
@@ -69,8 +69,8 @@ export class Model {
 						tw: memberTw
 					}
 
-					const data: BoxPlotResponse = await this.app.vocabApi.getBoxPlotData(
-						boxPlotDataArgs,
+					const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
+						{ ...boxPlotDataArgs, plotType: 'box' },
 						this.boxplot.api.getAbortSignal()
 					)
 
