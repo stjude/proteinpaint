@@ -166,20 +166,10 @@ export class profileForms extends profilePlot {
 		const height = (this.scoreTerms.length + 2) * step
 		this.dom.svg.attr('height', height + 120)
 		this.categories = new Set<string>()
-
-		// Strip the common prefix (e.g. "General Laboratory Availability ")
-		//The name column in the SQLite terms table stores full names
-		const names = this.scoreTerms.filter(tw => tw.term.type == 'multivalue').map(tw => tw.term.name)
-		const commonPrefix = names.reduce((acc, name) => {
-			let i = 0
-			while (i < acc.length && acc[i] === name[i]) i++
-			return acc.slice(0, i)
-		}, names[0] || '')
-
 		for (const tw of this.scoreTerms) {
 			if (tw.term.type != 'multivalue') continue
 			const dict = this.getPercentageDict(tw) //get the dict with the counts for each category  for the list of samples
-			this.renderLikertBar(dict, y, 25, tw, commonPrefix)
+			this.renderLikertBar(dict, y, 25, tw)
 			y += step
 		}
 		y += step * 2
@@ -301,7 +291,7 @@ export class profileForms extends profilePlot {
 		return key == 'Yes' ? this.activePlot.color : key == 'No' ? '#aaa' : `url(#${this.id}_diagonalHatch)`
 	}
 
-	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any, commonPrefix = '') {
+	renderLikertBar(dict: { [key: string]: number }, y: number, height: number, tw: any) {
 		const itemG = this.dom.mainG.append('g')
 		let total = 0
 		for (const key in dict) total += dict[key]
@@ -318,10 +308,7 @@ export class profileForms extends profilePlot {
 			const width = this.renderCategory(key, dict, itemG, x, height, total)
 			x += width
 		}
-		const strippedName = tw.term.name.startsWith(commonPrefix)
-			? tw.term.name.slice(commonPrefix.length).trim()
-			: tw.term.name
-		const text = getText(strippedName)
+		const text = getText(tw.term.details || tw.term.name)
 		const textG = this.dom.svg.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
 		textG
 			.append('text')
@@ -459,7 +446,8 @@ export class profileForms extends profilePlot {
 			.attr('pointer-events', 'none')
 		itemG
 			.append('text')
-			.attr('transform', `translate(${size + 10}, ${y + size})`)
+			.attr('transform', `translate(${size + 10}, ${size / 2})`)
+			.attr('dominant-baseline', 'central')
 			.style('font-size', '0.85em')
 			.text(text)
 	}
