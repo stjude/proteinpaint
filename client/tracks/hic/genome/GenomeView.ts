@@ -110,7 +110,7 @@ export class GenomeView {
 					.append('circle')
 					.attr('data-testid', 'sjpp-hic-genome-view-sv-circle-2')
 					.attr('stroke', 'black')
-					.attr('fill', 'whilte')
+					.attr('fill', 'white')
 					.attr('fill-opacity', 0)
 					.attr('cy', obj.x + p1)
 					.attr('cx', obj.y + p2)
