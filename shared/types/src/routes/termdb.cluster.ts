@@ -3,6 +3,7 @@ import type { ErrorResponse } from './errorResponse.ts'
 import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
 import type { GeneExpressionTW } from '../terms/geneExpression.ts'
+import type { IsoformExpressionTW } from '../terms/isoformExpression.ts'
 import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
 import type { ProteomeAbundanceTW, ProteomeDetails } from '../terms/proteomeAbundance.ts'
 
@@ -48,6 +49,15 @@ export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
 	zScoreTransformation?: string
 }
 
+export type TermdbClusterRequestIsoformExpression = TermdbClusterRequestBase & {
+	/** Data type */
+	dataType: 'isoformExpression'
+	/** List of terms */
+	terms: IsoformExpressionTW[]
+	/** perform z-score transformation on values */
+	zScoreTransformation?: string
+}
+
 export type TermdbClusterRequestProteomeAbundance = TermdbClusterRequestBase & {
 	/** Data type */
 	dataType: 'proteomeAbundance'
@@ -61,6 +71,7 @@ export type TermdbClusterRequestProteomeAbundance = TermdbClusterRequestBase & {
 
 export type TermdbClusterRequest =
 	| TermdbClusterRequestGeneExpression
+	| TermdbClusterRequestIsoformExpression
 	| TermdbClusterRequestMetabolite
 	| TermdbClusterRequestProteomeAbundance
 

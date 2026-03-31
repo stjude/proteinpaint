@@ -3,12 +3,14 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
 	TermdbClusterRequestGeneExpression,
+	TermdbClusterRequestIsoformExpression,
 	TermdbClusterRequest,
 	TermdbClusterResponse,
 	Clustering,
 	ValidResponse,
 	SingletermResponse,
 	GeneExpressionQuery,
+	IsoformExpressionQuery,
 	RouteApi
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
@@ -48,7 +50,9 @@ function init({ genomes }) {
 			// TODO: generalize to any dataset
 			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if ([TermTypes.GENE_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(q.dataType)) {
+			if (
+				[TermTypes.GENE_EXPRESSION, TermTypes.ISOFORM_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(q.dataType)
+			) {
 				if (!ds.queries?.[q.dataType]) throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
@@ -109,7 +113,13 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
 			const tw = q.terms.find(t => t.$id == term)
-			const termName = !tw ? term : tw.term.type == 'geneExpression' ? tw.term.gene : tw.term.name
+			const termName = !tw
+				? term
+				: tw.term.type == 'geneExpression'
+				? tw.term.gene
+				: tw.term.type == 'isoformExpression'
+				? tw.term.isoform
+				: tw.term.name
 			noValueTerms.push(termName)
 			term2sample2value.delete(term)
 			delete byTermId[term]
@@ -326,7 +336,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`
 	}
 
-	// HDF5 validation successful, set up the getter function
+	// HDF5 validation successful, set up the getter function for geneExpression
 	q.get = async (param: TermdbClusterRequestGeneExpression) => {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
@@ -411,6 +421,129 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		}
 		if (term2sample2value.size == 0) {
 			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.gene).join(', ')
+		}
+
+		return { term2sample2value, byTermId, bySampleId }
+	}
+}
+
+export async function validate_query_isoformExpression(ds: any, _genome: any) {
+	const q: IsoformExpressionQuery = ds.queries.isoformExpression
+	if (!q) return
+	q.isoformExpression2bins = {}
+
+	if (typeof q.get == 'function') return // ds supplied getter
+
+	if (q.src == 'native') {
+		await validateNativeIsoform(q as IsoformExpressionQuery, ds)
+		return
+	}
+	throw 'unknown queries.isoformExpression.src'
+}
+
+async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
+	q.file = path.join(serverconfig.tpmasterdir, q.file!)
+	q.samples = []
+
+	try {
+		await utils.file_is_readable(q.file)
+		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true }))
+
+		const vr = JSON.parse(tmp)
+
+		if (vr.status !== 'success') throw vr.message
+		if (!vr.samples?.length) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of vr.samples) {
+			const si = ds.cohort.termdb.q.sampleName2id(sn)
+			if (si == undefined) {
+				if (ds.cohort.db) {
+					throw `unknown sample ${sn} from HDF5 ${q.file}`
+				} else {
+					continue
+				}
+			}
+			q.samples.push(si)
+		}
+		console.log(`${ds.label}: isoformExpression HDF5 file validated. Format: ${vr.format}, Samples:`, q.samples.length)
+	} catch (error) {
+		throw `${ds.label}: Failed to validate isoformExpression HDF5 file: ${error}`
+	}
+
+	// HDF5 validation successful, set up the getter function for isoformExpression
+	q.get = async (param: TermdbClusterRequestIsoformExpression) => {
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+		}
+
+		const bySampleId = {}
+		const samples = q.samples || []
+		if (limitSamples) {
+			for (const sid of limitSamples) {
+				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
+					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
+				} else {
+					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				}
+			}
+		} else {
+			for (const sid of samples) {
+				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
+					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
+				} else {
+					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+				}
+			}
+		}
+
+		const term2sample2value = new Map()
+		const byTermId = {}
+
+		const isoformIds: string[] = []
+		for (const tw of param.terms) {
+			if (tw.term.isoform) {
+				isoformIds.push(tw.term.isoform)
+			}
+		}
+
+		if (isoformIds.length === 0) {
+			console.log('No isoforms to query')
+			return { term2sample2value, byTermId }
+		}
+
+		const time1 = Date.now()
+
+		const isoformData = JSON.parse(await queryHDF5(q.file, isoformIds, null))
+
+		console.log('Time taken to run isoform query:', formatElapsedTime(Date.now() - time1))
+
+		const isoformsData = isoformData.query_output || {}
+		if (!isoformsData) throw 'No expression data returned from HDF5 query'
+		for (const tw of param.terms) {
+			if (!tw.term.isoform) continue
+
+			const isoformResult = isoformsData[tw.term.isoform]
+			if (!isoformResult) {
+				console.warn(`No data found for isoform ${tw.term.isoform} in the response`)
+				continue
+			}
+
+			const samplesData = isoformResult.samples || {}
+			const s2v = {}
+
+			for (const sampleName in samplesData) {
+				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (!sampleId) continue
+				if (limitSamples && !limitSamples.has(sampleId)) continue
+				s2v[sampleId] = samplesData[sampleName]
+			}
+
+			if (Object.keys(s2v).length) {
+				term2sample2value.set(tw.$id, s2v)
+			}
+		}
+		if (term2sample2value.size == 0) {
+			throw 'No data available for the input ' + param.terms?.map(tw => tw.term.isoform).join(', ')
 		}
 
 		return { term2sample2value, byTermId, bySampleId }

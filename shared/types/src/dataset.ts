@@ -758,6 +758,26 @@ export type GeneExpressionQuery = {
 	unit?: string
 }
 
+/** the isoformExpression query — structurally identical to geneExpression
+but rows are keyed by Ensembl Transcript IDs (ENST*) instead of gene symbols.
+{ src: 'native', file }
+*/
+export type IsoformExpressionQuery = {
+	src: 'native'
+	/** either ds-supplied or dynamically added getter */
+	get?: (param: any, ds: any) => void
+	/** HDF5 file with ENST IDs as row keys */
+	file?: string
+	/** dynamically added during server launch, list of sample integer IDs from file */
+	samples?: number[]
+	/** dynamically added flag during launch */
+	nochr?: boolean
+	/** cache for default bins per isoform */
+	isoformExpression2bins?: { [index: string]: any }
+	/** expression unit (e.g. 'TPM') */
+	unit?: string
+}
+
 export type SingleCellGeneExpressionNative = {
 	src: 'native'
 	/** path to HDF5 files. for now only HDF5 is supported.
@@ -1000,6 +1020,7 @@ type Mds3Queries = {
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
+	isoformExpression?: IsoformExpressionQuery
 	/** single-sample gsea precomputed scores for rnaseq samples, for genesets from geneset db
 	requires genome to be equipped with geneset db
 	*/

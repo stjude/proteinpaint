@@ -4,6 +4,7 @@ import type {
 	TermValues,
 	BaseTerm,
 	GeneExpressionTerm,
+	IsoformExpressionTerm,
 	MetaboliteIntensityTerm,
 	ProteomeAbundanceTerm,
 	DateTerm,
@@ -62,6 +63,7 @@ export type RawNumericDictTerm = NumericDictTerm & {
 export type NumericTerm =
 	| NumericDictTerm
 	| GeneExpressionTerm
+	| IsoformExpressionTerm
 	| MetaboliteIntensityTerm
 	| ProteomeAbundanceTerm
 	| DateTerm

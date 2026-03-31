@@ -23,6 +23,7 @@ import { isNumeric } from '#shared/helpers.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
 import { GeneExpBase } from './geneExpression.ts'
+import { IsoformExpBase } from './isoformExpression.ts'
 import { MetaboliteIntensityBase } from './metaboliteIntensity.ts'
 import { ProteomeAbundanceBase } from './proteomeAbundance.ts'
 import { DateBase } from './date.ts'
@@ -40,6 +41,7 @@ export class NumericBase extends TwBase {
 		'float',
 		'date',
 		'geneExpression',
+		'isoformExpression',
 		'metaboliteIntensity',
 		'proteomeAbundance',
 		'ssGSEA',
@@ -65,6 +67,11 @@ export class NumericBase extends TwBase {
 
 			case 'geneExpression':
 				GeneExpBase.fill(tw.term, opts)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
+			case 'isoformExpression':
+				IsoformExpBase.fill(tw.term, opts)
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 
