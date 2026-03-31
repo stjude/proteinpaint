@@ -171,6 +171,13 @@ export function isNonDictionaryType(type: string) {
 	return nonDictTypes.has(type)
 }
 
+export function isNumTermCollection(term: Term) {
+	if (!term || !term.type) throw new Error('Term or term type is not defined')
+	//Enable this check when memberType is added to term collection
+	// return term.type === TERM_COLLECTION && term.memberType == 'numeric'
+	return term.type === TERM_COLLECTION
+}
+
 export function equals(t1: any, t2: any) {
 	if (!t1) throw new Error('First term is not defined ')
 	if (!t2) throw new Error('Second term is not defined ')

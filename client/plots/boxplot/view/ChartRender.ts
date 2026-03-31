@@ -9,6 +9,7 @@ import { BoxPlotToolTips } from './BoxPlotToolTips'
 import { BoxPlotLabelMenu } from './BoxPlotLabelMenu'
 import { AssociationTableRender } from './AssociationTableRender'
 import type { BoxPlotInteractions } from '../interactions/BoxPlotInteractions'
+import { isNumTermCollection } from '#shared/terms.js'
 
 /** Handles the rendering for charts individually.
  * Data is formatted in ChartsDataMapper.*/
@@ -139,7 +140,8 @@ export class ChartRender {
 			}
 
 			new BoxPlotToolTips(plot, g, dom.tip, settings.isVertical)
-			if (this.app.opts?.state?.plots?.[0]?.term?.term?.type != 'termCollection' && chart.plots.length > 1) {
+			const numCollection = isNumTermCollection(this.interactions.getPlotConfig().term.term)
+			if (!numCollection && chart.plots.length > 1) {
 				// FIXME quick fix to disable click menu for termCollection, until the functions will work
 
 				//Do not try to use the same tip for the menu as the tooltips.
