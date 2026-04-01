@@ -38,7 +38,7 @@ async function getNumericDensity(opts: any = {}) {
 				}
 			},
 			vocabApi: {
-				getViolinPlotData() {
+				getViolinBox() {
 					return agedxViolinData
 				}
 			}

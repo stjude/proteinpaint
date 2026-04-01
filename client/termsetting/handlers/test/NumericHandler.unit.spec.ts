@@ -48,7 +48,7 @@ async function getNumericHandler(_opts: any = {}) {
 				}
 			},
 			vocabApi: {
-				getViolinPlotData() {
+				getViolinBox() {
 					return agedxViolinData
 				},
 				getPercentile() {

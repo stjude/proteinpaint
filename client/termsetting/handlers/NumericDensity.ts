@@ -69,8 +69,9 @@ export class NumericDensity {
 	async setData() {
 		if (this.density_data) return this.density_data
 		const self = this.termsetting
-		const d = await self.vocabApi.getViolinPlotData(
+		const d = await self.vocabApi.getViolinBox(
 			{
+				plotType: 'violin',
 				tw: { term: self.term, q: self.q },
 				svgw: this.plot_size.width,
 				radius: this.plot_size.radius,

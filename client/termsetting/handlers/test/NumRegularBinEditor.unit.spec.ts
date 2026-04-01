@@ -25,7 +25,7 @@ async function getNumericHandler(opts: any = {}) {
 		state: {
 			termfilter: { filter: { type: 'tvslst', in: '', lst: [] } }
 		},
-		getViolinPlotData() {
+		getViolinBox() {
 			return agedxViolinData
 		}
 	}
