@@ -270,11 +270,10 @@ export class ScatterTooltip {
 				const [tdlabel, td] = table.addRow()
 				tdlabel.text(this.scatter.settings.itemLabel)
 				td.text(sample.sample || sample.cellId)
-				if ('sampleId' in sample && this.onClick) {
-					if (
-						!this.scatter.config?.singleCellPlot &&
-						this.scatter.state.currentCohortChartTypes.includes('sampleView')
-					) {
+				//All the plots below are enabled for samples only.
+				//Disable in single cell plot until relevant.
+				if ('sampleId' in sample && this.onClick && !this.scatter.config?.singleCellPlot) {
+					if (this.scatter.state.currentCohortChartTypes.includes('sampleView')) {
 						td.append('button')
 							.style('float', 'right')
 							.text('Sample view')
