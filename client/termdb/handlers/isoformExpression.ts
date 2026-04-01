@@ -47,9 +47,19 @@ export class SearchHandler {
 		const data = await dofetch3('genelookup', { body: { genome: genomeObj.name, input: gene, deep: 1 } })
 		if (!data.gmlst?.length) throw new Error(`No isoforms found for ${gene}`)
 
-		// filter to ENST isoforms that have data in the HDF5 file
-		const availableItems = this.app.vocabApi.termdbConfig.queries.isoformExpression?.availableItems || []
-		const enstModels = filterIsoforms(data.gmlst, availableItems)
+		// filter to ENST isoforms, then check which have data via server-side lookup
+		const enstCandidates = data.gmlst.filter((gm: any) => gm.isoform?.startsWith('ENST'))
+		if (enstCandidates.length === 0) throw new Error(`No Ensembl transcript isoforms found for ${gene}`)
+
+		const { available } = await dofetch3('termdb/isoformAvailability', {
+			body: {
+				genome: genomeObj.name,
+				dslabel: this.app.vocabApi.vocab.dslabel,
+				isoforms: enstCandidates.map((gm: any) => gm.isoform)
+			}
+		})
+		const availableSet = new Set(available || [])
+		const enstModels = enstCandidates.filter((gm: any) => availableSet.has(gm.isoform))
 		if (enstModels.length === 0) throw new Error(`No isoforms with data found for ${gene}`)
 
 		// bail if the user already searched a different gene while we were fetching

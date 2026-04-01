@@ -78,6 +78,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			const start = Math.max(0, Number(config.coordinateOverride!.start) - pad)
 			const stop = Number(config.coordinateOverride!.stop) + pad
 
+			checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
 			const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
 			if ('error' in dmrResult) {
 				sayerror(this.dom.error, dmrResult.error)
@@ -131,6 +132,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			this.view.clearErrors()
 
 			try {
+				checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
 				const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
 				if ('error' in dmrResult) {
 					sayerror(this.dom.error, dmrResult.error)
@@ -163,6 +165,7 @@ class DmrPlot extends PlotBase implements RxComponent {
 			this.blockInstance = null
 
 			try {
+				checkRegionSize(stop - start, config.settings.dmr.maxRegionSize)
 				const dmrResult = await this.model.fetchDmr(chr, start, stop, this.api?.getAbortSignal())
 				if ('error' in dmrResult) {
 					sayerror(this.dom.error, dmrResult.error)
@@ -228,4 +231,14 @@ function validateConfig(opts) {
 	if (!opts.coordinateOverride) throw new Error('coordinateOverride (chr/start/stop) is required for DMR plot')
 	if (!opts.group1) throw new Error('group1 is required for DMR plot')
 	if (!opts.group2) throw new Error('group2 is required for DMR plot')
+}
+
+/** Client-side region size guard (configurable via settings.dmr.maxRegionSize, default 5 Mb).
+ *  The server also enforces a hard safety cap (10 Mb) to catch direct API calls or buggy clients. */
+function checkRegionSize(span: number, maxRegionSize: number) {
+	if (span > maxRegionSize) {
+		const mbLimit = (maxRegionSize / 1_000_000).toFixed(0)
+		const mbSpan = (span / 1_000_000).toFixed(1)
+		throw new Error(`Region too large for DMR analysis (${mbSpan} Mb). Maximum is ${mbLimit} Mb.`)
+	}
 }

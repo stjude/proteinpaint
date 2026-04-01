@@ -255,10 +255,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		q2.geneExpression = { unit: q.geneExpression.unit }
 	}
 	if (q.isoformExpression) {
-		q2.isoformExpression = {
-			unit: q.isoformExpression.unit,
-			availableItems: (q.isoformExpression as any).availableItems
-		}
+		q2.isoformExpression = { unit: q.isoformExpression.unit }
 	}
 	if (q.proteome) {
 		q2.proteome = {}

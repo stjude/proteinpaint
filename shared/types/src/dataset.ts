@@ -758,6 +758,24 @@ export type GeneExpressionQuery = {
 	unit?: string
 }
 
+/** Isoform expression query — either .get() or .file is needed.
+ *  availableItems is populated at startup from the HDF5 item dataset
+ *  so the client can filter isoform selection lists. */
+export type IsoformExpressionQuery = {
+	/** ds-supplied or dynamically added getter */
+	get?: (param: any, ds: any) => void
+	/** HDF5 file with ENST IDs as row keys */
+	file?: string
+	/** dynamically added during server launch, list of sample integer IDs from file */
+	samples?: number[]
+	/** cache for default bins per isoform */
+	geneExpression2bins?: { [index: string]: any }
+	/** expression unit (e.g. 'TPM') */
+	unit?: string
+	/** ENST IDs available in the HDF5 file, populated during server validation */
+	availableItems?: string[]
+}
+
 export type SingleCellGeneExpressionNative = {
 	src: 'native'
 	/** path to HDF5 files. for now only HDF5 is supported.
@@ -1000,7 +1018,7 @@ type Mds3Queries = {
 	singleSampleMutation?: SingleSampleMutationQuery
 	NIdata?: NIdataQuery
 	geneExpression?: GeneExpressionQuery
-	isoformExpression?: GeneExpressionQuery
+	isoformExpression?: IsoformExpressionQuery
 	/** single-sample gsea precomputed scores for rnaseq samples, for genesets from geneset db
 	requires genome to be equipped with geneset db
 	*/
