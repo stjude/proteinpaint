@@ -28,6 +28,7 @@ runs:
       run: |
         cd ./container
         ./pack.sh
+        exit 2
 
     - name: Copy serverconfig.json to root
       shell: bash
