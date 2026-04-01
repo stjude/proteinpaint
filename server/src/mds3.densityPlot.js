@@ -1,4 +1,4 @@
-import { getDensity } from '../routes/termdb.violin.ts'
+import { getDensity } from '../routes/termdb.violinBox.ts'
 
 /*
 term: numeric term from termdb
