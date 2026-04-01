@@ -22,6 +22,7 @@ export class TermTypeGroups {
 	static DNA_METHYLATION = 'DNA Methylation'
 	static GENE_DEPENDENCY = 'Gene Dependency'
 	static GENE_EXPRESSION = 'Gene Expression'
+	static ISOFORM_EXPRESSION = 'Isoform Expression'
 	static GSEA = 'GSEA'
 	static METABOLITE_INTENSITY = 'Metabolite Intensity'
 	static PROTEOME_ABUNDANCE = 'Whole Proteome Abundance'

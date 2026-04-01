@@ -5,6 +5,7 @@ import {
 	TermTypeGroups,
 	SINGLECELL_CELLTYPE,
 	GENE_EXPRESSION,
+	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
@@ -369,6 +370,7 @@ function getAllowedTermTypes(ds) {
 	}
 	// assess other data types and add corresponding term types
 	if (ds.queries?.geneExpression) typeSet.add(GENE_EXPRESSION)
+	if (ds.queries?.isoformExpression) typeSet.add(ISOFORM_EXPRESSION)
 	if (ds.queries?.metaboliteIntensity) typeSet.add(METABOLITE_INTENSITY)
 	if (ds.queries?.proteome?.assays) typeSet.add(PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
