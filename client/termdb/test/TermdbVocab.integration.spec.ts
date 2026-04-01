@@ -23,7 +23,7 @@ Tests:
     ** TODO: 
         getNestedChartSeriesData()
         getCohortSampleCount()
-        getViolinPlotData()
+        getViolinBox()
         getNumericUncomputableCategories()
         validateSnps()
         get_variantFilter()
@@ -607,7 +607,7 @@ tape('getFilteredSampleCount()', async test => {
 	test.end()
 })
 
-tape.skip('getViolinPlotData()', async test => {
+tape.skip('getViolinBox()', async test => {
 	test.timeoutAfter(100)
 
 	// const termdbVocabApi = await getTermdbVocabApi()

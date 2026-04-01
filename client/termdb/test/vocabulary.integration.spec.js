@@ -70,7 +70,7 @@ tape('vocabInit(), default', test => {
 	test.equal(typeof vocabApi.getTermInfo, 'function', 'should have a vocab.getTermInfo function')
 	test.equal(typeof vocabApi.getCohortSampleCount, 'function', 'should have a vocab.getCohortSampleCount function')
 	test.equal(typeof vocabApi.getFilteredSampleCount, 'function', 'should have a vocab.getFilteredSampleCount function')
-	test.equal(typeof vocabApi.getViolinPlotData, 'function', 'should have a vocab.getViolinPlotData function')
+	test.equal(typeof vocabApi.getViolinBox, 'function', 'should have a vocab.getViolinBox function')
 	test.equal(typeof vocabApi.getPercentile, 'function', 'should have a vocab.getPercentile function')
 	test.equal(typeof vocabApi.getDescrStats, 'function', 'should have a vocab.getDescrStats function')
 	test.equal(typeof vocabApi.getterm, 'function', 'should have a vocab.getterm function')

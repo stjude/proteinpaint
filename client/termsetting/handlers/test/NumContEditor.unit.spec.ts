@@ -38,7 +38,7 @@ async function getNumericHandler(opts: any = {}) {
 				}
 			},
 			vocabApi: {
-				getViolinPlotData() {
+				getViolinBox() {
 					return agedxViolinData
 				}
 			}

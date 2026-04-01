@@ -128,10 +128,11 @@ async function fillMenu(self, div, tvs) {
 		radius: 8
 	}
 
-	if (typeof self.opts.vocabApi.getViolinPlotData == 'function') {
+	if (typeof self.opts.vocabApi.getViolinBox == 'function') {
 		try {
-			const data = await self.opts.vocabApi.getViolinPlotData(
+			const data = await self.opts.vocabApi.getViolinBox(
 				{
+					plotType: 'violin',
 					tw: { term: tvs.term, q: { mode: 'continuous' } },
 					// must supply this filter and override state filter in function, so the density plot will not be limited to range defined by current numeric tvs but will show whole range
 					filter: self.filter,

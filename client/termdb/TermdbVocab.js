@@ -448,55 +448,6 @@ export class TermdbVocab extends Vocab {
 		return data.count
 	}
 
-	async getViolinPlotData(arg, _body = {}, signal = undefined) {
-		const headers = await this.mayGetAuthHeaders('termdb')
-		arg.tw = this.getTwMinCopy(arg.tw)
-		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
-		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
-		const body = Object.assign(
-			{
-				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel,
-				filter: arg.filter || this.state.termfilter?.filter, // mds3 tk filterObj state lacks termfilter!!
-				filter0: this.state.termfilter?.filter0,
-				embedder: window.location.hostname,
-				devicePixelRatio: window.devicePixelRatio,
-				isKDE: 'isKDE' in arg ? arg.isKDE : true,
-				ticks: arg.ticks,
-				datasymbol: arg.datasymbol || 'rug',
-				orientation: arg.orientation || 'horizontal',
-				radius: arg.radius || 8,
-				svgw: arg.svgw || 200,
-				unit: arg.unit || 'abs'
-			},
-			arg,
-			_body
-		)
-		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const init = { headers, body, signal }
-		const data = await this.dofetch3('termdb/violin', init)
-		if (data.error) throw data.error
-		return data
-	}
-
-	async getBoxPlotData(arg, signal = undefined) {
-		const headers = await this.mayGetAuthHeaders('termdb')
-		arg.tw = this.getTwMinCopy(arg.tw)
-
-		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
-		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
-		const body = Object.assign(
-			{
-				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel
-			},
-			arg
-		)
-		if (body.filter) body.filter = getNormalRoot(body.filter)
-		const d = await this.dofetch3('termdb/boxplot', { headers, body, signal })
-		return d
-	}
-
 	async getViolinBox(arg, _body = {}, signal = undefined) {
 		const headers = await this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)

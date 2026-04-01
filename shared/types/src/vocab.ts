@@ -23,7 +23,6 @@ export type VocabApi = {
 	getterm: (f: any) => Term
 	getTerms: (f: any) => any
 	getTermdbConfig: () => any
-	getViolinPlotData: (args: any, _body?: any) => any
 	getAnnotatedSampleData: (args: any) => any
 	getDefaultBins: (args: any) => any
 	setTermBins(tw: TermWrapper): any
