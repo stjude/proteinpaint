@@ -432,123 +432,9 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					throw new Error('no data returned from pre-analysis request')
 				}
 
-				const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
-				const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
-
-				if (numControl + numCase > maxSampleCutoff) {
-					if (preAnalysisData.data.alert)
-						preAnalysisData.data.alert += ` | Sample size ${
-							numControl + numCase
-						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-					else
-						preAnalysisData.data.alert = `Sample size ${
-							numControl + numCase
-						} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
-				}
-
-				// display actual numbers of samples with rnaseq count
 				tip.clear().showunderoffset(itemDiv.node())
-				const menuDiv = tip.d.append('div')
-				const table = table2col({ holder: menuDiv })
-				table.table.style('margin-left', '5px').style('padding', '5px 10px')
-				{
-					const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
-					const colorSquareCtrl = controlGColor
-						? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
-						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-					const [c1, c2] = table.addRow()
-					c1.html(
-						`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
-					)
-					c2.html(`${numControl} samples`)
-				}
-				{
-					const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
-					const colorSquareCase = caseGColor
-						? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
-						: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
-					const [c1, c2] = table.addRow()
-					c1.html(
-						`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
-					)
-					c2.html(`${numCase} samples`)
-				}
 
-				// display errors
-				const alertDiv = menuDiv.append('div')
-				if (preAnalysisData.data.alert) {
-					sayerror(alertDiv, preAnalysisData.data.alert)
-				}
-
-				// option to launch DE
-				const sample_size_limit = 8
-				if (!preAnalysisData.data.alert) {
-					const options =
-						numControl + numCase >= maxGESampleCutoff
-							? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
-							: numControl <= sample_size_limit && numCase <= sample_size_limit
-							? [
-									{ label: 'edgeR', value: 'edgeR' },
-									{ label: 'Limma', value: 'limma' }
-							  ]
-							: [
-									{ label: 'edgeR', value: 'edgeR' },
-									{ label: 'Wilcoxon', value: 'wilcoxon' },
-									{ label: 'Limma', value: 'limma' }
-							  ]
-
-					const launchDEDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
-					const radioRow = launchDEDiv.append('tr')
-					let selectedMethod = options[0].value
-
-					radioRow
-						.append('td')
-						.html('Method')
-						.attr('aria-label', 'DE Method')
-						.attr('class', 'sja-termdb-config-row-label')
-						.style('padding', '5px')
-
-					const cell = radioRow.append('td')
-					const radioBtnDiv = cell.append('div')
-
-					make_radios({
-						holder: radioBtnDiv,
-						inputName: `de-method-${Date.now()}`,
-						options: options.map((o, i) => ({
-							...o,
-							title: `${o.label} method`,
-							checked: i === 0 // preselect first option
-						})),
-						styles: {
-							display: 'inline-block',
-							padding: '0 12px 0 0'
-						},
-						callback: v => (selectedMethod = v)
-					})
-
-					launchDEDiv
-						.append('button')
-						.style('border', 'none')
-						.style('border-radius', '20px')
-						.style('padding', '10px 15px')
-						.text(`Run Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
-						.on('click', async () => {
-							const config = {
-								chartType: 'differentialAnalysis',
-								state: self.state,
-								samplelst: { groups },
-								termType: TermTypes.GENE_EXPRESSION,
-								tw: samplelstTW,
-								settings: { volcano: { method: selectedMethod } }
-							}
-							tip.hide()
-							self.tip.hide()
-							self.app.dispatch({
-								type: 'plot_create',
-								config
-							})
-						})
-				}
+				renderPreAnalysisData({ preAnalysisData, samplelstTW, groups, tip, self })
 			})
 	}
 
@@ -677,6 +563,129 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 		.style('font-size', '0.8em')
 		.style('opacity', 0.8)
 		.style('padding', '3px 3px 3px 10px')
+}
+
+export function renderPreAnalysisData(arg) {
+	const { preAnalysisData, samplelstTW, groups, holder, tip, self } = arg
+
+	if (!preAnalysisData?.data) return
+
+	const numControl = preAnalysisData.data[samplelstTW.q.groups[0].name]
+	const numCase = preAnalysisData.data[samplelstTW.q.groups[1].name]
+
+	if (numControl + numCase > maxSampleCutoff) {
+		if (preAnalysisData.data.alert)
+			preAnalysisData.data.alert += ` | Sample size ${
+				numControl + numCase
+			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+		else
+			preAnalysisData.data.alert = `Sample size ${
+				numControl + numCase
+			} exceeds max sample size of ${maxSampleCutoff}. Please reduce sample size.`
+	}
+
+	// display actual numbers of samples with rnaseq count
+	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
+	const table = table2col({ holder: menuDiv })
+	table.table.style('margin-left', '5px').style('padding', '5px 10px')
+	{
+		const controlGColor = samplelstTW.term.values[samplelstTW.q.groups[0].name].color
+		const colorSquareCtrl = controlGColor
+			? `<span style="display:inline-block; width:12px; height:12px; background-color:${controlGColor}" ></span>`
+			: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+		const [c1, c2] = table.addRow()
+		c1.html(
+			`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
+		)
+		c2.html(`${numControl} samples`)
+	}
+	{
+		const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
+		const colorSquareCase = caseGColor
+			? `<span style="display:inline-block; width:12px; height:12px; background-color:${caseGColor}" ></span>`
+			: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
+		const [c1, c2] = table.addRow()
+		c1.html(
+			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
+		)
+		c2.html(`${numCase} samples`)
+	}
+
+	// display errors
+	const alertDiv = menuDiv.append('div')
+	if (preAnalysisData.data.alert) {
+		sayerror(alertDiv, preAnalysisData.data.alert)
+	}
+
+	// option to launch DE
+	const sample_size_limit = 8
+	if (!preAnalysisData.data.alert) {
+		const options =
+			numControl + numCase >= maxGESampleCutoff
+				? [{ label: 'Wilcoxon', value: 'wilcoxon' }]
+				: numControl <= sample_size_limit && numCase <= sample_size_limit
+				? [
+						{ label: 'edgeR', value: 'edgeR' },
+						{ label: 'Limma', value: 'limma' }
+				  ]
+				: [
+						{ label: 'edgeR', value: 'edgeR' },
+						{ label: 'Wilcoxon', value: 'wilcoxon' },
+						{ label: 'Limma', value: 'limma' }
+				  ]
+
+		const launchDEDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
+		const radioRow = launchDEDiv.append('tr')
+		let selectedMethod = options[0].value
+
+		radioRow
+			.append('td')
+			.html('Method')
+			.attr('aria-label', 'DE Method')
+			.attr('class', 'sja-termdb-config-row-label')
+			.style('padding', '5px')
+
+		const cell = radioRow.append('td')
+		const radioBtnDiv = cell.append('div')
+
+		make_radios({
+			holder: radioBtnDiv,
+			inputName: `de-method-${Date.now()}`,
+			options: options.map((o, i) => ({
+				...o,
+				title: `${o.label} method`,
+				checked: i === 0 // preselect first option
+			})),
+			styles: {
+				display: 'inline-block',
+				padding: '0 12px 0 0'
+			},
+			callback: v => (selectedMethod = v)
+		})
+
+		launchDEDiv
+			.append('button')
+			.style('border', 'none')
+			.style('border-radius', '20px')
+			.style('padding', '10px 15px')
+			.text(`Run Differential ${termType2label(TermTypes.GENE_EXPRESSION)} Analysis`)
+			.on('click', async () => {
+				const config = {
+					chartType: 'differentialAnalysis',
+					state: self.state,
+					samplelst: { groups },
+					termType: TermTypes.GENE_EXPRESSION,
+					tw: samplelstTW,
+					settings: { volcano: { method: selectedMethod } }
+				}
+				if (tip) tip.hide()
+				if (self.tip) self.tip.hide()
+				self.app.dispatch({
+					type: 'plot_create',
+					config
+				})
+			})
+	}
 }
 
 function initUI(self) {
