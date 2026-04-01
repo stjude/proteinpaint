@@ -1,4 +1,12 @@
-import type { ViolinBoxRequest, ViolinBoxResponse, RouteApi, ValidGetDataResponse, TermWrapper } from '#types'
+import type {
+	ViolinBoxRequest,
+	ViolinRequest,
+	BoxRequest,
+	ViolinBoxResponse,
+	RouteApi,
+	ValidGetDataResponse,
+	TermWrapper
+} from '#types'
 import type { ReqQueryAddons } from './types.ts'
 import { violinBoxPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
@@ -73,7 +81,7 @@ function init({ genomes }) {
  * VIOLIN PLOT FUNCTIONS
  **********************************************************/
 
-async function getViolin(q: ViolinBoxRequest & ReqQueryAddons, data: any, ds: any) {
+async function getViolin(q: ViolinRequest & ReqQueryAddons, data: any, ds: any) {
 	const samples = Object.values(data.samples)
 	let values = samples
 		.map(s => s?.[q.tw.$id!]?.value)
@@ -109,7 +117,7 @@ async function getViolin(q: ViolinBoxRequest & ReqQueryAddons, data: any, ds: an
 /** scale sample data
  * divide keys and values by scaling factor - this is important
  * for regression UI when running association tests. */
-function setScaleData(q: ViolinBoxRequest, data: ValidGetDataResponse, tw: TermWrapper) {
+function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrapper) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const val of Object.values(data.samples)) {
@@ -120,7 +128,7 @@ function setScaleData(q: ViolinBoxRequest, data: ValidGetDataResponse, tw: TermW
 	}
 }
 
-function divideValues(q: ViolinBoxRequest, data: ValidGetDataResponse, sampleType: string) {
+function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
 	const overlayTerm = q.overlayTw
 	const divideTerm = q.divideTw
 	const useLog = q.unit == 'log'
@@ -170,7 +178,7 @@ export function sortPlot2Values(
 	return plot2values
 }
 
-function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinBoxRequest) {
+function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest) {
 	const charts: any = {}
 	const overlayTerm = q.overlayTw
 	const divideTw = q.divideTw
@@ -218,7 +226,7 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 	return result
 }
 
-async function createCanvasImg(q: ViolinBoxRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
+async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
 	if (q.radius <= 0) throw new Error('q.radius is not a number')
@@ -385,7 +393,7 @@ export async function getDensities(
  * BOXPLOT FUNCTIONS
  **********************************************************/
 
-async function getBoxPlot(q: ViolinBoxRequest & ReqQueryAddons, data: any) {
+async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: any) {
 	const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =
 		await processBoxPlotData(data, q)
 
@@ -402,7 +410,7 @@ async function getBoxPlot(q: ViolinBoxRequest & ReqQueryAddons, data: any) {
 }
 
 /** Process the returned data from getData() for entire box plot chart.*/
-async function processBoxPlotData(data, q: ViolinBoxRequest) {
+async function processBoxPlotData(data, q: BoxRequest) {
 	const samples = Object.values(data.samples)
 	const values = samples
 		.map(s => s?.[q.tw.$id!]?.value)
@@ -481,7 +489,7 @@ function setPlotData(
 	key: string,
 	sampleType: string,
 	descrStats: any,
-	q: ViolinBoxRequest,
+	q: BoxRequest,
 	outlierMin: number,
 	outlierMax: number,
 	overlayTw?: any

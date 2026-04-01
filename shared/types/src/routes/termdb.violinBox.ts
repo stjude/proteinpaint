@@ -4,10 +4,8 @@ import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { DescrStats } from './termdb.descrstats.ts'
 
-/**Unified request type for violin and boxplot */
-export type ViolinBoxRequest = {
-	/** Indicates the type of chart to render: 'violin' or 'box' */
-	plotType: 'violin' | 'box'
+/** Common properties shared by both violin and box plots */
+type CommonViolinBoxProps = {
 	/** main tw to fetch numeric data */
 	tw: TermWrapper
 	/** Reference label (i.e. short label) for the ds */
@@ -22,8 +20,12 @@ export type ViolinBoxRequest = {
 	filter?: Filter
 	/** optional read-only invisible filter */
 	filter0?: any
+}
 
-	// Violin-specific properties
+/** Request type for violin plots with required violin-specific parameters */
+export type ViolinRequest = CommonViolinBoxProps & {
+	/** Indicates the type of chart to render */
+	plotType: 'violin'
 	/** A number representing the dimension perpendicular to the violin spread */
 	axisHeight?: number
 	/** ?? TODO: Needs description */
@@ -31,13 +33,13 @@ export type ViolinBoxRequest = {
 	/** A string representing the type of symbol used on the plot */
 	datasymbol?: string
 	/** A number representing the device's pixel ratio */
-	devicePixelRatio?: number
+	devicePixelRatio: number
 	/** If true, uses KDE method to build plot */
 	isKDE?: boolean
 	/** A string with two possible values: 'horizontal' or 'vertical' */
-	orientation?: 'horizontal' | 'vertical'
+	orientation: string
 	/** A number representing the radius of the data symbols */
-	radius?: number
+	radius: number
 	/** A number representing the right margin */
 	rightMargin?: number
 	/** Term may be scaled from regression analysis */
@@ -45,13 +47,17 @@ export type ViolinBoxRequest = {
 	/** A number representing the width of the stroke */
 	strokeWidth?: number
 	/** A number representing the width of the SVG box */
-	svgw?: number
+	svgw: number
 	/** Number of bins to build the plot. Default is 20. */
 	ticks?: number
 	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
 	unit?: string
+}
 
-	// Boxplot-specific properties
+/** Request type for box plots with required box-specific parameters */
+export type BoxRequest = CommonViolinBoxProps & {
+	/** Indicates the type of chart to render */
+	plotType: 'box'
 	/** if true, only return positive values */
 	isLogScale?: boolean
 	/** sort plots by median value */
@@ -61,6 +67,9 @@ export type ViolinBoxRequest = {
 	/** If true, show association tests table */
 	showAssocTests?: boolean
 }
+
+/**Unified request type for violin and boxplot - union of ViolinRequest and BoxRequest */
+export type ViolinBoxRequest = ViolinRequest | BoxRequest
 
 export type ViolinBoxResponse = ViolinResponse | BoxPlotResponse | ErrorResponse
 
