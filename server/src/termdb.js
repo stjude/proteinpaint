@@ -137,7 +137,17 @@ async function trigger_getsamples(q, res, ds) {
 
 async function getSampleList(req, q, ds) {
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
-	const samples = await termdbsql.get_samples(q, ds, canDisplay)
+	let samples
+	if (ds.cohort?.db) {
+		// dataset is sqlite-based
+		samples = await termdbsql.get_samples(q, ds, canDisplay)
+	} else if (typeof ds.cohort?.termdb?.getSamples === 'function') {
+		// dataset has getSamples() method
+		const temp = await ds.cohort.termdb.getSamples({ filter: q.filter, filter0: q.filter0, ds })
+		samples = [...temp]
+	} else {
+		throw new Error('no method available to get sample list')
+	}
 	return samples
 }
 
