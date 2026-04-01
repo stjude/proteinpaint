@@ -427,7 +427,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 }
 
 // Similar to validateNative but for isoform expression data. kept separate for now in case we want to add isoform-specific validation in the future
-// Keeping genome param for potential future use, even though it's not currently used in the function
+// Keeping genome param for potential future use, even though it's not currently used in the function to match the signature of other validate functions and allow for easier integration of future isoform-specific validation that may require genome info
 export async function validateQueryIsoformExpression(ds: any, _genome: any) {
 	const q: GeneExpressionQuery = ds.queries.isoformExpression
 	if (!q) return
