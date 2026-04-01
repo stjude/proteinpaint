@@ -500,6 +500,7 @@ export class TermdbVocab extends Vocab {
 	async getViolinBox(arg, _body = {}, signal = undefined) {
 		const headers = await this.mayGetAuthHeaders('termdb')
 		arg.tw = this.getTwMinCopy(arg.tw)
+		arg.tw.q.mode = 'continuous'
 		if (arg.overlayTw) arg.overlayTw = this.getTwMinCopy(arg.overlayTw)
 		if (arg.divideTw) arg.divideTw = this.getTwMinCopy(arg.divideTw)
 

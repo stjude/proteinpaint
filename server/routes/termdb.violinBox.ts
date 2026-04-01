@@ -29,28 +29,43 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		const q: ViolinBoxRequest & ReqQueryAddons = req.query
-		let data
+		let result
 		try {
 			const g = genomes[q.genome]
 			if (!g) throw new Error('invalid genome name')
 			const ds = g.datasets?.[q.dslabel]
 			if (!ds) throw new Error('invalid ds')
 
-			if (!q.plotType) throw new Error('plotType is required')
-			if (q.plotType !== 'violin' && q.plotType !== 'box') {
-				throw new Error('plotType must be either "violin" or "box"')
+			if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw new Error('q.tw not of {term,q}')
+			const term = q.tw.term
+			if (!isNumericTerm(term) && term.type !== 'survival') throw new Error('term type is not numeric or survival')
+
+			const arg = {
+				terms: [q.tw],
+				filter: q.filter,
+				filter0: q.filter0,
+				currentGeneNames: q.currentGeneNames,
+				__protected__: q.__protected__,
+				__abortSignal: q.__abortSignal
 			}
+			if (q.overlayTw) arg.terms.push(q.overlayTw)
+			if (q.divideTw) arg.terms.push(q.divideTw)
+			const data = await getData(arg, ds)
+			if (!data) throw new Error('getData() returns nothing')
+			if (data.error) throw new Error(data.error)
 
 			if (q.plotType === 'violin') {
-				data = await getViolin(q, ds)
+				result = await getViolin(q, data, ds)
+			} else if (q.plotType === 'box') {
+				result = await getBoxPlot(q, data)
 			} else {
-				data = await getBoxPlot(q, ds)
+				throw new Error('invalid plotType')
 			}
 		} catch (e: any) {
-			data = { error: e?.message || e }
+			result = { error: e?.message || e }
 			if (e instanceof Error && e.stack) console.log(e)
 		}
-		res.send(data satisfies ViolinBoxResponse)
+		res.send(result satisfies ViolinBoxResponse)
 	}
 }
 
@@ -58,30 +73,7 @@ function init({ genomes }) {
  * VIOLIN PLOT FUNCTIONS
  **********************************************************/
 
-async function getViolin(q: ViolinBoxRequest & ReqQueryAddons, ds: any) {
-	if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw new Error('q.tw not of {term,q}')
-	const term = q.tw.term
-	if (!q.tw.q.mode) q.tw.q.mode = 'continuous'
-	if (!isNumericTerm(term) && term.type !== 'survival') throw new Error('term type is not numeric or survival')
-
-	const terms = [q.tw]
-	if (q.overlayTw) terms.push(q.overlayTw)
-	if (q.divideTw) terms.push(q.divideTw)
-
-	const data = await getData(
-		{
-			terms,
-			filter: q.filter,
-			filter0: q.filter0,
-			currentGeneNames: q.currentGeneNames,
-			__protected__: q.__protected__,
-			__abortSignal: q.__abortSignal
-		},
-		ds
-	)
-	if (!data) throw new Error('getData() returns nothing')
-	if (data.error) throw new Error(data.error)
-
+async function getViolin(q: ViolinBoxRequest & ReqQueryAddons, data: any, ds: any) {
 	const samples = Object.values(data.samples)
 	let values = samples
 		.map(s => s?.[q.tw.$id!]?.value)
@@ -354,15 +346,15 @@ export async function getDensities(
 		for (const plot in plot2Values) {
 			// Filter out non-positive values and transform to log space
 			// Log is undefined for values <= 0, so we filter them out
-			transformedPlot2Values[plot] = plot2Values[plot]
-				.filter(v => v > 0)
-				.map(v => Math.log(v) / Math.log(logBase))
+			transformedPlot2Values[plot] = plot2Values[plot].filter(v => v > 0).map(v => Math.log(v) / Math.log(logBase))
 		}
 	} else {
 		transformedPlot2Values = plot2Values
 	}
 
-	const plot2Density: any = JSON.parse(await run_R('density.R', JSON.stringify({ plot2Values: transformedPlot2Values })))
+	const plot2Density: any = JSON.parse(
+		await run_R('density.R', JSON.stringify({ plot2Values: transformedPlot2Values }))
+	)
 	const densities = {}
 	for (const plot in plot2Density) {
 		const result: { x: number[]; y: number[] } = plot2Density[plot]
@@ -393,17 +385,7 @@ export async function getDensities(
  * BOXPLOT FUNCTIONS
  **********************************************************/
 
-async function getBoxPlot(q: ViolinBoxRequest & ReqQueryAddons, ds: any) {
-	const terms = [q.tw]
-	if (q.overlayTw) terms.push(q.overlayTw)
-	if (q.divideTw) terms.push(q.divideTw)
-
-	const data = await getData(
-		{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
-		ds
-	)
-	if (data.error) throw new Error(data.error)
-
+async function getBoxPlot(q: ViolinBoxRequest & ReqQueryAddons, data: any) {
 	const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =
 		await processBoxPlotData(data, q)
 
