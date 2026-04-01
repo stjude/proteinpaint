@@ -10,7 +10,6 @@ import type {
 	ValidResponse,
 	SingletermResponse,
 	GeneExpressionQuery,
-	IsoformExpressionQuery,
 	RouteApi
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
@@ -427,21 +426,23 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 	}
 }
 
-export async function validate_query_isoformExpression(ds: any, _genome: any) {
-	const q: IsoformExpressionQuery = ds.queries.isoformExpression
+// Similar to validateNative but for isoform expression data. kept separate for now in case we want to add isoform-specific validation in the future
+// Keeping genome param for potential future use, even though it's not currently used in the function
+export async function validateQueryIsoformExpression(ds: any, _genome: any) {
+	const q: GeneExpressionQuery = ds.queries.isoformExpression
 	if (!q) return
-	q.isoformExpression2bins = {}
+	q.geneExpression2bins = {}
 
 	if (typeof q.get == 'function') return // ds supplied getter
 
 	if (q.src == 'native') {
-		await validateNativeIsoform(q as IsoformExpressionQuery, ds)
+		await validateNativeIsoform(q as GeneExpressionQuery, ds)
 		return
 	}
 	throw 'unknown queries.isoformExpression.src'
 }
 
-async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
+async function validateNativeIsoform(q: GeneExpressionQuery, ds: any) {
 	q.file = path.join(serverconfig.tpmasterdir, q.file!)
 	q.samples = []
 
