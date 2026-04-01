@@ -1,6 +1,6 @@
 import { Menu, addGeneSearchbox, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes } from '#shared/terms.js'
+import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback: any
@@ -91,7 +91,7 @@ export class SearchHandler {
 	selectIsoform(isoform: string, gene: string) {
 		const unit = this.app.vocabApi.termdbConfig.queries.isoformExpression?.unit || 'Isoform Expression'
 		const name = `${isoform} ${unit}`
-		this.callback({ isoform, gene, name, type: TermTypes.ISOFORM_EXPRESSION })
+		this.callback({ isoform, gene, name, type: ISOFORM_EXPRESSION })
 	}
 }
 

@@ -20,7 +20,7 @@ import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { TermTypes, PROTEOME_ABUNDANCE } from '#shared/terms.js'
+import { TermTypes, ISOFORM_EXPRESSION, PROTEOME_ABUNDANCE } from '#shared/terms.js'
 import { termType2label } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
 
@@ -50,9 +50,7 @@ function init({ genomes }) {
 			// TODO: generalize to any dataset
 			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (
-				[TermTypes.GENE_EXPRESSION, TermTypes.ISOFORM_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(q.dataType)
-			) {
+			if ([TermTypes.GENE_EXPRESSION, ISOFORM_EXPRESSION, TermTypes.METABOLITE_INTENSITY].includes(q.dataType)) {
 				if (!ds.queries?.[q.dataType]) throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
