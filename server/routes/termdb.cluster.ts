@@ -10,6 +10,7 @@ import type {
 	ValidResponse,
 	SingletermResponse,
 	GeneExpressionQuery,
+	IsoformExpressionQuery,
 	RouteApi
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
@@ -429,20 +430,20 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 // Similar to validateNative but for isoform expression data. kept separate for now in case we want to add isoform-specific validation in the future
 // Keeping genome param for potential future use, even though it's not currently used in the function to match the signature of other validate functions and allow for easier integration of future isoform-specific validation that may require genome info
 export async function validateQueryIsoformExpression(ds: any, _genome: any) {
-	const q: GeneExpressionQuery = ds.queries.isoformExpression
+	const q: IsoformExpressionQuery = ds.queries.isoformExpression
 	if (!q) return
 	q.geneExpression2bins = {}
 
 	if (typeof q.get == 'function') return // ds supplied getter
 
-	if (q.src == 'native') {
-		await validateNativeIsoform(q as GeneExpressionQuery, ds)
+	if (q.file) {
+		await validateNativeIsoform(q, ds)
 		return
 	}
-	throw 'unknown queries.isoformExpression.src'
+	throw 'isoformExpression requires either .get() or .file'
 }
 
-async function validateNativeIsoform(q: GeneExpressionQuery, ds: any) {
+async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 	q.file = path.join(serverconfig.tpmasterdir, q.file!)
 	q.samples = []
 
@@ -466,12 +467,12 @@ async function validateNativeIsoform(q: GeneExpressionQuery, ds: any) {
 			q.samples.push(si)
 		}
 		// store available isoform IDs so the client can filter the list
-		;(q as any).availableItems = vr.items || []
+		q.availableItems = vr.items || []
 		console.log(
 			`${ds.label}: isoformExpression HDF5 file validated. Format: ${vr.format}, Samples:`,
 			q.samples.length,
 			'Items:',
-			(q as any).availableItems.length
+			q.availableItems!.length
 		)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate isoformExpression HDF5 file: ${error}`

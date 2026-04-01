@@ -38,6 +38,16 @@ function init({ genomes }) {
 			if (invalidcoord(genome, q.chr, q.start, q.stop))
 				throw new Error(`Invalid genomic coordinates: ${q.chr}:${q.start}-${q.stop}`)
 
+			// Hard server-side safety cap — prevents expensive requests regardless of client settings.
+			// The client enforces its own configurable limit (settings.dmr.maxRegionSize, default 5 Mb)
+			// which should always be <= this cap. This guard catches direct API calls or buggy clients.
+			const SERVER_MAX_REGION_BP = 10_000_000
+			const span = q.stop - q.start
+			if (span > SERVER_MAX_REGION_BP)
+				throw new Error(
+					`Region too large (${(span / 1e6).toFixed(1)} Mb). Server maximum is ${SERVER_MAX_REGION_BP / 1e6} Mb.`
+				)
+
 			const group1 = q.group1.map(s => s.sample).filter(Boolean)
 			const group2 = q.group2.map(s => s.sample).filter(Boolean)
 			if (group1.length < 3)
