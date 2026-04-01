@@ -200,7 +200,7 @@ pub fn detect_hdf5_format(
     }
 }
 
-pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
+pub fn validate_hdf5_file(hdf5_filename: String, include_items: bool) -> Result<()> {
     let file = File::open(&hdf5_filename)?;
     let matrix_name = "matrix";
     let row_dataset = "samples";
@@ -241,7 +241,7 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
                 false
             };
 
-            json!({
+            let mut result = json!({
                 "status": if matrix_valid { "success" } else { "failure" },
                 "message": if matrix_valid {
                     "HDF5 matrix file loaded successfully"
@@ -255,7 +255,20 @@ pub fn validate_hdf5_file(hdf5_filename: String) -> Result<()> {
                     "num_columns": matrix_shape.get(1).unwrap_or(&0)
                 },
                 row_dataset.to_string(): row_data
-            })
+            });
+
+            // Optionally include item names (e.g. isoform IDs) in the response
+            if include_items {
+                let col_dataset_data = file.dataset(col_dataset)?;
+                let col_data: Vec<String> = col_dataset_data
+                    .read_1d::<VarLenUnicode>()?
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect();
+                result["items"] = json!(col_data);
+            }
+
+            result
         }
         _ => {
             json!({
@@ -717,7 +730,8 @@ fn main() -> Result<()> {
                     None => false,
                 };
                 if v {
-                    let _ = validate_hdf5_file(hdf5_filename);
+                    let include_items = input_json["include_items"].as_bool().unwrap_or(false);
+                    let _ = validate_hdf5_file(hdf5_filename, include_items);
                 } else {
                     println!("{}", error_response("The value of validate is invalid"));
                 }
