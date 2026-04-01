@@ -170,6 +170,9 @@ class PlotApp extends AppBase implements RxApp {
 		}
 
 		for (const plot of this.state.plots.values()) {
+			/** plots with parentId means the parent plot will trigger the plot instead of being triggered here
+			 * (e.g. subplots with SC app). Mimics the same behavior in client/mass/app.ts main() */
+			if (plot.parentId) continue
 			if (!this.components.plots[plot.id]) {
 				const holder = this.opts?.app?.getPlotHolder
 					? this.opts.app.getPlotHolder(plot, this.dom.holder)
