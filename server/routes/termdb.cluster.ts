@@ -448,7 +448,7 @@ async function validateNativeIsoform(q: GeneExpressionQuery, ds: any) {
 
 	try {
 		await utils.file_is_readable(q.file)
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true }))
+		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true, include_items: true }))
 
 		const vr = JSON.parse(tmp)
 
@@ -465,7 +465,14 @@ async function validateNativeIsoform(q: GeneExpressionQuery, ds: any) {
 			}
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: isoformExpression HDF5 file validated. Format: ${vr.format}, Samples:`, q.samples.length)
+		// store available isoform IDs so the client can filter the list
+		;(q as any).availableItems = vr.items || []
+		console.log(
+			`${ds.label}: isoformExpression HDF5 file validated. Format: ${vr.format}, Samples:`,
+			q.samples.length,
+			'Items:',
+			(q as any).availableItems.length
+		)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate isoformExpression HDF5 file: ${error}`
 	}
