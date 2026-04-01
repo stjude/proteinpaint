@@ -2,6 +2,7 @@ const WebpackNotifierPlugin = require('webpack-notifier')
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
+const webpack = require('webpack')
 
 // TODO: delete webpack use, once esbuild migration is fully tested and unlikely to be reverted
 // as of 1/24/2025: still using webpack since esbuild chunks are still too granular,
@@ -31,15 +32,22 @@ module.exports = function getPortalConfig(env = {}) {
 			libraryTarget: 'window'
 		},
 		resolve: {
-			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin
+			// fallback to specific polyfills if not found in node-polyfill-webpack-plugin
 			fallback: {
-				//stream: false,
-				//fs: false,
-				path: require.resolve('path-browserify'),
-				process: require.resolve('process')
-			}*/
+				buffer: require.resolve('buffer/')
+				// You might need fallbacks for other Node.js modules too, e.g., "stream": require.resolve("stream-browserify")
+				// stream: false,
+				// fs: false,
+				// path: require.resolve('path-browserify'),
+				// process: require.resolve('process')
+			}
 		},
-		plugins: [new NodePolyfillPlugin()],
+		plugins: [
+			new NodePolyfillPlugin(),
+			new webpack.ProvidePlugin({
+				Buffer: ['buffer', 'Buffer']
+			})
+		],
 		module: {
 			strictExportPresence: true,
 			rules: [
