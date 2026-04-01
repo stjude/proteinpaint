@@ -1,1 +1,2 @@
-
+Features:
+- DNA Meth: Added support for isoform expression term type. Improvements to DMR region viewer
