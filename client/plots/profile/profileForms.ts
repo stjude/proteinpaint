@@ -10,7 +10,6 @@ const YES_NO_TAB = 'Yes/No Barchart'
 const IMPRESSIONS_TAB = 'Impressions'
 const LIKERT_TAB = 'Likert Scale'
 export class profileForms extends profilePlot {
-	static type = 'profileForm'
 	id: any
 	svg: any
 	components: any
