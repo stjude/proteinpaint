@@ -419,7 +419,6 @@ export default function (): Mds3 {
 				unit: 'FPKM'
 			},
 			isoformExpression: {
-				src: 'native',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.isoform.tpm.h5',
 				unit: 'TPM'
 			},
