@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { SearchHandler, filterIsoforms } from '../isoformExpression.ts'
-import { TermTypes } from '#shared/terms.js'
+import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 
 /**************
  test sections
@@ -32,7 +32,7 @@ tape('selectIsoform() should call callback with configured unit from termdbConfi
 	test.equal(selected?.isoform, 'ENST00000269305', 'Should pass selected isoform')
 	test.equal(selected?.gene, 'TP53', 'Should pass gene')
 	test.equal(selected?.name, 'ENST00000269305 TPM', 'Should include configured unit in term name')
-	test.equal(selected?.type, TermTypes.ISOFORM_EXPRESSION, 'Should set type to isoformExpression')
+	test.equal(selected?.type, ISOFORM_EXPRESSION, 'Should set type to isoformExpression')
 
 	test.end()
 })
@@ -55,7 +55,7 @@ tape('selectIsoform() should use default unit when not configured', test => {
 	handler.selectIsoform('ENST00000269305', 'TP53')
 	test.equal(selected?.isoform, 'ENST00000269305', 'Should pass selected isoform')
 	test.equal(selected?.name, 'ENST00000269305 Isoform Expression', 'Should use default unit')
-	test.equal(selected?.type, TermTypes.ISOFORM_EXPRESSION, 'Should set type to isoformExpression')
+	test.equal(selected?.type, ISOFORM_EXPRESSION, 'Should set type to isoformExpression')
 
 	test.end()
 })
