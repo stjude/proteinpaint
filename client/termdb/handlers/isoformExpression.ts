@@ -48,10 +48,8 @@ export class SearchHandler {
 		if (!data.gmlst?.length) throw new Error(`No isoforms found for ${gene}`)
 
 		// filter to ENST isoforms that have data in the HDF5 file
-		const availableItems = new Set(this.app.vocabApi.termdbConfig.queries.isoformExpression?.availableItems || [])
-		const enstModels = data.gmlst.filter(
-			(gm: any) => gm.isoform?.startsWith('ENST') && (availableItems.size === 0 || availableItems.has(gm.isoform))
-		)
+		const availableItems = this.app.vocabApi.termdbConfig.queries.isoformExpression?.availableItems || []
+		const enstModels = filterIsoforms(data.gmlst, availableItems)
 		if (enstModels.length === 0) throw new Error(`No isoforms with data found for ${gene}`)
 
 		// bail if the user already searched a different gene while we were fetching
@@ -85,4 +83,11 @@ export class SearchHandler {
 		const name = `${isoform} ${unit}`
 		this.callback({ isoform, gene, name, type: TermTypes.ISOFORM_EXPRESSION })
 	}
+}
+
+/** Filter gene models to ENST isoforms that exist in the available items list.
+ *  If availableItems is empty, all ENST isoforms are returned (no filtering). */
+export function filterIsoforms(gmlst: any[], availableItems: string[]) {
+	const itemSet = new Set(availableItems)
+	return gmlst.filter((gm: any) => gm.isoform?.startsWith('ENST') && (itemSet.size === 0 || itemSet.has(gm.isoform)))
 }
