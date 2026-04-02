@@ -658,6 +658,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (ds.cohort.scatterplots) return true
 		if (
 			ds.queries?.geneExpression ||
+			ds.queries?.isoformExpression ||
 			ds.queries?.metaboliteIntensity ||
 			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||
@@ -672,6 +673,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		// corresponds to the two-term-selection-ui on clicking "Scatter Plot" chart button.
 		if (
 			ds.queries?.geneExpression ||
+			ds.queries?.isoformExpression ||
 			ds.queries?.metaboliteIntensity ||
 			ds.queries?.proteome ||
 			ds.queries?.ssGSEA ||

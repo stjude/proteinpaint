@@ -1,4 +1,10 @@
-import { TermTypes, isNumericTerm, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from './terms.js'
+import {
+	TermTypes,
+	isNumericTerm,
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	ISOFORM_EXPRESSION
+} from './terms.js'
 
 export const graphableTypes = new Set([
 	'categorical',
@@ -11,7 +17,7 @@ export const graphableTypes = new Set([
 	'geneVariant',
 	'samplelst',
 	'geneExpression',
-	'isoformExpression',
+	ISOFORM_EXPRESSION,
 	'dtcnv',
 	'dtsnvindel',
 	'dtfusion',
