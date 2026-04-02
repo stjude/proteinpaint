@@ -1157,7 +1157,7 @@ args:
 
 todo unit test
 */
-export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, case_filters) {
+export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	if (Array.isArray(caseObj.diagnoses)) {
 		// There may be multiple diagnosis entries, choose only one for summary plot,
 		// but the selected entry must be deterministic and always render the same plot
@@ -1257,19 +1257,11 @@ function query(fields, sample, tw, current, i) {
 	query(fields, sample, tw, next, i + 1)
 }
 
-function isNotNull(v) {
-	return v !== null
-}
-
-function basicSort(a, b) {
-	return a < b ? -1 : a > b ? 1 : 0
-}
-
 // see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
 function diagnosisFilter(d) {
 	// strict equality, undefined and other non-null empty values are not matched,
-	// so this condition will not be applied if there if age_at_diagnosis was not
-	// added to the requested fieldset
+	// so this condition will not be applied if age_at_diagnosis or primary_diagnosis
+	// was not added to the requested fieldset
 	if (d.age_at_diagnosis === null) return false
 	// as of 4/1/2026, 14 CPTAC cases have diagnoses entries that all match the condition below;
 	// it looks like the GDC API does not return these samples when the fieldset is diagnoses.*,
@@ -1292,10 +1284,18 @@ function primaryDiseasesIsDefined(d) {
 function diagnosisSort(a, b) {
 	if (a.diagnosis_is_primary_disease) return -1
 	if (b.diagnosis_is_primary_disease) return 1
-	if (a.age_at_diagnosis === null && b.age_at_diagnosis === null) return 0
+	if (a.age_at_diagnosis === null && b.age_at_diagnosis === null) {
+		// submitter_id are guaranteed to be different between 2 entries,
+		// with the suffix being DIAG, relapse, etc
+		return a.submitter_id < b.submitter_id ? -1 : 1
+	}
 	if (a.age_at_diagnosis === null) return 1
 	if (b.age_at_diagnosis === null) return -1
-	return a.age_at_diagnosis < b.age_at_diagnosis ? -1 : a.age_at_diagnosis > b.age_at_diagnosis ? 1 : 0
+	if (a.age_at_diagnosis < b.age_at_diagnosis) return -1
+	if (a.age_at_diagnosis > b.age_at_diagnosis) return 1
+	// submitter_id's are guaranteed to be different between 2 entries,
+	// with the suffix being DIAG, relapse, etc
+	return a.submitter_id < b.submitter_id ? -1 : 1
 }
 
 function mayApplyGroupsetting(v, tw) {

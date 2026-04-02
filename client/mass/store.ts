@@ -103,11 +103,18 @@ class MassStore extends StoreBase implements RxStore {
 		this.app = opts.app
 		this.api = api
 		this.type = 'store'
-		// only automatically detect and recover saved state when webdriver is detected
-		const key = window.navigator.webdriver && window['SJPP_E2E_STORAGE_STATES_KEY']
-		const savedState = (key && window.localStorage.getItem('SJPP_E2E_STORAGE_STATES')) || '{}'
-		// console.log(107, 'mass/store savedState', key, savedState)
-		this.state = this.copyMerge(this.toJson(defaultState), opts.state, JSON.parse(savedState)[key]?.state || {}) // opts.state
+		let savedState = {}
+		try {
+			// only automatically detect and recover saved state when webdriver is detected
+			const key = window.navigator.webdriver && window['SJPP_E2E_STORAGE_STATES_KEY']
+			const savedStateStr = (key && window.localStorage.getItem('SJPP_E2E_STORAGE_STATES')) || '{}'
+			savedState = JSON.parse(savedStateStr)[key]?.state || {}
+			// console.log(107, 'mass/store savedState', key, savedState)
+		} catch (_) {
+			// okay to ignore error of not being able to recover state
+			savedState = {}
+		}
+		this.state = this.copyMerge(this.toJson(defaultState), opts.state, savedState)
 		this.prevGeneratedId = 0
 	}
 

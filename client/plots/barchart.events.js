@@ -61,8 +61,12 @@ export default function getHandlers(self) {
 						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`
 					)
 				}
+
+				const uiLabels = self.config.controlLabels || self.app.vocabApi.termdbConfig.uiLabels
 				rows.push(
-					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>${d.total}</td></tr>`,
+					`<tr><td style='padding:3px; color:#aaa'>#${
+						uiLabels.Samples || 'Individuals'
+					}</td><td style='padding:3px; text-align:center'>${d.total}</td></tr>`,
 					`<tr><td style='padding:3px; color:#aaa'>percent</td><td style='padding:3px; text-align:center'>${percent}%</td></tr>`
 				)
 
@@ -616,7 +620,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		}
 	}
 
-	const uiLabels = self.app.vocabApi.termdbConfig.uiLabels
+	const uiLabels = self.config.controlLabels || self.app.vocabApi.termdbConfig.uiLabels
 	const opts = {
 		terms: _terms,
 		filter: filterJoin([self.state.termfilter.filter, tvslst]),
@@ -682,7 +686,7 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 				const value = label || t2entry.value
 				row.push({ value: t2entry.key === dataId ? value : t2entry.key })
 			}
-			// if the series/bar label is clicked, the ovelay/dataId will not be provided for listSamples
+			// if the series/bar label is clicked, the overlay/dataId will not be provided for listSamples
 			if (dataId && t2entry.key !== dataId) notRendered = true
 		}
 		// for now, duplicating if block for term2 and term0
