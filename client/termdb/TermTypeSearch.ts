@@ -368,7 +368,7 @@ export class TermTypeSearch {
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 		if (tab.termTypeGroup != DICTIONARY_VARIABLES && tab.termTypeGroup != METABOLITE_INTENSITY) {
-			//When called in init before main() is called, this.state is not set.
+			//When called in init before main(), this.state is not set.
 			//Get the state from the app to pass it to the handlers.
 			if (!this.state) this.state = this.getState(this.app.getState())
 			const handler = this.handlerByType[type]
