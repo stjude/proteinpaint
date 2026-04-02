@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { termjson } from '../../test/testdata/termjson.js'
-import { parseValues } from '../termdb.boxplot.ts'
+import { parseValues } from '../termdb.violinBox.ts'
 
 /**
  * Tests
