@@ -11,6 +11,7 @@ export const graphableTypes = new Set([
 	'geneVariant',
 	'samplelst',
 	'geneExpression',
+	'isoformExpression',
 	'dtcnv',
 	'dtsnvindel',
 	'dtfusion',

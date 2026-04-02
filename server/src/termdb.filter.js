@@ -82,6 +82,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 			throw `filter item should have a 'tvs' or 'lst' property`
 		} else if (item.tvs.term.type == TermTypes.GENE_EXPRESSION) {
 			f = await get_geneExpression(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.ISOFORM_EXPRESSION) {
+			f = await get_isoformExpression(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.METABOLITE_INTENSITY) {
 			f = await get_metaboliteIntensity(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.PROTEOME_ABUNDANCE) {
@@ -379,6 +381,12 @@ async function get_snp(tvs, CTEname, ds) {
 async function get_geneExpression(tvs, CTEname, ds) {
 	const q = ds.queries?.geneExpression
 	if (!q) throw 'not supported' // guard against request to unsupported data. FIXME may improve filterui to gracefully handle such and avoid showing completely broken mass ui when the request comes from handwrite state or url
+	const data = await q.get({ terms: [{ $id, term: tvs.term }] }, ds)
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
+}
+async function get_isoformExpression(tvs, CTEname, ds) {
+	const q = ds.queries?.isoformExpression
+	if (!q) throw 'not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
