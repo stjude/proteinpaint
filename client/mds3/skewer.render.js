@@ -273,6 +273,7 @@ export function skewer_make(tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
+		.attr('data-testid', d => `sjpp-mds3skewerdisckick-${d.mlst[0].mname}`)
 		.on('mousedown', event => {
 			event.stopPropagation()
 		})

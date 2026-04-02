@@ -190,6 +190,7 @@ export default function (opts) {
 						.attr('height', emptyspace * 2)
 						.attr('fill', 'black')
 						.attr('fill-opacity', 0)
+						.attr('data-testid', `sjpp-sunburstEye-${chartlabel}`)
 						.on('click', () => {
 							if (sun.busy) return
 							remove(sun)
