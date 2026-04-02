@@ -7,7 +7,7 @@ import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
 // import { readJSONFile } from './chat/utils.ts'
-import { inferTermType } from './chat/termtype.ts'
+import { inferScaffold } from './chat/scaffold.ts'
 import serverconfig from '../src/serverconfig.js'
 import { getDsAllowedTermTypes } from './termdb.config.ts'
 
@@ -30,7 +30,7 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res) => {
-		console.log('Received request at /termdb/chat3 with query:', req.query)
+		// console.log('Received request at /termdb/chat3 with query:', req.query)
 		const q: ChatRequest = req.query
 		try {
 			const g = genomes[q.genome]
@@ -81,9 +81,9 @@ function init({ genomes }) {
 			const cohortFilter = filter.lst?.find((item: any) => item.tag === 'cohortFilter')
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedChartTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
-			console.log(`Supported chart types for ${cohortKey}:`, supportedChartTypes)
-			console.log('ds.cohort.termddb.allowedTermTypes:', ds.cohort.termdb.allowedTermTypes)
-			const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
+			// console.log(`Supported chart types for ${cohortKey}:`, supportedChartTypes)
+			// console.log('ds.cohort.termddb.allowedTermTypes:', ds.cohort.termdb.allowedTermTypes)
+			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
@@ -91,7 +91,7 @@ function init({ genomes }) {
 				agentFiles,
 				aiFilesDir,
 				supportedChartTypes,
-				allowedTermTypes
+				_allowedTermTypes
 				// 	testing
 			)
 			res.send(ai_output_json as ChatResponse)
@@ -109,7 +109,7 @@ export async function run_chat_pipeline(
 	agentFiles: string[],
 	aiFilesDir: string,
 	supportedChartTypes: string[],
-	allowedTermTypes: string[]
+	_allowedTermTypes: string[]
 	// testing: boolean
 ) {
 	// Read main.json file
@@ -140,7 +140,6 @@ export async function run_chat_pipeline(
 	} else if (class_response.type == 'plot') {
 		const time3 = new Date().valueOf()
 		const plotType = await classifyPlotType(user_prompt, llm)
-		console.log('Plot type is inferred as:', plotType)
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time3))
 
 		// As long as supported chart types is non-empty list
@@ -181,20 +180,27 @@ export async function run_chat_pipeline(
 
 		// If valid plot type, figure out term types
 		const time4 = new Date().valueOf()
-		const termTypeResult = await inferTermType(user_prompt, plotType, llm)
-		mayLog('Time taken to infer term types:', formatElapsedTime(Date.now() - time4))
-		console.log('Inferred term types:', termTypeResult)
+		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
+		console.log('ScaffoldResult: ', scaffoldResult)
+		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time4))
+		return
 
-		// dictionary term types will have to handled differently
-		//
+		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
+		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.
+		// This is a bit complex because it requires cross-referencing the inferred scaffold with the dataset's schema and allowed term types,
+		//  but it would improve robustness.
 
-		if (!allowedTermTypes.includes(termTypeResult)) {
-			ai_output_json = {
-				type: 'text',
-				text: 'TermType "' + termTypeResult + '" is not supported for this dataset.'
-			}
-			return ai_output_json
-		}
+		//const time5 = new Date().valueOf()
+		//const entityResult = await inferEntities(scaffoldResult, llm)
+		//mayLog('Time taken to infer entities:', formatElapsedTime(Date.now() - time5))
+
+		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
+
+		//const time6 = new Date().valueOf()
+		//const termObjResult = await inferTermObj(entityResult, allowedTermTypes, llm)
+		//mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time6))
+
+		return
 	}
 	return ai_output_json
 }
