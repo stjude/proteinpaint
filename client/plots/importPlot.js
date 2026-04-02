@@ -126,6 +126,8 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'WSIViewer':
 			return await import('./wsiviewer/WSIViewer.ts')
 
+		case 'profileImpressions':
+			return await import('./profile/profileImpressions.ts')
 		default:
 			// temporary option to force an error, to bypass the default filename matching
 			if (notFoundMessage) throw notFoundMessage

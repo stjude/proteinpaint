@@ -207,6 +207,12 @@ function getChartTypeList(self, state) {
 			usecase: { target: 'profileForms', detail: 'tw' },
 			config: { chartType: 'profileForms' }
 		},
+		{
+			label: 'Impressions',
+			chartType: 'profileImpressions',
+			clickTo: self.prepPlot,
+			config: { chartType: 'profileImpressions' }
+		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
 		{

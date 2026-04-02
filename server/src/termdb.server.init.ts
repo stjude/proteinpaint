@@ -453,6 +453,31 @@ export function server_init_db_queries(ds) {
 		}
 	}
 	{
+		// Use ESCAPE to treat underscores as literals, and filter by cohort prefix
+		const s = cn.prepare(
+			`select id, name, parent_id, jsondata
+			from terms where type='integer' and parent_id like ? escape '!'`
+		)
+		const cache = new Map()
+		q.get_impression_tws = (cohortPrefix: string) => {
+			if (cache.has(cohortPrefix)) return cache.get(cohortPrefix)
+			const pattern = `${cohortPrefix}%!_!_Impression`
+			const items = s.all(pattern)
+			const terms = items.map(item => {
+				const t = JSON.parse(item.jsondata)
+				t.id = item.id
+				t.name = item.name
+				t.type = 'integer'
+				// Extract module name from parent_id (e.g. "FContext__National Context__Impression" -> "National Context")
+				const parts = item.parent_id.split('__')
+				t.module = parts.length >= 2 ? parts[1] : item.parent_id
+				return { $id: item.id, term: t, q: { mode: 'continuous' }, parentId: item.parent_id }
+			})
+			cache.set(cohortPrefix, terms)
+			return terms
+		}
+	}
+	{
 		/* term id is required, sample id is optional
 		if sample is missing, select all sample and category by term id
 			return [ {sample=str, value=?}, ... ]
