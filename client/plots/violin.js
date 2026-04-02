@@ -12,7 +12,7 @@ import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
 
-TODO default to unit=log if term enables
+TODO default to isLogScale=true if term enables
 */
 
 class ViolinPlot extends PlotBase {
@@ -172,10 +172,10 @@ class ViolinPlot extends PlotBase {
 				title: 'Axis scale',
 				type: 'radio',
 				chartType: 'violin',
-				settingsKey: 'unit',
+				settingsKey: 'isLogScale',
 				options: [
-					{ label: 'Linear', value: 'abs' },
-					{ label: 'Log10', value: 'log' }
+					{ label: 'Linear', value: false },
+					{ label: 'Log10', value: true }
 				]
 			},
 			{
@@ -383,7 +383,7 @@ class ViolinPlot extends PlotBase {
 			radius: s.radius,
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin,
-			unit: s.unit,
+			isLogScale: s.isLogScale,
 			ticks: s.ticks,
 			orderByMedian: s.orderByMedian,
 			filter: this.state.termfilter.filter
@@ -437,7 +437,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		axisHeight: 60,
 		rightMargin: 50,
 		lines: [],
-		unit: 'abs', // abs: absolute scale, log: log scale
+		isLogScale: false, // false: linear scale, true: log scale
 		rowSpace: 10,
 		medianLength: 7,
 		medianColor: '#FF0000',

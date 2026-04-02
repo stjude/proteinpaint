@@ -22,6 +22,8 @@ type CommonViolinBoxProps = {
 	filter0?: any
 	/** ?? TODO: Needs description */
 	currentGeneNames?: string[]
+	/** if true, use log scale; if false or undefined, use linear scale */
+	isLogScale?: boolean
 }
 
 /** Request type for violin plots with required violin-specific parameters */
@@ -50,16 +52,12 @@ export type ViolinRequest = CommonViolinBoxProps & {
 	svgw: number
 	/** Number of bins to build the plot. Default is 20. */
 	ticks?: number
-	/** A string representing a unit of measurement (e.g., 'log' for log scale) */
-	unit?: string
 }
 
 /** Request type for box plots with required box-specific parameters */
 export type BoxRequest = CommonViolinBoxProps & {
 	/** Indicates the type of chart to render */
 	plotType: 'box'
-	/** if true, only return positive values */
-	isLogScale?: boolean
 	/** sort plots by median value */
 	orderByMedian?: boolean
 	/** Remove outliers from the plot */
@@ -188,7 +186,7 @@ export const violinBoxPayload: RoutePayload = {
 					orientation: 'horizontal',
 					datasymbol: 'rug',
 					radius: 5,
-					unit: 'abs'
+					isLogScale: false
 				}
 			},
 			response: {

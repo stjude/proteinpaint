@@ -278,10 +278,10 @@ export default function setViolinRenderer(self) {
 		const g = svg.svgG
 			.append('g')
 			.style('font-size', '12')
-			.classed(settings.unit === 'log' ? 'sjpp-logscale' : 'sjpp-linearscale', true)
+			.classed(settings.isLogScale ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
 		const ticks =
-			settings.unit === 'log'
+			settings.isLogScale
 				? svg.axisScale.ticks(15)
 				: // svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
 				  svg.axisScale.ticks()
@@ -290,7 +290,7 @@ export default function setViolinRenderer(self) {
 			(isH ? axisTop : axisLeft)()
 				.scale(svg.axisScale)
 				.tickFormat((d, i) => {
-					if (settings.unit === 'log') {
+					if (settings.isLogScale) {
 						if (self.app.vocabApi.termdbConfig.logscaleBase2) {
 							if (ticks.length > 10 && i % 2 !== 0) return ''
 							if (d < 0.1) return d3format('.3f')(d)
@@ -532,7 +532,7 @@ export default function setViolinRenderer(self) {
 // creates numeric axis
 export function createNumericScale(self, settings, isH) {
 	let axisScale
-	settings.unit == 'log'
+	settings.isLogScale
 		? (axisScale = scaleLog()
 				.base(self.app.vocabApi.termdbConfig.logscaleBase2 ? 2 : 10)
 				.domain([self.data.min, self.data.max])
