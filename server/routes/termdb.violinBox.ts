@@ -92,10 +92,10 @@ async function getViolin(q: ViolinRequest & ReqQueryAddons, data: any, ds: any) 
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
 	if (data.error) throw new Error(data.error)
 	//get ordered labels to sort keys in plot2values
-	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id]) {
-		data.refs.byTermId[q.overlayTw.$id].orderedLabels = getOrderedLabels(
+	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id!]) {
+		data.refs.byTermId[q.overlayTw.$id!].orderedLabels = getOrderedLabels(
 			q.overlayTw,
-			data.refs.byTermId[q.overlayTw.$id]?.bins,
+			data.refs.byTermId[q.overlayTw.$id!]?.bins,
 			undefined,
 			q.overlayTw.q
 		)
@@ -137,7 +137,7 @@ function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: 
 		q,
 		data,
 		sampleType,
-		useLog,
+		useLog == true ? true : false, // avoid tsc err
 		overlayTerm,
 		divideTerm
 	)
@@ -195,12 +195,12 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 
 		for (const [plot, values] of sortPlot2Values(data, plot2values, overlayTerm)) {
 			plots.push({
-				label: overlayTerm?.term?.values?.[plot]?.label || plot,
+				label: (overlayTerm?.term?.values?.[plot]?.label || plot) as string, // avoid strange tsc err
 				values,
 				seriesId: plot,
 				chartId: chart, //quick fix to get list samples working
 				plotValueCount: values?.length,
-				color: overlayTerm?.term?.values?.[plot]?.color || null
+				color: overlayTerm?.term?.values?.[plot]?.color || ''
 			})
 		}
 
@@ -425,7 +425,7 @@ async function processBoxPlotData(data, q: BoxRequest) {
 		q,
 		data as ValidGetDataResponse,
 		sampleType,
-		q.isLogScale,
+		q.isLogScale == true ? true : false, // avoid tsc err
 		overlayTw,
 		divideTw
 	)

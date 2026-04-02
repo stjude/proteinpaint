@@ -482,8 +482,7 @@ export class TermdbVocab extends Vocab {
 				datasymbol: arg.datasymbol || 'rug',
 				orientation: arg.orientation || 'horizontal',
 				radius: arg.radius || 8,
-				svgw: arg.svgw || 200,
-				unit: arg.unit || 'abs'
+				svgw: arg.svgw || 200
 			})
 		}
 

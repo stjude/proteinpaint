@@ -5,29 +5,27 @@ import type { ErrorResponse } from './errorResponse.ts'
 import type { DescrStats } from './termdb.descrstats.ts'
 
 /** Common properties shared by both violin and box plots */
-type CommonViolinBoxProps = {
-	/** main tw to fetch numeric data */
+type CommonProps = {
+	/** numeric tw to fetch numeric data. tw.q.mode must be continuous */
 	tw: TermWrapper
-	/** Reference label (i.e. short label) for the ds */
 	dslabel: string
-	/** Reference label */
 	genome: string
-	/** optional overlay tw, will generate multiple plots */
+	/** overlay tw for multiple violins/boxplots */
 	overlayTw?: TermWrapper
-	/** optional divide tw, will generate multiple charts */
+	/** tw to divide to multiple charts */
 	divideTw?: TermWrapper
-	/** optional mass filter */
+	/** mass filter */
 	filter?: Filter
-	/** optional read-only invisible filter */
+	/** read-only invisible filter */
 	filter0?: any
-	/** ?? TODO: Needs description */
+	/** TODO: Needs description FIXME delete */
 	currentGeneNames?: string[]
 	/** if true, use log scale; if false or undefined, use linear scale */
 	isLogScale?: boolean
 }
 
 /** Request type for violin plots with required violin-specific parameters */
-export type ViolinRequest = CommonViolinBoxProps & {
+export type ViolinRequest = CommonProps & {
 	/** Indicates the type of chart to render */
 	plotType: 'violin'
 	/** A number representing the dimension perpendicular to the violin spread */
@@ -55,7 +53,7 @@ export type ViolinRequest = CommonViolinBoxProps & {
 }
 
 /** Request type for box plots with required box-specific parameters */
-export type BoxRequest = CommonViolinBoxProps & {
+export type BoxRequest = CommonProps & {
 	/** Indicates the type of chart to render */
 	plotType: 'box'
 	/** sort plots by median value */

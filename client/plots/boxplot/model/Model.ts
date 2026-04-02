@@ -1,7 +1,7 @@
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotConfig } from '../BoxPlotTypes'
 import type { TdbBoxplot } from '../BoxPlot.ts'
-import type { BoxPlotResponse } from '#types'
+import type { ViolinBoxResponse } from '#types'
 import { isNumericTerm } from '#shared/terms.js'
 import type { BoxPlotSettings } from '../Settings.ts'
 
@@ -31,7 +31,7 @@ export class Model {
 			return await this.getDataForNumericTermCollection()
 		}
 
-		const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
+		const data: ViolinBoxResponse = await this.app.vocabApi.getViolinBox(
 			this.setRequestOpts(),
 			{},
 			this.boxplot.api.getAbortSignal()
@@ -42,7 +42,7 @@ export class Model {
 	/** Get data for each member term in a numeric termCollection 
 	FIXME delete!!
 	*/
-	async getDataForNumericTermCollection(): Promise<BoxPlotResponse> {
+	async getDataForNumericTermCollection(): Promise<ViolinBoxResponse> {
 		const termCollection = this.config.term
 		const memberTerms = termCollection.term.termlst || []
 
@@ -52,7 +52,7 @@ export class Model {
 
 		// Make requests for member terms in bounded-size batches to limit concurrency
 		const BATCH_SIZE = 5
-		const allResults: { memberTerm: any; data: BoxPlotResponse }[] = []
+		const allResults: { memberTerm: any; data: ViolinBoxResponse }[] = []
 
 		for (let i = 0; i < memberTerms.length; i += BATCH_SIZE) {
 			const batch = memberTerms.slice(i, i + BATCH_SIZE)
@@ -69,7 +69,7 @@ export class Model {
 						tw: memberTw
 					}
 
-					const data: BoxPlotResponse = await this.app.vocabApi.getViolinBox(
+					const data: ViolinBoxResponse = await this.app.vocabApi.getViolinBox(
 						boxPlotDataArgs,
 						{},
 						this.boxplot.api.getAbortSignal()
@@ -85,8 +85,8 @@ export class Model {
 		return this.combineNumericTermCollectionData(allResults, termCollection)
 	}
 
-	/** Combine data from multiple member terms into a single BoxPlotResponse */
-	combineNumericTermCollectionData(results: any[], termCollection: any): BoxPlotResponse {
+	/** Combine data from multiple member terms into a single ViolinBoxResponse */
+	combineNumericTermCollectionData(results: any[], termCollection: any): ViolinBoxResponse {
 		// Find the overall min/max across all member terms
 		let absMin = Infinity
 		let absMax = -Infinity
