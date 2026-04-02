@@ -14,6 +14,7 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
 import { setBoxPlotControlInputs } from './BoxPlotControlInputs'
+import { isErrorResponse } from '@sjcrh/proteinpaint-types/termdb.violinBox'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
@@ -143,7 +144,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 		try {
 			const data = await model.getData()
-			if (data.error) throw new Error(data.error)
+			if (isErrorResponse(data)) throw new Error(data.error)
 			config.term.q.descrStats = data.descrStats
 			config.bins = data.bins
 

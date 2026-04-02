@@ -69,6 +69,21 @@ export type ViolinBoxRequest = ViolinRequest | BoxRequest
 
 export type ViolinBoxResponse = ViolinResponse | BoxPlotResponse | ErrorResponse
 
+/** Type guard to check if response is an ErrorResponse */
+export function isErrorResponse(response: ViolinBoxResponse): response is ErrorResponse {
+	return 'error' in response && 'status' in response
+}
+
+/** Type guard to check if response is a BoxPlotResponse */
+export function isBoxPlotResponse(response: ViolinBoxResponse): response is BoxPlotResponse {
+	return !isErrorResponse(response) && 'charts' in response && 'descrStats' in response
+}
+
+/** Type guard to check if response is a ViolinResponse */
+export function isViolinResponse(response: ViolinBoxResponse): response is ViolinResponse {
+	return !isErrorResponse(response) && 'min' in response && 'max' in response
+}
+
 /** Violin response types */
 interface BinsEntries {
 	x0: number
