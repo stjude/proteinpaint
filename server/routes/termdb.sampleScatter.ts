@@ -171,14 +171,20 @@ async function getSingleCellScatter(req, res, ds) {
 		const plot = data.plots[0]
 		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
 		const groups = tw.q?.customset?.groups
+		const cat2GrpName = new Map<any, string>()
+		if (groups) {
+			for (const group of groups) {
+				for (const value of Object.values(group.values) as any[]) {
+					cat2GrpName.set(value.key, group.name)
+				}
+			}
+		}
 		const samples: ScatterSample[] = cells.map(cell => {
 			/** Since getData() from termdb.matrix is not called again for single cell scatter,
 			 * the groups formatting logic for category (i.e. value) is recreated here. */
 			let category = cell.category
-			if (groups) {
-				const group = groups.find(g => Object.values(g.values).find((v: any) => v.key == category))
-				if (group) category = group.name
-			}
+			const groupName = cat2GrpName.get(category)
+			if (groupName !== undefined) category = groupName
 			const hidden = {
 				category: tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
 			}

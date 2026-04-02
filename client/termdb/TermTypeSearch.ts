@@ -370,7 +370,7 @@ export class TermTypeSearch {
 		if (tab.termTypeGroup != DICTIONARY_VARIABLES && tab.termTypeGroup != METABOLITE_INTENSITY) {
 			//When called in init before main(), this.state is not set.
 			//Get the state from the app to pass it to the handlers.
-			if (!this.state) this.state = this.getState(this.app.getState())
+			const { usecase } = this.state?.usecase ? this.state : this.getState(this.app.getState())
 			const handler = this.handlerByType[type]
 			await handler.init({
 				holder,
@@ -378,7 +378,7 @@ export class TermTypeSearch {
 				genomeObj: this.genomeObj,
 				callback: term => this.selectTerm(term),
 				details,
-				usecase: this.state.usecase
+				usecase
 			})
 		}
 	}
