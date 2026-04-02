@@ -86,7 +86,7 @@ async function getViolin(q: ViolinRequest & ReqQueryAddons, data: any, ds: any) 
 	let values = samples
 		.map(s => s?.[q.tw.$id!]?.value)
 		.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
-	if (q.unit == 'log') values = values.filter(v => v > 0)
+	if (q.isLogScale) values = values.filter(v => v > 0)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
 	const descrStats = getDescrStats(values)
 	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
@@ -131,7 +131,7 @@ function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrap
 function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
 	const overlayTerm = q.overlayTw
 	const divideTerm = q.divideTw
-	const useLog = q.unit == 'log'
+	const useLog = q.isLogScale
 
 	const { absMax, absMin, chart2plot2values, uncomputableValues } = parseValues(
 		q,
@@ -237,7 +237,7 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 		const chart = result.charts[k]
 		const plot2Values = {}
 		for (const plot of chart.plots) plot2Values[plot.label] = plot.values
-		const useLog = q.unit == 'log'
+		const useLog = q.isLogScale
 		const logBase = ds.cohort.termdb.logscaleBase2 ? 2 : 10
 		const densities = await getDensities(plot2Values, useLog, logBase)
 
