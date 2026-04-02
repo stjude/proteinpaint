@@ -2,15 +2,14 @@ import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassificatio
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-
+import { readJSONFile, parse_geneset_db } from './chat/utils.ts'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
-// import { readJSONFile } from './chat/utils.ts'
 import { inferScaffold } from './chat/scaffold.ts'
 import serverconfig from '../src/serverconfig.js'
 import { getDsAllowedTermTypes } from './termdb.config.ts'
-
+import { validateNonDictionaryTypes } from './chat/phrase2entity.ts'
 import path from 'path'
 import fs from 'fs'
 
@@ -54,23 +53,23 @@ function init({ genomes }) {
 				throw "llm.provider must be 'SJ' or 'ollama'"
 			}
 			/*
-             * Old Stuff from Robin
-			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
-			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-			const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
-			const genesetNames = getGenesetNames(g)
-			const ai_output_json = await run_chat_pipeline(
-				q.prompt,
-				llm,
-				testing,
-				dataset_db,
-				genedb,
-				ds,
-				genesetNames,
-				agentFiles,
-				aiFilesDir
-			)
-            */
+ * Old Stuff from Robin
+            const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+            const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
+            const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
+            const genesetNames = getGenesetNames(g)
+            const ai_output_json = await run_chat_pipeline(
+                    q.prompt,
+                    llm,
+                    testing,
+                    dataset_db,
+                    genedb,
+                    ds,
+                    genesetNames,
+                    agentFiles,
+                    aiFilesDir
+            )
+*/
 
 			// This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output,
 			// only for testing we set this variable to true
@@ -81,6 +80,7 @@ function init({ genomes }) {
 			const cohortFilter = filter.lst?.find((item: any) => item.tag === 'cohortFilter')
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedChartTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
+			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			// console.log(`Supported chart types for ${cohortKey}:`, supportedChartTypes)
 			// console.log('ds.cohort.termddb.allowedTermTypes:', ds.cohort.termdb.allowedTermTypes)
 			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
@@ -88,6 +88,7 @@ function init({ genomes }) {
 				q.prompt,
 				llm,
 				ds,
+				genedb,
 				agentFiles,
 				aiFilesDir,
 				supportedChartTypes,
@@ -106,6 +107,7 @@ export async function run_chat_pipeline(
 	user_prompt: string,
 	llm: LlmConfig,
 	ds: any,
+	genedb: string,
 	agentFiles: string[],
 	aiFilesDir: string,
 	supportedChartTypes: string[],
@@ -115,7 +117,7 @@ export async function run_chat_pipeline(
 	// Read main.json file
 	if (!fs.existsSync(path.join(aiFilesDir, 'main.json')))
 		throw 'Main data file is not specified for dataset:' + ds.label
-	// const dataset_json: any = await readJSONFile(path.join(aiFilesDir, 'main.json'))
+	const dataset_json: any = await readJSONFile(path.join(aiFilesDir, 'main.json'))
 
 	// Plot vs Not-plot classification
 	const time1 = new Date().valueOf()
@@ -153,9 +155,9 @@ export async function run_chat_pipeline(
 		}
 
 		/* Special handling for summary chart types
-		// Every cohort by default supports summary charts unless 
-		// 'dictionary' is not in the supported chart type list
-		// */
+        // Every cohort by default supports summary charts unless 
+        // 'dictionary' is not in the supported chart type list
+        // */
 		if (plotType === 'summary') {
 			if (!supportedChartTypes.includes('dictionary')) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -178,13 +180,22 @@ export async function run_chat_pipeline(
 			}
 		}
 
+		// Ensure all nondicttypes in the scaffold have corresponding data types. For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
+		// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other nondicttypes such as metabolites, genesets, etc.
 		// If valid plot type, figure out term types
 		const time4 = new Date().valueOf()
 		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
 		console.log('ScaffoldResult: ', scaffoldResult)
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time4))
-		return
 
+		if (!scaffoldResult)
+			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
+		const genes_list = await parse_geneset_db(genedb)
+		const scaffoldResultObject = JSON.parse(scaffoldResult)
+		if (scaffoldResultObject.tw) {
+			validateNonDictionaryTypes(scaffoldResultObject.tw, llm, genes_list, dataset_json) // This function checks if the non-dictionary types mentioned in the scaffold result (e.g. gene names) are valid based on the corresponding db (e.g. genedb). If any invalid terms are found, it throws an error which is caught in the main function and returned as a text response to the user. This is an important validation step to ensure that downstream agents receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
+		}
+		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
 		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.
 		// This is a bit complex because it requires cross-referencing the inferred scaffold with the dataset's schema and allowed term types,
