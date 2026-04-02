@@ -352,7 +352,7 @@ tape('agedx/sex, basic controls', function (test) {
 					config: {
 						settings: {
 							violin: {
-								unit: 'log',
+								isLogScale: true,
 								plotThickness: 150
 							}
 						}
@@ -361,7 +361,7 @@ tape('agedx/sex, basic controls', function (test) {
 			}
 		})
 		test.ok(showLogScale, 'Log scale exists')
-		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.unit === 'log', 'Axis scale rendered in log')
+		test.true(violin.Inner.app.Inner.state.plots[0].settings.violin.isLogScale, 'Axis scale rendered in log')
 	}
 
 	async function changeModeToDiscrete(violin, violinDiv) {

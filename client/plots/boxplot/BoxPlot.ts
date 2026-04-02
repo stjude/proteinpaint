@@ -143,10 +143,10 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 		try {
 			const data = await model.getData()
+			if (data.error) throw new Error(data.error)
 			config.term.q.descrStats = data.descrStats
 			config.bins = data.bins
 
-			if (data.error) throw new Error(data.error)
 			if (!data.charts || !Object.keys(data.charts).length) {
 				this.interactions.clearDom()
 				this.dom.error.style('padding', '20px 20px 20px 60px').text('No visible box plot data to render')
