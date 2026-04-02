@@ -46,6 +46,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 	// track has a modifiable sample filter. add a new label to access the filter UI
 	if (!tk.leftlabels.doms.filterObj) {
 		tk.leftlabels.doms.filterObj = makelabel(tk, block, laby)
+		tk.leftlabels.doms.filterObj.attr('data-testid', 'sjpp_mds3tk_leftlabel_samplefilter')
 	}
 
 	tk.leftlabels.doms.filterObj.text(getFilterName(tk.filterObj)).on('click', async event => {
@@ -104,7 +105,7 @@ async function mayShowSummary(tk, block) {
 		const { summary } = await tk.mds.getSamples({ isSummary: true })
 		tk.leftlabels.__samples_data = summary // for testing
 		wait.remove()
-		await showSummary4terms(summary, div.append('div').attr('class', 'sja_mds3samplesummarydiv'), tk, block)
+		await showSummary4terms(summary, div.append('div').attr('data-testid', 'sja_mds3samplesummarydiv'), tk, block)
 	} catch (e) {
 		wait.text(`Error: ${e.message || e}`)
 		if (e.stack) console.log(e.stack)

@@ -137,7 +137,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 		tk.leftlabels.doms.samples.node().dispatchEvent(new Event('click'))
 		await whenVisible(tk.menutip.d, 10000)
 
-		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
+		const div = await detectOne({ elem: tk.menutip.d.node(), selector: '[data-testid="sja_mds3samplesummarydiv"]' })
 		test.ok(div, 'Sample summary table rendered in menutip')
 
 		/* skipped as callbackOnRender() is now also triggered by subtk
@@ -183,7 +183,7 @@ export async function testSampleSummary2subtrack(genome, gene, dslabel, test) {
 			await whenVisible(subtk.menutip.d)
 			// same as in main tk, must await for the summary table to be shown in subtk.menutip
 			// that means leftlabels.__samples_data is now created
-			await detectOne({ elem: subtk.menutip.d.node(), selector: '.sja_mds3samplesummarydiv' })
+			await detectOne({ elem: subtk.menutip.d.node(), selector: '[data-testid="sja_mds3samplesummarydiv"]' })
 
 			testSubtkSampleSummaryIsSmaller(test, tk, subtk)
 
