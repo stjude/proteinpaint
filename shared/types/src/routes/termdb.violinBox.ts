@@ -119,7 +119,7 @@ export type ViolinPlotEntry = {
 	summaryStats: ValuesEntries[]
 }
 
-type ViolinResponse = {
+export type ViolinResponse = {
 	bins: { [index: string]: any }
 	charts: {
 		[index: string]: {
@@ -163,7 +163,7 @@ export type BoxPlotChartEntry = {
 	wilcoxon?: [{ value: string }, { value: string }, { html: string }][]
 }
 
-type BoxPlotResponse = {
+export type BoxPlotResponse = {
 	absMin?: number
 	absMax?: number
 	bins?: {
