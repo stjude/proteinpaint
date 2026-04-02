@@ -170,9 +170,17 @@ async function getSingleCellScatter(req, res, ds) {
 
 		const plot = data.plots[0]
 		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
+		const groups = tw.q?.customset?.groups
 		const samples: ScatterSample[] = cells.map(cell => {
+			// getData() is not run again for single cell scatter, so formatting not applied.
+			// Recreate formatting logic here to properly rendering groups
+			let category = cell.category
+			if (groups) {
+				const group = groups.find(g => Object.values(g.values).find((v: any) => v.key == category))
+				if (group) category = group.name
+			}
 			const hidden = {
-				category: tw?.q?.hiddenValues ? cell.category in tw.q.hiddenValues : false
+				category: tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
 			}
 			return {
 				sample: cell.cellId,
@@ -180,7 +188,7 @@ async function getSingleCellScatter(req, res, ds) {
 				x: cell.x,
 				y: cell.y,
 				z: 0,
-				category: cell.category,
+				category,
 				shape: 'Ref',
 				hidden,
 				geneExp: cell.geneExp
@@ -201,11 +209,7 @@ async function getSingleCellScatter(req, res, ds) {
 				const dsTerm = ds.queries.singleCell?.terms
 					? ds.queries.singleCell.terms.find(t => t.name == tw.term.name)
 					: undefined
-				return (
-					tw.term.values?.[category]?.color ||
-					dsTerm?.values?.[category]?.color ||
-					defaultK2c(category)
-				)
+				return tw.term.values?.[category]?.color || dsTerm?.values?.[category]?.color || defaultK2c(category)
 			}
 
 			for (const category of categories) {

@@ -2,7 +2,7 @@ import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { Menu, GeneSetEditUI } from '#dom'
 import { digestMessage } from '#termsetting'
-import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
 
 /** Rendering for the plot buttons that appear below the item
  * table.
@@ -44,6 +44,7 @@ export class PlotButtons {
 	interactions: SCInteractions
 	scTermdbConfig: any
 	settings?: any
+	scctTerms?: any[]
 
 	constructor(interactions: SCInteractions, holder: Div) {
 		holder.style('padding', '10px')
@@ -56,6 +57,7 @@ export class PlotButtons {
 		}
 		this.interactions = interactions
 		const state = this.interactions.getState as any
+		this.scctTerms = state.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
 		this.scTermdbConfig = state.termdbConfig.queries.singleCell
 	}
 
@@ -219,7 +221,6 @@ export class PlotButtons {
 			term: {
 				$id: await digestMessage(`${gene}-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					/** NOTE: There are no term handlers for the single cell types */
 					type: SINGLECELL_GENE_EXPRESSION,
 					id: gene,
 					gene,
@@ -230,11 +231,11 @@ export class PlotButtons {
 					}
 				}
 			},
+			// term2: await this.makeScctTW(this.item, this.scTermdbConfig.data.plots[0])
 			term2: {
 				//CHANGE ME
 				$id: await digestMessage(`CHANGEME-${this.item.sample}-${this.item.experiment}`),
 				term: {
-					/** NOTE: There are no term handlers for the single cell types */
 					type: SINGLECELL_CELLTYPE,
 					id: 'cluster', //CHANGE ME, singlecell.data.plots.[i].colorColumns
 					name: 'cluster', //CHANGE ME
@@ -313,7 +314,7 @@ export class PlotButtons {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
 		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots [PlotButtons.ts getSingleCellConfig()]`)
-		const cfg: any = {
+		const config: any = {
 			chartType: 'sampleScatter',
 			singleCellPlot: {
 				name: plotName,
@@ -325,19 +326,22 @@ export class PlotButtons {
 		}
 		if (plot.colorColumns?.[0]) {
 			// apply optional color term. hardcodes to 1st of the array
-			cfg.colorTW = {
-				$id: await digestMessage(`${plot.name}-${this.item.sample}-${this.item.experiment}`),
-				term: {
-					type: SINGLECELL_CELLTYPE,
-					name: plot.colorColumns[0].name,
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					},
-					plot: plotName
-				}
-			}
+			config.colorTW = await this.makeScctTW(this.item, plot)
 		}
-		return cfg
+		return config
+	}
+
+	// Quick fix. Eventually use the handler to get the proper term from the termdbConfig
+	async makeScctTW(item, plot) {
+		const savedTerm = this.scctTerms?.find(t => t.name == plot.colorColumns[0].name)
+		if (!savedTerm) throw new Error(`No term found for colorColumn ${plot.colorColumns[0]} in scctTerms`)
+		const term = Object.assign(structuredClone(savedTerm), {
+			sample: {
+				sID: item.sample,
+				eID: item.experiment
+			}
+		})
+		const id = await digestMessage(`${plot.name}-${item.sample}-${item.experiment}`)
+		return Object.assign({ $id: id }, { term })
 	}
 }
