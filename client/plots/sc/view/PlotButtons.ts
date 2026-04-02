@@ -333,8 +333,12 @@ export class PlotButtons {
 
 	// Quick fix. Eventually use the handler to get the proper term from the termdbConfig
 	async makeScctTW(item, plot) {
-		const savedTerm = this.scctTerms?.find(t => t.name == plot.colorColumns[0].name)
-		if (!savedTerm) throw new Error(`No term found for colorColumn ${plot.colorColumns[0]} in scctTerms`)
+		const colorColName = plot.colorColumns[0].name
+		const savedTerm = this.scctTerms?.find(t => t.name == colorColName && t.plot == plot.name)
+		if (!savedTerm)
+			throw new Error(
+				`No term found for colorColumn=${colorColName} in .termType2terms.[TermTypeGroups.SINGLECELL_CELLTYPE] for plot ${plot.name}`
+			)
 		const term = Object.assign(structuredClone(savedTerm), {
 			sample: {
 				sID: item.sample,
