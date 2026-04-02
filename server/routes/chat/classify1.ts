@@ -22,7 +22,7 @@ Category:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	const category = response.trim().toLowerCase()
-	mayLog(`classifyQuery: "${category}"`)
+	mayLog(`--> classifyQuery: "${category}"`)
 
 	if (category === 'plot') return { type: 'plot' }
 	if (category === 'notplot') return { type: 'notplot' }

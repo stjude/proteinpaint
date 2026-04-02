@@ -38,6 +38,6 @@ Classification:`
 	//Training examples: "${training_data}"
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	const plotType = response.trim().toLowerCase() as PlotType
-	mayLog(`classifyPlotType: ${plotType}`)
+	mayLog(`--> classifyPlotType: ${plotType}`)
 	return plotType
 }
