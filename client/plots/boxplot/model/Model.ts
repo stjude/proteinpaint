@@ -2,7 +2,7 @@ import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotConfig } from '../BoxPlotTypes'
 import type { TdbBoxplot } from '../BoxPlot.ts'
 import type { ViolinBoxResponse, BoxPlotResponse } from '#types'
-import { isErrorResponse, isBoxPlotResponse } from '@sjcrh/proteinpaint-types/termdb.violinBox'
+import { isErrorResponse, isBoxPlotResponse } from '#types'
 import { isNumericTerm } from '#shared/terms.js'
 import type { BoxPlotSettings } from '../Settings.ts'
 

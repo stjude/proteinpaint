@@ -14,7 +14,7 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
 import { setBoxPlotControlInputs } from './BoxPlotControlInputs'
-import { isErrorResponse } from '@sjcrh/proteinpaint-types/termdb.violinBox'
+import { isErrorResponse } from '#types'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
