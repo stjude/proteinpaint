@@ -20,6 +20,8 @@ type CommonViolinBoxProps = {
 	filter?: Filter
 	/** optional read-only invisible filter */
 	filter0?: any
+	/** ?? TODO: Needs description */
+	currentGeneNames?: string[]
 }
 
 /** Request type for violin plots with required violin-specific parameters */
@@ -28,8 +30,6 @@ export type ViolinRequest = CommonViolinBoxProps & {
 	plotType: 'violin'
 	/** A number representing the dimension perpendicular to the violin spread */
 	axisHeight?: number
-	/** ?? TODO: Needs description */
-	currentGeneNames?: string[]
 	/** A string representing the type of symbol used on the plot */
 	datasymbol?: string
 	/** A number representing the device's pixel ratio */
