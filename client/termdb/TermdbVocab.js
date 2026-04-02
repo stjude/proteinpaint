@@ -1392,6 +1392,27 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb/profileScores', { body })
 	}
 
+	async getImpressionTWs(cohortPrefix) {
+		const headers = await this.mayGetAuthHeaders('termb')
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			for: 'getImpressionTWs',
+			cohortPrefix
+		}
+		return await this.dofetch3('termdb', { headers, body })
+	}
+
+	async getProfileImpressionScores(args) {
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			...args
+		}
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		return await this.dofetch3('termdb/profileImpressionScores', { body })
+	}
+
 	async getProfileFormScores(args) {
 		const body = {
 			genome: this.vocab.genome,

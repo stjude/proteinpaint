@@ -7,7 +7,6 @@ import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
 
 const YES_NO_TAB = 'Yes/No Barchart'
-const IMPRESSIONS_TAB = 'Impressions'
 const LIKERT_TAB = 'Likert Scale'
 export class profileForms extends profilePlot {
 	static type = 'profileForms' as const
@@ -28,20 +27,30 @@ export class profileForms extends profilePlot {
 	legendG: any
 	//for each plot tab, a dict of sc term wrappers
 	id2SCTW: { [key: string]: { [key: string]: any } }
+	initSeq: number
 
 	constructor(opts) {
 		super(opts, 'profileForms')
 		this.opts = opts
 		this.id2SCTW = {}
+		this.initSeq = 0
 	}
 
 	async init(appState) {
+		// Increment sequence to invalidate any previous in-flight init.
+		// After each await, check if a newer init has started and bail out if so.
+		const seq = ++this.initSeq
+		// Always clear holder to prevent duplicate DOM from concurrent inits
+		this.opts.holder.selectAll('*').remove()
 		super.init(appState)
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
 		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
+		if (seq !== this.initSeq) return
 		const settings = config.settings.profileForms
 		this.tabs = []
+		this.id2SCTW = {}
 		for (const plot of config.options) {
+			if (plot.isIntegerType) continue
 			const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
 			if (!tws.length) continue //no terms for this plot
 			const tab: any = {
@@ -59,6 +68,7 @@ export class profileForms extends profilePlot {
 					const scTermId = tw.term.id.replace(/^POC/, '')
 					const scTW: any = { id: scTermId }
 					await fillTermWrapper(scTW, this.app.vocabApi)
+					if (seq !== this.initSeq) return
 					this.id2SCTW[plot.name][scTermId] = scTW
 				}
 				this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
@@ -130,6 +140,8 @@ export class profileForms extends profilePlot {
 		this.dom.gridG.selectAll('*').remove()
 		this.dom.xAxisG.selectAll('*').remove()
 		this.dom.legendG.selectAll('*').remove()
+		// Remove extra elements appended directly to svg by Likert/YesNo renderers
+		this.dom.svg.selectAll('.sjpp-profileForms-extra').remove()
 		await this.setControls()
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
@@ -139,11 +151,9 @@ export class profileForms extends profilePlot {
 	renderPlot() {
 		try {
 			this.dom.headerDiv.style('display', 'none')
+			this.dom.mainG.attr('transform', `translate(${this.shift}, ${this.shiftTop})`)
 
 			switch (this.activePlot.name) {
-				case IMPRESSIONS_TAB:
-					this.renderImpressions()
-					break
 				case LIKERT_TAB:
 					this.renderLikert()
 					break
@@ -155,8 +165,6 @@ export class profileForms extends profilePlot {
 			throw e
 		}
 	}
-
-	renderImpressions() {}
 
 	renderLikert() {
 		this.dom.headerDiv.style('display', 'block')
@@ -200,7 +208,10 @@ export class profileForms extends profilePlot {
 		const posAxisBottom = axisBottom(posScale)
 			.ticks(10)
 			.tickFormat(d => d + '%')
-		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
+		const scaleG = this.dom.svg
+			.append('g')
+			.attr('class', 'sjpp-profileForms-extra')
+			.attr('transform', `translate(0, ${y})`)
 		posAxisBottom(scaleG)
 		// Fixed legend display order for Likert categories
 		const likertLegendOrder = [
@@ -375,7 +386,10 @@ export class profileForms extends profilePlot {
 			x += width
 		}
 		const text = getText(tw.term.details || tw.term.name)
-		const textG = this.dom.svg.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
+		const textG = this.dom.svg
+			.append('g')
+			.attr('class', 'sjpp-profileForms-extra')
+			.attr('transform', `translate(0, ${y + this.shiftTop})`)
 		textG
 			.append('text')
 			.text(text)

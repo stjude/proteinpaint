@@ -69,6 +69,7 @@ export function handle_request_closure(genomes) {
 			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'getMultivalueTWs') return res.send(tdb.q.get_multivalue_tws(q.parent_id))
+			if (q.for == 'getImpressionTWs') return res.send(tdb.q.get_impression_tws(q.cohortPrefix || 'F'))
 			if (q.for == 'validateToken') {
 			}
 			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
