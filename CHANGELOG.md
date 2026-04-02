@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - DNA Meth: Added R and Rust DMRCate implementations for region level DMR analysis
+- DNA Meth: Added support for isoform expression term type. Improvements to DMR region viewer
 
 Fixes:
 - always set the tooltip top position instead of bottom to make it more reliable when an embedder's body position=relative
