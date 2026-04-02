@@ -1,7 +1,8 @@
 import type { MassAppApi, MassState } from '#mass/types/mass'
 import type { BoxPlotConfig } from '../BoxPlotTypes'
 import type { TdbBoxplot } from '../BoxPlot.ts'
-import type { ViolinBoxResponse } from '#types'
+import type { ViolinBoxResponse, BoxPlotResponse } from '#types'
+import { isErrorResponse, isBoxPlotResponse } from '@sjcrh/proteinpaint-types/termdb.violinBox'
 import { isNumericTerm } from '#shared/terms.js'
 import type { BoxPlotSettings } from '../Settings.ts'
 
@@ -42,7 +43,7 @@ export class Model {
 	/** Get data for each member term in a numeric termCollection 
 	FIXME delete!!
 	*/
-	async getDataForNumericTermCollection(): Promise<ViolinBoxResponse> {
+	async getDataForNumericTermCollection(): Promise<BoxPlotResponse> {
 		const termCollection = this.config.term
 		const memberTerms = termCollection.term.termlst || []
 
@@ -85,8 +86,8 @@ export class Model {
 		return this.combineNumericTermCollectionData(allResults, termCollection)
 	}
 
-	/** Combine data from multiple member terms into a single ViolinBoxResponse */
-	combineNumericTermCollectionData(results: any[], termCollection: any): ViolinBoxResponse {
+	/** Combine data from multiple member terms into a single BoxPlotResponse */
+	combineNumericTermCollectionData(results: any[], termCollection: any): BoxPlotResponse {
 		// Find the overall min/max across all member terms
 		let absMin = Infinity
 		let absMax = -Infinity
@@ -94,6 +95,18 @@ export class Model {
 		const allUncomputableValues: any[] = []
 
 		results.forEach(({ memberTerm, data }) => {
+			// Skip error responses
+			if (isErrorResponse(data)) {
+				console.warn(`Error response for term ${memberTerm.id}:`, data.error)
+				return
+			}
+			
+			// Only process BoxPlotResponse (not ViolinResponse)
+			if (!isBoxPlotResponse(data)) {
+				console.warn(`Unexpected response type for term ${memberTerm.id}`)
+				return
+			}
+
 			if (data.absMin !== undefined && data.absMin < absMin) absMin = data.absMin
 			if (data.absMax !== undefined && data.absMax > absMax) absMax = data.absMax
 
@@ -139,7 +152,7 @@ export class Model {
 			bins: results[0]?.data.bins || {},
 			charts: combinedCharts,
 			uncomputableValues: allUncomputableValues.length > 0 ? allUncomputableValues : null,
-			descrStats: {} // empty value needed per type def
+			descrStats: {} as any // empty value needed per type def
 		}
 	}
 
