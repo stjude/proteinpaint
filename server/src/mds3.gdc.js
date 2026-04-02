@@ -1158,26 +1158,26 @@ args:
 todo unit test
 */
 export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, case_filters) {
-	if (tw.term.id === 'diagnoses.age_at_diagnosis' && Array.isArray(caseObj.diagnoses)) {
-		const diagnoses = caseObj.diagnoses.filter(agedxIsNotNull)
+	if (Array.isArray(caseObj.diagnoses)) {
+		// There may be multiple diagnosis entries, choose only one for summary plot,
+		// but the selected entry must be deterministic and always render the same plot
+		// for a given diagnoses array with entries in assumed arbitrary, random order.
+		// See https://gdc-ctds.atlassian.net/browse/SV-2770
+		const diagnoses = caseObj.diagnoses.filter(diagnosisFilter)
 		if (!diagnoses.length) return
-
-		if (
-			caseObj.diagnoses.find(
-				d =>
-					d.submitter_id.includes('TCGA-78-8662') ||
-					d.submitter_id.includes('TCGA-78-8648') ||
-					d.submitter_id.includes('TCGA-05-4402')
-			)
-		)
-			console.log(1178, caseObj)
-
-		caseObj.diagnoses = diagnoses.sort(agedxSort)[0]
-		//const diagnosesFilters = case_filter.contents.
+		if (diagnoses.length > 1) {
+			// there should be either exactly 1 diagnoses entry that is primary disease,
+			// or all of the diagnoses entries have undefined primary disease since
+			// it was not in the requested fieldset (as required if diagnoses.age_at_diagnosis
+			// or primary_disease are also requested)
+			if (diagnoses.filter(diagnosisIsPrimaryDisease).length !== 1 && diagnoses.filter(primaryDiseasesIsDefined).length)
+				return
+		}
+		diagnoses.sort(diagnosisSort)
+		caseObj.diagnoses = diagnoses[0]
 	}
 
 	const fields = tw.term.id.split('.')
-
 	query(fields, sample, tw, caseObj, startIdx)
 
 	/* done searching; if available, a new value is now assigned to sample[term.id]
@@ -1187,27 +1187,9 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1, case_filt
 	*** quick fix!! ***
 	downstream mds3 code does not handle array value well.
 	return 1st value for those to work; later can change back when array values can be handled
+	4/1/2026: for diagnoses terms, the decision tree from https://gdc-ctds.atlassian.net/browse/SV-2770
+						is implemented using diagnosisFilter() and diagnosisIsPrimaryDisease()
 	*/
-	if (sample[tw.term.id] instanceof Set) {
-		if (
-			caseObj.diagnoses.find(
-				d =>
-					d.submitter_id.includes('TCGA-78-8662') ||
-					d.submitter_id.includes('TCGA-78-8648') ||
-					d.submitter_id.includes('TCGA-05-4402')
-			)
-		)
-			console.log(
-				1178,
-				caseObj,
-				sample.sample_id.slice(0, 5),
-				[...sample[tw.term.id]].filter(isNotNull).sort(basicSort)
-			)
-		/*if (sample[tw.term.id].size > 1) {
-			delete sample[tw.term.id] // later may skip throwing, and simply not include cases with multiple values for the same annotation term
-			throw `At least one case has multiple values for ${tw.term.name}.`
-		} else*/ sample[tw.term.id] = [...sample[tw.term.id]].filter(isNotNull).sort(basicSort)[0]
-	}
 
 	if (tw.term.id in sample) {
 		// a valid value is set, if tw.q defines binning or groupsetting, convert the value
@@ -1283,11 +1265,33 @@ function basicSort(a, b) {
 	return a < b ? -1 : a > b ? 1 : 0
 }
 
-function agedxIsNotNull(d) {
-	return d.age_at_diagnosis !== null
+// see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
+function diagnosisFilter(d) {
+	// strict equality, undefined and other non-null empty values are not matched,
+	// so this condition will not be applied if there if age_at_diagnosis was not
+	// added to the requested fieldset
+	if (d.age_at_diagnosis === null) return false
+	// as of 4/1/2026, 14 CPTAC cases have diagnoses entries that all match the condition below;
+	// it looks like the GDC API does not return these samples when the fieldset is diagnoses.*,
+	// but will still filter here nonetheless
+	if (d.diagnosis_is_primary_disease === false) return false
+	return true
 }
 
-function agedxSort(a, b) {
+// see the decision tree in https://gdc-ctds.atlassian.net/browse/SV-2770
+// this filter is meant to be applied ONLY when there are multiple diagnoses[] entries,
+// it's okay for a single-entry diagnoses[] to have diagnosis_is_primary_disease === null
+function diagnosisIsPrimaryDisease(d) {
+	return d.diagnosis_is_primary_disease === true
+}
+
+function primaryDiseasesIsDefined(d) {
+	return d.diagnosis_is_primary_disease !== undefined
+}
+
+function diagnosisSort(a, b) {
+	if (a.diagnosis_is_primary_disease) return -1
+	if (b.diagnosis_is_primary_disease) return 1
 	if (a.age_at_diagnosis === null && b.age_at_diagnosis === null) return 0
 	if (a.age_at_diagnosis === null) return 1
 	if (b.age_at_diagnosis === null) return -1
@@ -1442,7 +1446,6 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			// but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
 			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
 		} else {
-			console.log(1406)
 			// not in gene exp clustering mode
 			;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
 		}
@@ -1642,6 +1645,10 @@ async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTw
 async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst) {
 	const fieldset = new Set(dictTwLst.map(tw => tw.term.id)) // set of fields to request from ssm_occurrences api. tolerate insertion of duplicating fields
 
+	if (fieldset.has('case.diagnoses.age_at_diagnosis') || fieldset.has('case.diagnoses.primary_diagnosis')) {
+		fieldset.add('case.diagnoses.diagnosis_is_primary_disease')
+	}
+
 	/* this function can identify sample either by case uuid, or sample submitter id
 	for simplicity, always request these two different values
 	*/
@@ -1816,12 +1823,7 @@ dictionary term ids starting with "case." must be trimmed before using as /cases
 case_filter variable names can still be "cases.xx"
 */
 export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds) {
-	const fieldset = new Set([
-		'submitter_id',
-		'diagnoses.submitter_id',
-		'diagnoses.primary_diagnosis',
-		'cases.diagnoses.submitter_id'
-	])
+	const fieldset = new Set(['submitter_id', 'diagnoses.submitter_id', 'cases.diagnoses.submitter_id'])
 	const updatedTwLst = [] // copy of dictTwLst by trimming "case."
 	const termIdMap = new Map() // map of new term id lacking "case." to original term id
 	for (const tw of dictTwLst) {
@@ -1835,6 +1837,10 @@ export async function querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q
 		}
 		updatedTwLst.push(t2)
 		fieldset.add(t2.term.id)
+	}
+	// preceding loop stripped 'case.' or 'cases.' prefix
+	if (fieldset.has('diagnoses.age_at_diagnosis') || fieldset.has('diagnoses.primary_diagnosis')) {
+		fieldset.add('diagnoses.diagnosis_is_primary_disease')
 	}
 
 	const param = {

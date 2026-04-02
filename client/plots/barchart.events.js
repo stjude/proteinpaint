@@ -476,7 +476,7 @@ function handle_click(event, self, chart) {
 		})
 	}
 
-	const uiLabels = self.app.vocabApi.termdbConfig.uiLabels
+	const uiLabels = self.config.controlLabels || self.app.vocabApi.termdbConfig.uiLabels
 	//disable sample listing temporarily
 	if (self.config.displaySampleIds) {
 		options.push({

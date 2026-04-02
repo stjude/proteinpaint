@@ -488,7 +488,11 @@ export async function getPlotConfig(opts, app) {
 	if (config.term.term.type == 'geneVariant') config.settings.barchart.colorBars = true
 
 	// may apply term-specific changes to the default object
-	return copyMerge(config, opts)
+	copyMerge(config, opts)
+	// always use the dataset-configured control/ui labels
+	// to override ui labels from recovered session state
+	Object.assign(config.controlLabels, app.vocabApi.termdbConfig.uiLabels || {})
+	return config
 }
 
 const discreteByContinuousPlots = new Set(['violin', 'boxplot'])
@@ -508,8 +512,7 @@ export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}
 	if (edits.childType) {
 		// no need to set config.childType if a value is already specified
 		// in an edits object (optional second argument), as processed by mass store
-		if (config.childType != edits.childType)
-			throw `action.config.childType was not applied in mass store.plot_edit()`
+		if (config.childType != edits.childType) throw `action.config.childType was not applied in mass store.plot_edit()`
 		return
 	}
 	// config.childType may be stale, OR edits.childType may not be available,
