@@ -172,8 +172,8 @@ async function getSingleCellScatter(req, res, ds) {
 		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
 		const groups = tw.q?.customset?.groups
 		const samples: ScatterSample[] = cells.map(cell => {
-			// getData() is not run again for single cell scatter, so formatting not applied.
-			// Recreate formatting logic here to properly rendering groups
+			/** Since getData() from termdb.matrix is not called again for single cell scatter,
+			 * the groups formatting logic for category (i.e. value) is recreated here. */
 			let category = cell.category
 			if (groups) {
 				const group = groups.find(g => Object.values(g.values).find((v: any) => v.key == category))
