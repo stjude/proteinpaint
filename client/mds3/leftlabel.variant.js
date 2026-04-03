@@ -143,6 +143,7 @@ function menu_variants(data, tk, block) {
 	if ((!tk.skewer?.rawmlst || tk.skewer.rawmlst?.length == 0) && tk.cnv?.cnvInDensity) {
 		tk.menutip.d
 			.append('div')
+			.attr('data-testid', 'sjpp-mds3tk-variantleftlabel-cnvdensitymsg')
 			.style('margin', '10px')
 			.text('Viewing CNV segment density, no information on individual segments.')
 		if (tk.cnv.cnvMsg) {
