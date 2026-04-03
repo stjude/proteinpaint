@@ -1,2 +1,1 @@
-Fixes:
-- hide CNV legend for GDC ssm lollipop
+
