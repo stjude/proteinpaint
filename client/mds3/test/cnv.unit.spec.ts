@@ -33,6 +33,22 @@ tape('mayInitCnv()', test => {
 	}
 	{
 		const tk: any = {
+			mds: { termdbConfig: { queries: { cnv: { requiresHardcodeCnvOnlyFlag: true } } } }
+		}
+		mayInitCnv(tk)
+		test.false(tk.cnv, 'tk.cnv{} is not set')
+	}
+	{
+		const tk: any = {
+			mds: { termdbConfig: { queries: { cnv: { requiresHardcodeCnvOnlyFlag: true } } } },
+			hardcodeCnvOnly: true,
+			glider: { append: () => {} }
+		}
+		mayInitCnv(tk)
+		test.true(tk.cnv, 'tk.cnv{} is set')
+	}
+	{
+		const tk: any = {
 			mds: {},
 			custom_variants: [{ dt: 4, class: 's' }],
 			glider: { append: () => {} }

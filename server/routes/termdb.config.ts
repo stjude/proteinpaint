@@ -225,7 +225,8 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			'cnvCutoffsByGene',
 			'absoluteValueRenderMax',
 			'gainColor',
-			'lossColor'
+			'lossColor',
+			'requiresHardcodeCnvOnlyFlag'
 		]) {
 			if (k in q.cnv) q2.cnv[k] = q.cnv[k]
 		}
