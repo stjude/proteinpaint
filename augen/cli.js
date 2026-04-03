@@ -18,7 +18,7 @@ if (!fs.existsSync(dir)) throw `Not found: dir='${dir}'`
 ;(async () => {
 	if (cmd == 'build') {
 		try {
-			const configFile = `${dir}/augen.config.json` //; console.log(19, dir, process.cwd(), configFile)
+			const configFile = `${dir}/augen.config.json`
 			const configExists = await existsProm(configFile)
 			if (!configExists) throw `missing augen.config.json in dir='${dir}'`
 			const config = await import(configFile, { assert: { type: 'json' } })

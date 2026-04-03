@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## Unreleased
+
+Fixes
+- include repository entry in augen/package.json
+
+
 ## 2.181.0
 
 Features:
