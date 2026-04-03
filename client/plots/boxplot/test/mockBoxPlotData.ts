@@ -1,13 +1,9 @@
-import { termjson } from '../../../test/testdata/termjson'
+import { getTermCopy } from '../../../test/testdata/termjson'
 
 /** Do not export these consts individually.
- * Instead, use a copy to avoid altering the
- * original test termjson term obj.*/
-export function getBoxPlotMockData(opts: any = {}) {
-	if (opts.termId) {
-		return structuredClone(termjson[opts.termId])
-	}
-
+ * Instead, use a copy to avoid inadvertently mutating it
+ * across tests.*/
+export function getBoxPlotMockData() {
 	const mockDescrStats1 = {
 		min: { key: 'min', label: 'Min', value: 20 },
 		max: { key: 'max', label: 'Max', value: 100 },
@@ -43,10 +39,10 @@ export function getBoxPlotMockData(opts: any = {}) {
 		childType: 'boxplot',
 		id: 'test_test',
 		term: {
-			term: JSON.parse(JSON.stringify(termjson['agedx'])),
+			term: getTermCopy('agedx'),
 			q: { mode: 'continuous', descrStats: mockDescrStats1 }
 		},
-		term2: { term: JSON.parse(JSON.stringify(termjson['sex'])), q: { descrStats: mockDescrStats2 } },
+		term2: { term: getTermCopy('sex'), q: { descrStats: mockDescrStats2 } },
 		settings: { boxplot: mockSettings }
 	}
 
@@ -56,10 +52,10 @@ export function getBoxPlotMockData(opts: any = {}) {
 		childType: 'boxplot',
 		id: 'test_test',
 		term: {
-			term: JSON.parse(JSON.stringify(termjson['diaggrp'])),
+			term: getTermCopy('diaggrp'),
 			q: { mode: 'continuous', descrStats: mockDescrStats1 }
 		},
-		term2: { term: JSON.parse(JSON.stringify(termjson['sex'])), q: { descrStats: mockDescrStats2 } },
+		term2: { term: getTermCopy('sex'), q: { descrStats: mockDescrStats2 } },
 		settings: { boxplot: mockSettings }
 	}
 
