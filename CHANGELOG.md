@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.181.0
 
 Features:
 - DNA Meth: Added R and Rust DMRCate implementations for region level DMR analysis
