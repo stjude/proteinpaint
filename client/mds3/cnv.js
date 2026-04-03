@@ -96,6 +96,7 @@ function renderDensity(data, tk, block) {
 		.attr('width', block.width)
 		.attr('height', tk.cnv.density.barheight)
 		.attr('xlink:href', data.cnvDensity.gain.src)
+		.attr('data-testid', 'sjpp-mds3tk-cnvdensityimg')
 	tk.cnv.g
 		.append('image')
 		.attr('width', block.width)

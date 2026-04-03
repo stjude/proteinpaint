@@ -507,11 +507,13 @@ export class Block {
 		this.ctrl.zobutt2 = butrow
 			.append('button')
 			.html('&times;10')
+			.attr('data-testid', 'sjpp-block-zoombtnx10')
 			.on('click', () => this.zoomblock(10, true))
 			.on('mouseover', () => this.zoombutton_mouseover(10, true, this.ctrl.zobutt2.node()))
 		this.ctrl.zobutt3 = butrow
 			.append('button')
 			.html('&times;50')
+			.attr('data-testid', 'sjpp-block-zoombtnx50')
 			.on('click', () => this.zoomblock(50, true))
 			.on('mouseover', () => this.zoombutton_mouseover(50, true, this.ctrl.zobutt3.node()))
 
