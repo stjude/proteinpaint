@@ -17,3 +17,16 @@ export type MatrixScaffold = {
 }
 
 export type Scaffold = SummaryScaffold | DEScaffold | MatrixScaffold
+
+// Helper functions to determine scaffold type
+export function isSummaryScaffold(s: Scaffold): s is SummaryScaffold {
+	return 'tw1' in s
+}
+
+export function isDEScaffold(s: Scaffold): s is DEScaffold {
+	return 'filter1' in s && 'filter2' in s
+}
+
+export function isMatrixScaffold(s: Scaffold): s is MatrixScaffold {
+	return 'twLst' in s
+}

@@ -90,7 +90,6 @@ export async function inferEntities(scaffold: Scaffold, llm: LlmConfig) {
         - specific gene names (e.g. "TP53", "EGFR")
         → Treat this as a GENE_EXPRESSION term type
 
-
         ## ssGSEA scores
         ssGSEA (single-sample Gene Set Enrichment Analysis) scores represent the enrichment of predefined gene sets in individual samples.
         When a phrase seems to refer to:
@@ -128,7 +127,6 @@ export async function inferEntities(scaffold: Scaffold, llm: LlmConfig) {
         - "expression of gene X in single cells", "RNA levels of gene Y in single cells"
         → Treat this as a SINGLECELL_GENE_EXPRESSION term type
 
-
     ## Instructions:
     1. If the role (key) of the scaffold is "filter", the phrase can be resolved to >= 1 entities.
     2. If the role is "tw1", "tw2", or "tw3", the phrase should be resolved to exactly 1 entity.
@@ -138,6 +136,8 @@ export async function inferEntities(scaffold: Scaffold, llm: LlmConfig) {
     
     ## Output Format:
     Return the scaffold with the same keys, but each phrase value is replaced by an entity object in this format: {type: termType, value: phrase}. For example:
+
+    ## Examples:
     Input scaffold:
     {
         "tw1": "expression of TP53",
