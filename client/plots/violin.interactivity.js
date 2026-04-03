@@ -130,19 +130,18 @@ export function setInteractivity(self) {
 	}
 
 	//get sample list for menu option callbacks
-	self.getSampleList = function (plot, start, end) {
-		const configCopy = self.config
+	self.getSampleList = function (plot, start, end, event) {
+		const { term, term2, term0 } = self.config
 		const bins = self.data.bins
-
 		const rangeStart = start !== undefined ? start : null
 		const rangeStop = end !== undefined ? end : null
 
 		const ls = new ListSamples({
 			app: self.app,
 			termfilter: self.state.termfilter,
-			term: configCopy.term,
-			term2: configCopy.term2,
-			term0: configCopy.term0,
+			term,
+			term2,
+			term0,
 			plot,
 			bins,
 			start: rangeStart,

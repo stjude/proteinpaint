@@ -3,7 +3,11 @@ import { termjson } from '../../../test/testdata/termjson'
 /** Do not export these consts individually.
  * Instead, use a copy to avoid altering the
  * original test termjson term obj.*/
-export function getBoxPlotMockData() {
+export function getBoxPlotMockData(opts: any = {}) {
+	if (opts.termId) {
+		return structuredClone(termjson[opts.termId])
+	}
+
 	const mockDescrStats1 = {
 		min: { key: 'min', label: 'Min', value: 20 },
 		max: { key: 'max', label: 'Max', value: 100 },

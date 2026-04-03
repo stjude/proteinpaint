@@ -26,14 +26,21 @@ Tests:
  reusable helper functions
 **************************/
 
-function getNewListSamples() {
+function getNewListSamples(opts: any = {}) {
 	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
 	const mockApp = {} as AppApi
 	const mockState: any = {
 		plots: [mockConfig1],
 		termfilter: { filter: 'test' }
 	}
-	const mockBins = { term1: { testKey: { start: 5, stop: 10 } } }
+
+	const mockBins: any = { term1: { testKey: { start: 5, stop: 10 } } }
+
+	if (opts.term2) {
+		mockConfig1.term2 = opts.term2
+		mockBins.term2 = { testKey: { start: 1000, stop: 2000 } }
+	}
+
 	const listSamples = new ListSamples({
 		app: mockApp,
 		termfilter: mockState.termfilter,
@@ -168,8 +175,8 @@ tape('ListSamples.getTvsLst() in constructor returns obj for categorical term an
 								type: 'regular-bin',
 								label_offset: 1,
 								bin_size: 3,
-								first_bin: { startunbounded: true, stop: 2 },
-								mode: 'discrete'
+								first_bin: { startunbounded: true, stop: 2 }
+								//mode: 'discrete'
 								//label_offset_ignored: false
 							},
 							less: {
@@ -202,8 +209,8 @@ tape('ListSamples.getTvsLst() in constructor returns obj for categorical term an
 			}
 		]
 	}
-	test.deepEqual(listSamples.tvslst, expected, `Should return expected tvslst object`)
 
+	test.deepEqual(listSamples.tvslst, expected, `Should return expected tvslst object`)
 	test.end()
 })
 
@@ -294,16 +301,31 @@ tape('createTvsRanges() returns empty array for continuous term without bins', t
 	test.end()
 })
 
-tape('createTvsRanges() handles bins', test => {
+tape('createTvsRanges() handles bins for continuous term', test => {
+	// TODO: figure out if a continuous term ever needs to use a bin to create a filter?
+	// if not, adjust the expected result to not create a tvs entry, especially useful as sanity
+	// check, such as when the continuous term bin happens to have a seriesId/key that is
+	// also found in a numeric overlay's bins
 	test.timeoutAfter(100)
-
 	const { listSamples } = getNewListSamples()
-
 	const mockTvs: any = {}
 	listSamples.createTvsRanges(mockTvs, 1, 'testKey')
+	test.equal(mockTvs.ranges.length, 1, 'Should handle bin value for continuous term')
+	test.deepEqual(mockTvs.ranges[0], { start: 5, stop: 10 }, 'Should handle bin value for continuous term')
+	test.end()
+})
 
-	test.equal(mockTvs.ranges.length, 1, 'Should handle bin value')
+tape('createTvsRanges() handles bins for numeric overlay', test => {
+	test.timeoutAfter(100)
 
+	const term = getBoxPlotMockData({ termId: 'aaclassic_5' })
+	const tw = { term, q: {} }
+	const { listSamples } = getNewListSamples({ term2: tw })
+
+	const mockTvs: any = {}
+	listSamples.createTvsRanges(mockTvs, 2, 'testKey')
+	test.equal(mockTvs.ranges.length, 1, 'Should handle bin value for numeric overlay term')
+	test.deepEqual(mockTvs.ranges[0], { start: 1000, stop: 2000 }, 'Should handle bin value for continuous term')
 	test.end()
 })
 
