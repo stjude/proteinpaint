@@ -12,6 +12,7 @@ import { getDsAllowedTermTypes } from './termdb.config.ts'
 import { validateNonDictionaryTypes } from './chat/phrase2entity.ts'
 import path from 'path'
 import fs from 'fs'
+import { isSummaryScaffold } from './chat/scaffoldTypes.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat3',
@@ -180,8 +181,6 @@ export async function run_chat_pipeline(
 			}
 		}
 
-		// Ensure all nondicttypes in the scaffold have corresponding data types. For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
-		// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other nondicttypes such as metabolites, genesets, etc.
 		// If valid plot type, figure out term types
 		const time4 = new Date().valueOf()
 		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
@@ -190,10 +189,20 @@ export async function run_chat_pipeline(
 
 		if (!scaffoldResult)
 			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
+
+		/* This function checks if the non-dictionary types mentioned in the scaffold result (e.g. gene names) are valid based
+		 * on the corresponding db (e.g. genedb). If any invalid terms are found, it throws an error which is caught in the main
+		 * function and returned as a text response to the user. This is an important validation step to ensure that downstream agents
+		 * receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
+		 */
 		const genes_list = await parse_geneset_db(genedb)
-		const scaffoldResultObject = JSON.parse(scaffoldResult)
-		if (scaffoldResultObject.tw) {
-			validateNonDictionaryTypes(scaffoldResultObject.tw, llm, genes_list, dataset_json) // This function checks if the non-dictionary types mentioned in the scaffold result (e.g. gene names) are valid based on the corresponding db (e.g. genedb). If any invalid terms are found, it throws an error which is caught in the main function and returned as a text response to the user. This is an important validation step to ensure that downstream agents receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
+		if (isSummaryScaffold(scaffoldResult)) {
+			// Ensure all nondicttypes in the scaffold have corresponding data types.
+			// For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid
+			// because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
+			// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
+			// nondicttypes such as metabolites, genesets, etc.
+			validateNonDictionaryTypes(scaffoldResult.tw1, llm, genes_list, dataset_json)
 		}
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
