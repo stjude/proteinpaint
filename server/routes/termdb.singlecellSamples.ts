@@ -367,8 +367,10 @@ function colorColumn2terms(plots, ds) {
 			return {
 				name: c.name,
 				isleaf: true,
-				/** TODO: possible term may apply to multiple plots.
-				 * May need to change to plots: [] */
+				/** Note, term may apply to multiple plots.
+				 * The plot denotes the data file defined in the ds file,
+				 * which may be the same or different file paths for
+				 * all the plots. */
 				plot: plot.name,
 				type: SINGLECELL_CELLTYPE,
 				groupsetting: {},
