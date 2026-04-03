@@ -668,8 +668,8 @@ function may_create_skewerRim(tk, block) {
 	R.row = tk.legend.table.append('tr')
 
 	R.headerTd = R.row // name of rim legend row is set on the fly, allows to change data type for rim
-		.attr('data-testid', `sjpp-mds3tk-legend-skewerRim`)
 		.append('td')
+		.attr('data-testid', `sjpp-mds3tk-legend-skewerRim`)
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
 
