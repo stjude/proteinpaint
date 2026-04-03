@@ -206,6 +206,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.attr('aria-label', 'Gene symbol, position, or alias')
 		.property('disabled', arg.disableInput || false)
 		.attr('class', 'sja_genesearchinput')
+		.attr('data-testid', 'sja_genesearchinput')
 		.style('width', width + 'px')
 
 	result.searchbox = searchbox
