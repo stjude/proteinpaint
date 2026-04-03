@@ -364,9 +364,21 @@ function mayInitSkewer(tk) {
 }
 
 export function mayInitCnv(tk) {
-	let cfg // the config object for rendering cnv
+	let cfg // cnv config obj
 	if (tk.mds.termdbConfig?.queries?.cnv) {
-		cfg = tk.mds.termdbConfig.queries.cnv // native ds config
+		// cnv present
+		if (tk.mds.termdbConfig.queries.cnv.requiresHardcodeCnvOnlyFlag) {
+			// cnv will only work when tk carries following flag
+			if (tk.hardcodeCnvOnly) {
+				// tk has flag. cnv works
+				cfg = tk.mds.termdbConfig.queries.cnv
+			} else {
+				// tk lacks flag and won't show cnv
+			}
+		} else {
+			// no special flag requirement. always allow
+			cfg = tk.mds.termdbConfig.queries.cnv
+		}
 	} else if (tk.custom_variants?.find(i => i.dt == dtcnv)) {
 		// has custom cnv; require that all are same type (using value or using category)
 		let useValue = false,
@@ -388,9 +400,9 @@ export function mayInitCnv(tk) {
 		} else {
 			throw 'custom cnv is neither value or category, should not happen'
 		}
-	} else {
-		return // no cnv from this tk
 	}
+
+	if (!cfg) return // no cnv from this tk
 
 	if (!tk.cnv) tk.cnv = {} // preserve existing setting
 	tk.cnv.g = tk.glider.append('g')
