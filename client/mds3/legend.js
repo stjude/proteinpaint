@@ -97,14 +97,16 @@ function create_mclass(tk, block) {
 
 	tk.legend.mclass.row
 		.append('td')
+		.attr('data-testid', 'sjpp-mds3tk-legend-mclass')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
-		.text(block.mclassOverride ? block.mclassOverride.className || 'Mutation' : 'Mutation')
+		.text(block.mclassOverride?.className || 'Mutation')
 
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
 
 function may_create_variantShapeName(tk) {
+	// TODO put shape legend under a heading with meaning
 	if (!tk.legend.customShapeLabels || !tk.custom_variants) return
 	if (!tk.legend.variantShapeName) tk.legend.variantShapeName = []
 
@@ -213,6 +215,7 @@ function may_create_infoFields(tk) {
 		// column 1 <td>: info field name
 		row
 			.append('td')
+			.attr('data-testid', `sjpp-mds3tk-legend-bcfinfo-${key}`)
 			.style('text-align', 'right')
 			.style('opacity', 0.7)
 			.text(tk.mds.bcf.info[key].name || key)
@@ -241,7 +244,12 @@ function may_create_formatFilter(tk) {
 		// this row will have two columns, just like mclass
 
 		// column 1 <td>: format field name
-		row.append('td').style('text-align', 'right').style('opacity', 0.7).text(tk.mds.bcf.format[key].Description)
+		row
+			.append('td')
+			.attr('data-testid', `sjpp-mds3tk-legend-bcfformat-${key}`)
+			.style('text-align', 'right')
+			.style('opacity', 0.7)
+			.text(tk.mds.bcf.format[key].Description)
 
 		tk.legend.formatFilter[key] = {
 			hiddenvalues: new Set(),
@@ -660,6 +668,7 @@ function may_create_skewerRim(tk, block) {
 	R.row = tk.legend.table.append('tr')
 
 	R.headerTd = R.row // name of rim legend row is set on the fly, allows to change data type for rim
+		.attr('data-testid', `sjpp-mds3tk-legend-skewerRim`)
 		.append('td')
 		.style('text-align', 'right')
 		.style('opacity', 0.7)
@@ -773,7 +782,11 @@ function may_create_ld(tk, block) {
 	const R = (tk.legend.ld = {})
 	R.row = tk.legend.table.append('tr')
 	// contents are filled in dynamically
-	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7)
+	R.headerTd = R.row
+		.append('td')
+		.attr('data-testid', `sjpp-mds3tk-legend-ld`)
+		.style('text-align', 'right')
+		.style('opacity', 0.7)
 	R.holder = R.row.append('td')
 	R.showHolder = R.holder.append('div').style('display', 'none')
 	showLDlegend(R.showHolder, tk.mds.queries.ld.colorScale)
@@ -808,7 +821,12 @@ function may_create_cnv(tk, block) {
 
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
-	R.headerTd = R.row.append('td').style('text-align', 'right').style('opacity', 0.7).text('CNV')
+	R.headerTd = R.row
+		.append('td')
+		.attr('data-testid', `sjpp-mds3tk-legend-cnv`)
+		.style('text-align', 'right')
+		.style('opacity', 0.7)
+		.text('CNV')
 	R.holder = R.row.append('td').style('padding-left', '10px')
 
 	if (Number.isFinite(tk.cnv.cnvGainCutoff)) {
