@@ -51,7 +51,8 @@ class SCViewer extends PlotBase implements RxComponent {
 			div,
 			loading: opts.holder
 				.append('div')
-				.attr('class', 'sjpp-sc-loading')
+				.attr('class', 'sjpp-sc-main-loading')
+				.attr('data-testid', 'sjpp-sc-main-loading')
 				.style('position', 'absolute')
 				.style('top', '0')
 				.style('left', '0')
