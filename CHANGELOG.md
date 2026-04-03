@@ -12,6 +12,7 @@ Fixes:
 - always set the tooltip top position instead of bottom to make it more reliable when an embedder's body position=relative
 - improved logic when hiding a tooltip after the first clickable element is blurred
 - prevent the unexpected closure of the parent GenesetEdit menu while clicking on a child MSigDb menu
+- list the correct samples when selecting a violin area with a numeric overlay
 
 
 ## 2.180.1
