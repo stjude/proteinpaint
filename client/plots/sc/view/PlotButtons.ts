@@ -11,17 +11,8 @@ import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from 
  *  - The hierarchical clustering limits to the first 100 genes.
  *
  ******* TODOs:
- * - Implement ds specific keys or logic for item name
  * - Update anywhere with 'CHANGEME' before prod
  * - Disable all plot btns until plot loads for performance??
- *
- ******* Scatter plot implementation TODOs:
- * - Check that the proper single cell data is used
- * - Configure tooltip to use 'cell' and not 'sample'
- * - term2 in the config is currently defined in
- * queries.singlecell.data.plots.[i].colorColumns. Need to:
- * 1. change that dataset obj and
- * 2. use new obj in the config
  *
  ******* Hier clustering implenentation TODOs and questions:
  * The matrix ** does not ** properly pull single cell data yet.
@@ -85,6 +76,8 @@ export class PlotButtons {
 			.data(btns.filter(b => b.isVisible()))
 			.enter()
 			.append('button')
+			.attr('type', 'button')
+			.attr('data-testid', b => `sjpp-sc-plot-btn-${b.label.toLowerCase().replace(/\s/g, '-')}`)
 			.style('padding', '10px 15px')
 			.style('border-radius', '20px')
 			.style('border-color', 'transparent')
@@ -107,7 +100,7 @@ export class PlotButtons {
 			label: string
 			isVisible: () => boolean
 			open?: (plot: any, self: PlotButtons) => void
-			getPlotConfig: (f?: any, g?: any) => any
+			getPlotConfig: (f?: any) => any
 		}[] = []
 
 		for (const plots of this.scTermdbConfig?.data?.plots || []) {
@@ -120,6 +113,15 @@ export class PlotButtons {
 			})
 		}
 		btns.push(
+			{
+				label: 'Summary',
+				isVisible: () => true,
+				getPlotConfig: () => {
+					return {
+						chartType: 'dictionary'
+					}
+				}
+			},
 			{
 				label: 'Gene expression',
 				isVisible: () => true,
@@ -142,16 +144,11 @@ export class PlotButtons {
 				isVisible: () => this.scTermdbConfig.DEgenes,
 				open: this.termDropdownMenu,
 				getPlotConfig: value => {
-					//TODO: refine this config
 					return {
 						chartType: 'differentialAnalysis',
 						termType: SINGLECELL_CELLTYPE,
-						//Eventually category will be updated to a term
-						// term: {
-						// 	name: term
-						// },
 						categoryName: `${value}`,
-						termId: this.data.plots[0].colorBy || 'Cluster', //CHANGEME
+						termId: this.scTermdbConfig.DEgenes.termId,
 						sample: this.item!.experiment || this.item!.sample
 					}
 				}
@@ -161,6 +158,7 @@ export class PlotButtons {
 	}
 
 	//********** Btn Menus **********/
+	//TODO: Use `client/dom/GeneExpChartMenu.ts` instead
 	geneSearchMenu(plot: any, self: PlotButtons) {
 		self.plotBtnsDom.tip.clear()
 
@@ -176,12 +174,9 @@ export class PlotButtons {
 		})
 	}
 
-	/** CHANGEME: This elem is a placeholder for now
-	 * Ideally this will call the tree with singleCellCellTerms.
-	 * That term type is not implemented yet. Once it is,
-	 * refactor this workflow to use the tree. */
+	//TODO: Change this to use the term from termdbConfig
+	// and return to getPlotConfig
 	termDropdownMenu(plot: any, self: PlotButtons) {
-		//CHANGEME: This ds obj needs to be defined as a term, not column name
 		self.plotBtnsDom.tip.clear()
 		const _plot = self.data.plots[0]
 

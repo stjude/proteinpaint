@@ -17,17 +17,20 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
-		case 'dmr':
-			return await import('./dmr/DmrPlot.ts')
-
-		case 'genomeBrowser':
-			return await import('./gb/GB.ts')
+		case 'dictionary':
+			return await import(`./dictionary.js`)
 
 		case 'differentialAnalysis':
 			return await import(`./diffAnalysis/DifferentialAnalysis.ts`)
 
 		case 'Disco':
 			return await import('./disco/Disco.ts')
+
+		case 'dmr':
+			return await import('./dmr/DmrPlot.ts')
+
+		case 'genomeBrowser':
+			return await import('./gb/GB.ts')
 
 		case 'grin2':
 			return await import('./grin2/grin2')
