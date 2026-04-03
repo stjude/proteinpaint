@@ -280,11 +280,10 @@ export default function setViolinRenderer(self) {
 			.style('font-size', '12')
 			.classed(settings.isLogScale ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
-		const ticks =
-			settings.isLogScale
-				? svg.axisScale.ticks(15)
-				: // svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
-				  svg.axisScale.ticks()
+		const ticks = settings.isLogScale
+			? svg.axisScale.ticks(15)
+			: // svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
+			  svg.axisScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
@@ -309,10 +308,12 @@ export default function setViolinRenderer(self) {
 
 		if (self.opts.mode != 'minimal') {
 			// TODO need to add term2 label onto the svg
+			const n = t2?.q?.mode === 'continuous' ? t2.term.name : t1.term.name
 			const lab = svg.svgG
 				.append('text')
-				.text(t2?.q?.mode === 'continuous' ? t2.term.name : t1.term.name)
+				.text(n)
 				.classed('sjpp-numeric-term-label', true)
+				.attr('data-testid', `sjpp-violin-label-${n}`)
 				.style('font-weight', 600)
 				.attr('text-anchor', 'middle')
 				.attr('x', isH ? settings.svgw / 2 : -settings.svgw / 2)

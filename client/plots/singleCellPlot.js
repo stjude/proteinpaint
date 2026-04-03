@@ -25,6 +25,8 @@ import { digestMessage } from '#termsetting'
 
 /*
 
+!!!! NO LONGER MAINTAINED !!!!
+
 hardcoded behaviors when this.samples[].experiments[] is present:
 
 - all samples must either have or not have .experiments[]
@@ -115,6 +117,7 @@ class singleCellPlot {
 				id: DIFFERENTIAL_EXPRESSION_TAB,
 				active: activeTab == DIFFERENTIAL_EXPRESSION_TAB,
 				isVisible,
+				testid: 'sjppoldscTabDE',
 				callback: () => this.setActiveTab(DIFFERENTIAL_EXPRESSION_TAB)
 			})
 		}
@@ -124,6 +127,7 @@ class singleCellPlot {
 				id: GENE_EXPRESSION_TAB,
 				active: activeTab == GENE_EXPRESSION_TAB,
 				isVisible,
+				testid: 'sjppoldscTabGE',
 				callback: () => this.setActiveTab(GENE_EXPRESSION_TAB)
 			})
 
@@ -133,6 +137,7 @@ class singleCellPlot {
 			id: VIOLIN_TAB,
 			active: activeTab == VIOLIN_TAB,
 			isVisible,
+			testid: 'sjppoldscTabSummary',
 			callback: () => this.setActiveTab(VIOLIN_TAB)
 		})
 
@@ -235,12 +240,15 @@ class singleCellPlot {
 			const label = this.dom.deDiv
 				.append('label')
 				.html('View differentially expressed genes for cells of a cluster versus rest of the cells:&nbsp;')
-			this.dom.deselect = label.append('select').on('change', e => {
-				const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
-				const cluster = this.dom.deselect.node().value.split(' ')[1]
-				this.genes = null
-				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster, gene: null } })
-			})
+			this.dom.deselect = label
+				.append('select')
+				.attr('data-testid', 'sjppoldscDEselect')
+				.on('change', e => {
+					const display = this.dom.deselect.node().value ? 'inline-block' : 'none'
+					const cluster = this.dom.deselect.node().value.split(' ')[1]
+					this.genes = null
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { cluster, gene: null } })
+				})
 			this.dom.deselect.append('option').text('')
 		}
 
@@ -806,6 +814,7 @@ class singleCellPlot {
 			},
 			selectedRows,
 			resize: true,
+			dataTestId: 'sjppoldscDEtable',
 			download: { fileName: downloadFilename }
 		})
 		this.renderGSEA(GSEADiv)
@@ -1413,6 +1422,7 @@ class singleCellPlot {
 			div,
 			maxWidth: columns.length > 3 ? '98vw' : '40vw',
 			maxHeight: '50vh',
+			dataTestId: 'sjppoldscSampleTable',
 			noButtonCallback: index => {
 				// NOTE that "index" is not array index of this.samples[]
 				const sample = rows[index][0].value
@@ -1519,7 +1529,11 @@ class singleCellPlot {
 
 	renderLargePlotThree = async function (plot) {
 		if (!plot.canvas) {
-			const canvas = plot.plotDiv.append('canvas').style('display', 'inline-block').style('vertical-align', 'top')
+			const canvas = plot.plotDiv
+				.append('canvas')
+				.attr('data-testid', 'sjppoldsccanvas')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
 			plot.canvas = canvas.node()
 			plot.canvas.width = this.settings.svgw
 			plot.canvas.height = this.settings.svgh

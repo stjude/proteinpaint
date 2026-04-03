@@ -43,6 +43,8 @@ export type TabsInputEntry = {
 	 * Do not set tab arg to RenderedTab.
 	 * Caller may have separate tab type.*/
 	keydownCallback?: (event: any, tab: any) => any
+	/** applied to <button> and overrides a default testid */
+	testid?: string
 }
 
 export type RenderedTab = TabsInputEntry & {
