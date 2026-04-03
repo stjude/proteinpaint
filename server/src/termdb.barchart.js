@@ -626,17 +626,9 @@ export function getOrderedLabels(term, bins, events, q) {
 	}
 	const firstVal = Object.values(term.values || {})[0]
 	if (firstVal && 'order' in firstVal) {
-		return Object.keys(term.values)
-			.sort((a, b) =>
-				'order' in term.values[a] && 'order' in term.values[b]
-					? term.values[a].order - term.values[b].order
-					: 'order' in term.values[a]
-					? term.values[a].order
-					: 'order' in term.values[b]
-					? term.values[b].order
-					: 0
-			)
-			.map(i => term.values[i].key)
+		const entries = Object.values(term.values).filter(v => 'order' in v)
+		entries.sort((a, b) => a.order - b.order)
+		return [...new Set(entries.map(v => v.label))]
 	}
 	return bins?.map(bin => (bin.name ? bin.name : bin.label))
 }
