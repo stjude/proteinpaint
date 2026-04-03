@@ -1,5 +1,5 @@
 import type { AppApi } from '#rx'
-import type { TermWrapper } from '#types'
+import type { TermWrapper, NumericBin } from '#types'
 import type { AnnotatedSampleData, AnnotatedSampleEntry } from '../../types/termdb'
 import type { TableColumn, TableRow } from '#dom'
 import { getSamplelstFilter } from '../../mass/groups.js'
@@ -17,16 +17,7 @@ type ScopedPlot = {
 
 type ScopedBins = {
 	[key: string]: {
-		[key: string]: {
-			start?: number
-			stop?: number
-			startinclusive?: boolean
-			stopinclusive?: boolean
-			startunbounded?: boolean
-			stopunbounded?: boolean
-			value?: string | number
-			label?: string
-		}
+		[key: string]: NumericBin
 	}
 }
 
@@ -57,6 +48,8 @@ export class ListSamples {
 	t2: TermWrapper | null
 	t0?: TermWrapper | null
 	terms: TermWrapper[]
+	contTerm?: TermWrapper | null
+	overlayTerm?: TermWrapper | null
 
 	/** Indicates a reduced range for the bin (e.g. violin brush) */
 	useRange: boolean
@@ -88,6 +81,9 @@ export class ListSamples {
 		this.t2 = opts.term2 || null
 		this.t0 = opts.term0 || null
 
+		const { term, term2 } = opts
+		this.contTerm = 'mode' in term.q && term.q.mode == 'continuous' ? term : term2
+		this.overlayTerm = term === this.contTerm ? term2 : term
 		this.terms = [this.t1]
 
 		if (
@@ -140,11 +136,14 @@ export class ListSamples {
 				term: tw.term
 			}
 		}
+
 		//TODO: delete isContinuousOrBinned and tests if isNumericTerm works
 		if (this.isContinuousOrBinned(tw, termNum)) {
-			tvsEntry.tvs = this.createTvsRanges(tvsEntry.tvs, termNum, key)
+			tvsEntry.tvs = this.createTvsRanges(tvsEntry.tvs, termNum)
 		}
+		// this may not be needed if there is tvsEntry.tvs.ranges[]?
 		tvsEntry = this.createTvsValues(tvsEntry, tw, key)
+
 		this.tvslst.lst.push(tvsEntry)
 	}
 
@@ -176,13 +175,20 @@ export class ListSamples {
 		return tvsEntry
 	}
 
-	createTvsRanges(tvs: any, termNum: number, key: string): any {
-		const keyBin = this.bins[`term${termNum}`]?.[`${key}`]
-		const uncomputable = Object.entries(this[`t${termNum}`].term?.values ?? {}).find(
-			([_, v]: [string, any]) => v.label === key && v?.uncomputable
-		)?.[0]
-		if (keyBin) {
-			tvs.ranges = [keyBin]
+	createTvsRanges(tvs: any, _termNum: number, key?: string): any {
+		const tw = this[`t${_termNum}`]
+		const termNum = `term${_termNum}`
+		// TODO: figure out if a continuous term ever needs to use a bin to create a filter?
+		// if not, can uncomment the condition below to prevent that from happening
+		const bins = /*tw != this.contTerm &&*/ this.bins[termNum]
+		const idOrLabel = key ? key : tw === this.overlayTerm ? this.plot.seriesId : tw === this.t0 ? this.plot.chartId : ''
+		const overlayOrChartBin = idOrLabel && bins?.[idOrLabel]
+		const uncomputable = Object.values(tw?.term?.values ?? {}).find(
+			(v: any) => v.label === idOrLabel && v?.uncomputable
+		)
+
+		if (overlayOrChartBin) {
+			tvs.ranges = [overlayOrChartBin]
 		} else if (uncomputable) {
 			/** Uncomputable values will not have bins defined but
 			 * require a value for filtering. Manually adding the
@@ -190,7 +196,7 @@ export class ListSamples {
 			if (!tvs.ranges) tvs.ranges = []
 			tvs.ranges.push({
 				value: uncomputable,
-				label: key
+				label: idOrLabel
 			})
 		} else {
 			/** Continuous terms may not have bins defined
@@ -198,7 +204,7 @@ export class ListSamples {
 			tvs.ranges = []
 		}
 
-		if (this.useRange) {
+		if (!overlayOrChartBin && this.useRange) {
 			/** May need to limit the range (e.g. violin brush) or add
 			 * a range when no bins exist for the query to succeed. */
 			if (tvs.ranges.length > 0 && tvs.ranges[0]?.start !== undefined) {

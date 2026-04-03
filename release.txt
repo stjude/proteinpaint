@@ -1,1 +1,2 @@
-
+Fixes:
+- list the correct samples when selecting a violin area with a numeric overlay

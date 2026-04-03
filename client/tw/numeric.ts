@@ -434,11 +434,11 @@ function mayFillQWithPresetBins(tw) {
 	if (preferredBins != 'median') {
 		if (!Object.keys(tw.term.bins).includes(preferredBins))
 			throw `term.bins does not have a preset '${preferredBins}' key`
-		const bins = tw.term.bins[preferredBins]
+		const bins = structuredClone(tw.term.bins[preferredBins])
 		if (!bins.mode) bins.mode = 'discrete'
 		if (tw.q.type && tw.q.type != bins.type) throw `mismatched tw.q.type and term.bins[preferredBins].type`
 		if (tw.q.isDummyPreset) {
-			tw.q = structuredClone(bins) // replace atomically
+			tw.q = bins // replace atomically
 			delete tw.q.descrStats
 		} else {
 			const qkeys = Object.keys(tw.q)
