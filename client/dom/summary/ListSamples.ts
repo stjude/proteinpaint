@@ -52,7 +52,7 @@ export class ListSamples {
 	overlayTerm?: TermWrapper | null
 
 	/** Indicates a reduced range for the bin (e.g. violin brush) */
-	useRange: boolean
+	useRange: boolean = false
 	start?: number | null
 	end?: number | null
 
@@ -75,7 +75,6 @@ export class ListSamples {
 		this.termfilter = opts.termfilter
 		this.plot = opts.plot
 		this.bins = opts.bins || {}
-		this.useRange = false
 
 		this.t1 = opts.term
 		this.t2 = opts.term2 || null
@@ -175,12 +174,10 @@ export class ListSamples {
 		return tvsEntry
 	}
 
-	createTvsRanges(tvs: any, _termNum: number, key?: string): any {
-		const tw = this[`t${_termNum}`]
-		const termNum = `term${_termNum}`
-		// TODO: figure out if a continuous term ever needs to use a bin to create a filter?
-		// if not, can uncomment the condition below to prevent that from happening
-		const bins = /*tw != this.contTerm &&*/ this.bins[termNum]
+	createTvsRanges(tvs: any, termNum: number, key?: string): any {
+		const tw = this[`t${termNum}`]
+		// continuous term should always use start/stop instead of any computed bin
+		const bins = tw != this.contTerm && this.bins[`term${termNum}`]
 		const idOrLabel = key ? key : tw === this.overlayTerm ? this.plot.seriesId : tw === this.t0 ? this.plot.chartId : ''
 		const hasIdOrLabel = idOrLabel !== '' && idOrLabel != null
 		const overlayOrChartBin = hasIdOrLabel ? bins?.[String(idOrLabel)] : undefined

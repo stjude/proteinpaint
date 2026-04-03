@@ -302,17 +302,34 @@ tape('createTvsRanges() returns empty array for continuous term without bins', t
 	test.end()
 })
 
-tape('createTvsRanges() handles bins for continuous term', test => {
-	// TODO: figure out if a continuous term ever needs to use a bin to create a filter?
-	// if not, adjust the expected result to not create a tvs entry, especially useful as sanity
-	// check, such as when the continuous term bin happens to have a seriesId/key that is
-	// also found in a numeric overlay's bins
+tape('createTvsRanges() ignores bin value for continuous term', test => {
 	test.timeoutAfter(100)
-	const { listSamples } = getNewListSamples()
+	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
+	const mockApp = {} as AppApi
+	const mockState: any = {
+		plots: [mockConfig1],
+		termfilter: { filter: 'test' }
+	}
+
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: mockState.termfilter,
+		term: mockConfig1.term as any,
+		term2: mockConfig1.term2 as any,
+		plot: mockPlot1 as any,
+		start: 333,
+		end: 999,
+		// this opts.bin should not be used by continuous term, should use opts.start, stop instead
+		bins: { term1: { testKey: { start: 5, stop: 10 } } }
+	})
+
 	const mockTvs: any = {}
 	listSamples.createTvsRanges(mockTvs, 1, 'testKey')
-	test.equal(mockTvs.ranges.length, 1, 'Should handle bin value for continuous term')
-	test.deepEqual(mockTvs.ranges[0], { start: 5, stop: 10 }, 'Should handle bin value for continuous term')
+	test.deepEqual(
+		mockTvs.ranges[0],
+		{ start: 333, stop: 999, startinclusive: true, stopinclusive: true, startunbounded: false, stopunbounded: false },
+		'Should use opts.start, stop instead of bin value for continuous term'
+	)
 	test.end()
 })
 
