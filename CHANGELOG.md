@@ -13,6 +13,7 @@ Fixes:
 - improved logic when hiding a tooltip after the first clickable element is blurred
 - prevent the unexpected closure of the parent GenesetEdit menu while clicking on a child MSigDb menu
 - list the correct samples when selecting a violin area with a numeric overlay
+- filter and sort GDC diagnoses entries to prioritize diagnosis_is_primary_disease entries
 - hide CNV legend for GDC ssm lollipop
 
 

@@ -45,5 +45,9 @@
     "cli.js",
     "readme.sh",
     "webpack.config.cjs"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/proteinpaint"
+  }
 }
