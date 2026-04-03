@@ -182,10 +182,11 @@ export class ListSamples {
 		// if not, can uncomment the condition below to prevent that from happening
 		const bins = /*tw != this.contTerm &&*/ this.bins[termNum]
 		const idOrLabel = key ? key : tw === this.overlayTerm ? this.plot.seriesId : tw === this.t0 ? this.plot.chartId : ''
-		const overlayOrChartBin = idOrLabel && bins?.[idOrLabel]
-		const uncomputable = Object.values(tw?.term?.values ?? {}).find(
-			(v: any) => v.label === idOrLabel && v?.uncomputable
-		)
+		const hasIdOrLabel = idOrLabel !== '' && idOrLabel != null
+		const overlayOrChartBin = hasIdOrLabel ? bins?.[String(idOrLabel)] : undefined
+		const uncomputable = Object.entries(tw.term?.values ?? {}).find(
+			([_, v]: [string, any]) => v.label === key && v?.uncomputable
+		)?.[0]?.[0]
 
 		if (overlayOrChartBin) {
 			tvs.ranges = [overlayOrChartBin]
