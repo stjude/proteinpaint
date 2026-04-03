@@ -237,7 +237,7 @@ function setWsDeps(name) {
 	// if a CI workflow was triggered from a tagged commit where
 	// a previous CI run was interrupted and failed to publish all
 	// updated workspaces after committing and tagging the version change
-	if (!pkg.private && !pkg.hasChanged && pkg.version === rootPkg.version) {
+	if (!pkg.private && !pkg.hasChanged /*&& pkg.version === rootPkg.version*/) {
 		const publishedVersion = ex(`npm view ${pkg.name} version | tail -n1`)
 		if (publishedVersion !== pkg.version) unpublishedPkgs.add(pkg.pkgDir)
 
