@@ -2,6 +2,7 @@ import type { AppApi } from '#rx'
 import tape from 'tape'
 import { ListSamples } from '../ListSamples'
 import { getBoxPlotMockData } from '#plots/boxplot/test/mockBoxPlotData.ts'
+import { getTermCopy } from '../../../test/testdata/termjson'
 import type { AnnotatedSampleEntry } from 'types/termdb'
 
 /*
@@ -318,8 +319,7 @@ tape('createTvsRanges() handles bins for continuous term', test => {
 tape('createTvsRanges() handles bins for numeric overlay', test => {
 	test.timeoutAfter(100)
 
-	const term = getBoxPlotMockData({ termId: 'aaclassic_5' })
-	const tw = { term, q: {} }
+	const tw = { term: getTermCopy('aaclassic_5'), q: {} }
 	const { listSamples } = getNewListSamples({ term2: tw })
 
 	const mockTvs: any = {}
