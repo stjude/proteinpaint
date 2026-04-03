@@ -325,7 +325,7 @@ tape('createTvsRanges() handles bins for numeric overlay', test => {
 	const mockTvs: any = {}
 	listSamples.createTvsRanges(mockTvs, 2, 'testKey')
 	test.equal(mockTvs.ranges.length, 1, 'Should handle bin value for numeric overlay term')
-	test.deepEqual(mockTvs.ranges[0], { start: 1000, stop: 2000 }, 'Should handle bin value for continuous term')
+	test.deepEqual(mockTvs.ranges[0], { start: 1000, stop: 2000 }, 'Should handle bin value for numeric overlay')
 	test.end()
 })
 
