@@ -13,7 +13,8 @@ class MassDict {
 	}
 
 	async init(appState) {
-		this.tree = await appInit({
+		const config = appState.plots.find(p => p.id === this.id)
+		const opts = {
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
 			state: this.getState(appState),
@@ -34,12 +35,23 @@ class MassDict {
 					})
 				}
 			}
-		})
+		}
+		if (config?.scItem) {
+			opts.tree.usecase = {
+				target: 'dictionary',
+				specialCase: { type: 'singleCell', config: { sample: config.scItem.sample } }
+			}
+		}
+		this.tree = await appInit(opts)
 	}
 
 	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		const tree = { usecase: { target: 'dictionary' } }
+		if (config?.scItem?.sample)
+			tree.usecase.specialCase = { type: 'singleCell', config: { sample: config.scItem.sample } }
 		return {
-			tree: { usecase: { target: 'dictionary' } },
+			tree,
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,

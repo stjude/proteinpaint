@@ -31,7 +31,7 @@ export const useCasesExcluded = {
 	matrix: [SNP_LOCUS, SNP_LIST, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
 	facet: [SNP_LOCUS, SNP_LIST, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
 	filter: [SNP_LOCUS, SNP_LIST, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
-	dictionary: [SNP_LOCUS, SNP_LIST, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
+	dictionary: [SNP_LOCUS, SNP_LIST],
 	summary: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
 	summaryInput: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
 	barchart: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
@@ -555,6 +555,16 @@ export function getAllowedTermTypesForUseCase(state, app) {
 
 		if (target == 'dataDownload') {
 			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
+		}
+
+		if (target == 'dictionary') {
+			//Limit the tree to only single cell types when use case is single cell
+			if (usecase.specialCase?.type == 'singleCell') {
+				if (!isSingleCellTerm({ type })) continue
+			} else {
+				// not singlecell! in cohort mode, disallow sc terms
+				if (isSingleCellTerm({ type })) continue
+			}
 		}
 
 		//////////////////////////////////////

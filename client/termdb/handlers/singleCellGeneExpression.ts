@@ -18,11 +18,11 @@ export class SearchHandler {
 			genome: opts.genomeObj,
 			row: holder,
 			searchOnly: 'gene',
-			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase.specialCase.config.sample)
+			callback: () => this.selectGene(geneSearch.geneSymbol, opts.usecase?.specialCase?.config?.sample)
 		})
 	}
 
-	async selectGene(gene: string | undefined, sample: any) {
+	async selectGene(gene: string | undefined, sample: any | undefined) {
 		if (!gene) throw new Error('No gene selected')
 		const unit = getSCGEunit(this.app!.vocabApi)
 		const name = `${gene} ${unit}`
@@ -35,8 +35,8 @@ export class SearchHandler {
 		if (opts.holder == null) throw new Error('holder is required')
 		if (opts.genomeObj == null) throw new Error('genomeObj is required')
 		if (opts.usecase == null) throw new Error('usecase is required')
-		if (!opts.usecase?.specialCase?.config?.sample) {
-			throw new Error('usecase.specialCase.config.sample is required for singleCellGeneExpression handler')
-		}
+		// if (!opts.usecase?.specialCase?.config?.sample) {
+		// 	throw new Error('usecase.specialCase.config.sample is required for singleCellGeneExpression handler')
+		// }
 	}
 }

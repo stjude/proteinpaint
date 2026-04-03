@@ -20,7 +20,8 @@ export class SearchHandler {
 			)
 			return
 		}
-		const filteredTerms = scctTerms.filter(t => t.plot == opts.usecase.specialCase.config.name)
+		const plotName = opts.usecase?.specialCase?.config?.name
+		const filteredTerms = plotName ? scctTerms.filter(t => t.plot == plotName) : scctTerms
 		for (const t of filteredTerms) {
 			holder
 				/** The divs and styling duplicates the appearance of the
@@ -49,8 +50,8 @@ export class SearchHandler {
 		if (opts.usecase == null) throw new Error('usecase is required')
 		if (!opts.app.vocabApi.termdbConfig?.termType2terms)
 			throw new Error('termType2terms is required in termdbConfig for singleCellCellType handler')
-		if (!opts.usecase?.specialCase?.config?.name) {
-			throw new Error('usecase.specialCase.config.name defining the plot is required for singleCellCellType handler')
-		}
+		// if (!opts.usecase?.specialCase?.config?.name) {
+		// 	throw new Error('usecase.specialCase.config.name defining the plot is required for singleCellCellType handler')
+		// }
 	}
 }
