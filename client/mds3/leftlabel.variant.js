@@ -129,7 +129,13 @@ export function getVariantLabelText(data, tk, block) {
 function menu_variants(data, tk, block) {
 	if (data.variantAlerts?.length) {
 		for (const m of data.variantAlerts) {
-			tk.menutip.d.append('div').style('margin', '10px').style('font-size', '.8em').style('color', 'red').text(m)
+			tk.menutip.d
+				.append('div')
+				.style('margin', '10px')
+				.attr('data-testid', 'sjpp-mds3tk-variantalerts')
+				.style('font-size', '.8em')
+				.style('color', 'red')
+				.text(m)
 		}
 	}
 
