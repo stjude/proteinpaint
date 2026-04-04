@@ -1,4 +1,5 @@
 import { getAppInit, getStoreInit, StoreBase } from '../rx'
+export * from './test.locator.ts'
 
 /********* EXPORTED ********
 sleep
@@ -311,7 +312,7 @@ export async function whenGone(opts) {
 }
 
 // must know that the element already exists when calling this,
-// otherwise use one of the detect* helpers
+// otherwise use Locator.shows() or one of the detect* helpers
 export async function whenHidden(elem) {
 	return new Promise((resolve, reject) => {
 		let j = 0

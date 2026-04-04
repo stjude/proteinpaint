@@ -148,7 +148,6 @@ export async function namedFetch(url, init, opts = {}) {
 	let result
 	const dataName = await getDataName(url, init)
 	if (opts.serverData[dataName]) {
-		// if (init.signal?.aborted) throw `stale sequenceId`
 		if (init.signal) {
 			// should not reuse a response if the abortController.signal option has been aborted,
 			// sleep() below allows sufficient time for the abort() to be called in rx AppApi.dispatch() or elsewhere,
@@ -157,10 +156,7 @@ export async function namedFetch(url, init, opts = {}) {
 			await sleep(0)
 			if (init.signal.aborted) throw `stale sequenceId`
 		}
-
-		result = opts.serverData[dataName].clone
-			? await processResponse(opts.serverData[dataName].clone())
-			: structuredClone(opts.serverData[dataName])
+		result = structuredClone(opts.serverData[dataName])
 	}
 
 	if (!result || (typeof result != 'object' && !(result instanceof Promise))) {
@@ -171,27 +167,26 @@ export async function namedFetch(url, init, opts = {}) {
 	if (!result) {
 		try {
 			const res = await fetch(url, init)
-			result = await processResponse(res.clone())
+			result = await processResponse(res)
 			// in case this fetch was cancelled with AbortController.signal,
 			// then the result may be another Promise instead of a data object,
 			// as observed when rapidly changing the gdc cohort filter
 			if (typeof result == 'object' && !(result instanceof Promise)) {
-				if (opts.cacheAs == 'Response') {
-					// per https://developer.mozilla.org/en-US/docs/Web/API/Response/clone,
-					// **should not use (.clone) to read very large bodies in parallel** at different speeds,
-					// may also mean(?) to not persist/store the Response for a long time as is being done here
-					opts.serverData[dataName] = res
-				} else {
-					// make decoded caching as default, since storing as a
-					// fetch Response interface can be problematic when a opts.signal is aborted
-					// after being reused as an option to different fetch requests. Calling signal.abort()
-					// will cause res.clone() to fail in all requests that reuse the signal.
-					deepFreeze(result)
-					opts.serverData[dataName] = result // store as a deeply frozen object
-					// should prefer to store results as a deeply frozen object instead of a Response interface,
-					// but must not return the same object to be reused by different requests
-					result = structuredClone(result)
-				}
+				// Ignore opts.cacheAs == 'Response':
+				// - per https://developer.mozilla.org/en-US/docs/Web/API/Response/clone,
+				// **should not use (.clone) to read very large bodies in parallel** at different speeds,
+				// may also mean(?) to not persist/store the Response for a long time as is being done here
+				//
+				// - Make decoded caching as default, since storing as a
+				// fetch Response interface can be problematic when a opts.signal is aborted
+				// after being reused as an option to different fetch requests. Calling signal.abort()
+				// will cause res.clone() to fail in all requests that reuse the signal.
+				//
+				deepFreeze(result)
+				opts.serverData[dataName] = result // store as a deeply frozen object
+				// should prefer to store results as a deeply frozen object instead of a Response interface,
+				// but must not return the same object to be reused by different requests
+				result = structuredClone(result)
 			}
 		} catch (e) {
 			delete opts.serverData[dataName]
