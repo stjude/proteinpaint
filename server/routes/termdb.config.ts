@@ -86,7 +86,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		selectCohort: getSelectCohort(ds, req),
 		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
-		allowedTermTypes: getAllowedTermTypes(ds),
+		allowedTermTypes: getDsAllowedTermTypes(ds),
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,
@@ -363,7 +363,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset. allows plot to determine if term type specific feature is applicable for a ds
-function getAllowedTermTypes(ds) {
+export function getDsAllowedTermTypes(ds) {
 	const typeSet = new Set()
 	for (const r of ds.cohort.termdb.termtypeByCohort) {
 		if (r.termType) typeSet.add(r.termType)
