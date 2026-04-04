@@ -37,6 +37,8 @@ type GeneSearchBoxArg = {
 	row: any
 	/** if not provided, auto compute to show in <input> */
 	placeholder?: string
+	/** overrides default testid assigned to <input> */
+	testid?: string
 	/** 
 	if 'gene':
 		input can be symbol or alias
@@ -206,7 +208,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 		.attr('aria-label', 'Gene symbol, position, or alias')
 		.property('disabled', arg.disableInput || false)
 		.attr('class', 'sja_genesearchinput')
-		.attr('data-testid', 'sja_genesearchinput')
+		.attr('data-testid', arg.testid || 'sja_genesearchinput')
 		.style('width', width + 'px')
 
 	result.searchbox = searchbox

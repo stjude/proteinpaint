@@ -36,6 +36,8 @@ type OptionEntry = {
 	title?: string
 	/** Should correspond to 'currValue' in callbacks */
 	value: string | number | boolean
+	/** test id assigned to <input>. if used, assumes all options are assigned testids */
+	testid?: string
 }
 
 type RadioApi = {
@@ -102,6 +104,10 @@ export function make_radios(opts: RadioButtonOpts): RadioApi {
 		.style('margin-top', '2px')
 		.style('margin-right', 0)
 		.property('checked', (d: OptionEntry) => d?.checked)
+	if (opts.options.find(i => i.testid)) {
+		// if any testid is present, will assign to all
+		inputs.attr('data-testid', i => i.testid)
+	}
 	if (opts.callback) {
 		inputs.on('input', async (event: KeyboardEvent, d: OptionEntry) => {
 			//Disable the radio buttons while the callback is running

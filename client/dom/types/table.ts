@@ -61,7 +61,8 @@ export type TableBarplot = {
 }
 
 export type TableButton = {
-	dataTestId?: any
+	/** applied to <button> */
+	dataTestId?: string
 	/** the text to show in the button */
 	text: string
 	/** called when the button is clicked. Receives selected indexes and the button dom object */
