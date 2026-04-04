@@ -2,9 +2,9 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { getExample } from '../../termdb/test/vocabData'
 import { vocabInit } from '../../termdb/vocabulary'
-import { termjson } from '../../test/testdata/termjson'
+import { termjson, getTermCopy } from '../../test/testdata/termjson'
 import { termsettingInit } from '#termsetting'
-import { sleep, detectLst, detectGte, whenGone, detectOne } from '../../test/test.helpers'
+import { sleep, detectLst, detectGte, whenGone, detectOne, Locator } from '../../test/test.helpers'
 import { getScctTw } from '../../test/testdata/data'
 
 /*
@@ -40,10 +40,6 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
 /*************************
  reusable helper functions
 **************************/
-
-function getTermCopy(id) {
-	return JSON.parse(JSON.stringify(termjson[id]))
-}
 
 // required to activate usage of xtw
 const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
@@ -481,12 +477,9 @@ tape('Numerical term: float custom bins', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
-	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(lines.length, 2, 'should have 2 lines')
+	const lines = await Locator.init(opts.pill.Inner.dom.tip.d).shows('.binsize_g line')
+	test.equal(lines?.length, 2, 'should have 2 lines')
 	if (test._ok) opts.pill.destroy()
 })
 
@@ -522,9 +515,8 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
 	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
+	const lines = await Locator.init(tip.d).shows('.binsize_g line')
 	test.equal(lines.length, 1, 'should have 1 line')
 
 	const tabs = tip.d.select('.sj-toggle-button').node()
