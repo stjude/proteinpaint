@@ -224,11 +224,17 @@ function makeControls(obj) {
 		make_radios({
 			holder: td2,
 			options: [
-				{ label: 'WXS', value: 'WXS', checked: obj.opts.experimentalStrategy == 'WXS' },
+				{
+					label: 'WXS',
+					value: 'WXS',
+					checked: obj.opts.experimentalStrategy == 'WXS',
+					testid: 'sjpp-gdcmaf-radio-wxs'
+				},
 				{
 					label: 'Targeted Sequencing',
 					value: 'Targeted Sequencing',
-					checked: obj.opts.experimentalStrategy == 'Targeted Sequencing'
+					checked: obj.opts.experimentalStrategy == 'Targeted Sequencing',
+					testid: 'sjpp-gdcmaf-radio-targeted'
 				}
 			],
 			styles: { display: 'inline' },
@@ -243,6 +249,7 @@ function makeControls(obj) {
 		const [td1, td2] = table.addRow('Output Columns')
 		const clickText = td2
 			.append('span')
+			.attr('data-testid', 'sjpp-gdcmaf-columnhandle')
 			.attr('class', 'sja_clbtext')
 			.on('click', event => {
 				const rows = [],
@@ -256,6 +263,7 @@ function makeControls(obj) {
 					rows,
 					columns: [{ label: 'Column Name' }],
 					selectedRows,
+					dataTestId: 'sjpp-gdcmaf-columnTableUi',
 					noButtonCallback: (i, n) => {
 						mafColumns[i].selected = n.checked
 						updateText()
@@ -329,7 +337,7 @@ async function getFilesAndShowTable(obj) {
 			resize: true,
 			div: obj.tableDiv.append('div'),
 			selectAll: true, // comment out for quicker testing
-			dataTestId: 'sja_mafFileTable',
+			dataTestId: 'sjpp-gdcmaf-maffiletable-' + obj.opts.experimentalStrategy,
 			header: { allowSort: true },
 			selectedRows: [], //[198], // uncomment out for quicker testing
 			buttonsToLeft: true,
@@ -337,7 +345,8 @@ async function getFilesAndShowTable(obj) {
 				{
 					text: ' ', // table.ts requires this
 					onChange: updateButtonBySelectionChange,
-					callback: submitSelectedFiles
+					callback: submitSelectedFiles,
+					dataTestId: 'sjpp-gdcmaf-submitBtn'
 				}
 			]
 		}

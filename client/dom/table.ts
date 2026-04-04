@@ -465,7 +465,7 @@ export function renderTable({
 						bCfg.callback(getCheckedRowIndex(), bCfg.button.node())
 					})
 				if (bCfg.class) bCfg.button.attr('class', bCfg.class)
-				//else button.button.attr('class', 'sjpp_apply_btn')
+				if (bCfg.dataTestId) bCfg.button.attr('data-testid', bCfg.dataTestId)
 				bCfg.button.node().disabled = selectedRows.length == 0 && !selectAll
 			}
 
