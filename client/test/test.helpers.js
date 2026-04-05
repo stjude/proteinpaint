@@ -1,5 +1,5 @@
 import { getAppInit, getStoreInit, StoreBase } from '../rx'
-export * from './test.locator.ts'
+export * from './Locator.ts'
 
 /********* EXPORTED ********
 sleep

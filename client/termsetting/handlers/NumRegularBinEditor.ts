@@ -8,6 +8,8 @@ import type { BoundaryOpts, BoundaryValue, DraggedLineData } from './NumericDens
 import type { TermSetting } from '../TermSetting.ts'
 import type { RegularNumericBinConfig } from '#types'
 
+// This is a bin editor for NumDiscreteEditor
+// NumericHandler (handler) -> NumDiscreteEditor (editor) -> NumRegularBinEditor (bin editor)
 export class NumRegularBinEditor {
 	tw: NumRegularBin
 	q!: RegularNumericBinConfig
@@ -64,6 +66,7 @@ export class NumRegularBinEditor {
 			.append('input')
 			.attr('type', 'number')
 			.attr('value', 'rounding' in q ? format(q.rounding || '.0f')(q.bin_size) : q.bin_size)
+			.attr('data-testid', 'sjpp-num-reg-bin-editor-size')
 			.style('margin-left', '15px')
 			.style('width', '100px')
 			.style('color', () => (q.bin_size > Math.abs(max - min) ? 'red' : ''))

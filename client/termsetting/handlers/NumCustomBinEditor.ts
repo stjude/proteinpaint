@@ -6,6 +6,8 @@ import type { TermSetting } from '../TermSetting.ts'
 import type { CustomNumericBinConfig, CustomNumericBinConfigLst, StartUnboundedBin, StopUnboundedBin } from '#types'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 
+// This is a bin editor for NumDiscreteEditor
+// NumericHandler (handler) -> NumDiscreteEditor (editor) -> NumCustomBinEditor (bin editor)
 export class NumCustomBinEditor {
 	tw: NumCustomBins
 	q!: CustomNumericBinConfig

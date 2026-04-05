@@ -1,7 +1,7 @@
 //import type { Dom } from '../types/d3.d.ts'
 
 export class Locator {
-	elem: any //HTMLElement | SVGElement | SVGGElement | SVGLineElement | SVGRectElement | SVGSVGElement | SVGTextElement
+	rootElem: any //HTMLElement | SVGElement | SVGGElement | SVGLineElement | SVGRectElement | SVGSVGElement | SVGTextElement
 	opts = {
 		intervalWait: 25,
 		maxWait: 3000
@@ -9,29 +9,38 @@ export class Locator {
 	pending: ((elems: any[]) => Promise<any>)[] = []
 	result: any | any[] = []
 
+	// convenience method to allow await Locator.init(elem).whenVisible('')
+	static init(elem) {
+		return new Locator(elem)
+	}
+
 	// arg could be one of the following, must always
 	// - DOM element
 	// - string selector
 	// - d3-selection
 	constructor(arg: any, opts = {}) {
 		Object.assign(this.opts, opts)
+		this.setRoot(arg)
+	}
+
+	setRoot(arg) {
 		if (typeof arg == 'string') {
 			const node = document.body.querySelector(arg)
 			if (!node) throw `missing elem by selector='${arg}'`
-			this.elem = node
+			this.rootElem = node
 		} else if (typeof arg.node == 'function') {
 			const numMatch = arg.size()
 			if (!numMatch) throw `missing elem from d3-selection`
-			this.elem = arg.node() // will collaps
+			this.rootElem = arg.node() // will collaps
 		} else {
-			this.elem = arg
+			this.rootElem = arg
 		}
 		this.pending = []
 	}
 
-	// convenience method to allow await Locator.init(elem).whenVisible('')
-	static init(elem) {
-		return new Locator(elem)
+	root(arg) {
+		if (arg) this.setRoot(arg)
+		return this.rootElem
 	}
 
 	// selector: string selector such as '#my-id', '.my-class', `[data-testid='my-id-here']`, `[role='button']`, etc
@@ -87,11 +96,22 @@ export class Locator {
 	async all() {
 		const pending = this.pending
 		this.pending = [] // clear
-		let elems = [this.elem]
+		let elems = [this.rootElem]
 		for (const fxn of pending) {
 			elems = await fxn(elems)
 		}
 		return [...elems]
+	}
+
+	async length(filter) {
+		const elems = await this.all()
+		return filter ? elems.filter(filter).length : elems.length
+	}
+
+	async value(callback) {
+		const elems = await this.all()
+		const values = elems.map(elem => elem.value)
+		return callback ? callback(values) : values
 	}
 
 	async text() {

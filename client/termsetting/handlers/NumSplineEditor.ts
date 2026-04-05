@@ -71,8 +71,10 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 
 	async showEditMenu(div) {
 		if (this.dom.density_div) {
-			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) return
-			else {
+			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) {
+				await this.handler.density.showViolin(this.dom.density_div, this.getBoundaryOpts())
+				return
+			} else {
 				this.dom.density_div.remove()
 				delete this.dom.density_div
 			}
@@ -188,6 +190,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 
 		const knot_ct_select = this.dom.knot_select_div
 			.append('select')
+			.attr('data-testid', 'num-spline-editor-num-knots')
 			.style('margin-left', '10px')
 			.style('margin-bottom', '7px')
 

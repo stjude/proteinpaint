@@ -11,6 +11,7 @@ import { NumRegularBinEditor } from './NumRegularBinEditor.ts'
 import { NumCustomBinEditor } from './NumCustomBinEditor.ts'
 
 // To show edit menu
+// NumericHandler (handler) -> NumDiscreteEditor (editor) -> bin editors
 export class NumDiscreteEditor extends HandlerBase implements Handler {
 	tw: NumRegularBin | NumCustomBins
 	termsetting: TermSetting
@@ -28,6 +29,7 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		'regular-bin': NumRegularBinEditor
 		'custom-bin': NumCustomBinEditor
 	}
+	tabs!: Tabs
 
 	constructor(opts, handler) {
 		super(opts)
@@ -54,8 +56,12 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 
 	async showEditMenu(div: any) {
 		if (this.dom.boundaryInclusionDiv) {
-			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) return // already rendered
-			else delete this.dom.boundaryInclusionDiv
+			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) {
+				await this.handler.density.showViolin(this.dom.density_div)
+				const tab = this.tabs.tabs[this.activeTab == 'regular-bin' ? 0 : 1]
+				await this.editorsByType[this.activeTab].render((tab as any).contentHolder)
+				return
+			} else delete this.dom.boundaryInclusionDiv
 		}
 
 		this.dom.density_div = div.append('div')
@@ -179,7 +185,9 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 				}
 			}
 		]
-		new Tabs({ holder: div, tabs }).main()
+
+		this.tabs = new Tabs({ holder: div, tabs })
+		this.tabs.main()
 	}
 
 	getEditedQ(destroyDom = true) {
