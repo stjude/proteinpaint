@@ -624,13 +624,21 @@ export function getOrderedLabels(term, bins, events, q) {
 				.map(i => term.values[i].label)
 		}
 	}
-	const allValues = Object.values(term.values || {})
-	const entries = allValues.filter(v => 'order' in v)
-	if (entries.length) {
-		entries.sort((a, b) => a.order - b.order)
-		return [...new Set(entries.map(v => v.label))]
+	const vals = Object.values(term.values || {})
+	const hasAnyOrder = vals.some(v => v && 'order' in v)
+	if (hasAnyOrder) {
+		return Object.keys(term.values)
+			.sort((a, b) => {
+				const aHasOrder = 'order' in term.values[a]
+				const bHasOrder = 'order' in term.values[b]
+				if (aHasOrder && bHasOrder) return term.values[a].order - term.values[b].order
+				if (aHasOrder && !bHasOrder) return -1
+				if (!aHasOrder && bHasOrder) return 1
+				return 0
+			})
+			.map(i => term.values[i].key)
 	}
-	return bins?.map(bin => (bin.name ? bin.name : bin.label)) || []
+	return bins?.map(bin => (bin.name ? bin.name : bin.label))
 }
 
 function getTermDetails(q, tdb, index) {
