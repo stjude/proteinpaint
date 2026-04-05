@@ -157,7 +157,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					const { assay, cohort } = selectedProteomeDetails
 					action.config.proteomeDetails = { assay, cohort }
 					const cohortSelected = chartsInstance.state.termdbConfig.queries.proteome.assays[assay].cohorts[cohort]
-					if (cohortSelected.filter) action.config.filter = buildFilter(cohortSelected.filter)
+					if (cohortSelected.filter) action.config.filter = toTvslstFilter(cohortSelected.filter)
 					const twlst = termlst.map(term => {
 						const t = structuredClone(term)
 						t.proteomeDetails = { assay, cohort }
@@ -167,7 +167,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					if (twlst.length == 1) {
 						action.config.chartType = 'summary'
 						action.config.term = twlst[0]
-						if (cohortSelected.overlayTerm) action.config.term2 = { term: structuredClone(cohortSelected.overlayTerm), q: {} }
+						if (cohortSelected.overlayTerm)
+							action.config.term2 = { term: structuredClone(cohortSelected.overlayTerm), q: {} }
 						return
 					}
 					if (twlst.length == 2) {
@@ -189,19 +190,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	syncLaunchButtonState()
 }
 
-function buildFilter(filterConfig) {
-	if (!filterConfig) return
-	const lst = []
-	for (const filterTvs of filterConfig) {
-		lst.push({
-			type: 'tvs',
-			tvs: filterTvs
-		})
-	}
-	return {
-		type: 'tvslst',
-		in: true,
-		join: lst.length > 1 ? 'and' : '',
-		lst
-	}
+export function toTvslstFilter(filterConfig) {
+	if (filterConfig && Array.isArray(filterConfig) && filterConfig.length)
+		return {
+			type: 'tvslst',
+			in: true,
+			join: filterConfig.length > 1 ? 'and' : '',
+			lst: filterConfig.map(tvs => ({ type: 'tvs', tvs }))
+		}
 }

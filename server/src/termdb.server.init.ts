@@ -696,6 +696,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	proteomeAbundance: ({ ds }) => ds.queries?.proteome?.assays,
+	proteinView: ({ ds }) => ds.queries?.proteome?.assays,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case

@@ -711,12 +711,17 @@ export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 type CohortConfig = {
 	file: string
 	filter?: Tvs[]
+	ctlFilter?: Tvs[]
 	overlayTerm?: BaseTerm
 }
 type AssayWithCohorts = {
 	cohorts: {
 		[cohortName: string]: CohortConfig
 	}
+	/** optional PTM type for PTM assay type */
+	PTMType?: string
+	/** optional specific mclass override for PTM assay type */
+	mclassOverride?: Mclass
 }
 type AssayConfig = AssayWithCohorts
 
