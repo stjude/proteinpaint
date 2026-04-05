@@ -282,6 +282,7 @@ export async function bamsliceui(
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File Name / File UUID / Case ID / Case UUID')
 			.attr('class', 'sja-gdcbam-input') // for testing
+			.attr('data-testid', 'sjpp-gdcbam-fileSearchInput')
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', searchByGdcInputString)
 			.on('keyup', event => {
@@ -524,6 +525,7 @@ export async function bamsliceui(
 				columns,
 				div: bamselection_table,
 				singleMode: stream2download ? true : false, // if true, display radio to only select 1 for download; otherwise allow to selec >1 for viz
+				dataTestId: 'sjpp-gdcbam-multiFileTable',
 				noButtonCallback: (i, node) => {
 					const onebam = files[i]
 
@@ -586,7 +588,9 @@ export async function bamsliceui(
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
 		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
 		*/
-		handle.text(`Or, Browse ${data.total} Available BAM Files`)
+		handle
+			.text(`Or, Browse ${data.total} Available BAM Files`)
+			.attr('data-testid', 'sjpp-gdcbam-availableBamFileHandleIsReady')
 
 		// count number of bams per assay, allow checkbox to alter true/false for each assay here
 		const assays = new Map() // k: assay, v: {count:int, checked:bool}
@@ -680,7 +684,8 @@ export async function bamsliceui(
 					tip.hide()
 					gdcid_input.property('value', rows[i][0].data.file_uuid).node().dispatchEvent(new Event('search'))
 				},
-				singleMode: true
+				singleMode: true,
+				dataTestId: 'sjpp-gdcbam-orBrowseFileTable'
 			})
 			//table.select('.sja_clbtext')?.node()?.focus() // auto focus on the first bam file
 		}
@@ -724,6 +729,7 @@ export async function bamsliceui(
 				const tabs = [
 					{
 						label: 'Gene or position',
+						testid: 'sjpp-gdcbam-afterfindingcasetab-geneorpos',
 						callback: () => {
 							gdc_args.useSsmOrGene = 'gene'
 							// under Gene or position tab, only enable submit button when coordInput provided
@@ -732,6 +738,7 @@ export async function bamsliceui(
 					},
 					{
 						label: 'Unmapped reads',
+						testid: 'sjpp-gdcbam-afterfindingcasetab-unmapped',
 						callback: () => {
 							gdc_args.useSsmOrGene = 'unmapped'
 							// under Unmapped reads tab, should always eanble submit button
@@ -755,6 +762,7 @@ export async function bamsliceui(
 		const tabs = [
 			{
 				label: `${ssmLst.length} mutations${data.dt2total?.[0] ? ' (' + data.dt2total[0].total + ' total)' : ''}`,
+				testid: 'sjpp-gdcbam-afterfindingcasetab-ssm',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
 					// Under variants tab, only enable submit button when ssmInput provided
@@ -763,6 +771,7 @@ export async function bamsliceui(
 			},
 			{
 				label: 'Gene or position',
+				testid: 'sjpp-gdcbam-afterfindingcasetab-geneorpos',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
 					// Under Gene or position tab, only enable submit button when coordInput provided
@@ -774,6 +783,7 @@ export async function bamsliceui(
 		if (stream2download) {
 			tabs.push({
 				label: 'Unmapped reads',
+				testid: 'sjpp-gdcbam-afterfindingcasetab-unmapped',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'unmapped'
 					// under Unmapped reads tab, should always eanble submit button
@@ -825,6 +835,7 @@ export async function bamsliceui(
 				}
 				submitButton.property('disabled', false)
 			},
+			dataTestId: 'sjpp-gdcbam-ssmTable',
 			singleMode: true
 		})
 
@@ -893,6 +904,7 @@ export async function bamsliceui(
 			.insert('div')
 			.style('display', 'inline-block')
 			.append('button')
+			.attr('data-testid', 'sjpp-gdcbam-submitBtn')
 			.style('margin', '20px 20px 20px 40px')
 			.style('padding', '10px 25px')
 			.style('border-radius', '35px')
