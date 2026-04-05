@@ -30,8 +30,10 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 
 	async showEditMenu(div) {
 		if (this.dom.density_div) {
-			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) return
-			else {
+			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) {
+				await this.handler.density.showViolin(this.dom.density_div, this.getBoundaryOpts())
+				return
+			} else {
 				this.dom.density_div.remove()
 				delete this.dom.density_div
 			}
