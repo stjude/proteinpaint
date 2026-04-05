@@ -23,6 +23,7 @@ arg{}
 	.margin
 	.cellPadding
 	.disableScroll=true
+	.testid // overrides default
 */
 export function table2col(arg) {
 	const scrollDiv = arg.holder.append('div').style('max-width', '80vw')
@@ -31,7 +32,7 @@ export function table2col(arg) {
 		.append('table')
 		.style('margin', arg.margin || '5px 8px')
 		.attr('class', 'sja_simpletable')
-		.attr('data-testid', 'sja_simpletable')
+		.attr('data-testid', arg.testid || 'sja_simpletable')
 	return {
 		scrollDiv,
 		table,
