@@ -526,7 +526,7 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 	if (test._ok) opts.pill.destroy()
 })
 
-tape('Numerical term: toggle menu - 4 options', async test => {
+tape.only('Numerical term: toggle menu - 4 options', async test => {
 	test.timeoutAfter(6000)
 	test.plan(8) // TODO
 
@@ -541,37 +541,29 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(200)
 	const tip = opts.pill.Inner.dom.tip
-	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
+	const tipLoc = await Locator.init(tip.d)
 
+	const toggleButtons = await tipLoc.shows('.sj-toggle-button').all()
 	test.equal(toggleButtons.length, 4, 'Should have 4 toggle buttons for numeric edit menu')
-
 	test.equal(toggleButtons[0].innerText, 'Continuous', 'Should have title for first tab as Continuous')
-	await sleep(1000)
 
-	test.equal(
-		tip.d.node().querySelector('select').querySelectorAll('option')[0].innerText,
-		'No Scaling',
+	test.deepEqual(
+		await tipLoc.shows('select').find('option:nth-child(1)').text(),
+		['No Scaling'],
 		'Should have rendered UI for Continuous menu'
 	)
 
-	//opts.tsData.q = getTermCopy('agedx').bins.less
-	//await opts.pill.main(opts.tsData)
 	test.equal(toggleButtons[1].innerText, 'Discrete', 'Should have title for 2nd tab as Discrete')
 	toggleButtons[1].click()
-	await sleep(2000)
-	// TODO: improve detection
-	test.equal(
-		tip.d.node().querySelector('tr').querySelector('td').innerText,
-		'Bin Size',
+	test.deepEqual(
+		await tipLoc.shows('tr td:nth-child(1)').text(),
+		['Bin Size', 'First Bin Stop', 'Last Bin Start'],
 		'Should have rendered UI for Discrete menu'
 	)
 
-	toggleButtons[2].click()
-	await sleep(1000)
-
 	test.equal(toggleButtons[2].innerText, 'Cubic spline', 'Should have title for 3nd tab as Cubic spline')
+	toggleButtons[2].click()
 
 	// TODO: !!! RE-ENABLE !!!
 	// test.equal(
@@ -584,13 +576,16 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	toggleButtons[3].click()
 
 	// TODO: !!! IMPROVE DETECTION TIMING !!!
-	await sleep(50)
-	const binary_lines = await detectGte({
-		elem: opts.pill.Inner.handler.dom.editDiv.node(),
-		selector: '.binsize_g line',
-		count: 1
-	})
-
+	// await sleep(1500)
+	// const binary_lines = await detectGte({
+	// 	elem: opts.pill.Inner.handler.dom.editDiv.node(),
+	// 	selector: '.binsize_g line',
+	// 	count: 1
+	// })
+	//const menu = await Locator.init(opts.pill.Inner.handler.dom.editDiv.node()); console.log(593, menu)
+	//console.log(586, (await tipLoc.shows('.binsize_g').all()).map(e => menu.contains(e)))
+	//console.log(594, await tipLoc.shows('.binsize_g').all())
+	const binary_lines = await tipLoc.shows('.binsize_g line').all()
 	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
 	if (test._ok) opts.pill.destroy()
 })
