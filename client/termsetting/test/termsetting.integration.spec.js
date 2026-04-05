@@ -2,9 +2,9 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { getExample } from '../../termdb/test/vocabData'
 import { vocabInit } from '../../termdb/vocabulary'
-import { termjson } from '../../test/testdata/termjson'
+import { termjson, getTermCopy } from '../../test/testdata/termjson'
 import { termsettingInit } from '#termsetting'
-import { sleep, detectLst, detectGte, whenGone, detectOne } from '../../test/test.helpers'
+import { sleep, detectLst, detectGte, whenGone, detectOne, Locator } from '../../test/test.helpers'
 import { getScctTw } from '../../test/testdata/data'
 
 /*
@@ -40,10 +40,6 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
 /*************************
  reusable helper functions
 **************************/
-
-function getTermCopy(id) {
-	return JSON.parse(JSON.stringify(termjson[id]))
-}
 
 // required to activate usage of xtw
 const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')
@@ -112,6 +108,9 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 			await sleep(300)
 		}
 	}
+
+	opts.tip = opts.pill.Inner.dom.tip
+	opts.tipLoc = await Locator.init(opts.tip.d.node())
 
 	return opts
 }
@@ -197,11 +196,12 @@ tape('use_bins_less', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(1000)
-	const tip = opts.pill.Inner.dom.tip.d.node()
-	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
-	test.equal(bin_size_input.value, '5', 'has term.bins.less.bin_size as value (is 5 not 3)')
-	if (test._ok) opts.pill.destroy()
+	test.deepEqual(
+		await opts.tipLoc.shows(`[data-testid='sjpp-num-reg-bin-editor-size']`).value(),
+		['5'],
+		'has term.bins.less.bin_size as value (is 5 not 3)'
+	)
+	//if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -445,7 +445,6 @@ tape('Numerical term: fixed bins', async test => {
 })
 
 tape('Numerical term: float custom bins', async test => {
-	test.timeoutAfter(3000)
 	test.plan(1)
 
 	const opts = await getOpts({
@@ -481,17 +480,13 @@ tape('Numerical term: float custom bins', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
-	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(lines.length, 2, 'should have 2 lines')
+	test.equal(await opts.tipLoc.shows('.binsize_g line').length(), 2, 'should have 2 lines')
 	if (test._ok) opts.pill.destroy()
+	test.end()
 })
 
 tape('Numerical term.bins.default.type=custom-bin', async test => {
-	test.timeoutAfter(3000)
 	test.plan(2)
 
 	// define a custom bin and apply to both term.bins and tw.q
@@ -515,28 +510,24 @@ tape('Numerical term.bins.default.type=custom-bin', async test => {
 		]
 	}
 
-	const copy = JSON.parse(JSON.stringify(termjson.agedx))
+	const copy = getTermCopy('agedx')
 	copy.bins.default = binconfig
 
 	const opts = await getOpts({ tsData: { term: copy, q: binconfig } })
-
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
-	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(lines.length, 1, 'should have 1 line')
+	test.equal(await opts.tipLoc.shows('.binsize_g line').length(), 1, 'should have 1 line')
 
-	const tabs = tip.d.select('.sj-toggle-button').node()
+	const tabs = opts.tip.d.select('.sj-toggle-button').node()
 	test.notOk(tabs, 'No switch tab should be rendered for Same/Varying bin size')
 	// if the "Same bin size/Varying bin size" toggle tab is still rendered, click "Same bin size" tab will break!! thus test to avoid it
 
 	if (test._ok) opts.pill.destroy()
+	test.end()
 })
 
 tape('Numerical term: toggle menu - 4 options', async test => {
-	test.timeoutAfter(6000)
-	test.plan(8) // TODO
+	test.plan(13)
 
 	const opts = await getOpts({
 		numericEditMenuVersion: ['continuous', 'discrete', 'spline', 'binary'],
@@ -545,62 +536,64 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 			q: { mode: 'continuous' }
 		}
 	})
-	//opts.tsData.q = getTermCopy('agedx').bins.less
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(200)
-	const tip = opts.pill.Inner.dom.tip
-	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
+	const tipLoc = opts.tipLoc
 
+	const toggleButtons = await tipLoc.shows('.sj-toggle-button').all()
 	test.equal(toggleButtons.length, 4, 'Should have 4 toggle buttons for numeric edit menu')
-
 	test.equal(toggleButtons[0].innerText, 'Continuous', 'Should have title for first tab as Continuous')
-	await sleep(1000)
 
-	test.equal(
-		tip.d.node().querySelector('select').querySelectorAll('option')[0].innerText,
-		'No Scaling',
+	test.deepEqual(
+		await tipLoc.shows('select').find('option:nth-child(1)').text(),
+		['No Scaling'],
 		'Should have rendered UI for Continuous menu'
 	)
 
-	//opts.tsData.q = getTermCopy('agedx').bins.less
-	//await opts.pill.main(opts.tsData)
 	test.equal(toggleButtons[1].innerText, 'Discrete', 'Should have title for 2nd tab as Discrete')
 	toggleButtons[1].click()
-	await sleep(2000)
-	// TODO: improve detection
-	test.equal(
-		tip.d.node().querySelector('tr').querySelector('td').innerText,
-		'Bin Size',
+	test.deepEqual(
+		await tipLoc.shows('tr td:nth-child(1)').text(),
+		['Bin Size', 'First Bin Stop', 'Last Bin Start'],
 		'Should have rendered UI for Discrete menu'
 	)
-
-	toggleButtons[2].click()
-	await sleep(1000)
+	test.equal(
+		await tipLoc.shows('.binsize_g line').length(),
+		7,
+		'Should show the expected number of discrete bin lines in Discrete tab'
+	)
 
 	test.equal(toggleButtons[2].innerText, 'Cubic spline', 'Should have title for 3nd tab as Cubic spline')
-
-	// TODO: !!! RE-ENABLE !!!
-	// test.equal(
-	// 	tip.d.node().querySelector('textarea').value.split('\n').length,
-	// 	parseInt(tip.d.node().querySelectorAll('select')[2].value),
-	// 	'Should have rendered UI for Spline menu'
-	// )
+	toggleButtons[2].click()
+	test.deepEqual(
+		await tipLoc.shows('.binsize_g line').length(),
+		await tipLoc.shows(`[data-testid='num-spline-editor-num-knots']`).value(values => Number(values[0])),
+		'Should have rendered UI for Spline menu'
+	)
+	test.equal(await tipLoc.shows('.binsize_g line').length(), 4, 'Should have rendered knot lints for Spline menu')
 
 	test.equal(toggleButtons[3].innerText, 'Binary', 'Should have title for 4nd tab as Binary')
 	toggleButtons[3].click()
 
-	// TODO: !!! IMPROVE DETECTION TIMING !!!
-	await sleep(50)
-	const binary_lines = await detectGte({
-		elem: opts.pill.Inner.handler.dom.editDiv.node(),
-		selector: '.binsize_g line',
-		count: 1
-	})
+	test.equal(await tipLoc.shows('.binsize_g line').length(), 1, 'Should have rendered UI for Binary menu')
 
-	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
+	toggleButtons[2].click()
+	test.equal(
+		await tipLoc.shows('.binsize_g line').length(),
+		4,
+		'Should show the expected number of knots when switching back to Spline tab'
+	)
+
+	toggleButtons[1].click()
+	test.equal(
+		await tipLoc.shows('.binsize_g line', { count: 7 }).length(),
+		7,
+		'Should show the expected number of knots when switching back to Discrete tab'
+	)
+
 	if (test._ok) opts.pill.destroy()
+	test.end()
 })
 
 tape('Numerical term: toggle menu - 2 options', async test => {

@@ -95,9 +95,10 @@ async function runTest(patternsStr) {
 			console.log('-- pageerror --', e.message)
 			console.trace(e)
 		})
-		.on('requestfailed', request =>
-			console.log('-- requestfailed --', `${request.failure().errorText} ${request.url()}`)
-		)
+		.on('requestfailed', request => {
+			const text = request.failure().errorText
+			if (!text.startsWith('net::ERR_ABORTED')) console.log('-- requestfailed --', `${text} ${request.url()}`)
+		})
 
 	const html = []
 	const markdowns = []
