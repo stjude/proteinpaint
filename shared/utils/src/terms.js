@@ -227,7 +227,7 @@ const typeMap = {
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
-	proteomeAbundance: 'Whole Proteome Abundance',
+	proteomeAbundance: 'Proteome Abundance',
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',

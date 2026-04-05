@@ -367,6 +367,16 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Protein View',
+			chartType: 'proteinView',
+			usecase: {
+				target: 'proteinView',
+				detail: 'term',
+				label: 'Select one protein'
+			},
+			clickTo: self.showTree_select1term
+		},
+		{
 			label: 'Protein Abundance',
 			chartType: 'proteomeAbundance',
 			clickTo: self.loadChartSpecificMenu

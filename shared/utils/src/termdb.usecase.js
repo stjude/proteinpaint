@@ -250,6 +250,11 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
+		case 'proteinView':
+			if (term.type == TermTypes.PROTEOME_ABUNDANCE) uses.add('plot')
+			if (child_types.includes(TermTypes.PROTEOME_ABUNDANCE)) uses.add('branch')
+			return uses
+
 		default:
 			if (graphableTypes.has(term.type)) uses.add('plot')
 			if (!term.isleaf) uses.add('branch')

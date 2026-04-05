@@ -25,7 +25,7 @@ export class TermTypeGroups {
 	static ISOFORM_EXPRESSION = 'Isoform Expression'
 	static GSEA = 'GSEA'
 	static METABOLITE_INTENSITY = 'Metabolite Intensity'
-	static PROTEOME_ABUNDANCE = 'Whole Proteome Abundance'
+	static PROTEOME_ABUNDANCE = 'Proteome Abundance'
 	static MUTATION_CNV_FUSION = 'Mutation/CNV/Fusion'
 	static MUTATION_SIGNATURE = 'Mutation Signature'
 	static PROTEIN_EXPRESSION = 'Protein Expression'
@@ -88,7 +88,7 @@ export const dt2label = {
 	[dtloh]: 'LOH',
 	[dtgeneexpression]: 'Gene Expression',
 	[dtmetaboliteintensity]: 'Metabolite Intensity',
-	[dtproteomeabundance]: 'Whole Proteome Abundance'
+	[dtproteomeabundance]: 'Proteome Abundance'
 }
 
 // Maps dt types to UI labels and lesion types for GRIN2

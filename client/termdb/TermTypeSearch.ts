@@ -88,6 +88,19 @@ export const useCasesExcluded = {
 		SINGLECELL_GENE_EXPRESSION,
 		METABOLITE_INTENSITY
 	],
+	proteinView: [
+		TermTypeGroups.SNP_LOCUS,
+		TermTypeGroups.SNP_LIST,
+		TermTypeGroups.MUTATION_CNV_FUSION,
+		TermTypeGroups.DICTIONARY_VARIABLES,
+		TermTypeGroups.GENE_EXPRESSION,
+		TermTypeGroups.DNA_METHYLATION,
+		TermTypeGroups.SSGSEA,
+		TermTypeGroups.TERM_COLLECTION,
+		TermTypeGroups.SINGLECELL_CELLTYPE,
+		TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
+		TermTypeGroups.METABOLITE_INTENSITY
+	],
 	geneExpression: [
 		SNP_LOCUS,
 		SNP_LIST,
