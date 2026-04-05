@@ -3,7 +3,7 @@ import { getOrderedLabels } from '../termdb.barchart.js'
 
 /**
  * test sections:
- * 
+ *
  * getOrderedLabels: returns event labels when events provided
  * getOrderedLabels: returns group names for condition type with groups
  * getOrderedLabels: returns sorted labels for condition type with values
@@ -71,11 +71,14 @@ tape('getOrderedLabels: handles mixed values with and without "order" property',
 		}
 	}
 	const result = getOrderedLabels(term, null, null, null)
-	// Verify all keys are present in the result (order may vary for entries without 'order' property)
+	// Verify all keys are present in the result (unordered entry may appear anywhere)
 	t.equal(result.length, 3, 'should return all three keys')
 	t.ok(result.includes('keyA'), 'should include keyA')
 	t.ok(result.includes('keyB'), 'should include keyB')
 	t.ok(result.includes('keyC'), 'should include keyC')
+
+	// Verify relative ordering of ordered entries only
+	t.ok(result.indexOf('keyC') < result.indexOf('keyA'), 'should place keyC (order=1) before keyA (order=2)')
 	t.end()
 })
 
@@ -106,9 +109,9 @@ tape('getOrderedLabels: handles undefined bins', t => {
 	t.end()
 })
 
-tape('getOrderedLabels: verifies code change - uses key instead of label', t => {
-	// This test specifically verifies the code change in the Ordering_CareReg branch
-	// The old code returned labels, the new code returns keys when order property exists
+tape('getOrderedLabels: verifies regression - uses key instead of label', t => {
+	// Regression test: values with an order property should return keys,
+	// not display labels.
 	const term = {
 		type: 'categorical',
 		values: {
@@ -118,7 +121,7 @@ tape('getOrderedLabels: verifies code change - uses key instead of label', t => 
 		}
 	}
 	const result = getOrderedLabels(term, null, null, null)
-	
+
 	// New behavior: returns keys (actual_key_1, actual_key_2, actual_key_3)
 	// Old behavior would have returned labels (Display Label 1, Display Label 2, Display Label 3)
 	t.deepEqual(
@@ -126,7 +129,7 @@ tape('getOrderedLabels: verifies code change - uses key instead of label', t => 
 		['actual_key_1', 'actual_key_2', 'actual_key_3'],
 		'should return keys instead of labels when order property exists'
 	)
-	
+
 	t.end()
 })
 
@@ -142,13 +145,34 @@ tape('getOrderedLabels: verifies firstVal check optimization', t => {
 		}
 	}
 	const result = getOrderedLabels(term, null, null, null)
-	
+
 	// Should work correctly even though only first value is checked for 'order' property
-	t.deepEqual(
-		result,
-		['keyB', 'keyC', 'keyA'],
-		'should correctly sort by order property based on firstVal check'
+	t.deepEqual(result, ['keyB', 'keyC', 'keyA'], 'should correctly sort by order property based on firstVal check')
+
+	t.end()
+})
+
+tape('getOrderedLabels: detects order when first value has no order', t => {
+	// Regression guard for edge case where the first value is unordered,
+	// but later values define explicit order.
+	const term = {
+		type: 'categorical',
+		values: {
+			keyB: { key: 'keyB', label: 'Label B' }, // first value has no order
+			keyC: { key: 'keyC', label: 'Label C', order: 1 },
+			keyA: { key: 'keyA', label: 'Label A', order: 2 }
+		}
+	}
+	const result = getOrderedLabels(term, null, null, null)
+
+	t.equal(result.length, 3, 'should return all three keys')
+	t.ok(result.includes('keyA'), 'should include keyA')
+	t.ok(result.includes('keyB'), 'should include keyB')
+	t.ok(result.includes('keyC'), 'should include keyC')
+	t.ok(
+		result.indexOf('keyC') < result.indexOf('keyA'),
+		'should place keyC (order=1) before keyA (order=2) even if the first value has no order'
 	)
-	
+
 	t.end()
 })
