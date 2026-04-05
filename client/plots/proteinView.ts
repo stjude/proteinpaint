@@ -13,8 +13,8 @@ class ProteinView implements RxComponent {
 	static type = 'proteinView'
 	type: string
 	opts: any
-	app: AppApi
-	id: string
+	app!: AppApi
+	id!: string
 	state: any
 	dom: {
 		holder?: any
@@ -143,8 +143,8 @@ function renderFCSummary(holder: any, data: any, self: ProteinView) {
 				.style('background', '#868e96')
 				.style('opacity', 0.7)
 
-			const value = Number.isFinite(log2ratio) ? log2ratio : 0
-			const ratio = maxAbs > 0 ? Math.abs(value as number) / maxAbs : 0
+			const value = Number.isFinite(log2ratio) ? (log2ratio as number) : 0
+			const ratio = maxAbs > 0 ? Math.abs(value) / maxAbs : 0
 			const widthPct = Math.max(0, Math.min(50, ratio * 50))
 			if (Number.isFinite(log2ratio) && widthPct > 0) {
 				track
