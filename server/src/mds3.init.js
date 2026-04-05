@@ -1971,8 +1971,11 @@ export async function validate_query_proteome(ds, genome) {
 	q.find = async arg => {
 		const proteins = arg?.proteins
 		if (!Array.isArray(proteins) || proteins.length == 0) throw 'queries.proteome.find arg.proteins[] missing'
-		const cohortQuery = q.getCohort(arg?.proteomeDetails)
-		return findProteinsInCohort(cohortQuery, proteins)
+		if (arg?.proteomeDetails) {
+			const cohortQuery = q.getCohort(arg.proteomeDetails)
+			return findProteinsInCohort(cohortQuery, proteins)
+		}
+		return findProteinsAcrossNonPTMCohorts(q, proteins)
 	}
 
 	q.get = async param => {
@@ -2015,6 +2018,7 @@ async function findProteinsInCohort(cohort, proteins) {
 				if (cols[0]?.startsWith('#Unique identifier')) return
 				const identifier = cols[0].trim()
 				const proteinName = cols[4].trim()
+				//protein isoform identifier is gene name: unique identifier
 				list.push(`${proteinName}: ${identifier}`)
 			}
 		})
@@ -2034,6 +2038,21 @@ async function findProteinsInCohort(cohort, proteins) {
 	return matches
 }
 
+async function findProteinsAcrossNonPTMCohorts(q, proteins) {
+	const unique = new Set()
+	for (const assayName in q.assays || {}) {
+		const assay = q.assays[assayName]
+		if (assay.PTMType) continue // Skip PTM assays when searching a gene on Protein View
+		const cohorts = assay?.cohorts || {}
+		for (const cohortName in cohorts) {
+			const cohort = cohorts[cohortName]
+			const matches = await findProteinsInCohort(cohort, proteins)
+			for (const m of matches) unique.add(m)
+		}
+	}
+	return [...unique]
+}
+
 async function getProteomeValuesFromCohort(ds, cohort, param) {
 	const limitSamples = await mayLimitSamples(param, cohort.samples, ds)
 	if (limitSamples?.size == 0) {
@@ -2050,40 +2069,87 @@ async function getProteomeValuesFromCohort(ds, cohort, param) {
 	}
 
 	const term2sample2value = new Map()
+	const byCohortPTM = {}
+	const PTMType = param.proteomeDetails.PTMType
+	const cohortName = param.proteomeDetails.cohort
 	for (const tw of param.terms) {
 		if (!tw) continue
 
 		const fullEntry = tw.term.name
 		const identifier = fullEntry.split(':')[1]?.trim()
-		if (!identifier) continue
+		const geneName = fullEntry.split(':')[0]?.trim()
+		if (!identifier || !geneName)
+			throw 'invalid term name for proteome query, must be in format geneName: uniqueIdentifier'
 
 		const s2v = {}
+		const cohortUniquePTMID2PTM = {}
 		await utils.get_lines_txtfile({
 			args: [cohort.file],
 			callback: line => {
 				const l = line.split('\t')
-				if (l[0]?.trim().toLowerCase() !== identifier.toLowerCase()) return
+				if (PTMType) {
+					// For PTM, getting all rows related to the gene name (5th column), matching is done on gene name.
+					if (l[4]?.trim().toLowerCase() !== geneName.toLowerCase()) return
+				} else if (l[0]?.trim().toLowerCase() !== identifier.toLowerCase()) {
+					// for nonPTM, only get the single row ralted to the unique identifier(1st column), matching is done on unique identifier.
+					return
+				}
+				if (PTMType) {
+					// Only for PTM, capture metadata and sample values for each matching row.
+					// 1 Unique identifier, 2 ModSites, 3 Protein accession, 5 Gene name, 6 PSMs.
+					const uniqueIdentifier = l[0]?.trim()
+					if (!uniqueIdentifier) throw 'missing unique identifier for PTM row'
+					const cohortUniquePTMID = `${uniqueIdentifier}: ${cohortName}`
 
-				for (let i = 9; i < l.length; i++) {
-					const sampleId = cohort.samples[i - 9]
-					if (limitSamples && !limitSamples.has(sampleId)) continue
-					if (!l[i]) continue
-					const v = Number(l[i])
-					if (Number.isNaN(v)) throw 'exp value not number'
-					s2v[sampleId] = v
+					// Accumulate sample values for this specific PTM row
+					const rowS2v = {}
+					for (let i = 9; i < l.length; i++) {
+						const sampleId = cohort.samples[i - 9]
+						if (limitSamples && !limitSamples.has(sampleId)) continue
+						if (!l[i]) continue
+						const v = Number(l[i])
+						if (Number.isNaN(v)) throw 'exp value not number'
+						rowS2v[sampleId] = v
+					}
+
+					cohortUniquePTMID2PTM[cohortUniquePTMID] = {
+						uniqueIdentifier: uniqueIdentifier,
+						cohortName: cohortName,
+						PTMType,
+						modSites: l[1]?.trim(),
+						//proteinAccession: l[2]?.trim(),
+						geneName: l[4]?.trim(),
+						//psms: l[5] === undefined || l[5] === '' ? undefined : Number.isNaN(Number(l[5])) ? l[5].trim() : Number(l[5]),
+						s2v: rowS2v
+					}
+				} else {
+					// For non-PTM, accumulate sample values into the single s2v
+					for (let i = 9; i < l.length; i++) {
+						const sampleId = cohort.samples[i - 9]
+						if (limitSamples && !limitSamples.has(sampleId)) continue
+						if (!l[i]) continue
+						const v = Number(l[i])
+						if (Number.isNaN(v)) throw 'exp value not number'
+						s2v[sampleId] = v
+					}
 				}
 			}
 		})
 
-		if (Object.keys(s2v).length) {
+		if (!PTMType && Object.keys(s2v).length) {
+			// For non-PTM, store in term2sample2value
 			term2sample2value.set(tw.$id, s2v)
 		}
+		if (PTMType && Object.keys(cohortUniquePTMID2PTM).length) {
+			// For PTM, store all rows with their individual metadata and s2v
+			byCohortPTM[cohortName] = cohortUniquePTMID2PTM
+		}
 	}
-
-	if (term2sample2value.size == 0) {
+	if (term2sample2value.size == 0 && param.for != 'proteinView') {
 		throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`
 	}
-	return { term2sample2value, byTermId: {}, bySampleId }
+	if (PTMType) return { byCohortPTM, bySampleId }
+	else return { term2sample2value, bySampleId }
 }
 
 // no longer used
