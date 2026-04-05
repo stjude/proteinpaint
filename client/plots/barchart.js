@@ -376,7 +376,7 @@ export class Barchart extends PlotBase {
 		if (this.state.parentError) throw this.state.parentError
 		try {
 			this.config = await this.getMutableConfig(c)
-			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
+			if (!this.currServerData) this.dom.barDiv.style('max-width', Function('return this')()?.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
 				this.dom.header.html(
@@ -452,8 +452,22 @@ export class Barchart extends PlotBase {
 
 	updateSettings(config) {
 		if (!config) return
+		const normalizeRefOrder = (lst, tw) => {
+			if (!Array.isArray(lst) || !tw?.term?.values) return lst
+			const values = tw.term.values
+			const labelToKey = new Map()
+			for (const [k, v] of Object.entries(values)) {
+				if (v?.label !== undefined) labelToKey.set(String(v.label), String(v.key ?? k))
+			}
+			return lst.map(v => {
+				if (v in values) return v
+				if (String(v) in values) return String(v)
+				const byLabel = labelToKey.get(String(v))
+				return byLabel !== undefined ? byLabel : v
+			})
+		}
+
 		// translate relevant config keys to barchart settings keys
-		const obj = this.state
 		const settings = {
 			term0: config.term0 ? config.term0.term.id : '', // convenient reference to the term id
 			term1: config.term.term.id, // convenient reference to the term2 id
@@ -489,8 +503,12 @@ export class Barchart extends PlotBase {
 		Object.assign(this.settings, settings, this.currServerData.refs || {}, {
 			exclude: this.settings.exclude
 		})
+		if (this.settings.cols) this.settings.cols = normalizeRefOrder(this.settings.cols, this.config.term)
+		if (this.settings.dedupCols) this.settings.dedupCols = normalizeRefOrder(this.settings.dedupCols, this.config.term)
+		if (this.settings.rows) this.settings.rows = normalizeRefOrder(this.settings.rows, this.config.term2)
 
 		this.settings.cols = this.settings.dedup ? this.currServerData.refs.dedupCols : this.currServerData.refs.cols
+		this.settings.cols = normalizeRefOrder(this.settings.cols, this.config.term)
 		this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
 		if (!config.term2 && this.settings.unit == 'pct') {
 			this.settings.unit = 'abs'
@@ -569,17 +587,86 @@ export class Barchart extends PlotBase {
 
 	processData(chartsData) {
 		this.seriesOrder = this.setMaxVisibleTotals(chartsData)
+		const visibleSeriesOrder = [...this.seriesOrder]
+		const getDeclaredValueOrder = tw => {
+			const values = tw?.term?.values
+			if (!values) return null
+			const order = []
+			const seen = new Set()
+			const entries = Object.entries(values).map(([k, v], i) => ({
+				k,
+				v,
+				idx: i,
+				key: String(v?.key ?? k),
+				label: v?.label === undefined ? null : String(v.label)
+			}))
+			const isNumeric = x => /^-?\d+(?:\.\d+)?$/.test(x)
+			const numericEntries = entries.filter(e => isNumeric(e.key)).sort((a, b) => Number(a.key) - Number(b.key))
+			const nonNumericEntries = entries.filter(e => !isNumeric(e.key)).sort((a, b) => a.idx - b.idx)
+			for (const { key, label } of [...numericEntries, ...nonNumericEntries]) {
+				if (!seen.has(key)) {
+					seen.add(key)
+					order.push(key)
+				}
+				if (label && !seen.has(label)) {
+					seen.add(label)
+					order.push(label)
+				}
+			}
+			return order.length ? order : null
+		}
+		const getNumericValueOrder = tw => {
+			const values = tw?.term?.values
+			if (!values) return null
+			const entries = Object.entries(values)
+			if (!entries.length) return null
+			const keys = entries.map(([k, v]) => v?.key ?? k).map(k => String(k))
+			if (!keys.every(k => /^-?\d+(?:\.\d+)?$/.test(k))) return null
+			return keys.sort((a, b) => Number(a) - Number(b))
+		}
+		const hasNumericValueKeys = tw => {
+			const values = tw?.term?.values
+			if (!values) return false
+			return Object.entries(values)
+				.map(([k, v]) => String(v?.key ?? k))
+				.some(k => /^-?\d+(?:\.\d+)?$/.test(k))
+		}
+		const term1DeclaredOrder = getDeclaredValueOrder(this.config.term)
+		const term1ConditionOrder =
+			this.config.term?.term?.type == 'condition' ? getDeclaredValueOrder(this.config.term) : null
+		const term1NumericOrder = getNumericValueOrder(this.config.term)
+		const term2ConditionRows =
+			this.config.term2?.term?.type == 'condition' ? getDeclaredValueOrder(this.config.term2) : null
+		const term2NumericRows = getNumericValueOrder(this.config.term2)
+		const shouldUseDeclaredTerm1Order =
+			term1DeclaredOrder?.length &&
+			(this.config.term?.term?.type == 'condition' || hasNumericValueKeys(this.config.term))
 		if (!chartsData.charts.length) {
 			this.seriesOrder = []
+		} else if (shouldUseDeclaredTerm1Order) {
+			const preferred = term1DeclaredOrder.filter(v => visibleSeriesOrder.includes(v))
+			const leftovers = visibleSeriesOrder.filter(v => !preferred.includes(v))
+			this.seriesOrder = preferred.concat(leftovers)
 		} else if (chartsData.refs.useColOrder) {
 			this.seriesOrder = this.settings.cols
+		} else if (term1ConditionOrder?.length) {
+			this.seriesOrder = term1ConditionOrder
+		} else if (term1NumericOrder?.length) {
+			this.seriesOrder = term1NumericOrder
 		}
 
-		const rows = chartsData.refs.rows
+		const rows = chartsData.refs.useRowOrder
+			? chartsData.refs.rows
+			: term2ConditionRows || term2NumericRows || chartsData.refs.rows
+		const getOrderIndex = (lst, v) => {
+			let idx = lst.indexOf(v)
+			if (idx == -1) idx = lst.indexOf(String(v))
+			return idx == -1 ? Number.MAX_SAFE_INTEGER : idx
+		}
 
-		this.barSorter = (a, b) => this.seriesOrder.indexOf(a) - this.seriesOrder.indexOf(b)
+		this.barSorter = (a, b) => getOrderIndex(this.seriesOrder, a) - getOrderIndex(this.seriesOrder, b)
 		this.overlaySorter = chartsData.refs.useRowOrder
-			? (a, b) => rows.indexOf(a.dataId) - rows.indexOf(b.dataId)
+			? (a, b) => getOrderIndex(rows, a.dataId) - getOrderIndex(rows, b.dataId)
 			: (a, b) =>
 					this.totalsByDataId[b.dataId] > this.totalsByDataId[a.dataId]
 						? 1
@@ -1362,8 +1449,9 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term2) opts.term2 = await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) opts.term0 = await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
-		console.log('Error reading config: ' + JSON.stringify(opts))
-		console.error(e)
+		const g = Function('return this')()
+		g?.console?.log('Error reading config: ' + JSON.stringify(opts))
+		g?.console?.error(e)
 		throw `${e} [barchart getPlotConfig()]`
 	}
 
