@@ -454,6 +454,13 @@ export class Barchart extends PlotBase {
 		if (!config) return
 		const normalizeRefOrder = (lst, tw) => {
 			if (!Array.isArray(lst) || !tw?.term?.values) return lst
+			// Keep integration behavior stable:
+			// - do not normalize overlay ids
+			// - do not normalize numeric term ids (may include special-value labels)
+			// - do not normalize when hidden values are active
+			if (tw === this.config.term2) return lst
+			if (isNumericTerm(tw.term)) return lst
+			if (Object.keys(tw?.q?.hiddenValues || {}).some(k => tw.q.hiddenValues[k])) return lst
 			const values = tw.term.values
 			const labelToKey = new Map()
 			for (const [k, v] of Object.entries(values)) {
@@ -499,7 +506,6 @@ export class Barchart extends PlotBase {
 		*/
 		//this.mayResetHidden(this.config.term, this.config.term2, this.config.term0)
 
-		this.setExclude(this.config.term, this.config.term2)
 		Object.assign(this.settings, settings, this.currServerData.refs || {}, {
 			exclude: this.settings.exclude
 		})
@@ -509,6 +515,7 @@ export class Barchart extends PlotBase {
 
 		this.settings.cols = this.settings.dedup ? this.currServerData.refs.dedupCols : this.currServerData.refs.cols
 		this.settings.cols = normalizeRefOrder(this.settings.cols, this.config.term)
+		this.setExclude(this.config.term, this.config.term2)
 		this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
 		if (!config.term2 && this.settings.unit == 'pct') {
 			this.settings.unit = 'abs'
@@ -557,32 +564,35 @@ export class Barchart extends PlotBase {
 	}
 
 	setExclude(term, term2) {
+		const mapHiddenId = (tw, id, seriesIds) => {
+			if (seriesIds?.includes(id)) return id
+			const values = tw?.term?.values
+			if (!values) return id
+			if (id in values) {
+				const label = values[id]?.label
+				if (label && seriesIds?.includes(label)) return label
+				return id
+			}
+			for (const [k, v] of Object.entries(values)) {
+				if (v?.label == id) {
+					if (seriesIds?.includes(k)) return k
+					if (seriesIds?.includes(v.label)) return v.label
+					return k
+				}
+			}
+			return id
+		}
+
 		// a non-numeric term.id is used directly as seriesId or dataId
 		this.settings.exclude.cols = Object.keys(term.q?.hiddenValues || {})
 			.filter(id => term.q.hiddenValues[id])
-			.map(id => {
-				return term.term.type == 'categorical'
-					? id
-					: this.settings.cols?.includes(id)
-					? id
-					: term.term.values[id]?.label
-					? term.term.values[id].label
-					: id
-			})
+			.map(id => mapHiddenId(term, id, this.settings.cols))
 
 		this.settings.exclude.rows = !term2?.q?.hiddenValues
 			? []
 			: Object.keys(term2.q.hiddenValues)
 					.filter(id => term2.q.hiddenValues[id])
-					.map(id =>
-						term2.term.type == 'categorical'
-							? id
-							: this.settings.rows?.includes(id)
-							? id
-							: term2.term.values[id]?.label
-							? term2.term.values[id].label
-							: id
-					)
+					.map(id => mapHiddenId(term2, id, this.settings.rows))
 	}
 
 	processData(chartsData) {
@@ -638,9 +648,13 @@ export class Barchart extends PlotBase {
 		const term2ConditionRows =
 			this.config.term2?.term?.type == 'condition' ? getDeclaredValueOrder(this.config.term2) : null
 		const term2NumericRows = getNumericValueOrder(this.config.term2)
+		const declaredVisibleMatches = term1DeclaredOrder?.filter(v => visibleSeriesOrder.includes(v)).length || 0
+		const hasStrongDeclaredCoverage =
+			visibleSeriesOrder.length > 0 && declaredVisibleMatches >= Math.ceil(visibleSeriesOrder.length / 2)
 		const shouldUseDeclaredTerm1Order =
 			term1DeclaredOrder?.length &&
-			(this.config.term?.term?.type == 'condition' || hasNumericValueKeys(this.config.term))
+			(this.config.term?.term?.type == 'condition' || hasNumericValueKeys(this.config.term)) &&
+			hasStrongDeclaredCoverage
 		if (!chartsData.charts.length) {
 			this.seriesOrder = []
 		} else if (shouldUseDeclaredTerm1Order) {
