@@ -1,11 +1,13 @@
-import { Menu, addGeneSearchbox, sayerror } from '#dom'
+import { Menu, addGeneSearchbox, sayerror, isoformSelect } from '#dom'
+import type { GeneModel, IsoformTerm } from '#dom/types/isoformSelect'
+import type { Div } from '../../types/d3'
 import { dofetch3 } from '#common/dofetch'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 
 export class SearchHandler {
-	callback: any
+	callback!: (term: IsoformTerm) => void
 	app: any
-	dom: any
+	dom!: { errDiv: Div; isoformDiv?: Div }
 	currentGene: string | null = null
 
 	init(opts) {
@@ -32,9 +34,9 @@ export class SearchHandler {
 					if (this.dom.isoformDiv) this.dom.isoformDiv.remove()
 					this.dom.isoformDiv = holder.append('div')
 					await this.showIsoforms(geneSearch.geneSymbol, opts.genomeObj)
-				} catch (e: any) {
+				} catch (e: unknown) {
 					this.dom.errDiv.style('display', 'block')
-					sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
+					sayerror(this.dom.errDiv, 'Error: ' + (e instanceof Error ? e.message : String(e)))
 				}
 			}
 		})
@@ -65,27 +67,16 @@ export class SearchHandler {
 		// bail if the user already searched a different gene while we were fetching
 		if (gene !== this.currentGene) return
 
-		const div = this.dom.isoformDiv
+		const div = this.dom.isoformDiv!
 		div.append('div').style('margin-bottom', '8px').style('opacity', 0.65).text(`${gene} — select an isoform:`)
 
-		for (const gm of enstModels) {
-			const row = div.append('div').style('padding', '2px 0').style('cursor', 'pointer')
-			const label = row.append('label').style('cursor', 'pointer')
-			const checkbox = label
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('name', 'isoformSelect')
-				.style('cursor', 'pointer')
-				.on('change', () => {
-					// uncheck all others — single selection for now
-					div.selectAll('input[name=isoformSelect]').property('checked', false)
-					checkbox.property('checked', true)
-					this.selectIsoform(gm.isoform, gene)
-				})
-
-			const defaultTag = gm.isdefault ? ' (default)' : ''
-			label.append('span').style('margin-left', '6px').text(`${gm.isoform}${defaultTag}`)
-		}
+		isoformSelect({
+			holder: div,
+			allgm: enstModels,
+			onSelect: (gm: GeneModel) => {
+				this.selectIsoform(gm.isoform, gene)
+			}
+		})
 	}
 
 	selectIsoform(isoform: string, gene: string) {
@@ -97,7 +88,7 @@ export class SearchHandler {
 
 /** Filter gene models to ENST isoforms that exist in the available items list.
  *  If availableItems is empty, all ENST isoforms are returned (no filtering). */
-export function filterIsoforms(gmlst: any[], availableItems: string[]) {
+export function filterIsoforms(gmlst: GeneModel[], availableItems: string[]) {
 	const itemSet = new Set(availableItems)
-	return gmlst.filter((gm: any) => gm.isoform?.startsWith('ENST') && (itemSet.size === 0 || itemSet.has(gm.isoform)))
+	return gmlst.filter(gm => gm.isoform?.startsWith('ENST') && (itemSet.size === 0 || itemSet.has(gm.isoform)))
 }
