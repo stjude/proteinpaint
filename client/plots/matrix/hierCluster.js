@@ -182,7 +182,7 @@ export class HierCluster extends Matrix {
 		// from d.byTermId to byTermId: change byTermId keys from gene names to $ids
 		const byTermId = {}
 		for (const tw of twlst) {
-			if (d.byTermId[tw.term.name]) byTermId[tw.$id] = d.byTermId[tw.term.name]
+			if (d.byTermId?.[tw.term.name]) byTermId[tw.$id] = d.byTermId[tw.term.name]
 		}
 		this.hierClusterSamples = {
 			refs: { byTermId, bySampleId: d.bySampleId },
