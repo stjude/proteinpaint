@@ -43,6 +43,7 @@ export async function validateNonDictionaryTypes(
 			relevant_genes,
 			dataset_json
 		)
+
 		if (typeof geneDataTypeMessage === 'string') {
 			if (geneDataTypeMessage.length > 0) {
 				// This shows error is any of the genes are missing relevant features
