@@ -38,7 +38,7 @@ export async function init(
 			genome: useGenome,
 			dslabel: useDslabel,
 			termfilter: { filter0: arg.filter0 },
-			nav: { activeTab: 1, header_mode: 'only_buttons' },
+			nav: { activeTab: 1, header_mode: 'hidden' },
 			plots: [{ chartType: 'DEinput' }]
 		},
 		opts: Object.assign(
