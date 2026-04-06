@@ -1,6 +1,12 @@
 import tape from 'tape'
 import { SearchHandler, filterIsoforms } from '../isoformExpression.ts'
+import type { GeneModel } from '#dom/types/isoformSelect'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
+
+/** Helper to create a minimal GeneModel for testing */
+function mockGm(isoform: string): GeneModel {
+	return { isoform, chr: 'chr1', start: 0, stop: 100, exon: [[0, 100]] }
+}
 
 /**************
  test sections
@@ -61,12 +67,7 @@ tape('selectIsoform() should use default unit when not configured', test => {
 })
 
 tape('filterIsoforms() should return only ENST isoforms present in availableItems', test => {
-	const gmlst = [
-		{ isoform: 'ENST00000269305' },
-		{ isoform: 'ENST00000413465' },
-		{ isoform: 'NM_000546' },
-		{ isoform: 'ENST00000359597' }
-	]
+	const gmlst = [mockGm('ENST00000269305'), mockGm('ENST00000413465'), mockGm('NM_000546'), mockGm('ENST00000359597')]
 	const availableItems = ['ENST00000269305', 'ENST00000359597']
 
 	const result = filterIsoforms(gmlst, availableItems)
@@ -78,7 +79,7 @@ tape('filterIsoforms() should return only ENST isoforms present in availableItem
 })
 
 tape('filterIsoforms() should exclude non-ENST isoforms even if in availableItems', test => {
-	const gmlst = [{ isoform: 'NM_000546' }, { isoform: 'NR_176326' }, { isoform: 'ENST00000269305' }]
+	const gmlst = [mockGm('NM_000546'), mockGm('NR_176326'), mockGm('ENST00000269305')]
 	const availableItems = ['NM_000546', 'ENST00000269305']
 
 	const result = filterIsoforms(gmlst, availableItems)
@@ -89,7 +90,7 @@ tape('filterIsoforms() should exclude non-ENST isoforms even if in availableItem
 })
 
 tape('filterIsoforms() should return all ENST isoforms when availableItems is empty', test => {
-	const gmlst = [{ isoform: 'ENST00000269305' }, { isoform: 'ENST00000413465' }, { isoform: 'NM_000546' }]
+	const gmlst = [mockGm('ENST00000269305'), mockGm('ENST00000413465'), mockGm('NM_000546')]
 
 	const result = filterIsoforms(gmlst, [])
 	test.equal(result.length, 2, 'Should return all ENST isoforms when no filter')
@@ -100,7 +101,7 @@ tape('filterIsoforms() should return all ENST isoforms when availableItems is em
 })
 
 tape('filterIsoforms() should return empty array when no ENST isoforms match', test => {
-	const gmlst = [{ isoform: 'ENST00000269305' }, { isoform: 'ENST00000413465' }]
+	const gmlst = [mockGm('ENST00000269305'), mockGm('ENST00000413465')]
 	const availableItems = ['ENST00000999999']
 
 	const result = filterIsoforms(gmlst, availableItems)

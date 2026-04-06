@@ -4,7 +4,7 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import { axisstyle, Menu, newSandboxDiv, sayerror, appear, disappear } from '#dom'
+import { axisstyle, Menu, newSandboxDiv, sayerror, appear, disappear, isoformSelect, allgm2sum } from '#dom'
 import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common.js'
 import * as coord from './coord'
@@ -3868,6 +3868,7 @@ seekrange(chr,start,stop) {
 		/*
 		showing gene in gmmode
 		list all isoforms to allow switching isoform
+		now delegates to the reusable isoformSelect component in dom/
 		*/
 		if (!this.allgm) {
 			this.error('this.allgm[] missing')
@@ -3878,124 +3879,63 @@ seekrange(chr,start,stop) {
 			return
 		}
 
-		const [rglst, chrcount] = allgm2sum(this.allgm)
-		let pxwidth = 370
-		let intronpx = 10
-		if (intronpx * (rglst.length - 1) > pxwidth * 0.3) {
-			intronpx = Math.max(2, (pxwidth * 0.3) / (rglst.length - 1))
-		}
-		const inw = intronpx * (rglst.length - 1)
-		const exonlen = rglst.reduce((a, b) => a + b.stop - b.start, 0)
-		const exonsf = (pxwidth - (inw > pxwidth * 0.4 ? 0 : inw)) / exonlen
-		pxwidth = exonlen * exonsf + inw
-		for (const e of rglst) {
-			e.width = Math.ceil((e.stop - e.start) * exonsf)
-		}
+		isoformSelect({
+			holder,
+			allgm: this.allgm,
+			usegm: this.usegm,
+			onSelect: async gm1 => {
+				if (hideuponselect) {
+					this.usegmtip.fadeout()
+				}
+				this.holder0.selectAll('*').remove()
 
-		let mayscroll = holder
-		if (this.allgm.length > 10) {
-			mayscroll = holder
-				.append('div')
-				.attr('tabindex', 0)
-				.style('height', '200px')
-				.style('overflow-y', 'scroll')
-				.style('resize', 'vertical')
-		}
-
-		const table = mayscroll.append('table').style('color', '#555')
-
-		const gmlabellst = []
-
-		for (const gm1 of this.allgm) {
-			const tr = table
-				.append('tr')
-				.attr('class', 'sja_clb')
-				.on('click', async () => {
-					if (hideuponselect) {
-						// hardcoded, hide the block menu
-						this.usegmtip.fadeout()
-					} else {
-						// toggle gm label font color
-						for (const gm2 of gmlabellst) {
-							gm2.label.style(
-								'color',
-								gm2.isoform == gm1.isoform && gm2.chr == gm1.chr && gm2.start == gm1.start ? '#cc0000' : '#545454'
-							)
-						}
-					}
-					this.holder0.selectAll('*').remove()
-
-					/*
-					this selected isoform may not have genomic sequence loaded
-					which is initially only loaded in block.init for bb.usegm
-					now may need to load it
-					*/
-					if (!gm1.genomicseq) {
-						const data = await dofetch3('ntseq', {
-							method: 'POST',
-							body: JSON.stringify({
-								genome: this.genome.name,
-								coord: gm1.chr + ':' + (gm1.start + 1) + '-' + gm1.stop
-							})
+				/*
+				this selected isoform may not have genomic sequence loaded
+				which is initially only loaded in block.init for bb.usegm
+				now may need to load it
+				*/
+				if (!gm1.genomicseq) {
+					const data = await dofetch3('ntseq', {
+						method: 'POST',
+						body: JSON.stringify({
+							genome: this.genome.name,
+							coord: gm1.chr + ':' + (gm1.start + 1) + '-' + gm1.stop
 						})
-						if (data.error) {
-							this.error(data.error)
-							return
-						}
-						gm1.genomicseq = data.seq
-						gm1.aaseq = common.nt2aa(gm1)
-					}
-
-					// quick fix based on changes to mds3/maketk
-					const tklst = []
-					for (const t of this.tklst) {
-						if (t.type == client.tkt.usegm) continue
-						if (t.type == client.tkt.mds3) delete t.mds
-						tklst.push(t)
-					}
-					new Block({
-						holder: this.holder0,
-						genome: this.genome,
-						hostURL: this.hostURL,
-						nobox: true,
-						gmstackheight: 37,
-						usegm: gm1,
-						allgm: this.allgm,
-						tklst,
-						gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
-						hidedatasetexpression: this.hidedatasetexpression,
-						hidegenecontrol: this.hidegenecontrol,
-						hidegenelegend: this.hidegenelegend,
-						variantPageCall_snv: this.variantPageCall_snv,
-						samplecart: this.samplecart,
-						debugmode: this.debugmode
 					})
-				})
+					if (data.error) {
+						this.error(data.error)
+						return
+					}
+					gm1.genomicseq = data.seq
+					gm1.aaseq = common.nt2aa(gm1)
+				}
 
-			tr.append('td')
-				.text(gm1.isdefault ? 'DEFAULT' : '')
-				.style('font-size', '.6em')
-			const lab = tr
-				.append('td')
-				.text(gm1.isoform)
-				.style(
-					'color',
-					gm1.isoform == this.usegm.isoform && gm1.chr == this.usegm.chr && gm1.start == this.usegm.start
-						? '#cc0000'
-						: '#545454'
-				)
-			gmlabellst.push({
-				isoform: gm1.isoform,
-				chr: gm1.chr,
-				start: gm1.start,
-				label: lab
-			})
-			if (chrcount > 1) {
-				tr.append('td').text(gm1.chr)
+				// quick fix based on changes to mds3/maketk
+				const tklst = []
+				for (const t of this.tklst) {
+					if (t.type == client.tkt.usegm) continue
+					if (t.type == client.tkt.mds3) delete t.mds
+					tklst.push(t)
+				}
+				new Block({
+					holder: this.holder0,
+					genome: this.genome,
+					hostURL: this.hostURL,
+					nobox: true,
+					gmstackheight: 37,
+					usegm: gm1,
+					allgm: this.allgm,
+					tklst,
+					gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
+					hidedatasetexpression: this.hidedatasetexpression,
+					hidegenecontrol: this.hidegenecontrol,
+					hidegenelegend: this.hidegenelegend,
+					variantPageCall_snv: this.variantPageCall_snv,
+					samplecart: this.samplecart,
+					debugmode: this.debugmode
+				})
 			}
-			client.sketchGmsum(tr.append('td'), rglst, gm1, exonsf, intronpx, pxwidth, 16, common.exoncolor)
-			client.sketchProtein(tr.append('td'), gm1, 200)
-		}
+		})
 	}
 
 	/** __gm__ ends **/
@@ -5077,67 +5017,7 @@ function makecoordinput(bb, butrow) {
 	const debouncer = debounce(genesearch, 300)
 }
 
-function allgm2sum(gmlst) {
-	const chr2gm = new Map()
-	for (const gm of gmlst) {
-		if (gm.hidden) {
-			continue
-		}
-		if (!chr2gm.has(gm.chr)) {
-			chr2gm.set(gm.chr, [])
-		}
-		chr2gm.get(gm.chr).push(gm)
-	}
-	const alllst = []
-	for (let [chr, gmlst] of chr2gm.entries()) {
-		const elst = []
-		for (const m of gmlst) {
-			for (const e of m.exon) {
-				elst.push([e[0], e[1]])
-			}
-		}
-		const reverse = gmlst[0].strand == '-'
-		elst.sort((a, b) => a[0] - b[0])
-		let thisregion = elst[0]
-		const rglst = []
-		for (let i = 1; i < elst.length; i++) {
-			const e = elst[i]
-			if (e[0] > thisregion[1]) {
-				const r = {
-					chr: chr,
-					bstart: thisregion[0],
-					bstop: thisregion[1],
-					start: thisregion[0],
-					stop: thisregion[1],
-					reverse: reverse
-				}
-				if (reverse) {
-					rglst.unshift(r)
-				} else {
-					rglst.push(r)
-				}
-				thisregion = e
-			} else {
-				thisregion[1] = Math.max(thisregion[1], e[1])
-			}
-		}
-		const r = {
-			chr: chr,
-			bstart: thisregion[0],
-			bstop: thisregion[1],
-			start: thisregion[0],
-			stop: thisregion[1],
-			reverse: reverse
-		}
-		if (reverse) {
-			rglst.unshift(r)
-		} else {
-			rglst.push(r)
-		}
-		alllst.push(...rglst)
-	}
-	return [alllst, chr2gm.size]
-}
+// allgm2sum is now imported from #dom (dom/isoformSelect.ts)
 
 const dnalenlimit = 100000
 
