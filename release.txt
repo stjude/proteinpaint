@@ -1,3 +1,2 @@
 Fixes:
 - re-render bin lines when switching between tabs in numeric termsetting edit menu
-- re-render bin lines when switching between tabs in numeric termsetting edit menu;
