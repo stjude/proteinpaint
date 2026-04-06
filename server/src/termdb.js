@@ -451,6 +451,7 @@ async function LDoverlay(q, ds, res) {
 }
 
 async function getFoldChange(allS2v, controlSampleIds) {
+	if (!allS2v || typeof allS2v != 'object') return null
 	const controlValues = []
 	const testedValues = []
 
