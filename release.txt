@@ -1,1 +1,2 @@
-
+Features:
+- Extracted isoform switching code to own dom component and moved it to typescript
