@@ -3,7 +3,14 @@ import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx
 import { term0_term2_defaultQ } from './controls'
 import { t0_t2_defaultQ as term0_term2_defaultQ_surv } from './survival/survival.ts'
 import { fillTermWrapper } from '#termsetting'
-import { filterInit, filterPromptInit, getNormalRoot, excludeFilterByTag, filterJoin } from '#filter/filter'
+import {
+	filterInit,
+	filterPromptInit,
+	getNormalRoot,
+	excludeFilterByTag,
+	filterJoin,
+	negateFilter
+} from '#filter/filter'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { renderTable } from '#dom'
@@ -200,57 +207,20 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			// see code in groups2samplelst() in client/mass/groups.js
 			this.dom.submit.text(`Analyze ${this.groups[0].name} vs others`)
 			this.dom.submit.on('click', async () => {
-				throw new Error('not yet supported')
+				const groups = [this.groups[0]]
+				const otherGroup = {
+					name: 'Not in ' + groups[0].name,
+					color: '#ccc',
+					filter: negateFilter(groups[0].filter)
+				}
+				groups.push(otherGroup)
+				await this.clickSubmit(groups)
 			})
 		} else if (this.groups.length == 2) {
 			// two groups of samples, compare these groups
 			this.dom.submit.text(`Analyze ${this.groups[0].name} vs ${this.groups[1].name}`)
 			this.dom.submit.on('click', async () => {
-				const groups: any[] = []
-				const termValues: any = {}
-				for (const g of this.groups) {
-					const samples = await this.app.vocabApi.getFilteredSampleList(
-						filterJoin([g.filter, this.state.termfilter.filter])
-					)
-					const sampleIds = samples.map(s => {
-						return { sampleId: s }
-					})
-					groups.push({
-						name: g.name,
-						in: true,
-						values: sampleIds
-					})
-					termValues[g.name] = {
-						color: g.color,
-						key: g.name,
-						label: g.name,
-						list: sampleIds
-					}
-				}
-
-				const samplelstTW = {
-					q: { groups },
-					term: {
-						name: groups.map(g => g.name).join(' vs '),
-						type: 'samplelst',
-						values: termValues
-					}
-				}
-
-				// get actual numbers of samples with rnaseq count
-				const body = {
-					genome: this.app.vocabApi.vocab.genome,
-					dslabel: this.app.vocabApi.vocab.dslabel,
-					samplelst: { groups },
-					filter: this.state.termfilter.filter,
-					filter0: this.state.termfilter.filter0,
-					preAnalysis: true
-				}
-				const preAnalysisData = await dofetch3('termdb/DE', { body })
-
-				// render sample counts
-				this.dom.preAnalysis.style('display', 'block')
-				renderPreAnalysisData({ preAnalysisData, samplelstTW, groups, holder: this.dom.preAnalysis, self: this })
+				await this.clickSubmit(this.groups)
 			})
 		} else {
 			throw new Error('cannot exceed 2 groups')
@@ -273,6 +243,57 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			color: rgb(colorScale(groups.length)).formatHex()
 		}
 		groups.push(newGroup)
+	}
+
+	async clickSubmit(groups) {
+		const samplelstTW: any = {
+			q: { groups: [] },
+			term: {
+				name: groups.map(g => g.name).join(' vs '),
+				type: 'samplelst',
+				values: {}
+			}
+		}
+		for (const g of groups) {
+			const samples = await this.app.vocabApi.getFilteredSampleList(
+				filterJoin([g.filter, this.state.termfilter.filter])
+			)
+			const sampleIds = samples.map(s => {
+				return { sampleId: s }
+			})
+			samplelstTW.q.groups.push({
+				name: g.name,
+				in: true,
+				values: sampleIds
+			})
+			samplelstTW.term.values[g.name] = {
+				color: g.color,
+				key: g.name,
+				label: g.name,
+				list: sampleIds
+			}
+		}
+
+		// get actual numbers of samples with rnaseq count
+		const body = {
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			samplelst: { groups: samplelstTW.q.groups },
+			filter: this.state.termfilter.filter,
+			filter0: this.state.termfilter.filter0,
+			preAnalysis: true
+		}
+		const preAnalysisData = await dofetch3('termdb/DE', { body })
+
+		// render sample counts
+		this.dom.preAnalysis.style('display', 'block')
+		renderPreAnalysisData({
+			preAnalysisData,
+			samplelstTW,
+			groups: samplelstTW.q.groups,
+			holder: this.dom.preAnalysis,
+			self: this
+		})
 	}
 }
 
