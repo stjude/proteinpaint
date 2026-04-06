@@ -201,7 +201,7 @@ tape('use_bins_less', async test => {
 		['5'],
 		'has term.bins.less.bin_size as value (is 5 not 3)'
 	)
-	//if (test._ok) opts.pill.destroy()
+	if (test._ok) opts.pill.destroy()
 	test.end()
 })
 
@@ -541,7 +541,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	await opts.pillMenuClick('Edit')
 	const tipLoc = opts.tipLoc
 
-	const toggleButtons = await tipLoc.shows('.sj-toggle-button').all()
+	const toggleButtons = await tipLoc.shows('.sj-toggle-button').get()
 	test.equal(toggleButtons.length, 4, 'Should have 4 toggle buttons for numeric edit menu')
 	test.equal(toggleButtons[0].innerText, 'Continuous', 'Should have title for first tab as Continuous')
 
@@ -568,19 +568,19 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	toggleButtons[2].click()
 	test.deepEqual(
 		await tipLoc.shows('.binsize_g line').length(),
-		await tipLoc.shows(`[data-testid='num-spline-editor-num-knots']`).value(values => Number(values[0])),
+		await tipLoc.shows(`[data-testid='num-spline-editor-num-knots']`).get(i => Number(i[0].value)),
 		'Should have rendered UI for Spline menu'
 	)
 	test.equal(await tipLoc.shows('.binsize_g line').length(), 4, 'Should have rendered knot lints for Spline menu')
 
 	test.equal(toggleButtons[3].innerText, 'Binary', 'Should have title for 4nd tab as Binary')
 	toggleButtons[3].click()
-
 	test.equal(await tipLoc.shows('.binsize_g line').length(), 1, 'Should have rendered UI for Binary menu')
 
 	toggleButtons[2].click()
 	test.equal(
-		await tipLoc.shows('.binsize_g line').length(),
+		//await tipLoc.shows('.binsize_g line').length(),
+		await tipLoc.shows('.binsize_g line').get('length'),
 		4,
 		'Should show the expected number of knots when switching back to Spline tab'
 	)
@@ -619,7 +619,7 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 })
 
 tape('Numerical term: toggle menu - 1 option', async test => {
-	test.timeoutAfter(3000)
+	test.plan(1)
 
 	const opts = await getOpts({
 		numericEditMenuVersion: ['continuous'],
@@ -630,11 +630,10 @@ tape('Numerical term: toggle menu - 1 option', async test => {
 
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
-	await sleep(1000)
 	test.equal(
-		opts.pill.Inner.handler.dom.editDiv.node().querySelectorAll('.sj-toggle-button').length,
+		await opts.tipLoc.shows(`[data-testid='sjpp-num-ts-edit-div']`).find('.sj-toggle-button').length(),
 		0,
-		'Should not have any toggle buttons for nuermic edit menu'
+		'Should not have any toggle buttons for numeric edit menu'
 	)
 	if (test._ok) opts.pill.destroy()
 	test.end()
@@ -685,10 +684,8 @@ tape('Numerical term: integer custom bins', async test => {
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
 
-	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(lines.length, 2, 'should have 2 lines')
+	test.equal(await opts.tipLoc.shows('.binsize_g line').length(), 2, 'should have 2 lines')
 	const tickTexts = tip.d.select('svg').selectAll('.tick').selectAll('text')
 	test.equal(
 		tickTexts
