@@ -181,9 +181,10 @@ Valid gene data types are:
 - "expression" — gene expression, RNA, transcription, FPKM, TPM, counts, upregulated, downregulated, overexpressed, underexpressed
 - "variant" — gene variant, mutation, SNV, SNP, indel, deletion, insertion, fusion, CNV, copy number, frameshift, missense, nonsense, splice, truncation
 - "methylation" — DNA methylation, CpG, epigenetic
+- "protein" — protein abundance, proteomics
 - "missing" — the prompt does NOT specify or imply any gene data type for this gene
 
-Respond with ONLY a valid JSON array. Each element must have "gene" (string) and "dataType" (string). Do NOT include any text outside the JSON.
+Respond with ONLY a valid JSON object. The object must have "gene" (string) and "dataType" (string). Do NOT include any text outside the JSON.
 
 Example 1:
 User prompt: "show ABC expression"
@@ -199,6 +200,11 @@ Example 3:
 User prompt: "show PQR"
 Genes: [PQR]
 Response: {"gene":"PQR","dataType":"missing"}
+
+Example 3:
+User prompt: "show XYZ protein levels"
+Genes: [PQR]
+Response: {"gene":"XYZ","dataType":"protein"}
 
 User prompt: "${user_prompt}"
 Genes: [${geneList}]

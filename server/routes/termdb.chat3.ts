@@ -60,15 +60,15 @@ const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
 const genesetNames = getGenesetNames(g)
 const ai_output_json = await run_chat_pipeline(
-        q.prompt,
-        llm,
-        testing,
-        dataset_db,
-        genedb,
-        ds,
-        genesetNames,
-        agentFiles,
-        aiFilesDir
+q.prompt,
+llm,
+testing,
+dataset_db,
+genedb,
+ds,
+genesetNames,
+agentFiles,
+aiFilesDir
 )
 */
 
@@ -202,12 +202,15 @@ export async function run_chat_pipeline(
 			// because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
 			// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
 			// nondicttypes such as metabolites, genesets, etc.
-			validateNonDictionaryTypes(scaffoldResult.tw1, llm, genes_list, dataset_json)
+			const term1 = await validateNonDictionaryTypes(scaffoldResult.tw1, llm, genes_list, dataset_json)
+			console.log('Validation result for term1:', term1)
 			if (scaffoldResult.tw2) {
-				validateNonDictionaryTypes(scaffoldResult.tw2, llm, genes_list, dataset_json)
+				const term2 = await validateNonDictionaryTypes(scaffoldResult.tw2, llm, genes_list, dataset_json)
+				console.log('Validation result for term2:', term2)
 			}
 			if (scaffoldResult.tw3) {
-				validateNonDictionaryTypes(scaffoldResult.tw3, llm, genes_list, dataset_json)
+				const term3 = await validateNonDictionaryTypes(scaffoldResult.tw3, llm, genes_list, dataset_json)
+				console.log('Validation result for term3:', term3)
 			}
 		}
 		return
