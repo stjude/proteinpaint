@@ -1,2 +1,2 @@
 Features:
-- Extracted isoform switching code to own dom component and moved it to typescript
+- Extracted isoform switching code to its own DOM component and moved it to TypeScript
