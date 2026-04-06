@@ -3,7 +3,7 @@ import { mayLog } from '#src/helpers.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { Scaffold } from './scaffoldTypes.ts'
-import { classifyGeneDataType } from './genedatatypeagent.ts'
+import { classifyGeneDataType } from './genedatatypeagentnew.ts'
 import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 // import { SINGLECELL_GENE_EXPRESSION } from 'terms.js'
 
@@ -26,9 +26,8 @@ export async function validateNonDictionaryTypes(
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any
-): Promise<{ type: 'text'; text: string } | { geneFeatures: GeneDataTypeResult[] }> {
+): Promise<{ type: 'text'; text: string } | { geneFeatures: GeneDataTypeResult } | null> {
 	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
-	let geneFeatures: GeneDataTypeResult[] = [] // This will hold the specific gene features (e.g. expression, mutation, etc.) that are relevant to the user prompt, which can be used by downstream agents to determine which data to pull and how to interpret it. For example, if the user prompt is "Show me the expression of TP53", then we want to classify that the relevant gene feature is "expression". Or if the user prompt is "Show me TP53 mutations", then we want to classify that the relevant gene feature is "mutation". This is important for correctly interpreting the user's intent and providing accurate responses.
 	if (relevant_genes.length > 0) {
 		const AmbiguousGeneMessage = determineAmbiguousGenePrompt(phrase, relevant_genes, dataset_json) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question. This function does NOT use an LLM and searches for specific keywords in the user prompt to determine if the prompt is ambiguous with respect to which gene feature the user is referring to.
 		if (AmbiguousGeneMessage.length > 0) {
@@ -37,14 +36,14 @@ export async function validateNonDictionaryTypes(
 				text: AmbiguousGeneMessage
 			}
 		}
-		const geneDataTypeMessage: GeneDataTypeResult[] | string = await classifyGeneDataType(
+		const geneDataTypeMessage: GeneDataTypeResult | string = await classifyGeneDataType(
 			// This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
 			phrase,
 			llm,
 			relevant_genes,
 			dataset_json
 		)
-		if (typeof geneDataTypeMessage === 'string' || geneDataTypeMessage instanceof String) {
+		if (typeof geneDataTypeMessage === 'string') {
 			if (geneDataTypeMessage.length > 0) {
 				// This shows error is any of the genes are missing relevant features
 				return {
@@ -55,14 +54,15 @@ export async function validateNonDictionaryTypes(
 				// Should not happen
 				throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
 			}
-		} else if (Array.isArray(geneDataTypeMessage)) {
-			geneFeatures = geneDataTypeMessage
+		} else if (geneDataTypeMessage.gene) {
+			return { geneFeatures: geneDataTypeMessage }
 		} else {
 			throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
 		}
+	} else {
+		// Need a similar exhaustive database for metabolites, genesets (e.g. msigdb)
+		return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
 	}
-	return { geneFeatures: geneFeatures }
-	// Need a similar exhaustive database for metabolites, genesets (e.g. msigdb)
 }
 
 export async function inferEntities(scaffold: Scaffold, llm: LlmConfig) {
