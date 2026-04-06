@@ -8,7 +8,8 @@ Standalone reusable component for displaying and selecting gene model isoforms.
 
 Extracted from block.js showisoform4switch() to be reusable.
 
-Supports single-select mode: click a row to select one isoform. Used by block.js and isoformExpression.ts for isoform switching.
+Supports single-select mode: click a row to select one isoform.
+Used by block.js and isoformExpression.ts for isoform switching.
 
 ******* required
 .holder     d3 selection to render into
