@@ -59,6 +59,7 @@ function validateQuery(ds: any) {
 
 		const rows = ds.cohort.db.connection.prepare(sql).all(sampleName)
 		const images: WSImage[] = []
+
 		for (const row of rows) {
 			images.push({
 				filename: row.filename,
