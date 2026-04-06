@@ -1,8 +1,5 @@
-import { PlotBase, defaultUiLabels } from './PlotBase.ts'
+import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { term0_term2_defaultQ } from './controls'
-import { t0_t2_defaultQ as term0_term2_defaultQ_surv } from './survival/survival.ts'
-import { fillTermWrapper } from '#termsetting'
 import {
 	filterInit,
 	filterPromptInit,
@@ -49,19 +46,19 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		const header = this.opts.header.html('Differential Gene Expression')
 		const holder = this.opts.holder.append('div').style('margin', '10px')
 		const table = holder.append('div')
-		const addGroup = holder.append('div')
-		const submit = holder
+		const btns = holder.append('div').style('margin-top', '5px')
+		const addGroup = btns.append('div').style('display', 'inline-block')
+		const submit = btns
 			.append('div')
 			.style('display', 'none')
-			.style('margin-top', '10px')
+			.style('margin-left', '15px')
 			.attr('class', 'sja_new_filter_btn sja_menuoption')
 		const loading = holder.append('div').style('display', 'none').style('margin', '20px 10px').text('Loading...')
 		const preAnalysis = holder
 			.append('div')
 			.style('display', 'none')
-			.style('margin-top', '30px')
+			.style('margin-top', '20px')
 			.style('margin-left', '5px')
-		preAnalysis.append('div').style('font-weight', 'bold').text('Samples with gene expression data:')
 		const dom = { header, table, addGroup, submit, loading, preAnalysis }
 		return dom
 	}
@@ -79,17 +76,16 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init(/*appState*/) {
-		//const state = this.getState(appState)
-		//this.renderSubmit()
-	}
+	async init() {}
 
 	// TODO: handle errors
 	async main() {
-		this.makeGroupUI()
+		this.dom.preAnalysis.selectAll('*').remove()
+		this.makeGroupsUI()
+		this.mayRenderSubmit()
 	}
 
-	async makeGroupUI() {
+	async makeGroupsUI() {
 		// filter prompt
 		if (!this.filterPrompt) {
 			this.filterPrompt = await filterPromptInit({
@@ -100,14 +96,15 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				callback: async f => {
 					const filter = getNormalRoot(f)
 					this.addNewGroup(filter, this.groups)
-					await this.makeGroupUI()
+					await this.main()
 				},
 				debug: this.opts.debug
 			})
 		}
 
+		// TODO: need to also consider filter0
 		// filterPrompt.main() always empties the filterUiRoot data
-		const filter = structuredClone(this.filter)
+		const filter = structuredClone(this.state.termfilter.filter)
 		this.filterPrompt.main(excludeFilterByTag(filter, 'cohortFilter')) // provide mass filter to limit the term tree
 
 		if (!this.groups.length) {
@@ -129,10 +126,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 						const index = this.groups.findIndex(group => group.name == newName)
 						if (index != -1) {
 							alert(`Group named ${newName} already exists`)
-							await this.makeGroupUI()
+							await this.main()
 						} else {
 							this.groups[i].name = newName
-							await this.makeGroupUI()
+							await this.main()
 						}
 					}
 				},
@@ -140,7 +137,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 					label: 'COLOR',
 					editCallback: async (i, cell) => {
 						this.groups[i].color = cell.color
-						this.makeGroupUI()
+						this.main()
 					}
 				},
 				//{ label: '#SAMPLE' }, // will re-enable when filtered sample count can be supported for gdc
@@ -173,7 +170,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				.html('&times;')
 				.on('click', () => {
 					this.groups.splice(i, 1)
-					this.makeGroupUI()
+					this.main()
 				})
 
 			// create filter ui in its cell
@@ -191,15 +188,37 @@ class DEinputPlot extends PlotBase implements RxComponent {
 						// update filter
 						group.filter = f
 					}
-					this.makeGroupUI()
+					this.main()
 				}
 			}).main(group.filter)
 		}
 
 		this.dom.addGroup.select('.sja_new_filter_btn').style('pointer-events', 'auto').style('opacity', 1)
+	}
 
-		if (!this.groups.length) return
+	addNewGroup(filter, groups, name?: string) {
+		if (!groups) throw 'groups is missing'
+		if (!name) {
+			const base = 'New group'
+			name = base
+			for (let i = 0; ; i++) {
+				name = base + (i === 0 ? '' : ' ' + i)
+				if (!groups.find(g => g.name === name)) break
+			}
+		}
+		const newGroup = {
+			name,
+			filter,
+			color: rgb(colorScale(groups.length)).formatHex()
+		}
+		groups.push(newGroup)
+	}
 
+	mayRenderSubmit() {
+		if (!this.groups.length) {
+			this.dom.submit.style('display', 'none')
+			return
+		}
 		this.dom.submit.style('display', 'inline-block')
 		if (this.groups.length == 1) {
 			// single group of samples, compare with all other samples
@@ -224,24 +243,6 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		} else {
 			throw new Error('cannot exceed 2 groups')
 		}
-	}
-
-	addNewGroup(filter, groups, name?: string) {
-		if (!groups) throw 'groups is missing'
-		if (!name) {
-			const base = 'New group'
-			name = base
-			for (let i = 0; ; i++) {
-				name = base + (i === 0 ? '' : ' ' + i)
-				if (!groups.find(g => g.name === name)) break
-			}
-		}
-		const newGroup = {
-			name,
-			filter,
-			color: rgb(colorScale(groups.length)).formatHex()
-		}
-		groups.push(newGroup)
 	}
 
 	async clickSubmit(groups) {
@@ -289,6 +290,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 		// render sample counts
 		this.dom.preAnalysis.style('display', 'block')
+		this.dom.preAnalysis.append('div').style('font-weight', 'bold').text('Samples with gene expression data:')
+
 		renderPreAnalysisData({
 			preAnalysisData,
 			samplelstTW,
@@ -302,40 +305,10 @@ class DEinputPlot extends PlotBase implements RxComponent {
 export const DEinputInit = getCompInit(DEinputPlot)
 export const componentInit = DEinputInit
 
-export async function getPlotConfig(opts, app) {
-	try {
-		// don't supply defaultQ if term.bins or term.q is defined (e.g. if q.mode='continuous', shouldn't override it with defaultQ)
-		if (opts.term) {
-			const defaultQ: any = opts.term.bins || opts.term.q ? undefined : { geneVariant: { type: 'predefined-groupset' } }
-			await fillTermWrapper(opts.term, app.vocabApi, defaultQ)
-		}
-		if (opts.term2) {
-			const defaultQ =
-				opts.term2.bins || opts.term2.q
-					? undefined
-					: opts.term.term.type == 'survival'
-					? term0_term2_defaultQ_surv
-					: term0_term2_defaultQ
-			await fillTermWrapper(opts.term2, app.vocabApi, defaultQ)
-		}
-		if (opts.term0) {
-			const defaultQ =
-				opts.term0.bins || opts.term0.q
-					? undefined
-					: opts.term.term.type == 'survival'
-					? term0_term2_defaultQ_surv
-					: term0_term2_defaultQ
-			await fillTermWrapper(opts.term0, app.vocabApi, defaultQ)
-		}
-	} catch (e: any) {
-		if (e.stack) console.log(e.stack)
-		throw `${e} [summaryInput getPlotConfig()]`
-	}
-
+export async function getPlotConfig(opts) {
 	const config = {
-		chartType: 'summaryInput',
-		settings: {},
-		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {})
+		chartType: 'DEinput',
+		settings: {}
 	}
 
 	// may apply term-specific changes to the default object
