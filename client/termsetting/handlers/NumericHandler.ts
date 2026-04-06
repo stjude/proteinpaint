@@ -157,7 +157,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 
 			this.density_data = await this.density.setData()
 			await this.setEditHandler(this.tabs.find(t => t.active))
-			this.dom.editDiv = div.append('div')
+			this.dom.editDiv = div.append('div').attr('data-testid', 'sjpp-num-ts-edit-div')
 			this.dom.btnDiv = div.append('div')
 			this.renderButtons(this.dom.btnDiv)
 
