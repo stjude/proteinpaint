@@ -933,6 +933,157 @@ tape('series order - condition without hidden values', function (test) {
 	}
 })
 
+tape('series order - mixed ordered and unordered values', function (test) {
+	test.timeoutAfter(5000)
+
+	const term = JSON.parse(JSON.stringify(termjson.diaggrp))
+	term.values['Acute lymphoblastic leukemia'].order = 1
+	term.values['Acute myeloid leukemia'].order = 2
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		const bar = barchart.Inner
+		const ids = [...bar.dom.holder.node().querySelectorAll('.bars-cell-grp')]
+			.sort((a, b) => a.__data__.data[0].y - b.__data__.data[0].y)
+			.map(d => d.__data__.seriesId)
+		const i1 = ids.indexOf('Acute lymphoblastic leukemia')
+		const i2 = ids.indexOf('Acute myeloid leukemia')
+		test.true(i1 > -1 && i2 > -1, 'should include both explicitly ordered values')
+		test.true(i1 < i2, 'should keep explicit ordered values in declared order')
+		if (test._ok) bar.app.destroy()
+		test.end()
+	}
+})
+
+tape('series visibility - hidden labels map to key refs', function (test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'sex',
+						q: {
+							hiddenValues: { Female: true }
+						}
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		const bar = barchart.Inner
+		const values = bar.config.term.term.values || {}
+		const femaleKey =
+			Object.keys(values).find(k => String(values[k]?.label || '').toLowerCase() == 'female') ||
+			bar.settings.exclude.cols[0]
+		test.true(bar.settings.cols.includes('1') && bar.settings.cols.includes('2'), 'should keep key-based refs for sex')
+		test.deepEqual(bar.settings.exclude.cols, [femaleKey], 'should map hidden label Female to key refs')
+		test.equal(
+			bar.dom.holder.selectAll('.bars-cell-grp').size(),
+			1,
+			'should render one visible bar after hiding Female'
+		)
+		if (test._ok) bar.app.destroy()
+		test.end()
+	}
+})
+
+tape('termCollection multi-key explode with hidden overlays', function (test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: getCategoricalTermcollectionTw(),
+					term2: {
+						id: 'sex',
+						q: {
+							hiddenValues: { Male: true }
+						}
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		const bar = barchart.Inner
+		test.true(bar.visibleCharts.length > 0, 'should render visible charts for exploded termCollection')
+		const hiddenOverlayIds = new Set((bar.settings.exclude.rows || []).map(i => String(i)))
+		const allVisibleData = bar.visibleCharts.flatMap(c => c.visibleSerieses.flatMap(s => s.visibleData))
+		test.true(
+			allVisibleData.every(d => !hiddenOverlayIds.has(String(d.dataId))),
+			'should exclude hidden overlay ids from exploded series'
+		)
+		if (test._ok) bar.app.destroy()
+		test.end()
+	}
+})
+
+tape('deterministic tail ordering for unknown labels', function (test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'Arrhythmias'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		const bar = barchart.Inner
+		test.true(bar.barSorter('unknown B', 'unknown A') > 0, 'should sort unknown labels deterministically by id')
+		test.true(bar.barSorter('10', '2') > 0, 'should sort unknown numeric labels numerically in tail ordering')
+		if (test._ok) bar.app.destroy()
+		test.end()
+	}
+})
+
 tape('single barchart, categorical filter', function (test) {
 	test.timeoutAfter(3000)
 	runpp({

@@ -614,6 +614,24 @@ function getPj(q, data, tdb, ds) {
 }
 
 export function getOrderedLabels(term, bins, events, q) {
+	const numericIdPattern = /^-?\d+(?:\.\d+)?$/
+	const isNumericId = id => {
+		const sid = String(id)
+		const num = Number(sid)
+		return Number.isFinite(num) && numericIdPattern.test(sid)
+	}
+	const compareIdsDeterministic = (a, b) => {
+		const sa = String(a)
+		const sb = String(b)
+		const na = Number(sa)
+		const nb = Number(sb)
+		const aIsNum = isNumericId(sa)
+		const bIsNum = isNumericId(sb)
+		if (aIsNum && bIsNum) return na - nb
+		return sa < sb ? -1 : sa > sb ? 1 : 0
+	}
+	const getValueId = (key, value) => String(value?.key ?? key)
+
 	if (events) return events.map(e => e.label)
 	if (term.type == 'condition') {
 		if (q?.groups?.length) return q.groups.map(g => g.name)
@@ -627,18 +645,38 @@ export function getOrderedLabels(term, bins, events, q) {
 	const vals = Object.values(term.values || {})
 	const hasAnyOrder = vals.some(v => v && 'order' in v)
 	if (hasAnyOrder) {
-		return Object.keys(term.values)
-			.sort((a, b) => {
-				const aHasOrder = 'order' in term.values[a]
-				const bHasOrder = 'order' in term.values[b]
-				if (aHasOrder && bHasOrder) return term.values[a].order - term.values[b].order
-				if (aHasOrder && !bHasOrder) return -1
-				if (!aHasOrder && bHasOrder) return 1
-				return 0
-			})
-			.map(i => term.values[i].key)
+		// Build a label-to-order fallback map from entries that carry an explicit order.
+		// This handles terms where numeric keys define the order (e.g. 0=Stage I) but
+		// annotations store the label string directly (e.g. "Stage I" as the value),
+		// resulting in duplicate label-based keys that have no order property.
+		const labelToOrder = new Map()
+		for (const v of vals) {
+			if (v?.order !== undefined && v.label !== undefined) {
+				if (!labelToOrder.has(v.label)) labelToOrder.set(v.label, v.order)
+			}
+		}
+		const getEffectiveOrder = (key, value) => {
+			if (value?.order !== undefined) return value.order
+			return labelToOrder.get(value?.label ?? key)
+		}
+		return (
+			Object.keys(term.values)
+				.sort((a, b) => {
+					const va = term.values[a]
+					const vb = term.values[b]
+					const aOrder = getEffectiveOrder(a, va)
+					const bOrder = getEffectiveOrder(b, vb)
+					if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder
+					if (aOrder !== undefined) return -1
+					if (bOrder !== undefined) return 1
+					return compareIdsDeterministic(getValueId(a, va), getValueId(b, vb))
+				})
+				// Return .key if present (normal case); fall back to the object key itself
+				// so that label-based duplicate keys return their own string (matching annotations).
+				.map(i => getValueId(i, term.values[i]))
+		)
 	}
-	return bins?.map(bin => (bin.name ? bin.name : bin.label))
+	return bins?.map(bin => (bin.name ? bin.name : bin.label)) || []
 }
 
 function getTermDetails(q, tdb, index) {

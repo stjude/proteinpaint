@@ -15,6 +15,105 @@ import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../mass/groups.js'
 
+const numericIdPattern = /^-?\d+(?:\.\d+)?$/
+
+export function isNumericId(id) {
+	const sid = String(id)
+	const num = Number(sid)
+	return Number.isFinite(num) && numericIdPattern.test(sid)
+}
+
+export function compareIdsDeterministic(a, b) {
+	const sa = String(a)
+	const sb = String(b)
+	const na = Number(sa)
+	const nb = Number(sb)
+	const aIsNum = isNumericId(sa)
+	const bIsNum = isNumericId(sb)
+	if (aIsNum && bIsNum) return na - nb
+	return sa < sb ? -1 : sa > sb ? 1 : 0
+}
+
+export function getCanonicalIdCandidates(tw, id) {
+	const sid = String(id)
+	const values = tw?.term?.values
+	if (!values) return [sid]
+	const candidates = []
+	if (sid in values) candidates.push(String(values[sid]?.key ?? sid))
+	for (const [k, v] of Object.entries(values)) {
+		if (v?.label !== undefined && String(v.label) == sid) candidates.push(String(v?.key ?? k))
+	}
+	if (!candidates.length) return [sid]
+	return [...new Set(candidates)].sort(compareIdsDeterministic)
+}
+
+export function findKeyLabelDrifts(tw, ids) {
+	const values = tw?.term?.values
+	if (!values || !ids?.length) return []
+	const idSet = new Set(ids.map(i => String(i)))
+	const drifts = []
+	for (const [k, v] of Object.entries(values)) {
+		const key = String(v?.key ?? k)
+		const label = v?.label === undefined ? null : String(v.label)
+		if (label && idSet.has(key) && idSet.has(label)) drifts.push({ key, label })
+	}
+	return drifts
+}
+
+export function getDeclaredValueOrder(tw) {
+	const values = tw?.term?.values
+	if (!values) return null
+	const order = []
+	const seen = new Set()
+	const entries = Object.entries(values).map(([k, v], i) => ({
+		k,
+		v,
+		idx: i,
+		key: String(v?.key ?? k),
+		label: v?.label === undefined ? null : String(v.label)
+	}))
+	const numericEntries = entries.filter(e => isNumericId(e.key)).sort((a, b) => Number(a.key) - Number(b.key))
+	const nonNumericEntries = entries.filter(e => !isNumericId(e.key)).sort((a, b) => a.idx - b.idx)
+	for (const { key, label } of [...numericEntries, ...nonNumericEntries]) {
+		if (!seen.has(key)) {
+			seen.add(key)
+			order.push(key)
+		}
+		if (label && !seen.has(label)) {
+			seen.add(label)
+			order.push(label)
+		}
+	}
+	return order.length ? order : null
+}
+
+export function getNumericValueOrder(tw) {
+	const values = tw?.term?.values
+	if (!values) return null
+	const entries = Object.entries(values)
+	if (!entries.length) return null
+	const keys = entries.map(([k, v]) => v?.key ?? k).map(k => String(k))
+	if (!keys.every(k => isNumericId(k))) return null
+	return keys.sort((a, b) => Number(a) - Number(b))
+}
+
+export function hasNumericValueKeys(tw) {
+	const values = tw?.term?.values
+	if (!values) return false
+	return Object.entries(values)
+		.map(([k, v]) => String(v?.key ?? k))
+		.some(k => isNumericId(k))
+}
+
+export function findCanonicalOrderIndex(tw, orderedIds, id) {
+	for (const canon of getCanonicalIdCandidates(tw, id)) {
+		let idx = orderedIds.indexOf(canon)
+		if (idx == -1) idx = orderedIds.indexOf(String(canon))
+		if (idx !== -1) return idx
+	}
+	return Number.MAX_SAFE_INTEGER
+}
+
 export class Barchart extends PlotBase {
 	static type = 'barchart'
 
@@ -584,48 +683,37 @@ export class Barchart extends PlotBase {
 	processData(chartsData) {
 		this.seriesOrder = this.setMaxVisibleTotals(chartsData)
 		const visibleSeriesOrder = [...this.seriesOrder]
-		const getDeclaredValueOrder = tw => {
-			const values = tw?.term?.values
-			if (!values) return null
-			const order = []
-			const seen = new Set()
-			const entries = Object.entries(values).map(([k, v], i) => ({
-				k,
-				v,
-				idx: i,
-				key: String(v?.key ?? k),
-				label: v?.label === undefined ? null : String(v.label)
-			}))
-			const isNumeric = x => /^-?\d+(?:\.\d+)?$/.test(x)
-			const numericEntries = entries.filter(e => isNumeric(e.key)).sort((a, b) => Number(a.key) - Number(b.key))
-			const nonNumericEntries = entries.filter(e => !isNumeric(e.key)).sort((a, b) => a.idx - b.idx)
-			for (const { key, label } of [...numericEntries, ...nonNumericEntries]) {
-				if (!seen.has(key)) {
-					seen.add(key)
-					order.push(key)
-				}
-				if (label && !seen.has(label)) {
-					seen.add(label)
-					order.push(label)
-				}
+		const resolveCanonicalId = (tw, id, scope) => {
+			const sid = String(id)
+			const candidates = getCanonicalIdCandidates(tw, sid)
+			if (candidates.length == 1) return candidates[0]
+			if (candidates.includes(sid)) return sid
+			if (!this._warnedCanonicalAmbiguity) {
+				this._warnedCanonicalAmbiguity = true
+				console.warn('[barchart] canonical id ambiguity detected; using deterministic fallback', {
+					scope,
+					id: sid,
+					candidates
+				})
 			}
-			return order.length ? order : null
+			return candidates[0]
 		}
-		const getNumericValueOrder = tw => {
-			const values = tw?.term?.values
-			if (!values) return null
-			const entries = Object.entries(values)
-			if (!entries.length) return null
-			const keys = entries.map(([k, v]) => v?.key ?? k).map(k => String(k))
-			if (!keys.every(k => /^-?\d+(?:\.\d+)?$/.test(k))) return null
-			return keys.sort((a, b) => Number(a) - Number(b))
+		const assertCanonicalInvariant = (tw, ids, scope) => {
+			const out = new Map()
+			for (const id of ids || []) {
+				out.set(String(id), resolveCanonicalId(tw, id, scope))
+			}
+			return out
 		}
-		const hasNumericValueKeys = tw => {
-			const values = tw?.term?.values
-			if (!values) return false
-			return Object.entries(values)
-				.map(([k, v]) => String(v?.key ?? k))
-				.some(k => /^-?\d+(?:\.\d+)?$/.test(k))
+		const watchKeyLabelDrift = (tw, ids, scope) => {
+			const drifts = findKeyLabelDrifts(tw, ids)
+			if (drifts.length && !this._warnedKeyLabelDrift) {
+				this._warnedKeyLabelDrift = true
+				console.warn('[barchart] mixed key/label ids detected; this may indicate ordering drift', {
+					scope,
+					drifts: drifts.slice(0, 10)
+				})
+			}
 		}
 		const term1DeclaredOrder = getDeclaredValueOrder(this.config.term)
 		const term1ConditionOrder =
@@ -658,23 +746,32 @@ export class Barchart extends PlotBase {
 		const rows = chartsData.refs.useRowOrder
 			? chartsData.refs.rows
 			: term2ConditionRows || term2NumericRows || chartsData.refs.rows
-		const getOrderIndex = (lst, v) => {
-			let idx = lst.indexOf(v)
-			if (idx == -1) idx = lst.indexOf(String(v))
-			return idx == -1 ? Number.MAX_SAFE_INTEGER : idx
-		}
+		watchKeyLabelDrift(this.config.term, this.seriesOrder, 'term1-series')
+		watchKeyLabelDrift(this.config.term2, rows, 'term2-overlays')
+		const seriesCanonical = assertCanonicalInvariant(this.config.term, this.seriesOrder, 'term1-series')
+		const rowCanonical = assertCanonicalInvariant(this.config.term2, rows, 'term2-overlays')
+		const canonicalSeriesOrder = this.seriesOrder.map(v => seriesCanonical.get(String(v)) || String(v))
+		const canonicalRows = rows.map(v => rowCanonical.get(String(v)) || String(v))
+		const getSeriesIndex = v => findCanonicalOrderIndex(this.config.term, canonicalSeriesOrder, v)
+		const getRowIndex = v => findCanonicalOrderIndex(this.config.term2, canonicalRows, v)
 
-		this.barSorter = (a, b) => getOrderIndex(this.seriesOrder, a) - getOrderIndex(this.seriesOrder, b)
+		this.barSorter = (a, b) => {
+			const ai = getSeriesIndex(a)
+			const bi = getSeriesIndex(b)
+			return ai != bi ? ai - bi : compareIdsDeterministic(a, b)
+		}
 		this.overlaySorter = chartsData.refs.useRowOrder
-			? (a, b) => getOrderIndex(rows, a.dataId) - getOrderIndex(rows, b.dataId)
+			? (a, b) => {
+					const ai = getRowIndex(a.dataId)
+					const bi = getRowIndex(b.dataId)
+					return ai != bi ? ai - bi : compareIdsDeterministic(a.dataId, b.dataId)
+			  }
 			: (a, b) =>
 					this.totalsByDataId[b.dataId] > this.totalsByDataId[a.dataId]
 						? 1
 						: this.totalsByDataId[b.dataId] < this.totalsByDataId[a.dataId]
 						? -1
-						: a.dataId < b.dataId
-						? -1
-						: 1
+						: compareIdsDeterministic(a.dataId, b.dataId)
 
 		this.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
 
