@@ -49,15 +49,20 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		const header = this.opts.header.html('Differential Gene Expression')
 		const holder = this.opts.holder.append('div').style('margin', '10px')
 		const table = holder.append('div')
-		const btns = holder.append('div')
-		const addGroup = btns.append('div').style('display', 'inline-block')
-		const submit = btns
+		const addGroup = holder.append('div')
+		const submit = holder
 			.append('div')
 			.style('display', 'none')
-			.style('margin-left', '15px')
+			.style('margin-top', '10px')
 			.attr('class', 'sja_new_filter_btn sja_menuoption')
-		const preAnalysis = holder.append('div').style('display', 'none').style('margin-top', '20px')
-		const dom = { header, table, addGroup, submit, preAnalysis }
+		const loading = holder.append('div').style('display', 'none').style('margin', '20px 10px').text('Loading...')
+		const preAnalysis = holder
+			.append('div')
+			.style('display', 'none')
+			.style('margin-top', '30px')
+			.style('margin-left', '5px')
+		preAnalysis.append('div').style('font-weight', 'bold').text('Samples with gene expression data:')
+		const dom = { header, table, addGroup, submit, loading, preAnalysis }
 		return dom
 	}
 
@@ -85,14 +90,6 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	}
 
 	async makeGroupUI() {
-		/*// message
-		div
-			.append('div')
-			.style('margin', '15px 0px')
-			.text(
-				'Group samples by mutation status. Samples are assigned to first possible group. Only tested samples are considered.'
-			)*/
-
 		// filter prompt
 		if (!this.filterPrompt) {
 			this.filterPrompt = await filterPromptInit({
@@ -199,13 +196,14 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			}).main(group.filter)
 		}
 
+		this.dom.addGroup.select('.sja_new_filter_btn').style('pointer-events', 'auto').style('opacity', 1)
+
 		if (!this.groups.length) return
 
 		this.dom.submit.style('display', 'inline-block')
 		if (this.groups.length == 1) {
 			// single group of samples, compare with all other samples
-			// see code in groups2samplelst() in client/mass/groups.js
-			this.dom.submit.text(`Analyze ${this.groups[0].name} vs others`)
+			this.dom.submit.text(`Submit (${this.groups[0].name} vs others)`)
 			this.dom.submit.on('click', async () => {
 				const groups = [this.groups[0]]
 				const otherGroup = {
@@ -218,7 +216,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			})
 		} else if (this.groups.length == 2) {
 			// two groups of samples, compare these groups
-			this.dom.submit.text(`Analyze ${this.groups[0].name} vs ${this.groups[1].name}`)
+			this.dom.addGroup.select('.sja_new_filter_btn').style('pointer-events', 'none').style('opacity', 0.5)
+			this.dom.submit.text(`Submit (${this.groups[0].name} vs ${this.groups[1].name})`)
 			this.dom.submit.on('click', async () => {
 				await this.clickSubmit(this.groups)
 			})
@@ -246,6 +245,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	}
 
 	async clickSubmit(groups) {
+		this.dom.loading.style('display', 'block')
 		const samplelstTW: any = {
 			q: { groups: [] },
 			term: {
@@ -284,6 +284,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			preAnalysis: true
 		}
 		const preAnalysisData = await dofetch3('termdb/DE', { body })
+
+		this.dom.loading.style('display', 'none')
 
 		// render sample counts
 		this.dom.preAnalysis.style('display', 'block')
