@@ -31,7 +31,7 @@ class ProteinView {
 	}
 
 	async main() {
-		const term = this.state.config?.term?.term || this.state.config?.term
+		const term = this.state.config?.tw?.term
 		if (!term?.name) throw 'proteinView: selected protein term is missing'
 
 		if (this.opts.header) this.opts.header.style('padding-left', '7px').text(`Protein View: ${term.name}`)
@@ -39,7 +39,7 @@ class ProteinView {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
 			for: 'proteinView',
-			term: this.state.config.term,
+			term: this.state.config.tw,
 			filter: this.state.config.filter,
 			filter0: this.state.config.filter0
 		}
@@ -162,7 +162,7 @@ function renderFCSummary(holder, data, self) {
 }
 
 function launchViolinPlot(self, assayName, cohortName) {
-	const selectedProtein = self.state.config?.term?.term || self.state.config?.term
+	const selectedProtein = self.state.config?.tw?.term
 	if (!selectedProtein) throw 'proteinView: selected protein term is missing'
 
 	const action = {
@@ -310,7 +310,7 @@ function getLog2Ratio(foldChange) {
 
 export async function getPlotConfig(opts) {
 	const config = structuredClone(defaultConfig)
-	if (!opts.term) throw 'proteinView requires opts.term'
+	if (!opts.tw) throw 'proteinView requires opts.tw'
 	return copyMerge(config, opts)
 }
 

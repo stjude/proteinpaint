@@ -371,7 +371,7 @@ function getChartTypeList(self, state) {
 			chartType: 'proteinView',
 			usecase: {
 				target: 'proteinView',
-				detail: 'term',
+				detail: 'tw',
 				label: 'Select one protein'
 			},
 			clickTo: self.showTree_select1term
