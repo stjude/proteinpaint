@@ -1,4 +1,6 @@
-import { getCompInit, copyMerge } from '#rx'
+import type { MassState, BasePlotConfig } from '#mass/types/mass'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
+import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
 import { NumericModes } from '#shared/terms.js'
 import { toTvslstFilter } from './proteomeAbundance.js'
@@ -9,11 +11,19 @@ const defaultConfig = {
 	chartType: 'proteinView'
 }
 
-class ProteinView {
+class ProteinView extends PlotBase implements RxComponent {
 	static type = 'proteinView'
+	type: string
+	dom!: {
+		holder: any
+		body: any
+	}
+	components: any
 
-	constructor() {
+	constructor(opts: any, api) {
+		super(opts, api)
 		this.type = ProteinView.type
+		this.components = {}
 	}
 
 	async init() {
@@ -24,8 +34,8 @@ class ProteinView {
 		}
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+	getState(appState: MassState) {
+		const config: any = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return { config }
 	}
@@ -34,7 +44,6 @@ class ProteinView {
 		const term = this.state.config?.tw?.term
 		if (!term?.name) throw 'proteinView: selected protein term is missing'
 
-		if (this.opts.header) this.opts.header.style('padding-left', '7px').text(`Protein View: ${term.name}`)
 		const body = {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
@@ -51,7 +60,7 @@ class ProteinView {
 	}
 }
 
-function renderFCSummary(holder, data, self) {
+function renderFCSummary(holder: any, data: any, self: ProteinView) {
 	holder.selectAll('*').remove()
 
 	// data.nonPTMAssays store the fold change for each nonPTM assay type, data.PTMs store the PTM data (including fold change) for each PTM assay type
@@ -61,7 +70,7 @@ function renderFCSummary(holder, data, self) {
 	for (const assay of nonPTMAssays) {
 		for (const c of assay.nonPTMCohorts || []) {
 			const log2ratio = getLog2Ratio(c.value)
-			if (Number.isFinite(log2ratio)) maxAbs = Math.max(maxAbs, Math.abs(log2ratio))
+			if (log2ratio !== null) maxAbs = Math.max(maxAbs, Math.abs(log2ratio))
 		}
 	}
 	if (maxAbs < 0.05) maxAbs = 0.05 // set a minimum scale for better visualization of small fold changes
@@ -135,17 +144,17 @@ function renderFCSummary(holder, data, self) {
 				.style('opacity', 0.7)
 
 			const value = Number.isFinite(log2ratio) ? log2ratio : 0
-			const ratio = maxAbs > 0 ? Math.abs(value) / maxAbs : 0
+			const ratio = maxAbs > 0 ? Math.abs(value as number) / maxAbs : 0
 			const widthPct = Math.max(0, Math.min(50, ratio * 50))
-			if (Number.isFinite(log2ratio) && widthPct > 0) {
+			if (log2ratio !== null && widthPct > 0) {
 				track
 					.append('div')
 					.style('position', 'absolute')
-					.style('left', value >= 0 ? '50%' : `${50 - widthPct}%`)
+					.style('left', log2ratio >= 0 ? '50%' : `${50 - widthPct}%`)
 					.style('top', 0)
 					.style('bottom', 0)
 					.style('width', `${widthPct}%`)
-					.style('background', value >= 0 ? '#2b8a3e' : '#c92a2a')
+					.style('background', log2ratio >= 0 ? '#2b8a3e' : '#c92a2a')
 					.style('opacity', 1)
 			}
 
@@ -156,16 +165,16 @@ function renderFCSummary(holder, data, self) {
 				.style('cursor', 'pointer')
 				.attr('title', 'Click to show violin plot')
 				.on('click', () => launchViolinPlot(self, assayName, cohortName))
-				.text(Number.isFinite(log2ratio) ? log2ratio.toFixed(3) : 'NA')
+				.text(log2ratio !== null ? log2ratio.toFixed(3) : 'NA')
 		}
 	}
 }
 
-function launchViolinPlot(self, assayName, cohortName) {
+function launchViolinPlot(self: ProteinView, assayName: string, cohortName: string) {
 	const selectedProtein = self.state.config?.tw?.term
 	if (!selectedProtein) throw 'proteinView: selected protein term is missing'
 
-	const action = {
+	const action: any = {
 		type: 'plot_create',
 		config: {
 			chartType: 'summary'
@@ -190,10 +199,10 @@ function launchViolinPlot(self, assayName, cohortName) {
 	self.app.dispatch(action)
 }
 
-async function renderPTMLollipop(holder, data, self) {
+async function renderPTMLollipop(holder: any, data: any, self: ProteinView) {
 	if (!data?.PTMAssays?.length) return
-	const custom_variants = []
-	const mergedMclassOverride = {}
+	const custom_variants: any[] = []
+	const mergedMclassOverride: any = {}
 	const gmCache = new Map()
 	for (const ptm of data.PTMAssays) {
 		//use default gene model to get coordinates for all PTM sites, which is sufficient for most cases
@@ -269,8 +278,8 @@ async function renderPTMLollipop(holder, data, self) {
 
 // return the first valid modification site parsed from the modSites string, which is expected to be in the format like "S10", or "S10,T11"
 // for now return the first valid site for simplicity. TODO: parse and display multiple sites if available.
-function parsePTMModSites(modSites) {
-	if (!modSites || typeof modSites != 'string') return null
+function parsePTMModSites(modSites: string) {
+	if (!modSites) return null
 	const regex = /([A-Za-z])(\d+)/g
 	let m
 	while ((m = regex.exec(modSites)) !== null) {
@@ -281,7 +290,7 @@ function parsePTMModSites(modSites) {
 	return null
 }
 
-async function getGmForPTM(geneName, genomeName, gmCache) {
+async function getGmForPTM(geneName: string, genomeName: string, gmCache: Map<string, any>) {
 	if (!geneName) return null
 	if (gmCache.has(geneName)) return gmCache.get(geneName)
 
@@ -298,17 +307,17 @@ async function getGmForPTM(geneName, genomeName, gmCache) {
 		return null
 	}
 
-	const gm = d.gmlst.find(i => i.isdefault) || d.gmlst[0]
+	const gm = d.gmlst.find((i: any) => i.isdefault) || d.gmlst[0]
 	gmCache.set(geneName, gm)
 	return gm
 }
 
-function getLog2Ratio(foldChange) {
+function getLog2Ratio(foldChange: number) {
 	if (!Number.isFinite(foldChange) || foldChange <= 0) return null
 	return Math.log2(foldChange)
 }
 
-export async function getPlotConfig(opts) {
+export async function getPlotConfig(opts: any) {
 	const config = structuredClone(defaultConfig)
 	if (!opts.tw) throw 'proteinView requires opts.tw'
 	return copyMerge(config, opts)

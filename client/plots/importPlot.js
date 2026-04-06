@@ -67,8 +67,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import(`./summary.ts`)
 
 		case 'proteinView':
-			return await import(`./proteinView.js`)
-
+			return await import(`./proteinView.ts`)
 		case 'survival':
 			return await import(`./survival/survival.js`)
 
