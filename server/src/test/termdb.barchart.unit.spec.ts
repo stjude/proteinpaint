@@ -11,7 +11,12 @@ import { getOrderedLabels } from '../termdb.barchart.js'
  * getOrderedLabels: handles mixed values with and without 'order' property
  * getOrderedLabels: returns bin names/labels when no ordering info
  * getOrderedLabels: handles undefined bins
+ * getOrderedLabels: verifies regression - uses key instead of label
+ * getOrderedLabels: sorts all values by order property regardless of declaration order
+ * getOrderedLabels: detects order when first value has no order
  * getOrderedLabels: label-based duplicate keys resolve order from numeric counterparts
+ * getOrderedLabels: treats order:0 as a valid explicit order, not falsy-skipped
+ * getOrderedLabels: non-contiguous order values sort correctly
  */
 
 tape('\n', function (test) {
@@ -134,9 +139,9 @@ tape('getOrderedLabels: verifies regression - uses key instead of label', t => {
 	t.end()
 })
 
-tape('getOrderedLabels: verifies firstVal check optimization', t => {
-	// This test verifies the optimization that checks only the first value
-	// rather than filtering all values
+tape('getOrderedLabels: sorts all values by order property regardless of declaration order', t => {
+	// Verifies that any value with an order property is detected (via vals.some(...))
+	// and that all entries sort correctly by their order property, not by insertion order.
 	const term = {
 		type: 'categorical',
 		values: {
@@ -147,8 +152,7 @@ tape('getOrderedLabels: verifies firstVal check optimization', t => {
 	}
 	const result = getOrderedLabels(term, null, null, null)
 
-	// Should work correctly even though only first value is checked for 'order' property
-	t.deepEqual(result, ['keyB', 'keyC', 'keyA'], 'should correctly sort by order property based on firstVal check')
+	t.deepEqual(result, ['keyB', 'keyC', 'keyA'], 'should sort keys by order property regardless of declaration order')
 
 	t.end()
 })
@@ -209,23 +213,25 @@ tape('getOrderedLabels: label-based duplicate keys resolve order from numeric co
 	t.end()
 })
 
-tape('getOrderedLabels: handles annotation values not present in metadata', t => {
-	// Regression guard for values that appear in actual data but are not declared in the term
+tape('getOrderedLabels: treats order:0 as a valid explicit order, not falsy-skipped', t => {
+	// Regression guard: order:0 is falsy but must be honoured as an explicit declared order.
+	// The CareReg staging term uses order:0 for "Stage 0"; a naive `if (value.order)` check
+	// would silently drop it and fall back to an unordered sort.
+	// getOrderedLabels() uses `'order' in v` and `value?.order !== undefined` throughout,
+	// so order:0 must be detected by hasAnyOrder and sort correctly ahead of order:1.
 	const term = {
 		type: 'categorical',
 		values: {
-			keyA: { key: 'keyA', label: 'Label A', order: 0 },
-			keyB: { key: 'keyB', label: 'Label B', order: 1 }
+			keyB: { key: 'keyB', label: 'Label B', order: 2 },
+			keyA: { key: 'keyA', label: 'Label A', order: 0 }, // falsy order value
+			keyC: { key: 'keyC', label: 'Label C', order: 1 }
 		}
 	}
-	// Simulate annotation containing an unknown value
 	const result = getOrderedLabels(term, null, null, null)
 
-	t.equal(result.length, 2, 'should return declared keys')
-	t.ok(result.includes('keyA'), 'should include keyA')
-	t.ok(result.includes('keyB'), 'should include keyB')
-	// Unknown values would be handled at runtime by getSeriesIndex fallback to alphabetical
-	t.pass('should gracefully handle undeclared values through runtime matching')
+	t.equal(result.length, 3, 'should return all three keys')
+	t.equal(result[0], 'keyA', 'keyA (order=0) should sort first, not be treated as unordered')
+	t.ok(result.indexOf('keyC') < result.indexOf('keyB'), 'keyC (order=1) should come before keyB (order=2)')
 
 	t.end()
 })

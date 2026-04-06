@@ -212,30 +212,27 @@ tape('barchart helper: unknown values not in metadata fall back gracefully', tes
 	test.end()
 })
 
-tape('barchart helper: non-contiguous and reversed order sequences sort deterministically', test => {
+tape('barchart helper: non-contiguous numeric key ids sort by v.order, not by key value', test => {
+	// Key values intentionally differ from order values so sorting by key vs sorting by order gives different results.
+	// getDeclaredValueOrder() must use v.order (consistent with server-side getOrderedLabels()).
 	const tw = {
 		term: {
 			values: {
-				'10': { key: '10', label: 'Ten', order: 10 },
-				'5': { key: '5', label: 'Five', order: 5 },
-				'2': { key: '2', label: 'Two', order: 2 },
-				'20': { key: '20', label: 'Twenty', order: 20 }
+				'100': { key: '100', label: 'First', order: 0 }, // large key, order=0 → must appear first
+				'2': { key: '2', label: 'Second', order: 1 }, // small key, order=1 → must appear second
+				'30': { key: '30', label: 'Third', order: 2 } // mid key, order=2 → must appear third
 			}
 		}
 	}
 	const order = getDeclaredValueOrder(tw)
-	// Non-contiguous numeric order values should still sort by their order property (2, 5, 10, 20) then add unique labels
+	// Sorted by v.order (0,1,2): 100, 2, 30 — NOT by key value (2, 30, 100)
 	test.ok(order !== null, 'order should not be null')
 	if (order) {
 		test.deepEqual(
 			order,
-			['2', 'Two', '5', 'Five', '10', 'Ten', '20', 'Twenty'],
-			'Should sort numeric ids by order property (2, 5, 10, 20) and include unique labels'
+			['100', 'First', '2', 'Second', '30', 'Third'],
+			'Should sort by v.order (0,1,2 → keys 100,2,30), not by numeric key value (2,30,100)'
 		)
-		// Verify numeric ids are in the correct order regardless of their numeric value
-		test.equal(order.indexOf('2') < order.indexOf('5'), true, '2 (order=2) should come before 5 (order=5)')
-		test.equal(order.indexOf('5') < order.indexOf('10'), true, '5 (order=5) should come before 10 (order=10)')
-		test.equal(order.indexOf('10') < order.indexOf('20'), true, '10 (order=10) should come before 20 (order=20)')
 	}
 	test.end()
 })

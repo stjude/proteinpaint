@@ -72,7 +72,16 @@ export function getDeclaredValueOrder(tw) {
 		key: String(v?.key ?? k),
 		label: v?.label === undefined ? null : String(v.label)
 	}))
-	const numericEntries = entries.filter(e => isNumericId(e.key)).sort((a, b) => Number(a.key) - Number(b.key))
+	const numericEntries = entries
+		.filter(e => isNumericId(e.key))
+		.sort((a, b) => {
+			const aOrder = a.v?.order
+			const bOrder = b.v?.order
+			if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder
+			if (aOrder !== undefined) return -1
+			if (bOrder !== undefined) return 1
+			return Number(a.key) - Number(b.key)
+		})
 	const nonNumericEntries = entries.filter(e => !isNumericId(e.key)).sort((a, b) => a.idx - b.idx)
 	for (const { key, label } of [...numericEntries, ...nonNumericEntries]) {
 		if (!seen.has(key)) {
@@ -461,7 +470,7 @@ export class Barchart extends PlotBase {
 		if (this.state.parentError) throw this.state.parentError
 		try {
 			this.config = await this.getMutableConfig(c)
-			if (!this.currServerData) this.dom.barDiv.style('max-width', Function('return this')()?.innerWidth + 'px')
+			if (!this.currServerData) this.dom.barDiv.style('max-width', globalThis?.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
 				this.dom.header.html(
@@ -683,6 +692,7 @@ export class Barchart extends PlotBase {
 	processData(chartsData) {
 		this.seriesOrder = this.setMaxVisibleTotals(chartsData)
 		const visibleSeriesOrder = [...this.seriesOrder]
+		const g = globalThis
 		const resolveCanonicalId = (tw, id, scope) => {
 			const sid = String(id)
 			const candidates = getCanonicalIdCandidates(tw, sid)
@@ -690,7 +700,7 @@ export class Barchart extends PlotBase {
 			if (candidates.includes(sid)) return sid
 			if (!this._warnedCanonicalAmbiguity) {
 				this._warnedCanonicalAmbiguity = true
-				console.warn('[barchart] canonical id ambiguity detected; using deterministic fallback', {
+				g?.console?.warn('[barchart] canonical id ambiguity detected; using deterministic fallback', {
 					scope,
 					id: sid,
 					candidates
@@ -709,7 +719,7 @@ export class Barchart extends PlotBase {
 			const drifts = findKeyLabelDrifts(tw, ids)
 			if (drifts.length && !this._warnedKeyLabelDrift) {
 				this._warnedKeyLabelDrift = true
-				console.warn('[barchart] mixed key/label ids detected; this may indicate ordering drift', {
+				g?.console?.warn('[barchart] mixed key/label ids detected; this may indicate ordering drift', {
 					scope,
 					drifts: drifts.slice(0, 10)
 				})
@@ -1545,7 +1555,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term2) opts.term2 = await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) opts.term0 = await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
-		const g = Function('return this')()
+		const g = globalThis
 		g?.console?.log('Error reading config: ' + JSON.stringify(opts))
 		g?.console?.error(e)
 		throw `${e} [barchart getPlotConfig()]`

@@ -826,13 +826,15 @@ tape('series visibility - numeric', function (test) {
 			excluded.length > 1 && excluded.length == Object.keys(bar.config.term.q.hiddenValues).length,
 			'should have the correct number of excluded numeric series by q.hiddenValues'
 		)
-		// console.log(bar.dom.legendDiv.selectAll('.legend-row').nodes())
 		const foundHiddenLabels = bar.dom.legendDiv
 			.selectAll('.sjpp-htmlLegend')
 			.filter(d => d?.isHidden == true)
 			.nodes()
 
-		test.true(foundHiddenLabels.length >= 0, 'should handle hidden legend labels state')
+		test.true(
+			foundHiddenLabels.length > 0 && foundHiddenLabels.length <= excluded.length,
+			'should have at least one hidden legend item, but no more than the number of excluded series (zero-sample series are omitted from the legend)'
+		)
 
 		const barOrder = [...bar.dom.holder.node().querySelectorAll('.bars-cell-grp')].sort(
 			(a, b) => a.__data__.data[0].y - b.__data__.data[0].y
