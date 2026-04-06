@@ -9,7 +9,7 @@ import { classifyNotPlot } from './chat/classify2.ts'
 import { inferScaffold } from './chat/scaffold.ts'
 import serverconfig from '../src/serverconfig.js'
 import { getDsAllowedTermTypes } from './termdb.config.ts'
-import { validateNonDictionaryTypes } from './chat/phrase2entity.ts'
+import { inferEntities } from './chat/phrase2entity.ts'
 import path from 'path'
 import fs from 'fs'
 import { isSummaryScaffold } from './chat/scaffoldTypes.ts'
@@ -202,16 +202,21 @@ export async function run_chat_pipeline(
 			// because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
 			// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
 			// nondicttypes such as metabolites, genesets, etc.
-			const term1 = await validateNonDictionaryTypes(scaffoldResult.tw1, llm, genes_list, dataset_json)
+			const term1 = await inferEntities(scaffoldResult.tw1, llm, genes_list, dataset_json)
 			console.log('Validation result for term1:', term1)
+			let term2, term3, filter
 			if (scaffoldResult.tw2) {
-				const term2 = await validateNonDictionaryTypes(scaffoldResult.tw2, llm, genes_list, dataset_json)
-				console.log('Validation result for term2:', term2)
+				term2 = await inferEntities(scaffoldResult.tw2, llm, genes_list, dataset_json)
 			}
 			if (scaffoldResult.tw3) {
-				const term3 = await validateNonDictionaryTypes(scaffoldResult.tw3, llm, genes_list, dataset_json)
-				console.log('Validation result for term3:', term3)
+				term3 = await inferEntities(scaffoldResult.tw3, llm, genes_list, dataset_json)
 			}
+			if (scaffoldResult.filter) {
+				filter = await inferEntities(scaffoldResult.filter, llm, genes_list, dataset_json)
+			}
+			console.log('Validation result for term2:', term2)
+			console.log('Validation result for term3:', term3)
+			console.log('Validation result for filter:', filter)
 		}
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
