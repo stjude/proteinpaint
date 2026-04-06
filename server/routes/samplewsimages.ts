@@ -65,7 +65,6 @@ function validateQuery(ds: any) {
 				metadata: row.metadata
 			})
 		}
-		console.trace('getWSImages query', sql, sampleName, 'returned', rows.length, 'rows')
 
 		return images
 	}
