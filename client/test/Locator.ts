@@ -50,7 +50,7 @@ export class Locator {
 			{
 				selector,
 				targetCount: opts.count || 1, //'>=1',
-				visibility: opts.visibility || true,
+				visibility: opts.visibility ?? true,
 				intervalWait: opts.intervalWait || this.opts.intervalWait,
 				maxWait: opts.maxWait || this.opts.maxWait
 			}
@@ -90,7 +90,7 @@ export class Locator {
 			elems = await fxn(elems, opts)
 		}
 		// no argument, return all matched elements
-		if (!arg) return elems
+		if (!arguments.length || arg === undefined) return elems
 		// apply callback and return whatever the callback returns
 		if (typeof arg === 'function') return arg(elems)
 		// return an elems entry, may be undefined

@@ -58,8 +58,10 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		if (this.dom.boundaryInclusionDiv) {
 			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) {
 				await this.handler.density.showViolin(this.dom.density_div)
-				const tab = this.tabs.tabs[this.activeTab == 'regular-bin' ? 0 : 1]
-				await this.editorsByType[this.activeTab].render((tab as any).contentHolder)
+				if (this.tabs.tabs) {
+					const tab = this.tabs.tabs[this.activeTab == 'regular-bin' ? 0 : 1]
+					await this.editorsByType[this.activeTab].render((tab as any).contentHolder)
+				}
 				return
 			} else delete this.dom.boundaryInclusionDiv
 		}

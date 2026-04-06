@@ -571,7 +571,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 		await tipLoc.shows(`[data-testid='num-spline-editor-num-knots']`).get(i => Number(i[0].value)),
 		'Should have rendered UI for Spline menu'
 	)
-	test.equal(await tipLoc.shows('.binsize_g line').length(), 4, 'Should have rendered knot lints for Spline menu')
+	test.equal(await tipLoc.shows('.binsize_g line').length(), 4, 'Should have rendered knot lines for Spline menu')
 
 	test.equal(toggleButtons[3].innerText, 'Binary', 'Should have title for 4nd tab as Binary')
 	toggleButtons[3].click()
