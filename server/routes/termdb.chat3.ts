@@ -54,22 +54,22 @@ function init({ genomes }) {
 				throw "llm.provider must be 'SJ' or 'ollama'"
 			}
 			/*
- * Old Stuff from Robin
-            const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
-            const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-            const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
-            const genesetNames = getGenesetNames(g)
-            const ai_output_json = await run_chat_pipeline(
-                    q.prompt,
-                    llm,
-                    testing,
-                    dataset_db,
-                    genedb,
-                    ds,
-                    genesetNames,
-                    agentFiles,
-                    aiFilesDir
-            )
+* Old Stuff from Robin
+const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
+const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
+const genesetNames = getGenesetNames(g)
+const ai_output_json = await run_chat_pipeline(
+        q.prompt,
+        llm,
+        testing,
+        dataset_db,
+        genedb,
+        ds,
+        genesetNames,
+        agentFiles,
+        aiFilesDir
+)
 */
 
 			// This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output,
@@ -156,9 +156,9 @@ export async function run_chat_pipeline(
 		}
 
 		/* Special handling for summary chart types
-        // Every cohort by default supports summary charts unless 
-        // 'dictionary' is not in the supported chart type list
-        // */
+// Every cohort by default supports summary charts unless 
+// 'dictionary' is not in the supported chart type list
+// */
 		if (plotType === 'summary') {
 			if (!supportedChartTypes.includes('dictionary')) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -203,6 +203,12 @@ export async function run_chat_pipeline(
 			// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
 			// nondicttypes such as metabolites, genesets, etc.
 			validateNonDictionaryTypes(scaffoldResult.tw1, llm, genes_list, dataset_json)
+			if (scaffoldResult.tw2) {
+				validateNonDictionaryTypes(scaffoldResult.tw2, llm, genes_list, dataset_json)
+			}
+			if (scaffoldResult.tw3) {
+				validateNonDictionaryTypes(scaffoldResult.tw3, llm, genes_list, dataset_json)
+			}
 		}
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
