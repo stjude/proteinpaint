@@ -3,7 +3,7 @@ import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type * as ScaffoldTypes from './scaffoldTypes.ts'
 
-async function de(user_prompt: string, llm: LlmConfig): Promise<ScaffoldTypes.DEScaffold> {
+async function dge(user_prompt: string, llm: LlmConfig): Promise<ScaffoldTypes.DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
 
 ## OUTPUT SCHEMA
@@ -152,7 +152,7 @@ Always return ONLY a JSON object in this exact format:
 ## Field Definitions
 - tw1 (REQUIRED): The PRIMARY analysis variable — what is being measured, summarized, or analyzed. Extract the phrase from the query that most likely refers to tw1.
 - tw2 (OPTIONAL): GROUPING variable — only when the user wants to compare or split tw1 across groups. (e.g., "between X and Y", "by group", "across conditions").
-- tw3 (OPTIONAL): DIVIDE BY variable — a tertiary variable used to split or facet the tw1 data (e.g., "divided by", "split by", "per", "for each").
+- tw3 (OPTIONAL): DIVIDE BY variable — a tertiary variable used to split or facet the plot generated with tw1 and tw2 data (e.g., "divided by", "split by", "per", "for each").
 - filter (OPTIONAL): A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males").
 
 ## Extraction Rules
@@ -165,7 +165,6 @@ Always return ONLY a JSON object in this exact format:
 5. If tw2 and tw3 are ambiguous, prefer tw2 for binary/categorical comparisons and tw3 for a faceting/panel variable
 6. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
 7. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
-8. At the end, reason about for your inferences and print how confident (high/medium/low) you are of your inference. Be conservative and cautious.
 
 ## Examples:
 - Query: "Show me the expression of EGFR."
@@ -222,8 +221,8 @@ export async function inferScaffold(
 	switch (plotType) {
 		case 'summary':
 			return await summary(user_prompt, llm)
-		case 'de':
-			return await de(user_prompt, llm)
+		case 'dge':
+			return await dge(user_prompt, llm)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
