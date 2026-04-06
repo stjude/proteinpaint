@@ -30,7 +30,7 @@ Used by block.js and isoformExpression.ts for isoform switching.
  * and chrcount is the number of distinct chromosomes.
  */
 export function allgm2sum(gmlst: GeneModel[]) {
-	const chr2gm = new Map()
+	const chr2gm = new Map<string, GeneModel[]>()
 	for (const gm of gmlst) {
 		if (gm.hidden) {
 			continue
@@ -38,7 +38,7 @@ export function allgm2sum(gmlst: GeneModel[]) {
 		if (!chr2gm.has(gm.chr)) {
 			chr2gm.set(gm.chr, [])
 		}
-		chr2gm.get(gm.chr).push(gm)
+		chr2gm.get(gm.chr)!.push(gm)
 	}
 	const alllst: ExonRegion[] = []
 	for (const [chr, gmlstForChr] of chr2gm.entries()) {
@@ -48,6 +48,7 @@ export function allgm2sum(gmlst: GeneModel[]) {
 				elst.push([e[0], e[1]])
 			}
 		}
+		if (elst.length === 0) continue
 		const reverse = gmlstForChr[0].strand == '-'
 		elst.sort((a: number[], b: number[]) => a[0] - b[0])
 		let thisregion = elst[0]
@@ -103,6 +104,7 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	const scrollThreshold = opts.scrollThreshold ?? 10
 
 	const [rglst, chrcount] = allgm2sum(allgm)
+	if (rglst.length === 0) return
 
 	// compute exon layout sizing
 	let pxwidth = 370
@@ -133,9 +135,9 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	const gmlabellst: { isoform: string; chr: string; start: number; label: Td }[] = []
 
 	for (const gm of allgm) {
-		const tr = table.append('tr').attr('class', 'sja_clb')
+		const tr = table.append('tr').attr('class', 'sja_clb').attr('tabindex', 0)
 
-		tr.on('click', () => {
+		const selectRow = () => {
 			for (const gm2 of gmlabellst) {
 				gm2.label.style(
 					'color',
@@ -143,6 +145,11 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 				)
 			}
 			onSelect(gm)
+		}
+
+		tr.on('click', selectRow)
+		tr.on('keydown', (event: KeyboardEvent) => {
+			if (event.key == 'Enter') selectRow()
 		})
 
 		// DEFAULT label
