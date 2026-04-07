@@ -351,7 +351,7 @@ tape('allgm2sum() - complex scenario with multiple chromosomes and strands', tes
 	const chr1Regions = rglst.filter(r => r.chr === 'chr1')
 	const chr2Regions = rglst.filter(r => r.chr === 'chr2')
 
-	test.equal(chr1Regions.length, 2, 'chr1 should have 2 regions after merging')
+	test.equal(chr1Regions.length, 1, 'chr1 should have 1 region after merging (NM_002 [1100,1600] bridges the gap)')
 	test.equal(chr2Regions.length, 2, 'chr2 should have 2 regions')
 	test.ok(
 		chr2Regions.every(r => r.reverse),
