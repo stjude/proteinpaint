@@ -1051,8 +1051,10 @@ export class MatrixControls {
 			})
 
 		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
-		const min = s.colwMin / s.colw
-		const max = s.colwMax / s.colw
+		// Use baseColw (the initial auto-computed value) for zoom slider min/max to prevent feedback loop
+		const baseColwForZoom = this.parent.baseColw || s.colw
+		const min = s.colwMin / baseColwForZoom
+		const max = s.colwMax / baseColwForZoom
 		const increment = Math.max(0.01, Number((min / max).toFixed(2)))
 
 		const d = this.parent.dimensions

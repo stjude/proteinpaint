@@ -57,6 +57,14 @@ export function plotDendrogramHclust(plotOnly) {
 
 			const height = yDendrogramHeight + 0.0000001
 			const width = colWidth * col.inputOrder.length
+			
+			// Safety check: prevent zero-sized canvas which causes convertToBlob error
+			if (width <= 0 || height <= 0) {
+				console.warn('Skipping dendrogram render: invalid dimensions', { width, height, colWidth })
+				this.dom.topDendrogram.selectAll('*').remove()
+				return
+			}
+			
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
@@ -162,6 +170,14 @@ export function plotDendrogramHclust(plotOnly) {
 			const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
 			const width = xDendrogramHeight + 0.0000001
 			const height = rowHeight * row.inputOrder.length
+			
+			// Safety check: prevent zero-sized canvas which causes convertToBlob error
+			if (width <= 0 || height <= 0) {
+				console.warn('Skipping dendrogram render: invalid dimensions', { width, height, rowHeight })
+				this.dom.leftDendrogram.selectAll('*').remove()
+				return
+			}
+			
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)

@@ -60,6 +60,12 @@ export function setAutoDimensions(xOffset) {
 			this.computedSettings.colw = tentativeColw
 			this.computedSettings.colspace = s.colspace
 		}
+
+		// Store the base colw value for zoom calculations to prevent feedback loop
+		// Only update when zoomLevel is 1 (initial or reset state) to preserve the base reference
+		if (!this.baseColw || s.zoomLevel === 1) {
+			this.baseColw = this.computedSettings.colw
+		}
 	}
 
 	//if (this.autoDimensions.has('rowh')) {
@@ -493,7 +499,9 @@ export function setLayout() {
 
 	// When the cell is very small, colspace is 0, once zoom in, colspace will be shown, so need to consider it when zooming in
 	// At this point, computed matrix settings has been merged to settings.matrix by setAutoDimensions.
-	const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
+	// Use baseColw (the initial auto-computed value) to calculate zoomed colw to prevent feedback loop
+	const baseColwForZoom = this.baseColw || s.colw
+	const colw = Math.max(s.colwMin, Math.min(s.colwMax, baseColwForZoom * s.zoomLevel))
 	const dx = colw + s.colspace
 	const nx = this[`${col}s`].length
 	const dy = s.rowh + s.rowspace
