@@ -3,6 +3,9 @@ import type {
 	ViolinRequest,
 	BoxRequest,
 	ViolinBoxResponse,
+	BoxPlotEntry,
+	BoxPlotData,
+	DescrStats,
 	RouteApi,
 	ValidGetDataResponse,
 	TermWrapper
@@ -19,6 +22,10 @@ import { isNumericTerm } from '#shared/terms.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { roundValueAuto } from '#shared/roundValue.js'
+
+/** Internal box plot entry with temporary values used for Wilcoxon tests.
+ *  tempValues is stripped before sending the response to the client. */
+type InternalBoxPlotEntry = BoxPlotEntry & { tempValues?: number[] }
 
 export const api: RouteApi = {
 	endpoint: 'termdb/violinBox',
@@ -63,9 +70,9 @@ function init({ genomes }) {
 			if (data.error) throw new Error(data.error)
 
 			if (q.plotType === 'violin') {
-				result = await getViolin(q, data, ds)
+				result = await getViolin(q, data as ValidGetDataResponse, ds)
 			} else if (q.plotType === 'box') {
-				result = await getBoxPlot(q, data)
+				result = await getBoxPlot(q, data as ValidGetDataResponse)
 			} else {
 				throw new Error('invalid plotType')
 			}
@@ -81,19 +88,19 @@ function init({ genomes }) {
  * VIOLIN PLOT FUNCTIONS
  **********************************************************/
 
-async function getViolin(q: ViolinRequest & ReqQueryAddons, data: any, ds: any) {
+async function getViolin(
+	q: ViolinRequest & ReqQueryAddons,
+	data: ValidGetDataResponse,
+	ds: { cohort: { termdb: { logscaleBase2?: boolean } } }
+) {
 	const samples = Object.values(data.samples)
-	let values = samples
-		.map(s => s?.[q.tw.$id!]?.value)
-		.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
-	if (q.isLogScale) values = values.filter(v => v > 0)
+	const values = extractNumericValues(samples, q.tw, q.isLogScale)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
 	const descrStats = getDescrStats(values)
-	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
-	if (data.error) throw new Error(data.error)
+	const sampleType = computeSampleType(data)
 	//get ordered labels to sort keys in plot2values
 	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id!]) {
-		data.refs.byTermId[q.overlayTw.$id!].orderedLabels = getOrderedLabels(
+		;(data.refs.byTermId[q.overlayTw.$id!] as any).orderedLabels = getOrderedLabels(
 			q.overlayTw,
 			data.refs.byTermId[q.overlayTw.$id!]?.bins,
 			undefined,
@@ -101,10 +108,10 @@ async function getViolin(q: ViolinRequest & ReqQueryAddons, data: any, ds: any) 
 		)
 	}
 
-	if (q.scale) setScaleData(q, data as ValidGetDataResponse, q.tw)
+	if (q.scale) setScaleData(q, data, q.tw)
 
-	const valuesObject = divideValues(q, data as ValidGetDataResponse, sampleType)
-	const result = setViolinResponse(valuesObject, data as ValidGetDataResponse, q)
+	const valuesObject = divideValues(q, data, sampleType)
+	const result = setViolinResponse(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
 	if (q.overlayTw) await getViolinWilcoxonData(result)
@@ -137,7 +144,7 @@ function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: 
 		q,
 		data,
 		sampleType,
-		useLog == true ? true : false, // avoid tsc err
+		!!useLog,
 		overlayTerm,
 		divideTerm
 	)
@@ -183,7 +190,6 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 	const overlayTerm = q.overlayTw
 	const divideTw = q.divideTw
 	for (const [chart, plot2values] of valuesObject.chart2plot2values) {
-		//temp plot type
 		const plots: {
 			label: string
 			values: number[]
@@ -195,10 +201,10 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 
 		for (const [plot, values] of sortPlot2Values(data, plot2values, overlayTerm)) {
 			plots.push({
-				label: (overlayTerm?.term?.values?.[plot]?.label || plot) as string, // avoid strange tsc err
+				label: String(overlayTerm?.term?.values?.[plot]?.label || plot),
 				values,
 				seriesId: plot,
-				chartId: chart, //quick fix to get list samples working
+				chartId: chart,
 				plotValueCount: values?.length,
 				color: overlayTerm?.term?.values?.[plot]?.color || ''
 			})
@@ -207,13 +213,7 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 		charts[chart] = { chartId: chart, plots }
 	}
 
-	/** bins are used for constructing filter objs. Specifically for
-	 * listing samples, filterting, etc. */
-	const bins: { [index: string]: any } = {
-		term1: numericBins(q.tw, data)
-	}
-	if (overlayTerm) bins.term2 = numericBins(overlayTerm, data)
-	if (divideTw) bins.term0 = numericBins(divideTw, data)
+	const bins = buildBins(q.tw, data, overlayTerm, divideTw)
 
 	const result = {
 		min: valuesObject.min,
@@ -226,7 +226,11 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 	return result
 }
 
-async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any }, ds: { [index: string]: any }) {
+async function createCanvasImg(
+	q: ViolinRequest,
+	result: { [index: string]: any },
+	ds: { cohort: { termdb: { logscaleBase2?: boolean } } }
+) {
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
 	if (q.radius <= 0) throw new Error('q.radius is not a number')
@@ -308,32 +312,11 @@ async function createCanvasImg(q: ViolinRequest, result: { [index: string]: any 
 
 // compute pvalues using wilcoxon rank sum test
 export async function getViolinWilcoxonData(result: { [index: string]: any }) {
-	for (const k of Object.keys(result.charts)) {
-		const chart = result.charts[k]
-		const numPlots = chart.plots.length
-		if (numPlots < 2) continue
-
-		const wilcoxInput: { [index: string]: any }[] = []
-
-		for (let i = 0; i < numPlots; i++) {
-			const group1_id = chart.plots[i].label
-			const group1_values = chart.plots[i].values
-			for (let j = i + 1; j < numPlots; j++) {
-				const group2_id = chart.plots[j].label
-				const group2_values = chart.plots[j].values
-				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
-			}
-		}
-		const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
-		chart.pvalues = []
-		for (const test of wilcoxOutput) {
-			if (test.pvalue == null || test.pvalue == 'null') {
-				chart.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
-			} else {
-				chart.pvalues.push([{ value: test.group1_id }, { value: test.group2_id }, { html: test.pvalue.toPrecision(4) }])
-			}
-		}
-	}
+	await runWilcoxonTests(
+		result.charts,
+		{ getGroupId: plot => plot.label, getGroupValues: plot => plot.values },
+		'pvalues'
+	)
 }
 
 export async function getDensity(
@@ -393,7 +376,7 @@ export async function getDensities(
  * BOXPLOT FUNCTIONS
  **********************************************************/
 
-async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: any) {
+async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: ValidGetDataResponse) {
 	const { absMin, absMax, bins, charts, uncomputableValues, descrStats, outlierMin, outlierMax } =
 		await processBoxPlotData(data, q)
 
@@ -410,34 +393,32 @@ async function getBoxPlot(q: BoxRequest & ReqQueryAddons, data: any) {
 }
 
 /** Process the returned data from getData() for entire box plot chart.*/
-async function processBoxPlotData(data, q: BoxRequest) {
+async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest) {
 	const samples = Object.values(data.samples)
-	const values = samples
-		.map(s => s?.[q.tw.$id!]?.value)
-		.filter(v => typeof v === 'number' && !q.tw.term.values?.[v]?.uncomputable)
+	const values = extractNumericValues(samples, q.tw)
 	//calculate stats here and pass them to client to avoid second request on client for getting stats
 	const descrStats = getDescrStats(values, q.removeOutliers)
 
-	const sampleType = `All ${data.sampleType?.plural_name || 'samples'}`
+	const sampleType = computeSampleType(data)
 	const overlayTw = q.overlayTw
 	const divideTw = q.divideTw
 	const { absMin, absMax, chart2plot2values, uncomputableValues } = parseValues(
 		q,
-		data as ValidGetDataResponse,
+		data,
 		sampleType,
-		q.isLogScale == true ? true : false, // avoid tsc err
+		!!q.isLogScale,
 		overlayTw,
 		divideTw
 	)
 
 	if (!absMin && absMin !== 0) throw new Error('absMin is undefined')
 	if (!absMax && absMax !== 0) throw new Error('absMax is undefined')
-	const charts: any = {}
+	const charts: Record<string, { chartId: string; plots: InternalBoxPlotEntry[]; sampleCount: number }> = {}
 	let outlierMin = Number.POSITIVE_INFINITY,
 		outlierMax = Number.NEGATIVE_INFINITY
 	for (const [chart, plot2values] of chart2plot2values) {
-		const plots: any = []
-		for (const [key, values] of sortPlot2Values(data as ValidGetDataResponse, plot2values, overlayTw)) {
+		const plots: InternalBoxPlotEntry[] = []
+		for (const [key, values] of sortPlot2Values(data, plot2values, overlayTw)) {
 			;[outlierMax, outlierMin] = setPlotData(
 				plots,
 				values,
@@ -459,19 +440,14 @@ async function processBoxPlotData(data, q: BoxRequest) {
 		}
 		/** Descr stats not calculated per chart. Set the total num of samples per chart */
 		const sampleCount = plots.reduce((total, p) => {
-			if (p.hidden) return total
+			if (p.isHidden) return total
 			return total + p.descrStats.total.value
 		}, 0)
 
 		charts[chart] = { chartId: chart, plots, sampleCount: sampleCount }
 	}
 
-	const bins: { [index: string]: any } = {
-		term1: numericBins(q.tw, data)
-	}
-
-	if (overlayTw) bins.term2 = numericBins(overlayTw, data)
-	if (divideTw) bins.term0 = numericBins(divideTw, data)
+	const bins = buildBins(q.tw, data, overlayTw, divideTw)
 
 	if (q.showAssocTests && overlayTw) await getBoxPlotWilcoxonData(charts)
 	//quick fix to not return values to the client
@@ -484,15 +460,15 @@ async function processBoxPlotData(data, q: BoxRequest) {
 /** Set the data (e.g. values, titles, outliers, etc.)
  * for individual box plots within a chart */
 function setPlotData(
-	plots: any[],
+	plots: InternalBoxPlotEntry[],
 	values: number[],
 	key: string,
 	sampleType: string,
-	descrStats: any,
+	descrStats: DescrStats,
 	q: BoxRequest,
 	outlierMin: number,
 	outlierMax: number,
-	overlayTw?: any
+	overlayTw?: TermWrapper
 ) {
 	const sortedValues = values.sort((a, b) => a - b)
 
@@ -506,22 +482,21 @@ function setPlotData(
 		outlierMax = Math.max(outlierMax, descrStats.outlierMax.value)
 	}
 
-	const boxplot = boxplot_getvalue(vs, q.removeOutliers)
+	const boxplot = boxplot_getvalue(vs, q.removeOutliers) as BoxPlotData
 	if (!boxplot) throw new Error('boxplot_getvalue failed [termdb.violinBox init()]')
-	const plot: { [index: string]: any } = {
+	const plot = {
 		boxplot,
 		descrStats: setIndividualBoxPlotStats(boxplot, sortedValues),
-		//quick fix
-		//to delete later
+		// See comment in processBoxPlotData about tempValues
 		tempValues: sortedValues
-	}
+	} as InternalBoxPlotEntry
 
 	//Set rendering properties for the plot
 	if (overlayTw) {
 		const _key = overlayTw?.term?.values?.[key]?.label || key
 
-		plot.color = overlayTw?.term?.values?.[key]?.color || null
-		plot.key = _key
+		plot.color = overlayTw?.term?.values?.[key]?.color || undefined
+		plot.key = String(_key)
 		plot.seriesId = key
 		plot.boxplot.label = `${_key}, n=${values.length}`
 	} else {
@@ -539,10 +514,7 @@ function setPlotData(
  * boxplot_getvalue() already calculates most of these values.
  * This function formats the data appropriately for the client.
  */
-function setIndividualBoxPlotStats(
-	boxplot,
-	values: number[]
-): { [key: string]: { key: string; label: string; value: number } } {
+function setIndividualBoxPlotStats(boxplot: BoxPlotData, values: number[]): DescrStats {
 	const stats = {
 		total: { key: 'total', label: 'Total', value: values.length },
 		min: { key: 'min', label: 'Minimum', value: values[0] },
@@ -561,8 +533,8 @@ function setIndividualBoxPlotStats(
 }
 
 /** Set hidden status for plots */
-function setHiddenPlots(term: any, plots: any) {
-	for (const v of Object.values(term.term?.values as { label: string; uncomputable: boolean }[])) {
+function setHiddenPlots(term: TermWrapper, plots: InternalBoxPlotEntry[]) {
+	for (const v of Object.values(term.term?.values as Record<string, { label: string; uncomputable: boolean }>)) {
 		const plot = plots.find(p => p.key === v.label)
 		if (plot) plot.isHidden = v?.uncomputable
 	}
@@ -583,30 +555,49 @@ function setUncomputableValues(values: Record<string, number>) {
 }
 
 async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
+	await runWilcoxonTests(
+		charts,
+		{
+			getGroupId: plot => plot.boxplot.label.replace(/, n=\d+$/, ''),
+			getGroupValues: plot => plot.tempValues
+		},
+		'wilcoxon'
+	)
+}
+
+/**********************************************************
+ * Functions used in both box plot and violin plot routes *
+ **********************************************************/
+
+/** Run Wilcoxon rank-sum tests for all pairwise plot comparisons within each chart.
+ *  Accessors allow reuse for both violin (label/values) and box (boxplot.label/tempValues) plots. */
+async function runWilcoxonTests(
+	charts: Record<string, any>,
+	accessors: { getGroupId: (plot: any) => string; getGroupValues: (plot: any) => number[] },
+	resultKey: string
+): Promise<void> {
 	for (const chart of Object.values(charts)) {
 		const numPlots = chart.plots?.length
-		if (numPlots < 2) continue
+		if (!numPlots || numPlots < 2) continue
 
-		const wilcoxonInput: { [index: string]: any }[] = []
+		const wilcoxInput: { group1_id: string; group1_values: number[]; group2_id: string; group2_values: number[] }[] = []
 
 		for (let i = 0; i < numPlots; i++) {
-			const group1_id = chart.plots[i].boxplot.label.replace(/, n=\d+$/, '')
-			const group1_values = chart.plots[i].tempValues
+			const group1_id = accessors.getGroupId(chart.plots[i])
+			const group1_values = accessors.getGroupValues(chart.plots[i])
 			for (let j = i + 1; j < numPlots; j++) {
-				const group2_id = chart.plots[j].boxplot.label.replace(/, n=\d+$/, '')
-				const group2_values = chart.plots[j].tempValues
-				wilcoxonInput.push({ group1_id, group1_values, group2_id, group2_values })
+				const group2_id = accessors.getGroupId(chart.plots[j])
+				const group2_values = accessors.getGroupValues(chart.plots[j])
+				wilcoxInput.push({ group1_id, group1_values, group2_id, group2_values })
 			}
 		}
-		const wilcoxonOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxonInput)))
-		//May change this if there are other tests to add in the future
-		chart.wilcoxon = []
-		for (const test of wilcoxonOutput) {
-			//Output is formated for #dom/table.js to render
+		const wilcoxOutput = JSON.parse(await run_rust('wilcoxon', JSON.stringify(wilcoxInput)))
+		chart[resultKey] = []
+		for (const test of wilcoxOutput) {
 			if (test.pvalue == null || test.pvalue == 'null') {
-				chart.wilcoxon.push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
+				chart[resultKey].push([{ value: test.group1_id }, { value: test.group2_id }, { html: 'NA' }])
 			} else {
-				chart.wilcoxon.push([
+				chart[resultKey].push([
 					{ value: test.group1_id },
 					{ value: test.group2_id },
 					{ html: test.pvalue.toPrecision(4) }
@@ -616,17 +607,42 @@ async function getBoxPlotWilcoxonData(charts: { [chartId: string]: any }) {
 	}
 }
 
-/**********************************************************
- * Functions used in both box plot and violin plot routes *
- **********************************************************/
+function computeSampleType(data: ValidGetDataResponse): string {
+	return `All ${data.sampleType?.plural_name || 'samples'}`
+}
+
+/** Build bins for constructing filter objects (listing samples, filtering, etc.) */
+function buildBins(
+	tw: TermWrapper,
+	data: ValidGetDataResponse,
+	overlayTw?: TermWrapper,
+	divideTw?: TermWrapper
+): Record<string, any> {
+	const bins: Record<string, any> = {
+		term1: numericBins(tw, data)
+	}
+	if (overlayTw) bins.term2 = numericBins(overlayTw, data)
+	if (divideTw) bins.term0 = numericBins(divideTw, data)
+	return bins
+}
+
+/** Extract numeric, computable values from sample data for a given term.
+ *  Optionally filters to positive-only values for log scale. */
+function extractNumericValues(samples: any[], tw: TermWrapper, isLogScale?: boolean): number[] {
+	let values = samples
+		.map(s => s?.[tw.$id!]?.value)
+		.filter(v => typeof v === 'number' && !tw.term.values?.[v]?.uncomputable)
+	if (isLogScale) values = values.filter(v => v > 0)
+	return values
+}
 
 export function parseValues(
-	q: any,
+	q: ViolinBoxRequest,
 	data: ValidGetDataResponse,
 	sampleType: string,
 	isLog: boolean,
-	overlayTw?: any,
-	divideTw?: any
+	overlayTw?: TermWrapper,
+	divideTw?: TermWrapper
 ) {
 	/** Map samples to terms */
 	const chart2plot2values = new Map()
@@ -634,44 +650,40 @@ export function parseValues(
 	 * but displayed in the legend */
 	const uncomputableValues = {}
 
+	/** Track an uncomputable value in the legend counter.
+	 *  Returns true if the value is uncomputable. */
+	function trackUncomputable(tw: TermWrapper, key: string | number): boolean {
+		if (!tw?.term?.values?.[key]?.uncomputable) return false
+		const label = tw.term.values[key]?.label
+		if (label) uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
+		return true
+	}
+
 	/** Find the absolute min and max values to render
 	 * the plot scale */
 	let absMin = Infinity,
 		absMax = -Infinity
 	for (const val of Object.values(data.samples)) {
-		const value = val[q.tw.$id]
+		const value = val[q.tw.$id!]
 		if (!Number.isFinite(value?.value)) continue
 
-		if (q.tw.term.values?.[value.value]?.uncomputable) {
-			/** Record uncomputable values for the legend and skip */
-			const label = q.tw.term.values[value.value].label
-			uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
-			continue
-		}
+		if (trackUncomputable(q.tw, value.value)) continue
 
 		/** Only use positive values for log scales */
 		if (isLog && value.value <= 0) continue
 
-		let chart: any = '' // chart containing violin plots
-		let plot: any = sampleType // violin plot
+		let chart: string | number = '' // chart containing violin plots
+		let plot: string | number = sampleType // violin plot
 		if (divideTw) {
-			if (!val[divideTw?.$id]) continue
-			const value0 = val[divideTw.$id]
-			if (divideTw.term?.values?.[value0.key]?.uncomputable) {
-				/** same as above but for divide term */
-				const label = divideTw.term.values[value0?.key]?.label
-				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
-			}
+			if (!val[divideTw.$id!]) continue
+			const value0 = val[divideTw.$id!]
+			trackUncomputable(divideTw, value0.key)
 			chart = value0.key
 		}
 		if (overlayTw) {
-			if (!val[overlayTw?.$id]) continue
-			const value2 = val[overlayTw.$id]
-			if (overlayTw.term?.values?.[value2.key]?.uncomputable) {
-				/** same as above but for overlay term */
-				const label = overlayTw.term.values[value2?.key]?.label
-				uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
-			}
+			if (!val[overlayTw.$id!]) continue
+			const value2 = val[overlayTw.$id!]
+			trackUncomputable(overlayTw, value2.key)
 			plot = value2.key
 		}
 
@@ -689,10 +701,10 @@ export function parseValues(
 }
 
 /** Return bins for filtering and list sample label menu options */
-export function numericBins(tw: any, data: any) {
+export function numericBins(tw: TermWrapper, data: ValidGetDataResponse) {
 	const bins = {}
 	if (!isNumericTerm(tw?.term)) return bins
-	for (const bin of data.refs.byTermId[tw?.$id]?.bins || []) {
+	for (const bin of data.refs.byTermId[tw.$id!]?.bins || []) {
 		bins[bin.label] = bin
 	}
 	return bins
