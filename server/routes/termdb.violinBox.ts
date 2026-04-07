@@ -101,8 +101,8 @@ async function getViolin(
 	//get ordered labels to sort keys in plot2values
 	if (q.overlayTw && data.refs.byTermId[q.overlayTw.$id!]) {
 		;(data.refs.byTermId[q.overlayTw.$id!] as any).orderedLabels = getOrderedLabels(
-			q.overlayTw,
-			data.refs.byTermId[q.overlayTw.$id!]?.bins,
+			q.overlayTw.term,
+			data.refs.byTermId[q.overlayTw.$id!]?.bins || [],
 			undefined,
 			q.overlayTw.q
 		)
@@ -203,14 +203,14 @@ function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: Vio
 			plots.push({
 				label: String(overlayTerm?.term?.values?.[plot]?.label || plot),
 				values,
-				seriesId: plot,
-				chartId: chart,
+				seriesId: String(plot),
+				chartId: String(chart),
 				plotValueCount: values?.length,
 				color: overlayTerm?.term?.values?.[plot]?.color || ''
 			})
 		}
 
-		charts[chart] = { chartId: chart, plots }
+		charts[String(chart)] = { chartId: String(chart), plots }
 	}
 
 	const bins = buildBins(q.tw, data, overlayTerm, divideTw)
@@ -444,7 +444,7 @@ async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest) {
 			return total + p.descrStats.total.value
 		}, 0)
 
-		charts[chart] = { chartId: chart, plots, sampleCount: sampleCount }
+		charts[String(chart)] = { chartId: String(chart), plots, sampleCount: sampleCount }
 	}
 
 	const bins = buildBins(q.tw, data, overlayTw, divideTw)
