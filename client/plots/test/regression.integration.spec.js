@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { detectLst, detectOne } from '../../test/test.helpers.js'
+import { detectGte, detectOne } from '../../test/test.helpers.js'
 
 /* 
 Tests:
@@ -179,8 +179,8 @@ tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_
 		const regDom = regression.Inner.dom
 
 		//**** Inputs ****
-		const violinDivs = await detectLst({ selector: '.sjpp-vp-violinDiv', elem: regDom.inputs.node(), count: 2 })
-		test.ok(violinDivs, `Should render violin plots for outcome and independent variables`)
+		const violinDivs = await detectGte({ selector: '.sjpp-vp-violinDiv', elem: regDom.inputs.node(), count: 2 })
+		test.equal(violinDivs.length, 2, `Should render violin plots for outcome and independent variables`)
 
 		//**** Results ****
 		let tableLabel, table, results
