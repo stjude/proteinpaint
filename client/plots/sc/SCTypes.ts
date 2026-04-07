@@ -32,7 +32,7 @@ export type SCDom = {
 	header?: Elem
 }
 
-export type Segments = { [key: string]: { title: any; subplots: any } }
+export type Segments = { [key: string]: { title: any; subplots: any; sandboxes: { [key: string]: any } } }
 
 export type SCSettings = {
 	sc: {
