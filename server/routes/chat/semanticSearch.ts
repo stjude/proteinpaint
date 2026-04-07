@@ -2,7 +2,6 @@ import Database from 'better-sqlite3'
 import fs from 'fs'
 import path from 'path'
 import type { LlmConfig } from '#types'
-import serverconfig from '../../src/serverconfig.js'
 import { route_to_appropriate_embedding_provider } from './routeAPIcall.ts'
 
 // Types
@@ -32,11 +31,6 @@ interface TermEmbedding {
 
 // Config
 const CACHE_FILE = './term-embeddings.json'
-
-// Embedding API — routes through the configured provider (SJ, ollama, or huggingface)
-async function getEmbeddings(texts: string[], llm: LlmConfig): Promise<number[][]> {
-	return route_to_appropriate_embedding_provider(texts, llm)
-}
 
 // Cosine similarity
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -117,7 +111,7 @@ async function buildEmbeddingStore(dbPath: string, llm: LlmConfig): Promise<Term
 	console.log(`Embedding ${allSentences.length} sentences across ${rows.length} rows...`)
 
 	// Single batched API call
-	const allEmbeddings = await getEmbeddings(allSentences, llm)
+	const allEmbeddings = await route_to_appropriate_embedding_provider(allSentences, llm)
 
 	// Assemble back into per-row structure
 	const result: TermEmbedding[] = rows.map(row => ({
@@ -153,7 +147,7 @@ async function querySimilar(
 	llm: LlmConfig,
 	topK = 5
 ): Promise<{ id: string; name: string; sentence: string; score: number }[]> {
-	const [queryEmb] = await getEmbeddings([query], llm)
+	const [queryEmb] = await route_to_appropriate_embedding_provider([query], llm)
 
 	const scored: { id: string; name: string; sentence: string; score: number }[] = []
 
@@ -180,12 +174,3 @@ export async function findBestMatch(
 	if (results.length === 0) throw new Error('No matches found')
 	return { id: results[0].id, name: results[0].name, score: results[0].score }
 }
-
-// For Test Purposes
-const DB_PATH = serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/db'
-const llm = serverconfig.llm as LlmConfig
-if (!llm) throw new Error('serverconfig.llm is not configured')
-// Loads from cache if it exists, otherwise builds from DB and saves to cache
-const store = await loadOrBuildEmbeddings(DB_PATH, llm)
-const match = await findBestMatch('heart rhythm problems', store, llm)
-console.log(`Best match → id: "${match.id}"  name: "${match.name}"  score: ${(match.score * 100).toFixed(1)}%`)
