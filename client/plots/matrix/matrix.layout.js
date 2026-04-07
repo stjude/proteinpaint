@@ -61,10 +61,18 @@ export function setAutoDimensions(xOffset) {
 			this.computedSettings.colspace = s.colspace
 		}
 
-		// Store the base colw value for zoom calculations to prevent feedback loop
-		// Only set once during initial calculation to preserve the base reference
-		if (!this.baseColw) {
+		// Store the base colw value for zoom calculations to prevent feedback loop.
+		// Recompute it only when the auto-width inputs change, but keep it stable
+		// across zoom-only renders.
+		const baseColwContext = {
+			sampleCount: this.sampleOrder.length,
+			visibleSampleGrpCount: this.visibleSampleGrps.size,
+			transpose: s.transpose,
+			availContentWidth: this.availContentWidth
+		}
+		if (!this.baseColwContext || !deepEqual(this.baseColwContext, baseColwContext)) {
 			this.baseColw = this.computedSettings.colw
+			this.baseColwContext = baseColwContext
 		}
 	}
 
