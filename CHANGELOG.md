@@ -9,6 +9,8 @@ Features:
 
 Fixes:
 - re-render bin lines when switching between tabs in numeric termsetting edit menu
+- hierCluster option to always hide sample labels or auto-show them based on column width
+- use arg.dslabel for oncomatrix topMutatedGenes request and not hardcoded to gdcDslabel
 
 
 ## 2.181.1
