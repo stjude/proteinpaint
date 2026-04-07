@@ -30,3 +30,15 @@ export function isDEScaffold(s: Scaffold): s is DEScaffold {
 export function isMatrixScaffold(s: Scaffold): s is MatrixScaffold {
 	return 'twLst' in s
 }
+
+export type InferEntity = {
+	termType: 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance'
+	phrase: string
+}
+
+export type SummaryPhrase2EntityResult = {
+	tw1: [InferEntity]
+	tw2?: [InferEntity]
+	tw3?: [InferEntity]
+	filter?: [InferEntity]
+}
