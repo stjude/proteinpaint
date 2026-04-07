@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.182.0
 
 Features:
 - Extracted isoform switching code to its own DOM component and moved it to TypeScript
