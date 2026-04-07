@@ -33,26 +33,26 @@ interface GeneModelWithDomains extends GeneModel {
  */
 function setupCanvas(canvas: HTMLCanvasElement, width: number, height: number): CanvasRenderingContext2D {
 	const dpr = window.devicePixelRatio || 1
-	
+
 	// Set display size (css pixels)
 	canvas.style.width = `${width}px`
 	canvas.style.height = `${height}px`
-	
+
 	// Set actual size in memory (scaled by device pixel ratio)
 	canvas.width = width * dpr
 	canvas.height = height * dpr
-	
+
 	const ctx = canvas.getContext('2d')!
-	
+
 	// Scale all drawing operations by the dpr
 	ctx.scale(dpr, dpr)
-	
+
 	return ctx
 }
 
 /**
  * Sketches a spliced RNA structure showing exons, introns, and coding regions.
- * 
+ *
  * @param holder - D3 selection to append canvas to
  * @param gm - Gene model with exon structure
  * @param pxwidth - Width in pixels
@@ -75,13 +75,13 @@ export function sketchSplicerna(holder: Div | Td, gm: GeneModelWithDomains, pxwi
 	const h = 20
 	const pad = 4
 	const ctx = setupCanvas(canvas, pxwidth, h)
-	
+
 	ctx.strokeStyle = color
 	ctx.beginPath()
 	ctx.moveTo(0, Math.floor(h / 2) - 0.5)
 	ctx.lineTo(pxwidth, Math.floor(h / 2) - 0.5)
 	ctx.stroke()
-	
+
 	// gm.exon is 5 to 3
 	const reverse = gm.strand === '-'
 	let x = 0
@@ -176,7 +176,7 @@ export function sketchSplicerna(holder: Div | Td, gm: GeneModelWithDomains, pxwi
 
 /**
  * Sketches a gene model summary across multiple regions.
- * 
+ *
  * @param holder - D3 selection to append canvas to
  * @param rglst - List of exon regions
  * @param gm - Gene model
@@ -199,7 +199,7 @@ export function sketchGmsum(
 	const canvas = holder.append('canvas').node() as HTMLCanvasElement
 	const pad = Math.ceil(h / 5)
 	const ctx = setupCanvas(canvas, pxwidth, h)
-	
+
 	let start: number | undefined
 	let x = 0
 	for (const r of rglst) {
@@ -226,7 +226,7 @@ export function sketchGmsum(
 		}
 		x += r.width! + intronw
 	}
-	
+
 	if (start !== undefined && stop !== undefined) {
 		ctx.strokeStyle = color
 		ctx.beginPath()
@@ -291,7 +291,7 @@ export function sketchGmsum(
 
 /**
  * Sketches an RNA structure showing UTRs, coding region, and protein domains.
- * 
+ *
  * @param holder - D3 selection to append canvas to
  * @param gm - Gene model with RNA and domain information
  * @param pxwidth - Width in pixels
@@ -302,7 +302,7 @@ export function sketchRna(holder: Div | Td, gm: GeneModelWithDomains, pxwidth: n
 	const h = 20
 	const pad = 4
 	const ctx = setupCanvas(canvas, pxwidth, h)
-	
+
 	if (!gm.cdslen) {
 		ctx.fillStyle = '#aaa'
 		ctx.fillRect(0, pad, pxwidth, h - pad * 2)
@@ -342,7 +342,7 @@ export function sketchRna(holder: Div | Td, gm: GeneModelWithDomains, pxwidth: n
 
 /**
  * Sketches a protein structure showing protein domains.
- * 
+ *
  * @param holder - D3 selection to append canvas to
  * @param gm - Gene model with protein domain information
  * @param pxwidth - Width in pixels
@@ -351,7 +351,7 @@ export function sketchProtein2(holder: Div | Td, gm: GeneModelWithDomains, pxwid
 	const canvas = holder.append('canvas').node() as HTMLCanvasElement
 	const h = 20
 	const ctx = setupCanvas(canvas, pxwidth, h)
-	
+
 	const sf = pxwidth / (gm.cdslen! / 3)
 	gm.pdomains!.sort((a, b) => b.stop - b.start - a.stop + a.start)
 	ctx.fillStyle = 'white'
@@ -366,7 +366,7 @@ export function sketchProtein2(holder: Div | Td, gm: GeneModelWithDomains, pxwid
 
 /**
  * Sketches a gene structure with exons, introns, UTRs, and strand direction.
- * 
+ *
  * @param holder - D3 selection to append canvas to
  * @param gm - Gene model
  * @param pxwidth - Width in pixels
@@ -390,7 +390,7 @@ export function sketchGene(
 ): void {
 	const canvas = holder.append('canvas').node() as HTMLCanvasElement
 	const ctx = setupCanvas(canvas, pxwidth, h)
-	
+
 	const sf = scaleLinear().range([1, pxwidth])
 	if (reverse) {
 		sf.domain([bpstop, bpstart])
@@ -434,7 +434,7 @@ export function sketchGene(
 			}
 		}
 	}
-	
+
 	function bpBox(
 		ctx: CanvasRenderingContext2D,
 		start: number,
@@ -449,7 +449,7 @@ export function sketchGene(
 		if (a >= b) return
 		ctx.fillRect(Math.floor(sf(reverse ? b : a)), y, Math.max(1, Math.abs(sf(b) - sf(a))), h)
 	}
-	
+
 	function bpStrand(
 		ctx: CanvasRenderingContext2D,
 		strand: string,
@@ -491,13 +491,13 @@ export function sketchGene(
 /**
  * Displays protein information (amino acid length) as text.
  * Note: This function does not use canvas rendering.
- * 
+ *
  * @param holder - D3 selection to append span to
  * @param gm - Gene model with CDS information
  * @param pxwidth - Width in pixels (unused but kept for API compatibility)
  * @returns The created span element
  */
-export function sketchProtein(holder: Div | Td, gm: GeneModelWithDomains, pxwidth: number) {
+export function sketchProtein(holder: Div | Td, gm: GeneModelWithDomains, _pxwidth: number) {
 	let aalen = -1
 	if (gm.cdslen) {
 		aalen = gm.cdslen / 3
