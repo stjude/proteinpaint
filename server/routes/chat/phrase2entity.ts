@@ -2,6 +2,8 @@ import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { extractGenesFromPrompt } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagentnew.ts'
 import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import { getDsAllowedTermTypes } from '../termdb.config.ts'
+import type { Scaffold, SummaryScaffold, InferEntity, SummaryPhrase2EntityResult } from './scaffoldTypes.ts'
 
 async function validateNonDictionaryTypes(
 	phrase: string,
@@ -48,15 +50,12 @@ async function validateNonDictionaryTypes(
 	}
 }
 
-export async function inferEntities(
+async function inferEntities(
 	phrase: string,
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any
-): Promise<
-	| { termType: 'dictionary' | 'geneExpression' | 'methylation' | 'variant' | 'proteome'; phrase: string }
-	| { type: 'text'; text: string }
-> {
+): Promise<InferEntity | { type: 'text'; text: string }> {
 	const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json)
 	if (!validatedNonDict) {
 		// No match, probably a dictionary term or a non-dictionary term we don't have a way to validate yet (e.g. ssGSEA score, metabolites, etc.)
@@ -67,11 +66,11 @@ export async function inferEntities(
 		if (validatedNonDict.geneFeatures.dataType == 'expression') {
 			return { termType: 'geneExpression', phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
-			return { termType: 'methylation', phrase: phrase }
+			return { termType: 'dnaMethylation', phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'variant') {
-			return { termType: 'variant', phrase: phrase }
+			return { termType: 'geneVariant', phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'proteome') {
-			return { termType: 'proteome', phrase: phrase }
+			return { termType: 'proteomeAbundance', phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
 		}
@@ -81,5 +80,80 @@ export async function inferEntities(
 			'validatedNonDict has unknown data type returned from validateNonDictionaryTypes function:' +
 			JSON.stringify(validatedNonDict)
 		)
+	}
+}
+
+export async function phrase2entity(
+	scaffold: Scaffold,
+	plotType: string,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	ds: any
+): Promise<{ type: 'text'; text: string } | SummaryPhrase2EntityResult> {
+	if (plotType == 'summary') {
+		const scaffoldResult = scaffold as SummaryScaffold
+		const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds)
+		if ('type' in tw1 && tw1.type === 'text') {
+			return { type: 'text', text: tw1.text }
+		} else {
+			console.log('Validation result for term1:', tw1)
+			const summ_term: SummaryPhrase2EntityResult = {
+				tw1: [tw1 as InferEntity]
+			}
+			if (scaffoldResult.tw2) {
+				const tw2 = await phrase2entitytw(scaffoldResult.tw2, llm, genes_list, dataset_json, ds)
+				if ('type' in tw2 && tw2.type === 'text') {
+					return { type: 'text', text: tw2.text }
+				}
+				console.log('Validation result for term2:', tw2)
+				summ_term.tw2 = [tw2 as InferEntity]
+			}
+			if (scaffoldResult.tw3) {
+				const tw3 = await phrase2entitytw(scaffoldResult.tw3, llm, genes_list, dataset_json, ds)
+				if ('type' in tw3 && tw3.type === 'text') {
+					return { type: 'text', text: tw3.text }
+				}
+				console.log('Validation result for term3:', tw3)
+				summ_term.tw3 = [tw3 as InferEntity]
+			}
+			if (scaffoldResult.filter) {
+				const filter = await phrase2entitytw(scaffoldResult.filter, llm, genes_list, dataset_json, ds)
+				if ('type' in filter && filter.type === 'text') {
+					return { type: 'text', text: filter.text }
+				}
+				console.log('Validation result for filter:', filter)
+				summ_term.filter = [filter as InferEntity]
+			}
+			return summ_term
+		}
+	} else {
+		return { type: 'text', text: 'Other plot types not yet supported' }
+	}
+}
+
+async function phrase2entitytw(
+	phrase: string,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	ds: any
+): Promise<{ type: 'text'; text: string } | InferEntity> {
+	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json)
+	if ('type' in tw1Result && tw1Result.type === 'text') {
+		return { type: 'text', text: tw1Result.text }
+	}
+	//console.log("getDsAllowedTermTypes(ds):", getDsAllowedTermTypes(ds))
+	if ((tw1Result as InferEntity).termType == 'dictionary') {
+		return tw1Result // Dictionary term
+	} else if (getDsAllowedTermTypes(ds).includes((tw1Result as InferEntity).termType)) {
+		return tw1Result
+	} else {
+		return {
+			type: 'text',
+			text: `The termType "${
+				(tw1Result as InferEntity).termType
+			}" in phrase "${phrase}" is not an allowed termType for this dataset`
+		}
 	}
 }
