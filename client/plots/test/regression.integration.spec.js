@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { detectOne } from '../../test/test.helpers.js'
+import { detectLst, detectOne } from '../../test/test.helpers.js'
 
 /* 
 Tests:
@@ -143,8 +143,8 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		}
 
 		const elem = regDom.inputs.node()
-		await detectOne({ selector: '.sjpp-vp-violinDiv', elem })
-		test.ok(elem.querySelector('.sjpp-vp-violinDiv'), `Should render violin plot for outcome variable`)
+		const violinDiv = await detectOne({ selector: '.sjpp-vp-violinDiv', elem })
+		test.ok(violinDiv, `Should render violin plot for outcome variable`)
 
 		if (test._ok) regression.Inner.app.destroy()
 		test.end()
@@ -179,11 +179,8 @@ tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_
 		const regDom = regression.Inner.dom
 
 		//**** Inputs ****
-		test.equal(
-			regDom.inputs.selectAll('.sjpp-vp-violinDiv').nodes().length,
-			2,
-			`Should render violin plot for outcome variable`
-		)
+		const violinDivs = await detectLst({ selector: '.sjpp-vp-violinDiv', elem: regDom.inputs.node(), count: 2 })
+		test.ok(violinDivs, `Should render violin plots for outcome and independent variables`)
 
 		//**** Results ****
 		let tableLabel, table, results
