@@ -4,7 +4,7 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import { axisstyle, Menu, newSandboxDiv, sayerror, appear, disappear, isoformSelect, allgm2sum } from '#dom'
+import { axisstyle, Menu, newSandboxDiv, sayerror, appear, disappear, isoformSelect, allgm2sum, sketchGene, sketchSplicerna, sketchRna, sketchProtein2 } from '#dom'
 import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common.js'
 import * as coord from './coord'
@@ -3736,7 +3736,7 @@ seekrange(chr,start,stop) {
 						if (row5) row5.attr('class', 'sja_menuoption')
 					}
 				})
-			client.sketchGene(
+			sketchGene(
 				row1.append('div').style('vertical-align', 'middle').style('display', 'inline-block'),
 				this.usegm,
 				width,
@@ -3768,7 +3768,7 @@ seekrange(chr,start,stop) {
 						if (row5) row5.attr('class', 'sja_menuoption')
 					}
 				})
-			client.sketchSplicerna(
+			sketchSplicerna(
 				row2.append('div').style('vertical-align', 'middle').style('display', 'inline-block').style('padding', '0px'),
 				this.usegm,
 				width,
@@ -3793,7 +3793,7 @@ seekrange(chr,start,stop) {
 				}
 				this.setgmmode(client.gmmode.exononly, true)
 			})
-		client.sketchRna(
+		sketchRna(
 			row3.append('div').style('vertical-align', 'middle').style('display', 'inline-block').style('padding', '0px'),
 			this.usegm,
 			width,
@@ -3822,7 +3822,7 @@ seekrange(chr,start,stop) {
 					}
 					this.setgmmode(client.gmmode.protein, true)
 				})
-			client.sketchProtein2(
+			sketchProtein2(
 				row4.append('div').style('vertical-align', 'middle').style('display', 'inline-block').style('padding', '0px'),
 				this.usegm,
 				width
