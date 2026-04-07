@@ -180,25 +180,41 @@ export function plotDendrogramHclust(plotOnly) {
 			const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
 			const width = xDendrogramHeight + 0.0000001
 			const height = rowHeight * row.inputOrder.length
+			const canvasWidthPx =
+				Number.isFinite(width) && Number.isFinite(pxr) ? Math.max(0, Math.floor(width * pxr)) : 0
+			const canvasHeightPx =
+				Number.isFinite(height) && Number.isFinite(pxr) ? Math.max(0, Math.floor(height * pxr)) : 0
 			
-			// Safety check: prevent zero-sized canvas which causes convertToBlob error
-			if (width <= 0 || height <= 0) {
+			// Safety check: prevent zero-sized canvas which causes OffscreenCanvas/convertToBlob errors
+			if (
+				!Number.isFinite(width) ||
+				!Number.isFinite(height) ||
+				!Number.isFinite(pxr) ||
+				width <= 0 ||
+				height <= 0 ||
+				pxr <= 0 ||
+				canvasWidthPx < 1 ||
+				canvasHeightPx < 1
+			) {
 				console.warn(
 					'Skipping left dendrogram render: invalid dimensions.',
 					'This may indicate a zoom feedback loop issue.',
-					{ 
-						width, 
-						height, 
-						rowHeight, 
+					{
+						width,
+						height,
+						pxr,
+						canvasWidthPx,
+						canvasHeightPx,
+						rowHeight,
 						termCount: row.inputOrder.length,
-						xDendrogramHeight 
+						xDendrogramHeight
 					}
 				)
 				this.dom.leftDendrogram.selectAll('*').remove()
 				return
 			}
 			
-			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
+			const canvas = new OffscreenCanvas(canvasWidthPx, canvasHeightPx)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
 			ctx.imageSmoothingEnabled = false
