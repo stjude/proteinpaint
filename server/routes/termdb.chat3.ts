@@ -10,10 +10,11 @@ import { inferScaffold } from './chat/scaffold.ts'
 import serverconfig from '../src/serverconfig.js'
 import { getDsAllowedTermTypes } from './termdb.config.ts'
 import { phrase2entity } from './chat/phrase2entity.ts'
-// import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
+import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import path from 'path'
 import fs from 'fs'
 import { isSummaryScaffold } from './chat/scaffoldTypes.ts'
+import type { SummaryPhrase2EntityResult } from './scaffoldTypes.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat3',
@@ -51,8 +52,8 @@ function init({ genomes }) {
 
 			const llm = serverconfig.llm
 			if (!llm) throw 'serverconfig.llm is not configured'
-			if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
-				throw "llm.provider must be 'SJ' or 'ollama'"
+			if (llm.provider !== 'SJ' && llm.provider !== 'ollama' && llm.provider !== 'huggingface') {
+				throw "llm.provider must be 'SJ', 'ollama', or 'huggingface'"
 			}
 			/*
 * Old Stuff from Robin
@@ -218,9 +219,15 @@ export async function run_chat_pipeline(
 			if ('type' in summary_phrase2entity && summary_phrase2entity.type === 'text') {
 				return summary_phrase2entity // Return error
 			}
-
 			console.log(summary_phrase2entity)
-			// const termObj = await inferTermObjFromEntity(summary_phrase2entity)
+			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+			const termObj = await inferTermObjFromEntity(
+				summary_phrase2entity as SummaryPhrase2EntityResult,
+				plotType,
+				llm,
+				dataset_db
+			)
+			console.log('Inferred termObj from entity:', termObj)
 		}
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
