@@ -124,7 +124,7 @@ async function getViolin(
 /** scale sample data
  * divide keys and values by scaling factor - this is important
  * for regression UI when running association tests. */
-function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrapper) {
+export function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrapper) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
 	for (const val of Object.values(data.samples)) {
@@ -135,7 +135,7 @@ function setScaleData(q: ViolinRequest, data: ValidGetDataResponse, tw: TermWrap
 	}
 }
 
-function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
+export function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: string) {
 	const overlayTerm = q.overlayTw
 	const divideTerm = q.divideTw
 	const useLog = q.isLogScale
@@ -156,7 +156,7 @@ function divideValues(q: ViolinRequest, data: ValidGetDataResponse, sampleType: 
 	}
 }
 
-function sortObj(object: { [index: string]: any }) {
+export function sortObj(object: { [index: string]: any }) {
 	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => (a as any) - (b as any)))
 }
 
@@ -185,7 +185,7 @@ export function sortPlot2Values(
 	return plot2values
 }
 
-function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest) {
+export function setViolinResponse(valuesObject: any, data: ValidGetDataResponse, q: ViolinRequest) {
 	const charts: any = {}
 	const overlayTerm = q.overlayTw
 	const divideTw = q.divideTw
@@ -459,7 +459,7 @@ async function processBoxPlotData(data: ValidGetDataResponse, q: BoxRequest) {
 
 /** Set the data (e.g. values, titles, outliers, etc.)
  * for individual box plots within a chart */
-function setPlotData(
+export function setPlotData(
 	plots: InternalBoxPlotEntry[],
 	values: number[],
 	key: string,
@@ -514,7 +514,7 @@ function setPlotData(
  * boxplot_getvalue() already calculates most of these values.
  * This function formats the data appropriately for the client.
  */
-function setIndividualBoxPlotStats(boxplot: BoxPlotData, values: number[]): DescrStats {
+export function setIndividualBoxPlotStats(boxplot: BoxPlotData, values: number[]): DescrStats {
 	const stats = {
 		total: { key: 'total', label: 'Total', value: values.length },
 		min: { key: 'min', label: 'Minimum', value: values[0] },
@@ -533,7 +533,7 @@ function setIndividualBoxPlotStats(boxplot: BoxPlotData, values: number[]): Desc
 }
 
 /** Set hidden status for plots */
-function setHiddenPlots(term: TermWrapper, plots: InternalBoxPlotEntry[]) {
+export function setHiddenPlots(term: TermWrapper, plots: InternalBoxPlotEntry[]) {
 	for (const v of Object.values(term.term?.values as Record<string, { label: string; uncomputable: boolean }>)) {
 		const plot = plots.find(p => p.key === v.label)
 		if (plot) plot.isHidden = v?.uncomputable
@@ -548,7 +548,7 @@ function setHiddenPlots(term: TermWrapper, plots: InternalBoxPlotEntry[]) {
 }
 
 /** Only return a simplified object for the legend data */
-function setUncomputableValues(values: Record<string, number>) {
+export function setUncomputableValues(values: Record<string, number>) {
 	if (Object.entries(values)?.length) {
 		return Object.entries(values).map(([label, v]) => ({ label, value: v as number }))
 	} else return null
@@ -607,12 +607,12 @@ async function runWilcoxonTests(
 	}
 }
 
-function computeSampleType(data: ValidGetDataResponse): string {
+export function computeSampleType(data: ValidGetDataResponse): string {
 	return `All ${data.sampleType?.plural_name || 'samples'}`
 }
 
 /** Build bins for constructing filter objects (listing samples, filtering, etc.) */
-function buildBins(
+export function buildBins(
 	tw: TermWrapper,
 	data: ValidGetDataResponse,
 	overlayTw?: TermWrapper,
@@ -628,7 +628,7 @@ function buildBins(
 
 /** Extract numeric, computable values from sample data for a given term.
  *  Optionally filters to positive-only values for log scale. */
-function extractNumericValues(samples: any[], tw: TermWrapper, isLogScale?: boolean): number[] {
+export function extractNumericValues(samples: any[], tw: TermWrapper, isLogScale?: boolean): number[] {
 	let values = samples
 		.map(s => s?.[tw.$id!]?.value)
 		.filter(v => typeof v === 'number' && !tw.term.values?.[v]?.uncomputable)
