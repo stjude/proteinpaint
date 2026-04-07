@@ -418,7 +418,7 @@ export function sketchGene(
 		}
 		if (gm.intron) {
 			for (const e of gm.intron) {
-				bpStrand(ctx, gm.strand, e[0], e[1], bpstart, bpstop, 1 + ypad, h - ypad * 2 - 1, color || 'black')
+				bpStrand(ctx, gm.strand, e[0], e[1], bpstart, bpstop, 1 + ypad, h - ypad * 2 - 1, color)
 			}
 		}
 	}
