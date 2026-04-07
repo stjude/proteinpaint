@@ -90,53 +90,65 @@ export function sketchSplicerna(holder: Div | Td, gm: GeneModelWithDomains, pxwi
 			thick: number[] | null = null,
 			thin2: number[] | null = null
 		if (reverse) {
-			const start = e[1],
-				stop = e[0],
-				cds5 = gm.codingstop!,
-				cds3 = gm.codingstart!
-			if (stop >= cds5) {
+			// Check if coding start/stop are defined for reverse strand logic
+			if (gm.codingstop === undefined || gm.codingstart === undefined) {
+				// For non-coding or incomplete genes, render as thin
 				thin1 = e
-			} else if (stop >= cds3) {
-				if (start >= cds5) {
-					thin1 = [cds5, start]
-					thick = [stop, cds5]
-				} else {
-					thick = e
-				}
 			} else {
-				if (start >= cds5) {
-					// assumption: 1 single continuous cds
-					thin1 = [cds5, start]
-					thin2 = [stop, cds3]
-					thick = [cds3, cds5]
-				} else if (start >= cds3) {
-					thin2 = [stop, cds3]
-					thick = [cds3, start]
+				const start = e[1],
+					stop = e[0],
+					cds5 = gm.codingstop,
+					cds3 = gm.codingstart
+				if (stop >= cds5) {
+					thin1 = e
+				} else if (stop >= cds3) {
+					if (start >= cds5) {
+						thin1 = [cds5, start]
+						thick = [stop, cds5]
+					} else {
+						thick = e
+					}
 				} else {
-					thin2 = e
+					if (start >= cds5) {
+						// assumption: 1 single continuous cds
+						thin1 = [cds5, start]
+						thin2 = [stop, cds3]
+						thick = [cds3, cds5]
+					} else if (start >= cds3) {
+						thin2 = [stop, cds3]
+						thick = [cds3, start]
+					} else {
+						thin2 = e
+					}
 				}
 			}
 		} else {
-			if (e[1] <= gm.codingstart!) {
+			// Check if coding start/stop are defined for forward strand logic
+			if (gm.codingstart === undefined || gm.codingstop === undefined) {
+				// For non-coding or incomplete genes, render as thin
 				thin1 = e
-			} else if (e[1] <= gm.codingstop!) {
-				if (e[0] <= gm.codingstart!) {
-					thin1 = [e[0], gm.codingstart!]
-					thick = [gm.codingstart!, e[1]]
-				} else {
-					thick = e
-				}
 			} else {
-				if (e[0] <= gm.codingstart!) {
-					// assumption: 1 single continuous cds
-					thin1 = [e[0], gm.codingstart!]
-					thin2 = [gm.codingstop!, e[1]]
-					thick = [gm.codingstart!, gm.codingstop!]
-				} else if (e[0] < gm.codingstop!) {
-					thin2 = [gm.codingstop!, e[1]]
-					thick = [e[0], gm.codingstop!]
+				if (e[1] <= gm.codingstart) {
+					thin1 = e
+				} else if (e[1] <= gm.codingstop) {
+					if (e[0] <= gm.codingstart) {
+						thin1 = [e[0], gm.codingstart]
+						thick = [gm.codingstart, e[1]]
+					} else {
+						thick = e
+					}
 				} else {
-					thin2 = e
+					if (e[0] <= gm.codingstart) {
+						// assumption: 1 single continuous cds
+						thin1 = [e[0], gm.codingstart]
+						thin2 = [gm.codingstop, e[1]]
+						thick = [gm.codingstart, gm.codingstop]
+					} else if (e[0] < gm.codingstop) {
+						thin2 = [gm.codingstop, e[1]]
+						thick = [e[0], gm.codingstop]
+					} else {
+						thin2 = e
+					}
 				}
 			}
 		}
@@ -447,7 +459,7 @@ export function sketchGene(
 		borderstop: number,
 		y: number,
 		h: number,
-		color: string
+		strokeColor: string
 	): void {
 		const a = Math.max(start, borderstart)
 		const b = Math.min(stop, borderstop)
@@ -456,7 +468,7 @@ export function sketchGene(
 			spacing = h / 2,
 			w = sf(b) - sf(a)
 		if (w <= pad * 2 + h / 2) return
-		ctx.strokeStyle = color
+		ctx.strokeStyle = strokeColor
 		const fillcount = Math.floor((w - pad * 2) / (h / 2 + spacing))
 		let x = Math.floor(sf(a) + (w - fillcount * (h / 2 + spacing)) / 2) + 0.5
 		ctx.beginPath()
