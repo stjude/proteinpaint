@@ -103,12 +103,12 @@ export class PlotButtons {
 			getPlotConfig: (f?: any) => any
 		}[] = []
 
-		for (const plots of this.scTermdbConfig?.data?.plots || []) {
+		for (const plot of this.scTermdbConfig?.data?.plots || []) {
 			btns.push({
-				label: plots.name,
+				label: plot.name,
 				isVisible: () => true,
 				getPlotConfig: async () => {
-					return await this.getSingleCellConfig(plots.name)
+					return await this.getSingleCellConfig(plot.name)
 				}
 			})
 		}
@@ -119,9 +119,22 @@ export class PlotButtons {
 				getPlotConfig: () => {
 					return {
 						chartType: 'dictionary',
-						sample: {
-							sID: this.item!.sample,
-							eID: this.item!.experiment
+						spawnConfig: {
+							parentId: this.interactions.id,
+							hidePlotFilter: true,
+							sample: {
+								sID: this.item!.sample,
+								eID: this.item!.experiment
+							}
+						},
+						tree: {
+							usecase: {
+								target: 'dictionary',
+								specialCase: {
+									type: 'singleCell',
+									config: { sample: this.item!.sample }
+								}
+							}
 						}
 					}
 				}
