@@ -20,8 +20,15 @@ export class SearchHandler {
 			)
 			return
 		}
-		const plotName = opts.usecase?.specialCase?.config?.name
-		const filteredTerms = plotName ? scctTerms.filter(t => t.plot == plotName) : scctTerms
+		const usecaseConfig = opts.usecase?.specialCase?.config
+		const plotName = usecaseConfig?.name
+		let filteredTerms: any[] = []
+		if (plotName) {
+			filteredTerms = scctTerms.filter(t => t.plot == plotName)
+		} else {
+			filteredTerms = scctTerms.map(t => Object.assign(t, { label: `${t.name} (${t.plot})` }))
+		}
+
 		for (const t of filteredTerms) {
 			holder
 				/** The divs and styling duplicates the appearance of the
@@ -36,11 +43,18 @@ export class SearchHandler {
 				.style('margin', '1px 0px')
 				.style('border-radius', '6px')
 				//End duplicated pill styling
-				.text(t.name)
+				.text(t.label || t.name)
 				.on('click', () => {
-					this.callback!(t)
+					const term = this.makeTerm(t, usecaseConfig)
+					this.callback!(term)
 				})
 		}
+	}
+
+	makeTerm(_term, usecaseConfig) {
+		const term = _term
+		if (!term.sample && usecaseConfig.sample) term.sample = usecaseConfig.sample
+		return term
 	}
 
 	validateOpts(opts) {
@@ -50,8 +64,5 @@ export class SearchHandler {
 		if (opts.usecase == null) throw new Error('usecase is required')
 		if (!opts.app.vocabApi.termdbConfig?.termType2terms)
 			throw new Error('termType2terms is required in termdbConfig for singleCellCellType handler')
-		// if (!opts.usecase?.specialCase?.config?.name) {
-		// 	throw new Error('usecase.specialCase.config.name defining the plot is required for singleCellCellType handler')
-		// }
 	}
 }

@@ -12,14 +12,6 @@ import { importPlot } from '#plots/importPlot.js'
 import { newSandboxDiv } from '#dom'
 import formatPlotData from './viewModel/plotData.ts'
 
-/** Overall app TODOs:
- *  - Plot buttons
- *  	- Implement additional menus to appear on click
- *  - Fix any outdated properties in the dataset queries.singleCell obj
- *  - Type all files
- *  - instead of using 'sample', change to 'key' or 'item' or something
- */
-
 class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
 
@@ -137,8 +129,8 @@ class SCViewer extends PlotBase implements RxComponent {
 
 	/** The plot obj is already in state.plots[] but not rendered
 	 * (see SCInteractions). This creates the component and renders the plot */
-	async initSubplotComponent(subplot: any) {
-		const sandbox = newSandboxDiv(this.segments[subplot.scItem.sample].subplots as any, {
+	async initSubplotComponent(subplot: any, item) {
+		const sandbox = newSandboxDiv(this.segments[item.sample].subplots as any, {
 			close: () => {
 				//Delete the component before calling dispatch
 				//Prevents main attempting to re-init the component
@@ -152,7 +144,7 @@ class SCViewer extends PlotBase implements RxComponent {
 				this.view?.removeSegments()
 			},
 			plotId: subplot.id,
-			// beforePlotId: plot.insertBefore || null,
+			beforePlotId: subplot.insertBefore || null,
 			style: {
 				//TODO: What width is appropriate here? 50%?
 				width: '98.5%'
@@ -161,11 +153,15 @@ class SCViewer extends PlotBase implements RxComponent {
 
 		const opts = Object.assign({}, subplot, {
 			app: this.app,
-			holder: sandbox.body,
-			header: sandbox.header,
 			parentId: this.id,
 			id: subplot.id
 		})
+		if (subplot.chartType == 'summary') {
+			opts.holder = sandbox
+		} else {
+			opts.holder = sandbox.body
+			opts.header = sandbox.header
+		}
 		const { componentInit } = await importPlot(opts.chartType)
 		this.components.plots[subplot.id] = await componentInit(opts)
 	}
@@ -179,12 +175,15 @@ class SCViewer extends PlotBase implements RxComponent {
 		if (!this.view) throw new Error(`View not initialized`)
 		if (!this.interactions) throw new Error(`Interactions not initialized`)
 
-		this.interactions.toggleLoading(true)
+		// this.interactions.toggleLoading(true)
 
 		// const errors = {} collect plot init errors
 		for (const subplot of state.subplots) {
-			if (!this.segments[subplot.scItem.sample]) this.initSegment(subplot.scItem)
-			if (!this.components.plots[subplot.id]) await this.initSubplotComponent(subplot)
+			//TODO: Get rid of passing scItem
+			const item = subplot.scItem || subplot?.term?.term?.sample
+			if (!item) throw new Error('No item found for subplot. Expected subplot.scItem or config.settings.sc.item')
+			if (!this.segments[item.sample]) this.initSegment(item)
+			if (!this.components.plots[subplot.id]) await this.initSubplotComponent(subplot, item)
 		}
 
 		let data: any = null
@@ -204,7 +203,6 @@ class SCViewer extends PlotBase implements RxComponent {
 			}
 			data.plots = formatPlotData(data.plots)
 		}
-
 		this.view.update(config.settings, data)
 		this.interactions.toggleLoading(false)
 	}

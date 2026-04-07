@@ -118,7 +118,11 @@ export class PlotButtons {
 				isVisible: () => true,
 				getPlotConfig: () => {
 					return {
-						chartType: 'dictionary'
+						chartType: 'dictionary',
+						sample: {
+							sID: this.item!.sample,
+							eID: this.item!.experiment
+						}
 					}
 				}
 			},
@@ -232,8 +236,8 @@ export class PlotButtons {
 				$id: await digestMessage(`CHANGEME-${this.item.sample}-${this.item.experiment}`),
 				term: {
 					type: SINGLECELL_CELLTYPE,
-					id: 'cluster', //CHANGE ME, singlecell.data.plots.[i].colorColumns
-					name: 'cluster', //CHANGE ME
+					id: this.scTermdbConfig.DEgenes.termId,
+					name: this.scTermdbConfig.DEgenes.termId,
 					sample: {
 						sID: this.item.sample,
 						eID: this.item.experiment
