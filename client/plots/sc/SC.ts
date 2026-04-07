@@ -165,8 +165,6 @@ class SCViewer extends PlotBase implements RxComponent {
 		 * expect the header and the holder (i.e. body).*/
 		if (subplot.chartType == 'summary') {
 			opts.holder = sandbox
-			//TODO need to pass .hidePlotFilter as well. Doesn't pass from dictionary
-			//Also doesn't pass sample info from dictionary to summary.
 		} else {
 			opts.holder = sandbox.body
 			opts.header = sandbox.header

@@ -21,14 +21,13 @@ class MassDict {
 			tree: {
 				click_term: _term => {
 					const term = _term.term || _term
+					const _config = Object.assign({}, config.spawnConfig, {
+						chartType: term.type == 'survival' ? 'survival' : 'summary',
+						term: _term.term ? _term : { term }
+					})
 					this.app.dispatch({
 						type: 'plot_create',
-						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: _term.term ? _term : { term },
-							/** Allow parent apps to launch plots within their context */
-							parentId: config?.parentId
-						}
+						config: _config
 					})
 
 					this.app.dispatch({
@@ -38,14 +37,8 @@ class MassDict {
 				}
 			}
 		}
-		/** TODO: Special logic for singleCell plot.
-		 * Possible to pass as tree.usecase.specialCase from
-		 * plot_create?? */
-		if (config?.sample) {
-			opts.tree.usecase = {
-				target: 'dictionary',
-				specialCase: { type: 'singleCell', config: { sample: config.sample, name: config?.plot } }
-			}
+		if (config?.tree?.usecase) {
+			opts.tree.usecase = config.tree.usecase
 		}
 		this.tree = await appInit(opts)
 	}
@@ -53,11 +46,9 @@ class MassDict {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const tree = { usecase: { target: 'dictionary' } }
-		/** TODO: Special logic for singleCell plot.
-		 * Possible to pass as tree.usecase.specialCase from
-		 * plot_create?? */
-		if (config?.sample)
-			tree.usecase.specialCase = { type: 'singleCell', config: { sample: config.sample, name: config?.plot } }
+		if (config?.tree?.usecase.specialCase) {
+			tree.usecase.specialCase = config.tree.usecase.specialCase
+		}
 		return {
 			tree,
 			vocab: appState.vocab,
