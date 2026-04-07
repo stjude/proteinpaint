@@ -346,7 +346,7 @@ async function getGenes(arg, settings, vocabApi) {
 	// genes are not predefined. query to get top genes using the current cohort
 	const body = {
 		genome: gdcGenome,
-		dslabel: arg.dslabel,
+		dslabel: arg.dslabel || gdcDslabel,
 		maxGenes: settings.maxGenes,
 		geneFilter: settings.geneFilter
 	}

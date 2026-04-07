@@ -541,7 +541,8 @@ export function setLayout() {
 		textpos: { coord: 'y', factor: 1 },
 		axisFxn: axisBottom
 	}
-	if (layout.btm.prefix == 'sample') layout.btm.display = colw >= s.minLabelFontSize ? '' : 'none'
+	if (layout.btm.prefix == 'sample')
+		layout.btm.display = s.sampleLabelsToggle !== 'hide' && colw >= s.minLabelFontSize ? '' : 'none'
 
 	const leftFontSize =
 		_l_ == 'Grp'
