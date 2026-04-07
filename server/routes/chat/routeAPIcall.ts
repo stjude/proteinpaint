@@ -21,22 +21,33 @@ export async function route_to_appropriate_llm_provider(
 	return response
 }
 
-// Commented out for now. May uncomment later if we use any of the logic from embeddingClassifier.ts for downstream individual plot agents for the bottom-k approach
 export async function route_to_appropriate_embedding_provider(
 	templates: string[],
 	llm: LlmConfig
 ): Promise<number[][]> {
-	if (llm.provider == 'SJ') {
-		// Local SJ server
-		return await callSjEmbedding(templates, llm.embeddingModelName, llm.api)
-	} else if (llm.provider == 'ollama') {
-		// Ollama server
-		return await callOllamaEmbedding(templates, llm.embeddingModelName, llm.api)
-	} else if (llm.provider == 'huggingface') {
-		// HuggingFace Inference API
-		return await callHuggingFaceEmbedding(templates, llm.embeddingModelName, llm.api)
-	} else {
-		throw 'Unknown LLM provider'
+	try {
+		let response: any
+		if (llm.EmbeddingProvider == 'SJ') {
+			// Local SJ server
+			response = await callSjEmbedding(templates, llm.embeddingModelName, llm.EmbeddingProviderApi)
+		} else if (llm.EmbeddingProvider == 'ollama') {
+			// Ollama server
+			response = await callOllamaEmbedding(templates, llm.embeddingModelName, llm.EmbeddingProviderApi)
+		} else if (llm.EmbeddingProvider == 'huggingface') {
+			// HuggingFace Inference API
+			if (!llm.EmbeddingProviderApiToken) throw 'HuggingFace provider requires apiToken in LlmConfig'
+			response = await callHuggingFaceEmbedding(
+				templates,
+				llm.embeddingModelName,
+				llm.EmbeddingProviderApi,
+				llm.EmbeddingProviderApiToken
+			)
+		} else {
+			throw `Unknown embedding LLM provider: "${llm.EmbeddingProvider}"`
+		}
+		return response
+	} catch (error) {
+		throw 'Error in route_to_appropriate_embedding_provider: ' + error
 	}
 }
 
@@ -112,9 +123,10 @@ const HF_FALLBACK_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
 export async function callHuggingFaceEmbedding(
 	texts: string[],
 	modelName: string,
+	api: string,
 	apiToken: string
 ): Promise<number[][]> {
-	const url = `https://router.huggingface.co/hf-inference/models/${modelName}/pipeline/feature-extraction`
+	const url = api.replace('modelName', modelName) // Replace "modelName" in the URL with the actual model name
 	const response = await fetch(url, {
 		method: 'POST',
 		headers: {
@@ -126,7 +138,7 @@ export async function callHuggingFaceEmbedding(
 
 	if (response.status === 404 && modelName !== HF_FALLBACK_MODEL) {
 		console.warn(`Model ${modelName} returned 404 — falling back to ${HF_FALLBACK_MODEL}`)
-		return callHuggingFaceEmbedding(texts, HF_FALLBACK_MODEL, apiToken)
+		return callHuggingFaceEmbedding(texts, HF_FALLBACK_MODEL, api, apiToken)
 	}
 
 	if (!response.ok) {
@@ -134,6 +146,7 @@ export async function callHuggingFaceEmbedding(
 	}
 
 	const result = (await response.json()) as number[][] | number[][][]
+	console.log(`Received embeddings from HuggingFace for model "${modelName}":`, result)
 
 	return (result as any[]).map(item => {
 		if (Array.isArray(item[0])) {
