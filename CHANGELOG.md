@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Extracted isoform switching code to its own DOM component and moved it to TypeScript
+
 Fixes:
 - re-render bin lines when switching between tabs in numeric termsetting edit menu
 
