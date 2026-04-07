@@ -458,7 +458,8 @@ export function setRenderers(self) {
 	self.adjustSvgDimensions = async function (prevTranspose) {
 		const s = self.settings.matrix
 		const hc = self.settings.hierCluster || {}
-		const hcHeight = hc.yDendrogramHeight || 0
+		const l = self.layout
+		const hcHeight = !hc.yDendrogramHeight ? 0 : hc.yDendrogramHeight + (l.top.display === 'none' ? 0 : 10)
 		const hcWidth = hc.xDendrogramHeight || 0
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
@@ -467,7 +468,6 @@ export function setRenderers(self) {
 		// the label rotation to end before measuring the label height and width
 		await sleep(prevTranspose == s.transpose ? duration : s.duration)
 
-		const l = self.layout
 		// these are the label boxes
 		const topBox = l.top.box.node().getBBox()
 		const btmBox = l.btm.box.node().getBBox()

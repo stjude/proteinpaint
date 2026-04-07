@@ -110,6 +110,7 @@ export async function getPlotConfig(opts = {}, app) {
 				minLabelFontSize: 6,
 				maxLabelFontSize: 14,
 				transpose: false,
+				sampleLabelsToggle: opts.chartType === 'hierCluster' ? 'hide' : 'auto', // 'auto' | 'hide'
 				sampleLabelOffset: 120,
 				sampleGrpLabelOffset: 120,
 				sampleGrpLabelMaxChars: 32,

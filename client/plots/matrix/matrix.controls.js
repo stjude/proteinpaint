@@ -131,6 +131,18 @@ export class MatrixControls {
 				settingsKey: 'collabelmaxchars'
 			},
 			{
+				label: `Toggle sample labels`,
+				title: `Do not automatically show sample labels based on column width`,
+				type: 'radio',
+				chartType: 'matrix',
+				settingsKey: 'sampleLabelsToggle',
+				styles: { display: 'inline-block' },
+				options: [
+					{ label: `Based on column width`, value: 'auto' },
+					{ label: 'Always hide', value: 'hide' }
+				]
+			},
+			{
 				label: `Group ${l.Samples} By`,
 				title: `Select a variable with discrete values to group ${l.samples}`,
 				type: 'term',

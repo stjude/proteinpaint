@@ -1,1 +1,2 @@
-
+Fixes:
+- hierCluster option to always hide samples labels or auto-show them based on column width

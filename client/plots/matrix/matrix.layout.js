@@ -147,12 +147,12 @@ export function setLabelsAndScales() {
 
 			const anno = sample.row[t.tw.$id]
 			if (!anno) continue
-			
+
 			// Check if this annotation has mixed positive/negative values (for termCollection)
 			if (t.tw.term.type == 'termCollection' && anno.hasMixedValues) {
 				hasMixedValues = true
 			}
-			
+
 			// Track min/max percentage values for termCollection
 			if (t.tw.term.type == 'termCollection' && anno.values) {
 				for (const val of anno.values) {
@@ -172,7 +172,7 @@ export function setLabelsAndScales() {
 					}
 				}
 			}
-			
+
 			// This is the second call to classifyValues(), to determine case/hit counts for row labels
 			const { filteredValues, countedValues, renderedValues } = this.classifyValues(
 				anno,
@@ -526,7 +526,7 @@ export function setLayout() {
 		axisFxn: axisTop
 	}
 	if (layout.top.prefix == 'sample')
-		layout.top.display = this.chartType !== 'hierCluster' && colw >= s.minLabelFontSize ? '' : 'none'
+		layout.top.display = s.sampleLabelsToggle !== 'hide' && colw >= s.minLabelFontSize ? '' : 'none'
 
 	const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 	layout.btm.attr = {
