@@ -22,13 +22,23 @@ export async function route_to_appropriate_llm_provider(
 }
 
 // Commented out for now. May uncomment later if we use any of the logic from embeddingClassifier.ts for downstream individual plot agents for the bottom-k approach
-// export async function route_to_appropriate_embedding_provider(
-// 	templates: string[],
-// 	llm: LlmConfig
-// ): Promise<number[][]> {
-// 	const embedder = await getEmbedder(llm)
-// 	return await embedder.embed(templates)
-// }
+export async function route_to_appropriate_embedding_provider(
+	templates: string[],
+	llm: LlmConfig
+): Promise<number[][]> {
+	if (llm.provider == 'SJ') {
+		// Local SJ server
+		return await callSjEmbedding(templates, llm.embeddingModelName, llm.api)
+	} else if (llm.provider == 'ollama') {
+		// Ollama server
+		return await callOllamaEmbedding(templates, llm.embeddingModelName, llm.api)
+	} else if (llm.provider == 'huggingface') {
+		// HuggingFace Inference API
+		return await callHuggingFaceEmbedding(templates, llm.embeddingModelName, llm.api)
+	} else {
+		throw 'Unknown LLM provider'
+	}
+}
 
 async function call_sj_llm(prompt: string, model_name: string, apilink: string) {
 	const temperature = 0.01
@@ -68,34 +78,73 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 }
 
 // Commented out for now. May uncomment later if we use any of the logic from embeddingClassifier.ts for downstream individual plot agents for the bottom-k approach
-// export async function callSjEmbedding(texts: string[], modelName: string, api: string): Promise<number[][]> {
-// 	const response = await ezFetch(api, {
-// 		method: 'POST',
-// 		body: {
-// 			inputs: [{ model_name: modelName, inputs: { text: texts } }]
-// 		},
-// 		headers: { 'Content-Type': 'application/json' },
-// 		timeout: { request: 200000 }
-// 	})
-// 	if (response.outputs?.[0]?.embeddings) return response.outputs[0].embeddings
-// 	const apiError = response.outputs?.[0]?.error
-// 	if (apiError) throw new Error(`SJ embedding API error: ${apiError}`)
-// 	throw new Error(`Unexpected response format from SJ embedding API: ${JSON.stringify(response)}`)
-// }
+export async function callSjEmbedding(texts: string[], modelName: string, api: string): Promise<number[][]> {
+	const response = await ezFetch(api, {
+		method: 'POST',
+		body: {
+			inputs: [{ model_name: modelName, inputs: { text: texts } }]
+		},
+		headers: { 'Content-Type': 'application/json' },
+		timeout: { request: 200000 }
+	})
+	if (response.outputs?.[0]?.embeddings) return response.outputs[0].embeddings
+	const apiError = response.outputs?.[0]?.error
+	if (apiError) throw new Error(`SJ embedding API error: ${apiError}`)
+	throw new Error(`Unexpected response format from SJ embedding API: ${JSON.stringify(response)}`)
+}
 
-// export async function callOllamaEmbedding(texts: string[], modelName: string, api: string): Promise<number[][]> {
-// 	const result = await ezFetch(api + '/api/embed', {
-// 		method: 'POST',
-// 		body: { model: modelName, input: texts },
-// 		headers: { 'Content-Type': 'application/json' },
-// 		timeout: { request: 200000 }
-// 	})
-// 	if (result?.embeddings?.length > 0) {
-// 		if (result.embeddings.length !== texts.length) throw new Error('Embedding count mismatch')
-// 		return result.embeddings
-// 	}
-// 	throw new Error('Unexpected response format from Ollama embedding API')
-// }
+export async function callOllamaEmbedding(texts: string[], modelName: string, api: string): Promise<number[][]> {
+	const result = await ezFetch(api + '/api/embed', {
+		method: 'POST',
+		body: { model: modelName, input: texts },
+		headers: { 'Content-Type': 'application/json' },
+		timeout: { request: 200000 }
+	})
+	if (result?.embeddings?.length > 0) {
+		if (result.embeddings.length !== texts.length) throw new Error('Embedding count mismatch')
+		return result.embeddings
+	}
+	throw new Error('Unexpected response format from Ollama embedding API')
+}
+
+const HF_FALLBACK_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
+
+export async function callHuggingFaceEmbedding(
+	texts: string[],
+	modelName: string,
+	apiToken: string
+): Promise<number[][]> {
+	const url = `https://router.huggingface.co/hf-inference/models/${modelName}/pipeline/feature-extraction`
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: `Bearer ${apiToken}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({ inputs: texts })
+	})
+
+	if (response.status === 404 && modelName !== HF_FALLBACK_MODEL) {
+		console.warn(`Model ${modelName} returned 404 — falling back to ${HF_FALLBACK_MODEL}`)
+		return callHuggingFaceEmbedding(texts, HF_FALLBACK_MODEL, apiToken)
+	}
+
+	if (!response.ok) {
+		throw new Error(`HuggingFace API ${response.status}: ${await response.text()}`)
+	}
+
+	const result = (await response.json()) as number[][] | number[][][]
+
+	return (result as any[]).map(item => {
+		if (Array.isArray(item[0])) {
+			const matrix = item as number[][]
+			const vec = new Array<number>(matrix[0].length).fill(0)
+			for (const row of matrix) row.forEach((v, i) => (vec[i] += v))
+			return vec.map(v => v / matrix.length)
+		}
+		return item as number[]
+	})
+}
 
 async function call_ollama_llm(prompt: string, model_name: string, apilink: string) {
 	const temperature = 0.01
