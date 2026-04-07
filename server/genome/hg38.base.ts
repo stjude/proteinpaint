@@ -6,14 +6,14 @@ import { CancerGeneCensusLst } from './cgc.js'
 // entry in serverconfig and the mmrf.gdc.genome is a distinct object from
 // the usual hg38 entry. These hg38 objects have to be distinct/separate
 // because initGenomeDs() will mutate the imported hg38 objects with
-// boostrapped data and functions.
+// bootstrapped data and functions.
 //
 // Exporting a function below will support returning an object with methods/functions,
 // unlike a literal object that, when copied, loses methods with JSON.parse(JSON.stringify())
 // or not allowed with structuredClone().
 export function getHg38(): Genome {
 	return {
-		specieså: 'human',
+		species: 'human',
 		genomefile: 'genomes/hg38.gz',
 		genedb: {
 			dbfile: 'anno/genes.hg38.db'
