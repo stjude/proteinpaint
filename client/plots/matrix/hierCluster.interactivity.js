@@ -176,8 +176,10 @@ export function triggerZoomBranch(self, clickedSampleNames) {
 	const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 	const centerCell = self.sampleOrder[zoomIndex] // || self.getImgCell(event)
 	const colw = self.computedSettings.colw || self.settings.matrix.colw
-	const maxZoomLevel = s.colwMax / colw
-	const minZoomLevel = s.colwMin / colw
+	// Use baseColw for calculating zoom level constraints to be consistent with controls
+	const baseColwForZoom = self.baseColw || colw
+	const maxZoomLevel = s.colwMax / baseColwForZoom
+	const minZoomLevel = s.colwMin / baseColwForZoom
 	const tentativeZoomLevel = Math.max(
 		1,
 		((s.zoomLevel * d.mainw) / Math.max(c.endCell.x - c.startCell.x, 2 * d.colw)) * 0.7
