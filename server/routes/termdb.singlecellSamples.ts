@@ -194,6 +194,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
 			const sample = q.sample || q.singleCellPlot.sample
+			if (!sample) throw new Error('sample is required for gene expression query')
 			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 		}
 		for (const plot of D.plots) {
@@ -220,10 +221,10 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				file2Lines[tsvfile] = lines2
 			}
 
-			//No idea why colorBy can't be a string but must be a whole object.
-			//Obj created somewhere else. Commenting out till code found.
-			// const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy?.[plot.name]) || plot.colorColumns[0]
-			const colorColumn = plot.colorColumns.find(c => c.name == q.colorBy) || plot.colorColumns[0]
+			/**  TODO: colorBy obj created somewhere else. When found, need to standardize
+			 * to avoid work around logic like this.*/
+			const checkColorBy = typeof q.colorBy == 'string' ? q.colorBy : q.colorBy?.[plot.name]
+			const colorColumn = plot.colorColumns.find(c => c.name == checkColorBy) || plot.colorColumns[0]
 
 			const expCells: Cell[] = []
 			const noExpCells: Cell[] = []

@@ -25,7 +25,9 @@ class MassDict {
 						type: 'plot_create',
 						config: {
 							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: _term.term ? _term : { term }
+							term: _term.term ? _term : { term },
+							/** Allow parent apps to launch plots within their context */
+							parentId: config?.parentId
 						}
 					})
 
@@ -36,10 +38,13 @@ class MassDict {
 				}
 			}
 		}
-		if (config?.scItem) {
+		/** TODO: Special logic for singleCell plot.
+		 * Possible to pass as tree.usecase.specialCase from
+		 * plot_create?? */
+		if (config?.sample) {
 			opts.tree.usecase = {
 				target: 'dictionary',
-				specialCase: { type: 'singleCell', config: { sample: config.scItem.sample } }
+				specialCase: { type: 'singleCell', config: { sample: config.sample, name: config?.plot } }
 			}
 		}
 		this.tree = await appInit(opts)
@@ -48,8 +53,11 @@ class MassDict {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		const tree = { usecase: { target: 'dictionary' } }
-		if (config?.scItem?.sample)
-			tree.usecase.specialCase = { type: 'singleCell', config: { sample: config.scItem.sample } }
+		/** TODO: Special logic for singleCell plot.
+		 * Possible to pass as tree.usecase.specialCase from
+		 * plot_create?? */
+		if (config?.sample)
+			tree.usecase.specialCase = { type: 'singleCell', config: { sample: config.sample, name: config?.plot } }
 		return {
 			tree,
 			vocab: appState.vocab,

@@ -206,6 +206,10 @@ class MassApp extends AppBase implements RxApp {
 		sayerror(errdiv || this.opts.holder, 'Error: ' + (e.message || e.error || e))
 		if (e.stack) console.log(e.stack)
 		this.bus.emit('error')
+		/** .printError() maybe called from any component without a helpful
+		 * message or error object. Include the trace when in debug mode to
+		 * help identify the source of the error.*/
+		if (this.opts?.debug) console.trace('Trace from MassApp.printError() call')
 	}
 
 	skipPrevActionAbort(action) {
