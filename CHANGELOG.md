@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- re-render bin lines when switching between tabs in numeric termsetting edit menu
+
 
 ## 2.181.1
 
