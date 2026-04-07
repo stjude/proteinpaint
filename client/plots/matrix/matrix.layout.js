@@ -62,8 +62,8 @@ export function setAutoDimensions(xOffset) {
 		}
 
 		// Store the base colw value for zoom calculations to prevent feedback loop
-		// Only update when zoomLevel is 1 (initial or reset state) to preserve the base reference
-		if (!this.baseColw || s.zoomLevel === 1) {
+		// Only set once during initial calculation to preserve the base reference
+		if (!this.baseColw) {
 			this.baseColw = this.computedSettings.colw
 		}
 	}

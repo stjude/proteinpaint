@@ -60,7 +60,17 @@ export function plotDendrogramHclust(plotOnly) {
 			
 			// Safety check: prevent zero-sized canvas which causes convertToBlob error
 			if (width <= 0 || height <= 0) {
-				console.warn('Skipping dendrogram render: invalid dimensions', { width, height, colWidth })
+				console.warn(
+					'Skipping top dendrogram render: invalid dimensions.',
+					'This may indicate a zoom feedback loop issue.',
+					{ 
+						width, 
+						height, 
+						colWidth, 
+						sampleCount: col.inputOrder.length,
+						yDendrogramHeight 
+					}
+				)
 				this.dom.topDendrogram.selectAll('*').remove()
 				return
 			}
@@ -173,7 +183,17 @@ export function plotDendrogramHclust(plotOnly) {
 			
 			// Safety check: prevent zero-sized canvas which causes convertToBlob error
 			if (width <= 0 || height <= 0) {
-				console.warn('Skipping dendrogram render: invalid dimensions', { width, height, rowHeight })
+				console.warn(
+					'Skipping left dendrogram render: invalid dimensions.',
+					'This may indicate a zoom feedback loop issue.',
+					{ 
+						width, 
+						height, 
+						rowHeight, 
+						termCount: row.inputOrder.length,
+						xDendrogramHeight 
+					}
+				)
 				this.dom.leftDendrogram.selectAll('*').remove()
 				return
 			}
