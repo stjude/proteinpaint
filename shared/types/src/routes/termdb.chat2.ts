@@ -29,10 +29,13 @@ export type PlotResponse = {
 
 export type LlmConfig = {
 	provider: 'SJ' | 'ollama' | 'huggingface'
+	EmbeddingProvider: 'SJ' | 'ollama' | 'huggingface'
+	EmbeddingProviderApi: string
 	api: string
+	EmbeddingProviderApiToken?: string
 	modelName: string
 	embeddingModelName: string
-	/** Whether to load the embedding model locally (via transformers.js) or call a remote API. Defaults to 'local'. */
+	/** Whether to load the embedding model locally (via transformers.js) or call a remote API. Defaults to 'api'. */
 	embeddingModelAccess?: 'local' | 'api'
 	/** Smaller model to use for LLM classification fallback. Defaults to modelName if not set. */
 	classifierModelName?: string
