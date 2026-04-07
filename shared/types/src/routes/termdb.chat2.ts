@@ -28,7 +28,7 @@ export type PlotResponse = {
 }
 
 export type LlmConfig = {
-	provider: 'SJ' | 'ollama'
+	provider: 'SJ' | 'ollama' | 'huggingface'
 	api: string
 	modelName: string
 	embeddingModelName: string
