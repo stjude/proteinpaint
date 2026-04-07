@@ -636,13 +636,15 @@ function extractNumericValues(samples: any[], tw: TermWrapper, isLogScale?: bool
 	return values
 }
 
+type ParseValuesTw = { $id?: string; term: { values?: Record<string, any>; [key: string]: any } }
+
 export function parseValues(
-	q: ViolinBoxRequest,
+	q: { tw: ParseValuesTw },
 	data: ValidGetDataResponse,
 	sampleType: string,
 	isLog: boolean,
-	overlayTw?: TermWrapper,
-	divideTw?: TermWrapper
+	overlayTw?: ParseValuesTw,
+	divideTw?: ParseValuesTw
 ) {
 	/** Map samples to terms */
 	const chart2plot2values = new Map()
@@ -652,7 +654,7 @@ export function parseValues(
 
 	/** Track an uncomputable value in the legend counter.
 	 *  Returns true if the value is uncomputable. */
-	function trackUncomputable(tw: TermWrapper, key: string | number): boolean {
+	function trackUncomputable(tw: { term?: { values?: Record<string, any> } }, key: string | number): boolean {
 		if (!tw?.term?.values?.[key]?.uncomputable) return false
 		const label = tw.term.values[key]?.label
 		if (label) uncomputableValues[label] = (uncomputableValues[label] || 0) + 1
