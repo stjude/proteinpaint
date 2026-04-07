@@ -10,6 +10,7 @@ import { inferScaffold } from './chat/scaffold.ts'
 import serverconfig from '../src/serverconfig.js'
 import { getDsAllowedTermTypes } from './termdb.config.ts'
 import { phrase2entity } from './chat/phrase2entity.ts'
+// import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import path from 'path'
 import fs from 'fs'
 import { isSummaryScaffold } from './chat/scaffoldTypes.ts'
@@ -169,7 +170,18 @@ export async function run_chat_pipeline(
 				console.log(log)
 				return ai_output_json
 			}
+		} else if (plotType === 'dge') {
+			if (!supportedChartTypes.includes('DA')) {
+				const log = 'Plot type: "' + plotType + '" is not supported.'
+				ai_output_json = {
+					type: 'text',
+					text: log
+				}
+				console.log(log)
+				return ai_output_json
+			}
 		} else {
+			console.log(`Supported chart types for this cohort: ${supportedChartTypes}`)
 			if (!supportedChartTypes.includes(plotType)) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
 				ai_output_json = {
@@ -206,6 +218,9 @@ export async function run_chat_pipeline(
 			if ('type' in summary_phrase2entity && summary_phrase2entity.type === 'text') {
 				return summary_phrase2entity // Return error
 			}
+
+			console.log(summary_phrase2entity)
+			// const termObj = await inferTermObjFromEntity(summary_phrase2entity)
 		}
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
