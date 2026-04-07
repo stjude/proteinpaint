@@ -1,4 +1,4 @@
-import { sketchGmsum, sketchProtein } from '../src/client'
+import { sketchGmsum, sketchProtein } from './sketchGm'
 import { exoncolor } from '#shared/common.js'
 import type { GeneModel, ExonRegion, IsoformSelectOpts } from './types/isoformSelect'
 import type { Td } from '../types/d3'
