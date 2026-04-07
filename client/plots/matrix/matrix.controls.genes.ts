@@ -310,7 +310,7 @@ export function addGenesetInput(self: any, app: any, parent: any, tr: any, geneI
 	}
 
 	if (geneInputType == 'hierCluster') {
-		// Gene set edit UI under "Clustering" control panel doen't need "create New Group"
+		// Gene set edit UI under "Clustering" control panel doesn't need "create New Group"
 		return
 	}
 	const td2 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
