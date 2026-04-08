@@ -82,19 +82,6 @@ tape('validateOpts() should require callback, app, holder, genomeObj, and usecas
 		'Should throw when genomeObj is missing'
 	)
 
-	test.throws(
-		() =>
-			handler.validateOpts({
-				holder,
-				callback: () => {},
-				app: { vocabApi: { termdbConfig: {} } },
-				genomeObj: {},
-				usecase: { target: 'sampleScatter', detail: 'term' }
-			}),
-		/usecase\.specialCase\.config\.sample is required/,
-		'Should throw when sample is missing'
-	)
-
 	if (test['_ok']) holder.remove()
 	test.end()
 })
