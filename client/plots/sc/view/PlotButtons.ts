@@ -11,7 +11,6 @@ import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from 
  *  - The hierarchical clustering limits to the first 100 genes.
  *
  ******* TODOs:
- * - Update anywhere with 'CHANGEME' before prod
  * - Disable all plot btns until plot loads for performance??
  *
  ******* Hier clustering implenentation TODOs and questions:
@@ -117,10 +116,7 @@ export class PlotButtons {
 				label: 'Summary',
 				isVisible: () => true,
 				getPlotConfig: () => {
-					const sample = {
-						sID: this.item!.sample,
-						eID: this.item!.experiment
-					}
+					const sample = this.makeSampleObj()
 					return {
 						chartType: 'dictionary',
 						spawnConfig: {
@@ -142,11 +138,11 @@ export class PlotButtons {
 			},
 			{
 				label: 'Gene expression',
-				isVisible: () => true,
+				isVisible: () => this.scTermdbConfig.geneExpression,
 				open: this.geneSearchMenu,
 				getPlotConfig: async geneLst => {
 					if (!geneLst.length) {
-						alert('No genes selected to launch gene expression subplot [PlotButtons.ts getChartBtnOpts()]')
+						alert('No genes selected to launch gene expression subplot.')
 						return
 					}
 					/** If 1 gene, launch violin
@@ -238,27 +234,10 @@ export class PlotButtons {
 					id: gene,
 					gene,
 					name: gene,
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					}
+					sample: this.makeSampleObj()
 				}
 			},
-			// term2: await this.makeScctTW(this.item, this.scTermdbConfig.data.plots[0])
-			term2: {
-				//CHANGE ME
-				$id: await digestMessage(`CHANGEME-${this.item.sample}-${this.item.experiment}`),
-				term: {
-					type: SINGLECELL_CELLTYPE,
-					id: this.scTermdbConfig.DEgenes.termId,
-					name: this.scTermdbConfig.DEgenes.termId,
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					},
-					plot: 'UMAP' //CHANGEME
-				}
-			}
+			term2: await this.makeScctTW(this.item, this.scTermdbConfig.data.plots[0])
 		}
 	}
 
@@ -276,10 +255,7 @@ export class PlotButtons {
 					gene: gene1,
 					id: gene1,
 					name: gene1,
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					}
+					sample: this.makeSampleObj()
 				},
 				q: { mode: 'continuous' }
 			},
@@ -290,10 +266,7 @@ export class PlotButtons {
 					gene: gene2,
 					id: gene2,
 					name: gene2,
-					sample: {
-						sID: this.item.sample,
-						eID: this.item.experiment
-					}
+					sample: this.makeSampleObj()
 				},
 				q: { mode: 'continuous' }
 			}
@@ -326,15 +299,12 @@ export class PlotButtons {
 	async getSingleCellConfig(plotName): Promise<object> {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
-		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots [PlotButtons.ts getSingleCellConfig()]`)
+		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots.`)
 		const config: any = {
 			chartType: 'sampleScatter',
 			singleCellPlot: {
 				name: plotName,
-				sample: {
-					sID: this.item.sample,
-					eID: this.item.experiment
-				}
+				sample: this.makeSampleObj()
 			}
 		}
 		if (plot.colorColumns?.[0]) {
@@ -353,12 +323,19 @@ export class PlotButtons {
 				`No term found for colorColumn=${colorColName} in .termType2terms.[TermTypeGroups.SINGLECELL_CELLTYPE] for plot ${plot.name}`
 			)
 		const term = Object.assign(structuredClone(savedTerm), {
-			sample: {
-				sID: item.sample,
-				eID: item.experiment
-			}
+			sample: this.makeSampleObj()
 		})
 		const id = await digestMessage(`${plot.name}-${item.sample}-${item.experiment}`)
 		return Object.assign({ $id: id }, { term })
+	}
+
+	/** Creates a sample object for the current item.
+	 * Part of the effort to normalize sample objects across
+	 * native and gdc datasets. */
+	makeSampleObj() {
+		return {
+			sID: this.item!.sample,
+			eID: this.item!.experiment
+		}
 	}
 }
