@@ -1,30 +1,34 @@
 import type { LlmConfig } from '#types'
 import type { SummaryPhrase2EntityResult, InferEntity } from './scaffoldTypes.ts'
 import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
+import { convert2TwTvs } from './entity2twTvs.ts'
 
 export async function inferTermObjFromEntity(
 	entity: SummaryPhrase2EntityResult,
 	type: string,
 	llm: LlmConfig,
-	dbPath: string
+	dbPath: string,
+	ds: any
 ) {
 	if (type === 'summary') {
 		const store = await loadOrBuildEmbeddings(dbPath, llm)
 		const results: Record<string, { id: string; name: string; score: number }> = {}
 
-		const fields: (keyof SummaryPhrase2EntityResult)[] = ['tw1', 'tw2', 'tw3', 'filter']
-		for (const field of fields) {
-			const entry = entity[field] as [InferEntity] | undefined
+		//const fields: (keyof SummaryPhrase2EntityResult)[] = ['tw1', 'tw2', 'tw3', 'filter']
+		for (const [key, value] of Object.entries(entity)) {
+			const entry = value as [InferEntity] | undefined
 			if (!entry) continue
 			const inferEntity = entry[0]
 			if (inferEntity.termType !== 'dictionary') continue
 			const match = await findBestMatch(inferEntity.phrase, store, llm)
 			console.log(
-				`${field}: "${inferEntity.phrase}" → best match: id="${match.id}" name="${match.name}" score=${(
+				`${key}: "${inferEntity.phrase}" → best match: id="${match.id}" name="${match.name}" score=${(
 					match.score * 100
 				).toFixed(1)}%`
 			)
-			results[field] = match
+			const TwTvs = convert2TwTvs(match, type, key, ds)
+			console.log(`Converted to TwTvs:`, TwTvs)
+			results[key] = match
 		}
 
 		return results
