@@ -117,22 +117,23 @@ export class PlotButtons {
 				label: 'Summary',
 				isVisible: () => true,
 				getPlotConfig: () => {
+					const sample = {
+						sID: this.item!.sample,
+						eID: this.item!.experiment
+					}
 					return {
 						chartType: 'dictionary',
 						spawnConfig: {
 							parentId: this.interactions.id,
 							hidePlotFilter: true,
-							sample: {
-								sID: this.item!.sample,
-								eID: this.item!.experiment
-							}
+							sample
 						},
 						tree: {
 							usecase: {
 								target: 'dictionary',
 								specialCase: {
 									type: 'singleCell',
-									config: { sample: this.item!.sample }
+									config: { sample }
 								}
 							}
 						}
