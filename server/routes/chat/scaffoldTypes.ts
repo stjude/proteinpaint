@@ -43,4 +43,10 @@ export type SummaryPhrase2EntityResult = {
 	filter?: [Entity]
 }
 
-export type Phrase2EntityResult = SummaryPhrase2EntityResult // | DESPhrase2EntityResult | MatrixPhrase2EntityResult (to be defined later)
+export type DEPhrase2EntityResult = {
+	filter1: [Entity[]] // will actually be nested structure later on
+	filter2: [Entity[]] // will actually be nested structure later on
+	filter?: [Entity[]]
+}
+
+export type Phrase2EntityResult = SummaryPhrase2EntityResult | DEPhrase2EntityResult // | MatrixPhrase2EntityResult (to be defined later)

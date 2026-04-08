@@ -159,9 +159,7 @@ Always return ONLY a JSON object in this exact format:
 1. Always identify tw1 first — it answers "what is the primary data variable being plotted/summarized?"
 2. tw2 answers "compared across what groups?" — look for prepositions like "between", "across", "by", "among", etc. Use contextual understanding to confirm that it's a grouping variable
 3. tw3 answers "divided/faceted by what?" — look for "divided by", "split by", "per", "for each", "stratified by", etc. Use contextual understanding to confirm that it's a grouping variable
-
 4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable
-
 5. If tw2 and tw3 are ambiguous, prefer tw2 for binary/categorical comparisons and tw3 for a faceting/panel variable
 6. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
 7. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
@@ -171,6 +169,12 @@ Always return ONLY a JSON object in this exact format:
   Output:
   {
 	"tw1": "expression of EGFR"
+  }
+- Query: "show XYZ for black males"
+  Output:
+  {
+	"tw1": "XYZ",
+	"filter": ["black", "male"]
   }
 - Query: "Show correlation between xxx and yyy."
   Output:
