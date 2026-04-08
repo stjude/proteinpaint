@@ -2,6 +2,20 @@ import tape from 'tape'
 import { SCViewModel } from '../viewModel/SCViewModel.ts'
 import { getMockSCApp, getMockSCConfig } from './getMockSCApp.ts'
 
+/**
+ * Tests
+ *   - constructor should set tableData with rows, columns, and selectedRows
+ *   - constructor should set selectedRows when item matches a sample
+ *   - constructor should have empty selectedRows when no item is set
+ *   - getTabelData() should create sample column as first column
+ *   - getTabelData() should add sampleColumns when provided
+ *   - getTabelData() should handle samples without experiments
+ *   - getTabelData() should expand experiments into separate rows
+ *   - getTabelData() should add GDC URL for experiment column when dslabel is GDC
+ *   - getTabelData() should not add GDC URL for non-GDC datasets
+ *   - getTabelData() should include sampleColumns with experiments
+ */
+
 /**************
  test sections
 ***************/
