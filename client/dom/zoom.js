@@ -37,7 +37,7 @@ export function zoom(opts) {
 		.attr('type', 'number')
 		.attr('min', settings.min)
 		.attr('max', settings.max)
-		.attr('step', settings.step)
+		.attr('step', settings.increment)
 		.style('min-width', settings.numberInputWidth)
 		.style('width', opts.width || 'fit-content')
 		.style('margin', '3px 5px')
@@ -143,7 +143,7 @@ export function zoom(opts) {
 				.property('value', settings.value)
 				.attr('min', settings.min)
 				.attr('max', settings.max)
-				.attr('step', settings.step)
+				.attr('step', settings.increment)
 			minusBtn?.property('disabled', settings.value <= settings.min)
 			plusBtn?.property('disabled', settings.value >= settings.max)
 		}

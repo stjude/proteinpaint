@@ -10,6 +10,7 @@ export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
 	if (!this.autoDimensions) this.autoDimensions = new Set()
 
+	// NOTE: there may be a hardcoded m.colw = 0 in matrix.config to force auto-sizing
 	if (!m.colw) this.autoDimensions.add('colw')
 	else this.autoDimensions.delete('colw')
 	if (!m.rowh) this.autoDimensions.add('rowh')
@@ -57,11 +58,17 @@ export function setAutoDimensions(xOffset) {
 		// IMPORTANT: compute zoomMin and zoomMax here before computing settings.colw downstream, to avoid feedback loop
 		this.computedSettings.zoomMin = s.colwMin / this.computedSettings.colw
 		this.computedSettings.zoomMax = s.colwMax / this.computedSettings.colw
-
-		// when cell has very small width, do not show colspace
-		// IMPORTANT: compute zoomMin and zoomMax before using s.zoomLevel for any computed settings
-		this.computedSettings.colspace = this.computedSettings.colw * s.zoomLevel < 7 ? 0 : s.colspace
+	} else {
+		// NOTE: There may be a hardcoded m.colw = 0 in matrix.config to force auto-sizing,
+		// handling this condition for future support.
+		this.computedSettings.colw = m.colw
+		this.computedSettings.zoomMin = s.colwMin / m.colw
+		this.computedSettings.zoomMax = s.colwMax / m.colw
 	}
+
+	// when cell has very small width, do not show colspace
+	// IMPORTANT: compute zoomMin and zoomMax before using s.zoomLevel for any computed settings
+	this.computedSettings.colspace = this.computedSettings.colw * s.zoomLevel < 7 ? 0 : s.colspace
 
 	const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
 	const availHeight = screen.availHeight - hch
@@ -491,10 +498,10 @@ export function setLayout() {
 	this.setAutoDimensions(xOffset)
 	this.setLabelsAndScales()
 
-	// When the cell is very small, colspace is 0, once zoom in, colspace will be shown, so need to consider it when zooming in
+	// When the cell is very small, colspace is 0. Once zoomed in, colspace will be shown, so need to consider it when zooming in
 	// At this point, computed matrix settings has been merged to settings.matrix by setAutoDimensions.
-	const colw = s.colw * s.zoomLevel
-	const dx = colw + s.colspace // s.colspace may be 0
+	const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
+	const dx = colw + s.colspace // s.colspace may have been set to 0 by setAutoDimensions
 	const nx = this[`${col}s`].length
 	const dy = s.rowh + s.rowspace
 	const ny = this[`${row}s`].length
