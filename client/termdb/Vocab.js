@@ -201,6 +201,8 @@ export class Vocab {
 				if (tw.term.memberType) copy.term.memberType = tw.term.memberType
 				if (tw.term.valueTransform) copy.term.valueTransform = tw.term.valueTransform
 				if (tw.term.categoryKeys) copy.term.categoryKeys = tw.term.categoryKeys
+				if (tw.term.termlst) copy.term.termlst = tw.term.termlst
+				if (tw.term.propsByTermId) copy.term.propsByTermId = tw.term.propsByTermId
 			} else {
 				// non-dictionary term
 				// pass entire tw.term because non-dictionary terms
