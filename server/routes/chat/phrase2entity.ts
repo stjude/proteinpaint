@@ -3,7 +3,7 @@ import { extractGenesFromPrompt } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagentnew.ts'
 import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
-import type { Scaffold, SummaryScaffold, InferEntity, SummaryPhrase2EntityResult } from './scaffoldTypes.ts'
+import type { Scaffold, SummaryScaffold, Entity, Phrase2EntityResult } from './scaffoldTypes.ts'
 
 async function validateNonDictionaryTypes(
 	phrase: string,
@@ -13,7 +13,10 @@ async function validateNonDictionaryTypes(
 ): Promise<{ type: 'text'; text: string } | { geneFeatures: GeneDataTypeResult } | null> {
 	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
 	if (relevant_genes.length > 0) {
-		const AmbiguousGeneMessage = determineAmbiguousGenePrompt(phrase, relevant_genes, dataset_json) // for e.g. classifying prompts such as "Show TP53". In this prompt its not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to, so we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question. This function does NOT use an LLM and searches for specific keywords in the user prompt to determine if the prompt is ambiguous with respect to which gene feature the user is referring to.
+		// for e.g. classifying prompts such as "Show TP53". If not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to,
+		// we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question. This function does NOT use an LLM
+		// and searches for specific keywords in the user prompt to determine if the prompt is ambiguous with respect to which gene feature the user is referring to.
+		const AmbiguousGeneMessage = determineAmbiguousGenePrompt(phrase, relevant_genes, dataset_json)
 		if (AmbiguousGeneMessage.length > 0) {
 			return {
 				type: 'text',
@@ -55,7 +58,7 @@ async function inferEntities(
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any
-): Promise<InferEntity | { type: 'text'; text: string }> {
+): Promise<Entity | { type: 'text'; text: string }> {
 	const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json)
 	if (!validatedNonDict) {
 		// No match, probably a dictionary term or a non-dictionary term we don't have a way to validate yet (e.g. ssGSEA score, metabolites, etc.)
@@ -83,6 +86,32 @@ async function inferEntities(
 	}
 }
 
+async function phrase2entitytw(
+	phrase: string,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	ds: any
+): Promise<{ type: 'text'; text: string } | Entity> {
+	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json)
+	if ('type' in tw1Result && tw1Result.type === 'text') {
+		return { type: 'text', text: tw1Result.text }
+	}
+	//console.log("getDsAllowedTermTypes(ds):", getDsAllowedTermTypes(ds))
+	if ((tw1Result as Entity).termType == 'dictionary') {
+		return tw1Result // Dictionary term
+	} else if (getDsAllowedTermTypes(ds).includes((tw1Result as Entity).termType)) {
+		return tw1Result
+	} else {
+		return {
+			type: 'text',
+			text: `The termType "${
+				(tw1Result as Entity).termType
+			}" in phrase "${phrase}" is not an allowed termType for this dataset`
+		}
+	}
+}
+
 export async function phrase2entity(
 	scaffold: Scaffold,
 	plotType: string,
@@ -90,7 +119,7 @@ export async function phrase2entity(
 	genes_list: string[],
 	dataset_json: any,
 	ds: any
-): Promise<{ type: 'text'; text: string } | SummaryPhrase2EntityResult> {
+): Promise<{ type: 'text'; text: string } | Phrase2EntityResult> {
 	if (plotType == 'summary') {
 		const scaffoldResult = scaffold as SummaryScaffold
 		const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds)
@@ -98,8 +127,8 @@ export async function phrase2entity(
 			return { type: 'text', text: tw1.text }
 		} else {
 			console.log('Validation result for term1:', tw1)
-			const summ_term: SummaryPhrase2EntityResult = {
-				tw1: [tw1 as InferEntity]
+			const summ_term: Phrase2EntityResult = {
+				tw1: [tw1 as Entity]
 			}
 			if (scaffoldResult.tw2) {
 				const tw2 = await phrase2entitytw(scaffoldResult.tw2, llm, genes_list, dataset_json, ds)
@@ -107,7 +136,7 @@ export async function phrase2entity(
 					return { type: 'text', text: tw2.text }
 				}
 				console.log('Validation result for term2:', tw2)
-				summ_term.tw2 = [tw2 as InferEntity]
+				summ_term.tw2 = [tw2 as Entity]
 			}
 			if (scaffoldResult.tw3) {
 				const tw3 = await phrase2entitytw(scaffoldResult.tw3, llm, genes_list, dataset_json, ds)
@@ -115,7 +144,7 @@ export async function phrase2entity(
 					return { type: 'text', text: tw3.text }
 				}
 				console.log('Validation result for term3:', tw3)
-				summ_term.tw3 = [tw3 as InferEntity]
+				summ_term.tw3 = [tw3 as Entity]
 			}
 			if (scaffoldResult.filter) {
 				const filter = await phrase2entitytw(scaffoldResult.filter, llm, genes_list, dataset_json, ds)
@@ -123,37 +152,11 @@ export async function phrase2entity(
 					return { type: 'text', text: filter.text }
 				}
 				console.log('Validation result for filter:', filter)
-				summ_term.filter = [filter as InferEntity]
+				summ_term.filter = [filter as Entity]
 			}
 			return summ_term
 		}
 	} else {
 		return { type: 'text', text: 'Other plot types not yet supported' }
-	}
-}
-
-async function phrase2entitytw(
-	phrase: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any,
-	ds: any
-): Promise<{ type: 'text'; text: string } | InferEntity> {
-	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json)
-	if ('type' in tw1Result && tw1Result.type === 'text') {
-		return { type: 'text', text: tw1Result.text }
-	}
-	//console.log("getDsAllowedTermTypes(ds):", getDsAllowedTermTypes(ds))
-	if ((tw1Result as InferEntity).termType == 'dictionary') {
-		return tw1Result // Dictionary term
-	} else if (getDsAllowedTermTypes(ds).includes((tw1Result as InferEntity).termType)) {
-		return tw1Result
-	} else {
-		return {
-			type: 'text',
-			text: `The termType "${
-				(tw1Result as InferEntity).termType
-			}" in phrase "${phrase}" is not an allowed termType for this dataset`
-		}
 	}
 }
