@@ -13,8 +13,7 @@ import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import path from 'path'
 import fs from 'fs'
-import { isSummaryScaffold } from './chat/scaffoldTypes.ts'
-import type { SummaryPhrase2EntityResult } from './scaffoldTypes.ts'
+import type * as Phrase2EntityResult from './chat/scaffoldTypes.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat3',
@@ -143,9 +142,9 @@ export async function run_chat_pipeline(
 			}
 		}
 	} else if (class_response.type == 'plot') {
-		const time3 = new Date().valueOf()
+		let time = new Date().valueOf()
 		const plotType = await classifyPlotType(user_prompt, llm)
-		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time3))
+		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
 
 		// As long as supported chart types is non-empty list
 		if (!supportedChartTypes) {
@@ -158,9 +157,9 @@ export async function run_chat_pipeline(
 		}
 
 		/* Special handling for summary chart types
-// Every cohort by default supports summary charts unless 
-// 'dictionary' is not in the supported chart type list
-// */
+		// Every cohort by default supports summary charts unless 
+		// 'dictionary' is not in the supported chart type list
+		// */
 		if (plotType === 'summary') {
 			if (!supportedChartTypes.includes('dictionary')) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -194,11 +193,12 @@ export async function run_chat_pipeline(
 			}
 		}
 
-		// If valid plot type, figure out term types
-		const time4 = new Date().valueOf()
+		// If valid plot type, figure out the scaffold according to the plot type
+		console.log('####### First phase: Infer Plot Scaffolds #######')
+		time = new Date().valueOf()
 		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
 		console.log('ScaffoldResult: ', scaffoldResult)
-		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time4))
+		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
 		if (!scaffoldResult)
 			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
@@ -209,27 +209,33 @@ export async function run_chat_pipeline(
 		 * receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
 		 */
 		const genes_list = await parse_geneset_db(genedb)
-		if (isSummaryScaffold(scaffoldResult)) {
-			// Ensure all nondicttypes in the scaffold have corresponding data types.
-			// For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid
-			// because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
-			// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
-			// nondicttypes such as metabolites, genesets, etc.
-			const summary_phrase2entity = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds)
-			if ('type' in summary_phrase2entity && summary_phrase2entity.type === 'text') {
-				return summary_phrase2entity // Return error
-			}
-			console.log(summary_phrase2entity)
-			const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
-			const termObj = await inferTermObjFromEntity(
-				summary_phrase2entity as SummaryPhrase2EntityResult,
-				plotType,
-				llm,
-				dataset_db,
-				ds
-			)
-			console.log('Inferred termObj from entity:', termObj)
+		// Ensure all nondicttypes in the scaffold have corresponding data types.
+		// For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid
+		// because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
+		// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
+		// nondicttypes such as metabolites, genesets, etc.
+		console.log("####### Second phase: From Scaffolds's phrases infer Entities #######")
+		time = new Date().valueOf()
+		const summary_phrase2entity = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds)
+		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
+
+		if ('type' in summary_phrase2entity && summary_phrase2entity.type === 'text') {
+			return summary_phrase2entity // Return error
 		}
+		console.log(summary_phrase2entity)
+		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+		console.log('####### Third phase: From Entities infer Term Objects #######')
+
+		time = new Date().valueOf()
+		const termObj = await inferTermObjFromEntity(
+			summary_phrase2entity as Phrase2EntityResult.SummaryPhrase2EntityResult,
+			plotType,
+			llm,
+			dataset_db,
+			genes_list
+		)
+		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
+		console.log('Inferred termObj from entity:', termObj)
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
 		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.
