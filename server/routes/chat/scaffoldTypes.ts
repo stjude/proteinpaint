@@ -31,14 +31,16 @@ export function isMatrixScaffold(s: Scaffold): s is MatrixScaffold {
 	return 'twLst' in s
 }
 
-export type InferEntity = {
+export type Entity = {
 	termType: 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance'
 	phrase: string
 }
 
 export type SummaryPhrase2EntityResult = {
-	tw1: [InferEntity]
-	tw2?: [InferEntity]
-	tw3?: [InferEntity]
-	filter?: [InferEntity]
+	tw1: [Entity]
+	tw2?: [Entity]
+	tw3?: [Entity]
+	filter?: [Entity]
 }
+
+export type Phrase2EntityResult = SummaryPhrase2EntityResult // | DESPhrase2EntityResult | MatrixPhrase2EntityResult (to be defined later)
