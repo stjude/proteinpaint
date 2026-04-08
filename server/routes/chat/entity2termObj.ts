@@ -29,6 +29,6 @@ export async function inferTermObjFromEntity(
 
 		return results
 	} else {
-		throw 'Other plot types not yet supported'
+		throw 'Other plot types other than summary not yet supported'
 	}
 }
