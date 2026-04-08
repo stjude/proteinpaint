@@ -22,6 +22,7 @@ import { getDescrStats, getStdDev, getMean } from './termdb.descrstats.ts'
 import { isNumericTerm } from '#shared/terms.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { mayLog } from '#src/helpers.ts'
 
 /** Internal box plot entry with temporary values used for Wilcoxon tests.
  *  tempValues is stripped before sending the response to the client. */
@@ -101,6 +102,12 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 	if (q.divideTw) throw new Error('divideTw is not supported with numeric termCollection')
 
 	const termlst: any[] = term.termlst || []
+	mayLog('termlst', termlst)
+	mayLog(
+		`Expanding numeric termCollection with ${termlst.length} member terms and ${
+			Object.keys(data.samples).length
+		} samples`
+	)
 	const propsByTermId: Record<string, any> = term.propsByTermId || {}
 	const tcId = q.tw.$id!
 
