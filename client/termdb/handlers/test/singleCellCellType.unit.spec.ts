@@ -57,26 +57,6 @@ tape('validateOpts() should require callback, termType2terms, and specialCase.co
 		'Should throw when termType2terms is missing'
 	)
 
-	test.throws(
-		() =>
-			handler.validateOpts({
-				holder,
-				callback: () => {},
-				app: {
-					vocabApi: {
-						termdbConfig: {
-							termType2terms: {
-								[TermTypeGroups.SINGLECELL_CELLTYPE]: []
-							}
-						}
-					}
-				},
-				usecase: { target: 'sampleScatter', detail: 'term' }
-			}),
-		/usecase\.specialCase\.config\.name defining the plot is required/,
-		'Should throw when plot name is missing'
-	)
-
 	if (test['_ok']) holder.remove()
 	test.end()
 })

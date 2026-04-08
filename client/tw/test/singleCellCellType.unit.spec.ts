@@ -37,6 +37,12 @@ tape('validate() should throw on invalid terms', test => {
 		'Should throw when term.type is incorrect'
 	)
 
+	test.throws(
+		() => SingleCellCellTypeBase.validate(getValidRawTerm({ sample: undefined }) as any),
+		/missing term.sample/,
+		'Should throw when sample is missing'
+	)
+
 	test.doesNotThrow(
 		() => SingleCellCellTypeBase.validate(getValidRawTerm() as any),
 		'Should accept valid singleCellCellType term'
@@ -66,6 +72,14 @@ tape('fill() should preserve existing groupsetting and values', test => {
 	test.end()
 })
 
+tape('fill() should normalize string sample to object with sID', test => {
+	const term = getValidRawTerm({ sample: 'mySample' })
+	SingleCellCellTypeBase.fill(term as any)
+
+	test.deepEqual(term.sample, { sID: 'mySample' }, 'Should convert string sample to { sID }')
+	test.end()
+})
+
 tape('fill() should no-op for class instances', test => {
 	const instance = new SingleCellCellTypeBase(getValidRawTerm() as any)
 	test.doesNotThrow(
@@ -91,11 +105,9 @@ tape('constructor should set explicit term fields', test => {
 })
 
 tape('constructor should fallback to default fields when optional fields missing', test => {
-	const term = getValidRawTerm({ sample: undefined, plot: undefined, groupsetting: undefined, values: undefined })
+	const term = getValidRawTerm({ sample: 'test', plot: 'test plot name', groupsetting: undefined, values: undefined })
 	const x = new SingleCellCellTypeBase(term as any)
 
-	test.deepEqual(x.sample, {}, 'Should fallback sample to empty object')
-	test.equal(x.plot, '', 'Should fallback plot to empty string')
 	test.deepEqual(x.groupsetting, { disabled: false }, 'Should fallback groupsetting')
 	test.deepEqual(x.values, {}, 'Should fallback values')
 	test.end()

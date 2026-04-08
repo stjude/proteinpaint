@@ -22,6 +22,8 @@ export class SearchHandler {
 		})
 	}
 
+	/**TODO: scge tw handler will validate that a sample is included. Need to resolve issue
+	 * with sample info not included.*/
 	async selectGene(gene: string | undefined, sample: any | undefined) {
 		if (!gene) throw new Error('No gene selected')
 		const unit = getSCGEunit(this.app!.vocabApi)
