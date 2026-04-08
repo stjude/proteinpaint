@@ -225,7 +225,8 @@ export async function run_chat_pipeline(
 				summary_phrase2entity as SummaryPhrase2EntityResult,
 				plotType,
 				llm,
-				dataset_db
+				dataset_db,
+				ds
 			)
 			console.log('Inferred termObj from entity:', termObj)
 		}
