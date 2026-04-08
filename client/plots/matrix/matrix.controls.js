@@ -1051,18 +1051,16 @@ export class MatrixControls {
 			})
 
 		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
-		// Use baseColw (the initial auto-computed value) for zoom slider min/max to prevent feedback loop
-		const baseColwForZoom = this.parent.baseColw || s.colw
-		const min = s.colwMin / baseColwForZoom
-		const max = s.colwMax / baseColwForZoom
+		const min = this.parent.computedSettings.zoomMin
+		const max = this.parent.computedSettings.zoomMax
 		const increment = Math.max(0.01, Number((min / max).toFixed(2)))
 
 		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
 				value: s.zoomLevel.toFixed(2),
-				min,
-				max,
+				min: min.toFixed(2),
+				max: max.toFixed(2),
 				increment,
 				step: s.zoomStep || 1
 			})
@@ -1615,9 +1613,9 @@ export class MatrixControls {
 			unit: '',
 			width: '80px',
 			settings: {
-				value: 1,
 				min: 0.1, // will be determined once the auto-computed width is determined
-				max: 10, // will be determined once the auto-computed width is determined
+				max: 1, // will be determined once the auto-computed width is determined
+				value: 1,
 				increment: s.zoomIncrement,
 				step: s.zoomStep || 5
 			},

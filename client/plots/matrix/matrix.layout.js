@@ -41,42 +41,28 @@ export function setAutoDimensions(xOffset) {
 	if (this.autoDimensions.has('colw')) {
 		const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
 		const tentativeGaps = this.sampleOrder.length * s.colspace + totalColgspace
-		const spacedColw = (this.availContentWidth - tentativeGaps) /*- this.sampleOrder.length*/ / this.sampleOrder.length
-		// tentativeColw is the colw after removing the colspace
+		const spacedColw = (this.availContentWidth - tentativeGaps) / this.sampleOrder.length
+		// tentativeColw is the colw if the colspace is shown between columns
 		const tentativeColw = Math.max(s.colwMin, Math.min(spacedColw, s.colwMax))
-		// detect if using colspace will cause the tentative computed widths to be exceeded
 
-		// noSpacedColw is the colw without removing the colspace
+		// noSpacedColw is the colw if the colspace is not shown between columns
 		const noSpacedColw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
 		const colwNoSpace = Math.max(s.colwMin, Math.min(noSpacedColw, s.colwMax))
 
-		// when cell has very small width, do not show colspace and set colw without considering colspace
-		if (colwNoSpace * s.zoomLevel < 7) {
-			// do not show colspace
-			this.computedSettings.colw = noSpacedColw
-			this.computedSettings.colspace = 0
-		} else {
-			// show colspace
-			this.computedSettings.colw = tentativeColw
-			this.computedSettings.colspace = s.colspace
-		}
+		// detect if using colspace will cause the tentative computed widths to be exceeded
+		// to determine whether to use colw + colspace or colwNoSpace
+		this.computedSettings.colw =
+			tentativeColw * this.sampleOrder.length + tentativeGaps <= this.availContentWidth ? tentativeColw : colwNoSpace
 
-		// Store the base colw value for zoom calculations to prevent feedback loop.
-		// Recompute it only when the auto-width inputs change, but keep it stable
-		// across zoom-only renders.
-		const baseColwContext = {
-			sampleCount: this.sampleOrder.length,
-			visibleSampleGrpCount: this.visibleSampleGrps.size,
-			transpose: s.transpose,
-			availContentWidth: this.availContentWidth
-		}
-		if (!this.baseColwContext || !deepEqual(this.baseColwContext, baseColwContext)) {
-			this.baseColw = this.computedSettings.colw
-			this.baseColwContext = baseColwContext
-		}
+		// IMPORTANT: compute zoomMin and zoomMax here before computing settings.colw downstream, to avoid feedback loop
+		this.computedSettings.zoomMin = s.colwMin / this.computedSettings.colw
+		this.computedSettings.zoomMax = s.colwMax / this.computedSettings.colw
+
+		// when cell has very small width, do not show colspace
+		// IMPORTANT: compute zoomMin and zoomMax before using s.zoomLevel for any computed settings
+		this.computedSettings.colspace = this.computedSettings.colw * s.zoomLevel < 7 ? 0 : s.colspace
 	}
 
-	//if (this.autoDimensions.has('rowh')) {
 	const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
 	const availHeight = screen.availHeight - hch
 	this.computedSettings.clusterRowh = Math.min(
@@ -507,10 +493,8 @@ export function setLayout() {
 
 	// When the cell is very small, colspace is 0, once zoom in, colspace will be shown, so need to consider it when zooming in
 	// At this point, computed matrix settings has been merged to settings.matrix by setAutoDimensions.
-	// Use baseColw (the initial auto-computed value) to calculate zoomed colw to prevent feedback loop
-	const baseColwForZoom = this.baseColw || s.colw
-	const colw = Math.max(s.colwMin, Math.min(s.colwMax, baseColwForZoom * s.zoomLevel))
-	const dx = colw + s.colspace
+	const colw = s.colw * s.zoomLevel
+	const dx = colw + s.colspace // s.colspace may be 0
 	const nx = this[`${col}s`].length
 	const dy = s.rowh + s.rowspace
 	const ny = this[`${row}s`].length

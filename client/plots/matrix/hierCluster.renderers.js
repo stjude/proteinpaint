@@ -56,28 +56,36 @@ export function plotDendrogramHclust(plotOnly) {
 			const height2px = getHclustHeightScalefactor(col.height, yDendrogramHeight)
 
 			const height = yDendrogramHeight + 0.0000001
-			const width = colWidth * col.inputOrder.length
-			
+			const width = Math.min(colWidth * col.inputOrder.length, s.imgWMax)
+
 			// Safety check: prevent zero-sized canvas which causes convertToBlob error
 			if (width <= 0 || height <= 0) {
 				console.warn(
 					'Skipping top dendrogram render: invalid dimensions.',
 					'This may indicate a zoom feedback loop issue.',
-					{ 
-						width, 
-						height, 
-						colWidth, 
+					{
+						width,
+						height,
+						colWidth,
 						sampleCount: col.inputOrder.length,
-						yDendrogramHeight 
+						yDendrogramHeight
 					}
 				)
 				this.dom.topDendrogram.selectAll('*').remove()
 				return
 			}
-			
+
 			const canvas = new OffscreenCanvas(width * pxr, height * pxr)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
+			// when the OffscreenCanvas width is too wide (>60k pixels as tested in Chrome and other browsers),
+			// rendering outside of the usable width causes an IndexSizeError. The solution below is similar to
+			// what's done in matrix.renderer: impose an upper limit of s.imgWMax for the canvas width and
+			// translate the rendered x positions to the left, creating a viewport bounded by the max canvas
+			// image width and where the segments/lines positioned outside of those bounds are clipped
+			// by the canvas engine
+			ctx.translate(-d.xMin, 0) // d.xMin = 0 when imgWMax is not exceeded
+			//ctx.translate(-d.xMin, 0)
 			ctx.imageSmoothingEnabled = false
 			ctx.imageSmoothingQuality = 'high'
 			ctx.strokeStyle = 'black'
@@ -164,7 +172,7 @@ export function plotDendrogramHclust(plotOnly) {
 				canvas,
 				width,
 				height,
-				xDendrogramHeight + 0.5 * colWidth,
+				xDendrogramHeight + 0.5 * colWidth + d.xMin,
 				s.margin.top + s.scrollHeight
 			)
 
@@ -180,11 +188,9 @@ export function plotDendrogramHclust(plotOnly) {
 			const height2px = getHclustHeightScalefactor(row.height, xDendrogramHeight)
 			const width = xDendrogramHeight + 0.0000001
 			const height = rowHeight * row.inputOrder.length
-			const canvasWidthPx =
-				Number.isFinite(width) && Number.isFinite(pxr) ? Math.max(0, Math.floor(width * pxr)) : 0
-			const canvasHeightPx =
-				Number.isFinite(height) && Number.isFinite(pxr) ? Math.max(0, Math.floor(height * pxr)) : 0
-			
+			const canvasWidthPx = Number.isFinite(width) && Number.isFinite(pxr) ? Math.max(0, Math.floor(width * pxr)) : 0
+			const canvasHeightPx = Number.isFinite(height) && Number.isFinite(pxr) ? Math.max(0, Math.floor(height * pxr)) : 0
+
 			// Safety check: prevent zero-sized canvas which causes OffscreenCanvas/convertToBlob errors
 			if (
 				!Number.isFinite(width) ||
@@ -213,7 +219,6 @@ export function plotDendrogramHclust(plotOnly) {
 				this.dom.leftDendrogram.selectAll('*').remove()
 				return
 			}
-			
 			const canvas = new OffscreenCanvas(canvasWidthPx, canvasHeightPx)
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
@@ -316,7 +321,7 @@ export async function renderImage(componentApi, g, canvas, width, height, x, y) 
 			// so that there will be no flicker on update
 			g.selectAll('*').remove()
 
-			g.append('image') //.attr('transform', `translate(${x},${y})`)
+			g.append('image')
 				.attr('x', x + 0.033)
 				.attr('y', y + 0.033)
 				.attr('xlink:href', reader.result)
