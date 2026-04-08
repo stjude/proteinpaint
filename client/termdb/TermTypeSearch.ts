@@ -34,8 +34,8 @@ export const useCasesExcluded = {
 	dictionary: [SNP_LOCUS, SNP_LIST],
 	summary: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
 	summaryInput: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
-	barchart: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
-	violin: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION],
+	barchart: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION],
+	violin: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION],
 	sampleScatter: [SNP_LOCUS, SNP_LIST, TERM_COLLECTION],
 	cuminc: [
 		SNP_LOCUS,
@@ -520,13 +520,20 @@ export function getAllowedTermTypesForUseCase(state, app) {
 
 		const termTypeGroup = typeGroup[type]
 		if (!termTypeGroup) {
-			console.log(type)
-			throw new Error('should not happen: no group for a term type')
+			throw new Error(`should not happen: no group for a term type = ${type}`)
 		}
 		/* based on usecase, determine if to allow group of this term type
 		- false: continue
 		- true: create tab entry
 		*/
+
+		if (usecase?.specialCase?.type == 'singleCell') {
+			//Limit the tree to only single cell types when use case is single cell
+			if (!isSingleCellTerm({ type })) continue
+		} else {
+			// not singlecell! in cohort mode, disallow sc terms
+			if (isSingleCellTerm({ type })) continue
+		}
 
 		if (target && useCasesExcluded[target]?.includes(termTypeGroup)) continue
 		if (target == 'regression') {
@@ -541,12 +548,6 @@ export function getAllowedTermTypesForUseCase(state, app) {
 		if (target == 'sampleScatter') {
 			if (detail == 'numeric' && !numericTypes.has(type)) continue
 			//Limit the tree to only single cell types when use case is single cell
-			if (usecase?.specialCase?.type == 'singleCell') {
-				if (!isSingleCellTerm({ type })) continue
-			} else {
-				// not singlecell special case! in cohort mode, disallow sc terms
-				if (isSingleCellTerm({ type })) continue
-			}
 		}
 
 		if ((target == 'survival' || target == 'cuminc') && termTypeGroup != DICTIONARY_VARIABLES) {
@@ -555,16 +556,6 @@ export function getAllowedTermTypesForUseCase(state, app) {
 
 		if (target == 'dataDownload') {
 			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
-		}
-
-		if (target == 'dictionary') {
-			//Limit the tree to only single cell types when use case is single cell
-			if (usecase.specialCase?.type == 'singleCell') {
-				if (!isSingleCellTerm({ type })) continue
-			} else {
-				// not singlecell! in cohort mode, disallow sc terms
-				if (isSingleCellTerm({ type })) continue
-			}
 		}
 
 		//////////////////////////////////////
