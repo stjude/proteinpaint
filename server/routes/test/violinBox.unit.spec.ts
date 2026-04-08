@@ -14,8 +14,22 @@ import {
 	setIndividualBoxPlotStats,
 	setHiddenPlots,
 	setUncomputableValues,
-	divideValues
+	divideValues,
+	expandNumericTermCollection
 } from '../termdb.violinBox.ts'
+import {
+	mockTerm1$id,
+	mockTerm2$id,
+	mockTerm3$id,
+	mockTermCollectionId,
+	mockSampleType,
+	mockTw,
+	mockOverlayTw,
+	mockSamples,
+	getMockData,
+	getMockTermCollectionQ,
+	getMockTermCollectionData
+} from './mockViolinBoxData.ts'
 
 /**
  * Tests
@@ -33,38 +47,8 @@ import {
  *  - setUncomputableValues()
  *  - parseValues() with uncomputable values
  *  - parseValues() with divideTw
+ *  - expandNumericTermCollection()
  */
-
-const mockTerm1$id = 'term1-id'
-const mockTerm2$id = 'term2-id'
-const mockTerm3$id = 'term3-id'
-const mockSampleType = 'All samples'
-
-const mockTw = { term: termjson.agedx, $id: mockTerm1$id }
-const mockOverlayTw = { term: termjson.sex, $id: mockTerm2$id }
-
-const mockSamples = {
-	1: {
-		sample: '80',
-		[mockTerm1$id]: { key: 5, value: 5 },
-		[mockTerm2$id]: { key: 'Male', value: 'M' }
-	},
-	2: {
-		sample: '81',
-		[mockTerm1$id]: { key: 10, value: 10 },
-		[mockTerm2$id]: { key: 'Female', value: 'F' }
-	},
-	3: {
-		sample: '82',
-		[mockTerm1$id]: { key: -3, value: -3 },
-		[mockTerm2$id]: { key: 'Female', value: 'F' }
-	},
-	4: {
-		sample: '83',
-		[mockTerm1$id]: { key: 0, value: 0 },
-		[mockTerm2$id]: { key: 'Male', value: 'M' }
-	}
-}
 
 /**************
  extractNumericValues
@@ -163,7 +147,7 @@ tape('numericBins: returns bins keyed by label', function (test) {
 
 tape('numericBins: returns empty object for non-numeric term', function (test) {
 	const tw = { term: { type: 'categorical', id: 'sex' }, $id: 'tw1' } as any
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples: {} } as any
+	const data = getMockData({})
 	const result = numericBins(tw, data)
 	test.deepEqual(result, {}, 'Should return empty object for categorical term')
 	test.end()
@@ -282,7 +266,7 @@ tape('parseValues: tracks uncomputable values in legend', function (test) {
 		3: { sample: '3', [mockTerm1$id]: { key: 99, value: 99 } },
 		4: { sample: '4', [mockTerm1$id]: { key: 10, value: 10 } }
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 
 	const result = parseValues({ tw }, data, mockSampleType, false)
 	test.equal(result.uncomputableValues['Not reported'], 2, 'Should count 2 uncomputable "Not reported" values')
@@ -320,7 +304,7 @@ tape('parseValues: splits into charts by divideTw', function (test) {
 			[mockTerm3$id]: { key: 'GroupA', value: 'A' }
 		}
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 
 	const result = parseValues({ tw: mockTw }, data, mockSampleType, false, undefined, divideTw)
 	test.equal(result.chart2plot2values.size, 2, 'Should create 2 charts')
@@ -363,7 +347,7 @@ tape('parseValues: combines overlay and divide terms', function (test) {
 			[mockTerm3$id]: { key: 'ChartB', value: 'B' }
 		}
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 
 	const result = parseValues({ tw: mockTw }, data, mockSampleType, false, mockOverlayTw, divideTw)
 	test.equal(result.chart2plot2values.size, 2, 'Should create 2 charts')
@@ -392,7 +376,7 @@ tape('parseValues: filters non-positive values when isLog=true', function (test)
 		3: { sample: '3', [mockTerm1$id]: { key: -2, value: -2 } },
 		4: { sample: '4', [mockTerm1$id]: { key: 100, value: 100 } }
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 
 	const result = parseValues({ tw: mockTw }, data, mockSampleType, true)
 	const values = result.chart2plot2values.get('').get(mockSampleType)
@@ -415,7 +399,7 @@ tape('parseValues: skips samples missing term data', function (test) {
 		3: { sample: '3', [mockTerm1$id]: { key: 'text', value: 'text' } }, // non-numeric
 		4: { sample: '4', [mockTerm1$id]: { key: 8, value: 8 } }
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 
 	const result = parseValues({ tw: mockTw }, data, mockSampleType, false)
 	const values = result.chart2plot2values.get('').get(mockSampleType)
@@ -760,7 +744,7 @@ tape('divideValues: returns chart2plot2values, min, max, uncomputableValues', fu
 		2: { [mockTerm1$id]: { key: 10, value: 10 } },
 		3: { [mockTerm1$id]: { key: 2, value: 2 } }
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 	const q = { tw: mockTw, isLogScale: false } as any
 
 	const result = divideValues(q, data, mockSampleType)
@@ -776,7 +760,7 @@ tape('divideValues: handles overlay term', function (test) {
 		1: { [mockTerm1$id]: { key: 5, value: 5 }, [mockTerm2$id]: { key: 'Male', value: 'M' } },
 		2: { [mockTerm1$id]: { key: 10, value: 10 }, [mockTerm2$id]: { key: 'Female', value: 'F' } }
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 	const q = { tw: mockTw, overlayTw: mockOverlayTw, isLogScale: false } as any
 
 	const result = divideValues(q, data, mockSampleType)
@@ -801,12 +785,171 @@ tape('divideValues: sorts uncomputable values by count', function (test) {
 		4: { [mockTerm1$id]: { key: 99, value: 99 } },
 		5: { [mockTerm1$id]: { key: 88, value: 88 } }
 	}
-	const data = { refs: { bySampleId: {}, byTermId: {} }, samples } as any
+	const data = getMockData(samples)
 	const q = { tw: { term, $id: mockTerm1$id }, isLogScale: false } as any
 
 	const result = divideValues(q, data, mockSampleType)
 	const keys = Object.keys(result.uncomputableValues)
 	test.equal(keys[0], 'Refused', 'Lower count should come first (sorted ascending)')
 	test.equal(keys[1], 'Unknown', 'Higher count should come second')
+	test.end()
+})
+
+/**************
+ expandNumericTermCollection
+***************/
+
+tape('expandNumericTermCollection: expands samples into per-member-term entries', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	const sampleKeys = Object.keys(data.samples)
+	// 2 samples × 3 member terms = 6 virtual samples
+	test.equal(sampleKeys.length, 6, 'Should create 6 virtual samples (2 samples × 3 drugs)')
+	test.ok(sampleKeys.includes('s1__drugA'), 'Should have s1__drugA')
+	test.ok(sampleKeys.includes('s2__drugC'), 'Should have s2__drugC')
+	test.end()
+})
+
+tape('expandNumericTermCollection: sets plain numeric values under tw.$id', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	test.equal(data.samples['s1__drugA'][mockTermCollectionId].value, 1.5, 'drugA value for s1 should be 1.5')
+	test.equal(data.samples['s2__drugB'][mockTermCollectionId].value, 5.0, 'drugB value for s2 should be 5.0')
+	test.end()
+})
+
+tape('expandNumericTermCollection: creates synthetic overlay keyed by member term name', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	test.ok(q.overlayTw, 'Should set overlayTw on q')
+	test.equal(q.overlayTw.$id, '__tcOverlay', 'Overlay $id should be __tcOverlay')
+	test.equal(q.overlayTw.term.type, 'categorical', 'Overlay term type should be categorical')
+
+	// Check overlay values have correct labels and colors
+	test.equal(q.overlayTw.term.values['Drug A'].label, 'Drug A', 'Should use member term name as label')
+	test.equal(q.overlayTw.term.values['Drug A'].color, '#ff0000', 'Should use color from propsByTermId')
+	test.equal(q.overlayTw.term.values['Drug B'].color, '#00ff00', 'Should use color from propsByTermId')
+	test.end()
+})
+
+tape('expandNumericTermCollection: sets overlay key on each virtual sample', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	test.equal(data.samples['s1__drugA']['__tcOverlay'].key, 'Drug A', 'Overlay key should be member term name')
+	test.equal(data.samples['s1__drugB']['__tcOverlay'].key, 'Drug B', 'Overlay key should be member term name')
+	test.equal(data.samples['s2__drugC']['__tcOverlay'].key, 'Drug C', 'Overlay key should be member term name')
+	test.end()
+})
+
+tape('expandNumericTermCollection: preserves termlst order in refs keyOrder', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	const keyOrder = data.refs.byTermId['__tcOverlay'].keyOrder
+	test.deepEqual(keyOrder, ['Drug A', 'Drug B', 'Drug C'], 'keyOrder should match termlst order')
+	test.end()
+})
+
+tape('expandNumericTermCollection: skips non-finite member values', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = {
+		refs: { bySampleId: {}, byTermId: {} },
+		samples: {
+			s1: {
+				sample: 's1',
+				[mockTermCollectionId]: { key: 's1', value: { drugA: 1.0, drugB: NaN, drugC: Infinity } }
+			}
+		}
+	} as any
+
+	expandNumericTermCollection(q, data)
+
+	const sampleKeys = Object.keys(data.samples)
+	test.equal(sampleKeys.length, 1, 'Should only create 1 virtual sample (NaN and Infinity skipped)')
+	test.ok(sampleKeys.includes('s1__drugA'), 'Should include the finite value')
+	test.end()
+})
+
+tape('expandNumericTermCollection: skips samples with missing termCollection data', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = {
+		refs: { bySampleId: {}, byTermId: {} },
+		samples: {
+			s1: {
+				sample: 's1',
+				[mockTermCollectionId]: { key: 's1', value: { drugA: 1.0 } }
+			},
+			s2: {
+				sample: 's2'
+				// missing mockTermCollectionId entry entirely
+			}
+		}
+	} as any
+
+	expandNumericTermCollection(q, data)
+
+	const sampleKeys = Object.keys(data.samples)
+	test.equal(sampleKeys.length, 1, 'Should only expand sample with valid termCollection data')
+	test.ok(sampleKeys.includes('s1__drugA'), 'Should include s1__drugA')
+	test.end()
+})
+
+tape('expandNumericTermCollection: throws for non-numeric memberType', function (test) {
+	const q = {
+		tw: {
+			$id: mockTermCollectionId,
+			term: {
+				type: 'termCollection',
+				memberType: 'categorical',
+				termlst: [],
+				propsByTermId: {}
+			},
+			q: {}
+		}
+	} as any
+	const data = getMockData({})
+
+	test.throws(
+		() => expandNumericTermCollection(q, data),
+		/only numeric termCollection/,
+		'Should throw for categorical memberType'
+	)
+	test.end()
+})
+
+tape('expandNumericTermCollection: expanded data works with parseValues', function (test) {
+	const q = getMockTermCollectionQ()
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	// parseValues should now see plain numeric values with the synthetic overlay
+	const result = parseValues({ tw: q.tw }, data, mockSampleType, false, q.overlayTw)
+
+	test.equal(result.absMin, 1.5, 'absMin should be 1.5')
+	test.equal(result.absMax, 6.0, 'absMax should be 6.0')
+
+	const plot2values = result.chart2plot2values.get('')
+	test.ok(plot2values.has('Drug A'), 'Should have Drug A plot')
+	test.ok(plot2values.has('Drug B'), 'Should have Drug B plot')
+	test.ok(plot2values.has('Drug C'), 'Should have Drug C plot')
+
+	test.deepEqual(plot2values.get('Drug A').sort(), [1.5, 4.0], 'Drug A should have values from both samples')
+	test.deepEqual(plot2values.get('Drug B').sort(), [2.5, 5.0], 'Drug B should have values from both samples')
+	test.deepEqual(plot2values.get('Drug C').sort(), [3.5, 6.0], 'Drug C should have values from both samples')
 	test.end()
 })

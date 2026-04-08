@@ -1,52 +1,39 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson.js'
 import { parseValues } from '../termdb.violinBox.ts'
+import { mockTw, mockOverlayTw, mockSampleType, getMockData } from './mockViolinBoxData.ts'
 
 /**
  * Tests
  *  - parseValues()
  */
 
-const mockTerm1$id = 'ansdkfljas-+'
-const mockTerm2$id = 'asldkfj-+'
-const mockSampleType = 'All samples'
-
 const mockRequest = {
-	tw: { term: termjson.agedx, $id: mockTerm1$id },
-	overlayTw: { term: termjson.sex, $id: mockTerm2$id }
+	tw: mockTw,
+	overlayTw: mockOverlayTw
 }
 
-const mockGetDataResponse = {
-	sampleType: {
-		plural_name: 'samples'
+const mockGetDataResponse = getMockData({
+	1: {
+		sample: '80',
+		[mockTw.$id]: { key: 1, value: 1 },
+		[mockOverlayTw.$id]: { key: 'Male', value: 'M' }
 	},
-	refs: {
-		bySampleId: {},
-		byTermId: {}
+	2: {
+		sample: '81',
+		[mockTw.$id]: { key: 1.75, value: 1.75 },
+		[mockOverlayTw.$id]: { key: 'Female', value: 'F' }
 	},
-	samples: {
-		1: {
-			sample: '80',
-			[mockTerm1$id]: { key: 1, value: 1 },
-			[mockTerm2$id]: { key: 'Male', value: 'M' }
-		},
-		2: {
-			sample: '81',
-			[mockTerm1$id]: { key: 1.75, value: 1.75 },
-			[mockTerm2$id]: { key: 'Female', value: 'F' }
-		},
-		3: {
-			sample: '82',
-			[mockTerm1$id]: { key: 3, value: 3 },
-			[mockTerm2$id]: { key: 'Female', value: 'F' }
-		},
-		4: {
-			sample: '83',
-			[mockTerm1$id]: { key: -1, value: -1 },
-			[mockTerm2$id]: { key: 'Male', value: 'M' }
-		}
+	3: {
+		sample: '82',
+		[mockTw.$id]: { key: 3, value: 3 },
+		[mockOverlayTw.$id]: { key: 'Female', value: 'F' }
+	},
+	4: {
+		sample: '83',
+		[mockTw.$id]: { key: -1, value: -1 },
+		[mockOverlayTw.$id]: { key: 'Male', value: 'M' }
 	}
-}
+})
 
 tape('parseValues()', test => {
 	test.timeoutAfter(100)

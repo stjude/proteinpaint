@@ -53,7 +53,8 @@ function init({ genomes }) {
 
 			if (typeof q.tw?.term != 'object' || typeof q.tw?.q != 'object') throw new Error('q.tw not of {term,q}')
 			const term = q.tw.term
-			if (!isNumericTerm(term) && term.type !== 'survival') throw new Error('term type is not numeric or survival')
+			if (!isNumericTerm(term) && term.type !== 'survival' && term.type !== 'termCollection')
+				throw new Error('term type is not numeric, survival, or termCollection')
 
 			const arg = {
 				terms: [q.tw],
@@ -69,6 +70,10 @@ function init({ genomes }) {
 			if (!data) throw new Error('getData() returns nothing')
 			if (data.error) throw new Error(data.error)
 
+			// For numeric termCollection, expand JSON-grouped data into per-member-term
+			// entries with a synthetic overlay so the existing pipeline handles it natively
+			if (q.tw.term.type === 'termCollection') expandNumericTermCollection(q, data as ValidGetDataResponse)
+
 			if (q.plotType === 'violin') {
 				result = await getViolin(q, data as ValidGetDataResponse, ds)
 			} else if (q.plotType === 'box') {
@@ -81,6 +86,57 @@ function init({ genomes }) {
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 		res.send(result satisfies ViolinBoxResponse)
+	}
+}
+
+/** For a numeric termCollection tw, expand the JSON-grouped sample data
+ *  (where each sample has {memberTermId: numericValue, ...}) into virtual
+ *  per-member-term samples with plain numeric values, and create a synthetic
+ *  categorical overlay so parseValues/setPlotData group plots by member term name. */
+export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons, data: ValidGetDataResponse): void {
+	const term = q.tw.term as any
+	if (term.memberType !== 'numeric') throw new Error('only numeric termCollection is supported for violinBox')
+
+	const termlst: any[] = term.termlst || []
+	const propsByTermId: Record<string, any> = term.propsByTermId || {}
+	const tcId = q.tw.$id!
+
+	// Expand: one virtual sample per (sample × member term) with a plain numeric value
+	const newSamples: Record<string, any> = {}
+	for (const [sampleId, sampleData] of Object.entries(data.samples)) {
+		const tcEntry = (sampleData as any)[tcId]
+		const memberValues = tcEntry?.value
+		if (!memberValues || typeof memberValues !== 'object') continue
+
+		for (const [memberId, memberVal] of Object.entries(memberValues as Record<string, number>)) {
+			if (typeof memberVal !== 'number' || !Number.isFinite(memberVal)) continue
+			const memberTerm = termlst.find((t: any) => t.id === memberId)
+			const memberName = memberTerm?.name || memberId
+
+			newSamples[`${sampleId}__${memberId}`] = {
+				...(sampleData as any),
+				[tcId]: { key: memberVal, value: memberVal },
+				['__tcOverlay']: { key: memberName, value: memberName }
+			}
+		}
+	}
+	data.samples = newSamples as any
+
+	// Build a synthetic categorical overlay tw keyed by member term name
+	const overlayValues: Record<string, { label: string; color?: string }> = {}
+	for (const mt of termlst) {
+		const name = mt.name || mt.id
+		overlayValues[name] = { label: name, color: propsByTermId[mt.id]?.color }
+	}
+	;(q as any).overlayTw = {
+		$id: '__tcOverlay',
+		term: { type: 'categorical', values: overlayValues, name: term.name },
+		q: {}
+	}
+
+	// Preserve termlst order for plot sorting
+	;(data.refs as any).byTermId['__tcOverlay'] = {
+		keyOrder: termlst.map((t: any) => t.name || t.id)
 	}
 }
 
