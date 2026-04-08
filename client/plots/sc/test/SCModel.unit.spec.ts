@@ -2,6 +2,16 @@ import tape from 'tape'
 import { getMockSCApp } from './getMockSCApp.ts'
 import { SCModel } from '../model/SCModel.ts'
 
+/**
+ * Tests
+ *   - SCModel constructor should set app, id, and state
+ *   - getSampleRequestOpts() should return genome, dslabel, and filter0
+ *   - getSampleRequestOpts() should pass through filter0 when present
+ *   - getDataRequestOpts() should return correct request body
+ *   - getDataRequestOpts() should return undefined when item is not set
+ *   - getDataRequestOpts() should throw when singleCell.data is not configured
+ */
+
 /**************
  test sections
 ***************/
