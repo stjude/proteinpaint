@@ -9,7 +9,10 @@ export function convert2TwTvs(
 		if (key === 'tw1' || key === 'tw2' || key === 'tw3') {
 			// Generate tw object
 			if (!term) throw new Error(`Invalid term id: ${match.id}`)
-			const tw = { id: term.id }
+			const tw: any = { id: term.id }
+			if (term.type == 'float' || term.type == 'integer') {
+				tw.q = { mode: 'continuous' }
+			}
 			return tw
 		} else if (key === 'filter') {
 			// Generate tvslst object for filter
