@@ -146,15 +146,16 @@ async function querySimilar(
 	store: TermEmbedding[],
 	llm: LlmConfig,
 	topK = 5
-): Promise<{ id: string; name: string; sentence: string; score: number }[]> {
+): Promise<{ id: string; type: string; name: string; sentence: string; score: number }[]> {
 	const [queryEmb] = await route_to_appropriate_embedding_provider([query], llm)
 
-	const scored: { id: string; name: string; sentence: string; score: number }[] = []
+	const scored: { id: string; type: string; name: string; sentence: string; score: number }[] = []
 
 	for (const term of store) {
 		for (let i = 0; i < term.embeddings.length; i++) {
 			scored.push({
 				id: term.id,
+				type: term.type,
 				name: term.name,
 				sentence: term.sentences[i],
 				score: cosineSimilarity(queryEmb, term.embeddings[i])
@@ -169,8 +170,8 @@ export async function findBestMatch(
 	query: string,
 	store: TermEmbedding[],
 	llm: LlmConfig
-): Promise<{ id: string; name: string; score: number }> {
+): Promise<{ id: string; type: string; name: string; score: number }> {
 	const results = await querySimilar(query, store, llm, 1)
 	if (results.length === 0) throw new Error('No matches found')
-	return { id: results[0].id, name: results[0].name, score: results[0].score }
+	return { id: results[0].id, type: results[0].type, name: results[0].name, score: results[0].score }
 }
