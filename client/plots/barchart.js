@@ -14,6 +14,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../mass/groups.js'
+import { isSingleCellTerm } from '#shared/terms.js'
 
 export class Barchart extends PlotBase {
 	static type = 'barchart'
@@ -94,6 +95,17 @@ export class Barchart extends PlotBase {
 			this.dom.holder.attr('class', 'pp-termdb-plot-viz').style('display', 'inline-block').style('min-width', '300px')
 			//.style('margin-left', '10px')
 
+			let specialCase = 'default'
+			if (isSingleCellTerm(this.state.config.term.term)) {
+				//Do not prevent from loading if no sample is specified but log the error.
+				if (!this.state.config.term.term.sample)
+					console.error('single cell term without sample specified in config, unexpected')
+				specialCase = {
+					type: 'singleCell',
+					config: { sample: this.state.config.term.term.sample }
+				}
+			}
+
 			const inputs = [
 				{
 					type: 'term',
@@ -115,7 +127,7 @@ export class Barchart extends PlotBase {
 					type: 'term',
 					configKey: 'term2',
 					chartType: 'barchart',
-					usecase: { target: 'barchart', detail: 'term2' },
+					usecase: { target: 'barchart', detail: 'term2', specialCase },
 					title: controlLabels.term2.title || controlLabels.term2.label,
 					label: controlLabels.term2.label,
 					vocabApi: this.app.vocabApi,
@@ -143,7 +155,7 @@ export class Barchart extends PlotBase {
 					type: 'term',
 					configKey: 'term0',
 					chartType: 'barchart',
-					usecase: { target: 'barchart', detail: 'term0' },
+					usecase: { target: 'barchart', detail: 'term0', specialCase },
 					title: controlLabels.term0.title || controlLabels.term0.label,
 					label: controlLabels.term0.label,
 					vocabApi: this.app.vocabApi,

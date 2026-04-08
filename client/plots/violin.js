@@ -6,7 +6,7 @@ import { htmlLegend, Menu } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { plotColor } from '#shared/common.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTerm, isSingleCellTerm } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 /*
@@ -108,6 +108,17 @@ class ViolinPlot extends PlotBase {
 		if (!controlLabels) throw 'controls labels not found'
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
+
+		let specialCase = 'default'
+		if (isSingleCellTerm(this.config.term.term)) {
+			//Do not prevent loading if no sample is specified but log the error.
+			if (!this.config.term.term.sample)
+				console.error('single cell term without sample specified in config, unexpected')
+			specialCase = {
+				type: 'singleCell',
+				config: { sample: this.config.term.term.sample }
+			}
+		}
 		const inputs = [
 			{
 				type: 'term',
@@ -122,7 +133,7 @@ class ViolinPlot extends PlotBase {
 				type: 'term',
 				configKey: 'term2',
 				chartType: 'violin',
-				usecase: { target: 'violin', detail: 'term2' },
+				usecase: { target: 'violin', detail: 'term2', specialCase },
 				title: controlLabels.term2.title || controlLabels.term2.label,
 				label: controlLabels.term2.label,
 				vocabApi: this.app.vocabApi,
@@ -133,7 +144,7 @@ class ViolinPlot extends PlotBase {
 				type: 'term',
 				configKey: 'term0',
 				chartType: 'violin',
-				usecase: { target: 'violin', detail: 'term0' },
+				usecase: { target: 'violin', detail: 'term0', specialCase },
 				title: controlLabels.term0.title || controlLabels.term0.label,
 				label: controlLabels.term0.label,
 				vocabApi: this.app.vocabApi,

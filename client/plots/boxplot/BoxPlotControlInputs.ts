@@ -1,9 +1,19 @@
 import { term0_term2_defaultQ, renderTerm1Label } from '../controls'
-import { isNumTermCollection } from '#shared/terms.js'
+import { isNumTermCollection, isSingleCellTerm } from '#shared/terms.js'
 
 export function setBoxPlotControlInputs(state: any, app: any, opts: any, getCharts: any, useDefaultSettings: boolean) {
 	const controlLabels = state.config.controlLabels
 	if (!controlLabels) throw new Error('controls labels not found')
+
+	let specialCase: any = 'default'
+	if (isSingleCellTerm(state.config.term.term)) {
+		//Do not prevent loading if no sample is specified but log the error.
+		if (!state.config.term.term.sample) console.error('single cell term without sample specified in config, unexpected')
+		specialCase = {
+			type: 'singleCell',
+			config: { sample: state.config.term.term.sample }
+		}
+	}
 
 	const inputs: { [index: string]: any }[] = [
 		{
@@ -22,7 +32,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			type: 'term',
 			configKey: 'term2',
 			chartType: 'boxplot',
-			usecase: { target: 'boxplot', detail: 'term2' },
+			usecase: { target: 'boxplot', detail: 'term2', specialCase },
 			title: controlLabels.term2.title || controlLabels.term2.label,
 			label: controlLabels.term2.label,
 			vocabApi: app.vocabApi,
@@ -36,7 +46,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			type: 'term',
 			configKey: 'term0',
 			chartType: 'boxplot',
-			usecase: { target: 'boxplot', detail: 'term0' },
+			usecase: { target: 'boxplot', detail: 'term0', specialCase },
 			title: controlLabels.term0.title || controlLabels.term0.label,
 			label: controlLabels.term0.label,
 			vocabApi: app.vocabApi,
