@@ -56,16 +56,20 @@ export default class ViewModelProvider {
 	map(data: Array<any>) {
 		const dataHolder = this.dataMapper.map(data)
 
-		const labelsMapper = new LabelsMapper(
-			this.settings,
-			this.sampleName,
-			this.reference,
-			dataHolder.cnvMaxPercentileAbs
-		)
+		let labelsRing: Labels
+		if (this.settings.Disco.showGeneNames) {
+			const labelsMapper = new LabelsMapper(
+				this.settings,
+				this.sampleName,
+				this.reference,
+				dataHolder.cnvMaxPercentileAbs
+			)
 
-		const labelsData = labelsMapper.map(dataHolder.labelData, dataHolder.cnvData)
-
-		const labelsRing = new Labels(this.settings, labelsData, dataHolder.hasPrioritizedGenes)
+			const labelsData = labelsMapper.map(dataHolder.labelData, dataHolder.cnvData)
+			labelsRing = new Labels(this.settings, labelsData, dataHolder.hasPrioritizedGenes)
+		} else {
+			labelsRing = new Labels(this.settings, [], false)
+		}
 
 		const chromosomesRing = new Ring(
 			this.settings.rings.chromosomeInnerRadius,
@@ -182,9 +186,9 @@ export default class ViewModelProvider {
 			lohLegend,
 			this.settings.Disco.mutationWaterfallPlot && this.mutationWaterfallRing
 				? {
-						color: this.settings.Disco.mutationWaterfallColor || '#4d4d4d',
-						onColorChange: this.discoInteractions.onMutationWaterfallColorChange
-				  }
+					color: this.settings.Disco.mutationWaterfallColor || '#4d4d4d',
+					onColorChange: this.discoInteractions.onMutationWaterfallColorChange
+				}
 				: undefined
 		)
 
