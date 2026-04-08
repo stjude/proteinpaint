@@ -9,9 +9,11 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 	if (isSingleCellTerm(state.config.term.term)) {
 		//Do not prevent loading if no sample is specified but log the error.
 		if (!state.config.term.term.sample) console.error('single cell term without sample specified in config, unexpected')
-		specialCase = {
-			type: 'singleCell',
-			config: { sample: state.config.term.term.sample }
+		else {
+			specialCase = {
+				type: 'singleCell',
+				config: { sample: state.config.term.term.sample }
+			}
 		}
 	}
 

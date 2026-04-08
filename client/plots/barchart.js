@@ -100,9 +100,11 @@ export class Barchart extends PlotBase {
 				//Do not prevent from loading if no sample is specified but log the error.
 				if (!this.state.config.term.term.sample)
 					console.error('single cell term without sample specified in config, unexpected')
-				specialCase = {
-					type: 'singleCell',
-					config: { sample: this.state.config.term.term.sample }
+				else {
+					specialCase = {
+						type: 'singleCell',
+						config: { sample: this.state.config.term.term.sample }
+					}
 				}
 			}
 
