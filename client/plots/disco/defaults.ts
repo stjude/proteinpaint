@@ -18,12 +18,13 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			isOpen: false,
 			prioritizeGeneLabelsByGeneSets: false,
 			showPrioritizeGeneLabelsByGeneSets: false,
+			showGeneNames: true,
 			mutationWaterfallPlot: false,
 			mutationWaterfallColor: '#4d4d4d',
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'percentile',
-			radius: 300,
+			radius: undefined as number | undefined,
 			fusionOpacity: 1,
 			hiddenChromosomes
 		},
@@ -88,7 +89,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 		}
 	}
 
-	if (overrides?.Disco?.radius > 1000 || overrides?.Disco?.radius < 300) {
+	if (overrides?.Disco?.radius > 1000 || overrides?.Disco?.radius < 200) {
 		console.log(`${overrides?.Disco?.radius} is greater or lower than the min and max for the radius`)
 	}
 

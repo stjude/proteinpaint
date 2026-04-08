@@ -21,6 +21,7 @@ export default interface Settings {
 		cnvCutoffMode: string
 		/** Chromosomes not rendered */
 		hiddenChromosomes: string[]
+		showGeneNames: boolean
 		mutationWaterfallPlot: boolean
 		mutationWaterfallColor: string
 	}

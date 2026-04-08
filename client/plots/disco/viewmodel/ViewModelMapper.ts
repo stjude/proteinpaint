@@ -4,6 +4,7 @@ import DataMapper from '#plots/disco/data/DataMapper.ts'
 import type Settings from '#plots/disco/Settings.ts'
 import ViewModelProvider from './ViewModelProvider.ts'
 import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
+import { dtsnvindel, dtcnv, dtloh } from '#shared/common.js'
 
 export class ViewModelMapper {
 	static snvClassLayer = {
@@ -57,6 +58,17 @@ export class ViewModelMapper {
 		this.settings.legend.fontSize *= scale
 	}
 
+	private computeDynamicRadius(data: Array<any>): number {
+		let ringCount = 0
+		if (data.some(d => d.dt == dtsnvindel)) ringCount++
+		if (data.some(d => d.dt == dtcnv)) ringCount++
+		if (data.some(d => d.dt == dtloh)) ringCount++
+
+		if (ringCount <= 1) return 200
+		if (ringCount == 2) return 250
+		return 300
+	}
+
 	map(opts: any): ViewModel {
 		const chrSizes = opts.args.genome.majorchr
 
@@ -77,6 +89,10 @@ export class ViewModelMapper {
 		const genesetName = genome?.geneset?.[0] ? genome.geneset[0].name : ''
 
 		const data: Array<any> = opts.args.data
+
+		if (!this.settings.Disco.radius) {
+			this.settings.Disco.radius = this.computeDynamicRadius(data)
+		}
 
 		this.applyRadius()
 

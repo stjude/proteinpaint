@@ -122,6 +122,15 @@ export default class Disco {
 			configInputsOptions.push(...cnvConfigInputOptions)
 		}
 
+		configInputsOptions.push({
+			boxLabel: '',
+			label: 'Show gene names',
+			type: 'checkbox',
+			chartType: 'Disco',
+			settingsKey: 'showGeneNames',
+			title: 'Show gene name labels on the outside of the plot'
+		})
+
 		const genomeChr = this.app.opts.state.args.genome.majorchr
 		const chromosomeConfigOption = {
 			label: 'Chromosomes',
@@ -148,13 +157,13 @@ export default class Disco {
 		const dimensionOptions = [
 			{
 				label: 'Radius',
-				title: 'Set the radius of the entire plot, between 300 and 1000 pixels.',
+				title: 'Set the radius of the entire plot, between 200 and 1000 pixels.',
 				type: 'number',
 				chartType: 'Disco',
 				settingsKey: 'radius',
 				debounceInterval: 500,
 				step: 25,
-				min: 300,
+				min: 200,
 				max: 1000
 			},
 			{
