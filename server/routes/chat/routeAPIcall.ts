@@ -127,26 +127,24 @@ export async function callHuggingFaceEmbedding(
 	apiToken: string
 ): Promise<number[][]> {
 	const url = api.replace('modelName', modelName) // Replace "modelName" in the URL with the actual model name
-	const response = await fetch(url, {
+	const result = await ezFetch(url, {
 		method: 'POST',
 		headers: {
 			Authorization: `Bearer ${apiToken}`,
 			'Content-Type': 'application/json'
 		},
-		body: JSON.stringify({ inputs: texts })
+		body: { inputs: texts },
+		timeout: { request: 200000 }
 	})
 
-	if (response.status === 404 && modelName !== HF_FALLBACK_MODEL) {
-		console.warn(`Model ${modelName} returned 404 — falling back to ${HF_FALLBACK_MODEL}`)
+	if (result?.error && modelName !== HF_FALLBACK_MODEL) {
+		console.warn(`Model ${modelName} returned error — falling back to ${HF_FALLBACK_MODEL}`)
 		return callHuggingFaceEmbedding(texts, HF_FALLBACK_MODEL, api, apiToken)
 	}
 
-	if (!response.ok) {
-		throw new Error(`HuggingFace API ${response.status}: ${await response.text()}`)
+	if (result?.error) {
+		throw new Error(`HuggingFace API error: ${JSON.stringify(result.error)}`)
 	}
-
-	const result = (await response.json()) as number[][] | number[][][]
-	console.log(`Received embeddings from HuggingFace for model "${modelName}":`, result)
 
 	return (result as any[]).map(item => {
 		if (Array.isArray(item[0])) {
