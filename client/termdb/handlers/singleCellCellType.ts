@@ -52,8 +52,8 @@ export class SearchHandler {
 	}
 
 	makeTerm(_term, usecaseConfig) {
-		const term = _term
-		if (!term.sample && usecaseConfig.sample) term.sample = usecaseConfig.sample
+		const term = { ..._term }
+		if (!term.sample && usecaseConfig?.sample) term.sample = usecaseConfig.sample
 		return term
 	}
 

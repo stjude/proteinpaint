@@ -13,7 +13,7 @@ class MassDict {
 	}
 
 	async init(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find(p => p.id === this.id) || {}
 		const opts = {
 			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
@@ -21,7 +21,7 @@ class MassDict {
 			tree: {
 				click_term: _term => {
 					const term = _term.term || _term
-					const _config = Object.assign({}, config.spawnConfig, {
+					const _config = Object.assign({}, config?.spawnConfig, {
 						chartType: term.type == 'survival' ? 'survival' : 'summary',
 						term: _term.term ? _term : { term }
 					})
@@ -44,9 +44,9 @@ class MassDict {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find(p => p.id === this.id) || {}
 		const tree = { usecase: { target: 'dictionary' } }
-		if (config?.tree?.usecase.specialCase) {
+		if (config?.tree?.usecase?.specialCase) {
 			tree.usecase.specialCase = config.tree.usecase.specialCase
 		}
 		return {
