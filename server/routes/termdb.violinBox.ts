@@ -96,10 +96,22 @@ function init({ genomes }) {
 export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons, data: ValidGetDataResponse): void {
 	const term = q.tw.term as any
 	if (term.memberType !== 'numeric') throw new Error('only numeric termCollection is supported for violinBox')
+	if (q.overlayTw)
+		throw new Error('overlayTw is not supported with numeric termCollection; member terms are used as the overlay')
+	if (q.divideTw) throw new Error('divideTw is not supported with numeric termCollection')
 
 	const termlst: any[] = term.termlst || []
 	const propsByTermId: Record<string, any> = term.propsByTermId || {}
 	const tcId = q.tw.$id!
+
+	// Precompute memberId → name lookup to avoid O(n) find per (sample × member)
+	const memberNameById: Record<string, string> = {}
+	const overlayValues: Record<string, { label: string; color?: string }> = {}
+	for (const mt of termlst) {
+		const name = mt.name || mt.id
+		memberNameById[mt.id] = name
+		overlayValues[name] = { label: name, color: propsByTermId[mt.id]?.color }
+	}
 
 	// Expand: one virtual sample per (sample × member term) with a plain numeric value
 	const newSamples: Record<string, any> = {}
@@ -110,8 +122,7 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 
 		for (const [memberId, memberVal] of Object.entries(memberValues as Record<string, number>)) {
 			if (typeof memberVal !== 'number' || !Number.isFinite(memberVal)) continue
-			const memberTerm = termlst.find((t: any) => t.id === memberId)
-			const memberName = memberTerm?.name || memberId
+			const memberName = memberNameById[memberId] || memberId
 
 			newSamples[`${sampleId}__${memberId}`] = {
 				...(sampleData as any),
@@ -121,13 +132,6 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 		}
 	}
 	data.samples = newSamples as any
-
-	// Build a synthetic categorical overlay tw keyed by member term name
-	const overlayValues: Record<string, { label: string; color?: string }> = {}
-	for (const mt of termlst) {
-		const name = mt.name || mt.id
-		overlayValues[name] = { label: name, color: propsByTermId[mt.id]?.color }
-	}
 	;(q as any).overlayTw = {
 		$id: '__tcOverlay',
 		term: { type: 'categorical', values: overlayValues, name: term.name },

@@ -34,6 +34,7 @@ export class Model {
 	}
 
 	setRequestOpts() {
+		const isNumericTC = this.config.term.term.type == 'termCollection' && this.config.term.term.memberType == 'numeric'
 		const opts: { [index: string]: any } = {
 			plotType: 'box',
 			tw: this.getContinousTerm(),
@@ -44,16 +45,22 @@ export class Model {
 			removeOutliers: this.settings.removeOutliers,
 			showAssocTests: this.settings.showAssocTests
 		}
-		if (this.config.term2)
-			opts.overlayTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
-
-		if (this.config.term0) opts.divideTw = this.config.term0
+		// Server creates a synthetic overlay for numeric termCollection,
+		// so don't send term2/term0 — they would be overwritten
+		if (!isNumericTC) {
+			if (this.config.term2)
+				opts.overlayTw = this.getContinousTerm() == this.config.term ? this.config.term2 : this.config.term
+			if (this.config.term0) opts.divideTw = this.config.term0
+		}
 
 		return opts
 	}
 
 	getContinousTerm() {
 		if (!this.config?.term2) return this.config.term
+		// Numeric termCollection is always the primary continuous term
+		if (this.config.term.term.type == 'termCollection' && this.config.term.term.memberType == 'numeric')
+			return this.config.term
 		return isNumericTerm(this.config.term.term) && this.config.term.q.mode == 'continuous'
 			? this.config.term
 			: this.config.term2

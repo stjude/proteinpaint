@@ -931,6 +931,30 @@ tape('expandNumericTermCollection: throws for non-numeric memberType', function 
 	test.end()
 })
 
+tape('expandNumericTermCollection: throws when overlayTw is present', function (test) {
+	const q = { ...getMockTermCollectionQ(), overlayTw: { $id: 'ov', term: { type: 'categorical' }, q: {} } }
+	const data = getMockTermCollectionData()
+
+	test.throws(
+		() => expandNumericTermCollection(q, data),
+		/overlayTw is not supported/,
+		'Should throw when overlayTw is already set'
+	)
+	test.end()
+})
+
+tape('expandNumericTermCollection: throws when divideTw is present', function (test) {
+	const q = { ...getMockTermCollectionQ(), divideTw: { $id: 'dv', term: { type: 'categorical' }, q: {} } }
+	const data = getMockTermCollectionData()
+
+	test.throws(
+		() => expandNumericTermCollection(q, data),
+		/divideTw is not supported/,
+		'Should throw when divideTw is already set'
+	)
+	test.end()
+})
+
 tape('expandNumericTermCollection: expanded data works with parseValues', function (test) {
 	const q = getMockTermCollectionQ()
 	const data = getMockTermCollectionData()
