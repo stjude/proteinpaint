@@ -407,6 +407,10 @@ class ViolinPlot extends PlotBase {
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
+		} else if (term.term?.type === 'termCollection' && term.term?.memberType === 'numeric') {
+			// numeric termCollection: server-side expandNumericTermCollection handles expansion
+			arg.tw = term
+			if (term2) arg.overlayTw = term2
 		} else if (isNumericTerm(term.term) && term.q.mode === 'continuous') {
 			arg.tw = term
 			if (term2) arg.overlayTw = term2
