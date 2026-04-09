@@ -1,2 +1,1 @@
-Features:
-- Adding custom non-dictionary termCollection support
+
