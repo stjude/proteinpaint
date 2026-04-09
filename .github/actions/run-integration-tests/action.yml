@@ -54,6 +54,9 @@ runs:
 
     - name: Build Docker Image
       uses: docker/build-push-action@v7
+      env:
+        DOCKER_BUILD_SUMMARY: false
+        DOCKER_BUILD_RECORD_UPLOAD: false
       with:
         context: ./container/
         file: ./container/server/Dockerfile
@@ -62,7 +65,7 @@ runs:
         outputs: type=docker
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        provenance: false
+        provenance: mode
         sbom: false
 
     - name: Run local server and integration tests
