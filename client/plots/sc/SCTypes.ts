@@ -1,9 +1,8 @@
 import type { Elem, Div } from '../../types/d3'
-import type { PlotConfig } from '#mass/types/mass'
 import type { TableRow, TableColumn } from '#dom'
 
 /** WIP config for the sc app */
-export type SCConfig = PlotConfig & {
+export type SCConfig = {
 	chartType: 'sc'
 	/** Common settings and settings for each child component/plot */
 	settings: SCSettings

@@ -1,7 +1,9 @@
 import type { ClientGenome } from '../types/clientGenome'
 import type { AppApi } from 'rx/src/AppApi'
 import { addGeneSearchbox, FlyoutMenu, type FlyoutMenuOption, GeneSetEditUI, Menu, sayerror } from '#dom'
-import { TermTypes } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { getGEunit } from '../tw/geneExpression'
+import { getSCGEunit } from '../tw/singleCellGeneExpression'
 
 /****** For mass plots only *******
  * Reuseable menu for gene expression chart buttons
@@ -13,11 +15,24 @@ import { TermTypes } from '#shared/terms.js'
  * Should clear and show tip before calling this menu instance.
  * See .clickTo() implementation in charts.js */
 
-type GeneExpressionTerm = {
+type ScopedGeneExpTerm = {
 	gene?: string
 	name?: string
-	type: string
+	type: string // see enabledTermTypes set for valid values
 }
+
+type GeneExpChartMenuOpts = {
+	/** see enabledTermTypes set for valid values */
+	termType?: string
+	/** Add more menu options for special use cases */
+	additionalOptions?: FlyoutMenuOption[]
+	/** Add needed properties to the resulting terms as needed */
+	termProperties?: { [key: string]: any }
+	/** Pass needed properties to the spawning plot */
+	spawnConfig?: { [key: string]: any }
+}
+
+const enabledTermTypes = new Set([GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION])
 
 export class GeneExpChartMenu {
 	app: AppApi
@@ -28,19 +43,32 @@ export class GeneExpChartMenu {
 	flyout?: FlyoutMenu
 	//Supports adding menu options for special use cases
 	additionalOptions: FlyoutMenuOption[]
+	termType: string
+	makeTerm: (term: any) => object
+	makeConfig: (config: any) => object
 
-	constructor(app: AppApi, tip: Menu, options: FlyoutMenuOption[] = []) {
+	constructor(app: AppApi, tip: Menu, opts: GeneExpChartMenuOpts = {}) {
+		this.termType = opts?.termType || GENE_EXPRESSION
+		if (!enabledTermTypes.has(this.termType)) {
+			throw new Error(`Invalid termType: ${this.termType}`)
+		}
 		this.app = app
 		this.genome = app.opts.genome
 		this.tip = tip
-		this.unit = this.app.vocabApi.termdbConfig.queries?.geneExpression?.unit || 'Gene Expression'
-		this.additionalOptions = options
+		this.unit = this.termType === GENE_EXPRESSION ? getGEunit(this.app.vocabApi) : getSCGEunit(this.app.vocabApi)
+		this.additionalOptions = opts?.additionalOptions || []
+
+		const termProperties = opts?.termProperties || {}
+		this.makeTerm = term => ({ ...term, ...termProperties, type: this.termType, unit: this.unit })
+
+		const spawnConfig = opts?.spawnConfig || {}
+		this.makeConfig = config => ({ ...config, ...spawnConfig })
 
 		this.renderMenu()
 	}
 
 	renderMenu() {
-		const _options = [
+		const _options: FlyoutMenuOption[] = [
 			{
 				label: 'Single gene summary',
 				isSubmenu: true,
@@ -89,19 +117,18 @@ export class GeneExpChartMenu {
 			searchOnly: 'gene',
 			callback: async () => {
 				const tw = {
-					term: {
+					term: this.makeTerm({
 						gene: geneSearch.geneSymbol,
-						name: `${geneSearch.geneSymbol} ${this.unit}`,
-						type: TermTypes.GENE_EXPRESSION
-					}
+						name: `${geneSearch.geneSymbol} ${this.unit}`
+					})
 				}
 				closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
-					config: {
+					config: this.makeConfig({
 						chartType: 'summary',
 						term: tw
-					}
+					})
 				})
 			}
 		})
@@ -110,8 +137,8 @@ export class GeneExpChartMenu {
 	/** Guide the user to select the first gene then
 	 * a second to launch the summary plot on submit.*/
 	renderTwoGeneSelect(holder, closeMenus) {
-		const term: GeneExpressionTerm = { type: TermTypes.GENE_EXPRESSION }
-		const term2: GeneExpressionTerm = { type: TermTypes.GENE_EXPRESSION }
+		const term: Partial<ScopedGeneExpTerm> = {}
+		const term2: Partial<ScopedGeneExpTerm> = {}
 
 		const gene1row = holder.append('div').style('padding', '5px')
 		const gene2row = holder.append('div').style('padding', '5px').style('display', 'none')
@@ -161,15 +188,14 @@ export class GeneExpChartMenu {
 				closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
-					config: {
+					config: this.makeConfig({
 						chartType: 'summary',
-						term: { term: term },
-						term2: { term: term2 }
-					}
+						term: { term: this.makeTerm(term) },
+						term2: { term: this.makeTerm(term2) }
+					})
 				})
 			})
 	}
-
 	/** Render the GeneSetEdit UI for selection and then
 	 * launch the hierarchical clustering on submit.*/
 	renderGeneMultiSelect(holder, closeMenus) {
@@ -217,7 +243,7 @@ export class GeneExpChartMenu {
 					geneList.map(async (d: any) => {
 						const gene: string = d.symbol || d.gene
 						const name = `${gene} ${this.unit}`
-						const term = { gene, name, type: TermTypes.GENE_EXPRESSION }
+						const term = this.makeTerm({ gene, name })
 						//if it was present use the previous term, genomic range terms require chr, start and stop fields, found in the original term
 						// let tw: any = group.lst.find((tw: any) => tw.term.name == name)
 						// if (!tw) tw = { term, q: {} }
@@ -242,11 +268,12 @@ export class GeneExpChartMenu {
 				closeMenus()
 				this.app.dispatch({
 					type: 'plot_create',
-					config: {
+					config: this.makeConfig({
 						chartType: 'hierCluster',
 						termgroups: [group],
-						dataType: TermTypes.GENE_EXPRESSION
-					}
+						//TODO: Need to allow singleCellGeneExpression as well
+						dataType: 'geneExpression'
+					})
 				})
 			}
 		})

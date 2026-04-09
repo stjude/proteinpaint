@@ -512,9 +512,9 @@ function setRenderers(self) {
 	self.showGenesetEditUI = async chart => {
 		const app = self.app
 		//Opt pertains to flyout menu options in #dom
-		const additionalItems = []
+		const additionalOptions = []
 		if (app.vocabApi.termdbConfig?.queries?.rnaseqGeneCount) {
-			additionalItems.push(
+			additionalOptions.push(
 				{
 					//Section heading
 					text: 'Differential Gene Expression Analysis'
@@ -536,7 +536,7 @@ function setRenderers(self) {
 				}
 			)
 		}
-		new GeneExpChartMenu(app, self.dom.tip, additionalItems)
+		new GeneExpChartMenu(app, self.dom.tip, { additionalOptions })
 	}
 
 	self.showTree_selectlst = async chart => {
