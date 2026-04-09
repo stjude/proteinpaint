@@ -6,6 +6,57 @@ import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { Scaffold, SummaryScaffold, Entity, Phrase2EntityResult } from './scaffoldTypes.ts'
 
+// JSON schema types for the filter tree returned by evaluateFilterTerm()
+type FilterLeafNode = { leaf: string }
+type FilterOperatorNode = { op: '&' | '|'; left: FilterTreeNode; right: FilterTreeNode }
+type FilterTreeNode = FilterLeafNode | FilterOperatorNode
+type FilterTreeResult = { sexpr: string; tree: FilterTreeNode }
+
+// The JSON schema definition passed to the LLM prompt
+const filterTreeJsonSchema = {
+	type: 'object',
+	required: ['sexpr', 'tree'],
+	properties: {
+		sexpr: { type: 'string', description: 'The full S-expression as a string' },
+		tree: { $ref: '#/$defs/node' }
+	},
+	$defs: {
+		node: {
+			oneOf: [
+				{
+					type: 'object',
+					required: ['op', 'left', 'right'],
+					properties: {
+						op: { type: 'string', enum: ['&', '|'] },
+						left: { $ref: '#/$defs/node' },
+						right: { $ref: '#/$defs/node' }
+					},
+					additionalProperties: false
+				},
+				{
+					type: 'object',
+					required: ['leaf'],
+					properties: {
+						leaf: { type: 'string' }
+					},
+					additionalProperties: false
+				}
+			]
+		}
+	},
+	additionalProperties: false
+}
+
+function isLeafNode(node: FilterTreeNode): node is FilterLeafNode {
+	return 'leaf' in node
+}
+
+/** Collect all leaf values from a filter tree */
+function collectLeaves(node: FilterTreeNode): string[] {
+	if (isLeafNode(node)) return [node.leaf]
+	return [...collectLeaves(node.left), ...collectLeaves(node.right)]
+}
+
 async function validateNonDictionaryTypes(
 	phrase: string,
 	llm: LlmConfig,
@@ -120,36 +171,117 @@ async function phrase2entitytw(
  * "young and black patients" -> ["young", "black"]
  * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
  */
-async function evaluateFilterTerm(phrase: string, llm: LlmConfig) {
-	const prompt = `You are a clinical data phrase decomposer.
-Given a user phrase, break it down into the smallest meaningful sub-phrases or words that each represent a standalone clinical or demographic concept or some descriptor term.
-Respond ONLY with an array of strings. No explanation, no markdown.
+async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
+	const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string.  
 
-Rules:
-- Each item should be a standalone concept on its own
-- If the phrase contains "and", split the phrase into two separate items stored in a single array element (e.g. "young and black patients" -> ["young", "black"])
-- If the phrase contains "or", split the phrase into two separate items stored in a two array elements (e.g. "young or black patients" -> [["young"], ["black"]])
-- Understand "and" in the context of the phrase even when not explicitly stated (e.g. "young black patients" -> ["young", "black"])
-- Keep multi-word concepts together if they only make sense as a unit
-- Do not rephrase or normalize — keep the original wording from the phrase
+PARSING RULES:
 
-Examples:
-"black men" → ["black", "men"]
-"elderly hispanic women with diabetes" → ["elderly", "hispanic", "women", "diabetes"]
-"high gene expression in pediatric patients" → ["high gene expression", "pediatric", "patients"]
-"survival of female breast cancer patients over 50" → ["survival", "female", "breast cancer", "over 50"]
-"patients of European or African ancestry" → [["European patients"], ["African patients"]]
-"young black patients or old white patients" -> [["young", "black"], ["old", "white"]]
+1. IMPLICIT AND (adjacency)
+   Adjacent words that form a single semantic unit (adjective + noun, modifier + noun) are grouped with an implicit AND.
+   "black males"  → (&, black, males)
+   "white women"  → (&, white, women)
+   "tall old man" → (&, (&, tall, old), man)  [chain left-to-right]
 
-Parse the following query into the summary plot scaffold:
+2. EXPLICIT AND
+   The word "and" between two groups produces an & operator node.
+   "black males and white women" → (&, (&, black, males), (&, white, women))
+
+3. EXPLICIT OR
+   The word "or" between two groups produces a | operator node.
+   "black males or white women" → (|, (&, black, males), (&, white, women))
+
+4. NO OPERATOR PRECEDENCE
+   Do NOT apply any precedence rules. Do NOT reorder or regroup based on operator type.
+   Parse strictly left-to-right. The operator encountered first wraps the groups encountered first.
+   "A and B or C"  → (|, (&, A, B), C)   [NOT (&, A, (|, B, C))]
+   "A or B or C"   → (|, (|, A, B), C)    [NOT (&, A, (|, B, C))]
+   "A or B and C"  → (&, (|, A, B), C)    [NOT (|, A, (&, B, C))]
+
+5. BINARY TREE ONLY
+   Every operator node has exactly two children: left and right.
+   For three or more groups connected by the same operator, chain left-to-right:
+   "A and B and C"       → (&, (&, A, B), C)
+   "A or B or C or D"    → (|, (|, (|, A, B), C), D)
+
+6. LEAVES
+   A leaf is a single word or a multi-word unit already grouped by implicit AND.
+   Leaves have no operator — they are atomic terms in the tree.
+
+OUTPUT FORMAT:
+Return ONLY valid JSON conforming to the following JSON schema. No explanation. No markdown. No extra keys.
+
+JSON Schema:
+${JSON.stringify(filterTreeJsonSchema, null, 2)}
+
+Each node is one of:
+  Operator node: { "op": "&" | "|", "left": <node>, "right": <node> }
+  Leaf node:     { "leaf": "word or phrase" }
+
+EXAMPLES:
+
+Input: black males and white women
+Output: {
+  "sexpr": "(&, (&, black, males), (&, white, women))",
+  "tree": {
+     "op": "&",
+     "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+     "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+  }
+}
+
+Input: black males and white women or asian men
+Output: {
+  "sexpr": "(|, (&, (&, black, males), (&, white, women)), (&, asian, men))",
+  "tree": {
+    "op": "|",
+    "left": {
+      "op": "&",
+      "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+      "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+    },
+    "right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
+  }
+}
+
+Input: black males or white women and asian men
+Output: {
+  "sexpr": "(&, (|, (&, black, males), (&, white, women)), (&, asian, men))",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "|",
+      "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+      "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+    },
+    "right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
+  }
+}
+
+Input: age > 60yrs
+Output: {
+  "sexpr": "(age > 60yrs)",
+  "tree": "age > 60yrs"
+}
+
+
+Parse the following query:
 Query: ${phrase}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	console.log('filter response:', response)
 	try {
-		return JSON.parse(response) as string[]
-	} catch {
-		console.warn('Failed to parse LLM response:', response)
-		return [phrase] // fallback
+		const parsed = JSON.parse(response) as FilterTreeResult
+		if (!parsed.tree || !parsed.sexpr) {
+			throw 'Response missing required fields "tree" or "sexpr"'
+		}
+		return parsed
+	} catch (e) {
+		console.warn('Failed to parse LLM filter response, wrapping phrase as single leaf:', response, e)
+		// Fallback: wrap the entire phrase as a single-leaf tree conforming to the schema
+		return {
+			sexpr: phrase,
+			tree: { leaf: phrase }
+		}
 	}
 }
 
@@ -188,26 +320,15 @@ export async function phrase2entity(
 				summ_term.tw3 = [tw3 as Entity]
 			}
 			if (scaffoldResult.filter) {
-				const parseFilterResult = (await evaluateFilterTerm(scaffoldResult.filter, llm)) as string[]
-				console.log('Parsed filter terms:', parseFilterResult)
-				/*
-				for (const filterTerm of parseFilterResult) {
-					if (Array.isArray(filterTerm)) {
-						for (const _filterTerm of filterTerm) {
-							const filterTw = await phrase2entitytw(filterTerm, llm, genes_list, dataset_json, ds)
-						}
-					} else {
-						const filterTw = await phrase2entitytw(filterTerm, llm, genes_list, dataset_json, ds)
-					}
-				}*/
+				const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+				console.log('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+				// Extract all leaf phrases from the filter tree and resolve each to an entity
+				const leafPhrases = collectLeaves(parseFilterResult.tree)
 				summ_term.filter = []
-				// Right now, it doesn't handle nested filters
-				// Assumes all filter terms are "anded" (i.e. an array of strings/words)
-				// Also, need to think about how to separate/represent and/or cases
-				for (const filterTerm of parseFilterResult) {
-					console.log('Evaluating filter term:', filterTerm)
-					const filterTw = await phrase2entitytw(filterTerm, llm, genes_list, dataset_json, ds)
-					console.log('filterTw :', filterTw)
+				for (const leafPhrase of leafPhrases) {
+					console.log('Evaluating filter leaf:', leafPhrase)
+					const filterTw = await phrase2entitytw(leafPhrase, llm, genes_list, dataset_json, ds)
+					console.log('filterTw:', filterTw)
 
 					if ('type' in filterTw && filterTw.type === 'text') {
 						return { type: 'text', text: filterTw.text }
