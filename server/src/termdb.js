@@ -6,7 +6,6 @@ import { get_survival } from './termdb.survival.js'
 import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
-import { filterJoin, getWrappedTvslst } from '#shared/filter.js'
 import { trigger_getLowessCurve } from '../routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile } from './utils.js'
@@ -74,7 +73,6 @@ export function handle_request_closure(genomes) {
 			}
 			if (q.for == 'convertSampleId') return get_convertSampleId(q, res, tdb)
 			if (q.for == 'singleSampleData') return get_singleSampleData(q, req, res, ds, tdb)
-			if (q.for == 'proteinView') return await get_proteinView(q, res, ds)
 			if (q.for == 'getProfileFacilities') return get_ProfileFacilities(q, req, res, ds, tdb)
 			if (q.for == 'getAllSamples') return get_AllSamples(q, req, res, ds)
 			if (q.for == 'getSamplesByName') return get_AllSamplesByName(q, req, res, ds)
@@ -331,86 +329,6 @@ async function get_AllSamplesByName(q, req, res, ds) {
 	}
 }
 
-async function get_proteinView(q, res, ds) {
-	try {
-		if (!ds.queries?.proteome?.get) throw 'queries.proteome.get() missing'
-		const term = q.term?.term || q.term
-		if (!term?.name) throw 'term.name missing'
-
-		const nonPTMAssays = []
-		const PTMAssays = []
-		for (const assayName in ds.queries.proteome.assays) {
-			const assay = ds.queries.proteome.assays[assayName]
-			const nonPTMCohorts = []
-
-			for (const cohortName in assay.cohorts || {}) {
-				const details = {
-					assay: assayName,
-					cohort: cohortName,
-					PTMType: assay.PTMType
-				}
-				const tw = {
-					$id: '_',
-					term: {
-						name: term.name,
-						type: 'proteomeAbundance',
-						proteomeDetails: details
-					}
-				}
-				const allData = await ds.queries.proteome.get({
-					terms: [tw],
-					proteomeDetails: details,
-					filter: q.filter,
-					filter0: q.filter0,
-					for: 'proteinView',
-					__abortSignal: q.__abortSignal
-				})
-
-				const filterConfig = assay.cohorts[cohortName]?.ctlFilter
-				const ctlFilter =
-					filterConfig && Array.isArray(filterConfig) && filterConfig.length
-						? getWrappedTvslst(
-								filterConfig.map(tvs => ({ type: 'tvs', tvs })),
-								filterConfig.length > 1 ? 'and' : ''
-						  )
-						: null
-
-				let controlSampleIds = new Set()
-				if (ctlFilter) {
-					const controlFilter = filterJoin([q.filter, ctlFilter].filter(f => !!f))
-					const controlSamples = await get_samples({ filter: controlFilter }, ds)
-					controlSampleIds = new Set(controlSamples.map(i => String(i.id)))
-				}
-
-				if (assay.PTMType) {
-					// this PTM cohort, multiple PTMs are returned instead of just one row for isoform in the case of whole proteome and insoluble proteome cohort
-					for (const [PTMcohortkey, PTM] of Object.entries(allData.byCohortPTM?.[cohortName] || {})) {
-						const s2v = PTM.s2v
-						const foldChange = await getFoldChange(s2v, controlSampleIds)
-						delete PTM.s2v // no need to send s2v to client; only fold change is needed for barchart
-						PTM.foldChange = foldChange
-						if (assay.mclassOverride) PTM.mclassOverride = assay.mclassOverride
-						PTMAssays.push(PTM)
-					}
-				} else {
-					const allS2v = allData.term2sample2value?.get('_')
-					const foldChange = await getFoldChange(allS2v, controlSampleIds)
-					nonPTMCohorts.push({
-						cohortName,
-						value: foldChange
-					})
-				}
-			}
-			if (nonPTMCohorts.length) nonPTMAssays.push({ assayName, nonPTMCohorts })
-		}
-
-		res.send({ protein: term.name, nonPTMAssays, PTMAssays })
-	} catch (e) {
-		if (e?.stack) console.log(e.stack)
-		res.send({ error: e.message || e })
-	}
-}
-
 async function LDoverlay(q, ds, res) {
 	if (!q.ldtkname) throw '.ldtkname missing'
 	if (!ds.queries?.ld?.tracks) throw 'no ld tk'
@@ -448,23 +366,4 @@ async function LDoverlay(q, ds, res) {
 		}
 	})
 	res.send({ lst })
-}
-
-async function getFoldChange(allS2v, controlSampleIds) {
-	if (!allS2v || typeof allS2v != 'object') return null
-	const controlValues = []
-	const testedValues = []
-
-	for (const sampleId in allS2v) {
-		const v = Number(allS2v[sampleId])
-		if (!Number.isFinite(v)) continue
-		if (controlSampleIds.has(String(sampleId))) controlValues.push(v)
-		else testedValues.push(v)
-	}
-
-	const controlMean = controlValues?.length ? controlValues.reduce((sum, v) => sum + v, 0) / controlValues.length : null
-	const testedMean = testedValues?.length ? testedValues.reduce((sum, v) => sum + v, 0) / testedValues.length : null
-	const foldChange =
-		Number.isFinite(testedMean) && Number.isFinite(controlMean) && controlMean !== 0 ? testedMean / controlMean : null
-	return foldChange
 }
