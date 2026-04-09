@@ -104,7 +104,7 @@ runs:
       with:
         payload: |
           {
-            "status": "${{ env.INTEGRATION_TEST_FAILED == 'true' && 'failure' || 'success' }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "status": "${{ (job.status != 'success' || env.INTEGRATION_TEST_FAILED == 'true') && 'failure' || 'success' }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "commit": "${{ env.SHORT_SHA }}",
             "date-time": "${{ steps.current-time.outputs.formattedTime }}"
           }
