@@ -1,4 +1,4 @@
-import { getHg38 } from './hg38.base.ts'
+import { getHg38 } from './hg38.base.js'
 
 const genome = getHg38()
 

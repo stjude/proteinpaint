@@ -52,7 +52,7 @@ do
 	if [[ "$CHANGEDWS" == *"shared/$shareddir"* ]]; then
 		cd ../shared/$shareddir
 		echo "packing shared/$sharedws ..."
-		npm pack
+		npm pack --loglevel error
 		SHAREDPKGVER=$(node -p "require('./package.json').version")
 		SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
 		mv $SHAREDTGZ ../../container/tmppack/
@@ -70,7 +70,7 @@ done
 if [[ "$CHANGEDWS" == *"client"* ]]; then
 	cd ../client
 	echo "packing client ..."
-	npm pack
+	npm pack --loglevel error
 	CLIENTPKGVER=$(node -p "require('./package.json').version")
 	CLIENTTGZ=sjcrh-proteinpaint-client-$CLIENTPKGVER.tgz
 	mv $CLIENTTGZ ../container/tmppack/
@@ -89,7 +89,7 @@ fi
 if [[ "$CHANGEDWS" == *"front"* ]]; then
 	cd ../front
 	echo "packing front ..."
-	npm pack
+	npm pack --loglevel error
 	FRONTPKGVER=$(node -p "require('./package.json').version")
 	FRONTTGZ=sjcrh-proteinpaint-front-$FRONTPKGVER.tgz
 	mv $FRONTTGZ ../container/tmppack/
@@ -104,7 +104,7 @@ fi
 if [[ "$CHANGEDWS" == *"augen"* ]]; then
 	cd ../augen
 	echo "packing augen ..."
-	npm pack
+	npm pack --loglevel error
 	AUGENPKGVER=$(node -p "require('./package.json').version")
 	AUGENTGZ=sjcrh-augen-$AUGENPKGVER.tgz
 	mv $AUGENTGZ ../container/tmppack/
@@ -150,7 +150,7 @@ if [[ "$CHANGEDWS" == *"rust"* ]]; then
   fi
 
   echo "Packing rust module with npm ..."
-  RUSTTGZ=$(npm pack)
+  RUSTTGZ=$(npm pack --loglevel error)
   RUSTPKGVER=$(node -p "require('./package.json').version")
 
   mv "$RUSTTGZ" ../container/tmppack/
@@ -165,7 +165,7 @@ fi
 if [[ "$CHANGEDWS" == *"python"* ]]; then
 	cd ../python
 	echo "packing python ..."
-	npm pack
+	npm pack --loglevel error
 	PYPKGVER=$(node -p "require('./package.json').version")
 	PYTGZ=sjcrh-proteinpaint-python-$PYPKGVER.tgz
 	mv $PYTGZ ../container/tmppack/
@@ -180,7 +180,7 @@ fi
 if [[ "$CHANGEDWS" == *"R"* ]]; then
 	cd ../R
 	echo "packing R ..."
-	npm pack
+	npm pack --loglevel error
 	RPKGVER=$(node -p "require('./package.json').version")
 	RTGZ=sjcrh-proteinpaint-r-$RPKGVER.tgz
 	mv $RTGZ ../container/tmppack/
@@ -195,7 +195,7 @@ fi
 if [[ "$CHANGEDWS" == *"server"* ]]; then
 	cd ../server
 	echo "packing server ..."
-	npm pack
+	npm pack --loglevel error
 	SERVERTPKGVER=$(node -p "require('./package.json').version")
 	SERVERTGZ=sjcrh-proteinpaint-server-$SERVERTPKGVER.tgz
 	mv $SERVERTGZ ../container/tmppack/
