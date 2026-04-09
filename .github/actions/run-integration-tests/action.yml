@@ -53,7 +53,7 @@ runs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build Docker Image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: ./container/
         file: ./container/server/Dockerfile
@@ -62,8 +62,7 @@ runs:
         outputs: type=docker
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        provenance: false
-        sbom: false
+        provenance: mode=min
 
     - name: Run local server and integration tests
       id: integration
