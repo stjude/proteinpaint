@@ -36,7 +36,7 @@ export type IsoformTerm = {
 export type IsoformCollectionMember = {
 	id: string
 	name: string
-	type: string
+	type: 'isoformExpression'
 	isoform: string
 }
 
