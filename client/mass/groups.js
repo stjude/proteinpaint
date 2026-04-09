@@ -1,5 +1,5 @@
-import { copyMerge, getCompInit } from '#rx'
-import { Menu, addGeneSearchbox, GeneSetEditUI, renderTable, table2col } from '#dom'
+import { getCompInit } from '#rx'
+import { Menu, GeneSetEditUI, renderTable, table2col, sayerror, make_radios } from '#dom'
 import {
 	filterInit,
 	getNormalRoot,
@@ -15,8 +15,8 @@ import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { TermTypes, isNumericTerm, termType2label } from '#shared/terms.js'
 import { dofetch3 } from '#common/dofetch'
-import { sayerror, make_radios } from '#dom'
 import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/settings/defaults.ts'
+import { getGEunit } from '#tw/geneExpression'
 
 /*
 this
@@ -1018,7 +1018,7 @@ function mayAddHierClusterPlotMenuItem(chartType, div, text, tip, samplelstTW, i
 					const tws = await Promise.all(
 						geneList.map(async d => {
 							const gene = d.symbol || d.gene
-							const unit = parent.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+							const unit = getGEunit(parent.app.vocabApi)
 							const name = `${gene} ${unit}`
 							const term = { gene, name, type: 'geneExpression' }
 							let tw = group.lst.find(tw => tw.term.name == d.symbol || tw.term.name == d.gene)
