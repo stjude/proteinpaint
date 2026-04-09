@@ -346,45 +346,24 @@ export async function validate_termdb(ds) {
 			if (c.type !== 'numeric' && c.type !== 'categorical')
 				throw `termdb.termCollections[].type must be 'numeric' or 'categorical' (${c.name})`
 			if (!c.propsByTermId) c.propsByTermId = {}
-
-			if (c.isCustom) {
-				// Custom collection: member terms are not in the dictionary.
-				// termlst may be empty for dynamic collections where members are chosen at runtime.
-				if (!Array.isArray(c.termlst)) c.termlst = []
-				if (c.termlst.length > 0) {
-					const colorScale = getColors(c.termlst.length)
-					for (const t of c.termlst) {
-						if (!t.name) throw `custom termCollection member term missing name in '${c.name}'`
-						const id = t.id || t.name
-						if (c.type === 'numeric') {
-							if (t.type !== 'integer' && t.type != 'float') throw 'member term type not integer/float ' + id
-						} else {
-							if (t.type !== 'categorical') throw 'member term type not categorical ' + id
-						}
-						if (!c.propsByTermId[id]) c.propsByTermId[id] = {}
-						if (!c.propsByTermId[id].color) c.propsByTermId[id].color = colorScale(id)
-					}
+			// Dictionary collection: look up member terms by ID from the database
+			if (!Array.isArray(c.termIds)) throw 'termdb.termCollections[].termIds[] not array'
+			if (c.termIds.length == 0) throw 'termdb.termCollections[].termIds[] blank array'
+			c.termlst = []
+			const colorScale = getColors(c.termIds.length)
+			for (const i of c.termIds) {
+				const t = tdb.q.termjsonByOneid(i)
+				if (!t) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
+				c.termlst.push(t)
+				if (c.type === 'numeric') {
+					if (t.type !== 'integer' && t.type != 'float') throw 'member term type not integer/float ' + i
+				} else {
+					if (t.type !== 'categorical') throw 'member term type not categorical ' + i
+					// later ensure all categories are same
 				}
-			} else {
-				// Dictionary collection: look up member terms by ID from the database
-				if (!Array.isArray(c.termIds)) throw 'termdb.termCollections[].termIds[] not array'
-				if (c.termIds.length == 0) throw 'termdb.termCollections[].termIds[] blank array'
-				c.termlst = []
-				const colorScale = getColors(c.termIds.length)
-				for (const i of c.termIds) {
-					const t = tdb.q.termjsonByOneid(i)
-					if (!t) throw `invalid term id "${i}" from termdb.termCollections[].${c.name}`
-					c.termlst.push(t)
-					if (c.type === 'numeric') {
-						if (t.type !== 'integer' && t.type != 'float') throw 'member term type not integer/float ' + i
-					} else {
-						if (t.type !== 'categorical') throw 'member term type not categorical ' + i
-						// later ensure all categories are same
-					}
-					// assign default color when missing, simplify client rendering as there's always color
-					if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
-					if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
-				}
+				// assign default color when missing, simplify client rendering as there's always color
+				if (!c.propsByTermId[i]) c.propsByTermId[i] = {}
+				if (!c.propsByTermId[i].color) c.propsByTermId[i].color = colorScale(i)
 			}
 			if (c.type === 'categorical') {
 				if (!c.categoryKeys)
