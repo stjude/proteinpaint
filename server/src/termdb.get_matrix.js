@@ -1,5 +1,4 @@
 import { getData } from './termdb.matrix.js'
-import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
 import serverconfig from './serverconfig.js'
 import { authApi } from './auth.js'
 import { Readable, pipeline } from 'stream'
@@ -77,11 +76,6 @@ export async function get_matrix(q, req, res, ds, genome) {
 			? ds.cohort.termdb.disableAssayAvailability(req.path, q)
 			: false
 
-	if (q.terms) {
-		const { expandedTerms, tcMappings } = expandCustomTermCollection(q.terms)
-		q.terms = expandedTerms
-		q._tcMappings = tcMappings
-	}
 	const data = await getData(q, ds, true) // FIXME hardcoded to true
 	if (data.error) {
 		if (String(data.error).includes('operation was aborted')) console.log(`(!) abort error`)
@@ -89,7 +83,6 @@ export async function get_matrix(q, req, res, ds, genome) {
 		res.send({ error: data.error })
 		return
 	}
-	if (q._tcMappings) reconstituteCustomTermCollection(data, q._tcMappings)
 	data.refs.$codes = $codes
 	if (!data.refs.byTermId) data.refs.byTermId = {}
 

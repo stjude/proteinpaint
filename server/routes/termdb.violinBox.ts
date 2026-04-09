@@ -22,7 +22,6 @@ import { getDescrStats, getStdDev, getMean } from './termdb.descrstats.ts'
 import { isNumericTerm } from '#shared/terms.js'
 import { boxplot_getvalue } from '../src/utils.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { expandCustomTermCollection, reconstituteCustomTermCollection } from '../src/termdb.termCollection.ts'
 import { mayLog } from '#src/helpers.ts'
 
 /** Internal box plot entry with temporary values used for Wilcoxon tests.
@@ -69,14 +68,9 @@ function init({ genomes }) {
 			if (q.overlayTw) arg.terms.push(q.overlayTw)
 			if (q.divideTw) arg.terms.push(q.divideTw)
 
-			// Expand custom termCollection members into individual tws before getData(),
-			// then reconstitute the grouped shape after
-			const { expandedTerms, tcMappings } = expandCustomTermCollection(arg.terms)
-			arg.terms = expandedTerms
 			const data = await getData(arg, ds)
 			if (!data) throw new Error('getData() returns nothing')
 			if (data.error) throw new Error(data.error)
-			reconstituteCustomTermCollection(data as any, tcMappings)
 
 			// For numeric termCollection, expand JSON-grouped data into per-member-term
 			// entries with a synthetic overlay so the existing pipeline handles it natively

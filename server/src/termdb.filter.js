@@ -324,14 +324,14 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 		throw new Error('termcollection memberType=categorical not supported yet')
 	}
 	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
-	if (!tvs.term.isCustom) {
+	if (tvs.term.isCustom) {
+		return await get_termCollection_custom(tvs, CTEname, ds, onlyChildren)
+	}
+	if (tvs.term.numerators) {
 		validateTermCollectionTvs(
 			tvs.term.numerators,
 			tvs.term.termlst?.map(i => i.id)
 		)
-	}
-	if (tvs.term.isCustom) {
-		return await get_termCollection_custom(tvs, CTEname, ds, onlyChildren)
 	}
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData({ terms: [tw] }, ds)
@@ -343,19 +343,20 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 		const sampleValues = sampleEntry.value
 		if (!sampleValues || typeof sampleValues !== 'object') continue
 
-		if (tvs.term.isCustom) {
-			// Custom termCollection: filter by range on the selected member's value.
-			// tvs.values[0].key is the member term ID being filtered on.
-			const memberKey = tvs.values?.[0]?.key
-			const val = memberKey ? sampleValues[memberKey] : undefined
+		const brushedLabel = tvs.values?.[0]?.key
+		if (brushedLabel) {
+			// Brush is on a specific member term. tvs.values[0].key may be
+			// a display label (e.g. "Cytarabine LC50 (normalized)") or a term ID.
+			// Resolve to the term ID used as key in sampleValues.
+			const termlst = tvs.term.termlst || []
+			const mt = termlst.find(t => t.name === brushedLabel || t.id === brushedLabel)
+			const memberId = mt?.id || brushedLabel
+			const val = sampleValues[memberId]
 			if (val == null || typeof val !== 'number') continue
 			const range = tvs.ranges[0]
 			if (isInRange(val, range, tvs.isnot)) samplenames.push(key)
-		} else {
-			/*
-			sampleValues here is an object with a key for each mutation signature term for the sampleID. e.g.
-			{ SBS1: 83, SBS2: 0, SBS5: 185 }
-			*/
+		} else if (tvs.term.numerators) {
+			// No specific member brushed — filter by numerator/denominator ratio
 			let numeratorSum = 0
 			let totalSum = 0
 			for (const [key, value] of Object.entries(sampleValues)) {
