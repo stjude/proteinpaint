@@ -173,10 +173,5 @@ export async function findBestMatch(
 ): Promise<{ id: string; type: string; name: string; score: number }> {
 	const results = await querySimilar(query, store, llm, 1)
 	if (results.length === 0) throw new Error('No matches found')
-	const similarityThreshold = 0.8
-	if (results[0].score < similarityThreshold) {
-		// Threshold for "good enough" match, can be tuned
-		console.warn(`Low similarity score (${(results[0].score * 100).toFixed(1)}%) for query "${query}"`)
-	}
 	return { id: results[0].id, type: results[0].type, name: results[0].name, score: results[0].score }
 }
