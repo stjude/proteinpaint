@@ -17,7 +17,7 @@ Single-select (default):
 Multi-select (multiSelect: true):
   Each row has a checkbox. A "Select all" toggle at the top and a
   submit button at the bottom. Calls onMultiSelect(gms) on submit.
-  Used by isoformExpression.ts to create a custom termCollection
+  Used by isoformExpression.ts to create a custom numeric termCollection
   from multiple isoforms.
 
 ******* required (both modes)
