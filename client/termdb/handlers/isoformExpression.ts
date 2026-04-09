@@ -101,7 +101,7 @@ export class SearchHandler {
 		const termlst = gms.map(gm => ({
 			id: gm.isoform,
 			name: gm.isoform,
-			type: ISOFORM_EXPRESSION,
+			type: ISOFORM_EXPRESSION as 'isoformExpression',
 			isoform: gm.isoform
 		}))
 		this.callback({
