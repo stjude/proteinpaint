@@ -35,8 +35,18 @@ export type IsoformTerm = {
 export type IsoformSelectOpts = {
 	holder: Div
 	allgm: GeneModel[]
-	onSelect: (selected: GeneModel) => void
+	/** Single-select: called when a row is clicked */
+	onSelect?: (selected: GeneModel) => void
+	/** Multi-select: called when submit is clicked */
+	onMultiSelect?: (selected: GeneModel[]) => void
+	/** Enable multi-select mode with checkboxes and submit button */
+	multiSelect?: boolean
+	/** Currently active gene model, highlighted in single-select mode */
 	usegm?: GeneModel
+	/** Pre-checked isoform IDs (multi-select only) */
+	selectedIsoforms?: Set<string>
+	/** Text for the submit button (multi-select only, default "Submit") */
+	submitLabel?: string
 	maxHeight?: number
 	scrollThreshold?: number
 }

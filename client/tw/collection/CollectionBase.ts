@@ -24,13 +24,18 @@ export class CollectionBase extends TwBase {
 
 	static fill(tw: RawTermCollectionTW, opts: TwOpts = {}): TermCollectionTW {
 		if (!tw.type) {
-			// Peek at config to determine memberType for routing (full fill happens inside CollectionCont/Qual)
-			if (!opts.vocabApi?.termdbConfig?.termCollections)
-				throw `missing vocabApi.termdbConfig.termCollections argument for fill()`
-			const term = tw.term
-			const tc = opts.vocabApi.termdbConfig.termCollections.find((c: { name: string }) => c.name === term.name)
-			if (!tc) throw new Error(`no matching termCollection for '${term.name}'`)
-			tw.type = tc.type === 'numeric' ? 'TermCollectionTWCont' : 'TermCollectionTWQual'
+			const term = tw.term as any
+			if (term.isCustom && term.memberType) {
+				// Custom collection: memberType is already on the term, no config lookup needed
+				tw.type = term.memberType === 'numeric' ? 'TermCollectionTWCont' : 'TermCollectionTWQual'
+			} else {
+				// Peek at config to determine memberType for routing (full fill happens inside CollectionCont/Qual)
+				if (!opts.vocabApi?.termdbConfig?.termCollections)
+					throw `missing vocabApi.termdbConfig.termCollections argument for fill()`
+				const tc = opts.vocabApi.termdbConfig.termCollections.find((c: { name: string }) => c.name === term.name)
+				if (!tc) throw new Error(`no matching termCollection for '${term.name}'`)
+				tw.type = tc.type === 'numeric' ? 'TermCollectionTWCont' : 'TermCollectionTWQual'
+			}
 		}
 
 		switch (tw.type) {

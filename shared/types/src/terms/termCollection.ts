@@ -10,7 +10,7 @@ type BaseTermCollection = BaseTerm & {
 	type: 'termCollection'
 	/** list of term.ids that are available in this collection. this is used in request payload and server side */
 	termIds?: string[]
-	/** list of term objs corresponding to termIds[]. 
+	/** list of term objs corresponding to termIds[].
 	this is generated on server init, and sent to client, so client has easy access to show name of every term */
 	termlst: BaseTerm[]
 	/** TODO purpose */
@@ -20,6 +20,9 @@ type BaseTermCollection = BaseTerm & {
 			[prop: string]: any
 		}
 	}
+	/** When true, member terms are not dictionary terms and data is fetched
+	 *  via ds.queries.termCollection.get() instead of SQL CTEs */
+	isCustom?: boolean
 }
 
 export type NumericTermCollection = BaseTermCollection & {
@@ -60,6 +63,7 @@ export type RawNumericTermCollection = {
 		}
 	}
 	numerators?: string[]
+	isCustom?: boolean
 }
 
 /** Pre-fill shape for a categorical termCollection (memberType set by TermCollection.fill()) */
@@ -75,6 +79,7 @@ export type RawCategoricalTermCollection = {
 		}
 	}
 	categoryKeys?: CategoryKey[]
+	isCustom?: boolean
 }
 
 export type RawTermCollection = RawNumericTermCollection | RawCategoricalTermCollection

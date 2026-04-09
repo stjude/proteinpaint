@@ -1671,14 +1671,15 @@ keep this setting here for reason of:
 type TermCollectionBase = {
 	/** human readable name as well as unique identifier for this collection */
 	name: string
-	/** array of dictionary term ids belonging to this collection */
-	termIds: string[]
+	/** array of dictionary term ids belonging to this collection.
+	 *  Optional for custom (non-dictionary) collections where termlst[] is the primary source. */
+	termIds?: string[]
 	/** full term objects corresponding to termIds[]; populated by server on dataset init,
 	 * sent to client so fill() can resolve member term names without extra requests */
 	termlst?: BaseTerm[]
 	/** array of branch term ids belonging to this collection,
 	 * may be used as state.tree.expandedTermIds[] option to termdb appInit() */
-	branchIds: string[]
+	branchIds?: string[]
 	propsByTermId: {
 		[termId: string]: any
 	}
@@ -1689,6 +1690,9 @@ type TermCollectionBase = {
 		/** json file path of this plot */
 		file: string
 	}[]
+	/** When true, member terms are not dictionary terms and data is fetched
+	 *  via ds.queries.termCollection.get() instead of SQL CTEs */
+	isCustom?: boolean
 }
 
 type NumericTermCollection = TermCollectionBase & {

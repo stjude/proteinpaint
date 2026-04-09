@@ -140,7 +140,8 @@ class ViolinPlot extends PlotBase {
 				label: controlLabels.term2.label,
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
-				defaultQ4fillTW: term0_term2_defaultQ
+				defaultQ4fillTW: term0_term2_defaultQ,
+				getDisplayStyle: plot => (plot.config?.term?.term?.type === 'termCollection' ? 'none' : '')
 			},
 			{
 				type: 'term',
@@ -154,7 +155,8 @@ class ViolinPlot extends PlotBase {
 				// it will create a separate violin-overlay group per unique float or integer value
 				// and there will nonsensical tens/hundreds of these charts based on the cohort size
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
+				defaultQ4fillTW: term0_term2_defaultQ,
+				getDisplayStyle: plot => (plot.config?.term?.term?.type === 'termCollection' ? 'none' : '')
 			},
 			{
 				label: 'Orientation',
