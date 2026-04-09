@@ -8,7 +8,16 @@ export function getProfileUrl() {
 
 export async function openProfilePage(page: Page, opts?: { openGraphsTab?: boolean }) {
 	await page.goto(getProfileUrl(), { waitUntil: 'domcontentloaded' })
-	await page.waitForLoadState('networkidle')
+
+	// Wait for page to be ready by checking for specific UI elements instead of networkidle.
+	// networkidle is unreliable when SSE is enabled (features.sse=true in dev/test mode),
+	// which opens a persistent EventSource connection, causing networkidle to hang/timeout.
+	// Instead, wait for stable elements: error check and navigation tabs.
+	await expect(page.getByText('Error: invalid dslabel')).not.toBeVisible({ timeout: 15000 })
+
+	// Wait for navigation table with ABOUT/GRAPHS cells to indicate page is ready
+	const aboutCell = page.getByRole('cell', { name: 'ABOUT' })
+	await expect(aboutCell).toBeVisible({ timeout: 15000 })
 
 	if (opts?.openGraphsTab) {
 		const graphsCell = page.getByRole('cell', { name: 'GRAPHS' })

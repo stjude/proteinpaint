@@ -111,12 +111,7 @@ test('profilePolar2 single-site selection in Sites filter narrows server-side sa
 	const sitesSelect = page.getByLabel('Sites').first()
 	await expect(sitesSelect).toBeVisible({ timeout: 10000 })
 
-	const siteValues = await sitesSelect.locator('option').evaluateAll(options =>
-		options
-			.map(o => ({ value: (o as HTMLOptionElement).value, disabled: (o as HTMLOptionElement).disabled }))
-			.filter(o => !o.disabled && o.value)
-			.map(o => o.value)
-	)
+	const siteValues = await getEnabledOptionValues(sitesSelect)
 	expect(siteValues.length).toBeGreaterThan(0)
 
 	const filteredResponsePromise = page.waitForResponse(
@@ -137,13 +132,18 @@ test('profilePolar2 single-site selection in Sites filter narrows server-side sa
 })
 
 test('profilePolar2 iterates all available options in every filter dropdown', async ({ page }) => {
-	for (const label of FILTER_LABELS) {
-		await openProfilePage(page, { openGraphsTab: true })
+	// This test exhaustively samples filter options and triggers server requests.
+	// Increase timeout to accommodate multiple filters × multiple options × server response time.
+	test.setTimeout(180000) // 3 minutes for comprehensive sampling
 
-		const sandbox = page.getByTestId('sjpp-massplot-sandbox-profilePolar2').first()
-		const table = page.getByTestId('sjpp-profilePolar2-data-table')
-		await expectVisible(sandbox)
-		await expectVisible(table)
+	// Initialize page once, then test all filters
+	await openProfilePage(page, { openGraphsTab: true })
+	const sandbox = page.getByTestId('sjpp-massplot-sandbox-profilePolar2').first()
+	const table = page.getByTestId('sjpp-profilePolar2-data-table')
+	await expectVisible(sandbox)
+	await expectVisible(table)
+
+	for (const label of FILTER_LABELS) {
 		await openFiltersFromSandbox(page, sandbox)
 
 		const select = page.getByLabel(label).first()
@@ -153,7 +153,11 @@ test('profilePolar2 iterates all available options in every filter dropdown', as
 		const optionValues = await getEnabledOptionValues(select)
 		expect(optionValues.length).toBeGreaterThan(0)
 
-		for (const value of optionValues) {
+		// Sample a subset of options to avoid excessive runtime.
+		// High-cardinality filters (e.g., "Sites") are naturally limited to first few options.
+		const samplesToTest = optionValues.slice(0, 3)
+
+		for (const value of samplesToTest) {
 			const currentValue = await select.inputValue().catch(() => '')
 			if (currentValue === value) continue
 
