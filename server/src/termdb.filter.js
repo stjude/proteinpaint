@@ -280,59 +280,92 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 	}
 }
 
+function isInRange(val, range, isnot) {
+	let left, right
+	if (range.startunbounded) left = true
+	else if ('start' in range) left = range.startinclusive ? val >= range.start : val > range.start
+	if (range.stopunbounded) right = true
+	else if ('stop' in range) right = range.stopinclusive ? val <= range.stop : val < range.stop
+	return isnot ? !(left && right) : left && right
+}
+
+function emptyFilterResult(CTEname, onlyChildren, ds) {
+	let query = `SELECT id as sample FROM sampleidmap WHERE 0`
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	return { CTEs: [`${CTEname} AS (${query})`], values: [], CTEname }
+}
+
+/** Custom termCollection filter: call query handlers directly for each member term,
+ *  then filter samples by value range on the selected member. */
+async function get_termCollection_custom(tvs, CTEname, ds, onlyChildren) {
+	const memberKey = tvs.values?.[0]?.key
+	const range = tvs.ranges?.[0]
+	if (!memberKey || !range) return emptyFilterResult(CTEname, onlyChildren, ds)
+
+	// Find the member term being filtered on
+	const mt = tvs.term.termlst?.find(t => (t.id || t.name) === memberKey)
+	if (!mt) return emptyFilterResult(CTEname, onlyChildren, ds)
+
+	// Call the existing query handler for this member's dataType
+	const dataType = mt.dataType || 'isoformExpression'
+	const queryHandler = ds.queries?.[dataType]
+	if (!queryHandler) throw `not supported by dataset: ${dataType}`
+
+	const tw = { $id, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
+	const data = await queryHandler.get({ terms: [tw] }, ds)
+	const values = data.term2sample2value?.get($id)
+	if (!values) return emptyFilterResult(CTEname, onlyChildren, ds)
+
+	return numericSampleData2tvs(tvs, CTEname, values)
+}
+
 async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 	if (tvs.term.memberType === 'categorical') {
 		throw new Error('termcollection memberType=categorical not supported yet')
 	}
 	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
-	validateTermCollectionTvs(
-		tvs.term.numerators,
-		tvs.term.termlst?.map(i => i.id)
-	)
+	if (!tvs.term.isCustom) {
+		validateTermCollectionTvs(
+			tvs.term.numerators,
+			tvs.term.termlst?.map(i => i.id)
+		)
+	}
+	if (tvs.term.isCustom) {
+		return await get_termCollection_custom(tvs, CTEname, ds, onlyChildren)
+	}
 	const tw = { $id, term: tvs.term, q: {} }
-	const data = await getData(
-		{
-			terms: [tw]
-		},
-		ds
-	)
+	const data = await getData({ terms: [tw] }, ds)
 	const samplenames = []
+	if (!data.samples) return emptyFilterResult(CTEname, onlyChildren, ds)
 	for (const [key, value] of Object.entries(data.samples)) {
-		const sampleValues = value[$id].value
-		/*
-		sampleValues here is an object with a key for each mutation signature term for the sampleID. e.g.
- 		{ SBS1: 83, SBS2: 0, SBS5: 185 }
-		*/
-		let numeratorSum = 0
-		let totalSum = 0
-		for (const [key, value] of Object.entries(sampleValues)) {
-			totalSum += value
-			if (tvs.term.numerators.includes(key)) numeratorSum += value
-		}
-		const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
+		const sampleEntry = value[$id]
+		if (!sampleEntry) continue
+		const sampleValues = sampleEntry.value
+		if (!sampleValues || typeof sampleValues !== 'object') continue
 
-		const range = tvs.ranges[0]
-		let left, right
-		if (range.startunbounded) {
-			left = true
-		} else if ('start' in range) {
-			if (range.startinclusive) {
-				left = percentage >= range.start
-			} else {
-				left = percentage > range.start
+		if (tvs.term.isCustom) {
+			// Custom termCollection: filter by range on the selected member's value.
+			// tvs.values[0].key is the member term ID being filtered on.
+			const memberKey = tvs.values?.[0]?.key
+			const val = memberKey ? sampleValues[memberKey] : undefined
+			if (val == null || typeof val !== 'number') continue
+			const range = tvs.ranges[0]
+			if (isInRange(val, range, tvs.isnot)) samplenames.push(key)
+		} else {
+			/*
+			sampleValues here is an object with a key for each mutation signature term for the sampleID. e.g.
+			{ SBS1: 83, SBS2: 0, SBS5: 185 }
+			*/
+			let numeratorSum = 0
+			let totalSum = 0
+			for (const [key, value] of Object.entries(sampleValues)) {
+				totalSum += value
+				if (tvs.term.numerators.includes(key)) numeratorSum += value
 			}
+			const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
+			const range = tvs.ranges[0]
+			if (isInRange(percentage, range, tvs.isnot)) samplenames.push(key)
 		}
-		if (range.stopunbounded) {
-			right = true
-		} else if ('stop' in range) {
-			if (range.stopinclusive) {
-				right = percentage <= range.stop
-			} else {
-				right = percentage < range.stop
-			}
-		}
-		const includeSample = tvs.isnot ? !(left && right) : left && right
-		if (includeSample) samplenames.push(key)
 	}
 
 	let query = `SELECT id as sample

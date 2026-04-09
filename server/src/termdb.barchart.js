@@ -4,6 +4,7 @@ import Partjson from 'partjson'
 import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
+import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
 
 const binLabelFormatter = format('.3r')
@@ -108,11 +109,19 @@ export async function barchart_data(q, ds, tdb) {
 		if (term) map.set(i, term)
 	}
 	const terms = [...map.values()]
+	const { expandedTerms, tcMappings } = expandCustomTermCollection(terms)
 	const data = await getData(
-		{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
+		{
+			filter: q.filter,
+			filter0: q.filter0,
+			terms: expandedTerms,
+			__protected__: q.__protected__,
+			__abortSignal: q.__abortSignal
+		},
 		q.ds
 	)
 	if (data.error) throw data.error
+	reconstituteCustomTermCollection(data, tcMappings)
 	const samplesMap = new Map()
 	const bins = []
 	const categories = []
