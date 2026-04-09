@@ -6,6 +6,7 @@ import { Menu, zoom, icons, svgScroll, make_radios, make_one_checkbox, GeneSetEd
 import { select } from 'd3-selection'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
 import { TermTypes, isNumericTerm } from '#shared/terms.js'
+import { getGEunit } from '#tw/geneExpression'
 
 const tip = new Menu({ padding: '' })
 
@@ -1233,7 +1234,7 @@ export class MatrixControls {
 							let term
 							if (targetTermType == 'geneExpression') {
 								const gene = d.symbol || d.gene
-								const unit = app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+								const unit = getGEunit(app.vocabApi)
 								const name = `${gene} ${unit}`
 								term = { gene, name, type: 'geneExpression' }
 							} else {
