@@ -96,9 +96,8 @@ tape('selectCollection() should create a custom termCollection from multiple iso
 	const mt = selected.termlst[0]
 	test.equal(mt.id, 'ENST00000256078', 'Member term id should be the isoform ID')
 	test.equal(mt.name, 'ENST00000256078', 'Member term name should be the isoform ID')
-	test.equal(mt.type, 'float', 'Member term type should be float')
+	test.equal(mt.type, 'isoformExpression', 'Member term type should be isoformExpression')
 	test.equal(mt.isoform, 'ENST00000256078', 'Member term should carry isoform field')
-	test.equal(mt.dataType, 'isoformExpression', 'Member term should declare dataType')
 
 	test.end()
 })
