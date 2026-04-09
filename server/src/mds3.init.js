@@ -41,11 +41,7 @@ import { validate_query_singleCell } from '#routes/termdb.singlecellSamples.ts'
 import { validate_query_proteome } from '#routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
-import {
-	validate_query_geneExpression,
-	validateQueryIsoformExpression,
-	setupCustomTermCollectionHandler
-} from '#routes/termdb.cluster.ts'
+import { validate_query_geneExpression, validateQueryIsoformExpression } from '#routes/termdb.cluster.ts'
 import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
@@ -406,9 +402,6 @@ export async function validate_termdb(ds) {
 			}
 		}
 	}
-
-	// Set up query handler for custom (non-dictionary) termCollections
-	setupCustomTermCollectionHandler(ds)
 
 	// since burden data is nested under ds.cohort, only validate it when ds.cohort is set
 	await validate_cumburden(ds)
