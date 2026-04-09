@@ -121,7 +121,11 @@ jobs:
 
       - name: Build Docker Image
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+          BUILDX_METADATA_PROVENANCE: disabled
         with:
           context: ./container/
           file: ./container/server/Dockerfile
@@ -130,6 +134,8 @@ jobs:
           outputs: type=docker
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
 
       - name: Generate client unit/integration spec coverage report
         # TODO: inside the ppcov container (see CI-coverage.yml), 

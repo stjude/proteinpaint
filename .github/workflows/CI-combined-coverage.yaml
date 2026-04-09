@@ -90,13 +90,19 @@ jobs:
           ./pack.sh
 
       - name: Build ppserver image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+          BUILDX_METADATA_PROVENANCE: disabled
         with:
           context: ./container/
           file: ./container/server/Dockerfile
           tags: ppserver:latest
           platforms: linux/amd64
           outputs: type=docker
+          provenance: false
+          sbom: false
           # cache-from: type=gha
           # cache-to: type=gha,mode=max
 
@@ -106,7 +112,11 @@ jobs:
           ./copy-server-files.sh
 
       - name: Build ppcov image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
+        env:
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+          BUILDX_METADATA_PROVENANCE: disabled
         with:
           build-contexts: |
             ppserver:latest=docker-image://ppserver:latest
@@ -115,6 +125,8 @@ jobs:
           tags: ppcov:latest
           platforms: linux/amd64
           outputs: type=docker
+          provenance: false
+          sbom: false
           # cache-from: type=gha
           # cache-to: type=gha,mode=max
 
