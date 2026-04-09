@@ -23,7 +23,8 @@ export class CollectionCont extends TwBase {
 			if (!tw.q.type) tw.q.type = 'values'
 			if (!tw.q.lst) tw.q.lst = []
 			// Default numerators to all term IDs for old URLs that predate this field
-			if (!tw.q.numerators) tw.q.numerators = tw.term.termIds?.slice() || []
+			if (!tw.q.numerators)
+				tw.q.numerators = tw.term.termIds?.slice() || tw.term.termlst?.map((t: any) => t.id || t.name) || []
 		}
 
 		return tw as TermCollectionTWCont
@@ -46,7 +47,11 @@ export class CollectionCont extends TwBase {
 		if (this.term.numerators) copy.term.numerators = structuredClone(this.term.numerators)
 		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)
 		if (this.term.valueTransform) copy.term.valueTransform = structuredClone(this.term.valueTransform)
-		copy.term.termIds = this.term.termlst?.map((t: any) => t.id) || []
+		copy.term.termIds = this.term.termlst?.map((t: any) => t.id || t.name) || []
+		if ((this.term as any).isCustom) {
+			copy.term.isCustom = true
+			copy.term.termlst = structuredClone(this.term.termlst)
+		}
 		if (copy.q) {
 			delete copy.q.isAtomic
 		}

@@ -5,7 +5,7 @@ import { dofetch3 } from '#common/dofetch'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 
 export class SearchHandler {
-	callback!: (term: IsoformTerm) => void
+	callback!: (term: IsoformTerm | any) => void
 	app: any
 	dom!: { errDiv: Div; isoformDiv?: Div }
 	currentGene: string | null = null
@@ -68,13 +68,21 @@ export class SearchHandler {
 		if (gene !== this.currentGene) return
 
 		const div = this.dom.isoformDiv!
-		div.append('div').style('margin-bottom', '8px').style('opacity', 0.65).text(`${gene} — select an isoform:`)
+		div.append('div').style('margin-bottom', '8px').style('opacity', 0.65).text(`${gene} — select isoform(s):`)
 
 		isoformSelect({
 			holder: div,
 			allgm: enstModels,
-			onSelect: (gm: GeneModel) => {
-				this.selectIsoform(gm.isoform, gene)
+			multiSelect: true,
+			submitLabel: 'Create Collection',
+			onMultiSelect: (selected: GeneModel[]) => {
+				if (selected.length === 1) {
+					// Single isoform: create individual isoformExpression term
+					this.selectIsoform(selected[0].isoform, gene)
+				} else {
+					// Multiple isoforms: create a custom termCollection
+					this.selectCollection(selected, gene)
+				}
 			}
 		})
 	}
@@ -83,6 +91,26 @@ export class SearchHandler {
 		const unit = this.app.vocabApi.termdbConfig.queries.isoformExpression?.unit || 'Isoform Expression'
 		const name = `${isoform} ${unit}`
 		this.callback({ isoform, gene, name, type: ISOFORM_EXPRESSION })
+	}
+
+	selectCollection(gms: GeneModel[], gene: string) {
+		const unit = this.app.vocabApi.termdbConfig.queries.isoformExpression?.unit || 'TPM'
+		const termlst = gms.map(gm => ({
+			id: gm.isoform,
+			name: gm.isoform,
+			type: 'float' as const,
+			isoform: gm.isoform,
+			dataType: 'isoformExpression'
+		}))
+		this.callback({
+			type: 'termCollection',
+			isCustom: true,
+			memberType: 'numeric',
+			name: `${gene} Isoforms (${unit})`,
+			termlst,
+			propsByTermId: {},
+			isleaf: true
+		})
 	}
 }
 

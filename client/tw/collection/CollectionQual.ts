@@ -10,11 +10,16 @@ export class CollectionQual extends TwBase {
 		QualTermCollection.fill(tw.term, opts)
 		tw.type = 'TermCollectionTWQual'
 
-		if (!tw.q) tw.q = { mode: 'discrete', type: 'values', lst: tw.term.termIds || [] }
+		if (!tw.q)
+			tw.q = {
+				mode: 'discrete',
+				type: 'values',
+				lst: tw.term.termIds || tw.term.termlst?.map((t: any) => t.id || t.name) || []
+			}
 		else {
 			if (!tw.q.mode) tw.q.mode = 'discrete'
 			if (!tw.q.type) tw.q.type = 'values'
-			if (!tw.q.lst) tw.q.lst = tw.term.termIds || []
+			if (!tw.q.lst) tw.q.lst = tw.term.termIds || tw.term.termlst?.map((t: any) => t.id || t.name) || []
 		}
 		if (!tw.q.categoryKeys && tw.term.categoryKeys?.length) {
 			tw.q.categoryKeys = structuredClone(tw.term.categoryKeys)
@@ -39,7 +44,11 @@ export class CollectionQual extends TwBase {
 		copy.term.memberType = this.term.memberType
 		if (this.term.categoryKeys) copy.term.categoryKeys = structuredClone(this.term.categoryKeys)
 		if (this.term.propsByTermId) copy.term.propsByTermId = structuredClone(this.term.propsByTermId)
-		copy.term.termIds = this.term.termlst?.map((t: any) => t.id) || []
+		copy.term.termIds = this.term.termlst?.map((t: any) => t.id || t.name) || []
+		if ((this.term as any).isCustom) {
+			copy.term.isCustom = true
+			copy.term.termlst = structuredClone(this.term.termlst)
+		}
 		if (copy.q) {
 			delete copy.q.isAtomic
 		}

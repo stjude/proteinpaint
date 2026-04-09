@@ -331,6 +331,14 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				}
 				samples[sampleId][tw.$id] = { value, key: value }
 			}
+		} else if (tw.term.type === 'termCollection' && tw.term.isCustom) {
+			const handler = q.ds.queries?.termCollection
+			if (!handler) throw 'not supported by dataset: custom termCollection'
+			const data = await handler.get({ tw, filter: q.filter, filter0: q.filter0 }, q.ds)
+			for (const [sampleId, sampleEntry] of Object.entries(data.samples)) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				samples[sampleId][tw.$id] = sampleEntry[tw.$id]
+			}
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
@@ -453,6 +461,10 @@ export function divideTerms(lst) {
 			if (!tw.$id || tw.$id == 'undefined') tw.$id = tw.term.id || tw.term.name //for tests and backwards compatibility
 			if (type == GENE_VARIANT) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
+			} else if (type === 'termCollection' && tw.term.isCustom) {
+				// Custom termCollection: member terms are not in the dictionary,
+				// route to non-dict path to use dataset query handler
+				nonDict.push(tw)
 			} else if (isNonDictionaryType(type)) {
 				nonDict.push(tw)
 			} else {

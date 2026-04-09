@@ -203,6 +203,7 @@ export class Vocab {
 				if (tw.term.categoryKeys) copy.term.categoryKeys = tw.term.categoryKeys
 				if (tw.term.termlst) copy.term.termlst = tw.term.termlst
 				if (tw.term.propsByTermId) copy.term.propsByTermId = tw.term.propsByTermId
+				if (tw.term.isCustom) copy.term.isCustom = tw.term.isCustom
 			} else {
 				// non-dictionary term
 				// pass entire tw.term because non-dictionary terms

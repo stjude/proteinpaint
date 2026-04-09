@@ -8,18 +8,35 @@ Standalone reusable component for displaying and selecting gene model isoforms.
 
 Extracted from block.js showisoform4switch() to be reusable.
 
-Supports single-select mode: click a row to select one isoform.
-Used by block.js and isoformExpression.ts for isoform switching.
+Two modes:
 
-******* required
+Single-select (default):
+  Click a row to select one isoform. Calls onSelect(gm).
+  Used by block.js for isoform switching.
+
+Multi-select (multiSelect: true):
+  Each row has a checkbox. A "Select all" toggle at the top and a
+  submit button at the bottom. Calls onMultiSelect(gms) on submit.
+  Used by isoformExpression.ts to create a custom termCollection
+  from multiple isoforms.
+
+******* required (both modes)
 .holder     d3 selection to render into
 .allgm      array of gene model objects
-.onSelect   callback when isoform is selected
+
+******* single-select
+.onSelect   callback(gm) when an isoform row is clicked
+
+******* multi-select
+.multiSelect       set to true
+.onMultiSelect     callback(gms[]) when submit is clicked
 
 ******* optional
-.usegm          currently active gene model, highlighted in the list
-.maxHeight      max height in px before scrolling (default 200)
-.scrollThreshold  number of isoforms before enabling scroll (default 10)
+.usegm             currently active gene model, highlighted (single-select only)
+.selectedIsoforms  Set of pre-checked isoform IDs (multi-select only)
+.submitLabel       text for the submit button (multi-select only, default "Submit")
+.maxHeight         max height in px before scrolling (default 200)
+.scrollThreshold   number of isoforms before enabling scroll (default 10)
 */
 
 /**
@@ -95,11 +112,11 @@ export function allgm2sum(gmlst: GeneModel[]) {
 /**
  * Render a list of gene model isoforms for selection.
  *
- * In single-select mode, clicking a row selects that isoform
- * and calls onSelect(gm).
+ * Single-select: click a row to select one isoform and call onSelect(gm).
+ * Multi-select: checkboxes with select-all and submit button, calls onMultiSelect(gms).
  */
 export function isoformSelect(opts: IsoformSelectOpts) {
-	const { holder, allgm, onSelect, usegm } = opts
+	const { holder, allgm, multiSelect } = opts
 	const maxHeight = opts.maxHeight ?? 200
 	const scrollThreshold = opts.scrollThreshold ?? 10
 
@@ -120,6 +137,41 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 		e.width = Math.ceil((e.stop - e.start) * exonsf)
 	}
 
+	// multi-select state
+	const checkedSet = new Set<string>(opts.selectedIsoforms || [])
+	const checkboxes: { isoform: string; input: any }[] = []
+	let selectAllCheckbox: any
+	let submitBtn: any
+
+	// select-all header (multi-select only)
+	if (multiSelect) {
+		const headerDiv = holder.append('div').style('margin-bottom', '4px')
+		selectAllCheckbox = headerDiv
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', checkedSet.size === allgm.length)
+			.style('cursor', 'pointer')
+			.on('change', function (this: HTMLInputElement) {
+				const checked = this.checked
+				for (const cb of checkboxes) {
+					cb.input.property('checked', checked)
+					if (checked) checkedSet.add(cb.isoform)
+					else checkedSet.delete(cb.isoform)
+				}
+				updateSubmitBtn()
+			})
+		headerDiv
+			.append('span')
+			.text(' Select all')
+			.style('cursor', 'pointer')
+			.style('user-select', 'none')
+			.on('click', () => {
+				const el = selectAllCheckbox.node() as HTMLInputElement
+				el.checked = !el.checked
+				el.dispatchEvent(new Event('change'))
+			})
+	}
+
 	// scrollable container if many isoforms
 	let mayscroll = holder
 	if (allgm.length > scrollThreshold) {
@@ -132,25 +184,53 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	}
 
 	const table = mayscroll.append('table').style('color', '#555')
+
+	// single-select: track labels for highlighting
 	const gmlabellst: { isoform: string; chr: string; start: number; label: Td }[] = []
 
 	for (const gm of allgm) {
-		const tr = table.append('tr').attr('class', 'sja_clb').attr('tabindex', 0)
+		const tr = table.append('tr').attr('tabindex', 0)
 
-		const selectRow = () => {
-			for (const gm2 of gmlabellst) {
-				gm2.label.style(
-					'color',
-					gm2.isoform == gm.isoform && gm2.chr == gm.chr && gm2.start == gm.start ? '#cc0000' : '#545454'
-				)
+		if (multiSelect) {
+			// checkbox column
+			const cb = tr
+				.append('td')
+				.append('input')
+				.attr('type', 'checkbox')
+				.property('checked', checkedSet.has(gm.isoform))
+				.style('cursor', 'pointer')
+				.on('change', function (this: HTMLInputElement) {
+					if (this.checked) checkedSet.add(gm.isoform)
+					else checkedSet.delete(gm.isoform)
+					selectAllCheckbox.property('checked', checkedSet.size === allgm.length)
+					updateSubmitBtn()
+				})
+			checkboxes.push({ isoform: gm.isoform, input: cb })
+
+			// clicking anywhere on the row toggles the checkbox
+			tr.style('cursor', 'pointer').on('click', (event: MouseEvent) => {
+				if ((event.target as HTMLElement).tagName === 'INPUT') return
+				const el = cb.node() as HTMLInputElement
+				el.checked = !el.checked
+				el.dispatchEvent(new Event('change'))
+			})
+		} else {
+			// single-select: click row to select
+			tr.attr('class', 'sja_clb')
+			const selectRow = () => {
+				for (const gm2 of gmlabellst) {
+					gm2.label.style(
+						'color',
+						gm2.isoform == gm.isoform && gm2.chr == gm.chr && gm2.start == gm.start ? '#cc0000' : '#545454'
+					)
+				}
+				opts.onSelect!(gm)
 			}
-			onSelect(gm)
+			tr.on('click', selectRow)
+			tr.on('keydown', (event: KeyboardEvent) => {
+				if (event.key == 'Enter') selectRow()
+			})
 		}
-
-		tr.on('click', selectRow)
-		tr.on('keydown', (event: KeyboardEvent) => {
-			if (event.key == 'Enter') selectRow()
-		})
 
 		// DEFAULT label
 		tr.append('td')
@@ -158,12 +238,16 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 			.style('font-size', '.6em')
 
 		// isoform name
-		const isActive = usegm && gm.isoform == usegm.isoform && gm.chr == usegm.chr && gm.start == usegm.start
+		const usegm = opts.usegm
+		const isActive =
+			!multiSelect && usegm && gm.isoform == usegm.isoform && gm.chr == usegm.chr && gm.start == usegm.start
 		const lab = tr
 			.append('td')
 			.text(gm.isoform)
 			.style('color', isActive ? '#cc0000' : '#545454')
-		gmlabellst.push({ isoform: gm.isoform, chr: gm.chr, start: gm.start, label: lab })
+		if (!multiSelect) {
+			gmlabellst.push({ isoform: gm.isoform, chr: gm.chr, start: gm.start, label: lab })
+		}
 
 		// chromosome column (only if multiple chromosomes)
 		if (chrcount > 1) {
@@ -175,5 +259,23 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 
 		// protein length sketch
 		sketchProtein(tr.append('td'), gm, 200)
+	}
+
+	// submit button (multi-select only)
+	if (multiSelect) {
+		submitBtn = holder
+			.append('button')
+			.text(opts.submitLabel || 'Submit')
+			.style('margin-top', '8px')
+			.style('cursor', 'pointer')
+			.on('click', () => {
+				const selected = allgm.filter(gm => checkedSet.has(gm.isoform))
+				if (selected.length > 0) opts.onMultiSelect!(selected)
+			})
+		updateSubmitBtn()
+	}
+
+	function updateSubmitBtn() {
+		submitBtn.property('disabled', checkedSet.size === 0).text(`${opts.submitLabel || 'Submit'} (${checkedSet.size})`)
 	}
 }

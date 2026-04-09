@@ -337,6 +337,16 @@ export class ListSamples {
 		} else if (tw.term.type === TermTypes.SURVIVAL) {
 			/** Use key for term value, not value (value == time elapsed) */
 			formattedVal = tw.term.values?.[sample.key]?.label || sample.key
+		} else if (tw.term.type === TermTypes.TERM_COLLECTION && typeof sample.value === 'object') {
+			/** termCollection value is a JSON object of {memberId: numericValue, ...}.
+			 *  Format as a readable string using member term names when available. */
+			const termlst: any[] = (tw.term as any).termlst || []
+			const parts: string[] = []
+			for (const [id, val] of Object.entries(sample.value)) {
+				const name = termlst.find((t: any) => (t.id || t.name) === id)?.name || id
+				parts.push(`${name}: ${roundValueAuto(val as number)}`)
+			}
+			formattedVal = parts.join(', ')
 		} else {
 			formattedVal = tw.term.values?.[sample.value]?.label || sample.value
 		}
