@@ -138,7 +138,7 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	}
 
 	// multi-select state
-	const checkedSet = new Set<string>(opts.selectedIsoforms || [])
+	const checkedSet = new Set<string>(multiSelect ? opts.selectedIsoforms || [] : [])
 	const checkboxes: { isoform: string; input: any }[] = []
 	let selectAllCheckbox: any
 	let submitBtn: any
@@ -207,12 +207,20 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 				})
 			checkboxes.push({ isoform: gm.isoform, input: cb })
 
-			// clicking anywhere on the row toggles the checkbox
+			// clicking or pressing Enter/Space on the row toggles the checkbox
 			tr.style('cursor', 'pointer').on('click', (event: MouseEvent) => {
 				if ((event.target as HTMLElement).tagName === 'INPUT') return
 				const el = cb.node() as HTMLInputElement
 				el.checked = !el.checked
 				el.dispatchEvent(new Event('change'))
+			})
+			tr.on('keydown', (event: KeyboardEvent) => {
+				if (event.key === 'Enter' || event.key === ' ') {
+					event.preventDefault()
+					const el = cb.node() as HTMLInputElement
+					el.checked = !el.checked
+					el.dispatchEvent(new Event('change'))
+				}
 			})
 		} else {
 			// single-select: click row to select
@@ -238,7 +246,7 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 			.style('font-size', '.6em')
 
 		// isoform name
-		const usegm = opts.usegm
+		const usegm = !multiSelect ? opts.usegm : undefined
 		const isActive =
 			!multiSelect && usegm && gm.isoform == usegm.isoform && gm.chr == usegm.chr && gm.start == usegm.start
 		const lab = tr
@@ -276,6 +284,7 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	}
 
 	function updateSubmitBtn() {
-		submitBtn.property('disabled', checkedSet.size === 0).text(`${opts.submitLabel || 'Submit'} (${checkedSet.size})`)
+		const label = multiSelect ? opts.submitLabel || 'Submit' : 'Submit'
+		submitBtn.property('disabled', checkedSet.size === 0).text(`${label} (${checkedSet.size})`)
 	}
 }

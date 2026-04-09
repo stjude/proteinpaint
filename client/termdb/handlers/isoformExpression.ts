@@ -1,11 +1,11 @@
 import { Menu, addGeneSearchbox, sayerror, isoformSelect } from '#dom'
-import type { GeneModel, IsoformTerm } from '#dom/types/isoformSelect'
+import type { GeneModel, IsoformTerm, IsoformCollectionTerm } from '#dom/types/isoformSelect'
 import type { Div } from '../../types/d3'
 import { dofetch3 } from '#common/dofetch'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 
 export class SearchHandler {
-	callback!: (term: IsoformTerm | any) => void
+	callback!: (term: IsoformTerm | IsoformCollectionTerm) => void
 	app: any
 	dom!: { errDiv: Div; isoformDiv?: Div }
 	currentGene: string | null = null
@@ -87,14 +87,17 @@ export class SearchHandler {
 		})
 	}
 
+	getUnit() {
+		return this.app.vocabApi.termdbConfig.queries.isoformExpression?.unit || 'TPM'
+	}
+
 	selectIsoform(isoform: string, gene: string) {
-		const unit = this.app.vocabApi.termdbConfig.queries.isoformExpression?.unit || 'Isoform Expression'
-		const name = `${isoform} ${unit}`
+		const name = `${isoform} ${this.getUnit()}`
 		this.callback({ isoform, gene, name, type: ISOFORM_EXPRESSION })
 	}
 
 	selectCollection(gms: GeneModel[], gene: string) {
-		const unit = this.app.vocabApi.termdbConfig.queries.isoformExpression?.unit || 'TPM'
+		const unit = this.getUnit()
 		const termlst = gms.map(gm => ({
 			id: gm.isoform,
 			name: gm.isoform,
