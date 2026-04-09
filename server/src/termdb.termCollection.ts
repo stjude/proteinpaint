@@ -20,20 +20,12 @@ export function expandCustomTermCollection(terms: any[]): { expandedTerms: any[]
 	const tcMappings: TcMapping[] = []
 	for (const tw of terms) {
 		if (tw.term?.type === 'termCollection' && tw.term.isCustom) {
+			if (!tw.term.termlst?.length) throw new Error('custom termCollection has empty termlst')
 			const mapping: TcMapping = { originalTcId: tw.$id, originalTw: tw, memberMap: [] }
-			for (const mt of tw.term.termlst || []) {
+			for (const mt of tw.term.termlst) {
 				const memberId = mt.id || mt.name
 				const expandedId = `__${tw.$id}__${memberId}`
-				expandedTerms.push({
-					$id: expandedId,
-					term: {
-						type: mt.dataType,
-						isoform: mt.isoform,
-						gene: mt.gene,
-						name: mt.name
-					},
-					q: {}
-				})
+				expandedTerms.push({ $id: expandedId, term: mt, q: {} })
 				mapping.memberMap.push({ expandedId, memberId })
 			}
 			tcMappings.push(mapping)

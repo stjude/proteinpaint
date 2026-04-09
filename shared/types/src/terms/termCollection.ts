@@ -20,8 +20,9 @@ type BaseTermCollection = BaseTerm & {
 			[prop: string]: any
 		}
 	}
-	/** When true, member terms are not dictionary terms and data is fetched
-	 *  via ds.queries.termCollection.get() instead of SQL CTEs */
+	/** When true, member terms are non-dictionary terms (e.g. isoformExpression).
+	 *  getData() expands them into individual tws for existing handlers, then
+	 *  reconstitutes the grouped shape after data is returned. */
 	isCustom?: boolean
 }
 
