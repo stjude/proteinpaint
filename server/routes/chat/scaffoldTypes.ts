@@ -40,7 +40,7 @@ export type SummaryPhrase2EntityResult = {
 	tw1: [Entity]
 	tw2?: [Entity]
 	tw3?: [Entity]
-	filter?: [Entity]
+	filter?: Entity[]
 }
 
 export type DEPhrase2EntityResult = {
