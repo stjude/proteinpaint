@@ -1,5 +1,6 @@
 import path from 'path'
-import { termdbProteomePayload, type RouteApi } from '#types'
+import type { RouteApi } from '#types'
+import { termdbProteomePayload } from '#types/checkers'
 import { filterJoin, getWrappedTvslst } from '#shared/filter.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { get_samples } from '#src/termdb.sql.js'
