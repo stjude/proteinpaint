@@ -54,50 +54,82 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[]): TwValue | 
 	}
 }
 
+async function getTermObj(
+	key: string,
+	twEntity: Entity,
+	llm: LlmConfig,
+	dbPath: string,
+	genes_list: string[]
+): Promise<TwValue | undefined> {
+	// Non-dic term types should be resolved accordingly,
+	if (twEntity.termType !== 'dictionary') {
+		const twRes = buildNonDictTermObj(twEntity, genes_list)
+		if (!twRes) {
+			console.warn(`Skipping ${key} — could not build term for type "${twEntity.termType}"`)
+			return undefined
+		}
+		return twRes
+	} else {
+		const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
+		const match = await findBestMatch(twEntity.phrase, refEmbedding, llm)
+		const similarityThreshold = 0.8
+		if (match.score < similarityThreshold) {
+			// Threshold for "good enough" match, can be tuned
+			console.warn(`Low similarity score (${(match.score * 100).toFixed(1)}%) for query "${twEntity.phrase}"`)
+		} else {
+			console.log(
+				`${key}: "${twEntity.phrase}" → best match: id="${match.id}" type="${match.type}" name="${match.name}" score=${(
+					match.score * 100
+				).toFixed(1)}%`
+			)
+			console.log('KEY: ', key)
+			const term: DictTerm = {
+				id: match.id,
+				type: match.type,
+				name: match.name
+			}
+			return { term, phrase: twEntity.phrase }
+		}
+	}
+}
+
 export async function inferTermObjFromEntity(
 	entity: Phrase2EntityResult,
 	plotType: string,
 	llm: LlmConfig,
 	dbPath: string,
 	genes_list: string[] // redundant (must be fixed)
-): Promise<Record<string, TwValue>> {
-	const twObjects: Record<string, TwValue> = {}
+): Promise<Record<string, TwValue | TwValue[]>> {
+	const twObjects: Record<string, TwValue | TwValue[]> = {}
 	if (plotType === 'summary') {
 		for (const [key, value] of Object.entries(entity)) {
+			// need special handling for filters, since they can be more complex and nested than other term types
+			if (key === 'filter') {
+				const entry = value as Entity[] | undefined
+				if (!entry) continue
+
+				const filterValues: TwValue[] = []
+				for (const filterTerm of entry) {
+					console.log('Evaluating filter term:', filterTerm)
+					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
+					if (!termObj) {
+						continue
+					}
+					filterValues.push(termObj)
+				}
+				twObjects[key] = filterValues
+				continue
+			}
+
+			// For other keys (tw1, tw2, tw3), we expect a single Entity in the array
 			const entry = value as [Entity] | undefined
 			if (!entry) continue
 			const twEntity = entry[0]
-
-			// Non-dic term types should be resolved accordingly,
-			if (twEntity.termType !== 'dictionary') {
-				const twRes = buildNonDictTermObj(twEntity, genes_list)
-				if (!twRes) {
-					console.warn(`Skipping key "${key}" — could not build term for type "${twEntity.termType}"`)
-					continue
-				}
-				twObjects[key] = twRes
-			} else {
-				const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
-				const match = await findBestMatch(twEntity.phrase, refEmbedding, llm)
-				const similarityThreshold = 0.8
-				if (match.score < similarityThreshold) {
-					// Threshold for "good enough" match, can be tuned
-					console.warn(`Low similarity score (${(match.score * 100).toFixed(1)}%) for query "${twEntity.phrase}"`)
-				} else {
-					console.log(
-						`${key}: "${twEntity.phrase}" → best match: id="${match.id}" type="${match.type}" name="${
-							match.name
-						}" score=${(match.score * 100).toFixed(1)}%`
-					)
-					console.log('KEY: ', key)
-					const term: DictTerm = {
-						id: match.id,
-						type: match.type,
-						name: match.name
-					}
-					twObjects[key] = { term, phrase: twEntity.phrase }
-				}
+			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+			if (!termObj) {
+				continue
 			}
+			twObjects[key] = termObj
 		}
 		return twObjects
 	} else {
