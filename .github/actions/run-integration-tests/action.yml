@@ -25,6 +25,10 @@ runs:
 
     - name: Set default integration test status
       shell: bash
+      # Assume failure by default; this flag is only cleared to 'false' at the very end
+      # of the integration test step if all commands succeed. This ensures that if any
+      # earlier step (e.g. pack.sh, Docker build) fails or is cancelled, Slack is still
+      # notified with a 'failure' status rather than a false 'success'.
       run: echo "INTEGRATION_TEST_FAILED=true" >> "$GITHUB_ENV"
 
     - name: Prepare for Docker build
@@ -77,6 +81,7 @@ runs:
         sleep 10
         cd ..
         xvfb-run --auto-servernum npm run test:integration
+        # Only reached if all commands above succeeded (set -e); clears the default failure flag
         echo "INTEGRATION_TEST_FAILED=false" >> "$GITHUB_ENV"
       continue-on-error: true
 
