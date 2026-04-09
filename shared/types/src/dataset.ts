@@ -1690,9 +1690,6 @@ type TermCollectionBase = {
 		/** json file path of this plot */
 		file: string
 	}[]
-	/** When true, member terms are not dictionary terms and data is fetched
-	 *  via ds.queries.termCollection.get() instead of SQL CTEs */
-	isCustom?: boolean
 }
 
 type NumericTermCollection = TermCollectionBase & {

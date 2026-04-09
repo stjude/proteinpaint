@@ -36,9 +36,8 @@ export type IsoformTerm = {
 export type IsoformCollectionMember = {
 	id: string
 	name: string
-	type: 'float'
+	type: string
 	isoform: string
-	dataType: string
 }
 
 /** Custom termCollection created from multi-select isoform selection */

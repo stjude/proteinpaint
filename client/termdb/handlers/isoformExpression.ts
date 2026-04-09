@@ -101,9 +101,8 @@ export class SearchHandler {
 		const termlst = gms.map(gm => ({
 			id: gm.isoform,
 			name: gm.isoform,
-			type: 'float' as const,
-			isoform: gm.isoform,
-			dataType: 'isoformExpression'
+			type: ISOFORM_EXPRESSION,
+			isoform: gm.isoform
 		}))
 		this.callback({
 			type: 'termCollection',
