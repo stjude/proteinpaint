@@ -3,6 +3,7 @@ import { extractGenesFromPrompt } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagentnew.ts'
 import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
+import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { Scaffold, SummaryScaffold, Entity, Phrase2EntityResult } from './scaffoldTypes.ts'
 
 async function validateNonDictionaryTypes(
@@ -112,6 +113,46 @@ async function phrase2entitytw(
 	}
 }
 
+/*
+ * For filter phrases that have literal or conceptual "ands", they're grouped in a single array
+ * If "or", they're grouped into separate array elements
+ * For examples:
+ * "young and black patients" -> ["young", "black"]
+ * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
+ */
+async function evaluateFilterTerm(phrase: string, llm: LlmConfig) {
+	const prompt = `You are a clinical data phrase decomposer.
+Given a user phrase, break it down into the smallest meaningful sub-phrases or words that each represent a standalone clinical or demographic concept or some descriptor term.
+Respond ONLY with an array of strings. No explanation, no markdown.
+
+Rules:
+- Each item should be a standalone concept on its own
+- If the phrase contains "and", split the phrase into two separate items stored in a single array element (e.g. "young and black patients" -> ["young", "black"])
+- If the phrase contains "or", split the phrase into two separate items stored in a two array elements (e.g. "young or black patients" -> [["young"], ["black"]])
+- Understand "and" in the context of the phrase even when not explicitly stated (e.g. "young black patients" -> ["young", "black"])
+- Keep multi-word concepts together if they only make sense as a unit
+- Do not rephrase or normalize — keep the original wording from the phrase
+
+Examples:
+"black men" → ["black", "men"]
+"elderly hispanic women with diabetes" → ["elderly", "hispanic", "women", "diabetes"]
+"high gene expression in pediatric patients" → ["high gene expression", "pediatric", "patients"]
+"survival of female breast cancer patients over 50" → ["survival", "female", "breast cancer", "over 50"]
+"patients of European or African ancestry" → [["European patients"], ["African patients"]]
+"young black patients or old white patients" -> [["young", "black"], ["old", "white"]]
+
+Parse the following query into the summary plot scaffold:
+Query: ${phrase}
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	try {
+		return JSON.parse(response) as string[]
+	} catch {
+		console.warn('Failed to parse LLM response:', response)
+		return [phrase] // fallback
+	}
+}
+
 export async function phrase2entity(
 	scaffold: Scaffold,
 	plotType: string,
@@ -147,12 +188,33 @@ export async function phrase2entity(
 				summ_term.tw3 = [tw3 as Entity]
 			}
 			if (scaffoldResult.filter) {
-				const filter = await phrase2entitytw(scaffoldResult.filter, llm, genes_list, dataset_json, ds)
-				if ('type' in filter && filter.type === 'text') {
-					return { type: 'text', text: filter.text }
+				const parseFilterResult = (await evaluateFilterTerm(scaffoldResult.filter, llm)) as string[]
+				console.log('Parsed filter terms:', parseFilterResult)
+				/*
+				for (const filterTerm of parseFilterResult) {
+					if (Array.isArray(filterTerm)) {
+						for (const _filterTerm of filterTerm) {
+							const filterTw = await phrase2entitytw(filterTerm, llm, genes_list, dataset_json, ds)
+						}
+					} else {
+						const filterTw = await phrase2entitytw(filterTerm, llm, genes_list, dataset_json, ds)
+					}
+				}*/
+				summ_term.filter = []
+				// Right now, it doesn't handle nested filters
+				// Assumes all filter terms are "anded" (i.e. an array of strings/words)
+				// Also, need to think about how to separate/represent and/or cases
+				for (const filterTerm of parseFilterResult) {
+					console.log('Evaluating filter term:', filterTerm)
+					const filterTw = await phrase2entitytw(filterTerm, llm, genes_list, dataset_json, ds)
+					console.log('filterTw :', filterTw)
+
+					if ('type' in filterTw && filterTw.type === 'text') {
+						return { type: 'text', text: filterTw.text }
+					}
+					summ_term.filter.push(filterTw as Entity)
 				}
-				console.log('Validation result for filter:', filter)
-				summ_term.filter = [filter as Entity]
+				console.log('Validation result for filter term:', summ_term.filter)
 			}
 			return summ_term
 		}
