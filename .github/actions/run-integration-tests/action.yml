@@ -63,6 +63,7 @@ runs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
         provenance: false
+        sbom: false
 
     - name: Run local server and integration tests
       id: integration
