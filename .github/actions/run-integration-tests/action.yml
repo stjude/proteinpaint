@@ -23,6 +23,10 @@ runs:
       run: |
         npm ci
 
+    - name: Set default integration test status
+      shell: bash
+      run: echo "INTEGRATION_TEST_FAILED=true" >> "$GITHUB_ENV"
+
     - name: Prepare for Docker build
       shell: bash
       run: |
@@ -73,15 +77,8 @@ runs:
         sleep 10
         cd ..
         xvfb-run --auto-servernum npm run test:integration
+        echo "INTEGRATION_TEST_FAILED=false" >> "$GITHUB_ENV"
       continue-on-error: true
-
-    - name: Check if integration tests failed
-      id: check-tests
-      shell: bash
-      run: |
-        if [ "${{ steps.integration.outcome }}" != "success" ]; then
-          echo "INTEGRATION_TEST_FAILED=true" >> "$GITHUB_ENV"
-        fi
 
     - name: Get current time
       id: current-time
@@ -110,6 +107,6 @@ runs:
         SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
 
     - name: Fail job if integration test failed
-      if: env.INTEGRATION_TEST_FAILED == 'true'
+      if: always() && env.INTEGRATION_TEST_FAILED == 'true'
       shell: bash
       run: exit 1
