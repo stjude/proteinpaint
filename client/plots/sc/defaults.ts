@@ -1,5 +1,8 @@
+import { getGEunit } from '#tw/geneExpression'
+import type { SCSettings } from './SCTypes'
+
 /** Define all subplot settings here */
-export function getDefaultSCAppSettings(overrides = {}, app) {
+export function getDefaultSCAppSettings(overrides = {}, app): SCSettings {
 	const defaults = {
 		sc: {
 			columns: {
@@ -9,7 +12,7 @@ export function getDefaultSCAppSettings(overrides = {}, app) {
 			item: undefined
 		},
 		hierCluster: {
-			unit: app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression',
+			unit: getGEunit(app.vocabApi),
 			yDendrogramHeight: 0,
 			clusterSamples: false
 		}

@@ -13,7 +13,7 @@ export class GeneExpBase {
 	static async fill(term: RawGeneExpTerm, opts: TwOpts) {
 		GeneExpBase.validate(term)
 		if (!term.name) {
-			term.unit = opts.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+			term.unit = getGEunit(opts.vocabApi)
 			const name = `${term.gene} ${term.unit}`
 			term.name = name
 		}
@@ -33,7 +33,11 @@ export class GeneExpBase {
 	constructor(term: RawGeneExpTerm, opts: TwOpts) {
 		GeneExpBase.validate(term)
 		this.gene = term.gene || term.name
-		this.unit = term.unit || opts.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+		this.unit = term.unit || getGEunit(opts.vocabApi)
 		this.name = term.name || `${term.gene} ${this.unit}`
 	}
+}
+
+export function getGEunit(vocabApi) {
+	return vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
 }

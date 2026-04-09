@@ -3,6 +3,7 @@ import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
+import { getGEunit } from '#tw/geneExpression'
 
 export class VolcanoInteractions {
 	app: MassAppApi
@@ -293,7 +294,7 @@ export class VolcanoInteractions {
 
 		const tws = geneList.map(d => {
 			const gene = d.gene
-			const unit = this.app.vocabApi.termdbConfig.queries.geneExpression?.unit || 'Gene Expression'
+			const unit = getGEunit(this.app.vocabApi)
 			const name = `${gene} ${unit}`
 			const term = { gene, name, type: GENE_EXPRESSION }
 			const tw = { term, q: {} }
