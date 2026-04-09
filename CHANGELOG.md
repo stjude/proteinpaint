@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 Features:
 - Various cleanups to further unify violin and boxplot route code
 - Support numeric termCollection natively in violinBox route
+- New SC app allows users to launch summary plot from a new 'Summary' plot tab. Users may select a single cell term from the dictionary to open the summary plot. The term selections within the summary plot are restricted to single cell terms when config.term is a single cell term.
+- New unit tests for SC app, specifically for the SCModel and SCViewModel. /plots/sc/README.md expanded with more technical details and usage explanation.
 
 
 ## 2.182.0
