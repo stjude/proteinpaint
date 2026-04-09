@@ -24,6 +24,7 @@ import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from '../routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
+import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
 
 /*
 for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
@@ -58,7 +59,11 @@ export async function getData(q, ds, onlyChildren = false) {
 		// must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
 		// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option
 		authApi.mayAdjustFilter(q, ds, q.terms)
+
+		const { expandedTerms, tcMappings } = expandCustomTermCollection(q.terms)
+		q.terms = expandedTerms
 		const data = await getSampleData(q, ds, onlyChildren)
+		reconstituteCustomTermCollection(data, tcMappings)
 
 		checkAccessToSampleData(data, ds, q)
 
