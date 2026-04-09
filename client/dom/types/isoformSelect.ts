@@ -32,21 +32,42 @@ export type IsoformTerm = {
 	type: string
 }
 
-export type IsoformSelectOpts = {
+/** Member term within a custom isoform termCollection */
+export type IsoformCollectionMember = {
+	id: string
+	name: string
+	type: 'float'
+	isoform: string
+	dataType: string
+}
+
+/** Custom termCollection created from multi-select isoform selection */
+export type IsoformCollectionTerm = {
+	type: 'termCollection'
+	isCustom: true
+	memberType: 'numeric'
+	name: string
+	termlst: IsoformCollectionMember[]
+	propsByTermId: Record<string, any>
+	isleaf: true
+}
+
+type IsoformSelectBase = {
 	holder: Div
 	allgm: GeneModel[]
-	/** Single-select: called when a row is clicked */
-	onSelect?: (selected: GeneModel) => void
-	/** Multi-select: called when submit is clicked */
-	onMultiSelect?: (selected: GeneModel[]) => void
-	/** Enable multi-select mode with checkboxes and submit button */
-	multiSelect?: boolean
-	/** Currently active gene model, highlighted in single-select mode */
-	usegm?: GeneModel
-	/** Pre-checked isoform IDs (multi-select only) */
-	selectedIsoforms?: Set<string>
-	/** Text for the submit button (multi-select only, default "Submit") */
-	submitLabel?: string
 	maxHeight?: number
 	scrollThreshold?: number
 }
+
+export type IsoformSelectOpts =
+	| (IsoformSelectBase & {
+			multiSelect?: false
+			onSelect: (selected: GeneModel) => void
+			usegm?: GeneModel
+	  })
+	| (IsoformSelectBase & {
+			multiSelect: true
+			onMultiSelect: (selected: GeneModel[]) => void
+			selectedIsoforms?: Set<string>
+			submitLabel?: string
+	  })

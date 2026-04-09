@@ -60,8 +60,110 @@ tape('selectIsoform() should use default unit when not configured', test => {
 
 	handler.selectIsoform('ENST00000269305', 'TP53')
 	test.equal(selected?.isoform, 'ENST00000269305', 'Should pass selected isoform')
-	test.equal(selected?.name, 'ENST00000269305 Isoform Expression', 'Should use default unit')
+	test.equal(selected?.name, 'ENST00000269305 TPM', 'Should use default unit TPM')
 	test.equal(selected?.type, ISOFORM_EXPRESSION, 'Should set type to isoformExpression')
+
+	test.end()
+})
+
+tape('selectCollection() should create a custom termCollection from multiple isoforms', test => {
+	const handler = new SearchHandler()
+	let selected: any
+
+	handler.callback = t => {
+		selected = t
+	}
+	handler.app = {
+		vocabApi: {
+			termdbConfig: {
+				queries: {
+					isoformExpression: { unit: 'TPM' }
+				}
+			}
+		}
+	} as any
+
+	handler.selectCollection([mockGm('ENST00000256078'), mockGm('ENST00000311936')], 'KRAS')
+	test.equal(selected?.type, 'termCollection', 'Should set type to termCollection')
+	test.equal(selected?.isCustom, true, 'Should set isCustom flag')
+	test.equal(selected?.memberType, 'numeric', 'Should set memberType to numeric')
+	test.equal(selected?.name, 'KRAS Isoforms (TPM)', 'Should include gene and unit in name')
+	test.equal(selected?.isleaf, true, 'Should set isleaf')
+	test.deepEqual(selected?.propsByTermId, {}, 'Should have empty propsByTermId')
+
+	// termlst shape
+	test.equal(selected?.termlst?.length, 2, 'Should have 2 member terms')
+	const mt = selected.termlst[0]
+	test.equal(mt.id, 'ENST00000256078', 'Member term id should be the isoform ID')
+	test.equal(mt.name, 'ENST00000256078', 'Member term name should be the isoform ID')
+	test.equal(mt.type, 'float', 'Member term type should be float')
+	test.equal(mt.isoform, 'ENST00000256078', 'Member term should carry isoform field')
+	test.equal(mt.dataType, 'isoformExpression', 'Member term should declare dataType')
+
+	test.end()
+})
+
+tape('selectCollection() should use default unit when not configured', test => {
+	const handler = new SearchHandler()
+	let selected: any
+
+	handler.callback = t => {
+		selected = t
+	}
+	handler.app = {
+		vocabApi: {
+			termdbConfig: {
+				queries: {}
+			}
+		}
+	} as any
+
+	handler.selectCollection([mockGm('ENST00000256078'), mockGm('ENST00000311936')], 'KRAS')
+	test.equal(selected?.name, 'KRAS Isoforms (TPM)', 'Should use default unit TPM')
+
+	test.end()
+})
+
+tape('showIsoforms multi-select: single isoform calls selectIsoform, multiple calls selectCollection', test => {
+	const handler = new SearchHandler()
+	const calls: { method: string; args: any }[] = []
+
+	handler.app = {
+		vocabApi: {
+			termdbConfig: {
+				queries: {
+					isoformExpression: { unit: 'TPM' }
+				}
+			}
+		}
+	} as any
+
+	// Spy on both methods
+	handler.selectIsoform = (isoform: string, gene: string) => {
+		calls.push({ method: 'selectIsoform', args: { isoform, gene } })
+	}
+	handler.selectCollection = (gms: GeneModel[], gene: string) => {
+		calls.push({ method: 'selectCollection', args: { gms, gene } })
+	}
+
+	// Simulate multi-select callback with 1 isoform
+	const onMultiSelect1 = (selected: GeneModel[]) => {
+		if (selected.length === 1) handler.selectIsoform(selected[0].isoform, 'TP53')
+		else handler.selectCollection(selected, 'TP53')
+	}
+	onMultiSelect1([mockGm('ENST00000269305')])
+	test.equal(calls.length, 1, 'Should have one call')
+	test.equal(calls[0].method, 'selectIsoform', 'Single isoform should call selectIsoform')
+
+	// Simulate multi-select callback with 2 isoforms
+	const onMultiSelect2 = (selected: GeneModel[]) => {
+		if (selected.length === 1) handler.selectIsoform(selected[0].isoform, 'KRAS')
+		else handler.selectCollection(selected, 'KRAS')
+	}
+	onMultiSelect2([mockGm('ENST00000256078'), mockGm('ENST00000311936')])
+	test.equal(calls.length, 2, 'Should have two calls total')
+	test.equal(calls[1].method, 'selectCollection', 'Multiple isoforms should call selectCollection')
+	test.equal(calls[1].args.gms.length, 2, 'Should pass both gene models')
 
 	test.end()
 })
