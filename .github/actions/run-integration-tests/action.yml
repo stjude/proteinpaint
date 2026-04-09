@@ -57,6 +57,7 @@ runs:
       env:
         DOCKER_BUILD_SUMMARY: false
         DOCKER_BUILD_RECORD_UPLOAD: false
+        BUILDX_METADATA_PROVENANCE: disabled
       with:
         context: ./container/
         file: ./container/server/Dockerfile
