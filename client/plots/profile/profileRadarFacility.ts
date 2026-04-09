@@ -52,7 +52,7 @@ class profileRadarFacility extends profilePlot {
 			.style('vertical-align', 'top')
 			.style('margin-top', '80px')
 			.style('margin-right', '20px')
-		this.dom.tableDiv = rightDiv.append('div')
+		this.dom.tableDiv = rightDiv.append('div').attr('data-testid', 'sjpp-profileRadarFacility-data-table')
 
 		// Create a polar grid.
 
@@ -69,6 +69,7 @@ class profileRadarFacility extends profilePlot {
 
 		this.legendG = this.dom.svg
 			.append('g')
+			.attr('data-testid', 'sjpp-profileRadarFacility-legend')
 			.attr('font-size', '0.9em')
 			.attr('transform', `translate(${x + 320},${y - 150})`)
 		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 320},${y - 50})`)
