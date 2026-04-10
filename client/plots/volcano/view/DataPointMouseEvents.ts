@@ -3,19 +3,46 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import type { SvgCircle } from '../../../types/d3'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { DataPointEntry } from '../VolcanoTypes'
-import { DNA_METHYLATION } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
 
 export class DataPointMouseEvents {
 	termType: string
-	constructor(
-		d: DataPointEntry,
-		circle: SvgCircle,
-		hoverTip: Menu,
-		clickTip: Menu,
-		interactions: VolcanoInteractions,
-		termType: string
-	) {
+
+	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions, termType: string) {
 		this.termType = termType
+
+		const menuOpts = [
+			{
+				label: 'Violin plot',
+				isVisible: () => termType === DNA_METHYLATION,
+				onClick: async () => {
+					interactions.launchViolin(d as any)
+				}
+			},
+			{
+				label: 'DMR analysis',
+				isVisible: () => termType === DNA_METHYLATION,
+				onClick: async () => {
+					interactions.launchViolin(d as any)
+				}
+			},
+			{
+				label: 'Violin plot',
+				note: 'Gene expression only',
+				isVisible: () => termType === GENE_EXPRESSION,
+				onClick: async () => {
+					await interactions.launchViolinGeneExp(d.gene_name)
+				}
+			},
+			{
+				label: 'Box plot',
+				isVisible: () => termType === GENE_EXPRESSION,
+				onClick: async () => {
+					await interactions.launchBoxPlot(d.gene_name)
+				}
+			}
+		]
+
 		circle.on('mouseover', () => {
 			circle.attr('fill-opacity', 0.9)
 
@@ -25,69 +52,34 @@ export class DataPointMouseEvents {
 			this.addTooltipRows(d, table)
 		})
 
+		let menuOpen = false
+
 		circle.on('mouseout', () => {
 			hoverTip.hide()
 			if (d.highlighted) return
 			circle.attr('fill-opacity', 0)
 		})
+
+		const visibleMenuOpts = menuOpts.filter(opt => opt.isVisible())
+		if (visibleMenuOpts.length === 0) return
+
 		circle.on('click', () => {
 			hoverTip.hide()
 			clickTip.onHide = () => {
 				if (!d.highlighted) circle.attr('fill-opacity', 0)
 			}
-			clickTip.clear().showunder(circle.node())
-			const table = table2col({ holder: clickTip.d.append('table') })
-			this.addTooltipRows(d, table)
-			const menuDiv = clickTip.d.append('div').style('padding', '5px')
-
-			if (termType === DNA_METHYLATION) {
-				const dm = d as any
-				menuDiv
+			tip.clear().showunder(circle.node())
+			for (const opt of visibleMenuOpts) {
+				tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
-					.text('Violin plot')
-					.on('click', () => {
-						clickTip.hide()
-						interactions.launchViolin(dm)
-					})
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('DMR analysis')
+					.text(opt.label)
 					.on('click', async () => {
-						clickTip.hide()
-						await interactions.launchDmr({
-							chr: dm.chr,
-							start: dm.start,
-							stop: dm.stop,
-							promoterId: dm.promoter_id
-						})
-					})
-			} else {
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Violin plot')
-					.on('click', async () => {
-						clickTip.hide()
-						await interactions.launchViolinGeneExp(d.gene_name)
-					})
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Box plot')
-					.on('click', async () => {
-						clickTip.hide()
-						await interactions.launchBoxPlot(d.gene_name)
+						tip.hide()
+						await opt.onClick()
 					})
 			}
 		})
-	}
-
-	addTooltipRow(table: any, text: string, value: number | string) {
-		const [td1, td2] = table.addRow()
-		td1.html(text)
-		td2.text(value)
 	}
 
 	addTooltipRows(d: DataPointEntry, table: any) {
@@ -100,5 +92,11 @@ export class DataPointMouseEvents {
 		this.addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
 		this.addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
 		this.addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+	}
+
+	addTooltipRow(table: any, text: string, value: number | string) {
+		const [td1, td2] = table.addRow()
+		td1.html(text)
+		td2.text(value)
 	}
 }
