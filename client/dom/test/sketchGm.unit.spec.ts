@@ -121,7 +121,7 @@ tape('sketchSplicerna renders spliced RNA on canvas', test => {
 
 	// Verify devicePixelRatio is considered
 	const dpr = window.devicePixelRatio || 1
-	test.ok(canvas.width >= 400 * dpr, 'Canvas backing store should be scaled by devicePixelRatio')
+	test.ok(Math.abs(canvas.width - 400 * dpr) <= 1, 'Canvas backing store should be scaled by devicePixelRatio')
 
 	// Check that the canvas has been drawn on
 	const ctx = canvas.getContext('2d')!
@@ -160,7 +160,11 @@ tape('sketchGmsum renders gene model summary', test => {
 
 	const canvas = holder.select('canvas').node() as HTMLCanvasElement
 	test.ok(canvas, 'Canvas element should be created')
-	test.equal(canvas.height * (1 / (window.devicePixelRatio || 1)), 20, 'Canvas height should match specified height')
+	test.equal(
+		Math.round(canvas.height / (window.devicePixelRatio || 1)),
+		20,
+		'Canvas height should match specified height'
+	)
 
 	// Check for rendering
 	const ctx = canvas.getContext('2d')!
@@ -199,11 +203,11 @@ tape('sketchRna renders RNA structure', test => {
 
 	const canvas = holder.select('canvas').node() as HTMLCanvasElement
 	test.ok(canvas, 'Canvas element should be created')
-	test.equal(canvas.height * (1 / (window.devicePixelRatio || 1)), 20, 'Canvas height should be 20px')
+	test.equal(Math.round(canvas.height / (window.devicePixelRatio || 1)), 20, 'Canvas height should be 20px')
 
 	// Check devicePixelRatio scaling
 	const dpr = window.devicePixelRatio || 1
-	test.ok(canvas.width >= 400 * dpr, 'Canvas should be scaled by devicePixelRatio')
+	test.ok(Math.abs(canvas.width - 400 * dpr) <= 1, 'Canvas should be scaled by devicePixelRatio')
 
 	holder.remove()
 	test.end()
@@ -253,7 +257,7 @@ tape('sketchProtein2 renders protein domains', test => {
 
 	const canvas = holder.select('canvas').node() as HTMLCanvasElement
 	test.ok(canvas, 'Canvas element should be created')
-	test.equal(canvas.height * (1 / (window.devicePixelRatio || 1)), 20, 'Canvas height should be 20px')
+	test.equal(Math.round(canvas.height / (window.devicePixelRatio || 1)), 20, 'Canvas height should be 20px')
 
 	// Verify that domains are rendered (canvas has content)
 	const ctx = canvas.getContext('2d')!
@@ -276,11 +280,15 @@ tape('sketchGene renders gene structure', test => {
 
 	const canvas = holder.select('canvas').node() as HTMLCanvasElement
 	test.ok(canvas, 'Canvas element should be created')
-	test.equal(canvas.height * (1 / (window.devicePixelRatio || 1)), 30, 'Canvas height should match specified height')
+	test.equal(
+		Math.round(canvas.height / (window.devicePixelRatio || 1)),
+		30,
+		'Canvas height should match specified height'
+	)
 
 	// Check devicePixelRatio scaling
 	const dpr = window.devicePixelRatio || 1
-	test.ok(canvas.width >= 400 * dpr, 'Canvas should be scaled by devicePixelRatio')
+	test.ok(Math.abs(canvas.width - 400 * dpr) <= 1, 'Canvas should be scaled by devicePixelRatio')
 
 	// Verify rendering
 	const ctx = canvas.getContext('2d')!
@@ -403,31 +411,31 @@ tape('All canvas functions respect devicePixelRatio', test => {
 	// Test sketchSplicerna
 	sketchSplicerna(holder, gm, width, '#000')
 	let canvas = holder.select('canvas').node() as HTMLCanvasElement
-	test.ok(canvas.width >= width * dpr, 'sketchSplicerna respects DPR')
+	test.ok(Math.abs(canvas.width - width * dpr) <= 1, 'sketchSplicerna respects DPR')
 	holder.selectAll('canvas').remove()
 
 	// Test sketchGmsum
 	sketchGmsum(holder, rglst, gm, 1, 10, width, 20, '#000')
 	canvas = holder.select('canvas').node() as HTMLCanvasElement
-	test.ok(canvas.width >= width * dpr, 'sketchGmsum respects DPR')
+	test.ok(Math.abs(canvas.width - width * dpr) <= 1, 'sketchGmsum respects DPR')
 	holder.selectAll('canvas').remove()
 
 	// Test sketchRna
 	sketchRna(holder, gm, width, '#000')
 	canvas = holder.select('canvas').node() as HTMLCanvasElement
-	test.ok(canvas.width >= width * dpr, 'sketchRna respects DPR')
+	test.ok(Math.abs(canvas.width - width * dpr) <= 1, 'sketchRna respects DPR')
 	holder.selectAll('canvas').remove()
 
 	// Test sketchProtein2
 	sketchProtein2(holder, gm, width)
 	canvas = holder.select('canvas').node() as HTMLCanvasElement
-	test.ok(canvas.width >= width * dpr, 'sketchProtein2 respects DPR')
+	test.ok(Math.abs(canvas.width - width * dpr) <= 1, 'sketchProtein2 respects DPR')
 	holder.selectAll('canvas').remove()
 
 	// Test sketchGene
 	sketchGene(holder, gm, width, 30, 1000, 5000, '#000', false, false)
 	canvas = holder.select('canvas').node() as HTMLCanvasElement
-	test.ok(canvas.width >= width * dpr, 'sketchGene respects DPR')
+	test.ok(Math.abs(canvas.width - width * dpr) <= 1, 'sketchGene respects DPR')
 
 	holder.remove()
 	test.end()
