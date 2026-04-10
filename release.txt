@@ -1,3 +1,1 @@
-Features
-- SC gene expression plot button now launches the gene expression chart menu for launching either the violin, scatter, or hierarchical cluster.
-- New unit tests for the gene expression chart menu dom component.
+
