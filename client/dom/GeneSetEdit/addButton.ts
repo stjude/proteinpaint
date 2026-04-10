@@ -11,13 +11,14 @@ type AddBtnOpts = {
 	disabled?: boolean
 	/** Change button display based on caller logic */
 	getDisplayStyle?: () => string
+	testid?: string
 }
 /**
  * Creates a button uniform in style for the entire UI
  */
 export function addButton(opts: AddBtnOpts): Button {
 	if (!opts.div || !opts.text || !opts.callback) throw new Error('Missing required parameters')
-	return opts.div
+	const btn = opts.div
 		.append('button')
 		.property('disabled', opts.disabled || false)
 		.style('display', opts.getDisplayStyle ? opts.getDisplayStyle() : '')
@@ -28,4 +29,6 @@ export function addButton(opts: AddBtnOpts): Button {
 		.on('click', () => {
 			opts.callback()
 		})
+	if (opts.testid) btn.attr('data-testid', opts.testid)
+	return btn
 }
