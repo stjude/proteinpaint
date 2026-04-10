@@ -18,7 +18,6 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 	projects?: any[]
 	prjtAdminUI?: ProjectAdminRender
 	interactions?: AIProjectAdminInteractions
-
 	dom!: {
 		[name: string]: any
 	}

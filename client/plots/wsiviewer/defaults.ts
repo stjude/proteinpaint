@@ -21,7 +21,9 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		tileSize: 512, // 512px
 		activeAnnotation: 0,
 		sessionsTileSelection: [],
-		changeTrigger: 0
+		changeTrigger: 0,
+		isSavingAnnotation: false,
+		isMoving: false
 	}
 	return copyMerge(defaults, overrides)
 }
