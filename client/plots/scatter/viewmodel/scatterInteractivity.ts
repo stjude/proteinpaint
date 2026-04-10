@@ -70,18 +70,34 @@ export class ScatterInteractivity {
 	async openDiscoPlot(sample) {
 		this.view.dom.tooltip.hide()
 		this.scatter.vm.scatterTooltip.onClick = false
-
 		sample.sample_id = sample.sample
-		const sandbox = newSandboxDiv(this.scatter.opts.plotDiv || select(this.scatter.opts.holder.node().parentNode))
-		sandbox.header.text(sample.sample_id)
-		const discoPlotImport = await import('../../plot.disco.js')
-		discoPlotImport.default(
+		const disco = await import('../../plot.disco.js')
+		const { disco_arg, plotConfig } = await disco.getDiscoArgConfig(
 			this.scatter.state.termdbConfig,
 			this.scatter.state.vocab.dslabel,
 			sample,
-			sandbox.body,
 			this.scatter.app.opts.genome
 		)
+		console.log(83, disco_arg, plotConfig)
+
+		// TODO: should not mutate app.opts directly,
+		this.scatter.app.opts.args = disco_arg
+
+		this.scatter.app.dispatch({
+			type: 'plot_create',
+			config: plotConfig
+		})
+
+		// const sandbox = newSandboxDiv(this.scatter.opts.plotDiv || select(this.scatter.opts.holder.node().parentNode))
+		// sandbox.header.text(sample.sample_id)
+		// const discoPlotImport = await import('../../plot.disco.js')
+		// discoPlotImport.default(
+		// 	this.scatter.state.termdbConfig,
+		// 	this.scatter.state.vocab.dslabel,
+		// 	sample,
+		// 	sandbox.body,
+		// 	this.scatter.app.opts.genome
+		// )
 	}
 
 	async openLollipop(label) {

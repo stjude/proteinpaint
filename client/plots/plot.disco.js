@@ -23,78 +23,18 @@ genomeObj={}
 _overrides={}
 	optional override parameters to pass to disco
 */
+
 export default async function (termdbConfig, dslabel, sample, holder, genomeObj, _overrides = {}, showError = true) {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
-
 	try {
-		// must do this check to make sure this ds supports disco
-		if (typeof termdbConfig?.queries?.singleSampleMutation != 'object')
-			throw 'termdbConfig.queries.singleSampleMutation{} not object'
-		// TODO can delete following checks if written as ts
-		if (typeof sample != 'object') throw 'sample{} not object'
-		if (typeof genomeObj != 'object') throw 'genomeObj{} not object'
-
-		// request data
-		const body = {
-			genome: genomeObj.name,
-			dslabel,
-			sample: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
-		}
-		const data = await dofetch3('termdb/singleSampleMutation', { body })
-		if (data.error) throw data.error
-		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
-
-		if (data.dt2total?.length) {
-			// array element: {dt:int, total:int}
-			// may pass this to disco argument to display it in legend
-			for (const o of data.dt2total) {
-				holder
-					.append('div')
-					.style('margin', '20px 20px 0px 40px')
-					.text(`(Displaying ${data.mlst.filter(i => i.dt == o.dt).length} out of total ${o.total} ${dt2label[o.dt]})`)
-			}
-		}
-
-		const mlst = data.mlst
-
-		for (const i of mlst) i.position = i.pos
-
-		const disco_arg = {
-			sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
-			data: mlst,
-			genome: genomeObj
-		}
-
-		if (data.alternativeDataByDt) {
-			disco_arg.alternativeDataByDt = data.alternativeDataByDt
-		}
-
-		if (termdbConfig.queries.singleSampleMutation.discoPlot?.skipChrM) {
-			// quick fix: exclude chrM from list of chromosomes
-			// assume the name of "chrM" but not chrMT. do case insensitive match
-			disco_arg.chromosomes = {}
-			for (const k in genomeObj.majorchr) {
-				if (k.toLowerCase() == 'chrm') continue
-				disco_arg.chromosomes[k] = genomeObj.majorchr[k]
-			}
-		}
-
+		const { disco_arg, plotConfig } = await getDiscoArgConfig(termdbConfig, dslabel, sample, genomeObj, _overrides)
 		const opts = {
 			holder: holder,
-
 			state: {
 				genome: genomeObj.name,
 				dslabel: dslabel,
 				args: disco_arg,
-
-				plots: [
-					{
-						chartType: 'Disco',
-						subfolder: 'disco',
-						extension: 'ts',
-						overrides: computeOverrides(_overrides, termdbConfig, genomeObj, sample)
-					}
-				]
+				plots: [plotConfig]
 			}
 		}
 		const plot = await import('#plots/plot.app.js')
@@ -105,6 +45,73 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 		if (showError) loadingDiv.text('Error: ' + (e.message || e))
 		else loadingDiv.remove()
 		return false
+	}
+}
+
+export async function getDiscoArgConfig(termdbConfig, dslabel, sample, genomeObj, _overrides = {}) {
+	console.log(51, genomeObj)
+	// must do this check to make sure this ds supports disco
+	if (typeof termdbConfig?.queries?.singleSampleMutation != 'object')
+		throw 'termdbConfig.queries.singleSampleMutation{} not object'
+	// TODO can delete following checks if written as ts
+	if (typeof sample != 'object') throw 'sample{} not object'
+	if (typeof genomeObj != 'object') throw 'genomeObj{} not object'
+
+	// request data
+	const body = {
+		genome: genomeObj.name,
+		dslabel,
+		sample: sample[termdbConfig.queries.singleSampleMutation.sample_id_key]
+	}
+	console.log(64, body)
+	const data = await dofetch3('termdb/singleSampleMutation', { body })
+	console.log(65, data)
+	if (data.error) throw data.error
+	if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
+
+	if (data.dt2total?.length) {
+		// array element: {dt:int, total:int}
+		// may pass this to disco argument to display it in legend
+		for (const o of data.dt2total) {
+			holder
+				.append('div')
+				.style('margin', '20px 20px 0px 40px')
+				.text(`(Displaying ${data.mlst.filter(i => i.dt == o.dt).length} out of total ${o.total} ${dt2label[o.dt]})`)
+		}
+	}
+
+	const mlst = data.mlst
+
+	for (const i of mlst) i.position = i.pos
+
+	const disco_arg = {
+		sampleName: sample[termdbConfig.queries.singleSampleMutation.sample_id_key],
+		data: mlst,
+		genome: genomeObj
+	}
+
+	if (data.alternativeDataByDt) {
+		disco_arg.alternativeDataByDt = data.alternativeDataByDt
+	}
+
+	if (termdbConfig.queries.singleSampleMutation.discoPlot?.skipChrM) {
+		// quick fix: exclude chrM from list of chromosomes
+		// assume the name of "chrM" but not chrMT. do case insensitive match
+		disco_arg.chromosomes = {}
+		for (const k in genomeObj.majorchr) {
+			if (k.toLowerCase() == 'chrm') continue
+			disco_arg.chromosomes[k] = genomeObj.majorchr[k]
+		}
+	}
+
+	return {
+		disco_arg,
+		plotConfig: {
+			chartType: 'Disco',
+			subfolder: 'disco',
+			extension: 'ts',
+			overrides: computeOverrides(_overrides, termdbConfig, genomeObj, sample)
+		}
 	}
 }
 

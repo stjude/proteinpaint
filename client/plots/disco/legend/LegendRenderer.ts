@@ -1,4 +1,5 @@
 import type Legend from './Legend.ts'
+import type Disco from '../Disco.ts'
 import { svgLegend, getMaxLabelWidth } from '#dom'
 import LegendJSONMapper from './LegendJSONMapper.ts'
 import { dtcnv } from '#shared/common.js'
@@ -6,10 +7,12 @@ import { renderCnvSourceLegend, type AlternativeCnvSet } from '../cnv/renderCnvS
 import type ViewModel from '../viewmodel/ViewModel.ts'
 
 export default class LegendRenderer {
+	private discoApp: Disco
 	private legendJSONMapper: LegendJSONMapper
 	private fontSize: number
 
-	constructor(cappedCnvMaxAbsValue = 0, fontSize: number) {
+	constructor(cappedCnvMaxAbsValue = 0, fontSize: number, discoApp) {
+		this.discoApp = discoApp
 		this.fontSize = fontSize
 		this.legendJSONMapper = new LegendJSONMapper(cappedCnvMaxAbsValue)
 	}
@@ -48,7 +51,7 @@ export default class LegendRenderer {
 				}
 			)
 		})
-		const altCnv: AlternativeCnvSet[] = viewModel.appState.args.alternativeDataByDt?.[dtcnv]
+		const altCnv: AlternativeCnvSet[] = this.discoApp.args.alternativeDataByDt?.[dtcnv]
 
 		if (altCnv && altCnv.length > 0) {
 			const legendG = holder.select('g[data-testid="sjpp_disco_plot_legend"]')

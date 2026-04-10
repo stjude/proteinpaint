@@ -41,11 +41,15 @@ export default class Disco {
 	private recreateViewModel = false
 	private errorDiv: any
 
+	args: any
+
 	constructor(opts: any) {
 		this.type = 'Disco'
 		this.opts = opts
 		this.isOpen = false
 		this.discoInteractions = new DiscoInteractions(this)
+		this.args = this.opts.args || this.opts.state?.args || this.opts?.app?.opts.args
+		console.log(51, this.args, this.opts)
 	}
 
 	async init() {
@@ -121,8 +125,7 @@ export default class Disco {
 			]
 			configInputsOptions.push(...cnvConfigInputOptions)
 		}
-
-		const genomeChr = this.app.opts.state.args.genome.majorchr
+		const genomeChr = this.args.genome.majorchr
 		const chromosomeConfigOption = {
 			label: 'Chromosomes',
 			title: 'Chromosomes shown in the plot',
@@ -215,12 +218,12 @@ export default class Disco {
 				this.features[name].update({ state: this.state, appState })
 			}
 
-			const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize)
+			const legendRenderer = new LegendRenderer(this.viewModel.cappedCnvMaxAbsValue, settings.label.fontSize, this)
 
 			const discoRenderer = new DiscoRenderer(
 				this.getRingRenderers(this.viewModel.settings, this.viewModel, this.discoInteractions.geneClickListener),
 				legendRenderer,
-				this.app.opts.state.args.genome
+				this.args.genome
 			)
 
 			discoRenderer.render(svgDiv, this.viewModel, this.onCnvSourceSelect)
@@ -235,7 +238,7 @@ export default class Disco {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) return config
 		// include args.data so updates rerender when mutation list changes
-		return { ...config, mlst: appState.args.data }
+		return { ...config, mlst: this.args.data }
 	}
 
 	getRingRenderers(
@@ -276,8 +279,8 @@ export default class Disco {
 	}
 
 	private onCnvSourceSelect = (index: number) => {
-		const state = this.app.getState()
-		const args = state.args
+		//const state = this.app.getState()
+		const args = this.args
 		const alt = args.alternativeDataByDt?.[dtcnv]
 		if (!alt) return
 		const altClone = structuredClone(args.alternativeDataByDt)

@@ -58,7 +58,8 @@ export class ViewModelMapper {
 	}
 
 	map(opts: any): ViewModel {
-		const chrSizes = opts.args.genome.majorchr
+		const args = this.discoInteractions.discoApp.args || opts.args
+		const chrSizes = args.genome.majorchr
 
 		/** Remove hidden chromosomes */
 		const chromosomesOverride = {}
@@ -68,15 +69,14 @@ export class ViewModelMapper {
 			}
 		}
 
-		const sampleName = opts.args.sampleName
-
-		const genome = opts.args.genome
+		const sampleName = args.sampleName
+		const genome = args.genome
 
 		const prioritizedGenes = genome?.geneset?.[0] ? genome.geneset[0].lst : []
 
 		const genesetName = genome?.geneset?.[0] ? genome.geneset[0].name : ''
 
-		const data: Array<any> = opts.args.data
+		const data: Array<any> = args.data
 
 		this.applyRadius()
 
