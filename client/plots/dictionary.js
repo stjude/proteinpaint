@@ -1,6 +1,18 @@
 import { getCompInit, copyMerge } from '#rx'
 import { appInit } from '#termdb/app'
 
+/**
+ * The dictionary spawns either the survival or summary plot, depending on the term selected. 
+ * 
+ * .spawnConfig:{}
+		properties to pass on to the spawning plot (e.g. survival or summary), as needed
+		e.g. chartType: 'dictionary',
+				spawnConfig: {
+				parentId: this.id,
+			}
+		In this example, the parentId is passed to the spawned survival or summary plot. 
+ */
+
 class MassDict {
 	static type = 'tree'
 
