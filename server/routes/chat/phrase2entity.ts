@@ -4,13 +4,17 @@ import { classifyGeneDataType } from './genedatatypeagentnew.ts'
 import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type { Scaffold, SummaryScaffold, Entity, Phrase2EntityResult } from './scaffoldTypes.ts'
-
-// JSON schema types for the filter tree returned by evaluateFilterTerm()
-type FilterLeafNode = { leaf: string }
-type FilterOperatorNode = { op: '&' | '|'; left: FilterTreeNode; right: FilterTreeNode }
-type FilterTreeNode = FilterLeafNode | FilterOperatorNode
-type FilterTreeResult = { sexpr: string; tree: FilterTreeNode }
+import type {
+	Scaffold,
+	SummaryScaffold,
+	Entity,
+	Phrase2EntityResult,
+	FilterTreeNode,
+	FilterLeafNode,
+	FilterTreeResult,
+	FilterTreeNodeEntity,
+	FilterLeafNodeEntity
+} from './scaffoldTypes.ts'
 
 // The JSON schema definition passed to the LLM prompt
 const filterTreeJsonSchema = {
@@ -51,10 +55,28 @@ function isLeafNode(node: FilterTreeNode): node is FilterLeafNode {
 	return 'leaf' in node
 }
 
-/** Collect all leaf values from a filter tree */
-function collectLeaves(node: FilterTreeNode): string[] {
-	if (isLeafNode(node)) return [node.leaf]
-	return [...collectLeaves(node.left), ...collectLeaves(node.right)]
+/** Recursively resolve a FilterTreeNode by converting each leaf phrase to an Entity */
+async function resolveFilterTree(
+	node: FilterTreeNode,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	ds: string
+): Promise<FilterTreeNodeEntity | { type: 'text'; text: string }> {
+	if (isLeafNode(node)) {
+		console.log('Evaluating filter leaf:', node.leaf)
+		const filterTw = await phrase2entitytw(node.leaf, llm, genes_list, dataset_json, ds)
+		console.log('filterTw:', filterTw)
+		if ('type' in filterTw && filterTw.type === 'text') {
+			return { type: 'text', text: filterTw.text }
+		}
+		return { leaf: filterTw as Entity } as FilterLeafNodeEntity
+	}
+	const left = await resolveFilterTree(node.left, llm, genes_list, dataset_json, ds)
+	if ('type' in left && left.type === 'text') return left
+	const right = await resolveFilterTree(node.right, llm, genes_list, dataset_json, ds)
+	if ('type' in right && right.type === 'text') return right
+	return { op: node.op, left, right } as FilterTreeNodeEntity
 }
 
 async function validateNonDictionaryTypes(
@@ -322,20 +344,13 @@ export async function phrase2entity(
 			if (scaffoldResult.filter) {
 				const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
 				console.log('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
-				// Extract all leaf phrases from the filter tree and resolve each to an entity
-				const leafPhrases = collectLeaves(parseFilterResult.tree)
-				summ_term.filter = []
-				for (const leafPhrase of leafPhrases) {
-					console.log('Evaluating filter leaf:', leafPhrase)
-					const filterTw = await phrase2entitytw(leafPhrase, llm, genes_list, dataset_json, ds)
-					console.log('filterTw:', filterTw)
-
-					if ('type' in filterTw && filterTw.type === 'text') {
-						return { type: 'text', text: filterTw.text }
-					}
-					summ_term.filter.push(filterTw as Entity)
+				// Recursively resolve the filter tree, converting each leaf phrase to an Entity
+				const resolvedTree = await resolveFilterTree(parseFilterResult.tree, llm, genes_list, dataset_json, ds)
+				if ('type' in resolvedTree && resolvedTree.type === 'text') {
+					return resolvedTree
 				}
-				console.log('Validation result for filter term:', summ_term.filter)
+				summ_term.filter = { sexpr: parseFilterResult.sexpr, tree: resolvedTree as FilterTreeNodeEntity }
+				console.log('Validation result for filter term:', JSON.stringify(summ_term.filter))
 			}
 			return summ_term
 		}
