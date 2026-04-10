@@ -157,9 +157,9 @@ export async function run_chat_pipeline(
 		}
 
 		/* Special handling for summary chart types
-		// Every cohort by default supports summary charts unless 
-		// 'dictionary' is not in the supported chart type list
-		// */
+        // Every cohort by default supports summary charts unless 
+        // 'dictionary' is not in the supported chart type list
+        // */
 		if (plotType === 'summary') {
 			if (!supportedChartTypes.includes('dictionary')) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -235,7 +235,7 @@ export async function run_chat_pipeline(
 			genes_list
 		)
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
-		console.log('Inferred termObj from entity:', termObj)
+		console.log('Inferred termObj from entity:', JSON.stringify(termObj))
 		return
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
 		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.

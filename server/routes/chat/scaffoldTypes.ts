@@ -33,18 +33,6 @@ export function isMatrixScaffold(s: Scaffold): s is MatrixScaffold {
 
 type TermTypes = 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance'
 
-//export type TwEntity = {
-//    termType: TermTypes
-//    phrase: string
-//}
-//
-//export type FilterEntity = {
-//    filter: TermTypes
-//    phrase: string
-//}
-//
-//export type Entity = TwEntity | FilterEntity
-
 export type Entity = {
 	termType: TermTypes
 	phrase: string
