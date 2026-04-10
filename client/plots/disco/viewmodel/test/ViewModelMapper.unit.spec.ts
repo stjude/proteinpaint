@@ -7,7 +7,7 @@ Tests:
 ViewModelMapper scales rings and dimensions using the radius setting
 */
 
-const settings = discoDefaults({ Disco: { radius: 500 } })
+const settings = discoDefaults({ Disco: { autoRadius: false, radius: 500 } })
 const mapper = new ViewModelMapper(structuredClone(settings as any), {} as any)
 
 const opts = {

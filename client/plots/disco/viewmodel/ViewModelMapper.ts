@@ -58,7 +58,7 @@ export class ViewModelMapper {
 		this.settings.legend.fontSize *= scale
 	}
 
-	private computeDynamicRadius(data: Array<any>): number {
+	static computeDynamicRadius(data: Array<any>): number {
 		let ringCount = 0
 		if (data.some(d => d.dt == dtsnvindel)) ringCount++
 		if (data.some(d => d.dt == dtcnv)) ringCount++
@@ -90,8 +90,8 @@ export class ViewModelMapper {
 
 		const data: Array<any> = opts.args.data
 
-		if (!this.settings.Disco.radius) {
-			this.settings.Disco.radius = this.computeDynamicRadius(data)
+		if (this.settings.Disco.autoRadius) {
+			this.settings.Disco.radius = ViewModelMapper.computeDynamicRadius(data)
 		}
 
 		this.applyRadius()

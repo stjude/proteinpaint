@@ -5,8 +5,10 @@ export default interface Settings {
 	downloadImgName: string // file name of downloaded svg
 
 	Disco: {
-		/** Global radius controlling ring size */
-		radius?: number
+		/** When true, radius is computed from the number of data-ring types */
+		autoRadius: boolean
+		/** Global radius controlling ring size (used when autoRadius is false to allow user-set radius) */
+		radius: number
 		/** Opacity of the fusion arcs */
 		fusionOpacity?: number
 		centerText: string

@@ -154,6 +154,15 @@ export default class Disco {
 
 		configInputsOptions.push(chromosomeConfigOption)
 
+		configInputsOptions.push({
+			boxLabel: '',
+			label: 'Auto radius',
+			type: 'checkbox',
+			chartType: 'Disco',
+			settingsKey: 'autoRadius',
+			title: 'Automatically set the radius based on the number of data rings'
+		})
+
 		const dimensionOptions = [
 			{
 				label: 'Radius',
@@ -164,7 +173,8 @@ export default class Disco {
 				debounceInterval: 500,
 				step: 25,
 				min: 200,
-				max: 1000
+				max: 1000,
+				getDisplayStyle: (plot: any) => (plot.settings.Disco.autoRadius ? 'none' : 'table-row')
 			},
 			{
 				label: 'Fusion opacity',

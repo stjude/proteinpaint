@@ -24,7 +24,8 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'percentile',
-			radius: undefined as number | undefined,
+			autoRadius: true,
+			radius: 300,
 			fusionOpacity: 1,
 			hiddenChromosomes
 		},
@@ -89,7 +90,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 		}
 	}
 
-	if (overrides?.Disco?.radius > 1000 || overrides?.Disco?.radius < 200) {
+	if (overrides?.Disco?.radius != null && (overrides.Disco.radius > 1000 || overrides.Disco.radius < 200)) {
 		console.log(`${overrides?.Disco?.radius} is greater or lower than the min and max for the radius`)
 	}
 
