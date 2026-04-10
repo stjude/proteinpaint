@@ -32,7 +32,7 @@ export class WSIViewerInteractions {
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
-	createSpinner: (spin: boolean) => void
+	createSpinner: () => void
 	toggleThumbnails: (start: number) => void
 	animationTime: number = 700
 	animationDelay: number = 200
@@ -193,6 +193,16 @@ export class WSIViewerInteractions {
 					return
 				}
 				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: true,
+								changeTrigger: Date.now()
+							}
+						}
+					})
 					// For debugging purposes, counts how many times shortcut keys are pressed
 					// Resolve class either by key_shortcut
 					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
@@ -206,7 +216,16 @@ export class WSIViewerInteractions {
 
 					// Persist and finalize via helper
 					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
-
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: false,
+								changeTrigger: Date.now()
+							}
+						}
+					})
 					return
 				}
 			})
@@ -352,7 +371,6 @@ export class WSIViewerInteractions {
 		}
 		this.createSpinner = () => {
 			wsiApp.dom.holder.selectAll('*').style('cursor', 'wait')
-			console.log('Creating spinner')
 		}
 	}
 
@@ -595,16 +613,6 @@ export class WSIViewerInteractions {
 		if (settings.isSavingAnnotation) return
 
 		try {
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: wsiApp.id,
-				config: {
-					settings: {
-						isSavingAnnotation: true,
-						changeTrigger: Date.now()
-					}
-				}
-			})
 			// TODO add UI rollback
 			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 			// TODO find another way to clear server cache
@@ -612,16 +620,7 @@ export class WSIViewerInteractions {
 		} catch (e) {
 			console.error('Error in saveWSIAnnotation request:', e)
 		}
-		wsiApp.app.dispatch({
-			type: 'plot_edit',
-			id: wsiApp.id,
-			config: {
-				settings: {
-					isSavingAnnotation: false,
-					changeTrigger: Date.now()
-				}
-			}
-		})
+
 		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
 			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
 		}
