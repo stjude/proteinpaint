@@ -61,13 +61,13 @@ function getMenuInstance(opts: any = {}, appOverrides: any = {}) {
 	GeneExpChartMenu.prototype.renderMenu = function () {
 		/* comment so linter doesn't throw a fit */
 	}
-
-	const menu = new GeneExpChartMenu(app, tip, opts)
-
-	// Restore
-	GeneExpChartMenu.prototype.renderMenu = origRender
-
-	return { menu, app, tip }
+	try {
+		const menu = new GeneExpChartMenu(app, tip, opts)
+		return { menu, app, tip }
+	} finally {
+		// Restore
+		GeneExpChartMenu.prototype.renderMenu = origRender
+	}
 }
 
 const closeMenus = () => {}
