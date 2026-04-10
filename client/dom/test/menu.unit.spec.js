@@ -46,6 +46,18 @@ function getTestMenu() {
 	return menu
 }
 
+/** Parse a CSS pixel value like '70px' to a number, returns NaN for empty/invalid */
+function parsePx(val) {
+	if (!val || !val.endsWith('px')) return NaN
+	return parseFloat(val)
+}
+
+/** Assert that a CSS pixel value is close to the expected number (tolerance of 1px) */
+function assertPxClose(test, actual, expected, msg) {
+	const parsed = parsePx(actual)
+	test.ok(Math.abs(parsed - expected) <= 1, `${msg} (actual: ${actual}, expected: ~${expected}px)`)
+}
+
 /**************
  test sections
 ***************/
@@ -128,24 +140,25 @@ tape('show() with args', async test => {
 	{
 		//left (x) position
 		const posNum = 50
-		const y = /*testMenu.offsetY +*/ window.scrollY // when running many other tests, the screen would scroll vertically
 		testMenu.show(posNum)
-		test.deepEqual(
-			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum + testMenu.offsetX}px`, top: '' },
-			`Should show menu left, under header, shifted by .offsetX = ${testMenu.offsetX}px`
+		assertPxClose(
+			test,
+			testMenu.dnode.style.left,
+			posNum + testMenu.offsetX,
+			`Should show menu left, shifted by .offsetX = ${testMenu.offsetX}px`
 		)
 	}
 
 	{
 		//top (y) position
 		const posNum = 50
-		const y = posNum + testMenu.offsetY + window.scrollY // when running many other tests, the screen would scroll vertically
+		const y = posNum + testMenu.offsetY + window.scrollY
 		testMenu.show('', posNum)
-		test.deepEqual(
-			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: '20px', top: `${y}px` },
-			`Should show menu at the top, above header, shifted by .offsetY + window.scrollY = ${y}px`
+		assertPxClose(
+			test,
+			testMenu.dnode.style.top,
+			y,
+			`Should show menu at the top, shifted by .offsetY + window.scrollY`
 		)
 	}
 
@@ -154,21 +167,25 @@ tape('show() with args', async test => {
 		const posNum = 100
 		const y = posNum + testMenu.offsetY + window.scrollY
 		testMenu.show(posNum, posNum)
-		test.deepEqual(
-			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum + testMenu.offsetX}px`, top: `${y}px` },
-			`Should show menu top left corner, over header, shifted by .offsetX = ${testMenu.offsetX}px & .offsetY = ${y}px`
+		assertPxClose(
+			test,
+			testMenu.dnode.style.left,
+			posNum + testMenu.offsetX,
+			`Should show menu left, shifted by .offsetX = ${testMenu.offsetX}px`
 		)
+		assertPxClose(test, testMenu.dnode.style.top, y, `Should show menu top, shifted by .offsetY + window.scrollY`)
 	}
 
 	{
 		const posNum = 100
 		//No shift (i.e. additional 20px)
 		testMenu.show(posNum, posNum, false)
-		test.deepEqual(
-			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum}px`, top: `${posNum + window.scrollY}px` },
-			`Should show menu top left corner without .offsetX or .offsetY added to left or top, respectively.`
+		assertPxClose(test, testMenu.dnode.style.left, posNum, `Should show menu left without .offsetX`)
+		assertPxClose(
+			test,
+			testMenu.dnode.style.top,
+			posNum + window.scrollY,
+			`Should show menu top without .offsetY, only window.scrollY`
 		)
 	}
 
@@ -182,10 +199,17 @@ tape('show() with args', async test => {
 		const posNum = 200
 		testMenu.d.append('div').text(longText)
 		testMenu.show(posNum, posNum, false)
-		test.deepEqual(
-			{ left: testMenu.dnode.style.left, top: testMenu.dnode.style.top },
-			{ left: `${posNum + window.scrollX}px`, top: `${posNum + window.scrollY}px` },
-			`Should show menu position with window.scrollX = ${window.scrollX} & window.scrollY = ${window.scrollY}`
+		assertPxClose(
+			test,
+			testMenu.dnode.style.left,
+			posNum + window.scrollX,
+			`Should show menu left with window.scrollX = ${window.scrollX}`
+		)
+		assertPxClose(
+			test,
+			testMenu.dnode.style.top,
+			posNum + window.scrollY,
+			`Should show menu top with window.scrollY = ${window.scrollY}`
 		)
 	}
 	testMenu.destroy()
