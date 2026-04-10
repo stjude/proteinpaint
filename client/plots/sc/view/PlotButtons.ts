@@ -143,21 +143,7 @@ export class PlotButtons {
 			{
 				label: 'Gene expression',
 				isVisible: () => this.scTermdbConfig.geneExpression,
-				// open: this.geneSearchMenu,
 				open: this.geneExpMenu
-				//*****Commenting out for now. Will assess need as development continues.
-				// getPlotConfig: async geneLst => {
-				// 	// if (!geneLst.length) {
-				// 	// 	alert('No genes selected to launch gene expression subplot.')
-				// 	// 	return
-				// 	// }
-				// 	// /** If 1 gene, launch violin
-				// 	//  * If 2 genes, launch scatter
-				// 	//  * If >2 genes, launch hier clustering */
-				// 	// if (geneLst.length == 1) return await this.getViolinConfig(geneLst[0].gene)
-				// 	// else if (geneLst.length == 2) return await this.getScatterConfig(geneLst)
-				// 	// else return this.getClusteringConfig(geneLst)
-				// }
 			},
 			{
 				label: 'Differential expression',
@@ -192,22 +178,6 @@ export class PlotButtons {
 		}
 		new GeneExpChartMenu(self.interactions.app, self.plotBtnsDom.tip, opts)
 	}
-	//*****Commenting out for now. Will assess need as development continues.
-	// //TODO: Use `client/dom/GeneExpChartMenu.ts` instead
-	// geneSearchMenu(plot: any, self: PlotButtons) {
-	// 	self.plotBtnsDom.tip.clear()
-
-	// 	new GeneSetEditUI({
-	// 		holder: self.plotBtnsDom.tip.d.append('div') as any,
-	// 		genome: self.interactions.app.opts.genome,
-	// 		vocabApi: {},
-	// 		callback: async result => {
-	// 			self.plotBtnsDom.tip.hide()
-	// 			const config = await plot.getPlotConfig(result.geneList)
-	// 			await self.interactions.createSubplot(config)
-	// 		}
-	// 	})
-	// }
 
 	//TODO: Change this to use the term from termdbConfig
 	// and return to getPlotConfig
@@ -244,80 +214,6 @@ export class PlotButtons {
 	}
 
 	//********** Plot Config Helpers **********/
-	//*****Commenting out for now. Will assess need as development continues.
-	// async getViolinConfig(gene): Promise<object> {
-	// 	if (!this.item) throw new Error('No item selected')
-	// 	return {
-	// 		chartType: 'violin',
-	// 		term: {
-	// 			$id: await digestMessage(`${gene}-${this.item.sample}-${this.item.experiment}`),
-	// 			term: {
-	// 				type: SINGLECELL_GENE_EXPRESSION,
-	// 				id: gene,
-	// 				gene,
-	// 				name: gene,
-	// 				sample: this.makeSampleObj()
-	// 			}
-	// 		},
-	// 		term2: await this.makeScctTW(this.item, this.scTermdbConfig.data.plots[0])
-	// 	}
-	// }
-
-	// async getScatterConfig(geneLst): Promise<object> {
-	// 	if (!this.item) throw new Error('No item selected')
-	// 	const gene1 = geneLst[0].gene
-	// 	const gene2 = geneLst[1].gene
-
-	// 	return {
-	// 		chartType: 'sampleScatter',
-	// 		term: {
-	// 			$id: await digestMessage(`${gene1}-${this.item.sample}-${this.item.experiment}`),
-	// 			term: {
-	// 				type: SINGLECELL_GENE_EXPRESSION,
-	// 				gene: gene1,
-	// 				id: gene1,
-	// 				name: gene1,
-	// 				sample: this.makeSampleObj()
-	// 			},
-	// 			q: { mode: 'continuous' }
-	// 		},
-	// 		term2: {
-	// 			$id: await digestMessage(`${gene2}-${this.item.sample}-${this.item.experiment}`),
-	// 			term: {
-	// 				type: SINGLECELL_GENE_EXPRESSION,
-	// 				gene: gene2,
-	// 				id: gene2,
-	// 				name: gene2,
-	// 				sample: this.makeSampleObj()
-	// 			},
-	// 			q: { mode: 'continuous' }
-	// 		}
-	// 	}
-	// }
-
-	// getClusteringConfig(geneLst): object {
-	// 	if (!this.item) throw new Error('No item selected')
-	// 	//limit to 100 genes for performance
-	// 	const tws = geneLst.slice(0, 100).map(g => {
-	// 		return {
-	// 			term: {
-	// 				gene: g.gene,
-	// 				name: `${g.gene} ${this.settings.hierCluster.unit}`,
-	// 				type: SINGLECELL_GENE_EXPRESSION,
-	// 				sample: this.item
-	// 			},
-	// 			q: {}
-	// 		}
-	// 	})
-
-	// 	return {
-	// 		chartType: 'hierCluster',
-	// 		termgroups: [{ lst: tws, type: 'hierCluster' }],
-	// 		dataType: 'geneExpression',
-	// 		settings: { hierCluster: this.settings.hierCluster }
-	// 	}
-	// }
-
 	async getSingleCellConfig(plotName): Promise<object> {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
