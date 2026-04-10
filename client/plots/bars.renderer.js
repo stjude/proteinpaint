@@ -720,6 +720,7 @@ export default function barsRenderer(barsapp, holder) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
+			.attr('data-testid', 'sjpp-massbarchart-vertical-charttitle')
 			.text(hm.handlers.yAxis.text(visibleTotal))
 	}
 
@@ -771,6 +772,7 @@ export default function barsRenderer(barsapp, holder) {
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.style('font-weight', 600)
+			.attr('data-testid', 'sjpp-massbarchart-horizontal-charttitle')
 			.text(hm.handlers.xAxis.text(visibleTotal))
 	}
 
