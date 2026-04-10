@@ -1,6 +1,6 @@
 import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
-import { Menu, /*GeneSetEditUI,*/ GeneExpChartMenu } from '#dom'
+import { Menu, GeneExpChartMenu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
 import type { SCSettings } from '../SCTypes'

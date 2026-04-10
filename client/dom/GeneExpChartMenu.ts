@@ -48,7 +48,7 @@ export class GeneExpChartMenu {
 	/** Helper function to create term with any additional properties */
 	makeTerm: (term: any) => object
 	/** Helper function to create config or the spawning plot with
-	 * any additional properties. Used in the violin, scatter, and heirCluster */
+	 * any additional properties. Used in the violin, scatter, and hierCluster */
 	makeConfig: (config: any) => object
 
 	constructor(app: AppApi, tip: Menu, opts: GeneExpChartMenuOpts = {}) {
