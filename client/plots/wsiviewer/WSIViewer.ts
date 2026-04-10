@@ -63,8 +63,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				.append('div')
 				.attr('id', 'annotations-table-wrapper')
 				.style('padding', '20px')
-				.style('display', 'inline-block')
-				.style('z-index', '9998'),
+				.style('display', 'inline-block'),
 			legendHolder: opts.holder
 				.append('div')
 				.attr('id', 'sjpp-legendHolder')
