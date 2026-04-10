@@ -110,7 +110,6 @@ export class VolcanoInteractions {
 	 * For geneExpression, value == gene symbol */
 	async launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType != GENE_EXPRESSION) return
 		const values = {}
 		for (const group of config.samplelst.groups) {
 			values[group.name] = {
@@ -151,7 +150,6 @@ export class VolcanoInteractions {
 	/** Launch a violin plot for a gene expression data point. */
 	async launchViolinGeneExp(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType != GENE_EXPRESSION) return
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
@@ -217,7 +215,6 @@ export class VolcanoInteractions {
 	 * track. */
 	async launchDmr(d: { chr: string; start: number; stop: number; promoterId?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		if (config.termType !== DNA_METHYLATION) return
 
 		const controlColor = config?.tw?.term?.values?.[config?.samplelst?.groups[0].name]?.color || '#ff0000'
 		const caseColor = config?.tw?.term?.values?.[config?.samplelst?.groups[1].name]?.color || '#0000ff'
@@ -291,8 +288,7 @@ export class VolcanoInteractions {
 			const unit = getGEunit(this.app.vocabApi)
 			const name = `${gene} ${unit}`
 			const term = { gene, name, type: GENE_EXPRESSION }
-			const tw = { term, q: {} }
-			return tw
+			return { term, q: {} }
 		})
 
 		const group = { lst: tws, type: 'hierCluster' }
