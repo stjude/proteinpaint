@@ -31,22 +31,46 @@ export function isMatrixScaffold(s: Scaffold): s is MatrixScaffold {
 	return 'twLst' in s
 }
 
+type TermTypes = 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance'
+
+//export type TwEntity = {
+//    termType: TermTypes
+//    phrase: string
+//}
+//
+//export type FilterEntity = {
+//    filter: TermTypes
+//    phrase: string
+//}
+//
+//export type Entity = TwEntity | FilterEntity
+
 export type Entity = {
-	termType: 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance'
+	termType: TermTypes
 	phrase: string
 }
+
+// JSON schema types for the filter tree returned by evaluateFilterTerm()
+export type FilterLeafNode = { leaf: string }
+export type FilterLeafNodeEntity = { leaf: Entity }
+export type FilterOperatorNode = { op: '&' | '|'; left: FilterTreeNode; right: FilterTreeNode }
+export type FilterTreeNode = FilterLeafNode | FilterOperatorNode
+export type FilterTreeResult = { sexpr: string; tree: FilterTreeNode }
+
+export type FilterTreeNodeEntity = FilterLeafNodeEntity | FilterOperatorNode
+export type FilterTreeResultEntity = { sexpr: string; tree: FilterTreeNodeEntity }
 
 export type SummaryPhrase2EntityResult = {
 	tw1: [Entity]
 	tw2?: [Entity]
 	tw3?: [Entity]
-	filter?: Entity[]
+	filter?: FilterTreeResultEntity
 }
 
 export type DEPhrase2EntityResult = {
-	filter1: [Entity[]] // will actually be nested structure later on
-	filter2: [Entity[]] // will actually be nested structure later on
-	filter?: [Entity[]]
+	filter1: FilterTreeResultEntity // will actually be nested structure later on
+	filter2: FilterTreeResultEntity // will actually be nested structure later on
+	filter?: FilterTreeResultEntity
 }
 
 export type Phrase2EntityResult = SummaryPhrase2EntityResult | DEPhrase2EntityResult // | MatrixPhrase2EntityResult (to be defined later)
