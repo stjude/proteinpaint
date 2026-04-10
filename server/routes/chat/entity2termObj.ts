@@ -1,5 +1,11 @@
 import type { LlmConfig } from '#types'
-import type { Phrase2EntityResult, Entity } from './scaffoldTypes.ts'
+import type {
+	SummaryPhrase2EntityResult,
+	Phrase2EntityResult,
+	Entity,
+	FilterTreeResultEntity,
+	FilterTreeNodeEntity
+} from './scaffoldTypes.ts'
 import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 
@@ -93,6 +99,15 @@ async function getTermObj(
 	}
 }
 
+/** Recursively collect all leaf Entity values from a FilterTreeNodeEntity */
+function collectLeafEntities(node: FilterTreeNodeEntity): Entity[] {
+	if ('leaf' in node) return [node.leaf]
+	return [
+		...collectLeafEntities(node.left as FilterTreeNodeEntity),
+		...collectLeafEntities(node.right as FilterTreeNodeEntity)
+	]
+}
+
 export async function inferTermObjFromEntity(
 	entity: Phrase2EntityResult,
 	plotType: string,
@@ -102,14 +117,16 @@ export async function inferTermObjFromEntity(
 ): Promise<Record<string, TwValue | TwValue[]>> {
 	const twObjects: Record<string, TwValue | TwValue[]> = {}
 	if (plotType === 'summary') {
-		for (const [key, value] of Object.entries(entity)) {
+		const summaryEntity = entity as SummaryPhrase2EntityResult
+		for (const [key, value] of Object.entries(summaryEntity)) {
 			// need special handling for filters, since they can be more complex and nested than other term types
 			if (key === 'filter') {
-				const entry = value as Entity[] | undefined
-				if (!entry) continue
+				const filterResult = value as FilterTreeResultEntity | undefined
+				if (!filterResult) continue
 
+				const leafEntities = collectLeafEntities(filterResult.tree)
 				const filterValues: TwValue[] = []
-				for (const filterTerm of entry) {
+				for (const filterTerm of leafEntities) {
 					console.log('Evaluating filter term:', filterTerm)
 					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
 					if (!termObj) {
