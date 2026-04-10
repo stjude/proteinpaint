@@ -233,6 +233,7 @@ export class GeneSetEditUI {
 				statLegendDiv: div.append('div'),
 				submitBtn: addButton({
 					div: div.append('div').style('margin-top', '10px'),
+					testid: 'sjpp-genesetedit-submitbtn',
 					text: 'Submit',
 					disabled: !this.geneList?.length,
 					callback: () => {
