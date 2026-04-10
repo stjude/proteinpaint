@@ -41,9 +41,10 @@ export class DiscoInteractions {
 
 		this.geneClickListener = async (gene: string, mnames: Array<string>) => {
 			const { filter, filter0 } = this.discoApp.app.getState().termfilter
+			console.log(43, filter0, filter)
 			const arg = {
 				holder: this.discoApp.app.opts.holder,
-				genome: this.discoApp.app.opts.state.args.genome,
+				genome: this.discoApp.args.genome || this.discoApp.app.opts.state.args.genome,
 				nobox: true,
 				query: gene,
 				tklst: [
@@ -56,6 +57,7 @@ export class DiscoInteractions {
 					}
 				]
 			}
+			console.log(58)
 			const _ = await import('#src/block.init')
 			await _.default(arg)
 		}
