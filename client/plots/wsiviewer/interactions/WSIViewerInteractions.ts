@@ -600,7 +600,6 @@ export class WSIViewerInteractions {
 		aiProjectID: number
 	) {
 		const state = wsiApp.app.getState()
-		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
@@ -610,7 +609,6 @@ export class WSIViewerInteractions {
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}
-		if (settings.isSavingAnnotation) return
 
 		try {
 			// TODO add UI rollback
