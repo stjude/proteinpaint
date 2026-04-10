@@ -30,8 +30,6 @@
     "server": "trap 'kill %1' INT; npm run dev -w @sjcrh/proteinpaint-server & npm start",
     "client": "npm run dev -w @sjcrh/proteinpaint-client",
     "test:integration": "npm run test:integration --workspace=client",
-    "test:playwright": "playwright test -c playwright.config.ts",
-    "test:playwright:profile": "playwright test -c playwright.config.ts e2e-playwright/profile",
     "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
     "client:coverage": "cd client && npm run combined:coverage",
     "combined:coverage": "cd server && npm run combined:coverage && sleep 10 && cd .. && npm run client:coverage",
@@ -57,7 +55,6 @@
     "url": "https://github.com/stjude/proteinpaint"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
     "@types/d3": "^7.4.0",
     "@types/estree": "^1.0.1",
     "@types/minimatch": "^5.1.2",
