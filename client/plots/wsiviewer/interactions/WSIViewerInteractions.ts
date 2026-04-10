@@ -32,8 +32,11 @@ export class WSIViewerInteractions {
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
+	createSpinner: () => void
 	toggleThumbnails: (start: number) => void
-
+	animationTime: number = 700
+	animationDelay: number = 200
+	previousZoomInPoints: [number, number][] = []
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -85,7 +88,7 @@ export class WSIViewerInteractions {
 				view.animate({
 					center: xyAvg,
 					zoom: 5,
-					duration: 700
+					duration: this.animationTime
 				})
 
 				//On zooming to a new annotation, add a border around the annotation
@@ -96,7 +99,7 @@ export class WSIViewerInteractions {
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
 				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, activePatchColor, settings.tileSize)
-			}, 200)
+			}, this.animationDelay)
 		}
 
 		this.setKeyDownListener = (
@@ -189,8 +192,18 @@ export class WSIViewerInteractions {
 
 					return
 				}
-
-				if (shortcuts.includes(event.code)) {
+				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: true,
+								changeTrigger: Date.now()
+							}
+						}
+					})
+					// For debugging purposes, counts how many times shortcut keys are pressed
 					// Resolve class either by key_shortcut
 					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 
@@ -203,7 +216,16 @@ export class WSIViewerInteractions {
 
 					// Persist and finalize via helper
 					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
-
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: false,
+								changeTrigger: Date.now()
+							}
+						}
+					})
 					return
 				}
 			})
@@ -346,6 +368,9 @@ export class WSIViewerInteractions {
 					settings: { thumbnailRangeStart: start, displayedImageIndex: start, renderWSIViewer: true }
 				}
 			})
+		}
+		this.createSpinner = () => {
+			wsiApp.dom.holder.selectAll('*').style('cursor', 'wait')
 		}
 	}
 
@@ -575,6 +600,7 @@ export class WSIViewerInteractions {
 		aiProjectID: number
 	) {
 		const state = wsiApp.app.getState()
+		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
@@ -584,6 +610,7 @@ export class WSIViewerInteractions {
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}
+		if (settings.isSavingAnnotation) return
 
 		try {
 			// TODO add UI rollback

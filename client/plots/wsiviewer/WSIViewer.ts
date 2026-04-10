@@ -40,6 +40,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 	constructor(opts: any, api) {
 		super(opts, api)
+
 		this.type = WSIViewer.type
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
@@ -56,7 +57,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 				.style('background-color', 'rgba(255, 255, 255, 0.95)')
 				.style('text-align', 'center')
 				.style('display', 'none'),
-
 			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
 			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
 			annotationsHolder: opts.holder
@@ -93,7 +93,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const sample_id = state.sample_id
 		const aiProjectID = state.aiProjectID
 		const aiWSIMageFiles = state.aiWSIMageFiles as Array<string>
-
 		const viewModel: ViewModel = await this.viewModelProvider.provide(
 			genome,
 			dslabel,
@@ -107,7 +106,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
-
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
 			this.wsiViewerInteractions.toggleLoadingDiv(false)
@@ -136,6 +134,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (!this.mapRenderer) {
 			this.mapRenderer = new MapRenderer()
 		}
+
 		this.mapRenderer.setState(
 			activeLayerData,
 			this.wsiViewerInteractions.viewerClickListener,
@@ -172,6 +171,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
 
 		if (settings.renderAnnotationTable && this.map) {
+			this.dom.holder.selectAll('*').style('cursor', 'default')
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 
@@ -199,6 +199,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 					imageViewData.shortcuts
 				)
 			}
+		}
+
+		if (settings.isSavingAnnotation) {
+			this.wsiViewerInteractions.createSpinner()
 		}
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
