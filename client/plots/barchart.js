@@ -1155,6 +1155,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('font-weight', 'bold')
 			.style('padding-bottom', '0.5em')
+			.attr('data-testid', 'sjpp-massbarchart-2x2assotestlabel')
 			.html("2x2 Association test (Fisher's exact test)")
 			.style('font-size', '0.9em')
 

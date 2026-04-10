@@ -69,7 +69,12 @@ export class SearchHandler {
 					holder: td2.attr('data-testid', 'sjpp-genevariant-mutationTypeRadios'),
 					styles: { display: 'inline-block' },
 					options: mutationTypeTerms.map((t, i) => {
-						return { label: t.name, value: i, checked: i == mutationTypeTermIdx }
+						return {
+							label: t.name,
+							value: i,
+							checked: i == mutationTypeTermIdx,
+							testid: 'sjpp-genevarianttermdbhandler-radio-' + t.name
+						}
 					}),
 					callback: v => {
 						this.toggleGeneSetRadioDisplay(v)
@@ -84,8 +89,13 @@ export class SearchHandler {
 					holder: td2.attr('data-testid', 'sjpp-genevariant-genesetTypeRadios'),
 					styles: { display: 'inline-block' },
 					options: [
-						{ label: 'Single Gene', value: 'single', checked: true },
-						{ label: 'Gene Set', value: 'geneset', checked: false }
+						{
+							label: 'Single Gene',
+							value: 'single',
+							checked: true,
+							testid: 'sjpp-genevarianttermdbhandler-singlegene'
+						},
+						{ label: 'Gene Set', value: 'geneset', checked: false, testid: 'sjpp-genevarianttermdbhandler-geneset' }
 					],
 					callback: v => (v == 'single' ? this.searchGene() : this.searchGeneSet())
 				})
