@@ -23,5 +23,4 @@ export default interface Settings {
 	activeAnnotation: number
 	sessionsTileSelection: Array<TileSelection>
 	changeTrigger: number
-	isMoving: boolean
 }

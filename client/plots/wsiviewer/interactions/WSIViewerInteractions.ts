@@ -32,12 +32,11 @@ export class WSIViewerInteractions {
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
-	toggleSpinner: (spin: boolean) => void
+	createSpinner: (spin: boolean) => void
 	toggleThumbnails: (start: number) => void
 	animationTime: number = 700
 	animationDelay: number = 200
 	previousZoomInPoints: [number, number][] = []
-	toggleClickability: (clickable: boolean) => void
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -64,34 +63,6 @@ export class WSIViewerInteractions {
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 
 			if (!zoomInPoints || zoomInPoints.length == 0) return
-
-			const pointsAreSame = JSON.stringify(this.previousZoomInPoints) === JSON.stringify(zoomInPoints)
-			this.previousZoomInPoints = zoomInPoints
-			if (!pointsAreSame) {
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							isMoving: true,
-							changeTrigger: Date.now()
-						}
-					}
-				})
-
-				setTimeout(() => {
-					wsiApp.app.dispatch({
-						type: 'plot_edit',
-						id: wsiApp.id,
-						config: {
-							settings: {
-								isMoving: false,
-								changeTrigger: Date.now()
-							}
-						}
-					})
-				}, this.animationTime + this.animationDelay)
-			}
 
 			setTimeout(() => {
 				if (!activeImageExtent) return
@@ -379,12 +350,9 @@ export class WSIViewerInteractions {
 				}
 			})
 		}
-		this.toggleSpinner = (spin: boolean) => {
-			wsiApp.dom.inactivationDiv.style('cursor', spin ? 'wait' : 'default')
-		}
-		this.toggleClickability = (clickable: boolean) => {
-			//Might toggle click on individual elements instead of whole div
-			wsiApp.dom.inactivationDiv.style('pointer-events', clickable ? 'auto' : 'all')
+		this.createSpinner = () => {
+			wsiApp.dom.holder.selectAll('*').style('cursor', 'wait')
+			console.log('Creating spinner')
 		}
 	}
 
@@ -644,7 +612,6 @@ export class WSIViewerInteractions {
 		} catch (e) {
 			console.error('Error in saveWSIAnnotation request:', e)
 		}
-		await new Promise(resolve => setTimeout(resolve, 500)) // Small delay to ensure server data is updated before fetching again
 		wsiApp.app.dispatch({
 			type: 'plot_edit',
 			id: wsiApp.id,

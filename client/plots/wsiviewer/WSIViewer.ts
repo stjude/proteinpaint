@@ -45,7 +45,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		this.opts = opts
 		this.wsiViewerInteractions = new WSIViewerInteractions(this, opts)
 		this.dom = {
-			holder: opts.holder.attr('data-testid', 'wsiViewer-holder'),
+			holder: opts.holder,
 			loadingDiv: opts.holder
 				.append('div')
 				.attr('class', 'wsiViewer-progress')
@@ -57,24 +57,14 @@ class WSIViewer extends PlotBase implements RxComponent {
 				.style('background-color', 'rgba(255, 255, 255, 0.95)')
 				.style('text-align', 'center')
 				.style('display', 'none'),
-			inactivationDiv: opts.holder
-				.append('div')
-				.attr('class', 'wsiViewer-inactivate')
-				.style('cursor', 'wait')
-				.style('background-color', 'transparent')
-				.style('position', 'absolute')
-				.style('z-index', '9999')
-				.style('height', '100%')
-				.style('pointer-events', 'auto')
-				.style('display', 'block')
-				.style('width', '100%'),
 			errorDiv: opts.holder.append('div').attr('class', 'wsiViewer-error').style('margin-left', '10px'),
 			mapHolder: opts.holder.append('div').attr('id', 'wsiviewer-mapHolder'),
 			annotationsHolder: opts.holder
 				.append('div')
 				.attr('id', 'annotations-table-wrapper')
 				.style('padding', '20px')
-				.style('display', 'inline-block'),
+				.style('display', 'inline-block')
+				.style('z-index', '9998'),
 			legendHolder: opts.holder
 				.append('div')
 				.attr('id', 'sjpp-legendHolder')
@@ -178,11 +168,11 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.map.getView().fit(activeImageExtent)
 			}
 		}
-		this.wsiViewerInteractions.toggleSpinner(settings.isSavingAnnotation || settings.isMoving)
-		this.wsiViewerInteractions.toggleClickability(!settings.isMoving)
+
 		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
 
 		if (settings.renderAnnotationTable && this.map) {
+			this.dom.holder.selectAll('*').style('cursor', 'default')
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 
@@ -195,7 +185,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
 
-			if (initialZoomInCoordinate != undefined && !settings.isMoving) {
+			if (initialZoomInCoordinate != undefined) {
 				this.wsiViewerInteractions.zoomInEffectListener(
 					activeImageExtent,
 					initialZoomInCoordinate,
@@ -210,6 +200,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 					imageViewData.shortcuts
 				)
 			}
+		}
+
+		if (settings.isSavingAnnotation) {
+			this.wsiViewerInteractions.createSpinner()
 		}
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}

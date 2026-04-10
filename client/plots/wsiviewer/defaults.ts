@@ -22,8 +22,7 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		activeAnnotation: 0,
 		sessionsTileSelection: [],
 		changeTrigger: 0,
-		isSavingAnnotation: false,
-		isMoving: false
+		isSavingAnnotation: false
 	}
 	return copyMerge(defaults, overrides)
 }
