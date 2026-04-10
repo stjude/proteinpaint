@@ -24,11 +24,12 @@ type ScopedGeneExpTerm = {
 type GeneExpChartMenuOpts = {
 	/** see enabledTermTypes set for valid values */
 	termType?: string
-	/** Add more menu options for special use cases */
+	/** Add more menu options for special use cases. For example may want to add
+	 * more clickable options under new headers. */
 	additionalOptions?: FlyoutMenuOption[]
-	/** Add needed properties to the resulting terms as needed */
+	/** Add needed properties to the resulting terms as needed (e.g. for scct terms, the sample) */
 	termProperties?: { [key: string]: any }
-	/** Pass needed properties to the spawning plot */
+	/** Pass needed properties to the spawning plot (e.g. .parentID, hidePlotFilter, etc.) */
 	spawnConfig?: { [key: string]: any }
 }
 
@@ -44,7 +45,10 @@ export class GeneExpChartMenu {
 	//Supports adding menu options for special use cases
 	additionalOptions: FlyoutMenuOption[]
 	termType: string
+	/** Helper function to create term with any additional properties */
 	makeTerm: (term: any) => object
+	/** Helper function to create config or the spawning plot with
+	 * any additional properties. Used in the violin, scatter, and heirCluster */
 	makeConfig: (config: any) => object
 
 	constructor(app: AppApi, tip: Menu, opts: GeneExpChartMenuOpts = {}) {
