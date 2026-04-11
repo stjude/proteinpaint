@@ -40,6 +40,7 @@ export default class Disco {
 	private viewModel?: ViewModel
 	private recreateViewModel = false
 	private errorDiv: any
+	private svgDiv: any
 
 	constructor(opts: any) {
 		this.type = 'Disco'
