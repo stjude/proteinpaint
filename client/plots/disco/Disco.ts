@@ -56,8 +56,9 @@ export default class Disco {
 		this.viewModel = this.stateViewModelMapper.map(state)
 
 		const holder = this.opts.holder
-		// Figure out why we need to set the background color here
-		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top') // on the left
+		const mainDiv = holder.append('div').style('display', 'inline-block') // on the right
+
 		const topbar = controlsHolder.append('div')
 		const config_div = controlsHolder.append('div')
 		const configInputsOptions = this.getConfigInputsOptions(this.viewModel)
@@ -83,7 +84,8 @@ export default class Disco {
 			})
 		})
 
-		this.errorDiv = holder.append('div')
+		this.errorDiv = mainDiv.append('div').attr('data-testid', 'sjpp-disco-errorDiv')
+		this.svgDiv = mainDiv.append('div').attr('data-testid', 'sjpp-disco-svgDiv')
 	}
 
 	private getConfigInputsOptions(viewModel: ViewModel) {
@@ -216,18 +218,10 @@ export default class Disco {
 		this.recreateViewModel = true
 
 		if (this.viewModel) {
-			const holder = this.opts.holder
-			// TODO change this
-			holder.select('div[id="sjpp_disco_plot_holder_div"]').remove()
-			const svgDiv = holder
-				.append('div')
-				.attr('id', 'sjpp_disco_plot_holder_div')
-				.style('display', 'inline-block')
-				.style('position', 'relative')
-
 			// TODO calculate viewModel.filteredSnvDataLength always
+			this.svgDiv.selectAll('*').remove() // todo not to need this
 			const appState = this.app.getState()
-			this.viewModel.svgDiv = svgDiv
+			this.viewModel.svgDiv = this.svgDiv
 			this.viewModel.appState = appState
 
 			for (const name in this.features) {
@@ -242,7 +236,7 @@ export default class Disco {
 				this.app.opts.state.args.genome
 			)
 
-			discoRenderer.render(svgDiv, this.viewModel, this.onCnvSourceSelect)
+			discoRenderer.render(this.svgDiv, this.viewModel, this.onCnvSourceSelect)
 
 			if (this.viewModel.invalidDataInfo?.entries?.length) {
 				InvalidDataUI.render(this.errorDiv, this.viewModel.invalidDataInfo)

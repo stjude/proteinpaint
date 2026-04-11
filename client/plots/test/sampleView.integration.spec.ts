@@ -131,7 +131,7 @@ tape('Multiple samples', function (test) {
 			test.ok(sample, `Should render ${o.text} in the multi-select.`)
 		}
 
-		const discoPlots = sv.dom.plotsDiv.selectAll('#sjpp_disco_plot_holder_div').nodes()
+		const discoPlots = sv.dom.plotsDiv.selectAll('[data-testid="sjpp-disco-svgDiv"]').nodes()
 		test.equal(discoPlots.length, 1, 'Should render disco plot for sample id 3416 but not 2646.')
 
 		if (test['_ok']) sv.app.destroy()
