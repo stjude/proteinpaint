@@ -237,6 +237,7 @@ export default function (opts) {
 						sun.listbutt
 							.append('rect')
 							.classed('sja_info_click', true) //For tape test
+							.attr('data-testid', 'sjpp-sunburst-listButton')
 							.attr('x', -eyeheight / 2)
 							.attr('width', eyeheight)
 							.attr('height', emptyspace - fontsize1 / 2)
