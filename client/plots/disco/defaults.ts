@@ -50,7 +50,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			nonExonicFilterValues: ['non-exonic']
 		},
 
-		verticalPadding: 70,
+		verticalPadding: 20,
 		horizontalPadding: 500,
 
 		layerScaler: 1,
