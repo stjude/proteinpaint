@@ -11,9 +11,11 @@ import serverconfig from '../src/serverconfig.js'
 import { getDsAllowedTermTypes } from './termdb.config.ts'
 import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
+import { resolveToTwTvs } from './chat/entity2twTvs.ts'
 import path from 'path'
 import fs from 'fs'
-import type * as Phrase2EntityResult from './chat/scaffoldTypes.ts'
+import type { Phrase2EntityResult } from './chat/scaffoldTypes.ts'
+import { resolveToPlotState } from './chat/scaffold2state.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/chat3',
@@ -31,7 +33,6 @@ export const api: RouteApi = {
 
 function init({ genomes }) {
 	return async (req, res) => {
-		// console.log('Received request at /termdb/chat3 with query:', req.query)
 		const q: ChatRequest = req.query
 		try {
 			const g = genomes[q.genome]
@@ -54,24 +55,6 @@ function init({ genomes }) {
 			if (llm.provider !== 'SJ' && llm.provider !== 'ollama' && llm.provider !== 'huggingface') {
 				throw "llm.provider must be 'SJ', 'ollama', or 'huggingface'"
 			}
-			/*
-* Old Stuff from Robin
-const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
-const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-const testing = false // This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output, only for testing we set this variable to true
-const genesetNames = getGenesetNames(g)
-const ai_output_json = await run_chat_pipeline(
-q.prompt,
-llm,
-testing,
-dataset_db,
-genedb,
-ds,
-genesetNames,
-agentFiles,
-aiFilesDir
-)
-*/
 
 			// This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output,
 			// only for testing we set this variable to true
@@ -83,8 +66,6 @@ aiFilesDir
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedChartTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-			// console.log(`Supported chart types for ${cohortKey}:`, supportedChartTypes)
-			// console.log('ds.cohort.termddb.allowedTermTypes:', ds.cohort.termdb.allowedTermTypes)
 			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
@@ -97,6 +78,7 @@ aiFilesDir
 				_allowedTermTypes
 				// 	testing
 			)
+			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
 		} catch (e: any) {
 			if (e.stack) mayLog(e.stack)
@@ -157,9 +139,9 @@ export async function run_chat_pipeline(
 		}
 
 		/* Special handling for summary chart types
-        // Every cohort by default supports summary charts unless 
-        // 'dictionary' is not in the supported chart type list
-        // */
+		// Every cohort by default supports summary charts unless 
+		// 'dictionary' is not in the supported chart type list
+		// */
 		if (plotType === 'summary') {
 			if (!supportedChartTypes.includes('dictionary')) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -167,7 +149,7 @@ export async function run_chat_pipeline(
 					type: 'text',
 					text: log
 				}
-				console.log(log)
+				mayLog(log)
 				return ai_output_json
 			}
 		} else if (plotType === 'dge') {
@@ -177,80 +159,70 @@ export async function run_chat_pipeline(
 					type: 'text',
 					text: log
 				}
-				console.log(log)
+				mayLog(log)
 				return ai_output_json
 			}
 		} else {
-			console.log(`Supported chart types for this cohort: ${supportedChartTypes}`)
+			mayLog(`Supported chart types for this cohort: ${supportedChartTypes}`)
 			if (!supportedChartTypes.includes(plotType)) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
 				ai_output_json = {
 					type: 'text',
 					text: log
 				}
-				console.log(log)
+				mayLog(log)
 				return ai_output_json
 			}
 		}
 
 		// If valid plot type, figure out the scaffold according to the plot type
-		console.log('####### First phase: Infer Plot Scaffolds #######')
+		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		time = new Date().valueOf()
 		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
-		console.log('ScaffoldResult: ', scaffoldResult)
+		mayLog('ScaffoldResult: ', scaffoldResult)
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
 		if (!scaffoldResult)
 			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
+		const subplotType = scaffoldResult.plotType === 'summary' ? scaffoldResult.chartType : undefined
 
-		/* This function checks if the non-dictionary types mentioned in the scaffold result (e.g. gene names) are valid based
-		 * on the corresponding db (e.g. genedb). If any invalid terms are found, it throws an error which is caught in the main
-		 * function and returned as a text response to the user. This is an important validation step to ensure that downstream agents
-		 * receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
-		 */
+		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")
 		const genes_list = await parse_geneset_db(genedb)
-		// Ensure all nondicttypes in the scaffold have corresponding data types.
-		// For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid
-		// because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
-		// We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
-		// nondicttypes such as metabolites, genesets, etc.
-		console.log("####### Second phase: From Scaffolds's phrases infer Entities #######")
 		time = new Date().valueOf()
-		const summary_phrase2entity = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds)
+		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
-
-		if ('type' in summary_phrase2entity && summary_phrase2entity.type === 'text') {
-			return summary_phrase2entity // Return error
+		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
+			return phrase2entityResult // Return msg/error
 		}
-		console.log(summary_phrase2entity)
-		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
-		console.log('####### Third phase: From Entities infer Term Objects #######')
+		mayLog(phrase2entityResult)
 
+		mayLog('####### Third phase: From Entities infer Term Objects #######')
+		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 		time = new Date().valueOf()
 		const termObj = await inferTermObjFromEntity(
-			summary_phrase2entity as Phrase2EntityResult.SummaryPhrase2EntityResult,
+			phrase2entityResult as Phrase2EntityResult,
 			plotType,
 			llm,
 			dataset_db,
 			genes_list
 		)
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
-		console.log('Inferred termObj from entity:', JSON.stringify(termObj))
-		return
+		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))
+
+		mayLog('####### Fourth phase: From Term Objects to TwTvs Objects #######')
+		time = new Date().valueOf()
+		const twTvsObj = await resolveToTwTvs(termObj, plotType, llm, dataset_db)
+		mayLog('Time taken to resolve to TwTvs object from termObj:', formatElapsedTime(Date.now() - time))
+		mayLog('twTvsObj:', twTvsObj)
+
+		mayLog('####### Fifth/Final phase: From TwTvs Objects to Plot States #######')
+		time = new Date().valueOf()
+		ai_output_json = resolveToPlotState(twTvsObj, plotType, subplotType)
+		mayLog('Time taken to resolve to plot state:', formatElapsedTime(Date.now() - time))
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
 		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.
 		// This is a bit complex because it requires cross-referencing the inferred scaffold with the dataset's schema and allowed term types,
 		//  but it would improve robustness.
-
-		//const time5 = new Date().valueOf()
-		//const entityResult = await inferEntities(scaffoldResult, llm)
-		//mayLog('Time taken to infer entities:', formatElapsedTime(Date.now() - time5))
-
-		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
-
-		//const time6 = new Date().valueOf()
-		//const termObjResult = await inferTermObj(entityResult, allowedTermTypes, llm)
-		//mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time6))
 	}
 	return ai_output_json
 }
