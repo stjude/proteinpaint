@@ -19,11 +19,11 @@ export class DnaMethylationBase {
 	}
 
 	static validate(term: RawDnaMethylationTerm) {
-		if (typeof term !== 'object') throw 'term is not an object'
-		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
+		if (!term || typeof term !== 'object') throw 'Term is missing or not an object'
+		if (term.type != termType) throw `Incorrect term.type='${term?.type}', expecting '${termType}'`
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
-			throw 'incomplete coordinate in term{}'
-		if (!term.genomicFeatureType) throw 'missing term.genomicFeatureType'
+			throw 'Incomplete coordinate in term{}'
+		if (!term.genomicFeatureType) throw 'Missing term.genomicFeatureType'
 	}
 
 	constructor(term: RawDnaMethylationTerm, opts: TwOpts) {
