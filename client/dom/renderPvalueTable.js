@@ -19,7 +19,18 @@ input parameter:
 }
 */
 
-export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setActiveMenu, updateHiddenPvalues }) {
+export function renderPvalues({
+	title,
+	titleTestid,
+	holder,
+	plot,
+	tests,
+	s,
+	bins,
+	tip,
+	setActiveMenu,
+	updateHiddenPvalues
+}) {
 	let fontSize
 
 	if (s.axisTitleFontSize) {
@@ -39,6 +50,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 		.style('padding-bottom', '5px')
 		.style('font-size', fontSize + 'px')
 		.style('font-weight', 'bold')
+		.attr('data-testid', titleTestid || 'sjpp-pvalueTable-title')
 		.text(title)
 
 	// table div
