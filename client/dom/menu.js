@@ -46,7 +46,7 @@ export class Menu {
 		this.d = body
 			.append('div')
 			.attr('class', 'sja_menu_div')
-			.attr('data-testid', 'sjpp-menu-div')
+			.attr('data-testid', arg.testid || 'sjpp-menu-div')
 			.style('display', 'none')
 			.style('position', 'absolute')
 			.style('background-color', 'white')
