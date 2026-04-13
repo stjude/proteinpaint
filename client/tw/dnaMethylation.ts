@@ -1,25 +1,20 @@
-import type { RawDnaMethylationTerm } from '#types'
+import type { RawDnaMethylationTerm, VocabApi } from '#types'
 import { type TwOpts } from './TwBase.ts'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION } from '#shared/terms.js'
 
-const termType = TermTypes.DNA_METHYLATION
+const termType = DNA_METHYLATION
 
 export class DnaMethylationBase {
 	id: string
 	name: string
 	unit: string
 
-	// option to fill-in/mutate the input raw term object in-place
-	// - does not have to construct, but may require forced type casting in consumer code
 	static async fill(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
-		if (!term.id) {
-			term.id = `${term.chr}:${term.start}-${term.stop}`
-		}
+		if (!term.id) term.id = makeDNAMethTermId(term)
 		if (!term.name) {
-			term.unit = opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
-			const name = `${term.id} ${term.unit}`
-			term.name = name
+			term.unit = getDNAMethUnit(term.genomicFeatureType, opts.vocabApi)
+			term.name = getDNAMethTermName(term)
 		}
 	}
 
@@ -28,14 +23,44 @@ export class DnaMethylationBase {
 		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
 			throw 'incomplete coordinate in term{}'
+		if (!term.genomicFeatureType) throw 'missing term.genomicFeatureType'
 	}
 
-	// option to construct an object instance and not mutate the input raw term
-	// - will be used instead of term literal object
 	constructor(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
-		this.id = term.id || `${term.chr}:${term.start}-${term.stop}`
-		this.unit = term.unit || opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
-		this.name = term.name || `${this.id} ${this.unit}`
+		this.id = term.id || makeDNAMethTermId(term)
+		this.unit = term.unit || getDNAMethUnit(term.genomicFeatureType, opts.vocabApi)
+		this.name = term.name || getDNAMethTermName(term, this.unit)
+	}
+}
+
+function makeDNAMethTermId(term: RawDnaMethylationTerm) {
+	return `${term.chr}:${term.start}-${term.stop}`
+}
+
+/** Function standardizes DNA methylation units */
+export function getDNAMethUnit(genomicFeatureType: string, vocabApi: VocabApi) {
+	switch (genomicFeatureType) {
+		case 'gene':
+			return vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
+		case 'promoter':
+			return vocabApi.termdbConfig.queries.dnaMethylation?.promoter?.unit || 'Average M-value'
+		default:
+			return 'Average Beta Value'
+	}
+}
+
+/** Function standardizes DNA methylation term name
+ * May evolve over time. For example, unit may be optional in the future. */
+export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: string) {
+	const unit = term.unit || termUnit
+
+	switch (term.genomicFeatureType) {
+		case 'promoter':
+			return `Promoter ${unit} (${term.id})` //term.id is expected to be in "chr:start-stop" format
+		case 'gene':
+			return `${term.featureName} - Promoter ${unit} (${term.id})`
+		default:
+			return `${term.id} ${unit}`
 	}
 }
