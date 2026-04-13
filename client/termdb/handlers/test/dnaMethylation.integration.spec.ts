@@ -53,10 +53,13 @@ tape('Coordinate search', async test => {
 	test.equal(term.chr, chr, 'term.chr should equal input chr')
 	test.equal(term.start, start, 'term.start should equal input start')
 	test.equal(term.stop, stop, 'term.stop should equal input stop')
-	test.equal(term.id, coord, 'term.id should equal input coord')
-	const unit = vocabApi.termdbConfig.queries.dnaMethylation.unit
-	const name = `${coord} ${unit}`
-	test.equal(term.name, name, 'term.name should be <coord> <unit>')
+	/** No longer necessary to pass the unit or name in the search handler.
+	 * Commenting out for now. Search handler may become more sophisticated and
+	 * require handling these properties in the future. */
+	// test.equal(term.id, coord, 'term.id should equal input coord')
+	// const unit = vocabApi.termdbConfig.queries.dnaMethylation.unit
+	// const name = `${coord} ${unit}`
+	// test.equal(term.name, name, 'term.name should be <coord> <unit>')
 	test.equal(term.type, TermTypes.DNA_METHYLATION, 'term.type should be dnaMethylation')
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -82,11 +85,12 @@ tape('Gene search', async test => {
 	test.equal(term.chr, 'chr17', 'term.chr should be TP53 chr')
 	test.equal(term.start, 7661778, 'term.start should be TP53 start')
 	test.equal(term.stop, 7687537, 'term.stop should be TP53 stop')
-	const coord = 'chr17:7661778-7687537'
-	test.equal(term.id, coord, 'term.id should equal input coord')
-	const unit = vocabApi.termdbConfig.queries.dnaMethylation.unit
-	const name = `${coord} ${unit}`
-	test.equal(term.name, name, 'term.name should be <coord> <unit>')
+	// See note above
+	// const coord = 'chr17:7661778-7687537'
+	// test.equal(term.id, coord, 'term.id should equal input coord')
+	// const unit = vocabApi.termdbConfig.queries.dnaMethylation.unit
+	// const name = `${coord} ${unit}`
+	// test.equal(term.name, name, 'term.name should be <coord> <unit>')
 	test.equal(term.type, TermTypes.DNA_METHYLATION, 'term.type should be dnaMethylation')
 	if (test['_ok']) holder.remove()
 	test.end()
@@ -124,11 +128,12 @@ tape('Gene search with navigation', async test => {
 	test.equal(term.chr, chr, 'term.chr should equal input chr')
 	test.equal(term.start, 7682349, 'term.start should equal input start')
 	test.equal(term.stop, 7684349, 'term.stop should equal input stop')
-	const new_coord = 'chr17:7682349-7684349'
-	test.equal(term.id, new_coord, 'term.id should equal input coord')
-	const unit = vocabApi.termdbConfig.queries.dnaMethylation.unit
-	const name = `${new_coord} ${unit}`
-	test.equal(term.name, name, 'term.name should be <coord> <unit>')
+	// See note above
+	// const new_coord = 'chr17:7682349-7684349'
+	// test.equal(term.id, new_coord, 'term.id should equal input coord')
+	// const unit = vocabApi.termdbConfig.queries.dnaMethylation.unit
+	// const name = `${new_coord} ${unit}`
+	// test.equal(term.name, name, 'term.name should be <coord> <unit>')
 	test.equal(term.type, TermTypes.DNA_METHYLATION, 'term.type should be dnaMethylation')
 	if (test['_ok']) holder.remove()
 	test.end()
