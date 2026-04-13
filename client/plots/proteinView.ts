@@ -7,6 +7,7 @@ import { dofetch3 } from '#common/dofetch'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
+import { shapeSelector, shapesArray } from '../dom/shapes.js'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { toTvslstFilter } from './proteomeAbundance.js'
 import { aa2gmcoord } from '#src/coord'
@@ -153,10 +154,19 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const proteinColors = new Map<string, string>(
 		proteinAccessions.map(acc => [acc, rgb(proteinColorScale(acc)).formatHex()])
 	)
+	const makeShapeMap = (items: string[]) =>
+		new Map<string, number>(items.map((item, i) => [item, i % shapesArray.length]))
+	const assayShapes = makeShapeMap(assayNames)
+	const cohortShapes = makeShapeMap(cohortNames)
+	const proteinShapes = makeShapeMap(proteinAccessions)
 
-	let colorMode: 'assayType' | 'cohort' | 'proteinAccession' = 'assayType'
+	let colorMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'none'
+	let shapeMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'none'
+	const defaultDotColor = '#9ca3af'
 	const getColor = (d: any) => {
 		switch (colorMode) {
+			case 'none':
+				return defaultDotColor
 			case 'assayType':
 				return assayColors.get(d.assayName) ?? '#888'
 			case 'cohort':
@@ -165,6 +175,148 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				return proteinColors.get(d.proteinAccession) ?? '#888'
 			default:
 				return '#888'
+		}
+	}
+	const getShapeIndex = (d: any) => {
+		switch (shapeMode) {
+			case 'none':
+				return 0
+			case 'assayType':
+				return assayShapes.get(d.assayName) ?? 0
+			case 'cohort':
+				return cohortShapes.get(d.cohortName) ?? 0
+			case 'proteinAccession':
+				return proteinShapes.get(d.proteinAccession) ?? 0
+			default:
+				return 0
+		}
+	}
+	const getShapePath = (d: any) => {
+		const index = getShapeIndex(d) % shapesArray.length
+		return shapesArray[index]
+	}
+	const getShapeTransform = (d: any, sizeScale = 1) => {
+		const r = radiusScale(Math.max(minTestedN, d.testedN || minTestedN)) * sizeScale
+		const scale = r / 8
+		const x = xScale(d.log2fc) - 8 * scale
+		const y = yScale(d.score) - 8 * scale
+		return `translate(${x},${y}) scale(${scale})`
+	}
+	const groupingModes: Array<{ key: 'none' | 'assayType' | 'cohort' | 'proteinAccession'; label: string }> = [
+		{ key: 'none', label: 'Default' },
+		{ key: 'assayType', label: 'Assay' },
+		{ key: 'cohort', label: 'Cohort' },
+		{ key: 'proteinAccession', label: 'Isoform' }
+	]
+	const makeHiddenState = () => ({
+		none: new Set<string>(),
+		assayType: new Set<string>(),
+		cohort: new Set<string>(),
+		proteinAccession: new Set<string>()
+	})
+	const hiddenColor = makeHiddenState()
+	const hiddenShape = makeHiddenState()
+	const getValueByMode = (d: any, mode: 'none' | 'assayType' | 'cohort' | 'proteinAccession') => {
+		switch (mode) {
+			case 'none':
+				return ''
+			case 'assayType':
+				return d.assayName
+			case 'cohort':
+				return d.cohortName
+			case 'proteinAccession':
+				return d.proteinAccession
+			default:
+				return ''
+		}
+	}
+	const isDotHidden = (d: any) => {
+		const colorValue = getValueByMode(d, colorMode)
+		const shapeValue = getValueByMode(d, shapeMode)
+		return hiddenColor[colorMode].has(colorValue) || hiddenShape[shapeMode].has(shapeValue)
+	}
+	const getDotDistancePx = (d1: any, d2: any) => {
+		const x = xScale(d1.log2fc) - xScale(d2.log2fc)
+		const y = yScale(d1.score) - yScale(d2.score)
+		return Math.sqrt(x * x + y * y)
+	}
+	const getClusterDots = (seed: any) => {
+		const thresholdPx = 5
+		return dots
+			.filter(d => !isDotHidden(d) && getDotDistancePx(d, seed) < thresholdPx)
+			.sort((a, b) => getDotDistancePx(a, seed) - getDotDistancePx(b, seed))
+	}
+	const renderClusterTooltip = (clusterDots: any[]) => {
+		const tip = self.dom.tip.clear().d
+
+		if (clusterDots.length > 1) {
+			tip
+				.append('div')
+				.style('color', '#888')
+				.style('font-weight', 'bold')
+				.style('margin', '0 0 6px 0')
+				.text(`${clusterDots.length} Cohorts`)
+		}
+
+		const list = tip.append('div')
+
+		if (clusterDots.length > 1) {
+			const grouped = new Map<string, any>()
+			for (const d of clusterDots) {
+				const key = [d.assayName, d.cohortName, d.modSites || ''].join('\t')
+				if (!grouped.has(key)) grouped.set(key, d)
+			}
+			for (const d of grouped.values()) {
+				const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
+				const table = table2col({ holder: block.append('table') })
+				table.addRow('Assay', d.assayName)
+				table.addRow('Cohort', d.cohortName)
+				if (d.modSites) table.addRow('Modified Site', d.modSites)
+			}
+			return
+		}
+
+		for (const d of clusterDots) {
+			const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
+			const table = table2col({ holder: block.append('table') })
+			table.addRow('Assay', d.assayName)
+			table.addRow('Cohort', d.cohortName)
+			table.addRow('Protein Accession', d.proteinAccession)
+			if (d.PTMType) {
+				table.addRow('PTM Type', d.PTMType)
+				table.addRow('Modified Site', d.modSites)
+				table.addRow('PTM', d.uniqueIdentifier)
+			} else {
+				table.addRow('Isoform', d.uniqueIdentifier)
+			}
+			table.addRow('log2 fold change', roundValue(d.log2fc, 3))
+			table.addRow('p value', d.pValue.toExponential(2))
+			table.addRow('-log10(p)', roundValue(d.score, 3))
+			table.addRow('Tested samples', d.testedN)
+			table.addRow('Control samples', d.controlN)
+		}
+	}
+	const updateDots = () => {
+		cohortDots
+			.attr('fill', (d: any) => getColor(d))
+			.attr('stroke', (d: any) => getColor(d))
+			.attr('d', (d: any) => getShapePath(d))
+			.attr('transform', (d: any) => getShapeTransform(d))
+			.style('opacity', (d: any) => (isDotHidden(d) ? 0 : 1))
+			.style('pointer-events', (d: any) => (isDotHidden(d) ? 'none' : 'auto'))
+	}
+	const getShapeMapInUse = () => {
+		switch (shapeMode) {
+			case 'none':
+				return assayShapes
+			case 'assayType':
+				return assayShapes
+			case 'cohort':
+				return cohortShapes
+			case 'proteinAccession':
+				return proteinShapes
+			default:
+				return assayShapes
 		}
 	}
 
@@ -229,14 +381,13 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	// Points
 	const cohortDots = g
-		.selectAll('circle.cohort-dot')
+		.selectAll('path.cohort-dot')
 		.data(dots)
 		.enter()
-		.append('circle')
+		.append('path')
 		.attr('class', 'cohort-dot')
-		.attr('cx', (d: any) => xScale(d.log2fc))
-		.attr('cy', (d: any) => yScale(d.score))
-		.attr('r', (d: any) => radiusScale(Math.max(minTestedN, d.testedN || minTestedN)) * 0.9)
+		.attr('transform', (d: any) => getShapeTransform(d, 0.9))
+		.attr('d', (d: any) => getShapePath(d))
 		.attr('fill', (d: any) => getColor(d))
 		.attr('fill-opacity', 0.5)
 		.attr('stroke', (d: any) => getColor(d))
@@ -246,27 +397,16 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	cohortDots
 		.transition()
 		.duration(350)
-		.attr('r', (d: any) => radiusScale(Math.max(minTestedN, d.testedN || minTestedN)))
-		.attr('cx', (d: any) => xScale(d.log2fc))
-		.attr('cy', (d: any) => yScale(d.score))
+		.attr('d', (d: any) => getShapePath(d))
+		.attr('transform', (d: any) => getShapeTransform(d, 1))
+
+	updateDots()
 
 	cohortDots
 		.on('mouseover', function (this: any, _event: any, d: any) {
-			self.dom.tip.clear().showunder(this)
-			const table = table2col({ holder: self.dom.tip.d.append('table') })
-			table.addRow('Assay', d.assayName)
-			table.addRow('Cohort', d.cohortName)
-			table.addRow('Protein Accession', d.proteinAccession)
-			if (d.PTMType) {
-				table.addRow('PTM Type', d.PTMType)
-				table.addRow('Modified Site', d.modSites)
-				table.addRow('PTM', d.uniqueIdentifier)
-			} else table.addRow('Isoform', d.uniqueIdentifier)
-			table.addRow('log2 fold change', roundValue(d.log2fc, 3))
-			table.addRow('p value', d.pValue.toExponential(2))
-			table.addRow('-log10(p)', roundValue(d.score, 3))
-			table.addRow('Tested samples', d.testedN)
-			table.addRow('Control samples', d.controlN)
+			const clusterDots = getClusterDots(d)
+			renderClusterTooltip(clusterDots)
+			self.dom.tip.showunder(this)
 		})
 		.on('mouseout', () => {
 			self.dom.tip.hide()
@@ -281,9 +421,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.style('color', '#374151')
 
 	const colorLegendDiv = legend.append('div').style('margin-bottom', '12px')
+	const shapeLegendDiv = legend.append('div').style('margin-bottom', '12px')
 
 	function renderColorLegend() {
 		colorLegendDiv.selectAll('*').remove()
+		shapeLegendDiv.selectAll('*').remove()
 
 		const modeRow = colorLegendDiv
 			.append('div')
@@ -294,13 +436,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 		modeRow.append('span').text('Color by')
 
-		const modes: Array<{ key: 'assayType' | 'cohort' | 'proteinAccession'; label: string }> = [
-			{ key: 'assayType', label: 'Assay' },
-			{ key: 'cohort', label: 'Cohort' },
-			{ key: 'proteinAccession', label: 'Isoform' }
-		]
-
-		for (const { key, label } of modes) {
+		for (const { key, label } of groupingModes) {
 			modeRow
 				.append('span')
 				.text(label)
@@ -310,13 +446,76 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				.style('color', key === colorMode ? '#111' : '#6b7280')
 				.on('click', () => {
 					colorMode = key
-					cohortDots.attr('fill', (d: any) => getColor(d)).attr('stroke', (d: any) => getColor(d))
+					updateDots()
 					renderColorLegend()
 				})
 		}
 
 		const makeLegendItems = (items: string[], colorMap: Map<string, string>) => {
+			const openColorMenu = (event: any, name: string, swatch: any) => {
+				const menu = new Menu({ padding: '0px' })
+				const div = menu.d.append('div')
+				const hidden = hiddenColor[colorMode].has(name)
+				const hiddenCount = hiddenColor[colorMode].size
+
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(hidden ? 'Show' : 'Hide')
+					.on('click', () => {
+						if (hidden) hiddenColor[colorMode].delete(name)
+						else hiddenColor[colorMode].add(name)
+						updateDots()
+						renderColorLegend()
+						menu.hide()
+					})
+
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Show only')
+					.on('click', () => {
+						hiddenColor[colorMode].clear()
+						for (const item of items) {
+							if (item != name) hiddenColor[colorMode].add(item)
+						}
+						updateDots()
+						renderColorLegend()
+						menu.hide()
+					})
+
+				if (hiddenCount > 1)
+					div
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text('Show all')
+						.on('click', () => {
+							hiddenColor[colorMode].clear()
+							updateDots()
+							renderColorLegend()
+							menu.hide()
+						})
+
+				const input: any = div
+					.append('div')
+					.attr('class', 'sja_sharp_border')
+					.style('padding', '0px 10px')
+					.text('Color:')
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', colorMap.get(name) ?? '#888')
+					.on('change', () => {
+						const newColor = input.node().value
+						colorMap.set(name, newColor)
+						swatch.style('background', newColor)
+						updateDots()
+						menu.hide()
+					})
+				menu.showunder(event.target)
+			}
+
 			for (const name of items) {
+				const hidden = hiddenColor[colorMode].has(name)
 				const row = colorLegendDiv
 					.append('div')
 					.style('display', 'flex')
@@ -330,30 +529,16 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.style('height', '10px')
 					.style('border-radius', '50%')
 					.style('background', colorMap.get(name) ?? '#888')
-					.style('opacity', 0.8)
+					.style('opacity', hidden ? 0.35 : 0.8)
 					.style('flex-shrink', '0')
 					.style('cursor', 'pointer')
-				swatch.on('click', (event: any) => {
-					const menu = new Menu({ padding: '0px' })
-					const div = menu.d.append('div')
-					const input: any = div
-						.append('div')
-						.attr('class', 'sja_sharp_border')
-						.style('padding', '0px 10px')
-						.text('Color:')
-						.append('input')
-						.attr('type', 'color')
-						.attr('value', colorMap.get(name) ?? '#888')
-						.on('change', () => {
-							const newColor = input.node().value
-							colorMap.set(name, newColor)
-							swatch.style('background', newColor)
-							cohortDots.attr('fill', (d: any) => getColor(d)).attr('stroke', (d: any) => getColor(d))
-							menu.hide()
-						})
-					menu.showunder(event.target)
-				})
-				row.append('span').text(name)
+				swatch.on('click', (event: any) => openColorMenu(event, name, swatch))
+				row
+					.append('span')
+					.text(name)
+					.style('text-decoration', hidden ? 'line-through' : 'none')
+					.style('cursor', 'pointer')
+					.on('click', (event: any) => openColorMenu(event, name, swatch))
 			}
 		}
 
@@ -363,6 +548,131 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			makeLegendItems(cohortNames, cohortColors)
 		} else if (colorMode === 'proteinAccession') {
 			makeLegendItems(proteinAccessions, proteinColors)
+		}
+
+		const shapeModeRow = shapeLegendDiv
+			.append('div')
+			.style('display', 'flex')
+			.style('gap', '10px')
+			.style('margin-bottom', '6px')
+			.style('flex-wrap', 'wrap')
+
+		shapeModeRow.append('span').text('Shape by')
+
+		for (const { key, label } of groupingModes) {
+			shapeModeRow
+				.append('span')
+				.text(label)
+				.style('cursor', 'pointer')
+				.style('font-weight', key === shapeMode ? '600' : '400')
+				.style('text-decoration', key === shapeMode ? 'underline' : 'none')
+				.style('color', key === shapeMode ? '#111' : '#6b7280')
+				.on('click', () => {
+					shapeMode = key
+					updateDots()
+					renderColorLegend()
+				})
+		}
+
+		const drawShapeLegend = (items: string[], shapeMap: Map<string, number>) => {
+			const openShapeMenu = (event: any, name: string) => {
+				const menu = new Menu({ padding: '0px' })
+				const activeShapeMap = getShapeMapInUse()
+				const div = menu.d.append('div')
+				const hidden = hiddenShape[shapeMode].has(name)
+				const hiddenCount = hiddenShape[shapeMode].size
+
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(hidden ? 'Show' : 'Hide')
+					.on('click', () => {
+						if (hidden) hiddenShape[shapeMode].delete(name)
+						else hiddenShape[shapeMode].add(name)
+						updateDots()
+						renderColorLegend()
+						menu.hide()
+					})
+
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Show only')
+					.on('click', () => {
+						hiddenShape[shapeMode].clear()
+						for (const item of items) {
+							if (item != name) hiddenShape[shapeMode].add(item)
+						}
+						updateDots()
+						renderColorLegend()
+						menu.hide()
+					})
+
+				if (hiddenCount > 1)
+					div
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text('Show all')
+						.on('click', () => {
+							hiddenShape[shapeMode].clear()
+							updateDots()
+							renderColorLegend()
+							menu.hide()
+						})
+
+				div
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text('Change shape')
+					.on('click', () => {
+						div.selectAll('*').remove()
+						shapeSelector(div, (index: number) => {
+							activeShapeMap.set(name, index)
+							updateDots()
+							renderColorLegend()
+							menu.hide()
+						})
+					})
+
+				menu.showunder(event.target)
+			}
+
+			for (const name of items) {
+				const hidden = hiddenShape[shapeMode].has(name)
+				const row = shapeLegendDiv
+					.append('div')
+					.style('display', 'flex')
+					.style('align-items', 'center')
+					.style('gap', '6px')
+					.style('margin-bottom', '3px')
+				const icon = row
+					.append('svg')
+					.attr('width', 16)
+					.attr('height', 16)
+					.style('display', 'inline-block')
+					.style('cursor', 'pointer')
+				icon
+					.append('path')
+					.attr('transform', 'scale(0.8)')
+					.attr('d', shapesArray[(shapeMap.get(name) || 0) % shapesArray.length])
+					.attr('fill', '#4b5563')
+					.attr('fill-opacity', hidden ? 0.35 : 0.9)
+				icon.on('click', (event: any) => openShapeMenu(event, name))
+				row
+					.append('span')
+					.text(name)
+					.style('text-decoration', hidden ? 'line-through' : 'none')
+					.style('cursor', 'pointer')
+					.on('click', (event: any) => openShapeMenu(event, name))
+			}
+		}
+
+		if (shapeMode === 'assayType') {
+			drawShapeLegend(assayNames, assayShapes)
+		} else if (shapeMode === 'cohort') {
+			drawShapeLegend(cohortNames, cohortShapes)
+		} else if (shapeMode === 'proteinAccession') {
+			drawShapeLegend(proteinAccessions, proteinShapes)
 		}
 	}
 
@@ -390,7 +700,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		title: '',
 		menu: {
 			minMaxLabel: 'pixels',
-			callback: async () => {}
+			callback: async (obj: { min: number; max: number }) => {
+				radiusScale.range([obj.min, obj.max])
+				updateDots()
+			}
 		}
 	})
 }
