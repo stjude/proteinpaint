@@ -775,11 +775,17 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 	if (notRenderedVals.size) {
 		// TODO: do not hardcode, make this dataset specific
 		const barOrChart = self.config.term0?.term.id.startsWith('case.diagnoses') ? 'bar or chart' : 'bar'
+		const matchedLabels = []
+		console.log(778, term?.term.id, term2?.term.id, term0?.term.id)
+		if (term?.term.id.startsWith('case.diagnoses')) matchedLabels.push(seriesId)
+		if (term2?.term.id.startsWith('case.diagnoses')) matchedLabels.push(dataId)
+		if (term0?.term.id.startsWith('case.diagnoses')) matchedLabels.push(chartId)
+		const clickedLabel = matchedLabels.join(',')
 
 		div.append('div').style('margin', '5px').style('padding', '5px').style('max-width', '600px')
-			.html(`<span>The ${uiLabels.samples} below have matching values that were not rendered in this ${barOrChart}, 
-				due to statistical processing that requires 1 value per ${uiLabels.sample}.
-				A different value was used and rendered in a different ${barOrChart}.</span>
+			.html(`<span>The ${uiLabels.samples} below have multiple diagnoses entries, where 1 or more entries match the value in 
+				the clicked ${barOrChart} (${clickedLabel}), but were not rendered in this bar. The entries corresponding to the 
+				primary diagnosis for these cases were rendered and counted in a different ${barOrChart}.</span>
 			`)
 
 		await renderTable({
