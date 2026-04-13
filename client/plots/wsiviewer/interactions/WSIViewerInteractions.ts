@@ -33,7 +33,6 @@ export class WSIViewerInteractions {
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
 	toggleThumbnails: (start: number) => void
-
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -84,8 +83,8 @@ export class WSIViewerInteractions {
 				const view = map.getView()
 				view.animate({
 					center: xyAvg,
-					zoom: 5,
-					duration: 700
+					zoom: settings.defaultZoom,
+					duration: settings.animationTime
 				})
 
 				//On zooming to a new annotation, add a border around the annotation
@@ -96,7 +95,7 @@ export class WSIViewerInteractions {
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
 				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, activePatchColor, settings.tileSize)
-			}, 200)
+			}, settings.animationDelay)
 		}
 
 		this.setKeyDownListener = (
@@ -189,8 +188,17 @@ export class WSIViewerInteractions {
 
 					return
 				}
-
-				if (shortcuts.includes(event.code)) {
+				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: true,
+								changeTrigger: Date.now()
+							}
+						}
+					})
 					// Resolve class either by key_shortcut
 					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 
@@ -203,7 +211,16 @@ export class WSIViewerInteractions {
 
 					// Persist and finalize via helper
 					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
-
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: false,
+								changeTrigger: Date.now()
+							}
+						}
+					})
 					return
 				}
 			})

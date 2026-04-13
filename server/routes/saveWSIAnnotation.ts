@@ -35,7 +35,6 @@ function init({ genomes }) {
 					return res.status(500).send(result)
 				}
 			}
-
 			res.status(200).send({ status: 'ok' })
 		} catch (e: any) {
 			console.warn(e)

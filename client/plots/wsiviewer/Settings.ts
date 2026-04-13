@@ -18,8 +18,12 @@ export default interface Settings {
 	renderAnnotationTable: boolean
 	selectedPatchBorderColor: string
 	annotatedPatchBorderColor: string
+	isSavingAnnotation: boolean
 	tileSize: number
 	activeAnnotation: number
 	sessionsTileSelection: Array<TileSelection>
 	changeTrigger: number
+	animationTime: number
+	animationDelay: number
+	defaultZoom: number
 }
