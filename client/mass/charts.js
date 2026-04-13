@@ -18,7 +18,7 @@ class MassCharts {
 	async init(appState) {
 		this.dom = {
 			holder: this.opts.holder,
-			tip: new Menu({ padding: '0px' }),
+			tip: new Menu({ padding: '0px', testid: 'sjpp-mass-nav-chartBtnMenu' }),
 			tooltip: new Menu({ padding: '4px' })
 		}
 

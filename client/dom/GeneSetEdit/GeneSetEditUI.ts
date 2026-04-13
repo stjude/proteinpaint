@@ -182,6 +182,7 @@ export class GeneSetEditUI {
 
 		const addGene = this.addGene.bind(this)
 		this.geneSearch = addGeneSearchbox({
+			testid: 'sjpp-geneSetEditUi-geneSearchInput',
 			tip: this.tip2,
 			genome: this.genome,
 			row,
