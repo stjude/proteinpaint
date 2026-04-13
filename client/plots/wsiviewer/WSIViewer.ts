@@ -11,6 +11,7 @@ import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
+import { SpinnerRenderer } from '#plots/wsiviewer/view/SpinnerRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
 import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import type OLMap from 'ol/Map'
@@ -37,6 +38,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 	// New: persistent MapRenderer instance reused across main() calls
 	private mapRenderer: MapRenderer | undefined
+	private spinnerRenderer = new SpinnerRenderer()
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -169,9 +171,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 		}
 
 		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
-
+		if (!settings.isSavingAnnotation) {
+			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
+		}
 		if (settings.renderAnnotationTable && this.map) {
-			this.dom.holder.selectAll('*').style('cursor', 'default')
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 
@@ -200,9 +203,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
-
 		if (settings.isSavingAnnotation) {
-			this.wsiViewerInteractions.createSpinner()
+			this.spinnerRenderer.renderSpinner(this.dom.holder)
 		}
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}

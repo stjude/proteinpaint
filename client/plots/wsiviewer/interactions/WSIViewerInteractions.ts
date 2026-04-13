@@ -32,11 +32,7 @@ export class WSIViewerInteractions {
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
-	createSpinner: () => void
 	toggleThumbnails: (start: number) => void
-	animationTime: number = 700
-	animationDelay: number = 200
-	previousZoomInPoints: [number, number][] = []
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -87,8 +83,8 @@ export class WSIViewerInteractions {
 				const view = map.getView()
 				view.animate({
 					center: xyAvg,
-					zoom: 5,
-					duration: this.animationTime
+					zoom: settings.defaultZoom,
+					duration: settings.animationTime
 				})
 
 				//On zooming to a new annotation, add a border around the annotation
@@ -99,7 +95,7 @@ export class WSIViewerInteractions {
 
 				const zoomCoordinates = [zoomInPoints[0][0], imageHeight - zoomInPoints[0][1]] as [number, number]
 				this.addActiveBorder(vectorLayer as VectorLayer, zoomCoordinates, activePatchColor, settings.tileSize)
-			}, this.animationDelay)
+			}, settings.animationDelay)
 		}
 
 		this.setKeyDownListener = (
@@ -203,7 +199,6 @@ export class WSIViewerInteractions {
 							}
 						}
 					})
-					// For debugging purposes, counts how many times shortcut keys are pressed
 					// Resolve class either by key_shortcut
 					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 
@@ -368,9 +363,6 @@ export class WSIViewerInteractions {
 					settings: { thumbnailRangeStart: start, displayedImageIndex: start, renderWSIViewer: true }
 				}
 			})
-		}
-		this.createSpinner = () => {
-			wsiApp.dom.holder.selectAll('*').style('cursor', 'wait')
 		}
 	}
 

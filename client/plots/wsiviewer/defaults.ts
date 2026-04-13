@@ -22,7 +22,10 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		activeAnnotation: 0,
 		sessionsTileSelection: [],
 		changeTrigger: 0,
-		isSavingAnnotation: false
+		isSavingAnnotation: false,
+		animationTime: 700,
+		animationDelay: 200,
+		defaultZoom: 5
 	}
 	return copyMerge(defaults, overrides)
 }

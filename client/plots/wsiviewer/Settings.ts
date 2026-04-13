@@ -23,4 +23,7 @@ export default interface Settings {
 	activeAnnotation: number
 	sessionsTileSelection: Array<TileSelection>
 	changeTrigger: number
+	animationTime: number
+	animationDelay: number
+	defaultZoom: number
 }
