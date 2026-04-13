@@ -1,1 +1,2 @@
-
+Fixes:
+- show the persisted top mutated genes message in matrix plot when starting with no cohort filter and after switching cohorts
