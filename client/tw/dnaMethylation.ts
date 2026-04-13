@@ -24,13 +24,15 @@ export class DnaMethylationBase {
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
 			throw 'Incomplete coordinate in term{}'
 		if (!term.genomicFeatureType) throw 'Missing term.genomicFeatureType'
+		if (term.genomicFeatureType !== 'gene' && term.featureName)
+			throw 'term.featureName required for DNA methylation term when genomicFeatureType = gene'
 	}
 
 	constructor(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
 		this.id = term.id || makeDNAMethTermId(term)
 		this.unit = term.unit || getDNAMethUnit(term.genomicFeatureType, opts.vocabApi)
-		this.name = term.name || getDNAMethTermName(term, this.unit)
+		this.name = term.name || getDNAMethTermName({ ...term, id: this.id }, this.unit)
 	}
 }
 
@@ -41,26 +43,28 @@ function makeDNAMethTermId(term: RawDnaMethylationTerm) {
 /** Function standardizes DNA methylation units */
 export function getDNAMethUnit(genomicFeatureType: string, vocabApi: VocabApi) {
 	switch (genomicFeatureType) {
-		case 'gene':
-			return vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 		case 'promoter':
 			return vocabApi.termdbConfig.queries.dnaMethylation?.promoter?.unit || 'Average M-value'
+		case 'gene':
+			return vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
 		default:
 			return 'Average Beta Value'
 	}
 }
 
-/** Function standardizes DNA methylation term name
- * May evolve over time. For example, unit may be optional in the future. */
+/** Function standardizes DNA methylation term name */
 export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: string) {
 	const unit = term.unit || termUnit
+	if (!unit) throw 'Unit is required to generate term name'
+	const id = term.id || makeDNAMethTermId(term)
+	const featureName = term.featureName || id
 
 	switch (term.genomicFeatureType) {
 		case 'promoter':
-			return `Promoter ${unit} (${term.id})` //term.id is expected to be in "chr:start-stop" format
+			return `Promoter ${unit} (${id})`
 		case 'gene':
-			return `${term.featureName} - Promoter ${unit} (${term.id})`
+			return `${featureName} - Promoter ${unit} (${id})`
 		default:
-			return `${term.id} ${unit}`
+			return `${id} ${unit}`
 	}
 }

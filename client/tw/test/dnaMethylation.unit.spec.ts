@@ -136,6 +136,41 @@ tape('getDNAMethTermName() should use termUnit fallback when term.unit is missin
 	test.end()
 })
 
+tape('getDNAMethTermName() should throw when unit is missing entirely', test => {
+	const term = getValidRawTerm({ genomicFeatureType: 'region', id: 'chr1:100-200', unit: undefined })
+	test.throws(
+		() => getDNAMethTermName(term as any),
+		/Unit is required/,
+		'Should throw when both term.unit and termUnit are missing'
+	)
+	test.end()
+})
+
+tape('getDNAMethTermName() should generate id from coordinates when term.id is missing', test => {
+	const term = getValidRawTerm({ genomicFeatureType: 'region', id: undefined, unit: 'Average Beta Value' })
+	test.equal(
+		getDNAMethTermName(term as any),
+		'chr1:100-200 Average Beta Value',
+		'Should generate id from chr:start-stop when term.id is missing'
+	)
+	test.end()
+})
+
+tape('getDNAMethTermName() should fallback featureName to id for gene type', test => {
+	const term = getValidRawTerm({
+		genomicFeatureType: 'gene',
+		featureName: undefined,
+		id: 'chr1:100-200',
+		unit: 'Average Beta Value'
+	})
+	test.equal(
+		getDNAMethTermName(term as any),
+		'chr1:100-200 - Promoter Average Beta Value (chr1:100-200)',
+		'Should use id as featureName fallback for gene type'
+	)
+	test.end()
+})
+
 tape('validate() should throw on invalid terms', test => {
 	test.throws(
 		() => DnaMethylationBase.validate(null as any),
@@ -171,6 +206,12 @@ tape('validate() should throw on invalid terms', test => {
 		() => DnaMethylationBase.validate(getValidRawTerm({ genomicFeatureType: undefined }) as any),
 		/Missing term.genomicFeatureType/,
 		'Should throw when genomicFeatureType is missing'
+	)
+
+	test.throws(
+		() => DnaMethylationBase.validate(getValidRawTerm({ genomicFeatureType: 'promoter', featureName: 'TP53' }) as any),
+		/featureName required/,
+		'Should throw when featureName is present with non-gene genomicFeatureType'
 	)
 
 	test.doesNotThrow(
