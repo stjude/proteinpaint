@@ -3,6 +3,8 @@ import { copyMerge } from '#rx'
 
 export default function wsiViewerDefaults(overrides = {}): Settings {
 	const defaults: Settings = {
+		pastActionStack: [],
+		futureActionStack: [],
 		displayedImageIndex: 0,
 		imageWidth: '47vw',
 		imageHeight: '25vw',
