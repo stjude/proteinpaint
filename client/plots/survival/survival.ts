@@ -599,7 +599,6 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'pp-survival-chart')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
-			//.style("position", "absolute")
 			.style('width', 'fit-content')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
@@ -608,10 +607,8 @@ function setRenderers(self) {
 			.style('left', 0)
 			.style('text-align', 'left')
 			.style('vertical-align', 'top')
-		//.style('border', '1px solid #eee')
-		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
-		/*const titleDiv =*/ div
+		div
 			.append('div')
 			.style('width', s.svgw + 50 + 'px')
 			.style('height', s.chartTitleDivHt + 'px')
@@ -620,14 +617,11 @@ function setRenderers(self) {
 			.style('margin', '5px')
 			.append('div')
 			.attr('class', 'sjpp-survival-title')
+			.attr('data-testid', 'sjpp-survival-plotTitle')
 			.style('display', 'inline-block')
 			.style('width', 'fit-content')
 			.datum(chart)
 			.html(chart => chart.chartId)
-		//.style('cursor', 'pointer')
-		// .on('mouseover', () => titleDiv.style('text-decoration', 'underline'))
-		// .on('mouseout', () => titleDiv.style('text-decoration', ''))
-		//.on('click', self.showMenuForSelectedChart)
 
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
