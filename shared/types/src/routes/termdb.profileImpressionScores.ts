@@ -16,6 +16,7 @@ export type ImpressionSiteValue = {
 
 export type ImpressionTermScore = {
 	median: number
+	distribution: Record<number, number>
 	values: ImpressionSiteValue[]
 }
 

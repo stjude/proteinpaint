@@ -70,18 +70,26 @@ async function getImpressionScores(query, ds) {
 			median = rawValues.length % 2 !== 0 ? rawValues[mid] : (rawValues[mid - 1] + rawValues[mid]) / 2
 		}
 
+		// Compute rating distribution (aggregate stat, safe for all roles)
+		const distribution: Record<number, number> = {}
+		for (const v of rawValues) {
+			const rounded = Math.round(v)
+			distribution[rounded] = (distribution[rounded] || 0) + 1
+		}
+
 		if (isPublic) {
-			// Public users: only see median, no per-site data
-			term2Scores[d.term.id] = { median, values: [] }
+			// Public users: only see median + distribution, no per-site data
+			term2Scores[d.term.id] = { median, distribution, values: [] }
 		} else if (userSites) {
 			// Users with site-limited access: only see their authorized sites
 			term2Scores[d.term.id] = {
 				median,
+				distribution,
 				values: values.filter(v => userSites.includes(v.siteId))
 			}
 		} else {
-			// Admin users: see all sites
-			term2Scores[d.term.id] = { median, values }
+			// Admin or users without site restrictions: see all sites
+			term2Scores[d.term.id] = { median, distribution, values }
 		}
 	}
 

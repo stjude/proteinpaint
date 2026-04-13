@@ -129,22 +129,36 @@ class ProfileImpressions extends profilePlot {
 	renderThermometer() {
 		const data = this.impressionData
 		const terms = this.impressionTWs
-		const thermW = 40
-		const thermH = 250
-		const spacing = 110
-		const marginLeft = 20
-		const marginTop = 30
+		const thermW = 50
+		const thermH = 300
+		const bulbR = 28
+		const spacing = 130
+		const marginLeft = 80
+		const marginTop = 40
 		const labelAreaH = 120
-		const legendAreaH = 50
-		const svgW = marginLeft + terms.length * spacing + 100
-		const svgH = this.shiftTop + marginTop + thermH + labelAreaH + legendAreaH + 30
+		const legendAreaH = 80
+		const svgW = marginLeft + terms.length * spacing + 60
+		const svgH = this.shiftTop + marginTop + thermH + bulbR * 2 + 20 + labelAreaH + legendAreaH
 
 		this.dom.svg.attr('width', svgW + 200).attr('height', svgH)
 		this.filterG.attr('transform', `translate(${svgW + 20}, ${this.shiftTop + 10})`)
 
 		const mainG = this.dom.mainG
-		const colorScale = scaleSequential(interpolateRdYlGn).domain([1, 10])
-		const yScale = d3Linear().domain([1, 10]).range([thermH, 0])
+
+		// Rating colors from red (1) to green (10)
+		const ratingColors: Record<number, string> = {
+			1: '#8B0000',
+			2: '#CC3300',
+			3: '#E85D04',
+			4: '#F77F00',
+			5: '#FCBF49',
+			6: '#EAE151',
+			7: '#B5D22C',
+			8: '#7CB518',
+			9: '#4A9D2F',
+			10: '#2D6A1E'
+		}
+		const ratingScale = d3Linear().domain([1, 10]).range([thermH, 0])
 
 		for (let i = 0; i < terms.length; i++) {
 			const tw = terms[i]
@@ -154,7 +168,16 @@ class ProfileImpressions extends profilePlot {
 			const x = marginLeft + i * spacing
 			const g = mainG.append('g').attr('transform', `translate(${x}, ${marginTop})`)
 
-			// Background thermometer
+			const median = termScore.median
+			const moduleName = tw.term.module || tw.term.name
+
+			// Get site coordinator value
+			let siteValue: any = null
+			if (this.selectedSite) {
+				siteValue = termScore.values.find((v: any) => v.siteId === this.selectedSite)
+			}
+
+			// Background — empty tube
 			g.append('rect')
 				.attr('x', 0)
 				.attr('y', 0)
@@ -162,83 +185,149 @@ class ProfileImpressions extends profilePlot {
 				.attr('height', thermH)
 				.attr('fill', '#f0f0f0')
 				.attr('stroke', '#999')
-				.attr('rx', 4)
+				.attr('rx', 2)
 
-			// Gradient fill segments (1-10 scale)
-			for (let v = 1; v <= 10; v++) {
-				const segH = thermH / 10
-				const segY = yScale(v + 1) + segH
+			// Colored bands for ratings 1-10 (always visible as background scale)
+			for (let r = 1; r <= 10; r++) {
+				const y1 = ratingScale(r + 1)
+				const y2 = ratingScale(r)
 				g.append('rect')
-					.attr('x', 1)
-					.attr('y', segY)
-					.attr('width', thermW - 2)
-					.attr('height', segH)
-					.attr('fill', colorScale(v))
-					.attr('opacity', 0.3)
+					.attr('x', 2)
+					.attr('y', y1)
+					.attr('width', thermW - 4)
+					.attr('height', y2 - y1)
+					.attr('fill', ratingColors[r])
 			}
 
-			// Scale labels on left
-			for (let v = 1; v <= 10; v += 1) {
+			// Site Coordinator mercury level line
+			if (siteValue) {
+				const fillY = ratingScale(siteValue.value)
+				g.append('line')
+					.attr('x1', 0)
+					.attr('x2', thermW)
+					.attr('y1', fillY)
+					.attr('y2', fillY)
+					.attr('stroke', '#333')
+					.attr('stroke-width', 2.5)
+			}
+
+			// Thermometer tube outline
+			g.append('rect')
+				.attr('x', 0)
+				.attr('y', 0)
+				.attr('width', thermW)
+				.attr('height', thermH)
+				.attr('fill', 'none')
+				.attr('stroke', '#666')
+				.attr('stroke-width', 1.5)
+
+			// Thermometer bulb
+			const bulbColor = siteValue ? ratingColors[Math.min(Math.max(Math.round(siteValue.value), 1), 10)] : '#E07020'
+			g.append('circle')
+				.attr('cx', thermW / 2)
+				.attr('cy', thermH + bulbR)
+				.attr('r', bulbR)
+				.attr('fill', bulbColor)
+				.attr('stroke', '#666')
+				.attr('stroke-width', 1.5)
+			// Connector between tube and bulb
+			g.append('rect')
+				.attr('x', 2)
+				.attr('y', thermH - 1)
+				.attr('width', thermW - 4)
+				.attr('height', bulbR - thermW / 2 + 5)
+				.attr('fill', bulbColor)
+				.attr('stroke', 'none')
+			// Re-draw tube side borders over the connector
+			g.append('line')
+				.attr('x1', 0)
+				.attr('x2', 0)
+				.attr('y1', thermH)
+				.attr('y2', thermH + bulbR - thermW / 2 + 2)
+				.attr('stroke', '#666')
+				.attr('stroke-width', 1.5)
+			g.append('line')
+				.attr('x1', thermW)
+				.attr('x2', thermW)
+				.attr('y1', thermH)
+				.attr('y2', thermH + bulbR - thermW / 2 + 2)
+				.attr('stroke', '#666')
+				.attr('stroke-width', 1.5)
+
+			// Median marker — gray circle
+			const medianY = ratingScale(median)
+			g.append('circle')
+				.attr('cx', thermW / 2)
+				.attr('cy', medianY)
+				.attr('r', 8)
+				.attr('fill', '#aaa')
+				.attr('stroke', '#555')
+				.attr('stroke-width', 1.5)
+
+			// Left axis — site coordinator value label
+			if (siteValue) {
+				const siteY = ratingScale(siteValue.value)
 				g.append('text')
 					.attr('x', -5)
-					.attr('y', yScale(v))
+					.attr('y', siteY)
 					.attr('text-anchor', 'end')
 					.attr('dominant-baseline', 'central')
 					.style('font-size', '0.7em')
-					.text(v)
+					.style('font-weight', 'bold')
+					.text(siteValue.value)
 			}
-
-			// Median marker — horizontal line with label
-			const median = termScore.median
-			const medianY = yScale(median)
-			g.append('line')
-				.attr('x1', -3)
-				.attr('x2', thermW + 3)
-				.attr('y1', medianY)
-				.attr('y2', medianY)
-				.attr('stroke', '#333')
-				.attr('stroke-width', 3)
+			// Left axis — median value label
 			g.append('text')
-				.attr('x', thermW + 6)
+				.attr('x', -5)
 				.attr('y', medianY)
+				.attr('text-anchor', 'end')
 				.attr('dominant-baseline', 'central')
-				.style('font-size', '0.7em')
-				.style('font-weight', 'bold')
+				.style('font-size', '0.65em')
+				.style('fill', '#666')
 				.text(roundValueAuto(median, true, 1))
 
-			// Selected site marker — diamond
-			if (this.selectedSite) {
-				const siteValue = termScore.values.find((v: any) => v.siteId === this.selectedSite)
-				if (siteValue) {
-					const siteY = yScale(siteValue.value)
-					const dSize = 6
-					g.append('polygon')
-						.attr(
-							'points',
-							`${thermW / 2},${siteY - dSize} ${thermW / 2 + dSize},${siteY} ${thermW / 2},${siteY + dSize} ${
-								thermW / 2 - dSize
-							},${siteY}`
-						)
-						.attr('fill', '#c0392b')
-						.attr('stroke', '#fff')
-						.attr('stroke-width', 1)
-					g.append('text')
-						.attr('x', thermW + 6)
-						.attr('y', siteY + 12)
-						.attr('dominant-baseline', 'central')
-						.style('font-size', '0.65em')
-						.style('fill', '#c0392b')
-						.text(siteValue.value)
-				}
+			// Left axis label (rotated, only on first thermometer)
+			if (i === 0) {
+				g.append('text')
+					.attr('transform', `translate(${-40}, ${thermH / 2}) rotate(-90)`)
+					.attr('text-anchor', 'middle')
+					.style('font-size', '0.65em')
+					.text('Impression Rating')
 			}
 
-			// Module label below (rotated)
-			const moduleName = tw.term.module || tw.term.name
+			// Right axis — impression rating scale (1-10)
+			for (let r = 1; r <= 10; r++) {
+				const y = ratingScale(r)
+				g.append('line')
+					.attr('x1', thermW)
+					.attr('x2', thermW + 4)
+					.attr('y1', y)
+					.attr('y2', y)
+					.attr('stroke', '#666')
+				g.append('text')
+					.attr('x', thermW + 7)
+					.attr('y', y)
+					.attr('text-anchor', 'start')
+					.attr('dominant-baseline', 'central')
+					.style('font-size', '0.65em')
+					.text(r)
+			}
+			// Right axis label (rotated, only on last thermometer)
+			if (i === terms.length - 1) {
+				g.append('text')
+					.attr('transform', `translate(${thermW + 35}, ${thermH / 2}) rotate(90)`)
+					.attr('text-anchor', 'middle')
+					.style('font-size', '0.65em')
+					.text('Impression Rating')
+			}
+
+			// Module label below bulb (rotated)
 			g.append('text')
-				.attr('transform', `translate(${thermW / 2}, ${thermH + 35}) rotate(50)`)
+				.attr('transform', `translate(${thermW / 2}, ${thermH + bulbR * 2 + 15}) rotate(50)`)
 				.attr('text-anchor', 'start')
 				.attr('dominant-baseline', 'hanging')
 				.style('font-size', '0.75em')
+				.style('font-weight', 'bold')
 				.text(moduleName)
 
 			// Tooltip on hover
@@ -251,10 +340,7 @@ class ProfileImpressions extends profilePlot {
 				.on('mouseover', (event: any) => {
 					const menu = this.tip.clear()
 					let text = `${moduleName}\nMedian: ${roundValueAuto(median, true, 1)}`
-					if (this.selectedSite) {
-						const sv = termScore.values.find((v: any) => v.siteId === this.selectedSite)
-						if (sv) text += `\n${sv.siteLabel}: ${sv.value}`
-					}
+					if (siteValue) text += `\nSite Coordinator: ${siteValue.value}`
 					menu.d.style('white-space', 'pre').text(text)
 					menu.show(event.clientX, event.clientY, true, true)
 				})
@@ -264,37 +350,87 @@ class ProfileImpressions extends profilePlot {
 		// Legend
 		const legendG = this.dom.legendG.attr(
 			'transform',
-			`translate(${marginLeft + 20}, ${this.shiftTop + marginTop + thermH + labelAreaH + 40})`
+			`translate(${marginLeft}, ${this.shiftTop + marginTop + thermH + bulbR * 2 + 20 + labelAreaH})`
 		)
-		// Median legend
+
+		// Rating color swatches (10 down to 1)
+		const swatchSize = 14
+		const swatchGap = 4
+		let lx = 0
+		for (let r = 10; r >= 6; r--) {
+			legendG
+				.append('rect')
+				.attr('x', lx)
+				.attr('y', 0)
+				.attr('width', swatchSize)
+				.attr('height', swatchSize)
+				.attr('fill', ratingColors[r])
+				.attr('stroke', '#666')
+				.attr('stroke-width', 0.5)
+			legendG
+				.append('text')
+				.attr('x', lx + swatchSize + 2)
+				.attr('y', swatchSize / 2)
+				.attr('dominant-baseline', 'central')
+				.style('font-size', '0.65em')
+				.text(r)
+			lx += swatchSize + 20
+		}
+		lx = 0
+		for (let r = 5; r >= 1; r--) {
+			legendG
+				.append('rect')
+				.attr('x', lx)
+				.attr('y', swatchSize + swatchGap + 2)
+				.attr('width', swatchSize)
+				.attr('height', swatchSize)
+				.attr('fill', ratingColors[r])
+				.attr('stroke', '#666')
+				.attr('stroke-width', 0.5)
+			legendG
+				.append('text')
+				.attr('x', lx + swatchSize + 2)
+				.attr('y', swatchSize + swatchGap + 2 + swatchSize / 2)
+				.attr('dominant-baseline', 'central')
+				.style('font-size', '0.65em')
+				.text(r)
+			lx += swatchSize + 20
+		}
+
+		// Site marker legend (line)
+		const legendRow2Y = (swatchSize + swatchGap) * 2 + 10
 		legendG
 			.append('line')
 			.attr('x1', 0)
-			.attr('x2', 20)
-			.attr('y1', 10)
-			.attr('y2', 10)
+			.attr('x2', 22)
+			.attr('y1', legendRow2Y)
+			.attr('y2', legendRow2Y)
 			.attr('stroke', '#333')
-			.attr('stroke-width', 3)
+			.attr('stroke-width', 2.5)
 		legendG
 			.append('text')
-			.attr('x', 25)
-			.attr('y', 10)
+			.attr('x', 28)
+			.attr('y', legendRow2Y)
 			.attr('dominant-baseline', 'central')
-			.style('font-size', '0.8em')
-			.text('Median')
-		// Site legend
-		const dSize = 5
-		legendG
-			.append('polygon')
-			.attr('points', `${110},${10 - dSize} ${110 + dSize},${10} ${110},${10 + dSize} ${110 - dSize},${10}`)
-			.attr('fill', '#c0392b')
-		legendG
-			.append('text')
-			.attr('x', 120)
-			.attr('y', 10)
-			.attr('dominant-baseline', 'central')
-			.style('font-size', '0.8em')
+			.style('font-size', '0.75em')
 			.text('Selected Site')
+
+		// Median marker legend (circle)
+		legendG
+			.append('circle')
+			.attr('cx', 160)
+			.attr('cy', legendRow2Y)
+			.attr('r', 6)
+			.attr('fill', '#aaa')
+			.attr('stroke', '#333')
+			.attr('stroke-width', 1.5)
+		legendG
+			.append('text')
+			.attr('x', 170)
+			.attr('y', legendRow2Y)
+			.attr('dominant-baseline', 'central')
+			.style('font-size', '0.75em')
+			.text('Median')
 	}
 
 	renderHeatmap() {
