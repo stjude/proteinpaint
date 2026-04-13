@@ -1377,7 +1377,7 @@ tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
 		test.end()
 	}
 })
-tape('term1=dnameth, term2=geneExp', function (test) {
+tape('Test violin rendering with term1=dnameth, term2=geneExp', function (test) {
 	runpp({
 		state: {
 			plots: [
@@ -1385,7 +1385,13 @@ tape('term1=dnameth, term2=geneExp', function (test) {
 					chartType: 'summary',
 					childType: 'violin',
 					term: {
-						term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953 },
+						term: {
+							type: 'dnaMethylation',
+							chr: 'chr17',
+							start: 7673484,
+							stop: 7681953,
+							genomicFeatureType: 'promoter'
+						},
 						q: { mode: 'continuous' }
 					},
 					term2: { term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' } }
