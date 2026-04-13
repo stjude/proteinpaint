@@ -8,10 +8,14 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
+import type { Prediction, TileSelection, WSIClass } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
+type UndoRedoRecord = {
+	action: () => Promise<void>
+	reaction: () => Promise<void>
+}
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -33,6 +37,16 @@ export class WSIViewerInteractions {
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
 	toggleThumbnails: (start: number) => void
+	savePastAction: (action: UndoRedoRecord) => void
+	saveFutureAction: (action: UndoRedoRecord) => void
+	fullAnnotationSave: (
+		vectorLayer: VectorLayer,
+		sessionWSImage: SessionWSImage,
+		matchingClass: WSIClass,
+		aiProjectID: number,
+		tileSelections: TileSelection[],
+		currentIndex: number
+	) => Promise<void>
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -47,6 +61,52 @@ export class WSIViewerInteractions {
 					}
 				}
 			})
+		}
+		this.savePastAction = (action: UndoRedoRecord) => {
+			const state = wsiApp.app.getState()
+			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						pastActionStack: [...settings.pastActionStack, action],
+						changeTrigger: Date.now()
+					}
+				}
+			})
+		}
+		this.saveFutureAction = (action: UndoRedoRecord) => {
+			const state = wsiApp.app.getState()
+			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						futureActionStack: [...settings.futureActionStack, action],
+						changeTrigger: Date.now()
+					}
+				}
+			})
+		}
+
+		this.fullAnnotationSave = async (
+			vectorLayer: VectorLayer,
+			sessionWSImage: SessionWSImage,
+			matchingClass: WSIClass,
+			aiProjectID: number,
+			tileSelections: TileSelection[],
+			currentIndex: number
+		) => {
+			const state = wsiApp.app.getState()
+			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+			// Visual add
+			this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
+
+			const selectedClassId = matchingClass.id
+			// Persist and finalize via helper
+			await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
 		}
 
 		this.zoomInEffectListener = (
@@ -155,11 +215,6 @@ export class WSIViewerInteractions {
 					.getArray()
 					.find(l => l instanceof VectorLayer)!
 
-				if (event.key == 'Backspace') {
-					//Delete
-					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
-				}
-
 				// New Enter key branch: check for prediction uncertainty and save annotation
 				if (event.key === 'Enter') {
 					// Only proceed if this selection has a prediction uncertainty
@@ -188,6 +243,34 @@ export class WSIViewerInteractions {
 
 					return
 				}
+				if (event.key == 'Backspace') {
+					//Delete
+					//Dispatching inverse action for undo, i.e. if we delete a tile we add a function
+					//to be popped of the pastActionStack that would re-add the tile.
+					const action = async () => {
+						await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
+					}
+					await action()
+					const inverseAction = async () => {
+						const matchingClass = sessionWSImage?.classes?.find(
+							c => c.key_shortcut === tileSelections[currentIndex].class
+						)
+						if (!matchingClass) return
+						await this.fullAnnotationSave(
+							vectorLayer!,
+							sessionWSImage,
+							matchingClass,
+							aiProjectID,
+							tileSelections,
+							currentIndex
+						)
+					}
+					if (settings.pastActionStack.length <= 4) {
+						// Might want to only save inverse if forward is successful
+						this.savePastAction({ action: action, reaction: inverseAction })
+					}
+				}
+
 				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
@@ -199,18 +282,29 @@ export class WSIViewerInteractions {
 							}
 						}
 					})
-					// Resolve class either by key_shortcut
-					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 
-					if (!matchingClass) return
+					const action = async () => {
+						// Resolve class either by key_shortcut
+						const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
+						if (!matchingClass) return
+						await this.fullAnnotationSave(
+							vectorLayer!,
+							sessionWSImage,
+							matchingClass,
+							aiProjectID,
+							tileSelections,
+							currentIndex
+						)
+					}
+					await action()
+					const inverseAction = async () => {
+						await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
+					}
 
-					// Visual add
-					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
-
-					const selectedClassId = matchingClass.id
-
-					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
+					if (settings.pastActionStack.length <= 4) {
+						// Might want to only save inverse if forward is successful
+						this.savePastAction({ action: action, reaction: inverseAction })
+					}
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
