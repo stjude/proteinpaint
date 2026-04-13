@@ -48,6 +48,7 @@ export function select2Terms(tip, app, chartType, detail, callback, detail2) {
 		const xdiv = row
 			.append('div')
 			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.attr('data-testid', chartType == 'facet' ? 'sjpp-facet-column-selector' : null)
 			.style('padding', '3px 6px')
 			.style('border-radius', '6px')
 			.text('+')
@@ -64,6 +65,7 @@ export function select2Terms(tip, app, chartType, detail, callback, detail2) {
 		const ydiv = row
 			.append('div')
 			.attr('class', 'ts_pill sja_filter_tag_btn')
+			.attr('data-testid', chartType == 'facet' ? 'sjpp-facet-row-selector' : null)
 			.style('padding', '3px 6px')
 			.style('border-radius', '6px')
 			.text('+')
@@ -75,6 +77,7 @@ export function select2Terms(tip, app, chartType, detail, callback, detail2) {
 	const row = d0.append('div')
 	const submitBtn = row
 		.append('button')
+		.attr('data-testid', chartType == 'facet' ? 'sjpp-facet-submit' : null)
 		.text('Submit')
 		.property('disabled', true)
 		.on('click', () => {

@@ -17,11 +17,11 @@ export class RunChart2View {
 		this.settings = settings
 		this.config = config
 		this.runChart2 = runChart2
-		const svg = holder.append('svg').attr('data-testId', 'sjpp-runChart2-svg')
+		const svg = holder.append('svg').attr('data-testid', 'sjpp-runChart2-svg')
 		this.chartDom = {
 			svg,
-			xAxis: svg.append('g').attr('data-testId', 'sjpp-runChart2-xAxis'),
-			yAxis: svg.append('g').attr('data-testId', 'sjpp-runChart2-yAxis')
+			xAxis: svg.append('g').attr('data-testid', 'sjpp-runChart2-xAxis'),
+			yAxis: svg.append('g').attr('data-testid', 'sjpp-runChart2-yAxis')
 		}
 
 		this.render()
@@ -32,8 +32,8 @@ export class RunChart2View {
 
 		this.chartDom.svg.selectAll('*').remove()
 
-		this.chartDom.xAxis = this.chartDom.svg.append('g').attr('data-testId', 'sjpp-runChart2-xAxis')
-		this.chartDom.yAxis = this.chartDom.svg.append('g').attr('data-testId', 'sjpp-runChart2-yAxis')
+		this.chartDom.xAxis = this.chartDom.svg.append('g').attr('data-testid', 'sjpp-runChart2-xAxis')
+		this.chartDom.yAxis = this.chartDom.svg.append('g').attr('data-testid', 'sjpp-runChart2-yAxis')
 
 		this.chartDom.svg.transition().attr('width', plotDims.svg.width).attr('height', plotDims.svg.height)
 
@@ -42,7 +42,7 @@ export class RunChart2View {
 
 		const seriesGroup = this.chartDom.svg
 			.append('g')
-			.attr('data-testId', 'sjpp-runChart2-seriesGroup')
+			.attr('data-testid', 'sjpp-runChart2-seriesGroup')
 			.attr('transform', `translate(${plotDims.xAxis.x}, ${plotDims.yAxis.y})`)
 
 		const seriesList = this.viewData.series || []
@@ -67,7 +67,7 @@ export class RunChart2View {
 		const xAxisLabelY = plotDims.xAxis.y + (plotDims.xAxis.labelOffset ?? 50)
 		this.chartDom.svg
 			.append('text')
-			.attr('data-testId', 'sjpp-runChart2-xAxisLabel')
+			.attr('data-testid', 'sjpp-runChart2-xAxisLabel')
 			.attr('transform', `translate(${plotDims.xAxis.x + this.settings.svgw / 2}, ${xAxisLabelY})`)
 			.attr('text-anchor', 'middle')
 			.style('font-size', '0.9em')
@@ -83,7 +83,7 @@ export class RunChart2View {
 					periodN > 0 ? `${String(firstSeriesId)}, n=${periodN.toLocaleString()}` : String(firstSeriesId)
 				this.chartDom.svg
 					.append('text')
-					.attr('data-testId', 'sjpp-runChart2-xAxisSeriesIds')
+					.attr('data-testid', 'sjpp-runChart2-xAxisSeriesIds')
 					.attr('transform', `translate(${plotDims.xAxis.x + this.settings.svgw / 2}, ${xAxisLabelY + 20})`)
 					.attr('text-anchor', 'middle')
 					.style('font-size', '0.9em')
@@ -94,7 +94,7 @@ export class RunChart2View {
 		const yAxisLabelX = plotDims.yAxis.labelX ?? 55
 		this.chartDom.svg
 			.append('text')
-			.attr('data-testId', 'sjpp-runChart2-yAxisLabel')
+			.attr('data-testid', 'sjpp-runChart2-yAxisLabel')
 			.attr('transform', `translate(${yAxisLabelX}, ${plotDims.yAxis.y + this.settings.svgh / 2}) rotate(-90)`)
 			.attr('text-anchor', 'middle')
 			.style('font-size', '0.9em')

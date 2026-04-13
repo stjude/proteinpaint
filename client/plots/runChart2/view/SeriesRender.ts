@@ -73,7 +73,7 @@ export class SeriesRender {
 		const opacity = this.settings.opacity ?? 0.6
 		const seriesG = this.seriesGroup
 			.append('g')
-			.attr('data-testId', 'sjpp-runChart2-series')
+			.attr('data-testid', 'sjpp-runChart2-series')
 			.attr('data-series-id', this.series.seriesId ?? '')
 
 		// Median line and text FIRST (background layer)
@@ -85,7 +85,7 @@ export class SeriesRender {
 			const xEnd = this.getCoordinates(sortedPoints[sortedPoints.length - 1]).x
 
 			// Create background group for median line and text
-			const medianG = seriesG.append('g').attr('data-testId', 'sjpp-runChart2-median-bg')
+			const medianG = seriesG.append('g').attr('data-testid', 'sjpp-runChart2-median-bg')
 
 			// Draw median horizontal line
 			medianG
