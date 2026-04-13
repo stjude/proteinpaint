@@ -89,11 +89,11 @@ tape('Render TermdbTest runChart2 plot with data', async function (test) {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 		test.ok(!svg.empty(), 'should have SVG in chartHolder')
 
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 		const circles = seriesGroup.selectAll('circle')
 		test.ok(circles.size() > 0, `should render circles. Rendered ${circles.size()}.`)
 	} catch (e) {
@@ -154,20 +154,20 @@ tape('Frequency mode (no ytw) renders with mocked frequency data', async functio
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 		test.ok(!svg.empty(), 'should have SVG in chartHolder')
 
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 		const circles = seriesGroup.selectAll('circle')
 		test.ok(circles.size() > 0, `should render data points. Rendered ${circles.size()}.`)
 
-		const errorEl = chartHolder.select('[data-testId="sjpp-runChart2-error"]')
+		const errorEl = chartHolder.select('[data-testid="sjpp-runChart2-error"]')
 		const errorText = !errorEl.empty() ? errorEl.text() : ''
 		test.ok(!errorText, 'should not show error message')
 
 		test.ok(
-			seriesGroup.selectAll('[data-testId="sjpp-runChart2-series"]').size() >= 1,
+			seriesGroup.selectAll('[data-testid="sjpp-runChart2-series"]').size() >= 1,
 			'should have at least one series group'
 		)
 	} catch (e) {
@@ -217,11 +217,11 @@ tape('Frequency mode shows FREQUENCY CHART header', async function (test) {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		await waitForElement('svg', chartHolder, 5000)
 
 		// Header is rendered in holder when app provides opts.header
-		const header = holder.select('[data-testId="sjpp-runChart2-header"]')
+		const header = holder.select('[data-testid="sjpp-runChart2-header"]')
 		test.ok(!header.empty(), 'should have header element')
 		test.equal(header.text().trim(), 'FREQUENCY CHART', 'header should say FREQUENCY CHART when no ytw')
 	} catch (e) {
@@ -280,10 +280,10 @@ tape('Frequency mode with showCumulativeFrequency shows Cumulative count y-axis 
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
-		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
+		const yAxisLabel = svg.select('[data-testid="sjpp-runChart2-yAxisLabel"]')
 		test.ok(!yAxisLabel.empty(), 'should have y-axis label')
 		test.equal(
 			yAxisLabel.text(),
@@ -346,10 +346,10 @@ tape('Frequency mode without showCumulativeFrequency shows Count y-axis label', 
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
-		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
+		const yAxisLabel = svg.select('[data-testid="sjpp-runChart2-yAxisLabel"]')
 		test.ok(!yAxisLabel.empty(), 'should have y-axis label')
 		test.equal(yAxisLabel.text(), 'Count', 'y-axis label should be Count when showCumulativeFrequency is false')
 	} catch (e) {
@@ -430,8 +430,8 @@ tape('Frequency mode request includes showCumulativeFrequency when enabled', asy
 	})
 
 	try {
-		await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
-		await waitForElement('svg', holder.select('[data-testId="sjpp-runChart2-chartHolder"]'), 5000)
+		await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
+		await waitForElement('svg', holder.select('[data-testid="sjpp-runChart2-chartHolder"]'), 5000)
 
 		test.ok(lastRunChartBody != null, 'runChart should have been called')
 		test.equal(
@@ -468,9 +468,9 @@ tape('runChart2Period (period) renders series and data points', async test => {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 
 		const paths = seriesGroup.selectAll('path')
 		test.ok(paths.size() >= 1, `should render at least one series path. Rendered ${paths.size()}.`)
@@ -478,7 +478,7 @@ tape('runChart2Period (period) renders series and data points', async test => {
 		const circles = seriesGroup.selectAll('circle')
 		test.ok(circles.size() >= 1, `should render at least one circle (data point). Rendered ${circles.size()}.`)
 
-		const errorEl = chartHolder.select('[data-testId="sjpp-runChart2-error"]')
+		const errorEl = chartHolder.select('[data-testid="sjpp-runChart2-error"]')
 		const errorText = !errorEl.empty() ? errorEl.text() : ''
 		test.ok(!errorText, 'should not show error message')
 	} catch (e) {
@@ -509,13 +509,13 @@ tape('runChart2Period has x-axis and y-axis groups', async test => {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
-		const xAxis = svg.select('[data-testId="sjpp-runChart2-xAxis"]')
+		const xAxis = svg.select('[data-testid="sjpp-runChart2-xAxis"]')
 		test.ok(!xAxis.empty(), 'should have x-axis group')
 
-		const yAxis = svg.select('[data-testId="sjpp-runChart2-yAxis"]')
+		const yAxis = svg.select('[data-testid="sjpp-runChart2-yAxis"]')
 		test.ok(!yAxis.empty(), 'should have y-axis group')
 	} catch (e) {
 		console.error('Test error:', e)
@@ -545,13 +545,13 @@ tape('runChart2Period has axis labels', async test => {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
-		const xAxisLabel = svg.select('[data-testId="sjpp-runChart2-xAxisLabel"]')
+		const xAxisLabel = svg.select('[data-testid="sjpp-runChart2-xAxisLabel"]')
 		test.ok(!xAxisLabel.empty(), 'should have x-axis label')
 
-		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
+		const yAxisLabel = svg.select('[data-testid="sjpp-runChart2-yAxisLabel"]')
 		test.ok(!yAxisLabel.empty(), 'should have y-axis label')
 	} catch (e) {
 		console.error('Test error:', e)
@@ -614,11 +614,11 @@ tape('runChart2Period renders with mocked discrete data', async test => {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 
-		const seriesGs = seriesGroup.selectAll('[data-testId="sjpp-runChart2-series"]')
+		const seriesGs = seriesGroup.selectAll('[data-testid="sjpp-runChart2-series"]')
 		test.equal(seriesGs.size(), 2, 'should render two series groups')
 
 		const series2020 = seriesGroup.select('[data-series-id="2020"]')
@@ -632,7 +632,7 @@ tape('runChart2Period renders with mocked discrete data', async test => {
 
 		// Test rendering order: median background group should come first
 		const series2020Group = seriesGroup.select('[data-series-id="2020"]')
-		const medianBgGroup = series2020Group.select('[data-testId="sjpp-runChart2-median-bg"]')
+		const medianBgGroup = series2020Group.select('[data-testid="sjpp-runChart2-median-bg"]')
 		test.ok(!medianBgGroup.empty(), 'should render median background group for layering')
 
 		// Verify median text has pointer-events none (non-interactive)
@@ -669,7 +669,7 @@ tape('runChart2Period chart SVG is valid for download', async test => {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 		test.ok(!svg.empty(), 'should have SVG for download')
 
@@ -704,7 +704,7 @@ tape('RunChart2 control panel initializes and renders', async test => {
 
 	try {
 		// Wait for chart to render
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
 		// Check that controls section is present in DOM (no specific testId, just check structure)
@@ -742,7 +742,7 @@ tape('RunChart2 chart images can be extracted for download', async test => {
 
 	try {
 		// Wait for chart to render
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 		test.ok(!svg.empty(), 'should have SVG for download')
 
@@ -777,9 +777,9 @@ tape('RunChart2Period should render median lines for each series', async test =>
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 
 		// Check for median lines (horizontal lines in series)
 		const medianLines = seriesGroup.selectAll('line')
@@ -822,9 +822,9 @@ tape('RunChart2 Y-axis baseline should be 0 for positive-only data', async test 
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
-		const yAxis = await waitForElement('[data-testId="sjpp-runChart2-yAxis"]', svg, 5000)
+		const yAxis = await waitForElement('[data-testid="sjpp-runChart2-yAxis"]', svg, 5000)
 
 		// Get Y-axis tick labels
 		const ticks = yAxis.selectAll('.tick text')
@@ -866,9 +866,9 @@ tape('RunChart2Period should render series with different colors', async test =>
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 
 		const paths = seriesGroup.selectAll('path')
 		test.ok(paths.size() >= 1, `should have series paths. Found ${paths.size()}.`)
@@ -912,24 +912,24 @@ tape('RunChart2 axis labels and tick marks should render correctly', async test 
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
 		// Check X-axis ticks
-		const xAxis = await waitForElement('[data-testId="sjpp-runChart2-xAxis"]', svg, 5000)
+		const xAxis = await waitForElement('[data-testid="sjpp-runChart2-xAxis"]', svg, 5000)
 		const xTicks = xAxis.selectAll('.tick')
 		test.ok(xTicks.size() > 0, `should have X-axis tick marks. Found ${xTicks.size()}.`)
 
 		// Check Y-axis ticks
-		const yAxis = await waitForElement('[data-testId="sjpp-runChart2-yAxis"]', svg, 5000)
+		const yAxis = await waitForElement('[data-testid="sjpp-runChart2-yAxis"]', svg, 5000)
 		const yTicks = yAxis.selectAll('.tick')
 		test.ok(yTicks.size() > 0, `should have Y-axis tick marks. Found ${yTicks.size()}.`)
 
 		// Check axis labels
-		const xAxisLabel = svg.select('[data-testId="sjpp-runChart2-xAxisLabel"]')
+		const xAxisLabel = svg.select('[data-testid="sjpp-runChart2-xAxisLabel"]')
 		test.ok(!xAxisLabel.empty(), 'should have X-axis label')
 
-		const yAxisLabel = svg.select('[data-testId="sjpp-runChart2-yAxisLabel"]')
+		const yAxisLabel = svg.select('[data-testid="sjpp-runChart2-yAxisLabel"]')
 		test.ok(!yAxisLabel.empty(), 'should have Y-axis label')
 	} catch (e) {
 		console.error('Test error:', e)
@@ -965,7 +965,7 @@ tape('RunChart2 with count aggregation should render correctly', async test => {
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		test.ok(chartHolder, 'should render with count aggregation')
 
 		const svg = await waitForElement('svg', chartHolder, 5000)
@@ -1000,9 +1000,9 @@ tape('RunChart2 with discrete X-axis should partition data into series', async t
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
-		const seriesGroup = await waitForElement('[data-testId="sjpp-runChart2-seriesGroup"]', svg, 5000)
+		const seriesGroup = await waitForElement('[data-testid="sjpp-runChart2-seriesGroup"]', svg, 5000)
 
 		// Discrete mode should create multiple series (one per discrete bin/period)
 		const paths = seriesGroup.selectAll('path')
@@ -1046,7 +1046,7 @@ tape('RunChart2 with continuous X-axis should render single series', async test 
 	})
 
 	try {
-		const chartHolder = await waitForElement('[data-testId="sjpp-runChart2-chartHolder"]', holder, 5000)
+		const chartHolder = await waitForElement('[data-testid="sjpp-runChart2-chartHolder"]', holder, 5000)
 		const svg = await waitForElement('svg', chartHolder, 5000)
 
 		// Continuous mode should have a single series with all data points
@@ -1054,7 +1054,7 @@ tape('RunChart2 with continuous X-axis should render single series', async test 
 		test.ok(circles.size() > 0, `continuous mode should render data points. Found ${circles.size()}.`)
 
 		// Verify it's a single series (no partitioning)
-		const paths = svg.selectAll('[data-testId="sjpp-runChart2-seriesGroup"] path')
+		const paths = svg.selectAll('[data-testid="sjpp-runChart2-seriesGroup"] path')
 		test.ok(
 			paths.size() === 1 || paths.size() === 0,
 			`continuous mode should have single series. Found ${paths.size()} paths.`
