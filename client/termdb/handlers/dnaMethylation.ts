@@ -1,5 +1,6 @@
 import { Menu, addGeneSearchbox, sayerror } from '#dom'
 import { DNA_METHYLATION } from '#shared/terms.js'
+import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
 // TODO: currently, when inputting a single position (e.g. chr17:7661778 or chr17:7661778-7661778), the output is a region 400bp long. Need to support single position input.
@@ -93,9 +94,7 @@ export class SearchHandler {
 	makeTerm(opts) {
 		const { chr, start, stop } = opts
 		if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
-		/** Leaving unit logic for now. Ideally should use getDNAMethUnit in tw/handler/dnaMethylation.
-		 * Will wait till implementation.*/
-		const unit = this.app.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
+		const unit = getDNAMethUnit('region', this.app.vocabApi)
 
 		const term = {
 			chr,

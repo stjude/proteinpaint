@@ -246,10 +246,8 @@ export class VolcanoInteractions {
 	 * Creates a methylation term using the promoter's chr/start/stop coordinates.
 	 * The tw handler fills in id and unit from termdbConfig. */
 	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
-		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
-		const featureName = d.gene_name?.split(',')[0]?.trim() || d.promoter_id || ''
-
+		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : undefined
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
@@ -265,10 +263,6 @@ export class VolcanoInteractions {
 						start: d.start,
 						stop: d.stop
 					}
-				},
-				term2: {
-					q: { groups: config.tw.q.groups, type: 'custom-samplelst' },
-					term: config.tw.term
 				}
 			}
 		})
