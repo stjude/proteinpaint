@@ -181,7 +181,7 @@ def write_clustal_with_wrap(msa, handle, wrap = 60, seqtype = "auto"):
         # === Improved Conservation Line ===
         cons = ""
         for i in range(pos, block_end):
-            column = [rec[i] for rec in msa]
+            column = [str(rec.seq)[i] for rec in msa]
 
             # If ANY gap in the column → no conservation symbol
             if "-" in column:
