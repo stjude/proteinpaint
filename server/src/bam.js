@@ -1149,7 +1149,16 @@ async function align_multiple_reads(
 		fasta_sequence,
 		max_read_alignment
 	}
-	console.log(fasta_sequence)
+	if (serverconfig.debugmode) {
+		const fastaSequencePreviewLength = 200
+		const fastaSequencePreview =
+			fasta_sequence.length > fastaSequencePreviewLength
+				? fasta_sequence.slice(0, fastaSequencePreviewLength) + '…'
+				: fasta_sequence
+		console.log(
+			`align_multiple fasta_sequence preview (${fasta_sequence.length} chars): ${fastaSequencePreview}`
+		)
+	}
 	const align_multiple_output = await run_python('pyomega.py', JSON.stringify(align_multiple_input))
 	return await parse_align_output(
 		align_multiple_output,
