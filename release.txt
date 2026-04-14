@@ -1,1 +1,2 @@
-
+Fixes:
+- avoid having a gene exp cluster width that is too small, by preventing the use of colwSpaced with s.colspace=0

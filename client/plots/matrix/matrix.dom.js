@@ -15,6 +15,7 @@ export function setMatrixDom(opts) {
 	const warningDiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 	const svg = holder
 		.append('svg')
+		.attr('data-testid', 'sjpp-matrix-svg')
 		.style('margin', '20px')
 		.style('overflow', 'visible')
 		.on('mousemove.label', this.svgMousemove)

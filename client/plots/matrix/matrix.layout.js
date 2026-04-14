@@ -6,6 +6,8 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/
 import { colorDelta, getInterpolatedDomainRange, removeInterpolatedOutliers, removeOutliers } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 
+const MINCOLWSPACED = 7
+
 export function setAutoDimensions(xOffset) {
 	const m = this.state.config.settings.matrix
 	if (!this.autoDimensions) this.autoDimensions = new Set()
@@ -43,17 +45,19 @@ export function setAutoDimensions(xOffset) {
 		const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
 		const tentativeGaps = this.sampleOrder.length * s.colspace + totalColgspace
 		const spacedColw = (this.availContentWidth - tentativeGaps) / this.sampleOrder.length
-		// tentativeColw is the colw if the colspace is shown between columns
-		const tentativeColw = Math.max(s.colwMin, Math.min(spacedColw, s.colwMax))
-
-		// noSpacedColw is the colw if the colspace is not shown between columns
+		// colwSpaced is the colw if the colspace is shown between columns, but note that
+		// its value does not include the colspace. It also requires MINCOLWSPACED column width
+		// for the colspace to not be too visually overwhelming.
+		const colwSpaced = Math.max(MINCOLWSPACED, Math.min(spacedColw, s.colwMax))
+		// noSpacedColw is the colw if the colspace is not shown between columns, without taking into account colwMin and colwMax
 		const noSpacedColw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
+		// colwNoSpace is the colw if the colspace is not shown between columns, after taking into account colwMin and colwMax
 		const colwNoSpace = Math.max(s.colwMin, Math.min(noSpacedColw, s.colwMax))
 
-		// detect if using colspace will cause the tentative computed widths to be exceeded
-		// to determine whether to use colw + colspace or colwNoSpace
+		// detect if using colwSpaced + colspace + colgspace will cause the availContentWidth to be exceeded,
+		// to determine whether to use colwSpaced or colwNoSpace
 		this.computedSettings.colw =
-			tentativeColw * this.sampleOrder.length + tentativeGaps <= this.availContentWidth ? tentativeColw : colwNoSpace
+			colwSpaced * this.sampleOrder.length + tentativeGaps <= this.availContentWidth ? colwSpaced : colwNoSpace
 
 		// IMPORTANT: compute zoomMin and zoomMax here before computing settings.colw downstream, to avoid feedback loop
 		this.computedSettings.zoomMin = s.colwMin / this.computedSettings.colw
@@ -66,12 +70,12 @@ export function setAutoDimensions(xOffset) {
 		this.computedSettings.zoomMax = s.colwMax / m.colw
 	}
 
-	// when cell has very small width, do not show colspace
+	// when cells have very small width, do not show colspace
 	// IMPORTANT: compute zoomMin and zoomMax before using s.zoomLevel for any computed settings
-	this.computedSettings.colspace = this.computedSettings.colw * s.zoomLevel < 7 ? 0 : s.colspace
+	this.computedSettings.colspace = this.computedSettings.colw * s.zoomLevel < MINCOLWSPACED ? 0 : s.colspace
 
 	const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
-	const availHeight = screen.availHeight - hch
+	const availHeight = s.availContentHeight || screen.availHeight - hch
 	this.computedSettings.clusterRowh = Math.min(
 		s.rowhMax,
 		Math.max(s.rowhMin, Math.floor(availHeight / this.numClusterTerms))
