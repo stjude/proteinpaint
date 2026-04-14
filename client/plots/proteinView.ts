@@ -8,8 +8,8 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { shapeSelector, shapesArray } from '../dom/shapes.js'
-import { NumericModes, TermTypes } from '#shared/terms.js'
-import { toTvslstFilter } from './proteomeAbundance.js'
+import { /* NumericModes, */ TermTypes } from '#shared/terms.js'
+// import { toTvslstFilter } from './proteomeAbundance.js'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
 import { roundValue } from '#shared/roundValue.js'
@@ -411,7 +411,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.on('mouseout', () => {
 			self.dom.tip.hide()
 		})
-		.on('click', (_event: any, d: any) => launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier))
+	// disable launching violin plot on click for now since we don't have filters and overlay terms on dataset file defined to make it work meaningfully
+	// .on('click', (_event: any, d: any) => launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier))
 
 	const legend = plotAndLegend
 		.append('div')
@@ -820,6 +821,7 @@ function renderFCSummary(holder: any, data: any, self: ProteinView) {
 }
 */
 
+/*
 function launchViolinPlot(self: ProteinView, assayName: string, cohortName: string, isoForm: string) {
 	const selectedProtein = self.state.config?.tw?.term
 	if (!selectedProtein) throw new Error('proteinView: selected protein term is missing')
@@ -849,7 +851,7 @@ function launchViolinPlot(self: ProteinView, assayName: string, cohortName: stri
 
 	self.app.dispatch(action)
 }
-
+*/
 async function renderPTMLollipop(holder: any, data: any, self: ProteinView) {
 	if (!data?.cohorts?.length) return
 
