@@ -1,1 +1,2 @@
-
+Fixes:
+- Regenerated termdbtest file to support differential DNA meth in termdbtest. Now using getDNAMethUnit. Fixed launchViolin to allow launching violin from the promoter volcano
