@@ -15,6 +15,7 @@ import { defaultUiLabels } from '#plots/PlotBase.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	const controlLabels = structuredClone(defaultUiLabels)
+	const devicePixelRatio = opts.devicePixelRatio || window.devicePixelRatio
 	const config = {
 		// data configuration
 		termgroups: [],
@@ -85,7 +86,7 @@ export async function getPlotConfig(opts = {}, app) {
 				outlineStroke: '#ccc',
 				beamStroke: '#f00',
 				colw: 0,
-				colwMin: 0.1 / window.devicePixelRatio,
+				colwMin: 0.1 / devicePixelRatio,
 				colwMax: 16,
 				colspace: 1,
 				colgspace: 8,
@@ -128,7 +129,7 @@ export async function getPlotConfig(opts = {}, app) {
 				// renderedWMax should not be exposed as a user-input
 				// 60000 pixels is based on laptop and external monitor tests,
 				// when a canvas dataURL image in a zoomed-in matrix svg stops rendering
-				imgWMax: 60000 / window.devicePixelRatio,
+				imgWMax: 60000 / devicePixelRatio,
 				scrollHeight: 12,
 				controlLabels,
 				cnvUnit: 'log2ratio',
