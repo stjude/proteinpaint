@@ -50,6 +50,7 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 			for (const o of data.dt2total) {
 				holder
 					.append('div')
+					.attr('data-testid', 'sjpp-disco-maxReached-' + dt2label[o.dt])
 					.style('margin', '20px 20px 0px 40px')
 					.text(`(Displaying ${data.mlst.filter(i => i.dt == o.dt).length} out of total ${o.total} ${dt2label[o.dt]})`)
 			}
