@@ -45,8 +45,7 @@ class Volcano extends PlotBase implements RxComponent {
 				.style('opacity', 0.75)
 				.style('padding', '20px')
 				.text('Loading...') as any,
-			hoverTip: new Menu({ padding: '' }),
-			clickTip: new Menu({ padding: '' }),
+			tip: new Menu({ padding: '' }),
 			actionsTip: new Menu({ padding: '' })
 		}
 	}

@@ -45,17 +45,14 @@ export class DataPointMouseEvents {
 
 		circle.on('mouseover', () => {
 			circle.attr('fill-opacity', 0.9)
-
-			hoverTip.clear().showunder(circle.node())
-			const table = table2col({ holder: hoverTip.d.append('table') })
+			tip.clear().showunder(circle.node())
+			const table = table2col({ holder: tip.d.append('table') })
 
 			this.addTooltipRows(d, table)
 		})
 
-		let menuOpen = false
-
 		circle.on('mouseout', () => {
-			hoverTip.hide()
+			tip.hide()
 			if (d.highlighted) return
 			circle.attr('fill-opacity', 0)
 		})
@@ -64,8 +61,7 @@ export class DataPointMouseEvents {
 		if (visibleMenuOpts.length === 0) return
 
 		circle.on('click', () => {
-			hoverTip.hide()
-			clickTip.onHide = () => {
+			tip.onHide = () => {
 				if (!d.highlighted) circle.attr('fill-opacity', 0)
 			}
 			tip.clear().showunder(circle.node())
