@@ -33,7 +33,8 @@ export class WSIViewerInteractions {
 		aiProjectID: number,
 		shortcuts?: string[]
 	) => void
-
+	pastActionStack: Array<UndoRedoRecord>
+	futureActionStack: Array<UndoRedoRecord>
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
 	toggleThumbnails: (start: number) => void
@@ -47,6 +48,7 @@ export class WSIViewerInteractions {
 		tileSelections: TileSelection[],
 		currentIndex: number
 	) => Promise<void>
+	performRedo: () => void
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -62,35 +64,43 @@ export class WSIViewerInteractions {
 				}
 			})
 		}
+		this.pastActionStack = []
+		this.futureActionStack = []
 		this.savePastAction = (action: UndoRedoRecord) => {
-			const state = wsiApp.app.getState()
-			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: wsiApp.id,
-				config: {
-					settings: {
-						pastActionStack: [...settings.pastActionStack, action],
-						changeTrigger: Date.now()
-					}
-				}
-			})
+			if (this.pastActionStack.length < 5) {
+				this.pastActionStack = [...this.pastActionStack, action]
+			} else {
+				// If pastActionStack is too long, remove the oldest action before adding a new one
+				// flexible on amount of actions we save
+				this.pastActionStack = [...this.pastActionStack.slice(1), action]
+			}
 		}
 		this.saveFutureAction = (action: UndoRedoRecord) => {
-			const state = wsiApp.app.getState()
-			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: wsiApp.id,
-				config: {
-					settings: {
-						futureActionStack: [...settings.futureActionStack, action],
-						changeTrigger: Date.now()
-					}
-				}
-			})
+			if (this.futureActionStack.length < 5) {
+				this.futureActionStack = [...this.futureActionStack, action]
+			} else {
+				// If futureActionStack is too long, remove the oldest action before adding a new one
+				// flexible on amount of actions we save
+				this.futureActionStack = [...this.futureActionStack.slice(1), action]
+			}
 		}
+		this.performUndo = async () => {
+			console.log(wsiApp, wsiApp.viewModel)
+			const lastAction = this.pastActionStack.pop()
+			if (lastAction) {
+				await lastAction.reaction()
 
+				this.saveFutureAction({ action: lastAction.reaction, reaction: lastAction.action })
+			}
+		}
+		this.performRedo = async () => {
+			console.log('Performing redo. Future stack length:', this.futureActionStack.length)
+			const lastUndoneAction = this.futureActionStack.pop()
+			if (lastUndoneAction) {
+				await lastUndoneAction.action()
+				this.savePastAction({ action: lastUndoneAction.reaction, reaction: lastUndoneAction.action })
+			}
+		}
 		this.fullAnnotationSave = async (
 			vectorLayer: VectorLayer,
 			sessionWSImage: SessionWSImage,
@@ -243,13 +253,29 @@ export class WSIViewerInteractions {
 
 					return
 				}
+				if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+					// call your undo handler here
+					await this.performUndo()
+					return
+				}
 				if (event.key == 'Backspace') {
 					//Delete
 					//Dispatching inverse action for undo, i.e. if we delete a tile we add a function
 					//to be popped of the pastActionStack that would re-add the tile.
-					const action = async () => {
-						await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
-					}
+
+					//shoould I create structued clones of these params? I think I can just pulls state at the time of undo and just keep track of the
+					//TileSelection or even explicitly the class and zoomCoords
+					const action = async function (this, _wsiApp, _map, _sessionWSImage, currentSelection) {
+						const vectorLayer = _map
+							.getLayers()
+							.getArray()
+							.find(l => l instanceof VectorLayer)!
+						const currentIndex = tileSelections.findIndex(tileSelection =>
+							tileSelection.zoomCoordinates.every((coord, idx) => coord === currentSelection.zoomCoordinates[idx])
+						)
+						await this.deleteAnnotation(_wsiApp, vectorLayer!, _sessionWSImage, currentIndex)
+					}.bind(this, wsiApp, map, sessionWSImage, tileSelections[currentIndex])
+
 					await action()
 					const inverseAction = async () => {
 						const matchingClass = sessionWSImage?.classes?.find(
@@ -265,10 +291,9 @@ export class WSIViewerInteractions {
 							currentIndex
 						)
 					}
-					if (settings.pastActionStack.length <= 4) {
-						// Might want to only save inverse if forward is successful
-						this.savePastAction({ action: action, reaction: inverseAction })
-					}
+
+					// Might want to only save inverse if forward is successful
+					this.savePastAction({ action: action, reaction: inverseAction })
 				}
 
 				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
@@ -301,10 +326,8 @@ export class WSIViewerInteractions {
 						await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
 					}
 
-					if (settings.pastActionStack.length <= 4) {
-						// Might want to only save inverse if forward is successful
-						this.savePastAction({ action: action, reaction: inverseAction })
-					}
+					// Might want to only save inverse if forward is successful
+					this.savePastAction({ action: action, reaction: inverseAction })
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
@@ -333,7 +356,7 @@ export class WSIViewerInteractions {
 			sessionWSImage.sessionsTileSelections = sessionsTileSelection
 
 			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage)
-
+			console.log(tileSelections)
 			// Check if click falls inside an existing annotation
 			const selectedTileSelectionIndex = tileSelections.findIndex(tileSelection => {
 				const [x0, y0] = tileSelection.zoomCoordinates
@@ -458,6 +481,9 @@ export class WSIViewerInteractions {
 				}
 			})
 		}
+	}
+	performUndo() {
+		throw new Error('Method not implemented.')
 	}
 
 	private addAnnotation(

@@ -1,8 +1,6 @@
 import type { TileSelection } from '@sjcrh/proteinpaint-types'
 
 export default interface Settings {
-	futureActionStack: Array<Promise<void>>
-	pastActionStack: Array<Promise<void>>
 	imageWidth: string
 	imageHeight: string
 	displayedImageIndex: number
