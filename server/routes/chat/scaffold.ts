@@ -176,6 +176,12 @@ Always return ONLY a JSON object in this exact format:
     "tw2": "age",
     "chartType": "sampleScatter"
   }
+-Query: "Show ABCD expression for XXX and YYY subtypes"
+  Output:
+  {
+    "tw1": "ABCD expression",
+    "filter": ["XXX", "YYY"]
+  }
 - Query: "Show me the expression of EGFR."
   Output:
   {
