@@ -6,6 +6,8 @@ import { sleep } from '#rx'
 /*
 arg{}
 ---All are optional---
+	testid
+		- overrides the default testid
 	parent_menu
 		- define if menu is launched within another menu
 	padding: STR

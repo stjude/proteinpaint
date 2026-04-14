@@ -8,6 +8,7 @@ used by survival plot and cuminc plot
 input parameter:
 {
 	title: 'str' value specified by user,
+	titleTestid: overrides default testid
     holder: holder div,
     plot: plot type ('survial' or 'cuminc'),
     tests: [] chart tests,
