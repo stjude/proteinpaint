@@ -204,19 +204,6 @@ if (UC.BINPATH) {
 		}
 	}
 	{
-		const a = path.join(UC.BINPATH, 'clustalo')
-		trydownload(
-			a,
-			UC.MAC
-				? 'https://proteinpaint.stjude.org/ppSupport/static/pp-support/mac/clustalo'
-				: 'https://proteinpaint.stjude.org/ppSupport/static/pp-support/linux/clustalo'
-		)
-		if (!validateurlmode) {
-			exec('chmod +x ' + a)
-			SC.clustalo = a
-		}
-	}
-	{
 		const a = path.join(UC.BINPATH, 'straw')
 		trydownload(
 			a,

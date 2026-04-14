@@ -15,8 +15,7 @@ import { match_complexvariant_rust } from './bam.kmer.indel.js'
 import { basecolor, bplen } from '#shared/common.js'
 import { gdcCheckPermission } from './bam.gdc.js'
 import { fileSize } from '#shared/fileSize.js'
-
-const clustalo_read_alignment = serverconfig.clustalo
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 /*
 TODO
@@ -1146,9 +1145,14 @@ async function align_multiple_reads(
 		}
 		i += 1
 	}
-	return await run_clustalo(
+	const align_multiple_input = {
 		fasta_sequence,
-		max_read_alignment,
+		max_read_alignment
+	}
+	console.log(fasta_sequence)
+	const align_multiple_output = await run_python('pyomega.py', JSON.stringify(align_multiple_input))
+	return await parse_align_output(
+		align_multiple_output,
 		sequence_reads.length,
 		qual_sequence,
 		leftflankseq_length,
@@ -1158,9 +1162,8 @@ async function align_multiple_reads(
 	) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
-function run_clustalo(
-	fasta_sequence,
-	max_read_alignment,
+async function parse_align_output(
+	align_multiple_output,
 	num_reads,
 	qual_sequence,
 	leftflankseq_length,
@@ -1168,138 +1171,112 @@ function run_clustalo(
 	partstack_stop,
 	reference_sequence
 ) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(clustalo_read_alignment, [
-			'-i',
-			'-', // Instructs ClustalO to accept input from stdin
-			'-t',
-			'DNA', // Input type - DNA
-			'--outfmt=clu', // Output format ClustalW
-			'--wrap=5000', // Allows upto 5000 nucleotides to be shown in a single row
-			'--maxnumseq=' + (max_read_alignment + 1), // Maximum number of sequences to analyze set to max_read_alignment
-			'--maxseqlen=1000' // Maximum length of each sequence = 1000
-		])
-		const stdout = []
-		const stderr = []
-		Readable.from(fasta_sequence).pipe(ps.stdin)
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			console.log('stderr (clustalo):', stderr)
-			reject(err)
-		})
-		ps.on('close', code => {
-			//console.log('RawAlignment:', stdout.toString())
-			let read_count = 0
-			const ref_nucleotides = []
-			const clustalo_output = {
-				final_read_align: [],
-				qual_r: [],
-				qual_g: [],
-				qual_b: []
-			}
-			let gaps_before_variant = 0 // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
-			for (const read of stdout.toString().split('\n')) {
-				if (read.includes('seq      ')) {
-					// Remove "-" before/after the start/end of a sequence
-					let nuc_count = 0 // This variable counts nucleotide positions w.r.t read
-					let aligned_read = ''
-					let global_nuc_count = 0 // This variable counts nucleotide positions w.r.t reference sequence
+	let read_count = 0
+	const ref_nucleotides = []
+	const align_output = {
+		final_read_align: [],
+		qual_r: [],
+		qual_g: [],
+		qual_b: []
+	}
+	let gaps_before_variant = 0 // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
+	for (const read of align_multiple_output.toString().split('\n')) {
+		if (read.startsWith('seq')) {
+			// Remove "-" before/after the start/end of a sequence
+			let nuc_count = 0 // This variable counts nucleotide positions w.r.t read
+			let aligned_read = ''
+			let global_nuc_count = 0 // This variable counts nucleotide positions w.r.t reference sequence
 
-					let read_quality = ''
-					if (read_count != 0 && reference_sequence) {
-						// In case of reference and alternate group
-						// First sequence is reference sequence
-						read_quality = qual_sequence.split('\n')[read_count - 1].split(',')
-					} else if (!reference_sequence) {
-						// In case of none and ambiguous groups
-						read_quality = qual_sequence.split('\n')[read_count].split(',')
-					}
-					let qual_r = ''
-					let qual_g = ''
-					let qual_b = ''
-					for (const nucl of read.replace('seq      ', '')) {
-						if (nucl == ',') continue // Ignoring ,
-						if (nucl != '-') {
-							nuc_count += 1
-							aligned_read += nucl
-							if (read_count == 0 && reference_sequence) {
-								// In case of reference and alternate group
-								// Looking at reference sequence
-								ref_nucleotides.push(nucl)
-							} else {
-								if ((nucl == ref_nucleotides[global_nuc_count] && reference_sequence) || !reference_sequence) {
-									const colors = qual2match(read_quality[nuc_count - 1] / maxqual)
-										.replace('rgb(', '')
-										.replace(')', '')
-										.split(',')
-									qual_r += colors[0] + ','
-									qual_g += colors[1] + ','
-									qual_b += colors[2] + ','
-								} else if (nucl != ref_nucleotides[global_nuc_count] && reference_sequence) {
-									const colors = qual2mismatchbg(read_quality[nuc_count - 1] / maxqual)
-										.replace('rgb(', '')
-										.replace(')', '')
-										.split(',')
-									qual_r += colors[0] + ','
-									qual_g += colors[1] + ','
-									qual_b += colors[2] + ','
-								}
-							}
-						} else {
-							if (
-								nuc_count > 0 &&
-								nuc_count < read.replace(/-/g, '').replace(/,/g, '').replace('seq      ', '').length
-							) {
-								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
-								aligned_read += nucl
-								if (read_count == 0) {
-									// Adding reference nucleotides
-									ref_nucleotides.push(nucl)
-									if (global_nuc_count < leftflankseq_length) {
-										gaps_before_variant += 1 // Calculating gaps in ref sequence before variant region
-									}
-								}
-							} else {
-								aligned_read += ' '
-								if (read_count == 0) {
-									// Adding reference nucleotides
-									ref_nucleotides.push(nucl)
-								}
-							}
-							qual_r += '255,'
-							qual_g += '255,'
-							qual_b += '255,'
-						}
-						global_nuc_count += 1
-					}
-					read_count += 1
-					clustalo_output.gaps_before_variant = gaps_before_variant // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
-					if (reference_sequence) {
-						// In case of reference and alternate group
-						clustalo_output.read_count = read_count - 1 // Total reads aligned, subtracted one so as to exclude reference sequence
-					} else {
-						// In case of none and anbiguous group
-						clustalo_output.read_count = read_count
-					}
-					clustalo_output.qual_r.push(qual_r)
-					clustalo_output.qual_g.push(qual_g)
-					clustalo_output.qual_b.push(qual_b)
-					clustalo_output.final_read_align.push(aligned_read)
-					if (partstack_start != 0 && partstack_stop != 0) {
-						// In partstack mode
-						clustalo_output.partstack_start = partstack_start
-						clustalo_output.partstack_stop = partstack_stop
-					}
-				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
-					// Possible problem in read-alignment
-					console.log(read)
-					reject(read)
-				}
+			let read_quality = ''
+			if (read_count != 0 && reference_sequence) {
+				// In case of reference and alternate group
+				// First sequence is reference sequence
+				read_quality = qual_sequence.split('\n')[read_count - 1].split(',')
+			} else if (!reference_sequence) {
+				// In case of none and ambiguous groups
+				read_quality = qual_sequence.split('\n')[read_count].split(',')
 			}
-			resolve(clustalo_output)
-		})
-	})
+			let qual_r = ''
+			let qual_g = ''
+			let qual_b = ''
+			const match = read.match(/^(\S+)\s+(.+)$/)
+			for (const nucl of match[2]) {
+				if (nucl == ',') continue // Ignoring ,
+				if (nucl != '-') {
+					nuc_count += 1
+					aligned_read += nucl
+					if (read_count == 0 && reference_sequence) {
+						// In case of reference and alternate group
+						// Looking at reference sequence
+						ref_nucleotides.push(nucl)
+					} else {
+						if ((nucl == ref_nucleotides[global_nuc_count] && reference_sequence) || !reference_sequence) {
+							const colors = qual2match(read_quality[nuc_count - 1] / maxqual)
+								.replace('rgb(', '')
+								.replace(')', '')
+								.split(',')
+							qual_r += colors[0] + ','
+							qual_g += colors[1] + ','
+							qual_b += colors[2] + ','
+						} else if (nucl != ref_nucleotides[global_nuc_count] && reference_sequence) {
+							const colors = qual2mismatchbg(read_quality[nuc_count - 1] / maxqual)
+								.replace('rgb(', '')
+								.replace(')', '')
+								.split(',')
+							qual_r += colors[0] + ','
+							qual_g += colors[1] + ','
+							qual_b += colors[2] + ','
+						}
+					}
+				} else {
+					if (nuc_count > 0 && nuc_count < match[2].replace(/-/g, '').replace(/,/g, '').length) {
+						// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
+						aligned_read += nucl
+						if (read_count == 0) {
+							// Adding reference nucleotides
+							ref_nucleotides.push(nucl)
+							if (global_nuc_count < leftflankseq_length) {
+								gaps_before_variant += 1 // Calculating gaps in ref sequence before variant region
+							}
+						}
+					} else {
+						aligned_read += ' '
+						if (read_count == 0) {
+							// Adding reference nucleotides
+							ref_nucleotides.push(nucl)
+						}
+					}
+					qual_r += '255,'
+					qual_g += '255,'
+					qual_b += '255,'
+				}
+				global_nuc_count += 1
+			}
+			read_count += 1
+			align_output.gaps_before_variant = gaps_before_variant // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
+			if (reference_sequence) {
+				// In case of reference and alternate group
+				align_output.read_count = read_count - 1 // Total reads aligned, subtracted one so as to exclude reference sequence
+			} else {
+				// In case of none and anbiguous group
+				align_output.read_count = read_count
+			}
+			align_output.qual_r.push(qual_r)
+			align_output.qual_g.push(qual_g)
+			align_output.qual_b.push(qual_b)
+			align_output.final_read_align.push(aligned_read)
+			if (partstack_start != 0 && partstack_stop != 0) {
+				// In partstack mode
+				align_output.partstack_start = partstack_start
+				align_output.partstack_stop = partstack_stop
+			}
+		} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
+			// Possible problem in read-alignment
+			console.log(read)
+			throw new Error(read)
+		}
+	}
+	return align_output
 }
 
 async function query_reads(q) {

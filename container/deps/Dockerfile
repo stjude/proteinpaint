@@ -112,7 +112,6 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
-        wget -O /usr/local/bin/clustalo https://proteinpaint.stjude.org/ppdemo/tools/linux/clustalo && chmod 755 /usr/local/bin/clustalo && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
@@ -124,10 +123,6 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
     #     curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz && \
     #     cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install && \
     #     chmod 755 /usr/local/bin/clustalo; \
-     elif [ "$ARCH" = "aarch64" ]; then \
-        echo "ARCH='$ARCH' is currently not supported: clustalo binary for aarch64 is not available in this image." && \
-        echo "Please provide a suitable clustalo binary or update this Dockerfile to build clustalo for ARCH='$ARCH' before building." && \
-        exit 1; \
     else \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
