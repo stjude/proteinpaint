@@ -1,11 +1,7 @@
-import path from 'path'
 import type { RouteApi } from '#types'
 import { termdbProteomePayload } from '#types/checkers'
-import { filterJoin, getWrappedTvslst } from '#shared/filter.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { get_samples } from '#src/termdb.sql.js'
 import * as utils from '#src/utils.js'
-import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 
 export const api: RouteApi = {
@@ -36,11 +32,16 @@ function init({ genomes }) {
 			const cohorts: any[] = []
 			for (const assayName in ds.queries.proteome.assays) {
 				const assay = ds.queries.proteome.assays[assayName]
-				for (const cohortName in assay.cohorts || {}) {
+				for (const cohort of assay.cohorts) {
 					const details = {
-						assay: assayName,
-						cohort: cohortName,
-						PTMType: assay.PTMType
+						dbfile: ds.queries.proteome.dbfile,
+						assayName,
+						cohortName: cohort.cohortName,
+						cohortControlFilter: cohort.controlFilter,
+						cohortCaseFilter: cohort.caseFilter,
+						PTMType: assay.PTMType,
+						assayColumnIdx: assay.columnIdx,
+						assayColumnValue: assay.columnValue
 					}
 					const tw = {
 						$id: '_',
@@ -50,7 +51,8 @@ function init({ genomes }) {
 							proteomeDetails: details
 						}
 					}
-					const allData = await ds.queries.proteome.get({
+					// request data for each cohort
+					const cohortData = await ds.queries.proteome.get({
 						terms: [tw],
 						proteomeDetails: details,
 						filter: q.filter,
@@ -58,33 +60,18 @@ function init({ genomes }) {
 						for: 'proteinView',
 						__abortSignal: q.__abortSignal
 					})
+					const controlSampleIds = cohortData.controlSampleIds || new Set()
 
-					const filterConfig = assay.cohorts[cohortName]?.ctlFilter
-					const ctlFilter =
-						filterConfig && Array.isArray(filterConfig) && filterConfig.length
-							? getWrappedTvslst(
-									filterConfig.map(tvs => ({ type: 'tvs', tvs })),
-									filterConfig.length > 1 ? 'and' : ''
-							  )
-							: null
-
-					let controlSampleIds = new Set()
-					if (ctlFilter) {
-						const controlFilter = filterJoin([q.filter, ctlFilter].filter(f => !!f))
-						const controlSamples = await get_samples({ filter: controlFilter }, ds)
-						controlSampleIds = new Set(controlSamples.map(i => String(i.id)))
-					}
-
-					for (const cohortData of allData.allEntries || []) {
-						const s2v = cohortData.s2v
+					for (const entry of cohortData.allEntries || []) {
+						const s2v = entry.s2v
 						const stats = getCohortStats(s2v, controlSampleIds)
-						delete cohortData.s2v
-						cohortData.foldChange = stats.foldChange
-						cohortData.pValue = stats.pValue
-						cohortData.testedN = stats.testedN
-						cohortData.controlN = stats.controlN
-						if (assay.mclassOverride) cohortData.mclassOverride = assay.mclassOverride
-						cohorts.push(cohortData)
+						delete entry.s2v
+						entry.foldChange = stats.foldChange
+						entry.pValue = stats.pValue
+						entry.testedN = stats.testedN
+						entry.controlN = stats.controlN
+						if (assay.mclassOverride) entry.mclassOverride = assay.mclassOverride
+						cohorts.push(entry)
 					}
 				}
 			}
@@ -248,216 +235,231 @@ export async function validate_query_proteome(ds) {
 	if (!q.assays) {
 		throw 'queries.proteome.assays is missing'
 	}
+	if (!q.dbfile) {
+		throw 'queries.proteome.dbfile is missing'
+	}
+
+	// Open SQLite database connection
+	try {
+		q.db = utils.connect_db(q.dbfile)
+	} catch (e: any) {
+		throw `Cannot connect to proteome db ${q.dbfile}: ${e.message || e}`
+	}
 
 	for (const assayName in q.assays) {
 		const assay = q.assays[assayName]
+		if (!assay.columnIdx) throw `queries.proteome.assays.${assayName}.columnIdx missing`
+		if (!assay.columnValue) throw `queries.proteome.assays.${assayName}.columnValue missing`
 		if (assay.cohorts) {
-			// assay has multiple cohorts, each with its own file
 			console.log(`Validating assay "${assayName}" with multiple cohorts`)
-			for (const cohortName in assay.cohorts) {
-				const cohort = assay.cohorts[cohortName]
-				if (!cohort.file) {
-					throw `Missing file in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
-				}
-				await validateCohortFile(ds, assayName, cohortName, cohort)
+			for (const cohort of assay.cohorts) {
+				if (!cohort.cohortName) throw `Missing cohortName in queries.proteome.assays.${assayName}.cohorts`
+				if (!cohort.controlFilter)
+					throw `Missing controlFilter in queries.proteome.assays.${assayName}.cohorts.${cohort.cohortName}`
+				if (!cohort.caseFilter)
+					throw `Missing caseFilter in queries.proteome.assays.${assayName}.cohorts.${cohort.cohortName}`
 			}
 		} else {
 			throw `Invalid assay structure for "${assayName}". Must have .cohorts`
 		}
 	}
 
-	q.getCohort = proteomeDetails => {
-		const assay = proteomeDetails?.assay
-		const cohort = proteomeDetails?.cohort
-		if (!assay || !cohort) throw 'proteomeDetails.{assay,cohort} missing'
-		const cohortQuery = q.assays?.[assay]?.cohorts?.[cohort]
-		if (!cohortQuery) throw `queries.proteome.assays.${assay}.cohorts.${cohort} missing for the dataset`
-		return cohortQuery
-	}
-
 	q.find = async arg => {
 		const proteins = arg?.proteins
 		if (!Array.isArray(proteins) || proteins.length == 0) throw 'queries.proteome.find arg.proteins[] missing'
-		if (arg?.proteomeDetails) {
-			const cohortQuery = q.getCohort(arg.proteomeDetails)
-			return findProteinsInCohort(cohortQuery, proteins)
-		}
-		return findProteinsAcrossNonPTMCohorts(q, proteins)
+		return findProteinsInCohort(q.db, proteins)
 	}
 
 	q.get = async param => {
 		if (!param?.terms?.length) throw 'queries.proteome.get param.terms[] missing'
-		if (!param.proteomeDetails?.assay || !param.proteomeDetails?.cohort)
-			throw 'queries.proteome.get param.proteomeDetails.{assay,cohort} missing'
-		const cohortQuery = q.getCohort(param.proteomeDetails)
-		return getProteomeValuesFromCohort(ds, cohortQuery, param)
+		if (!param.proteomeDetails?.assayName || !param.proteomeDetails?.cohortName)
+			throw 'queries.proteome.get param.proteomeDetails.{assayName,cohortName} missing'
+		if (
+			!param.proteomeDetails?.cohortControlFilter ||
+			!param.proteomeDetails?.cohortCaseFilter ||
+			!param.proteomeDetails?.assayColumnIdx ||
+			!param.proteomeDetails?.assayColumnValue
+		)
+			throw 'queries.proteome.get param.proteomeDetails.{cohortControlFilter, cohortCaseFilter, assayColumnIdx, assayColumnValue} missing'
+
+		return await getProteomeValuesFromCohort(ds, param)
 	}
 }
 
-// Helper function to validate cohort files for proteome assays
-async function validateCohortFile(ds, assayName, cohortName, cohort) {
-	if (!cohort.file.startsWith(serverconfig.tpmasterdir)) cohort.file = path.join(serverconfig.tpmasterdir, cohort.file)
-	// validate file exists
-	await utils.validate_txtfile(cohort.file)
-
-	// Read header and extract sample IDs
-	const headerLine = await utils.get_header_txt(cohort.file)
-	const l = headerLine.split('\t')
-
-	cohort.samples = []
-	for (let i = 9; i < l.length; i++) {
-		const sampleName = l[i]
-		const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
-		if (sampleId == undefined) {
-			throw `queries.proteome.assays.${assayName}.cohorts.${cohortName}: unknown sample from header: ${sampleName}`
-		}
-		cohort.samples.push(sampleId)
-	}
+// Map DB column indices to column names
+const columnIdxToName: Record<number, string> = {
+	0: 'organism',
+	1: 'disease',
+	2: 'tissue',
+	3: 'brain_region',
+	4: 'tech1',
+	5: 'tech2',
+	6: 'cohort'
 }
 
-async function findProteinsInCohort(cohort, proteins) {
-	if (!cohort._proteins) {
-		const list: string[] = []
-		await utils.get_lines_txtfile({
-			args: [cohort.file],
-			dir: undefined,
-			callback: line => {
-				const cols = line.split('\t')
-				if (cols[0]?.startsWith('#Unique identifier')) return
-				const identifier = cols[0].trim()
-				const proteinName = cols[4].trim()
-				//protein isoform identifier is gene name: unique identifier
-				list.push(`${proteinName}: ${identifier}`)
-			}
-		})
-		cohort._proteins = list
+function resolveColumnName(idx: number) {
+	const name = columnIdxToName[idx]
+	if (!name) throw `Invalid columnIdx: ${idx}, must be one of ${Object.keys(columnIdxToName).join(',')}`
+	return name
+}
+
+// Build a WHERE clause and params array from a filter array like [{columnIdx:6, columnValue:'AD1'}, {columnIdx:1, columnValue:'Ctl'}]
+function buildFilterClause(filters: { columnIdx: number; columnValue: string }[]) {
+	const conditions: string[] = []
+	const params: string[] = []
+	for (const f of filters) {
+		const colName = resolveColumnName(f.columnIdx)
+		conditions.push(`${colName} = ?`)
+		params.push(f.columnValue)
 	}
+	return { conditions, params }
+}
+
+function findProteinsInCohort(db, proteins) {
 	const matches: string[] = []
 	for (const p of proteins) {
 		if (!p) continue
-		const lowerP = p.toLowerCase()
-		for (const entry of cohort._proteins) {
-			const proteinName = entry.split(':')[0]
-			if (proteinName.toLowerCase().includes(lowerP)) {
-				matches.push(entry)
+		const rows = db
+			.prepare('SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene LIKE ? COLLATE NOCASE')
+			.all(`%${p}%`)
+		for (const row of rows) {
+			if (row.gene.toLowerCase().includes(p.toLowerCase())) {
+				matches.push(`${row.gene}: ${row.identifier}`)
 			}
 		}
 	}
 	return matches
 }
 
-async function findProteinsAcrossNonPTMCohorts(q, proteins) {
-	const unique = new Set()
-	for (const assayName in q.assays || {}) {
-		const assay = q.assays[assayName]
-		if (assay.PTMType) continue // Skip PTM assays when searching a gene on Protein View
-		const cohorts = assay?.cohorts || {}
-		for (const cohortName in cohorts) {
-			const cohort = cohorts[cohortName]
-			const matches = await findProteinsInCohort(cohort, proteins)
-			for (const m of matches) unique.add(m)
-		}
-	}
-	return [...unique]
+function queryDbRows(
+	db,
+	matchColumn: 'gene' | 'identifier',
+	matchValue: string,
+	filters: { columnIdx: number; columnValue: string }[]
+) {
+	console.log(`Querying DB for ${matchColumn}=${matchValue} with filters:`, filters)
+	const { conditions, params } = buildFilterClause(filters)
+	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
+	const sql = `SELECT identifier, protein_accession, modsite, gene, sample, value
+		FROM proteome_abundance
+		WHERE ${allConditions.join(' AND ')}`
+	console.log('Executing SQL:', sql)
+	return db.prepare(sql).all(matchValue, ...params)
 }
 
-async function getProteomeValuesFromCohort(ds, cohort, param) {
-	const limitSamples = await mayLimitSamples(param, cohort.samples, ds)
-	if (limitSamples?.size == 0) {
-		// got 0 sample after filtering, must still return expected structure with no data
-		return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
-	}
+async function getProteomeValuesFromCohort(ds, param) {
+	const db = ds.queries.proteome.db
+	const { assayName, cohortName, PTMType, cohortControlFilter, cohortCaseFilter, assayColumnIdx, assayColumnValue } =
+		param.proteomeDetails
 
-	const bySampleId = {}
-	const samples = cohort.samples || []
-	if (limitSamples) {
-		for (const sid of limitSamples) bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-	} else {
-		for (const sid of samples) bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-	}
+	// Assay-level filter (e.g. tech1='wholeProteome') must be included in every query
+	const assayFilter = [{ columnIdx: assayColumnIdx, columnValue: assayColumnValue }]
 
 	const term2sample2value = new Map()
-	const { PTMType, cohort: cohortName, assay: assayName } = param.proteomeDetails
 	const allEntries: any[] = []
+	const controlSampleIds = new Set<string>()
 
 	for (const tw of param.terms) {
 		if (!tw) continue
 
-		const fullEntry = tw.term.name
-		const identifier = fullEntry.split(':')[1]?.trim()
-		const geneName = fullEntry.split(':')[0]?.trim()
+		const fullGeneName = tw.term.name
+		const identifier = fullGeneName.split(':')[1]?.trim()
+		const geneName = fullGeneName.split(':')[0]?.trim()
 		if (param.for === 'proteinView') {
-			// for protein view, the term name can be either gene name or in format geneName: uniqueIdentifier
 			if (!geneName) throw 'invalid term name for proteome query, gene name missing'
 		} else {
-			// If not for protein view, the term name must be in format geneName: uniqueIdentifier, both are required for proper matching to the cohort file
 			if (!identifier || !geneName)
 				throw 'invalid term name for proteome query, must be in format geneName: uniqueIdentifier'
 		}
 
-		const s2v = {}
-		await utils.get_lines_txtfile({
-			args: [cohort.file],
-			dir: undefined,
-			callback: line => {
-				const l = line.split('\t')
-				if (param.for === 'proteinView') {
-					// For proteinView, getting all rows related to the gene name (5th column), matching is done on gene name.
-					if (l[4]?.trim().toLowerCase() !== geneName.toLowerCase()) return
-				} else if (l[0]?.trim().toLowerCase() !== identifier.toLowerCase()) {
-					// for non proteinView, only get the single row ralted to the unique identifier(1st column), matching is done on unique identifier.
-					return
-				}
-				if (param.for === 'proteinView') {
-					// Only for proteinView, capture metadata and sample values for each matching row.
-					// 1 Unique identifier, 2 ModSites, 3 Protein accession, 5 Gene name
-					const uniqueIdentifier = l[0]?.trim()
-					if (!uniqueIdentifier) throw 'missing unique identifier for PTM row'
+		const matchColumn = param.for === 'proteinView' ? 'gene' : 'identifier'
+		const matchValue = param.for === 'proteinView' ? geneName : identifier
 
-					const rowS2v = {}
-					for (let i = 9; i < l.length; i++) {
-						const sampleId = cohort.samples[i - 9]
-						if (limitSamples && !limitSamples.has(sampleId)) continue
-						if (!l[i]) continue
-						const v = Number(l[i])
-						if (Number.isNaN(v)) throw 'exp value not number'
-						rowS2v[sampleId] = v
-					}
+		// Query case and control samples from DB using assay filter + cohort-specific filters
+		const caseRows = queryDbRows(db, matchColumn, matchValue, [...assayFilter, ...cohortCaseFilter])
+		const controlRows = queryDbRows(db, matchColumn, matchValue, [...assayFilter, ...cohortControlFilter])
 
-					allEntries.push({
-						uniqueIdentifier: uniqueIdentifier,
+		// Identify control sample IDs
+		for (const row of controlRows) {
+			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
+			if (sid !== undefined) controlSampleIds.add(String(sid))
+		}
+
+		// Combine all rows
+		const allRows = [...caseRows, ...controlRows]
+
+		// Collect all sample IDs for mayLimitSamples
+		const allSampleIds: number[] = []
+		for (const row of allRows) {
+			const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
+			if (sid !== undefined) allSampleIds.push(sid)
+		}
+		const uniqueSampleIds = [...new Set(allSampleIds)]
+
+		const limitSamples = await mayLimitSamples(param, uniqueSampleIds, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, must still return expected structure with no data
+			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
+		}
+
+		if (param.for === 'proteinView') {
+			// Group rows by identifier, building s2v map for each
+			const entryMap = new Map<string, any>()
+			for (const row of allRows) {
+				const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
+				if (sid === undefined) continue
+				if (limitSamples && !limitSamples.has(sid)) continue
+
+				if (!entryMap.has(row.identifier)) {
+					entryMap.set(row.identifier, {
+						uniqueIdentifier: row.identifier,
 						assayName,
 						cohortName,
 						PTMType,
-						modSites: PTMType ? l[1]?.trim() : undefined,
-						category: !PTMType ? l[1]?.trim() : undefined,
-						proteinAccession: l[2]?.trim(),
-						geneName: l[4]?.trim(),
-						//psms: l[5] === undefined || l[5] === '' ? undefined : Number.isNaN(Number(l[5])) ? l[5].trim() : Number(l[5]),
-						s2v: rowS2v
+						modSites: PTMType ? row.modsite || undefined : undefined,
+						proteinAccession: row.protein_accession,
+						geneName: row.gene,
+						s2v: {}
 					})
-				} else {
-					// For non protein view, accumulate sample values into the single s2v
-					for (let i = 9; i < l.length; i++) {
-						const sampleId = cohort.samples[i - 9]
-						if (limitSamples && !limitSamples.has(sampleId)) continue
-						if (!l[i]) continue
-						const v = Number(l[i])
-						if (Number.isNaN(v)) throw 'exp value not number'
-						s2v[sampleId] = v
-					}
 				}
+				entryMap.get(row.identifier).s2v[sid] = row.value
 			}
-		})
-
-		if (param.for !== 'proteinView' && Object.keys(s2v).length) {
-			// For non-proteinView, store in term2sample2value
-			term2sample2value.set(tw.$id, s2v)
+			for (const entry of entryMap.values()) allEntries.push(entry)
+		} else {
+			// For non-proteinView, accumulate sample values into a single s2v
+			const s2v = {}
+			for (const row of allRows) {
+				const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
+				if (sid === undefined) continue
+				if (limitSamples && !limitSamples.has(sid)) continue
+				s2v[sid] = row.value
+			}
+			if (Object.keys(s2v).length) {
+				term2sample2value.set(tw.$id, s2v)
+			}
 		}
 	}
-	if (term2sample2value.size == 0 && param.for != 'proteinView') {
+
+	// Build bySampleId from the samples we actually have data for
+	const bySampleId = {}
+	if (param.for === 'proteinView') {
+		const sampleIds = new Set<number>()
+		for (const entry of allEntries) {
+			for (const sid of Object.keys(entry.s2v)) sampleIds.add(Number(sid))
+		}
+		for (const sid of sampleIds) {
+			bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
+		}
+		return { allEntries, controlSampleIds, bySampleId }
+	}
+
+	if (term2sample2value.size == 0) {
 		throw `No data available for: ${param.terms?.map(t => t.term.name).join(', ')}`
 	}
-	if (param.for === 'proteinView') return { allEntries, bySampleId }
-	else return { term2sample2value, bySampleId }
+	for (const s2v of term2sample2value.values()) {
+		for (const sid of Object.keys(s2v)) {
+			bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(Number(sid)) }
+		}
+	}
+	return { term2sample2value, controlSampleIds, bySampleId }
 }
