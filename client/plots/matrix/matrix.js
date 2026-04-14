@@ -359,10 +359,7 @@ export class Matrix extends PlotBase {
 	}
 
 	mayDisplayCohortMessage() {
-		const msg =
-			!this.prevFilter0 || deepEqual(this.state.filter0, this.prevFilter0)
-				? ''
-				: 'The gene list is persisted across cohorts.'
+		const msg = deepEqual(this.state.filter0, this.prevFilter0) ? '' : 'The gene list is persisted across cohorts.'
 		if (msg) {
 			this.dom.loadingDiv.html('')
 			const div = this.dom.loadingDiv

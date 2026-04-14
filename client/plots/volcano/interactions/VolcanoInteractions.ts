@@ -247,24 +247,18 @@ export class VolcanoInteractions {
 	 * The tw handler fills in id and unit from termdbConfig. */
 	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
-		const geneName = d.gene_name?.split(',')[0]?.trim() || d.promoter_id || ''
-		const unit =
-			this.app.vocabApi.termdbConfig.queries.dnaMethylation?.promoter?.unit ||
-			this.app.vocabApi.termdbConfig.queries.dnaMethylation?.unit ||
-			'avg. M-value'
-		const coords = `${d.chr}:${d.start}-${d.stop}`
-		const label = geneName ? `${geneName} — Promoter ${unit} (${coords})` : `Promoter ${unit} (${coords})`
+		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
+		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
 				chartType: 'summary',
 				childType: 'violin',
-				headerText: label,
 				term: {
 					q: { mode: 'continuous' },
 					term: {
-						gene: geneName,
-						name: label,
+						genomicFeatureType,
+						featureName,
 						type: DNA_METHYLATION,
 						chr: d.chr,
 						start: d.start,

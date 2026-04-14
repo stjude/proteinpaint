@@ -1,41 +1,70 @@
-import type { RawDnaMethylationTerm } from '#types'
+import type { RawDnaMethylationTerm, VocabApi } from '#types'
 import { type TwOpts } from './TwBase.ts'
-import { TermTypes } from '#shared/terms.js'
+import { DNA_METHYLATION } from '#shared/terms.js'
 
-const termType = TermTypes.DNA_METHYLATION
+const termType = DNA_METHYLATION
 
 export class DnaMethylationBase {
 	id: string
 	name: string
 	unit: string
 
-	// option to fill-in/mutate the input raw term object in-place
-	// - does not have to construct, but may require forced type casting in consumer code
 	static async fill(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
-		if (!term.id) {
-			term.id = `${term.chr}:${term.start}-${term.stop}`
-		}
+		if (!term.id) term.id = makeDNAMethTermId(term)
 		if (!term.name) {
-			term.unit = opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
-			const name = `${term.id} ${term.unit}`
-			term.name = name
+			term.unit = getDNAMethUnit(term.genomicFeatureType, opts.vocabApi)
+			term.name = getDNAMethTermName(term)
 		}
 	}
 
 	static validate(term: RawDnaMethylationTerm) {
-		if (typeof term !== 'object') throw 'term is not an object'
-		if (term.type != termType) throw `incorrect term.type='${term?.type}', expecting '${termType}'`
+		if (!term || typeof term !== 'object') throw 'Term is missing or not an object'
+		if (term.type != termType) throw `Incorrect term.type='${term?.type}', expecting '${termType}'`
 		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop))
-			throw 'incomplete coordinate in term{}'
+			throw 'Incomplete coordinate in term{}'
+		if (!term.genomicFeatureType) throw 'Missing term.genomicFeatureType'
+		if (term.genomicFeatureType !== 'gene' && term.featureName)
+			throw 'term.featureName required for DNA methylation term when genomicFeatureType = gene'
 	}
 
-	// option to construct an object instance and not mutate the input raw term
-	// - will be used instead of term literal object
 	constructor(term: RawDnaMethylationTerm, opts: TwOpts) {
 		DnaMethylationBase.validate(term)
-		this.id = term.id || `${term.chr}:${term.start}-${term.stop}`
-		this.unit = term.unit || opts.vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
-		this.name = term.name || `${this.id} ${this.unit}`
+		this.id = term.id || makeDNAMethTermId(term)
+		this.unit = term.unit || getDNAMethUnit(term.genomicFeatureType, opts.vocabApi)
+		this.name = term.name || getDNAMethTermName({ ...term, id: this.id }, this.unit)
+	}
+}
+
+function makeDNAMethTermId(term: RawDnaMethylationTerm) {
+	return `${term.chr}:${term.start}-${term.stop}`
+}
+
+/** Function standardizes DNA methylation units */
+export function getDNAMethUnit(genomicFeatureType: string, vocabApi: VocabApi) {
+	switch (genomicFeatureType) {
+		case 'promoter':
+			return vocabApi.termdbConfig.queries.dnaMethylation?.promoter?.unit || 'Average M-value'
+		case 'gene':
+			return vocabApi.termdbConfig.queries.dnaMethylation?.unit || 'Average Beta Value'
+		default:
+			return 'Average Beta Value'
+	}
+}
+
+/** Function standardizes DNA methylation term name */
+export function getDNAMethTermName(term: RawDnaMethylationTerm, termUnit?: string) {
+	const unit = term.unit || termUnit
+	if (!unit) throw 'Unit is required to generate term name'
+	const id = term.id || makeDNAMethTermId(term)
+	const featureName = term.featureName || id
+
+	switch (term.genomicFeatureType) {
+		case 'promoter':
+			return `Promoter ${unit} (${id})`
+		case 'gene':
+			return `${featureName} - Promoter ${unit} (${id})`
+		default:
+			return `${id} ${unit}`
 	}
 }

@@ -125,11 +125,11 @@ const state2dnameth = {
 			chartType: 'sampleScatter',
 			colorTW: { id: 'diaggrp' },
 			term: {
-				term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953 },
+				term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'gene' },
 				q: { mode: 'continuous' }
 			},
 			term2: {
-				term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664 },
+				term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664, genomicFeatureType: 'gene' },
 				q: { mode: 'continuous' }
 			}
 		}

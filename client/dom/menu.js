@@ -6,6 +6,8 @@ import { sleep } from '#rx'
 /*
 arg{}
 ---All are optional---
+	testid
+		- overrides the default testid
 	parent_menu
 		- define if menu is launched within another menu
 	padding: STR
@@ -46,7 +48,7 @@ export class Menu {
 		this.d = body
 			.append('div')
 			.attr('class', 'sja_menu_div')
-			.attr('data-testid', 'sjpp-menu-div')
+			.attr('data-testid', arg.testid || 'sjpp-menu-div')
 			.style('display', 'none')
 			.style('position', 'absolute')
 			.style('background-color', 'white')

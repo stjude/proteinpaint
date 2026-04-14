@@ -159,7 +159,7 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 			// get term obj to verify termid
 			const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 			if (!term) throw new Error('unknown termid from singlecell.samples.sampleColumns[]')
-			const s2v = ds.cohort.termdb.q.getAllValues4term(termid) // map. k: sampleid, v: term value
+			const s2v = await ds.cohort.termdb.q.getAllValues4term(termid) // map. k: sampleid, v: term value
 			for (const [sid, v] of s2v.entries()) {
 				if (!samples.has(sid)) continue // ignore sample without sc data
 				samples.get(sid)[termid] = term.values?.[v]?.label || v

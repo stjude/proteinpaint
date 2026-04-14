@@ -33,6 +33,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 		holder: holder.append('div').style('margin', '20px 10px 5px 15px'),
 		labeltext: 'Use Same Gene For CNV',
 		checked: true,
+		testid: 'sjpp-summarizeCnvGeneexp-useSameGeneCheckbox',
 		callback: async checked => {
 			cnvGeneSameAsExp = checked
 			await updateUi()
@@ -55,6 +56,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			row: searchDiv,
 			tip,
 			searchOnly: 'gene',
+			testid: 'sjpp-summarizeCnvGeneexp-genesearch-exp',
 			genome: chartsInstance.app.opts.genome!,
 			callback: async () => {
 				expSearchPrompt.text('LOADING ...')
@@ -82,6 +84,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			row: searchDiv,
 			tip,
 			searchOnly: 'gene',
+			testid: 'sjpp-summarizeCnvGeneexp-genesearch-cnv',
 			genome: chartsInstance.app.opts.genome!,
 			callback: async () => {
 				cnvSearchPrompt.text('LOADING ...')
@@ -99,6 +102,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 
 	const submitBtn = holder
 		.append('button')
+		.attr('data-testid', 'sjpp-summarizeCnvGeneexp-submitBtn')
 		.text('Launch Plot')
 		.style('margin', '0px 15px 15px 15px')
 		.property('disabled', true) // enable when both exp and cnv tws are set

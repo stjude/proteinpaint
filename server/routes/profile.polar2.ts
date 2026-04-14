@@ -146,7 +146,7 @@ async function getScores(query: any, ds: any) {
  */
 function computeMedianPercentage(d: any, samples: any[]): number | null {
 	const percentages = samples
-		.filter(s => s[d.score.$id]?.value)
+		.filter(s => s[d.score.$id]?.value != null)
 		.map(s => (s[d.score.$id].value / (s[d.maxScore.$id]?.value || d.maxScore)) * 100)
 
 	if (percentages.length === 0) return null

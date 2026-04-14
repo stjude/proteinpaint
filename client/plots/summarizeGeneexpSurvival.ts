@@ -39,6 +39,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			row: searchDiv,
 			tip,
 			searchOnly: 'gene',
+			testid: 'sjpp-summarizeGeneexpSurvival-genesearch',
 			genome: chartsInstance.app.opts.genome!,
 			callback: async () => {
 				loadingDiv.style('display', 'block')

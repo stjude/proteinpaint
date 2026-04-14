@@ -3,16 +3,25 @@ import type { NumericBaseTerm, NumericQ, PresetNumericBins, NumTW, RawNumTW } fr
 export type DnaMethylationQ = NumericQ & { dt?: number }
 
 export type DnaMethylationTerm = NumericBaseTerm & {
-	/** term.id: plan to be concatenated string value "chr:start-stop" */
-	/** term.name: can be user-assigned */
 	type: 'dnaMethylation'
+	/** concatenated string value "chr:start-stop" */
+	id?: string
 	chr: string
 	start: number
 	stop: number
+	/** Type used to categorize the genomic feature */
+	genomicFeatureType: 'gene' | 'promoter' | 'region' | 'enhancer'
 	bins?: PresetNumericBins
 }
 
-export type RawDnaMethylationTerm = DnaMethylationTerm & { name?: string }
+export type RawDnaMethylationTerm = DnaMethylationTerm & {
+	/** Name of the genomic feature, e.g., gene name or promoter id/name, etc.
+	 * Different than .name, which includes the genomic coordinates and unit,
+	 * and is used for display purposes.*/
+	featureName?: string
+	name?: string
+	unit?: string
+}
 
 export type DnaMethylationTW = NumTW & { term: DnaMethylationTerm }
 

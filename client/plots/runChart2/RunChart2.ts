@@ -34,21 +34,21 @@ export class RunChart2 extends PlotBase implements RxComponent {
 		const controlsHolder = leftDiv.append('div').style('display', 'inline-block')
 		const chartHolder = opts.holder
 			.append('div')
-			.attr('data-testId', 'sjpp-runChart2-chartHolder')
+			.attr('data-testid', 'sjpp-runChart2-chartHolder')
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 
 		this.dom = {
 			controls: controlsHolder,
 			chartHolder,
-			error: chartHolder.append('div').attr('data-testId', 'sjpp-runChart2-error'),
+			error: chartHolder.append('div').attr('data-testid', 'sjpp-runChart2-error'),
 			hovertip: new Menu({ padding: '3px' })
 		}
 		if (opts.header) {
 			this.dom.headerLabel = opts.header
 				.append('span')
 				.attr('class', 'sja_runChart2_header')
-				.attr('data-testId', 'sjpp-runChart2-header')
+				.attr('data-testid', 'sjpp-runChart2-header')
 				.style('font-size', '0.8em')
 				.style('opacity', 0.7)
 				.text('RUN CHART')

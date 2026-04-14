@@ -45,7 +45,8 @@ class Volcano extends PlotBase implements RxComponent {
 				.style('opacity', 0.75)
 				.style('padding', '20px')
 				.text('Loading...') as any,
-			tip: new Menu({ padding: '' }),
+			hoverTip: new Menu({ padding: '' }),
+			clickTip: new Menu({ padding: '' }),
 			actionsTip: new Menu({ padding: '' })
 		}
 	}
@@ -125,8 +126,8 @@ class Volcano extends PlotBase implements RxComponent {
 			/** Fetch data */
 			const model = new VolcanoModel(this.app, config, settings)
 			const response = await model.getData()
-			if (!response || response.error || !response.data.length) {
-				sayerror(this.dom.error, response.error || 'No data returned from server')
+			if (!response || response.error || !response.data || !response.data.length) {
+				sayerror(this.dom.error, response?.error || 'No data returned from server')
 				clearTimeout(showWait)
 				this.dom.wait.style('display', 'none')
 				return
