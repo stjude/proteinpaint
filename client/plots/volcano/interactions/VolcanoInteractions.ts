@@ -247,7 +247,7 @@ export class VolcanoInteractions {
 	 * The tw handler fills in id and unit from termdbConfig. */
 	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
-		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : undefined
+		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
 		this.app.dispatch({
 			type: 'plot_create',
 			config: {
