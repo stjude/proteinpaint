@@ -16,6 +16,7 @@ Features:
 Fixes:
 - show the persisted top mutated genes message in matrix plot when starting with no cohort filter and after switching cohorts
 - improve the message wording when non-primary diagnoses data is not rendered for a sample or case
+- Regenerated termdbtest file to support differential DNA meth in termdbtest. Now using getDNAMethUnit. Fixed launchViolin to allow launching violin from the promoter volcano
 
 
 ## 2.182.0
