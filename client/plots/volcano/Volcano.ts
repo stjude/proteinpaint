@@ -127,7 +127,7 @@ class Volcano extends PlotBase implements RxComponent {
 			const model = new VolcanoModel(this.app, config, settings)
 			const response = await model.getData()
 			if (!response || response.error || !response.data || !response.data.length) {
-				sayerror(this.dom.error, response.error || 'No data returned from server')
+				sayerror(this.dom.error, response?.error || 'No data returned from server')
 				clearTimeout(showWait)
 				this.dom.wait.style('display', 'none')
 				return
