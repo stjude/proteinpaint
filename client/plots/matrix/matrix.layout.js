@@ -50,10 +50,20 @@ export function setAutoDimensions(xOffset) {
 		const noSpacedColw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
 		const colwNoSpace = Math.max(s.colwMin, Math.min(noSpacedColw, s.colwMax))
 
-		// detect if using colspace will cause the tentative computed widths to be exceeded
-		// to determine whether to use colw + colspace or colwNoSpace
-		this.computedSettings.colw =
-			tentativeColw * this.sampleOrder.length + tentativeGaps <= this.availContentWidth ? tentativeColw : colwNoSpace
+		// Use colwNoSpace (base width without colspace overhead) when cells are small,
+		// otherwise use tentativeColw (which together with colspace exactly fills availContentWidth).
+		// The threshold of 7px is applied to colwNoSpace (the base zoom-level-1 width) to avoid
+		// a zoom feedback loop: using colwNoSpace * zoomLevel as the threshold caused colw to switch
+		// between tentativeColw and colwNoSpace as zoomLevel changed, making zoomMax unstable.
+		if (colwNoSpace < 7) {
+			// cells are inherently small: use colwNoSpace so columns fill availContentWidth without colspace overhead
+			this.computedSettings.colw = colwNoSpace
+			this.computedSettings.colspace = 0
+		} else {
+			// cells are large enough to show colspace: use tentativeColw so columns+colspace fill availContentWidth
+			this.computedSettings.colw = tentativeColw
+			this.computedSettings.colspace = s.colspace
+		}
 
 		// IMPORTANT: compute zoomMin and zoomMax here before computing settings.colw downstream, to avoid feedback loop
 		this.computedSettings.zoomMin = s.colwMin / this.computedSettings.colw
@@ -65,10 +75,6 @@ export function setAutoDimensions(xOffset) {
 		this.computedSettings.zoomMin = s.colwMin / m.colw
 		this.computedSettings.zoomMax = s.colwMax / m.colw
 	}
-
-	// when cell has very small width, do not show colspace
-	// IMPORTANT: compute zoomMin and zoomMax before using s.zoomLevel for any computed settings
-	this.computedSettings.colspace = this.computedSettings.colw * s.zoomLevel < 7 ? 0 : s.colspace
 
 	const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
 	const availHeight = screen.availHeight - hch
