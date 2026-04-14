@@ -9,7 +9,6 @@ import * as bamcommon from './bam.common.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 
 const features = serverconfig.features
-const clustalo_read_alignment = serverconfig.clustalo
 
 export async function match_complexvariant_rust(q, templates_info, region_widths) {
 	//const segbplen = templates[0].segments[0].seq.length
