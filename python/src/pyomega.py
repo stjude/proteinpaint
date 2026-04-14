@@ -222,6 +222,7 @@ try:
     json_input = sys.stdin.read().strip()
     if not json_input:
         write_error("No input data provided")
+        sys.exit(1)
     input_data = json.loads(json_input)
     fasta_sequence = input_data.get("fasta_sequence")
     if not fasta_sequence:
