@@ -7,33 +7,38 @@ import { DNA_METHYLATION } from '#shared/terms.js'
 
 export class DataPointMouseEvents {
 	termType: string
-	constructor(d: DataPointEntry, circle: SvgCircle, tip: Menu, interactions: VolcanoInteractions, termType: string) {
+	constructor(
+		d: DataPointEntry,
+		circle: SvgCircle,
+		hoverTip: Menu,
+		clickTip: Menu,
+		interactions: VolcanoInteractions,
+		termType: string
+	) {
 		this.termType = termType
 		circle.on('mouseover', () => {
-			//Show highlight and tooltip on hover
 			circle.attr('fill-opacity', 0.9)
 
-			tip.clear().showunder(circle.node())
-			const table = table2col({ holder: tip.d.append('table') })
+			hoverTip.clear().showunder(circle.node())
+			const table = table2col({ holder: hoverTip.d.append('table') })
 
 			this.addTooltipRows(d, table)
 		})
 
-		let menuOpen = false
 		circle.on('mouseout', () => {
-			if (menuOpen) return
-			tip.hide()
+			hoverTip.hide()
 			if (d.highlighted) return
 			circle.attr('fill-opacity', 0)
 		})
 		circle.on('click', () => {
-			menuOpen = true
-			tip.onHide = () => {
-				menuOpen = false
+			hoverTip.hide()
+			clickTip.onHide = () => {
 				if (!d.highlighted) circle.attr('fill-opacity', 0)
 			}
-			tip.clear().showunder(circle.node())
-			const menuDiv = tip.d.append('div').style('padding', '5px')
+			clickTip.clear().showunder(circle.node())
+			const table = table2col({ holder: clickTip.d.append('table') })
+			this.addTooltipRows(d, table)
+			const menuDiv = clickTip.d.append('div').style('padding', '5px')
 
 			if (termType === DNA_METHYLATION) {
 				const dm = d as any
@@ -42,7 +47,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('Violin plot')
 					.on('click', () => {
-						tip.hide()
+						clickTip.hide()
 						interactions.launchViolin(dm)
 					})
 				menuDiv
@@ -50,7 +55,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('DMR analysis')
 					.on('click', async () => {
-						tip.hide()
+						clickTip.hide()
 						await interactions.launchDmr({
 							chr: dm.chr,
 							start: dm.start,
@@ -64,7 +69,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('Violin plot')
 					.on('click', async () => {
-						tip.hide()
+						clickTip.hide()
 						await interactions.launchViolinGeneExp(d.gene_name)
 					})
 				menuDiv
@@ -72,7 +77,7 @@ export class DataPointMouseEvents {
 					.attr('class', 'sja_menuoption')
 					.text('Box plot')
 					.on('click', async () => {
-						tip.hide()
+						clickTip.hide()
 						await interactions.launchBoxPlot(d.gene_name)
 					})
 			}
