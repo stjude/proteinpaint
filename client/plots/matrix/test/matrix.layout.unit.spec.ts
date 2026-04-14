@@ -93,9 +93,9 @@ tape('100 samples', async test => {
 		obj.computedSettings,
 		{
 			useCanvas: false,
-			colw: 9.3,
-			zoomMin: 0.01075268817204301,
-			zoomMax: 1.7204301075268815,
+			colw: 8.3,
+			zoomMin: 0.012048192771084336,
+			zoomMax: 1.9277108433734937,
 			colspace: 1,
 			clusterRowh: 18
 		},
