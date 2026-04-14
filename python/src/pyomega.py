@@ -54,10 +54,10 @@ def compute_distance_matrix(records):
     aligner.extend_gap_score = -1.0     # lower extension penalty helps
 
     # semi-global mode
-    aligner.target_end_open_gap_score = 0.0
-    aligner.target_end_extend_gap_score = 0.0
-    aligner.query_end_open_gap_score = 0.0
-    aligner.query_end_extend_gap_score = 0.0
+    aligner.open_end_insertion_score = 0.0
+    aligner.extend_end_insertion_score = 0.0
+    aligner.open_end_deletion_score = 0.0
+    aligner.extend_end_deletion_score = 0.0
 
     for i in range(n):
         for j in range(i + 1, n):
@@ -85,10 +85,10 @@ def align_two_msas(msa1, msa2):
     aligner.extend_gap_score = -1.0     # important for this example
 
     # semi-global mode
-    aligner.target_end_open_gap_score = 0.0
-    aligner.target_end_extend_gap_score = 0.0
-    aligner.query_end_open_gap_score = 0.0
-    aligner.query_end_extend_gap_score = 0.0
+    aligner.open_end_insertion_score = 0.0
+    aligner.extend_end_insertion_score = 0.0
+    aligner.open_end_deletion_score = 0.0
+    aligner.extend_end_deletion_score = 0.0
 
 
     alignments = aligner.align(cons1, cons2)
