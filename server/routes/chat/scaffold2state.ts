@@ -10,12 +10,13 @@ function isDictionaryTerm(term: any) {
  * input: is Tw or TVS object
  * output: a plot state object that can be used to generate the appropriate plot
  */
-export function resolveToPlotState(input: any, plotType: string) {
+export function resolveToPlotState(input: any, plotType: string, subplotType?: string) {
 	// }, llm: LlmConfig) {
 	const plotState: any = { type: 'plot', plot: { chartType: plotType } }
 
 	if (plotType === 'summary') {
-		plotState.childType = 'violin' // default child type for summary plot for now
+		// default to violing for summary if not provided
+		plotState.childType = subplotType ? subplotType : 'violin'
 
 		// for non-dict term, it needs to be within term: {}
 		// but, for dictionary term, it can be supplied as is
