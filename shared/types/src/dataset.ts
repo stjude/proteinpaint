@@ -708,27 +708,33 @@ export type MetaboliteIntensityQueryNative = {
 export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
 /** the proteomics query */
-type CohortConfig = {
-	file: string
-	filter?: Tvs[]
-	ctlFilter?: Tvs[]
-	overlayTerm?: BaseTerm
+type ProteomeFilter = {
+	columnIdx: number
+	columnValue: string | number
 }
-type AssayWithCohorts = {
-	cohorts: {
-		[cohortName: string]: CohortConfig
-	}
+
+type ProteomeCohortConfig = {
+	cohortName: string
+	controlFilter: ProteomeFilter[]
+	caseFilter: ProteomeFilter[]
+}
+
+type ProteomeAssayConfig = {
+	columnIdx: number
+	columnValue: string | number
+	cohorts: ProteomeCohortConfig[]
 	/** optional PTM type for PTM assay type */
 	PTMType?: string
 	/** optional specific mclass override for PTM assay type */
 	mclassOverride?: Mclass
 }
-type AssayConfig = AssayWithCohorts
 
 export type ProteomeAbundanceQuery = {
+	/** database file path */
+	dbfile?: string
 	/** document structure */
 	assays: {
-		[assayName: string]: AssayConfig
+		[assayName: string]: ProteomeAssayConfig
 	}
 	samples?: number[]
 	/** _proteins,used to dynamically built cache of protein names to speed up search */
@@ -736,6 +742,8 @@ export type ProteomeAbundanceQuery = {
 	get?: (param: any) => void
 	find?: (param: string[]) => void
 	bins?: { [index: string]: any }
+	/** set of control sample IDs returned from get() query */
+	controlSampleIds?: Set<string>
 }
 
 /** the geneExpression query
@@ -1058,10 +1066,7 @@ type Mds3Queries = {
 		src: 'native'
 		file: string
 	}
-	proteome?: {
-		/** whole proteome abundance */
-		assays?: { [assayType: string]: AssayConfig }
-	}
+	proteome?: ProteomeAbundanceQuery
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
