@@ -8,6 +8,8 @@
  * But "Show TP53 expression" is not ambiguous.
  */
 
+import assert from 'assert'
+
 // Keywords that indicate the user has specified a gene feature.
 // Organized by feature category for clarity.
 const GENE_FEATURE_KEYWORDS: string[] = [
@@ -86,7 +88,7 @@ const DIAGNOSIS_GROUP_KEYWORDS: string[] = ['subtype', 'diagnosis group', 'group
  */
 
 export function determineAmbiguousGenePrompt(user_prompt: string, relevant_genes: string[], dataset_json: any): string {
-	if (relevant_genes.length === 0) return ''
+	assert(relevant_genes.length !== 0)
 	// Remove gene names from the prompt so they don't accidentally match keywords
 	// (e.g. a gene named "EXPRESSION" shouldn't count as a feature keyword)
 	let promptWithoutGenes = user_prompt.toLowerCase()

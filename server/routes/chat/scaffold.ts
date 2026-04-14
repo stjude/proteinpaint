@@ -147,6 +147,7 @@ Always return ONLY a JSON object in this exact format:
   "tw2": "<phrase>",        // OPTIONAL
   "tw3": "<phrase>",        // OPTIONAL
   "filter": "<phrase>"      // OPTIONAL
+  "chartType": "<phrase>"      // OPTIONAL
 }
 
 ## Field Definitions
@@ -154,9 +155,12 @@ Always return ONLY a JSON object in this exact format:
 - tw2 (OPTIONAL): GROUPING variable — only when the user wants to compare or split tw1 across groups. (e.g., "between X and Y", "by group", "across conditions").
 - tw3 (OPTIONAL): DIVIDE BY variable — a tertiary variable used to split or facet the plot generated with tw1 and tw2 data (e.g., "divided by", "split by", "per", "for each").
 - filter (OPTIONAL): A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males").
+- chartType (OPTIONAL): The specific type of summary chart the user wants (e.g. "violin", "boxplot", "barchart", "sampleScatter"). Only populate this when the user explicitly specifies a chart type in the prompt.
 
 ## Extraction Rules
-1. Always identify tw1 first — it answers "what is the primary data variable being plotted/summarized?"
+1. Always identify tw1 first — it answers "what is the primary data variable being plotted/summarized?" tw1 must be a DATA VARIABLE and when extracting tw1, preserve biological/analytical qualifiers that modify the variable
+ (e.g. "overexpressed", "mutated", "deleted", "amplified", "methylated", "expressed", "activated"). These qualifiers are part of the analysis intent and must not be dropped. tw1 is never an analytical method or plot descriptor 
+ (e.g. "correlation", "distribution", "summary", "comparison") are NOT valid tw1 values — look past these words to the actual variable being analyzed).
 2. tw2 answers "compared across what groups?" — look for prepositions like "between", "across", "by", "among", etc. Use contextual understanding to confirm that it's a grouping variable
 3. tw3 answers "divided/faceted by what?" — look for "divided by", "split by", "per", "for each", "stratified by", etc. Use contextual understanding to confirm that it's a grouping variable
 4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable
@@ -165,6 +169,13 @@ Always return ONLY a JSON object in this exact format:
 7. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
 
 ## Examples:
+-Query: "compare tp53 expression vs age using a scatter plot"
+  Output:
+  {
+    "tw1": "tp53 expression",
+    "tw2": "age",
+    "chartType": "sampleScatter"
+  }
 - Query: "Show me the expression of EGFR."
   Output:
   {
@@ -176,11 +187,11 @@ Always return ONLY a JSON object in this exact format:
 	"tw1": "XYZ",
 	"filter": ["black", "male"]
   }
-- Query: "Show correlation between xxx and yyy."
+- Query: "Show correlation between age at diagnosis and ancestry."
   Output:
   {
-	"tw1": "xxx",
-	"tw2": "yyy"
+	"tw1": "age at diagnosis",
+	"tw2": "ancestry"
   }
 - Query: "Show me the distribution of gene expression in TP53 across different cell types, but only for patients aged 10 to 40."
   Output:
@@ -211,7 +222,11 @@ Query: ${user_prompt}
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Summary scaffold: ${response}`)
 	try {
-		return JSON.parse(response) as ScaffoldTypes.SummaryScaffold
+		const parsed = JSON.parse(response) as ScaffoldTypes.SummaryScaffold
+		parsed.plotType = 'summary'
+		return parsed
+		// response["plotType"] = 'summary'
+		// return JSON.parse(response) as ScaffoldTypes.SummaryScaffold
 	} catch {
 		throw new Error(`Failed to parse SummaryScaffold from LLM response: ${response}`)
 	}
