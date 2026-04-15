@@ -106,6 +106,10 @@ class GenesetComp {
 
 	async getGenes({ signal }) {
 		const genes = this.opts.genes
+		if (this.opts.showEditUI) {
+			// must show edit UI, do not automatically get genes
+			return []
+		}
 		const settings = this.state.config.settings
 		if (this.opts.genes) {
 			// genes are predefined
