@@ -18,9 +18,10 @@ genomeSelection
 makePositionDropDown
 makeSubmit
 makeInfoSection
+validatePosition
+createFusionVariant
 makeSubmitResult
 makeFusionTabs
-createFusionVariant
 
 */
 
@@ -65,7 +66,7 @@ function makeFusionInput(div, obj) {
 	const fusionInput = uiutils
 		.makeTextAreaInput({
 			div,
-			cols: 70,
+			cols: 70, // Increased from 50 to accommodate longer isoform format example
 			placeholder: 'Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ or RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,+,NM_004991'
 		})
 		.style('border', '1px solid rgb(138, 177, 212)')
@@ -152,6 +153,22 @@ function makeInfoSection(div) {
 }
 
 /**
+ * Validates a position string
+ * @param {string} position - The position string to validate
+ * @param {string} geneName - Gene name for error messages
+ * @throws {Error} If position is invalid
+ */
+function validatePosition(position, geneName) {
+	if (!/^\d+$/.test(position)) {
+		throw new Error(`Invalid fusion format: position for ${geneName} must be a positive integer (numeric string)`)
+	}
+	const pos = Number(position)
+	if (pos <= 0) {
+		throw new Error(`Invalid fusion format: position for ${geneName} must be greater than 0 (1-based coordinates)`)
+	}
+}
+
+/**
  * Parses a fusion line into two gene arrays
  * Supports both formats:
  * - Format 1 (4 fields per gene): gene,chr,pos,strand
@@ -181,18 +198,12 @@ export function parseFusionLine(line) {
 		}
 	}
 	
-	// Validate position is a number (entire string must be numeric)
-	if (!/^\d+$/.test(gene1[2]) || !/^\d+$/.test(gene2[2])) {
-		throw new Error('Invalid fusion format: position must be a positive integer (numeric string)')
-	}
-	const pos1 = Number(gene1[2])
-	const pos2 = Number(gene2[2])
-	if (pos1 <= 0 || pos2 <= 0) {
-		throw new Error('Invalid fusion format: position must be greater than 0 (1-based coordinates)')
-	}
+	// Validate positions
+	validatePosition(gene1[2], gene1[0])
+	validatePosition(gene2[2], gene2[0])
 	
 	// Validate strand is + or -
-	if (!gene1[3].match(/^[+-]$/) || !gene2[3].match(/^[+-]$/)) {
+	if (!/^[+-]$/.test(gene1[3]) || !/^[+-]$/.test(gene2[3])) {
 		throw new Error('Invalid fusion format: strand must be "+" or "-"')
 	}
 	
@@ -219,12 +230,13 @@ function createFusionVariant(gene1, gene2) {
 		class: 'Fuserna'
 	}
 	// Add isoform information if available (check for non-empty strings)
-	if (gene1.length > 4 && gene1[4] && gene1[4].trim()) {
-		variant.isoform1 = gene1[4]
+	const addIsoformIfPresent = (gene, index, fieldName) => {
+		if (gene.length > 4 && gene[4] && gene[4].trim()) {
+			variant[fieldName] = gene[4]
+		}
 	}
-	if (gene2.length > 4 && gene2[4] && gene2[4].trim()) {
-		variant.isoform2 = gene2[4]
-	}
+	addIsoformIfPresent(gene1, 4, 'isoform1')
+	addIsoformIfPresent(gene2, 4, 'isoform2')
 	return variant
 }
 
