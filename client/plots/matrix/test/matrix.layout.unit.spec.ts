@@ -99,7 +99,39 @@ tape('100 samples', async test => {
 			colspace: 1,
 			clusterRowh: 18
 		},
-		`should give the expected computedSettings`
+		`should give the expected computedSettings for 100 samples and ${obj.availContentWidth}px width`
+	)
+	test.end()
+})
+
+tape('100 samples, narrow available width', async test => {
+	// narrow width > 600, since matrix.layout hardcodes limit that switches from
+	// using div width to document.body.contentWidth
+	const obj = await getObj({ sampleOrder: new Array(100), boundingWidth: 634 })
+	obj.setAutoDimensions(0)
+	test.deepEqual(
+		obj.computedSettings,
+		{
+			useCanvas: false,
+			colw: 5.64,
+			zoomMin: 0.01773049645390071,
+			zoomMax: 2.8368794326241136,
+			colspace: 0,
+			clusterRowh: 18
+		},
+		`should give the expected computedSettings for 100 samples and ${obj.availContentWidth}px width`
+	)
+	test.end()
+})
+
+tape('100 samples, content div wider than needed', async test => {
+	const obj = await getObj({ sampleOrder: new Array(100), boundingWidth: 2000 })
+	obj.setAutoDimensions(0)
+	test.deepEqual(
+		obj.computedSettings,
+		// test that colspace != 0,
+		{ useCanvas: false, colw: 16, zoomMin: 0.00625, zoomMax: 1, colspace: 1, clusterRowh: 18 },
+		`should give the expected computedSettings for 100 samples and ${obj.availContentWidth}px width, with colspace != 0`
 	)
 	test.end()
 })

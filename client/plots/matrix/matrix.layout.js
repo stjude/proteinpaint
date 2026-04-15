@@ -27,7 +27,10 @@ export function setAutoDimensions(xOffset) {
 		this.availContentWidth = s.availContentWidth
 	} else {
 		let boundingWidth = this.dom.contentNode.getBoundingClientRect().width
-		if (boundingWidth < 600) boundingWidth = window.document.body.clientWidth
+		if (boundingWidth < 600) {
+			// rely on div scroll to view a not-overly-narrow matrix
+			boundingWidth = window.document.body.clientWidth
+		}
 
 		// 65 is an mannually calibrated padding
 		const maxGrpLabelWidth = this.getMaxGrpLabelWidth()
@@ -41,7 +44,7 @@ export function setAutoDimensions(xOffset) {
 		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset - hcw // - 0.5 * labelOffset
 	}
 
-	let colwNoSpace
+	let colwSpaced, colwNoSpace
 	if (this.autoDimensions.has('colw')) {
 		const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
 		const tentativeGaps = this.sampleOrder.length * s.colspace + totalColgspace
@@ -50,7 +53,7 @@ export function setAutoDimensions(xOffset) {
 		// colwSpaced is the colw if the colspace is shown between columns, but note that
 		// its value does not include the colspace. It also requires MINCOLWSPACED column width
 		// for the colspace to not be too visually overwhelming.
-		const colwSpaced = Math.max(constrainedMINCOLWSPACED, Math.min(spacedColw, s.colwMax))
+		colwSpaced = Math.max(constrainedMINCOLWSPACED, Math.min(spacedColw, s.colwMax))
 		// noSpacedColw is the colw if the colspace is not shown between columns, without taking into account colwMin and colwMax
 		const noSpacedColw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
 		// colwNoSpace is the colw if the colspace is not shown between columns, after taking into account colwMin and colwMax
@@ -65,6 +68,8 @@ export function setAutoDimensions(xOffset) {
 		this.computedSettings.zoomMin = s.colwMin / this.computedSettings.colw
 		this.computedSettings.zoomMax = s.colwMax / this.computedSettings.colw
 	} else {
+		colwSpaced = m.colw
+		colNoSpace = m.colw
 		// NOTE: There may be a hardcoded m.colw = 0 in matrix.config to force auto-sizing,
 		// handling this condition for future support.
 		this.computedSettings.colw = m.colw
@@ -72,12 +77,12 @@ export function setAutoDimensions(xOffset) {
 		this.computedSettings.zoomMax = s.colwMax / m.colw
 	}
 
-	// when cells have very small width, do not show colspace
+	const { colw } = this.computedSettings
+	// When cells have very small width, do not show colspace. If colwSpaced == colwNoSpace,
+	// that means max
 	// IMPORTANT: compute zoomMin and zoomMax before using s.zoomLevel for any computed settings
 	this.computedSettings.colspace =
-		this.computedSettings.colw === colwNoSpace || this.computedSettings.colw * s.zoomLevel < MINCOLWSPACED
-			? 0
-			: s.colspace
+		(colw === colwNoSpace && colwSpaced < colwNoSpace) || colw * s.zoomLevel < MINCOLWSPACED ? 0 : s.colspace
 
 	const hch = this.state.config.settings.hierCluster?.yDendrogramHeight || 0
 	const availHeight = s.availContentHeight || screen.availHeight - hch
