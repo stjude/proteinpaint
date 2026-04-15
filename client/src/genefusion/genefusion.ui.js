@@ -20,6 +20,7 @@ makeSubmit
 makeInfoSection
 makeSubmitResult
 makeFusionTabs
+createFusionVariant
 
 */
 
@@ -102,7 +103,7 @@ function makeSubmit(div, obj, holder) {
 	})
 	const errorMessage_div = div.append('div')
 	submit.style('display', 'block').on('click', () => {
-		if (!obj.data || obj.data == undefined) {
+		if (!obj.data || obj.data === undefined) {
 			const sayerrorDiv = errorMessage_div.append('div').style('display', 'inline-block').style('max-width', '20vw')
 			sayerror(sayerrorDiv, 'Please provide data')
 			setTimeout(() => sayerrorDiv.remove(), 3000)
@@ -193,11 +194,43 @@ export function parseFusionLine(line) {
 	return [gene1, gene2]
 }
 
+/**
+ * Creates a fusion variant object from gene arrays
+ * @param {Array} gene1 - First gene array [gene, chr, pos, strand, (isoform)]
+ * @param {Array} gene2 - Second gene array [gene, chr, pos, strand, (isoform)]
+ * @returns {Object} Variant object for proteinpaint
+ */
+function createFusionVariant(gene1, gene2) {
+	const variant = {
+		gene1: gene1[0],
+		chr1: gene1[1],
+		pos1: parseInt(gene1[2]) - 1,
+		strand1: gene1[3],
+		gene2: gene2[0],
+		chr2: gene2[1],
+		pos2: parseInt(gene2[2]) - 1,
+		strand2: gene2[3],
+		dt: 2,
+		class: 'Fuserna'
+	}
+	// Add isoform information if available
+	if (gene1.length > 4 && gene1[4]) {
+		variant.isoform1 = gene1[4]
+	}
+	if (gene2.length > 4 && gene2[4]) {
+		variant.isoform2 = gene2[4]
+	}
+	return variant
+}
+
 function makeSubmitResult(obj, div, runpp_arg) {
-	if (obj.data.split(/[\r\n]/).length == 1) {
+	// Filter out empty lines
+	const lines = obj.data.split(/[\r\n]/).filter(line => line.trim().length > 0)
+	
+	if (lines.length === 1) {
 		//Only one line entered, no dropdown
 		try {
-			const [gene1, gene2] = parseFusionLine(obj.data)
+			const [gene1, gene2] = parseFusionLine(lines[0])
 			return makeFusionTabs(div, runpp_arg, gene1, gene2)
 		} catch (error) {
 			const errorDiv = div.append('div').style('color', 'red').style('margin', '20px')
@@ -214,13 +247,13 @@ function makeSubmitResult(obj, div, runpp_arg) {
 		.style('padding', '5px 10px')
 		.style('margin', '1px 10px 1px 10px')
 
-	fusionSelect.append('option').text(`Select Fusion (${obj.data.split(/[\r\n]/).length})`)
+	fusionSelect.append('option').text(`Select Fusion (${lines.length})`)
 
 	const tabsDiv = div.append('div').style('margin', '20px')
 
 	const fusionsMap = new Map()
 
-	for (const data of obj.data.split(/[\r\n]/)) {
+	for (const data of lines) {
 		try {
 			const [gene1, gene2] = parseFusionLine(data)
 			fusionsMap.set(`${gene1[0]}-${gene2[0]}`, [gene1, gene2])
@@ -279,25 +312,7 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 			label: gene1[0],
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
-				const variant = {
-					gene1: gene1[0],
-					chr1: gene1[1],
-					pos1: parseInt(gene1[2]) - 1,
-					strand1: gene1[3],
-					gene2: gene2[0],
-					chr2: gene2[1],
-					pos2: parseInt(gene2[2]) - 1,
-					strand2: gene2[3],
-					dt: 2,
-					class: 'Fuserna'
-				}
-				// Add isoform information if available
-				if (gene1.length > 4 && gene1[4]) {
-					variant.isoform1 = gene1[4]
-				}
-				if (gene2.length > 4 && gene2[4]) {
-					variant.isoform2 = gene2[4]
-				}
+				const variant = createFusionVariant(gene1, gene2)
 				const fusion_arg = {
 					holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 					gene: gene1[0],
@@ -317,25 +332,7 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 			label: gene2[0],
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
-				const variant = {
-					gene1: gene1[0],
-					chr1: gene1[1],
-					pos1: parseInt(gene1[2]) - 1,
-					strand1: gene1[3],
-					gene2: gene2[0],
-					chr2: gene2[1],
-					pos2: parseInt(gene2[2]) - 1,
-					strand2: gene2[3],
-					dt: 2,
-					class: 'Fuserna'
-				}
-				// Add isoform information if available
-				if (gene1.length > 4 && gene1[4]) {
-					variant.isoform1 = gene1[4]
-				}
-				if (gene2.length > 4 && gene2[4]) {
-					variant.isoform2 = gene2[4]
-				}
+				const variant = createFusionVariant(gene1, gene2)
 				const fusion_arg = {
 					holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 					gene: gene2[0],
