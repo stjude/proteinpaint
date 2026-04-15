@@ -11,6 +11,7 @@ export class VolcanoInteractions {
 	id: string
 	pValueTableData: any
 	data: any
+
 	constructor(app: MassAppApi, id: string, dom: VolcanoDom) {
 		this.app = app
 		this.dom = dom
@@ -61,15 +62,6 @@ export class VolcanoInteractions {
 			disable_terms
 		})
 		await ui.renderUI()
-	}
-
-	clearDom() {
-		this.dom.holder.selectAll('div[id="sjpp-volcano-actions"]').remove()
-		this.dom.holder.selectAll('svg[id="sjpp-volcano-svg"]').remove()
-		this.dom.holder.selectAll('div[id="sjpp-volcano-stats"]').remove()
-		this.dom.holder.selectAll('div[id="sjpp-volcano-pValueTable"]').remove()
-		this.dom.holder.selectAll('div[id="sjpp-volcano-images"]').remove()
-		this.dom.error.selectAll('*').remove()
 	}
 
 	download(termType: string) {

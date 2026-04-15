@@ -1,4 +1,4 @@
-import type { Div, Elem, SvgG, SvgSvg, SvgText } from '../../types/d3'
+import type { Elem } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TableCell, TableColumn, Menu } from '#dom'
 import type { DataEntry, DiffMethDataEntry, DEImage, TermWrapper } from '#types'
@@ -105,27 +105,6 @@ export type VolcanoDom = {
 	tip: Menu
 	/** Menu for action buttons above the volcano plot */
 	actionsTip: Menu
-}
-
-/** this.volcanoDom in view */
-export type VolcanoPlotDom = {
-	/** Holder for action buttons above the images and plot */
-	actions: Div
-	/** Holder for data points, p value line, and fold change line */
-	plot: SvgG
-	pValueTable: Div
-	/** Holder for plot, axis labels, and title */
-	svg: SvgSvg
-	/** Term info */
-	top: SvgG
-	/** X axis */
-	xAxis: SvgG
-	/** X axis label */
-	xAxisLabel: SvgText
-	/** Y axis */
-	yAxis: SvgG
-	/** Y axis label */
-	yAxisLabel: SvgText
 }
 
 export type VolcanoPValueTableData = {

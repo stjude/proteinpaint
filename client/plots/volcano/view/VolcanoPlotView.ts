@@ -2,13 +2,8 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { axisstyle, table2col, renderTable } from '#dom'
 import { select, selectAll } from 'd3-selection'
 import { rgb } from 'd3-color'
-import type {
-	DataPointEntry,
-	VolcanoDom,
-	VolcanoPlotDimensions,
-	VolcanoPlotDom,
-	VolcanoViewData
-} from '../VolcanoTypes'
+import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
+import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import { DataPointMouseEvents } from './DataPointMouseEvents'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
@@ -39,26 +34,46 @@ export class VolcanoPlotView {
 		this.volcanoDom = {
 			actions,
 			svg,
-			top: svg.append('g').attr('id', 'sjpp-volcano-top'),
-			xAxis: svg.append('g').attr('id', 'sjpp-volcano-xAxis'),
-			yAxis: svg.append('g').attr('id', 'sjpp-volcano-yAxis'),
-			xAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle'),
-			yAxisLabel: svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle'),
-			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
-			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'none')
-		}
+			pValueTable: this.dom.holder
+				.append('div')
+				.attr('id', 'sjpp-volcano-pValueTable')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top'),
+			top: undefined,
+			xAxis: undefined,
+			xAxisLabel: undefined,
+			yAxis: undefined,
+			yAxisLabel: undefined,
+			plot: undefined
+		} as Partial<VolcanoPlotDom> as VolcanoPlotDom
 	}
 
 	render(settings: ValidatedVolcanoSettings, viewData: VolcanoViewData) {
 		this.settings = settings
 		this.viewData = viewData
 		const plotDim = this.viewData.plotDim
+
+		this.initDom()
+
 		this.renderUserActions()
 		this.renderPlot(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
-		this.renderStatsMenu()
 		this.renderPValueTable()
+	}
+
+	initDom() {
+		this.volcanoDom.actions.selectAll('*').remove()
+		this.volcanoDom.svg.selectAll('*').remove()
+		this.volcanoDom.pValueTable.selectAll('*').remove()
+
+		const svg = this.volcanoDom.svg
+		this.volcanoDom.top = svg.append('g').attr('id', 'sjpp-volcano-top')
+		this.volcanoDom.xAxis = svg.append('g').attr('id', 'sjpp-volcano-xAxis')
+		this.volcanoDom.yAxis = svg.append('g').attr('id', 'sjpp-volcano-yAxis')
+		this.volcanoDom.xAxisLabel = svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle')
+		this.volcanoDom.yAxisLabel = svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle')
+		this.volcanoDom.plot = svg.append('g').attr('id', 'sjpp-volcano-plot')
 	}
 
 	renderUserActions() {
@@ -81,11 +96,14 @@ export class VolcanoPlotView {
 			const sigText = this.termType == DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
-			this.addActionButton('Show p-value table', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () => {
-				this.volcanoDom.pValueTable.style(
-					'display',
-					this.volcanoDom.pValueTable.style('display') == 'none' ? 'inline-block' : 'none'
-				)
+			this.addActionButton('Show p-value table', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], async () => {
+				const showTable = !this.settings.showPValueTable
+				await this.interactions.app.dispatch({
+					type: 'plot_edit',
+					id: this.interactions.id,
+					config: { settings: { volcano: { showPValueTable: showTable } } }
+				})
+				console.log('showTable', showTable)
 			})
 		}
 		if (numSigGenes && numSigGenes >= 3) {
@@ -110,9 +128,9 @@ export class VolcanoPlotView {
 			.style('margin', '3px')
 			.style('padding', '3px')
 			.text(text)
-			.on('click', () => {
+			.on('click', async () => {
 				this.dom.actionsTip.clear().showunder(button.node())
-				callback()
+				await callback()
 			})
 	}
 
@@ -232,6 +250,7 @@ export class VolcanoPlotView {
 	}
 
 	renderPValueTable() {
+		if (!this.settings.showPValueTable) return
 		// Cap rendered rows to prevent browser OOM with large datasets (e.g. 30k+ significant promoters).
 		// The full data is still available in pValueTableData.rows for export/search.
 		const maxTableRows = 5000
