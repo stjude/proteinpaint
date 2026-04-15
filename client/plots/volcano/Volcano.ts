@@ -33,17 +33,24 @@ class Volcano extends PlotBase implements RxComponent {
 		}
 
 		this.termType = opts.termType
-		const holder = opts.holder.classed('sjpp-diff-analysis-main', true)
+		const holder = opts.holder
+			.classed('sjpp-volcano-main', true)
+			.attr('data-testId', `sjpp-volcano-main-${opts.termType}`)
 		//Either allow a node to be passed or create a new div
 		const controls = typeof opts.controls == 'object' ? opts.controls : holder || (holder as any).append('div')
-		const error = opts.holder.append('div').attr('id', 'sjpp-diff-analysis-error').style('opacity', 0.75) as any
+		const error = opts.holder
+			.append('div')
+			.attr('id', 'sjpp-volcano-error')
+			.attr('data-testId', `sjpp-volcano-error-${opts.termType}`)
+			.style('opacity', 0.75) as any
 		this.dom = {
 			holder,
 			controls,
 			error,
 			wait: holder
 				.append('div')
-				.attr('id', 'sjpp-diff-analysis-wait')
+				.attr('id', 'sjpp-volcano-wait')
+				.attr('data-testId', `sjpp-volcano-wait-${opts.termType}`)
 				.style('opacity', 0.75)
 				.style('padding', '20px')
 				.text('Loading...') as any,
@@ -110,8 +117,6 @@ class Volcano extends PlotBase implements RxComponent {
 
 		const settings = config.settings.volcano
 		try {
-			if (!this.interactions) throw new Error('Interactions not initialized')
-
 			//Only show Loading for data requests that take longer than 500ms
 			const showWait = setTimeout(() => {
 				this.dom.wait.style('display', 'block')
@@ -126,18 +131,17 @@ class Volcano extends PlotBase implements RxComponent {
 				return
 			}
 
-			this.interactions.clearDom()
-
 			/** Format response into an object for rendering */
 			const viewModel = new VolcanoViewModel(config, response, settings)
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			this.interactions.data = response.data
 
-			clearTimeout(showWait)
-			this.dom.wait.style('display', 'none')
 			/** Render formatted data */
 			this.view.render(settings, viewModel.viewData)
+
+			clearTimeout(showWait)
+			this.dom.wait.style('display', 'none')
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)

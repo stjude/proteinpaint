@@ -53,7 +53,8 @@ export class VolcanoViewModel {
 				{ label: 'Original p-value', sortable: true },
 				{ label: 'Adjusted p-value', sortable: true }
 			],
-			//Arr set in setPointData()
+			/** Arr set in setPointData() if settings.showPValueTable is true to
+			 * prevent unnecessary data processing when the table is not shown */
 			rows: [],
 			height: settings.height + this.topPad
 		}
@@ -66,9 +67,12 @@ export class VolcanoViewModel {
 		const plotDim = this.setPlotDimensions()
 		this.setPTableColumns()
 		const pointData = this.setPointData(plotDim, controlColor, caseColor)
-		//Get all rows data for the pValueTable in setPointsData, then sort by fold change
-		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log₂(fold-change)'))
-		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
+
+		if (this.settings.showPValueTable) {
+			//Get all rows data for the pValueTable in setPointsData, then sort by fold change
+			const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log₂(fold-change)'))
+			this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
+		}
 
 		this.viewData = {
 			images: response.images || [],
@@ -196,7 +200,8 @@ export class VolcanoViewModel {
 				} else {
 					row.splice(0, 0, { value: d.gene_name || '' })
 				}
-				this.pValueTable.rows.push(row)
+				//Do not create p-value table data unless user opts to show the table
+				if (this.settings.showPValueTable) this.pValueTable.rows.push(row)
 			} else {
 				this.numNonSignificant++
 			}
