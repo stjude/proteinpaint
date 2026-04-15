@@ -360,7 +360,9 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			filter: this.state.termfilter.filter,
 			filter0: this.state.termfilter.filter0
 		}
-		if (c.term2) opts.term2 = c.term2
+		if (c.term2) {
+			opts.term2 = c.term2
+		}
 		if (c.term0) opts.term0 = c.term0
 		return opts
 	}
@@ -1195,7 +1197,6 @@ function setInteractivity(self) {
 		self.legendOrder.splice(oldIndex, 1)
 		// insert at new index
 		self.legendOrder.splice(newIndex, 0, d.seriesId)
-		console.log('self.legendOrder:', self.legendOrder)
 		self.app.dispatch({
 			type: 'app_refresh'
 		})
@@ -1212,11 +1213,14 @@ function setInteractivity(self) {
 				config: { settings: { survival: { defaultColor: color } } }
 			})
 		} else {
-			const values = structuredClone(t2?.term.values || self.legendValues)
+			// this is the overlay termwrapper
 			const term2 = structuredClone(t2)
-			term2.term.values = values
-			if (!values) term2.term.values = { [d.seriesId]: {} }
-			term2.term.values[d.seriesId].color = color
+			// do not replace term2.term.values directly, will set term2.values to use as overrides
+			if (!term2.values) term2.values = {}
+			const values = term2.values
+			if (!values[d.seriesId]) values[d.seriesId] = {}
+			if (!('key' in values[d.seriesId])) values[d.seriesId].key = d.seriesId
+			values[d.seriesId].color = color
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.id,

@@ -19,6 +19,7 @@ export type BaseTW = {
 	sortSamples?: any
 	minNumSamples?: number
 	valueFilter?: any
+	values?: { [key: string]: any }
 }
 
 export type TermWrapper = NumTW | GvTW | ConditionTW | SnpsTW | QualTW | TermCollectionTW
