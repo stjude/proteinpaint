@@ -52,8 +52,8 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 
 		if (opts.header) {
 			this.dom.header = {
-				terms: opts.header.append('span'),
-				title: opts.header.append('span').style('font-size', '0.8em').style('opacity', 0.7)
+				title: opts.header.append('span').style('margin-right', '5px').style('color', 'darkslategray'),
+				plot: opts.header.append('span').style('font-size', '0.7em').style('opacity', 0.6)
 			}
 		}
 	}
@@ -120,9 +120,10 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 		this.plotsControlsDiv[config.childType].style('display', '')
 
 		if (this.dom.header) {
-			if (config.tw) this.dom.header.terms.text(config.tw.term.name)
+			if (config.tw) this.dom.header.title.text(config.tw.term.name)
+			if (config.headerText) this.dom.header.title.text(config.headerText)
 			const typeStr = termType2label(config.termType).toUpperCase()
-			this.dom.header.title.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
+			this.dom.header.plot.text(` DIFFERENTIAL ${typeStr} ANALYSIS`)
 		}
 
 		if (this.plotTabs) this.plotTabs.update(config)
@@ -148,6 +149,9 @@ export function getPlotConfig(opts: any) {
 		highlightedData: opts.highlightedData || [],
 		hidePlotFilter: true //TODO: Support filtering and reactivity in child plots
 	} as any
+
+	if (opts?.tw?.term?.name && opts.headerText)
+		throw new Error('Cannot provide both tw.term.name and headerText. Please choose one to use as the plot title.')
 
 	/** TODO: Fix this config. This only applies to the
 	 * gdc and won't work long term for terms */
