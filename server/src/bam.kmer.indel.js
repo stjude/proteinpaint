@@ -209,26 +209,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 
 	const input_data = { reads: reads, alleles: alleles, strictness: Number(q.strictness) }
 
-	//if (is_realignment_reads == 1) {
-	//	// When realignment of reads is neccessary, quality scores and path to clustalo is passed for determining correct indel sequence (not functional, currently in development)
-	//	const quality_scores = templates_info.map((i) => i.sam_info.split('\t')[10]).join('-')
-	//	input_data += clustalo_read_alignment + '_' + quality_scores + '_' + is_realignment_reads
-	//}
-
-	/* uncomment this line to help creating tests at server/utils/test/indel.spec.js
-	console.log('indel test:',{
-		leftFlank:leftflankseq, rightFlank:rightflankseq,
-		seqRef:refseq, seqMut:altseq,
-		variant: q.variant
-	})
-	*/
-
-	//console.log('input_data:', input_data)
-	//fs.writeFile('test.txt', JSON.stringify(input_data), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
-
 	const time1 = new Date()
 	const rust_output = await run_rust('indel', JSON.stringify(input_data))
 	const time2 = new Date()

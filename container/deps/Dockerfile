@@ -118,11 +118,6 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
         wget https://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/blat/gfClient -P /home/root/pp/tools/ && \
         chmod -R 755 /home/root/pp/tools; \
-    # TODO: We will need a version 1.2.4 binary for this platform as the link is now broken. Adding a workaround letting the user know for now.
-    # elif [ "$ARCH" = "aarch64" ]; then \
-    #     curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz && \
-    #     cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install && \
-    #     chmod 755 /usr/local/bin/clustalo; \
     else \
         echo "unknown ARCH='$ARCH'" && \
         exit 1; \
