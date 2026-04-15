@@ -7,7 +7,6 @@ Run test script as follows (from 'proteinpaint/'):
 
 import tape from 'tape'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { parse_align_output } from '@sjcrh/proteinpaint-server/src/bam.js'
 
 tape('Test MSA #0: Basic functionality with 4 sequences', async t => {
 	const fasta = `>seq1
