@@ -172,9 +172,7 @@ class GenesetComp {
 
 	async render() {
 		if (!this.dom?.holder) return
-		this.dom.body
-			.append('p')
-			.text(`No default genes. Please change the cohort or define a gene set to launch ${this.state.config.toolName}.`)
+		this.dom.body.append('p').text(`Define a gene set to launch ${this.state.config.toolName.toLowerCase()}.`)
 		new GeneSetEditUI(
 			{
 				holder: this.dom.body.append('div'),
