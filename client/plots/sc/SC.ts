@@ -1,5 +1,5 @@
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn, Segments } from './SCTypes'
+import type { SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
@@ -9,22 +9,20 @@ import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './defaults'
 import { importPlot } from '#plots/importPlot.js'
-import { newSandboxDiv } from '#dom'
 import formatPlotData from './viewModel/plotData.ts'
 
-class SCViewer extends PlotBase implements RxComponent {
+export class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
 
 	type: string
 	components: { plots: { [key: string]: any } }
 	dom: SCDom
-	interactions?: SCInteractions
-	items?: SingleCellSample[]
-	itemColumns?: SampleColumn[]
-	model?: SCModel
-	segments: Segments
-	view?: SCViewRenderer
-	viewModel?: SCViewModel
+	interactions!: SCInteractions
+	items!: SingleCellSample[]
+	itemColumns!: SampleColumn[]
+	model!: SCModel
+	view!: SCViewRenderer
+	viewModel!: SCViewModel
 
 	constructor(opts: SCViewerOpts, api: any) {
 		super(opts, api)
@@ -54,10 +52,9 @@ class SCViewer extends PlotBase implements RxComponent {
 				.style('text-align', 'center'),
 			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-item-table'),
-			plotsBtnsDiv: div.append('div').attr('id', 'sjpp-sc-plot-buttons').style('display', 'none')
+			plotsBtnsDiv: div.append('div').attr('id', 'sjpp-sc-plot-buttons').style('display', 'none'),
+			sectionsDiv: div.append('div').attr('id', 'sjpp-sc-sections')
 		}
-
-		this.segments = {}
 
 		//opts.header is the sandbox header
 		if (opts.header) opts.header.html(`SINGLE CELL`).style('font-size', '0.9em')
@@ -100,110 +97,12 @@ class SCViewer extends PlotBase implements RxComponent {
 			throw new Error(e.message || e)
 		}
 		this.interactions = new SCInteractions(this.app, this.dom, this.id, () => this.getState(this.app.getState()))
-		//Init view model and view
 		this.viewModel = new SCViewModel(this.app, state.config, this.items!, this.itemColumns)
-		this.view = new SCViewRenderer(this.dom, this.interactions, this.segments)
+		this.view = new SCViewRenderer(this)
 
 		/** The item data and table rendering should only occur once
 		 * .update() in main() handles changes to the buttons and plots */
 		this.view.render(this.viewModel.tableData)
-	}
-
-	//TODO: .text() should be ds specific
-	async initSegment(item, sampleId) {
-		const caseText = item.case ? `Case: ${item.case}` : ''
-		const itemText = `Sample: ${sampleId}` //item.cell, etc.
-		const projectText = item['project id'] ? `Project: ${item['project id']}` : ''
-		const headerText = [itemText, caseText, projectText].join(' ')
-
-		this.segments[sampleId] = {
-			title: this.dom.div
-				.append('div')
-				.attr('data-testid', `sjpp-sc-segment-title-${sampleId}`)
-				.style('margin-left', '10px')
-				.style('padding', '10px')
-				.style('font-weight', 600)
-				.text(headerText),
-			subplots: this.dom.div
-				.append('div')
-				.attr('data-testid', `sjpp-sc-segment-subplots-${sampleId}`)
-				.style('margin-left', '10px'),
-			sandboxes: {}
-		}
-	}
-
-	/** The plot obj is already in state.plots[] but not rendered
-	 * (see SCInteractions). This creates the component and renders the plot */
-	async initSubplotComponent(subplot: any, sampleId) {
-		const sandbox = newSandboxDiv(this.segments[sampleId].subplots as any, {
-			close: () => {
-				//Delete the component before calling dispatch
-				//Prevents main attempting to re-init the component
-				delete this.components.plots[subplot.id]
-				delete this.segments[sampleId].sandboxes[subplot.id]
-				this.app.dispatch({
-					type: 'plot_delete',
-					id: subplot.id,
-					parentId: this.id
-				})
-				//Could do this in main() but this is more performant
-				this.view?.removeSegments()
-			},
-			plotId: subplot.id,
-			beforePlotId: subplot.insertBefore || null
-			// style: {
-			// 	width: '98.5%'
-			// }
-		})
-
-		const opts = Object.assign({}, subplot, {
-			app: this.app,
-			parentId: this.id,
-			id: subplot.id
-		})
-		/** Summary is expecting entire sandbox object. Most other plots
-		 * expect the header and the holder (i.e. body).*/
-		if (subplot.chartType == 'summary') {
-			opts.holder = sandbox
-		} else {
-			opts.holder = sandbox.body
-			opts.header = sandbox.header
-		}
-		const { componentInit } = await importPlot(opts.chartType)
-		this.components.plots[subplot.id] = await componentInit(opts)
-		this.segments[sampleId].sandboxes[subplot.id] = sandbox.app_div
-	}
-
-	private async reconcileSubplots(state: SCFormattedState) {
-		const subplotsById = new Map(state.subplots.map(subplot => [subplot.id, subplot]))
-		for (const [subplotId, subplot] of subplotsById) {
-			//TODO: Get rid of passing scItem
-			const item = subplot.scItem || subplot?.term?.term?.sample
-			if (!item) throw new Error('No item found for subplot. Expected subplot.scItem or config.settings.sc.item')
-			const sampleId = item.sample || item.sID
-			if (!this.segments[sampleId]) this.initSegment(item, sampleId)
-			if (!this.components.plots[subplotId]) await this.initSubplotComponent(subplot, sampleId)
-		}
-
-		/** Instances like init'ing another plot from a transient plot (e.g.
-		 * dictionary to summary) may not delete the sandbox DOM element immediately.
-		 * This is a clean up for those instances */
-		for (const subplotId of Object.keys(this.components.plots)) {
-			if (!subplotsById.has(subplotId)) {
-				// Find and remove the sandbox DOM element
-				for (const segment of Object.values(this.segments)) {
-					const sandbox = segment.sandboxes[subplotId]
-					if (sandbox) {
-						sandbox.remove()
-						delete segment.sandboxes[subplotId]
-						break
-					}
-				}
-				delete this.components.plots[subplotId]
-			}
-		}
-
-		this.view?.removeSegments()
 	}
 
 	async main() {
@@ -216,7 +115,6 @@ class SCViewer extends PlotBase implements RxComponent {
 		if (!this.interactions) throw new Error(`Interactions not initialized`)
 
 		this.interactions.toggleLoading(true)
-		await this.reconcileSubplots(state)
 
 		let data: any = null
 		if (config.settings.sc.item) {
@@ -235,8 +133,17 @@ class SCViewer extends PlotBase implements RxComponent {
 			}
 			data.plots = formatPlotData(data.plots)
 		}
-		this.view.update(config.settings, data)
+		await this.view.update(config.settings, data, state.subplots)
 		this.interactions.toggleLoading(false)
+	}
+
+	async initPlotComponent(subplotId, opts) {
+		const { componentInit } = await importPlot(opts.chartType)
+		this.components.plots[subplotId] = await componentInit(opts)
+	}
+
+	removeComponent(subplotId) {
+		delete this.components.plots[subplotId]
 	}
 }
 
