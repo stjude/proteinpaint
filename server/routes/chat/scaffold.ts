@@ -234,15 +234,12 @@ Always return ONLY a JSON object in this exact format:
 Parse the following query into the summary plot scaffold:
 Query: ${user_prompt}
 `
-	// let response = summaryScaffold
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Summary scaffold: ${response}`)
 	try {
 		const parsed = JSON.parse(response) as ScaffoldTypes.SummaryScaffold
 		parsed.plotType = 'summary'
 		return parsed
-		// response["plotType"] = 'summary'
-		// return JSON.parse(response) as ScaffoldTypes.SummaryScaffold
 	} catch {
 		throw new Error(`Failed to parse SummaryScaffold from LLM response: ${response}`)
 	}
