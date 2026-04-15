@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- restore option to replace survival series colors via legend click menu
+- darken willdtype gray color to pass Section 508 contrast requirement
+
+
 ## 2.183.0
 
 Features:
