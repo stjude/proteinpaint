@@ -319,13 +319,80 @@ async function get_termCollection_custom(tvs, CTEname, ds, onlyChildren) {
 	return numericSampleData2tvs(tvs, CTEname, values)
 }
 
+/** Percentage filter for custom (non-dictionary) termCollections, e.g. isoform
+ *  expression collections created dynamically via "Create Collection".
+ *
+ *  Cannot use getData() here because it requires req.query.__protected__ (auth
+ *  context set by Express middleware), which is not available inside the filter
+ *  evaluation path. Instead, call the underlying query handlers (e.g.
+ *  isoformExpression HDF5 handler) directly for each member term, then compute
+ *  the numerator/denominator percentage client-side and filter samples. */
+async function get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildren) {
+	const range = tvs.ranges?.[0]
+	if (!range) return emptyFilterResult(CTEname, onlyChildren, ds)
+	const termlst = tvs.term.termlst || []
+	const numerators = tvs.term.numerators || []
+	if (!termlst.length) return emptyFilterResult(CTEname, onlyChildren, ds)
+
+	// Fetch values for all member terms via query handlers directly
+	// sampleValues: { sampleId: { memberId: value, ... }, ... }
+	const sampleValues = {}
+	for (const mt of termlst) {
+		const dataType = mt.dataType || mt.type || 'isoformExpression'
+		const queryHandler = ds.queries?.[dataType]
+		if (!queryHandler) continue
+		const memberId = mt.id || mt.name
+		const tw = { $id: memberId, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
+		try {
+			const data = await queryHandler.get({ terms: [tw] }, ds)
+			const values = data.term2sample2value?.get(memberId)
+			if (!values) continue
+			for (const [sid, val] of Object.entries(values)) {
+				if (!sampleValues[sid]) sampleValues[sid] = {}
+				sampleValues[sid][memberId] = val
+			}
+		} catch (e) {
+			// skip members that have no data
+		}
+	}
+
+	// Calculate percentage and filter samples
+	const samplenames = []
+	for (const [sid, memberVals] of Object.entries(sampleValues)) {
+		let numeratorSum = 0
+		let totalSum = 0
+		for (const [mid, val] of Object.entries(memberVals)) {
+			totalSum += val
+			if (numerators.includes(mid)) numeratorSum += val
+		}
+		const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
+		if (isInRange(percentage, range, tvs.isnot)) samplenames.push(sid)
+	}
+
+	if (!samplenames.length) return emptyFilterResult(CTEname, onlyChildren, ds)
+
+	let query = `SELECT id as sample
+				FROM sampleidmap
+				WHERE id IN (${samplenames.map(() => '?').join(', ')})`
+	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+
+	return {
+		CTEs: [`${CTEname} AS (${query})`],
+		values: [...samplenames],
+		CTEname
+	}
+}
+
 async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 	if (tvs.term.memberType === 'categorical') {
 		throw new Error('termcollection memberType=categorical not supported yet')
 	}
 	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
 	if (tvs.term.isCustom) {
-		return await get_termCollection_custom(tvs, CTEname, ds, onlyChildren)
+		// Custom collections bypass the getData() path below because getData()
+		// requires __protected__ auth context that is unavailable during filter
+		// CTE evaluation. Use direct query handler calls instead.
+		return await get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildren)
 	}
 	if (tvs.term.numerators) {
 		validateTermCollectionTvs(
