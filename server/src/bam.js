@@ -1152,7 +1152,6 @@ async function align_multiple_reads(
 	const align_multiple_output = await run_python('seqMultiAlign.py', JSON.stringify(align_multiple_input))
 	return parse_align_output(
 		align_multiple_output,
-		sequence_reads.length,
 		qual_sequence,
 		leftflankseq_length,
 		partstack_start,
@@ -1161,9 +1160,8 @@ async function align_multiple_reads(
 	)
 }
 
-function parse_align_output(
+export function parse_align_output(
 	align_multiple_output,
-	num_reads,
 	qual_sequence,
 	leftflankseq_length,
 	partstack_start,
