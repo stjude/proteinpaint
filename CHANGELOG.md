@@ -4,15 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-Features:
-- Various cleanups to further unify violin and boxplot route code
-- Support numeric termCollection natively in violinBox route
-- New SC app allows users to launch summary plot from a new 'Summary' plot tab. Users may select a single cell term from the dictionary to open the summary plot. The term selections within the summary plot are restricted to single cell terms when config.term is a single cell term.
-- New unit tests for SC app, specifically for the SCModel and SCViewModel. /plots/sc/README.md expanded with more technical details and usage explanation.
-- Adding custom non-dictionary termCollection support
-- SC gene expression plot button now launches the gene expression chart menu for launching either the violin, scatter, or hierarchical cluster.
-- New unit tests for the gene expression chart menu dom component.
-
 Fixes:
 - show the persisted top mutated genes message in matrix plot when starting with no cohort filter and after switching cohorts
 - improve the message wording when non-primary diagnoses data is not rendered for a sample or case
