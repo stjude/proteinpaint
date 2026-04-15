@@ -16,9 +16,10 @@ oncomatrix.js
 	oncomatrix
 maf.js
 	cohort MAF
-singlecell.js
+(DEPRECIATED) singlecell.js 
 	single cell rnaseq (not released)
-
+sc.ts
+	single cell app (not released)
 
 From a GFF card, it calls runpp({ purposeSpecificKey:{} })
 and such purpose-specific key will trigger client/src/app.js to load a script file from this folder,
