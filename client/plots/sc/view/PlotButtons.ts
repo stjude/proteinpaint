@@ -52,7 +52,7 @@ export class PlotButtons {
 		this.scTermdbConfig = state.termdbConfig.queries.singleCell
 	}
 
-	update(settings, data) {
+	update(settings: SCSettings, data) {
 		/** If the user has not selected a item yet but clicks
 		 * the select item/plots btn above the table, the prompt appears
 		 * unnecessarily */
@@ -221,6 +221,7 @@ export class PlotButtons {
 		const sample = this.makeSampleObj()
 		const config: any = {
 			chartType: 'sampleScatter',
+			name: `Sample: ${this.item!.sample}`,
 			singleCellPlot: {
 				name: plotName,
 				sample
