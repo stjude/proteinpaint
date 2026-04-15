@@ -66,7 +66,7 @@ function makeFusionInput(div, obj) {
 	const fusionInput = uiutils
 		.makeTextAreaInput({
 			div,
-			cols: 70, // Increased from 50 to accommodate longer isoform format example
+			cols: 70, // Increased to accommodate longer isoform format example
 			placeholder: 'Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ or RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,+,NM_004991'
 		})
 		.style('border', '1px solid rgb(138, 177, 212)')
@@ -160,7 +160,7 @@ function makeInfoSection(div) {
  */
 function validatePosition(position, geneName) {
 	if (!/^\d+$/.test(position)) {
-		throw new Error(`Invalid fusion format: position for ${geneName} must be a positive integer (numeric string)`)
+		throw new Error(`Invalid fusion format: position for ${geneName} must be a positive integer`)
 	}
 	const pos = Number(position)
 	if (pos <= 0) {
@@ -231,7 +231,7 @@ function createFusionVariant(gene1, gene2) {
 	}
 	// Add isoform information if available (check for non-empty strings)
 	const addIsoformIfPresent = (gene, fieldName) => {
-		if (gene.length > 4 && gene[4] && gene[4].trim()) {
+		if (gene.length > 4 && gene[4]?.trim()) {
 			variant[fieldName] = gene[4]
 		}
 	}
