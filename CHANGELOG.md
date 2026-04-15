@@ -4,7 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+
 Fixes:
+- restore option to replace survival series colors via legend click menu
+- darken willdtype gray color to pass Section 508 contrast requirement
 - show the persisted top mutated genes message in matrix plot when starting with no cohort filter and after switching cohorts
 - improve the message wording when non-primary diagnoses data is not rendered for a sample or case
 - Regenerated termdbtest file to support differential DNA meth in termdbtest. Now using getDNAMethUnit. Fixed launchViolin to allow launching violin from the promoter volcano
