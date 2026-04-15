@@ -159,7 +159,7 @@ def get_msa_from_tree(tree, original_seqs):
 
 def write_clustal_with_wrap(msa, handle, wrap = 60, seqtype = "auto"):
     """Write Clustal output with proper conservation line (no * in gapped columns)."""
-    handle.write("CLUSTAL O (PyOmega)\n\n")
+    handle.write("Multiple Sequencing Alignment\n\n")
 
     max_len = max(len(rec.id) for rec in msa)
     name_width = max_len + 2
