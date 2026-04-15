@@ -14,31 +14,39 @@ export class DataPointMouseEvents {
 		const menuOpts = [
 			{
 				label: 'Violin plot',
-				isVisible: () => termType === DNA_METHYLATION,
+				isVisible: () => {
+					const enabledTermTypes = new Set([DNA_METHYLATION, GENE_EXPRESSION])
+					return enabledTermTypes.has(termType)
+				},
 				onClick: async () => {
-					interactions.launchViolin(d as any)
+					if (termType === DNA_METHYLATION) interactions.launchDNAMethViolin(d as any)
+					if (termType === GENE_EXPRESSION) interactions.launchViolinGeneExp(d.gene_name)
 				}
 			},
 			{
 				label: 'DMR analysis',
 				isVisible: () => termType === DNA_METHYLATION,
 				onClick: async () => {
-					interactions.launchViolin(d as any)
-				}
-			},
-			{
-				label: 'Violin plot',
-				note: 'Gene expression only',
-				isVisible: () => termType === GENE_EXPRESSION,
-				onClick: async () => {
-					await interactions.launchViolinGeneExp(d.gene_name)
+					const dm = d as DataPointEntry & {
+						chr: string
+						start: number
+						stop: number
+						promoter_id?: string
+						gene_name?: string
+					}
+					await interactions.launchDmr({
+						chr: dm.chr,
+						start: dm.start,
+						stop: dm.stop,
+						promoterId: dm.promoter_id
+					})
 				}
 			},
 			{
 				label: 'Box plot',
 				isVisible: () => termType === GENE_EXPRESSION,
 				onClick: async () => {
-					await interactions.launchBoxPlot(d.gene_name)
+					interactions.launchBoxPlot(d.gene_name)
 				}
 			}
 		]
@@ -51,7 +59,9 @@ export class DataPointMouseEvents {
 			this.addTooltipRows(d, table)
 		})
 
+		let menuOpen = false
 		circle.on('mouseout', () => {
+			if (menuOpen) return
 			tip.hide()
 			if (d.highlighted) return
 			circle.attr('fill-opacity', 0)
@@ -61,7 +71,9 @@ export class DataPointMouseEvents {
 		if (visibleMenuOpts.length === 0) return
 
 		circle.on('click', () => {
+			menuOpen = true
 			tip.onHide = () => {
+				menuOpen = false
 				if (!d.highlighted) circle.attr('fill-opacity', 0)
 			}
 			tip.clear().showunder(circle.node())
@@ -72,6 +84,7 @@ export class DataPointMouseEvents {
 					.text(opt.label)
 					.on('click', async () => {
 						tip.hide()
+						if (!d.highlighted) circle.attr('fill-opacity', 0)
 						await opt.onClick()
 					})
 			}

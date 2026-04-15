@@ -100,7 +100,8 @@ export type VolcanoDom = {
 	error: Elem
 	/** Loading message */
 	wait: Elem
-	/** Tooltip for data points */
+	/** Tooltip for data points. Displays information on hover
+	 * and, if enabled, a menu for launching other plots */
 	tip: Menu
 	/** Menu for action buttons above the volcano plot */
 	actionsTip: Menu
