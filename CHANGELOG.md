@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - restore option to replace survival series colors via legend click menu
 - darken willdtype gray color to pass Section 508 contrast requirement
+- darken wildtype gray color to pass Section 508 contrast requirement
+- correctly handle undefined item.tvs in filterSamples4assayAvailability
 
 
 ## 2.183.0
