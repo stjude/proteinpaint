@@ -45,7 +45,11 @@ class GenesetComp {
 		this.type = GenesetComp.type
 
 		this.dom = {
-			holder: opts.holder.style('position', 'relative').style('min-height', '300px'),
+			holder: opts.holder
+				.style('position', 'relative')
+				.style('min-height', '300px')
+				.style('margin', '0px 20px')
+				.style('max-width', '1000px'),
 			body: opts.holder.append('div'),
 			loadingOverlay: opts.holder
 				.append('div')
