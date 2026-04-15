@@ -154,6 +154,7 @@ export class PlotButtons {
 						chartType: 'differentialAnalysis',
 						termType: SINGLECELL_CELLTYPE,
 						categoryName: `${value}`,
+						headerText: `Sample: ${this.item!.sample} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
 						termId: this.scTermdbConfig.DEgenes.termId,
 						sample: this.item!.experiment || this.item!.sample
 					}
@@ -186,12 +187,11 @@ export class PlotButtons {
 		const _plot = self.data.plots[0]
 
 		const wrapper = self.plotBtnsDom.tip.d.append('div').style('padding', '10px')
-
 		wrapper
 			.append('div')
 			.style('display', 'block')
 			.style('width', '300px')
-			.text(`View differentially expressed genes of a ${_plot.colorBy.toLowerCase()} versus rest of the cells:`)
+			.text(`View differentially expressed genes of a ${self.scTermdbConfig.DEgenes.termId} versus rest of the cells:`)
 
 		const select = wrapper
 			.append('select')
@@ -202,38 +202,39 @@ export class PlotButtons {
 				self.plotBtnsDom.tip.hide()
 				const value = select.node()!.value
 				if (value.indexOf('Select') == 0) return //ignore prompt option
-				const config = plot.getPlotConfig(value, _plot.colorBy)
+				const config = plot.getPlotConfig(value)
 				await self.interactions.createSubplot(config)
 			})
 
 		const regex = new RegExp(_plot.colorBy, 'g')
-		_plot.clusters.unshift(`Select ${_plot.colorBy}...`)
+		_plot.clusters.unshift(`Select ${self.scTermdbConfig.DEgenes.termId}...`)
 		for (const cluster of _plot.clusters) {
 			select.append('option').attr('value', cluster.replace(regex, '').trim()).text(cluster)
 		}
 	}
 
 	//********** Plot Config Helpers **********/
-	async getSingleCellConfig(plotName): Promise<object> {
+	async getSingleCellConfig(plotName: string): Promise<object> {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
 		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots.`)
+		const sample = this.makeSampleObj()
 		const config: any = {
 			chartType: 'sampleScatter',
 			singleCellPlot: {
 				name: plotName,
-				sample: this.makeSampleObj()
+				sample
 			}
 		}
 		if (plot.colorColumns?.[0]) {
 			// apply optional color term. hardcodes to 1st of the array
-			config.colorTW = await this.makeScctTW(this.item, plot)
+			config.colorTW = await this.makeScctTW(sample, plot)
 		}
 		return config
 	}
 
 	// Quick fix. Eventually use the handler to get the proper term from the termdbConfig
-	async makeScctTW(item, plot) {
+	async makeScctTW(item: { sID: string; eID: string }, plot: any) {
 		const colorColName = plot.colorColumns[0].name
 		const savedTerm = this.scctTerms?.find(t => t.name == colorColName && t.plot == plot.name)
 		if (!savedTerm)
@@ -243,14 +244,14 @@ export class PlotButtons {
 		const term = Object.assign(structuredClone(savedTerm), {
 			sample: this.makeSampleObj()
 		})
-		const id = await digestMessage(`${plot.name}-${item.sample}-${item.experiment}`)
+		const id = await digestMessage(`${plot.name}-${item.sID}-${item.eID}`)
 		return Object.assign({ $id: id }, { term })
 	}
 
 	/** Creates a sample object for the current item.
 	 * Part of the effort to normalize sample objects across
 	 * native and gdc datasets. */
-	makeSampleObj() {
+	makeSampleObj(): { sID: string; eID: string } {
 		return {
 			sID: this.item!.sample,
 			eID: this.item!.experiment

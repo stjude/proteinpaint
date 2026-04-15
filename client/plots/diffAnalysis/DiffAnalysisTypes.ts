@@ -10,10 +10,10 @@ export type DiffAnalysisDom = {
 	div: Elem
 	/** Sandbox header, if provided */
 	header?: {
-		/** If tw.term.name is present, show in header */
-		terms: Elem
-		/** Updates plot titl per provided opts.termType */
+		/** If tw.term.name || headerText is present, show in header */
 		title: Elem
+		/** Updates plot title per provided opts.termType */
+		plot: Elem
 	}
 	/** Toggle between plots */
 	tabsDiv: Elem
