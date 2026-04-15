@@ -26,6 +26,7 @@ const binaryDir = path.join(__dirname, '/target/release/')
 if (!fs.existsSync(binaryDir)) throw `missing rust binary directory='${binaryDir}'`
 if (!fs.readdirSync(binaryDir).length) throw `empty rust binary directory='${binaryDir}'`
 
+// use this for non-streamed input/output
 export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)

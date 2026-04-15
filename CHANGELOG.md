@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- fix the detection of an unpublished package version
+
+
 ## 2.182.1
 
 Fixes:
