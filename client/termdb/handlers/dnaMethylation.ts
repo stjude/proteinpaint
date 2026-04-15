@@ -3,8 +3,24 @@ import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
-// TODO: currently, when inputting a single position (e.g. chr17:7661778 or chr17:7661778-7661778), the output is a region 400bp long. Need to support single position input.
-// TODO: verify whether coordiante is 0-based or 1-based (need to do the same for other search handlers e.g. geneVariant.ts, snp.ts, etc.)
+/** Coordinate note: both the genome browser and the HDF5 beta file use 0-based
+ coordinates. Verified by cross-referencing 5 probes from the test H5 file
+ (dnaMeth.h5) against UCSC hg38 using the search API:
+   https://api.genome.ucsc.edu/search?search=<probeId>&genome=hg38
+
+ H5 positions were read with:
+   python3 -c "import h5py; h5=h5py.File('proteinpaint/server/test/tp/files/hg38/TermdbTest/dnaMeth.h5','r'); \
+     print(list(zip(h5['/meta/probe/probeID'].asstr()[:5], h5['/meta/start'][:5])))"
+
+ All matched the 0-based half-open (BED) position returned by UCSC:
+   cg22949073: H5=7669073, UCSC=chr17:7669073-7669074
+   cg16397722: H5=7673772, UCSC=chr17:7673772-7673773
+   cg04405586: H5=7675143, UCSC=chr17:7675143-7675144
+   cg15110538: H5=7675305, UCSC=chr17:7675305-7675306
+   cg10792831: H5=7675371, UCSC=chr17:7675371-7675372
+No conversion is needed. Single-position inputs (e.g. chr17:7661778) are
+recovered from actualposition to avoid the 400bp expansion that string2pos()
+applies for the genome browser. */
 
 export class SearchHandler {
 	opts: any
@@ -82,8 +98,15 @@ export class SearchHandler {
 				})
 		} else if (geneSearch.chr && Number.isInteger(geneSearch.start) && Number.isInteger(geneSearch.stop)) {
 			// coordinate input
-			// directly use coordinate to make term
-			const { chr, start, stop } = geneSearch
+			// string2pos() expands single positions to a 400bp window for the
+			// genome browser, but we need the exact position for CpG queries.
+			// Use actualposition when it indicates a single-position input.
+			const { chr } = geneSearch
+			let { start, stop } = geneSearch
+			if (geneSearch.actualposition?.len <= 1) {
+				start = geneSearch.actualposition.position
+				stop = start + 1
+			}
 			const term = this.makeTerm({ chr, start, stop })
 			await this.callback(term)
 		} else {
