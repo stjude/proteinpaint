@@ -124,7 +124,7 @@ export async function init(arg, holder, genomes) {
 				mode: 'geneExpression', // consistent with GeneSetEdit
 				genome,
 				genes: arg.genes,
-				showEditUI: arg.opts.geneset.showEditUI,
+				showEditUI: arg.opts?.geneset?.showEditUI,
 				reactsTo(action) {
 					if (action.type.startsWith('plot_')) return action.id === this.id
 					if (action.type.startsWith('filter')) return true
