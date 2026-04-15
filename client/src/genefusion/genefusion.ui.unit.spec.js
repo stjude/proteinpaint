@@ -2,19 +2,14 @@ import tape from 'tape'
 import { parseFusionLine } from './genefusion.ui.js'
 
 /****************
-Tests
+Tests for genefusion.ui.js parseFusionLine function
 
-- parseFusionLine tests
-	valid format 1 (basic 4 fields per gene)
-	valid format 2 (with isoform - 5 fields per gene)
-	mixed format (gene1 with isoform, gene2 without)
-	missing double colon separator
-	wrong number of genes (not exactly 2)
-	invalid number of fields per gene (not 4 or 5)
-	empty required fields
-	non-numeric position
-	invalid strand values
-	whitespace handling
+This test suite covers:
+- Valid input formats (basic 4-field and 5-field with isoform)
+- Mixed formats (one gene with isoform, one without)
+- Whitespace handling
+- Validation error cases
+- Real-world fusion examples
 
 *****************/
 
