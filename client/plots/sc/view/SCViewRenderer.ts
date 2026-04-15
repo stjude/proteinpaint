@@ -1,6 +1,6 @@
 import type { SCDom, Segments } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
-import { PlotSelectionRenderer } from './PlotSelectionRenderer'
+import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
 
 export class SCViewRenderer {
@@ -21,7 +21,7 @@ export class SCViewRenderer {
 
 	render(tableData) {
 		this.renderSelectBtn()
-		new PlotSelectionRenderer(this.dom, this.interactions, tableData)
+		new SampleTableRenderer(this.dom, this.interactions, tableData)
 		this.dom.plotsBtnsDiv.style('display', 'none')
 	}
 

@@ -3,7 +3,8 @@ import type { TableCell } from '#dom'
 import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 
-export class PlotSelectionRenderer {
+/** Renders the sample table for selection */
+export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
 
