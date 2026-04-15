@@ -20,18 +20,11 @@ export class VolcanoPlotView {
 	settings: any
 	termType: string
 	volcanoDom: VolcanoPlotDom
-	viewData: VolcanoViewData
-	constructor(
-		dom: VolcanoDom,
-		settings: ValidatedVolcanoSettings,
-		viewData: VolcanoViewData,
-		interactions: VolcanoInteractions,
-		termType: string
-	) {
+	viewData!: VolcanoViewData
+	constructor(dom: VolcanoDom, interactions: VolcanoInteractions, termType: string) {
 		this.dom = dom
 		this.interactions = interactions
-		this.settings = settings
-		this.viewData = viewData
+		this.termType = termType
 		const actions = this.dom.holder
 			.append('div')
 			.attr('id', 'sjpp-volcano-actions')
@@ -54,7 +47,11 @@ export class VolcanoPlotView {
 			plot: svg.append('g').attr('id', 'sjpp-volcano-plot'),
 			pValueTable: this.dom.holder.append('div').attr('id', 'sjpp-volcano-pValueTable').style('display', 'none')
 		}
-		this.termType = termType
+	}
+
+	render(settings: ValidatedVolcanoSettings, viewData: VolcanoViewData) {
+		this.settings = settings
+		this.viewData = viewData
 		const plotDim = this.viewData.plotDim
 		this.renderUserActions()
 		this.renderPlot(plotDim)

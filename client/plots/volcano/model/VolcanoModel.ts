@@ -1,25 +1,24 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { VolcanoPlotConfig } from '../VolcanoTypes'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest } from '#types'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
-import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
 export class VolcanoModel {
 	app: MassAppApi
-	config: any
-	settings: any
+	config!: any
+	settings!: any
 	termType: string
 
-	constructor(app: MassAppApi, config: VolcanoPlotConfig, settings: ValidatedVolcanoSettings) {
+	constructor(app: MassAppApi, termType: string) {
 		this.app = app
-		this.config = config
-		this.settings = settings
-		this.termType = config.termType
+		this.termType = termType
 	}
 
 	/** May use mapper instead as more termTypes are added */
-	async getData() {
+	async getData(config: any, settings: any) {
+		this.config = config
+		this.settings = settings
+
 		if (this.termType === GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
 			return await dofetch3('termdb/DE', { body })
@@ -51,12 +50,8 @@ export class VolcanoModel {
 			filter0: state.termfilter.filter0,
 			cpm_cutoff: this.settings.cpmCutoff
 		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
-		//This is a workaround until the server can accept an arr of confounder tws
-		const confounders = this.config?.confounderTws
-		if (confounders?.length) {
-			body.tw = this.config.confounderTws[0]
-			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
-		}
+
+		this.addConfounderTw(body)
 
 		return body
 	}
@@ -73,12 +68,19 @@ export class VolcanoModel {
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup
 		} as Partial<DiffMethRequest>
+
+		this.addConfounderTw(body)
+
+		return body
+	}
+
+	//This is a workaround until the server can accept an arr of confounder tws
+	addConfounderTw(body) {
 		const confounders = this.config?.confounderTws
 		if (confounders?.length) {
 			body.tw = this.config.confounderTws[0]
 			if (confounders.length > 1) body.tw2 = this.config.confounderTws[1]
 		}
-		return body
 	}
 
 	//Single cell cell type

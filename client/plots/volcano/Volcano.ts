@@ -20,6 +20,8 @@ class Volcano extends PlotBase implements RxComponent {
 	components: { controls: any }
 	dom: VolcanoDom
 	interactions?: VolcanoInteractions
+	model!: VolcanoModel
+	view!: VolcanoPlotView
 	termType: string
 
 	constructor(opts: VolcanoOpts, api) {
@@ -47,19 +49,6 @@ class Volcano extends PlotBase implements RxComponent {
 				.text('Loading...') as any,
 			tip: new Menu({ padding: '' }),
 			actionsTip: new Menu({ padding: '' })
-		}
-	}
-
-	reactsTo(action) {
-		if (action.type.includes('cache_termq')) return true
-		if (action.type.startsWith('filter')) return true
-		if (action.type.startsWith('cohort')) return true
-		if (action.type == 'app_refresh') return true
-		if (action.type.startsWith('plot_')) {
-			return (
-				(action.id === this.id || action.id == this.parentId) &&
-				(!action.config?.childType || action.config?.childType == this.type)
-			)
 		}
 	}
 
@@ -105,10 +94,16 @@ class Volcano extends PlotBase implements RxComponent {
 
 	async init() {
 		this.interactions = new VolcanoInteractions(this.app, this.id, this.dom)
+		this.model = new VolcanoModel(this.app, this.termType)
+		this.view = new VolcanoPlotView(this.dom, this.interactions, this.termType)
 		await this.setControls()
 	}
 
 	async main() {
+		if (!this.interactions) throw new Error('Volcano Interactions not initialized')
+		if (!this.model) throw new Error('Volcano Model not initialized')
+		if (!this.view) throw new Error('Volcano View not initialized')
+
 		const config = structuredClone(this.state.config)
 		//TODO: Fix this to use parentId instead
 		if (config.chartType != this.type && config.childType != this.type) return
@@ -123,8 +118,7 @@ class Volcano extends PlotBase implements RxComponent {
 			}, 500)
 
 			/** Fetch data */
-			const model = new VolcanoModel(this.app, config, settings)
-			const response = await model.getData()
+			const response = await this.model.getData(config, settings)
 			if (!response || response.error || !response.data || !response.data.length) {
 				sayerror(this.dom.error, response?.error || 'No data returned from server')
 				clearTimeout(showWait)
@@ -143,7 +137,7 @@ class Volcano extends PlotBase implements RxComponent {
 			clearTimeout(showWait)
 			this.dom.wait.style('display', 'none')
 			/** Render formatted data */
-			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions, config.termType)
+			this.view.render(settings, viewModel.viewData)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)
