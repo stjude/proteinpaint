@@ -176,6 +176,29 @@ tape('parseFusion()', async function (test) {
 		test.pass(`${message}: ${e}`)
 	}
 
+	{
+		const mlst = []
+		await parseFusion(['PAX5', 'NM_016734', '1234', 'JAK2', 'NM_004972', '5678'], mlst, selecti, mockBlock)
+		test.deepEqual(
+			mlst[0],
+			{
+				class: 'Fuserna',
+				dt: 2,
+				gene1: 'PAX5',
+				chr1: 'chr9',
+				pos1: 1233,
+				strand1: '-',
+				isoform1: 'NM_016734',
+				gene2: 'JAK2',
+				chr2: 'chr9',
+				pos2: 5677,
+				strand2: '+',
+				isoform2: 'NM_004972'
+			},
+			'successfully parsed fusion'
+		)
+	}
+
 	test.end()
 })
 

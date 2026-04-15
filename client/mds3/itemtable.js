@@ -566,8 +566,8 @@ async function makeSvgraph(m, div, block) {
 			}
 		}
 
-		await getGm(svpair.a, block, m.pairlst[0].a.name)
-		await getGm(svpair.b, block, m.pairlst[0].b.name)
+		await getGm(svpair.a, block, m.pairlst[0].a.name, m.pairlst[0].a.isoform)
+		await getGm(svpair.b, block, m.pairlst[0].b.name, m.pairlst[0].b.isoform)
 
 		wait.remove()
 
@@ -581,12 +581,21 @@ async function makeSvgraph(m, div, block) {
 		wait.text(e.message || e)
 	}
 }
-async function getGm(p, block, name) {
+
+// isoform is optional
+async function getGm(p, block, geneName, isoform) {
 	// p={chr, position}
+	if (isoform) {
+		// isoform already specified on the breakend. use as-is and without validation
+		p.name = geneName
+		p.gm = { isoform }
+		return
+	}
+	// no isoform specified. find matching isoform by position
 	const d = await dofetch3('isoformbycoord', { body: { genome: block.genome.name, chr: p.chr, pos: p.position } })
 	if (d.error) throw d.error
 	//Find name if more than one gene returned
-	const u = d.lst.find(i => i.isdefault && name == i.name) || d.lst[0]
+	const u = d.lst.find(i => i.isdefault && geneName == i.name) || d.lst[0]
 	if (u) {
 		p.name = u.name
 		p.gm = { isoform: u.isoform }

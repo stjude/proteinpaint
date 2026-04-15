@@ -909,12 +909,14 @@ function validateCustomSvfusion(m, block) {
 					chr: m.chr1,
 					pos: m.pos1,
 					strand: m.strand1,
+					isoform: m.isoform1,
 					name: m.gene1 || ''
 				},
 				b: {
 					chr: m.chr2,
 					pos: m.pos2,
 					strand: m.strand2,
+					isoform: m.isoform2,
 					name: m.gene2 || ''
 				}
 			}
@@ -927,6 +929,8 @@ function validateCustomSvfusion(m, block) {
 		delete m.pos2
 		delete m.strand2
 		delete m.gene2
+		delete m.isoform1
+		delete m.isoform2
 	}
 
 	// m.pairlst[] is ready
