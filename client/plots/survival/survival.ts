@@ -444,6 +444,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	setTerm2Color(charts) {
 		if (!charts) return
 		const config = this.state.config
+		// color override via legend clicks is saved in term2.values, not by directly editing term2.term.values
 		const t2values = copyMerge({}, config.term2?.term?.values || {}, config.term2?.values || {})
 		const values = (this.refs.bins[2] && [this.refs.bins[2]]) || Object.values(t2values)
 		let t2groups
@@ -461,6 +462,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				let color
+				// color override via legend clicks is saved in t2values, does not edit term.values or group.color directly
 				const v = values.find(
 					v =>
 						v.seriesId === series.seriesId ||
@@ -472,6 +474,12 @@ class TdbSurvival extends PlotBase implements RxComponent {
 				if (!color && t2groups?.length) {
 					const group = t2groups.find(g => g.name == series.seriesId)
 					color = group?.color
+					// quick fix to make WT gray darker to pass Section 508 contrast requirement;
+					// doing this in common.js makes this gray in all tools darker and conflicts
+					// with other mclass colors like in-frame insertion, also visually overwhelming
+					// in GDC oncomatrix
+					if (color === '#D3D3D3' && group?.filter?.lst?.find(f => f?.type === 'tvs' && f.tvs.genotype == 'wt'))
+						color = 'rgb(105,105,105)'
 				}
 				const orig = color || (series.seriesId == '' ? this.settings.defaultColor : this.colorScale(series.seriesId))
 				const _rgb = rgb(orig)
