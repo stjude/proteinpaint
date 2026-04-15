@@ -26,7 +26,7 @@ tape('bam.js - parse_align_output', async t => {
 			reference_sequence
 		)
 		t.ok(result, 'Should return a result object')
-		t.ok(typeof result, 'object', 'Result should be an object')
+		t.equal(typeof result, 'object', 'Result should be an object')
 
 		// Core structure validation
 		t.ok(Array.isArray(result.final_read_align), 'final_read_align should be array')
@@ -40,7 +40,7 @@ tape('bam.js - parse_align_output', async t => {
 
 		t.equal(result.gaps_before_variant, 0, 'gaps_before_variant should be 0')
 		t.equal(result.read_count, 5, 'read_count should be 5')
-	} catch (err) {
+	} catch (err: any) {
 		t.fail(`Failed to parse the output of alignment: ${err.message}`)
 	}
 	t.end()
