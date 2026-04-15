@@ -27,11 +27,15 @@ export type SCDom = {
 	tableDiv: Div
 	/** Holder for the dynamically generated plot buttons for each sample */
 	plotsBtnsDiv: Div
+	/** Holder for the sections that contain the plots */
+	sectionsDiv: Div
 	/** Sandbox header, if provided */
 	header?: Elem
 }
 
-export type Segments = { [key: string]: { title: any; subplots: any; sandboxes: { [key: string]: any } } }
+export type Sections = {
+	[key: string]: { sectionWrapper: Div; title: any; subplots: any; sandboxes: { [key: string]: any } }
+}
 
 export type SCSettings = {
 	sc: {

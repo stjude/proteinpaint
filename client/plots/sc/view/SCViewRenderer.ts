@@ -1,7 +1,10 @@
-import type { SCDom, Segments } from '../SCTypes'
+import type { SCDom } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
+import type { TableData } from '../viewModel/SCViewModel'
+import { SectionRender } from './SectionRender'
+import type { SCViewer } from '../SC.ts'
 
 export class SCViewRenderer {
 	dom: SCDom
@@ -10,16 +13,20 @@ export class SCViewRenderer {
 	//On load, show table
 	//Eventually maybe an app dispatch and not a flag
 	static inUse = true
-	segments: Segments
+	sectionRender: SectionRender
+	sc: SCViewer
+	// sections: Sections
 
-	constructor(dom: SCDom, interactions: SCInteractions, segments: Segments) {
-		this.dom = dom
-		this.interactions = interactions
+	constructor(sc: SCViewer) {
+		this.sc = sc
+		this.dom = sc.dom
+		this.interactions = sc.interactions
 		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		this.segments = segments
+		// this.sections = {}
+		this.sectionRender = new SectionRender(this.dom.sectionsDiv)
 	}
 
-	render(tableData) {
+	render(tableData: TableData) {
 		this.renderSelectBtn()
 		new SampleTableRenderer(this.dom, this.interactions, tableData)
 		this.dom.plotsBtnsDiv.style('display', 'none')
@@ -49,21 +56,8 @@ export class SCViewRenderer {
 		})
 	}
 
-	update(settings, data) {
+	async update(settings, data, subplots) {
 		this.plotBtns.update(settings, data)
-	}
-
-	removeSegments() {
-		if (!Object.keys(this.segments).length) return
-		for (const [key, segment] of Object.entries(this.segments)) {
-			//DO NOT use .sjpp-sandbox as the identifier.
-			//That div remains after user deletes the plot
-			const plots = segment.subplots.selectAll('.sjpp-output-sandbox-header').size()
-			if (!plots) {
-				segment.title.remove()
-				segment.subplots.remove()
-				delete this.segments[key]
-			}
-		}
+		await this.sectionRender.update(this.sc, subplots)
 	}
 }

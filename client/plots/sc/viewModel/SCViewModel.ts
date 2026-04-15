@@ -8,11 +8,7 @@ import type { SingleCellSample } from '#types'
  *  - Implement data mapper for plots in the dashboard
  */
 
-// export type SCViewModelData = {
-// 	//TODO
-// }
-
-type TableData = {
+export type TableData = {
 	rows: TableRow[]
 	columns: TableColumn[]
 	selectedRows: number[]
@@ -42,7 +38,11 @@ export class SCViewModel {
 		}
 	}
 
-	getTabelData(plotConfig: SCConfig, items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
+	getTabelData(
+		plotConfig: SCConfig,
+		items: SingleCellSample[],
+		sampleColumns?: SampleColumn[]
+	): [TableRow[], TableColumn[]] {
 		const rows: TableRow[] = []
 		const hasExperiments = items.some(i => i.experiments)
 
