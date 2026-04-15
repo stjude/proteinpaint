@@ -18,6 +18,7 @@ Fixes:
 - improve the message wording when non-primary diagnoses data is not rendered for a sample or case
 - Regenerated termdbtest file to support differential DNA meth in termdbtest. Now using getDNAMethUnit. Fixed launchViolin to allow launching violin from the promoter volcano
 - avoid having a gene exp cluster width that is too small, by preventing the use of colwSpaced with s.colspace=0
+- in mds3 tk, svgraph will display correct set of isoforms specified in custom fusion data
 
 
 ## 2.182.0

@@ -1,2 +1,1 @@
-Fixes:
-- in mds3 tk, svgraph will display correct set of isoforms specified in custom fusion data
+
