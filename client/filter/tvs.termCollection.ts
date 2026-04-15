@@ -21,10 +21,21 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 	div.selectAll('*').remove()
 	div = div.append('div').style('font-size', '0.8em')
 
-	const rangeInput = renderRangeInput(div, tvs, applyRange)
-	const details = self.opts.vocabApi.termdbConfig.termCollections?.find(c => c.name === tvs.term.name)
-	if (!details) throw new Error(`No termCollection found for name=${tvs.term.name}`)
+	// Pre-configured collections are registered in termdbConfig.termCollections.
+	// Custom collections (e.g. isoform expression collections created dynamically
+	// via "Create Collection") are not registered there — they carry their own
+	// termlst and memberType directly on the term object.
+	let details = self.opts.vocabApi.termdbConfig.termCollections?.find(c => c.name === tvs.term.name)
+	if (!details) {
+		if (tvs.term.isCustom && tvs.term.termlst?.length) {
+			details = { termlst: tvs.term.termlst, type: tvs.term.memberType || 'numeric' }
+		} else {
+			throw new Error(`No termCollection found for name=${tvs.term.name}`)
+		}
+	}
 	if (details.type !== 'numeric') throw new Error('filter only supports numeric term collection')
+	// Render UI after details lookup succeeds so no orphaned input is left on error
+	const rangeInput = renderRangeInput(div, tvs, applyRange)
 	const getTableData = await addFilterTable({ holder: div, tvs, details, vocabApi: self.opts.vocabApi })
 
 	async function applyRange(tvs) {
