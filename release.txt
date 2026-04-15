@@ -1,1 +1,2 @@
-
+Fixes:
+- restore option to replace survival series colors via legend click menu

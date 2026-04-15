@@ -35,6 +35,7 @@ export class TwBase {
 	sortSamples?: any
 	minNumSamples?: number
 	valueFilter?: any
+	values?: { [key: string]: any }
 
 	constructor(tw: TermWrapper, opts: TwOpts) {
 		this.#tw = tw
@@ -44,6 +45,7 @@ export class TwBase {
 		if (tw.sortSamples) this.sortSamples = tw.sortSamples
 		if (tw.minNumSamples) this.minNumSamples = tw.minNumSamples
 		if (tw.valueFilter) this.valueFilter = tw.valueFilter
+		if (tw.values) this.values = tw.values
 
 		// By using Object.defineProperties(), addon methods are not enumerable
 		// and makes the xtw instance compatible with structuredClone(),
