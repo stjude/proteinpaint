@@ -181,9 +181,11 @@ export function parseFusionLine(line) {
 		}
 	}
 	
-	// Validate position is a number
-	if (isNaN(parseInt(gene1[2])) || isNaN(parseInt(gene2[2]))) {
-		throw new Error('Invalid fusion format: position must be a number')
+	// Validate position is a number (entire string must be numeric)
+	const pos1 = Number(gene1[2])
+	const pos2 = Number(gene2[2])
+	if (!Number.isInteger(pos1) || !Number.isInteger(pos2) || pos1 < 0 || pos2 < 0) {
+		throw new Error('Invalid fusion format: position must be a positive integer')
 	}
 	
 	// Validate strand is + or -
@@ -213,11 +215,11 @@ function createFusionVariant(gene1, gene2) {
 		dt: 2,
 		class: 'Fuserna'
 	}
-	// Add isoform information if available
-	if (gene1.length > 4 && gene1[4]) {
+	// Add isoform information if available (check for non-empty strings)
+	if (gene1.length > 4 && gene1[4] && gene1[4].trim()) {
 		variant.isoform1 = gene1[4]
 	}
-	if (gene2.length > 4 && gene2[4]) {
+	if (gene2.length > 4 && gene2[4] && gene2[4].trim()) {
 		variant.isoform2 = gene2[4]
 	}
 	return variant

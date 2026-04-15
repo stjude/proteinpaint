@@ -185,7 +185,35 @@ tape('non-numeric position', function (test) {
 		parseFusionLine(line)
 		test.fail('should throw error for non-numeric position')
 	} catch (error) {
-		test.ok(error.message.includes('position must be a number'), 'should throw appropriate error')
+		test.ok(error.message.includes('position must be a positive integer'), 'should throw appropriate error')
+	}
+	
+	test.end()
+})
+
+tape('partial numeric position (e.g., 123abc)', function (test) {
+	test.timeoutAfter(100)
+	const line = 'PAX5,chr9,123abc,-::JAK2,chr9,5081726,+'
+	
+	try {
+		parseFusionLine(line)
+		test.fail('should throw error for partial numeric position')
+	} catch (error) {
+		test.ok(error.message.includes('position must be a positive integer'), 'should throw appropriate error')
+	}
+	
+	test.end()
+})
+
+tape('negative position', function (test) {
+	test.timeoutAfter(100)
+	const line = 'PAX5,chr9,-100,-::JAK2,chr9,5081726,+'
+	
+	try {
+		parseFusionLine(line)
+		test.fail('should throw error for negative position')
+	} catch (error) {
+		test.ok(error.message.includes('position must be a positive integer'), 'should throw appropriate error')
 	}
 	
 	test.end()
@@ -239,6 +267,19 @@ tape('real-world example with isoforms: PAX5-JAK2 fusion', function (test) {
 	test.equal(gene1[0], 'PAX5', 'gene1 symbol should be PAX5')
 	test.equal(gene1[4], 'NM_016734', 'gene1 isoform should be NM_016734')
 	test.equal(gene2[0], 'JAK2', 'gene2 symbol should be JAK2')
+	test.equal(gene2[4], 'NM_004972', 'gene2 isoform should be NM_004972')
+	
+	test.end()
+})
+
+tape('empty isoform field should be filtered out', function (test) {
+	test.timeoutAfter(100)
+	const line = 'PAX5,chr9,37002646,-,::JAK2,chr9,5081726,+,NM_004972'
+	const [gene1, gene2] = parseFusionLine(line)
+	
+	// The parsing should succeed even with empty isoform
+	test.equal(gene1[0], 'PAX5', 'gene1 symbol should be PAX5')
+	test.equal(gene1[4], '', 'gene1 isoform should be empty string')
 	test.equal(gene2[4], 'NM_004972', 'gene2 isoform should be NM_004972')
 	
 	test.end()
