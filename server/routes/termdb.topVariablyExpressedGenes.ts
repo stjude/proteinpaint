@@ -2,7 +2,7 @@ import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressed
 import { termdbTopVariablyExpressedGenesPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
-import { get_samples } from '#src/termdb.sql.js'
+import { mayLimitSamples } from '#src/mds3.filter.js'
 import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
 import { joinUrl } from '#shared/joinUrl.js'
@@ -70,18 +70,14 @@ function nativeValidateQuery(ds: any) {
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
 		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
 		const samples = [] as string[]
-		if (q.filter) {
-			// get all samples pasing pp filter, may contain those without exp data
-			const sidlst = await get_samples(q, ds)
-			// [{id:int}]
-			// filter for those with exp data from q.samples[]
-			for (const i of sidlst) {
-				if (gE.samples.includes(i.id)) {
-					// this sample passing filter also has exp data; convert to string name
-					const n: string = ds.cohort.termdb.q.id2sampleName(i.id)
-					if (!n) throw 'sample id cannot convert to string name'
-					samples.push(n)
-				}
+		const param = { filter: q.filter, filter0: q.filter0 }
+		const limitSamples = await mayLimitSamples(param, gE.samples, ds)
+		if (limitSamples) {
+			// get samples passing filter
+			for (const sid of limitSamples) {
+				const n: string = ds.cohort.termdb.q.id2sampleName(sid)
+				if (!n) throw 'sample id cannot convert to string name'
+				samples.push(n)
 			}
 		} else {
 			// no filter, use all samples with exp data

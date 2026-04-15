@@ -34,9 +34,6 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	let filterSamples
 	if (ds.cohort?.db) {
 		// dataset has sqlite db
-		// get samples that match filter
-		if (typeof ds.cohort?.db?.connection?.prepare !== 'function')
-			throw new Error('db.connection.prepare() is not a function')
 		if (!filter) {
 			// no filtering, use all samples
 			return
@@ -45,17 +42,15 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
 		filterSamples = new Set((await get_samples({ filter }, ds)).map(i => i.id))
 	} else if (typeof ds.cohort?.termdb?.getSamples === 'function') {
-		// dataset is not sqlite-based, but supplies getSamples() function
-		// get samples that match filter/filter0
-		// TODO: currently only considering filter0, later will merge in filter
-		if (!filter0) {
+		// dataset supplies getSamples() function
+		if (!filter && !filter0) {
 			// no filtering, use all samples
 			return
 		}
-		// get samples that match filter0
-		filterSamples = await ds.cohort.termdb.getSamples({ filter0, ds })
+		// get samples that match filter/filter0
+		filterSamples = await ds.cohort.termdb.getSamples({ filter, filter0, ds })
 	} else {
-		throw new Error('no method available to filter samples')
+		throw new Error('no method available to get samples')
 	}
 
 	// filterSamples is the set of samples in dataset that match filter/filter0
