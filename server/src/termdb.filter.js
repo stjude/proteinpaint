@@ -320,7 +320,7 @@ async function get_termCollection_custom(tvs, CTEname, ds, onlyChildren) {
 }
 
 /** Percentage filter for custom (non-dictionary) termCollections, e.g. isoform
- *  expression collections created dynamically via "Create Collection".
+ *  expression collections created dynamically.
  *
  *  Cannot use getData() here because it requires req.query.__protected__ (auth
  *  context set by Express middleware), which is not available inside the filter
