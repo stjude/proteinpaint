@@ -238,9 +238,8 @@ function setWsDeps(name) {
 	// a previous CI run was interrupted and failed to publish all
 	// updated workspaces after committing and tagging the version change
 	if (!pkg.private && !pkg.hasChanged /*&& pkg.version === rootPkg.version*/) {
-		const publishedVersion = ex(`npm view ${pkg.name} version | tail -n1`)
+		const publishedVersion = ex(`npm view ${pkg.name}@${pkg.version} version | tail -n1`)
 		if (publishedVersion !== pkg.version) unpublishedPkgs.add(pkg.pkgDir)
-
 		// --- uncomment for testing ---
 		// if (pkg.pkgDir == 'client') unpublishedPkgs.add(pkg.pkgDir)
 	}
