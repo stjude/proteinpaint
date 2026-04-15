@@ -317,15 +317,13 @@ class SummaryPlot extends PlotBase implements RxComponent {
 	}
 
 	maySetSandboxHeader() {
-		const { term, term2 } = this.config
+		const { term, term2, headerText } = this.config
 		const mainTerm = term.getTitleText?.() || term.term.name
+		const titleBase = mainTerm + (this.config.assayCohortTitle ? ` (${this.config.assayCohortTitle})` : '')
 		if (term2?.type) {
-			this.dom.paneTitleText.html(
-				`${term2.getTitleText?.() || term2.term.name} vs ${mainTerm}` +
-					(this.config.assayCohortTitle ? ` (${this.config.assayCohortTitle})` : '')
-			)
+			this.dom.paneTitleText.html(`${headerText || ''} ${term2.getTitleText?.() || term2.term.name} vs ${titleBase}`)
 		} else {
-			this.dom.paneTitleText.html(mainTerm + (this.config.assayCohortTitle ? ` (${this.config.assayCohortTitle})` : ''))
+			this.dom.paneTitleText.html(`${headerText || ''} ${titleBase}`)
 		}
 	}
 
