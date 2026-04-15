@@ -25,6 +25,7 @@ export function filter2GDCfilter(f, level = 0) {
 		if (!item.tvs) throw new Error('item.tvs missing')
 		if (!item.tvs.term) throw new Error('item.tvs.term missing')
 		if (dtTermTypes.has(item.tvs.term.type)) {
+			if (level > 0) throw new Error(`geneVariant filters are only supported at the root level of a nested filter`)
 			// geneVariant/dt term filtering will be performed during post-processing
 			// (see mayFilterByGeneVariant() in server/src/mds3.init.js)
 			continue
