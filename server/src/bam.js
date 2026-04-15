@@ -1118,7 +1118,7 @@ async function do_alignOneGroup(group, q, templates) {
 	return { alignmentData }
 }
 
-async function align_multiple_reads(
+export async function align_multiple_reads(
 	templates,
 	leftflankseq_length,
 	partstack_start,
