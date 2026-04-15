@@ -165,8 +165,9 @@ Always return ONLY a JSON object in this exact format:
 3. tw3 answers "divided/faceted by what?" — look for "divided by", "split by", "per", "for each", "stratified by", etc. Use contextual understanding to confirm that it's a grouping variable
 4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable
 5. If tw2 and tw3 are ambiguous, prefer tw2 for binary/categorical comparisons and tw3 for a faceting/panel variable
-6. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
-7. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
+6. Its possible a term might be present in both tw1/tw2 as well as filter — for example, "Compare tp53 gene expression between XXX and YYY subtypes" — here the "XXX and YYY subtypes" is relevant to both the grouping variable (tw2) and the filter (restricting to subtypes). In such cases, put "XXX and YYY subtypes" both in tw2 as well as filter. 
+7. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
+8. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
 
 ## Examples:
 -Query: "compare tp53 expression vs age using a scatter plot"
@@ -198,6 +199,13 @@ Always return ONLY a JSON object in this exact format:
   {
 	"tw1": "age at diagnosis",
 	"tw2": "ancestry"
+  }
+- Query: "compare age between wilms tumor and hodgkin lymphoma"
+  Output:
+  {
+	"tw1": "age at diagnosis",
+        "tw2": "diaggrp",
+        "filter": ["wilms tumor", "hodgkin lymphoma"]
   }
 - Query: "Show me the distribution of gene expression in TP53 across different cell types, but only for patients aged 10 to 40."
   Output:
