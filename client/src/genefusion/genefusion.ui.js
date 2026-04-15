@@ -67,7 +67,8 @@ function makeFusionInput(div, obj) {
 		.makeTextAreaInput({
 			div,
 			cols: 70, // Increased to accommodate longer isoform format example
-			placeholder: 'Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ or RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,+,NM_004991'
+			placeholder:
+				'Example:\nPAX5,chr9,37002646,-::JAK2,chr9,5081726,+\nOr:\nPAX5,chr9,37002646,-,NM_016734::JAK2,chr9,5081726,+,NM_004972'
 		})
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
@@ -148,7 +149,7 @@ function makeInfoSection(div) {
 		ZCCHC7,chr9,37257786,-::PAX5,chr9,37024824,-<br>
 		BCR,chr22,23524427,+::ABL1,chr9,133729449,+<br><br>
 		<strong>Format 2:</strong><br>
-		RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,+,NM_004991<br>
+		RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,-,NM_004991<br>
 		PAX5,chr9,37002646,-,NM_016734::JAK2,chr9,5081726,+,NM_004972<p>`)
 }
 
@@ -182,31 +183,33 @@ export function parseFusionLine(line) {
 	if (parts.length !== 2) {
 		throw new Error('Invalid fusion format: must contain exactly two genes separated by "::"')
 	}
-	
+
 	const gene1 = parts[0].split(',').map(s => s.trim())
 	const gene2 = parts[1].split(',').map(s => s.trim())
-	
+
 	// Validate that each gene has either 4 fields (basic format) or 5 fields (with isoform)
 	if ((gene1.length !== 4 && gene1.length !== 5) || (gene2.length !== 4 && gene2.length !== 5)) {
-		throw new Error(`Invalid fusion format: each gene must have 4 or 5 fields. Found gene1: ${gene1.length} fields, gene2: ${gene2.length} fields`)
+		throw new Error(
+			`Invalid fusion format: each gene must have 4 or 5 fields. Found gene1: ${gene1.length} fields, gene2: ${gene2.length} fields`
+		)
 	}
-	
+
 	// Validate required fields are not empty
 	for (let i = 0; i < 4; i++) {
 		if (!gene1[i] || !gene2[i]) {
 			throw new Error('Invalid fusion format: gene symbol, chromosome, position, and strand are required')
 		}
 	}
-	
+
 	// Validate positions
 	validatePosition(gene1[2], gene1[0])
 	validatePosition(gene2[2], gene2[0])
-	
+
 	// Validate strand is + or -
 	if (!/^[+-]$/.test(gene1[3]) || !/^[+-]$/.test(gene2[3])) {
 		throw new Error('Invalid fusion format: strand must be "+" or "-"')
 	}
-	
+
 	return [gene1, gene2]
 }
 
@@ -243,7 +246,7 @@ function createFusionVariant(gene1, gene2) {
 function makeSubmitResult(obj, div, runpp_arg) {
 	// Filter out empty lines
 	const lines = obj.data.split(/[\r\n]/).filter(line => line.trim().length > 0)
-	
+
 	if (lines.length === 1) {
 		//Only one line entered, no dropdown
 		try {

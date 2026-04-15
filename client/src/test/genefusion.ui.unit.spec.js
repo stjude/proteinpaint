@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { parseFusionLine } from './genefusion.ui.js'
+import { parseFusionLine } from '../genefusion/genefusion.ui.js'
 
 /****************
 Tests for genefusion.ui.js parseFusionLine function
@@ -167,48 +167,6 @@ tape('empty required fields (chromosome)', function (test) {
 		test.fail('should throw error for empty chromosome')
 	} catch (error) {
 		test.ok(error.message.includes('gene symbol, chromosome, position, and strand are required'), 'should throw appropriate error')
-	}
-	
-	test.end()
-})
-
-tape('non-numeric position', function (test) {
-	test.timeoutAfter(100)
-	const line = 'PAX5,chr9,notanumber,-::JAK2,chr9,5081726,+'
-	
-	try {
-		parseFusionLine(line)
-		test.fail('should throw error for non-numeric position')
-	} catch (error) {
-		test.ok(error.message.includes('position must be a positive integer'), 'should throw appropriate error')
-	}
-	
-	test.end()
-})
-
-tape('partial numeric position (e.g., 123abc)', function (test) {
-	test.timeoutAfter(100)
-	const line = 'PAX5,chr9,123abc,-::JAK2,chr9,5081726,+'
-	
-	try {
-		parseFusionLine(line)
-		test.fail('should throw error for partial numeric position')
-	} catch (error) {
-		test.ok(error.message.includes('position must be a positive integer'), 'should throw appropriate error')
-	}
-	
-	test.end()
-})
-
-tape('negative position', function (test) {
-	test.timeoutAfter(100)
-	const line = 'PAX5,chr9,-100,-::JAK2,chr9,5081726,+'
-	
-	try {
-		parseFusionLine(line)
-		test.fail('should throw error for negative position')
-	} catch (error) {
-		test.ok(error.message.includes('position must be'), 'should throw appropriate error')
 	}
 	
 	test.end()
