@@ -232,7 +232,7 @@ function createFusionVariant(gene1, gene2) {
 	// Add isoform information if available (check for non-empty strings)
 	const addIsoformIfPresent = (gene, fieldName) => {
 		if (gene.length > 4 && gene[4]?.trim()) {
-			variant[fieldName] = gene[4]
+			variant[fieldName] = gene[4].trim()
 		}
 	}
 	addIsoformIfPresent(gene1, 'isoform1')
