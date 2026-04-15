@@ -4,7 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
-
 Fixes:
 - restore option to replace survival series colors via legend click menu
 - darken willdtype gray color to pass Section 508 contrast requirement
@@ -12,6 +11,7 @@ Fixes:
 - improve the message wording when non-primary diagnoses data is not rendered for a sample or case
 - Regenerated termdbtest file to support differential DNA meth in termdbtest. Now using getDNAMethUnit. Fixed launchViolin to allow launching violin from the promoter volcano
 - avoid having a gene exp cluster width that is too small, by preventing the use of colwSpaced with s.colspace=0
+- correctly handle undefined item.tvs in filterSamples4assayAvailability
 
 
 ## 2.182.0

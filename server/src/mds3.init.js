@@ -3110,7 +3110,7 @@ async function filterSamples4assayAvailability(q, ds) {
 			// be filtered during post-processing (see mayFilterByGeneVariant())
 			filterObj = structuredClone(q.filter)
 			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessDtFilter
-				? q.filter.lst.filter(item => !dtTermTypes.has(item.tvs.term.type))
+				? q.filter.lst.filter(item => !dtTermTypes.has(item.tvs?.term.type))
 				: q.filter.lst
 		}
 		if (q.filter0 || filterObj?.lst.length) {
