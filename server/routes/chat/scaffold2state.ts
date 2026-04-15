@@ -1,3 +1,5 @@
+import { mayLog } from '#src/helpers.ts'
+
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
@@ -21,20 +23,20 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		// for non-dict term, it needs to be within term: {}
 		// but, for dictionary term, it can be supplied as is
 		if (input.tw1) {
-			console.log('input.tw1:', input.tw1)
+			mayLog('input.tw1:', input.tw1)
 			switch (plotState.plot.childType) {
 				case 'sampleScatter':
-					console.log('Setting mode to continuous for sampleScatter plot')
+					mayLog('Setting mode to continuous for sampleScatter plot')
 					input.tw1.q.mode = 'continuous'
 			}
 			plotState.plot.term = isDictionaryTerm(input.tw1) ? input.tw1 : { term: input.tw1 }
 		}
 		if (input.tw2) {
 			// overlay term
-			console.log('input.tw2:', input.tw2)
+			mayLog('input.tw2:', input.tw2)
 			switch (plotState.plot.childType) {
 				case 'sampleScatter':
-					console.log('Setting mode to continuous for sampleScatter plot')
+					mayLog('Setting mode to continuous for sampleScatter plot')
 					input.tw2.q.mode = 'continuous'
 			}
 			plotState.plot.term2 = isDictionaryTerm(input.tw2) ? input.tw2 : { term: input.tw2 }
