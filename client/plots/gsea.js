@@ -205,8 +205,8 @@ class gsea extends PlotBase {
 			try {
 				const volcanoSettings =
 					config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
-				const model = new VolcanoModel(this.app, config, volcanoSettings)
-				const response = await model.getData()
+				const model = new VolcanoModel(this.app, config.termType)
+				const response = await model.getData(config, volcanoSettings)
 				if (!response || !response.data || response.error) {
 					throw response.error || 'No data returned from volcano model'
 				}
