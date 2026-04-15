@@ -505,11 +505,17 @@ export function getAllowedTabs(state, self) {
 }
 
 // state = app.getState()
+// used directly by termdb/store.ts init() to not make the initial state
+// dependent on any component init()
 export function getAllowedTermTypesForUseCase(state, app) {
 	const allowedTermTypes: string[] = []
 	const types = app.vocabApi.termdbConfig?.allowedTermTypes || ['categorical']
 	const usecase = state.tree.usecase
 	const { target, detail } = usecase
+	const dsUseCasesExcluded = Object.assign(
+		structuredClone(useCasesExcluded),
+		app.vocabApi.termdbConfig?.useCasesExcluded || {}
+	)
 
 	for (const type of types) {
 		if (type == TermTypes.SNP_LIST || type == TermTypes.SNP_LOCUS) {
@@ -535,7 +541,7 @@ export function getAllowedTermTypesForUseCase(state, app) {
 			if (isSingleCellTerm({ type })) continue
 		}
 
-		if (target && useCasesExcluded[target]?.includes(termTypeGroup)) continue
+		if (target && dsUseCasesExcluded[target]?.includes(termTypeGroup)) continue
 		if (target == 'regression') {
 			//regression snplst/snplocus cases will be handled when the search handler is added
 			if (type == TermTypes.SNP) continue // same functionality is covered by snplst/snplocus terms
