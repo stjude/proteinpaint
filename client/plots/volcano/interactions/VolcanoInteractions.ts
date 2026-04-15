@@ -108,7 +108,7 @@ export class VolcanoInteractions {
 
 	/** When clicking on a data point, launches the box plot in a separate sandbox
 	 * For geneExpression, value == gene symbol */
-	async launchBoxPlot(value: string) {
+	launchBoxPlot(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const values = {}
 		for (const group of config.samplelst.groups) {
@@ -148,7 +148,7 @@ export class VolcanoInteractions {
 	}
 
 	/** Launch a violin plot for a gene expression data point. */
-	async launchViolinGeneExp(value: string) {
+	launchViolinGeneExp(value: string) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		this.app.dispatch({
 			type: 'plot_create',
@@ -242,7 +242,7 @@ export class VolcanoInteractions {
 	/** Launch a violin/box plot for a DNA methylation promoter.
 	 * Creates a methylation term using the promoter's chr/start/stop coordinates.
 	 * The tw handler fills in id and unit from termdbConfig. */
-	launchViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
+	launchDNAMethViolin(d: { chr: string; start: number; stop: number; gene_name?: string; promoter_id?: string }) {
 		const config = this.app.getState().plots.find((p: VolcanoPlotConfig) => p.id === this.id)
 		const genomicFeatureType = d.promoter_id ? 'promoter' : 'gene'
 		const featureName = genomicFeatureType === 'gene' ? d.gene_name?.split(',')[0]?.trim() || '' : ''
