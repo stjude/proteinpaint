@@ -106,15 +106,16 @@ class GenesetComp {
 
 	async getGenes({ signal }) {
 		const genes = this.opts.genes
-		if (this.opts.showEditUI) {
-			// must show edit UI, do not automatically get genes
-			return []
-		}
 		const settings = this.state.config.settings
 		if (this.opts.genes) {
 			// genes are predefined
 			if (!Array.isArray(this.opts.genes) || this.opts.genes.length == 0) throw '.genes[] is not non-empty array'
 			return await this.getTwLst(this.opts.genes)
+		}
+
+		if (this.opts.showEditUI) {
+			// must show edit UI, do not automatically get genes
+			return []
 		}
 
 		let waitDiv
