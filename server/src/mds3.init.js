@@ -3110,7 +3110,17 @@ async function filterSamples4assayAvailability(q, ds) {
 			// be filtered during post-processing (see mayFilterByGeneVariant())
 			filterObj = structuredClone(q.filter)
 			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessDtFilter
-				? q.filter.lst.filter(item => !dtTermTypes.has(item.tvs?.term.type))
+				? q.filter.lst.filter(item => {
+						if (item.type == 'tvslst') {
+							// item is tvslst so can pass because geneVariant tvs is not
+							// allowed in nested tvslst for gdc (see filter2GDCfilter() in mds3.gdc.filter.js)
+							return true
+						}
+						if (!dtTermTypes.has(item.tvs?.term.type)) {
+							// tvs is not geneVariant so can pass
+							return true
+						}
+				  })
 				: q.filter.lst
 		}
 		if (q.filter0 || filterObj?.lst.length) {
