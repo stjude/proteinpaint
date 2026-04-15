@@ -182,10 +182,13 @@ export function parseFusionLine(line) {
 	}
 	
 	// Validate position is a number (entire string must be numeric)
+	if (!/^\d+$/.test(gene1[2]) || !/^\d+$/.test(gene2[2])) {
+		throw new Error('Invalid fusion format: position must be a positive integer (numeric string)')
+	}
 	const pos1 = Number(gene1[2])
 	const pos2 = Number(gene2[2])
-	if (!Number.isInteger(pos1) || !Number.isInteger(pos2) || pos1 < 0 || pos2 < 0) {
-		throw new Error('Invalid fusion format: position must be a positive integer')
+	if (pos1 <= 0 || pos2 <= 0) {
+		throw new Error('Invalid fusion format: position must be greater than 0 (1-based coordinates)')
 	}
 	
 	// Validate strand is + or -

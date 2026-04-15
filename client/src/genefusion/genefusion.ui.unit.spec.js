@@ -213,7 +213,21 @@ tape('negative position', function (test) {
 		parseFusionLine(line)
 		test.fail('should throw error for negative position')
 	} catch (error) {
-		test.ok(error.message.includes('position must be a positive integer'), 'should throw appropriate error')
+		test.ok(error.message.includes('position must be'), 'should throw appropriate error')
+	}
+	
+	test.end()
+})
+
+tape('zero position (not valid for 1-based coordinates)', function (test) {
+	test.timeoutAfter(100)
+	const line = 'PAX5,chr9,0,-::JAK2,chr9,5081726,+'
+	
+	try {
+		parseFusionLine(line)
+		test.fail('should throw error for zero position')
+	} catch (error) {
+		test.ok(error.message.includes('greater than 0'), 'should throw appropriate error for 1-based coordinates')
 	}
 	
 	test.end()
@@ -272,7 +286,7 @@ tape('real-world example with isoforms: PAX5-JAK2 fusion', function (test) {
 	test.end()
 })
 
-tape('empty isoform field should be filtered out', function (test) {
+tape('empty isoform field is allowed in parsing', function (test) {
 	test.timeoutAfter(100)
 	const line = 'PAX5,chr9,37002646,-,::JAK2,chr9,5081726,+,NM_004972'
 	const [gene1, gene2] = parseFusionLine(line)
@@ -281,6 +295,10 @@ tape('empty isoform field should be filtered out', function (test) {
 	test.equal(gene1[0], 'PAX5', 'gene1 symbol should be PAX5')
 	test.equal(gene1[4], '', 'gene1 isoform should be empty string')
 	test.equal(gene2[4], 'NM_004972', 'gene2 isoform should be NM_004972')
+	
+	// Note: The createFusionVariant() function will filter out empty isoforms
+	// when creating the variant object, so empty isoforms won't be included
+	// in the final custom_variants structure
 	
 	test.end()
 })
