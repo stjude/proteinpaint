@@ -9,6 +9,8 @@ import { appear } from '#dom/animation'
 init_geneFusionUI()
 	holder 
 	genomes
+parseFusionLine()
+	line
 
 ------ Internal ------ 
 makeFusionInput
@@ -18,7 +20,6 @@ makeSubmit
 makeInfoSection
 makeSubmitResult
 makeFusionTabs
-parseFusionLine
 
 */
 
@@ -158,7 +159,7 @@ function makeInfoSection(div) {
  * @returns {Array} [gene1Array, gene2Array] where each array contains [gene, chr, pos, strand] and optionally [isoform]
  * @throws {Error} If the line format is invalid
  */
-function parseFusionLine(line) {
+export function parseFusionLine(line) {
 	const parts = line.trim().split('::')
 	if (parts.length !== 2) {
 		throw new Error('Invalid fusion format: must contain exactly two genes separated by "::"')
