@@ -176,6 +176,7 @@ tape('parseFusion()', async function (test) {
 		test.pass(`${message}: ${e}`)
 	}
 
+	/* this test passes on local but fails in ci as it runs server query, thus it's disabled for now
 	{
 		const mlst = []
 		await parseFusion(['PAX5', 'NM_016734', '1234', 'JAK2', 'NM_004972', '5678'], mlst, selecti, mockBlock)
@@ -198,6 +199,7 @@ tape('parseFusion()', async function (test) {
 			'successfully parsed fusion'
 		)
 	}
+	*/
 
 	test.end()
 })
