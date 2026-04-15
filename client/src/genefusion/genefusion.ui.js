@@ -230,13 +230,13 @@ function createFusionVariant(gene1, gene2) {
 		class: 'Fuserna'
 	}
 	// Add isoform information if available (check for non-empty strings)
-	const addIsoformIfPresent = (gene, index, fieldName) => {
+	const addIsoformIfPresent = (gene, fieldName) => {
 		if (gene.length > 4 && gene[4] && gene[4].trim()) {
 			variant[fieldName] = gene[4]
 		}
 	}
-	addIsoformIfPresent(gene1, 4, 'isoform1')
-	addIsoformIfPresent(gene2, 4, 'isoform2')
+	addIsoformIfPresent(gene1, 'isoform1')
+	addIsoformIfPresent(gene2, 'isoform2')
 	return variant
 }
 
