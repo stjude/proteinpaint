@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.183.0
 
 Features:
 - Various cleanups to further unify violin and boxplot route code
