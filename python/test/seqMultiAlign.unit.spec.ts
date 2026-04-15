@@ -47,7 +47,7 @@ tape('Test MSA #2: Respect max_read_alignment limit', async t => {
 		const output = await run_python('seqMultiAlign.py', JSON.stringify(input))
 		const count = (output.match(/s\d/g) || []).length
 		t.ok(count <= 4, `Should limit to ${input.max_read_alignment + 1} sequences (found ${count})`)
-	} catch (err) {
+	} catch (err: any) {
 		t.fail(`Max limit test failed: ${String(err)}`)
 	}
 	t.end()
