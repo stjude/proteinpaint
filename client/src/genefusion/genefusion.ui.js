@@ -18,6 +18,7 @@ makeSubmit
 makeInfoSection
 makeSubmitResult
 makeFusionTabs
+parseFusionLine
 
 */
 
@@ -62,8 +63,8 @@ function makeFusionInput(div, obj) {
 	const fusionInput = uiutils
 		.makeTextAreaInput({
 			div,
-			cols: 50,
-			placeholder: 'Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+'
+			cols: 70,
+			placeholder: 'Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ or RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,+,NM_004991'
 		})
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
@@ -122,27 +123,86 @@ function makeSubmit(div, obj, holder) {
 function makeInfoSection(div) {
 	div.append('div').style('margin', '10px').style('opacity', '0.65').html(`Limited to two-gene fusion products.<br>
 		One product per line.<br>
-		Each line has eight fields. four fields for each gene. For each gene join the following fields separated by a comma:
+		<br>
+		<strong>Format 1 (Basic):</strong> Each line has eight fields, four fields for each gene. For each gene join the following fields separated by a comma:
 		<ol><li>Gene symbol</li>
 		<li>Chromosome</li>
 		<li>Position, 1-based coordinate</li>
 		<li>Strand</li>
 		</ol>
+		<strong>Format 2 (With RefSeq isoforms):</strong> Each line has ten fields, five fields for each gene. For each gene join the following fields separated by a comma:
+		<ol><li>Gene symbol</li>
+		<li>Chromosome</li>
+		<li>Position, 1-based coordinate</li>
+		<li>Strand</li>
+		<li>RefSeq isoform (e.g., NM_001754)</li>
+		</ol>
 		Separate the two genes by a double colon (::). <br><br>
-		Example: <br>
+		Examples: <br>
 		<p style="margin-left: 10px">
+		<strong>Format 1:</strong><br>
 		PAX5,chr9,37002646,-::JAK2,chr9,5081726,+<br>
 		ZCCHC7,chr9,37257786,-::PAX5,chr9,37024824,-<br>
-		BCR,chr22,23524427,+::ABL1,chr9,133729449,+<p>`)
+		BCR,chr22,23524427,+::ABL1,chr9,133729449,+<br><br>
+		<strong>Format 2:</strong><br>
+		RUNX1,chr21,36206706,-,NM_001754::MECOM,chr3,169099311,+,NM_004991<br>
+		PAX5,chr9,37002646,-,NM_016734::JAK2,chr9,5081726,+,NM_004972<p>`)
+}
+
+/**
+ * Parses a fusion line into two gene arrays
+ * Supports both formats:
+ * - Format 1 (4 fields per gene): gene,chr,pos,strand
+ * - Format 2 (5 fields per gene): gene,chr,pos,strand,isoform
+ * @param {string} line - The fusion line to parse
+ * @returns {Array} [gene1Array, gene2Array] where each array contains [gene, chr, pos, strand] and optionally [isoform]
+ * @throws {Error} If the line format is invalid
+ */
+function parseFusionLine(line) {
+	const parts = line.trim().split('::')
+	if (parts.length !== 2) {
+		throw new Error('Invalid fusion format: must contain exactly two genes separated by "::"')
+	}
+	
+	const gene1 = parts[0].split(',').map(s => s.trim())
+	const gene2 = parts[1].split(',').map(s => s.trim())
+	
+	// Validate that each gene has either 4 fields (basic format) or 5 fields (with isoform)
+	if ((gene1.length !== 4 && gene1.length !== 5) || (gene2.length !== 4 && gene2.length !== 5)) {
+		throw new Error(`Invalid fusion format: each gene must have 4 or 5 fields. Found gene1: ${gene1.length} fields, gene2: ${gene2.length} fields`)
+	}
+	
+	// Validate required fields are not empty
+	for (let i = 0; i < 4; i++) {
+		if (!gene1[i] || !gene2[i]) {
+			throw new Error('Invalid fusion format: gene symbol, chromosome, position, and strand are required')
+		}
+	}
+	
+	// Validate position is a number
+	if (isNaN(parseInt(gene1[2])) || isNaN(parseInt(gene2[2]))) {
+		throw new Error('Invalid fusion format: position must be a number')
+	}
+	
+	// Validate strand is + or -
+	if (!gene1[3].match(/^[+-]$/) || !gene2[3].match(/^[+-]$/)) {
+		throw new Error('Invalid fusion format: strand must be "+" or "-"')
+	}
+	
+	return [gene1, gene2]
 }
 
 function makeSubmitResult(obj, div, runpp_arg) {
 	if (obj.data.split(/[\r\n]/).length == 1) {
 		//Only one line entered, no dropdown
-		const line = obj.data.trim().split('::')
-		const gene1 = line[0].split(',')
-		const gene2 = line[1].split(',')
-		return makeFusionTabs(div, runpp_arg, gene1, gene2)
+		try {
+			const [gene1, gene2] = parseFusionLine(obj.data)
+			return makeFusionTabs(div, runpp_arg, gene1, gene2)
+		} catch (error) {
+			const errorDiv = div.append('div').style('color', 'red').style('margin', '20px')
+			sayerror(errorDiv, `Error parsing fusion: ${error.message}`)
+			return
+		}
 	}
 	//Make dropdown to select fusions
 	//On select, toggle tabs for each gene appears underneath with the track for each gene
@@ -160,10 +220,18 @@ function makeSubmitResult(obj, div, runpp_arg) {
 	const fusionsMap = new Map()
 
 	for (const data of obj.data.split(/[\r\n]/)) {
-		const line = data.trim().split('::')
-		const gene1 = line[0].split(',')
-		const gene2 = line[1].split(',')
-		fusionsMap.set(`${gene1[0]}-${gene2[0]}`, [gene1, gene2])
+		try {
+			const [gene1, gene2] = parseFusionLine(data)
+			fusionsMap.set(`${gene1[0]}-${gene2[0]}`, [gene1, gene2])
+		} catch (error) {
+			console.warn(`Skipping invalid fusion line: ${data}. Error: ${error.message}`)
+		}
+	}
+
+	if (fusionsMap.size === 0) {
+		const errorDiv = div.append('div').style('color', 'red').style('margin', '20px')
+		sayerror(errorDiv, 'No valid fusion lines found. Please check the format.')
+		return
 	}
 
 	for (const fusion of fusionsMap) {
@@ -210,6 +278,25 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 			label: gene1[0],
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
+				const variant = {
+					gene1: gene1[0],
+					chr1: gene1[1],
+					pos1: parseInt(gene1[2]) - 1,
+					strand1: gene1[3],
+					gene2: gene2[0],
+					chr2: gene2[1],
+					pos2: parseInt(gene2[2]) - 1,
+					strand2: gene2[3],
+					dt: 2,
+					class: 'Fuserna'
+				}
+				// Add isoform information if available
+				if (gene1.length > 4 && gene1[4]) {
+					variant.isoform1 = gene1[4]
+				}
+				if (gene2.length > 4 && gene2[4]) {
+					variant.isoform2 = gene2[4]
+				}
 				const fusion_arg = {
 					holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 					gene: gene1[0],
@@ -217,20 +304,7 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 						{
 							type: 'mds3',
 							name: gene1[0],
-							custom_variants: [
-								{
-									gene1: gene1[0],
-									chr1: gene1[1],
-									pos1: parseInt(gene1[2]) - 1,
-									strand1: gene1[3],
-									gene2: gene2[0],
-									chr2: gene2[1],
-									pos2: parseInt(gene2[2]) - 1,
-									strand2: gene2[3],
-									dt: 2,
-									class: 'Fuserna'
-								}
-							]
+							custom_variants: [variant]
 						}
 					]
 				}
@@ -242,6 +316,25 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 			label: gene2[0],
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
+				const variant = {
+					gene1: gene1[0],
+					chr1: gene1[1],
+					pos1: parseInt(gene1[2]) - 1,
+					strand1: gene1[3],
+					gene2: gene2[0],
+					chr2: gene2[1],
+					pos2: parseInt(gene2[2]) - 1,
+					strand2: gene2[3],
+					dt: 2,
+					class: 'Fuserna'
+				}
+				// Add isoform information if available
+				if (gene1.length > 4 && gene1[4]) {
+					variant.isoform1 = gene1[4]
+				}
+				if (gene2.length > 4 && gene2[4]) {
+					variant.isoform2 = gene2[4]
+				}
 				const fusion_arg = {
 					holder: tab.contentHolder.append('div').style('margin', '20px').node(),
 					gene: gene2[0],
@@ -249,20 +342,7 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 						{
 							type: 'mds3',
 							name: gene2[0],
-							custom_variants: [
-								{
-									gene1: gene1[0],
-									chr1: gene1[1],
-									pos1: parseInt(gene1[2]) - 1,
-									strand1: gene1[3],
-									gene2: gene2[0],
-									chr2: gene2[1],
-									pos2: parseInt(gene2[2]) - 1,
-									strand2: gene2[3],
-									dt: 2,
-									class: 'Fuserna'
-								}
-							]
+							custom_variants: [variant]
 						}
 					]
 				}
