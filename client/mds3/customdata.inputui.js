@@ -155,6 +155,7 @@ export async function parseFusion(l, mlst, selecti, block) {
 		const o = parsePositionFromGm(selecti, pos1, gm)
 		m.pos1 = o[1]
 		m.strand1 = gm.strand
+		m.isoform1 = isoform1
 	}
 	{
 		const d = await dofetch3('genelookup', { body: { deep: 1, genome: block.genome.name, input: gene2 } })
@@ -166,6 +167,7 @@ export async function parseFusion(l, mlst, selecti, block) {
 		const o = parsePositionFromGm(selecti, pos2, gm)
 		m.pos2 = o[1]
 		m.strand2 = gm.strand
+		m.isoform2 = isoform2
 	}
 	mlst.push(m)
 }
