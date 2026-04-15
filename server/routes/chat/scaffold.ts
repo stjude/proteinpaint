@@ -41,8 +41,8 @@ filter:  A global constraint that applies to BOTH groups — i.e. the overall co
 --- Two explicit categorical groups ---
 Q: "Compare gene expression between BCR-ABL1 and ETV6-RUNX1 subtypes"
 A: {
-  "filter1": "BCR-ABL1",
-  "filter2": "ETV6-RUNX1"
+  "filter1": "BCR-ABL1 subtypes",
+  "filter2": "ETV6-RUNX1 subtypes"
 }
 
 --- Two groups defined by a numeric threshold ---
@@ -55,8 +55,8 @@ A: {
 --- Two groups with a global cohort filter ---
 Q: "Compare BCR-ABL1 vs ETV6-RUNX1 subtypes in pediatric patients"
 A: {
-  "filter1": "BCR-ABL1",
-  "filter2": "ETV6-RUNX1",
+  "filter1": "BCR-ABL1 subtypes",
+  "filter2": "ETV6-RUNX1 subtypes",
   "filter": "pediatric patients"
 }
 
@@ -71,7 +71,7 @@ A: {
 --- Implicit second group ---
 Q: "Is TP53 overexpressed in BCR-ABL1 compared to all other subtypes?"
 A: {
-  "filter1": "BCR-ABL1",
+  "filter1": "BCR-ABL1 subtype",
   "filter2": "all other subtypes"
 }
 
@@ -132,7 +132,9 @@ Query: ${user_prompt}
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> DE scaffold: ${response}`)
 	try {
-		return JSON.parse(response) as ScaffoldTypes.DEScaffold
+		const parsed = JSON.parse(response) as ScaffoldTypes.DEScaffold
+		parsed.plotType = 'dge'
+		return parsed
 	} catch {
 		throw new Error(`Failed to parse DEScaffold from LLM response: ${response}`)
 	}
@@ -155,7 +157,7 @@ Always return ONLY a JSON object in this exact format:
 - tw2 (OPTIONAL): GROUPING variable — only when the user wants to compare or split tw1 across groups. (e.g., "between X and Y", "by group", "across conditions").
 - tw3 (OPTIONAL): DIVIDE BY variable — a tertiary variable used to split or facet the plot generated with tw1 and tw2 data (e.g., "divided by", "split by", "per", "for each").
 - filter (OPTIONAL): A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males").
-- chartType (OPTIONAL): The specific type of summary chart the user wants (e.g. "violin", "boxplot", "barchart", "sampleScatter"). Only populate this when the user explicitly specifies a chart type in the prompt.
+- chartType (OPTIONAL): The specific type of summary chart the user wants (ONLY among "violin", "boxplot", "barchart", "sampleScatter"). Only populate this when the user explicitly specifies a chart type in the prompt.
 
 ## Extraction Rules
 1. Always identify tw1 first — it answers "what is the primary data variable being plotted/summarized?" tw1 must be a DATA VARIABLE and when extracting tw1, preserve biological/analytical qualifiers that modify the variable

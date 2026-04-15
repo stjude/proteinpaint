@@ -452,6 +452,13 @@ export async function resolveToTwTvs(
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
 			twTvsObjects[key] = termWrapper
 		}
+	} else if (plotType == 'dge') {
+		for (const [key, value] of Object.entries(entity)) {
+			const filterValues = value as Value[] | undefined
+			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			twTvsObjects[key] = termWrapper
+		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'
 	}
