@@ -36,6 +36,10 @@ export class DnaMethylationBase {
 	}
 }
 
+/** Build the query string used by the server to look up CpG sites in the HDF5
+ *  file. Both the genome browser and the HDF5 file use 0-based coordinates
+ *  (verified against UCSC hg38 via api.genome.ucsc.edu/search for 5 probes;
+ *  see coordinate note in client/termdb/handlers/dnaMethylation.ts). */
 function makeDNAMethTermId(term: RawDnaMethylationTerm) {
 	return `${term.chr}:${term.start}-${term.stop}`
 }

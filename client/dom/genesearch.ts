@@ -149,6 +149,9 @@ type Result = Partial<GeneOrSNPResult> &
 		chr?: string
 		searchbox?: any
 		genes?: { geneSymbol: string }[]
+		/** Original position before any expansion by string2pos(). Present when
+		 *  a single position or small range was expanded to a minimum span. */
+		actualposition?: { position: number; len: number }
 	}
 
 export const debounceDelay = 500
@@ -600,6 +603,7 @@ export function addGeneSearchbox(arg: GeneSearchBoxArg) {
 				result.chr = r.chr
 				result.start = r.start
 				result.stop = r.stop
+				if (r.actualposition) result.actualposition = r.actualposition
 				if (r.ref) result.ref = r.ref
 				if (r.alt) result.alt = r.alt
 			} else if (r.geneSymbol) {
