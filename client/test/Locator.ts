@@ -44,7 +44,16 @@ export class Locator {
 	}
 
 	// selector: string selector such as '#my-id', '.my-class', `[data-testid='my-id-here']`, `[role='button']`, etc
-	shows(selector, opts: { intervalWait?: number; maxWait?: number; visibility?: boolean; count?: number } = {}) {
+	shows(
+		selector,
+		opts: {
+			intervalWait?: number
+			maxWait?: number
+			visibility?: boolean
+			count?: number
+			attr?: { [attrName: string]: string | number }
+		} = {}
+	) {
 		this.pending.push([
 			shows,
 			{
@@ -52,7 +61,8 @@ export class Locator {
 				targetCount: opts.count || 1, //'>=1',
 				visibility: opts.visibility ?? true,
 				intervalWait: opts.intervalWait || this.opts.intervalWait,
-				maxWait: opts.maxWait || this.opts.maxWait
+				maxWait: opts.maxWait || this.opts.maxWait,
+				attr: opts.attr || {}
 			}
 		])
 
@@ -132,12 +142,24 @@ export class Locator {
 	hides(selector) {
 		return this.shows(selector, { visibility: false })
 	}
+
+	async click(arg) {
+		const elems = await this.get(arg)
+		const arr = Array.isArray(elems) ? elems : [elems]
+		for (const elem of arr) {
+			const box = elem.getBoundingClientRect()
+			const clientX = box.x + 0.5 * box.width
+			const clientY = box.y + box.height
+			elem.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX, clientY }))
+		}
+		return elems
+	}
 }
 
 // must not reference 'this'
 async function shows(elems, opts: any) {
 	return new Promise(resolve => {
-		const { selector, targetCount, intervalWait, maxWait, visibility } = opts
+		const { selector, targetCount, intervalWait, maxWait, visibility, attr } = opts
 		const matchedElems = new Set()
 		let elapsed = 0,
 			pending = false
@@ -148,7 +170,17 @@ async function shows(elems, opts: any) {
 			for (const elem of elems) {
 				for (const descendant of elem.querySelectorAll(selector)) {
 					if (matchedElems.has(descendant)) continue
-					if (descendant.checkVisibility() === visibility) matchedElems.add(descendant)
+					if (descendant.checkVisibility() === visibility) {
+						if (!attr) matchedElems.add(descendant)
+						else {
+							const kvEntries = Object.entries(attr)
+							const matchedKeys: string[] = []
+							for (const [key, value] of kvEntries) {
+								if (elem.getAttribute(key) !== value) matchedKeys.push(key)
+							}
+							if (matchedKeys.length === kvEntries.length) matchedElems.add(descendant)
+						}
+					}
 				}
 			}
 			elapsed += intervalWait

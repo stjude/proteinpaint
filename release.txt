@@ -1,1 +1,7 @@
+<<<<<<< Updated upstream
 
+=======
+Fixes:
+- restore option to replace survival series colors via legend click menu
+- darken wildtype gray color to pass Section 508 contrast requirement
+>>>>>>> Stashed changes

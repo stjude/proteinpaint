@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { termjson } from '#test/testdata/termjson.ts'
 import * as helpers from '#test/front.helpers.js'
-import { detectOne, detectGte } from '#test/test.helpers.js'
+import { detectOne, detectGte, Locator, sleep } from '#test/test.helpers.js'
 
 /*
 Tests:
@@ -822,7 +822,9 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 
 	let survivalDiv
 	async function runTests(survival) {
-		survivalDiv = survival.Inner.dom.chartsDiv
+		survival.on('postRender.test', null)
+		const { chartsDiv, legendTip } = survival.Inner.dom
+		survivalDiv = chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
@@ -830,7 +832,18 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 			'should render 10 survival censored symbols'
 		)
 
-		if (test._ok) survival.Inner.app.destroy()
+		const atRiskLegend0 = await Locator.init(survivalDiv.node()).find(`[data-testid='sjpp-atrisk-seriesId']`).click(0)
+		// NOTE: simulated color picker click leads to error "A user gesture is required to show the color picker"
+		// directly call color change instead of simulated clicks
+		const colorInput = await Locator.init(legendTip.d).shows('input[type="color"]').get(0)
+		colorInput.value = '#0000ff'
+		colorInput.dispatchEvent(new Event('change', { cancelable: true }))
+		await sleep(100) // todo: use improved Locator methods to avoid using sleep()
+		test.equal(atRiskLegend0?.parentNode?.getAttribute('fill'), 'rgb(0, 0, 255)', 'should change the series color')
+		if (test._ok) {
+			survival.Inner.app.destroy()
+			legendTip.hide()
+		}
 		test.end()
 	}
 })
