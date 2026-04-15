@@ -18,10 +18,6 @@ import type { SCSettings } from '../SCTypes'
  * The matrix ** does not ** properly pull single cell data yet.
  * This implementation works as a placeholder for now.
  * Need to revisit before production.
- *
- * Questions:
- * - Limit to 100 genes or no?
- * - What settings to use for hier cluster?
  * */
 export class PlotButtons {
 	plotBtnsDom: {
@@ -126,6 +122,7 @@ export class PlotButtons {
 						spawnConfig: {
 							parentId: this.interactions.id,
 							hidePlotFilter: true,
+							headerText: `Sample: ${this.item!.sample}`,
 							sample
 						},
 						tree: {
@@ -165,6 +162,7 @@ export class PlotButtons {
 	}
 
 	//********** Btn Menus **********/
+	//TODO: Change gene expression menu to transient plot
 	geneExpMenu(plot: any, self: PlotButtons) {
 		const opts = {
 			termType: SINGLECELL_GENE_EXPRESSION as string,
@@ -172,6 +170,7 @@ export class PlotButtons {
 			spawnConfig: {
 				hidePlotFilter: true,
 				parentId: self.interactions.id,
+				headerText: `Sample: ${self.item!.sample}`,
 				scItem: self.makeSampleObj(),
 				/** It's not ideal to always pass the hierCluster settings here, but it's required for the current implementation */
 				settings: { hierCluster: self.settings.hierCluster }
