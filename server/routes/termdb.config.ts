@@ -260,6 +260,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.proteome) {
 		q2.proteome = {}
+		if (q.proteome.overlayTerm) {
+			q2.proteome.overlayTerm = JSON.parse(JSON.stringify(q.proteome.overlayTerm))
+		}
 		if (q.proteome.assays) {
 			q2.proteome.assays = {}
 			for (const assay in q.proteome.assays) {
@@ -269,11 +272,11 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 					for (const cohort in q.proteome.assays[assay].cohorts) {
 						q2.proteome.assays[assay].cohorts[cohort] = {}
 						const src = q.proteome.assays[assay].cohorts[cohort]
-						if ('filter' in src) {
-							q2.proteome.assays[assay].cohorts[cohort].filter = JSON.parse(JSON.stringify(src.filter))
+						if ('controlFilter' in src) {
+							q2.proteome.assays[assay].cohorts[cohort].controlFilter = JSON.parse(JSON.stringify(src.controlFilter))
 						}
-						if ('overlayTerm' in src) {
-							q2.proteome.assays[assay].cohorts[cohort].overlayTerm = JSON.parse(JSON.stringify(src.overlayTerm))
+						if ('caseFilter' in src) {
+							q2.proteome.assays[assay].cohorts[cohort].caseFilter = JSON.parse(JSON.stringify(src.caseFilter))
 						}
 					}
 				}
