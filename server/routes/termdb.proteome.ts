@@ -243,8 +243,8 @@ export async function validate_query_proteome(ds) {
 
 	for (const assayName in q.assays) {
 		const assay = q.assays[assayName]
-		if (!assay.columnIdx) throw `queries.proteome.assays.${assayName}.columnIdx missing`
-		if (!assay.columnValue) throw `queries.proteome.assays.${assayName}.columnValue missing`
+		if (assay.columnIdx == null) throw `queries.proteome.assays.${assayName}.columnIdx missing`
+		if (assay.columnValue == null) throw `queries.proteome.assays.${assayName}.columnValue missing`
 		if (assay.cohorts) {
 			for (const cohortName in assay.cohorts) {
 				const cohort = assay.cohorts[cohortName]
