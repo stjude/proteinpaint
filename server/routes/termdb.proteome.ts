@@ -336,9 +336,9 @@ function resolveColumnName(idx: number) {
 }
 
 // Build a WHERE clause and params array from a filter array like [{columnIdx:6, columnValue:'AD1'}, {columnIdx:1, columnValue:'Ctl'}]
-function buildFilterClause(filters: { columnIdx: number; columnValue: string }[]) {
+function buildFilterClause(filters: { columnIdx: number; columnValue: string | number }[]) {
 	const conditions: string[] = []
-	const params: string[] = []
+	const params: (string | number)[] = []
 	for (const f of filters) {
 		const colName = resolveColumnName(f.columnIdx)
 		conditions.push(`${colName} = ?`)
@@ -351,7 +351,7 @@ function queryDbRows(
 	db,
 	matchColumn: 'gene' | 'identifier',
 	matchValue: string,
-	filters: { columnIdx: number; columnValue: string }[]
+	filters: { columnIdx: number; columnValue: string | number }[]
 ) {
 	const { conditions, params } = buildFilterClause(filters)
 	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
