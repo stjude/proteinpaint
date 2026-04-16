@@ -19,6 +19,7 @@ export type DEScaffold = {
 	filter?: string
 	method?: 'edgeR' | 'DESeq2' | 'limma' // optional, default to edgeR if not provided
 }
+
 export type MatrixScaffold = {
 	plotType: 'matrix'
 	twLst: string[]
