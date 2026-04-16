@@ -714,7 +714,6 @@ type ProteomeFilter = {
 }
 
 type ProteomeCohortConfig = {
-	cohortName: string
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
 }
@@ -722,7 +721,9 @@ type ProteomeCohortConfig = {
 type ProteomeAssayConfig = {
 	columnIdx: number
 	columnValue: string | number
-	cohorts: ProteomeCohortConfig[]
+	cohorts: {
+		[cohortName: string]: ProteomeCohortConfig
+	}
 	/** optional PTM type for PTM assay type */
 	PTMType?: string
 	/** optional specific mclass override for PTM assay type */
@@ -732,6 +733,7 @@ type ProteomeAssayConfig = {
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
+	overlayTerm?: BaseTerm
 	/** document structure */
 	assays: {
 		[assayName: string]: ProteomeAssayConfig

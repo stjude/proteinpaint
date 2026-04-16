@@ -32,11 +32,12 @@ function init({ genomes }) {
 			const cohorts: any[] = []
 			for (const assayName in ds.queries.proteome.assays) {
 				const assay = ds.queries.proteome.assays[assayName]
-				for (const cohort of assay.cohorts) {
+				for (const cohortName in assay.cohorts || {}) {
+					const cohort = assay.cohorts[cohortName]
 					const details = {
 						dbfile: ds.queries.proteome.dbfile,
 						assayName,
-						cohortName: cohort.cohortName,
+						cohortName,
 						cohortControlFilter: cohort.controlFilter,
 						cohortCaseFilter: cohort.caseFilter,
 						PTMType: assay.PTMType,
@@ -251,13 +252,11 @@ export async function validate_query_proteome(ds) {
 		if (!assay.columnIdx) throw `queries.proteome.assays.${assayName}.columnIdx missing`
 		if (!assay.columnValue) throw `queries.proteome.assays.${assayName}.columnValue missing`
 		if (assay.cohorts) {
-			console.log(`Validating assay "${assayName}" with multiple cohorts`)
-			for (const cohort of assay.cohorts) {
-				if (!cohort.cohortName) throw `Missing cohortName in queries.proteome.assays.${assayName}.cohorts`
+			for (const cohortName in assay.cohorts) {
+				const cohort = assay.cohorts[cohortName]
 				if (!cohort.controlFilter)
-					throw `Missing controlFilter in queries.proteome.assays.${assayName}.cohorts.${cohort.cohortName}`
-				if (!cohort.caseFilter)
-					throw `Missing caseFilter in queries.proteome.assays.${assayName}.cohorts.${cohort.cohortName}`
+					throw `Missing controlFilter in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
+				if (!cohort.caseFilter) throw `Missing caseFilter in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
 			}
 		} else {
 			throw `Invalid assay structure for "${assayName}". Must have .cohorts`
@@ -267,7 +266,54 @@ export async function validate_query_proteome(ds) {
 	q.find = async arg => {
 		const proteins = arg?.proteins
 		if (!Array.isArray(proteins) || proteins.length == 0) throw 'queries.proteome.find arg.proteins[] missing'
-		return findProteinsInCohort(q.db, proteins)
+		const matches = new Set<string>()
+		const details = arg?.proteomeDetails || {}
+		const assay = details.assay
+		const cohort = details.cohort
+		const MAX_FIND_RESULTS = 500
+
+		const filters: { columnIdx: number; columnValue: string }[] = []
+		if (Object.keys(details).length) {
+			if (!assay || !cohort) throw 'queries.proteome.find arg.proteomeDetails.{assay,cohort} missing'
+			const assayConfig = q.assays?.[assay]
+			if (!assayConfig) throw `queries.proteome.find invalid assay: ${assay}`
+			const cohortConfig = assayConfig?.cohorts?.[cohort]
+			if (!cohortConfig) throw `queries.proteome.find invalid cohort: ${cohort}`
+
+			const assayFilter = [{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }]
+			const cohortFilter = [cohortConfig.caseFilter[0]]
+			filters.push(...assayFilter, ...cohortFilter)
+		}
+
+		for (const p of proteins) {
+			if (!p) continue
+			const token = String(p).trim()
+			if (token.length < 2) continue
+			const upperToken = `${token}\uffff`
+			const rawRows: { gene: string; identifier: string }[] = []
+
+			if (filters?.length) {
+				const { conditions, params } = buildFilterClause(filters)
+				const sql = `SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene >= ? COLLATE NOCASE AND gene < ? COLLATE NOCASE AND ${conditions.join(
+					' AND '
+				)} LIMIT ${MAX_FIND_RESULTS}`
+				rawRows.push(...q.db.prepare(sql).all(token, upperToken, ...params))
+			} else {
+				rawRows.push(
+					...q.db
+						.prepare(
+							`SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene >= ? COLLATE NOCASE AND gene < ? COLLATE NOCASE LIMIT ${MAX_FIND_RESULTS}`
+						)
+						.all(token, upperToken)
+				)
+			}
+
+			for (const row of rawRows) {
+				if (!row?.gene || !row?.identifier) continue
+				matches.add(`${row.gene}: ${row.identifier}`)
+			}
+		}
+		return [...matches]
 	}
 
 	q.get = async param => {
@@ -315,35 +361,17 @@ function buildFilterClause(filters: { columnIdx: number; columnValue: string }[]
 	return { conditions, params }
 }
 
-function findProteinsInCohort(db, proteins) {
-	const matches: string[] = []
-	for (const p of proteins) {
-		if (!p) continue
-		const rows = db
-			.prepare('SELECT DISTINCT gene, identifier FROM proteome_abundance WHERE gene LIKE ? COLLATE NOCASE')
-			.all(`%${p}%`)
-		for (const row of rows) {
-			if (row.gene.toLowerCase().includes(p.toLowerCase())) {
-				matches.push(`${row.gene}: ${row.identifier}`)
-			}
-		}
-	}
-	return matches
-}
-
 function queryDbRows(
 	db,
 	matchColumn: 'gene' | 'identifier',
 	matchValue: string,
 	filters: { columnIdx: number; columnValue: string }[]
 ) {
-	console.log(`Querying DB for ${matchColumn}=${matchValue} with filters:`, filters)
 	const { conditions, params } = buildFilterClause(filters)
 	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
 	const sql = `SELECT identifier, protein_accession, modsite, gene, sample, value
 		FROM proteome_abundance
 		WHERE ${allConditions.join(' AND ')}`
-	console.log('Executing SQL:', sql)
 	return db.prepare(sql).all(matchValue, ...params)
 }
 
