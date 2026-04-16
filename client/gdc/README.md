@@ -16,8 +16,8 @@ oncomatrix.js
 	oncomatrix
 maf.js
 	cohort MAF
-(DEPRECIATED) singlecell.js 
-	single cell rnaseq (not released)
+(DEPRECATED) singlecell.js 
+	single cell rnaseq
 sc.ts
 	single cell app (not released)
 

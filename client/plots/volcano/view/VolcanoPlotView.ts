@@ -103,7 +103,6 @@ export class VolcanoPlotView {
 					id: this.interactions.id,
 					config: { settings: { volcano: { showPValueTable: showTable } } }
 				})
-				console.log('showTable', showTable)
 			})
 		}
 		if (numSigGenes && numSigGenes >= 3) {

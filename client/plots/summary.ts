@@ -324,7 +324,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		const _headerSuffix = assayCohortTitle ? ` (${assayCohortTitle})` : ''
 		const titleBase = mainTerm + _headerSuffix
 		if (term2?.type) {
-			this.dom.paneTitleText.html(`${_headerPretext} ${term2.getTitleText?.() || term2.term.name} vs ${titleBase}`)
+			this.dom.paneTitleText.html(`${_headerPretext}${term2.getTitleText?.() || term2.term.name} vs ${titleBase}`)
 		} else {
 			this.dom.paneTitleText.html(`${_headerPretext}${titleBase}`)
 		}

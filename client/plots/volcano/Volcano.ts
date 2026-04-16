@@ -35,13 +35,13 @@ class Volcano extends PlotBase implements RxComponent {
 		this.termType = opts.termType
 		const holder = opts.holder
 			.classed('sjpp-volcano-main', true)
-			.attr('data-testId', `sjpp-volcano-main-${opts.termType}`)
+			.attr('data-testid', `sjpp-volcano-main-${opts.termType}`)
 		//Either allow a node to be passed or create a new div
 		const controls = typeof opts.controls == 'object' ? opts.controls : holder || (holder as any).append('div')
 		const error = opts.holder
 			.append('div')
 			.attr('id', 'sjpp-volcano-error')
-			.attr('data-testId', `sjpp-volcano-error-${opts.termType}`)
+			.attr('data-testid', `sjpp-volcano-error-${opts.termType}`)
 			.style('opacity', 0.75) as any
 		this.dom = {
 			holder,
@@ -50,7 +50,7 @@ class Volcano extends PlotBase implements RxComponent {
 			wait: holder
 				.append('div')
 				.attr('id', 'sjpp-volcano-wait')
-				.attr('data-testId', `sjpp-volcano-wait-${opts.termType}`)
+				.attr('data-testid', `sjpp-volcano-wait-${opts.termType}`)
 				.style('opacity', 0.75)
 				.style('padding', '20px')
 				.text('Loading...') as any,
