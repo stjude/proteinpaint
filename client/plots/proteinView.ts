@@ -8,8 +8,7 @@ import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 import { shapeSelector, shapesArray } from '../dom/shapes.js'
-import { /* NumericModes, */ TermTypes } from '#shared/terms.js'
-// import { toTvslstFilter } from './proteomeAbundance.js'
+import { NumericModes, TermTypes } from '#shared/terms.js'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
 import { roundValue } from '#shared/roundValue.js'
@@ -411,8 +410,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.on('mouseout', () => {
 			self.dom.tip.hide()
 		})
-	// disable launching violin plot on click for now since we don't have filters and overlay terms on dataset file defined to make it work meaningfully
-	// .on('click', (_event: any, d: any) => launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier))
+		.on('click', (_event: any, d: any) => launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier))
 
 	const legend = plotAndLegend
 		.append('div')
@@ -821,7 +819,6 @@ function renderFCSummary(holder: any, data: any, self: ProteinView) {
 }
 */
 
-/*
 function launchViolinPlot(self: ProteinView, assayName: string, cohortName: string, isoForm: string) {
 	const selectedProtein = self.state.config?.tw?.term
 	if (!selectedProtein) throw new Error('proteinView: selected protein term is missing')
@@ -837,21 +834,19 @@ function launchViolinPlot(self: ProteinView, assayName: string, cohortName: stri
 	action.config.proteomeDetails = { assay: assayName, cohort: cohortName }
 
 	const termdbConfig = self.app.vocabApi.termdbConfig
-	const cohortSelected = termdbConfig?.queries?.proteome?.assays?.[assayName]?.cohorts?.[cohortName]
-	if (cohortSelected?.filter) action.config.filter = toTvslstFilter(cohortSelected.filter)
-
+	const proteomeOverlayTerm = termdbConfig?.queries?.proteome?.overlayTerm
 	const t = structuredClone(selectedProtein)
 	t.name = `${t.name}: ${isoForm}`
 	t.proteomeDetails = { assay: assayName, cohort: cohortName }
 	action.config.term = { term: t, q: { mode: NumericModes.continuous } }
 
-	if (cohortSelected?.overlayTerm) {
-		action.config.term2 = { term: structuredClone(cohortSelected.overlayTerm), q: {} }
+	if (proteomeOverlayTerm) {
+		action.config.term2 = { term: structuredClone(proteomeOverlayTerm), q: {} }
 	}
 
 	self.app.dispatch(action)
 }
-*/
+
 async function renderPTMLollipop(holder: any, data: any, self: ProteinView) {
 	if (!data?.cohorts?.length) return
 
