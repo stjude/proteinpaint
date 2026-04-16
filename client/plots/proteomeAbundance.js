@@ -33,7 +33,13 @@ export function renderAssayAndCohortRadios({
 		.style('padding', '3px 5px')
 		.style('font-weight', 600)
 		.text(cohortTitle)
-	const cohortListDiv = holder.append('div')
+	const cohortListDiv = holder
+		.append('div')
+		.style('max-height', '300px')
+		.style('overflow-y', 'auto')
+		.style('border', '1px solid #ddd')
+		.style('border-radius', '4px')
+		.style('padding', '5px')
 
 	for (const [assayKey] of assayEntries) {
 		const assayLabel = assayListDiv
