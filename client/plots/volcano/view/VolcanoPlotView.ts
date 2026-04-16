@@ -16,6 +16,7 @@ export class VolcanoPlotView {
 	termType: string
 	volcanoDom: VolcanoPlotDom
 	viewData!: VolcanoViewData
+
 	constructor(dom: VolcanoDom, interactions: VolcanoInteractions, termType: string) {
 		this.dom = dom
 		this.interactions = interactions
@@ -34,11 +35,7 @@ export class VolcanoPlotView {
 		this.volcanoDom = {
 			actions,
 			svg,
-			pValueTable: this.dom.holder
-				.append('div')
-				.attr('id', 'sjpp-volcano-pValueTable')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top'),
+			pValueTable: undefined,
 			top: undefined,
 			xAxis: undefined,
 			xAxisLabel: undefined,
@@ -59,13 +56,12 @@ export class VolcanoPlotView {
 		this.renderPlot(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
-		this.renderPValueTable()
+		if (this.settings.showPValueTable) this.renderPValueTable()
 	}
 
 	initDom() {
 		this.volcanoDom.actions.selectAll('*').remove()
 		this.volcanoDom.svg.selectAll('*').remove()
-		this.volcanoDom.pValueTable.selectAll('*').remove()
 
 		const svg = this.volcanoDom.svg
 		this.volcanoDom.top = svg.append('g').attr('id', 'sjpp-volcano-top')
@@ -74,6 +70,14 @@ export class VolcanoPlotView {
 		this.volcanoDom.xAxisLabel = svg.append('text').attr('id', 'sjpp-volcano-xAxisLabel').attr('text-anchor', 'middle')
 		this.volcanoDom.yAxisLabel = svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle')
 		this.volcanoDom.plot = svg.append('g').attr('id', 'sjpp-volcano-plot')
+
+		if (!this.settings.showPValueTable) return
+		this.volcanoDom.pValueTable = this.dom.holder
+			.append('div')
+			.attr('id', 'sjpp-volcano-pValueTable')
+			.attr('data-testid', 'sjpp-volcano-pValueTable')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
 	}
 
 	renderUserActions() {
@@ -97,6 +101,8 @@ export class VolcanoPlotView {
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			this.addActionButton('Show p-value table', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], async () => {
+				/** TODO: This is very slow to render. Need to optimize rendering
+				 * and server response to increase performance.*/
 				const showTable = !this.settings.showPValueTable
 				await this.interactions.app.dispatch({
 					type: 'plot_edit',
