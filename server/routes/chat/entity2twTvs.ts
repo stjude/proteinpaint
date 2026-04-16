@@ -1,5 +1,6 @@
 import type { LlmConfig } from '@sjcrh/proteinpaint-types'
 import type { Value, DictTerm, GeneTerm } from './entity2termObj.ts'
+import type { MsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { parse_dataset_db } from './utils.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -169,7 +170,7 @@ function generateFlatTvslst(items: Array<ResolvedFilter | any>): any {
 	return localfilter
 }
 
-async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any> {
+async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any | MsgToUser> {
 	// Resolve each filter phrase via the LLM helpers into an intermediate ResolvedFilter, then
 	// assemble a tvslst matching filter.ts's validate_filter() + generate_filter_term() output:
 	//   { type: 'tvslst', in: true, join?: 'and'|'or',
@@ -183,6 +184,26 @@ async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig):
 			if (!categoricalFilterTerm) {
 				console.warn(`resolveToTvs: skipping categorical filter term (no result): "${termObj.phrase}"`)
 				continue
+			}
+			// Validate the category value against the term's actual values
+			// (similar logic to generate_filter_term() in filter.ts)
+			if ('id' in termObj.term) {
+				const { db_rows } = await parse_dataset_db(dbPath)
+				const dbRow = db_rows.find(r => r.name === (termObj.term as DictTerm).id)
+				if (dbRow) {
+					let cat: string | undefined
+					for (const dbVal of dbRow.values) {
+						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
+						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
+					}
+					if (!cat) {
+						const msg: MsgToUser = {
+							type: 'text',
+							text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
+						}
+						return msg
+					}
+				}
 			}
 			resolved.push({
 				kind: 'categorical',
@@ -435,6 +456,7 @@ export async function resolveToTwTvs(
 				const filterValues = value as Value[] | undefined
 				if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
 				const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+				if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 				twTvsObjects[key] = termWrapper
 				continue
 			}
@@ -450,6 +472,7 @@ export async function resolveToTwTvs(
 			const filterValues = value as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects[key] = termWrapper
 		}
 	} else {
