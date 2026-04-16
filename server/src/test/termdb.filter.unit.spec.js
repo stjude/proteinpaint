@@ -9,7 +9,6 @@ import tape from 'tape'
 import { getFilterCTEs } from '../termdb.filter.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
-import { validateQueryIsoformExpression } from '#routes/termdb.cluster.ts'
 
 tape('\n', function (test) {
 	test.comment('-***- src/termdb.filter specs -***-')
@@ -21,7 +20,22 @@ let tdb
 tape('simple filter', async function (test) {
 	tdb = await init('termdb.test.ts')
 	server_init_db_queries(tdb.ds)
-	await validateQueryIsoformExpression(tdb.ds, null)
+
+	// Mock isoformExpression handler for custom termCollection tests.
+	// The real handler requires Rust binaries not available in CI.
+	if (!tdb.ds.queries) tdb.ds.queries = {}
+	tdb.ds.queries.isoformExpression = {
+		get: async param => {
+			const term2sample2value = new Map()
+			for (const tw of param.terms) {
+				// Return mock TPM values for two samples per isoform.
+				// Sample IDs must exist in the test db's sampleidmap.
+				const s2v = { 1: 10, 2: 5 }
+				term2sample2value.set(tw.$id, s2v)
+			}
+			return { term2sample2value, byTermId: {}, bySampleId: {} }
+		}
+	}
 
 	const filter = await getFilterCTEs(
 		{
