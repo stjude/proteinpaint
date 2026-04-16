@@ -9,6 +9,7 @@ import tape from 'tape'
 import { getFilterCTEs } from '../termdb.filter.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
+import { validateQueryIsoformExpression } from '#routes/termdb.cluster.ts'
 
 tape('\n', function (test) {
 	test.comment('-***- src/termdb.filter specs -***-')
@@ -20,6 +21,7 @@ let tdb
 tape('simple filter', async function (test) {
 	tdb = await init('termdb.test.ts')
 	server_init_db_queries(tdb.ds)
+	await validateQueryIsoformExpression(tdb.ds, null)
 
 	const filter = await getFilterCTEs(
 		{
@@ -131,6 +133,100 @@ tape('nested filter', async function (test) {
 		'CTE string should have the same number of ? as values[]'
 	)
 	test.equal(filter.CTEs.length, 8, 'should return 8 CTE clauses for this complex filter')
+	test.end()
+})
+
+tape('custom termCollection percentage filter', async function (test) {
+	const filter = await getFilterCTEs(
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							type: 'termCollection',
+							isCustom: true,
+							memberType: 'numeric',
+							name: 'Test Isoforms (TPM)',
+							termlst: [
+								{
+									id: 'ENST00000256078',
+									name: 'ENST00000256078',
+									type: 'isoformExpression',
+									isoform: 'ENST00000256078'
+								},
+								{
+									id: 'ENST00000311936',
+									name: 'ENST00000311936',
+									type: 'isoformExpression',
+									isoform: 'ENST00000311936'
+								}
+							],
+							numerators: ['ENST00000256078'],
+							propsByTermId: {}
+						},
+						ranges: [{ start: 0, startinclusive: false, stopunbounded: true }]
+					}
+				}
+			]
+		},
+		tdb.ds
+	)
+
+	test.deepEqual(
+		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
+		['CTEname', 'CTEs', 'filters', 'sampleTypes', 'values'],
+		'should return an object with the five expected keys'
+	)
+	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
+	test.ok(filter.values.length > 0, 'should return matching samples (percentage > 0)')
+	test.equal(filter.CTEs.length, 2, 'should return two CTE clauses')
+	test.end()
+})
+
+tape('custom termCollection filter validates numerators', async function (test) {
+	const message = 'Should throw when numerator is not in denominator'
+	try {
+		await getFilterCTEs(
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: {
+								type: 'termCollection',
+								isCustom: true,
+								memberType: 'numeric',
+								name: 'Test Isoforms (TPM)',
+								termlst: [
+									{
+										id: 'ENST00000256078',
+										name: 'ENST00000256078',
+										type: 'isoformExpression',
+										isoform: 'ENST00000256078'
+									}
+								],
+								// numerator not in termlst
+								numerators: ['ENST00000311936'],
+								propsByTermId: {}
+							},
+							ranges: [{ start: 0, startinclusive: false, stopunbounded: true }]
+						}
+					}
+				]
+			},
+			tdb.ds
+		)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
 	test.end()
 })
 

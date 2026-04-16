@@ -65,6 +65,44 @@ tape('Coordinate search', async test => {
 	test.end()
 })
 
+tape('Single position search (chr:pos format)', async test => {
+	let term
+	const callback = _term => {
+		term = _term
+	}
+	const holder = getHolder()
+	await initializeSearchHandler({ holder, callback })
+	const geneSearchInput: any = holder.select('.sja_genesearchinput').node()
+	geneSearchInput.value = 'chr17:7669073'
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.equal(term.chr, 'chr17', 'term.chr should equal input chr')
+	test.equal(term.start, 7669073, 'term.start should be exact position, not 400bp-expanded')
+	test.equal(term.stop, 7669074, 'term.stop should be start+1 for a single CpG site')
+	test.equal(term.type, TermTypes.DNA_METHYLATION, 'term.type should be dnaMethylation')
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('Single position search (chr:pos-pos format)', async test => {
+	let term
+	const callback = _term => {
+		term = _term
+	}
+	const holder = getHolder()
+	await initializeSearchHandler({ holder, callback })
+	const geneSearchInput: any = holder.select('.sja_genesearchinput').node()
+	geneSearchInput.value = 'chr17:7669073-7669073'
+	geneSearchInput.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', bubbles: true }))
+	await sleep(100)
+	test.equal(term.chr, 'chr17', 'term.chr should equal input chr')
+	test.equal(term.start, 7669073, 'term.start should be exact position, not 400bp-expanded')
+	test.equal(term.stop, 7669074, 'term.stop should be start+1 for a single CpG site')
+	test.equal(term.type, TermTypes.DNA_METHYLATION, 'term.type should be dnaMethylation')
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('Gene search', async test => {
 	let term
 	const callback = _term => {

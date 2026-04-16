@@ -149,8 +149,10 @@ type Result = Partial<GeneOrSNPResult> &
 		chr?: string
 		searchbox?: any
 		genes?: { geneSymbol: string }[]
-		/** Original position before any expansion by string2pos(). Present when
-		 *  a single position or small range was expanded to a minimum span. */
+		/** Original position and length from string2pos(). Present for any
+		 *  coordinate input (position is the start, len is stop - start).
+		 *  Useful for recovering exact coordinates when string2pos() expands
+		 *  small ranges to a 400bp minimum span for the genome browser. */
 		actualposition?: { position: number; len: number }
 	}
 

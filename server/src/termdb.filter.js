@@ -333,26 +333,47 @@ async function get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildr
 	const termlst = tvs.term.termlst || []
 	const numerators = tvs.term.numerators || []
 	if (!termlst.length) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (numerators.length) {
+		validateTermCollectionTvs(
+			numerators,
+			termlst.map(i => i.id)
+		)
+	}
 
-	// Fetch values for all member terms via query handlers directly
+	// Fetch values for all member terms via query handlers directly.
+	// Group members by data type so each handler is called once with all its
+	// terms batched together (avoids sequential HDF5 reads).
 	// sampleValues: { sampleId: { memberId: value, ... }, ... }
 	const sampleValues = {}
+	const byDataType = new Map()
 	for (const mt of termlst) {
 		const dataType = mt.dataType || mt.type || 'isoformExpression'
-		const queryHandler = ds.queries?.[dataType]
-		if (!queryHandler) continue
+		if (!ds.queries?.[dataType]) continue
+		if (!byDataType.has(dataType)) byDataType.set(dataType, [])
 		const memberId = mt.id || mt.name
-		const tw = { $id: memberId, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
+		byDataType.get(dataType).push({
+			memberId,
+			tw: { $id: memberId, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
+		})
+	}
+	for (const [dataType, members] of byDataType) {
+		const queryHandler = ds.queries[dataType]
 		try {
-			const data = await queryHandler.get({ terms: [tw] }, ds)
-			const values = data.term2sample2value?.get(memberId)
-			if (!values) continue
-			for (const [sid, val] of Object.entries(values)) {
-				if (!sampleValues[sid]) sampleValues[sid] = {}
-				sampleValues[sid][memberId] = val
+			const data = await queryHandler.get({ terms: members.map(m => m.tw) }, ds)
+			for (const { memberId } of members) {
+				const values = data.term2sample2value?.get(memberId)
+				if (!values) continue
+				for (const [sid, val] of Object.entries(values)) {
+					if (!sampleValues[sid]) sampleValues[sid] = {}
+					sampleValues[sid][memberId] = val
+				}
 			}
 		} catch (e) {
-			// skip members that have no data
+			// The handler throws a string like "No data available for the input ..."
+			// when no expression data exists for the queried terms. This is expected
+			// and safe to skip. Rethrow unexpected errors (e.g. file read failures).
+			const msg = typeof e === 'string' ? e : e?.message || ''
+			if (!msg.startsWith('No data available')) throw e
 		}
 	}
 
