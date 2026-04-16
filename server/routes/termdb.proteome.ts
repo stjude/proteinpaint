@@ -33,16 +33,10 @@ function init({ genomes }) {
 			for (const assayName in ds.queries.proteome.assays) {
 				const assay = ds.queries.proteome.assays[assayName]
 				for (const cohortName in assay.cohorts || {}) {
-					const cohort = assay.cohorts[cohortName]
 					const details = {
 						dbfile: ds.queries.proteome.dbfile,
-						assayName,
-						cohortName,
-						cohortControlFilter: cohort.controlFilter,
-						cohortCaseFilter: cohort.caseFilter,
-						PTMType: assay.PTMType,
-						assayColumnIdx: assay.columnIdx,
-						assayColumnValue: assay.columnValue
+						assay: assayName,
+						cohort: cohortName
 					}
 					const tw = {
 						$id: '_',
@@ -318,17 +312,9 @@ export async function validate_query_proteome(ds) {
 
 	q.get = async param => {
 		if (!param?.terms?.length) throw 'queries.proteome.get param.terms[] missing'
-		if (!param.proteomeDetails?.assayName || !param.proteomeDetails?.cohortName)
-			throw 'queries.proteome.get param.proteomeDetails.{assayName,cohortName} missing'
-		if (
-			!param.proteomeDetails?.cohortControlFilter ||
-			!param.proteomeDetails?.cohortCaseFilter ||
-			!param.proteomeDetails?.assayColumnIdx ||
-			!param.proteomeDetails?.assayColumnValue
-		)
-			throw 'queries.proteome.get param.proteomeDetails.{cohortControlFilter, cohortCaseFilter, assayColumnIdx, assayColumnValue} missing'
-
-		return await getProteomeValuesFromCohort(ds, param)
+		if (!param.proteomeDetails?.assay || !param.proteomeDetails?.cohort)
+			throw 'queries.proteome.get param.proteomeDetails.{assay,cohort} missing'
+		return await getProteomeValuesFromCohort(ds, param, q)
 	}
 }
 
@@ -375,10 +361,20 @@ function queryDbRows(
 	return db.prepare(sql).all(matchValue, ...params)
 }
 
-async function getProteomeValuesFromCohort(ds, param) {
+async function getProteomeValuesFromCohort(ds, param, q) {
 	const db = ds.queries.proteome.db
-	const { assayName, cohortName, PTMType, cohortControlFilter, cohortCaseFilter, assayColumnIdx, assayColumnValue } =
-		param.proteomeDetails
+	const { assay, cohort } = param.proteomeDetails
+
+	const assayConfig = q.assays?.[assay]
+	if (!assayConfig) throw `queries.proteome.find invalid assay: ${assay}`
+	const PTMType = q.assays[assay].PTMType
+	const assayColumnIdx = assayConfig.columnIdx
+	const assayColumnValue = assayConfig.columnValue
+
+	const cohortConfig = assayConfig?.cohorts?.[cohort]
+	if (!cohortConfig) throw `queries.proteome.find invalid cohort: ${cohort}`
+	const cohortControlFilter = cohortConfig.controlFilter
+	const cohortCaseFilter = cohortConfig.caseFilter
 
 	// Assay-level filter (e.g. tech1='wholeProteome') must be included in every query
 	const assayFilter = [{ columnIdx: assayColumnIdx, columnValue: assayColumnValue }]
@@ -441,8 +437,8 @@ async function getProteomeValuesFromCohort(ds, param) {
 				if (!entryMap.has(row.identifier)) {
 					entryMap.set(row.identifier, {
 						uniqueIdentifier: row.identifier,
-						assayName,
-						cohortName,
+						assayName: assay,
+						cohortName: cohort,
 						PTMType,
 						modSites: PTMType ? row.modsite || undefined : undefined,
 						proteinAccession: row.protein_accession,
