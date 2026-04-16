@@ -143,6 +143,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 	}
 
 	removeComponent(subplotId) {
+		this.components.plots[subplotId].destroy()
 		delete this.components.plots[subplotId]
 	}
 }
