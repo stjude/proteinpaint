@@ -366,13 +366,13 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 	const { assay, cohort } = param.proteomeDetails
 
 	const assayConfig = q.assays?.[assay]
-	if (!assayConfig) throw `queries.proteome.find invalid assay: ${assay}`
+	if (!assayConfig) throw `queries.proteome.get invalid assay: ${assay}`
 	const PTMType = q.assays[assay].PTMType
 	const assayColumnIdx = assayConfig.columnIdx
 	const assayColumnValue = assayConfig.columnValue
 
 	const cohortConfig = assayConfig?.cohorts?.[cohort]
-	if (!cohortConfig) throw `queries.proteome.find invalid cohort: ${cohort}`
+	if (!cohortConfig) throw `queries.proteome.get invalid cohort: ${cohort}`
 	const cohortControlFilter = cohortConfig.controlFilter
 	const cohortCaseFilter = cohortConfig.caseFilter
 
