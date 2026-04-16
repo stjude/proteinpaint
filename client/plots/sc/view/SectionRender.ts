@@ -1,30 +1,39 @@
 import type { Sections } from '../SCTypes'
 import type { Div } from '../../../types/d3'
 import { newSandboxDiv } from '#dom'
+import type { SCViewer } from '../SC'
 
 export class SectionRender {
 	sections: Sections
 	holder: Div
+	plot2Sample: Map<string, string>
 
-	constructor(sectionsDiv) {
+	constructor(sectionsDiv: Div) {
 		this.sections = {}
 		this.holder = sectionsDiv
+		this.plot2Sample = new Map()
 	}
 
-	async update(sc, subplots: any) {
+	//Send the sc with the updated state
+	async update(sc: SCViewer, subplots: any) {
 		const activeSubplots = new Set(subplots.map(s => s.id))
 
-		/** Transient plots are deleted from the state but still plot components
-		 * until completely deleted from the app. */
+		/** Repeat the destory from the close button, as mass/app.ts
+		 * cannot remove components from within a parent plot */
 		for (const plotId of Object.keys(sc.components.plots)) {
-			if (!activeSubplots.has(plotId)) sc.removeComponent(plotId)
+			if (!activeSubplots.has(plotId)) {
+				this.removeSandbox(plotId, sc)
+			}
 		}
 
 		for (const subplot of subplots) {
 			const item = subplot.scItem || subplot?.term?.term?.sample
 			const sampleId = item.sample || item.sID
 			if (!this.sections[sampleId]) this.initSection(sampleId, item)
-			if (!this.sections[sampleId].sandboxes[subplot.id]) await this.initSandbox(sc, subplot, sampleId)
+			if (!this.sections[sampleId].sandboxes[subplot.id]) {
+				this.plot2Sample.set(subplot.id, sampleId)
+				await this.initSandbox(sc, subplot, sampleId)
+			}
 		}
 
 		/** Remove sections after iterating through subplots to avoid
@@ -102,8 +111,8 @@ export class SectionRender {
 			close: () => {
 				//Delete the component before calling dispatch
 				//Prevents main attempting to re-init the component
-				sc.removeComponent(subplot.id)
-				delete this.sections[sampleId].sandboxes[subplot.id]
+				//Remove the reference to the plotId in plot2Sample map to avoid memory leak
+				this.removeSandbox(subplot.id, sc)
 				sc.app.dispatch({
 					type: 'plot_delete',
 					id: subplot.id,
@@ -135,5 +144,15 @@ export class SectionRender {
 	removeSection(sampleId: string) {
 		this.sections[sampleId].sectionWrapper.remove()
 		delete this.sections[sampleId]
+	}
+
+	removeSandbox(plotId: string, sc: SCViewer) {
+		sc.removeComponent(plotId)
+		const sampleId = this.plot2Sample.get(plotId)
+		if (sampleId) {
+			this.sections[sampleId].sandboxes[plotId].remove()
+			delete this.sections[sampleId].sandboxes[plotId]
+			this.plot2Sample.delete(plotId)
+		}
 	}
 }
