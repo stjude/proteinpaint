@@ -29,7 +29,7 @@ export class SectionRender {
 		for (const subplot of subplots) {
 			const item = subplot.scItem || subplot?.term?.term?.sample
 			const sampleId = item.sample || item.sID
-			if (!this.sections[sampleId]) this.initSection(sampleId, item)
+			if (!this.sections[sampleId]) this.initSection(sampleId, item, sc)
 			if (!this.sections[sampleId].sandboxes[subplot.id]) {
 				this.plot2Sample.set(subplot.id, sampleId)
 				await this.initSandbox(sc, subplot, sampleId)
@@ -40,12 +40,12 @@ export class SectionRender {
 		 * deleting sections before they can be re-rendered with the correct plots */
 		for (const sampleId of Object.keys(this.sections)) {
 			if (Object.keys(this.sections[sampleId].sandboxes).length === 0) {
-				this.removeSection(sampleId)
+				this.removeSection(sampleId, sc)
 			}
 		}
 	}
 
-	initSection(sampleId: string, item: any) {
+	initSection(sampleId: string, item: any, sc: SCViewer) {
 		const sectionWrapper = this.holder
 			.insert('div', ':first-child')
 			.style('padding', '10px')
@@ -67,7 +67,7 @@ export class SectionRender {
                 </svg>`
 			)
 			.on('click', () => {
-				this.removeSection(sampleId)
+				this.removeSection(sampleId, sc)
 			})
 
 		const titleText = this.makeSectionTitleText(sampleId, item)
@@ -111,13 +111,7 @@ export class SectionRender {
 			close: () => {
 				//Delete the component before calling dispatch
 				//Prevents main attempting to re-init the component
-				//Remove the reference to the plotId in plot2Sample map to avoid memory leak
 				this.removeSandbox(subplot.id, sc)
-				sc.app.dispatch({
-					type: 'plot_delete',
-					id: subplot.id,
-					parentId: sc.id
-				})
 			},
 			plotId: subplot.id
 		})
@@ -141,18 +135,35 @@ export class SectionRender {
 		this.sections[sampleId].sandboxes[subplot.id] = sandbox.app_div
 	}
 
-	removeSection(sampleId: string) {
+	removeSection(sampleId: string, sc: SCViewer) {
+		const subactions: { type: string; id: string; parentId: string }[] = []
+		for (const plotId of Object.keys(this.sections[sampleId].sandboxes || {})) {
+			this.removeSandbox(plotId, sc, sampleId)
+			/** Need to remove plots from the state to prevent main from re-rendering
+			 * and memory leak from orphaned components after the section is deleted. */
+			subactions.push({
+				type: 'plot_delete',
+				id: plotId,
+				parentId: sc.id
+			})
+		}
+		if (subactions.length > 0) {
+			sc.app.dispatch({
+				type: 'app_refresh',
+				subactions
+			})
+		}
 		this.sections[sampleId].sectionWrapper.remove()
 		delete this.sections[sampleId]
 	}
 
-	removeSandbox(plotId: string, sc: SCViewer) {
+	removeSandbox(plotId: string, sc: SCViewer, _sampleId?: string) {
 		sc.removeComponent(plotId)
-		const sampleId = this.plot2Sample.get(plotId)
-		if (sampleId) {
-			this.sections[sampleId].sandboxes[plotId].remove()
-			delete this.sections[sampleId].sandboxes[plotId]
-			this.plot2Sample.delete(plotId)
-		}
+		const sampleId = _sampleId || this.plot2Sample.get(plotId)
+		if (!sampleId) return
+		this.sections[sampleId].sandboxes[plotId].remove()
+		delete this.sections[sampleId].sandboxes[plotId]
+		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
+		this.plot2Sample.delete(plotId)
 	}
 }
