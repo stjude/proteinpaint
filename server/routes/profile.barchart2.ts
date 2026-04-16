@@ -136,12 +136,32 @@ async function getScores(query: any, ds: any) {
 /**
  * For each sample (site), computes (score / maxScore) * 100,
  * collects all values, sorts them, and returns the median — rounded to integer.
- * Returns null when no samples have data for the term.
+ * d.maxScore can be either a number or a term wrapper.
+ * Skips samples where score or maxScore are missing or maxScore is zero (to avoid NaN/Infinity).
+ * Returns null when no samples have valid data for the term.
  */
 function computeMedianPercentage(d: any, samples: any[]): number | null {
-	const percentages = samples
-		.filter(s => s[d.score.$id]?.value != null)
-		.map(s => (s[d.score.$id].value / (s[d.maxScore.$id]?.value || d.maxScore)) * 100)
+	const percentages: number[] = []
+
+	for (const s of samples) {
+		const scoreValue = s[d.score.$id]?.value
+		if (scoreValue == null) continue
+
+		// Resolve maxScore: either a number or a term wrapper
+		let maxScoreValue: number | null = null
+		if (typeof d.maxScore === 'number') {
+			maxScoreValue = d.maxScore
+		} else {
+			// d.maxScore is a term wrapper
+			maxScoreValue = s[d.maxScore.$id]?.value
+		}
+
+		// Skip if max score is null or zero (avoid NaN or Infinity)
+		if (maxScoreValue == null || maxScoreValue === 0) continue
+
+		const percentage = (scoreValue / maxScoreValue) * 100
+		percentages.push(percentage)
+	}
 
 	if (percentages.length === 0) return null
 	percentages.sort((a, b) => a - b)
