@@ -173,7 +173,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const cohortShapes = makeShapeMap(cohortNames)
 	const proteinShapes = makeShapeMap(proteinAccessions)
 
-	let colorMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'none'
+	let colorMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'assayType'
 	let shapeMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'none'
 	const defaultDotColor = '#9ca3af'
 	const getColor = (d: any) => {
