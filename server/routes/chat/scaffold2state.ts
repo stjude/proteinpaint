@@ -18,7 +18,9 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 
 	if (plotType === 'summary') {
 		// default to violing for summary if not provided
-		plotState.plot.childType = subplotType ? subplotType : 'violin'
+		if (subplotType) {
+			plotState.plot.childType = subplotType
+		}
 
 		// for non-dict term, it needs to be within term: {}
 		// but, for dictionary term, it can be supplied as is
