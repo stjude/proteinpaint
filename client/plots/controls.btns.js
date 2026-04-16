@@ -96,6 +96,7 @@ function helpBtnInit(opts) {
 			'profilePolar',
 			'profilePolar2',
 			'profileBarchart',
+			'profileBarchart2',
 			'profileRadar',
 			'profileRadarFacility',
 			'boxplot',

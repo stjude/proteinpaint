@@ -185,6 +185,12 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'profileBarchart' }
 		},
 		{
+			label: 'Barchart 2',
+			clickTo: self.prepPlot,
+			chartType: 'profileBarchart2',
+			config: { chartType: 'profileBarchart2' }
+		},
+		{
 			label: 'Facility Radar',
 			chartType: 'profileRadarFacility',
 			clickTo: self.loadChartSpecificMenu
