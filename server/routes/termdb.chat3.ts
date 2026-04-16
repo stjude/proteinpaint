@@ -213,6 +213,9 @@ export async function run_chat_pipeline(
 		time = new Date().valueOf()
 		const twTvsObj = await resolveToTwTvs(termObj, plotType, llm, dataset_db)
 		mayLog('Time taken to resolve to TwTvs object from termObj:', formatElapsedTime(Date.now() - time))
+		if ('type' in twTvsObj && twTvsObj.type === 'text') {
+			return twTvsObj // Return msg/error
+		}
 		mayLog('twTvsObj:', twTvsObj)
 
 		mayLog('####### Fifth/Final phase: From TwTvs Objects to Plot States #######')
