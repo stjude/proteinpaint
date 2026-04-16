@@ -64,7 +64,21 @@ class ProteinView extends PlotBase implements RxComponent {
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
 		renderCohortVolcano(this.dom.body, data, this)
-		renderPTMLollipop(this.dom.body, data, this)
+		const ptmDataByIsoform = {}
+		for (const cohortData of data.cohorts || []) {
+			if (!cohortData.PTMType) continue // filter out non-PTM cohorts
+			const isoform = cohortData.isoform
+			if (!ptmDataByIsoform[isoform]) {
+				ptmDataByIsoform[isoform] = [cohortData]
+			} else {
+				ptmDataByIsoform[isoform].push(cohortData)
+			}
+		}
+
+		for (const isoform in ptmDataByIsoform) {
+			const ptmCohorts = ptmDataByIsoform[isoform]
+			await renderPTMLollipop(this.dom.body, ptmCohorts, this, isoform)
+		}
 	}
 }
 
@@ -819,7 +833,7 @@ function renderFCSummary(holder: any, data: any, self: ProteinView) {
 }
 */
 
-function launchViolinPlot(self: ProteinView, assayName: string, cohortName: string, isoForm: string) {
+function launchViolinPlot(self: ProteinView, assayName: string, cohortName: string, isoform: string) {
 	const selectedProtein = self.state.config?.tw?.term
 	if (!selectedProtein) throw new Error('proteinView: selected protein term is missing')
 
@@ -836,7 +850,7 @@ function launchViolinPlot(self: ProteinView, assayName: string, cohortName: stri
 	const termdbConfig = self.app.vocabApi.termdbConfig
 	const proteomeOverlayTerm = termdbConfig?.queries?.proteome?.overlayTerm
 	const t = structuredClone(selectedProtein)
-	t.name = `${t.name}: ${isoForm}`
+	t.name = `${t.name}: ${isoform}`
 	t.proteomeDetails = { assay: assayName, cohort: cohortName }
 	action.config.term = { term: t, q: { mode: NumericModes.continuous } }
 
@@ -847,17 +861,15 @@ function launchViolinPlot(self: ProteinView, assayName: string, cohortName: stri
 	self.app.dispatch(action)
 }
 
-async function renderPTMLollipop(holder: any, data: any, self: ProteinView) {
-	if (!data?.cohorts?.length) return
+async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView, isoform: string) {
+	if (!ptmCohorts?.length) return
 
 	const custom_variants: any[] = []
 	const mergedMclassOverride: any = {}
-	const gmCache = new Map()
-	for (const ptm of data.cohorts) {
-		if (!ptm.PTMType) continue // filter out non-PTM cohorts
+	const gm = await getGmForPTM(ptmCohorts[0].geneName, self.app.opts.genome.name, isoform)
+	for (const ptm of ptmCohorts) {
 		//use default gene model to get coordinates for all PTM sites, which is sufficient for most cases
 		//and avoids the complexity of mapping between different isoforms. TODO:support isoform-specific mapping.
-		const gm = await getGmForPTM(ptm.geneName, self.app.opts.genome.name, gmCache)
 		if (!gm) continue
 		const logValue = getLog2Ratio(ptm.foldChange)
 
@@ -919,7 +931,7 @@ async function renderPTMLollipop(holder: any, data: any, self: ProteinView) {
 		tklst: [tk],
 		mclassOverride,
 		debugmode: self.app.opts.debug,
-		query: data.cohorts[0].geneName
+		query: gm.isoform
 	}
 
 	const _ = await import('#src/block.init')
@@ -940,10 +952,8 @@ function parsePTMModSites(modSites: string) {
 	return null
 }
 
-async function getGmForPTM(geneName: string, genomeName: string, gmCache: Map<string, any>) {
+async function getGmForPTM(geneName: string, genomeName: string, isoform: string) {
 	if (!geneName) return null
-	if (gmCache.has(geneName)) return gmCache.get(geneName)
-
 	const d = await dofetch3('genelookup', {
 		body: {
 			deep: 1,
@@ -952,13 +962,13 @@ async function getGmForPTM(geneName: string, genomeName: string, gmCache: Map<st
 		}
 	})
 
-	if (d.error || !Array.isArray(d.gmlst) || !d.gmlst.length) {
-		gmCache.set(geneName, null)
-		return null
-	}
+	if (d.error || !Array.isArray(d.gmlst) || !d.gmlst.length) return null
 
-	const gm = d.gmlst.find((i: any) => i.isdefault) || d.gmlst[0]
-	gmCache.set(geneName, gm)
+	const normalizedIsoform = isoform?.trim().toUpperCase()
+	const gm =
+		d.gmlst.find((i: any) => i.isoform && normalizedIsoform && i.isoform.toUpperCase() == normalizedIsoform) ||
+		d.gmlst.find((i: any) => i.isdefault) ||
+		d.gmlst[0]
 	return gm
 }
 

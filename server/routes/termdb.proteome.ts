@@ -355,7 +355,7 @@ function queryDbRows(
 ) {
 	const { conditions, params } = buildFilterClause(filters)
 	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
-	const sql = `SELECT identifier, protein_accession, modsite, gene, sample, value
+	const sql = `SELECT identifier, protein_accession, isoform, modsite, gene, sample, value
 		FROM proteome_abundance
 		WHERE ${allConditions.join(' AND ')}`
 	return db.prepare(sql).all(matchValue, ...params)
@@ -442,6 +442,7 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 						PTMType,
 						modSites: PTMType ? row.modsite || undefined : undefined,
 						proteinAccession: row.protein_accession,
+						isoform: row.isoform, // refSeq transcript ID mapped from protein_accession
 						geneName: row.gene,
 						s2v: {}
 					})
