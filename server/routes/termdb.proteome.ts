@@ -275,7 +275,15 @@ export async function validate_query_proteome(ds) {
 			if (!cohortConfig) throw `queries.proteome.find invalid cohort: ${cohort}`
 
 			const assayFilter = [{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }]
-			const cohortFilter = [cohortConfig.caseFilter[0]]
+			const cohortFilter = (Array.isArray(cohortConfig.caseFilter) ? cohortConfig.caseFilter : []).filter(
+				(
+					filter
+				): filter is {
+					columnIdx: number
+					columnValue: string
+				} => !!filter
+			)
+			if (!cohortFilter.length) throw `queries.proteome.find invalid cohort caseFilter: ${cohort}`
 			filters.push(...assayFilter, ...cohortFilter)
 		}
 
