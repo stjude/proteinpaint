@@ -64,19 +64,19 @@ class ProteinView extends PlotBase implements RxComponent {
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
 		renderCohortVolcano(this.dom.body, data, this)
-		const ptmDataByIsoform = {}
+		const ptmDataByIsoform = new Map<string, any[]>()
 		for (const cohortData of data.cohorts || []) {
 			if (!cohortData.PTMType) continue // filter out non-PTM cohorts
 			const isoform = cohortData.isoform
-			if (!ptmDataByIsoform[isoform]) {
-				ptmDataByIsoform[isoform] = [cohortData]
+			const existingCohorts = ptmDataByIsoform.get(isoform)
+			if (!existingCohorts) {
+				ptmDataByIsoform.set(isoform, [cohortData])
 			} else {
-				ptmDataByIsoform[isoform].push(cohortData)
+				existingCohorts.push(cohortData)
 			}
 		}
 
-		for (const isoform in ptmDataByIsoform) {
-			const ptmCohorts = ptmDataByIsoform[isoform]
+		for (const [isoform, ptmCohorts] of ptmDataByIsoform) {
 			await renderPTMLollipop(this.dom.body, ptmCohorts, this, isoform)
 		}
 	}
