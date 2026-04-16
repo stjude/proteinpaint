@@ -1,7 +1,7 @@
 import type { LlmConfig } from '#types' // ,TermType
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type * as ScaffoldTypes from './scaffoldTypes.ts'
+import type { Scaffold } from './scaffoldTypes.ts'
 
 async function dge(user_prompt: string, llm: LlmConfig): Promise<ScaffoldTypes.DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
@@ -245,11 +245,7 @@ Query: ${user_prompt}
 	}
 }
 
-export async function inferScaffold(
-	user_prompt: string,
-	plotType: string,
-	llm: LlmConfig
-): Promise<ScaffoldTypes.Scaffold> {
+export async function inferScaffold(user_prompt: string, plotType: string, llm: LlmConfig): Promise<Scaffold> {
 	switch (plotType) {
 		case 'summary':
 			return await summary(user_prompt, llm)
