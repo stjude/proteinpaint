@@ -5,7 +5,8 @@ export function maySetSandboxHeader(appState) {
 	if (!this.dom.header) return // no header
 	switch (this.config.dataType) {
 		case TermTypes.GENE_EXPRESSION:
-			this.dom.header.text(`${this.config?.headerText || ''} Gene Expression Clustering`)
+			const headerText = this.config?.headerText ? `${this.config.headerText} ` : ''
+			this.dom.header.text(`${headerText}Gene Expression Clustering`)
 			break
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
