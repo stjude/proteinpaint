@@ -1,9 +1,9 @@
-import type { LlmConfig } from '#types' // ,TermType
+import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type { Scaffold } from './scaffoldTypes.ts'
+import type { Scaffold, SummaryScaffold, DEScaffold } from './scaffoldTypes.ts'
 
-async function dge(user_prompt: string, llm: LlmConfig): Promise<ScaffoldTypes.DEScaffold> {
+async function dge(user_prompt: string, llm: LlmConfig): Promise<DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
 
 ## OUTPUT SCHEMA
@@ -132,7 +132,7 @@ Query: ${user_prompt}
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> DE scaffold: ${response}`)
 	try {
-		const parsed = JSON.parse(response) as ScaffoldTypes.DEScaffold
+		const parsed = JSON.parse(response) as DEScaffold
 		parsed.plotType = 'dge'
 		return parsed
 	} catch {
@@ -140,7 +140,7 @@ Query: ${user_prompt}
 	}
 }
 
-async function summary(user_prompt: string, llm: LlmConfig): Promise<ScaffoldTypes.SummaryScaffold> {
+async function summary(user_prompt: string, llm: LlmConfig): Promise<SummaryScaffold> {
 	const prompt = `You are a structured data extraction assistant. Your job is to parse the user prompt string and extract variables into a strict JSON scaffold for a summary plot configuration.
 ## Output Schema
 Always return ONLY a JSON object in this exact format:
@@ -237,7 +237,7 @@ Query: ${user_prompt}
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Summary scaffold: ${response}`)
 	try {
-		const parsed = JSON.parse(response) as ScaffoldTypes.SummaryScaffold
+		const parsed = JSON.parse(response) as SummaryScaffold
 		parsed.plotType = 'summary'
 		return parsed
 	} catch {
