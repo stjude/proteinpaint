@@ -87,6 +87,37 @@ Here is a breakdown of the main plot types:
 Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically — `derivePrefix()` reads the `F`/`A` prefix from term IDs already present in the request, requiring no cohort-specific logic on the client.
 
 
+### Bar Chart v2 (profileBarchart2)
+**Class:** [barchart2.ts](./barchart2.ts)
+**Server route:** [`profile.barchart2.ts`](../../../../server/routes/profile.barchart2.ts) at endpoint `termdb/profileBarchart2Scores`
+**Title:** Score-based Results for the Component by Module and Domain (v2)
+**Description:** A redesigned bar chart that follows the per-plot dedicated route architecture established by `profilePolar2`. Visually identical to the original bar chart but with a cleaner, more secure data flow.
+
+**Key differences from the original Bar Chart:**
+
+- **Dedicated server route:** Uses `termdb/profileBarchart2Scores` instead of the shared `termdb/profileScores`. Same pattern as `profilePolar2` — each v2 plot owns its route and data logic independently.
+- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` for full cohort, `AUNIT` for abbreviated) by inspecting term ID prefixes already present in the request (`scoreTerms` or `filter`), eliminating any client influence over which facility term is used.
+- **Always aggregated:** Always returns the median percentage across all eligible sites. There is no single-site mode — when only one site is accessible, the median of a single value equals that value.
+- **Minimal client payload:** The client strips `scoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`. No `facilityTW`, no `$id`, no client-only term wrapper properties are sent.
+- **Consistent eligible sample scoping:** `eligibleSamples` is filtered to `userSites` only when `filterByUserSites` is explicitly `true`. When `filterByUserSites` is `false`, the median is computed across all sites (global aggregate).
+- **Public role security:** `sites` is always `[]` for public users — no site IDs or names are ever exposed to public-role users.
+- **Cleaner rendering structure:** The `plot()` method is split into focused private methods (`createSvg`, `drawTitleAndDefs`, `drawColumnHeaders`, `drawComponentRows`, `drawGuideLines`, `drawLegend`) instead of one large function.
+- **Documentation icon:** The help icon in the controls panel is enabled for `profileBarchart2` in [`controls.btns.js`](../../plots/controls.btns.js). Clicking it opens the same bar graph PDF as `profileBarchart` for the active cohort.
+
+**Calculation:** Identical to the original bar chart — for each score term, computes `(score / maxScore) * 100` per eligible site, then returns the median across all eligible sites, rounded to the nearest integer. Each row in the `plotByComponent` groups contributes `term1` (objective) and, when present, `term2` (subjective) into the flat `scoreTerms` list sent to the server.
+
+**Plot configuration:** Shares the same `plotByComponent` configuration as `profileBarchart` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — the v2 difference is architectural (route + data flow), not config shape.
+
+**Role and cohort coverage:**
+
+| Role | `filterByUserSites` | Eligible samples | `sites` in response |
+|------|---------------------|-----------------|---------------------|
+| Public | false | All sites | `[]` (never exposed) |
+| Admin | false | All sites | Full sorted list |
+| Site user | false | All sites (global aggregate) | Full sorted list |
+| Site user | true | User's sites only | User's sites only |
+
+
 ### Facility Radar Chart
 **Class:** [profileRadarFacility.js](../profileRadarFacility.js)  
 **Title:** Comparison of Institutional and Aggregated Score-based Results by Module  

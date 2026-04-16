@@ -267,9 +267,9 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
-			else if (this.type != 'profilePolar2')
-				// profilePolar2 skips this fetch — its subclass setControls() calls
-				// the dedicated termdb/profilePolar2Scores route instead
+			else if (this.type != 'profilePolar2' && this.type != 'profileBarchart2')
+				// profilePolar2 and profileBarchart2 skip this fetch — their subclass setControls()
+				// calls their dedicated termdb/profilePolar2Scores / termdb/profileBarchart2Scores route instead
 				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,
@@ -450,7 +450,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				const activeCohort = this.state.activeCohort
 				let link
 				if (activeCohort == ABBREV_COHORT) {
-					if (chartType == 'profileBarchart')
+					if (chartType == 'profileBarchart' || chartType == 'profileBarchart2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
 					else if (chartType == 'profilePolar' || chartType == 'profilePolar2')
@@ -459,7 +459,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					else if (chartType.startsWith('profileRadar'))
 						link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
 				} else if (activeCohort == FULL_COHORT) {
-					if (chartType == 'profileBarchart')
+					if (chartType == 'profileBarchart' || chartType == 'profileBarchart2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
 					else if (chartType == 'profilePolar' || chartType == 'profilePolar2')
