@@ -120,7 +120,7 @@ type SnvindelByRange = {
 	/** allow to apply special configurations to certain INFO fields of the bcf file */
 	infoFields?: InfoFieldEntry[]
 	/** getter function to retrieve data. dynamically added or ds-supplied */
-	get?: (f: any) => void
+	get?: (f: any, f2?: any) => void
 }
 
 type URLEntry = {
