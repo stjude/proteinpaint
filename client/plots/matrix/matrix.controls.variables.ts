@@ -32,7 +32,7 @@ export function setVariablesBtn(self: any, s: any) {
 		.on('click', (event: any, d: any) => self.callback(event, d))
 }
 
-export function appendDictInputs(self: any, app: any, parent: any, table: any) {
+export function appendDictInputs(self: any, app: any, parent: any) {
 	tip.clear()
 	if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
 	app.tip.d.append('hr')

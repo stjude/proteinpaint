@@ -1,4 +1,4 @@
-export function setLegendBtn(self: any, s: any) {
+export function setLegendBtn(self: any) {
 	self.opts.holder
 		.append('button')
 		.style('margin', '2px 0')

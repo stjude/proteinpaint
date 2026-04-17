@@ -1,4 +1,4 @@
-import type { QualQ, Q, RawValuesQ, RawGvQ, TermWrapper, TwLst, NumericQ, SnpsQ, Term } from '#types'
+import type { QualQ, Q, RawValuesQ, RawGvQ, TermWrapper, RawTW, NumericQ, SnpsQ, Term } from '#types'
 import type { VocabApi } from './types'
 import { TwRouter, routedTermTypes, type TwBase } from '#tw'
 
@@ -71,7 +71,7 @@ type DefaultQByTsHandler = {
 }
 
 export async function fillTwLst(
-	twlst: TwLst,
+	twlst: RawTW[], //TwLst,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<void> {
@@ -86,7 +86,7 @@ export async function fillTwLst(
 // fill in tw.term{} from a dehydrated state
 // a dictionary tw can be simply expressed as {id:str} and this function will fill in the term object.
 // a non-dict term will always have a term object, so this function will not be applied to non-dict term
-export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
+export async function mayHydrateDictTwLst(twlst: RawTW[], vocabApi: VocabApi) {
 	const ids: string[] = []
 	for (const tw of twlst) {
 		if (tw.term) continue
@@ -105,12 +105,12 @@ export async function mayHydrateDictTwLst(twlst: TwLst, vocabApi: VocabApi) {
 // add migrated tw fillers here, by term.type
 
 async function mayUseTwRouterFill(
-	tw: TermWrapper,
+	tw: RawTW, //TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<TermWrapper | false | TwBase> {
-	if (!routedTermTypes.has(tw.term?.type)) return false
-	if (tw.constructor.name != 'Object') return tw
+	if (!routedTermTypes.has(tw.term?.type || '')) return false
+	if (tw.constructor.name != 'Object') return tw as TermWrapper
 	const xtw = await TwRouter.initRaw(tw, { vocabApi, defaultQByTsHandler })
 
 	// NOTE: while the tw refactor is not done for all term types and q.types/modes,
@@ -128,7 +128,7 @@ async function mayUseTwRouterFill(
 }
 
 export async function fillTermWrapper(
-	tw: TermWrapper,
+	tw: RawTW, //TermWrapper,
 	vocabApi: VocabApi,
 	defaultQByTsHandler?: DefaultQByTsHandler
 ): Promise<TermWrapper | TwBase> {
@@ -143,8 +143,8 @@ export async function fillTermWrapper(
 
 	// tw.id is no longer needed
 	delete tw.id
-	if (!tw.q) (tw.q as any) = {}
-	tw.q.isAtomic = true
+	if (!tw.q) (tw.q as any) = {} as any
+	;(tw.q as any).isAtomic = true
 	// check for legacy tw structure
 	checkLegacyTw(tw)
 	// call term-type specific logic to fill tw
@@ -152,7 +152,7 @@ export async function fillTermWrapper(
 	mayValidateQmode(tw)
 	// compute $id after tw is filled
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
-	return tw
+	return tw as TermWrapper
 }
 
 // check for legacy tw structure that could be
@@ -175,13 +175,13 @@ function checkLegacyTw(tw) {
 	}
 }
 
-export async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
+export async function call_fillTW(tw: RawTW, vocabApi: VocabApi, defaultQByTsHandler?: DefaultQByTsHandler) {
 	// repeating this logic from fillTermWrapper(), since call_fillTW() may be called directly
 	// TODO: may deprecate call_fillTW() once all term types have been migrated to xtw
 	if (await mayUseTwRouterFill(tw, vocabApi, defaultQByTsHandler)) return
 
 	if (!tw.$id) tw.$id = await get$id(vocabApi.getTwMinCopy(tw))
-	const t = tw.term.type
+	const t = tw.term?.type || ''
 	const type = t == 'float' || t == 'integer' || t == 'date' ? 'numeric' : (t as string)
 	let _
 	if (tw.term.type) {
@@ -194,7 +194,8 @@ export async function call_fillTW(tw: TermWrapper, vocabApi: VocabApi, defaultQB
 	await _.fillTW(tw, vocabApi, defaultQByTsHandler ? defaultQByTsHandler[type] : null)
 }
 
-function mayValidateQmode(tw: TermWrapper) {
+function mayValidateQmode(tw: RawTW) {
+	if (!tw.q) return
 	if (!('mode' in tw.q)) {
 		// at this stage q.mode is allowed to be missing and will not validate
 		return
