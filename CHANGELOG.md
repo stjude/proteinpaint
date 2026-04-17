@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- SC: Sample sections in the SC app include action buttons: 'X' to destroy the section and an arrow to show/hide the section.
+- SC: Header text is passed to the subplots to show the sample to avoid confusion.
+
+Fixes:
+- SC: Sample sections and subplots within sample sections are added to the DOM in descending order.
+- DA volcano: The click events in the volcano now show appropriately per termType and launch the appropriate plot.
+- DA: Showing or hiding the p value table is tracked in the state; fixing the issue of the table disappearing on state change.
+
 
 ## 2.183.1
 
