@@ -339,9 +339,12 @@ function getChartTypeList(self, state) {
 		{
 			//This chart may be later on extended to support other gene expression data types
 			label: 'Gene Expression',
-			chartType: 'geneExpression',
-			clickTo: self.showGenesetEditUI,
-			usecase: { target: 'geneExpression' }
+			chartType: 'GeneExpInput',
+			clickTo: self.prepPlot,
+			config: {
+				chartType: 'GeneExpInput',
+				termType: TermTypes.GENE_EXPRESSION
+			}
 		},
 		{
 			label: 'Metabolite Intensity',

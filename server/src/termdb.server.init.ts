@@ -694,6 +694,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	chat: ({ ds }) => ds.queries?.chat,
 	alphaGenome: ({ ds }) => ds.queries?.alphaGenome,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
+	GeneExpInput: ({ ds }) => ds.queries?.geneExpression || ds.queries?.singleCell.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	proteomeAbundance: ({ ds }) => ds.queries?.proteome?.assays,
 	proteinView: ({ ds }) => ds.queries?.proteome?.assays,
