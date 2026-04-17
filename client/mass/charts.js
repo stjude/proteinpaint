@@ -343,7 +343,8 @@ function getChartTypeList(self, state) {
 			clickTo: self.prepPlot,
 			config: {
 				chartType: 'GeneExpInput',
-				termType: TermTypes.GENE_EXPRESSION
+				termType: TermTypes.GENE_EXPRESSION,
+				hidePlotFilter: true
 			}
 		},
 		{
