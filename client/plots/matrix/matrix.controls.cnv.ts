@@ -1,4 +1,4 @@
-import { dtsnvindel, dtcnv } from '#shared/common.js'
+import { dtsnvindel } from '#shared/common.js'
 
 // CNV button for selecting the CNVs to display on the matrix
 export function setCNVBtn(self: any) {

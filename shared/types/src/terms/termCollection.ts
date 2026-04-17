@@ -123,13 +123,13 @@ export type TermCollectionTWQual = BaseTW & {
 // TODO: may add different termCollection TW types here
 export type TermCollectionTW = TermCollectionTWCont | TermCollectionTWQual
 
-export type RawTermCollectionTWCont = {
+export type RawTermCollectionTWCont = BaseTW & {
 	type?: 'TermCollectionTWCont'
 	term: RawNumericTermCollection
 	q?: TermCollectionQCont
 }
 
-export type RawTermCollectionTWQual = {
+export type RawTermCollectionTWQual = BaseTW & {
 	type?: 'TermCollectionTWQual'
 	term: RawCategoricalTermCollection
 	q?: TermCollectionQQual

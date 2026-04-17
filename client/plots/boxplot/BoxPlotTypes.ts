@@ -1,6 +1,6 @@
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
-import type { BoxPlotEntry, BoxPlotData, TermWrapper } from '#types'
+import type { BoxPlotEntry, BoxPlotData, RawTW } from '#types'
 import type { Div, Elem } from '../../types/d3'
 import type { BoxPlotSettings } from './Settings'
 
@@ -14,9 +14,9 @@ export type TdbBoxPlotOpts = {
 }
 
 export type BoxPlotConfigOpts = {
-	term: TermWrapper
-	term2?: TermWrapper
-	term0?: TermWrapper
+	term: RawTW // changed from TermWrapper, I think one of these should be RawNumTW
+	term2?: RawTW // | TermWrapper
+	term0?: RawTW // | TermWrapper
 	overrides?: any
 }
 

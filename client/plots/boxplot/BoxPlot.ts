@@ -14,7 +14,7 @@ import { BoxPlotInteractions } from './interactions/BoxPlotInteractions'
 import { View } from './view/View'
 import { getDefaultBoxplotSettings } from './defaults'
 import { setBoxPlotControlInputs } from './BoxPlotControlInputs'
-import { isErrorResponse } from '#types'
+import { isErrorResponse, type TermWrapper } from '#types'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
@@ -257,7 +257,7 @@ export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 	}
 
 	const config = {
-		id: opts.term.term.id,
+		id: (opts.term as TermWrapper).term?.id,
 		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {

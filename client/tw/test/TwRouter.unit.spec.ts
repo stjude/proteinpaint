@@ -74,10 +74,7 @@ tape('fill({id, q}) nested q.groupsetting (legacy support)', async test => {
 		term,
 		q: {
 			type: 'predefined-groupset',
-			groupsetting: {
-				inuse: true,
-				predefined_groupset_idx: 0
-			}
+			predefined_groupset_idx: 0
 		}
 	}
 

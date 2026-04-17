@@ -1,10 +1,10 @@
 import type { SnpsQ, SnpsTW } from './snps.ts'
-import type { ConditionQ, ConditionTW } from './condition.ts'
+import type { ConditionQ, ConditionTW, RawConditionTW } from './condition.ts'
 import type { SampleLstQ } from './samplelst.ts'
-import type { NumTW, NumericQ } from './numeric.ts'
-import type { GvTW, GvQ } from './geneVariant.ts'
-import type { QualTW, QualQ } from './qualitative.ts'
-import type { TermCollectionTW, TermCollectionQ } from './termCollection.ts'
+import type { NumTW, NumericQ, RawNumTW } from './numeric.ts'
+import type { GvTW, GvQ, RawGvTW } from './geneVariant.ts'
+import type { QualTW, QualQ, RawQualTW } from './qualitative.ts'
+import type { TermCollectionTW, TermCollectionQ, RawTermCollectionTW } from './termCollection.ts'
 
 export type BaseTW = {
 	id?: string
@@ -31,27 +31,27 @@ export type TwLst = TermWrapper[]
 
 //export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | SampleLstQ | SnpsQ
 
-export type RawTW =
-	//{ id: string } | RawCatTW
-	//
-	// BELOW TYPE IS NOT TESTED, only being used to compare tsc type checking behavior
-	// between non-union versus type-unions, which way is easier to code against
-	{
-		id?: string
-		term?: {
-			type: 'categorical' | 'condition'
-			[key: string | number]: any
-		}
-		q?: {
-			//predefined_groupset_idx?: number
-			//customset?: any
-			[key: string]: any
-			//type?: string //'custom-groupset' |
-			//customset?: any
-		}
-		isAtomic?: true
-		$id?: string
-	}
+export type RawTW = RawQualTW | RawNumTW | RawGvTW | RawConditionTW | RawTermCollectionTW
+//{ id: string } | RawCatTW
+//
+// BELOW TYPE IS NOT TESTED, only being used to compare tsc type checking behavior
+// between non-union versus type-unions, which way is easier to code against
+// {
+// 	id?: string
+// 	term?: {
+// 		type: 'categorical' | 'condition'
+// 		[key: string | number]: any
+// 	}
+// 	q?: {
+// 		//predefined_groupset_idx?: number
+// 		//customset?: any
+// 		[key: string]: any
+// 		//type?: string //'custom-groupset' |
+// 		//customset?: any
+// 	}
+// 	isAtomic?: true
+// 	$id?: string
+// }
 
 export interface TwHandler {
 	render?: (opts?: any) => void

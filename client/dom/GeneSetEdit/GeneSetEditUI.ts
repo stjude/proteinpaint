@@ -96,6 +96,10 @@ export type GeneSetEditArg = {
 	termsAsListed?: boolean
 	/** show input for geneset name */
 	nameInput?: boolean
+	backBtn?: {
+		target: string
+		callback: () => void
+	}
 }
 
 type MenuListEntry = {

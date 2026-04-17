@@ -3,7 +3,7 @@ import { Menu } from '#dom'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import { TermTypes } from '#shared/terms.js'
 
-export function setDownloadBtn(self: any, s: any) {
+export function setDownloadBtn(self: any) {
 	self.opts.holder
 		.append('button')
 		.style('margin', '2px 0')
@@ -86,9 +86,7 @@ export function setDownloadBtn(self: any, s: any) {
 												: mclass[v.class]?.label
 
 											allVariant.push(
-												(v.origin ? `${v.origin} ` : '') +
-													(hasAssayAvailability ? `${dt2label[v.dt]}:` : '') +
-													cnvValue
+												(v.origin ? `${v.origin} ` : '') + (hasAssayAvailability ? `${dt2label[v.dt]}:` : '') + cnvValue
 											)
 										} else if (v.dt == dtfusionrna || v.dt == dtsv) {
 											allVariant.push(

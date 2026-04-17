@@ -49,7 +49,7 @@ export function setGenesBtn(self: any, s: any) {
 						{ label: `Percent`, value: 'pct' },
 						{ label: `None`, value: '' }
 					],
-					getDisplayStyle(plot: any) {
+					getDisplayStyle() {
 						return self.parent.termOrder?.filter((t: any) => t.tw.term.type == 'geneVariant').length
 							? 'table-row'
 							: 'none'
@@ -73,7 +73,7 @@ export function setGenesBtn(self: any, s: any) {
 					options: renderStyleOptions,
 					styles: { padding: '5px 0px', margin: 0 },
 					labelDisplay: 'block',
-					getDisplayStyle(plot: any) {
+					getDisplayStyle() {
 						return self.parent.termOrder?.filter((t: any) => t.tw.term.type == 'geneVariant').length
 							? 'table-row'
 							: 'none'
@@ -91,7 +91,7 @@ export function setGenesBtn(self: any, s: any) {
 						{ label: `By ${l.sample} Count`, value: 'sampleCount' }
 					],
 					styles: { padding: 0, 'padding-right': '10px', margin: 0, display: 'inline-block' },
-					getDisplayStyle(plot: any) {
+					getDisplayStyle() {
 						return self.parent.termOrder?.filter((t: any) => t.tw.term.type == 'geneVariant').length
 							? 'table-row'
 							: 'none'
@@ -115,13 +115,7 @@ export async function addGeneInputs(self: any, app: any, parent: any, table: any
 		appendGeneInputs(self, app, parent, table)
 }
 
-export async function appendGeneInputs(
-	self: any,
-	app: any,
-	parent: any,
-	table: any,
-	geneInputType?: string
-) {
+export async function appendGeneInputs(self: any, app: any, parent: any, table: any, geneInputType?: string) {
 	tip.clear()
 	if (!parent.selectedGroup) parent.selectedGroup = 0
 
@@ -261,7 +255,7 @@ export function addGenesetInput(self: any, app: any, parent: any, tr: any, geneI
 		const td1 = tr.append('td').style('display', 'block').style('padding', '5px 0px')
 		const editGrpDiv = td1.append('div').append('label')
 
-		const editBtn = editGrpDiv
+		editGrpDiv
 			.append('button')
 			.html(
 				numOfEditableGrps > 1 && geneInputType !== 'hierCluster'
@@ -286,17 +280,25 @@ export function addGenesetInput(self: any, app: any, parent: any, tr: any, geneI
 		} else {
 			const s = parent.config.settings.hierCluster
 			const g =
-				geneInputType == 'hierCluster' ? tg.find((g: any) => g.type == 'hierCluster') : tg.find((g: any) => g.type != 'hierCluster')
+				geneInputType == 'hierCluster'
+					? tg.find((g: any) => g.type == 'hierCluster')
+					: tg.find((g: any) => g.type != 'hierCluster')
 
 			selectedGroup = {
 				index:
-					geneInputType == 'hierCluster' ? tg.findIndex((g: any) => g.type == 'hierCluster') : tg[0].type == g.type ? 0 : 1,
+					geneInputType == 'hierCluster'
+						? tg.findIndex((g: any) => g.type == 'hierCluster')
+						: tg[0].type == g.type
+						? 0
+						: 1,
 				name: g.name,
 				type: g.type,
 				lst:
 					g.type == 'hierCluster'
 						? g.lst.map((tw: any) => ({ name: tw.term.gene || tw.term.name }))
-						: g.lst.filter((tw: any) => tw.term.type == TermTypes.GENE_VARIANT).map((tw: any) => ({ name: tw.term.name })),
+						: g.lst
+								.filter((tw: any) => tw.term.type == TermTypes.GENE_VARIANT)
+								.map((tw: any) => ({ name: tw.term.name })),
 				mode:
 					g.type == 'hierCluster'
 						? s.dataType // is clustering group, pass dataType

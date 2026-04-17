@@ -1,4 +1,4 @@
-import type { TermWrapper, VariableItemEntry, NumericTW } from '#types'
+import type { VariableItemEntry, NumericTW, RawTW } from '#types'
 import type { Elem, SvgG, SvgSvg, SvgText } from '../../types/d3.js'
 import type { Menu } from '#dom'
 import type { BasePlotConfig } from '#mass/types/mass'
@@ -6,10 +6,10 @@ import type { ScaleLinear } from 'd3'
 
 export type CorrVolcanoOpts = {
 	chartType: 'correlationVolcano'
-	featureTw: TermWrapper
+	featureTw: RawTW //TermWrapper
 	/** No featureTw is passed from the tree in charts button.
 	 * Use .numeric{} to create a featureTw.*/
-	numeric?: TermWrapper
+	numeric?: RawTW //TermWrapper
 	/** Settings overrides */
 	overrides?: Partial<CorrVolcanoSettings>
 }
