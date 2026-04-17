@@ -12,6 +12,10 @@ Fixes:
 - SC: Sample sections and subplots within sample sections are added to the DOM in descending order.
 - DA volcano: The click events in the volcano now show appropriately per termType and launch the appropriate plot.
 - DA: Showing or hiding the p value table is tracked in the state; fixing the issue of the table disappearing on state change.
+- restore option to replace survival series colors via legend click menu
+- darken wildtype gray color to pass Section 508 contrast requirement
+- Support custom numeric term collection filtering
+- Fix single-position DNA methylation queries using exact coordinates instead of 400bp window
 
 
 ## 2.183.1
