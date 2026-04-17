@@ -109,7 +109,10 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				label: `Differential ${typeGroup[this.termType].toLowerCase()} anaylsis`,
 				//Only enabling for gene expression for now
 				chartType: 'DEinput',
-				isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION,
+				isVisible: () => false,
+				// TODO: Sorting out server response error in another PR.
+				// Will enable when fixed. For now hiding from UI to avoid confusion.
+				// isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION,
 				callback: async (event, tab) => {
 					await this.app.dispatch({
 						type: 'plot_create',
