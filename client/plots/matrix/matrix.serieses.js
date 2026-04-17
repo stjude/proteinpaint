@@ -141,7 +141,7 @@ export function getSerieses(data) {
 				const cell =
 					t.grp.type == 'hierCluster'
 						? getEmptyCell(cellTemplate, s, this.dimensions)
-						: maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions)
+						: maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions, this)
 				if (cell) emptyGridCells.push(cell)
 			}
 		}

@@ -424,7 +424,7 @@ function setVariantEmptyCell(siblingCells, cellTemplate, s, d) {
 	return cell
 }
 
-function setNumericEmptyCell(siblingCells, cellTemplate, s, d) {
+function setNumericEmptyCell(siblingCells, cellTemplate, s, d, self) {
 	const q = cellTemplate.tw.q
 	if (q.mode != 'continuous') {
 		if (siblingCells.length) return
@@ -433,7 +433,7 @@ function setNumericEmptyCell(siblingCells, cellTemplate, s, d) {
 		if (q?.mode != 'continuous') return
 		const twSpecificSettings = self.config.settings.matrix.twSpecificSettings
 		const twSettings = twSpecificSettings[cellTemplate.$id]
-		const h = twSettings ? twSettings.contBarH + 2 * contBarGap : s.rowh
+		const h = twSettings ? twSettings.contBarH + 2 * twSettings.contBarGap : s.rowh
 		if (cellTemplate.height >= h) return
 		const cell = Object.assign({}, cellTemplate)
 		cell.fill = s.cellbg
