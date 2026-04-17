@@ -141,10 +141,37 @@ class Volcano extends PlotBase implements RxComponent {
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			this.interactions.data = response.data
 
+			/** Fetch the server-rendered PNG + top-N interactive points. */
+			const renderRes = await model.renderPlot(response)
+			if (!renderRes?.png) throw new Error((renderRes as any)?.error || 'server render failed')
+
+			// Debug info for profiling / optimization work. Exposed on window.
+			console.log('[volcano] server-rendered plot:', {
+				pngBytes: renderRes.png?.length,
+				topNPoints: renderRes.plotData?.points?.length,
+				totalPoints: renderRes.plotData?.total_points,
+				numSignificant: renderRes.plotData?.num_significant,
+				range: {
+					x: [renderRes.plotData?.x_min, renderRes.plotData?.x_max],
+					y: [renderRes.plotData?.y_min, renderRes.plotData?.y_max]
+				},
+				samplePoints: renderRes.plotData?.points?.slice(0, 3),
+				full: renderRes
+			})
+			;(window as any).__lastVolcanoRender = renderRes
+
 			clearTimeout(showWait)
 			this.dom.wait.style('display', 'none')
-			/** Render formatted data */
-			new VolcanoPlotView(this.dom, settings, viewModel.viewData, this.interactions, config.termType)
+			/** Render: server PNG base, SVG overlay for axes, quadtree for hover/click. */
+			new VolcanoPlotView(
+				this.dom,
+				settings,
+				viewModel.viewData,
+				this.interactions,
+				config.termType,
+				renderRes.png,
+				renderRes.plotData
+			)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(e.message || e)
 			else if (e.stack) console.log(e.stack)

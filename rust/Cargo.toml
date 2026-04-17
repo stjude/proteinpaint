@@ -129,6 +129,10 @@ name="manhattan_plot"
 path="src/manhattan_plot.rs"
 
 [[bin]]
+name="volcano_plot"
+path="src/volcano_plot.rs"
+
+[[bin]]
 name="query_classification"
 path="src/query_classification.rs"
 

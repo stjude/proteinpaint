@@ -24,6 +24,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 		pValueType: 'adjusted',
 		//Only declare this value in one place
 		sampleNumCutoff: opts.termType == GENE_EXPRESSION ? maxGESampleCutoff : maxSampleCutoff,
+		topInteractivePoints: 5000,
 		width: 400
 	} satisfies DefaultVolcanoSettings
 

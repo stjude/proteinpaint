@@ -1,9 +1,26 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { VolcanoPlotConfig } from '../VolcanoTypes'
-import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest } from '#types'
+import type {
+	DERequest,
+	DiffMethRequest,
+	TermdbSingleCellDEgenesRequest,
+	VolcanoPlotRequest,
+	VolcanoPlotResponse
+} from '#types'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
+import { rgb } from 'd3-color'
+
+/** Convert any CSS color string (e.g. "red", "rgb(255,0,0)") to "#rrggbb".
+ *  The Rust renderer only understands hex. */
+function toHex(color: string): string {
+	try {
+		return rgb(color).formatHex()
+	} catch {
+		return '#888888'
+	}
+}
 
 export class VolcanoModel {
 	app: MassAppApi
@@ -16,6 +33,46 @@ export class VolcanoModel {
 		this.config = config
 		this.settings = settings
 		this.termType = config.termType
+	}
+
+	/** Call the server-side volcano renderer with the analysis response and
+	 *  receive a base64 PNG plus the top-N interactive points. */
+	async renderPlot(response: any): Promise<VolcanoPlotResponse> {
+		const points = response.data.map((d: any) => ({
+			gene: d.gene_name || d.promoter_id || d.gene_id || '',
+			log2_fold_change: d.fold_change,
+			original_p_value: d.original_p_value,
+			adjusted_p_value: d.adjusted_p_value,
+			promoter_id: d.promoter_id
+		}))
+
+		// Resolve up/down significant colors the same way VolcanoViewModel does:
+		// prefer per-group colors from the term wrapper, else fall back to the
+		// single defaultSignColor. See VolcanoViewModel constructor.
+		// Match VolcanoViewModel constructor: controlColor (down) defaults to
+		// 'red', caseColor (up) defaults to 'blue'.
+		const groups = this.config?.samplelst?.groups
+		const controlColor = this.config?.tw?.term?.values?.[groups?.[0]?.name]?.color || 'red'
+		const caseColor = this.config?.tw?.term?.values?.[groups?.[1]?.name]?.color || 'blue'
+		const upColor = caseColor
+		const downColor = controlColor
+
+		const body: VolcanoPlotRequest = {
+			points,
+			width: this.settings.width,
+			height: this.settings.height,
+			devicePixelRatio: window.devicePixelRatio || 1,
+			pngDotRadius: Math.max(2, Math.round(Math.max(this.settings.width, this.settings.height) / 80)),
+			foldChangeCutoff: this.settings.foldChangeCutoff,
+			pValueCutoff: this.settings.pValue,
+			pValueType: this.settings.pValueType,
+			topN: this.settings.topInteractivePoints ?? 5000,
+			colorSignificantUp: toHex(upColor),
+			colorSignificantDown: toHex(downColor),
+			colorNonsignificant: toHex(this.settings.defaultNonSignColor || 'black')
+		}
+
+		return await dofetch3('termdb/volcanoPlot', { body })
 	}
 
 	/** May use mapper instead as more termTypes are added */

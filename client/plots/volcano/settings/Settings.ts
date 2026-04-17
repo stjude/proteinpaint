@@ -15,6 +15,10 @@ export type DefaultVolcanoSettings = {
 	pValueType: 'original' | 'adjusted'
 	/** Maximum number of samples to include in the analysis per termType */
 	sampleNumCutoff: number
+	/** Max number of points returned from the server with pixel coordinates
+	 *  for client-side hover/click. Non-interactive points are still rendered
+	 *  in the PNG; they just don't trigger tooltips. */
+	topInteractivePoints: number
 	/** Width of the plot in pixels */
 	width: number
 }

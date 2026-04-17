@@ -43,6 +43,7 @@ export const routeFiles = [
 	import('../routes/snp.ts'),
 	import('../routes/termdb.DE.ts'),
 	import('../routes/termdb.diffMeth.ts'),
+	import('../routes/termdb.volcanoPlot.ts'),
 	import('../routes/termdb.violinBox.ts'),
 	import('../routes/termdb.chat.ts'),
 	import('../routes/termdb.chat2.ts'),

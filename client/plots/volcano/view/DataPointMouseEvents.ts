@@ -1,104 +1,61 @@
-import { table2col, type Menu } from '#dom'
+import type { Menu } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
-import type { SvgCircle } from '../../../types/d3'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { DataPointEntry } from '../VolcanoTypes'
 import { DNA_METHYLATION } from '#shared/terms.js'
 
-export class DataPointMouseEvents {
-	termType: string
-	constructor(
-		d: DataPointEntry,
-		circle: SvgCircle,
-		hoverTip: Menu,
-		clickTip: Menu,
-		interactions: VolcanoInteractions,
-		termType: string
-	) {
-		this.termType = termType
-		circle.on('mouseover', () => {
-			circle.attr('fill-opacity', 0.9)
-
-			hoverTip.clear().showunder(circle.node())
-			const table = table2col({ holder: hoverTip.d.append('table') })
-
-			this.addTooltipRows(d, table)
-		})
-
-		circle.on('mouseout', () => {
-			hoverTip.hide()
-			if (d.highlighted) return
-			circle.attr('fill-opacity', 0)
-		})
-		circle.on('click', () => {
-			hoverTip.hide()
-			clickTip.onHide = () => {
-				if (!d.highlighted) circle.attr('fill-opacity', 0)
-			}
-			clickTip.clear().showunder(circle.node())
-			const table = table2col({ holder: clickTip.d.append('table') })
-			this.addTooltipRows(d, table)
-			const menuDiv = clickTip.d.append('div').style('padding', '5px')
-
-			if (termType === DNA_METHYLATION) {
-				const dm = d as any
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Violin plot')
-					.on('click', () => {
-						clickTip.hide()
-						interactions.launchViolin(dm)
-					})
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('DMR analysis')
-					.on('click', async () => {
-						clickTip.hide()
-						await interactions.launchDmr({
-							chr: dm.chr,
-							start: dm.start,
-							stop: dm.stop,
-							promoterId: dm.promoter_id
-						})
-					})
-			} else {
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Violin plot')
-					.on('click', async () => {
-						clickTip.hide()
-						await interactions.launchViolinGeneExp(d.gene_name)
-					})
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Box plot')
-					.on('click', async () => {
-						clickTip.hide()
-						await interactions.launchBoxPlot(d.gene_name)
-					})
-			}
-		})
-	}
-
-	addTooltipRow(table: any, text: string, value: number | string) {
+/** Populate a 2-column table with the tooltip rows for a data point. */
+export function addTooltipRows(d: DataPointEntry, table: any, termType: string) {
+	const addRow = (label: string, value: string | number) => {
 		const [td1, td2] = table.addRow()
-		td1.html(text)
+		td1.html(label)
 		td2.text(value)
 	}
 
-	addTooltipRows(d: DataPointEntry, table: any) {
-		if (this.termType === DNA_METHYLATION) {
-			if ('promoter_id' in d) this.addTooltipRow(table, 'Promoter', d.promoter_id)
-			if (d.gene_name) this.addTooltipRow(table, 'Gene(s)', d.gene_name)
-		} else {
-			this.addTooltipRow(table, 'Gene name', d.gene_name)
-		}
-		this.addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
-		this.addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
-		this.addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+	if (termType === DNA_METHYLATION) {
+		const dm = d as any
+		if (dm.promoter_id) addRow('Promoter', dm.promoter_id)
+		if (d.gene_name) addRow('Gene(s)', d.gene_name)
+	} else {
+		addRow('Gene name', d.gene_name)
+	}
+	addRow('log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
+	addRow('Original p-value', roundValueAuto(d.original_p_value))
+	addRow('Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+}
+
+/** Populate a click menu with actions available for a data point. */
+export function addClickMenuActions(
+	d: DataPointEntry,
+	menuDiv: any,
+	clickTip: Menu,
+	interactions: VolcanoInteractions,
+	termType: string
+) {
+	const addOption = (label: string, handler: () => any) => {
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text(label)
+			.on('click', async () => {
+				clickTip.hide()
+				await handler()
+			})
+	}
+
+	if (termType === DNA_METHYLATION) {
+		const dm = d as any
+		addOption('Violin plot', () => interactions.launchViolin(dm))
+		addOption('DMR analysis', () =>
+			interactions.launchDmr({
+				chr: dm.chr,
+				start: dm.start,
+				stop: dm.stop,
+				promoterId: dm.promoter_id
+			})
+		)
+	} else {
+		addOption('Violin plot', () => interactions.launchViolinGeneExp(d.gene_name))
+		addOption('Box plot', () => interactions.launchBoxPlot(d.gene_name))
 	}
 }

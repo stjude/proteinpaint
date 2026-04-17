@@ -64,6 +64,17 @@ export class VolcanoControlInputs {
 				min: -10,
 				max: 10
 			},
+			{
+				label: 'Top N interactive points',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'topInteractivePoints',
+				title:
+					'Max number of points with hover/click support. All points are rendered in the plot image; this only caps the interactive overlay.',
+				min: 1,
+				max: 20000,
+				step: 100
+			},
 			//Preferably, keep all the display (e.g. colors, sizes, etc.) controls
 			//at the bottom of the list or at least together
 			{
