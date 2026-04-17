@@ -1,9 +1,10 @@
 import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom'
+import type { MatrixControls } from './matrix.controls'
 
 const tip = new Menu({ padding: '' })
 
-export function setVariablesBtn(self: any, s: any) {
+export function setVariablesBtn(self: MatrixControls, s: any) {
 	self.opts.holder
 		.append('button')
 		.datum({
@@ -32,14 +33,14 @@ export function setVariablesBtn(self: any, s: any) {
 		.on('click', (event: any, d: any) => self.callback(event, d))
 }
 
-export function appendDictInputs(self: any, app: any, parent: any) {
+export function appendDictInputs(self: MatrixControls, app: any, parent: any) {
 	tip.clear()
 	if (!parent.selectedGroup) parent.selectedGroup = parent.chartType == 'hierCluster' ? 1 : 0
 	app.tip.d.append('hr')
 	addDictMenu(self, app, parent, app.tip.d.append('div'))
 }
 
-export async function addDictMenu(self: any, app: any, parent: any, holder: any = undefined) {
+export async function addDictMenu(self: MatrixControls, app: any, parent: any, holder: any = undefined) {
 	//app.tip.clear()
 
 	const termdb = await import('#termdb/app')
@@ -69,7 +70,7 @@ export async function addDictMenu(self: any, app: any, parent: any, holder: any 
 	})
 }
 
-export async function submitLst(self: any, termlst: any) {
+export async function submitLst(self: MatrixControls, termlst: any) {
 	const newterms = await Promise.all(
 		termlst.map(async (_term: any) => {
 			const term = structuredClone(_term)

@@ -2,8 +2,9 @@ import { to_svg } from '#src/client'
 import { Menu } from '#dom'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import { TermTypes } from '#shared/terms.js'
+import type { MatrixControls } from './matrix.controls'
 
-export function setDownloadBtn(self: any) {
+export function setDownloadBtn(self: MatrixControls) {
 	self.opts.holder
 		.append('button')
 		.style('margin', '2px 0')

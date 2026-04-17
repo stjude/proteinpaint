@@ -3,10 +3,11 @@ import { fillTermWrapper, get$id } from '#termsetting'
 import { Menu, GeneSetEditUI } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 import { getGEunit } from '#tw/geneExpression'
+import type { MatrixControls } from './matrix.controls'
 
 const tip = new Menu({ padding: '' })
 
-export function setGenesBtn(self: any, s: any) {
+export function setGenesBtn(self: MatrixControls, s: any) {
 	const l = s.controlLabels
 	const renderStyleOptions = [
 		{
@@ -104,7 +105,7 @@ export function setGenesBtn(self: any, s: any) {
 		.on('click', (event: any, d: any) => self.callback(event, d))
 }
 
-export async function addGeneInputs(self: any, app: any, parent: any, table: any) {
+export async function addGeneInputs(self: MatrixControls, app: any, parent: any, table: any) {
 	if (parent.chartType == 'hierCluster' && parent.config.dataType == TermTypes.GENE_EXPRESSION) {
 		appendGeneInputs(self, app, parent, table, 'hierCluster')
 	}
@@ -115,7 +116,7 @@ export async function addGeneInputs(self: any, app: any, parent: any, table: any
 		appendGeneInputs(self, app, parent, table)
 }
 
-export async function appendGeneInputs(self: any, app: any, parent: any, table: any, geneInputType?: string) {
+export async function appendGeneInputs(self: MatrixControls, app: any, parent: any, table: any, geneInputType?: string) {
 	tip.clear()
 	if (!parent.selectedGroup) parent.selectedGroup = 0
 
@@ -156,7 +157,7 @@ export async function appendGeneInputs(self: any, app: any, parent: any, table: 
 	addGenesetInput(self, app, parent, geneInputTr, geneInputType)
 }
 
-export function addGenesetInput(self: any, app: any, parent: any, tr: any, geneInputType?: string) {
+export function addGenesetInput(self: MatrixControls, app: any, parent: any, tr: any, geneInputType?: string) {
 	const controlPanelBtn = self.btns.filter((d: any) => d.label.endsWith('Genes'))?.node()
 	const tip = app.tip //new Menu({ padding: '5px' })
 	const tg = parent.config.termgroups
@@ -408,7 +409,7 @@ export function setMenuBackBtn(holder: any, callback: any, label: string) {
 		})
 }
 
-export function setTermGroupSelector(self: any, holder: any, tg: any) {
+export function setTermGroupSelector(self: MatrixControls, holder: any, tg: any) {
 	//const label = grpDiv.append('label')
 	//label.append('span').html('')
 	const firstGrpWithGeneTw = tg.find((g: any) =>

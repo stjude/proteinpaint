@@ -1,4 +1,6 @@
-export function setDimensionsBtn(self: any, s: any) {
+import type { MatrixControls } from './matrix.controls'
+
+export function setDimensionsBtn(self: MatrixControls, s: any) {
 	const l = s.controlLabels
 	self.opts.holder
 		.append('button')

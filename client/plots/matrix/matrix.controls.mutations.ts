@@ -1,7 +1,8 @@
 import { dtcnv } from '#shared/common.js'
+import type { MatrixControls } from './matrix.controls'
 
 // Mutation button for selecting mutations to display on the matrix
-export function setMutationBtn(self: any) {
+export function setMutationBtn(self: MatrixControls) {
 	self.opts.holder
 		.append('button')
 		.style('margin', '2px 0')
@@ -40,7 +41,7 @@ export function setMutationBtn(self: any) {
 		.on('click', (event: any, d: any) => self.callback(event, d))
 }
 
-export function generateMutationItems(self: any, app: any, parent: any, table: any) {
+export function generateMutationItems(self: MatrixControls, app: any, parent: any, table: any) {
 	table.attr('class', null) // remove the hoverover background for CNV button
 	const m = parent.config.settings.matrix
 	const cnvLegendGrp = parent.legendData.find((l: any) => l.dt?.includes(dtcnv))

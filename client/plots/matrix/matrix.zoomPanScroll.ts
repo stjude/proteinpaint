@@ -1,6 +1,7 @@
 import { zoom, icons, svgScroll } from '#dom'
+import type { MatrixControls } from './matrix.controls'
 
-export function setZoomInput(self: any) {
+export function setZoomInput(self: MatrixControls) {
 	const holder = self.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
 	const s = self.parent.settings.matrix || self.parent.config.settings.matrix
 	self.zoomApi = zoom({
@@ -51,7 +52,7 @@ export function setZoomInput(self: any) {
 	})
 }
 
-export function setDragToggle(self: any, opts: any = {}) {
+export function setDragToggle(self: MatrixControls, opts: any = {}) {
 	const defaults = {
 		mouseMode: 'select',
 		activeBgColor: 'rgb(255, 255, 255)'
@@ -107,7 +108,7 @@ export function setDragToggle(self: any, opts: any = {}) {
 	}
 }
 
-export function setSvgScroll(self: any, state: any) {
+export function setSvgScroll(self: MatrixControls, state: any) {
 	self.svgScrollApi = svgScroll({
 		holder: self.parent.dom.scroll,
 		height: state.config.settings.matrix.scrollHeight,
