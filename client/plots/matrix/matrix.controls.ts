@@ -21,6 +21,8 @@ export class MatrixControls {
 	dragToggleApi: any
 	keyEventTarget: any
 	btns: any
+	activeTab: 'basic' | 'advanced' = 'basic'
+	sorterUi!: any
 
 	constructor(opts: any, appState: any) {
 		this.type = 'matrixControls'
