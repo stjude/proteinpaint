@@ -702,7 +702,9 @@ async function validate_query_snvindel(ds, genome) {
 
 	if (!q.byisoform && !q.byrange) throw 'byisoform and byrange are both missing on queries.snvindel'
 	if (q.byrange) {
-		if (q.byrange.gdcapi) {
+		if (typeof q.byrange.get == 'function') {
+			// ds supplied getter
+		} else if (q.byrange.gdcapi) {
 			gdc.validate_query_snvindel_byrange(ds)
 			// q.byrange.get() added
 		} else if (q.byrange.bcffile) {

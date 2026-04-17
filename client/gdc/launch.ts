@@ -7,6 +7,10 @@ export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 		const _ = await import('./lollipop.js')
 		return await _.init(arg, app.holder0, app.genomes)
 	}
+	if (arg.launchGdcGb) {
+		const _ = await import('./gb.ts')
+		return await _.init(arg, app.holder0, app.genomes)
+	}
 	if (arg.launchGdcMatrix) {
 		const _ = await import('./oncomatrix.js')
 		return await _.init(arg, app.holder0, app.genomes)
