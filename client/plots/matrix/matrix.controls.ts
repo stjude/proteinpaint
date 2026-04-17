@@ -102,7 +102,7 @@ export class MatrixControls {
 	}
 
 	setLegendBtn(s: any) {
-		setLegendBtn(this, s)
+		setLegendBtn(this)
 	}
 
 	// Mutation button for selecting mutations to display on the matrix
@@ -116,7 +116,7 @@ export class MatrixControls {
 	}
 
 	setDownloadBtn(s: any) {
-		setDownloadBtn(this, s)
+		setDownloadBtn(this)
 	}
 
 	setZoomInput() {
@@ -143,8 +143,8 @@ export class MatrixControls {
 					? `${d.label} (n=${d.getCount()})`
 					: `${d.getCount()} ${d.label}`
 			)
-			.each(function (d: any) {
-				if (d.updateBtn) d.updateBtn(select(this as any))
+			.each(function (this: any, d: any) {
+				if (d.updateBtn) d.updateBtn(select(this))
 			})
 
 		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
@@ -185,7 +185,6 @@ export class MatrixControls {
 	}
 
 	async callback(event: any, d: any) {
-		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent
 		const tables = d.tables || [d]
@@ -258,7 +257,7 @@ export class MatrixControls {
 	}
 
 	appendDictInputs(self: any, app: any, parent: any, table: any) {
-		return appendDictInputs(self, app, parent, table)
+		return appendDictInputs(self, app, parent)
 	}
 
 	generateCNVItems(self: any, app: any, parent: any, table: any) {
