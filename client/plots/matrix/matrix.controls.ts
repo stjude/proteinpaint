@@ -1,5 +1,4 @@
 import { initByInput } from '#plots/controls.config.js'
-import { zoom, icons, svgScroll } from '#dom'
 import { select } from 'd3-selection'
 import { TermTypes } from '#shared/terms.js'
 import { setSamplesBtn, updateSamplesControls } from './matrix.controls.samples'
@@ -10,9 +9,20 @@ import { setLegendBtn } from './matrix.controls.legend'
 import { setMutationBtn, generateMutationItems } from './matrix.controls.mutations'
 import { setCNVBtn, generateCNVItems } from './matrix.controls.cnv'
 import { setDownloadBtn } from './matrix.controls.download'
+import { setZoomInput, setDragToggle, setSvgScroll } from './matrix.zoomPanScroll'
 
 export class MatrixControls {
-	constructor(opts, appState) {
+	type: string
+	opts: any
+	parent: any
+	overrides: any
+	zoomApi: any
+	svgScrollApi: any
+	dragToggleApi: any
+	keyEventTarget: any
+	btns: any
+
+	constructor(opts: any, appState: any) {
 		this.type = 'matrixControls'
 		this.opts = opts
 		this.parent = opts.parent
@@ -22,7 +32,7 @@ export class MatrixControls {
 		const state = this.parent.getState(appState)
 		const s = state.config.settings.matrix
 		if (this.parent.setClusteringBtn)
-			this.parent.setClusteringBtn(this.opts.holder, (event, data) => this.callback(event, data))
+			this.parent.setClusteringBtn(this.opts.holder, (event: any, data: any) => this.callback(event, data))
 		this.setSamplesBtn(s)
 		if (
 			state.termdbConfig?.allowedTermTypes?.includes(TermTypes.GENE_VARIANT) ||
@@ -46,7 +56,7 @@ export class MatrixControls {
 		})
 		this.setSvgScroll(state)
 
-		this.keyboardNavHandler = async event => {
+		this.keyboardNavHandler = async (event: any) => {
 			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
 			if (event.key == 'Escape') {
 				this.parent.app.tip.hide()
@@ -69,27 +79,29 @@ export class MatrixControls {
 
 		this.btns = this.opts.holder
 			.selectAll(':scope>button')
-			.filter(d => d && d.label)
+			.filter((d: any) => d && d.label)
 			.on(`keyup.matrix-${this.parent.id}`, this.keyboardNavHandler)
 	}
 
-	setSamplesBtn(s) {
+	keyboardNavHandler: any
+
+	setSamplesBtn(s: any) {
 		setSamplesBtn(this, s)
 	}
 
-	setGenesBtn(s) {
+	setGenesBtn(s: any) {
 		setGenesBtn(this, s)
 	}
 
-	setVariablesBtn(s) {
+	setVariablesBtn(s: any) {
 		setVariablesBtn(this, s)
 	}
 
-	setDimensionsBtn(s) {
+	setDimensionsBtn(s: any) {
 		setDimensionsBtn(this, s)
 	}
 
-	setLegendBtn(s) {
+	setLegendBtn(s: any) {
 		setLegendBtn(this, s)
 	}
 
@@ -103,24 +115,36 @@ export class MatrixControls {
 		setCNVBtn(this)
 	}
 
-	setDownloadBtn(s) {
+	setDownloadBtn(s: any) {
 		setDownloadBtn(this, s)
 	}
 
-	main(overrides = {}) {
+	setZoomInput() {
+		setZoomInput(this)
+	}
+
+	setDragToggle(opts: any = {}) {
+		setDragToggle(this, opts)
+	}
+
+	setSvgScroll(state: any) {
+		setSvgScroll(this, state)
+	}
+
+	main(overrides: any = {}) {
 		this.overrides = overrides
 		this.parent.app.tip.hide()
 
 		this.btns
-			.text(d =>
+			.text((d: any) =>
 				!d.getCount || d.showCount == 'hide'
 					? d.label
 					: d.showCount == 'append'
 					? `${d.label} (n=${d.getCount()})`
 					: `${d.getCount()} ${d.label}`
 			)
-			.each(function (d) {
-				if (d.updateBtn) d.updateBtn(select(this))
+			.each(function (d: any) {
+				if (d.updateBtn) d.updateBtn(select(this as any))
 			})
 
 		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
@@ -160,7 +184,7 @@ export class MatrixControls {
 		}
 	}
 
-	async callback(event, d) {
+	async callback(event: any, d: any) {
 		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent
@@ -179,7 +203,7 @@ export class MatrixControls {
 					.data(t.header)
 					.enter()
 					.append('th')
-					.html(d => d)
+					.html((d: any) => d)
 			}
 
 			for (const inputConfig of t.rows) {
@@ -190,7 +214,7 @@ export class MatrixControls {
 						{
 							holder,
 							app,
-							dispatch: action => app.dispatch(action),
+							dispatch: (action: any) => app.dispatch(action),
 							id: parent.id,
 							debug: this.opts.debug,
 							parent
@@ -202,208 +226,58 @@ export class MatrixControls {
 			}
 
 			if (t.customInputs) t.customInputs(this, app, parent, table)
-			table.selectAll('select, input, button').attr('tabindex', 0).on('keydown', self.keyboardNavHandler)
+			table.selectAll('select, input, button').attr('tabindex', 0).on('keydown', this.keyboardNavHandler)
 		}
 
 		app.tip.showunder(event.target)
 	}
 
-	prependInfo(table, header, value) {
+	prependInfo(table: any, header: any, value: any) {
 		const tr = table.append('tr')
 		tr.append('td').text(header).attr('class', 'sja-termdb-config-row-label')
 		tr.append('td').text(value)
 	}
 
-	async addGeneInputs(self, app, parent, table) {
+	async addGeneInputs(self: any, app: any, parent: any, table: any) {
 		return addGeneInputs(self, app, parent, table)
 	}
-	async appendGeneInputs(self, app, parent, table, geneInputType) {
+	async appendGeneInputs(self: any, app: any, parent: any, table: any, geneInputType: any) {
 		return appendGeneInputs(self, app, parent, table, geneInputType)
 	}
 
-	addGenesetInput(app, parent, tr, geneInputType) {
+	addGenesetInput(app: any, parent: any, tr: any, geneInputType: any) {
 		return addGenesetInput(this, app, parent, tr, geneInputType)
 	}
 
-	setMenuBackBtn(holder, callback, label) {
+	setMenuBackBtn(holder: any, callback: any, label: any) {
 		return setMenuBackBtn(holder, callback, label)
 	}
 
-	setTermGroupSelector(holder, tg) {
+	setTermGroupSelector(holder: any, tg: any) {
 		return setTermGroupSelector(this, holder, tg)
 	}
 
-	appendDictInputs(self, app, parent, table) {
+	appendDictInputs(self: any, app: any, parent: any, table: any) {
 		return appendDictInputs(self, app, parent, table)
 	}
 
-	generateCNVItems(self, app, parent, table) {
+	generateCNVItems(self: any, app: any, parent: any, table: any) {
 		return generateCNVItems(self, app, parent, table)
 	}
 
-	generateMutationItems(self, app, parent, table) {
+	generateMutationItems(self: any, app: any, parent: any, table: any) {
 		return generateMutationItems(self, app, parent, table)
 	}
 
-	updateSamplesControls(self, app, parent, table) {
+	updateSamplesControls(self: any, app: any, parent: any, table: any) {
 		return updateSamplesControls(self, app, parent, table)
 	}
 
-	async addDictMenu(app, parent, holder = undefined) {
+	async addDictMenu(app: any, parent: any, holder: any = undefined) {
 		return addDictMenu(this, app, parent, holder)
 	}
 
-	async submit_lst(termlst) {
+	async submit_lst(termlst: any) {
 		return submitLst(this, termlst)
-	}
-
-	setZoomInput() {
-		const holder = this.opts.holder.append('div').style('display', 'inline-block').style('margin-left', '50px')
-		const s = this.parent.settings.matrix || this.parent.config.settings.matrix
-		this.zoomApi = zoom({
-			holder,
-			title:
-				'Zoom factor relative to the ideal column width, as computed for the number of columns versus available screen width',
-			unit: '',
-			width: '80px',
-			settings: {
-				min: 0.1, // will be determined once the auto-computed width is determined
-				max: 1, // will be determined once the auto-computed width is determined
-				value: 1,
-				increment: s.zoomIncrement,
-				step: s.zoomStep || 5
-			},
-			callback: zoomLevel => {
-				const p = this.parent
-				const d = p.dimensions
-				const s = p.settings.matrix
-				const c = p.getVisibleCenterCell(0)
-				p.app.dispatch({
-					type: 'plot_edit',
-					id: p.id,
-					config: {
-						settings: {
-							matrix: {
-								zoomLevel,
-								zoomCenterPct: 0.5,
-								zoomIndex: c.totalIndex,
-								zoomGrpIndex: c.grpIndex
-							}
-						}
-					}
-				})
-			},
-			reset: () => {
-				const s = this.parent.settings.matrix
-				const d = this.parent.dimensions
-				this.parent.app.dispatch({
-					type: 'plot_edit',
-					id: this.parent.id,
-					config: {
-						settings: {
-							matrix: {
-								zoomLevel: 1,
-								zoomCenterPct: 0
-							}
-						}
-					}
-				})
-			}
-		})
-	}
-
-	setDragToggle(opts = {}) {
-		const defaults = {
-			mouseMode: 'select',
-			activeBgColor: 'rgb(255, 255, 255)'
-		}
-
-		// hardcode to always be in select mode on first render
-		opts.target.style('cursor', 'default')
-
-		const instance = {
-			opts: Object.assign({}, defaults, opts),
-			//holder: opts.holder.append('div').style('display', 'inline-block')
-			dom: {
-				selectBtn: opts.holder
-					.append('button')
-					.attr('aria-label', 'Click the matrix to select data')
-					.style('display', 'inline-block')
-					.style('width', '25px')
-					.style('height', '24.5px')
-					.style('background-color', defaults.activeBgColor)
-					.on('click', () => setMode('select')),
-
-				grabBtn: opts.holder
-					.append('button')
-					.attr('aria-label', 'Click the matrix to drag and move')
-					.style('display', 'inline-block')
-					.style('width', '25px')
-					.style('height', '24.5px')
-					.on('click', () => setMode('pan'))
-			}
-		}
-
-		//icons.crosshair(instance.dom.selectBtn, { width: 18, height: 18, transform: 'translate(50,50)' })
-		icons.arrowPointer(instance.dom.selectBtn, { width: 14, height: 14, transform: 'translate(50,50)' })
-		icons.grab(instance.dom.grabBtn, { width: 14, height: 14, transform: 'translate(30,50)' })
-
-		const self = this
-		function setMode(m) {
-			instance.opts.mouseMode = m
-			self.parent.settings.matrix.mouseMode = m
-			opts.target.style('cursor', m == 'select' ? 'default' : 'grab')
-			instance.dom.selectBtn.style('background-color', m == 'select' ? instance.opts.activeBgColor : '')
-			instance.dom.grabBtn.style('background-color', m == 'pan' ? instance.opts.activeBgColor : '')
-		}
-
-		// NOTE:
-		this.dragToggleApi = {
-			update(s = {}) {
-				Object.assign(instance.opts, s)
-				setMode(instance.opts.mouseMode)
-			},
-			getSettings() {
-				return {
-					mouseMode: instance.opts.mouseMode
-				}
-			}
-		}
-	}
-
-	setSvgScroll(state) {
-		this.svgScrollApi = svgScroll({
-			holder: this.parent.dom.scroll,
-			height: state.config.settings.matrix.scrollHeight,
-			callback: (dx, eventType) => {
-				const p = this.parent
-				const s = p.settings.matrix
-				const d = p.dimensions
-				if (eventType == 'move') {
-					p.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset - dx},${d.yOffset})`)
-					p.clusterRenderer.translateElems(-dx, s, d)
-					p.layout.top.attr.adjustBoxTransform(-dx)
-					p.layout.btm.attr.adjustBoxTransform(-dx)
-					if (p.dom.topDendrogram) {
-						p.dom.topDendrogram.attr('transform', `translate(${p.topDendroX - dx},0)`)
-					}
-				} else if (eventType == 'up') {
-					const c = p.getVisibleCenterCell(-dx)
-					p.app.dispatch({
-						type: 'plot_edit',
-						id: p.id,
-						config: {
-							settings: {
-								matrix: {
-									zoomCenterPct: 0.5,
-									zoomIndex: c.totalIndex,
-									zoomGrpIndex: c.grpIndex
-								}
-							}
-						}
-					})
-				}
-			}
-		})
 	}
 }
