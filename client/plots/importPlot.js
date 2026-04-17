@@ -17,6 +17,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
+		case 'DEinput':
+			return await import(`./DEinput.ts`)
+
 		case 'dictionary':
 			return await import(`./dictionary.js`)
 
@@ -29,6 +32,12 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'dmr':
 			return await import('./dmr/DmrPlot.ts')
 
+		case 'DziViewer':
+			return await import(`./dziviewer/DziViewer.ts`)
+
+		case 'GeneExpInput':
+			return await import(`./GeneExpInput.ts`)
+
 		case 'genomeBrowser':
 			return await import('./gb/GB.ts')
 
@@ -38,9 +47,39 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'gsea':
 			return await import(`./gsea.js`)
 
-		case 'runChart2':
+		case 'report':
+			return await import(`././report/report.ts`)
+
+		case 'runChart2': //See frequencyChart
 		case 'frequencyChart':
 			return await import(`./runChart2/RunChart2.ts`)
+
+		case 'profileBarchart':
+			return await import('./profile/profileBarchart.ts')
+
+		case 'profileBarchart2':
+			return await import('./profile/barchart2.ts')
+
+		case 'profileForms':
+			return await import('./profile/profileForms.ts')
+
+		case 'profilePlot':
+			return await import('./profile/profilePlot.ts')
+
+		case 'profilePolar':
+			return await import('./profile/polar.ts')
+
+		case 'profilePolar2':
+			return await import('./profile/polar2.ts')
+
+		case 'profileRadar':
+			return await import('./profile/profileRadar.ts')
+
+		case 'profileRadarFacility':
+			return await import('./profile/profileRadarFacility.ts')
+
+		case 'proteinView':
+			return await import(`./proteinView.ts`)
 
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
@@ -69,13 +108,8 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'summary':
 			return await import(`./summary.ts`)
 
-		case 'proteinView':
-			return await import(`./proteinView.ts`)
 		case 'survival':
 			return await import(`./survival/survival.js`)
-
-		case 'DEinput':
-			return await import(`./DEinput.ts`)
 
 		case 'table':
 			return await import(`./table.js`)
@@ -91,30 +125,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'WSIViewer':
 			return await import('./wsiviewer/WSIViewer.ts')
-
-		case 'profileRadar':
-			return await import('./profile/profileRadar.ts')
-
-		case 'profileRadarFacility':
-			return await import('./profile/profileRadarFacility.ts')
-
-		case 'profileBarchart':
-			return await import('./profile/profileBarchart.ts')
-
-		case 'profileBarchart2':
-			return await import('./profile/barchart2.ts')
-
-		case 'profilePolar':
-			return await import('./profile/polar.ts')
-
-		case 'profilePolar2':
-			return await import('./profile/polar2.ts')
-
-		case 'profileForms':
-			return await import('./profile/profileForms.ts')
-
-		case 'profilePlot':
-			return await import('./profile/profilePlot.ts')
 
 		default:
 			// temporary option to force an error, to bypass the default filename matching
