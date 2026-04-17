@@ -34,7 +34,7 @@ export function setVariablesBtn(self: any, s: any) {
 
 export function appendDictInputs(self: any, app: any, parent: any) {
 	tip.clear()
-	if (!parent.selectedGroup) parent.selectedGroup = self.chartType == 'hierCluster' ? 1 : 0
+	if (!parent.selectedGroup) parent.selectedGroup = parent.chartType == 'hierCluster' ? 1 : 0
 	app.tip.d.append('hr')
 	addDictMenu(self, app, parent, app.tip.d.append('div'))
 }

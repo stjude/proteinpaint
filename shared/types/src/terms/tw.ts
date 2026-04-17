@@ -31,7 +31,13 @@ export type TwLst = TermWrapper[]
 
 //export type Q = BaseQ | CategoricalQ | ConditionQ | NumericQ | SampleLstQ | SnpsQ
 
-export type RawTW = RawQualTW | RawNumTW | RawGvTW | RawConditionTW | RawTermCollectionTW
+export type RawDictTW = BaseTW & {
+	id: string
+	term?: undefined
+	q?: any
+}
+
+export type RawTW = RawDictTW | RawQualTW | RawNumTW | RawGvTW | RawConditionTW | RawTermCollectionTW
 //{ id: string } | RawCatTW
 //
 // BELOW TYPE IS NOT TESTED, only being used to compare tsc type checking behavior

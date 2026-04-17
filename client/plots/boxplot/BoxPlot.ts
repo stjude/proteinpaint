@@ -257,7 +257,7 @@ export async function getPlotConfig(opts: BoxPlotConfigOpts, app: MassAppApi) {
 	}
 
 	const config = {
-		id: (opts.term as TermWrapper).term?.id,
+		id: (opts.term as TermWrapper).term.id || opts.term.$id,
 		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
