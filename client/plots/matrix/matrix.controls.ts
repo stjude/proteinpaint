@@ -1,13 +1,13 @@
 import { initByInput } from '#plots/controls.config.js'
 import { select } from 'd3-selection'
 import { TermTypes } from '#shared/terms.js'
-import { setSamplesBtn, updateSamplesControls } from './matrix.controls.samples'
-import { setGenesBtn, addGeneInputs, appendGeneInputs, addGenesetInput, setMenuBackBtn, setTermGroupSelector } from './matrix.controls.genes'
-import { setVariablesBtn, appendDictInputs, addDictMenu, submitLst } from './matrix.controls.variables'
+import { setSamplesBtn } from './matrix.controls.samples'
+import { setGenesBtn } from './matrix.controls.genes'
+import { setVariablesBtn } from './matrix.controls.variables'
 import { setDimensionsBtn } from './matrix.controls.dimensions'
 import { setLegendBtn } from './matrix.controls.legend'
-import { setMutationBtn, generateMutationItems } from './matrix.controls.mutations'
-import { setCNVBtn, generateCNVItems } from './matrix.controls.cnv'
+import { setMutationBtn } from './matrix.controls.mutations'
+import { setCNVBtn } from './matrix.controls.cnv'
 import { setDownloadBtn } from './matrix.controls.download'
 import { setZoomInput, setDragToggle, setSvgScroll } from './matrix.zoomPanScroll'
 
@@ -33,28 +33,28 @@ export class MatrixControls {
 		const s = state.config.settings.matrix
 		if (this.parent.setClusteringBtn)
 			this.parent.setClusteringBtn(this.opts.holder, (event: any, data: any) => this.callback(event, data))
-		this.setSamplesBtn(s)
+		setSamplesBtn(this, s)
 		if (
 			state.termdbConfig?.allowedTermTypes?.includes(TermTypes.GENE_VARIANT) ||
 			state.termdbConfig.queries.snvindel ||
 			(this.parent.chartType == 'hierCluster' && this.parent.config.dataType == TermTypes.GENE_EXPRESSION)
 		) {
-			this.setGenesBtn(s)
+			setGenesBtn(this, s)
 		}
 		if (s.addMutationCNVButtons && this.parent.chartType !== 'hierCluster') {
-			this.setMutationBtn()
-			this.setCNVBtn()
+			setMutationBtn(this)
+			setCNVBtn(this)
 		}
-		this.setVariablesBtn(s)
-		this.setDimensionsBtn(s)
-		this.setLegendBtn(s)
-		this.setDownloadBtn(s)
-		this.setZoomInput()
-		this.setDragToggle({
+		setVariablesBtn(this, s)
+		setDimensionsBtn(this, s)
+		setLegendBtn(this)
+		setDownloadBtn(this)
+		setZoomInput(this)
+		setDragToggle(this, {
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
 			target: this.parent.dom.seriesesG
 		})
-		this.setSvgScroll(state)
+		setSvgScroll(this, state)
 
 		this.keyboardNavHandler = async (event: any) => {
 			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
@@ -84,52 +84,6 @@ export class MatrixControls {
 	}
 
 	keyboardNavHandler: any
-
-	setSamplesBtn(s: any) {
-		setSamplesBtn(this, s)
-	}
-
-	setGenesBtn(s: any) {
-		setGenesBtn(this, s)
-	}
-
-	setVariablesBtn(s: any) {
-		setVariablesBtn(this, s)
-	}
-
-	setDimensionsBtn(s: any) {
-		setDimensionsBtn(this, s)
-	}
-
-	setLegendBtn(s: any) {
-		setLegendBtn(this)
-	}
-
-	// Mutation button for selecting mutations to display on the matrix
-	setMutationBtn() {
-		setMutationBtn(this)
-	}
-
-	// CNV button for selecting the CNVs to display on the matrix
-	setCNVBtn() {
-		setCNVBtn(this)
-	}
-
-	setDownloadBtn(s: any) {
-		setDownloadBtn(this)
-	}
-
-	setZoomInput() {
-		setZoomInput(this)
-	}
-
-	setDragToggle(opts: any = {}) {
-		setDragToggle(this, opts)
-	}
-
-	setSvgScroll(state: any) {
-		setSvgScroll(this, state)
-	}
 
 	main(overrides: any = {}) {
 		this.overrides = overrides
@@ -229,54 +183,5 @@ export class MatrixControls {
 		}
 
 		app.tip.showunder(event.target)
-	}
-
-	prependInfo(table: any, header: any, value: any) {
-		const tr = table.append('tr')
-		tr.append('td').text(header).attr('class', 'sja-termdb-config-row-label')
-		tr.append('td').text(value)
-	}
-
-	async addGeneInputs(self: any, app: any, parent: any, table: any) {
-		return addGeneInputs(self, app, parent, table)
-	}
-	async appendGeneInputs(self: any, app: any, parent: any, table: any, geneInputType: any) {
-		return appendGeneInputs(self, app, parent, table, geneInputType)
-	}
-
-	addGenesetInput(app: any, parent: any, tr: any, geneInputType: any) {
-		return addGenesetInput(this, app, parent, tr, geneInputType)
-	}
-
-	setMenuBackBtn(holder: any, callback: any, label: any) {
-		return setMenuBackBtn(holder, callback, label)
-	}
-
-	setTermGroupSelector(holder: any, tg: any) {
-		return setTermGroupSelector(this, holder, tg)
-	}
-
-	appendDictInputs(self: any, app: any, parent: any, table: any) {
-		return appendDictInputs(self, app, parent)
-	}
-
-	generateCNVItems(self: any, app: any, parent: any, table: any) {
-		return generateCNVItems(self, app, parent, table)
-	}
-
-	generateMutationItems(self: any, app: any, parent: any, table: any) {
-		return generateMutationItems(self, app, parent, table)
-	}
-
-	updateSamplesControls(self: any, app: any, parent: any, table: any) {
-		return updateSamplesControls(self, app, parent, table)
-	}
-
-	async addDictMenu(app: any, parent: any, holder: any = undefined) {
-		return addDictMenu(this, app, parent, holder)
-	}
-
-	async submit_lst(termlst: any) {
-		return submitLst(this, termlst)
 	}
 }
