@@ -106,7 +106,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			},
 			{
-				label: `Differential ${typeGroup[this.termType].toLowerCase()} anaylsis`,
+				label: `Differential ${typeGroup[this.termType].toLowerCase()} analysis`,
 				//Only enabling for gene expression for now
 				chartType: 'DEinput',
 				isVisible: () => false,
@@ -286,7 +286,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 					type: 'hierCluster'
 				}
 				const tws = await Promise.all(
-					geneList.map(async (d: any) => {
+					geneList.map((d: any) => {
 						const gene: string = d.symbol || d.gene
 						const name = `${gene} ${this.unit}`
 						const term = this.makeTerm({ gene, name })
@@ -309,7 +309,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 	async initSubplotInTab(subplot) {
 		const holder = this.tabs.find(tab => tab.chartType === subplot.chartType)?.contentHolder
-		if (!holder) throw new Error(`No tab found for chart type ${subplot.config.chartType}`)
+		if (!holder) throw new Error(`No tab found for chart type ${subplot.chartType}`)
 
 		const opts = Object.assign({}, subplot, {
 			holder,
