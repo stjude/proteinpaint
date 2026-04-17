@@ -184,7 +184,7 @@ export async function call_fillTW(tw: RawTW, vocabApi: VocabApi, defaultQByTsHan
 	const t = tw.term?.type || ''
 	const type = t == 'float' || t == 'integer' || t == 'date' ? 'numeric' : (t as string)
 	let _
-	if (tw.term.type) {
+	if (tw.term?.type) {
 		try {
 			_ = await import(`./handlers/${type}.ts`)
 		} catch (_e) {

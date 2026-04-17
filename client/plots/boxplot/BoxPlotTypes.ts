@@ -1,6 +1,6 @@
 import type { Menu } from '#dom'
 import type { PlotConfig } from '#mass/types/mass'
-import type { BoxPlotEntry, BoxPlotData, RawTW } from '#types'
+import type { BoxPlotEntry, BoxPlotData, RawTW, RawNumTWCont } from '#types'
 import type { Div, Elem } from '../../types/d3'
 import type { BoxPlotSettings } from './Settings'
 
@@ -13,10 +13,17 @@ export type TdbBoxPlotOpts = {
 	parentId?: string
 }
 
-export type BoxPlotConfigOpts = {
-	term: RawTW // changed from TermWrapper, I think one of these should be RawNumTW
-	term2?: RawTW // | TermWrapper
-	term0?: RawTW // | TermWrapper
+export type BoxPlotConfigOpts = (
+	| {
+			term: RawNumTWCont // at least one tw has to be numeric
+			term2?: RawTW
+	  }
+	| {
+			term: RawTW
+			term2?: RawNumTWCont
+	  }
+) & {
+	term0?: RawTW
 	overrides?: any
 }
 
