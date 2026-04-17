@@ -115,18 +115,19 @@ fn hex_to_rgb(hex: &str) -> (u8, u8, u8) {
     (r, g, b)
 }
 
-// Smallest non-zero p-value, used to substitute for p=0 so we can -log10.
-const MIN_NONZERO_P: f64 = 1e-300;
-
 fn plot_volcano(input: &Input) -> Result<(String, PlotData), Box<dyn Error>> {
     let use_adjusted = input.p_value_type == "adjusted";
 
     // -------------------------------------------------------------
-    // 1. Compute derived values per point: -log10(p), significance, color
+    // 1. Compute derived values per point: -log10(p), significance, color.
+    //    p=0 points can't be log-transformed; mark them and cap to max_y
+    //    after we've found max from non-zero p-values. Matches master's
+    //    VolcanoViewModel behavior and the grin2 "clamp zero to top" trick.
     // -------------------------------------------------------------
     struct ComputedPoint<'a> {
         src: &'a InputPoint,
         neg_log10_p: f64,
+        is_zero_p: bool,
         significant: bool,
         color: String,
     }
@@ -138,10 +139,11 @@ fn plot_volcano(input: &Input) -> Result<(String, PlotData), Box<dyn Error>> {
         } else {
             p.original_p_value
         };
-        let pv_for_log = if pv <= 0.0 { MIN_NONZERO_P } else { pv };
-        let neg_log10_p = -(pv_for_log.log10());
+        let is_zero_p = pv <= 0.0;
+        // Placeholder for zero-p points; overwritten with max_y after pass 2.
+        let neg_log10_p = if is_zero_p { 0.0 } else { -(pv.log10()) };
 
-        let passes_p = neg_log10_p > input.p_value_cutoff;
+        let passes_p = is_zero_p || neg_log10_p > input.p_value_cutoff;
         let passes_fc = p.log2_fold_change.abs() > input.fold_change_cutoff;
         let significant = passes_p && passes_fc;
 
@@ -158,43 +160,68 @@ fn plot_volcano(input: &Input) -> Result<(String, PlotData), Box<dyn Error>> {
         computed.push(ComputedPoint {
             src: p,
             neg_log10_p,
+            is_zero_p,
             significant,
             color,
         });
     }
 
-    let num_significant = computed.iter().filter(|c| c.significant).count();
-
     // -------------------------------------------------------------
-    // 2. Determine plot axis ranges (symmetric x around 0)
+    // 2. Determine plot axis ranges from actual data min/max. Matches the
+    //    old client behavior (VolcanoViewModel uses [minFoldChange,
+    //    maxFoldChange] directly). p=0 points are excluded from max_y and
+    //    then clamped to max_y so they cluster at the top of the plot.
     // -------------------------------------------------------------
-    let mut max_abs_fc: f64 = 0.0;
+    let mut min_fc: f64 = f64::INFINITY;
+    let mut max_fc: f64 = f64::NEG_INFINITY;
     let mut max_y: f64 = 0.0;
     for c in &computed {
-        if c.src.log2_fold_change.abs() > max_abs_fc {
-            max_abs_fc = c.src.log2_fold_change.abs();
+        if c.src.log2_fold_change < min_fc {
+            min_fc = c.src.log2_fold_change;
         }
-        if c.neg_log10_p > max_y {
+        if c.src.log2_fold_change > max_fc {
+            max_fc = c.src.log2_fold_change;
+        }
+        if !c.is_zero_p && c.neg_log10_p > max_y {
             max_y = c.neg_log10_p;
         }
     }
-    // Pad 5% on each axis; guard against degenerate empty data
-    let x_pad = (max_abs_fc * 0.05).max(0.5);
-    let x_min = -max_abs_fc - x_pad;
-    let x_max = max_abs_fc + x_pad;
-    let y_pad = (max_y * 0.05).max(0.5);
+    if !min_fc.is_finite() {
+        min_fc = -1.0;
+    }
+    if !max_fc.is_finite() {
+        max_fc = 1.0;
+    }
+    if max_y == 0.0 {
+        max_y = 1.0;
+    }
+    // Clamp p=0 points to max_y (top of plot) so they render with real data
+    // instead of being scattered above/below based on a synthetic placeholder.
+    for c in computed.iter_mut() {
+        if c.is_zero_p {
+            c.neg_log10_p = max_y;
+        }
+    }
+
+    let num_significant = computed.iter().filter(|c| c.significant).count();
+
+    let x_min = min_fc;
+    let x_max = max_fc;
     let y_min = 0.0;
-    let y_max = max_y + y_pad;
+    let y_max = max_y;
 
     // -------------------------------------------------------------
     // 3. Setup high-DPR bitmap
     // -------------------------------------------------------------
     let dpr = input.device_pixel_ratio.max(1.0);
-    // PNG dimensions match the plot area exactly (no dot-radius buffer).
-    // Dots at the very edges of the data range are half-clipped, matching
-    // how the old SVG circles rendered beyond the plot rect.
-    let png_width = input.plot_width;
-    let png_height = input.plot_height;
+    // PNG is padded by dot_radius on each side so dots at the very edges of
+    // the data range render fully (not half-clipped). The chart's plot area
+    // is inset by the same amount (via margin), so data coord x_min maps to
+    // pixel x = dot_radius, x_max maps to pixel x = png_width - dot_radius.
+    // On the client the PNG is positioned with its inner area aligned to the
+    // SVG plot rect, so the dot overflow extends visibly beyond the rect.
+    let png_width = input.plot_width + 2 * input.png_dot_radius;
+    let png_height = input.plot_height + 2 * input.png_dot_radius;
     let w: u32 = ((png_width as f64) * dpr) as u32;
     let h: u32 = ((png_height as f64) * dpr) as u32;
 
@@ -206,9 +233,12 @@ fn plot_volcano(input: &Input) -> Result<(String, PlotData), Box<dyn Error>> {
         let root = backend.into_drawing_area();
         root.fill(&WHITE)?;
 
-        // Chart with no axes (client overlays SVG axes) and no margins
+        // Chart with no axes (client overlays SVG axes). Use a margin equal
+        // to png_dot_radius (in logical px, scaled by dpr) so the data area
+        // is inset, leaving room for edge dots to render fully.
+        let chart_margin = (input.png_dot_radius as f64 * dpr) as i32;
         let mut chart = ChartBuilder::on(&root)
-            .margin(0)
+            .margin(chart_margin)
             .set_all_label_area_size(0)
             .build_cartesian_2d(x_min..x_max, y_min..y_max)?;
         chart
@@ -228,22 +258,13 @@ fn plot_volcano(input: &Input) -> Result<(String, PlotData), Box<dyn Error>> {
     }
 
     // -------------------------------------------------------------
-    // 4. Convert RGB buffer to RGBA pixmap and draw AA circles
+    // 4. Create a transparent pixmap for the circles. Plotters was only
+    //    used above for coord mapping — we discard its (white-filled) RGB
+    //    buffer so the PNG background is transparent. This lets the SVG
+    //    plot rect show through on the client.
     // -------------------------------------------------------------
+    let _ = buffer; // keep the variable around for plotters' lifetime; unused from here
     let mut pixmap = Pixmap::new(w, h).ok_or("Failed to create pixmap")?;
-    {
-        let data = pixmap.data_mut();
-        let mut src_i = 0usize;
-        let mut dst_i = 0usize;
-        for _ in 0..(w as usize * h as usize) {
-            data[dst_i] = buffer[src_i];
-            data[dst_i + 1] = buffer[src_i + 1];
-            data[dst_i + 2] = buffer[src_i + 2];
-            data[dst_i + 3] = 255u8;
-            src_i += 3;
-            dst_i += 4;
-        }
-    }
 
     // Scale CSS pixel values (radius and stroke width) to device pixels so
     // the PNG looks consistent on high-DPR displays.

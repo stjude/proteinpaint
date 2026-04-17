@@ -184,24 +184,23 @@ export class VolcanoPlotView {
 			})
 	}
 
-	/** Compute PNG placement + new axis scales from the server's plotData.
-	 *  The PNG exactly matches the plot area (no dot-radius padding) so it
-	 *  fits inside the pre-computed plot rectangle. Dots at the extreme edges
-	 *  of the data range are half-clipped — same as the old SVG behavior. */
+	/** Compute PNG placement. The PNG is slightly larger than the plot
+	 *  rectangle (padded by dot radius on each side) so edge dots can
+	 *  overflow visibly beyond the axis bounds. The PNG's inner region
+	 *  (offset by dotRadius) aligns with the plot rect. Axes/scales still
+	 *  use the plot rect dimensions. */
 	private computePngLayout(plotDim: VolcanoPlotDimensions) {
 		const dotRadius = Math.max(2, Math.round(Math.max(this.settings.width, this.settings.height) / 80))
 		return {
 			dotRadius,
-			pngWidth: plotDim.plot.width,
-			pngHeight: plotDim.plot.height,
-			pngLeft: plotDim.plot.x,
-			pngTop: plotDim.plot.y
+			pngWidth: plotDim.plot.width + 2 * dotRadius,
+			pngHeight: plotDim.plot.height + 2 * dotRadius,
+			pngLeft: plotDim.plot.x - dotRadius,
+			pngTop: plotDim.plot.y - dotRadius
 		}
 	}
 
 	renderPlot(plotDim: VolcanoPlotDimensions) {
-		const { pngWidth, pngHeight, pngLeft, pngTop } = this.computePngLayout(plotDim)
-
 		this.volcanoDom.svg.attr('width', plotDim.svg.width).attr('height', plotDim.svg.height)
 
 		this.renderTermInfo(plotDim)
@@ -215,29 +214,19 @@ export class VolcanoPlotView {
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
 
-		// Build axis scales that match the PNG's pixel space exactly. These
-		// override the view model's pre-computed scales so axes align with
-		// the server-rendered dots.
-		const xScaleFn = scaleLinear().domain([this.plotData.x_min, this.plotData.x_max]).range([0, pngWidth])
-		const yScaleFn = scaleLinear().domain([this.plotData.y_min, this.plotData.y_max]).range([pngHeight, 0])
+		// Override just the scale functions with domains matching the
+		// server-rendered PNG; keep the view model's x/y axis positions so
+		// axes render with their original offset from the plot rect.
+		const xScaleFn = scaleLinear().domain([this.plotData.x_min, this.plotData.x_max]).range([0, plotDim.plot.width])
+		const yScaleFn = scaleLinear().domain([this.plotData.y_min, this.plotData.y_max]).range([plotDim.plot.height, 0])
 		plotDim.xScale.scale = xScaleFn
 		plotDim.yScale.scale = yScaleFn
-		plotDim.xScale.x = pngLeft
-		plotDim.xScale.y = pngTop + pngHeight
-		plotDim.yScale.x = pngLeft
-		plotDim.yScale.y = pngTop
 
 		this.renderScale(plotDim.xScale)
 		this.renderScale(plotDim.yScale, true)
 
-		this.volcanoDom.plot
-			.append('rect')
-			.attr('width', pngWidth)
-			.attr('height', pngHeight)
-			.attr('stroke', '#ededed')
-			.attr('fill', 'transparent')
-			.attr('shape-rendering', 'crispEdges')
-			.attr('transform', `translate(${pngLeft}, ${pngTop})`)
+		// Plot rect is drawn later, in renderServerImage(), AFTER the PNG
+		// <image> element so the border sits on top of the image.
 	}
 
 	/** Add the server-rendered PNG plus a cover div for quadtree-based hover/click. */
@@ -252,6 +241,20 @@ export class VolcanoPlotView {
 			.attr('y', pngTop)
 			.attr('width', pngWidth)
 			.attr('height', pngHeight)
+
+		// Plot rect border drawn AFTER the image so it sits clearly on top,
+		// matching the crisp bounding box the old SVG had.
+		const plot = this.viewData.plotDim.plot
+		this.volcanoDom.plot
+			.append('rect')
+			.attr('x', plot.x)
+			.attr('y', plot.y)
+			.attr('width', plot.width)
+			.attr('height', plot.height)
+			.attr('stroke', '#ccc')
+			.attr('fill', 'none')
+			.attr('shape-rendering', 'crispEdges')
+			.attr('pointer-events', 'none')
 
 		// SVG layers on top of the PNG:
 		//   1. Persistent highlights for genes in config.highlightedData
@@ -386,17 +389,16 @@ export class VolcanoPlotView {
 	}
 
 	renderFoldChangeLine(plotDim: VolcanoPlotDimensions) {
-		const { dotRadius, pngHeight, pngLeft, pngTop } = this.computePngLayout(plotDim)
 		// x=0 in data space, converted to SVG coords via the new xScale.
-		const zeroX = pngLeft + plotDim.xScale.scale(0)
+		const zeroX = plotDim.plot.x + plotDim.xScale.scale(0)
 		this.volcanoDom.plot
 			.append('line')
 			.attr('stroke', '#ccc')
 			.attr('shape-rendering', 'crispEdges')
 			.attr('x1', zeroX)
 			.attr('x2', zeroX)
-			.attr('y1', pngTop - dotRadius)
-			.attr('y2', pngTop + pngHeight + dotRadius)
+			.attr('y1', plotDim.plot.y)
+			.attr('y2', plotDim.plot.y + plotDim.plot.height)
 	}
 
 	renderStatsMenu() {
@@ -499,9 +501,12 @@ export class VolcanoPlotView {
 		const negLog10P = pv <= 0 ? this.plotData.y_max : -Math.log10(pv)
 		const xScale = this.viewData.plotDim.xScale.scale
 		const yScale = this.viewData.plotDim.yScale.scale
+		// xScale/yScale ranges cover the plot rect (not the PNG's padded area),
+		// so offset by plot.x / plot.y to get SVG coords.
+		const plot = this.viewData.plotDim.plot
 		return {
-			cx: this.pngLayout.pngLeft + xScale(fc),
-			cy: this.pngLayout.pngTop + yScale(negLog10P)
+			cx: plot.x + xScale(fc),
+			cy: plot.y + yScale(negLog10P)
 		}
 	}
 
