@@ -38,7 +38,7 @@ Plots are tracked in the MassApp as `app.components.plots{[plotId]: plot_instanc
 
 ## Local Filters
 
-Local filters are plot-specific filters that adhere to the same TermTypeSearch and tree.usecase{} declarations. These filters are enabled by **default** from `MassPlot`. Setting `config.hideLocalFilter: true` disables the filter. 
+Local filters are plot-specific filters that adhere to the same TermTypeSearch and tree.usecase{} declarations. These filters are enabled by **default** from `MassPlot`. Setting `config.hidePlotFilter: true` disables the filter. 
 
 # Transient Plots
 
