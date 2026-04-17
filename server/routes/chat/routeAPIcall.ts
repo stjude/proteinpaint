@@ -14,8 +14,10 @@ export async function route_to_appropriate_llm_provider(
 	} else if (llm.provider == 'ollama') {
 		// Ollama server
 		response = await call_ollama_llm(template, model, llm.api)
+	} else if ((llm.provider as string) == 'azure') {
+		// Azure server
+		response = await call_azure_llm(template, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
 	} else {
-		// Will later add support for azure server also
 		throw 'Unknown LLM provider'
 	}
 	return response
@@ -155,6 +157,50 @@ export async function callHuggingFaceEmbedding(
 		}
 		return item as number[]
 	})
+}
+
+async function call_azure_llm(
+	prompt: string,
+	model_name: string,
+	apilink: string,
+	apiVersion?: string,
+	apiToken?: string
+) {
+	const temperature = 1
+	const top_p = 1
+	const timeout = 200000
+	const max_completion_tokens = 2048
+	const version = apiVersion
+	// Azure APIM URL pattern: {apilink}/{deployment}/models/chat/completions?api-version={version}
+	// The deployment name is the model name.
+	const base = apilink.replace(/\/+$/, '')
+	const url = `${base}/${model_name}/models/chat/completions?api-version=${encodeURIComponent(version)}`
+	const payload = {
+		messages: [{ role: 'user', content: prompt }],
+		max_completion_tokens,
+		temperature,
+		top_p,
+		frequency_penalty: 0,
+		presence_penalty: 0,
+		model: model_name
+	}
+
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+	if (apiToken) headers['api-key'] = apiToken
+
+	try {
+		const response = await ezFetch(url, {
+			method: 'POST',
+			body: payload,
+			headers,
+			timeout: { request: timeout }
+		})
+		const content = response?.choices?.[0]?.message?.content
+		if (content && content.length > 0) return content
+		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
+	} catch (error) {
+		throw 'Azure API request failed:' + error
+	}
 }
 
 async function call_ollama_llm(prompt: string, model_name: string, apilink: string) {

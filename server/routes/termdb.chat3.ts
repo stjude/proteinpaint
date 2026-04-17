@@ -52,8 +52,13 @@ function init({ genomes }) {
 
 			const llm = serverconfig.llm
 			if (!llm) throw 'serverconfig.llm is not configured'
-			if (llm.provider !== 'SJ' && llm.provider !== 'ollama' && llm.provider !== 'huggingface') {
-				throw "llm.provider must be 'SJ', 'ollama', or 'huggingface'"
+			if (
+				llm.provider !== 'SJ' &&
+				llm.provider !== 'ollama' &&
+				llm.provider !== 'huggingface' &&
+				(llm.provider as string) !== 'azure'
+			) {
+				throw "llm.provider must be 'SJ', 'ollama', 'huggingface', or 'azure'"
 			}
 
 			// This toggles validation of LLM output. In this script, this will ALWAYS be false since we always want validation of LLM output,
