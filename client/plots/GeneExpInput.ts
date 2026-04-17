@@ -28,6 +28,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	/** termType dependent */
 	unit!: string
 	dom!: { [index: string]: any }
+	tabs!: any
 	/** Helper function to create term with any additional properties */
 	makeTerm: (term: any) => object
 	/** Helper function to create config or the spawning plot with
@@ -76,17 +77,21 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const headerText = this.opts?.headerTextOverride || `${typeGroup[this.termType]}`
 
 		const dom: { [index: string]: any } = {
-			header: this.opts.header.text(headerText),
-			tabs: this.opts.holder.append('div').style('margin', '10px')
+			header: this.opts.header.text(headerText).attr('data-testid', 'sjpp-gene-exp-input-header'),
+			tabs: this.opts.holder
+				.append('div')
+				.style('margin', '10px')
+				.attr('data-testid', 'sjpp-gene-exp-input-tabs-wrapper')
 		}
 
 		return dom
 	}
 
 	async main() {
-		const tabs = [
+		this.tabs = [
 			{
 				label: 'Single gene summary',
+				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderGeneSelect(tab)
 					delete tab.callback
@@ -94,6 +99,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: 'Two gene comparison',
+				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderTwoGeneSelect(tab)
 					delete tab.callback
@@ -111,7 +117,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 		const chartTabs = new Tabs({
 			holder: this.dom.tabs,
-			tabs,
+			tabs: this.tabs,
 			tabsPosition: 'vertical'
 		})
 		await chartTabs.main()

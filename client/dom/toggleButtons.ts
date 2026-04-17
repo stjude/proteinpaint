@@ -14,6 +14,9 @@ Note:
 	For easier debugging, in the console using inspect element > styles > properties > __data__	
 */
 
+const activeColor = '#1575ad'
+const inactiveColor = '#757373'
+
 export class Tabs {
 	opts: TabsOpts
 	tabs: TabsInputEntry[]
@@ -157,13 +160,14 @@ function setRenderers(self) {
 				}
 
 				tab.tab //Button text
-					.style('color', tab.active ? '#1575ad' : '#757373')
+					.attr('data-testid', `sjpp-toggle_button-text-${tab.label}`)
+					.style('color', tab.active ? activeColor : inactiveColor)
 					.style('text-align', textAlign)
 					.style('padding', '5px')
 					.html(tab.label)
 
 				tab.line //Bolded, blue line indicating the active button
-					.style('background-color', '#1575ad')
+					.style('background-color', activeColor)
 					.style('visibility', tab.active ? 'visible' : 'hidden')
 
 				if (self.opts.linePosition == 'top' || self.opts.linePosition == 'bottom') {
@@ -195,10 +199,10 @@ function setRenderers(self) {
 
 				tab.wrapper
 					.on('mouseenter', () => {
-						tab.tab.style('color', tab.active ? '#757373' : '#1575ad')
+						tab.tab.style('color', tab.active ? inactiveColor : activeColor)
 					})
 					.on('mouseleave', () => {
-						tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
+						tab.tab.style('color', tab.active ? activeColor : inactiveColor)
 					})
 			})
 			.on('click', async (event, tab) => {
@@ -250,7 +254,7 @@ function setRenderers(self) {
 				tab.wrapper.classed('sjpp-active', tab.active)
 				if (tab.isVisible) tab.wrapper.style('display', isVisible ? '' : 'none')
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
-				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
+				tab.tab.style('color', tab.active ? activeColor : inactiveColor)
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
 				tab.tab.html(tab.label) // re-print tab label since the label value could have been updated by outside code
 			})
