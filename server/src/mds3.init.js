@@ -825,10 +825,16 @@ function validateSampleHeader2(ds, samples, where) {
 		// has id mapper and is official ds
 		for (const s of samples) {
 			const id = ds.cohort.termdb.q.sampleName2id(s.name)
-			if (!Number.isInteger(id)) {
-				unknownSamples.push(s.name)
-				// TODO if file with unknown sample should still be usable, slot a mock element in sampleIds[]. downstream query should be able to ignore it
-				continue
+			if (id == undefined) {
+				if (ds.cohort.db) {
+					// sqlite-based db, samples in file should be in sync with db
+					unknownSamples.push(s.name)
+					// TODO if file with unknown sample should still be usable, slot a mock element in sampleIds[]. downstream query should be able to ignore it
+					continue
+				} else {
+					// api-based db, samples in file may not be in sync with api
+					continue
+				}
 			}
 			s.name = id
 			sampleIds.push(s)
