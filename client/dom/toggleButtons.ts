@@ -37,7 +37,12 @@ export class Tabs {
 	validateOpts(opts: TabsOpts) {
 		if (!opts.holder) throw `missing opts.holder for Tabs()`
 		if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs array for Tabs()`
-		if (!opts.linePosition) opts.linePosition = 'bottom'
+		if (!opts.tabsPosition) opts.tabsPosition = 'horizontal'
+		if (opts.tabsPosition != 'horizontal' && opts.tabsPosition != 'vertical')
+			throw `Invalid .tabsPosition arg. Must be either vertical or horizontal`
+		if (!opts.linePosition) {
+			opts.linePosition = opts.tabsPosition == 'horizontal' ? 'bottom' : 'right'
+		}
 		if (
 			opts.linePosition != 'bottom' &&
 			opts.linePosition != 'top' &&
@@ -45,9 +50,6 @@ export class Tabs {
 			opts.linePosition != 'left'
 		)
 			throw `Invalid .linePosition arg. Must be either bottom, top, right, or left`
-		if (!opts.tabsPosition) opts.tabsPosition = 'horizontal'
-		if (opts.tabsPosition != 'horizontal' && opts.tabsPosition != 'vertical')
-			throw `Invalid .tabsPosition arg. Must be either vertical or horizontal`
 		return opts
 	}
 
