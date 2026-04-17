@@ -52,7 +52,7 @@ tape('Test GeneExpInput rendering with GENE_EXPRESSION', test => {
 	async function runTests(GeneExpInput) {
         const dom = GeneExpInput.Inner.dom
         test.equal(dom.header.text(), 'Gene Expression', 'Header text should render with termtype.')
-        const visibleTabs = GeneExpInput.Inner.tabs.filter(tab => tab?.isVisible || tab?.isVisible()).map(tab => tab.label)
+        const visibleTabs = GeneExpInput.Inner.tabs.filter(tab => tab?.isVisible).map(tab => tab.label)
         const tabs = dom.tabs.selectAll('button').nodes().map(n => n.textContent.trim())
         test.deepEqual(tabs, visibleTabs, 'Should display the correct number of tabs with correct labels.')
 		
@@ -83,7 +83,7 @@ tape('Test GeneExpInput rendering with SINGLECELL_GENE_EXPRESSION', test => {
 	async function runTests(GeneExpInput) {
         const dom = GeneExpInput.Inner.dom
         test.equal(dom.header.text(), 'Single-cell Gene Expression', 'Header text should render with termtype.')
-		const visibleTabs = GeneExpInput.Inner.tabs.filter(tab => tab?.isVisible || tab?.isVisible()).map(tab => tab.label)
+		const visibleTabs = GeneExpInput.Inner.tabs.filter(tab => tab?.isVisible).map(tab => tab.label)
         const tabs = dom.tabs.selectAll('button').nodes().map(n => n.textContent.trim())
         test.deepEqual(tabs, visibleTabs, 'Should display the correct number of tabs with correct labels.')
 

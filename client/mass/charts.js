@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { Menu, GeneExpChartMenu, getAncestorWithComputedStyle } from '#dom'
+import { Menu, getAncestorWithComputedStyle } from '#dom'
 import { getNormalRoot } from '#filter/filter'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { importPlot } from '#plots/importPlot.js'
@@ -517,36 +517,6 @@ function setRenderers(self) {
 				}
 			}
 		})
-	}
-
-	self.showGenesetEditUI = async chart => {
-		const app = self.app
-		//Opt pertains to flyout menu options in #dom
-		const additionalOptions = []
-		if (app.vocabApi.termdbConfig?.queries?.rnaseqGeneCount) {
-			additionalOptions.push(
-				{
-					//Section heading
-					text: 'Differential Gene Expression Analysis'
-				},
-				{
-					/** TODO: In the future, may replace these instructions
-					 * with DA button that is in development. */
-					label: 'View Instructions',
-					isSubmenu: true,
-					callback: holder => {
-						const message = `For Differential Gene Expression Analysis, please follow steps:
-		<ol>
-		<li>Navigate to the <span style="opacity:.5">GROUPS</span> tab at the top, and create two groups.</li>
-		<li>Create a new variable from the two groups and click on the new variable button.</li>
-		<li>Select <span class=sja_menuoption style="font-size:.8em">Differential Gene Expression Analysis</span> from the menu options and run the analysis.</li>
-		</ol>`
-						holder.append('div').style('padding', '10px').html(message)
-					}
-				}
-			)
-		}
-		new GeneExpChartMenu(app, self.dom.tip, { additionalOptions })
 	}
 
 	self.showTree_selectlst = async chart => {
