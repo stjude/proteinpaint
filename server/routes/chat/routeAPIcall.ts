@@ -170,6 +170,7 @@ async function call_azure_llm(
 	const top_p = 1
 	const timeout = 200000
 	const max_completion_tokens = 2048
+	if (!apiVersion) throw 'Azure API requires apiVersion'
 	const version = apiVersion
 	// Azure APIM URL pattern: {apilink}/{deployment}/models/chat/completions?api-version={version}
 	// The deployment name is the model name.
