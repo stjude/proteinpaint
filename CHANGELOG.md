@@ -7,6 +7,8 @@ All notable changes to this project will be documented in this file.
 Features:
 - SC: Sample sections in the SC app include action buttons: 'X' to destroy the section and an arrow to show/hide the section.
 - SC: Header text is passed to the subplots to show the sample to avoid confusion.
+- New GeneExpInput plot is a transient plot for spawning plots with gene expression or single cell gene expression data. Plot options, available as tabs, are termType specific. Integration tests available for this plot.
+- New GeneExpInput plot replaces the GeneExpChartMenu in the mass UI 'Gene Expression' chart button.
 
 Fixes:
 - SC: Sample sections and subplots within sample sections are added to the DOM in descending order.

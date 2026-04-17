@@ -1,3 +1,1 @@
-Features
-- New GeneExpInput plot is a transient plot for spawning plots with gene expression or single cell gene expression data. Plot options, available as tabs, are termType specific. Integration tests available for this plot.
-- New GeneExpInput plot replaces the GeneExpChartMenu in the mass UI 'Gene Expression' chart button. 
+
