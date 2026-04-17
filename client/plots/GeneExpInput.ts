@@ -5,6 +5,8 @@ import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
 import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs } from '#dom'
 import type { ClientGenome } from '../types/clientGenome'
+import { getCurrentCohortChartTypes } from '../mass/charts.js'
+import { importPlot } from '#plots/importPlot.js'
 
 type GeneExpInputOpts = {
 	/** sandbox header
@@ -23,6 +25,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	static type = 'GeneExpInput'
 
 	type: string
+	components: { plots: { [key: string]: any } }
 	genome!: ClientGenome
 	termType!: string
 	/** termType dependent */
@@ -39,6 +42,9 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		super(opts, api)
 		this.type = GeneExpInput.type
 		this.opts = opts
+		this.components = {
+			plots: {}
+		}
 
 		const termProperties = opts?.termProperties || {}
 		this.makeTerm = term => ({ ...term, ...termProperties, type: this.termType, unit: this.unit })
@@ -57,16 +63,73 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		return config
+		const subplots = appState.plots.filter(p => p.parentId === this.id)
+		return {
+			config,
+			termdbConfig: appState.termdbConfig,
+			subplots
+		}
 	}
 
 	async init(appState) {
 		const state = this.getState(appState)
-
 		this.genome = this.app.opts.genome
-		this.termType = state.termType
+		this.termType = state.config.termType
 		this.unit = this.getUnit()
 		this.dom = this.initDom()
+
+		const chartTypes = new Set(getCurrentCohortChartTypes(appState))
+
+		this.tabs = [
+			{
+				label: 'Single gene summary',
+				isVisible: () => true,
+				callback: (event, tab) => {
+					this.renderGeneSelect(tab)
+					delete tab.callback
+				}
+			},
+			{
+				label: 'Two gene comparison',
+				isVisible: () => true,
+				callback: (event, tab) => {
+					this.renderTwoGeneSelect(tab)
+					delete tab.callback
+				}
+			},
+			{
+				label: 'Multiple genes for hierarchical clustering',
+				isVisible: () => chartTypes.has('matrix') && this.termType === GENE_EXPRESSION, // hierarchical clustering doesn't support scge
+				callback: (event, tab) => {
+					this.renderGeneMultiSelect(tab)
+					delete tab.callback
+				}
+			},
+			{
+				label: `Differential ${typeGroup[this.termType].toLowerCase()} anaylsis`,
+				//Only enabling for gene expression for now
+				chartType: 'DEinput',
+				isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION,
+				callback: async (event, tab) => {
+					await this.app.dispatch({
+						type: 'plot_create',
+						parentId: this.id,
+						config: {
+							chartType: 'DEinput',
+							parentId: this.id
+						}
+					})
+					delete tab.callback
+				}
+			}
+		]
+
+		const chartTabs = new Tabs({
+			holder: this.dom.tabs,
+			tabs: this.tabs,
+			tabsPosition: 'vertical'
+		})
+		await chartTabs.main()
 	}
 
 	getUnit() {
@@ -88,44 +151,16 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		this.tabs = [
-			{
-				label: 'Single gene summary',
-				isVisible: () => true,
-				callback: (event, tab) => {
-					this.renderGeneSelect(tab)
-					delete tab.callback
-				}
-			},
-			{
-				label: 'Two gene comparison',
-				isVisible: () => true,
-				callback: (event, tab) => {
-					this.renderTwoGeneSelect(tab)
-					delete tab.callback
-				}
-			},
-			{
-				label: 'Multiple genes for hierarchical clustering',
-				isVisible: () => this.termType === GENE_EXPRESSION, // hierarchical clustering doesn't support scge
-				callback: (event, tab) => {
-					this.renderGeneMultiSelect(tab)
-					delete tab.callback
-				}
-			}
-		]
+		const state = this.getState(this.app.getState())
 
-		const chartTabs = new Tabs({
-			holder: this.dom.tabs,
-			tabs: this.tabs,
-			tabsPosition: 'vertical'
-		})
-		await chartTabs.main()
+		for (const subplot of state.subplots || []) {
+			if (!this.components.plots[subplot.id]) await this.initSubplotInTab(subplot)
+		}
 	}
 
 	renderGeneSelect(tab) {
-		const row = tab.contentHolder.style('padding', '10px')
-		row.append('span').text('Select a gene:')
+		const row = tab.contentHolder.style('padding', '15px')
+		row.append('span').style('padding', '5px').text('Select a gene:')
 		const geneSearch = addGeneSearchbox({
 			row,
 			genome: this.genome,
@@ -157,6 +192,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 		const gene1row = holder.append('div').style('padding', '5px')
 		const gene2row = holder.append('div').style('padding', '5px').style('display', 'none')
+		const submitButton = holder.append('button').attr('type', 'button').attr('disabled', true)
 
 		gene1row.append('span').text('Select 1st gene:')
 		const geneSearch1 = addGeneSearchbox({
@@ -182,13 +218,11 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				if (!geneSearch2.geneSymbol) throw new Error('Second gene result is required')
 				term2.gene = geneSearch2.geneSymbol
 				term2.name = `${geneSearch2.geneSymbol} ${this.unit}`
+				submitButton.attr('disabled', null)
 			}
 		})
 
-		//Submit button
-		holder
-			.append('button')
-			.attr('type', 'button')
+		submitButton
 			.text('Submit')
 			.style('border', 'none')
 			.style('border-radius', '20px')
@@ -268,6 +302,21 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				await this.dispatchEdits(config)
 			}
 		})
+	}
+
+	async initSubplotInTab(subplot) {
+		const holder = this.tabs.find(tab => tab.chartType === subplot.chartType)?.contentHolder
+		if (!holder) throw new Error(`No tab found for chart type ${subplot.config.chartType}`)
+
+		const opts = Object.assign({}, subplot, {
+			holder,
+			app: this.app,
+			parentId: this.id,
+			id: subplot.id
+		})
+
+		const { componentInit } = await importPlot(opts.chartType)
+		this.components.plots[subplot.id] = await componentInit(opts)
 	}
 
 	async dispatchEdits(config) {

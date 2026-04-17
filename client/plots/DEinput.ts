@@ -43,7 +43,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	}
 
 	getDom() {
-		const header = this.opts.header.html('Differential Gene Expression')
+		const header = this.opts?.header?.html('Differential Gene Expression') || undefined
 		const holder = this.opts.holder.append('div').style('margin', '10px')
 		const table = holder.append('div')
 		const btns = holder.append('div').style('margin-top', '5px')
