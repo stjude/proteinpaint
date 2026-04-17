@@ -1,6 +1,12 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { GENE_EXPRESSION /*SINGLECELL_CELLTYPE*/ } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+
+/**
+ * Tests
+ *   - Test GeneExpInput rendering with GENE_EXPRESSION
+ *   - Test GeneExpInput rendering with SINGLECELL_GENE_EXPRESSION
+ */
 
 /*************************
  reusable helper functions
@@ -33,6 +39,32 @@ tape('Test GeneExpInput rendering with GENE_EXPRESSION', test => {
 				{
 					chartType: 'GeneExpInput',
 					termType: GENE_EXPRESSION
+				}
+			]
+		},
+		GeneExpInput: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(GeneExpInput) {
+		console.log('Running GeneExpInput tests', GeneExpInput)
+		// if (test['_ok']) GeneExpInput.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Test GeneExpInput rendering with SINGLECELL_GENE_EXPRESSION', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'GeneExpInput',
+					termType: SINGLECELL_GENE_EXPRESSION
 				}
 			]
 		},
