@@ -1,4 +1,6 @@
-export function setLegendBtn(self: any) {
+import type { MatrixControls } from './matrix.controls'
+
+export function setLegendBtn(self: MatrixControls) {
 	self.opts.holder
 		.append('button')
 		.style('margin', '2px 0')

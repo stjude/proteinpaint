@@ -3,8 +3,9 @@ import { fillTermWrapper } from '#termsetting'
 import { make_radios, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import { isNumericTerm } from '#shared/terms.js'
+import type { MatrixControls } from './matrix.controls'
 
-export function setSamplesBtn(self: any, s: any) {
+export function setSamplesBtn(self: MatrixControls, s: any) {
 	const l = s.controlLabels
 	const controls = self
 	const parent = self.parent
@@ -277,7 +278,7 @@ export function setSamplesBtn(self: any, s: any) {
 		.on('click', (event: any, d: any) => self.callback(event, d))
 }
 
-export function updateSamplesControls(self: any, app: any, parent: any, table: any) {
+export function updateSamplesControls(self: MatrixControls, app: any, parent: any, table: any) {
 	if (parent.chartType == 'hierCluster' && parent.config.settings.hierCluster.clusterSamples) {
 		const l = parent.config.settings.matrix.controlLabels
 		const sortingControl = select(

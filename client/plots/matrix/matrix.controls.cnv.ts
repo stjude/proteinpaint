@@ -1,7 +1,8 @@
 import { dtsnvindel } from '#shared/common.js'
+import type { MatrixControls } from './matrix.controls'
 
 // CNV button for selecting the CNVs to display on the matrix
-export function setCNVBtn(self: any) {
+export function setCNVBtn(self: MatrixControls) {
 	self.opts.holder
 		.append('button')
 		.style('margin', '2px 0')
@@ -39,7 +40,7 @@ export function setCNVBtn(self: any) {
 		.on('click', (event: any, d: any) => self.callback(event, d))
 }
 
-export function generateCNVItems(self: any, app: any, parent: any, table: any) {
+export function generateCNVItems(self: MatrixControls, app: any, parent: any, table: any) {
 	table.attr('class', null) // remove the hoverover background for CNV button
 	const m = parent.config.settings.matrix
 	const mutationLegendGrp = parent.legendData.find((l: any) => l.dt?.includes(dtsnvindel))
