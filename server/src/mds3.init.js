@@ -804,7 +804,7 @@ function mayValidateSampleHeader(ds, samples, where) {
 	if (!samples) return
 	// samples[] elements: {name:str}
 	let useint
-	if (ds?.cohort?.termdb) {
+	if (ds?.cohort?.db) {
 		// using sqlite3 db
 		// as samples are kept as integer ids in termdb, cast name into integers
 		for (const s of samples) {
@@ -831,10 +831,13 @@ function validateSampleHeader2(ds, samples, where) {
 				if (ds.cohort.db) {
 					// sqlite-based db, samples in file should be in sync with db
 					unknownSamples.push(s.name)
-					// TODO if file with unknown sample should still be usable, slot a mock element in sampleIds[]. downstream query should be able to ignore it
 					continue
 				} else {
 					// api-based db, samples in file may not be in sync with api
+					// file should still be used, so insert a mock element in
+					// sampleIds to preserve sample order
+					// downstream query should be able to ignore it
+					sampleIds.push({})
 					continue
 				}
 			}
