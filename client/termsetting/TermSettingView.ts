@@ -70,10 +70,12 @@ export class TermSettingView {
 
 		// nopilldiv - plus button
 		if (self.opts.placeholderIcon) {
+			console.log(22, self.opts)
 			// margin & hover are applied so this icon looks identical to a pill without distracting visual diff on adding/removing tw; however the ts_pill class cannot be used for breaking termsetting ci test
 			self.dom.nopilldiv
 				.append('div')
 				.attr('class', 'sja_filter_tag_btn add_term_btn')
+				.attr('data-testid', 'sjpp-tw-addTermBtn-' + (self.opts.testids?.suffix || ''))
 				.style('padding', '3px 6px')
 				.style('margin', '2px')
 				.style('display', 'inline-block')
@@ -182,7 +184,8 @@ export class TermSettingView {
 		// left half of blue pill
 		self.dom.pill_termname = one_term_div
 			.append('div')
-			.attr('class', 'term_name_btn  sja_filter_tag_btn')
+			.attr('class', 'term_name_btn sja_filter_tag_btn')
+			.attr('data-testid', 'sjpp-tw-pillBtn-' + (self.opts.testids?.suffix || ''))
 			.attr('tabindex', 0)
 			.style('display', 'flex')
 			.style('grid-area', 'left')

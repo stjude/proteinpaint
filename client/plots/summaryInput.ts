@@ -4,6 +4,8 @@ import { controlsInit, term0_term2_defaultQ } from './controls'
 import { t0_t2_defaultQ as term0_term2_defaultQ_surv } from './survival/survival.ts'
 import { fillTermWrapper } from '#termsetting'
 
+// transient. on submission, it is replaced by a new one
+
 class SummaryInputPlot extends PlotBase implements RxComponent {
 	static type = 'summaryInput'
 
@@ -60,6 +62,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term',
+				testids: {
+					suffix: 'summaryInputControlTerm'
+				},
 				usecase: { target: 'summaryInput', detail: 'term' },
 				label: controlLabels.term1?.label || 'Primary variable',
 				processConfig: config => {
@@ -82,6 +87,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term2',
+				testids: {
+					suffix: 'summaryInputControlTerm2'
+				},
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
 				defaultQ4fillTW: term0_term2_defaultQ,
@@ -90,6 +98,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term0',
+				testids: {
+					suffix: 'summaryInputControlTerm0'
+				},
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
 				defaultQ4fillTW: term0_term2_defaultQ,
@@ -99,6 +110,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term2_surv',
+				testids: {
+					suffix: 'summaryInputControlTerm2surv'
+				},
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
 				defaultQ4fillTW: term0_term2_defaultQ_surv,
@@ -107,6 +121,9 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			{
 				type: 'term',
 				configKey: 'term0_surv',
+				testids: {
+					suffix: 'summaryInputControlTerm0surv'
+				},
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
 				defaultQ4fillTW: term0_term2_defaultQ_surv + '_surv',
@@ -139,6 +156,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 			.style('border', 'none')
 			.style('border-radius', '20px')
 			.style('padding', '10px 15px')
+			.attr('data-testid', 'sjpp-summaryInput-submitBtn')
 			.text('Submit')
 			.on('click', () => {
 				const { term, term2, term0, term2_surv, term0_surv, filter } = structuredClone(this.config)
