@@ -70,7 +70,6 @@ export class TermSettingView {
 
 		// nopilldiv - plus button
 		if (self.opts.placeholderIcon) {
-			console.log(22, self.opts)
 			// margin & hover are applied so this icon looks identical to a pill without distracting visual diff on adding/removing tw; however the ts_pill class cannot be used for breaking termsetting ci test
 			self.dom.nopilldiv
 				.append('div')
