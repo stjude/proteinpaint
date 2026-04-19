@@ -819,6 +819,7 @@ async function setTermInput(opts) {
 		defaultQ4fillTW: opts.defaultQ4fillTW,
 		geneVariantEditMenuOnlyGrp: opts.geneVariantEditMenuOnlyGrp,
 		loadingMasks: opts.parent.loadingMasks,
+		testids: opts.testids,
 		callback: async tw => {
 			// showing "processing data ..."" before pill is set
 			if (opts.parent.dom.loadingDiv && opts.parent.dom.svg) {

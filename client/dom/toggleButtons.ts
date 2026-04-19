@@ -160,7 +160,7 @@ function setRenderers(self) {
 				}
 
 				tab.tab //Button text
-					.attr('data-testid', `sjpp-toggle_button-text-${tab.label.toLowerCase().replace(/\s/g, '-')}}`)
+					.attr('data-testid', `sjpp-toggle_button-text-${tab.label.toLowerCase().replace(/\s/g, '-')}`)
 					.style('color', tab.active ? activeColor : inactiveColor)
 					.style('text-align', textAlign)
 					.style('padding', '5px')
