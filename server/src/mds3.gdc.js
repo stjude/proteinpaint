@@ -462,22 +462,29 @@ async function getCases4exp(q, ds, case_filters) {
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
-		const re = await xfetch(joinUrl(host.rest, 'cases'), {
-			method: 'POST',
-			timeout: false,
-			headers,
-			body,
-			signal: q.__abortSignal
-		})
-		if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
-		for (const h of re.data.hits) {
-			if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
-				lst.push(h.id)
-				if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) {
-					// flag indicates it is for clustering. apply this limit to not to overload clustering app, stop collecting when max number of cases is reached
-					break
+		let currTotal = 0
+		while (lst.length < maxCase4geneExpCluster) {
+			const re = await xfetch(joinUrl(host.rest, 'cases'), {
+				method: 'POST',
+				timeout: false,
+				headers,
+				body: Object.assign({ from: currTotal + 1 }, body),
+				signal: q.__abortSignal
+			})
+			if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
+			for (const h of re.data.hits) {
+				if (h.id && ds.__gdc.casesWithExpData.has(h.id)) {
+					lst.push(h.id)
+					if (q.forClusteringAnalysis && lst.length == maxCase4geneExpCluster) {
+						// flag indicates it is for clustering. apply this limit to not to overload clustering app, stop collecting when max number of cases is reached
+						break
+					}
 				}
 			}
+			if (lst.length >= maxCase4geneExpCluster) break
+			const { page, pages, total, count } = re.data.pagination
+			currTotal += count
+			if (!page || page >= pages || currTotal >= total) break
 		}
 		return lst
 	} catch (e) {
