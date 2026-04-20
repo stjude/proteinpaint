@@ -317,6 +317,11 @@ Query: ${user_prompt}
 	try {
 		const parsed = JSON.parse(response) as HierarchicalScaffold
 		parsed.plotType = 'hiercluster'
+		// Ensure each gene symbol is followed by "expression" so downstream phrase2entity
+		// resolves it to the geneExpression term type rather than flagging it as ambiguous.
+		if (parsed.geneNames) {
+			parsed.geneNames = parsed.geneNames.map(g => (/\bexpression\b/i.test(g) ? g : `${g} expression`))
+		}
 		return parsed
 	} catch {
 		throw new Error(`Failed to parse HierarchicalScaffold from LLM response: ${response}`)
