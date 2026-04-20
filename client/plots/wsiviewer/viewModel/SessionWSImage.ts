@@ -1,5 +1,5 @@
 import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
-import { WSImage } from '@sjcrh/proteinpaint-types'
+import { TileSelectionPrefix, WSImage } from '@sjcrh/proteinpaint-types'
 import { roundValue } from '#shared/roundValue.js'
 
 export class SessionWSImage extends WSImage {
@@ -20,17 +20,8 @@ export class SessionWSImage extends WSImage {
 		this.sessionsTileSelections = sessionsTileSelections
 	}
 
-	public static removeTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): TileSelection[] {
-		if (!sessionWSImage.sessionsTileSelections) return []
-
-		const sessionsTileSelection = sessionWSImage.sessionsTileSelections[currentIndex]
-
-		if (!sessionsTileSelection) return []
-		if (currentIndex < 0 || currentIndex >= sessionWSImage.sessionsTileSelections.length) return []
-
-		sessionWSImage.sessionsTileSelections.splice(currentIndex, 1)
-
-		return sessionWSImage.sessionsTileSelections
+	public static removeTileSelection(id: string, sessionWSImage: SessionWSImage): TileSelection[] {
+		return sessionWSImage.sessionsTileSelections?.filter(selection => selection.id !== id) || []
 	}
 
 	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
@@ -43,7 +34,7 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsTileSelections, ...predictions, ...annotations]
 	}
 
-	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
+	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileId: string): any[] {
 		const annotations = sessionWSImage.annotations || []
 
 		const sessionsTileSelections = sessionWSImage.sessionsTileSelections || []
@@ -53,7 +44,7 @@ export class SessionWSImage extends WSImage {
 			const idx = i
 			const firstCell: any = { value: idx }
 			// Mark original/background hint for renderers. Keep column shape unchanged.
-			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
+			firstCell.origBackground = d.id === selectedTileId ? selectedColor : ''
 			return [
 				firstCell, // Index
 				{ value: d.zoomCoordinates },
@@ -68,7 +59,7 @@ export class SessionWSImage extends WSImage {
 			const idx = sessionsRows.length + i // Continue index after sessions
 			const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
 			const firstCell: any = { value: idx }
-			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
+			firstCell.origBackground = prediction.id === selectedTileId ? selectedColor : ''
 			return [
 				firstCell,
 				{ value: prediction.zoomCoordinates },
@@ -83,9 +74,10 @@ export class SessionWSImage extends WSImage {
 
 		const annotationsRows: any[] = annotations.map((annotation, i) => {
 			const idx = sessionsRows.length + predictionRows.length + i // Continue index
+			console.log(sessionWSImage.classes, annotation.class)
 			const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
 			const firstCell: any = { value: idx }
-			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
+			firstCell.origBackground = annotation.id === selectedTileId ? selectedColor : ''
 			return [
 				firstCell,
 				{ value: annotation.zoomCoordinates },
@@ -101,17 +93,11 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsRows, ...predictionRows, ...annotationsRows]
 	}
 
-	public static isPrediction(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
-		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
-
-		const predictionsCount = (sessionWSImage.predictions || []).length
-
-		return currentIndex >= sessionsCount && currentIndex < sessionsCount + predictionsCount
+	public static isPrediction(id: string): boolean {
+		return id.startsWith(TileSelectionPrefix.PREDICTION)
 	}
 
-	public static isSessionTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
-		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
-		if (sessionsCount == 0) return false
-		return currentIndex >= 0 && currentIndex < sessionsCount
+	public static isSessionTileSelection(id: string): boolean {
+		return id.startsWith(TileSelectionPrefix.SELECTION)
 	}
 }

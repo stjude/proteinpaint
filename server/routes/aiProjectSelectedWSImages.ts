@@ -1,4 +1,4 @@
-import type { Annotation, Mds3, RouteApi, WSImage } from '#types'
+import { type Annotation, type Mds3, type RouteApi, type WSImage, AnnotationImpl } from '#types'
 import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
@@ -130,7 +130,6 @@ export async function validate_query_getWSIClassesQuery(ds: Mds3) {
 
 export function validateWSIAnnotationsQuery(ds: any, connection: Database.Database) {
 	if (!ds.queries?.WSImages?.db) return
-
 	type AnnotationRow = {
 		id: number
 		project_id: number
@@ -197,13 +196,8 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 				} catch {
 					/* ignore parse errors, keep [NaN, NaN] */
 				}
-
-				return {
-					zoomCoordinates: coords,
-					class: r.label ?? '',
-					status: r.status,
-					timestamp: r.timestamp
-				}
+				console.log('Parsed annotation coordinates', r.label)
+				return new AnnotationImpl(coords, r.label ?? '', r.status, r.timestamp) as Annotation
 			})
 		} catch (error) {
 			console.error('Error loading annotations:', error)

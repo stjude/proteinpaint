@@ -41,7 +41,6 @@ function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
-
 			const connection = getDbConnection(ds) as Database.Database
 
 			/** get list of projects from db */

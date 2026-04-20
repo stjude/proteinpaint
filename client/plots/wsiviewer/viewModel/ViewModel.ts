@@ -46,7 +46,6 @@ export class ViewModel {
 		}
 
 		if (imageData.activePatchColor) imageViewData.activePatchColor = imageData.activePatchColor
-
 		return imageViewData
 	}
 

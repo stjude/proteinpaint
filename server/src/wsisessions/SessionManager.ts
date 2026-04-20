@@ -205,7 +205,6 @@ export default class SessionManager {
 		}
 
 		const sessions = await this.sessionFetcher.getSessions(tileServer.url)
-
 		await this.keyValueStorages.update(key, sessions, tileServer)
 
 		const keySessions = await this.keyValueStorages.getAllKeyValues(key)

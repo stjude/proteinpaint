@@ -26,4 +26,5 @@ export default interface Settings {
 	animationTime: number
 	animationDelay: number
 	defaultZoom: number
+	activeID: string
 }

@@ -20,6 +20,7 @@ function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: SaveWSIAnnotationRequest = req.query
+			// should this be "required for saveWSIAnnotation request" instead of "deleteWSIAnnotation request"?
 			if (!query.genome) throw new Error('.genome is required for deleteWSIAnnotation request.')
 			if (!query.dslabel) throw new Error('.dslabel is required for deleteWSIAnnotation request.')
 
@@ -91,6 +92,29 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 
 			const imageId = imageRow.id
+			//Checking for duplicate annotation based on projectId, imageId and coordinates
+			const duplicateCheckSql = `
+				SELECT id
+				FROM project_annotations
+				WHERE project_id = ?
+				  AND image_id = ?
+				  AND coordinates = ?
+				LIMIT 1
+			`
+			const duplicateCheckStmt = connection.prepare(duplicateCheckSql)
+			const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords)
+			if (duplicateRow) {
+				const deleteDuplicateSql = `
+					DELETE FROM project_annotations
+					WHERE id = ?
+				`
+				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
+				deleteDuplicateStmt.run(duplicateRow.id)
+				console.log(
+					`Deleted duplicate annotation with id=${duplicateRow.id} for project_id=${projectId}, image_id=${imageId}.`
+				)
+				//Gotta retrieve the info for what was deleted
+			}
 
 			const insertSql = `
 				INSERT INTO project_annotations (

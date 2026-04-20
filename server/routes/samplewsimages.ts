@@ -27,6 +27,7 @@ function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[query.dslabel]
 			if (!ds) throw 'invalid dataset name'
+
 			const sampleId = query.sample_id
 			const wsimages: WSImage[] = await ds.queries.WSImages.getWSImages(sampleId)
 

@@ -87,8 +87,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 	async main(): Promise<void> {
 		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
+		console.log(settings.activeAnnotation, settings.activeID)
 		const holder = this.opts.holder
-
 		// TODO verify if state.vocab.genome is needed?
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel

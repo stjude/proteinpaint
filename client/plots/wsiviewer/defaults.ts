@@ -25,7 +25,8 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		isSavingAnnotation: false,
 		animationTime: 700,
 		animationDelay: 200,
-		defaultZoom: 5
+		defaultZoom: 5,
+		activeID: ''
 	}
 	return copyMerge(defaults, overrides)
 }

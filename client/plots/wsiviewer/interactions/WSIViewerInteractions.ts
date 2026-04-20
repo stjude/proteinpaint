@@ -8,13 +8,23 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { Prediction, TileSelection, WSIClass } from '@sjcrh/proteinpaint-types'
+import {
+	type Annotation,
+	TileSelectionImpl,
+	TileSelectionPrefix,
+	type Prediction,
+	type TileSelection
+} from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
+// import { active } from 'd3'
 type UndoRedoRecord = {
-	action: () => Promise<void>
-	reaction: () => Promise<void>
+	action: 'save' | 'delete'
+	reaction: 'save' | 'delete'
+	id: string
+	class_id: number
+	class_color: string
 }
 
 export class WSIViewerInteractions {
@@ -35,28 +45,32 @@ export class WSIViewerInteractions {
 	) => void
 	pastActionStack: Array<UndoRedoRecord>
 	futureActionStack: Array<UndoRedoRecord>
+	undoStackLimit = 10
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
 	toggleThumbnails: (start: number) => void
-	savePastAction: (action: UndoRedoRecord) => void
-	saveFutureAction: (action: UndoRedoRecord) => void
 	fullAnnotationSave: (
-		vectorLayer: VectorLayer,
+		wsiApp: any,
 		sessionWSImage: SessionWSImage,
-		matchingClass: WSIClass,
 		aiProjectID: number,
 		tileSelections: TileSelection[],
-		currentIndex: number
+		classColor: string,
+		classID: number,
+		vectorLayer: VectorLayer,
+		selectedID: string
 	) => Promise<void>
-	performRedo: () => void
+	savePastAction: (action: UndoRedoRecord) => void
+	saveFutureAction: (action: UndoRedoRecord) => void
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
+			//Could be a plaece to reset undo
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
 					settings: {
 						activeAnnotation: 0,
+						activeID: '',
 						sessionsTileSelection: [],
 						displayedImageIndex: index,
 						renderWSIViewer: true
@@ -67,7 +81,7 @@ export class WSIViewerInteractions {
 		this.pastActionStack = []
 		this.futureActionStack = []
 		this.savePastAction = (action: UndoRedoRecord) => {
-			if (this.pastActionStack.length < 5) {
+			if (this.pastActionStack.length < this.undoStackLimit) {
 				this.pastActionStack = [...this.pastActionStack, action]
 			} else {
 				// If pastActionStack is too long, remove the oldest action before adding a new one
@@ -76,7 +90,7 @@ export class WSIViewerInteractions {
 			}
 		}
 		this.saveFutureAction = (action: UndoRedoRecord) => {
-			if (this.futureActionStack.length < 5) {
+			if (this.futureActionStack.length < this.undoStackLimit) {
 				this.futureActionStack = [...this.futureActionStack, action]
 			} else {
 				// If futureActionStack is too long, remove the oldest action before adding a new one
@@ -84,39 +98,44 @@ export class WSIViewerInteractions {
 				this.futureActionStack = [...this.futureActionStack.slice(1), action]
 			}
 		}
-		this.performUndo = async () => {
-			console.log(wsiApp, wsiApp.viewModel)
-			const lastAction = this.pastActionStack.pop()
-			if (lastAction) {
-				await lastAction.reaction()
-
-				this.saveFutureAction({ action: lastAction.reaction, reaction: lastAction.action })
-			}
-		}
-		this.performRedo = async () => {
-			console.log('Performing redo. Future stack length:', this.futureActionStack.length)
-			const lastUndoneAction = this.futureActionStack.pop()
-			if (lastUndoneAction) {
-				await lastUndoneAction.action()
-				this.savePastAction({ action: lastUndoneAction.reaction, reaction: lastUndoneAction.action })
-			}
-		}
 		this.fullAnnotationSave = async (
-			vectorLayer: VectorLayer,
+			wsiApp: any,
 			sessionWSImage: SessionWSImage,
-			matchingClass: WSIClass,
 			aiProjectID: number,
 			tileSelections: TileSelection[],
-			currentIndex: number
+			classColor: string,
+			classID: number,
+			vectorLayer: VectorLayer,
+			selectedID: string
 		) => {
 			const state = wsiApp.app.getState()
 			const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-			// Visual add
-			this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
+			if (settings.isSavingAnnotation) return
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						isSavingAnnotation: true,
+						changeTrigger: Date.now()
+					}
+				}
+			})
 
-			const selectedClassId = matchingClass.id
+			// Visual add
+			this.addAnnotation(vectorLayer!, tileSelections, selectedID, classColor, settings)
 			// Persist and finalize via helper
-			await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
+			await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, selectedID, classID, aiProjectID)
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						isSavingAnnotation: true,
+						changeTrigger: Date.now()
+					}
+				}
+			})
 		}
 
 		this.zoomInEffectListener = (
@@ -183,9 +202,12 @@ export class WSIViewerInteractions {
 			holder.node()?.focus()
 
 			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage) || []
-
 			holder.on('keydown', async (event: KeyboardEvent) => {
-				let currentIndex = settings.activeAnnotation
+				const indexFromID = tileSelections.findIndex(tileSelection => tileSelection.id === settings.activeID)
+				let currentIndex = indexFromID === -1 ? settings.activeAnnotation : indexFromID
+				if (currentIndex === -1) {
+					currentIndex = 0
+				}
 
 				event.preventDefault()
 				event.stopPropagation()
@@ -211,7 +233,8 @@ export class WSIViewerInteractions {
 							config: {
 								settings: {
 									renderWSIViewer: false,
-									activeAnnotation: currentIndex
+									activeAnnotation: currentIndex,
+									activeID: tileSelections[currentIndex]?.id ?? ''
 								}
 							}
 						})
@@ -244,90 +267,99 @@ export class WSIViewerInteractions {
 					}
 
 					// Draw annotation visually
-					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
-
-					const selectedClassId = matchingClass.id
-
-					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
+					await this.fullAnnotationSave(
+						wsiApp,
+						sessionWSImage,
+						aiProjectID,
+						tileSelections,
+						matchingClass.color,
+						matchingClass.id,
+						vectorLayer!,
+						tileSelections[currentIndex].id
+					)
 
 					return
 				}
-				if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLowerCase() === 'z') {
+				if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
 					// call your undo handler here
-					await this.performUndo()
+					let lastAction: UndoRedoRecord | undefined
+					if (!event.shiftKey) {
+						lastAction = this.pastActionStack.pop()
+					} else {
+						lastAction = this.futureActionStack.pop()
+					}
+
+					if (lastAction) {
+						if (lastAction.reaction === 'save') {
+							await this.fullAnnotationSave(
+								wsiApp,
+								sessionWSImage,
+								aiProjectID,
+								tileSelections,
+								lastAction.class_color,
+								lastAction.class_id,
+								vectorLayer!,
+								lastAction.id
+							)
+						} else if (lastAction.reaction === 'delete') {
+							await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, lastAction.id)
+						}
+						if (event.shiftKey) {
+							this.savePastAction({ ...lastAction, action: lastAction.reaction, reaction: lastAction.action })
+						} else {
+							this.saveFutureAction({ ...lastAction, action: lastAction.reaction, reaction: lastAction.action })
+						}
+					}
 					return
 				}
 				if (event.key == 'Backspace') {
 					//Delete
 					//Dispatching inverse action for undo, i.e. if we delete a tile we add a function
 					//to be popped of the pastActionStack that would re-add the tile.
-
-					//shoould I create structued clones of these params? I think I can just pulls state at the time of undo and just keep track of the
-					//TileSelection or even explicitly the class and zoomCoords
-					const action = async function (this, _wsiApp, _map, _sessionWSImage, currentSelection) {
-						const vectorLayer = _map
-							.getLayers()
-							.getArray()
-							.find(l => l instanceof VectorLayer)!
-						const currentIndex = tileSelections.findIndex(tileSelection =>
-							tileSelection.zoomCoordinates.every((coord, idx) => coord === currentSelection.zoomCoordinates[idx])
-						)
-						await this.deleteAnnotation(_wsiApp, vectorLayer!, _sessionWSImage, currentIndex)
-					}.bind(this, wsiApp, map, sessionWSImage, tileSelections[currentIndex])
-
-					await action()
-					const inverseAction = async () => {
-						const matchingClass = sessionWSImage?.classes?.find(
-							c => c.key_shortcut === tileSelections[currentIndex].class
-						)
-						if (!matchingClass) return
-						await this.fullAnnotationSave(
-							vectorLayer!,
-							sessionWSImage,
-							matchingClass,
-							aiProjectID,
-							tileSelections,
-							currentIndex
-						)
+					const tileSelection = tileSelections.find(t => t.id === settings.activeID) as Annotation
+					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === tileSelection?.class)
+					if (!matchingClass) {
+						console.log('shit')
+						return
 					}
-
+					this.savePastAction({
+						action: 'delete',
+						id: settings.activeID,
+						reaction: 'save',
+						class_color: matchingClass.color,
+						class_id: matchingClass.id
+					})
+					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, settings.activeID)
 					// Might want to only save inverse if forward is successful
-					this.savePastAction({ action: action, reaction: inverseAction })
 				}
 
-				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
-					wsiApp.app.dispatch({
-						type: 'plot_edit',
-						id: wsiApp.id,
-						config: {
-							settings: {
-								isSavingAnnotation: true,
-								changeTrigger: Date.now()
-							}
-						}
+				if (shortcuts.includes(event.code)) {
+					const tileSelection = tileSelections[currentIndex]
+					// Resolve class either by key_shortcut
+					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
+					if (!matchingClass) return
+					console.log(matchingClass)
+					this.savePastAction({
+						action: 'save',
+						reaction: 'delete',
+						id: tileSelection.id,
+						class_color: matchingClass.color,
+						class_id: matchingClass.id
 					})
 
-					const action = async () => {
-						// Resolve class either by key_shortcut
-						const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
-						if (!matchingClass) return
-						await this.fullAnnotationSave(
-							vectorLayer!,
-							sessionWSImage,
-							matchingClass,
-							aiProjectID,
-							tileSelections,
-							currentIndex
-						)
-					}
-					await action()
-					const inverseAction = async () => {
-						await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
-					}
+					await this.fullAnnotationSave(
+						wsiApp,
+						sessionWSImage,
+						aiProjectID,
+						tileSelections,
+						matchingClass.color,
+						matchingClass.id,
+						vectorLayer!,
+						tileSelection.id
+					)
 
 					// Might want to only save inverse if forward is successful
-					this.savePastAction({ action: action, reaction: inverseAction })
+					// move thsi dispatch to fullAnnotation
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
@@ -356,7 +388,6 @@ export class WSIViewerInteractions {
 			sessionWSImage.sessionsTileSelections = sessionsTileSelection
 
 			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage)
-			console.log(tileSelections)
 			// Check if click falls inside an existing annotation
 			const selectedTileSelectionIndex = tileSelections.findIndex(tileSelection => {
 				const [x0, y0] = tileSelection.zoomCoordinates
@@ -375,6 +406,7 @@ export class WSIViewerInteractions {
 							renderAnnotationTable: true,
 							changeTrigger: Date.now(),
 							activeAnnotation: selectedTileSelectionIndex,
+							activeID: tileSelections[selectedTileSelectionIndex].id,
 							sessionsTileSelection: [...sessionsTileSelection]
 						}
 					}
@@ -383,10 +415,7 @@ export class WSIViewerInteractions {
 			}
 
 			// Create new tile section
-			const newTileSelection: TileSelection = {
-				zoomCoordinates: [coordinateX, coordinateY],
-				class: ''
-			}
+			const newTileSelection: TileSelection = new TileSelectionImpl([coordinateX, coordinateY], '')
 
 			const vectorLayer = map
 				.getLayers()
@@ -415,6 +444,7 @@ export class WSIViewerInteractions {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
 						activeAnnotation: 0,
+						activeID: newTileSelection.id,
 						changeTrigger: Date.now(),
 						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
 					}
@@ -489,12 +519,13 @@ export class WSIViewerInteractions {
 	private addAnnotation(
 		vectorLayer: VectorLayer,
 		tileSelections: TileSelection[],
-		currentIndex: number,
+		selectedId: string,
 		color: any,
 		settings: Settings
 	) {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-		const tileSelection = tileSelections[currentIndex]
+		const tileSelection = tileSelections.find(ts => ts.id === selectedId)
+		if (!tileSelection) return
 		//Remove any previous feature with the same ID
 		const feature = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
 		if (feature) {
@@ -543,11 +574,13 @@ export class WSIViewerInteractions {
 		wsiApp: any,
 		vectorLayer: VectorLayer<any, any>,
 		sessionWSImage: SessionWSImage,
-		currentIndex: number
+		selectedId: string
 	) {
 		const state = wsiApp.app.getState()
+		let deleteSuccess = false
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
-		const tileSelection = tileSelections[currentIndex]
+		const tileSelection = tileSelections.find(ts => ts.id === selectedId)
+		if (!tileSelection) return
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove annotated square
@@ -572,8 +605,8 @@ export class WSIViewerInteractions {
 			source?.removeFeature(annotationBorderFeat)
 		}
 
-		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			const sessionsTileSelection = SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+		if (SessionWSImage.isSessionTileSelection(selectedId, sessionWSImage)) {
+			const sessionsTileSelection = SessionWSImage.removeTileSelection(selectedId, sessionWSImage)
 
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
@@ -583,6 +616,7 @@ export class WSIViewerInteractions {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
 						activeAnnotation: 0,
+						activeID: tileSelections[0]?.id ?? '',
 						changeTrigger: Date.now(),
 						sessionsTileSelection: sessionsTileSelection
 					}
@@ -591,17 +625,17 @@ export class WSIViewerInteractions {
 			return
 		}
 
-		const isPrediction = SessionWSImage.isPrediction(currentIndex, sessionWSImage)
+		const isPrediction = SessionWSImage.isPrediction(selectedId, sessionWSImage)
 
 		const tileSelectionType = isPrediction ? 0 : 1
 
-		const prediction = tileSelections[currentIndex] as Prediction
+		const prediction = tileSelections.find(ts => ts.id === selectedId) as Prediction
 
 		const body: DeleteWSITileSelectionRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			projectId: state.aiProjectID,
-			tileSelection: tileSelections[currentIndex],
+			tileSelection: tileSelection,
 			predictionClassId: prediction.class,
 			tileSelectionType: tileSelectionType,
 			wsimage: sessionWSImage.filename
@@ -609,6 +643,7 @@ export class WSIViewerInteractions {
 
 		try {
 			await dofetch3('deleteWSITileSelection', { method: 'DELETE', body })
+			deleteSuccess = true
 		} catch (e: any) {
 			console.error('Error in deleteWSITileSelection request:', e.message || e)
 		}
@@ -624,11 +659,13 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
 					activeAnnotation: 0,
+					activeID: tileSelections[0]?.id ?? '',
 					changeTrigger: Date.now(),
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}
 		})
+		return deleteSuccess
 	}
 
 	private addActiveBorder(vectorLayer: VectorLayer, zoomCoordinates: [number, number], color: any, tileSize: number) {
@@ -707,16 +744,17 @@ export class WSIViewerInteractions {
 	private async saveAndFinalizeAnnotation(
 		wsiApp: any,
 		sessionWSImage: SessionWSImage,
-		currentIndex: number,
+		selectedId: string,
 		selectedClassId: number | undefined,
 		aiProjectID: number
 	) {
 		const state = wsiApp.app.getState()
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
+		let saveSuccess = false
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			coordinates: tileSelections[currentIndex].zoomCoordinates,
+			coordinates: tileSelections.find(ts => ts.id === selectedId)!.zoomCoordinates,
 			classId: selectedClassId!,
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
@@ -725,16 +763,14 @@ export class WSIViewerInteractions {
 		try {
 			// TODO add UI rollback
 			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
+			saveSuccess = true
 			// TODO find another way to clear server cache
 			clearServerDataCache()
 		} catch (e) {
 			console.error('Error in saveWSIAnnotation request:', e)
 		}
-
-		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
-		}
-
+		console.log(selectedId, selectedId.replace(TileSelectionPrefix.ANNOTATION, TileSelectionPrefix.PREDICTION))
+		SessionWSImage.removeTileSelection(selectedId, sessionWSImage)
 		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 		wsiApp.app.dispatch({
 			type: 'plot_edit',
@@ -744,9 +780,11 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					changeTrigger: Date.now(),
 					activeAnnotation: 0,
+					activeID: tileSelections[0]?.id ?? '',
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}
 		})
+		return saveSuccess
 	}
 }
