@@ -19,17 +19,17 @@ export function dissect_INFO(str) {
 	while (i < str.length) {
 		const c = str[i]
 		if (findequalorsemicolon) {
-			if (c == '=') {
+			if (c == "=") {
 				findsemicolon = true
 				findequalorsemicolon = false
 				lastkey = str.substring(idx, i)
 				idx = i + 1
-			} else if (c == ';') {
+			} else if (c == ";") {
 				// should be a flag
 				k2v[str.substring(idx, i)] = 1
 				idx = i + 1
 			}
-		} else if (findsemicolon && c == ';') {
+		} else if (findsemicolon && c == ";") {
 			findequalorsemicolon = true
 			findsemicolon = false
 			k2v[lastkey] = str.substring(idx, i)

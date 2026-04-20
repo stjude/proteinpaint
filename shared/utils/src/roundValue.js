@@ -25,7 +25,8 @@ export function roundValue(value, digits) {
 export function roundValueAuto(value, format = false, defaultDigits = 2) {
 	if (!value && value != 0) return value
 	const dp = decimalPlacesUntilFirstNonZero(value)
-	const digits = Math.abs(value) > 1 ? defaultDigits : dp > 0 ? dp + 1 : defaultDigits
+	const digits =
+		Math.abs(value) > 1 ? defaultDigits : dp > 0 ? dp + 1 : defaultDigits
 	if (format) return formatValue(value, digits)
 	return roundValue(value, digits)
 }
@@ -35,7 +36,7 @@ export function decimalPlacesUntilFirstNonZero(number) {
 	const numberStr = number.toString()
 
 	// Find the position of the decimal point
-	const decimalIndex = numberStr.indexOf('.')
+	const decimalIndex = numberStr.indexOf(".")
 
 	// If decimal point is not found or number is an integer, return 0
 	if (decimalIndex === -1 || decimalIndex === numberStr.length - 1) {
@@ -46,9 +47,9 @@ export function decimalPlacesUntilFirstNonZero(number) {
 	let decimalPlaces = 0
 	for (let i = decimalIndex + 1; i < numberStr.length; i++) {
 		// Increment the count of decimal places until a non-zero digit is found
-		if (numberStr[i] === '0') {
+		if (numberStr[i] === "0") {
 			decimalPlaces++
-		} else if (numberStr[i] >= '1' && numberStr[i] <= '9') {
+		} else if (numberStr[i] >= "1" && numberStr[i] <= "9") {
 			break
 		}
 	}

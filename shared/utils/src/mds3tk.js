@@ -1,4 +1,4 @@
-import { dtcnv, dtsnvindel, dtsv, dtfusionrna } from './common.js'
+import { dtcnv, dtsnvindel, dtsv, dtfusionrna } from "./common.js"
 
 // this script should contain mds3 track-related stuff shared between client and backend
 
@@ -15,7 +15,7 @@ svfusion: dt + chr + pos + strand + pairlstidx + mname
 
 the separator must avoid conflicting with characters from gene names, and can be changed based on needs
 */
-export const ssmIdFieldsSeparator = '__'
+export const ssmIdFieldsSeparator = "__"
 
 /*
 input: array of mixture of ssm, svfusion and cnv
@@ -59,7 +59,7 @@ export function guessSsmid(ssmid) {
 	if (l.length == 4) {
 		const [chr, tmp, ref, alt] = l
 		const pos = Number(tmp)
-		if (Number.isNaN(pos)) throw 'ssmid snvindel pos not integer'
+		if (Number.isNaN(pos)) throw "ssmid snvindel pos not integer"
 		return { dt: dtsnvindel, l: [chr, pos, ref, alt] }
 	}
 	if (l.length == 5) {
@@ -67,32 +67,34 @@ export function guessSsmid(ssmid) {
 		const [chr, _start, _stop, _class, _value] = l
 		const start = Number(_start),
 			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value)
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
+			value = _value == "" ? null : Number(_value)
+		if (Number.isNaN(start) || Number.isNaN(stop))
+			throw "ssmid cnv start/stop not integer"
 		return { dt: dtcnv, l: [chr, start, stop, _class, value] }
 	}
 	if (l.length == 6) {
-		if (l[3] == '+' || l[3] == '-') {
+		if (l[3] == "+" || l[3] == "-") {
 			// sv/fusion
 			const [_dt, chr, _pos, strand, _pi, _mname] = l
 
 			// mname is encoded in case it contains comma (and is same as ssmIdFieldsSeparator)
 			const mname = decodeURIComponent(_mname)
 			const dt = Number(_dt)
-			if (dt != dtsv && dt != dtfusionrna) throw 'ssmid dt not sv/fusion'
+			if (dt != dtsv && dt != dtfusionrna) throw "ssmid dt not sv/fusion"
 			const pos = Number(_pos)
-			if (Number.isNaN(pos)) throw 'ssmid svfusion position not integer'
+			if (Number.isNaN(pos)) throw "ssmid svfusion position not integer"
 			const pairlstIdx = Number(_pi)
-			if (Number.isNaN(pairlstIdx)) throw 'ssmid pairlstIdx not integer'
+			if (Number.isNaN(pairlstIdx)) throw "ssmid pairlstIdx not integer"
 			return { dt, l: [dt, chr, pos, strand, pairlstIdx, mname] }
 		}
 		// cnv with sample
 		const [chr, _start, _stop, _class, _value, sample] = l
 		const start = Number(_start),
 			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value) // if cnv not using value, must avoid `Number('')=0`
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
+			value = _value == "" ? null : Number(_value) // if cnv not using value, must avoid `Number('')=0`
+		if (Number.isNaN(start) || Number.isNaN(stop))
+			throw "ssmid cnv start/stop not integer"
 		return { dt: dtcnv, l: [chr, start, stop, _class, value, sample] }
 	}
-	throw 'unknown ssmid'
+	throw "unknown ssmid"
 }

@@ -4,7 +4,7 @@
 //
 ////////////////////////////////////
 
-import * as common from './common.js'
+import * as common from "./common.js"
 
 export default {}
 
@@ -34,45 +34,45 @@ export function init_bulk_flag(genome) {
 			// jinghui: based on missense/silent ratio of entire dataset to decide whether to include silent when importing...
 			// hard-coded class codes
 			missense: 0,
-			silent: 0
+			silent: 0,
 		},
 		svjson: {
 			loaded: false,
 			header: null,
-			badlines: []
+			badlines: [],
 		},
 		fusion: {
 			loaded: false,
 			header: null,
 			badlines: [],
-			original: []
+			original: [],
 		},
 		sv: {
 			loaded: false,
 			header: null,
 			badlines: [],
-			original: []
+			original: [],
 		},
 		cnv: {
 			loaded: false,
 			header: null,
-			badlines: []
+			badlines: [],
 		},
 		itd: {
 			loaded: false,
 			header: null,
-			badlines: []
+			badlines: [],
 		},
 		del: {
 			loaded: false,
 			header: null,
-			badlines: []
+			badlines: [],
 		},
 		truncation: {
 			loaded: false,
 			header: null,
-			badlines: []
-		}
+			badlines: [],
+		},
 	}
 }
 
@@ -81,25 +81,25 @@ export function parsesample(m, flag, i, lst, badline) {
 	if (m.sampletype) {
 		const s = m.sampletype.toLowerCase()
 		switch (s) {
-			case 'relapse':
+			case "relapse":
 				variantorigin = common.moriginrelapse
 				break
-			case 'germline':
+			case "germline":
 				variantorigin = common.morigingermline
 				break
-			case 'somatic':
-			case 'diagnosis':
+			case "somatic":
+			case "diagnosis":
 				break
 		}
 		if (m.sample) {
 			if (m.patient) {
 				// good
 			} else {
-				m.patient = m.sample + ' ' + m.sampletype
+				m.patient = m.sample + " " + m.sampletype
 			}
 		} else {
 			if (m.patient) {
-				m.sample = m.patient + ' ' + m.sampletype
+				m.sample = m.patient + " " + m.sampletype
 			} else {
 				// neither sample or patient, will quit later
 			}
@@ -123,30 +123,30 @@ export function parsesample(m, flag, i, lst, badline) {
 		// override existing variantorigin
 		const s = m.origin.toLowerCase()
 		switch (s) {
-			case 'r':
-			case 'relapse':
+			case "r":
+			case "relapse":
 				variantorigin = common.moriginrelapse
 				m.isrim2 = true
 				break
-			case 'g':
-			case 'germline':
+			case "g":
+			case "germline":
 				variantorigin = common.morigingermline
 				m.isrim1 = true
 				break
-			case 'gp':
-			case 'germline pathogenic':
+			case "gp":
+			case "germline pathogenic":
 				variantorigin = common.morigingermlinepathogenic
 				m.isrim1 = true
 				break
-			case 'gnp':
-			case 'germline nonpathogenic':
-			case 'germline non-pathogenic':
+			case "gnp":
+			case "germline nonpathogenic":
+			case "germline non-pathogenic":
 				variantorigin = common.morigingermlinenonpathogenic
 				m.isrim1 = true
 				break
-			case 's':
-			case 'somatic':
-			case 'diagnosis':
+			case "s":
+			case "somatic":
+			case "diagnosis":
 				variantorigin = common.moriginsomatic
 				break
 		}
@@ -158,7 +158,7 @@ export function parsesample(m, flag, i, lst, badline) {
 		return
 	}
 
-	const nopatientname = 'no patient/individual name'
+	const nopatientname = "no patient/individual name"
 	let p
 	if (m.patient) {
 		if (!flag.patient2st[m.patient]) {
@@ -182,9 +182,9 @@ export function parsesample(m, flag, i, lst, badline) {
 							m.sample +
 							'": ' +
 							m.disease +
-							', ' +
+							", " +
 							flag.sample2disease[m.sample],
-						lst
+						lst,
 					])
 					return true
 				}

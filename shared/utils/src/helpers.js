@@ -9,14 +9,14 @@ this is a helper file with a collection of functions to be used in backend and c
 
 // checks whether given argument n is Numeric, with option to cast from string
 export function isNumeric(n) {
-	const v = typeof n != 'string' || n === '' ? n : Number(n)
+	const v = typeof n != "string" || n === "" ? n : Number(n)
 	const f = parseFloat(n)
 	return !isNaN(f) && Number.isFinite(v) && v === f
 }
 
 // like isNumeric but does not cast from string
 export function isStrictNumeric(n) {
-	return typeof n === 'number' && Number.isFinite(n)
+	return typeof n === "number" && Number.isFinite(n)
 }
 
 // converts a value from a unit to another unit
@@ -26,24 +26,32 @@ export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact) {
 	if (scaleFactor >= 1) {
 		const toUnitV = Math.floor(v * scaleFactor)
 		if (compact) return `${toUnitV}${toUnit.charAt(0)}`
-		return `${toUnitV} ${toUnitV > 1 ? toUnit + 's' : ''}`
+		return `${toUnitV} ${toUnitV > 1 ? toUnit + "s" : ""}`
 	}
 	const toUnitV = Math.floor(v * scaleFactor)
 	const fromUnitV = Math.ceil(v % (1 / scaleFactor))
 
 	if (fromUnitV == 0) {
 		if (compact) return `${toUnitV}${toUnit.charAt(0)}`
-		return `${toUnitV} ${toUnitV > 1 ? toUnit + 's' : ''}`
+		return `${toUnitV} ${toUnitV > 1 ? toUnit + "s" : ""}`
 	}
 
-	if (compact) return `${toUnitV}${toUnit.charAt(0)}${fromUnitV}${fromUnit.charAt(0)}`
-	return `${toUnitV} ${toUnitV > 1 ? toUnit + 's' : toUnit} ${fromUnitV} ${fromUnitV > 1 ? fromUnit + 's' : fromUnit}`
+	if (compact)
+		return `${toUnitV}${toUnit.charAt(0)}${fromUnitV}${fromUnit.charAt(0)}`
+	return `${toUnitV} ${toUnitV > 1 ? toUnit + "s" : toUnit} ${fromUnitV} ${
+		fromUnitV > 1 ? fromUnit + "s" : fromUnit
+	}`
 }
 
 export function deepEqual(x, y) {
 	if (x === y) {
 		return true
-	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
+	} else if (
+		typeof x == "object" &&
+		x != null &&
+		typeof y == "object" &&
+		y != null
+	) {
 		if (Object.keys(x).length != Object.keys(y).length) {
 			return false
 		}
@@ -63,13 +71,13 @@ export function deepFreeze(obj) {
 	Object.freeze(obj)
 	// not using for..in loop, in order to not descend into inherited props/methods
 	for (const value of Object.values(obj)) {
-		if (value !== null && typeof value == 'object') deepFreeze(value)
+		if (value !== null && typeof value == "object") deepFreeze(value)
 	}
 	return obj
 }
 
 export class CustomError extends Error {
-	level = '' // '' | 'warn'
+	level = "" // '' | 'warn'
 
 	constructor(message, opts = {}) {
 		super(message)

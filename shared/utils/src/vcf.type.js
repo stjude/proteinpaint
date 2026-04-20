@@ -1,9 +1,15 @@
-import { mclassdeletion, mclasssnv, mclassmnv, mclassinsertion, mclassnonstandard } from './common.js'
+import {
+	mclassdeletion,
+	mclasssnv,
+	mclassmnv,
+	mclassinsertion,
+	mclassnonstandard,
+} from "./common.js"
 
 export function getVariantType(ref, alt) {
 	if (ref.length == 1 && alt.length == 1) {
 		// both alleles length of 1
-		if (alt == '.') {
+		if (alt == ".") {
 			// alt is missing
 			return mclassdeletion
 		}

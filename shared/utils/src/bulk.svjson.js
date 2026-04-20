@@ -4,15 +4,15 @@
 //
 /////////////////////////////////
 
-import * as common from './common.js'
-import * as bulk from './bulk.js'
+import * as common from "./common.js"
+import * as bulk from "./bulk.js"
 
 // work for both sv/fusion
 // must tell if the data is fusion or sv
 
 export function parseheader(line, flag) {
-	const header = line.toLowerCase().split('\t')
-	if (header.length <= 1) return 'invalid file header for svjson'
+	const header = line.toLowerCase().split("\t")
+	if (header.length <= 1) return "invalid file header for svjson"
 	const htry = (...lst) => {
 		for (const a of lst) {
 			const j = header.indexOf(a)
@@ -20,21 +20,21 @@ export function parseheader(line, flag) {
 		}
 		return -1
 	}
-	let i = htry('sample')
-	if (i != -1) header[i] = 'sample'
-	i = htry('sampletype')
-	if (i != -1) header[i] = 'sampletype'
-	i = htry('patient')
-	if (i != -1) header[i] = 'patient'
-	i = htry('json', 'jsontext')
-	if (i == -1) return ['json missing from header']
-	header[i] = 'jsontext'
+	let i = htry("sample")
+	if (i != -1) header[i] = "sample"
+	i = htry("sampletype")
+	if (i != -1) header[i] = "sampletype"
+	i = htry("patient")
+	if (i != -1) header[i] = "patient"
+	i = htry("json", "jsontext")
+	if (i == -1) return ["json missing from header"]
+	header[i] = "jsontext"
 	return [null, header]
 }
 
 export function parseline(i, line, flag, header) {
-	if (line == '' || line[0] == '#') return
-	const lst = line.split('\t')
+	if (line == "" || line[0] == "#") return
+	const lst = line.split("\t")
 	const m = {}
 	const badlines = flag.svjson.badlines
 
@@ -42,7 +42,7 @@ export function parseline(i, line, flag, header) {
 		m[header[j]] = lst[j]
 	}
 	if (!m.jsontext) {
-		badlines.push([i, 'missing jsontext', lst])
+		badlines.push([i, "missing jsontext", lst])
 		return
 	}
 	if (bulk.parsesample(m, flag, i, lst, badlines)) {
@@ -52,7 +52,7 @@ export function parseline(i, line, flag, header) {
 	try {
 		json = JSON.parse(m.jsontext)
 	} catch (e) {
-		badlines.push([i, 'invalid JSON text', lst])
+		badlines.push([i, "invalid JSON text", lst])
 		return
 	}
 	// duplicating logic in pediatric.js
@@ -65,10 +65,10 @@ export function parseline(i, line, flag, header) {
 					dt: common.dtfusionrna,
 					class: common.mclassfusionrna,
 					isoform: pair.a.isoform,
-					mname: pair.b.name
+					mname: pair.b.name,
 				}
 				for (const k in m) {
-					if (k != 'jsontext') m2[k] = m[k]
+					if (k != "jsontext") m2[k] = m[k]
 				}
 				m2.pairlst = duplicate(json)
 				const n = pair.a.name.toUpperCase()
@@ -83,10 +83,10 @@ export function parseline(i, line, flag, header) {
 					dt: common.dtfusionrna,
 					class: common.mclassfusionrna,
 					isoform: pair.b.isoform,
-					mname: pair.a.name
+					mname: pair.a.name,
 				}
 				for (const k in m) {
-					if (k != 'jsontext') m2[k] = m[k]
+					if (k != "jsontext") m2[k] = m[k]
 				}
 				m2.pairlst = duplicate(json)
 				const n = pair.b.name.toUpperCase()
@@ -102,40 +102,42 @@ export function parseline(i, line, flag, header) {
 		switch (json.dt) {
 			case common.dtitd:
 				json.class = common.mclassitd
-				json.mname = 'ITD'
+				json.mname = "ITD"
 				break
 			case common.dtnloss:
 				json.class = common.mclassnloss
-				json.mname = 'N-loss'
+				json.mname = "N-loss"
 				break
 			case common.dtcloss:
 				json.class = common.mclasscloss
-				json.mname = 'C-loss'
+				json.mname = "C-loss"
 				break
 			case common.dtdel:
 				json.class = common.mclassdel
-				json.mname = 'Del'
+				json.mname = "Del"
 				break
 			case common.dtsv:
 				json.class = common.mclasssv
-				json.mname = 'SV'
+				json.mname = "SV"
 				break
 			default:
-				badlines.push([i, 'unknown datatype', lst])
+				badlines.push([i, "unknown datatype", lst])
 				return
 		}
 		// record only about a single gene
 		if (!json.gene) {
-			badlines.push([i, 'json.gene missing', lst])
+			badlines.push([i, "json.gene missing", lst])
 			return
 		}
 		flag.good++
 		for (const k in m) {
-			if (k != 'jsontext') {
+			if (k != "jsontext") {
 				json[k] = m[k]
 			}
 		}
-		const n = flag.geneToUpper ? json.gene.toUpperCase() : json.gene.toUpperCase()
+		const n = flag.geneToUpper
+			? json.gene.toUpperCase()
+			: json.gene.toUpperCase()
 		if (!flag.data[n]) {
 			flag.data[n] = []
 		}
@@ -148,7 +150,7 @@ function duplicate(lst) {
 	for (const pair of lst) {
 		const p = { a: {}, b: {} }
 		for (const k in pair) {
-			if (k != 'a' && k != 'b') p[k] = pair[k]
+			if (k != "a" && k != "b") p[k] = pair[k]
 		}
 		for (const k in pair.a) {
 			p.a[k] = pair.a[k]

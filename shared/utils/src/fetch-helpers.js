@@ -1,6 +1,6 @@
-import { hash } from './hash.js'
-import { encode } from './urljson.js'
-import { deepFreeze } from './helpers.js'
+import { hash } from "./hash.js"
+import { encode } from "./urljson.js"
+import { deepFreeze } from "./helpers.js"
 
 /*
 	ezFetch()
@@ -20,12 +20,12 @@ import { deepFreeze } from './helpers.js'
 */
 export async function ezFetch(_url, init = {}, opts = {}) {
 	const url = opts.autoMethod ? mayAdjustRequest(_url, init) : _url
-	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
+	if (typeof init.body === "object") init.body = JSON.stringify(init.body)
 
-	return fetch(url, init).then(async r => {
+	return fetch(url, init).then(async (r) => {
 		const response = await processResponse(r)
 		if (!r.ok) {
-			console.log('ezFetch error ' + r.status)
+			console.log("ezFetch error " + r.status)
 			console.log(response)
 			throw response
 		}
@@ -34,14 +34,15 @@ export async function ezFetch(_url, init = {}, opts = {}) {
 }
 
 function mayAdjustRequest(url, init) {
-	const method = init.method?.toUpperCase() || 'GET'
-	if (method == 'POST') {
+	const method = init.method?.toUpperCase() || "GET"
+	if (method == "POST") {
 		if (!init.headers) init.headers = {}
 		if (init.body) {
-			if (!init.headers['content-type']) init.headers['content-type'] = 'application/json'
-			if (init.headers['content-type'].toLowerCase() == 'application/json') {
+			if (!init.headers["content-type"])
+				init.headers["content-type"] = "application/json"
+			if (init.headers["content-type"].toLowerCase() == "application/json") {
 				// if consumer code has pre-encoded the body, parse to verify correctness
-				if (typeof init.body == 'string') init.body = JSON.parse(init.body)
+				if (typeof init.body == "string") init.body = JSON.parse(init.body)
 				init.body = JSON.stringify(init.body)
 			}
 		}
@@ -49,9 +50,9 @@ function mayAdjustRequest(url, init) {
 	}
 	// default to GET method per native fetch
 	if (init.body) {
-		if (typeof init.body != 'object') throw `init.body should be an object`
+		if (typeof init.body != "object") throw `init.body should be an object`
 		// init.body should be an object, to be converted to GET URL search parameter strings
-		if (!url.includes('?')) url += '?'
+		if (!url.includes("?")) url += "?"
 		return `${url}${encode(init.body)}`
 	}
 }
@@ -68,9 +69,9 @@ export async function processResponse(r) {
 	// if (!r.ok) {
 	//   throw new Error(`HTTP error! status: ${r.status}`)
 	// }
-	const ct = r.headers.get('content-type') // content type is always present
+	const ct = r.headers.get("content-type") // content type is always present
 	if (!ct) throw `missing response.header['content-type']`
-	if (ct.includes('/json')) {
+	if (ct.includes("/json")) {
 		const payload = await r.json()
 		// server should use a standard HTTP response status 400+, 500+
 		// so that !r.ok will already be caught when wrapping fetch with try-catch
@@ -78,14 +79,14 @@ export async function processResponse(r) {
 		// if (payload.status === 'error') throw payload.message || payload
 		return payload
 	}
-	if (ct.includes('/text') || ct.includes('text/')) {
+	if (ct.includes("/text") || ct.includes("text/")) {
 		return r.text()
 	}
-	if (ct.includes('multipart')) {
-		if (ct.startsWith('multipart/form-data')) return processFormData(r)
+	if (ct.includes("multipart")) {
+		if (ct.startsWith("multipart/form-data")) return processFormData(r)
 		else throw `cannot handle response content-type: '${ct}'`
 	}
-	if (ct == 'application/x-ndjson-nestedkey') {
+	if (ct == "application/x-ndjson-nestedkey") {
 		return processNDJSON_nestedKey(r)
 	}
 	// call blob() as catch-all
@@ -116,12 +117,12 @@ export async function processFormData(res) {
 		for (const [key, value] of form.entries()) {
 			if (value.type) {
 				// value is a Blob
-				data[key] = { headers: { 'content-type': value.type }, body: value }
+				data[key] = { headers: { "content-type": value.type }, body: value }
 			} else {
 				// value is a string, assume to be application/x-jsonlines (one json encoded value per line)
 				// and convert into an array of json-decoded values
-				const body = !value ? [] : value.trim().split('\n').map(JSON.parse)
-				data[key] = { headers: { 'content-type': 'application/json' }, body }
+				const body = !value ? [] : value.trim().split("\n").map(JSON.parse)
+				data[key] = { headers: { "content-type": "application/json" }, body }
 			}
 		}
 		return data
@@ -136,7 +137,7 @@ async function processNDJSON_nestedKey(r) {
 	const reader = stream.getReader()
 	let rootObj = {}
 
-	let buffer = ''
+	let buffer = ""
 
 	while (true) {
 		const { value, done } = await reader.read()
@@ -146,7 +147,7 @@ async function processNDJSON_nestedKey(r) {
 		buffer += value
 
 		// 3. Split by newline
-		let parts = buffer.split('\n')
+		let parts = buffer.split("\n")
 
 		// 4. Keep the last partial line in the buffer
 		buffer = parts.pop()
@@ -199,7 +200,7 @@ const cacheLifetime = 1000 * 60 * 5
     - for server side usage, client may be `xfetch()`, `ky` or other libraries 
 */
 export async function memFetch(url, init, opts = {}) {
-	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
+	if (typeof init.body === "object") init.body = JSON.stringify(init.body)
 	const dataKey = opts.q || (await getDataName(url, init))
 	const { response, exp } = dataCache.get(dataKey) || {}
 	const now = Date.now()
@@ -217,35 +218,48 @@ export async function memFetch(url, init, opts = {}) {
 			// IMPORTANT: do not await so that this same promise may be reused
 			// by subsequent requests with the same dataKey
 			result = opts.client
-				? opts.client(url, init, Object.assign(opts, { client: undefined })).then(response => {
-						// replace the cached promise result with the actual data,
-						// since persisting a cached promise for a long time is likely not best practice
-						dataCache.set(dataKey, { response, exp: Date.now() + cacheLifetime })
-						return response
-				  })
+				? opts
+						.client(url, init, Object.assign(opts, { client: undefined }))
+						.then((response) => {
+							// replace the cached promise result with the actual data,
+							// since persisting a cached promise for a long time is likely not best practice
+							dataCache.set(dataKey, {
+								response,
+								exp: Date.now() + cacheLifetime,
+							})
+							return response
+						})
 				: fetch(url, init)
-						.then(async r => {
+						.then(async (r) => {
 							const response = await processResponse(r)
 							if (!r.ok) {
 								console.trace(response)
 								throw (
-									'memFetch error ' +
+									"memFetch error " +
 									r.status +
-									': ' +
-									(typeof response == 'object' ? response.message || response.error : response)
+									": " +
+									(typeof response == "object"
+										? response.message || response.error
+										: response)
 								)
 							}
 							// replace the cached promise result with the actual data,
 							// since persisting a cached promise for a long time is likely not best practice
-							dataCache.set(dataKey, { response: deepFreeze(response), exp: Date.now() + cacheLifetime })
+							dataCache.set(dataKey, {
+								response: deepFreeze(response),
+								exp: Date.now() + cacheLifetime,
+							})
 							return response
 						})
-						.catch(e => {
+						.catch((e) => {
 							if (dataCache.get(dataKey)) dataCache.delete(dataKey)
 							throw e
 						})
 
-			dataCache.set(dataKey, { response: result, exp: Date.now() + cacheLifetime })
+			dataCache.set(dataKey, {
+				response: result,
+				exp: Date.now() + cacheLifetime,
+			})
 			manageCacheSize(now)
 			return result
 		} catch (e) {
@@ -269,7 +283,9 @@ export function manageCacheSize(_now) {
 		else keyExp.push({ key, exp: result.exp })
 	}
 	if (dataCache.size > maxNumOfDataKeys) {
-		const oldestEntries = keyExp.sort((a, b) => a.exp - b.exp).slice(maxNumOfDataKeys)
+		const oldestEntries = keyExp
+			.sort((a, b) => a.exp - b.exp)
+			.slice(maxNumOfDataKeys)
 		for (const entry of oldestEntries) dataCache.delete(entry.key)
 	}
 }
@@ -280,7 +296,14 @@ export function manageCacheSize(_now) {
 */
 export async function getDataName(url, init) {
 	// IMPORTANT: must ensure dataName is unique to either public or logged-in user
-	const dataName = url + ' | ' + init.method + ' | ' + init.body + ' | ' + JSON.stringify(init.headers)
+	const dataName =
+		url +
+		" | " +
+		init.method +
+		" | " +
+		init.body +
+		" | " +
+		JSON.stringify(init.headers)
 	return await hash(dataName)
 }
 
@@ -290,9 +313,11 @@ export function clearMemFetchDataCache(opts = {}) {
 		dataCache.clear()
 		return
 	}
-	if (typeof opts.serverData != 'object') throw `opts.serverData is not an object`
+	if (typeof opts.serverData != "object")
+		throw `opts.serverData is not an object`
 	for (const k of Object.keys(opts.serverData)) {
 		delete opts.serverData[k]
 	}
-	if (optsServerDataNames.has(opts.serverData)) optsServerDataNames.delete(opts.serverData)
+	if (optsServerDataNames.has(opts.serverData))
+		optsServerDataNames.delete(opts.serverData)
 }

@@ -29,8 +29,8 @@ using Map for lp, nodes etc will cause memory issue, thus the use of simple obje
 to-do: verify this works after a reorg
 */
 
-const hardcode_root = 'root'
-const hierarchy_spacer = '...'
+const hardcode_root = "root"
+const hierarchy_spacer = "..."
 
 export function stratinput(lst, levels) {
 	const lp = Object.create(null)
@@ -75,7 +75,7 @@ export function stratinput(lst, levels) {
 			}
 			if (!(thisv in nodes)) {
 				const n = {
-					lst: []
+					lst: [],
 				}
 				if (lev.full) {
 					n.full = m[lev.full]
@@ -119,7 +119,7 @@ export function stratinput(lst, levels) {
 			id1: n.id1,
 			v1: n.v1,
 			id2: n.id2,
-			v2: n.v2
+			v2: n.v2,
 		})
 	}
 	return nlst

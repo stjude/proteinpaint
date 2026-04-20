@@ -5,36 +5,36 @@ import {
 	dtmetaboliteintensity,
 	dtproteomeabundance,
 	TermTypeGroups,
-	dtTerms
-} from './common.js'
-import { TermTypeGroups as TermTypeGroups2 } from './common.js'
+	dtTerms,
+} from "./common.js"
+import { TermTypeGroups as TermTypeGroups2 } from "./common.js"
 const ROOT_SAMPLE_TYPE = 1
 const DEFAULT_SAMPLE_TYPE = 2
 const NumericModes = {
-	continuous: 'continuous',
-	discrete: 'discrete'
+	continuous: "continuous",
+	discrete: "discrete",
 }
-const CATEGORICAL = 'categorical'
-const CONDITION = 'condition'
-const DATE = 'date'
-const DNA_METHYLATION = 'dnaMethylation'
-const FLOAT = 'float'
-const GENE_VARIANT = 'geneVariant'
-const GENE_EXPRESSION = 'geneExpression'
-const ISOFORM_EXPRESSION = 'isoformExpression'
-const INTEGER = 'integer'
-const METABOLITE_INTENSITY = 'metaboliteIntensity'
-const MULTIVALUE = 'multivalue'
-const SAMPLELST = 'samplelst'
-const SINGLECELL_CELLTYPE = 'singleCellCellType'
-const SINGLECELL_GENE_EXPRESSION = 'singleCellGeneExpression'
-const SNP = 'snp'
-const SNP_LIST = 'snplst'
-const SNP_LOCUS = 'snplocus'
-const SSGSEA = 'ssGSEA'
-const SURVIVAL = 'survival'
-const TERM_COLLECTION = 'termCollection'
-const PROTEOME_ABUNDANCE = 'proteomeAbundance'
+const CATEGORICAL = "categorical"
+const CONDITION = "condition"
+const DATE = "date"
+const DNA_METHYLATION = "dnaMethylation"
+const FLOAT = "float"
+const GENE_VARIANT = "geneVariant"
+const GENE_EXPRESSION = "geneExpression"
+const ISOFORM_EXPRESSION = "isoformExpression"
+const INTEGER = "integer"
+const METABOLITE_INTENSITY = "metaboliteIntensity"
+const MULTIVALUE = "multivalue"
+const SAMPLELST = "samplelst"
+const SINGLECELL_CELLTYPE = "singleCellCellType"
+const SINGLECELL_GENE_EXPRESSION = "singleCellGeneExpression"
+const SNP = "snp"
+const SNP_LIST = "snplst"
+const SNP_LOCUS = "snplocus"
+const SSGSEA = "ssGSEA"
+const SURVIVAL = "survival"
+const TERM_COLLECTION = "termCollection"
+const PROTEOME_ABUNDANCE = "proteomeAbundance"
 const TermTypes = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
@@ -56,9 +56,9 @@ const TermTypes = {
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
 	DATE,
-	TERM_COLLECTION
+	TERM_COLLECTION,
 }
-const dtTermTypes = new Set(dtTerms.map(t => t.type))
+const dtTermTypes = new Set(dtTerms.map((t) => t.type))
 for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType
 }
@@ -67,7 +67,7 @@ const TermTypes2Dt = {
 	[SSGSEA]: dtssgsea,
 	[DNA_METHYLATION]: dtdnamethylation,
 	[METABOLITE_INTENSITY]: dtmetaboliteintensity,
-	[PROTEOME_ABUNDANCE]: dtproteomeabundance
+	[PROTEOME_ABUNDANCE]: dtproteomeabundance,
 }
 const typeGroup = {
 	[CATEGORICAL]: TermTypeGroups.DICTIONARY_VARIABLES,
@@ -90,7 +90,7 @@ const typeGroup = {
 	[PROTEOME_ABUNDANCE]: TermTypeGroups.PROTEOME_ABUNDANCE,
 	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
-	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
 }
 const nonDictTypes = /* @__PURE__ */ new Set([
 	SNP,
@@ -104,7 +104,7 @@ const nonDictTypes = /* @__PURE__ */ new Set([
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_CELLTYPE,
-	SINGLECELL_GENE_EXPRESSION
+	SINGLECELL_GENE_EXPRESSION,
 ])
 for (const dtTermType of dtTermTypes) {
 	nonDictTypes.add(TermTypes[dtTermType.toUpperCase()])
@@ -119,11 +119,14 @@ const numericTypes = /* @__PURE__ */ new Set([
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
-	DATE
+	DATE,
 ])
 const annoNumericTypes = /* @__PURE__ */ new Set([INTEGER, FLOAT, DATE])
 const categoricalTypes = /* @__PURE__ */ new Set([CATEGORICAL, SNP])
-const singleCellTerms = /* @__PURE__ */ new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION])
+const singleCellTerms = /* @__PURE__ */ new Set([
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+])
 function isSingleCellTerm(term) {
 	if (!term) return false
 	return singleCellTerms.has(term.type)
@@ -140,18 +143,23 @@ function isDictionaryType(type) {
 	return !isNonDictionaryType(type)
 }
 function isNonDictionaryType(type) {
-	if (!type) throw new Error('Type is not defined')
+	if (!type) throw new Error("Type is not defined")
 	return nonDictTypes.has(type)
 }
 function isNumTermCollection(term) {
-	if (!term || !term.type) throw new Error('Term or term type is not defined')
+	if (!term || !term.type) throw new Error("Term or term type is not defined")
 	return term.type === TERM_COLLECTION
 }
 function equals(t1, t2) {
-	if (!t1) throw new Error('First term is not defined ')
-	if (!t2) throw new Error('Second term is not defined ')
+	if (!t1) throw new Error("First term is not defined ")
+	if (!t2) throw new Error("Second term is not defined ")
 	if (t1.type !== t2.type) return false
-	if (isDictionaryType(t1.type) && isDictionaryType(t2.type) && t1.type != SAMPLELST) return t1.id === t2.id
+	if (
+		isDictionaryType(t1.type) &&
+		isDictionaryType(t2.type) &&
+		t1.type != SAMPLELST
+	)
+		return t1.id === t2.id
 	switch (t1.type) {
 		case GENE_EXPRESSION:
 			return t1.gene == t2.gene
@@ -165,7 +173,10 @@ function equals(t1, t2) {
 		case PROTEOME_ABUNDANCE:
 			return t1.name == t2.name
 		case GENE_VARIANT:
-			return t1.gene == t2.gene || (t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
+			return (
+				t1.gene == t2.gene ||
+				(t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop)
+			)
 		// TO DO: Add more cases
 		// case SNP_LIST:
 		// case SNP_LOCUS:
@@ -176,15 +187,19 @@ function equals(t1, t2) {
 }
 function getBin(lst, value) {
 	let bin = lst.findIndex(
-		b => (b.startunbounded && value < b.stop) || (b.startunbounded && b.stopinclusive && value == b.stop)
+		(b) =>
+			(b.startunbounded && value < b.stop) ||
+			(b.startunbounded && b.stopinclusive && value == b.stop)
 	)
 	if (bin == -1)
 		bin = lst.findIndex(
-			b => (b.stopunbounded && value > b.start) || (b.stopunbounded && b.startinclusive && value == b.start)
+			(b) =>
+				(b.stopunbounded && value > b.start) ||
+				(b.stopunbounded && b.startinclusive && value == b.start)
 		)
 	if (bin == -1)
 		bin = lst.findIndex(
-			b =>
+			(b) =>
 				(value > b.start && value < b.stop) ||
 				(b.startinclusive && value == b.start) ||
 				(b.stopinclusive && value == b.stop)
@@ -195,7 +210,7 @@ function getSampleType(term, ds) {
 	if (!term) return null
 	if (term.type && isNonDictionaryType(term.type)) return DEFAULT_SAMPLE_TYPE
 	if (term.id) return ds.cohort.termdb.term2SampleType.get(term.id)
-	if (term.type == 'samplelst') {
+	if (term.type == "samplelst") {
 		const key = Object.keys(term.values)[0]
 		const sampleId = term.values[key].list[0]?.sampleId
 		if (sampleId) return ds.sampleId2Type.get(Number(sampleId) || sampleId)
@@ -217,27 +232,27 @@ function getParentType(types, ds) {
 	return null
 }
 const typeMap = {
-	categorical: 'Categorical',
-	condition: 'Condition',
-	float: 'Numerical',
-	integer: 'Numerical',
-	geneExpression: 'Gene Expression',
-	isoformExpression: 'Isoform Expression',
-	ssGSEA: 'Geneset Expression',
-	dnaMethylation: 'DNA Methylation',
-	geneVariant: 'Gene Variant',
-	metaboliteIntensity: 'Metabolite Intensity',
-	proteomeAbundance: 'Proteome Abundance',
-	multivalue: 'Multi Value',
-	singleCellGeneExpression: 'Single Cell, Gene Expression',
-	singleCellCellType: 'Single Cell, Cell Type',
-	snplocus: 'SNP Locus',
-	snp: 'SNP',
-	snplst: 'SNP List',
-	termCollection: 'Term Collection'
+	categorical: "Categorical",
+	condition: "Condition",
+	float: "Numerical",
+	integer: "Numerical",
+	geneExpression: "Gene Expression",
+	isoformExpression: "Isoform Expression",
+	ssGSEA: "Geneset Expression",
+	dnaMethylation: "DNA Methylation",
+	geneVariant: "Gene Variant",
+	metaboliteIntensity: "Metabolite Intensity",
+	proteomeAbundance: "Proteome Abundance",
+	multivalue: "Multi Value",
+	singleCellGeneExpression: "Single Cell, Gene Expression",
+	singleCellCellType: "Single Cell, Cell Type",
+	snplocus: "SNP Locus",
+	snp: "SNP",
+	snplst: "SNP List",
+	termCollection: "Term Collection",
 }
 function termType2label(type) {
-	return typeMap[type] || 'Unknown term type'
+	return typeMap[type] || "Unknown term type"
 }
 function getDateFromNumber(value) {
 	const year = Math.floor(value)
@@ -250,9 +265,9 @@ function getDateFromNumber(value) {
 const oneDayTime = 24 * 60 * 60 * 1e3
 function getDateStrFromNumber(value) {
 	const date = getDateFromNumber(value)
-	return date.toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long'
+	return date.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
 	})
 }
 function getNumberFromDateStr(str) {
@@ -319,5 +334,5 @@ export {
 	isSingleCellTerm,
 	numericTypes,
 	termType2label,
-	typeGroup
+	typeGroup,
 }

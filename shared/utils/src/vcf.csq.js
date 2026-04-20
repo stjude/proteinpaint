@@ -1,4 +1,4 @@
-import { vepinfo } from './common.js'
+import { vepinfo } from "./common.js"
 /*
 parse csq field from a variant line, not header
 CSQ header must have already been parsed
@@ -57,8 +57,8 @@ export function parse_CSQ(str, header, m) {
 	if (!header) {
 		return null
 	}
-	for (const thisannotation of str.split(',')) {
-		const lst = thisannotation.replace(/&/g, ',').split('|')
+	for (const thisannotation of str.split(",")) {
+		const lst = thisannotation.replace(/&/g, ",").split("|")
 
 		const o = {}
 
@@ -86,7 +86,7 @@ export function parse_CSQ(str, header, m) {
 			}
 		}
 		if (!allele) {
-			if (o.Allele == '-') {
+			if (o.Allele == "-") {
 				// deletion
 				if (m.mlst) {
 					if (m.mlst.length == 1) {
@@ -120,8 +120,8 @@ export function parse_CSQ(str, header, m) {
 		o._gene = o.SYMBOL || o.Gene
 
 		// isoform
-		if (o.Feature_type && o.Feature_type == 'Transcript') {
-			o._isoform = o.Feature.split('.')[0] // remove version
+		if (o.Feature_type && o.Feature_type == "Transcript") {
+			o._isoform = o.Feature.split(".")[0] // remove version
 		} else {
 			o._isoform = o._gene
 		}
@@ -139,11 +139,11 @@ export function parse_CSQ(str, header, m) {
 		}
 		// mname
 		if (o.HGVSp) {
-			o._mname = decodeURIComponent(o.HGVSp.substr(o.HGVSp.indexOf(':') + 1))
+			o._mname = decodeURIComponent(o.HGVSp.substr(o.HGVSp.indexOf(":") + 1))
 		} else if (o.Protein_position && o.Amino_acids) {
 			o._mname = decodeURIComponent(o.Protein_position + o.Amino_acids)
 		} else if (o.HGVSc) {
-			o._mname = o.HGVSc.substr(o.HGVSc.indexOf(':') + 1)
+			o._mname = o.HGVSc.substr(o.HGVSc.indexOf(":") + 1)
 		} else if (o.Existing_variation) {
 			o._name = o.Existing_variation
 		} else {

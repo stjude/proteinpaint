@@ -1,8 +1,8 @@
-import { mclass } from './common.js'
-import { dissect_INFO } from './vcf.info.js'
-import { parse_CSQ } from './vcf.csq.js'
-import { parse_ANN } from './vcf.ann.js'
-import { getVariantType } from './vcf.type.js'
+import { mclass } from "./common.js"
+import { dissect_INFO } from "./vcf.info.js"
+import { parse_CSQ } from "./vcf.csq.js"
+import { parse_ANN } from "./vcf.ann.js"
+import { getVariantType } from "./vcf.type.js"
 
 /*
 Only for parsing vcf files
@@ -36,30 +36,30 @@ export function vcfparsemeta(lines) {
 		hasformat = false
 
 	for (const line of lines) {
-		if (!line.startsWith('#')) {
+		if (!line.startsWith("#")) {
 			continue
 		}
 
-		if (line.startsWith('#C')) {
+		if (line.startsWith("#C")) {
 			// header, get samples
-			sample = line.split('\t').slice(9)
+			sample = line.split("\t").slice(9)
 			continue
 		}
 
-		if (line.startsWith('##INFO')) {
+		if (line.startsWith("##INFO")) {
 			const e = tohash(line.substring(8, line.length - 1), info)
 			if (e) {
-				errlst.push('INFO error: ' + e)
+				errlst.push("INFO error: " + e)
 			} else {
 				hasinfo = true
 			}
 			continue
 		}
 
-		if (line.startsWith('##FORMAT')) {
+		if (line.startsWith("##FORMAT")) {
 			const e = tohash(line.substring(10, line.length - 1), format)
 			if (e) {
-				errlst.push('FORMAT error: ' + e)
+				errlst.push("FORMAT error: " + e)
 			} else {
 				hasformat = true
 			}
@@ -77,9 +77,9 @@ export function vcfparsemeta(lines) {
 
 	// reserved INFO fields
 	if (info.CSQ) {
-		const lst = info.CSQ.Description.split(' Format: ')
+		const lst = info.CSQ.Description.split(" Format: ")
 		if (lst[1]) {
-			const lst2 = lst[1].split('|')
+			const lst2 = lst[1].split("|")
 			if (lst2.length > 1) {
 				// fix csq headers so to allow configuring show/hide of csq fields
 				info.CSQ.csqheader = []
@@ -88,17 +88,17 @@ export function vcfparsemeta(lines) {
 					info.CSQ.csqheader.push(attr)
 				}
 			} else {
-				errlst.push('unknown format for CSQ header: ' + info.CSQ.Description)
+				errlst.push("unknown format for CSQ header: " + info.CSQ.Description)
 			}
 		} else {
-			errlst.push('unknown format for CSQ header: ' + info.CSQ.Description)
+			errlst.push("unknown format for CSQ header: " + info.CSQ.Description)
 		}
 	}
 
 	if (info.ANN) {
 		const lst = info.ANN.Description.split("'")
 		if (lst[1]) {
-			const lst2 = lst[1].split(' | ')
+			const lst2 = lst[1].split(" | ")
 			if (lst2.length) {
 				info.ANN.annheader = []
 				for (const s of lst2) {
@@ -106,14 +106,25 @@ export function vcfparsemeta(lines) {
 					info.ANN.annheader.push(attr)
 				}
 			} else {
-				errlst.push('no " | " joined annotation fields for ANN (snpEff annotation): ' + info.ANN.Description)
+				errlst.push(
+					'no " | " joined annotation fields for ANN (snpEff annotation): ' +
+						info.ANN.Description
+				)
 			}
 		} else {
-			errlst.push('no single-quote enclosed annotation fields for ANN (snpEff annotation): ' + info.ANN.Description)
+			errlst.push(
+				"no single-quote enclosed annotation fields for ANN (snpEff annotation): " +
+					info.ANN.Description
+			)
 		}
 	}
 
-	return [hasinfo ? info : null, hasformat ? format : null, sampleobjlst, errlst.length ? errlst : null]
+	return [
+		hasinfo ? info : null,
+		hasformat ? format : null,
+		sampleobjlst,
+		errlst.length ? errlst : null,
+	]
 }
 
 export function vcfparseline(line, vcf) {
@@ -140,22 +151,22 @@ export function vcfparseline(line, vcf) {
 			altinfo
 	*/
 
-	const lst = line.split('\t')
+	const lst = line.split("\t")
 	if (lst.length < 8) {
 		// no good
-		return ['line has less than 8 fields', null, null]
+		return ["line has less than 8 fields", null, null]
 	}
 
 	const rawpos = Number.parseInt(lst[2 - 1])
 	if (!Number.isInteger(rawpos)) {
-		return ['invalid value for genomic position', null, null]
+		return ["invalid value for genomic position", null, null]
 	}
 
 	const refallele = lst[4 - 1]
 
 	const m = {
 		vcf_ID: lst[3 - 1],
-		chr: (vcf.nochr ? 'chr' : '') + lst[1 - 1],
+		chr: (vcf.nochr ? "chr" : "") + lst[1 - 1],
 		pos: rawpos - 1,
 		ref: refallele,
 		//refstr:refallele, // e.g. GA>GCC, ref:A, refstr:GA, "refstr" is required for matching in FORMAT
@@ -168,18 +179,18 @@ export function vcfparseline(line, vcf) {
 				also allows GT allele index to work
 				*/
 				allele: refallele,
-				sampledata: []
-			}
+				sampledata: [],
+			},
 		],
 
 		info: {}, // locus info, do not contain allele info
 
-		name: lst[3 - 1] == '.' ? null : lst[3 - 1]
+		name: lst[3 - 1] == "." ? null : lst[3 - 1],
 	}
 
 	// parse alt
 	const altinvalid = []
-	for (const alt of lst[5 - 1].split(',')) {
+	for (const alt of lst[5 - 1].split(",")) {
 		const a = {
 			ref: m.ref, // may be corrected just below!
 			allele: alt,
@@ -187,10 +198,10 @@ export function vcfparseline(line, vcf) {
 			allele_original: alt,
 			sampledata: [],
 			_m: m,
-			info: {} // allele info, do not contain locus info
+			info: {}, // allele info, do not contain locus info
 		}
 		m.alleles.push(a)
-		if (alt[0] == '<') {
+		if (alt[0] == "<") {
 			/*
 			symbolic allele, show text within <> as name
 			FIXME match INFO
@@ -225,7 +236,7 @@ export function vcfparseline(line, vcf) {
 	m.alleles.shift()
 
 	// info
-	const tmp = lst[8 - 1] == '.' ? [] : dissect_INFO(lst[8 - 1])
+	const tmp = lst[8 - 1] == "." ? [] : dissect_INFO(lst[8 - 1])
 	let badinfokeys = []
 
 	if (vcf.info) {
@@ -239,20 +250,20 @@ export function vcfparseline(line, vcf) {
 	for (const a of m.alleles) {
 		const m2 = {}
 		for (const k in m) {
-			if (k != 'alleles') {
+			if (k != "alleles") {
 				m2[k] = m[k]
 			}
 		}
 		for (const k in a) {
-			if (k == 'allele') {
+			if (k == "allele") {
 				m2.alt = a[k]
-			} else if (k == 'info') {
+			} else if (k == "info") {
 				m2.altinfo = a[k]
 			} else {
 				m2[k] = a[k]
 			}
 		}
-		if (!m2.issymbolicallele && m2.alt != 'NON_REF') {
+		if (!m2.issymbolicallele && m2.alt != "NON_REF") {
 			m2.type = getVariantType(m2.ref, m2.alt)
 			/*
 			// valid alt allele, apply Dr. J's cool method
@@ -265,15 +276,19 @@ export function vcfparseline(line, vcf) {
 		mlst.push(m2)
 	}
 	return [
-		badinfokeys.length ? 'unknown info keys: ' + badinfokeys.join(',') : null,
+		badinfokeys.length ? "unknown info keys: " + badinfokeys.join(",") : null,
 		mlst,
-		altinvalid.length > 0 ? altinvalid : null
+		altinvalid.length > 0 ? altinvalid : null,
 	]
 }
 
 function correctRefAlt(p, ref, alt) {
 	// for oligos, always trim the last identical base
-	while (ref.length > 1 && alt.length > 1 && ref[ref.length - 1] == alt[alt.length - 1]) {
+	while (
+		ref.length > 1 &&
+		alt.length > 1 &&
+		ref[ref.length - 1] == alt[alt.length - 1]
+	) {
 		ref = ref.substr(0, ref.length - 1)
 		alt = alt.substr(0, alt.length - 1)
 	}
@@ -296,17 +311,17 @@ function parse_FORMAT2(lst, m, vcf) {
 		.allele_original
 		.sampledata[]     blank array
 	*/
-	const formatfields = lst[9 - 1].split(':')
+	const formatfields = lst[9 - 1].split(":")
 
 	for (let _sampleidx = 9; _sampleidx < lst.length; _sampleidx++) {
 		// for each sample
 
-		const valuelst = lst[_sampleidx].split(':')
+		const valuelst = lst[_sampleidx].split(":")
 		{
 			// tell if this sample have any data in this line (variant), if .:., then skip
 			let none = true
 			for (const v of valuelst) {
-				if (v != '.') {
+				if (v != ".") {
 					none = false
 					break
 				}
@@ -336,10 +351,10 @@ function parse_FORMAT2(lst, m, vcf) {
 					sobj[k] = vcf.samples[sampleidx][k]
 				}
 			} else {
-				sobj.name = 'missing_samplename_from_vcf_header'
+				sobj.name = "missing_samplename_from_vcf_header"
 			}
 			m.alleles[i].sampledata.push({
-				sampleobj: sobj
+				sampleobj: sobj,
 			})
 		}
 
@@ -348,18 +363,18 @@ function parse_FORMAT2(lst, m, vcf) {
 
 			const field = formatfields[fi]
 			const value = valuelst[fi]
-			if (value == '.') {
+			if (value == ".") {
 				// no value for this field
 				continue
 			}
 
-			if (field == 'GT') {
-				const splitter = value.indexOf('/') != -1 ? '/' : '|'
+			if (field == "GT") {
+				const splitter = value.indexOf("/") != -1 ? "/" : "|"
 				let gtsum = 0 // for calculating gtallref=true, old
 				let unknowngt = false // if any is '.', then won't calculate gtallref
 				const gtalleles = []
 				for (const i of value.split(splitter)) {
-					if (i == '.') {
+					if (i == ".") {
 						unknowngt = true
 						continue
 					}
@@ -399,20 +414,21 @@ function parse_FORMAT2(lst, m, vcf) {
 			if (!formatdesc) {
 				// unspecified field, put to all alt alleles
 				for (let i = 1; i < m.alleles.length; i++) {
-					m.alleles[i].sampledata[m.alleles[i].sampledata.length - 1][field] = value
+					m.alleles[i].sampledata[m.alleles[i].sampledata.length - 1][field] =
+						value
 				}
 				continue
 			}
 
-			const isinteger = formatdesc.Type == 'Integer'
-			const isfloat = formatdesc.Type == 'Float'
+			const isinteger = formatdesc.Type == "Integer"
+			const isfloat = formatdesc.Type == "Float"
 
-			if ((formatdesc.Number && formatdesc.Number == 'R') || field == 'AD') {
+			if ((formatdesc.Number && formatdesc.Number == "R") || field == "AD") {
 				/*
 				per-allele value, including ref
 				v4.1 has AD not with "R", must process as R
 				*/
-				const fvlst = value.split(',').map(i => {
+				const fvlst = value.split(",").map((i) => {
 					if (isinteger) return Number.parseInt(i)
 					if (isfloat) return Number.parseFloat(i)
 					return i
@@ -430,9 +446,9 @@ function parse_FORMAT2(lst, m, vcf) {
 				}
 				continue
 			}
-			if (formatdesc.Number && formatdesc.Number == 'A') {
+			if (formatdesc.Number && formatdesc.Number == "A") {
 				// per alt-allele value
-				const fvlst = value.split(',').map(i => {
+				const fvlst = value.split(",").map((i) => {
 					if (isinteger) return Number.parseInt(i)
 					if (isfloat) return Number.parseFloat(i)
 					return i
@@ -451,7 +467,8 @@ function parse_FORMAT2(lst, m, vcf) {
 			}
 			// otherwise, append this field to all alt
 			for (let i = 1; i < m.alleles.length; i++) {
-				m.alleles[i].sampledata[m.alleles[i].sampledata.length - 1][field] = value
+				m.alleles[i].sampledata[m.alleles[i].sampledata.length - 1][field] =
+					value
 			}
 		}
 	}
@@ -489,17 +506,17 @@ function tohash(s, hash) {
 				h[k] = s.substring(thisstart, i)
 				k = null
 			} else {
-				err.push('k undefined before double quotes')
+				err.push("k undefined before double quotes")
 			}
 			prevdoublequote = true
 			continue
 		}
-		if (s[i] == '=') {
+		if (s[i] == "=") {
 			k = s.substring(prev, i)
 			prev = i + 1
 			continue
 		}
-		if (s[i] == ',') {
+		if (s[i] == ",") {
 			if (prevdoublequote) {
 				prevdoublequote = false
 			} else {
@@ -507,7 +524,7 @@ function tohash(s, hash) {
 					h[k] = s.substring(prev, i)
 					k = null
 				} else {
-					err.push('k undefined')
+					err.push("k undefined")
 				}
 			}
 			prev = i + 1
@@ -520,9 +537,9 @@ function tohash(s, hash) {
 	if (h.ID) {
 		hash[h.ID] = h
 	} else {
-		return 'no ID'
+		return "no ID"
 	}
-	if (err.length) return err.join('\n')
+	if (err.length) return err.join("\n")
 }
 
 function parse_INFO(tmp, m, vcf) {
@@ -546,14 +563,14 @@ function parse_INFO(tmp, m, vcf) {
 
 		////////////////// hard-coded fields
 
-		if (key == 'CSQ') {
+		if (key == "CSQ") {
 			const okay = parse_CSQ(value, vcf.info.CSQ.csqheader, m)
 			if (!okay) {
 				m.info[key] = value
 			}
 			continue
 		}
-		if (key == 'ANN') {
+		if (key == "ANN") {
 			const okay = parse_ANN(value, vcf.info.ANN.annheader, m)
 			if (!okay) {
 				m.info[key] = value
@@ -563,17 +580,17 @@ function parse_INFO(tmp, m, vcf) {
 
 		////////////////// end of hardcoded fields
 
-		if (vcf.info[key].Type == 'Flag') {
+		if (vcf.info[key].Type == "Flag") {
 			// flag has no value
 			m.info[key] = key
 			continue
 		}
 
 		const __number = vcf.info[key].Number
-		const isinteger = vcf.info[key].Type == 'Integer'
-		const isfloat = vcf.info[key].Type == 'Float'
+		const isinteger = vcf.info[key].Type == "Integer"
+		const isfloat = vcf.info[key].Type == "Float"
 
-		if (__number == '0') {
+		if (__number == "0") {
 			/*
 			no value, should be a Flag
 			*/
@@ -581,31 +598,39 @@ function parse_INFO(tmp, m, vcf) {
 			continue
 		}
 
-		if (__number == 'A') {
+		if (__number == "A") {
 			/*
 			per alt allele
 			*/
-			const tt = value.split(',')
+			const tt = value.split(",")
 			for (let j = 0; j < tt.length; j++) {
 				if (m.alleles[j]) {
-					m.alleles[j].info[key] = isinteger ? Number.parseInt(tt[j]) : isfloat ? Number.parseFloat(tt[j]) : tt[j]
+					m.alleles[j].info[key] = isinteger
+						? Number.parseInt(tt[j])
+						: isfloat
+						? Number.parseFloat(tt[j])
+						: tt[j]
 				}
 			}
 			continue
 		}
 
-		if (__number == 'R') {
+		if (__number == "R") {
 			/*
 			FIXME "R" is not considered, m.alleles only contain alt, which .info{} for each
 			the current datastructure does not support info for ref allele!
 			*/
 		}
 
-		if (__number == '1') {
+		if (__number == "1") {
 			/*
 			single value
 			*/
-			m.info[key] = isinteger ? Number.parseInt(value) : isfloat ? Number.parseFloat(value) : value
+			m.info[key] = isinteger
+				? Number.parseInt(value)
+				: isfloat
+				? Number.parseFloat(value)
+				: value
 			continue
 		}
 
@@ -616,7 +641,7 @@ function parse_INFO(tmp, m, vcf) {
 
 		// number of values unknown, "commas are permitted only as delimiters for lists of values"
 
-		const lst = value.split(',') // value is always array!!
+		const lst = value.split(",") // value is always array!!
 		if (isinteger) {
 			m.info[key] = lst.map(Number.parseInt)
 		} else if (isfloat) {

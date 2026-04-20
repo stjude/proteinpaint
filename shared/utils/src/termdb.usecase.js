@@ -3,26 +3,26 @@ import {
 	isNumericTerm,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
-	ISOFORM_EXPRESSION
-} from './terms.js'
+	ISOFORM_EXPRESSION,
+} from "./terms.js"
 
 export const graphableTypes = new Set([
-	'categorical',
-	'integer',
-	'float',
-	'condition',
-	'survival',
-	'snplst',
-	'snplocus',
-	'geneVariant',
-	'samplelst',
-	'geneExpression',
+	"categorical",
+	"integer",
+	"float",
+	"condition",
+	"survival",
+	"snplst",
+	"snplocus",
+	"geneVariant",
+	"samplelst",
+	"geneExpression",
 	ISOFORM_EXPRESSION,
-	'dtcnv',
-	'dtsnvindel',
-	'dtfusion',
-	'dtsv',
-	'date',
+	"dtcnv",
+	"dtsnvindel",
+	"dtfusion",
+	"dtsv",
+	"date",
 	TermTypes.SSGSEA,
 	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
@@ -30,7 +30,7 @@ export const graphableTypes = new Set([
 	SINGLECELL_GENE_EXPRESSION,
 	SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
-	TermTypes.TERM_COLLECTION
+	TermTypes.TERM_COLLECTION,
 ])
 
 /*
@@ -75,7 +75,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	const usecase = _usecase || {}
 
 	// may apply dataset specific override filter for a use case
-	if (typeof ds?.usecase?.[usecase.target] == 'function') {
+	if (typeof ds?.usecase?.[usecase.target] == "function") {
 		return ds.usecase[usecase.target](term, usecase)
 	}
 
@@ -86,41 +86,41 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 	const child_types = term.child_types || []
 	// default handling
 	switch (usecase.target) {
-		case 'barchart':
-		case 'violin':
-		case 'boxplot':
-		case 'summary':
-			if (term.type && term.type !== 'survival') uses.add('plot')
-			if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+		case "barchart":
+		case "violin":
+		case "boxplot":
+		case "summary":
+			if (term.type && term.type !== "survival") uses.add("plot")
+			if (hasAllowedChildTypes(child_types, ["survival"])) uses.add("branch")
 			return uses
 
-		case 'summaryInput':
-			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
-				if (term.type && term.type !== 'survival') uses.add('plot')
-				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+		case "summaryInput":
+			if (usecase.detail === "term2" || usecase.detail == "term0") {
+				if (term.type && term.type !== "survival") uses.add("plot")
+				if (hasAllowedChildTypes(child_types, ["survival"])) uses.add("branch")
 				return uses
 			} else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
-				if (!term.isleaf) uses.add('branch')
+				if (graphableTypes.has(term.type)) uses.add("plot")
+				if (!term.isleaf) uses.add("branch")
 				return uses
 			}
 
-		case 'matrix':
-			if (term.type) uses.add('plot')
-			if (!term.isleaf) uses.add('branch')
+		case "matrix":
+			if (term.type) uses.add("plot")
+			if (!term.isleaf) uses.add("branch")
 			return uses
 
-		case 'table':
-			if (usecase.detail == 'term') uses.add('plot')
-			if (child_types.length > 1) uses.add('branch')
+		case "table":
+			if (usecase.detail == "term") uses.add("plot")
+			if (child_types.length > 1) uses.add("branch")
 			return uses
 
-		case 'sampleScatter':
-			if (usecase.detail == 'numeric') {
+		case "sampleScatter":
+			if (usecase.detail == "numeric") {
 				if (isNumericTerm(term)) {
-					uses.add('plot')
+					uses.add("plot")
 				}
-				if (hasNumericChild(child_types)) uses.add('branch')
+				if (hasNumericChild(child_types)) uses.add("branch")
 			}
 			// Commenting out for now. May need later for another single
 			// cell term. Revisit logic at that time.
@@ -132,38 +132,38 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			// 		}
 			// }
 			else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
-				if (!term.isleaf) uses.add('branch')
+				if (graphableTypes.has(term.type)) uses.add("plot")
+				if (!term.isleaf) uses.add("branch")
 			}
 			return uses
-		case 'runChart2':
-			if (usecase.detail == 'date' || usecase.detail == 'xtw') {
-				if (term.type == 'date') {
-					uses.add('plot')
+		case "runChart2":
+			if (usecase.detail == "date" || usecase.detail == "xtw") {
+				if (term.type == "date") {
+					uses.add("plot")
 				}
-				if (child_types.includes('date')) uses.add('branch')
-			} else if (usecase.detail == 'numeric') {
-				if (isNumericTerm(term) && term.type != 'date') {
-					uses.add('plot')
+				if (child_types.includes("date")) uses.add("branch")
+			} else if (usecase.detail == "numeric") {
+				if (isNumericTerm(term) && term.type != "date") {
+					uses.add("plot")
 				}
-				if (hasNumericChild(child_types)) uses.add('branch')
+				if (hasNumericChild(child_types)) uses.add("branch")
 			} else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
-				if (!term.isleaf) uses.add('branch')
+				if (graphableTypes.has(term.type)) uses.add("plot")
+				if (!term.isleaf) uses.add("branch")
 			}
 			return uses
-		case 'termCollections':
-			if (usecase.detail?.termIds?.includes(term.id)) uses.add('plot')
-			if (usecase.detail?.branchIds?.includes(term.id)) uses.add('branch')
+		case "termCollections":
+			if (usecase.detail?.termIds?.includes(term.id)) uses.add("plot")
+			if (usecase.detail?.branchIds?.includes(term.id)) uses.add("branch")
 			return uses
 
-		case 'profileForms':
+		case "profileForms":
 			if (!term.isleaf) {
-				const ancestors = term.id.split('__').length //depends on using the __ naming convension!
+				const ancestors = term.id.split("__").length //depends on using the __ naming convension!
 				if (ancestors == 3) {
 					// 3rd level term is a domain, we show the templates associated to this domain
-					uses.add('plot')
-				} else if (ancestors < 3) uses.add('branch')
+					uses.add("plot")
+				} else if (ancestors < 3) uses.add("branch")
 			}
 			return uses
 
@@ -172,92 +172,107 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 		// 	if (usecase.detail === 'term2' && hasNumericChild(child_types)) uses.add('branch')
 		// 	return uses
 
-		case 'cuminc':
-			if (usecase.detail == 'term') {
-				if (term.type == 'condition') uses.add('plot')
-				if (child_types.includes('condition')) uses.add('branch')
+		case "cuminc":
+			if (usecase.detail == "term") {
+				if (term.type == "condition") uses.add("plot")
+				if (child_types.includes("condition")) uses.add("branch")
 				return uses
 			}
-			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
-				if (term.type && term.type != 'condition' && term.type != 'survival') uses.add('plot')
-				if (hasAllowedChildTypes(child_types, ['condition', 'survival'])) uses.add('branch')
-				return uses
-			}
-			return uses
-
-		case 'survival':
-			if (usecase.detail == 'term') {
-				if (term.type == 'survival') uses.add('plot')
-				if (child_types.includes('survival')) uses.add('branch')
-				return uses
-			}
-			if (usecase.detail === 'term2' || usecase.detail == 'term0') {
-				if (term.type && term.type != 'survival') uses.add('plot')
-				if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+			if (usecase.detail === "term2" || usecase.detail == "term0") {
+				if (term.type && term.type != "condition" && term.type != "survival")
+					uses.add("plot")
+				if (hasAllowedChildTypes(child_types, ["condition", "survival"]))
+					uses.add("branch")
 				return uses
 			}
 			return uses
 
-		case 'regression':
-			if (usecase.detail == 'outcome') {
-				if (usecase.regressionType == 'linear') {
-					if (term.type == 'float' || term.type == 'integer') uses.add('plot')
-					if (hasNumericChild(child_types)) uses.add('branch')
+		case "survival":
+			if (usecase.detail == "term") {
+				if (term.type == "survival") uses.add("plot")
+				if (child_types.includes("survival")) uses.add("branch")
+				return uses
+			}
+			if (usecase.detail === "term2" || usecase.detail == "term0") {
+				if (term.type && term.type != "survival") uses.add("plot")
+				if (hasAllowedChildTypes(child_types, ["survival"])) uses.add("branch")
+				return uses
+			}
+			return uses
+
+		case "regression":
+			if (usecase.detail == "outcome") {
+				if (usecase.regressionType == "linear") {
+					if (term.type == "float" || term.type == "integer") uses.add("plot")
+					if (hasNumericChild(child_types)) uses.add("branch")
 					return uses
 				}
-				if (usecase.regressionType == 'logistic') {
-					if (term.type && term.type != 'survival') uses.add('plot')
-					if (hasAllowedChildTypes(child_types, ['survival'])) uses.add('branch')
+				if (usecase.regressionType == "logistic") {
+					if (term.type && term.type != "survival") uses.add("plot")
+					if (hasAllowedChildTypes(child_types, ["survival"]))
+						uses.add("branch")
 					return uses
-				} else if (usecase.regressionType == 'cox') {
-					if (term.type == 'condition' || term.type == 'survival') uses.add('plot')
-					if (child_types.includes('condition') || child_types.includes('survival')) uses.add('branch')
+				} else if (usecase.regressionType == "cox") {
+					if (term.type == "condition" || term.type == "survival")
+						uses.add("plot")
+					if (
+						child_types.includes("condition") ||
+						child_types.includes("survival")
+					)
+						uses.add("branch")
 					return uses
 				}
 			}
 
-			if (usecase.detail == 'independent') {
-				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical' || term.type == 'samplelst')
-					uses.add('plot')
-				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
+			if (usecase.detail == "independent") {
+				if (
+					term.type == "float" ||
+					term.type == "integer" ||
+					term.type == "categorical" ||
+					term.type == "samplelst"
+				)
+					uses.add("plot")
+				if (hasChildTypes(child_types, ["categorical", "float", "integer"]))
+					uses.add("branch")
 				return uses
 			}
 			return uses
 
-		case 'filter': {
+		case "filter": {
 			// apply "exlst" to other targets as needed
 			const exlst = termdbConfig?.excludedTermtypeByTarget?.filter
 			if (exlst) {
-				if (graphableTypes.has(term.type) && !exlst.includes(term.type)) uses.add('plot')
-				if (child_types.find(t => !exlst.includes(t))) uses.add('branch') // there's a non-excluded child type, allow branch to show
+				if (graphableTypes.has(term.type) && !exlst.includes(term.type))
+					uses.add("plot")
+				if (child_types.find((t) => !exlst.includes(t))) uses.add("branch") // there's a non-excluded child type, allow branch to show
 				return uses
 			}
 			// no specific rule for filter. use default rules
-			if (graphableTypes.has(term.type)) uses.add('plot')
-			if (!term.isleaf) uses.add('branch')
+			if (graphableTypes.has(term.type)) uses.add("plot")
+			if (!term.isleaf) uses.add("branch")
 			return uses
 		}
 
-		case 'correlationVolcano':
-			if (usecase.detail == 'numeric') {
+		case "correlationVolcano":
+			if (usecase.detail == "numeric") {
 				if (isNumericTerm(term)) {
-					uses.add('plot')
+					uses.add("plot")
 				}
-				if (hasNumericChild(child_types)) uses.add('branch')
+				if (hasNumericChild(child_types)) uses.add("branch")
 			} else {
-				if (graphableTypes.has(term.type)) uses.add('plot')
-				if (!term.isleaf) uses.add('branch')
+				if (graphableTypes.has(term.type)) uses.add("plot")
+				if (!term.isleaf) uses.add("branch")
 			}
 			return uses
 
-		case 'proteinView':
-			if (term.type == TermTypes.PROTEOME_ABUNDANCE) uses.add('plot')
-			if (child_types.includes(TermTypes.PROTEOME_ABUNDANCE)) uses.add('branch')
+		case "proteinView":
+			if (term.type == TermTypes.PROTEOME_ABUNDANCE) uses.add("plot")
+			if (child_types.includes(TermTypes.PROTEOME_ABUNDANCE)) uses.add("branch")
 			return uses
 
 		default:
-			if (graphableTypes.has(term.type)) uses.add('plot')
-			if (!term.isleaf) uses.add('branch')
+			if (graphableTypes.has(term.type)) uses.add("plot")
+			if (!term.isleaf) uses.add("branch")
 			return uses
 	}
 }
@@ -273,14 +288,14 @@ function hasAllowedChildTypes(child_types, excluded_types) {
 		// no excluded types
 		return true
 	}
-	if (child_types.some(type => !excluded_types.includes(type))) {
+	if (child_types.some((type) => !excluded_types.includes(type))) {
 		// at least one child type is not excluded
 		return true
 	}
 }
 
 function hasNumericChild(child_types) {
-	return child_types.includes('float') || child_types.includes('integer')
+	return child_types.includes("float") || child_types.includes("integer")
 }
 
 function hasChildTypes(child_types, expected_types) {
