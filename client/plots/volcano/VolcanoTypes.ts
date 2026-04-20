@@ -1,12 +1,12 @@
 import type { Elem } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TableCell, TableColumn, Menu } from '#dom'
-import type { DataEntry, DiffMethEntry, DEImage, TermWrapper } from '#types'
+import type { GeneDEEntry, DiffMethEntry, SingleCellDEEntry, DEImage, TermWrapper } from '#types'
 import type { ValidatedVolcanoSettings } from './settings/Settings'
 
 /** Attributes are added in the view model
  * to the response data for rendering. */
-export type DataPointEntry = (DataEntry | DiffMethEntry) & {
+export type DataPointEntry = (GeneDEEntry | DiffMethEntry | SingleCellDEEntry) & {
 	/** color indicating significance */
 	color: string
 	/** If true, the fill opacity increases to show the highlight color */
