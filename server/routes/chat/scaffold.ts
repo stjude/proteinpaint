@@ -1,7 +1,7 @@
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type { Scaffold, SummaryScaffold, DEScaffold } from './scaffoldTypes.ts'
+import type { Scaffold, SummaryScaffold, DEScaffold, HierarchicalScaffold } from './scaffoldTypes.ts'
 
 async function dge(user_prompt: string, llm: LlmConfig): Promise<DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
@@ -245,12 +245,92 @@ Query: ${user_prompt}
 	}
 }
 
+async function hierarchical(user_prompt: string, llm: LlmConfig): Promise<HierarchicalScaffold> {
+	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of genes (and optionally gene sets) and an optional cohort filter from a user's natural language question.
+
+A hierarchical clustering plot clusters samples and features (such as genes) and displays the result as a heatmap with dendrograms.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure:
+{
+  "geneNames": ["<gene>", ...],       // OPTIONAL — list of gene symbols to cluster
+  "genesetNames": ["<geneset>", ...], // OPTIONAL — list of gene set/pathway names to cluster (e.g. HALLMARK pathways)
+  "filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase
+}
+
+## FIELD DEFINITIONS
+geneNames:    Individual gene symbols mentioned in the query (e.g. "TP53", "KRAS", "BCR"). ONLY gene symbols belong here — no descriptive words like "expression" or "mutation".
+genesetNames: Gene set / pathway names mentioned in the query (e.g. "HALLMARK_APOPTOSIS", "HALLMARK_P53_PATHWAY"). Only include if explicitly named.
+filter:       A cohort restriction that narrows the sample set used for clustering (e.g. "in women", "for AML patients", "KMT2A subtype"). Preserve the exact phrase from the user's question. Omit this field if the user does not restrict the cohort.
+
+## Extraction RULES
+1. At least one of "geneNames" or "genesetNames" must be extracted — a hierarchical clustering plot is meaningless without features to cluster.
+2. Preserve the EXACT gene symbols as written (upper/lower case is fine — downstream code will normalize).
+3. Do NOT include descriptive/analytic words (e.g. "expression", "clustering", "dendrogram") in geneNames or genesetNames.
+4. Only populate "filter" when the user restricts the analysis to a specific subpopulation.
+5. OPTIONAL fields should be omitted from the JSON (not set to null or empty array) if they cannot be confidently extracted from the query.
+6. Return ONLY the JSON — no explanation, no markdown fences, no extra text.
+
+## EXAMPLES
+
+--- Simple gene list ---
+Q: "Cluster AKT1, TP53 and KRAS gene expression"
+A: {
+  "geneNames": ["AKT1", "TP53", "KRAS"]
+}
+
+--- Gene list with cohort filter ---
+Q: "Cluster BCR, TP53 and KRAS gene expression for patients with acute lymphoblastic leukemia"
+A: {
+  "geneNames": ["BCR", "TP53", "KRAS"],
+  "filter": "acute lymphoblastic leukemia"
+}
+
+--- Dendrogram phrasing ---
+Q: "Show a gene expression dendrogram for BCR, TP53 and AKT1"
+A: {
+  "geneNames": ["BCR", "TP53", "AKT1"]
+}
+
+--- Subtype-restricted cluster ---
+Q: "Cluster ATM, TP53 and KRAS for patients with KMT2A subtype"
+A: {
+  "geneNames": ["ATM", "TP53", "KRAS"],
+  "filter": "KMT2A subtype"
+}
+
+--- Gene set clustering ---
+Q: "Hierarchical clustering of HALLMARK_P53_PATHWAY and HALLMARK_APOPTOSIS"
+A: {
+  "genesetNames": ["HALLMARK_P53_PATHWAY", "HALLMARK_APOPTOSIS"]
+}
+
+## EDGE CASES
+- If no genes or gene sets are mentioned, return:
+  { "error": "No genes or gene sets found", "reason": "<brief explanation>" }
+
+Parse the following query into the hierarchical clustering scaffold:
+Query: ${user_prompt}
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Hierarchical scaffold: ${response}`)
+	try {
+		const parsed = JSON.parse(response) as HierarchicalScaffold
+		parsed.plotType = 'hiercluster'
+		return parsed
+	} catch {
+		throw new Error(`Failed to parse HierarchicalScaffold from LLM response: ${response}`)
+	}
+}
+
 export async function inferScaffold(user_prompt: string, plotType: string, llm: LlmConfig): Promise<Scaffold> {
 	switch (plotType) {
 		case 'summary':
 			return await summary(user_prompt, llm)
 		case 'dge':
 			return await dge(user_prompt, llm)
+		case 'hiercluster':
+			return await hierarchical(user_prompt, llm)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}

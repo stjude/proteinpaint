@@ -475,6 +475,24 @@ export async function resolveToTwTvs(
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects[key] = termWrapper
 		}
+	} else if (plotType == 'hiercluster') {
+		// genes → array of tws; filter → single tvslst
+		const geneValues = entity['genes'] as Value[] | undefined
+		if (!geneValues || geneValues.length === 0) throw new Error('Invalid gene term entity for hierCluster')
+		const geneTws: any[] = []
+		for (const gv of geneValues) {
+			const tw = await resolveToTw(gv, llm)
+			if (!tw) throw new Error(`Failed to resolve gene tw for phrase "${gv.phrase}"`)
+			geneTws.push(tw)
+		}
+		twTvsObjects['genes'] = geneTws
+
+		if (entity['filter']) {
+			const filterValues = entity['filter'] as Value[]
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects['filter'] = termWrapper
+		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'
 	}

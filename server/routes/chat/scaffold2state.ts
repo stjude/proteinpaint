@@ -101,6 +101,16 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		const groups = [input.filter1, input.filter2]
 		plotState.plot.samplelst = groups
 		plotState.method = 'edgeR'
+	} else if (plotType == 'hiercluster') {
+		plotState.plot.chartType = 'hierCluster'
+		// genes is an array of tw objects produced by resolveToTw() for geneExpression terms
+		const genes = input.genes || []
+		plotState.plot.terms = genes.map((g: any) => (g.term ? g : { term: g }))
+		// All hierCluster entries here are gene expression features; downstream supports other numeric types in the future
+		plotState.plot.dataType = 'geneExpression'
+		if (input.filter) {
+			plotState.plot.filter = input.filter
+		}
 	} else {
 		throw 'Only summary plot type is supported for now'
 	}
