@@ -66,8 +66,10 @@ function init({ genomes }) {
 			// const testing = false
 
 			// Access the cohort key/label
-			const filter = typeof q.filter === 'string' ? JSON.parse(q.filter) : q.filter
-			const cohortFilter = filter.lst?.find((item: any) => item.tag === 'cohortFilter')
+			const rawFilter = typeof q.filter === 'string' ? JSON.parse(q.filter) : q.filter
+			const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
+			const lst = Array.isArray(filter.lst) ? filter.lst : []
+			const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedChartTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
