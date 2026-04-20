@@ -8,9 +8,11 @@ import type {
 	Scaffold,
 	SummaryScaffold,
 	DEScaffold,
+	HierarchicalScaffold,
 	Entity,
 	Phrase2EntityResult,
 	DEPhrase2EntityResult,
+	HierPhrase2EntityResult,
 	MsgToUser
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -433,6 +435,37 @@ export async function phrase2entity(
 		}
 
 		return dge_term
+	} else if (plotType == 'hiercluster') {
+		const scaffoldResult = scaffold as HierarchicalScaffold
+		const hier_term: HierPhrase2EntityResult = { genes: [] }
+
+		const geneNames = scaffoldResult.geneNames || []
+		if (geneNames.length === 0) {
+			return {
+				type: 'text',
+				text: 'At least one gene is required for hierarchical clustering.'
+			}
+		}
+		for (const gene of geneNames) {
+			const geneEntity = await phrase2entitytw(gene, llm, genes_list, dataset_json, ds)
+			if ('type' in geneEntity && geneEntity.type === 'text') {
+				return geneEntity // MsgToUser
+			}
+			mayLog(`Validation result for gene "${gene}":`, geneEntity)
+			hier_term.genes.push(geneEntity as Entity)
+		}
+
+		if (scaffoldResult.filter) {
+			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const hier_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			if ('type' in hier_filter && hier_filter.type === 'text') {
+				return hier_filter // MsgToUser
+			}
+			hier_term.filter = hier_filter as Entity[]
+			mayLog('Validation result for hierCluster filter term:', JSON.stringify(hier_term.filter))
+		}
+
+		return hier_term
 	} else {
 		const msg: MsgToUser = {
 			type: 'text',
