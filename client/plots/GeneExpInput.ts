@@ -82,7 +82,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 		this.tabs = [
 			{
-				label: 'Single gene summary',
+				label: 'One gene',
 				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderGeneSelect(tab)
@@ -90,7 +90,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			},
 			{
-				label: 'Two gene comparison',
+				label: 'Two gene',
 				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderTwoGeneSelect(tab)
@@ -98,7 +98,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			},
 			{
-				label: 'Multiple genes for hierarchical clustering',
+				label: 'Hierarchical clustering',
 				isVisible: () => chartTypes.has('matrix') && this.termType === GENE_EXPRESSION, // hierarchical clustering doesn't support scge
 				callback: (event, tab) => {
 					this.renderGeneMultiSelect(tab)
