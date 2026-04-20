@@ -175,6 +175,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
 		}
 		if (settings.renderAnnotationTable && this.map) {
+			this.dom.holder.selectAll('*').style('cursor', 'default')
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 

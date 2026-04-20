@@ -48,6 +48,7 @@ export class WSIViewerInteractions {
 	undoStackLimit = 10
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
+	createSpinner: () => void
 	toggleThumbnails: (start: number) => void
 	fullAnnotationSave: (
 		wsiApp: any,
@@ -749,6 +750,7 @@ export class WSIViewerInteractions {
 		aiProjectID: number
 	) {
 		const state = wsiApp.app.getState()
+		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
 		let saveSuccess = false
 		const body: SaveWSIAnnotationRequest = {
@@ -759,6 +761,7 @@ export class WSIViewerInteractions {
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}
+		if (settings.isSavingAnnotation) return
 
 		try {
 			// TODO add UI rollback
