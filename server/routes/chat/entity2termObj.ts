@@ -1,5 +1,11 @@
 import type { LlmConfig } from '#types'
-import type { SummaryPhrase2EntityResult, Phrase2EntityResult, Entity, DEPhrase2EntityResult } from './scaffoldTypes.ts'
+import type {
+	SummaryPhrase2EntityResult,
+	Phrase2EntityResult,
+	Entity,
+	DEPhrase2EntityResult,
+	HierPhrase2EntityResult
+} from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -178,6 +184,35 @@ export async function inferTermObjFromEntity(
 			}
 			mayLog('Final filter values:', filterValues)
 			twObjects[key] = filterValues
+		}
+		return twObjects
+	} else if (plotType == 'hiercluster') {
+		const hierEntity = entity as HierPhrase2EntityResult
+		const geneValues: Value[] = []
+		for (const geneEntity of hierEntity.genes) {
+			mayLog('Evaluating hierCluster gene entity:', geneEntity)
+			const termObj = await getTermObj('genes', geneEntity, llm, dbPath, genes_list)
+			if (!termObj) {
+				console.warn(`Skipping hierCluster gene "${geneEntity.phrase}" — failed to get term object`)
+				continue
+			}
+			geneValues.push(termObj)
+		}
+		if (geneValues.length === 0) {
+			throw 'No valid gene terms could be resolved for hierarchical clustering.'
+		}
+		twObjects['genes'] = geneValues
+
+		if (hierEntity.filter) {
+			const filterValues: Value[] = []
+			for (const filterTerm of hierEntity.filter) {
+				mayLog('Evaluating hierCluster filter term:', filterTerm)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+				if (!termObj) continue
+				if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
+				filterValues.push(termObj)
+			}
+			twObjects['filter'] = filterValues
 		}
 		return twObjects
 	} else {

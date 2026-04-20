@@ -173,6 +173,16 @@ export async function run_chat_pipeline(
 				mayLog(log)
 				return ai_output_json
 			}
+		} else if (plotType === 'hiercluster') {
+			if (!supportedChartTypes.includes('geneExpression')) {
+				const log = 'Plot type: "' + plotType + '" is not supported.'
+				ai_output_json = {
+					type: 'text',
+					text: log
+				}
+				mayLog(log)
+				return ai_output_json
+			}
 		} else {
 			mayLog(`Supported chart types for this cohort: ${supportedChartTypes}`)
 			if (!supportedChartTypes.includes(plotType)) {
