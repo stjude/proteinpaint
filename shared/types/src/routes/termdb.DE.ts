@@ -58,7 +58,7 @@ export type ExpressionInput = {
 
 export type DEResponse = {
 	/** Array containing objects of each gene containing foldchange, gene name, gene symbol, original pvalue, adjusted pvalue */
-	data: DataEntry[]
+	data: GeneDEEntry[]
 	/** Effective sample size for group 1 */
 	sample_size1: number
 	/** Effective sample size for group 2 */
@@ -72,10 +72,17 @@ export type DEResponse = {
 	bcv?: number
 }
 
+/** Shared base shape for a single row of differential analysis results.
+ * Used by DE (gene expression), diff methylation, and singlecell DE genes. */
 export type DataEntry = {
-	adjusted_p_value: number
 	original_p_value: number
+	adjusted_p_value: number
 	fold_change: number
+	/** Per-point volcano plot image (base64), when generated server-side */
+	volcano_img?: string
+}
+
+export type GeneDEEntry = DataEntry & {
 	gene_id: string
 	gene_name: string
 }

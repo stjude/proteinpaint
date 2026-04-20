@@ -1,1 +1,2 @@
-
+Features:
+- Created a common base type (DataEntry) for different DA analysis types
