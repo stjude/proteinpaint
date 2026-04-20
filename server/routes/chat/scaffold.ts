@@ -259,7 +259,7 @@ Return ONLY a valid JSON object with this structure:
 }
 
 ## FIELD DEFINITIONS
-geneNames:    Individual gene symbols mentioned in the query (e.g. "TP53", "KRAS", "BCR"). ONLY gene symbols belong here — no descriptive words like "expression" or "mutation".
+geneNames:    List of gene symbols mentioned in the query (e.g. "TP53", "KRAS", "BCR"). ALSO INCLUDE their corresponding descriptive words like "expression", "methylation" or "mutation".
 genesetNames: Gene set / pathway names mentioned in the query (e.g. "HALLMARK_APOPTOSIS", "HALLMARK_P53_PATHWAY"). Only include if explicitly named.
 filter:       A cohort restriction that narrows the sample set used for clustering (e.g. "in women", "for AML patients", "KMT2A subtype"). Preserve the exact phrase from the user's question. Omit this field if the user does not restrict the cohort.
 
@@ -276,33 +276,33 @@ filter:       A cohort restriction that narrows the sample set used for clusteri
 --- Simple gene list ---
 Q: "Cluster AKT1, TP53 and KRAS gene expression"
 A: {
-  "geneNames": ["AKT1", "TP53", "KRAS"]
+  "geneNames": ["AKT1 expression", "TP53 expression", "KRAS expression"]
 }
 
 --- Gene list with cohort filter ---
 Q: "Cluster BCR, TP53 and KRAS gene expression for patients with acute lymphoblastic leukemia"
 A: {
-  "geneNames": ["BCR", "TP53", "KRAS"],
+  "geneNames": ["BCR expression", "TP53 expression", KRAS gene expression"],
   "filter": "acute lymphoblastic leukemia"
 }
 
 --- Dendrogram phrasing ---
 Q: "Show a gene expression dendrogram for BCR, TP53 and AKT1"
 A: {
-  "geneNames": ["BCR", "TP53", "AKT1"]
+  "geneNames": ["BCR expression, TP53 expression, AKT1 gene expression"]
 }
 
 --- Subtype-restricted cluster ---
 Q: "Cluster ATM, TP53 and KRAS for patients with KMT2A subtype"
 A: {
-  "geneNames": ["ATM", "TP53", "KRAS"],
+  "geneNames": ["ATM expression", "TP53 expression", "KRAS expression"],
   "filter": "KMT2A subtype"
 }
 
 --- Gene set clustering ---
-Q: "Hierarchical clustering of HALLMARK_P53_PATHWAY and HALLMARK_APOPTOSIS"
+Q: "Hierarchical clustering of HALLMARK_P53_PATHWAY and HALLMARK_APOPTOSIS genesets"
 A: {
-  "genesetNames": ["HALLMARK_P53_PATHWAY", "HALLMARK_APOPTOSIS"]
+  "genesetNames": "HALLMARK_P53_PATHWAY and HALLMARK_APOPTOSIS genesets"]
 }
 
 ## EDGE CASES
