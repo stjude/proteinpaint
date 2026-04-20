@@ -106,7 +106,6 @@ async function getTermObj(
 					match.score * 100
 				).toFixed(1)}%`
 			)
-			mayLog('KEY: ', key)
 			const term: DictTerm = {
 				id: match.id,
 				type: match.type,
