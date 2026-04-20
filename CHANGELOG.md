@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.184.0
 
 Features:
 - SC: Sample sections in the SC app include action buttons: 'X' to destroy the section and an arrow to show/hide the section.
