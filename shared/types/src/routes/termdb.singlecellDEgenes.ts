@@ -1,5 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
+import type { DataEntry } from './termdb.DE.js'
 
 export type TermdbSingleCellDEgenesRequest = {
 	/** Genome id */
@@ -19,18 +20,14 @@ export type TermdbSingleCellDEgenesRequest = {
 	categoryName: string
 }
 
+export type SingleCellDEEntry = DataEntry & {
+	/** gene name */
+	gene_name: string
+}
+
 export type HasDataResponse = {
 	/** list of significant DE genes for the given category in the sample */
-	data: {
-		/** gene name */
-		gene_name: string
-		/** adjusted p-value */
-		adjusted_p_value: number
-		/** original p-value */
-		original_p_value: number
-		/** log2 fold change */
-		fold_change: number
-	}[] // TODO: May replace with DataEntry from termdb.DE.ts in the future
+	data: SingleCellDEEntry[]
 }
 
 export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse
