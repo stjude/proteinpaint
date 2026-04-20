@@ -91,7 +91,29 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 
 			const imageId = imageRow.id
-
+			//Checking for duplicate annotation based on projectId, imageId and coordinates
+			const duplicateCheckSql = `
+				SELECT id
+				FROM project_annotations
+				WHERE project_id = ?
+				  AND image_id = ?
+				  AND coordinates = ?
+				LIMIT 1
+			`
+			const duplicateCheckStmt = connection.prepare(duplicateCheckSql)
+			const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords)
+			if (duplicateRow) {
+				const deleteDuplicateSql = `
+					DELETE FROM project_annotations
+					WHERE id = ?
+				`
+				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
+				deleteDuplicateStmt.run(duplicateRow.id)
+				console.log(
+					`Deleted duplicate annotation with id=${duplicateRow.id} for project_id=${projectId}, image_id=${imageId}.`
+				)
+				//Gotta retrieve the info for what was deleted
+			}
 			const insertSql = `
 				INSERT INTO project_annotations (
 					project_id, user_id, coordinates, timestamp, status, class_id, image_id
