@@ -57,7 +57,7 @@ export type ExpressionInput = {
 }
 
 export type DEResponse = {
-	/** Array containing objects of each gene containing foldchange, gene name, gene symbol, original pvalue, adjusted pvalue */
+	/** Array of gene differential-expression results containing gene_id, gene_name, fold_change, original_p_value, and adjusted_p_value */
 	data: GeneDEEntry[]
 	/** Effective sample size for group 1 */
 	sample_size1: number
