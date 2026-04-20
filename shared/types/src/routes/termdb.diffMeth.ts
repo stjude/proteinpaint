@@ -1,4 +1,5 @@
 import type { RoutePayload } from './routeApi.js'
+import type { DataEntry } from './termdb.DE.js'
 
 export type DiffMethRequest = {
 	/** Genome build name */
@@ -19,14 +20,14 @@ export type DiffMethRequest = {
 
 export type DiffMethResponse = {
 	/** Array of promoter-level differential methylation results */
-	data: DiffMethDataEntry[]
+	data: DiffMethEntry[]
 	/** Effective sample size for group 1 */
 	sample_size1: number
 	/** Effective sample size for group 2 */
 	sample_size2: number
 }
 
-export type DiffMethDataEntry = {
+export type DiffMethEntry = DataEntry & {
 	/** ENCODE CRE promoter ID (e.g. EH38E3756858) */
 	promoter_id: string
 	/** Gene symbol(s) associated with the promoter (comma-separated if multiple) */
@@ -37,12 +38,6 @@ export type DiffMethDataEntry = {
 	start: number
 	/** Promoter end coordinate (exclusive) */
 	stop: number
-	/** M-value difference (positive = hypermethylated in cases) */
-	fold_change: number
-	/** Raw p-value from moderated t-test */
-	original_p_value: number
-	/** FDR-adjusted p-value (Benjamini-Hochberg) */
-	adjusted_p_value: number
 }
 
 export const diffMethPayload: RoutePayload = {
