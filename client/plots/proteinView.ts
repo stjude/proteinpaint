@@ -883,6 +883,9 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		//and avoids the complexity of mapping between different isoforms. TODO:support isoform-specific mapping.
 		if (!gm) continue
 		const logValue = getLog2Ratio(ptm.foldChange)
+		const pValue = Number(ptm.pValue)
+		const testedN = Number(ptm.testedN)
+		const controlN = Number(ptm.controlN)
 
 		if (ptm.mclassOverride && typeof ptm.mclassOverride == 'object') {
 			Object.assign(mergedMclassOverride, ptm.mclassOverride)
@@ -896,16 +899,24 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		custom_variants.push({
 			chr: gm.chr,
 			pos,
-			mname: `${ptm.modSites}: ${ptm.cohortName}`,
+			mname: ptm.modSites,
 			class: ptmClass,
 			dt: 1,
-			logValue
+			logValue,
+			pValue,
+			testedN: Number.isFinite(testedN) ? testedN : null,
+			controlN: Number.isFinite(controlN) ? controlN : null,
+			htmlSections: [
+				{ key: 'Assay', html: ptm.assayName || 'NA' },
+				{ key: 'Cohort', html: ptm.cohortName || 'NA' },
+				{ key: 'Protein Accession', html: ptm.proteinAccession || 'NA' }
+			]
 		})
 	}
 	if (!custom_variants.length) return
 
 	const mclassOverride = {
-		className: 'PTMs',
+		className: 'PTM',
 		classes: mergedMclassOverride
 	}
 
@@ -927,6 +938,15 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 				type: 'numeric',
 				byAttribute: 'logValue',
 				label: 'Log2FC Disease vs Control',
+				tooltipPrintValue: m => {
+					const p = Number(m.pValue)
+					return [
+						{ k: 'log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
+						{ k: 'p value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
+						{ k: 'Tested samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
+						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' }
+					]
+				},
 				inuse: true,
 				axisheight: 100
 			}
