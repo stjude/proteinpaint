@@ -6,12 +6,12 @@ import type { SCViewer } from '../SC'
 export class SectionRender {
 	sections: Sections
 	holder: Div
-	plot2Sample: Map<string, string>
+	plotId2Sample: Map<string, string>
 
 	constructor(sectionsDiv: Div) {
 		this.sections = {}
 		this.holder = sectionsDiv
-		this.plot2Sample = new Map()
+		this.plotId2Sample = new Map()
 	}
 
 	//Send the sc with the updated state
@@ -31,7 +31,7 @@ export class SectionRender {
 			const sampleId = item.sample || item.sID
 			if (!this.sections[sampleId]) this.initSection(sampleId, item, sc)
 			if (!this.sections[sampleId].sandboxes[subplot.id]) {
-				this.plot2Sample.set(subplot.id, sampleId)
+				this.plotId2Sample.set(subplot.id, sampleId)
 				await this.initSandbox(sc, subplot, sampleId)
 			}
 		}
@@ -112,6 +112,11 @@ export class SectionRender {
 				//Delete the component before calling dispatch
 				//Prevents main attempting to re-init the component
 				this.removeSandbox(subplot.id, sc)
+				sc.app.dispatch({
+					type: 'plot_delete',
+					id: subplot.id,
+					parentId: sc.id
+				})
 			},
 			plotId: subplot.id
 		})
@@ -159,11 +164,11 @@ export class SectionRender {
 
 	removeSandbox(plotId: string, sc: SCViewer, _sampleId?: string) {
 		sc.removeComponent(plotId)
-		const sampleId = _sampleId || this.plot2Sample.get(plotId)
+		const sampleId = _sampleId || this.plotId2Sample.get(plotId)
 		if (!sampleId) return
 		this.sections[sampleId].sandboxes[plotId].remove()
 		delete this.sections[sampleId].sandboxes[plotId]
 		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
-		this.plot2Sample.delete(plotId)
+		this.plotId2Sample.delete(plotId)
 	}
 }
