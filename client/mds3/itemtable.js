@@ -364,7 +364,10 @@ function table_snvindel_mayInsertHtmlSections(m, tk, table) {
 	if (!Array.isArray(m.htmlSections)) throw 'htmlSections[] is not array'
 	for (const section of m.htmlSections) {
 		const [td1, td2] = table.addRow()
-		if (section.key && section.html) {
+		if (section.callback) {
+			if (section.key) td1.text(section.key)
+			td2.append('button').text(section.label).on('click', section.callback)
+		} else if (section.key && section.html) {
 			td1.text(section.key)
 			td2.html(section.html)
 		}
