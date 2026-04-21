@@ -66,6 +66,9 @@ struct Output {
     dots: Vec<Value>,
     /// Total rows rendered into the PNG; used client-side for stats.
     total_rows: usize,
+    /// Total rows that passed the significance thresholds, before any
+    /// `max_interactive_dots` truncation. Use this for "% significant" stats.
+    total_significant_rows: usize,
 }
 
 fn rgb(hex: &str, fallback: (u8, u8, u8)) -> RGBColor {
@@ -107,10 +110,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             .get("fold_change")
             .and_then(|v| v.as_f64())
             .ok_or_else(|| format!("row {idx} missing numeric fold_change"))?;
+        if !fc.is_finite() {
+            return Err(format!("row {idx} fold_change is not finite ({fc})").into());
+        }
         let p = row
             .get(p_field)
             .and_then(|v| v.as_f64())
             .ok_or_else(|| format!("row {idx} missing numeric {p_field}"))?;
+        if !p.is_finite() || p < 0.0 {
+            return Err(format!("row {idx} {p_field} must be a finite value >= 0 (got {p})").into());
+        }
         if p > 0.0 && p < min_nonzero_p {
             min_nonzero_p = p;
         }
@@ -145,6 +154,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     // axes and positions the PNG exactly over its plot rect, so the inner
     // drawing area fills the whole canvas.
     let (w, h) = (input.pixel_width, input.pixel_height);
+    if w == 0 || h == 0 || w > 4000 || h > 4000 {
+        return Err(format!("pixel dimensions {}x{} out of range (1–4000)", w, h).into());
+    }
     let mut buffer = vec![0u8; (w as usize) * (h as usize) * 3];
     {
         let backend = BitMapBackend::with_buffer(&mut buffer, (w, h));
@@ -220,6 +232,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // chosen p-value column, optionally capped at `max_interactive_dots`.
     let mut sig_points: Vec<&Point> = points.iter().filter(|p| p.significant).collect();
     sig_points.sort_by(|a, b| a.p.partial_cmp(&b.p).unwrap_or(std::cmp::Ordering::Equal));
+    let total_significant_rows = sig_points.len();
     if let Some(cap) = input.max_interactive_dots {
         sig_points.truncate(cap);
     }
@@ -242,6 +255,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         },
         dots,
         total_rows: input.rows.len(),
+        total_significant_rows,
     };
 
     println!("{}", serde_json::to_string(&output)?);

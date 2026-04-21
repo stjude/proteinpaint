@@ -6,7 +6,7 @@ import type {
 	DataPointEntry
 } from '../VolcanoTypes'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
-import type { DEResponse } from '#types'
+import type { DEFullResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
@@ -16,7 +16,7 @@ import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/t
 export class VolcanoViewModel {
 	config: any
 	dataType: string
-	response: DEResponse
+	response: DEFullResponse
 	pValueTable: VolcanoPValueTableData
 	settings: any
 	termType: string
@@ -40,7 +40,7 @@ export class VolcanoViewModel {
 	 * significance. The full scatter lives in `response.volcanoPng`. */
 	dataRows: DataPointEntry[]
 
-	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: ValidatedVolcanoSettings) {
+	constructor(config: VolcanoPlotConfig, response: DEFullResponse, settings: ValidatedVolcanoSettings) {
 		this.config = config
 		this.response = response
 		this.plotX = this.horizPad + this.offset * 2
@@ -220,8 +220,9 @@ export class VolcanoViewModel {
 			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad
 			d.radius = radius
 		}
-		// The server knows the true total; non-significant is the remainder since
-		// the local loop above only iterated the significant rows.
+		// Use the server's pre-truncation count so stats are correct even when
+		// dots was capped by maxInteractiveDots.
+		this.numSignificant = this.response.data.totalSignificantRows
 		this.numNonSignificant = Math.max(0, this.response.data.totalRows - this.numSignificant)
 		//Sort so the highlighted points appear on top
 		dataCopy.sort((a: any, b: any) => a.highlighted - b.highlighted)
