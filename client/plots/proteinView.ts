@@ -909,7 +909,12 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			htmlSections: [
 				{ key: 'Assay', html: ptm.assayName || 'NA' },
 				{ key: 'Cohort', html: ptm.cohortName || 'NA' },
-				{ key: 'Protein Accession', html: ptm.proteinAccession || 'NA' }
+				{ key: 'Protein Accession', html: ptm.proteinAccession || 'NA' },
+				{
+					key: 'Action',
+					label: 'Launch Violin Plot',
+					callback: () => launchViolinPlot(self, ptm.assayName, ptm.cohortName, ptm.uniqueIdentifier)
+				}
 			]
 		})
 	}
