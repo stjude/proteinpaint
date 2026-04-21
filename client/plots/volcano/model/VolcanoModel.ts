@@ -2,17 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
-import { rgb } from 'd3-color'
-
-/** Normalize any CSS-accepted color string ('red', 'rgb(255,0,0)', '#f00',
- * '#ff0000', etc.) into a 6-digit hex string the Rust renderer can parse.
- * The SVG overlay runs its stroke color through the same d3-color pipeline
- * (see VolcanoPlotView.renderDataPoints), so both sides end up painting the
- * exact same hex. */
-function toHex(color: string | undefined, fallback: string): string {
-	const c = rgb(color || fallback)
-	return c.displayable() ? c.formatHex() : rgb(fallback).formatHex()
-}
+import { getGroupColors, toHex } from '../colors'
 
 export class VolcanoModel {
 	app: MassAppApi
@@ -95,18 +85,9 @@ export class VolcanoModel {
 		// a smaller PNG ring sits inside the larger overlay ring and looks like
 		// a stray dot at the center.
 		const dotRadius = Math.max(this.settings.width, this.settings.height) / 80
-		// Group-specific colors (case/control) — must match VolcanoViewModel.getGenesColor
-		// so the PNG and the interactive overlay paint the same dot the same color.
-		// fold_change > 0 maps to the case group (group 2); fold_change < 0 to control (group 1).
-		// Fallbacks 'red'/'blue' mirror VolcanoViewModel's defaults for when the term
-		// doesn't define explicit group colors. Every color is normalized to #rrggbb
-		// so the Rust side (hex-only parser) sees the same value the SVG overlay
-		// paints with — otherwise a CSS name like 'red' would fall through Rust's
-		// parser and render as a muted tuple fallback.
-		const groups = this.config?.samplelst?.groups
-		const termValues = this.config?.tw?.term?.values
-		const colorSignificantDown = toHex(termValues?.[groups?.[0]?.name]?.color, 'red')
-		const colorSignificantUp = toHex(termValues?.[groups?.[1]?.name]?.color, 'blue')
+		// Resolve case/control colors via the shared helper (see colors.ts) so the
+		// PNG and the SVG overlay paint each side with the exact same hex string.
+		const { caseColor, controlColor } = getGroupColors(this.config)
 		return {
 			significanceThresholds: {
 				pValueCutoff: this.settings.pValue,
@@ -116,8 +97,8 @@ export class VolcanoModel {
 			pixelWidth: this.settings.width,
 			pixelHeight: this.settings.height,
 			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),
-			colorSignificantUp,
-			colorSignificantDown,
+			colorSignificantUp: caseColor,
+			colorSignificantDown: controlColor,
 			colorNonsignificant: toHex(this.settings.defaultNonSignColor, 'black'),
 			dotRadius,
 			maxInteractiveDots: this.settings.maxInteractiveDots
