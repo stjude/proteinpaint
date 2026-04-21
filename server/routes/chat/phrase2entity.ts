@@ -440,11 +440,9 @@ export async function phrase2entity(
 		const scaffoldResult = scaffold as HierarchicalScaffold
 		const hier_term: HierPhrase2EntityResult = { genes: [] }
 
-		const geneNames = scaffoldResult.geneNames || []
 		// Resolve geneset names to individual genes using trigger_genesetByTermId logic
 		if (scaffoldResult.genesetNames && Array.isArray(scaffoldResult.genesetNames) && genome) {
 			for (const genesetName of scaffoldResult.genesetNames) {
-				console.log('Resolving geneset for hierarchical clustering:', genesetName)
 				const genes = getGenesForGeneset(genome, genesetName)
 				if (!scaffoldResult.genesetNames) scaffoldResult.genesetNames = []
 				if (genes && genes.length > 0) {
@@ -452,7 +450,7 @@ export async function phrase2entity(
 						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
 						if (!scaffoldResult.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
 							scaffoldResult.geneNames = scaffoldResult.geneNames || []
-							scaffoldResult.genesetNames.push(gene.symbol)
+							scaffoldResult.geneNames.push(gene.symbol + ' expression') // Append " expression" to indicate we're referring to gene expression of the gene, which is the only supported termType for hierarchical clustering at the moment
 						}
 					}
 				} else {
@@ -464,6 +462,7 @@ export async function phrase2entity(
 			}
 		}
 
+		const geneNames = scaffoldResult.geneNames || []
 		if (geneNames.length === 0) {
 			return {
 				type: 'text',
