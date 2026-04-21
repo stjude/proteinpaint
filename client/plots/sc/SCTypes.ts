@@ -1,5 +1,6 @@
 import type { Elem, Div } from '../../types/d3'
 import type { TableRow, TableColumn } from '#dom'
+import type { SCSettings } from './settings/Settings'
 
 /** WIP config for the sc app */
 export type SCConfig = {
@@ -33,28 +34,8 @@ export type SCDom = {
 	header?: Elem
 }
 
-export type Sections = {
-	[key: string]: { sectionWrapper: Div; title: any; subplots: any; sandboxes: { [key: string]: any } }
-}
-
 /** Standardized sample identifier used throughout the SC app */
 export type SCSample = { sID: string; eID: string }
-
-export type SCSettings = {
-	sc: {
-		columns: {
-			/** Defined column name for 'sample' column*/
-			sample: string
-		}
-		/** Active item chosen by the user */
-		item: SCSample | undefined
-	}
-	hierCluster: {
-		unit: string
-		yDendrogramHeight: number
-		clusterSamples: boolean
-	}
-}
 
 /** State retrieved from this.getState()
  * specific to SC chartType. ** NOT ** reflective

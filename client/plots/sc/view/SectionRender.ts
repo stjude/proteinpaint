@@ -1,4 +1,4 @@
-import type { Sections } from '../SCTypes'
+import type { Sections } from './Sections'
 import type { Div } from '../../../types/d3'
 import { newSandboxDiv } from '#dom'
 import type { SCViewer } from '../SC'
@@ -7,16 +7,21 @@ import type { SingleCellSample } from '#types'
 export class SectionRender {
 	sections: Sections
 	holder: Div
-	plotId2Sample: Map<string, string>
+	/** Maps the plotId to either the sampleId or plotName (i.e. key in secions map)
+	 * as a reverse lookup. */
+	plotId2Key: Map<string, string>
+	groupBy: string | undefined
 
 	constructor(sectionsDiv: Div) {
 		this.sections = {}
 		this.holder = sectionsDiv
-		this.plotId2Sample = new Map()
+		//Key may be either sampleId or plotName
+		this.plotId2Key = new Map()
+		this.groupBy = undefined
 	}
 
 	//Send the sc with the updated state
-	async update(sc: SCViewer, subplots: any) {
+	async update(sc: SCViewer, subplots: any, groupBy: 'none' | 'sample' | 'plot') {
 		const activeSubplots = new Set(subplots.map(s => s.id))
 
 		/** Repeat the destory from the close button, as mass/app.ts
@@ -28,20 +33,20 @@ export class SectionRender {
 		}
 
 		for (const subplot of subplots) {
-			const sampleId = this.getSampleId(subplot)
-			if (!sampleId) continue
-			if (!this.sections[sampleId]) this.initSection(sampleId, sc)
-			if (!this.sections[sampleId].sandboxes[subplot.id]) {
-				this.plotId2Sample.set(subplot.id, sampleId)
-				await this.initSandbox(sc, subplot, sampleId)
+			const key = groupBy == 'sample' ? this.getSampleId(subplot) : undefined
+			if (!key) continue
+			if (!this.sections[key]) this.initSection(key, sc)
+			if (!this.sections[key].sandboxes[subplot.id]) {
+				this.plotId2Key.set(subplot.id, key)
+				await this.initSandbox(sc, subplot, key)
 			}
 		}
 
 		/** Remove sections after iterating through subplots to avoid
 		 * deleting sections before they can be re-rendered with the correct plots */
-		for (const sampleId of Object.keys(this.sections)) {
-			if (Object.keys(this.sections[sampleId].sandboxes).length === 0) {
-				this.removeSection(sampleId, sc)
+		for (const key of Object.keys(this.sections)) {
+			if (Object.keys(this.sections[key].sandboxes).length === 0) {
+				this.removeSection(key, sc)
 			}
 		}
 	}
@@ -52,17 +57,25 @@ export class SectionRender {
 		return subplot.sample?.sID || subplot.singleCellPlot?.sample?.sID || subplot.term?.term?.sample?.sID
 	}
 
-	initSection(sampleId: string, sc: SCViewer) {
-		const item = this.findSampleMetadata(sampleId, sc)
+	getPlotName(subplot: any): string {
+		let plotName = subplot?.singleCellPlot?.name || subplot?.term?.term?.plot
+		if (!plotName) {
+			if (subplot.chartType === 'dictionary') plotName = 'Dictionary'
+		}
+		return plotName
+	}
+
+	initSection(key: string, sc: SCViewer) {
+		const item = this.findSampleMetadata(key, sc)
 		const sectionWrapper = this.holder
 			.insert('div', ':first-child')
 			.style('padding', '10px')
-			.attr('data-testid', `sjpp-sc-section-wrapper-${sampleId}`)
+			.attr('data-testid', `sjpp-sc-section-wrapper-${key}`)
 
 		//delete section btn
 		sectionWrapper
 			.append('span')
-			.attr('data-testid', `sjpp-sc-section-remove-btn-${sampleId}`)
+			.attr('data-testid', `sjpp-sc-section-remove-btn-${key}`)
 			.style('margin', '0px 5px')
 			.style('cursor', 'pointer')
 			.attr('title', 'Remove all plots for this sample')
@@ -75,10 +88,10 @@ export class SectionRender {
                 </svg>`
 			)
 			.on('click', () => {
-				this.removeSection(sampleId, sc)
+				this.removeSection(key, sc)
 			})
 
-		const titleText = this.makeSectionTitleText(sampleId, item)
+		const titleText = this.makeSectionTitleText(key, item)
 		const titleWrapper = sectionWrapper.append('span').style('font-weight', 600).style('opacity', 0.7).text(titleText)
 
 		const arrow = titleWrapper
@@ -89,15 +102,15 @@ export class SectionRender {
 			.text('▼')
 
 		titleWrapper.on('click', () => {
-			const isHidden = this.sections[sampleId].subplots.style('display') === 'none'
-			this.sections[sampleId].subplots.style('display', isHidden ? 'block' : 'none')
+			const isHidden = this.sections[key].subplots.style('display') === 'none'
+			this.sections[key].subplots.style('display', isHidden ? 'block' : 'none')
 			arrow.text(isHidden ? '▼' : '▲')
 		})
 
-		this.sections[sampleId] = {
+		this.sections[key] = {
 			sectionWrapper,
 			title: titleWrapper,
-			subplots: sectionWrapper.append('div').attr('data-testid', `sjpp-sc-subplots-${sampleId}`),
+			subplots: sectionWrapper.append('div').attr('data-testid', `sjpp-sc-subplots-${key}`),
 			sandboxes: {}
 		}
 	}
@@ -110,15 +123,15 @@ export class SectionRender {
 		return sc.items.find(item => item.sample === sampleId || item.experiments?.some(e => e.sampleName === sampleId))
 	}
 
-	makeSectionTitleText(sampleId: string, item?: SingleCellSample) {
-		const caseText = item?.sample && item.sample !== sampleId ? `Case: ${item.sample}` : ''
-		const itemText = `Sample: ${sampleId}`
+	makeSectionTitleText(key: string, item?: SingleCellSample) {
+		const caseText = item?.sample && item.sample !== key ? `Case: ${item.sample}` : ''
+		const itemText = `Sample: ${key}`
 		const projectText = item?.['project id'] ? `Project: ${item['project id']}` : ''
 		return [itemText, caseText, projectText].filter(Boolean).join(' ')
 	}
 
-	async initSandbox(sc: any, subplot: any, sampleId: string) {
-		const sandboxHolder = this.sections[sampleId].subplots
+	async initSandbox(sc: any, subplot: any, key: string) {
+		const sandboxHolder = this.sections[key].subplots
 			.insert('div', ':first-child')
 			.attr('data-testid', `sjpp-sc-sandbox-${subplot.id}`)
 
@@ -152,13 +165,13 @@ export class SectionRender {
 		}
 
 		await sc.initPlotComponent(subplot.id, opts)
-		this.sections[sampleId].sandboxes[subplot.id] = sandbox.app_div
+		this.sections[key].sandboxes[subplot.id] = sandbox.app_div
 	}
 
-	removeSection(sampleId: string, sc: SCViewer) {
+	removeSection(key: string, sc: SCViewer) {
 		const subactions: { type: string; id: string; parentId: string }[] = []
-		for (const plotId of Object.keys(this.sections[sampleId].sandboxes || {})) {
-			this.removeSandbox(plotId, sc, sampleId)
+		for (const plotId of Object.keys(this.sections[key].sandboxes || {})) {
+			this.removeSandbox(plotId, sc, key)
 			/** Need to remove plots from the state to prevent main from re-rendering
 			 * and memory leak from orphaned components after the section is deleted. */
 			subactions.push({
@@ -173,17 +186,17 @@ export class SectionRender {
 				subactions
 			})
 		}
-		this.sections[sampleId].sectionWrapper.remove()
-		delete this.sections[sampleId]
+		this.sections[key].sectionWrapper.remove()
+		delete this.sections[key]
 	}
 
-	removeSandbox(plotId: string, sc: SCViewer, _sampleId?: string) {
+	removeSandbox(plotId: string, sc: SCViewer, _key?: string) {
 		sc.removeComponent(plotId)
-		const sampleId = _sampleId || this.plotId2Sample.get(plotId)
-		if (!sampleId) return
-		this.sections[sampleId].sandboxes[plotId].remove()
-		delete this.sections[sampleId].sandboxes[plotId]
+		const key = _key || this.plotId2Key.get(plotId)
+		if (!key) return
+		this.sections[key].sandboxes[plotId].remove()
+		delete this.sections[key].sandboxes[plotId]
 		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
-		this.plotId2Sample.delete(plotId)
+		this.plotId2Key.delete(plotId)
 	}
 }

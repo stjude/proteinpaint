@@ -58,6 +58,9 @@ export class SCViewRenderer {
 
 	async update(settings, data, subplots) {
 		this.plotBtns.update(settings, data)
-		await this.sectionRender.update(this.sc, subplots)
+		if (settings.sc.groupBy !== 'none') await this.sectionRender.update(this.sc, subplots, settings.sc.groupBy)
+		else {
+			//TODO, need to init sandboxes for ungrouped view as well
+		}
 	}
 }

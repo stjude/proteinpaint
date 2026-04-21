@@ -7,7 +7,10 @@ export type TermdbSingleCellDEgenesRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	/** Sample identifier */
+	/** Sample identifier 
+	 * for GDC the value is "seurat.analysis.tsv" file UUID
+	rather than sample name, derived from the eID. The file 
+	contains the analysis results for an experiment */
 	sample: { sID: string; eID: string }
 	/** column name to provide cell groups/clustering,
 	 * for which DE genes are precomputed.  */

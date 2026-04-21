@@ -3,7 +3,8 @@ import type { SCInteractions } from '../interactions/SCInteractions'
 import { Menu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
-import type { SCSettings, SCSample } from '../SCTypes'
+import type { SCSample } from '../SCTypes'
+import type { SCSettings } from '../settings/Settings'
 
 /** Rendering for the plot buttons that appear below the item
  * table.
@@ -140,7 +141,7 @@ export class PlotButtons {
 			},
 			{
 				label: 'Gene expression',
-				isVisible: () => this.scTermdbConfig.geneExpression,
+				isVisible: () => this.scTermdbConfig?.geneExpression,
 				getPlotConfig: () => {
 					const sample = this.item!
 					const headerText = `Sample: ${this.item!.sID}`
@@ -160,7 +161,7 @@ export class PlotButtons {
 			},
 			{
 				label: 'Differential expression',
-				isVisible: () => this.scTermdbConfig.DEgenes,
+				isVisible: () => this.scTermdbConfig?.DEgenes,
 				open: this.termDropdownMenu,
 				getPlotConfig: value => {
 					return {

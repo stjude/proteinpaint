@@ -7,7 +7,7 @@ import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
-import { getDefaultSCAppSettings } from './defaults'
+import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { importPlot } from '#plots/importPlot.js'
 import formatPlotData from './viewModel/plotData.ts'
 
