@@ -11,23 +11,47 @@ import { formatElapsedTime } from '#shared'
  * The returned `VolcanoData<T>` is meant to be nested under `data` on each
  * route's response — sibling to route-specific metadata (sample sizes, method).
  */
+const MAX_PIXEL_DIM = 4000
+const MAX_INTERACTIVE_DOTS = 50000
+const MAX_DOT_RADIUS = 20
+
+function clampedInt(value: number, min: number, max: number, name: string): number {
+	if (!Number.isFinite(value) || value < min || value > max)
+		throw new Error(`${name} must be a finite number between ${min} and ${max}`)
+	return Math.round(value)
+}
+
+function clampedFloat(value: number, min: number, max: number, name: string): number {
+	if (!Number.isFinite(value) || value < min || value > max)
+		throw new Error(`${name} must be a finite number between ${min} and ${max}`)
+	return value
+}
+
 export async function renderVolcano<T extends DataEntry>(
 	rows: T[],
 	req: VolcanoRenderRequest
 ): Promise<VolcanoData<T>> {
+	const pixelWidth = clampedInt(req.pixelWidth, 1, MAX_PIXEL_DIM, 'pixelWidth')
+	const pixelHeight = clampedInt(req.pixelHeight, 1, MAX_PIXEL_DIM, 'pixelHeight')
+	const dotRadius = clampedFloat(req.dotRadius ?? 2.0, 0.1, MAX_DOT_RADIUS, 'dotRadius')
+	const maxInteractiveDots =
+		req.maxInteractiveDots == null
+			? null
+			: clampedInt(req.maxInteractiveDots, 0, MAX_INTERACTIVE_DOTS, 'maxInteractiveDots')
+
 	const input = {
 		rows,
 		p_value_type: req.significanceThresholds.pValueType,
 		p_value_cutoff: req.significanceThresholds.pValueCutoff,
 		fold_change_cutoff: req.significanceThresholds.foldChangeCutoff,
-		pixel_width: req.pixelWidth,
-		pixel_height: req.pixelHeight,
+		pixel_width: pixelWidth,
+		pixel_height: pixelHeight,
 		color_significant: req.colorSignificant ?? '#d62728',
 		color_significant_up: req.colorSignificantUp ?? null,
 		color_significant_down: req.colorSignificantDown ?? null,
 		color_nonsignificant: req.colorNonsignificant ?? '#000000',
-		dot_radius: req.dotRadius ?? 2.0,
-		max_interactive_dots: req.maxInteractiveDots ?? null
+		dot_radius: dotRadius,
+		max_interactive_dots: maxInteractiveDots
 	}
 	const t0 = Date.now()
 	const raw = await run_rust('volcano', JSON.stringify(input))
@@ -49,6 +73,7 @@ export async function renderVolcano<T extends DataEntry>(
 		}
 		dots: T[]
 		total_rows: number
+		total_significant_rows: number
 	}
 	return {
 		dots: out.dots,
@@ -66,6 +91,7 @@ export async function renderVolcano<T extends DataEntry>(
 			plotBottom: out.plot_extent.plot_bottom,
 			minNonZeroPValue: out.plot_extent.min_nonzero_p
 		},
-		totalRows: out.total_rows
+		totalRows: out.total_rows,
+		totalSignificantRows: out.total_significant_rows
 	}
 }

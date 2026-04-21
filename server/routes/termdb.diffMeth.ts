@@ -1,4 +1,4 @@
-import type { DiffMethEntry, DiffMethRequest, DiffMethResponse, RouteApi } from '#types'
+import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, RouteApi } from '#types'
 import { diffMethPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -47,9 +47,10 @@ function init({ genomes }) {
 				throw new Error(
 					'Differential methylation analysis returned no data. Please verify sample selections and try again.'
 				)
-			// preAnalysis short-circuit returns `data: {alert, ...}` (no dots).
-			// PNG mode returns `data: VolcanoData` whose `dots` may be empty.
-			if (Array.isArray(results.data?.dots) && results.data.dots.length === 0)
+			// preAnalysis short-circuit returns `data: {alert, ...}` (no totalRows).
+			// Full mode: throw only when no promoter_data reached the renderer at all;
+			// empty dots is valid (strict thresholds) and the PNG should still return.
+			if ('totalRows' in results.data && results.data.totalRows === 0)
 				throw new Error('No promoters passed filtering. Try relaxing group criteria or selecting more samples.')
 			res.send(results)
 		} catch (e: any) {
@@ -212,7 +213,7 @@ async function run_diffMeth(param: DiffMethRequest, ds: any, term_results: any, 
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
 
 	const rendered = await renderVolcano<DiffMethEntry>(result.promoter_data, param.volcanoRender)
-	const output: DiffMethResponse = {
+	const output: DiffMethFullResponse = {
 		data: rendered,
 		sample_size1,
 		sample_size2

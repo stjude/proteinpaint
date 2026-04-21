@@ -21,7 +21,14 @@ export type DiffMethRequest = {
 	volcanoRender: VolcanoRenderRequest
 }
 
-export type DiffMethResponse = {
+/** Response when DiffMethRequest.preAnalysis === true. Returns per-group
+ * sample counts (keyed by group name) plus an optional validation alert. */
+export type DiffMethPreAnalysisResponse = {
+	data: Record<string, number | string>
+}
+
+/** Response for a full differential methylation run (preAnalysis absent/false). */
+export type DiffMethFullResponse = {
 	/** The volcano payload — per-promoter interactive dots + PNG + extents +
 	 * totals. See VolcanoData for details. */
 	data: VolcanoData<DiffMethEntry>
@@ -30,6 +37,8 @@ export type DiffMethResponse = {
 	/** Effective sample size for group 2 */
 	sample_size2: number
 }
+
+export type DiffMethResponse = DiffMethPreAnalysisResponse | DiffMethFullResponse
 
 export type DiffMethEntry = DataEntry & {
 	/** ENCODE CRE promoter ID (e.g. EH38E3756858) */
