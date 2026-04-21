@@ -16,14 +16,20 @@ Called during `main()` once a sample is selected (`config.settings.sc.item`). Th
 
 ## Subplots
 Subplot creation and rendering: 
-1. Subplots are first added as a plot to `state.plots[]` via `app.dispatch(...'plot_create')`.
+1. `SCInteractions.createSubplot()` dispatches `plot_create` with `parentId` set to the SC id and `scItem` cloned from the current selection. This adds the subplot as an entry in `state.plots[]`.
 2. `getState()` in SC.ts filters all plots with a `parentId` matching the SC id into `subplots[]`.
-3. `main()` calls `reconcileSubplots()` which iterates through all subplots to check for a matching component.
-
-### Segments
-Each sample has a segment in `this.segments[sampleId]` that holds the title DOM element, a container div for subplots, and a map of sandbox DOM elements keyed by subplot id. When a subplot is encountered for a sample that has no segment yet, `initSegment()` creates the segment. Then `initSubplotComponent()` creates a sandbox within that segment, imports and initializes the plot component, and stores references in both `this.components.plots[subplotId]` and `this.segments[sampleId].sandboxes[subplotId]`.
-
-### Reconciling Deleted Subplots
-After initializing new subplots, `reconcileSubplots()` cleans up stale components. It compares the subplot ids present in state against `this.components.plots`. Any component that exists locally but is no longer in state (e.g. deleted by another action such as replacing a transient plot) has its sandbox DOM element removed from the segment and its entry deleted from `this.components.plots`. Finally, `view.removeSegments()` removes any segment whose subplots container has no remaining sandbox headers.
+3. `main()` passes `subplots[]` to `SCViewRenderer.update()`, which delegates to `SectionRender.update()` for reconciliation and rendering.
 
 Once added as a component, the plot will update every time `app.dispatch` is called.
+
+### Sections (`SectionRender`)
+`SectionRender` (in `view/SectionRender.ts`) groups subplots by sample into collapsible sections. It maintains a `sections` map keyed by sample id and a `plotId2Sample` map that links each subplot id back to its sample.
+
+`update()` runs three passes on every render cycle:
+1. **Remove stale subplots** — builds an active set from the current state and calls `removeSandbox()` for any component in `sc.components.plots` that is no longer active.
+2. **Initialize new subplots** — for each subplot in state, creates its section (via `initSection()`) if one does not exist for the sample, then creates a sandbox (via `initSandbox()`) if one does not exist for the subplot. `initSandbox()` calls `sc.initPlotComponent()` which dynamically imports the chart module and stores the component.
+3. **Remove empty sections** — deletes any section whose sandboxes map is empty.
+
+Users can also remove subplots and sections directly:
+- **Sandbox close button** — calls `removeSandbox()` then dispatches `plot_delete`.
+- **Section close button** — calls `removeSection()`, which removes every sandbox in the section, batches the corresponding `plot_delete` actions into a single `app_refresh` dispatch, and removes the section wrapper from the DOM.
