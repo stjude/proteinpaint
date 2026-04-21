@@ -1,2 +1,2 @@
 Features:
-- Created a common base type (DataEntry) for different DA analysis types
+- Updated volcano plot to use a serverside rendered png + top interactive points approach
