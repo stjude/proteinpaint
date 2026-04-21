@@ -23,6 +23,89 @@ export type DERequest = {
 	tw2?: any
 	/** Option to return early with actual number of samples with expression values */
 	preAnalysis?: boolean
+	/** Parameters for the server-side `da` Rust renderer: significance thresholds,
+	 * PNG dimensions, and dot styling. The server always renders the volcano PNG
+	 * and returns it plus the threshold-passing rows as the interactive `data`. */
+	volcanoRender: VolcanoRenderRequest
+}
+
+/** Thresholds used to classify a data point as "significant" on the volcano plot.
+ * Shared across DE, diffMeth, and singlecellDEgenes routes. */
+export type SignificanceThresholds = {
+	/** Cutoff on the -log10 scale; rows with -log10(p) > pValueCutoff pass. */
+	pValueCutoff: number
+	/** Which p-value column to threshold against. */
+	pValueType: 'adjusted' | 'original'
+	/** Log2 fold-change magnitude; rows with |fold_change| > foldChangeCutoff pass. */
+	foldChangeCutoff: number
+}
+
+/** Options the client sends when it wants the server to render the volcano PNG. */
+export type VolcanoRenderRequest = {
+	significanceThresholds: SignificanceThresholds
+	/** Target PNG width in pixels. */
+	pixelWidth: number
+	/** Target PNG height in pixels. */
+	pixelHeight: number
+	/** Default color for significant dots when no group colors are supplied. */
+	colorSignificant?: string
+	/** Color for significant dots with positive fold change (case group). */
+	colorSignificantUp?: string
+	/** Color for significant dots with negative fold change (control group). */
+	colorSignificantDown?: string
+	/** Color for non-significant dots. */
+	colorNonsignificant?: string
+	/** Ring radius in PNG pixels. Should match the client overlay's circle
+	 * radius so PNG rings align with interactive overlay rings. */
+	dotRadius?: number
+	/** Maximum number of interactive rows to return in `data` (the overlay).
+	 * The server still renders every row into `volcanoPng`; this only caps the
+	 * interactive list. Capped to the most-significant rows (smallest p-value). */
+	maxInteractiveDots?: number
+}
+
+/** Everything the client needs to draw one volcano: the pre-rendered PNG of
+ * the full scatter, the coordinate extents that produced it, the subset of
+ * rows to overlay as interactive dots, and the total row count (for stats).
+ * Routes nest this under `data` on their response, keeping route-specific
+ * metadata (sample sizes, method, etc.) next to it. */
+export type VolcanoData<T extends DataEntry> = {
+	/** Interactive dots for the overlay: rows that passed the client's
+	 * significance thresholds, sorted ascending by the chosen p-value column,
+	 * capped at `maxInteractiveDots`. Each entry is one dot, not one volcano. */
+	dots: T[]
+	/** Base64-encoded PNG of the full scatter (every row). */
+	volcanoPng: string
+	/** Coordinate extents of the PNG; client overlay circles are positioned
+	 * against these so they land on their counterparts in the rendered image. */
+	plotExtent: PlotExtent
+	/** Total rows rendered into the PNG. Used client-side for "% significant"
+	 * stats since the full row list is not transmitted. */
+	totalRows: number
+}
+
+/** Coordinate metadata returned by the `volcano` renderer, used by the client to overlay
+ * interactive top-significant circles on top of the server-drawn PNG. */
+export type PlotExtent = {
+	/** Data-space x domain used during rendering. */
+	xMin: number
+	xMax: number
+	/** Data-space y domain used during rendering (on -log10 p-value scale). */
+	yMin: number
+	yMax: number
+	/** PNG canvas dimensions. */
+	pixelWidth: number
+	pixelHeight: number
+	/** Inner drawing rect inside the PNG (after axis margins). Client overlay circles
+	 * must position against this rect, not the full canvas. */
+	plotLeft: number
+	plotTop: number
+	plotRight: number
+	plotBottom: number
+	/** The smallest non-zero p-value observed in the input rows. Rows with p == 0
+	 * were drawn at y = -log10(minNonZeroPValue) in the PNG; the client must reuse
+	 * this cap when positioning overlay circles so they align with the PNG. */
+	minNonZeroPValue: number
 }
 
 export type ExpressionInput = {
@@ -57,8 +140,9 @@ export type ExpressionInput = {
 }
 
 export type DEResponse = {
-	/** Array of gene differential-expression results containing gene_id, gene_name, fold_change, original_p_value, and adjusted_p_value */
-	data: GeneDEEntry[]
+	/** The volcano payload — per-gene interactive dots + PNG + extents + totals.
+	 * See VolcanoData for details. */
+	data: VolcanoData<GeneDEEntry>
 	/** Effective sample size for group 1 */
 	sample_size1: number
 	/** Effective sample size for group 2 */
@@ -72,14 +156,13 @@ export type DEResponse = {
 	bcv?: number
 }
 
-/** Shared base shape for a single row of differential analysis results.
- * Used by DE (gene expression), diff methylation, and singlecell DE genes. */
+/** Shared base shape for a single row of differential analysis results — i.e.
+ * one dot in a volcano. Used by DE (gene expression), diff methylation, and
+ * singlecell DE genes, each of which extends this with route-specific fields. */
 export type DataEntry = {
 	original_p_value: number
 	adjusted_p_value: number
 	fold_change: number
-	/** Per-point volcano plot image (base64), when generated server-side */
-	volcano_img?: string
 }
 
 export type GeneDEEntry = DataEntry & {

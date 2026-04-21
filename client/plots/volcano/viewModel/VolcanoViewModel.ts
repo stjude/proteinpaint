@@ -36,11 +36,17 @@ export class VolcanoViewModel {
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
+	/** Interactive rows returned by the server: threshold-passing dots, sorted by
+	 * significance. The full scatter lives in `response.volcanoPng`. */
+	dataRows: DataPointEntry[]
+
 	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: ValidatedVolcanoSettings) {
 		this.config = config
 		this.response = response
 		this.pValueCutoff = settings.pValue
 		this.plotX = this.horizPad + this.offset * 2
+
+		this.dataRows = response.data.dots as DataPointEntry[]
 
 		const controlColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[0].name]?.color || 'red'
 		const caseColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[1].name].color || 'blue'
@@ -81,7 +87,9 @@ export class VolcanoViewModel {
 			pointData,
 			pValueTableData: this.pValueTable,
 			statsData: this.setStatsData(),
-			userActions: this.setUserActions()
+			userActions: this.setUserActions(),
+			volcanoPng: response.data.volcanoPng,
+			plotExtent: response.data.plotExtent
 		}
 	}
 
@@ -93,15 +101,16 @@ export class VolcanoViewModel {
 	}
 
 	setMinMaxValues() {
-		for (const d of this.response.data) {
-			this.minLogFoldChange = Math.min(this.minLogFoldChange, d.fold_change)
-			this.maxLogFoldChange = Math.max(this.maxLogFoldChange, d.fold_change)
-			if (d[`${this.settings.pValueType}_p_value`] != 0) {
-				this.minLogPValue = Math.min(this.minLogPValue, -Math.log10(d[`${this.settings.pValueType}_p_value`]))
-				this.maxLogPValue = Math.max(this.maxLogPValue, -Math.log10(d[`${this.settings.pValueType}_p_value`]))
-				this.minNonZeroPValue = Math.min(this.minNonZeroPValue, d[`${this.settings.pValueType}_p_value`])
-			}
-		}
+		// The server-drawn PNG owns the axes; we adopt its extents verbatim so
+		// overlay circles land on their counterparts in the PNG. Also adopt the
+		// server's minNonZeroPValue so p=0 rows are capped at the same y position
+		// the PNG used.
+		const ext = this.response.data.plotExtent
+		this.minLogFoldChange = ext.xMin
+		this.maxLogFoldChange = ext.xMax
+		this.minLogPValue = ext.yMin
+		this.maxLogPValue = ext.yMax
+		if (ext.minNonZeroPValue > 0) this.minNonZeroPValue = ext.minNonZeroPValue
 	}
 
 	setPlotDimensions() {
@@ -182,11 +191,12 @@ export class VolcanoViewModel {
 
 	setPointData(plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
 		const radius = Math.max(this.settings.width, this.settings.height) / 80
-		const dataCopy: any = structuredClone(this.response.data)
+		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
 			const highlightKey = this.termType === DNA_METHYLATION ? d.promoter_id : d.gene_name
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
-			d.significant = this.isSignificant(d)
+			// Every row in response.data passed the server's thresholds by definition.
+			d.significant = true
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
 				this.numSignificant++
@@ -211,16 +221,12 @@ export class VolcanoViewModel {
 			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad
 			d.radius = radius
 		}
+		// The server knows the true total; non-significant is the remainder since
+		// the local loop above only iterated the significant rows.
+		this.numNonSignificant = Math.max(0, this.response.data.totalRows - this.numSignificant)
 		//Sort so the highlighted points appear on top
 		dataCopy.sort((a: any, b: any) => a.highlighted - b.highlighted)
 		return dataCopy
-	}
-
-	isSignificant(d: DataPointEntry) {
-		return (
-			-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
-			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
-		)
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {

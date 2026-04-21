@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { DERequest, DEResponse, ExpressionInput, RouteApi } from '#types'
+import type { DERequest, DEResponse, ExpressionInput, GeneDEEntry, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from '../src/termdb.matrix.js'
@@ -11,6 +11,7 @@ import serverconfig from '../src/serverconfig.js'
 import { imageSize } from 'image-size'
 import { get_header_txt } from '#src/utils.js'
 import { formatElapsedTime } from '#shared'
+import { renderVolcano } from '../src/renderVolcano.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
@@ -297,8 +298,9 @@ values[] // using integer sample id
 
 		const images = [result.ql_image]
 		if (result.mds_image) images.push(result.mds_image)
+		const rendered = await renderVolcano<GeneDEEntry>(result.gene_data, param.volcanoRender)
 		const output: DEResponse = {
-			data: result.gene_data,
+			data: rendered,
 			sample_size2: result.num_cases[0],
 			sample_size1: result.num_controls[0],
 			method: param.method,
@@ -315,7 +317,13 @@ values[] // using integer sample id
 	const result = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
 	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
-	return { data: result, sample_size1: sample_size1, sample_size2: sample_size2, method: param.method } as DEResponse
+	const rendered = await renderVolcano<GeneDEEntry>(result, param.volcanoRender)
+	return {
+		data: rendered,
+		sample_size1,
+		sample_size2,
+		method: param.method
+	}
 }
 
 function validateGroups(sample_size1: number, sample_size2: number, group1names: string[], group2names: string[]) {

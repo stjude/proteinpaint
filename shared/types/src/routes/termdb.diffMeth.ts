@@ -1,5 +1,5 @@
 import type { RoutePayload } from './routeApi.js'
-import type { DataEntry } from './termdb.DE.js'
+import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
 export type DiffMethRequest = {
 	/** Genome build name */
@@ -16,11 +16,15 @@ export type DiffMethRequest = {
 	tw2?: any
 	/** Option to return early with actual number of samples with methylation values */
 	preAnalysis?: boolean
+	/** Parameters for the server-side `da` Rust renderer. Always required — the
+	 * server always returns a rendered PNG plus the threshold-passing rows. */
+	volcanoRender: VolcanoRenderRequest
 }
 
 export type DiffMethResponse = {
-	/** Array of promoter-level differential methylation results */
-	data: DiffMethEntry[]
+	/** The volcano payload — per-promoter interactive dots + PNG + extents +
+	 * totals. See VolcanoData for details. */
+	data: VolcanoData<DiffMethEntry>
 	/** Effective sample size for group 1 */
 	sample_size1: number
 	/** Effective sample size for group 2 */
