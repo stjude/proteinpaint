@@ -51,20 +51,41 @@ export class DataPointMouseEvents {
 			}
 		]
 
-		circle.on('mouseover', () => {
-			circle.attr('fill-opacity', 0.9)
+		// Use a throwaway clone to visualize the hover highlight instead of mutating
+		// the original circle + raising it. Rearranging DOM mid-hover can leave the
+		// original stuck at full fill-opacity when rapid enter/leave events race
+		// against the DOM move. Same pattern as the p-value table hover preview.
+		let clone: SVGCircleElement | null = null
+		const showHighlight = () => {
+			if (clone) return
+			const node = circle.node() as SVGCircleElement | null
+			if (!node) return
+			const c = node.cloneNode(true) as SVGCircleElement
+			c.setAttribute('fill-opacity', '0.9')
+			// Don't intercept subsequent enter/leave events destined for siblings.
+			c.setAttribute('pointer-events', 'none')
+			node.parentNode?.appendChild(c)
+			clone = c
+		}
+		const hideHighlight = () => {
+			if (!clone) return
+			clone.remove()
+			clone = null
+		}
+
+		circle.on('mouseenter', () => {
+			showHighlight()
 			tip.clear().showunder(circle.node())
 			const table = table2col({ holder: tip.d.append('table') })
-
 			this.addTooltipRows(d, table)
 		})
 
 		let menuOpen = false
-		circle.on('mouseout', () => {
+		circle.on('mouseleave', () => {
 			if (menuOpen) return
 			tip.hide()
 			if (d.highlighted) return
-			circle.attr('fill-opacity', 0)
+			hideHighlight()
 		})
 
 		const visibleMenuOpts = menuOpts.filter(opt => opt.isVisible())
@@ -72,9 +93,10 @@ export class DataPointMouseEvents {
 
 		circle.on('click', () => {
 			menuOpen = true
+			showHighlight()
 			tip.onHide = () => {
 				menuOpen = false
-				if (!d.highlighted) circle.attr('fill-opacity', 0)
+				if (!d.highlighted) hideHighlight()
 			}
 			tip.clear().showunder(circle.node())
 			for (const opt of visibleMenuOpts) {
@@ -84,7 +106,7 @@ export class DataPointMouseEvents {
 					.text(opt.label)
 					.on('click', async () => {
 						tip.hide()
-						if (!d.highlighted) circle.attr('fill-opacity', 0)
+						if (!d.highlighted) hideHighlight()
 						await opt.onClick()
 					})
 			}

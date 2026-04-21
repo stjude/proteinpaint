@@ -1,6 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
-import type { DataEntry } from './termdb.DE.js'
+import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
 export type TermdbSingleCellDEgenesRequest = {
 	/** Genome id */
@@ -8,8 +8,8 @@ export type TermdbSingleCellDEgenesRequest = {
 	/** Dataset label */
 	dslabel: string
 	/** Sample name
-	for GDC the value is "seurat.analysis.tsv" file UUID 
-	rather than sample name. the file contains the analysis 
+	for GDC the value is "seurat.analysis.tsv" file UUID
+	rather than sample name. the file contains the analysis
 	results for an experiment */
 	sample: string
 	/** column name to provide cell groups/clustering,
@@ -18,6 +18,9 @@ export type TermdbSingleCellDEgenesRequest = {
 	/** User selected cell group/cluster, corresponds to termId,
 	 * for which DE genes will be returned to client */
 	categoryName: string
+	/** Parameters for the server-side `volcano` Rust renderer. Always required — the
+	 * server always returns a rendered PNG plus the threshold-passing rows. */
+	volcanoRender: VolcanoRenderRequest
 }
 
 export type SingleCellDEEntry = DataEntry & {
@@ -26,8 +29,9 @@ export type SingleCellDEEntry = DataEntry & {
 }
 
 export type HasDataResponse = {
-	/** list of significant DE genes for the given category in the sample */
-	data: SingleCellDEEntry[]
+	/** The volcano payload — per-gene interactive dots + PNG + extents + totals.
+	 * See VolcanoData for details. */
+	data: VolcanoData<SingleCellDEEntry>
 }
 
 export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse

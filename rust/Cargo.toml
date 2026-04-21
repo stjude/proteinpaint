@@ -139,3 +139,7 @@ path="src/summary_agent.rs"
 [[bin]]
 name="dmrcate"
 path="src/dmrcate.rs"
+
+[[bin]]
+name="volcano"
+path="src/volcano.rs"
