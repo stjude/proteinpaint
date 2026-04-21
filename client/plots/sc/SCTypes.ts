@@ -37,14 +37,17 @@ export type Sections = {
 	[key: string]: { sectionWrapper: Div; title: any; subplots: any; sandboxes: { [key: string]: any } }
 }
 
+/** Standardized sample identifier used throughout the SC app */
+export type SCSample = { sID: string; eID: string }
+
 export type SCSettings = {
 	sc: {
 		columns: {
 			/** Defined column name for 'sample' column*/
 			sample: string
 		}
-		/** Active item choosen by the user */
-		item: any
+		/** Active item chosen by the user */
+		item: SCSample | undefined
 	}
 	hierCluster: {
 		unit: string

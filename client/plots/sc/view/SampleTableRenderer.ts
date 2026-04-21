@@ -31,11 +31,15 @@ export class SampleTableRenderer {
 			striped: true,
 			selectedRows: tableData.selectedRows,
 			noButtonCallback: index => {
-				const item = {}
+				const row = {} as { [key: string]: any }
 				tableData.rows[index].forEach((r: TableCell, idx: number) => {
 					if (!r.value) return
-					item[tableData.columns[idx].label.toLowerCase()] = r.value
+					row[tableData.columns[idx].label.toLowerCase()] = r.value
 				})
+				const item = {
+					sID: row.sample || '',
+					eID: row.experiment || ''
+				}
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
 			}

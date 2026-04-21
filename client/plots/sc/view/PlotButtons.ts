@@ -3,7 +3,7 @@ import type { SCInteractions } from '../interactions/SCInteractions'
 import { Menu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
-import type { SCSettings } from '../SCTypes'
+import type { SCSettings, SCSample } from '../SCTypes'
 
 /** Rendering for the plot buttons that appear below the item
  * table.
@@ -27,7 +27,7 @@ export class PlotButtons {
 		tip: Menu
 	}
 	data?: any
-	item?: { [key: string]: any }
+	item?: SCSample
 	interactions: SCInteractions
 	scTermdbConfig: any
 	settings!: SCSettings
@@ -58,7 +58,7 @@ export class PlotButtons {
 		if (data != null && data.plots) this.data = data
 		this.settings = settings
 		this.item = item
-		const name = item.sample // add ds specific keys/logic here
+		const name = item.sID
 		this.plotBtnsDom.selectPrompt.text(` ${name}:`)
 		this.renderChartBtns()
 	}
@@ -116,13 +116,14 @@ export class PlotButtons {
 				label: 'Summary',
 				isVisible: () => true,
 				getPlotConfig: () => {
-					const sample = this.makeSampleObj()
+					const sample = this.item!
 					return {
 						chartType: 'dictionary',
+						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
 							hidePlotFilter: true,
-							headerText: `Sample: ${this.item!.sample}`,
+							headerText: `Sample: ${this.item!.sID}`,
 							sample
 						},
 						tree: {
@@ -141,13 +142,14 @@ export class PlotButtons {
 				label: 'Gene expression',
 				isVisible: () => this.scTermdbConfig.geneExpression,
 				getPlotConfig: () => {
-					const sample = this.makeSampleObj()
-					const headerText = `Sample: ${this.item!.sample}`
+					const sample = this.item!
+					const headerText = `Sample: ${this.item!.sID}`
 					return {
 						chartType: 'GeneExpInput',
 						termType: SINGLECELL_GENE_EXPRESSION,
 						headerText,
 						termProperties: { sample },
+						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
 							hidePlotFilter: true,
@@ -165,9 +167,9 @@ export class PlotButtons {
 						chartType: 'differentialAnalysis',
 						termType: SINGLECELL_CELLTYPE,
 						categoryName: `${value}`,
-						headerText: `Sample: ${this.item!.sample} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
+						headerText: `Sample: ${this.item!.sID} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
 						termId: this.scTermdbConfig.DEgenes.termId,
-						sample: this.item!.experiment || this.item!.sample
+						sample: this.item!
 					}
 				}
 			}
@@ -214,10 +216,11 @@ export class PlotButtons {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
 		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots.`)
-		const sample = this.makeSampleObj()
+		const sample = this.item
 		const config: any = {
 			chartType: 'sampleScatter',
-			name: `Sample: ${this.item!.sample}`,
+			name: `Sample: ${this.item.sID}`,
+			sample,
 			singleCellPlot: {
 				name: plotName,
 				sample
@@ -239,19 +242,9 @@ export class PlotButtons {
 				`No term found for colorColumn=${colorColName} in .termType2terms.[TermTypeGroups.SINGLECELL_CELLTYPE] for plot ${plot.name}`
 			)
 		const term = Object.assign(structuredClone(savedTerm), {
-			sample: this.makeSampleObj()
+			sample: item
 		})
 		const id = await digestMessage(`${plot.name}-${item.sID}-${item.eID}`)
 		return Object.assign({ $id: id }, { term })
-	}
-
-	/** Creates a sample object for the current item.
-	 * Part of the effort to normalize sample objects across
-	 * native and gdc datasets. */
-	makeSampleObj(): { sID: string; eID: string } {
-		return {
-			sID: this.item!.sample,
-			eID: this.item!.experiment
-		}
 	}
 }
