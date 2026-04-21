@@ -82,6 +82,9 @@ export type VolcanoData<T extends DataEntry> = {
 	/** Total rows rendered into the PNG. Used client-side for "% significant"
 	 * stats since the full row list is not transmitted. */
 	totalRows: number
+	/** Rows that passed significance thresholds, before any maxInteractiveDots
+	 * truncation. Use this (not dots.length) for "% significant" stats. */
+	totalSignificantRows: number
 }
 
 /** Coordinate metadata returned by the `volcano` renderer, used by the client to overlay
@@ -139,7 +142,15 @@ export type ExpressionInput = {
 	mds_cutoff: number
 }
 
-export type DEResponse = {
+/** Response when DERequest.preAnalysis === true. Returns per-group sample
+ * counts (keyed by group name) plus an optional validation alert. No volcano
+ * is rendered; the client uses this to show counts before the user submits. */
+export type DEPreAnalysisResponse = {
+	data: Record<string, number | string>
+}
+
+/** Response for a full DE run (DERequest.preAnalysis absent/false). */
+export type DEFullResponse = {
 	/** The volcano payload — per-gene interactive dots + PNG + extents + totals.
 	 * See VolcanoData for details. */
 	data: VolcanoData<GeneDEEntry>
@@ -155,6 +166,8 @@ export type DEResponse = {
 	/** Biological coefficient of variation (BCV), this is only generated for edgeR*/
 	bcv?: number
 }
+
+export type DEResponse = DEPreAnalysisResponse | DEFullResponse
 
 /** Shared base shape for a single row of differential analysis results — i.e.
  * one dot in a volcano. Used by DE (gene expression), diff methylation, and

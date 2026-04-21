@@ -124,7 +124,8 @@ class Volcano extends PlotBase implements RxComponent {
 
 			/** Fetch data */
 			const response = await this.model.getData(config, settings)
-			if (!response || response.error || !response.data || !response.data.dots || !response.data.dots.length) {
+			this.dom.error.text('')
+			if (!response || response.error || !response.data || !response.data.volcanoPng || !response.data.totalRows) {
 				sayerror(this.dom.error, response?.error || 'No data returned from server')
 				clearTimeout(showWait)
 				this.dom.wait.style('display', 'none')
@@ -139,6 +140,10 @@ class Volcano extends PlotBase implements RxComponent {
 
 			/** Render formatted data */
 			this.view.render(settings, viewModel.viewData)
+
+			if (!response.data.dots.length) {
+				this.dom.error.text('No points passed the significance thresholds').style('color', '#555')
+			}
 
 			clearTimeout(showWait)
 			this.dom.wait.style('display', 'none')

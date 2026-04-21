@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import type { DERequest, DEResponse, ExpressionInput, GeneDEEntry, RouteApi } from '#types'
+import type { DERequest, DEFullResponse, ExpressionInput, GeneDEEntry, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from '../src/termdb.matrix.js'
@@ -299,7 +299,7 @@ values[] // using integer sample id
 		const images = [result.ql_image]
 		if (result.mds_image) images.push(result.mds_image)
 		const rendered = await renderVolcano<GeneDEEntry>(result.gene_data, param.volcanoRender)
-		const output: DEResponse = {
+		const output: DEFullResponse = {
 			data: rendered,
 			sample_size2: result.num_cases[0],
 			sample_size1: result.num_controls[0],
