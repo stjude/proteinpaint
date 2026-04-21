@@ -457,18 +457,19 @@ async function getCases4exp(q, ds, case_filters) {
 	const body = {
 		fields: 'case_id',
 		case_filters,
-		// hiercluster app will limit max number of allowed cases by hardcoded value. times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
+		// hiercluster app will limit max number of allowed cases by hardcoded value.
+		// times 10 is a generous guess to allow for cases without gene exp data, as is from current cohort
 		size: maxCase4geneExpCluster * 10
 	}
 	try {
 		const { host, headers } = ds.getHostHeaders(q)
 		let currTotal = 0
-		while (lst.length < maxCase4geneExpCluster) {
+		while (!q.forClusteringAnalysis || lst.length < maxCase4geneExpCluster) {
 			const re = await xfetch(joinUrl(host.rest, 'cases'), {
 				method: 'POST',
 				timeout: false,
 				headers,
-				body: Object.assign({ from: currTotal + 1 }, body),
+				body: Object.assign({ from: currTotal }, body),
 				signal: q.__abortSignal
 			})
 			if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
@@ -481,7 +482,9 @@ async function getCases4exp(q, ds, case_filters) {
 					}
 				}
 			}
-			if (lst.length >= maxCase4geneExpCluster) break
+			// querying for additional data is limited for clustering use case,
+			// but is not limited by a max constant for non-cluster use case
+			if (q.forClusteringAnalysis && lst.length >= maxCase4geneExpCluster) break
 			const { page, pages, total, count } = re.data.pagination
 			currTotal += count
 			if (!page || page >= pages || currTotal >= total) break
