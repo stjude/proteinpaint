@@ -1,6 +1,6 @@
 import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
-import { Menu, GeneExpChartMenu } from '#dom'
+import { Menu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
 import type { SCSettings } from '../SCTypes'
@@ -140,7 +140,21 @@ export class PlotButtons {
 			{
 				label: 'Gene expression',
 				isVisible: () => this.scTermdbConfig.geneExpression,
-				open: this.geneExpMenu
+				getPlotConfig: () => {
+					const sample = this.makeSampleObj()
+					const headerText = `Sample: ${this.item!.sample}`
+					return {
+						chartType: 'GeneExpInput',
+						termType: SINGLECELL_GENE_EXPRESSION,
+						headerText,
+						termProperties: { sample },
+						spawnConfig: {
+							parentId: this.interactions.id,
+							hidePlotFilter: true,
+							headerText
+						}
+					}
+				}
 			},
 			{
 				label: 'Differential expression',
@@ -162,23 +176,6 @@ export class PlotButtons {
 	}
 
 	//********** Btn Menus **********/
-	//TODO: Change gene expression menu to transient plot
-	geneExpMenu(plot: any, self: PlotButtons) {
-		const opts = {
-			termType: SINGLECELL_GENE_EXPRESSION as string,
-			termProperties: { sample: self.makeSampleObj() },
-			spawnConfig: {
-				hidePlotFilter: true,
-				parentId: self.interactions.id,
-				headerText: `Sample: ${self.item!.sample}`,
-				scItem: self.makeSampleObj(),
-				/** It's not ideal to always pass the hierCluster settings here, but it's required for the current implementation */
-				settings: { hierCluster: self.settings.hierCluster }
-			}
-		}
-		new GeneExpChartMenu(self.interactions.app, self.plotBtnsDom.tip, opts)
-	}
-
 	//TODO: Change this to use the term from termdbConfig
 	// and return to getPlotConfig
 	termDropdownMenu(plot: any, self: PlotButtons) {

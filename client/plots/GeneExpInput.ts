@@ -13,8 +13,8 @@ type GeneExpInputOpts = {
 	 * Normally this is optional but there's no reason to launch this plot
 	 * sans sandbox. */
 	header: any
-	/** Override default text for sanbox header */
-	headerTextOverride?: string
+	/** Optional text to display in the header before the term type */
+	headerText?: string
 	termProperties?: { [key: string]: any }
 	spawnConfig?: { [key: string]: any }
 }
@@ -90,7 +90,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			},
 			{
-				label: 'Two gene',
+				label: 'Two genes',
 				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderTwoGeneSelect(tab)
@@ -140,10 +140,17 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	}
 
 	initDom() {
-		const headerText = this.opts?.headerTextOverride || `${typeGroup[this.termType]}`
-
+		const headerText = this.opts.headerText ? `${this.opts.headerText} ` : ''
 		const dom: { [index: string]: any } = {
-			header: this.opts.header.text(headerText).attr('data-testid', 'sjpp-gene-exp-input-header'),
+			header: {
+				title: this.opts.header.append('span').text(headerText).attr('data-testid', 'sjpp-gene-exp-input-headerText'),
+				plot: this.opts.header
+					.append('span')
+					.text(typeGroup[this.termType].toUpperCase())
+					.style('font-size', '0.7em')
+					.style('opacity', '0.6')
+					.attr('data-testid', 'sjpp-gene-exp-input-termType')
+			},
 			tabs: this.opts.holder
 				.append('div')
 				.style('margin', '10px')
@@ -197,7 +204,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const gene2row = holder.append('div').style('padding', '5px').style('display', 'none')
 		const submitButton = holder.append('button').attr('type', 'button').attr('disabled', true)
 
-		gene1row.append('span').text('Select 1st gene:')
+		gene1row.append('span').text('Select the first gene:')
 		const geneSearch1 = addGeneSearchbox({
 			row: gene1row,
 			genome: this.genome,
@@ -211,7 +218,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			}
 		})
 
-		gene2row.append('span').text('Select 2nd gene:')
+		gene2row.append('span').text('Select the second gene:')
 		const geneSearch2 = addGeneSearchbox({
 			row: gene2row,
 			genome: this.genome,
