@@ -24,6 +24,7 @@ class ProteinView extends PlotBase implements RxComponent {
 		holder: any
 		body: any
 		tip: Menu
+		header?: any
 	}
 	components: any
 
@@ -38,14 +39,23 @@ class ProteinView extends PlotBase implements RxComponent {
 		this.dom = {
 			holder,
 			body: holder.append('div'),
-			tip: new Menu({ padding: '' })
+			tip: new Menu({ padding: '' }),
+			header: this.opts.header
 		}
+		if (this.dom.header) this.dom.header.html('Protein View')
 	}
 
 	getState(appState: MassState) {
 		const config: any = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return { config }
+	}
+
+	maySetSandboxHeader() {
+		if (!this.dom.header) return
+		const term = this.state.config?.tw?.term
+		const header = `Protein View: ${term?.name}`
+		this.dom.header.html(header)
 	}
 
 	async main() {
@@ -60,6 +70,7 @@ class ProteinView extends PlotBase implements RxComponent {
 			filter0: this.state.config.filter0
 		}
 
+		this.maySetSandboxHeader()
 		const data = await dofetch3('termdb/proteome', { body })
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
