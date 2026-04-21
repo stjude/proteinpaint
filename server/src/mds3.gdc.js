@@ -2240,6 +2240,10 @@ export function gdc_validate_query_singleCell_DEgenes(ds) {
 		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
 
 		const genes = await getSinglecellDEgenes(q, degFileId, ds)
+		// Non-volcano callers (e.g. the singleCellPlot DE table) iterate data as
+		// a plain gene array. Only wrap in VolcanoData when the client actually
+		// asked for a server-rendered volcano.
+		if (!q.volcanoRender) return { data: genes }
 		const rendered = await renderVolcano(genes, q.volcanoRender)
 		return { data: rendered }
 	}
@@ -2334,7 +2338,7 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
 	const { host, headers } = ds.getHostHeaders(q, { accept: undefined })
 	const re = await xfetch(joinUrl(host.rest, 'data', degFileId), { headers, timeout: false })
-	const lines = re.trim().split('\n')
+	const lines = re.trim().replace(/\r/g, '').split('\n')
 	/*
         this tsv file first line is header:
         gene    gene_names      cluster avg_log2FC      p_val   p_val_adj       prop_in_cluster prop_out_cluster        avg_logFC
