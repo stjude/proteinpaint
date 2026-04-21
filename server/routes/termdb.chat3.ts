@@ -82,7 +82,8 @@ function init({ genomes }) {
 				agentFiles,
 				aiFilesDir,
 				supportedChartTypes,
-				_allowedTermTypes
+				_allowedTermTypes,
+				g
 				// 	testing
 			)
 			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
@@ -102,7 +103,8 @@ export async function run_chat_pipeline(
 	agentFiles: string[],
 	aiFilesDir: string,
 	supportedChartTypes: string[],
-	_allowedTermTypes: string[]
+	_allowedTermTypes: string[],
+	genome: any
 	// testing: boolean
 ) {
 	// Read main.json file
@@ -150,9 +152,9 @@ export async function run_chat_pipeline(
 		}
 
 		/* Special handling for summary chart types
-		// Every cohort by default supports summary charts unless 
-		// 'dictionary' is not in the supported chart type list
-		// */
+        // Every cohort by default supports summary charts unless 
+        // 'dictionary' is not in the supported chart type list
+        // */
 		if (plotType === 'summary') {
 			if (!supportedChartTypes.includes('dictionary')) {
 				const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -210,7 +212,7 @@ export async function run_chat_pipeline(
 		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")
 		const genes_list = await parse_geneset_db(genedb)
 		time = new Date().valueOf()
-		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds)
+		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds, genome)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
 		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
 			return phrase2entityResult // Return msg/error

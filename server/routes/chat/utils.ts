@@ -33,6 +33,18 @@ export interface DataTypeConfig {
 	dataTypeDescription?: string
 }
 
+export function getGenesForGeneset(genome: any, genesetTermId: string): { symbol: string }[] | undefined {
+	if (!genome?.termdbs) return undefined
+	for (const key in genome.termdbs) {
+		const tdb = genome.termdbs[key]
+		if (!tdb.cohort?.termdb?.isGeneSetTermdb) continue
+		const getGenesetByTermId = tdb.cohort?.termdb?.q?.getGenesetByTermId
+		if (!getGenesetByTermId) continue
+		return getGenesetByTermId(genesetTermId)
+	}
+	return undefined
+}
+
 export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 	{
 		termType: TermTypes.GENE_EXPRESSION,
