@@ -459,9 +459,9 @@ export function server_init_db_queries(ds) {
 		else, return single value by sample and term
 		*/
 		const s = {
-			categorical: cn.prepare('SELECT value FROM anno_categorical WHERE term_id=?'),
-			integer: cn.prepare('SELECT value FROM anno_integer WHERE term_id=?'),
-			float: cn.prepare('SELECT value FROM anno_float WHERE term_id=?')
+			categorical: cn.prepare('SELECT sample, value FROM anno_categorical WHERE term_id=?'),
+			integer: cn.prepare('SELECT sample, value FROM anno_integer WHERE term_id=?'),
+			float: cn.prepare('SELECT sample, value FROM anno_float WHERE term_id=?')
 		}
 		const s_sampleInt = {
 			categorical: cn.prepare('SELECT value FROM anno_categorical WHERE term_id=? AND sample=?'),
@@ -469,20 +469,57 @@ export function server_init_db_queries(ds) {
 			float: cn.prepare('SELECT value FROM anno_float WHERE term_id=? AND sample=?')
 		}
 		const s_sampleStr = {
-			categorical: cn.prepare('SELECT value FROM anno_categorical a,sampleidmap s WHERE term_id=? AND s.name=?'),
-			integer: cn.prepare('SELECT value FROM anno_integer a,sampleidmap s WHERE term_id=? AND s.name=?'),
-			float: cn.prepare('SELECT value FROM anno_float a, sampleidmap s WHERE term_id=? AND s.name=?')
+			categorical: cn.prepare(
+				'SELECT a.value FROM anno_categorical a,sampleidmap s WHERE term_id=? AND a.sample=s.id AND s.name=?'
+			),
+			integer: cn.prepare(
+				'SELECT a.value FROM anno_integer a,sampleidmap s WHERE term_id=? AND a.sample=s.id AND s.name=?'
+			),
+			float: cn.prepare(
+				'SELECT a.value FROM anno_float a, sampleidmap s WHERE term_id=? AND a.sample=s.id AND s.name=?'
+			)
 		}
 		if (tables.has('anno_date')) {
-			s_sampleInt['date'] = cn.prepare('SELECT value FROM anno_date a, sampleidmap s WHERE term_id=? AND s.name=?')
-			s_sampleStr['date'] = cn.prepare('SELECT value FROM anno_date a, sampleidmap s WHERE term_id=? AND s.name=?')
+			s['date'] = cn.prepare('SELECT sample, value FROM anno_date WHERE term_id=?')
+			s_sampleInt['date'] = cn.prepare('SELECT value FROM anno_date WHERE term_id=? AND sample=?')
+			s_sampleStr['date'] = cn.prepare(
+				'SELECT a.value FROM anno_date a, sampleidmap s WHERE a.term_id=? AND a.sample=s.id AND s.name=?'
+			)
 		}
+
+		// detect whether this db has a sample_ancestry table
+		const hasAncestry =
+			cn.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='sample_ancestry'`).get() != null
+
+		// ancestry helpers - only prepared when the table exists
+		const s_rootAncestor = hasAncestry
+			? cn.prepare('SELECT ancestor_id FROM sample_ancestry WHERE sample_id=? ORDER BY distance DESC LIMIT 1')
+			: null
+		// map a sample *name* to its root ancestor id in one query
+		const s_rootAncestorByName = hasAncestry
+			? cn.prepare(`
+				SELECT sa.ancestor_id
+				FROM sample_ancestry sa, sampleidmap s
+				WHERE s.name=? AND s.id=sa.sample_id
+				ORDER BY sa.distance DESC LIMIT 1`)
+			: null
 
 		q.getSample2value = (id, sample = null) => {
 			const term = q.termjsonByOneid(id)
-			if (!sample) return s[term.type].all(id)
-			if (typeof sample == 'string') return s_sampleStr[term.type].all(id, sample)
-			return s_sampleInt[term.type].all(id, sample)
+			const isPatientLevel = hasAncestry && term?.sample_type === '1'
+			if (!sample) return s[term.type].all(id) // WARNING: This line is incomplete and lacks full logic. Review before modifying or relying on it.
+			// --- single sample by name (string) ---
+			if (typeof sample == 'string') {
+				if (!isPatientLevel) return s_sampleStr[term.type].all(id, sample)
+				const r = s_rootAncestorByName.get(sample)
+				if (!r) return []
+				return s_sampleStr[term.type].all(id, r.ancestor_id)
+			}
+
+			if (!isPatientLevel) return s_sampleInt[term.type].all(id, sample)
+			const r = s_rootAncestor.get(sample)
+			const patientId = r ? r.ancestor_id : sample
+			return s_sampleInt[term.type].all(id, patientId)
 		}
 	}
 	if (tables.has('termhtmldef')) {
