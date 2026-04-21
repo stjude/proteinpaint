@@ -10,13 +10,13 @@ import type { DEResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
+import { getGroupColors } from '../colors'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 export class VolcanoViewModel {
 	config: any
 	dataType: string
 	response: DEResponse
-	pValueCutoff: number
 	pValueTable: VolcanoPValueTableData
 	settings: any
 	termType: string
@@ -43,15 +43,14 @@ export class VolcanoViewModel {
 	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: ValidatedVolcanoSettings) {
 		this.config = config
 		this.response = response
-		this.pValueCutoff = settings.pValue
 		this.plotX = this.horizPad + this.offset * 2
 
 		this.dataRows = response.data.dots as DataPointEntry[]
 
-		const controlColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[0].name]?.color || 'red'
-		const caseColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[1].name].color || 'blue'
-		//Set colors equal to the groups colors if present
-		const barplot = caseColor && controlColor ? { colorNegative: controlColor, colorPositive: caseColor } : {}
+		// Shared helper (colors.ts) so the SVG overlay and the server PNG paint
+		// each side in the exact same hex.
+		const { caseColor, controlColor } = getGroupColors(this.config)
+		const barplot = { colorNegative: controlColor, colorPositive: caseColor }
 
 		this.pValueTable = {
 			columns: [
