@@ -2,6 +2,7 @@ import * as common from '#shared/common.js'
 import { joinUrl, memFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
+import { renderVolcano } from './renderVolcano.ts'
 // import ky from 'ky'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
@@ -2239,7 +2240,8 @@ export function gdc_validate_query_singleCell_DEgenes(ds) {
 		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
 
 		const genes = await getSinglecellDEgenes(q, degFileId, ds)
-		return { data: genes }
+		const rendered = await renderVolcano(genes, q.volcanoRender)
+		return { data: rendered }
 	}
 }
 

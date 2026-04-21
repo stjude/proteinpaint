@@ -64,6 +64,17 @@ export class VolcanoControlInputs {
 				min: -10,
 				max: 10
 			},
+			{
+				label: 'Max interactive dots',
+				type: 'number',
+				chartType: 'volcano',
+				settingsKey: 'maxInteractiveDots',
+				title:
+					'Cap on the number of top-significant points the server returns as interactive overlay circles. The PNG still shows every dot.',
+				min: 0,
+				max: 100000,
+				step: 100
+			},
 			//Preferably, keep all the display (e.g. colors, sizes, etc.) controls
 			//at the bottom of the list or at least together
 			{

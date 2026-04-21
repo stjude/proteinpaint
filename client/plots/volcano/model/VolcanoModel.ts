@@ -1,7 +1,18 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest } from '#types'
+import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { rgb } from 'd3-color'
+
+/** Normalize any CSS-accepted color string ('red', 'rgb(255,0,0)', '#f00',
+ * '#ff0000', etc.) into a 6-digit hex string the Rust renderer can parse.
+ * The SVG overlay runs its stroke color through the same d3-color pipeline
+ * (see VolcanoPlotView.renderDataPoints), so both sides end up painting the
+ * exact same hex. */
+function toHex(color: string | undefined, fallback: string): string {
+	const c = rgb(color || fallback)
+	return c.displayable() ? c.formatHex() : rgb(fallback).formatHex()
+}
 
 export class VolcanoModel {
 	app: MassAppApi
@@ -48,7 +59,8 @@ export class VolcanoModel {
 			samplelst: this.config.samplelst,
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
-			cpm_cutoff: this.settings.cpmCutoff
+			cpm_cutoff: this.settings.cpmCutoff,
+			volcanoRender: this.getVolcanoRender()
 		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
 
 		this.addConfounderTw(body)
@@ -66,12 +78,50 @@ export class VolcanoModel {
 			samplelst: this.config.samplelst,
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
-			min_samples_per_group: this.settings.minSamplesPerGroup
+			min_samples_per_group: this.settings.minSamplesPerGroup,
+			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 
 		this.addConfounderTw(body)
 
 		return body
+	}
+
+	/** Parameters telling the server to run the `volcano` Rust renderer and return a
+	 * volcano PNG + top-significant rows instead of the full dot list. */
+	getVolcanoRender(): VolcanoRenderRequest {
+		// Match the client overlay's radius (see VolcanoViewModel.setPointData)
+		// so the PNG rings and the interactive overlay rings line up; otherwise
+		// a smaller PNG ring sits inside the larger overlay ring and looks like
+		// a stray dot at the center.
+		const dotRadius = Math.max(this.settings.width, this.settings.height) / 80
+		// Group-specific colors (case/control) — must match VolcanoViewModel.getGenesColor
+		// so the PNG and the interactive overlay paint the same dot the same color.
+		// fold_change > 0 maps to the case group (group 2); fold_change < 0 to control (group 1).
+		// Fallbacks 'red'/'blue' mirror VolcanoViewModel's defaults for when the term
+		// doesn't define explicit group colors. Every color is normalized to #rrggbb
+		// so the Rust side (hex-only parser) sees the same value the SVG overlay
+		// paints with — otherwise a CSS name like 'red' would fall through Rust's
+		// parser and render as a muted tuple fallback.
+		const groups = this.config?.samplelst?.groups
+		const termValues = this.config?.tw?.term?.values
+		const colorSignificantDown = toHex(termValues?.[groups?.[0]?.name]?.color, 'red')
+		const colorSignificantUp = toHex(termValues?.[groups?.[1]?.name]?.color, 'blue')
+		return {
+			significanceThresholds: {
+				pValueCutoff: this.settings.pValue,
+				pValueType: this.settings.pValueType,
+				foldChangeCutoff: this.settings.foldChangeCutoff
+			},
+			pixelWidth: this.settings.width,
+			pixelHeight: this.settings.height,
+			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),
+			colorSignificantUp,
+			colorSignificantDown,
+			colorNonsignificant: toHex(this.settings.defaultNonSignColor, 'black'),
+			dotRadius,
+			maxInteractiveDots: this.settings.maxInteractiveDots
+		}
 	}
 
 	//This is a workaround until the server can accept an arr of confounder tws
@@ -90,7 +140,8 @@ export class VolcanoModel {
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			sample: this.config.sample,
 			termId: this.config.termId,
-			categoryName: this.config.categoryName
+			categoryName: this.config.categoryName,
+			volcanoRender: this.getVolcanoRender()
 		}
 		return body
 	}

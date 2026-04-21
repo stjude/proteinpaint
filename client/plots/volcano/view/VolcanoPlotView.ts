@@ -156,6 +156,21 @@ export class VolcanoPlotView {
 		this.renderScale(plotDim.xScale)
 		this.renderScale(plotDim.yScale, true)
 
+		// Server-rendered PNG of the full scatter (every dot, non-interactive).
+		// Drawn first so overlay circles + the border rect sit on top. The volcano
+		// binary emits a borderless image whose data extent matches the client's
+		// scales, so placing it over the plot rect aligns dot-for-dot.
+		if (this.viewData.volcanoPng) {
+			this.volcanoDom.plot
+				.append('image')
+				.attr('href', `data:image/png;base64,${this.viewData.volcanoPng}`)
+				.attr('x', plotDim.plot.x)
+				.attr('y', plotDim.plot.y)
+				.attr('width', plotDim.plot.width)
+				.attr('height', plotDim.plot.height)
+				.attr('preserveAspectRatio', 'none')
+		}
+
 		this.volcanoDom.plot
 			.append('rect')
 			.attr('width', plotDim.plot.width)

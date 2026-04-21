@@ -1,7 +1,7 @@
 import type { Elem } from '../../types/d3'
 import type { PlotConfig } from '#mass/types/mass'
 import type { TableCell, TableColumn, Menu } from '#dom'
-import type { GeneDEEntry, DiffMethEntry, SingleCellDEEntry, DEImage, TermWrapper } from '#types'
+import type { GeneDEEntry, DiffMethEntry, SingleCellDEEntry, DEImage, PlotExtent, TermWrapper } from '#types'
 import type { ValidatedVolcanoSettings } from './settings/Settings'
 
 /** Attributes are added in the view model
@@ -136,4 +136,10 @@ export type VolcanoViewData = {
 	userActions: {
 		noShow: Set<string>
 	}
+	/** Base64-encoded PNG of the full scatter, rendered by the `da` Rust binary. */
+	volcanoPng: string
+	/** Coordinate extents used by the server-drawn PNG. The view's scales and
+	 * overlay circles are derived from these so the interactive dots land exactly
+	 * on their PNG counterparts. */
+	plotExtent: PlotExtent
 }
