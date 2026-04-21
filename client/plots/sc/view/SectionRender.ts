@@ -2,6 +2,7 @@ import type { Sections } from '../SCTypes'
 import type { Div } from '../../../types/d3'
 import { newSandboxDiv } from '#dom'
 import type { SCViewer } from '../SC'
+import type { SingleCellSample } from '#types'
 
 export class SectionRender {
 	sections: Sections
@@ -27,9 +28,9 @@ export class SectionRender {
 		}
 
 		for (const subplot of subplots) {
-			const item = subplot.scItem || subplot?.term?.term?.sample
-			const sampleId = item.sample || item.sID
-			if (!this.sections[sampleId]) this.initSection(sampleId, item, sc)
+			const sampleId = this.getSampleId(subplot)
+			if (!sampleId) continue
+			if (!this.sections[sampleId]) this.initSection(sampleId, sc)
 			if (!this.sections[sampleId].sandboxes[subplot.id]) {
 				this.plotId2Sample.set(subplot.id, sampleId)
 				await this.initSandbox(sc, subplot, sampleId)
@@ -45,7 +46,14 @@ export class SectionRender {
 		}
 	}
 
-	initSection(sampleId: string, item: any, sc: SCViewer) {
+	/** Extract sID from a subplot's config.
+	 * Actual subplots store sample as {sID, eID} at top level or on term.term.sample. */
+	getSampleId(subplot: any): string | undefined {
+		return subplot.sample?.sID || subplot.singleCellPlot?.sample?.sID || subplot.term?.term?.sample?.sID
+	}
+
+	initSection(sampleId: string, sc: SCViewer) {
+		const item = this.findSampleMetadata(sampleId, sc)
 		const sectionWrapper = this.holder
 			.insert('div', ':first-child')
 			.style('padding', '10px')
@@ -94,12 +102,19 @@ export class SectionRender {
 		}
 	}
 
-	//This needs to be ds specific. Placeholder for now
-	makeSectionTitleText(sampleId: string, item: any) {
-		const caseText = item.case ? `Case: ${item.case}` : ''
-		const itemText = `Sample: ${sampleId}` //item.cell, etc.
-		const projectText = item['project id'] ? `Project: ${item['project id']}` : ''
-		return [itemText, caseText, projectText].join(' ')
+	/** Look up sample metadata from the fetched items list.
+	 * For experiment datasets, matches sID against experiments[].sampleName.
+	 * For non-experiment datasets, matches sID against item.sample. */
+	findSampleMetadata(sampleId: string, sc: SCViewer): SingleCellSample | undefined {
+		if (!sc.items) return undefined
+		return sc.items.find(item => item.sample === sampleId || item.experiments?.some(e => e.sampleName === sampleId))
+	}
+
+	makeSectionTitleText(sampleId: string, item?: SingleCellSample) {
+		const caseText = item?.sample && item.sample !== sampleId ? `Case: ${item.sample}` : ''
+		const itemText = `Sample: ${sampleId}`
+		const projectText = item?.['project id'] ? `Project: ${item['project id']}` : ''
+		return [itemText, caseText, projectText].filter(Boolean).join(' ')
 	}
 
 	async initSandbox(sc: any, subplot: any, sampleId: string) {

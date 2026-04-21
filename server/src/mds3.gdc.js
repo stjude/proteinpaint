@@ -2235,9 +2235,10 @@ export function gdc_validate_query_singleCell_DEgenes(ds) {
 	q{} TermdbSinglecellDEgenesRequest
 	*/
 	ds.queries.singleCell.DEgenes.get = async q => {
-		const caseuuid = await getCaseidByFileid(q, q.sample, ds)
+		const fileId = typeof q.sample === 'string' ? q.sample : q.sample.eID
+		const caseuuid = await getCaseidByFileid(q, fileId, ds)
 
-		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
+		const degFileId = await getSinglecellDEfile(caseuuid, q, fileId, ds)
 
 		const genes = await getSinglecellDEgenes(q, degFileId, ds)
 		// Non-volcano callers (e.g. the singleCellPlot DE table) iterate data as
@@ -2267,8 +2268,8 @@ async function getCaseidByFileid(q, fileId, ds) {
 	return re.data?.cases[0].case_id
 }
 
-async function getSinglecellDEfile(caseuuid, q, ds) {
-	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use q.sample which is seurat.analysis.tsv file id. find the matching deg.tsv
+async function getSinglecellDEfile(caseuuid, q, fileId, ds) {
+	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use fileId which is seurat.analysis.tsv file id. find the matching deg.tsv
 
 	const body = {
 		filters: {
@@ -2324,7 +2325,7 @@ async function getSinglecellDEfile(caseuuid, q, ds) {
 		if (!Array.isArray(hit.downstream_analyses[0]?.output_files)) throw 'downstream_analyses[0].output_files[] missing'
 
 		// from output files of this experiment, find if the output_files[] array contains the requested analysis.tsv file
-		if (hit.downstream_analyses[0].output_files.find(f => f.file_id == q.sample)) {
+		if (hit.downstream_analyses[0].output_files.find(f => f.file_id == fileId)) {
 			// now find the deg.tsv file from output_files[] array
 			const f = hit.downstream_analyses[0].output_files.find(f => f.file_name == 'seurat.deg.tsv')
 			if (!f) throw 'a MEX downstream files has analysis.tsv but no deg.tsv'

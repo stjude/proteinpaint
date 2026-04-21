@@ -3,11 +3,6 @@ import type { TableColumn, TableRow } from '#dom'
 import type { SCConfig, SCFormattedState, SampleColumn } from '../SCTypes'
 import type { SingleCellSample } from '#types'
 
-/** TODOs
- *  - ?Implement data mapper for buttons?
- *  - Implement data mapper for plots in the dashboard
- */
-
 export type TableData = {
 	rows: TableRow[]
 	columns: TableColumn[]
@@ -26,7 +21,10 @@ export class SCViewModel {
 		//Should only be called once
 		const [rows, columns] = this.getTabelData(config, items, sampleColumns)
 		const selectedRows: number[] = []
-		const i = items.findIndex(i => i.sample == config.settings.sc.item?.sample)
+		const sID = config.settings.sc.item?.sID
+		const i = sID
+			? items.findIndex(item => item.sample === sID || item.experiments?.some(e => e.sampleName === sID))
+			: -1
 		if (i != -1) selectedRows.push(i)
 
 		/** Returning this data separately from the eventual

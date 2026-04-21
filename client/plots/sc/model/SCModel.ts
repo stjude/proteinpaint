@@ -78,8 +78,8 @@ export class SCModel {
 			checkPlotAvailability: true, // only return available plot names, but not actual plot data
 			plots,
 			sample: {
-				eID: config.settings.sc.item.experiment,
-				sID: config.settings.sc.item.sample
+				eID: config.settings.sc.item.eID,
+				sID: config.settings.sc.item.sID
 			}
 		}
 	}

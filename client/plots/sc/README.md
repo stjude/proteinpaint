@@ -16,7 +16,7 @@ Called during `main()` once a sample is selected (`config.settings.sc.item`). Th
 
 ## Subplots
 Subplot creation and rendering: 
-1. `SCInteractions.createSubplot()` dispatches `plot_create` with `parentId` set to the SC id and `scItem` cloned from the current selection. This adds the subplot as an entry in `state.plots[]`.
+1. `SCInteractions.createSubplot()` dispatches `plot_create` with `parentId` set to the SC id. Each subplot config carries its own `sample: {sID, eID}` (or `term.term.sample: {sID, eID}` for term-based plots). This adds the subplot as an entry in `state.plots[]`.
 2. `getState()` in SC.ts filters all plots with a `parentId` matching the SC id into `subplots[]`.
 3. `main()` passes `subplots[]` to `SCViewRenderer.update()`, which delegates to `SectionRender.update()` for reconciliation and rendering.
 

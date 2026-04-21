@@ -27,7 +27,7 @@ export function getMockSCState(overrides: any = {}) {
 				id: 'plot1',
 				settings: {
 					sc: {
-						item: { experiment: 'EXP1', sample: 'S1' }
+						item: { sID: 'S1', eID: 'EXP1' }
 					}
 				}
 			}

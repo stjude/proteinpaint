@@ -159,7 +159,7 @@ export function getPlotConfig(opts: any) {
 		Object.assign(config, {
 			categoryName: opts.categoryName || '',
 			termId: opts.termId || '',
-			sample: opts.sample || ''
+			sample: opts.sample || { sID: '', eID: '' }
 		})
 	}
 
