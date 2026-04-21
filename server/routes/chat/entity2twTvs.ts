@@ -66,7 +66,7 @@ export function convert2TwTvs(
 type ResolvedCatFilter = {
 	kind: 'categorical'
 	termObj: Value
-	values: string[] // array so multi-category merges work (mirrors sortSameCategoricalFilterKeys)
+	values: { key: string; label: string }[] // array so multi-category merges work (mirrors sortSameCategoricalFilterKeys)
 	logicalOperator?: '&' | '|'
 }
 type ResolvedNumFilter = {
@@ -120,7 +120,7 @@ function buildTvsNode(r: ResolvedFilter): any {
 			type: 'tvs',
 			tvs: {
 				term: r.termObj.term,
-				values: r.values.map(v => ({ key: v }))
+				values: r.values.map(v => ({ key: v.key, label: v.label }))
 			}
 		}
 	}
@@ -187,28 +187,29 @@ async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig):
 			}
 			// Validate the category value against the term's actual values
 			// (similar logic to generate_filter_term() in filter.ts)
+			let cat: string | undefined
 			if ('id' in termObj.term) {
 				const { db_rows } = await parse_dataset_db(dbPath)
 				const dbRow = db_rows.find(r => r.name === (termObj.term as DictTerm).id)
 				if (dbRow) {
-					let cat: string | undefined
 					for (const dbVal of dbRow.values) {
-						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
-						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
-					}
-					if (!cat) {
-						const msg: MsgToUser = {
-							type: 'text',
-							text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
-						}
-						return msg
+						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.value?.label
+						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase())
+							cat = dbVal.value?.label
 					}
 				}
+			}
+			if (!cat) {
+				const msg: MsgToUser = {
+					type: 'text',
+					text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
+				}
+				return msg
 			}
 			resolved.push({
 				kind: 'categorical',
 				termObj,
-				values: [categoricalFilterTerm.value],
+				values: [{ key: categoricalFilterTerm.value, label: cat }],
 				logicalOperator: termObj.logicalOperator
 			})
 		} else if (
