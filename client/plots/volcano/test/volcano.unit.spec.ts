@@ -88,7 +88,8 @@ const mockResponse = {
 			plotBottom: 400,
 			minNonZeroPValue: 1e-9
 		},
-		totalRows: testData.responseData.length
+		totalRows: testData.responseData.length,
+		totalSignificantRows: significantRow ? 1 : 0
 	},
 	images: [],
 	method: 'edgeR',
