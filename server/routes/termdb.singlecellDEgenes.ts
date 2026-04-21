@@ -32,7 +32,7 @@ function init({ genomes }) {
 			if (!ds.queries?.singleCell?.DEgenes || !ds.queries.singleCell.DEgenes.get)
 				throw new Error('DE genes not supported on this dataset.')
 			result = await ds.queries.singleCell.DEgenes.get(q)
-			if (!result || !result.data || !result.data.dots || !result.data.dots.length) {
+			if (!result || !result.data || !result.data.totalRows) {
 				result = {
 					status: 404,
 					error: !result ? 'No data found.' : 'No differentially expressed genes found.'

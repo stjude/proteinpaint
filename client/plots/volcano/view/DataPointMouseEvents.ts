@@ -74,7 +74,8 @@ export class DataPointMouseEvents {
 		}
 
 		circle.on('mouseenter', () => {
-			showHighlight()
+			// Skip the clone for already-highlighted points; their fill handles the visual.
+			if (!d.highlighted) showHighlight()
 			tip.clear().showunder(circle.node())
 			const table = table2col({ holder: tip.d.append('table') })
 			this.addTooltipRows(d, table)
@@ -84,7 +85,6 @@ export class DataPointMouseEvents {
 		circle.on('mouseleave', () => {
 			if (menuOpen) return
 			tip.hide()
-			if (d.highlighted) return
 			hideHighlight()
 		})
 
@@ -93,10 +93,10 @@ export class DataPointMouseEvents {
 
 		circle.on('click', () => {
 			menuOpen = true
-			showHighlight()
+			if (!d.highlighted) showHighlight()
 			tip.onHide = () => {
 				menuOpen = false
-				if (!d.highlighted) hideHighlight()
+				hideHighlight()
 			}
 			tip.clear().showunder(circle.node())
 			for (const opt of visibleMenuOpts) {
@@ -106,7 +106,7 @@ export class DataPointMouseEvents {
 					.text(opt.label)
 					.on('click', async () => {
 						tip.hide()
-						if (!d.highlighted) hideHighlight()
+						hideHighlight()
 						await opt.onClick()
 					})
 			}
