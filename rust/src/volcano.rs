@@ -174,28 +174,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             .disable_axes()
             .draw()?;
 
-        // Threshold guide lines: horizontal p-value cutoff + vertical ±fc cutoff.
-        let guide = ShapeStyle {
-            color: RGBColor(170, 170, 170).mix(0.6),
-            filled: false,
-            stroke_width: 1,
-        };
-        if input.p_value_cutoff > y_min && input.p_value_cutoff < y_max {
-            chart.draw_series(std::iter::once(PathElement::new(
-                vec![(x_min, input.p_value_cutoff), (x_max, input.p_value_cutoff)],
-                guide.clone(),
-            )))?;
-        }
-        if input.fold_change_cutoff > 0.0 {
-            for fc in [-input.fold_change_cutoff, input.fold_change_cutoff] {
-                if fc > x_min && fc < x_max {
-                    chart.draw_series(std::iter::once(PathElement::new(
-                        vec![(fc, y_min), (fc, y_max)],
-                        guide.clone(),
-                    )))?;
-                }
-            }
-        }
+        // Threshold guide lines are drawn by the SVG overlay on the client, not
+        // here — double-drawing them would add stray lines offset by axis padding.
 
         // Resolve colors once. Up/down fall back to `color_sig` when absent.
         let color_sig = rgb(&input.color_significant, (214, 39, 40));

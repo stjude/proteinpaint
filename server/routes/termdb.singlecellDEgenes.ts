@@ -32,7 +32,13 @@ function init({ genomes }) {
 			if (!ds.queries?.singleCell?.DEgenes || !ds.queries.singleCell.DEgenes.get)
 				throw new Error('DE genes not supported on this dataset.')
 			result = await ds.queries.singleCell.DEgenes.get(q)
-			if (!result || !result.data || !result.data.totalRows) {
+			// data can be either a plain gene array (non-volcano callers) or a
+			// VolcanoData object (volcano callers). Both count as empty only if
+			// there are truly no rows — for the array shape that's length===0,
+			// for the volcano shape that's totalRows===0.
+			const isEmpty =
+				!result || !result.data || (Array.isArray(result.data) ? result.data.length === 0 : !result.data.totalRows)
+			if (isEmpty) {
 				result = {
 					status: 404,
 					error: !result ? 'No data found.' : 'No differentially expressed genes found.'
