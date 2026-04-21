@@ -15,6 +15,13 @@ const MAX_PIXEL_DIM = 4000
 const MAX_INTERACTIVE_DOTS = 50000
 const MAX_DOT_RADIUS = 20
 
+const DEFAULT_REQ: VolcanoRenderRequest = {
+	significanceThresholds: { pValueCutoff: 1.3, pValueType: 'adjusted', foldChangeCutoff: 0.3 },
+	pixelWidth: 400,
+	pixelHeight: 400,
+	maxInteractiveDots: 5000
+}
+
 function clampedInt(value: number, min: number, max: number, name: string): number {
 	if (!Number.isFinite(value) || value < min || value > max)
 		throw new Error(`${name} must be a finite number between ${min} and ${max}`)
@@ -29,7 +36,7 @@ function clampedFloat(value: number, min: number, max: number, name: string): nu
 
 export async function renderVolcano<T extends DataEntry>(
 	rows: T[],
-	req: VolcanoRenderRequest
+	req: VolcanoRenderRequest = DEFAULT_REQ
 ): Promise<VolcanoData<T>> {
 	const pixelWidth = clampedInt(req.pixelWidth, 1, MAX_PIXEL_DIM, 'pixelWidth')
 	const pixelHeight = clampedInt(req.pixelHeight, 1, MAX_PIXEL_DIM, 'pixelHeight')
