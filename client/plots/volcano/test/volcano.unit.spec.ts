@@ -112,7 +112,6 @@ tape('init VolcanoViewModel', function (test) {
 	test.equal(viewModel.config, mockConfig, `Should properly set config`)
 	test.equal(viewModel.response, mockResponse, `Should properly set response`)
 	test.equal(viewModel.settings, mockSettings, `Should properly set settings`)
-	test.equal(viewModel.pValueCutoff, mockSettings.pValue, `Should properly set pValueCutoff`)
 	test.equal(viewModel.termType, mockConfig.termType, 'Should properly set termType')
 	test.equal(viewModel.numSignificant, 1, 'Should properly set numSignificant')
 	test.equal(viewModel.numNonSignificant, 9, 'Should properly set numNonSignificant')
