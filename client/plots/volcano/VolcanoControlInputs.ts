@@ -72,7 +72,7 @@ export class VolcanoControlInputs {
 				title:
 					'Cap on the number of top-significant points the server returns as interactive overlay circles. The PNG still shows every dot.',
 				min: 0,
-				max: 100000,
+				max: 20000,
 				step: 100
 			},
 			//Preferably, keep all the display (e.g. colors, sizes, etc.) controls
