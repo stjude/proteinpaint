@@ -64,8 +64,32 @@ const mockConfig = {
 	}
 }
 
+// The server returns `data: VolcanoData` — threshold-passing rows live at
+// `data.dots`, alongside the pre-rendered PNG + extents + total row count.
+// Under the legacy fixture (pValue=1.3, foldChangeCutoff=0, pValueType='adjusted')
+// only C1orf159 passes, so `dots` mirrors the 1 interactive row the server
+// would emit for the old 10-row fixture; totalRows=10 lets numNonSignificant=9
+// fall out for the stats tests.
+const significantRow = testData.responseData.find((d: any) => d.gene_name === 'C1orf159')
 const mockResponse = {
-	data: testData.responseData,
+	data: {
+		dots: significantRow ? [significantRow] : [],
+		volcanoPng: '',
+		plotExtent: {
+			xMin: -0.1281,
+			xMax: 0.6196,
+			yMin: -0.192065410979292,
+			yMax: 2.677780705266081,
+			pixelWidth: 400,
+			pixelHeight: 400,
+			plotLeft: 0,
+			plotTop: 0,
+			plotRight: 400,
+			plotBottom: 400,
+			minNonZeroPValue: 1e-9
+		},
+		totalRows: testData.responseData.length
+	},
 	images: [],
 	method: 'edgeR',
 	sample_size1: 3,
@@ -153,18 +177,19 @@ tape('setPointData', function (test) {
 	const plotDim = viewModel.setPlotDimensions()
 	const pointData = viewModel.setPointData(plotDim, 'red', 'blue')
 
-	test.equal(pointData.length, 10, 'Should properly set pointData length')
+	// Only significant rows are in response.data; non-significant dots live in the PNG.
+	test.equal(pointData.length, 1, 'Should properly set pointData length')
 	test.equal(
 		pointData.filter((d: any) => d.color === 'black').length,
-		9,
-		'Should properly set color for each data point'
+		0,
+		'All overlay circles are significant, so none should be colored as non-significant (black)'
 	)
 	test.equal(
 		pointData.filter((d: any) => d.highlighted === false).length,
-		10,
+		1,
 		'Should properly set highlighted property for each data point'
 	)
-	test.equal(pointData.filter((d: any) => d.radius === 5).length, 10, 'Should properly set radius for each data point')
+	test.equal(pointData.filter((d: any) => d.radius === 5).length, 1, 'Should properly set radius for each data point')
 
 	test.end()
 })

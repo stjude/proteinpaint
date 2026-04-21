@@ -124,7 +124,7 @@ class Volcano extends PlotBase implements RxComponent {
 
 			/** Fetch data */
 			const response = await this.model.getData(config, settings)
-			if (!response || response.error || !response.data || !response.data.length) {
+			if (!response || response.error || !response.data || !response.data.dots || !response.data.dots.length) {
 				sayerror(this.dom.error, response?.error || 'No data returned from server')
 				clearTimeout(showWait)
 				this.dom.wait.style('display', 'none')
@@ -135,7 +135,7 @@ class Volcano extends PlotBase implements RxComponent {
 			const viewModel = new VolcanoViewModel(config, response, settings)
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
-			this.interactions.data = response.data
+			this.interactions.data = response.data.dots
 
 			/** Render formatted data */
 			this.view.render(settings, viewModel.viewData)
