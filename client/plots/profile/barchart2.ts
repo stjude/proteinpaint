@@ -152,7 +152,7 @@ class ProfileBarchart2 extends profilePlot {
 				: `Objective ${
 						this.profileComponent == 'Patients and Outcomes' ? '' : 'and Subjective '
 				  }Score-based Results for the ${this.profileComponent} Component by Module and Domain`
-		this.dom.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
+		this.dom.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(`${title} (v2)`)
 
 		const color = this.configProfileComponent.profileComponent.color
 		this.dom.svg
