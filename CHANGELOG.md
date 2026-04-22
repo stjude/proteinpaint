@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Updated volcano plot to use a serverside rendered png + top interactive points approach
+- Added cache id for GSEA analysis. Allows it to work with new DA Volcano
 
 
 ## 2.184.0
