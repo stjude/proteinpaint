@@ -1,4 +1,5 @@
 import type { RoutePayload } from './routeApi.js'
+import type { DERequest } from './termdb.DE.js'
 
 export type GenesetEnrichmentRequest = {
 	/** Sample genes to be queried. Optional when `cacheId` is given — the
@@ -6,10 +7,16 @@ export type GenesetEnrichmentRequest = {
 	genes?: string[]
 	/** Fold changes aligned to `genes`. Optional when `cacheId` is given. */
 	fold_change?: number[]
-	/** DE cache ID (returned by the volcano/DE route). If set, the server
-	 * reads genes + fold_change from the cache file and ignores any
-	 * `genes`/`fold_change` fields sent in this request. */
+	/** DE cache ID (returned by the volcano/DE route). Deterministic hash
+	 * of the DE inputs. If set, the server reads genes + fold_change from
+	 * the cache file and ignores any `genes`/`fold_change` fields sent in
+	 * this request. */
 	cacheId?: string
+	/** Snapshot of the original DE request that produced `cacheId`. When
+	 * the cache file is missing (TTL eviction or farm node that has never
+	 * seen this request), the server uses this to recompute and rewrite
+	 * the cache. Without this field, a cache miss is unrecoverable. */
+	daRequest?: DERequest
 	/** When true and `cacheId` is set, the server skips enrichment and
 	 * returns the ranked `{ genes, fold_change }` from the cache. Used by
 	 * the client-side cerno detail plot to lazily load the full ranked

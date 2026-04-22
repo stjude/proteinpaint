@@ -22,7 +22,12 @@ export class VolcanoModel {
 
 		if (this.termType === GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			return await dofetch3('termdb/DE', { body })
+			const response = await dofetch3('termdb/DE', { body })
+			// Surface the DE request so downstream plots (GSEA) can snapshot
+			// it and later ask the server to recompute the DA cache if the
+			// file is missing on a peer node or after TTL eviction.
+			if (response && !response.error) response.daRequest = body
+			return response
 		}
 		if (this.termType === DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
