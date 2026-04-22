@@ -5,6 +5,8 @@ import { PlotButtons } from './PlotButtons'
 import type { TableData } from '../viewModel/SCViewModel'
 import { SectionRender } from './SectionRender'
 import type { SCViewer } from '../SC.ts'
+import { GroupByOptions } from '../settings/Settings'
+import { make_radios } from '#dom'
 
 export class SCViewRenderer {
 	dom: SCDom
@@ -15,19 +17,18 @@ export class SCViewRenderer {
 	static inUse = true
 	sectionRender: SectionRender
 	sc: SCViewer
-	// sections: Sections
 
 	constructor(sc: SCViewer) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
 		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		// this.sections = {}
-		this.sectionRender = new SectionRender(this.dom.sectionsDiv)
+		this.sectionRender = new SectionRender(this.dom.sectionsDiv, sc.state.config.settings.sc.groupBy)
 	}
 
-	render(tableData: TableData) {
+	render(tableData: TableData, settings) {
 		this.renderSelectBtn()
+		this.renderGroupByOptions(settings)
 		new SampleTableRenderer(this.dom, this.interactions, tableData)
 		this.dom.plotsBtnsDiv.style('display', 'none')
 	}
@@ -35,9 +36,9 @@ export class SCViewRenderer {
 	/** Renders the select btn at the top of the page that
 	 * show/hides the item table and plot buttons */
 	renderSelectBtn() {
-		this.dom.selectBtnDiv.style('padding', '10px')
+		this.dom.controlsDiv.style('padding', '10px')
 
-		const btn = this.dom.selectBtnDiv
+		const btn = this.dom.controlsDiv
 			.append('button')
 			.attr('data-testid', 'sjpp-sc-item-table-select-btn')
 			.style('border-radius', '20px')
@@ -56,11 +57,33 @@ export class SCViewRenderer {
 		})
 	}
 
+	renderGroupByOptions(settings) {
+		this.dom.controlsDiv.append('span').style('margin-left', '20px').style('opacity', 0.7).text('Group plots by:')
+		const optionsDiv = this.dom.controlsDiv.append('div').style('display', 'inline-block').style('margin-left', '10px')
+		const options = GroupByOptions.map(option => {
+			return {
+				label: `${option.charAt(0).toUpperCase() + option.slice(1)}`,
+				value: option,
+				checked: settings.groupBy === option
+			}
+		})
+		make_radios({
+			holder: optionsDiv,
+			styles: { display: 'inline-block' },
+			options,
+			callback: async value => {
+				await this.sc.app.dispatch({
+					type: 'plot_edit',
+					id: this.sc.id,
+					config: { settings: { sc: { ...settings, groupBy: value } } }
+				})
+			}
+		})
+	}
+
 	async update(settings, data, subplots) {
 		this.plotBtns.update(settings, data)
-		if (settings.sc.groupBy !== 'none') await this.sectionRender.update(this.sc, subplots, settings.sc.groupBy)
-		else {
-			//TODO, need to init sandboxes for ungrouped view as well
-		}
+		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
+		await this.sectionRender.update(this.sc, subplots, settings.sc.groupBy)
 	}
 }

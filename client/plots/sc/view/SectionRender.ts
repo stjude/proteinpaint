@@ -10,20 +10,21 @@ export class SectionRender {
 	/** Maps the plotId to either the sampleId or plotName (i.e. key in secions map)
 	 * as a reverse lookup. */
 	plotId2Key: Map<string, string>
-	groupBy: string | undefined
+	groupBy: string
 
-	constructor(sectionsDiv: Div) {
+	constructor(sectionsDiv: Div, groupBy: string) {
 		this.sections = {}
 		this.holder = sectionsDiv
 		//Key may be either sampleId or plotName
 		this.plotId2Key = new Map()
-		this.groupBy = undefined
+		this.groupBy = groupBy
 	}
 
 	//Send the sc with the updated state
-	async update(sc: SCViewer, subplots: any, groupBy: 'none' | 'sample' | 'plot') {
+	async update(sc: SCViewer, subplots: any, groupBy: string) {
 		if (groupBy !== this.groupBy) {
 			this.groupBy = groupBy
+			this.holder.selectAll('*').remove()
 			//Reset sections and plotId2Key map when groupBy changes as the keys will be different
 			//TODO: evaluate if there's a more performant way to update sections when
 			//groupBy changes without needing to re-render all the sections and sandboxes
@@ -41,7 +42,8 @@ export class SectionRender {
 		}
 
 		for (const subplot of subplots) {
-			const key = groupBy == 'sample' ? this.getSampleId(subplot) : this.getPlotName(subplot)
+			const key =
+				groupBy == 'none' ? 'none' : groupBy == 'sample' ? this.getSampleId(subplot) : this.getPlotName(subplot)
 			if (!key) continue
 			if (!this.sections[key]) this.initSection(key, sc)
 			if (!this.sections[key].sandboxes[subplot.id]) {
@@ -80,6 +82,9 @@ export class SectionRender {
 
 	initSection(key: string, sc: SCViewer) {
 		const item = this.findSampleMetadata(key, sc)
+
+		const titleAttrText =
+			this.groupBy == 'this sample section' ? 'sample' : this.groupBy == 'plot' ? 'this plot section' : 'all plots'
 		const sectionWrapper = this.holder
 			.insert('div', ':first-child')
 			.style('padding', '10px')
@@ -91,7 +96,7 @@ export class SectionRender {
 			.attr('data-testid', `sjpp-sc-section-remove-btn-${key}`)
 			.style('margin', '0px 5px')
 			.style('cursor', 'pointer')
-			.attr('title', 'Remove all plots for this sample')
+			.attr('title', `Remove ${titleAttrText}`)
 			.html(
 				`<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="#000" class="bi bi-x-lg" viewBox="0 0 12 12">
                 <path
@@ -106,19 +111,20 @@ export class SectionRender {
 
 		const titleText = this.makeSectionTitleText(key, item)
 		const titleWrapper = sectionWrapper.append('span').style('font-weight', 600).style('opacity', 0.7).text(titleText)
+		if (titleText.length) {
+			const arrow = titleWrapper
+				.append('span')
+				.style('font-size', '0.8em')
+				.style('padding-left', '3px')
+				.attr('title', `Show/hide plots in ${titleAttrText}`)
+				.text('▼')
 
-		const arrow = titleWrapper
-			.append('span')
-			.style('font-size', '0.8em')
-			.style('padding-left', '3px')
-			.attr('title', 'Show or hide plots for this sample')
-			.text('▼')
-
-		titleWrapper.on('click', () => {
-			const isHidden = this.sections[key].subplots.style('display') === 'none'
-			this.sections[key].subplots.style('display', isHidden ? 'block' : 'none')
-			arrow.text(isHidden ? '▼' : '▲')
-		})
+			titleWrapper.on('click', () => {
+				const isHidden = this.sections[key].subplots.style('display') === 'none'
+				this.sections[key].subplots.style('display', isHidden ? 'block' : 'none')
+				arrow.text(isHidden ? '▼' : '▲')
+			})
+		}
 
 		this.sections[key] = {
 			sectionWrapper,
@@ -137,6 +143,7 @@ export class SectionRender {
 	}
 
 	makeSectionTitleText(key: string, item?: SingleCellSample) {
+		if (this.groupBy === 'none') return ''
 		if (this.groupBy === 'plot') return key
 		const caseText = item?.sample && item.sample !== key ? `Case: ${item.sample}` : ''
 		const itemText = `Sample: ${key}`
