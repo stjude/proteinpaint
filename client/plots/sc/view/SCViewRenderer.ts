@@ -2,7 +2,7 @@ import type { SCDom, SCTableData } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
-import { SectionRender } from './SectionRender'
+import { SectionRenderer } from './SectionRenderer'
 import type { SCViewer } from '../SC.ts'
 import { GroupByOptions, type SCSettings, type Settings } from '../settings/Settings'
 import { make_radios } from '#dom'
@@ -15,8 +15,8 @@ export class SCViewRenderer {
 	plotBtns: PlotButtons
 	//On load, show table
 	//Eventually maybe an app dispatch and not a flag
-	static inUse = true
-	sectionRender: SectionRender
+	static inUse: boolean = true
+	sectionRender: SectionRenderer
 	sc: SCViewer
 
 	constructor(sc: SCViewer, groupBy: (typeof GroupByOptions)[number]) {
@@ -24,7 +24,7 @@ export class SCViewRenderer {
 		this.dom = sc.dom
 		this.interactions = sc.interactions
 		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		this.sectionRender = new SectionRender(this.dom.sectionsDiv, groupBy)
+		this.sectionRender = new SectionRenderer(this.dom.sectionsDiv, groupBy)
 	}
 
 	render(tableData: SCTableData, settings: SCSettings) {
