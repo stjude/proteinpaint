@@ -1,5 +1,5 @@
 import * as d3axis from 'd3-axis'
-import { Menu, renderTable, table2col, axisstyle } from '#dom'
+import { Menu, renderTable, table2col, axisstyle, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
@@ -368,33 +368,43 @@ add:
 
 	//Ensure the image renders when toggling between tabs
 	if (self.config.gsea_params.geneset_name != null) {
-		if (self.settings.gsea_method == 'blitzgsea') {
-			self.config.gsea_params.method = self.settings.gsea_method
-			const image = await rungsea(self.config.gsea_params, self.dom)
-			// //render_gsea_plot(self, plot_data)
-			if (image.error) throw image.error
-			self.imageUrl = URL.createObjectURL(image)
-			const png_width = 600
-			const png_height = 400
-			self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
-		} else if (self.settings.gsea_method == 'cerno') {
-			if (!self.rankedDE && self.config.gsea_params.cacheId) {
-				const deResp = await dofetch3('genesetEnrichment', {
-					body: {
-						genome: self.config.gsea_params.genome,
-						cacheId: self.config.gsea_params.cacheId,
-						fetchDE: true,
-						geneSetGroup: '-',
-						filter_non_coding_genes: false,
-						method: 'cerno'
-					}
-				})
-				if (deResp.error) throw deResp.error
-				self.rankedDE = deResp.data
+		try {
+			if (self.settings.gsea_method == 'blitzgsea') {
+				self.config.gsea_params.method = self.settings.gsea_method
+				const image = await rungsea(self.config.gsea_params, self.dom)
+				// //render_gsea_plot(self, plot_data)
+				if (image.error) throw image.error
+				self.imageUrl = URL.createObjectURL(image)
+				const png_width = 600
+				const png_height = 400
+				self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
+			} else if (self.settings.gsea_method == 'cerno') {
+				if (!self.rankedDE && self.config.gsea_params.cacheId) {
+					const deResp = await dofetch3('genesetEnrichment', {
+						body: {
+							genome: self.config.gsea_params.genome,
+							cacheId: self.config.gsea_params.cacheId,
+							fetchDE: true,
+							geneSetGroup: '-',
+							filter_non_coding_genes: false,
+							method: 'cerno'
+						}
+					})
+					if (deResp.error) throw deResp.error
+					self.rankedDE = deResp.data
+				}
+				render_cerno_plot(self, output)
+			} else {
+				throw 'Unknown method:' + self.settings.gsea_method
 			}
-			render_cerno_plot(self, output)
-		} else {
-			throw 'Unknown method:' + self.settings.gsea_method
+		} catch (e) {
+			self.dom.holder.selectAll('*').remove()
+			const msg = String(e?.message || e)
+			const userMsg = /ENOENT|no such file/i.test(msg)
+				? 'The differential-analysis cache for this GSEA has expired. Reopen the volcano plot to regenerate it.'
+				: msg
+			sayerror(self.dom.holder, userMsg)
+			return
 		}
 	}
 
