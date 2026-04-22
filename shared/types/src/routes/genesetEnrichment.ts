@@ -1,10 +1,20 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type GenesetEnrichmentRequest = {
-	/** Sample genes to be queried */
-	genes: string[]
-	/** Background genes against which the sample genes will be queried */
-	fold_change: number[]
+	/** Sample genes to be queried. Optional when `cacheId` is given — the
+	 * server loads genes from the DE cache file in that case. */
+	genes?: string[]
+	/** Fold changes aligned to `genes`. Optional when `cacheId` is given. */
+	fold_change?: number[]
+	/** DE cache ID (returned by the volcano/DE route). If set, the server
+	 * reads genes + fold_change from the cache file and ignores any
+	 * `genes`/`fold_change` fields sent in this request. */
+	cacheId?: string
+	/** When true and `cacheId` is set, the server skips enrichment and
+	 * returns the ranked `{ genes, fold_change }` from the cache. Used by
+	 * the client-side cerno detail plot to lazily load the full ranked
+	 * gene list without keeping it in plot state. */
+	fetchDE?: boolean
 	/** Filter non-coding genes */
 	filter_non_coding_genes: boolean
 	/** Genome build */

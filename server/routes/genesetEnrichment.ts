@@ -68,9 +68,27 @@ async function run_genesetEnrichment_analysis(
 ): Promise<GenesetEnrichmentResponse | string> {
 	if (!genomes[q.genome].termdbs) throw 'termdb database is not available for ' + q.genome
 
+	let genes = q.genes
+	let fold_change = q.fold_change
+	if (q.cacheId) {
+		// cacheId enters path.join; constrain to the exact format writeDaCache produces
+		if (!/^da_[0-9a-f]{32}$/.test(q.cacheId)) throw 'invalid cacheId'
+		const file = path.join(serverconfig.cachedir, 'daAnalysis', `${q.cacheId}.tsv`)
+		const text = await fs.promises.readFile(file, 'utf8')
+		const rows = text.split('\n').slice(1).filter(Boolean)
+		genes = rows.map(r => r.split('\t')[0])
+		fold_change = rows.map(r => Number(r.split('\t')[1]))
+	}
+
+	if (q.fetchDE) {
+		// Client requested the ranked DE list only (used by the cerno detail plot).
+		if (!genes || !fold_change) throw 'fetchDE requires cacheId'
+		return { data: { genes, fold_change } } as unknown as GenesetEnrichmentResponse
+	}
+
 	const genesetenrichment_input: any = {
-		genes: q.genes,
-		fold_change: q.fold_change,
+		genes,
+		fold_change,
 		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name, // For now msigdb has been added, but later databases other than msigdb may be used
 		geneset_group: q.geneSetGroup,
 		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),

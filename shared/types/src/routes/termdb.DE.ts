@@ -85,6 +85,10 @@ export type VolcanoData<T extends DataEntry> = {
 	/** Rows that passed significance thresholds, before any maxInteractiveDots
 	 * truncation. Use this (not dots.length) for "% significant" stats. */
 	totalSignificantRows: number
+	/** Server-side cache ID for the full DE result (all rows, not just dots).
+	 * Downstream tools (e.g. GSEA) pass this back to the server instead of
+	 * re-transmitting the gene + fold_change arrays. */
+	cacheId?: string
 }
 
 /** Coordinate metadata returned by the `volcano` renderer, used by the client to overlay

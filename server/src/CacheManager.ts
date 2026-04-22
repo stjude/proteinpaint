@@ -89,6 +89,11 @@ const defaultOpts = {
 			...subdirOptsDefaults,
 			maxAge: day * 60,
 			skipMs: halfDay
+		},
+		daAnalysis: {
+			...subdirOptsDefaults,
+			maxAge: day * 60,
+			skipMs: halfDay
 		}
 		// bam: {
 		//  ...subdirOptsDefaults,
