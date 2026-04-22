@@ -2369,6 +2369,13 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 export function gdc_validate_query_singleCell_data(ds, genome) {
 	// q{} TermdbSinglecellDataRequest
 	ds.queries.singleCell.data.get = async q => {
+		if (q.checkPlotAvailability) {
+			// hardcoded to assume every sample has all plots
+			return {
+				plots: q.plots.map(p => ({ expCells: [], noExpCells: [], name: p }))
+			}
+		}
+
 		const { host, headers } = ds.getHostHeaders(q)
 		const sample = q.sample || q.singleCellPlot.sample
 		// do not use headers here that has accept: 'application/json'
