@@ -5,7 +5,7 @@ import type { SCViewer } from '../SC'
 import type { SingleCellSample } from '#types'
 import type { GroupByOptions } from '../settings/Settings'
 
-export class SectionRender {
+export class SectionRenderer {
 	sections: Sections
 	holder: Div
 	/** Maps the plotId to either the sampleId or plotName (i.e. key in secions map)

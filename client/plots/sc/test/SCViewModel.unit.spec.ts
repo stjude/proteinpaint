@@ -21,7 +21,7 @@ import { getMockSCApp, getMockSCConfig } from './getMockSCApp.ts'
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/sc/SCViewModel -***-')
+	test.comment('-***- plots/sc/viewModel/SCViewModel -***-')
 	test.end()
 })
 
