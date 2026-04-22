@@ -1,6 +1,6 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
-import { axisstyle } from '#src/client'
+import { axisstyle, to_svg } from '#src/client'
 import { Menu, table2col, LegendCircleReference, addGeneSearchbox } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
@@ -12,6 +12,8 @@ import { NumericModes, TermTypes } from '#shared/terms.js'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
 import { roundValue } from '#shared/roundValue.js'
+import { select, creator } from 'd3-selection'
+import { icons as controlIcons } from '../dom/control.icons'
 
 const defaultConfig = {
 	chartType: 'proteinView'
@@ -118,9 +120,19 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	}
 
 	const panel = holder.append('div').style('margin-bottom', '14px')
-	panel.append('div').style('font-weight', 600).style('margin-bottom', '6px').text('Cohort Volcano')
+	const header = panel
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '6px')
+		.style('margin-bottom', '6px')
+
+	const downloadBtn = header.append('div').style('display', 'inline-block')
+
+	header.append('div').style('font-weight', 600).text('Cohort Volcano')
 
 	if (!dots.length) {
+		downloadBtn.style('display', 'none')
 		panel
 			.append('div')
 			.style('font-size', '.85em')
@@ -443,6 +455,43 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.style('min-width', '220px')
 		.style('font-size', '.75em')
 		.style('color', '#374151')
+
+	const termName = self.state.config?.tw?.term?.name || ''
+	const svgName = `${termName}.cohort-volcano`
+	const downloadVolcanoSvg = () => {
+		const plotNode = svg.node()
+		const legendNode = legend.node()
+		if (!plotNode) return
+
+		const plotWidth = width
+		const plotHeight = height
+		const legendRect = legendNode?.getBoundingClientRect()
+		const legendWidth = Math.max(220, Math.ceil(legendRect?.width || 220))
+		const legendHeight = Math.max(plotHeight, Math.ceil(legendRect?.height || 0))
+		const gap = 14
+
+		const combinedSvg = select(creator('svg').call(document.documentElement) as SVGSVGElement)
+			.attr('width', plotWidth + gap + legendWidth)
+			.attr('height', legendHeight)
+
+		combinedSvg.append(() => plotNode.cloneNode(true) as SVGSVGElement)
+
+		combinedSvg
+			.append('foreignObject')
+			.attr('x', plotWidth + gap)
+			.attr('y', 0)
+			.attr('width', legendWidth)
+			.attr('height', legendHeight)
+			.append(() => {
+				const clone = legendNode!.cloneNode(true) as HTMLDivElement
+				clone.style.margin = '0px'
+				clone.style.minWidth = '0px'
+				return clone
+			})
+
+		to_svg(combinedSvg.node()!, svgName, { apply_dom_styles: true })
+	}
+	controlIcons.download(downloadBtn, { handler: downloadVolcanoSvg, title: 'Download' })
 
 	const colorLegendDiv = legend.append('div').style('margin-bottom', '12px')
 	const shapeLegendDiv = legend.append('div').style('margin-bottom', '12px')
