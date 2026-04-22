@@ -1295,7 +1295,7 @@ tape('singlecell map', function (test) {
 				{
 					chartType: 'sampleScatter',
 					colorTW: getScctTw(),
-					singleCellPlot: { name: 'scRNA', sample: { sID: '1_patient' } }
+					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
 				}
 			]
 		},

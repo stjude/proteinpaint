@@ -1346,7 +1346,7 @@ tape('Load linear regression-violin UI', function (test) {
 	}
 })
 
-tape('term1=singleCellExpression, term2=singleCellCellType', function (test) {
+tape('Test violin render with term1=singleCellExpression, term2=singleCellCellType', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
