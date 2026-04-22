@@ -9,6 +9,9 @@ import { make_radios } from '#dom'
 import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
 import type { PlotBase } from '#plots/PlotBase.ts'
 
+/** Manages the initial rendering of the sample table and the dynamic
+ * rendering of the plot buttons and sections based on the selected sample and plots.
+ * .update() from sc.main() updates the plot buttons and sections. */
 export class SCViewRenderer {
 	dom: SCDom
 	interactions: SCInteractions

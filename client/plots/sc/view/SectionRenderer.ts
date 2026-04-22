@@ -5,18 +5,26 @@ import type { SCViewer } from '../SC'
 import type { SingleCellSample } from '#types'
 import type { GroupByOptions } from '../settings/Settings'
 
+/** Manages the mapping and rendering of the sections based on the groupBy option.
+ * sections{} maps the section key (i.e. sampleId, plotName, or none) to the section
+ * wrapper, title, subplots div, and the sandboxes in that section.
+ *
+ * Initializing and destorying the plot components is within SC.ts
+ * (i.e. sc.components.plots[plotId]). This ensures plots are responsive to state changes.
+ */
 export class SectionRenderer {
 	sections: Sections
 	holder: Div
-	/** Maps the plotId to either the sampleId or plotName (i.e. key in secions map)
-	 * as a reverse lookup. */
+	/** Maps the plotId to either the sampleId, plotName, or none (i.e. key in sections map)
+	 * as a reverse lookup. Used in tandem with sections{} to manage the sandboxes
+	 * within each section. */
 	plotId2Key: Map<string, string>
 	groupBy: (typeof GroupByOptions)[number]
 
 	constructor(sectionsDiv: Div, groupBy: (typeof GroupByOptions)[number]) {
 		this.sections = {}
 		this.holder = sectionsDiv
-		//Key may be either sampleId or plotName
+		//Key may be either sampleId, plotName, or none
 		this.plotId2Key = new Map()
 		this.groupBy = groupBy
 	}
@@ -159,8 +167,6 @@ export class SectionRenderer {
 
 		const sandbox = newSandboxDiv(sandboxHolder, {
 			close: () => {
-				//Delete the component before calling dispatch
-				//Prevents main attempting to re-init the component
 				this.removeSandbox(subplot.id, sc)
 				sc.app.dispatch({
 					type: 'plot_delete',
@@ -213,6 +219,8 @@ export class SectionRenderer {
 	}
 
 	removeSandbox(plotId: string, sc: SCViewer, _key?: string) {
+		//Delete the component before calling dispatch
+		//Prevents main attempting to re-init the component
 		sc.removeComponent(plotId)
 		const key = _key || this.plotId2Key.get(plotId)
 		if (!key) return
