@@ -581,7 +581,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			checkIPaddress(req, ip, cred)
 			let jwt = rawToken
 			if (!dslabel) {
-				// NOTE: A login jwt payload is expeted to not have dslabel, while session jwt is expected to have it
+				// NOTE: A login jwt payload is expected to not have dslabel, while session jwt is expected to have it
 				// No need to get another session jwt if the current jwt is already a session jwt (not from initial login)
 				code = 401 // in case of jwt processing error
 				jwt = await getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email, sessions)
@@ -589,7 +589,6 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			// difficult to setup CORS cookie, will deprecate support
 			res.send({ status: 'ok', jwt, route: cred.route, clientAuthResult })
 		} catch (e) {
-			//console.log(e)
 			res.status(code)
 			res.header('Set-Cookie', `${cred.cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.send(e instanceof Error || typeof e != 'object' ? { error: e } : e)
@@ -643,7 +642,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				}
 			}
 
-			const computed = cred.demoToken.computedByRole[q.role] //; console.log(626, computed.exp, Date.now() + 60000, computed.exp - Date.now() + 60000)
+			const computed = cred.demoToken.computedByRole[q.role]
 			if (computed && computed.exp > Date.now() + 60000) {
 				// reuse a previously computed jwt that is not close to expiring;
 				// both computed.exp and time buffer (60000) are in milliseconds
@@ -660,7 +659,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 			}
 			const fullPayload = Object.assign({}, defaultToken, ds.demoJwtInput[q.role])
 			const jwt = cred.processor
-				? cred.processor.generatePayload(fullPayload, cred)
+				? cred.processor.generatePayload(fullPayload, { secret: cred.demoToken.secret })
 				: jsonwebtoken.sign(fullPayload, cred.demoToken.secret)
 			console.log(`~~ Faketoken computed for ds=${q.dslabel}, role=${q.role}`)
 			cred.demoToken.computedByRole[q.role] = { jwt, exp: fullPayload.exp * 1000 } // track expiration in milliseconds
@@ -676,10 +675,17 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		will return a list of all dslabels that require credentials
 	*/
 	authApi.getDsAuth = function (req) {
+		const activeDslabels = []
+		for (const g of Object.values(genomes)) {
+			for (const dslabel of Object.keys(g.datasets)) {
+				activeDslabels.push(dslabel)
+			}
+		}
 		const dsAuth = []
 		const embedder = req.query.embedder || req.get('host')?.split(':')[0] // do not include port number
 		for (const [dslabelPattern, ds] of Object.entries(creds)) {
-			if (dslabelPattern.startsWith('__')) continue
+			if (dslabelPattern.startsWith('__') || dslabelPattern.startsWith('#') || !activeDslabels.includes(dslabelPattern))
+				continue
 			for (const [routePattern, route] of Object.entries(ds)) {
 				for (const [embedderHostPattern, cred] of Object.entries(route)) {
 					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue
@@ -700,13 +706,16 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 
 					// if session is valid, extend the session expiration by resetting the start time
 					if (insession) activeSession.time = currTime
-
+					const demoTokenRoles = cred.demoToken?.referers.find(r => req.headers.referer.includes(r))
+						? cred.demoToken?.roles
+						: undefined
 					dsAuth.push({
 						dslabel: dslabelPattern,
 						route: routePattern,
 						type: cred.type || 'basic',
 						headerKey: cred.headerKey,
-						insession
+						insession,
+						demoTokenRoles
 					})
 				}
 			}
@@ -1078,7 +1087,7 @@ function getJwtPayload(q, headers, cred, session = null) {
 	// optionally transform, translate, reformat the payload
 	if (processor.handlePayload) {
 		try {
-			processor.handlePayload(cred, payload, time)
+			processor.handlePayload({ secret: cred.demoToken.secret }, payload, time)
 		} catch (e) {
 			//console.log(e)
 			if (e.reason == 'bad decrypt') throw `Please login again to access this feature. (${e.reason})`

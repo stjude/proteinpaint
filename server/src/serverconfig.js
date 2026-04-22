@@ -322,7 +322,12 @@ function mayUpdateTestDatasets(datasets, serverconfig) {
 						id: 'XYZ',
 						label: 'XYZ cohort'
 					}
-				]
+				],
+				demoToken: {
+					secret: '...', // pragma: allowlist secret
+					roles: ['user'],
+					referers: ['/demo-login.html']
+				}
 			}
 		}
 	}
