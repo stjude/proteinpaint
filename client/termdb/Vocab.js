@@ -40,7 +40,7 @@ export class Vocab {
 		if (this.state.vocab) this.vocab = this.state.vocab
 		// may or may not need a verified token for a dslabel, based on genome response.dsAuth
 		const dslabel = this.state.dslabel || this.state.vocab.dslabel
-		this.verifiedToken = !this.state.termdbConfig?.requiredAuth?.length || isInSession(dslabel, 'termdb')
+		this.verifiedToken = !this.state.termdbConfig?.requiredAuth?.length || (await isInSession(dslabel, 'termdb'))
 		// secured plots need to confirm that a verified token exists
 		if (dslabel) await this.maySetVerifiedToken(dslabel)
 	}
@@ -137,7 +137,7 @@ export class Vocab {
 
 		if (!auth) return {}
 		if (!this.verifiedToken) {
-			if (isInSession(dslabel, 'termdb')) {
+			if (await isInSession(dslabel, 'termdb')) {
 				const jwt = getSavedToken(this.state.vocab.dslabel, route)
 				if (jwt) this.verifiedToken = jwt
 			} else {
