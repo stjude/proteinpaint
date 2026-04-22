@@ -8,11 +8,11 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import { AnnotationStatus, type Prediction, type TileSelection } from '@sjcrh/proteinpaint-types'
+import { type Annotation, AnnotationStatus, type Prediction, type TileSelection } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
-
+import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
 	zoomInEffectListener: (
@@ -159,6 +159,32 @@ export class WSIViewerInteractions {
 					//Delete
 					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
 				}
+				if (event.key.toLowerCase() === 'f') {
+					if (!('timestamp' in tileSelections[currentIndex])) return
+					const tileSelection = tileSelections[currentIndex] as Annotation
+					const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
+					if (!matchingClass) return
+					const newFlag =
+						tileSelection.flag === AnnotationStatus.Flagged ? AnnotationStatus.Normal : AnnotationStatus.Flagged
+					const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+					//Remove any previous feature with the same ID
+					const feature = source?.getFeatureById(`annotation-star-${tileSelection.zoomCoordinates}`)
+					if (feature) {
+						source?.removeFeature(feature)
+					}
+					if (newFlag === AnnotationStatus.Flagged) {
+						console.log('hrer')
+						const starFeature = ViewModelProvider.createStarFeature(
+							sessionWSImage.tileSize!,
+							tileSelection.zoomCoordinates,
+							tileSelection.zoomCoordinates,
+							'yellow',
+							matchingClass.color
+						)
+						source?.addFeature(starFeature)
+					}
+					this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, matchingClass.id, aiProjectID, newFlag)
+				}
 
 				// New Enter key branch: check for prediction uncertainty and save annotation
 				if (event.key === 'Enter') {
@@ -247,7 +273,6 @@ export class WSIViewerInteractions {
 				const y1 = y0 + settings.tileSize
 				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
-
 			if (selectedTileSelectionIndex !== -1) {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
@@ -589,7 +614,8 @@ export class WSIViewerInteractions {
 		sessionWSImage: SessionWSImage,
 		currentIndex: number,
 		selectedClassId: number | undefined,
-		aiProjectID: number
+		aiProjectID: number,
+		annotationFlag: AnnotationStatus = AnnotationStatus.Normal
 	) {
 		const state = wsiApp.app.getState()
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
@@ -598,7 +624,7 @@ export class WSIViewerInteractions {
 			dslabel: state.vocab.dslabel,
 			coordinates: tileSelections[currentIndex].zoomCoordinates,
 			classId: selectedClassId!,
-			flag: AnnotationStatus.Normal,
+			flag: annotationFlag,
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}

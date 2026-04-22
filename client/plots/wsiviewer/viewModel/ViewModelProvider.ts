@@ -6,9 +6,10 @@ import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import type {
-	AiProjectSelectedWSImagesRequest,
-	AiProjectSelectedWSImagesResponse
+import {
+	AnnotationStatus,
+	type AiProjectSelectedWSImagesRequest,
+	type AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
 import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'
@@ -220,46 +221,20 @@ export class ViewModelProvider {
 					`annotation-border-${annotation.zoomCoordinates}`
 				)
 				sourceAnnotations.addFeature(borderFeature)
-				//turn into function
-				// Source - https://stackoverflow.com/a/70960369
-				// Posted by enxaneta
-				// Retrieved 2026-04-21, License - CC BY-SA 4.0
+				console.log(annotation.flag === AnnotationStatus.Flagged)
 
-				const starCoords: Array<[number, number]> = []
-				let n = 0 //a counter
-				const starRadiusOuter = 110
-				const starRadiusInner = 55
-				const starOffset = tileSize / 4
-				const starCenter = { x: topLeft[0] + starOffset, y: topLeft[1] - starOffset }
-				const step = Math.PI / 5 //since the star has 5 points you will need to calculate the position of a point every 36degs i.e Math.PI/5;
-				const starColor = 'yellow'
-
-				//a for loop to calculate the position of the points for the star
-				for (let a = Math.PI / 2; a > (-3 * Math.PI) / 2; a -= step) {
-					//The point will be either on the outer circle or on the inner one
-					const r = n % 2 == 0 ? starRadiusOuter : starRadiusInner
-					const x = starCenter.x + r * Math.cos(a)
-					const y = starCenter.y + r * Math.sin(a)
-					starCoords.push([x, y])
-					n++
+				if (annotation.flag === AnnotationStatus.Flagged) {
+					const starFeature = ViewModelProvider.createStarFeature(
+						tileSize,
+						topLeft,
+						annotation.zoomCoordinates,
+						'yellow',
+						color
+					)
+					sourceAnnotations.addFeature(starFeature)
 				}
-				const feature = new Feature({
-					geometry: new Polygon([starCoords]),
-					properties: {
-						isLocked: false
-					}
-				})
-
-				feature.setId(`annotation-star-${annotation.zoomCoordinates}`)
-
-				feature.setStyle(
-					new Style({
-						fill: new Fill({ color: starColor }),
-						stroke: new Stroke({ color, width: 2 })
-					})
-				)
-				sourceAnnotations.addFeature(feature)
 			}
+			console.log(sourceAnnotations.getFeatures())
 
 			const vectorLayer = new VectorLayer({
 				source: sourceAnnotations,
@@ -271,7 +246,7 @@ export class ViewModelProvider {
 			} else {
 				wsiImageLayers.overlays = [vectorLayer]
 			}
-
+			console.log(wsiImageLayers.overlays)
 			layers[i] = wsiImageLayers
 		}
 		return layers
@@ -292,6 +267,52 @@ export class ViewModelProvider {
 		return await dofetch3('aiProjectSelectedWSImages', {
 			body: body
 		})
+	}
+	public static createStarFeature(
+		tileSize: number,
+		starCenter: [number, number],
+		annotationCoords: [number, number],
+		fillColor: string = 'yellow',
+		outlineColor: any = 'yellow'
+	): Feature<Geometry> {
+		//turn into function
+		// Source - https://stackoverflow.com/a/70960369
+		// Posted by enxaneta
+		// Retrieved 2026-04-21, License - CC BY-SA 4.0
+
+		const starCoords: Array<[number, number]> = []
+		let n = 0 //a counter
+		const starRadiusOuter = 110
+		const starRadiusInner = 55
+		const starOffset = tileSize / 4
+		const step = Math.PI / 5 //since the star has 5 points you will need to calculate the position of a point every 36degs i.e Math.PI/5;
+
+		//a for loop to calculate the position of the points for the star
+		for (let a = Math.PI / 2; a > (-3 * Math.PI) / 2; a -= step) {
+			//The point will be either on the outer circle or on the inner one
+			const r = n % 2 == 0 ? starRadiusOuter : starRadiusInner
+			const x = starCenter[0] + starOffset + r * Math.cos(a)
+			const y = starCenter[1] - starOffset + r * Math.sin(a)
+			starCoords.push([x, y])
+			n++
+		}
+		const feature = new Feature({
+			geometry: new Polygon([starCoords]),
+			properties: {
+				isLocked: false
+			}
+		})
+
+		feature.setId(`annotation-star-${annotationCoords}`)
+
+		feature.setStyle(
+			new Style({
+				zIndex: 1000,
+				fill: new Fill({ color: fillColor }),
+				stroke: new Stroke({ color: outlineColor, width: 2 })
+			})
+		)
+		return feature
 	}
 
 	//TODO: This should be centralized with interaction code

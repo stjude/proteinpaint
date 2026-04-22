@@ -107,6 +107,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const wsimages = viewModel.sampleWSImages
 
 		const wsimageLayers = viewModel.wsimageLayers
+		console.log(wsimageLayers)
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')

@@ -92,7 +92,26 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 
 			const imageId = imageRow.id
-
+			//Checking for duplicate annotation based on projectId, imageId and coordinates
+			const duplicateCheckSql = `
+				SELECT id
+				FROM project_flagged_annotations
+				WHERE project_id = ?
+				  AND image_id = ?
+				  AND coordinates = ?
+				LIMIT 1
+			`
+			const duplicateCheckStmt = connection.prepare(duplicateCheckSql)
+			const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords) as { id: number } | undefined
+			if (duplicateRow) {
+				const deleteDuplicateSql = `
+					DELETE FROM project_flagged_annotations
+					WHERE id = ?
+				`
+				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
+				deleteDuplicateStmt.run(duplicateRow.id)
+				//Gotta retrieve the info for what was deleted
+			}
 			const insertSql = `
 				INSERT INTO project_flagged_annotations (
 					project_id, user_id, coordinates, timestamp, status, flagged,class_id, image_id
