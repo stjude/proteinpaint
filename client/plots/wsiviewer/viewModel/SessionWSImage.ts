@@ -80,13 +80,11 @@ export class SessionWSImage extends WSImage {
 				{ value: '' }
 			]
 		})
-		console.log('new')
 		const annotationsRows: any[] = annotations.map((annotation, i) => {
 			const idx = sessionsRows.length + predictionRows.length + i // Continue index
 			const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
 			const firstCell: any = { value: idx }
 			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
-			console.log(annotation.class, color)
 			return [
 				firstCell,
 				{ value: annotation.zoomCoordinates },
