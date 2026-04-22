@@ -248,11 +248,12 @@ class gsea extends PlotBase {
 
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
-		if (this.dom.header)
+		if (this.dom.header) {
+			const geneCount = this.config.gsea_params.genes_length ?? this.config.gsea_params.genes?.length ?? 0
 			this.dom.header.html(
-				this.config.gsea_params.genes_length +
-					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
+				geneCount + ' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
+		}
 		render_gsea(this)
 	}
 }
@@ -346,12 +347,18 @@ add:
 
 	let output
 	try {
+		const p = self.config.gsea_params
 		const body = {
-			genome: self.config.gsea_params.genome,
-			cacheId: self.config.gsea_params.cacheId,
+			genome: p.genome,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
 			method: self.settings.gsea_method
+		}
+		if (p.cacheId) {
+			body.cacheId = p.cacheId
+		} else {
+			body.genes = p.genes
+			body.fold_change = p.fold_change
 		}
 
 		if (self.settings.gsea_method == 'blitzgsea') {

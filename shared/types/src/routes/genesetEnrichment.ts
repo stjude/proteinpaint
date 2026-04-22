@@ -25,8 +25,9 @@ export type GenesetEnrichmentRequest = {
 	geneset_name?: string
 	/** Pickle file to be queried for generating gsea image of a particular geneset */
 	pickle_file?: string
-	/** Number of permutations to be carried out for GSEA analysis */
-	num_permutations: number
+	/** Number of permutations to be carried out for GSEA analysis.
+	 * Only read by the blitzgsea path; cerno and fetchDE requests omit it. */
+	num_permutations?: number
 	/** Method used for GSEA blitzgsea/cerno */
 	method: 'blitzgsea' | 'cerno'
 }
