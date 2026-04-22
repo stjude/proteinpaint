@@ -1,1 +1,2 @@
-
+Features
+- Several updates for the SC app: The flyout menu for the Gene expression button is replaced with the transient GeneExpInput plot. The blue plot buttons now correspond to plots with available data. Users may group plots by samples, plot type, or not at all. New units are available for the PlotButtons and SectionRenderer. 
