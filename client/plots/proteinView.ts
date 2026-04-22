@@ -57,7 +57,7 @@ class ProteinView extends PlotBase implements RxComponent {
 		if (!this.dom.header) return
 		const term = this.state.config?.tw?.term
 		const header = `Protein View: ${term?.name}`
-		this.dom.header.html(header)
+		this.dom.header.text(header)
 	}
 
 	async main() {
