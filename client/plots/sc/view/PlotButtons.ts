@@ -4,7 +4,7 @@ import { Menu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
 import type { SCSample } from '../SCTypes'
-import type { SCSettings } from '../settings/Settings'
+import type { Settings } from '../settings/Settings'
 
 /** Rendering for the plot buttons that appear below the item
  * table. Plot buttons are rendered based on the available plots
@@ -29,7 +29,7 @@ export class PlotButtons {
 	item?: SCSample
 	interactions: SCInteractions
 	scTermdbConfig: any
-	settings!: SCSettings
+	settings!: Settings
 	scctTerms?: any[]
 
 	constructor(interactions: SCInteractions, holder: Div) {
@@ -47,7 +47,7 @@ export class PlotButtons {
 		this.scTermdbConfig = state.termdbConfig.queries.singleCell
 	}
 
-	update(settings: SCSettings, data) {
+	update(settings: Settings, data) {
 		/** If the user has not selected a item yet but clicks
 		 * the select item/plots btn above the table, the prompt appears
 		 * unnecessarily */

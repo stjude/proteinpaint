@@ -1,18 +1,12 @@
 import type { AppApi } from '#rx'
 import type { TableColumn, TableRow } from '#dom'
-import type { SCConfig, SCFormattedState, SampleColumn } from '../SCTypes'
+import type { SCConfig, SCFormattedState, SampleColumn, SCTableData } from '../SCTypes'
 import type { SingleCellSample } from '#types'
-
-export type TableData = {
-	rows: TableRow[]
-	columns: TableColumn[]
-	selectedRows: number[]
-}
 
 export class SCViewModel {
 	app: AppApi
 	state: SCFormattedState
-	tableData: TableData
+	tableData: SCTableData
 
 	constructor(app: AppApi, config: SCConfig, items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		this.app = app
