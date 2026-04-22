@@ -1,2 +1,1 @@
-Features:
-- Updated volcano plot to use a serverside rendered png + top interactive points approach
+

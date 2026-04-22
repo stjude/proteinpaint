@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Updated volcano plot to use a serverside rendered png + top interactive points approach
+
 
 ## 2.184.0
 
