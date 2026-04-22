@@ -38,6 +38,8 @@ export type TermdbSingleCellDataRequest = {
 	sample: { eID?: string; sID: string }
 	/** List of plot names from this sample to request data for */
 	plots: string[]
+	/** check plot availability for this sample, will not return actual plot data and speed up */
+	checkPlotAvailability?: boolean
 	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
 	gene?: string
 	/** in each plot, what Column name to color by 
