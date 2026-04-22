@@ -1,4 +1,4 @@
-import type { Div } from '../../../types/d3'
+import type { Div, Span } from '../../../types/d3'
 
 export type Sections = {
 	//Key is either sampleId or plotName depending on the grouping method
@@ -6,9 +6,9 @@ export type Sections = {
 		/** Wrapper div for the entire section. Used to destroy the section when needed. */
 		sectionWrapper: Div
 		/** Title element for the section. */
-		title: any
+		title: Span
 		/** Wrapper for the subplots within the section. */
-		subplots: any
+		subplots: Div
 		/** Maps the plotId to the corresponding sandbox element. */
 		sandboxes: {
 			//Key is the plot.id and the value is sandbox.app_div

@@ -1,9 +1,9 @@
 import { getGEunit } from '#tw/geneExpression'
-import type { SCSettings } from './Settings'
+import type { Settings } from './Settings'
 
 /** Define all subplot settings here */
-export function getDefaultSCAppSettings(overrides = {}, app): SCSettings {
-	const defaults: SCSettings = {
+export function getDefaultSCAppSettings(overrides = {}, app): Settings {
+	const defaults: Settings = {
 		sc: {
 			columns: {
 				// TODO: Implement ds specific column name

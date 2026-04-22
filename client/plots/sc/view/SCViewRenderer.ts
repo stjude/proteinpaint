@@ -1,12 +1,13 @@
-import type { SCDom } from '../SCTypes'
+import type { SCDom, SCTableData } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
-import type { TableData } from '../viewModel/SCViewModel'
 import { SectionRender } from './SectionRender'
 import type { SCViewer } from '../SC.ts'
-import { GroupByOptions } from '../settings/Settings'
+import { GroupByOptions, type SCSettings, type Settings } from '../settings/Settings'
 import { make_radios } from '#dom'
+import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
+import type { PlotBase } from '#plots/PlotBase.ts'
 
 export class SCViewRenderer {
 	dom: SCDom
@@ -18,7 +19,7 @@ export class SCViewRenderer {
 	sectionRender: SectionRender
 	sc: SCViewer
 
-	constructor(sc: SCViewer, groupBy: string) {
+	constructor(sc: SCViewer, groupBy: (typeof GroupByOptions)[number]) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
@@ -26,7 +27,7 @@ export class SCViewRenderer {
 		this.sectionRender = new SectionRender(this.dom.sectionsDiv, groupBy)
 	}
 
-	render(tableData: TableData, settings) {
+	render(tableData: SCTableData, settings: SCSettings) {
 		this.renderSelectBtn()
 		this.renderGroupByOptions(settings)
 		new SampleTableRenderer(this.dom, this.interactions, tableData)
@@ -58,7 +59,7 @@ export class SCViewRenderer {
 		})
 	}
 
-	renderGroupByOptions(settings) {
+	renderGroupByOptions(settings: SCSettings) {
 		this.dom.controlsDiv
 			.append('span')
 			.style('padding', '3px 0px 3px 20px')
@@ -86,7 +87,7 @@ export class SCViewRenderer {
 		})
 	}
 
-	async update(settings, data, subplots) {
+	async update(settings: Settings, data: SingleCellDataNative | SingleCellDataGdc, subplots: PlotBase[]) {
 		this.plotBtns.update(settings, data)
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
 		await this.sectionRender.update(this.sc, subplots, settings.sc.groupBy)

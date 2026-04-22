@@ -1,12 +1,12 @@
 import type { Elem, Div } from '../../types/d3'
 import type { TableRow, TableColumn } from '#dom'
-import type { SCSettings } from './settings/Settings'
+import type { Settings } from './settings/Settings'
 
 /** WIP config for the sc app */
 export type SCConfig = {
 	chartType: 'sc'
 	/** Common settings and settings for each child component/plot */
-	settings: SCSettings
+	settings: Settings
 }
 
 /** Opts defined in getPlotConfig() */

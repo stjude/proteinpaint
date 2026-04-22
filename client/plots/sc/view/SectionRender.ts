@@ -1,8 +1,9 @@
 import type { Sections } from './Sections'
-import type { Div } from '../../../types/d3'
+import type { Div, Elem } from '../../../types/d3'
 import { newSandboxDiv } from '#dom'
 import type { SCViewer } from '../SC'
 import type { SingleCellSample } from '#types'
+import type { GroupByOptions } from '../settings/Settings'
 
 export class SectionRender {
 	sections: Sections
@@ -10,9 +11,9 @@ export class SectionRender {
 	/** Maps the plotId to either the sampleId or plotName (i.e. key in secions map)
 	 * as a reverse lookup. */
 	plotId2Key: Map<string, string>
-	groupBy: string
+	groupBy: (typeof GroupByOptions)[number]
 
-	constructor(sectionsDiv: Div, groupBy: string) {
+	constructor(sectionsDiv: Div, groupBy: (typeof GroupByOptions)[number]) {
 		this.sections = {}
 		this.holder = sectionsDiv
 		//Key may be either sampleId or plotName
@@ -21,7 +22,7 @@ export class SectionRender {
 	}
 
 	//Send the sc with the updated state
-	async update(sc: SCViewer, subplots: any, groupBy: string) {
+	async update(sc: SCViewer, subplots: any, groupBy: (typeof GroupByOptions)[number]) {
 		if (groupBy !== this.groupBy) {
 			this.groupBy = groupBy
 			this.holder.selectAll('*').remove()
@@ -84,7 +85,7 @@ export class SectionRender {
 		const item = this.findSampleMetadata(key, sc)
 
 		const titleAttrText =
-			this.groupBy == 'this sample section' ? 'sample' : this.groupBy == 'plot' ? 'this plot section' : 'all plots'
+			this.groupBy == 'sample' ? 'this sample section' : this.groupBy == 'plot' ? 'this plot section' : 'all plots'
 		const sectionWrapper = this.holder
 			.insert('div', ':first-child')
 			.style('padding', '10px')
@@ -154,7 +155,7 @@ export class SectionRender {
 	async initSandbox(sc: any, subplot: any, key: string) {
 		const sandboxHolder = this.sections[key].subplots
 			.insert('div', ':first-child')
-			.attr('data-testid', `sjpp-sc-sandbox-${subplot.id}`)
+			.attr('data-testid', `sjpp-sc-sandbox-${subplot.id}`) as any as Elem
 
 		const sandbox = newSandboxDiv(sandboxHolder, {
 			close: () => {
