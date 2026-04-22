@@ -75,8 +75,14 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'profileRadar':
 			return await import('./profile/profileRadar.ts')
 
+		case 'profileRadar2':
+			return await import('./profile/radar2.ts')
+
 		case 'profileRadarFacility':
 			return await import('./profile/profileRadarFacility.ts')
+
+		case 'profileRadarFacility2':
+			return await import('./profile/radarFacility2.ts')
 
 		case 'proteinView':
 			return await import(`./proteinView.ts`)
