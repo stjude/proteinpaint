@@ -366,7 +366,7 @@ function table_snvindel_mayInsertHtmlSections(m, tk, table) {
 		const [td1, td2] = table.addRow()
 		if (section.callback) {
 			if (section.key) td1.text(section.key)
-			td2.append('button').text(section.label).on('click', section.callback)
+			td2.append('button').text(section.label || 'Run').on('click', section.callback)
 		} else if (section.key && section.html) {
 			td1.text(section.key)
 			td2.html(section.html)
