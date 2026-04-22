@@ -22,6 +22,14 @@ export class SectionRender {
 
 	//Send the sc with the updated state
 	async update(sc: SCViewer, subplots: any, groupBy: 'none' | 'sample' | 'plot') {
+		if (groupBy !== this.groupBy) {
+			this.groupBy = groupBy
+			//Reset sections and plotId2Key map when groupBy changes as the keys will be different
+			//TODO: evaluate if there's a more performant way to update sections when
+			//groupBy changes without needing to re-render all the sections and sandboxes
+			this.sections = {}
+			this.plotId2Key = new Map()
+		}
 		const activeSubplots = new Set(subplots.map(s => s.id))
 
 		/** Repeat the destory from the close button, as mass/app.ts
@@ -33,7 +41,7 @@ export class SectionRender {
 		}
 
 		for (const subplot of subplots) {
-			const key = groupBy == 'sample' ? this.getSampleId(subplot) : undefined
+			const key = groupBy == 'sample' ? this.getSampleId(subplot) : this.getPlotName(subplot)
 			if (!key) continue
 			if (!this.sections[key]) this.initSection(key, sc)
 			if (!this.sections[key].sandboxes[subplot.id]) {
@@ -58,9 +66,14 @@ export class SectionRender {
 	}
 
 	getPlotName(subplot: any): string {
-		let plotName = subplot?.singleCellPlot?.name || subplot?.term?.term?.plot
+		let plotName = subplot?.plotName || subplot?.singleCellPlot?.name || subplot?.term?.term?.plot
 		if (!plotName) {
-			if (subplot.chartType === 'dictionary') plotName = 'Dictionary'
+			/** Harcoding logic for some transient and parent plots for now. May consider
+			 * adding to the config if this becomes more complex. Must weight against
+			 * adding unnecessary complexity to the config for edge cases though.*/
+			if (subplot.chartType === 'dictionary') plotName = 'Summary'
+			if (subplot.chartType === 'summary') plotName = 'Summary'
+			if (subplot.chartType === 'GeneExpInput') plotName = 'Gene expression'
 		}
 		return plotName
 	}
@@ -124,6 +137,7 @@ export class SectionRender {
 	}
 
 	makeSectionTitleText(key: string, item?: SingleCellSample) {
+		if (this.groupBy === 'plot') return key
 		const caseText = item?.sample && item.sample !== key ? `Case: ${item.sample}` : ''
 		const itemText = `Sample: ${key}`
 		const projectText = item?.['project id'] ? `Project: ${item['project id']}` : ''
