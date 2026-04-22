@@ -216,8 +216,18 @@ class gsea extends PlotBase {
 					config: {
 						gsea_params: {
 							cacheId: response.data.cacheId,
+							// Snapshot of the DE request so the server can regenerate
+							// the cache if this GSEA request lands on a peer node or
+							// arrives after the cache TTL has expired.
+							daRequest: response.daRequest,
 							genes_length: response.data.totalRows,
-							genome: this.app.vocabApi.opts.state.vocab.genome
+							genome: this.app.vocabApi.opts.state.vocab.genome,
+							// Sending dslabel at the top level makes the global
+							// auth middleware populate clientAuthResult on this
+							// request the same way it did for the volcano
+							// request, so the server can re-apply the same
+							// auth-filter injection to daRequest before hashing.
+							dslabel: this.app.vocabApi.vocab.dslabel
 						}
 					}
 				})
@@ -356,6 +366,13 @@ add:
 		}
 		if (p.cacheId) {
 			body.cacheId = p.cacheId
+			// Sending the DE request snapshot lets the server regenerate the
+			// cache on miss (farm node without the file, TTL-expired).
+			if (p.daRequest) body.daRequest = p.daRequest
+			// Top-level dslabel makes the global auth middleware populate
+			// clientAuthResult so the server can re-apply the same
+			// auth-filter injection to daRequest before hashing.
+			if (p.dslabel) body.dslabel = p.dslabel
 		} else {
 			body.genes = p.genes
 			body.fold_change = p.fold_change
@@ -391,6 +408,14 @@ add:
 						body: {
 							genome: self.config.gsea_params.genome,
 							cacheId: self.config.gsea_params.cacheId,
+							// Also send daRequest so the server can recompute
+							// the cache on miss (same farm-safety reason as
+							// the primary enrichment call).
+							daRequest: self.config.gsea_params.daRequest,
+							// Top-level dslabel so the auth middleware populates
+							// clientAuthResult for the server's auth-filter
+							// adjustment of daRequest.
+							dslabel: self.config.gsea_params.dslabel,
 							fetchDE: true,
 							geneSetGroup: '-',
 							filter_non_coding_genes: false,
@@ -407,8 +432,8 @@ add:
 		} catch (e) {
 			self.dom.holder.selectAll('*').remove()
 			const msg = String(e?.message || e)
-			const userMsg = /ENOENT|no such file/i.test(msg)
-				? 'The differential-analysis cache for this GSEA has expired. Reopen the volcano plot to regenerate it.'
+			const userMsg = /daCacheMissing|ENOENT|no such file/i.test(msg)
+				? 'The differential-analysis cache for this GSEA is no longer available. Reopen the volcano plot to regenerate it.'
 				: msg
 			sayerror(self.dom.holder, userMsg)
 			return
