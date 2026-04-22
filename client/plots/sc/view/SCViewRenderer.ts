@@ -18,12 +18,12 @@ export class SCViewRenderer {
 	sectionRender: SectionRender
 	sc: SCViewer
 
-	constructor(sc: SCViewer) {
+	constructor(sc: SCViewer, groupBy: string) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
 		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		this.sectionRender = new SectionRender(this.dom.sectionsDiv, sc.state.config.settings.sc.groupBy)
+		this.sectionRender = new SectionRender(this.dom.sectionsDiv, groupBy)
 	}
 
 	render(tableData: TableData, settings) {
@@ -41,6 +41,7 @@ export class SCViewRenderer {
 		const btn = this.dom.controlsDiv
 			.append('button')
 			.attr('data-testid', 'sjpp-sc-item-table-select-btn')
+			.attr('title', 'Show/hide sample table and plot buttons')
 			.style('border-radius', '20px')
 			.style('padding', '5px 10px')
 			.style('background-color', 'transparent')
@@ -58,8 +59,12 @@ export class SCViewRenderer {
 	}
 
 	renderGroupByOptions(settings) {
-		this.dom.controlsDiv.append('span').style('margin-left', '20px').style('opacity', 0.7).text('Group plots by:')
-		const optionsDiv = this.dom.controlsDiv.append('div').style('display', 'inline-block').style('margin-left', '10px')
+		this.dom.controlsDiv
+			.append('span')
+			.style('padding', '3px 0px 3px 20px')
+			.style('opacity', 0.7)
+			.text('Group plots by:')
+		const optionsDiv = this.dom.controlsDiv.append('span').style('display', 'inline-block')
 		const options = GroupByOptions.map(option => {
 			return {
 				label: `${option.charAt(0).toUpperCase() + option.slice(1)}`,
