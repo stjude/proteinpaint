@@ -196,8 +196,18 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Facility Radar 2',
+			chartType: 'profileRadarFacility2',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Radar',
 			chartType: 'profileRadar',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Radar 2',
+			chartType: 'profileRadar2',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{

@@ -78,5 +78,7 @@ export const routeFiles = [
 	import('../routes/termdb.profileScores.ts'),
 	import('../routes/termdb.profileFormScores.ts'),
 	import('../routes/profile.polar2.ts'),
-	import('../routes/profile.barchart2.ts')
+	import('../routes/profile.barchart2.ts'),
+	import('../routes/profile.radar2.ts'),
+	import('../routes/profile.radarFacility2.ts')
 ]
