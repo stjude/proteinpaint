@@ -7,7 +7,6 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type {
 	SingleCellQuery,
-	SingleCellSamples,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative,
 	SingleCellSample,
@@ -78,7 +77,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		// ds-supplied
 	} else {
 		// add q.samples.get() for native ds
-		await validateSamplesNative(q.samples, q.data as SingleCellDataNative, ds)
+		await validateSamplesNative(q, ds)
 	}
 
 	// validate required q.data{}
@@ -123,12 +122,12 @@ function validateImages(images) {
  * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
  * Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
  * defined in the ds file, for use in vocabApi methods later.
- * @param S ds.queries.singleCell.samples{}
- * @param D ds.queries.singleCell.data{}
  * @param ds Entire dataset configuration from the ds file
  */
-async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNative, ds: any) {
+async function validateSamplesNative(q: SingleCellQuery, ds: any) {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
+	const S: any = q.samples,
+		D: any = q.data
 
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
@@ -151,6 +150,8 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
+	if (samples.size == 0) throw new Error('no scrna samples found')
+	console.log(samples.size, 'singleCell samples loaded from ' + ds.label)
 
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
@@ -167,9 +168,16 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 		}
 	}
 
-	// FIXME must get q.filter and apply filter to list!!
 	S.get = () => {
-		return { samples: [...samples.values()] as SingleCellSample[] }
+		// FIXME must get q.filter and apply filter to list!!
+		const re: any = { samples: [...samples.values()] as SingleCellSample[] }
+		if (q.metaResults) {
+			// meta analysis results exist. pass it along with samples
+			re.metaResults = q.metaResults.map(i => {
+				return { name: i.name }
+			})
+		}
+		return re
 	}
 }
 
