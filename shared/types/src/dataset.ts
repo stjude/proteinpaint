@@ -919,6 +919,7 @@ export type SingleCellQuery = {
 	/** defines tsne/umap type of clustering maps for each sample
 	 */
 	data: SingleCellDataGdc | SingleCellDataNative
+	metaResults?: SingleCellMetaResult[]
 	/** defines available gene-level expression values for each cell of each sample */
 	geneExpression?: SingleCellGeneExpressionGdc | SingleCellGeneExpressionNative
 	/** Precomputed top differentialy expressed genes for a cell cluster, against rest of cells */
@@ -927,6 +928,23 @@ export type SingleCellQuery = {
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
 	terms?: object[]
+}
+
+export type SingleCellMetaResult = {
+	/** identifier */
+	name: string
+	/** tsv file
+	- 1st column is cell barcode
+	- x/y coordinate column number is defined in coordsColumns{x,y} below
+	- additional columns for cell annotations, corresponds to colorColumns
+	- must have a column for sample name, to identify which sample the cell is from
+	*/
+	file: string
+	/** gene exp h5 file */
+	geneExpFile?: string
+	/** 0-based column number for x/y coordinate for this plot */
+	coordsColumns: { x: number; y: number }
+	colorColumns: ColorColumn[]
 }
 
 type SCImages = {
