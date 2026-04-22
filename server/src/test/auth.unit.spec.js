@@ -205,7 +205,8 @@ tape(`initialization, non-empty credentials`, async test => {
 				}
 			}
 		}
-		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, dsCredentials, cachedir })
+		const genomes = { hg38: { datasets: { testds: {} } } }
+		await authApi.maySetAuthRoutes(app, genomes, '', { debugmode, dsCredentials, cachedir })
 		test.deepEqual(
 			Object.keys(authApi).sort(),
 			[
@@ -225,7 +226,16 @@ tape(`initialization, non-empty credentials`, async test => {
 		)
 		test.deepEqual(
 			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
-			[{ dslabel: 'testds', route: '/**', type: 'basic', headerKey: 'x-ds-access-token', insession: false }],
+			[
+				{
+					dslabel: 'testds',
+					route: '/**',
+					type: 'basic',
+					headerKey: 'x-ds-access-token',
+					insession: false,
+					demoTokenRoles: undefined
+				}
+			],
 			'should return all dslabels that require authorization for a given embedder'
 		)
 
@@ -343,14 +353,29 @@ tape(`auth methods`, async test => {
 		cachedir
 	}
 
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
+	const genomes = { hg38: { datasets: { ds100: {} } } }
+	await authApi.maySetAuthRoutes(app, genomes, '', serverconfig)
 
 	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req0),
 		[
-			{ dslabel: 'ds100', route: 'termdb', type: 'jwt', headerKey: 'x-ds-access-token', insession: undefined },
-			{ dslabel: 'ds100', route: 'burden', type: 'forbidden', headerKey: undefined, insession: false }
+			{
+				dslabel: 'ds100',
+				route: 'termdb',
+				type: 'jwt',
+				headerKey: 'x-ds-access-token',
+				insession: undefined,
+				demoTokenRoles: undefined
+			},
+			{
+				dslabel: 'ds100',
+				route: 'burden',
+				type: 'forbidden',
+				headerKey: undefined,
+				insession: false,
+				demoTokenRoles: undefined
+			}
 		],
 		`should return the expected dsAuth array for a termdb-specified embedder`
 	)
@@ -358,7 +383,16 @@ tape(`auth methods`, async test => {
 	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req1),
-		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', headerKey: undefined, insession: false }],
+		[
+			{
+				dslabel: 'ds100',
+				route: 'burden',
+				type: 'forbidden',
+				headerKey: undefined,
+				insession: false,
+				demoTokenRoles: undefined
+			}
+		],
 		`should return the expected dsAuth array for a specified embedder`
 	)
 	test.deepEqual(
