@@ -207,19 +207,17 @@ class gsea extends PlotBase {
 					config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
 				const model = new VolcanoModel(this.app, config.termType)
 				const response = await model.getData(config, volcanoSettings)
-				if (!response || !response.data || response.error) {
-					throw response.error || 'No data returned from volcano model'
+				if (!response?.data?.cacheId || response.error) {
+					throw response.error || 'No DE cacheId returned from volcano model'
 				}
-				const inputGenes = response.data.map(g => g.gene_name)
 				await this.app.save({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						gsea_params: {
-							genes: inputGenes,
-							fold_change: response.data.map(g => g.fold_change),
-							genome: this.app.vocabApi.opts.state.vocab.genome,
-							genes_length: inputGenes.length
+							cacheId: response.data.cacheId,
+							genes_length: response.data.totalRows,
+							genome: this.app.vocabApi.opts.state.vocab.genome
 						}
 					}
 				})
@@ -252,7 +250,7 @@ class gsea extends PlotBase {
 		await this.setControls()
 		if (this.dom.header)
 			this.dom.header.html(
-				this.config.gsea_params.genes.length +
+				this.config.gsea_params.genes_length +
 					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
 		render_gsea(this)
@@ -350,8 +348,7 @@ add:
 	try {
 		const body = {
 			genome: self.config.gsea_params.genome,
-			genes: self.config.gsea_params.genes,
-			fold_change: self.config.gsea_params.fold_change,
+			cacheId: self.config.gsea_params.cacheId,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
 			method: self.settings.gsea_method
@@ -381,6 +378,20 @@ add:
 			const png_height = 400
 			self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 		} else if (self.settings.gsea_method == 'cerno') {
+			if (!self.rankedDE && self.config.gsea_params.cacheId) {
+				const deResp = await dofetch3('genesetEnrichment', {
+					body: {
+						genome: self.config.gsea_params.genome,
+						cacheId: self.config.gsea_params.cacheId,
+						fetchDE: true,
+						geneSetGroup: '-',
+						filter_non_coding_genes: false,
+						method: 'cerno'
+					}
+				})
+				if (deResp.error) throw deResp.error
+				self.rankedDE = deResp.data
+			}
 			render_cerno_plot(self, output)
 		} else {
 			throw 'Unknown method:' + self.settings.gsea_method
@@ -607,9 +618,10 @@ function render_cerno_plot(self, cerno_output) {
 	const xpad = 50
 	const ypad = 100
 
+	const rankedDE = self.rankedDE || self.config.gsea_params
 	const DE_output = []
-	for (let i = 0; i < self.config.gsea_params.genes.length; i++) {
-		const item = { gene: self.config.gsea_params.genes[i], fold_change: self.config.gsea_params.fold_change[i] }
+	for (let i = 0; i < rankedDE.genes.length; i++) {
+		const item = { gene: rankedDE.genes[i], fold_change: rankedDE.fold_change[i] }
 		DE_output.push(item)
 	}
 	DE_output.sort((i, j) => j.fold_change - i.fold_change) // Sorting genes in descending order of fold change

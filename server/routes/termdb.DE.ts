@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import type { DERequest, DEFullResponse, ExpressionInput, GeneDEEntry, RouteApi } from '#types'
@@ -12,6 +13,15 @@ import { imageSize } from 'image-size'
 import { get_header_txt } from '#src/utils.js'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
+
+async function writeDaCache(geneData: GeneDEEntry[]): Promise<string> {
+	const cacheId = `da_${crypto.randomBytes(16).toString('hex')}`
+	const file = path.join(serverconfig.cachedir, 'daAnalysis', `${cacheId}.tsv`)
+	const lines = ['gene_name\tfold_change']
+	for (const g of geneData) lines.push(`${g.gene_name}\t${g.fold_change}`)
+	await fs.promises.writeFile(file, lines.join('\n'))
+	return cacheId
+}
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
@@ -299,6 +309,7 @@ values[] // using integer sample id
 		const images = [result.ql_image]
 		if (result.mds_image) images.push(result.mds_image)
 		const rendered = await renderVolcano<GeneDEEntry>(result.gene_data, param.volcanoRender)
+		rendered.cacheId = await writeDaCache(result.gene_data)
 		const output: DEFullResponse = {
 			data: rendered,
 			sample_size2: result.num_cases[0],
@@ -318,6 +329,7 @@ values[] // using integer sample id
 	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 	const rendered = await renderVolcano<GeneDEEntry>(result, param.volcanoRender)
+	rendered.cacheId = await writeDaCache(result)
 	return {
 		data: rendered,
 		sample_size1,
