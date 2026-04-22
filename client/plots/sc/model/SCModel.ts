@@ -75,6 +75,7 @@ export class SCModel {
 		return {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
+			checkPlotAvailability: true, // only return available plot names, but not actual plot data
 			plots,
 			sample: {
 				eID: config.settings.sc.item.experiment,
