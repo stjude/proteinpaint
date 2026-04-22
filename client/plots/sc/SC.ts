@@ -50,7 +50,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 				.style('height', '100%')
 				.style('background-color', 'rgba(255, 255, 255, 0.95)')
 				.style('text-align', 'center'),
-			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
+			controlsDiv: div.append('div').attr('id', 'sjpp-sc-controls-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-item-table'),
 			plotsBtnsDiv: div.append('div').attr('id', 'sjpp-sc-plot-buttons').style('display', 'none'),
 			sectionsDiv: div.append('div').attr('id', 'sjpp-sc-sections')
@@ -102,7 +102,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 
 		/** The item data and table rendering should only occur once
 		 * .update() in main() handles changes to the buttons and plots */
-		this.view.render(this.viewModel.tableData)
+		this.view.render(this.viewModel.tableData, state.config.settings.sc)
 	}
 
 	async main() {

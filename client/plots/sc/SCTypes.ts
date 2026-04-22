@@ -22,8 +22,9 @@ export type SCDom = {
 	div: Div
 	/** When visible, shows a loading spinner */
 	loading: Div
-	/** Holder for the 'select' btn at the top page */
-	selectBtnDiv: Div
+	/** Holder for the manually created controls at the top page
+	 * This is **not** the same as mass controls.*/
+	controlsDiv: Div
 	/** Holder for the sample table */
 	tableDiv: Div
 	/** Holder for the dynamically generated plot buttons for each sample */

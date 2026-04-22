@@ -1,5 +1,7 @@
 import type { SCSample } from '../SCTypes'
 
+export const GroupByOptions = ['none', 'sample', 'plot'] as const
+
 export type SCSettings = {
 	sc: {
 		columns: {
@@ -8,7 +10,7 @@ export type SCSettings = {
 		}
 		/** Active item chosen by the user */
 		item: SCSample | undefined
-		groupBy: 'none' | 'sample' | 'plot'
+		groupBy: (typeof GroupByOptions)[number]
 	}
 	hierCluster: {
 		unit: string
