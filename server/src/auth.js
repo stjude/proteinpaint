@@ -1078,7 +1078,15 @@ function getJwtPayload(q, headers, cred, session = null) {
 	const token = processor.handleToken?.(rawToken) || rawToken
 	// this verification will throw if the token is invalid in any way
 	const secret = cred.demoToken?.referers.find(r => headers.referer.includes(r)) ? cred.demoToken.secret : cred.secret
-	const payload = jsonwebtoken.verify(token, secret)
+	let payload
+	try {
+		payload = jsonwebtoken.verify(token, secret) // change the secret with a suffix or to some other string to trigger and test the error below
+	} catch (e) {
+		// may include info on whether a demoToken secret was used, to help with embedder troubleshooting
+		if (typeof e == 'object' && cred.demoToken) e.usedDemoTokenSecret = secret === cred.demoToken.secret
+		throw e
+	}
+
 	// if there is a session, handle the expiration outside of this function
 	if (session)
 		return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
@@ -1087,9 +1095,9 @@ function getJwtPayload(q, headers, cred, session = null) {
 	// optionally transform, translate, reformat the payload
 	if (processor.handlePayload) {
 		try {
-			processor.handlePayload({ secret: cred.demoToken.secret }, payload, time)
+			processor.handlePayload({ secret }, payload, time)
 		} catch (e) {
-			//console.log(e)
+			console.log(e)
 			if (e.reason == 'bad decrypt') throw `Please login again to access this feature. (${e.reason})`
 			throw e
 		}

@@ -78,8 +78,8 @@ tape('setAuth()', async test => {
 			{ dslabel: 'xyz', type: 'basic', insession: true }
 		]
 	}
-	df.setAuth(opts, df.dofetch3)
-	test.equal(df.isInSession('abc'), false, 'should detect a dslabel that is not in session')
-	test.equal(df.isInSession('xyz'), true, 'should detect a dslabel that is in session')
+	df.setAuth(opts)
+	test.equal(await df.isInSession('abc'), false, 'should detect a dslabel that is not in session')
+	test.equal(await df.isInSession('xyz'), true, 'should detect a dslabel that is in session')
 	test.end()
 })

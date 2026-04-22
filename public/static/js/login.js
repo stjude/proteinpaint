@@ -33,6 +33,8 @@ function getJwtByDsRoute(dslabel) {
 
 const fakeTokensByDsRole = {}
 
+// this is meant for 1 time use throughout a browser session,
+// and not meant for repeated calls within getDatasetAccessToken()
 async function login(dslabel, role = '') {
 	if (window.location.hash.includes('dslogout')) {
 		logout(dslabel)
@@ -42,27 +44,42 @@ async function login(dslabel, role = '') {
 	return jwt || undefined
 }
 
-async function getJwt(dslabel, _role = 'public') {
+// the returned function below can be used for the `getDatasetAccessToken()`
+// callback option in runproteinpaint() argument, which may be called
+// multiple times within a browser session
+function demoGetDatasetAccessToken(dslabel, defaultRole) {
+	// track jwt by role for possible reuse if not expired,
+	// to lessen /demoToken requests
+	const fakeTokensByRole = {}
+	// url param can specify a role to simulate a logged-in user
 	const params = getParams()
-	if (!params.role) params.role = _role
-	const role = params.role
+	// only one role per login/browser session, will require user logout
+	// to change the user role
+	const role = params.role || defaultRole
 
-	if (!fakeTokensByDsRole[dslabel]) {
-		fakeTokensByDsRole[dslabel] = {}
-	} else if (fakeTokensByDsRole[dslabel][role]) {
-		const jwt = fakeTokensByDsRole[dslabel][role]
-		const payloadEncoded = jwt.split('.')[1]
+	return async function getDatasetAccesToken() {
+		if (fakeTokensByRole[role]) {
+			const { jwt, exp } = fakeTokensByRole[role]
+			if (exp && Math.floor(Date.now() / 1000) < exp - 5) return jwt // reuse an unexpired demo token
+		}
+		const jwt = role ? await getJwt(dslabel, role) : await getJwt(dslabel)
+		const payloadEncoded = jwt?.split('.')[1]
 		if (payloadEncoded) {
 			try {
 				const payloadStr = atob(payloadEncoded)
 				const payload = JSON.parse(payloadStr)
-				return jwt
+				fakeTokensByRole[role] = { jwt, exp: payload.exp }
 			} catch (e) {
 				console.log(e)
 			}
 		}
+		return jwt
 	}
+}
 
+// this makes a server request to get a jwt by role,
+// and is called by other helper functions above
+async function getJwt(dslabel, role = 'public') {
 	// The fakeTokens allows simulating valid, signed jwt by dslabel and role.
 	// It assumes there is only one protected route entry for each dataset.demoJwtInput{[role]: {...}} entry,
 	// and there can be 1 or more entries by role.
@@ -84,11 +101,7 @@ async function getJwt(dslabel, _role = 'public') {
 		console.error(res.error)
 		return null
 	}
-	if (!res.fakeTokensByRole) return null
-	for (const [role, jwt] of Object.entries(res.fakeTokensByRole)) {
-		fakeTokensByDsRole[dslabel][role] = jwt
-	}
-	return res.fakeTokensByRole[role]
+	return res.fakeTokensByRole?.[role]
 }
 
 // URL search params can be used to trigger user roles or other behaviour
