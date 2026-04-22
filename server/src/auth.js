@@ -677,7 +677,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 	authApi.getDsAuth = function (req) {
 		const activeDslabels = []
 		for (const g of Object.values(genomes)) {
-			for (const dslabel of Object.keys(g.datasets)) {
+			for (const dslabel of Object.keys(g.datasets || {})) {
 				activeDslabels.push(dslabel)
 			}
 		}
