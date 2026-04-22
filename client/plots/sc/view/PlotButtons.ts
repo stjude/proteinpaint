@@ -42,6 +42,8 @@ export class PlotButtons {
 			tip: new Menu({ padding: '' })
 		}
 		this.interactions = interactions
+		/** This is the initial state. scctTerms and the termdbConfig are created on
+		 * server init and will not change. */
 		const state = this.interactions.getState as any
 		this.scctTerms = state.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
 		this.scTermdbConfig = state.termdbConfig.queries.singleCell

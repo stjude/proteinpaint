@@ -3,7 +3,9 @@ import type { TableCell } from '#dom'
 import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 
-/** Renders the sample table for selection */
+/** Renders the sample table for selection on SC app init()
+ * On selecting a sample, the plot buttons will appear and
+ * the user can select a plot to render in the dashboard. */
 export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
