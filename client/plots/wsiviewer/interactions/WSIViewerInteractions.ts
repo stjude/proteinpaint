@@ -122,13 +122,20 @@ export class WSIViewerInteractions {
 				const idx = currentIndex
 				if (event.key == '.') {
 					//Do not react if at the last annotation
-					if (currentIndex == tileSelections.length) return
-					currentIndex += 1
+					if (currentIndex == tileSelections.length) {
+						currentIndex = 0
+					} else {
+						currentIndex += 1
+					}
 				}
 				if (event.key == ',') {
 					//Do not react if at the starting annotation
-					if (currentIndex === 0) return
-					currentIndex -= 1
+					if (currentIndex === 0) {
+						// If at the starting tileselection, find the the most recent Annotation by checking for timestamp property
+						currentIndex = tileSelections.findIndex(ts => 'timestamp' in ts) || 0
+					} else {
+						currentIndex -= 1
+					}
 				}
 
 				if (idx !== currentIndex) {
@@ -189,6 +196,8 @@ export class WSIViewerInteractions {
 					return
 				}
 				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
+					// TODO: Issue where if you press shortcuts too fast, annotation table doesnt get updated with correct class
+					//My guess is that if you press this fast enough, saveAnnotation doesnt update fast enough
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
@@ -211,16 +220,7 @@ export class WSIViewerInteractions {
 
 					// Persist and finalize via helper
 					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
-					wsiApp.app.dispatch({
-						type: 'plot_edit',
-						id: wsiApp.id,
-						config: {
-							settings: {
-								isSavingAnnotation: false,
-								changeTrigger: Date.now()
-							}
-						}
-					})
+
 					return
 				}
 			})
@@ -624,6 +624,7 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					changeTrigger: Date.now(),
 					activeAnnotation: 0,
+					isSavingAnnotation: false,
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}

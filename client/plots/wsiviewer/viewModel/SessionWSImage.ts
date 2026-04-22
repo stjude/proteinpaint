@@ -80,7 +80,6 @@ export class SessionWSImage extends WSImage {
 				{ value: '' }
 			]
 		})
-
 		const annotationsRows: any[] = annotations.map((annotation, i) => {
 			const idx = sessionsRows.length + predictionRows.length + i // Continue index
 			const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
