@@ -71,6 +71,7 @@ const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
 	interval: minute,
 	subdirs: {
+		// TODO: What is generating .pkl files?
 		gsea: {
 			...subdirOptsDefaults,
 			fileExtensions: new Set(['.pkl'])
