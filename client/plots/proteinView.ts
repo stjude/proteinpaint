@@ -171,9 +171,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	const xScale = scaleLinear().domain([xMin, xMax]).range([0, innerW])
 	const yScale = scaleLinear().domain([0, yMax]).range([innerH, 0])
+	const radiusRange: [number, number] = [4, 12]
 	const radiusScale = scaleLinear()
 		.domain([minTestedN, Math.max(minTestedN + 1, maxTestedN)])
-		.range([4, 12])
+		.range(radiusRange)
 
 	const assayNames = [...new Set(dots.map((d: any) => d.assayName))].sort() as string[]
 	const cohortNames = [...new Set(dots.map((d: any) => d.cohortName))].sort() as string[]
@@ -275,6 +276,29 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		const x = xScale(d1.log2fc) - xScale(d2.log2fc)
 		const y = yScale(d1.score) - yScale(d2.score)
 		return Math.sqrt(x * x + y * y)
+	}
+	const getVisibleDots = () => dots.filter(d => !isDotHidden(d))
+	const getVisibleTestedNStats = () => {
+		const visibleDots = getVisibleDots()
+		if (!visibleDots.length) {
+			return { domainMin: 1, domainMax: 2, minLabel: 0, maxLabel: 0 }
+		}
+
+		let visibleMax = 0
+		let visibleMin = Number.POSITIVE_INFINITY
+		for (const d of visibleDots) {
+			visibleMax = Math.max(visibleMax, d.testedN)
+			if (d.testedN > 0) visibleMin = Math.min(visibleMin, d.testedN)
+		}
+
+		if (!Number.isFinite(visibleMin)) visibleMin = 1
+		const domainMax = Math.max(visibleMin + 1, visibleMax)
+		return { domainMin: visibleMin, domainMax, minLabel: visibleMin, maxLabel: visibleMax || visibleMin }
+	}
+	const updateRadiusScaleForVisibleDots = () => {
+		const stats = getVisibleTestedNStats()
+		radiusScale.domain([stats.domainMin, stats.domainMax]).range(radiusRange)
+		return stats
 	}
 	const getClusterDots = (seed: any) => {
 		const thresholdPx = 5
@@ -455,6 +479,37 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.style('min-width', '220px')
 		.style('font-size', '.75em')
 		.style('color', '#374151')
+	function renderSizeLegend() {
+		legendSvg.selectAll('*').remove()
+		const stats = updateRadiusScaleForVisibleDots()
+
+		new LegendCircleReference({
+			g: legendSvg.append('g').attr('transform', 'translate(12, 8)'),
+			inputMax: radiusRange[1],
+			inputMin: radiusRange[0],
+			maxLabel: stats.maxLabel,
+			maxRadius: radiusScale(stats.domainMax),
+			minLabel: stats.minLabel,
+			minRadius: radiusScale(stats.domainMin),
+			title: '',
+			menu: {
+				minMaxLabel: 'pixels',
+				callback: async (obj: { min: number; max: number }) => {
+					radiusRange[0] = obj.min
+					radiusRange[1] = obj.max
+					radiusScale.range([obj.min, obj.max])
+					updateDots()
+					renderSizeLegend()
+				}
+			}
+		})
+	}
+	const refreshAfterVisibilityChange = () => {
+		updateRadiusScaleForVisibleDots()
+		updateDots()
+		renderColorLegend()
+		renderSizeLegend()
+	}
 
 	const termName = self.state.config?.tw?.term?.name || ''
 	const svgName = `${termName}.cohort-volcano`
@@ -495,6 +550,16 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	const colorLegendDiv = legend.append('div').style('margin-bottom', '12px')
 	const shapeLegendDiv = legend.append('div').style('margin-bottom', '12px')
+	const sizeLegendRow = legend
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'flex-start')
+		.style('gap', '8px')
+		.style('margin-top', '8px')
+
+	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Tested sample size')
+
+	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
 
 	function renderColorLegend() {
 		colorLegendDiv.selectAll('*').remove()
@@ -519,8 +584,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				.style('color', key === colorMode ? '#111' : '#6b7280')
 				.on('click', () => {
 					colorMode = key
-					updateDots()
-					renderColorLegend()
+					refreshAfterVisibilityChange()
 				})
 		}
 
@@ -538,8 +602,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.on('click', () => {
 						if (hidden) hiddenColor[colorMode].delete(name)
 						else hiddenColor[colorMode].add(name)
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -552,8 +615,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						for (const item of items) {
 							if (item != name) hiddenColor[colorMode].add(item)
 						}
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -564,8 +626,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						.text('Show all')
 						.on('click', () => {
 							hiddenColor[colorMode].clear()
-							updateDots()
-							renderColorLegend()
+							refreshAfterVisibilityChange()
 							menu.hide()
 						})
 
@@ -642,8 +703,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				.style('color', key === shapeMode ? '#111' : '#6b7280')
 				.on('click', () => {
 					shapeMode = key
-					updateDots()
-					renderColorLegend()
+					refreshAfterVisibilityChange()
 				})
 		}
 
@@ -662,8 +722,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.on('click', () => {
 						if (hidden) hiddenShape[shapeMode].delete(name)
 						else hiddenShape[shapeMode].add(name)
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -676,8 +735,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						for (const item of items) {
 							if (item != name) hiddenShape[shapeMode].add(item)
 						}
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -688,8 +746,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						.text('Show all')
 						.on('click', () => {
 							hiddenShape[shapeMode].clear()
-							updateDots()
-							renderColorLegend()
+							refreshAfterVisibilityChange()
 							menu.hide()
 						})
 
@@ -749,36 +806,9 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 	}
 
+	updateRadiusScaleForVisibleDots()
 	renderColorLegend()
-
-	const sizeLegendRow = legend
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'flex-start')
-		.style('gap', '8px')
-		.style('margin-top', '8px')
-
-	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Tested sample size')
-
-	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
-
-	new LegendCircleReference({
-		g: legendSvg.append('g').attr('transform', 'translate(12, 8)'),
-		inputMax: 12,
-		inputMin: 4,
-		maxLabel: maxTestedN || minTestedN,
-		maxRadius: radiusScale(Math.max(minTestedN + 1, maxTestedN || minTestedN)),
-		minLabel: minTestedN,
-		minRadius: radiusScale(minTestedN),
-		title: '',
-		menu: {
-			minMaxLabel: 'pixels',
-			callback: async (obj: { min: number; max: number }) => {
-				radiusScale.range([obj.min, obj.max])
-				updateDots()
-			}
-		}
-	})
+	renderSizeLegend()
 }
 
 /*
