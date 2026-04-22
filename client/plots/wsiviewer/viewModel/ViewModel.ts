@@ -66,7 +66,8 @@ export class ViewModel {
 			{ label: 'Uncertainty', sortable: true },
 			{ label: 'Model-Predicted Class', sortable: true },
 			{ label: '', align: 'center' }, //Show the color next to the class
-			{ label: 'Annotated Class', sortable: true }
+			{ label: 'Annotated Class', sortable: true },
+			{ label: 'Flag/Skip' }
 		]
 
 		imageViewData.tilesTable = {

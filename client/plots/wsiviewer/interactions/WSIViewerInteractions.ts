@@ -8,7 +8,7 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import type { Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
+import { AnnotationStatus, type Prediction, type TileSelection } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
@@ -598,6 +598,7 @@ export class WSIViewerInteractions {
 			dslabel: state.vocab.dslabel,
 			coordinates: tileSelections[currentIndex].zoomCoordinates,
 			classId: selectedClassId!,
+			flag: AnnotationStatus.Normal,
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}

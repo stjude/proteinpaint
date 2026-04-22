@@ -60,10 +60,16 @@ export class SessionWSImage extends WSImage {
 				{ value: 0 },
 				{ value: '' },
 				{ html: '' },
-				{ value: '' }
+				{ value: '' },
+				{ html: `` }
 			]
 		})
-
+		const flagDropDownHtml = `<label for="flag">Flag/Skip:</label>
+		<select name="flag" id="flag">
+		<option value="normal">Normal</option>
+		<option value="skipped">Skip</option>
+		<option value="flagged">Flag</option>
+		</select>`
 		const predictionRows: any[] = (sessionWSImage.predictions || []).map((prediction, i) => {
 			const idx = sessionsRows.length + i // Continue index after sessions
 			const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
@@ -77,7 +83,10 @@ export class SessionWSImage extends WSImage {
 				{
 					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
 				},
-				{ value: '' }
+				{ value: '' },
+				{
+					html: flagDropDownHtml
+				}
 			]
 		})
 
@@ -94,7 +103,10 @@ export class SessionWSImage extends WSImage {
 				{
 					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
 				},
-				{ value: annotation.class }
+				{ value: annotation.class },
+				{
+					html: flagDropDownHtml
+				}
 			]
 		})
 

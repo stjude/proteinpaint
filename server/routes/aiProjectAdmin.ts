@@ -184,7 +184,7 @@ function deleteProject(connection: Database.Database, projectId: number): void {
 	if (!projectId) throw new Error('Invalid project ID [aiProjectAdmin route deleteProject()]')
 	// Deletes ** ALL ** project data
 	const stmts = [
-		{ sql: 'DELETE FROM project_annotations WHERE project_id = ?', params: [[projectId]] },
+		{ sql: 'DELETE FROM project_flagged_annotations WHERE project_id = ?', params: [[projectId]] },
 		{ sql: 'DELETE FROM project_classes WHERE project_id = ?', params: [[projectId]] },
 		{ sql: 'DELETE FROM project_images WHERE project_id = ?', params: [[projectId]] },
 		{ sql: 'DELETE FROM project_users WHERE project_id = ?', params: [[projectId]] },

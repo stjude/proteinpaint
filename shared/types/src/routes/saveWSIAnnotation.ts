@@ -1,3 +1,4 @@
+import type { AnnotationStatus } from 'src/index.ts'
 import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
@@ -5,6 +6,7 @@ export type SaveWSIAnnotationRequest = {
 	dslabel: string
 	coordinates: [number, number]
 	classId: number
+	flag: AnnotationStatus
 	projectId: number
 	wsimage: string
 }

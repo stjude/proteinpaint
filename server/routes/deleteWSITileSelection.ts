@@ -103,7 +103,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 		} else
 			try {
 				const deleteSql = `
-                    DELETE FROM project_annotations
+                    DELETE FROM project_flagged_annotations
                     WHERE project_id = ?
                       AND coordinates = ?
                       AND image_id = (

@@ -19,10 +19,17 @@ export interface TileSelection {
 	class?: string
 }
 
+export enum AnnotationStatus {
+	Normal = 0,
+	Skipped = 1,
+	Flagged = 2
+}
+
 export interface Annotation extends TileSelection {
 	class: string
 	status: number
 	timestamp: string
+	flag: AnnotationStatus
 }
 
 export interface Prediction extends TileSelection {

@@ -64,6 +64,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
 			const coords = JSON.stringify(annotation.coordinates ?? [])
 			const status = 1
+			const flag = annotation.flag
 			const classId = annotation.classId
 
 			if (projectId == null || wsimageFilename == null) {
@@ -93,9 +94,9 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const imageId = imageRow.id
 
 			const insertSql = `
-				INSERT INTO project_annotations (
-					project_id, user_id, coordinates, timestamp, status, class_id, image_id
-				) VALUES (?, ?, ?, ?, ?, ?, ?)
+				INSERT INTO project_flagged_annotations (
+					project_id, user_id, coordinates, timestamp, status, flagged,class_id, image_id
+				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			`
 
 			const insertStmt = connection.prepare(insertSql)
@@ -112,7 +113,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 
 			const userId = userRow?.id
 
-			insertStmt.run(projectId, userId, coords, timestamp, status, classId, imageId)
+			insertStmt.run(projectId, userId, coords, timestamp, status, flag, classId, imageId)
 
 			return { status: 'ok' }
 		} catch (error: any) {

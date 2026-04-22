@@ -1,4 +1,4 @@
-import type { Annotation, Mds3, RouteApi, WSImage } from '#types'
+import { type AnnotationStatus, type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
 import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
@@ -138,6 +138,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
 		status: number
+		flagged: AnnotationStatus
 		label: string | null
 	}
 
@@ -149,8 +150,9 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
             pa.coordinates,
             pa.timestamp,
             pa.status,
+			pa.flagged,
             pc.label AS label
-        FROM project_annotations pa
+        FROM project_flagged_annotations pa
                  INNER JOIN project_images pi
                             ON pi.id = pa.image_id
                  LEFT JOIN project_classes pc
@@ -202,6 +204,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 					zoomCoordinates: coords,
 					class: r.label ?? '',
 					status: r.status,
+					flag: r.flagged as AnnotationStatus,
 					timestamp: r.timestamp
 				}
 			})

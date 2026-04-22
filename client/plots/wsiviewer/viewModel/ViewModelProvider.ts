@@ -201,7 +201,7 @@ export class ViewModelProvider {
 
 			const annotations = wsimages[i].annotations ?? []
 			const sourceAnnotations = new VectorSource()
-
+			const tileSize = wsimages[i].tileSize ?? 512
 			for (const annotation of annotations) {
 				// flip Y as in your original code
 				const topLeft: [number, number] = [annotation.zoomCoordinates[0], -annotation.zoomCoordinates[1]]
@@ -209,17 +209,56 @@ export class ViewModelProvider {
 				const color = this.getClassColor(wsimages[i], annotation.class)
 				const featureId = `annotation-square-${annotation.zoomCoordinates}`
 
-				const squareFeature = this.createSquareFeature(topLeft, 512, color, featureId)
+				const squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
 				sourceAnnotations.addFeature(squareFeature)
 
 				const borderFeature = this.createBorderFeature(
 					topLeft,
-					512,
+					tileSize,
 					15,
 					annotatedPatchBorderColor,
 					`annotation-border-${annotation.zoomCoordinates}`
 				)
 				sourceAnnotations.addFeature(borderFeature)
+				//turn into function
+				// Source - https://stackoverflow.com/a/70960369
+				// Posted by enxaneta
+				// Retrieved 2026-04-21, License - CC BY-SA 4.0
+
+				const starCoords: Array<[number, number]> = []
+				let n = 0 //a counter
+				const starRadiusOuter = 110
+				const starRadiusInner = 55
+				const starOffset = tileSize / 4
+				const starCenter = { x: topLeft[0] + starOffset, y: topLeft[1] - starOffset }
+				const step = Math.PI / 5 //since the star has 5 points you will need to calculate the position of a point every 36degs i.e Math.PI/5;
+				const starColor = 'yellow'
+
+				//a for loop to calculate the position of the points for the star
+				for (let a = Math.PI / 2; a > (-3 * Math.PI) / 2; a -= step) {
+					//The point will be either on the outer circle or on the inner one
+					const r = n % 2 == 0 ? starRadiusOuter : starRadiusInner
+					const x = starCenter.x + r * Math.cos(a)
+					const y = starCenter.y + r * Math.sin(a)
+					starCoords.push([x, y])
+					n++
+				}
+				const feature = new Feature({
+					geometry: new Polygon([starCoords]),
+					properties: {
+						isLocked: false
+					}
+				})
+
+				feature.setId(`annotation-star-${annotation.zoomCoordinates}`)
+
+				feature.setStyle(
+					new Style({
+						fill: new Fill({ color: starColor }),
+						stroke: new Stroke({ color, width: 2 })
+					})
+				)
+				sourceAnnotations.addFeature(feature)
 			}
 
 			const vectorLayer = new VectorLayer({
