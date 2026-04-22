@@ -31,9 +31,10 @@ export type TermdbSingleCellSamplesRequest = {
 type ValidResponse = {
 	/** List of sample names with singlecell data */
 	samples: SingleCellSample[]
-	fields: string[]
-	columnNames: string[]
-	sameLegend?: boolean
+	metaResults?: {
+		/** identifier of one result */
+		name: string
+	}[]
 }
 
 export type TermdbSingleCellSamplesResponse = ErrorResponse | ValidResponse
