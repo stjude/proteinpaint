@@ -101,7 +101,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				LIMIT 1
 			`
 			const duplicateCheckStmt = connection.prepare(duplicateCheckSql)
-			const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords)
+			const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords) as { id: number } | undefined
 			if (duplicateRow) {
 				const deleteDuplicateSql = `
 					DELETE FROM project_annotations
