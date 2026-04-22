@@ -18,5 +18,11 @@ export default function (): Mds3 {
 			canAccess: data.count >= minSize
 		}
 	}
+
+	ds.demoJwtInput = {
+		user: {
+			datasets: ['abc', 'xyz']
+		}
+	}
 	return ds
 }

@@ -14,10 +14,11 @@ async function logout(dslabel, route = 'termdb') {
 		.then(console.log)
 		.catch(console.error)
 
+	if (window.location.hash.includes('dslogout')) return
 	window.location.reload()
 }
 
-function getJwtByDsRoute() {
+function getJwtByDsRoute(dslabel) {
 	// jwtByDsRoute is a nested object that's saved to localStorage,
 	// so that a user can stay logged-in when opening new tabs.
 	// jwtByDsRoute{}
@@ -26,36 +27,66 @@ function getJwtByDsRoute() {
 	//     value = jwt
 	//
 	const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
-	return JSON.parse(jwtByDsRouteStr)
+	const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+	return dslabel ? jwtByDsRoute[dslabel] : jwtByDsRoute
 }
 
-async function login(dslabel, role = 'public') {
+const fakeTokensByDsRole = {}
+
+async function login(dslabel, role = '') {
+	if (window.location.hash.includes('dslogout')) {
+		logout(dslabel)
+		return null
+	}
 	const jwt = await getJwt(dslabel, role)
-	if (!jwt) return
-	return jwt
+	return jwt || undefined
 }
 
-async function getJwt(dslabel, role) {
+async function getJwt(dslabel, _role = 'public') {
 	const params = getParams()
-	if (!params.role) params.role = role
+	if (!params.role) params.role = _role
+	const role = params.role
+
+	if (!fakeTokensByDsRole[dslabel]) {
+		fakeTokensByDsRole[dslabel] = {}
+	} else if (fakeTokensByDsRole[dslabel][role]) {
+		const jwt = fakeTokensByDsRole[dslabel][role]
+		const payloadEncoded = jwt.split('.')[1]
+		if (payloadEncoded) {
+			try {
+				const payloadStr = atob(payloadEncoded)
+				const payload = JSON.parse(payloadStr)
+				return jwt
+			} catch (e) {
+				console.log(e)
+			}
+		}
+	}
 
 	// The fakeTokens allows simulating valid, signed jwt by dslabel and role.
-	// It assumes there is only one protected route entry for serverconfig.features.fakeTokens[<dslabel>],
-	// and there can be 1 or more role:jwt key-values nested under it.
+	// It assumes there is only one protected route entry for each dataset.demoJwtInput{[role]: {...}} entry,
+	// and there can be 1 or more entries by role.
+	//
+	// see https://github.com/stjude/sjpp/wiki/Demo-token-and-auth-testing-for-datasets-with-access-control
 	//
 	// NOTE: Verified fake tokens will be passed to `setTokenByDsRoute()` in `dofetch()`, to be
 	// saved in localStorage 'jwtByDsCredentials' and returned by getJwtByDsRoute() above.
 	//
 
-	// !!! NOTE: to clear/refresh the stored fake jwt's, use the dslogout() function above or force the condition below to true !!!
+	// !!! NOTE: to clear/refresh the stored fake jwt's, use the logout(dslabel) function above or force the condition below to true !!!
 	// otherwise, should reuse saved fake tokens that have not changed in serverconfig.features
-	const body = JSON.stringify({ genome: 'hg38', dslabel, role })
+	const genome = dslabel === 'ProtectedTest' ? 'hg38-test' : 'hg38'
+	const body = JSON.stringify({ genome, dslabel, role })
 	const res = await fetch('/demoToken', { method: 'POST', body })
 		.then(r => r.json())
 		.catch(console.error)
 	if (res.error) {
 		console.error(res.error)
 		return null
+	}
+	if (!res.fakeTokensByRole) return null
+	for (const [role, jwt] of Object.entries(res.fakeTokensByRole)) {
+		fakeTokensByDsRole[dslabel][role] = jwt
 	}
 	return res.fakeTokensByRole[role]
 }
