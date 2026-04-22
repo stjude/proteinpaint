@@ -7,18 +7,16 @@ import type { SCSample } from '../SCTypes'
 import type { SCSettings } from '../settings/Settings'
 
 /** Rendering for the plot buttons that appear below the item
- * table.
+ * table. Plot buttons are rendered based on the available plots
+ * for the selected sample, and the config defined in
+ * termdbConfig.queries.singleCell.data.plots. Each plot config
+ * in termdbConfig should define a name that matches the plot
+ * names returned from the server, and can optionally define
+ * colorColumns which will be used to apply color to the plot
+ * if those columns are present in the data.
  *
  * Notes:
  *  - The hierarchical clustering limits to the first 100 genes.
- *
- ******* TODOs:
- * - Disable all plot btns until plot loads for performance??
- *
- ******* Hier clustering implenentation TODOs and questions:
- * The matrix ** does not ** properly pull single cell data yet.
- * This implementation works as a placeholder for now.
- * Need to revisit before production.
  * */
 export class PlotButtons {
 	plotBtnsDom: {
@@ -65,7 +63,7 @@ export class PlotButtons {
 	}
 
 	renderChartBtns() {
-		this.plotBtnsDom.btnsDiv.selectAll('*').remove()
+		// this.plotBtnsDom.btnsDiv.selectAll('*').remove()
 		const btns = this.getChartBtnOpts()
 
 		this.plotBtnsDom.btnsDiv
@@ -103,10 +101,13 @@ export class PlotButtons {
 			getPlotConfig?: (f?: any) => any
 		}[] = []
 
+		//Show buttons for plots with found data files (see note above).
+		const availablePlots = new Set(this.data?.plots?.map((p: any) => p.name))
+
 		for (const plot of this.scTermdbConfig?.data?.plots || []) {
 			btns.push({
 				label: plot.name,
-				isVisible: () => true,
+				isVisible: () => availablePlots.has(plot.name),
 				getPlotConfig: async () => {
 					return await this.getSingleCellConfig(plot.name)
 				}
@@ -179,10 +180,12 @@ export class PlotButtons {
 	}
 
 	//********** Btn Menus **********/
-	//TODO: Change this to use the term from termdbConfig
-	// and return to getPlotConfig
 	termDropdownMenu(plot: any, self: PlotButtons) {
 		self.plotBtnsDom.tip.clear()
+		//TODO: Planned server request here to get the available
+		// clusters/termIds for the selected sample,
+		// instead of using the clusters returned for the
+		// plot which is currently hardcoded to a few options for testing.
 		const _plot = self.data.plots[0]
 
 		const wrapper = self.plotBtnsDom.tip.d.append('div').style('padding', '10px')
@@ -205,6 +208,7 @@ export class PlotButtons {
 				await self.interactions.createSubplot(config)
 			})
 
+		//TODO: Replace this with planned server response for the clusters/termId.
 		const regex = new RegExp(_plot.colorBy, 'g')
 		_plot.clusters.unshift(`Select ${self.scTermdbConfig.DEgenes.termId}...`)
 		for (const cluster of _plot.clusters) {
