@@ -186,7 +186,10 @@ fn input_data_hdf5(
 
     for gene_idx in 0..num_genes {
         for &col_idx in &column_indices {
-            input_vector.push(all_counts[[gene_idx, col_idx]]);
+            let val = all_counts[[gene_idx, col_idx]];
+            // Treat missing/NaN/Inf as 0 so downstream statrs sort/percentile
+            // functions never see non-finite values.
+            input_vector.push(if val.is_finite() { val } else { 0.0 });
         }
     }
 
