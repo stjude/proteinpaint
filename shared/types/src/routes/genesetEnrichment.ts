@@ -16,11 +16,14 @@ export type GenesetEnrichmentRequest = {
 	 * the cache file is missing (TTL eviction or farm node that has never
 	 * seen this request), the server uses this to recompute and rewrite
 	 * the cache. Without this field, a cache miss is unrecoverable. */
-	daRequest?: DERequest
-	/** When true and `cacheId` is set, the server skips enrichment and
-	 * returns the ranked `{ genes, fold_change }` from the cache. Used by
-	 * the client-side cerno detail plot to lazily load the full ranked
-	 * gene list without keeping it in plot state. */
+	/** Dataset label forwarded for auth middleware / dataset scoping. */
+	dslabel?: string
+	/** Snapshot of the original DE request that produced `cacheId`. When
+	 * the cache file is missing (TTL eviction or farm node that has never
+	 * seen this request), the server uses this to recompute and rewrite
+	 * the cache. Without this field, a cache miss is unrecoverable.
+	 * This mirrors the partial DE payload shape sent by clients. */
+	daRequest?: Partial<DERequest>
 	fetchDE?: boolean
 	/** Filter non-coding genes */
 	filter_non_coding_genes: boolean
