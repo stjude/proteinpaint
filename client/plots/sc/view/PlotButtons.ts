@@ -65,7 +65,7 @@ export class PlotButtons {
 	}
 
 	renderChartBtns() {
-		// this.plotBtnsDom.btnsDiv.selectAll('*').remove()
+		this.plotBtnsDom.btnsDiv.selectAll('*').remove()
 		const btns = this.getChartBtnOpts()
 
 		this.plotBtnsDom.btnsDiv
