@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { BrainSample, BrainImagingSamplesRequest, BrainImagingSamplesResponse, RouteApi } from '#types'
+import { getData } from '#src/termdb.matrix.js'
 
 /*
 given one or more samples, map the sample(s) to brain template and return the image
@@ -53,14 +54,30 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 
 		const sampleNames = files.map(name => name.split('.nii')[0])
 		if (q[key].sampleColumns) {
+			// Build term wrappers for getData
+			const terms = q[key].sampleColumns.map(term => ({
+				$id: term.termid,
+				term: { id: term.termid },
+				q: {}
+			}))
+			
+			// Get data for all terms at once
+			const data = await getData({ terms }, ds)
+			if (data.error) throw data.error
+			
 			const samples = {}
 			for (const s of sampleNames) {
 				const annoForOneS = { sample: s }
 				const sid = ds.cohort.termdb.q.sampleName2id(s)
-				for (const term of q[key].sampleColumns) {
-					const v = ds.cohort.termdb.q.getSample2value(term.termid, sid)
-					if (v[0]) {
-						annoForOneS[term.termid] = v[0].value
+				
+				// Extract values from getData result
+				const sampleData = data.samples?.[sid]
+				if (sampleData) {
+					for (const term of q[key].sampleColumns) {
+						const value = sampleData[term.termid]
+						if (value !== undefined) {
+							annoForOneS[term.termid] = value.value
+						}
 					}
 				}
 				samples[s] = annoForOneS

@@ -4,7 +4,7 @@ import { get_densityplot } from './mds3.densityPlot.js'
 import * as utils from './utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
-import { getSampleData_dictionaryTerms_termdb } from './termdb.matrix.js'
+import { getSampleData_dictionaryTerms_termdb, getData } from './termdb.matrix.js'
 import { ssmIdFieldsSeparator, guessSsmid } from '#shared/mds3tk.js'
 
 /*
@@ -377,7 +377,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 		throw 'unknown format of ssm id'
 	}
 
-	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
+	await mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 
 	return { samples: [...samples.values()] }
 }
@@ -412,15 +412,29 @@ export function combineSamplesById(inlst, samples, ssmid) {
 	}
 }
 
-function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
+async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
 	if (!twLst) return
-	// for every term, append term values to each sample
-	// right now does not observe tw setting
+	
+	// Build terms array for getData
+	const terms = twLst.map(tw => ({
+		$id: tw.term.id,
+		term: tw.term,
+		q: tw.q || {}
+	}))
+	
+	// Get data for all terms at once
+	const data = await getData({ terms }, ds)
+	if (data.error) throw data.error
+	
+	// For every term, append term values to each sample
 	for (const s of samples.values()) {
-		for (const tw of twLst) {
-			const v = ds.cohort.termdb.q.getSample2value(tw.term.id, s.sample_id)
-			if (v[0]) {
-				s[tw.term.id] = v[0].value
+		const sampleData = data.samples?.[s.sample_id]
+		if (sampleData) {
+			for (const tw of twLst) {
+				const value = sampleData[tw.term.id]
+				if (value !== undefined) {
+					s[tw.term.id] = value.value
+				}
 			}
 		}
 	}
@@ -452,7 +466,7 @@ async function queryServerFileByRglst(q, twLst, ds) {
 		}
 	}
 
-	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
+	await mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 
 	return { samples: [...samples.values()] }
 }
