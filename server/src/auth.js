@@ -658,8 +658,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				ip: req.ip || null
 			}
 			const fullPayload = Object.assign({}, defaultToken, ds.demoJwtInput[q.role])
-			const credCopy = Object.assign({}, cred, { secret: cred.demoToken.secret })
-			const jwt = cred.processor
+			const credCopy = { ...cred, secret: cred.demoToken.secret }
+			const jwt = cred.processor // also test any applicable cred.processor in demo mode
 				? cred.processor.generatePayload(fullPayload, credCopy)
 				: jsonwebtoken.sign(fullPayload, cred.demoToken.secret)
 			console.log(`~~ Faketoken computed for ds=${q.dslabel}, role=${q.role}`)
@@ -802,9 +802,7 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		const [type, b64token] = req.headers.authorization.split(' ')
 		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 		const token = Buffer.from(b64token, 'base64').toString()
-		const secret = cred.demoToken?.referers.find(r => r.includes(req.headers.referer))
-			? cred.demoToken.secret
-			: cred.secret
+		const { secret } = getApplicableSecret(req.headers, cred, token)
 		const payload = jsonwebtoken.verify(token, secret)
 		return payload || {}
 	}
@@ -975,7 +973,8 @@ async function getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, 
 			email
 		}
 		if (cred.dsnames) payload.datasets = cred.dsnames.map(d => d.id)
-		const jwt = jsonwebtoken.sign(payload, cred.secret)
+		const { secret } = getApplicableSecret(req.headers, cred, payload)
+		const jwt = jsonwebtoken.sign(payload, secret)
 		const id = getSessionIdFromJwt(jwt)
 		const ip = req.ip // may use req.ips?
 		if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
@@ -1019,9 +1018,7 @@ function mayAddSessionFromJwt(sessions, req, cred) {
 	const token = Buffer.from(b64token, 'base64').toString()
 	const id = getSessionIdFromJwt(token)
 	try {
-		const secret = cred.demoToken?.referers.find(r => r.includes(req.headers.referer))
-			? cred.demoToken.secret
-			: cred.secret
+		const { secret } = getApplicableSecret(req.headers, cred)
 		const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)
 		// signed payload dataset must match the requested dataset
 		if (payload.dslabel) {
@@ -1077,16 +1074,14 @@ function getJwtPayload(q, headers, cred, session = null) {
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`
 
-	// the embedder may supply a processor function
-	const processor = cred.processor || {}
-
-	// use a handleToken() if available for an embedder, for example to decrypt a fully encrypted jwt
-	const token = processor.handleToken?.(rawToken) || rawToken
-	// this verification will throw if the token is invalid in any way
-	const referer = headers.referer || ''
-	const secret = cred.demoToken?.referers.find(r => referer.includes(r)) ? cred.demoToken.secret : cred.secret
+	const { secret, processor } = getApplicableSecret(headers, cred, rawToken)
+	// use handleToken() if available for an embedder, for example to decrypt a fully encrypted jwt
+	const token =
+		// the embedder may supply a processor function
+		secret === cred.secret && processor.handleToken ? processor.handleToken(rawToken) : rawToken
 	let payload
 	try {
+		// this verification will throw if the token is invalid in any way
 		payload = jsonwebtoken.verify(token, secret) // change the secret with a suffix or to some other string to trigger and test the error below
 	} catch (e) {
 		// may include info on whether a demoToken secret was used, to help with embedder troubleshooting
@@ -1099,7 +1094,10 @@ function getJwtPayload(q, headers, cred, session = null) {
 		return { iat: payload.iat, email: payload.email, ip: payload.ip, clientAuthResult: payload.clientAuthResult }
 
 	// the embedder may use a post-processor function to
-	// optionally transform, translate, reformat the payload
+	// optionally transform, translate, reformat the payload,
+	// but this only applies to non-session jwt that was issued
+	// directly from getDatasetAccessToken() on the client-side
+	// and doesn't have a dslabel property
 	if (processor.handlePayload) {
 		try {
 			processor.handlePayload({ ...cred, secret }, payload, time)
@@ -1128,6 +1126,18 @@ function getJwtPayload(q, headers, cred, session = null) {
 		clientAuthResult: payload.clientAuthResult,
 		rawToken
 	}
+}
+
+function getApplicableSecret(headers, cred, rawToken) {
+	if (rawToken) {
+		const unverifiedPayload = typeof rawToken == 'object' ? rawToken : jsonwebtoken.decode(rawToken)
+		if (!unverifiedPayload) return { secret: cred.secret, processor: {} }
+		const { dslabel, embedder, route } = unverifiedPayload || {}
+		if (dslabel && embedder && route) return { secret: cred.secret, processor: {} }
+	}
+	const referer = headers.referer || ''
+	const secret = cred.demoToken?.referers.find(str => referer.includes(str)) ? cred.demoToken.secret : cred.secret
+	return { secret, processor: cred.processor || {} }
 }
 
 // cred.ipCheck: undefined | 'none' | 'loose'
