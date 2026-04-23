@@ -4,7 +4,15 @@ import { TermTypes } from '#shared/terms.js'
 import { colorScaleMap } from '#shared/common.js'
 import { CNVkey2order } from './matrix.legend'
 import { scaleLinear } from 'd3-scale'
-import { interpolateRdBu } from 'd3-scale-chromatic'
+
+// Helper function to create heatmap color scale for continuous values
+function createHeatmapColorScale(minval, maxval) {
+	return scaleLinear()
+		.domain([minval, (minval + maxval) / 2, maxval])
+		.range(['#2166ac', '#f7f7f7', '#b2182b'])
+		.clamp(true)
+}
+
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -60,12 +68,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			
 			// Create color scale for heatmap
 			if (!t.heatmapColorScale) {
-				// Use interpolateRdBu (red-white-blue) for diverging scale
-				// Blue for low values, white for middle, red for high values
-				t.heatmapColorScale = scaleLinear()
-					.domain([t.counts.minval, (t.counts.minval + t.counts.maxval) / 2, t.counts.maxval])
-					.range(['#2166ac', '#f7f7f7', '#b2182b'])
-					.clamp(true)
+				t.heatmapColorScale = createHeatmapColorScale(t.counts.minval, t.counts.maxval)
 			}
 			
 			cell.fill = t.heatmapColorScale(renderV)
@@ -163,10 +166,7 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 			
 			// Create color scale for heatmap
 			if (!t.heatmapColorScale) {
-				t.heatmapColorScale = scaleLinear()
-					.domain([t.counts.minval, (t.counts.minval + t.counts.maxval) / 2, t.counts.maxval])
-					.range(['#2166ac', '#f7f7f7', '#b2182b'])
-					.clamp(true)
+				t.heatmapColorScale = createHeatmapColorScale(t.counts.minval, t.counts.maxval)
 			}
 			
 			cell.fill = t.heatmapColorScale(renderV)

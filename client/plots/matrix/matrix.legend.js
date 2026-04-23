@@ -289,6 +289,12 @@ export function getLegendData(legendGroups, refs, self) {
 				const name = t.tw.legend?.group || t.tw.label || term.name
 				const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
 				const colors = ['#2166ac', '#f7f7f7', '#b2182b']
+				
+				// Validate that minval and maxval exist before using them
+				if (legend.minval == null || legend.maxval == null) {
+					continue
+				}
+				
 				const domain = [legend.minval, (legend.minval + legend.maxval) / 2, legend.maxval]
 				
 				legendData.push({
