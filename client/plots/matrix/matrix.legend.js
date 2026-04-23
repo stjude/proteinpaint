@@ -3,6 +3,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
+import { HEATMAP_COLORS } from './matrix.cells.js'
 
 export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix
@@ -288,10 +289,10 @@ export function getLegendData(legendGroups, refs, self) {
 			if (legend.isHeatmap && legend.heatmapColorScale) {
 				const name = t.tw.legend?.group || t.tw.label || term.name
 				const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
-				const colors = ['#2166ac', '#f7f7f7', '#b2182b']
+				const colors = [HEATMAP_COLORS.LOW, HEATMAP_COLORS.MID, HEATMAP_COLORS.HIGH]
 				
-				// Validate that minval and maxval exist before using them
-				if (legend.minval == null || legend.maxval == null) {
+				// Validate that minval and maxval exist and are numbers before using them
+				if (typeof legend.minval !== 'number' || typeof legend.maxval !== 'number') {
 					continue
 				}
 				

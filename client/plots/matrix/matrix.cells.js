@@ -5,11 +5,18 @@ import { colorScaleMap } from '#shared/common.js'
 import { CNVkey2order } from './matrix.legend'
 import { scaleLinear } from 'd3-scale'
 
+// Heatmap color constants for continuous values
+export const HEATMAP_COLORS = {
+	LOW: '#2166ac',
+	MID: '#f7f7f7',
+	HIGH: '#b2182b'
+}
+
 // Helper function to create heatmap color scale for continuous values
 function createHeatmapColorScale(minval, maxval) {
 	return scaleLinear()
 		.domain([minval, (minval + maxval) / 2, maxval])
-		.range(['#2166ac', '#f7f7f7', '#b2182b'])
+		.range([HEATMAP_COLORS.LOW, HEATMAP_COLORS.MID, HEATMAP_COLORS.HIGH])
 		.clamp(true)
 }
 
