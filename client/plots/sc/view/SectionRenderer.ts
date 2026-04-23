@@ -29,14 +29,18 @@ export class SectionRenderer {
 		this.groupBy = groupBy
 	}
 
-	//Send the sc with the updated state
+	/** Send the sc with the updated state. May not be necessary long term. If not,
+	 * remove and put in the constructor. */
 	async update(sc: SCViewer, subplots: any, groupBy: (typeof GroupByOptions)[number]) {
 		if (groupBy !== this.groupBy) {
 			this.groupBy = groupBy
 			this.holder.selectAll('*').remove()
-			//Reset sections and plotId2Key map when groupBy changes as the keys will be different
-			//TODO: evaluate if there's a more performant way to update sections when
-			//groupBy changes without needing to re-render all the sections and sandboxes
+			/** Reset sections and plotId2Key map when groupBy changes as the keys will be different
+			 *
+			 * TODO: evaluate if there's a more performant way to update sections when
+			 * groupBy changes without needing to re-render all the sections and sandboxes.
+			 *
+			 * Note: the plot component is only init'ed once under initSandbox() */
 			this.sections = {}
 			this.plotId2Key = new Map()
 		}
@@ -192,7 +196,10 @@ export class SectionRenderer {
 			opts.header = sandbox.header
 		}
 
-		await sc.initPlotComponent(subplot.id, opts)
+		/** Only initialize components once (i.e. do not re-initialize when the user has
+		 * changed the groupBy option, which triggers update and initSandbox for all
+		 * active subplots.) */
+		if (!sc.components.plots[subplot.id]) await sc.initPlotComponent(subplot.id, opts)
 		this.sections[key].sandboxes[subplot.id] = sandbox.app_div
 	}
 
