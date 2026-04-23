@@ -63,7 +63,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 
 		// Check if row height is small enough to use heatmap mode
 		const useHeatmap = t.rowHt < 10
-		
+
 		if (useHeatmap) {
 			// Heatmap mode: use color scale instead of bars
 			const vc = cell.term.valueConversion
@@ -72,12 +72,12 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 				renderV = (renderV - t.mean) / t.std
 				cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
 			}
-			
+
 			// Create color scale for heatmap
 			if (!t.heatmapColorScale) {
 				t.heatmapColorScale = createHeatmapColorScale(t.counts.minval, t.counts.maxval)
 			}
-			
+
 			cell.fill = t.heatmapColorScale(renderV)
 			cell.label =
 				'label' in anno
@@ -158,10 +158,10 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 		cell.fill =
 			self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.[anno.key]?.color ||
 			(anno.key == 1 ? '#a1a3a6' : '#a3c88b')
-		
+
 		// Check if row height is small enough to use heatmap mode
 		const useHeatmap = t.rowHt < 10
-		
+
 		if (useHeatmap) {
 			// Heatmap mode: use color scale instead of bars
 			const vc = cell.term.valueConversion
@@ -170,12 +170,12 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 				renderV = (renderV - t.mean) / t.std
 				cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
 			}
-			
+
 			// Create color scale for heatmap
 			if (!t.heatmapColorScale) {
 				t.heatmapColorScale = createHeatmapColorScale(t.counts.minval, t.counts.maxval)
 			}
-			
+
 			cell.fill = t.heatmapColorScale(renderV)
 			cell.label = tw.term.unit ? `${cell.key.toFixed(2)} ${tw.term.unit}` : cell.key.toFixed(2)
 			cell.height = t.rowHt

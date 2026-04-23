@@ -284,13 +284,13 @@ export function getLegendData(legendGroups, refs, self) {
 			const grp = $id
 			const term = t.tw.term
 			const ref = legend.ref
-			
+
 			// Check if this is a heatmap legend
 			if (legend.isHeatmap && legend.heatmapColorScale) {
 				const name = t.tw.legend?.group || t.tw.label || term.name
 				const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
 				const colors = [HEATMAP_COLORS.LOW, HEATMAP_COLORS.MID, HEATMAP_COLORS.HIGH]
-				
+
 				// Validate that minval and maxval exist and are numbers before using them
 				if (typeof legend.minval !== 'number' || typeof legend.maxval !== 'number') {
 					continue
