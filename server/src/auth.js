@@ -658,8 +658,9 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				ip: req.ip || null
 			}
 			const fullPayload = Object.assign({}, defaultToken, ds.demoJwtInput[q.role])
+			const credCopy = Object.assign({}, cred, { secret: cred.demoToken.secret })
 			const jwt = cred.processor
-				? cred.processor.generatePayload(fullPayload, { secret: cred.demoToken.secret })
+				? cred.processor.generatePayload(fullPayload, credCopy)
 				: jsonwebtoken.sign(fullPayload, cred.demoToken.secret)
 			console.log(`~~ Faketoken computed for ds=${q.dslabel}, role=${q.role}`)
 			cred.demoToken.computedByRole[q.role] = { jwt, exp: fullPayload.exp * 1000 } // track expiration in milliseconds
@@ -684,7 +685,11 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 		const dsAuth = []
 		const embedder = req.query.embedder || req.get('host')?.split(':')[0] // do not include port number
 		for (const [dslabelPattern, ds] of Object.entries(creds)) {
-			if (dslabelPattern.startsWith('__') || dslabelPattern.startsWith('#') || !activeDslabels.includes(dslabelPattern))
+			if (
+				dslabelPattern.startsWith('__') ||
+				dslabelPattern.startsWith('#') ||
+				!activeDslabels.find(dslabel => dslabel === dslabelPattern || isMatch(dslabel, dslabelPattern))
+			)
 				continue
 			for (const [routePattern, route] of Object.entries(ds)) {
 				for (const [embedderHostPattern, cred] of Object.entries(route)) {
@@ -706,7 +711,8 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 
 					// if session is valid, extend the session expiration by resetting the start time
 					if (insession) activeSession.time = currTime
-					const demoTokenRoles = cred.demoToken?.referers.find(r => req.headers.referer.includes(r))
+					const referer = req.headers.referer || ''
+					const demoTokenRoles = cred.demoToken?.referers.find(r => referer.includes(r))
 						? cred.demoToken?.roles
 						: undefined
 					dsAuth.push({
@@ -1077,7 +1083,8 @@ function getJwtPayload(q, headers, cred, session = null) {
 	// use a handleToken() if available for an embedder, for example to decrypt a fully encrypted jwt
 	const token = processor.handleToken?.(rawToken) || rawToken
 	// this verification will throw if the token is invalid in any way
-	const secret = cred.demoToken?.referers.find(r => headers.referer.includes(r)) ? cred.demoToken.secret : cred.secret
+	const referer = headers.referer || ''
+	const secret = cred.demoToken?.referers.find(r => referer.includes(r)) ? cred.demoToken.secret : cred.secret
 	let payload
 	try {
 		payload = jsonwebtoken.verify(token, secret) // change the secret with a suffix or to some other string to trigger and test the error below
@@ -1095,9 +1102,10 @@ function getJwtPayload(q, headers, cred, session = null) {
 	// optionally transform, translate, reformat the payload
 	if (processor.handlePayload) {
 		try {
-			processor.handlePayload({ secret }, payload, time)
+			processor.handlePayload({ ...cred, secret }, payload, time)
 		} catch (e) {
-			console.log(e)
+			const errorMessage = typeof e == 'object' && e?.message ? e.message : String(e)
+			console.log(`JWT payload processing failed: ${errorMessage}`)
 			if (e.reason == 'bad decrypt') throw `Please login again to access this feature. (${e.reason})`
 			throw e
 		}

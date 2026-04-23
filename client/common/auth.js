@@ -1,5 +1,5 @@
 import { select } from 'd3-selection'
-import { dofetch3 } from './dofetch'
+//import { dofetch3 } from './dofetch'
 
 const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
 const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
@@ -102,41 +102,38 @@ export function getRequiredAuth(dslabel, route) {
 // so access to unprotected ds/routes should not be affected by this check
 export async function isInSession(dslabel, route) {
 	if (!dslabel) return false
+	if (!Array.isArray(dsAuth)) return false
 	for (const a of dsAuth) {
-		if (a.dslabel == dslabel && (a.route == route || a.route == '/**')) {
-			if (dsAuthOk.has(a)) return true
-			// for auth.type == 'jwt', migrate to always using getDatasetAccessToken()
-			// instead of saving a session jwt in localStorage
-			if (a.checked || a.type == 'jwt') return false
-			// for other auth types like basic (password login), recover related saved jwt that
-			// allows one-time sign-in throughout a user's browser session;
-			const { dslabel, route } = a
-			// check if there is a PP-server generated session token that has been saved from a previous login
-			const jwt = getSavedToken(dslabel, route)
-			if (jwt) {
-				const payload = JSON.parse(atob(jwt.split('.')[1]))
-				if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) return false
-				const data = await dofetch3('/jwt-status', {
-					method: 'POST',
-					headers: {
-						//authorization: `Bearer ${btoa(jwt)}`
-						[a.headerKey]: jwt
-					},
-					body: {
-						dslabel,
-						route,
-						embedder: location.hostname
-					}
-				})
-				if (data.ok || data.status == 'ok') {
-					dsAuthOk.add(a)
-					a.insession = true
-					return true
-				} else {
-					a.checked = false
-					return false
-				}
+		if (a.dslabel != dslabel || (a.route != route && a.route != '/**')) continue
+		if (dsAuthOk.has(a)) return true
+		// for auth.type == 'jwt', migrate to always using getDatasetAccessToken()
+		// instead of saving a session jwt in localStorage
+		if (a.checked || a.type == 'jwt') return false
+		// for other auth types like basic (password login), recover related saved jwt that
+		// allows one-time sign-in throughout a user's browser session;
+		// check if there is a PP-server generated session token that has been saved from a previous login
+		const jwt = getSavedToken(dslabel, a.route)
+		if (!jwt) return false
+		const { dofetch3 } = await import('./dofetch')
+		const payload = JSON.parse(atob(jwt.split('.')[1]))
+		if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) return false
+		const data = await dofetch3('/jwt-status', {
+			method: 'POST',
+			headers: {
+				//authorization: `Bearer ${btoa(jwt)}`
+				[a.headerKey]: jwt
+			},
+			body: {
+				dslabel,
+				route,
+				embedder: location.hostname
 			}
+		})
+		a.checked = true
+		if (data.ok || data.status == 'ok') {
+			dsAuthOk.add(a)
+			a.insession = true
+			return true
 		}
 	}
 	// no matching sessions found for this dslabel and route
@@ -246,4 +243,18 @@ async function defaultAuthUi(dslabel, auth, opts = {}) {
 				authUiHolder
 			})
 	})
+}
+
+function decodeJwtPayload(token) {
+	// 1. Split the token into its 3 parts (header, payload, signature)
+	const base64Url = token.split('.')[1]
+	// 2. Convert Base64Url to standard Base64
+	const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+	// 3. Decode the Base64 string and parse it as JSON
+	const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(convertAtoBresult).join(''))
+	return JSON.parse(jsonPayload)
+}
+
+function convertAtoBresult(c) {
+	return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
 }
