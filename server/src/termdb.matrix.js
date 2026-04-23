@@ -269,6 +269,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 			const values = data.term2sample2value.get(tw.$id)
 			for (const sampleId in values) {
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				if (!Number.isFinite(values[sampleId])) continue // skip non-numeric values
 				const value = Number(values[sampleId])
 				let key = value
 				if (lstOfBins) {

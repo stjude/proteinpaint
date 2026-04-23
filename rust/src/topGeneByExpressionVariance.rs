@@ -186,10 +186,7 @@ fn input_data_hdf5(
 
     for gene_idx in 0..num_genes {
         for &col_idx in &column_indices {
-            let val = all_counts[[gene_idx, col_idx]];
-            // Treat missing/NaN/Inf as 0 so downstream statrs sort/percentile
-            // functions never see non-finite values.
-            input_vector.push(if val.is_finite() { val } else { 0.0 });
+            input_vector.push(all_counts[[gene_idx, col_idx]]);
         }
     }
 
@@ -305,14 +302,20 @@ fn calculate_variance(
         min_sample_size = LARGE_N + (min_sample_size - LARGE_N) * MIN_PROP;
     }
 
-    let mut lib_sizes = Vec::<f64>::new();
-    let lib_sizes_vector = input_matrix.row_sum();
-    //println!("lib_sizes_vector:{:?}", lib_sizes_vector);
-    for i in 0..lib_sizes_vector.ncols() {
-        lib_sizes.push(lib_sizes_vector[(0, i)].into());
+    // Per-sample library sizes as nansum — a single NaN gene doesn't
+    // poison the whole sample's total.
+    let mut lib_sizes = Vec::<f64>::with_capacity(input_matrix.ncols());
+    for col in 0..input_matrix.ncols() {
+        let mut s = 0.0_f64;
+        for row in 0..input_matrix.nrows() {
+            let v = input_matrix[(row, col)];
+            if v.is_finite() {
+                s += v;
+            }
+        }
+        lib_sizes.push(s);
     }
-    //println!("lib_sizes:{:?}", lib_sizes);
-    //println!("min_sample_size:{}", min_sample_size);
+
     let median_lib_size = Data::new(lib_sizes.clone()).median();
     let cpm_cutoff = (min_count / median_lib_size) * 1000000.0;
     //println!("cpm_cutoff:{}", cpm_cutoff);
@@ -320,11 +323,12 @@ fn calculate_variance(
     const TOL: f64 = 1e-14; // Value of constant from R implementation
 
     let mut gene_infos = Vec::<GeneInfo>::new();
-    let row_sums = input_matrix.column_sum();
     for row in 0..input_matrix.nrows() {
         let mut trues = 0.0;
+        // CPM filter (NaN-safe)
         for col in 0..cpm_matrix.ncols() {
-            if cpm_matrix[(row, col)] >= cpm_cutoff {
+            let v = cpm_matrix[(row, col)];
+            if v.is_finite() && v >= cpm_cutoff {
                 trues += 1.0;
             }
         }
@@ -335,17 +339,32 @@ fn calculate_variance(
             //positive_cpm += 1;
         }
 
+        let mut row_sum_finite = 0.0_f64;
+        for col in 0..input_matrix.ncols() {
+            let v = input_matrix[(row, col)];
+            if v.is_finite() {
+                row_sum_finite += v;
+            }
+        }
         let mut keep_total_bool = false;
-        if row_sums[(row, 0)] as f64 >= min_total_count - TOL {
+        if row_sum_finite >= min_total_count - TOL {
             keep_total_bool = true;
-            //keep_total.push(keep_total_bool);
-            //positive_total += 1;
         }
 
         let mut gene_counts: Vec<f64> = Vec::with_capacity(input_matrix.ncols());
         for col in 0..input_matrix.ncols() {
-            gene_counts.push(input_matrix[(row, col)]);
+            let v = input_matrix[(row, col)];
+            if v.is_finite() {
+                gene_counts.push(v);
+            }
         }
+
+        // Skip genes with too few observations to produce a stable statistic
+        let min_required = if rank_type == "var" { 2 } else { 4 };
+        if gene_counts.len() < min_required {
+            continue;
+        }
+
         if rank_type == "var" {
             // Calculating variance
             if gene_counts.clone().variance().is_nan() == true {
@@ -386,17 +405,28 @@ fn calculate_variance(
 fn cpm(
     input_matrix: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
 ) -> Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>> {
-    //let mut blank = Vec::<f64>::new();
-    let mut blank = Vec::with_capacity(input_matrix.nrows() * input_matrix.ncols());
-    for _i in 0..input_matrix.nrows() * input_matrix.ncols() {
-        blank.push(0.0);
-    }
-    let mut output_matrix = DMatrix::from_vec(input_matrix.nrows(), input_matrix.ncols(), blank);
-    let column_sums = input_matrix.row_sum();
+    let mut output_matrix = DMatrix::from_element(input_matrix.nrows(), input_matrix.ncols(), 0.0);
+
+    // Per-sample totals over finite entries only (nansum).
+    let mut col_sums = vec![0.0_f64; input_matrix.ncols()];
     for col in 0..input_matrix.ncols() {
-        let norm_factor = column_sums[(0, col)];
         for row in 0..input_matrix.nrows() {
-            output_matrix[(row, col)] = (input_matrix[(row, col)] as f64 * 1000000.0) / norm_factor as f64;
+            let v = input_matrix[(row, col)];
+            if v.is_finite() {
+                col_sums[col] += v;
+            }
+        }
+    }
+
+    for col in 0..input_matrix.ncols() {
+        let norm = col_sums[col];
+        for row in 0..input_matrix.nrows() {
+            let v = input_matrix[(row, col)];
+            output_matrix[(row, col)] = if v.is_finite() && norm > 0.0 {
+                v * 1_000_000.0 / norm
+            } else {
+                f64::NAN
+            };
         }
     }
     //println!("output_matrix:{:?}", output_matrix);
