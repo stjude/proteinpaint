@@ -33,15 +33,17 @@ export class SampleTableRenderer {
 			striped: true,
 			selectedRows: tableData.selectedRows,
 			noButtonCallback: index => {
-				const row = {} as { [key: string]: any }
+				const item = {} as { sID: string; eID: string; [key: string]: any }
 				tableData.rows[index].forEach((r: TableCell, idx: number) => {
 					if (!r.value) return
-					row[tableData.columns[idx].label.toLowerCase()] = r.value
+					let key = tableData.columns[idx].label.toLowerCase()
+					/** Convert the column labels into the required sample structure keys.
+					 * Maintains the sample obj used throughout the app whilst allowing for
+					 * dynamic column labels based on the config. */
+					key = key === 'sample' ? 'sID' : key === 'experiment' ? 'eID' : key
+					item[key] = r.value
 				})
-				const item = {
-					sID: row.sample || '',
-					eID: row.experiment || ''
-				}
+				if (!item.sID) throw new Error('Selected item must have sID property')
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
 			}
