@@ -47,8 +47,11 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'gsea':
 			return await import(`./gsea.js`)
 
+		case 'imagePlot':
+			return await import('./imagePlot.ts')
+
 		case 'report':
-			return await import(`././report/report.ts`)
+			return await import(`./report/report.ts`)
 
 		case 'runChart2': //See frequencyChart
 		case 'frequencyChart':
