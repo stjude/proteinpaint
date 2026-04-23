@@ -38,11 +38,12 @@ export class SectionRenderer {
 			/** Reset sections and plotId2Key map when groupBy changes as the keys will be different
 			 *
 			 * TODO: evaluate if there's a more performant way to update sections when
-			 * groupBy changes without needing to re-render all the sections and sandboxes.
-			 *
-			 * Note: the plot component is only init'ed once under initSandbox() */
+			 * groupBy changes without needing to re-render all the sections and sandboxes.*/
 			this.sections = {}
 			this.plotId2Key = new Map()
+			for (const subplotId of Object.keys(sc.components.plots)) {
+				sc.removeComponent(subplotId)
+			}
 		}
 		const activeSubplots = new Set(subplots.map(s => s.id))
 
@@ -195,11 +196,7 @@ export class SectionRenderer {
 			opts.holder = sandbox.body
 			opts.header = sandbox.header
 		}
-
-		/** Only initialize components once (i.e. do not re-initialize when the user has
-		 * changed the groupBy option, which triggers update and initSandbox for all
-		 * active subplots.) */
-		if (!sc.components.plots[subplot.id]) await sc.initPlotComponent(subplot.id, opts)
+		await sc.initPlotComponent(subplot.id, opts)
 		this.sections[key].sandboxes[subplot.id] = sandbox.app_div
 	}
 
