@@ -274,35 +274,35 @@ filter:       A cohort restriction that narrows the sample set used for clusteri
 ## EXAMPLES
 
 --- Simple gene list ---
-Q: "Cluster AKT1, TP53 and KRAS gene expression"
+Q: "Cluster ABC, PQR and XYZ gene expression"
 A: {
-  "geneNames": ["AKT1 expression", "TP53 expression", "KRAS expression"]
+  "geneNames": ["ABC expression", "PQR expression", "XYZ expression"]
 }
 
 --- Gene list with cohort filter ---
-Q: "Cluster BCR, TP53 and KRAS gene expression for patients with acute lymphoblastic leukemia"
+Q: "Cluster IJK45, MNO4 and RSTB4 gene expression for patients with acute lymphoblastic leukemia"
 A: {
-  "geneNames": ["BCR expression", "TP53 expression", KRAS gene expression"],
+  "geneNames": ["IJK45 expression", "MNO4 expression", RSTB4 gene expression"],
   "filter": "acute lymphoblastic leukemia"
 }
 
 --- Dendrogram phrasing ---
-Q: "Show a gene expression dendrogram for BCR, TP53 and AKT1"
+Q: "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
 A: {
-  "geneNames": ["BCR expression, TP53 expression, AKT1 gene expression"]
+  "geneNames": ["XYZ4 expression, CDE5 expression, AZF1 gene expression"]
 }
 
 --- Subtype-restricted cluster ---
-Q: "Cluster ATM, TP53 and KRAS for patients with KMT2A subtype"
+Q: "Cluster HGT3, XCFT53 and KRRDF for patients with SBG5B subtype"
 A: {
-  "geneNames": ["ATM expression", "TP53 expression", "KRAS expression"],
-  "filter": "KMT2A subtype"
+  "geneNames": ["HGT3 expression", "XCFT53 expression", "KRRDF expression"],
+  "filter": "SBG5B subtype"
 }
 
 --- Gene set clustering ---
-Q: "Hierarchical clustering of HALLMARK_P53_PATHWAY and HALLMARK_APOPTOSIS genesets"
+Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
 A: {
-  "genesetNames": "HALLMARK_P53_PATHWAY and HALLMARK_APOPTOSIS genesets"]
+  "genesetNames": "GO_T67_PATHWAY and HGC_676 genesets"]
 }
 
 ## EDGE CASES
