@@ -320,9 +320,7 @@ async function readFileAndDelete(file: string, key: string, response: any) {
 		size: `${width}x${height}`,
 		key
 	}
-	fs.unlink(file, err => {
-		if (err) throw new Error(err.message || String(err))
-	})
+	await fs.promises.unlink(file)
 }
 
 export type RunDeFreshResult = {
@@ -443,8 +441,24 @@ export type CacheOrRecomputeResult = {
 	bcv?: number
 }
 
+/** In-flight read-or-recompute promises keyed by cacheId. Deduplicates
+ * concurrent requests for the same inputs so only one R/Rust run (and one
+ * file write) actually happens per unique cacheId, even if N callers
+ * arrive simultaneously. Matters in two scenarios:
+ *
+ *   - Automated tests / demos where many clients hit the same URL at once.
+ *   - A fresh volcano render racing a GSEA click that immediately follows.
+ *
+ * Second and subsequent callers attach to the first caller's promise and
+ * resolve to the same result — `fromCache` reports whatever the winning
+ * caller did (typically `false` on first miss, `true` afterwards). The
+ * entry is cleared once the promise settles so later, genuinely new
+ * requests start fresh. */
+const pendingReadOrRecompute = new Map<string, Promise<CacheOrRecomputeResult>>()
+
 /** Single entry point for "give me the DE result for this request" —
- * hides the cache-hit-vs-recompute branch from callers.
+ * hides the cache-hit-vs-recompute branch from callers and deduplicates
+ * concurrent requests for the same inputs via `pendingReadOrRecompute`.
  *
  * On hit: reads the cached gene data, resolves sample groups from the
  * dataset to produce `sample_size{1,2}` (cheap — no R/Rust).
@@ -463,6 +477,21 @@ export async function readCacheFileOrRecompute({
 	genomes: any
 }): Promise<CacheOrRecomputeResult> {
 	const cacheId = computeDaCacheId(daRequest)
+
+	// Synchronous get/set — JS single-threaded event loop guarantees no
+	// interleaving between this get and the set below, so two concurrent
+	// callers cannot both miss the map and both start a fresh compute.
+	const inFlight = pendingReadOrRecompute.get(cacheId)
+	if (inFlight) return inFlight
+
+	const work = doReadOrRecompute(cacheId, daRequest, genomes)
+	pendingReadOrRecompute.set(cacheId, work)
+	return work.finally(() => {
+		pendingReadOrRecompute.delete(cacheId)
+	})
+}
+
+async function doReadOrRecompute(cacheId: string, daRequest: DERequest, genomes: any): Promise<CacheOrRecomputeResult> {
 	const cached = await readDaCache(cacheId)
 	const { ds, term_results, term_results2 } = await resolveDeContext(daRequest, genomes)
 
