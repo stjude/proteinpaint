@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Updated volcano plot to use a serverside rendered png + top interactive points approach
 - Added cache id for GSEA analysis. Allows it to work with new DA Volcano
+- Several updates for the SC app: The flyout menu for the Gene expression button is replaced with the transient GeneExpInput plot. The blue plot buttons now correspond to plots with available data. Users may group plots by samples, plot type, or not at all. New units are available for the PlotButtons and SectionRenderer.
 
 
 ## 2.184.0
