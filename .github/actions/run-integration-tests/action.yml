@@ -23,6 +23,14 @@ runs:
       run: |
         npm ci
 
+    - name: Set default integration test status
+      shell: bash
+      # Assume failure by default; this flag is only cleared to 'false' at the very end
+      # of the integration test step if all commands succeed. This ensures that if any
+      # earlier step (e.g. pack.sh, Docker build) fails or is cancelled, Slack is still
+      # notified with a 'failure' status rather than a false 'success'.
+      run: echo "INTEGRATION_TEST_FAILED=true" >> "$GITHUB_ENV"
+
     - name: Prepare for Docker build
       shell: bash
       run: |
@@ -79,15 +87,9 @@ runs:
         sleep 10
         cd ..
         xvfb-run --auto-servernum npm run test:integration
+        # Only reached if all commands above succeeded (set -e); clears the default failure flag
+        echo "INTEGRATION_TEST_FAILED=false" >> "$GITHUB_ENV"
       continue-on-error: true
-
-    - name: Check if integration tests failed
-      id: check-tests
-      shell: bash
-      run: |
-        if [ "${{ steps.integration.outcome }}" != "success" ]; then
-          echo "INTEGRATION_TEST_FAILED=true" >> "$GITHUB_ENV"
-        fi
 
     - name: Get current time
       id: current-time
@@ -108,7 +110,7 @@ runs:
       with:
         payload: |
           {
-            "status": "${{ env.INTEGRATION_TEST_FAILED == 'true' && 'failure' || 'success' }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "status": "${{ (job.status != 'success' || env.INTEGRATION_TEST_FAILED == 'true') && 'failure' || 'success' }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "commit": "${{ env.SHORT_SHA }}",
             "date-time": "${{ steps.current-time.outputs.formattedTime }}"
           }
@@ -116,6 +118,6 @@ runs:
         SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
 
     - name: Fail job if integration test failed
-      if: env.INTEGRATION_TEST_FAILED == 'true'
+      if: always() && env.INTEGRATION_TEST_FAILED == 'true'
       shell: bash
       run: exit 1

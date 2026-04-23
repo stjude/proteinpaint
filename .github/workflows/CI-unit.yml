@@ -75,7 +75,11 @@ jobs:
       # TODO: no need to run pack test once esbuild is used for package release 
       - name: 🔎 Run client pack test
         if: contains(env.WS_TO_TEST, 'client')
-        run: npm pack --workspace="client"
+        run: npm pack --workspace="client" --loglevel error
+
+      - name: 🔎 Run front pack test
+        if: contains(env.WS_TO_TEST, 'front')
+        run: npm pack --workspace="front" --loglevel error
 
       - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client')
