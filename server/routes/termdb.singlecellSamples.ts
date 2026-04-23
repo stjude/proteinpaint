@@ -185,6 +185,7 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 }
 
 /** Adds ds.queries.singleCell.data.get() on init()
+ * Runs from termdb.singleCellData route when q.data.src is 'native'.
  * @param D ds.queries.singleCell.data{}
  * @param ds Entire dataset configuration from the ds file
  */
@@ -200,25 +201,29 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	const file2Lines = {} // key: file path, value: string[]
 
 	D.get = async (q: TermdbSingleCellDataRequest) => {
+		/** Only return plots with corresponding data files. */
 		if (q.checkPlotAvailability) {
+			const sampleId = q.sample?.eID || q.sample?.sID
 			const plots: any = []
 			for (const plot of D.plots) {
 				if (!q.plots.includes(plot.name)) continue
-				const tsvfile = path.join(
-					serverconfig.tpmasterdir,
-					plot.folder,
-					(q.sample?.eID || q.sample?.sID) + (plot.fileSuffix || '')
-				)
+				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
 				try {
 					await file_is_readable(tsvfile)
 					// file exists for this sample
-					plots.push({
-						name: plot.name,
-						expCells: [], // FIXME avoid breaking client but shouldn't be needed
-						noExpCells: []
-					})
+					plots.push({ name: plot.name })
 				} catch (_) {
 					// file doesn't exist for this sample. this is allowed
+				}
+			}
+			const imgs = ds.queries.singleCell?.images
+			if (imgs) {
+				const imgFile = path.join(serverconfig.tpmasterdir, imgs.folder, sampleId, imgs.fileName)
+				try {
+					await file_is_readable(imgFile)
+					plots.push({ name: imgs?.label || 'Image' })
+				} catch (_) {
+					// image doesn't exist for this sample.
 				}
 			}
 			return { plots }

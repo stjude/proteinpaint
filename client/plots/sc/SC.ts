@@ -9,7 +9,6 @@ import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { importPlot } from '#plots/importPlot.js'
-import formatPlotData from './viewModel/plotData.ts'
 
 export class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
@@ -131,7 +130,6 @@ export class SCViewer extends PlotBase implements RxComponent {
 				else if (e.stack) console.log(e.stack)
 				throw new Error(e.message || e)
 			}
-			data.plots = formatPlotData(data.plots)
 		}
 		await this.view.update(config.settings, data, state.subplots)
 		this.interactions.toggleLoading(false)
