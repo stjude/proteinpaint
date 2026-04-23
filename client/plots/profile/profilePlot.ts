@@ -267,9 +267,13 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					facilityTW: this.config.facilityTW,
 					filterByUserSites: this.settings.filterByUserSites
 				})
-			else if (this.type != 'profilePolar2' && this.type != 'profileBarchart2')
-				// profilePolar2 and profileBarchart2 skip this fetch — their subclass setControls()
-				// calls their dedicated termdb/profilePolar2Scores / termdb/profileBarchart2Scores route instead
+			else if (this.type == 'profileRadarFacility2')
+				// profileRadarFacility2 fetches aggregate + single-site in one dedicated-route call;
+				// the subclass's fetchRadarFacility2Scores() also sets this.sampleData from the response
+				this.data = await (this as any).fetchRadarFacility2Scores()
+			else if (this.type != 'profilePolar2' && this.type != 'profileBarchart2' && this.type != 'profileRadar2')
+				// profilePolar2, profileBarchart2, and profileRadar2 skip this fetch — their subclass setControls()
+				// calls their dedicated termdb/profile<Plot>2Scores route instead
 				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,
@@ -406,16 +410,20 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					if (this.state.user != 'admin') inputs.unshift(userSitesFilterInput) //add filter by user sites only for non-admin users
 				}
 				if (isRadarFacility) {
-					const settings = { ...this.settings }
-					settings[this.config.facilityTW.term.id] = null //clear facility filter to get all the sites allowed
-					const filter = this.getFilterWithSettings(settings)
-					//another request is needed to get the sample selected and populate the facility sites
-					this.sampleData = await this.app.vocabApi.getProfileScores({
-						scoreTerms: this.scoreTerms,
-						filter, //filter excluding facility term
-						facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server
-						facilityTW: this.config.facilityTW
-					})
+					if (this.type != 'profileRadarFacility2') {
+						// v1 facility radar: second round-trip to fetch the single-site row.
+						// profileRadarFacility2 skips this — its fetchRadarFacility2Scores() above
+						// already populated this.sampleData from the dedicated-route response.
+						const settings = { ...this.settings }
+						settings[this.config.facilityTW.term.id] = null //clear facility filter to get all the sites allowed
+						const filter = this.getFilterWithSettings(settings)
+						this.sampleData = await this.app.vocabApi.getProfileScores({
+							scoreTerms: this.scoreTerms,
+							filter, //filter excluding facility term
+							facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server
+							facilityTW: this.config.facilityTW
+						})
+					}
 					const facilitySites = this.sampleData.sites
 					const facilitySite = this.settings.facilitySite
 						? facilitySites.find(s => s.value == this.settings.facilitySite)
