@@ -38,12 +38,15 @@ function canonicalizeSamplelst(s: any): any {
 	}
 }
 
-export function computeDaCacheId(req: DERequest, debugTag?: string): string {
+export function computeDaCacheId(req: DERequest): string {
 	// storage_type is intentionally excluded: it is dataset-pinned (derived
 	// from ds.queries.rnaseqGeneCount at request time, not sent by the client)
 	// and `dslabel` already identifies the dataset that determines it. Including
 	// it caused hash drift because some call sites saw it mutated onto `req`
 	// and others did not.
+	// Our keyInputs are all the parameters that determine the DE result,
+	// except for storage_type as noted above. Changing rendering parameters
+	// will not change the DA result, so they are not included in the inputs that determine the cacheId.
 	const keyInputs = {
 		genome: req.genome,
 		dslabel: req.dslabel,
@@ -60,10 +63,6 @@ export function computeDaCacheId(req: DERequest, debugTag?: string): string {
 	const key = stableStringify(keyInputs)
 	const hash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
 	const cacheId = `da_${hash}`
-	if (debugTag) {
-		mayLog(`[DA cache ${debugTag}] id=${cacheId}`)
-		mayLog(`[DA cache ${debugTag}] key=${key}`)
-	}
 	return cacheId
 }
 
@@ -157,6 +156,23 @@ export async function resolveDeContext(
 	}
 
 	return { ds, term_results, term_results2 }
+}
+
+/** Below this per-group size, DE runs edgeR (parametric) even if the client
+ * requested wilcoxon — small groups don't have enough degrees of freedom for
+ * the non-parametric test. Keeping this threshold in one place so runDeFresh
+ * and the cache-hit label-derivation can't drift. */
+const SAMPLE_SIZE_LIMIT = 8
+
+/** Return the canonical engine label ('edgeR' or 'wilcoxon') for a given
+ * request + group sizes. Mirrors the branch at the top of runDeFresh; used
+ * there to pick the engine and used in readCacheFileOrRecompute on a cache
+ * hit to report the same label the fresh run would have reported (the cache
+ * file does not record which engine produced it). */
+function deriveEngineLabel(req: DERequest, group1size: number, group2size: number): 'edgeR' | 'wilcoxon' {
+	const small = group1size <= SAMPLE_SIZE_LIMIT && group2size <= SAMPLE_SIZE_LIMIT
+	if (small || req.method === 'edgeR' || req.method === 'limma') return 'edgeR'
+	return 'wilcoxon'
 }
 
 type SampleGroups = {
@@ -366,12 +382,8 @@ export async function runDeFresh(
 	// param.method, so capture the id first.
 	const cacheId = computeDaCacheId(param)
 
-	const sample_size_limit = 8
-	if (
-		(groups.group1names.length <= sample_size_limit && groups.group2names.length <= sample_size_limit) ||
-		param.method == 'edgeR' ||
-		param.method == 'limma'
-	) {
+	const engine = deriveEngineLabel(param, groups.group1names.length, groups.group2names.length)
+	if (engine === 'edgeR') {
 		const time1 = new Date().valueOf()
 		const result = JSON.parse(await run_R('edge_newh5.R', JSON.stringify(expression_input)))
 		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
@@ -443,13 +455,19 @@ export type CacheOrRecomputeResult = {
  * The deterministic cacheId ensures every node/process produces the same
  * filename for the same inputs; both routes (`termdb/DE` and
  * `genesetEnrichment`'s recompute branch) go through this helper. */
-export async function readCacheFileOrRecompute(req: DERequest, genomes: any): Promise<CacheOrRecomputeResult> {
-	const cacheId = computeDaCacheId(req)
+export async function readCacheFileOrRecompute({
+	daRequest,
+	genomes
+}: {
+	daRequest: DERequest
+	genomes: any
+}): Promise<CacheOrRecomputeResult> {
+	const cacheId = computeDaCacheId(daRequest)
 	const cached = await readDaCache(cacheId)
-	const { ds, term_results, term_results2 } = await resolveDeContext(req, genomes)
+	const { ds, term_results, term_results2 } = await resolveDeContext(daRequest, genomes)
 
 	if (cached) {
-		const groups = resolveSampleGroups(req, ds, term_results, term_results2)
+		const groups = resolveSampleGroups(daRequest, ds, term_results, term_results2)
 		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 		return {
 			cacheId,
@@ -457,13 +475,15 @@ export async function readCacheFileOrRecompute(req: DERequest, genomes: any): Pr
 			fromCache: true,
 			sample_size1: groups.group1names.length,
 			sample_size2: groups.group2names.length,
-			// The cache file doesn't record which engine produced it; echo back
-			// what the client asked for.
-			method: req.method as string
+			// The cache file doesn't record which engine produced it, and
+			// daRequest.method is optional on the wire. Derive the label the
+			// same way runDeFresh does (shared helper) so cache-hit responses
+			// match fresh-run responses for the same request.
+			method: deriveEngineLabel(daRequest, groups.group1names.length, groups.group2names.length)
 		}
 	}
 
-	const fresh = await runDeFresh(req, ds, term_results, term_results2)
+	const fresh = await runDeFresh(daRequest, ds, term_results, term_results2)
 	return {
 		cacheId: fresh.cacheId,
 		geneData: fresh.geneData,
