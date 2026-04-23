@@ -410,6 +410,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 				const sampleId = ds.cohort.termdb.q.sampleName2id(sampleName)
 				if (!sampleId) continue
 				if (limitSamples && !limitSamples.has(sampleId)) continue
+				if (!Number.isFinite(samplesData[sampleName])) continue // skip non-numeric values
 				s2v[sampleId] = samplesData[sampleName]
 			}
 
