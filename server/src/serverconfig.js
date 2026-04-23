@@ -162,6 +162,15 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	serverconfig.routeSetters = routeSetters
 }
 
+if (typeof serverconfig.dsCredentials == 'string') {
+	const json = fs.readFileSync(serverconfig.dsCredentials, { encoding: 'utf8' })
+	try {
+		serverconfig.dsCredentials = JSON.parse(json)
+	} catch (e) {
+		throw `invalid json file, serverconfig.dsCredentials='${json}'`
+	}
+}
+
 if (serverconfig.debugmode) {
 	// should be able to run this in local dev and test environments that use containers
 	const hg38test = serverconfig.genomes.find(g => g.name == 'hg38-test')
