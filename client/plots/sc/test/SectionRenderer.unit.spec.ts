@@ -32,7 +32,7 @@ import { SectionRenderer } from '../view/SectionRenderer.ts'
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/sc/view/SectionRender -***-')
+	test.comment('-***- plots/sc/view/SectionRenderer -***-')
 	test.end()
 })
 

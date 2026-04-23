@@ -2269,7 +2269,7 @@ async function getCaseidByFileid(q, fileId, ds) {
 }
 
 async function getSinglecellDEfile(caseuuid, q, fileId, ds) {
-	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use fileId which is seurat.analysis.tsv file id. find the matching deg.tsv
+	// find the seurat.deg.tsv file for the requested experiment, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use fileId which is seurat.analysis.tsv file id. find the matching deg.tsv
 
 	const body = {
 		filters: {

@@ -18,12 +18,12 @@ Called during `main()` once a sample is selected (`config.settings.sc.item`). Th
 Subplot creation and rendering: 
 1. `SCInteractions.createSubplot()` dispatches `plot_create` with `parentId` set to the SC id. Each subplot config carries its own `sample: {sID, eID}` (or `term.term.sample: {sID, eID}` for term-based plots). This adds the subplot as an entry in `state.plots[]`.
 2. `getState()` in SC.ts filters all plots with a `parentId` matching the SC id into `subplots[]`.
-3. `main()` passes `subplots[]` to `SCViewRenderer.update()`, which delegates to `SectionRender.update()` for reconciliation and rendering.
+3. `main()` passes `subplots[]` to `SCViewRenderer.update()`, which delegates to `SectionRenderer.update()` for reconciliation and rendering.
 
 Once added as a component, the plot will update every time `app.dispatch` is called.
 
-### Sections (`SectionRender`)
-`SectionRender` (in `view/SectionRender.ts`) groups subplots by sample into collapsible sections. It maintains a `sections` map keyed by sample id and a `plotId2Sample` map that links each subplot id back to its sample.
+### Sections (`SectionRenderer`)
+`SectionRenderer` (in `view/SectionRenderer.ts`) groups subplots by sample into collapsible sections. It maintains a `sections` map keyed by sample id and a `plotId2Sample` map that links each subplot id back to its sample.
 
 `update()` runs three passes on every render cycle:
 1. **Remove stale subplots** — builds an active set from the current state and calls `removeSandbox()` for any component in `sc.components.plots` that is no longer active.

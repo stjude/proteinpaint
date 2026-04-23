@@ -19,7 +19,7 @@ export class SCViewRenderer {
 	//On load, show table
 	//Eventually maybe an app dispatch and not a flag
 	static inUse: boolean = true
-	sectionRender: SectionRenderer
+	sectionRenderer: SectionRenderer
 	sc: SCViewer
 
 	constructor(sc: SCViewer, groupBy: (typeof GroupByOptions)[number]) {
@@ -27,7 +27,7 @@ export class SCViewRenderer {
 		this.dom = sc.dom
 		this.interactions = sc.interactions
 		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		this.sectionRender = new SectionRenderer(this.dom.sectionsDiv, groupBy)
+		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, groupBy)
 	}
 
 	render(tableData: SCTableData, settings: SCSettings) {
@@ -93,6 +93,6 @@ export class SCViewRenderer {
 	async update(settings: Settings, data: SingleCellDataNative | SingleCellDataGdc, subplots: PlotBase[]) {
 		this.plotBtns.update(settings, data)
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
-		await this.sectionRender.update(this.sc, subplots, settings.sc.groupBy)
+		await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
 	}
 }

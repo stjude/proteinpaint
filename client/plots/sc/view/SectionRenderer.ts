@@ -9,7 +9,7 @@ import type { GroupByOptions } from '../settings/Settings'
  * sections{} maps the section key (i.e. sampleId, plotName, or none) to the section
  * wrapper, title, subplots div, and the sandboxes in that section.
  *
- * Initializing and destorying the plot components is within SC.ts
+ * Initializing and destroying the plot components is within SC.ts
  * (i.e. sc.components.plots[plotId]). This ensures plots are responsive to state changes.
  */
 export class SectionRenderer {
