@@ -31,8 +31,6 @@ function getJwtByDsRoute(dslabel) {
 	return dslabel ? jwtByDsRoute[dslabel] : jwtByDsRoute
 }
 
-const fakeTokensByDsRole = {}
-
 // this is meant for 1 time use throughout a browser session,
 // and not meant for repeated calls within getDatasetAccessToken()
 async function login(dslabel, role = '') {
@@ -66,8 +64,7 @@ function demoGetDatasetAccessToken(dslabel, defaultRole) {
 		const payloadEncoded = jwt?.split('.')[1]
 		if (payloadEncoded) {
 			try {
-				const payloadStr = atob(payloadEncoded)
-				const payload = JSON.parse(payloadStr)
+				const payload = decodeJwtPayload(jwt)
 				fakeTokensByRole[role] = { jwt, exp: payload.exp }
 			} catch (e) {
 				console.log(e)
@@ -116,4 +113,18 @@ function getParams() {
 			params[key] = value
 		})
 	return params
+}
+
+function decodeJwtPayload(token) {
+	// 1. Split the token into its 3 parts (header, payload, signature)
+	const base64Url = token.split('.')[1]
+	// 2. Convert Base64Url to standard Base64
+	const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+	// 3. Decode the Base64 string and parse it as JSON
+	const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(convertAtoBresult).join(''))
+	return JSON.parse(jsonPayload)
+}
+
+function convertAtoBresult(c) {
+	return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
 }
