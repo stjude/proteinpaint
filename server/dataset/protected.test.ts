@@ -21,7 +21,7 @@ export default function (): Mds3 {
 
 	ds.demoJwtInput = {
 		user: {
-			datasets: ['abc', 'xyz']
+			datasets: ['ABC', 'XYZ']
 		}
 	}
 	return ds

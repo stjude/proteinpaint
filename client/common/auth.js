@@ -115,7 +115,7 @@ export async function isInSession(dslabel, route) {
 		const jwt = getSavedToken(dslabel, a.route)
 		if (!jwt) return false
 		const { dofetch3 } = await import('./dofetch')
-		const payload = JSON.parse(atob(jwt.split('.')[1]))
+		const payload = decodeJwtPayload(jwt)
 		if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) return false
 		const data = await dofetch3('/jwt-status', {
 			method: 'POST',
@@ -250,8 +250,9 @@ function decodeJwtPayload(token) {
 	const base64Url = token.split('.')[1]
 	// 2. Convert Base64Url to standard Base64
 	const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+	const paddedBase64 = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
 	// 3. Decode the Base64 string and parse it as JSON
-	const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(convertAtoBresult).join(''))
+	const jsonPayload = decodeURIComponent(window.atob(paddedBase64).split('').map(convertAtoBresult).join(''))
 	return JSON.parse(jsonPayload)
 }
 
