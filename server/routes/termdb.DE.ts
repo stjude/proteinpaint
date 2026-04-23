@@ -46,10 +46,10 @@ function init({ genomes }) {
 			// Unified read-or-recompute: hides the cache-hit vs fresh-compute
 			// branch behind a single call. On hit, `images` and `bcv` are
 			// undefined (fresh R runs are the only source of those).
-			const { cacheId, geneData, sample_size1, sample_size2, method, images, bcv } = await readCacheFileOrRecompute(
-				q,
+			const { cacheId, geneData, sample_size1, sample_size2, method, images, bcv } = await readCacheFileOrRecompute({
+				daRequest: q,
 				genomes
-			)
+			})
 
 			const rendered = await renderVolcano<GeneDEEntry>(geneData, q.volcanoRender)
 			rendered.cacheId = cacheId
