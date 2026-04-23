@@ -319,7 +319,7 @@ fn calculate_variance(
     let median_lib_size = Data::new(lib_sizes.clone()).median();
     let cpm_cutoff = (min_count / median_lib_size) * 1000000.0;
     //println!("cpm_cutoff:{}", cpm_cutoff);
-    let cpm_matrix = cpm(&input_matrix);
+    let cpm_matrix = cpm(&input_matrix, &lib_sizes);
     const TOL: f64 = 1e-14; // Value of constant from R implementation
 
     let mut gene_infos = Vec::<GeneInfo>::new();
@@ -404,19 +404,9 @@ fn calculate_variance(
 
 fn cpm(
     input_matrix: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
+    col_sums: &[f64],
 ) -> Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>> {
     let mut output_matrix = DMatrix::from_element(input_matrix.nrows(), input_matrix.ncols(), 0.0);
-
-    // Per-sample totals over finite entries only (nansum).
-    let mut col_sums = vec![0.0_f64; input_matrix.ncols()];
-    for col in 0..input_matrix.ncols() {
-        for row in 0..input_matrix.nrows() {
-            let v = input_matrix[(row, col)];
-            if v.is_finite() {
-                col_sums[col] += v;
-            }
-        }
-    }
 
     for col in 0..input_matrix.ncols() {
         let norm = col_sums[col];
@@ -429,7 +419,6 @@ fn cpm(
             };
         }
     }
-    //println!("output_matrix:{:?}", output_matrix);
     output_matrix
 }
 
