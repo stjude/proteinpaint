@@ -3,6 +3,8 @@ import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteint
 import { TermTypes } from '#shared/terms.js'
 import { colorScaleMap } from '#shared/common.js'
 import { CNVkey2order } from './matrix.legend'
+import { scaleLinear } from 'd3-scale'
+import { interpolateRdBu } from 'd3-scale-chromatic'
 /*
 	cell: a matrix cell data
 	tw: termwrapper
@@ -44,21 +46,29 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 			return //{ ref: t.ref, group, value: specialValue.label || specialValue.key, entry: { key, label: cell.label, fill: cell.fill } }
 		}
 
-		// TODO: may use color scale instead of bars
-		cell.fill = self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.contBarColor || '#555'
-		if (s.transpose) {
-			cell.height = t.scale(cell.key)
-			cell.x = twSettings.contBarGap // - cell.width
-		} else {
+		// Check if row height is small enough to use heatmap mode
+		const useHeatmap = t.rowHt < 10
+		
+		if (useHeatmap) {
+			// Heatmap mode: use color scale instead of bars
 			const vc = cell.term.valueConversion
 			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
 			if (tw.q.convert2ZScore) {
 				renderV = (renderV - t.mean) / t.std
-
-				// show positive z-score as soft red and negative z-score as soft blue
-				cell.fill = renderV > 0 ? '#FF6666' : '#6666FF'
 				cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
 			}
+			
+			// Create color scale for heatmap
+			if (!t.heatmapColorScale) {
+				// Use interpolateRdBu (red-white-blue) for diverging scale
+				// Blue for low values, white for middle, red for high values
+				t.heatmapColorScale = scaleLinear()
+					.domain([t.counts.minval, (t.counts.minval + t.counts.maxval) / 2, t.counts.maxval])
+					.range(['#2166ac', '#f7f7f7', '#b2182b'])
+					.clamp(true)
+			}
+			
+			cell.fill = t.heatmapColorScale(renderV)
 			cell.label =
 				'label' in anno
 					? anno.label
@@ -67,13 +77,43 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 					: tw.term.unit
 					? `${cell.key.toFixed(2)} ${tw.term.unit}`
 					: cell.key.toFixed(2)
-			cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
+			cell.height = t.rowHt
 			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
-			cell.y =
-				renderV >= 0
-					? t.counts.posMaxHt + twSettings.contBarGap - cell.height
-					: t.counts.posMaxHt + twSettings.contBarGap
+			cell.y = 0
 			cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			cell.isHeatmap = true
+		} else {
+			// Bar plot mode: use bars as before
+			cell.fill = self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.contBarColor || '#555'
+			if (s.transpose) {
+				cell.height = t.scale(cell.key)
+				cell.x = twSettings.contBarGap // - cell.width
+			} else {
+				const vc = cell.term.valueConversion
+				let renderV = vc ? cell.key * vc.scaleFactor : cell.key
+				if (tw.q.convert2ZScore) {
+					renderV = (renderV - t.mean) / t.std
+
+					// show positive z-score as soft red and negative z-score as soft blue
+					cell.fill = renderV > 0 ? '#FF6666' : '#6666FF'
+					cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
+				}
+				cell.label =
+					'label' in anno
+						? anno.label
+						: values[key]?.label
+						? values[key].label
+						: tw.term.unit
+						? `${cell.key.toFixed(2)} ${tw.term.unit}`
+						: cell.key.toFixed(2)
+				cell.height = renderV >= 0 ? t.scales.pos(renderV) : t.scales.neg(renderV)
+				cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+				cell.y =
+					renderV >= 0
+						? t.counts.posMaxHt + twSettings.contBarGap - cell.height
+						: t.counts.posMaxHt + twSettings.contBarGap
+				cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			}
 		}
 	} else {
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
@@ -108,7 +148,35 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 		cell.fill =
 			self.config.settings.matrix.twSpecificSettings?.[tw.$id]?.[anno.key]?.color ||
 			(anno.key == 1 ? '#a1a3a6' : '#a3c88b')
-		if (s.transpose) {
+		
+		// Check if row height is small enough to use heatmap mode
+		const useHeatmap = t.rowHt < 10
+		
+		if (useHeatmap) {
+			// Heatmap mode: use color scale instead of bars
+			const vc = cell.term.valueConversion
+			let renderV = vc ? cell.key * vc.scaleFactor : cell.key
+			if (tw.q.convert2ZScore) {
+				renderV = (renderV - t.mean) / t.std
+				cell.zscoreLabel = ` (Z-score: ${renderV.toFixed(2)})`
+			}
+			
+			// Create color scale for heatmap
+			if (!t.heatmapColorScale) {
+				t.heatmapColorScale = scaleLinear()
+					.domain([t.counts.minval, (t.counts.minval + t.counts.maxval) / 2, t.counts.maxval])
+					.range(['#2166ac', '#f7f7f7', '#b2182b'])
+					.clamp(true)
+			}
+			
+			cell.fill = t.heatmapColorScale(renderV)
+			cell.label = tw.term.unit ? `${cell.key.toFixed(2)} ${tw.term.unit}` : cell.key.toFixed(2)
+			cell.height = t.rowHt
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = 0
+			cell.convertedValueLabel = !vc ? '' : convertUnits(cell.key, vc.fromUnit, vc.toUnit, vc.scaleFactor)
+			cell.isHeatmap = true
+		} else if (s.transpose) {
 			cell.height = t.scale(cell.key)
 			cell.x = twSettings.contBarGap
 		} else {

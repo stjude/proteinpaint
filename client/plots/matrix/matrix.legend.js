@@ -104,7 +104,7 @@ export function getLegendData(legendGroups, refs, self) {
 				}
 			} else {
 				if (isNumericTerm(f.tvs.term)) {
-					// create a legend only if the mode is discrete, no legend created for continuous mode
+					// create a legend only if the mode is discrete, no legend created for continuous mode (except heatmap)
 					if (t.ref?.bins) {
 						for (const v of f.tvs.ranges) {
 							const termValues = t.ref.bins
@@ -115,6 +115,12 @@ export function getLegendData(legendGroups, refs, self) {
 								crossedOut: true
 							}
 						}
+					} else if (f.tvs.q?.mode == 'continuous' && t.rowHt && t.rowHt < 10) {
+						// Create heatmap legend for continuous terms with small row height
+						legend.isHeatmap = true
+						legend.heatmapColorScale = t.heatmapColorScale
+						legend.minval = t.counts?.minval
+						legend.maxval = t.counts?.maxval
 					}
 				} else if (f.tvs.term.type == 'survival') {
 					for (const v of f.tvs.values) {
@@ -277,6 +283,39 @@ export function getLegendData(legendGroups, refs, self) {
 			const grp = $id
 			const term = t.tw.term
 			const ref = legend.ref
+			
+			// Check if this is a heatmap legend
+			if (legend.isHeatmap && legend.heatmapColorScale) {
+				const name = t.tw.legend?.group || t.tw.label || term.name
+				const legendGrpLabelMaxChars = s.legendGrpLabelMaxChars || 26
+				const colors = ['#2166ac', '#f7f7f7', '#b2182b']
+				const domain = [legend.minval, (legend.minval + legend.maxval) / 2, legend.maxval]
+				
+				legendData.push({
+					name: name.length < legendGrpLabelMaxChars ? name : name.slice(0, legendGrpLabelMaxChars) + '...',
+					order: legend.order,
+					$id: legend.$id,
+					dt: legend.dt,
+					origin: legend.origin,
+					hasScale: true,
+					items: [{
+						termid: term.id || term.name,
+						key: 'heatmap_scale',
+						text: name,
+						width: 100,
+						scale: legend.heatmapColorScale,
+						colors,
+						domain,
+						order: 0,
+						isLegendItem: true,
+						minLabel: legend.minval.toFixed(2),
+						maxLabel: legend.maxval.toFixed(2),
+						labels: { left: 'Low', right: 'High' }
+					}]
+				})
+				continue
+			}
+			
 			if (ref.bins)
 				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
 			else if (ref.keyOrder) keys.sort((a, b) => ref.keyOrder.indexOf(a) - ref.keyOrder.indexOf(b))

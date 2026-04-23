@@ -204,7 +204,7 @@ export function setRenderers(self) {
 					.attr('transform', side.attr.labelGTransform)
 
 				if (!g.select(':scope>text').size()) g.append('text')
-				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous'
+				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' && lab.rowHt >= 10
 				const labelText = side.label(lab)
 				const text = g.select(':scope>text').attr('fill', '#000')
 
@@ -219,6 +219,8 @@ export function setRenderers(self) {
 					.attr(
 						'display',
 						lab.grp?.type === 'hierCluster' && s.clusterRowh < 6
+							? 'none'
+							: lab.tw?.q?.mode == 'continuous' && lab.rowHt < 7
 							? 'none'
 							: side.attr.fontSize < 6 || labelText === 'configure'
 							? 'none'
