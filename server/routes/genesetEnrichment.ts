@@ -84,7 +84,9 @@ async function run_genesetEnrichment_analysis(
 		if (q.daRequest && (q as any).__protected__) {
 			try {
 				;(q.daRequest as any).__protected__ = (q as any).__protected__
-				const genome = genomes[q.daRequest.genome]
+				// daRequest is Partial<DERequest>, so genome/dslabel may be
+				// undefined on the wire. Guard before indexing into genomes.
+				const genome = q.daRequest.genome ? genomes[q.daRequest.genome] : undefined
 				if (genome && q.daRequest.dslabel && q.daRequest.dslabel !== 'msigdb') {
 					const [ds] = get_ds_tdb(genome, q.daRequest as any)
 					authApi.mayAdjustFilter(q.daRequest as any, ds)
