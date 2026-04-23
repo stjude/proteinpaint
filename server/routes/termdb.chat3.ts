@@ -31,6 +31,33 @@ export const api: RouteApi = {
 	}
 }
 
+function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
+	if (!supportedPlotTypes) {
+		mayLog(
+			'Supported plot types list is undefined. Defaulting to empty list, which may lead to unsupported plot type errors downstream.'
+		)
+		return []
+	}
+
+	// check if it supports summary charts
+	if (supportedPlotTypes.includes('dictionary')) {
+		// summmary means it includes "boxplot", "violin", "barchart", "sampleScatter" as child types
+		supportedPlotTypes.push('summary')
+	}
+
+	// check if it supports heirarchical clustering charts
+	// TODO:
+	if (supportedPlotTypes.includes('geneExpression')) {
+		// || supportedPlotTypes.includes('proteomeAbundance') || supportedPlotTypes.includes('dnaMethylation'))
+		supportedPlotTypes.push('hiercluster')
+	}
+	// check if it supports dge
+	if (supportedPlotTypes.includes('DA')) {
+		supportedPlotTypes.push('dge')
+	}
+	return supportedPlotTypes
+}
+
 function init({ genomes }) {
 	return async (req, res) => {
 		const q: ChatRequest = req.query
@@ -71,7 +98,8 @@ function init({ genomes }) {
 			const lst = Array.isArray(filter.lst) ? filter.lst : []
 			const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
-			const supportedChartTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
+			const supportedPlotTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
+			const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
 			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
 			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
@@ -81,7 +109,7 @@ function init({ genomes }) {
 				genedb,
 				agentFiles,
 				aiFilesDir,
-				supportedChartTypes,
+				chatSupportedPlotTypes,
 				_allowedTermTypes,
 				g
 				// 	testing
@@ -102,7 +130,7 @@ export async function run_chat_pipeline(
 	genedb: string,
 	agentFiles: string[],
 	aiFilesDir: string,
-	supportedChartTypes: string[],
+	supportedPlotTypes: string[],
 	_allowedTermTypes: string[],
 	genome: any
 	// testing: boolean
@@ -118,13 +146,13 @@ export async function run_chat_pipeline(
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 
 	let ai_output_json: any
-	if (class_response.type == 'notplot') {
+	if (class_response.type === 'notplot') {
 		// If Not-plot: Resource or None classification
 		const time2 = new Date().valueOf()
 		const notPlotResult = await classifyNotPlot(user_prompt, llm, agentFiles, aiFilesDir)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
 
-		if (notPlotResult.type == 'html') {
+		if (notPlotResult.type === 'html') {
 			ai_output_json = notPlotResult
 		} else {
 			ai_output_json = {
@@ -132,73 +160,23 @@ export async function run_chat_pipeline(
 				text: 'Your query does not appear to be related to the available data visualizations. Please try rephrasing your question.'
 			}
 		}
-	} else if (class_response.type == 'plot') {
+	} else if (class_response.type === 'plot') {
 		let time = new Date().valueOf()
 		const plotType = await classifyPlotType(user_prompt, llm)
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
 
-		// As long as supported chart types is non-empty list
-		if (!supportedChartTypes) {
-			const errorMsg =
-				'Supported chart types list is undefined. Please check the dataset configuration and ensure \
-							  that getSupportedChartTypes is implemented correctly. Skipping chart type validation, but this may \
-							  lead to unsupported chart type errors downstream.'
-			console.warn(errorMsg)
-			const errorResponse: ChatResponse = {
+		// Check if the classified plot type is supported by this dataset
+		if (!supportedPlotTypes.includes(plotType)) {
+			const log = 'Plot type: "' + plotType + '" is not supported.'
+			ai_output_json = {
 				type: 'text',
-				text: errorMsg
+				text: log
 			}
-			return errorResponse
+			mayLog(log)
+			return ai_output_json
 		}
 
-		/* Special handling for summary chart types
-        // Every cohort by default supports summary charts unless 
-        // 'dictionary' is not in the supported chart type list
-        // */
-		if (plotType === 'summary') {
-			if (!supportedChartTypes.includes('dictionary')) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		} else if (plotType === 'dge') {
-			if (!supportedChartTypes.includes('DA')) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		} else if (plotType === 'hiercluster') {
-			if (!supportedChartTypes.includes('geneExpression')) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		} else {
-			mayLog(`Supported chart types for this cohort: ${supportedChartTypes}`)
-			if (!supportedChartTypes.includes(plotType)) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		}
-
-		// If valid plot type, figure out the scaffold according to the plot type
+		// If supported plot type, figure out the scaffold according to the plot type
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		time = new Date().valueOf()
 		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
