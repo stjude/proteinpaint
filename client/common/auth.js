@@ -106,9 +106,9 @@ export async function isInSession(dslabel, route) {
 	for (const a of dsAuth) {
 		if (a.dslabel != dslabel || (a.route != route && a.route != '/**')) continue
 		if (dsAuthOk.has(a)) return true
-		// for auth.type == 'jwt', migrate to always using getDatasetAccessToken()
+		// TODO: for auth.type == 'jwt', consider migrating to always using getDatasetAccessToken()
 		// instead of saving a session jwt in localStorage
-		if (a.checked || a.type == 'jwt') return false
+		if (a.checked /*|| a.type == 'jwt'*/) return false
 		// for other auth types like basic (password login), recover related saved jwt that
 		// allows one-time sign-in throughout a user's browser session;
 		// check if there is a PP-server generated session token that has been saved from a previous login

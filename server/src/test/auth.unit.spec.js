@@ -225,7 +225,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			'should set the expected methods with a non-empty dsCredentials'
 		)
 		test.deepEqual(
-			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
+			authApi.getDsAuth({ query: { embedder: 'localhost' }, headers: {} }),
 			[
 				{
 					dslabel: 'testds',
@@ -239,7 +239,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			'should return all dslabels that require authorization for a given embedder'
 		)
 
-		const req = { query: { dslabel: 'no-cred-entry', embedder: 'localhost' } }
+		const req = { query: { dslabel: 'no-cred-entry', embedder: 'localhost' }, headers: {} }
 		test.deepEqual(
 			authApi.getNonsensitiveInfo(req),
 			{ forbiddenRoutes: [], clientAuthResult: {} },
@@ -356,7 +356,7 @@ tape(`auth methods`, async test => {
 	const genomes = { hg38: { datasets: { ds100: {} } } }
 	await authApi.maySetAuthRoutes(app, genomes, '', serverconfig)
 
-	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, get: () => 'localhost' }
+	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req0),
 		[
@@ -380,7 +380,7 @@ tape(`auth methods`, async test => {
 		`should return the expected dsAuth array for a termdb-specified embedder`
 	)
 
-	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, get: () => 'localhost' }
+	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req1),
 		[
@@ -401,14 +401,14 @@ tape(`auth methods`, async test => {
 		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
 	)
 
-	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, get: () => 'localhost' }
+	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req2),
 		{ forbiddenRoutes: [], clientAuthResult: {} },
 		`should return the expected forbidden routes for a non-wildcard embedder`
 	)
 	test.deepEqual(
-		authApi.isUserLoggedIn({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
+		authApi.isUserLoggedIn({ query: { embedder: 'localhost' }, headers: {} }, { label: 'ds100' }),
 		true,
 		`should return false for isUserLoggedIn() for a non-logged in user`
 	)
