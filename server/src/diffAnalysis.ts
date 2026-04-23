@@ -416,3 +416,62 @@ export async function runDeFresh(
 		cacheId
 	}
 }
+
+export type CacheOrRecomputeResult = {
+	cacheId: string
+	geneData: GeneDEEntry[]
+	/** true = served from cache; false = freshly computed and written. */
+	fromCache: boolean
+	sample_size1: number
+	sample_size2: number
+	method: string
+	/** Only populated on fresh edgeR/limma runs. Cache hits do not carry
+	 * diagnostic PNGs — those are produced only during a fresh R invocation. */
+	images?: DEImage[]
+	bcv?: number
+}
+
+/** Single entry point for "give me the DE result for this request" —
+ * hides the cache-hit-vs-recompute branch from callers.
+ *
+ * On hit: reads the cached gene data, resolves sample groups from the
+ * dataset to produce `sample_size{1,2}` (cheap — no R/Rust).
+ *
+ * On miss: runs the full DE pipeline via `runDeFresh`, which writes the
+ * cache as a side effect.
+ *
+ * The deterministic cacheId ensures every node/process produces the same
+ * filename for the same inputs; both routes (`termdb/DE` and
+ * `genesetEnrichment`'s recompute branch) go through this helper. */
+export async function readCacheFileOrRecompute(req: DERequest, genomes: any): Promise<CacheOrRecomputeResult> {
+	const cacheId = computeDaCacheId(req)
+	const cached = await readDaCache(cacheId)
+	const { ds, term_results, term_results2 } = await resolveDeContext(req, genomes)
+
+	if (cached) {
+		const groups = resolveSampleGroups(req, ds, term_results, term_results2)
+		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+		return {
+			cacheId,
+			geneData: cached,
+			fromCache: true,
+			sample_size1: groups.group1names.length,
+			sample_size2: groups.group2names.length,
+			// The cache file doesn't record which engine produced it; echo back
+			// what the client asked for.
+			method: req.method as string
+		}
+	}
+
+	const fresh = await runDeFresh(req, ds, term_results, term_results2)
+	return {
+		cacheId: fresh.cacheId,
+		geneData: fresh.geneData,
+		fromCache: false,
+		sample_size1: fresh.sample_size1,
+		sample_size2: fresh.sample_size2,
+		method: fresh.method,
+		images: fresh.images,
+		bcv: fresh.bcv
+	}
+}

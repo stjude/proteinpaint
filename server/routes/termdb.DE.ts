@@ -6,13 +6,7 @@ import serverconfig from '../src/serverconfig.js'
 import { get_header_txt } from '#src/utils.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import {
-	computeDaCacheId,
-	readDaCache,
-	resolveDeContext,
-	resolveSampleGroups,
-	runDeFresh
-} from '../src/diffAnalysis.ts'
+import { readCacheFileOrRecompute, resolveDeContext, resolveSampleGroups } from '../src/diffAnalysis.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
@@ -32,10 +26,10 @@ function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const q = req.query as DERequest
-			const { ds, term_results, term_results2 } = await resolveDeContext(q, genomes)
 
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
+				const { ds, term_results, term_results2 } = await resolveDeContext(q, genomes)
 				const groups = resolveSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
@@ -49,40 +43,13 @@ function init({ genomes }) {
 				return
 			}
 
-			// Deterministic cacheId; try cache before re-running DE.
-			const cacheId = computeDaCacheId(q)
-			const cached = await readDaCache(cacheId)
-
-			let geneData: GeneDEEntry[]
-			let sample_size1: number
-			let sample_size2: number
-			let method: string
-			let images: DEFullResponse['images']
-			let bcv: number | undefined
-
-			if (cached) {
-				// Cache hit: still resolve groups so sample sizes (and `alerts`
-				// for things like sample overlap) reflect the current request.
-				const groups = resolveSampleGroups(q, ds, term_results, term_results2)
-				if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
-				geneData = cached
-				sample_size1 = groups.group1names.length
-				sample_size2 = groups.group2names.length
-				// Method label in the response reflects what the client asked for;
-				// the cached file itself does not record which engine produced it.
-				method = q.method as string
-				// QL/MDS diagnostic images are only produced during fresh R runs;
-				// they are not cached and are not available on hit. `images` stays
-				// undefined — the client type already marks it optional.
-			} else {
-				const fresh = await runDeFresh(q, ds, term_results, term_results2)
-				geneData = fresh.geneData
-				sample_size1 = fresh.sample_size1
-				sample_size2 = fresh.sample_size2
-				method = fresh.method
-				images = fresh.images
-				bcv = fresh.bcv
-			}
+			// Unified read-or-recompute: hides the cache-hit vs fresh-compute
+			// branch behind a single call. On hit, `images` and `bcv` are
+			// undefined (fresh R runs are the only source of those).
+			const { cacheId, geneData, sample_size1, sample_size2, method, images, bcv } = await readCacheFileOrRecompute(
+				q,
+				genomes
+			)
 
 			const rendered = await renderVolcano<GeneDEEntry>(geneData, q.volcanoRender)
 			rendered.cacheId = cacheId
