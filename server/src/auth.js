@@ -178,15 +178,18 @@ async function validateDsCredentials(creds, serverconfig) {
 						delete cred.demoToken
 						console.warn(`(!) ${dslabel} cred.demoToken must be an object`)
 					} else {
-						// the demoToken secret must be different from the embedder's signing secret,
+						// The demoToken secret should be different from the embedder's signing secret,
 						// to make it simpler to invalidate demoToken and derived session tokens without
-						// having to coordinate with the embedder portal maintainers
+						// having to coordinate with the embedder portal maintainers. However, for now,
+						// support reusing the embedder's secret for the demo token to minimize testing
+						// issues in internal test sites.
 						// prettier-ignore
 						if (typeof cred.demoToken.secret != 'string') { // pragma: allowlist secret
-							delete cred.demoToken.secret
+							cred.demoToken.secret = cred.secret
+							// delete cred.demoToken.secret
 							// demoToken.secret cannot be randomly generated per server instance, 
 							// since this PP server may be in a server farm that has to accept each other's issued jwt
-							console.warn(`(!) invalid ${dslabel} demoToken.secret, will not issue`)
+							// console.warn(`(!) invalid ${dslabel} demoToken.secret, will not issue`)
 						}
 						if (!Array.isArray(cred.demoToken.roles)) {
 							cred.demoToken.roles = [] // an empty roles array means no matching demoJwtInput role will be found
@@ -637,8 +640,9 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				if (!cred.demoToken.roles.includes(q.role) || !ds.demoJwtInput[q.role]) {
 					throw `${q.dslabel} demoToken is not supported for role=${q.role}`
 				}
-				if (!cred.demoToken.referers.find(r => req.headers.referer.includes(r))) {
-					throw `${q.dslabel} demoToken requests are not accepted from ${req.headers.referer}`
+				const referer = req.headers.referer || ''
+				if (!cred.demoToken.referers.find(r => referer.includes(r))) {
+					throw `${q.dslabel} demoToken requests are not accepted from referer='${referer}'`
 				}
 			}
 
@@ -1018,7 +1022,7 @@ function mayAddSessionFromJwt(sessions, req, cred) {
 	const token = Buffer.from(b64token, 'base64').toString()
 	const id = getSessionIdFromJwt(token)
 	try {
-		const { secret } = getApplicableSecret(req.headers, cred)
+		const { secret } = getApplicableSecret(req.headers, cred, token)
 		const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)
 		// signed payload dataset must match the requested dataset
 		if (payload.dslabel) {
