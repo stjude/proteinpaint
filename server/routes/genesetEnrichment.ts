@@ -7,7 +7,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { computeDaCacheId, readDaCache, resolveDeContext, runDeFresh } from '#src/diffAnalysis.ts'
+import { readCacheFileOrRecompute, readDaCache } from '#src/diffAnalysis.ts'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 
@@ -74,11 +74,6 @@ async function run_genesetEnrichment_analysis(
 	let genes = q.genes
 	let fold_change = q.fold_change
 	if (q.cacheId) {
-		// Try the cache first. On miss, fall back to recomputing from q.daRequest
-		// if present (bam.js-style farm-safe pattern). Without daRequest we have
-		// no way to regenerate the cache contents — return a typed error so the
-		// client can prompt the user to reopen the volcano.
-
 		// Apply the same auth-filter injection that the volcano route's
 		// req.query.filter receives via the global auth middleware
 		// (auth.js mayUpdate__protected__ → mayAdjustFilter). That middleware
@@ -98,23 +93,23 @@ async function run_genesetEnrichment_analysis(
 			}
 		}
 
-		const expectedId = q.daRequest ? computeDaCacheId(q.daRequest) : null
-		const cached = await readDaCache(q.cacheId)
-		if (cached) {
+		if (q.daRequest) {
+			// Unified helper handles read-or-recompute internally. Returns
+			// the deterministic cacheId derived from daRequest.
+			const result = await readCacheFileOrRecompute(q.daRequest, genomes)
+			// Tamper check: the client-supplied cacheId must match what the
+			// server derived from daRequest. Anything else is either drift
+			// or a crafted request.
+			if (result.cacheId !== q.cacheId) throw 'cacheId does not match daRequest'
+			genes = result.geneData.map(g => g.gene_name)
+			fold_change = result.geneData.map(g => g.fold_change)
+		} else {
+			// Pre-change saved session (cacheId but no daRequest). Can only
+			// try the client-supplied id; no way to regenerate on miss.
+			const cached = await readDaCache(q.cacheId)
+			if (!cached) throw 'daCacheMissing'
 			genes = cached.map(g => g.gene_name)
 			fold_change = cached.map(g => g.fold_change)
-		} else if (q.daRequest && expectedId !== null) {
-			// Tamper check: the client's cacheId must match what the server
-			// would compute from the supplied daRequest. Anything else means
-			// the request was crafted or the client drifted.
-			if (expectedId !== q.cacheId) throw 'cacheId does not match daRequest'
-			mayLog(`[GSEA] DA cache miss for ${q.cacheId} — recomputing from daRequest`)
-			const { ds, term_results, term_results2 } = await resolveDeContext(q.daRequest, genomes)
-			const fresh = await runDeFresh(q.daRequest, ds, term_results, term_results2)
-			genes = fresh.geneData.map(g => g.gene_name)
-			fold_change = fresh.geneData.map(g => g.fold_change)
-		} else {
-			throw 'daCacheMissing'
 		}
 	}
 
