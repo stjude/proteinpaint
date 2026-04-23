@@ -39,10 +39,6 @@ export const authApi = Object.assign({}, defaultApiMethods)
 // serverconfig.dsCredentials
 //
 // DsCredentials = {
-// 	/** optional filepath of a secrets json file
-//   *  the default is to use the secrets object if provided
-//   */
-// 	secrets: string
 
 // 	// NOTES:
 // 	// 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
@@ -61,7 +57,11 @@ export const authApi = Object.assign({}, defaultApiMethods)
 //            secret: string,
 //            // optional list of cohort(s) that a user must have access to,
 //            // to be matched against the jwt payload as signed by the embedder
-//            dsnames: [{id, label}]
+//            dsnames?: [{id, label}],
+//            demoToken?: {
+//              roles: string[],
+//              referers: string[]
+//            }
 //         } |
 //         // TODO: support other credential types
 // 		}
@@ -71,10 +71,16 @@ export const authApi = Object.assign({}, defaultApiMethods)
 // Examples:
 
 // dsCredentials: {
-// 	secrets: 'secrets', // pragma: allowlist secret
 // 	SJLife: {
 // 		termdb: {
-// 			'viz.stjude.cloud': 'vizcomJwt',
+// 			'viz.stjude.cloud': {
+//         type: 'jwt',
+//         secret: "something",  // pragma: allowlist secret
+//         demoToken: {
+//           roles: ['user', 'admin'],
+//           referers: ['/some-path?param=value', 'obscure=randomString']
+//         }
+//      }
 // 		},
 // 		burden: {
 // 			'*: 'burdenDemo'
@@ -99,22 +105,11 @@ export const authApi = Object.assign({}, defaultApiMethods)
 // 	}
 // }
 
-// secrets: {
-// 	vizcomJwt: {
-// 		type: "jwt"
-// 	},
-// 	burdenDemo: {
-// 		type: 'basic',
-//    password: '...'
-// 	}
-// }
-
 async function validateDsCredentials(creds, serverconfig) {
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
-		const json = await fs.readFile(creds[key], 'utf8')
-		creds[key] = JSON.parse(json)
+		throw `serverconfig {dsCredentials: {${key}: <string>}} has been deprecated. Use {dsCredentials: <abs filepath string>} instead.`
 	}
 
 	// track which domains are allowed to embed proteinpaint with credentials,
@@ -139,8 +134,12 @@ async function validateDsCredentials(creds, serverconfig) {
 				// create a copy from the original in case it's shared across different dslabels/routes/embedders,
 				// since additional properties may be added to the object that is specific to a dslabel/route/embedder
 				route[embedderHost] = JSON.parse(JSON.stringify(route[embedderHost]))
-				const c = route[embedderHost]
-				const cred = typeof c == 'string' ? creds.secrets[c] : c
+				const cred = route[embedderHost]
+				if (typeof cred == 'string')
+					throw (
+						`serverconfig {dsCredentials[dslabel][route][embedderHost]: <string>} has been deprecated. ` +
+						`Instead, use {dsCredentials: <abs filepath string>} where the filepath points to a pre-built json file.`
+					)
 				// copy the server route pattern to easily obtain it from within the cred
 				if (cred.type == 'basic') {
 					if (!cred.secret) cred.secret = cred.password
