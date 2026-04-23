@@ -176,6 +176,19 @@ export class PlotButtons {
 						sample: this.item!
 					}
 				}
+			},
+			{
+				label: this.scTermdbConfig?.images?.label || 'Image',
+				isVisible: () => this.scTermdbConfig?.images && availablePlots.has(this.scTermdbConfig.images.label || 'Image'),
+				getPlotConfig: () => {
+					return {
+						chartType: 'imagePlot',
+						sample: this.item!,
+						imgDir: this.scTermdbConfig?.images,
+						headerText: `Sample: ${this.item!.sID}`,
+						settings: { imagePlot: { width: '', height: 400 } }
+					}
+				}
 			}
 		)
 		return btns
