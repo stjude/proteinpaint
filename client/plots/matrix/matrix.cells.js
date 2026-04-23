@@ -5,6 +5,10 @@ import { colorScaleMap } from '#shared/common.js'
 import { CNVkey2order } from './matrix.legend'
 import { scaleLinear } from 'd3-scale'
 
+// Heatmap threshold constants
+export const HEATMAP_ROW_HEIGHT_THRESHOLD = 10 // Switch to heatmap mode when row height < this value
+export const LABEL_HIDE_THRESHOLD = 7 // Hide row labels when row height < this value
+
 // Heatmap color constants for continuous values
 export const HEATMAP_COLORS = {
 	LOW: '#2166ac',
@@ -62,7 +66,7 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 		}
 
 		// Check if row height is small enough to use heatmap mode
-		const useHeatmap = t.rowHt < 10
+		const useHeatmap = t.rowHt < HEATMAP_ROW_HEIGHT_THRESHOLD
 
 		if (useHeatmap) {
 			// Heatmap mode: use color scale instead of bars
@@ -160,7 +164,7 @@ function setSurvivalCellProps(cell, tw, anno, value, s, t, self, width, height, 
 			(anno.key == 1 ? '#a1a3a6' : '#a3c88b')
 
 		// Check if row height is small enough to use heatmap mode
-		const useHeatmap = t.rowHt < 10
+		const useHeatmap = t.rowHt < HEATMAP_ROW_HEIGHT_THRESHOLD
 
 		if (useHeatmap) {
 			// Heatmap mode: use color scale instead of bars

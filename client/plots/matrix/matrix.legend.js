@@ -3,7 +3,7 @@ import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-ch
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { mclass, dt2label, morigin, dtsnvindel, dtcnv } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
-import { HEATMAP_COLORS } from './matrix.cells.js'
+import { HEATMAP_COLORS, HEATMAP_ROW_HEIGHT_THRESHOLD } from './matrix.cells.js'
 
 export function getLegendData(legendGroups, refs, self) {
 	const s = this.settings.matrix
@@ -116,7 +116,7 @@ export function getLegendData(legendGroups, refs, self) {
 								crossedOut: true
 							}
 						}
-					} else if (f.tvs.q?.mode == 'continuous' && t.rowHt && t.rowHt < 10) {
+					} else if (f.tvs.q?.mode == 'continuous' && t.rowHt && t.rowHt < HEATMAP_ROW_HEIGHT_THRESHOLD) {
 						// Create heatmap legend for continuous terms with small row height
 						legend.isHeatmap = true
 						legend.heatmapColorScale = t.heatmapColorScale

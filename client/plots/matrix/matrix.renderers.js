@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { isNumericTerm } from '#shared/terms.js'
+import { HEATMAP_ROW_HEIGHT_THRESHOLD, LABEL_HIDE_THRESHOLD } from './matrix.cells.js'
 
 export function setRenderers(self) {
 	self.render = function () {
@@ -204,7 +205,7 @@ export function setRenderers(self) {
 					.attr('transform', side.attr.labelGTransform)
 
 				if (!g.select(':scope>text').size()) g.append('text')
-				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' && lab.rowHt >= 10
+				const showContAxis = !side.isGroup && lab.grp?.type !== 'hierCluster' && lab.tw?.q?.mode == 'continuous' && lab.rowHt >= HEATMAP_ROW_HEIGHT_THRESHOLD
 				const labelText = side.label(lab)
 				const text = g.select(':scope>text').attr('fill', '#000')
 
@@ -220,7 +221,7 @@ export function setRenderers(self) {
 						'display',
 						lab.grp?.type === 'hierCluster' && s.clusterRowh < 6
 							? 'none'
-							: lab.tw?.q?.mode == 'continuous' && lab.rowHt < 7
+							: lab.tw?.q?.mode == 'continuous' && lab.rowHt < LABEL_HIDE_THRESHOLD
 							? 'none'
 							: side.attr.fontSize < 6 || labelText === 'configure'
 							? 'none'
