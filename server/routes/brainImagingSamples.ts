@@ -74,9 +74,9 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 				const sampleData = data.samples?.[sid]
 				if (sampleData) {
 					for (const term of q[key].sampleColumns) {
-						const value = sampleData[term.termid]
-						if (value !== undefined) {
-							annoForOneS[term.termid] = value.value
+						const v = sampleData[term.termid]
+						if (v?.value !== undefined) {
+							annoForOneS[term.termid] = v.value
 						}
 					}
 				}

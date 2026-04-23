@@ -431,9 +431,9 @@ async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
 		const sampleData = data.samples?.[s.sample_id]
 		if (sampleData) {
 			for (const tw of twLst) {
-				const value = sampleData[tw.term.id]
-				if (value !== undefined) {
-					s[tw.term.id] = value.value
+				const v = sampleData[tw.term.id]
+				if (v?.value !== undefined) {
+					s[tw.term.id] = v.value
 				}
 			}
 		}
