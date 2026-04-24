@@ -27,6 +27,9 @@ rangequery_add_variantfilters
       this flag shouldn't be set in gdc ds, that will permanently disable skewer (lollipop and cnv tool are based on same ds)
 	  this mode will not allow reenabling snvindel, and will hide skewer-specific menu options
 	  this is similar to user "show only" cnv via legend option on a regular tk, but is reversible
+- snvIndelOnly=boolean:
+	  Whether to only show snvindel. If true, only snvindel data will be retrieved from server. Mutually exclusive
+	  with hardcodeCnvOnly (i.e. tk.snvIndelOnly and tk.hardcodeCnvOnly cannot both be true)
 */
 
 export async function loadTk(tk, block) {
@@ -74,6 +77,9 @@ export async function loadTk(tk, block) {
 
 function getParameter(tk, block) {
 	// to get data for current view range
+
+	if (tk.hardcodeCnvOnly && tk.snvIndelOnly)
+		throw new Error('tk.hardcodeCnvOnly and tk.snvIndelOnly cannot both be true')
 
 	const par = {
 		genome: block.genome.name,

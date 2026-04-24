@@ -256,6 +256,8 @@ export async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
 
+	if (q.hardcodeCnvOnly && q.snvIndelOnly) throw new Error('q.hardcodeCnvOnly and q.snvIndelOnly cannot both be true')
+
 	if (q.singleSampleGenomeQuantification) {
 		if (!ds.queries.singleSampleGenomeQuantification) throw 'not supported on this dataset'
 		const p = ds.queries.singleSampleGenomeQuantification[q.singleSampleGenomeQuantification.dataType]

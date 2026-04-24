@@ -3,6 +3,7 @@ import * as d3s from 'd3-selection'
 import { detectOne, detectZero, detectGte, whenVisible, detectLst, sleep } from '../../test/test.helpers'
 import { runproteinpaint } from '../../test/front.helpers.js'
 import { unannotatedKey } from '../legend.js'
+import { dtsnvindel } from '#shared/common.js'
 
 /**************
  test sections
@@ -508,7 +509,7 @@ tape('Official - snvIndelOnly', test => {
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
 		test.ok(tk.skewer.rawmlst.length > 0, 'rawmlst[] should be non-empty')
 		test.ok(
-			tk.skewer.rawmlst.every(m => m.dt === 1),
+			tk.skewer.rawmlst.every(m => m.dt === dtsnvindel),
 			'rawmlst[] should only contain snvindels'
 		)
 		test.notOk(tk.cnv, 'tk.cnv should not be defined')
