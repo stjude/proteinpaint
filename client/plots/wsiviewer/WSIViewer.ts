@@ -13,6 +13,7 @@ import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 import { SpinnerRenderer } from '#plots/wsiviewer/view/SpinnerRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
+import { SkipFlagCheckRenderer } from '#plots/wsiviewer/view/SkipFlagCheckRenderer.ts'
 import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
@@ -38,6 +39,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 	// New: persistent MapRenderer instance reused across main() calls
 	private mapRenderer: MapRenderer | undefined
+	private skipFlagRenderer = new SkipFlagCheckRenderer()
 	private spinnerRenderer = new SpinnerRenderer()
 
 	constructor(opts: any, api) {
@@ -107,7 +109,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const wsimages = viewModel.sampleWSImages
 
 		const wsimageLayers = viewModel.wsimageLayers
-		console.log(wsimageLayers)
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
@@ -183,9 +184,13 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
 			this.dom.legendHolder.selectAll('*').remove()
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
-			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
+			downloadCSVButtonRenderer.render(
+				this.dom.legendHolder,
+				viewModel.sampleWSImages[settings.displayedImageIndex],
+				this.opts.holder
+			)
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
-
+			// this.skipFlagRenderer.render(this.dom.mapHolder,this)
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
 
 			if (initialZoomInCoordinate != undefined) {
@@ -200,7 +205,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 					viewModel.sampleWSImages[settings.displayedImageIndex],
 					this.map,
 					aiProjectID,
-					imageViewData.shortcuts
+					imageViewData.shortcuts,
+					downloadCSVButtonRenderer
 				)
 			}
 		}

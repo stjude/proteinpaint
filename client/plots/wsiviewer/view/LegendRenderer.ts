@@ -23,6 +23,27 @@ export class LegendRenderer {
 			showLines: false
 		})
 
+		renderTable({
+			columns: [
+				{ label: 'Action', align: 'left' },
+				{ label: 'Keyboard Map', align: 'center' }
+			],
+			rows: [
+				[{ value: 'Export Annotations' }, { value: 'X' }],
+				[{ value: 'Retrain Model' }, { value: 'R' }],
+				[{ value: 'Flag Annotation' }, { value: 'F' }],
+				[{ value: 'Skip Annotation' }, { value: 'S' }],
+				[{ value: 'Back 1 Selection' }, { value: ',' }],
+				[{ value: 'Forward 1 Selection' }, { value: '.' }],
+				[{ value: 'Delete Selection' }, { value: 'Backspace' }]
+			],
+			div: legendHolder
+				.append('div')
+				.attr('id', 'annotations-shortcuts')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top'),
+			showLines: false
+		})
 		if (!imageViewData.uncertainty) return
 
 		const svgHolder = legendHolder.append('div').attr('id', 'uncertainty-legend').style('margin-top', '20px')

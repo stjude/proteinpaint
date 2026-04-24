@@ -1,5 +1,5 @@
 import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
-import { AnnotationStatus, WSImage } from '@sjcrh/proteinpaint-types'
+import { AnnotationStatusMessages, WSImage } from '@sjcrh/proteinpaint-types'
 import { roundValue } from '#shared/roundValue.js'
 
 export class SessionWSImage extends WSImage {
@@ -60,8 +60,7 @@ export class SessionWSImage extends WSImage {
 				{ value: 0 },
 				{ value: '' },
 				{ html: '' },
-				{ value: '' },
-				{ html: `` }
+				{ value: '' }
 			]
 		})
 
@@ -95,7 +94,7 @@ export class SessionWSImage extends WSImage {
 				{
 					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
 				},
-				{ value: annotation.class + (annotation.flag === AnnotationStatus.Flagged ? ' (Flagged)' : '') }
+				{ value: `${annotation.class} ${AnnotationStatusMessages[annotation.flag]}` }
 			]
 		})
 
