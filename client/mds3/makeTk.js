@@ -554,6 +554,11 @@ async function mayInitTermdb(tk, block) {
 
 	tk.mds.termdbConfig = await tdb.vocabApi.getTermdbConfig()
 
+	if (tk.hardcodeCnvOnly) {
+		if (tk.snvIndelOnly) throw 'hardcodeCnvOnly and tk.snvIndelOnly cannot both be true'
+		if (!tk.mds.termdbConfig.queries.cnv) throw 'hardcodeCnvOnly is set but cnv is missing'
+	}
+
 	if (tk.mds.termdb.allowCaseDetails) {
 		tk.mds.termdb.allowCaseDetails.get = async acase => {}
 	}
