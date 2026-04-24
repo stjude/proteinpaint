@@ -1402,7 +1402,7 @@ type Matrix = {
 	cnvCutoffs?: any
 }
 
-// specific hierCluster type settings, should be named as "dataTYpe + Cluster"
+// specific hierCluster type settings, should be named as "dataType + Cluster"
 type NumericDictTermCluster = {
 	/** alternative name, e.g. the plot is called "drug sensitivity" in ALL-pharmacotyping; by default it's called "Numeric Dictionary Term cluster" */
 	appName?: string
