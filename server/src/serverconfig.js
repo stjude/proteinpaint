@@ -163,11 +163,12 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 }
 
 if (typeof serverconfig.dsCredentials == 'string') {
-	const json = fs.readFileSync(serverconfig.dsCredentials, { encoding: 'utf8' })
+	const dsCredentialsFile = serverconfig.dsCredentials
 	try {
+		const json = fs.readFileSync(dsCredentialsFile, { encoding: 'utf8' })
 		serverconfig.dsCredentials = JSON.parse(json)
 	} catch (e) {
-		throw `invalid json file, serverconfig.dsCredentials='${json}'`
+		throw `invalid json file, serverconfig.dsCredentials='${dsCredentialsFile}': ${e}`
 	}
 }
 

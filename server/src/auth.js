@@ -50,7 +50,6 @@ export const authApi = Object.assign({}, defaultApiMethods)
 // 		[serverRoute: string]: {
 // 			// serverRoute can be a glob pattern, to find any matching server route name/path
 // 			[hostName: string]:
-//         'secrets-object-key' |
 //         { type: 'basic', password: '...'} |
 //         {
 //            type: 'jwt',
@@ -83,7 +82,7 @@ export const authApi = Object.assign({}, defaultApiMethods)
 //      }
 // 		},
 // 		burden: {
-// 			'*: 'burdenDemo'
+// 			'*': 'burdenDemo'
 // 		}
 // 	},
 // 	PNET: {
@@ -137,7 +136,7 @@ async function validateDsCredentials(creds, serverconfig) {
 				const cred = route[embedderHost]
 				if (typeof cred == 'string')
 					throw (
-						`serverconfig {dsCredentials[dslabel][route][embedderHost]: <string>} has been deprecated. ` +
+						`serverconfig {dsCredentials[dslabel][serverRoute][embedderHost]: <string>} has been deprecated. ` +
 						`Instead, use {dsCredentials: <abs filepath string>} where the filepath points to a pre-built json file.`
 					)
 				// copy the server route pattern to easily obtain it from within the cred
