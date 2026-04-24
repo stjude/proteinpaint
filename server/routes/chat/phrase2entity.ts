@@ -1,7 +1,7 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { extractGenesFromPrompt, getGenesForGeneset } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagentnew.ts'
-import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
@@ -117,10 +117,21 @@ async function validateNonDictionaryTypes(
 		} else {
 			throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
 		}
-	} else {
-		// TODO: This also executes when a gene is not present in the genes_list (needs better handling for this case)
-		// Need a similar exhaustive database for metabolites, genesets (e.g. msigdb)
-		return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
+	}
+	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, ssGSEA)
+	else {
+		const NonDictKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, ssGSEA
+		if (NonDictKeyWords.length > 0) {
+			msg.text =
+				"Prompt includes keyword(s) such as '" +
+				NonDictKeyWords.join(',') +
+				"' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
+			return msg
+		}
+		// else if // May go for an LLM based approach if the above string search based method is not sufficient
+		else {
+			return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
+		}
 	}
 }
 
