@@ -822,8 +822,8 @@ export async function mayInitiateMatrixplots(ds) {
 		if (!p.name) throw '.name missing from one of matrixplots.plots[]'
 		if (p.file) {
 			const matrixConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
-			p.matrixConfig = JSON.parse(matrixConfig)
-			if (p.getConfig) p.matrixConfig = p.getConfig(p.matrixConfig)
+			const parsedConfig = JSON.parse(matrixConfig)
+			p.matrixConfig = p.getConfig?.(parsedConfig) || parsedConfig
 		} else {
 			throw 'unknown data source of one of matrixplots.plots[]'
 		}
@@ -841,8 +841,8 @@ export async function mayInitiateNumericDictionaryTermplots(ds) {
 		if (!p.name) throw '.name missing from one of numericDictTermCluster.plots[]'
 		if (p.file) {
 			const numericDictTermClusterConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
-			p.numericDictTermClusterConfig = JSON.parse(numericDictTermClusterConfig)
-			if (p.getConfig) p.numericDictTermClusterConfig = p.getConfig(p.numericDictTermClusterConfig)
+			const parsedConfig = JSON.parse(numericDictTermClusterConfig)
+			p.numericDictTermClusterConfig = p.getConfig?.(parsedConfig) || parsedConfig
 		} else {
 			throw 'unknown data source of one of numericDictTermClusterConfig.plots[]'
 		}
