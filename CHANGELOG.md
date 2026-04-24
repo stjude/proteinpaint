@@ -9,6 +9,9 @@ Features:
 - Added cache id for GSEA analysis. Allows it to work with new DA Volcano
 - Several updates for the SC app: The flyout menu for the Gene expression button is replaced with the transient GeneExpInput plot. The blue plot buttons now correspond to plots with available data. Users may group plots by samples, plot type, or not at all. New units are available for the PlotButtons and SectionRenderer.
 
+Fixes:
+- Adjusted the caching to allow re-run if missing cache hit and to have a deterministic cache name based on parameters
+
 
 ## 2.184.0
 
