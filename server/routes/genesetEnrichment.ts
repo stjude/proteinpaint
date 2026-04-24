@@ -132,47 +132,14 @@ async function resolveGseaGenesAndFoldChange({
 	return { genes: q.genes, fold_change: q.fold_change }
 }
 
-/** Compute the deterministic pickle filename for a blitzgsea run. Hash
- * includes everything that affects the blitzgsea result: the signature
- * arrays (genes + fold_change), the gene-set library selector, the
- * permutation count, and the coding-genes filter flag. Method is always
- * 'blitzgsea' for this helper; included in the hash for future-proofing. */
-function computeGseaPickleId({
-	genes,
-	fold_change,
-	geneSetGroup,
-	num_permutations,
-	filter_non_coding_genes
-}: {
-	genes: string[]
-	fold_change: number[]
-	geneSetGroup: string
-	num_permutations: number | undefined
-	filter_non_coding_genes: boolean
-}): string {
-	const keyInputs = {
-		genes,
-		fold_change,
-		geneSetGroup,
-		num_permutations: num_permutations ?? null,
-		filter_non_coding_genes,
-		method: 'blitzgsea'
-	}
-	const key = stableStringify(keyInputs)
-	const hash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
-	return `gsea_${hash}.pkl`
-}
-
 /** In-flight blitzgsea work keyed by pickle filename. Dedupes concurrent
  * callers with identical inputs so only one Python invocation runs per
- * (pickleId, work-kind). Initial computes (no geneset_name) occupy the
- * `.gsea` slot; detail-plot image requests occupy the `.img` slot. Both
- * slots can be in flight concurrently on the same pickle. */
-type PendingGseaEntry = {
-	gsea?: Promise<GenesetEnrichmentResponse | string>
-	img?: Promise<GenesetEnrichmentResponse | string>
-}
-const pendingGseaCompute = new Map<string, PendingGseaEntry>()
+ * (pickleId, work-kind). Initial computes (no geneset_name) go in
+ * `pendingTracker_gsea`; detail-plot image requests go in
+ * `pendingTracker_img`. The two trackers are independent so both kinds
+ * can be in flight concurrently on the same pickle. */
+const pendingTracker_gsea = new Map<string, Promise<GenesetEnrichmentResponse | string>>()
+const pendingTracker_img = new Map<string, Promise<GenesetEnrichmentResponse | string>>()
 
 /** Single entry point for GSEA (blitzgsea) — resolves genes+fold_change,
  * computes a deterministic pickle filename, calls Python which either
@@ -200,24 +167,16 @@ async function computeGSEA({
 		num_permutations: q.num_permutations,
 		filter_non_coding_genes: q.filter_non_coding_genes
 	}
-	const pickle_file = computeGseaPickleId(gseaComputeArg)
+	const key = stableStringify(gseaComputeArg)
+	const pickle_file = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32) + '.pkl'
 
-	const slot: 'gsea' | 'img' = q.geneset_name ? 'img' : 'gsea'
-	const entry = pendingGseaCompute.get(pickle_file)
-	const inFlight = entry?.[slot]
+	const tracker = q.geneset_name ? pendingTracker_img : pendingTracker_gsea
+	const inFlight = tracker.get(pickle_file)
 	if (inFlight) return inFlight
 
 	const work = runGseaPython({ q, genomes, gseaComputeArg, pickle_file })
-	pendingGseaCompute.set(pickle_file, { ...entry, [slot]: work })
-
-	return work.finally(() => {
-		const cur = pendingGseaCompute.get(pickle_file)
-		if (!cur || cur[slot] !== work) return
-		const next: PendingGseaEntry = { ...cur }
-		delete next[slot]
-		if (next.gsea || next.img) pendingGseaCompute.set(pickle_file, next)
-		else pendingGseaCompute.delete(pickle_file)
-	})
+	tracker.set(pickle_file, work)
+	return work.finally(() => tracker.delete(pickle_file))
 }
 
 async function runGseaPython({
