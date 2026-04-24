@@ -64,9 +64,9 @@ function init({ genomes }) {
 	return async (req, res) => {
 		const q: ChatRequest = req.query
 		try {
-			const g = genomes[q.genome]
-			if (!g) throw 'invalid genome'
-			const ds = g.datasets?.[q.dslabel]
+			const genome = genomes[q.genome]
+			if (!genome) throw 'invalid genome'
+			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + q.dslabel // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
 			let agentFiles: string[] = []
@@ -102,7 +102,7 @@ function init({ genomes }) {
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedPlotTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 			const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
-			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
+			const genedb = serverconfig.tpmasterdir + '/' + genome.genedb.dbfile
 			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
@@ -113,7 +113,7 @@ function init({ genomes }) {
 				aiFilesDir,
 				chatSupportedPlotTypes,
 				_allowedTermTypes,
-				g
+				genome
 				// 	testing
 			)
 			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
