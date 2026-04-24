@@ -1,6 +1,6 @@
 import { NumericModes } from '#shared/terms.js'
 
-export function makeChartBtnMenu(holder, chartsInstance) {
+export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance
@@ -45,7 +45,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			target: 'numericDictTermCluster',
 			detail: { exclude: chartsInstance.state.termdbConfig.numericDictTermCluster?.exclude }
 		},
-		updateActionBySelectedTerms: (action, termlst) => {
+		updateActionBySelectedTerms: (action: any, termlst: any[]): void => {
 			const twlst = termlst.map(term => ({
 				term: structuredClone(term),
 				q: { mode: NumericModes.continuous }
