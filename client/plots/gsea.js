@@ -312,7 +312,6 @@ async function renderPathwayDropdown(self) {
 				//Need to clear the gsea_params completely
 				gsea_params: {
 					geneset_name: null,
-					pickle_file: null,
 					pathway: pathwayOpts[idx].value
 				},
 				highlightGenes: [],
@@ -583,7 +582,6 @@ add:
 		noButtonCallback: async index => {
 			const config = {
 				gsea_params: {
-					pickle_file: output.pickle_file,
 					geneset_name: self.gsea_table_rows[index][0].value
 				}
 			}

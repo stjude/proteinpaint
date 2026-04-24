@@ -496,6 +496,14 @@ async function maySetAuthRoutes(app, genomes, basepath = '', _serverconfig = nul
 				// later, any server route or downstream code may call authApi.mayAdjustFilter() again to
 				// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
 				authApi.mayAdjustFilter(req.query, ds)
+				if (req.query.daRequest) {
+					try {
+						req.query.daRequest.__protected__ = req.query.__protected__
+						authApi.mayAdjustFilter(req.query.daRequest, ds)
+					} finally {
+						delete req.query.daRequest.__protected__
+					}
+				}
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
 				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds, protectedRoutes.minSampleSize)
