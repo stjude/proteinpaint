@@ -15,6 +15,7 @@ Official - allow2selectSamples
 Official - hidegenelegend
 Official - hardcodeCnvOnly hidegenelegend
 Official - hardcodeCnvOnly
+Official - snvIndelOnly
 Incorrect dslabel
 Custom cnv only, no sample
 
@@ -486,6 +487,39 @@ tape('Official - hardcodeCnvOnly', test => {
 		{
 			const t = tk.duplicateTk()
 			test.ok(t.hardcodeCnvOnly, 'duplicateTk() should attach hardcodeCnvOnly')
+		}
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Official - snvIndelOnly', test => {
+	const holder = getHolder()
+	const gene = 'TP53'
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene,
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', snvIndelOnly: true, callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length > 0, 'rawmlst[] should be non-empty')
+		test.ok(
+			tk.skewer.rawmlst.every(m => m.dt === 1),
+			'rawmlst[] should only contain snvindels'
+		)
+		test.notOk(tk.cnv, 'tk.cnv should not be defined')
+		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
+		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
+
+		testLegend(test, tk)
+
+		{
+			const t = tk.duplicateTk()
+			test.ok(t.snvIndelOnly, 'duplicateTk() should attach snvIndelOnly')
 		}
 
 		if (test._ok) holder.remove()
