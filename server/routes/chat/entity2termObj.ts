@@ -282,30 +282,10 @@ async function findBestMatchLLM(
 
 	JSON response:`
 
-	/*
-	const prompt = `You are an assistant that selects the best matching dictionary term from a dataset dictionary for a user-supplied phrase if they are highly semantically similar.
-	If not, you do not select any dictionary term as it's ambiguous.
-
-You will be given:
-1. A phrase describing a clinical or genomic concept (e.g. "age at diagnosis", "diagnosis group", "ancestry", etc).
-2. A list of dictionary rows. Each row describes one term: its field name, its type (categorical, integer, float, condition, etc.), its description, and — for categorical terms — the possible (key, label) values it can take.
-
-Your job:
-- Select the SINGLE dictionary row whose term is most semantically similar to the phrase.
-- When looking for semantic similarity, give more emphasis to 70% emphasis to keyword matches and 30% to semantic similarity.
-- Match on field name, description, and — when relevant — on the value labels of categorical terms.
-- Return ONLY a JSON object conforming to the following schema, with no explanation, no markdown, no extra keys only when absolutely confident:
-  { "term": "<the field name of the selected row>" }
-- If not confident, simply return {"term": "ambiguous", "possible": ["<first possible match to filed name of selected row>", "<second possible match to filed name of selected row>", "<third possible match to filed name of selected row>"]}
-
-Dictionary rows:
-${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
-
-Phrase: "${phrase}"
-
-JSON response:`
-*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	if (!response) {
+		throw new Error('No response from LLM for findBestMatchLLM')
+	}
 	// mayLog("Raw Response: ", JSON.stringify(response))
 	let parsedTerm: string
 	// let msg: string
@@ -314,10 +294,11 @@ JSON response:`
 		if (parsed.term === 'ambiguous') {
 			mayLog('Ambiguous!!! Possible matches: ')
 			if (parsed.possible) {
-				mayLog(parsed.possible)
-				// msg = parsed.term
 				parsedTerm = parsed.possible[0]
+				mayLog(parsed.possible)
 				mayLog('But choosing the first choice: ', parsedTerm)
+			} else {
+				parsedTerm = 'ambiguous_no_candidates'
 			}
 		} else {
 			parsedTerm = parsed.term
@@ -353,25 +334,6 @@ JSON response:`
 		type: matchedRow.term_type,
 		score: 1
 	}
-	/*
-	if (msg){
-		retVal = {
-			id: matchedRow.id,
-			name: matchedRow.name,
-			type: matchedRow.term_type,
-			score: 1,
-			msg: msg
-		}
-
-	} else {
-		retVal = {
-			id: matchedRow.id,
-			name: matchedRow.name,
-			type: matchedRow.term_type,
-			score: 1,
-		}
-
-	}*/
 	return retVal
 }
 
