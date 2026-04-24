@@ -452,39 +452,6 @@ export function server_init_db_queries(ds) {
 			return terms
 		}
 	}
-	{
-		/* term id is required, sample id is optional
-		if sample is missing, select all sample and category by term id
-			return [ {sample=str, value=?}, ... ]
-		else, return single value by sample and term
-		*/
-		const s = {
-			categorical: cn.prepare('SELECT value FROM anno_categorical WHERE term_id=?'),
-			integer: cn.prepare('SELECT value FROM anno_integer WHERE term_id=?'),
-			float: cn.prepare('SELECT value FROM anno_float WHERE term_id=?')
-		}
-		const s_sampleInt = {
-			categorical: cn.prepare('SELECT value FROM anno_categorical WHERE term_id=? AND sample=?'),
-			integer: cn.prepare('SELECT value FROM anno_integer WHERE term_id=? AND sample=?'),
-			float: cn.prepare('SELECT value FROM anno_float WHERE term_id=? AND sample=?')
-		}
-		const s_sampleStr = {
-			categorical: cn.prepare('SELECT value FROM anno_categorical a,sampleidmap s WHERE term_id=? AND s.name=?'),
-			integer: cn.prepare('SELECT value FROM anno_integer a,sampleidmap s WHERE term_id=? AND s.name=?'),
-			float: cn.prepare('SELECT value FROM anno_float a, sampleidmap s WHERE term_id=? AND s.name=?')
-		}
-		if (tables.has('anno_date')) {
-			s_sampleInt['date'] = cn.prepare('SELECT value FROM anno_date a, sampleidmap s WHERE term_id=? AND s.name=?')
-			s_sampleStr['date'] = cn.prepare('SELECT value FROM anno_date a, sampleidmap s WHERE term_id=? AND s.name=?')
-		}
-
-		q.getSample2value = (id, sample = null) => {
-			const term = q.termjsonByOneid(id)
-			if (!sample) return s[term.type].all(id)
-			if (typeof sample == 'string') return s_sampleStr[term.type].all(id, sample)
-			return s_sampleInt[term.type].all(id, sample)
-		}
-	}
 	if (tables.has('termhtmldef')) {
 		//get term_info for a term
 		//rightnow only few conditional terms have grade info

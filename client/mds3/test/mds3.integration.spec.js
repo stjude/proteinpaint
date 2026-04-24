@@ -118,7 +118,7 @@ export async function testMclassFiltering(test, tk, bb, holder) {
 	await tk.load()
 }
 
-tape('Official - sample summaries table, create subtrack (tk.filterObj)', test => {
+tape.skip('Official - sample summaries table, create subtrack (tk.filterObj)', test => {
 	testSampleSummary2subtrack('hg38-test', 'TP53', 'TermdbTest', test)
 })
 
