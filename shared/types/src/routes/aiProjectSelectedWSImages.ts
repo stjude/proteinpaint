@@ -25,6 +25,12 @@ export enum AnnotationStatus {
 	Flagged = 2
 }
 
+export const AnnotationStatusMessages = {
+	[AnnotationStatus.Normal]: '',
+	[AnnotationStatus.Skipped]: '(Skipped)',
+	[AnnotationStatus.Flagged]: '(Flagged)'
+}
+
 export interface Annotation extends TileSelection {
 	class: string
 	status: number

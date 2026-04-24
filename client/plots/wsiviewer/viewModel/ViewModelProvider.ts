@@ -209,8 +209,12 @@ export class ViewModelProvider {
 
 				const color = this.getClassColor(wsimages[i], annotation.class)
 				const featureId = `annotation-square-${annotation.zoomCoordinates}`
-
-				const squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
+				let squareFeature: Feature<Geometry>
+				if (annotation.flag !== AnnotationStatus.Skipped) {
+					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
+				} else {
+					squareFeature = createDimSquareFeature(annotation.zoomCoordinates, topLeft, tileSize, color, featureId)
+				}
 				sourceAnnotations.addFeature(squareFeature)
 
 				const borderFeature = this.createBorderFeature(
@@ -221,20 +225,12 @@ export class ViewModelProvider {
 					`annotation-border-${annotation.zoomCoordinates}`
 				)
 				sourceAnnotations.addFeature(borderFeature)
-				console.log(annotation.flag === AnnotationStatus.Flagged)
 
 				if (annotation.flag === AnnotationStatus.Flagged) {
-					const starFeature = ViewModelProvider.createStarFeature(
-						tileSize,
-						topLeft,
-						annotation.zoomCoordinates,
-						'yellow',
-						color
-					)
+					const starFeature = createStarFeature(tileSize, topLeft, annotation.zoomCoordinates, 'yellow', color)
 					sourceAnnotations.addFeature(starFeature)
 				}
 			}
-			console.log(sourceAnnotations.getFeatures())
 
 			const vectorLayer = new VectorLayer({
 				source: sourceAnnotations,
@@ -246,7 +242,6 @@ export class ViewModelProvider {
 			} else {
 				wsiImageLayers.overlays = [vectorLayer]
 			}
-			console.log(wsiImageLayers.overlays)
 			layers[i] = wsiImageLayers
 		}
 		return layers
@@ -267,52 +262,6 @@ export class ViewModelProvider {
 		return await dofetch3('aiProjectSelectedWSImages', {
 			body: body
 		})
-	}
-	public static createStarFeature(
-		tileSize: number,
-		starCenter: [number, number],
-		annotationCoords: [number, number],
-		fillColor: string = 'yellow',
-		outlineColor: any = 'yellow'
-	): Feature<Geometry> {
-		//turn into function
-		// Source - https://stackoverflow.com/a/70960369
-		// Posted by enxaneta
-		// Retrieved 2026-04-21, License - CC BY-SA 4.0
-
-		const starCoords: Array<[number, number]> = []
-		let n = 0 //a counter
-		const starRadiusOuter = 110
-		const starRadiusInner = 55
-		const starOffset = tileSize / 4
-		const step = Math.PI / 5 //since the star has 5 points you will need to calculate the position of a point every 36degs i.e Math.PI/5;
-
-		//a for loop to calculate the position of the points for the star
-		for (let a = Math.PI / 2; a > (-3 * Math.PI) / 2; a -= step) {
-			//The point will be either on the outer circle or on the inner one
-			const r = n % 2 == 0 ? starRadiusOuter : starRadiusInner
-			const x = starCenter[0] + starOffset + r * Math.cos(a)
-			const y = starCenter[1] - starOffset + r * Math.sin(a)
-			starCoords.push([x, y])
-			n++
-		}
-		const feature = new Feature({
-			geometry: new Polygon([starCoords]),
-			properties: {
-				isLocked: false
-			}
-		})
-
-		feature.setId(`annotation-star-${annotationCoords}`)
-
-		feature.setStyle(
-			new Style({
-				zIndex: 1000,
-				fill: new Fill({ color: fillColor }),
-				stroke: new Stroke({ color: outlineColor, width: 2 })
-			})
-		)
-		return feature
 	}
 
 	//TODO: This should be centralized with interaction code
@@ -402,4 +351,96 @@ export class ViewModelProvider {
 	private getClassColor(wsImage: WSImage, annotationClass: string): string {
 		return wsImage.classes?.find(wsiCLass => String(wsiCLass.label) === annotationClass)?.color ?? '#FFFFFF' // TODO get the default color from settings
 	}
+}
+
+export function createStarFeature(
+	tileSize: number,
+	starCenter: [number, number],
+	annotationCoords: [number, number],
+	fillColor: string = 'yellow',
+	outlineColor: any = 'yellow'
+): Feature<Polygon> {
+	// Source - https://stackoverflow.com/a/70960369
+	// Posted by enxaneta
+	// Retrieved 2026-04-21, License - CC BY-SA 4.0
+	// When I call this from W
+	const starCoords: [number, number][][] = [[]]
+	let n = 0 //a counter
+	const starRadiusOuter = 110
+	const starRadiusInner = 55
+	const starOffset = tileSize / 4
+	const step = Math.PI / 5 //since the star has 5 points you will need to calculate the position of a point every 36degs i.e Math.PI/5;
+
+	//a for loop to calculate the position of the points for the star
+	for (let a = Math.PI / 2; a > (-3 * Math.PI) / 2; a -= step) {
+		//The point will be either on the outer circle or on the inner one
+		const r = n % 2 == 0 ? starRadiusOuter : starRadiusInner
+		const x = starCenter[0] + starOffset + r * Math.cos(a)
+		const y = starCenter[1] - starOffset + r * Math.sin(a)
+		starCoords[0].push([x, y])
+		n++
+	}
+
+	const feature = new Feature({
+		geometry: new Polygon(starCoords),
+		properties: {
+			isLocked: false
+		}
+	})
+
+	feature.setId(`annotation-star-${annotationCoords}`)
+
+	feature.setStyle(
+		new Style({
+			zIndex: 1000,
+			fill: new Fill({ color: fillColor }),
+			stroke: new Stroke({ color: outlineColor, width: 2 })
+		})
+	)
+	return feature
+}
+
+export function createDimSquareFeature(
+	annotationCoords: [number, number],
+	topLeft: [number, number],
+	tileSize: number,
+	color: string
+): Feature<Geometry> {
+	const squareCoords = [
+		[
+			topLeft,
+			[topLeft[0] + tileSize, topLeft[1]],
+			[topLeft[0] + tileSize, topLeft[1] - tileSize],
+			[topLeft[0], topLeft[1] - tileSize],
+			topLeft
+		]
+	]
+
+	const feature = new Feature({
+		geometry: new Polygon(squareCoords),
+		properties: {
+			isLocked: false
+		}
+	})
+
+	feature.setId(`annotation-square-${annotationCoords}`)
+	function hexToRgb(hex: string): number[] {
+		// Remove hash if it exists
+		hex = hex.replace(/^#/, '')
+
+		// Parse the chunks into integers
+		const r = parseInt(hex.substring(0, 2), 16)
+		const g = parseInt(hex.substring(2, 4), 16)
+		const b = parseInt(hex.substring(4, 6), 16)
+
+		return [r, g, b]
+	}
+	feature.setStyle(
+		new Style({
+			fill: new Fill({ color: [...hexToRgb(color), 0.4] }),
+			stroke: new Stroke({ color, width: 2 })
+		})
+	)
+
+	return feature
 }

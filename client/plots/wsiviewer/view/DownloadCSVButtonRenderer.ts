@@ -21,7 +21,6 @@ export class DownloadCSVButtonRenderer {
 			.style('margin', '0 10px')
 			.style('cursor', 'pointer')
 			.text('Export Annotations')
-
 		btn.on('click', () => {
 			if (!sessionWSImage) {
 				// nothing to export
@@ -31,7 +30,7 @@ export class DownloadCSVButtonRenderer {
 		})
 	}
 
-	private downloadAllAsCsv(sessionWSImage: SessionWSImage) {
+	public downloadAllAsCsv(sessionWSImage: SessionWSImage) {
 		const annotations: Annotation[] = (sessionWSImage.annotations || []) as Annotation[]
 
 		if (!Array.isArray(annotations) || annotations.length === 0) {

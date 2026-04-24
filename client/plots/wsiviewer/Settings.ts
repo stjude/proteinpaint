@@ -26,4 +26,6 @@ export default interface Settings {
 	animationTime: number
 	animationDelay: number
 	defaultZoom: number
+	renderOnlyFlagged: boolean
+	renderSkipped: boolean
 }
