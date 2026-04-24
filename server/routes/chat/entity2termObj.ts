@@ -96,10 +96,10 @@ async function getTermObj(
 		return twRes
 	} else {
 		/*
-		const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
-		const topK: number = 3
-		const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
-		*/
+        const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
+        const topK: number = 3
+        const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
+        */
 		const match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
 		if (!match) {
 			console.warn(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
@@ -168,7 +168,7 @@ export async function inferTermObjFromEntity(
 			twObjects[key] = termObj
 		}
 		return twObjects
-	} else if (plotType == 'dge') {
+	} else if (plotType === 'dge') {
 		const deEntity = entity as DEPhrase2EntityResult
 		for (const [key, value] of Object.entries(deEntity)) {
 			assert(value != undefined)
@@ -189,7 +189,7 @@ export async function inferTermObjFromEntity(
 			twObjects[key] = filterValues
 		}
 		return twObjects
-	} else if (plotType == 'hiercluster') {
+	} else if (plotType === 'hiercluster') {
 		const hierEntity = entity as HierPhrase2EntityResult
 		const geneValues: Value[] = []
 		for (const geneEntity of hierEntity.genes) {
@@ -309,17 +309,17 @@ async function findBestMatchLLM(
 		return undefined
 	}
 	/*
-	try {
-		const parsed = JSON.parse(response) as { term: string }
-		if (!parsed.term) {
-			console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
-			return undefined
-		}
-		parsedTerm = parsed.term
-	} catch (e) {
-		console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
-		return undefined
-	}*/
+    try {
+            const parsed = JSON.parse(response) as { term: string }
+            if (!parsed.term) {
+                    console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
+                    return undefined
+            }
+            parsedTerm = parsed.term
+    } catch (e) {
+            console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+            return undefined
+    }*/
 
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)
 	if (!matchedRow) {
