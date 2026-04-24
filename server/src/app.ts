@@ -12,7 +12,7 @@ import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
-import { authApi } from './auth.js'
+import { getAuthApi } from './auth.js'
 import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
@@ -47,10 +47,11 @@ export async function launch() {
 		const routeCallbacks = await setOptionalRoutes(app, genomes)
 		console.log('may set auth routes ...')
 		/**
-!!! the order of middlewares is critical, must be set before data routes !!!
-- so that a request will be inspected by auth before allowing 
-to proceed to any *protected* route handler
-*/
+			!!! the order of middlewares is critical, must be set before data routes !!!
+			- so that a request will be inspected by auth before allowing 
+			to proceed to any *protected* route handler
+		*/
+		const authApi = await getAuthApi(app, genomes, serverconfig)
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)
