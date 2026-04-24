@@ -36,12 +36,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				})
 		}
 	}
-
 	const chart = {
 		//use the app name defined in dataset file
 		label: chartsInstance.state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 		chartType: 'numericDictTermCluster',
-		clickTo: self.showTree_selectlst,
+		clickTo: chartsInstance.showTree_selectlst,
 		usecase: {
 			target: 'numericDictTermCluster',
 			detail: { exclude: chartsInstance.state.termdbConfig.numericDictTermCluster?.exclude }
