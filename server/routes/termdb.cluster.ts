@@ -172,6 +172,8 @@ async function getNumericDictTermAnnotation(q, ds) {
 	}
 	const data = await getData(getDataArgs, ds)
 
+	if (data.error) throw data.error
+
 	const term2sample2value = new Map()
 	for (const [key, sampleData] of Object.entries(data.samples)) {
 		for (const [term, value] of Object.entries(sampleData as { [key: string]: unknown })) {
