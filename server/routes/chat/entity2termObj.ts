@@ -95,8 +95,11 @@ async function getTermObj(
 		}
 		return twRes
 	} else {
-		// const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
-		// const match = await findBestMatch(twEntity.phrase, refEmbedding, llm)
+		/*
+		const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
+		const topK: number = 3
+		const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
+		*/
 		const match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
 		if (!match) {
 			console.warn(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
@@ -224,25 +227,76 @@ async function findBestMatchLLM(
 	phrase: string,
 	dbPath: string,
 	llm: LlmConfig
-): Promise<{ id: string; type: string; name: string; score: number } | undefined> {
+): Promise<{ id: string; type: string; name: string; score: number; msg?: string } | undefined> {
 	const dataset_db_output = await parse_dataset_db(dbPath)
 	const { db_rows, rag_docs } = dataset_db_output
 	if (rag_docs.length === 0) {
 		console.warn('findBestMatchLLM: no rag_docs in DB')
 		return undefined
 	}
+	const prompt = `You are an assistant that maps a user phrase to a dataset dictionary term.
+	IMPORTANT: Your goal is NOT to always select a match. Your goal is to AVOID incorrect matches.
+	
+	You must follow this strict decision rule:
+	1. Only select a term if it is a CLEAR, SPECIFIC, and UNIQUE match to the phrase.
+	2. If multiple dictionary rows are closely related OR represent subtypes/specializations of the phrase, you MUST return "ambiguous".
+	3. If the phrase is broader than the candidate terms (e.g., "chemotherapy" vs specific drug classes), you MUST return "ambiguous".
+	4. If two or more candidates differ only by subtype, drug class, or measurement detail, DO NOT pick one — return "ambiguous" and list the three most closely related candidates.
 
-	const prompt = `You are an assistant that selects the best matching dictionary term from a dataset dictionary for a user-supplied phrase.
+	Examples of ambiguity:
+	- Phrase: "chemotherapy"
+	Candidates:
+		- alkylating chemotherapy exposure
+		- platinum chemotherapy exposure
+	→ Return ambiguous (because phrase is general, candidates are specific subtypes)
+
+	- Phrase: "age at diagnosis"
+	Candidates:
+		- age at diagnosis
+		- diagnosis group
+	→ Select "age at diagnosis" (clear and unique match)
+
+	Scoring guidance:
+	- Keyword overlap is important but NOT sufficient.
+	- You must check:
+	- specificity (is this too narrow?)
+	- exclusivity (is this the only valid match?)
+	- competition (are there similar alternatives?)
+
+	Output format:
+	- If confident:
+	{ "term": "<field name>" }
+
+	- If ambiguous:
+	{
+		"term": "ambiguous",
+		"possible": ["<field1>", "<field2>", "<field3>"]
+	}
+
+	Return ONLY valid JSON. No explanation. No markdown. No code fences.
+
+	Dictionary rows:
+	${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
+
+	Phrase: "${phrase}"
+
+	JSON response:`
+
+	/*
+	const prompt = `You are an assistant that selects the best matching dictionary term from a dataset dictionary for a user-supplied phrase if they are highly semantically similar.
+	If not, you do not select any dictionary term as it's ambiguous.
 
 You will be given:
-1. A phrase describing a clinical or genomic concept (e.g. "age at diagnosis", "diagnosis group", "ancestry").
+1. A phrase describing a clinical or genomic concept (e.g. "age at diagnosis", "diagnosis group", "ancestry", etc).
 2. A list of dictionary rows. Each row describes one term: its field name, its type (categorical, integer, float, condition, etc.), its description, and — for categorical terms — the possible (key, label) values it can take.
 
 Your job:
 - Select the SINGLE dictionary row whose term is most semantically similar to the phrase.
+- When looking for semantic similarity, give more emphasis to 70% emphasis to keyword matches and 30% to semantic similarity.
 - Match on field name, description, and — when relevant — on the value labels of categorical terms.
-- Return ONLY a JSON object conforming to the following schema, with no explanation, no markdown, no extra keys:
+- Return ONLY a JSON object conforming to the following schema, with no explanation, no markdown, no extra keys only when absolutely confident:
   { "term": "<the field name of the selected row>" }
+- If not confident, simply return {"term": "ambiguous", "possible": ["<first possible match to filed name of selected row>", "<second possible match to filed name of selected row>", "<third possible match to filed name of selected row>"]}
 
 Dictionary rows:
 ${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
@@ -250,9 +304,30 @@ ${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
 Phrase: "${phrase}"
 
 JSON response:`
-
+*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// mayLog("Raw Response: ", JSON.stringify(response))
 	let parsedTerm: string
+	// let msg: string
+	try {
+		const parsed = JSON.parse(response) as { term: string; possible?: string[] }
+		if (parsed.term === 'ambiguous') {
+			mayLog('Ambiguous!!! Possible matches: ')
+			if (parsed.possible) {
+				mayLog(parsed.possible)
+				// msg = parsed.term
+				parsedTerm = parsed.possible[0]
+				mayLog('But choosing the first choice: ', parsedTerm)
+			}
+		} else {
+			parsedTerm = parsed.term
+			// msg = ''
+		}
+	} catch (e) {
+		console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+		return undefined
+	}
+	/*
 	try {
 		const parsed = JSON.parse(response) as { term: string }
 		if (!parsed.term) {
@@ -263,7 +338,7 @@ JSON response:`
 	} catch (e) {
 		console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
 		return undefined
-	}
+	}*/
 
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)
 	if (!matchedRow) {
@@ -272,12 +347,32 @@ JSON response:`
 	}
 	// db_rows.name is the dictionary term id (see parse_dataset_db in utils.ts).
 	// LLM doesn't produce a native similarity score; use 1 so the downstream threshold treats this as confident.
-	return {
+	const retVal = {
 		id: matchedRow.id,
 		name: matchedRow.name,
 		type: matchedRow.term_type,
 		score: 1
 	}
+	/*
+	if (msg){
+		retVal = {
+			id: matchedRow.id,
+			name: matchedRow.name,
+			type: matchedRow.term_type,
+			score: 1,
+			msg: msg
+		}
+
+	} else {
+		retVal = {
+			id: matchedRow.id,
+			name: matchedRow.name,
+			type: matchedRow.term_type,
+			score: 1,
+		}
+
+	}*/
+	return retVal
 }
 
 export async function parse_dataset_db(dataset_db: string) {

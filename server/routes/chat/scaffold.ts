@@ -1,4 +1,5 @@
 import type { LlmConfig } from '#types'
+// import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { Scaffold, SummaryScaffold, DEScaffold, HierarchicalScaffold } from './scaffoldTypes.ts'
@@ -205,9 +206,8 @@ Always return ONLY a JSON object in this exact format:
 - Query: "compare age between wilms tumor and hodgkin lymphoma"
   Output:
   {
-	"tw1": "age at diagnosis",
-        "tw2": "diaggrp",
-        "filter": ["wilms tumor", "hodgkin lymphoma"]
+	"tw1": "age",
+  "tw2": "wilms tumor, hodgkin lymphoma",
   }
 - Query: "Show me the distribution of gene expression in TP53 across different cell types, but only for patients aged 10 to 40."
   Output:

@@ -2,6 +2,11 @@ import type { Filter } from '../filter.ts'
 import type { RoutePayload } from './routeApi.js'
 
 /** */
+// Helps track ambiguous points in the LLM reasoning process for debugging and improvement purposes.
+// This array can be populated at various stages of the pipeline (e.g. scaffold inference, phrase-to-entity mapping,
+// term object inference) to log any uncertainties or ambiguities encountered by the LLM.
+export const ambiguousPoints: string[] = []
+
 export type ChatRequest = {
 	genome: string
 	dslabel: string
@@ -24,6 +29,7 @@ export type HtmlResponse = {
 export type PlotResponse = {
 	type: 'plot'
 	plot: object
+	msg?: string
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
 
@@ -137,7 +143,7 @@ export type none_type = {
 }
 
 /** Top-level classification returned by classifyQuery: plot or notplot (subtype determined separately by plot.ts) */
-export type QueryClassification = { type: 'plot' } | { type: 'notplot' }
+export type QueryClassification = { type: 'plot' } | { type: 'notplot' } | { type: 'binaryQuery' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
 export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter' | 'hiercluster' | 'lollipop'
