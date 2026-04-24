@@ -132,7 +132,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const activeImage: TileLayer = activeLayerData.wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
+		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex, settings)
 
 		// set MapRenderer state here: ensure the persistent renderer receives current state
 		if (!this.mapRenderer) {
@@ -184,13 +184,10 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
 			this.dom.legendHolder.selectAll('*').remove()
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
-			downloadCSVButtonRenderer.render(
-				this.dom.legendHolder,
-				viewModel.sampleWSImages[settings.displayedImageIndex],
-				this.opts.holder
-			)
+			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
-			// this.skipFlagRenderer.render(this.dom.mapHolder,this)
+			this.dom.mapHolder.select('#SFField').remove()
+			this.skipFlagRenderer.render(this.dom.mapHolder, this, settings.renderOnlyFlagged, settings.renderSkipped)
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
 
 			if (initialZoomInCoordinate != undefined) {

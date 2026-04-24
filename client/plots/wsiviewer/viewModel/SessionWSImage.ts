@@ -1,6 +1,7 @@
 import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
-import { AnnotationStatusMessages, WSImage } from '@sjcrh/proteinpaint-types'
+import { AnnotationStatus, AnnotationStatusMessages, WSImage } from '@sjcrh/proteinpaint-types'
 import { roundValue } from '#shared/roundValue.js'
+import type Settings from '#plots/wsiviewer/Settings.ts'
 
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
@@ -43,7 +44,11 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsTileSelections, ...predictions, ...annotations]
 	}
 
-	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
+	public static getTilesTableRows(
+		sessionWSImage: SessionWSImage,
+		selectedTileIndex: number,
+		settings: Settings
+	): any[] {
 		const annotations = sessionWSImage.annotations || []
 
 		const sessionsTileSelections = sessionWSImage.sessionsTileSelections || []
@@ -81,22 +86,26 @@ export class SessionWSImage extends WSImage {
 			]
 		})
 
-		const annotationsRows: any[] = annotations.map((annotation, i) => {
-			const idx = sessionsRows.length + predictionRows.length + i // Continue index
-			const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
-			const firstCell: any = { value: idx }
-			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
-			return [
-				firstCell,
-				{ value: annotation.zoomCoordinates },
-				{ value: 0 },
-				{ value: '' },
-				{
-					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
-				},
-				{ value: `${annotation.class} ${AnnotationStatusMessages[annotation.flag]}` }
-			]
-		})
+		const annotationsRows: any[] = annotations
+			.map((annotation, i) => {
+				if (annotation.flag === AnnotationStatus.Skipped && !settings.renderSkipped) return []
+				if (annotation.flag !== AnnotationStatus.Flagged && settings.renderOnlyFlagged) return []
+				const idx = sessionsRows.length + predictionRows.length + i // Continue index
+				const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
+				const firstCell: any = { value: idx }
+				firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
+				return [
+					firstCell,
+					{ value: annotation.zoomCoordinates },
+					{ value: 0 },
+					{ value: '' },
+					{
+						html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+					},
+					{ value: `${annotation.class} ${AnnotationStatusMessages[annotation.flag]}` }
+				]
+			})
+			.filter((annotation, _) => annotation.length > 0)
 
 		return [...sessionsRows, ...predictionRows, ...annotationsRows]
 	}

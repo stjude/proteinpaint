@@ -1,12 +1,14 @@
 export class SkipFlagCheckRenderer {
-	render(holder: any, wsiApp: any) {
-		const skipFlagFieldSet = holder.append('div').append('fieldset')
+	render(holder: any, wsiApp: any, flagChecked: boolean, skipChecked: boolean) {
+		const skipFlagFieldSet = holder.append('div').append('fieldset').attr('id', 'SFField')
+		console.log()
 		const flagCheck = skipFlagFieldSet
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('id', 'flaganno')
 			.attr('name', 'skipflag')
 			.attr('value', 'flagging')
+			.property('checked', flagChecked)
 		skipFlagFieldSet.append('label').text('Show Only Flagged').attr('for', 'flaganno')
 		const skipCheck = skipFlagFieldSet
 			.append('input')
@@ -14,6 +16,7 @@ export class SkipFlagCheckRenderer {
 			.attr('id', 'skipanno')
 			.attr('name', 'skipflag')
 			.attr('value', 'notskipping')
+			.property('checked', skipChecked)
 		skipFlagFieldSet.append('label').text('Show Skipped').attr('for', 'skipanno')
 
 		// Adding listener that will uncheck each other, even though I'm using a checkbox
@@ -21,7 +24,7 @@ export class SkipFlagCheckRenderer {
 		flagCheck.on('change', (event: Event) => {
 			const target = event.target as HTMLInputElement
 			if (target.checked) {
-				skipCheck.attr('checked', false)
+				skipCheck.property('checked', false)
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
 					id: wsiApp.id,
@@ -52,7 +55,7 @@ export class SkipFlagCheckRenderer {
 		skipCheck.on('change', (event: Event) => {
 			const target = event.target as HTMLInputElement
 			if (target.checked) {
-				flagCheck.attr('checked', false)
+				flagCheck.property('checked', false)
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
 					id: wsiApp.id,

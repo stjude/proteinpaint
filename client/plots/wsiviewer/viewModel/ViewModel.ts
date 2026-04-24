@@ -28,13 +28,13 @@ export class ViewModel {
 		this.selectedTileIndex = settings.activeAnnotation
 		this.wsimageLayers = wsimageLayers
 		this.wsimageLayersLoadError = wsimageLayersLoadError
-		this.imageViewData = index => this.getImageViewData(index)
+		this.imageViewData = index => this.getImageViewData(index, settings)
 	}
 
-	public getImageViewData(index: number): ImageViewData {
+	public getImageViewData(index: number, settings: Settings): ImageViewData {
 		const imageViewData: ImageViewData = {}
 		const imageData = this.sampleWSImages[index]
-		this.setAnnonationsTableData(imageViewData, imageData)
+		this.setAnnonationsTableData(imageViewData, imageData, settings)
 		this.setClassData(imageViewData, imageData)
 		if (imageData?.uncertainty) {
 			imageViewData.uncertainty = imageData?.uncertainty
@@ -57,8 +57,8 @@ export class ViewModel {
 			.slice(settings.activeAnnotation, settings.activeAnnotation + 1)
 	}
 
-	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage) {
-		const mergedRows: any[] = SessionWSImage.getTilesTableRows(imageData, this.selectedTileIndex)
+	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage, settings: Settings) {
+		const mergedRows: any[] = SessionWSImage.getTilesTableRows(imageData, this.selectedTileIndex, settings)
 
 		const columns = [
 			{ label: 'Index', sortable: true, align: 'center' },
