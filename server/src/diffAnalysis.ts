@@ -75,6 +75,7 @@ function cacheFilePath(cacheId: string): string {
 
 export async function writeDaCache(cacheId: string, geneData: GeneDEEntry[]): Promise<void> {
 	const file = cacheFilePath(cacheId)
+	console.log(77, file)
 	// Full 5-field row: renderVolcano (and its underlying Rust renderer) needs
 	// adjusted_p_value + original_p_value for significance gating on the PNG;
 	// GSEA only uses gene_name + fold_change. Storing everything lets cache
@@ -482,7 +483,10 @@ export async function readCacheFileOrRecompute({
 	// interleaving between this get and the set below, so two concurrent
 	// callers cannot both miss the map and both start a fresh compute.
 	const inFlight = pendingReadOrRecompute.get(cacheId)
-	if (inFlight) return inFlight
+	if (inFlight) {
+		console.log(485, 'reused inflight')
+		return inFlight
+	}
 
 	const work = doReadOrRecompute(cacheId, daRequest, genomes)
 	pendingReadOrRecompute.set(cacheId, work)

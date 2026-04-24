@@ -27,6 +27,11 @@ export const api: RouteApi = {
 
 const cachedir_gsea = path.join(serverconfig.cachedir, 'gsea')
 
+const pendingGseaByMethod = {
+	blitzgsea: new Map(),
+	cerno: new Map()
+}
+
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -34,7 +39,13 @@ function init({ genomes }) {
 			// TODO: should separate the processing based on if q.geneset_name exists,
 			// so that each of the separate function can have definite signature types
 			// instead of trying to generalize the same function to do different things
-			const results = await run_genesetEnrichment_analysis(q, genomes)
+			const pending = pendingGseaByMethod[q.method]
+			const pendingKey = q.cacheId || q
+			const inflight = pending.get(q.cacheId)
+			if (!inflight) pending.set(pendingKey, run_genesetEnrichment_analysis(q, genomes))
+			const results = await pending.get(pendingKey)
+			pending.delete(pendingKey)
+			console.log(47, 'continued request', Object.keys(results))
 			if (!q.geneset_name) {
 				// req.query.geneset_name contains the geneset name which is defined only
 				// when a request for plotting the details of a particular geneset_name is made.
@@ -74,6 +85,7 @@ async function run_genesetEnrichment_analysis(
 	let genes: string[]
 	let fold_change: number[]
 	if (q.cacheId) {
+		console.log(76)
 		// Cache-backed path. Apply the same auth-filter injection that the
 		// volcano route's req.query.filter receives via the global auth
 		// middleware (auth.js mayUpdate__protected__ → mayAdjustFilter).
@@ -97,9 +109,11 @@ async function run_genesetEnrichment_analysis(
 		}
 
 		if (q.daRequest) {
+			console.log(99)
 			// Unified helper handles read-or-recompute internally. Returns
 			// the deterministic cacheId derived from daRequest.
 			const result = await readCacheFileOrRecompute({ daRequest: q.daRequest as DERequest, genomes })
+			console.log(102, result.cacheId, q.cacheId, result.cacheId === q.cacheId)
 			// Tamper check: the client-supplied cacheId must match what the
 			// server derived from daRequest. Anything else is either drift
 			// or a crafted request.
