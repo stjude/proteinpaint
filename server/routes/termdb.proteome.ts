@@ -57,9 +57,10 @@ function init({ genomes }) {
 					})
 					const controlSampleIds = cohortData.controlSampleIds || new Set()
 
+					const prior = assay.cohorts[cohortName].prior
 					for (const entry of cohortData.allEntries || []) {
 						const s2v = entry.s2v
-						const stats = getCohortStats(s2v, controlSampleIds)
+						const stats = getCohortStats(s2v, controlSampleIds, prior)
 						delete entry.s2v
 						entry.foldChange = stats.foldChange
 						entry.pValue = stats.pValue
@@ -78,7 +79,7 @@ function init({ genomes }) {
 	}
 }
 
-function getCohortStats(allS2v, controlSampleIds) {
+function getCohortStats(allS2v, controlSampleIds, prior: { d0: number; s0sq: number }) {
 	if (!allS2v || typeof allS2v != 'object') return { foldChange: null, pValue: null, testedN: 0, controlN: 0 }
 	const controlValues: number[] = []
 	const testedValues: number[] = []
@@ -100,7 +101,8 @@ function getCohortStats(allS2v, controlSampleIds) {
 		controlMean !== 0
 			? testedMean / controlMean
 			: null
-	const pValue = getWelchPValue(testedValues, controlValues)
+	if (!prior?.d0 || !prior?.s0sq) throw 'prior with d0 and s0sq is required for moderated t-test'
+	const pValue = getModeratedPValue(testedValues, controlValues, prior)
 	return {
 		foldChange,
 		pValue,
@@ -109,40 +111,45 @@ function getCohortStats(allS2v, controlSampleIds) {
 	}
 }
 
-function getWelchPValue(a, b) {
+function getModeratedPValue(a, b, prior: { d0: number; s0sq: number }) {
 	const n1 = a.length
 	const n2 = b.length
 	if (n1 < 2 || n2 < 2) return null
 
 	const mean1 = a.reduce((s, v) => s + v, 0) / n1
 	const mean2 = b.reduce((s, v) => s + v, 0) / n2
-	const var1 = sampleVariance(a, mean1)
-	const var2 = sampleVariance(b, mean2)
 
-	if (!Number.isFinite(var1) || !Number.isFinite(var2)) return null
-	const se2 = var1 / n1 + var2 / n2
-	if (!(se2 > 0)) {
+	// pooled sample variance
+	let ss1 = 0
+	for (const v of a) {
+		const d = v - mean1
+		ss1 += d * d
+	}
+	let ss2 = 0
+	for (const v of b) {
+		const d = v - mean2
+		ss2 += d * d
+	}
+	const dfResidual = n1 + n2 - 2
+	const pooledVar = (ss1 + ss2) / dfResidual
+
+	// posterior (moderated) variance: shrink toward prior
+	const { d0, s0sq } = prior
+	const sTildeSq = (d0 * s0sq + dfResidual * pooledVar) / (d0 + dfResidual)
+
+	const se = Math.sqrt(sTildeSq * (1 / n1 + 1 / n2))
+	if (!(se > 0)) {
 		if (mean1 === mean2) return 1
 		return 1e-300
 	}
 
-	const t = (mean1 - mean2) / Math.sqrt(se2)
-	const df = (se2 * se2) / ((var1 / n1) ** 2 / (n1 - 1) + (var2 / n2) ** 2 / (n2 - 1))
+	const t = (mean1 - mean2) / se
+	const df = d0 + dfResidual
 	if (!Number.isFinite(df) || df < 0.1) return null
 
 	const p = 2 * tCdfTail(Math.abs(t), df)
 	if (!Number.isFinite(p)) return null
 	return Math.max(1e-300, Math.min(1, p))
-}
-
-function sampleVariance(lst, mean) {
-	if (lst.length < 2) return NaN
-	let sumsq = 0
-	for (const v of lst) {
-		const d = v - mean
-		sumsq += d * d
-	}
-	return sumsq / (lst.length - 1)
 }
 
 function tCdfTail(t, df) {
@@ -251,6 +258,8 @@ export async function validate_query_proteome(ds) {
 				if (!cohort.controlFilter)
 					throw `Missing controlFilter in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
 				if (!cohort.caseFilter) throw `Missing caseFilter in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
+				if (!cohort.prior?.d0 || !cohort.prior?.s0sq)
+					throw `Missing prior.d0 and prior.s0sq in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
 			}
 		} else {
 			throw `Invalid assay structure for "${assayName}". Must have .cohorts`
