@@ -37,7 +37,11 @@ class ProfileRadar2 extends profilePlot {
 	constructor(opts) {
 		super(opts, 'profileRadar2')
 		this.radius = 200
-		this.lineGenerator = d3.line()
+		// `.defined()` lets per-module series contain `null` for modules whose score the
+		// server omitted (no eligible data). A missing vertex becomes a gap in the radar
+		// polygon instead of an NaN-poisoned `d` attribute. drawPolygon() always passes
+		// fully-populated arrays, so it is unaffected.
+		this.lineGenerator = d3.line().defined((d: any) => d !== null)
 		this.arcGenerator = d3.arc().innerRadius(0)
 	}
 
@@ -131,18 +135,24 @@ class ProfileRadar2 extends profilePlot {
 		for (let i = 0; i <= 10; i++) this.drawPolygon(i * 10)
 
 		// Populate per-module arc slices + compute percentages + build rows table.
+		// data / data2 may contain `null` for modules the server omitted (no eligible data).
+		// `.defined()` on the lineGenerator turns those into polygon gaps instead of NaN.
 		const rows: any[] = []
-		const data: number[][] = [] // term1 vertices
-		const data2: number[][] = [] // term2 vertices
+		const data: (number[] | null)[] = [] // term1 vertices
+		const data2: (number[] | null)[] = [] // term2 vertices
 		const angle = this.angle!
 		let i = 0
 		for (const { module, term1, term2 } of config.terms) {
 			const iangle = i * angle - Math.PI / 2
-			const percentage1 = this.getPercentage(term1)
-			const percentage2 = this.getPercentage(term2)
+			const raw1 = this.getPercentage(term1)
+			const raw2 = this.getPercentage(term2)
+			// Treat undefined/null/NaN as missing. A real zero score remains a valid data point.
+			const p1: number | null = Number.isFinite(raw1) ? (raw1 as number) : null
+			const p2: number | null = Number.isFinite(raw2) ? (raw2 as number) : null
+
 			this.radarG
 				.append('path')
-				.datum({ module, percentage1, percentage2 })
+				.datum({ module, percentage1: p1, percentage2: p2 })
 				.attr('fill', 'transparent')
 				.attr(
 					'd',
@@ -154,14 +164,24 @@ class ProfileRadar2 extends profilePlot {
 				)
 				.on('click', event => this.onMouseOver(event))
 
-			this.addDataPoint('term2', percentage2, iangle, data2)
-			this.addDataPoint('term1', percentage1, iangle, data)
+			if (p2 !== null) this.addDataPoint('term2', p2, iangle, data2)
+			else data2.push(null)
+
+			if (p1 !== null) this.addDataPoint('term1', p1, iangle, data)
+			else data.push(null)
 
 			const color = term1.score.term.color
-			const diff = Math.abs(percentage1 - percentage2)
-			const diffRow: any = { value: diff }
-			if (diff >= 20) diffRow.color = percentage2 > percentage1 ? 'red' : 'blue'
-			rows.push([{ color, disabled: true }, { value: module }, { value: percentage1 }, { value: percentage2 }, diffRow])
+			const bothPresent = p1 !== null && p2 !== null
+			const diff = bothPresent ? Math.abs(p1 - p2) : null
+			const diffRow: any = diff !== null ? { value: diff } : { value: '—' }
+			if (diff !== null && diff >= 20) diffRow.color = (p2 as number) > (p1 as number) ? 'red' : 'blue'
+			rows.push([
+				{ color, disabled: true },
+				{ value: module },
+				{ value: p1 !== null ? p1 : '—' },
+				{ value: p2 !== null ? p2 : '—' },
+				diffRow
+			])
 
 			this.drawModuleLabel(module, iangle)
 			i++
@@ -170,9 +190,15 @@ class ProfileRadar2 extends profilePlot {
 		return { radarG, rows, data, data2 }
 	}
 
-	private drawLines(radarG: any, data: number[][], data2: number[][]) {
-		data.push(data[0])
-		data2.push(data2[0])
+	private drawLines(radarG: any, data: (number[] | null)[], data2: (number[] | null)[]) {
+		// Close each polygon back to its FIRST DEFINED vertex so the first module's gap (if any)
+		// doesn't leak into the closing segment.
+		const closePolygon = (arr: (number[] | null)[]) => {
+			const firstDefined = arr.find(v => v !== null)
+			if (firstDefined) arr.push(firstDefined)
+		}
+		closePolygon(data)
+		closePolygon(data2)
 		const color1 = 'blue'
 		const color2 = 'gray'
 
@@ -183,14 +209,14 @@ class ProfileRadar2 extends profilePlot {
 			.attr('fill', 'none')
 			.style('stroke-dasharray', '5, 5')
 			.attr('stroke-width', '2px')
-			.attr('d', this.lineGenerator(data2))
+			.attr('d', this.lineGenerator(data2 as any))
 		radarG
 			.append('g')
 			.append('path')
 			.style('stroke', color1)
 			.attr('fill', 'none')
 			.attr('stroke-width', '2px')
-			.attr('d', this.lineGenerator(data))
+			.attr('d', this.lineGenerator(data as any))
 	}
 
 	private drawPercentLabels(radarG: any) {
@@ -257,7 +283,7 @@ class ProfileRadar2 extends profilePlot {
 		if (leftSide) textElem.attr('text-anchor', 'end')
 	}
 
-	private addDataPoint(field: 'term1' | 'term2', percentage: number, iangle: number, data: number[][]) {
+	private addDataPoint(field: 'term1' | 'term2', percentage: number, iangle: number, data: (number[] | null)[]) {
 		const iradius = (percentage / 100) * this.radius
 		const x = iradius * Math.cos(iangle)
 		const y = iradius * Math.sin(iangle)
@@ -326,10 +352,10 @@ class ProfileRadar2 extends profilePlot {
 			const table = menu.d.append('table')
 			let tr = table.append('tr')
 			tr.append('td').text(label1)
-			tr.append('td').text(d.percentage1)
+			tr.append('td').text(d.percentage1 ?? '—')
 			tr = table.append('tr')
 			tr.append('td').text(label2)
-			tr.append('td').text(d.percentage2)
+			tr.append('td').text(d.percentage2 ?? '—')
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
 	}

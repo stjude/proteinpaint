@@ -424,24 +424,29 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 							facilityTW: this.config.facilityTW
 						})
 					}
-					const facilitySites = this.sampleData.sites
-					const facilitySite = this.settings.facilitySite
-						? facilitySites.find(s => s.value == this.settings.facilitySite)
-						: facilitySites[0]
-					if (!facilitySite)
-						//probably a session recovery
-						throw new Error(`Access to ${this.settings.facilitySite} facility not allowed`)
-					facilitySite.selected = true //mark selected facility site
+					// Skip the facility-site dropdown entirely when no sampleData is available
+					// (e.g. profileRadarFacility2 in public role, or when the current filter
+					// excludes all sites). This turns a would-be TypeError into a graceful no-op.
+					if (this.sampleData?.sites?.length) {
+						const facilitySites = this.sampleData.sites
+						const facilitySite = this.settings.facilitySite
+							? facilitySites.find(s => s.value == this.settings.facilitySite)
+							: facilitySites[0]
+						if (!facilitySite)
+							//probably a session recovery
+							throw new Error(`Access to ${this.settings.facilitySite} facility not allowed`)
+						facilitySite.selected = true //mark selected facility site
 
-					inputs.unshift({
-						label: 'Facility site',
-						type: 'dropdown',
-						chartType,
-						options: facilitySites,
-						callback: value => {
-							this.setFacilitySite(value)
-						}
-					})
+						inputs.unshift({
+							label: 'Facility site',
+							type: 'dropdown',
+							chartType,
+							options: facilitySites,
+							callback: value => {
+								this.setFacilitySite(value)
+							}
+						})
+					}
 				}
 			}
 
