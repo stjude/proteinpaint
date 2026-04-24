@@ -414,26 +414,19 @@ export function combineSamplesById(inlst, samples, ssmid) {
 
 async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
 	if (!twLst) return
-	
-	// Build terms array for getData
-	const terms = twLst.map(tw => ({
-		$id: tw.term.id,
-		term: tw.term,
-		q: tw.q || {}
-	}))
-	
-	// Get data for all terms at once
-	const data = await getData({ terms }, ds)
+
+	// Get data for all terms at once. fix is needed to handle sample hierarchy but inefficient as it pulls data for all samples.
+	const data = await getData({ terms: twLst }, ds)
 	if (data.error) throw data.error
-	
+
 	// For every term, append term values to each sample
 	for (const s of samples.values()) {
 		const sampleData = data.samples?.[s.sample_id]
 		if (sampleData) {
 			for (const tw of twLst) {
-				const v = sampleData[tw.term.id]
+				const v = sampleData[tw.$id]
 				if (v?.value !== undefined) {
-					s[tw.term.id] = v.value
+					s[tw.term.id] = v.value // only works for dictionary terms
 				}
 			}
 		}
