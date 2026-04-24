@@ -101,7 +101,9 @@ function getCohortStats(allS2v, controlSampleIds, prior: { d0: number; s0sq: num
 		controlMean !== 0
 			? testedMean / controlMean
 			: null
-	if (!prior?.d0 || !prior?.s0sq) throw 'prior with d0 and s0sq is required for moderated t-test'
+	if (!Number.isFinite(prior?.d0) || prior.d0 <= 0 || !Number.isFinite(prior?.s0sq) || prior.s0sq <= 0) {
+		throw 'prior with finite positive d0 and s0sq is required for moderated t-test'
+	}
 	const pValue = getModeratedPValue(testedValues, controlValues, prior)
 	return {
 		foldChange,
