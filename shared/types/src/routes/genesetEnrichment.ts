@@ -33,8 +33,6 @@ export type GenesetEnrichmentRequest = {
 	geneSetGroup: string
 	/** Gene set name whose enrichment score is to be profiled */
 	geneset_name?: string
-	/** Pickle file to be queried for generating gsea image of a particular geneset */
-	pickle_file?: string
 	/** Number of permutations to be carried out for GSEA analysis.
 	 * Only read by the blitzgsea path; cerno and fetchDE requests omit it. */
 	num_permutations?: number
@@ -82,8 +80,6 @@ type cerno_geneset_attributes = {
 type blitzgsea_json = {
 	/** array of pathway_attributes */
 	data: blitzgsea_map[]
-	/** file name of pickle file containing the stored gsea result in cache directory */
-	pickle_file: string
 }
 
 // Key value pair of geneset name and cerno geneset attributes

@@ -40,9 +40,9 @@ tape('defaults', function (test) {
 					Object.fromEntries(m.subdirs.entries()),
 					{
 						gsea: {
-							maxAge: 7200000,
+							maxAge: 5184000000,
 							maxSize: 5000000000,
-							skipMs: 0,
+							skipMs: 43200000,
 							fileExtensions: new Set(['.pkl']),
 							absPath: `${m.cachedir}/gsea`,
 							skipUntil: 0
@@ -98,8 +98,10 @@ tape('defaults', function (test) {
 					test.deepEqual(
 						results,
 						{
-							gsea: { deletedCount: 0, totalCount: 0 }
-							// massSession|Trash has skipMs >= 30 days, so only gsea subdir will be checked in 2nd iteration
+							// All subdirs now have skipMs >= halfDay, so the 2nd
+							// iteration (fired ~100ms after the first) has no
+							// subdirs eligible for checking. Post-check still
+							// fires but with an empty results map.
 						},
 						`should detect no cache files to delete`
 					)

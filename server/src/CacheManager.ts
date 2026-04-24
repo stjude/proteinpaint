@@ -74,6 +74,8 @@ const defaultOpts = {
 		// TODO: What is generating .pkl files?
 		gsea: {
 			...subdirOptsDefaults,
+			maxAge: day * 60,
+			skipMs: halfDay,
 			fileExtensions: new Set(['.pkl'])
 		},
 		massSession: {
