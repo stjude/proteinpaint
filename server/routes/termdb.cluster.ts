@@ -22,11 +22,12 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData } from '#src/termdb.matrix.js'
 import {
-	TermTypes,
+	GENE_EXPRESSION,
+	METABOLITE_INTENSITY,
+	NUMERIC_DICTIONARY_TERM,
 	termType2label,
 	ISOFORM_EXPRESSION,
-	PROTEOME_ABUNDANCE,
-	NUMERIC_DICTIONARY_TERM
+	PROTEOME_ABUNDANCE
 } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
 
@@ -56,14 +57,7 @@ function init({ genomes }) {
 			// TODO: generalize to any dataset
 			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (
-				[
-					TermTypes.GENE_EXPRESSION,
-					ISOFORM_EXPRESSION,
-					TermTypes.METABOLITE_INTENSITY,
-					NUMERIC_DICTIONARY_TERM
-				].includes(q.dataType)
-			) {
+			if ([GENE_EXPRESSION, ISOFORM_EXPRESSION, METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM].includes(q.dataType)) {
 				if (!ds.queries?.[q.dataType] && q.dataType !== NUMERIC_DICTIONARY_TERM)
 					throw `no ${q.dataType} data on this dataset`
 				if (!q.terms) throw `missing gene list`
@@ -75,7 +69,7 @@ function init({ genomes }) {
 				result = (await getResult(q, ds)) as TermdbClusterResponse
 			} else if (PROTEOME_ABUNDANCE == q.dataType) {
 				const proteomeQuery = ds.queries?.proteome
-				if (!proteomeQuery?.get) throw `no ${TermTypes.PROTEOME_ABUNDANCE} data getter on this dataset`
+				if (!proteomeQuery?.get) throw `no ${PROTEOME_ABUNDANCE} data getter on this dataset`
 				if (!q.terms) throw `missing gene list`
 				if (!Array.isArray(q.terms)) throw `gene list is not an array`
 				// TODO: there should be a fix on the client-side to handle this error more gracefully,
@@ -100,7 +94,7 @@ function init({ genomes }) {
 async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
-	if (q.dataType == TermTypes.GENE_EXPRESSION) {
+	if (q.dataType == GENE_EXPRESSION) {
 		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
 		_q = JSON.parse(JSON.stringify(q))
 		_q.forClusteringAnalysis = true
@@ -111,7 +105,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 
 	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
-	} else if (q.dataType == TermTypes.WHOLE_PROTEOME_ABUNDANCE) {
+	} else if (q.dataType == PROTEOME_ABUNDANCE) {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get(_q))
 	} else {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q, ds)) // 2nd ds param needed for ds-supplied getter
@@ -143,7 +137,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	const removedHierClusterTerms: { text: string; lst: string[] }[] = [] // allow to collect multiple sets of skipped items, each based on different reasons
 	if (noValueTerms.length) {
 		removedHierClusterTerms.push({
-			text: `Skipped ${q.dataType == TermTypes.GENE_EXPRESSION ? 'genes' : 'items'} with no data`,
+			text: `Skipped ${q.dataType == GENE_EXPRESSION ? 'genes' : 'items'} with no data`,
 			lst: noValueTerms
 		})
 	}
@@ -156,7 +150,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	if (term2sample2value.size == 1) {
 		// get data for only 1 gene; still return data, may create violin plot later
 		const g = Array.from(term2sample2value.keys())[0]
-		return { term: { gene: g, type: TermTypes.GENE_EXPRESSION }, data: term2sample2value.get(g) } as SingletermResponse
+		return { term: { gene: g, type: GENE_EXPRESSION }, data: term2sample2value.get(g) } as SingletermResponse
 	}
 
 	// have data for multiple genes, run clustering

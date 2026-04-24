@@ -334,7 +334,7 @@ export function setClusteringBtn(holder, callback) {
 			: dataType == 'proteomeAbundance'
 			? 'Proteins'
 			: dataType == 'numericDictTerm'
-			? 'Terms'
+			? 'Variables'
 			: 'Rows'
 	const cluteringButtonLabel =
 		dataType == 'geneExpression'
