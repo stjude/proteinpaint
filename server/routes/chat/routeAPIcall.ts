@@ -2,7 +2,7 @@ import type { LlmConfig } from '#types'
 import { ezFetch } from '#shared'
 
 export async function route_to_appropriate_llm_provider(
-	template: string,
+	prompt: string,
 	llm: LlmConfig,
 	modelOverride?: string
 ): Promise<string> {
@@ -10,13 +10,13 @@ export async function route_to_appropriate_llm_provider(
 	let response: string
 	if (llm.provider == 'SJ') {
 		// Local SJ server
-		response = await call_sj_llm(template, model, llm.api)
+		response = await call_sj_llm(prompt, model, llm.api)
 	} else if (llm.provider == 'ollama') {
 		// Ollama server
-		response = await call_ollama_llm(template, model, llm.api)
+		response = await call_ollama_llm(prompt, model, llm.api)
 	} else if ((llm.provider as string) == 'azure') {
 		// Azure server
-		response = await call_azure_llm(template, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
+		response = await call_azure_llm(prompt, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
 	} else {
 		throw 'Unknown LLM provider'
 	}
@@ -67,6 +67,12 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 					max_new_tokens: max_new_tokens,
 					temperature: temperature,
 					top_p: top_p
+					// return_scores: true
+					// return_logprobs: true
+
+					// output_scores: true,
+					// return_dict_in_generate: true
+					//logprobs: 5
 				}
 			}
 		]
@@ -200,6 +206,7 @@ async function call_azure_llm(
 		if (content && content.length > 0) return content
 		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
 	} catch (error) {
+		console.log(error)
 		throw 'Azure API request failed:' + error
 	}
 }

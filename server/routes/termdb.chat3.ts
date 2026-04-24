@@ -1,4 +1,5 @@
 import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
+// import { ambiguousPoints } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -12,6 +13,7 @@ import { getDsAllowedTermTypes } from './termdb.config.ts'
 import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import { resolveToTwTvs } from './chat/entity2twTvs.ts'
+import { answerDataQueries } from './chat/dataQueries.ts'
 import path from 'path'
 import fs from 'fs'
 import type { Phrase2EntityResult } from './chat/scaffoldTypes.ts'
@@ -124,7 +126,7 @@ function init({ genomes }) {
 }
 
 export async function run_chat_pipeline(
-	user_prompt: string,
+	userPrompt: string,
 	llm: LlmConfig,
 	ds: any,
 	genedb: string,
@@ -142,14 +144,14 @@ export async function run_chat_pipeline(
 
 	// Plot vs Not-plot classification
 	const time1 = new Date().valueOf()
-	const class_response: QueryClassification = await classifyQuery(user_prompt, llm)
+	const class_response: QueryClassification = await classifyQuery(userPrompt, llm)
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 
 	let ai_output_json: any
 	if (class_response.type === 'notplot') {
 		// If Not-plot: Resource or None classification
 		const time2 = new Date().valueOf()
-		const notPlotResult = await classifyNotPlot(user_prompt, llm, agentFiles, aiFilesDir)
+		const notPlotResult = await classifyNotPlot(userPrompt, llm, agentFiles, aiFilesDir) //, _allowedTermTypes)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
 
 		if (notPlotResult.type === 'html') {
@@ -160,9 +162,14 @@ export async function run_chat_pipeline(
 				text: 'Your query does not appear to be related to the available data visualizations. Please try rephrasing your question.'
 			}
 		}
+	} else if (class_response.type === 'binaryQuery') {
+		const answer = await answerDataQueries(userPrompt, llm, _allowedTermTypes)
+		if (!answer) throw "Couldn't decide if this is data related query!"
+		mayLog('Data Binary Query: ', answer)
+		ai_output_json = answer
 	} else if (class_response.type === 'plot') {
 		let time = new Date().valueOf()
-		const plotType = await classifyPlotType(user_prompt, llm)
+		const plotType = await classifyPlotType(userPrompt, llm)
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
 
 		// Check if the classified plot type is supported by this dataset
@@ -178,8 +185,9 @@ export async function run_chat_pipeline(
 
 		// If supported plot type, figure out the scaffold according to the plot type
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
+		mayLog('#################################################')
 		time = new Date().valueOf()
-		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
+		const scaffoldResult = await inferScaffold(userPrompt, plotType, llm)
 		mayLog('ScaffoldResult: ', scaffoldResult)
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
@@ -187,7 +195,9 @@ export async function run_chat_pipeline(
 			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
 		const subplotType = scaffoldResult.plotType === 'summary' ? scaffoldResult.chartType : undefined
 
+		mayLog('#################################################')
 		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")
+		mayLog('#################################################')
 		const genes_list = await parse_geneset_db(genedb)
 		time = new Date().valueOf()
 		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds, genome)
@@ -197,7 +207,9 @@ export async function run_chat_pipeline(
 		}
 		mayLog(phrase2entityResult)
 
+		mayLog('#################################################')
 		mayLog('####### Third phase: From Entities infer Term Objects #######')
+		mayLog('#################################################')
 		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 		time = new Date().valueOf()
 		const termObj = await inferTermObjFromEntity(
@@ -210,7 +222,9 @@ export async function run_chat_pipeline(
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
 		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))
 
+		mayLog('#################################################')
 		mayLog('####### Fourth phase: From Term Objects to TwTvs Objects #######')
+		mayLog('#################################################')
 		time = new Date().valueOf()
 		const twTvsObj = await resolveToTwTvs(termObj, plotType, llm, dataset_db)
 		mayLog('Time taken to resolve to TwTvs object from termObj:', formatElapsedTime(Date.now() - time))
@@ -219,7 +233,9 @@ export async function run_chat_pipeline(
 		}
 		mayLog('twTvsObj:', twTvsObj)
 
+		mayLog('#################################################')
 		mayLog('####### Fifth/Final phase: From TwTvs Objects to Plot States #######')
+		mayLog('#################################################')
 		time = new Date().valueOf()
 		ai_output_json = resolveToPlotState(twTvsObj, plotType, subplotType)
 		mayLog('Time taken to resolve to plot state:', formatElapsedTime(Date.now() - time))
