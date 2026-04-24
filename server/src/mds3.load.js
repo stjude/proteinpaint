@@ -312,7 +312,7 @@ export async function load_driver(q, ds) {
 				result.skewer.push(...mlst)
 			}
 
-			if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
+			if (ds.queries.svfusion && !q.hardcodeCnvOnly && !q.snvIndelOnly) {
 				const d = await query_svfusion(q, ds)
 				if (d) result.skewer.push(...d)
 			}
@@ -322,6 +322,8 @@ export async function load_driver(q, ds) {
 					// cnv is hidden, do not load
 				} else if (ds.queries.cnv.requiresHardcodeCnvOnlyFlag && !q.hardcodeCnvOnly) {
 					// the required flag is missing. do not load
+				} else if (q.snvIndelOnly) {
+					// only show snvindel, do not load
 				} else {
 					result.cnv = await ds.queries.cnv.get(q)
 					if (!Array.isArray(result.cnv?.cnvs)) throw 'result.cnv.cnvs[] not array'

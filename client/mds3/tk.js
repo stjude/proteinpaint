@@ -82,7 +82,8 @@ function getParameter(tk, block) {
 		forTrack: 1,
 		// may not pass skewerRim if it is not in use (turn off)
 		skewerRim: tk.mds.queries?.snvindel?.skewerRim, // instructions for counting rim counts per variant
-		hardcodeCnvOnly: tk.hardcodeCnvOnly
+		hardcodeCnvOnly: tk.hardcodeCnvOnly,
+		snvIndelOnly: tk.snvIndelOnly // if true, will only query for snvindel data
 	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }

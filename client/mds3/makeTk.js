@@ -364,6 +364,7 @@ function mayInitSkewer(tk) {
 }
 
 export function mayInitCnv(tk) {
+	if (tk.snvIndelOnly) return // only show snvindel
 	let cfg // cnv config obj
 	if (tk.mds.termdbConfig?.queries?.cnv) {
 		// cnv present

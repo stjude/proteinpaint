@@ -145,7 +145,8 @@ export async function init(arg, holder, genomes) {
 				type: 'mds3',
 				dslabel: useDslabel,
 				allow2selectSamples: arg.allow2selectSamples,
-				filter0: arg.filter0
+				filter0: arg.filter0,
+				snvIndelOnly: arg.geneSearch4GDCmds3.snvIndelOnly
 			}
 			pa.tklst = [tk]
 			if (arg.geneSearch4GDCmds3.hardcodeCnvOnly) {
