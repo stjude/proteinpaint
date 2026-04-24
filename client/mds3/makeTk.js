@@ -3,7 +3,7 @@ import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, getColors } from '#shared/common.js'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, mclassfusionrna, mclasssv, getColors } from '#shared/common.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
@@ -453,6 +453,10 @@ function init_mclass(tk) {
 	if (tk.mds.hiddenmclass) {
 		// port over default hidden mclass
 		for (const c of tk.mds.hiddenmclass) tk.legend.mclass.hiddenvalues.add(c)
+	}
+	if (tk.snvIndelOnly) {
+		// hide non-snvindel classes
+		for (const c of [dtcnv, mclassfusionrna, mclasssv]) tk.legend.mclass.hiddenvalues.add(c)
 	}
 }
 

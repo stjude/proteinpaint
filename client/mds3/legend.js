@@ -1,17 +1,6 @@
 import { legend_newrow } from '#src/block.legend'
 import { Menu, ColorScale, icons, shapes, renderCnvConfig } from '#dom'
-import {
-	mds3tkMclass,
-	mclass,
-	dt2label,
-	dtcnv,
-	dtloh,
-	dtitd,
-	dtsv,
-	dtfusionrna,
-	mclassitd,
-	bplen
-} from '#shared/common.js'
+import { mds3tkMclass, mclass, dt2label, dtcnv, mclassfusionrna, mclasssv, bplen } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
 import { rgb } from 'd3-color'
@@ -641,6 +630,12 @@ function update_mclass(tk) {
 
 	// hidden ones
 	for (const c of hiddenlst) {
+		if (tk.snvIndelOnly) {
+			// only showing snvindel data
+			// do not display non-snvindel classes in legend
+			if ([dtcnv, mclassfusionrna, mclasssv].includes(c.k)) continue
+		}
+
 		let loading = false
 
 		tk.legend.mclass.holder
@@ -908,6 +903,12 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
+	if (tk.snvIndelOnly) {
+		// only showing snvindel data
+		// do not show cnv legend
+		tk.legend.cnv.row.selectAll('*').remove()
+		return
+	}
 
 	// tk is equipped with cnv. determine if cnv data is actually shown
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
