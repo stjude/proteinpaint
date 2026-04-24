@@ -413,7 +413,7 @@ export function combineSamplesById(inlst, samples, ssmid) {
 }
 
 async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
-	if (!twLst) return
+	if (!twLst || twLst.length == 0) return
 
 	// Get data for all terms at once. fix is needed to handle sample hierarchy but inefficient as it pulls data for all samples.
 	const data = await getData({ terms: twLst }, ds)
