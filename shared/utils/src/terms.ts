@@ -81,6 +81,8 @@ for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType
 }
 
+export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
+
 export const TermTypes2Dt = {
 	[GENE_EXPRESSION]: dtgeneexpression,
 	[SSGSEA]: dtssgsea,
@@ -284,6 +286,7 @@ const typeMap: { [key: string]: string } = {
 	snplocus: 'SNP Locus',
 	snp: 'SNP',
 	snplst: 'SNP List',
+	numericDictTerm: 'Numeric Dictionary Term',
 	termCollection: 'Term Collection'
 }
 

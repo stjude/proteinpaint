@@ -6,6 +6,7 @@ import type { GeneExpressionTW } from '../terms/geneExpression.ts'
 import type { IsoformExpressionTW } from '../terms/isoformExpression.ts'
 import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
 import type { ProteomeAbundanceTW, ProteomeDetails } from '../terms/proteomeAbundance.ts'
+import type { NumericTW } from '../terms/numeric.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -69,10 +70,20 @@ export type TermdbClusterRequestProteomeAbundance = TermdbClusterRequestBase & {
 	proteomeDetails: ProteomeDetails
 }
 
+export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
+	/** Data type */
+	dataType: 'numericDictTerm'
+	/** List of terms */
+	terms: NumericTW[]
+	/** perform z-score transformation on values */
+	zScoreTransformation?: string
+}
+
 export type TermdbClusterRequest =
 	| TermdbClusterRequestGeneExpression
 	| TermdbClusterRequestIsoformExpression
 	| TermdbClusterRequestMetabolite
+	| TermdbClusterRequestNumericDictTerm
 	| TermdbClusterRequestProteomeAbundance
 
 export type Hclust = {
