@@ -275,6 +275,7 @@ async function get_numericDictTermCluster(q, req, res, ds, genome) {
 		res.send(plot.numericDictTermClusterConfig)
 		return
 	}
+	throw 'missing getPlotDataByName for numericDictTermCluster request'
 }
 
 async function get_ProfileFacilities(q, req, res, ds, tdb) {
