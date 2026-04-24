@@ -4,6 +4,14 @@ import path from 'path'
 import type { LlmConfig } from '#types'
 import { route_to_appropriate_embedding_provider } from './routeAPIcall.ts'
 
+// Return type
+interface TermObj {
+	id: string
+	type: string
+	name: string
+	score: number
+}
+
 // Types
 interface DescriptionEntry {
 	label: string
@@ -141,12 +149,7 @@ export async function loadOrBuildEmbeddings(dbPath: string, llm: LlmConfig): Pro
 }
 
 // Matches query against the DB embeddings
-async function querySimilar(
-	query: string,
-	store: TermEmbedding[],
-	llm: LlmConfig,
-	topK = 5
-): Promise<{ id: string; type: string; name: string; sentence: string; score: number }[]> {
+async function querySimilar(query: string, store: TermEmbedding[], llm: LlmConfig, topK = 5): Promise<TermObj[]> {
 	const [queryEmb] = await route_to_appropriate_embedding_provider([query], llm)
 
 	const scored: { id: string; type: string; name: string; sentence: string; score: number }[] = []
@@ -169,9 +172,10 @@ async function querySimilar(
 export async function findBestMatch(
 	query: string,
 	store: TermEmbedding[],
-	llm: LlmConfig
-): Promise<{ id: string; type: string; name: string; score: number }> {
-	const results = await querySimilar(query, store, llm, 1)
+	llm: LlmConfig,
+	topK: number = 1
+): Promise<TermObj | TermObj[]> {
+	const results = await querySimilar(query, store, llm, topK)
 	if (results.length === 0) throw new Error('No matches found')
-	return { id: results[0].id, type: results[0].type, name: results[0].name, score: results[0].score }
+	return results
 }
