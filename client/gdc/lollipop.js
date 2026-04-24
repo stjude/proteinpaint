@@ -154,6 +154,9 @@ export async function init(arg, holder, genomes) {
 				delete pa.gmmode
 				first_genetrack_tolist(pa.genome, pa.tklst)
 			}
+			if (arg.geneSearch4GDCmds3.snvIndelOnly) {
+				tk.snvIndelOnly = 1
+			}
 		}
 
 		if (userSelection) {
