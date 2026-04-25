@@ -1,7 +1,7 @@
 import jsonwebtoken from 'jsonwebtoken'
 import { getApplicableSecret } from './auth.demoToken.ts'
-import { type AuthApi } from '../auth.ts'
-import { AuthInner } from './AuthInner.ts'
+import { type AuthInterface } from '../auth.ts'
+import { Auth } from './Auth.ts'
 import { setAuthMiddleware } from './AuthMiddleWare.ts'
 import { setAuthRoutes } from './AuthRoutes.ts'
 import { sleep } from '../utils.js'
@@ -14,38 +14,43 @@ const { isMatch } = mm
 // 	jwt: '/jwt-status'
 // }
 
-export const AuthApiProtected: AuthApi = {
-	credEmbedders: [],
+// An AuthApi instance wraps the private Auth instance
+export class AuthApi implements AuthInterface {
+	#auth: Auth
+	credEmbedders: string[] = []
+
+	constructor(creds, app, genome, serverconfig) {
+		this.#auth = new Auth(creds, app, genome, serverconfig)
+	}
 
 	async maySetAuthRoutes(app, genomes, basepath = '', serverconfig) {
-		AuthInner.genomes = genomes
-		setAuthMiddleware(app, genomes, AuthApiProtected, AuthInner)
+		setAuthMiddleware(app, genomes, this, this.#auth)
 		/*** call app.use() before any await lines ***/
 
 		// app.use() from other route setters must be called before app.get|post|all
 		// so delay setting these optional routes (this is done in server/src/test/routes/gdc.js also)
 		await sleep(0)
-		setAuthRoutes(app, AuthInner, basepath, serverconfig)
-	},
+		setAuthRoutes(app, this.#auth, basepath, serverconfig)
+	}
 
-	canDisplaySampleIds: (req, ds) => {
+	canDisplaySampleIds(req, ds) {
 		if (!ds.cohort.termdb.displaySampleIds) return false
-		return AuthApiProtected.isUserLoggedIn(req, ds, AuthInner.protectedRoutes.samples)
-	},
+		return this.isUserLoggedIn(req, ds, this.#auth.protectedRoutes.samples)
+	}
 
 	/*
 		will return a list of all dslabels that require credentials
 	*/
 	getDsAuth(req) {
 		const activeDslabels: string[] = []
-		for (const g of Object.values(AuthInner.genomes)) {
-			for (const dslabel of Object.keys(g.datasets || {})) {
+		for (const g of Object.values(this.#auth.genomes)) {
+			for (const dslabel of Object.keys((g as any).datasets || {})) {
 				activeDslabels.push(dslabel)
 			}
 		}
 		const dsAuth: any[] = []
 		const embedder = req.query.embedder || req.get('host')?.split(':')[0] // do not include port number
-		for (const [dslabelPattern, ds] of Object.entries(AuthInner.creds)) {
+		for (const [dslabelPattern, ds] of Object.entries(this.#auth.creds)) {
 			if (
 				dslabelPattern.startsWith('__') ||
 				dslabelPattern.startsWith('#') ||
@@ -57,15 +62,11 @@ export const AuthApiProtected: AuthApi = {
 					if (embedderHostPattern != '*' && !isMatch(embedder, embedderHostPattern)) continue
 					const cred: any = _cred
 					const query = Object.assign({}, req.query, { dslabel: dslabelPattern })
-					const id = AuthInner.getSessionId(
-						{ query, headers: req.headers, cookies: req.cookies },
-						cred,
-						AuthInner.sessions
-					)
-					const activeSession = AuthInner.sessions[dslabelPattern]?.[id]
+					const id = this.#auth.getSessionId({ query, headers: req.headers, cookies: req.cookies }, cred)
+					const activeSession = this.#auth.sessions[dslabelPattern]?.[id]
 					const sessionStart = activeSession?.time || 0
 					// support a dataset-specific override to maxSessionAge
-					const maxAge = cred.maxSessionAge || AuthInner.maxSessionAge
+					const maxAge = cred.maxSessionAge || this.#auth.maxSessionAge
 					const currTime = Date.now()
 					const insession =
 						// Previously, all requests to `/genomes` is assumed to originate from a "landing page"
@@ -94,7 +95,7 @@ export const AuthApiProtected: AuthApi = {
 		}
 
 		return dsAuth
-	},
+	}
 
 	/* return non sensitive user auth info to assist backend process e.g. getSupportChartTypes
 	forbiddenRoutes: 
@@ -112,7 +113,7 @@ export const AuthApiProtected: AuthApi = {
 		}
 
 		const forbiddenRoutes: string[] = []
-		const ds = AuthInner.creds[req.query.dslabel] || AuthInner.creds['*']
+		const ds = this.#auth.creds[req.query.dslabel] || this.#auth.creds['*']
 		let cred
 		if (!ds) {
 			// no checks for this ds, is open access
@@ -126,19 +127,19 @@ export const AuthApiProtected: AuthApi = {
 				}
 			}
 		}
-		const id = AuthInner.getSessionId(req, cred, AuthInner.sessions)
-		const activeSession = id && AuthInner.creds[req.query.dslabel]?.[id]
+		const id = this.#auth.getSessionId(req, cred)
+		const activeSession = id && this.#auth.sessions[req.query.dslabel]?.[id]
 		return { forbiddenRoutes, clientAuthResult: activeSession?.clientAuthResult || {} }
-	},
+	}
 
 	getRequiredCredForDsEmbedder(dslabel, embedder) {
 		const requiredCred: any[] = []
-		for (const dslabelPattern in AuthInner.creds) {
+		for (const dslabelPattern in this.#auth.creds) {
 			if (!isMatch(dslabel, dslabelPattern)) continue
-			for (const routePattern in AuthInner.creds[dslabelPattern]) {
-				for (const embedderHostPattern in AuthInner.creds[dslabelPattern][routePattern]) {
+			for (const routePattern in this.#auth.creds[dslabelPattern]) {
+				for (const embedderHostPattern in this.#auth.creds[dslabelPattern][routePattern]) {
 					if (!isMatch(embedder, embedderHostPattern)) continue
-					const cred = AuthInner.creds[dslabelPattern][routePattern][embedderHostPattern]
+					const cred = this.#auth.creds[dslabelPattern][routePattern][embedderHostPattern]
 					requiredCred.push({
 						route: routePattern,
 						type: cred.type,
@@ -148,22 +149,22 @@ export const AuthApiProtected: AuthApi = {
 			}
 		}
 		return requiredCred.length ? requiredCred : undefined
-	},
+	}
 
 	isUserLoggedIn(req, ds, protectedRoutes) {
-		const cred = AuthInner.getRequiredCred(req.query, req.path, protectedRoutes)
+		const cred = this.#auth.getRequiredCred(req.query, req.path, protectedRoutes)
 		if (!cred) return true
 		// NOTE: Basic (password) credentials are converted to session token upon log-in,
 		// so that a user does not have to login again for each runproteinpaint() call.
-		const id = AuthInner.getSessionId(req, cred, AuthInner.sessions)
-		const activeSession = AuthInner.sessions[ds.label]?.[id]
+		const id = this.#auth.getSessionId(req, cred)
+		const activeSession = this.#auth.sessions[ds.label]?.[id]
 		const sessionStart = activeSession?.time || 0
-		return Date.now() - sessionStart < AuthInner.maxSessionAge
-	},
+		return Date.now() - sessionStart < this.#auth.maxSessionAge
+	}
 
 	getPayloadFromHeaderAuth(req, route) {
 		if (!req.headers?.authorization) return {}
-		const cred = AuthInner.getRequiredCred(req.query, route)
+		const cred = this.#auth.getRequiredCred(req.query, route)
 		if (!cred) return {}
 		const [type, b64token] = req.headers.authorization.split(' ')
 		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
@@ -171,24 +172,24 @@ export const AuthApiProtected: AuthApi = {
 		const { secret } = getApplicableSecret(req.headers, cred, token)
 		const payload = jsonwebtoken.verify(token, secret)
 		return payload || {}
-	},
+	}
 
 	async getHealth() {
-		const { app, port } = AuthInner
+		const { app, port } = this.#auth
 		// may track different health for actual or mock apps during tests
-		if (AuthInner.authHealth.has(app)) return AuthInner.authHealth.get(app)
+		if (this.#auth.authHealth.has(app)) return this.#auth.authHealth.get(app)
 
 		const errors: any[] = []
-		const dslabelPatterns = Object.keys(AuthInner.creds)
+		const dslabelPatterns = Object.keys(this.#auth.creds)
 		if (!dslabelPatterns.length) return { errors }
 
 		for (const dslabelPattern of dslabelPatterns) {
 			if (dslabelPattern.startsWith('#')) continue
-			for (const routePattern in AuthInner.creds[dslabelPattern]) {
+			for (const routePattern in this.#auth.creds[dslabelPattern]) {
 				if (dslabelPattern.startsWith('#')) continue
-				for (const embedderHostPattern in AuthInner.creds[dslabelPattern][routePattern]) {
+				for (const embedderHostPattern in this.#auth.creds[dslabelPattern][routePattern]) {
 					if (dslabelPattern.startsWith('#')) continue
-					const cred = AuthInner.creds[dslabelPattern][routePattern][embedderHostPattern]
+					const cred = this.#auth.creds[dslabelPattern][routePattern][embedderHostPattern]
 					const keys = [dslabelPattern, routePattern, embedderHostPattern].join(' > ')
 					if (cred.processor) {
 						if (cred.processor.test) {
@@ -222,9 +223,9 @@ export const AuthApiProtected: AuthApi = {
 			}
 		}
 		const health = { errors }
-		AuthInner.authHealth.set(app, health)
+		this.#auth.authHealth.set(app, health)
 		return health
-	},
+	}
 
 	// q: req.query
 	// ds: dataset object
