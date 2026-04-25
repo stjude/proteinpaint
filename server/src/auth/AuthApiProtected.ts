@@ -17,24 +17,20 @@ const { isMatch } = mm
 export const AuthApiProtected: AuthApi = {
 	credEmbedders: [],
 
-	canDisplaySampleIds: (req, ds) => {
-		if (!ds.cohort.termdb.displaySampleIds) return false
-		return AuthApiProtected.isUserLoggedIn(req, ds, AuthInner.protectedRoutes.samples)
-	},
-
-	/* !!! app.use() must be called before route setters and await !!! */
-
-	// "gatekeeper" middleware that checks if a request requires
-	// credentials and if yes, if there is already a valid session
-	// for a ds label
 	async maySetAuthRoutes(app, genomes, basepath = '', serverconfig) {
-		setAuthMiddleware(app, genomes, AuthApiProtected, AuthInner, serverconfig)
+		AuthInner.genomes = genomes
+		setAuthMiddleware(app, genomes, AuthApiProtected, AuthInner)
 		/*** call app.use() before any await lines ***/
 
 		// app.use() from other route setters must be called before app.get|post|all
 		// so delay setting these optional routes (this is done in server/src/test/routes/gdc.js also)
 		await sleep(0)
 		setAuthRoutes(app, AuthInner, basepath, serverconfig)
+	},
+
+	canDisplaySampleIds: (req, ds) => {
+		if (!ds.cohort.termdb.displaySampleIds) return false
+		return AuthApiProtected.isUserLoggedIn(req, ds, AuthInner.protectedRoutes.samples)
 	},
 
 	/*

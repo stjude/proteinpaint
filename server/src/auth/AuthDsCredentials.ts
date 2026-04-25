@@ -77,9 +77,12 @@ export async function validateDsCredentials(creds) {
 	// to be used by app middleware to set CORS response headers
 	const credEmbedders: Set<string> = new Set()
 
-	for (const dslabel in creds) {
-		if (dslabel[0] == '#') continue
-		const ds = creds[dslabel]
+	for (const [dslabel, _ds] of Object.entries(creds)) {
+		if (dslabel[0] == '#') {
+			delete creds[dslabel]
+			continue
+		}
+		const ds = _ds as any
 		if (ds['*']) {
 			ds['/**'] = ds['*']
 			delete ds['*']

@@ -23,20 +23,21 @@ export type AuthApi = {
 export let authApi
 
 // these may be overriden within maySetAuthRoutes()
-export async function getAuthApi(app, genomes, _serverconfig = null) {
+export async function getAuthApi(app, _serverconfig = null) {
 	AuthInner.app = app
-	AuthInner.genomes = genomes
 	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
+
+	if (serverconfig.features?.sessionTracking) AuthInner.sessionTracking = serverconfig.features?.sessionTracking
 	if (serverconfig.maxSessionAge) AuthInner.maxSessionAge = serverconfig.maxSessionAge
 	// the required security checks for each applicable dslabel, to be processed from serverconfig.dsCredentials
 	AuthInner.creds = serverconfig.dsCredentials || {}
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
 
-	const credEmbedders = await validateDsCredentials(AuthInner.creds, serverconfig)
+	const credEmbedders = await validateDsCredentials(AuthInner.creds)
 	// no need to set up auth middleware and routes if there are no dsCredential entries
 	authApi = credEmbedders.size ? AuthApiProtected : AuthApiOpen
-	console.log(44, credEmbedders, authApi === AuthApiProtected)
+	//console.log(44, credEmbedders, authApi === AuthApiProtected)
 	authApi.credEmbedders.push(...credEmbedders)
 	if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) {
 		Object.freeze(authApi)
