@@ -14,6 +14,7 @@ export const AuthInner = {
 	maxSessionAge: 1000 * 3600 * 16,
 	authHealth: new Map(),
 	sessions: {} as any,
+	sessionTracking: '',
 
 	// TODO: should create a checker function for each route group that may be protected
 	protectedRoutes: {
