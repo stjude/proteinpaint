@@ -54,7 +54,7 @@ if (mode == 'dev') {
 		config.cachedir = path.join(__dirname, 'test/cache')
 		fs.writeFileSync(path.join(__dirname, './serverconfig.json'), JSON.stringify(config, null, '    '))
 	}
-	const specs = fs.globSync('./**/test/auth.unit.spec.*', { cwd: __dirname, exclude: ['node_modules/**'] })
+	const specs = fs.globSync('./**/test/*.unit.spec.*', { cwd: __dirname, exclude: ['node_modules/**'] })
 	const imports = [comment, ...specs.map(f => `import './${f}'`)]
 	console.log(imports.join('\n'))
 }

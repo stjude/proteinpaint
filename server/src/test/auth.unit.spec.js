@@ -24,8 +24,6 @@ const secrets = {
 	}
 }
 
-let authApi
-
 async function appInit(serverconfig = {}, genomes = {}) {
 	// mock the express router api
 	const app = {
@@ -55,10 +53,9 @@ async function appInit(serverconfig = {}, genomes = {}) {
 		}
 	}
 
-	authApi = await getAuthApi(app, serverconfig)
+	const authApi = await getAuthApi(app, genomes, serverconfig)
 	await authApi.maySetAuthRoutes(app, genomes, '', serverconfig)
-
-	return app
+	return { app, authApi }
 }
 
 function sleep(ms) {
@@ -75,7 +72,7 @@ tape('\n', function (test) {
 })
 
 tape(`initialization, empty credentials`, async test => {
-	const app = await appInit({ debugmode, cachedir })
+	const { app, authApi } = await appInit({ debugmode, cachedir })
 	const middlewares = Object.keys(app.middlewares)
 	const middlewareName = Object.values(app.middlewares)[0]?.name
 	test.deepEqual(middlewares, ['*'], 'should set a global middleware when there are no dsCredentials')
@@ -87,7 +84,8 @@ tape(`initialization, empty credentials`, async test => {
 	const routes = Object.keys(app.routes)
 	routes.sort()
 	test.deepEqual(routes, [], 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
-
+	// this is also checked statitically by typescript, but doesn't hurt to test
+	// that the expected runtime methods and props
 	test.deepEqual(
 		Object.keys(authApi).sort(),
 		[
@@ -157,7 +155,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			}
 		}
 		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
-		const app = await appInit(serverconfig)
+		const { app, authApi } = await appInit(serverconfig)
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(middlewares, ['*'], 'should set a global middleware when dsCredentials is not empty')
 		const routes = Object.keys(app.routes)
@@ -181,7 +179,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			}
 		}
 		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
-		const app = await appInit(serverconfig)
+		const { app, authApi } = await appInit(serverconfig)
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			middlewares,
@@ -210,10 +208,12 @@ tape(`initialization, non-empty credentials`, async test => {
 		}
 		const serverconfig = { debugmode, dsCredentials, cachedir }
 		const genomes = { hg38: { datasets: { testds: {} } } }
-		const app = await appInit(serverconfig, genomes)
-
+		const { app, authApi } = await appInit(serverconfig, genomes)
+		const inherited = Object.getOwnPropertyNames(Object.getPrototypeOf(authApi)).filter(name => name != 'constructor')
+		// this is also checked statitically by typescript, but doesn't hurt to test
+		// that the expected runtime methods and props
 		test.deepEqual(
-			Object.keys(authApi).sort(),
+			[...Object.keys(authApi), ...inherited].sort(),
 			[
 				'canDisplaySampleIds',
 				'credEmbedders',
@@ -290,7 +290,7 @@ tape('legacy reshape', async test => {
 		dsCredentials,
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	test.deepEqual(
 		JSON.parse(JSON.stringify(dsCredentials)),
@@ -356,7 +356,7 @@ tape(`auth methods`, async test => {
 		cachedir
 	}
 	const genomes = { hg38: { datasets: { ds100: {} } } }
-	const app = await appInit(serverconfig, genomes)
+	const { app, authApi } = await appInit(serverconfig, genomes)
 
 	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
@@ -435,7 +435,7 @@ tape(`a valid request`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	{
 		const req = {
@@ -482,7 +482,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -538,7 +538,7 @@ tape(`invalid embedder`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	{
 		const req = {
@@ -592,7 +592,7 @@ tape(`invalid dataset access`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	{
 		const req = {
@@ -646,7 +646,7 @@ tape(`invalid jwt`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	{
 		const req = {
@@ -758,7 +758,7 @@ tape(`session handling by the middleware`, async test => {
 		cachedir
 	}
 
-	const app = await appInit(serverconfig, {})
+	const { app, authApi } = await appInit(serverconfig, {})
 
 	{
 		const message = 'should call the next function on a non-protected route'
@@ -931,7 +931,7 @@ tape(`/dslogin`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	let cookie
 	/*** valid /dslogin request ***/
@@ -1101,7 +1101,7 @@ tape(`req.query.filter, __protected__`, async test => {
 		},
 		cachedir
 	}
-	const app = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	const tvslst = { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: {}, values: {} } }] }
 

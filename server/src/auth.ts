@@ -1,9 +1,8 @@
 import { validateDsCredentials } from './auth/AuthDsCredentials.ts'
 import { AuthApiOpen } from './auth/AuthApiOpen.ts'
-import { AuthApiProtected } from './auth/AuthApiProtected.ts'
-import { AuthInner } from './auth/AuthInner.ts'
+import { AuthApi } from './auth/AuthApi.ts'
 
-export type AuthApi = {
+export interface AuthInterface {
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: string[]
 	maySetAuthRoutes: (app, genomes, basepath: string, serverconfig: any) => void
@@ -19,24 +18,19 @@ export type AuthApi = {
 	mayAdjustFilter: (q, ds, routeTwLst) => void
 }
 
-// will fill this is in when
+// will fill this is in when the server/app.ts calls getAuthApi()
 export let authApi
 
 // these may be overriden within maySetAuthRoutes()
-export async function getAuthApi(app, _serverconfig = null) {
-	AuthInner.app = app
+export async function getAuthApi(app, genomes, _serverconfig = null) {
 	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
-
-	if (serverconfig.features?.sessionTracking) AuthInner.sessionTracking = serverconfig.features?.sessionTracking
-	if (serverconfig.maxSessionAge) AuthInner.maxSessionAge = serverconfig.maxSessionAge
-	// the required security checks for each applicable dslabel, to be processed from serverconfig.dsCredentials
-	AuthInner.creds = serverconfig.dsCredentials || {}
+	const creds = serverconfig.dsCredentials || {}
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
 
-	const credEmbedders = await validateDsCredentials(AuthInner.creds)
+	const credEmbedders = await validateDsCredentials(creds)
 	// no need to set up auth middleware and routes if there are no dsCredential entries
-	authApi = credEmbedders.size ? AuthApiProtected : AuthApiOpen
+	authApi = credEmbedders.size ? new AuthApi(creds, app, genomes, serverconfig) : AuthApiOpen
 	//console.log(44, credEmbedders, authApi === AuthApiProtected)
 	authApi.credEmbedders.push(...credEmbedders)
 	if (!serverconfig.debugmode || !app.doNotFreezeAuthApi) {
