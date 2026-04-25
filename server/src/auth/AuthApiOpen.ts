@@ -1,7 +1,7 @@
-import { type AuthApi } from '../auth.ts'
+import { type AuthInterface } from '../auth.ts'
 
 // will be used when there is no active serverconfig.dsCredentials entry
-export const AuthApiOpen: AuthApi = {
+export const AuthApiOpen: AuthInterface = {
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],
 

@@ -3,7 +3,7 @@
 // also logout should be supported regardless
 const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/demoToken'])
 
-export function setAuthMiddleware(app, genomes, authApi, AuthInner) {
+export function setAuthMiddleware(app, genomes, authApi, auth) {
 	/* !!! app.use() must be called before route setters and await !!! */
 
 	// "gatekeeper" middleware that checks if a request requires
@@ -33,7 +33,7 @@ export function setAuthMiddleware(app, genomes, authApi, AuthInner) {
 		}
 
 		const q = req.query
-		const cred = AuthInner.getRequiredCred(q, req.path)
+		const cred = auth.getRequiredCred(q, req.path)
 		if (!cred) {
 			next()
 			return
@@ -42,30 +42,30 @@ export function setAuthMiddleware(app, genomes, authApi, AuthInner) {
 		let code
 
 		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
-		if (AuthInner.sessionTracking == 'jwt-only') {
+		if (auth.sessionTracking == 'jwt-only') {
 			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
-			for (const key of Object.keys(AuthInner.sessions)) delete AuthInner.sessions[key]
+			for (const key of Object.keys(auth.sessions)) delete auth.sessions[key]
 		}
 
 		try {
-			const id = AuthInner.getSessionId(req, cred, AuthInner.sessions)
-			const session = id && AuthInner.sessions[q.dslabel]?.[id]
+			const id = auth.getSessionId(req, cred, auth.sessions)
+			const session = id && auth.sessions[q.dslabel]?.[id]
 			if (!session) {
 				code = 401
 				throw `unestablished or expired browser session`
 			}
 			//if (!session.email) throw `missing session details: please login again through a supported portal`
-			AuthInner.checkIPaddress(req, session.ip, cred)
+			auth.checkIPaddress(req, session.ip, cred)
 			const time = Date.now()
 			/* !!! TODO: may rethink the following assumption !!!
 				assumes that the payload.datasets list will not change within the maxSessionAge duration
 				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
 			*/
-			if (time - session.time > AuthInner.maxSessionAge) {
-				const { iat } = AuthInner.getJwtPayload(q, req.headers, cred, session)
+			if (time - session.time > auth.maxSessionAge) {
+				const { iat } = auth.getJwtPayload(q, req.headers, cred, session)
 				const elapsedSinceIssue = time - iat
-				if (elapsedSinceIssue > AuthInner.maxSessionAge) {
-					delete AuthInner.sessions[q.dslabel][id]
+				if (elapsedSinceIssue > auth.maxSessionAge) {
+					delete auth.sessions[q.dslabel][id]
 					throw 'Please login again to access this feature. (expired session)'
 				}
 				if (elapsedSinceIssue < 300000) {
@@ -126,7 +126,7 @@ export function setAuthMiddleware(app, genomes, authApi, AuthInner) {
 				authApi.mayAdjustFilter(req.query, ds)
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
-				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds, AuthInner.protectedRoutes.minSampleSize)
+				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds, auth.protectedRoutes.minSampleSize)
 			}
 		}
 		Object.freeze(__protected__)

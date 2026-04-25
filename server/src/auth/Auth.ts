@@ -4,24 +4,40 @@ import mm from 'micromatch'
 
 const { isMatch } = mm
 
-// TODO: must not make this object/instance importable by any code,
-// should be specific to the current authApi that can access it
-export const AuthInner = {
-	app: {} as any,
-	port: 3000,
-	creds: {} as any,
-	genomes: {} as any,
-	maxSessionAge: 1000 * 3600 * 16,
-	authHealth: new Map(),
-	sessions: {} as any,
-	sessionTracking: '',
+// This is the "inner" private auth that's wrapped by AuthApi.
+// It hides and protect implementation details from being accidentally
+// viewed or mutated by consumer code.
+export class Auth {
+	// the required security checks for each applicable dslabel, to be processed from serverconfig.dsCredentials
+	creds: any
+	// express app
+	app: any
+	port: number = 3000
+	genomes: any
+	maxSessionAge: number = 1000 * 3600 * 16
+	authHealth: Map<string, any> = new Map()
+	sessions: {
+		[dslabel: string]: {
+			[sessionId: string]: any
+		}
+	} = {}
+	sessionTracking: '' | 'jwt-only' = ''
 
 	// TODO: should create a checker function for each route group that may be protected
-	protectedRoutes: {
+	protectedRoutes = {
 		termdb: ['matrix'],
 		samples: ['singleSampleData', 'getAllSamples', 'scatter', 'convertSampleId', 'getSamplesByName'],
 		minSampleSize: ['/termdb/barsql', 'matrix', 'cuminc', 'survival', 'regression', 'scatter']
-	},
+	}
+
+	constructor(creds, app, genomes, serverconfig) {
+		this.app = app
+		this.creds = creds
+		this.genomes = genomes
+		const { sessionTracking, maxSessionAge } = serverconfig.features || {}
+		if (sessionTracking) this.sessionTracking = sessionTracking
+		if (maxSessionAge) this.maxSessionAge = maxSessionAge
+	}
 
 	// runs on every request as part of middleware to inspect request
 	//
@@ -31,7 +47,7 @@ export const AuthInner = {
 	//
 	getRequiredCred(q, path, _protectedRoutes?: string[]) {
 		if (!q.dslabel) return
-		const { creds } = AuthInner
+		const creds = this.creds
 		// faster exact matching, based on known protected routes
 		// if no creds[dslabel], match to wildcard dslabel if specified
 		const ds0 = creds[q.dslabel] || creds['*']
@@ -48,7 +64,7 @@ export const AuthInner = {
 				const cred = route[q.embedder] || route['*']
 				if (!cred) return
 				if (cred.protectedRoutes?.find(pattern => isMatch(path, pattern))) return cred
-				const protRoutes = _protectedRoutes || AuthInner.protectedRoutes.termdb
+				const protRoutes = _protectedRoutes || this.protectedRoutes.termdb
 				if (protRoutes.includes(q.for) || protRoutes.find(pattern => isMatch(path, pattern))) return cred
 			} else if (path.startsWith('/burden') && ds0.burden) {
 				// okay to return an undefined embedder[route]
@@ -69,7 +85,7 @@ export const AuthInner = {
 				}
 			}
 		}
-	},
+	}
 
 	/**
 		Arguments
@@ -149,7 +165,7 @@ export const AuthInner = {
 			clientAuthResult: payload.clientAuthResult,
 			rawToken
 		}
-	},
+	}
 
 	// cred.ipCheck: undefined | 'none' | 'loose'
 	// undefined (default) means strict check, by default
@@ -162,13 +178,13 @@ export const AuthInner = {
 		if (!ip) throw `Server error: missing ip address in saved session`
 		if (req.ip != ip && req.ips?.[0] != ip && req.connection?.remoteAddress != ip)
 			throw `Your connection has changed, please refresh your page or sign in again.`
-	},
+	}
 
-	getSessionId(req, cred, sessions) {
+	getSessionId(req, cred) {
 		// embedder sites may use HTTP 2.0 which requires lowercased header key names
 		// using all lowercase is compatible for both http 1 and 2
-		if (sessions && req.headers?.authorization) {
-			const id = AuthInner.mayAddSessionFromJwt(sessions, req, cred)
+		if (this.sessions && req.headers?.authorization) {
+			const id = this.mayAddSessionFromJwt(this.sessions, req, cred)
 			if (id) return id
 		}
 
@@ -181,13 +197,13 @@ export const AuthInner = {
 			req.headers?.['x-sjppds-sessionid'] ||
 			req.query?.['x-sjppds-sessionid']
 		)
-	},
+	}
 
 	getSessionIdFromJwt(jwt) {
 		// the last segment of the dot-separated jwt string is the signature,
 		// this hash can be used as a unique ID
 		return jwt.slice(-20)
-	},
+	}
 
 	// proteinpaint-issued JWT
 	getSignedJwt(req, res, q, cred, clientAuthResult, maxSessionAge, email = '', sessions) {
@@ -211,7 +227,7 @@ export const AuthInner = {
 			if (cred.dsnames) payload.datasets = cred.dsnames.map(d => d.id)
 			const { secret } = getApplicableSecret(req.headers, cred, payload)
 			const jwt = jsonwebtoken.sign(payload, secret)
-			const id = AuthInner.getSessionIdFromJwt(jwt)
+			const id = this.getSessionIdFromJwt(jwt)
 			//const ip = req.ip // may use req.ips?
 			if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
 			sessions[q.dslabel][id] = payload
@@ -237,7 +253,7 @@ export const AuthInner = {
 			console.log('getSignedJwt() error')
 			throw e
 		}
-	},
+	}
 
 	// in a server farm, where the session state is not shared by all active PP servers,
 	// the login details that is created by one server can be obtained from the JWT payload
@@ -253,7 +269,7 @@ export const AuthInner = {
 		const [type, b64token] = req.headers.authorization.split(' ')
 		if (type.toLowerCase() != 'bearer') throw `unsupported authorization type='${type}', allowed: 'Bearer'`
 		const token = Buffer.from(b64token, 'base64').toString()
-		const id = AuthInner.getSessionIdFromJwt(token)
+		const id = this.getSessionIdFromJwt(token)
 		try {
 			const { secret } = getApplicableSecret(req.headers, cred, token)
 			const payload = sessions[dslabel]?.[id] || jsonwebtoken.verify(token, secret)

@@ -2,7 +2,7 @@ import jsonwebtoken from 'jsonwebtoken'
 import { promises as fs } from 'fs'
 import path from 'path'
 
-export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
+export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 
 	// creates a session ID that is returned
@@ -10,7 +10,7 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 		let code = 401
 		try {
 			const q = req.query
-			const cred = AuthInner.getRequiredCred(q, req.path)
+			const cred = auth.getRequiredCred(q, req.path)
 			if (!cred) {
 				code = 400
 				throw `No login required for dataset='${q.dslabel}'`
@@ -24,7 +24,7 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != cred.password) throw 'invalid password'
 			code = 401 // in case of jwt processing error
-			const jwt = await AuthInner.getSignedJwt(req, res, q, cred, {}, AuthInner.maxSessionAge, '', AuthInner.sessions)
+			const jwt = await auth.getSignedJwt(req, res, q, cred, {}, auth.maxSessionAge, '', auth.sessions)
 			res.send({ status: 'ok', jwt, route: cred.route })
 		} catch (e) {
 			res.status(code)
@@ -35,15 +35,15 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 	app.post(basepath + '/dslogout', async (req, res) => {
 		try {
 			const q = req.query
-			const cred = AuthInner.getRequiredCred(q, req.path)
-			const id = AuthInner.getSessionId(req, cred)
+			const cred = auth.getRequiredCred(q, req.path)
+			const id = auth.getSessionId(req, cred)
 			if (!id) throw 'missing session cookie'
-			const session = AuthInner.sessions[q.dslabel]?.[id]
+			const session = auth.sessions[q.dslabel]?.[id]
 			if (!session) {
 				res.send({ status: 'ok' })
 				return
 			}
-			delete AuthInner.sessions[q.dslabel][id]
+			delete auth.sessions[q.dslabel][id]
 			//const ip = req.ip
 			res.send({ status: 'ok' })
 		} catch (e) {
@@ -60,7 +60,7 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 		// res.send({"error":{"name":"JsonWebTokenError","message":"invalid signature"}})
 		// return
 		const q = req.query
-		const cred = AuthInner.getRequiredCred(q, req.path)
+		const cred = auth.getRequiredCred(q, req.path)
 		try {
 			if (!cred) {
 				res.send({ status: 'ok' })
@@ -72,23 +72,14 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 			// 	throw `Incorrect authorization route, use ${cred.authRoute}'`
 			// }
 
-			const { email, ip, clientAuthResult, dslabel, rawToken } = AuthInner.getJwtPayload(q, req.headers, cred)
-			AuthInner.checkIPaddress(req, ip, cred)
+			const { email, ip, clientAuthResult, dslabel, rawToken } = auth.getJwtPayload(q, req.headers, cred)
+			auth.checkIPaddress(req, ip, cred)
 			let jwt = rawToken
 			if (!dslabel) {
 				// NOTE: A login jwt payload is expected to not have dslabel, while session jwt is expected to have it
 				// No need to get another session jwt if the current jwt is already a session jwt (not from initial login)
 				code = 401 // in case of jwt processing error
-				jwt = await AuthInner.getSignedJwt(
-					req,
-					res,
-					q,
-					cred,
-					clientAuthResult,
-					AuthInner.maxSessionAge,
-					email,
-					AuthInner.sessions
-				)
+				jwt = await auth.getSignedJwt(req, res, q, cred, clientAuthResult, auth.maxSessionAge, email, auth.sessions)
 			}
 			// difficult to setup CORS cookie, will deprecate support
 			res.send({ status: 'ok', jwt, route: cred.route, clientAuthResult })
@@ -103,13 +94,13 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 		const q = req.query
 		try {
 			// TODO: later, other routes besides /termdb may require tracking
-			const cred = AuthInner.getRequiredCred(q, 'termdb')
+			const cred = auth.getRequiredCred(q, 'termdb')
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
 			}
-			const id = AuthInner.getSessionId(req)
-			const session = AuthInner.sessions[q.dslabel]?.[id]
+			const id = auth.getSessionId(req)
+			const session = auth.sessions[q.dslabel]?.[id]
 			const email = session.email
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
@@ -124,13 +115,13 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 		let cookieId
 		try {
 			const q = req.query
-			const genome = AuthInner.genomes[q.genome]
+			const genome = auth.genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.demoJwtInput) throw `missing ds.demoJwtInput`
 
-			const cred = AuthInner.getRequiredCred(q, '/demoToken')
+			const cred = auth.getRequiredCred(q, '/demoToken')
 			if (!cred) {
 				res.send({ status: 'ok' })
 				return
