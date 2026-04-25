@@ -33,7 +33,6 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 	})
 
 	app.post(basepath + '/dslogout', async (req, res) => {
-		//let code = 401
 		try {
 			const q = req.query
 			const cred = AuthInner.getRequiredCred(q, req.path)
@@ -48,7 +47,7 @@ export function setAuthRoutes(app, AuthInner, basepath = '', serverconfig) {
 			//const ip = req.ip
 			res.send({ status: 'ok' })
 		} catch (e) {
-			res.status(code)
+			res.status(401)
 			res.send({ error: e })
 		}
 	})

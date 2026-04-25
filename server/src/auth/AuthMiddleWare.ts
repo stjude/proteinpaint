@@ -4,8 +4,11 @@
 const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/demoToken'])
 
 export function setAuthMiddleware(app, genomes, authApi, AuthInner) {
-	//const sessionTracking = serverconfig.features?.sessionTracking || ''
+	/* !!! app.use() must be called before route setters and await !!! */
 
+	// "gatekeeper" middleware that checks if a request requires
+	// credentials and if yes, if there is already a valid session
+	// for a ds label
 	app.use((req, res, next) => {
 		req.query.__protected__ = {
 			ignoredTermIds: [], // when provided the filter on these terms will be ignored
@@ -21,7 +24,7 @@ export function setAuthMiddleware(app, genomes, authApi, AuthInner) {
 		}
 
 		try {
-			mayUpdate__protected__(req, res)
+			mayUpdate__protected__(req)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.status(e.status || 401)
