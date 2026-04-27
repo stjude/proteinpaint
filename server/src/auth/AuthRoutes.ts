@@ -104,7 +104,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			}
 			const id = auth.getSessionId(req)
 			const session = auth.sessions[q.dslabel]?.[id]
-			const email = session.email
+			const email = session?.email || ''
 			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })

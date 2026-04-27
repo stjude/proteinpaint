@@ -84,8 +84,8 @@ tape(`initialization, empty credentials`, async test => {
 	const routes = Object.keys(app.routes)
 	routes.sort()
 	test.deepEqual(routes, [], 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
-	// this is also checked statitically by typescript, but doesn't hurt to test
-	// that the expected runtime methods and props
+	// these are also checked statically by typescript, but doesn't hurt
+	// to test the expected runtime methods and props
 	test.deepEqual(
 		Object.keys(authApi).sort(),
 		[

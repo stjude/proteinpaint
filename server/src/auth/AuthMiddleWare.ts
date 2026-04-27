@@ -80,10 +80,10 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 					return
 				}
 			}
-			// TODO: may not to adjust session expiration based on the last active period
-			// If any activity happens within the harcoded number of milliseconds below,
+			// TODO: may need to adjust session expiration based on the last active period
+			// If any activity happens within the hardcoded number of milliseconds below,
 			// then update the start time of the active session (account for prolonged user inactivity)
-			if (session.time - time < 900) session.time = time
+			if (time - session.time < 900) session.time = time
 			next()
 		} catch (e: any) {
 			console.log(e)
