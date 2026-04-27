@@ -1,11 +1,11 @@
-import { validateDsCredentials } from './auth/AuthDsCredentials.ts'
+import { validateDsCredentials } from './auth/auth.dsCredentials.ts'
 import { AuthApiOpen } from './auth/AuthApiOpen.ts'
 import { AuthApi } from './auth/AuthApi.ts'
 
 export interface AuthInterface {
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: string[]
-	maySetAuthRoutes: (app, genomes, basepath: string, serverconfig: any) => void
+	maySetAuthRoutes: (app, genomes, basepath: string, serverconfig: any) => void | Promise<void>
 	//getJwtPayload, // declared below
 	canDisplaySampleIds: (req, ds) => boolean
 	// these open-acces, default methods may be replaced by maySetAuthRoutes()
