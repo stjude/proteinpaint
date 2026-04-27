@@ -102,15 +102,15 @@ export async function validate_query_rnaseqGeneCount(ds) {
 		} else throw new Error('unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type)
 
 		q.allSampleSet = new Set(samples)
-		//if(q.allSampleSet.size < samples.length) throw 'rnaseqGeneCount.file header contains duplicate samples'
+		//if(q.allSampleSet.size < samples.length) throw new Error('rnaseqGeneCount.file header contains duplicate samples')
 		const unknownSamples: string[] = []
 		for (const n of q.allSampleSet) {
 			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 		}
 		//if (unknownSamples.length)
-		//	throw `${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
+		//	throw new Error(`${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
 		//		q.allSampleSet.size
-		//	} sample names are unknown: ${unknownSamples.join(',')}`
+		//	} sample names are unknown: ${unknownSamples.join(',')}`)
 		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 	}
 }
