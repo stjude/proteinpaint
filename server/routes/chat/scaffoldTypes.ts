@@ -27,7 +27,14 @@ export type MatrixScaffold = {
 	filter?: string
 }
 
-export type Scaffold = SummaryScaffold | DEScaffold | MatrixScaffold
+export type HierarchicalScaffold = {
+	plotType: 'hiercluster'
+	geneNames?: string[]
+	genesetNames?: string[]
+	filter?: string
+}
+
+export type Scaffold = SummaryScaffold | DEScaffold | MatrixScaffold | HierarchicalScaffold
 
 // Helper functions to determine scaffold type
 export function isSummaryScaffold(s: Scaffold): s is SummaryScaffold {
@@ -40,6 +47,10 @@ export function isDEScaffold(s: Scaffold): s is DEScaffold {
 
 export function isMatrixScaffold(s: Scaffold): s is MatrixScaffold {
 	return 'twLst' in s
+}
+
+export function isHierarchicalScaffold(s: Scaffold): s is HierarchicalScaffold {
+	return s.plotType === 'hiercluster'
 }
 
 // *** Entity Temp Types *** //
@@ -65,4 +76,9 @@ export type DEPhrase2EntityResult = {
 	method?: 'edgeR' | 'DESeq2' | 'limma' // optional, default to edgeR if not provided
 }
 
-export type Phrase2EntityResult = SummaryPhrase2EntityResult | DEPhrase2EntityResult // | MatrixPhrase2EntityResult (to be defined later)
+export type HierPhrase2EntityResult = {
+	genes: Entity[]
+	filter?: Entity[]
+}
+
+export type Phrase2EntityResult = SummaryPhrase2EntityResult | DEPhrase2EntityResult | HierPhrase2EntityResult // | MatrixPhrase2EntityResult (to be defined later)

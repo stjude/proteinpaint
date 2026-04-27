@@ -1,7 +1,8 @@
 import type { LlmConfig } from '#types'
+// import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type { Scaffold, SummaryScaffold, DEScaffold } from './scaffoldTypes.ts'
+import type { Scaffold, SummaryScaffold, DEScaffold, HierarchicalScaffold } from './scaffoldTypes.ts'
 
 async function dge(user_prompt: string, llm: LlmConfig): Promise<DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
@@ -205,9 +206,8 @@ Always return ONLY a JSON object in this exact format:
 - Query: "compare age between wilms tumor and hodgkin lymphoma"
   Output:
   {
-	"tw1": "age at diagnosis",
-        "tw2": "diaggrp",
-        "filter": ["wilms tumor", "hodgkin lymphoma"]
+	"tw1": "age",
+  "tw2": "wilms tumor, hodgkin lymphoma",
   }
 - Query: "Show me the distribution of gene expression in TP53 across different cell types, but only for patients aged 10 to 40."
   Output:
@@ -245,12 +245,97 @@ Query: ${user_prompt}
 	}
 }
 
+async function hierarchical(user_prompt: string, llm: LlmConfig): Promise<HierarchicalScaffold> {
+	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of genes (and optionally gene sets) and an optional cohort filter from a user's natural language question.
+
+A hierarchical clustering plot clusters samples and features (such as genes) and displays the result as a heatmap with dendrograms.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure:
+{
+  "geneNames": ["<gene>", ...],       // OPTIONAL — list of gene symbols to cluster
+  "genesetNames": ["<geneset>", ...], // OPTIONAL — list of gene set/pathway names to cluster (e.g. HALLMARK pathways)
+  "filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase
+}
+
+## FIELD DEFINITIONS
+geneNames:    List of gene symbols mentioned in the query (e.g. "TP53", "KRAS", "BCR"). ALSO INCLUDE their corresponding descriptive words like "expression", "methylation" or "mutation".
+genesetNames: Gene set / pathway names mentioned in the query (e.g. "HALLMARK_APOPTOSIS", "HALLMARK_P53_PATHWAY"). Only include if explicitly named.
+filter:       A cohort restriction that narrows the sample set used for clustering (e.g. "in women", "for AML patients", "KMT2A subtype"). Preserve the exact phrase from the user's question. Omit this field if the user does not restrict the cohort.
+
+## Extraction RULES
+1. At least one of "geneNames" or "genesetNames" must be extracted — a hierarchical clustering plot is meaningless without features to cluster.
+2. Preserve the EXACT gene symbols as written (upper/lower case is fine — downstream code will normalize).
+3. Do NOT include descriptive/analytic words (e.g. "expression", "clustering", "dendrogram") in geneNames or genesetNames.
+4. Only populate "filter" when the user restricts the analysis to a specific subpopulation.
+5. OPTIONAL fields should be omitted from the JSON (not set to null or empty array) if they cannot be confidently extracted from the query.
+6. Return ONLY the JSON — no explanation, no markdown fences, no extra text.
+
+## EXAMPLES
+
+--- Simple gene list ---
+Q: "Cluster ABC, PQR and XYZ gene expression"
+A: {
+  "geneNames": ["ABC expression", "PQR expression", "XYZ expression"]
+}
+
+--- Gene list with cohort filter ---
+Q: "Cluster IJK45, MNO4 and RSTB4 gene expression for patients with acute lymphoblastic leukemia"
+A: {
+  "geneNames": ["IJK45 expression", "MNO4 expression", RSTB4 gene expression"],
+  "filter": "acute lymphoblastic leukemia"
+}
+
+--- Dendrogram phrasing ---
+Q: "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
+A: {
+  "geneNames": ["XYZ4 expression, CDE5 expression, AZF1 gene expression"]
+}
+
+--- Subtype-restricted cluster ---
+Q: "Cluster HGT3, XCFT53 and KRRDF for patients with SBG5B subtype"
+A: {
+  "geneNames": ["HGT3 expression", "XCFT53 expression", "KRRDF expression"],
+  "filter": "SBG5B subtype"
+}
+
+--- Gene set clustering ---
+Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
+A: {
+  "genesetNames": "GO_T67_PATHWAY and HGC_676 genesets"]
+}
+
+## EDGE CASES
+- If no genes or gene sets are mentioned, return:
+  { "error": "No genes or gene sets found", "reason": "<brief explanation>" }
+
+Parse the following query into the hierarchical clustering scaffold:
+Query: ${user_prompt}
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Hierarchical scaffold: ${response}`)
+	try {
+		const parsed = JSON.parse(response) as HierarchicalScaffold
+		parsed.plotType = 'hiercluster'
+		// Ensure each gene symbol is followed by "expression" so downstream phrase2entity
+		// resolves it to the geneExpression term type rather than flagging it as ambiguous.
+		if (parsed.geneNames) {
+			parsed.geneNames = parsed.geneNames.map(g => (/\bexpression\b/i.test(g) ? g : `${g} expression`))
+		}
+		return parsed
+	} catch {
+		throw new Error(`Failed to parse HierarchicalScaffold from LLM response: ${response}`)
+	}
+}
+
 export async function inferScaffold(user_prompt: string, plotType: string, llm: LlmConfig): Promise<Scaffold> {
 	switch (plotType) {
 		case 'summary':
 			return await summary(user_prompt, llm)
 		case 'dge':
 			return await dge(user_prompt, llm)
+		case 'hiercluster':
+			return await hierarchical(user_prompt, llm)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}

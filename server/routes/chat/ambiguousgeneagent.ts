@@ -12,7 +12,8 @@ import assert from 'assert'
 
 // Keywords that indicate the user has specified a gene feature.
 // Organized by feature category for clarity.
-const GENE_FEATURE_KEYWORDS: string[] = [
+export const GENE_FEATURE_KEYWORDS: string[] = [
+	// Words should always be in lower case
 	// Gene expression
 	'expression',
 	'expressed',
@@ -70,8 +71,10 @@ const GENE_FEATURE_KEYWORDS: string[] = [
 	// Differential expression
 	'differential',
 	'fold change',
+	'fold_change',
 	'differentially expressed',
 	'dge',
+	'de',
 	'de analysis'
 ]
 

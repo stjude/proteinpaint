@@ -1,16 +1,18 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
-import { extractGenesFromPrompt } from './utils.ts'
+import { extractGenesFromPrompt, getGenesForGeneset } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagentnew.ts'
-import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
 	Scaffold,
 	SummaryScaffold,
 	DEScaffold,
+	HierarchicalScaffold,
 	Entity,
 	Phrase2EntityResult,
 	DEPhrase2EntityResult,
+	HierPhrase2EntityResult,
 	MsgToUser
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -115,10 +117,21 @@ async function validateNonDictionaryTypes(
 		} else {
 			throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
 		}
-	} else {
-		// TODO: This also executes when a gene is not present in the genes_list (needs better handling for this case)
-		// Need a similar exhaustive database for metabolites, genesets (e.g. msigdb)
-		return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
+	}
+	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, ssGSEA)
+	else {
+		const NonDictKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, ssGSEA
+		if (NonDictKeyWords.length > 0) {
+			msg.text =
+				"Prompt includes keyword(s) such as '" +
+				NonDictKeyWords.join(',') +
+				"' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
+			return msg
+		}
+		// else if // May go for an LLM based approach if the above string search based method is not sufficient
+		else {
+			return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
+		}
 	}
 }
 
@@ -346,7 +359,8 @@ export async function phrase2entity(
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any,
-	ds: any
+	ds: any,
+	genome: any
 ): Promise<MsgToUser | Phrase2EntityResult> {
 	if (plotType == 'summary') {
 		const scaffoldResult = scaffold as SummaryScaffold
@@ -433,6 +447,82 @@ export async function phrase2entity(
 		}
 
 		return dge_term
+	} else if (plotType == 'hiercluster') {
+		const scaffoldResult = scaffold as HierarchicalScaffold
+		const hier_term: HierPhrase2EntityResult = { genes: [] }
+
+		// Resolve geneset names to individual genes using trigger_genesetByTermId logic
+		if (scaffoldResult.genesetNames && Array.isArray(scaffoldResult.genesetNames) && genome) {
+			for (const genesetName of scaffoldResult.genesetNames) {
+				const genes = getGenesForGeneset(genome, genesetName)
+				if (!scaffoldResult.genesetNames) scaffoldResult.genesetNames = []
+				if (genes && genes.length > 0) {
+					for (const gene of genes) {
+						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
+						if (!scaffoldResult.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
+							scaffoldResult.geneNames = scaffoldResult.geneNames || []
+							scaffoldResult.geneNames.push(gene.symbol + ' expression') // Append " expression" to indicate we're referring to gene expression of the gene, which is the only supported termType for hierarchical clustering at the moment
+						}
+					}
+				} else {
+					return {
+						type: 'text',
+						text: 'Could not find genes for geneset: ' + genesetName + '. '
+					}
+				}
+			}
+		}
+
+		const geneNames = scaffoldResult.geneNames || []
+		// Resolve geneset names to individual genes using trigger_genesetByTermId logic
+		if (scaffoldResult.genesetNames && Array.isArray(scaffoldResult.genesetNames) && genome) {
+			for (const genesetName of scaffoldResult.genesetNames) {
+				console.log('Resolving geneset for hierarchical clustering:', genesetName)
+				const genes = getGenesForGeneset(genome, genesetName)
+				if (!scaffoldResult.genesetNames) scaffoldResult.genesetNames = []
+				if (genes && genes.length > 0) {
+					for (const gene of genes) {
+						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
+						if (!scaffoldResult.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
+							scaffoldResult.geneNames = scaffoldResult.geneNames || []
+							scaffoldResult.genesetNames.push(gene.symbol)
+						}
+					}
+				} else {
+					return {
+						type: 'text',
+						text: 'Could not find genes for geneset: ' + genesetName + '. '
+					}
+				}
+			}
+		}
+
+		if (geneNames.length === 0) {
+			return {
+				type: 'text',
+				text: 'At least one gene is required for hierarchical clustering.'
+			}
+		}
+		for (const gene of geneNames) {
+			const geneEntity = await phrase2entitytw(gene, llm, genes_list, dataset_json, ds)
+			if ('type' in geneEntity && geneEntity.type === 'text') {
+				return geneEntity // MsgToUser
+			}
+			mayLog(`Validation result for gene "${gene}":`, geneEntity)
+			hier_term.genes.push(geneEntity as Entity)
+		}
+
+		if (scaffoldResult.filter) {
+			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const hier_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			if ('type' in hier_filter && hier_filter.type === 'text') {
+				return hier_filter // MsgToUser
+			}
+			hier_term.filter = hier_filter as Entity[]
+			mayLog('Validation result for hierCluster filter term:', JSON.stringify(hier_term.filter))
+		}
+
+		return hier_term
 	} else {
 		const msg: MsgToUser = {
 			type: 'text',

@@ -66,7 +66,7 @@ export function convert2TwTvs(
 type ResolvedCatFilter = {
 	kind: 'categorical'
 	termObj: Value
-	values: string[] // array so multi-category merges work (mirrors sortSameCategoricalFilterKeys)
+	values: { key: string; label: string }[] // array so multi-category merges work (mirrors sortSameCategoricalFilterKeys)
 	logicalOperator?: '&' | '|'
 }
 type ResolvedNumFilter = {
@@ -120,7 +120,7 @@ function buildTvsNode(r: ResolvedFilter): any {
 			type: 'tvs',
 			tvs: {
 				term: r.termObj.term,
-				values: r.values.map(v => ({ key: v }))
+				values: r.values.map(v => ({ key: v.key, label: v.label }))
 			}
 		}
 	}
@@ -187,28 +187,29 @@ async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig):
 			}
 			// Validate the category value against the term's actual values
 			// (similar logic to generate_filter_term() in filter.ts)
+			let cat: string | undefined
 			if ('id' in termObj.term) {
 				const { db_rows } = await parse_dataset_db(dbPath)
 				const dbRow = db_rows.find(r => r.name === (termObj.term as DictTerm).id)
 				if (dbRow) {
-					let cat: string | undefined
 					for (const dbVal of dbRow.values) {
-						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
-						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
-					}
-					if (!cat) {
-						const msg: MsgToUser = {
-							type: 'text',
-							text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
-						}
-						return msg
+						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.value?.label
+						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase())
+							cat = dbVal.value?.label
 					}
 				}
+			}
+			if (!cat) {
+				const msg: MsgToUser = {
+					type: 'text',
+					text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
+				}
+				return msg
 			}
 			resolved.push({
 				kind: 'categorical',
 				termObj,
-				values: [categoricalFilterTerm.value],
+				values: [{ key: categoricalFilterTerm.value, label: cat }],
 				logicalOperator: termObj.logicalOperator
 			})
 		} else if (
@@ -474,6 +475,24 @@ export async function resolveToTwTvs(
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects[key] = termWrapper
+		}
+	} else if (plotType == 'hiercluster') {
+		// genes → array of tws; filter → single tvslst
+		const geneValues = entity['genes'] as Value[] | undefined
+		if (!geneValues || geneValues.length === 0) throw new Error('Invalid gene term entity for hierCluster')
+		const geneTws: any[] = []
+		for (const gv of geneValues) {
+			const tw = await resolveToTw(gv, llm)
+			if (!tw) throw new Error(`Failed to resolve gene tw for phrase "${gv.phrase}"`)
+			geneTws.push(tw)
+		}
+		twTvsObjects['genes'] = geneTws
+
+		if (entity['filter']) {
+			const filterValues = entity['filter'] as Value[]
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects['filter'] = termWrapper
 		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'

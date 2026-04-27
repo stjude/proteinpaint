@@ -93,7 +93,8 @@ class Chat extends PlotBase implements RxComponent {
 							id: newPlotId,
 							config: result.plot
 						})
-						serverBubble.html('Please refer to the plot generated above')
+						if (result.msg) serverBubble.html(result.msg + '.Please refer to the plot generated above.')
+						else serverBubble.html('Please refer to the plot generated above.')
 					}
 					/* may switch by data.type
 type=chat: server returns a chat msg
