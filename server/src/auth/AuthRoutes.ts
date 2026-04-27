@@ -5,6 +5,9 @@ import path from 'path'
 export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 
+	// TODO: should check if the app already has an auth route handlers,
+	// to avoid mutating what's already been set at server launch
+
 	// creates a session ID that is returned
 	app.post(basepath + '/dslogin', async (req, res) => {
 		let code = 401
