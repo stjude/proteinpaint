@@ -11,9 +11,13 @@ export type DataPointEntry = (GeneDEEntry | DiffMethEntry | SingleCellDEEntry) &
 	color: string
 	/** If true, the fill opacity increases to show the highlight color */
 	highlighted: boolean
-	/** x coordinate */
+	/** Inner-plot pixel x coordinate (rust echoes plotters' rasterized center). */
+	pixel_x: number
+	/** Inner-plot pixel y coordinate (rust echoes plotters' rasterized center). */
+	pixel_y: number
+	/** SVG-absolute x = pixel_x + plotX */
 	x: number
-	/** y coordinate */
+	/** SVG-absolute y = pixel_y + topPad */
 	y: number
 	/** radius */
 	radius: number
@@ -68,9 +72,15 @@ export type VolcanoPlotDimensions = {
 	top: { x: number; y: number }
 	svg: { width: number; height: number }
 	xAxisLabel: { x: number; y: number }
+	/** Visible x-axis (unpadded data range) */
 	xScale: { x: number; y: number; scale: any }
 	yAxisLabel: { x: number; y: number; text: string }
+	/** Visible y-axis (unpadded data range) */
 	yScale: { x: number; y: number; scale: any }
+	/** Positioning scales: padded data range covering the full plot rect.
+	 * Use these for overlay dots, PNG image, and the fold-change=0 line. */
+	xPlotScale: any
+	yPlotScale: any
 }
 
 export type VolcanoOpts = {
