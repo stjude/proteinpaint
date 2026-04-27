@@ -1,6 +1,8 @@
 /** A row used by the results table where the first cell typically holds the
- * gene/promoter/feature name. Generic — callers shape it however they like. */
-export type ResultsTableRow = Array<{ value?: string; [key: string]: any }>
+ * gene/promoter/feature name. Generic — callers shape it however they like.
+ * `value` is `string | number` because numeric stats (q-values, fold-change,
+ * subject counts) are passed through unwrapped alongside string identifiers. */
+export type ResultsTableRow = Array<{ value?: string | number; [key: string]: any }>
 
 /** Data item passed to button callbacks for selection tracking. The table is
  * data-agnostic — items can be points (manhattan), promoters (volcano DM),
