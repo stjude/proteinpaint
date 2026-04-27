@@ -17,6 +17,7 @@ export type AiProjectSelectedWSImagesResponse = {
 export interface TileSelection {
 	zoomCoordinates: [number, number]
 	class?: string
+	flag: AnnotationStatus
 }
 
 export enum AnnotationStatus {
@@ -35,7 +36,6 @@ export interface Annotation extends TileSelection {
 	class: string
 	status: number
 	timestamp: string
-	flag: AnnotationStatus
 }
 
 export interface Prediction extends TileSelection {

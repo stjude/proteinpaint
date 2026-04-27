@@ -213,7 +213,7 @@ export class ViewModelProvider {
 				if (annotation.flag !== AnnotationStatus.Skipped) {
 					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
 				} else {
-					squareFeature = createDimSquareFeature(annotation.zoomCoordinates, topLeft, tileSize, color, featureId)
+					squareFeature = createDimSquareFeature(annotation.zoomCoordinates, topLeft, tileSize, color)
 				}
 				sourceAnnotations.addFeature(squareFeature)
 

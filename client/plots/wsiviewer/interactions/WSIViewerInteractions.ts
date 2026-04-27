@@ -331,7 +331,8 @@ export class WSIViewerInteractions {
 			// Create new tile section
 			const newTileSelection: TileSelection = {
 				zoomCoordinates: [coordinateX, coordinateY],
-				class: ''
+				class: '',
+				flag: AnnotationStatus.Normal
 			}
 
 			const vectorLayer = map
@@ -454,7 +455,6 @@ export class WSIViewerInteractions {
 				[topLeft[0], topLeft[1] - settings.tileSize]
 			]
 		]
-		console.log([squareCoords[0]])
 		const square = new Feature({
 			geometry: new Polygon([squareCoords[0]]),
 			properties: {
@@ -470,7 +470,6 @@ export class WSIViewerInteractions {
 				stroke: new Stroke({ color: color, width: 2 })
 			})
 		)
-		console.log(square.getGeometry()?.getCoordinates())
 		source?.addFeature(square)
 
 		this.addAnnotationBorder(
@@ -656,19 +655,19 @@ export class WSIViewerInteractions {
 		annotationFlag: AnnotationStatus = AnnotationStatus.Normal
 	) {
 		const state = wsiApp.app.getState()
-		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-		if (!settings.isSavingAnnotation) {
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: wsiApp.id,
-				config: {
-					settings: {
-						isSavingAnnotation: true,
-						changeTrigger: Date.now()
-					}
-				}
-			})
-		}
+		// const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+		// if (!settings.isSavingAnnotation) {
+		// 	wsiApp.app.dispatch({
+		// 		type: 'plot_edit',
+		// 		id: wsiApp.id,
+		// 		config: {
+		// 			settings: {
+		// 				isSavingAnnotation: true,
+		// 				changeTrigger: Date.now()
+		// 			}
+		// 		}
+		// 	})
+		// }
 		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
