@@ -1,119 +1,13 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { GRIN2Dom, GRIN2Opts, ShowGrin2ResultTableOpts } from './GRIN2Types'
+import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { getCombinedTermFilter, getNormalRoot, filterInit } from '#filter'
-import { Menu, renderTable, table2col, make_one_checkbox, sayerror } from '#dom'
+import { Menu, table2col, make_one_checkbox, sayerror } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
-import {
-	plotManhattan,
-	createLollipopFromGene,
-	createMatrixFromGenes,
-	updateSelectionTracking
-} from '#plots/manhattan/manhattan.ts'
+import { plotManhattan } from '#plots/manhattan/manhattan.ts'
+import { showResultsTable } from '../shared/resultsTable'
 import { controlsInit } from '#plots/controls.js'
-
-/**
- * Renders a GRIN2 result table for gene data.
- * Used by Manhattan plot for hover tooltips, click menus, and the top genes table.
- *
- * @param opts - Configuration options including tableDiv, hits, and optional settings
- */
-export function showGrin2ResultTable(opts: ShowGrin2ResultTableOpts): void {
-	const {
-		tableDiv,
-		hits,
-		app,
-		clickMenu,
-		columns: prebuiltColumns,
-		rows: prebuiltRows,
-		dataItems: prebuiltDataItems,
-		getGene = (item: any) => item.gene,
-		matrixButtonFormat = 'Matrix ({n})',
-		...renderTableOpts
-	} = opts
-
-	// Determine data source for button callbacks and selection tracking
-	const dataItems = prebuiltDataItems || hits
-
-	// Guard against empty data
-	if (!dataItems || dataItems.length === 0) return
-
-	// Use pre-built columns/rows if provided, otherwise build from hits
-	const columns = prebuiltColumns || [
-		{ label: 'Gene' },
-		{ label: `${hits![0].chrom.charAt(0).toUpperCase()}${hits![0].chrom.slice(1).toLowerCase()} pos` },
-		{ label: 'Type' },
-		{ label: 'Q-value', sortable: true },
-		{ label: 'Subject count', sortable: true }
-	]
-
-	const rows =
-		prebuiltRows ||
-		hits!.map(d => [
-			{ value: d.gene },
-			{ html: `<span style="font-size:.8em">${d.start}-${d.end}</span>` },
-			{ html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}` },
-			{ value: d.q_value.toPrecision(3) },
-			{ value: d.nsubj }
-		])
-	// Base table options
-	const tableOptions: any = {
-		div: tableDiv,
-		columns,
-		rows,
-		showLines: false,
-		showHeader: true,
-		striped: true,
-		resize: 'both',
-		header: { allowSort: true },
-		...renderTableOpts
-	}
-
-	// If app is provided, add Matrix/Lollipop buttons with selection tracking
-	if (app) {
-		let lastTouchedGene: string | null = null
-		let selectionOrder: number[] = []
-
-		tableOptions.buttonsToLeft = true
-		tableOptions.buttons = [
-			{
-				text: matrixButtonFormat.replace('{n}', '0'),
-				callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					if (selectedIndices.length > 0) {
-						buttonNode.disabled = true
-						const selectedGenes = selectedIndices.map(idx => getGene(dataItems[idx]))
-						clickMenu?.hide()
-						createMatrixFromGenes(selectedGenes, app)
-					}
-				},
-				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					buttonNode.textContent = matrixButtonFormat.replace('{n}', String(selectedIndices.length))
-					buttonNode.disabled = selectedIndices.length === 0
-				}
-			},
-			{
-				text: 'Lollipop',
-				callback: (_selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					if (lastTouchedGene) {
-						buttonNode.disabled = true
-						clickMenu?.hide()
-						createLollipopFromGene(lastTouchedGene, app)
-					}
-				},
-				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems)
-					selectionOrder = result.selectionOrder
-					lastTouchedGene = result.lastTouchedGene
-					buttonNode.textContent = result.buttonText
-					buttonNode.disabled = result.buttonDisabled
-				}
-			}
-		]
-	}
-
-	renderTable(tableOptions)
-}
 
 class GRIN2 extends PlotBase implements RxComponent {
 	static type = 'grin2'
@@ -845,8 +739,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				return [{ value: '', html: circles.join('') }, ...row]
 			})
 
-			// Use showGrin2ResultTable for consistent table rendering
-			showGrin2ResultTable({
+			// Use showResultsTable for consistent table rendering
+			showResultsTable({
 				tableDiv,
 				app: this.app,
 				columns: modifiedColumns,

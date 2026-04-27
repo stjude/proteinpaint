@@ -1,116 +1,13 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { select } from 'd3-selection'
-import { Menu, icons, axisstyle, table2col, sayerror } from '#dom'
+import { Menu, icons, axisstyle, table2col } from '#dom'
 import { to_svg } from '#src/client'
-import { quadtree, type Quadtree } from 'd3-quadtree'
+import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
-import { get$id } from '#termsetting'
-import { showGrin2ResultTable } from '../grin2/grin2.ts'
-import type { GeneDataItem } from '../grin2/GRIN2Types.ts'
-
-/**
- * Searches a quadtree for all points within a specified radius of target coordinates.
- *
- * @param {Object} quadtree - D3 quadtree containing ManhattanPoint data
- * @param {number} mx - Target x coordinate (in pixels)
- * @param {number} my - Target y coordinate (in pixels)
- * @param {number} hitRadius - Search radius (in pixels)
- * @returns {Array<{point: ManhattanPoint, distance: number}>} Array of points within radius with their distances
- */
-function findPointsInRadius(
-	quadtree: Quadtree<ManhattanPoint>,
-	mx: number,
-	my: number,
-	hitRadius: number
-): Array<{ point: ManhattanPoint; distance: number }> {
-	const candidates: Array<{ point: ManhattanPoint; distance: number }> = []
-
-	quadtree.visit((node, x1, y1, x2, y2) => {
-		// Skip this node if it's outside the search radius
-		if (x1 > mx + hitRadius || x2 < mx - hitRadius || y1 > my + hitRadius || y2 < my - hitRadius) {
-			return true // Skip this branch
-		}
-
-		// If this is a leaf node, check ALL points (including coincident ones)
-		if (!node.length) {
-			// Traverse the linked list of coincident points
-			let current: any = node
-			while (current) {
-				const point = current.data
-				if (point) {
-					const px = point.pixel_x
-					const py = point.pixel_y
-					const distance = Math.sqrt((mx - px) ** 2 + (my - py) ** 2)
-
-					if (distance <= hitRadius) {
-						candidates.push({ point, distance })
-					}
-				}
-				current = current.next // Move to next coincident point
-			}
-		}
-
-		return false // Don't stop early - check all nodes in radius
-	})
-
-	return candidates
-}
-
-/**
- * Updates selection order tracking and determines the last touched gene.
- * This function is used by interactive selection buttons (Lollipop, Matrix) to track
- * which item was most recently selected, even when multiple items are selected.
- *
- * @param {number[]} currentSelectionOrder - Current array tracking selection order (indices in order of selection)
- * @param {number[]} selectedIndices - New array of selected indices from the selection UI
- * @param {GeneDataItem[]} dataSource - Array of data items containing gene information
- *   Can be either ManhattanPoints with `gene` property or table rows with `value` property
- * @returns {{selectionOrder: number[], lastTouchedGene: string | null, buttonText: string, buttonDisabled: boolean}}
- *   - selectionOrder: Updated array of indices in selection order
- *   - lastTouchedGene: Gene symbol of most recently selected item, or null if no selection
- *   - buttonText: Suggested button text including gene name if available
- *   - buttonDisabled: Whether the button should be disabled (true when no gene is selected)
- */
-export function updateSelectionTracking(
-	currentSelectionOrder: number[],
-	selectedIndices: number[],
-	dataSource: GeneDataItem[]
-): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string; buttonDisabled: boolean } {
-	// Find newly selected items
-	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
-
-	// Update selection order: remove deselected items, add newly selected ones
-	const updatedSelectionOrder = currentSelectionOrder.filter(idx => selectedIndices.includes(idx))
-	updatedSelectionOrder.push(...newlySelected)
-
-	let lastTouchedGene: string | null = null
-	let buttonText = 'Lollipop'
-
-	if (updatedSelectionOrder.length > 0) {
-		// Get the most recently selected gene (last in selectionOrder)
-		const lastSelectedIdx = updatedSelectionOrder[updatedSelectionOrder.length - 1]
-		const dataItem = dataSource[lastSelectedIdx]
-
-		// Handle both ManhattanPoint objects (with 'gene' property) and table rows (arrays with value property)
-		if (Array.isArray(dataItem)) {
-			// Table row format: array of cells with value property
-			lastTouchedGene = dataItem[0]?.value || null
-		} else {
-			// ManhattanPoint format: object with gene property
-			lastTouchedGene = (dataItem as { gene: string }).gene
-		}
-
-		buttonText = `Lollipop (${lastTouchedGene})`
-	}
-
-	return {
-		selectionOrder: updatedSelectionOrder,
-		lastTouchedGene,
-		buttonText,
-		buttonDisabled: lastTouchedGene === null
-	}
-}
+import { showResultsTable } from '../shared/resultsTable'
+import { createLollipopFromGene } from '../shared/genePlotActions'
+import { findPointsInRadius } from '../shared/quadtreeHitTest'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.
@@ -327,7 +224,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 						// Multiple genes
 						const holder = geneTip.d.append('div').style('margin', '10px')
 
-						showGrin2ResultTable({ tableDiv: holder, hits: nearbyDots })
+						showResultsTable({ tableDiv: holder, hits: nearbyDots })
 
 						// Show message if there are more dots beyond the settings.maxTooltipGenes shown
 						// TODO: Make these settings abstracted out and can improve this later
@@ -394,7 +291,7 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 					const holder = clickMenu.d.append('div').style('margin', '10px')
 
-					showGrin2ResultTable({ tableDiv: holder, hits: allNearbyDots, app, clickMenu })
+					showResultsTable({ tableDiv: holder, hits: allNearbyDots, app, clickMenu })
 				}
 			})
 	}
@@ -513,62 +410,5 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 				.attr('font-size', `${settings.legendFontSize + 2}px`)
 				.text(item.type)
 		})
-	}
-}
-
-export function createLollipopFromGene(geneSymbol: string, app: any) {
-	const cfg: any = {
-		type: 'plot_create',
-		config: {
-			chartType: 'genomeBrowser',
-			snvindel: { shown: true }, // always set snvindel.shown=true so the mds3 tk is always shown; since grin2 works for this ds, it doesn't matter whether snvindel/cnv/svfusion any is present; all will be shown in mds3 tk
-			geneSearchResult: { geneSymbol }
-		}
-	}
-	if (app.vocabApi.termdbConfig.queries.trackLst?.activeTracks) {
-		cfg.config.trackLst = structuredClone(app.vocabApi.termdbConfig.queries.trackLst)
-		cfg.config.trackLst.activeTracks = [] // clear all active tracks as they are not related to grin2 analysis
-		// cannot do cfg.config.trackLst={activeTracks:[]}; breaks
-	}
-	app.dispatch(cfg)
-}
-
-export async function createMatrixFromGenes(geneSymbols: string[], app: any): Promise<void> {
-	// TODO: Improve this by maybe adding sayInfo that has a little div that shows a message letting the user know the matrix is being created with only the first N genes if they selected too many
-	const MAX_GENES = 100
-	const genesToUse = geneSymbols.slice(0, MAX_GENES)
-
-	try {
-		const termwrappers = await Promise.all(
-			genesToUse.map(async (gene: string) => {
-				const term = {
-					type: 'geneVariant',
-					gene: gene,
-					name: gene
-				}
-				const minTwCopy = app.vocabApi.getTwMinCopy({ term, q: {} })
-				return {
-					$id: await get$id(minTwCopy),
-					term,
-					q: {}
-				}
-			})
-		)
-
-		app.dispatch({
-			type: 'plot_create',
-			config: {
-				chartType: 'matrix',
-				dataType: 'geneVariant',
-				termgroups: [
-					{
-						name: 'Genomic Alterations',
-						lst: termwrappers
-					}
-				]
-			}
-		})
-	} catch (error) {
-		sayerror(app.dom.div, `Error creating matrix: ${error instanceof Error ? error.message : error}`)
 	}
 }
