@@ -11,9 +11,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'boxplot':
 			return await import(`./boxplot/BoxPlot.ts`)
 
-		case 'chat':
-			return await import(`./chat/chat.ts`)
-
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
