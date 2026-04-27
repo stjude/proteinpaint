@@ -973,6 +973,10 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 			{ <formatKey> : set of hidden values }
 	*/
 	return async param => {
+		if (param.hiddenmclass?.has(dtsnvindel)) {
+			// snvindel is skipped
+			return []
+		}
 		utils.validateRglst(param, genome)
 		const formatFilter = getFormatFilter(param)
 
@@ -1018,7 +1022,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 
 				// make a m{} for every alt allele
 				for (const m of m0.mlst) {
-					if (param.hiddenmclass && param.hiddenmclass.has(m.class)) continue
+					if (param.hiddenmclass?.has(m.class)) continue
 
 					// m should have .info{}
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
@@ -1253,6 +1257,11 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			{ <formatKey> : set of hidden values }
 	*/
 	return async param => {
+		if (param.hiddenmclass?.has(dtsnvindel)) {
+			// snvindel is skipped. allows to avoid file read
+			return []
+		}
+
 		utils.validateRglst(param, genome)
 
 		const formatFilter = getFormatFilter(param)
@@ -1323,7 +1332,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 				// make a m{} for every alt allele
 				for (const m of m0.mlst) {
-					if (param.hiddenmclass && param.hiddenmclass.has(m.class)) continue
+					if (param.hiddenmclass?.has(m.class)) continue
 
 					// m should have .info{}
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
@@ -2308,6 +2317,10 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 
 	// same parameter as snvindel.byrange.get()
 	return async param => {
+		if (param.hiddenmclass?.has(dtsv) && param.hiddenmclass.has(dtfusionrna)) {
+			// both sv & fusion are skipped (even if ds has only 1 type)
+			return []
+		}
 		utils.validateRglst(param, genome)
 
 		const formatFilter = getFormatFilter(param)
@@ -2353,7 +2366,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 
 					j.class = j.dt == dtsv ? mclasssv : mclassfusionrna
 
-					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+					if (param.hiddenmclass?.has(j.class)) return
 
 					if (j.sample) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
@@ -2484,6 +2497,10 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 export async function svfusionByNameGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byname
 	return async param => {
+		if (param.hiddenmclass?.has(dtsv) && param.hiddenmclass.has(dtfusionrna)) {
+			// both sv & fusion are skipped (even if ds has only 1 type)
+			return []
+		}
 		utils.validateRglst(param, genome)
 
 		const formatFilter = getFormatFilter(param)
@@ -2541,7 +2558,7 @@ export async function svfusionByNameGetter_file(ds, genome) {
 					// FIXME file should use sample name but not integer id
 					j.sample = ds.cohort.termdb.q.sampleName2id(m['sample_name'])
 
-					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+					if (param.hiddenmclass?.has(j.class)) return
 
 					if (j.sample && limitSamples) {
 						// to filter sample
@@ -2685,6 +2702,10 @@ async function addCnvGetter(ds, genome) {
 	cnvLossCutoff: float
 	*/
 	return async param => {
+		if (param.hiddenmclass?.has(dtcnv)) {
+			// cnv is skipped
+			return { cnvs: [] }
+		}
 		utils.validateRglst(param, genome)
 		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
 		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
@@ -2754,7 +2775,7 @@ async function addCnvGetter(ds, genome) {
 						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
 					}
 
-					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+					if (param.hiddenmclass?.has(j.class)) return
 
 					if (j.sample) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
