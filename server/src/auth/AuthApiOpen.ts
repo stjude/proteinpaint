@@ -1,6 +1,8 @@
 import { type AuthInterface } from '../auth.ts'
 
-// will be used when there is no active serverconfig.dsCredentials entry
+// will be used when there is no active serverconfig.dsCredentials entry;
+// use a literal object to represent a singleton instance, as there are no
+// private properties and methods to hide/protect
 export const AuthApiOpen: AuthInterface = {
 	// credentialed embedders, using an array which can be frozen with Object.freeze(), unlike a Set()
 	credEmbedders: [],

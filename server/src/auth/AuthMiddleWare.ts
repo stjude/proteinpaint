@@ -3,7 +3,13 @@
 // also logout should be supported regardless
 const forcedOpenRoutes = new Set(['/dslogin', '/jwt-status', '/dslogout', '/healthcheck', '/demoToken'])
 
+// Using a closure to make sure that the arguments are all related to each other.
+// An alternative of exporting/importing the auth instance unnecessarily exposes it
+// to code that doesn't need to read, use, or mutate the private auth properties and methods.
 export function setAuthMiddleware(app, genomes, authApi, auth) {
+	// TODO: should check if the app already has an auth middleware,
+	// to avoid mutating what's already been set at server launch
+
 	/* !!! app.use() must be called before route setters and await !!! */
 
 	// "gatekeeper" middleware that checks if a request requires
@@ -44,7 +50,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 		// may configure to avoid in-memory session tracking, to simulate a multi-server process setup
 		if (auth.sessionTracking == 'jwt-only') {
 			console.log('!!! --- CLEARING ALL SESSION DATA TO simulate stateless service --- !!!')
-			for (const key of Object.keys(auth.sessions)) delete auth.sessions[key]
+			auth.sessions = {}
 		}
 
 		try {

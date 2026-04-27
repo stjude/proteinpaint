@@ -14,7 +14,10 @@ const { isMatch } = mm
 // 	jwt: '/jwt-status'
 // }
 
-// An AuthApi instance wraps the private Auth instance
+// An AuthApi class instance will wrap a private Auth class instance.
+// A class is used here so that the instance can be specific to the importer,
+// and the private #auth class will be exposed only to middleware and
+// routes handlers via closure, and not exposed to any other code.
 export class AuthApi implements AuthInterface {
 	#auth: Auth
 	credEmbedders: string[] = []
