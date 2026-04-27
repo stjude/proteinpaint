@@ -907,12 +907,6 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
-	if (tk.snvIndelOnly) {
-		// only show snvindel
-		// clear cnv legend
-		tk.legend.cnv.row.selectAll('*').remove()
-		return
-	}
 
 	// tk is equipped with cnv. determine if cnv data is actually shown
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {
