@@ -347,7 +347,7 @@ export class VolcanoPlotView {
 				addTooltipRows(shown[0], table, this.termType)
 			} else {
 				const holder = hoverTip.d.append('div').style('margin', '10px')
-				renderVolcanoGeneTable(holder, shown, this.termType)
+				renderVolcanoGeneTable(holder, shown, this.termType, this.settings.pValueType)
 				if (additionalCount > 0) {
 					holder
 						.append('div')
@@ -383,7 +383,7 @@ export class VolcanoPlotView {
 
 			clickMenu.clear().show(event.clientX, event.clientY)
 			const holder = clickMenu.d.append('div').style('margin', '10px')
-			renderVolcanoGeneTable(holder, candidates, this.termType, {
+			renderVolcanoGeneTable(holder, candidates, this.termType, this.settings.pValueType, {
 				// Radio buttons (not checkboxes) — volcano actions only target one gene.
 				singleMode: true,
 				noButtonCallback: (i: number) => {
@@ -525,29 +525,33 @@ function renderDataPoints(self: any) {
 /** Renders the multi-gene table used by both the hover tooltip (when >1 dot
  * is in range) and the click menu. Reuses showResultsTable for sortable
  * columns; volcano omits the `app` arg so manhattan-only Lollipop/Matrix
- * buttons stay hidden. */
+ * buttons stay hidden. The p-value column matches `settings.pValueType` so
+ * the table aligns with the y-axis basis (original vs adjusted). */
 function renderVolcanoGeneTable(
 	holder: any,
 	dots: DataPointEntry[],
 	termType: string,
+	pValueType: 'original' | 'adjusted',
 	extra: Record<string, any> = {}
 ) {
 	const isDM = termType === DNA_METHYLATION
+	const pLabel = `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
+	const pField = `${pValueType}_p_value` as 'original_p_value' | 'adjusted_p_value'
 	const columns = isDM
 		? [
 				{ label: 'Promoter' },
 				{ label: 'Gene(s)' },
 				{ label: 'log₂(FC)', sortable: true },
-				{ label: 'Adjusted p-value', sortable: true }
+				{ label: pLabel, sortable: true }
 		  ]
-		: [{ label: 'Gene' }, { label: 'log₂(FC)', sortable: true }, { label: 'Adjusted p-value', sortable: true }]
+		: [{ label: 'Gene' }, { label: 'log₂(FC)', sortable: true }, { label: pLabel, sortable: true }]
 	const rows = dots.map(d => {
 		const fc = { value: roundValueAuto(d.fold_change) }
-		const padj = { value: roundValueAuto(d.adjusted_p_value) }
+		const pval = { value: roundValueAuto(d[pField]) }
 		if (isDM) {
-			return [{ value: (d as any).promoter_id || '' }, { value: d.gene_name || '' }, fc, padj]
+			return [{ value: (d as any).promoter_id || '' }, { value: d.gene_name || '' }, fc, pval]
 		}
-		return [{ value: d.gene_name || '' }, fc, padj]
+		return [{ value: d.gene_name || '' }, fc, pval]
 	})
 	showResultsTable({
 		tableDiv: holder,

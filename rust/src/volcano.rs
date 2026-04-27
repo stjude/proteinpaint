@@ -165,24 +165,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     let y_min_unpadded = 0f64;
     let y_max_unpadded = if y_max_data > 0.0 { y_max_data } else { 1.0 };
 
-    // Pad PNG by 2*dot_radius on each axis so dots near the edges of the data
-    // region stay fully visible (matches manhattan_plot.rs:476-531).
-    // pad_px uses ceil() so dot_radius < 0.5 doesn't collapse to 0 under u32 cast.
-    let pad_px = (2.0 * input.dot_radius).ceil() as u32;
+    // Normalize the dot radius once into the integer pixel count plotters will
+    // actually draw, with a min of 1 so sub-pixel inputs don't collapse to a
+    // zero-radius dot. This single value drives both PNG padding and circle
+    // rendering, keeping the geometry self-consistent (matches manhattan).
+    let radius_px = (input.dot_radius as i32).max(1);
+    // Pad PNG by 2*radius_px so dots near the data edges stay fully visible.
+    let pad_px = (2 * radius_px) as u32;
     let (w, h) = (input.pixel_width + pad_px, input.pixel_height + pad_px);
     if w == 0 || h == 0 || w > 4000 || h > 4000 {
         return Err(format!("pixel dimensions {}x{} out of range (1–4000)", w, h).into());
     }
 
     // Convert pixel padding to data units using the unpadded extents and the
-    // unpadded pixel dimensions. Use pad_px/2 (not dot_radius) so the data/pixel
-    // ratio stays exactly equal between padded and unpadded space — important
-    // when ceil() rounded pad_px above 2*dot_radius for sub-pixel radii.
+    // unpadded pixel dimensions. Per-axis pad in data space = radius_px * (data
+    // range / pixel range) — keeps the data/pixel ratio identical between
+    // padded and unpadded space.
     let x_data_per_px = (x_max_unpadded - x_min_unpadded) / input.pixel_width as f64;
     let y_data_per_px = (y_max_unpadded - y_min_unpadded) / input.pixel_height as f64;
-    let half_pad_px = pad_px as f64 / 2.0;
-    let x_pad_data = half_pad_px * x_data_per_px;
-    let y_pad_data = half_pad_px * y_data_per_px;
+    let x_pad_data = radius_px as f64 * x_data_per_px;
+    let y_pad_data = radius_px as f64 * y_data_per_px;
     let x_min = x_min_unpadded - x_pad_data;
     let x_max = x_max_unpadded + x_pad_data;
     let y_min = y_min_unpadded - y_pad_data;
@@ -226,18 +228,17 @@ fn main() -> Result<(), Box<dyn Error>> {
             filled: false,
             stroke_width: 1,
         };
-        let radius = input.dot_radius as i32;
 
         // Draw non-significant first so significant rings overlay on top.
         chart.draw_series(
             points
                 .iter()
                 .filter(|p| !p.significant)
-                .map(|p| Circle::new((p.fc, p.y), radius, ring(color_non))),
+                .map(|p| Circle::new((p.fc, p.y), radius_px, ring(color_non))),
         )?;
         chart.draw_series(points.iter().filter(|p| p.significant).map(|p| {
             let c = if p.fc > 0.0 { color_up } else { color_down };
-            Circle::new((p.fc, p.y), radius, ring(c))
+            Circle::new((p.fc, p.y), radius_px, ring(c))
         }))?;
 
         // Mirror manhattan_plot.rs: capture the exact pixel coords plotters
@@ -282,7 +283,9 @@ fn main() -> Result<(), Box<dyn Error>> {
             x_max_unpadded,
             y_min_unpadded,
             y_max_unpadded,
-            dot_radius_px: input.dot_radius,
+            // Echo the normalized integer radius plotters actually drew so the
+            // SVG overlay sizes its rings to match the rasterized PNG dots.
+            dot_radius_px: radius_px as f64,
             pixel_width: w,
             pixel_height: h,
             plot_left: 0,

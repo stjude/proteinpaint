@@ -126,7 +126,10 @@ export function updateSelectionTracking(
 		const dataItem = dataSource[lastSelectedIdx]
 
 		if (Array.isArray(dataItem)) {
-			lastTouchedGene = dataItem[0]?.value || null
+			// First cell is by convention the gene/feature name; coerce to string
+			// since `value` is widened to string | number across the table API.
+			const v = dataItem[0]?.value
+			lastTouchedGene = v != null ? String(v) : null
 		} else {
 			lastTouchedGene = (dataItem as { gene: string }).gene
 		}

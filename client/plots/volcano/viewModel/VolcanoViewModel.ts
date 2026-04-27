@@ -128,10 +128,14 @@ export class VolcanoViewModel {
 	}
 
 	setPlotDimensions() {
-		// Plot rect grows by 2*dotRadiusPx on each axis to accommodate the
-		// server-side PNG padding (so dots near the real-data edge stay whole).
-		const plotW = this.settings.width + 2 * this.dotRadiusPx
-		const plotH = this.settings.height + 2 * this.dotRadiusPx
+		// Trust the server's authoritative PNG dimensions for the plot rect.
+		// (Recomputing as `settings.width + 2*dotRadiusPx` is wrong when rust's
+		// `pad_px = ceil(2*dot_radius)` rounds up for non-integer dot_radius —
+		// the SVG plot rect would scale the PNG and break pixel_x/pixel_y
+		// alignment with the rasterized dots.)
+		const ext = this.response.data.plotExtent
+		const plotW = ext.pixelWidth
+		const plotH = ext.pixelHeight
 
 		// Positioning scales — padded data range covers the full plot rect.
 		// Used for overlay dot placement, the PNG image, and the fold-change line.
