@@ -1,8 +1,13 @@
 import { select } from 'd3-selection'
 //import { dofetch3 } from './dofetch'
 
-const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
-const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+let jwtByDsRoute
+
+function setJwtByDsRoute() {
+	if (jwtByDsRoute) return
+	const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
+	jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+}
 
 /*
 	setTokenByDsRoute() sets this storage item:
@@ -21,6 +26,7 @@ const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
 	The stored token will be submitted as part of Vocab.mayGetAuthHeaders() or getSavedToken().
 */
 export function setTokenByDsRoute(dslabel, route, jwt) {
+	setJwtByDsRoute()
 	if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
 	if (jwt) jwtByDsRoute[dslabel][route] = jwt
 	else delete jwtByDsRoute[dslabel][route]
@@ -29,6 +35,7 @@ export function setTokenByDsRoute(dslabel, route, jwt) {
 
 // get jwt string directly from localStorage/jwtByDsRoute tracking object
 export function getSavedToken(dslabel, route) {
+	setJwtByDsRoute()
 	return jwtByDsRoute[dslabel]?.[route] || jwtByDsRoute[dslabel]?.['/**']
 }
 
@@ -49,6 +56,7 @@ export function mayAddJwtToRequest(init, body, url) {
 			dslabel = value
 		}
 	}
+	setJwtByDsRoute()
 	if (!dslabel || !jwtByDsRoute[dslabel]) return
 	const h = url.split('//')
 	const postProtocolStr = h[1] || h[0] // handle a url such as '://something.abc'
