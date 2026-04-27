@@ -3,7 +3,17 @@ import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '#common/urlmap'
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, getColors } from '#shared/common.js'
+import {
+	mclass,
+	dtsnvindel,
+	dtsv,
+	dtfusionrna,
+	dtcnv,
+	mclassfusionrna,
+	mclasssv,
+	CNVClasses,
+	getColors
+} from '#shared/common.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import { getFilterName } from './filterName'
 import { fillTermWrapper } from '#termsetting'
@@ -247,6 +257,7 @@ export async function makeTk(tk, block) {
 			onClose: tk.onClose,
 			callbackOnRender: tk.callbackOnRender,
 			hardcodeCnvOnly: tk.hardcodeCnvOnly,
+			snvIndelOnly: tk.snvIndelOnly,
 			token: tk.token // for testing
 		}
 		if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
@@ -453,6 +464,26 @@ function init_mclass(tk) {
 	if (tk.mds.hiddenmclass) {
 		// port over default hidden mclass
 		for (const c of tk.mds.hiddenmclass) tk.legend.mclass.hiddenvalues.add(c)
+	}
+	if (tk.snvIndelOnly) {
+		// hide non-snvindel classes
+		const nonSnvIndelClasses = [mclassfusionrna, mclasssv]
+		const cnv = tk.mds.termdbConfig?.queries?.cnv
+		if (cnv) {
+			const keys = Object.keys(cnv)
+			if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
+				// continuous cnv data
+				nonSnvIndelClasses.push(dtcnv)
+			} else {
+				// categorical cnv data
+				nonSnvIndelClasses.push(...CNVClasses)
+			}
+		}
+		tk.legend.mclass.nonSnvIndelClasses = new Set()
+		for (const c of nonSnvIndelClasses) {
+			tk.legend.mclass.hiddenvalues.add(c)
+			tk.legend.mclass.nonSnvIndelClasses.add(c) // keep track to hide legend items in client/mds3/legend.js
+		}
 	}
 }
 
