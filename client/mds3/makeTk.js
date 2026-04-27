@@ -468,7 +468,7 @@ function init_mclass(tk) {
 	if (tk.snvIndelOnly) {
 		// hide non-snvindel classes
 		const nonSnvIndelClasses = [mclassfusionrna, mclasssv]
-		const cnv = tk.mds.termdbConfig.queries.cnv
+		const cnv = tk.mds.termdbConfig?.queries?.cnv
 		if (cnv) {
 			const keys = Object.keys(cnv)
 			if (keys.includes('cnvGainCutoff') || keys.includes('cnvLossCutoff')) {
