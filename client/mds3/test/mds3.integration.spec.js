@@ -3,6 +3,7 @@ import * as d3s from 'd3-selection'
 import { detectOne, detectZero, detectGte, whenVisible, detectLst, sleep } from '../../test/test.helpers'
 import { runproteinpaint } from '../../test/front.helpers.js'
 import { unannotatedKey } from '../legend.js'
+import { dtsnvindel, mclass } from '#shared/common.js'
 
 /**************
  test sections
@@ -15,6 +16,7 @@ Official - allow2selectSamples
 Official - hidegenelegend
 Official - hardcodeCnvOnly hidegenelegend
 Official - hardcodeCnvOnly
+Official - snvIndelOnly
 Incorrect dslabel
 Custom cnv only, no sample
 
@@ -486,6 +488,40 @@ tape('Official - hardcodeCnvOnly', test => {
 		{
 			const t = tk.duplicateTk()
 			test.ok(t.hardcodeCnvOnly, 'duplicateTk() should attach hardcodeCnvOnly')
+		}
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Official - snvIndelOnly', test => {
+	const holder = getHolder()
+	const gene = 'TP53'
+	runproteinpaint({
+		holder,
+		genome: 'hg38-test',
+		gene,
+		tracks: [{ type: 'mds3', dslabel: 'TermdbTest', snvIndelOnly: true, callbackOnRender }]
+	})
+	async function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, gene, 'block.usegm.name=' + gene)
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length > 0, 'rawmlst[] should be non-empty')
+		test.ok(
+			tk.skewer.rawmlst.every(m => m.dt === dtsnvindel),
+			'rawmlst[] should only contain snvindels'
+		)
+		test.ok(tk.cnv.cnvLst.length === 0, 'cnvLst[] should be empty')
+
+		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
+		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
+
+		testLegend(test, tk)
+
+		{
+			const t = tk.duplicateTk()
+			test.ok(t.snvIndelOnly, 'duplicateTk() should attach snvIndelOnly')
 		}
 
 		if (test._ok) holder.remove()
@@ -1273,6 +1309,24 @@ function testLegend_mclass(test, tk) {
 		return
 	}
 
+	if (tk.snvIndelOnly) {
+		// ensure all mutation classes in legend are snvindel classes
+		const items = tk.legend.mclass.row.selectAll('.sja_clb').nodes()
+		for (const item of items) {
+			const itemLabel = Array.from(item.childNodes)
+				.filter(n => !n.classList?.contains('sja_mcdot'))
+				.map(n => n.textContent || '')
+				.join('')
+				.trim()
+			const m = Object.values(mclass).find(m => m.label == itemLabel)
+			if (!m) {
+				test.fail('cannot find mutation by label')
+			} else {
+				test.equal(m.dt, dtsnvindel, 'variant in legend should be snvindel')
+			}
+		}
+	}
+
 	test.equal(
 		tk.legend.mclass.row.style('display'),
 		'table-row',
@@ -1381,6 +1435,13 @@ function testLegend_cnv(test, tk) {
 		return
 	}
 	test.ok(tk.legend.cnv, 'tk.legend.cnv is set when tk has cnv')
+
+	const cnvItems = tk.legend.cnv.row.selectAll('*').nodes()
+	if (tk.snvIndelOnly) {
+		test.ok(cnvItems.length === 0, 'should not have cnv items when tk.snvIndelOnly = true')
+	} else {
+		test.ok(cnvItems.length > 0, 'should have cnv items when tk.snvIndelOnly = false')
+	}
 
 	// test if color scale is shown based on type of cnv data
 	const colorS = tk.legend.cnv.holder.selectAll('[data-testid="sjpp-color-scale"]')._groups[0]

@@ -257,6 +257,7 @@ export async function makeTk(tk, block) {
 			onClose: tk.onClose,
 			callbackOnRender: tk.callbackOnRender,
 			hardcodeCnvOnly: tk.hardcodeCnvOnly,
+			snvIndelOnly: tk.snvIndelOnly,
 			token: tk.token // for testing
 		}
 		if (tk.cnv?.presetMax) tkarg.cnv = { presetMax: tk.cnv.presetMax } // preset value is present, pass to subtk
