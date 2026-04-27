@@ -70,6 +70,11 @@ export async function renderVolcano<T extends DataEntry>(
 			x_max: number
 			y_min: number
 			y_max: number
+			x_min_unpadded: number
+			x_max_unpadded: number
+			y_min_unpadded: number
+			y_max_unpadded: number
+			dot_radius_px: number
 			pixel_width: number
 			pixel_height: number
 			plot_left: number
@@ -90,6 +95,11 @@ export async function renderVolcano<T extends DataEntry>(
 			xMax: out.plot_extent.x_max,
 			yMin: out.plot_extent.y_min,
 			yMax: out.plot_extent.y_max,
+			xMinUnpadded: out.plot_extent.x_min_unpadded,
+			xMaxUnpadded: out.plot_extent.x_max_unpadded,
+			yMinUnpadded: out.plot_extent.y_min_unpadded,
+			yMaxUnpadded: out.plot_extent.y_max_unpadded,
+			dotRadiusPx: out.plot_extent.dot_radius_px,
 			pixelWidth: out.plot_extent.pixel_width,
 			pixelHeight: out.plot_extent.pixel_height,
 			plotLeft: out.plot_extent.plot_left,
