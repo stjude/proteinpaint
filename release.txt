@@ -1,2 +1,1 @@
-Features:
-- Now using common quadtree approach in volcano and manhattan plot
+
