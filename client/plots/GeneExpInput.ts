@@ -124,10 +124,9 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: typeGroup[SSGSEA],
-				active: true,
 				isVisible: () => this.termType === GENE_EXPRESSION,
 				callback: async (event, tab) => {
-					this.renderSSGEA(tab)
+					await this.renderSSGSEA(tab)
 					delete tab.callback
 				}
 			}
@@ -324,11 +323,11 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		})
 	}
 
-	async renderSSGEA(tab) {
+	async renderSSGSEA(tab) {
 		const holder = tab.contentHolder.style('padding', '10px')
 		const _ = await import('../termdb/handlers/ssGSEA.ts')
 		const searchHandler = new _.SearchHandler()
-		searchHandler.init({
+		await searchHandler.init({
 			holder,
 			app: this.app,
 			genomeObj: this.genome,
