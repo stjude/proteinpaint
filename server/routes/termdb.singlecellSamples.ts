@@ -184,7 +184,7 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 	}
 }
 
-/** Adds ds.queries.singleCell.data.get() on init()
+/** Adds ds.queries.singleCell.data.get() on init().
  * Runs from termdb.singleCellData route when q.data.src is 'native'.
  * @param D ds.queries.singleCell.data{}
  * @param ds Entire dataset configuration from the ds file
@@ -201,9 +201,9 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	const file2Lines = {} // key: file path, value: string[]
 
 	D.get = async (q: TermdbSingleCellDataRequest) => {
-		/** Only return plots with corresponding data files. */
+		const sampleId = q.sample?.eID || q.sample?.sID
+		/** Only return plots with available data files. */
 		if (q.checkPlotAvailability) {
-			const sampleId = q.sample?.eID || q.sample?.sID
 			const plots: any = []
 			for (const plot of D.plots) {
 				if (!q.plots.includes(plot.name)) continue
@@ -228,6 +228,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			}
 			return { plots }
 		}
+
 		// if sample is int, may convert to string
 		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
@@ -239,11 +240,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
-			const tsvfile = path.join(
-				serverconfig.tpmasterdir,
-				plot.folder,
-				(q.sample?.eID || q.sample?.sID) + (plot.fileSuffix || '')
-			)
+			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
 			if (!file2Lines[tsvfile]) {
 				await file_is_readable(tsvfile)
 				const text = await read_file(tsvfile)

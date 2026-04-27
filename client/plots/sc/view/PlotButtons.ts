@@ -31,8 +31,11 @@ export class PlotButtons {
 	scTermdbConfig: any
 	settings!: Settings
 	scctTerms?: any[]
+	availablePlots!: Set<string>
 
-	constructor(interactions: SCInteractions, holder: Div) {
+	/** This is the initial state. scctTerms and the termdbConfig are created on
+	 * server init and will not change. */
+	constructor(interactions: SCInteractions, holder: Div, state) {
 		holder.style('padding', '10px')
 		const promptDiv = holder.append('div').style('padding', '10px 0').text('Select data from')
 		this.plotBtnsDom = {
@@ -42,9 +45,6 @@ export class PlotButtons {
 			tip: new Menu({ padding: '' })
 		}
 		this.interactions = interactions
-		/** This is the initial state. scctTerms and the termdbConfig are created on
-		 * server init and will not change. */
-		const state = this.interactions.getState as any
 		this.scctTerms = state.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
 		this.scTermdbConfig = state.termdbConfig.queries.singleCell
 	}
@@ -57,6 +57,8 @@ export class PlotButtons {
 		this.plotBtnsDom.promptDiv.style('display', !item ? 'none' : 'block')
 		if (!item) return
 		if (data != null && data.plots) this.data = data
+		//Show buttons for plots with found data files (see note above).
+		this.availablePlots = new Set(this.data?.plots?.map((p: any) => p.name))
 		this.settings = settings
 		this.item = item
 		const name = item.sID
@@ -103,18 +105,16 @@ export class PlotButtons {
 			getPlotConfig?: (f?: any) => any
 		}[] = []
 
-		//Show buttons for plots with found data files (see note above).
-		const availablePlots = new Set(this.data?.plots?.map((p: any) => p.name))
-
 		for (const plot of this.scTermdbConfig?.data?.plots || []) {
 			btns.push({
 				label: plot.name,
-				isVisible: () => availablePlots.has(plot.name),
+				isVisible: () => this.availablePlots.has(plot.name),
 				getPlotConfig: async () => {
 					return await this.getSingleCellConfig(plot.name)
 				}
 			})
 		}
+
 		btns.push(
 			{
 				label: 'Summary',
@@ -179,7 +179,8 @@ export class PlotButtons {
 			},
 			{
 				label: this.scTermdbConfig?.images?.label || 'Image',
-				isVisible: () => this.scTermdbConfig?.images && availablePlots.has(this.scTermdbConfig.images.label || 'Image'),
+				isVisible: () =>
+					this.scTermdbConfig?.images && this.availablePlots.has(this.scTermdbConfig.images.label || 'Image'),
 				getPlotConfig: () => {
 					return {
 						chartType: 'imagePlot',
@@ -195,14 +196,14 @@ export class PlotButtons {
 	}
 
 	//********** Btn Menus **********/
-	termDropdownMenu(plot: any, self: PlotButtons) {
-		self.plotBtnsDom.tip.clear()
-		//TODO: Planned server request here to get the available
-		// clusters/termIds for the selected sample,
-		// instead of using the clusters returned for the
-		// plot which is currently hardcoded to a few options for testing.
-		const _plot = self.data.plots[0]
+	async termDropdownMenu(plot: any, self: PlotButtons) {
+		/** An array of plots is required for the server request.
+		 * The data for all scRNA plots is the same. Pick the first one */
+		const _plot = Array.from(self.availablePlots)[0]
+		const options: string[] | undefined = await self.interactions.getDropDownOptions([_plot])
+		if (!options?.length) throw new Error('No options found for this plot. Cannot open dropdown menu.')
 
+		self.plotBtnsDom.tip.clear()
 		const wrapper = self.plotBtnsDom.tip.d.append('div').style('padding', '10px')
 		wrapper
 			.append('div')
@@ -223,10 +224,9 @@ export class PlotButtons {
 				await self.interactions.createSubplot(config)
 			})
 
-		//TODO: Replace this with planned server response for the clusters/termId.
-		const regex = new RegExp(_plot.colorBy, 'g')
-		_plot.clusters.unshift(`Select ${self.scTermdbConfig.DEgenes.termId}...`)
-		for (const cluster of _plot.clusters) {
+		const regex = new RegExp(self.scTermdbConfig.DEgenes.termId, 'gi')
+		options.unshift(`Select a ${self.scTermdbConfig.DEgenes.termId}...`)
+		for (const cluster of options) {
 			select.append('option').attr('value', cluster.replace(regex, '').trim()).text(cluster)
 		}
 	}

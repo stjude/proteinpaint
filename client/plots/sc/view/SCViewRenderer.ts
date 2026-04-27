@@ -22,12 +22,12 @@ export class SCViewRenderer {
 	sectionRenderer: SectionRenderer
 	sc: SCViewer
 
-	constructor(sc: SCViewer, groupBy: (typeof GroupByOptions)[number]) {
+	constructor(sc: SCViewer, state: any) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
-		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, groupBy)
+		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv, state)
+		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, state.config.settings.sc.groupBy)
 	}
 
 	render(tableData: SCTableData, settings: SCSettings) {
