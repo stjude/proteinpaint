@@ -1,6 +1,6 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, typeGroup } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, SSGSEA, typeGroup } from '#shared/terms.js'
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
 import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs } from '#dom'
@@ -121,6 +121,15 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 					})
 					delete tab.callback
 				}
+			},
+			{
+				label: typeGroup[SSGSEA],
+				active: true,
+				isVisible: () => this.termType === GENE_EXPRESSION,
+				callback: async (event, tab) => {
+					this.renderSSGEA(tab)
+					delete tab.callback
+				}
 			}
 		]
 
@@ -140,7 +149,11 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const headerText = this.opts.headerText ? `${this.opts.headerText} ` : ''
 		const dom: { [index: string]: any } = {
 			header: {
-				title: this.opts.header.append('span').text(headerText).attr('data-testid', 'sjpp-gene-exp-input-headerText'),
+				title: this.opts.header
+					.append('span')
+					.style('padding-right', '5px')
+					.text(headerText)
+					.attr('data-testid', 'sjpp-gene-exp-input-headerText'),
 				plot: this.opts.header
 					.append('span')
 					.text(typeGroup[this.termType].toUpperCase())
@@ -306,6 +319,24 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 					dataType: GENE_EXPRESSION
 				})
 
+				await this.dispatchEdits(config)
+			}
+		})
+	}
+
+	async renderSSGEA(tab) {
+		const holder = tab.contentHolder.style('padding', '10px')
+		const _ = await import('../termdb/handlers/ssGSEA.ts')
+		const searchHandler = new _.SearchHandler()
+		searchHandler.init({
+			holder,
+			app: this.app,
+			genomeObj: this.genome,
+			callback: async term => {
+				const config = this.makeConfig({
+					chartType: 'summary',
+					term: { term: term }
+				})
 				await this.dispatchEdits(config)
 			}
 		})
