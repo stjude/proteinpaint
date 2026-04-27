@@ -94,13 +94,23 @@ export type VolcanoData<T extends DataEntry> = {
 /** Coordinate metadata returned by the `volcano` renderer, used by the client to overlay
  * interactive top-significant circles on top of the server-drawn PNG. */
 export type PlotExtent = {
-	/** Data-space x domain used during rendering. */
+	/** Padded data-space x domain — used to position overlay dots so points near
+	 * the real-data edges stay fully visible (mirror of manhattan's yPlot domain). */
 	xMin: number
 	xMax: number
-	/** Data-space y domain used during rendering (on -log10 p-value scale). */
+	/** Padded data-space y domain (on -log10 p-value scale). */
 	yMin: number
 	yMax: number
-	/** PNG canvas dimensions. */
+	/** Unpadded data-space x domain — used for the visible axis labels/ticks
+	 * so the axis only spans the real data region. */
+	xMinUnpadded: number
+	xMaxUnpadded: number
+	/** Unpadded data-space y domain. */
+	yMinUnpadded: number
+	yMaxUnpadded: number
+	/** Dot radius in pixels (echoed back so overlay rings match the PNG). */
+	dotRadiusPx: number
+	/** PNG canvas dimensions (already include 2*dotRadiusPx of padding). */
 	pixelWidth: number
 	pixelHeight: number
 	/** Inner drawing rect inside the PNG (after axis margins). Client overlay circles

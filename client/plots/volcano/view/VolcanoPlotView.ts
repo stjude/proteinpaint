@@ -1,11 +1,15 @@
 import { axisBottom, axisLeft } from 'd3-axis'
-import { axisstyle, table2col, renderTable } from '#dom'
-import { select, selectAll } from 'd3-selection'
+import { axisstyle, Menu, table2col, renderTable } from '#dom'
+import { selectAll } from 'd3-selection'
 import { rgb } from 'd3-color'
+import { quadtree } from 'd3-quadtree'
+import { roundValueAuto } from '#shared/roundValue.js'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import { DataPointMouseEvents } from './DataPointMouseEvents'
+import { addTooltipRows, getActionMenuOpts } from './DataPointMouseEvents'
+import { findPointsInRadius } from '../../shared/quadtreeHitTest'
+import { showResultsTable } from '../../shared/resultsTable'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
@@ -56,6 +60,7 @@ export class VolcanoPlotView {
 		this.renderPlot(plotDim)
 		renderDataPoints(this)
 		this.renderFoldChangeLine(plotDim)
+		this.setupOverlayInteractions(plotDim)
 		if (this.settings.showPValueTable) this.renderPValueTable()
 	}
 
@@ -170,15 +175,6 @@ export class VolcanoPlotView {
 				.attr('height', plotDim.plot.height)
 				.attr('preserveAspectRatio', 'none')
 		}
-
-		this.volcanoDom.plot
-			.append('rect')
-			.attr('width', plotDim.plot.width)
-			.attr('height', plotDim.plot.height)
-			.attr('stroke', '#ededed')
-			.attr('fill', 'transparent')
-			.attr('shape-rendering', 'crispEdges')
-			.attr('transform', `translate(${plotDim.plot.x}, ${plotDim.plot.y})`)
 	}
 
 	renderTermInfo(plotDim) {
@@ -238,6 +234,164 @@ export class VolcanoPlotView {
 			.attr('x2', plotDim.logFoldChangeLine.x)
 			.attr('y1', plotDim.logFoldChangeLine.y1)
 			.attr('y2', plotDim.logFoldChangeLine.y2)
+	}
+
+	/** Quadtree-driven hover & click overlay. Mirrors the manhattan plot:
+	 *   - a transparent SVG rect (cover) sits over the plot rect and absorbs
+	 *     mouse events so coincident dots are all reachable;
+	 *   - hover finds every point within (dotRadiusPx + 3) px and shows a
+	 *     single-gene table2col tooltip OR a multi-gene sortable table;
+	 *   - click launches the per-gene action menu directly for one hit, or
+	 *     opens a click-menu with a row-clickable table for many hits. */
+	setupOverlayInteractions(plotDim: VolcanoPlotDimensions) {
+		// Skip for term types with no data point actions (e.g. SCCT) — preserves
+		// existing behavior where SCCT volcanoes have no per-dot interactions.
+		if (this.termType === SINGLECELL_CELLTYPE) return
+
+		const points = this.viewData.pointData as DataPointEntry[]
+		if (!points || points.length === 0) return
+
+		// PNG-aligned radius for hover fills + hit-radius. The SVG overlay rings
+		// (points[0].radius) are deliberately drawn smaller to keep their outer
+		// stroke from overhanging the PNG dot.
+		const dotRadiusPx = this.viewData.plotExtent.dotRadiusPx
+		const hitRadius = dotRadiusPx + 3
+		const maxTooltipGenes = this.settings.maxTooltipGenes
+
+		// Hover-ring layer — visual only, never intercepts mouse events so the
+		// cover keeps absorbing them.
+		const hoverLayer = this.volcanoDom.plot.append('g').attr('id', 'sjpp-volcano-hover').style('pointer-events', 'none')
+
+		// Cover rect — last child of plot group so it sits on top of dots,
+		// hover rings, and the fold-change line.
+		const cover = this.volcanoDom.plot
+			.append('rect')
+			.attr('id', 'sjpp-volcano-cover')
+			.attr('x', plotDim.plot.x)
+			.attr('y', plotDim.plot.y)
+			.attr('width', plotDim.plot.width)
+			.attr('height', plotDim.plot.height)
+			.attr('fill', 'transparent')
+			.style('pointer-events', 'all')
+			.style('cursor', 'default')
+
+		// Quadtree in cover-local space — d.x/d.y are SVG-absolute, so subtract
+		// the plot rect's origin once when building the tree.
+		const qt = quadtree<DataPointEntry>()
+			.x(d => d.x - plotDim.plot.x)
+			.y(d => d.y - plotDim.plot.y)
+			.addAll(points)
+
+		const hoverTip = this.dom.tip
+		const clickMenu = new Menu({
+			padding: '',
+			onHide: () => {
+				clickMenuIsShown = false
+				// Drop the persisted highlight once the user dismisses the menu.
+				drawHoverRings([])
+			}
+		})
+		let clickMenuIsShown = false
+
+		const highlightColor = this.settings.defaultHighlightColor
+		// Inset by stroke-width/2 (= 0.5 px for stroke=1) so the orange fill
+		// stops at the ring's inner edge — the colored stroke stays fully
+		// visible around the highlight instead of being painted over.
+		const highlightRadius = Math.max(0.5, dotRadiusPx - 0.5)
+		const drawHoverRings = (dots: DataPointEntry[]) => {
+			hoverLayer.selectAll('circle').remove()
+			for (const d of dots) {
+				hoverLayer
+					.append('circle')
+					.attr('cx', d.x)
+					.attr('cy', d.y)
+					.attr('r', highlightRadius)
+					.attr('fill', highlightColor)
+					.attr('fill-opacity', 0.9)
+			}
+		}
+
+		const findCandidates = (event: MouseEvent) => {
+			const rect = (cover.node() as SVGRectElement).getBoundingClientRect()
+			const mx = event.clientX - rect.left
+			const my = event.clientY - rect.top
+			const candidates = findPointsInRadius<DataPointEntry>(
+				qt,
+				mx,
+				my,
+				hitRadius,
+				d => d.x - plotDim.plot.x,
+				d => d.y - plotDim.plot.y
+			)
+			candidates.sort((a, b) => a.distance - b.distance)
+			return candidates.map(c => c.point)
+		}
+
+		cover.on('mousemove', (event: MouseEvent) => {
+			if (clickMenuIsShown) return
+			const all = findCandidates(event)
+			const shown = all.slice(0, maxTooltipGenes)
+			const additionalCount = all.length - maxTooltipGenes
+
+			if (shown.length === 0) {
+				drawHoverRings([])
+				hoverTip.hide()
+				return
+			}
+
+			drawHoverRings(shown)
+			hoverTip.clear().show(event.clientX, event.clientY)
+
+			if (shown.length === 1) {
+				const table = table2col({ holder: hoverTip.d.append('table') })
+				addTooltipRows(shown[0], table, this.termType)
+			} else {
+				const holder = hoverTip.d.append('div').style('margin', '10px')
+				renderVolcanoGeneTable(holder, shown, this.termType)
+				if (additionalCount > 0) {
+					holder
+						.append('div')
+						.style('font-size', '0.85em')
+						.style('color', '#666')
+						.style('font-style', 'italic')
+						.text(`and ${additionalCount} more gene${additionalCount > 1 ? 's' : ''}...`)
+				}
+			}
+		})
+
+		cover.on('mouseleave', () => {
+			// Don't clear rings while the click menu is showing — the highlight
+			// must stay on the picked dots until the user dismisses the menu.
+			if (!clickMenuIsShown) drawHoverRings([])
+			hoverTip.hide()
+		})
+
+		cover.on('click', (event: MouseEvent) => {
+			const candidates = findCandidates(event)
+			if (candidates.length === 0) return
+			hoverTip.hide()
+			// Persist highlight on the picked dots — clickMenu.onHide clears it.
+			drawHoverRings(candidates)
+			clickMenuIsShown = true
+
+			if (candidates.length === 1) {
+				// Use clickMenu (not hoverTip) so the cover's mouseleave handler
+				// doesn't dismiss this menu when the cursor moves up to a button.
+				openActionMenu(candidates[0], event, clickMenu, this.termType, this.interactions)
+				return
+			}
+
+			clickMenu.clear().show(event.clientX, event.clientY)
+			const holder = clickMenu.d.append('div').style('margin', '10px')
+			renderVolcanoGeneTable(holder, candidates, this.termType, {
+				// Radio buttons (not checkboxes) — volcano actions only target one gene.
+				singleMode: true,
+				noButtonCallback: (i: number) => {
+					const d = candidates[i]
+					openActionMenu(d, event, clickMenu, this.termType, this.interactions)
+				}
+			})
+		})
 	}
 
 	renderStatsMenu() {
@@ -346,6 +500,10 @@ export class VolcanoPlotView {
 }
 
 function renderDataPoints(self: any) {
+	// Visual-only circles. The cover rect added in setupOverlayInteractions
+	// drives all hover/click — we strip pointer-events here so events fall
+	// through to the cover. The p-value table hover-clone effect at
+	// renderPValueTable() still finds these via selectAll('circle').
 	self.volcanoDom.plot
 		.selectAll('circle')
 		.data(self.viewData.pointData)
@@ -353,14 +511,85 @@ function renderDataPoints(self: any) {
 		.append('circle')
 		.attr('stroke', (d: DataPointEntry) => rgb(d.color).formatHex())
 		.attr('stroke-opacity', (d: DataPointEntry) => (d.significant ? 0.35 : 0.2))
-		.attr('stroke-width', (d: DataPointEntry) => (d.significant ? 1.5 : 1))
+		// Match the rust PNG's stroke-width (1) so the overlay ring sits
+		// exactly on top of the rasterized dot.
+		.attr('stroke-width', 1)
 		.attr('fill', self.settings.defaultHighlightColor)
 		.attr('fill-opacity', (d: DataPointEntry) => (d.highlighted ? 0.9 : 0))
 		.attr('cx', (d: DataPointEntry) => d.x)
 		.attr('cy', (d: DataPointEntry) => d.y)
 		.attr('r', (d: DataPointEntry) => d.radius)
-		.each(function (this: any, d: DataPointEntry) {
-			const circle = select(this)
-			new DataPointMouseEvents(d, circle, self.dom.tip, self.interactions, self.termType)
-		})
+		.style('pointer-events', 'none')
+}
+
+/** Renders the multi-gene table used by both the hover tooltip (when >1 dot
+ * is in range) and the click menu. Reuses showResultsTable for sortable
+ * columns; volcano omits the `app` arg so manhattan-only Lollipop/Matrix
+ * buttons stay hidden. */
+function renderVolcanoGeneTable(
+	holder: any,
+	dots: DataPointEntry[],
+	termType: string,
+	extra: Record<string, any> = {}
+) {
+	const isDM = termType === DNA_METHYLATION
+	const columns = isDM
+		? [
+				{ label: 'Promoter' },
+				{ label: 'Gene(s)' },
+				{ label: 'log₂(FC)', sortable: true },
+				{ label: 'Adjusted p-value', sortable: true }
+		  ]
+		: [{ label: 'Gene' }, { label: 'log₂(FC)', sortable: true }, { label: 'Adjusted p-value', sortable: true }]
+	const rows = dots.map(d => {
+		const fc = { value: roundValueAuto(d.fold_change) }
+		const padj = { value: roundValueAuto(d.adjusted_p_value) }
+		if (isDM) {
+			return [{ value: (d as any).promoter_id || '' }, { value: d.gene_name || '' }, fc, padj]
+		}
+		return [{ value: d.gene_name || '' }, fc, padj]
+	})
+	showResultsTable({
+		tableDiv: holder,
+		dataItems: dots,
+		getGene: (d: any) => d.gene_name,
+		columns,
+		rows,
+		...extra
+	} as any)
+}
+
+/** Opens the per-gene action menu at the click point. Action buttons sit at
+ * the top of the menu; the same single-gene info shown on hover (gene name,
+ * fold-change, p-values) is rendered below so the user can confirm what
+ * they're acting on. Used for both the single-hit click flow and the
+ * row-drill-down from the multi-hit click menu. */
+function openActionMenu(
+	d: DataPointEntry,
+	event: MouseEvent,
+	hostMenu: any,
+	termType: string,
+	interactions: VolcanoInteractions
+) {
+	const opts = getActionMenuOpts(d, termType, interactions)
+	hostMenu.clear().show(event.clientX, event.clientY)
+	const container = hostMenu.d.append('div').style('margin', '10px')
+
+	if (opts.length > 0) {
+		const buttonRow = container.append('div').style('margin-bottom', '10px')
+		for (const opt of opts) {
+			buttonRow
+				.append('button')
+				.attr('class', 'sja_menuoption')
+				.style('margin-right', '5px')
+				.text(opt.label)
+				.on('click', async () => {
+					hostMenu.hide()
+					await opt.onClick()
+				})
+		}
+	}
+
+	const table = table2col({ holder: container.append('table') })
+	addTooltipRows(d, table, termType)
 }

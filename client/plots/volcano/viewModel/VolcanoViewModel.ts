@@ -28,6 +28,13 @@ export class VolcanoViewModel {
 	//Used for the y axis domain
 	minLogPValue = 0
 	maxLogPValue = 0
+	//Unpadded extents — used for the visible axis labels/ticks (only span real data)
+	minLogFoldChangeAxis = 0
+	maxLogFoldChangeAxis = 0
+	minLogPValueAxis = 0
+	maxLogPValueAxis = 0
+	//Dot radius in pixels (from server) — overlay rings size to match the PNG
+	dotRadiusPx = 2
 	//Used in place of 0 p values that cannot be log transformed
 	minNonZeroPValue = 10e-10
 	//The x coord flush with the left side of the plot
@@ -105,40 +112,65 @@ export class VolcanoViewModel {
 		// server's minNonZeroPValue so p=0 rows are capped at the same y position
 		// the PNG used.
 		const ext = this.response.data.plotExtent
+		// Padded extents — used for positioning overlay dots & PNG (so dots near
+		// the real-data edge stay fully visible).
 		this.minLogFoldChange = ext.xMin
 		this.maxLogFoldChange = ext.xMax
 		this.minLogPValue = ext.yMin
 		this.maxLogPValue = ext.yMax
+		// Unpadded extents — used only for the visible axis ticks/labels.
+		this.minLogFoldChangeAxis = ext.xMinUnpadded
+		this.maxLogFoldChangeAxis = ext.xMaxUnpadded
+		this.minLogPValueAxis = ext.yMinUnpadded
+		this.maxLogPValueAxis = ext.yMaxUnpadded
+		this.dotRadiusPx = ext.dotRadiusPx
 		if (ext.minNonZeroPValue > 0) this.minNonZeroPValue = ext.minNonZeroPValue
 	}
 
 	setPlotDimensions() {
-		const xScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, this.settings.width])
-		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.settings.height, 0])
+		// Plot rect grows by 2*dotRadiusPx on each axis to accommodate the
+		// server-side PNG padding (so dots near the real-data edge stay whole).
+		const plotW = this.settings.width + 2 * this.dotRadiusPx
+		const plotH = this.settings.height + 2 * this.dotRadiusPx
+
+		// Positioning scales — padded data range covers the full plot rect.
+		// Used for overlay dot placement, the PNG image, and the fold-change line.
+		const xPlotScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, plotW])
+		const yPlotScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([plotH, 0])
+
+		// Visible axis scales — unpadded domain mapped onto the matching pixel
+		// subrange of the padded plot, so axis ticks land exactly at their data
+		// values in the PNG (mirror of manhattan's yAxisScale).
+		const xScale = scaleLinear()
+			.domain([this.minLogFoldChangeAxis, this.maxLogFoldChangeAxis])
+			.range([xPlotScale(this.minLogFoldChangeAxis), xPlotScale(this.maxLogFoldChangeAxis)])
+		const yScale = scaleLinear()
+			.domain([this.minLogPValueAxis, this.maxLogPValueAxis])
+			.range([yPlotScale(this.minLogPValueAxis), yPlotScale(this.maxLogPValueAxis)])
 
 		return {
 			svg: {
 				//20 is for the term info above the plot
-				height: this.settings.height + this.topPad + this.bottomPad * 2 + this.offset * 3,
-				width: this.settings.width + this.horizPad * 2
+				height: plotH + this.topPad + this.bottomPad * 2 + this.offset * 3,
+				width: plotW + this.horizPad * 2
 			},
 			top: {
 				x: this.plotX,
 				y: 5
 			},
 			xAxisLabel: {
-				x: this.horizPad + this.settings.width / 2 + this.offset,
-				y: this.topPad + this.settings.height + this.bottomPad + this.offset
+				x: this.horizPad + plotW / 2 + this.offset,
+				y: this.topPad + plotH + this.bottomPad + this.offset
 			},
 			xScale: {
 				scale: xScale,
 				x: this.plotX,
-				y: this.settings.height + this.topPad + this.offset * 2
+				y: plotH + this.topPad + this.offset * 2
 			},
 			yAxisLabel: {
 				text: `-log10(${this.settings.pValueType} P value)`,
 				x: this.horizPad / 3,
-				y: this.topPad + this.settings.height / 2
+				y: this.topPad + plotH / 2
 			},
 			yScale: {
 				scale: yScale,
@@ -146,16 +178,18 @@ export class VolcanoViewModel {
 				y: this.topPad
 			},
 			plot: {
-				height: this.settings.height,
-				width: this.settings.width,
+				height: plotH,
+				width: plotW,
 				x: this.plotX,
 				y: this.topPad
 			},
 			logFoldChangeLine: {
-				x: xScale(0) + this.plotX,
+				x: xPlotScale(0) + this.plotX,
 				y1: this.topPad,
-				y2: this.settings.height + this.offset * 4
-			}
+				y2: plotH + this.offset * 4
+			},
+			xPlotScale,
+			yPlotScale
 		}
 	}
 
@@ -188,8 +222,11 @@ export class VolcanoViewModel {
 		}
 	}
 
-	setPointData(plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
-		const radius = Math.max(this.settings.width, this.settings.height) / 80
+	setPointData(_plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
+		// Use the server-supplied radius so SVG overlay rings sit exactly on top
+		// of the PNG rings. The view's renderDataPoints draws them at stroke-width
+		// 1 to match the rust PNG's stroke geometry.
+		const radius = this.dotRadiusPx
 		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
 			const highlightKey = this.termType === DNA_METHYLATION ? d.promoter_id : d.gene_name
@@ -214,10 +251,13 @@ export class VolcanoViewModel {
 			} else {
 				this.numNonSignificant++
 			}
-			d.x = plotDim.xScale.scale(d.fold_change) + this.plotX
-			const y =
-				d[`${this.settings.pValueType}_p_value`] == 0 ? this.minNonZeroPValue : d[`${this.settings.pValueType}_p_value`]
-			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad
+			// Use the exact pixel coords plotters used to rasterize this dot in
+			// the PNG (echoed back from rust per-point). Translating by plotX /
+			// topPad shifts from inner-plot pixel space to SVG-absolute coords.
+			// This is the manhattan trick — guarantees the SVG overlay ring lands
+			// on the rasterized PNG dot regardless of float-vs-int conventions.
+			d.x = d.pixel_x + this.plotX
+			d.y = d.pixel_y + this.topPad
 			d.radius = radius
 		}
 		// Use the server's pre-truncation count so stats are correct even when

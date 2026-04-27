@@ -40,10 +40,21 @@ struct Input {
 
 #[derive(Serialize)]
 struct PlotExtent {
+    /// Padded data extents — used to position overlay dots so points near the
+    /// real-data edge stay fully visible (mirror of manhattan's yPlot domain).
     x_min: f64,
     x_max: f64,
     y_min: f64,
     y_max: f64,
+    /// Unpadded data extents — used for the visible axis labels/ticks so the
+    /// axis only spans the real data region (mirror of manhattan's yAxisScale).
+    x_min_unpadded: f64,
+    x_max_unpadded: f64,
+    y_min_unpadded: f64,
+    y_max_unpadded: f64,
+    /// Dot radius in pixels (echoed back so the client can size overlay rings
+    /// to match the PNG without recomputing the heuristic).
+    dot_radius_px: f64,
     pixel_width: u32,
     pixel_height: u32,
     /// Inner drawing rect inside the PNG. Client overlay circles are
@@ -145,19 +156,43 @@ fn main() -> Result<(), Box<dyn Error>> {
         y_max_data = y_max_data.max(pt.y);
     }
 
-    // Axis extents — symmetric on x, padded 5%.
-    let x_span = if x_abs_max > 0.0 { x_abs_max * 1.05 } else { 1.0 };
-    let (x_min, x_max, y_min) = (-x_span, x_span, 0f64);
-    let y_max = if y_max_data > 0.0 { y_max_data * 1.05 } else { 1.0 };
+    // Unpadded axis extents — symmetric on x, raw data bounds. The dot-radius
+    // pad below provides pixel-level headroom so we don't need extra data-range
+    // breathing room (mirrors manhattan_plot.rs's tighter feel). Fallback to 1.0
+    // when the data has zero spread to keep the chart range valid.
+    let x_span = if x_abs_max > 0.0 { x_abs_max } else { 1.0 };
+    let (x_min_unpadded, x_max_unpadded) = (-x_span, x_span);
+    let y_min_unpadded = 0f64;
+    let y_max_unpadded = if y_max_data > 0.0 { y_max_data } else { 1.0 };
 
-    // Render — borderless scatter. No axes/labels/margins. The client owns
-    // axes and positions the PNG exactly over its plot rect, so the inner
-    // drawing area fills the whole canvas.
-    let (w, h) = (input.pixel_width, input.pixel_height);
+    // Pad PNG by 2*dot_radius on each axis so dots near the edges of the data
+    // region stay fully visible (matches manhattan_plot.rs:476-531).
+    // pad_px uses ceil() so dot_radius < 0.5 doesn't collapse to 0 under u32 cast.
+    let pad_px = (2.0 * input.dot_radius).ceil() as u32;
+    let (w, h) = (input.pixel_width + pad_px, input.pixel_height + pad_px);
     if w == 0 || h == 0 || w > 4000 || h > 4000 {
         return Err(format!("pixel dimensions {}x{} out of range (1–4000)", w, h).into());
     }
+
+    // Convert pixel padding to data units using the unpadded extents and the
+    // unpadded pixel dimensions. Use pad_px/2 (not dot_radius) so the data/pixel
+    // ratio stays exactly equal between padded and unpadded space — important
+    // when ceil() rounded pad_px above 2*dot_radius for sub-pixel radii.
+    let x_data_per_px = (x_max_unpadded - x_min_unpadded) / input.pixel_width as f64;
+    let y_data_per_px = (y_max_unpadded - y_min_unpadded) / input.pixel_height as f64;
+    let half_pad_px = pad_px as f64 / 2.0;
+    let x_pad_data = half_pad_px * x_data_per_px;
+    let y_pad_data = half_pad_px * y_data_per_px;
+    let x_min = x_min_unpadded - x_pad_data;
+    let x_max = x_max_unpadded + x_pad_data;
+    let y_min = y_min_unpadded - y_pad_data;
+    let y_max = y_max_unpadded + y_pad_data;
     let mut buffer = vec![0u8; (w as usize) * (h as usize) * 3];
+    // Per-point pixel coords as plotters actually rasterizes them. Returned to
+    // the client so the SVG overlay rings sit exactly on top of the PNG dots
+    // instead of being recomputed from data coords (which loses sub-pixel
+    // precision under plotters' integer truncation).
+    let mut all_pixel_coords: Vec<(f64, f64)> = Vec::with_capacity(points.len());
     {
         let backend = BitMapBackend::with_buffer(&mut buffer, (w, h));
         let root = backend.into_drawing_area();
@@ -205,6 +240,13 @@ fn main() -> Result<(), Box<dyn Error>> {
             Circle::new((p.fc, p.y), radius, ring(c))
         }))?;
 
+        // Mirror manhattan_plot.rs: capture the exact pixel coords plotters
+        // used for each point so the client overlay can land on them precisely.
+        for p in points.iter() {
+            let (px, py) = chart.backend_coord(&(p.fc, p.y));
+            all_pixel_coords.push((px as f64, py as f64));
+        }
+
         root.present()?;
     }
 
@@ -216,7 +258,18 @@ fn main() -> Result<(), Box<dyn Error>> {
     if let Some(cap) = input.max_interactive_dots {
         sig_points.truncate(cap);
     }
-    let dots: Vec<Value> = sig_points.iter().map(|p| input.rows[p.idx].clone()).collect();
+    let dots: Vec<Value> = sig_points
+        .iter()
+        .map(|p| {
+            let mut row = input.rows[p.idx].clone();
+            let (px, py) = all_pixel_coords[p.idx];
+            if let Value::Object(ref mut m) = row {
+                m.insert("pixel_x".to_string(), Value::from(px));
+                m.insert("pixel_y".to_string(), Value::from(py));
+            }
+            row
+        })
+        .collect();
 
     let output = Output {
         png: BASE64.encode(&encode_rgb_to_png(&buffer, w, h)?),
@@ -225,6 +278,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             x_max,
             y_min,
             y_max,
+            x_min_unpadded,
+            x_max_unpadded,
+            y_min_unpadded,
+            y_max_unpadded,
+            dot_radius_px: input.dot_radius,
             pixel_width: w,
             pixel_height: h,
             plot_left: 0,

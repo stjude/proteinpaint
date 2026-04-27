@@ -71,21 +71,29 @@ const mockConfig = {
 // would emit for the old 10-row fixture; totalRows=10 lets numNonSignificant=9
 // fall out for the stats tests.
 const significantRow = testData.responseData.find((d: any) => d.gene_name === 'C1orf159')
+// Server now echoes pixel_x/pixel_y per dot (manhattan trick) so the SVG
+// overlay lands exactly on the rasterized PNG dot.
+const significantWithPixels = significantRow ? { ...significantRow, pixel_x: 350, pixel_y: 100 } : null
 const mockResponse = {
 	data: {
-		dots: significantRow ? [significantRow] : [],
+		dots: significantWithPixels ? [significantWithPixels] : [],
 		volcanoPng: '',
 		plotExtent: {
 			xMin: -0.1281,
 			xMax: 0.6196,
 			yMin: -0.192065410979292,
 			yMax: 2.677780705266081,
-			pixelWidth: 400,
-			pixelHeight: 400,
+			xMinUnpadded: -0.122,
+			xMaxUnpadded: 0.59,
+			yMinUnpadded: 0,
+			yMaxUnpadded: 2.55,
+			dotRadiusPx: 2,
+			pixelWidth: 404,
+			pixelHeight: 404,
 			plotLeft: 0,
 			plotTop: 0,
-			plotRight: 400,
-			plotBottom: 400,
+			plotRight: 404,
+			plotBottom: 404,
 			minNonZeroPValue: 1e-9
 		},
 		totalRows: testData.responseData.length,
@@ -152,17 +160,19 @@ tape('setPlotDimensions', function (test) {
 	const viewModel = new VolcanoViewModel(mockConfig as any, mockResponse, mockSettings as any)
 
 	const plotDim = viewModel.setPlotDimensions()
-	test.deepEqual(plotDim.svg, { height: 590, width: 540 }, 'Should properly set svg')
-	test.deepEqual(plotDim.xAxisLabel, { x: 280, y: 510 }, 'Should properly set xAxisLabel')
+	// Plot rect grows by 2*dotRadiusPx (= 4 px here) on each axis to match the
+	// server's PNG padding, so all dependent positions shift by 4.
+	test.deepEqual(plotDim.svg, { height: 594, width: 544 }, 'Should properly set svg')
+	test.deepEqual(plotDim.xAxisLabel, { x: 282, y: 514 }, 'Should properly set xAxisLabel')
 	test.deepEqual(
 		plotDim.yAxisLabel,
-		{ text: '-log10(adjusted P value)', x: 23.333333333333332, y: 240 },
+		{ text: '-log10(adjusted P value)', x: 23.333333333333332, y: 242 },
 		'Should properly set yAxisLabel'
 	)
-	test.deepEqual(plotDim.plot, { height: 400, width: 400, x: 90, y: 40 }, 'Should properly set plot')
+	test.deepEqual(plotDim.plot, { height: 404, width: 404, x: 90, y: 40 }, 'Should properly set plot')
 	test.deepEqual(
 		plotDim.logFoldChangeLine,
-		{ x: 158.5301591547412, y1: 40, y2: 440 },
+		{ x: 159.2154607462886, y1: 40, y2: 444 },
 		'Should properly set logFoldChangeLine'
 	)
 
@@ -189,7 +199,7 @@ tape('setPointData', function (test) {
 		1,
 		'Should properly set highlighted property for each data point'
 	)
-	test.equal(pointData.filter((d: any) => d.radius === 5).length, 1, 'Should properly set radius for each data point')
+	test.equal(pointData.filter((d: any) => d.radius === 2).length, 1, 'Should properly set radius for each data point')
 
 	test.end()
 })
