@@ -82,7 +82,7 @@ function getMockInteractions(overrides: any = {}) {
 function getPlotButtons(overrides: any = {}) {
 	const interactions = getMockInteractions(overrides)
 	const holder = getMockDiv()
-	const pb = new PlotButtons(interactions, holder)
+	const pb = new PlotButtons(interactions, holder, interactions.getState)
 	return pb
 }
 

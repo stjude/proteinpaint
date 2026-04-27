@@ -95,9 +95,9 @@ export class SCViewer extends PlotBase implements RxComponent {
 			else if (e.stack) console.log(e.stack)
 			throw new Error(e.message || e)
 		}
-		this.interactions = new SCInteractions(this.app, this.dom, this.id, () => this.getState(this.app.getState()))
+		this.interactions = new SCInteractions(this)
 		this.viewModel = new SCViewModel(this.app, state.config, this.items!, this.itemColumns)
-		this.view = new SCViewRenderer(this, state.config.settings.sc.groupBy)
+		this.view = new SCViewRenderer(this, state)
 
 		/** The item data and table rendering should only occur once
 		 * .update() in main() handles changes to the buttons and plots */
