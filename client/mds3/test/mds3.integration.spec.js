@@ -512,8 +512,7 @@ tape('Official - snvIndelOnly', test => {
 			tk.skewer.rawmlst.every(m => m.dt === dtsnvindel),
 			'rawmlst[] should only contain snvindels'
 		)
-		test.ok(tk.cnv.cnvLst.length === 0, 'cnvLst[] should be empty')
-
+		test.notOk(tk.cnv, 'tk.cnv should not be defined')
 		test.ok(tk.leftlabels.doms.variants, 'tk.leftlabels.doms.variants is set')
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 
