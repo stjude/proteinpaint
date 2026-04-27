@@ -153,7 +153,7 @@ Response:`
  * more genes are missing a data type.
  */
 
-export async function classifyGeneDataType(
+export async function classifyGeneDataTypePhrase(
 	user_prompt: string,
 	llm: LlmConfig,
 	relevant_genes: string[],

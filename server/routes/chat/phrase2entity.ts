@@ -1,6 +1,6 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { extractGenesFromPrompt, getGenesForGeneset } from './utils.ts'
-import { classifyGeneDataType } from './genedatatypeagentnew.ts'
+import { classifyGeneDataTypePhrase } from './genedatatypeagentnew.ts'
 import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -95,7 +95,7 @@ async function validateNonDictionaryTypes(
 			msg.text = AmbiguousGeneMessage
 			return msg
 		}
-		const geneDataTypeMessage: GeneDataTypeResult | string = await classifyGeneDataType(
+		const geneDataTypeMessage: GeneDataTypeResult | string = await classifyGeneDataTypePhrase(
 			// This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
 			phrase,
 			llm,
