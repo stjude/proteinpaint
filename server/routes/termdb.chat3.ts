@@ -1,9 +1,9 @@
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification, GeneDataTypeResult } from '#types'
 // import { ambiguousPoints } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readJSONFile, parse_geneset_db } from './chat/utils.ts'
+import { readJSONFile, parse_geneset_db, getGenesetNames, extractGenesFromPrompt } from './chat/utils.ts'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
@@ -14,6 +14,9 @@ import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import { resolveToTwTvs } from './chat/entity2twTvs.ts'
 import { answerDataQueries } from './chat/dataQueries.ts'
+import { extract_hiercluster_terms_from_query } from './chat/hiercluster.ts'
+import { classifyGeneDataType } from './chat/genedatatypeagent.ts'
+import { determineAmbiguousGenePrompt } from './chat/ambiguousgeneagent.ts'
 import path from 'path'
 import fs from 'fs'
 import type { Phrase2EntityResult } from './chat/scaffoldTypes.ts'
@@ -183,6 +186,55 @@ export async function run_chat_pipeline(
 			return ai_output_json
 		}
 
+		const genes_list = await parse_geneset_db(genedb)
+		if (plotType === 'hiercluster') {
+			const genesetNames = getGenesetNames(genome)
+
+			let geneFeatures: GeneDataTypeResult[] = []
+			const relevant_genes = extractGenesFromPrompt(userPrompt, genes_list)
+			if (relevant_genes.length > 0) {
+				// For now assuming that only 'geneExpression' is the only term that hierarchical clustering plot supports, will later add support for metabolite intensity and other numeric data types, in which case this relevant terms extraction step and subsequent gene data type classification step will need to be modified to include relevant terms of those data types as well, not just genes.
+				console.log('_allowedTermTypes for this dataset are: ', _allowedTermTypes)
+				if (_allowedTermTypes.includes('geneExpression')) {
+					const ambiguousMsg = determineAmbiguousGenePrompt(userPrompt, relevant_genes, dataset_json)
+					if (ambiguousMsg.length > 0) {
+						return { type: 'text', text: ambiguousMsg }
+					}
+					const geneDataTypeMessage = await classifyGeneDataType(userPrompt, llm, relevant_genes, dataset_json) // classifyGeneDataType() in chat/genedatatypeagent.ts is DIFFERENT from classifyGeneDataTypePhrase() in chat/genedatatypeagentnew.ts, the former returns a string message when there is an issue with gene data type classification, while the latter returns an array of gene data type results. The reason for this difference is that for hierarchical clustering, we need to know the specific data type for each gene in order to determine if hierarchical clustering is supported and how to perform it, whereas for the initial classification of gene vs group, we only needed to know if the term was a gene or a group, not the specific data type.
+					if (typeof geneDataTypeMessage === 'string') {
+						if (geneDataTypeMessage.length > 0) {
+							return { type: 'text', text: geneDataTypeMessage }
+						}
+						throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+					} else if (Array.isArray(geneDataTypeMessage)) {
+						geneFeatures = geneDataTypeMessage
+					} else {
+						throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+					}
+
+					const time = new Date().valueOf()
+					ai_output_json = await extract_hiercluster_terms_from_query(
+						userPrompt,
+						llm,
+						dataset_json,
+						ds,
+						false,
+						genesetNames,
+						geneFeatures
+					)
+					mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
+					return ai_output_json
+				} else {
+					return {
+						type: 'text',
+						text: 'Hierarchical clustering is not supported for this dataset because gene expression data is not available.'
+					}
+				}
+			} else {
+				return { type: 'text', text: 'Unsupported NonDict type for hierarchical clustering' }
+			}
+		}
+
 		// If supported plot type, figure out the scaffold according to the plot type
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		mayLog('#################################################')
@@ -198,7 +250,6 @@ export async function run_chat_pipeline(
 		mayLog('#################################################')
 		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")
 		mayLog('#################################################')
-		const genes_list = await parse_geneset_db(genedb)
 		time = new Date().valueOf()
 		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds, genome)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
