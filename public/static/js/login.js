@@ -1,17 +1,22 @@
-async function logout(dslabel, route = 'termdb', reload = true) {
+// clear all sessions
+localStorage.setItem('jwtByDsRoute', `{}`)
+
+// loggedOut: will track if the user has been logged out of a dslabel
+// key: dslabel, value: Set<route str>
+const loggedOut = new Set()
+
+async function logout(dslabel, reload = true) {
 	const jwtByDsRoute = getJwtByDsRoute()
-	if (jwtByDsRoute[dslabel]?.[route]) {
+	if (!loggedOut[dslabel]) loggedOut[dslabel] = new Set()
+	if (jwtByDsRoute[dslabel]) {
 		// Deleting this entry means there will be no dofetch() request header.Authorization
 		// that the backend may use to reestablish user sessions that have expired
-		delete jwtByDsRoute[dslabel][route]
+		delete jwtByDsRoute[dslabel]
 		localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
 	}
-	if (route == '/**' && typeof jwtByDsRoute[dslabel] == 'object') {
-		for (const route of Object.keys(jwtByDsRoute[dslabel])) {
-			delete jwtByDsRoute[dslabel][route]
-		}
-	}
+	loggedOut.add(dslabel)
 
+	const route = findMatchDsAuthRoute(dslabel)
 	const body = JSON.stringify({ dslabel, route })
 	// this will clear any active user session in the backend
 	await fetch(`/dslogout`, { method: 'POST', body })
@@ -21,6 +26,21 @@ async function logout(dslabel, route = 'termdb', reload = true) {
 
 	if (window.location.hash.includes('dslogout')) return
 	if (reload) window.location.reload()
+}
+
+const genomes = fetch('/genomes?requestBy=login.js').then(r => r.json())
+let dsAuth
+
+async function findMatchDsAuthRoute(dslabel) {
+	if (!dsAuth) dsAuth = (await genomes).dsAuth
+	const dsAuthRoutes = dsAuth.filter(a => a.dslabel == dslabel).map(a => a.route)
+	const route = dsAuth.find(a => a.route == 'termdb' || a.route == '/**')
+	if (!route)
+		throw (
+			`The /genomes response did not contain a matching dsAuth[] entry for dslabel=${dslabel}: ` +
+			`${JSON.stringify(dsAuthRoutes)} is expected to have 'termdb' or '/**'.`
+		)
+	return route
 }
 
 function getJwtByDsRoute(dslabel) {
@@ -40,8 +60,7 @@ function getJwtByDsRoute(dslabel) {
 // and not meant for repeated calls within getDatasetAccessToken()
 async function login(dslabel, role = '') {
 	if (window.location.hash.includes('dslogout')) {
-		logout(dslabel, '/**', false)
-		logout(dslabel, 'termdb', false)
+		logout(dslabel, false)
 		return null
 	}
 	const jwt = await getJwt(dslabel, role)
@@ -62,6 +81,7 @@ function demoGetDatasetAccessToken(dslabel, defaultRole) {
 	const role = params.role || defaultRole
 
 	return async function getDatasetAccesToken() {
+		if (loggedOut.has(dslabel)) return
 		if (fakeTokensByRole[role]) {
 			const { jwt, exp } = fakeTokensByRole[role]
 			if (exp && Math.floor(Date.now() / 1000) < exp - 5) return jwt // reuse an unexpired demo token
@@ -102,10 +122,10 @@ async function getJwt(dslabel, role = 'public') {
 		.catch(console.error)
 	if (res.error) {
 		console.error(res.error)
-		logout(dslabel, '/**', false)
-		logout(dslabel, 'termdb', false)
+		logout(dslabel, false)
 		return null
 	}
+	loggedOut.delete(dslabel)
 	return res.fakeTokensByRole?.[role]
 }
 
