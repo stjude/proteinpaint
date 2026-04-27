@@ -225,6 +225,7 @@ tape('getChartBtnOpts() plot button isVisible() should return false when plot is
 	const pb = getPlotButtons()
 	pb.data = { plots: [{ name: 'umap' }] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set(['umap']) // Simulate that only umap plot is available
 
 	const btns = pb.getChartBtnOpts()
 	const umap = btns.find(b => b.label === 'umap')
