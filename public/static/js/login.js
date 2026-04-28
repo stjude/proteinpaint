@@ -1,13 +1,9 @@
-// clear all sessions
-localStorage.setItem('jwtByDsRoute', `{}`)
-
 // loggedOut: will track if the user has been logged out of a dslabel
 // key: dslabel, value: Set<route str>
 const loggedOut = new Set()
 
 async function logout(dslabel, reload = true) {
 	const jwtByDsRoute = getJwtByDsRoute()
-	if (!loggedOut[dslabel]) loggedOut[dslabel] = new Set()
 	if (jwtByDsRoute[dslabel]) {
 		// Deleting this entry means there will be no dofetch() request header.Authorization
 		// that the backend may use to reestablish user sessions that have expired
@@ -16,10 +12,10 @@ async function logout(dslabel, reload = true) {
 	}
 	loggedOut.add(dslabel)
 
-	const route = findMatchDsAuthRoute(dslabel)
+	const route = await findMatchDsAuthRoute(dslabel)
 	const body = JSON.stringify({ dslabel, route })
 	// this will clear any active user session in the backend
-	await fetch(`/dslogout`, { method: 'POST', body })
+	await fetch(`/dslogout`, { method: 'POST', header: { 'Content-Type': 'application/json' }, body })
 		.then(r => r.json())
 		.then(console.log)
 		.catch(console.error)
@@ -33,12 +29,12 @@ let dsAuth
 
 async function findMatchDsAuthRoute(dslabel) {
 	if (!dsAuth) dsAuth = (await genomes).dsAuth
-	const dsAuthRoutes = dsAuth.filter(a => a.dslabel == dslabel).map(a => a.route)
-	const route = dsAuth.find(a => a.route == 'termdb' || a.route == '/**')
+	const matchedDsAuthRoutes = dsAuth.filter(a => a.dslabel == dslabel).map(a => a.route)
+	const route = matchedDsAuthRoutes.find(r => r == 'termdb' || r == '/**')
 	if (!route)
 		throw (
 			`The /genomes response did not contain a matching dsAuth[] entry for dslabel=${dslabel}: ` +
-			`${JSON.stringify(dsAuthRoutes)} is expected to have 'termdb' or '/**'.`
+			`${JSON.stringify(matchedDsAuthRoutes)} is expected to have 'termdb' or '/**'.`
 		)
 	return route
 }
@@ -117,7 +113,7 @@ async function getJwt(dslabel, role = 'public') {
 	// otherwise, should reuse saved fake tokens that have not changed in serverconfig.features
 	const genome = dslabel === 'ProtectedTest' ? 'hg38-test' : 'hg38'
 	const body = JSON.stringify({ genome, dslabel, role })
-	const res = await fetch('/demoToken', { method: 'POST', body })
+	const res = await fetch('/demoToken', { method: 'POST', header: { 'Content-Type': 'application/json' }, body })
 		.then(r => r.json())
 		.catch(console.error)
 	if (res.error) {
