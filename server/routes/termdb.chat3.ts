@@ -3,7 +3,13 @@ import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassificatio
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readJSONFile, parse_geneset_db, getGenesetNames, extractGenesFromPrompt } from './chat/utils.ts'
+import {
+	readJSONFile,
+	parse_geneset_db,
+	getGenesetNames,
+	extractGenesFromPrompt,
+	extractGenesetsFromPromptNew
+} from './chat/utils.ts'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
@@ -106,7 +112,7 @@ function init({ genomes }) {
 			const supportedPlotTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 			const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
 			const genedb = serverconfig.tpmasterdir + '/' + genome.genedb.dbfile
-			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
+			const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
@@ -115,7 +121,7 @@ function init({ genomes }) {
 				agentFiles,
 				aiFilesDir,
 				chatSupportedPlotTypes,
-				_allowedTermTypes,
+				allowedTermTypes,
 				genome
 				// 	testing
 			)
@@ -136,7 +142,7 @@ export async function run_chat_pipeline(
 	agentFiles: string[],
 	aiFilesDir: string,
 	supportedPlotTypes: string[],
-	_allowedTermTypes: string[],
+	allowedTermTypes: string[],
 	genome: any
 	// testing: boolean
 ) {
@@ -154,7 +160,7 @@ export async function run_chat_pipeline(
 	if (class_response.type === 'notplot') {
 		// If Not-plot: Resource or None classification
 		const time2 = new Date().valueOf()
-		const notPlotResult = await classifyNotPlot(userPrompt, llm, agentFiles, aiFilesDir) //, _allowedTermTypes)
+		const notPlotResult = await classifyNotPlot(userPrompt, llm, agentFiles, aiFilesDir) //, allowedTermTypes)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
 
 		if (notPlotResult.type === 'html') {
@@ -166,7 +172,7 @@ export async function run_chat_pipeline(
 			}
 		}
 	} else if (class_response.type === 'binaryQuery') {
-		const answer = await answerDataQueries(userPrompt, llm, _allowedTermTypes)
+		const answer = await answerDataQueries(userPrompt, llm, allowedTermTypes)
 		if (!answer) throw "Couldn't decide if this is data related query!"
 		mayLog('Data Binary Query: ', answer)
 		ai_output_json = answer
@@ -188,53 +194,57 @@ export async function run_chat_pipeline(
 
 		const genes_list = await parse_geneset_db(genedb)
 		if (plotType === 'hiercluster') {
-			const genesetNames = getGenesetNames(genome)
-
-			let geneFeatures: GeneDataTypeResult[] = []
-			const relevant_genes = extractGenesFromPrompt(userPrompt, genes_list)
-			if (relevant_genes.length > 0) {
+			if (allowedTermTypes.includes('geneExpression')) {
 				// For now assuming that only 'geneExpression' is the only term that hierarchical clustering plot supports, will later add support for metabolite intensity and other numeric data types, in which case this relevant terms extraction step and subsequent gene data type classification step will need to be modified to include relevant terms of those data types as well, not just genes.
-				console.log('_allowedTermTypes for this dataset are: ', _allowedTermTypes)
-				if (_allowedTermTypes.includes('geneExpression')) {
-					const ambiguousMsg = determineAmbiguousGenePrompt(userPrompt, relevant_genes, dataset_json)
-					if (ambiguousMsg.length > 0) {
-						return { type: 'text', text: ambiguousMsg }
-					}
-					const geneDataTypeMessage = await classifyGeneDataType(userPrompt, llm, relevant_genes, dataset_json) // classifyGeneDataType() in chat/genedatatypeagent.ts is DIFFERENT from classifyGeneDataTypePhrase() in chat/genedatatypeagentnew.ts, the former returns a string message when there is an issue with gene data type classification, while the latter returns an array of gene data type results. The reason for this difference is that for hierarchical clustering, we need to know the specific data type for each gene in order to determine if hierarchical clustering is supported and how to perform it, whereas for the initial classification of gene vs group, we only needed to know if the term was a gene or a group, not the specific data type.
-					if (typeof geneDataTypeMessage === 'string') {
-						if (geneDataTypeMessage.length > 0) {
-							return { type: 'text', text: geneDataTypeMessage }
+				const relevant_genes = extractGenesFromPrompt(userPrompt, genes_list)
+				console.log('Geneset names:', getGenesetNames(genome))
+				const relevant_genesets = extractGenesetsFromPromptNew(userPrompt, getGenesetNames(genome)) // This is to extract any geneset names mentioned in the prompt, which will then be used as additional context for the gene data type classification and hierarchical clustering term extraction agents. For hierarchical clustering, users might mention geneset names instead of individual gene names, so this is to capture those geneset names and use them as additional context for the downstream agents.
+				if (relevant_genes.length > 0 || relevant_genesets.length > 0) {
+					let geneFeatures: GeneDataTypeResult[] = []
+					if (relevant_genes.length > 0) {
+						const ambiguousMsg = determineAmbiguousGenePrompt(userPrompt, relevant_genes, dataset_json)
+						if (ambiguousMsg.length > 0) {
+							return { type: 'text', text: ambiguousMsg }
 						}
-						throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
-					} else if (Array.isArray(geneDataTypeMessage)) {
-						geneFeatures = geneDataTypeMessage
-					} else {
-						throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+						const geneDataTypeMessage = await classifyGeneDataType(userPrompt, llm, relevant_genes, dataset_json) // classifyGeneDataType() in chat/genedatatypeagent.ts is DIFFERENT from classifyGeneDataTypePhrase() in chat/genedatatypeagentnew.ts, the former returns a string message when there is an issue with gene data type classification, while the latter returns an array of gene data type results. The reason for this difference is that for hierarchical clustering, we need to know the specific data type for each gene in order to determine if hierarchical clustering is supported and how to perform it, whereas for the initial classification of gene vs group, we only needed to know if the term was a gene or a group, not the specific data type.
+						if (typeof geneDataTypeMessage === 'string') {
+							if (geneDataTypeMessage.length > 0) {
+								return { type: 'text', text: geneDataTypeMessage }
+							}
+							throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+						} else if (Array.isArray(geneDataTypeMessage)) {
+							geneFeatures = geneDataTypeMessage
+						} else {
+							throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+						}
 					}
 
 					const time = new Date().valueOf()
 					ai_output_json = await extract_hiercluster_terms_from_query(
 						userPrompt,
 						llm,
-						dataset_json,
+						genome,
 						ds,
-						false,
-						genesetNames,
-						geneFeatures
+						geneFeatures,
+						relevant_genesets
 					)
 					mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
 					return ai_output_json
 				} else {
 					return {
 						type: 'text',
-						text: 'Hierarchical clustering is not supported for this dataset because gene expression data is not available.'
+						text: 'No relevant genes or genesets were found in the user prompt for hierarchical clustering'
 					}
 				}
-			} else {
-				return { type: 'text', text: 'Unsupported NonDict type for hierarchical clustering' }
+			}
+			// else if() // Will later add support for other hierarchical clustering types e.g. metaboliteIntensity
+			else {
+				return {
+					type: 'text',
+					text: 'Hierarchical clustering is not supported for this dataset because gene expression data is not available.'
+				}
 			}
 		}
-
 		// If supported plot type, figure out the scaffold according to the plot type
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		mayLog('#################################################')
