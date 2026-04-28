@@ -57,9 +57,9 @@ export class ScatterViewModelBase {
 		const s = this.scatter.settings
 		div.style('opacity', 0).style('display', 'inline-block')
 		div.on('mouseover', event => {
-			if (!this.scatterTooltip.onClick) this.scatterTooltip.showTooltip(event, chart)
+			if (!this.scatterTooltip.clickMenuIsShown) this.scatterTooltip.showTooltip(event, chart)
 		})
-		div.on('click', event => this.scatterTooltip.showTooltip(event, chart))
+		div.on('click', event => this.scatterTooltip.showSampleClickMenu(event, chart))
 
 		chart.svg = div.select('svg').empty() ? div.append('svg') : div.select('svg')
 		this.renderSVG(chart, s, removePrevious)

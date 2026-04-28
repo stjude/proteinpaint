@@ -1,13 +1,10 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { select } from 'd3-selection'
-import { Menu, icons, axisstyle, table2col } from '#dom'
+import { Menu, icons, axisstyle, table2col, showResultsTable, createLollipopFromGene, findPointsInRadius } from '#dom'
 import { to_svg } from '#src/client'
 import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
-import { showResultsTable } from '../shared/resultsTable'
-import { createLollipopFromGene } from '../shared/genePlotActions'
-import { findPointsInRadius } from '../shared/quadtreeHitTest'
 
 /**
  * Creates an interactive Manhattan plot on top of a PNG background plot image.

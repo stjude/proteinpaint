@@ -1,6 +1,6 @@
-import { renderTable } from '#dom'
+import { renderTable } from './table'
 import { createLollipopFromGene, createMatrixFromGenes } from './genePlotActions'
-import type { ShowResultsTableOpts, ResultsDataItem } from './resultsTableTypes'
+import type { ShowResultsTableOpts, ResultsDataItem } from './types/resultsTable'
 
 /**
  * Renders a results table for biological items (genes, promoters, etc.).
@@ -19,7 +19,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 		columns: prebuiltColumns,
 		rows: prebuiltRows,
 		dataItems: prebuiltDataItems,
-		getGene = (item: any) => item.gene,
+		getRowKey = (item: any) => item.gene,
 		matrixButtonFormat = 'Matrix ({n})',
 		...renderTableOpts
 	} = opts
@@ -27,6 +27,13 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 	const dataItems = prebuiltDataItems || hits
 
 	if (!dataItems || dataItems.length === 0) return
+
+	// Auto-build manhattan-default columns/rows only when hits look manhattan-shaped.
+	// Non-manhattan callers (volcano, proteinView) must supply columns + rows.
+	const useManhattanDefaults = !prebuiltColumns && hits && hits[0]?.chrom
+	if (!prebuiltColumns && !useManhattanDefaults) {
+		throw new Error('showResultsTable: `columns` is required when `hits` is not manhattan-shaped')
+	}
 
 	const columns = prebuiltColumns || [
 		{ label: 'Gene' },
@@ -69,7 +76,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 				callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
 					if (selectedIndices.length > 0) {
 						buttonNode.disabled = true
-						const selectedGenes = selectedIndices.map(idx => getGene(dataItems[idx]))
+						const selectedGenes = selectedIndices.map(idx => getRowKey(dataItems[idx]))
 						clickMenu?.hide()
 						createMatrixFromGenes(selectedGenes, app)
 					}
@@ -130,11 +137,9 @@ export function updateSelectionTracking(
 			// since `value` is widened to string | number across the table API.
 			const v = dataItem[0]?.value
 			lastTouchedGene = v != null ? String(v) : null
-		} else {
-			lastTouchedGene = (dataItem as { gene: string }).gene
 		}
 
-		buttonText = `Lollipop (${lastTouchedGene})`
+		if (lastTouchedGene !== null) buttonText = `Lollipop (${lastTouchedGene})`
 	}
 
 	return {

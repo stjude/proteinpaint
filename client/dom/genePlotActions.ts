@@ -1,4 +1,4 @@
-import { sayerror } from '#dom'
+import { sayerror } from './sayerror'
 import { get$id } from '#termsetting'
 
 /**
