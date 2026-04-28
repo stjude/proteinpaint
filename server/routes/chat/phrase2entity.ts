@@ -13,9 +13,11 @@ import type {
 	Phrase2EntityResult,
 	DEPhrase2EntityResult,
 	HierPhrase2EntityResult,
-	MsgToUser
+	MsgToUser,
+	MatrixScaffold
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
+import assert from 'assert'
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
 type FilterLeafNode = { leaf: string }
@@ -362,7 +364,7 @@ export async function phrase2entity(
 	ds: any,
 	genome: any
 ): Promise<MsgToUser | Phrase2EntityResult> {
-	if (plotType == 'summary') {
+	if (plotType === 'summary') {
 		const scaffoldResult = scaffold as SummaryScaffold
 		const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds)
 		if ('type' in tw1 && tw1.type === 'text') {
@@ -410,7 +412,7 @@ export async function phrase2entity(
 			}
 			return summ_term
 		}
-	} else if (plotType == 'dge') {
+	} else if (plotType === 'dge') {
 		const scaffoldResult = scaffold as DEScaffold
 		const dge_term: DEPhrase2EntityResult = {
 			filter1: [],
@@ -447,7 +449,7 @@ export async function phrase2entity(
 		}
 
 		return dge_term
-	} else if (plotType == 'hiercluster') {
+	} else if (plotType === 'hiercluster') {
 		const scaffoldResult = scaffold as HierarchicalScaffold
 		const hier_term: HierPhrase2EntityResult = { genes: [] }
 
@@ -523,6 +525,57 @@ export async function phrase2entity(
 		}
 
 		return hier_term
+	} else if (plotType === 'matrix') {
+		const scaffoldResult = scaffold as MatrixScaffold
+		assert(scaffoldResult.twLst.length > 0) // 'At least one term is required for matrix plot'
+
+		// Convert each term in twLst to an entity
+		const twLstEntities: Entity[] = []
+		for (const [index, twPhrase] of scaffoldResult.twLst.entries()) {
+			const twEntity = await phrase2entitytw(twPhrase, llm, genes_list, dataset_json, ds)
+			if ('type' in twEntity && twEntity.type === 'text') {
+				return twEntity // MsgToUser
+			}
+			mayLog(`Validation result for term${index + 1} "${twPhrase}":`, twEntity)
+			twLstEntities.push(twEntity as Entity)
+		}
+
+		const matrix_term: Phrase2EntityResult = {
+			twLst: twLstEntities
+		}
+
+		// if divideBy is present, convert to entity as well
+		if (scaffoldResult.divideBy) {
+			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds)
+			if ('type' in divideByEntity && divideByEntity.type === 'text') {
+				return divideByEntity // MsgToUser
+			}
+			mayLog(`Validation result for divideBy "${scaffoldResult.divideBy}":`, divideByEntity)
+			matrix_term.divideBy = divideByEntity as Entity
+		}
+
+		// if filter is present, convert to entity as well
+		if (scaffoldResult.filter) {
+			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+			// Extract all leaf phrases from the filter tree and resolve each to an entity
+			const leafPhrases = collectLeaves(parseFilterResult.tree)
+			matrix_term.filter = [] as Entity[]
+			for (const leaf of leafPhrases) {
+				mayLog('Evaluating filter leaf:', leaf.phrase)
+				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+				mayLog('filterTw:', filterTw)
+
+				if ('type' in filterTw && filterTw.type === 'text') {
+					return filterTw // MsgToUser
+				}
+				const filterEntity = filterTw as Entity
+				if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+				matrix_term.filter.push(filterEntity)
+			}
+			mayLog('Validation result for filter term:', JSON.stringify(matrix_term.filter))
+		}
+		return matrix_term
 	} else {
 		const msg: MsgToUser = {
 			type: 'text',

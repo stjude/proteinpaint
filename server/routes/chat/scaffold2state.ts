@@ -111,6 +111,21 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
+	} else if (plotType === 'matrix') {
+		if (input.twLst && Array.isArray(input.twLst)) {
+			plotState.plot.termgroups = [{ name: '', lst: input.twLst.map((tw: any) => (tw.term ? tw : { term: tw })) }]
+		} else {
+			mayLog('Matrix plot requires a list of terms (twLst), but it is missing or not an array in the input.')
+			throw 'Matrix plot requires a list of terms (twLst), but it is missing or not an array in the input.'
+		}
+
+		if (input.divideBy) {
+			plotState.plot.divideBy = isDictionaryTerm(input.divideBy) ? input.divideBy : { term: input.divideBy }
+		}
+
+		if (input.filter) {
+			plotState.plot.filter = input.filter
+		}
 	} else {
 		throw 'Only summary plot type is supported for now'
 	}

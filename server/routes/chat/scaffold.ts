@@ -2,7 +2,86 @@ import type { LlmConfig } from '#types'
 // import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type { Scaffold, SummaryScaffold, DEScaffold, HierarchicalScaffold } from './scaffoldTypes.ts'
+import type { Scaffold, SummaryScaffold, DEScaffold, HierarchicalScaffold, MatrixScaffold } from './scaffoldTypes.ts'
+
+async function matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
+	const prompt = ` You are a ProteinPaint matrix plot assistant. Your task is to extract the necessary variables from a user's natural language question to populate a strict JSON scaffold for configuring a matrix plot. 
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure:
+{
+  "twLst": ["<phrase1>", "<phrase2>", ...],   // REQUIRED - list of variables to include in the matrix
+  "divideBy": "<phrase>",                     // OPTIONAL - variable to divide the matrix by (e.g. for faceting)
+  "filter": "<phrase>"                       // OPTIONAL - global cohort constraint applied to the matrix
+}
+
+## FIELD DEFINITIONS
+- twLst (REQUIRED): A list of variables or terms that the user wants to include in the matrix plot. Extract the phrases from the query that most likely refer to these variables, preserving the exact wording.
+- divideBy (OPTIONAL): A variable that the user wants to use to divide or facet the matrix (e.g. "by sex" or "separately for each subtype"). Extract the phrase that indicates this variable, preserving the exact wording. 
+- filter (OPTIONAL): A global constraint that applies to the entire matrix (e.g. "in pediatric patients", "for AML cases", "for men", etc.). Only populate this when the user restricts the analysis to a specific subpopulation.
+
+## EXTRACTION RULES
+1. ALWAYS extract at least one variable into twLst — this is the core of the matrix plot.
+2. Preserve the EXACT phrasing from the user's question for all fields — do not paraphrase, normalize, or generalize.
+3. divideBy is ONLY set when the user indicates they want to divide/facet the matrix by a variable (e.g. "by sex", "separately for each subtype"). Do NOT set divideBy if the user does not explicitly indicate this.
+4. filter is ONLY set when the user restricts the entire matrix to a specific subpopulation (e.g. "in women", "for pediatric patients", "among AML cases"). Do NOT put the same information in both twLst and filter.
+5. If the user does not mention a global cohort constraint, omit filter entirely.
+6. If the user does not mention a divideBy variable, omit divideBy entirely.
+
+## EXAMPLES
+Q: "Show a matrix of gene expression, mutation status, and age"
+A: {
+  "twLst": ["gene expression", "mutation status", "age"]
+}
+
+Q: "Show a matrix of gene expression and mutation status, divided by sex"
+A: {
+  "twLst": ["gene expression", "mutation status"],
+  "divideBy": "sex" 
+}
+
+Q: "Show a matrix of gene expression and mutation status for pediatric patients"
+A: {
+  "twLst": ["gene expression", "mutation status"],
+  "filter": "pediatric patients"
+}
+
+Q: "Show a matrix of gene expression and mutation status, divided by sex, for pediatric patients"
+A: {
+  "twLst": ["gene expression", "mutation status"],
+  "divideBy": "sex",
+  "filter": "pediatric patients"
+}
+
+## NEGATIVE EXAMPLES — WHAT NOT TO DO
+Q: "Show a matrix of gene expression, mutation status, and age"
+WRONG:
+{
+  "twLst": ["gene expression", "mutation status", "age"],
+  "divideBy": "sex",          // do not add fields not supported by the query
+  "filter": "pediatric patients"  // do not add fields not supported by the query
+}
+Q: "Show a matrix of gene expression and mutation status, divided by sex"
+WRONG:
+{
+  "twLst": ["gene expression", "mutation status"],
+  "divideBy": "sex",
+  "filter": "pediatric patients"  // do not add fields not supported by the query
+}
+
+Parse the following user query into the JSON scaffold according to the rules and schema defined above:
+Query: "${user_prompt}"
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm)
+	mayLog(`--> Matrix Scaffold LLM response: ${response}`)
+	try {
+		const scaffold = JSON.parse(response)
+		scaffold.plotType = 'matrix' // add plotType to the scaffold for downstream use
+		return scaffold
+	} catch (error) {
+		throw new Error(`Failed to parse LLM response as JSON: ${response}\nError: ${error}`)
+	}
+}
 
 async function dge(user_prompt: string, llm: LlmConfig): Promise<DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
@@ -336,6 +415,8 @@ export async function inferScaffold(user_prompt: string, plotType: string, llm: 
 			return await dge(user_prompt, llm)
 		case 'hiercluster':
 			return await hierarchical(user_prompt, llm)
+		case 'matrix':
+			return await matrix(user_prompt, llm)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
