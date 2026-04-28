@@ -18,12 +18,8 @@ export class ScatterInteractivity {
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.view = scatter.view
-		document.addEventListener('scroll', () => {
-			if (!this.scatter.vm?.scatterTooltip?.onClick) this.scatter.view.dom.tooltip.hide()
-		})
-		select('.sjpp-output-sandbox-content').on('scroll', () => {
-			if (!this.scatter.vm?.scatterTooltip?.onClick) this.view.dom.tooltip.hide()
-		})
+		document.addEventListener('scroll', () => this.scatter.view.dom.tooltip.hide())
+		select('.sjpp-output-sandbox-content').on('scroll', () => this.view.dom.tooltip.hide())
 	}
 
 	showText(event, text) {
@@ -34,7 +30,6 @@ export class ScatterInteractivity {
 
 	openSampleView(sample) {
 		this.view.dom.tooltip.hide()
-		this.scatter.vm.scatterTooltip.onClick = false
 		this.scatter.app.dispatch({
 			type: 'plot_create',
 			id: getId(),
@@ -48,7 +43,6 @@ export class ScatterInteractivity {
 
 	async openMetArray(sample) {
 		this.view.dom.tooltip.hide()
-		this.scatter.vm.scatterTooltip.onClick = false
 
 		sample.sample_id = sample.sample
 		for (const k in this.scatter.state.termdbConfig.queries.singleSampleGenomeQuantification) {
@@ -69,7 +63,6 @@ export class ScatterInteractivity {
 
 	async openDiscoPlot(sample) {
 		this.view.dom.tooltip.hide()
-		this.scatter.vm.scatterTooltip.onClick = false
 
 		sample.sample_id = sample.sample
 		const sandbox = newSandboxDiv(this.scatter.opts.plotDiv || select(this.scatter.opts.holder.node().parentNode))
@@ -86,7 +79,6 @@ export class ScatterInteractivity {
 
 	async openLollipop(label) {
 		this.view.dom.tooltip.hide()
-		this.scatter.vm.scatterTooltip.onClick = false
 		const sandbox = newSandboxDiv(this.scatter.opts.plotDiv || select(this.scatter.opts.holder.node().parentNode))
 		sandbox.header.text(label)
 		const arg = {
