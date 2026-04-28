@@ -34,6 +34,7 @@ export class Auth {
 		this.app = app
 		this.creds = creds
 		this.genomes = genomes
+		if (serverconfig.port) this.port = serverconfig.port
 		const { sessionTracking, maxSessionAge } = serverconfig.features || {}
 		if (sessionTracking) this.sessionTracking = sessionTracking
 		if (maxSessionAge) this.maxSessionAge = maxSessionAge

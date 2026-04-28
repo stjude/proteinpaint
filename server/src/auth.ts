@@ -28,7 +28,7 @@ const authApiByApp = new WeakMap()
 
 // these may be overriden within maySetAuthRoutes()
 export async function getAuthApi(app, genomes, _serverconfig = null) {
-	// reuse an exiting authApi if it arleady exists for an app
+	// reuse an existing authApi if it arleady exists for an app
 	if (authApiByApp.has(app)) return authApiByApp.get(app)
 
 	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
