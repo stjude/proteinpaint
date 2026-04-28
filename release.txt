@@ -1,2 +1,2 @@
 Features 
-- AI chat bot recreated as a mass navigation tab. This ensures the chat is always open to the user, if desired, and in a fixed location on the page. 
+- AI chat bot recreated as a mass navigation tab. This ensures the chat is always open to the user, if desired, and in a fixed location on the page.
