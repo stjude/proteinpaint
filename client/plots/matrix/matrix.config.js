@@ -141,6 +141,7 @@ export async function getPlotConfig(opts = {}, app) {
 				// - "genesetEdit", for gene-centric embedders only like GDC OncoMatrix
 				// - may add other optional hints later
 				showHints: [],
+				geneSetEditUiVersion: '', // '' | 'withTabs'
 				// settings for a specific tw
 				twSpecificSettings: {},
 				oncoPrintSNVindelCellBorder: false, // whether to show white cell border for SNVindel in oncoPrint mode
