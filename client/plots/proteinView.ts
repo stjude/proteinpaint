@@ -1165,9 +1165,9 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.attr(
 						'd',
 						shapesArray[
-							(isGroup
+							((isGroup
 								? customShapeIndicesByMode[shapeMode].get(getCustomShapeGroupNameFromKey(name))
-								: shapeMap.get(name)) || 0 % shapesArray.length
+								: shapeMap.get(name)) || 0) % shapesArray.length
 						]
 					)
 					.attr('fill', '#4b5563')
