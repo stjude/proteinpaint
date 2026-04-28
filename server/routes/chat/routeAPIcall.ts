@@ -54,10 +54,11 @@ export async function route_to_appropriate_embedding_provider(
 }
 
 async function call_sj_llm(prompt: string, model_name: string, apilink: string) {
-	const temperature = 0.01
+	const temperature = 0.81
 	const top_p = 0.95
 	const timeout = 200000
 	const max_new_tokens = 512
+	// const TOP_LOGPROBS = 2
 	const payload = {
 		inputs: [
 			{
@@ -67,24 +68,53 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 					max_new_tokens: max_new_tokens,
 					temperature: temperature,
 					top_p: top_p
-					// return_scores: true
-					// return_logprobs: true
-
-					// output_scores: true,
-					// return_dict_in_generate: true
-					//logprobs: 5
+					// logprobs: TOP_LOGPROBS
 				}
 			}
 		]
 	}
 
 	try {
+		/*
+		const response = await fetch(apilink, {
+			method: 'POST',
+			body: JSON.stringify(payload),
+			headers: { 'Content-Type': 'application/json' }
+		})
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		// Read as text instead of JSON
+		const rawText = await response.text();
+		// Sanitize invalid JSON values
+		const sanitizedText = rawText
+			.replace(/-Infinity/g, 'null')
+			.replace(/Infinity/g, 'null')
+			.replace(/NaN/g, 'null');
+
+		let data;
+		try {
+			data = JSON.parse(sanitizedText);
+		} catch (parseErr) {
+			console.error('Failed to parse response:', rawText);
+			throw new Error('Invalid JSON response from API');
+		}
+
+		console.log('Data: ', data)
+		console.log('Gen text output from SJ LLM API:', data.outputs?.[0]?.generated_text)
+		console.log('logprobs from SJ LLM API:', data.outputs?.[0]?.logprobs)
+
+		return data.outputs?.[0]?.generated_text 
+		*/
+
 		const response = await ezFetch(apilink, {
 			method: 'POST',
 			body: payload,
 			headers: { 'Content-Type': 'application/json' },
 			timeout: { request: timeout }
 		})
+
 		if (response.outputs && response.outputs[0] && response.outputs[0].generated_text) {
 			const result = response.outputs[0].generated_text
 			return result

@@ -81,4 +81,14 @@ export type HierPhrase2EntityResult = {
 	filter?: Entity[]
 }
 
-export type Phrase2EntityResult = SummaryPhrase2EntityResult | DEPhrase2EntityResult | HierPhrase2EntityResult // | MatrixPhrase2EntityResult (to be defined later)
+export type MatrixPhrase2EntityResult = {
+	twLst: Entity[]
+	divideBy?: Entity
+	filter?: Entity[]
+}
+
+export type Phrase2EntityResult =
+	| SummaryPhrase2EntityResult
+	| DEPhrase2EntityResult
+	| HierPhrase2EntityResult
+	| MatrixPhrase2EntityResult // (to be defined later)
