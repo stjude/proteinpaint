@@ -1,7 +1,6 @@
-import type { LlmConfig, GeneDataTypeResult } from '#types'
+import type { LlmConfig, GeneDataTypeResult, TermdbTopVariablyExpressedGenesRequest } from '#types'
 import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
-//import { extractGenesetsFromPrompt } from './utils.ts'
-import { getGenesForGeneset } from './utils.ts'
+import { getGenesForGeneset, extractGenesetsFromPromptNew, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 //import { mayLog } from '#src/helpers.ts'
 
@@ -14,10 +13,10 @@ export async function extract_hiercluster_terms_from_query(
 	llm: LlmConfig,
 	genome: any,
 	ds: any,
-	geneFeatures: GeneDataTypeResult[],
-	relevant_genesets: string[] = []
+	geneFeatures: GeneDataTypeResult[]
 ) {
 	// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present, but for now require gene expression
+	const relevant_genesets = extractGenesetsFromPromptNew(prompt, getGenesetNames(genome)) // This is to extract any geneset names mentioned in the prompt, which will then be used as additional context for the gene data type classification and hierarchical clustering term extraction agents. For hierarchical clustering, users might mention geneset names instead of individual gene names, so this is to capture those geneset names and use them as additional context for the downstream agents.
 	const common_genes = geneFeatures.map(g => g.gene)
 	const properties = {
 		simpleFilter: {
@@ -34,6 +33,11 @@ export async function extract_hiercluster_terms_from_query(
 			type: 'array',
 			items: { type: 'string' },
 			description: 'Names of gene sets (e.g. HALLMARK pathways) to be used for hierarchical clustering'
+		},
+		topVariablyExpressedGenes: {
+			type: 'integer',
+			description:
+				'A positive integer to specify how many genes to include for top variably expressed genes. In case a number is not specified, set it to -1'
 		}
 	}
 
@@ -93,7 +97,16 @@ export async function extract_hiercluster_terms_from_query(
                 "AKT1"
             ]
         }
-    
+
+        "question": "Show a dendrogram of the top variably expressed genes across all samples",
+        "answer": {
+            "topVariablyExpressedGenes": -1
+        }
+
+        "question": "Show a dendrogram of the top 100 variably expressed genes across all samples",
+        "answer": {
+            "topVariablyExpressedGenes": 100
+        }
     `
 
 	let system_prompt =
@@ -121,16 +134,20 @@ export async function extract_hiercluster_terms_from_query(
 	system_prompt += '.\n' + 'User query: ' + prompt
 
 	const response: string = await route_to_appropriate_llm_provider(system_prompt, llm)
-	return validate_hiercluster_response(response, ds, genome, geneFeatures)
+	return await validate_hiercluster_response(response, ds, genome, geneFeatures)
 }
 
 // ---------------------------------------------------------------------------
 //  Validation — builds term wrappers from LLM response using active configs
 // ---------------------------------------------------------------------------
 
-function validate_hiercluster_response(response: string, ds: any, genome: any, geneFeatures: GeneDataTypeResult[]) {
+async function validate_hiercluster_response(
+	response: string,
+	ds: any,
+	genome: any,
+	geneFeatures: GeneDataTypeResult[]
+) {
 	const response_type = JSON.parse(response)
-	console.log('LLM response for hierarchical clustering term extraction:', response_type)
 	const pp_plot_json: any = { chartType: 'hierCluster' }
 	let text = ''
 
@@ -139,7 +156,6 @@ function validate_hiercluster_response(response: string, ds: any, genome: any, g
 
 	// If geneset names are provided, resolve them to gene names and add to the geneNames array (while ensuring no duplicates)
 	if (response_type.genesetNames) {
-		console.log('Resolving geneset for hierarchical clustering:', response_type.genesetNames)
 		const genes = getGenesForGeneset(genome, response_type.genesetNames)
 		if (genes && genes.length > 0) {
 			for (const gene of genes) {
@@ -155,6 +171,37 @@ function validate_hiercluster_response(response: string, ds: any, genome: any, g
 			}
 		}
 	}
+
+	let topVEgenes: string[] = []
+	if (response_type.topVariablyExpressedGenes) {
+		let num_genes: number
+		if (Number.isInteger(response_type.topVariablyExpressedGenes) && response_type.topVariablyExpressedGenes > 0) {
+			num_genes = response_type.topVariablyExpressedGenes
+		} else if (response_type.topVariablyExpressedGenes === -1) {
+			num_genes = 100 // Default to top 100 variably expressed genes if -1 is specified
+		} else {
+			return {
+				type: 'text',
+				text:
+					'Invalid value for topVariablyExpressedGenes: ' +
+					response_type.topVariablyExpressedGenes +
+					'. Must be a positive integer.'
+			}
+		}
+		const q: TermdbTopVariablyExpressedGenesRequest = {
+			genome: genome.id,
+			dslabel: ds.label,
+			maxGenes: num_genes
+		}
+		topVEgenes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+		for (const gene of topVEgenes) {
+			// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
+			if (!response_type.geneNames?.some((g: string) => g.toLowerCase() === gene.toLowerCase())) {
+				terms.push({ term: { gene: gene, type: 'geneExpression' } })
+			}
+		}
+	}
+
 	for (const identifier of response_type.geneNames || []) {
 		const gene_hit = geneFeatures.find(g => g.gene.toLowerCase() === identifier.toLowerCase())
 		if (!gene_hit) {
