@@ -116,7 +116,10 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 						parentId: this.id,
 						config: {
 							chartType: 'DEinput',
-							parentId: this.id
+							parentId: this.id,
+							/** ' ' overrides the default 'hide_search' mode in DEInput.
+							 * 'hide_search' by default expands all terms. */
+							header_mode: ' '
 						}
 					})
 					delete tab.callback
@@ -124,7 +127,6 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: typeGroup[SSGSEA],
-				active: true,
 				isVisible: () => {
 					return this.termType === GENE_EXPRESSION && state.termdbConfig?.allowedTermTypes?.includes(SSGSEA)
 				},
