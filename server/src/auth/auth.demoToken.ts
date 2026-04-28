@@ -16,7 +16,7 @@ export type DemoToken = {
 
 //export const demoTokens: DemoToken[] = []
 
-export function addCred(cred, dslabel) {
+export function addDemoTokenCred(cred, dslabel) {
 	// it's safe to not throw and block server startup on any of the errors below;
 	// an invalid cred.demoToken means demo tokens will not be issued
 	if (typeof cred.demoToken != 'object') {

@@ -1,3 +1,5 @@
+import { addDemoTokenCred } from './auth.demoToken.ts'
+
 // serverconfig.dsCredentials
 //
 // DsCredentials = {
@@ -134,43 +136,7 @@ export async function validateDsCredentials(creds) {
 					delete cred.looseIpCheck
 				}
 
-				if (cred.demoToken) {
-					// it's safe to not throw and block server startup on any of the errors below;
-					// an invalid cred.demoToken means demo tokens will not be issued
-					if (typeof cred.demoToken != 'object') {
-						delete cred.demoToken
-						console.warn(`(!) ${dslabel} cred.demoToken must be an object`)
-					} else {
-						// The demoToken secret should be different from the embedder's signing secret,
-						// to make it simpler to invalidate demoToken and derived session tokens without
-						// having to coordinate with the embedder portal maintainers. However, for now,
-						// support reusing the embedder's secret for the demo token to minimize testing
-						// issues in internal test sites.
-						// prettier-ignore
-						if (typeof cred.demoToken.secret != 'string') { // pragma: allowlist secret
-							cred.demoToken.secret = cred.secret
-							// delete cred.demoToken.secret
-							// demoToken.secret cannot be randomly generated per server instance, 
-							// since this PP server may be in a server farm that has to accept each other's issued jwt
-							// console.warn(`(!) invalid ${dslabel} demoToken.secret, will not issue`)
-						}
-						if (!Array.isArray(cred.demoToken.roles)) {
-							cred.demoToken.roles = [] // an empty roles array means no matching demoJwtInput role will be found
-							console.warn(`(!) ${dslabel} demoToken.roles forced into an empty array`)
-						}
-						if (!Array.isArray(cred.demoToken.referers)) {
-							cred.demoToken.referers = [] // an empty referers array means a req.headers.referer will not be matched
-							console.warn(`(!) ${dslabel} demoToken.referers forced into an empty array`)
-						}
-						// this will track and reuse issued JWT's that are not close to expiring
-						// key: role (public, user, admin, etc) as allowed in cred.demoTokens.roles[]
-						// value: {
-						//  jwt,
-						//  exp: expiration time in milliseconds
-						// }
-						cred.demoToken.computedByRole = {}
-					}
-				}
+				if (cred.demoToken) addDemoTokenCred(cred, dslabel)
 			}
 		}
 	}
