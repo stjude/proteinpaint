@@ -1,42 +1,62 @@
 import { addDemoTokenCred } from './auth.demoToken.ts'
 
-// serverconfig.dsCredentials
-//
-// DsCredentials = {
+// NOTES:
+// 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
+// 2. glob pattern: '*', '!', etc
 
-// 	// NOTES:
-// 	// 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
-// 	// 2. glob pattern: '*', '!', etc
+type ServerConfigDsCredentials = {
+	[dslabelPattern: string]: {
+		/** 
+		routePattern could be one of the following: 
+		  'termdb': A public view will be allowed by default for aggregated data, even without a jwt submitted
+		            in the request header. Sample-level data will be hidden by default, unless the user is logged-in
+		            or some dataset options are set to allow samples IDs to be displayed or specific charts to be shown.
 
-// 	// the dslabel can be a glob pattern, to find any matching dslabel
-// 	[dslabel: string]: {
-// 		// the hostName can be a glob pattern, to find any matching embedder host name
-// 		[serverRoute: string]: {
-// 			// serverRoute can be a glob pattern, to find any matching server route name/path
-// 			[hostName: string]:
-//         { type: 'basic', password: '...'} |
-//         {
-//            type: 'jwt',
-//            secret: string,
-//            // optional list of cohort(s) that a user must have access to,
-//            // to be matched against the jwt payload as signed by the embedder
-//            dsnames?: [{id, label}],
-//            demoToken?: {
-//              roles: string[],
-//              referers: string[]
-//            }
-//         } |
-//         // TODO: support other credential types
-// 		}
-// 	}
-// }
+		            For example, aggregated data for barchart or regression may be rendered,
+		            but not sample-level data such as labeled matrix or scatter plots - these can be displayed
+                if the samples are not labeled or if the dataset's isSupportedChartOverride() option allows
+                these charts to be displayed. 
+
+      '*' | '/**': no public view is allowed, termdb plots will always require a jwt to be issued
+
+      'burden': specific to the personalized cumulative burden app
+
+      todo: may support other route patterns as needed
+		*/
+		[routePattern: string]: {
+			[embedderPattern: string]: BasicCredEntry | JwtCredEntry
+		}
+	}
+}
+
+type BasicCredEntry = {
+	type: 'basic' // as-in Basic authorization in HTTP request header
+	secret?: string
+	password?: string // legacy, will be converted to secret
+}
+
+type JwtCredEntry = {
+	type: 'jwt'
+	secret: string
+	// optional list of cohort(s) that a user must have access to,
+	// to be matched against the jwt payload as signed by the embedder
+	// TODO: should make dsnames legacy and migrate to cohort
+	dsnames?: { id: string; label: string }[]
+	/** see https://github.com/stjude/sjpp/wiki/Demo-token-and-auth-testing-for-datasets-with-access-control */
+	demoToken?: {
+		/** the roles is dataset demoJwtInput that are allowed in this server instance */
+		roles: string[]
+		/** the URL paths and/or param substring that are allowed to make a /demoToken request */
+		referers: string[]
+	}
+}
 
 // Examples:
 
 // dsCredentials: {
 // 	SJLife: {
 // 		termdb: {
-// 			'viz.stjude.cloud': {
+// 			'viz.stjude.cloud': { // this exact embedder will be allowed since there is no wildcard pattern
 //         type: 'jwt',
 //         secret: "something",  // pragma: allowlist secret
 //         demoToken: {
@@ -46,12 +66,15 @@ import { addDemoTokenCred } from './auth.demoToken.ts'
 //      }
 // 		},
 // 		burden: {
-// 			'*': 'burdenDemo'
+// 			'*': {
+//         type: 'basic',
+//         password: '...'
+//      }
 // 		}
 // 	},
 // 	PNET: {
-// 		'*': { // equivalent to /**/*
-// 			'*': {
+// 		'*': { // equivalent to /** for a route path, all routes will be protected
+// 			'*': { // any embedder
 //         type: 'basic',
 //         password: '...'
 //      }
@@ -63,12 +86,12 @@ import { addDemoTokenCred } from './auth.demoToken.ts'
 // 	but only if these 'default' protections are specified as a dsCredential (sub)entry
 // 	'*': { // apply the following creds to all datasets
 // 		'*': { // apply the following creds for all server routes
-// 			'*': 'defaultCred'
+// 			'*': BasicCredEntry | JwtCredEntry
 // 		}
 // 	}
 // }
 
-export async function validateDsCredentials(creds) {
+export async function validateDsCredentials(creds: ServerConfigDsCredentials) {
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
@@ -144,9 +167,28 @@ export async function validateDsCredentials(creds) {
 	return credEmbedders
 }
 
-function mayReshapeDsCredentials(creds) {
+type LegacyDsCredentials = {
+	[dslabel: string]:
+		| {
+				type?: 'login'
+				password?: string // will be converted as "secret" value
+				secret?: string
+				embedders?: undefined // indicates a mistake in the entry
+		  }
+		| {
+				type?: 'jwt'
+				termdb?: any // will be reshaped and checked as a (non-legacy) ServerConfigDsCredentials entry
+				/** the request header key to submit with verified jwt token as the value */
+				headerKey?: string
+				embedders?: {
+					[hostName: string]: any // will be reshaped and checked as a (non-legacy) ServerConfigDsCredentials entry
+				}
+		  }
+}
+
+function mayReshapeDsCredentials(creds: LegacyDsCredentials) {
 	// reshape legacy
-	for (const dslabel in creds) {
+	for (const dslabel of Object.keys(creds)) {
 		const cred = creds[dslabel]
 		if (cred.type == 'login') {
 			if (cred.embedders) throw `unexpected 'embedders' property`
@@ -155,8 +197,8 @@ function mayReshapeDsCredentials(creds) {
 			cred['*'] = {
 				'*': {
 					type: 'basic',
-					password: cred.password,
-					secret: cred.secret
+					secret: cred.secret || cred.password
+					//password: cred.password
 				}
 			}
 			delete cred.type

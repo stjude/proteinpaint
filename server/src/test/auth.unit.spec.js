@@ -313,7 +313,7 @@ tape('legacy reshape', async test => {
 				'/**': {
 					'*': {
 						type: 'basic',
-						password: '...',
+						//password: '...',
 						secret: '...',
 						dslabel: 'ds1',
 						route: '/**',
