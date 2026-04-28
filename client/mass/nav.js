@@ -353,8 +353,10 @@ function setRenderers(self) {
 			self.tabs.push(filterTab)
 			Object.assign(filterTab, massNav.tabs?.filter)
 		}
-		//TODO: need termdbConfig logic here
-		if (!massNav.tabs?.chat?.hide) {
+		/** For now, limit to only datasets with chat enabled.
+		 * In the future, may show search instead of chat but use
+		 * the same component.  */
+		if (appState.termdbConfig?.queries?.chat && !massNav.tabs?.chat?.hide) {
 			self.tabs.push(chatTab)
 			Object.assign(chatTab, massNav.tabs?.chat)
 		}
