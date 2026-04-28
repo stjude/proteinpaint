@@ -7,7 +7,6 @@ import type { Div, Elem } from '../../types/d3'
 import type { ClientGenome } from '../../types/clientGenome'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
-import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
 import type { API, Gene, CallbackArg, CustomInputs, GeneSetEditArg, MenuListEntry } from './GeneSetEditUI.ts'
 
@@ -132,12 +131,10 @@ export class GeneSetEditUIwithTabs {
 					const result: CallbackArg = { geneList: this.geneList }
 					if (this.nameInput) result.name = this.nameInput.property('value')
 					for (const gene of term._geneset) this.geneList.push({ gene: gene.symbol })
-					console.log(228, this.geneList)
 					this.callback(result)
 					this.tip2.hide()
 				}
 				this.renderTextControls(presetMenu, m => !m.isPreset)
-				console.log(131, presetMenu)
 				presetMenu.style('display', 'inline-block')
 				presetMenu.node()?.firstChild?.dispatchEvent(new PointerEvent('click', { bubbles: true })) //click?.()
 			})
@@ -241,7 +238,6 @@ export class GeneSetEditUIwithTabs {
 						)
 						return
 					}
-					console.log(335, this.geneList)
 					this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
 					const result: CallbackArg = { geneList: this.geneList }
 					if (this.nameInput) result.name = this.nameInput.property('value')
@@ -314,16 +310,15 @@ export class GeneSetEditUIwithTabs {
 				callback: async (event: Event) => {
 					this.tip2.clear().showunder(event.target)
 					const callback = async () => {
-						const args = {
+						const body = {
 							genome: this.vocabApi.vocab.genome,
 							dslabel: this.vocabApi.vocab.dslabel,
 							filter: this.vocabApi.state.termfilter.filter,
 							filter0: this.vocabApi.state.termfilter.filter0
 						}
 
-						this.getInputs(this.api.topMutatedGenesParams, args)
-						const result = await dofetch3('termdb/topMutatedGenes', { method: 'GET', body: args })
-
+						this.getInputs(this.api.topMutatedGenesParams, body)
+						const result = await this.vocabApi.getTopMutatedGenes({ method: 'GET', body })
 						this.geneList = []
 						this.geneList.push(...result.genes)
 						this.renderGenes()
@@ -364,7 +359,7 @@ export class GeneSetEditUIwithTabs {
 						}
 
 						this.getInputs(copy, args)
-						const result = await dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: args })
+						const result = await this.vocabApi.getTopVariablyExpressedGenes({ method: 'GET', body: args })
 
 						this.geneList = []
 						if (result.genes) {
@@ -380,12 +375,12 @@ export class GeneSetEditUIwithTabs {
 		}
 		if (this.genome?.termdbs?.msigdb) {
 			for (const key of Object.keys(this.genome.termdbs)) {
-				console.log(462, key)
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
 					isPreset: true,
 					label: `${tdb.label} gene set`,
-					callback: event => this.showMSigDbTree(event, key)
+					callback: event => this.showMSigDbTree(event, key),
+					testid: `sjpp-geneSetEditUi-msigdb-${key}`
 				})
 			}
 		}
@@ -449,11 +444,13 @@ export class GeneSetEditUIwithTabs {
 					div,
 					text: menu.label,
 					getDisplayStyle: menu.getDisplayStyle || (() => ''),
-					callback: menu.callback
+					callback: menu.callback,
+					testid: menu.testid
 				})
 			else
 				div
 					.append('a')
+					.attr('data-testid', menu.testid || null)
 					.style('text-decoration', 'underline')
 					.style('padding', '0px 10px')
 					.style('color', 'black')
@@ -702,13 +699,13 @@ export class GeneSetEditUIwithTabs {
 		let data
 		if (this.mode == 'geneVariant') {
 			const body = {
-				maxGenes: this.maxNumGenes
-				//geneFilter: this.geneFilter
+				maxGenes: numGenes || this.maxNumGenes
 			}
 			// XXX this is optional query!! if ds is missing then should show input ui instead
 			// TODO why cannot use vocab method?
 			// TODO purpose of 2nd and 3rd arguments?
-			data = await this.vocabApi.getTopVariablyExpressedGenes(body)
+			//const result = await dofetch3('termdb/topMutatedGenes', { method: 'GET', body })
+			data = await this.vocabApi.getTopMutatedGenes(body)
 		} else if (this.mode == 'geneExpression') {
 			const body = {
 				//genome: this.vocabApi.state.vocab.genome,
@@ -727,6 +724,6 @@ export class GeneSetEditUIwithTabs {
 		if (!data.genes) return [] // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 		//waitDiv.remove()
 		//this.dom.loadingOverlay?.style('display', 'none')
-		this.callback({ geneList: data.genes })
+		this.callback({ geneList: data.genes.map(gene => ({ gene })) })
 	}
 }

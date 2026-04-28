@@ -1,10 +1,10 @@
-import { GeneSetEditUI } from '../GeneSetEdit/GeneSetEditUI'
+import { GeneSetEditUI } from '../GeneSetEditUI.ts'
 import tape from 'tape'
 import { select } from 'd3-selection'
-import { hg38 } from '../../test/testdata/genomes'
-import { vocabInit } from '../../termdb/vocabulary'
-import { detectGte } from '../../test/test.helpers'
-import { Menu } from '../menu.js'
+import { hg38 } from '../../../test/testdata/genomes'
+import { vocabInit } from '../../../termdb/vocabulary'
+import { detectGte } from '../../../test/test.helpers'
+import { Menu } from '../../menu.js'
 
 /**
  * NOTE: Do not add tests that require the fasta file to be available.

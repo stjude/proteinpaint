@@ -111,6 +111,7 @@ export type MenuListEntry = {
 	/** Element tagname. If button, uses addButton to create elem */
 	tagName?: string
 	isPreset?: boolean
+	testid?: string
 }
 
 export class GeneSetEditUI {

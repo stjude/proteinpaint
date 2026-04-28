@@ -1,7 +1,7 @@
-import { GeneSetEditUI } from '../GeneSetEdit/GeneSetEditUI'
+import { GeneSetEditUI } from '../GeneSetEditUI'
 import tape from 'tape'
 import { select } from 'd3-selection'
-import { hg38, hg19 } from '../../test/testdata/genomes'
+import { hg38, hg19 } from '../../../test/testdata/genomes'
 
 /*************************
  reusable helper functions
