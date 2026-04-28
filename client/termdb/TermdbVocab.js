@@ -1246,8 +1246,14 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
-	async getTopVariablyExpressedGenes(arg) {
-		return await this.dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
+	async getTopVariablyExpressedGenes(args) {
+		console.trace(1249, args)
+		if (!args.genome) args.genome = this.state.vocab.genome
+		if (!args.dslabel) args.dslabel = this.state.vocab.dslabel
+		if (!args.filter) args.filter = getNormalRoot(this.state.termfilter.filter)
+		else args.filter = getNormalRoot(args.filter)
+		if (!args.filter0) args.filter0 = this.state.termfilter.filter0
+		return await this.dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: args })
 	}
 
 	async getTopTermsByType(args) {
