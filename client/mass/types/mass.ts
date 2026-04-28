@@ -3,7 +3,6 @@ import type { BoxPlotSettings } from '../../plots/boxplot/Settings'
 import type { CorrVolcanoSettings } from '#plots/corrVolcano/CorrelationVolcanoTypes.ts'
 import type { ValidatedVolcanoSettings } from '#plots/volcano/settings/Settings.ts'
 import type { GRIN2Settings } from '#plots/grin2/GRIN2Types.ts'
-import type { ChatSettings } from '#plots/chat/chatTypes.ts'
 //import { TermWrapper } from '#types'
 
 export type MassAppApi = AppApi /*& {
@@ -81,7 +80,6 @@ type PlotSettings = {
 	controls?: any
 	correlationVolcano?: CorrVolcanoSettings
 	grin2?: GRIN2Settings
-	chat?: ChatSettings
 	geneORA?: any
 	gsea?: any
 	sampleScatter?: any
