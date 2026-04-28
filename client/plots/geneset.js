@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge, sleep } from '../rx'
-import { GeneSetEditUI /*, GeneSetEditArg, CallbackArg*/ } from '../dom/GeneSetEdit/GeneSetEditUI.ts'
+import { GeneSetEditUIwithTabs /*, GeneSetEditArg, CallbackArg*/ } from '../dom/GeneSetEdit/GeneSetEditUIwithTabs.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
 
@@ -80,10 +80,10 @@ class GenesetComp {
 	async main() {
 		this.dom.body.selectAll('*').remove()
 		this.dom.loadingOverlay.style('display', '')
-		// do not await, since this main may be called as part of the initial dispatch
+		// Do not await, since this main may be called as part of the initial dispatch
 		// in the app init(), and that app instance should return without having to wait
-		// for this component to finish the initial genes request and fully render
-		// NOTE: This is an important accomodation of rapid-fire cohort changes in the gdc portal
+		// for this component to finish the initial genes request and fully render.
+		// NOTE: This is an important accomodation of rapid-fire cohort changes in the gdc portal.
 		this.noWait().catch(console.warn)
 	}
 
@@ -177,17 +177,25 @@ class GenesetComp {
 
 	async render() {
 		if (!this.dom?.holder) return
-		this.dom.body.append('p').text(`Define a gene set to launch ${this.state.config.toolName.toLowerCase()}.`)
-		new GeneSetEditUI(
+		const settings = this.state.config.settings
+
+		this.dom.body
+			.append('p')
+			.html(
+				`Define a gene set to launch <span style='text-transform: capitalize'>${this.state.config.toolName.toLowerCase()}</span>.`
+			)
+
+		new GeneSetEditUIwithTabs(
 			{
 				holder: this.dom.body.append('div'),
 				genome: this.opts.genome,
 				mode: this.opts.mode,
 				vocabApi: this.app.vocabApi, //  await vocabInit({ state: { genome: gdcGenome, dslabel: gdcDslabel } }),
+				maxNumGenes: settings.maxGenes,
 				callback: async result => {
 					const twlst = await Promise.all(
 						result.geneList.map(async i => {
-							return fillTermWrapper({ term: { gene: i.gene || i.name || i, type: 'geneVariant' } }, this.app.vocabApi)
+							return fillTermWrapper({ term: { gene: i.gene || i.name || i, type: this.opts.mode } }, this.app.vocabApi)
 						})
 					)
 

@@ -3,116 +3,18 @@ import { Menu } from '#dom'
 import { select } from 'd3-selection'
 import { mclass, dt2color, dt2label } from '#shared/common.js'
 import { TermTypes } from '#shared/terms.js'
-import type { Button, Div, Elem } from '../../types/d3'
+import type { Div, Elem } from '../../types/d3'
 import type { ClientGenome } from '../../types/clientGenome'
-import type { GeneArgumentEntry } from '#types'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
+import type { API, Gene, CallbackArg, CustomInputs, GeneSetEditArg, MenuListEntry } from './GeneSetEditUI.ts'
 
-export type API = {
-	dom: {
-		holder: Div
-		/** text links above the gene holding div
-		 * Opens a menu to select genes from different datasets
-		 */
-		textControlDiv: Div
-		/** on click clears the gene holding div */
-		clearBtn: Button
-		/** on click populates the geneHoldingDiv with original gene list */
-		restoreBtn: Button | null
-		/** gene holding area, shows bunch of gene buttons pending submission */
-		geneHoldingDiv: Div
-		/** legend area, to show available stats legend on genes */
-		statLegendDiv: Div
-		/** Submit button */
-		submitBtn: Button
-	}
-	/** originally .params and split into two
-	 * Derived from termdbConfig.queries.topMutatedGenes.arguments
-	 * input for the param is add in the gene set menu
-	 */
-	topMutatedGenesParams: { param: GeneArgumentEntry; input?: any }[]
-	/** Derived from termdbConfig.queries.topVariablyExpressedGenes.arguments
-	 * input for the param is add in the gene set menu
-	 */
-	topVariablyExpressedGenesParams: { param: GeneArgumentEntry; input?: any }[]
-	/** while rendering each gene button, if gene stat is available,
-	 * it records color and labels for each color,
-	 * to be shown in statLegendDiv */
-	statColor2label: Map<string, any>
-	/** destory the original menu (i.e. tip == opts.holder) */
-	destroy: () => void
-}
+const tabRadioSuffix = Math.random().toString().slice(-5)
+let tabRadioIndex = 0
 
-export type Gene = {
-	gene: string
-	mutationStat?: { class: string; count: number; dt?: number }[]
-}
-
-export type CallbackArg = {
-	geneList: Gene[]
-	/** optional, gene set name */
-	name?: string
-}
-
-/** optional instruction to add new button(s) and pull in gene sets by custom-designed means.
- * used by gdc oncomatrix react wrapper to call the GFF gene set modal */
-export type CustomInputs = {
-	/** button name */
-	label: string
-	/** Change button display based on caller logic */
-	getDisplayStyle?: () => void
-	/** callback to trigger upon clicking this button. should show some ui to collect
-	 * gene names and bring them into holding box */
-	showInput: (arg: any) => void
-}[]
-
-export type GeneSetEditArg = {
-	holder: Elem
-	genome: ClientGenome
-	/** Optional: If provided, allow to load top variably mutated ('geneVariant') or
-	 * expressed genes ('geneExpression'). If not provided, only allow to add genes manually
-	 * later can be union of multiple mode strings */
-	mode?: 'geneVariant' | 'geneExpression'
-	/** Minimum number of genes to return in the callback */
-	minNumGenes?: number
-	/** Maxiumum number of genes allowed in gene set */
-	maxNumGenes?: number
-	/** What to do with the genes returned */
-	callback: (arg: CallbackArg) => void
-	/** passed termdb instance */
-	vocabApi: any
-	/** List of genes returned by the callback */
-	geneList?: Gene[]
-	/** Title appearing above the UI */
-	titleText?: string
-	customInputs?: CustomInputs
-	/** Pass the genes available to be used by the caller. When not in the limited
-	 * list, genes will appear with a strikethrough */
-	limitedGenesList?: string[]
-	/** show the terms in the order of input*/
-	termsAsListed?: boolean
-	/** show input for geneset name */
-	nameInput?: boolean
-	backBtn?: {
-		target: string
-		callback: () => void
-	}
-}
-
-export type MenuListEntry = {
-	/** Label shown, either on the button or link */
-	label: string
-	/** For buttons, set display per condition(s) */
-	getDisplayStyle?: () => string
-	callback: (f?: any) => void
-	/** Element tagname. If button, uses addButton to create elem */
-	tagName?: string
-}
-
-export class GeneSetEditUI {
+export class GeneSetEditUIwithTabs {
 	holder: Elem
 	genome: ClientGenome
 	callback: (arg: CallbackArg) => void
@@ -124,7 +26,7 @@ export class GeneSetEditUI {
 	api: API
 	geneSearch: any //cheating
 	/** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
-	menuList: MenuListEntry[]
+	menuList: MenuListEntry[] = []
 	mode?: 'geneVariant' | 'geneExpression'
 	minNumGenes?: number
 	maxNumGenes?: number
@@ -135,6 +37,8 @@ export class GeneSetEditUI {
 	customInputs?: CustomInputs
 	limitedGenesList?: string[]
 	termsAsListed?: boolean
+	tabRadioName: string
+	msigClickTerm?: (term: any) => void
 
 	constructor(opts: GeneSetEditArg) {
 		this.holder = opts.holder
@@ -156,6 +60,11 @@ export class GeneSetEditUI {
 			? JSON.stringify(this.geneList.map(t => t.gene))
 			: JSON.stringify(this.geneList.map(t => t.gene).sort())
 
+		this.tabRadioName = `sjpp-geneset-tab-radio-${tabRadioIndex++}-${tabRadioSuffix}`
+		this.setDom(opts)
+	}
+
+	setDom(opts) {
 		this.holder.selectAll('*').remove()
 		const div = this.holder.append('div').attr('class', 'sja_genesetinput').style('padding', '5px')
 
@@ -167,8 +76,90 @@ export class GeneSetEditUI {
 		}
 
 		const headerDiv = div.append('div')
+		const tabsDiv = headerDiv.append('div')
 
-		const label = headerDiv.append('label')
+		const quickDiv = tabsDiv.append('div').style('min-height', '24px')
+		const topGenesLabel = quickDiv.append('label')
+		const rankingType = this.mode == 'geneVariant' ? 'mutated' : 'variably expressed'
+		topGenesLabel
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', this.tabRadioName)
+			.property('checked', true)
+			.property('value', 'topGenes')
+			.on('change', () => {
+				customMenu.style('display', 'none')
+				this.api.dom.geneHoldingDiv.style('display', 'none')
+				presetMenu.style('display', 'none')
+				delete this.msigClickTerm
+				quickApplyBtn.style('display', '')
+			})
+		topGenesLabel.append('span').text(`Top `)
+		const numGenesInput = topGenesLabel
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '60px')
+			.property('value', this.maxNumGenes)
+		topGenesLabel.append('span').text(`${rankingType} genes`)
+		const quickApplyBtn = quickDiv
+			.append('button')
+			.style('margin-left', '10px')
+			.html('Submit')
+			.on('click', () => {
+				this.setTopGenes(Number(numGenesInput.property('value')))
+			})
+
+		const presetDiv = tabsDiv.append('div').style('min-height', '24px')
+		const presetGenesLabel = presetDiv.append('label')
+		presetGenesLabel
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', this.tabRadioName)
+			//.property('checked', true)
+			.property('value', 'presetGenes')
+			.on('change', () => {
+				quickApplyBtn.style('display', 'none')
+				this.api.dom.geneHoldingDiv.style('display', 'none')
+				customMenu.style('display', 'none')
+				presetMenu.selectAll('*').remove()
+				this.msigClickTerm = term => {
+					this.geneList = []
+					const result: CallbackArg = { geneList: this.geneList }
+					if (this.nameInput) result.name = this.nameInput.property('value')
+					for (const gene of term._geneset) this.geneList.push({ gene: gene.symbol })
+					console.log(228, this.geneList)
+					this.callback(result)
+					this.tip2.hide()
+				}
+				this.renderTextControls(presetMenu, m => !m.isPreset)
+				console.log(131, presetMenu)
+				presetMenu.style('display', 'inline-block')
+				presetMenu.node()?.firstChild?.dispatchEvent(new PointerEvent('click', { bubbles: true })) //click?.()
+			})
+		presetGenesLabel.append('span').text(`Preset gene set`)
+		const presetMenu = presetDiv.append('div').style('display', 'inline-block')
+
+		const customDiv = tabsDiv.append('div').style('min-height', '24px')
+		const customGenesLabel = customDiv.append('label')
+		customGenesLabel
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', this.tabRadioName)
+			//.property('checked', true)
+			.property('value', 'customGenes')
+			.on('change', () => {
+				quickApplyBtn.style('display', 'none')
+				presetMenu.style('display', 'none')
+				delete this.msigClickTerm
+				this.api.dom.geneHoldingDiv.style('display', '')
+				customMenu.style('display', '')
+			})
+		customGenesLabel.append('span').text(`Custom gene set`)
+
+		const customMenu = customDiv.append('div').style('display', 'none')
+		customMenu.append('p').text(`Search for genes, edit a computed top genes list, or edit an MSigDb gene set.`)
+
+		const label = customMenu.append('label')
 		label.append('span').html('Search')
 		const row = label
 			.append('div')
@@ -177,7 +168,7 @@ export class GeneSetEditUI {
 			.style('margin', '8px 0px -5px 0px')
 
 		// a holder to render optional buttons
-		const controlDiv = headerDiv
+		const controlDiv = customMenu
 			.append('div')
 			.style('display', 'inline-flex')
 			.style('align-items', 'center')
@@ -207,8 +198,6 @@ export class GeneSetEditUI {
 				.style('width', '150px')
 		}
 
-		this.menuList = []
-
 		this.api = {
 			dom: {
 				holder: div,
@@ -234,10 +223,10 @@ export class GeneSetEditUI {
 							}
 					  })
 					: null,
-				geneHoldingDiv: this.renderGeneHoldingDiv(div),
+				geneHoldingDiv: this.renderGeneHoldingDiv(customMenu.append('div')),
 				statLegendDiv: div.append('div'),
 				submitBtn: addButton({
-					div: div.append('div').style('margin-top', '10px'),
+					div: customMenu.append('div').style('margin-top', '10px'),
 					testid: 'sjpp-genesetedit-submitbtn',
 					text: 'Submit',
 					disabled: !this.geneList?.length,
@@ -248,6 +237,7 @@ export class GeneSetEditUI {
 							)
 							return
 						}
+						console.log(335, this.geneList)
 						this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
 						const result: CallbackArg = { geneList: this.geneList }
 						if (this.nameInput) result.name = this.nameInput.property('value')
@@ -384,39 +374,13 @@ export class GeneSetEditUI {
 			})
 		}
 		if (this.genome?.termdbs?.msigdb) {
-			for (const key in this.genome.termdbs) {
+			for (const key of Object.keys(this.genome.termdbs)) {
+				console.log(462, key)
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
+					isPreset: true,
 					label: `${tdb.label} gene set`,
-					callback: async () => {
-						this.tip2.clear().showunder(this.api.dom.textControlDiv.node()!)
-						const termdb = await import('../../termdb/app.js')
-						termdb.appInit({
-							holder: this.tip2.d,
-							state: {
-								dslabel: key,
-								genome: this.genome.name,
-								nav: {
-									header_mode: 'search_only'
-								}
-							},
-							tree: {
-								click_term: term => {
-									this.geneList = []
-									const geneset = term._geneset
-									if (geneset) {
-										for (const gene of geneset) this.geneList.push({ gene: gene.symbol })
-										this.renderGenes(term.name)
-										// disable name update to retain msigdb gene set name
-										// when user modifies gene set
-										this.updateName = false
-									}
-									this.tip2.hide()
-									this.api.dom.submitBtn.node()!.focus()
-								}
-							}
-						})
-					}
+					callback: event => this.showMSigDbTree(event, key)
 				})
 			}
 		}
@@ -440,8 +404,41 @@ export class GeneSetEditUI {
 		}
 	}
 
-	renderTextControls(div: Div) {
+	async showMSigDbTree(event, key) {
+		this.tip2.clear().showunder(event.target) //this.api.dom.textControlDiv.node()!)
+		const termdb = await import('../../termdb/app.js')
+		termdb.appInit({
+			holder: this.tip2.d,
+			state: {
+				dslabel: key,
+				genome: this.genome.name,
+				nav: {
+					header_mode: 'search_only'
+				}
+			},
+			tree: {
+				click_term:
+					this.msigClickTerm ||
+					(term => {
+						this.geneList = []
+						const geneset = term._geneset
+						if (geneset) {
+							for (const gene of geneset) this.geneList.push({ gene: gene.symbol })
+							this.renderGenes(term.name)
+							// disable name update to retain msigdb gene set name
+							// when user modifies gene set
+							this.updateName = false
+						}
+						this.tip2.hide()
+						this.api.dom.submitBtn.node()!.focus()
+					})
+			}
+		})
+	}
+
+	renderTextControls(div: Div, excludeFilter?: (m: MenuListEntry) => boolean) {
 		for (const menu of this.menuList) {
+			if (excludeFilter?.(menu)) continue
 			if (menu.tagName == 'button')
 				addButton({
 					div,
@@ -687,5 +684,55 @@ export class GeneSetEditUI {
 			this.geneList.splice(i, 1)
 			this.renderGenes()
 		}
+	}
+
+	async setTopGenes(numGenes = 0) {
+		// let waitDiv
+		// if (this.opts.showWaitMessage) {
+		// 	waitDiv = this.dom.body.append('div').style('margin', '20px')
+		// 	this.opts.showWaitMessage(waitDiv)
+		// }
+
+		// genes are not predefined. query to get top genes using the current cohort
+		let data
+		if (this.mode == 'geneVariant') {
+			const body = {
+				maxGenes: this.maxNumGenes,
+				geneFilter: this.geneFilter
+			}
+			// XXX this is optional query!! if ds is missing then should show input ui instead
+			// TODO why cannot use vocab method?
+			// TODO purpose of 2nd and 3rd arguments?
+			data = await this.vocabApi.getTopVariablyExpressedGenes(body)
+		} else if (this.mode == 'geneExpression') {
+			const body = {
+				//genome: this.vocabApi.state.vocab.genome,
+				//dslabel: this.vocabApi.state.vocab.dslabel,
+				maxGenes: numGenes || this.maxNumGenes
+			}
+			// XXX this is optional query!! if ds is missing then should show input ui instead
+			data = await this.vocabApi.getTopVariablyExpressedGenes(body)
+		} else {
+			throw 'unknown opts.mode [geneset.js]'
+		}
+
+		if (!data) throw 'invalid server response'
+		if (data.error) throw data.error
+
+		if (!data.genes) return [] // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
+		//waitDiv.remove()
+		//this.dom.loadingOverlay?.style('display', 'none')
+		this.callback({ geneList: data.genes })
+	}
+
+	async getTwLst(genes) {
+		return await Promise.all(
+			// do tempfix of "data.genes.slice(0,3).map" for faster testing
+			genes.map(async i =>
+				typeof i == 'string'
+					? await fillTermWrapper({ term: { gene: i, type: this.opts.mode } }, this.app.vocabApi)
+					: await fillTermWrapper({ term: { gene: i.gene || i.name, type: this.opts.mode } }, this.app.vocabApi)
+			)
+		)
 	}
 }
