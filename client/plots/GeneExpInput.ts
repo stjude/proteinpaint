@@ -124,7 +124,10 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: typeGroup[SSGSEA],
-				isVisible: () => this.termType === GENE_EXPRESSION,
+				active: true,
+				isVisible: () => {
+					return this.termType === GENE_EXPRESSION && state.termdbConfig?.allowedTermTypes?.includes(SSGSEA)
+				},
 				callback: async (event, tab) => {
 					await this.renderSSGSEA(tab)
 					delete tab.callback
