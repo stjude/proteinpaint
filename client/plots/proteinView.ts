@@ -314,20 +314,18 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		return [...customShapeGroupsByMode[mode].keys()].sort().map(name => makeCustomShapeGroupKey(name))
 	}
 	const getColor = (d: any) => {
+		const customGroup = colorMode === 'none' ? undefined : getCustomGroupOfDot(d, colorMode)
 		switch (colorMode) {
 			case 'none':
 				return defaultDotColor
 			case 'assayType':
-				if (getCustomGroupOfDot(d, colorMode))
-					return customGroupColorsByMode[colorMode].get(getCustomGroupOfDot(d, colorMode) as string) ?? '#888'
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return assayColors.get(d.assayName) ?? '#888'
 			case 'cohort':
-				if (getCustomGroupOfDot(d, colorMode))
-					return customGroupColorsByMode[colorMode].get(getCustomGroupOfDot(d, colorMode) as string) ?? '#888'
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return cohortColors.get(d.cohortName) ?? '#888'
 			case 'proteinAccession':
-				if (getCustomGroupOfDot(d, colorMode))
-					return customGroupColorsByMode[colorMode].get(getCustomGroupOfDot(d, colorMode) as string) ?? '#888'
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return proteinColors.get(d.proteinAccession) ?? '#888'
 			default:
 				return '#888'
