@@ -1,6 +1,6 @@
 import { initByInput } from '#plots/controls.config.js'
 import { fillTermWrapper, get$id } from '#termsetting'
-import { Menu, GeneSetEditUIwithTabs } from '#dom'
+import { Menu, GeneSetEditUI, GeneSetEditUIwithTabs } from '#dom'
 import { TermTypes } from '#shared/terms.js'
 import { getGEunit } from '#tw/geneExpression'
 import type { MatrixControls } from './matrix.controls'
@@ -167,6 +167,7 @@ export function addGenesetInput(self: MatrixControls, app: any, parent: any, tr:
 	const controlPanelBtn = self.btns.filter((d: any) => d.label.endsWith('Genes'))?.node()
 	const tip = app.tip //new Menu({ padding: '5px' })
 	const tg = parent.config.termgroups
+	const { maxGenes, genesetEditUiVersion } = parent.settings.matrix
 
 	let selectedGroup: any
 	const triggerGenesetEdit = (holder: any) => {
@@ -174,7 +175,8 @@ export function addGenesetInput(self: MatrixControls, app: any, parent: any, tr:
 		const geneList = selectedGroup.lst.map((item: any) => {
 			return { gene: item.name }
 		}) //To do, selectedGroup.lst may replace name with gene as well
-		new GeneSetEditUIwithTabs({
+		const genesetUi = genesetEditUiVersion === 'withTabs' ? GeneSetEditUIwithTabs : GeneSetEditUI
+		new genesetUi({
 			holder,
 			genome: app.opts.genome,
 			geneList,
@@ -190,7 +192,7 @@ export function addGenesetInput(self: MatrixControls, app: any, parent: any, tr:
 
 			mode: selectedGroup.mode,
 			minNumGenes: selectedGroup.mode == 'geneExpression' ? 3 : 1,
-			maxNumGenes: parent.settings.matrix.maxGenes,
+			maxNumGenes: maxGenes,
 			vocabApi: self.opts.app.vocabApi,
 			callback: async ({ geneList, groupName }: any) => {
 				if (!selectedGroup) throw `missing selectedGroup`
