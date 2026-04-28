@@ -110,6 +110,7 @@ export type MenuListEntry = {
 	callback: (f?: any) => void
 	/** Element tagname. If button, uses addButton to create elem */
 	tagName?: string
+	isPreset?: boolean
 }
 
 export class GeneSetEditUI {
