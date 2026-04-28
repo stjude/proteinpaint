@@ -48,7 +48,7 @@ export function setAuthRoutes(app, auth, basepath = '', serverconfig) {
 			}
 			delete auth.sessions[q.dslabel][id]
 			//const ip = req.ip
-			res.header('Set-Cookie', `${id}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
+			res.header('Set-Cookie', `${cred.cookieId}=; HttpOnly; SameSite=None; Secure; Max-Age=0`)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(401)
