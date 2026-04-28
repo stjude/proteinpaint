@@ -61,7 +61,12 @@ export class GeneSetEditUIwithTabs {
 			: JSON.stringify(this.geneList.map(t => t.gene).sort())
 
 		this.tabRadioName = `sjpp-geneset-tab-radio-${tabRadioIndex++}-${tabRadioSuffix}`
-		this.setDom(opts)
+		const dom = this.setDom(opts)
+		this.api = this.getApi(dom)
+		this.getParams()
+		this.createMenuList()
+		this.renderTextControls(this.api.dom.textControlDiv)
+		this.renderGenes()
 	}
 
 	setDom(opts) {
@@ -198,65 +203,65 @@ export class GeneSetEditUIwithTabs {
 				.style('width', '150px')
 		}
 
-		this.api = {
-			dom: {
-				holder: div,
-				textControlDiv: controlDiv.append('div'),
-				clearBtn: addButton({
-					div: controlDiv,
-					text: 'Clear',
-					disabled: !this.geneList?.length,
-					callback: () => {
-						this.geneList = []
-						this.updateName = true
-						this.renderGenes()
-					}
-				}),
-				restoreBtn: this.geneList?.length
-					? addButton({
-							div: controlDiv,
-							disabled: true,
-							text: 'Restore',
-							callback: () => {
-								this.geneList = this.origLst
-								this.renderGenes()
-							}
-					  })
-					: null,
-				geneHoldingDiv: this.renderGeneHoldingDiv(customMenu.append('div')),
-				statLegendDiv: div.append('div'),
-				submitBtn: addButton({
-					div: customMenu.append('div').style('margin-top', '10px'),
-					testid: 'sjpp-genesetedit-submitbtn',
-					text: 'Submit',
-					disabled: !this.geneList?.length,
-					callback: () => {
-						if (this.maxNumGenes && this.geneList.length > this.maxNumGenes) {
-							window.alert(
-								`Gene set size (${this.geneList.length} genes) exceeds the allowed limit (${this.maxNumGenes} genes).`
-							)
-							return
+		return {
+			holder: div,
+			textControlDiv: controlDiv.append('div'),
+			clearBtn: addButton({
+				div: controlDiv,
+				text: 'Clear',
+				disabled: !this.geneList?.length,
+				callback: () => {
+					this.geneList = []
+					this.updateName = true
+					this.renderGenes()
+				}
+			}),
+			restoreBtn: this.geneList?.length
+				? addButton({
+						div: controlDiv,
+						disabled: true,
+						text: 'Restore',
+						callback: () => {
+							this.geneList = this.origLst
+							this.renderGenes()
 						}
-						console.log(335, this.geneList)
-						this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
-						const result: CallbackArg = { geneList: this.geneList }
-						if (this.nameInput) result.name = this.nameInput.property('value')
-						this.callback(result)
+				  })
+				: null,
+			geneHoldingDiv: this.renderGeneHoldingDiv(customMenu.append('div')),
+			statLegendDiv: div.append('div'),
+			submitBtn: addButton({
+				div: customMenu.append('div').style('margin-top', '10px'),
+				testid: 'sjpp-genesetedit-submitbtn',
+				text: 'Submit',
+				disabled: !this.geneList?.length,
+				callback: () => {
+					if (this.maxNumGenes && this.geneList.length > this.maxNumGenes) {
+						window.alert(
+							`Gene set size (${this.geneList.length} genes) exceeds the allowed limit (${this.maxNumGenes} genes).`
+						)
+						return
 					}
-				})
-			},
+					console.log(335, this.geneList)
+					this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
+					const result: CallbackArg = { geneList: this.geneList }
+					if (this.nameInput) result.name = this.nameInput.property('value')
+					this.callback(result)
+				}
+			})
+		}
+	}
+
+	getApi(dom) {
+		return {
+			dom,
 			topMutatedGenesParams: [],
 			topVariablyExpressedGenesParams: [],
 			statColor2label: new Map(),
 			destroy: () => {
 				this.tip2.destroy()
-				opts.holder.remove()
+				dom.holder.remove()
 			}
 		}
-		this.getParams()
-		this.createMenuList()
-		this.renderTextControls(this.api.dom.textControlDiv)
-		this.renderGenes()
 	}
 
 	getParams() {
@@ -697,8 +702,8 @@ export class GeneSetEditUIwithTabs {
 		let data
 		if (this.mode == 'geneVariant') {
 			const body = {
-				maxGenes: this.maxNumGenes,
-				geneFilter: this.geneFilter
+				maxGenes: this.maxNumGenes
+				//geneFilter: this.geneFilter
 			}
 			// XXX this is optional query!! if ds is missing then should show input ui instead
 			// TODO why cannot use vocab method?
@@ -723,16 +728,5 @@ export class GeneSetEditUIwithTabs {
 		//waitDiv.remove()
 		//this.dom.loadingOverlay?.style('display', 'none')
 		this.callback({ geneList: data.genes })
-	}
-
-	async getTwLst(genes) {
-		return await Promise.all(
-			// do tempfix of "data.genes.slice(0,3).map" for faster testing
-			genes.map(async i =>
-				typeof i == 'string'
-					? await fillTermWrapper({ term: { gene: i, type: this.opts.mode } }, this.app.vocabApi)
-					: await fillTermWrapper({ term: { gene: i.gene || i.name, type: this.opts.mode } }, this.app.vocabApi)
-			)
-		)
 	}
 }
