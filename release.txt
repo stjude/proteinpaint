@@ -1,2 +1,1 @@
-Features
-- The differential expression option is re-enabled in the GeneExpInput plot. A new tab for gene set expression is available as well. Selecting a gene set launches the summary chart.
+

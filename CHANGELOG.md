@@ -8,6 +8,7 @@ Features:
 - Now using common quadtree approach in volcano and manhattan plot
 - In the SC app, dataset defined sample images now appear as an optional plot. The plot button will either appear as 'Image' or the dataset defined label.
 - The functionality of the 'Differential expression' plot button is restored. The recent changes to the server response prevented the dropdown from rendering. New methods re-enabled the dropdown.
+- The differential expression option is re-enabled in the GeneExpInput plot. A new tab for gene set expression is available as well. Selecting a gene set launches the summary chart.
 
 
 ## 2.185.0
