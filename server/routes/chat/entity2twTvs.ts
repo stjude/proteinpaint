@@ -468,7 +468,7 @@ export async function resolveToTwTvs(
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
 		}
-	} else if (plotType == 'dge') {
+	} else if (plotType === 'dge') {
 		for (const [key, value] of Object.entries(entity)) {
 			const filterValues = value as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
@@ -476,7 +476,7 @@ export async function resolveToTwTvs(
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects[key] = termWrapper
 		}
-	} else if (plotType == 'hiercluster') {
+	} else if (plotType === 'hiercluster') {
 		// genes → array of tws; filter → single tvslst
 		const geneValues = entity['genes'] as Value[] | undefined
 		if (!geneValues || geneValues.length === 0) throw new Error('Invalid gene term entity for hierCluster')
@@ -493,6 +493,41 @@ export async function resolveToTwTvs(
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects['filter'] = termWrapper
+		}
+	} else if (plotType === 'matrix') {
+		for (const [key, value] of Object.entries(entity)) {
+			// special handling for filters
+			if (key === 'filter') {
+				const filterValues = value as Value[] | undefined
+				if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
+				const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+				if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+				twTvsObjects[key] = termWrapper
+				continue
+			}
+
+			if (key === 'twLst') {
+				const twValues = value as Value[] | undefined
+				if (!twValues || twValues.length === 0) throw new Error(`Invalid term entity for key ${key}`)
+				// TOOD: better to restrict the types for twLst values
+				const twLst: any[] = []
+				for (const twValue of twValues) {
+					if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
+					const termWrapper = await resolveToTw(twValue, llm)
+					if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
+					mayLog(`Resolved term for twLst item:`, JSON.stringify(termWrapper))
+					twLst.push(termWrapper)
+				}
+				twTvsObjects[key] = twLst
+				continue
+			}
+			// For divideBy keys we expect a single Term in the array
+			const twValue = value as Value | undefined
+			if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
+			const termWrapper = await resolveToTw(twValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
+			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
+			twTvsObjects[key] = termWrapper
 		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'

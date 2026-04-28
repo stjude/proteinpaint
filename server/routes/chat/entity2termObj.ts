@@ -4,7 +4,8 @@ import type {
 	Phrase2EntityResult,
 	Entity,
 	DEPhrase2EntityResult,
-	HierPhrase2EntityResult
+	HierPhrase2EntityResult,
+	MatrixPhrase2EntityResult
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesFromPrompt } from './utils.ts'
@@ -216,6 +217,61 @@ export async function inferTermObjFromEntity(
 				filterValues.push(termObj)
 			}
 			twObjects['filter'] = filterValues
+		}
+		return twObjects
+	} else if (plotType === 'matrix') {
+		const matrixEntity = entity as MatrixPhrase2EntityResult
+		for (const [key, value] of Object.entries(matrixEntity)) {
+			// need special handling for filters, since they can be more complex and nested than other term types
+			if (key === 'filter') {
+				const filterResult = value as Entity[] | undefined
+				if (!filterResult) continue
+
+				const filterValues: Value[] = []
+				for (const filterTerm of filterResult) {
+					mayLog('Evaluating filter term:', filterTerm)
+					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
+					if (!termObj) {
+						continue
+					}
+					const filterEntity = filterTerm as Entity
+					if (filterEntity.logicalOperator) termObj.logicalOperator = filterEntity.logicalOperator
+					filterValues.push(termObj)
+				}
+				mayLog('Final filter values:', filterValues)
+				twObjects[key] = filterValues
+				continue
+			}
+
+			if (key === 'twLst' && Array.isArray(value)) {
+				const twEntities = value as Entity[]
+				const termObjs: Value[] = []
+				for (const [index, twEntity] of twEntities.entries()) {
+					mayLog(`Evaluating twLst[${index}] entity:`, twEntity)
+					const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+					if (!termObj) {
+						console.warn(`Skipping twLst[${index}] — failed to get term object for phrase "${twEntity.phrase}"`)
+						continue
+					}
+					termObjs.push(termObj)
+				}
+				if (termObjs.length > 0) {
+					twObjects[key] = termObjs
+				} else {
+					console.warn('No valid term objects could be resolved for any entries in twLst.')
+				}
+				continue
+			}
+
+			// For other keys divideBy,
+			const entry = value as [Entity] | undefined
+			if (!entry) continue
+			const twEntity = entry[0]
+			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+			if (!termObj) {
+				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
+			}
+			twObjects[key] = termObj
 		}
 		return twObjects
 	} else {

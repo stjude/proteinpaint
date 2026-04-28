@@ -245,7 +245,9 @@ export async function run_chat_pipeline(
 				}
 			}
 		}
+
 		// If supported plot type, figure out the scaffold according to the plot type
+		mayLog('#################################################')
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		mayLog('#################################################')
 		time = new Date().valueOf()
