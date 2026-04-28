@@ -97,13 +97,13 @@ async function validateNonDictionaryTypes(
 			msg.text = AmbiguousGeneMessage
 			return msg
 		}
-		const geneDataTypeMessage: GeneDataTypeResult | string = await classifyGeneDataTypePhrase(
+		const geneDataTypeMessage: GeneDataTypeResult | string = (await classifyGeneDataTypePhrase(
 			// This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
 			phrase,
 			llm,
 			relevant_genes,
 			dataset_json
-		)
+		)) as GeneDataTypeResult | string
 
 		if (typeof geneDataTypeMessage === 'string') {
 			if (geneDataTypeMessage.length > 0) {
@@ -532,6 +532,7 @@ export async function phrase2entity(
 		// Convert each term in twLst to an entity
 		const twLstEntities: Entity[] = []
 		for (const [index, twPhrase] of scaffoldResult.twLst.entries()) {
+			mayLog(`Processing term${index + 1} in twLst: "${twPhrase}"`)
 			const twEntity = await phrase2entitytw(twPhrase, llm, genes_list, dataset_json, ds)
 			if ('type' in twEntity && twEntity.type === 'text') {
 				return twEntity // MsgToUser
