@@ -16,7 +16,7 @@ Return ONLY a valid JSON object with this structure:
 }
 
 ## FIELD DEFINITIONS
-- twLst (REQUIRED): A list of variables or terms that the user wants to include in the matrix plot. Extract the phrases from the query that most likely refer to these variables, preserving the exact wording.
+- twLst (REQUIRED): A list of variables or terms that the user wants to include in the matrix plot. Extract the phrases from the query that most likely refer to these variables, preserving the exact wording and descriptive qualifiers.
 - divideBy (OPTIONAL): A variable that the user wants to use to divide or facet the matrix (e.g. "by sex" or "separately for each subtype"). Extract the phrase that indicates this variable, preserving the exact wording. 
 - filter (OPTIONAL): A global constraint that applies to the entire matrix (e.g. "in pediatric patients", "for AML cases", "for men", etc.). Only populate this when the user restricts the analysis to a specific subpopulation.
 
@@ -24,14 +24,19 @@ Return ONLY a valid JSON object with this structure:
 1. ALWAYS extract at least one variable into twLst — this is the core of the matrix plot.
 2. Preserve the EXACT phrasing from the user's question for all fields — do not paraphrase, normalize, or generalize.
 3. divideBy is ONLY set when the user indicates they want to divide/facet the matrix by a variable (e.g. "by sex", "separately for each subtype"). Do NOT set divideBy if the user does not explicitly indicate this.
-4. filter is ONLY set when the user restricts the entire matrix to a specific subpopulation (e.g. "in women", "for pediatric patients", "among AML cases"). Do NOT put the same information in both twLst and filter.
+4. filter is ONLY set when the user restricts the entire matrix to a specific subpopulation (e.g. "in women", "for pediatric patients", "among AML cases"). Do not populate filter for terms like "for all patients" or "for the whole cohort" that do not indicate a specific subset.
 5. If the user does not mention a global cohort constraint, omit filter entirely.
 6. If the user does not mention a divideBy variable, omit divideBy entirely.
 
 ## EXAMPLES
-Q: "Show a matrix of gene expression, mutation status, and age"
+Q: "Show a matrix of X and Y gene expression, and age"
 A: {
-  "twLst": ["gene expression", "mutation status", "age"]
+  "twLst": ["X gene expression", "Y gene expression", "age"]
+}
+
+Q: "Show a matrix of X and Y gene expression, and age"
+A: {
+  "twLst": ["X gene expression", "Y gene expression", "age"]
 }
 
 Q: "Show a matrix of gene expression and mutation status, divided by sex"
