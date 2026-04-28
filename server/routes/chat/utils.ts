@@ -190,6 +190,21 @@ export function extractGenesetsFromPrompt(prompt: string, genesetNames: string[]
 	return matched.slice(0, 10)
 }
 
+export function extractGenesetsFromPromptNew(prompt: string, genesetNames: string[]): string[] {
+	if (genesetNames.length === 0) return []
+	const arr1 = genesetNames.map(name => name.toLowerCase())
+	const tokens = prompt
+		.replace(/[^a-zA-Z0-9_\s]/g, '')
+		.split(/\s+/)
+		.map(w => w.toLowerCase())
+
+	if (tokens.length === 0) return []
+
+	// Simple approach - works for primitives
+	const common_tokens = arr1.filter(item => tokens.includes(item))
+	return common_tokens
+}
+
 /** Builds the common suffix shared by all agent system prompts:
  *  filter description, dataset/chart prompts, DB context, training data,
  *  gene list, geneset list, data type mentions, and the question. */
