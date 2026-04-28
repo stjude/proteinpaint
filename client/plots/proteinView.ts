@@ -200,8 +200,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	type ColorMode = 'none' | 'assayType' | 'cohort' | 'proteinAccession'
 	type ShapeMode = 'none' | 'assayType' | 'cohort' | 'proteinAccession'
 
-	let colorMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'assayType'
-	let shapeMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'none'
+	let colorMode: ColorMode = 'assayType'
+	let shapeMode: ShapeMode = 'none'
 	const defaultDotColor = '#9ca3af'
 	const customGroupPrefix = '__custom_group__:'
 	const makeCustomGroupKey = (name: string) => `${customGroupPrefix}${name}`
