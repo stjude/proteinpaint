@@ -214,8 +214,14 @@ export async function run_chat_pipeline(
 				}
 
 				const time = new Date().valueOf()
-				mayLog('Right before calling extract_hiercluster_terms_from_query with userPrompt')
-				ai_output_json = await extract_hiercluster_terms_from_query(userPrompt, llm, genome, ds, geneFeatures)
+				ai_output_json = await extract_hiercluster_terms_from_query(
+					userPrompt,
+					llm,
+					genome,
+					ds,
+					geneFeatures,
+					'geneExpression'
+				)
 				mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
 				return ai_output_json
 			}
