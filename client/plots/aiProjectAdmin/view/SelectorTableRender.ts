@@ -101,9 +101,6 @@ export class SelectorTableRender {
 				} else {
 					this.selectedRows.delete(orig)
 				}
-				// Re-render so selected rows move to the top immediately
-				;(this.dom.tableDiv as any).selectAll('*').remove()
-				this.render()
 			}
 		})
 
