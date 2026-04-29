@@ -5,28 +5,6 @@ const tabRadioSuffix = Math.random().toString().slice(-5)
 let tabRadioIndex = 0
 
 export class GeneSetEditUIwithTabs extends GeneSetEditUI {
-	// holder: Elem
-	// genome: ClientGenome
-	// callback: (arg: CallbackArg) => void
-	// /** termdb */
-	// vocabApi: any
-	// tip2: Menu
-	// origLst: Gene[]
-	// origNames: string
-	// api: API
-	// geneSearch: any //cheating
-	// /** Objects detailing the menus to create above the api.dom.geneHoldingDiv as clickable links  */
-	// menuList: MenuListEntry[] = []
-	// mode?: 'geneVariant' | 'geneExpression'
-	// minNumGenes?: number
-	// maxNumGenes?: number
-	// updateName: boolean // whether to update gene set name upon user input
-	// nameInput?: any
-	// geneList: Gene[]
-	// titleText?: string
-	// customInputs?: CustomInputs
-	// limitedGenesList?: string[]
-	// termsAsListed?: boolean
 	opts: GeneSetEditArg
 	tabRadioName!: string
 	controlDiv!: Div
@@ -38,7 +16,7 @@ export class GeneSetEditUIwithTabs extends GeneSetEditUI {
 	msigClickTerm?: (term: any) => void
 
 	constructor(opts: GeneSetEditArg) {
-		super(opts)
+		super({ ...opts, hideDefaultMenu: true })
 		this.opts = opts
 		this.api.dom.defaultMenu.style('display', 'none')
 		this.tabRadioName = `sjpp-geneset-tab-radio-${tabRadioIndex++}-${tabRadioSuffix}`
@@ -155,9 +133,6 @@ export class GeneSetEditUIwithTabs extends GeneSetEditUI {
 				maxGenes: numGenes || this.maxNumGenes
 			}
 			// XXX this is optional query!! if ds is missing then should show input ui instead
-			// TODO why cannot use vocab method?
-			// TODO purpose of 2nd and 3rd arguments?
-			//const result = await dofetch3('termdb/topMutatedGenes', { method: 'GET', body })
 			data = await this.vocabApi.getTopMutatedGenes(body)
 		} else if (this.mode == 'geneExpression') {
 			const body = {
@@ -177,6 +152,10 @@ export class GeneSetEditUIwithTabs extends GeneSetEditUI {
 		if (!data.genes) return [] // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 		//waitDiv.remove()
 		//this.dom.loadingOverlay?.style('display', 'none')
-		this.callback({ geneList: data.genes.map(gene => ({ gene })) })
+		this.callback({
+			geneList: data.genes.map(gene => ({
+				gene: typeof gene == 'string' ? gene : gene.gene
+			}))
+		})
 	}
 }

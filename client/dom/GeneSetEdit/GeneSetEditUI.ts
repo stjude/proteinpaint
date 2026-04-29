@@ -103,6 +103,7 @@ export type GeneSetEditArg = {
 		target: string
 		callback: () => void
 	}
+	hideDefaultMenu?: boolean
 }
 
 export type MenuListEntry = {
@@ -190,7 +191,13 @@ export class GeneSetEditUI {
 			div.append('div').style('margin-bottom', '10px').html(this.titleText)
 		}
 
-		const defaultMenu = div.append('div').attr('class', 'sja_genesetinput').style('padding', '5px')
+		const defaultMenu = div
+			.append('div')
+			.attr('class', 'sja_genesetinput')
+			// prevent flicker when GeneSetEditUIwithTabs() calls this super()
+			// and immediately hides the rendered default menu
+			.style('display', opts.hideDefaultMenu ? 'none' : '')
+			.style('padding', '5px')
 		const headerDiv = defaultMenu.append('div')
 		const label = headerDiv.append('label')
 		label.append('span').html('Search')
@@ -331,7 +338,7 @@ export class GeneSetEditUI {
 					const callback = async () => {
 						const args = {}
 						this.getInputs(this.api.topMutatedGenesParams, args)
-						const result = await this.vocabApi.getTopMutatedGenes({ body: args })
+						const result = await this.vocabApi.getTopMutatedGenes(args)
 						this.geneList = []
 						this.geneList.push(...result.genes)
 						this.renderGenes()
@@ -362,7 +369,7 @@ export class GeneSetEditUI {
 					const callback = async () => {
 						const args: any = {}
 						this.getInputs(copy, args)
-						const result = await this.vocabApi.getTopVariablyExpressedGenes({ body: args })
+						const result = await this.vocabApi.getTopVariablyExpressedGenes(args)
 
 						this.geneList = []
 						if (result.genes) {

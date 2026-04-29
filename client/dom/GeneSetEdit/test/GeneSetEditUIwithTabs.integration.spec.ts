@@ -24,7 +24,7 @@ function getHolder() {
  test sections
 ***************/
 tape('\n', function (test) {
-	test.comment('-***- dom/GeneSetEdit/GeneSetEditUIwithTabs -***-')
+	test.comment('-***- dom/GeneSetEdit/GeneSetEditUIwithTabs integration -***-')
 	test.end()
 })
 
