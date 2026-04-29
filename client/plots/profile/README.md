@@ -161,6 +161,58 @@ This chart compares two different metrics for the same respondent group for each
 	- Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses.
 	- Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
 
+### Templates v2 (profileForms2)
+**Class:** [forms2.ts](./forms2.ts)
+**Server route:** [`profile.forms2.ts`](../../../../server/routes/profile.forms2.ts) at endpoint `termdb/profileForms2Scores`
+**Description:** A redesigned Templates plot following the per-plot dedicated route architecture established by `profilePolar2`. Visually identical to v1 once a domain is picked. The picker UX, however, is different: chart types are categorized as **horizontal tabs at the top** of the picker, and each tab shows a domain dictionary filtered to only domains that offer that chart type.
+
+**Picker UX (chart-type tabs above a filtered domain tree):** Clicking the `Templates 2` button opens a popover with horizontal tabs — one tab per chart type — and an embedded term-picker dictionary below. Switching tabs re-mounts the dictionary with a different chart-type filter, so the user can browse by chart type instead of seeing every domain mixed together.
+
+The picker UI is defined entirely in [`mass/charts.js`](../../mass/charts.js) (`self.showFormsToggleTree`) — the generic [`tree.js`](../../termdb/tree.js) component is untouched. The same `Tabs` component used inside the rendered chart (Yes/No vs Likert) is reused for the picker tabs.
+
+A single map is precomputed at server init in [`mds3.init.js`](../../../../server/src/mds3.init.js) and surfaced on `termdbConfig`:
+
+- `profileForms2Domains` — `Record<cohortKey, Record<domainId, friendlyLabel[]>>`: cohort-keyed map of depth-3 domain term IDs whose multivalue children match a configured subtype. The outer key is the cohort (e.g., `'full'`, `'abbrev'`). Drives both the tab list (deduped union of all friendly labels for the active cohort) and the per-tab tree filter. An empty inner map means the cohort has no template data — the picker shows the empty-state message in that case.
+
+[`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (both set by the picker): a depth-3 term gets `'plot'` only if its value array in `profileForms2Domains[cohort]` contains the active subtype, and a depth-1/2 term gets `'branch'` only if at least one matching depth-3 descendant exists. Terms with empty `uses` are entirely excluded by `tree.js`'s filter — not just disabled.
+
+When the active cohort has no template data (e.g., Abbreviated today), the picker shows a friendly empty-state message in place of the tabs/tree. v1 Templates does none of this filtering and may silently produce blank charts.
+
+**Key differences from v1 Templates:**
+
+- **Dedicated server route:** Uses `termdb/profileForms2Scores` instead of the shared `termdb/profileFormScores`. Same pattern as the other v2 plots — each plot owns its route and data logic independently.
+- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` for full cohort, `AUNIT` for abbreviated) from `__protected__.activeCohort`.
+- **Always aggregated:** The server returns the combined categorical dict across all eligible sites. There is no single-site `sampleData` shortcut.
+- **Minimal client payload:** The client strips `scoreTerms` and `scScoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`.
+- **Public role security:** `sites` is always `[]` for public users.
+- **Cohort coverage:** Wired in both Full and Abbreviated cohort configs. Functional in Full today; Abbrev is dead config until `A*`-prefixed multivalue templates land in the DB.
+
+**Response shape:** `term2Score: { [termId]: { [category]: number } }` — same as v1.
+
+**Plot configuration (shared across v1/v2):** A single module-level constant `profileFormsOptions` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) defines the `options[]` array, referenced by `full.profileForms`, `full.profileForms2`, and `abbrev.profileForms2`. Single source of truth — v1 and v2 cannot drift, and full/abbrev cannot drift.
+
+**Domain × chart-type availability (sjglobal `db.6` snapshot, full cohort):**
+
+| Domain (parent_id) | Yes/No Barchart | Likert Scale |
+|---|---:|---:|
+| `FContext__National Context__Care Access and Utilization` | 4 | — |
+| `FContext__Facility and Local Context__Facility Basic Amenities` | — | 5 |
+| `FContext__Finances and Resources__Families/Patients` | — | 42 |
+| `FDiagnostics__Diagnostics__General Laboratory` | — | 11 |
+| `FWorkforce__Service Integration__Communication` | — | 40 |
+
+Counts are template questions per domain. To regenerate this table after a DB change:
+
+```sql
+SELECT parent_id, json_extract(jsondata, '$.subtype') AS subtype, COUNT(*) AS cnt
+FROM terms
+WHERE type='multivalue' AND json_extract(jsondata, '$.subtype') IS NOT NULL AND parent_id IS NOT NULL
+GROUP BY parent_id, subtype
+ORDER BY parent_id;
+```
+
+(The JSON field is `subtype`. The `get_multivalue_tws` function in `server/src/termdb.sql.js` queries `$.plotType` and is dead code; the live multivalue handler is in [`termdb.server.init.ts`](../../../../server/src/termdb.server.init.ts) which JSON-parses `jsondata` so all fields including `subtype` reach the client.)
+
 ## Conclusion
 These plots collectively provide a comprehensive toolkit for users to analyze PrOFILE data from a high-level summary down to individual data points. The PrOFILE dashboard is designed to empower institutions and collaborative groups to explore, benchmark, and improve pediatric oncology care using interactive, data-driven visualizations. With flexible filters, site-based access, and a variety of plot types, users can gain insights from high-level summaries down to individual survey responses.
 
