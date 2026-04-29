@@ -7,6 +7,17 @@ The [`PrOFILE dashboard`](http://localhost:3000/profile/?role=admin) provides se
 
 The charts retrieve their data by calling dedicated or shared server endpoints, depending on the type of visualization. Most plots, such as polar, radar, and the profile barchart use the `termdb/profileScores` endpoint to obtain aggregated scores for each module or domain. The `profileForms` plot calls `termdb/profileFormScores` to fetch detailed, question-level survey responses per domain. Newer plots such as `profilePolar2` use their own dedicated endpoint (`termdb/profilePolar2Scores`), establishing a pattern where each plot owns its route and data logic independently. 
 
+### Term ID conventions
+
+Every cohort-specific term ID is prefixed `F` (Full) or `A` (Abbreviated): facility term `FUNIT`/`AUNIT`, filter terms `Fcountry`/`Acountry` (and `WHO_region`, `Income_group`, `FC_TypeofFacility`, `FC_TeachingFacility`, `FC_ReferralFacility`, `FC_FundingSrc`, `PO_HospitalVolume`, `Year_implementation`), score terms `FX24`/`AX117`, etc.
+
+The convention is used in:
+
+1. `profilePlot.ts` — `getProfilePlotConfig` / `loadFilterTerms` concatenate the prefix with the rest of the term ID.
+2. `profile.{polar2,barchart2,radar2,radarFacility2}.ts` — `derivePrefix(query)` scans request term IDs and builds `${prefix}UNIT`.
+
+**Exception: `profile.forms2.ts`** — forms2's score terms are `POC*`-prefixed, so it reads `facilityTW.id` from the dataset config (`plotConfigByCohort[cohort].profileForms2.facilityTW.id`) instead.
+
 ### How Filters Are Implemented
 
 Each plot in the PrOFILE dashboard includes a set of filters implemented by the `profilePlot` class. These filters allow users to refine the data displayed in the visualizations based on key attributes of participating hospitals or survey responses.

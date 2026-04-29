@@ -532,13 +532,8 @@ function setRenderers(self) {
 		})
 	}
 
-	/*
-		Templates 2 picker. Renders horizontal tabs (one per chart-type label found in the
-		active cohort's profileForms2Domains submap) above an embedded termdb tree. Each tab
-		passes its subtype into usecase.subtype so isUsableTerm filters the visible domains
-		to those offering that chart type. Cohorts with no template data (e.g., Abbreviated
-		today) get a friendly empty-state message instead.
-	*/
+	/* Templates 2 picker: chart-type tabs over a per-tab cohort-filtered termdb tree.
+	   Cohorts with no template data show a friendly empty-state message instead. */
 	self.showFormsToggleTree = async chart => {
 		const action = {
 			type: 'plot_create',
@@ -547,15 +542,11 @@ function setRenderers(self) {
 		}
 		if (chart.parentId) action.parentId = chart.parentId
 
-		// Derive the cohort key (e.g. 'full', 'abbrev') from the active cohort index +
-		// selectCohort.values[]. Used to look up the cohort-specific submap of
-		// profileForms2Domains and to thread through usecase.cohort so isUsableTerm
-		// reads the correct cohort-specific submap.
+		// Resolve cohort key ('full'/'abbrev'/...) → cohort-specific submap of profileForms2Domains.
 		const termdbConfig = self.app.vocabApi.termdbConfig
 		const cohortKey = termdbConfig?.selectCohort?.values?.[self.state.activeCohort]?.keys?.[0]
 		const domains = (termdbConfig?.profileForms2Domains || {})[cohortKey] || {}
-		// dedupe friendly chart-type labels across all domains for THIS cohort
-		const subtypeNames = [...new Set(Object.values(domains).flat())]
+		const subtypeNames = [...new Set(Object.values(domains).flat())] // dedupe chart-type labels
 
 		if (!subtypeNames.length) {
 			self.dom.tip.d
@@ -571,12 +562,17 @@ function setRenderers(self) {
 		const treeHolder = self.dom.tip.d.append('div')
 		let activeSubtype = subtypeNames[0]
 
+		// renderSeq token: drop stale renders when tabs are clicked faster than appInit() resolves.
+		let renderSeq = 0
 		const renderTree = async () => {
+			const mySeq = ++renderSeq
 			treeHolder.selectAll('*').remove()
 			const termdb = await import('../termdb/app')
+			if (mySeq !== renderSeq) return // preempted before mount
+			const innerHolder = treeHolder.append('div')
 			await termdb.appInit({
 				vocabApi: self.app.vocabApi,
-				holder: treeHolder.append('div'),
+				holder: innerHolder,
 				state: {
 					activeCohort: self.state.activeCohort,
 					nav: { header_mode: 'search_only' },
@@ -591,6 +587,7 @@ function setRenderers(self) {
 					}
 				}
 			})
+			if (mySeq !== renderSeq) innerHolder.remove() // preempted during mount
 		}
 
 		const { Tabs } = await import('#dom/toggleButtons')
@@ -602,9 +599,7 @@ function setRenderers(self) {
 				renderTree()
 			}
 		}))
-		// Tabs.main() auto-fires the active tab's callback once on mount, so the initial
-		// renderTree() runs from there. Do NOT call renderTree() again here — that would
-		// kick off a second async mount of the termdb app and duplicate the search bar.
+		// Tabs.main() auto-fires the active tab's callback, so initial render happens there.
 		await new Tabs({ holder: tabsHolder, tabsPosition: 'horizontal', tabs }).main()
 	}
 
