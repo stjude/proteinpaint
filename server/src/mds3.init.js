@@ -413,47 +413,53 @@ export async function validate_termdb(ds) {
 			return d
 		}
 
-		// One-time scan: build a map keyed by depth-3 domain ID -> array of friendly chart-type
-		// labels, for every domain that has multivalue children whose subtype matches one declared
-		// in plotConfigByCohort.<cohort>.profileForms2.options[]. Used by:
-		//   - isUsableTerm (case 'profileForms2') to hide empty domains from the term picker
-		//   - tree.js to render the chart-type annotation next to each clickable domain
-		// Also derives the depth-1/2 ancestor IDs (profileForms2Branches) so empty branches are
-		// hidden too, not just empty leaves.
-		// (Note: the JSON field is 'subtype', not 'plotType' — get_multivalue_tws in termdb.sql.js
-		// queries $.plotType but is dead code; the live path is termdb.server.init.ts which JSON-parses jsondata.)
+		/*
+		One-time scan: build a cohort-keyed map for the Templates 2 picker, by JOINing
+		subcohort_terms so each domain (parent_id) is tagged with the cohort it belongs to.
+
+		Output:
+		  tdb.profileForms2Domains = Record<cohortKey, Record<domainId, friendlyLabel[]>>
+
+		A cohort with no template data (e.g., abbrev today) gets an empty submap; the picker
+		reads that to show its empty-state message.
+
+		Note: the JSON field is 'subtype', not 'plotType' — get_multivalue_tws in termdb.sql.js
+		queries $.plotType but is dead code; the live path is termdb.server.init.ts which
+		JSON-parses jsondata.
+		*/
 		if (tdb.plotConfigByCohort) {
-			const subtypeSet = new Set()
 			const subtypeLabels = {}
 			for (const cohortKey of Object.keys(tdb.plotConfigByCohort)) {
-				const f2 = tdb.plotConfigByCohort[cohortKey]?.profileForms2
-				if (!f2?.options) continue
-				for (const o of f2.options) {
-					if (o.subtype) subtypeSet.add(o.subtype)
-					if (o.subtype && o.name) subtypeLabels[o.subtype] = o.name
-				}
+				const opts = tdb.plotConfigByCohort[cohortKey]?.profileForms2?.options
+				if (!opts) continue
+				for (const o of opts) if (o.subtype && o.name) subtypeLabels[o.subtype] = o.name
 			}
-			if (subtypeSet.size) {
-				const placeholders = [...subtypeSet].map(() => '?').join(',')
-				const sql = `SELECT DISTINCT parent_id, json_extract(jsondata, '$.subtype') AS subtype
-					FROM terms
-					WHERE type='multivalue'
-						AND json_extract(jsondata, '$.subtype') IN (${placeholders})
-						AND parent_id IS NOT NULL`
-				const rows = ds.cohort.db.connection.prepare(sql).all([...subtypeSet])
-				const domains = {}
+			const subtypes = Object.keys(subtypeLabels)
+			if (subtypes.length) {
+				const placeholders = subtypes.map(() => '?').join(',')
+				const sql = `SELECT DISTINCT s.cohort, t.parent_id, json_extract(t.jsondata, '$.subtype') AS subtype
+					FROM terms t
+					JOIN subcohort_terms s ON s.term_id = t.parent_id
+					WHERE t.type='multivalue'
+						AND json_extract(t.jsondata, '$.subtype') IN (${placeholders})
+						AND t.parent_id IS NOT NULL`
+				const rows = ds.cohort.db.connection.prepare(sql).all(subtypes)
+
+				// Seed declared cohorts so the picker can distinguish "no template data"
+				// from "cohort key not declared".
+				const domainsByCohort = {}
+				for (const cohortKey of Object.keys(tdb.plotConfigByCohort)) {
+					if (tdb.plotConfigByCohort[cohortKey]?.profileForms2?.options) {
+						domainsByCohort[cohortKey] = {}
+					}
+				}
 				for (const r of rows) {
-					const label = subtypeLabels[r.subtype] || r.subtype
-					if (!domains[r.parent_id]) domains[r.parent_id] = []
-					if (!domains[r.parent_id].includes(label)) domains[r.parent_id].push(label)
+					if (!domainsByCohort[r.cohort]) domainsByCohort[r.cohort] = {}
+					const label = subtypeLabels[r.subtype]
+					const arr = (domainsByCohort[r.cohort][r.parent_id] ||= [])
+					if (!arr.includes(label)) arr.push(label)
 				}
-				tdb.profileForms2Domains = domains
-				const branches = new Set()
-				for (const id of Object.keys(domains)) {
-					const parts = id.split('__')
-					for (let i = 1; i < parts.length; i++) branches.add(parts.slice(0, i).join('__'))
-				}
-				tdb.profileForms2Branches = [...branches]
+				tdb.profileForms2Domains = domainsByCohort
 			}
 		}
 	}

@@ -110,18 +110,22 @@ class ProfileForms2 extends profilePlot {
 		this.shift = shift
 		const mainG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
 		const gridG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop})`)
+		const labelsG = svg.append('g')
 		this.filterG = svg.append('g').attr('transform', `translate(${shift + settings.svgw + 60}, ${shiftTop + 40})`)
 		this.legendG = svg.append('g')
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
+		const scaleAxisG = svg.append('g')
 
 		this.dom = copyMerge(this.dom, {
 			svg,
 			headerDiv,
 			mainG,
 			gridG,
+			labelsG,
 			legendG: this.legendG,
 			xAxisG,
+			scaleAxisG,
 			domainDiv
 		})
 	}
@@ -140,7 +144,9 @@ class ProfileForms2 extends profilePlot {
 		this.categories = new Set()
 		this.dom.mainG.selectAll('*').remove()
 		this.dom.gridG.selectAll('*').remove()
+		this.dom.labelsG.selectAll('*').remove()
 		this.dom.xAxisG.selectAll('*').remove()
+		this.dom.scaleAxisG.selectAll('*').remove()
 		this.dom.legendG.selectAll('*').remove()
 		await this.setControls()
 		this.renderPlot()
@@ -238,8 +244,8 @@ class ProfileForms2 extends profilePlot {
 		const posAxisBottom = axisBottom(posScale)
 			.ticks(10)
 			.tickFormat(d => d + '%')
-		const scaleG = this.dom.svg.append('g').attr('transform', `translate(0, ${y})`)
-		posAxisBottom(scaleG)
+		this.dom.scaleAxisG.attr('transform', `translate(0, ${y})`)
+		posAxisBottom(this.dom.scaleAxisG)
 		const likertLegendOrder = [
 			"I Don't Know",
 			'Do Not Know',
@@ -410,7 +416,7 @@ class ProfileForms2 extends profilePlot {
 			x += width
 		}
 		const text = getText(tw.term.details || tw.term.name)
-		const textG = this.dom.svg.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
+		const textG = this.dom.labelsG.append('g').attr('transform', `translate(0, ${y + this.shiftTop})`)
 		textG
 			.append('text')
 			.text(text)

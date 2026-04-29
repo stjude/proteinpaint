@@ -179,25 +179,30 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
-		case 'profileForms2':
-			if (!term.isleaf) {
-				const ancestors = term.id.split('__').length
-				if (ancestors == 3) {
-					// Only mark depth-3 domains as clickable when they have multivalue templates
-					// available. termdbConfig.profileForms2Domains is precomputed at dataset init
-					// (see server/src/mds3.init.js) as a Record<domainId, friendlyLabel[]>.
-					// When undefined (other datasets), allow any depth-3.
-					const allowed = termdbConfig?.profileForms2Domains
-					if (!allowed || Object.prototype.hasOwnProperty.call(allowed, term.id)) uses.add('plot')
-				} else if (ancestors < 3) {
-					// Hide branches with no template-bearing depth-3 descendants.
-					// profileForms2Branches is the precomputed set of depth-1/2 ancestors of every
-					// profileForms2Domains entry. When undefined (other datasets), allow any depth<3.
-					const branches = termdbConfig?.profileForms2Branches
-					if (!branches || branches.includes(term.id)) uses.add('branch')
+		case 'profileForms2': {
+			// usecase.cohort + usecase.subtype are set by the Templates 2 picker
+			// (mass/charts.js showFormsToggleTree). profileForms2Domains is cohort-keyed:
+			//   Record<cohortKey, Record<domainId, friendlyLabel[]>>
+			// A depth-3 term is clickable iff its label array contains the active subtype.
+			// A depth-1/2 term is an expandable branch iff some descendant offers that subtype.
+			if (term.isleaf) return uses
+			const allowed = termdbConfig?.profileForms2Domains?.[usecase.cohort]
+			if (!allowed) return uses
+			const ancestors = term.id.split('__').length
+			const subtype = usecase.subtype
+			if (ancestors == 3) {
+				if (allowed[term.id]?.includes(subtype)) uses.add('plot')
+			} else if (ancestors < 3) {
+				const prefix = term.id + '__'
+				for (const id in allowed) {
+					if (id.startsWith(prefix) && allowed[id].includes(subtype)) {
+						uses.add('branch')
+						break
+					}
 				}
 			}
 			return uses
+		}
 
 		// case 'boxplot':
 		// 	if (term.type == 'float' || term.type == 'integer') uses.add('plot')

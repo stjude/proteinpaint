@@ -220,12 +220,8 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Templates 2',
 			chartType: 'profileForms2',
-			clickTo: self.showTree_select1term,
-			usecase: {
-				target: 'profileForms2',
-				detail: 'tw',
-				emptyTreeMessage: 'No templates are currently available for this cohort.'
-			},
+			clickTo: self.showFormsToggleTree,
+			usecase: { target: 'profileForms2', detail: 'tw' },
 			config: { chartType: 'profileForms2' }
 		},
 		////////////////////// PROFILE PLOTS END //////////////////////
@@ -534,6 +530,82 @@ function setRenderers(self) {
 				}
 			}
 		})
+	}
+
+	/*
+		Templates 2 picker. Renders horizontal tabs (one per chart-type label found in the
+		active cohort's profileForms2Domains submap) above an embedded termdb tree. Each tab
+		passes its subtype into usecase.subtype so isUsableTerm filters the visible domains
+		to those offering that chart type. Cohorts with no template data (e.g., Abbreviated
+		today) get a friendly empty-state message instead.
+	*/
+	self.showFormsToggleTree = async chart => {
+		const action = {
+			type: 'plot_create',
+			id: getId(),
+			config: { chartType: chart.chartType, activeCohort: self.state.activeCohort }
+		}
+		if (chart.parentId) action.parentId = chart.parentId
+
+		// Derive the cohort key (e.g. 'full', 'abbrev') from the active cohort index +
+		// selectCohort.values[]. Used to look up the cohort-specific submap of
+		// profileForms2Domains and to thread through usecase.cohort so isUsableTerm
+		// reads the correct cohort-specific submap.
+		const termdbConfig = self.app.vocabApi.termdbConfig
+		const cohortKey = termdbConfig?.selectCohort?.values?.[self.state.activeCohort]?.keys?.[0]
+		const domains = (termdbConfig?.profileForms2Domains || {})[cohortKey] || {}
+		// dedupe friendly chart-type labels across all domains for THIS cohort
+		const subtypeNames = [...new Set(Object.values(domains).flat())]
+
+		if (!subtypeNames.length) {
+			self.dom.tip.d
+				.append('div')
+				.style('padding', '15px')
+				.style('color', '#777')
+				.style('font-style', 'italic')
+				.text('No templates are currently available for this cohort.')
+			return
+		}
+
+		const tabsHolder = self.dom.tip.d.append('div').style('padding', '4px 8px')
+		const treeHolder = self.dom.tip.d.append('div')
+		let activeSubtype = subtypeNames[0]
+
+		const renderTree = async () => {
+			treeHolder.selectAll('*').remove()
+			const termdb = await import('../termdb/app')
+			await termdb.appInit({
+				vocabApi: self.app.vocabApi,
+				holder: treeHolder.append('div'),
+				state: {
+					activeCohort: self.state.activeCohort,
+					nav: { header_mode: 'search_only' },
+					tree: { usecase: { ...chart.usecase, cohort: cohortKey, subtype: activeSubtype } }
+				},
+				tree: {
+					click_term: term => {
+						const tw = term.term ? term : { term }
+						action.config[chart.usecase.detail] = tw
+						self.dom.tip.hide()
+						self.app.dispatch(action)
+					}
+				}
+			})
+		}
+
+		const { Tabs } = await import('#dom/toggleButtons')
+		const tabs = subtypeNames.map(name => ({
+			label: name,
+			active: name === activeSubtype,
+			callback: () => {
+				activeSubtype = name
+				renderTree()
+			}
+		}))
+		// Tabs.main() auto-fires the active tab's callback once on mount, so the initial
+		// renderTree() runs from there. Do NOT call renderTree() again here — that would
+		// kick off a second async mount of the termdb app and duplicate the search bar.
+		await new Tabs({ holder: tabsHolder, tabsPosition: 'horizontal', tabs }).main()
 	}
 
 	self.showTree_selectlst = async chart => {

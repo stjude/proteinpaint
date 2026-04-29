@@ -1590,16 +1590,13 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
-	/** Precomputed at server init: map keyed by depth-3 domain term ID, value = array of
-	 * friendly chart-type labels (option.name from plotConfigByCohort.<cohort>.profileForms2.options[])
-	 * for the multivalue children matching that domain. Used by isUsableTerm (case 'profileForms2')
-	 * to hide empty domains and by tree.js to render the chart-type annotation next to each
-	 * clickable domain. */
-	profileForms2Domains?: Record<string, string[]>
-	/** Precomputed at server init: depth-1/2 ancestor term IDs of every entry in
-	 * profileForms2Domains. Used by isUsableTerm (case 'profileForms2') so that empty
-	 * branches (no template-bearing depth-3 descendants) are hidden too. */
-	profileForms2Branches?: string[]
+	/** Precomputed at server init: cohort-keyed map of Templates 2 picker visibility data.
+	 * Outer key = cohort key from selectCohort.values[].keys (e.g., 'full', 'abbrev').
+	 * Inner key = depth-3 domain term ID. Inner value = friendly chart-type labels
+	 * (option.name from plotConfigByCohort.<cohort>.profileForms2.options[]) for the
+	 * multivalue children matching that domain. A cohort with no template data has an
+	 * empty inner map; the picker shows its empty-state message in that case. */
+	profileForms2Domains?: Record<string, Record<string, string[]>>
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
