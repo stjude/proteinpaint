@@ -914,8 +914,16 @@ type SingleCellPlot = {
 	/** list of columns in tabular text file that define cell categories and can be used to color the cells in the plot. must have categorical values
 	 */
 	colorColumns: ColorColumn[]
-	/** if true the plot is shown by default. otherwise hidden */
+	/** if true the plot is shown by default. otherwise hidden.
+	 * Old implementation. Maybe deleted when singleCellPlot is depreciated.
+	 */
 	selected?: boolean
+	/** Plot is a meta analysis result and treated differently in the UI */
+	isMetaResult?: boolean
+	/** optional for meta analysis result plots. Define the "sampleId" for the
+	 * server requests that should match the file name or the plot name with the
+	 * spaces replaced with '_' is used. */
+	sampleId?: string
 }
 export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'
