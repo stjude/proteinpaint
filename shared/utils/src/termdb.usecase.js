@@ -179,6 +179,26 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			}
 			return uses
 
+		case 'profileForms2':
+			if (!term.isleaf) {
+				const ancestors = term.id.split('__').length
+				if (ancestors == 3) {
+					// Only mark depth-3 domains as clickable when they have multivalue templates
+					// available. termdbConfig.profileForms2Domains is precomputed at dataset init
+					// (see server/src/mds3.init.js) as a Record<domainId, friendlyLabel[]>.
+					// When undefined (other datasets), allow any depth-3.
+					const allowed = termdbConfig?.profileForms2Domains
+					if (!allowed || Object.prototype.hasOwnProperty.call(allowed, term.id)) uses.add('plot')
+				} else if (ancestors < 3) {
+					// Hide branches with no template-bearing depth-3 descendants.
+					// profileForms2Branches is the precomputed set of depth-1/2 ancestors of every
+					// profileForms2Domains entry. When undefined (other datasets), allow any depth<3.
+					const branches = termdbConfig?.profileForms2Branches
+					if (!branches || branches.includes(term.id)) uses.add('branch')
+				}
+			}
+			return uses
+
 		// case 'boxplot':
 		// 	if (term.type == 'float' || term.type == 'integer') uses.add('plot')
 		// 	if (usecase.detail === 'term2' && hasNumericChild(child_types)) uses.add('branch')

@@ -412,6 +412,50 @@ export async function validate_termdb(ds) {
 			}
 			return d
 		}
+
+		// One-time scan: build a map keyed by depth-3 domain ID -> array of friendly chart-type
+		// labels, for every domain that has multivalue children whose subtype matches one declared
+		// in plotConfigByCohort.<cohort>.profileForms2.options[]. Used by:
+		//   - isUsableTerm (case 'profileForms2') to hide empty domains from the term picker
+		//   - tree.js to render the chart-type annotation next to each clickable domain
+		// Also derives the depth-1/2 ancestor IDs (profileForms2Branches) so empty branches are
+		// hidden too, not just empty leaves.
+		// (Note: the JSON field is 'subtype', not 'plotType' — get_multivalue_tws in termdb.sql.js
+		// queries $.plotType but is dead code; the live path is termdb.server.init.ts which JSON-parses jsondata.)
+		if (tdb.plotConfigByCohort) {
+			const subtypeSet = new Set()
+			const subtypeLabels = {}
+			for (const cohortKey of Object.keys(tdb.plotConfigByCohort)) {
+				const f2 = tdb.plotConfigByCohort[cohortKey]?.profileForms2
+				if (!f2?.options) continue
+				for (const o of f2.options) {
+					if (o.subtype) subtypeSet.add(o.subtype)
+					if (o.subtype && o.name) subtypeLabels[o.subtype] = o.name
+				}
+			}
+			if (subtypeSet.size) {
+				const placeholders = [...subtypeSet].map(() => '?').join(',')
+				const sql = `SELECT DISTINCT parent_id, json_extract(jsondata, '$.subtype') AS subtype
+					FROM terms
+					WHERE type='multivalue'
+						AND json_extract(jsondata, '$.subtype') IN (${placeholders})
+						AND parent_id IS NOT NULL`
+				const rows = ds.cohort.db.connection.prepare(sql).all([...subtypeSet])
+				const domains = {}
+				for (const r of rows) {
+					const label = subtypeLabels[r.subtype] || r.subtype
+					if (!domains[r.parent_id]) domains[r.parent_id] = []
+					if (!domains[r.parent_id].includes(label)) domains[r.parent_id].push(label)
+				}
+				tdb.profileForms2Domains = domains
+				const branches = new Set()
+				for (const id of Object.keys(domains)) {
+					const parts = id.split('__')
+					for (let i = 1; i < parts.length; i++) branches.add(parts.slice(0, i).join('__'))
+				}
+				tdb.profileForms2Branches = [...branches]
+			}
+		}
 	}
 
 	if (ds.cohort.mutationset) {
