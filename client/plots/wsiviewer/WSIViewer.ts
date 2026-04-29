@@ -189,7 +189,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.dom.mapHolder.select('#SFField').remove()
 			this.skipFlagRenderer.render(this.dom.mapHolder, this, settings.renderOnlyFlagged, settings.renderSkipped)
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
-
 			if (initialZoomInCoordinate != undefined) {
 				this.wsiViewerInteractions.zoomInEffectListener(
 					activeImageExtent,

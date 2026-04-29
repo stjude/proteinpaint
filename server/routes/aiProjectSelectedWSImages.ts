@@ -1,4 +1,4 @@
-import { type AnnotationStatus, type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
+import { AnnotationStatus, type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
 import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
@@ -84,7 +84,7 @@ function init({ genomes }) {
 						)
 
 						// get flagged prediction coordinate keys for this project (may be empty)
-						let flaggedPredictions = new Set<string>()
+						let flaggedPredictions: Map<string, AnnotationStatus>
 						if (typeof ds.queries.WSImages.getFlaggedPredictions === 'function') {
 							flaggedPredictions = await ds.queries.WSImages.getFlaggedPredictions(projectId)
 						}
@@ -94,11 +94,15 @@ function init({ genomes }) {
 						wsimage.predictions = (predictions || [])
 							.map((p: any) => {
 								const label = classMap.get(p.class) ?? p.class
-								return { ...p, class: label } as any
+								return {
+									...p,
+									class: label,
+									flag: flaggedPredictions?.get(JSON.stringify(p.zoomCoordinates)) ?? AnnotationStatus.Normal
+								} as any
 							})
 							.filter((p: any) => {
 								const key = `${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`
-								return !annotationKeys.has(key) && !flaggedPredictions.has(key)
+								return !annotationKeys.has(key)
 							})
 					}
 
@@ -142,6 +146,13 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		label: string | null
 	}
 
+	type PredictionRow = {
+		id: number
+		project_id: number
+		coordinates: any // stored JSON string like "[x,y]" or JSON array
+		timestamp: string
+		flag_type: AnnotationStatus
+	}
 	const GET_ANNOTATIONS_SQL = `
         SELECT
             pa.id,
@@ -173,7 +184,9 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 
 	// SQL to get flagged prediction coordinates for a project
 	const GET_FLAGGED_PREDICTIONS_SQL = `
-        SELECT coordinates
+        SELECT 
+			coordinates,
+			flag_type
         FROM project_flagged_predictions
         WHERE project_id = ?
     `
@@ -227,30 +240,20 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 	}
 
 	// expose helper that returns a Set of flagged prediction coordinate keys for a project
-	ds.queries.WSImages.getFlaggedPredictions = async (projectId: number): Promise<Set<string>> => {
-		try {
-			const stmt = connection.prepare<[number], { coordinates: any }>(GET_FLAGGED_PREDICTIONS_SQL)
-			const rows = stmt.all(projectId) || []
+	ds.queries.WSImages.getFlaggedPredictions = async (projectId: number): Promise<Map<string, AnnotationStatus>> => {
+		const predictionMap = new Map<string, AnnotationStatus>()
 
-			const keys = new Set<string>()
-			for (const r of rows) {
-				try {
-					const parsed = typeof r.coordinates === 'string' ? JSON.parse(r.coordinates) : r.coordinates
-					if (Array.isArray(parsed) && parsed.length >= 2) {
-						const x = Number(parsed[0])
-						const y = Number(parsed[1])
-						if (!Number.isNaN(x) && !Number.isNaN(y)) {
-							keys.add(`${x},${y}`)
-						}
-					}
-				} catch {
-					// ignore parse errors
-				}
+		try {
+			const stmt = connection.prepare<[number], PredictionRow>(GET_FLAGGED_PREDICTIONS_SQL)
+			const rows = stmt.all(projectId) || []
+			for (const p of rows) {
+				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
+					predictionMap.set(p.coordinates, p.flag_type as AnnotationStatus)
 			}
-			return keys
+			return predictionMap
 		} catch (error) {
 			console.error('Error loading flagged predictions:', error)
-			return new Set()
+			return predictionMap
 		}
 	}
 }

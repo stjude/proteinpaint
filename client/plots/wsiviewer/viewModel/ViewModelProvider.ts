@@ -201,6 +201,7 @@ export class ViewModelProvider {
 			}
 
 			const annotations = wsimages[i].annotations ?? []
+			const predictions = wsimages[i].predictions ?? []
 			const sourceAnnotations = new VectorSource()
 			const tileSize = wsimages[i].tileSize ?? 512
 			for (const annotation of annotations) {
@@ -229,6 +230,25 @@ export class ViewModelProvider {
 				if (annotation.flag === AnnotationStatus.Flagged) {
 					const starFeature = createStarFeature(tileSize, topLeft, annotation.zoomCoordinates, 'yellow', color)
 					sourceAnnotations.addFeature(starFeature)
+				}
+			}
+
+			for (const pred of predictions) {
+				// flip Y as in your original code
+				const topLeft: [number, number] = [pred.zoomCoordinates[0], -pred.zoomCoordinates[1]]
+
+				const color = this.getClassColor(wsimages[i], pred.class) ?? 'black'
+				const featureId = `annotation-square-${pred.zoomCoordinates}`
+				let squareFeature: Feature<Geometry> | null = null
+				if (pred.flag == AnnotationStatus.Flagged) {
+					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
+					const starFeature = createStarFeature(tileSize, topLeft, pred.zoomCoordinates, 'yellow', color)
+					sourceAnnotations.addFeature(starFeature)
+				} else if (pred.flag === AnnotationStatus.Skipped) {
+					squareFeature = createDimSquareFeature(pred.zoomCoordinates, topLeft, tileSize, color)
+				}
+				if (squareFeature !== null) {
+					sourceAnnotations.addFeature(squareFeature)
 				}
 			}
 
@@ -352,13 +372,16 @@ export class ViewModelProvider {
 		return wsImage.classes?.find(wsiCLass => String(wsiCLass.label) === annotationClass)?.color ?? '#FFFFFF' // TODO get the default color from settings
 	}
 }
-
+/**
+ NOTE: If you provide a VectorSource the starFeature will be added to it instead of just created 
+ */
 export function createStarFeature(
 	tileSize: number,
 	starCenter: [number, number],
 	annotationCoords: [number, number],
 	fillColor: string = 'yellow',
-	outlineColor: any = 'yellow'
+	outlineColor: any = 'yellow',
+	featureSource: VectorSource<Feature<Geometry>> | null = null
 ): Feature<Polygon> {
 	// Source - https://stackoverflow.com/a/70960369
 	// Posted by enxaneta
@@ -381,30 +404,42 @@ export function createStarFeature(
 		n++
 	}
 
-	const feature = new Feature({
+	const starFeature = new Feature({
 		geometry: new Polygon(starCoords),
 		properties: {
 			isLocked: false
 		}
 	})
 
-	feature.setId(`annotation-star-${annotationCoords}`)
+	starFeature.setId(`annotation-star-${annotationCoords}`)
 
-	feature.setStyle(
+	starFeature.setStyle(
 		new Style({
 			zIndex: 1000,
 			fill: new Fill({ color: fillColor }),
 			stroke: new Stroke({ color: outlineColor, width: 2 })
 		})
 	)
-	return feature
+	if (featureSource) {
+		const oldFeature = featureSource.getFeatureById(`annotation-star-${annotationCoords}`)
+		if (oldFeature) {
+			featureSource.removeFeature(oldFeature)
+		}
+		featureSource.addFeature(starFeature)
+	}
+
+	return starFeature
 }
 
+/**
+ NOTE: If you provide a VectorSource the starFeature will be added to it instead of just created 
+ */
 export function createDimSquareFeature(
 	annotationCoords: [number, number],
 	topLeft: [number, number],
 	tileSize: number,
-	color: string
+	color: string,
+	featureSource: VectorSource<Feature<Geometry>> | null = null
 ): Feature<Geometry> {
 	const squareCoords = [
 		[
@@ -416,14 +451,14 @@ export function createDimSquareFeature(
 		]
 	]
 
-	const feature = new Feature({
+	const dimFeature = new Feature({
 		geometry: new Polygon(squareCoords),
 		properties: {
 			isLocked: false
 		}
 	})
 
-	feature.setId(`annotation-square-${annotationCoords}`)
+	dimFeature.setId(`annotation-square-${annotationCoords}`)
 	function hexToRgb(hex: string): number[] {
 		// Remove hash if it exists
 		hex = hex.replace(/^#/, '')
@@ -435,12 +470,19 @@ export function createDimSquareFeature(
 
 		return [r, g, b]
 	}
-	feature.setStyle(
+	dimFeature.setStyle(
 		new Style({
 			fill: new Fill({ color: [...hexToRgb(color), 0.4] }),
 			stroke: new Stroke({ color, width: 2 })
 		})
 	)
 
-	return feature
+	if (featureSource) {
+		const oldFeature = featureSource.getFeatureById(`annotation-star-${annotationCoords}`)
+		if (oldFeature) {
+			featureSource.removeFeature(oldFeature)
+		}
+		featureSource.addFeature(dimFeature)
+	}
+	return dimFeature
 }

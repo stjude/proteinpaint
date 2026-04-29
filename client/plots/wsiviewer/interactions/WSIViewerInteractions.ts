@@ -8,7 +8,7 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import { type Annotation, AnnotationStatus, type Prediction, type TileSelection } from '@sjcrh/proteinpaint-types'
+import { AnnotationStatus, type Prediction, type TileSelection } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
@@ -174,61 +174,110 @@ export class WSIViewerInteractions {
 					if (!sessionWSImage) return
 					downloadCSVRenderer.downloadAllAsCsv(sessionWSImage)
 				}
-				if (['f', 's'].includes(event.key.toLowerCase())) {
-					if (!('timestamp' in tileSelections[currentIndex])) return
-					const tileSelection = tileSelections[currentIndex] as Annotation
-					const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
-					if (!matchingClass) return
-					let newFlag: AnnotationStatus
-					if (event.key.toLowerCase() === 'f') {
-						newFlag =
-							tileSelection.flag === AnnotationStatus.Flagged ? AnnotationStatus.Normal : AnnotationStatus.Flagged
-					} else {
-						newFlag =
-							tileSelection.flag === AnnotationStatus.Skipped ? AnnotationStatus.Normal : AnnotationStatus.Skipped
-					}
-					console.log(newFlag)
-					const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-					let feature = source?.getFeatureById(`annotation-star-${tileSelection.zoomCoordinates}`)
-					if (feature) {
-						source?.removeFeature(feature)
-					}
-					feature = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
-					if (feature) {
-						source?.removeFeature(feature)
-					}
+				if (['f', 's'].includes(event.key.toLowerCase()) && !settings.isSavingAnnotation) {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: true,
+								changeTrigger: Date.now(),
+								renderWSIViewer: false
+							}
+						}
+					})
+					try {
+						const isPrediction = 'uncertainty' in tileSelections[currentIndex]
+						const isAnnotation = 'timestamp' in tileSelections[currentIndex]
+						const justTileSelection = !isAnnotation && !isPrediction
+						const defaultColor = 'black'
+						const tileSelection = tileSelections[currentIndex]
+						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
+						const classColor: string = matchingClass ? matchingClass.color : defaultColor
+						let newFlag: AnnotationStatus | null = null
+						if (event.key.toLowerCase() === 'f') {
+							newFlag =
+								tileSelection.flag === AnnotationStatus.Flagged ? AnnotationStatus.Normal : AnnotationStatus.Flagged
+						} else if (!justTileSelection && event.key.toLowerCase() === 's') {
+							newFlag =
+								tileSelection.flag === AnnotationStatus.Skipped ? AnnotationStatus.Normal : AnnotationStatus.Skipped
+						}
+						if (newFlag === null) throw new Error("Couldn't identify new flag to save.")
 
-					if (newFlag === AnnotationStatus.Flagged) {
-						const starFeature = createStarFeature(
-							settings.tileSize || 512,
-							[tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]],
-							tileSelection.zoomCoordinates,
-							'yellow',
-							matchingClass.color
-						)
-						this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
+						const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+						tileSelection.flag = newFlag
 
-						source?.addFeature(starFeature)
-					} else if (newFlag === AnnotationStatus.Skipped) {
-						const dimFeature = createDimSquareFeature(
-							tileSelection.zoomCoordinates,
-							[tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]],
-							settings.tileSize || 512,
-							matchingClass.color
-						)
-						source?.addFeature(dimFeature)
-					} else {
-						this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
+						const oldStar = source?.getFeatureById(`annotation-star-${tileSelection.zoomCoordinates}`)
+						if (oldStar) {
+							source?.removeFeature(oldStar)
+						}
+						const oldSquare = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
+						if (oldSquare) {
+							source?.removeFeature(oldSquare)
+						}
+						const annotationBorderFeat = source?.getFeatureById(`annotation-border-${tileSelection.zoomCoordinates}`)
+						if (annotationBorderFeat) {
+							source?.removeFeature(annotationBorderFeat)
+						}
+						if (newFlag === AnnotationStatus.Flagged) {
+							const newStar = createStarFeature(
+								settings.tileSize || 512,
+								[tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]],
+								tileSelection.zoomCoordinates,
+								'yellow',
+								classColor
+							)
+							this.addAnnotation(vectorLayer!, tileSelections, currentIndex, classColor, settings)
+							source?.addFeature(newStar)
+						} else if (newFlag === AnnotationStatus.Skipped) {
+							const newDim = createDimSquareFeature(
+								tileSelection.zoomCoordinates,
+								[tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]],
+								settings.tileSize || 512,
+								classColor
+							)
+							source?.addFeature(newDim)
+						} else if (isAnnotation) {
+							this.addAnnotation(vectorLayer!, tileSelections, currentIndex, classColor, settings)
+						}
+						if (justTileSelection) {
+							SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
+
+							let sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
+							sessionsTileSelection = [tileSelection, ...sessionsTileSelection]
+							wsiApp.app.dispatch({
+								type: 'plot_edit',
+								id: wsiApp.id,
+								config: {
+									settings: {
+										renderWSIViewer: false,
+										changeTrigger: Date.now(),
+										activeAnnotation: 0,
+										renderAnnotationTable: true,
+										sessionsTileSelection: sessionsTileSelection,
+										isSavingAnnotation: false
+									}
+								}
+							})
+							return
+						} else if (matchingClass) {
+							await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, tileSelection, matchingClass.id, aiProjectID)
+						}
+					} catch (error: any) {
+						console.trace("Couldn't succesfully flag tile:", error)
 					}
-					await this.saveAndFinalizeAnnotation(
-						wsiApp,
-						sessionWSImage,
-						currentIndex,
-						matchingClass.id,
-						aiProjectID,
-						newFlag
-					)
-
+					// Should I update state here or at the end of saveand filnalize
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: false,
+								changeTrigger: Date.now(),
+								renderWSIViewer: false
+							}
+						}
+					})
 					return
 				}
 
@@ -262,29 +311,45 @@ export class WSIViewerInteractions {
 				}
 
 				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
+					// Resolve class either by key_shortcut
+					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
+
+					if (!matchingClass) return
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
 						config: {
 							settings: {
 								isSavingAnnotation: true,
-								changeTrigger: Date.now()
+								changeTrigger: Date.now(),
+								renderWSIViewer: false
 							}
 						}
 					})
-					// Resolve class either by key_shortcut
-					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
-
-					if (!matchingClass) return
-
 					// Visual add
 					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
 
 					const selectedClassId = matchingClass.id
 
 					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
-
+					await this.saveAndFinalizeAnnotation(
+						wsiApp,
+						sessionWSImage,
+						tileSelections[currentIndex],
+						selectedClassId,
+						aiProjectID
+					)
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								isSavingAnnotation: false,
+								changeTrigger: Date.now(),
+								renderWSIViewer: false
+							}
+						}
+					})
 					return
 				}
 			})
@@ -514,8 +579,8 @@ export class WSIViewerInteractions {
 			source?.removeFeature(annotationBorderFeat)
 		}
 
-		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			const sessionsTileSelection = SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
+		if (SessionWSImage.isSessionTileSelection(tileSelection)) {
+			const sessionsTileSelection = SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
 
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
@@ -533,7 +598,7 @@ export class WSIViewerInteractions {
 			return
 		}
 
-		const isPrediction = SessionWSImage.isPrediction(currentIndex, sessionWSImage)
+		const isPrediction = SessionWSImage.isPrediction(tileSelection)
 
 		const tileSelectionType = isPrediction ? 0 : 1
 
@@ -649,32 +714,16 @@ export class WSIViewerInteractions {
 	private async saveAndFinalizeAnnotation(
 		wsiApp: any,
 		sessionWSImage: SessionWSImage,
-		currentIndex: number,
+		tileSelection: TileSelection,
 		selectedClassId: number | undefined,
-		aiProjectID: number,
-		annotationFlag: AnnotationStatus = AnnotationStatus.Normal
+		aiProjectID: number
 	) {
 		const state = wsiApp.app.getState()
-		// const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-		// if (!settings.isSavingAnnotation) {
-		// 	wsiApp.app.dispatch({
-		// 		type: 'plot_edit',
-		// 		id: wsiApp.id,
-		// 		config: {
-		// 			settings: {
-		// 				isSavingAnnotation: true,
-		// 				changeTrigger: Date.now()
-		// 			}
-		// 		}
-		// 	})
-		// }
-		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			coordinates: tileSelections[currentIndex].zoomCoordinates,
+			tileSelection: tileSelection,
 			classId: selectedClassId!,
-			flag: annotationFlag,
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}
@@ -688,9 +737,7 @@ export class WSIViewerInteractions {
 			console.error('Error in saveWSIAnnotation request:', e)
 		}
 
-		if (SessionWSImage.isSessionTileSelection(currentIndex, sessionWSImage)) {
-			SessionWSImage.removeTileSelection(currentIndex, sessionWSImage)
-		}
+		SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
 
 		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 		wsiApp.app.dispatch({
@@ -699,9 +746,9 @@ export class WSIViewerInteractions {
 			config: {
 				settings: {
 					renderWSIViewer: false,
+					renderAnnotationTable: true,
 					changeTrigger: Date.now(),
 					activeAnnotation: 0,
-					isSavingAnnotation: false,
 					sessionsTileSelection: sessionsTileSelection
 				}
 			}

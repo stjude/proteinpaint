@@ -21,16 +21,11 @@ export class SessionWSImage extends WSImage {
 		this.sessionsTileSelections = sessionsTileSelections
 	}
 
-	public static removeTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): TileSelection[] {
+	public static removeTileSelection(tileSelection: TileSelection, sessionWSImage: SessionWSImage): TileSelection[] {
 		if (!sessionWSImage.sessionsTileSelections) return []
-
-		const sessionsTileSelection = sessionWSImage.sessionsTileSelections[currentIndex]
-
-		if (!sessionsTileSelection) return []
-		if (currentIndex < 0 || currentIndex >= sessionWSImage.sessionsTileSelections.length) return []
-
-		sessionWSImage.sessionsTileSelections.splice(currentIndex, 1)
-
+		sessionWSImage.sessionsTileSelections = sessionWSImage.sessionsTileSelections.filter(
+			(ts: TileSelection) => JSON.stringify(ts.zoomCoordinates) !== JSON.stringify(tileSelection.zoomCoordinates)
+		)
 		return sessionWSImage.sessionsTileSelections
 	}
 
@@ -65,26 +60,31 @@ export class SessionWSImage extends WSImage {
 				{ value: 0 },
 				{ value: '' },
 				{ html: '' },
-				{ value: '' }
+				{ value: `${AnnotationStatusMessages[d.flag]}` }
 			]
 		})
 
-		const predictionRows: any[] = (sessionWSImage.predictions || []).map((prediction, i) => {
-			const idx = sessionsRows.length + i // Continue index after sessions
-			const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
-			const firstCell: any = { value: idx }
-			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
-			return [
-				firstCell,
-				{ value: prediction.zoomCoordinates },
-				{ value: roundValue(prediction.uncertainty, 4) },
-				{ value: prediction.class },
-				{
-					html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
-				},
-				{ value: '' }
-			]
-		})
+		const predictionRows: any[] = (sessionWSImage.predictions || [])
+			.map((prediction, i) => {
+				if (prediction.flag === AnnotationStatus.Skipped && !settings.renderSkipped) return []
+				if (prediction.flag !== AnnotationStatus.Flagged && settings.renderOnlyFlagged) return []
+				const idx = sessionsRows.length + i // Continue index after sessions
+				const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
+				const firstCell: any = { value: idx }
+				firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
+				console.log(prediction.flag, AnnotationStatusMessages[prediction.flag])
+				return [
+					firstCell,
+					{ value: prediction.zoomCoordinates },
+					{ value: roundValue(prediction.uncertainty, 4) },
+					{ value: prediction.class },
+					{
+						html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+					},
+					{ value: `${AnnotationStatusMessages[prediction.flag]}` }
+				]
+			})
+			.filter((annotation, _) => annotation.length > 0)
 
 		const annotationsRows: any[] = annotations
 			.map((annotation, i) => {
@@ -110,17 +110,13 @@ export class SessionWSImage extends WSImage {
 		return [...sessionsRows, ...predictionRows, ...annotationsRows]
 	}
 
-	public static isPrediction(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
-		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
-
-		const predictionsCount = (sessionWSImage.predictions || []).length
-
-		return currentIndex >= sessionsCount && currentIndex < sessionsCount + predictionsCount
+	public static isPrediction(tileSelection: TileSelection): boolean {
+		return 'uncertainty' in tileSelection
 	}
 
-	public static isSessionTileSelection(currentIndex: number, sessionWSImage: SessionWSImage): boolean {
-		const sessionsCount = sessionWSImage.sessionsTileSelections?.length ?? 0
-		if (sessionsCount == 0) return false
-		return currentIndex >= 0 && currentIndex < sessionsCount
+	public static isSessionTileSelection(tileSelection: TileSelection): boolean {
+		const isPrediction = 'uncertainty' in tileSelection
+		const isAnnotation = 'timestamp' in tileSelection
+		return !isAnnotation && !isPrediction
 	}
 }

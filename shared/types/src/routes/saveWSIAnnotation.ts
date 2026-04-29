@@ -1,12 +1,11 @@
-import type { AnnotationStatus } from 'src/index.ts'
+import type { TileSelection } from 'src/index.ts'
 import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
 	genome: string
 	dslabel: string
-	coordinates: [number, number]
+	tileSelection: TileSelection
 	classId: number
-	flag: AnnotationStatus
 	projectId: number
 	wsimage: string
 }

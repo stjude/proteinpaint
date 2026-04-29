@@ -32,11 +32,12 @@ export class SkipFlagCheckRenderer {
 						settings: {
 							renderOnlyFlagged: true,
 							renderSkipped: false,
-							changeTrigger: Date.now()
+							changeTrigger: Date.now(),
+							renderAnnotationTable: true,
+							renderWSIViewer: false
 						}
 					}
 				})
-				console.log('Checkbox is checked')
 			} else {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
@@ -44,11 +45,12 @@ export class SkipFlagCheckRenderer {
 					config: {
 						settings: {
 							renderOnlyFlagged: false,
-							changeTrigger: Date.now()
+							renderAnnotationTable: true,
+							changeTrigger: Date.now(),
+							renderWSIViewer: false
 						}
 					}
 				})
-				console.log('Checkbox is unchecked')
 			}
 		})
 
@@ -63,11 +65,12 @@ export class SkipFlagCheckRenderer {
 						settings: {
 							renderOnlyFlagged: false,
 							renderSkipped: true,
-							changeTrigger: Date.now()
+							changeTrigger: Date.now(),
+							renderWSIViewer: false,
+							renderAnnotationTable: true
 						}
 					}
 				})
-				console.log('Checkbox is checked')
 			} else {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',
@@ -75,11 +78,12 @@ export class SkipFlagCheckRenderer {
 					config: {
 						settings: {
 							renderSkipped: false,
-							changeTrigger: Date.now()
+							changeTrigger: Date.now(),
+							renderWSIViewer: false,
+							renderAnnotationTable: true
 						}
 					}
 				})
-				console.log('Checkbox is unchecked')
 			}
 		})
 	}
