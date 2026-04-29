@@ -77,12 +77,15 @@ export class SCViewModel {
 			else {
 				// sample does not use experiment
 				// first cell is sample name
-				const row: { [index: string]: any }[] = [{ value: item.sample }]
+				const row: { [index: string]: any }[] = item.isMetaResult
+					? [{ html: item.sample.replace(/_/g, ' '), value: item.sample, isMetaResult: true }]
+					: [{ value: item.sample }]
 				// optional sample columns
 				for (const col of sampleColumns || []) {
 					row.push({ value: item[col.termid] })
 				}
-				rows.push(row)
+				if (item.isMetaResult) rows.unshift(row)
+				else rows.push(row)
 			}
 		}
 		return [rows, columns]
