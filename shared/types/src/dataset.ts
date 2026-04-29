@@ -1590,6 +1590,16 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
+	/** Precomputed at server init: map keyed by depth-3 domain term ID, value = array of
+	 * friendly chart-type labels (option.name from plotConfigByCohort.<cohort>.profileForms2.options[])
+	 * for the multivalue children matching that domain. Used by isUsableTerm (case 'profileForms2')
+	 * to hide empty domains and by tree.js to render the chart-type annotation next to each
+	 * clickable domain. */
+	profileForms2Domains?: Record<string, string[]>
+	/** Precomputed at server init: depth-1/2 ancestor term IDs of every entry in
+	 * profileForms2Domains. Used by isUsableTerm (case 'profileForms2') so that empty
+	 * branches (no template-bearing depth-3 descendants) are hidden too. */
+	profileForms2Branches?: string[]
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]

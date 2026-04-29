@@ -111,6 +111,8 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
+	if (tdb.profileForms2Domains) c.profileForms2Domains = tdb.profileForms2Domains
+	if (tdb.profileForms2Branches) c.profileForms2Branches = tdb.profileForms2Branches
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx

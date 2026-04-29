@@ -313,6 +313,21 @@ function setRenderers(self) {
 
 		const id = term.id || term.name
 		if (!(id in self.termsById) || !self.included_terms.length) {
+			// Opt-in: render a friendly fallback when the ROOT tree resolves to nothing
+			// and the usecase declares an emptyTreeMessage. Lets callers (e.g., Templates 2
+			// in a cohort with no template data) avoid a silent blank picker.
+			if (term.__tree_isroot && !self.included_terms.length && self.state.usecase?.emptyTreeMessage) {
+				div.style('display', 'block')
+				div.selectAll('.sjpp-empty-tree-msg').remove()
+				div
+					.append('div')
+					.attr('class', 'sjpp-empty-tree-msg')
+					.style('padding', '15px')
+					.style('color', '#777')
+					.style('font-style', 'italic')
+					.text(self.state.usecase.emptyTreeMessage)
+				return
+			}
 			div.style('display', 'none')
 			return
 		}
@@ -456,6 +471,18 @@ function setRenderers(self) {
 					.style('margin-left', '5px')
 					.style('color', term.samplecount ? '#777' : '#ddd')
 					.text('n=' + term.samplecount)
+			}
+
+			// Templates 2 picker: annotate each clickable domain with the chart types it offers
+			const f2Domains = self.app.vocabApi.termdbConfig?.profileForms2Domains
+			if (self.state.usecase?.target === 'profileForms2' && uses.has('plot') && f2Domains?.[term.id]?.length) {
+				div
+					.append('div')
+					.style('font-size', '.8em')
+					.style('display', 'inline-block')
+					.style('margin-left', '6px')
+					.style('color', '#777')
+					.text(f2Domains[term.id].join(', '))
 			}
 		}
 		//Creates the info icon and description div from termInfo.js

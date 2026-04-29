@@ -217,6 +217,17 @@ function getChartTypeList(self, state) {
 			usecase: { target: 'profileForms', detail: 'tw' },
 			config: { chartType: 'profileForms' }
 		},
+		{
+			label: 'Templates 2',
+			chartType: 'profileForms2',
+			clickTo: self.showTree_select1term,
+			usecase: {
+				target: 'profileForms2',
+				detail: 'tw',
+				emptyTreeMessage: 'No templates are currently available for this cohort.'
+			},
+			config: { chartType: 'profileForms2' }
+		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
 		{
