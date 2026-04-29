@@ -8,8 +8,6 @@ import type { ClientGenome } from '../../types/clientGenome'
 import type { GeneArgumentEntry } from '#types'
 import { GenesMenu } from './GenesMenu'
 import { addButton } from './addButton.ts'
-import { dofetch3 } from '#common/dofetch'
-import { getNormalRoot } from '#filter/filter'
 
 export type API = {
 	dom: {
@@ -331,16 +329,9 @@ export class GeneSetEditUI {
 				callback: async (event: Event) => {
 					this.tip2.clear().showunder(event.target)
 					const callback = async () => {
-						const args = {
-							genome: this.vocabApi.vocab.genome,
-							dslabel: this.vocabApi.vocab.dslabel,
-							filter: this.vocabApi.state.termfilter.filter,
-							filter0: this.vocabApi.state.termfilter.filter0
-						}
-
+						const args = {}
 						this.getInputs(this.api.topMutatedGenesParams, args)
-						const result = await dofetch3('termdb/topMutatedGenes', { method: 'GET', body: args })
-
+						const result = await this.vocabApi.getTopMutatedGenes({ body: args })
 						this.geneList = []
 						this.geneList.push(...result.genes)
 						this.renderGenes()
@@ -369,19 +360,9 @@ export class GeneSetEditUI {
 						})
 					this.tip2.clear().showunder(event.target)
 					const callback = async () => {
-						const args: any = {
-							genome: this.vocabApi.state.vocab.genome,
-							dslabel: this.vocabApi.state.vocab.dslabel
-						}
-						// supply filters from app state
-						if (this.vocabApi.state.termfilter) {
-							if (this.vocabApi.state.termfilter.filter)
-								args.filter = getNormalRoot(this.vocabApi.state.termfilter.filter) // pp filter
-							if (this.vocabApi.state.termfilter.filter0) args.filter0 = this.vocabApi.state.termfilter.filter0 // gdc filter
-						}
-
+						const args: any = {}
 						this.getInputs(copy, args)
-						const result = await dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: args })
+						const result = await this.vocabApi.getTopVariablyExpressedGenes({ body: args })
 
 						this.geneList = []
 						if (result.genes) {

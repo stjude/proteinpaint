@@ -76,8 +76,16 @@ export class GeneSetEditUIwithTabs extends GeneSetEditUI {
 			.append('button')
 			.style('margin-left', '10px')
 			.html('Submit')
-			.on('click', () => {
-				this.setTopGenes(Number(numGenesInput.property('value')))
+			.on('click', async () => {
+				const numGenes = Number(numGenesInput.property('value'))
+				this.quickApplyBtn.property('disabled', true)
+				try {
+					await this.setTopGenes(numGenes)
+				} catch (error) {
+					console.error(error)
+				} finally {
+					this.quickApplyBtn.property('disabled', false)
+				}
 			})
 	}
 
