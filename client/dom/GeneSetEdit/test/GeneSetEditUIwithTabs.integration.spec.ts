@@ -52,7 +52,7 @@ tape('Initial radio buttons/tab for top, preset, and custom gene set', async fun
 	test.equal(radios.length, 3, 'should show 3 radio inputs initially')
 
 	radios[2].dispatchEvent(new PointerEvent('click', { bubbles: true }))
-	const msigBtn = await tipLoc.shows('[data-testid="sjpp-geneSetEditUi-msigdb"').get(0)
+	const msigBtn = await tipLoc.shows('[data-testid="sjpp-geneSetEditUi-msigdb"]').get(0)
 
 	const branches = await detectGte({
 		selector: '.termdiv',

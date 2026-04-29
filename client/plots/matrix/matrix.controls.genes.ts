@@ -167,7 +167,7 @@ export function addGenesetInput(self: MatrixControls, app: any, parent: any, tr:
 	const controlPanelBtn = self.btns.filter((d: any) => d.label.endsWith('Genes'))?.node()
 	const tip = app.tip //new Menu({ padding: '5px' })
 	const tg = parent.config.termgroups
-	const { maxGenes, genesetEditUiVersion } = parent.settings.matrix
+	const { maxGenes, genesetEditUiVersion } = parent.settings?.matrix || parent.config?.settings?.matrix || {}
 
 	let selectedGroup: any
 	const triggerGenesetEdit = (holder: any) => {
