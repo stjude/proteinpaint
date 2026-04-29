@@ -17,7 +17,7 @@ export type SingleCellSample = {
 		sampleName: any
 		experimentID?: string
 	}[]
-
+	isMetaResult?: boolean // whether this sample is a meta result. if so, sample name is from plot.sampleId or plot.name and experimentID is not used
 	// a sample may have additional fields that will be displayed in table, see singleCell.samples.sampleColumns[]
 }
 
