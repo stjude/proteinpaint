@@ -18,6 +18,11 @@ export type API = {
 		 * Opens a menu to select genes from different datasets
 		 */
 		textControlDiv: Div
+		/** The defaultMenu contains the gene search, MSigDb options, and gene list/text box.
+		 * In the GeneSetUIwithTabs child class, it is rendered below the radio button for
+		 * 'Custom Menu'
+		 * */
+		defaultMenu: Div
 		/** on click clears the gene holding div */
 		clearBtn: Button
 		/** on click populates the geneHoldingDiv with original gene list */
@@ -137,6 +142,7 @@ export class GeneSetEditUI {
 	customInputs?: CustomInputs
 	limitedGenesList?: string[]
 	termsAsListed?: boolean
+	msigClickTerm?: (term: any) => void
 
 	constructor(opts: GeneSetEditArg) {
 		this.holder = opts.holder
@@ -158,18 +164,36 @@ export class GeneSetEditUI {
 			? JSON.stringify(this.geneList.map(t => t.gene))
 			: JSON.stringify(this.geneList.map(t => t.gene).sort())
 
+		this.menuList = []
+		if (opts.limitedGenesList) this.limitedGenesList = opts.limitedGenesList
+		const dom = this.getDom(opts)
+
+		this.api = {
+			dom,
+			topMutatedGenesParams: [],
+			topVariablyExpressedGenesParams: [],
+			statColor2label: new Map(),
+			destroy: () => {
+				this.tip2.destroy()
+				opts.holder.remove()
+			}
+		}
+		this.getParams()
+		this.createMenuList()
+		this.renderTextControls(this.api.dom.textControlDiv)
+		this.renderGenes()
+	}
+
+	getDom(opts) {
 		this.holder.selectAll('*').remove()
-		const div = this.holder.append('div').attr('class', 'sja_genesetinput').style('padding', '5px')
+		const div = this.holder.append('div')
 
 		if (this.titleText) {
 			div.append('div').style('margin-bottom', '10px').html(this.titleText)
 		}
-		if (opts.limitedGenesList) {
-			this.limitedGenesList = opts.limitedGenesList
-		}
 
-		const headerDiv = div.append('div')
-
+		const defaultMenu = div.append('div').attr('class', 'sja_genesetinput').style('padding', '5px')
+		const headerDiv = defaultMenu.append('div')
 		const label = headerDiv.append('label')
 		label.append('span').html('Search')
 		const row = label
@@ -209,66 +233,52 @@ export class GeneSetEditUI {
 				.style('width', '150px')
 		}
 
-		this.menuList = []
-
-		this.api = {
-			dom: {
-				holder: div,
-				textControlDiv: controlDiv.append('div'),
-				clearBtn: addButton({
-					div: controlDiv,
-					text: 'Clear',
-					disabled: !this.geneList?.length,
-					callback: () => {
-						this.geneList = []
-						this.updateName = true
-						this.renderGenes()
-					}
-				}),
-				restoreBtn: this.geneList?.length
-					? addButton({
-							div: controlDiv,
-							disabled: true,
-							text: 'Restore',
-							callback: () => {
-								this.geneList = this.origLst
-								this.renderGenes()
-							}
-					  })
-					: null,
-				geneHoldingDiv: this.renderGeneHoldingDiv(div),
-				statLegendDiv: div.append('div'),
-				submitBtn: addButton({
-					div: div.append('div').style('margin-top', '10px'),
-					testid: 'sjpp-genesetedit-submitbtn',
-					text: 'Submit',
-					disabled: !this.geneList?.length,
-					callback: () => {
-						if (this.maxNumGenes && this.geneList.length > this.maxNumGenes) {
-							window.alert(
-								`Gene set size (${this.geneList.length} genes) exceeds the allowed limit (${this.maxNumGenes} genes).`
-							)
-							return
+		return {
+			holder: div,
+			defaultMenu,
+			textControlDiv: controlDiv.append('div'),
+			clearBtn: addButton({
+				div: controlDiv,
+				text: 'Clear',
+				disabled: !this.geneList?.length,
+				callback: () => {
+					this.geneList = []
+					this.updateName = true
+					this.renderGenes()
+				}
+			}),
+			restoreBtn: this.geneList?.length
+				? addButton({
+						div: controlDiv,
+						disabled: true,
+						text: 'Restore',
+						callback: () => {
+							this.geneList = this.origLst
+							this.renderGenes()
 						}
-						this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
-						const result: CallbackArg = { geneList: this.geneList }
-						if (this.nameInput) result.name = this.nameInput.property('value')
-						this.callback(result)
+				  })
+				: null,
+			geneHoldingDiv: this.renderGeneHoldingDiv(defaultMenu),
+			statLegendDiv: div.append('div'),
+			submitBtn: addButton({
+				div: defaultMenu.append('div').style('margin-top', '10px'),
+				testid: 'sjpp-genesetedit-submitbtn',
+				text: 'Submit',
+				disabled: !this.geneList?.length,
+				callback: () => {
+					if (this.maxNumGenes && this.geneList.length > this.maxNumGenes) {
+						window.alert(
+							`Gene set size (${this.geneList.length} genes) exceeds the allowed limit (${this.maxNumGenes} genes).`
+						)
+						return
 					}
-				})
-			},
-			topMutatedGenesParams: [],
-			topVariablyExpressedGenesParams: [],
-			statColor2label: new Map(),
-			destroy: () => {
-				this.tip2.destroy()
-				opts.holder.remove()
-			}
+					this.api.dom.submitBtn.property('disabled', true).text('Loading...') // to prevent repeated clicking and triggering callback. when this ui is used in geneVariant tw edit, it can keep showing a while after user clicks btn thus this fix is needed
+					const result: CallbackArg = { geneList: this.geneList }
+					if (this.nameInput) result.name = this.nameInput.property('value')
+					this.callback(result)
+				}
+			})
 		}
-		this.getParams()
-		this.createMenuList()
-		this.renderTextControls(this.api.dom.textControlDiv)
-		this.renderGenes()
 	}
 
 	getParams() {
@@ -390,35 +400,9 @@ export class GeneSetEditUI {
 				const tdb = this.genome.termdbs[key]
 				this.menuList.push({
 					label: `${tdb.label} gene set`,
-					callback: async () => {
-						this.tip2.clear().showunder(this.api.dom.textControlDiv.node()!)
-						const termdb = await import('../../termdb/app.js')
-						termdb.appInit({
-							holder: this.tip2.d,
-							state: {
-								dslabel: key,
-								genome: this.genome.name,
-								nav: {
-									header_mode: 'search_only'
-								}
-							},
-							tree: {
-								click_term: term => {
-									this.geneList = []
-									const geneset = term._geneset
-									if (geneset) {
-										for (const gene of geneset) this.geneList.push({ gene: gene.symbol })
-										this.renderGenes(term.name)
-										// disable name update to retain msigdb gene set name
-										// when user modifies gene set
-										this.updateName = false
-									}
-									this.tip2.hide()
-									this.api.dom.submitBtn.node()!.focus()
-								}
-							}
-						})
-					}
+					callback: event => this.showMSigDbTree(event, key),
+					isPreset: true,
+					testid: `sjpp-geneSetEditUi-${key}`
 				})
 			}
 		}
@@ -442,18 +426,53 @@ export class GeneSetEditUI {
 		}
 	}
 
-	renderTextControls(div: Div) {
+	async showMSigDbTree(event, key) {
+		this.tip2.clear().showunder(event.target) //this.api.dom.textControlDiv.node()!)
+		const termdb = await import('../../termdb/app.js')
+		termdb.appInit({
+			holder: this.tip2.d,
+			state: {
+				dslabel: key,
+				genome: this.genome.name,
+				nav: {
+					header_mode: 'search_only'
+				}
+			},
+			tree: {
+				click_term:
+					this.msigClickTerm ||
+					(term => {
+						this.geneList = []
+						const geneset = term._geneset
+						if (geneset) {
+							for (const gene of geneset) this.geneList.push({ gene: gene.symbol })
+							this.renderGenes(term.name)
+							// disable name update to retain msigdb gene set name
+							// when user modifies gene set
+							this.updateName = false
+						}
+						this.tip2.hide()
+						this.api.dom.submitBtn.node()!.focus()
+					})
+			}
+		})
+	}
+
+	renderTextControls(div: Div, includeFilter?: (m: MenuListEntry) => boolean) {
 		for (const menu of this.menuList) {
+			if (includeFilter && !includeFilter(menu)) continue
 			if (menu.tagName == 'button')
 				addButton({
 					div,
 					text: menu.label,
 					getDisplayStyle: menu.getDisplayStyle || (() => ''),
-					callback: menu.callback
+					callback: menu.callback,
+					testid: menu.testid
 				})
-			else
+			else {
 				div
 					.append('a')
+					.attr('data-testid', menu.testid || null)
 					.style('text-decoration', 'underline')
 					.style('padding', '0px 10px')
 					.style('color', 'black')
@@ -461,6 +480,7 @@ export class GeneSetEditUI {
 					.on('click', async (event: Event) => {
 						await menu.callback(event)
 					})
+			}
 		}
 	}
 

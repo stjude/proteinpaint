@@ -97,7 +97,8 @@ tape('MSigDB gene set', async function (test) {
 		target: ui.tip2.dnode,
 		count: 2,
 		trigger() {
-			ui.menuList.find(d => d.label.includes('MSigDB'))!.callback()
+			const event = { target: document.querySelector('[data-testid="sjpp-geneSetEditUi-msigdb"]') }
+			ui.menuList.find(d => d.label.includes('MSigDB'))!.callback(event)
 		}
 	})
 
