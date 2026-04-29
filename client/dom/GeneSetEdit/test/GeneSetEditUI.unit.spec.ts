@@ -52,7 +52,7 @@ tape('Empty opts.geneList', function (test) {
 		test.equal(ui.api.dom.clearBtn.property('disabled'), true, `Should have a disabled clear button`)
 		test.false(
 			ui.menuList.some(d => d.label.includes('mutated')),
-			`should show load top genes button`
+			`should not show the load top genes button`
 		)
 
 		if (test['_ok']) ui.api.destroy()
