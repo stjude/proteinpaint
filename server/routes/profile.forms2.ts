@@ -3,18 +3,11 @@ import { ProfileForms2ScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
-Route for profileForms2.
-
-Key differences from termdb.profileFormScores:
-  - Client does NOT send facilityTW.
-  - Server derives the facility term id from query.__protected__.activeCohort
-    (server-trusted; set by auth middleware). Forms scoreTerm IDs start with
-    POC* and do not carry an F/A prefix, so the polar2-style term-ID scan
-    would always fall back to filter terms — fragile when no filter is applied.
-  - Always returns aggregated dicts across all eligible sites (no
-    sampleData / single-site shortcut). For one eligible site, the aggregation
-    is numerically identical to v1's sampleData branch.
-  - Public-role users never see site IDs (`sites: []`).
+profileForms2 route. Differs from termdb.profileFormScores:
+  - Facility term id read from dataset config (plotConfigByCohort[cohort].profileForms2.facilityTW.id),
+    not client-supplied or scanned from term IDs (forms2 score terms are POC*-prefixed).
+  - Always aggregated across eligible sites; no sampleData shortcut.
+  - Public role never sees site IDs (sites: []).
 */
 
 export const api: RouteApi = {
@@ -46,31 +39,20 @@ function init({ genomes }) {
 	}
 }
 
-/**
- * Derives the cohort prefix from the server-trusted activeCohort, which is
- * the subcohort filter's `key` value (set by auth.mayUpdate__protected__()).
- * For sjglobal: 'full' → 'F' (facility term FUNIT), 'abbrev' → 'A' (AUNIT).
- */
-function derivePrefix(query: any): string {
-	const cohort = query.__protected__?.activeCohort
-	if (cohort === 'full') return 'F'
-	if (cohort === 'abbrev') return 'A'
-	throw `cannot determine cohort prefix from activeCohort=${cohort}`
-}
-
 async function getScores(query: any, ds: any) {
 	const { activeCohort, clientAuthResult } = query.__protected__
-	const facilityTermId = `${derivePrefix(query)}UNIT`
+	// Facility term id from dataset config (forms2 scoreTerms are POC*, not F*/A* — can't
+	// reuse the polar2/barchart2/radar2 derivePrefix scan).
+	const facilityTermId = ds.cohort.termdb.plotConfigByCohort?.[activeCohort]?.profileForms2?.facilityTW?.id
+	if (!facilityTermId) throw `profileForms2.facilityTW.id missing for cohort '${activeCohort}'`
 
-	// Minimal facility term wrapper — getData fills term.values, $id via termjsonByOneid
+	// Minimal wrapper; getData fills term.values + $id.
 	const facilityTW: any = { term: { id: facilityTermId }, q: {} }
 
-	// Collect all terms for getData: facility + every score term + every SC score term
 	const terms: any[] = [facilityTW, ...query.scoreTerms]
 	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
 
-	// Allow the facility term to be seen across all users (matches v1 behavior).
-	// When filterByUserSites is true the term goes through normal access control.
+	// Skip access control on facility term when aggregating globally (matches v1).
 	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(facilityTermId)
 
 	const cohortAuth = clientAuthResult[activeCohort]
@@ -88,7 +70,6 @@ async function getScores(query: any, ds: any) {
 	if (raw.error) throw raw.error
 	const samples: any[] = Object.values(raw.samples)
 
-	// Build site list (filtered to user-accessible sites if needed)
 	let sites = samples.map(s => {
 		const val = s[facilityTW.$id].value
 		let label = facilityTW.term.values?.[val]?.label || val
@@ -98,8 +79,7 @@ async function getScores(query: any, ds: any) {
 	if (userSites && query.filterByUserSites) sites = sites.filter(s => userSites.includes(s.value))
 	sites.sort((a, b) => a.label.localeCompare(b.label))
 
-	// Eligible samples: only filter to userSites when filterByUserSites is explicitly true.
-	// When false, facilityTW is in ignoredTermIds so getData() returns all sites; aggregate globally.
+	// Narrow eligible samples to user's sites only when filterByUserSites=true; otherwise aggregate globally.
 	const eligibleSamples =
 		userSites && query.filterByUserSites ? samples.filter(s => userSites.includes(s[facilityTW.$id].value)) : samples
 
@@ -115,8 +95,7 @@ async function getScores(query: any, ds: any) {
 
 	return {
 		term2Score,
-		// Public users never see site IDs/names
-		sites: isPublic ? [] : sites,
+		sites: isPublic ? [] : sites, // public never sees site IDs
 		n: eligibleSamples.length
 	}
 }
@@ -145,8 +124,8 @@ function getSCPercentsDict(tw: any, samples: any[]): { [key: string]: number } {
 	if (!tw) throw 'tw not defined'
 	const percentageDict: { [key: string]: number } = {}
 	for (const sample of samples) {
-		const twData = sample[tw.$id]
-		const key = twData?.value
+		const key = sample[tw.$id]?.value
+		if (key == null) continue // skip missing values to avoid an "undefined" bucket
 		if (!percentageDict[key]) percentageDict[key] = 0
 		percentageDict[key] += 1
 	}
