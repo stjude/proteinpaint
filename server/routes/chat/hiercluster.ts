@@ -124,13 +124,14 @@ export async function extract_hiercluster_terms_from_query(
 			' Training examples: ' +
 			training_data
 
+		// this is not required
 		if (common_genes.length > 0) {
 			system_prompt +=
 				'The dataset has the following relevant genes available for clustering: ' +
 				common_genes.join(', ') +
 				'. Add these genes to geneNames field'
 		}
-
+		// this is not required
 		if (relevant_genesets.length > 0) {
 			system_prompt +=
 				'The dataset has the following relevant genesets available for clustering: ' +
@@ -160,7 +161,6 @@ async function validate_hiercluster_gene_expression_response(
 	const pp_plot_json: any = { chartType: 'hierCluster' }
 	let text = ''
 
-	// if (response_type.text) text = response_type.text // will this ever happen? the LLM is never instructed to return text?
 	const terms: any[] = []
 	const seen_genes: Set<string> = new Set() // to track genes we've already added from geneNames and genesets to avoid duplicates
 

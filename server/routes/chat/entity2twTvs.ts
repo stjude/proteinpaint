@@ -529,6 +529,29 @@ export async function resolveToTwTvs(
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
 		}
+	} else if (plotType === 'prebuiltscatter') {
+		// prebuiltScatter handling
+		if (entity['name']) {
+			const nameValue = entity['name'] as Value | undefined
+			if (!nameValue) throw new Error('Invalid name term entity for prebuiltScatter')
+			twTvsObjects['name'] = nameValue.phrase
+		}
+
+		if (entity['colorBy']) {
+			const colorByValue = entity['colorBy'] as Value | undefined
+			if (!colorByValue) throw new Error('Invalid colorBy term entity for prebuiltScatter')
+			const termWrapper = await resolveToTw(colorByValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve colorBy term for phrase "${colorByValue.phrase}"`)
+			twTvsObjects['colorBy'] = termWrapper
+		}
+
+		if (entity['shapeBy']) {
+			const shapeByValue = entity['shapeBy'] as Value | undefined
+			if (!shapeByValue) throw new Error('Invalid shapeBy term entity for prebuiltScatter')
+			const termWrapper = await resolveToTw(shapeByValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve shapeBy term for phrase "${shapeByValue.phrase}"`)
+			twTvsObjects['shapeBy'] = termWrapper
+		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'
 	}

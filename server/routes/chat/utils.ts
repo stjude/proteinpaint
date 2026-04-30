@@ -5,6 +5,38 @@ import { mayLog } from '#src/helpers.ts'
 import fs from 'fs'
 import Database from 'better-sqlite3'
 
+export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
+	if (!supportedPlotTypes) {
+		mayLog(
+			'Supported plot types list is undefined. Defaulting to empty list, which may lead to unsupported plot type errors downstream.'
+		)
+		return []
+	}
+
+	// check if it supports summary charts
+	if (supportedPlotTypes.includes('dictionary')) {
+		// summmary means it includes "boxplot", "violin", "barchart", "sampleScatter" as child types
+		supportedPlotTypes.push('summary')
+	}
+
+	// check if it supports heirarchical clustering charts
+	// TODO:
+	if (supportedPlotTypes.includes('geneExpression')) {
+		// || supportedPlotTypes.includes('proteomeAbundance') || supportedPlotTypes.includes('dnaMethylation'))
+		supportedPlotTypes.push('hiercluster')
+	}
+	// check if it supports dge
+	if (supportedPlotTypes.includes('DA')) {
+		supportedPlotTypes.push('dge')
+	}
+
+	// For t-SNE/UMAP scatter plots
+	if (supportedPlotTypes.includes('sampleScatter')) {
+		supportedPlotTypes.push('prebuiltscatter')
+	}
+	return supportedPlotTypes
+}
+
 // ---------------------------------------------------------------------------
 //  Shared data type registry — describes non-dictionary data types available
 //  to all chat agents (matrix, summary, scatter, etc.)

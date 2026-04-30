@@ -126,6 +126,16 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
+	} else if (plotType === 'prebuiltscatter') {
+		plotState.plot.chartType = 'sampleScatter'
+		// if (input.name === 't-SNE')
+		plotState.plot.name = 'TermdbTest TSNE'
+		if (input.colorBy) {
+			plotState.plot.coloTw = isDictionaryTerm(input.colorBy) ? input.colorBy : { term: input.colorBy }
+		}
+		if (input.shapeBy) {
+			plotState.plot.shapeTw = isDictionaryTerm(input.shapeBy) ? input.shapeBy : { term: input.shapeBy }
+		}
 	} else {
 		throw 'Only summary plot type is supported for now'
 	}
