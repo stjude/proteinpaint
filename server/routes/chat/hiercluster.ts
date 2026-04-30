@@ -196,6 +196,11 @@ async function validate_hiercluster_gene_expression_response(
 			terms.push({ term: { gene: gene.symbol, type: 'geneExpression' } })
 		}
 	} else if (response_type.topVariablyExpressedGenes) {
+		if (!ds.queries.topVariablyExpressedGenes)
+			return {
+				type: 'text',
+				text: 'The dataset ' + ds.label + ' does not support querying for top variably expressed genes'
+			}
 		let topVEgenes: string[] = []
 		let num_genes: number
 		if (Number.isInteger(response_type.topVariablyExpressedGenes) && response_type.topVariablyExpressedGenes > 0) {
@@ -248,7 +253,7 @@ async function validate_hiercluster_gene_expression_response(
 	}
 
 	// Must have at least one term
-	if (terms.length < 3 && text === '') {
+	if (terms.length < 3) {
 		return {
 			type: 'text',
 			text: 'Please specify at least 3 genes for hierarchical clustering.'
