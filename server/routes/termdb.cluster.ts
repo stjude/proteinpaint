@@ -353,20 +353,27 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 
 		if (vr.status !== 'success') throw vr.message
 		if (!vr.samples?.length) throw 'HDF5 file has no samples, please check file.'
+		const unknownSamples = new Set() // samples present in gene expression file but missing from db
 		for (const sn of vr.samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
-			if (si == undefined) {
+			if (si === undefined) {
 				if (ds.cohort.db) {
 					// sqlite-based db, samples in hdf5 file should be in sync with db
 					throw `unknown sample ${sn} from HDF5 ${q.file}`
 				} else {
 					// api-based db, samples in hdf5 file may not be in sync with api
+					unknownSamples.add(sn)
 					continue
 				}
 			}
 			q.samples.push(si)
 		}
 		console.log(`${ds.label}: geneExpression HDF5 file validated. Format: ${vr.format}, Samples:`, q.samples.length)
+		if (unknownSamples.size) {
+			// report unknown samples in server log
+			const arr = [...unknownSamples]
+			console.log(`unknown samples from geneExpression HDF5 file (${arr.length}): ${arr.join(', ')}`)
+		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`
 	}
