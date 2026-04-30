@@ -162,6 +162,16 @@ if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	serverconfig.routeSetters = routeSetters
 }
 
+if (typeof serverconfig.dsCredentials == 'string') {
+	const dsCredentialsFile = serverconfig.dsCredentials
+	try {
+		const json = fs.readFileSync(dsCredentialsFile, { encoding: 'utf8' })
+		serverconfig.dsCredentials = JSON.parse(json)
+	} catch (e) {
+		throw `invalid json file, serverconfig.dsCredentials='${dsCredentialsFile}': ${e}`
+	}
+}
+
 if (serverconfig.debugmode) {
 	// should be able to run this in local dev and test environments that use containers
 	const hg38test = serverconfig.genomes.find(g => g.name == 'hg38-test')
@@ -322,7 +332,12 @@ function mayUpdateTestDatasets(datasets, serverconfig) {
 						id: 'XYZ',
 						label: 'XYZ cohort'
 					}
-				]
+				],
+				demoToken: {
+					secret: '...', // pragma: allowlist secret
+					roles: ['user'],
+					referers: ['/demo-login.html']
+				}
 			}
 		}
 	}

@@ -1,9 +1,10 @@
-import type { DiffMethRequest, DiffMethResponse, RouteApi } from '#types'
+import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, RouteApi } from '#types'
 import { diffMethPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
+import { renderVolcano } from '../src/renderVolcano.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/diffMeth',
@@ -41,12 +42,15 @@ function init({ genomes }) {
 				if (term_results2.error) throw new Error(term_results2.error)
 			}
 
-			const results = await run_diffMeth(req.query as DiffMethRequest, ds, term_results, term_results2)
+			const results = (await run_diffMeth(req.query as DiffMethRequest, ds, term_results, term_results2)) as any
 			if (!results || !results.data)
 				throw new Error(
 					'Differential methylation analysis returned no data. Please verify sample selections and try again.'
 				)
-			if (Array.isArray(results.data) && !results.data.length)
+			// preAnalysis short-circuit returns `data: {alert, ...}` (no totalRows).
+			// Full mode: throw only when no promoter_data reached the renderer at all;
+			// empty dots is valid (strict thresholds) and the PNG should still return.
+			if ('totalRows' in results.data && results.data.totalRows === 0)
 				throw new Error('No promoters passed filtering. Try relaxing group criteria or selecting more samples.')
 			res.send(results)
 		} catch (e: any) {
@@ -208,8 +212,9 @@ async function run_diffMeth(param: DiffMethRequest, ds: any, term_results: any, 
 	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
 
-	const output: DiffMethResponse = {
-		data: result.promoter_data,
+	const rendered = await renderVolcano<DiffMethEntry>(result.promoter_data, param.volcanoRender)
+	const output: DiffMethFullResponse = {
+		data: rendered,
 		sample_size1,
 		sample_size2
 	}

@@ -3,7 +3,9 @@ import type { TableCell } from '#dom'
 import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
 
-/** Renders the sample table for selection */
+/** Renders the sample table for selection on SC app init()
+ * On selecting a sample, the plot buttons will appear and
+ * the user can select a plot to render in the dashboard. */
 export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
@@ -31,11 +33,17 @@ export class SampleTableRenderer {
 			striped: true,
 			selectedRows: tableData.selectedRows,
 			noButtonCallback: index => {
-				const item = {}
+				const item = {} as { sID: string; eID: string; [key: string]: any }
 				tableData.rows[index].forEach((r: TableCell, idx: number) => {
 					if (!r.value) return
-					item[tableData.columns[idx].label.toLowerCase()] = r.value
+					let key = tableData.columns[idx].label.toLowerCase()
+					/** Convert the column labels into the required sample structure keys.
+					 * Maintains the sample obj used throughout the app whilst allowing for
+					 * dynamic column labels based on the config. */
+					key = key === 'sample' ? 'sID' : key === 'experiment' ? 'eID' : key
+					item[key] = r.value
 				})
+				if (!item.sID) throw new Error('Selected item must have sID property')
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
 			}

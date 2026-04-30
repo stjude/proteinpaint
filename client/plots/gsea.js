@@ -1,5 +1,5 @@
 import * as d3axis from 'd3-axis'
-import { Menu, renderTable, table2col, axisstyle } from '#dom'
+import { Menu, renderTable, table2col, axisstyle, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { controlsInit } from './controls'
 import { getCompInit, copyMerge } from '#rx'
@@ -207,19 +207,27 @@ class gsea extends PlotBase {
 					config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
 				const model = new VolcanoModel(this.app, config.termType)
 				const response = await model.getData(config, volcanoSettings)
-				if (!response || !response.data || response.error) {
-					throw response.error || 'No data returned from volcano model'
+				if (!response?.data?.cacheId || response.error) {
+					throw response.error || 'No DE cacheId returned from volcano model'
 				}
-				const inputGenes = response.data.map(g => g.gene_name)
 				await this.app.save({
 					type: 'plot_edit',
 					id: this.id,
 					config: {
 						gsea_params: {
-							genes: inputGenes,
-							fold_change: response.data.map(g => g.fold_change),
+							cacheId: response.data.cacheId,
+							// Snapshot of the DE request so the server can regenerate
+							// the cache if this GSEA request lands on a peer node or
+							// arrives after the cache TTL has expired.
+							daRequest: response.daRequest,
+							genes_length: response.data.totalRows,
 							genome: this.app.vocabApi.opts.state.vocab.genome,
-							genes_length: inputGenes.length
+							// Sending dslabel at the top level makes the global
+							// auth middleware populate clientAuthResult on this
+							// request the same way it did for the volcano
+							// request, so the server can re-apply the same
+							// auth-filter injection to daRequest before hashing.
+							dslabel: this.app.vocabApi.vocab.dslabel
 						}
 					}
 				})
@@ -250,11 +258,12 @@ class gsea extends PlotBase {
 
 		this.imageUrl = null // Reset the image URL
 		await this.setControls()
-		if (this.dom.header)
+		if (this.dom.header) {
+			const geneCount = this.config.gsea_params.genes_length ?? this.config.gsea_params.genes?.length ?? 0
 			this.dom.header.html(
-				this.config.gsea_params.genes.length +
-					' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
+				geneCount + ' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
+		}
 		render_gsea(this)
 	}
 }
@@ -303,7 +312,6 @@ async function renderPathwayDropdown(self) {
 				//Need to clear the gsea_params completely
 				gsea_params: {
 					geneset_name: null,
-					pickle_file: null,
 					pathway: pathwayOpts[idx].value
 				},
 				highlightGenes: [],
@@ -348,13 +356,25 @@ add:
 
 	let output
 	try {
+		const p = self.config.gsea_params
 		const body = {
-			genome: self.config.gsea_params.genome,
-			genes: self.config.gsea_params.genes,
-			fold_change: self.config.gsea_params.fold_change,
+			genome: p.genome,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
 			method: self.settings.gsea_method
+		}
+		if (p.cacheId) {
+			body.cacheId = p.cacheId
+			// Sending the DE request snapshot lets the server regenerate the
+			// cache on miss (farm node without the file, TTL-expired).
+			if (p.daRequest) body.daRequest = p.daRequest
+			// Top-level dslabel makes the global auth middleware populate
+			// clientAuthResult so the server can re-apply the same
+			// auth-filter injection to daRequest before hashing.
+			if (p.dslabel) body.dslabel = p.dslabel
+		} else {
+			body.genes = p.genes
+			body.fold_change = p.fold_change
 		}
 
 		if (self.settings.gsea_method == 'blitzgsea') {
@@ -371,19 +391,51 @@ add:
 
 	//Ensure the image renders when toggling between tabs
 	if (self.config.gsea_params.geneset_name != null) {
-		if (self.settings.gsea_method == 'blitzgsea') {
-			self.config.gsea_params.method = self.settings.gsea_method
-			const image = await rungsea(self.config.gsea_params, self.dom)
-			// //render_gsea_plot(self, plot_data)
-			if (image.error) throw image.error
-			self.imageUrl = URL.createObjectURL(image)
-			const png_width = 600
-			const png_height = 400
-			self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
-		} else if (self.settings.gsea_method == 'cerno') {
-			render_cerno_plot(self, output)
-		} else {
-			throw 'Unknown method:' + self.settings.gsea_method
+		try {
+			if (self.settings.gsea_method == 'blitzgsea') {
+				self.config.gsea_params.method = self.settings.gsea_method
+				const image = await rungsea(self.config.gsea_params, self.dom)
+				// //render_gsea_plot(self, plot_data)
+				if (image.error) throw image.error
+				self.imageUrl = URL.createObjectURL(image)
+				const png_width = 600
+				const png_height = 400
+				self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
+			} else if (self.settings.gsea_method == 'cerno') {
+				if (!self.rankedDE && self.config.gsea_params.cacheId) {
+					const deResp = await dofetch3('genesetEnrichment', {
+						body: {
+							genome: self.config.gsea_params.genome,
+							cacheId: self.config.gsea_params.cacheId,
+							// Also send daRequest so the server can recompute
+							// the cache on miss (same farm-safety reason as
+							// the primary enrichment call).
+							daRequest: self.config.gsea_params.daRequest,
+							// Top-level dslabel so the auth middleware populates
+							// clientAuthResult for the server's auth-filter
+							// adjustment of daRequest.
+							dslabel: self.config.gsea_params.dslabel,
+							fetchDE: true,
+							geneSetGroup: '-',
+							filter_non_coding_genes: false,
+							method: 'cerno'
+						}
+					})
+					if (deResp.error) throw deResp.error
+					self.rankedDE = deResp.data
+				}
+				render_cerno_plot(self, output)
+			} else {
+				throw 'Unknown method:' + self.settings.gsea_method
+			}
+		} catch (e) {
+			self.dom.holder.selectAll('*').remove()
+			const msg = String(e?.message || e)
+			const userMsg = /daCacheMissing|ENOENT|no such file/i.test(msg)
+				? 'The differential-analysis cache for this GSEA is no longer available. Reopen the volcano plot to regenerate it.'
+				: msg
+			sayerror(self.dom.holder, userMsg)
+			return
 		}
 	}
 
@@ -530,7 +582,6 @@ add:
 		noButtonCallback: async index => {
 			const config = {
 				gsea_params: {
-					pickle_file: output.pickle_file,
 					geneset_name: self.gsea_table_rows[index][0].value
 				}
 			}
@@ -607,9 +658,10 @@ function render_cerno_plot(self, cerno_output) {
 	const xpad = 50
 	const ypad = 100
 
+	const rankedDE = self.rankedDE || self.config.gsea_params
 	const DE_output = []
-	for (let i = 0; i < self.config.gsea_params.genes.length; i++) {
-		const item = { gene: self.config.gsea_params.genes[i], fold_change: self.config.gsea_params.fold_change[i] }
+	for (let i = 0; i < rankedDE.genes.length; i++) {
+		const item = { gene: rankedDE.genes[i], fold_change: rankedDE.fold_change[i] }
 		DE_output.push(item)
 	}
 	DE_output.sort((i, j) => j.fold_change - i.fold_change) // Sorting genes in descending order of fold change

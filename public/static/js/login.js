@@ -1,23 +1,45 @@
-async function logout(dslabel, route = 'termdb') {
+// loggedOut: will track if the user has been logged out of a dslabel
+// key: dslabel, value: Set<route str>
+const loggedOut = new Set()
+
+async function logout(dslabel, reload = true) {
 	const jwtByDsRoute = getJwtByDsRoute()
-	if (jwtByDsRoute[dslabel]?.[route]) {
+	if (jwtByDsRoute[dslabel]) {
 		// Deleting this entry means there will be no dofetch() request header.Authorization
 		// that the backend may use to reestablish user sessions that have expired
-		delete jwtByDsRoute[dslabel][route]
+		delete jwtByDsRoute[dslabel]
 		localStorage.setItem('jwtByDsRoute', JSON.stringify(jwtByDsRoute))
 	}
+	loggedOut.add(dslabel)
 
+	const route = await findMatchDsAuthRoute(dslabel)
 	const body = JSON.stringify({ dslabel, route })
 	// this will clear any active user session in the backend
-	await fetch(`/dslogout`, { method: 'POST', body })
+	await fetch(`/dslogout`, { method: 'POST', header: { 'Content-Type': 'application/json' }, body })
 		.then(r => r.json())
 		.then(console.log)
 		.catch(console.error)
 
-	window.location.reload()
+	if (window.location.hash.includes('dslogout')) return
+	if (reload) window.location.reload()
 }
 
-function getJwtByDsRoute() {
+const genomes = fetch('/genomes?requestBy=login.js').then(r => r.json())
+let dsAuth
+
+async function findMatchDsAuthRoute(dslabel) {
+	if (!dsAuth) dsAuth = (await genomes).dsAuth
+	const matchedDsAuthRoutes = dsAuth.filter(a => a.dslabel == dslabel).map(a => a.route)
+	const route = matchedDsAuthRoutes.find(r => r == 'termdb' || r == '/**')
+	if (!route)
+		throw (
+			`The /genomes response did not contain a matching dsAuth[] entry for dslabel=${dslabel}: ` +
+			`${JSON.stringify(matchedDsAuthRoutes)} is expected to have 'termdb' or '/**'.`
+		)
+	return route
+}
+
+function getJwtByDsRoute(dslabel) {
 	// jwtByDsRoute is a nested object that's saved to localStorage,
 	// so that a user can stay logged-in when opening new tabs.
 	// jwtByDsRoute{}
@@ -26,38 +48,81 @@ function getJwtByDsRoute() {
 	//     value = jwt
 	//
 	const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
-	return JSON.parse(jwtByDsRouteStr)
+	const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+	return dslabel ? jwtByDsRoute[dslabel] : jwtByDsRoute
 }
 
-async function login(dslabel, role = 'public') {
+// this is meant for 1 time use throughout a browser session,
+// and not meant for repeated calls within getDatasetAccessToken()
+async function login(dslabel, role = '') {
+	if (window.location.hash.includes('dslogout')) {
+		logout(dslabel, false)
+		return null
+	}
 	const jwt = await getJwt(dslabel, role)
-	if (!jwt) return
-	return jwt
+	return jwt || undefined
 }
 
-async function getJwt(dslabel, role) {
+// the returned function below can be used for the `getDatasetAccessToken()`
+// callback option in runproteinpaint() argument, which may be called
+// multiple times within a browser session
+function demoGetDatasetAccessToken(dslabel, defaultRole) {
+	// track jwt by role for possible reuse if not expired,
+	// to lessen /demoToken requests
+	const fakeTokensByRole = {}
+	// url param can specify a role to simulate a logged-in user
 	const params = getParams()
-	if (!params.role) params.role = role
+	// only one role per login/browser session, will require user logout
+	// to change the user role
+	const role = params.role || defaultRole
 
+	return async function getDatasetAccesToken() {
+		if (loggedOut.has(dslabel)) return
+		if (fakeTokensByRole[role]) {
+			const { jwt, exp } = fakeTokensByRole[role]
+			if (exp && Math.floor(Date.now() / 1000) < exp - 5) return jwt // reuse an unexpired demo token
+		}
+		const jwt = role ? await getJwt(dslabel, role) : await getJwt(dslabel)
+		const payloadEncoded = jwt?.split('.')[1]
+		if (payloadEncoded) {
+			try {
+				const payload = decodeJwtPayload(jwt)
+				fakeTokensByRole[role] = { jwt, exp: payload.exp }
+			} catch (e) {
+				console.log(e)
+			}
+		}
+		return jwt
+	}
+}
+
+// this makes a server request to get a jwt by role,
+// and is called by other helper functions above
+async function getJwt(dslabel, role = 'public') {
 	// The fakeTokens allows simulating valid, signed jwt by dslabel and role.
-	// It assumes there is only one protected route entry for serverconfig.features.fakeTokens[<dslabel>],
-	// and there can be 1 or more role:jwt key-values nested under it.
+	// It assumes there is only one protected route entry for each dataset.demoJwtInput{[role]: {...}} entry,
+	// and there can be 1 or more entries by role.
+	//
+	// see https://github.com/stjude/sjpp/wiki/Demo-token-and-auth-testing-for-datasets-with-access-control
 	//
 	// NOTE: Verified fake tokens will be passed to `setTokenByDsRoute()` in `dofetch()`, to be
 	// saved in localStorage 'jwtByDsCredentials' and returned by getJwtByDsRoute() above.
 	//
 
-	// !!! NOTE: to clear/refresh the stored fake jwt's, use the dslogout() function above or force the condition below to true !!!
+	// !!! NOTE: to clear/refresh the stored fake jwt's, use the logout(dslabel) function above or force the condition below to true !!!
 	// otherwise, should reuse saved fake tokens that have not changed in serverconfig.features
-	const body = JSON.stringify({ genome: 'hg38', dslabel, role })
-	const res = await fetch('/demoToken', { method: 'POST', body })
+	const genome = dslabel === 'ProtectedTest' ? 'hg38-test' : 'hg38'
+	const body = JSON.stringify({ genome, dslabel, role })
+	const res = await fetch('/demoToken', { method: 'POST', header: { 'Content-Type': 'application/json' }, body })
 		.then(r => r.json())
 		.catch(console.error)
 	if (res.error) {
 		console.error(res.error)
+		logout(dslabel, false)
 		return null
 	}
-	return res.fakeTokensByRole[role]
+	loggedOut.delete(dslabel)
+	return res.fakeTokensByRole?.[role]
 }
 
 // URL search params can be used to trigger user roles or other behaviour
@@ -72,4 +137,18 @@ function getParams() {
 			params[key] = value
 		})
 	return params
+}
+
+function decodeJwtPayload(token) {
+	// 1. Split the token into its 3 parts (header, payload, signature)
+	const base64Url = token.split('.')[1]
+	// 2. Convert Base64Url to standard Base64
+	const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+	// 3. Decode the Base64 string and parse it as JSON
+	const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(convertAtoBresult).join(''))
+	return JSON.parse(jsonPayload)
+}
+
+function convertAtoBresult(c) {
+	return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
 }

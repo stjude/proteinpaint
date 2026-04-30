@@ -101,5 +101,8 @@ export async function getPlotConfig(opts = {}, app) {
 
 // checking if a tw type could exist in a hierCluster group type
 function canTermBeInHierGrp(grpType, twType) {
+	if (grpType == 'numericDictTerm') {
+		if (twType == 'float' || twType == 'integer') return true
+	}
 	return twType == grpType
 }

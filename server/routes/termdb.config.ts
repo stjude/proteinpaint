@@ -91,6 +91,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		dataDownloadCatch: tdb.dataDownloadCatch,
 		matrix: tdb.matrix,
 		hierCluster: tdb.hierCluster,
+		numericDictTermCluster: tdb.numericDictTermCluster,
 		mclass: tdb.mclass,
 		alwaysRefillCategoricalTermValues: tdb.alwaysRefillCategoricalTermValues,
 		isGeneSetTermdb: tdb.isGeneSetTermdb,

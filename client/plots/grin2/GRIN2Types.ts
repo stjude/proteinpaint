@@ -1,5 +1,4 @@
 import type { Menu } from '#dom'
-import type { ManhattanPoint } from '#plots/manhattan/manhattanTypes.ts'
 import type { Elem } from '../../types/d3'
 
 export interface GRIN2Dom {
@@ -98,37 +97,4 @@ export interface GRIN2Settings {
 	generalOptions?: {
 		[key: string]: any
 	}
-}
-/** A row from the top genes table where the first cell contains the gene name */
-export type GeneTableRow = Array<{ value?: string; [key: string]: any }>
-
-/** Data item for gene selection tracking - either a ManhattanPoint or a table row */
-export type GeneDataItem = ManhattanPoint | GeneTableRow
-
-/**
- * Options for showGrin2ResultTable
- */
-export interface ShowGrin2ResultTableOpts {
-	/** Div selection where the table will be rendered */
-	tableDiv: any
-	/** Array of ManhattanPoint gene results (used when columns/rows not provided) */
-	hits?: ManhattanPoint[]
-	/** Div where Matrix/Lollipop plots will be shown */
-	newPlotDiv?: any
-	/** App context for dispatching Matrix/Lollipop actions */
-	app?: any
-	/** Menu instance to hide on button actions */
-	clickMenu?: any
-	/** Pre-built columns (for top genes table). If not provided, builds from hits. */
-	columns?: any[]
-	/** Pre-built rows (for top genes table). If not provided, builds from hits. */
-	rows?: any[]
-	/** Original data items for button callbacks and selection tracking. Defaults to hits. */
-	dataItems?: any[]
-	/** Function to extract gene name from a data item. Defaults to (item) => item.gene */
-	getGene?: (item: any) => string
-	/** Format for matrix button text. Use {n} as placeholder for count. Defaults to "Matrix ({n})" */
-	matrixButtonFormat?: string
-	/** Additional options passed directly to renderTable */
-	[key: string]: any
 }

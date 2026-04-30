@@ -17,7 +17,7 @@ import { SCModel } from '../model/SCModel.ts'
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/sc/SCModel -***-')
+	test.comment('-***- plots/sc/model/SCModel -***-')
 	test.end()
 })
 

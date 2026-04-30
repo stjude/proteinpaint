@@ -1,7 +1,13 @@
 import { select } from 'd3-selection'
+//import { dofetch3 } from './dofetch'
 
-const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
-const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+let jwtByDsRoute
+
+function setJwtByDsRoute() {
+	if (jwtByDsRoute) return
+	const jwtByDsRouteStr = localStorage.getItem('jwtByDsRoute') || `{}`
+	jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
+}
 
 /*
 	setTokenByDsRoute() sets this storage item:
@@ -20,6 +26,7 @@ const jwtByDsRoute = JSON.parse(jwtByDsRouteStr)
 	The stored token will be submitted as part of Vocab.mayGetAuthHeaders() or getSavedToken().
 */
 export function setTokenByDsRoute(dslabel, route, jwt) {
+	setJwtByDsRoute()
 	if (!jwtByDsRoute[dslabel]) jwtByDsRoute[dslabel] = {}
 	if (jwt) jwtByDsRoute[dslabel][route] = jwt
 	else delete jwtByDsRoute[dslabel][route]
@@ -28,6 +35,7 @@ export function setTokenByDsRoute(dslabel, route, jwt) {
 
 // get jwt string directly from localStorage/jwtByDsRoute tracking object
 export function getSavedToken(dslabel, route) {
+	setJwtByDsRoute()
 	return jwtByDsRoute[dslabel]?.[route] || jwtByDsRoute[dslabel]?.['/**']
 }
 
@@ -48,6 +56,7 @@ export function mayAddJwtToRequest(init, body, url) {
 			dslabel = value
 		}
 	}
+	setJwtByDsRoute()
 	if (!dslabel || !jwtByDsRoute[dslabel]) return
 	const h = url.split('//')
 	const postProtocolStr = h[1] || h[0] // handle a url such as '://something.abc'
@@ -72,7 +81,7 @@ export let includeEmbedder = false
 	.authUi: optional, a custom login UI function to launch as needed
 	.holder: optional, a d3-wrapped selection to hold the auth UI
 */
-export async function setDsAuthOk(opts, dofetch3) {
+export async function setDsAuthOk(opts) {
 	dsAuth = opts.dsAuth
 	authUi = opts.ui || defaultAuthUi
 	authUiHolder = opts.holder || select('body')
@@ -80,31 +89,10 @@ export async function setDsAuthOk(opts, dofetch3) {
 		// fillin all the dslabels that has an active session
 		// so that an unnecessary login form will not be shown
 		if (auth.insession) dsAuthOk.add(auth)
-		else {
-			// check if there is a PP-server generated session token that has been saved from a previous login
-			const { dslabel, route } = auth
-			const jwt = getSavedToken(dslabel, route)
-			if (jwt) {
-				const payload = JSON.parse(atob(jwt.split('.')[1]))
-				if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) continue
-				const data = await dofetch3('/jwt-status', {
-					method: 'POST',
-					headers: {
-						//authorization: `Bearer ${btoa(jwt)}`
-						[auth.headerKey]: jwt
-					},
-					body: {
-						dslabel,
-						route,
-						embedder: location.hostname
-					}
-				})
-				if (data.ok || data.status == 'ok') {
-					dsAuthOk.add(auth)
-					auth.insession = true
-				}
-			}
-		}
+		// defer the check for saved jwtByDsRoute to isInSession(),
+		// so that there are no confusing multiple /jwt-status requests
+		// in the Network requests tab in simulated demoToken usage
+		// which is only one dslabel at a time
 	}
 	includeEmbedder = opts.dsAuth?.length > 0 || false
 }
@@ -120,10 +108,41 @@ export function getRequiredAuth(dslabel, route) {
 
 // check if a user is logged in, usually checked together with requiredAuth in termdb/config,
 // so access to unprotected ds/routes should not be affected by this check
-export function isInSession(dslabel, route) {
+export async function isInSession(dslabel, route) {
 	if (!dslabel) return false
-	for (const a of dsAuthOk) {
-		if (a.dslabel == dslabel && (a.route == route || a.route == '/**')) return true
+	if (!Array.isArray(dsAuth)) return false
+	for (const a of dsAuth) {
+		if (a.dslabel != dslabel || (a.route != route && a.route != '/**')) continue
+		if (dsAuthOk.has(a)) return true
+		// TODO: for auth.type == 'jwt', consider migrating to always using getDatasetAccessToken()
+		// instead of saving a session jwt in localStorage
+		if (a.checked /*|| a.type == 'jwt'*/) return false
+		// for other auth types like basic (password login), recover related saved jwt that
+		// allows one-time sign-in throughout a user's browser session;
+		// check if there is a PP-server generated session token that has been saved from a previous login
+		const jwt = getSavedToken(dslabel, a.route)
+		if (!jwt) return false
+		const { dofetch3 } = await import('./dofetch')
+		const payload = decodeJwtPayload(jwt)
+		if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) return false
+		const data = await dofetch3('/jwt-status', {
+			method: 'POST',
+			headers: {
+				//authorization: `Bearer ${btoa(jwt)}`
+				[a.headerKey]: jwt
+			},
+			body: {
+				dslabel,
+				route,
+				embedder: location.hostname
+			}
+		})
+		a.checked = true
+		if (data.ok || data.status == 'ok') {
+			dsAuthOk.add(a)
+			a.insession = true
+			return true
+		}
 	}
 	// no matching sessions found for this dslabel and route
 	return false
@@ -232,4 +251,19 @@ async function defaultAuthUi(dslabel, auth, opts = {}) {
 				authUiHolder
 			})
 	})
+}
+
+function decodeJwtPayload(token) {
+	// 1. Split the token into its 3 parts (header, payload, signature)
+	const base64Url = token.split('.')[1]
+	// 2. Convert Base64Url to standard Base64
+	const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+	const paddedBase64 = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+	// 3. Decode the Base64 string and parse it as JSON
+	const jsonPayload = decodeURIComponent(window.atob(paddedBase64).split('').map(convertAtoBresult).join(''))
+	return JSON.parse(jsonPayload)
+}
+
+function convertAtoBresult(c) {
+	return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
 }

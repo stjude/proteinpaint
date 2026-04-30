@@ -714,6 +714,7 @@ type ProteomeFilter = {
 }
 
 type ProteomeCohortConfig = {
+	prior: { d0: number; s0sq: number }
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
 }
@@ -919,6 +920,7 @@ export type SingleCellQuery = {
 	/** defines tsne/umap type of clustering maps for each sample
 	 */
 	data: SingleCellDataGdc | SingleCellDataNative
+	metaResults?: SingleCellMetaResult[]
 	/** defines available gene-level expression values for each cell of each sample */
 	geneExpression?: SingleCellGeneExpressionGdc | SingleCellGeneExpressionNative
 	/** Precomputed top differentialy expressed genes for a cell cluster, against rest of cells */
@@ -927,6 +929,23 @@ export type SingleCellQuery = {
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
 	terms?: object[]
+}
+
+export type SingleCellMetaResult = {
+	/** identifier */
+	name: string
+	/** tsv file
+	- 1st column is cell barcode
+	- x/y coordinate column number is defined in coordsColumns{x,y} below
+	- additional columns for cell annotations, corresponds to colorColumns
+	- must have a column for sample name, to identify which sample the cell is from
+	*/
+	file: string
+	/** gene exp h5 file */
+	geneExpFile?: string
+	/** 0-based column number for x/y coordinate for this plot */
+	coordsColumns: { x: number; y: number }
+	colorColumns: ColorColumn[]
 }
 
 type SCImages = {
@@ -1358,6 +1377,15 @@ type MatrixSettings = {
 	cnvUnit?: 'log2ratio' | 'segmedian'
 	/** whether to show white cell border for SNVindel in oncoPrint mode */
 	oncoPrintSNVindelCellBorder?: boolean
+	/** use a geneset edit UI without or with initial radio inputs */
+	genesetEditUiVersion?: '' | 'withTabs'
+}
+
+type NumericDictTermClusterSettings = {
+	/** default hiercluster group name */
+	termGroupName?: string
+	zScoreTransformation?: boolean
+	colorScale?: string
 }
 
 type Matrix = {
@@ -1375,6 +1403,28 @@ type Matrix = {
 	filter?: any
 	/** matrix criteria for a CNV alteration */
 	cnvCutoffs?: any
+}
+
+// specific hierCluster type settings, should be named as "dataType + Cluster"
+type NumericDictTermCluster = {
+	/** alternative name, e.g. the plot is called "drug sensitivity" in ALL-pharmacotyping; by default it's called "Numeric Dictionary Term cluster" */
+	appName?: string
+	/** default settings for numericDictTermCluster plot */
+	settings?: NumericDictTermClusterSettings
+	/** list of numeric term ids that will be excluded from the numeric dictionary term cluster, add to usecase.detail to exclude terms*/
+	exclude?: string[]
+	/** list of pre-built numericDictTermcluster plots */
+	plots?: NumericDictTermClusterPlotsEntry[]
+}
+
+type NumericDictTermClusterPlotsEntry = {
+	name: string
+	file: string
+	settings?: {
+		[key: string]: any
+	}
+	/** helper function to get plot config from saved session file */
+	getConfig?: (f: any) => void
 }
 
 type Survival = {
@@ -1523,6 +1573,7 @@ keep this setting here for reason of:
   */
 	useLower?: boolean
 	matrix?: Matrix
+	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
 	regression?: Regression
 	logscaleBase2?: boolean

@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Now using common quadtree approach in volcano and manhattan plot
+- In the SC app, dataset defined sample images now appear as an optional plot. The plot button will either appear as 'Image' or the dataset defined label.
+- The functionality of the 'Differential expression' plot button is restored. The recent changes to the server response prevented the dropdown from rendering. New methods re-enabled the dropdown.
+- The differential expression option is re-enabled in the GeneExpInput plot. A new tab for gene set expression is available as well. Selecting a gene set launches the summary chart.
+- AI chat bot recreated as a mass navigation tab. This ensures the chat is always open to the user, if desired, and in a fixed location on the page.
+
+
+## 2.185.0
+
+Features:
+- Updated volcano plot to use a serverside rendered png + top interactive points approach
+- Added cache id for GSEA analysis. Allows it to work with new DA Volcano
+- Several updates for the SC app: The flyout menu for the Gene expression button is replaced with the transient GeneExpInput plot. The blue plot buttons now correspond to plots with available data. Users may group plots by samples, plot type, or not at all. New units are available for the PlotButtons and SectionRenderer.
+
+Fixes:
+- Adjusted the caching to allow re-run if missing cache hit and to have a deterministic cache name based on parameters
+
 
 ## 2.184.0
 

@@ -2,6 +2,7 @@ import * as common from '#shared/common.js'
 import { joinUrl, memFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
+import { renderVolcano } from './renderVolcano.ts'
 // import ky from 'ky'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
@@ -2234,12 +2235,18 @@ export function gdc_validate_query_singleCell_DEgenes(ds) {
 	q{} TermdbSinglecellDEgenesRequest
 	*/
 	ds.queries.singleCell.DEgenes.get = async q => {
-		const caseuuid = await getCaseidByFileid(q, q.sample, ds)
+		const fileId = typeof q.sample === 'string' ? q.sample : q.sample.eID
+		const caseuuid = await getCaseidByFileid(q, fileId, ds)
 
-		const degFileId = await getSinglecellDEfile(caseuuid, q, ds)
+		const degFileId = await getSinglecellDEfile(caseuuid, q, fileId, ds)
 
 		const genes = await getSinglecellDEgenes(q, degFileId, ds)
-		return { data: genes }
+		// Non-volcano callers (e.g. the singleCellPlot DE table) iterate data as
+		// a plain gene array. Only wrap in VolcanoData when the client actually
+		// asked for a server-rendered volcano.
+		if (!q.volcanoRender) return { data: genes }
+		const rendered = await renderVolcano(genes, q.volcanoRender)
+		return { data: rendered }
 	}
 }
 
@@ -2261,8 +2268,8 @@ async function getCaseidByFileid(q, fileId, ds) {
 	return re.data?.cases[0].case_id
 }
 
-async function getSinglecellDEfile(caseuuid, q, ds) {
-	// find the seurat.deg.tsv file for the requested experient, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use q.sample which is seurat.analysis.tsv file id. find the matching deg.tsv
+async function getSinglecellDEfile(caseuuid, q, fileId, ds) {
+	// find the seurat.deg.tsv file for the requested experiment, and return file id. many cases have multiple sc experiments. to identify the correct experiment, use fileId which is seurat.analysis.tsv file id. find the matching deg.tsv
 
 	const body = {
 		filters: {
@@ -2318,7 +2325,7 @@ async function getSinglecellDEfile(caseuuid, q, ds) {
 		if (!Array.isArray(hit.downstream_analyses[0]?.output_files)) throw 'downstream_analyses[0].output_files[] missing'
 
 		// from output files of this experiment, find if the output_files[] array contains the requested analysis.tsv file
-		if (hit.downstream_analyses[0].output_files.find(f => f.file_id == q.sample)) {
+		if (hit.downstream_analyses[0].output_files.find(f => f.file_id == fileId)) {
 			// now find the deg.tsv file from output_files[] array
 			const f = hit.downstream_analyses[0].output_files.find(f => f.file_name == 'seurat.deg.tsv')
 			if (!f) throw 'a MEX downstream files has analysis.tsv but no deg.tsv'
@@ -2332,7 +2339,7 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 	// with seurat.deg.tsv file id, read file content and find DE genes belonging to given cluster
 	const { host, headers } = ds.getHostHeaders(q, { accept: undefined })
 	const re = await xfetch(joinUrl(host.rest, 'data', degFileId), { headers, timeout: false })
-	const lines = re.trim().split('\n')
+	const lines = re.trim().replace(/\r/g, '').split('\n')
 	/*
         this tsv file first line is header:
         gene    gene_names      cluster avg_log2FC      p_val   p_val_adj       prop_in_cluster prop_out_cluster        avg_logFC
@@ -2363,6 +2370,13 @@ async function getSinglecellDEgenes(q, degFileId, ds) {
 export function gdc_validate_query_singleCell_data(ds, genome) {
 	// q{} TermdbSinglecellDataRequest
 	ds.queries.singleCell.data.get = async q => {
+		if (q.checkPlotAvailability) {
+			// hardcoded to assume every sample has all plots
+			return {
+				plots: q.plots.map(p => ({ expCells: [], noExpCells: [], name: p }))
+			}
+		}
+
 		const { host, headers } = ds.getHostHeaders(q)
 		const sample = q.sample || q.singleCellPlot.sample
 		// do not use headers here that has accept: 'application/json'

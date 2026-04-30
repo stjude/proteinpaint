@@ -1,17 +1,20 @@
 import type { AppApi } from '#rx'
+import type { SCModel } from '../model/SCModel.ts'
+import type { SCViewer } from '../SC.ts'
+import type { SCDom } from '../SCTypes'
 
 /** Handles the interactivity from the view */
 export class SCInteractions {
 	app: AppApi
-	dom: any //May not be necessary
+	dom: SCDom
 	id: string
-	getState: () => any
+	model: SCModel
 
-	constructor(app: AppApi, dom: any, id: string, getState: () => any) {
-		this.app = app
-		this.dom = dom
-		this.id = id
-		this.getState = getState()
+	constructor(sc: SCViewer) {
+		this.app = sc.app
+		this.dom = sc.dom
+		this.id = sc.id
+		this.model = sc.model
 	}
 
 	/** Used in the gene search menu shown on click from a plot btn
@@ -22,9 +25,7 @@ export class SCInteractions {
 	 * SC.main() initializes the subplots as components in chartsDiv
 	 */
 	async createSubplot(config) {
-		const item = this.app.getState().plots.find(p => p.id === this.id)?.settings.sc.item
-		//'item' isFrozen. Pass the clone to avoid downstream issues.
-		const c = Object.assign({}, config, { parentId: this.id, scItem: structuredClone(item) })
+		const c = Object.assign({}, config, { parentId: this.id })
 		await this.app.dispatch({
 			type: 'plot_create',
 			parentId: this.id,
@@ -39,6 +40,10 @@ export class SCInteractions {
 			id: this.id,
 			config: { settings: { sc: { item } } }
 		})
+	}
+
+	async getDropDownOptions(plot): Promise<string[] | undefined> {
+		return this.model.getCategories(plot)
 	}
 
 	toggleLoading(on: boolean) {

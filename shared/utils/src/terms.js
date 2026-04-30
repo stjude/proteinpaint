@@ -62,6 +62,7 @@ const dtTermTypes = new Set(dtTerms.map(t => t.type))
 for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType
 }
+const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
 const TermTypes2Dt = {
 	[GENE_EXPRESSION]: dtgeneexpression,
 	[SSGSEA]: dtssgsea,
@@ -234,6 +235,7 @@ const typeMap = {
 	snplocus: 'SNP Locus',
 	snp: 'SNP',
 	snplst: 'SNP List',
+	numericDictTerm: 'Numeric Dictionary Term',
 	termCollection: 'Term Collection'
 }
 function termType2label(type) {
@@ -285,6 +287,7 @@ export {
 	ISOFORM_EXPRESSION,
 	METABOLITE_INTENSITY,
 	MULTIVALUE,
+	NUMERIC_DICTIONARY_TERM,
 	NumericModes,
 	PROTEOME_ABUNDANCE,
 	ROOT_SAMPLE_TYPE,

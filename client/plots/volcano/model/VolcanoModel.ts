@@ -1,7 +1,8 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
-import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest } from '#types'
+import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { getGroupColors, toHex } from '../colors'
 
 export class VolcanoModel {
 	app: MassAppApi
@@ -21,7 +22,12 @@ export class VolcanoModel {
 
 		if (this.termType === GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			return await dofetch3('termdb/DE', { body })
+			const response = await dofetch3('termdb/DE', { body })
+			// Surface the DE request so downstream plots (GSEA) can snapshot
+			// it and later ask the server to recompute the DA cache if the
+			// file is missing on a peer node or after TTL eviction.
+			if (response && !response.error) response.daRequest = body
+			return response
 		}
 		if (this.termType === DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
@@ -48,7 +54,8 @@ export class VolcanoModel {
 			samplelst: this.config.samplelst,
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
-			cpm_cutoff: this.settings.cpmCutoff
+			cpm_cutoff: this.settings.cpmCutoff,
+			volcanoRender: this.getVolcanoRender()
 		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
 
 		this.addConfounderTw(body)
@@ -66,12 +73,41 @@ export class VolcanoModel {
 			samplelst: this.config.samplelst,
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
-			min_samples_per_group: this.settings.minSamplesPerGroup
+			min_samples_per_group: this.settings.minSamplesPerGroup,
+			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 
 		this.addConfounderTw(body)
 
 		return body
+	}
+
+	/** Parameters telling the server to run the `volcano` Rust renderer and return a
+	 * volcano PNG + top-significant rows instead of the full dot list. */
+	getVolcanoRender(): VolcanoRenderRequest {
+		// Match the client overlay's radius (see VolcanoViewModel.setPointData)
+		// so the PNG rings and the interactive overlay rings line up; otherwise
+		// a smaller PNG ring sits inside the larger overlay ring and looks like
+		// a stray dot at the center.
+		const dotRadius = Math.max(this.settings.width, this.settings.height) / 80
+		// Resolve case/control colors via the shared helper (see colors.ts) so the
+		// PNG and the SVG overlay paint each side with the exact same hex string.
+		const { caseColor, controlColor } = getGroupColors(this.config)
+		return {
+			significanceThresholds: {
+				pValueCutoff: this.settings.pValue,
+				pValueType: this.settings.pValueType,
+				foldChangeCutoff: this.settings.foldChangeCutoff
+			},
+			pixelWidth: this.settings.width,
+			pixelHeight: this.settings.height,
+			colorSignificant: toHex(this.settings.defaultSignColor, 'red'),
+			colorSignificantUp: caseColor,
+			colorSignificantDown: controlColor,
+			colorNonsignificant: toHex(this.settings.defaultNonSignColor, 'black'),
+			dotRadius,
+			maxInteractiveDots: this.settings.maxInteractiveDots
+		}
 	}
 
 	//This is a workaround until the server can accept an arr of confounder tws
@@ -90,7 +126,8 @@ export class VolcanoModel {
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			sample: this.config.sample,
 			termId: this.config.termId,
-			categoryName: this.config.categoryName
+			categoryName: this.config.categoryName,
+			volcanoRender: this.getVolcanoRender()
 		}
 		return body
 	}

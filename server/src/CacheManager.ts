@@ -71,8 +71,11 @@ const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
 	interval: minute,
 	subdirs: {
+		// TODO: What is generating .pkl files?
 		gsea: {
 			...subdirOptsDefaults,
+			maxAge: day * 60,
+			skipMs: halfDay,
 			fileExtensions: new Set(['.pkl'])
 		},
 		massSession: {
@@ -86,6 +89,11 @@ const defaultOpts = {
 			skipMs: halfDay // run every 12 hours
 		},
 		grin2: {
+			...subdirOptsDefaults,
+			maxAge: day * 60,
+			skipMs: halfDay
+		},
+		daAnalysis: {
 			...subdirOptsDefaults,
 			maxAge: day * 60,
 			skipMs: halfDay

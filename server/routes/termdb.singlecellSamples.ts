@@ -7,7 +7,6 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import type {
 	SingleCellQuery,
-	SingleCellSamples,
 	SingleCellDataNative,
 	SingleCellGeneExpressionNative,
 	SingleCellSample,
@@ -74,19 +73,21 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 
 	// validate required q.samples{}
 	if (typeof q.samples != 'object') throw new Error('singleCell.samples{} not object')
+	if (typeof q.data != 'object') throw new Error('singleCell.data{} not object')
+
 	if (typeof q.samples.get == 'function') {
 		// ds-supplied
 	} else {
-		// add q.samples.get() for native ds
-		await validateSamplesNative(q.samples, q.data as SingleCellDataNative, ds)
+		await validateSamples(q, ds)
+		// added q.samples.get()
 	}
 
 	// validate required q.data{}
-	if (typeof q.data != 'object') throw new Error('singleCell.data{} not object')
 	if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome) // todo change to ds-supplied q.data.get()
 	} else if (q.data.src == 'native') {
 		validateDataNative(q.data as SingleCellDataNative, ds)
+		// added q.data.get()
 	} else {
 		throw new Error('unknown singleCell.data.src')
 	}
@@ -123,12 +124,13 @@ function validateImages(images) {
  * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
  * Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
  * defined in the ds file, for use in vocabApi methods later.
- * @param S ds.queries.singleCell.samples{}
- * @param D ds.queries.singleCell.data{}
+ * @param q query
  * @param ds Entire dataset configuration from the ds file
  */
-async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNative, ds: any) {
+async function validateSamples(q: SingleCellQuery, ds: any) {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
+	const S: SingleCellQuery['samples'] = q.samples,
+		D = q.data as SingleCellDataNative
 
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
@@ -151,6 +153,8 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
+	if (samples.size == 0) throw new Error('no scrna samples found')
+	console.log(samples.size, 'singleCell samples loaded from ' + ds.label)
 
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
@@ -167,13 +171,21 @@ async function validateSamplesNative(S: SingleCellSamples, D: SingleCellDataNati
 		}
 	}
 
-	// FIXME must get q.filter and apply filter to list!!
 	S.get = () => {
-		return { samples: [...samples.values()] as SingleCellSample[] }
+		// FIXME must get q.filter and apply filter to list!!
+		const re: any = { samples: [...samples.values()] as SingleCellSample[] }
+		if (q.metaResults) {
+			// meta analysis results exist. pass it along with samples
+			re.metaResults = q.metaResults.map(i => {
+				return { name: i.name }
+			})
+		}
+		return re
 	}
 }
 
-/** Adds ds.queries.singleCell.data.get() on init()
+/** Adds ds.queries.singleCell.data.get() on init().
+ * Runs from termdb.singleCellData route when q.data.src is 'native'.
  * @param D ds.queries.singleCell.data{}
  * @param ds Entire dataset configuration from the ds file
  */
@@ -189,6 +201,34 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	const file2Lines = {} // key: file path, value: string[]
 
 	D.get = async (q: TermdbSingleCellDataRequest) => {
+		const sampleId = q.sample?.eID || q.sample?.sID
+		/** Only return plots with available data files. */
+		if (q.checkPlotAvailability) {
+			const plots: any = []
+			for (const plot of D.plots) {
+				if (!q.plots.includes(plot.name)) continue
+				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
+				try {
+					await file_is_readable(tsvfile)
+					// file exists for this sample
+					plots.push({ name: plot.name })
+				} catch (_) {
+					// file doesn't exist for this sample. this is allowed
+				}
+			}
+			const imgs = ds.queries.singleCell?.images
+			if (imgs) {
+				const imgFile = path.join(serverconfig.tpmasterdir, imgs.folder, sampleId, imgs.fileName)
+				try {
+					await file_is_readable(imgFile)
+					plots.push({ name: imgs?.label || 'Image' })
+				} catch (_) {
+					// image doesn't exist for this sample.
+				}
+			}
+			return { plots }
+		}
+
 		// if sample is int, may convert to string
 		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
@@ -200,11 +240,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
-			const tsvfile = path.join(
-				serverconfig.tpmasterdir,
-				plot.folder,
-				(q.sample?.eID || q.sample?.sID) + plot.fileSuffix
-			)
+			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
 			if (!file2Lines[tsvfile]) {
 				await file_is_readable(tsvfile)
 				const text = await read_file(tsvfile)

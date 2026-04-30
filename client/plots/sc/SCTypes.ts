@@ -1,11 +1,12 @@
 import type { Elem, Div } from '../../types/d3'
 import type { TableRow, TableColumn } from '#dom'
+import type { Settings } from './settings/Settings'
 
 /** WIP config for the sc app */
 export type SCConfig = {
 	chartType: 'sc'
 	/** Common settings and settings for each child component/plot */
-	settings: SCSettings
+	settings: Settings
 }
 
 /** Opts defined in getPlotConfig() */
@@ -21,8 +22,9 @@ export type SCDom = {
 	div: Div
 	/** When visible, shows a loading spinner */
 	loading: Div
-	/** Holder for the 'select' btn at the top page */
-	selectBtnDiv: Div
+	/** Holder for the manually created controls at the top page
+	 * This is **not** the same as mass controls.*/
+	controlsDiv: Div
 	/** Holder for the sample table */
 	tableDiv: Div
 	/** Holder for the dynamically generated plot buttons for each sample */
@@ -33,25 +35,8 @@ export type SCDom = {
 	header?: Elem
 }
 
-export type Sections = {
-	[key: string]: { sectionWrapper: Div; title: any; subplots: any; sandboxes: { [key: string]: any } }
-}
-
-export type SCSettings = {
-	sc: {
-		columns: {
-			/** Defined column name for 'sample' column*/
-			sample: string
-		}
-		/** Active item choosen by the user */
-		item: any
-	}
-	hierCluster: {
-		unit: string
-		yDendrogramHeight: number
-		clusterSamples: boolean
-	}
-}
+/** Standardized sample identifier used throughout the SC app */
+export type SCSample = { sID: string; eID: string }
 
 /** State retrieved from this.getState()
  * specific to SC chartType. ** NOT ** reflective

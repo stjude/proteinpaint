@@ -644,7 +644,7 @@ function setRenderers(self) {
 				.append('div')
 				.attr('class', 'pp-survival-chartLegends')
 				.style('vertical-align', 'top')
-				.style('margin', '10px 10px 10px 80px')
+				.style('margin', '10px 10px 10px 10px')
 				.style('display', 'none')
 
 			// p-values legend
@@ -729,12 +729,12 @@ function setRenderers(self) {
 			.attr('width', s.svgw + chart.atRiskLabelWidth)
 			.attr('height', s.svgh + extraHeight)
 			.style('overflow', 'visible')
-			.style('padding-left', '20px')
+			.style('padding-left', '5px')
 
 		/* eslint-disable */
 		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
 		/* eslint-enable */
-		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 70 //adding 70 avoids clipping of the svg when downloading
+		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 10 //adding 10 avoids clipping of the svg when downloading
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 
 		const serieses = seriesesG

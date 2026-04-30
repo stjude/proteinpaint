@@ -15,9 +15,8 @@ export class SCModel {
 		this.state = this.app.getState()
 	}
 
-	/********** Single Cell SAMPLES for rendering the table *********/
-	//The table data does not update
-	//Should only need to init once
+	/********** Single Cell SAMPLES for rendering the table ********
+	 * The table data does not update. Should only need to run once. */
 	async getSampleData() {
 		const body = this.getSampleRequestOpts()
 		return await dofetch3('termdb/singlecellSamples', { body })
@@ -54,14 +53,19 @@ export class SCModel {
 		return colsCopy
 	}
 
-	/********** Single Cell DATA for rendering plots *********/
+	/********** Single Cell DATA for rendering plots ********
+	 * This is for the plot buttons. Returns an array plots with found files or
+	 * available data. */
 	async getData() {
 		const body = this.getDataRequestOpts()
 		if (!body) return
 		return await dofetch3('termdb/singlecellData', { body })
 	}
 
-	getDataRequestOpts() {
+	/** May provide active plots to the request and return plot data when
+	 * checkPlotAvailability is false. When checkPlotAvailability is true,
+	 * only returns which plots are available but not the actual data. */
+	getDataRequestOpts(_plots: any[] = [], checkPlotAvailability = true) {
 		const state = this.app.getState()
 		const singleCellTermdbConfig = state.termdbConfig?.queries?.singleCell
 		if (!singleCellTermdbConfig?.data) throw new Error('No singleCell.data defined in termdbConfig.queries')
@@ -69,17 +73,48 @@ export class SCModel {
 		const config = state.plots.find((p: any) => p.id === this.id)
 		if (!config.settings.sc.item) return
 
-		//TODO: May need to only use active plots for this sample
-		const plots = singleCellTermdbConfig.data.plots.map(p => p.name)
+		const plots = _plots?.length ? _plots : singleCellTermdbConfig.data.plots.map(p => p.name)
 
 		return {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
+			// if true, only return available plot names, but not actual plot data
+			checkPlotAvailability,
 			plots,
 			sample: {
-				eID: config.settings.sc.item.experiment,
-				sID: config.settings.sc.item.sample
+				eID: config.settings.sc.item.eID,
+				sID: config.settings.sc.item.sID
 			}
 		}
+	}
+
+	/** Essentially for the GDC. Maybe applied to other ds in the future. */
+	async getCategories(_plots: any[]): Promise<string[] | undefined> {
+		const body = this.getDataRequestOpts(_plots, false)
+		if (!body) return
+
+		let res
+		try {
+			res = await dofetch3('termdb/singlecellData', { body })
+		} catch (e: any) {
+			if (e instanceof Error) console.error(`${e.message || e}`)
+		}
+
+		return this.formatCategories(res)
+	}
+
+	formatCategories(res: any): string[] {
+		const plot = structuredClone(res.plots[0])
+
+		plot.cells = [...plot.noExpCells, ...plot.expCells]
+		const clusters: Set<string> = new Set(plot.cells.map(c => c.category))
+
+		/** Clean up list into an descending array */
+		const sortedClusters: string[] = Array.from(clusters).sort((a: any, b: any) => {
+			const num1 = parseInt(a.split(' ')[1])
+			const num2 = parseInt(b.split(' ')[1])
+			return num1 - num2
+		})
+		return sortedClusters
 	}
 }

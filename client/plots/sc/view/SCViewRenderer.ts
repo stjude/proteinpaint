@@ -1,33 +1,38 @@
-import type { SCDom } from '../SCTypes'
+import type { SCDom, SCTableData } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
-import type { TableData } from '../viewModel/SCViewModel'
-import { SectionRender } from './SectionRender'
+import { SectionRenderer } from './SectionRenderer'
 import type { SCViewer } from '../SC.ts'
+import { GroupByOptions, type SCSettings, type Settings } from '../settings/Settings'
+import { make_radios } from '#dom'
+import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
+import type { PlotBase } from '#plots/PlotBase.ts'
 
+/** Manages the initial rendering of the sample table and the dynamic
+ * rendering of the plot buttons and sections based on the selected sample and plots.
+ * .update() from sc.main() updates the plot buttons and sections. */
 export class SCViewRenderer {
 	dom: SCDom
 	interactions: SCInteractions
 	plotBtns: PlotButtons
 	//On load, show table
 	//Eventually maybe an app dispatch and not a flag
-	static inUse = true
-	sectionRender: SectionRender
+	static inUse: boolean = true
+	sectionRenderer: SectionRenderer
 	sc: SCViewer
-	// sections: Sections
 
-	constructor(sc: SCViewer) {
+	constructor(sc: SCViewer, state: any) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
-		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv)
-		// this.sections = {}
-		this.sectionRender = new SectionRender(this.dom.sectionsDiv)
+		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv, state)
+		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, state.config.settings.sc.groupBy)
 	}
 
-	render(tableData: TableData) {
+	render(tableData: SCTableData, settings: SCSettings) {
 		this.renderSelectBtn()
+		this.renderGroupByOptions(settings)
 		new SampleTableRenderer(this.dom, this.interactions, tableData)
 		this.dom.plotsBtnsDiv.style('display', 'none')
 	}
@@ -35,11 +40,12 @@ export class SCViewRenderer {
 	/** Renders the select btn at the top of the page that
 	 * show/hides the item table and plot buttons */
 	renderSelectBtn() {
-		this.dom.selectBtnDiv.style('padding', '10px')
+		this.dom.controlsDiv.style('padding', '10px')
 
-		const btn = this.dom.selectBtnDiv
+		const btn = this.dom.controlsDiv
 			.append('button')
 			.attr('data-testid', 'sjpp-sc-item-table-select-btn')
+			.attr('title', 'Show/hide sample table and plot buttons')
 			.style('border-radius', '20px')
 			.style('padding', '5px 10px')
 			.style('background-color', 'transparent')
@@ -56,8 +62,37 @@ export class SCViewRenderer {
 		})
 	}
 
-	async update(settings, data, subplots) {
+	renderGroupByOptions(settings: SCSettings) {
+		this.dom.controlsDiv
+			.append('span')
+			.style('padding', '3px 0px 3px 20px')
+			.style('opacity', 0.7)
+			.text('Group plots by:')
+		const optionsDiv = this.dom.controlsDiv.append('span').style('display', 'inline-block')
+		const options = GroupByOptions.map(option => {
+			return {
+				label: `${option.charAt(0).toUpperCase() + option.slice(1)}`,
+				value: option,
+				checked: settings.groupBy === option
+			}
+		})
+		make_radios({
+			holder: optionsDiv,
+			styles: { display: 'inline-block' },
+			options,
+			callback: async value => {
+				await this.sc.app.dispatch({
+					type: 'plot_edit',
+					id: this.sc.id,
+					config: { settings: { sc: { ...settings, groupBy: value } } }
+				})
+			}
+		})
+	}
+
+	async update(settings: Settings, data: SingleCellDataNative | SingleCellDataGdc, subplots: PlotBase[]) {
 		this.plotBtns.update(settings, data)
-		await this.sectionRender.update(this.sc, subplots)
+		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
+		await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
 	}
 }

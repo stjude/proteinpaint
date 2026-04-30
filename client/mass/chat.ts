@@ -1,48 +1,38 @@
-import { getCompInit, copyMerge, type RxComponent } from '#rx'
-import { PlotBase } from '../PlotBase'
-import type { BasePlotConfig, MassState } from '#mass/types/mass'
+import { getCompInit, type RxComponent } from '#rx'
+import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import { getId } from '#mass/nav'
 import type { ChatRequest, ChatResponse } from '#types'
 
-class Chat extends PlotBase implements RxComponent {
+class MassAiChatBot implements RxComponent {
 	static type = 'chat'
-	readonly type = 'chat'
-	components: { controls: any }
 
-	constructor(opts: any, api) {
-		super(opts, api)
+	type: string
+	opts: any
+	app: MassAppApi
+	dom!: any
+	state: any
+	id!: string
+
+	constructor(opts: any) {
+		this.type = MassAiChatBot.type
 		this.opts = opts
-		this.components = {
-			controls: {}
-		}
-		this.initUi(opts)
+		this.app = opts.app
 	}
 
-	getState(appState: MassState) {
-		const config = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
-		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
-		}
-		return {}
+	async init() {
+		this.initDom()
 	}
 
-	//async init(appState: MassState) {}
-
-	async main() {}
-
-	initUi(opts) {
-		const holder = opts.holder.classed('sjpp-chat-main', true)
-		const div = holder.append('div').style('padding', '5px').style('display', 'inline-block')
+	initDom() {
 		this.dom = {
 			tip: new Menu({ padding: '' }),
-			div,
+			div: this.opts.subheader,
 			// error div on top
-			error: div.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75),
+			error: this.opts.subheader.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75),
 			// div with bubbles to show chat history
-			bubbleDiv: div
+			bubbleDiv: this.opts.subheader
 				.append('div')
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
@@ -50,11 +40,8 @@ class Chat extends PlotBase implements RxComponent {
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
-		if (opts.header) {
-			this.dom.header = opts.header.text('CHAT').style('opacity', 0.7)
-		}
-		// show input box at bottom
-		div
+
+		this.dom.div
 			.append('input')
 			.style('margin', '15px')
 			.style('padding', '17px')
@@ -79,7 +66,6 @@ class Chat extends PlotBase implements RxComponent {
 				try {
 					const data = await dofetch3('termdb/chat3', { body })
 					if (data.error) throw data.error
-					console.log(data)
 
 					const result: ChatResponse = data
 					if (result.type == 'text') {
@@ -87,18 +73,15 @@ class Chat extends PlotBase implements RxComponent {
 					} else if (result.type == 'html') {
 						serverBubble.html(result.html)
 					} else if (result.type == 'plot') {
-						const newPlotId = getId()
 						this.app.dispatch({
 							type: 'plot_create',
-							id: newPlotId,
 							config: result.plot
 						})
 						serverBubble.html('Please refer to the plot generated above')
 					}
-					/* may switch by data.type
-type=chat: server returns a chat msg
-type=plot: server returns a plot obj
-*/
+					/** may switch by data.type
+					 * type=chat: server returns a chat msg
+					 * type=plot: server returns a plot obj */
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
 					serverBubble.html(`Error: ${e.message || e}`)
@@ -107,15 +90,14 @@ type=plot: server returns a plot obj
 			.node()
 			.focus()
 	}
-	addBubble(arg: { msg: string; me?: number }) {
-		/* 
-{
-msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
-me: if 1, is me; otherwise is ai
-}
 
-return the created bubble and allow to be modified
-*/
+	addBubble(arg: { msg: string; me?: number }) {
+		/** {
+            msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
+            me: if 1, is me; otherwise is ai
+        }
+            return the created bubble and allow to be modified
+        */
 		const bubble = this.dom.bubbleDiv
 			.append('div')
 			.style('padding', '10px')
@@ -126,19 +108,11 @@ return the created bubble and allow to be modified
 		n.scrollTop = n.scrollHeight
 		return bubble
 	}
-}
 
-export const chatInit = getCompInit(Chat)
-export const componentInit = chatInit
-
-export async function getPlotConfig(opts: any) {
-	const config = {
-		chartType: 'chat'
+	main() {
+		/** Comment because main() is required for RxComponent
+		 * but chat does not have any main logic for now. May add in the future.*/
 	}
-	return copyMerge(config, opts)
 }
 
-export function makeChartBtnMenu(_holder, chartsInstance) {
-	const chart = { config: { chartType: 'chat' } }
-	chartsInstance.prepPlot(chart)
-}
+export const chatInit = getCompInit(MassAiChatBot)

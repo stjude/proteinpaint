@@ -1,6 +1,6 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, typeGroup } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, SSGSEA, typeGroup } from '#shared/terms.js'
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
 import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs } from '#dom'
@@ -13,8 +13,8 @@ type GeneExpInputOpts = {
 	 * Normally this is optional but there's no reason to launch this plot
 	 * sans sandbox. */
 	header: any
-	/** Override default text for sanbox header */
-	headerTextOverride?: string
+	/** Optional text to display in the header before the term type */
+	headerText?: string
 	termProperties?: { [key: string]: any }
 	spawnConfig?: { [key: string]: any }
 }
@@ -82,7 +82,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 
 		this.tabs = [
 			{
-				label: 'Single gene summary',
+				label: 'One gene',
 				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderGeneSelect(tab)
@@ -90,7 +90,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			},
 			{
-				label: 'Two gene comparison',
+				label: 'Two genes',
 				isVisible: () => true,
 				callback: (event, tab) => {
 					this.renderTwoGeneSelect(tab)
@@ -98,7 +98,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				}
 			},
 			{
-				label: 'Multiple genes for hierarchical clustering',
+				label: 'Hierarchical clustering',
 				isVisible: () => chartTypes.has('matrix') && this.termType === GENE_EXPRESSION, // hierarchical clustering doesn't support scge
 				callback: (event, tab) => {
 					this.renderGeneMultiSelect(tab)
@@ -109,19 +109,29 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 				label: `Differential ${typeGroup[this.termType].toLowerCase()} analysis`,
 				//Only enabling for gene expression for now
 				chartType: 'DEinput',
-				isVisible: () => false,
-				// TODO: Sorting out server response error in another PR.
-				// Will enable when fixed. For now hiding from UI to avoid confusion.
-				// isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION,
+				isVisible: () => chartTypes.has('DA') && this.termType === GENE_EXPRESSION,
 				callback: async (event, tab) => {
 					await this.app.dispatch({
 						type: 'plot_create',
 						parentId: this.id,
 						config: {
 							chartType: 'DEinput',
-							parentId: this.id
+							parentId: this.id,
+							/** ' ' overrides the default 'hide_search' mode in DEInput.
+							 * 'hide_search' by default expands all terms. */
+							header_mode: ' '
 						}
 					})
+					delete tab.callback
+				}
+			},
+			{
+				label: typeGroup[SSGSEA],
+				isVisible: () => {
+					return this.termType === GENE_EXPRESSION && state.termdbConfig?.allowedTermTypes?.includes(SSGSEA)
+				},
+				callback: async (event, tab) => {
+					await this.renderSSGSEA(tab)
 					delete tab.callback
 				}
 			}
@@ -140,10 +150,21 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	}
 
 	initDom() {
-		const headerText = this.opts?.headerTextOverride || `${typeGroup[this.termType]}`
-
+		const headerText = this.opts.headerText ? `${this.opts.headerText} ` : ''
 		const dom: { [index: string]: any } = {
-			header: this.opts.header.text(headerText).attr('data-testid', 'sjpp-gene-exp-input-header'),
+			header: {
+				title: this.opts.header
+					.append('span')
+					.style('padding-right', '5px')
+					.text(headerText)
+					.attr('data-testid', 'sjpp-gene-exp-input-headerText'),
+				plot: this.opts.header
+					.append('span')
+					.text(typeGroup[this.termType].toUpperCase())
+					.style('font-size', '0.7em')
+					.style('opacity', '0.6')
+					.attr('data-testid', 'sjpp-gene-exp-input-termType')
+			},
 			tabs: this.opts.holder
 				.append('div')
 				.style('margin', '10px')
@@ -197,7 +218,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		const gene2row = holder.append('div').style('padding', '5px').style('display', 'none')
 		const submitButton = holder.append('button').attr('type', 'button').attr('disabled', true)
 
-		gene1row.append('span').text('Select 1st gene:')
+		gene1row.append('span').text('Select the first gene:')
 		const geneSearch1 = addGeneSearchbox({
 			row: gene1row,
 			genome: this.genome,
@@ -211,7 +232,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			}
 		})
 
-		gene2row.append('span').text('Select 2nd gene:')
+		gene2row.append('span').text('Select the second gene:')
 		const geneSearch2 = addGeneSearchbox({
 			row: gene2row,
 			genome: this.genome,
@@ -302,6 +323,24 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 					dataType: GENE_EXPRESSION
 				})
 
+				await this.dispatchEdits(config)
+			}
+		})
+	}
+
+	async renderSSGSEA(tab) {
+		const holder = tab.contentHolder.style('padding', '10px')
+		const _ = await import('../termdb/handlers/ssGSEA.ts')
+		const searchHandler = new _.SearchHandler()
+		await searchHandler.init({
+			holder,
+			app: this.app,
+			genomeObj: this.genome,
+			callback: async term => {
+				const config = this.makeConfig({
+					chartType: 'summary',
+					term: { term: term }
+				})
 				await this.dispatchEdits(config)
 			}
 		})

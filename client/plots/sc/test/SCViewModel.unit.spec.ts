@@ -21,7 +21,7 @@ import { getMockSCApp, getMockSCConfig } from './getMockSCApp.ts'
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/sc/SCViewModel -***-')
+	test.comment('-***- plots/sc/viewModel/SCViewModel -***-')
 	test.end()
 })
 
@@ -43,7 +43,7 @@ tape('constructor should set selectedRows when item matches a sample', test => {
 	const app = getMockSCApp()
 	const config = getMockSCConfig({
 		settings: {
-			sc: { columns: { sample: 'Sample' }, item: { sample: 'S2' } },
+			sc: { columns: { sample: 'Sample' }, item: { sID: 'S2', eID: '' } },
 			hierCluster: {}
 		}
 	})

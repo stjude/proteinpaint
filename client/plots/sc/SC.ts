@@ -7,9 +7,8 @@ import { SCModel } from './model/SCModel'
 import { SCViewModel } from './viewModel/SCViewModel'
 import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
-import { getDefaultSCAppSettings } from './defaults'
+import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { importPlot } from '#plots/importPlot.js'
-import formatPlotData from './viewModel/plotData.ts'
 
 export class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
@@ -50,7 +49,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 				.style('height', '100%')
 				.style('background-color', 'rgba(255, 255, 255, 0.95)')
 				.style('text-align', 'center'),
-			selectBtnDiv: div.append('div').attr('id', 'sjpp-sc-select-btn'),
+			controlsDiv: div.append('div').attr('id', 'sjpp-sc-controls-btn'),
 			tableDiv: div.append('div').attr('id', 'sjpp-sc-item-table'),
 			plotsBtnsDiv: div.append('div').attr('id', 'sjpp-sc-plot-buttons').style('display', 'none'),
 			sectionsDiv: div.append('div').attr('id', 'sjpp-sc-sections')
@@ -96,13 +95,13 @@ export class SCViewer extends PlotBase implements RxComponent {
 			else if (e.stack) console.log(e.stack)
 			throw new Error(e.message || e)
 		}
-		this.interactions = new SCInteractions(this.app, this.dom, this.id, () => this.getState(this.app.getState()))
+		this.interactions = new SCInteractions(this)
 		this.viewModel = new SCViewModel(this.app, state.config, this.items!, this.itemColumns)
-		this.view = new SCViewRenderer(this)
+		this.view = new SCViewRenderer(this, state)
 
 		/** The item data and table rendering should only occur once
 		 * .update() in main() handles changes to the buttons and plots */
-		this.view.render(this.viewModel.tableData)
+		this.view.render(this.viewModel.tableData, state.config.settings.sc)
 	}
 
 	async main() {
@@ -131,7 +130,6 @@ export class SCViewer extends PlotBase implements RxComponent {
 				else if (e.stack) console.log(e.stack)
 				throw new Error(e.message || e)
 			}
-			data.plots = formatPlotData(data.plots)
 		}
 		await this.view.update(config.settings, data, state.subplots)
 		this.interactions.toggleLoading(false)

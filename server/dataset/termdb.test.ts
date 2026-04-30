@@ -450,7 +450,7 @@ export default function (): Mds3 {
 					src: 'native',
 					plots: [
 						{
-							name: 'scRNA',
+							name: 'UMAP',
 							folder: 'files/hg38/TermdbTest/scrna/umap',
 							fileSuffix: '_umap.txt',
 							colorColumns: [

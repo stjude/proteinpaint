@@ -5,6 +5,7 @@ import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
 import { aboutInit } from './about.ts'
+import { chatInit } from './chat.ts'
 import { dofetch3 } from '#common/dofetch'
 import { Menu, icons as icon_functions } from '#dom'
 import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
@@ -37,6 +38,7 @@ const aboutTab = { top: 'ABOUT', mid: '', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
+const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
 const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 
 export function getId() {
@@ -121,6 +123,10 @@ class TdbNav {
 					instanceNum: this.instanceNum,
 					aboutOverrides: appState?.termdbConfig?.massNav?.tabs?.about || null,
 					selectCohort: appState?.termdbConfig?.selectCohort || null
+				}),
+				chat: chatInit({
+					app: this.app,
+					subheader: this.dom.subheader.chat
 				})
 			})
 			this.mayShowMessage_sessionDaysLeft()
@@ -308,6 +314,10 @@ function setRenderers(self) {
 			filter: self.dom.subheaderDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-mass-nav-subheader-filter')
+				.style('display', 'none'),
+			chat: self.dom.subheaderDiv
+				.append('div')
+				.attr('data-testid', 'sjpp-mass-nav-subheader-chat')
 				.style('display', 'none')
 			// cart: self.dom.subheaderDiv.append('div').style('display', 'none').html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>'),
 		})
@@ -342,6 +352,13 @@ function setRenderers(self) {
 			// filter tab is not hidden
 			self.tabs.push(filterTab)
 			Object.assign(filterTab, massNav.tabs?.filter)
+		}
+		/** For now, limit to only datasets with chat enabled.
+		 * In the future, may show search instead of chat but use
+		 * the same component.  */
+		if (appState.termdbConfig?.queries?.chat && !massNav.tabs?.chat?.hide) {
+			self.tabs.push(chatTab)
+			Object.assign(chatTab, massNav.tabs?.chat)
 		}
 
 		const table = self.dom.tabDiv

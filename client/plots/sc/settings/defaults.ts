@@ -1,15 +1,16 @@
 import { getGEunit } from '#tw/geneExpression'
-import type { SCSettings } from './SCTypes'
+import type { Settings } from './Settings'
 
 /** Define all subplot settings here */
-export function getDefaultSCAppSettings(overrides = {}, app): SCSettings {
-	const defaults = {
+export function getDefaultSCAppSettings(overrides = {}, app): Settings {
+	const defaults: Settings = {
 		sc: {
 			columns: {
 				// TODO: Implement ds specific column name
 				sample: 'Sample'
 			},
-			item: undefined
+			item: undefined,
+			groupBy: 'sample'
 		},
 		hierCluster: {
 			unit: getGEunit(app.vocabApi),

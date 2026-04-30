@@ -1,23 +1,22 @@
 import type { Div, Elem } from '../../../types/d3'
 import type { SCInteractions } from '../interactions/SCInteractions'
-import { Menu, GeneExpChartMenu } from '#dom'
+import { Menu } from '#dom'
 import { digestMessage } from '#termsetting'
 import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, TermTypeGroups } from '#shared/terms.js'
-import type { SCSettings } from '../SCTypes'
+import type { SCSample } from '../SCTypes'
+import type { Settings } from '../settings/Settings'
 
 /** Rendering for the plot buttons that appear below the item
- * table.
+ * table. Plot buttons are rendered based on the available plots
+ * for the selected sample, and the config defined in
+ * termdbConfig.queries.singleCell.data.plots. Each plot config
+ * in termdbConfig should define a name that matches the plot
+ * names returned from the server, and can optionally define
+ * colorColumns which will be used to apply color to the plot
+ * if those columns are present in the data.
  *
  * Notes:
  *  - The hierarchical clustering limits to the first 100 genes.
- *
- ******* TODOs:
- * - Disable all plot btns until plot loads for performance??
- *
- ******* Hier clustering implenentation TODOs and questions:
- * The matrix ** does not ** properly pull single cell data yet.
- * This implementation works as a placeholder for now.
- * Need to revisit before production.
  * */
 export class PlotButtons {
 	plotBtnsDom: {
@@ -27,13 +26,16 @@ export class PlotButtons {
 		tip: Menu
 	}
 	data?: any
-	item?: { [key: string]: any }
+	item?: SCSample
 	interactions: SCInteractions
 	scTermdbConfig: any
-	settings!: SCSettings
+	settings!: Settings
 	scctTerms?: any[]
+	availablePlots!: Set<string>
 
-	constructor(interactions: SCInteractions, holder: Div) {
+	/** This is the initial state. scctTerms and the termdbConfig are created on
+	 * server init and will not change. */
+	constructor(interactions: SCInteractions, holder: Div, state) {
 		holder.style('padding', '10px')
 		const promptDiv = holder.append('div').style('padding', '10px 0').text('Select data from')
 		this.plotBtnsDom = {
@@ -43,12 +45,11 @@ export class PlotButtons {
 			tip: new Menu({ padding: '' })
 		}
 		this.interactions = interactions
-		const state = this.interactions.getState as any
 		this.scctTerms = state.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
 		this.scTermdbConfig = state.termdbConfig.queries.singleCell
 	}
 
-	update(settings: SCSettings, data) {
+	update(settings: Settings, data) {
 		/** If the user has not selected a item yet but clicks
 		 * the select item/plots btn above the table, the prompt appears
 		 * unnecessarily */
@@ -56,9 +57,11 @@ export class PlotButtons {
 		this.plotBtnsDom.promptDiv.style('display', !item ? 'none' : 'block')
 		if (!item) return
 		if (data != null && data.plots) this.data = data
+		//Show buttons for plots with found data files (see note above).
+		this.availablePlots = new Set(this.data?.plots?.map((p: any) => p.name))
 		this.settings = settings
 		this.item = item
-		const name = item.sample // add ds specific keys/logic here
+		const name = item.sID
 		this.plotBtnsDom.selectPrompt.text(` ${name}:`)
 		this.renderChartBtns()
 	}
@@ -105,24 +108,26 @@ export class PlotButtons {
 		for (const plot of this.scTermdbConfig?.data?.plots || []) {
 			btns.push({
 				label: plot.name,
-				isVisible: () => true,
+				isVisible: () => this.availablePlots.has(plot.name),
 				getPlotConfig: async () => {
 					return await this.getSingleCellConfig(plot.name)
 				}
 			})
 		}
+
 		btns.push(
 			{
 				label: 'Summary',
 				isVisible: () => true,
 				getPlotConfig: () => {
-					const sample = this.makeSampleObj()
+					const sample = this.item!
 					return {
 						chartType: 'dictionary',
+						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
 							hidePlotFilter: true,
-							headerText: `Sample: ${this.item!.sample}`,
+							headerText: `Sample: ${this.item!.sID}`,
 							sample
 						},
 						tree: {
@@ -139,21 +144,50 @@ export class PlotButtons {
 			},
 			{
 				label: 'Gene expression',
-				isVisible: () => this.scTermdbConfig.geneExpression,
-				open: this.geneExpMenu
+				isVisible: () => this.scTermdbConfig?.geneExpression,
+				getPlotConfig: () => {
+					const sample = this.item!
+					const headerText = `Sample: ${this.item!.sID}`
+					return {
+						chartType: 'GeneExpInput',
+						termType: SINGLECELL_GENE_EXPRESSION,
+						headerText,
+						termProperties: { sample },
+						sample,
+						spawnConfig: {
+							parentId: this.interactions.id,
+							hidePlotFilter: true,
+							headerText
+						}
+					}
+				}
 			},
 			{
 				label: 'Differential expression',
-				isVisible: () => this.scTermdbConfig.DEgenes,
+				isVisible: () => this.scTermdbConfig?.DEgenes,
 				open: this.termDropdownMenu,
 				getPlotConfig: value => {
 					return {
 						chartType: 'differentialAnalysis',
 						termType: SINGLECELL_CELLTYPE,
 						categoryName: `${value}`,
-						headerText: `Sample: ${this.item!.sample} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
+						headerText: `Sample: ${this.item!.sID} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
 						termId: this.scTermdbConfig.DEgenes.termId,
-						sample: this.item!.experiment || this.item!.sample
+						sample: this.item!
+					}
+				}
+			},
+			{
+				label: this.scTermdbConfig?.images?.label || 'Image',
+				isVisible: () =>
+					this.scTermdbConfig?.images && this.availablePlots.has(this.scTermdbConfig.images.label || 'Image'),
+				getPlotConfig: () => {
+					return {
+						chartType: 'imagePlot',
+						sample: this.item!,
+						imgDir: this.scTermdbConfig?.images,
+						headerText: `Sample: ${this.item!.sID}`,
+						settings: { imagePlot: { width: '', height: 400 } }
 					}
 				}
 			}
@@ -162,29 +196,14 @@ export class PlotButtons {
 	}
 
 	//********** Btn Menus **********/
-	//TODO: Change gene expression menu to transient plot
-	geneExpMenu(plot: any, self: PlotButtons) {
-		const opts = {
-			termType: SINGLECELL_GENE_EXPRESSION as string,
-			termProperties: { sample: self.makeSampleObj() },
-			spawnConfig: {
-				hidePlotFilter: true,
-				parentId: self.interactions.id,
-				headerText: `Sample: ${self.item!.sample}`,
-				scItem: self.makeSampleObj(),
-				/** It's not ideal to always pass the hierCluster settings here, but it's required for the current implementation */
-				settings: { hierCluster: self.settings.hierCluster }
-			}
-		}
-		new GeneExpChartMenu(self.interactions.app, self.plotBtnsDom.tip, opts)
-	}
+	async termDropdownMenu(plot: any, self: PlotButtons) {
+		/** An array of plots is required for the server request.
+		 * The data for all scRNA plots is the same. Pick the first one */
+		const _plot = Array.from(self.availablePlots)[0]
+		const options: string[] | undefined = await self.interactions.getDropDownOptions([_plot])
+		if (!options?.length) throw new Error('No options found for this plot. Cannot open dropdown menu.')
 
-	//TODO: Change this to use the term from termdbConfig
-	// and return to getPlotConfig
-	termDropdownMenu(plot: any, self: PlotButtons) {
 		self.plotBtnsDom.tip.clear()
-		const _plot = self.data.plots[0]
-
 		const wrapper = self.plotBtnsDom.tip.d.append('div').style('padding', '10px')
 		wrapper
 			.append('div')
@@ -205,9 +224,9 @@ export class PlotButtons {
 				await self.interactions.createSubplot(config)
 			})
 
-		const regex = new RegExp(_plot.colorBy, 'g')
-		_plot.clusters.unshift(`Select ${self.scTermdbConfig.DEgenes.termId}...`)
-		for (const cluster of _plot.clusters) {
+		const regex = new RegExp(self.scTermdbConfig.DEgenes.termId, 'gi')
+		options.unshift(`Select a ${self.scTermdbConfig.DEgenes.termId}...`)
+		for (const cluster of options) {
 			select.append('option').attr('value', cluster.replace(regex, '').trim()).text(cluster)
 		}
 	}
@@ -217,10 +236,11 @@ export class PlotButtons {
 		if (!this.item) throw new Error('No item selected')
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
 		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots.`)
-		const sample = this.makeSampleObj()
+		const sample = this.item
 		const config: any = {
 			chartType: 'sampleScatter',
-			name: `Sample: ${this.item!.sample}`,
+			name: `Sample: ${this.item.sID}`,
+			sample,
 			singleCellPlot: {
 				name: plotName,
 				sample
@@ -242,19 +262,9 @@ export class PlotButtons {
 				`No term found for colorColumn=${colorColName} in .termType2terms.[TermTypeGroups.SINGLECELL_CELLTYPE] for plot ${plot.name}`
 			)
 		const term = Object.assign(structuredClone(savedTerm), {
-			sample: this.makeSampleObj()
+			sample: item
 		})
 		const id = await digestMessage(`${plot.name}-${item.sID}-${item.eID}`)
 		return Object.assign({ $id: id }, { term })
-	}
-
-	/** Creates a sample object for the current item.
-	 * Part of the effort to normalize sample objects across
-	 * native and gdc datasets. */
-	makeSampleObj(): { sID: string; eID: string } {
-		return {
-			sID: this.item!.sample,
-			eID: this.item!.experiment
-		}
 	}
 }

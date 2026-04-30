@@ -75,18 +75,7 @@ async function handle_tkbigwig(req, res, genomes) {
 	}
 
 	for (const r of req.query.rglst) {
-		let out
-
-		if (serverconfig.features.bigwig_rust) {
-			// When bigwig_rust is defined in serverconfig.json, bigwig rust binary will be used to query the bigwig file (currently experimental!!)
-			const input_data =
-				file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
-
-			out = await run_rust('bigwig', input_data)
-		} else {
-			// When this flag is not defined, the ucsc bigwigsummary will be used to query the bigwig file
-			out = await run_bigwigsummary(req, r, file)
-		}
+		const out = await run_bigwigsummary(req, r, file)
 
 		if (out) {
 			r.values = out.trim().split('\t').map(Number.parseFloat)

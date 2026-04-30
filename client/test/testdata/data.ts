@@ -623,7 +623,7 @@ export function getScctTw() {
 			sample: {
 				sID: '1_patient'
 			},
-			plot: 'scRNA',
+			plot: 'UMAP',
 			colorBy: 'CellType',
 			values: {
 				T_NK: {

@@ -6,17 +6,17 @@ import type {
 	DataPointEntry
 } from '../VolcanoTypes'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
-import type { DEResponse } from '#types'
+import type { DEFullResponse } from '#types'
 import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
+import { getGroupColors } from '../colors'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 export class VolcanoViewModel {
 	config: any
 	dataType: string
-	response: DEResponse
-	pValueCutoff: number
+	response: DEFullResponse
 	pValueTable: VolcanoPValueTableData
 	settings: any
 	termType: string
@@ -28,6 +28,13 @@ export class VolcanoViewModel {
 	//Used for the y axis domain
 	minLogPValue = 0
 	maxLogPValue = 0
+	//Unpadded extents — used for the visible axis labels/ticks (only span real data)
+	minLogFoldChangeAxis = 0
+	maxLogFoldChangeAxis = 0
+	minLogPValueAxis = 0
+	maxLogPValueAxis = 0
+	//Dot radius in pixels (from server) — overlay rings size to match the PNG
+	dotRadiusPx = 2
 	//Used in place of 0 p values that cannot be log transformed
 	minNonZeroPValue = 10e-10
 	//The x coord flush with the left side of the plot
@@ -36,16 +43,21 @@ export class VolcanoViewModel {
 	readonly bottomPad = 60
 	readonly horizPad = 70
 	readonly topPad = 40
-	constructor(config: VolcanoPlotConfig, response: DEResponse, settings: ValidatedVolcanoSettings) {
+	/** Interactive rows returned by the server: threshold-passing dots, sorted by
+	 * significance. The full scatter lives in `response.volcanoPng`. */
+	dataRows: DataPointEntry[]
+
+	constructor(config: VolcanoPlotConfig, response: DEFullResponse, settings: ValidatedVolcanoSettings) {
 		this.config = config
 		this.response = response
-		this.pValueCutoff = settings.pValue
 		this.plotX = this.horizPad + this.offset * 2
 
-		const controlColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[0].name]?.color || 'red'
-		const caseColor = this.config?.tw?.term?.values?.[this.config?.samplelst?.groups[1].name].color || 'blue'
-		//Set colors equal to the groups colors if present
-		const barplot = caseColor && controlColor ? { colorNegative: controlColor, colorPositive: caseColor } : {}
+		this.dataRows = response.data.dots as DataPointEntry[]
+
+		// Shared helper (colors.ts) so the SVG overlay and the server PNG paint
+		// each side in the exact same hex.
+		const { caseColor, controlColor } = getGroupColors(this.config)
+		const barplot = { colorNegative: controlColor, colorPositive: caseColor }
 
 		this.pValueTable = {
 			columns: [
@@ -81,7 +93,9 @@ export class VolcanoViewModel {
 			pointData,
 			pValueTableData: this.pValueTable,
 			statsData: this.setStatsData(),
-			userActions: this.setUserActions()
+			userActions: this.setUserActions(),
+			volcanoPng: response.data.volcanoPng,
+			plotExtent: response.data.plotExtent
 		}
 	}
 
@@ -93,44 +107,74 @@ export class VolcanoViewModel {
 	}
 
 	setMinMaxValues() {
-		for (const d of this.response.data) {
-			this.minLogFoldChange = Math.min(this.minLogFoldChange, d.fold_change)
-			this.maxLogFoldChange = Math.max(this.maxLogFoldChange, d.fold_change)
-			if (d[`${this.settings.pValueType}_p_value`] != 0) {
-				this.minLogPValue = Math.min(this.minLogPValue, -Math.log10(d[`${this.settings.pValueType}_p_value`]))
-				this.maxLogPValue = Math.max(this.maxLogPValue, -Math.log10(d[`${this.settings.pValueType}_p_value`]))
-				this.minNonZeroPValue = Math.min(this.minNonZeroPValue, d[`${this.settings.pValueType}_p_value`])
-			}
-		}
+		// The server-drawn PNG owns the axes; we adopt its extents verbatim so
+		// overlay circles land on their counterparts in the PNG. Also adopt the
+		// server's minNonZeroPValue so p=0 rows are capped at the same y position
+		// the PNG used.
+		const ext = this.response.data.plotExtent
+		// Padded extents — used for positioning overlay dots & PNG (so dots near
+		// the real-data edge stay fully visible).
+		this.minLogFoldChange = ext.xMin
+		this.maxLogFoldChange = ext.xMax
+		this.minLogPValue = ext.yMin
+		this.maxLogPValue = ext.yMax
+		// Unpadded extents — used only for the visible axis ticks/labels.
+		this.minLogFoldChangeAxis = ext.xMinUnpadded
+		this.maxLogFoldChangeAxis = ext.xMaxUnpadded
+		this.minLogPValueAxis = ext.yMinUnpadded
+		this.maxLogPValueAxis = ext.yMaxUnpadded
+		this.dotRadiusPx = ext.dotRadiusPx
+		if (ext.minNonZeroPValue > 0) this.minNonZeroPValue = ext.minNonZeroPValue
 	}
 
 	setPlotDimensions() {
-		const xScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, this.settings.width])
-		const yScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([this.settings.height, 0])
+		// Trust the server's authoritative PNG dimensions for the plot rect.
+		// (Recomputing as `settings.width + 2*dotRadiusPx` is wrong when rust's
+		// `pad_px = ceil(2*dot_radius)` rounds up for non-integer dot_radius —
+		// the SVG plot rect would scale the PNG and break pixel_x/pixel_y
+		// alignment with the rasterized dots.)
+		const ext = this.response.data.plotExtent
+		const plotW = ext.pixelWidth
+		const plotH = ext.pixelHeight
+
+		// Positioning scales — padded data range covers the full plot rect.
+		// Used for overlay dot placement, the PNG image, and the fold-change line.
+		const xPlotScale = scaleLinear().domain([this.minLogFoldChange, this.maxLogFoldChange]).range([0, plotW])
+		const yPlotScale = scaleLinear().domain([this.minLogPValue, this.maxLogPValue]).range([plotH, 0])
+
+		// Visible axis scales — unpadded domain mapped onto the matching pixel
+		// subrange of the padded plot, so axis ticks land exactly at their data
+		// values in the PNG (mirror of manhattan's yAxisScale).
+		const xScale = scaleLinear()
+			.domain([this.minLogFoldChangeAxis, this.maxLogFoldChangeAxis])
+			.range([xPlotScale(this.minLogFoldChangeAxis), xPlotScale(this.maxLogFoldChangeAxis)])
+		const yScale = scaleLinear()
+			.domain([this.minLogPValueAxis, this.maxLogPValueAxis])
+			.range([yPlotScale(this.minLogPValueAxis), yPlotScale(this.maxLogPValueAxis)])
 
 		return {
 			svg: {
 				//20 is for the term info above the plot
-				height: this.settings.height + this.topPad + this.bottomPad * 2 + this.offset * 3,
-				width: this.settings.width + this.horizPad * 2
+				height: plotH + this.topPad + this.bottomPad * 2 + this.offset * 3,
+				width: plotW + this.horizPad * 2
 			},
 			top: {
 				x: this.plotX,
 				y: 5
 			},
 			xAxisLabel: {
-				x: this.horizPad + this.settings.width / 2 + this.offset,
-				y: this.topPad + this.settings.height + this.bottomPad + this.offset
+				x: this.horizPad + plotW / 2 + this.offset,
+				y: this.topPad + plotH + this.bottomPad + this.offset
 			},
 			xScale: {
 				scale: xScale,
 				x: this.plotX,
-				y: this.settings.height + this.topPad + this.offset * 2
+				y: plotH + this.topPad + this.offset * 2
 			},
 			yAxisLabel: {
 				text: `-log10(${this.settings.pValueType} P value)`,
 				x: this.horizPad / 3,
-				y: this.topPad + this.settings.height / 2
+				y: this.topPad + plotH / 2
 			},
 			yScale: {
 				scale: yScale,
@@ -138,16 +182,18 @@ export class VolcanoViewModel {
 				y: this.topPad
 			},
 			plot: {
-				height: this.settings.height,
-				width: this.settings.width,
+				height: plotH,
+				width: plotW,
 				x: this.plotX,
 				y: this.topPad
 			},
 			logFoldChangeLine: {
-				x: xScale(0) + this.plotX,
+				x: xPlotScale(0) + this.plotX,
 				y1: this.topPad,
-				y2: this.settings.height + this.offset * 4
-			}
+				y2: plotH + this.offset * 4
+			},
+			xPlotScale,
+			yPlotScale
 		}
 	}
 
@@ -180,13 +226,17 @@ export class VolcanoViewModel {
 		}
 	}
 
-	setPointData(plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
-		const radius = Math.max(this.settings.width, this.settings.height) / 80
-		const dataCopy: any = structuredClone(this.response.data)
+	setPointData(_plotDim: VolcanoPlotDimensions, controlColor: string, caseColor: string) {
+		// Use the server-supplied radius so SVG overlay rings sit exactly on top
+		// of the PNG rings. The view's renderDataPoints draws them at stroke-width
+		// 1 to match the rust PNG's stroke geometry.
+		const radius = this.dotRadiusPx
+		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
 			const highlightKey = this.termType === DNA_METHYLATION ? d.promoter_id : d.gene_name
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
-			d.significant = this.isSignificant(d)
+			// Every row in response.data passed the server's thresholds by definition.
+			d.significant = true
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
 				this.numSignificant++
@@ -205,22 +255,22 @@ export class VolcanoViewModel {
 			} else {
 				this.numNonSignificant++
 			}
-			d.x = plotDim.xScale.scale(d.fold_change) + this.plotX
-			const y =
-				d[`${this.settings.pValueType}_p_value`] == 0 ? this.minNonZeroPValue : d[`${this.settings.pValueType}_p_value`]
-			d.y = plotDim.yScale.scale(-Math.log10(y)) + this.topPad
+			// Use the exact pixel coords plotters used to rasterize this dot in
+			// the PNG (echoed back from rust per-point). Translating by plotX /
+			// topPad shifts from inner-plot pixel space to SVG-absolute coords.
+			// This is the manhattan trick — guarantees the SVG overlay ring lands
+			// on the rasterized PNG dot regardless of float-vs-int conventions.
+			d.x = d.pixel_x + this.plotX
+			d.y = d.pixel_y + this.topPad
 			d.radius = radius
 		}
+		// Use the server's pre-truncation count so stats are correct even when
+		// dots was capped by maxInteractiveDots.
+		this.numSignificant = this.response.data.totalSignificantRows
+		this.numNonSignificant = Math.max(0, this.response.data.totalRows - this.numSignificant)
 		//Sort so the highlighted points appear on top
 		dataCopy.sort((a: any, b: any) => a.highlighted - b.highlighted)
 		return dataCopy
-	}
-
-	isSignificant(d: DataPointEntry) {
-		return (
-			-Math.log10(d[`${this.settings.pValueType}_p_value`]) > this.pValueCutoff &&
-			Math.abs(d.fold_change) > this.settings.foldChangeCutoff
-		)
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {

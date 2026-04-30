@@ -1,10 +1,30 @@
 import type { RoutePayload } from './routeApi.js'
+import type { DERequest } from './termdb.DE.js'
 
 export type GenesetEnrichmentRequest = {
-	/** Sample genes to be queried */
-	genes: string[]
-	/** Background genes against which the sample genes will be queried */
-	fold_change: number[]
+	/** Sample genes to be queried. Optional when `cacheId` is given — the
+	 * server loads genes from the DE cache file in that case. */
+	genes?: string[]
+	/** Fold changes aligned to `genes`. Optional when `cacheId` is given. */
+	fold_change?: number[]
+	/** DE cache ID (returned by the volcano/DE route). Deterministic hash
+	 * of the DE inputs. If set, the server reads genes + fold_change from
+	 * the cache file and ignores any `genes`/`fold_change` fields sent in
+	 * this request. */
+	cacheId?: string
+	/** Snapshot of the original DE request that produced `cacheId`. When
+	 * the cache file is missing (TTL eviction or farm node that has never
+	 * seen this request), the server uses this to recompute and rewrite
+	 * the cache. Without this field, a cache miss is unrecoverable. */
+	/** Dataset label forwarded for auth middleware / dataset scoping. */
+	dslabel?: string
+	/** Snapshot of the original DE request that produced `cacheId`. When
+	 * the cache file is missing (TTL eviction or farm node that has never
+	 * seen this request), the server uses this to recompute and rewrite
+	 * the cache. Without this field, a cache miss is unrecoverable.
+	 * This mirrors the partial DE payload shape sent by clients. */
+	daRequest?: Partial<DERequest>
+	fetchDE?: boolean
 	/** Filter non-coding genes */
 	filter_non_coding_genes: boolean
 	/** Genome build */
@@ -13,10 +33,9 @@ export type GenesetEnrichmentRequest = {
 	geneSetGroup: string
 	/** Gene set name whose enrichment score is to be profiled */
 	geneset_name?: string
-	/** Pickle file to be queried for generating gsea image of a particular geneset */
-	pickle_file?: string
-	/** Number of permutations to be carried out for GSEA analysis */
-	num_permutations: number
+	/** Number of permutations to be carried out for GSEA analysis.
+	 * Only read by the blitzgsea path; cerno and fetchDE requests omit it. */
+	num_permutations?: number
 	/** Method used for GSEA blitzgsea/cerno */
 	method: 'blitzgsea' | 'cerno'
 }
@@ -61,8 +80,6 @@ type cerno_geneset_attributes = {
 type blitzgsea_json = {
 	/** array of pathway_attributes */
 	data: blitzgsea_map[]
-	/** file name of pickle file containing the stored gsea result in cache directory */
-	pickle_file: string
 }
 
 // Key value pair of geneset name and cerno geneset attributes

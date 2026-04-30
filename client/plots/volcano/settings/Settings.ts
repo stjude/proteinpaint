@@ -19,6 +19,13 @@ export type DefaultVolcanoSettings = {
 	showPValueTable: boolean
 	/** Width of the plot in pixels */
 	width: number
+	/** Max number of interactive (overlay) dots to return from the server. The
+	 * PNG still shows every dot — this only caps the SVG overlay the client
+	 * renders on top. Capped to the most-significant rows. */
+	maxInteractiveDots: number
+	/** Max genes shown in the multi-gene hover tooltip when many dots overlap.
+	 * Beyond this an "and N more" footer appears. */
+	maxTooltipGenes: number
 }
 
 export type GEVolcanoSettings = DefaultVolcanoSettings & {

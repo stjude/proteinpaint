@@ -11,9 +11,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'boxplot':
 			return await import(`./boxplot/BoxPlot.ts`)
 
-		case 'chat':
-			return await import(`./chat/chat.ts`)
-
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
@@ -47,8 +44,11 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'gsea':
 			return await import(`./gsea.js`)
 
+		case 'imagePlot':
+			return await import('./imagePlot.ts')
+
 		case 'report':
-			return await import(`././report/report.ts`)
+			return await import(`./report/report.ts`)
 
 		case 'runChart2': //See frequencyChart
 		case 'frequencyChart':
@@ -75,11 +75,20 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'profileRadar':
 			return await import('./profile/profileRadar.ts')
 
+		case 'profileRadar2':
+			return await import('./profile/radar2.ts')
+
 		case 'profileRadarFacility':
 			return await import('./profile/profileRadarFacility.ts')
 
+		case 'profileRadarFacility2':
+			return await import('./profile/radarFacility2.ts')
+
 		case 'proteinView':
 			return await import(`./proteinView.ts`)
+
+		case 'numericDictTermCluster':
+			return await import(`./numericDictTermCluster.ts`)
 
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)

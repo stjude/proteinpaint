@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { authApi } from '../auth.js'
+import { getAuthApi } from '../auth.js'
 import jsonwebtoken from 'jsonwebtoken'
 import serverconfig from '../serverconfig.js'
 
@@ -24,7 +24,7 @@ const secrets = {
 	}
 }
 
-function appInit() {
+async function appInit(serverconfig = {}, genomes = {}) {
 	// mock the express router api
 	const app = {
 		doNotFreezeAuthApi: true,
@@ -53,7 +53,9 @@ function appInit() {
 		}
 	}
 
-	return app
+	const authApi = await getAuthApi(app, genomes, serverconfig)
+	await authApi.maySetAuthRoutes(app, genomes, '', serverconfig)
+	return { app, authApi }
 }
 
 function sleep(ms) {
@@ -70,8 +72,7 @@ tape('\n', function (test) {
 })
 
 tape(`initialization, empty credentials`, async test => {
-	const app = appInit()
-	await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir })
+	const { app, authApi } = await appInit({ debugmode, cachedir })
 	const middlewares = Object.keys(app.middlewares)
 	const middlewareName = Object.values(app.middlewares)[0]?.name
 	test.deepEqual(middlewares, ['*'], 'should set a global middleware when there are no dsCredentials')
@@ -83,7 +84,8 @@ tape(`initialization, empty credentials`, async test => {
 	const routes = Object.keys(app.routes)
 	routes.sort()
 	test.deepEqual(routes, [], 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
-
+	// these are also checked statically by typescript, but doesn't hurt
+	// to test the expected runtime methods and props
 	test.deepEqual(
 		Object.keys(authApi).sort(),
 		[
@@ -91,7 +93,7 @@ tape(`initialization, empty credentials`, async test => {
 			'credEmbedders',
 			'getDsAuth',
 			'getHealth',
-			'getJwtPayload',
+			//'getJwtPayload',
 			'getNonsensitiveInfo',
 			'getPayloadFromHeaderAuth',
 			'getRequiredCredForDsEmbedder',
@@ -152,8 +154,8 @@ tape(`initialization, non-empty credentials`, async test => {
 				}
 			}
 		}
-		const app = appInit()
-		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials, secrets })
+		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
+		const { app, authApi } = await appInit(serverconfig)
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(middlewares, ['*'], 'should set a global middleware when dsCredentials is not empty')
 		const routes = Object.keys(app.routes)
@@ -166,7 +168,6 @@ tape(`initialization, non-empty credentials`, async test => {
 	}
 
 	{
-		const app = appInit()
 		const dsCredentials = {
 			testds: {
 				'*': {
@@ -177,7 +178,8 @@ tape(`initialization, non-empty credentials`, async test => {
 				}
 			}
 		}
-		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, cachedir, dsCredentials, secrets })
+		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
+		const { app, authApi } = await appInit(serverconfig)
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			middlewares,
@@ -194,7 +196,6 @@ tape(`initialization, non-empty credentials`, async test => {
 	}
 
 	{
-		const app = appInit()
 		const dsCredentials = {
 			testds: {
 				'*': {
@@ -205,15 +206,20 @@ tape(`initialization, non-empty credentials`, async test => {
 				}
 			}
 		}
-		await authApi.maySetAuthRoutes(app, {}, '', { debugmode, dsCredentials, cachedir })
+		const serverconfig = { debugmode, dsCredentials, cachedir }
+		const genomes = { hg38: { datasets: { testds: {} } } }
+		const { app, authApi } = await appInit(serverconfig, genomes)
+		const inherited = Object.getOwnPropertyNames(Object.getPrototypeOf(authApi)).filter(name => name != 'constructor')
+		// this is also checked statitically by typescript, but doesn't hurt to test
+		// that the expected runtime methods and props
 		test.deepEqual(
-			Object.keys(authApi).sort(),
+			[...Object.keys(authApi), ...inherited].sort(),
 			[
 				'canDisplaySampleIds',
 				'credEmbedders',
 				'getDsAuth',
 				'getHealth',
-				'getJwtPayload',
+				//'getJwtPayload',
 				'getNonsensitiveInfo',
 				'getPayloadFromHeaderAuth',
 				'getRequiredCredForDsEmbedder',
@@ -224,12 +230,21 @@ tape(`initialization, non-empty credentials`, async test => {
 			'should set the expected methods with a non-empty dsCredentials'
 		)
 		test.deepEqual(
-			authApi.getDsAuth({ query: { embedder: 'localhost' } }),
-			[{ dslabel: 'testds', route: '/**', type: 'basic', headerKey: 'x-ds-access-token', insession: false }],
+			authApi.getDsAuth({ query: { embedder: 'localhost' }, headers: {} }),
+			[
+				{
+					dslabel: 'testds',
+					route: '/**',
+					type: 'basic',
+					headerKey: 'x-ds-access-token',
+					insession: false,
+					demoTokenRoles: undefined
+				}
+			],
 			'should return all dslabels that require authorization for a given embedder'
 		)
 
-		const req = { query: { dslabel: 'no-cred-entry', embedder: 'localhost' } }
+		const req = { query: { dslabel: 'no-cred-entry', embedder: 'localhost' }, headers: {} }
 		test.deepEqual(
 			authApi.getNonsensitiveInfo(req),
 			{ forbiddenRoutes: [], clientAuthResult: {} },
@@ -254,7 +269,6 @@ tape('legacy reshape', async test => {
 	test.timeoutAfter(500)
 	test.plan(1)
 
-	const app = appInit()
 	const dsCredentials = {
 		ds0: {
 			type: 'jwt',
@@ -276,8 +290,8 @@ tape('legacy reshape', async test => {
 		dsCredentials,
 		cachedir
 	}
+	const { app, authApi } = await appInit(serverconfig)
 
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 	test.deepEqual(
 		JSON.parse(JSON.stringify(dsCredentials)),
 		{
@@ -299,7 +313,7 @@ tape('legacy reshape', async test => {
 				'/**': {
 					'*': {
 						type: 'basic',
-						password: '...',
+						//password: '...',
 						secret: '...',
 						dslabel: 'ds1',
 						route: '/**',
@@ -318,7 +332,6 @@ tape(`auth methods`, async test => {
 	test.timeoutAfter(500)
 	test.plan(5)
 
-	const app = appInit()
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -342,23 +355,46 @@ tape(`auth methods`, async test => {
 		},
 		cachedir
 	}
+	const genomes = { hg38: { datasets: { ds100: {} } } }
+	const { app, authApi } = await appInit(serverconfig, genomes)
 
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
-
-	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, get: () => 'localhost' }
+	const req0 = { query: { embedder: 'localhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req0),
 		[
-			{ dslabel: 'ds100', route: 'termdb', type: 'jwt', headerKey: 'x-ds-access-token', insession: undefined },
-			{ dslabel: 'ds100', route: 'burden', type: 'forbidden', headerKey: undefined, insession: false }
+			{
+				dslabel: 'ds100',
+				route: 'termdb',
+				type: 'jwt',
+				headerKey: 'x-ds-access-token',
+				insession: undefined,
+				demoTokenRoles: undefined
+			},
+			{
+				dslabel: 'ds100',
+				route: 'burden',
+				type: 'forbidden',
+				headerKey: undefined,
+				insession: false,
+				demoTokenRoles: undefined
+			}
 		],
 		`should return the expected dsAuth array for a termdb-specified embedder`
 	)
 
-	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, get: () => 'localhost' }
+	const req1 = { query: { embedder: 'some.domain', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getDsAuth(req1),
-		[{ dslabel: 'ds100', route: 'burden', type: 'forbidden', headerKey: undefined, insession: false }],
+		[
+			{
+				dslabel: 'ds100',
+				route: 'burden',
+				type: 'forbidden',
+				headerKey: undefined,
+				insession: false,
+				demoTokenRoles: undefined
+			}
+		],
 		`should return the expected dsAuth array for a specified embedder`
 	)
 	test.deepEqual(
@@ -367,14 +403,14 @@ tape(`auth methods`, async test => {
 		`should return the expected forbidden routes for a wildcard embedder with cred.type='forbidden'`
 	)
 
-	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, get: () => 'localhost' }
+	const req2 = { query: { embedder: 'notlocalhost', dslabel: 'ds100' }, headers: {}, get: () => 'localhost' }
 	test.deepEqual(
 		authApi.getNonsensitiveInfo(req2),
 		{ forbiddenRoutes: [], clientAuthResult: {} },
 		`should return the expected forbidden routes for a non-wildcard embedder`
 	)
 	test.deepEqual(
-		authApi.isUserLoggedIn({ query: { embedder: 'localhost' } }, { label: 'ds100' }),
+		authApi.isUserLoggedIn({ query: { embedder: 'localhost' }, headers: {} }, { label: 'ds100' }),
 		true,
 		`should return false for isUserLoggedIn() for a non-logged in user`
 	)
@@ -384,7 +420,6 @@ tape(`a valid request`, async test => {
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	const app = appInit()
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -400,8 +435,8 @@ tape(`a valid request`, async test => {
 		},
 		cachedir
 	}
+	const { app, authApi } = await appInit(serverconfig)
 
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -431,7 +466,6 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 	test.timeoutAfter(500)
 	test.plan(4)
 
-	const app = appInit()
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -448,8 +482,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 		},
 		cachedir
 	}
-
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
+	const { app, authApi } = await appInit(serverconfig)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -486,7 +519,6 @@ tape(`invalid embedder`, async test => {
 	test.timeoutAfter(500)
 	test.plan(4)
 
-	const app = appInit()
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -506,8 +538,7 @@ tape(`invalid embedder`, async test => {
 		},
 		cachedir
 	}
-
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(308, app.routes)
+	const { app, authApi } = await appInit(serverconfig)
 
 	{
 		const req = {
@@ -545,7 +576,6 @@ tape(`invalid dataset access`, async test => {
 	test.timeoutAfter(500)
 	test.plan(4)
 
-	const app = appInit()
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -562,8 +592,8 @@ tape(`invalid dataset access`, async test => {
 		},
 		cachedir
 	}
+	const { app, authApi } = await appInit(serverconfig)
 
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -600,7 +630,6 @@ tape(`invalid jwt`, async test => {
 	test.timeoutAfter(500)
 	test.plan(12)
 
-	const app = appInit()
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -617,8 +646,7 @@ tape(`invalid jwt`, async test => {
 		},
 		cachedir
 	}
-
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig) //; console.log(app.routes)
+	const { app, authApi } = await appInit(serverconfig)
 
 	{
 		const req = {
@@ -730,8 +758,8 @@ tape(`session handling by the middleware`, async test => {
 		cachedir
 	}
 
-	const app = appInit()
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
+	const { app, authApi } = await appInit(serverconfig, {})
+
 	{
 		const message = 'should call the next function on a non-protected route'
 		const req = {
@@ -903,9 +931,7 @@ tape(`/dslogin`, async test => {
 		},
 		cachedir
 	}
-
-	const app = appInit()
-	await authApi.maySetAuthRoutes(app, {}, '', serverconfig)
+	const { app, authApi } = await appInit(serverconfig)
 
 	let cookie
 	/*** valid /dslogin request ***/
@@ -1060,8 +1086,6 @@ tape(`req.query.filter, __protected__`, async test => {
 	test.timeoutAfter(500)
 	test.plan(2)
 
-	const app = appInit()
-
 	const serverconfig = {
 		debugmode,
 		dsCredentials: {
@@ -1077,6 +1101,7 @@ tape(`req.query.filter, __protected__`, async test => {
 		},
 		cachedir
 	}
+	const { app, authApi } = await appInit(serverconfig)
 
 	const tvslst = { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: {}, values: {} } }] }
 

@@ -1234,7 +1234,31 @@ export class TermdbVocab extends Vocab {
 		})
 	}
 
+	async getNumericDictTermClusterByName(name) {
+		// find a pre-built numericDictTermCluster by name from this dataset
+		return await this.dofetch3('termdb', {
+			body: {
+				for: 'numericDictTermCluster',
+				getPlotDataByName: name,
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
+		})
+	}
+
+	async getTopMutatedGenes(arg) {
+		if (!arg.genome) arg.genome = this.state.vocab.genome
+		if (!arg.dslabel) arg.dslabel = this.state.vocab.dslabel
+		arg.filter = getNormalRoot(arg.filter || this.state.termfilter.filter)
+		if (!arg.filter0) arg.filter0 = this.state.termfilter.filter0
+		return await this.dofetch3('termdb/getTopMutatedGenes', { method: 'GET', body: arg })
+	}
+
 	async getTopVariablyExpressedGenes(arg) {
+		if (!arg.genome) arg.genome = this.state.vocab.genome
+		if (!arg.dslabel) arg.dslabel = this.state.vocab.dslabel
+		arg.filter = getNormalRoot(arg.filter || this.state.termfilter.filter)
+		if (!arg.filter0) arg.filter0 = this.state.termfilter.filter0
 		return await this.dofetch3('termdb/topVariablyExpressedGenes', { method: 'GET', body: arg })
 	}
 

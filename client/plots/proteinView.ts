@@ -1,6 +1,6 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
-import { axisstyle } from '#src/client'
+import { axisstyle, to_svg } from '#src/client'
 import { Menu, table2col, LegendCircleReference, addGeneSearchbox } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
@@ -12,6 +12,8 @@ import { NumericModes, TermTypes } from '#shared/terms.js'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
 import { roundValue } from '#shared/roundValue.js'
+import { select, creator } from 'd3-selection'
+import { icons as controlIcons } from '../dom/control.icons'
 
 const defaultConfig = {
 	chartType: 'proteinView'
@@ -24,6 +26,7 @@ class ProteinView extends PlotBase implements RxComponent {
 		holder: any
 		body: any
 		tip: Menu
+		header?: any
 	}
 	components: any
 
@@ -38,14 +41,23 @@ class ProteinView extends PlotBase implements RxComponent {
 		this.dom = {
 			holder,
 			body: holder.append('div'),
-			tip: new Menu({ padding: '' })
+			tip: new Menu({ padding: '' }),
+			header: this.opts.header
 		}
+		if (this.dom.header) this.dom.header.html('Protein View')
 	}
 
 	getState(appState: MassState) {
 		const config: any = appState.plots.find((p: BasePlotConfig) => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
 		return { config }
+	}
+
+	maySetSandboxHeader() {
+		if (!this.dom.header) return
+		const term = this.state.config?.tw?.term
+		const header = `Protein View: ${term?.name}`
+		this.dom.header.text(header)
 	}
 
 	async main() {
@@ -60,6 +72,7 @@ class ProteinView extends PlotBase implements RxComponent {
 			filter0: this.state.config.filter0
 		}
 
+		this.maySetSandboxHeader()
 		const data = await dofetch3('termdb/proteome', { body })
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
@@ -107,9 +120,19 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	}
 
 	const panel = holder.append('div').style('margin-bottom', '14px')
-	panel.append('div').style('font-weight', 600).style('margin-bottom', '6px').text('Cohort Volcano')
+	const header = panel
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '6px')
+		.style('margin-bottom', '6px')
+
+	const downloadBtn = header.append('div').style('display', 'inline-block')
+
+	header.append('div').style('font-weight', 600).text('Cohort Volcano')
 
 	if (!dots.length) {
+		downloadBtn.style('display', 'none')
 		panel
 			.append('div')
 			.style('font-size', '.85em')
@@ -148,9 +171,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	const xScale = scaleLinear().domain([xMin, xMax]).range([0, innerW])
 	const yScale = scaleLinear().domain([0, yMax]).range([innerH, 0])
+	const radiusRange: [number, number] = [4, 12]
 	const radiusScale = scaleLinear()
 		.domain([minTestedN, Math.max(minTestedN + 1, maxTestedN)])
-		.range([4, 12])
+		.range(radiusRange)
 
 	const assayNames = [...new Set(dots.map((d: any) => d.assayName))].sort() as string[]
 	const cohortNames = [...new Set(dots.map((d: any) => d.cohortName))].sort() as string[]
@@ -173,24 +197,145 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const cohortShapes = makeShapeMap(cohortNames)
 	const proteinShapes = makeShapeMap(proteinAccessions)
 
-	let colorMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'assayType'
-	let shapeMode: 'none' | 'assayType' | 'cohort' | 'proteinAccession' = 'none'
+	type ColorMode = 'none' | 'assayType' | 'cohort' | 'proteinAccession'
+	type ShapeMode = 'none' | 'assayType' | 'cohort' | 'proteinAccession'
+
+	let colorMode: ColorMode = 'assayType'
+	let shapeMode: ShapeMode = 'none'
 	const defaultDotColor = '#9ca3af'
+	const customGroupPrefix = '__custom_group__:'
+	const makeCustomGroupKey = (name: string) => `${customGroupPrefix}${name}`
+	const isCustomGroupKey = (value: string) => value.startsWith(customGroupPrefix)
+	const getCustomGroupNameFromKey = (value: string) => value.slice(customGroupPrefix.length)
+	const customShapeGroupPrefix = '__custom_shape_group__:'
+	const makeCustomShapeGroupKey = (name: string) => `${customShapeGroupPrefix}${name}`
+	const isCustomShapeGroupKey = (value: string) => value.startsWith(customShapeGroupPrefix)
+	const getCustomShapeGroupNameFromKey = (value: string) => value.slice(customShapeGroupPrefix.length)
+	const customColorDomain = Array.from({ length: 64 }, (_, i) => `custom-${i}`)
+	const customColorScale = getColors(customColorDomain.length).domain(customColorDomain)
+	const colorModesWithGroups: ColorMode[] = ['assayType', 'cohort', 'proteinAccession']
+	const shapeModesWithGroups: ShapeMode[] = ['assayType', 'cohort', 'proteinAccession']
+	const createModeMap = <T>(factory: () => T) => ({
+		none: factory(),
+		assayType: factory(),
+		cohort: factory(),
+		proteinAccession: factory()
+	})
+	const customGroupsByMode = createModeMap(() => new Map<string, Set<string>>())
+	const customGroupColorsByMode = createModeMap(() => new Map<string, string>())
+	const customShapeGroupsByMode = createModeMap(() => new Map<string, Set<string>>())
+	const customShapeIndicesByMode = createModeMap(() => new Map<string, number>())
+	const checkedItemsByMode = createModeMap(() => new Set<string>())
+	const checkedShapeItemsByMode = createModeMap(() => new Set<string>())
+	const groupingModeActive = new Set<ColorMode>()
+	const shapeGroupingModeActive = new Set<ShapeMode>()
+	let customColorSeed = 0
+
+	const getBaseColorValue = (d: any, mode: ColorMode) => {
+		switch (mode) {
+			case 'assayType':
+				return d.assayName
+			case 'cohort':
+				return d.cohortName
+			case 'proteinAccession':
+				return d.proteinAccession
+			default:
+				return ''
+		}
+	}
+	const getCustomGroupOfValue = (mode: ColorMode, value: string) => {
+		if (mode === 'none') return null
+		for (const [group, members] of customGroupsByMode[mode]) {
+			if (members.has(value)) return group
+		}
+		return null
+	}
+	const getCustomGroupOfDot = (d: any, mode: ColorMode) => {
+		if (mode === 'none') return null
+		return getCustomGroupOfValue(mode, getBaseColorValue(d, mode))
+	}
+	const getCustomShapeGroupOfValue = (mode: ShapeMode, value: string) => {
+		if (mode === 'none') return null
+		for (const [group, members] of customShapeGroupsByMode[mode]) {
+			if (members.has(value)) return group
+		}
+		return null
+	}
+	const getCustomShapeGroupOfDot = (d: any, mode: ShapeMode) => {
+		if (mode === 'none') return null
+		return getCustomShapeGroupOfValue(mode, getBaseColorValue(d, mode))
+	}
+	const getNextCustomColor = () => {
+		const color = rgb(customColorScale(customColorDomain[customColorSeed % customColorDomain.length])).formatHex()
+		customColorSeed++
+		return color
+	}
+	const addOrUpdateCustomGroup = (mode: ColorMode, name: string, baseValues: string[]) => {
+		if (!name || !baseValues.length || mode === 'none') return
+		for (const members of customGroupsByMode[mode].values()) {
+			for (const val of baseValues) members.delete(val)
+		}
+		const existing = customGroupsByMode[mode].get(name) || new Set<string>()
+		for (const val of baseValues) existing.add(val)
+		customGroupsByMode[mode].set(name, existing)
+		if (!customGroupColorsByMode[mode].has(name)) customGroupColorsByMode[mode].set(name, getNextCustomColor())
+	}
+	const removeCustomGroup = (mode: ColorMode, name: string) => {
+		if (mode === 'none') return
+		customGroupsByMode[mode].delete(name)
+		customGroupColorsByMode[mode].delete(name)
+		hiddenColor[mode].delete(makeCustomGroupKey(name))
+	}
+	const addOrUpdateCustomShapeGroup = (mode: ShapeMode, name: string, baseValues: string[]) => {
+		if (!name || !baseValues.length || mode === 'none') return
+		for (const members of customShapeGroupsByMode[mode].values()) {
+			for (const val of baseValues) members.delete(val)
+		}
+		const existing = customShapeGroupsByMode[mode].get(name) || new Set<string>()
+		for (const val of baseValues) existing.add(val)
+		customShapeGroupsByMode[mode].set(name, existing)
+		if (!customShapeIndicesByMode[mode].has(name)) {
+			const idx = customShapeIndicesByMode[mode].size % shapesArray.length
+			customShapeIndicesByMode[mode].set(name, idx)
+		}
+	}
+	const removeCustomShapeGroup = (mode: ShapeMode, name: string) => {
+		if (mode === 'none') return
+		customShapeGroupsByMode[mode].delete(name)
+		customShapeIndicesByMode[mode].delete(name)
+		hiddenShape[mode].delete(makeCustomShapeGroupKey(name))
+	}
+	const getCustomGroupItems = (mode: ColorMode) => {
+		if (mode === 'none') return [] as string[]
+		return [...customGroupsByMode[mode].keys()].sort().map(name => makeCustomGroupKey(name))
+	}
+	const getCustomShapeGroupItems = (mode: ShapeMode) => {
+		if (mode === 'none') return [] as string[]
+		return [...customShapeGroupsByMode[mode].keys()].sort().map(name => makeCustomShapeGroupKey(name))
+	}
 	const getColor = (d: any) => {
+		const customGroup = colorMode === 'none' ? undefined : getCustomGroupOfDot(d, colorMode)
 		switch (colorMode) {
 			case 'none':
 				return defaultDotColor
 			case 'assayType':
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return assayColors.get(d.assayName) ?? '#888'
 			case 'cohort':
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return cohortColors.get(d.cohortName) ?? '#888'
 			case 'proteinAccession':
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return proteinColors.get(d.proteinAccession) ?? '#888'
 			default:
 				return '#888'
 		}
 	}
 	const getShapeIndex = (d: any) => {
+		const customShapeGroup = getCustomShapeGroupOfDot(d, shapeMode)
+		if (customShapeGroup && shapeMode !== 'none') {
+			return customShapeIndicesByMode[shapeMode].get(customShapeGroup) ?? 0
+		}
 		switch (shapeMode) {
 			case 'none':
 				return 0
@@ -215,7 +360,13 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		const y = yScale(d.score) - 8 * scale
 		return `translate(${x},${y}) scale(${scale})`
 	}
-	const groupingModes: Array<{ key: 'none' | 'assayType' | 'cohort' | 'proteinAccession'; label: string }> = [
+	const colorGroupingModes: Array<{ key: ColorMode; label: string }> = [
+		{ key: 'none', label: 'Default' },
+		{ key: 'assayType', label: 'Assay' },
+		{ key: 'cohort', label: 'Cohort' },
+		{ key: 'proteinAccession', label: 'Isoform' }
+	]
+	const shapeGroupingModes: Array<{ key: ShapeMode; label: string }> = [
 		{ key: 'none', label: 'Default' },
 		{ key: 'assayType', label: 'Assay' },
 		{ key: 'cohort', label: 'Cohort' },
@@ -229,29 +380,74 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	})
 	const hiddenColor = makeHiddenState()
 	const hiddenShape = makeHiddenState()
-	const getValueByMode = (d: any, mode: 'none' | 'assayType' | 'cohort' | 'proteinAccession') => {
+	const getColorValueByMode = (d: any, mode: ColorMode) => {
 		switch (mode) {
 			case 'none':
 				return ''
 			case 'assayType':
-				return d.assayName
+				return getCustomGroupOfDot(d, mode) ? makeCustomGroupKey(getCustomGroupOfDot(d, mode) as string) : d.assayName
 			case 'cohort':
-				return d.cohortName
+				return getCustomGroupOfDot(d, mode) ? makeCustomGroupKey(getCustomGroupOfDot(d, mode) as string) : d.cohortName
 			case 'proteinAccession':
-				return d.proteinAccession
+				return getCustomGroupOfDot(d, mode)
+					? makeCustomGroupKey(getCustomGroupOfDot(d, mode) as string)
+					: d.proteinAccession
+			default:
+				return ''
+		}
+	}
+	const getShapeValueByMode = (d: any, mode: ShapeMode) => {
+		switch (mode) {
+			case 'none':
+				return ''
+			case 'assayType':
+				return getCustomShapeGroupOfDot(d, mode)
+					? makeCustomShapeGroupKey(getCustomShapeGroupOfDot(d, mode) as string)
+					: d.assayName
+			case 'cohort':
+				return getCustomShapeGroupOfDot(d, mode)
+					? makeCustomShapeGroupKey(getCustomShapeGroupOfDot(d, mode) as string)
+					: d.cohortName
+			case 'proteinAccession':
+				return getCustomShapeGroupOfDot(d, mode)
+					? makeCustomShapeGroupKey(getCustomShapeGroupOfDot(d, mode) as string)
+					: d.proteinAccession
 			default:
 				return ''
 		}
 	}
 	const isDotHidden = (d: any) => {
-		const colorValue = getValueByMode(d, colorMode)
-		const shapeValue = getValueByMode(d, shapeMode)
+		const colorValue = getColorValueByMode(d, colorMode)
+		const shapeValue = getShapeValueByMode(d, shapeMode)
 		return hiddenColor[colorMode].has(colorValue) || hiddenShape[shapeMode].has(shapeValue)
 	}
 	const getDotDistancePx = (d1: any, d2: any) => {
 		const x = xScale(d1.log2fc) - xScale(d2.log2fc)
 		const y = yScale(d1.score) - yScale(d2.score)
 		return Math.sqrt(x * x + y * y)
+	}
+	const getVisibleDots = () => dots.filter(d => !isDotHidden(d))
+	const getVisibleTestedNStats = () => {
+		const visibleDots = getVisibleDots()
+		if (!visibleDots.length) {
+			return { domainMin: 1, domainMax: 2, minLabel: 0, maxLabel: 0 }
+		}
+
+		let visibleMax = 0
+		let visibleMin = Number.POSITIVE_INFINITY
+		for (const d of visibleDots) {
+			visibleMax = Math.max(visibleMax, d.testedN)
+			if (d.testedN > 0) visibleMin = Math.min(visibleMin, d.testedN)
+		}
+
+		if (!Number.isFinite(visibleMin)) visibleMin = 1
+		const domainMax = Math.max(visibleMin + 1, visibleMax)
+		return { domainMin: visibleMin, domainMax, minLabel: visibleMin, maxLabel: visibleMax || visibleMin }
+	}
+	const updateRadiusScaleForVisibleDots = () => {
+		const stats = getVisibleTestedNStats()
+		radiusScale.domain([stats.domainMin, stats.domainMax]).range(radiusRange)
+		return stats
 	}
 	const getClusterDots = (seed: any) => {
 		const thresholdPx = 5
@@ -313,6 +509,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		cohortDots
 			.attr('fill', (d: any) => getColor(d))
 			.attr('stroke', (d: any) => getColor(d))
+			.attr('stroke-width', 1)
 			.attr('d', (d: any) => getShapePath(d))
 			.attr('transform', (d: any) => getShapeTransform(d))
 			.style('opacity', (d: any) => (isDotHidden(d) ? 0 : 1))
@@ -424,7 +621,9 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.on('mouseout', () => {
 			self.dom.tip.hide()
 		})
-		.on('click', (_event: any, d: any) => launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier))
+		.on('click', (_event: any, d: any) => {
+			launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier)
+		})
 
 	const legend = plotAndLegend
 		.append('div')
@@ -432,13 +631,129 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.style('min-width', '220px')
 		.style('font-size', '.75em')
 		.style('color', '#374151')
+	function renderSizeLegend() {
+		legendSvg.selectAll('*').remove()
+		const stats = updateRadiusScaleForVisibleDots()
+
+		new LegendCircleReference({
+			g: legendSvg.append('g').attr('transform', 'translate(12, 8)'),
+			inputMax: radiusRange[1],
+			inputMin: radiusRange[0],
+			maxLabel: stats.maxLabel,
+			maxRadius: radiusScale(stats.domainMax),
+			minLabel: stats.minLabel,
+			minRadius: radiusScale(stats.domainMin),
+			title: '',
+			menu: {
+				minMaxLabel: 'pixels',
+				callback: async (obj: { min: number; max: number }) => {
+					radiusRange[0] = obj.min
+					radiusRange[1] = obj.max
+					radiusScale.range([obj.min, obj.max])
+					updateDots()
+					renderSizeLegend()
+				}
+			}
+		})
+	}
+	const refreshAfterVisibilityChange = () => {
+		updateRadiusScaleForVisibleDots()
+		updateDots()
+		renderColorLegend()
+		renderSizeLegend()
+	}
+
+	const termName = self.state.config?.tw?.term?.name || ''
+	const svgName = `${termName}.cohort-volcano`
+	const downloadVolcanoSvg = () => {
+		const plotNode = svg.node()
+		const legendNode = legend.node()
+		if (!plotNode) return
+
+		const plotWidth = width
+		const plotHeight = height
+		const legendRect = legendNode?.getBoundingClientRect()
+		const legendWidth = Math.max(220, Math.ceil(legendRect?.width || 220))
+		const legendHeight = Math.max(plotHeight, Math.ceil(legendRect?.height || 0))
+		const gap = 14
+
+		const combinedSvg = select(creator('svg').call(document.documentElement) as SVGSVGElement)
+			.attr('width', plotWidth + gap + legendWidth)
+			.attr('height', legendHeight)
+
+		combinedSvg.append(() => plotNode.cloneNode(true) as SVGSVGElement)
+
+		combinedSvg
+			.append('foreignObject')
+			.attr('x', plotWidth + gap)
+			.attr('y', 0)
+			.attr('width', legendWidth)
+			.attr('height', legendHeight)
+			.append(() => {
+				const clone = legendNode!.cloneNode(true) as HTMLDivElement
+				clone.style.margin = '0px'
+				clone.style.minWidth = '0px'
+				return clone
+			})
+
+		to_svg(combinedSvg.node()!, svgName, { apply_dom_styles: true })
+	}
+	controlIcons.download(downloadBtn, { handler: downloadVolcanoSvg, title: 'Download' })
 
 	const colorLegendDiv = legend.append('div').style('margin-bottom', '12px')
 	const shapeLegendDiv = legend.append('div').style('margin-bottom', '12px')
+	const sizeLegendRow = legend
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'flex-start')
+		.style('gap', '8px')
+		.style('margin-top', '8px')
+
+	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Tested sample size')
+
+	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
 
 	function renderColorLegend() {
 		colorLegendDiv.selectAll('*').remove()
 		shapeLegendDiv.selectAll('*').remove()
+
+		const setCreateButtonState = (
+			container: any,
+			isActive: boolean,
+			inputSelector: string,
+			buttonSelector: string,
+			hasCheckedItems: boolean
+		) => {
+			if (!isActive) return
+			const inputNode = container.select(inputSelector).node() as HTMLInputElement | null
+			const createBtn = container.select(buttonSelector)
+			if (!inputNode || createBtn.empty()) return
+			const shouldDisable = !inputNode.value.trim() || !hasCheckedItems
+			createBtn
+				.property('disabled', shouldDisable)
+				.style('opacity', shouldDisable ? '0.5' : '1')
+				.style('cursor', shouldDisable ? 'not-allowed' : 'pointer')
+		}
+
+		const updateColorCreateButtonState = () => {
+			setCreateButtonState(
+				colorLegendDiv,
+				groupingModeActive.has(colorMode),
+				'input[data-role="custom-group-name"]',
+				'button[data-role="create-custom-group-submit"]',
+				checkedItemsByMode[colorMode].size > 0
+			)
+		}
+
+		const updateShapeCreateButtonState = () => {
+			setCreateButtonState(
+				shapeLegendDiv,
+				shapeGroupingModeActive.has(shapeMode),
+				'input[data-role="custom-shape-group-name"]',
+				'button[data-role="create-custom-shape-group-submit"]',
+				checkedShapeItemsByMode[shapeMode].size > 0
+			)
+		}
 
 		const modeRow = colorLegendDiv
 			.append('div')
@@ -449,7 +764,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 		modeRow.append('span').text('Color by')
 
-		for (const { key, label } of groupingModes) {
+		for (const { key, label } of colorGroupingModes) {
 			modeRow
 				.append('span')
 				.text(label)
@@ -458,9 +773,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				.style('text-decoration', key === colorMode ? 'underline' : 'none')
 				.style('color', key === colorMode ? '#111' : '#6b7280')
 				.on('click', () => {
+					groupingModeActive.delete(colorMode)
+					checkedItemsByMode[colorMode].clear()
 					colorMode = key
-					updateDots()
-					renderColorLegend()
+					refreshAfterVisibilityChange()
 				})
 		}
 
@@ -478,8 +794,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.on('click', () => {
 						if (hidden) hiddenColor[colorMode].delete(name)
 						else hiddenColor[colorMode].add(name)
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -492,8 +807,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						for (const item of items) {
 							if (item != name) hiddenColor[colorMode].add(item)
 						}
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -504,8 +818,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						.text('Show all')
 						.on('click', () => {
 							hiddenColor[colorMode].clear()
-							updateDots()
-							renderColorLegend()
+							refreshAfterVisibilityChange()
 							menu.hide()
 						})
 
@@ -519,22 +832,53 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.attr('value', colorMap.get(name) ?? '#888')
 					.on('change', () => {
 						const newColor = input.node().value
+						if (isCustomGroupKey(name) && colorMode != 'none') {
+							customGroupColorsByMode[colorMode].set(getCustomGroupNameFromKey(name), newColor)
+						} else if (!isCustomGroupKey(name)) {
+							if (colorMode == 'assayType') assayColors.set(name, newColor)
+							else if (colorMode == 'cohort') cohortColors.set(name, newColor)
+							else if (colorMode == 'proteinAccession') proteinColors.set(name, newColor)
+						}
 						colorMap.set(name, newColor)
 						swatch.style('background', newColor)
 						updateDots()
 						menu.hide()
 					})
+
+				if (isCustomGroupKey(name))
+					div
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text('Remove group')
+						.on('click', () => {
+							removeCustomGroup(colorMode, getCustomGroupNameFromKey(name))
+							refreshAfterVisibilityChange()
+							menu.hide()
+						})
 				menu.showunder(event.target)
 			}
 
 			for (const name of items) {
 				const hidden = hiddenColor[colorMode].has(name)
+				const isGroup = isCustomGroupKey(name)
+				const displayName = isGroup ? getCustomGroupNameFromKey(name) : name
+				const inGroup = !isGroup ? getCustomGroupOfValue(colorMode, name) : null
 				const row = colorLegendDiv
 					.append('div')
 					.style('display', 'flex')
 					.style('align-items', 'center')
 					.style('gap', '6px')
 					.style('margin-bottom', '3px')
+				if (!isGroup && groupingModeActive.has(colorMode)) {
+					const cb = row.append('input').attr('type', 'checkbox').style('cursor', 'pointer').style('flex-shrink', '0')
+					const cbNode = cb.node() as HTMLInputElement
+					cbNode.checked = checkedItemsByMode[colorMode].has(name)
+					cb.on('change', () => {
+						if (cbNode.checked) checkedItemsByMode[colorMode].add(name)
+						else checkedItemsByMode[colorMode].delete(name)
+						updateColorCreateButtonState()
+					})
+				}
 				const swatch = row
 					.append('span')
 					.style('display', 'inline-block')
@@ -548,20 +892,138 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				swatch.on('click', (event: any) => openColorMenu(event, name, swatch))
 				row
 					.append('span')
-					.text(name)
+					.text(displayName)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openColorMenu(event, name, swatch))
+				if (isGroup) {
+					const count = customGroupsByMode[colorMode].get(getCustomGroupNameFromKey(name))?.size || 0
+					row.append('span').style('color', '#6b7280').text(`(${count} items)`)
+				} else if (inGroup) {
+					row.append('span').style('color', '#6b7280').style('font-style', 'italic').text(`→ ${inGroup}`)
+				}
 			}
 		}
 
-		if (colorMode === 'assayType') {
-			makeLegendItems(assayNames, assayColors)
-		} else if (colorMode === 'cohort') {
-			makeLegendItems(cohortNames, cohortColors)
-		} else if (colorMode === 'proteinAccession') {
-			makeLegendItems(proteinAccessions, proteinColors)
+		const buildModeLegendItems = (baseItems: string[], baseColorMap: Map<string, string>) => {
+			if (colorMode === 'none') {
+				return { items: baseItems, colorMap: baseColorMap }
+			}
+			// Hide base items that have been absorbed into a custom group
+			const visibleBaseItems = baseItems.filter(name => !getCustomGroupOfValue(colorMode, name))
+			const mergedColorMap = new Map<string, string>()
+			for (const name of visibleBaseItems) mergedColorMap.set(name, baseColorMap.get(name) ?? '#888')
+			for (const name of getCustomGroupItems(colorMode)) {
+				const rawName = getCustomGroupNameFromKey(name)
+				mergedColorMap.set(name, customGroupColorsByMode[colorMode].get(rawName) ?? '#888')
+			}
+			return { items: [...visibleBaseItems, ...getCustomGroupItems(colorMode)], colorMap: mergedColorMap }
 		}
+
+		const renderCustomGroupControls = () => {
+			if (!colorModesWithGroups.includes(colorMode)) return
+
+			if (!groupingModeActive.has(colorMode)) {
+				const createBtn = colorLegendDiv
+					.append('button')
+					.attr('type', 'button')
+					.style('font-size', '1em')
+					.style('font-weight', '400')
+					.style('margin-top', '6px')
+					.style('padding', '0')
+					.style('border', 'none')
+					.style('border-radius', '0')
+					.style('background', 'transparent')
+					.style('color', '#6b7280')
+					.style('box-shadow', 'none')
+					.style('cursor', 'pointer')
+					.style('transition', 'color 120ms ease')
+					.text('+ Create custom group')
+					.on('click', () => {
+						groupingModeActive.add(colorMode)
+						renderColorLegend()
+					})
+				createBtn
+					.on('mouseover', function (this: any) {
+						select(this).style('color', '#111827')
+					})
+					.on('mouseout', function (this: any) {
+						select(this).style('color', '#6b7280')
+					})
+				return
+			}
+
+			colorLegendDiv
+				.append('div')
+				.style('font-size', '11px')
+				.style('color', '#6b7280')
+				.style('margin-bottom', '4px')
+				.text('Check items to include in the new group:')
+
+			const controls = colorLegendDiv
+				.append('div')
+				.style('display', 'flex')
+				.style('gap', '6px')
+				.style('align-items', 'center')
+				.style('flex-wrap', 'wrap')
+				.style('margin-top', '4px')
+
+			const nameInput = controls
+				.append('input')
+				.attr('data-role', 'custom-group-name')
+				.attr('type', 'text')
+				.attr('placeholder', 'Group name')
+				.style('font-size', '12px')
+				.style('padding', '2px 4px')
+				.style('min-width', '100px')
+				.on('input', () => updateColorCreateButtonState())
+
+			controls
+				.append('button')
+				.attr('data-role', 'create-custom-group-submit')
+				.attr('type', 'button')
+				.style('font-size', '12px')
+				.style('padding', '2px 6px')
+				.text('Create')
+				.on('click', () => {
+					const groupName = ((nameInput.node() as HTMLInputElement)?.value || '').trim()
+					if (!groupName || checkedItemsByMode[colorMode].size < 1) return
+					addOrUpdateCustomGroup(colorMode, groupName, [...checkedItemsByMode[colorMode]])
+					checkedItemsByMode[colorMode].clear()
+					groupingModeActive.delete(colorMode)
+					refreshAfterVisibilityChange()
+				})
+
+			updateColorCreateButtonState()
+
+			controls
+				.append('button')
+				.attr('type', 'button')
+				.style('font-size', '12px')
+				.style('padding', '2px 6px')
+				.text('Cancel')
+				.on('click', () => {
+					checkedItemsByMode[colorMode].clear()
+					groupingModeActive.delete(colorMode)
+					renderColorLegend()
+				})
+		}
+
+		if (colorMode === 'assayType') {
+			const { items, colorMap } = buildModeLegendItems(assayNames, assayColors)
+			makeLegendItems(items, colorMap)
+			renderCustomGroupControls()
+		} else if (colorMode === 'cohort') {
+			const { items, colorMap } = buildModeLegendItems(cohortNames, cohortColors)
+			makeLegendItems(items, colorMap)
+			renderCustomGroupControls()
+		} else if (colorMode === 'proteinAccession') {
+			const { items, colorMap } = buildModeLegendItems(proteinAccessions, proteinColors)
+			makeLegendItems(items, colorMap)
+			renderCustomGroupControls()
+		}
+
+		shapeLegendDiv.append('div').style('border-top', '1px solid #e5e7eb').style('margin', '8px 0 8px 0')
 
 		const shapeModeRow = shapeLegendDiv
 			.append('div')
@@ -572,7 +1034,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 		shapeModeRow.append('span').text('Shape by')
 
-		for (const { key, label } of groupingModes) {
+		for (const { key, label } of shapeGroupingModes) {
 			shapeModeRow
 				.append('span')
 				.text(label)
@@ -581,16 +1043,25 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				.style('text-decoration', key === shapeMode ? 'underline' : 'none')
 				.style('color', key === shapeMode ? '#111' : '#6b7280')
 				.on('click', () => {
+					shapeGroupingModeActive.delete(shapeMode)
+					checkedShapeItemsByMode[shapeMode].clear()
 					shapeMode = key
-					updateDots()
-					renderColorLegend()
+					refreshAfterVisibilityChange()
 				})
+		}
+
+		const buildShapeLegendItems = (baseItems: string[]) => {
+			if (shapeMode === 'none') {
+				return { items: baseItems }
+			}
+			const visibleBaseItems = baseItems.filter(name => !getCustomShapeGroupOfValue(shapeMode, name))
+			return { items: [...visibleBaseItems, ...getCustomShapeGroupItems(shapeMode)] }
 		}
 
 		const drawShapeLegend = (items: string[], shapeMap: Map<string, number>) => {
 			const openShapeMenu = (event: any, name: string) => {
 				const menu = new Menu({ padding: '0px' })
-				const activeShapeMap = getShapeMapInUse()
+				const activeShapeMap = isCustomShapeGroupKey(name) ? customShapeIndicesByMode[shapeMode] : getShapeMapInUse()
 				const div = menu.d.append('div')
 				const hidden = hiddenShape[shapeMode].has(name)
 				const hiddenCount = hiddenShape[shapeMode].size
@@ -602,8 +1073,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.on('click', () => {
 						if (hidden) hiddenShape[shapeMode].delete(name)
 						else hiddenShape[shapeMode].add(name)
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -616,8 +1086,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						for (const item of items) {
 							if (item != name) hiddenShape[shapeMode].add(item)
 						}
-						updateDots()
-						renderColorLegend()
+						refreshAfterVisibilityChange()
 						menu.hide()
 					})
 
@@ -628,8 +1097,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						.text('Show all')
 						.on('click', () => {
 							hiddenShape[shapeMode].clear()
-							updateDots()
-							renderColorLegend()
+							refreshAfterVisibilityChange()
 							menu.hide()
 						})
 
@@ -640,24 +1108,49 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.on('click', () => {
 						div.selectAll('*').remove()
 						shapeSelector(div, (index: number) => {
-							activeShapeMap.set(name, index)
+							const shapeKey = isCustomShapeGroupKey(name) ? getCustomShapeGroupNameFromKey(name) : name
+							activeShapeMap.set(shapeKey, index)
 							updateDots()
 							renderColorLegend()
 							menu.hide()
 						})
 					})
 
+				if (isCustomShapeGroupKey(name))
+					div
+						.append('div')
+						.attr('class', 'sja_menuoption sja_sharp_border')
+						.text('Remove group')
+						.on('click', () => {
+							removeCustomShapeGroup(shapeMode, getCustomShapeGroupNameFromKey(name))
+							refreshAfterVisibilityChange()
+							menu.hide()
+						})
+
 				menu.showunder(event.target)
 			}
 
 			for (const name of items) {
 				const hidden = hiddenShape[shapeMode].has(name)
+				const isGroup = isCustomShapeGroupKey(name)
+				const displayName = isGroup ? getCustomShapeGroupNameFromKey(name) : name
+				const inGroup = !isGroup ? getCustomShapeGroupOfValue(shapeMode, name) : null
 				const row = shapeLegendDiv
 					.append('div')
 					.style('display', 'flex')
 					.style('align-items', 'center')
 					.style('gap', '6px')
 					.style('margin-bottom', '3px')
+				if (!isGroup && shapeGroupingModeActive.has(shapeMode)) {
+					const cb = row.append('input').attr('type', 'checkbox').style('cursor', 'pointer').style('flex-shrink', '0')
+					const cbNode = cb.node() as HTMLInputElement
+					cbNode.checked = checkedShapeItemsByMode[shapeMode].has(name)
+					cb.on('change', () => {
+						if (cbNode.checked) checkedShapeItemsByMode[shapeMode].add(name)
+						else checkedShapeItemsByMode[shapeMode].delete(name)
+						updateShapeCreateButtonState()
+					})
+				}
 				const icon = row
 					.append('svg')
 					.attr('width', 16)
@@ -667,58 +1160,139 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				icon
 					.append('path')
 					.attr('transform', 'scale(0.8)')
-					.attr('d', shapesArray[(shapeMap.get(name) || 0) % shapesArray.length])
+					.attr(
+						'd',
+						shapesArray[
+							((isGroup
+								? customShapeIndicesByMode[shapeMode].get(getCustomShapeGroupNameFromKey(name))
+								: shapeMap.get(name)) || 0) % shapesArray.length
+						]
+					)
 					.attr('fill', '#4b5563')
 					.attr('fill-opacity', hidden ? 0.35 : 0.9)
 				icon.on('click', (event: any) => openShapeMenu(event, name))
 				row
 					.append('span')
-					.text(name)
+					.text(displayName)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openShapeMenu(event, name))
+				if (isGroup) {
+					const count = customShapeGroupsByMode[shapeMode].get(getCustomShapeGroupNameFromKey(name))?.size || 0
+					row.append('span').style('color', '#6b7280').text(`(${count} items)`)
+				} else if (inGroup) {
+					row.append('span').style('color', '#6b7280').style('font-style', 'italic').text(`→ ${inGroup}`)
+				}
 			}
+		}
+
+		const renderShapeCustomGroupControls = () => {
+			if (!shapeModesWithGroups.includes(shapeMode)) return
+
+			if (!shapeGroupingModeActive.has(shapeMode)) {
+				const createBtn = shapeLegendDiv
+					.append('button')
+					.attr('type', 'button')
+					.style('font-size', '1em')
+					.style('font-weight', '400')
+					.style('margin-top', '6px')
+					.style('padding', '0')
+					.style('border', 'none')
+					.style('border-radius', '0')
+					.style('background', 'transparent')
+					.style('color', '#6b7280')
+					.style('box-shadow', 'none')
+					.style('cursor', 'pointer')
+					.style('transition', 'color 120ms ease')
+					.text('+ Create custom group')
+					.on('click', () => {
+						shapeGroupingModeActive.add(shapeMode)
+						renderColorLegend()
+					})
+				createBtn
+					.on('mouseover', function (this: any) {
+						select(this).style('color', '#111827')
+					})
+					.on('mouseout', function (this: any) {
+						select(this).style('color', '#6b7280')
+					})
+				return
+			}
+
+			shapeLegendDiv
+				.append('div')
+				.style('font-size', '11px')
+				.style('color', '#6b7280')
+				.style('margin-bottom', '4px')
+				.text('Check items to include in the new group:')
+
+			const controls = shapeLegendDiv
+				.append('div')
+				.style('display', 'flex')
+				.style('gap', '6px')
+				.style('align-items', 'center')
+				.style('flex-wrap', 'wrap')
+				.style('margin-top', '4px')
+
+			const nameInput = controls
+				.append('input')
+				.attr('data-role', 'custom-shape-group-name')
+				.attr('type', 'text')
+				.attr('placeholder', 'Group name')
+				.style('font-size', '12px')
+				.style('padding', '2px 4px')
+				.style('min-width', '100px')
+				.on('input', () => updateShapeCreateButtonState())
+
+			controls
+				.append('button')
+				.attr('data-role', 'create-custom-shape-group-submit')
+				.attr('type', 'button')
+				.style('font-size', '12px')
+				.style('padding', '2px 6px')
+				.text('Create')
+				.on('click', () => {
+					const groupName = ((nameInput.node() as HTMLInputElement)?.value || '').trim()
+					if (!groupName || checkedShapeItemsByMode[shapeMode].size < 1) return
+					addOrUpdateCustomShapeGroup(shapeMode, groupName, [...checkedShapeItemsByMode[shapeMode]])
+					checkedShapeItemsByMode[shapeMode].clear()
+					shapeGroupingModeActive.delete(shapeMode)
+					refreshAfterVisibilityChange()
+				})
+
+			updateShapeCreateButtonState()
+
+			controls
+				.append('button')
+				.attr('type', 'button')
+				.style('font-size', '12px')
+				.style('padding', '2px 6px')
+				.text('Cancel')
+				.on('click', () => {
+					checkedShapeItemsByMode[shapeMode].clear()
+					shapeGroupingModeActive.delete(shapeMode)
+					renderColorLegend()
+				})
 		}
 
 		if (shapeMode === 'assayType') {
-			drawShapeLegend(assayNames, assayShapes)
+			const { items } = buildShapeLegendItems(assayNames)
+			drawShapeLegend(items, assayShapes)
+			renderShapeCustomGroupControls()
 		} else if (shapeMode === 'cohort') {
-			drawShapeLegend(cohortNames, cohortShapes)
+			const { items } = buildShapeLegendItems(cohortNames)
+			drawShapeLegend(items, cohortShapes)
+			renderShapeCustomGroupControls()
 		} else if (shapeMode === 'proteinAccession') {
-			drawShapeLegend(proteinAccessions, proteinShapes)
+			const { items } = buildShapeLegendItems(proteinAccessions)
+			drawShapeLegend(items, proteinShapes)
+			renderShapeCustomGroupControls()
 		}
 	}
 
+	updateRadiusScaleForVisibleDots()
 	renderColorLegend()
-
-	const sizeLegendRow = legend
-		.append('div')
-		.style('display', 'flex')
-		.style('align-items', 'flex-start')
-		.style('gap', '8px')
-		.style('margin-top', '8px')
-
-	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Tested sample size')
-
-	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
-
-	new LegendCircleReference({
-		g: legendSvg.append('g').attr('transform', 'translate(12, 8)'),
-		inputMax: 12,
-		inputMin: 4,
-		maxLabel: maxTestedN || minTestedN,
-		maxRadius: radiusScale(Math.max(minTestedN + 1, maxTestedN || minTestedN)),
-		minLabel: minTestedN,
-		minRadius: radiusScale(minTestedN),
-		title: '',
-		menu: {
-			minMaxLabel: 'pixels',
-			callback: async (obj: { min: number; max: number }) => {
-				radiusScale.range([obj.min, obj.max])
-				updateDots()
-			}
-		}
-	})
+	renderSizeLegend()
 }
 
 /*
@@ -872,6 +1446,9 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		//and avoids the complexity of mapping between different isoforms. TODO:support isoform-specific mapping.
 		if (!gm) continue
 		const logValue = getLog2Ratio(ptm.foldChange)
+		const pValue = Number(ptm.pValue)
+		const testedN = Number(ptm.testedN)
+		const controlN = Number(ptm.controlN)
 
 		if (ptm.mclassOverride && typeof ptm.mclassOverride == 'object') {
 			Object.assign(mergedMclassOverride, ptm.mclassOverride)
@@ -885,16 +1462,29 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		custom_variants.push({
 			chr: gm.chr,
 			pos,
-			mname: `${ptm.modSites}: ${ptm.cohortName}`,
+			mname: ptm.modSites,
 			class: ptmClass,
 			dt: 1,
-			logValue
+			logValue,
+			pValue,
+			testedN: Number.isFinite(testedN) ? testedN : null,
+			controlN: Number.isFinite(controlN) ? controlN : null,
+			htmlSections: [
+				{ key: 'Assay', html: ptm.assayName || 'NA' },
+				{ key: 'Cohort', html: ptm.cohortName || 'NA' },
+				{ key: 'Protein Accession', html: ptm.proteinAccession || 'NA' },
+				{
+					key: 'Action',
+					label: 'Launch Violin Plot',
+					callback: () => launchViolinPlot(self, ptm.assayName, ptm.cohortName, ptm.uniqueIdentifier)
+				}
+			]
 		})
 	}
 	if (!custom_variants.length) return
 
 	const mclassOverride = {
-		className: 'PTMs',
+		className: 'PTM',
 		classes: mergedMclassOverride
 	}
 
@@ -916,6 +1506,15 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 				type: 'numeric',
 				byAttribute: 'logValue',
 				label: 'Log2FC Disease vs Control',
+				tooltipPrintValue: m => {
+					const p = Number(m.pValue)
+					return [
+						{ k: 'log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
+						{ k: 'p value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
+						{ k: 'Tested samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
+						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' }
+					]
+				},
 				inuse: true,
 				axisheight: 100
 			}

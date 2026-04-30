@@ -196,8 +196,18 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Facility Radar 2',
+			chartType: 'profileRadarFacility2',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Radar',
 			chartType: 'profileRadar',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Radar 2',
+			chartType: 'profileRadar2',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
@@ -321,14 +331,6 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Chat',
-			clickTo: self.loadChartSpecificMenu,
-			chartType: 'chat',
-			config: {
-				chartType: 'chat'
-			}
-		},
-		{
 			label: 'Single Cell Plot',
 			clickTo: self.prepPlot,
 			chartType: 'singleCellPlot',
@@ -343,8 +345,7 @@ function getChartTypeList(self, state) {
 			clickTo: self.prepPlot,
 			config: {
 				chartType: 'GeneExpInput',
-				termType: TermTypes.GENE_EXPRESSION,
-				hidePlotFilter: true
+				termType: TermTypes.GENE_EXPRESSION
 			}
 		},
 		{
@@ -384,6 +385,11 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Protein Abundance',
 			chartType: 'proteomeAbundance',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
+			chartType: 'numericDictTermCluster',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
