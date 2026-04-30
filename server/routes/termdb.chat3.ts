@@ -3,7 +3,7 @@ import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassificatio
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readJSONFile, parse_geneset_db, extractGenesFromPrompt } from './chat/utils.ts'
+import { readJSONFile, parse_geneset_db, extractGenesFromPrompt, getChatRelatedPlotTypes } from './chat/utils.ts'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
@@ -34,33 +34,6 @@ export const api: RouteApi = {
 			init
 		}
 	}
-}
-
-function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
-	if (!supportedPlotTypes) {
-		mayLog(
-			'Supported plot types list is undefined. Defaulting to empty list, which may lead to unsupported plot type errors downstream.'
-		)
-		return []
-	}
-
-	// check if it supports summary charts
-	if (supportedPlotTypes.includes('dictionary')) {
-		// summmary means it includes "boxplot", "violin", "barchart", "sampleScatter" as child types
-		supportedPlotTypes.push('summary')
-	}
-
-	// check if it supports heirarchical clustering charts
-	// TODO:
-	if (supportedPlotTypes.includes('geneExpression')) {
-		// || supportedPlotTypes.includes('proteomeAbundance') || supportedPlotTypes.includes('dnaMethylation'))
-		supportedPlotTypes.push('hiercluster')
-	}
-	// check if it supports dge
-	if (supportedPlotTypes.includes('DA')) {
-		supportedPlotTypes.push('dge')
-	}
-	return supportedPlotTypes
 }
 
 function init({ genomes }) {

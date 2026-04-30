@@ -2,8 +2,9 @@
 
 // Test URL: http://localhost:3000/testchat
 import serverconfig from '../../serverconfig.js'
-import { readJSONFile, getGenesetNames } from '../../../routes/chat/utils.ts'
-import { run_chat_pipeline } from '../../../routes/termdb.chat2.ts'
+import { getDsAllowedTermTypes } from '../../../routes/termdb.config.ts'
+import { readJSONFile, getChatRelatedPlotTypes } from '../../../routes/chat/utils.ts' // getGenesetNames
+import { run_chat_pipeline } from '../../../routes/termdb.chat3.ts'
 import assert from 'node:assert/strict'
 import path from 'path'
 import fs from 'fs'
@@ -18,13 +19,27 @@ export default function setRoutes(app, basepath, genomes) {
 		console.log('test chat page' + (datasetFilter ? ` (dslabel filter: ${datasetFilter})` : ''))
 		const results: { dataset: string; num_errors: number }[] = []
 		for (const genome of Object.values(genomes)) {
+			if (!genome) {
+				// This should not happen since we are iterating over Object.values(genomes), but just in case
+				console.log('Genome is undefined, skipping')
+				continue
+			}
+
 			for (const ds of Object.values((genome as any).datasets)) {
 				if ((ds as any)?.queries?.chat) {
 					const label = (ds as any).label
 					if (datasetFilter && label !== datasetFilter) continue
+
+					const rawFilter = typeof req.query.filter === 'string' ? JSON.parse(req.query.filter) : req.query.filter
+					const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
+					const lst = Array.isArray(filter.lst) ? filter.lst : []
+					const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
+					const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
+					const supportedPlotTypes = (ds as any).cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
+					const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
 					const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + label // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
-					const num_errors = await test_chatbot_by_dataset(ds, genome, aiFilesDir)
+					const num_errors = await test_chatbot_by_dataset(ds, genome, aiFilesDir, chatSupportedPlotTypes)
 					if (num_errors == 0) {
 						console.log(
 							'\x1b[32m%s\x1b[0m',
@@ -44,8 +59,13 @@ export default function setRoutes(app, basepath, genomes) {
 	})
 }
 
-export async function test_chatbot_by_dataset(ds: any, genome: any, aiFilesDir: string): Promise<number> {
-	const testing = false // This causes raw LLM output to be sent by the agent
+export async function test_chatbot_by_dataset(
+	ds: any,
+	genome: any,
+	aiFilesDir: string,
+	chatSupportedPlotTypes: string[]
+): Promise<number> {
+	// const testing = false // This causes raw LLM output to be sent by the agent
 	let agentFiles: string[] = []
 	try {
 		// Read dataset JSON file
@@ -58,28 +78,32 @@ export async function test_chatbot_by_dataset(ds: any, genome: any, aiFilesDir: 
 
 	const llm = serverconfig.llm
 	if (!llm) throw 'serverconfig.llm is not configured'
-	if (llm.provider !== 'SJ' && llm.provider !== 'ollama') {
-		throw "llm.provider must be 'SJ' or 'ollama'"
+	if (llm.provider !== 'SJ' && llm.provider !== 'ollama' && llm.provider !== 'azure') {
+		throw "llm.provider must be 'SJ' or 'ollama' or 'azure'"
 	}
 	let num_errors = 0 // Number of errors encountered across all prompts for this dataset
 	// Read test data from separate test.json file
 	if (!fs.existsSync(path.join(aiFilesDir, 'test.json')))
 		throw 'Test data file is not specified for dataset:' + ds.label
 	const testData = await readJSONFile(path.join(aiFilesDir, 'test.json'))
+
+	const genedb = (genome as any).genedb.db
+	const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 	//console.log("dataset_json:", dataset_json)
 	for (const test_data of testData) {
-		const genesetNames = getGenesetNames(genome)
+		// const genesetNames = getGenesetNames(genome)
 		//console.log("Test question:", test_data.question)
+
 		const test_result = await run_chat_pipeline(
 			test_data.question,
 			llm,
-			testing, // This is not needed anymore, need to be deprecated
-			path.join(serverconfig.tpmasterdir, ds.cohort.db.file),
-			path.join(serverconfig.tpmasterdir, genome.genedb.dbfile),
 			ds,
-			genesetNames,
+			genedb,
 			agentFiles,
-			aiFilesDir
+			aiFilesDir,
+			chatSupportedPlotTypes,
+			allowedTermTypes,
+			genome
 		)
 		if (test_result.type == test_data.PPoutput.type) {
 			// Only proceed further if the type of the LLM output matches the expected type. Otherwise its a classification agent error.

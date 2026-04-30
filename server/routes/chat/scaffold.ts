@@ -2,7 +2,14 @@ import type { LlmConfig } from '#types'
 // import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import type { Scaffold, SummaryScaffold, DEScaffold, HierarchicalScaffold, MatrixScaffold } from './scaffoldTypes.ts'
+import type {
+	Scaffold,
+	SummaryScaffold,
+	DEScaffold,
+	HierarchicalScaffold,
+	MatrixScaffold,
+	PrebuiltScatterScaffold
+} from './scaffoldTypes.ts'
 
 async function matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
 	const prompt = ` You are a ProteinPaint matrix plot assistant. Your task is to extract the necessary variables from a user's natural language question to populate a strict JSON scaffold for configuring a matrix plot. 
@@ -412,6 +419,75 @@ Query: ${user_prompt}
 	}
 }
 
+async function prebuiltScatter(user_prompt: string, llm: LlmConfig): Promise<PrebuiltScatterScaffold> {
+	const prompt = `You are a ProteinPaint prebuilt scatter plot assistant. 
+  Your task is to determine if the user query is asking for a scatter plot based on pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Extract the necessary variables into a strict JSON scaffold.
+  The user can overlay clinical variables or gene expression on these plots via color, shape, or divide (Z). To remove an overlay, set the corresponding field to null. If the user does not specify a plot name, default to 'TermdbTest TSNE'. If the user says 'tsne' or 't-sne' match it to 'TermdbTest TSNE'. This dataset does NOT have UMAP plots
+
+  ## OUTPUT SCHEMA
+  Return ONLY a valid JSON object with this structure and do not add any extra fields, text, or explanation or code fences:
+  {
+    "name": "name of the prebuilt map"          // REQUIRED - name of the prebuilt scatter plot (e.g. "UMAP", "PCA", "t-SNE", etc)
+    "colorBy": "<phrase>",                      // OPTIONAL - variable to divide the matrix by (e.g. for faceting)
+    "shapeBy": "<phrase>"                       // OPTIONAL - global cohort constraint applied to the matrix
+  }
+
+  ## FIELD DEFINITIONS
+  name: The specific prebuilt scatter plot the user wants (e.g. "UMAP", "PCA", "t-SNE", etc). If the user does not specify a plot name, default to "t-SNE".
+  colorBy: A variable that the user wants to use for coloring points (e.g. "by sex", "color by subtype", "colored by age"). Extract the phrase that indicates this variable, preserving the exact wording.
+  shapeBy: A variable that the user wants to use for shaping points (e.g. "shaped by treatment response", "shape by mutation status"). Extract the phrase that indicates this variable, preserving the exact wording.  
+  
+  ## Extraction RULES
+  1. name is REQUIRED — if the user does not specify a plot name, default to "t-SNE". If the user says "tsne" or "t-sne" match it to "t-SNE".
+  2. Use colorBy when the user indicates they want to color points by a variable (e.g. "color by sex", "colored by subtype", "color by age"). Preserve the EXACT phrasing from the user's question — do not paraphrase, normalize, or generalize.
+  3. Use shapeBy when the user indicates they want to shape points by a variable (e.g. "shape by treatment response", "shape by mutation status"). Preserve the EXACT phrasing from the user's question — do not paraphrase, normalize, or generalize.
+  4. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
+  
+  ## EXAMPLES
+  Query: "Show me a t-SNE plot colored by X and shaped by Y"
+  Output: 
+  {
+    "name": "t-SNE",
+    "colorBy": "X",
+    "shapeBy": "Y"
+  }
+  
+  Query: "Show a UMAP plot colored by age"
+  Output: 
+  {
+    "name": "UMAP",
+    "colorBy": "age"
+  }
+  
+  Query: "I want to see a PCA plot shaped by treatment response"
+  Output: 
+  {
+    "name": "PCA",
+    "shapeBy": "treatment response"
+  }
+  
+  Query: "Show me a t-SNE plot"
+  Output: 
+  {
+    "name": "t-SNE"
+  }
+
+  Parse the following query into the prebuilt scatter scaffold:
+  Query: ${user_prompt}
+  `
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Prebuilt scatter scaffold: ${response}`)
+	try {
+		const parsed = JSON.parse(response) as PrebuiltScatterScaffold
+		if (!parsed.name)
+			throw new Error('Name of pre-built map (e.g. t-SNE, UMAP, etc) is required for prebuilt scatter scaffold')
+		parsed.plotType = 'prebuiltscatter'
+		return parsed
+	} catch {
+		throw new Error(`Failed to parse PrebuiltScatterScaffold from LLM response: ${response}`)
+	}
+}
+
 export async function inferScaffold(user_prompt: string, plotType: string, llm: LlmConfig): Promise<Scaffold> {
 	switch (plotType) {
 		case 'summary':
@@ -422,6 +498,8 @@ export async function inferScaffold(user_prompt: string, plotType: string, llm: 
 			return await hierarchical(user_prompt, llm)
 		case 'matrix':
 			return await matrix(user_prompt, llm)
+		case 'prebuiltscatter':
+			return await prebuiltScatter(user_prompt, llm)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
