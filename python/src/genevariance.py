@@ -109,7 +109,6 @@ def _read_json_input(args) -> str:
 
 def main():
     args = parser.parse_args()
-    print("Starting gene variance calculation...")
     try:
         raw_json = _read_json_input(args)
         json_args:dict=json.loads(raw_json)
@@ -134,7 +133,7 @@ def main():
         if not rank_type in ['iqr','var']:
             raise ValueError(f'{rank_type} must be either "iqr" or "var"')
         gene_sample_matrix=input_data_hdf5(input_file,samples)
-        print(calculate_variance(gene_sample_matrix,filter_extreme_values,rank_type,num_genes))
+        print(json.dumps(calculate_variance(gene_sample_matrix,filter_extreme_values,rank_type,num_genes)))
     except Exception as e:
         print(e, file=sys.stderr)
         sys.exit(1)
