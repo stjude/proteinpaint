@@ -1591,7 +1591,7 @@ keep this setting here for reason of:
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
 	/** Templates 2 picker map: cohortKey → domainId → friendly chart-type labels.
-	 * Lazy-built and cached by getProfileForms2Domains in server/src/profile.forms2.config.ts. */
+	 * Lazy-built and cached by getProfileForms2Domains in server/routes/profile.forms2.config.ts. */
 	profileForms2Domains?: Record<string, Record<string, string[]>>
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch

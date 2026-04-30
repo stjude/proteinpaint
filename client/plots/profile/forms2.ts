@@ -310,6 +310,9 @@ class ProfileForms2 extends profilePlot {
 
 		let y = 0
 		let showSCBar = false
+		// showSCBar is reassigned per row (drives per-row layout); anyShowSCBar tracks whether
+		// any row drew an SC bar so the post-loop legend transform reflects the whole plot.
+		let anyShowSCBar = false
 		for (const tw of this.scoreTerms) {
 			const percents: { [key: string]: number } = this.getPercentageDict(tw)
 			const scTermId = tw.term.id.replace(/^POC/, '')
@@ -323,6 +326,7 @@ class ProfileForms2 extends profilePlot {
 				.map(k => scTW.term.values?.[k]?.label || k)
 			const scTotal = Object.values(scPercents).reduce((a, b) => a + b, 0)
 			showSCBar = scTotal > 1
+			anyShowSCBar ||= showSCBar
 			this.renderYesNoBar(percents, y, step, scTotal == 1 ? scPercentKeys : [])
 			if (showSCBar) {
 				y += step + 10
@@ -354,7 +358,7 @@ class ProfileForms2 extends profilePlot {
 		}
 		this.renderLines(y - 20)
 
-		if (showSCBar) this.dom.legendG.attr('transform', `translate(${550}, ${30 + this.settings.svgh})`)
+		if (anyShowSCBar) this.dom.legendG.attr('transform', `translate(${550}, ${30 + this.settings.svgh})`)
 		else this.dom.legendG.attr('transform', `translate(${550}, ${this.settings.svgh * 0.8})`)
 
 		let x = 0
