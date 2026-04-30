@@ -15,7 +15,7 @@ from pathlib import Path
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 #    newformat?: bool. Used to support new format HDF5
 
-# json_example='{"samples":"sample1,sample2,sample3","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file.h5",
+# json_example='{"samples":"sample1,sample2,sample3,"input_file":"/path/to/input/file.h5",
 # "filter_extreme_values":true,"num_genes":100, "rank_type":"var"}'
 
 def generate_sample_list(filename:str):
@@ -58,7 +58,8 @@ def input_data_hdf5(filename:str, sample_list: list):
         df.columns=all_samples
         return df[sample_list]
     except Exception as e:
-        print(e)
+        print(e, file=sys.stderr)
+        sys.exit(1)
 
 
 def calculate_variance(
@@ -94,43 +95,46 @@ def calculate_variance(
     return [key for (key,_) in sorted(gene_data.items(), key=lambda item: item[1],reverse=True)[:desired_num_genes]]
 
 parser = argparse.ArgumentParser(description="This script selects the top most variant genes by calculating the variance/interquartile region for each gene across samples.")
-parser.add_argument('json', type='str', required=True,help='Input json string containing: samples, input_file,filter_extreme_values, num_genes, rank_type')
+parser.add_argument('json', nargs='?', help='Input json string containing: samples, input_file,filter_extreme_values, num_genes, rank_type')
+
+def _read_json_input(args) -> str:
+    if args.json is not None:
+        return args.json
+
+    stdin_json = sys.stdin.read().strip()
+    if stdin_json:
+        return stdin_json
+
+    raise ValueError('Missing input JSON. Provide it as a CLI argument or pipe it on stdin.')
 
 def main():
     args = parser.parse_args()
     print("Starting gene variance calculation...")
     try:
-        json_args:dict=json.loads(args.json)
+        raw_json = _read_json_input(args)
+        json_args:dict=json.loads(raw_json)
         if not isinstance(json_args,dict):
-            raise SyntaxError(f'Problem parsing json ({args.json}) as dictionary, check formatting.')
+            raise SyntaxError(f'Problem parsing json ({raw_json}) as dictionary, check formatting.')
         
         samples:list=json_args.get('samples').split(',')
         if samples.__len__()<2:
-            raise ValueError(f'Problem parsing json ({args.json}) as dictionary, check formatting.')
-        
+            raise ValueError(f'Not enough samples provided. Requires at least 2.')
         input_file:str=json_args.get('input_file')
         if not Path(input_file).is_file():
             raise FileNotFoundError(f'{input_file} could not be found')
         if not h5py.is_hdf5(input_file):
             raise ValueError(f'{input_file} is not a valid hdf5')
-
         filter_extreme_values:bool=json_args.get('filter_extreme_values')
-        if isinstance(filter_extreme_values,bool):
+        if not isinstance(filter_extreme_values,bool):
             raise ValueError(f'{filter_extreme_values} is not a valid boolean, check json formatting')
-        
         num_genes:int = int(json_args.get('num_genes'))
-        if isinstance(num_genes,int):
+        if not isinstance(num_genes,int):
             raise ValueError(f'{num_genes} must be an integer, check json formatting')
-        
         rank_type:str = json_args.get('rank_type')
         if not rank_type in ['iqr','var']:
             raise ValueError(f'{rank_type} must be either "iqr" or "var"')
-        
         gene_sample_matrix=input_data_hdf5(input_file,samples)
         print(calculate_variance(gene_sample_matrix,filter_extreme_values,rank_type,num_genes))
-
     except Exception as e:
-        print(e)
-        return
-    print("Program execution complete")
-
+        print(e, file=sys.stderr)
+        sys.exit(1)
