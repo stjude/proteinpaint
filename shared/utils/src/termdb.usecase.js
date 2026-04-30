@@ -180,11 +180,9 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			return uses
 
 		case 'profileForms2': {
-			// usecase.cohort + usecase.subtype are set by the Templates 2 picker
-			// (mass/charts.js showFormsToggleTree). profileForms2Domains is cohort-keyed:
-			//   Record<cohortKey, Record<domainId, friendlyLabel[]>>
-			// A depth-3 term is clickable iff its label array contains the active subtype.
-			// A depth-1/2 term is an expandable branch iff some descendant offers that subtype.
+			// Picker (mass/charts.js showFormsToggleTree) sets usecase.cohort + usecase.subtype.
+			// termdbConfig.profileForms2Domains is lazy-built server-side on first /termdb/config
+			// request (see getProfileForms2Domains in termdb.config.ts).
 			if (term.isleaf) return uses
 			const allowed = termdbConfig?.profileForms2Domains?.[usecase.cohort]
 			if (!allowed) return uses

@@ -181,13 +181,9 @@ This chart compares two different metrics for the same respondent group for each
 
 The picker UI is defined entirely in [`mass/charts.js`](../../mass/charts.js) (`self.showFormsToggleTree`) — the generic [`tree.js`](../../termdb/tree.js) component is untouched. The same `Tabs` component used inside the rendered chart (Yes/No vs Likert) is reused for the picker tabs.
 
-A single map is precomputed at server init in [`mds3.init.js`](../../../../server/src/mds3.init.js) and surfaced on `termdbConfig`:
+`termdbConfig.profileForms2Domains` (`Record<cohortKey, Record<domainId, friendlyLabel[]>>`) drives the tab list and per-tab tree filter. Lazy-built on first `/termdb/config` request for the dataset and cached on `tdb` (see `getProfileForms2Domains` in [`server/routes/termdb.config.ts`](../../../../server/routes/termdb.config.ts)) — no startup cost, populated when the first client connects. An empty inner submap (e.g., Abbreviated today) triggers the picker's empty-state message.
 
-- `profileForms2Domains` — `Record<cohortKey, Record<domainId, friendlyLabel[]>>`: cohort-keyed map of depth-3 domain term IDs whose multivalue children match a configured subtype. The outer key is the cohort (e.g., `'full'`, `'abbrev'`). Drives both the tab list (deduped union of all friendly labels for the active cohort) and the per-tab tree filter. An empty inner map means the cohort has no template data — the picker shows the empty-state message in that case.
-
-[`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (both set by the picker): a depth-3 term gets `'plot'` only if its value array in `profileForms2Domains[cohort]` contains the active subtype, and a depth-1/2 term gets `'branch'` only if at least one matching depth-3 descendant exists. Terms with empty `uses` are entirely excluded by `tree.js`'s filter — not just disabled.
-
-When the active cohort has no template data (e.g., Abbreviated today), the picker shows a friendly empty-state message in place of the tabs/tree. v1 Templates does none of this filtering and may silently produce blank charts.
+[`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (set by the picker): depth-3 gets `'plot'` only if `profileForms2Domains[cohort][term.id]` includes the active subtype; depth-1/2 gets `'branch'` only if any descendant matches. Terms with empty `uses` are entirely excluded by `tree.js`'s filter.
 
 **Key differences from v1 Templates:**
 
