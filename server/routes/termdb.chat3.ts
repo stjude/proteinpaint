@@ -1,9 +1,9 @@
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification, GeneDataTypeResult } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
 // import { ambiguousPoints } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readJSONFile, parse_geneset_db, extractGenesFromPrompt, getChatRelatedPlotTypes } from './chat/utils.ts'
+import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './chat/utils.ts'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
@@ -14,12 +14,9 @@ import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import { resolveToTwTvs } from './chat/entity2twTvs.ts'
 import { answerDataQueries } from './chat/dataQueries.ts'
-import { extract_hiercluster_terms_from_query } from './chat/hiercluster.ts'
-import { classifyGeneDataType } from './chat/genedatatypeagent.ts'
-import { determineAmbiguousGenePrompt } from './chat/ambiguousgeneagent.ts'
 import path from 'path'
 import fs from 'fs'
-import type { Phrase2EntityResult } from './chat/scaffoldTypes.ts'
+import type { Scaffold, Phrase2EntityResult } from './chat/scaffoldTypes.ts'
 import { resolveToPlotState } from './chat/scaffold2state.ts'
 
 export const api: RouteApi = {
@@ -160,71 +157,97 @@ export async function run_chat_pipeline(
 		}
 
 		const genes_list = await parse_geneset_db(genedb)
-		if (plotType === 'hiercluster') {
-			if (allowedTermTypes.includes('geneExpression')) {
-				// For now assuming that only 'geneExpression' is the only term that hierarchical clustering plot supports,
-				// Will later add support for metabolite intensity and other numeric data types, in which case this relevant terms extraction step
-				// and subsequent gene data type classification step will need to be modified to include relevant terms of those data types as well, not just genes.
-				const genesInPrompt = extractGenesFromPrompt(userPrompt, genes_list)
-				let geneFeatures: GeneDataTypeResult[] = []
-				mayLog('Relevant genes extracted from prompt for hierarchical clustering:', genesInPrompt)
-				if (genesInPrompt.length > 0) {
-					const ambiguousMsg = determineAmbiguousGenePrompt(userPrompt, genesInPrompt, dataset_json)
-					if (ambiguousMsg.length > 0) {
-						return { type: 'text', text: ambiguousMsg }
-					}
-					const geneDataTypeMessage = await classifyGeneDataType(userPrompt, llm, genesInPrompt, dataset_json) // classifyGeneDataType() in chat/genedatatypeagent.ts is DIFFERENT from classifyGeneDataTypePhrase() in chat/genedatatypeagentnew.ts, the former returns a string message when there is an issue with gene data type classification, while the latter returns an array of gene data type results. The reason for this difference is that for hierarchical clustering, we need to know the specific data type for each gene in order to determine if hierarchical clustering is supported and how to perform it, whereas for the initial classification of gene vs group, we only needed to know if the term was a gene or a group, not the specific data type.
-					if (typeof geneDataTypeMessage === 'string') {
-						if (geneDataTypeMessage.length > 0) {
-							return { type: 'text', text: geneDataTypeMessage }
-						}
-						throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
-					} else if (Array.isArray(geneDataTypeMessage)) {
-						geneFeatures = geneDataTypeMessage
-					} else {
-						throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
-					}
-				}
+		//if (plotType === 'hiercluster') {
+		//    if (allowedTermTypes.includes('geneExpression')) {
+		//        // For now assuming that only 'geneExpression' is the only term that hierarchical clustering plot supports,
+		//        // Will later add support for metabolite intensity and other numeric data types, in which case this relevant terms extraction step
+		//        // and subsequent gene data type classification step will need to be modified to include relevant terms of those data types as well, not just genes.
+		//        const genesInPrompt = extractGenesFromPrompt(userPrompt, genes_list)
+		//        let geneFeatures: GeneDataTypeResult[] = []
+		//        mayLog('Relevant genes extracted from prompt for hierarchical clustering:', genesInPrompt)
+		//        if (genesInPrompt.length > 0) {
+		//            const ambiguousMsg = determineAmbiguousGenePrompt(userPrompt, genesInPrompt, dataset_json)
+		//            if (ambiguousMsg.length > 0) {
+		//                return { type: 'text', text: ambiguousMsg }
+		//            }
+		//            const geneDataTypeMessage = await classifyGeneDataType(userPrompt, llm, genesInPrompt, dataset_json) // classifyGeneDataType() in chat/genedatatypeagent.ts is DIFFERENT from classifyGeneDataTypePhrase() in chat/genedatatypeagentnew.ts, the former returns a string message when there is an issue with gene data type classification, while the latter returns an array of gene data type results. The reason for this difference is that for hierarchical clustering, we need to know the specific data type for each gene in order to determine if hierarchical clustering is supported and how to perform it, whereas for the initial classification of gene vs group, we only needed to know if the term was a gene or a group, not the specific data type.
+		//            if (typeof geneDataTypeMessage === 'string') {
+		//                if (geneDataTypeMessage.length > 0) {
+		//                    return { type: 'text', text: geneDataTypeMessage }
+		//                }
+		//                throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+		//            } else if (Array.isArray(geneDataTypeMessage)) {
+		//                geneFeatures = geneDataTypeMessage
+		//            } else {
+		//                throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+		//            }
+		//        }
 
-				const time = new Date().valueOf()
-				ai_output_json = await extract_hiercluster_terms_from_query(
-					userPrompt,
-					llm,
-					genome,
-					ds,
-					geneFeatures,
-					'geneExpression'
-				)
-				mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
-				return ai_output_json
-			}
-			// else if() // Will later add support for other hierarchical clustering types e.g. metaboliteIntensity
-			else {
-				return {
-					type: 'text',
-					text: 'Hierarchical clustering is not supported for this dataset because gene expression data is not available.'
-				}
-			}
-		}
+		//        const time = new Date().valueOf()
+		//        ai_output_json = await extract_hiercluster_terms_from_query(
+		//            userPrompt,
+		//            llm,
+		//            genome,
+		//            ds,
+		//            geneFeatures,
+		//            'geneExpression'
+		//        )
+		//        mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
+		//        return ai_output_json
+		//    }
+		//    // else if() // Will later add support for other hierarchical clustering types e.g. metaboliteIntensity
+		//    else {
+		//        return {
+		//            type: 'text',
+		//            text: 'Hierarchical clustering is not supported for this dataset because gene expression data is not available.'
+		//        }
+		//    }
+		//}
 
 		// If supported plot type, figure out the scaffold according to the plot type
 		mayLog('#################################################')
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
 		mayLog('#################################################')
 		time = new Date().valueOf()
-		const scaffoldResult = await inferScaffold(userPrompt, plotType, llm)
+		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+		const scaffoldResult = await inferScaffold(
+			userPrompt,
+			plotType,
+			llm,
+			genome,
+			genes_list,
+			allowedTermTypes,
+			dataset_json,
+			ds,
+			dataset_db
+		)
 		mayLog('ScaffoldResult: ', scaffoldResult)
+		if (plotType === 'hiercluster') {
+			return scaffoldResult
+		}
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
 		if (!scaffoldResult)
 			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
-		const subplotType = scaffoldResult.plotType === 'summary' ? scaffoldResult.chartType : undefined
+		if ('type' in scaffoldResult && scaffoldResult.type === 'text') {
+			return scaffoldResult // Return msg/error
+		}
+
+		const subplotType =
+			(scaffoldResult as Scaffold).plotType === 'summary' ? (scaffoldResult as Scaffold).chartType : undefined
 
 		mayLog('#################################################')
 		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")
 		mayLog('#################################################')
 		time = new Date().valueOf()
-		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds, genome)
+		const phrase2entityResult = await phrase2entity(
+			scaffoldResult as Scaffold,
+			plotType,
+			llm,
+			genes_list,
+			dataset_json,
+			ds
+		)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
 		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
 			return phrase2entityResult // Return msg/error
@@ -234,7 +257,6 @@ export async function run_chat_pipeline(
 		mayLog('#################################################')
 		mayLog('####### Third phase: From Entities infer Term Objects #######')
 		mayLog('#################################################')
-		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
 		time = new Date().valueOf()
 		const termObj = await inferTermObjFromEntity(
 			phrase2entityResult as Phrase2EntityResult,

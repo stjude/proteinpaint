@@ -1,75 +1,74 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
-import { extractGenesFromPrompt, getGenesForGeneset } from './utils.ts'
+import { extractGenesFromPrompt } from './utils.ts'
 import { classifyGeneDataTypePhrase } from './genedatatypeagentnew.ts'
 import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
-	Scaffold,
-	SummaryScaffold,
-	DEScaffold,
-	HierarchicalScaffold,
-	PrebuiltScatterScaffold,
-	Entity,
-	Phrase2EntityResult,
-	DEPhrase2EntityResult,
-	HierPhrase2EntityResult,
-	PrebuiltScatterPhrase2EntityResult,
-	MsgToUser,
-	MatrixScaffold
+    Scaffold,
+    SummaryScaffold,
+    DEScaffold,
+    Entity,
+    Phrase2EntityResult,
+    DEPhrase2EntityResult,
+    MsgToUser,
+    MatrixScaffold
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
 import assert from 'assert'
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
-type FilterLeafNode = { leaf: string }
-type FilterOperatorNode = { op: '&' | '|'; left: FilterTreeNode; right: FilterTreeNode }
-type FilterTreeNode = FilterLeafNode | FilterOperatorNode
-type FilterTreeResult = { sexpr: string; tree: FilterTreeNode }
+export type FilterLeafNode = { leaf: string }
+export type FilterOperatorNode = { op: '&' | '|'; left: FilterTreeNode; right: FilterTreeNode }
+export type FilterTreeNode = FilterLeafNode | FilterOperatorNode
+export type FilterTreeResult = { sexpr: string; tree: FilterTreeNode }
 
 // The JSON schema definition passed to the LLM prompt
 const filterTreeJsonSchema = {
-	type: 'object',
-	required: ['sexpr', 'tree'],
-	properties: {
-		sexpr: { type: 'string', description: 'The full S-expression as a string' },
-		tree: { $ref: '#/$defs/node' }
-	},
-	$defs: {
-		node: {
-			oneOf: [
-				{
-					type: 'object',
-					required: ['op', 'left', 'right'],
-					properties: {
-						op: { type: 'string', enum: ['&', '|'] },
-						left: { $ref: '#/$defs/node' },
-						right: { $ref: '#/$defs/node' }
-					},
-					additionalProperties: false
-				},
-				{
-					type: 'object',
-					required: ['leaf'],
-					properties: {
-						leaf: { type: 'string' }
-					},
-					additionalProperties: false
-				}
-			]
-		}
-	},
-	additionalProperties: false
+    type: 'object',
+    required: ['sexpr', 'tree'],
+    properties: {
+        sexpr: { type: 'string', description: 'The full S-expression as a string' },
+        tree: { $ref: '#/$defs/node' }
+    },
+    $defs: {
+        node: {
+            oneOf: [
+                {
+                    type: 'object',
+                    required: ['op', 'left', 'right'],
+                    properties: {
+                        op: { type: 'string', enum: ['&', '|'] },
+                        left: { $ref: '#/$defs/node' },
+                        right: { $ref: '#/$defs/node' }
+                    },
+                    additionalProperties: false
+                },
+                {
+                    type: 'object',
+                    required: ['leaf'],
+                    properties: {
+                        leaf: { type: 'string' }
+                    },
+                    additionalProperties: false
+                }
+            ]
+        }
+    },
+    additionalProperties: false
 }
 
 function isLeafNode(node: FilterTreeNode): node is FilterLeafNode {
-	return 'leaf' in node
+    return 'leaf' in node
 }
 
 /** Collect all leaf values from a filter tree, preserving the logical operator that connects each leaf to the previous one */
-function collectLeaves(node: FilterTreeNode, parentOp?: '&' | '|'): { phrase: string; logicalOperator?: '&' | '|' }[] {
-	if (isLeafNode(node)) return [{ phrase: node.leaf, logicalOperator: parentOp }]
-	return [...collectLeaves(node.left, parentOp), ...collectLeaves(node.right, node.op)]
+export function collectLeaves(
+    node: FilterTreeNode,
+    parentOp?: '&' | '|'
+): { phrase: string; logicalOperator?: '&' | '|' }[] {
+    if (isLeafNode(node)) return [{ phrase: node.leaf, logicalOperator: parentOp }]
+    return [...collectLeaves(node.left, parentOp), ...collectLeaves(node.right, node.op)]
 }
 
 /* This function checks if the non-dictionary types mentioned in the scaffold result (e.g. gene names) are valid based
@@ -83,122 +82,121 @@ function collectLeaves(node: FilterTreeNode, parentOp?: '&' | '|'): { phrase: st
  * nondictionary types such as metabolites, genesets, etc.
  */
 async function validateNonDictionaryTypes(
-	phrase: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any
+    phrase: string,
+    llm: LlmConfig,
+    genes_list: string[],
+    dataset_json: any
 ): Promise<MsgToUser | { geneFeatures: GeneDataTypeResult } | null> {
-	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
-	const msg: MsgToUser = { type: 'text', text: '' }
-	if (relevant_genes.length > 0) {
-		// for e.g. classifying prompts such as "Show TP53". If not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to,
-		// we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question. This function does NOT use an LLM
-		// and searches for specific keywords in the user prompt to determine if the prompt is ambiguous with respect to which gene feature the user is referring to.
-		const AmbiguousGeneMessage = determineAmbiguousGenePrompt(phrase, relevant_genes, dataset_json)
-		if (AmbiguousGeneMessage.length > 0) {
-			msg.text = AmbiguousGeneMessage
-			return msg
-		}
-		const geneDataTypeMessage: GeneDataTypeResult | string = (await classifyGeneDataTypePhrase(
-			// This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
-			phrase,
-			llm,
-			relevant_genes,
-			dataset_json
-		)) as GeneDataTypeResult | string
+    const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
+    const msg: MsgToUser = { type: 'text', text: '' }
+    if (relevant_genes.length > 0) {
+        // for e.g. classifying prompts such as "Show TP53". If not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to,
+        // we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question. This function does NOT use an LLM
+        // and searches for specific keywords in the user prompt to determine if the prompt is ambiguous with respect to which gene feature the user is referring to.
+        const AmbiguousGeneMessage = determineAmbiguousGenePrompt(phrase, relevant_genes, dataset_json)
+        if (AmbiguousGeneMessage.length > 0) {
+            msg.text = AmbiguousGeneMessage
+            return msg
+        }
+        const geneDataTypeMessage: GeneDataTypeResult | string = (await classifyGeneDataTypePhrase(
+            // This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
+            phrase,
+            llm,
+            relevant_genes,
+            dataset_json
+        )) as GeneDataTypeResult | string
 
-		if (typeof geneDataTypeMessage === 'string') {
-			if (geneDataTypeMessage.length > 0) {
-				// This shows error is any of the genes are missing relevant features
-				msg.text = geneDataTypeMessage
-				return msg
-			} else {
-				// Should not happen
-				throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
-			}
-		} else if (geneDataTypeMessage.gene) {
-			return { geneFeatures: geneDataTypeMessage }
-		} else {
-			throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
-		}
-	}
-	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, ssGSEA)
-	else {
-		const NonDictKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, ssGSEA
-		if (NonDictKeyWords.length > 0) {
-			msg.text =
-				"Prompt includes keyword(s) such as '" +
-				NonDictKeyWords.join(',') +
-				"' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
-			return msg
-		}
-		// else if // May go for an LLM based approach if the above string search based method is not sufficient
-		else {
-			return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
-		}
-	}
+        if (typeof geneDataTypeMessage === 'string') {
+            if (geneDataTypeMessage.length > 0) {
+                // This shows error is any of the genes are missing relevant features
+                msg.text = geneDataTypeMessage
+                return msg
+            } else {
+                // Should not happen
+                throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+            }
+        } else if (geneDataTypeMessage.gene) {
+            return { geneFeatures: geneDataTypeMessage }
+        } else {
+            throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+        }
+    }
+    // else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, ssGSEA)
+    else {
+        const NonDictKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, ssGSEA
+        if (NonDictKeyWords.length > 0) {
+            msg.text =
+                "Prompt includes keyword(s) such as '" +
+                NonDictKeyWords.join(',') +
+                "' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
+            return msg
+        }
+        // else if // May go for an LLM based approach if the above string search based method is not sufficient
+        else {
+            return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
+        }
+    }
 }
 
 async function inferEntities(
-	phrase: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any
+    phrase: string,
+    llm: LlmConfig,
+    genes_list: string[],
+    dataset_json: any
 ): Promise<Entity | MsgToUser> {
-	const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json)
-	if (!validatedNonDict) {
-		// No match, probably a dictionary term or a non-dictionary term we don't have a way to validate yet (e.g. ssGSEA score, metabolites, etc.)
+    const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json)
+    if (!validatedNonDict) {
+        // No match, probably a dictionary term or a non-dictionary term we don't have a way to validate yet (e.g. ssGSEA score, metabolites, etc.)
 
-		// TODO: This incorrectly fails when a gene is not present in the genes_list, it assumes it's a dictionary term
-		// Need a way to handle this correctly and gracefully
-		return { termType: 'dictionary', phrase: phrase }
-	} else if ('type' in validatedNonDict && validatedNonDict.type === 'text') {
-		return validatedNonDict // This means we encountered an error or an ambiguous gene prompt, and we want to return early with a user-facing message.
-	} else if ('geneFeatures' in validatedNonDict) {
-		if (validatedNonDict.geneFeatures.dataType == 'expression') {
-			return { termType: 'geneExpression', phrase: phrase }
-		} else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
-			return { termType: 'dnaMethylation', phrase: phrase }
-		} else if (validatedNonDict.geneFeatures.dataType === 'variant') {
-			return { termType: 'geneVariant', phrase: phrase }
-		} else if (validatedNonDict.geneFeatures.dataType === 'proteome') {
-			return { termType: 'proteomeAbundance', phrase: phrase }
-		} else {
-			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
-		}
-	} else {
-		// Should not happen
-		throw (
-			'validatedNonDict has unknown data type returned from validateNonDictionaryTypes function:' +
-			JSON.stringify(validatedNonDict)
-		)
-	}
+        // TODO: This incorrectly fails when a gene is not present in the genes_list, it assumes it's a dictionary term
+        // Need a way to handle this correctly and gracefully
+        return { termType: 'dictionary', phrase: phrase }
+    } else if ('type' in validatedNonDict && validatedNonDict.type === 'text') {
+        return validatedNonDict // This means we encountered an error or an ambiguous gene prompt, and we want to return early with a user-facing message.
+    } else if ('geneFeatures' in validatedNonDict) {
+        if (validatedNonDict.geneFeatures.dataType == 'expression') {
+            return { termType: 'geneExpression', phrase: phrase }
+        } else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
+            return { termType: 'dnaMethylation', phrase: phrase }
+        } else if (validatedNonDict.geneFeatures.dataType === 'variant') {
+            return { termType: 'geneVariant', phrase: phrase }
+        } else if (validatedNonDict.geneFeatures.dataType === 'proteome') {
+            return { termType: 'proteomeAbundance', phrase: phrase }
+        } else {
+            throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
+        }
+    } else {
+        // Should not happen
+        throw (
+            'validatedNonDict has unknown data type returned from validateNonDictionaryTypes function:' +
+            JSON.stringify(validatedNonDict)
+        )
+    }
 }
 
-async function phrase2entitytw(
-	phrase: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any,
-	ds: any
+export async function phrase2entitytw(
+    phrase: string,
+    llm: LlmConfig,
+    genes_list: string[],
+    dataset_json: any,
+    ds: any
 ): Promise<MsgToUser | Entity> {
-	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json)
-	if ('type' in tw1Result && tw1Result.type === 'text') {
-		return tw1Result // MsgToUser
-	}
-	//mayLog("getDsAllowedTermTypes(ds):", getDsAllowedTermTypes(ds))
-	if ((tw1Result as Entity).termType == 'dictionary') {
-		return tw1Result // Dictionary term
-	} else if (getDsAllowedTermTypes(ds).includes((tw1Result as Entity).termType)) {
-		return tw1Result
-	} else {
-		return {
-			type: 'text',
-			text: `The termType "${
-				(tw1Result as Entity).termType
-			}" in phrase "${phrase}" is not an allowed termType for this dataset`
-		}
-	}
+    const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json)
+    if ('type' in tw1Result && tw1Result.type === 'text') {
+        return tw1Result // MsgToUser
+    }
+    //mayLog("getDsAllowedTermTypes(ds):", getDsAllowedTermTypes(ds))
+    if ((tw1Result as Entity).termType == 'dictionary') {
+        return tw1Result // Dictionary term
+    } else if (getDsAllowedTermTypes(ds).includes((tw1Result as Entity).termType)) {
+        return tw1Result
+    } else {
+        return {
+            type: 'text',
+            text: `The termType "${(tw1Result as Entity).termType
+                }" in phrase "${phrase}" is not an allowed termType for this dataset`
+        }
+    }
 }
 
 /*
@@ -208,8 +206,8 @@ async function phrase2entitytw(
  * "young and black patients" -> ["young", "black"]
  * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
  */
-async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
-	const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patientsas leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
+export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
+    const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patientsas leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
 
 PARSING RULES:
 
@@ -316,294 +314,217 @@ Output: {
 Parse the following query:
 Query: ${phrase}
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
-	mayLog('filter response:', response)
-	try {
-		const parsed = JSON.parse(response) as FilterTreeResult
-		if (!parsed.tree || !parsed.sexpr) {
-			throw 'Response missing required fields "tree" or "sexpr"'
-		}
-		return parsed
-	} catch (e) {
-		console.warn('Failed to parse LLM filter response, wrapping phrase as single leaf:', response, e)
-		// Fallback: wrap the entire phrase as a single-leaf tree conforming to the schema
-		return {
-			sexpr: phrase,
-			tree: { leaf: phrase }
-		}
-	}
+    const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+    mayLog('filter response:', response)
+    try {
+        const parsed = JSON.parse(response) as FilterTreeResult
+        if (!parsed.tree || !parsed.sexpr) {
+            throw 'Response missing required fields "tree" or "sexpr"'
+        }
+        return parsed
+    } catch (e) {
+        console.warn('Failed to parse LLM filter response, wrapping phrase as single leaf:', response, e)
+        // Fallback: wrap the entire phrase as a single-leaf tree conforming to the schema
+        return {
+            sexpr: phrase,
+            tree: { leaf: phrase }
+        }
+    }
 }
 
 async function parseFilterTree(
-	filterTree: FilterTreeResult,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any,
-	ds: any
+    filterTree: FilterTreeResult,
+    llm: LlmConfig,
+    genes_list: string[],
+    dataset_json: any,
+    ds: any
 ): Promise<MsgToUser | Entity[]> {
-	const entities_result: Entity[] = []
-	const leafPhrases = collectLeaves(filterTree.tree)
-	for (const leaf of leafPhrases) {
-		mayLog('Evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
-		mayLog('filterTw:', filterTw)
-		if ('type' in filterTw && filterTw.type === 'text') {
-			return filterTw // MsgToUser
-		}
-		const filterEntity = filterTw as Entity
-		if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-		entities_result.push(filterEntity)
-	}
-	return entities_result
+    const entities_result: Entity[] = []
+    const leafPhrases = collectLeaves(filterTree.tree)
+    for (const leaf of leafPhrases) {
+        mayLog('Evaluating filter leaf:', leaf.phrase)
+        const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+        mayLog('filterTw:', filterTw)
+        if ('type' in filterTw && filterTw.type === 'text') {
+            return filterTw // MsgToUser
+        }
+        const filterEntity = filterTw as Entity
+        if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+        entities_result.push(filterEntity)
+    }
+    return entities_result
 }
 
 export async function phrase2entity(
-	scaffold: Scaffold,
-	plotType: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any,
-	ds: any,
-	genome: any
+    scaffold: Scaffold,
+    plotType: string,
+    llm: LlmConfig,
+    genes_list: string[],
+    dataset_json: any,
+    ds: any
 ): Promise<MsgToUser | Phrase2EntityResult> {
-	if (plotType === 'summary') {
-		const scaffoldResult = scaffold as SummaryScaffold
-		const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds)
-		if ('type' in tw1 && tw1.type === 'text') {
-			return tw1 // MsgToUser
-		} else {
-			mayLog('Validation result for term1:', tw1)
-			const summ_term: Phrase2EntityResult = {
-				tw1: [tw1 as Entity]
-			}
-			if (scaffoldResult.tw2) {
-				const tw2 = await phrase2entitytw(scaffoldResult.tw2, llm, genes_list, dataset_json, ds)
-				if ('type' in tw2 && tw2.type === 'text') {
-					return tw2 // MsgToUser
-				}
-				mayLog('Validation result for term2:', tw2)
-				summ_term.tw2 = [tw2 as Entity]
-			}
-			if (scaffoldResult.tw3) {
-				const tw3 = await phrase2entitytw(scaffoldResult.tw3, llm, genes_list, dataset_json, ds)
-				if ('type' in tw3 && tw3.type === 'text') {
-					return tw3 // MsgToUser
-				}
-				mayLog('Validation result for term3:', tw3)
-				summ_term.tw3 = [tw3 as Entity]
-			}
-			if (scaffoldResult.filter) {
-				const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
-				mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
-				// Extract all leaf phrases from the filter tree and resolve each to an entity
-				const leafPhrases = collectLeaves(parseFilterResult.tree)
-				summ_term.filter = []
-				for (const leaf of leafPhrases) {
-					mayLog('Evaluating filter leaf:', leaf.phrase)
-					const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
-					mayLog('filterTw:', filterTw)
+    if (plotType === 'summary') {
+        const scaffoldResult = scaffold as SummaryScaffold
+        const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds)
+        if ('type' in tw1 && tw1.type === 'text') {
+            return tw1 // MsgToUser
+        } else {
+            mayLog('Validation result for term1:', tw1)
+            const summ_term: Phrase2EntityResult = {
+                tw1: [tw1 as Entity]
+            }
+            if (scaffoldResult.tw2) {
+                const tw2 = await phrase2entitytw(scaffoldResult.tw2, llm, genes_list, dataset_json, ds)
+                if ('type' in tw2 && tw2.type === 'text') {
+                    return tw2 // MsgToUser
+                }
+                mayLog('Validation result for term2:', tw2)
+                summ_term.tw2 = [tw2 as Entity]
+            }
+            if (scaffoldResult.tw3) {
+                const tw3 = await phrase2entitytw(scaffoldResult.tw3, llm, genes_list, dataset_json, ds)
+                if ('type' in tw3 && tw3.type === 'text') {
+                    return tw3 // MsgToUser
+                }
+                mayLog('Validation result for term3:', tw3)
+                summ_term.tw3 = [tw3 as Entity]
+            }
+            if (scaffoldResult.filter) {
+                const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+                mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+                // Extract all leaf phrases from the filter tree and resolve each to an entity
+                const leafPhrases = collectLeaves(parseFilterResult.tree)
+                summ_term.filter = []
+                for (const leaf of leafPhrases) {
+                    mayLog('Evaluating filter leaf:', leaf.phrase)
+                    const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+                    mayLog('filterTw:', filterTw)
 
-					if ('type' in filterTw && filterTw.type === 'text') {
-						return filterTw // MsgToUser
-					}
-					const filterEntity = filterTw as Entity
-					if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-					summ_term.filter.push(filterEntity)
-				}
-				mayLog('Validation result for filter term:', JSON.stringify(summ_term.filter))
-			}
-			return summ_term
-		}
-	} else if (plotType === 'dge') {
-		const scaffoldResult = scaffold as DEScaffold
-		const dge_term: DEPhrase2EntityResult = {
-			filter1: [],
-			filter2: []
-		}
+                    if ('type' in filterTw && filterTw.type === 'text') {
+                        return filterTw // MsgToUser
+                    }
+                    const filterEntity = filterTw as Entity
+                    if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+                    summ_term.filter.push(filterEntity)
+                }
+                mayLog('Validation result for filter term:', JSON.stringify(summ_term.filter))
+            }
+            return summ_term
+        }
+    } else if (plotType === 'dge') {
+        const scaffoldResult = scaffold as DEScaffold
+        const dge_term: DEPhrase2EntityResult = {
+            filter1: [],
+            filter2: []
+        }
 
-		// filter 1
-		let parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter1, llm)
-		const dge_term_filter1 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
-		if ('type' in dge_term_filter1 && dge_term_filter1.type === 'text') {
-			return dge_term_filter1 // MsgToUser
-		}
-		dge_term.filter1 = dge_term_filter1 as Entity[]
-		mayLog('Validation result for filter1 term:', JSON.stringify(dge_term.filter1))
+        // filter 1
+        let parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter1, llm)
+        const dge_term_filter1 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+        if ('type' in dge_term_filter1 && dge_term_filter1.type === 'text') {
+            return dge_term_filter1 // MsgToUser
+        }
+        dge_term.filter1 = dge_term_filter1 as Entity[]
+        mayLog('Validation result for filter1 term:', JSON.stringify(dge_term.filter1))
 
-		// filter 2
-		parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter2, llm)
-		const dge_term_filter2 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
-		if ('type' in dge_term_filter2 && dge_term_filter2.type === 'text') {
-			return dge_term_filter2 // MsgToUser
-		}
-		dge_term.filter2 = dge_term_filter2 as Entity[]
-		mayLog('Validation result for filter2 term:', JSON.stringify(dge_term.filter2))
+        // filter 2
+        parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter2, llm)
+        const dge_term_filter2 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+        if ('type' in dge_term_filter2 && dge_term_filter2.type === 'text') {
+            return dge_term_filter2 // MsgToUser
+        }
+        dge_term.filter2 = dge_term_filter2 as Entity[]
+        mayLog('Validation result for filter2 term:', JSON.stringify(dge_term.filter2))
 
-		// filter ?
-		if (scaffoldResult.filter) {
-			parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
-			const dge_term_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
-			if ('type' in dge_term_filter && dge_term_filter.type === 'text') {
-				return dge_term_filter // MsgToUser
-			}
-			dge_term.filter = dge_term_filter as Entity[]
-			mayLog('Validation result for optional filter term:', JSON.stringify(dge_term.filter))
-		}
+        // filter ?
+        if (scaffoldResult.filter) {
+            parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+            const dge_term_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+            if ('type' in dge_term_filter && dge_term_filter.type === 'text') {
+                return dge_term_filter // MsgToUser
+            }
+            dge_term.filter = dge_term_filter as Entity[]
+            mayLog('Validation result for optional filter term:', JSON.stringify(dge_term.filter))
+        }
 
-		return dge_term
-	} else if (plotType === 'hiercluster') {
-		const scaffoldResult = scaffold as HierarchicalScaffold
-		const hier_term: HierPhrase2EntityResult = { genes: [] }
+        return dge_term
+    } else if (plotType === 'matrix') {
+        const scaffoldResult = scaffold as MatrixScaffold
+        assert(scaffoldResult.twLst.length > 0) // 'At least one term is required for matrix plot'
 
-		// Resolve geneset names to individual genes using trigger_genesetByTermId logic
-		if (scaffoldResult.genesetNames && Array.isArray(scaffoldResult.genesetNames) && genome) {
-			for (const genesetName of scaffoldResult.genesetNames) {
-				const genes = getGenesForGeneset(genome, genesetName)
-				if (!scaffoldResult.genesetNames) scaffoldResult.genesetNames = []
-				if (genes && genes.length > 0) {
-					for (const gene of genes) {
-						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
-						if (!scaffoldResult.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
-							scaffoldResult.geneNames = scaffoldResult.geneNames || []
-							scaffoldResult.geneNames.push(gene.symbol + ' expression') // Append " expression" to indicate we're referring to gene expression of the gene, which is the only supported termType for hierarchical clustering at the moment
-						}
-					}
-				} else {
-					return {
-						type: 'text',
-						text: 'Could not find genes for geneset: ' + genesetName + '. '
-					}
-				}
-			}
-		}
+        // Convert each term in twLst to an entity
+        const twLstEntities: Entity[] = []
+        for (const [index, twPhrase] of scaffoldResult.twLst.entries()) {
+            mayLog(`Processing term${index + 1} in twLst: "${twPhrase}"`)
+            const twEntity = await phrase2entitytw(twPhrase, llm, genes_list, dataset_json, ds)
+            if ('type' in twEntity && twEntity.type === 'text') {
+                return twEntity // MsgToUser
+            }
+            mayLog(`Validation result for term${index + 1} "${twPhrase}":`, twEntity)
+            twLstEntities.push(twEntity as Entity)
+        }
 
-		const geneNames = scaffoldResult.geneNames || []
-		// Resolve geneset names to individual genes using trigger_genesetByTermId logic
-		if (scaffoldResult.genesetNames && Array.isArray(scaffoldResult.genesetNames) && genome) {
-			for (const genesetName of scaffoldResult.genesetNames) {
-				console.log('Resolving geneset for hierarchical clustering:', genesetName)
-				const genes = getGenesForGeneset(genome, genesetName)
-				if (!scaffoldResult.genesetNames) scaffoldResult.genesetNames = []
-				if (genes && genes.length > 0) {
-					for (const gene of genes) {
-						// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
-						if (!scaffoldResult.geneNames?.some((g: string) => g.toLowerCase() === gene.symbol.toLowerCase())) {
-							scaffoldResult.geneNames = scaffoldResult.geneNames || []
-							scaffoldResult.genesetNames.push(gene.symbol)
-						}
-					}
-				} else {
-					return {
-						type: 'text',
-						text: 'Could not find genes for geneset: ' + genesetName + '. '
-					}
-				}
-			}
-		}
+        const matrix_term: Phrase2EntityResult = {
+            twLst: twLstEntities
+        }
 
-		if (geneNames.length === 0) {
-			return {
-				type: 'text',
-				text: 'At least one gene is required for hierarchical clustering.'
-			}
-		}
-		for (const gene of geneNames) {
-			const geneEntity = await phrase2entitytw(gene, llm, genes_list, dataset_json, ds)
-			if ('type' in geneEntity && geneEntity.type === 'text') {
-				return geneEntity // MsgToUser
-			}
-			mayLog(`Validation result for gene "${gene}":`, geneEntity)
-			hier_term.genes.push(geneEntity as Entity)
-		}
+        // if divideBy is present, convert to entity as well
+        if (scaffoldResult.divideBy) {
+            const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds)
+            if ('type' in divideByEntity && divideByEntity.type === 'text') {
+                return divideByEntity // MsgToUser
+            }
+            mayLog(`Validation result for divideBy "${scaffoldResult.divideBy}":`, divideByEntity)
+            matrix_term.divideBy = divideByEntity as Entity
+        }
 
-		if (scaffoldResult.filter) {
-			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
-			const hier_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
-			if ('type' in hier_filter && hier_filter.type === 'text') {
-				return hier_filter // MsgToUser
-			}
-			hier_term.filter = hier_filter as Entity[]
-			mayLog('Validation result for hierCluster filter term:', JSON.stringify(hier_term.filter))
-		}
+        // if filter is present, convert to entity as well
+        if (scaffoldResult.filter) {
+            const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+            mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+            // Extract all leaf phrases from the filter tree and resolve each to an entity
+            const leafPhrases = collectLeaves(parseFilterResult.tree)
+            matrix_term.filter = [] as Entity[]
+            for (const leaf of leafPhrases) {
+                mayLog('Evaluating filter leaf:', leaf.phrase)
+                const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+                mayLog('filterTw:', filterTw)
 
-		return hier_term
-	} else if (plotType === 'matrix') {
-		const scaffoldResult = scaffold as MatrixScaffold
-		assert(scaffoldResult.twLst.length > 0) // 'At least one term is required for matrix plot'
-
-		// Convert each term in twLst to an entity
-		const twLstEntities: Entity[] = []
-		for (const [index, twPhrase] of scaffoldResult.twLst.entries()) {
-			mayLog(`Processing term${index + 1} in twLst: "${twPhrase}"`)
-			const twEntity = await phrase2entitytw(twPhrase, llm, genes_list, dataset_json, ds)
-			if ('type' in twEntity && twEntity.type === 'text') {
-				return twEntity // MsgToUser
-			}
-			mayLog(`Validation result for term${index + 1} "${twPhrase}":`, twEntity)
-			twLstEntities.push(twEntity as Entity)
-		}
-
-		const matrix_term: Phrase2EntityResult = {
-			twLst: twLstEntities
-		}
-
-		// if divideBy is present, convert to entity as well
-		if (scaffoldResult.divideBy) {
-			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds)
-			if ('type' in divideByEntity && divideByEntity.type === 'text') {
-				return divideByEntity // MsgToUser
-			}
-			mayLog(`Validation result for divideBy "${scaffoldResult.divideBy}":`, divideByEntity)
-			matrix_term.divideBy = divideByEntity as Entity
-		}
-
-		// if filter is present, convert to entity as well
-		if (scaffoldResult.filter) {
-			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
-			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
-			// Extract all leaf phrases from the filter tree and resolve each to an entity
-			const leafPhrases = collectLeaves(parseFilterResult.tree)
-			matrix_term.filter = [] as Entity[]
-			for (const leaf of leafPhrases) {
-				mayLog('Evaluating filter leaf:', leaf.phrase)
-				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
-				mayLog('filterTw:', filterTw)
-
-				if ('type' in filterTw && filterTw.type === 'text') {
-					return filterTw // MsgToUser
-				}
-				const filterEntity = filterTw as Entity
-				if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-				matrix_term.filter.push(filterEntity)
-			}
-			mayLog('Validation result for filter term:', JSON.stringify(matrix_term.filter))
-		}
-		return matrix_term
-	} else if (plotType === 'prebuiltscatter') {
-		const scaffoldResult = scaffold as PrebuiltScatterScaffold
-		const scatter_term: PrebuiltScatterPhrase2EntityResult = { name: scaffoldResult.name }
-		if (scaffoldResult.colorBy) {
-			const colorByEntity = await phrase2entitytw(scaffoldResult.colorBy, llm, genes_list, dataset_json, ds)
-			if ('type' in colorByEntity && colorByEntity.type === 'text') {
-				return colorByEntity // MsgToUser
-			}
-			mayLog(`Validation result for colorBy "${scaffoldResult.colorBy}":`, colorByEntity)
-			scatter_term.colorBy = colorByEntity as Entity
-		}
-		if (scaffoldResult.shapeBy) {
-			const shapeByEntity = await phrase2entitytw(scaffoldResult.shapeBy, llm, genes_list, dataset_json, ds)
-			if ('type' in shapeByEntity && shapeByEntity.type === 'text') {
-				return shapeByEntity // MsgToUser
-			}
-			mayLog(`Validation result for shapeBy "${scaffoldResult.shapeBy}":`, shapeByEntity)
-			scatter_term.shapeBy = shapeByEntity as Entity
-		}
-		return scatter_term
-	} else {
-		const msg: MsgToUser = {
-			type: 'text',
-			text: `Plot type "${plotType}" is not supported yet.`
-		}
-		return msg
-	}
+                if ('type' in filterTw && filterTw.type === 'text') {
+                    return filterTw // MsgToUser
+                }
+                const filterEntity = filterTw as Entity
+                if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+                matrix_term.filter.push(filterEntity)
+            }
+            mayLog('Validation result for filter term:', JSON.stringify(matrix_term.filter))
+        }
+        return matrix_term
+    } else if (plotType === 'prebuiltscatter') {
+        const scaffoldResult = scaffold as PrebuiltScatterScaffold
+        const scatter_term: PrebuiltScatterPhrase2EntityResult = { name: scaffoldResult.name }
+        if (scaffoldResult.colorBy) {
+            const colorByEntity = await phrase2entitytw(scaffoldResult.colorBy, llm, genes_list, dataset_json, ds)
+            if ('type' in colorByEntity && colorByEntity.type === 'text') {
+                return colorByEntity // MsgToUser
+            }
+            mayLog(`Validation result for colorBy "${scaffoldResult.colorBy}":`, colorByEntity)
+            scatter_term.colorBy = colorByEntity as Entity
+        }
+        if (scaffoldResult.shapeBy) {
+            const shapeByEntity = await phrase2entitytw(scaffoldResult.shapeBy, llm, genes_list, dataset_json, ds)
+            if ('type' in shapeByEntity && shapeByEntity.type === 'text') {
+                return shapeByEntity // MsgToUser
+            }
+            mayLog(`Validation result for shapeBy "${scaffoldResult.shapeBy}":`, shapeByEntity)
+            scatter_term.shapeBy = shapeByEntity as Entity
+        }
+        return scatter_term
+    } else {
+        const msg: MsgToUser = {
+            type: 'text',
+            text: `Plot type "${plotType}" is not supported yet.`
+        }
+        return msg
+    }
 }

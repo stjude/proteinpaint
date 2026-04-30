@@ -1,15 +1,25 @@
-import type { LlmConfig } from '#types'
+import type { LlmConfig, GeneDataTypeResult } from '#types'
 // import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
+import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import { extract_hiercluster_terms_from_query } from './hiercluster.ts'
 import type {
 	Scaffold,
 	SummaryScaffold,
 	DEScaffold,
 	HierarchicalScaffold,
 	MatrixScaffold,
-	PrebuiltScatterScaffold
+	PrebuiltScatterScaffold,
+	MsgToUser,
+	Entity
 } from './scaffoldTypes.ts'
+import { extractGenesFromPrompt } from './utils.ts'
+import { classifyGeneDataType } from './genedatatypeagent.ts'
+import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
+import { getTermObj, type Value } from './entity2termObj.ts'
+import { resolveToTvs } from './entity2twTvs.ts'
 
 async function matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
 	const prompt = ` You are a ProteinPaint matrix plot assistant. Your task is to extract the necessary variables from a user's natural language question to populate a strict JSON scaffold for configuring a matrix plot. 
@@ -336,7 +346,16 @@ Query: ${user_prompt}
 	}
 }
 
-async function hierarchical(user_prompt: string, llm: LlmConfig): Promise<HierarchicalScaffold> {
+async function hierarchical(
+	user_prompt: string,
+	llm: LlmConfig,
+	genome: any,
+	genes_list: string[],
+	allowedTermTypes: string[],
+	dataset_json?: any,
+	ds?: any,
+	dbPath?: string
+): Promise<any | MsgToUser> {
 	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of genes (and optionally gene sets) and an optional cohort filter from a user's natural language question.
 
 A hierarchical clustering plot clusters samples and features (such as genes) and displays the result as a heatmap with dendrograms.
@@ -344,56 +363,42 @@ A hierarchical clustering plot clusters samples and features (such as genes) and
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure:
 {
-  "geneNames": ["<gene>", ...],       // OPTIONAL — list of gene symbols to cluster
-  "genesetNames": ["<geneset>", ...], // OPTIONAL — list of gene set/pathway names to cluster (e.g. HALLMARK pathways)
-  "filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase
+"hierarchicalPhrase": "<phrase>",   // REQUIRED - the phrase indicating details for hierarchical clustering which may include gene names, geneset names or calculating the top variably expressed genes, etc. Extract the entire phrase that indicates hierarchical clustering intent, preserving the exact wording.
+"filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase that narrows the sample set used for clustering
 }
-
-## FIELD DEFINITIONS
-geneNames:    List of gene symbols mentioned in the query (e.g. "TP53", "KRAS", "BCR"). ALSO INCLUDE their corresponding descriptive words like "expression", "methylation" or "mutation".
-genesetNames: Gene set / pathway names mentioned in the query (e.g. "HALLMARK_APOPTOSIS", "HALLMARK_P53_PATHWAY"). Only include if explicitly named.
-filter:       A cohort restriction that narrows the sample set used for clustering (e.g. "in women", "for AML patients", "KMT2A subtype"). Preserve the exact phrase from the user's question. Omit this field if the user does not restrict the cohort.
-
-## Extraction RULES
-1. At least one of "geneNames" or "genesetNames" must be extracted — a hierarchical clustering plot is meaningless without features to cluster.
-2. Preserve the EXACT gene symbols as written (upper/lower case is fine — downstream code will normalize).
-3. Do NOT include descriptive/analytic words (e.g. "expression", "clustering", "dendrogram") in geneNames or genesetNames.
-4. Only populate "filter" when the user restricts the analysis to a specific subpopulation.
-5. OPTIONAL fields should be omitted from the JSON (not set to null or empty array) if they cannot be confidently extracted from the query.
-6. Return ONLY the JSON — no explanation, no markdown fences, no extra text.
 
 ## EXAMPLES
 
 --- Simple gene list ---
 Q: "Cluster ABC, PQR and XYZ gene expression"
 A: {
-  "geneNames": ["ABC expression", "PQR expression", "XYZ expression"]
+  "hierarchicalPhrase": "Cluster ABC, PQR and XYZ gene expression"
 }
 
 --- Gene list with cohort filter ---
 Q: "Cluster IJK45, MNO4 and RSTB4 gene expression for patients with acute lymphoblastic leukemia"
 A: {
-  "geneNames": ["IJK45 expression", "MNO4 expression", RSTB4 gene expression"],
+  "hierarchicalPhrase": "Cluster IJK45, MNO4 and RSTB4 gene expression:",
   "filter": "acute lymphoblastic leukemia"
 }
 
 --- Dendrogram phrasing ---
 Q: "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
 A: {
-  "geneNames": ["XYZ4 expression, CDE5 expression, AZF1 gene expression"]
+  "hierarchicalPhrase": "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
 }
 
 --- Subtype-restricted cluster ---
-Q: "Cluster HGT3, XCFT53 and KRRDF for patients with SBG5B subtype"
+Q: "Cluster HGT3, XCFT53 and KRRDF gene expression for patients with SBG5B subtype"
 A: {
-  "geneNames": ["HGT3 expression", "XCFT53 expression", "KRRDF expression"],
+  "hierarchicalPhrase": "Cluster HGT3, XCFT53 and KRRDF gene expression",
   "filter": "SBG5B subtype"
 }
 
 --- Gene set clustering ---
 Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
 A: {
-  "genesetNames": "GO_T67_PATHWAY and HGC_676 genesets"]
+  "hierarchicalPhrase": "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
 }
 
 ## EDGE CASES
@@ -410,10 +415,67 @@ Query: ${user_prompt}
 		parsed.plotType = 'hiercluster'
 		// Ensure each gene symbol is followed by "expression" so downstream phrase2entity
 		// resolves it to the geneExpression term type rather than flagging it as ambiguous.
-		if (parsed.geneNames) {
-			parsed.geneNames = parsed.geneNames.map(g => (/\bexpression\b/i.test(g) ? g : `${g} expression`))
+		let filterTvs: any
+		if (parsed.filter) {
+			if (!genes_list || !dataset_json || !ds || !dbPath) {
+				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and dbPath to be provided'
+			}
+			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath)
+			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
+				return filterTvs as { type: 'text'; text: string }
+			}
 		}
-		return parsed
+
+		if (allowedTermTypes.includes('geneExpression')) {
+			// For now assuming that only 'geneExpression' is the only term that hierarchical clustering plot supports,
+			// Will later add support for metabolite intensity and other numeric data types, in which case this relevant terms extraction step
+			// and subsequent gene data type classification step will need to be modified to include relevant terms of those data types as well, not just genes.
+			const genesInPrompt = extractGenesFromPrompt(parsed.hierarchicalPhrase, genes_list)
+			let geneFeatures: GeneDataTypeResult[] = []
+			mayLog('Relevant genes extracted from prompt for hierarchical clustering:', genesInPrompt)
+			if (genesInPrompt.length > 0) {
+				const ambiguousMsg = determineAmbiguousGenePrompt(parsed.hierarchicalPhrase, genesInPrompt, dataset_json)
+				if (ambiguousMsg.length > 0) {
+					return { type: 'text', text: ambiguousMsg }
+				}
+				const geneDataTypeMessage = await classifyGeneDataType(
+					parsed.hierarchicalPhrase,
+					llm,
+					genesInPrompt,
+					dataset_json
+				) // classifyGeneDataType() in chat/genedatatypeagent.ts is DIFFERENT from classifyGeneDataTypePhrase() in chat/genedatatypeagentnew.ts, the former returns a string message when there is an issue with gene data type classification, while the latter returns an array of gene data type results. The reason for this difference is that for hierarchical clustering, we need to know the specific data type for each gene in order to determine if hierarchical clustering is supported and how to perform it, whereas for the initial classification of gene vs group, we only needed to know if the term was a gene or a group, not the specific data type.
+				if (typeof geneDataTypeMessage === 'string') {
+					if (geneDataTypeMessage.length > 0) {
+						return { type: 'text', text: geneDataTypeMessage }
+					}
+					throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+				} else if (Array.isArray(geneDataTypeMessage)) {
+					geneFeatures = geneDataTypeMessage
+				} else {
+					throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+				}
+			}
+
+			const time = new Date().valueOf()
+			const ai_output_json = await extract_hiercluster_terms_from_query(
+				parsed.hierarchicalPhrase,
+				llm,
+				genome,
+				ds,
+				geneFeatures,
+				'geneExpression',
+				filterTvs
+			)
+			mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
+			return ai_output_json
+		}
+		// else if() // Will later add support for other hierarchical clustering types e.g. metaboliteIntensity
+		else {
+			return {
+				type: 'text',
+				text: 'Hierarchical clustering is not supported for this dataset because gene expression data is not available.'
+			}
+		}
 	} catch {
 		throw new Error(`Failed to parse HierarchicalScaffold from LLM response: ${response}`)
 	}
@@ -488,14 +550,25 @@ async function prebuiltScatter(user_prompt: string, llm: LlmConfig): Promise<Pre
 	}
 }
 
-export async function inferScaffold(user_prompt: string, plotType: string, llm: LlmConfig): Promise<Scaffold> {
+export async function inferScaffold(
+	user_prompt: string,
+	plotType: string,
+	llm: LlmConfig,
+	genome: any,
+	genes_list: string[],
+	allowedTermTypes: string[],
+	dataset_json?: any,
+	ds?: any,
+	dbPath?: string
+): Promise<Scaffold | MsgToUser | any> {
+	// any is for final output in case of hierarchical clustering
 	switch (plotType) {
 		case 'summary':
 			return await summary(user_prompt, llm)
 		case 'dge':
 			return await dge(user_prompt, llm)
 		case 'hiercluster':
-			return await hierarchical(user_prompt, llm)
+			return await hierarchical(user_prompt, llm, genome, genes_list, allowedTermTypes, dataset_json, ds, dbPath)
 		case 'matrix':
 			return await matrix(user_prompt, llm)
 		case 'prebuiltscatter':
@@ -503,4 +576,50 @@ export async function inferScaffold(user_prompt: string, plotType: string, llm: 
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
+}
+
+/**
+ * Convert a natural-language filter phrase into a tvslst object that can be sent to the UI.
+ * Pipeline:
+ *   1. evaluateFilterTerm() — parse the phrase into a binary AND/OR tree of leaf phrases
+ *   2. phrase2entitytw() per leaf — resolve each leaf phrase into an Entity (mirrors the
+ *      filter-loop pattern used in phrase2entity.ts)
+ *   3. getTermObj() per Entity — resolve each Entity into a Value (mirrors lines 210-219 of
+ *      entity2termObj.ts, which does the same conversion for hierCluster filter entities)
+ *   4. resolveToTvs() — assemble the Value[] into a final tvslst object
+ */
+async function generateFilterTerm(
+	phrase: string,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	ds: any,
+	dbPath: string
+): Promise<any | MsgToUser> {
+	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
+	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
+
+	const leafPhrases = collectLeaves(filterTree.tree)
+	const filterEntities: Entity[] = []
+	for (const leaf of leafPhrases) {
+		mayLog('generateFilterTerm evaluating filter leaf:', leaf.phrase)
+		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+		if ('type' in filterTw && filterTw.type === 'text') {
+			return filterTw as MsgToUser
+		}
+		const filterEntity = filterTw as Entity
+		if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+		filterEntities.push(filterEntity)
+	}
+
+	const filterValues: Value[] = []
+	for (const filterTerm of filterEntities) {
+		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
+		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+		if (!termObj) continue
+		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
+		filterValues.push(termObj)
+	}
+
+	return await resolveToTvs(filterValues, dbPath, llm)
 }

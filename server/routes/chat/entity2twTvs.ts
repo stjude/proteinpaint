@@ -170,7 +170,7 @@ function generateFlatTvslst(items: Array<ResolvedFilter | any>): any {
 	return localfilter
 }
 
-async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any | MsgToUser> {
+export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any | MsgToUser> {
 	// Resolve each filter phrase via the LLM helpers into an intermediate ResolvedFilter, then
 	// assemble a tvslst matching filter.ts's validate_filter() + generate_filter_term() output:
 	//   { type: 'tvslst', in: true, join?: 'and'|'or',
