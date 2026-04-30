@@ -70,30 +70,6 @@ async function makeAuthApiWithRoutes(credOpts: any = {}, genomes: any = {}, serv
 	return { authApi, app, creds }
 }
 
-// Establishes a session by calling /jwt-status with a valid JWT
-async function establishSession(app: any, token: string): Promise<string> {
-	return new Promise(resolve => {
-		let sessionId = ''
-		const req = {
-			query: { embedder, dslabel },
-			headers: { [headerKey]: token },
-			path: '/jwt-status',
-			ip: '127.0.0.1',
-			cookies: {}
-		}
-		const res = {
-			send() {},
-			header(_key: string, val: string) {
-				if (_key === 'Set-Cookie') {
-					sessionId = val.split(';')[0].split('=')[1]
-				}
-			},
-			status() {}
-		}
-		app.routes['/jwt-status'].post(req, res).then?.(() => resolve(sessionId)) || setTimeout(() => resolve(sessionId), 10)
-	})
-}
-
 function sleep(ms: number) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -250,7 +226,11 @@ tape('AuthApi.getDsAuth: shows insession=false for jwt type with no session', fu
 	}
 	const result = authApi.getDsAuth(req)
 	// jwt type with no session id means insession should be undefined (id is falsy)
-	test.equal(result[0]?.insession, undefined, 'should show insession=undefined when there is no session id for jwt type')
+	test.equal(
+		result[0]?.insession,
+		undefined,
+		'should show insession=undefined when there is no session id for jwt type'
+	)
 	test.end()
 })
 
@@ -277,10 +257,7 @@ tape('AuthApi.getDsAuth: shows insession=true after session is established', asy
 
 	const genomes = { hg38: { datasets: { [dslabel]: {} } } }
 	// Token without 'datasets' field so the dsnames check is skipped
-	const loginToken = jsonwebtoken.sign(
-		{ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com' },
-		secret
-	)
+	const loginToken = jsonwebtoken.sign({ iat: time, exp: time + 300, ip: '127.0.0.1', email: 'user@test.com' }, secret)
 	const { authApi, app } = await makeAuthApiWithRoutes({}, genomes)
 
 	// Establish a session via /jwt-status and capture the session cookie
@@ -295,7 +272,7 @@ tape('AuthApi.getDsAuth: shows insession=true after session is established', asy
 			cookies: {}
 		}
 		const res = {
-			send(data: any) {
+			send() {
 				resolve()
 			},
 			header(key: string, val: string) {
@@ -422,7 +399,9 @@ tape('AuthApi.getNonsensitiveInfo: returns clientAuthResult from active session'
 			cookies: {}
 		}
 		const res = {
-			send() { resolve() },
+			send() {
+				resolve()
+			},
 			header(_key: string, val: string) {
 				if (_key === 'Set-Cookie') {
 					const parts = val.split(';')[0].split('=')
@@ -504,7 +483,11 @@ tape('AuthApi.isUserLoggedIn: returns true when no cred is required for the rout
 	const { authApi } = makeAuthApi()
 	// A path that is not 'termdb' or 'burden' won't match any cred
 	const req = { query: { embedder, dslabel: 'unknown-ds' }, headers: {}, path: '/some-open-route', cookies: {} }
-	test.equal(authApi.isUserLoggedIn(req as any, { label: dslabel } as any, []), true, 'should return true when no cred is required')
+	test.equal(
+		authApi.isUserLoggedIn(req as any, { label: dslabel } as any, []),
+		true,
+		'should return true when no cred is required'
+	)
 	test.end()
 })
 
@@ -565,7 +548,10 @@ tape('AuthApi.getPayloadFromHeaderAuth: throws for non-bearer auth type', functi
 		authApi.getPayloadFromHeaderAuth(req as any, 'termdb')
 		test.fail('should have thrown for non-bearer auth type')
 	} catch (e) {
-		test.ok(String(e).includes('unsupported authorization type'), 'should throw mentioning unsupported authorization type')
+		test.ok(
+			String(e).includes('unsupported authorization type'),
+			'should throw mentioning unsupported authorization type'
+		)
 	}
 	test.end()
 })
@@ -690,24 +676,27 @@ tape('AuthApi.mayAdjustFilter: throws when clientAuthResult is missing from __pr
 	test.end()
 })
 
-tape('AuthApi.mayAdjustFilter: creates new filter when q.filter is not set and authFilter is returned', function (test) {
-	test.timeoutAfter(500)
-	test.plan(3)
+tape(
+	'AuthApi.mayAdjustFilter: creates new filter when q.filter is not set and authFilter is returned',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(3)
 
-	const { authApi } = makeAuthApi()
-	const authFilter = { type: 'tvslst', join: '', lst: [{ tvs: { term: { id: 'subcohort' } } }] }
-	const q: any = {
-		__protected__: { clientAuthResult: {}, ignoredTermIds: [] }
+		const { authApi } = makeAuthApi()
+		const authFilter = { type: 'tvslst', join: '', lst: [{ tvs: { term: { id: 'subcohort' } } }] }
+		const q: any = {
+			__protected__: { clientAuthResult: {}, ignoredTermIds: [] }
+		}
+		const ds = { cohort: { termdb: { getAdditionalFilter: () => authFilter } } }
+
+		authApi.mayAdjustFilter(q, ds as any, undefined)
+
+		test.ok(q.filter, 'should create a filter')
+		test.equal(q.filter.tag, 'termLevelAuthFilter', 'should tag the filter')
+		test.equal(q.filter, authFilter, 'should set the authFilter directly as root filter when no prior filter')
+		test.end()
 	}
-	const ds = { cohort: { termdb: { getAdditionalFilter: () => authFilter } } }
-
-	authApi.mayAdjustFilter(q, ds as any, undefined)
-
-	test.ok(q.filter, 'should create a filter')
-	test.equal(q.filter.tag, 'termLevelAuthFilter', 'should tag the filter')
-	test.equal(q.filter, authFilter, 'should set the authFilter directly as root filter when no prior filter')
-	test.end()
-})
+)
 
 tape('AuthApi.mayAdjustFilter: pushes authFilter to existing filter.lst and sets join to and', function (test) {
 	test.timeoutAfter(500)
@@ -811,35 +800,42 @@ tape('AuthApi.mayAdjustFilter: replaces existing FILTER_TAG entry in filter.lst 
 	test.end()
 })
 
-tape('AuthApi.mayAdjustFilter: filters routeTwLst by ignoredTermIds before passing to getAdditionalFilter', function (test) {
-	test.timeoutAfter(500)
-	test.plan(1)
+tape(
+	'AuthApi.mayAdjustFilter: filters routeTwLst by ignoredTermIds before passing to getAdditionalFilter',
+	function (test) {
+		test.timeoutAfter(500)
+		test.plan(1)
 
-	const { authApi } = makeAuthApi()
-	const capturedTerms: any[] = []
-	const ds = {
-		cohort: {
-			termdb: {
-				getAdditionalFilter: (_protected: any, terms: any) => {
-					if (terms) capturedTerms.push(...terms)
-					return null
+		const { authApi } = makeAuthApi()
+		const capturedTerms: any[] = []
+		const ds = {
+			cohort: {
+				termdb: {
+					getAdditionalFilter: (_protected: any, terms: any) => {
+						if (terms) capturedTerms.push(...terms)
+						return null
+					}
 				}
 			}
 		}
-	}
-	const q: any = {
-		__protected__: { clientAuthResult: {}, ignoredTermIds: ['ignored-term-id'] }
-	}
-	const routeTwLst = [
-		{ term: { id: 'included-term' } },
-		{ term: { id: 'ignored-term-id' } } // this should be filtered out
-	]
+		const q: any = {
+			__protected__: { clientAuthResult: {}, ignoredTermIds: ['ignored-term-id'] }
+		}
+		const routeTwLst = [
+			{ term: { id: 'included-term' } },
+			{ term: { id: 'ignored-term-id' } } // this should be filtered out
+		]
 
-	authApi.mayAdjustFilter(q, ds as any, routeTwLst as any)
+		authApi.mayAdjustFilter(q, ds as any, routeTwLst as any)
 
-	test.equal(capturedTerms.length, 1, 'should filter out ignored term from routeTwLst before passing to getAdditionalFilter')
-	test.end()
-})
+		test.equal(
+			capturedTerms.length,
+			1,
+			'should filter out ignored term from routeTwLst before passing to getAdditionalFilter'
+		)
+		test.end()
+	}
+)
 
 tape('AuthApi.mayAdjustFilter: throws when filter.type is not tvslst', function (test) {
 	test.timeoutAfter(500)
