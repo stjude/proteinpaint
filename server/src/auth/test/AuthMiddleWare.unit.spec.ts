@@ -1,5 +1,4 @@
 import tape from 'tape'
-import jsonwebtoken from 'jsonwebtoken'
 import { setAuthMiddleware } from '#src/auth/AuthMiddleWare.ts'
 import { Auth } from '#src/auth/Auth.ts'
 import { AuthApiOpen } from '#src/auth/AuthApiOpen.ts'
@@ -9,7 +8,6 @@ import { AuthApiOpen } from '#src/auth/AuthApiOpen.ts'
 **************************/
 
 const secret = 'middleware-unit-test-secret' // pragma: allowlist secret
-const time = Math.floor(Date.now() / 1000)
 const dslabel = 'testDs'
 const embedder = 'localhost'
 const headerKey = 'x-ds-access-token'
@@ -69,10 +67,6 @@ function makeMockRes() {
 	return res
 }
 
-function sleep(ms: number) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 /**************
  test sections
 ***************/
@@ -97,7 +91,7 @@ tape('setAuthMiddleware: registers exactly one middleware on app', function (tes
 
 tape('middleware: initializes __protected__ on req.query with ignoredTermIds and sessionid', function (test) {
 	test.timeoutAfter(500)
-	test.plan(3)
+	test.plan(4)
 
 	const auth = makeAuth()
 	const middleware = registerMiddleware(auth)
@@ -109,13 +103,16 @@ tape('middleware: initializes __protected__ on req.query with ignoredTermIds and
 	}
 	const res = makeMockRes()
 	let nextCalled = false
-	const next = () => { nextCalled = true }
+	const next = () => {
+		nextCalled = true
+	}
 
 	middleware(req, res, next)
 
 	test.ok(req.query.__protected__, 'should add __protected__ to req.query')
 	test.deepEqual(req.query.__protected__.ignoredTermIds, [], 'should initialize ignoredTermIds as empty array')
 	test.equal(req.query.__protected__.sessionid, 'test-session-123', 'should copy sessionid from cookie')
+	test.equal(nextCalled, true, `should call next() in middelware() for unprotected route`)
 	test.end()
 })
 
@@ -137,7 +134,9 @@ tape('middleware: forced open routes bypass auth check and call next()', functio
 		}
 		const res = makeMockRes()
 		let nextCalled = false
-		const next = () => { nextCalled = true }
+		const next = () => {
+			nextCalled = true
+		}
 
 		middleware(req, res, next)
 		test.ok(nextCalled, `should call next() for forced open route '${path}'`)
@@ -184,7 +183,9 @@ tape('middleware: calls next() for routes with no required credentials', functio
 	}
 	const res = makeMockRes()
 	let nextCalled = false
-	const next = () => { nextCalled = true }
+	const next = () => {
+		nextCalled = true
+	}
 
 	middleware(req, res, next)
 	test.ok(nextCalled, 'should call next() when no cred is required for the route')
@@ -276,11 +277,7 @@ tape('middleware: clears sessions when sessionTracking is jwt-only', function (t
 	middleware(req, res, () => {})
 
 	// After the middleware runs, sessions should be cleared (jwt-only mode)
-	test.deepEqual(
-		(auth as any).sessions,
-		{},
-		'should clear all sessions when sessionTracking is jwt-only'
-	)
+	test.deepEqual((auth as any).sessions, {}, 'should clear all sessions when sessionTracking is jwt-only')
 	test.end()
 })
 
@@ -313,7 +310,9 @@ tape('middleware: valid session - calls next() and updates session time', async 
 	}
 	const res = makeMockRes()
 	let nextCalled = false
-	const next = () => { nextCalled = true }
+	const next = () => {
+		nextCalled = true
+	}
 
 	middleware(req, res, next)
 
@@ -324,7 +323,7 @@ tape('middleware: valid session - calls next() and updates session time', async 
 
 tape('mayUpdate__protected__: extracts activeCohort from subcohort filter', function (test) {
 	test.timeoutAfter(500)
-	test.plan(1)
+	test.plan(2)
 
 	const auth = makeAuth()
 	const mockAuthApi = {
@@ -356,12 +355,15 @@ tape('mayUpdate__protected__: extracts activeCohort from subcohort filter', func
 	}
 	const res = makeMockRes()
 	let nextCalled = false
-	middleware(req, res, () => { nextCalled = true })
+	middleware(req, res, () => {
+		nextCalled = true
+	})
 
 	// If activeCohort was set, __protected__ would have it
 	// (this exercises the cohortFilter branch in mayUpdate__protected__)
 	// The middleware may pass or fail due to dslabel check, but activeCohort gets set first
 	test.pass('should execute without error when filter contains subcohort tvs')
+	test.equal(nextCalled, true, `should call next() in unprotected route`)
 	test.end()
 })
 
@@ -424,7 +426,7 @@ tape('mayUpdate__protected__: throws for invalid dslabel when genome is found bu
 
 tape('mayUpdate__protected__: freezes __protected__ after update', function (test) {
 	test.timeoutAfter(500)
-	test.plan(1)
+	test.plan(2)
 
 	const auth = makeAuth()
 	let capturedProtected: any = null
@@ -449,15 +451,15 @@ tape('mayUpdate__protected__: freezes __protected__ after update', function (tes
 
 	// After middleware, __protected__ should be frozen
 	test.ok(Object.isFrozen(req.query.__protected__), 'should freeze __protected__ after mayUpdate__protected__ runs')
+	test.notEqual(capturedProtected, null, `req.query.__protected__ should be accessible within getNonsensitiveInfo()`)
 	test.end()
 })
 
 tape('mayUpdate__protected__: sets isUserLoggedIn flag when genome and dslabel are valid', function (test) {
 	test.timeoutAfter(500)
-	test.plan(1)
+	test.plan(2)
 
 	const auth = makeAuth()
-	let capturedProtected: any = null
 	const mockAuthApi = {
 		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
 		mayAdjustFilter: () => {},
@@ -477,10 +479,13 @@ tape('mayUpdate__protected__: sets isUserLoggedIn flag when genome and dslabel a
 
 	// The middleware may block the request if there's a required cred without session,
 	// but mayUpdate__protected__ runs first and sets isUserLoggedIn
-	middleware(req, res, () => { nextCalled = true })
+	middleware(req, res, () => {
+		nextCalled = true
+	})
 
 	// isUserLoggedIn should have been set on __protected__
 	test.equal(req.query.__protected__?.isUserLoggedIn, true, 'should set isUserLoggedIn on __protected__')
+	test.equal(nextCalled, true, `next() should be called within the middleware`)
 	test.end()
 })
 

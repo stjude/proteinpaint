@@ -42,7 +42,7 @@ function makeAuth(credOverrides: any = {}, serverconfig: any = {}) {
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- src/auth/Auth -***-')
+	test.comment('-***- src/auth/Auth unit -***-')
 	test.end()
 })
 
@@ -212,7 +212,7 @@ tape('getJwtPayload: returns payload for valid token with datasets', function (t
 
 	const result = auth.getJwtPayload({ embedder, dslabel }, headers, cred)
 	test.ok(result, 'should return a payload for a valid token')
-	test.equal(result.email, 'user@test.com', 'should include the email from the payload')
+	test.equal(result?.email, 'user@test.com', 'should include the email from the payload')
 	test.end()
 })
 
@@ -248,7 +248,10 @@ tape('getJwtPayload: throws for invalid signature', function (test) {
 		auth.getJwtPayload({ embedder, dslabel }, headers, cred)
 		test.fail('should have thrown for an invalid signature')
 	} catch (e: any) {
-		test.ok(e.message === 'invalid signature' || String(e).includes('invalid signature'), 'should throw an invalid signature error')
+		test.ok(
+			e.message === 'invalid signature' || String(e).includes('invalid signature'),
+			'should throw an invalid signature error'
+		)
 	}
 	test.end()
 })
@@ -425,14 +428,14 @@ tape('getSignedJwt: returns undefined when cred has no secret', function (test) 
 
 tape('getSignedJwt: creates a valid jwt and stores session', function (test) {
 	test.timeoutAfter(500)
-	test.plan(3)
+	test.plan(4)
 
 	const auth = makeAuth()
 	const cred = auth.creds[dslabel].termdb[embedder]
 	const req = { ip: '127.0.0.1', headers: {} }
 	let setCookieCalled = false
 	const res = {
-		header(key: string, val: string) {
+		header(key: string) {
 			if (key === 'Set-Cookie') setCookieCalled = true
 		}
 	}
@@ -443,6 +446,7 @@ tape('getSignedJwt: creates a valid jwt and stores session', function (test) {
 	test.equal(typeof jwt, 'string', 'should return a jwt string')
 	test.ok(jwt && jwt.length > 50, 'should return a non-trivial jwt string')
 	test.ok(sessions[dslabel], 'should create a session entry for the dslabel')
+	test.equal(setCookieCalled, true, `should include Set-Cookie in the response header`)
 	test.end()
 })
 
@@ -472,7 +476,10 @@ tape('mayAddSessionFromJwt: throws for unsupported authorization type', function
 		auth.mayAddSessionFromJwt({}, req, cred)
 		test.fail('should have thrown for unsupported authorization type')
 	} catch (e) {
-		test.ok(String(e).includes('unsupported authorization type'), 'should throw mentioning unsupported authorization type')
+		test.ok(
+			String(e).includes('unsupported authorization type'),
+			'should throw mentioning unsupported authorization type'
+		)
 	}
 	test.end()
 })

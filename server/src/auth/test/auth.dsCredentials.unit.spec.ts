@@ -32,8 +32,8 @@ tape('validateDsCredentials: skips and removes comment keys starting with #', as
 	test.plan(2)
 
 	const creds: any = {
-		'#comment': { termdb: { '*': { type: 'basic', password: 'test' } } },
-		realDs: { termdb: { '*': { type: 'basic', password: 'test' } } }
+		'#comment': { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+		realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
 	}
 	await validateDsCredentials(creds)
 	test.equal(creds['#comment'], undefined, 'should remove comment keys starting with #')
@@ -50,7 +50,7 @@ tape('validateDsCredentials: basic type gets expected defaults', async function 
 			termdb: {
 				'test.example.com': {
 					type: 'basic',
-					password: 'mypassword'
+					password: 'mypassword' // pragma: allowlist secret
 				}
 			}
 		}
@@ -99,7 +99,7 @@ tape('validateDsCredentials: wildcard route is renamed from * to /**', async fun
 			'*': {
 				'*': {
 					type: 'basic',
-					password: 'test'
+					password: 'test' // pragma: allowlist secret
 				}
 			}
 		}
@@ -119,7 +119,7 @@ tape('validateDsCredentials: looseIpCheck is converted to ipCheck: loose', async
 			termdb: {
 				'*': {
 					type: 'basic',
-					password: 'test',
+					password: 'test', // pragma: allowlist secret
 					looseIpCheck: true
 				}
 			}
@@ -207,7 +207,7 @@ tape('validateDsCredentials: cookieId is set from headerKey for termdb route', a
 			termdb: {
 				'*': {
 					type: 'basic',
-					password: 'test',
+					password: 'test', // pragma: allowlist secret
 					headerKey: 'custom-header-key'
 				}
 			}
@@ -228,14 +228,18 @@ tape('validateDsCredentials: cookieId uses dslabel+route+embedder pattern for no
 			burden: {
 				myEmbedder: {
 					type: 'basic',
-					password: 'test'
+					password: 'test' // pragma: allowlist secret
 				}
 			}
 		}
 	}
 	await validateDsCredentials(creds)
 	const cred = creds.myDs.burden['myEmbedder']
-	test.equal(cred.cookieId, 'myDs-burden-myEmbedder-Id', 'should set cookieId from dslabel+route+embedder for non-termdb route')
+	test.equal(
+		cred.cookieId,
+		'myDs-burden-myEmbedder-Id',
+		'should set cookieId from dslabel+route+embedder for non-termdb route'
+	)
 	test.end()
 })
 
@@ -246,7 +250,7 @@ tape('validateDsCredentials: legacy type=login is reshaped correctly', async fun
 	const creds: any = {
 		legacyDs: {
 			type: 'login',
-			password: 'legacyPassword'
+			password: 'legacyPassword' // pragma: allowlist secret
 		}
 	}
 	await validateDsCredentials(creds)
@@ -266,7 +270,7 @@ tape('validateDsCredentials: legacy type=jwt with embedders is reshaped correctl
 			type: 'jwt',
 			headerKey: 'x-custom-token',
 			embedders: {
-				'localhost': {
+				localhost: {
 					secret,
 					dsnames: [{ id: 'legacyJwtDs', label: 'Legacy JWT Dataset' }]
 				}
@@ -286,7 +290,7 @@ tape('validateDsCredentials: deprecated secrets key throws an error', async func
 	test.plan(1)
 
 	const creds: any = {
-		secrets: 'deprecated-secrets-value'
+		secrets: 'deprecated-secrets-value' // pragma: allowlist secret
 	}
 	try {
 		await validateDsCredentials(creds)
@@ -307,13 +311,17 @@ tape('validateDsCredentials: ds-level headerKey overrides default for all routes
 			termdb: {
 				'*': {
 					type: 'basic',
-					password: 'test'
+					password: 'test' // pragma: allowlist secret
 				}
 			}
 		}
 	}
 	await validateDsCredentials(creds)
 	const cred = creds.testDs.termdb['*']
-	test.equal(cred.headerKey, 'custom-ds-header', 'should use ds-level headerKey for cred entries that do not specify their own')
+	test.equal(
+		cred.headerKey,
+		'custom-ds-header',
+		'should use ds-level headerKey for cred entries that do not specify their own'
+	)
 	test.end()
 })
