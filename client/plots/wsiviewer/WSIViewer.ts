@@ -90,7 +90,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
-
 		// TODO verify if state.vocab.genome is needed?
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel
@@ -132,7 +131,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const activeImage: TileLayer = activeLayerData.wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex, settings)
+		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
 
 		// set MapRenderer state here: ensure the persistent renderer receives current state
 		if (!this.mapRenderer) {
@@ -171,7 +170,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.map.getView().fit(activeImageExtent)
 			}
 		}
-
 		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
 		if (!settings.isSavingAnnotation) {
 			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
@@ -209,6 +207,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (settings.isSavingAnnotation) {
 			this.spinnerRenderer.renderSpinner(this.dom.holder)
 		}
+
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
 }

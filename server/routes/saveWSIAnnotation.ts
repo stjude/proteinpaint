@@ -1,4 +1,4 @@
-import type { Mds3, RouteApi, TileSelection } from '#types'
+import { FlagStatus, SelectionPrefixes, type Mds3, type RouteApi, type TileSelection } from '#types'
 import { saveWSIAnnotationPayload } from '#types/checkers'
 import type { SaveWSIAnnotationRequest } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
@@ -60,42 +60,40 @@ function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
 		try {
 			const tileSelection: TileSelection = annotation.tileSelection
-			if ('timestamp' in tileSelection) {
-				const timestamp = new Date().toISOString()
-				const projectId = annotation.projectId
-				const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
-				const coords = JSON.stringify(tileSelection.zoomCoordinates ?? [])
-				const status = 1
-				const flag = tileSelection.flag
-				const classId = annotation.classId
+			const timestamp = new Date().toISOString()
+			const projectId = annotation.projectId
+			const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
+			const coords = JSON.stringify(tileSelection.zoomCoordinates ?? [])
+			const status = 1
+			const flag = tileSelection.flag
+			const classId = annotation.classId
 
-				if (projectId == null || wsimageFilename == null) {
-					return {
-						status: 'error',
-						error: 'Missing required fields: projectId and wsimage.'
-					}
+			if (projectId == null || wsimageFilename == null) {
+				return {
+					status: 'error',
+					error: 'Missing required fields: projectId and wsimage.'
 				}
+			}
 
-				const getImageIdSql = `
+			const getImageIdSql = `
 				SELECT id
 				FROM project_images
 				WHERE project_id = ?
 				  AND image_path = ?
 				LIMIT 1
 			`
-				const getImageStmt = connection.prepare(getImageIdSql)
-				const imageRow = getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined
+			const getImageStmt = connection.prepare(getImageIdSql)
+			const imageRow = getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined
 
-				if (!imageRow?.id) {
-					return {
-						status: 'error',
-						error: `Image not found for project_id=${projectId} and image_path="${wsimageFilename}".`
-					}
+			if (!imageRow?.id) {
+				return {
+					status: 'error',
+					error: `Image not found for project_id=${projectId} and image_path="${wsimageFilename}".`
 				}
+			}
 
-				const imageId = imageRow.id
-				//Checking for duplicate annotation based on projectId, imageId and coordinates
-				const duplicateCheckSql = `
+			const imageId = Math.floor(imageRow.id)
+			const duplicateAnnoSql = `
 				SELECT id
 				FROM project_flagged_annotations
 				WHERE project_id = ?
@@ -103,17 +101,37 @@ function validateQuery(ds: any, connection: Database.Database) {
 				  AND coordinates = ?
 				LIMIT 1
 			`
-				const duplicateCheckStmt = connection.prepare(duplicateCheckSql)
-				const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords) as { id: number } | undefined
-				if (duplicateRow) {
-					const deleteDuplicateSql = `
+			const duplicateAnnoStmt = connection.prepare(duplicateAnnoSql)
+			const duplicateAnnoRow = duplicateAnnoStmt.get(projectId, imageId, coords) as { id: number } | undefined
+			if (duplicateAnnoRow) {
+				const deleteDuplicateSql = `
 					DELETE FROM project_flagged_annotations
 					WHERE id = ?
 				`
-					const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
-					deleteDuplicateStmt.run(duplicateRow.id)
-					//Gotta retrieve the info for what was deleted
-				}
+				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
+				deleteDuplicateStmt.run(duplicateAnnoRow.id)
+			}
+
+			const duplicatePredSql = `
+				SELECT id
+				FROM project_flagged_predictions
+				WHERE project_id = ?
+				  AND image_id = ?
+				  AND coordinates = ?
+				LIMIT 1
+			`
+			const duplicatePredStmt = connection.prepare(duplicatePredSql)
+			const duplicatePredRow = duplicatePredStmt.get(projectId, imageId, coords) as { id: number } | undefined
+			if (duplicatePredRow) {
+				const deleteDuplicateSql = `
+					DELETE FROM project_flagged_predictions
+					WHERE id = ?
+				`
+				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
+				deleteDuplicateStmt.run(duplicatePredRow.id)
+			}
+
+			if (tileSelection.id.startsWith(SelectionPrefixes.Annotation)) {
 				const insertSql = `
 				INSERT INTO project_flagged_annotations (
 					project_id, user_id, coordinates, timestamp, status, flagged,class_id, image_id
@@ -135,18 +153,22 @@ function validateQuery(ds: any, connection: Database.Database) {
 				const userId = userRow?.id
 
 				insertStmt.run(projectId, userId, coords, timestamp, status, flag, classId, imageId)
-			} else if ('uncertainty' in tileSelection) {
-				const insertSql = `
-                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type)
-                    VALUES (?, ?, ?, ?)
+			} else if (tileSelection.id.startsWith(SelectionPrefixes.Prediction)) {
+				if (tileSelection.flag !== FlagStatus.Normal) {
+					const insertSql = `
+                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)
+                    VALUES (?, ?, ?, ?,?,?)
                 `
-				const insertStmt = connection.prepare(insertSql)
-				insertStmt.run(
-					annotation.projectId,
-					annotation.classId,
-					JSON.stringify(tileSelection.zoomCoordinates),
-					tileSelection.flag
-				)
+					const insertStmt = connection.prepare(insertSql)
+					insertStmt.run(
+						annotation.projectId,
+						annotation.classId,
+						JSON.stringify(tileSelection.zoomCoordinates),
+						tileSelection.flag,
+						imageId,
+						timestamp
+					)
+				}
 			}
 			return { status: 'ok' }
 		} catch (error: any) {

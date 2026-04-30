@@ -7,7 +7,7 @@ import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import {
-	AnnotationStatus,
+	FlagStatus,
 	type AiProjectSelectedWSImagesRequest,
 	type AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
@@ -211,7 +211,7 @@ export class ViewModelProvider {
 				const color = this.getClassColor(wsimages[i], annotation.class)
 				const featureId = `annotation-square-${annotation.zoomCoordinates}`
 				let squareFeature: Feature<Geometry>
-				if (annotation.flag !== AnnotationStatus.Skipped) {
+				if (annotation.flag !== FlagStatus.Skipped) {
 					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
 				} else {
 					squareFeature = createDimSquareFeature(annotation.zoomCoordinates, topLeft, tileSize, color)
@@ -227,7 +227,7 @@ export class ViewModelProvider {
 				)
 				sourceAnnotations.addFeature(borderFeature)
 
-				if (annotation.flag === AnnotationStatus.Flagged) {
+				if (annotation.flag === FlagStatus.Flagged) {
 					const starFeature = createStarFeature(tileSize, topLeft, annotation.zoomCoordinates, 'yellow', color)
 					sourceAnnotations.addFeature(starFeature)
 				}
@@ -240,11 +240,11 @@ export class ViewModelProvider {
 				const color = this.getClassColor(wsimages[i], pred.class) ?? 'black'
 				const featureId = `annotation-square-${pred.zoomCoordinates}`
 				let squareFeature: Feature<Geometry> | null = null
-				if (pred.flag == AnnotationStatus.Flagged) {
+				if (pred.flag == FlagStatus.Flagged) {
 					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
 					const starFeature = createStarFeature(tileSize, topLeft, pred.zoomCoordinates, 'yellow', color)
 					sourceAnnotations.addFeature(starFeature)
-				} else if (pred.flag === AnnotationStatus.Skipped) {
+				} else if (pred.flag === FlagStatus.Skipped) {
 					squareFeature = createDimSquareFeature(pred.zoomCoordinates, topLeft, tileSize, color)
 				}
 				if (squareFeature !== null) {

@@ -1,7 +1,11 @@
 import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
-import { AnnotationStatus, AnnotationStatusMessages, WSImage } from '@sjcrh/proteinpaint-types'
-import { roundValue } from '#shared/roundValue.js'
-import type Settings from '#plots/wsiviewer/Settings.ts'
+import {
+	FlagStatus,
+	FlagStatusMessages,
+	checkSelectionType,
+	SelectionPrefixes,
+	WSImage
+} from '@sjcrh/proteinpaint-types'
 
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
@@ -30,93 +34,82 @@ export class SessionWSImage extends WSImage {
 	}
 
 	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
-		const annotations: Annotation[] = sessionWSImage.annotations || []
-
-		const sessionsTileSelections: TileSelection[] = sessionWSImage.sessionsTileSelections || []
-
-		const predictions: Prediction[] = sessionWSImage.predictions || []
-
-		return [...sessionsTileSelections, ...predictions, ...annotations]
+		const [selections, flagged_selections] = partition(
+			sessionWSImage.sessionsTileSelections || [],
+			ts => ts.flag === FlagStatus.Normal
+		)
+		const [preds, flagged_preds] = partition(sessionWSImage.predictions || [], ts => ts.flag === FlagStatus.Normal) as [
+			Prediction[],
+			Prediction[]
+		]
+		const [annotations, flagged_annotations] = partition(
+			sessionWSImage.annotations || [],
+			ts => ts.flag === FlagStatus.Normal
+		) as [Annotation[], Annotation[]]
+		for (const array of [selections, flagged_selections, preds, flagged_preds, annotations, flagged_annotations]) {
+			array.sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+		}
+		// I could make a mega array of all flagged items and sort then,
+		// but I feel unceratin annotations are the least important, maybe at least combine predictions and selections
+		return [...selections, ...preds, ...flagged_selections, ...flagged_preds, ...flagged_annotations, ...annotations]
 	}
 
-	public static getTilesTableRows(
-		sessionWSImage: SessionWSImage,
-		selectedTileIndex: number,
-		settings: Settings
-	): any[] {
-		const annotations = sessionWSImage.annotations || []
-
-		const sessionsTileSelections = sessionWSImage.sessionsTileSelections || []
+	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
+		let row_index = 0
+		const incrementIndex = () => {
+			row_index++
+		}
 		const selectedColor = '#fcfc8b'
 
-		const sessionsRows: any[] = sessionsTileSelections.map((d, i) => {
-			const idx = i
-			const firstCell: any = { value: idx }
-			// Mark original/background hint for renderers. Keep column shape unchanged.
-			firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
-			return [
-				firstCell, // Index
-				{ value: d.zoomCoordinates },
-				{ value: 0 },
-				{ value: '' },
-				{ html: '' },
-				{ value: `${AnnotationStatusMessages[d.flag]}` }
-			]
-		})
-
-		const predictionRows: any[] = (sessionWSImage.predictions || [])
-			.map((prediction, i) => {
-				if (prediction.flag === AnnotationStatus.Skipped && !settings.renderSkipped) return []
-				if (prediction.flag !== AnnotationStatus.Flagged && settings.renderOnlyFlagged) return []
-				const idx = sessionsRows.length + i // Continue index after sessions
-				const color = sessionWSImage.classes?.find(c => c.label === prediction.class)?.color
-				const firstCell: any = { value: idx }
-				firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
-				console.log(prediction.flag, AnnotationStatusMessages[prediction.flag])
+		const selectionRows: any[] = SessionWSImage.getTileSelections(sessionWSImage)
+			.map(tileSelection => {
+				const color = sessionWSImage.classes?.find(c => c.label === tileSelection.class)?.color
+				const firstCell: any = { value: row_index }
+				firstCell.origBackground = row_index === selectedTileIndex ? selectedColor : ''
+				const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
+				const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
+				const annotationLabel = isAnnotation ? tileSelection.class : ''
+				const squareHTML =
+					color === undefined
+						? ''
+						: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
+				incrementIndex()
 				return [
 					firstCell,
-					{ value: prediction.zoomCoordinates },
-					{ value: roundValue(prediction.uncertainty, 4) },
-					{ value: prediction.class },
+					{ value: tileSelection.zoomCoordinates },
+					{ value: isPrediction ? (tileSelection as Prediction).uncertainty : 0 },
+					{ value: isPrediction && FlagStatus.Normal === tileSelection.flag ? tileSelection.class : '' },
+					{ html: squareHTML },
 					{
-						html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
-					},
-					{ value: `${AnnotationStatusMessages[prediction.flag]}` }
+						value: `${
+							FlagStatus.Normal === tileSelection.flag ? annotationLabel : FlagStatusMessages[tileSelection.flag]
+						}`
+					}
 				]
 			})
 			.filter((annotation, _) => annotation.length > 0)
 
-		const annotationsRows: any[] = annotations
-			.map((annotation, i) => {
-				if (annotation.flag === AnnotationStatus.Skipped && !settings.renderSkipped) return []
-				if (annotation.flag !== AnnotationStatus.Flagged && settings.renderOnlyFlagged) return []
-				const idx = sessionsRows.length + predictionRows.length + i // Continue index
-				const color = sessionWSImage.classes?.find(c => c.label === annotation.class)?.color
-				const firstCell: any = { value: idx }
-				firstCell.origBackground = idx === selectedTileIndex ? selectedColor : ''
-				return [
-					firstCell,
-					{ value: annotation.zoomCoordinates },
-					{ value: 0 },
-					{ value: '' },
-					{
-						html: `<span style="display:inline-block;width:12px;height:18px;background-color:${color};border:grey 1px solid;"></span>`
-					},
-					{ value: `${annotation.class} ${AnnotationStatusMessages[annotation.flag]}` }
-				]
-			})
-			.filter((annotation, _) => annotation.length > 0)
-
-		return [...sessionsRows, ...predictionRows, ...annotationsRows]
+		return selectionRows
 	}
 
-	public static isPrediction(tileSelection: TileSelection): boolean {
-		return 'uncertainty' in tileSelection
+	public static isSessionTileSelection(tileSelection: TileSelection, sessionWSImage: SessionWSImage): boolean {
+		return sessionWSImage.sessionsTileSelections?.map(ts => ts.id).includes(tileSelection.id) ?? false
 	}
+}
+function partition(
+	array: TileSelection[],
+	callback: (element: TileSelection) => boolean
+): [TileSelection[], TileSelection[]] {
+	const trueList: TileSelection[] = []
+	const falseList: TileSelection[] = []
 
-	public static isSessionTileSelection(tileSelection: TileSelection): boolean {
-		const isPrediction = 'uncertainty' in tileSelection
-		const isAnnotation = 'timestamp' in tileSelection
-		return !isAnnotation && !isPrediction
-	}
+	array.forEach(element => {
+		if (callback(element)) {
+			trueList.push(element)
+		} else {
+			falseList.push(element)
+		}
+	})
+
+	return [trueList, falseList]
 }

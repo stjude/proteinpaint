@@ -8,7 +8,14 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import { AnnotationStatus, type Prediction, type TileSelection } from '@sjcrh/proteinpaint-types'
+import {
+	FlagStatus,
+	checkSelectionType,
+	createSelectionID,
+	SelectionPrefixes,
+	type Prediction,
+	type TileSelection
+} from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
@@ -187,20 +194,17 @@ export class WSIViewerInteractions {
 						}
 					})
 					try {
-						const isPrediction = 'uncertainty' in tileSelections[currentIndex]
-						const isAnnotation = 'timestamp' in tileSelections[currentIndex]
-						const justTileSelection = !isAnnotation && !isPrediction
 						const defaultColor = 'black'
 						const tileSelection = tileSelections[currentIndex]
+						const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
+						const justTileSelection = checkSelectionType(tileSelection, SelectionPrefixes.TileSelection)
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
-						let newFlag: AnnotationStatus | null = null
+						let newFlag: FlagStatus | null = null
 						if (event.key.toLowerCase() === 'f') {
-							newFlag =
-								tileSelection.flag === AnnotationStatus.Flagged ? AnnotationStatus.Normal : AnnotationStatus.Flagged
+							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
 						} else if (!justTileSelection && event.key.toLowerCase() === 's') {
-							newFlag =
-								tileSelection.flag === AnnotationStatus.Skipped ? AnnotationStatus.Normal : AnnotationStatus.Skipped
+							newFlag = tileSelection.flag === FlagStatus.Skipped ? FlagStatus.Normal : FlagStatus.Skipped
 						}
 						if (newFlag === null) throw new Error("Couldn't identify new flag to save.")
 
@@ -219,7 +223,7 @@ export class WSIViewerInteractions {
 						if (annotationBorderFeat) {
 							source?.removeFeature(annotationBorderFeat)
 						}
-						if (newFlag === AnnotationStatus.Flagged) {
+						if (newFlag === FlagStatus.Flagged) {
 							const newStar = createStarFeature(
 								settings.tileSize || 512,
 								[tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]],
@@ -229,7 +233,7 @@ export class WSIViewerInteractions {
 							)
 							this.addAnnotation(vectorLayer!, tileSelections, currentIndex, classColor, settings)
 							source?.addFeature(newStar)
-						} else if (newFlag === AnnotationStatus.Skipped) {
+						} else if (newFlag === FlagStatus.Skipped) {
 							const newDim = createDimSquareFeature(
 								tileSelection.zoomCoordinates,
 								[tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]],
@@ -242,7 +246,7 @@ export class WSIViewerInteractions {
 						}
 						if (justTileSelection) {
 							SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
-
+							tileSelection.timestamp = new Date().toISOString()
 							let sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 							sessionsTileSelection = [tileSelection, ...sessionsTileSelection]
 							wsiApp.app.dispatch({
@@ -272,6 +276,7 @@ export class WSIViewerInteractions {
 						id: wsiApp.id,
 						config: {
 							settings: {
+								activeAnnotation: 0,
 								isSavingAnnotation: false,
 								changeTrigger: Date.now(),
 								renderWSIViewer: false
@@ -305,7 +310,13 @@ export class WSIViewerInteractions {
 					const selectedClassId = matchingClass.id
 
 					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, currentIndex, selectedClassId, aiProjectID)
+					await this.saveAndFinalizeAnnotation(
+						wsiApp,
+						sessionWSImage,
+						tileSelections[currentIndex],
+						selectedClassId,
+						aiProjectID
+					)
 
 					return
 				}
@@ -330,15 +341,16 @@ export class WSIViewerInteractions {
 					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
 
 					const selectedClassId = matchingClass.id
-
+					const tileSelection = tileSelections[currentIndex]
+					tileSelection.id = createSelectionID(SelectionPrefixes.Annotation, tileSelection.zoomCoordinates)
+					tileSelection.flag = FlagStatus.Normal
+					const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+					const oldStar = source?.getFeatureById(`annotation-star-${tileSelection.zoomCoordinates}`)
+					if (oldStar) {
+						source?.removeFeature(oldStar)
+					}
 					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(
-						wsiApp,
-						sessionWSImage,
-						tileSelections[currentIndex],
-						selectedClassId,
-						aiProjectID
-					)
+					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, tileSelection, selectedClassId, aiProjectID)
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
@@ -397,7 +409,9 @@ export class WSIViewerInteractions {
 			const newTileSelection: TileSelection = {
 				zoomCoordinates: [coordinateX, coordinateY],
 				class: '',
-				flag: AnnotationStatus.Normal
+				flag: FlagStatus.Normal,
+				id: createSelectionID(SelectionPrefixes.TileSelection, [coordinateX, coordinateY]),
+				timestamp: new Date().toISOString()
 			}
 
 			const vectorLayer = map
@@ -579,7 +593,7 @@ export class WSIViewerInteractions {
 			source?.removeFeature(annotationBorderFeat)
 		}
 
-		if (SessionWSImage.isSessionTileSelection(tileSelection)) {
+		if (SessionWSImage.isSessionTileSelection(tileSelection, sessionWSImage)) {
 			const sessionsTileSelection = SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
 
 			wsiApp.app.dispatch({
@@ -598,7 +612,7 @@ export class WSIViewerInteractions {
 			return
 		}
 
-		const isPrediction = SessionWSImage.isPrediction(tileSelection)
+		const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
 
 		const tileSelectionType = isPrediction ? 0 : 1
 

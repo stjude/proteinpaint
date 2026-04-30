@@ -13,29 +13,48 @@ export type AiProjectSelectedWSImagesResponse = {
 	wsimages: WSImage[]
 }
 
+export enum SelectionPrefixes {
+	TileSelection = 'ts_',
+	Prediction = 'pred_',
+	Annotation = 'anno_'
+}
+export interface flagPredictionInfo {
+	flag: FlagStatus
+	timestamp: string
+}
+
+export function createSelectionID(prefix: SelectionPrefixes, coordinates: [number, number]): string {
+	return prefix + JSON.stringify(coordinates)
+}
+
+export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixes): boolean {
+	return tileSelection.id.startsWith(suspectedPrefix)
+}
+
 // TODO move to another class
 export interface TileSelection {
 	zoomCoordinates: [number, number]
 	class?: string
-	flag: AnnotationStatus
+	flag: FlagStatus
+	id: string
+	timestamp: string
 }
 
-export enum AnnotationStatus {
+export enum FlagStatus {
 	Normal = 0,
 	Skipped = 1,
 	Flagged = 2
 }
 
-export const AnnotationStatusMessages = {
-	[AnnotationStatus.Normal]: '',
-	[AnnotationStatus.Skipped]: '(Skipped)',
-	[AnnotationStatus.Flagged]: '(Flagged)'
+export const FlagStatusMessages = {
+	[FlagStatus.Normal]: '',
+	[FlagStatus.Skipped]: '(Skipped)',
+	[FlagStatus.Flagged]: '(Flagged)'
 }
 
 export interface Annotation extends TileSelection {
 	class: string
 	status: number
-	timestamp: string
 }
 
 export interface Prediction extends TileSelection {
