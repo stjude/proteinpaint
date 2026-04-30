@@ -1377,6 +1377,8 @@ type MatrixSettings = {
 	cnvUnit?: 'log2ratio' | 'segmedian'
 	/** whether to show white cell border for SNVindel in oncoPrint mode */
 	oncoPrintSNVindelCellBorder?: boolean
+	/** use a geneset edit UI without or with initial radio inputs */
+	genesetEditUiVersion?: '' | 'withTabs'
 }
 
 type NumericDictTermClusterSettings = {
@@ -2099,7 +2101,6 @@ export type Mds3 = BaseMds & {
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
 	scatterplots?: Scatterplots
-	matrix?: any
 	/** disables switching to genomic mode for the protein view mds3 tk of this ds
 	works by preventing block gmmode menu from showing "genomic" option
 	is only passed via mds3 adhoc ds copy, but not termdbConfig
