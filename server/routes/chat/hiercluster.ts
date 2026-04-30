@@ -172,6 +172,20 @@ async function validate_hiercluster_gene_expression_response(
 		}
 	}
 
+	// Validate filters
+	let validated_filters: any
+	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
+		validated_filters = validate_filter(response_type.simpleFilter, ds, '')
+		if (validated_filters.text.length > 0) {
+			return {
+				type: 'text',
+				text: validated_filters.text
+			}
+		} else {
+			pp_plot_json.filter = validated_filters.simplefilter
+		}
+	}
+
 	// If geneset names are provided, resolve them to gene names and add to the geneNames array (while ensuring no duplicates)
 	if (response_type.genesetNames) {
 		// Multiple geneset names not supported (might change)
@@ -222,6 +236,9 @@ async function validate_hiercluster_gene_expression_response(
 			dslabel: ds.label,
 			maxGenes: num_genes
 		}
+		if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
+			q.filter = validated_filters.simplefilter
+		}
 		topVEgenes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
 		for (const gene of topVEgenes) {
 			// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
@@ -257,16 +274,6 @@ async function validate_hiercluster_gene_expression_response(
 		return {
 			type: 'text',
 			text: 'Please specify at least 3 genes for hierarchical clustering.'
-		}
-	}
-
-	// Validate filters
-	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
-		const validated_filters = validate_filter(response_type.simpleFilter, ds, '')
-		if (validated_filters.text.length > 0) {
-			text += validated_filters.text
-		} else {
-			pp_plot_json.filter = validated_filters.simplefilter
 		}
 	}
 
