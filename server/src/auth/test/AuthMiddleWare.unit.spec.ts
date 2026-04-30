@@ -112,7 +112,7 @@ tape('middleware: initializes __protected__ on req.query with ignoredTermIds and
 	test.ok(req.query.__protected__, 'should add __protected__ to req.query')
 	test.deepEqual(req.query.__protected__.ignoredTermIds, [], 'should initialize ignoredTermIds as empty array')
 	test.equal(req.query.__protected__.sessionid, 'test-session-123', 'should copy sessionid from cookie')
-	test.equal(nextCalled, true, `should call next() in middelware() for unprotected route`)
+	test.equal(nextCalled, true, `should call next() in middleware() for unprotected route`)
 	test.end()
 })
 
