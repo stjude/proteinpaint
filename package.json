@@ -67,6 +67,8 @@
     "typescript-eslint": "^8.46.2"
   },
   "dependencies": {
-    "html-to-image": "^1.11.13"
+    "html-to-image": "^1.11.13",
+    "jsonwebtoken": "^9.0.3",
+    "tape": "^5.9.0"
   }
 }
