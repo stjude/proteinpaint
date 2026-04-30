@@ -1,5 +1,4 @@
 import type { LlmConfig, GeneDataTypeResult, TermdbTopVariablyExpressedGenesRequest } from '#types'
-import { FILTER_TERM_DEFINITIONS, validate_filter } from './filter.ts'
 import { getGenesForGeneset, extractGenesetsFromPromptNew, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 //import { mayLog } from '#src/helpers.ts'
@@ -14,7 +13,8 @@ export async function extract_hiercluster_terms_from_query(
 	genome: any,
 	ds: any,
 	geneFeatures: GeneDataTypeResult[],
-	dataType: string
+	dataType: string,
+	filterTerms: any
 ) {
 	// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present,
 	// but for now require gene expression
@@ -26,11 +26,6 @@ export async function extract_hiercluster_terms_from_query(
 		const relevant_genesets = extractGenesetsFromPromptNew(prompt, getGenesetNames(genome))
 		const common_genes = geneFeatures.map(g => g.gene)
 		const properties = {
-			simpleFilter: {
-				type: 'array',
-				items: { $ref: '#/definitions/FilterTerm' },
-				description: 'Optional simple filter terms to restrict the sample set'
-			},
 			geneNames: {
 				type: 'array',
 				items: { type: 'string' },
@@ -56,8 +51,7 @@ export async function extract_hiercluster_terms_from_query(
 					type: 'object',
 					properties,
 					additionalProperties: false
-				},
-				...FILTER_TERM_DEFINITIONS
+				}
 			}
 		}
 
@@ -114,7 +108,12 @@ export async function extract_hiercluster_terms_from_query(
 			"answer": {
 				"topVariablyExpressedGenes": 100
 			}
-		`
+
+			"question": "Cluster HALLMARK_APOPTOSIS pathway gene expression",
+			"answer": {
+				"genesetNames": "HALLMARK_APOPTOSIS"
+			}
+                 `
 
 		let system_prompt =
 			'I am an assistant that extracts terms and data identifiers from the user query to create a hierarchical clustering plot. ' +
@@ -148,15 +147,17 @@ export async function extract_hiercluster_terms_from_query(
 			text: 'Hierarchical clustering is currently only supported for gene expression data.'
 		}
 	}
-	return await validate_hiercluster_response(response, ds, genome, geneFeatures, dataType)
+	return await validate_hiercluster_response(response, ds, genome, geneFeatures, dataType, filterTerms)
 }
 
 async function validate_hiercluster_gene_expression_response(
 	response: string,
 	ds: any,
 	genome: any,
-	geneFeatures: GeneDataTypeResult[]
+	geneFeatures: GeneDataTypeResult[],
+	filterTerms: any
 ) {
+	console.log('LLM response for hierarchical clustering term extraction: ' + response)
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'hierCluster' }
 	let text = ''
@@ -169,20 +170,6 @@ async function validate_hiercluster_gene_expression_response(
 		return {
 			type: 'text',
 			text: 'We do not support using both geneset names and top variably expressed genes for hierarchical clustering. Please specify only one of these in your query.'
-		}
-	}
-
-	// Validate filters
-	let validated_filters: any
-	if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
-		validated_filters = validate_filter(response_type.simpleFilter, ds, '')
-		if (validated_filters.text.length > 0) {
-			return {
-				type: 'text',
-				text: validated_filters.text
-			}
-		} else {
-			pp_plot_json.filter = validated_filters.simplefilter
 		}
 	}
 
@@ -236,8 +223,8 @@ async function validate_hiercluster_gene_expression_response(
 			dslabel: ds.label,
 			maxGenes: num_genes
 		}
-		if (response_type.simpleFilter && response_type.simpleFilter.length > 0) {
-			q.filter = validated_filters.simplefilter
+		if (filterTerms) {
+			q.filter = filterTerms
 		}
 		topVEgenes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
 		for (const gene of topVEgenes) {
@@ -284,6 +271,9 @@ async function validate_hiercluster_gene_expression_response(
 		// and a dataType to configure the clustering type
 		pp_plot_json.terms = terms
 		pp_plot_json.dataType = 'geneExpression' // For now only support gene expression clustering, but will add metabolite intensity and other data types later
+		if (filterTerms) {
+			pp_plot_json.filter = filterTerms
+		}
 		return { type: 'plot', plot: pp_plot_json }
 	}
 }
@@ -297,11 +287,12 @@ async function validate_hiercluster_response(
 	ds: any,
 	genome: any,
 	geneFeatures: GeneDataTypeResult[],
-	dataType: string
+	dataType: string,
+	filterTerms: any
 ) {
 	switch (dataType) {
 		case 'geneExpression':
-			return await validate_hiercluster_gene_expression_response(response, ds, genome, geneFeatures)
+			return await validate_hiercluster_gene_expression_response(response, ds, genome, geneFeatures, filterTerms)
 		default:
 			return {
 				type: 'text',
