@@ -9,10 +9,12 @@ import type {
 	SummaryScaffold,
 	DEScaffold,
 	HierarchicalScaffold,
+	PrebuiltScatterScaffold,
 	Entity,
 	Phrase2EntityResult,
 	DEPhrase2EntityResult,
 	HierPhrase2EntityResult,
+	PrebuiltScatterPhrase2EntityResult,
 	MsgToUser,
 	MatrixScaffold
 } from './scaffoldTypes.ts'
@@ -577,6 +579,26 @@ export async function phrase2entity(
 			mayLog('Validation result for filter term:', JSON.stringify(matrix_term.filter))
 		}
 		return matrix_term
+	} else if (plotType === 'prebuiltscatter') {
+		const scaffoldResult = scaffold as PrebuiltScatterScaffold
+		const scatter_term: PrebuiltScatterPhrase2EntityResult = { name: scaffoldResult.name }
+		if (scaffoldResult.colorBy) {
+			const colorByEntity = await phrase2entitytw(scaffoldResult.colorBy, llm, genes_list, dataset_json, ds)
+			if ('type' in colorByEntity && colorByEntity.type === 'text') {
+				return colorByEntity // MsgToUser
+			}
+			mayLog(`Validation result for colorBy "${scaffoldResult.colorBy}":`, colorByEntity)
+			scatter_term.colorBy = colorByEntity as Entity
+		}
+		if (scaffoldResult.shapeBy) {
+			const shapeByEntity = await phrase2entitytw(scaffoldResult.shapeBy, llm, genes_list, dataset_json, ds)
+			if ('type' in shapeByEntity && shapeByEntity.type === 'text') {
+				return shapeByEntity // MsgToUser
+			}
+			mayLog(`Validation result for shapeBy "${scaffoldResult.shapeBy}":`, shapeByEntity)
+			scatter_term.shapeBy = shapeByEntity as Entity
+		}
+		return scatter_term
 	} else {
 		const msg: MsgToUser = {
 			type: 'text',

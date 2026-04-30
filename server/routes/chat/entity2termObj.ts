@@ -5,7 +5,8 @@ import type {
 	Entity,
 	DEPhrase2EntityResult,
 	HierPhrase2EntityResult,
-	MatrixPhrase2EntityResult
+	MatrixPhrase2EntityResult,
+	PrebuiltScatterPhrase2EntityResult
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesFromPrompt } from './utils.ts'
@@ -272,6 +273,36 @@ export async function inferTermObjFromEntity(
 				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
 			}
 			twObjects[key] = termObj
+		}
+		return twObjects
+	} else if (plotType === 'prebuiltscatter') {
+		const scatterEntity = entity as PrebuiltScatterPhrase2EntityResult
+		if (scatterEntity.name) {
+			twObjects['name'] = {
+				term: { id: scatterEntity.name, type: 'prebuiltscatter', name: scatterEntity.name },
+				type: 'prebuiltscatter',
+				phrase: scatterEntity.name
+			}
+		}
+		if (scatterEntity.colorBy) {
+			const termObj = await getTermObj('colorBy', scatterEntity.colorBy, llm, dbPath, genes_list)
+			if (termObj) {
+				twObjects['colorBy'] = termObj
+			} else {
+				console.warn(
+					`Failed to resolve colorBy term "${scatterEntity.colorBy.phrase}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+		}
+		if (scatterEntity.shapeBy) {
+			const termObj = await getTermObj('shapeBy', scatterEntity.shapeBy, llm, dbPath, genes_list)
+			if (termObj) {
+				twObjects['shapeBy'] = termObj
+			} else {
+				console.warn(
+					`Failed to resolve shapeBy term "${scatterEntity.shapeBy.phrase}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
 		}
 		return twObjects
 	} else {

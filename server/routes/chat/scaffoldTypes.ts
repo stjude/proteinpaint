@@ -34,7 +34,14 @@ export type HierarchicalScaffold = {
 	filter?: string
 }
 
-export type Scaffold = SummaryScaffold | DEScaffold | MatrixScaffold | HierarchicalScaffold
+export type PrebuiltScatterScaffold = {
+	plotType: 'prebuiltscatter'
+	name: string
+	colorBy?: string
+	shapeBy?: string
+}
+
+export type Scaffold = SummaryScaffold | DEScaffold | MatrixScaffold | HierarchicalScaffold | PrebuiltScatterScaffold
 
 // Helper functions to determine scaffold type
 export function isSummaryScaffold(s: Scaffold): s is SummaryScaffold {
@@ -87,8 +94,15 @@ export type MatrixPhrase2EntityResult = {
 	filter?: Entity[]
 }
 
+export type PrebuiltScatterPhrase2EntityResult = {
+	name: string
+	colorBy?: Entity
+	shapeBy?: Entity
+}
+
 export type Phrase2EntityResult =
 	| SummaryPhrase2EntityResult
 	| DEPhrase2EntityResult
 	| HierPhrase2EntityResult
-	| MatrixPhrase2EntityResult // (to be defined later)
+	| MatrixPhrase2EntityResult
+	| PrebuiltScatterPhrase2EntityResult
