@@ -27,8 +27,9 @@ if (mode == 'dev') {
 	const imports = [comment]
 	if (hasServerConfig) {
 		imports.push(`import './serverconfig.json'`)
-		const { default: serverconfig } = await import(`${cwd}/serverconfig.json`, { with: { type: 'json' } })
-		if (typeof serverconfig.dsCredentials == 'string') imports.push(`import '${serverconfig.dsCredentials}'`)
+		const { default: serverconfig } = await import(`${cwd}/serverconfig.json`, { with: { type: 'json' } }) //; console.log(30, __dirname, path.relative(__dirname, serverconfig.dsCredentials))
+		if (typeof serverconfig.dsCredentials == 'string')
+			imports.push(`import '${path.relative(cwd, serverconfig.dsCredentials)}' with { type: "json" }`)
 	}
 
 	for (const dir of ['genome', 'dataset']) {
@@ -58,8 +59,9 @@ if (mode == 'dev') {
 		config.cachedir = path.join(__dirname, 'test/cache')
 		fs.writeFileSync(path.join(__dirname, './serverconfig.json'), JSON.stringify(config, null, '    '))
 	}
-	const fileNamePattern = process.env.fileNamePattern || '*'
-	const specs = fs.globSync(`./**/test/${fileNamePattern}.unit.spec.*`, {
+	const dirPattern = process.env.dirPattern ? `${process.env.dirPattern}/` : ''
+	const filePattern = process.env.filePattern || '*'
+	const specs = fs.globSync(`./**/${dirPattern}test/${filePattern}.unit.spec.*`, {
 		cwd: __dirname,
 		exclude: ['node_modules/**']
 	})
