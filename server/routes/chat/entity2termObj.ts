@@ -77,7 +77,7 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[]): Value | un
 	}
 }
 
-async function getTermObj(
+export async function getTermObj(
 	key: string,
 	twEntity: Entity,
 	llm: LlmConfig,
