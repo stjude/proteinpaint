@@ -823,22 +823,22 @@ function mayValidateSampleHeader(ds, samples, where) {
 function validateSampleHeader2(ds, samples, where) {
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
-	const unknownSamples = [] // samples present in big file header but missing from db
+	const unknownSamples = new Set() // samples present in big file header but missing from db
 	if (ds.cohort?.termdb?.q?.sampleName2id) {
 		// has id mapper and is official ds
 		for (const s of samples) {
 			const id = ds.cohort.termdb.q.sampleName2id(s.name)
-			if (id == undefined) {
+			if (id === undefined) {
 				if (ds.cohort.db) {
 					// sqlite-based db, samples in file should be in sync with db
-					unknownSamples.push(s.name)
-					continue
+					throw new Error(`unknown sample ${s.name} from ${where} file`)
 				} else {
 					// api-based db, samples in file may not be in sync with api
 					// file should still be used, so insert a mock element in
-					// sampleIds to preserve sample order
-					// downstream query should be able to ignore it
+					// sampleIds to preserve sample order, downstream query should
+					// be able to ignore it
 					sampleIds.push({})
+					unknownSamples.add(s.name)
 					continue
 				}
 			}
@@ -846,11 +846,10 @@ function validateSampleHeader2(ds, samples, where) {
 			sampleIds.push(s)
 		}
 		console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
-		if (unknownSamples.length) {
+		if (unknownSamples.size) {
 			// unknown samples can be safely reported to server log
-			console.log('unknown samples: ' + unknownSamples.join(', '))
-			// later attach a sanitized err msg to ds to report to client
-			throw 'unknown samples in big file'
+			const arr = [...unknownSamples]
+			console.log(`unknown samples from ${where} (${arr.length}): ${arr.join(', ')}`)
 		}
 	} else {
 		// no mapper, should be custom ds from custom bcf file
@@ -2780,6 +2779,11 @@ async function addCnvGetter(ds, genome) {
 
 					if (j.sample) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (j.sample === undefined) {
+							// skip unmapped samples here as there are already
+							// handled during validation (see validateSampleHeader2())
+							return
+						}
 						if (limitSamples) {
 							// to filter sample
 							if (!limitSamples.has(j.sample)) return
