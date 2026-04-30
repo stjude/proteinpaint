@@ -29,7 +29,6 @@ export function getProfileForms2Domains(ds: any) {
 		WHERE t.type='multivalue'
 			AND json_extract(t.jsondata, '$.subtype') IN (${placeholders})
 			AND t.parent_id IS NOT NULL`
-	console.log('7777777777', sql, subtypes)
 	const rows = ds.cohort.db.connection.prepare(sql).all(subtypes)
 	// Seed declared cohorts so an empty submap is distinguishable from a missing key.
 	const out: Record<string, Record<string, string[]>> = {}
@@ -42,7 +41,6 @@ export function getProfileForms2Domains(ds: any) {
 		const arr = (out[r.cohort][r.parent_id] ||= [])
 		if (!arr.includes(label)) arr.push(label)
 	}
-	console.log('5555555555555555555555555555555555555555555555555555', out)
 	tdb.profileForms2Domains = out
 	return out
 }
