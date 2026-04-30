@@ -412,56 +412,6 @@ export async function validate_termdb(ds) {
 			}
 			return d
 		}
-
-		/*
-		One-time scan: build a cohort-keyed map for the Templates 2 picker, by JOINing
-		subcohort_terms so each domain (parent_id) is tagged with the cohort it belongs to.
-
-		Output:
-		  tdb.profileForms2Domains = Record<cohortKey, Record<domainId, friendlyLabel[]>>
-
-		A cohort with no template data (e.g., abbrev today) gets an empty submap; the picker
-		reads that to show its empty-state message.
-
-		Note: the JSON field is 'subtype', not 'plotType' — get_multivalue_tws in termdb.sql.js
-		queries $.plotType but is dead code; the live path is termdb.server.init.ts which
-		JSON-parses jsondata.
-		*/
-		if (tdb.plotConfigByCohort) {
-			const subtypeLabels = {}
-			for (const cohortKey of Object.keys(tdb.plotConfigByCohort)) {
-				const opts = tdb.plotConfigByCohort[cohortKey]?.profileForms2?.options
-				if (!opts) continue
-				for (const o of opts) if (o.subtype && o.name) subtypeLabels[o.subtype] = o.name
-			}
-			const subtypes = Object.keys(subtypeLabels)
-			if (subtypes.length) {
-				const placeholders = subtypes.map(() => '?').join(',')
-				const sql = `SELECT DISTINCT s.cohort, t.parent_id, json_extract(t.jsondata, '$.subtype') AS subtype
-					FROM terms t
-					JOIN subcohort_terms s ON s.term_id = t.parent_id
-					WHERE t.type='multivalue'
-						AND json_extract(t.jsondata, '$.subtype') IN (${placeholders})
-						AND t.parent_id IS NOT NULL`
-				const rows = ds.cohort.db.connection.prepare(sql).all(subtypes)
-
-				// Seed declared cohorts so the picker can distinguish "no template data"
-				// from "cohort key not declared".
-				const domainsByCohort = {}
-				for (const cohortKey of Object.keys(tdb.plotConfigByCohort)) {
-					if (tdb.plotConfigByCohort[cohortKey]?.profileForms2?.options) {
-						domainsByCohort[cohortKey] = {}
-					}
-				}
-				for (const r of rows) {
-					if (!domainsByCohort[r.cohort]) domainsByCohort[r.cohort] = {}
-					const label = subtypeLabels[r.subtype]
-					const arr = (domainsByCohort[r.cohort][r.parent_id] ||= [])
-					if (!arr.includes(label)) arr.push(label)
-				}
-				tdb.profileForms2Domains = domainsByCohort
-			}
-		}
 	}
 
 	if (ds.cohort.mutationset) {

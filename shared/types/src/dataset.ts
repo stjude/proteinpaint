@@ -1590,12 +1590,8 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
-	/** Precomputed at server init: cohort-keyed map of Templates 2 picker visibility data.
-	 * Outer key = cohort key from selectCohort.values[].keys (e.g., 'full', 'abbrev').
-	 * Inner key = depth-3 domain term ID. Inner value = friendly chart-type labels
-	 * (option.name from plotConfigByCohort.<cohort>.profileForms2.options[]) for the
-	 * multivalue children matching that domain. A cohort with no template data has an
-	 * empty inner map; the picker shows its empty-state message in that case. */
+	/** Templates 2 picker map: cohortKey → domainId → friendly chart-type labels.
+	 * Lazy-built and cached by getProfileForms2Domains in server/src/profile.forms2.config.ts. */
 	profileForms2Domains?: Record<string, Record<string, string[]>>
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
