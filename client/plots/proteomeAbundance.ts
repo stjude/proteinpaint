@@ -1,4 +1,15 @@
 import { NumericModes } from '#shared/terms.js'
+import type { ProteomeDetails } from '#types'
+
+type RenderAssayAndCohortRadiosOpts = {
+	holder: any
+	organisms: any
+	selectedProteomeDetails?: Partial<ProteomeDetails>
+	onChange?: (details: Partial<ProteomeDetails>) => void
+	organismTitle?: string
+	assayTitle?: string
+	cohortTitle?: string
+}
 
 export function renderAssayAndCohortRadios({
 	holder,
@@ -8,7 +19,7 @@ export function renderAssayAndCohortRadios({
 	organismTitle = 'Organism',
 	assayTitle = 'Assay Type',
 	cohortTitle = 'Cohort'
-}) {
+}: RenderAssayAndCohortRadiosOpts) {
 	const organismEntries = Object.entries(organisms || {})
 	if (!organismEntries.length) {
 		holder
@@ -27,7 +38,7 @@ export function renderAssayAndCohortRadios({
 	const assayRadioName = `sjpp-proteome-assay-${Math.random().toString().slice(-6)}`
 	const cohortRadioName = `sjpp-proteome-cohort-${Math.random().toString().slice(-6)}`
 
-	let selectedOrganism = organisms[initialProteomeDetails.organism]
+	let selectedOrganism = organisms[initialProteomeDetails.organism || '']
 		? initialProteomeDetails.organism
 		: organismEntries[0][0]
 	let selectedAssay = initialProteomeDetails.assay
@@ -95,7 +106,7 @@ export function renderAssayAndCohortRadios({
 
 	function renderAssayOptions() {
 		assayListDiv.selectAll('*').remove()
-		const assays = organisms[selectedOrganism]?.assays || {}
+		const assays = organisms[selectedOrganism || '']?.assays || {}
 		const assayEntries = Object.entries(assays)
 		if (!assayEntries.length) {
 			selectedAssay = undefined
@@ -138,7 +149,7 @@ export function renderAssayAndCohortRadios({
 
 	function renderCohortOptions() {
 		cohortListDiv.selectAll('*').remove()
-		const cohorts = Object.keys(organisms[selectedOrganism]?.assays?.[selectedAssay]?.cohorts || {})
+		const cohorts = Object.keys(organisms[selectedOrganism || '']?.assays?.[selectedAssay || '']?.cohorts || {})
 		if (!cohorts.length) {
 			selectedCohort = undefined
 			cohortListDiv
@@ -149,8 +160,8 @@ export function renderAssayAndCohortRadios({
 			return
 		}
 
-		if (!selectedCohort || !organisms[selectedOrganism]?.assays?.[selectedAssay]?.cohorts?.[selectedCohort]) {
-			selectedCohort = cohorts.includes(initialProteomeDetails.cohort) ? initialProteomeDetails.cohort : cohorts[0]
+		if (!selectedCohort || !organisms[selectedOrganism || '']?.assays?.[selectedAssay || '']?.cohorts?.[selectedCohort]) {
+			selectedCohort = cohorts.includes(initialProteomeDetails.cohort || '') ? initialProteomeDetails.cohort : cohorts[0]
 		}
 
 		for (const cohortKey of cohorts) {
@@ -178,38 +189,22 @@ export function renderAssayAndCohortRadios({
 	}
 }
 
-export function makeChartBtnMenu(holder, chartsInstance) {
+export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 	chartsInstance.dom.tip.clear()
 	const organisms = chartsInstance.state.termdbConfig?.queries?.proteome?.organisms || {}
 	const menuDiv = holder.append('div')
 
-	let selectedProteomeDetails
-	let launchOption
-
-	const syncLaunchButtonState = () => {
-		if (!launchOption) return
-		if (selectedProteomeDetails?.cohort) launchOption.style('opacity', 1).style('pointer-events', 'auto')
-		else launchOption.style('opacity', 0.5).style('pointer-events', 'none')
-	}
-
-	renderAssayAndCohortRadios({
-		holder: menuDiv,
-		organisms,
-		onChange: proteomeDetails => {
-			selectedProteomeDetails = proteomeDetails
-			syncLaunchButtonState()
-		}
-	})
-
-	launchOption = menuDiv
+	let selectedProteomeDetails: Partial<ProteomeDetails> | undefined
+	const launchOption = menuDiv
 		.append('button')
 		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn sja_sharp_border')
 		.style('display', 'block')
 		.style('margin', '10px auto 10px')
 		.text('Select Protein')
 		.on('click', () => {
-			if (!selectedProteomeDetails?.cohort) return
-			const { organism, assay, cohort } = selectedProteomeDetails
+			const current = selectedProteomeDetails
+			if (!current?.organism || !current.assay || !current.cohort) return
+			const { organism, assay, cohort } = current
 			const assayCohortTitle = `${organism} ${assay}: ${cohort}`
 			const chart = {
 				label: 'Protein Abundance',
@@ -220,10 +215,12 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 					proteomeDetails: { organism, assay, cohort },
 					label: `Organism: ${organism}; Assay: ${assay}; Cohort: ${cohort}`
 				},
-				processSelection: termlst => termlst,
-				updateActionBySelectedTerms: (action, termlst) => {
+				processSelection: (termlst: any[]) => termlst,
+				updateActionBySelectedTerms: (action: any, termlst: any[]) => {
 					action.config.assayCohortTitle = assayCohortTitle
-					const { organism, assay, cohort } = selectedProteomeDetails
+					const currentDetails = selectedProteomeDetails
+					if (!currentDetails?.organism || !currentDetails.assay || !currentDetails.cohort) return
+					const { organism, assay, cohort } = currentDetails
 					action.config.proteomeDetails = { organism, assay, cohort }
 					const twlst = termlst.map(term => {
 						const t = structuredClone(term)
@@ -255,15 +252,30 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			chartsInstance.showTree_selectlst(chart)
 		})
 
+	const syncLaunchButtonState = () => {
+		if (!launchOption) return
+		if (selectedProteomeDetails?.cohort) launchOption.style('opacity', 1).style('pointer-events', 'auto')
+		else launchOption.style('opacity', 0.5).style('pointer-events', 'none')
+	}
+
+	renderAssayAndCohortRadios({
+		holder: menuDiv,
+		organisms,
+		onChange: proteomeDetails => {
+			selectedProteomeDetails = proteomeDetails
+			syncLaunchButtonState()
+		}
+	})
+
 	syncLaunchButtonState()
 }
 
-export function toTvslstFilter(filterConfig) {
+export function toTvslstFilter(filterConfig: any): any {
 	if (filterConfig && Array.isArray(filterConfig) && filterConfig.length)
 		return {
 			type: 'tvslst',
 			in: true,
 			join: filterConfig.length > 1 ? 'and' : '',
-			lst: filterConfig.map(tvs => ({ type: 'tvs', tvs }))
+			lst: filterConfig.map((tvs: any) => ({ type: 'tvs', tvs }))
 		}
 }
