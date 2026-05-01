@@ -39,7 +39,7 @@ export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix
 	return tileSelection.id.startsWith(suspectedPrefix)
 }
 
-export function createFeatureID(feature_prefix: FeaturePrefixes, coords: [number, number]) {
+export function createFeatureID(featurePrefix: FeaturePrefixes, coords: [number, number]) {
 	return featurePrefix + JSON.stringify(coords)
 }
 
