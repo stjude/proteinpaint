@@ -80,7 +80,7 @@ class ProteinView extends PlotBase implements RxComponent {
 		const ptmDataByIsoform = new Map<string, any[]>()
 		for (const cohortData of data.cohorts || []) {
 			if (!cohortData.PTMType) continue // filter out non-PTM cohorts
-			// TODO: add PTM lollopop for other organisms
+			// TODO: add PTM lollipop for other organisms
 			if (cohortData.organism !== 'human') continue
 			const isoform = cohortData.isoform
 			const existingCohorts = ptmDataByIsoform.get(isoform)
