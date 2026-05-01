@@ -833,7 +833,7 @@ function validateSampleHeader2(ds, samples, where) {
 			if (id === undefined) {
 				if (ds.cohort.db) {
 					// sqlite-based db, samples in file should be in sync with db
-					throw new Error(`unknown sample ${s.name} from ${where} file`)
+					throw `unknown sample ${s.name} from ${where} file`
 				} else {
 					// api-based db, samples in file may not be in sync with api
 					// file should still be used, so insert a mock element in
