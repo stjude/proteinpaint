@@ -1,6 +1,5 @@
 import tape from 'tape'
 import { filterTerms } from '../termdb.server.init.ts'
-import * as authApi from '../auth'
 
 tape('\n', function (test) {
 	test.comment('-***- termdb access control specs -***-')
