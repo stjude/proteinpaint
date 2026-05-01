@@ -9,8 +9,8 @@ profileForms2 route. Differs from termdb.profileFormScores:
   - Always aggregated across eligible sites; no sampleData shortcut.
   - Public role never sees site IDs (sites: []).
 
-The Templates 2 picker map is read by clients directly from
-termdbConfig.plotConfigByCohort[cohort].profileForms2.domain2plotType — no
+The Templates 2 picker config is read by clients directly from
+termdbConfig.plotConfigByCohort[cohort].profileForms2.domains — no
 helper is needed here.
 */
 

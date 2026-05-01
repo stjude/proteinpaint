@@ -181,22 +181,19 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 
 		case 'profileForms2': {
 			// Picker (mass/charts.js showFormsToggleTree) sets usecase.cohort + usecase.subtype.
-			// Reads the static domain → plotType map directly from the dataset config
-			// at plotConfigByCohort[cohort].profileForms2.domain2plotType.
+			// Reads the per-cohort domains list directly from the dataset config at
+			// plotConfigByCohort[cohort].profileForms2.domains — each entry is { id, plotTypes }.
 			if (term.isleaf) return uses
-			const allowed = termdbConfig?.plotConfigByCohort?.[usecase.cohort]?.profileForms2?.domain2plotType
+			const allowed = termdbConfig?.plotConfigByCohort?.[usecase.cohort]?.profileForms2?.domains
 			if (!allowed) return uses
 			const ancestors = term.id.split('__').length
 			const subtype = usecase.subtype
 			if (ancestors == 3) {
-				if (allowed[term.id]?.includes(subtype)) uses.add('plot')
+				if (allowed.find(d => d.id === term.id)?.plotTypes?.includes(subtype)) uses.add('plot')
 			} else if (ancestors < 3) {
 				const prefix = term.id + '__'
-				for (const id in allowed) {
-					if (id.startsWith(prefix) && allowed[id].includes(subtype)) {
-						uses.add('branch')
-						break
-					}
+				if (allowed.some(d => d.id.startsWith(prefix) && d.plotTypes.includes(subtype))) {
+					uses.add('branch')
 				}
 			}
 			return uses
