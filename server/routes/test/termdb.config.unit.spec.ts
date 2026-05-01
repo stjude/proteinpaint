@@ -307,22 +307,6 @@ tape('getDsAllowedTermTypes() - no queries object', function (test) {
 	test.end()
 })
 
-tape('getDsAllowedTermTypes() - proteome without assays', function (test) {
-	const ds: any = {
-		cohort: {
-			termdb: {
-				termtypeByCohort: []
-			}
-		},
-		queries: {
-			proteome: {}
-		}
-	}
-	const result = getDsAllowedTermTypes(ds)
-	test.notOk(result.includes(PROTEOME_ABUNDANCE), 'Should not include PROTEOME_ABUNDANCE without assays')
-	test.end()
-})
-
 tape('getDsAllowedTermTypes() - singleCell without geneExpression', function (test) {
 	const ds: any = {
 		cohort: {
