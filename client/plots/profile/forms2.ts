@@ -173,8 +173,10 @@ class ProfileForms2 extends profilePlot {
 			body: {
 				genome: this.state.vocab.genome,
 				dslabel: this.state.vocab.dslabel,
-				scoreTerms: this.scoreTerms.map((t: any) => ({ term: { id: t.term.id }, q: t.q })),
-				scScoreTerms: (this.scScoreTerms || []).map((t: any) => ({ term: { id: t.term.id }, q: t.q })),
+				// q is optional in the route type (getMultivalueTWs returns wrappers without q),
+				// but normalize to {} here so downstream server code can always read .q without a guard.
+				scoreTerms: this.scoreTerms.map((t: any) => ({ term: { id: t.term.id }, q: t.q ?? {} })),
+				scScoreTerms: (this.scScoreTerms || []).map((t: any) => ({ term: { id: t.term.id }, q: t.q ?? {} })),
 				filter: this.filter,
 				filterByUserSites: this.settings?.filterByUserSites
 			}
