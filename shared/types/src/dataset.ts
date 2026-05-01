@@ -1736,6 +1736,7 @@ keep this setting here for reason of:
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
+	getHiddenTermIds?: (ctx: { clientAuthResult: any; activeCohort: string }) => string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]

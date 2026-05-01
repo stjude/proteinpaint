@@ -519,6 +519,7 @@ function setRenderers(self) {
 				tree: { usecase: chart.usecase }
 			},
 			tree: {
+				disable_terms: self.app.vocabApi.termdbConfig?.hiddenIds || [],
 				click_term: term => {
 					// summary/survival/cuminc all expect config.term{} to be a termsetting object, but not term (which is confusing)
 					// thus convert term into a termwrapper (termsetting obj)
@@ -579,6 +580,7 @@ function setRenderers(self) {
 					tree: { usecase: { ...chart.usecase, cohort: cohortKey, subtype: activeSubtype } }
 				},
 				tree: {
+					disable_terms: self.app.vocabApi.termdbConfig?.hiddenIds || [],
 					click_term: term => {
 						const tw = term.term ? term : { term }
 						action.config[chart.usecase.detail] = tw
@@ -631,6 +633,7 @@ function setRenderers(self) {
 				tree: { usecase: chart.usecase }
 			},
 			tree: {
+				disable_terms: self.app.vocabApi.termdbConfig?.hiddenIds || [],
 				submit_lst: termlst => {
 					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
 					action.config[chart.usecase.detail] = data
