@@ -54,7 +54,7 @@ export class SkipFlagCheckRenderer {
 				renderOnlyFlagged: target.checked,
 				renderSkipped: skipCheckBool
 			}
-			newSettings.activeAnnotation = calculateNewIndex(settings.activeAnnotation, newSettings)
+			newSettings = { ...newSettings, activeAnnotation: calculateNewIndex(settings.activeAnnotation, newSettings) }
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: wsiApp.id,
@@ -78,7 +78,7 @@ export class SkipFlagCheckRenderer {
 				renderOnlyFlagged: flagCheckBool,
 				renderSkipped: target.checked
 			}
-			newSettings.activeAnnotation = calculateNewIndex(settings.activeAnnotation, newSettings)
+			newSettings = { ...newSettings, activeAnnotation: calculateNewIndex(settings.activeAnnotation, newSettings) }
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: wsiApp.id,

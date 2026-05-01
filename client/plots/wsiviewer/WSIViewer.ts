@@ -20,6 +20,7 @@ import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import { sayerror } from '#dom'
 import { DownloadCSVButtonRenderer } from '#plots/wsiviewer/view/DownloadCSVButtonRenderer.ts'
+import { SessionWSImage } from './viewModel/SessionWSImage'
 
 class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
@@ -104,7 +105,27 @@ class WSIViewer extends PlotBase implements RxComponent {
 			aiProjectID,
 			aiWSIMageFiles
 		)
-
+		if (settings.activeID) {
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: {
+					settings: {
+						renderWSIViewer: false,
+						changeTrigger: Date.now(),
+						activeID: '',
+						activeAnnotation:
+							SessionWSImage.findTileIndexByID(
+								settings.activeID,
+								viewModel.sampleWSImages[settings.displayedImageIndex],
+								settings
+							) || 0,
+						renderAnnotationTable: true
+					}
+				}
+			})
+			return
+		}
 		const wsimages = viewModel.sampleWSImages
 
 		const wsimageLayers = viewModel.wsimageLayers

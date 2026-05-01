@@ -213,6 +213,7 @@ export class WSIViewerInteractions {
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
 						let newFlag: FlagStatus | null = null
+
 						if (event.key.toLowerCase() === 'f') {
 							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
 						} else if (!justTileSelection && event.key.toLowerCase() === 's') {
@@ -222,7 +223,6 @@ export class WSIViewerInteractions {
 
 						const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 						tileSelection.flag = newFlag
-
 						const oldStar = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
 						if (oldStar) {
 							source?.removeFeature(oldStar)
@@ -239,6 +239,7 @@ export class WSIViewerInteractions {
 						if (annotationBorderFeat) {
 							source?.removeFeature(annotationBorderFeat)
 						}
+
 						if (newFlag === FlagStatus.Flagged) {
 							const newStar = createStarFeature(
 								settings.tileSize || 512,
@@ -272,10 +273,8 @@ export class WSIViewerInteractions {
 									settings: {
 										renderWSIViewer: false,
 										changeTrigger: Date.now(),
-										activeAnnotation:
-											SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1
-												? settings.activeAnnotation
-												: 0,
+										activeAnnotation: 0,
+										activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
 										renderAnnotationTable: true,
 										sessionsTileSelection: sessionsTileSelection,
 										isSavingAnnotation: false
@@ -295,8 +294,8 @@ export class WSIViewerInteractions {
 						id: wsiApp.id,
 						config: {
 							settings: {
-								activeAnnotation:
-									SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
+								activeAnnotation: 0,
+								activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelections[currentIndex].id),
 								isSavingAnnotation: false,
 								changeTrigger: Date.now(),
 								renderWSIViewer: false
@@ -636,7 +635,6 @@ export class WSIViewerInteractions {
 
 		if (SessionWSImage.isSessionTileSelection(tileSelection, sessionWSImage)) {
 			const sessionsTileSelection = SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
-
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: wsiApp.id,
@@ -644,8 +642,8 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
-						activeAnnotation:
-							SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
+						activeAnnotation: 0,
+						activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
 						changeTrigger: Date.now(),
 						sessionsTileSelection: sessionsTileSelection
 					}
@@ -671,7 +669,6 @@ export class WSIViewerInteractions {
 		}
 		// TODO find another way to clear server cache
 		clearServerDataCache()
-
 		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
 		wsiApp.app.dispatch({
 			type: 'plot_edit',
@@ -680,8 +677,8 @@ export class WSIViewerInteractions {
 				settings: {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
-					activeAnnotation:
-						SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
+					activeAnnotation: 0,
+					activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
 					changeTrigger: Date.now(),
 					sessionsTileSelection: sessionsTileSelection
 				}
@@ -800,8 +797,8 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
 					changeTrigger: Date.now(),
-					activeAnnotation:
-						SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
+					activeAnnotation: 0,
+					activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
 					isSavingAnnotation: false,
 					sessionsTileSelection: sessionsTileSelection
 				}

@@ -24,6 +24,24 @@ export class SessionWSImage extends WSImage {
 		this.predictions = ws.predictions
 		this.sessionsTileSelections = sessionsTileSelections
 	}
+	public static getNextTileID(sessionWSImage: SessionWSImage, settings: Settings, currentTileID: string): string {
+		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+		if (allSelections.length < 2) return ''
+		const currentIndex = allSelections.findIndex(ts => ts.id === currentTileID)
+		if (currentIndex === -1) return ''
+		const nextID: string =
+			currentIndex === allSelections.length - 1
+				? allSelections[currentIndex - 1].id
+				: allSelections[currentIndex + 1].id
+		return nextID
+	}
+
+	public static findTileIndexByID(tileID: string, sessionWSImage: SessionWSImage, settings: Settings): number {
+		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+		const foundIndex = allSelections.findIndex(ts => ts.id === tileID)
+		if (foundIndex === -1) return 0
+		return foundIndex
+	}
 
 	public static removeTileSelection(tileSelection: TileSelection, sessionWSImage: SessionWSImage): TileSelection[] {
 		if (!sessionWSImage.sessionsTileSelections) return []
