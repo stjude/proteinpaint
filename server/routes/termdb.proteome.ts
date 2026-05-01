@@ -259,6 +259,8 @@ export async function validate_query_proteome(ds) {
 		const organism = q.organisms[organismName]
 		if (organism.columnIdx == null) throw `queries.proteome.organisms.${organismName}.columnIdx missing`
 		if (organism.columnValue == null) throw `queries.proteome.organisms.${organismName}.columnValue missing`
+		if (!organism.assays || typeof organism.assays != 'object')
+			throw `queries.proteome.organisms.${organismName}.assays missing or invalid`
 		for (const assayName in organism.assays) {
 			const assay = organism.assays[assayName]
 			if (assay.columnIdx == null)
