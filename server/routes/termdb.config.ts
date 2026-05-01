@@ -109,15 +109,15 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		defaultTw4correlationPlot: tdb.defaultTw4correlationPlot,
 		authFilter: req.query.filter
 	}
-	// Resolve auth context up-front: getProfileForms2Domains and c.hiddenIds both depend
-	// on per-user/per-cohort hidden-term scrubbing via tdb.getHiddenTermIds(ctx).
+	// Resolve auth context up-front so getProfileForms2Domains can scrub picker rows
+	// per-user via tdb.getHiddenTermIds(ctx). Hidden term IDs are NOT exposed to the
+	// client - the SQL filter here plus sample-level filtering in termdb.matrix is
+	// sufficient, and revealing them would leak the protected-term identifiers.
 	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
 	const clientAuthResult = info?.clientAuthResult || {}
 	const activeCohort = (req.query.cohort as string) || Object.keys(clientAuthResult)[0]
 	const ctx = { clientAuthResult, activeCohort }
 	c.clientAuthResult = clientAuthResult
-	if (tdb.getHiddenTermIds) c.hiddenIds = tdb.getHiddenTermIds(ctx)
-
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
