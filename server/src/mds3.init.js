@@ -333,7 +333,9 @@ export async function validate_termdb(ds) {
 	}
 
 	if (tdb.convertSampleId) {
-		if (tdb.convertSampleId.gdcapi) {
+		if (typeof tdb.convertSampleId.get === 'function') {
+			// ds-supplied getter
+		} else if (tdb.convertSampleId.gdcapi) {
 			gdc.convertSampleId_addGetter(tdb, ds)
 			// convertSampleId.get() added
 		} else {
