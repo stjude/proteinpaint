@@ -1,7 +1,7 @@
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { getProfileForms2Domain2PlotType } from '#routes/profile.forms2.config.js'
+import { getProfileForms2Domain2PlotType } from '#routes/profile.forms2.js'
 import {
 	TermTypeGroups,
 	SINGLECELL_CELLTYPE,

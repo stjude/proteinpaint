@@ -181,9 +181,9 @@ This chart compares two different metrics for the same respondent group for each
 
 The picker UI is defined entirely in [`mass/charts.js`](../../mass/charts.js) (`self.showFormsToggleTree`) — the generic [`tree.js`](../../termdb/tree.js) component is untouched. The same `Tabs` component used inside the rendered chart (Yes/No vs Likert) is reused for the picker tabs.
 
-`termdbConfig.profileForms2Domains` (`Record<cohortKey, Record<domainId, friendlyLabel[]>>`) drives the tab list and per-tab tree filter. Lazy-built on first `/termdb/config` request for the dataset and cached on `tdb` (helper [`getProfileForms2Domains`](../../../../server/routes/profile.forms2.config.ts) — invoked from [`termdb.config.ts`](../../../../server/routes/termdb.config.ts) as a thin pass-through). No startup cost, populated when the first client connects. An empty inner submap (e.g., Abbreviated today) triggers the picker's empty-state message.
+`termdbConfig.profileForms2Domain2PlotType` (`Record<cohortKey, Record<domainId, friendlyLabel[]>>`) drives the tab list and per-tab tree filter. Sourced from the dataset config — each cohort declares its own static `profileForms2.domain2plotType` map under `plotConfigByCohort` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts), which the server reads via the thin helper [`getProfileForms2Domain2PlotType`](../../../../server/routes/profile.forms2.ts) and emits on `/termdb/config` (invoked from [`termdb.config.ts`](../../../../server/routes/termdb.config.ts)). No SQL, no DB read, no per-request caching — adding or removing a template-bearing domain is a code edit reviewable in PRs. An empty inner submap (e.g., Abbreviated today) triggers the picker's empty-state message.
 
-[`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (set by the picker): depth-3 gets `'plot'` only if `profileForms2Domains[cohort][term.id]` includes the active subtype; depth-1/2 gets `'branch'` only if any descendant matches. Terms with empty `uses` are entirely excluded by `tree.js`'s filter.
+[`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (set by the picker): depth-3 gets `'plot'` only if `profileForms2Domain2PlotType[cohort][term.id]` includes the active subtype; depth-1/2 gets `'branch'` only if any descendant matches. Terms with empty `uses` are entirely excluded by `tree.js`'s filter.
 
 **Key differences from v1 Templates:**
 
@@ -196,7 +196,7 @@ The picker UI is defined entirely in [`mass/charts.js`](../../mass/charts.js) (`
 
 **Response shape:** `term2Score: { [termId]: { [category]: number } }` — same as v1.
 
-**Plot configuration (shared across v1/v2):** A single module-level constant `profileFormsOptions` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) defines the `options[]` array, referenced by `full.profileForms`, `full.profileForms2`, and `abbrev.profileForms2`. Single source of truth — v1 and v2 cannot drift, and full/abbrev cannot drift.
+**Plot configuration (shared across v1/v2):** A single module-level constant `profileFormsOptions` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) defines the `options[]` array, referenced by `fullCohortPlots.profileForms`, `fullCohortPlots.profileForms2`, and `abbrevCohortPlots.profileForms2`. Single source of truth — v1 and v2 cannot drift, and full/abbrev cannot drift.
 
 **Domain × chart-type availability (sjglobal `db.6` snapshot, full cohort):**
 
@@ -208,7 +208,7 @@ The picker UI is defined entirely in [`mass/charts.js`](../../mass/charts.js) (`
 | `FDiagnostics__Diagnostics__General Laboratory` | — | 11 |
 | `FWorkforce__Service Integration__Communication` | — | 40 |
 
-Counts are template questions per domain. To regenerate this table after a DB change:
+Counts are template questions per domain. The picker map itself is **not** computed from this query — it is hardcoded as `profileForms2.domain2plotType` inside `fullCohortPlots`/`abbrevCohortPlots` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) (the canonical source). The SQL below is an audit tool: after a DB change that adds or removes template-bearing domains, run it to verify the dataset's `domain2plotType` still matches what's in the DB, and update the dataset map if it doesn't.
 
 ```sql
 SELECT parent_id, json_extract(jsondata, '$.subtype') AS subtype, COUNT(*) AS cnt
