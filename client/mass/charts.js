@@ -533,9 +533,9 @@ function setRenderers(self) {
 	}
 
 	/* Templates 2 picker: chart-type tabs over a per-tab cohort-filtered termdb tree.
-	   Reads the domain → plotType map directly from
-	   termdbConfig.plotConfigByCohort[cohort].profileForms2.domain2plotType (declared in the
-	   dataset config). */
+	   Reads the per-cohort domains list directly from
+	   termdbConfig.plotConfigByCohort[cohort].profileForms2.domains (declared in the
+	   dataset config) — each entry is { id, plotTypes }. */
 	self.showFormsToggleTree = async chart => {
 		const action = {
 			type: 'plot_create',
@@ -547,11 +547,11 @@ function setRenderers(self) {
 		const termdbConfig = self.app.vocabApi.termdbConfig
 		const cohortKey = termdbConfig?.selectCohort?.values?.[self.state.activeCohort]?.keys?.[0]
 		const cohortForms2 = termdbConfig?.plotConfigByCohort?.[cohortKey]?.profileForms2
-		const domains = cohortForms2?.domain2plotType || {}
+		const domains = cohortForms2?.domains || []
 		// Sort tabs by their order in profileFormsOptions (dataset-declared canonical order)
 		// so the first option (e.g. Yes/No Barchart) is the default active tab.
 		const tabOrder = (cohortForms2?.options || []).map(o => o.name)
-		const subtypeNames = [...new Set(Object.values(domains).flat())] // dedupe chart-type labels
+		const subtypeNames = [...new Set(domains.flatMap(d => d.plotTypes))] // dedupe chart-type labels
 			.sort((a, b) => tabOrder.indexOf(a) - tabOrder.indexOf(b))
 
 		if (!subtypeNames.length) {
