@@ -1,4 +1,4 @@
-import { dofetch3 } from '#common/dofetch'
+import { dofetch3, getSavedToken } from '#common/dofetch'
 import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '@sjcrh/proteinpaint-types'
 import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
@@ -10,11 +10,12 @@ import type {
 	AiProjectSelectedWSImagesRequest,
 	AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
-import { Feature } from 'ol'
+import type { Feature, ImageTile } from 'ol'
 import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
+import type { LoadFunction } from 'ol/Tile'
 
 export class ViewModelProvider {
 	constructor() {}
@@ -83,6 +84,19 @@ export class ViewModelProvider {
 		})
 	}
 
+	private async createAuthenticatedPreviewUrl(url: string, token: string): Promise<string> {
+		const response = await fetch(url, {
+			headers: { Authorization: `Bearer ${token}` }
+		})
+
+		if (!response.ok) {
+			throw new Error(`Failed to load preview image: ${response.status} ${response.statusText}`)
+		}
+
+		const blob = await response.blob()
+		return URL.createObjectURL(blob)
+	}
+
 	private async getWSImageLayers(
 		genome: string,
 		dslabel: string,
@@ -111,10 +125,14 @@ export class ViewModelProvider {
 		// Always load the currently displayed image if not in range
 		indicesToLoad.add(displayedImageIndex)
 
+		const rawHost = sessionStorage.getItem('hostURL') || (window as any).testHost || ''
+		const host = rawHost.endsWith('/') ? rawHost.slice(0, -1) : rawHost
+
 		// Load layers for the determined indices
 		for (const i of indicesToLoad) {
 			const wsimage = wsimages[i].filename
-
+			const savedJwt = getSavedToken(dslabel) || ''
+			const authToken = savedJwt ? btoa(savedJwt) : ''
 			const body: WSImagesRequest = {
 				genome: genome,
 				dslabel: dslabel,
@@ -141,7 +159,7 @@ export class ViewModelProvider {
 				queryParams += `&ai_project_id=${aiProjectID}`
 			}
 
-			const zoomifyUrl = `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
+			const zoomifyUrl = `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
 
 			const source = new Zoomify({
 				url: zoomifyUrl,
@@ -150,8 +168,13 @@ export class ViewModelProvider {
 				zDirection: -1
 			})
 
+			source.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
+
+			const previewUrl = `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`
+			const authenticatedPreviewUrl = await this.createAuthenticatedPreviewUrl(previewUrl, authToken)
+
 			const options = {
-				preview: `/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`,
+				preview: authenticatedPreviewUrl,
 				metadata: wsimages[i].metadata,
 				source: source,
 				baseLayer: true,
@@ -174,7 +197,7 @@ export class ViewModelProvider {
 						predictionQueryParams += `&ai_project_id=${aiProjectID}`
 					}
 
-					const zoomifyOverlayLatUrl = `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
+					const zoomifyOverlayLatUrl = `${host}/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
 
 					const sourceOverlay = new Zoomify({
 						url: zoomifyOverlayLatUrl,
@@ -183,8 +206,13 @@ export class ViewModelProvider {
 						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
 					})
 
+					sourceOverlay.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
+
+					const previewOverlayUrl = `${host}/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`
+					const authenticatedOverlayPreviewUrl = await this.createAuthenticatedPreviewUrl(previewOverlayUrl, authToken)
+
 					const optionsOverlay = {
-						preview: `/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`,
+						preview: authenticatedOverlayPreviewUrl,
 						metadata: wsimages[i].metadata,
 						source: sourceOverlay,
 						title: overlay.predictionOverlayType,
@@ -341,5 +369,22 @@ export class ViewModelProvider {
 
 	private getClassColor(wsImage: WSImage, annotationClass: string): string {
 		return wsImage.classes?.find(wsiCLass => String(wsiCLass.label) === annotationClass)?.color ?? '#FFFFFF' // TODO get the default color from settings
+	}
+
+	private createAuthenticatedTileLoader(token: string): LoadFunction {
+		return (tile, src) => {
+			const imageTile = tile as ImageTile
+			const img = imageTile.getImage() as HTMLImageElement
+
+			fetch(src, {
+				headers: { Authorization: `Bearer ${token}` }
+			})
+				.then(r => r.blob())
+				.then(blob => {
+					const url = URL.createObjectURL(blob)
+					img.onload = () => URL.revokeObjectURL(url)
+					img.src = url
+				})
+		}
 	}
 }
