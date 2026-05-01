@@ -1,5 +1,24 @@
+import type { TileSelection } from '@sjcrh/proteinpaint-types'
+import type Settings from '../Settings'
+import { SessionWSImage } from '../viewModel/SessionWSImage'
+
 export class SkipFlagCheckRenderer {
-	render(holder: any, wsiApp: any, flagChecked: boolean, skipChecked: boolean) {
+	render(
+		holder: any,
+		wsiApp: any,
+		flagChecked: boolean,
+		skipChecked: boolean,
+		sessionWSImage: SessionWSImage,
+		settings: Settings
+	) {
+		function calculateNewIndex(currentIndex: number, newSettings: Settings) {
+			const oldTileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+			const currentID = oldTileSelections[currentIndex]?.id
+			const newTileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage, newSettings) || []
+			const newIndex = newTileSelections.findIndex(tileSelection => tileSelection.id === currentID)
+			return newIndex != -1 ? newIndex : 0
+		}
+
 		const skipFlagFieldSet = holder.append('div').append('fieldset').attr('id', 'SFField')
 		const flagCheck = skipFlagFieldSet
 			.append('input')
@@ -22,68 +41,51 @@ export class SkipFlagCheckRenderer {
 		//These options aren't compatible but radio buttons cant be completely unselected
 		flagCheck.on('change', (event: Event) => {
 			const target = event.target as HTMLInputElement
-			if (target.checked) {
-				skipCheck.property('checked', false)
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							renderOnlyFlagged: true,
-							renderSkipped: false,
-							changeTrigger: Date.now(),
-							renderAnnotationTable: true,
-							renderWSIViewer: false
-						}
-					}
-				})
-			} else {
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							renderOnlyFlagged: false,
-							renderAnnotationTable: true,
-							changeTrigger: Date.now(),
-							renderWSIViewer: false
-						}
-					}
-				})
+			let newSettings: Settings = {
+				...settings,
+				renderWSIViewer: false,
+				renderAnnotationTable: true,
+				changeTrigger: Date.now()
 			}
+			const skipCheckBool = target.checked ? false : settings.renderSkipped
+			skipCheck.property('checked', skipCheckBool)
+			newSettings = {
+				...newSettings,
+				renderOnlyFlagged: target.checked,
+				renderSkipped: skipCheckBool
+			}
+			newSettings.activeAnnotation = calculateNewIndex(settings.activeAnnotation, newSettings)
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: newSettings
+				}
+			})
 		})
-
 		skipCheck.on('change', (event: Event) => {
 			const target = event.target as HTMLInputElement
-			if (target.checked) {
-				flagCheck.property('checked', false)
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							renderOnlyFlagged: false,
-							renderSkipped: true,
-							changeTrigger: Date.now(),
-							renderWSIViewer: false,
-							renderAnnotationTable: true
-						}
-					}
-				})
-			} else {
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							renderSkipped: false,
-							changeTrigger: Date.now(),
-							renderWSIViewer: false,
-							renderAnnotationTable: true
-						}
-					}
-				})
+			let newSettings: Settings = {
+				...settings,
+				renderWSIViewer: false,
+				renderAnnotationTable: true,
+				changeTrigger: Date.now()
 			}
+			const flagCheckBool = target.checked ? false : settings.renderOnlyFlagged
+			flagCheck.property('checked', flagCheckBool)
+			newSettings = {
+				...newSettings,
+				renderOnlyFlagged: flagCheckBool,
+				renderSkipped: target.checked
+			}
+			newSettings.activeAnnotation = calculateNewIndex(settings.activeAnnotation, newSettings)
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: newSettings
+				}
+			})
 		})
 	}
 }

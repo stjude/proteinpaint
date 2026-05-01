@@ -124,7 +124,7 @@ export class WSIViewerInteractions {
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage) || []
+			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = settings.activeAnnotation
@@ -272,7 +272,10 @@ export class WSIViewerInteractions {
 									settings: {
 										renderWSIViewer: false,
 										changeTrigger: Date.now(),
-										activeAnnotation: 0,
+										activeAnnotation:
+											SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1
+												? settings.activeAnnotation
+												: 0,
 										renderAnnotationTable: true,
 										sessionsTileSelection: sessionsTileSelection,
 										isSavingAnnotation: false
@@ -286,13 +289,14 @@ export class WSIViewerInteractions {
 					} catch (error: any) {
 						console.trace("Couldn't successfully flag tile:", error)
 					}
-					// Should I update state here or at the end of saveand filnalize
+
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
 						id: wsiApp.id,
 						config: {
 							settings: {
-								activeAnnotation: 0,
+								activeAnnotation:
+									SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
 								isSavingAnnotation: false,
 								changeTrigger: Date.now(),
 								renderWSIViewer: false
@@ -397,7 +401,7 @@ export class WSIViewerInteractions {
 
 			sessionWSImage.sessionsTileSelections = sessionsTileSelection
 
-			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage)
+			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings)
 
 			// Check if click falls inside an existing annotation
 			const selectedTileSelectionIndex = tileSelections.findIndex(tileSelection => {
@@ -585,8 +589,16 @@ export class WSIViewerInteractions {
 		currentIndex: number
 	) {
 		const state = wsiApp.app.getState()
-		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage)
+		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
+		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage, settings)
 		const tileSelection = tileSelections[currentIndex]
+		if (!tileSelection) {
+			console.warn('deleteAnnotation called with no tileSelection for currentIndex', {
+				currentIndex,
+				tileSelectionsLength: tileSelections.length
+			})
+			return
+		}
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove annotated square
@@ -632,7 +644,8 @@ export class WSIViewerInteractions {
 					settings: {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
-						activeAnnotation: 0,
+						activeAnnotation:
+							SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
 						changeTrigger: Date.now(),
 						sessionsTileSelection: sessionsTileSelection
 					}
@@ -667,7 +680,8 @@ export class WSIViewerInteractions {
 				settings: {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
-					activeAnnotation: 0,
+					activeAnnotation:
+						SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
 					changeTrigger: Date.now(),
 					sessionsTileSelection: sessionsTileSelection
 				}
@@ -756,6 +770,7 @@ export class WSIViewerInteractions {
 		aiProjectID: number
 	) {
 		const state = wsiApp.app.getState()
+		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
@@ -785,7 +800,8 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
 					changeTrigger: Date.now(),
-					activeAnnotation: 0,
+					activeAnnotation:
+						SessionWSImage.getTileSelections(sessionWSImage, settings).length > 1 ? settings.activeAnnotation : 0,
 					isSavingAnnotation: false,
 					sessionsTileSelection: sessionsTileSelection
 				}

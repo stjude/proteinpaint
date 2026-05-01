@@ -14,6 +14,7 @@ import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 import { SpinnerRenderer } from '#plots/wsiviewer/view/SpinnerRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
 import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
+import { SkipFlagCheckRenderer } from './view/SkipFlagCheckRenderer'
 import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
@@ -38,7 +39,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 	// New: persistent MapRenderer instance reused across main() calls
 	private mapRenderer: MapRenderer | undefined
-	// private skipFlagRenderer = new SkipFlagCheckRenderer()
+	private skipFlagRenderer = new SkipFlagCheckRenderer()
 	private spinnerRenderer = new SpinnerRenderer()
 
 	constructor(opts: any, api) {
@@ -130,7 +131,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const activeImage: TileLayer = activeLayerData.wsimage
 		const activeImageExtent = activeImage?.getSource()?.getTileGrid()?.getExtent()
 
-		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex)
+		const imageViewData: ImageViewData = viewModel.getImageViewData(settings.displayedImageIndex, settings)
 
 		// set MapRenderer state here: ensure the persistent renderer receives current state
 		if (!this.mapRenderer) {
@@ -183,8 +184,15 @@ class WSIViewer extends PlotBase implements RxComponent {
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
 			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
-			// this.dom.mapHolder.select('#SFField').remove()
-			// this.skipFlagRenderer.render(this.dom.mapHolder, this, settings.renderOnlyFlagged, settings.renderSkipped)
+			this.dom.mapHolder.select('#SFField').remove()
+			this.skipFlagRenderer.render(
+				this.dom.mapHolder,
+				this,
+				settings.renderOnlyFlagged,
+				settings.renderSkipped,
+				viewModel.sampleWSImages[settings.displayedImageIndex],
+				settings
+			)
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
 			if (initialZoomInCoordinate != undefined) {
 				this.wsiViewerInteractions.zoomInEffectListener(

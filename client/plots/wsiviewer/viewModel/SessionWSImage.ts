@@ -6,7 +6,7 @@ import {
 	SelectionPrefixes,
 	WSImage
 } from '@sjcrh/proteinpaint-types'
-
+import type Settings from '#plots/wsiviewer/Settings.ts'
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
@@ -33,7 +33,7 @@ export class SessionWSImage extends WSImage {
 		return sessionWSImage.sessionsTileSelections
 	}
 
-	public static getTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
+	public static getTileSelections(sessionWSImage: SessionWSImage, settings: Settings): TileSelection[] {
 		const [selections, flagged_selections] = partition(
 			sessionWSImage.sessionsTileSelections || [],
 			ts => ts.flag === FlagStatus.Normal
@@ -52,19 +52,26 @@ export class SessionWSImage extends WSImage {
 		for (const array of desired_arrays) {
 			array.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 		}
-		// I could make a mega array of all flagged items and sort then,
-		// but I feel unceratin annotations are the least important, maybe at least combine predictions and selections
-		return desired_arrays.flat()
+		const filtered_arrays = desired_arrays.flat().filter(ts => {
+			if (ts.flag === FlagStatus.Skipped && !settings.renderSkipped) return false
+			if (ts.flag !== FlagStatus.Flagged && settings.renderOnlyFlagged) return false
+			return true
+		})
+		return filtered_arrays
 	}
 
-	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {
+	public static getTilesTableRows(
+		sessionWSImage: SessionWSImage,
+		selectedTileIndex: number,
+		settings: Settings
+	): any[] {
 		let row_index = 0
 		const incrementIndex = () => {
 			row_index++
 		}
 		const selectedColor = '#fcfc8b'
 
-		const selectionRows: any[] = SessionWSImage.getTileSelections(sessionWSImage)
+		const selectionRows: any[] = SessionWSImage.getTileSelections(sessionWSImage, settings)
 			.map(tileSelection => {
 				const color = sessionWSImage.classes?.find(c => c.label === tileSelection.class)?.color
 				const firstCell: any = { value: row_index }
