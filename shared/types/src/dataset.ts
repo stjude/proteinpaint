@@ -734,9 +734,19 @@ type ProteomeAssayConfig = {
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
-	overlayTerm?: BaseTerm
-	/** document structure */
-	assays: {
+	/** organism-keyed structure (new format) */
+	organisms?: {
+		[organism: string]: {
+			overlayTerm?: BaseTerm
+			columnIdx?: number
+			columnValue?: string
+			assays: {
+				[assayName: string]: ProteomeAssayConfig
+			}
+		}
+	}
+	/** flat assays structure (legacy format) */
+	assays?: {
 		[assayName: string]: ProteomeAssayConfig
 	}
 	samples?: number[]

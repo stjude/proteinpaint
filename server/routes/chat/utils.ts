@@ -96,7 +96,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 	},
 	{
 		termType: TermTypes.PROTEOME_ABUNDANCE,
-		detectAvailability: (ds: any) => !!ds?.queries?.proteome?.assays,
+		detectAvailability: (ds: any) => !!ds?.queries?.proteome,
 		schemaFieldName: 'proteinNames',
 		schemaDefinition: {
 			type: 'array',
