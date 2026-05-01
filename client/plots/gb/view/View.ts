@@ -59,6 +59,7 @@ export class View {
 				const tk: any = {
 					type: 'mds3',
 					dslabel: this.state.vocab.dslabel,
+					allow2selectSamples: this.opts.allow2selectSamples,
 					onClose: () => {
 						// on closing subtk, the filterObj corresponding to the subtk will be "removed" from subMds3Tks[], by regenerating the array
 						this.interactions.maySaveTrackUpdatesToState(this.blockInstance)

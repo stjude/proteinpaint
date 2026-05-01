@@ -96,7 +96,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			vocabApi: this.app.vocabApi,
 			debug: this.app.opts.debug,
 			plotDiv: this.opts.plotDiv,
-			header: this.opts.header
+			header: this.opts.header,
+			allow2selectSamples: this.opts.allow2selectSamples
 		}
 		return opts
 	}

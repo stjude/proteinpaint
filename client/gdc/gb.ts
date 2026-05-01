@@ -14,6 +14,7 @@ interface InitArg {
 	}
 	opts?: {
 		app?: Record<string, any>
+		genomeBrowser?: any
 	}
 }
 
@@ -41,14 +42,7 @@ export async function init(
 			nav: { activeTab: 1, header_mode: 'hidden' },
 			plots: [{ chartType: 'genomeBrowser' }]
 		},
-		opts: Object.assign(
-			{
-				// todo additional customizations
-				// dictionary:{header:'Select a variable to build Correlation Plot'}
-				// some way to make gene exp violin/boxplot to use log scale by default, but numeric dict term should not
-			},
-			arg.opts || {}
-		),
+		genomeBrowser: arg.opts?.genomeBrowser || {},
 		app: arg.opts?.app || {}
 	})
 	const api = {
