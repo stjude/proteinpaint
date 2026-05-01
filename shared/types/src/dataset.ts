@@ -737,8 +737,8 @@ export type ProteomeAbundanceQuery = {
 	/** organism-keyed structure (new format) */
 	organisms?: {
 		[organism: string]: {
-			overlayTerm?: BaseTerm
-			columnIdx?: number
+			overlayTerm: BaseTerm
+			columnIdx: number
 			columnValue?: string
 			assays: {
 				[assayName: string]: ProteomeAssayConfig
