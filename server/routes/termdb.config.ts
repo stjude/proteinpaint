@@ -1,7 +1,6 @@
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { getProfileForms2Domain2PlotType } from '#routes/profile.forms2.js'
 import {
 	TermTypeGroups,
 	SINGLECELL_CELLTYPE,
@@ -112,8 +111,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
-	const f2 = getProfileForms2Domain2PlotType(ds)
-	if (f2) c.profileForms2Domain2PlotType = f2
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
