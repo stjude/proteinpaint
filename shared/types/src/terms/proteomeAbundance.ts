@@ -8,6 +8,7 @@ ProteomeTermSettingInstance
 */
 
 export type ProteomeDetails = {
+	organism: string
 	assay: string
 	cohort: string
 }
@@ -19,7 +20,7 @@ export type ProteomeAbundanceTerm = NumericBaseTerm & {
 	protein: string
 	bins?: PresetNumericBins
 	unit?: string
-	/** assay and cohort this term belongs to */
+	/** organism, assay and cohort this term belongs to */
 	proteomeDetails: ProteomeDetails
 }
 

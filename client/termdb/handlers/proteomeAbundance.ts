@@ -10,40 +10,46 @@ type Opts = {
 export class SearchHandler {
 	opts: any
 	dom: any
-	assays: any
-	proteomeDetails!: { assay: string; cohort: string }
+	organisms: any
+	proteomeDetails!: { organism: string; assay: string; cohort: string }
 
 	async init(opts: Opts) {
 		this.opts = opts
 		this.dom = {}
 		opts.holder.style('padding', '5px 10px 10px 25px')
 
-		// Get available assays from termdbConfig
-		this.assays = this.opts.app.vocabApi.termdbConfig?.queries?.proteome?.assays || {}
-		const assayKeys = Object.keys(this.assays)
-		if (!assayKeys.length) throw 'No proteome assays available'
+		this.organisms = this.opts.app.vocabApi.termdbConfig?.queries?.proteome?.organisms || {}
+		const organismKeys = Object.keys(this.organisms)
+		if (!organismKeys.length) throw 'No proteome organisms available'
 		const initialProteomeDetails = opts.usecase?.proteomeDetails || {}
 
+		const selectedOrganism =
+			initialProteomeDetails.organism && this.organisms[initialProteomeDetails.organism]
+				? initialProteomeDetails.organism
+				: organismKeys[0]
+		const selectedOrganismAssays = this.organisms[selectedOrganism]?.assays || {}
+		const assayKeys = Object.keys(selectedOrganismAssays)
+		if (!assayKeys.length) throw `No assays available for selected organism: ${selectedOrganism}`
 		const selectedAssay =
-			initialProteomeDetails.assay && this.assays[initialProteomeDetails.assay]
+			initialProteomeDetails.assay && selectedOrganismAssays[initialProteomeDetails.assay]
 				? initialProteomeDetails.assay
 				: assayKeys[0]
-		const cohortKeys = Object.keys(this.assays[selectedAssay]?.cohorts || {})
+		const cohortKeys = Object.keys(selectedOrganismAssays[selectedAssay]?.cohorts || {})
 		if (!cohortKeys.length) throw 'No cohorts available for selected assay'
 		const selectedCohort =
-			initialProteomeDetails.cohort && this.assays[selectedAssay]?.cohorts?.[initialProteomeDetails.cohort]
+			initialProteomeDetails.cohort && selectedOrganismAssays[selectedAssay]?.cohorts?.[initialProteomeDetails.cohort]
 				? initialProteomeDetails.cohort
 				: cohortKeys[0]
-		this.proteomeDetails = { assay: selectedAssay, cohort: selectedCohort }
+		this.proteomeDetails = { organism: selectedOrganism, assay: selectedAssay, cohort: selectedCohort }
 
 		this.dom.typeSettingDiv = opts.holder.append('div')
 		renderAssayAndCohortRadios({
 			holder: this.dom.typeSettingDiv,
-			assays: this.assays,
+			organisms: this.organisms,
 			selectedProteomeDetails: this.proteomeDetails,
 			onChange: proteomeDetails => {
-				const { assay, cohort } = proteomeDetails
-				this.proteomeDetails = { assay, cohort }
+				const { organism, assay, cohort } = proteomeDetails
+				this.proteomeDetails = { organism, assay, cohort }
 				void this.updateUsecase()
 			}
 		})
@@ -51,7 +57,7 @@ export class SearchHandler {
 	}
 
 	private async updateUsecase() {
-		const { assay, cohort } = this.proteomeDetails
+		const { organism, assay, cohort } = this.proteomeDetails
 		const state = this.opts.app.getState()
 		await this.opts.app.dispatch({
 			type: 'app_refresh',
@@ -60,7 +66,7 @@ export class SearchHandler {
 					...state.tree,
 					usecase: {
 						...state.tree.usecase,
-						proteomeDetails: { assay, cohort }
+						proteomeDetails: { organism, assay, cohort }
 					}
 				}
 			}

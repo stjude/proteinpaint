@@ -25,49 +25,54 @@ function init({ genomes }) {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
+			// get() is attached to proteome, all organism, assay type, and cohorts share the same get().
 			if (!ds.queries?.proteome?.get) throw 'queries.proteome.get() missing'
 			const term = q.term?.term || q.term
 			if (!term?.name) throw 'term.name missing'
 
 			const cohorts: any[] = []
-			for (const assayName in ds.queries.proteome.assays) {
-				const assay = ds.queries.proteome.assays[assayName]
-				for (const cohortName in assay.cohorts || {}) {
-					const details = {
-						dbfile: ds.queries.proteome.dbfile,
-						assay: assayName,
-						cohort: cohortName
-					}
-					const tw = {
-						$id: '_',
-						term: {
-							name: term.name,
-							type: 'proteomeAbundance',
-							proteomeDetails: details
+			for (const organismName in ds.queries.proteome.organisms) {
+				const organism = ds.queries.proteome.organisms[organismName]
+				for (const assayName in organism.assays) {
+					const assay = organism.assays[assayName]
+					for (const cohortName in assay.cohorts || {}) {
+						const details = {
+							dbfile: ds.queries.proteome.dbfile,
+							organism: organismName,
+							assay: assayName,
+							cohort: cohortName
 						}
-					}
-					// request data for each cohort
-					const cohortData = await ds.queries.proteome.get({
-						terms: [tw],
-						proteomeDetails: details,
-						filter: q.filter,
-						filter0: q.filter0,
-						for: 'proteinView',
-						__abortSignal: q.__abortSignal
-					})
-					const controlSampleIds = cohortData.controlSampleIds || new Set()
+						const tw = {
+							$id: '_',
+							term: {
+								name: term.name,
+								type: 'proteomeAbundance',
+								proteomeDetails: details
+							}
+						}
+						// request data for each cohort
+						const cohortData = await ds.queries.proteome.get({
+							terms: [tw],
+							proteomeDetails: details,
+							filter: q.filter,
+							filter0: q.filter0,
+							for: 'proteinView',
+							__abortSignal: q.__abortSignal
+						})
+						const controlSampleIds = cohortData.controlSampleIds || new Set()
 
-					const prior = assay.cohorts[cohortName].prior
-					for (const entry of cohortData.allEntries || []) {
-						const s2v = entry.s2v
-						const stats = getCohortStats(s2v, controlSampleIds, prior)
-						delete entry.s2v
-						entry.foldChange = stats.foldChange
-						entry.pValue = stats.pValue
-						entry.testedN = stats.testedN
-						entry.controlN = stats.controlN
-						if (assay.mclassOverride) entry.mclassOverride = assay.mclassOverride
-						cohorts.push(entry)
+						const prior = assay.cohorts[cohortName].prior
+						for (const entry of cohortData.allEntries || []) {
+							const s2v = entry.s2v
+							const stats = getCohortStats(s2v, controlSampleIds, prior)
+							delete entry.s2v
+							entry.foldChange = stats.foldChange
+							entry.pValue = stats.pValue
+							entry.testedN = stats.testedN
+							entry.controlN = stats.controlN
+							if (assay.mclassOverride) entry.mclassOverride = assay.mclassOverride
+							cohorts.push(entry)
+						}
 					}
 				}
 			}
@@ -236,8 +241,8 @@ export async function validate_query_proteome(ds) {
 	const q = ds.queries.proteome
 	if (!q) return
 
-	if (!q.assays) {
-		throw 'queries.proteome.assays is missing'
+	if (!q.organisms) {
+		throw 'queries.proteome.organisms is missing'
 	}
 	if (!q.dbfile) {
 		throw 'queries.proteome.dbfile is missing'
@@ -250,21 +255,29 @@ export async function validate_query_proteome(ds) {
 		throw `Cannot connect to proteome db ${q.dbfile}: ${e.message || e}`
 	}
 
-	for (const assayName in q.assays) {
-		const assay = q.assays[assayName]
-		if (assay.columnIdx == null) throw `queries.proteome.assays.${assayName}.columnIdx missing`
-		if (assay.columnValue == null) throw `queries.proteome.assays.${assayName}.columnValue missing`
-		if (assay.cohorts) {
-			for (const cohortName in assay.cohorts) {
-				const cohort = assay.cohorts[cohortName]
-				if (!cohort.controlFilter)
-					throw `Missing controlFilter in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
-				if (!cohort.caseFilter) throw `Missing caseFilter in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
-				if (!cohort.prior?.d0 || !cohort.prior?.s0sq)
-					throw `Missing prior.d0 and prior.s0sq in queries.proteome.assays.${assayName}.cohorts.${cohortName}`
+	for (const organismName in q.organisms) {
+		const organism = q.organisms[organismName]
+		if (organism.columnIdx == null) throw `queries.proteome.organisms.${organismName}.columnIdx missing`
+		if (organism.columnValue == null) throw `queries.proteome.organisms.${organismName}.columnValue missing`
+		for (const assayName in organism.assays) {
+			const assay = organism.assays[assayName]
+			if (assay.columnIdx == null)
+				throw `queries.proteome.organisms.${organismName}.assays.${assayName}.columnIdx missing`
+			if (assay.columnValue == null)
+				throw `queries.proteome.organisms.${organismName}.assays.${assayName}.columnValue missing`
+			if (assay.cohorts) {
+				for (const cohortName in assay.cohorts) {
+					const cohort = assay.cohorts[cohortName]
+					if (!cohort.controlFilter)
+						throw `Missing controlFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+					if (!cohort.caseFilter)
+						throw `Missing caseFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+					if (!cohort.prior?.d0 || !cohort.prior?.s0sq)
+						throw `Missing prior.d0 and prior.s0sq in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+				}
+			} else {
+				throw `Invalid assay structure for "${assayName}". Must have .cohorts`
 			}
-		} else {
-			throw `Invalid assay structure for "${assayName}". Must have .cohorts`
 		}
 	}
 
@@ -273,18 +286,23 @@ export async function validate_query_proteome(ds) {
 		if (!Array.isArray(proteins) || proteins.length == 0) throw 'queries.proteome.find arg.proteins[] missing'
 		const matches = new Set<string>()
 		const details = arg?.proteomeDetails || {}
+		const organism = details.organism
 		const assay = details.assay
 		const cohort = details.cohort
 		const MAX_FIND_RESULTS = 500
 
 		const filters: { columnIdx: number; columnValue: string }[] = []
 		if (Object.keys(details).length) {
-			if (!assay || !cohort) throw 'queries.proteome.find arg.proteomeDetails.{assay,cohort} missing'
-			const assayConfig = q.assays?.[assay]
+			if (!organism || !assay || !cohort)
+				throw 'queries.proteome.find arg.proteomeDetails.{organism,assay,cohort} missing'
+			const organismConfig = q.organisms?.[organism]
+			if (!organismConfig) throw `queries.proteome.find invalid organism: ${organism}`
+			const assayConfig = organismConfig.assays?.[assay]
 			if (!assayConfig) throw `queries.proteome.find invalid assay: ${assay}`
 			const cohortConfig = assayConfig?.cohorts?.[cohort]
 			if (!cohortConfig) throw `queries.proteome.find invalid cohort: ${cohort}`
 
+			const organismFilter = [{ columnIdx: organismConfig.columnIdx, columnValue: organismConfig.columnValue }]
 			const assayFilter = [{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }]
 			const cohortFilter = (Array.isArray(cohortConfig.caseFilter) ? cohortConfig.caseFilter : []).filter(
 				(
@@ -295,7 +313,7 @@ export async function validate_query_proteome(ds) {
 				} => !!filter
 			)
 			if (!cohortFilter.length) throw `queries.proteome.find invalid cohort caseFilter: ${cohort}`
-			filters.push(...assayFilter, ...cohortFilter)
+			filters.push(...organismFilter, ...assayFilter, ...cohortFilter)
 		}
 
 		for (const p of proteins) {
@@ -331,8 +349,8 @@ export async function validate_query_proteome(ds) {
 
 	q.get = async param => {
 		if (!param?.terms?.length) throw 'queries.proteome.get param.terms[] missing'
-		if (!param.proteomeDetails?.assay || !param.proteomeDetails?.cohort)
-			throw 'queries.proteome.get param.proteomeDetails.{assay,cohort} missing'
+		if (!param.proteomeDetails?.assay || !param.proteomeDetails?.cohort || !param.proteomeDetails?.organism)
+			throw 'queries.proteome.get param.proteomeDetails.{assay,cohort,organism} missing'
 		return await getProteomeValuesFromCohort(ds, param, q)
 	}
 }
@@ -374,7 +392,7 @@ function queryDbRows(
 ) {
 	const { conditions, params } = buildFilterClause(filters)
 	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
-	const sql = `SELECT identifier, protein_accession, isoform, modsite, gene, sample, value
+	const sql = `SELECT organism, disease, identifier, protein_accession, isoform, modsite, gene, sample, value
 		FROM proteome_abundance
 		WHERE ${allConditions.join(' AND ')}`
 	return db.prepare(sql).all(matchValue, ...params)
@@ -382,19 +400,29 @@ function queryDbRows(
 
 async function getProteomeValuesFromCohort(ds, param, q) {
 	const db = ds.queries.proteome.db
-	const { assay, cohort } = param.proteomeDetails
+	const { assay, cohort, organism } = param.proteomeDetails
+	const organismConfig = q.organisms?.[organism]
 
-	const assayConfig = q.assays?.[assay]
+	//organism
+	if (!organismConfig) throw `queries.proteome invalid organism: ${organism}`
+	const organismColumnIdx = organismConfig.columnIdx
+	const organismColumnValue = organismConfig.columnValue
+
+	//assay type
+	const assayConfig = organismConfig.assays?.[assay]
 	if (!assayConfig) throw `queries.proteome.get invalid assay: ${assay}`
-	const PTMType = q.assays[assay].PTMType
+	const PTMType = assayConfig.PTMType
 	const assayColumnIdx = assayConfig.columnIdx
 	const assayColumnValue = assayConfig.columnValue
 
+	//cohort
 	const cohortConfig = assayConfig?.cohorts?.[cohort]
 	if (!cohortConfig) throw `queries.proteome.get invalid cohort: ${cohort}`
 	const cohortControlFilter = cohortConfig.controlFilter
 	const cohortCaseFilter = cohortConfig.caseFilter
 
+	// organism-level filter (e.g. organism='human') must be included in every query
+	const organismFilter = [{ columnIdx: organismColumnIdx, columnValue: organismColumnValue }]
 	// Assay-level filter (e.g. tech1='wholeProteome') must be included in every query
 	const assayFilter = [{ columnIdx: assayColumnIdx, columnValue: assayColumnValue }]
 
@@ -418,9 +446,13 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		const matchColumn = param.for === 'proteinView' ? 'gene' : 'identifier'
 		const matchValue = param.for === 'proteinView' ? geneName : identifier
 
-		// Query case and control samples from DB using assay filter + cohort-specific filters
-		const caseRows = queryDbRows(db, matchColumn, matchValue, [...assayFilter, ...cohortCaseFilter])
-		const controlRows = queryDbRows(db, matchColumn, matchValue, [...assayFilter, ...cohortControlFilter])
+		// Query case and control samples from DB using organism filter + assay filter + cohort-specific filters
+		const caseRows = queryDbRows(db, matchColumn, matchValue, [...organismFilter, ...assayFilter, ...cohortCaseFilter])
+		const controlRows = queryDbRows(db, matchColumn, matchValue, [
+			...organismFilter,
+			...assayFilter,
+			...cohortControlFilter
+		])
 
 		// Identify control sample IDs
 		for (const row of controlRows) {
@@ -439,8 +471,8 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 		}
 		const uniqueSampleIds = [...new Set(allSampleIds)]
 
-		const limitSamples = await mayLimitSamples(param, uniqueSampleIds, ds)
-		if (limitSamples?.size == 0) {
+		const allowedSampleIds = await mayLimitSamples(param, uniqueSampleIds, ds)
+		if (allowedSampleIds?.size == 0) {
 			// got 0 sample after filtering, must still return expected structure with no data
 			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
 		}
@@ -451,10 +483,12 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 			for (const row of allRows) {
 				const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
 				if (sid === undefined) continue
-				if (limitSamples && !limitSamples.has(sid)) continue
+				if (allowedSampleIds && !allowedSampleIds.has(sid)) continue
 
 				if (!entryMap.has(row.identifier)) {
 					entryMap.set(row.identifier, {
+						organism: row.organism,
+						disease: row.disease,
 						uniqueIdentifier: row.identifier,
 						assayName: assay,
 						cohortName: cohort,
@@ -475,7 +509,7 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 			for (const row of allRows) {
 				const sid = ds.cohort.termdb.q.sampleName2id(row.sample)
 				if (sid === undefined) continue
-				if (limitSamples && !limitSamples.has(sid)) continue
+				if (allowedSampleIds && !allowedSampleIds.has(sid)) continue
 				s2v[sid] = row.value
 			}
 			if (Object.keys(s2v).length) {

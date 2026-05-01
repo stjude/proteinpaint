@@ -80,6 +80,8 @@ class ProteinView extends PlotBase implements RxComponent {
 		const ptmDataByIsoform = new Map<string, any[]>()
 		for (const cohortData of data.cohorts || []) {
 			if (!cohortData.PTMType) continue // filter out non-PTM cohorts
+			// TODO: add PTM lollopop for other organisms
+			if (cohortData.organism !== 'human') continue
 			const isoform = cohortData.isoform
 			const existingCohorts = ptmDataByIsoform.get(isoform)
 			if (!existingCohorts) {
@@ -105,6 +107,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		const controlN = Number(cohortData.controlN)
 		if (log2fc === null || !Number.isFinite(pValue) || pValue <= 0) continue
 		dots.push({
+			organismName: cohortData.organism,
+			disease: cohortData.disease,
 			assayName: cohortData.assayName,
 			cohortName: cohortData.cohortName,
 			PTMType: cohortData.PTMType,
@@ -176,16 +180,21 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.domain([minTestedN, Math.max(minTestedN + 1, maxTestedN)])
 		.range(radiusRange)
 
+	const organismNames = [...new Set(dots.map((d: any) => d.organismName).filter(Boolean))].sort() as string[]
 	const assayNames = [...new Set(dots.map((d: any) => d.assayName))].sort() as string[]
 	const cohortNames = [...new Set(dots.map((d: any) => d.cohortName))].sort() as string[]
 	const proteinAccessions = [...new Set(dots.map((d: any) => d.proteinAccession))].sort() as string[]
 
 	// Create color scales for each grouping category
+	const organismColorScale = getColors(organismNames.length).domain(organismNames)
 	const assayColorScale = getColors(assayNames.length).domain(assayNames)
 	const cohortColorScale = getColors(cohortNames.length).domain(cohortNames)
 	const proteinColorScale = getColors(proteinAccessions.length).domain(proteinAccessions)
 
 	// Store colors in maps
+	const organismColors = new Map<string, string>(
+		organismNames.map(name => [name, rgb(organismColorScale(name)).formatHex()])
+	)
 	const assayColors = new Map<string, string>(assayNames.map(name => [name, rgb(assayColorScale(name)).formatHex()]))
 	const cohortColors = new Map<string, string>(cohortNames.map(name => [name, rgb(cohortColorScale(name)).formatHex()]))
 	const proteinColors = new Map<string, string>(
@@ -193,15 +202,16 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	)
 	const makeShapeMap = (items: string[]) =>
 		new Map<string, number>(items.map((item, i) => [item, i % shapesArray.length]))
+	const organismShapes = makeShapeMap(organismNames)
 	const assayShapes = makeShapeMap(assayNames)
 	const cohortShapes = makeShapeMap(cohortNames)
 	const proteinShapes = makeShapeMap(proteinAccessions)
 
-	type ColorMode = 'none' | 'assayType' | 'cohort' | 'proteinAccession'
-	type ShapeMode = 'none' | 'assayType' | 'cohort' | 'proteinAccession'
+	type ColorMode = 'none' | 'organism' | 'assayType' | 'cohort' | 'proteinAccession'
+	type ShapeMode = 'none' | 'organism' | 'assayType' | 'cohort' | 'proteinAccession'
 
 	let colorMode: ColorMode = 'assayType'
-	let shapeMode: ShapeMode = 'none'
+	let shapeMode: ShapeMode = 'organism'
 	const defaultDotColor = '#9ca3af'
 	const customGroupPrefix = '__custom_group__:'
 	const makeCustomGroupKey = (name: string) => `${customGroupPrefix}${name}`
@@ -213,10 +223,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const getCustomShapeGroupNameFromKey = (value: string) => value.slice(customShapeGroupPrefix.length)
 	const customColorDomain = Array.from({ length: 64 }, (_, i) => `custom-${i}`)
 	const customColorScale = getColors(customColorDomain.length).domain(customColorDomain)
-	const colorModesWithGroups: ColorMode[] = ['assayType', 'cohort', 'proteinAccession']
-	const shapeModesWithGroups: ShapeMode[] = ['assayType', 'cohort', 'proteinAccession']
+	const colorModesWithGroups: ColorMode[] = ['organism', 'assayType', 'cohort', 'proteinAccession']
+	const shapeModesWithGroups: ShapeMode[] = ['organism', 'assayType', 'cohort', 'proteinAccession']
 	const createModeMap = <T>(factory: () => T) => ({
 		none: factory(),
+		organism: factory(),
 		assayType: factory(),
 		cohort: factory(),
 		proteinAccession: factory()
@@ -233,6 +244,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	const getBaseColorValue = (d: any, mode: ColorMode) => {
 		switch (mode) {
+			case 'organism':
+				return d.organismName
 			case 'assayType':
 				return d.assayName
 			case 'cohort':
@@ -318,6 +331,9 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		switch (colorMode) {
 			case 'none':
 				return defaultDotColor
+			case 'organism':
+				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
+				return organismColors.get(d.organismName) ?? '#888'
 			case 'assayType':
 				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return assayColors.get(d.assayName) ?? '#888'
@@ -339,6 +355,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		switch (shapeMode) {
 			case 'none':
 				return 0
+			case 'organism':
+				return organismShapes.get(d.organismName) ?? 0
 			case 'assayType':
 				return assayShapes.get(d.assayName) ?? 0
 			case 'cohort':
@@ -362,18 +380,21 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	}
 	const colorGroupingModes: Array<{ key: ColorMode; label: string }> = [
 		{ key: 'none', label: 'Default' },
+		{ key: 'organism', label: 'Organism' },
 		{ key: 'assayType', label: 'Assay' },
 		{ key: 'cohort', label: 'Cohort' },
 		{ key: 'proteinAccession', label: 'Isoform' }
 	]
 	const shapeGroupingModes: Array<{ key: ShapeMode; label: string }> = [
 		{ key: 'none', label: 'Default' },
+		{ key: 'organism', label: 'Organism' },
 		{ key: 'assayType', label: 'Assay' },
 		{ key: 'cohort', label: 'Cohort' },
 		{ key: 'proteinAccession', label: 'Isoform' }
 	]
 	const makeHiddenState = () => ({
 		none: new Set<string>(),
+		organism: new Set<string>(),
 		assayType: new Set<string>(),
 		cohort: new Set<string>(),
 		proteinAccession: new Set<string>()
@@ -384,6 +405,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		switch (mode) {
 			case 'none':
 				return ''
+			case 'organism':
+				return getCustomGroupOfDot(d, mode)
+					? makeCustomGroupKey(getCustomGroupOfDot(d, mode) as string)
+					: d.organismName
 			case 'assayType':
 				return getCustomGroupOfDot(d, mode) ? makeCustomGroupKey(getCustomGroupOfDot(d, mode) as string) : d.assayName
 			case 'cohort':
@@ -400,6 +425,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		switch (mode) {
 			case 'none':
 				return ''
+			case 'organism':
+				return getCustomShapeGroupOfDot(d, mode)
+					? makeCustomShapeGroupKey(getCustomShapeGroupOfDot(d, mode) as string)
+					: d.organismName
 			case 'assayType':
 				return getCustomShapeGroupOfDot(d, mode)
 					? makeCustomShapeGroupKey(getCustomShapeGroupOfDot(d, mode) as string)
@@ -488,6 +517,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		for (const d of clusterDots) {
 			const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
 			const table = table2col({ holder: block.append('table') })
+			table.addRow('Organism', d.organismName)
+			table.addRow('Disease', d.disease)
 			table.addRow('Assay', d.assayName)
 			table.addRow('Cohort', d.cohortName)
 			table.addRow('Protein Accession', d.proteinAccession)
@@ -517,8 +548,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	}
 	const getShapeMapInUse = () => {
 		switch (shapeMode) {
-			case 'none':
-				return assayShapes
+			case 'organism':
+				return organismShapes
 			case 'assayType':
 				return assayShapes
 			case 'cohort':
@@ -622,7 +653,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			self.dom.tip.hide()
 		})
 		.on('click', (_event: any, d: any) => {
-			launchViolinPlot(self, d.assayName, d.cohortName, d.uniqueIdentifier)
+			launchViolinPlot(self, d.organismName, d.assayName, d.cohortName, d.uniqueIdentifier)
 		})
 
 	const legend = plotAndLegend
@@ -835,7 +866,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 						if (isCustomGroupKey(name) && colorMode != 'none') {
 							customGroupColorsByMode[colorMode].set(getCustomGroupNameFromKey(name), newColor)
 						} else if (!isCustomGroupKey(name)) {
-							if (colorMode == 'assayType') assayColors.set(name, newColor)
+							if (colorMode == 'organism') organismColors.set(name, newColor)
+							else if (colorMode == 'assayType') assayColors.set(name, newColor)
 							else if (colorMode == 'cohort') cohortColors.set(name, newColor)
 							else if (colorMode == 'proteinAccession') proteinColors.set(name, newColor)
 						}
@@ -1009,7 +1041,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				})
 		}
 
-		if (colorMode === 'assayType') {
+		if (colorMode === 'organism') {
+			const { items, colorMap } = buildModeLegendItems(organismNames, organismColors)
+			makeLegendItems(items, colorMap)
+			renderCustomGroupControls()
+		} else if (colorMode === 'assayType') {
 			const { items, colorMap } = buildModeLegendItems(assayNames, assayColors)
 			makeLegendItems(items, colorMap)
 			renderCustomGroupControls()
@@ -1275,7 +1311,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				})
 		}
 
-		if (shapeMode === 'assayType') {
+		if (shapeMode === 'organism') {
+			const { items } = buildShapeLegendItems(organismNames)
+			drawShapeLegend(items, organismShapes)
+			renderShapeCustomGroupControls()
+		} else if (shapeMode === 'assayType') {
 			const { items } = buildShapeLegendItems(assayNames)
 			drawShapeLegend(items, assayShapes)
 			renderShapeCustomGroupControls()
@@ -1407,7 +1447,13 @@ function renderFCSummary(holder: any, data: any, self: ProteinView) {
 }
 */
 
-function launchViolinPlot(self: ProteinView, assayName: string, cohortName: string, isoform: string) {
+function launchViolinPlot(
+	self: ProteinView,
+	organismName: string,
+	assayName: string,
+	cohortName: string,
+	isoform: string
+) {
 	const selectedProtein = self.state.config?.tw?.term
 	if (!selectedProtein) throw new Error('proteinView: selected protein term is missing')
 
@@ -1417,15 +1463,14 @@ function launchViolinPlot(self: ProteinView, assayName: string, cohortName: stri
 			chartType: 'summary'
 		}
 	}
-
-	action.config.assayCohortTitle = `${assayName}: ${cohortName}`
-	action.config.proteomeDetails = { assay: assayName, cohort: cohortName }
+	action.config.assayCohortTitle = `${organismName} ${assayName}: ${cohortName}`
+	action.config.proteomeDetails = { organism: organismName, assay: assayName, cohort: cohortName }
 
 	const termdbConfig = self.app.vocabApi.termdbConfig
-	const proteomeOverlayTerm = termdbConfig?.queries?.proteome?.overlayTerm
+	const proteomeOverlayTerm = termdbConfig?.queries?.proteome?.organisms?.[organismName]?.overlayTerm
 	const t = structuredClone(selectedProtein)
 	t.name = `${t.name}: ${isoform}`
-	t.proteomeDetails = { assay: assayName, cohort: cohortName }
+	t.proteomeDetails = { organism: organismName, assay: assayName, cohort: cohortName }
 	action.config.term = { term: t, q: { mode: NumericModes.continuous } }
 
 	if (proteomeOverlayTerm) {
@@ -1472,11 +1517,13 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			htmlSections: [
 				{ key: 'Assay', html: ptm.assayName || 'NA' },
 				{ key: 'Cohort', html: ptm.cohortName || 'NA' },
+				{ key: 'Organism', html: ptm.organism || 'NA' },
+				{ key: 'Disease', html: ptm.disease || 'NA' },
 				{ key: 'Protein Accession', html: ptm.proteinAccession || 'NA' },
 				{
 					key: 'Action',
 					label: 'Launch Violin Plot',
-					callback: () => launchViolinPlot(self, ptm.assayName, ptm.cohortName, ptm.uniqueIdentifier)
+					callback: () => launchViolinPlot(self, ptm.organism, ptm.assayName, ptm.cohortName, ptm.uniqueIdentifier)
 				}
 			]
 		})
