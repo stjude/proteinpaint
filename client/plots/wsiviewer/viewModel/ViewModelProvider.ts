@@ -7,6 +7,8 @@ import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import {
+	createFeatureID,
+	FeaturePrefixes,
 	FlagStatus,
 	type AiProjectSelectedWSImagesRequest,
 	type AiProjectSelectedWSImagesResponse
@@ -209,7 +211,7 @@ export class ViewModelProvider {
 				const topLeft: [number, number] = [annotation.zoomCoordinates[0], -annotation.zoomCoordinates[1]]
 
 				const color = this.getClassColor(wsimages[i], annotation.class)
-				const featureId = `annotation-square-${annotation.zoomCoordinates}`
+				const featureId = createFeatureID(FeaturePrefixes.Square, annotation.zoomCoordinates)
 				let squareFeature: Feature<Geometry>
 				if (annotation.flag !== FlagStatus.Skipped) {
 					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
@@ -223,7 +225,7 @@ export class ViewModelProvider {
 					tileSize,
 					15,
 					annotatedPatchBorderColor,
-					`annotation-border-${annotation.zoomCoordinates}`
+					createFeatureID(FeaturePrefixes.Border, annotation.zoomCoordinates)
 				)
 				sourceAnnotations.addFeature(borderFeature)
 
@@ -238,7 +240,7 @@ export class ViewModelProvider {
 				const topLeft: [number, number] = [pred.zoomCoordinates[0], -pred.zoomCoordinates[1]]
 
 				const color = this.getClassColor(wsimages[i], pred.class) ?? 'black'
-				const featureId = `annotation-square-${pred.zoomCoordinates}`
+				const featureId = createFeatureID(FeaturePrefixes.Square, pred.zoomCoordinates)
 				let squareFeature: Feature<Geometry> | null = null
 				if (pred.flag == FlagStatus.Flagged) {
 					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
@@ -411,7 +413,7 @@ export function createStarFeature(
 		}
 	})
 
-	starFeature.setId(`annotation-star-${annotationCoords}`)
+	starFeature.setId(createFeatureID(FeaturePrefixes.Star, annotationCoords))
 
 	starFeature.setStyle(
 		new Style({
@@ -421,7 +423,7 @@ export function createStarFeature(
 		})
 	)
 	if (featureSource) {
-		const oldFeature = featureSource.getFeatureById(`annotation-star-${annotationCoords}`)
+		const oldFeature = featureSource.getFeatureById(createFeatureID(FeaturePrefixes.Star, annotationCoords))
 		if (oldFeature) {
 			featureSource.removeFeature(oldFeature)
 		}
@@ -458,7 +460,7 @@ export function createDimSquareFeature(
 		}
 	})
 
-	dimFeature.setId(`annotation-square-${annotationCoords}`)
+	dimFeature.setId(createFeatureID(FeaturePrefixes.Square, annotationCoords))
 	function hexToRgb(hex: string): number[] {
 		// Remove hash if it exists
 		hex = hex.replace(/^#/, '')
@@ -478,7 +480,7 @@ export function createDimSquareFeature(
 	)
 
 	if (featureSource) {
-		const oldFeature = featureSource.getFeatureById(`annotation-star-${annotationCoords}`)
+		const oldFeature = featureSource.getFeatureById(createFeatureID(FeaturePrefixes.Square, annotationCoords))
 		if (oldFeature) {
 			featureSource.removeFeature(oldFeature)
 		}

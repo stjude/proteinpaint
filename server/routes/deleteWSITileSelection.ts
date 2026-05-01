@@ -1,4 +1,4 @@
-import type { Mds3, RouteApi } from '#types'
+import { SelectionPrefixes, type Mds3, type RouteApi } from '#types'
 import { deleteWSITileSelectionPayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type { DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
@@ -62,7 +62,7 @@ export async function validate_query_deleteWSIAnnotation(ds: Mds3) {
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest) => {
 		// tileSelectionType: 0 = predictions, 1 = annotations
-		if (query.tileSelectionType === 0) {
+		if (query.tileSelection.id.startsWith(SelectionPrefixes.Prediction)) {
 			try {
 				const projectId = query.projectId
 
@@ -74,9 +74,9 @@ function validateQuery(ds: any, connection: Database.Database) {
 				}
 
 				// Derive prediction_id from common fields on the tileSelection payload
-				const predictionId = query.predictionClassId
+				const predictionId = query.tileSelection.class
 				const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
-				const flagType = 0 // TODO remove hardcode
+				const flagType = query.tileSelection.flag
 
 				if (predictionId == null) {
 					return {
@@ -86,11 +86,22 @@ function validateQuery(ds: any, connection: Database.Database) {
 				}
 
 				const insertSql = `
-                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type, timestamp, image_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 `
+				const getImageIdSql = `
+						SELECT id
+						FROM project_images
+						WHERE project_id = ?
+						AND image_path = ?
+						LIMIT 1
+					`
+				const getImageStmt = getDbConnection(ds)?.prepare(getImageIdSql)
+				const imageId = getImageStmt
+					? (getImageStmt.get(projectId, query.wsimage) as { id: number } | undefined)?.id ?? 'unknown'
+					: 'unknown'
 				const insertStmt = connection.prepare(insertSql)
-				insertStmt.run(projectId, predictionId, zoomCoordinates, flagType)
+				insertStmt.run(projectId, predictionId, zoomCoordinates, flagType, new Date().toISOString(), imageId)
 
 				return { status: 'ok' }
 			} catch (error: any) {

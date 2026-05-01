@@ -28,7 +28,7 @@ export class SessionWSImage extends WSImage {
 	public static removeTileSelection(tileSelection: TileSelection, sessionWSImage: SessionWSImage): TileSelection[] {
 		if (!sessionWSImage.sessionsTileSelections) return []
 		sessionWSImage.sessionsTileSelections = sessionWSImage.sessionsTileSelections.filter(
-			(ts: TileSelection) => JSON.stringify(ts.zoomCoordinates) !== JSON.stringify(tileSelection.zoomCoordinates)
+			(ts: TileSelection) => tileSelection.id !== ts.id
 		)
 		return sessionWSImage.sessionsTileSelections
 	}
@@ -46,12 +46,15 @@ export class SessionWSImage extends WSImage {
 			sessionWSImage.annotations || [],
 			ts => ts.flag === FlagStatus.Normal
 		) as [Annotation[], Annotation[]]
-		for (const array of [selections, flagged_selections, preds, flagged_preds, annotations, flagged_annotations]) {
-			array.sort((a, b) => a.timestamp.localeCompare(b.timestamp))
+
+		const flagged_and_annotated = [...flagged_selections, ...flagged_preds, ...flagged_annotations, ...annotations]
+		const desired_arrays = [selections, preds, flagged_and_annotated]
+		for (const array of desired_arrays) {
+			array.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 		}
 		// I could make a mega array of all flagged items and sort then,
 		// but I feel unceratin annotations are the least important, maybe at least combine predictions and selections
-		return [...selections, ...preds, ...flagged_selections, ...flagged_preds, ...flagged_annotations, ...annotations]
+		return desired_arrays.flat()
 	}
 
 	public static getTilesTableRows(sessionWSImage: SessionWSImage, selectedTileIndex: number): any[] {

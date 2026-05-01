@@ -7,7 +7,7 @@ import {
 	type RouteApi,
 	type WSImage
 } from '#types'
-import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, flagPredictionInfo } from '#types'
+import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, FlagPredictionInfo } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
@@ -92,17 +92,32 @@ function init({ genomes }) {
 						)
 
 						// get flagged prediction coordinate keys for this project (may be empty)
-						let flaggedPredictions: Map<string, flagPredictionInfo> = new Map<string, flagPredictionInfo>()
+						let flaggedPredictions: Map<string, FlagPredictionInfo> = new Map<string, FlagPredictionInfo>()
 						if (typeof ds.queries.WSImages.getFlaggedPredictions === 'function') {
-							flaggedPredictions = await ds.queries.WSImages.getFlaggedPredictions(projectId)
+							flaggedPredictions = await ds.queries.WSImages.getFlaggedPredictions(projectId, wsimageFilename)
 						}
 
 						// map class ids to labels then filter out predictions that overlap annotations
 						// or that were flagged in project_flagged_predictions
+
+						// Might find a better way to manage timestamps for non-flagged predictions
+						// but its not really pertinent to sort non-flagged preds
+						// but it's not really pertinent to sort non-flagged preds
+						const getImageIdSql = `
+						SELECT id
+						FROM project_images
+						WHERE project_id = ?
+						AND image_path = ?
+						LIMIT 1
+					`
+						const getImageStmt = getDbConnection(ds)?.prepare(getImageIdSql)
+						const imageId = getImageStmt
+							? (getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined)?.id ?? 'unknown'
+							: 'unknown'
 						wsimage.predictions = (predictions || [])
 							.map((p: any) => {
 								const label = classMap.get(p.class) ?? p.class
-								const flagged_counterpart = flaggedPredictions.get(JSON.stringify(p.zoomCoordinates))
+								const flagged_counterpart = flaggedPredictions.get(JSON.stringify(p.zoomCoordinates) + imageId)
 								return {
 									...p,
 									class: label,
@@ -113,7 +128,7 @@ function init({ genomes }) {
 							})
 							.filter((p: any) => {
 								const key = `${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`
-								return !annotationKeys.has(key)
+								return !annotationKeys.has(key) && p.flag !== FlagStatus.Deleted
 							})
 					}
 
@@ -194,15 +209,18 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
     `
 
 	// SQL to get flagged prediction coordinates for a project
-	const GET_FLAGGED_PREDICTIONS_SQL = `
-        SELECT 
-			coordinates,
-			flag_type,
-			timestamp
-        FROM project_flagged_predictions
-        WHERE project_id = ?
-    `
 
+	const GET_FLAGGED_PREDICTIONS_SQL = `
+        SELECT
+            pa.coordinates,
+            pa.flag_type,
+            pa.timestamp
+        FROM project_flagged_predictions pa
+                 INNER JOIN project_images pi
+                            ON pi.id = pa.image_id
+        WHERE pa.project_id = ?
+          AND pa.image_id = ?
+    `
 	if (!ds.queries) ds.queries = {}
 	if (!ds.queries.WSImages) ds.queries.WSImages = {}
 
@@ -253,15 +271,33 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 	}
 
 	// expose helper that returns a Set of flagged prediction coordinate keys for a project
-	ds.queries.WSImages.getFlaggedPredictions = async (projectId: number): Promise<Map<string, flagPredictionInfo>> => {
-		const predictionMap = new Map<string, flagPredictionInfo>()
+	ds.queries.WSImages.getFlaggedPredictions = async (
+		projectId: number,
+		filename: string
+	): Promise<Map<string, FlagPredictionInfo>> => {
+		const predictionMap = new Map<string, FlagPredictionInfo>()
 
+		const getImageIdSql = `
+				SELECT id
+				FROM project_images
+				WHERE project_id = ?
+				  AND image_path = ?
+				LIMIT 1
+			`
+		const getImageStmt = connection.prepare(getImageIdSql)
+		const imageRow = getImageStmt.get(projectId, filename) as { id: number } | undefined
+
+		if (!imageRow?.id) {
+			return predictionMap
+		}
+
+		const imageId = Math.floor(imageRow.id)
 		try {
-			const stmt = connection.prepare<[number], PredictionRow>(GET_FLAGGED_PREDICTIONS_SQL)
-			const rows = stmt.all(projectId) || []
+			const stmt = connection.prepare<[number, number], PredictionRow>(GET_FLAGGED_PREDICTIONS_SQL)
+			const rows = stmt.all(projectId, imageId) || []
 			for (const p of rows) {
 				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
-					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
+					predictionMap.set(p.coordinates + imageId, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
 			}
 			return predictionMap
 		} catch (error) {

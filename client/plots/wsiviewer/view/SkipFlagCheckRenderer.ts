@@ -1,7 +1,6 @@
 export class SkipFlagCheckRenderer {
 	render(holder: any, wsiApp: any, flagChecked: boolean, skipChecked: boolean) {
 		const skipFlagFieldSet = holder.append('div').append('fieldset').attr('id', 'SFField')
-		console.log()
 		const flagCheck = skipFlagFieldSet
 			.append('input')
 			.attr('type', 'checkbox')

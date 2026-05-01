@@ -18,7 +18,15 @@ export enum SelectionPrefixes {
 	Prediction = 'pred_',
 	Annotation = 'anno_'
 }
-export interface flagPredictionInfo {
+
+export enum FeaturePrefixes {
+	Star = `annotation-star-`,
+	Square = `annotation-square-`,
+	Border = 'annotation-border-',
+	PredBorder = 'prediction-border-'
+}
+
+export interface FlagPredictionInfo {
 	flag: FlagStatus
 	timestamp: string
 }
@@ -29,6 +37,10 @@ export function createSelectionID(prefix: SelectionPrefixes, coordinates: [numbe
 
 export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixes): boolean {
 	return tileSelection.id.startsWith(suspectedPrefix)
+}
+
+export function createFeatureID(feature_prefix: FeaturePrefixes, coords: [number, number]) {
+	return featurePrefix + JSON.stringify(coords)
 }
 
 // TODO move to another class
@@ -43,7 +55,8 @@ export interface TileSelection {
 export enum FlagStatus {
 	Normal = 0,
 	Skipped = 1,
-	Flagged = 2
+	Flagged = 2,
+	Deleted = 3
 }
 
 export const FlagStatusMessages = {

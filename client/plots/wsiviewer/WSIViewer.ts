@@ -13,7 +13,6 @@ import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
 import { SpinnerRenderer } from '#plots/wsiviewer/view/SpinnerRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
-import { SkipFlagCheckRenderer } from '#plots/wsiviewer/view/SkipFlagCheckRenderer.ts'
 import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import type OLMap from 'ol/Map'
 import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
@@ -39,7 +38,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 	// New: persistent MapRenderer instance reused across main() calls
 	private mapRenderer: MapRenderer | undefined
-	private skipFlagRenderer = new SkipFlagCheckRenderer()
+	// private skipFlagRenderer = new SkipFlagCheckRenderer()
 	private spinnerRenderer = new SpinnerRenderer()
 
 	constructor(opts: any, api) {
@@ -184,8 +183,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
 			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
-			this.dom.mapHolder.select('#SFField').remove()
-			this.skipFlagRenderer.render(this.dom.mapHolder, this, settings.renderOnlyFlagged, settings.renderSkipped)
+			// this.dom.mapHolder.select('#SFField').remove()
+			// this.skipFlagRenderer.render(this.dom.mapHolder, this, settings.renderOnlyFlagged, settings.renderSkipped)
 			const initialZoomInCoordinate = viewModel.getInitialZoomInCoordinate(settings)
 			if (initialZoomInCoordinate != undefined) {
 				this.wsiViewerInteractions.zoomInEffectListener(

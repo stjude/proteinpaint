@@ -14,7 +14,9 @@ import {
 	createSelectionID,
 	SelectionPrefixes,
 	type Prediction,
-	type TileSelection
+	type TileSelection,
+	createFeatureID,
+	FeaturePrefixes
 } from '@sjcrh/proteinpaint-types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
@@ -142,7 +144,10 @@ export class WSIViewerInteractions {
 					//Do not react if at the starting annotation
 					if (currentIndex === 0) {
 						// If at the starting tileselection, find the the most recent Annotation by checking for timestamp property
-						currentIndex = tileSelections.findIndex(ts => 'timestamp' in ts) || 0
+						currentIndex =
+							tileSelections.findIndex(
+								ts => ts.id.startsWith(SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
+							) || 0
 					} else {
 						currentIndex -= 1
 					}
@@ -218,15 +223,19 @@ export class WSIViewerInteractions {
 						const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 						tileSelection.flag = newFlag
 
-						const oldStar = source?.getFeatureById(`annotation-star-${tileSelection.zoomCoordinates}`)
+						const oldStar = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
 						if (oldStar) {
 							source?.removeFeature(oldStar)
 						}
-						const oldSquare = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
+						const oldSquare = source?.getFeatureById(
+							createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates)
+						)
 						if (oldSquare) {
 							source?.removeFeature(oldSquare)
 						}
-						const annotationBorderFeat = source?.getFeatureById(`annotation-border-${tileSelection.zoomCoordinates}`)
+						const annotationBorderFeat = source?.getFeatureById(
+							createFeatureID(FeaturePrefixes.Border, tileSelection.zoomCoordinates)
+						)
 						if (annotationBorderFeat) {
 							source?.removeFeature(annotationBorderFeat)
 						}
@@ -275,7 +284,7 @@ export class WSIViewerInteractions {
 							await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, tileSelection, matchingClass.id, aiProjectID)
 						}
 					} catch (error: any) {
-						console.trace("Couldn't succesfully flag tile:", error)
+						console.trace("Couldn't successfully flag tile:", error)
 					}
 					// Should I update state here or at the end of saveand filnalize
 					wsiApp.app.dispatch({
@@ -354,7 +363,7 @@ export class WSIViewerInteractions {
 					tileSelection.id = createSelectionID(SelectionPrefixes.Annotation, tileSelection.zoomCoordinates)
 					tileSelection.flag = FlagStatus.Normal
 					const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-					const oldStar = source?.getFeatureById(`annotation-star-${tileSelection.zoomCoordinates}`)
+					const oldStar = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
 					if (oldStar) {
 						source?.removeFeature(oldStar)
 					}
@@ -436,7 +445,7 @@ export class WSIViewerInteractions {
 				settings.tileSize,
 				30,
 				settings.selectedPatchBorderColor,
-				`prediction-border-${newTileSelection.zoomCoordinates}`
+				createFeatureID(FeaturePrefixes.PredBorder, newTileSelection.zoomCoordinates)
 			)
 			//Add border feature
 
@@ -528,7 +537,7 @@ export class WSIViewerInteractions {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 		const tileSelection = tileSelections[currentIndex]
 		//Remove any previous feature with the same ID
-		const feature = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
+		const feature = source?.getFeatureById(createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates))
 		if (feature) {
 			source?.removeFeature(feature)
 		}
@@ -550,7 +559,7 @@ export class WSIViewerInteractions {
 			}
 		})
 
-		square.setId(`annotation-square-${tileSelection.zoomCoordinates}`)
+		square.setId(createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates))
 
 		square.setStyle(
 			new Style({
@@ -581,7 +590,9 @@ export class WSIViewerInteractions {
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove annotated square
-		const annotationFeature = source?.getFeatureById(`annotation-square-${tileSelection.zoomCoordinates}`)
+		const annotationFeature = source?.getFeatureById(
+			createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates)
+		)
 		if (annotationFeature) {
 			source?.removeFeature(annotationFeature)
 		}
@@ -591,15 +602,24 @@ export class WSIViewerInteractions {
 			source?.removeFeature(activeBorderFeature)
 		}
 		// Remove prediction border
-		const predictionBorderFeature = source?.getFeatureById(`prediction-border-${tileSelection.zoomCoordinates}`)
+		const predictionBorderFeature = source?.getFeatureById(
+			createFeatureID(FeaturePrefixes.PredBorder, tileSelection.zoomCoordinates)
+		)
 		if (predictionBorderFeature) {
 			source?.removeFeature(predictionBorderFeature)
 		}
 
 		// Remove annotation border
-		const annotationBorderFeat = source?.getFeatureById(`annotation-border-${tileSelection.zoomCoordinates}`)
+		const annotationBorderFeat = source?.getFeatureById(
+			createFeatureID(FeaturePrefixes.Border, tileSelection.zoomCoordinates)
+		)
 		if (annotationBorderFeat) {
 			source?.removeFeature(annotationBorderFeat)
+		}
+
+		const starFeat = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
+		if (starFeat) {
+			source?.removeFeature(starFeat)
 		}
 
 		if (SessionWSImage.isSessionTileSelection(tileSelection, sessionWSImage)) {
@@ -621,19 +641,13 @@ export class WSIViewerInteractions {
 			return
 		}
 
-		const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
-
-		const tileSelectionType = isPrediction ? 0 : 1
-
 		const prediction = tileSelections[currentIndex] as Prediction
-
+		prediction.flag = FlagStatus.Deleted
 		const body: DeleteWSITileSelectionRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			projectId: state.aiProjectID,
 			tileSelection: tileSelections[currentIndex],
-			predictionClassId: prediction.class,
-			tileSelectionType: tileSelectionType,
 			wsimage: sessionWSImage.filename
 		}
 
@@ -675,7 +689,7 @@ export class WSIViewerInteractions {
 	}
 
 	private addAnnotationBorder(source, topLeft, zoomCoordinates: [number, number], color: string, tileSize: number) {
-		const existingFeature = source?.getFeatureById(`prediction-border-${zoomCoordinates}`)
+		const existingFeature = source?.getFeatureById(createFeatureID(FeaturePrefixes.PredBorder, zoomCoordinates))
 		if (existingFeature) {
 			source?.removeFeature(existingFeature)
 		}
@@ -684,7 +698,7 @@ export class WSIViewerInteractions {
 			tileSize,
 			15,
 			color,
-			`annotation-border-${zoomCoordinates}`
+			createFeatureID(FeaturePrefixes.Border, zoomCoordinates)
 		)
 		source?.addFeature(annotatedBorderFeat)
 	}
