@@ -31,7 +31,7 @@ root_ID
 ******************** constructor opts{}
 .holder
 .click_term()
-.disable_terms[]   // term objects, or term-id strings (e.g. termdbConfig.hiddenIds)
+.disable_terms[]
 
 ******************** exit/update/enter
 termsById{} is bound to the DOM tree, to provide:
@@ -365,9 +365,7 @@ function setRenderers(self) {
 			return
 		}
 
-		const termIsDisabled = self.opts?.disable_terms?.some(t =>
-			typeof t === 'string' ? t === term.id : equals(t, term)
-		)
+		const termIsDisabled = self.opts?.disable_terms?.some(t => equals(t, term))
 		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		div.style('display', '')
@@ -390,9 +388,7 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function (term) {
-		const termIsDisabled = self.opts?.disable_terms?.some(t =>
-			typeof t === 'string' ? t === term.id : equals(t, term)
-		)
+		const termIsDisabled = self.opts?.disable_terms?.some(t => equals(t, term))
 		const uses = isUsableTerm(term, self.state.usecase, self.app.vocabApi.termdbConfig)
 
 		const div = select(this)
