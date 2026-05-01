@@ -90,6 +90,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'numericDictTermCluster':
 			return await import(`./numericDictTermCluster.ts`)
 
+		case 'proteomeAbundance':
+			return await import(`./proteomeAbundance.ts`)
+
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
 

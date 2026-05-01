@@ -1,4 +1,4 @@
-import { renderAssayAndCohortRadios } from '../../plots/proteomeAbundance.js'
+import { renderAssayAndCohortRadios } from '../../plots/proteomeAbundance.ts'
 
 type Opts = {
 	holder: any
@@ -49,6 +49,7 @@ export class SearchHandler {
 			selectedProteomeDetails: this.proteomeDetails,
 			onChange: proteomeDetails => {
 				const { organism, assay, cohort } = proteomeDetails
+				if (!organism || !assay || !cohort) return
 				this.proteomeDetails = { organism, assay, cohort }
 				void this.updateUsecase()
 			}
