@@ -9,7 +9,11 @@ The charts retrieve their data by calling dedicated or shared server endpoints, 
 
 ### Term ID conventions
 
-Every cohort-specific term ID is prefixed `F` (Full) or `A` (Abbreviated): facility term `FUNIT`/`AUNIT`, filter terms `Fcountry`/`Acountry` (and `WHO_region`, `Income_group`, `FC_TypeofFacility`, `FC_TeachingFacility`, `FC_ReferralFacility`, `FC_FundingSrc`, `PO_HospitalVolume`, `Year_implementation`), score terms `FX24`/`AX117`, etc.
+Every cohort-specific term ID is prefixed `F` (Full) or `A` (Abbreviated). The prefix is concatenated to the bare suffix in `loadFilterTerms()` ([profilePlot.ts](./profilePlot.ts)) — so existing `FC_*`/`PO_*`/`WHO_*` substrings end up as **doubled** prefixes (`FFC_*`, `FPO_*`, `FWHO_*` for Full; `AFC_*`, `APO_*`, `AWHO_*` for Abbreviated). Examples:
+
+- Facility term: `FUNIT` / `AUNIT`
+- Filter terms: `Fcountry`/`Acountry`, `FWHO_region`/`AWHO_region`, `FIncome_group`/`AIncome_group`, `FFC_TypeofFacility`/`AFC_TypeofFacility`, `FFC_TeachingFacility`/`AFC_TeachingFacility`, `FFC_ReferralFacility`/`AFC_ReferralFacility`, `FFC_FundingSrc`/`AFC_FundingSrc`, `FPO_HospitalVolume`/`APO_HospitalVolume`, `FYear_implementation`/`AYear_implementation`
+- Score terms: `FX24` / `AX117`, etc.
 
 The convention is used in:
 

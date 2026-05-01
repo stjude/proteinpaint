@@ -1,8 +1,10 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type ProfileForms2ScoresRequest = {
-	scoreTerms: { term: { id: string }; q: any }[]
-	scScoreTerms?: { term: { id: string }; q: any }[]
+	// q is optional: term wrappers from getMultivalueTWs() carry no q field,
+	// and JSON.stringify drops `q: undefined`, so the field may be absent on the wire.
+	scoreTerms: { term: { id: string }; q?: any }[]
+	scScoreTerms?: { term: { id: string }; q?: any }[]
 	filter?: any
 	filterByUserSites?: boolean
 }
