@@ -10,7 +10,8 @@ import type {
 	AiProjectSelectedWSImagesRequest,
 	AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
-import type { Feature, ImageTile } from 'ol'
+import type { ImageTile } from 'ol'
+import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
