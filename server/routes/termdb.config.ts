@@ -1,7 +1,7 @@
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { getProfileForms2Domains } from '#routes/profile.forms2.config.js'
+import { getProfileForms2Domain2PlotType } from '#routes/profile.forms2.config.js'
 import {
 	TermTypeGroups,
 	SINGLECELL_CELLTYPE,
@@ -109,20 +109,11 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 		defaultTw4correlationPlot: tdb.defaultTw4correlationPlot,
 		authFilter: req.query.filter
 	}
-	// Resolve auth context up-front so getProfileForms2Domains can scrub picker rows
-	// per-user via tdb.getHiddenTermIds(ctx). Hidden term IDs are NOT exposed to the
-	// client - the SQL filter here plus sample-level filtering in termdb.matrix is
-	// sufficient, and revealing them would leak the protected-term identifiers.
-	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
-	const clientAuthResult = info?.clientAuthResult || {}
-	const activeCohort = (req.query.cohort as string) || Object.keys(clientAuthResult)[0]
-	const ctx = { clientAuthResult, activeCohort }
-	c.clientAuthResult = clientAuthResult
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
-	const f2 = getProfileForms2Domains(ds, ctx)
-	if (f2) c.profileForms2Domains = f2
+	const f2 = getProfileForms2Domain2PlotType(ds)
+	if (f2) c.profileForms2Domain2PlotType = f2
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
@@ -148,8 +139,9 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 
 	/////////////// CAUTION //////////////
 	// ensure only safe auth info is revealed to client
-	// (clientAuthResult was resolved earlier; see top of make() for the auth context.)
 	c.requiredAuth = authApi.getRequiredCredForDsEmbedder(q.dslabel, q.embedder)
+	const info: any = authApi.getNonsensitiveInfo(req) // type any to avoid tsc err
+	c.clientAuthResult = info?.clientAuthResult || {}
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds(c.clientAuthResult)
 	// app.middleware.js would have used authApi.mayAdjustFilter() to create an auth-related filter,
 	// note this may be undefined if there is no ds.cohort.termdb.getAdditionalFilter

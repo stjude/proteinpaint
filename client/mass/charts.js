@@ -533,8 +533,8 @@ function setRenderers(self) {
 	}
 
 	/* Templates 2 picker: chart-type tabs over a per-tab cohort-filtered termdb tree.
-	   Reads the cohort-keyed domain map from termdbConfig.profileForms2Domains
-	   (lazy-built on the server in termdb.config.ts on first /termdb/config request). */
+	   Reads the cohort-keyed domain map from termdbConfig.profileForms2Domain2PlotType,
+	   which the server sources from plotConfigByCohort[cohort].profileForms2.domain2plotType. */
 	self.showFormsToggleTree = async chart => {
 		const action = {
 			type: 'plot_create',
@@ -545,7 +545,7 @@ function setRenderers(self) {
 
 		const termdbConfig = self.app.vocabApi.termdbConfig
 		const cohortKey = termdbConfig?.selectCohort?.values?.[self.state.activeCohort]?.keys?.[0]
-		const domains = (termdbConfig?.profileForms2Domains || {})[cohortKey] || {}
+		const domains = (termdbConfig?.profileForms2Domain2PlotType || {})[cohortKey] || {}
 		const subtypeNames = [...new Set(Object.values(domains).flat())] // dedupe chart-type labels
 
 		if (!subtypeNames.length) {

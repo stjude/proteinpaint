@@ -1591,8 +1591,8 @@ keep this setting here for reason of:
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
 	/** Templates 2 picker map: cohortKey → domainId → friendly chart-type labels.
-	 * Lazy-built and cached by getProfileForms2Domains in server/routes/profile.forms2.config.ts. */
-	profileForms2Domains?: Record<string, Record<string, string[]>>
+	 * Sourced from plotConfigByCohort[cohort].profileForms2.domain2plotType in the dataset config. */
+	profileForms2Domain2PlotType?: Record<string, Record<string, string[]>>
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -1736,7 +1736,6 @@ keep this setting here for reason of:
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
-	getHiddenTermIds?: (ctx: { clientAuthResult: any; activeCohort: string }) => string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
