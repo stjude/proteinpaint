@@ -210,7 +210,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		.on('click', () => {
 			if (!selectedProteomeDetails?.cohort) return
 			const { organism, assay, cohort } = selectedProteomeDetails
-			const assayCohortTitle = `${assay}: ${cohort}`
+			const assayCohortTitle = `${organism} ${assay}: ${cohort}`
 			const chart = {
 				label: 'Protein Abundance',
 				chartType: 'proteomeAbundance',
