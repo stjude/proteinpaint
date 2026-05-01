@@ -4,7 +4,7 @@ Run with:  node server/src/test/bam.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
-import { parse_align_output } from '@sjcrh/proteinpaint-server/src/bam.js'
+import { parse_align_output } from '../bam.js'
 
 tape('bam.js - parse_align_output', async t => {
 	const multiSeqClustal =

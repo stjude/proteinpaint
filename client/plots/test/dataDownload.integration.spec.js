@@ -162,6 +162,7 @@ tape('protected dataset', test => {
 
 	async function runTests(dataDownload) {
 		dataDownload.on('postRender.test', null)
+		console.log(164, dataDownload.Inner.dom.titleDiv.text())
 		test.true(
 			dataDownload.Inner.dom.titleDiv.text().includes('Requires sign-in'),
 			'should not open by default for protected dataset'
