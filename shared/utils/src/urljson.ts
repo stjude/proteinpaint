@@ -74,7 +74,7 @@ export function decode(query: UrlJsonEncoded) {
 			isNumeric(value) || // NEED TO check
 			(typeof value == 'string' && value.startsWith('"') && value.endsWith('"')) ||
 			(typeof value == 'string' && value.startsWith('{') && value.endsWith('}')) ||
-			(value.startsWith('[') && value.endsWith(']'))
+			(typeof value == 'string' && value.startsWith('[') && value.endsWith(']'))
 		)
 			query[key] = JSON.parse(value)
 		// else the value is already a string
