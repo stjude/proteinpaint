@@ -23,7 +23,7 @@ function decode(query) {
 			isNumeric(value) || // NEED TO check
 			(typeof value == 'string' && value.startsWith('"') && value.endsWith('"')) ||
 			(typeof value == 'string' && value.startsWith('{') && value.endsWith('}')) ||
-			(value.startsWith('[') && value.endsWith(']'))
+			(typeof value == 'string' && value.startsWith('[') && value.endsWith(']'))
 		)
 			query[key] = JSON.parse(value)
 	}
