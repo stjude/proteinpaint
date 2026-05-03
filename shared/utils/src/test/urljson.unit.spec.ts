@@ -98,11 +98,11 @@ tape('non-string value type safety', test => {
 		d: null as any, // Simulate a null value passed as-is
 		e: ['array'] as any // Simulate an array value passed as-is
 	}
-	
+
 	// decode() should not throw an error when processing non-string values
 	test.doesNotThrow(() => {
 		decode(query)
 	}, 'should not throw when value types are not strings')
-	
+
 	test.end()
 })
