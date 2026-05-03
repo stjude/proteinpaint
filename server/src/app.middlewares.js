@@ -55,7 +55,6 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 		// detect URL parameter values with matching JSON start-stop encoding characters
 		try {
 			if (testDataCacheDir) mayWrapResponseSend(testDataCacheDir, req, res)
-			const encoding = req.query.encoding
 			urlJsonDecode(req.query)
 		} catch (e) {
 			console.trace(e)
