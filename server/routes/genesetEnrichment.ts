@@ -48,6 +48,14 @@ function init({ genomes }) {
 			// The python code will retrieve gsea_<hash>.pkl from cachedir_gsea to
 			// generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the
 			// entire gsea computation again.
+			//
+			// gsea.py emits `{error}` (a structured object) when blitzgsea fails
+			// on degenerate input — forward that to the client instead of
+			// throwing the unhelpful "gsea result is not string".
+			if (typeof results === 'object' && (results as any).error) {
+				res.send({ status: 'error', error: (results as any).error })
+				return
+			}
 			if (typeof results != 'string') throw new Error('gsea result is not string')
 			res.sendFile(results, (err: any) => {
 				fs.unlink(results, () => {})
