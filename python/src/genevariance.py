@@ -108,13 +108,20 @@ def _parse_args() -> argparse.Namespace:
             "and rank_type"
         ),
     )
-    
+    parser.add_argument(
+        "--params",
+        dest="params",
+        help=(
+            "JSON string containing samples, input_file, filter_extreme_values, num_genes, "
+            "and rank_type"
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = _parse_args()
-    params_str = args.params or args.json
+    params_str = getattr(args, "params", None) or args.json
     if not params_str:
         print("Error: provide a JSON payload as positional argument or with --params")
         return 2
