@@ -47,10 +47,10 @@ function init({ genomes }) {
 			// branch behind a single call. On hit, `images` and `bcv` are
 			// undefined (fresh R runs are the only source of those).
 			const result = await readCacheFileOrRecompute({ daRequest: q, genomes })
-			// Defensive — the route only sends DERequests, so the result must
-			// be the DE shape. A DM-shaped result here would mean a cacheId
-			// collision or a hand-edited cache file with the wrong header.
-			if (!('geneData' in result)) throw new Error('expected DE result from readCacheFileOrRecompute')
+			// Defensive — the route only sends DERequests, so the result kind
+			// must be 'DE'. A 'DM' result here would mean a cacheId collision
+			// or a hand-edited cache file with the wrong header.
+			if (result.kind !== 'DE') throw new Error('expected DE result from readCacheFileOrRecompute')
 
 			const rendered = await renderVolcano<GeneDEEntry>(result.geneData, q.volcanoRender)
 			rendered.cacheId = result.cacheId

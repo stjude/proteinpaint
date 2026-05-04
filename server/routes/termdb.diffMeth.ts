@@ -39,10 +39,9 @@ function init({ genomes }) {
 
 			const result = await readCacheFileOrRecompute({ daRequest: q, genomes })
 			// Defensive — the route only sends DiffMethRequests, so the result
-			// must be the DM shape. A DE-shaped result here would mean a
-			// cacheId collision or a hand-edited cache file with the wrong
-			// header.
-			if (!('promoterData' in result)) throw new Error('expected DM result from readCacheFileOrRecompute')
+			// kind must be 'DM'. A 'DE' result here would mean a cacheId
+			// collision or a hand-edited cache file with the wrong header.
+			if (result.kind !== 'DM') throw new Error('expected DM result from readCacheFileOrRecompute')
 
 			const rendered = await renderVolcano<DiffMethEntry>(result.promoterData, q.volcanoRender)
 			rendered.cacheId = result.cacheId
