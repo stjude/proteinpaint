@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.186.0
 
 Features:
 - Now using common quadtree approach in volcano and manhattan plot
