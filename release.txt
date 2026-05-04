@@ -1,1 +1,2 @@
-
+Features:
+- Added support for cache id in the promoter volcano. Scatter plot now uses same hover detection as other plots. Other improvements
