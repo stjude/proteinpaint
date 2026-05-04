@@ -102,7 +102,6 @@ function init({ genomes }) {
 
 						// Might find a better way to manage timestamps for non-flagged predictions
 						// but its not really pertinent to sort non-flagged preds
-						// but it's not really pertinent to sort non-flagged preds
 
 						wsimage.predictions = (predictions || [])
 							.map((p: any) => {

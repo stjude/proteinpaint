@@ -35,7 +35,8 @@ export class LegendRenderer {
 				[{ value: 'Skip Annotation' }, { value: 'S' }],
 				[{ value: 'Back 1 Selection' }, { value: ',' }],
 				[{ value: 'Forward 1 Selection' }, { value: '.' }],
-				[{ value: 'Delete Selection' }, { value: 'Backspace' }]
+				[{ value: 'Delete Selection' }, { value: 'Backspace' }],
+				[{ value: 'Confirm Prediction' }, { value: 'Enter' }]
 			],
 			div: legendHolder
 				.append('div')

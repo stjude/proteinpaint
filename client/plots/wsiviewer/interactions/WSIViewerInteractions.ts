@@ -13,7 +13,6 @@ import {
 	checkSelectionType,
 	createSelectionID,
 	SelectionPrefixes,
-	type Prediction,
 	type TileSelection,
 	createFeatureID,
 	FeaturePrefixes
@@ -318,12 +317,12 @@ export class WSIViewerInteractions {
 				// New Enter key branch: check for prediction uncertainty and save annotation
 				if (event.key === 'Enter') {
 					// Only proceed if this selection has a prediction uncertainty
-					if (!(tileSelections[currentIndex] as Prediction).uncertainty) {
+					if (!checkSelectionType(tileSelections[currentIndex], SelectionPrefixes.Prediction)) {
 						return
 					}
-					const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 					const predictions = sessionWSImage?.predictions
 					if (!predictions || !predictions[currentIndex]) return
+					const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 
 					// Find class by prediction label
 					const matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
@@ -337,7 +336,8 @@ export class WSIViewerInteractions {
 					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
 
 					const selectedClassId = matchingClass.id
-
+					const tileSelection = tileSelections[currentIndex]
+					tileSelection.id = createSelectionID(SelectionPrefixes.Annotation, tileSelection.zoomCoordinates)
 					// Persist and finalize via helper
 					await this.saveAndFinalizeAnnotation(
 						wsiApp,
@@ -831,6 +831,7 @@ export class WSIViewerInteractions {
 		SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
 
 		const sessionsTileSelection: TileSelection[] = sessionWSImage.sessionsTileSelections ?? []
+		// Should only move to next annotation if save is successful, I think save and delete routes should be bool promises
 		wsiApp.app.dispatch({
 			type: 'plot_edit',
 			id: wsiApp.id,

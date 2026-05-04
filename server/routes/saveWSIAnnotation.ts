@@ -1,4 +1,4 @@
-import { FlagStatus, SelectionPrefixes, type Mds3, type RouteApi, type TileSelection } from '#types'
+import { checkSelectionType, FlagStatus, SelectionPrefixes, type Mds3, type RouteApi, type TileSelection } from '#types'
 import { saveWSIAnnotationPayload } from '#types/checkers'
 import type { SaveWSIAnnotationRequest } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
@@ -67,8 +67,8 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const status = 1
 			const flag = tileSelection.flag
 			const classId = annotation.classId
-			const isAnnotation = tileSelection.id.startsWith(SelectionPrefixes.Annotation)
-			const isPrediction = tileSelection.id.startsWith(SelectionPrefixes.Prediction)
+			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
+			const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
 			if (!isAnnotation && !isPrediction) {
 				return {
 					status: 'error',
