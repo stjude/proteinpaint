@@ -740,6 +740,8 @@ export type ProteomeAbundanceQuery = {
 			overlayTerm: BaseTerm
 			columnIdx: number
 			columnValue?: string
+			/** genome assembly name for this organism, e.g. 'hg38' or 'mm10' */
+			genomeName?: string
 			assays: {
 				[assayName: string]: ProteomeAssayConfig
 			}

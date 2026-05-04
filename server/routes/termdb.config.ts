@@ -269,6 +269,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				if (orgSrc.overlayTerm) {
 					q2.proteome.organisms[organism].overlayTerm = JSON.parse(JSON.stringify(orgSrc.overlayTerm))
 				}
+				if (orgSrc.genomeName) {
+					q2.proteome.organisms[organism].genomeName = orgSrc.genomeName
+				}
 				if (orgSrc.assays) {
 					q2.proteome.organisms[organism].assays = {}
 					for (const assay in orgSrc.assays) {

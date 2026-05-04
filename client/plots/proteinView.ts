@@ -77,12 +77,15 @@ class ProteinView extends PlotBase implements RxComponent {
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
 		renderCohortVolcano(this.dom.body, data, this)
-		const ptmDataByIsoform = new Map<string, any[]>()
+
+		// group PTM cohorts by organism first, then isoform.
+		const ptmDataByOrganism = new Map<string, Map<string, any[]>>()
 		for (const cohortData of data.cohorts || []) {
 			if (!cohortData.PTMType) continue // filter out non-PTM cohorts
-			// TODO: add PTM lollipop for other organisms
-			if (cohortData.organism !== 'human') continue
+			const organism = cohortData.organism
 			const isoform = cohortData.isoform
+			const ptmDataByIsoform = ptmDataByOrganism.get(organism) || new Map<string, any[]>()
+			ptmDataByOrganism.set(organism, ptmDataByIsoform)
 			const existingCohorts = ptmDataByIsoform.get(isoform)
 			if (!existingCohorts) {
 				ptmDataByIsoform.set(isoform, [cohortData])
@@ -91,8 +94,32 @@ class ProteinView extends PlotBase implements RxComponent {
 			}
 		}
 
-		for (const [isoform, ptmCohorts] of ptmDataByIsoform) {
-			await renderPTMLollipop(this.dom.body, ptmCohorts, this, isoform)
+		let allGenomes: any = null
+		for (const [, ptmDataByIsoform] of ptmDataByOrganism) {
+			for (const [isoform, ptmCohorts] of ptmDataByIsoform) {
+				const genomeName: string = ptmCohorts[0].genomeName
+				let genome = this.app.opts.genome
+				if (genomeName !== genome.name) {
+					if (!allGenomes) {
+						const result = await dofetch3('genomes')
+						allGenomes = result.genomes || {}
+						// build chrlookup for each genome
+						for (const g of Object.values(allGenomes) as any[]) {
+							if (g.chrlookup || g.name == genome.name) continue
+							g.chrlookup = {}
+							for (const chr in g.majorchr) {
+								g.chrlookup[chr.toUpperCase()] = { name: chr, len: g.majorchr[chr], major: true }
+							}
+							for (const chr in g.minorchr || {}) {
+								g.chrlookup[chr.toUpperCase()] = { name: chr, len: g.minorchr[chr] }
+							}
+						}
+					}
+					genome = allGenomes[genomeName]
+					if (!genome) throw `genome ${genomeName} not supported`
+				}
+				await renderPTMLollipop(this.dom.body, ptmCohorts, this, isoform, genome)
+			}
 		}
 	}
 }
@@ -1480,12 +1507,12 @@ function launchViolinPlot(
 	self.app.dispatch(action)
 }
 
-async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView, isoform: string) {
+async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView, isoform: string, genome: any) {
 	if (!ptmCohorts?.length) return
 
 	const custom_variants: any[] = []
 	const mergedMclassOverride: any = {}
-	const gm = await getGmForPTM(ptmCohorts[0].geneName, self.app.opts.genome.name, isoform)
+	const gm = await getGmForPTM(ptmCohorts[0].geneName, genome.name, isoform)
 	for (const ptm of ptmCohorts) {
 		//use default gene model to get coordinates for all PTM sites, which is sufficient for most cases
 		//and avoids the complexity of mapping between different isoforms. TODO:support isoform-specific mapping.
@@ -1572,7 +1599,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 	// launch block in protein mode with custom track
 	const arg = {
 		holder: holder.append('div'),
-		genome: self.app.opts.genome,
+		genome,
 		nobox: true,
 		tklst: [tk],
 		mclassOverride,
