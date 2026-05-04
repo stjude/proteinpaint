@@ -24,15 +24,13 @@ export class SessionWSImage extends WSImage {
 		this.predictions = ws.predictions
 		this.sessionsTileSelections = sessionsTileSelections
 	}
-	public static getNextTileID(sessionWSImage: SessionWSImage, settings: Settings, currentTileID: string): string {
+	public static getNextTileID(sessionWSImage: SessionWSImage, settings: Settings, currentIndex: number): string {
 		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
 		if (allSelections.length < 2) return ''
-		const currentIndex = allSelections.findIndex(ts => ts.id === currentTileID)
-		if (currentIndex === -1) return ''
 		const nextID: string =
-			currentIndex === allSelections.length - 1
-				? allSelections[currentIndex - 1].id
-				: allSelections[currentIndex + 1].id
+			currentIndex === allSelections.length - 1 ? allSelections[0].id : allSelections[currentIndex + 1].id
+		console.trace('current index', currentIndex, nextID)
+
 		return nextID
 	}
 
@@ -73,9 +71,17 @@ export class SessionWSImage extends WSImage {
 		const filtered_arrays = desired_arrays.flat().filter(ts => {
 			if (ts.flag === FlagStatus.Skipped && !settings.renderSkipped) return false
 			if (ts.flag !== FlagStatus.Flagged && settings.renderOnlyFlagged) return false
+			if (ts.flag === FlagStatus.Deleted) return false
 			return true
 		})
 		return filtered_arrays
+	}
+
+	public static getUnfilteredTileSelections(sessionWSImage: SessionWSImage): TileSelection[] {
+		const selections = sessionWSImage.sessionsTileSelections || []
+		const preds = sessionWSImage.predictions || []
+		const annotations = sessionWSImage.annotations || []
+		return [...selections, ...preds, ...annotations]
 	}
 
 	public static getTilesTableRows(

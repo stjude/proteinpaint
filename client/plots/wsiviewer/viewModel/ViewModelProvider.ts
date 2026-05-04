@@ -388,7 +388,6 @@ export function createStarFeature(
 	// Source - https://stackoverflow.com/a/70960369
 	// Posted by enxaneta
 	// Retrieved 2026-04-21, License - CC BY-SA 4.0
-	// When I call this from W
 	const starCoords: [number, number][][] = [[]]
 	let n = 0 //a counter
 	const starRadiusOuter = 110
@@ -435,13 +434,15 @@ export function createStarFeature(
 
 /**
  NOTE: If you provide a VectorSource the starFeature will be added to it instead of just created 
+ This function also defualts to using hexcode for color
  */
 export function createDimSquareFeature(
 	annotationCoords: [number, number],
 	topLeft: [number, number],
 	tileSize: number,
 	color: string,
-	featureSource: VectorSource<Feature<Geometry>> | null = null
+	featureSource: VectorSource<Feature<Geometry>> | null = null,
+	useHex: boolean = true
 ): Feature<Geometry> {
 	const squareCoords = [
 		[
@@ -462,10 +463,8 @@ export function createDimSquareFeature(
 
 	dimFeature.setId(createFeatureID(FeaturePrefixes.Square, annotationCoords))
 	function hexToRgb(hex: string): number[] {
-		// Remove hash if it exists
 		hex = hex.replace(/^#/, '')
 
-		// Parse the chunks into integers
 		const r = parseInt(hex.substring(0, 2), 16)
 		const g = parseInt(hex.substring(2, 4), 16)
 		const b = parseInt(hex.substring(4, 6), 16)
@@ -474,7 +473,7 @@ export function createDimSquareFeature(
 	}
 	dimFeature.setStyle(
 		new Style({
-			fill: new Fill({ color: [...hexToRgb(color), 0.4] }),
+			fill: new Fill({ color: useHex ? [...hexToRgb(color), 0.4] : color }),
 			stroke: new Stroke({ color, width: 2 })
 		})
 	)

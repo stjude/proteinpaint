@@ -92,44 +92,25 @@ function validateQuery(ds: any, connection: Database.Database) {
 				}
 			}
 
-			const imageId = Math.floor(imageRow.id)
-			const duplicateAnnoSql = `
-				SELECT id
-				FROM project_flagged_annotations
-				WHERE project_id = ?
-				  AND image_id = ?
-				  AND coordinates = ?
-				LIMIT 1
-			`
-			const duplicateAnnoStmt = connection.prepare(duplicateAnnoSql)
-			const duplicateAnnoRow = duplicateAnnoStmt.get(projectId, imageId, coords) as { id: number } | undefined
-			if (duplicateAnnoRow) {
-				const deleteDuplicateSql = `
-					DELETE FROM project_flagged_annotations
-					WHERE id = ?
-				`
-				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
-				deleteDuplicateStmt.run(duplicateAnnoRow.id)
-			}
+			const imageId = imageRow.id
 
-			const duplicatePredSql = `
-				SELECT id
-				FROM project_flagged_predictions
-				WHERE project_id = ?
-				  AND image_id = ?
-				  AND coordinates = ?
-				LIMIT 1
-			`
-			const duplicatePredStmt = connection.prepare(duplicatePredSql)
-			const duplicatePredRow = duplicatePredStmt.get(projectId, imageId, coords) as { id: number } | undefined
-			if (duplicatePredRow) {
-				const deleteDuplicateSql = `
-					DELETE FROM project_flagged_predictions
-					WHERE id = ?
-				`
-				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
-				deleteDuplicateStmt.run(duplicatePredRow.id)
-			}
+			connection
+				.prepare(
+					`DELETE FROM project_flagged_annotations
+					 WHERE project_id = ?
+					   AND image_id = ?
+					   AND coordinates = ?`
+				)
+				.run(projectId, imageId, coords)
+
+			connection
+				.prepare(
+					`DELETE FROM project_flagged_predictions
+					 WHERE project_id = ?
+					   AND image_id = ?
+					   AND coordinates = ?`
+				)
+				.run(projectId, imageId, coords)
 
 			if (tileSelection.id.startsWith(SelectionPrefixes.Annotation)) {
 				const insertSql = `
@@ -154,6 +135,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 
 				insertStmt.run(projectId, userId, coords, timestamp, status, flag, classId, imageId)
 			} else if (tileSelection.id.startsWith(SelectionPrefixes.Prediction)) {
+				// Not returning if flag is normal only flagged predictions are saved, but unflagged need to be deleted as above
 				if (tileSelection.flag !== FlagStatus.Normal) {
 					const insertSql = `
                     INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)

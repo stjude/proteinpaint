@@ -74,7 +74,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				}
 
 				// Derive prediction_id from common fields on the tileSelection payload
-				const predictionId = query.tileSelection.class
+				const predictionId = query.classID
 				const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
 				const flagType = query.tileSelection.flag
 
@@ -85,23 +85,36 @@ function validateQuery(ds: any, connection: Database.Database) {
 					}
 				}
 
-				const insertSql = `
-                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type, timestamp, image_id)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                `
 				const getImageIdSql = `
-						SELECT id
-						FROM project_images
-						WHERE project_id = ?
-						AND image_path = ?
-						LIMIT 1
-					`
-				const getImageStmt = getDbConnection(ds)?.prepare(getImageIdSql)
-				const imageId = getImageStmt
-					? (getImageStmt.get(projectId, query.wsimage) as { id: number } | undefined)?.id ?? 'unknown'
-					: 'unknown'
-				const insertStmt = connection.prepare(insertSql)
-				insertStmt.run(projectId, predictionId, zoomCoordinates, flagType, new Date().toISOString(), imageId)
+				SELECT id FROM project_images 
+				WHERE project_id = ? AND image_path = ? LIMIT 1
+`
+				const imageRow = connection.prepare(getImageIdSql).get(projectId, query.wsimage) as { id: number } | undefined
+				const imageId = imageRow?.id
+
+				if (!imageId) {
+					return { status: 'error', error: 'Image not found' }
+				}
+
+				connection
+					.prepare(
+						`
+					DELETE FROM project_flagged_predictions 
+					WHERE project_id = ? AND image_id = ? AND coordinates = ?
+				`
+					)
+					.run(projectId, imageId, zoomCoordinates)
+
+				// Insert new flagged prediction
+				connection
+					.prepare(
+						`
+				INSERT INTO project_flagged_predictions 
+				(project_id, prediction_class_id, coordinates, flag_type, timestamp, image_id)
+				VALUES (?, ?, ?, ?, ?, ?)
+			    `
+					)
+					.run(projectId, predictionId, zoomCoordinates, flagType, new Date().toISOString(), imageId)
 
 				return { status: 'ok' }
 			} catch (error: any) {

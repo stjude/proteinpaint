@@ -106,6 +106,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			aiWSIMageFiles
 		)
 		if (settings.activeID) {
+			console.log('qwe', settings.activeID)
 			this.app.dispatch({
 				type: 'plot_edit',
 				id: this.id,

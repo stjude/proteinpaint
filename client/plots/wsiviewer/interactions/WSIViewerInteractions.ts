@@ -179,7 +179,11 @@ export class WSIViewerInteractions {
 
 				if (event.key == 'Backspace') {
 					//Delete
-					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex)
+					const classID: number | undefined = sessionWSImage?.classes?.find(
+						c => c.label === tileSelections[currentIndex].class
+					)?.id
+					if (classID === undefined) return
+					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex, classID)
 				}
 				if (event.key.toLowerCase() === 'r') {
 					this.toggleLoadingDiv(true)
@@ -213,7 +217,7 @@ export class WSIViewerInteractions {
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
 						let newFlag: FlagStatus | null = null
-
+						const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 						if (event.key.toLowerCase() === 'f') {
 							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
 						} else if (!justTileSelection && event.key.toLowerCase() === 's') {
@@ -274,7 +278,7 @@ export class WSIViewerInteractions {
 										renderWSIViewer: false,
 										changeTrigger: Date.now(),
 										activeAnnotation: 0,
-										activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
+										activeID: nextID,
 										renderAnnotationTable: true,
 										sessionsTileSelection: sessionsTileSelection,
 										isSavingAnnotation: false
@@ -283,7 +287,14 @@ export class WSIViewerInteractions {
 							})
 							return
 						} else if (matchingClass) {
-							await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, tileSelection, matchingClass.id, aiProjectID)
+							await this.saveAndFinalizeAnnotation(
+								wsiApp,
+								sessionWSImage,
+								tileSelection,
+								matchingClass.id,
+								aiProjectID,
+								nextID
+							)
 						}
 					} catch (error: any) {
 						console.trace("Couldn't successfully flag tile:", error)
@@ -294,8 +305,6 @@ export class WSIViewerInteractions {
 						id: wsiApp.id,
 						config: {
 							settings: {
-								activeAnnotation: 0,
-								activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelections[currentIndex].id),
 								isSavingAnnotation: false,
 								changeTrigger: Date.now(),
 								renderWSIViewer: false
@@ -311,7 +320,7 @@ export class WSIViewerInteractions {
 					if (!(tileSelections[currentIndex] as Prediction).uncertainty) {
 						return
 					}
-
+					const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 					const predictions = sessionWSImage?.predictions
 					if (!predictions || !predictions[currentIndex]) return
 
@@ -334,7 +343,8 @@ export class WSIViewerInteractions {
 						sessionWSImage,
 						tileSelections[currentIndex],
 						selectedClassId,
-						aiProjectID
+						aiProjectID,
+						nextID
 					)
 
 					return
@@ -345,6 +355,7 @@ export class WSIViewerInteractions {
 					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
 
 					if (!matchingClass) return
+					const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 					// TODO: Issue where if you press shortcuts too fast, annotation table doesnt get updated with correct class
 					//My guess is that if you press this fast enough, saveAnnotation doesnt update fast enough
 					wsiApp.app.dispatch({
@@ -371,18 +382,15 @@ export class WSIViewerInteractions {
 						source?.removeFeature(oldStar)
 					}
 					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, tileSelection, selectedClassId, aiProjectID)
-					wsiApp.app.dispatch({
-						type: 'plot_edit',
-						id: wsiApp.id,
-						config: {
-							settings: {
-								isSavingAnnotation: false,
-								changeTrigger: Date.now(),
-								renderWSIViewer: false
-							}
-						}
-					})
+					await this.saveAndFinalizeAnnotation(
+						wsiApp,
+						sessionWSImage,
+						tileSelection,
+						selectedClassId,
+						aiProjectID,
+						nextID
+					)
+
 					return
 				}
 			})
@@ -400,29 +408,54 @@ export class WSIViewerInteractions {
 
 			sessionWSImage.sessionsTileSelections = sessionsTileSelection
 
-			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings)
+			const tileSelections = SessionWSImage.getUnfilteredTileSelections(sessionWSImage)
 
 			// Check if click falls inside an existing annotation
-			const selectedTileSelectionIndex = tileSelections.findIndex(tileSelection => {
+			const selectedTileSelection = tileSelections.find(tileSelection => {
 				const [x0, y0] = tileSelection.zoomCoordinates
 				const x1 = x0 + settings.tileSize
 				const y1 = y0 + settings.tileSize
 				return coordinateX >= x0 && coordinateX < x1 && coordinateY >= y0 && coordinateY < y1
 			})
-			if (selectedTileSelectionIndex !== -1) {
-				wsiApp.app.dispatch({
-					type: 'plot_edit',
-					id: wsiApp.id,
-					config: {
-						settings: {
-							renderWSIViewer: false,
-							renderAnnotationTable: true,
-							changeTrigger: Date.now(),
-							activeAnnotation: selectedTileSelectionIndex,
-							sessionsTileSelection: [...sessionsTileSelection]
+			// Need to have solution for clicking on skipped tiles. Maybe show skipped or just dont move and show warning
+			if (selectedTileSelection !== undefined) {
+				const isSkipped = selectedTileSelection.flag === FlagStatus.Skipped
+				const isFlagged = selectedTileSelection.flag === FlagStatus.Flagged
+				if (isSkipped && !settings.renderSkipped) {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								renderWSIViewer: false,
+								renderAnnotationTable: true,
+								renderSkipped: true,
+								renderOnlyFlagged: false,
+								changeTrigger: Date.now(),
+								activeAnnotation: 0,
+								activeID: selectedTileSelection.id,
+								sessionsTileSelection: [...sessionsTileSelection]
+							}
 						}
-					}
-				})
+					})
+				} else if (!isFlagged && settings.renderOnlyFlagged) {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								renderWSIViewer: false,
+								renderAnnotationTable: true,
+								renderOnlyFlagged: false,
+								changeTrigger: Date.now(),
+								activeAnnotation: 0,
+								activeID: selectedTileSelection.id,
+								sessionsTileSelection: [...sessionsTileSelection]
+							}
+						}
+					})
+				}
+
 				return
 			}
 
@@ -585,7 +618,8 @@ export class WSIViewerInteractions {
 		wsiApp: any,
 		vectorLayer: VectorLayer<any, any>,
 		sessionWSImage: SessionWSImage,
-		currentIndex: number
+		currentIndex: number,
+		classID: number
 	) {
 		const state = wsiApp.app.getState()
 		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
@@ -598,6 +632,7 @@ export class WSIViewerInteractions {
 			})
 			return
 		}
+		const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
 
 		//Remove annotated square
@@ -643,7 +678,7 @@ export class WSIViewerInteractions {
 						renderWSIViewer: false,
 						renderAnnotationTable: true,
 						activeAnnotation: 0,
-						activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
+						activeID: nextID,
 						changeTrigger: Date.now(),
 						sessionsTileSelection: sessionsTileSelection
 					}
@@ -652,12 +687,13 @@ export class WSIViewerInteractions {
 			return
 		}
 
-		const prediction = tileSelections[currentIndex] as Prediction
+		const prediction = tileSelections[currentIndex]
 		prediction.flag = FlagStatus.Deleted
 		const body: DeleteWSITileSelectionRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			projectId: state.aiProjectID,
+			classID: classID,
 			tileSelection: tileSelections[currentIndex],
 			wsimage: sessionWSImage.filename
 		}
@@ -678,7 +714,7 @@ export class WSIViewerInteractions {
 					renderWSIViewer: false,
 					renderAnnotationTable: true,
 					activeAnnotation: 0,
-					activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
+					activeID: nextID,
 					changeTrigger: Date.now(),
 					sessionsTileSelection: sessionsTileSelection
 				}
@@ -764,10 +800,10 @@ export class WSIViewerInteractions {
 		sessionWSImage: SessionWSImage,
 		tileSelection: TileSelection,
 		selectedClassId: number | undefined,
-		aiProjectID: number
+		aiProjectID: number,
+		nextID: string = ''
 	) {
 		const state = wsiApp.app.getState()
-		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
 		const body: SaveWSIAnnotationRequest = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
@@ -798,7 +834,7 @@ export class WSIViewerInteractions {
 					renderAnnotationTable: true,
 					changeTrigger: Date.now(),
 					activeAnnotation: 0,
-					activeID: SessionWSImage.getNextTileID(sessionWSImage, settings, tileSelection.id),
+					activeID: nextID,
 					isSavingAnnotation: false,
 					sessionsTileSelection: sessionsTileSelection
 				}

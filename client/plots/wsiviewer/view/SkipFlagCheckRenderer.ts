@@ -36,9 +36,13 @@ export class SkipFlagCheckRenderer {
 			.attr('value', 'notskipping')
 			.property('checked', skipChecked)
 		skipFlagFieldSet.append('label').text('Show Skipped').attr('for', 'skipanno')
-
+		if (settings.renderOnlyFlagged) {
+			flagCheck.property('checked', true)
+		} else if (settings.renderSkipped) {
+			skipCheck.property('checked', true)
+		}
 		// Adding listener that will uncheck each other, even though I'm using a checkbox
-		//These options aren't compatible but radio buttons cant be completely unselected
+		// These options aren't compatible but radio buttons cant be completely unselected
 		flagCheck.on('change', (event: Event) => {
 			const target = event.target as HTMLInputElement
 			let newSettings: Settings = {
@@ -63,6 +67,7 @@ export class SkipFlagCheckRenderer {
 				}
 			})
 		})
+
 		skipCheck.on('change', (event: Event) => {
 			const target = event.target as HTMLInputElement
 			let newSettings: Settings = {

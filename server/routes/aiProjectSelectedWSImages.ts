@@ -103,21 +103,11 @@ function init({ genomes }) {
 						// Might find a better way to manage timestamps for non-flagged predictions
 						// but its not really pertinent to sort non-flagged preds
 						// but it's not really pertinent to sort non-flagged preds
-						const getImageIdSql = `
-						SELECT id
-						FROM project_images
-						WHERE project_id = ?
-						AND image_path = ?
-						LIMIT 1
-					`
-						const getImageStmt = getDbConnection(ds)?.prepare(getImageIdSql)
-						const imageId = getImageStmt
-							? (getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined)?.id ?? 'unknown'
-							: 'unknown'
+
 						wsimage.predictions = (predictions || [])
 							.map((p: any) => {
 								const label = classMap.get(p.class) ?? p.class
-								const flagged_counterpart = flaggedPredictions.get(JSON.stringify(p.zoomCoordinates) + imageId)
+								const flagged_counterpart = flaggedPredictions.get(JSON.stringify(p.zoomCoordinates))
 								return {
 									...p,
 									class: label,
@@ -297,7 +287,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 			const rows = stmt.all(projectId, imageId) || []
 			for (const p of rows) {
 				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
-					predictionMap.set(p.coordinates + imageId, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
+					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
 			}
 			return predictionMap
 		} catch (error) {

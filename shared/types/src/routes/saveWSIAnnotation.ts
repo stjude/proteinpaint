@@ -1,4 +1,4 @@
-import type { TileSelection } from 'src/index.ts'
+import type { TileSelection } from '../index.ts'
 import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
