@@ -385,7 +385,17 @@ add:
 			throw output.error
 		}
 	} catch (e) {
-		alert('Error: ' + e)
+		// Inline error block instead of alert(). Mirror the detail-plot
+		// branch below so the GSEA pane shows the failure in-context (e.g.
+		// blitzgsea calibration failures on small/degenerate signatures
+		// from gsea.py's _safe_blitz_gsea, or daCacheMissing on a
+		// stale-session cache regen).
+		self.dom.holder.selectAll('*').remove()
+		const msg = String(e?.message || e)
+		const userMsg = /daCacheMissing|ENOENT|no such file/i.test(msg)
+			? 'The differential-analysis cache for this GSEA is no longer available. Reopen the volcano plot to regenerate it.'
+			: msg
+		sayerror(self.dom.holder, userMsg)
 		return
 	}
 
