@@ -135,7 +135,7 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 				// snapshot used by the GSEA path. The cacheId returned by the
 				// original DA/DM run was hashed over the auth-injected filter,
 				// so the recompute path here must see the same filter shape
-				// or computeDaCacheId / computeDmCacheId will produce a
+				// or computeDeCacheId / computeDmCacheId will produce a
 				// different hash and the route throws "cacheId does not match
 				// daRequest". Used for both gene-expression DE (DERequest)
 				// and DNA-methylation DM (DiffMethRequest). Type-guard against
