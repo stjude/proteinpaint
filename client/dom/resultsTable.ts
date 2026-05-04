@@ -96,7 +96,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 					}
 				},
 				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems)
+					const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems, getRowKey)
 					selectionOrder = result.selectionOrder
 					lastTouchedGene = result.lastTouchedGene
 					buttonNode.textContent = result.buttonText
@@ -114,11 +114,16 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
  * Used by the Lollipop button to remember which gene the user touched most
  * recently across multi-select changes. Lives next to showResultsTable since
  * the button-state logic is its only caller.
+ *
+ * `getRowKey` resolves the gene name from the data item — `item.gene` works
+ * for the manhattan-default `hits` shape, while grin2/volcano callers pass
+ * `row => row[0]?.value` because their items are pre-built cell arrays.
  */
 export function updateSelectionTracking(
 	currentSelectionOrder: number[],
 	selectedIndices: number[],
-	dataSource: ResultsDataItem[]
+	dataSource: ResultsDataItem[],
+	getRowKey: (item: any) => string | number | null | undefined
 ): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string; buttonDisabled: boolean } {
 	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
 
@@ -131,13 +136,8 @@ export function updateSelectionTracking(
 	if (updatedSelectionOrder.length > 0) {
 		const lastSelectedIdx = updatedSelectionOrder[updatedSelectionOrder.length - 1]
 		const dataItem = dataSource[lastSelectedIdx]
-
-		if (Array.isArray(dataItem)) {
-			// First cell is by convention the gene/feature name; coerce to string
-			// since `value` is widened to string | number across the table API.
-			const v = dataItem[0]?.value
-			lastTouchedGene = v != null ? String(v) : null
-		}
+		const v = dataItem != null ? getRowKey(dataItem) : null
+		lastTouchedGene = v != null ? String(v) : null
 
 		if (lastTouchedGene !== null) buttonText = `Lollipop (${lastTouchedGene})`
 	}
