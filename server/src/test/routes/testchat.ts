@@ -29,7 +29,6 @@ export default function setRoutes(app, basepath, genomes) {
 				if ((ds as any)?.queries?.chat) {
 					const label = (ds as any).label
 					if (datasetFilter && label !== datasetFilter) continue
-
 					const rawFilter = typeof req.query.filter === 'string' ? JSON.parse(req.query.filter) : req.query.filter
 					const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
 					const lst = Array.isArray(filter.lst) ? filter.lst : []

@@ -133,8 +133,8 @@ export async function inferTermObjFromEntity(
 	llm: LlmConfig,
 	dbPath: string,
 	genes_list: string[] // redundant (must be fixed)
-): Promise<Record<string, Value | Value[]>> {
-	const twObjects: Record<string, Value | Value[]> = {}
+): Promise<Record<string, Value | Value[] | string>> {
+	const twObjects: Record<string, Value | Value[] | string> = {}
 	if (plotType === 'summary') {
 		const summaryEntity = entity as SummaryPhrase2EntityResult
 		for (const [key, value] of Object.entries(summaryEntity)) {
@@ -284,7 +284,9 @@ export async function inferTermObjFromEntity(
 				phrase: scatterEntity.name
 			}
 		}
-		if (scatterEntity.colorBy) {
+		if (scatterEntity.colorBy === 'null') {
+			twObjects['colorBy'] = 'null'
+		} else if (scatterEntity.colorBy) {
 			const termObj = await getTermObj('colorBy', scatterEntity.colorBy, llm, dbPath, genes_list)
 			if (termObj) {
 				twObjects['colorBy'] = termObj
@@ -294,7 +296,9 @@ export async function inferTermObjFromEntity(
 				)
 			}
 		}
-		if (scatterEntity.shapeBy) {
+		if (scatterEntity.shapeBy === 'null') {
+			twObjects['shapeBy'] = 'null'
+		} else if (scatterEntity.shapeBy) {
 			const termObj = await getTermObj('shapeBy', scatterEntity.shapeBy, llm, dbPath, genes_list)
 			if (termObj) {
 				twObjects['shapeBy'] = termObj
