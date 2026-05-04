@@ -5,9 +5,9 @@ import {
 	findPointsInRadius,
 	showResultsTable,
 	openActionMenu as openSharedActionMenu,
-	openMultiHitClickMenu
+	openMultiHitClickMenu,
+	type ActionMenuItem
 } from '#dom'
-import type { ActionMenuItem } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import type { DataPointEntry, VolcanoPlotDimensions } from '../VolcanoTypes'

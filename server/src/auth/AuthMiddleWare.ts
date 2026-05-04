@@ -131,6 +131,23 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 				// loosen the additional filter, to consider fewer tvs terms based on route-specific payloads or aggregation logic
 				authApi.mayAdjustFilter(req.query, ds)
 
+				// Re-apply the auth-filter injection to the nested daRequest
+				// snapshot used by the GSEA path. The cacheId returned by the
+				// original DA/DM run was hashed over the auth-injected filter,
+				// so the recompute path here must see the same filter shape
+				// or computeDaCacheId / computeDmCacheId will produce a
+				// different hash and the route throws "cacheId does not match
+				// daRequest". Used for both gene-expression DE (DERequest)
+				// and DNA-methylation DM (DiffMethRequest).
+				if (req.query.daRequest) {
+					try {
+						req.query.daRequest.__protected__ = req.query.__protected__
+						authApi.mayAdjustFilter(req.query.daRequest, ds)
+					} finally {
+						delete req.query.daRequest.__protected__
+					}
+				}
+
 				// this flag may be used by downstream code that does not have access to req argument or ds object
 				__protected__.isUserLoggedIn = authApi.isUserLoggedIn(req, ds, auth.protectedRoutes.minSampleSize)
 			}

@@ -6,7 +6,7 @@ import serverconfig from '../src/serverconfig.js'
 import { get_header_txt } from '#src/utils.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { readCacheFileOrRecompute, resolveDeContext, resolveSampleGroups } from '../src/diffAnalysis.ts'
+import { readCacheFileOrRecompute, resolveDaContext, resolveSampleGroups } from '../src/diffAnalysis.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
@@ -29,7 +29,7 @@ function init({ genomes }) {
 
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
-				const { ds, term_results, term_results2 } = await resolveDeContext(q, genomes)
+				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
 				const groups = resolveSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
