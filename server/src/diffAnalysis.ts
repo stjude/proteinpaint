@@ -97,16 +97,16 @@ export async function writeDeCache(cacheId: string, geneData: GeneDEEntry[]): Pr
  * volcano renderer + GSEA — safer to discard the file and recompute.
  *
  * The header line is the file-format discriminator: matches
- * `DE_CACHE_HEADER` → DE rows under `geneRows`; matches `DM_CACHE_HEADER`
- * → DM rows under `promoterRows`. Anything else (legacy 2-col cache,
- * schema drift across a deploy, unrelated file) is treated as a miss so
- * the caller recomputes and rewrites with the current schema. The
- * differing field names also discriminate the two branches at the type
- * level — callers narrow with `'geneRows' in cached` /
- * `'promoterRows' in cached`. */
+ * `DE_CACHE_HEADER` → `kind: 'DE'` with rows under `geneRows`; matches
+ * `DM_CACHE_HEADER` → `kind: 'DM'` with rows under `promoterRows`.
+ * Anything else (legacy 2-col cache, schema drift across a deploy,
+ * unrelated file) is treated as a miss so the caller recomputes and
+ * rewrites with the current schema. The `kind` literal lets callers
+ * narrow with `cached.kind === 'DE'` — same convention as
+ * CacheOrRecomputeResult. */
 export async function readDaCacheFile(
 	cacheId: string
-): Promise<{ geneRows: GeneDEEntry[] } | { promoterRows: DiffMethEntry[] } | null> {
+): Promise<{ kind: 'DE'; geneRows: GeneDEEntry[] } | { kind: 'DM'; promoterRows: DiffMethEntry[] } | null> {
 	const file = cacheFilePath(cacheId)
 	let text: string
 	try {
@@ -472,14 +472,13 @@ export async function runDeFresh(
 	}
 }
 
-/** Union result of the unified read-or-recompute helper. The differing
- * payload field name (`geneData` vs `promoterData`) discriminates the two
- * branches; callers narrow with `'geneData' in result` /
- * `'promoterData' in result`. No literal `kind` tag — the field shapes
- * already encode it, and the cache file's header line is the ground truth
- * at storage level. */
+/** Discriminated-union result of the unified read-or-recompute helper.
+ * The `kind` literal tells callers which payload field to read at a
+ * glance — more readable than structurally narrowing on the field name
+ * itself, even though TypeScript would handle either correctly. */
 export type CacheOrRecomputeResult =
 	| {
+			kind: 'DE'
 			cacheId: string
 			geneData: GeneDEEntry[]
 			fromCache: boolean
@@ -492,6 +491,7 @@ export type CacheOrRecomputeResult =
 			bcv?: number
 	  }
 	| {
+			kind: 'DM'
 			cacheId: string
 			promoterData: DiffMethEntry[]
 			fromCache: boolean
@@ -580,6 +580,7 @@ async function doReadOrRecompute(
 			const groups = resolveSampleGroups(daRequest, ds, term_results, term_results2)
 			if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 			return {
+				kind: 'DE',
 				cacheId,
 				geneData: cached.geneRows,
 				fromCache: true,
@@ -594,6 +595,7 @@ async function doReadOrRecompute(
 		}
 		const fresh = await runDeFresh(daRequest, ds, term_results, term_results2)
 		return {
+			kind: 'DE',
 			cacheId: fresh.cacheId,
 			geneData: fresh.geneData,
 			fromCache: false,
@@ -610,6 +612,7 @@ async function doReadOrRecompute(
 		const groups = resolveDmSampleGroups(daRequest, ds, term_results, term_results2)
 		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 		return {
+			kind: 'DM',
 			cacheId,
 			promoterData: cached.promoterRows,
 			fromCache: true,
@@ -619,6 +622,7 @@ async function doReadOrRecompute(
 	}
 	const fresh = await runDmFresh(daRequest, ds, term_results, term_results2)
 	return {
+		kind: 'DM',
 		cacheId: fresh.cacheId,
 		promoterData: fresh.promoterData,
 		fromCache: false,

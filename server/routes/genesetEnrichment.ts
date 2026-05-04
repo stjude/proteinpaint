@@ -128,7 +128,7 @@ async function resolveGseaGenesAndFoldChange({
 		// message.
 		if (!q.daRequest) throw new Error('daCacheMissing')
 		// One unified read-or-recompute for both DE and DM. The orchestrator
-		// sniffs the request shape internally; we branch on result.kind to
+		// sniffs the request shape internally; we branch on `result.kind` to
 		// extract the right rows. For DM, multiple promoters can map to the
 		// same gene_name — blitzgsea/CERNO may warn or down-rank duplicates;
 		// we pass them through without dedup for now (collapsing strategy is
@@ -138,7 +138,7 @@ async function resolveGseaGenesAndFoldChange({
 			genomes
 		})
 		if (result.cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
-		if ('geneData' in result) {
+		if (result.kind === 'DE') {
 			return {
 				genes: result.geneData.map(g => g.gene_name),
 				fold_change: result.geneData.map(g => g.fold_change)
