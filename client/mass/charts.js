@@ -220,7 +220,7 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Templates 2',
 			chartType: 'profileForms2',
-			clickTo: self.showFormsToggleTree,
+			clickTo: self.loadChartSpecificMenu,
 			usecase: { target: 'profileForms2', detail: 'tw' },
 			config: { chartType: 'profileForms2' }
 		},
@@ -530,83 +530,6 @@ function setRenderers(self) {
 				}
 			}
 		})
-	}
-
-	/* Templates 2 picker: chart-type tabs over a per-tab cohort-filtered termdb tree.
-	   Reads the per-cohort domains list directly from
-	   termdbConfig.plotConfigByCohort[cohort].profileForms2.domains (declared in the
-	   dataset config) — each entry is { id, plotTypes }. */
-	self.showFormsToggleTree = async chart => {
-		const action = {
-			type: 'plot_create',
-			id: getId(),
-			config: { chartType: chart.chartType, activeCohort: self.state.activeCohort }
-		}
-		if (chart.parentId) action.parentId = chart.parentId
-
-		const termdbConfig = self.app.vocabApi.termdbConfig
-		const cohortKey = termdbConfig?.selectCohort?.values?.[self.state.activeCohort]?.keys?.[0]
-		const cohortForms2 = termdbConfig?.plotConfigByCohort?.[cohortKey]?.profileForms2
-		const domains = cohortForms2?.domains || []
-		// Sort tabs by their order in profileFormsOptions (dataset-declared canonical order)
-		// so the first option (e.g. Yes/No Barchart) is the default active tab.
-		const tabOrder = (cohortForms2?.options || []).map(o => o.name)
-		const subtypeNames = [...new Set(domains.flatMap(d => d.plotTypes))] // dedupe chart-type labels
-			.sort((a, b) => tabOrder.indexOf(a) - tabOrder.indexOf(b))
-
-		if (!subtypeNames.length) {
-			self.dom.tip.d
-				.append('div')
-				.style('padding', '15px')
-				.style('color', '#777')
-				.style('font-style', 'italic')
-				.text('No templates are currently available for this cohort.')
-			return
-		}
-
-		const tabsHolder = self.dom.tip.d.append('div').style('padding', '4px 8px')
-		const treeHolder = self.dom.tip.d.append('div')
-		let activeSubtype = subtypeNames[0]
-
-		// renderSeq token: drop stale renders when tabs are clicked faster than appInit() resolves.
-		let renderSeq = 0
-		const renderTree = async () => {
-			const mySeq = ++renderSeq
-			treeHolder.selectAll('*').remove()
-			const termdb = await import('../termdb/app')
-			if (mySeq !== renderSeq) return // preempted before mount
-			const innerHolder = treeHolder.append('div')
-			await termdb.appInit({
-				vocabApi: self.app.vocabApi,
-				holder: innerHolder,
-				state: {
-					activeCohort: self.state.activeCohort,
-					nav: { header_mode: 'search_only' },
-					tree: { usecase: { ...chart.usecase, cohort: cohortKey, subtype: activeSubtype } }
-				},
-				tree: {
-					click_term: term => {
-						const tw = term.term ? term : { term }
-						action.config[chart.usecase.detail] = tw
-						self.dom.tip.hide()
-						self.app.dispatch(action)
-					}
-				}
-			})
-			if (mySeq !== renderSeq) innerHolder.remove() // preempted during mount
-		}
-
-		const { Tabs } = await import('#dom/toggleButtons')
-		const tabs = subtypeNames.map(name => ({
-			label: name,
-			active: name === activeSubtype,
-			callback: () => {
-				activeSubtype = name
-				renderTree()
-			}
-		}))
-		// Tabs.main() auto-fires the active tab's callback, so initial render happens there.
-		await new Tabs({ holder: tabsHolder, tabsPosition: 'horizontal', tabs }).main()
 	}
 
 	self.showTree_selectlst = async chart => {
