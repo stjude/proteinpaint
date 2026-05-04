@@ -8,7 +8,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readCacheFileOrRecompute, readCacheFileOrRecomputeDm, stableStringify } from '#src/diffAnalysis.ts'
+import { readCacheFileOrRecompute, stableStringify } from '#src/diffAnalysis.ts'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',
@@ -127,29 +127,27 @@ async function resolveGseaGenesAndFoldChange({
 		// regex so stale sessions still get the reopen-the-volcano
 		// message.
 		if (!q.daRequest) throw new Error('daCacheMissing')
-		// Dispatch by cacheId prefix: `da_…` is gene-expression DE,
-		// `dm_…` is DNA-methylation promoter DM. The two caches store
-		// different schemas in different subdirs.
-		if (q.cacheId.startsWith('da_')) {
-			const result = await readCacheFileOrRecompute({ daRequest: q.daRequest as DERequest, genomes })
-			if (result.cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
+		// One unified read-or-recompute for both DE and DM. The orchestrator
+		// sniffs the request shape internally; we branch on result.kind to
+		// extract the right rows. For DM, multiple promoters can map to the
+		// same gene_name — blitzgsea/CERNO may warn or down-rank duplicates;
+		// we pass them through without dedup for now (collapsing strategy is
+		// a follow-up).
+		const result = await readCacheFileOrRecompute({
+			daRequest: q.daRequest as DERequest | DiffMethRequest,
+			genomes
+		})
+		if (result.cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
+		if ('geneData' in result) {
 			return {
 				genes: result.geneData.map(g => g.gene_name),
 				fold_change: result.geneData.map(g => g.fold_change)
 			}
 		}
-		if (q.cacheId.startsWith('dm_')) {
-			const result = await readCacheFileOrRecomputeDm({ daRequest: q.daRequest as DiffMethRequest, genomes })
-			if (result.cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
-			// Multiple promoters can map to the same gene_name; the GSEA
-			// engines may down-rank or warn about duplicates. Pass through
-			// without dedup for now — collapsing strategy is a follow-up.
-			return {
-				genes: result.promoterData.map(p => p.gene_name),
-				fold_change: result.promoterData.map(p => p.fold_change)
-			}
+		return {
+			genes: result.promoterData.map(p => p.gene_name),
+			fold_change: result.promoterData.map(p => p.fold_change)
 		}
-		throw new Error('invalid cacheId')
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.

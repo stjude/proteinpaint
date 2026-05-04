@@ -38,7 +38,7 @@ export function canonicalizeSamplelst(s: any): any {
 	}
 }
 
-export function computeDaCacheId(req: DERequest): string {
+export function computeDeCacheId(req: DERequest): string {
 	// storage_type is intentionally excluded: it is dataset-pinned (derived
 	// from ds.queries.rnaseqGeneCount at request time, not sent by the client)
 	// and `dslabel` already identifies the dataset that determines it. Including
@@ -61,39 +61,52 @@ export function computeDaCacheId(req: DERequest): string {
 		filter0: (req as any).filter0 ?? null
 	}
 	const key = stableStringify(keyInputs)
-	const hash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
-	const cacheId = `da_${hash}`
-	return cacheId
+	return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
 }
 
-const CACHE_ID_RE = /^da_[0-9a-f]{32}$/
+const CACHE_ID_RE = /^[0-9a-f]{32}$/
 
 function cacheFilePath(cacheId: string): string {
 	if (!CACHE_ID_RE.test(cacheId)) throw new Error('invalid cacheId')
 	return path.join(serverconfig.cachedir, 'daAnalysis', `${cacheId}.tsv`)
 }
 
-export async function writeDaCache(cacheId: string, geneData: GeneDEEntry[]): Promise<void> {
+// Header lines double as the file-format discriminator: readDaCacheFile
+// inspects line 0 to decide DE vs DM, so writers and the reader must agree
+// on these exact strings.
+const DE_CACHE_HEADER = 'gene_id\tgene_name\tfold_change\toriginal_p_value\tadjusted_p_value'
+const DE_CACHE_COL_COUNT = 5
+
+export async function writeDeCache(cacheId: string, geneData: GeneDEEntry[]): Promise<void> {
 	const file = cacheFilePath(cacheId)
 	// Full 5-field row: renderVolcano (and its underlying Rust renderer) needs
 	// adjusted_p_value + original_p_value for significance gating on the PNG;
 	// GSEA only uses gene_name + fold_change. Storing everything lets cache
 	// hits serve both paths without re-running DE.
-	const lines = ['gene_id\tgene_name\tfold_change\toriginal_p_value\tadjusted_p_value']
+	const lines = [DE_CACHE_HEADER]
 	for (const g of geneData) {
 		lines.push(`${g.gene_id ?? ''}\t${g.gene_name}\t${g.fold_change}\t${g.original_p_value}\t${g.adjusted_p_value}`)
 	}
 	await fs.promises.writeFile(file, lines.join('\n'))
 }
 
-const DA_CACHE_COL_COUNT = 5
-
-/** Returns null on cache miss (ENOENT), legacy/short header, or any
+/** Returns null on cache miss (ENOENT), an unrecognized header, or any
  * malformed data row so callers can branch on hit vs. miss. A truncated
- * line (interrupted write, hand-edit, partial copy) would otherwise yield
- * NaNs from `Number(undefined)` and silently propagate into the volcano
- * renderer + GSEA — safer to discard the file and recompute. */
-export async function readDaCache(cacheId: string): Promise<GeneDEEntry[] | null> {
+ * line (interrupted write, hand-edit, partial copy) would otherwise
+ * yield NaNs from `Number(undefined)` and silently propagate into the
+ * volcano renderer + GSEA — safer to discard the file and recompute.
+ *
+ * The header line is the file-format discriminator: matches
+ * `DE_CACHE_HEADER` → DE rows under `geneRows`; matches `DM_CACHE_HEADER`
+ * → DM rows under `promoterRows`. Anything else (legacy 2-col cache,
+ * schema drift across a deploy, unrelated file) is treated as a miss so
+ * the caller recomputes and rewrites with the current schema. The
+ * differing field names also discriminate the two branches at the type
+ * level — callers narrow with `'geneRows' in cached` /
+ * `'promoterRows' in cached`. */
+export async function readDaCacheFile(
+	cacheId: string
+): Promise<{ geneRows: GeneDEEntry[] } | { promoterRows: DiffMethEntry[] } | null> {
 	const file = cacheFilePath(cacheId)
 	let text: string
 	try {
@@ -102,27 +115,50 @@ export async function readDaCache(cacheId: string): Promise<GeneDEEntry[] | null
 		if (e && e.code === 'ENOENT') return null
 		throw e
 	}
-	const rows = text.split('\n')
-	if (rows.length < 1) return []
-	// Detect legacy 2-column caches (gene_name, fold_change) written before
-	// this format change. Those files can't drive the volcano Rust renderer
-	// (no p-values), so return null and let the caller fall back to
-	// runDeFresh, which rewrites the file with the full schema.
-	const header = rows[0].split('\t')
-	if (header.length < DA_CACHE_COL_COUNT) return null
-	const data: GeneDEEntry[] = []
-	for (const r of rows.slice(1).filter(Boolean)) {
-		const cols = r.split('\t')
-		if (cols.length < DA_CACHE_COL_COUNT) return null
-		data.push({
-			gene_id: cols[0],
-			gene_name: cols[1],
-			fold_change: Number(cols[2]),
-			original_p_value: Number(cols[3]),
-			adjusted_p_value: Number(cols[4])
-		})
+	const lines = text.split('\n')
+	if (lines.length < 1) return null
+	const header = lines[0]
+
+	if (header === DE_CACHE_HEADER) {
+		const geneRows: GeneDEEntry[] = []
+		for (const r of lines.slice(1).filter(Boolean)) {
+			const cols = r.split('\t')
+			if (cols.length < DE_CACHE_COL_COUNT) return null
+			geneRows.push({
+				gene_id: cols[0],
+				gene_name: cols[1],
+				fold_change: Number(cols[2]),
+				original_p_value: Number(cols[3]),
+				adjusted_p_value: Number(cols[4])
+			})
+		}
+		return { geneRows }
 	}
-	return data
+
+	if (header === DM_CACHE_HEADER) {
+		const promoterRows: DiffMethEntry[] = []
+		for (const r of lines.slice(1).filter(Boolean)) {
+			const cols = r.split('\t')
+			if (cols.length < DM_CACHE_COL_COUNT) return null
+			promoterRows.push({
+				promoter_id: cols[0],
+				gene_name: cols[1],
+				fold_change: Number(cols[2]),
+				original_p_value: Number(cols[3]),
+				adjusted_p_value: Number(cols[4]),
+				chr: cols[5],
+				start: Number(cols[6]),
+				stop: Number(cols[7])
+			})
+		}
+		return { promoterRows }
+	}
+
+	// Unknown header — could be a legacy short-header file or schema drift
+	// across a deploy. Treat as a cache miss so the caller recomputes and
+	// rewrites with the current schema; auto-recovery beats failing every
+	// user's first post-deploy request until someone hand-cleans the dir.
+	return null
 }
 
 /** Resolve the dataset + confounder term data. Both the volcano route and
@@ -387,7 +423,7 @@ export async function runDeFresh(
 
 	// cacheId is computed from the unmutated request; runners below may mutate
 	// param.method, so capture the id first.
-	const cacheId = computeDaCacheId(param)
+	const cacheId = computeDeCacheId(param)
 
 	const engine = deriveEngineLabel(param, groups.group1names.length, groups.group2names.length)
 	if (engine === 'edgeR') {
@@ -407,7 +443,7 @@ export async function runDeFresh(
 		const images: DEImage[] = [result.ql_image]
 		if (result.mds_image) images.push(result.mds_image)
 
-		await writeDaCache(cacheId, result.gene_data)
+		await writeDeCache(cacheId, result.gene_data)
 
 		return {
 			geneData: result.gene_data,
@@ -425,7 +461,7 @@ export async function runDeFresh(
 	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 
-	await writeDaCache(cacheId, result)
+	await writeDeCache(cacheId, result)
 
 	return {
 		geneData: result,
@@ -436,18 +472,38 @@ export async function runDeFresh(
 	}
 }
 
-export type CacheOrRecomputeResult = {
-	cacheId: string
-	geneData: GeneDEEntry[]
-	/** true = served from cache; false = freshly computed and written. */
-	fromCache: boolean
-	sample_size1: number
-	sample_size2: number
-	method: string
-	/** Only populated on fresh edgeR/limma runs. Cache hits do not carry
-	 * diagnostic PNGs — those are produced only during a fresh R invocation. */
-	images?: DEImage[]
-	bcv?: number
+/** Union result of the unified read-or-recompute helper. The differing
+ * payload field name (`geneData` vs `promoterData`) discriminates the two
+ * branches; callers narrow with `'geneData' in result` /
+ * `'promoterData' in result`. No literal `kind` tag — the field shapes
+ * already encode it, and the cache file's header line is the ground truth
+ * at storage level. */
+export type CacheOrRecomputeResult =
+	| {
+			cacheId: string
+			geneData: GeneDEEntry[]
+			fromCache: boolean
+			sample_size1: number
+			sample_size2: number
+			method: string
+			/** Only populated on fresh edgeR/limma runs. Cache hits do not carry
+			 * diagnostic PNGs — those are produced only during a fresh R invocation. */
+			images?: DEImage[]
+			bcv?: number
+	  }
+	| {
+			cacheId: string
+			promoterData: DiffMethEntry[]
+			fromCache: boolean
+			sample_size1: number
+			sample_size2: number
+	  }
+
+/** True if the request is a gene-expression DE request. `min_count` is
+ * required on `DERequest` and absent on `DiffMethRequest`, so this is a
+ * reliable structural type guard without needing a wire-protocol marker. */
+function isDeRequest(req: DERequest | DiffMethRequest): req is DERequest {
+	return 'min_count' in req
 }
 
 /** In-flight read-or-recompute promises keyed by cacheId. Deduplicates
@@ -462,30 +518,36 @@ export type CacheOrRecomputeResult = {
  * resolve to the same result — `fromCache` reports whatever the winning
  * caller did (typically `false` on first miss, `true` afterwards). The
  * entry is cleared once the promise settles so later, genuinely new
- * requests start fresh. */
+ * requests start fresh. One map covers both DE and DM since cacheIds are
+ * unique across kinds — the keyInputs differ structurally (DE has
+ * min_count/cpm_cutoff/method, DM has min_samples_per_group), so
+ * stableStringify produces disjoint hash inputs. */
 const pendingReadOrRecompute = new Map<string, Promise<CacheOrRecomputeResult>>()
 
-/** Single entry point for "give me the DE result for this request" —
- * hides the cache-hit-vs-recompute branch from callers and deduplicates
+/** Single entry point for "give me the DA result for this request" —
+ * handles both gene-expression DE (`DERequest`) and DNA-methylation DM
+ * (`DiffMethRequest`). Hides the cache-hit-vs-recompute branch from
+ * callers, dispatches to the right runner on miss, and deduplicates
  * concurrent requests for the same inputs via `pendingReadOrRecompute`.
  *
- * On hit: reads the cached gene data, resolves sample groups from the
- * dataset to produce `sample_size{1,2}` (cheap — no R/Rust).
- *
- * On miss: runs the full DE pipeline via `runDeFresh`, which writes the
- * cache as a side effect.
+ * On hit: reads the cached rows via the unified `readDaCacheFile` (which
+ * inspects the file's header line to decide DE vs DM), then resolves
+ * sample groups from the dataset to produce `sample_size{1,2}` (cheap —
+ * no R/Rust). On miss: dispatches to `runDeFresh` / `runDmFresh`, which
+ * write the cache as a side effect.
  *
  * The deterministic cacheId ensures every node/process produces the same
- * filename for the same inputs; both routes (`termdb/DE` and
- * `genesetEnrichment`'s recompute branch) go through this helper. */
+ * filename for the same inputs; the volcano routes (`termdb/DE`,
+ * `termdb/diffMeth`) and `genesetEnrichment`'s recompute branch all go
+ * through this helper. */
 export async function readCacheFileOrRecompute({
 	daRequest,
 	genomes
 }: {
-	daRequest: DERequest
+	daRequest: DERequest | DiffMethRequest
 	genomes: any
 }): Promise<CacheOrRecomputeResult> {
-	const cacheId = computeDaCacheId(daRequest)
+	const cacheId = isDeRequest(daRequest) ? computeDeCacheId(daRequest) : computeDmCacheId(daRequest)
 
 	// Synchronous get/set — JS single-threaded event loop guarantees no
 	// interleaving between this get and the set below, so two concurrent
@@ -502,48 +564,76 @@ export async function readCacheFileOrRecompute({
 	})
 }
 
-async function doReadOrRecompute(cacheId: string, daRequest: DERequest, genomes: any): Promise<CacheOrRecomputeResult> {
-	const cached = await readDaCache(cacheId)
+async function doReadOrRecompute(
+	cacheId: string,
+	daRequest: DERequest | DiffMethRequest,
+	genomes: any
+): Promise<CacheOrRecomputeResult> {
+	const cached = await readDaCacheFile(cacheId)
 	const { ds, term_results, term_results2 } = await resolveDaContext(daRequest, genomes)
 
-	if (cached) {
-		const groups = resolveSampleGroups(daRequest, ds, term_results, term_results2)
-		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+	if (isDeRequest(daRequest)) {
+		// Cache-hit defense: a shape-mismatched file (DM rows under a DE
+		// cacheId) would only happen via header drift or hand-edits. Treat
+		// as a miss so we recompute and rewrite cleanly.
+		if (cached && 'geneRows' in cached) {
+			const groups = resolveSampleGroups(daRequest, ds, term_results, term_results2)
+			if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+			return {
+				cacheId,
+				geneData: cached.geneRows,
+				fromCache: true,
+				sample_size1: groups.group1names.length,
+				sample_size2: groups.group2names.length,
+				// The cache file doesn't record which engine produced it, and
+				// daRequest.method is optional on the wire. Derive the label the
+				// same way runDeFresh does (shared helper) so cache-hit responses
+				// match fresh-run responses for the same request.
+				method: deriveEngineLabel(daRequest, groups.group1names.length, groups.group2names.length)
+			}
+		}
+		const fresh = await runDeFresh(daRequest, ds, term_results, term_results2)
 		return {
-			cacheId,
-			geneData: cached,
-			fromCache: true,
-			sample_size1: groups.group1names.length,
-			sample_size2: groups.group2names.length,
-			// The cache file doesn't record which engine produced it, and
-			// daRequest.method is optional on the wire. Derive the label the
-			// same way runDeFresh does (shared helper) so cache-hit responses
-			// match fresh-run responses for the same request.
-			method: deriveEngineLabel(daRequest, groups.group1names.length, groups.group2names.length)
+			cacheId: fresh.cacheId,
+			geneData: fresh.geneData,
+			fromCache: false,
+			sample_size1: fresh.sample_size1,
+			sample_size2: fresh.sample_size2,
+			method: fresh.method,
+			images: fresh.images,
+			bcv: fresh.bcv
 		}
 	}
 
-	const fresh = await runDeFresh(daRequest, ds, term_results, term_results2)
+	// DM branch
+	if (cached && 'promoterRows' in cached) {
+		const groups = resolveDmSampleGroups(daRequest, ds, term_results, term_results2)
+		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+		return {
+			cacheId,
+			promoterData: cached.promoterRows,
+			fromCache: true,
+			sample_size1: groups.group1names.length,
+			sample_size2: groups.group2names.length
+		}
+	}
+	const fresh = await runDmFresh(daRequest, ds, term_results, term_results2)
 	return {
 		cacheId: fresh.cacheId,
-		geneData: fresh.geneData,
+		promoterData: fresh.promoterData,
 		fromCache: false,
 		sample_size1: fresh.sample_size1,
-		sample_size2: fresh.sample_size2,
-		method: fresh.method,
-		images: fresh.images,
-		bcv: fresh.bcv
+		sample_size2: fresh.sample_size2
 	}
 }
 
 // ---- DM (DNA methylation promoter) ----
 //
-// Mirrors the DE block above with a `dm_` cacheId prefix and a richer 8-col
-// cache schema (DiffMethEntry carries promoter_id/chr/start/stop on top of
-// the shared DataEntry fields). The two halves intentionally stay parallel
-// rather than abstracting over a shared type; the runners (edgeR/Rust vs
-// diffMeth.R), validation messages, and ds.queries paths differ enough that
-// generics would obscure more than they save.
+// DE and DM share the cacheId namespace, the cacheFilePath, and the
+// readCacheFileOrRecompute orchestrator. What stays parallel below is
+// only the genuinely-different pieces: keyInputs, write/header, sample-
+// group resolver (different ds.queries path + user-facing copy), and
+// runner (diffMeth.R vs edgeR/Rust).
 
 export function computeDmCacheId(req: DiffMethRequest): string {
 	const keyInputs = {
@@ -557,24 +647,14 @@ export function computeDmCacheId(req: DiffMethRequest): string {
 		filter0: (req as any).filter0 ?? null
 	}
 	const key = stableStringify(keyInputs)
-	const hash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
-	return `dm_${hash}`
-}
-
-const DM_CACHE_ID_RE = /^dm_[0-9a-f]{32}$/
-
-function dmCacheFilePath(cacheId: string): string {
-	if (!DM_CACHE_ID_RE.test(cacheId)) throw new Error('invalid dm cacheId')
-	// Shares the daAnalysis subdir with DE (`da_…`) caches; the cacheId
-	// prefix (`dm_` vs `da_`) keeps file names disjoint.
-	return path.join(serverconfig.cachedir, 'daAnalysis', `${cacheId}.tsv`)
+	return crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
 }
 
 const DM_CACHE_HEADER = 'promoter_id\tgene_name\tfold_change\toriginal_p_value\tadjusted_p_value\tchr\tstart\tstop'
 const DM_CACHE_COL_COUNT = 8
 
 export async function writeDmCache(cacheId: string, promoterData: DiffMethEntry[]): Promise<void> {
-	const file = dmCacheFilePath(cacheId)
+	const file = cacheFilePath(cacheId)
 	const lines = [DM_CACHE_HEADER]
 	for (const p of promoterData) {
 		lines.push(
@@ -582,42 +662,6 @@ export async function writeDmCache(cacheId: string, promoterData: DiffMethEntry[
 		)
 	}
 	await fs.promises.writeFile(file, lines.join('\n'))
-}
-
-/** Returns null on cache miss (ENOENT) or on a header column-count mismatch
- * (legacy guard) so callers can branch on hit vs. miss. */
-/** Same defensive contract as readDaCache: null on ENOENT, short header, or
- * any malformed data row. A truncated line would yield NaNs from
- * `Number(undefined)` for start/stop/p-values; safer to recompute. */
-export async function readDmCache(cacheId: string): Promise<DiffMethEntry[] | null> {
-	const file = dmCacheFilePath(cacheId)
-	let text: string
-	try {
-		text = await fs.promises.readFile(file, 'utf8')
-	} catch (e: any) {
-		if (e && e.code === 'ENOENT') return null
-		throw e
-	}
-	const rows = text.split('\n')
-	if (rows.length < 1) return []
-	const header = rows[0].split('\t')
-	if (header.length < DM_CACHE_COL_COUNT) return null
-	const data: DiffMethEntry[] = []
-	for (const r of rows.slice(1).filter(Boolean)) {
-		const cols = r.split('\t')
-		if (cols.length < DM_CACHE_COL_COUNT) return null
-		data.push({
-			promoter_id: cols[0],
-			gene_name: cols[1],
-			fold_change: Number(cols[2]),
-			original_p_value: Number(cols[3]),
-			adjusted_p_value: Number(cols[4]),
-			chr: cols[5],
-			start: Number(cols[6]),
-			stop: Number(cols[7])
-		})
-	}
-	return data
 }
 
 type DmSampleGroups = {
@@ -825,67 +869,5 @@ export async function runDmFresh(
 		sample_size1: groups.group1names.length,
 		sample_size2: groups.group2names.length,
 		cacheId
-	}
-}
-
-export type DmCacheOrRecomputeResult = {
-	cacheId: string
-	promoterData: DiffMethEntry[]
-	fromCache: boolean
-	sample_size1: number
-	sample_size2: number
-}
-
-// Separate from the DE pendingReadOrRecompute map so the value type stays
-// concrete (Promise<DmCacheOrRecomputeResult>) rather than degrading to a
-// union. The cacheId prefix already namespaces the keys.
-const pendingReadOrRecomputeDm = new Map<string, Promise<DmCacheOrRecomputeResult>>()
-
-export async function readCacheFileOrRecomputeDm({
-	daRequest,
-	genomes
-}: {
-	daRequest: DiffMethRequest
-	genomes: any
-}): Promise<DmCacheOrRecomputeResult> {
-	const cacheId = computeDmCacheId(daRequest)
-
-	const inFlight = pendingReadOrRecomputeDm.get(cacheId)
-	if (inFlight) return inFlight
-
-	const work = doReadOrRecomputeDm(cacheId, daRequest, genomes)
-	pendingReadOrRecomputeDm.set(cacheId, work)
-	return work.finally(() => {
-		pendingReadOrRecomputeDm.delete(cacheId)
-	})
-}
-
-async function doReadOrRecomputeDm(
-	cacheId: string,
-	daRequest: DiffMethRequest,
-	genomes: any
-): Promise<DmCacheOrRecomputeResult> {
-	const cached = await readDmCache(cacheId)
-	const { ds, term_results, term_results2 } = await resolveDaContext(daRequest, genomes)
-
-	if (cached) {
-		const groups = resolveDmSampleGroups(daRequest, ds, term_results, term_results2)
-		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
-		return {
-			cacheId,
-			promoterData: cached,
-			fromCache: true,
-			sample_size1: groups.group1names.length,
-			sample_size2: groups.group2names.length
-		}
-	}
-
-	const fresh = await runDmFresh(daRequest, ds, term_results, term_results2)
-	return {
-		cacheId: fresh.cacheId,
-		promoterData: fresh.promoterData,
-		fromCache: false,
-		sample_size1: fresh.sample_size1,
-		sample_size2: fresh.sample_size2
 	}
 }

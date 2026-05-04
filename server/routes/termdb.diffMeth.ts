@@ -1,7 +1,7 @@
 import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, RouteApi } from '#types'
 import { diffMethPayload } from '#types/checkers'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { readCacheFileOrRecomputeDm, resolveDaContext, resolveDmSampleGroups } from '../src/diffAnalysis.ts'
+import { readCacheFileOrRecompute, resolveDaContext, resolveDmSampleGroups } from '../src/diffAnalysis.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/diffMeth',
@@ -37,13 +37,15 @@ function init({ genomes }) {
 				return
 			}
 
-			const { cacheId, promoterData, sample_size1, sample_size2 } = await readCacheFileOrRecomputeDm({
-				daRequest: q,
-				genomes
-			})
+			const result = await readCacheFileOrRecompute({ daRequest: q, genomes })
+			// Defensive — the route only sends DiffMethRequests, so the result
+			// must be the DM shape. A DE-shaped result here would mean a
+			// cacheId collision or a hand-edited cache file with the wrong
+			// header.
+			if (!('promoterData' in result)) throw new Error('expected DM result from readCacheFileOrRecompute')
 
-			const rendered = await renderVolcano<DiffMethEntry>(promoterData, q.volcanoRender)
-			rendered.cacheId = cacheId
+			const rendered = await renderVolcano<DiffMethEntry>(result.promoterData, q.volcanoRender)
+			rendered.cacheId = result.cacheId
 
 			// Empty dots is valid (strict thresholds) and the PNG should still
 			// return; only abort if no rows reached the renderer at all.
@@ -52,8 +54,8 @@ function init({ genomes }) {
 
 			const output: DiffMethFullResponse = {
 				data: rendered,
-				sample_size1,
-				sample_size2
+				sample_size1: result.sample_size1,
+				sample_size2: result.sample_size2
 			}
 			res.send(output)
 		} catch (e: any) {
