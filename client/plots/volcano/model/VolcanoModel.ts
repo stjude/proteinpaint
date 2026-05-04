@@ -31,7 +31,12 @@ export class VolcanoModel {
 		}
 		if (this.termType === DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
-			return await dofetch3('termdb/diffMeth', { body })
+			const response = await dofetch3('termdb/diffMeth', { body })
+			// Surface the DM request the same way the GE branch above does so
+			// the GSEA tab can snapshot it and the server can recompute the DM
+			// cache if the file is missing on a peer node or after TTL.
+			if (response && !response.error) response.daRequest = body
+			return response
 		}
 		if (this.termType === SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()

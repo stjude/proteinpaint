@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
-import type { DERequest, DEImage, ExpressionInput, GeneDEEntry } from '#types'
+import type { DERequest, DEImage, DiffMethEntry, DiffMethRequest, ExpressionInput, GeneDEEntry } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { getData } from './termdb.matrix.js'
@@ -20,7 +20,7 @@ export function stableStringify(v: any): string {
 	return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}'
 }
 
-function canonicalizeSamplelst(s: any): any {
+export function canonicalizeSamplelst(s: any): any {
 	if (!s || !Array.isArray(s.groups)) return s
 	return {
 		groups: s.groups.map((g: any) => ({
@@ -119,10 +119,12 @@ export async function readDaCache(cacheId: string): Promise<GeneDEEntry[] | null
 }
 
 /** Resolve the dataset + confounder term data. Both the volcano route and
- * the GSEA recompute path call this before running DE or computing sample
- * sizes on a cache hit. */
-export async function resolveDeContext(
-	req: DERequest,
+ * the GSEA recompute path call this before running DA (DE or DM) or
+ * computing sample sizes on a cache hit. Generic over request type — the
+ * lookups (genome, tw, tw2, filter, filter0) live on both DERequest and
+ * DiffMethRequest with identical semantics. */
+export async function resolveDaContext(
+	req: DERequest | DiffMethRequest,
 	genomes: any
 ): Promise<{ ds: any; term_results: any; term_results2: any }> {
 	const genome = genomes[req.genome]
@@ -495,7 +497,7 @@ export async function readCacheFileOrRecompute({
 
 async function doReadOrRecompute(cacheId: string, daRequest: DERequest, genomes: any): Promise<CacheOrRecomputeResult> {
 	const cached = await readDaCache(cacheId)
-	const { ds, term_results, term_results2 } = await resolveDeContext(daRequest, genomes)
+	const { ds, term_results, term_results2 } = await resolveDaContext(daRequest, genomes)
 
 	if (cached) {
 		const groups = resolveSampleGroups(daRequest, ds, term_results, term_results2)
@@ -524,5 +526,355 @@ async function doReadOrRecompute(cacheId: string, daRequest: DERequest, genomes:
 		method: fresh.method,
 		images: fresh.images,
 		bcv: fresh.bcv
+	}
+}
+
+// ---- DM (DNA methylation promoter) ----
+//
+// Mirrors the DE block above with a `dm_` cacheId prefix and a richer 8-col
+// cache schema (DiffMethEntry carries promoter_id/chr/start/stop on top of
+// the shared DataEntry fields). The two halves intentionally stay parallel
+// rather than abstracting over a shared type; the runners (edgeR/Rust vs
+// diffMeth.R), validation messages, and ds.queries paths differ enough that
+// generics would obscure more than they save.
+
+export function computeDmCacheId(req: DiffMethRequest): string {
+	const keyInputs = {
+		genome: req.genome,
+		dslabel: req.dslabel,
+		samplelst: canonicalizeSamplelst(req.samplelst),
+		min_samples_per_group: req.min_samples_per_group ?? null,
+		tw: req.tw ?? null,
+		tw2: req.tw2 ?? null,
+		filter: (req as any).filter ?? null,
+		filter0: (req as any).filter0 ?? null
+	}
+	const key = stableStringify(keyInputs)
+	const hash = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32)
+	return `dm_${hash}`
+}
+
+const DM_CACHE_ID_RE = /^dm_[0-9a-f]{32}$/
+
+function dmCacheFilePath(cacheId: string): string {
+	if (!DM_CACHE_ID_RE.test(cacheId)) throw new Error('invalid dm cacheId')
+	// Shares the daAnalysis subdir with DE (`da_…`) caches; the cacheId
+	// prefix (`dm_` vs `da_`) keeps file names disjoint.
+	return path.join(serverconfig.cachedir, 'daAnalysis', `${cacheId}.tsv`)
+}
+
+const DM_CACHE_HEADER = 'promoter_id\tgene_name\tfold_change\toriginal_p_value\tadjusted_p_value\tchr\tstart\tstop'
+const DM_CACHE_COL_COUNT = 8
+
+export async function writeDmCache(cacheId: string, promoterData: DiffMethEntry[]): Promise<void> {
+	const file = dmCacheFilePath(cacheId)
+	const lines = [DM_CACHE_HEADER]
+	for (const p of promoterData) {
+		lines.push(
+			`${p.promoter_id}\t${p.gene_name}\t${p.fold_change}\t${p.original_p_value}\t${p.adjusted_p_value}\t${p.chr}\t${p.start}\t${p.stop}`
+		)
+	}
+	await fs.promises.writeFile(file, lines.join('\n'))
+}
+
+/** Returns null on cache miss (ENOENT) or on a header column-count mismatch
+ * (legacy guard) so callers can branch on hit vs. miss. */
+export async function readDmCache(cacheId: string): Promise<DiffMethEntry[] | null> {
+	const file = dmCacheFilePath(cacheId)
+	let text: string
+	try {
+		text = await fs.promises.readFile(file, 'utf8')
+	} catch (e: any) {
+		if (e && e.code === 'ENOENT') return null
+		throw e
+	}
+	const rows = text.split('\n')
+	if (rows.length < 1) return []
+	const header = rows[0].split('\t')
+	if (header.length < DM_CACHE_COL_COUNT) return null
+	const data: DiffMethEntry[] = []
+	for (const r of rows.slice(1).filter(Boolean)) {
+		const cols = r.split('\t')
+		data.push({
+			promoter_id: cols[0],
+			gene_name: cols[1],
+			fold_change: Number(cols[2]),
+			original_p_value: Number(cols[3]),
+			adjusted_p_value: Number(cols[4]),
+			chr: cols[5],
+			start: Number(cols[6]),
+			stop: Number(cols[7])
+		})
+	}
+	return data
+}
+
+type DmSampleGroups = {
+	group1names: string[]
+	group2names: string[]
+	conf1_group1: (string | number)[]
+	conf1_group2: (string | number)[]
+	conf2_group1: (string | number)[]
+	conf2_group2: (string | number)[]
+	alerts: string[]
+}
+
+export function resolveDmSampleGroups(
+	param: DiffMethRequest,
+	ds: any,
+	term_results: any,
+	term_results2: any
+): DmSampleGroups {
+	if (param.samplelst?.groups?.length != 2)
+		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
+	if (param.samplelst.groups[0].values?.length < 1)
+		throw new Error('Group 1 has no samples. Please select at least one sample.')
+	if (param.samplelst.groups[1].values?.length < 1)
+		throw new Error('Group 2 has no samples. Please select at least one sample.')
+
+	const q = ds.queries.dnaMethylation?.promoter
+	if (!q) throw new Error('This dataset does not have promoter-level methylation data configured.')
+	if (!q.file) throw new Error('Promoter methylation data file is not configured for this dataset.')
+
+	const group1names: string[] = []
+	const conf1_group1: (string | number)[] = []
+	const conf2_group1: (string | number)[] = []
+	for (const s of param.samplelst.groups[0].values) {
+		if (!Number.isInteger(s.sampleId)) continue
+		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
+		if (!n) continue
+		if (!q.allSampleSet.has(n)) continue
+
+		if (param.tw && param.tw2) {
+			if (term_results.samples[s.sampleId] && term_results2.samples[s.sampleId]) {
+				conf1_group1.push(
+					param.tw.q.mode == 'continuous'
+						? term_results.samples[s.sampleId][param.tw.$id]['value']
+						: term_results.samples[s.sampleId][param.tw.$id]['key']
+				)
+				conf2_group1.push(
+					param.tw2.q.mode == 'continuous'
+						? term_results2.samples[s.sampleId][param.tw2.$id]['value']
+						: term_results2.samples[s.sampleId][param.tw2.$id]['key']
+				)
+				group1names.push(n)
+			}
+		} else if (param.tw && !param.tw2) {
+			if (term_results.samples[s.sampleId]) {
+				conf1_group1.push(
+					param.tw.q.mode == 'continuous'
+						? term_results.samples[s.sampleId][param.tw.$id]['value']
+						: term_results.samples[s.sampleId][param.tw.$id]['key']
+				)
+				group1names.push(n)
+			}
+		} else if (!param.tw && param.tw2) {
+			if (term_results2.samples[s.sampleId]) {
+				conf2_group1.push(
+					param.tw2.q.mode == 'continuous'
+						? term_results2.samples[s.sampleId][param.tw2.$id]['value']
+						: term_results2.samples[s.sampleId][param.tw2.$id]['key']
+				)
+				group1names.push(n)
+			}
+		} else {
+			group1names.push(n)
+		}
+	}
+
+	const group2names: string[] = []
+	const conf1_group2: (string | number)[] = []
+	const conf2_group2: (string | number)[] = []
+	for (const s of param.samplelst.groups[1].values) {
+		if (!Number.isInteger(s.sampleId)) continue
+		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
+		if (!n) continue
+		if (!q.allSampleSet.has(n)) continue
+
+		if (param.tw && param.tw2) {
+			if (term_results.samples[s.sampleId] && term_results2.samples[s.sampleId]) {
+				conf1_group2.push(
+					param.tw.q.mode == 'continuous'
+						? term_results.samples[s.sampleId][param.tw.$id]['value']
+						: term_results.samples[s.sampleId][param.tw.$id]['key']
+				)
+				conf2_group2.push(
+					param.tw2.q.mode == 'continuous'
+						? term_results2.samples[s.sampleId][param.tw2.$id]['value']
+						: term_results2.samples[s.sampleId][param.tw2.$id]['key']
+				)
+				group2names.push(n)
+			}
+		} else if (param.tw && !param.tw2) {
+			if (term_results.samples[s.sampleId]) {
+				conf1_group2.push(
+					param.tw.q.mode == 'continuous'
+						? term_results.samples[s.sampleId][param.tw.$id]['value']
+						: term_results.samples[s.sampleId][param.tw.$id]['key']
+				)
+				group2names.push(n)
+			}
+		} else if (!param.tw && param.tw2) {
+			if (term_results2.samples[s.sampleId]) {
+				conf2_group2.push(
+					param.tw2.q.mode == 'continuous'
+						? term_results2.samples[s.sampleId][param.tw2.$id]['value']
+						: term_results2.samples[s.sampleId][param.tw2.$id]['key']
+				)
+				group2names.push(n)
+			}
+		} else {
+			group2names.push(n)
+		}
+	}
+
+	const alerts = validateDmGroups(group1names.length, group2names.length, group1names, group2names)
+	return { group1names, group2names, conf1_group1, conf1_group2, conf2_group1, conf2_group2, alerts }
+}
+
+// User-facing copy (vs the engineer-facing strings in DE's validateGroups);
+// rendered directly in the volcano UI.
+function validateDmGroups(
+	sample_size1: number,
+	sample_size2: number,
+	group1names: string[],
+	group2names: string[]
+): string[] {
+	const alerts: string[] = []
+	if (sample_size1 < 1) alerts.push('No samples in group 1 have methylation data available.')
+	if (sample_size2 < 1) alerts.push('No samples in group 2 have methylation data available.')
+	const commonnames = group1names.filter(x => group2names.includes(x))
+	if (commonnames.length)
+		alerts.push(
+			`${commonnames.length} sample(s) appear in both groups: ${commonnames.join(', ')}. Please remove duplicates.`
+		)
+	return alerts
+}
+
+type DiffMethInput = {
+	case: string
+	control: string
+	input_file: string
+	min_samples_per_group?: number
+	conf1?: any[]
+	conf1_mode?: 'continuous' | 'discrete'
+	conf2?: any[]
+	conf2_mode?: 'continuous' | 'discrete'
+}
+
+export type RunDmFreshResult = {
+	promoterData: DiffMethEntry[]
+	sample_size1: number
+	sample_size2: number
+	cacheId: string
+}
+
+export async function runDmFresh(
+	param: DiffMethRequest,
+	ds: any,
+	term_results: any,
+	term_results2: any
+): Promise<RunDmFreshResult> {
+	const groups = resolveDmSampleGroups(param, ds, term_results, term_results2)
+	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+
+	const q = ds.queries.dnaMethylation.promoter
+
+	const diffMethInput: DiffMethInput = {
+		// Group 1 is control, group 2 is case (same convention as DE).
+		case: groups.group2names.join(','),
+		control: groups.group1names.join(','),
+		input_file: q.file,
+		min_samples_per_group: param.min_samples_per_group
+	}
+
+	if (param.tw) {
+		diffMethInput.conf1 = [...groups.conf1_group2, ...groups.conf1_group1]
+		diffMethInput.conf1_mode = param.tw.q.mode
+		if (new Set(diffMethInput.conf1).size === 1) throw new Error('Confounding variable 1 has only one value')
+	}
+
+	if (param.tw2) {
+		diffMethInput.conf2 = [...groups.conf2_group2, ...groups.conf2_group1]
+		diffMethInput.conf2_mode = param.tw2.q.mode
+		if (new Set(diffMethInput.conf2).size === 1) throw new Error('Confounding variable 2 has only one value')
+	}
+
+	const cacheId = computeDmCacheId(param)
+
+	const time1 = Date.now()
+	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
+	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
+
+	const promoterData: DiffMethEntry[] = result.promoter_data
+	await writeDmCache(cacheId, promoterData)
+
+	return {
+		promoterData,
+		sample_size1: groups.group1names.length,
+		sample_size2: groups.group2names.length,
+		cacheId
+	}
+}
+
+export type DmCacheOrRecomputeResult = {
+	cacheId: string
+	promoterData: DiffMethEntry[]
+	fromCache: boolean
+	sample_size1: number
+	sample_size2: number
+}
+
+// Separate from the DE pendingReadOrRecompute map so the value type stays
+// concrete (Promise<DmCacheOrRecomputeResult>) rather than degrading to a
+// union. The cacheId prefix already namespaces the keys.
+const pendingReadOrRecomputeDm = new Map<string, Promise<DmCacheOrRecomputeResult>>()
+
+export async function readCacheFileOrRecomputeDm({
+	daRequest,
+	genomes
+}: {
+	daRequest: DiffMethRequest
+	genomes: any
+}): Promise<DmCacheOrRecomputeResult> {
+	const cacheId = computeDmCacheId(daRequest)
+
+	const inFlight = pendingReadOrRecomputeDm.get(cacheId)
+	if (inFlight) return inFlight
+
+	const work = doReadOrRecomputeDm(cacheId, daRequest, genomes)
+	pendingReadOrRecomputeDm.set(cacheId, work)
+	return work.finally(() => {
+		pendingReadOrRecomputeDm.delete(cacheId)
+	})
+}
+
+async function doReadOrRecomputeDm(
+	cacheId: string,
+	daRequest: DiffMethRequest,
+	genomes: any
+): Promise<DmCacheOrRecomputeResult> {
+	const cached = await readDmCache(cacheId)
+	const { ds, term_results, term_results2 } = await resolveDaContext(daRequest, genomes)
+
+	if (cached) {
+		const groups = resolveDmSampleGroups(daRequest, ds, term_results, term_results2)
+		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+		return {
+			cacheId,
+			promoterData: cached,
+			fromCache: true,
+			sample_size1: groups.group1names.length,
+			sample_size2: groups.group2names.length
+		}
+	}
+
+	const fresh = await runDmFresh(daRequest, ds, term_results, term_results2)
+	return {
+		cacheId: fresh.cacheId,
+		promoterData: fresh.promoterData,
+		fromCache: false,
+		sample_size1: fresh.sample_size1,
+		sample_size2: fresh.sample_size2
 	}
 }
