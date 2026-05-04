@@ -71,6 +71,7 @@ function init({ genomes }) {
 							entry.testedN = stats.testedN
 							entry.controlN = stats.controlN
 							if (assay.mclassOverride) entry.mclassOverride = assay.mclassOverride
+							if (organism.genomeName) entry.genomeName = organism.genomeName
 							cohorts.push(entry)
 						}
 					}
