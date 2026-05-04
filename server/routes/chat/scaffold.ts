@@ -346,7 +346,7 @@ Query: ${user_prompt}
 	}
 }
 
-async function hierarchical(
+async function hierarchicalGeneExpression(
 	user_prompt: string,
 	llm: LlmConfig,
 	genome: any,
@@ -596,71 +596,71 @@ async function prebuiltScatter(
   `
 
 	/*
-  const prebuiltScatterNames: Map<string, string> = new Map()
-  if (ds?.cohort?.scatterplots?.plots) {
-      for (const plot of ds.cohort.scatterplots.plots) {
-          if (plot.name) {
-              prebuiltScatterNames.set(plot.name, plot.descriptionShort)
-          }
-      }
-  }
+const prebuiltScatterNames: Map<string, string> = new Map()
+if (ds?.cohort?.scatterplots?.plots) {
+for (const plot of ds.cohort.scatterplots.plots) {
+if (plot.name) {
+  prebuiltScatterNames.set(plot.name, plot.descriptionShort)
+}
+}
+}
 
 
-	const prompt = `You are a ProteinPaint prebuilt scatter plot assistant. 
-  Your task is to determine if the user query is asking for a scatter plot based on pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Extract the necessary variables into a strict JSON scaffold.
-  The user can overlay clinical variables or gene expression on these plots via color, shape, or divide (Z). To remove an overlay, set the corresponding field to null. If the user does not specify a plot name, default to 'TermdbTest TSNE'. If the user says 'tsne' or 't-sne' match it to 'TermdbTest TSNE'. This dataset does NOT have UMAP plots
+const prompt = `You are a ProteinPaint prebuilt scatter plot assistant. 
+Your task is to determine if the user query is asking for a scatter plot based on pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Extract the necessary variables into a strict JSON scaffold.
+The user can overlay clinical variables or gene expression on these plots via color, shape, or divide (Z). To remove an overlay, set the corresponding field to null. If the user does not specify a plot name, default to 'TermdbTest TSNE'. If the user says 'tsne' or 't-sne' match it to 'TermdbTest TSNE'. This dataset does NOT have UMAP plots
 
-  ## OUTPUT SCHEMA
-  Return ONLY a valid JSON object with this structure and do not add any extra fields, text, or explanation or code fences:
-  {
-    "name": "name of the prebuilt map"          // REQUIRED - name of the prebuilt scatter plot (e.g. "UMAP", "PCA", "t-SNE", etc)
-    "colorBy": "<phrase>",                      // OPTIONAL - variable to divide the matrix by (e.g. for faceting)
-    "shapeBy": "<phrase>"                       // OPTIONAL - global cohort constraint applied to the matrix
-  }
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure and do not add any extra fields, text, or explanation or code fences:
+{
+"name": "name of the prebuilt map"          // REQUIRED - name of the prebuilt scatter plot (e.g. "UMAP", "PCA", "t-SNE", etc)
+"colorBy": "<phrase>",                      // OPTIONAL - variable to divide the matrix by (e.g. for faceting)
+"shapeBy": "<phrase>"                       // OPTIONAL - global cohort constraint applied to the matrix
+}
 
-  ## FIELD DEFINITIONS
-  name: The specific prebuilt scatter plot the user wants (e.g. "UMAP", "PCA", "t-SNE", etc). If the user does not specify a plot name, default to "t-SNE".
-  colorBy: A variable that the user wants to use for coloring points (e.g. "by sex", "color by subtype", "colored by age"). Extract the phrase that indicates this variable, preserving the exact wording.
-  shapeBy: A variable that the user wants to use for shaping points (e.g. "shaped by treatment response", "shape by mutation status"). Extract the phrase that indicates this variable, preserving the exact wording.  
-  
-  ## Extraction RULES
-  1. name is REQUIRED — if the user does not specify a plot name, default to "t-SNE". If the user says "tsne" or "t-sne" match it to "t-SNE".
-  2. Use colorBy when the user indicates they want to color points by a variable (e.g. "color by sex", "colored by subtype", "color by age"). Preserve the EXACT phrasing from the user's question — do not paraphrase, normalize, or generalize.
-  3. Use shapeBy when the user indicates they want to shape points by a variable (e.g. "shape by treatment response", "shape by mutation status"). Preserve the EXACT phrasing from the user's question — do not paraphrase, normalize, or generalize.
-  4. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
-  
-  ## EXAMPLES
-  Query: "Show me a t-SNE plot colored by X and shaped by Y"
-  Output: 
-  {
-    "name": "t-SNE",
-    "colorBy": "X",
-    "shapeBy": "Y"
-  }
-  
-  Query: "Show a UMAP plot colored by age"
-  Output: 
-  {
-    "name": "UMAP",
-    "colorBy": "age"
-  }
-  
-  Query: "I want to see a PCA plot shaped by treatment response"
-  Output: 
-  {
-    "name": "PCA",
-    "shapeBy": "treatment response"
-  }
-  
-  Query: "Show me a t-SNE plot"
-  Output: 
-  {
-    "name": "t-SNE"
-  }
+## FIELD DEFINITIONS
+name: The specific prebuilt scatter plot the user wants (e.g. "UMAP", "PCA", "t-SNE", etc). If the user does not specify a plot name, default to "t-SNE".
+colorBy: A variable that the user wants to use for coloring points (e.g. "by sex", "color by subtype", "colored by age"). Extract the phrase that indicates this variable, preserving the exact wording.
+shapeBy: A variable that the user wants to use for shaping points (e.g. "shaped by treatment response", "shape by mutation status"). Extract the phrase that indicates this variable, preserving the exact wording.  
+ 
+## Extraction RULES
+1. name is REQUIRED — if the user does not specify a plot name, default to "t-SNE". If the user says "tsne" or "t-sne" match it to "t-SNE".
+2. Use colorBy when the user indicates they want to color points by a variable (e.g. "color by sex", "colored by subtype", "color by age"). Preserve the EXACT phrasing from the user's question — do not paraphrase, normalize, or generalize.
+3. Use shapeBy when the user indicates they want to shape points by a variable (e.g. "shape by treatment response", "shape by mutation status"). Preserve the EXACT phrasing from the user's question — do not paraphrase, normalize, or generalize.
+4. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
+ 
+## EXAMPLES
+Query: "Show me a t-SNE plot colored by X and shaped by Y"
+Output: 
+{
+"name": "t-SNE",
+"colorBy": "X",
+"shapeBy": "Y"
+}
+ 
+Query: "Show a UMAP plot colored by age"
+Output: 
+{
+"name": "UMAP",
+"colorBy": "age"
+}
+ 
+Query: "I want to see a PCA plot shaped by treatment response"
+Output: 
+{
+"name": "PCA",
+"shapeBy": "treatment response"
+}
+ 
+Query: "Show me a t-SNE plot"
+Output: 
+{
+"name": "t-SNE"
+}
 
-  Parse the following query into the prebuilt scatter scaffold:
-  Query: ${user_prompt}
-  `*/
+Parse the following query into the prebuilt scatter scaffold:
+Query: ${user_prompt}
+`*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Prebuilt scatter scaffold: ${response}`)
 	try {
@@ -685,6 +685,182 @@ async function prebuiltScatter(
 	}
 }
 
+export async function hierarchical(
+	user_prompt: string,
+	llm: LlmConfig,
+	genome: any,
+	genes_list: string[],
+	allowedTermTypes: string[],
+	ds: any,
+	dbPath: string,
+	dataset_json: any
+): Promise<any | HierarchicalScaffold | MsgToUser> {
+	const prompt = `You are a ProteinPaint hierarchical clustering classifier. Your task is to determine what kind of variable the user wants to cluster on.
+
+A hierarchical clustering plot clusters samples based on a chosen feature type. Classify the user's query into exactly one of the following categories:
+  - "geneExpression": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
+  - "metaboliteIntensity": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
+  - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
+{
+  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary"
+}
+
+## EXAMPLES
+
+Q: "Cluster ABC, PQR and XYZ gene expression"
+A: { "variableType": "geneExpression" }
+
+Q: "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
+A: { "variableType": "geneExpression" }
+
+Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
+A: { "variableType": "geneExpression" }
+
+Q: "Cluster patients by glucose and lactate metabolite intensity"
+A: { "variableType": "metaboliteIntensity" }
+
+Q: "Show a hierarchical clustering of metabolites"
+A: { "variableType": "metaboliteIntensity" }
+
+Q: "Cluster samples using age, sex, and treatment response"
+A: { "variableType": "dictionary" }
+
+Q: "Cluster samples using age, sex, and treatment response by ABC5 expression"
+A: { "variableType": "dictionary" }
+
+Q: "Hierarchical clustering by clinical variables"
+A: { "variableType": "dictionary" }
+
+Classify the following query:
+Query: ${user_prompt}
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Hierarchical variable-type classifier: ${response}`)
+	let variableType: string
+	try {
+		const parsed = JSON.parse(response)
+		variableType = parsed.variableType
+	} catch {
+		throw new Error(`Failed to parse hierarchical variable-type classifier response: ${response}`)
+	}
+
+	if (variableType === 'geneExpression') {
+		return await hierarchicalGeneExpression(
+			user_prompt,
+			llm,
+			genome,
+			genes_list,
+			allowedTermTypes,
+			dataset_json,
+			ds,
+			dbPath
+		)
+	} else if (variableType === 'metaboliteIntensity') {
+		return {
+			type: 'text',
+			text: 'Hierarchical clustering on metabolite intensity is not currently supported.'
+		}
+	} else if (variableType === 'dictionary') {
+		return await hierarchicalDictionary(user_prompt, llm, ds, dbPath, genes_list, dataset_json)
+	} else {
+		throw new Error(`Unexpected variableType "${variableType}" returned by hierarchical classifier`)
+	}
+}
+
+export async function hierarchicalDictionary(
+	user_prompt: string,
+	llm: LlmConfig,
+	ds: any,
+	dbPath: string,
+	genes_list: string[],
+	dataset_json: any
+): Promise<HierarchicalScaffold | MsgToUser> {
+	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of dictionary (clinical) variables and an optional cohort filter from a user's natural language question.
+
+A hierarchical clustering plot clusters samples based on selected continuous (either integral or float variables) dictionary variables (e.g. age, BMI, lab values, weight, height) and displays the result as a heatmap with dendrograms.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
+{
+  "hierarchicalPhrase": ["<phrase>"],   // REQUIRED - Array of phrases listing the dictionary variables to cluster on. Extract the entire phrase that indicates the variables of interest, preserving the exact wording.
+  "filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase that narrows the sample set used for clustering
+}
+
+## EXAMPLES
+
+--- Simple dictionary variable list ---
+Q: "Cluster patients by age, height and treatment response"
+A: {
+  "hierarchicalPhrases": ["age", "height", "treatment response"]
+}
+
+--- Dictionary variables with cohort filter ---
+Q: "Cluster age, weight and BMI for patients with acute lymphoblastic leukemia"
+A: {
+  "hierarchicalPhrases": ["age", "weight", "BMI"]
+  "filter": "acute lymphoblastic leukemia"
+}
+
+--- Dendrogram phrasing ---
+Q: "Show a clinical-variable dendrogram for weight, height and lab values"
+A: {
+  "hierarchicalPhrases": ["weight", "height", "lab values"]
+}
+
+--- Subtype-restricted cluster ---
+Q: "Hierarchical clustering of weight, height, and treatment response for patients with SBG5B subtype"
+A: {
+  "hierarchicalPhrases": ["weight", "height", "treatment response"],
+  "filter": "SBG5B subtype"
+}
+
+## EDGE CASES
+- If no dictionary variables are mentioned, return:
+  { "error": "No dictionary variables found", "reason": "<brief explanation>" }
+
+Parse the following query into the hierarchical clustering scaffold:
+Query: ${user_prompt}
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Hierarchical dictionary scaffold: ${response}`)
+	let parsed: HierarchicalScaffold
+	try {
+		parsed = JSON.parse(response) as HierarchicalScaffold
+	} catch {
+		throw new Error(`Failed to parse HierarchicalScaffold from LLM response: ${response}`)
+	}
+	parsed.plotType = 'hiercluster'
+
+	if (!parsed.hierarchicalPhrases) {
+		return {
+			type: 'text',
+			text: 'No dictionary variables found in the query. Please specify at least one dictionary variable to cluster on.'
+		}
+	} else if (!Array.isArray(parsed.hierarchicalPhrases)) {
+		return {
+			type: 'text',
+			text: 'hierarchicalPhrase field should be an array of strings listing the dictionary variables to cluster on.'
+		}
+	} else if (parsed.hierarchicalPhrases.length < 3) {
+		return {
+			type: 'text',
+			text: 'For hierarchical clustering, at least 3 variables are required to generate a dendrogram.'
+		}
+	} else {
+		if (parsed.filter) {
+			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath)
+			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
+				throw new Error(filterTvs.text)
+			}
+			parsed.filterTvs = filterTvs
+		}
+	}
+	return parsed
+}
+
 export async function inferScaffold(
 	user_prompt: string,
 	plotType: string,
@@ -692,9 +868,9 @@ export async function inferScaffold(
 	genome: any,
 	genes_list: string[],
 	allowedTermTypes: string[],
-	dataset_json?: any,
-	ds?: any,
-	dbPath?: string
+	dataset_json: any,
+	ds: any,
+	dbPath: string
 ): Promise<Scaffold | MsgToUser | any> {
 	// any is for final output in case of hierarchical clustering
 	switch (plotType) {
@@ -703,7 +879,7 @@ export async function inferScaffold(
 		case 'dge':
 			return await dge(user_prompt, llm)
 		case 'hiercluster':
-			return await hierarchical(user_prompt, llm, genome, genes_list, allowedTermTypes, dataset_json, ds, dbPath)
+			return await hierarchical(user_prompt, llm, genome, genes_list, allowedTermTypes, ds, dbPath, dataset_json)
 		case 'matrix':
 			return await matrix(user_prompt, llm)
 		case 'prebuiltscatter':
