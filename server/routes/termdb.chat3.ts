@@ -16,7 +16,7 @@ import { resolveToTwTvs } from './chat/entity2twTvs.ts'
 import { answerDataQueries } from './chat/dataQueries.ts'
 import path from 'path'
 import fs from 'fs'
-import type { Scaffold, Phrase2EntityResult } from './chat/scaffoldTypes.ts'
+import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './chat/scaffoldTypes.ts'
 import { resolveToPlotState } from './chat/scaffold2state.ts'
 
 export const api: RouteApi = {
@@ -234,7 +234,7 @@ export async function run_chat_pipeline(
 		}
 
 		const subplotType =
-			(scaffoldResult as Scaffold).plotType === 'summary' ? (scaffoldResult as Scaffold).chartType : undefined
+			(scaffoldResult as Scaffold).plotType === 'summary' ? (scaffoldResult as SummaryScaffold).chartType : undefined
 
 		mayLog('#################################################')
 		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")

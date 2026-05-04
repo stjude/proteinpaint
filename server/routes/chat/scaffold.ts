@@ -481,7 +481,131 @@ Query: ${user_prompt}
 	}
 }
 
-async function prebuiltScatter(user_prompt: string, llm: LlmConfig): Promise<PrebuiltScatterScaffold> {
+async function prebuiltScatter(
+	user_prompt: string,
+	llm: LlmConfig,
+	ds: any
+): Promise<PrebuiltScatterScaffold | MsgToUser> {
+	const prebuiltScatterNames: Map<string, string> = new Map()
+	if (ds?.cohort?.scatterplots?.plots) {
+		for (const plot of ds.cohort.scatterplots.plots) {
+			if (plot.name) {
+				prebuiltScatterNames.set(plot.name, plot.descriptionShort)
+			}
+		}
+	}
+
+	// Build a formatted list of available plots for the prompt
+	const availablePlotsList = Array.from(prebuiltScatterNames.entries())
+		.map(([name, description]) => `  - "${name}": ${description}`)
+		.join('\n')
+
+	const prompt = `You are a ProteinPaint prebuilt scatter plot assistant.
+  Your task is to parse a user query about scatter plots based on pre-built dimensionality reduction embeddings (e.g. UMAP, t-SNE, PCA) and return a strict JSON scaffold.
+
+  The user can overlay clinical variables or gene expression on these plots via color or shape.
+
+  ## AVAILABLE PREBUILT SCATTER PLOTS
+  The "name" field MUST be exactly one of the keys listed below. Each key is followed by a short description — use the descriptions to map the user's intent (e.g. "tsne", "t-sne", "umap", "pca", or descriptive phrases) to the correct key.
+
+  ${availablePlotsList}
+
+  ## OUTPUT SCHEMA
+  Return ONLY a valid JSON object — no extra fields, no surrounding text, no explanation, no code fences.
+
+  {
+    "name": <string>,                 // REQUIRED - see rules below
+    "colorBy": <string>,     // OPTIONAL - include only if user specifies coloring intent
+    "shapeBy": <string>      // OPTIONAL - include only if user specifies shaping intent
+  }
+
+  ## RULES FOR "name" (REQUIRED)
+  The "name" field must be one of:
+    (a) An EXACT key from the AVAILABLE PREBUILT SCATTER PLOTS list above — choose this when the user's query clearly matches one of the available plots based on the descriptions.
+    (b) The string "unsure" — choose this when the query mentions a scatter plot or embedding but you cannot confidently determine which available key it corresponds to (e.g. ambiguous phrasing, multiple plausible matches, or vague references).
+    (c) The string "nomatch" — choose this when the query is clearly NOT requesting any of the available prebuilt scatter plots (e.g. the user asks for a plot type that is not in the list, or the query is unrelated to scatter plots entirely).
+
+  Do NOT invent, modify, or paraphrase keys. The exact key string must be copied verbatim from the list.
+
+  ## RULES FOR "colorBy" (OPTIONAL)
+  - Include "colorBy" ONLY if the user explicitly indicates they want to color points by some variable (e.g. "color by sex", "colored by subtype", "colored by age").
+  - Preserve the EXACT phrasing of the variable from the user's query — do not paraphrase, normalize, capitalize, or generalize.
+  - Set "colorBy" to the string "null" (not JSON null) ONLY if the user explicitly asks to remove coloring (e.g. "without coloring", "no color overlay", "color by none", "remove color").
+  - If the user says nothing about coloring, OMIT the "colorBy" field entirely. Do NOT guess or fabricate.
+
+  ## RULES FOR "shapeBy" (OPTIONAL)
+  - Include "shapeBy" ONLY if the user explicitly indicates they want to shape points by some variable (e.g. "shape by treatment response", "shaped by mutation status").
+  - Preserve the EXACT phrasing of the variable from the user's query — do not paraphrase, normalize, capitalize, or generalize.
+  - Set "shapeBy" to the string "null" (not JSON null) ONLY if the user explicitly asks to remove shaping (e.g. "without shaping", "no shape overlay", "shape by none", "remove shape").
+  - If the user says nothing about shaping, OMIT the "shapeBy" field entirely. Do NOT guess or fabricate.
+
+  ## EXAMPLES
+  The following examples assume the available plots include keys whose descriptions match t-SNE, UMAP, and PCA. In your actual output, use the literal key strings from the AVAILABLE PREBUILT SCATTER PLOTS section.
+
+  Query: "Show me a t-SNE plot colored by sex and shaped by subtype"
+  Output:
+  {
+    "name": "<exact key matching t-SNE>",
+    "colorBy": "sex",
+    "shapeBy": "subtype"
+  }
+
+  Query: "Show a UMAP colored by age"
+  Output:
+  {
+    "name": "<exact key matching UMAP>",
+    "colorBy": "age"
+  }
+
+  Query: "PCA plot shaped by treatment response"
+  Output:
+  {
+    "name": "<exact key matching PCA>",
+    "shapeBy": "treatment response"
+  }
+
+  Query: "Show me the t-SNE without any coloring"
+  Output:
+  {
+    "name": "<exact key matching t-SNE>",
+    "colorBy": "null"
+  }
+
+  Query: "Show me a scatter plot"
+  Output:
+  {
+    "name": "unsure"
+  }
+
+  Query: "Show me a bar chart of gene expression"
+  Output:
+  {
+    "name": "nomatch"
+  }
+
+  Query: "Show the embedding plot colored by diagnosis"
+  Output:
+  {
+    "name": "unsure",
+    "colorBy": "diagnosis"
+  }
+
+  ## TASK
+  Parse the following query into the prebuilt scatter scaffold:
+  Query: ${user_prompt}
+  `
+
+	/*
+  const prebuiltScatterNames: Map<string, string> = new Map()
+  if (ds?.cohort?.scatterplots?.plots) {
+      for (const plot of ds.cohort.scatterplots.plots) {
+          if (plot.name) {
+              prebuiltScatterNames.set(plot.name, plot.descriptionShort)
+          }
+      }
+  }
+
+
 	const prompt = `You are a ProteinPaint prebuilt scatter plot assistant. 
   Your task is to determine if the user query is asking for a scatter plot based on pre-built dimensionality reduction embeddings (UMAP, t-SNE, PCA). Extract the necessary variables into a strict JSON scaffold.
   The user can overlay clinical variables or gene expression on these plots via color, shape, or divide (Z). To remove an overlay, set the corresponding field to null. If the user does not specify a plot name, default to 'TermdbTest TSNE'. If the user says 'tsne' or 't-sne' match it to 'TermdbTest TSNE'. This dataset does NOT have UMAP plots
@@ -536,13 +660,24 @@ async function prebuiltScatter(user_prompt: string, llm: LlmConfig): Promise<Pre
 
   Parse the following query into the prebuilt scatter scaffold:
   Query: ${user_prompt}
-  `
+  `*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Prebuilt scatter scaffold: ${response}`)
 	try {
 		const parsed = JSON.parse(response) as PrebuiltScatterScaffold
 		if (!parsed.name)
-			throw new Error('Name of pre-built map (e.g. t-SNE, UMAP, etc) is required for prebuilt scatter scaffold')
+			return {
+				type: 'text',
+				text: 'Name of pre-built map (e.g. t-SNE, UMAP, etc) is required for prebuilt scatter scaffold'
+			}
+		if (parsed.name === 'unsure') {
+			return {
+				type: 'text',
+				text: 'LLM was unsure which prebuilt scatter plot the user query corresponded to based on the descriptions, indicating that the query did not clearly match any of the available options.'
+			}
+		} else if (parsed.name === 'nomatch') {
+			return { type: 'text', text: 'The plot you are asking for is not currently supported.' }
+		}
 		parsed.plotType = 'prebuiltscatter'
 		return parsed
 	} catch {
@@ -572,7 +707,7 @@ export async function inferScaffold(
 		case 'matrix':
 			return await matrix(user_prompt, llm)
 		case 'prebuiltscatter':
-			return await prebuiltScatter(user_prompt, llm)
+			return await prebuiltScatter(user_prompt, llm, ds)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}

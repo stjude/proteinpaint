@@ -1248,6 +1248,8 @@ type DataDownloadCatch = {
 
 type ScatterPlotsEntry = {
 	name: string
+	description: string
+	descriptionShort: string
 	dimension: number
 	file: string
 	coordsColumns?: { x: number; y: number; z?: number }

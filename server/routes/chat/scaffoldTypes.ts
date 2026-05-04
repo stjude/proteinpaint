@@ -96,8 +96,8 @@ export type MatrixPhrase2EntityResult = {
 
 export type PrebuiltScatterPhrase2EntityResult = {
 	name: string
-	colorBy?: Entity
-	shapeBy?: Entity
+	colorBy?: Entity | 'null' // null means user explicitly wants to remove coloring
+	shapeBy?: Entity | 'null' // null means user explicitly wants to remove shaping
 }
 
 export type Phrase2EntityResult =

@@ -441,7 +441,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig) {
 }
 
 export async function resolveToTwTvs(
-	entity: Record<string, Value | Value[] | undefined>,
+	entity: Record<string, Value | Value[] | string | undefined>,
 	plotType: string,
 	llm: LlmConfig,
 	dbPath: string
@@ -537,7 +537,9 @@ export async function resolveToTwTvs(
 			twTvsObjects['name'] = nameValue.phrase
 		}
 
-		if (entity['colorBy']) {
+		if (entity['colorBy'] && entity['colorBy'] === 'null') {
+			twTvsObjects['colorBy'] = 'null'
+		} else if (entity['colorBy']) {
 			const colorByValue = entity['colorBy'] as Value | undefined
 			if (!colorByValue) throw new Error('Invalid colorBy term entity for prebuiltScatter')
 			const termWrapper = await resolveToTw(colorByValue, llm)
@@ -545,7 +547,9 @@ export async function resolveToTwTvs(
 			twTvsObjects['colorBy'] = termWrapper
 		}
 
-		if (entity['shapeBy']) {
+		if (entity['shapeBy'] && entity['shapeBy'] === 'null') {
+			twTvsObjects['shapeBy'] = 'null'
+		} else if (entity['shapeBy']) {
 			const shapeByValue = entity['shapeBy'] as Value | undefined
 			if (!shapeByValue) throw new Error('Invalid shapeBy term entity for prebuiltScatter')
 			const termWrapper = await resolveToTw(shapeByValue, llm)
