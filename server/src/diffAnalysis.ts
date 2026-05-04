@@ -86,7 +86,13 @@ export async function writeDaCache(cacheId: string, geneData: GeneDEEntry[]): Pr
 	await fs.promises.writeFile(file, lines.join('\n'))
 }
 
-/** Returns null on cache miss (ENOENT) so callers can branch on hit vs. miss. */
+const DA_CACHE_COL_COUNT = 5
+
+/** Returns null on cache miss (ENOENT), legacy/short header, or any
+ * malformed data row so callers can branch on hit vs. miss. A truncated
+ * line (interrupted write, hand-edit, partial copy) would otherwise yield
+ * NaNs from `Number(undefined)` and silently propagate into the volcano
+ * renderer + GSEA — safer to discard the file and recompute. */
 export async function readDaCache(cacheId: string): Promise<GeneDEEntry[] | null> {
 	const file = cacheFilePath(cacheId)
 	let text: string
@@ -103,10 +109,11 @@ export async function readDaCache(cacheId: string): Promise<GeneDEEntry[] | null
 	// (no p-values), so return null and let the caller fall back to
 	// runDeFresh, which rewrites the file with the full schema.
 	const header = rows[0].split('\t')
-	if (header.length < 5) return null
+	if (header.length < DA_CACHE_COL_COUNT) return null
 	const data: GeneDEEntry[] = []
 	for (const r of rows.slice(1).filter(Boolean)) {
 		const cols = r.split('\t')
+		if (cols.length < DA_CACHE_COL_COUNT) return null
 		data.push({
 			gene_id: cols[0],
 			gene_name: cols[1],
@@ -579,6 +586,9 @@ export async function writeDmCache(cacheId: string, promoterData: DiffMethEntry[
 
 /** Returns null on cache miss (ENOENT) or on a header column-count mismatch
  * (legacy guard) so callers can branch on hit vs. miss. */
+/** Same defensive contract as readDaCache: null on ENOENT, short header, or
+ * any malformed data row. A truncated line would yield NaNs from
+ * `Number(undefined)` for start/stop/p-values; safer to recompute. */
 export async function readDmCache(cacheId: string): Promise<DiffMethEntry[] | null> {
 	const file = dmCacheFilePath(cacheId)
 	let text: string
@@ -595,6 +605,7 @@ export async function readDmCache(cacheId: string): Promise<DiffMethEntry[] | nu
 	const data: DiffMethEntry[] = []
 	for (const r of rows.slice(1).filter(Boolean)) {
 		const cols = r.split('\t')
+		if (cols.length < DM_CACHE_COL_COUNT) return null
 		data.push({
 			promoter_id: cols[0],
 			gene_name: cols[1],

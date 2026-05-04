@@ -78,6 +78,14 @@ export function openMultiHitClickMenu<T>(opts: OpenMultiHitClickMenuOpts<T>): vo
 		rows: opts.rows,
 		getRowKey: opts.getRowKey as any,
 		singleMode: true,
-		noButtonCallback: (i: number) => opts.onRowClick(opts.items[i], opts.event)
+		// `i` is the sorted-table position, not the original index — after a
+		// column sort it would point at the wrong item. The checkbox node's
+		// `value` is the original index (renderTable sets it from rowsCopy
+		// before sorting), so resolve from there.
+		noButtonCallback: (_i: number, checkbox: HTMLInputElement) => {
+			const originalIdx = Number.parseInt(checkbox.value)
+			if (Number.isNaN(originalIdx)) return
+			opts.onRowClick(opts.items[originalIdx], opts.event)
+		}
 	})
 }

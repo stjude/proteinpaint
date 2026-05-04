@@ -138,14 +138,14 @@ export function setAuthMiddleware(app, genomes, authApi, auth) {
 				// or computeDaCacheId / computeDmCacheId will produce a
 				// different hash and the route throws "cacheId does not match
 				// daRequest". Used for both gene-expression DE (DERequest)
-				// and DNA-methylation DM (DiffMethRequest).
-				if (req.query.daRequest) {
-					try {
-						req.query.daRequest.__protected__ = req.query.__protected__
-						authApi.mayAdjustFilter(req.query.daRequest, ds)
-					} finally {
-						delete req.query.daRequest.__protected__
-					}
+				// and DNA-methylation DM (DiffMethRequest). Type-guard against
+				// non-object daRequest payloads (string, number, etc.) so the
+				// pipeline doesn't crash before route-level validation runs.
+				const daRequest = req.query.daRequest
+				if (daRequest && typeof daRequest === 'object') {
+					daRequest.__protected__ = req.query.__protected__
+					authApi.mayAdjustFilter(daRequest, ds)
+					delete daRequest.__protected__
 				}
 
 				// this flag may be used by downstream code that does not have access to req argument or ds object
