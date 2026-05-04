@@ -1541,12 +1541,11 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			pValue,
 			testedN: Number.isFinite(testedN) ? testedN : null,
 			controlN: Number.isFinite(controlN) ? controlN : null,
+			organism: ptm.organism || null,
+			assayName: ptm.assayName || null,
+			cohortName: ptm.cohortName || null,
+			proteinAccession: ptm.proteinAccession || null,
 			htmlSections: [
-				{ key: 'Assay', html: ptm.assayName || 'NA' },
-				{ key: 'Cohort', html: ptm.cohortName || 'NA' },
-				{ key: 'Organism', html: ptm.organism || 'NA' },
-				{ key: 'Disease', html: ptm.disease || 'NA' },
-				{ key: 'Protein Accession', html: ptm.proteinAccession || 'NA' },
 				{
 					key: 'Action',
 					label: 'Launch Violin Plot',
@@ -1579,14 +1578,18 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			{
 				type: 'numeric',
 				byAttribute: 'logValue',
-				label: 'Log2FC Disease vs Control',
+				label: 'Log2FC',
 				tooltipPrintValue: m => {
 					const p = Number(m.pValue)
 					return [
+						{ k: 'Organism', v: m.organism ?? 'NA' },
+						{ k: 'Assay', v: m.assayName ?? 'NA' },
+						{ k: 'Cohort', v: m.cohortName ?? 'NA' },
 						{ k: 'log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
 						{ k: 'p value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
 						{ k: 'Tested samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
-						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' }
+						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' },
+						{ k: 'Protein Accession', v: m.proteinAccession ?? 'NA' }
 					]
 				},
 				inuse: true,
