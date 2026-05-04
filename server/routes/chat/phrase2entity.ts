@@ -8,10 +8,12 @@ import type {
 	Scaffold,
 	SummaryScaffold,
 	DEScaffold,
+	HierarchicalScaffold,
 	Entity,
 	Phrase2EntityResult,
 	DEPhrase2EntityResult,
 	PrebuiltScatterPhrase2EntityResult,
+	HierPhrase2EntityResult,
 	MsgToUser,
 	MatrixScaffold,
 	PrebuiltScatterScaffold
@@ -528,6 +530,38 @@ export async function phrase2entity(
 			scatter_term.shapeBy = shapeByEntity as Entity
 		}
 		return scatter_term
+	} else if (plotType === 'hiercluster') {
+		const scaffoldResult = scaffold as HierarchicalScaffold
+		const hier_term: HierPhrase2EntityResult = { phrases: [] }
+		for (const phrase of scaffoldResult.hierarchicalPhrases) {
+			const tw1 = await phrase2entitytw(phrase, llm, genes_list, dataset_json, ds)
+			if ('type' in tw1 && tw1.type === 'text') {
+				return tw1 // MsgToUser
+			} else {
+				hier_term.phrases.push(tw1 as Entity)
+			}
+		}
+		if (scaffoldResult.filter) {
+			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+			// Extract all leaf phrases from the filter tree and resolve each to an entity
+			const leafPhrases = collectLeaves(parseFilterResult.tree)
+			hier_term.filter = []
+			for (const leaf of leafPhrases) {
+				mayLog('Evaluating filter leaf:', leaf.phrase)
+				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+				mayLog('filterTw:', filterTw)
+
+				if ('type' in filterTw && filterTw.type === 'text') {
+					return filterTw // MsgToUser
+				}
+				const filterEntity = filterTw as Entity
+				if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+				hier_term.filter.push(filterEntity)
+			}
+			mayLog('Validation result for filter term:', JSON.stringify(hier_term.filter))
+		}
+		return hier_term
 	} else {
 		const msg: MsgToUser = {
 			type: 'text',

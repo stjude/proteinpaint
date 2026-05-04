@@ -166,7 +166,7 @@ async function validate_hiercluster_gene_expression_response(
 	const seen_genes: Set<string> = new Set() // to track genes we've already added from geneNames and genesets to avoid duplicates
 
 	// Not supported cases
-	if (response_type.genesetNames && response_type.topVariablyExpressedGenes) {
+	if (response_type.genesetNames.length > 0 && response_type.topVariablyExpressedGenes) {
 		return {
 			type: 'text',
 			text: 'We do not support using both geneset names and top variably expressed genes for hierarchical clustering. Please specify only one of these in your query.'
@@ -174,7 +174,7 @@ async function validate_hiercluster_gene_expression_response(
 	}
 
 	// If geneset names are provided, resolve them to gene names and add to the geneNames array (while ensuring no duplicates)
-	if (response_type.genesetNames) {
+	if (response_type.genesetNames.length > 0) {
 		// Multiple geneset names not supported (might change)
 		if (response_type.genesetNames.length > 1) {
 			return {

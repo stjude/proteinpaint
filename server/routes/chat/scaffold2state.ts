@@ -103,11 +103,10 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		plotState.method = 'edgeR'
 	} else if (plotType == 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
-		// genes is an array of tw objects produced by resolveToTw() for geneExpression terms
-		const genes = input.genes || []
-		plotState.plot.terms = genes.map((g: any) => (g.term ? g : { term: g }))
-		// All hierCluster entries here are gene expression features; downstream supports other numeric types in the future
-		plotState.plot.dataType = 'geneExpression'
+		// DictPhrases is an array of tw objects produced by resolveToTw() for dictionary terms
+		const DictPhrases = input.DictPhrases || []
+		plotState.plot.terms = DictPhrases.map((g: any) => (g.term ? g : { term: g }))
+		plotState.plot.dataType = 'numericDictTerm'
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}

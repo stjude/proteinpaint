@@ -477,16 +477,22 @@ export async function resolveToTwTvs(
 			twTvsObjects[key] = termWrapper
 		}
 	} else if (plotType === 'hiercluster') {
-		// genes → array of tws; filter → single tvslst
-		const geneValues = entity['genes'] as Value[] | undefined
-		if (!geneValues || geneValues.length === 0) throw new Error('Invalid gene term entity for hierCluster')
-		const geneTws: any[] = []
-		for (const gv of geneValues) {
+		// Dicts → array of tws; filter → single tvslst
+		const DictValues = entity['DictPhrases'] as Value[] | undefined
+		if (!DictValues || DictValues.length === 0) throw new Error('Invalid Dict term entity for hierCluster')
+		const DictTws: any[] = []
+		for (const gv of DictValues) {
 			const tw = await resolveToTw(gv, llm)
-			if (!tw) throw new Error(`Failed to resolve gene tw for phrase "${gv.phrase}"`)
-			geneTws.push(tw)
+			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
+			if (tw.type != 'float' && tw.type != 'integer') {
+				return {
+					type: 'text',
+					text: `Only numeric terms can be used in hierarchical clustering. Term "${gv.phrase}" is of type "${tw.type}". Please rephrase your request using only numeric terms for hierarchical clustering.`
+				} as MsgToUser
+			}
+			DictTws.push(tw)
 		}
-		twTvsObjects['genes'] = geneTws
+		twTvsObjects['DictPhrases'] = DictTws
 
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[]
