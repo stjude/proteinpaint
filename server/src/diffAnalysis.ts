@@ -132,7 +132,7 @@ export async function readDaCacheFile(
 				adjusted_p_value: Number(cols[4])
 			})
 		}
-		return { geneRows }
+		return { kind: 'DE', geneRows }
 	}
 
 	if (header === DM_CACHE_HEADER) {
@@ -151,7 +151,7 @@ export async function readDaCacheFile(
 				stop: Number(cols[7])
 			})
 		}
-		return { promoterRows }
+		return { kind: 'DM', promoterRows }
 	}
 
 	// Unknown header — could be a legacy short-header file or schema drift
@@ -576,7 +576,7 @@ async function doReadOrRecompute(
 		// Cache-hit defense: a shape-mismatched file (DM rows under a DE
 		// cacheId) would only happen via header drift or hand-edits. Treat
 		// as a miss so we recompute and rewrite cleanly.
-		if (cached && 'geneRows' in cached) {
+		if (cached && cached.kind === 'DE') {
 			const groups = resolveSampleGroups(daRequest, ds, term_results, term_results2)
 			if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 			return {
@@ -608,7 +608,7 @@ async function doReadOrRecompute(
 	}
 
 	// DM branch
-	if (cached && 'promoterRows' in cached) {
+	if (cached && cached.kind === 'DM') {
 		const groups = resolveDmSampleGroups(daRequest, ds, term_results, term_results2)
 		if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 		return {
