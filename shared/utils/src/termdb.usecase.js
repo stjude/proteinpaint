@@ -180,7 +180,7 @@ export function isUsableTerm(term, _usecase, termdbConfig, ds) {
 			return uses
 
 		case 'profileForms2': {
-			// Picker (mass/charts.js showFormsToggleTree) sets usecase.cohort + usecase.subtype.
+			// Picker (forms2.ts makeChartBtnMenu) sets usecase.cohort + usecase.subtype.
 			// Reads the per-cohort domains list directly from the dataset config at
 			// plotConfigByCohort[cohort].profileForms2.domains — each entry is { id, plotTypes }.
 			if (term.isleaf) return uses

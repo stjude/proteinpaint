@@ -579,6 +579,89 @@ class ProfileForms2 extends profilePlot {
 	}
 }
 
+/*
+Templates 2 chart-button menu: chart-type tabs over a per-tab cohort-filtered termdb tree.
+Picker config sourced from the dataset's plotConfigByCohort[cohort].profileForms2.{ options, domains }.
+Tabs are sorted by their order in profileFormsOptions so the first option is the default tab.
+Invoked by mass/charts.js loadChartSpecificMenu via the standard chart-specific menu pattern.
+*/
+export async function makeChartBtnMenu(holder, chartsInstance) {
+	const action = {
+		type: 'plot_create',
+		id: (+new Date()).toString(16),
+		config: {
+			chartType: 'profileForms2',
+			activeCohort: chartsInstance.state.activeCohort
+		} as any
+	}
+
+	const termdbConfig = chartsInstance.app.vocabApi.termdbConfig
+	const cohortKey = termdbConfig?.selectCohort?.values?.[chartsInstance.state.activeCohort]?.keys?.[0]
+	const cohortForms2 = termdbConfig?.plotConfigByCohort?.[cohortKey]?.profileForms2
+	const domains = cohortForms2?.domains || []
+	// Sort tabs by their order in profileFormsOptions (dataset-declared canonical order)
+	// so the first option (e.g. Yes/No Barchart) is the default active tab.
+	const tabOrder = (cohortForms2?.options || []).map((o: any) => o.name)
+	const subtypeNames = ([...new Set(domains.flatMap((d: any) => d.plotTypes))] as string[]) // dedupe chart-type labels
+		.sort((a, b) => tabOrder.indexOf(a) - tabOrder.indexOf(b))
+
+	if (!subtypeNames.length) {
+		holder
+			.append('div')
+			.style('padding', '15px')
+			.style('color', '#777')
+			.style('font-style', 'italic')
+			.text('No templates are currently available for this cohort.')
+		return
+	}
+
+	const tabsHolder = holder.append('div').style('padding', '4px 8px')
+	const treeHolder = holder.append('div')
+	let activeSubtype = subtypeNames[0]
+
+	// renderSeq token: drop stale renders when tabs are clicked faster than appInit() resolves.
+	let renderSeq = 0
+	const renderTree = async () => {
+		const mySeq = ++renderSeq
+		treeHolder.selectAll('*').remove()
+		const termdb = await import('../../termdb/app')
+		if (mySeq !== renderSeq) return // preempted before mount
+		const innerHolder = treeHolder.append('div')
+		await termdb.appInit({
+			vocabApi: chartsInstance.app.vocabApi,
+			holder: innerHolder,
+			state: {
+				activeCohort: chartsInstance.state.activeCohort,
+				nav: { header_mode: 'search_only' },
+				tree: {
+					usecase: { target: 'profileForms2', detail: 'tw', cohort: cohortKey, subtype: activeSubtype }
+				}
+			},
+			tree: {
+				click_term: term => {
+					const tw = term.term ? term : { term }
+					action.config.tw = tw
+					chartsInstance.dom.tip.hide()
+					chartsInstance.app.dispatch(action)
+				}
+			}
+		})
+		if (mySeq !== renderSeq) innerHolder.remove() // preempted during mount
+	}
+
+	const { Tabs } = await import('#dom/toggleButtons')
+	const tabs = subtypeNames.map(name => ({
+		label: name,
+		active: name === activeSubtype,
+		callback: () => {
+			activeSubtype = name
+			renderTree()
+		}
+	}))
+	// Tabs.main() auto-fires the active tab's callback, so initial render happens there.
+	await new Tabs({ holder: tabsHolder, tabsPosition: 'horizontal', tabs }).main()
+}
+
 export async function getPlotConfig(opts, app, _activeCohort) {
 	const activeCohort = _activeCohort === undefined ? app.getState().activeCohort : _activeCohort
 	const formsConfig = await getProfilePlotConfig(activeCohort, app, opts)
