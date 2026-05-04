@@ -29,8 +29,6 @@ export class SessionWSImage extends WSImage {
 		if (allSelections.length < 2) return ''
 		const nextID: string =
 			currentIndex === allSelections.length - 1 ? allSelections[0].id : allSelections[currentIndex + 1].id
-		console.trace('current index', currentIndex, nextID)
-
 		return nextID
 	}
 

@@ -73,7 +73,6 @@ function validateQuery(ds: any, connection: Database.Database) {
 					}
 				}
 
-				// Derive prediction_id from common fields on the tileSelection payload
 				const predictionId = query.classID
 				const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
 				const flagType = query.tileSelection.flag

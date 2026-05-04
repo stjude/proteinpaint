@@ -144,10 +144,12 @@ export class WSIViewerInteractions {
 					//Do not react if at the starting annotation
 					if (currentIndex === 0) {
 						// If at the starting tileselection, find the the most recent Annotation by checking for timestamp property
-						currentIndex =
-							tileSelections.findIndex(
-								ts => ts.id.startsWith(SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
-							) || 0
+						currentIndex = tileSelections.findIndex(
+							ts => ts.id.startsWith(SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
+						)
+						if (currentIndex === -1) {
+							currentIndex = 0
+						}
 					} else {
 						currentIndex -= 1
 					}
@@ -182,7 +184,6 @@ export class WSIViewerInteractions {
 					const classID: number | undefined = sessionWSImage?.classes?.find(
 						c => c.label === tileSelections[currentIndex].class
 					)?.id
-					if (classID === undefined) return
 					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex, classID)
 				}
 				if (event.key.toLowerCase() === 'r') {
@@ -619,7 +620,7 @@ export class WSIViewerInteractions {
 		vectorLayer: VectorLayer<any, any>,
 		sessionWSImage: SessionWSImage,
 		currentIndex: number,
-		classID: number
+		classID: number | undefined
 	) {
 		const state = wsiApp.app.getState()
 		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
@@ -686,7 +687,12 @@ export class WSIViewerInteractions {
 			})
 			return
 		}
-
+		if (classID === undefined) {
+			console.warn('deleteAnnotation called but classID is undefined for tileSelection', {
+				tileSelection
+			})
+			return
+		}
 		const prediction = tileSelections[currentIndex]
 		prediction.flag = FlagStatus.Deleted
 		const body: DeleteWSITileSelectionRequest = {

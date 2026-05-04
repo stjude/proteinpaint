@@ -434,7 +434,7 @@ export function createStarFeature(
 
 /**
  NOTE: If you provide a VectorSource the starFeature will be added to it instead of just created 
- This function also defualts to using hexcode for color
+ This function also defaults to using hexcode for color
  */
 export function createDimSquareFeature(
 	annotationCoords: [number, number],

@@ -67,7 +67,14 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const status = 1
 			const flag = tileSelection.flag
 			const classId = annotation.classId
-
+			const isAnnotation = tileSelection.id.startsWith(SelectionPrefixes.Annotation)
+			const isPrediction = tileSelection.id.startsWith(SelectionPrefixes.Prediction)
+			if (!isAnnotation && !isPrediction) {
+				return {
+					status: 'error',
+					error: `Invalid tileSelection id "${tileSelection.id}". Must start with "${SelectionPrefixes.Annotation}" or "${SelectionPrefixes.Prediction}".`
+				}
+			}
 			if (projectId == null || wsimageFilename == null) {
 				return {
 					status: 'error',
@@ -112,7 +119,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				)
 				.run(projectId, imageId, coords)
 
-			if (tileSelection.id.startsWith(SelectionPrefixes.Annotation)) {
+			if (isAnnotation) {
 				const insertSql = `
 				INSERT INTO project_flagged_annotations (
 					project_id, user_id, coordinates, timestamp, status, flagged,class_id, image_id
@@ -134,7 +141,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				const userId = userRow?.id
 
 				insertStmt.run(projectId, userId, coords, timestamp, status, flag, classId, imageId)
-			} else if (tileSelection.id.startsWith(SelectionPrefixes.Prediction)) {
+			} else if (isPrediction) {
 				// Not returning if flag is normal only flagged predictions are saved, but unflagged need to be deleted as above
 				if (tileSelection.flag !== FlagStatus.Normal) {
 					const insertSql = `
