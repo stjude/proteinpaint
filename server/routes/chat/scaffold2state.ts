@@ -105,7 +105,14 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		plotState.plot.chartType = 'hierCluster'
 		// DictPhrases is an array of tw objects produced by resolveToTw() for dictionary terms
 		const DictPhrases = input.DictPhrases || []
-		plotState.plot.terms = DictPhrases.map((g: any) => (g.term ? g : { term: g }))
+		const termgroups: any = []
+		const termgroup: any = {}
+		termgroup.lst = DictPhrases
+		termgroup.type = 'hiercluster'
+		termgroup.name = 'Clinical Variables'
+		termgroups.push(termgroup)
+		console.log('termgroups:', termgroups)
+		plotState.plot.termgroups = termgroups
 		plotState.plot.dataType = 'numericDictTerm'
 		if (input.filter) {
 			plotState.plot.filter = input.filter
