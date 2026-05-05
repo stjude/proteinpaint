@@ -18,7 +18,7 @@ export function renderAssayAndCohortRadios({
 	onChange,
 	organismTitle = 'Organism',
 	assayTitle = 'Assay Type',
-	cohortTitle = 'Cohort'
+	cohortTitle = 'Sample Set'
 }: RenderAssayAndCohortRadiosOpts) {
 	const organismEntries = Object.entries(organisms || {})
 	if (!organismEntries.length) {
@@ -160,8 +160,13 @@ export function renderAssayAndCohortRadios({
 			return
 		}
 
-		if (!selectedCohort || !organisms[selectedOrganism || '']?.assays?.[selectedAssay || '']?.cohorts?.[selectedCohort]) {
-			selectedCohort = cohorts.includes(initialProteomeDetails.cohort || '') ? initialProteomeDetails.cohort : cohorts[0]
+		if (
+			!selectedCohort ||
+			!organisms[selectedOrganism || '']?.assays?.[selectedAssay || '']?.cohorts?.[selectedCohort]
+		) {
+			selectedCohort = cohorts.includes(initialProteomeDetails.cohort || '')
+				? initialProteomeDetails.cohort
+				: cohorts[0]
 		}
 
 		for (const cohortKey of cohorts) {
@@ -213,7 +218,7 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 					target: 'proteomeAbundance',
 					detail: 'term',
 					proteomeDetails: { organism, assay, cohort },
-					label: `Organism: ${organism}; Assay: ${assay}; Cohort: ${cohort}`
+					label: `Organism: ${organism}; Assay: ${assay}; Sample set: ${cohort}`
 				},
 				processSelection: (termlst: any[]) => termlst,
 				updateActionBySelectedTerms: (action: any, termlst: any[]) => {
