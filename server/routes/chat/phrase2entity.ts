@@ -102,15 +102,18 @@ async function validateNonDictionaryTypes(
 			msg.text = AmbiguousGeneMessage
 			return msg
 		}
-		const geneDataTypeMessage: GeneDataTypeResult | string = (await classifyGeneDataTypePhrase(
+		const geneDataTypeMessage: GeneDataTypeResult | string | null = (await classifyGeneDataTypePhrase(
 			// This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
 			phrase,
 			llm,
 			relevant_genes,
 			dataset_json
-		)) as GeneDataTypeResult | string
+		)) as GeneDataTypeResult | string | null
 
-		if (typeof geneDataTypeMessage === 'string') {
+		if (geneDataTypeMessage === null) {
+			// This will be null when a word could be both a gene/metabolite and a dictionary variable for e.g. A molecular subtype named "KMT2A" which is also a gene. When classifyGeneDataTypePhrase() classifies it as a dictionary variable, it returns null for geneDataTypeMessage, and then we want to return null from this function so that the main phrase2entity function can continue processing it as a dictionary variable rather than a nonDictionary variable.
+			return null
+		} else if (typeof geneDataTypeMessage === 'string') {
 			if (geneDataTypeMessage.length > 0) {
 				// This shows error is any of the genes are missing relevant features
 				msg.text = geneDataTypeMessage
@@ -394,44 +397,44 @@ Parse the following query:
 Query: ${phrase}
 `
 	/*
-    const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. 
-    Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patients as leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
+const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. 
+Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patients as leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
 
-    ### Scope nouns (NEVER a leaf on their own)
-    Generic population words — "patients", "people", "subjects", "individuals", "cases", "participants" — are scope words, not constraints. They introduce the population being filtered. When a scope noun appears with a modifier, the leaf is the modifier-noun unit as a whole; the scope noun does NOT become a separate leaf.
+### Scope nouns (NEVER a leaf on their own)
+Generic population words — "patients", "people", "subjects", "individuals", "cases", "participants" — are scope words, not constraints. They introduce the population being filtered. When a scope noun appears with a modifier, the leaf is the modifier-noun unit as a whole; the scope noun does NOT become a separate leaf.
 
 PARSING RULES:
 
 1. IMPLICIT AND (adjacency)
-   Adjacent words that form a single semantic unit (adjective + noun, modifier + noun) are grouped with an implicit AND.
-   "black males"  → (&, black, males)
-   "white women"  → (&, white, women)
-   "tall old man" → (&, (&, tall, old), man)  [chain left-to-right]
+Adjacent words that form a single semantic unit (adjective + noun, modifier + noun) are grouped with an implicit AND.
+"black males"  → (&, black, males)
+"white women"  → (&, white, women)
+"tall old man" → (&, (&, tall, old), man)  [chain left-to-right]
 
 2. EXPLICIT AND
-   The word "and" between two groups produces an & operator node.
-   "black males and white women" → (&, (&, black, males), (&, white, women))
+The word "and" between two groups produces an & operator node.
+"black males and white women" → (&, (&, black, males), (&, white, women))
 
 3. EXPLICIT OR
-   The word "or" between two groups produces a | operator node.
-   "black males or white women" → (|, (&, black, males), (&, white, women))
+The word "or" between two groups produces a | operator node.
+"black males or white women" → (|, (&, black, males), (&, white, women))
 
 4. NO OPERATOR PRECEDENCE
-   Do NOT apply any precedence rules. Do NOT reorder or regroup based on operator type.
-   Parse strictly left-to-right. The operator encountered first wraps the groups encountered first.
-   "A and B or C"  → (|, (&, A, B), C)   [NOT (&, A, (|, B, C))]
-   "A or B or C"   → (|, (|, A, B), C)    [NOT (&, A, (|, B, C))]
-   "A or B and C"  → (&, (|, A, B), C)    [NOT (|, A, (&, B, C))]
+Do NOT apply any precedence rules. Do NOT reorder or regroup based on operator type.
+Parse strictly left-to-right. The operator encountered first wraps the groups encountered first.
+"A and B or C"  → (|, (&, A, B), C)   [NOT (&, A, (|, B, C))]
+"A or B or C"   → (|, (|, A, B), C)    [NOT (&, A, (|, B, C))]
+"A or B and C"  → (&, (|, A, B), C)    [NOT (|, A, (&, B, C))]
 
 5. BINARY TREE ONLY
-   Every operator node has exactly two children: left and right.
-   For three or more groups connected by the same operator, chain left-to-right:
-   "A and B and C"       → (&, (&, A, B), C)
-   "A or B or C or D"    → (|, (|, (|, A, B), C), D)
+Every operator node has exactly two children: left and right.
+For three or more groups connected by the same operator, chain left-to-right:
+"A and B and C"       → (&, (&, A, B), C)
+"A or B or C or D"    → (|, (|, (|, A, B), C), D)
 
 6. LEAVES
-   A leaf is a single word or a multi-word unit already grouped by implicit AND.
-   Leaves have no operator — they are atomic terms in the tree.
+A leaf is a single word or a multi-word unit already grouped by implicit AND.
+Leaves have no operator — they are atomic terms in the tree.
 
 OUTPUT FORMAT:
 Return ONLY valid JSON conforming to the following JSON schema. No explanation. No markdown. No extra keys.
@@ -440,75 +443,75 @@ JSON Schema:
 ${JSON.stringify(filterTreeJsonSchema, null, 2)}
 
 Each node is one of:
-  Operator node: { "op": "&" | "|", "left": <node>, "right": <node> }
-  Leaf node:     { "leaf": "word or phrase" }
+Operator node: { "op": "&" | "|", "left": <node>, "right": <node> }
+Leaf node:     { "leaf": "word or phrase" }
 
 EXAMPLES:
 
 Input: black males and white women
 Output: {
-  "sexpr": "(&, (&, black, males), (&, white, women))",
-  "tree": {
-     "op": "&",
-     "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
-     "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
-  }
+"sexpr": "(&, (&, black, males), (&, white, women))",
+"tree": {
+ "op": "&",
+ "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+ "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+}
 }
 
 Input: patients with age of diagnosis less than 15yrs
 Output: {
-  "sexpr": "(age < 15yrs)",
-  "tree": "age < 15yrs"
+"sexpr": "(age < 15yrs)",
+"tree": "age < 15yrs"
 }
 
 Input: patients with TP53 expression less than 10
 Output: {
-  "sexpr": "(TP53 expression < 10)",
-  "tree": "TP53 expression < 10"
+"sexpr": "(TP53 expression < 10)",
+"tree": "TP53 expression < 10"
 }
 
 Input: black males and white women or asian men
 Output: {
-  "sexpr": "(|, (&, (&, black, males), (&, white, women)), (&, asian, men))",
-  "tree": {
-    "op": "|",
-    "left": {
-      "op": "&",
-      "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
-      "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
-    },
-    "right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
-  }
+"sexpr": "(|, (&, (&, black, males), (&, white, women)), (&, asian, men))",
+"tree": {
+"op": "|",
+"left": {
+  "op": "&",
+  "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+  "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+},
+"right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
+}
 }
 
 Input: black males or white women and asian men
 Output: {
-  "sexpr": "(&, (|, (&, black, males), (&, white, women)), (&, asian, men))",
-  "tree": {
-    "op": "&",
-    "left": {
-      "op": "|",
-      "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
-      "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
-    },
-    "right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
-  }
+"sexpr": "(&, (|, (&, black, males), (&, white, women)), (&, asian, men))",
+"tree": {
+"op": "&",
+"left": {
+  "op": "|",
+  "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+  "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+},
+"right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
+}
 }
 
 Input: age > 60yrs
 Output: {
-  "sexpr": "(age > 60yrs)",
-  "tree": "age > 60yrs"
+"sexpr": "(age > 60yrs)",
+"tree": "age > 60yrs"
 }
 
 Input: men with age greater than 60 years
 Output: {
-  "sexpr": "(&, (men), (age > 60 years))",
-  "tree": {
-    "op": "&",
-    "left": { "leaf": "men" },
-    "right": { "leaf": "age > 60 years" }
-  }
+"sexpr": "(&, (men), (age > 60 years))",
+"tree": {
+"op": "&",
+"left": { "leaf": "men" },
+"right": { "leaf": "age > 60 years" }
+}
 }
 
 Parse the following query:

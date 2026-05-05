@@ -26,7 +26,6 @@ export const GENE_FEATURE_KEYWORDS: string[] = [
 	'fpkm',
 	'rpkm',
 	'tpm',
-	'counts',
 	'gene expression',
 	'upregulated',
 	'downregulated',
