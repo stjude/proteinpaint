@@ -562,6 +562,14 @@ export async function resolveToTwTvs(
 			if (!termWrapper) throw new Error(`Failed to resolve shapeBy term for phrase "${shapeByValue.phrase}"`)
 			twTvsObjects['shapeBy'] = termWrapper
 		}
+
+		if (entity['filter']) {
+			const filterValues = entity['filter'] as Value[] | undefined
+			if (!filterValues) throw new Error(`Invalid term entity for key filter`)
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects['filter'] = termWrapper
+		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'
 	}

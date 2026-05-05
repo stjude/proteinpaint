@@ -75,39 +75,6 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	}
 
 	try {
-		/*
-		const response = await fetch(apilink, {
-			method: 'POST',
-			body: JSON.stringify(payload),
-			headers: { 'Content-Type': 'application/json' }
-		})
-		if (!response.ok) {
-			throw new Error(`HTTP error! status: ${response.status}`);
-		}
-
-		// Read as text instead of JSON
-		const rawText = await response.text();
-		// Sanitize invalid JSON values
-		const sanitizedText = rawText
-			.replace(/-Infinity/g, 'null')
-			.replace(/Infinity/g, 'null')
-			.replace(/NaN/g, 'null');
-
-		let data;
-		try {
-			data = JSON.parse(sanitizedText);
-		} catch (parseErr) {
-			console.error('Failed to parse response:', rawText);
-			throw new Error('Invalid JSON response from API');
-		}
-
-		console.log('Data: ', data)
-		console.log('Gen text output from SJ LLM API:', data.outputs?.[0]?.generated_text)
-		console.log('logprobs from SJ LLM API:', data.outputs?.[0]?.logprobs)
-
-		return data.outputs?.[0]?.generated_text 
-		*/
-
 		const response = await ezFetch(apilink, {
 			method: 'POST',
 			body: payload,
@@ -121,8 +88,15 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 		} else {
 			throw 'Error: Received an unexpected response format:' + response
 		}
-	} catch (error) {
-		throw 'SJ API request failed:' + error
+	} catch (error: unknown) {
+		console.error('SJ API request failed. Underlying error:', error)
+		if (error && typeof error == 'object' && 'cause' in error)
+			console.error('Cause:', (error as { cause?: unknown }).cause)
+		// Re-throw a real Error that preserves the original
+		throw new Error('SJ API request failed: ' + ((error as { message?: string })?.message ?? error), {
+			cause: error
+		})
+		// throw 'SJ API request failed:' + error
 	}
 }
 
