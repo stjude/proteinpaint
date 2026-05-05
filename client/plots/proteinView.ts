@@ -1217,13 +1217,17 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.text('Change shape')
 					.on('click', () => {
 						div.selectAll('*').remove()
-						shapeSelector(div, (index: number) => {
-							const shapeKey = isCustomShapeGroupKey(name) ? getCustomShapeGroupNameFromKey(name) : name
-							activeShapeMap.set(shapeKey, index)
-							updateDots()
-							renderColorLegend()
-							menu.hide()
-						})
+						shapeSelector(
+							div,
+							(index: number) => {
+								const shapeKey = isCustomShapeGroupKey(name) ? getCustomShapeGroupNameFromKey(name) : name
+								activeShapeMap.set(shapeKey, index)
+								updateDots()
+								renderColorLegend()
+								menu.hide()
+							},
+							prioritizedShapesArray
+						)
 					})
 
 				if (isCustomShapeGroupKey(name))
@@ -1532,11 +1536,11 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 						{ k: 'Organism', v: m.organism ?? 'NA' },
 						{ k: 'Assay', v: m.assayName ?? 'NA' },
 						{ k: 'Sample set', v: m.cohortName ?? 'NA' },
-						{ k: 'log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
-						{ k: 'p value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
-						{ k: 'Treated samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
+						{ k: 'Log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
+						{ k: 'P value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
+						{ k: 'Case samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
 						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' },
-						{ k: 'Protein Accession', v: m.proteinAccession ?? 'NA' }
+						{ k: 'Protein accession', v: m.proteinAccession ?? 'NA' }
 					]
 				},
 				inuse: true,
