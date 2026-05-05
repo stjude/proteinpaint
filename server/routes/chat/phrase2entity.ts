@@ -212,7 +212,193 @@ export async function phrase2entitytw(
  * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
  */
 export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
-	const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patientsas leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
+	const prompt = `You are an assistant that analyzes a filter term written in natural language and converts it into a nested binary S-expression tree using two operators: AND (&) and OR (|).
+Do NOT generate code. You yourself must produce the tree. Return ONLY a JSON string — no explanations, no markdown, no extra keys.
+
+## CORE PRINCIPLE: WHAT IS A LEAF?
+A leaf represents ONE filter constraint along ONE dimension (e.g. sex, race, age, diagnosis, gene expression). A leaf is whatever phrase, taken as a whole, expresses a single criterion along a single dimension.
+
+To decide whether a phrase is one leaf or multiple leaves, ask: "Does this phrase combine constraints from MORE THAN ONE dimension?"
+  - If YES → split it into one leaf per dimension, joined by implicit AND.
+  - If NO → it is a single leaf.
+
+### Dimensions (each is independent and produces a separate leaf)
+Examples of independent dimensions: sex/gender, race/ethnicity, age, diagnosis, treatment, mutation status, gene expression, time/year, etc.
+
+### Scope nouns (NEVER a leaf on their own)
+Generic population words — "patients", "people", "subjects", "individuals", "cases", "participants" — are scope words, not constraints. They introduce the population being filtered. When a scope noun appears with a modifier, the leaf is the modifier-noun unit as a whole; the scope noun does NOT become a separate leaf.
+
+## LEAF EXTRACTION EXAMPLES
+
+Single dimension → ONE leaf:
+  "female patients"           → leaf: "female patients"          (sex only; "patients" is scope)
+  "young patients"            → leaf: "young patients"           (age only)
+  "diabetic patients"         → leaf: "diabetic patients"        (diagnosis only)
+  "patients with diabetes"    → leaf: "diabetes"                 (diagnosis only)
+  "patients older than 60"    → leaf: "age > 60"                 (age only)
+  "TP53 expression < 10"      → leaf: "TP53 expression < 10"     (gene expression only)
+
+Multiple dimensions → SPLIT into one leaf per dimension, joined by implicit AND:
+  "black males"               → (&, black, males)                (race + sex)
+  "white women"               → (&, white, women)                (race + sex)
+  "young black women"         → (&, (&, young, black), women)    (age + race + sex; chain left-to-right)
+  "black diabetic patients"   → (&, black, diabetic patients)    (race + diagnosis; "patients" stays attached to "diabetic")
+  "young women with diabetes" → (&, young women, diabetes)       ("young women" already covers age+sex as ONE unit only if you consider them inseparable — but since age and sex are independent dimensions, prefer (&, (&, young, women), diabetes))
+
+When in doubt, split along independent biological/clinical dimensions. Do NOT, however, split a modifier away from a scope noun: "female patients" stays as ONE leaf because "patients" is scope, not a dimension.
+
+## PARSING RULES
+
+1. IDENTIFY LEAVES FIRST. Read the whole phrase and find each independent filter constraint along its own dimension. Each constraint is one leaf.
+
+2. IMPLICIT AND (multi-dimensional descriptors). When adjacent words describe DIFFERENT dimensions of the same group (e.g. "black males" = race + sex), join them with implicit AND, chained left-to-right.
+   "black males"     → (&, black, males)
+   "tall old man"    → (&, (&, tall, old), man)
+   "young black women" → (&, (&, young, black), women)
+
+3. EXPLICIT AND. The word "and" between two groups produces an & operator node.
+   "black males and white women" → (&, (&, black, males), (&, white, women))
+
+4. EXPLICIT OR. The word "or" between two groups produces an | operator node.
+   "black males or white women" → (|, (&, black, males), (&, white, women))
+
+5. NO OPERATOR PRECEDENCE. Parse strictly left-to-right. The operator encountered first wraps the groups encountered first.
+   "A and B or C"  → (|, (&, A, B), C)
+   "A or B or C"   → (|, (|, A, B), C)
+   "A or B and C"  → (&, (|, A, B), C)
+
+6. BINARY TREE ONLY. Every operator node has exactly two children. For three or more groups joined by the same operator, chain left-to-right.
+   "A and B and C"     → (&, (&, A, B), C)
+   "A or B or C or D"  → (|, (|, (|, A, B), C), D)
+
+7. SINGLE-CONSTRAINT QUERIES. If the entire phrase expresses one constraint with no AND/OR and no multi-dimensional descriptor, the "tree" field is just the leaf string (no operator node).
+
+## OUTPUT FORMAT
+Return ONLY valid JSON conforming to this schema:
+
+${JSON.stringify(filterTreeJsonSchema, null, 2)}
+
+Each node is one of:
+  Operator node: { "op": "&" | "|", "left": <node>, "right": <node> }
+  Leaf node:     { "leaf": "phrase representing one constraint along one dimension" }
+
+## EXAMPLES
+
+Input: female patients
+Output: {
+  "sexpr": "(female patients)",
+  "tree": {"leaf":"female patients"}
+}
+
+Input: patients with age of diagnosis less than 15yrs
+Output: {
+  "sexpr": "(age of diagnosis < 15yrs)",
+  "tree": {"leaf":"age of diagnosis < 15yrs"}
+}
+
+Input: patients with TP53 expression less than 10
+Output: {
+  "sexpr": "(TP53 expression < 10)",
+  "tree": {"leaf":"TP53 expression < 10"}
+}
+
+Input: age > 60yrs
+Output: {
+  "sexpr": "(age > 60yrs)",
+  "tree": {"leaf":"age > 60yrs"}
+}
+
+Input: black males
+Output: {
+  "sexpr": "(&, black, males)",
+  "tree": {
+    "op": "&",
+    "left":  { "leaf": "black" },
+    "right": { "leaf": "males" }
+  }
+}
+
+Input: black males and white women
+Output: {
+  "sexpr": "(&, (&, black, males), (&, white, women))",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "&",
+      "left":  { "leaf": "black" },
+      "right": { "leaf": "males" }
+    },
+    "right": {
+      "op": "&",
+      "left":  { "leaf": "white" },
+      "right": { "leaf": "women" }
+    }
+  }
+}
+
+Input: black males or white women and asian men
+Output: {
+  "sexpr": "(&, (|, (&, black, males), (&, white, women)), (&, asian, men))",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "|",
+      "left": {
+        "op": "&",
+        "left":  { "leaf": "black" },
+        "right": { "leaf": "males" }
+      },
+      "right": {
+        "op": "&",
+        "left":  { "leaf": "white" },
+        "right": { "leaf": "women" }
+      }
+    },
+    "right": {
+      "op": "&",
+      "left":  { "leaf": "asian" },
+      "right": { "leaf": "men" }
+    }
+  }
+}
+
+Input: female patients with TP53 expression greater than 5
+Output: {
+  "sexpr": "(&, female patients, TP53 expression > 5)",
+  "tree": {
+    "op": "&",
+    "left":  { "leaf": "female patients" },
+    "right": { "leaf": "TP53 expression > 5" }
+  }
+}
+
+Input: young black women with diabetes
+Output: {
+  "sexpr": "(&, (&, (&, young, black), women), diabetes)",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "&",
+      "left": {
+        "op": "&",
+        "left":  { "leaf": "young" },
+        "right": { "leaf": "black" }
+      },
+      "right": { "leaf": "women" }
+    },
+    "right": { "leaf": "diabetes" }
+  }
+}
+
+Parse the following query:
+Query: ${phrase}
+`
+	/*
+    const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. 
+    Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patients as leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
+
+    ### Scope nouns (NEVER a leaf on their own)
+    Generic population words — "patients", "people", "subjects", "individuals", "cases", "participants" — are scope words, not constraints. They introduce the population being filtered. When a scope noun appears with a modifier, the leaf is the modifier-noun unit as a whole; the scope noun does NOT become a separate leaf.
 
 PARSING RULES:
 
@@ -315,10 +501,20 @@ Output: {
   "tree": "age > 60yrs"
 }
 
+Input: men with age greater than 60 years
+Output: {
+  "sexpr": "(&, (men), (age > 60 years))",
+  "tree": {
+    "op": "&",
+    "left": { "leaf": "men" },
+    "right": { "leaf": "age > 60 years" }
+  }
+}
 
 Parse the following query:
 Query: ${phrase}
 `
+*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog('filter response:', response)
 	try {
@@ -488,20 +684,11 @@ export async function phrase2entity(
 			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
 			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
-			const leafPhrases = collectLeaves(parseFilterResult.tree)
-			matrix_term.filter = [] as Entity[]
-			for (const leaf of leafPhrases) {
-				mayLog('Evaluating filter leaf:', leaf.phrase)
-				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
-				mayLog('filterTw:', filterTw)
-
-				if ('type' in filterTw && filterTw.type === 'text') {
-					return filterTw // MsgToUser
-				}
-				const filterEntity = filterTw as Entity
-				if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-				matrix_term.filter.push(filterEntity)
+			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			if ('type' in filter_term && filter_term.type === 'text') {
+				return filter_term // MsgToUser
 			}
+			matrix_term.filter = filter_term as Entity[]
 			mayLog('Validation result for filter term:', JSON.stringify(matrix_term.filter))
 		}
 		return matrix_term
@@ -528,6 +715,26 @@ export async function phrase2entity(
 			}
 			mayLog(`Validation result for shapeBy "${scaffoldResult.shapeBy}":`, shapeByEntity)
 			scatter_term.shapeBy = shapeByEntity as Entity
+		}
+		if (scaffoldResult.filter) {
+			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			// mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+			// Extract all leaf phrases from the filter tree and resolve each to an entity
+			const leafPhrases = collectLeaves(parseFilterResult.tree)
+			scatter_term.filter = []
+			for (const leaf of leafPhrases) {
+				mayLog('Evaluating filter leaf:', leaf.phrase)
+				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+				mayLog('filterTw:', filterTw)
+
+				if ('type' in filterTw && filterTw.type === 'text') {
+					return filterTw // MsgToUser
+				}
+				const filterEntity = filterTw as Entity
+				if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
+				scatter_term.filter.push(filterEntity)
+			}
+			mayLog('Validation result for filter term:', JSON.stringify(scatter_term.filter))
 		}
 		return scatter_term
 	} else if (plotType === 'hiercluster') {

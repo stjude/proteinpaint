@@ -515,9 +515,10 @@ async function prebuiltScatter(
   Return ONLY a valid JSON object — no extra fields, no surrounding text, no explanation, no code fences.
 
   {
-    "name": <string>,                 // REQUIRED - see rules below
+    "name": <string>,        // REQUIRED - see rules below
     "colorBy": <string>,     // OPTIONAL - include only if user specifies coloring intent
-    "shapeBy": <string>      // OPTIONAL - include only if user specifies shaping intent
+    "shapeBy": <string>,     // OPTIONAL - include only if user specifies shaping intent
+    "filter": <string>       // OPTIONAL - A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males")
   }
 
   ## RULES FOR "name" (REQUIRED)
@@ -539,6 +540,12 @@ async function prebuiltScatter(
   - Preserve the EXACT phrasing of the variable from the user's query — do not paraphrase, normalize, capitalize, or generalize.
   - Set "shapeBy" to the string "null" (not JSON null) ONLY if the user explicitly asks to remove shaping (e.g. "without shaping", "no shape overlay", "shape by none", "remove shape").
   - If the user says nothing about shaping, OMIT the "shapeBy" field entirely. Do NOT guess or fabricate.
+
+  ## RULES FOR "filter" (OPTIONAL)
+  - Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). 
+  - Use contextual understanding to confirm that it's a grouping variable
+  - Preserve the EXACT phrasing of the variable from the user's query — do not paraphrase, normalize, capitalize, or generalize.
+  - If the user says nothing about filtering, OMIT the "filter" field entirely. Do NOT guess or fabricate.
 
   ## EXAMPLES
   The following examples assume the available plots include keys whose descriptions match t-SNE, UMAP, and PCA. In your actual output, use the literal key strings from the AVAILABLE PREBUILT SCATTER PLOTS section.

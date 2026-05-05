@@ -46,6 +46,7 @@ export type PrebuiltScatterScaffold = {
 	name: string
 	colorBy?: string
 	shapeBy?: string
+	filter?: string
 }
 
 export type Scaffold = SummaryScaffold | DEScaffold | MatrixScaffold | HierarchicalScaffold | PrebuiltScatterScaffold
@@ -105,6 +106,7 @@ export type PrebuiltScatterPhrase2EntityResult = {
 	name: string
 	colorBy?: Entity | 'null' // null means user explicitly wants to remove coloring
 	shapeBy?: Entity | 'null' // null means user explicitly wants to remove shaping
+	filter?: Entity[]
 }
 
 export type Phrase2EntityResult =

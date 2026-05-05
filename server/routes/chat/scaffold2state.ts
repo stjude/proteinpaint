@@ -9,7 +9,7 @@ function isDictionaryTerm(term: any) {
 }
 
 function isValidSubplot(subplotType: string, input: any): boolean {
-	const validSubplots = ['barchart', 'violin', 'box', 'sampleScatter']
+	const validSubplots = ['barchart', 'violin', 'boxplot', 'sampleScatter']
 	if (!validSubplots.includes(subplotType)) {
 		mayLog(`Subplot type: "${subplotType}" is not supported. Supported subplot types are: ${validSubplots.join(', ')}`)
 		return false
@@ -22,7 +22,7 @@ function isValidSubplot(subplotType: string, input: any): boolean {
 			// return false
 		}
 		// Violin/Box plot: 2 terms required: One term must be numeric and continuous. The other: anything from the TermTypeSearch list
-	} else if (subplotType === 'violin' || subplotType === 'box') {
+	} else if (subplotType === 'violin' || subplotType === 'boxplot') {
 		// requires at least 2 terms
 		if (!input.tw1 || !input.tw2) {
 			mayLog(`${subplotType} subplot requires two terms (tw1 and tw2), but one or both are missing in the input.`)
@@ -66,7 +66,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 	const plotState: any = { type: 'plot', plot: { chartType: plotType } }
 
 	if (plotType === 'summary') {
-		// default to violing for summary if not provided
+		// default to violin for summary if not provided
 		if (subplotType) {
 			plotState.plot.childType = subplotType
 			if (!isValidSubplot(subplotType, input)) {
@@ -78,12 +78,10 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		// for non-dict term, it needs to be within term: {}
 		// but, for dictionary term, it can be supplied as is
 		if (input.tw1) {
-			mayLog('input.tw1:', input.tw1)
 			plotState.plot.term = isDictionaryTerm(input.tw1) ? input.tw1 : { term: input.tw1 }
 		}
 		if (input.tw2) {
 			// overlay term
-			mayLog('input.tw2:', input.tw2)
 			plotState.plot.term2 = isDictionaryTerm(input.tw2) ? input.tw2 : { term: input.tw2 }
 		}
 		if (input.tw3) {
@@ -93,7 +91,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
-	} else if (plotType == 'dge') {
+	} else if (plotType === 'dge') {
 		// default method for differential gene expression analysis
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
@@ -101,7 +99,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		const groups = [input.filter1, input.filter2]
 		plotState.plot.samplelst = groups
 		plotState.method = 'edgeR'
-	} else if (plotType == 'hiercluster') {
+	} else if (plotType === 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
 		// DictPhrases is an array of tw objects produced by resolveToTw() for dictionary terms
 		const DictPhrases = input.DictPhrases || []
@@ -135,7 +133,8 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 	} else if (plotType === 'prebuiltscatter') {
 		plotState.plot.chartType = 'sampleScatter'
 		// if (input.name === 't-SNE')
-		plotState.plot.name = 'TermdbTest TSNE'
+		// plotState.plot.name = 'TermdbTest TSNE'
+		plotState.plot.name = input.name
 		mayLog('Prebuilt scatter scaffold input:', input)
 		if (input.colorBy && input.colorBy === 'null') {
 			plotState.plot.colorTW = null
@@ -148,8 +147,14 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		} else if (input.shapeBy) {
 			plotState.plot.shapeTW = isDictionaryTerm(input.shapeBy) ? input.shapeBy : { term: input.shapeBy }
 		}
+
+		if (input.filter) {
+			plotState.plot.filter = input.filter
+		}
 	} else {
 		throw 'Only summary plot type is supported for now'
 	}
+
+	mayLog('Final plot state:', plotState)
 	return plotState
 }

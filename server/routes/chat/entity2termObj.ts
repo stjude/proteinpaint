@@ -89,6 +89,7 @@ export async function getTermObj(
 	// with the user phrase; the LLM returns the single rag_docs row whose term best matches.
 
 	// Non-dic term types should be resolved accordingly,
+	mayLog(`Getting term object for key "${key}" and phrase "${twEntity.phrase}" with term type "${twEntity.termType}"`)
 	if (twEntity.termType !== 'dictionary') {
 		const twRes = buildNonDictTermObj(twEntity, genes_list)
 		if (!twRes) {
@@ -265,6 +266,7 @@ export async function inferTermObjFromEntity(
 			}
 
 			// For other keys divideBy,
+			mayLog(`Evaluating divide by ${key} entity:`, value)
 			const entry = value as [Entity] | undefined
 			if (!entry) continue
 			const twEntity = entry[0]
@@ -308,6 +310,29 @@ export async function inferTermObjFromEntity(
 				)
 			}
 		}
+
+		if (scatterEntity.filter) {
+			const filterResult = scatterEntity.filter as Entity[]
+			if (!filterResult) {
+				console.warn(
+					`Failed to resolve filter term "${scatterEntity.filter}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+
+			const filterValues: Value[] = []
+			for (const filterTerm of filterResult) {
+				mayLog('Evaluating filter term:', filterTerm)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+				if (!termObj) {
+					continue
+				}
+				const filterEntity = filterTerm as Entity
+				if (filterEntity.logicalOperator) termObj.logicalOperator = filterEntity.logicalOperator
+				filterValues.push(termObj)
+			}
+			mayLog('Final filter values:', filterValues)
+			twObjects['filter'] = filterValues
+		}
 		return twObjects
 	} else {
 		throw 'Other plot types other than summary not yet supported'
@@ -332,7 +357,7 @@ async function findBestMatchLLM(
 	1. Only select a term if it is a CLEAR, SPECIFIC, and UNIQUE match to the phrase.
 	2. If multiple dictionary rows are closely related OR represent subtypes/specializations of the phrase, you MUST return "ambiguous".
 	3. If the phrase is broader than the candidate terms (e.g., "chemotherapy" vs specific drug classes), you MUST return "ambiguous".
-	4. If two or more candidates differ only by subtype, drug class, or measurement detail, DO NOT pick one — return "ambiguous" and list the three most closely related candidates.
+	4. If two or more candidates differ only by subtype, drug class, or measurement detail, DO NOT pick one — return "ambiguous" and list the three most closely related candidates ordered from most to least relevant.
 
 	Examples of ambiguity:
 	- Phrase: "chemotherapy"
