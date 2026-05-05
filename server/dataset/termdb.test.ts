@@ -304,9 +304,8 @@ export default function (): Mds3 {
 
 			// list of term ids as sample details
 			twLst: [
-				{ id: 'sex', q: {} },
-				{ id: 'diaggrp', q: {} },
-				{ id: 'agedx', q: {} }
+				{ id: 'sex', q: {} }
+				//{ id: 'diaggrp', q: {} }, { id: 'agedx', q: {} } only for testing. REVERT before merging
 			],
 
 			// small list of terms for sunburst rings
