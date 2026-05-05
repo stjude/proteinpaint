@@ -590,7 +590,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			table.addRow('log2 fold change', roundValue(d.log2fc, 3))
 			table.addRow('p value', d.pValue.toExponential(2))
 			table.addRow('-log10(p)', roundValue(d.score, 3))
-			table.addRow('Treated samples', d.testedN)
+			table.addRow('Case samples', d.testedN)
 			table.addRow('Control samples', d.controlN)
 		}
 	}
