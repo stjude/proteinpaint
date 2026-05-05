@@ -157,24 +157,21 @@ async function validate_hiercluster_gene_expression_response(
 	geneFeatures: GeneDataTypeResult[],
 	filterTerms: any
 ) {
-	console.log('LLM response for hierarchical clustering term extraction: ' + response)
 	const response_type = JSON.parse(response)
 	const pp_plot_json: any = { chartType: 'hierCluster' }
 	let text = ''
 
 	const terms: any[] = []
 	const seen_genes: Set<string> = new Set() // to track genes we've already added from geneNames and genesets to avoid duplicates
-
 	// Not supported cases
-	if (response_type.genesetNames.length > 0 && response_type.topVariablyExpressedGenes) {
+	if (response_type.genesetNames && response_type.genesetNames.length > 0 && response_type.topVariablyExpressedGenes) {
 		return {
 			type: 'text',
 			text: 'We do not support using both geneset names and top variably expressed genes for hierarchical clustering. Please specify only one of these in your query.'
 		}
 	}
-
 	// If geneset names are provided, resolve them to gene names and add to the geneNames array (while ensuring no duplicates)
-	if (response_type.genesetNames.length > 0) {
+	if (response_type.genesetNames && response_type.genesetNames.length > 0) {
 		// Multiple geneset names not supported (might change)
 		if (response_type.genesetNames.length > 1) {
 			return {
@@ -219,10 +216,11 @@ async function validate_hiercluster_gene_expression_response(
 		}
 
 		const q: TermdbTopVariablyExpressedGenesRequest = {
-			genome: genome.id,
+			genome: genome.label,
 			dslabel: ds.label,
 			maxGenes: num_genes
 		}
+
 		if (filterTerms) {
 			q.filter = filterTerms
 		}

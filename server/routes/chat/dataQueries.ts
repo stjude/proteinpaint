@@ -9,7 +9,7 @@ const TermTypeDefinitions: Record<string, string> = {
 	geneVariant:
 		'Supports genetic variant analysis, mutation analysis, somatic/germline variant queries, and genotype-phenotype association studies. Represents a specific genetic variant or mutation (e.g., SNV, indel, copy number change) at the gene or locus level.',
 	geneExpression:
-		'Supports gene expression analysis, bulk RNA-seq / microarray expression queries, differential expression comparisons, and expression-based correlation or stratification. Represents the expression level of a gene.',
+		'Supports gene expression analysis, hierarchical clustering, bulk RNA-seq / microarray expression queries, differential expression comparisons, and expression-based correlation or stratification. Represents the expression level of a gene.',
 	isoformExpression:
 		'Supports isoform-level expression analysis, transcript-level quantification, alternative splicing analysis, and isoform-specific differential expression. Represents the expression level of a specific isoform (transcript) of a gene.',
 	ssGSEA:
