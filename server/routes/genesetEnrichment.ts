@@ -144,10 +144,16 @@ async function resolveGseaGenesAndFoldChange({
 				fold_change: result.geneData.map(g => g.fold_change)
 			}
 		}
-		return {
-			genes: result.promoterData.map(p => p.gene_name),
-			fold_change: result.promoterData.map(p => p.fold_change)
+		if (result.kind === 'DM') {
+			return {
+				genes: result.promoterData.map(p => p.gene_name),
+				fold_change: result.promoterData.map(p => p.fold_change)
+			}
 		}
+		// Both branches handled explicitly above — any new result kind added
+		// to CacheOrRecomputeResult must extend this dispatcher rather than
+		// silently falling through into one of the existing branches.
+		throw new Error(`unexpected result kind: ${(result as any).kind}`)
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.
