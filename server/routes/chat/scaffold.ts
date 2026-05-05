@@ -41,7 +41,7 @@ Return ONLY a valid JSON object with this structure:
 ## EXTRACTION RULES
 1. ALWAYS extract at least one variable into twLst — this is the core of the matrix plot.
 2. Preserve the EXACT phrasing from the user's question for all fields — do not paraphrase, normalize, or generalize.
-3. divideBy is ONLY set when the user indicates they want to divide/facet the matrix by a variable (e.g. "by sex", "separately for each subtype"). Do NOT set divideBy if the user does not explicitly indicate this.
+3. divideBy is ONLY set when the user indicates they want to divide/facet the matrix by a variable (e.g. "by sex", "separately for each subtype", "with age", etc). Do NOT set divideBy if the user does not explicitly indicate this.
 4. filter is ONLY set when the user restricts the entire matrix to a specific subpopulation (e.g. "in women", "for pediatric patients", "among AML cases"). Do not populate filter for terms like "for all patients" or "for the whole cohort" that do not indicate a specific subset.
 5. If the user does not mention a global cohort constraint, omit filter entirely.
 6. If the user does not mention a divideBy variable, omit divideBy entirely.
@@ -63,6 +63,16 @@ A: {
   "divideBy": "sex" 
 }
 
+Q: "Show a gene expression matrix of X and Y and age"
+A: {
+  "twLst": ["X gene expression", "Y gene expression", "age"]
+}
+
+Q: "Show expression of X and Y"
+A: {
+  "twLst": ["expression of X", "expression of Y"]
+}
+
 Q: "Show a matrix of gene expression and mutation status for pediatric patients"
 A: {
   "twLst": ["gene expression", "mutation status"],
@@ -81,7 +91,7 @@ Q: "Show a matrix of gene expression, mutation status, and age"
 WRONG:
 {
   "twLst": ["gene expression", "mutation status", "age"],
-  "divideBy": "sex",          // do not add fields not supported by the query
+  "divideBy": "age",          // not a divideBy variable, age is just another variable in the matrix
   "filter": "pediatric patients"  // do not add fields not supported by the query
 }
 Q: "Show a matrix of gene expression and mutation status, divided by sex"

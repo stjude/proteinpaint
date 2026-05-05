@@ -739,7 +739,8 @@ export async function phrase2entity(
 			if ('type' in filter_term && filter_term.type === 'text') {
 				return filter_term // MsgToUser
 			}
-			mayLog('Validation result for filter term:', JSON.stringify(scatter_term.filter))
+			mayLog('Validation result for filter term:', JSON.stringify(filter_term))
+			scatter_term.filter = filter_term as Entity[]
 		}
 		return scatter_term
 	} else if (plotType === 'hiercluster') {
