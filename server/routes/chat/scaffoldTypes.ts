@@ -46,6 +46,7 @@ export type PrebuiltScatterScaffold = {
 	name: string
 	colorBy?: string
 	shapeBy?: string
+	divideBy?: string
 	filter?: string
 }
 
@@ -106,6 +107,7 @@ export type PrebuiltScatterPhrase2EntityResult = {
 	name: string
 	colorBy?: Entity | 'null' // null means user explicitly wants to remove coloring
 	shapeBy?: Entity | 'null' // null means user explicitly wants to remove shaping
+	divideBy?: Entity
 	filter?: Entity[]
 }
 

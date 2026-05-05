@@ -311,6 +311,17 @@ export async function inferTermObjFromEntity(
 			}
 		}
 
+		if (scatterEntity.divideBy) {
+			const termObj = await getTermObj('divideBy', scatterEntity.divideBy, llm, dbPath, genes_list)
+			if (termObj) {
+				twObjects['divideBy'] = termObj
+			} else {
+				console.warn(
+					`Failed to resolve divideBy term "${scatterEntity.divideBy.phrase}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+		}
+
 		if (scatterEntity.filter) {
 			const filterResult = scatterEntity.filter as Entity[]
 			if (!filterResult) {

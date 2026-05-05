@@ -695,6 +695,8 @@ export async function phrase2entity(
 	} else if (plotType === 'prebuiltscatter') {
 		const scaffoldResult = scaffold as PrebuiltScatterScaffold
 		const scatter_term: PrebuiltScatterPhrase2EntityResult = { name: scaffoldResult.name }
+
+		// ColorBy term
 		if (scaffoldResult.colorBy === 'null') {
 			scatter_term.colorBy = 'null'
 		} else if (scaffoldResult.colorBy) {
@@ -706,6 +708,7 @@ export async function phrase2entity(
 			scatter_term.colorBy = colorByEntity as Entity
 		}
 
+		// ShapeBy term
 		if (scaffoldResult.shapeBy === 'null') {
 			scatter_term.shapeBy = 'null'
 		} else if (scaffoldResult.shapeBy) {
@@ -716,23 +719,25 @@ export async function phrase2entity(
 			mayLog(`Validation result for shapeBy "${scaffoldResult.shapeBy}":`, shapeByEntity)
 			scatter_term.shapeBy = shapeByEntity as Entity
 		}
+
+		// divideBy term
+		if (scaffoldResult.divideBy) {
+			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds)
+			if ('type' in divideByEntity && divideByEntity.type === 'text') {
+				return divideByEntity // MsgToUser
+			}
+			mayLog(`Validation result for divideBy "${scaffoldResult.divideBy}":`, divideByEntity)
+			scatter_term.divideBy = divideByEntity as Entity
+		}
+
+		// Filter term
 		if (scaffoldResult.filter) {
 			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
 			// mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
-			const leafPhrases = collectLeaves(parseFilterResult.tree)
-			scatter_term.filter = []
-			for (const leaf of leafPhrases) {
-				mayLog('Evaluating filter leaf:', leaf.phrase)
-				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
-				mayLog('filterTw:', filterTw)
-
-				if ('type' in filterTw && filterTw.type === 'text') {
-					return filterTw // MsgToUser
-				}
-				const filterEntity = filterTw as Entity
-				if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-				scatter_term.filter.push(filterEntity)
+			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			if ('type' in filter_term && filter_term.type === 'text') {
+				return filter_term // MsgToUser
 			}
 			mayLog('Validation result for filter term:', JSON.stringify(scatter_term.filter))
 		}

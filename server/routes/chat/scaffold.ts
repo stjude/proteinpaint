@@ -496,7 +496,7 @@ async function prebuiltScatter(
 		}
 	}
 
-	// Build a formatted list of available plots for the prompt
+	// Build a formatted list of available plots and descriptions for the prompt
 	const availablePlotsList = Array.from(prebuiltScatterNames.entries())
 		.map(([name, description]) => `  - "${name}": ${description}`)
 		.join('\n')
@@ -518,7 +518,8 @@ async function prebuiltScatter(
     "name": <string>,        // REQUIRED - see rules below
     "colorBy": <string>,     // OPTIONAL - include only if user specifies coloring intent
     "shapeBy": <string>,     // OPTIONAL - include only if user specifies shaping intent
-    "filter": <string>       // OPTIONAL - A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males")
+    "filter": <string>,      // OPTIONAL - A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males")
+    "divideBy": <string>     // OPTIONAL - include only if user specifies intent to facet/divide the plot by a variable (e.g. "divided by sex", "separately for each subtype", "split by treatment response")
   }
 
   ## RULES FOR "name" (REQUIRED)
@@ -547,6 +548,11 @@ async function prebuiltScatter(
   - Preserve the EXACT phrasing of the variable from the user's query — do not paraphrase, normalize, capitalize, or generalize.
   - If the user says nothing about filtering, OMIT the "filter" field entirely. Do NOT guess or fabricate.
 
+  ## RULES FOR "divideBy" (OPTIONAL)
+  - Include "divideBy" ONLY if the user explicitly indicates they want to facet/divide the plot by some variable (e.g. "divided by sex", "separately for each subtype", "split by treatment response").
+  - Preserve the EXACT phrasing of the variable from the user's query — do not paraphrase, normalize, capitalize, or generalize.
+  - If the user says nothing about dividing/faceting, OMIT the "divideBy" field entirely. Do NOT guess or fabricate.
+
   ## EXAMPLES
   The following examples assume the available plots include keys whose descriptions match t-SNE, UMAP, and PCA. In your actual output, use the literal key strings from the AVAILABLE PREBUILT SCATTER PLOTS section.
 
@@ -556,6 +562,13 @@ async function prebuiltScatter(
     "name": "<exact key matching t-SNE>",
     "colorBy": "sex",
     "shapeBy": "subtype"
+  }
+
+  Query: "Show a UMAP divided by age"
+  Output:
+  {
+    "name": "<exact key matching UMAP>",
+    "dividedBy": "age"
   }
 
   Query: "Show a UMAP colored by age"
