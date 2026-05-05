@@ -267,9 +267,8 @@ export async function inferTermObjFromEntity(
 
 			// For other keys divideBy,
 			mayLog(`Evaluating divide by ${key} entity:`, value)
-			const entry = value as [Entity] | undefined
-			if (!entry) continue
-			const twEntity = entry[0]
+			const twEntity = value as Entity | undefined
+			if (!twEntity) continue
 			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
 			if (!termObj) {
 				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
