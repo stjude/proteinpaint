@@ -117,7 +117,7 @@ export async function test_chatbot_by_dataset(
 	for (const test_data of testData) {
 		// const genesetNames = getGenesetNames(genome)
 		//console.log("Test question:", test_data.question)
-		if (test_data.cat === 'dge' || test_data.cat === 'hierCluster') {
+		if (test_data.cat === 'dge') {
 			console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>')
 			console.log(`Skipping ${test_data.cat} tests...`)
 			continue
