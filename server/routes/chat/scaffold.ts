@@ -8,6 +8,7 @@ import type {
 	Scaffold,
 	SummaryScaffold,
 	DEScaffold,
+	HierarchicalGeneExpressionScaffold,
 	HierarchicalScaffold,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
@@ -411,7 +412,7 @@ Query: ${user_prompt}
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical scaffold: ${response}`)
 	try {
-		const parsed = JSON.parse(response) as HierarchicalScaffold
+		const parsed = JSON.parse(response) as HierarchicalGeneExpressionScaffold
 		parsed.plotType = 'hiercluster'
 		// Ensure each gene symbol is followed by "expression" so downstream phrase2entity
 		// resolves it to the geneExpression term type rather than flagging it as ambiguous.
@@ -600,7 +601,7 @@ const prebuiltScatterNames: Map<string, string> = new Map()
 if (ds?.cohort?.scatterplots?.plots) {
 for (const plot of ds.cohort.scatterplots.plots) {
 if (plot.name) {
-  prebuiltScatterNames.set(plot.name, plot.descriptionShort)
+prebuiltScatterNames.set(plot.name, plot.descriptionShort)
 }
 }
 }
