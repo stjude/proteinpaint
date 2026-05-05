@@ -798,7 +798,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.style('gap', '8px')
 		.style('margin-top', '8px')
 
-	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Treated sample size')
+	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Case sample size')
 
 	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
 
