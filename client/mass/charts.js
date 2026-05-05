@@ -385,12 +385,12 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Protein View',
+			label: 'Protein Selection',
 			chartType: 'proteinView',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Protein Abundance',
+			label: 'Sample Selection',
 			chartType: 'proteomeAbundance',
 			clickTo: self.loadChartSpecificMenu
 		},
