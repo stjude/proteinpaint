@@ -1351,35 +1351,14 @@ tape('Disco plot and lollipop', test => {
 			elem: holder.node(),
 			selector: '.chord-text',
 			count: 1,
-			trigger: async () => {
-				// The Disco button now lives in the ScatterTooltip click menu
-				// (a separate Menu instance), not on view.dom.tooltip. If the
-				// click landed on a cluster of overlapping samples, the
-				// multi-hit row table opens first; pick the row for sample
-				// 3416 to drill into the action menu, then click Disco.
-				const clickMenuD = scatter.Inner.vm.scatterTooltip.clickMenu.d
-				const findDiscoBtn = () =>
-					clickMenuD
-						.selectAll('button')
-						.filter(function () {
-							return this.innerHTML == 'Disco'
-						})
-						.node()
-				let discoBtn = findDiscoBtn()
-				if (!discoBtn) {
-					const row = clickMenuD
-						.selectAll('tr')
-						.filter(function () {
-							return this.textContent.includes('3416')
-						})
-						.node()
-					if (row) {
-						row.click()
-						await sleep(50)
-						discoBtn = findDiscoBtn()
-					}
-				}
-				if (discoBtn) discoBtn.click()
+			trigger: () => {
+				scatter.Inner.dom.tooltip.d
+					.selectAll('button')
+					.filter(function () {
+						return this.innerHTML == 'Disco'
+					})
+					.node()
+					.click()
 			}
 		})
 		const label = [...chordTexts].find(c => c.__data__?.text === 'TP53')

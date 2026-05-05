@@ -4,10 +4,8 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import type { Scatter } from '../scatter.js'
-import { Menu, table2col, openActionMenu, openMultiHitClickMenu } from '#dom'
-import type { ActionMenuItem } from '#dom'
+import { table2col } from '#dom'
 import { getCoordinate } from '../model/scatterModel.ts'
-import { zoomTransform } from 'd3-zoom'
 
 export class ScatterTooltip {
 	scatter: Scatter
@@ -16,61 +14,81 @@ export class ScatterTooltip {
 	samples!: any[]
 	tree!: any[]
 	tableDiv: any
+	onClick: boolean
 	displaySample!: boolean
 	parentCategories!: string[]
+	searchMenu: any
+	samplesData: any
+	chartDiv: any
 	level: any
 	parentTW: any
-
-	// Click menu shared with the volcano/manhattan flow.
-	clickMenu: Menu
-	clickMenuIsShown = false
-	private lastRingChart: any = null
 
 	constructor(scatter: Scatter) {
 		this.scatter = scatter
 		this.view = scatter.view
-		this.clickMenu = new Menu({
-			padding: '',
-			onHide: () => {
-				this.clickMenuIsShown = false
-				if (this.lastRingChart) this.drawHoverRings([], this.lastRingChart)
-			}
-		})
+		this.onClick = false
 	}
 
 	showTooltip(event, chart) {
 		if (this.scatter.config.lassoOn) return
 		this.chart = chart
+		const onClick = event.type == 'click'
+		this.onClick = onClick
+		if (onClick) this.scatter.interactivity.searchMenu?.hide()
 		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) {
-			this.view.dom.tooltip.hide()
-			if (!this.clickMenuIsShown) this.drawHoverRings([], chart)
+			if (this.onClick && onClick) {
+				this.onClick = false
+				this.view.dom.tooltip.hide()
+				return
+			}
+			if (!onClick) {
+				this.view.dom.tooltip.hide()
+			} //dont hide current tooltip if mouse moved away, may want to scroll
 			return
 		}
 		this.showSampleTooltip(event.target.__data__, event.clientX, event.clientY, chart)
 	}
 
-	showSampleClickMenu(event, chart) {
-		if (this.scatter.config.lassoOn) return
-		this.view.dom.tooltip.hide()
-		if (!(event.target.tagName == 'path' && event.target.getAttribute('name') == 'serie')) return
-		this.chart = chart
-		const seedSample = event.target.__data__
-		const samples = this.getClusterSamples(seedSample, chart)
-		if (samples.length === 0) return
-		this.drawHoverRings(samples, chart)
-		this.clickMenuIsShown = true
-		if (samples.length === 1) {
-			this.openSampleActionMenu(samples[0], event)
-		} else {
-			this.openClusterClickMenu(samples, event)
-		}
-	}
-
 	showSampleTooltip(s2, x, y, chart) {
 		this.chart = chart
 		this.displaySample = 'sample' in s2 || 'cellId' in s2
-		const samples = this.getClusterSamples(s2, chart)
+		const threshold = 5 / this.scatter.zoom //Threshold should consider the zoom
+		/** Avoid calculating the min and max for x and y
+		 * multiple times in the distance function.
+		 * Supply them as parameters.*/
+		const xMin = chart.xAxisScale.invert(0)
+		const xMax = chart.xAxisScale.invert(chart.width ?? this.scatter.settings.svgw)
+		const yMin = chart.yAxisScale.invert(chart.height ?? this.scatter.settings.svgh)
+		const yMax = chart.yAxisScale.invert(0)
+		const samples = chart.data.samples.filter(s => {
+			const dist = distance(s.x, s.y, s2.x, s2.y, chart, xMin, xMax, yMin, yMax)
+			if (!('sampleId' in s) && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false
+			return this.scatter.model.getOpacity(s) > 0 && dist < threshold
+		})
 		this.samples = samples
+		samples.sort((s1, s2) => {
+			if (!('sampleId' in s1)) return 1
+			if (this.scatter.config.term) {
+				//coordinates from terms
+				if (s1.x < s2.x) return -1
+				if (s1.x > s2.x) return 1
+				if (s1.y < s2.y) return -1
+				return 1
+			}
+
+			if (this.scatter.config.colorTW) {
+				if (this.scatter.config.colorTW.term.type == 'categorical') {
+					if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
+				} // numeric
+				else {
+					if (s1.category < s2.category) return -1
+					else if (s1.category > s2.category) return 1
+				}
+			}
+			if (s1.shape.includes(mclass.WT.label) || s1.shape.includes(mclass.Blank.label)) return 1
+
+			return -1
+		})
 		if (samples.length == 0) return
 		this.tree = []
 		const showCoords = this.scatter.config.term ? true : false
@@ -153,218 +171,7 @@ export class ScatterTooltip {
 				this.addCategory(node, null)
 			}
 
-		if (!this.clickMenuIsShown) this.drawHoverRings(samples, chart)
 		this.view.dom.tooltip.show(x, y, true, false)
-	}
-
-	private getClusterSamples(s2, chart): any[] {
-		const threshold = 5 / this.scatter.zoom //Threshold should consider the zoom
-		const xMin = chart.xAxisScale.invert(0)
-		const xMax = chart.xAxisScale.invert(chart.width ?? this.scatter.settings.svgw)
-		const yMin = chart.yAxisScale.invert(chart.height ?? this.scatter.settings.svgh)
-		const yMax = chart.yAxisScale.invert(0)
-		const samples = chart.data.samples.filter(s => {
-			const dist = distance(s.x, s.y, s2.x, s2.y, chart, xMin, xMax, yMin, yMax)
-			if (!('sampleId' in s) && (!this.scatter.settings.showRef || this.scatter.settings.refSize == 0)) return false
-			return this.scatter.model.getOpacity(s) > 0 && dist < threshold
-		})
-		samples.sort((s1, s2) => {
-			if (!('sampleId' in s1)) return 1
-			if (this.scatter.config.term) {
-				if (s1.x < s2.x) return -1
-				if (s1.x > s2.x) return 1
-				if (s1.y < s2.y) return -1
-				return 1
-			}
-			if (this.scatter.config.colorTW) {
-				if (this.scatter.config.colorTW.term.type == 'categorical') {
-					if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
-				} else {
-					if (s1.category < s2.category) return -1
-					else if (s1.category > s2.category) return 1
-				}
-			}
-			if (s1.shape.includes(mclass.WT.label) || s1.shape.includes(mclass.Blank.label)) return 1
-			return -1
-		})
-		return samples
-	}
-
-	private drawHoverRings(samples: any[], chart: any) {
-		// `mainG` is reused across re-renders; chart.serie's children get cleared,
-		// but our sibling layer is untouched, so just clear and repaint each call.
-		let layer = chart.mainG.select('.sjpcb-scatter-hover-rings')
-		if (layer.empty()) {
-			layer = chart.mainG.append('g').attr('class', 'sjpcb-scatter-hover-rings').style('pointer-events', 'none')
-		}
-		// Mirror the zoom transform on every redraw — getCoordinates returns
-		// pre-zoom pixels, and zoom is applied via chart.serie's `transform`
-		// attribute. Picking it up here keeps rings aligned right after a zoom.
-		const serieTransform = chart.serie.attr('transform')
-		if (serieTransform) layer.attr('transform', serieTransform)
-		else layer.attr('transform', null)
-		layer.selectAll('circle').remove()
-		if (samples.length === 0) return
-		this.lastRingChart = chart
-		// The parent transform scales geometry, so a fixed 2px slack would balloon
-		// into 2*k visible px at zoom k. Divide by k pre-transform so the visible
-		// slack stays a constant 2px at any zoom level.
-		const k = zoomTransform(chart.mainG.node()).k || 1
-		for (const s of samples) {
-			const { x, y } = this.scatter.model.getCoordinates(chart, s)
-			const scale = this.scatter.model.getScale(chart, s)
-			const r = 8 * scale + 2 / k
-			layer
-				.append('circle')
-				.attr('cx', x)
-				.attr('cy', y)
-				.attr('r', r)
-				.attr('data-base-scale', scale)
-				.attr('fill', 'none')
-				.attr('stroke', 'black')
-				.attr('stroke-width', 1.5)
-				// Stroke stays a constant 1.5px — without this it bloats with the
-				// parent zoom transform.
-				.attr('vector-effect', 'non-scaling-stroke')
-		}
-	}
-
-	private openSampleActionMenu(sample: any, event: any) {
-		openActionMenu({
-			menu: this.clickMenu,
-			event,
-			actions: this.buildSampleActions(sample),
-			renderInfo: container => this.renderSampleInfo(container, sample)
-		})
-	}
-
-	private openClusterClickMenu(samples: any[], event: any) {
-		const config = this.scatter.config
-		const itemLabel = this.scatter.settings.itemLabel || 'Sample'
-		const columns: any[] = [{ label: itemLabel }]
-		if (config.colorTW) columns.push({ label: config.colorTW.term.name, sortable: true })
-		if (config.shapeTW) columns.push({ label: config.shapeTW.term.name, sortable: true })
-
-		const rows = samples.map(s => {
-			const r: any[] = [{ value: s.sample ?? s.cellId ?? '' }]
-			if (config.colorTW) r.push({ value: String(this.getCategoryValue('category', s, config.colorTW) ?? '') })
-			if (config.shapeTW) r.push({ value: String(this.getCategoryValue('shape', s, config.shapeTW) ?? '') })
-			return r
-		})
-
-		openMultiHitClickMenu<any>({
-			menu: this.clickMenu,
-			event,
-			items: samples,
-			columns,
-			rows,
-			getRowKey: (s: any) => String(s.sample ?? s.cellId ?? ''),
-			header: `${samples.length} ${itemLabel}s`,
-			onRowClick: (s, ev) => this.openSampleActionMenu(s, ev)
-		})
-	}
-
-	private buildSampleActions(sample: any): ActionMenuItem[] {
-		const actions: ActionMenuItem[] = []
-		const config = this.scatter.config
-		const termdb = this.scatter.state.termdbConfig
-		const interactivity = this.scatter.interactivity
-
-		if ('sampleId' in sample && !config?.singleCellPlot) {
-			if (this.scatter.state.currentCohortChartTypes?.includes('sampleView')) {
-				actions.push({
-					label: 'Sample view',
-					onClick: () => interactivity.openSampleView(sample)
-				})
-			}
-			if (termdb?.queries?.singleSampleMutation) {
-				actions.push({
-					label: 'Disco',
-					onClick: async () => interactivity.openDiscoPlot(sample)
-				})
-			}
-			if (termdb?.queries?.singleSampleGenomeQuantification) {
-				actions.push({
-					label: 'Met Array',
-					onClick: async () => interactivity.openMetArray(sample)
-				})
-			}
-		}
-
-		// Lollipop appears when the sample's color or shape value is a gene-mutation
-		// label — same condition as the inline button it replaces.
-		for (const tw of [config.colorTW, config.shapeTW]) {
-			if (!tw) continue
-			if (tw.term.type !== 'geneVariant' || tw.q?.type !== 'values') continue
-			const raw = tw === config.colorTW ? sample.category : sample.shape
-			const mutation = String(raw ?? '').split(', ')[0]
-			if (!mutation) continue
-			let matched = false
-			for (const id in mclass) {
-				if (mclass[id].label === mutation) {
-					matched = true
-					break
-				}
-			}
-			if (!matched) continue
-			actions.push({
-				label: `Lollipop (${mutation})`,
-				onClick: async () => interactivity.openLollipop(mutation)
-			})
-		}
-
-		return actions
-	}
-
-	private renderSampleInfo(container: any, sample: any) {
-		const table = table2col({ holder: container.append('table'), disableScroll: true, cellPadding: '5px' })
-		const config = this.scatter.config
-		const itemLabel = this.scatter.settings.itemLabel || 'Sample'
-
-		const sampleId = sample.sample ?? sample.cellId
-		if (sampleId != null) {
-			const [td1, td2] = table.addRow()
-			td1.text(itemLabel)
-			td2.text(sampleId)
-		}
-
-		if (config.term) {
-			const xv = this.getCategoryValue('x', sample, config.term)
-			const [td1, td2] = table.addRow()
-			td1.text(config.term.term.name)
-			td2.text(String(xv))
-			if (config.term2) {
-				const yv = this.getCategoryValue('y', sample, config.term2)
-				const [td1b, td2b] = table.addRow()
-				td1b.text(config.term2.term.name)
-				td2b.text(String(yv))
-			}
-		}
-		if (config.colorTW) {
-			const cv = this.getCategoryValue('category', sample, config.colorTW)
-			const [td1, td2] = table.addRow()
-			td1.text(config.colorTW.term.name)
-			td2.text(String(cv ?? ''))
-		}
-		if (config.shapeTW) {
-			const sv = this.getCategoryValue('shape', sample, config.shapeTW)
-			const [td1, td2] = table.addRow()
-			td1.text(config.shapeTW.term.name)
-			td2.text(String(sv ?? ''))
-		}
-		if (config.scaleDotTW) {
-			const dv = this.getCategoryValue('scale', sample, config.scaleDotTW)
-			const [td1, td2] = table.addRow()
-			td1.text(config.scaleDotTW.term.name)
-			td2.text(String(dv ?? ''))
-		}
-		if (sample.info) {
-			for (const [k, v] of Object.entries(sample.info)) {
-				const [td1, td2] = table.addRow()
-				td1.text(k)
-				td2.text(String(v))
-			}
-		}
 	}
 
 	getTW(category) {
@@ -389,6 +196,8 @@ export class ScatterTooltip {
 		const chart = this.chart
 		const tw = this.getTW(node.category)
 		node.added = true
+		const hasDiscoPlot = this.scatter.state.termdbConfig.queries?.singleSampleMutation
+		const hasMetArrayPlot = this.scatter.state.termdbConfig.queries?.singleSampleGenomeQuantification
 		const div = this.tableDiv.append('div')
 		if (!table) table = table2col({ holder: div, disableScroll: true, cellPadding: '5px' })
 		const sample = node.samples[0]
@@ -423,6 +232,15 @@ export class ScatterTooltip {
 							break
 						}
 					}
+					if (this.onClick) {
+						td.append('button')
+							.style('float', 'right')
+							.text('Lollipop')
+							.on('click', async () => {
+								await this.scatter.interactivity.openLollipop(label)
+								this.scatter.dom.tip.hide()
+							})
+					}
 				}
 
 				const chars = node.value.toString().length
@@ -452,6 +270,27 @@ export class ScatterTooltip {
 				const [tdlabel, td] = table.addRow()
 				tdlabel.text(this.scatter.settings.itemLabel)
 				td.text(sample.sample || sample.cellId)
+				//All the plots below are enabled for samples only.
+				//Disable in single cell plot until relevant.
+				if ('sampleId' in sample && this.onClick && !this.scatter.config?.singleCellPlot) {
+					if (this.scatter.state.currentCohortChartTypes.includes('sampleView')) {
+						td.append('button')
+							.style('float', 'right')
+							.text('Sample view')
+							.on('click', () => this.scatter.interactivity.openSampleView(sample))
+					}
+					if (hasDiscoPlot)
+						td.append('button')
+							.style('float', 'right')
+							.text('Disco')
+							.on('click', async () => this.scatter.interactivity.openDiscoPlot(sample))
+
+					if (hasMetArrayPlot)
+						td.append('button')
+							.style('float', 'right')
+							.text('Met Array')
+							.on('click', async () => this.scatter.interactivity.openMetArray(sample))
+				}
 			}
 		}
 	}

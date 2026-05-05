@@ -77,16 +77,6 @@ export class ScatterZoom {
 			const new_yScale = transform.rescaleY(chart.yAxisScale)
 			chart.serie.attr('transform', transform)
 			chart.regressionG?.attr('transform', transform)
-			// Hover rings live in a sibling layer; mirror the zoom so they track dots,
-			// then rescale each ring's radius so the slack stays a constant 2px in
-			// visible pixels rather than 2*k.
-			const ringsLayer = chart.mainG.select('.sjpcb-scatter-hover-rings')
-			ringsLayer.attr('transform', transform)
-			const k = transform.k || 1
-			ringsLayer.selectAll('circle').attr('r', function (this: SVGCircleElement) {
-				const base = +(this.getAttribute('data-base-scale') || '0')
-				return 8 * base + 2 / k
-			})
 			chart.xAxis.call(chart.axisBottom.scale(new_xScale))
 			chart.yAxis.call(chart.axisLeft.scale(new_yScale))
 			if (this.scatter.config.lassoOn)

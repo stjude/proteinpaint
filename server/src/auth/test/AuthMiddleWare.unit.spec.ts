@@ -489,6 +489,83 @@ tape('mayUpdate__protected__: sets isUserLoggedIn flag when genome and dslabel a
 	test.end()
 })
 
+tape('mayUpdate__protected__: re-applies mayAdjustFilter to req.query.daRequest when it is an object', function (test) {
+	test.timeoutAfter(500)
+	test.plan(5)
+
+	const auth = makeAuth()
+	const calls: { target: any; protectedRef: any }[] = []
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: (q: any) => {
+			// snapshot the __protected__ reference at call-time, since the
+			// middleware deletes it from daRequest immediately after the
+			// nested call returns
+			calls.push({ target: q, protectedRef: q.__protected__ })
+		},
+		isUserLoggedIn: () => true
+	}
+	const genomes = { hg38: { datasets: { [dslabel]: { cohort: { termdb: {} }, label: dslabel } } } }
+	const middleware = registerMiddleware(auth, mockAuthApi, genomes)
+
+	const daRequest = { filter: { type: 'tvslst', join: '', lst: [] } }
+	const req: any = {
+		query: { dslabel, embedder, genome: 'hg38', daRequest },
+		path: '/termdb',
+		cookies: {}
+	}
+	const res = makeMockRes()
+	middleware(req, res, () => {})
+
+	test.equal(calls.length, 2, 'should call mayAdjustFilter twice — once for req.query, once for daRequest')
+	test.equal(calls[0].target, req.query, 'first call should be on req.query (top-level filter injection)')
+	test.equal(calls[1].target, daRequest, 'second call should be on the nested daRequest')
+	test.equal(
+		calls[1].protectedRef,
+		calls[0].protectedRef,
+		'daRequest must see the same __protected__ context as req.query so the auth filter matches'
+	)
+	test.notOk(
+		'__protected__' in daRequest,
+		'should delete __protected__ from daRequest after the auth-filter call so it does not leak into route handlers'
+	)
+	test.end()
+})
+
+tape('mayUpdate__protected__: skips daRequest auth-filter injection for non-object daRequest values', function (test) {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const auth = makeAuth()
+	let mayAdjustFilterCalls = 0
+	const mockAuthApi = {
+		getNonsensitiveInfo: () => ({ forbiddenRoutes: [], clientAuthResult: {} }),
+		mayAdjustFilter: () => {
+			mayAdjustFilterCalls++
+		},
+		isUserLoggedIn: () => true
+	}
+	const genomes = { hg38: { datasets: { [dslabel]: { cohort: { termdb: {} }, label: dslabel } } } }
+	const middleware = registerMiddleware(auth, mockAuthApi, genomes)
+
+	// String daRequest (e.g. an unparsed JSON payload) — without the
+	// `typeof === 'object'` guard, assigning `daRequest.__protected__`
+	// would throw before route-level validation runs.
+	const req: any = {
+		query: { dslabel, embedder, genome: 'hg38', daRequest: '{"filter":"unparsed"}' },
+		path: '/termdb',
+		cookies: {}
+	}
+	const res = makeMockRes()
+	test.doesNotThrow(() => middleware(req, res, () => {}), 'should not throw on a string daRequest')
+	test.equal(
+		mayAdjustFilterCalls,
+		1,
+		'should call mayAdjustFilter once for req.query and skip the daRequest call for the non-object payload'
+	)
+	test.end()
+})
+
 tape('mayUpdate__protected__: skips msigdb dslabel when getting isUserLoggedIn', function (test) {
 	test.timeoutAfter(500)
 	test.plan(1)
