@@ -7,7 +7,7 @@ import { dofetch3 } from '#common/dofetch'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
-import { shapeSelector, shapesArray } from '../dom/shapes.js'
+import { shapeSelector, shapes } from '../dom/shapes.js'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
@@ -160,7 +160,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	const downloadBtn = header.append('div').style('display', 'inline-block')
 
-	header.append('div').style('font-weight', 600).text('Cohort Volcano')
+	header.append('div').style('font-weight', 600).text('Sample Set Volcano')
 
 	if (!dots.length) {
 		downloadBtn.style('display', 'none')
@@ -227,8 +227,20 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const proteinColors = new Map<string, string>(
 		proteinAccessions.map(acc => [acc, rgb(proteinColorScale(acc)).formatHex()])
 	)
+
+	// Prioritize filled shapes first, then empty shapes
+	const prioritizedShapesArray = (() => {
+		const entries = Object.entries(shapes)
+		const sorted = [
+			...entries.filter(([, s]) => s.isFilled === true),
+			...entries.filter(([, s]) => s.isFilled === false),
+			...entries.filter(([, s]) => !('isFilled' in s))
+		]
+		return sorted.map(([, s]) => s.path)
+	})()
+
 	const makeShapeMap = (items: string[]) =>
-		new Map<string, number>(items.map((item, i) => [item, i % shapesArray.length]))
+		new Map<string, number>(items.map((item, i) => [item, i % prioritizedShapesArray.length]))
 	const organismShapes = makeShapeMap(organismNames)
 	const assayShapes = makeShapeMap(assayNames)
 	const cohortShapes = makeShapeMap(cohortNames)
@@ -335,7 +347,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		for (const val of baseValues) existing.add(val)
 		customShapeGroupsByMode[mode].set(name, existing)
 		if (!customShapeIndicesByMode[mode].has(name)) {
-			const idx = customShapeIndicesByMode[mode].size % shapesArray.length
+			const idx = customShapeIndicesByMode[mode].size % prioritizedShapesArray.length
 			customShapeIndicesByMode[mode].set(name, idx)
 		}
 	}
@@ -352,6 +364,25 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const getCustomShapeGroupItems = (mode: ShapeMode) => {
 		if (mode === 'none') return [] as string[]
 		return [...customShapeGroupsByMode[mode].keys()].sort().map(name => makeCustomShapeGroupKey(name))
+	}
+	const getLegendItemSampleCount = (mode: ColorMode | ShapeMode, item: string) => {
+		if (mode === 'none') return 0
+
+		if (isCustomGroupKey(item)) {
+			const groupName = getCustomGroupNameFromKey(item)
+			return dots.filter(
+				d => getCustomGroupOfValue(mode as ColorMode, getBaseColorValue(d, mode as ColorMode)) === groupName
+			).length
+		}
+
+		if (isCustomShapeGroupKey(item)) {
+			const groupName = getCustomShapeGroupNameFromKey(item)
+			return dots.filter(
+				d => getCustomShapeGroupOfValue(mode as ShapeMode, getBaseColorValue(d, mode as ColorMode)) === groupName
+			).length
+		}
+
+		return dots.filter(d => getBaseColorValue(d, mode as ColorMode) === item).length
 	}
 	const getColor = (d: any) => {
 		const customGroup = colorMode === 'none' ? undefined : getCustomGroupOfDot(d, colorMode)
@@ -395,8 +426,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 	}
 	const getShapePath = (d: any) => {
-		const index = getShapeIndex(d) % shapesArray.length
-		return shapesArray[index]
+		const index = getShapeIndex(d) % prioritizedShapesArray.length
+		return prioritizedShapesArray[index]
 	}
 	const getShapeTransform = (d: any, sizeScale = 1) => {
 		const r = radiusScale(Math.max(minTestedN, d.testedN || minTestedN)) * sizeScale
@@ -409,14 +440,14 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		{ key: 'none', label: 'Default' },
 		{ key: 'organism', label: 'Organism' },
 		{ key: 'assayType', label: 'Assay' },
-		{ key: 'cohort', label: 'Cohort' },
+		{ key: 'cohort', label: 'Sample Set' },
 		{ key: 'proteinAccession', label: 'Isoform' }
 	]
 	const shapeGroupingModes: Array<{ key: ShapeMode; label: string }> = [
 		{ key: 'none', label: 'Default' },
 		{ key: 'organism', label: 'Organism' },
 		{ key: 'assayType', label: 'Assay' },
-		{ key: 'cohort', label: 'Cohort' },
+		{ key: 'cohort', label: 'Sample Set' },
 		{ key: 'proteinAccession', label: 'Isoform' }
 	]
 	const makeHiddenState = () => ({
@@ -535,7 +566,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
 				const table = table2col({ holder: block.append('table') })
 				table.addRow('Assay', d.assayName)
-				table.addRow('Cohort', d.cohortName)
+				table.addRow('Sample Set', d.cohortName)
 				if (d.modSites) table.addRow('Modified Site', d.modSites)
 			}
 			return
@@ -547,7 +578,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			table.addRow('Organism', d.organismName)
 			table.addRow('Disease', d.disease)
 			table.addRow('Assay', d.assayName)
-			table.addRow('Cohort', d.cohortName)
+			table.addRow('Sample Set', d.cohortName)
 			table.addRow('Protein Accession', d.proteinAccession)
 			if (d.PTMType) {
 				table.addRow('PTM Type', d.PTMType)
@@ -559,7 +590,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			table.addRow('log2 fold change', roundValue(d.log2fc, 3))
 			table.addRow('p value', d.pValue.toExponential(2))
 			table.addRow('-log10(p)', roundValue(d.score, 3))
-			table.addRow('Tested samples', d.testedN)
+			table.addRow('Treated samples', d.testedN)
 			table.addRow('Control samples', d.controlN)
 		}
 	}
@@ -767,7 +798,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.style('gap', '8px')
 		.style('margin-top', '8px')
 
-	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Tested sample size')
+	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Treated sample size')
 
 	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
 
@@ -922,6 +953,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				const isGroup = isCustomGroupKey(name)
 				const displayName = isGroup ? getCustomGroupNameFromKey(name) : name
 				const inGroup = !isGroup ? getCustomGroupOfValue(colorMode, name) : null
+				const sampleCount = getLegendItemSampleCount(colorMode, name)
 				const row = colorLegendDiv
 					.append('div')
 					.style('display', 'flex')
@@ -955,9 +987,20 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openColorMenu(event, name, swatch))
+				row.append('span').style('color', '#6b7280').text(`(n=${sampleCount})`)
 				if (isGroup) {
 					const count = customGroupsByMode[colorMode].get(getCustomGroupNameFromKey(name))?.size || 0
-					row.append('span').style('color', '#6b7280').text(`(${count} items)`)
+					const itemLabel =
+						colorMode === 'organism'
+							? 'organisms'
+							: colorMode === 'assayType'
+							? 'assays'
+							: colorMode === 'cohort'
+							? 'sample sets'
+							: colorMode === 'proteinAccession'
+							? 'isoforms'
+							: 'items'
+					row.append('span').style('color', '#6b7280').text(`(${count} ${itemLabel})`)
 				} else if (inGroup) {
 					row.append('span').style('color', '#6b7280').style('font-style', 'italic').text(`→ ${inGroup}`)
 				}
@@ -1198,6 +1241,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				const isGroup = isCustomShapeGroupKey(name)
 				const displayName = isGroup ? getCustomShapeGroupNameFromKey(name) : name
 				const inGroup = !isGroup ? getCustomShapeGroupOfValue(shapeMode, name) : null
+				const sampleCount = getLegendItemSampleCount(shapeMode, name)
 				const row = shapeLegendDiv
 					.append('div')
 					.style('display', 'flex')
@@ -1225,10 +1269,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.attr('transform', 'scale(0.8)')
 					.attr(
 						'd',
-						shapesArray[
+						prioritizedShapesArray[
 							((isGroup
 								? customShapeIndicesByMode[shapeMode].get(getCustomShapeGroupNameFromKey(name))
-								: shapeMap.get(name)) || 0) % shapesArray.length
+								: shapeMap.get(name)) || 0) % prioritizedShapesArray.length
 						]
 					)
 					.attr('fill', '#4b5563')
@@ -1240,9 +1284,20 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openShapeMenu(event, name))
+				row.append('span').style('color', '#6b7280').text(`(n=${sampleCount})`)
 				if (isGroup) {
 					const count = customShapeGroupsByMode[shapeMode].get(getCustomShapeGroupNameFromKey(name))?.size || 0
-					row.append('span').style('color', '#6b7280').text(`(${count} items)`)
+					const itemLabel =
+						shapeMode === 'organism'
+							? 'organisms'
+							: shapeMode === 'assayType'
+							? 'assays'
+							: shapeMode === 'cohort'
+							? 'sample sets'
+							: shapeMode === 'proteinAccession'
+							? 'isoforms'
+							: 'items'
+					row.append('span').style('color', '#6b7280').text(`(${count} ${itemLabel})`)
 				} else if (inGroup) {
 					row.append('span').style('color', '#6b7280').style('font-style', 'italic').text(`→ ${inGroup}`)
 				}
@@ -1584,10 +1639,10 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 					return [
 						{ k: 'Organism', v: m.organism ?? 'NA' },
 						{ k: 'Assay', v: m.assayName ?? 'NA' },
-						{ k: 'Cohort', v: m.cohortName ?? 'NA' },
+						{ k: 'Sample set', v: m.cohortName ?? 'NA' },
 						{ k: 'log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
 						{ k: 'p value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
-						{ k: 'Tested samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
+						{ k: 'Treated samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
 						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' },
 						{ k: 'Protein Accession', v: m.proteinAccession ?? 'NA' }
 					]
