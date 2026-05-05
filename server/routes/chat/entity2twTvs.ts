@@ -563,6 +563,14 @@ export async function resolveToTwTvs(
 			twTvsObjects['shapeBy'] = termWrapper
 		}
 
+		if (entity['divideBy']) {
+			const divideByValue = entity['divideBy'] as Value | undefined
+			if (!divideByValue) throw new Error('Invalid divideBy term entity for prebuiltScatter')
+			const termWrapper = await resolveToTw(divideByValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve divideBy term for phrase "${divideByValue.phrase}"`)
+			twTvsObjects['divideBy'] = termWrapper
+		}
+
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key filter`)

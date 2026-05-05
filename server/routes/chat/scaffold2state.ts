@@ -148,6 +148,10 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			plotState.plot.shapeTW = isDictionaryTerm(input.shapeBy) ? input.shapeBy : { term: input.shapeBy }
 		}
 
+		if (input.divideBy) {
+			plotState.plot.term0 = isDictionaryTerm(input.divideBy) ? input.divideBy : { term: input.divideBy }
+		}
+
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
