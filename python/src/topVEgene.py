@@ -1,8 +1,6 @@
-import argparse
 import json
 from pathlib import Path
-import time
-import subprocess
+import sys
 import h5py
 import numpy as np
 import pandas as pd
@@ -18,8 +16,8 @@ import pandas as pd
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 #    newformat?: bool. Used to support new format HDF5
 
-# json_example='{"samples":"sample1,sample2,sample3","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file.h5",
-# "filter_extreme_values":true,"num_genes":100, "rank_type":"var"}'
+# json_example='{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file.h5",
+# "filter_extreme_values":true,"num_genes":10, "rank_type":"var"}'
 
 def generate_sample_list(filename: str) -> np.ndarray:
     with h5py.File(filename, "r") as hdf_data:
@@ -52,14 +50,15 @@ def calculate_variance(
     rank_type: str,
     desired_num_genes: int = 100,
 ) -> list[str]:
-    # Minimum required percentage of samples after dropout from low expression and nan values
+    # Minimum required percentage of samples after dropout from low expression
     MIN_PROP = 0.7
-    sample_size_cutoff = MIN_PROP * len(input_matrix.columns)
-
-    # TODO: arbitrarily using 5% to cutout low-expressed genes — may re-evaluate
-    cutoffs = (input_matrix.quantile(0.05, axis=1)) if filter_extreme_values else pd.Series(0.0, index=input_matrix.index)
+    #using 10% based on https://pmc.ncbi.nlm.nih.gov/articles/PMC4983432/, other discussions/papers have suggested cutoff is mostly arbitrary
+    cutoffs = (input_matrix.quantile(0.1, axis=1)) if filter_extreme_values else pd.Series(0.0, index=input_matrix.index)
     #Finding genes that have enough samples with expression values above the cutoff and high enough expression
-    valid_genes = input_matrix.ge(cutoffs, axis=0).sum(axis=1) >= sample_size_cutoff
+    gene_sample_count = input_matrix.ge(cutoffs, axis=0).sum(axis=1)
+    # Minimum sample size based on 70% of the gene with smallest sample size after dropout
+    min_sample_size = MIN_PROP * gene_sample_count.min()
+    valid_genes = gene_sample_count >= (min_sample_size)
     filtered_matrix = input_matrix.loc[valid_genes]
 
     if rank_type == "var":
@@ -72,41 +71,15 @@ def calculate_variance(
     scores = scores[scores >= 0].dropna()
     return scores.nlargest(desired_num_genes).index.tolist()
 
-def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description=(
-            "Select top variant genes using variance or interquartile range from an HDF5 matrix."
-        )
-    )
-    parser.add_argument(
-        "json",
-        nargs="?",
-        help=(
-            "JSON string containing samples, input_file, filter_extreme_values, num_genes, "
-            "and rank_type"
-        ),
-    )
-    parser.add_argument(
-        "--params",
-        dest="params",
-        help=(
-            "JSON string containing samples, input_file, filter_extreme_values, num_genes, "
-            "and rank_type"
-        ),
-    )
-    return parser.parse_args()
-
+def _read_stdin_payload() -> str:
+    payload = sys.stdin.read().strip()
+    if not payload:
+        raise ValueError("No JSON payload provided on stdin")
+    return payload
 
 def main() -> int:
-    performance_start = time.time()
-
-    args = _parse_args()
-    params_str = args.params or args.json
-    if not params_str:
-        print("Error: provide a JSON payload as positional argument or with --params")
-        return 2
-
     try:
+        params_str = _read_stdin_payload()
         json_args = json.loads(params_str)
         if not isinstance(json_args, dict):
             raise ValueError("Input JSON must be an object")
@@ -114,7 +87,6 @@ def main() -> int:
         samples_value = json_args.get("samples")
         if isinstance(samples_value, str):
             samples = [sample.strip() for sample in samples_value.split(",") if sample.strip()]
-            # samples= generate_sample_list("/Users/jsimps98/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix6.h5")
         elif isinstance(samples_value, list):
             samples = [str(sample).strip() for sample in samples_value if str(sample).strip()]
         else:
@@ -147,24 +119,10 @@ def main() -> int:
             raise ValueError("Could not load input matrix from HDF5")
 
         result = calculate_variance(gene_sample_matrix, filter_extreme_values, rank_type, num_genes)
-        performance_end = time.time()
-
-        print('python', json.dumps(result), performance_end-performance_start)
-        # payload = {"input_file":"/Users/jsimps98/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix6.h5","filter_extreme_values":True,"num_genes":4, "rank_type":"var","samples":','.join(samples)}
-        # performance_start = time.time()
-        # result =subprocess.run(
-        #         ["./target/release/topGeneByExpressionVariance"],
-        #         input=json.dumps(payload),   # what echo was sending
-        #         text=True,                   # send/receive str instead of bytes
-        #         capture_output=True,
-        #         check=True,
-        #         cwd="/Users/jsimps98/dev/sjpp/proteinpaint/rust",  # optional
-        #     )
-        # performance_end = time.time()
-        # print('rust',result.stdout, performance_end-performance_start)
+        print(json.dumps(result))
         return 0
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {e}", file=sys.stderr)
         return 1
 
 
