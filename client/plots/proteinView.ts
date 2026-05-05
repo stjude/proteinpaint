@@ -365,24 +365,24 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		if (mode === 'none') return [] as string[]
 		return [...customShapeGroupsByMode[mode].keys()].sort().map(name => makeCustomShapeGroupKey(name))
 	}
-	const getLegendItemSampleCount = (mode: ColorMode | ShapeMode, item: string) => {
+	const getLegendItemSampleCount = (mode: ColorMode | ShapeMode, item: string, dotsToCount: any[] = dots) => {
 		if (mode === 'none') return 0
 
 		if (isCustomGroupKey(item)) {
 			const groupName = getCustomGroupNameFromKey(item)
-			return dots.filter(
+			return dotsToCount.filter(
 				d => getCustomGroupOfValue(mode as ColorMode, getBaseColorValue(d, mode as ColorMode)) === groupName
 			).length
 		}
 
 		if (isCustomShapeGroupKey(item)) {
 			const groupName = getCustomShapeGroupNameFromKey(item)
-			return dots.filter(
+			return dotsToCount.filter(
 				d => getCustomShapeGroupOfValue(mode as ShapeMode, getBaseColorValue(d, mode as ColorMode)) === groupName
 			).length
 		}
 
-		return dots.filter(d => getBaseColorValue(d, mode as ColorMode) === item).length
+		return dotsToCount.filter(d => getBaseColorValue(d, mode as ColorMode) === item).length
 	}
 	const getColor = (d: any) => {
 		const customGroup = colorMode === 'none' ? undefined : getCustomGroupOfDot(d, colorMode)
@@ -870,6 +870,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const makeLegendItems = (items: string[], colorMap: Map<string, string>) => {
+			// Filter dots to exclude those hidden by shape filtering
+			const dotsVisibleByShape = dots.filter(d => !hiddenShape[shapeMode].has(getShapeValueByMode(d, shapeMode)))
 			const openColorMenu = (event: any, name: string, swatch: any) => {
 				const menu = new Menu({ padding: '0px' })
 				const div = menu.d.append('div')
@@ -953,7 +955,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				const isGroup = isCustomGroupKey(name)
 				const displayName = isGroup ? getCustomGroupNameFromKey(name) : name
 				const inGroup = !isGroup ? getCustomGroupOfValue(colorMode, name) : null
-				const sampleCount = getLegendItemSampleCount(colorMode, name)
+				const sampleCount = getLegendItemSampleCount(colorMode, name, dotsVisibleByShape)
+				if (sampleCount === 0) continue
 				const row = colorLegendDiv
 					.append('div')
 					.style('display', 'flex')
@@ -983,11 +986,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				swatch.on('click', (event: any) => openColorMenu(event, name, swatch))
 				row
 					.append('span')
-					.text(displayName)
+					.text(`${displayName}, n=${sampleCount}`)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openColorMenu(event, name, swatch))
-				row.append('span').style('color', '#6b7280').text(`(n=${sampleCount})`)
 				if (isGroup) {
 					const count = customGroupsByMode[colorMode].get(getCustomGroupNameFromKey(name))?.size || 0
 					const itemLabel =
@@ -1165,6 +1167,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const drawShapeLegend = (items: string[], shapeMap: Map<string, number>) => {
+			// Filter dots to exclude those hidden by color filtering
+			const dotsVisibleByColor = dots.filter(d => !hiddenColor[colorMode].has(getColorValueByMode(d, colorMode)))
 			const openShapeMenu = (event: any, name: string) => {
 				const menu = new Menu({ padding: '0px' })
 				const activeShapeMap = isCustomShapeGroupKey(name) ? customShapeIndicesByMode[shapeMode] : getShapeMapInUse()
@@ -1241,7 +1245,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				const isGroup = isCustomShapeGroupKey(name)
 				const displayName = isGroup ? getCustomShapeGroupNameFromKey(name) : name
 				const inGroup = !isGroup ? getCustomShapeGroupOfValue(shapeMode, name) : null
-				const sampleCount = getLegendItemSampleCount(shapeMode, name)
+				const sampleCount = getLegendItemSampleCount(shapeMode, name, dotsVisibleByColor)
+				if (sampleCount === 0) continue
 				const row = shapeLegendDiv
 					.append('div')
 					.style('display', 'flex')
@@ -1280,11 +1285,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				icon.on('click', (event: any) => openShapeMenu(event, name))
 				row
 					.append('span')
-					.text(displayName)
+					.text(`${displayName}, n=${sampleCount}`)
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.style('cursor', 'pointer')
 					.on('click', (event: any) => openShapeMenu(event, name))
-				row.append('span').style('color', '#6b7280').text(`(n=${sampleCount})`)
 				if (isGroup) {
 					const count = customShapeGroupsByMode[shapeMode].get(getCustomShapeGroupNameFromKey(name))?.size || 0
 					const itemLabel =
@@ -1416,118 +1420,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	renderColorLegend()
 	renderSizeLegend()
 }
-
-/*
-function renderFCSummary(holder: any, data: any, self: ProteinView) {
-	holder.selectAll('*').remove()
-
-	// data.nonPTMAssays store the fold change for each nonPTM assay type, data.PTMs store the PTM data (including fold change) for each PTM assay type
-	const nonPTMAssays = data?.nonPTMAssays || []
-
-	let maxAbs = 0
-	for (const assay of nonPTMAssays) {
-		for (const c of assay.nonPTMCohorts || []) {
-			const log2ratio = getLog2Ratio(c.value)
-			if (log2ratio !== null) maxAbs = Math.max(maxAbs, Math.abs(log2ratio))
-		}
-	}
-	if (maxAbs < 0.05) maxAbs = 0.05 // set a minimum scale for better visualization of small fold changes
-
-	for (const assay of nonPTMAssays) {
-		const assayName = assay.assayName
-		const section = holder.append('div').style('margin-bottom', '18px')
-		section.append('div').style('font-weight', 600).style('margin-bottom', '8px').text(`${assayName}`)
-
-		const header = section
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', '220px 30% 100px')
-			.style('align-items', 'center')
-			.style('gap', '8px')
-			.style('margin', '0 0 6px 0')
-			.style('font-size', '.75em')
-			.style('font-weight', 600)
-			.style('color', '#495057')
-
-		header.append('div').text('Cohort')
-		const scaleHeader = header.append('div').style('position', 'relative').style('height', '14px')
-
-		scaleHeader.append('div').style('position', 'absolute').style('left', 0).style('top', 0).text((-maxAbs).toFixed(2))
-
-		scaleHeader
-			.append('div')
-			.style('position', 'absolute')
-			.style('left', '50%')
-			.style('top', 0)
-			.style('transform', 'translateX(-50%)')
-			.text('0')
-
-		scaleHeader.append('div').style('position', 'absolute').style('right', 0).style('top', 0).text(maxAbs.toFixed(2))
-
-		header.append('div').text('log2 fold change')
-
-		for (const c of assay.nonPTMCohorts || []) {
-			const cohortName = c.cohortName
-			const log2ratio = getLog2Ratio(c.value)
-			const row = section
-				.append('div')
-				.style('display', 'grid')
-				.style('grid-template-columns', '220px 30% 100px')
-				.style('align-items', 'center')
-				.style('gap', '8px')
-				.style('margin', '4px 0')
-
-			row.append('div').style('font-size', '.9em').text(cohortName)
-
-			const track = row
-				.append('div')
-				.style('height', '14px')
-				.style('background', '#f1f3f4')
-				.style('border-radius', '7px')
-				.style('position', 'relative')
-				.style('overflow', 'hidden')
-				.style('cursor', 'pointer')
-				.attr('title', 'Click to show violin plot')
-				.on('click', () => launchViolinPlot(self, assayName, cohortName))
-
-			track
-				.append('div')
-				.style('position', 'absolute')
-				.style('left', '50%')
-				.style('top', 0)
-				.style('bottom', 0)
-				.style('width', '1px')
-				.style('transform', 'translateX(-0.5px)')
-				.style('background', '#868e96')
-				.style('opacity', 0.7)
-
-			const value = Number.isFinite(log2ratio) ? log2ratio : 0
-			const ratio = maxAbs > 0 ? Math.abs(value as number) / maxAbs : 0
-			const widthPct = Math.max(0, Math.min(50, ratio * 50))
-			if (log2ratio !== null && widthPct > 0) {
-				track
-					.append('div')
-					.style('position', 'absolute')
-					.style('left', log2ratio >= 0 ? '50%' : `${50 - widthPct}%`)
-					.style('top', 0)
-					.style('bottom', 0)
-					.style('width', `${widthPct}%`)
-					.style('background', log2ratio >= 0 ? '#2b8a3e' : '#c92a2a')
-					.style('opacity', 1)
-			}
-
-			row
-				.append('div')
-				.style('font-family', 'monospace')
-				.style('font-size', '.85em')
-				.style('cursor', 'pointer')
-				.attr('title', 'Click to show violin plot')
-				.on('click', () => launchViolinPlot(self, assayName, cohortName))
-				.text(log2ratio !== null ? log2ratio.toFixed(3) : 'NA')
-		}
-	}
-}
-*/
 
 function launchViolinPlot(
 	self: ProteinView,
