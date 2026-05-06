@@ -102,7 +102,7 @@ function sortSameCategoricalFilterKeys(resolved: ResolvedFilter[]): ResolvedFilt
 			if (existingIdx !== undefined) {
 				const existing = sorted[existingIdx] as ResolvedCatFilter
 				for (const v of r.values) {
-					if (!existing.values.includes(v)) existing.values.push(v)
+					if (!existing.values.some(ev => ev.key === v.key && ev.label === v.label)) existing.values.push(v)
 				}
 				continue
 			}
