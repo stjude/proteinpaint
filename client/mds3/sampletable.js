@@ -475,14 +475,27 @@ export async function samples2columnsRows(samples, tk) {
 							}
 							showClass = true
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
-							// use server-returned sample._pairArray[], do not use m.pairlst; client-side custom data only has m.pairlst
-							const p = sample._pairArray[pairArrayIdx++][0]
-							oneHtml.push(
-								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
-									p.b.name || ''
-								} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
-							)
-							showClass = true
+							/* when m has multiple samples, m.pairlst cannot be used to print breakpoint of 
+							one of its sample in the multi-sample table
+							because m.pairlst only has one breakend equal to the sample's actual event
+							where the other breakend from the sample is missing from m.pairlst
+							thus has to use sample._pairArray. 
+							*/
+							const p = sample._pairArray?.[pairArrayIdx]?.[0]
+							/* incrementing array index is to account for when a sample contains both non-sv item and sv, 
+							in such case, _pairArray[] is shorter than ssm_id_lst[]
+							*/
+							pairArrayIdx++
+							if (p) {
+								oneHtml.push(
+									`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
+										p.b.name || ''
+									} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+								)
+								showClass = true
+							} else {
+								oneHtml.push('ERR: unidentified sv/fusion')
+							}
 						} else if (m.dt == dtcnv) {
 							const v = cnv2str(m, tk)
 							oneHtml.push(v.value + ' ' + v.pos)
