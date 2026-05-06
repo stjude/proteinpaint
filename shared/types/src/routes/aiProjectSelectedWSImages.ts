@@ -13,18 +13,22 @@ export type AiProjectSelectedWSImagesResponse = {
 	wsimages: WSImage[]
 }
 
-export enum SelectionPrefixes {
-	TileSelection = 'ts_',
-	Prediction = 'pred_',
-	Annotation = 'anno_'
-}
+export const SelectionPrefixes = {
+	TileSelection: 'ts_',
+	Prediction: 'pred_',
+	Annotation: 'anno_'
+} as const
 
-export enum FeaturePrefixes {
-	Star = `annotation-star-`,
-	Square = `annotation-square-`,
-	Border = 'annotation-border-',
-	PredBorder = 'prediction-border-'
-}
+type SelectionPrefixes = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
+
+export const FeaturePrefixes = {
+	Star: `annotation-star-`,
+	Square: `annotation-square-`,
+	Border: 'annotation-border-',
+	PredBorder: 'prediction-border-'
+} as const
+
+type FeaturePrefixes = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
 
 export interface FlagPredictionInfo {
 	flag: FlagStatus
@@ -52,12 +56,14 @@ export interface TileSelection {
 	timestamp: string
 }
 
-export enum FlagStatus {
-	Normal = 0,
-	Skipped = 1,
-	Flagged = 2,
-	Deleted = 3
-}
+export const FlagStatus = {
+	Normal: 0,
+	Skipped: 1,
+	Flagged: 2,
+	Deleted: 3
+} as const
+
+type FlagStatus = (typeof FlagStatus)[keyof typeof FlagStatus]
 
 export const FlagStatusMessages = {
 	[FlagStatus.Normal]: '',
