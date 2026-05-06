@@ -291,7 +291,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 			const rows = stmt.all(projectId, imageId) || []
 			for (const p of rows) {
 				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
-					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
+					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatusType, timestamp: p.timestamp })
 			}
 			return predictionMap
 		} catch (error) {
