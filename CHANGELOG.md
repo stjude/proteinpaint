@@ -7,6 +7,9 @@ All notable changes to this project will be documented in this file.
 Features:
 - Added support for cache id in the promoter volcano. Scatter plot now uses same hover detection as other plots. Other improvements
 
+Fixes:
+- bug fix to display actual breakpoints in mds3 tk sample table, for samples with multiple fusion events
+
 
 ## 2.186.0
 
