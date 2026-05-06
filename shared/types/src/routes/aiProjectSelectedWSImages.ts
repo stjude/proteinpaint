@@ -19,7 +19,7 @@ export const SelectionPrefixes = {
 	Annotation: 'anno_'
 } as const
 
-type SelectionPrefixes = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
+export type SelectionPrefixes = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
 
 export const FeaturePrefixes = {
 	Star: `annotation-star-`,
@@ -28,7 +28,7 @@ export const FeaturePrefixes = {
 	PredBorder: 'prediction-border-'
 } as const
 
-type FeaturePrefixes = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
+export type FeaturePrefixes = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
 
 export interface FlagPredictionInfo {
 	flag: FlagStatus
@@ -63,7 +63,7 @@ export const FlagStatus = {
 	Deleted: 3
 } as const
 
-type FlagStatus = (typeof FlagStatus)[keyof typeof FlagStatus]
+export type FlagStatus = (typeof FlagStatus)[keyof typeof FlagStatus]
 
 export const FlagStatusMessages = {
 	[FlagStatus.Normal]: '',
