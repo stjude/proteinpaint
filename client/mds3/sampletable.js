@@ -458,6 +458,9 @@ export async function samples2columnsRows(samples, tk) {
 		if (has_ssm) {
 			if (ssm_id_lst) {
 				const htmls = []
+
+				let pairArrayIdx = 0 // see below
+
 				for (const ssm_id of ssm_id_lst) {
 					const m = findMbyId(ssm_id, tk)
 					const oneHtml = []
@@ -472,8 +475,8 @@ export async function samples2columnsRows(samples, tk) {
 							}
 							showClass = true
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
-							// server-returned data has sample._pairlst and shouldn't use m.pairlst; client-side custom data only has m.pairlst
-							const p = sample._pairlst?.[0] || m.pairlst[0]
+							// use server-returned sample._pairArray[], do not use m.pairlst; client-side custom data only has m.pairlst
+							const p = sample._pairArray[pairArrayIdx++][0]
 							oneHtml.push(
 								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${
 									p.b.name || ''

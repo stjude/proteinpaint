@@ -406,6 +406,15 @@ export function combineSamplesById(inlst, samples, ssmid) {
 		// slot this sample into samples{}
 		const s2 = samples.get(s.sample_id)
 		s2.ssm_id_lst.push(ssmid)
+		if (s._pairlst) {
+			/* due to ssm id only containing one break point,
+			in order for client to access both breakpoints and print them,
+			pass the _pairlst to an array _pairArray
+			when a sample has multiple _pairlst, they are all stored in s2._pairArray
+			*/
+			if (!s2._pairArray) s2._pairArray = []
+			s2._pairArray.push(s._pairlst)
+		}
 		if (s2.ssmid2format) {
 			s2.ssmid2format[ssmid] = s.formatK2v
 		}
