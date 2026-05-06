@@ -13,28 +13,30 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 		return []
 	}
 
+	const plotTypes = [...supportedPlotTypes]
+
 	// check if it supports summary charts
-	if (supportedPlotTypes.includes('dictionary')) {
+	if (plotTypes.includes('dictionary')) {
 		// summmary means it includes "boxplot", "violin", "barchart", "sampleScatter" as child types
-		supportedPlotTypes.push('summary')
+		plotTypes.push('summary')
 	}
 
 	// check if it supports heirarchical clustering charts
 	// TODO:
-	if (supportedPlotTypes.includes('geneExpression')) {
-		// || supportedPlotTypes.includes('proteomeAbundance') || supportedPlotTypes.includes('dnaMethylation'))
-		supportedPlotTypes.push('hiercluster')
+	if (plotTypes.includes('geneExpression')) {
+		// || plotTypes.includes('proteomeAbundance') || plotTypes.includes('dnaMethylation'))
+		plotTypes.push('hiercluster')
 	}
 	// check if it supports dge
-	if (supportedPlotTypes.includes('DA')) {
-		supportedPlotTypes.push('dge')
+	if (plotTypes.includes('DA')) {
+		plotTypes.push('dge')
 	}
 
 	// For t-SNE/UMAP scatter plots
-	if (supportedPlotTypes.includes('sampleScatter')) {
-		supportedPlotTypes.push('prebuiltscatter')
+	if (plotTypes.includes('sampleScatter')) {
+		plotTypes.push('prebuiltscatter')
 	}
-	return supportedPlotTypes
+	return Array.from(new Set(plotTypes))
 }
 
 // ---------------------------------------------------------------------------
