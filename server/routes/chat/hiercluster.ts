@@ -180,7 +180,7 @@ async function validate_hiercluster_gene_expression_response(
 			}
 		}
 
-		const genesInGeneset = getGenesForGeneset(genome, response_type.genesetNames)
+		const genesInGeneset = getGenesForGeneset(genome, response_type.genesetNames[0])
 		if (!genesInGeneset || genesInGeneset.length === 0) {
 			return {
 				type: 'text',
