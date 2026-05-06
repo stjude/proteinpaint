@@ -2,7 +2,7 @@
 Unit Test script for 'python/src/topVEgene.py'
 
 Run test script as follows (from 'proteinpaint/'):
-    node python/test/topVEgene.unit.spec.js
+    node python/test/topVEgene.unit.spec.ts
 *********************************************/
 
 import tape from 'tape'
