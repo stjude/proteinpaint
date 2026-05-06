@@ -10,6 +10,7 @@ import {
 	openActionMenu,
 	openMultiHitClickMenu,
 	drawHoverShapes,
+	showResultsTable,
 	type ActionMenuItem
 } from '#dom'
 import { PlotBase } from './PlotBase'
@@ -32,6 +33,7 @@ const COHORT_VOLCANO_HIT_RADIUS_PADDING_PX = 3 // px added to maxDotRadius for t
 const COHORT_VOLCANO_HIT_BUFFER_PX = 2 // px of forgiveness around each dot's own visual edge
 const COHORT_VOLCANO_HOVER_RING_SIZE_SCALE = 1.15 // hover ring grows the dot by this factor
 const COHORT_VOLCANO_HOVER_RING_STROKE_PX = 1.5 // hover ring stroke width (non-scaling)
+const COHORT_VOLCANO_HOVER_MAX_COHORTS = 5 // max rows shown in the hover tooltip table; rest collapse into "and N more..."
 
 class ProteinView extends PlotBase implements RxComponent {
 	static type = 'proteinView'
@@ -556,6 +558,36 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			.filter(d => !isDotHidden(d) && getDotDistancePx(d, seed) < thresholdPx)
 			.sort((a, b) => getDotDistancePx(a, seed) - getDotDistancePx(b, seed))
 	}
+	const buildClusterTableData = (clusterDots: any[]): { columns: any[]; rows: any[] } => {
+		// Union semantics: PTM dots and non-PTM dots have different attribute
+		// keys (PTM Type, Modified Site, PTM identifier vs Isoform identifier),
+		// so include any column whose underlying field is present on at least
+		// one row in the cluster. Cells for rows that don't have that field
+		// render as blank.
+		const hasPtm = clusterDots.some(d => d.PTMType)
+		const hasNonPtm = clusterDots.some(d => !d.PTMType)
+		const hasModSites = clusterDots.some(d => d.modSites)
+
+		const columns: any[] = [{ label: 'Organism' }, { label: 'Assay' }, { label: 'Sample Set' }]
+		if (hasPtm) columns.push({ label: 'PTM Type' })
+		if (hasModSites) columns.push({ label: 'Modified Site' })
+		if (hasPtm) columns.push({ label: 'PTM' })
+		if (hasNonPtm) columns.push({ label: 'Isoform' })
+		columns.push({ label: 'log₂(FC)', sortable: true }, { label: 'p-value', sortable: true })
+
+		const rows = clusterDots.map(d => {
+			const isPtm = !!d.PTMType
+			const row: any[] = [{ value: d.organismName || '' }, { value: d.assayName || '' }, { value: d.cohortName || '' }]
+			if (hasPtm) row.push({ value: isPtm ? d.PTMType || '' : '' })
+			if (hasModSites) row.push({ value: d.modSites || '' })
+			if (hasPtm) row.push({ value: isPtm ? d.uniqueIdentifier || '' : '' })
+			if (hasNonPtm) row.push({ value: !isPtm ? d.uniqueIdentifier || '' : '' })
+			row.push({ value: roundValue(d.log2fc, 3) }, { value: d.pValue.toExponential(2) })
+			return row
+		})
+		return { columns, rows }
+	}
+
 	const renderClusterTooltip = (clusterDots: any[]) => {
 		const tip = self.dom.tip.clear().d
 
@@ -566,26 +598,32 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				.style('font-weight', 'bold')
 				.style('margin', '0 0 6px 0')
 				.text(`${clusterDots.length} Cohorts`)
-		}
 
-		const list = tip.append('div')
+			const shown = clusterDots.slice(0, COHORT_VOLCANO_HOVER_MAX_COHORTS)
+			const additionalCount = clusterDots.length - shown.length
 
-		if (clusterDots.length > 1) {
-			const grouped = new Map<string, any>()
-			for (const d of clusterDots) {
-				const key = [d.assayName, d.cohortName, d.modSites || ''].join('\t')
-				if (!grouped.has(key)) grouped.set(key, d)
-			}
-			for (const d of grouped.values()) {
-				const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
-				const table = table2col({ holder: block.append('table') })
-				table.addRow('Assay', d.assayName)
-				table.addRow('Sample Set', d.cohortName)
-				if (d.modSites) table.addRow('Modified Site', d.modSites)
+			const holder = tip.append('div').style('margin', '10px')
+			const { columns, rows } = buildClusterTableData(shown)
+			showResultsTable({
+				tableDiv: holder,
+				dataItems: shown,
+				getRowKey: (d: any) => d.uniqueIdentifier,
+				columns,
+				rows
+			})
+
+			if (additionalCount > 0) {
+				holder
+					.append('div')
+					.style('font-size', '0.85em')
+					.style('color', '#666')
+					.style('font-style', 'italic')
+					.text(`and ${additionalCount} more cohort${additionalCount > 1 ? 's' : ''}...`)
 			}
 			return
 		}
 
+		const list = tip.append('div')
 		for (const d of clusterDots) {
 			const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
 			const table = table2col({ holder: block.append('table') })
@@ -844,17 +882,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 				return
 			}
 
-			const hasModSites = clusterDots.some(d => d.modSites)
-			const columns: any[] = [{ label: 'Assay' }, { label: 'Sample Set' }]
-			if (hasModSites) columns.push({ label: 'Modified Site' })
-			columns.push({ label: 'log₂(FC)', sortable: true }, { label: 'p-value', sortable: true })
-
-			const rows = clusterDots.map(d => {
-				const row: any[] = [{ value: d.assayName || '' }, { value: d.cohortName || '' }]
-				if (hasModSites) row.push({ value: d.modSites || '' })
-				row.push({ value: roundValue(d.log2fc, 3) }, { value: d.pValue.toExponential(2) })
-				return row
-			})
+			const { columns, rows } = buildClusterTableData(clusterDots)
 
 			openMultiHitClickMenu<any>({
 				menu: clickMenu,
