@@ -5,10 +5,18 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
+import { dofetch3 } from '#common/dofetch'
+import { renderImpressionThermometer, IMPRESSION_MAX_SCORE } from './renderImpressionThermometer.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
-const IMPRESSIONS_TAB = 'Impressions'
 const LIKERT_TAB = 'Likert Scale'
+
+// Used to detect when the user clicked an "Impression" domain term in the tree
+// (parent term ID ends with '__Impression'). Such domains don't have multivalue
+// children — they wrap a SC integer term and a POC float term — so the standard
+// tabs flow is skipped and a dedicated thermometer is rendered instead.
+const IMPRESSION_SUFFIX = '__Impression'
+
 export class profileForms extends profilePlot {
 	static type = 'profileForms' as const
 	id: any
@@ -29,6 +37,15 @@ export class profileForms extends profilePlot {
 	//for each plot tab, a dict of sc term wrappers
 	id2SCTW: { [key: string]: { [key: string]: any } }
 
+	// Impression-domain mode (set in init() when config.tw.term.id ends with '__Impression')
+	isImpressionDomain!: boolean
+	scTW: any
+	pocTW: any
+	// Per-module color sourced from the DB: terms.jsondata.color on the SC and POC children.
+	// Within a module SC and POC share the same color in the DB; we capture both for safety.
+	impressionScColor?: string
+	impressionPocColor?: string
+
 	constructor(opts) {
 		super(opts, 'profileForms')
 		this.opts = opts
@@ -38,39 +55,71 @@ export class profileForms extends profilePlot {
 	async init(appState) {
 		super.init(appState)
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
-		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
+		const parentId: string = config.tw?.term?.id || ''
+		this.isImpressionDomain = parentId.endsWith(IMPRESSION_SUFFIX)
 		const settings = config.settings.profileForms
 		this.tabs = []
-		for (const plot of config.options) {
-			const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
-			if (!tws.length) continue //no terms for this plot
-			const tab: any = {
-				label: plot.name,
-				callback: () => {
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
-				},
-				active: false
+		this.twLst = []
+		if (this.isImpressionDomain) {
+			// Children of an "__Impression" domain are scalar (integer SC + float POC),
+			// not multivalue. Resolve them via getTermChildren — but note the server
+			// joins on subcohort_terms with a cohort string, so we MUST pass the active
+			// cohort or no children come back. Mirrors the lookup tree.js does
+			// (state.cohortValuelst = termdbConfig.selectCohort.values[activeCohort].keys).
+			const cohortValuelst = appState.termdbConfig?.selectCohort
+				? appState.termdbConfig.selectCohort.values[appState.activeCohort]?.keys
+				: null
+			const childData = await this.app.vocabApi.getTermChildren({ id: parentId }, cohortValuelst)
+			const children: any[] = childData?.lst || []
+			const scChild = children.find(t => t.type === 'integer') || children[0]
+			// pocChild may be absent — Patients & Outcomes is SC-only by design.
+			const pocChild = children.find(t => t.type === 'float')
+			if (!scChild) {
+				console.error('profileForms impression-domain SC child not found:', { parentId, cohortValuelst, childData })
 			}
-			if (plot.name == config.activeTab) tab.active = true
-			if (plot.hasSC) {
-				this.id2SCTW[plot.name] = {}
-				for (const tw of this.twLst) {
-					if (tw.term.subtype != plot.subtype) continue
-					const scTermId = tw.term.id.replace(/^POC/, '')
-					const scTW: any = { id: scTermId }
-					await fillTermWrapper(scTW, this.app.vocabApi)
-					this.id2SCTW[plot.name][scTermId] = scTW
+			if (scChild) {
+				this.scTW = { id: scChild.id, q: { mode: 'continuous' } }
+				await fillTermWrapper(this.scTW, this.app.vocabApi)
+				this.impressionScColor = scChild.color
+			}
+			if (pocChild) {
+				this.pocTW = { id: pocChild.id, q: { mode: 'continuous' } }
+				await fillTermWrapper(this.pocTW, this.app.vocabApi)
+				this.impressionPocColor = pocChild.color
+			}
+		} else {
+			this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: parentId })
+			for (const plot of config.options) {
+				const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
+				if (!tws.length) continue //no terms for this plot
+				const tab: any = {
+					label: plot.name,
+					callback: () => {
+						this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
+					},
+					active: false
 				}
-				this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
+				if (plot.name == config.activeTab) tab.active = true
+				if (plot.hasSC) {
+					this.id2SCTW[plot.name] = {}
+					for (const tw of this.twLst) {
+						if (tw.term.subtype != plot.subtype) continue
+						const scTermId = tw.term.id.replace(/^POC/, '')
+						const scTW: any = { id: scTermId }
+						await fillTermWrapper(scTW, this.app.vocabApi)
+						this.id2SCTW[plot.name][scTermId] = scTW
+					}
+					this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
+				}
+				this.tabs.push(tab)
 			}
-			this.tabs.push(tab)
 		}
 		const rightDiv = this.dom.rightDiv
 		const topDiv = rightDiv.append('div')
 		const domainDiv = topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold')
 
 		const headerDiv = rightDiv.append('div').style('padding-bottom', '10px')
-		if (this.tabs.length > 1)
+		if (!this.isImpressionDomain && this.tabs.length > 1)
 			await new Tabs({
 				holder: topDiv,
 				tabsPosition: 'horizontal',
@@ -114,6 +163,33 @@ export class profileForms extends profilePlot {
 
 	async main() {
 		super.main()
+		const parents = this.config.tw.term.id.split('__')
+		this.module = parents[1]
+		const domain = parents.slice(1).join(' / ')
+		this.dom.domainDiv.text(domain)
+		this.dom.mainG.selectAll('*').remove()
+		this.dom.gridG.selectAll('*').remove()
+		this.dom.xAxisG.selectAll('*').remove()
+		this.dom.legendG.selectAll('*').remove()
+
+		if (this.isImpressionDomain) {
+			await this.setControls()
+			this.data = await this.fetchImpressionDistribution()
+			if (this.data && 'error' in this.data) throw this.data.error
+			renderImpressionThermometer({
+				dom: this.dom,
+				id: this.id,
+				module: this.module,
+				data: this.data,
+				texts: this.config.impression,
+				colors: { sc: this.impressionScColor || '#888' },
+				tip: this.tip
+			})
+			this.filterG.selectAll('*').remove()
+			this.addFilterLegend()
+			return
+		}
+
 		if (this.tabs.length == 0) return // no plots to show
 		const activeTab = this.state.config.activeTab || this.tabs[0].label
 		this.activePlot = this.state.config.options.find(p => p.name == activeTab)
@@ -121,15 +197,7 @@ export class profileForms extends profilePlot {
 		if (this.activePlot.hasSC) {
 			this.scScoreTerms = Object.values(this.id2SCTW[this.activePlot.name])
 		}
-		const parents = this.config.tw.term.id.split('__')
-		this.module = parents[1]
-		const domain = parents.slice(1).join(' / ')
-		this.dom.domainDiv.text(domain)
 		this.categories = new Set()
-		this.dom.mainG.selectAll('*').remove()
-		this.dom.gridG.selectAll('*').remove()
-		this.dom.xAxisG.selectAll('*').remove()
-		this.dom.legendG.selectAll('*').remove()
 		await this.setControls()
 		this.renderPlot()
 		this.filterG.selectAll('*').remove()
@@ -141,9 +209,6 @@ export class profileForms extends profilePlot {
 			this.dom.headerDiv.style('display', 'none')
 
 			switch (this.activePlot.name) {
-				case IMPRESSIONS_TAB:
-					this.renderImpressions()
-					break
 				case LIKERT_TAB:
 					this.renderLikert()
 					break
@@ -156,7 +221,20 @@ export class profileForms extends profilePlot {
 		}
 	}
 
-	renderImpressions() {}
+	private async fetchImpressionDistribution() {
+		if (!this.scTW) return { error: 'missing SC term for impression domain' }
+		// pocTermId is omitted when this.pocTW is undefined (SC-only modules e.g. Patients & Outcomes).
+		const body: any = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			scTermId: this.scTW.term.id,
+			maxScore: IMPRESSION_MAX_SCORE,
+			filter: this.filter,
+			filterByUserSites: this.settings?.filterByUserSites
+		}
+		if (this.pocTW) body.pocTermId = this.pocTW.term.id
+		return dofetch3('termdb/profileImpressionDistribution', { body })
+	}
 
 	renderLikert() {
 		this.dom.headerDiv.style('display', 'block')
