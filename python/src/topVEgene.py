@@ -11,12 +11,12 @@ import pandas as pd
 # Various JSON parameters:
 #    samples: Enter the sample ID(s) separated by comma
 #    input_file: Path to input file (HDF5 format)
-#    filter_extreme_values: boolean (true/false). When true, this filter according to logic filterbyExpr in edgeR. This basically removes genes that have very low gene counts.
+#    filter_extreme_values: boolean (true/false). When true, this filter removes genes that have very low expression in most samples, which can be considered as noise and can interfere with the variance calculation.
 #    num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
-# json_example='{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"/path/to/input/file.h5",
-# "filter_extreme_values":true,"num_genes":10, "rank_type":"var"}'
+# echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","min_count":30,"min_total_count":20,"input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"num_genes":10, "rank_type":"var"}' 
+#  | /Users/jsimps98/anaconda3/envs/pp_env/bin/python python/src/topVEgene.py
 
 def input_data_hdf5(filename: str, sample_list: list) -> pd.DataFrame:
     sample_list = [str(s) for s in sample_list]
@@ -34,6 +34,9 @@ def input_data_hdf5(filename: str, sample_list: list) -> pd.DataFrame:
         raise ValueError(f"Matrix columns ({matrix.shape[1]}) must equal number of samples ({n_samples})")
 
     df = pd.DataFrame(matrix, index=gene_names, columns=all_samples)
+    if not set(sample_list).issubset(set(all_samples)):
+        missing_samples = set(sample_list) - set(all_samples)
+        raise ValueError(f"Sample(s) {missing_samples} not found in HDF5 file")
     return df[sample_list]
 
 
@@ -49,8 +52,8 @@ def calculate_variance(
     cutoffs = (input_matrix.quantile(0.1, axis=1)) if filter_extreme_values else pd.Series(0.0, index=input_matrix.index)
     #Finding genes that have enough samples with expression values above the cutoff and high enough expression
     gene_sample_count = input_matrix.ge(cutoffs, axis=0).sum(axis=1)
-    # Minimum sample size based on 70% of the gene with smallest sample size after dropout
-    min_sample_size = MIN_PROP * gene_sample_count.min()
+    # Minimum sample size based on 70% of total samples
+    min_sample_size = MIN_PROP * input_matrix.shape[1]
     valid_genes = gene_sample_count >= (min_sample_size)
     filtered_matrix = input_matrix.loc[valid_genes]
 
