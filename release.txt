@@ -1,1 +1,2 @@
-
+Features:
+- Added quadtree hover support to cohort volcano. Added support for different shapes in quadtree hover
