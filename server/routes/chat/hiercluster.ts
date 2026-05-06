@@ -144,7 +144,7 @@ export async function extract_hiercluster_terms_from_query(
 	} else {
 		return {
 			type: 'text',
-			text: 'Hierarchical clustering is currently only supported for gene expression data.'
+			text: 'Unsupported term type for hierarchical clustering.'
 		}
 	}
 	return await validate_hiercluster_response(response, ds, genome, geneFeatures, dataType, filterTerms)

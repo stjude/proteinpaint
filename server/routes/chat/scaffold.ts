@@ -716,7 +716,7 @@ Query: ${user_prompt}
 	}
 }
 
-export async function hierarchical(
+export async function getScaffold_hierarchical(
 	user_prompt: string,
 	llm: LlmConfig,
 	genome: any,
@@ -910,7 +910,16 @@ export async function inferScaffold(
 		case 'dge':
 			return await dge(user_prompt, llm)
 		case 'hiercluster':
-			return await hierarchical(user_prompt, llm, genome, genes_list, allowedTermTypes, ds, dbPath, dataset_json)
+			return await getScaffold_hierarchical(
+				user_prompt,
+				llm,
+				genome,
+				genes_list,
+				allowedTermTypes,
+				ds,
+				dbPath,
+				dataset_json
+			)
 		case 'matrix':
 			return await matrix(user_prompt, llm)
 		case 'prebuiltscatter':

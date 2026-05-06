@@ -77,8 +77,7 @@ class MassAiChatBot implements RxComponent {
 							type: 'plot_create',
 							config: result.plot
 						})
-						if (result.msg) serverBubble.text(result.msg + '.Please refer to the plot generated below.')
-						else serverBubble.text('Please refer to the plot generated below.')
+						serverBubble.text(`${result.msg ? result.msg + '.' : ''}Please refer to the plot generated below.`)
 					}
 					/** may switch by data.type
 					 * type=chat: server returns a chat msg
