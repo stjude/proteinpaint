@@ -157,13 +157,8 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 }
 
 async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, gE: any, samples: string[]) {
-	if (!['number', 'boolean'].includes(typeof q.filter_extreme_values)) {
-		console.error(
-			`invalid filter_extreme_values type ${typeof q.filter_extreme_values}`,
-			q.filter_extreme_values,
-			'must be number or boolean'
-		)
-		return []
+	if (!['number', 'boolean'].includes(typeof q.filter_extreme_values) || q.filter_extreme_values === undefined) {
+		q.filter_extreme_values = false
 	}
 	const input_json = {
 		input_file: gE.file,
