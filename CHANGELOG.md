@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.187.0
 
 Features:
 - Added support for cache id in the promoter volcano. Scatter plot now uses same hover detection as other plots. Other improvements
