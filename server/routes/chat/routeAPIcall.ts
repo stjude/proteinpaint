@@ -54,7 +54,7 @@ export async function route_to_appropriate_embedding_provider(
 }
 
 async function call_sj_llm(prompt: string, model_name: string, apilink: string) {
-	const temperature = 0.81
+	const temperature = 0.01
 	const top_p = 0.95
 	const timeout = 200000
 	const max_new_tokens = 512
