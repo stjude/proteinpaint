@@ -8,13 +8,13 @@ export async function route_to_appropriate_llm_provider(
 ): Promise<string> {
 	const model = modelOverride ?? llm.modelName
 	let response: string
-	if (llm.provider == 'SJ') {
+	if (llm.provider === 'SJ') {
 		// Local SJ server
 		response = await call_sj_llm(prompt, model, llm.api)
-	} else if (llm.provider == 'ollama') {
+	} else if (llm.provider === 'ollama') {
 		// Ollama server
 		response = await call_ollama_llm(prompt, model, llm.api)
-	} else if ((llm.provider as string) == 'azure') {
+	} else if ((llm.provider as string) === 'azure') {
 		// Azure server
 		response = await call_azure_llm(prompt, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
 	} else {
