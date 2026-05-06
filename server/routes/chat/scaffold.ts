@@ -22,7 +22,7 @@ import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResu
 import { getTermObj, type Value } from './entity2termObj.ts'
 import { resolveToTvs } from './entity2twTvs.ts'
 
-async function matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
+async function getScaffold_matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
 	const prompt = ` You are a ProteinPaint matrix plot assistant. Your task is to extract the necessary variables from a user's natural language question to populate a strict JSON scaffold for configuring a matrix plot. 
 
 ## OUTPUT SCHEMA
@@ -116,7 +116,7 @@ Query: "${user_prompt}"
 	}
 }
 
-async function dge(user_prompt: string, llm: LlmConfig): Promise<DEScaffold> {
+async function getScaffold_dge(user_prompt: string, llm: LlmConfig): Promise<DEScaffold> {
 	const prompt = ` You are a ProteinPaint differential expression analysis assistant. Your task is to extract exactly two comparison groups and an optional cohort filter from a user's natural language question.
 
 ## OUTPUT SCHEMA
@@ -253,7 +253,7 @@ Query: ${user_prompt}
 	}
 }
 
-async function summary(user_prompt: string, llm: LlmConfig): Promise<SummaryScaffold> {
+async function getScaffold_summary(user_prompt: string, llm: LlmConfig): Promise<SummaryScaffold> {
 	const prompt = `You are a structured data extraction assistant. Your job is to parse the user prompt string and extract variables into a strict JSON scaffold for a summary plot configuration.
 ## Output Schema
 Always return ONLY a JSON object in this exact format:
@@ -492,7 +492,7 @@ Query: ${user_prompt}
 	}
 }
 
-async function prebuiltScatter(
+async function getScaffold_prebuiltScatter(
 	user_prompt: string,
 	llm: LlmConfig,
 	ds: any
@@ -906,9 +906,9 @@ export async function inferScaffold(
 	// any is for final output in case of hierarchical clustering
 	switch (plotType) {
 		case 'summary':
-			return await summary(user_prompt, llm)
+			return await getScaffold_summary(user_prompt, llm)
 		case 'dge':
-			return await dge(user_prompt, llm)
+			return await getScaffold_dge(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,
@@ -921,9 +921,9 @@ export async function inferScaffold(
 				dataset_json
 			)
 		case 'matrix':
-			return await matrix(user_prompt, llm)
+			return await getScaffold_matrix(user_prompt, llm)
 		case 'prebuiltscatter':
-			return await prebuiltScatter(user_prompt, llm, ds)
+			return await getScaffold_prebuiltScatter(user_prompt, llm, ds)
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
