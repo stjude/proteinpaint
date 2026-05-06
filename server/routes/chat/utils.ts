@@ -226,7 +226,6 @@ export function extractGenesetsFromPrompt(prompt: string, genesetNames: string[]
 
 export function extractGenesetsFromPromptNew(prompt: string, genesetNames: string[]): string[] {
 	if (genesetNames.length === 0) return []
-	const arr1 = genesetNames.map(name => name.toLowerCase())
 	const tokens = prompt
 		.replace(/[^a-zA-Z0-9_\s]/g, '')
 		.split(/\s+/)
@@ -235,7 +234,7 @@ export function extractGenesetsFromPromptNew(prompt: string, genesetNames: strin
 	if (tokens.length === 0) return []
 
 	// Simple approach - works for primitives
-	const common_tokens = arr1.filter(item => tokens.includes(item))
+	const common_tokens = genesetNames.filter(item => tokens.includes(item.toLowerCase()))
 	return common_tokens
 }
 
