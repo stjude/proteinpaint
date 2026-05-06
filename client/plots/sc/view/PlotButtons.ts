@@ -120,7 +120,7 @@ export class PlotButtons {
 				label: 'Summary',
 				isVisible: () => true,
 				getPlotConfig: () => {
-					const sample = this.item!
+					const sample = Object.assign(this.item!, { plots: Array.from(this.availablePlots) })
 					return {
 						chartType: 'dictionary',
 						sample,
