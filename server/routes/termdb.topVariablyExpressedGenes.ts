@@ -1,12 +1,12 @@
 import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse, RouteApi } from '#types'
 import { termdbTopVariablyExpressedGenesPayload } from '#types/checkers'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
 import { joinUrl } from '#shared/joinUrl.js'
 import { formatElapsedTime } from '#shared/time.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -157,36 +157,25 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 }
 
 async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, gE: any, samples: string[]) {
+	if (!['number', 'boolean'].includes(typeof q.filter_extreme_values)) {
+		console.error(
+			`invalid filter_extreme_values type ${typeof q.filter_extreme_values}`,
+			q.filter_extreme_values,
+			'must be number or boolean'
+		)
+		return []
+	}
 	const input_json = {
 		input_file: gE.file,
 		samples: samples.join(','),
-		filter_extreme_values: q.filter_extreme_values,
+		filter_extreme_values:
+			typeof q.filter_extreme_values === 'number' ? Boolean(q.filter_extreme_values) : q.filter_extreme_values,
 		num_genes: q.maxGenes,
-		rank_type: q.rank_type?.type
+		rank_type: q.rank_type?.type ?? 'var'
 	}
 
-	if (q.filter_extreme_values == 1) {
-		input_json['min_count'] = q.min_count
-		input_json['min_total_count'] = q.min_total_count
-	}
-
-	// Handle new-format H5 file
-	if (gE.newformat) {
-		input_json['newformat'] = true
-	}
-
-	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
-	const rust_output_list = rust_output.split('\n')
-
-	let output_json
-	for (const item of rust_output_list) {
-		if (item.includes('output_json:')) {
-			output_json = JSON.parse(item.replace('output_json:', ''))
-		} else {
-			console.log(item)
-		}
-	}
-	const varGenes = output_json.map(i => i.gene_symbol)
+	const python_output = await run_python('topVEgene.py', JSON.stringify(input_json))
+	const varGenes: string[] = typeof python_output === 'string' ? JSON.parse(python_output) : []
 	return varGenes
 }
 
