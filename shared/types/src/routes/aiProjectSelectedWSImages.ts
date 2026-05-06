@@ -19,7 +19,7 @@ export const SelectionPrefixes = {
 	Annotation: 'anno_'
 } as const
 
-export type SelectionPrefixes = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
+export type SelectionPrefixType = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
 
 export const FeaturePrefixes = {
 	Star: `annotation-star-`,
@@ -28,22 +28,22 @@ export const FeaturePrefixes = {
 	PredBorder: 'prediction-border-'
 } as const
 
-export type FeaturePrefixes = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
+export type FeaturePrefixType = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
 
 export interface FlagPredictionInfo {
-	flag: FlagStatus
+	flag: FlagStatusType
 	timestamp: string
 }
 
-export function createSelectionID(prefix: SelectionPrefixes, coordinates: [number, number]): string {
+export function createSelectionID(prefix: SelectionPrefixType, coordinates: [number, number]): string {
 	return prefix + JSON.stringify(coordinates)
 }
 
-export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixes): boolean {
+export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixType): boolean {
 	return tileSelection.id.startsWith(suspectedPrefix)
 }
 
-export function createFeatureID(featurePrefix: FeaturePrefixes, coords: [number, number]) {
+export function createFeatureID(featurePrefix: FeaturePrefixType, coords: [number, number]) {
 	return featurePrefix + JSON.stringify(coords)
 }
 
@@ -51,7 +51,7 @@ export function createFeatureID(featurePrefix: FeaturePrefixes, coords: [number,
 export interface TileSelection {
 	zoomCoordinates: [number, number]
 	class?: string
-	flag: FlagStatus
+	flag: FlagStatusType
 	id: string
 	timestamp: string
 }
@@ -63,7 +63,7 @@ export const FlagStatus = {
 	Deleted: 3
 } as const
 
-export type FlagStatus = (typeof FlagStatus)[keyof typeof FlagStatus]
+export type FlagStatusType = (typeof FlagStatus)[keyof typeof FlagStatus]
 
 export const FlagStatusMessages = {
 	[FlagStatus.Normal]: '',

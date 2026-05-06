@@ -14,6 +14,7 @@ import {
 	createSelectionID,
 	SelectionPrefixes,
 	type TileSelection,
+	type FlagStatusType,
 	createFeatureID,
 	FeaturePrefixes
 } from '@sjcrh/proteinpaint-types'
@@ -216,7 +217,7 @@ export class WSIViewerInteractions {
 						const justTileSelection = checkSelectionType(tileSelection, SelectionPrefixes.TileSelection)
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
-						let newFlag: FlagStatus | null = null
+						let newFlag: FlagStatusType | null = null
 						const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 						if (event.key.toLowerCase() === 'f') {
 							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
@@ -448,6 +449,21 @@ export class WSIViewerInteractions {
 								renderWSIViewer: false,
 								renderAnnotationTable: true,
 								renderOnlyFlagged: false,
+								changeTrigger: Date.now(),
+								activeAnnotation: 0,
+								activeID: selectedTileSelection.id,
+								sessionsTileSelection: [...sessionsTileSelection]
+							}
+						}
+					})
+				} else {
+					wsiApp.app.dispatch({
+						type: 'plot_edit',
+						id: wsiApp.id,
+						config: {
+							settings: {
+								renderWSIViewer: false,
+								renderAnnotationTable: true,
 								changeTrigger: Date.now(),
 								activeAnnotation: 0,
 								activeID: selectedTileSelection.id,
