@@ -14,16 +14,12 @@ import {
 } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
-import { axisBottom, axisLeft } from 'd3-axis'
-import { scaleLinear } from 'd3-scale'
-import { rgb } from 'd3-color'
-import { quadtree } from 'd3-quadtree'
+import { axisBottom, axisLeft, scaleLinear, rgb, quadtree, select, creator } from 'd3'
 import { shapeSelector, shapes } from '../dom/shapes.js'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { aa2gmcoord } from '#src/coord'
 import { mclass, getColors } from '#shared/common.js'
 import { roundValue } from '#shared/roundValue.js'
-import { select, creator } from 'd3-selection'
 import { icons as controlIcons } from '../dom/control.icons'
 
 const defaultConfig = {
@@ -721,8 +717,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.y((d: any) => yScale(d.score))
 		.addAll(dots)
 
-	const hitRadius = radiusRange[1] + COHORT_VOLCANO_HIT_RADIUS_PADDING_PX
-
 	const hoverLayer = g.append('g').attr('class', 'cohort-volcano-hover').style('pointer-events', 'none')
 
 	const toHoverSpec = (d: any) => ({
@@ -749,6 +743,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		const rect = (cover.node() as SVGRectElement).getBoundingClientRect()
 		const mx = event.clientX - rect.left
 		const my = event.clientY - rect.top
+		// Re-read radiusRange[1] each call: the size-legend menu mutates it
+		// at runtime, so caching this once would leave the broad-query stale
+		// after the user enlarges the dots.
+		const hitRadius = radiusRange[1] + COHORT_VOLCANO_HIT_RADIUS_PADDING_PX
 		return findPointsInRadius<any>(
 			dotQuadtree,
 			mx,
