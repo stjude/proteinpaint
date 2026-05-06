@@ -1,4 +1,4 @@
-import type { LlmConfig } from '@sjcrh/proteinpaint-types'
+import type { LlmConfig } from '#types'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
