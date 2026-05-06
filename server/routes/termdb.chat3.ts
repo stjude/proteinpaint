@@ -68,7 +68,16 @@ function init({ genomes }) {
 			// const testing = false
 
 			// Access the cohort key/label
-			const rawFilter = typeof q.filter === 'string' ? JSON.parse(q.filter) : q.filter
+			let rawFilter: any
+			if (typeof q.filter === 'string') {
+				try {
+					rawFilter = JSON.parse(q.filter)
+				} catch (e) {
+					throw new Error('Failed to parse filter JSON string: ' + e)
+				}
+			} else {
+				rawFilter = q.filter
+			}
 			const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
 			const lst = Array.isArray(filter.lst) ? filter.lst : []
 			const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')

@@ -30,7 +30,16 @@ export default function setRoutes(app, basepath, genomes) {
 				if ((ds as any)?.queries?.chat) {
 					const label = (ds as any).label
 					if (datasetFilter && label !== datasetFilter) continue
-					const rawFilter = typeof req.query.filter === 'string' ? JSON.parse(req.query.filter) : req.query.filter
+					let rawFilter: any
+					if (typeof req.query.filter === 'string') {
+						try {
+							rawFilter = JSON.parse(req.query.filter)
+						} catch (err) {
+							throw new Error(`Invalid JSON in filter query parameter: ${err}`)
+						}
+					} else {
+						rawFilter = req.query.filter
+					}
 					const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
 					const lst = Array.isArray(filter.lst) ? filter.lst : []
 					const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
