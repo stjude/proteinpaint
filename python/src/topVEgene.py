@@ -14,16 +14,9 @@ import pandas as pd
 #    filter_extreme_values: boolean (true/false). When true, this filter according to logic filterbyExpr in edgeR. This basically removes genes that have very low gene counts.
 #    num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
-#    newformat?: bool. Used to support new format HDF5
 
-# json_example='{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","min_count":30,"min_total_count":20,"input_file":"/path/to/input/file.h5",
+# json_example='{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"/path/to/input/file.h5",
 # "filter_extreme_values":true,"num_genes":10, "rank_type":"var"}'
-
-def generate_sample_list(filename: str) -> np.ndarray:
-    with h5py.File(filename, "r") as hdf_data:
-        all_samples = hdf_data["samples"].asstr()[:]
-        return all_samples[: int(0.8 * len(all_samples))]
-
 
 def input_data_hdf5(filename: str, sample_list: list) -> pd.DataFrame:
     sample_list = [str(s) for s in sample_list]
