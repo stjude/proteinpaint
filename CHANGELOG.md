@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Meta analysis results are incorporated into the SC app. The results appear in the first row(s) of the sample table.
+
 
 ## 2.187.0
 

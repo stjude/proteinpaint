@@ -1,2 +1,1 @@
-Features
-- Meta analysis results are incorporated into the SC app. The results appear in the first row(s) of the sample table.
+
