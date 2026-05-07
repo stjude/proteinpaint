@@ -13,37 +13,33 @@ export type AiProjectSelectedWSImagesResponse = {
 	wsimages: WSImage[]
 }
 
-export const SelectionPrefixes = {
-	TileSelection: 'ts_',
-	Prediction: 'pred_',
-	Annotation: 'anno_'
+export enum SelectionPrefixes {
+	TileSelection = 'ts_',
+	Prediction = 'pred_',
+	Annotation = 'anno_'
 }
 
-export type SelectionPrefixType = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
-
-export const FeaturePrefixes = {
-	Star: `annotation-star-`,
-	Square: `annotation-square-`,
-	Border: 'annotation-border-',
-	PredBorder: 'prediction-border-'
+export enum FeaturePrefixes {
+	Star = 'annotation-star-',
+	Square = 'annotation-square-',
+	Border = 'annotation-border-',
+	PredBorder = 'prediction-border-'
 }
-
-export type FeaturePrefixType = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
 
 export interface FlagPredictionInfo {
-	flag: FlagStatusType
+	flag: FlagStatus
 	timestamp: string
 }
 
-export function createSelectionID(prefix: SelectionPrefixType, coordinates: [number, number]): string {
+export function createSelectionID(prefix: SelectionPrefixes, coordinates: [number, number]): string {
 	return prefix + JSON.stringify(coordinates)
 }
 
-export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixType): boolean {
+export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixes): boolean {
 	return tileSelection.id.startsWith(suspectedPrefix)
 }
 
-export function createFeatureID(featurePrefix: FeaturePrefixType, coords: [number, number]) {
+export function createFeatureID(featurePrefix: FeaturePrefixes, coords: [number, number]) {
 	return featurePrefix + JSON.stringify(coords)
 }
 
@@ -51,19 +47,17 @@ export function createFeatureID(featurePrefix: FeaturePrefixType, coords: [numbe
 export interface TileSelection {
 	zoomCoordinates: [number, number]
 	class?: string
-	flag: FlagStatusType
+	flag: FlagStatus
 	id: string
 	timestamp: string
 }
 
-export const FlagStatus = {
-	Normal: 0,
-	Skipped: 1,
-	Flagged: 2,
-	Deleted: 3
+export enum FlagStatus {
+	Normal = 0,
+	Skipped = 1,
+	Flagged = 2,
+	Deleted = 3
 }
-
-export type FlagStatusType = (typeof FlagStatus)[keyof typeof FlagStatus]
 
 export const FlagStatusMessages = {
 	[FlagStatus.Normal]: '',

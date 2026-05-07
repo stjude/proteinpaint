@@ -7,12 +7,7 @@ import {
 	type RouteApi,
 	type WSImage
 } from '#types'
-import type {
-	AiProjectSelectedWSImagesRequest,
-	AiProjectSelectedWSImagesResponse,
-	FlagPredictionInfo,
-	FlagStatusType
-} from '#types'
+import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, FlagPredictionInfo } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
@@ -162,7 +157,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
 		status: number
-		flagged: FlagStatusType
+		flagged: FlagStatus
 		label: string | null
 	}
 
@@ -171,7 +166,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		project_id: number
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
-		flag_type: FlagStatusType
+		flag_type: FlagStatus
 	}
 	const GET_ANNOTATIONS_SQL = `
         SELECT
@@ -241,7 +236,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 					zoomCoordinates: coords,
 					class: r.label ?? '',
 					status: r.status,
-					flag: r.flagged as FlagStatusType,
+					flag: r.flagged as FlagStatus,
 					timestamp: r.timestamp,
 					id: createSelectionID(SelectionPrefixes.Annotation, coords)
 				}
@@ -291,7 +286,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 			const rows = stmt.all(projectId, imageId) || []
 			for (const p of rows) {
 				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
-					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatusType, timestamp: p.timestamp })
+					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
 			}
 			return predictionMap
 		} catch (error) {
