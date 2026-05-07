@@ -1,38 +1,18 @@
-import { quadtree, type Quadtree } from 'd3-quadtree'
-import {
-	Menu,
-	table2col,
-	findPointsInRadius,
-	showResultsTable,
-	openActionMenu as openSharedActionMenu,
-	openMultiHitClickMenu,
-	type ActionMenuItem
-} from '#dom'
+import { DataPointInteractions, table2col, type ActionMenuItem } from '#dom'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import type { DataPointEntry, VolcanoPlotDimensions } from '../VolcanoTypes'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
 import type { VolcanoPlotView } from './VolcanoPlotView'
 
-/** @deprecated use `ActionMenuItem` from `#dom`. Re-exported here for callers. */
-export type ActionMenuOpt = ActionMenuItem
-
-/** Quadtree-driven hover & click overlay for the volcano plot. Owns the
- * cover rect, hit-test quadtree, hover-ring layer, and click menu so the
- * view stays render-only — restoring the pre-quadtree-refactor split. */
+/** Volcano-plot facade for the shared `DataPointInteractions` orchestration.
+ * Owns the cover rect and hover-ring layer DOM; configures the shared module
+ * with volcano-specific tooltip / table / action-menu callbacks. The view
+ * stays render-only — interactions live here. */
 export class DataPointMouseEvents {
 	private view: VolcanoPlotView
 	private termType: string
-	private cover: any
-	private hoverLayer: any
-	private clickMenu!: Menu
-	private clickMenuIsShown = false
-	private qt!: Quadtree<DataPointEntry>
-	private hitRadius = 0
-	private highlightRadius = 0
-	private highlightColor = ''
-	private maxTooltipGenes = 0
-	private plotDim!: VolcanoPlotDimensions
+	private interactions: DataPointInteractions<DataPointEntry> | null = null
 
 	constructor(view: VolcanoPlotView, termType: string) {
 		this.view = view
@@ -46,23 +26,21 @@ export class DataPointMouseEvents {
 		const points = this.view.viewData.pointData as DataPointEntry[]
 		if (!points || points.length === 0) return
 
-		this.plotDim = plotDim
 		const dotRadiusPx = this.view.viewData.plotExtent.dotRadiusPx
-		this.hitRadius = dotRadiusPx + 3
-		// Inset by stroke-width/2 so the orange fill stops at the ring's inner edge.
-		this.highlightRadius = Math.max(0.5, dotRadiusPx - 0.5)
-		this.highlightColor = this.view.settings.defaultHighlightColor
-		this.maxTooltipGenes = this.view.settings.maxTooltipGenes
+		const hitRadius = dotRadiusPx + 3
+		// Inset by stroke-width/2 so the orange fill stops at the dot's stroke inner edge.
+		const highlightRadius = Math.max(0.5, dotRadiusPx - 0.5)
+		const highlightColor = this.view.settings.defaultHighlightColor
 
 		// Hover-ring layer — visual only, never intercepts mouse events.
-		this.hoverLayer = this.view.volcanoDom.plot
+		const hoverLayer = this.view.volcanoDom.plot
 			.append('g')
 			.attr('id', 'sjpp-volcano-hover')
 			.style('pointer-events', 'none')
 
 		// Cover rect — last child of plot group so it sits on top of dots,
 		// hover rings, and the fold-change line.
-		this.cover = this.view.volcanoDom.plot
+		const cover = this.view.volcanoDom.plot
 			.append('rect')
 			.attr('id', 'sjpp-volcano-cover')
 			.attr('x', plotDim.plot.x)
@@ -73,131 +51,45 @@ export class DataPointMouseEvents {
 			.style('pointer-events', 'all')
 			.style('cursor', 'default')
 
-		// Quadtree in cover-local space — d.x/d.y are SVG-absolute, so subtract
-		// the plot rect's origin once when building the tree.
-		this.qt = quadtree<DataPointEntry>()
-			.x(d => d.x - plotDim.plot.x)
-			.y(d => d.y - plotDim.plot.y)
-			.addAll(points)
+		// Circle as an SVG path so it can flow through the generic
+		// `drawHoverShapes` helper (which renders `<path>` elements).
+		const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
-		this.clickMenu = new Menu({
-			padding: '',
-			onHide: () => {
-				this.clickMenuIsShown = false
-				this.drawHoverRings([])
-			}
-		})
-
-		this.cover.on('mousemove', (event: MouseEvent) => this.onMousemove(event))
-		this.cover.on('mouseleave', () => this.onMouseleave())
-		this.cover.on('click', (event: MouseEvent) => this.onClick(event))
-	}
-
-	private findCandidates(event: MouseEvent): DataPointEntry[] {
-		const rect = (this.cover.node() as SVGRectElement).getBoundingClientRect()
-		const mx = event.clientX - rect.left
-		const my = event.clientY - rect.top
-		const candidates = findPointsInRadius<DataPointEntry>(
-			this.qt,
-			mx,
-			my,
-			this.hitRadius,
-			d => d.x - this.plotDim.plot.x,
-			d => d.y - this.plotDim.plot.y
-		)
-		candidates.sort((a, b) => a.distance - b.distance)
-		return candidates.map(c => c.point)
-	}
-
-	private drawHoverRings(dots: DataPointEntry[]) {
-		this.hoverLayer.selectAll('circle').remove()
-		for (const d of dots) {
-			this.hoverLayer
-				.append('circle')
-				.attr('cx', d.x)
-				.attr('cy', d.y)
-				.attr('r', this.highlightRadius)
-				.attr('fill', this.highlightColor)
-				.attr('fill-opacity', 0.9)
-		}
-	}
-
-	private onMousemove(event: MouseEvent) {
-		if (this.clickMenuIsShown) return
-		const all = this.findCandidates(event)
-		const shown = all.slice(0, this.maxTooltipGenes)
-		const additionalCount = all.length - this.maxTooltipGenes
-
-		const hoverTip = this.view.dom.tip
-		if (shown.length === 0) {
-			this.drawHoverRings([])
-			hoverTip.hide()
-			return
-		}
-
-		this.drawHoverRings(shown)
-		hoverTip.clear().show(event.clientX, event.clientY)
-
-		if (shown.length === 1) {
-			const table = table2col({ holder: hoverTip.d.append('table') })
-			addTooltipRows(shown[0], table, this.termType)
-		} else {
-			const holder = hoverTip.d.append('div').style('margin', '10px')
-			this.renderMultiHitTable(holder, shown)
-			if (additionalCount > 0) {
-				holder
-					.append('div')
-					.style('font-size', '0.85em')
-					.style('color', '#666')
-					.style('font-style', 'italic')
-					.text(`and ${additionalCount} more gene${additionalCount > 1 ? 's' : ''}...`)
-			}
-		}
-	}
-
-	private onMouseleave() {
-		// Don't clear rings while the click menu is showing — the highlight
-		// must stay on the picked dots until the user dismisses the menu.
-		if (!this.clickMenuIsShown) this.drawHoverRings([])
-		this.view.dom.tip.hide()
-	}
-
-	private onClick(event: MouseEvent) {
-		const candidates = this.findCandidates(event)
-		if (candidates.length === 0) return
-		this.view.dom.tip.hide()
-		// Persist highlight on the picked dots — clickMenu.onHide clears it.
-		this.drawHoverRings(candidates)
-		this.clickMenuIsShown = true
-
-		if (candidates.length === 1) {
-			this.openActionMenu(candidates[0], event)
-			return
-		}
-
-		const { columns, rows } = this.buildMultiHitTable(candidates)
-		openMultiHitClickMenu<DataPointEntry>({
-			menu: this.clickMenu,
-			event,
-			items: candidates,
-			columns,
-			rows,
-			getRowKey: d => d.gene_name,
-			onRowClick: (d, ev) => this.openActionMenu(d, ev as MouseEvent)
-		})
-	}
-
-	private openActionMenu(d: DataPointEntry, event: MouseEvent) {
-		const actions: ActionMenuItem[] = getActionMenuOpts(d, this.termType, this.view.interactions)
-		openSharedActionMenu({
-			menu: this.clickMenu,
-			event,
-			actions,
-			renderInfo: container => {
+		this.interactions = new DataPointInteractions<DataPointEntry>({
+			cover,
+			hoverLayer,
+			hoverTip: this.view.dom.tip,
+			points,
+			// Quadtree in cover-local space — d.x/d.y are SVG-absolute, so subtract
+			// the plot rect's origin once when building the tree.
+			getX: d => d.x - plotDim.plot.x,
+			getY: d => d.y - plotDim.plot.y,
+			hitRadius,
+			toHoverSpec: d => ({
+				path: circlePath(highlightRadius),
+				// Hover layer lives in the same coord space as the dots (SVG-absolute),
+				// so translate by d.x/d.y — NOT the cover-local pair.
+				transform: `translate(${d.x},${d.y})`,
+				fill: highlightColor,
+				fillOpacity: 0.9,
+				stroke: 'none'
+			}),
+			maxTooltipRows: this.view.settings.maxTooltipGenes,
+			itemNoun: 'gene',
+			renderSingleHoverTooltip: (d, container) => {
+				const table = table2col({ holder: container.append('table') })
+				addTooltipRows(d, table, this.termType)
+			},
+			buildMultiHitTableData: dots => this.buildMultiHitTable(dots),
+			getActions: d => getActionMenuOpts(d, this.termType, this.view.interactions),
+			renderSingleHitInfo: (d, container) => {
 				const tbl = table2col({ holder: container.append('table') })
 				addTooltipRows(d, tbl, this.termType)
-			}
+			},
+			getRowKey: d => d.gene_name
 		})
+
+		this.interactions.attach()
 	}
 
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
@@ -223,17 +115,6 @@ export class DataPointMouseEvents {
 		})
 		return { columns, rows }
 	}
-
-	private renderMultiHitTable(holder: any, dots: DataPointEntry[]) {
-		const { columns, rows } = this.buildMultiHitTable(dots)
-		showResultsTable({
-			tableDiv: holder,
-			dataItems: dots,
-			getRowKey: (d: any) => d.gene_name,
-			columns,
-			rows
-		} as any)
-	}
 }
 
 /** Returns the per-data-point action menu items (Violin / DMR / Box-plot). Used
@@ -243,7 +124,7 @@ export function getActionMenuOpts(
 	d: DataPointEntry,
 	termType: string,
 	interactions: VolcanoInteractions
-): ActionMenuOpt[] {
+): ActionMenuItem[] {
 	const all = [
 		{
 			label: 'Violin plot',

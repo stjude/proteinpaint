@@ -1,9 +1,16 @@
 import { scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { select } from 'd3-selection'
-import { Menu, icons, axisstyle, table2col, showResultsTable, createLollipopFromGene, findPointsInRadius } from '#dom'
+import {
+	Menu,
+	icons,
+	axisstyle,
+	table2col,
+	showResultsTable,
+	createLollipopFromGene,
+	DataPointInteractions
+} from '#dom'
 import { to_svg } from '#src/client'
-import { quadtree } from 'd3-quadtree'
 import type { ManhattanPoint } from './manhattanTypes'
 
 /**
@@ -61,16 +68,8 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 	// Set the  positioning up for download button to work properly
 	div.style('position', 'relative')
 
-	// Create tooltip menu
+	// Hover tooltip menu — DataPointInteractions writes into this on hover.
 	const geneTip = new Menu({ padding: '' })
-	// Create click menu for showing all nearby genes
-	let clickMenuIsShown = false
-	const clickMenu = new Menu({
-		padding: '',
-		onHide: () => {
-			clickMenuIsShown = false
-		}
-	})
 
 	const svg = div
 		.append('svg')
@@ -149,13 +148,14 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 
 	// Add interactive dots layer
 	if (settings.showInteractiveDots && data.plotData.points && data.plotData.points.length > 0) {
-		// Create a group for hover circles inside the SVG
-		const pointsLayer = svg
+		// Hover-ring layer — `pointer-events: none` so rings never intercept clicks.
+		const hoverLayer = svg
 			.append('g')
 			.attr('transform', `translate(${settings.yAxisX + settings.yAxisSpace},${settings.yAxisY})`)
+			.style('pointer-events', 'none')
 
-		// Create cover as a sibling div positioned over the plot area
-		// This avoids mouse event issues when nested inside SVG
+		// Cover as a sibling HTML div positioned over the plot area — avoids
+		// the mouse-event quirks of nesting inside SVG.
 		const cover = select(svg.node().parentNode as HTMLElement)
 			.append('div')
 			.style('position', 'absolute')
@@ -165,132 +165,75 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			.style('height', `${settings.plotHeight + 2 * settings.pngDotRadius}px`)
 			.style('pointer-events', 'all')
 
-		// Track which dots are currently highlighted
-		let highlightedDots: ManhattanPoint[] = []
+		// Circle as an SVG path so it flows through the generic `drawHoverShapes`.
+		const circlePath = (r: number) => `M${r},0 A${r},${r} 0 1,1 ${-r},0 A${r},${r} 0 1,1 ${r},0 Z`
 
-		const normalizedPoints = interactivePoints
-
-		const pointQuadtree = quadtree<ManhattanPoint>()
-			.x(d => d.pixel_x)
-			.y(d => d.pixel_y)
-			.addAll(normalizedPoints)
-
-		cover
-			.on('mousemove', event => {
-				// Don't show hover tooltip if click menu is open
-				if (clickMenuIsShown) return
-				// Get mouse position relative to the cover div
-				const rect = (cover.node() as HTMLElement).getBoundingClientRect()
-				const mx = event.clientX - rect.left
-				const my = event.clientY - rect.top
-
-				// Find all dots within hit radius
-				// TODO: Make hit radius user configurable with its own setting
-				const hitRadius = settings.pngDotRadius + 3
-
-				// Find all points within hit radius with their distances
-				const candidates = findPointsInRadius(pointQuadtree, mx, my, hitRadius)
-
-				// Sort by distance and take the closest points based on settings.maxTooltipGenes setting
-				candidates.sort((a, b) => a.distance - b.distance)
-				const nearbyDots = candidates.slice(0, settings.maxTooltipGenes).map(c => c.point)
-				const additionalCount = candidates.length - settings.maxTooltipGenes
-
-				// Always remove old circles first
-				pointsLayer.selectAll('.hover-circle').remove()
-
-				if (nearbyDots.length > 0) {
-					// Add hover circles for all nearby dots
-					nearbyDots.forEach(d => {
-						pointsLayer
-							.append('circle')
-							.attr('class', 'hover-circle')
-							.attr('cx', d.pixel_x)
-							.attr('cy', d.pixel_y)
-							.attr('r', settings.pngDotRadius)
-							.attr('fill', 'none')
-							.attr('stroke', 'black')
-							.attr('stroke-width', settings.interactiveDotStrokeWidth)
-					})
-
-					highlightedDots = nearbyDots
-
-					// Show tooltip
-					geneTip.clear().show(event.clientX, event.clientY)
-					if (nearbyDots.length > 1) {
-						// Multiple genes
-						const holder = geneTip.d.append('div').style('margin', '10px')
-
-						showResultsTable({ tableDiv: holder, hits: nearbyDots })
-
-						// Show message if there are more dots beyond the settings.maxTooltipGenes shown
-						// TODO: Make these settings abstracted out and can improve this later
-						if (additionalCount > 0) {
-							holder
-								.append('div')
-								.style('font-size', '0.85em')
-								.style('color', '#666')
-								.style('font-style', 'italic')
-								.text(`and ${additionalCount} more gene${additionalCount > 1 ? 's' : ''}...`)
-						}
-					} else {
-						// Single gene - use table2col format
-						const d = nearbyDots[0]
-						const table = table2col({
-							holder: geneTip.d.append('div'),
-							margin: '10px'
-						})
-						table.addRow('Gene', d.gene)
-						table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
-						const [t1, t2] = table.addRow()
-						t1.text('Type')
-						t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
-						table.addRow('Q-value', d.q_value.toPrecision(3))
-						table.addRow('Subject count', d.nsubj)
-					}
-				} else {
-					// No dots nearby, hide tooltip
-					highlightedDots = []
-					geneTip.hide()
+		const interactions = new DataPointInteractions<ManhattanPoint>({
+			cover,
+			hoverLayer,
+			hoverTip: geneTip,
+			points: interactivePoints,
+			getX: d => d.pixel_x,
+			getY: d => d.pixel_y,
+			hitRadius: settings.pngDotRadius + 3,
+			toHoverSpec: d => ({
+				path: circlePath(settings.pngDotRadius),
+				transform: `translate(${d.pixel_x},${d.pixel_y})`,
+				fill: 'none',
+				stroke: 'black',
+				strokeWidth: settings.interactiveDotStrokeWidth
+			}),
+			maxTooltipRows: settings.maxTooltipGenes,
+			itemNoun: 'gene',
+			renderSingleHoverTooltip: (d, container) => {
+				const table = table2col({ holder: container.append('div'), margin: '10px' })
+				table.addRow('Gene', d.gene)
+				table.addRow('Position', `${d.chrom}:${d.start}-${d.end}`)
+				const [t1, t2] = table.addRow()
+				t1.text('Type')
+				t2.html(`<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`)
+				table.addRow('Q-value', d.q_value.toPrecision(3))
+				table.addRow('Subject count', d.nsubj)
+			},
+			buildMultiHitTableData: dots => ({
+				columns: [
+					{ label: 'Gene' },
+					{ label: 'Position' },
+					{ label: 'Type' },
+					{ label: 'Q-value', sortable: true },
+					{ label: 'Subject count', sortable: true }
+				],
+				rows: dots.map(d => [
+					{ value: d.gene },
+					{ value: `${d.chrom}:${d.start}-${d.end}` },
+					{
+						html: `<span style="color:${d.color}">●</span> ${d.type.charAt(0).toUpperCase() + d.type.slice(1)}`
+					},
+					{ value: d.q_value.toPrecision(3) },
+					{ value: d.nsubj }
+				])
+			}),
+			// Manhattan single-click goes straight to a lollipop launch — no menu.
+			// Release hover-suppression immediately so the cursor's next move re-engages.
+			onSingleClick: (d, _event, ctx) => {
+				ctx.dismiss()
+				if (app) createLollipopFromGene(d.gene, app)
+			},
+			// Manhattan multi-click shows showResultsTable directly with `app + clickMenu`
+			// so the table renders inline Matrix/Lollipop buttons. Reuses the module's
+			// clickMenu so its onHide cleanup (clear flag, clear hover) fires on dismiss.
+			onMultiClick: (dots, event, ctx) => {
+				if (!app) {
+					ctx.dismiss()
+					return
 				}
-			})
-			.on('mouseleave', () => {
-				// Remove all hover circles and hide tooltip
-				pointsLayer.selectAll('.hover-circle').remove()
-				highlightedDots = []
-				geneTip.hide()
-			})
-			.on('click', event => {
-				// Don't do anything if no dots nearby or no app context
-				if (highlightedDots.length === 0 || !app) return
+				ctx.clickMenu.clear().show(event.clientX, event.clientY)
+				const holder = ctx.clickMenu.d.append('div').style('margin', '10px')
+				showResultsTable({ tableDiv: holder, hits: dots, app, clickMenu: ctx.clickMenu })
+			}
+		})
 
-				// Hide the hover tooltip
-				geneTip.hide()
-
-				// Get ALL candidates within hit radius (reusing the quadtree search)
-				const rect = (cover.node() as HTMLElement).getBoundingClientRect()
-				const mx = event.clientX - rect.left
-				const my = event.clientY - rect.top
-				const hitRadius = settings.pngDotRadius + 3
-
-				const allCandidates = findPointsInRadius(pointQuadtree, mx, my, hitRadius)
-
-				allCandidates.sort((a, b) => a.distance - b.distance)
-				const allNearbyDots = allCandidates.map(c => c.point)
-
-				if (allNearbyDots.length === 1) {
-					// Single gene - launch directly
-					createLollipopFromGene(allNearbyDots[0].gene, app)
-				} else if (allNearbyDots.length > 1) {
-					// Multiple genes - show click menu with table
-					clickMenu.clear().show(event.clientX, event.clientY)
-					clickMenuIsShown = true
-
-					const holder = clickMenu.d.append('div').style('margin', '10px')
-
-					showResultsTable({ tableDiv: holder, hits: allNearbyDots, app, clickMenu })
-				}
-			})
+		interactions.attach()
 	}
 
 	// Add chromosome labels
