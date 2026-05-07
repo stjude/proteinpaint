@@ -17,7 +17,7 @@ export const SelectionPrefixes = {
 	TileSelection: 'ts_',
 	Prediction: 'pred_',
 	Annotation: 'anno_'
-} as const
+}
 
 export type SelectionPrefixType = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
 
@@ -26,7 +26,7 @@ export const FeaturePrefixes = {
 	Square: `annotation-square-`,
 	Border: 'annotation-border-',
 	PredBorder: 'prediction-border-'
-} as const
+}
 
 export type FeaturePrefixType = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
 
@@ -61,7 +61,7 @@ export const FlagStatus = {
 	Skipped: 1,
 	Flagged: 2,
 	Deleted: 3
-} as const
+}
 
 export type FlagStatusType = (typeof FlagStatus)[keyof typeof FlagStatus]
 
