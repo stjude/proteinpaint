@@ -226,6 +226,13 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			const plots: any = []
 			for (const plot of D.plots) {
 				if (!q.plots.includes(plot.name)) continue
+				if (plot.isMetaResult) {
+					/** Check to see if the plot name is the same as the sampleId to
+					 * prevent showing all meta analysis results when a single meta analysis
+					 * result is selected as a sample. */
+					const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
+					if (sampleName != sampleId) continue
+				}
 				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
 				try {
 					await file_is_readable(tsvfile)
