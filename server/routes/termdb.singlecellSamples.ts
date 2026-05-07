@@ -146,8 +146,13 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 			 * in the db. */
 			const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
 			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleName + (plot.fileSuffix || ''))
-			if (!tsvfile) throw new Error('meta result plot.file missing')
-			samples.set(sampleName, { sample: sampleName, isMetaResult: true })
+			try {
+				/** Files should exist for each meta analysis result. */
+				await file_is_readable(tsvfile)
+				samples.set(sampleName, { sample: sampleName, isMetaResult: true })
+			} catch (e: any) {
+				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
+			}
 			continue
 		}
 		for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
