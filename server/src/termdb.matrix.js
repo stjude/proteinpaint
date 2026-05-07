@@ -700,8 +700,8 @@ async function mayQueryMutatedSamples(q) {
 // TODO: account for filter/filter0
 // TODO: use tw.$id instead of tw.term.id (will need to also change in flattenCaseByFields() in server/src/mds3.gdc.js)
 async function getSampleData_dictionaryTerms_api(q, termWrappers) {
-	const data = await q.ds.cohort.termdb.dictionary.get(termWrappers)
-	const samples = {} // data.samples[] converts into this
+	/*const data = */ return await q.ds.cohort.termdb.dictionary.get(termWrappers)
+	/*const samples = {} // data.samples[] converts into this
 	for (const s of data.samples) {
 		const sampleId = q.ds.cohort.termdb.q.sampleName2id(s.sample_id)
 		if (!sampleId && sampleId !== 0) throw new Error('cannot find sample')
@@ -727,7 +727,7 @@ async function getSampleData_dictionaryTerms_api(q, termWrappers) {
 		}
 		samples[sampleId] = s2
 	}
-	return [samples, data.byTermId || {}]
+	return [samples, data.byTermId || {}]*/
 }
 
 /*
