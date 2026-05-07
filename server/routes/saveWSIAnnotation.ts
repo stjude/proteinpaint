@@ -1,6 +1,7 @@
-import { checkSelectionType, FlagStatus, SelectionPrefixes, type Mds3, type RouteApi, type TileSelection } from '#types'
+import { type Mds3, type RouteApi, type TileSelection } from '#types'
 import { saveWSIAnnotationPayload } from '#types/checkers'
-import type { SaveWSIAnnotationRequest } from '#types'
+import { checkSelectionType, SelectionPrefixes } from '#shared/index.js'
+import { type SaveWSIAnnotationRequest, FlagStatus } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 

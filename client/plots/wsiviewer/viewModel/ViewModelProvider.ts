@@ -7,12 +7,12 @@ import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
 import {
-	createFeatureID,
-	FeaturePrefixes,
-	FlagStatus,
 	type AiProjectSelectedWSImagesRequest,
 	type AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
+import { FlagStatus } from '#types'
+import { FeaturePrefixes, createFeatureID } from '#shared/index.js'
+
 import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'

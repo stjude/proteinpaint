@@ -8,15 +8,14 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
+import { type TileSelection, type FlagStatus } from '#types'
 import {
-	FlagStatus,
-	checkSelectionType,
 	createSelectionID,
 	SelectionPrefixes,
-	type TileSelection,
-	createFeatureID,
-	FeaturePrefixes
-} from '@sjcrh/proteinpaint-types'
+	FeaturePrefixes,
+	checkSelectionType,
+	createFeatureID
+} from '#shared/index.js'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
@@ -216,7 +215,7 @@ export class WSIViewerInteractions {
 						const justTileSelection = checkSelectionType(tileSelection, SelectionPrefixes.TileSelection)
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
-						let newFlag: FlagStatus | null = null
+						let newFlag: FlagStatusType | null = null
 						const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 						if (event.key.toLowerCase() === 'f') {
 							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
