@@ -875,8 +875,7 @@ type GDCSingleCellPlot = {
 	colorColumns: ColorColumn[]
 	coordsColumns: { x: number; y: number }
 	/** if true the plot is shown by default. otherwise hidden
-	 * Will not be needed when the singleCellPlot is depreciated.
-	 */
+	 * Will not be needed when the singleCellPlot is deprecated.*/
 	selected?: boolean
 }
 
@@ -915,13 +914,12 @@ type SingleCellPlot = {
 	 */
 	colorColumns: ColorColumn[]
 	/** if true the plot is shown by default. otherwise hidden.
-	 * Old implementation. Maybe deleted when singleCellPlot is depreciated.
-	 */
+	 * Old implementation. Maybe deleted when singleCellPlot is deprecated.*/
 	selected?: boolean
 	/** Plot is a meta analysis result and treated differently in the UI */
 	isMetaResult?: boolean
-	/** optional for meta analysis result plots. Define the "sampleId" for the
-	 * server requests that should match the file name or the plot name with the
+	/** optional for meta analysis result plots. May define the "sampleId" for the
+	 * server requests. If not provided, the file name or the plot name with the
 	 * spaces replaced with '_' is used. */
 	sampleId?: string
 }
@@ -1111,7 +1109,7 @@ type Mds3Queries = {
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
-	/** depreciated. replaced by WSImages */
+	/** deprecated. replaced by WSImages */
 	DZImages?: DZImages
 	WSImages?: WSImages
 	images?: Images
@@ -1143,7 +1141,7 @@ type Images = {
 	folder: string
 }
 
-/** Depreciated. deep zoom image shown via openseadragon, with precomputed tiles.
+/** Deprecated. deep zoom image shown via openseadragon, with precomputed tiles.
  * this is replaced by WSImages and should not be used anymore */
 export type DZImages = {
 	// type of the image, e.g. H&E
