@@ -87,7 +87,7 @@ export class SCViewModel {
 				// optional sample columns
 				for (const col of sampleColumns || []) {
 					const value = item[col.termid]
-					if (!value && item.isMetaResult) row.push({ value: 'All' })
+					if (value == null && item.isMetaResult) row.push({ value: 'All' })
 					else row.push({ value: item[col.termid] })
 				}
 				rows.push(row)
