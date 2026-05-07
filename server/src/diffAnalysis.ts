@@ -51,9 +51,6 @@ export function computeDeCacheId(req: DERequest): string {
 		genome: req.genome,
 		dslabel: req.dslabel,
 		samplelst: canonicalizeSamplelst(req.samplelst),
-		min_count: req.min_count,
-		min_total_count: req.min_total_count,
-		cpm_cutoff: req.cpm_cutoff,
 		method: req.method ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
@@ -399,9 +396,6 @@ export async function runDeFresh(
 		data_type: 'do_DE',
 		input_file: q.file,
 		cachedir: serverconfig.cachedir,
-		min_count: param.min_count,
-		min_total_count: param.min_total_count,
-		cpm_cutoff: param.cpm_cutoff,
 		// Read storage_type from the dataset directly, not from the mutable
 		// request object — see note in resolveSampleGroups.
 		storage_type: q.storage_type,

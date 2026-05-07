@@ -12,10 +12,10 @@ import pandas as pd
 #    samples: Enter the sample ID(s) separated by comma
 #    input_file: Path to input file (HDF5 format)
 #    filter_extreme_values: boolean (true/false). When true, this filter removes genes that have very low expression in most samples, which can be considered as noise and can interfere with the variance calculation.
-#    num_genes: The top num_genes (for e.g 10) that need to be reported in the output.
+#    max_genes: The max num of genes (for e.g 10) that need to be reported in the output.
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
-# echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","min_count":30,"min_total_count":20,"input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"num_genes":10, "rank_type":"var"}' 
+# echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"max_genes":10, "rank_type":"var"}' 
 #  | /Users/jsimps98/anaconda3/envs/pp_env/bin/python python/src/topVEgene.py
 
 def input_data_hdf5(filename: str, sample_list: list) -> pd.DataFrame:
@@ -44,8 +44,10 @@ def calculate_variance(
     input_matrix: pd.DataFrame,
     filter_extreme_values: bool,
     rank_type: str,
-    desired_num_genes: int = 100,
+    max_genes: int = 100,
 ) -> list[str]:
+    #TODO stop at 1000 and change to max genes
+    max_genes=np.clip(max_genes, 1, 1000)
     # Minimum required percentage of samples after dropout from low expression
     MIN_PROP = 0.7
     #using 10% based on https://pmc.ncbi.nlm.nih.gov/articles/PMC4983432/, other discussions/papers have suggested cutoff is mostly arbitrary
@@ -65,7 +67,7 @@ def calculate_variance(
         scores = fq3 - fq1
 
     scores = scores[scores >= 0].dropna()
-    return scores.nlargest(desired_num_genes).index.tolist()
+    return scores.nlargest(max_genes).index.tolist()
 
 def _read_stdin_payload() -> str:
     payload = sys.stdin.read().strip()
@@ -102,9 +104,9 @@ def main() -> int:
         if not isinstance(filter_extreme_values, bool):
             raise ValueError("filter_extreme_values must be true or false")
 
-        num_genes = json_args.get("num_genes")
-        if not isinstance(num_genes, int) or num_genes < 1:
-            raise ValueError("num_genes must be a positive integer")
+        max_genes = json_args.get("max_genes")
+        if not isinstance(max_genes, int) or max_genes < 1 or max_genes > 1000:
+            raise ValueError("max_genes must be an integer between 1 and 1000")
 
         rank_type = json_args.get("rank_type")
         if rank_type not in ["iqr", "var"]:
@@ -114,7 +116,7 @@ def main() -> int:
         if gene_sample_matrix is None:
             raise ValueError("Could not load input matrix from HDF5")
 
-        result = calculate_variance(gene_sample_matrix, filter_extreme_values, rank_type, num_genes)
+        result = calculate_variance(gene_sample_matrix, filter_extreme_values, rank_type, max_genes)
         print(json.dumps(result))
         return 0
     except Exception as e:
