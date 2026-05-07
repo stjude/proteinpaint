@@ -17,7 +17,7 @@
  *   detach removes handlers and clears hover state
  *   mousemove with no hits clears hover layer and hides tip
  *   mousemove with single hit calls renderSingleHoverTooltip and draws hover ring
- *   mousemove with multiple hits renders header + table + draws rings
+ *   mousemove with multiple hits renders table + rings (no header — module never renders one)
  *   mousemove caps rows by maxTooltipRows and shows "and N more X..." footer
  *   mousemove is suppressed while click menu is open
  *   isHidden filter excludes hidden dots
@@ -199,8 +199,8 @@ tape('mousemove with single hit calls renderSingleHoverTooltip and draws hover r
 	t.end()
 })
 
-// Multi-hit: header + table + one ring per shown row.
-tape('mousemove with multiple hits renders header + table + draws rings', t => {
+// Multi-hit: table + one ring per shown row, no header (module renders none).
+tape('mousemove with multiple hits renders table + rings (no header — module never renders one)', t => {
 	const { holder, cover, hoverLayer, hoverTip } = setupHarness()
 	const points: TestPoint[] = [
 		{ id: 'a', x: 50, y: 50 },
@@ -214,11 +214,10 @@ tape('mousemove with multiple hits renders header + table + draws rings', t => {
 	dispatchMouseEvent(cover.node(), 'mousemove', rect.left + 50, rect.top + 50)
 
 	t.equal(hoverLayer.selectAll('path').size(), 3, 'three hover rings drawn (one per hit)')
-
-	const headerText = hoverTip.d.select('div').text()
-	t.ok(headerText.includes('3 genes'), `header reflects the cluster count and noun, got "${headerText}"`)
-	// The table is rendered by showResultsTable into the inner holder
 	t.ok(hoverTip.d.selectAll('table').size() >= 1, 'a table is rendered for the multi-hit body')
+
+	const tipText = (hoverTip.d.node() as Element).textContent || ''
+	t.notOk(/3\s*genes/.test(tipText), 'no count+noun header rendered above the table')
 
 	holder.remove()
 	t.end()

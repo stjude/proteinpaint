@@ -32,7 +32,13 @@ export interface DataPointInteractionsOpts<T> {
 	cover: any
 	/** Layer where hover shapes render. Should be `pointer-events: none`. */
 	hoverLayer: any
-	/** Hover tooltip Menu — typically the parent component's shared tip. */
+	/** Hover tooltip Menu — typically the parent component's shared tip.
+	 * `attach()` sets `pointer-events: none` on this Menu's outer `<div>` so
+	 * the cursor passes through it to the cover (a hover tooltip is
+	 * informational; without this a flipped wide tooltip can cover the cursor
+	 * and cause a mouseleave-then-show flicker loop). `detach()` restores the
+	 * default. If a caller needs an *interactive* tooltip elsewhere, they
+	 * should use a separate `Menu` instance. */
 	hoverTip: Menu
 
 	/** Underlying point data; the quadtree is built from this at attach time. */
@@ -79,12 +85,6 @@ export interface DataPointInteractionsOpts<T> {
 	renderSingleHoverTooltip: (d: T, container: any) => void
 	/** Builds `{ columns, rows }` for the multi-hit hover table and click menu. */
 	buildMultiHitTableData: (dots: T[]) => { columns: any[]; rows: any[] }
-	/**
-	 * Custom header above the multi-hit table. Receives the FULL cluster size
-	 * (not just `shown.length`), so callers can write "100 Cohorts" while the
-	 * table caps at 5 rows + "and 95 more cohorts...".
-	 */
-	multiHitHeader?: (count: number) => string
 
 	// --- Default click flow (used unless onSingleClick / onMultiClick override) ---
 
@@ -140,6 +140,12 @@ export class DataPointInteractions<T> {
 	attach(): void {
 		this.qt = quadtree<T>().x(this.opts.getX).y(this.opts.getY).addAll(this.opts.points)
 
+		// Hover tooltip is informational, not interactive — make it transparent
+		// to mouse events so the cursor passes through to the cover. Without
+		// this, a flipped wide tooltip can cover the cursor, causing a
+		// mouseleave-then-show flicker loop.
+		this.opts.hoverTip.d.style('pointer-events', 'none')
+
 		this.opts.cover.on('mousemove', (event: MouseEvent) => this.onMousemove(event))
 		this.opts.cover.on('mouseleave', () => this.onMouseleave())
 		this.opts.cover.on('click', (event: MouseEvent) => this.onClick(event))
@@ -152,6 +158,7 @@ export class DataPointInteractions<T> {
 		this.opts.cover.on('click', null)
 		drawHoverShapes(this.opts.hoverLayer, [])
 		this.opts.hoverTip.hide()
+		this.opts.hoverTip.d.style('pointer-events', null)
 		this.clickMenu.hide()
 		this.qt = null
 	}
@@ -185,12 +192,6 @@ export class DataPointInteractions<T> {
 		return this.opts.getCluster(candidates[0], this.opts.points)
 	}
 
-	private buildHeader(totalCount: number): string {
-		if (this.opts.multiHitHeader) return this.opts.multiHitHeader(totalCount)
-		const noun = this.opts.itemNoun ?? 'item'
-		return `${totalCount} ${noun}${totalCount > 1 ? 's' : ''}`
-	}
-
 	private onMousemove(event: MouseEvent): void {
 		if (this.clickMenuIsShown) return
 
@@ -209,39 +210,40 @@ export class DataPointInteractions<T> {
 			this.opts.hoverLayer,
 			shown.map(d => this.opts.toHoverSpec(d))
 		)
-		this.opts.hoverTip.clear().show(event.clientX, event.clientY)
+
+		// Render content BEFORE positioning so Menu.show2() can measure the
+		// populated tooltip's rect. Calling show2 first would leave the menu
+		// empty at measurement time (width = 0), so its right-edge clamp
+		// wouldn't trigger and a wide tooltip could overflow the viewport.
+		this.opts.hoverTip.clear()
 
 		if (shown.length === 1) {
 			this.opts.renderSingleHoverTooltip(shown[0], this.opts.hoverTip.d)
-			return
+		} else {
+			const holder = this.opts.hoverTip.d.append('div').style('margin', '10px')
+			const { columns, rows } = this.opts.buildMultiHitTableData(shown)
+			showResultsTable({
+				tableDiv: holder,
+				dataItems: shown,
+				getRowKey: this.opts.getRowKey,
+				columns,
+				rows
+			})
+
+			if (additional > 0) {
+				const noun = this.opts.itemNoun ?? 'item'
+				holder
+					.append('div')
+					.style('font-size', '0.85em')
+					.style('color', '#666')
+					.style('font-style', 'italic')
+					.text(`and ${additional} more ${noun}${additional > 1 ? 's' : ''}...`)
+			}
 		}
 
-		this.opts.hoverTip.d
-			.append('div')
-			.style('color', '#888')
-			.style('font-weight', 'bold')
-			.style('margin', '0 0 6px 0')
-			.text(this.buildHeader(dots.length))
-
-		const holder = this.opts.hoverTip.d.append('div').style('margin', '10px')
-		const { columns, rows } = this.opts.buildMultiHitTableData(shown)
-		showResultsTable({
-			tableDiv: holder,
-			dataItems: shown,
-			getRowKey: this.opts.getRowKey,
-			columns,
-			rows
-		})
-
-		if (additional > 0) {
-			const noun = this.opts.itemNoun ?? 'item'
-			holder
-				.append('div')
-				.style('font-size', '0.85em')
-				.style('color', '#666')
-				.style('font-style', 'italic')
-				.text(`and ${additional} more ${noun}${additional > 1 ? 's' : ''}...`)
-		}
+		// show2 handles the right-edge clamp via `right: 5px` when the tooltip
+		// is wider than the room available to the right of the cursor.
+		this.opts.hoverTip.show2(event.clientX, event.clientY)
 	}
 
 	private onMouseleave(): void {
@@ -301,7 +303,6 @@ export class DataPointInteractions<T> {
 			columns,
 			rows,
 			getRowKey: this.opts.getRowKey,
-			header: this.buildHeader(dots.length),
 			onRowClick: (d, e) => this.openDefaultActionMenu(d, e as MouseEvent)
 		})
 	}

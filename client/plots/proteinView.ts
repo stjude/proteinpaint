@@ -741,7 +741,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}),
 		maxTooltipRows: COHORT_VOLCANO_HOVER_MAX_COHORTS,
 		itemNoun: 'cohort',
-		multiHitHeader: count => `${count} Cohorts`,
 		renderSingleHoverTooltip: renderDotInfoTable,
 		buildMultiHitTableData: buildClusterTableData,
 		getActions: (d: any) => [

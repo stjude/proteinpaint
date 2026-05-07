@@ -222,14 +222,18 @@ export function plotManhattan(div: any, data: any, settings: any, app?: any) {
 			// Manhattan multi-click shows showResultsTable directly with `app + clickMenu`
 			// so the table renders inline Matrix/Lollipop buttons. Reuses the module's
 			// clickMenu so its onHide cleanup (clear flag, clear hover) fires on dismiss.
+			// Content is built BEFORE show2 so Menu can measure the populated rect for
+			// its right-edge clamp — otherwise the wide table is placed at cursor+offsetX
+			// and extends off the right edge of the viewport.
 			onMultiClick: (dots, event, ctx) => {
 				if (!app) {
 					ctx.dismiss()
 					return
 				}
-				ctx.clickMenu.clear().show(event.clientX, event.clientY)
+				ctx.clickMenu.clear()
 				const holder = ctx.clickMenu.d.append('div').style('margin', '10px')
 				showResultsTable({ tableDiv: holder, hits: dots, app, clickMenu: ctx.clickMenu })
+				ctx.clickMenu.show2(event.clientX, event.clientY)
 			}
 		})
 
