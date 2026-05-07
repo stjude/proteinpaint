@@ -132,8 +132,7 @@ export class ViewModelProvider {
 		// Load layers for the determined indices
 		for (const i of indicesToLoad) {
 			const wsimage = wsimages[i].filename
-			const savedJwt = getSavedToken(dslabel) || ''
-			const authToken = savedJwt ? btoa(savedJwt) : ''
+			const authToken = btoa(getSavedToken(dslabel) || '')
 			const body: WSImagesRequest = {
 				genome: genome,
 				dslabel: dslabel,
