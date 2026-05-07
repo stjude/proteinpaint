@@ -20,9 +20,12 @@ export interface OpenActionMenuOpts {
 
 /** Opens an action menu at the click point: action buttons row at top, then
  * a caller-rendered info section. Used by single-hit clicks and as the
- * second step after picking a row from `openMultiHitClickMenu`. */
+ * second step after picking a row from `openMultiHitClickMenu`.
+ *
+ * Content is built BEFORE `show2()` so Menu can measure the populated rect
+ * for its right-edge clamp. */
 export function openActionMenu(opts: OpenActionMenuOpts): void {
-	opts.menu.clear().show(opts.event.clientX, opts.event.clientY)
+	opts.menu.clear()
 	const container = opts.menu.d.append('div').style('margin', '10px')
 	if (opts.actions.length > 0) {
 		const buttonRow = container.append('div').style('margin-bottom', '10px')
@@ -39,6 +42,7 @@ export function openActionMenu(opts: OpenActionMenuOpts): void {
 		}
 	}
 	opts.renderInfo(container)
+	opts.menu.show2(opts.event.clientX, opts.event.clientY)
 }
 
 export interface OpenMultiHitClickMenuOpts<T> {
@@ -59,9 +63,12 @@ export interface OpenMultiHitClickMenuOpts<T> {
 
 /** Opens a click menu with a multi-row sortable table. Selecting a row
  * invokes `onRowClick`. Mirrors the volcano/manhattan multi-hit affordance
- * so plots with cluster-style hits all behave the same way. */
+ * so plots with cluster-style hits all behave the same way.
+ *
+ * Content is built BEFORE `show2()` so Menu can measure the populated rect
+ * for its right-edge clamp. */
 export function openMultiHitClickMenu<T>(opts: OpenMultiHitClickMenuOpts<T>): void {
-	opts.menu.clear().show(opts.event.clientX, opts.event.clientY)
+	opts.menu.clear()
 	const holder = opts.menu.d.append('div').style('margin', '10px')
 	if (opts.header) {
 		holder
@@ -88,4 +95,5 @@ export function openMultiHitClickMenu<T>(opts: OpenMultiHitClickMenuOpts<T>): vo
 			opts.onRowClick(opts.items[originalIdx], opts.event)
 		}
 	})
+	opts.menu.show2(opts.event.clientX, opts.event.clientY)
 }
