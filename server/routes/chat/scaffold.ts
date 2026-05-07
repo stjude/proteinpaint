@@ -278,7 +278,7 @@ Always return ONLY a JSON object in this exact format:
  (e.g. "correlation", "distribution", "summary", "comparison") are NOT valid tw1 values — look past these words to the actual variable being analyzed).
 2. tw2 answers "compared across what groups?" — look for prepositions like "between", "across", "by", "among", etc. Use contextual understanding to confirm that it's a grouping variable
 3. tw3 answers "divided/faceted by what?" — look for "divided by", "split by", "per", "for each", "stratified by", etc. Use contextual understanding to confirm that it's a grouping variable
-4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable
+4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable. If words such as "subtype", "group" are used, this implies there is a filter term also along with the tw/2/3 variable.
 5. If tw2 and tw3 are ambiguous, prefer tw2 for binary/categorical comparisons and tw3 for a faceting/panel variable
 6. Its possible a term might be present in both tw1/tw2 as well as filter — for example, "Compare tp53 gene expression between XXX and YYY subtypes" — here the "XXX and YYY subtypes" is relevant to both the grouping variable (tw2) and the filter (restricting to subtypes). In such cases, put "XXX and YYY subtypes" both in tw2 as well as filter. 
 7. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
@@ -308,6 +308,23 @@ Always return ONLY a JSON object in this exact format:
   {
 	"tw1": "XYZ",
 	"filter": ["black", "male"]
+  }
+- Query: "show diagnosis groups"
+  Output:
+  {
+	"tw1": "diagnosis groups"
+  }
+- Query: "show ABC and BNG groups"
+  Output:
+  {
+	"tw1": "ABC and BNG groups",
+        "filter": ["ABC group", "BNG group"]
+  }
+- Query: "show IJK and GHT subtypes"
+  Output:
+  {
+	"tw1": "IJK and GHT subtypes",
+	"filter": ["IJK subtype", "GHT subtype"]
   }
 - Query: "Show correlation between age at diagnosis and ancestry."
   Output:
