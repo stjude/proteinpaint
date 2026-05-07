@@ -103,21 +103,7 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 			id: 'filter_extreme_values',
 			label: 'Filter Extreme Values',
 			type: 'boolean',
-			value: true,
-			options: [
-				{
-					id: 'min_count',
-					label: 'Min count',
-					type: 'number',
-					value: 10
-				},
-				{
-					id: 'min_total_count',
-					label: 'Min total count',
-					type: 'number',
-					value: 15
-				}
-			]
+			value: true
 		},
 		{
 			id: 'rank_type',
@@ -165,7 +151,7 @@ async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, 
 		samples: samples.join(','),
 		filter_extreme_values:
 			typeof q.filter_extreme_values === 'number' ? Boolean(q.filter_extreme_values) : q.filter_extreme_values,
-		num_genes: q.maxGenes,
+		max_genes: q.maxGenes,
 		rank_type: q.rank_type?.type ?? 'var'
 	}
 
