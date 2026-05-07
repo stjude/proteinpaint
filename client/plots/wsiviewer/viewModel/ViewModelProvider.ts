@@ -126,8 +126,7 @@ export class ViewModelProvider {
 		// Always load the currently displayed image if not in range
 		indicesToLoad.add(displayedImageIndex)
 
-		const rawHost = sessionStorage.getItem('hostURL') || (window as any).testHost || ''
-		const host = rawHost.endsWith('/') ? rawHost.slice(0, -1) : rawHost
+		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
 
 		// Load layers for the determined indices
 		for (const i of indicesToLoad) {
