@@ -1,21 +1,10 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { axisstyle, to_svg } from '#src/client'
-import {
-	Menu,
-	table2col,
-	LegendCircleReference,
-	addGeneSearchbox,
-	findPointsInRadius,
-	openActionMenu,
-	openMultiHitClickMenu,
-	drawHoverShapes,
-	showResultsTable,
-	type ActionMenuItem
-} from '#dom'
+import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
-import { axisBottom, axisLeft, scaleLinear, rgb, quadtree, select, creator } from 'd3'
+import { axisBottom, axisLeft, scaleLinear, rgb, select, creator } from 'd3'
 import { shapeSelector, shapes } from '../dom/shapes.js'
 import { NumericModes, TermTypes } from '#shared/terms.js'
 import { aa2gmcoord } from '#src/coord'
@@ -588,64 +577,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		return { columns, rows }
 	}
 
-	const renderClusterTooltip = (clusterDots: any[]) => {
-		const tip = self.dom.tip.clear().d
-
-		if (clusterDots.length > 1) {
-			tip
-				.append('div')
-				.style('color', '#888')
-				.style('font-weight', 'bold')
-				.style('margin', '0 0 6px 0')
-				.text(`${clusterDots.length} Cohorts`)
-
-			const shown = clusterDots.slice(0, COHORT_VOLCANO_HOVER_MAX_COHORTS)
-			const additionalCount = clusterDots.length - shown.length
-
-			const holder = tip.append('div').style('margin', '10px')
-			const { columns, rows } = buildClusterTableData(shown)
-			showResultsTable({
-				tableDiv: holder,
-				dataItems: shown,
-				getRowKey: (d: any) => d.uniqueIdentifier,
-				columns,
-				rows
-			})
-
-			if (additionalCount > 0) {
-				holder
-					.append('div')
-					.style('font-size', '0.85em')
-					.style('color', '#666')
-					.style('font-style', 'italic')
-					.text(`and ${additionalCount} more cohort${additionalCount > 1 ? 's' : ''}...`)
-			}
-			return
-		}
-
-		const list = tip.append('div')
-		for (const d of clusterDots) {
-			const block = list.append('div').style('padding', '3px 0').style('border-bottom', '1px solid #f1f1f1')
-			const table = table2col({ holder: block.append('table') })
-			table.addRow('Organism', d.organismName)
-			table.addRow('Disease', d.disease)
-			table.addRow('Assay', d.assayName)
-			table.addRow('Sample Set', d.cohortName)
-			table.addRow('Protein Accession', d.proteinAccession)
-			if (d.PTMType) {
-				table.addRow('PTM Type', d.PTMType)
-				table.addRow('Modified Site', d.modSites)
-				table.addRow('PTM', d.uniqueIdentifier)
-			} else {
-				table.addRow('Isoform', d.uniqueIdentifier)
-			}
-			table.addRow('log2 fold change', roundValue(d.log2fc, 3))
-			table.addRow('p value', d.pValue.toExponential(2))
-			table.addRow('-log10(p)', roundValue(d.score, 3))
-			table.addRow('Case samples', d.testedN)
-			table.addRow('Control samples', d.controlN)
-		}
-	}
 	const updateDots = () => {
 		cohortDots
 			.attr('fill', (d: any) => getColor(d))
@@ -750,20 +681,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.attr('d', (d: any) => getShapePath(d))
 		.attr('transform', (d: any) => getShapeTransform(d, 1))
 
-	const dotQuadtree = quadtree<any>()
-		.x((d: any) => xScale(d.log2fc))
-		.y((d: any) => yScale(d.score))
-		.addAll(dots)
-
+	// Hover-ring layer — visual only, never intercepts mouse events.
 	const hoverLayer = g.append('g').attr('class', 'cohort-volcano-hover').style('pointer-events', 'none')
 
-	const toHoverSpec = (d: any) => ({
-		path: getShapePath(d),
-		transform: getShapeTransform(d, COHORT_VOLCANO_HOVER_RING_SIZE_SCALE),
-		stroke: 'black',
-		strokeWidth: COHORT_VOLCANO_HOVER_RING_STROKE_PX
-	})
-
+	// Cover rect — last child so it sits on top of dots and hover shapes.
 	const cover = g
 		.append('rect')
 		.attr('class', 'cohort-volcano-cover')
@@ -777,40 +698,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 
 	updateDots()
 
-	const findHitCandidates = (event: MouseEvent) => {
-		const rect = (cover.node() as SVGRectElement).getBoundingClientRect()
-		const mx = event.clientX - rect.left
-		const my = event.clientY - rect.top
-		// Re-read radiusRange[1] each call: the size-legend menu mutates it
-		// at runtime, so caching this once would leave the broad-query stale
-		// after the user enlarges the dots.
-		const hitRadius = radiusRange[1] + COHORT_VOLCANO_HIT_RADIUS_PADDING_PX
-		return findPointsInRadius<any>(
-			dotQuadtree,
-			mx,
-			my,
-			hitRadius,
-			(d: any) => xScale(d.log2fc),
-			(d: any) => yScale(d.score)
-		)
-			.filter(c => {
-				if (isDotHidden(c.point)) return false
-				const r = radiusScale(Math.max(minTestedN, c.point.testedN || minTestedN))
-				return c.distance <= r + COHORT_VOLCANO_HIT_BUFFER_PX
-			})
-			.sort((a, b) => a.distance - b.distance)
-	}
-
-	let clickMenuIsShown = false
-	const clickMenu = new Menu({
-		padding: '',
-		onHide: () => {
-			clickMenuIsShown = false
-			drawHoverShapes(hoverLayer, [])
-		}
-	})
-
-	const renderDotInfoTable = (container: any, d: any) => {
+	const renderDotInfoTable = (d: any, container: any) => {
 		const tbl = table2col({ holder: container.append('table') })
 		tbl.addRow('Organism', d.organismName)
 		tbl.addRow('Disease', d.disease)
@@ -831,70 +719,44 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		tbl.addRow('Control samples', d.controlN)
 	}
 
-	const openCohortActionMenu = (d: any, event: { clientX: number; clientY: number }) => {
-		const actions: ActionMenuItem[] = [
+	const interactions = new DataPointInteractions<any>({
+		cover,
+		hoverLayer,
+		hoverTip: self.dom.tip,
+		points: dots,
+		getX: (d: any) => xScale(d.log2fc),
+		getY: (d: any) => yScale(d.score),
+		// Function form because the size-legend menu mutates radiusRange at runtime;
+		// caching this once would leave the broad-query stale after dots are enlarged.
+		hitRadius: () => radiusRange[1] + COHORT_VOLCANO_HIT_RADIUS_PADDING_PX,
+		perDotRadius: (d: any) => radiusScale(Math.max(minTestedN, d.testedN || minTestedN)),
+		perDotBuffer: COHORT_VOLCANO_HIT_BUFFER_PX,
+		isHidden: isDotHidden,
+		getCluster: (seed: any) => getClusterDots(seed),
+		toHoverSpec: (d: any) => ({
+			path: getShapePath(d),
+			transform: getShapeTransform(d, COHORT_VOLCANO_HOVER_RING_SIZE_SCALE),
+			stroke: 'black',
+			strokeWidth: COHORT_VOLCANO_HOVER_RING_STROKE_PX
+		}),
+		maxTooltipRows: COHORT_VOLCANO_HOVER_MAX_COHORTS,
+		itemNoun: 'cohort',
+		multiHitHeader: count => `${count} Cohorts`,
+		renderSingleHoverTooltip: renderDotInfoTable,
+		buildMultiHitTableData: buildClusterTableData,
+		getActions: (d: any) => [
 			{
 				label: 'Violin plot',
 				onClick: () => {
 					launchViolinPlot(self, d.organismName, d.assayName, d.cohortName, d.uniqueIdentifier)
 				}
 			}
-		]
-		openActionMenu({
-			menu: clickMenu,
-			event,
-			actions,
-			renderInfo: container => renderDotInfoTable(container, d)
-		})
-	}
+		],
+		renderSingleHitInfo: renderDotInfoTable,
+		getRowKey: (d: any) => d.uniqueIdentifier
+	})
 
-	cover
-		.on('mousemove', (event: MouseEvent) => {
-			if (clickMenuIsShown) return
-			const candidates = findHitCandidates(event)
-			if (!candidates.length) {
-				drawHoverShapes(hoverLayer, [])
-				self.dom.tip.hide()
-				return
-			}
-			const seed = candidates[0].point
-			const clusterDots = getClusterDots(seed)
-			drawHoverShapes(hoverLayer, clusterDots.map(toHoverSpec))
-			renderClusterTooltip(clusterDots)
-			self.dom.tip.show(event.clientX, event.clientY)
-		})
-		.on('mouseleave', () => {
-			if (clickMenuIsShown) return
-			drawHoverShapes(hoverLayer, [])
-			self.dom.tip.hide()
-		})
-		.on('click', (event: MouseEvent) => {
-			const candidates = findHitCandidates(event)
-			if (!candidates.length) return
-			self.dom.tip.hide()
-			const seed = candidates[0].point
-			const clusterDots = getClusterDots(seed)
-			clickMenuIsShown = true
-			drawHoverShapes(hoverLayer, clusterDots.map(toHoverSpec))
-
-			if (clusterDots.length === 1) {
-				openCohortActionMenu(clusterDots[0], event)
-				return
-			}
-
-			const { columns, rows } = buildClusterTableData(clusterDots)
-
-			openMultiHitClickMenu<any>({
-				menu: clickMenu,
-				event,
-				items: clusterDots,
-				columns,
-				rows,
-				getRowKey: (d: any) => d.uniqueIdentifier,
-				header: `${clusterDots.length} Cohorts`,
-				onRowClick: (d, e) => openCohortActionMenu(d, e)
-			})
-		})
+	interactions.attach()
 
 	const legend = plotAndLegend
 		.append('div')
