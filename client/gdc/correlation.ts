@@ -12,6 +12,8 @@ todo
 
 interface InitArg {
 	debugmode?: true
+	genome?: string
+	dslabel?: string
 	filter0?: object
 	state?: {
 		plots?: Array<{ chartType: string; [key: string]: any }>
@@ -26,21 +28,20 @@ interface UpdateArg {
 	[key: string]: any
 }
 
-const gdcGenome = 'hg38'
-const gdcDslabel = 'GDC'
-
 export async function init(
 	arg: InitArg,
 	holder: HTMLElement,
 	genomes: any
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
+	const useGenome = arg.genome || 'hg38'
+	const useDslabel = arg.dslabel || 'GDC'
 	const massApi = await appInit({
 		//debug: arg.debugmode, // is debug accepted?
-		genome: genomes[gdcGenome],
+		genome: genomes[useGenome],
 		holder,
 		state: {
-			genome: gdcGenome,
-			dslabel: gdcDslabel,
+			genome: useGenome,
+			dslabel: useDslabel,
 			termfilter: { filter0: arg.filter0 },
 			nav: { activeTab: 1, header_mode: 'only_buttons' },
 			plots: arg.state?.plots || [

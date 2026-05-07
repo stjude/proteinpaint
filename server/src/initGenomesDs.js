@@ -24,6 +24,7 @@ const dsHelpers = {
 	isUsableTerm,
 	joinUrl,
 	ezFetch,
+	DEFAULT_SAMPLE_TYPE,
 	xfetch: utils.xfetch,
 	cachedFetch: utils.cachedFetch,
 	mayLog,
