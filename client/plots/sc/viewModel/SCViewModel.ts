@@ -8,9 +8,13 @@ export class SCViewModel {
 	state: SCFormattedState
 	tableData: SCTableData
 
-	constructor(app: AppApi, config: SCConfig, items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
+	constructor(app: AppApi, config: SCConfig, _items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
 		this.app = app
 		this.state = this.app.getState()
+
+		//Sort meta analysis results to show at the beginning of the table.
+		//Prevents breaking the logic for selected rows after formating the table data.
+		const items = _items.sort((a, b) => (b.isMetaResult === a.isMetaResult ? 0 : b.isMetaResult ? 1 : -1))
 
 		//Should only be called once
 		const [rows, columns] = this.getTabelData(config, items, sampleColumns)
@@ -86,8 +90,7 @@ export class SCViewModel {
 					if (!value && item.isMetaResult) row.push({ value: 'All' })
 					else row.push({ value: item[col.termid] })
 				}
-				if (item.isMetaResult) rows.unshift(row)
-				else rows.push(row)
+				rows.push(row)
 			}
 		}
 		return [rows, columns]
