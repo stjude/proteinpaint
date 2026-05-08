@@ -64,7 +64,6 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const projectId = annotation.projectId
 			const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
 			const coords = JSON.stringify(tileSelection.zoomCoordinates ?? [])
-			const status = 1
 			const flag = tileSelection.flag
 			const classId = annotation.classId
 			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
@@ -100,7 +99,9 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 
 			const imageId = imageRow.id
-
+			// Predictions and Annotations are housed in three databases, project_flagged_annotations, project_flagged_predictions, and project_annotations
+			// project_flagged_annotations and project_flagged_predictions are for both annotations and predictions that are flagged
+			// Non-flagged predictions are saved as csvs elsewhere, all three should be scrubbed for duplicates when saving
 			connection
 				.prepare(
 					`DELETE FROM project_flagged_annotations
@@ -118,16 +119,16 @@ function validateQuery(ds: any, connection: Database.Database) {
 					   AND coordinates = ?`
 				)
 				.run(projectId, imageId, coords)
+			connection
+				.prepare(
+					`DELETE FROM project_annotations
+					 WHERE project_id = ?
+					   AND image_id = ?
+					   AND coordinates = ?`
+				)
+				.run(projectId, imageId, coords)
 
 			if (isAnnotation) {
-				const insertSql = `
-				INSERT INTO project_flagged_annotations (
-					project_id, user_id, coordinates, timestamp, status, flagged,class_id, image_id
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-			`
-
-				const insertStmt = connection.prepare(insertSql)
-
 				// Query first user id from project_users table, later replace with actual user management
 				const userRow = connection
 					.prepare(
@@ -140,9 +141,35 @@ function validateQuery(ds: any, connection: Database.Database) {
 
 				const userId = userRow?.id
 
-				insertStmt.run(projectId, userId, coords, timestamp, status, flag, classId, imageId)
+				if (userId === undefined) {
+					return {
+						status: 'error',
+						error: 'No users found in project_users table.'
+					}
+				}
+				if (tileSelection.flag === FlagStatus.Normal) {
+					connection
+						.prepare(
+							`
+						INSERT INTO project_annotations (
+							project_id, user_id, coordinates, timestamp,class_id, image_id
+						) VALUES (?, ?, ?, ?, ?, ?)
+					`
+						)
+						.run(projectId, userId, coords, timestamp, classId, imageId)
+				} else {
+					connection
+						.prepare(
+							`
+				INSERT INTO project_flagged_annotations (
+					project_id, user_id, coordinates, timestamp, flagged,class_id, image_id
+				) VALUES (?, ?, ?, ?, ?, ?, ?)
+				`
+						)
+						.run(projectId, userId, coords, timestamp, flag, classId, imageId)
+				}
 			} else if (isPrediction) {
-				// Not returning if flag is normal only flagged predictions are saved, but unflagged need to be deleted as above
+				// Not inserting if flag is normal
 				if (tileSelection.flag !== FlagStatus.Normal) {
 					const insertSql = `
                     INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)

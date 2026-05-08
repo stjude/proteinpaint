@@ -1,5 +1,5 @@
 import { type Mds3, type RouteApi } from '#types'
-import { deleteWSITileSelectionPayload, checkSelectionType, SelectionPrefixes } from '#types/checkers'
+import { deleteWSITileSelectionPayload, checkSelectionType, SelectionPrefixes, FlagStatus } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type { DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
 import type Database from 'better-sqlite3'
@@ -61,7 +61,12 @@ export async function validate_query_deleteWSIAnnotation(ds: Mds3) {
 
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest) => {
-		if (checkSelectionType(query.tileSelection, SelectionPrefixes.Prediction)) {
+		const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
+
+		if (
+			checkSelectionType(query.tileSelection, SelectionPrefixes.Prediction) &&
+			query.tileSelection.flag !== FlagStatus.Normal
+		) {
 			try {
 				const projectId = query.projectId
 
@@ -73,7 +78,6 @@ function validateQuery(ds: any, connection: Database.Database) {
 				}
 
 				const predictionId = query.classID
-				const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
 				const flagType = query.tileSelection.flag
 
 				if (predictionId == null) {
@@ -98,10 +102,15 @@ function validateQuery(ds: any, connection: Database.Database) {
 					.prepare(
 						`
 					DELETE FROM project_flagged_predictions 
-					WHERE project_id = ? AND image_id = ? AND coordinates = ?
+					WHERE project_id = ?  AND coordinates = ? 
+					AND image_id = (
+                        SELECT id FROM project_images
+                        WHERE project_id = ?
+                          AND image_path = ?
+                      )
 				`
 					)
-					.run(projectId, imageId, zoomCoordinates)
+					.run(projectId, zoomCoordinates, projectId, query.wsimage)
 
 				// Insert new flagged prediction
 				connection
@@ -124,7 +133,9 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 		} else
 			try {
-				const deleteSql = `
+				connection
+					.prepare(
+						`
                     DELETE FROM project_flagged_annotations
                     WHERE project_id = ?
                       AND coordinates = ?
@@ -134,9 +145,24 @@ function validateQuery(ds: any, connection: Database.Database) {
                           AND image_path = ?
                       )
                 `
-				const coords = JSON.stringify(query.tileSelection?.zoomCoordinates)
-				const stmt = connection.prepare(deleteSql)
-				stmt.run(query.projectId, coords, query.projectId, query.wsimage)
+					)
+					.run(query.projectId, zoomCoordinates, query.projectId, query.wsimage)
+
+				connection
+					.prepare(
+						`
+                    DELETE FROM project_annotations
+                    WHERE project_id = ?
+                      AND coordinates = ?
+                      AND image_id = (
+                        SELECT id FROM project_images
+                        WHERE project_id = ?
+                          AND image_path = ?
+                      )
+                `
+					)
+					.run(query.projectId, zoomCoordinates, query.projectId, query.wsimage)
+
 				return { status: 'ok' }
 			} catch (error: any) {
 				console.error('Error deleting annotation:', error)

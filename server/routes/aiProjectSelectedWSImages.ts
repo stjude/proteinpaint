@@ -153,7 +153,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
 		status: number
-		flagged: FlagStatus
+		flagged?: FlagStatus
 		label: string | null
 	}
 
@@ -165,24 +165,43 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		flag_type: FlagStatus
 	}
 	const GET_ANNOTATIONS_SQL = `
-        SELECT
-            pa.id,
-            pa.project_id,
-            pa.user_id,
-            pa.coordinates,
-            pa.timestamp,
-            pa.status,
-			pa.flagged,
-            pc.label AS label
-        FROM project_flagged_annotations pa
-                 INNER JOIN project_images pi
-                            ON pi.id = pa.image_id
-                 LEFT JOIN project_classes pc
-                           ON pc.id = pa.class_id
-        WHERE pa.project_id = ?
-          AND pi.image_path = ?
-          AND pa.status = 1
-        ORDER BY pa.timestamp DESC, pa.id DESC
+		SELECT *
+		FROM (
+			SELECT
+				pa.id,
+				pa.project_id,
+				pa.user_id,
+				pa.coordinates,
+				pa.timestamp,
+				pa.flagged,
+				pc.label AS label
+			FROM project_flagged_annotations pa
+					 INNER JOIN project_images pi
+								ON pi.id = pa.image_id
+					 LEFT JOIN project_classes pc
+							   ON pc.id = pa.class_id
+			WHERE pa.project_id = ?
+			  AND pi.image_path = ?
+
+			UNION ALL
+
+			SELECT
+				pa.id,
+				pa.project_id,
+				pa.user_id,
+				pa.coordinates,
+				pa.timestamp,
+				${FlagStatus.Normal} AS flagged,
+				pc.label AS label
+			FROM project_annotations pa
+					 INNER JOIN project_images pi
+								ON pi.id = pa.image_id
+					 LEFT JOIN project_classes pc
+							   ON pc.id = pa.class_id
+			WHERE pa.project_id = ?
+			  AND pi.image_path = ?
+		)
+		ORDER BY timestamp DESC, id DESC
     `
 
 	// SQL to list all WSI filenames for a project (used when client asks for ["all"])
@@ -211,8 +230,8 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 
 	ds.queries.WSImages.getWSIAnnotations = async (projectId: number, filename: string): Promise<Annotation[]> => {
 		try {
-			const stmt = connection.prepare<[number, string], AnnotationRow>(GET_ANNOTATIONS_SQL)
-			const rows = stmt.all(projectId, filename)
+			const stmt = connection.prepare<[number, string, number, string], AnnotationRow>(GET_ANNOTATIONS_SQL)
+			const rows = stmt.all(projectId, filename, projectId, filename)
 
 			return rows.map(r => {
 				let coords: [number, number] = [NaN, NaN]
@@ -232,7 +251,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 					zoomCoordinates: coords,
 					class: r.label ?? '',
 					status: r.status,
-					flag: r.flagged as FlagStatus,
+					flag: r.flagged === undefined ? FlagStatus.Normal : (r.flagged as FlagStatus),
 					timestamp: r.timestamp,
 					id: createSelectionID(SelectionPrefixes.Annotation, coords)
 				}
