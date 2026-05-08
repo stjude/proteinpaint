@@ -1,4 +1,4 @@
-import { FlagStatus } from '@sjcrh/proteinpaint-types'
+import { FlagStatus } from '#types/checkers'
 var FeaturePrefixes = /* @__PURE__ */ (FeaturePrefixes2 => {
 	FeaturePrefixes2['Star'] = 'annotation-star-'
 	FeaturePrefixes2['Square'] = 'annotation-square-'

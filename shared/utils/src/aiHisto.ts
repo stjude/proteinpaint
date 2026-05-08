@@ -1,4 +1,5 @@
-import { type TileSelection, FlagStatus } from '@sjcrh/proteinpaint-types'
+import { type TileSelection } from '@sjcrh/proteinpaint-types'
+import { FlagStatus } from '#types/checkers'
 
 export enum FeaturePrefixes {
 	Star = 'annotation-star-',
