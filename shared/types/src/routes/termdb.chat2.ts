@@ -53,6 +53,11 @@ export interface GeneDataTypeResult {
 	dataType: string
 }
 
+export interface GeneSetDataTypeResult {
+	geneSet: string
+	dataType: 'ssGSEA' | 'geneVariant' | 'ambiguous'
+}
+
 export type ChatResponse = TextResponse | HtmlResponse | PlotResponse
 
 export const ChatPayload: RoutePayload = {
