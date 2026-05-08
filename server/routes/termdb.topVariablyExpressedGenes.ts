@@ -5,8 +5,8 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { makeFilter } from '#src/mds3.gdc.js'
 import { cachedFetch } from '#src/utils.js'
 import { joinUrl } from '#shared/joinUrl.js'
-import { formatElapsedTime } from '#shared/time.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -37,8 +37,7 @@ function init({ genomes }) {
 			result = {
 				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
 			}
-
-			console.log('compute top variably expressed genes:', formatElapsedTime(Date.now() - t))
+			mayLog('time for top variably expressed genes', Date.now() - t)
 		} catch (e: any) {
 			result = { status: e.status || 400, error: e.message || e }
 		}
