@@ -27,6 +27,13 @@ export async function xfetch(url, opts = {}) {
 		}
 		opts.body = JSON.stringify(opts.body)
 	}
+	if (!opts.headers) opts.headers = {}
+	if (
+		opts.method?.toUpperCase() == 'POST' &&
+		!Object.keys(opts.headers).find(k => k.toLowerCase() == 'content-type') &&
+		isJSON(opts.body)
+	)
+		opts.headers['Content-Type'] = 'application/json'
 
 	mayCollectTrackedInfo(url, opts)
 
@@ -140,4 +147,14 @@ function mayCollectTrackedInfo(url, opts) {
 	const key = '[' + url + ']' + (body || '')
 	if (!uniqueReqTracker.has(key)) uniqueReqTracker.set(key, 0)
 	uniqueReqTracker.set(key, uniqueReqTracker.get(key) + 1)
+}
+
+function isJSON(str) {
+	if (typeof str != 'string') return false
+	try {
+		JSON.parse(str)
+		return true
+	} catch (e) {
+		return false
+	}
 }
