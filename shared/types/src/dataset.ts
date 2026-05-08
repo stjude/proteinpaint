@@ -1752,6 +1752,12 @@ keep this setting here for reason of:
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
+	/** Optional hook to mutate the per-request /termdb/config response based on the requesting user's role.
+	 * Invoked from termdb.config.ts after the response object has been populated, so the dataset can prune
+	 * preset plot entries (or any other client-visible config) that should not be exposed to a given role.
+	 * Implementations should deep-clone any shared objects before mutating to avoid leaking changes into
+	 * the cached dataset across requests. */
+	filterClientCopy?: (c: any, clientAuthResult: any) => void
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
 }
