@@ -1758,9 +1758,9 @@ keep this setting here for reason of:
 	 * Implementations should deep-clone any shared objects before mutating to avoid leaking changes into
 	 * the cached dataset across requests. */
 	filterClientCopy?: (c: any, clientAuthResult: any) => void
-	/** Populated by server_init_db_queries when the term_role_allowlist sidecar table exists in the
-	 * dictionary db. Map keys are role names; values are the Set of term IDs visible to that role.
-	 * Undefined when the table is absent (no role-based term restriction for this dataset). */
+	/** Populated by server_init_db_queries from the term2role sidecar table when it is non-empty.
+	 * Map keys are role names; values are the Set of term IDs visible to that role. Undefined when
+	 * the table is empty (no role-based term restriction for this dataset). */
 	_roleAllowlist?: Map<string, Set<string>>
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]

@@ -67,7 +67,8 @@ export function server_init_db_queries(ds) {
 		'anno_integer',
 		'anno_float',
 		'anno_categorical',
-		'buildDate'
+		'buildDate',
+		'term2role'
 	]
 
 	// ds.cohort.termdb.sampleTypes has been added in mds3.init.js
@@ -165,20 +166,24 @@ export function server_init_db_queries(ds) {
 		} else q.getCohortSampleCount = () => `${totalCount} samples`
 	}
 
-	// Optional opt-in: a sidecar table mapping (term_id, role) declares which terms each role can see.
-	// Loaded once into a Map<role, Set<termId>> attached to ds.cohort.termdb._roleAllowlist; the dataset's
-	// isTermVisible / filterClientCopy hooks consult it. Datasets without this table are unaffected.
-	if (tables.has('term_role_allowlist')) {
-		const rows = cn.prepare('SELECT term_id, role FROM term_role_allowlist').all() as Array<{
+	// term2role sidecar table maps (term_id, role) to declare which terms each role can see.
+	// The table is always created by create.sql but is empty unless a dataset's build supplied a tsv
+	// via buildTermdb's term2role= arg. When non-empty, load once into a Map<role, Set<termId>> and
+	// attach to ds.cohort.termdb._roleAllowlist; the dataset's isTermVisible / filterClientCopy
+	// hooks consult it. When the table is empty the Map stays undefined and datasets are unaffected.
+	if (tables.has('term2role')) {
+		const rows = cn.prepare('SELECT term_id, role FROM term2role').all() as Array<{
 			term_id: string
 			role: string
 		}>
-		const map: Map<string, Set<string>> = new Map()
-		for (const r of rows) {
-			if (!map.has(r.role)) map.set(r.role, new Set())
-			map.get(r.role)!.add(r.term_id)
+		if (rows.length) {
+			const map: Map<string, Set<string>> = new Map()
+			for (const r of rows) {
+				if (!map.has(r.role)) map.set(r.role, new Set())
+				map.get(r.role)!.add(r.term_id)
+			}
+			ds.cohort.termdb._roleAllowlist = map
 		}
-		ds.cohort.termdb._roleAllowlist = map
 	}
 
 	if (tables.has('category2vcfsample')) {
