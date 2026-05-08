@@ -188,7 +188,7 @@ export type DEResponse = DEPreAnalysisResponse | DEFullResponse
  * singlecell DE genes, each of which extends this with route-specific fields. */
 export type DataEntry = {
 	original_p_value: number
-	adjusted_p_value: number
+	adjusted_p_value?: number
 	fold_change: number
 }
 

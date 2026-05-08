@@ -263,7 +263,7 @@ async function getSampleData(q, ds, onlyChildren = false) {
 				terms: [tw],
 				filter: q.filter,
 				filter0: q.filter0,
-				proteomeDetails: tw.term.proteomeDetails
+				dataTypeDetails: tw.term.dataTypeDetails
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)

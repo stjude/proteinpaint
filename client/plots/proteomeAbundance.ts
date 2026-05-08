@@ -229,7 +229,7 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 					action.config.proteomeDetails = { organism, assay, cohort }
 					const twlst = termlst.map(term => {
 						const t = structuredClone(term)
-						t.proteomeDetails = { organism, assay, cohort }
+						t.dataTypeDetails = { organism, assay, cohort }
 						return { term: t, q: { mode: NumericModes.continuous } }
 					})
 

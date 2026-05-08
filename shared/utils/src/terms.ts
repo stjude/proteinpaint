@@ -50,6 +50,7 @@ export const SSGSEA = 'ssGSEA'
 export const SURVIVAL = 'survival'
 export const TERM_COLLECTION = 'termCollection'
 export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
+export const PROTEOME_DAP = 'proteomeDAP'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
@@ -280,6 +281,7 @@ const typeMap: { [key: string]: string } = {
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
 	proteomeAbundance: 'Proteome Abundance',
+	proteomeDAP: 'Proteome DAP',
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',

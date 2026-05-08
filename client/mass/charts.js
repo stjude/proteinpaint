@@ -395,6 +395,11 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'DAP Volcano',
+			chartType: 'dapVolcano',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 			chartType: 'numericDictTermCluster',
 			clickTo: self.loadChartSpecificMenu

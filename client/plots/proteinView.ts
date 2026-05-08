@@ -1491,7 +1491,7 @@ function launchViolinPlot(
 	const proteomeOverlayTerm = termdbConfig?.queries?.proteome?.organisms?.[organismName]?.overlayTerm
 	const t = structuredClone(selectedProtein)
 	t.name = `${t.name}: ${isoform}`
-	t.proteomeDetails = { organism: organismName, assay: assayName, cohort: cohortName }
+	t.dataTypeDetails = { organism: organismName, assay: assayName, cohort: cohortName }
 	action.config.term = { term: t, q: { mode: NumericModes.continuous } }
 
 	if (proteomeOverlayTerm) {

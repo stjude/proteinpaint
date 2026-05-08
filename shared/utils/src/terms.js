@@ -35,6 +35,7 @@ const SSGSEA = 'ssGSEA'
 const SURVIVAL = 'survival'
 const TERM_COLLECTION = 'termCollection'
 const PROTEOME_ABUNDANCE = 'proteomeAbundance'
+const PROTEOME_DAP = 'proteomeDAP'
 const TermTypes = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
@@ -229,6 +230,7 @@ const typeMap = {
 	geneVariant: 'Gene Variant',
 	metaboliteIntensity: 'Metabolite Intensity',
 	proteomeAbundance: 'Proteome Abundance',
+	proteomeDAP: 'Proteome DAP',
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',
@@ -290,6 +292,7 @@ export {
 	NUMERIC_DICTIONARY_TERM,
 	NumericModes,
 	PROTEOME_ABUNDANCE,
+	PROTEOME_DAP,
 	ROOT_SAMPLE_TYPE,
 	SAMPLELST,
 	SINGLECELL_CELLTYPE,

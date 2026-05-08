@@ -9,6 +9,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { readCacheFileOrRecompute, stableStringify } from '#src/diffAnalysis.ts'
+import { get_ds_tdb } from '#src/termdb.js'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',
@@ -157,6 +158,28 @@ async function resolveGseaGenesAndFoldChange({
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.
+	if (q.dapParams) {
+		const genome = genomes[q.genome]
+		if (!genome) throw new Error('invalid genome')
+		const [ds] = get_ds_tdb(genome, q)
+		const { organism, assay, cohort } = q.dapParams
+		const cohortConfig = ds.queries?.proteome?.organisms?.[organism]?.assays?.[assay]?.cohorts?.[cohort]
+		if (!cohortConfig?.DAPfile) throw new Error('DAP file not configured for this cohort')
+		const filePath = path.join(serverconfig.tpmasterdir, cohortConfig.DAPfile)
+		const content = await fs.promises.readFile(filePath, 'utf8')
+		const lines = content.trim().split('\n')
+		const genes: string[] = []
+		const fold_change: number[] = []
+		for (let i = 1; i < lines.length; i++) {
+			const parts = lines[i].split('\t')
+			if (parts.length < 4) continue
+			const fc = Number(parts[2])
+			if (!Number.isFinite(fc)) continue
+			genes.push(parts[1])
+			fold_change.push(fc)
+		}
+		return { genes, fold_change }
+	}
 	if (!q.genes || !q.fold_change) throw new Error('requires genes and fold_change when cacheId is absent')
 	return { genes: q.genes, fold_change: q.fold_change }
 }

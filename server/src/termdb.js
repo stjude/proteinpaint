@@ -193,11 +193,11 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 		} else if (q.targetType == TermTypeGroups.PROTEOME_ABUNDANCE) {
 			if (!ds.queries?.proteome?.find) throw 'queries.proteome.find() missing'
 			const proteomeDetails = q.usecase?.proteomeDetails
-			const matches = await ds.queries.proteome.find({ proteins: [q.findterm], proteomeDetails })
+			const matches = await ds.queries.proteome.find({ proteins: [q.findterm], dataTypeDetails: proteomeDetails })
 			const foundTerms = []
 			for (const protein of matches) {
 				const t = { name: protein, type: 'proteomeAbundance' }
-				if (proteomeDetails) t.proteomeDetails = proteomeDetails
+				if (proteomeDetails) t.dataTypeDetails = proteomeDetails
 				foundTerms.push(t)
 			}
 			terms.push(...foundTerms)

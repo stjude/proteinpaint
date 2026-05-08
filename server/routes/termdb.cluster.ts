@@ -106,7 +106,10 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
 	} else if (q.dataType == PROTEOME_ABUNDANCE) {
-		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get(_q))
+		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get({
+			..._q,
+			dataTypeDetails: _q.proteomeDetails
+		}))
 	} else {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries[q.dataType].get(_q, ds)) // 2nd ds param needed for ds-supplied getter
 	}

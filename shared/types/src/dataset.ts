@@ -717,6 +717,7 @@ type ProteomeCohortConfig = {
 	prior: { d0: number; s0sq: number }
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
+	DAPfile?: string
 }
 
 type ProteomeAssayConfig = {
