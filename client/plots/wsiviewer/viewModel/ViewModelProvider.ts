@@ -10,8 +10,7 @@ import {
 	type AiProjectSelectedWSImagesRequest,
 	type AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
-import { FlagStatus } from '#types'
-import { FeaturePrefixes, createFeatureID } from '#types/checkers'
+import { FeaturePrefixes, createFeatureID, FlagStatus } from '#types/checkers'
 
 import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'

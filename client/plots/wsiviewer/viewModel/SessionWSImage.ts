@@ -1,7 +1,6 @@
 import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import { WSImage } from '@sjcrh/proteinpaint-types'
-import { FlagStatus } from '#types'
-import { SelectionPrefixes, checkSelectionType, FlagStatusMessages } from '#types/checkers'
+import { SelectionPrefixes, checkSelectionType, FlagStatusMessages, FlagStatus } from '#types/checkers'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
