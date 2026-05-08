@@ -8,14 +8,15 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import { type TileSelection, FlagStatus } from '#types'
+import { type TileSelection } from '#types'
 import {
+	FlagStatus,
 	createSelectionID,
 	SelectionPrefixes,
 	FeaturePrefixes,
 	checkSelectionType,
 	createFeatureID
-} from '#shared/index.js'
+} from '#types/checkers'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'

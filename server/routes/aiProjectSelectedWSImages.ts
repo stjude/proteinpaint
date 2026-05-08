@@ -1,9 +1,13 @@
-import { type Annotation, FlagStatus, type Mds3, type RouteApi, type WSImage } from '#types'
+import { type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
 import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, FlagPredictionInfo } from '#types'
-import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
+import {
+	aiProjectSelectedWSImagesResponsePayload,
+	createSelectionID,
+	SelectionPrefixes,
+	FlagStatus
+} from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
-import { createSelectionID, SelectionPrefixes } from '#shared/index.js'
 /*
 given a sample, return all whole slide images for specified datasets
 */
