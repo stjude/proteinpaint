@@ -12,31 +12,25 @@ export type AiProjectSelectedWSImagesResponse = {
 	wsimages: WSImage[]
 }
 
-export const FlagStatus = {
-	Normal: 0,
-	Skipped: 1,
-	Flagged: 2,
-	Deleted: 3
-} as const
+export enum FlagStatus {
+	Normal = 0,
+	Skipped = 1,
+	Flagged = 2,
+	Deleted = 3
+}
 
-export type FlagStatusType = (typeof FlagStatus)[keyof typeof FlagStatus]
+export enum FeaturePrefixes {
+	Star = 'annotation-star-',
+	Square = 'annotation-square-',
+	Border = 'annotation-border-',
+	PredBorder = 'prediction-border-'
+}
 
-export const FeaturePrefixes = {
-	Star: 'annotation-star-',
-	Square: 'annotation-square-',
-	Border: 'annotation-border-',
-	PredBorder: 'prediction-border-'
-} as const
-
-export type FeaturePrefixType = (typeof FeaturePrefixes)[keyof typeof FeaturePrefixes]
-
-export const SelectionPrefixes = {
-	TileSelection: 'ts_',
-	Prediction: 'pred_',
-	Annotation: 'anno_'
-} as const
-
-export type SelectionPrefixType = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
+export enum SelectionPrefixes {
+	TileSelection = 'ts_',
+	Prediction = 'pred_',
+	Annotation = 'anno_'
+}
 
 export const FlagStatusMessages = {
 	[FlagStatus.Normal]: '',
@@ -44,20 +38,20 @@ export const FlagStatusMessages = {
 	[FlagStatus.Flagged]: '(Flagged)'
 }
 
-export function createSelectionID(prefix: SelectionPrefixType, coordinates: [number, number]): string {
+export function createSelectionID(prefix: SelectionPrefixes, coordinates: [number, number]): string {
 	return prefix + JSON.stringify(coordinates)
 }
 
-export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixType): boolean {
+export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixes): boolean {
 	return tileSelection.id.startsWith(suspectedPrefix)
 }
 
-export function createFeatureID(featurePrefix: FeaturePrefixType, coords: [number, number]) {
+export function createFeatureID(featurePrefix: FeaturePrefixes, coords: [number, number]) {
 	return featurePrefix + JSON.stringify(coords)
 }
 
 export interface FlagPredictionInfo {
-	flag: FlagStatusType
+	flag: FlagStatus
 	timestamp: string
 }
 
@@ -65,7 +59,7 @@ export interface FlagPredictionInfo {
 export interface TileSelection {
 	zoomCoordinates: [number, number]
 	class?: string
-	flag: FlagStatusType
+	flag: FlagStatus
 	id: string
 	timestamp: string
 }
