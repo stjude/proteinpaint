@@ -90,9 +90,9 @@ read_data_time <- system.time({
   all_samples <- h5read(h5_file, "meta/samples/names") # All 1,544 sample names in the H5
   gene_names <- h5read(h5_file, "meta/gene_names") # Gene annotation per promoter (e.g. "TP53" or "TP53,TP53-AS1")
   promoter_ids <- h5read(h5_file, "meta/promoter/promoterID") # ENCODE CRE ID per promoter (used as row identifier)
-  chrs <- h5read(h5_file, "meta/chr")     # Chromosome per promoter (e.g. "chr1")
+  chrs <- h5read(h5_file, "meta/chr") # Chromosome per promoter (e.g. "chr1")
   starts <- h5read(h5_file, "meta/start") # Promoter start coordinate (0-based)
-  stops <- h5read(h5_file, "meta/stop")   # Promoter end coordinate (exclusive)
+  stops <- h5read(h5_file, "meta/stop") # Promoter end coordinate (exclusive)
 
   # match() returns the positional index of each case/control sample within all_samples.
   # These indices are used to read only the relevant columns from the H5 matrix,
@@ -264,7 +264,10 @@ impute_time <- system.time({
     case_cols <- 1:n_cases
     control_cols <- (n_cases + 1):(n_cases + n_controls)
     case_means <- rowMeans(mvalues[, case_cols, drop = FALSE], na.rm = TRUE)
-    control_means <- rowMeans(mvalues[, control_cols, drop = FALSE], na.rm = TRUE)
+    control_means <- rowMeans(
+      mvalues[, control_cols, drop = FALSE],
+      na.rm = TRUE
+    )
     fill <- cbind(
       matrix(case_means, nrow = nrow(mvalues), ncol = n_cases),
       matrix(control_means, nrow = nrow(mvalues), ncol = n_controls)
@@ -361,32 +364,32 @@ output_mem <- mem_probe()
 # user/system CPU time.
 elapsed <- function(t) unbox(unname(t["elapsed"]))
 final_output$timings <- list(
-  pkg_load    = elapsed(pkg_load_time),    # library() calls
-  read_json   = elapsed(read_json_time),   # parse stdin JSON
-  read_data   = elapsed(read_data_time),   # h5read of metadata + M-value matrix
-  filter      = elapsed(filter_time),      # NA-count and variance filtering
-  design      = elapsed(design_time),      # build conditions + design matrix
-  impute      = elapsed(impute_time),      # group-mean NA imputation
-  fit         = elapsed(fit_time),         # lmFit + eBayes
-  results     = elapsed(results_time),     # topTable
-  output      = elapsed(output_time)       # data.frame assembly
+  pkg_load = elapsed(pkg_load_time), # library() calls
+  read_json = elapsed(read_json_time), # parse stdin JSON
+  read_data = elapsed(read_data_time), # h5read of metadata + M-value matrix
+  filter = elapsed(filter_time), # NA-count and variance filtering
+  design = elapsed(design_time), # build conditions + design matrix
+  impute = elapsed(impute_time), # group-mean NA imputation
+  fit = elapsed(fit_time), # lmFit + eBayes
+  results = elapsed(results_time), # topTable
+  output = elapsed(output_time) # data.frame assembly
 )
 
 # Per-stage peak memory (MB). Each value is the high-water mark of total R
 # heap usage during that step (Ncells + Vcells, "max used" from gc()).
-# Useful for spotting transient spikes — e.g. read_data peaks at ~780MB
+# Useful for spotting transient spikes — e.g. read_data peaks at ~356MB
 # while the full HDF5 matrix is held before being subset and rm()'d.
 mem <- function(m) unbox(round(m, 1))
 final_output$memory_mb <- list(
-  pkg_load    = mem(pkg_load_mem),
-  read_json   = mem(read_json_mem),
-  read_data   = mem(read_data_mem),
-  filter      = mem(filter_mem),
-  design      = mem(design_mem),
-  impute      = mem(impute_mem),
-  fit         = mem(fit_mem),
-  results     = mem(results_mem),
-  output      = mem(output_mem)
+  pkg_load = mem(pkg_load_mem),
+  read_json = mem(read_json_mem),
+  read_data = mem(read_data_mem),
+  filter = mem(filter_mem),
+  design = mem(design_mem),
+  impute = mem(impute_mem),
+  fit = mem(fit_mem),
+  results = mem(results_mem),
+  output = mem(output_mem)
 )
 
 # Write the result as a single JSON string to stdout.

@@ -1,1 +1,2 @@
-
+Features:
+- Improved diffMeth.R performance dramatically by removing slow h5 file reading option. Added ability to close Volcano p-value table
