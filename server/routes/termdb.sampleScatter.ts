@@ -81,7 +81,7 @@ function init({ genomes }) {
 				if (!q.plotName) throw new Error('Neither plot name or coordinates where provided')
 				if (typeof ds.cohort?.scatterplots?.get == 'function') {
 					// getter returns list of permitted plot. check against this list to ensure the requested plot is allowed
-					const allowed = ds.cohort.scatterplots.get(q.__protected__.clientAuthResult)
+					const allowed = ds.cohort.scatterplots.get(q.__protected__?.clientAuthResult)
 					if (!allowed?.find(i => i.name == q.plotName)) throw new Error('No permission to display plot')
 				}
 				if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw new Error('not supported')

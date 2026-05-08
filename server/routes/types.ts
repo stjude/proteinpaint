@@ -5,7 +5,7 @@
 export type ReqQueryAddons = {
 	__protected__?: {
 		sessionId?: string
-		clientAuthResults?: any
+		clientAuthResult?: any
 		ignoredTermIds?: any
 	}
 	__abortSignal?: AbortSignal
