@@ -85,10 +85,6 @@ name="gdcmaf"
 path="src/gdcmaf.rs"
 
 [[bin]]
-name="topGeneByExpressionVariance"
-path="src/topGeneByExpressionVariance.rs"
-
-[[bin]]
 name="wilcoxon"
 path="src/wilcoxon.rs"
 
