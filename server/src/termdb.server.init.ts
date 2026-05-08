@@ -165,6 +165,22 @@ export function server_init_db_queries(ds) {
 		} else q.getCohortSampleCount = () => `${totalCount} samples`
 	}
 
+	// Optional opt-in: a sidecar table mapping (term_id, role) declares which terms each role can see.
+	// Loaded once into a Map<role, Set<termId>> attached to ds.cohort.termdb._roleAllowlist; the dataset's
+	// isTermVisible / filterClientCopy hooks consult it. Datasets without this table are unaffected.
+	if (tables.has('term_role_allowlist')) {
+		const rows = cn.prepare('SELECT term_id, role FROM term_role_allowlist').all() as Array<{
+			term_id: string
+			role: string
+		}>
+		const map: Map<string, Set<string>> = new Map()
+		for (const r of rows) {
+			if (!map.has(r.role)) map.set(r.role, new Set())
+			map.get(r.role)!.add(r.term_id)
+		}
+		ds.cohort.termdb._roleAllowlist = map
+	}
+
 	if (tables.has('category2vcfsample')) {
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
