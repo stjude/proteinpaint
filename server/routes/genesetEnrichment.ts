@@ -1,4 +1,4 @@
-import type { DERequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } from '#types'
+import type { DERequest, DiffMethRequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } from '#types'
 import { genesetEnrichmentPayload } from '#types/checkers'
 import crypto from 'crypto'
 import fs from 'fs'
@@ -48,6 +48,14 @@ function init({ genomes }) {
 			// The python code will retrieve gsea_<hash>.pkl from cachedir_gsea to
 			// generate the image (gsea_plot_{random_num}.png). This prevents having to rerun the
 			// entire gsea computation again.
+			//
+			// gsea.py emits `{error}` (a structured object) when blitzgsea fails
+			// on degenerate input — forward that to the client instead of
+			// throwing the unhelpful "gsea result is not string".
+			if (typeof results === 'object' && (results as any).error) {
+				res.send({ status: 'error', error: (results as any).error })
+				return
+			}
 			if (typeof results != 'string') throw new Error('gsea result is not string')
 			res.sendFile(results, (err: any) => {
 				fs.unlink(results, () => {})
@@ -113,18 +121,39 @@ async function resolveGseaGenesAndFoldChange({
 	genomes: any
 }): Promise<{ genes: string[]; fold_change: number[] }> {
 	if (q.cacheId) {
-		// A cacheId without daRequest is malformed — without the DE
+		// A cacheId without daRequest is malformed — without the DA/DM
 		// snapshot there's no way to verify the id or recompute on a cache
 		// miss. The 'daCacheMissing' literal matches the client's sayerror
 		// regex so stale sessions still get the reopen-the-volcano
 		// message.
 		if (!q.daRequest) throw new Error('daCacheMissing')
-		const result = await readCacheFileOrRecompute({ daRequest: q.daRequest as DERequest, genomes })
+		// One unified read-or-recompute for both DE and DM. The orchestrator
+		// sniffs the request shape internally; we branch on `result.kind` to
+		// extract the right rows. For DM, multiple promoters can map to the
+		// same gene_name — blitzgsea/CERNO may warn or down-rank duplicates;
+		// we pass them through without dedup for now (collapsing strategy is
+		// a follow-up).
+		const result = await readCacheFileOrRecompute({
+			daRequest: q.daRequest as DERequest | DiffMethRequest,
+			genomes
+		})
 		if (result.cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
-		return {
-			genes: result.geneData.map(g => g.gene_name),
-			fold_change: result.geneData.map(g => g.fold_change)
+		if (result.kind === 'DE') {
+			return {
+				genes: result.geneData.map(g => g.gene_name),
+				fold_change: result.geneData.map(g => g.fold_change)
+			}
 		}
+		if (result.kind === 'DM') {
+			return {
+				genes: result.promoterData.map(p => p.gene_name),
+				fold_change: result.promoterData.map(p => p.fold_change)
+			}
+		}
+		// Both branches handled explicitly above — any new result kind added
+		// to CacheOrRecomputeResult must extend this dispatcher rather than
+		// silently falling through into one of the existing branches.
+		throw new Error(`unexpected result kind: ${(result as any).kind}`)
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.

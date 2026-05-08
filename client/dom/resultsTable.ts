@@ -1,6 +1,6 @@
-import { renderTable } from '#dom'
+import { renderTable } from './table'
 import { createLollipopFromGene, createMatrixFromGenes } from './genePlotActions'
-import type { ShowResultsTableOpts, ResultsDataItem } from './resultsTableTypes'
+import type { ShowResultsTableOpts, ResultsDataItem } from './types/resultsTable'
 
 /**
  * Renders a results table for biological items (genes, promoters, etc.).
@@ -19,7 +19,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 		columns: prebuiltColumns,
 		rows: prebuiltRows,
 		dataItems: prebuiltDataItems,
-		getGene = (item: any) => item.gene,
+		getRowKey = (item: any) => item.gene,
 		matrixButtonFormat = 'Matrix ({n})',
 		...renderTableOpts
 	} = opts
@@ -27,6 +27,13 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 	const dataItems = prebuiltDataItems || hits
 
 	if (!dataItems || dataItems.length === 0) return
+
+	// Auto-build manhattan-default columns/rows only when hits look manhattan-shaped.
+	// Non-manhattan callers (volcano, proteinView) must supply columns + rows.
+	const useManhattanDefaults = !prebuiltColumns && hits && hits[0]?.chrom
+	if (!prebuiltColumns && !useManhattanDefaults) {
+		throw new Error('showResultsTable: `columns` is required when `hits` is not manhattan-shaped')
+	}
 
 	const columns = prebuiltColumns || [
 		{ label: 'Gene' },
@@ -69,7 +76,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 				callback: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
 					if (selectedIndices.length > 0) {
 						buttonNode.disabled = true
-						const selectedGenes = selectedIndices.map(idx => getGene(dataItems[idx]))
+						const selectedGenes = selectedIndices.map(idx => getRowKey(dataItems[idx]))
 						clickMenu?.hide()
 						createMatrixFromGenes(selectedGenes, app)
 					}
@@ -89,7 +96,7 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
 					}
 				},
 				onChange: (selectedIndices: number[], buttonNode: HTMLButtonElement) => {
-					const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems)
+					const result = updateSelectionTracking(selectionOrder, selectedIndices, dataItems, getRowKey)
 					selectionOrder = result.selectionOrder
 					lastTouchedGene = result.lastTouchedGene
 					buttonNode.textContent = result.buttonText
@@ -107,11 +114,16 @@ export function showResultsTable(opts: ShowResultsTableOpts): void {
  * Used by the Lollipop button to remember which gene the user touched most
  * recently across multi-select changes. Lives next to showResultsTable since
  * the button-state logic is its only caller.
+ *
+ * `getRowKey` resolves the gene name from the data item — `item.gene` works
+ * for the manhattan-default `hits` shape, while grin2/volcano callers pass
+ * `row => row[0]?.value` because their items are pre-built cell arrays.
  */
 export function updateSelectionTracking(
 	currentSelectionOrder: number[],
 	selectedIndices: number[],
-	dataSource: ResultsDataItem[]
+	dataSource: ResultsDataItem[],
+	getRowKey: (item: any) => string | number | null | undefined
 ): { selectionOrder: number[]; lastTouchedGene: string | null; buttonText: string; buttonDisabled: boolean } {
 	const newlySelected = selectedIndices.filter(idx => !currentSelectionOrder.includes(idx))
 
@@ -124,17 +136,10 @@ export function updateSelectionTracking(
 	if (updatedSelectionOrder.length > 0) {
 		const lastSelectedIdx = updatedSelectionOrder[updatedSelectionOrder.length - 1]
 		const dataItem = dataSource[lastSelectedIdx]
+		const v = dataItem != null ? getRowKey(dataItem) : null
+		lastTouchedGene = v != null ? String(v) : null
 
-		if (Array.isArray(dataItem)) {
-			// First cell is by convention the gene/feature name; coerce to string
-			// since `value` is widened to string | number across the table API.
-			const v = dataItem[0]?.value
-			lastTouchedGene = v != null ? String(v) : null
-		} else {
-			lastTouchedGene = (dataItem as { gene: string }).gene
-		}
-
-		buttonText = `Lollipop (${lastTouchedGene})`
+		if (lastTouchedGene !== null) buttonText = `Lollipop (${lastTouchedGene})`
 	}
 
 	return {

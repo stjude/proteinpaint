@@ -271,9 +271,14 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				// profileRadarFacility2 fetches aggregate + single-site in one dedicated-route call;
 				// the subclass's fetchRadarFacility2Scores() also sets this.sampleData from the response
 				this.data = await (this as any).fetchRadarFacility2Scores()
-			else if (this.type != 'profilePolar2' && this.type != 'profileBarchart2' && this.type != 'profileRadar2')
-				// profilePolar2, profileBarchart2, and profileRadar2 skip this fetch — their subclass setControls()
-				// calls their dedicated termdb/profile<Plot>2Scores route instead
+			else if (
+				this.type != 'profilePolar2' &&
+				this.type != 'profileBarchart2' &&
+				this.type != 'profileRadar2' &&
+				this.type != 'profileForms2'
+			)
+				// profilePolar2, profileBarchart2, profileRadar2, and profileForms2 skip this fetch —
+				// their subclass setControls() calls the dedicated termdb/profile<Plot>2Scores route instead
 				this.data = await this.app.vocabApi.getProfileScores({
 					scoreTerms: this.scoreTerms,
 					filter: this.filter,

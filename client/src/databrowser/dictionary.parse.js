@@ -48,7 +48,10 @@ export function parseDictionary(input) {
 		if (nameIndex == -1) {
 			throw `Missing required 'Name' header`
 		}
-		const typeIndex = header.findIndex(l => l.toLowerCase().includes('type'))
+		const typeIndex = header.findIndex(l => {
+			const v = l.trim().toLowerCase()
+			return v === 'type'
+		})
 		if (typeIndex == -1) {
 			throw `Missing required 'Type' header`
 		}
@@ -139,7 +142,10 @@ export function parseDictionary(input) {
 			throw `Missing required 'Variable' header`
 		}
 
-		const typeIndex = header.findIndex(l => l.toLowerCase().includes('type'))
+		const typeIndex = header.findIndex(l => {
+			const v = l.trim().toLowerCase()
+			return v === 'type'
+		})
 		if (typeIndex == -1) {
 			throw `Missing required 'Type' header`
 		}
@@ -151,6 +157,11 @@ export function parseDictionary(input) {
 		if (!levelColIndexes.length) levelColIndexes.push(variableIndex)
 
 		const unitIndex = header.findIndex(l => l.toLowerCase().includes('unit'))
+
+		const sampleTypeIndex = header.findIndex(l => {
+			const v = l.trim().toLowerCase()
+			return v === 'sample_type'
+		})
 
 		// see below
 		const additionalAttrIndexes = header.findIndex(l => l.toLowerCase().includes('additional attributes'))
@@ -218,6 +229,7 @@ export function parseDictionary(input) {
 
 				// pass additional properties to term obj
 				if (cols[unitIndex] != null) terms[id].unit = cols[unitIndex]
+				if (cols[sampleTypeIndex] != null) terms[id].sample_type = cols[sampleTypeIndex]
 				if (cols[additionalAttrIndexes]) {
 					/* file has additional attribute JSON column, and this line has value for it;
 					directly assign json properties to the term object, no need to nest in "term.attributes{}"

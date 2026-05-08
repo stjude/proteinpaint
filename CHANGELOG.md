@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Features:
+- Meta analysis results are incorporated into the SC app. The results appear in the first row(s) of the sample table.
+- Added quadtree hover support to cohort volcano. Added support for different shapes in quadtree hover
+
+Fixes:
+- prevent loading unauthorized prebuild scatterplot
+
+
+## 2.187.0
+
+Features:
+- Added support for cache id in the promoter volcano. Scatter plot now uses same hover detection as other plots. Other improvements
+
+Fixes:
+- bug fix to display actual breakpoints in mds3 tk sample table, for samples with multiple fusion events
+
+
+## 2.186.0
+
+Features:
 - Now using common quadtree approach in volcano and manhattan plot
 - In the SC app, dataset defined sample images now appear as an optional plot. The plot button will either appear as 'Image' or the dataset defined label.
 - The functionality of the 'Differential expression' plot button is restored. The recent changes to the server response prevented the dropdown from rendering. New methods re-enabled the dropdown.

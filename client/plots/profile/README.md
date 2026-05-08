@@ -7,6 +7,21 @@ The [`PrOFILE dashboard`](http://localhost:3000/profile/?role=admin) provides se
 
 The charts retrieve their data by calling dedicated or shared server endpoints, depending on the type of visualization. Most plots, such as polar, radar, and the profile barchart use the `termdb/profileScores` endpoint to obtain aggregated scores for each module or domain. The `profileForms` plot calls `termdb/profileFormScores` to fetch detailed, question-level survey responses per domain. Newer plots such as `profilePolar2` use their own dedicated endpoint (`termdb/profilePolar2Scores`), establishing a pattern where each plot owns its route and data logic independently. 
 
+### Term ID conventions
+
+Every cohort-specific term ID is prefixed `F` (Full) or `A` (Abbreviated). The prefix is concatenated to the bare suffix in `loadFilterTerms()` ([profilePlot.ts](./profilePlot.ts)) — so existing `FC_*`/`PO_*`/`WHO_*` substrings end up as **doubled** prefixes (`FFC_*`, `FPO_*`, `FWHO_*` for Full; `AFC_*`, `APO_*`, `AWHO_*` for Abbreviated). Examples:
+
+- Facility term: `FUNIT` / `AUNIT`
+- Filter terms: `Fcountry`/`Acountry`, `FWHO_region`/`AWHO_region`, `FIncome_group`/`AIncome_group`, `FFC_TypeofFacility`/`AFC_TypeofFacility`, `FFC_TeachingFacility`/`AFC_TeachingFacility`, `FFC_ReferralFacility`/`AFC_ReferralFacility`, `FFC_FundingSrc`/`AFC_FundingSrc`, `FPO_HospitalVolume`/`APO_HospitalVolume`, `FYear_implementation`/`AYear_implementation`
+- Score terms: `FX24` / `AX117`, etc.
+
+The convention is used in:
+
+1. `profilePlot.ts` — `getProfilePlotConfig` / `loadFilterTerms` concatenate the prefix with the rest of the term ID.
+2. `profile.{polar2,barchart2,radar2,radarFacility2}.ts` — `derivePrefix(query)` scans request term IDs and builds `${prefix}UNIT`.
+
+**Exception: `profile.forms2.ts`** — forms2's score terms are `POC*`-prefixed, so it reads `facilityTW.id` from the dataset config (`plotConfigByCohort[cohort].profileForms2.facilityTW.id`) instead.
+
 ### How Filters Are Implemented
 
 Each plot in the PrOFILE dashboard includes a set of filters implemented by the `profilePlot` class. These filters allow users to refine the data displayed in the visualizations based on key attributes of participating hospitals or survey responses.
@@ -160,6 +175,54 @@ This chart compares two different metrics for the same respondent group for each
 **Plot Types:**
 	- Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses.
 	- Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
+
+### Templates v2 (profileForms2)
+**Class:** [forms2.ts](./forms2.ts)
+**Server route:** [`profile.forms2.ts`](../../../../server/routes/profile.forms2.ts) at endpoint `termdb/profileForms2Scores`
+**Description:** A redesigned Templates plot following the per-plot dedicated route architecture established by `profilePolar2`. Visually identical to v1 once a domain is picked. The picker UX, however, is different: chart types are categorized as **horizontal tabs at the top** of the picker, and each tab shows a domain dictionary filtered to only domains that offer that chart type.
+
+**Picker UX (chart-type tabs above a filtered domain tree):** Clicking the `Templates 2` button opens a popover with horizontal tabs — one tab per chart type — and an embedded term-picker dictionary below. Switching tabs re-mounts the dictionary with a different chart-type filter, so the user can browse by chart type instead of seeing every domain mixed together. Tabs are ordered by their position in `profileFormsOptions` (the first option becomes the default active tab — currently `Yes/No Barchart`).
+
+The picker UI is defined entirely in [`forms2.ts`](./forms2.ts) (the `makeChartBtnMenu` export, invoked by `loadChartSpecificMenu` in [`mass/charts.js`](../../mass/charts.js)) — the generic [`tree.js`](../../termdb/tree.js) component is untouched. The same `Tabs` component used inside the rendered chart (Yes/No vs Likert) is reused for the picker tabs.
+
+`termdbConfig.plotConfigByCohort[cohort].profileForms2.domains` (`Array<{ id: domainId, plotTypes: friendlyLabel[] }>`) drives the tab list and per-tab tree filter. Declared as a static array in the dataset config in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — same array-of-structured-objects shape as the other profile charts (`profilePolar.terms`, `profileRadar.options[].terms`, etc.) — and shipped to the client as part of the existing `plotConfigByCohort` payload. No separate field on the wire, no SQL, no DB read. Adding or removing a template-bearing domain is a code edit reviewable in PRs. An empty `domains: []` (e.g., Abbreviated today) triggers the picker's empty-state message.
+
+[`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (set by the picker): depth-3 gets `'plot'` only if `domains.find(d => d.id === term.id)?.plotTypes` includes the active subtype; depth-1/2 gets `'branch'` only if any descendant matches (`domains.some(d => d.id.startsWith(prefix) && d.plotTypes.includes(subtype))`). Terms with empty `uses` are entirely excluded by `tree.js`'s filter.
+
+**Key differences from v1 Templates:**
+
+- **Dedicated server route:** Uses `termdb/profileForms2Scores` instead of the shared `termdb/profileFormScores`. Same pattern as the other v2 plots — each plot owns its route and data logic independently.
+- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` for full cohort, `AUNIT` for abbreviated) from `__protected__.activeCohort`.
+- **Always aggregated:** The server returns the combined categorical dict across all eligible sites. There is no single-site `sampleData` shortcut.
+- **Minimal client payload:** The client strips `scoreTerms` and `scScoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`.
+- **Public role security:** `sites` is always `[]` for public users.
+- **Cohort coverage:** Wired in both Full and Abbreviated cohort configs. Functional in Full today; Abbrev is dead config until `A*`-prefixed multivalue templates land in the DB.
+
+**Response shape:** `term2Score: { [termId]: { [category]: number } }` — same as v1.
+
+**Plot configuration (shared across v1/v2):** A single module-level constant `profileFormsOptions` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) defines the `options[]` array, referenced by `fullCohortPlots.profileForms`, `fullCohortPlots.profileForms2`, and `abbrevCohortPlots.profileForms2`. Single source of truth — v1 and v2 cannot drift, and full/abbrev cannot drift.
+
+**Domain × chart-type availability (sjglobal `db.6` snapshot, full cohort):**
+
+| Domain (parent_id) | Yes/No Barchart | Likert Scale |
+|---|---:|---:|
+| `FContext__National Context__Care Access and Utilization` | 4 | — |
+| `FContext__Facility and Local Context__Facility Basic Amenities` | — | 5 |
+| `FContext__Finances and Resources__Families/Patients` | — | 42 |
+| `FDiagnostics__Diagnostics__General Laboratory` | — | 11 |
+| `FWorkforce__Service Integration__Communication` | — | 40 |
+
+Counts are template questions per domain. The picker map itself is **not** computed from this query — it is hardcoded as `profileForms2.domains` inside `fullCohortPlots`/`abbrevCohortPlots` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) (the canonical source). The SQL below is an audit tool: after a DB change that adds or removes template-bearing domains, run it to verify the dataset's `domains` array still matches what's in the DB, and update the dataset entries if it doesn't.
+
+```sql
+SELECT parent_id, json_extract(jsondata, '$.subtype') AS subtype, COUNT(*) AS cnt
+FROM terms
+WHERE type='multivalue' AND json_extract(jsondata, '$.subtype') IS NOT NULL AND parent_id IS NOT NULL
+GROUP BY parent_id, subtype
+ORDER BY parent_id;
+```
+
+(The JSON field is `subtype`. The `get_multivalue_tws` function in `server/src/termdb.sql.js` queries `$.plotType` and is dead code; the live multivalue handler is in [`termdb.server.init.ts`](../../../../server/src/termdb.server.init.ts) which JSON-parses `jsondata` so all fields including `subtype` reach the client.)
 
 ## Conclusion
 These plots collectively provide a comprehensive toolkit for users to analyze PrOFILE data from a high-level summary down to individual data points. The PrOFILE dashboard is designed to empower institutions and collaborative groups to explore, benchmark, and improve pediatric oncology care using interactive, data-driven visualizations. With flexible filters, site-based access, and a variety of plot types, users can gain insights from high-level summaries down to individual survey responses.

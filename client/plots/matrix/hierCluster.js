@@ -241,6 +241,7 @@ export class HierCluster extends Matrix {
 		}
 		if (state.config.dataType == 'proteomeAbundance') {
 			body.proteomeDetails = {
+				organism: state.config.proteomeDetails?.organism,
 				assay: state.config.proteomeDetails?.assay,
 				cohort: state.config.proteomeDetails?.cohort
 			}

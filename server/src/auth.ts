@@ -27,7 +27,10 @@ export let authApi
 const authApiByApp = new WeakMap()
 
 // these may be overriden within maySetAuthRoutes()
-export async function getAuthApi(app, genomes, _serverconfig = null) {
+export async function getAuthApi(app, genomes, _serverconfig = null, assignSharedApi = false) {
+	if (assignSharedApi && authApi) {
+		throw `The shared authApi reference has already been assigned.`
+	}
 	// reuse an existing authApi if it already exists for an app
 	if (authApiByApp.has(app)) return authApiByApp.get(app)
 
@@ -45,9 +48,11 @@ export async function getAuthApi(app, genomes, _serverconfig = null) {
 		Object.freeze(_authApi)
 		Object.freeze(_authApi.credEmbedders)
 	}
-	// IMPORTANT: only set the exported authApi value once,
-	// expected to be at the beginning of server launch
-	if (!authApi) authApi = _authApi
+	// IMPORTANT: only set the exported authApi value once, expected to be at the
+	// beginning of server launch. Unit tests should not set the assignSharedApi argument
+	// to true when the imports are persisted into integration tests, such as when running
+	// combined coverage scripts.
+	if (assignSharedApi) authApi = _authApi
 	// track each authApi by app
 	authApiByApp.set(app, _authApi)
 	// Return the generated authApi. It is more reliable for consumer code

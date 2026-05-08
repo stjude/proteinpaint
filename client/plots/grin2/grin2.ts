@@ -2,11 +2,10 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
 import { getCombinedTermFilter, getNormalRoot, filterInit } from '#filter'
-import { Menu, table2col, make_one_checkbox, sayerror } from '#dom'
+import { Menu, table2col, make_one_checkbox, sayerror, showResultsTable } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { plotManhattan } from '#plots/manhattan/manhattan.ts'
-import { showResultsTable } from '../shared/resultsTable'
 import { controlsInit } from '#plots/controls.js'
 
 class GRIN2 extends PlotBase implements RxComponent {
@@ -746,7 +745,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				columns: modifiedColumns,
 				rows: processedRows,
 				dataItems: result.topGeneTable.rows,
-				getGene: (row: any) => row[0]?.value,
+				getRowKey: (row: any) => row[0]?.value,
 				matrixButtonFormat: 'Matrix ({n} genes selected)',
 				maxHeight: '400px',
 				maxWidth: '100%',

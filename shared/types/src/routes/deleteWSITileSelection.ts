@@ -6,8 +6,7 @@ export type DeleteWSITileSelectionRequest = {
 	dslabel: string
 	projectId: number
 	tileSelection: TileSelection
-	predictionClassId: string
-	tileSelectionType: number
+	classID: number
 	wsimage: string
 }
 

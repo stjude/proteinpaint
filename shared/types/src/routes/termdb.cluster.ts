@@ -66,7 +66,7 @@ export type TermdbClusterRequestProteomeAbundance = TermdbClusterRequestBase & {
 	terms: ProteomeAbundanceTW[]
 	/** perform z-score transformation on values */
 	zScoreTransformation?: string
-	/** assay type and cohort for the selected proteome data */
+	/** organism, assay type and cohort for the selected proteome data */
 	proteomeDetails: ProteomeDetails
 }
 

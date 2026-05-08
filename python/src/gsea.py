@@ -13,6 +13,29 @@ import pandas as pd
 def extract_symbols(x):
     return x['symbol']  # Return the 'symbol' field from the dictionary
 
+# Friendly fallback around blitz.gsea(). The library raises ValueError from
+# scipy.stats.gamma.fit (via multiprocessing) when its calibration step
+# encounters non-finite values — typically when the signature has too few
+# genes overlapping the library, or fold-changes that are degenerate (all
+# zero / all identical). It also throws ZeroDivisionError on similar
+# pathological inputs. Surface a clean structured error to the Node caller
+# instead of letting the Python process exit non-zero with a multi-page
+# traceback. Returns the gsea result on success, or None after emitting an
+# error line — caller should `continue` to the next stdin line.
+def _safe_blitz_gsea(signature, library, permutations):
+    try:
+        return blitz.gsea(signature, library, permutations=permutations)
+    except (ValueError, ZeroDivisionError, RuntimeError) as e:
+        msg = (
+            'GSEA failed: the input signature could not be calibrated by blitzgsea. '
+            'This usually means too few genes overlap the selected gene-set library, '
+            'or the fold-change values are degenerate (all zero / all identical). '
+            f'Underlying error: {type(e).__name__}: {e}'
+        )
+        # Single-line JSON; the Node side already parses any `result: ` line.
+        print(f'result: {json.dumps({"error": msg})}')
+        return None
+
 # Main function
 try:
     # Check if there is input from stdin
@@ -112,7 +135,10 @@ try:
                     result = pd.read_pickle(os.path.join(cachedir, pickle_file))  # Load the result from the pickle file
                     fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
                 else: # If pickle file is not found, redo the GSEA computation from scratch
-                    result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T  # Perform GSEA computation and transpose the result
+                    gsea_result = _safe_blitz_gsea(signature, msigdb_library, num_permutations)
+                    if gsea_result is None:
+                        continue
+                    result = gsea_result.T
                     fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
                     result.to_pickle(os.path.join(cachedir, pickle_file))  # Save the result to a pickle file with same name
                 random_num = np.random.rand()  # Generate a random number for unique png filename
@@ -136,7 +162,10 @@ try:
                     else:
                         # Cache miss: run blitzgsea and persist the result
                         # under the server-supplied filename.
-                        result = blitz.gsea(signature, msigdb_library, permutations=num_permutations).T
+                        gsea_result = _safe_blitz_gsea(signature, msigdb_library, num_permutations)
+                        if gsea_result is None:
+                            continue
+                        result = gsea_result.T
                         result.to_pickle(pickle_path)
                     # pickle_file is server-computed deterministically from
                     # the GSEA inputs; the server can always regenerate it

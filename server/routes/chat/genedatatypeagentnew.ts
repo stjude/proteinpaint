@@ -21,6 +21,7 @@ interface GeneOrGroupOrAmbiguousResult {
 	role: 'gene' | 'group' | 'ambiguous'
 }
 
+// NOTE: This function currently designed to parse the entire user prompt. In the future to parse each phrase. The training examples need to be changed. Also probably needs to be generalized to other things later: for e.g. a molecular subtype could be named based on a metabolite instead of gene.
 export async function classifyGeneOrGroup(
 	user_prompt: string,
 	llm: LlmConfig,
@@ -28,7 +29,7 @@ export async function classifyGeneOrGroup(
 ): Promise<{ term: string; role: string }[]> {
 	//const allTerms = relevant_genes.map(x => x.toUpperCase()).join(', ')
 	const ambiguousTerms = gene_group_intersection.join(', ')
-
+	console.log('ambiguousTerms:', ambiguousTerms)
 	const jsonSchema = JSON.stringify(
 		{
 			$schema: 'http://json-schema.org/draft-07/schema#',
@@ -136,7 +137,7 @@ Response:`
 
 	const geneTerms: { term: string; role: string }[] = results.filter(r => r.role === 'group')
 	//const filteredGenes = gene_group_intersection.filter(g => geneTerms.includes(g.toLowerCase()))
-
+	console.log('geneTerms:', geneTerms)
 	return geneTerms
 }
 
@@ -153,12 +154,12 @@ Response:`
  * more genes are missing a data type.
  */
 
-export async function classifyGeneDataType(
+export async function classifyGeneDataTypePhrase(
 	user_prompt: string,
 	llm: LlmConfig,
 	relevant_genes: string[],
 	dataset_json: any
-): Promise<GeneDataTypeResult | string> {
+): Promise<GeneDataTypeResult | string | null> {
 	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
 	let genes: string[] = []
 	if (exclude_keywords.length > 0) {
@@ -174,8 +175,10 @@ export async function classifyGeneDataType(
 	} else {
 		genes = relevant_genes
 	}
-	const geneList = genes.map(x => x.toUpperCase()).join(', ')
-	const prompt = `You are a genomics query classifier. Given a user prompt and a list of gene names, determine which gene data type the user is referring to for EACH gene.
+
+	if (genes.length > 0) {
+		const geneList = genes.map(x => x.toUpperCase()).join(', ')
+		const prompt = `You are a genomics query classifier. Given a user prompt and a list of gene names, determine which gene data type the user is referring to for EACH gene.
 
 Valid gene data types are:
 - "expression" — gene expression, RNA, transcription, FPKM, TPM, counts, upregulated, downregulated, overexpressed, underexpressed
@@ -210,21 +213,24 @@ User prompt: "${user_prompt}"
 Genes: [${geneList}]
 Response:`
 
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 
-	let result: GeneDataTypeResult
-	try {
-		const cleaned = stripMarkdownFencing(response)
-		result = JSON.parse(cleaned)
-	} catch {
-		mayLog('classifyGeneDataType: failed to parse LLM response as JSON:', response)
-		return ''
-	}
+		let result: GeneDataTypeResult
+		try {
+			const cleaned = stripMarkdownFencing(response)
+			result = JSON.parse(cleaned)
+		} catch {
+			mayLog('classifyGeneDataType: failed to parse LLM response as JSON:', response)
+			return ''
+		}
 
-	if (result.dataType === 'missing') {
-		return `Gene data type is missing for ${result.gene}. Please specify what you would like to see for this gene (e.g. expression, variant, methylation).`
+		if (result.dataType === 'missing') {
+			return `Gene data type is missing for ${result.gene}. Please specify what you would like to see for this gene (e.g. expression, variant, methylation).`
+		} else {
+			return result
+		}
 	} else {
-		return result
+		return null // No genes to classify, so we can skip this step in the pipeline. This happens when a term is classified as "group" and filtered out, leaving no "gene"-classified terms to determine data type for.
 	}
 }
 

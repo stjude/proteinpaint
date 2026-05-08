@@ -217,6 +217,13 @@ function getChartTypeList(self, state) {
 			usecase: { target: 'profileForms', detail: 'tw' },
 			config: { chartType: 'profileForms' }
 		},
+		{
+			label: 'Templates 2',
+			chartType: 'profileForms2',
+			clickTo: self.loadChartSpecificMenu,
+			usecase: { target: 'profileForms2', detail: 'tw' },
+			config: { chartType: 'profileForms2' }
+		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
 		{
@@ -378,12 +385,12 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Protein View',
+			label: 'Protein Selection',
 			chartType: 'proteinView',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Protein Abundance',
+			label: 'Sample Selection',
 			chartType: 'proteomeAbundance',
 			clickTo: self.loadChartSpecificMenu
 		},

@@ -136,6 +136,25 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
 	for (const plot of D.plots) {
+		if (plot.isMetaResult) {
+			/** Meta analysis results may not be separated into folders like the sample files
+			 * for other plots. Check the file exists with the appropriate "sample name". This
+			 * method ensure the file can be queried as intended later.
+			 *
+			 * Note: meta analysis results are treated as sample because the data structure and
+			 * getters are the same. The results or the sID used for querying will not appear
+			 * in the db. */
+			const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
+			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleName + (plot.fileSuffix || ''))
+			try {
+				/** Files should exist for each meta analysis result. */
+				await file_is_readable(tsvfile)
+				samples.set(sampleName, { sample: sampleName, isMetaResult: true })
+			} catch (e: any) {
+				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
+			}
+			continue
+		}
 		for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
 			// fn: string file name.
 			let sampleName = fn

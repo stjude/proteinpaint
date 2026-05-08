@@ -1,8 +1,9 @@
 import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
+// import { ambiguousPoints } from '#types'
 import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readJSONFile, parse_geneset_db } from './chat/utils.ts'
+import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './chat/utils.ts'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
@@ -12,9 +13,10 @@ import { getDsAllowedTermTypes } from './termdb.config.ts'
 import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
 import { resolveToTwTvs } from './chat/entity2twTvs.ts'
+import { answerDataQueries } from './chat/dataQueries.ts'
 import path from 'path'
 import fs from 'fs'
-import type { Phrase2EntityResult } from './chat/scaffoldTypes.ts'
+import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './chat/scaffoldTypes.ts'
 import { resolveToPlotState } from './chat/scaffold2state.ts'
 
 export const api: RouteApi = {
@@ -35,9 +37,9 @@ function init({ genomes }) {
 	return async (req, res) => {
 		const q: ChatRequest = req.query
 		try {
-			const g = genomes[q.genome]
-			if (!g) throw 'invalid genome'
-			const ds = g.datasets?.[q.dslabel]
+			const genome = genomes[q.genome]
+			if (!genome) throw 'invalid genome'
+			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + q.dslabel // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
 			let agentFiles: string[] = []
@@ -66,14 +68,24 @@ function init({ genomes }) {
 			// const testing = false
 
 			// Access the cohort key/label
-			const rawFilter = typeof q.filter === 'string' ? JSON.parse(q.filter) : q.filter
+			let rawFilter: any
+			if (typeof q.filter === 'string') {
+				try {
+					rawFilter = JSON.parse(q.filter)
+				} catch (e) {
+					throw new Error('Failed to parse filter JSON string: ' + e)
+				}
+			} else {
+				rawFilter = q.filter
+			}
 			const filter: any = rawFilter && typeof rawFilter === 'object' ? rawFilter : {}
 			const lst = Array.isArray(filter.lst) ? filter.lst : []
 			const cohortFilter = lst.find((item: any) => item.tag === 'cohortFilter')
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
-			const supportedChartTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
-			const genedb = serverconfig.tpmasterdir + '/' + g.genedb.dbfile
-			const _allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
+			const supportedPlotTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
+			const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
+			const genedb = serverconfig.tpmasterdir + '/' + genome.genedb.dbfile
+			const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
 				llm,
@@ -81,8 +93,9 @@ function init({ genomes }) {
 				genedb,
 				agentFiles,
 				aiFilesDir,
-				supportedChartTypes,
-				_allowedTermTypes
+				chatSupportedPlotTypes,
+				allowedTermTypes,
+				genome
 				// 	testing
 			)
 			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
@@ -95,14 +108,15 @@ function init({ genomes }) {
 }
 
 export async function run_chat_pipeline(
-	user_prompt: string,
+	userPrompt: string,
 	llm: LlmConfig,
 	ds: any,
 	genedb: string,
 	agentFiles: string[],
 	aiFilesDir: string,
-	supportedChartTypes: string[],
-	_allowedTermTypes: string[]
+	supportedPlotTypes: string[],
+	allowedTermTypes: string[],
+	genome: any
 	// testing: boolean
 ) {
 	// Read main.json file
@@ -112,17 +126,17 @@ export async function run_chat_pipeline(
 
 	// Plot vs Not-plot classification
 	const time1 = new Date().valueOf()
-	const class_response: QueryClassification = await classifyQuery(user_prompt, llm)
+	const class_response: QueryClassification = await classifyQuery(userPrompt, llm)
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
 
 	let ai_output_json: any
-	if (class_response.type == 'notplot') {
+	if (class_response.type === 'notplot') {
 		// If Not-plot: Resource or None classification
 		const time2 = new Date().valueOf()
-		const notPlotResult = await classifyNotPlot(user_prompt, llm, agentFiles, aiFilesDir)
+		const notPlotResult = await classifyNotPlot(userPrompt, llm, agentFiles, aiFilesDir) //, allowedTermTypes)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
 
-		if (notPlotResult.type == 'html') {
+		if (notPlotResult.type === 'html') {
 			ai_output_json = notPlotResult
 		} else {
 			ai_output_json = {
@@ -130,85 +144,86 @@ export async function run_chat_pipeline(
 				text: 'Your query does not appear to be related to the available data visualizations. Please try rephrasing your question.'
 			}
 		}
-	} else if (class_response.type == 'plot') {
+	} else if (class_response.type === 'binaryQuery') {
+		const answer = await answerDataQueries(userPrompt, llm, allowedTermTypes)
+		if (!answer) throw "Couldn't decide if this is data related query!"
+		mayLog('Data Binary Query: ', answer)
+		ai_output_json = answer
+	} else if (class_response.type === 'plot') {
 		let time = new Date().valueOf()
-		const plotType = await classifyPlotType(user_prompt, llm)
+		const plotType = await classifyPlotType(userPrompt, llm)
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
 
-		// As long as supported chart types is non-empty list
-		if (!supportedChartTypes) {
-			const errorMsg =
-				'Supported chart types list is undefined. Please check the dataset configuration and ensure \
-							  that getSupportedChartTypes is implemented correctly. Skipping chart type validation, but this may \
-							  lead to unsupported chart type errors downstream.'
-			console.warn(errorMsg)
-			const errorResponse: ChatResponse = {
+		// Check if the classified plot type is supported by this dataset
+		if (!supportedPlotTypes.includes(plotType)) {
+			const log = 'Plot type: "' + plotType + '" is not supported.'
+			ai_output_json = {
 				type: 'text',
-				text: errorMsg
+				text: log
 			}
-			return errorResponse
+			mayLog(log)
+			return ai_output_json
 		}
 
-		/* Special handling for summary chart types
-		// Every cohort by default supports summary charts unless 
-		// 'dictionary' is not in the supported chart type list
-		// */
-		if (plotType === 'summary') {
-			if (!supportedChartTypes.includes('dictionary')) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		} else if (plotType === 'dge') {
-			if (!supportedChartTypes.includes('DA')) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		} else {
-			mayLog(`Supported chart types for this cohort: ${supportedChartTypes}`)
-			if (!supportedChartTypes.includes(plotType)) {
-				const log = 'Plot type: "' + plotType + '" is not supported.'
-				ai_output_json = {
-					type: 'text',
-					text: log
-				}
-				mayLog(log)
-				return ai_output_json
-			}
-		}
+		const genes_list = await parse_geneset_db(genedb)
 
-		// If valid plot type, figure out the scaffold according to the plot type
+		// If supported plot type, figure out the scaffold according to the plot type
+		mayLog('#################################################')
 		mayLog('####### First phase: Infer Plot Scaffolds #######')
+		mayLog('#################################################')
 		time = new Date().valueOf()
-		const scaffoldResult = await inferScaffold(user_prompt, plotType, llm)
+		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+		const scaffoldResult = await inferScaffold(
+			userPrompt,
+			plotType,
+			llm,
+			genome,
+			genes_list,
+			allowedTermTypes,
+			dataset_json,
+			ds,
+			dataset_db
+		)
 		mayLog('ScaffoldResult: ', scaffoldResult)
+		if (
+			(plotType === 'hiercluster' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
+			('text' in scaffoldResult && scaffoldResult.type === 'text')
+		) {
+			// In case of geneExpression clustering, the plot state is generated through a single LLM call and invoking downstream steps is not necessary.
+			return scaffoldResult
+		}
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
 		if (!scaffoldResult)
 			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
-		const subplotType = scaffoldResult.plotType === 'summary' ? scaffoldResult.chartType : undefined
+		if ('type' in scaffoldResult && scaffoldResult.type === 'text') {
+			return scaffoldResult // Return msg/error
+		}
 
+		const subplotType =
+			(scaffoldResult as Scaffold).plotType === 'summary' ? (scaffoldResult as SummaryScaffold).chartType : undefined
+
+		mayLog('#################################################')
 		mayLog("####### Second phase: From Scaffolds's phrases infer Entities #######")
-		const genes_list = await parse_geneset_db(genedb)
+		mayLog('#################################################')
 		time = new Date().valueOf()
-		const phrase2entityResult = await phrase2entity(scaffoldResult, plotType, llm, genes_list, dataset_json, ds)
+		const phrase2entityResult = await phrase2entity(
+			scaffoldResult as Scaffold,
+			plotType,
+			llm,
+			genes_list,
+			dataset_json,
+			ds
+		)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
 		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
 			return phrase2entityResult // Return msg/error
 		}
 		mayLog(phrase2entityResult)
 
+		mayLog('#################################################')
 		mayLog('####### Third phase: From Entities infer Term Objects #######')
-		const dataset_db = serverconfig.tpmasterdir + '/' + ds.cohort.db.file
+		mayLog('#################################################')
 		time = new Date().valueOf()
 		const termObj = await inferTermObjFromEntity(
 			phrase2entityResult as Phrase2EntityResult,
@@ -220,7 +235,9 @@ export async function run_chat_pipeline(
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
 		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))
 
+		mayLog('#################################################')
 		mayLog('####### Fourth phase: From Term Objects to TwTvs Objects #######')
+		mayLog('#################################################')
 		time = new Date().valueOf()
 		const twTvsObj = await resolveToTwTvs(termObj, plotType, llm, dataset_db)
 		mayLog('Time taken to resolve to TwTvs object from termObj:', formatElapsedTime(Date.now() - time))
@@ -229,7 +246,9 @@ export async function run_chat_pipeline(
 		}
 		mayLog('twTvsObj:', twTvsObj)
 
+		mayLog('#################################################')
 		mayLog('####### Fifth/Final phase: From TwTvs Objects to Plot States #######')
+		mayLog('#################################################')
 		time = new Date().valueOf()
 		ai_output_json = resolveToPlotState(twTvsObj, plotType, subplotType)
 		mayLog('Time taken to resolve to plot state:', formatElapsedTime(Date.now() - time))

@@ -1,12 +1,13 @@
 {
   "name": "@sjcrh/proteinpaint-shared",
-  "version": "2.185.0",
+  "version": "2.187.0",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
   "main": "src/index.js",
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
-    "#types/*": "@sjcrh/proteinpaint-types/*"
+    "#types/*": "@sjcrh/proteinpaint-types/*",
+    "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
   "exports": {
     ".": "./src/index.js",

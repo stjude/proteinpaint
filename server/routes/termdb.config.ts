@@ -261,23 +261,37 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.proteome) {
 		q2.proteome = {}
-		if (q.proteome.overlayTerm) {
-			q2.proteome.overlayTerm = JSON.parse(JSON.stringify(q.proteome.overlayTerm))
-		}
-		if (q.proteome.assays) {
-			q2.proteome.assays = {}
-			for (const assay in q.proteome.assays) {
-				q2.proteome.assays[assay] = {}
-				if (q.proteome.assays[assay].cohorts) {
-					q2.proteome.assays[assay].cohorts = {}
-					for (const cohort in q.proteome.assays[assay].cohorts) {
-						q2.proteome.assays[assay].cohorts[cohort] = {}
-						const src = q.proteome.assays[assay].cohorts[cohort]
-						if ('controlFilter' in src) {
-							q2.proteome.assays[assay].cohorts[cohort].controlFilter = JSON.parse(JSON.stringify(src.controlFilter))
-						}
-						if ('caseFilter' in src) {
-							q2.proteome.assays[assay].cohorts[cohort].caseFilter = JSON.parse(JSON.stringify(src.caseFilter))
+		if (q.proteome.organisms) {
+			q2.proteome.organisms = {}
+			for (const organism in q.proteome.organisms) {
+				q2.proteome.organisms[organism] = {}
+				const orgSrc = q.proteome.organisms[organism]
+				if (orgSrc.overlayTerm) {
+					q2.proteome.organisms[organism].overlayTerm = JSON.parse(JSON.stringify(orgSrc.overlayTerm))
+				}
+				if (orgSrc.genomeName) {
+					q2.proteome.organisms[organism].genomeName = orgSrc.genomeName
+				}
+				if (orgSrc.assays) {
+					q2.proteome.organisms[organism].assays = {}
+					for (const assay in orgSrc.assays) {
+						q2.proteome.organisms[organism].assays[assay] = {}
+						if (orgSrc.assays[assay].cohorts) {
+							q2.proteome.organisms[organism].assays[assay].cohorts = {}
+							for (const cohort in orgSrc.assays[assay].cohorts) {
+								q2.proteome.organisms[organism].assays[assay].cohorts[cohort] = {}
+								const src = orgSrc.assays[assay].cohorts[cohort]
+								if ('controlFilter' in src) {
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].controlFilter = JSON.parse(
+										JSON.stringify(src.controlFilter)
+									)
+								}
+								if ('caseFilter' in src) {
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].caseFilter = JSON.parse(
+										JSON.stringify(src.caseFilter)
+									)
+								}
+							}
 						}
 					}
 				}
@@ -380,7 +394,7 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.geneExpression) typeSet.add(GENE_EXPRESSION)
 	if (ds.queries?.isoformExpression) typeSet.add(ISOFORM_EXPRESSION)
 	if (ds.queries?.metaboliteIntensity) typeSet.add(METABOLITE_INTENSITY)
-	if (ds.queries?.proteome?.assays) typeSet.add(PROTEOME_ABUNDANCE)
+	if (ds.queries?.proteome) typeSet.add(PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
 	if (ds.queries?.singleCell) {

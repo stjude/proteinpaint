@@ -103,7 +103,7 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 	if (q.divideTw) throw new Error('divideTw is not supported with numeric termCollection')
 
 	const termlst: any[] = term.termlst || []
-	mayLog('termlst', termlst)
+	//mayLog('termlst', termlst)
 	mayLog(
 		`Expanding numeric termCollection with ${termlst.length} member terms and ${
 			Object.keys(data.samples).length

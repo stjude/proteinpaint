@@ -70,5 +70,9 @@ tape('setTopGenes', async test => {
 		}
 	}
 
+	if (test['_ok']) {
+		holder.remove()
+		ui.api.destroy()
+	}
 	test.end()
 })

@@ -1,5 +1,13 @@
 import type { LlmConfig } from '#types'
-import type { SummaryPhrase2EntityResult, Phrase2EntityResult, Entity, DEPhrase2EntityResult } from './scaffoldTypes.ts'
+import type {
+	SummaryPhrase2EntityResult,
+	Phrase2EntityResult,
+	Entity,
+	DEPhrase2EntityResult,
+	HierPhrase2EntityResult,
+	MatrixPhrase2EntityResult,
+	PrebuiltScatterPhrase2EntityResult
+} from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -69,7 +77,7 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[]): Value | un
 	}
 }
 
-async function getTermObj(
+export async function getTermObj(
 	key: string,
 	twEntity: Entity,
 	llm: LlmConfig,
@@ -81,6 +89,7 @@ async function getTermObj(
 	// with the user phrase; the LLM returns the single rag_docs row whose term best matches.
 
 	// Non-dic term types should be resolved accordingly,
+	mayLog(`Getting term object for key "${key}" and phrase "${twEntity.phrase}" with term type "${twEntity.termType}"`)
 	if (twEntity.termType !== 'dictionary') {
 		const twRes = buildNonDictTermObj(twEntity, genes_list)
 		if (!twRes) {
@@ -89,8 +98,11 @@ async function getTermObj(
 		}
 		return twRes
 	} else {
-		// const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
-		// const match = await findBestMatch(twEntity.phrase, refEmbedding, llm)
+		/*
+const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
+const topK: number = 3
+const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
+*/
 		const match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
 		if (!match) {
 			console.warn(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
@@ -122,8 +134,8 @@ export async function inferTermObjFromEntity(
 	llm: LlmConfig,
 	dbPath: string,
 	genes_list: string[] // redundant (must be fixed)
-): Promise<Record<string, Value | Value[]>> {
-	const twObjects: Record<string, Value | Value[]> = {}
+): Promise<Record<string, Value | Value[] | string>> {
+	const twObjects: Record<string, Value | Value[] | string> = {}
 	if (plotType === 'summary') {
 		const summaryEntity = entity as SummaryPhrase2EntityResult
 		for (const [key, value] of Object.entries(summaryEntity)) {
@@ -159,7 +171,7 @@ export async function inferTermObjFromEntity(
 			twObjects[key] = termObj
 		}
 		return twObjects
-	} else if (plotType == 'dge') {
+	} else if (plotType === 'dge') {
 		const deEntity = entity as DEPhrase2EntityResult
 		for (const [key, value] of Object.entries(deEntity)) {
 			assert(value != undefined)
@@ -180,6 +192,158 @@ export async function inferTermObjFromEntity(
 			twObjects[key] = filterValues
 		}
 		return twObjects
+	} else if (plotType === 'hiercluster') {
+		const hierEntity = entity as HierPhrase2EntityResult
+		const DictValues: Value[] = []
+		for (const phrase of hierEntity.phrases) {
+			mayLog('Evaluating hierCluster phrase:', phrase)
+			const termObj = await getTermObj('DictPhrases', phrase, llm, dbPath, genes_list)
+			if (!termObj) {
+				console.warn(`Skipping hierCluster gene "${phrase.phrase}" — failed to get term object`)
+				continue
+			}
+			DictValues.push(termObj)
+		}
+		if (DictValues.length === 0) {
+			throw 'No valid gene terms could be resolved for hierarchical clustering.'
+		}
+		twObjects['DictPhrases'] = DictValues
+
+		if (hierEntity.filter) {
+			const filterValues: Value[] = []
+			for (const filterTerm of hierEntity.filter) {
+				mayLog('Evaluating hierCluster filter term:', filterTerm)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+				if (!termObj) continue
+				if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
+				filterValues.push(termObj)
+			}
+			twObjects['filter'] = filterValues
+		}
+		return twObjects
+	} else if (plotType === 'matrix') {
+		const matrixEntity = entity as MatrixPhrase2EntityResult
+		for (const [key, value] of Object.entries(matrixEntity)) {
+			// need special handling for filters, since they can be more complex and nested than other term types
+			if (key === 'filter') {
+				const filterResult = value as Entity[] | undefined
+				if (!filterResult) continue
+
+				const filterValues: Value[] = []
+				for (const filterTerm of filterResult) {
+					mayLog('Evaluating filter term:', filterTerm)
+					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
+					if (!termObj) {
+						continue
+					}
+					const filterEntity = filterTerm as Entity
+					if (filterEntity.logicalOperator) termObj.logicalOperator = filterEntity.logicalOperator
+					filterValues.push(termObj)
+				}
+				mayLog('Final filter values:', filterValues)
+				twObjects[key] = filterValues
+				continue
+			}
+
+			if (key === 'twLst' && Array.isArray(value)) {
+				const twEntities = value as Entity[]
+				const termObjs: Value[] = []
+				for (const [index, twEntity] of twEntities.entries()) {
+					mayLog(`Evaluating twLst[${index}] entity:`, twEntity)
+					const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+					if (!termObj) {
+						console.warn(`Skipping twLst[${index}] — failed to get term object for phrase "${twEntity.phrase}"`)
+						continue
+					}
+					termObjs.push(termObj)
+				}
+				if (termObjs.length > 0) {
+					twObjects[key] = termObjs
+				} else {
+					console.warn('No valid term objects could be resolved for any entries in twLst.')
+				}
+				continue
+			}
+
+			// For other keys divideBy,
+			mayLog(`Evaluating divide by ${key} entity:`, value)
+			const twEntity = value as Entity | undefined
+			if (!twEntity) continue
+			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+			if (!termObj) {
+				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
+			}
+			twObjects[key] = termObj
+		}
+		return twObjects
+	} else if (plotType === 'prebuiltscatter') {
+		const scatterEntity = entity as PrebuiltScatterPhrase2EntityResult
+		if (scatterEntity.name) {
+			twObjects['name'] = {
+				term: { id: scatterEntity.name, type: 'prebuiltscatter', name: scatterEntity.name },
+				type: 'prebuiltscatter',
+				phrase: scatterEntity.name
+			}
+		}
+		if (scatterEntity.colorBy === 'null') {
+			twObjects['colorBy'] = 'null'
+		} else if (scatterEntity.colorBy) {
+			const termObj = await getTermObj('colorBy', scatterEntity.colorBy, llm, dbPath, genes_list)
+			if (termObj) {
+				twObjects['colorBy'] = termObj
+			} else {
+				console.warn(
+					`Failed to resolve colorBy term "${scatterEntity.colorBy.phrase}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+		}
+		if (scatterEntity.shapeBy === 'null') {
+			twObjects['shapeBy'] = 'null'
+		} else if (scatterEntity.shapeBy) {
+			const termObj = await getTermObj('shapeBy', scatterEntity.shapeBy, llm, dbPath, genes_list)
+			if (termObj) {
+				twObjects['shapeBy'] = termObj
+			} else {
+				console.warn(
+					`Failed to resolve shapeBy term "${scatterEntity.shapeBy.phrase}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+		}
+
+		if (scatterEntity.divideBy) {
+			const termObj = await getTermObj('divideBy', scatterEntity.divideBy, llm, dbPath, genes_list)
+			if (termObj) {
+				twObjects['divideBy'] = termObj
+			} else {
+				console.warn(
+					`Failed to resolve divideBy term "${scatterEntity.divideBy.phrase}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+		}
+
+		if (scatterEntity.filter) {
+			const filterResult = scatterEntity.filter as Entity[]
+			if (!filterResult) {
+				console.warn(
+					`Failed to resolve filter term "${scatterEntity.filter}" for prebuilt scatter — skipping this attribute.`
+				)
+			}
+
+			const filterValues: Value[] = []
+			for (const filterTerm of filterResult) {
+				mayLog('Evaluating filter term:', filterTerm)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+				if (!termObj) {
+					continue
+				}
+				const filterEntity = filterTerm as Entity
+				if (filterEntity.logicalOperator) termObj.logicalOperator = filterEntity.logicalOperator
+				filterValues.push(termObj)
+			}
+			mayLog('Final filter values:', filterValues)
+			twObjects['filter'] = filterValues
+		}
+		return twObjects
 	} else {
 		throw 'Other plot types other than summary not yet supported'
 	}
@@ -189,46 +353,99 @@ async function findBestMatchLLM(
 	phrase: string,
 	dbPath: string,
 	llm: LlmConfig
-): Promise<{ id: string; type: string; name: string; score: number } | undefined> {
+): Promise<{ id: string; type: string; name: string; score: number; msg?: string } | undefined> {
 	const dataset_db_output = await parse_dataset_db(dbPath)
 	const { db_rows, rag_docs } = dataset_db_output
 	if (rag_docs.length === 0) {
 		console.warn('findBestMatchLLM: no rag_docs in DB')
 		return undefined
 	}
+	const prompt = `You are an assistant that maps a user phrase to a dataset dictionary term.
+	IMPORTANT: Your goal is NOT to always select a match. Your goal is to AVOID incorrect matches.
+	
+	You must follow this strict decision rule:
+	1. Only select a term if it is a CLEAR, SPECIFIC, and UNIQUE match to the phrase.
+	2. If multiple dictionary rows are closely related OR represent subtypes/specializations of the phrase, you MUST return "ambiguous".
+	3. If the phrase is broader than the candidate terms (e.g., "chemotherapy" vs specific drug classes), you MUST return "ambiguous".
+	4. If two or more candidates differ only by subtype, drug class, or measurement detail, DO NOT pick one — return "ambiguous" and list the three most closely related candidates ordered from most to least relevant.
 
-	const prompt = `You are an assistant that selects the best matching dictionary term from a dataset dictionary for a user-supplied phrase.
+	Examples of ambiguity:
+	- Phrase: "chemotherapy"
+	Candidates:
+		- alkylating chemotherapy exposure
+		- platinum chemotherapy exposure
+	→ Return ambiguous (because phrase is general, candidates are specific subtypes)
 
-You will be given:
-1. A phrase describing a clinical or genomic concept (e.g. "age at diagnosis", "diagnosis group", "ancestry").
-2. A list of dictionary rows. Each row describes one term: its field name, its type (categorical, integer, float, condition, etc.), its description, and — for categorical terms — the possible (key, label) values it can take.
+	- Phrase: "age at diagnosis"
+	Candidates:
+		- age at diagnosis
+		- diagnosis group
+	→ Select "age at diagnosis" (clear and unique match)
 
-Your job:
-- Select the SINGLE dictionary row whose term is most semantically similar to the phrase.
-- Match on field name, description, and — when relevant — on the value labels of categorical terms.
-- Return ONLY a JSON object conforming to the following schema, with no explanation, no markdown, no extra keys:
-  { "term": "<the field name of the selected row>" }
+	Scoring guidance:
+	- Keyword overlap is important but NOT sufficient.
+	- You must check:
+	- specificity (is this too narrow?)
+	- exclusivity (is this the only valid match?)
+	- competition (are there similar alternatives?)
 
-Dictionary rows:
-${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
+	Output format:
+	- If confident:
+	{ "term": "<field name>" }
 
-Phrase: "${phrase}"
+	- If ambiguous:
+	{
+		"term": "ambiguous",
+		"possible": ["<field1>", "<field2>", "<field3>"]
+	}
 
-JSON response:`
+	Return ONLY valid JSON. No explanation. No markdown. No code fences.
+
+	Dictionary rows:
+	${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
+
+	Phrase: "${phrase}"
+
+	JSON response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	if (!response) {
+		throw new Error('No response from LLM for findBestMatchLLM')
+	}
+	// mayLog("Raw Response: ", JSON.stringify(response))
 	let parsedTerm: string
+	// let msg: string
 	try {
-		const parsed = JSON.parse(response) as { term: string }
-		if (!parsed.term) {
-			console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
-			return undefined
+		const parsed = JSON.parse(response) as { term: string; possible?: string[] }
+		if (parsed.term === 'ambiguous') {
+			mayLog('Ambiguous!!! Possible matches: ')
+			if (parsed.possible) {
+				parsedTerm = parsed.possible[0]
+				mayLog(parsed.possible)
+				mayLog('But choosing the first choice: ', parsedTerm)
+			} else {
+				parsedTerm = 'ambiguous_no_candidates'
+			}
+		} else {
+			parsedTerm = parsed.term
+			// msg = ''
 		}
-		parsedTerm = parsed.term
 	} catch (e) {
 		console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
 		return undefined
 	}
+	/*
+try {
+        const parsed = JSON.parse(response) as { term: string }
+        if (!parsed.term) {
+                console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
+                return undefined
+        }
+        parsedTerm = parsed.term
+} catch (e) {
+        console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+        return undefined
+}*/
 
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)
 	if (!matchedRow) {
@@ -237,12 +454,13 @@ JSON response:`
 	}
 	// db_rows.name is the dictionary term id (see parse_dataset_db in utils.ts).
 	// LLM doesn't produce a native similarity score; use 1 so the downstream threshold treats this as confident.
-	return {
+	const retVal = {
 		id: matchedRow.id,
 		name: matchedRow.name,
 		type: matchedRow.term_type,
 		score: 1
 	}
+	return retVal
 }
 
 export async function parse_dataset_db(dataset_db: string) {

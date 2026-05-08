@@ -2,21 +2,21 @@ import type { LlmConfig } from '#types'
 import { ezFetch } from '#shared'
 
 export async function route_to_appropriate_llm_provider(
-	template: string,
+	prompt: string,
 	llm: LlmConfig,
 	modelOverride?: string
 ): Promise<string> {
 	const model = modelOverride ?? llm.modelName
 	let response: string
-	if (llm.provider == 'SJ') {
+	if (llm.provider === 'SJ') {
 		// Local SJ server
-		response = await call_sj_llm(template, model, llm.api)
-	} else if (llm.provider == 'ollama') {
+		response = await call_sj_llm(prompt, model, llm.api)
+	} else if (llm.provider === 'ollama') {
 		// Ollama server
-		response = await call_ollama_llm(template, model, llm.api)
-	} else if ((llm.provider as string) == 'azure') {
+		response = await call_ollama_llm(prompt, model, llm.api)
+	} else if ((llm.provider as string) === 'azure') {
 		// Azure server
-		response = await call_azure_llm(template, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
+		response = await call_azure_llm(prompt, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
 	} else {
 		throw 'Unknown LLM provider'
 	}
@@ -58,6 +58,7 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 	const top_p = 0.95
 	const timeout = 200000
 	const max_new_tokens = 512
+	// const TOP_LOGPROBS = 2
 	const payload = {
 		inputs: [
 			{
@@ -67,6 +68,7 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 					max_new_tokens: max_new_tokens,
 					temperature: temperature,
 					top_p: top_p
+					// logprobs: TOP_LOGPROBS
 				}
 			}
 		]
@@ -79,14 +81,22 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 			headers: { 'Content-Type': 'application/json' },
 			timeout: { request: timeout }
 		})
+
 		if (response.outputs && response.outputs[0] && response.outputs[0].generated_text) {
 			const result = response.outputs[0].generated_text
 			return result
 		} else {
 			throw 'Error: Received an unexpected response format:' + response
 		}
-	} catch (error) {
-		throw 'SJ API request failed:' + error
+	} catch (error: unknown) {
+		console.error('SJ API request failed. Underlying error:', error)
+		if (error && typeof error == 'object' && 'cause' in error)
+			console.error('Cause:', (error as { cause?: unknown }).cause)
+		// Re-throw a real Error that preserves the original
+		throw new Error('SJ API request failed: ' + ((error as { message?: string })?.message ?? error), {
+			cause: error
+		})
+		// throw 'SJ API request failed:' + error
 	}
 }
 
@@ -200,6 +210,7 @@ async function call_azure_llm(
 		if (content && content.length > 0) return content
 		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
 	} catch (error) {
+		console.log(error)
 		throw 'Azure API request failed:' + error
 	}
 }

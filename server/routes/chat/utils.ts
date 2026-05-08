@@ -5,6 +5,40 @@ import { mayLog } from '#src/helpers.ts'
 import fs from 'fs'
 import Database from 'better-sqlite3'
 
+export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
+	if (!supportedPlotTypes) {
+		mayLog(
+			'Supported plot types list is undefined. Defaulting to empty list, which may lead to unsupported plot type errors downstream.'
+		)
+		return []
+	}
+
+	const plotTypes = [...supportedPlotTypes]
+
+	// check if it supports summary charts
+	if (plotTypes.includes('dictionary')) {
+		// summmary means it includes "boxplot", "violin", "barchart", "sampleScatter" as child types
+		plotTypes.push('summary')
+	}
+
+	// check if it supports heirarchical clustering charts
+	// TODO:
+	if (plotTypes.includes('geneExpression')) {
+		// || plotTypes.includes('proteomeAbundance') || plotTypes.includes('dnaMethylation'))
+		plotTypes.push('hiercluster')
+	}
+	// check if it supports dge
+	if (plotTypes.includes('DA')) {
+		plotTypes.push('dge')
+	}
+
+	// For t-SNE/UMAP scatter plots
+	if (plotTypes.includes('sampleScatter')) {
+		plotTypes.push('prebuiltscatter')
+	}
+	return Array.from(new Set(plotTypes))
+}
+
 // ---------------------------------------------------------------------------
 //  Shared data type registry — describes non-dictionary data types available
 //  to all chat agents (matrix, summary, scatter, etc.)
@@ -31,6 +65,18 @@ export interface DataTypeConfig {
 	/** Human-readable description of valid identifiers, used by buildCommonPrompt()
 	 *  to tell the LLM what names are accepted (e.g. "Gene set pathway names (e.g. HALLMARK_APOPTOSIS)") */
 	dataTypeDescription?: string
+}
+
+export function getGenesForGeneset(genome: any, genesetTermId: string): { symbol: string }[] | undefined {
+	if (!genome?.termdbs) return undefined
+	for (const key in genome.termdbs) {
+		const tdb = genome.termdbs[key]
+		if (!tdb.cohort?.termdb?.isGeneSetTermdb) continue
+		const getGenesetByTermId = tdb.cohort?.termdb?.q?.getGenesetByTermId
+		if (!getGenesetByTermId) continue
+		return getGenesetByTermId(genesetTermId)
+	}
+	return undefined
 }
 
 export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
@@ -96,7 +142,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 	},
 	{
 		termType: TermTypes.PROTEOME_ABUNDANCE,
-		detectAvailability: (ds: any) => !!ds?.queries?.proteome?.assays,
+		detectAvailability: (ds: any) => !!ds?.queries?.proteome,
 		schemaFieldName: 'proteinNames',
 		schemaDefinition: {
 			type: 'array',
@@ -176,6 +222,20 @@ export function extractGenesetsFromPrompt(prompt: string, genesetNames: string[]
 
 	// Cap to avoid prompt bloat
 	return matched.slice(0, 10)
+}
+
+export function extractGenesetsFromPromptNew(prompt: string, genesetNames: string[]): string[] {
+	if (genesetNames.length === 0) return []
+	const tokens = prompt
+		.replace(/[^a-zA-Z0-9_\s]/g, '')
+		.split(/\s+/)
+		.map(w => w.toLowerCase())
+
+	if (tokens.length === 0) return []
+
+	// Simple approach - works for primitives
+	const common_tokens = genesetNames.filter(item => tokens.includes(item.toLowerCase()))
+	return common_tokens
 }
 
 /** Builds the common suffix shared by all agent system prompts:

@@ -87,3 +87,22 @@ tape('object values', test => {
 	test.deepEqual(params, decode(preprocess(encodedParams)), 'should be correctly encoded and decoded')
 	test.end()
 })
+
+tape('non-string value type safety', test => {
+	// This test demonstrates that decode() should handle non-string values gracefully
+	// without attempting to call .startsWith() on them
+	const query = {
+		a: 'test',
+		b: 123 as any, // Simulate a numeric value passed as-is
+		c: true as any, // Simulate a boolean value passed as-is
+		d: null as any, // Simulate a null value passed as-is
+		e: ['array'] as any // Simulate an array value passed as-is
+	}
+
+	// decode() should not throw an error when processing non-string values
+	test.doesNotThrow(() => {
+		decode(query)
+	}, 'should not throw when value types are not strings')
+
+	test.end()
+})

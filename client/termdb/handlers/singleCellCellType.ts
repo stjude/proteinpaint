@@ -21,15 +21,22 @@ export class SearchHandler {
 			return
 		}
 		const usecaseConfig = opts.usecase?.specialCase?.config
-		const plotName = usecaseConfig?.name
-		let filteredTerms: any[] = []
-		if (plotName) {
-			filteredTerms = scctTerms.filter(t => t.plot == plotName)
-		} else {
-			filteredTerms = scctTerms.map(t => Object.assign(t, { label: `${t.name} (${t.plot})` }))
-		}
+		const plots = usecaseConfig?.sample?.plots
 
-		for (const t of filteredTerms) {
+		/** Use either the usecase.config.sample.plots:[] or usecase.config.name (i.e.
+		 * plot name) to filter the terms OR display all. If displaying all terms,
+		 * append the plot name to the label. Only display a term once. */
+		const filtered = plots
+			? scctTerms.filter(t => plots.includes(t.plot))
+			: usecaseConfig?.name
+			? scctTerms.filter(t => t.plot === usecaseConfig.name)
+			: scctTerms
+
+		const filteredTerms: Set<any> = new Set(
+			plots || !usecaseConfig?.name ? filtered.map(t => ({ ...t, label: `${t.name} (${t.plot})` })) : filtered
+		)
+
+		for (const t of Array.from(filteredTerms)) {
 			holder
 				/** The divs and styling duplicates the appearance of the
 				 * tree terms. The tree is NOT called for this handler. */

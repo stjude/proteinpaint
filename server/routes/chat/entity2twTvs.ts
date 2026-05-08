@@ -66,7 +66,7 @@ export function convert2TwTvs(
 type ResolvedCatFilter = {
 	kind: 'categorical'
 	termObj: Value
-	values: string[] // array so multi-category merges work (mirrors sortSameCategoricalFilterKeys)
+	values: { key: string; label: string }[] // array so multi-category merges work (mirrors sortSameCategoricalFilterKeys)
 	logicalOperator?: '&' | '|'
 }
 type ResolvedNumFilter = {
@@ -102,7 +102,7 @@ function sortSameCategoricalFilterKeys(resolved: ResolvedFilter[]): ResolvedFilt
 			if (existingIdx !== undefined) {
 				const existing = sorted[existingIdx] as ResolvedCatFilter
 				for (const v of r.values) {
-					if (!existing.values.includes(v)) existing.values.push(v)
+					if (!existing.values.some(ev => ev.key === v.key && ev.label === v.label)) existing.values.push(v)
 				}
 				continue
 			}
@@ -120,7 +120,7 @@ function buildTvsNode(r: ResolvedFilter): any {
 			type: 'tvs',
 			tvs: {
 				term: r.termObj.term,
-				values: r.values.map(v => ({ key: v }))
+				values: r.values.map(v => ({ key: v.key, label: v.label }))
 			}
 		}
 	}
@@ -170,7 +170,7 @@ function generateFlatTvslst(items: Array<ResolvedFilter | any>): any {
 	return localfilter
 }
 
-async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any | MsgToUser> {
+export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig): Promise<any | MsgToUser> {
 	// Resolve each filter phrase via the LLM helpers into an intermediate ResolvedFilter, then
 	// assemble a tvslst matching filter.ts's validate_filter() + generate_filter_term() output:
 	//   { type: 'tvslst', in: true, join?: 'and'|'or',
@@ -187,28 +187,29 @@ async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmConfig):
 			}
 			// Validate the category value against the term's actual values
 			// (similar logic to generate_filter_term() in filter.ts)
+			let cat: string | undefined
 			if ('id' in termObj.term) {
 				const { db_rows } = await parse_dataset_db(dbPath)
 				const dbRow = db_rows.find(r => r.name === (termObj.term as DictTerm).id)
 				if (dbRow) {
-					let cat: string | undefined
 					for (const dbVal of dbRow.values) {
-						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
-						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.key
-					}
-					if (!cat) {
-						const msg: MsgToUser = {
-							type: 'text',
-							text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
-						}
-						return msg
+						if (dbVal.key.toLowerCase() === categoricalFilterTerm.value.toLowerCase()) cat = dbVal.value?.label
+						else if (dbVal.value?.label?.toLowerCase() === categoricalFilterTerm.value.toLowerCase())
+							cat = dbVal.value?.label
 					}
 				}
+			}
+			if (!cat) {
+				const msg: MsgToUser = {
+					type: 'text',
+					text: `Invalid category "${categoricalFilterTerm.value}" for filter term "${termObj.phrase}"`
+				}
+				return msg
 			}
 			resolved.push({
 				kind: 'categorical',
 				termObj,
-				values: [categoricalFilterTerm.value],
+				values: [{ key: categoricalFilterTerm.value, label: cat }],
 				logicalOperator: termObj.logicalOperator
 			})
 		} else if (
@@ -440,7 +441,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig) {
 }
 
 export async function resolveToTwTvs(
-	entity: Record<string, Value | Value[] | undefined>,
+	entity: Record<string, Value | Value[] | string | undefined>,
 	plotType: string,
 	llm: LlmConfig,
 	dbPath: string
@@ -467,13 +468,115 @@ export async function resolveToTwTvs(
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
 		}
-	} else if (plotType == 'dge') {
+	} else if (plotType === 'dge') {
 		for (const [key, value] of Object.entries(entity)) {
 			const filterValues = value as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects[key] = termWrapper
+		}
+	} else if (plotType === 'hiercluster') {
+		// Dicts → array of tws; filter → single tvslst
+		const DictValues = entity['DictPhrases'] as Value[] | undefined
+		if (!DictValues || DictValues.length === 0) throw new Error('Invalid Dict term entity for hierCluster')
+		const DictTws: any[] = []
+		for (const gv of DictValues) {
+			const tw = await resolveToTw(gv, llm)
+			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
+			if (tw.type != 'float' && tw.type != 'integer') {
+				return {
+					type: 'text',
+					text: `Only numeric terms can be used in hierarchical clustering. Term "${gv.phrase}" is of type "${tw.type}". Please rephrase your request using only numeric terms for hierarchical clustering.`
+				} as MsgToUser
+			}
+			DictTws.push(tw)
+		}
+		twTvsObjects['DictPhrases'] = DictTws
+
+		if (entity['filter']) {
+			const filterValues = entity['filter'] as Value[]
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects['filter'] = termWrapper
+		}
+	} else if (plotType === 'matrix') {
+		for (const [key, value] of Object.entries(entity)) {
+			// special handling for filters
+			if (key === 'filter') {
+				const filterValues = value as Value[] | undefined
+				if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
+				const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+				if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+				twTvsObjects[key] = termWrapper
+				continue
+			}
+
+			if (key === 'twLst') {
+				const twValues = value as Value[] | undefined
+				if (!twValues || twValues.length === 0) throw new Error(`Invalid term entity for key ${key}`)
+				// TOOD: better to restrict the types for twLst values
+				const twLst: any[] = []
+				for (const twValue of twValues) {
+					if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
+					const termWrapper = await resolveToTw(twValue, llm)
+					if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
+					mayLog(`Resolved term for twLst item:`, JSON.stringify(termWrapper))
+					twLst.push(termWrapper)
+				}
+				twTvsObjects[key] = twLst
+				continue
+			}
+			// For divideBy keys we expect a single Term in the array
+			const twValue = value as Value | undefined
+			if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
+			const termWrapper = await resolveToTw(twValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
+			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
+			twTvsObjects[key] = termWrapper
+		}
+	} else if (plotType === 'prebuiltscatter') {
+		// prebuiltScatter handling
+		if (entity['name']) {
+			const nameValue = entity['name'] as Value | undefined
+			if (!nameValue) throw new Error('Invalid name term entity for prebuiltScatter')
+			twTvsObjects['name'] = nameValue.phrase
+		}
+
+		if (entity['colorBy'] && entity['colorBy'] === 'null') {
+			twTvsObjects['colorBy'] = 'null'
+		} else if (entity['colorBy']) {
+			const colorByValue = entity['colorBy'] as Value | undefined
+			if (!colorByValue) throw new Error('Invalid colorBy term entity for prebuiltScatter')
+			const termWrapper = await resolveToTw(colorByValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve colorBy term for phrase "${colorByValue.phrase}"`)
+			twTvsObjects['colorBy'] = termWrapper
+		}
+
+		if (entity['shapeBy'] && entity['shapeBy'] === 'null') {
+			twTvsObjects['shapeBy'] = 'null'
+		} else if (entity['shapeBy']) {
+			const shapeByValue = entity['shapeBy'] as Value | undefined
+			if (!shapeByValue) throw new Error('Invalid shapeBy term entity for prebuiltScatter')
+			const termWrapper = await resolveToTw(shapeByValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve shapeBy term for phrase "${shapeByValue.phrase}"`)
+			twTvsObjects['shapeBy'] = termWrapper
+		}
+
+		if (entity['divideBy']) {
+			const divideByValue = entity['divideBy'] as Value | undefined
+			if (!divideByValue) throw new Error('Invalid divideBy term entity for prebuiltScatter')
+			const termWrapper = await resolveToTw(divideByValue, llm)
+			if (!termWrapper) throw new Error(`Failed to resolve divideBy term for phrase "${divideByValue.phrase}"`)
+			twTvsObjects['divideBy'] = termWrapper
+		}
+
+		if (entity['filter']) {
+			const filterValues = entity['filter'] as Value[] | undefined
+			if (!filterValues) throw new Error(`Invalid term entity for key filter`)
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects['filter'] = termWrapper
 		}
 	} else {
 		throw 'Other plot types other than summary not yet supported'

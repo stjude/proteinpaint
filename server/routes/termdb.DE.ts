@@ -6,7 +6,7 @@ import serverconfig from '../src/serverconfig.js'
 import { get_header_txt } from '#src/utils.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { readCacheFileOrRecompute, resolveDeContext, resolveSampleGroups } from '../src/diffAnalysis.ts'
+import { readCacheFileOrRecompute, resolveDaContext, resolveSampleGroups } from '../src/diffAnalysis.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
@@ -29,7 +29,7 @@ function init({ genomes }) {
 
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
-				const { ds, term_results, term_results2 } = await resolveDeContext(q, genomes)
+				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
 				const groups = resolveSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
@@ -46,22 +46,23 @@ function init({ genomes }) {
 			// Unified read-or-recompute: hides the cache-hit vs fresh-compute
 			// branch behind a single call. On hit, `images` and `bcv` are
 			// undefined (fresh R runs are the only source of those).
-			const { cacheId, geneData, sample_size1, sample_size2, method, images, bcv } = await readCacheFileOrRecompute({
-				daRequest: q,
-				genomes
-			})
+			const result = await readCacheFileOrRecompute({ daRequest: q, genomes })
+			// Defensive — the route only sends DERequests, so the result kind
+			// must be 'DE'. A 'DM' result here would mean a cacheId collision
+			// or a hand-edited cache file with the wrong header.
+			if (result.kind !== 'DE') throw new Error('expected DE result from readCacheFileOrRecompute')
 
-			const rendered = await renderVolcano<GeneDEEntry>(geneData, q.volcanoRender)
-			rendered.cacheId = cacheId
+			const rendered = await renderVolcano<GeneDEEntry>(result.geneData, q.volcanoRender)
+			rendered.cacheId = result.cacheId
 
 			const output: DEFullResponse = {
 				data: rendered,
-				sample_size1,
-				sample_size2,
-				method,
-				images
+				sample_size1: result.sample_size1,
+				sample_size2: result.sample_size2,
+				method: result.method,
+				images: result.images
 			}
-			if (bcv != null) output.bcv = bcv
+			if (result.bcv != null) output.bcv = result.bcv
 			res.send(output)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })

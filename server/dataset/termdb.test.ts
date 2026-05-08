@@ -278,6 +278,11 @@ export default function (): Mds3 {
 				plots: [
 					{
 						name: 'TermdbTest TSNE',
+						description:
+							'Transcriptome t-SNE plot based on termdb data which is a 2D or 3D visualization of \
+									gene expression data where each point represents a single cell (or sample) and the distance between \
+									points reflects how similar their gene expression profiles are.',
+						descriptionShort: 'transcriptome t-SNE plot',
 						dimension: 2,
 						file: 'files/hg38/TermdbTest/tsne.txt',
 						colorTW: { id: 'diaggrp' },
@@ -433,9 +438,7 @@ export default function (): Mds3 {
 					unit: 'M-value'
 				}
 			},
-			topVariablyExpressedGenes: {
-				src: 'native'
-			},
+			topVariablyExpressedGenes: {},
 			rnaseqGeneCount: {
 				storage_type: 'HDF5',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5'

@@ -499,9 +499,8 @@ export type GeneArgumentEntry = {
 }
 
 type TopVariablyExpressedGenesQuery = {
-	/** Denotes either gdc specific data requests or common
-	 * data request processing */
-	src: 'gdcapi' | 'native' | string
+	/** ds supplied getter. if not, dynamically adds one during launch */
+	getGenes?: (f: any) => void
 	/** Specifies the dom element rendered in the menu */
 	arguments?: GeneArgumentEntry[]
 }
@@ -734,9 +733,21 @@ type ProteomeAssayConfig = {
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
-	overlayTerm?: BaseTerm
-	/** document structure */
-	assays: {
+	/** organism-keyed structure (new format) */
+	organisms?: {
+		[organism: string]: {
+			overlayTerm: BaseTerm
+			columnIdx: number
+			columnValue?: string
+			/** genome assembly name for this organism, e.g. 'hg38' or 'mm10' */
+			genomeName?: string
+			assays: {
+				[assayName: string]: ProteomeAssayConfig
+			}
+		}
+	}
+	/** flat assays structure (legacy format) */
+	assays?: {
 		[assayName: string]: ProteomeAssayConfig
 	}
 	samples?: number[]
@@ -863,8 +874,7 @@ type GDCSingleCellPlot = {
 	colorColumns: ColorColumn[]
 	coordsColumns: { x: number; y: number }
 	/** if true the plot is shown by default. otherwise hidden
-	 * Will not be needed when the singleCellPlot is depreciated.
-	 */
+	 * Will not be needed when the singleCellPlot is deprecated.*/
 	selected?: boolean
 }
 
@@ -902,8 +912,15 @@ type SingleCellPlot = {
 	/** list of columns in tabular text file that define cell categories and can be used to color the cells in the plot. must have categorical values
 	 */
 	colorColumns: ColorColumn[]
-	/** if true the plot is shown by default. otherwise hidden */
+	/** if true the plot is shown by default. otherwise hidden.
+	 * Old implementation. Maybe deleted when singleCellPlot is deprecated.*/
 	selected?: boolean
+	/** Plot is a meta analysis result and treated differently in the UI */
+	isMetaResult?: boolean
+	/** optional for meta analysis result plots. May define the "sampleId" for the
+	 * server requests. If not provided, the file name or the plot name with the
+	 * spaces replaced with '_' is used. */
+	sampleId?: string
 }
 export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'
@@ -1080,8 +1097,7 @@ type Mds3Queries = {
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
 	topMutatedGenes?: TopMutatedGenes
-	/** Used to create the top variably expressed UI in the gene
-	 * set edit ui. Also used for data requests */
+	/** get top variably expressed genes */
 	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
 	metaboliteIntensity?: {
 		src: 'native'
@@ -1091,7 +1107,7 @@ type Mds3Queries = {
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
-	/** depreciated. replaced by WSImages */
+	/** deprecated. replaced by WSImages */
 	DZImages?: DZImages
 	WSImages?: WSImages
 	images?: Images
@@ -1123,7 +1139,7 @@ type Images = {
 	folder: string
 }
 
-/** Depreciated. deep zoom image shown via openseadragon, with precomputed tiles.
+/** Deprecated. deep zoom image shown via openseadragon, with precomputed tiles.
  * this is replaced by WSImages and should not be used anymore */
 export type DZImages = {
 	// type of the image, e.g. H&E
@@ -1236,6 +1252,8 @@ type DataDownloadCatch = {
 
 type ScatterPlotsEntry = {
 	name: string
+	description?: string
+	descriptionShort?: string
 	dimension: number
 	file: string
 	coordsColumns?: { x: number; y: number; z?: number }

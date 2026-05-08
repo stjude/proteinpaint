@@ -1,4 +1,5 @@
 // please list in alphanumeric order
+export * from './aiHisto.js'
 export * from './bulk.js'
 export * from './clustering.js'
 export * from './common.js'
