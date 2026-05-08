@@ -1,5 +1,5 @@
-import type { Mds3, RouteApi } from '#types'
-import { deleteWSITileSelectionPayload } from '#types/checkers'
+import { type Mds3, type RouteApi } from '#types'
+import { deleteWSITileSelectionPayload, checkSelectionType, SelectionPrefixes, FlagStatus } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type { DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
 import type Database from 'better-sqlite3'
@@ -61,8 +61,12 @@ export async function validate_query_deleteWSIAnnotation(ds: Mds3) {
 
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest) => {
-		// tileSelectionType: 0 = predictions, 1 = annotations
-		if (query.tileSelectionType === 0) {
+		const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
+
+		if (
+			checkSelectionType(query.tileSelection, SelectionPrefixes.Prediction) &&
+			query.tileSelection.flag !== FlagStatus.Normal
+		) {
 			try {
 				const projectId = query.projectId
 
@@ -73,10 +77,8 @@ function validateQuery(ds: any, connection: Database.Database) {
 					}
 				}
 
-				// Derive prediction_id from common fields on the tileSelection payload
-				const predictionId = query.predictionClassId
-				const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
-				const flagType = 0 // TODO remove hardcode
+				const predictionId = query.classID
+				const flagType = query.tileSelection.flag
 
 				if (predictionId == null) {
 					return {
@@ -85,12 +87,41 @@ function validateQuery(ds: any, connection: Database.Database) {
 					}
 				}
 
-				const insertSql = `
-                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type)
-                    VALUES (?, ?, ?, ?)
-                `
-				const insertStmt = connection.prepare(insertSql)
-				insertStmt.run(projectId, predictionId, zoomCoordinates, flagType)
+				const getImageIdSql = `
+				SELECT id FROM project_images 
+				WHERE project_id = ? AND image_path = ? LIMIT 1
+`
+				const imageRow = connection.prepare(getImageIdSql).get(projectId, query.wsimage) as { id: number } | undefined
+				const imageId = imageRow?.id
+
+				if (!imageId) {
+					return { status: 'error', error: 'Image not found' }
+				}
+
+				connection
+					.prepare(
+						`
+					DELETE FROM project_flagged_predictions 
+					WHERE project_id = ?  AND coordinates = ? 
+					AND image_id = (
+                        SELECT id FROM project_images
+                        WHERE project_id = ?
+                          AND image_path = ?
+                      )
+				`
+					)
+					.run(projectId, zoomCoordinates, projectId, query.wsimage)
+
+				// Insert new flagged prediction
+				connection
+					.prepare(
+						`
+				INSERT INTO project_flagged_predictions 
+				(project_id, prediction_class_id, coordinates, flag_type, timestamp, image_id)
+				VALUES (?, ?, ?, ?, ?, ?)
+			    `
+					)
+					.run(projectId, predictionId, zoomCoordinates, flagType, new Date().toISOString(), imageId)
 
 				return { status: 'ok' }
 			} catch (error: any) {
@@ -102,7 +133,24 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 		} else
 			try {
-				const deleteSql = `
+				connection
+					.prepare(
+						`
+                    DELETE FROM project_flagged_annotations
+                    WHERE project_id = ?
+                      AND coordinates = ?
+                      AND image_id = (
+                        SELECT id FROM project_images
+                        WHERE project_id = ?
+                          AND image_path = ?
+                      )
+                `
+					)
+					.run(query.projectId, zoomCoordinates, query.projectId, query.wsimage)
+
+				connection
+					.prepare(
+						`
                     DELETE FROM project_annotations
                     WHERE project_id = ?
                       AND coordinates = ?
@@ -112,9 +160,9 @@ function validateQuery(ds: any, connection: Database.Database) {
                           AND image_path = ?
                       )
                 `
-				const coords = JSON.stringify(query.tileSelection?.zoomCoordinates)
-				const stmt = connection.prepare(deleteSql)
-				stmt.run(query.projectId, coords, query.projectId, query.wsimage)
+					)
+					.run(query.projectId, zoomCoordinates, query.projectId, query.wsimage)
+
 				return { status: 'ok' }
 			} catch (error: any) {
 				console.error('Error deleting annotation:', error)

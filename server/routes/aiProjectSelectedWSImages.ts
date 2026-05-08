@@ -1,11 +1,15 @@
-import type { Annotation, Mds3, RouteApi, WSImage } from '#types'
-import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse } from '#types'
-import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
+import { type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
+import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, FlagPredictionInfo } from '#types'
+import {
+	aiProjectSelectedWSImagesResponsePayload,
+	createSelectionID,
+	SelectionPrefixes,
+	FlagStatus
+} from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
-
 /*
-given a sample, return all whole slide images for specified dataset
+given a sample, return all whole slide images for specified datasets
 */
 
 export const api: RouteApi = {
@@ -84,21 +88,32 @@ function init({ genomes }) {
 						)
 
 						// get flagged prediction coordinate keys for this project (may be empty)
-						let flaggedPredictions = new Set<string>()
+						let flaggedPredictions: Map<string, FlagPredictionInfo> = new Map<string, FlagPredictionInfo>()
 						if (typeof ds.queries.WSImages.getFlaggedPredictions === 'function') {
-							flaggedPredictions = await ds.queries.WSImages.getFlaggedPredictions(projectId)
+							flaggedPredictions = await ds.queries.WSImages.getFlaggedPredictions(projectId, wsimageFilename)
 						}
 
 						// map class ids to labels then filter out predictions that overlap annotations
 						// or that were flagged in project_flagged_predictions
+
+						// Might find a better way to manage timestamps for non-flagged predictions
+						// but its not really pertinent to sort non-flagged preds
+
 						wsimage.predictions = (predictions || [])
 							.map((p: any) => {
 								const label = classMap.get(p.class) ?? p.class
-								return { ...p, class: label } as any
+								const flagged_counterpart = flaggedPredictions.get(JSON.stringify(p.zoomCoordinates))
+								return {
+									...p,
+									class: label,
+									timestamp: flagged_counterpart?.timestamp ?? new Date().toISOString(),
+									flag: flagged_counterpart?.flag ?? FlagStatus.Normal,
+									id: createSelectionID(SelectionPrefixes.Prediction, p.zoomCoordinates)
+								} as any
 							})
 							.filter((p: any) => {
 								const key = `${p.zoomCoordinates[0]},${p.zoomCoordinates[1]}`
-								return !annotationKeys.has(key) && !flaggedPredictions.has(key)
+								return !annotationKeys.has(key) && p.flag !== FlagStatus.Deleted
 							})
 					}
 
@@ -138,27 +153,55 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
 		status: number
+		flagged?: FlagStatus
 		label: string | null
 	}
 
+	type PredictionRow = {
+		id: number
+		project_id: number
+		coordinates: any // stored JSON string like "[x,y]" or JSON array
+		timestamp: string
+		flag_type: FlagStatus
+	}
 	const GET_ANNOTATIONS_SQL = `
-        SELECT
-            pa.id,
-            pa.project_id,
-            pa.user_id,
-            pa.coordinates,
-            pa.timestamp,
-            pa.status,
-            pc.label AS label
-        FROM project_annotations pa
-                 INNER JOIN project_images pi
-                            ON pi.id = pa.image_id
-                 LEFT JOIN project_classes pc
-                           ON pc.id = pa.class_id
-        WHERE pa.project_id = ?
-          AND pi.image_path = ?
-          AND pa.status = 1
-        ORDER BY pa.timestamp DESC, pa.id DESC
+		SELECT *
+		FROM (
+			SELECT
+				pa.id,
+				pa.project_id,
+				pa.user_id,
+				pa.coordinates,
+				pa.timestamp,
+				pa.flagged,
+				pc.label AS label
+			FROM project_flagged_annotations pa
+					 INNER JOIN project_images pi
+								ON pi.id = pa.image_id
+					 LEFT JOIN project_classes pc
+							   ON pc.id = pa.class_id
+			WHERE pa.project_id = ?
+			  AND pi.image_path = ?
+
+			UNION ALL
+
+			SELECT
+				pa.id,
+				pa.project_id,
+				pa.user_id,
+				pa.coordinates,
+				pa.timestamp,
+				${FlagStatus.Normal} AS flagged,
+				pc.label AS label
+			FROM project_annotations pa
+					 INNER JOIN project_images pi
+								ON pi.id = pa.image_id
+					 LEFT JOIN project_classes pc
+							   ON pc.id = pa.class_id
+			WHERE pa.project_id = ?
+			  AND pi.image_path = ?
+		)
+		ORDER BY timestamp DESC, id DESC
     `
 
 	// SQL to list all WSI filenames for a project (used when client asks for ["all"])
@@ -170,19 +213,25 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
     `
 
 	// SQL to get flagged prediction coordinates for a project
-	const GET_FLAGGED_PREDICTIONS_SQL = `
-        SELECT coordinates
-        FROM project_flagged_predictions
-        WHERE project_id = ?
-    `
 
+	const GET_FLAGGED_PREDICTIONS_SQL = `
+        SELECT
+            pa.coordinates,
+            pa.flag_type,
+            pa.timestamp
+        FROM project_flagged_predictions pa
+                 INNER JOIN project_images pi
+                            ON pi.id = pa.image_id
+        WHERE pa.project_id = ?
+          AND pa.image_id = ?
+    `
 	if (!ds.queries) ds.queries = {}
 	if (!ds.queries.WSImages) ds.queries.WSImages = {}
 
 	ds.queries.WSImages.getWSIAnnotations = async (projectId: number, filename: string): Promise<Annotation[]> => {
 		try {
-			const stmt = connection.prepare<[number, string], AnnotationRow>(GET_ANNOTATIONS_SQL)
-			const rows = stmt.all(projectId, filename)
+			const stmt = connection.prepare<[number, string, number, string], AnnotationRow>(GET_ANNOTATIONS_SQL)
+			const rows = stmt.all(projectId, filename, projectId, filename)
 
 			return rows.map(r => {
 				let coords: [number, number] = [NaN, NaN]
@@ -202,7 +251,9 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 					zoomCoordinates: coords,
 					class: r.label ?? '',
 					status: r.status,
-					timestamp: r.timestamp
+					flag: r.flagged === undefined ? FlagStatus.Normal : (r.flagged as FlagStatus),
+					timestamp: r.timestamp,
+					id: createSelectionID(SelectionPrefixes.Annotation, coords)
 				}
 			})
 		} catch (error) {
@@ -224,30 +275,38 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 	}
 
 	// expose helper that returns a Set of flagged prediction coordinate keys for a project
-	ds.queries.WSImages.getFlaggedPredictions = async (projectId: number): Promise<Set<string>> => {
-		try {
-			const stmt = connection.prepare<[number], { coordinates: any }>(GET_FLAGGED_PREDICTIONS_SQL)
-			const rows = stmt.all(projectId) || []
+	ds.queries.WSImages.getFlaggedPredictions = async (
+		projectId: number,
+		filename: string
+	): Promise<Map<string, FlagPredictionInfo>> => {
+		const predictionMap = new Map<string, FlagPredictionInfo>()
 
-			const keys = new Set<string>()
-			for (const r of rows) {
-				try {
-					const parsed = typeof r.coordinates === 'string' ? JSON.parse(r.coordinates) : r.coordinates
-					if (Array.isArray(parsed) && parsed.length >= 2) {
-						const x = Number(parsed[0])
-						const y = Number(parsed[1])
-						if (!Number.isNaN(x) && !Number.isNaN(y)) {
-							keys.add(`${x},${y}`)
-						}
-					}
-				} catch {
-					// ignore parse errors
-				}
+		const getImageIdSql = `
+				SELECT id
+				FROM project_images
+				WHERE project_id = ?
+				  AND image_path = ?
+				LIMIT 1
+			`
+		const getImageStmt = connection.prepare(getImageIdSql)
+		const imageRow = getImageStmt.get(projectId, filename) as { id: number } | undefined
+
+		if (!imageRow?.id) {
+			return predictionMap
+		}
+
+		const imageId = Math.floor(imageRow.id)
+		try {
+			const stmt = connection.prepare<[number, number], PredictionRow>(GET_FLAGGED_PREDICTIONS_SQL)
+			const rows = stmt.all(projectId, imageId) || []
+			for (const p of rows) {
+				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
+					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
 			}
-			return keys
+			return predictionMap
 		} catch (error) {
 			console.error('Error loading flagged predictions:', error)
-			return new Set()
+			return predictionMap
 		}
 	}
 }

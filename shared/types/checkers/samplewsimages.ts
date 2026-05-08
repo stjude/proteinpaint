@@ -2,6 +2,7 @@
 import { createValidate } from 'typia'
 import type { SampleWSImagesRequest, SampleWSImagesResponse } from '../src/routes/samplewsimages.ts'
 
+export { WSImage } from '../src/routes/samplewsimages.ts'
 export { sampleWSImagesPayload } from '../src/routes/samplewsimages.ts'
 
 export const validSampleWSImagesRequest = createValidate<SampleWSImagesRequest>()

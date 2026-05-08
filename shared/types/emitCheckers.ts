@@ -39,7 +39,6 @@ for (const f of files) {
 	const exportCheckers: string[] = []
 	const _ = await import(`${routesDir}/${f}`)
 	for (const [key, val] of Object.entries(_)) {
-		if (!key.endsWith('Payload')) continue
 		exportPayloads.push(`export { ${key} } from '../src/routes/${f}'`)
 		const { request, response } = val as any
 		const typeIds = [request?.typeId, response?.typeId].filter(t => t != undefined)

@@ -1,6 +1,6 @@
-import type { Mds3, RouteApi } from '#types'
-import { saveWSIAnnotationPayload } from '#types/checkers'
-import type { SaveWSIAnnotationRequest } from '#types'
+import { type Mds3, type RouteApi, type TileSelection } from '#types'
+import { saveWSIAnnotationPayload, FlagStatus, checkSelectionType, SelectionPrefixes } from '#types/checkers'
+import { type SaveWSIAnnotationRequest } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 
@@ -59,13 +59,21 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
 		try {
+			const tileSelection: TileSelection = annotation.tileSelection
 			const timestamp = new Date().toISOString()
 			const projectId = annotation.projectId
 			const wsimageFilename = annotation.wsimage // expected to exactly match project_images.image_path
-			const coords = JSON.stringify(annotation.coordinates ?? [])
-			const status = 1
+			const coords = JSON.stringify(tileSelection.zoomCoordinates ?? [])
+			const flag = tileSelection.flag
 			const classId = annotation.classId
-
+			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
+			const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
+			if (!isAnnotation && !isPrediction) {
+				return {
+					status: 'error',
+					error: `Invalid tileSelection id "${tileSelection.id}". Must start with "${SelectionPrefixes.Annotation}" or "${SelectionPrefixes.Prediction}".`
+				}
+			}
 			if (projectId == null || wsimageFilename == null) {
 				return {
 					status: 'error',
@@ -91,51 +99,93 @@ function validateQuery(ds: any, connection: Database.Database) {
 			}
 
 			const imageId = imageRow.id
-			//Checking for duplicate annotation based on projectId, imageId and coordinates
-			const duplicateCheckSql = `
-				SELECT id
-				FROM project_annotations
-				WHERE project_id = ?
-				  AND image_id = ?
-				  AND coordinates = ?
-				LIMIT 1
-			`
-			const duplicateCheckStmt = connection.prepare(duplicateCheckSql)
-			const duplicateRow = duplicateCheckStmt.get(projectId, imageId, coords) as { id: number } | undefined
-			if (duplicateRow) {
-				const deleteDuplicateSql = `
-					DELETE FROM project_annotations
-					WHERE id = ?
-				`
-				const deleteDuplicateStmt = connection.prepare(deleteDuplicateSql)
-				deleteDuplicateStmt.run(duplicateRow.id)
-				console.log(
-					`Deleted duplicate annotation with id=${duplicateRow.id} for project_id=${projectId}, image_id=${imageId}.`
-				)
-				//Gotta retrieve the info for what was deleted
-			}
-			const insertSql = `
-				INSERT INTO project_annotations (
-					project_id, user_id, coordinates, timestamp, status, class_id, image_id
-				) VALUES (?, ?, ?, ?, ?, ?, ?)
-			`
-
-			const insertStmt = connection.prepare(insertSql)
-
-			// Query first user id from project_users table, later replace with actual user management
-			const userRow = connection
+			// Predictions and Annotations are housed in three databases, project_flagged_annotations, project_flagged_predictions, and project_annotations
+			// project_flagged_annotations and project_flagged_predictions are for both annotations and predictions that are flagged
+			// Non-flagged predictions are saved as csvs elsewhere, all three should be scrubbed for duplicates when saving
+			connection
 				.prepare(
-					`SELECT id
+					`DELETE FROM project_flagged_annotations
+					 WHERE project_id = ?
+					   AND image_id = ?
+					   AND coordinates = ?`
+				)
+				.run(projectId, imageId, coords)
+
+			connection
+				.prepare(
+					`DELETE FROM project_flagged_predictions
+					 WHERE project_id = ?
+					   AND image_id = ?
+					   AND coordinates = ?`
+				)
+				.run(projectId, imageId, coords)
+			connection
+				.prepare(
+					`DELETE FROM project_annotations
+					 WHERE project_id = ?
+					   AND image_id = ?
+					   AND coordinates = ?`
+				)
+				.run(projectId, imageId, coords)
+
+			if (isAnnotation) {
+				// Query first user id from project_users table, later replace with actual user management
+				const userRow = connection
+					.prepare(
+						`SELECT id
 						  FROM project_users
 						  ORDER BY id
 						  LIMIT 1`
-				)
-				.get() as { id: number } | undefined
+					)
+					.get() as { id: number } | undefined
 
-			const userId = userRow?.id
+				const userId = userRow?.id
 
-			insertStmt.run(projectId, userId, coords, timestamp, status, classId, imageId)
-
+				if (userId === undefined) {
+					return {
+						status: 'error',
+						error: 'No users found in project_users table.'
+					}
+				}
+				if (tileSelection.flag === FlagStatus.Normal) {
+					connection
+						.prepare(
+							`
+						INSERT INTO project_annotations (
+							project_id, user_id, coordinates, timestamp,class_id, image_id
+						) VALUES (?, ?, ?, ?, ?, ?)
+					`
+						)
+						.run(projectId, userId, coords, timestamp, classId, imageId)
+				} else {
+					connection
+						.prepare(
+							`
+				INSERT INTO project_flagged_annotations (
+					project_id, user_id, coordinates, timestamp, flagged,class_id, image_id
+				) VALUES (?, ?, ?, ?, ?, ?, ?)
+				`
+						)
+						.run(projectId, userId, coords, timestamp, flag, classId, imageId)
+				}
+			} else if (isPrediction) {
+				// Not inserting if flag is normal
+				if (tileSelection.flag !== FlagStatus.Normal) {
+					const insertSql = `
+                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)
+                    VALUES (?, ?, ?, ?,?,?)
+                `
+					const insertStmt = connection.prepare(insertSql)
+					insertStmt.run(
+						annotation.projectId,
+						annotation.classId,
+						JSON.stringify(tileSelection.zoomCoordinates),
+						tileSelection.flag,
+						imageId,
+						timestamp
+					)
+				}
+			}
 			return { status: 'ok' }
 		} catch (error: any) {
 			console.error('Error saving annotation:', error)
