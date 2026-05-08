@@ -147,6 +147,10 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// continue to add contents that may require auth
 	addScatterplots(c, ds, info)
 
+	// optional dataset hook to mutate the response based on the requesting user's role
+	// (e.g. to prune preset plot entries that reference role-restricted terms)
+	if (tdb.filterClientCopy) tdb.filterClientCopy(c, info?.clientAuthResult)
+
 	res.send({ termdbConfig: c })
 }
 
