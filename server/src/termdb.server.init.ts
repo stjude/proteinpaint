@@ -488,7 +488,7 @@ export function server_init_db_queries(ds) {
 	for showing as chart buttons in mass ui
 	*/
 	q.getSupportedChartTypes = req => {
-		// based on request, derive forbiddenRoutes and clientAuthResults that ds can use to tailor chart support
+		// based on request, derive forbiddenRoutes and clientAuthResult that ds can use to tailor chart support
 		const info = authApi.getNonsensitiveInfo(req)
 		// must do the check so as not to fail tsc compiler check (auth.js is not ts)
 		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
