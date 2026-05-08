@@ -169,7 +169,7 @@ type DictApi = {
 	// helpers at ds.cohort.termdb.q{}
 	build?: (ds: any) => void
 	// gets dictionary term data
-	get?: (twLst: any) => void
+	get?: (q: any, twLst: any, useCache?: boolean) => void
 }
 
 type SnvIndelFormat = {
