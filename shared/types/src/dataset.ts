@@ -499,9 +499,8 @@ export type GeneArgumentEntry = {
 }
 
 type TopVariablyExpressedGenesQuery = {
-	/** Denotes either gdc specific data requests or common
-	 * data request processing */
-	src: 'gdcapi' | 'native' | string
+	/** ds supplied getter. if not, dynamically adds one during launch */
+	getGenes?: (f: any) => void
 	/** Specifies the dom element rendered in the menu */
 	arguments?: GeneArgumentEntry[]
 }
@@ -1098,8 +1097,7 @@ type Mds3Queries = {
 	/** Used to create the top mutated genes UI in the gene
 	 * set edit ui and data requests. */
 	topMutatedGenes?: TopMutatedGenes
-	/** Used to create the top variably expressed UI in the gene
-	 * set edit ui. Also used for data requests */
+	/** get top variably expressed genes */
 	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
 	metaboliteIntensity?: {
 		src: 'native'

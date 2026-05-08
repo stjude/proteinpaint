@@ -191,7 +191,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_singleSampleGbtk(ds, genome)
 		//await validate_query_probe2cnv(ds, genome)
 		await validate_query_singleCell(ds, genome)
-		await validate_query_TopVariablyExpressedGenes(ds, genome)
+		await validate_query_TopVariablyExpressedGenes(ds)
 		await validate_query_trackLst(ds, genome)
 
 		await validate_variant2samples(ds)

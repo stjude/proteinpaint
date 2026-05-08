@@ -32,6 +32,8 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	filter?: Filter
 	/** JSON, optional GDC cohort filter to restrict cases */
 	filter0?: any //GdcFilter0
+	/** helps ds getter */
+	ds?: any
 }
 
 type ValidResponse = {
