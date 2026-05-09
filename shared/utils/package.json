@@ -15,7 +15,7 @@
     "./*": "./dist/*"
   },
   "scripts": {
-    "build": "esbuild src/*.ts --platform=node --outdir=dist --format=esm --sourcemap",
+    "build": "esbuild src/*.* --platform=node --outdir=dist --format=esm --sourcemap",
     "prepack": "npm run build && tsc --sourcemap",
     "pretest": "mkdir -p test && node emitImports > test/internals-test.ts",
     "spec:coverage": "node test/relevant.js",

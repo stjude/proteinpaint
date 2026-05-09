@@ -53,6 +53,9 @@ jobs:
         run: |
           cd shared/types
           npm run build
+          cd ../utils
+          npm run prepack
+          npx tsc
           cd ../../server
           npx tsc
           cd ..    
