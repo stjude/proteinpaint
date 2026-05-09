@@ -6,10 +6,10 @@
 	"scripts": {
 		"release": ""
 	},
+	"//": "need to provide shared/utils code that are expected in production runtime by dataset files",
 	"dependencies": {
 		"@sjcrh/proteinpaint-front": "2.187.0",
 		"@sjcrh/proteinpaint-server": "2.187.0",
-		"//": "need to provide shared/utils code that are expected in production runtime by dataset files",
 		"@sjcrh/proteinpaint-shared": "^2.187.0"
 	},
 	"files": [

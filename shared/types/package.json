@@ -15,8 +15,7 @@
   },
   "scripts": {
     "generate": "node dev.mjs",
-    "predev": "tsx emitCheckers.ts",
-    "dev": "node --watch-path=src --watch-path=checkers dev.mjs",
+    "dev": "node --watch-path=src/routes dev.mjs",
     "prepare": "ts-patch install",
     "build": "./build.sh",
     "prepack": "./build.sh",
