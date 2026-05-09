@@ -10,13 +10,13 @@
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
   "exports": {
-    ".": "./src/index.js",
-    "./*.ts": "./src/*.ts_SHOULD_BE_js",
-    "./*": "./src/*"
+    ".": "./dist/index.js",
+    "./*.ts": "./dist/*.ts_SHOULD_BE_js",
+    "./*": "./dist/*"
   },
   "scripts": {
-    "build": "esbuild src/*.ts --platform=node --outdir=src/ --format=esm && prettier --no-semi --use-tabs --write src/*.js",
-    "prepack": "npm run build",
+    "build": "esbuild src/*.ts --platform=node --outdir=dist --format=esm --sourcemap",
+    "prepack": "npm run build && tsc --sourcemap",
     "pretest": "mkdir -p test && node emitImports > test/internals-test.ts",
     "spec:coverage": "node test/relevant.js",
     "test": "tsx test/internals-test.ts",
@@ -25,7 +25,7 @@
   "author": "",
   "license": "ISC",
   "files": [
-    "src/*.js"
+  	"dist"
   ],
   "devDependencies": {
     "esbuild": "^0.25.9"
