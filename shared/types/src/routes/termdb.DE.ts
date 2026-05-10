@@ -7,6 +7,12 @@ export type DERequest = {
 	dslabel: string
 	/* Object containing two arrays of RNA seq count for DE analysis */
 	samplelst: any //{number[]; number[];}
+	/** Minimum count per sample for edgeR's filterByExpr */
+	min_count: number
+	/** Minimum total count across samples for edgeR's filterByExpr */
+	min_total_count: number
+	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
+	cpm_cutoff: number
 	/** Storage_type for storing data. Will deprecate text files */
 	storage_type: 'text' | 'HDF5'
 	/** Method of DE used wilcoxon/edgeR */
@@ -144,6 +150,12 @@ export type ExpressionInput = {
 	DE_method: 'wilcoxon' | 'limma' | 'edgeR'
 	/** Cutoff for when mds plot will be generated for edgeR and limma test */
 	mds_cutoff: number
+	/** Minimum count per sample for edgeR's filterByExpr */
+	min_count: number
+	/** Minimum total count across samples for edgeR's filterByExpr */
+	min_total_count: number
+	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
+	cpm_cutoff: number
 }
 
 /** Response when DERequest.preAnalysis === true. Returns per-group sample

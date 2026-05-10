@@ -20,14 +20,21 @@
 # a full collection so freed objects from rm() are accounted for. Each call
 # costs a few ms; negligible relative to the steps we wrap.
 #
-# gc() returns a matrix with several "(Mb)" columns (current used, gc trigger,
-# max used). The LAST "(Mb)" column is always max-used-Mb across R versions
-# (newer R adds a "limit (Mb)" column that shifts numeric indices). We sum
-# Ncells + Vcells from that column.
+# We compute MB from the "max used" cell counts (Ncells row 1, Vcells row 2)
+# rather than indexing the "(Mb)" formatted columns, because the number and
+# layout of "(Mb)" columns varies across R versions (e.g. newer R adds a
+# "limit (Mb)" column). The "max used" column name and the Ncells/Vcells row
+# names are stable. Cell sizes (56 / 8 bytes) match 64-bit R conventions and
+# mirror the conversion used in dmrcate_full.R. Wrapped in tryCatch so any
+# unexpected gc() shape returns NA instead of crashing the analysis.
 mem_probe <- function() {
-  g <- gc(verbose = FALSE, full = TRUE, reset = TRUE)
-  mb_cols <- which(colnames(g) == "(Mb)")
-  unname(sum(g[, mb_cols[length(mb_cols)]]))
+  tryCatch(
+    {
+      g <- gc(verbose = FALSE, full = TRUE, reset = TRUE)
+      unname((g[1, "max used"] * 56 + g[2, "max used"] * 8) / 1048576)
+    },
+    error = function(e) NA_real_
+  )
 }
 invisible(mem_probe()) # establish a baseline before any work is timed
 
