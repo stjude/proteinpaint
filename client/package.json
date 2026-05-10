@@ -19,6 +19,7 @@
     "#rx": "./rx/index.js",
     "#shared": "@sjcrh/proteinpaint-shared",
     "#shared/*": "@sjcrh/proteinpaint-shared/*",
+    "#shared/constants/*": "@sjcrh/proteinpaint-shared/constants/*",
     "#src/*": "./src/*.js",
     "#termdb/*": "./termdb/*.js",
     "#termsetting": "./termsetting/index.ts",

@@ -1,30 +1,11 @@
 import { type TileSelection } from '@sjcrh/proteinpaint-types'
-import { FlagStatus } from '#types/checkers'
+import type { FeaturePrefixes, SelectionPrefixValues } from '../constants/AiHisto.ts'
 
-export enum FeaturePrefixes {
-	Star = 'annotation-star-',
-	Square = 'annotation-square-',
-	Border = 'annotation-border-',
-	PredBorder = 'prediction-border-'
-}
-
-export enum SelectionPrefixes {
-	TileSelection = 'ts_',
-	Prediction = 'pred_',
-	Annotation = 'anno_'
-}
-
-export const FlagStatusMessages = {
-	[FlagStatus.Normal]: '',
-	[FlagStatus.Skipped]: '(Skipped)',
-	[FlagStatus.Flagged]: '(Flagged)'
-}
-
-export function createSelectionID(prefix: SelectionPrefixes, coordinates: [number, number]): string {
+export function createSelectionID(prefix: SelectionPrefixValues, coordinates: [number, number]): string {
 	return prefix + JSON.stringify(coordinates)
 }
 
-export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixes): boolean {
+export function checkSelectionType(tileSelection: TileSelection, suspectedPrefix: SelectionPrefixValues): boolean {
 	return tileSelection.id.startsWith(suspectedPrefix)
 }
 
