@@ -11,7 +11,7 @@ import {
 	type AiProjectSelectedWSImagesResponse
 } from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
 import type { ImageTile } from 'ol'
-import { FeaturePrefixes, createFeatureID, FlagStatus } from '#types/checkers'
+import { FeaturePrefixes, createFeatureID, FlagStatus } from '#shared'
 
 import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'

@@ -2,6 +2,8 @@
   "compilerOptions": {
     "strictNullChecks": true,
     "baseUrl": "./",
+    "rootDir": "./",
+    "allowJs": false,
     //"noEmit": true,
     "allowImportingTsExtensions": true,
     "emitDeclarationOnly": true,
@@ -12,9 +14,15 @@
     "module": "esnext",
     "moduleResolution": "bundler" // to skip errors related to import of types from ts files
   },
-  "include": ["src/*"],
+  // the order of input dirs is significant:
+  // - constants ts files should not have imports, to avoid cyclical dependencies that breaks tsc and bundling startup
+  // - shared/types may import type code from @sjcrh/proteinpaint-shared/constants
+  // - src/ code is always allowed to import any type definition from shared/types
+  "include": ["./src/*"],
   "exclude": [
     "./node_modules",
-    "**/test"
+    "./dist/**/*",
+    "./**/test",
+    "../types"
   ]
 }
