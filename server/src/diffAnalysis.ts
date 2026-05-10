@@ -51,6 +51,9 @@ export function computeDeCacheId(req: DERequest): string {
 		genome: req.genome,
 		dslabel: req.dslabel,
 		samplelst: canonicalizeSamplelst(req.samplelst),
+		min_count: req.min_count,
+		min_total_count: req.min_total_count,
+		cpm_cutoff: req.cpm_cutoff,
 		method: req.method ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
@@ -400,7 +403,10 @@ export async function runDeFresh(
 		// request object — see note in resolveSampleGroups.
 		storage_type: q.storage_type,
 		DE_method: param.method,
-		mds_cutoff: 10000
+		mds_cutoff: 10000,
+		min_count: param.min_count,
+		min_total_count: param.min_total_count,
+		cpm_cutoff: param.cpm_cutoff
 	} as ExpressionInput
 
 	if (param.tw) {
