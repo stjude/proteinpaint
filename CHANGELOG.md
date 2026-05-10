@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Meta analysis results are incorporated into the SC app. The results appear in the first row(s) of the sample table.
 - Added quadtree hover support to cohort volcano. Added support for different shapes in quadtree hover
+- Improved diffMeth.R performance dramatically by removing slow h5 file reading option. Added ability to close Volcano p-value table
 
 Fixes:
 - prevent loading unauthorized prebuild scatterplot
