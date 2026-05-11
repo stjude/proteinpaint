@@ -231,7 +231,8 @@ export async function run_chat_pipeline(
 			plotType,
 			llm,
 			dataset_db,
-			genes_list
+			genes_list,
+			genome
 		)
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
 		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))

@@ -980,7 +980,7 @@ async function generateFilterTerm(
 	const filterValues: Value[] = []
 	for (const filterTerm of filterEntities) {
 		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
-		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
 		if (!termObj) continue
 		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
 		filterValues.push(termObj)

@@ -70,7 +70,7 @@ export function isHierarchicalScaffold(s: Scaffold): s is HierarchicalScaffold {
 }
 
 // *** Entity Temp Types *** //
-type TermTypes = 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance'
+type TermTypes = 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance' | 'ssGSEA'
 
 export type Entity = {
 	termType: TermTypes

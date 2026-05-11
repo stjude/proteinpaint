@@ -4,6 +4,7 @@ import { isNumericTerm } from '#shared/terms.js'
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
 function isDictionaryTerm(term: any) {
+	console.log('Checking if term is a dictionary term:', term)
 	if (term.id) return true
 	return false
 }

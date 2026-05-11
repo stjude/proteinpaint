@@ -9,7 +9,7 @@ import type {
 	PrebuiltScatterPhrase2EntityResult
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
-import { extractGenesFromPrompt } from './utils.ts'
+import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import Database from 'better-sqlite3'
 import assert from 'assert'
@@ -26,6 +26,11 @@ export interface GeneTerm {
 	type: string
 }
 
+export interface GeneSetTerm {
+	geneSet: string
+	type: 'ssGSEA' | 'geneVariant'
+}
+
 export interface MethTerm {
 	chr: string
 	startPos: number
@@ -33,7 +38,7 @@ export interface MethTerm {
 	type: string
 }
 
-type Term = DictTerm | GeneTerm | MethTerm
+type Term = DictTerm | GeneTerm | MethTerm | GeneSetTerm
 
 export type Value = {
 	term: Term
@@ -42,13 +47,30 @@ export type Value = {
 	logicalOperator?: '&' | '|'
 }
 
-function buildNonDictTermObj(twEntity: Entity, genes_list: string[]): Value | undefined {
+function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any): Value | undefined {
 	switch (twEntity.termType) {
 		case 'geneExpression': {
 			const relevant_genes = extractGenesFromPrompt(twEntity.phrase, genes_list)
 			const twResult: GeneTerm = {
 				gene: relevant_genes.length > 0 ? relevant_genes[0] : 'UNKNOWN_GENE',
 				type: twEntity.termType
+			}
+			if ('logicalOperator' in twEntity) {
+				return {
+					term: twResult,
+					phrase: twEntity.phrase,
+					type: twEntity.termType,
+					logicalOperator: twEntity.logicalOperator
+				}
+			} else {
+				return { term: twResult, phrase: twEntity.phrase, type: twEntity.termType }
+			}
+		}
+		case 'ssGSEA': {
+			const geneSetNames = extractGenesetsFromPromptNew(twEntity.phrase, getGenesetNames(genome))
+			const twResult: GeneSetTerm = {
+				geneSet: geneSetNames.length > 0 ? geneSetNames[0] : 'UNKNOWN_GENESET',
+				type: 'ssGSEA'
 			}
 			if ('logicalOperator' in twEntity) {
 				return {
@@ -82,7 +104,8 @@ export async function getTermObj(
 	twEntity: Entity,
 	llm: LlmConfig,
 	dbPath: string,
-	genes_list: string[]
+	genes_list: string[],
+	genome: any
 ): Promise<Value | undefined> {
 	// Nested LLM-based replacement for semanticSearch.findBestMatch(). Parses the dataset DB
 	// via parse_dataset_db() to get the full rag_docs list and hands it to the classifier LLM
@@ -91,7 +114,7 @@ export async function getTermObj(
 	// Non-dic term types should be resolved accordingly,
 	mayLog(`Getting term object for key "${key}" and phrase "${twEntity.phrase}" with term type "${twEntity.termType}"`)
 	if (twEntity.termType !== 'dictionary') {
-		const twRes = buildNonDictTermObj(twEntity, genes_list)
+		const twRes = buildNonDictTermObj(twEntity, genes_list, genome)
 		if (!twRes) {
 			console.warn(`Skipping ${key} — could not build term for type "${twEntity.termType}"`)
 			return undefined
@@ -133,7 +156,8 @@ export async function inferTermObjFromEntity(
 	plotType: string,
 	llm: LlmConfig,
 	dbPath: string,
-	genes_list: string[] // redundant (must be fixed)
+	genes_list: string[], // redundant (must be fixed)
+	genome: any
 ): Promise<Record<string, Value | Value[] | string>> {
 	const twObjects: Record<string, Value | Value[] | string> = {}
 	if (plotType === 'summary') {
@@ -147,7 +171,7 @@ export async function inferTermObjFromEntity(
 				const filterValues: Value[] = []
 				for (const filterTerm of filterResult) {
 					mayLog('Evaluating filter term:', filterTerm)
-					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
+					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
 					if (!termObj) {
 						continue
 					}
@@ -164,7 +188,7 @@ export async function inferTermObjFromEntity(
 			const entry = value as [Entity] | undefined
 			if (!entry) continue
 			const twEntity = entry[0]
-			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
 			if (!termObj) {
 				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
 			}
@@ -179,7 +203,7 @@ export async function inferTermObjFromEntity(
 			const filterValues: Value[] = []
 			for (const filterTerm of filterResult) {
 				mayLog(`Evaluating ${key} term:`, filterTerm)
-				const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
+				const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
 				if (!termObj) {
 					console.warn(`Skipping filter term "${filterTerm.phrase}" — failed to get term object`)
 					continue
@@ -197,7 +221,7 @@ export async function inferTermObjFromEntity(
 		const DictValues: Value[] = []
 		for (const phrase of hierEntity.phrases) {
 			mayLog('Evaluating hierCluster phrase:', phrase)
-			const termObj = await getTermObj('DictPhrases', phrase, llm, dbPath, genes_list)
+			const termObj = await getTermObj('DictPhrases', phrase, llm, dbPath, genes_list, genome)
 			if (!termObj) {
 				console.warn(`Skipping hierCluster gene "${phrase.phrase}" — failed to get term object`)
 				continue
@@ -213,7 +237,7 @@ export async function inferTermObjFromEntity(
 			const filterValues: Value[] = []
 			for (const filterTerm of hierEntity.filter) {
 				mayLog('Evaluating hierCluster filter term:', filterTerm)
-				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
 				if (!termObj) continue
 				if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
 				filterValues.push(termObj)
@@ -232,7 +256,7 @@ export async function inferTermObjFromEntity(
 				const filterValues: Value[] = []
 				for (const filterTerm of filterResult) {
 					mayLog('Evaluating filter term:', filterTerm)
-					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list)
+					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
 					if (!termObj) {
 						continue
 					}
@@ -250,7 +274,7 @@ export async function inferTermObjFromEntity(
 				const termObjs: Value[] = []
 				for (const [index, twEntity] of twEntities.entries()) {
 					mayLog(`Evaluating twLst[${index}] entity:`, twEntity)
-					const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+					const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
 					if (!termObj) {
 						console.warn(`Skipping twLst[${index}] — failed to get term object for phrase "${twEntity.phrase}"`)
 						continue
@@ -269,7 +293,7 @@ export async function inferTermObjFromEntity(
 			mayLog(`Evaluating divide by ${key} entity:`, value)
 			const twEntity = value as Entity | undefined
 			if (!twEntity) continue
-			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list)
+			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
 			if (!termObj) {
 				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
 			}
@@ -288,7 +312,7 @@ export async function inferTermObjFromEntity(
 		if (scatterEntity.colorBy === 'null') {
 			twObjects['colorBy'] = 'null'
 		} else if (scatterEntity.colorBy) {
-			const termObj = await getTermObj('colorBy', scatterEntity.colorBy, llm, dbPath, genes_list)
+			const termObj = await getTermObj('colorBy', scatterEntity.colorBy, llm, dbPath, genes_list, genome)
 			if (termObj) {
 				twObjects['colorBy'] = termObj
 			} else {
@@ -300,7 +324,7 @@ export async function inferTermObjFromEntity(
 		if (scatterEntity.shapeBy === 'null') {
 			twObjects['shapeBy'] = 'null'
 		} else if (scatterEntity.shapeBy) {
-			const termObj = await getTermObj('shapeBy', scatterEntity.shapeBy, llm, dbPath, genes_list)
+			const termObj = await getTermObj('shapeBy', scatterEntity.shapeBy, llm, dbPath, genes_list, genome)
 			if (termObj) {
 				twObjects['shapeBy'] = termObj
 			} else {
@@ -311,7 +335,7 @@ export async function inferTermObjFromEntity(
 		}
 
 		if (scatterEntity.divideBy) {
-			const termObj = await getTermObj('divideBy', scatterEntity.divideBy, llm, dbPath, genes_list)
+			const termObj = await getTermObj('divideBy', scatterEntity.divideBy, llm, dbPath, genes_list, genome)
 			if (termObj) {
 				twObjects['divideBy'] = termObj
 			} else {
@@ -332,7 +356,7 @@ export async function inferTermObjFromEntity(
 			const filterValues: Value[] = []
 			for (const filterTerm of filterResult) {
 				mayLog('Evaluating filter term:', filterTerm)
-				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
 				if (!termObj) {
 					continue
 				}
@@ -436,15 +460,15 @@ async function findBestMatchLLM(
 	}
 	/*
 try {
-        const parsed = JSON.parse(response) as { term: string }
-        if (!parsed.term) {
-                console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
-                return undefined
-        }
-        parsedTerm = parsed.term
+    const parsed = JSON.parse(response) as { term: string }
+    if (!parsed.term) {
+            console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
+            return undefined
+    }
+    parsedTerm = parsed.term
 } catch (e) {
-        console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
-        return undefined
+    console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+    return undefined
 }*/
 
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)

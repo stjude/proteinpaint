@@ -1,5 +1,5 @@
 import type { LlmConfig } from '@sjcrh/proteinpaint-types'
-import type { Value, DictTerm, GeneTerm } from './entity2termObj.ts'
+import type { Value, DictTerm, GeneSetTerm, GeneTerm } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { parse_dataset_db } from './utils.ts'
@@ -215,7 +215,8 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 		} else if (
 			termObj.term.type === 'integer' ||
 			termObj.term.type === 'float' ||
-			termObj.term.type === 'geneExpression' // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
+			termObj.term.type === 'geneExpression' ||
+			termObj.term.type === 'ssGSEA' // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
 		) {
 			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
 			if (!numericFilterTerm) {
@@ -433,6 +434,14 @@ async function resolveToTw(twValue: Value, llm: LlmConfig) {
 			return {
 				gene: twValueTerm.gene.toUpperCase(),
 				name: twValueTerm.gene.toUpperCase(),
+				type: twValueTerm.type,
+				q: { mode: 'continuous' }
+			}
+		} else if (twValue.type === 'ssGSEA') {
+			const twValueTerm = twValue.term as GeneSetTerm
+			return {
+				id: twValueTerm.geneSet.toUpperCase(),
+				name: twValueTerm.geneSet.toUpperCase(),
 				type: twValueTerm.type,
 				q: { mode: 'continuous' }
 			}

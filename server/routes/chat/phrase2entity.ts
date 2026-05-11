@@ -1,7 +1,7 @@
 import type { LlmConfig, GeneDataTypeResult, GeneSetDataTypeResult } from '#types'
 import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { classifyGeneDataTypePhrase } from './genedatatypeagentnew.ts'
-import { classifyGeneSetDataType } from './genesetdatatypeagent.ts'
+import { classifyGeneSetDataType, GENE_SET_KEYWORDS } from './genesetdatatypeagent.ts'
 import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -92,9 +92,7 @@ async function validateNonDictionaryTypes(
 	genes_list: string[],
 	dataset_json: any,
 	genome: any
-): Promise<
-	MsgToUser | { geneFeatures: GeneDataTypeResult } | { geneSetFeatures: GeneSetDataTypeResult } | null | undefined
-> {
+): Promise<MsgToUser | { geneFeatures: GeneDataTypeResult } | { geneSetFeatures: GeneSetDataTypeResult } | null> {
 	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
 	const msg: MsgToUser = { type: 'text', text: '' }
 	if (relevant_genes.length > 0) {
@@ -145,16 +143,34 @@ async function validateNonDictionaryTypes(
 		// TODO: surface ssGSEA vs geneVariant downstream once consumers know how to handle genesetFeatures.
 		if ('type' in genesetDataTypeMessage && genesetDataTypeMessage.type === 'text') {
 			return genesetDataTypeMessage
+		} else if ('dataType' in genesetDataTypeMessage && genesetDataTypeMessage.dataType === 'ambiguous') {
+			msg.text =
+				'The intent for geneset "' +
+				genesetDataTypeMessage.geneSet +
+				'" is ambiguous. Please clarify if you are asking about the ssGSEA enrichment score for the geneset, or the gene variants of the genes in the geneset.'
+			return msg
+		} else if ('geneSet' in genesetDataTypeMessage && genesetDataTypeMessage.geneSet) {
+			return { geneSetFeatures: genesetDataTypeMessage }
+		} else {
+			throw 'geneSetDataTypeMessage has unknown data type returned from classifyGeneSetDataType agent'
 		}
 	}
-	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, ssGSEA)
+	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, protein abundance, etc.)
 	else {
-		const NonDictKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, ssGSEA
-		if (NonDictKeyWords.length > 0) {
+		const NonDictGeneKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, protein abundance, etc.
+		if (NonDictGeneKeyWords.length > 0) {
 			msg.text =
 				"Prompt includes keyword(s) such as '" +
-				NonDictKeyWords.join(',') +
+				NonDictGeneKeyWords.join(',') +
 				"' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
+			return msg
+		}
+		const NonDictGeneSetKeyWords = extractGenesFromPrompt(phrase, GENE_SET_KEYWORDS) // Using the same function as extracting genes from a phrase.
+		if (NonDictGeneSetKeyWords.length > 0) {
+			msg.text =
+				"Prompt includes keyword(s) such as '" +
+				NonDictGeneSetKeyWords.join(',') +
+				"' that may refer to a nonDict type (e.g. geneset) but no such term was found in the prompt"
 			return msg
 		}
 		// else if // May go for an LLM based approach if the above string search based method is not sufficient
@@ -200,6 +216,14 @@ async function inferEntities(
 			return { termType: 'proteomeAbundance', phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
+		}
+	} else if ('geneSetFeatures' in validatedNonDict) {
+		if (validatedNonDict.geneSetFeatures.dataType === 'ssGSEA') {
+			return { termType: 'ssGSEA', phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneVariant') {
+			return { termType: 'geneVariant', phrase: phrase }
+		} else {
+			throw 'validateNonDictionaryTypes returned an unrecognized geneSetFeatures:' + validatedNonDict.geneSetFeatures
 		}
 	} else {
 		// Should not happen
