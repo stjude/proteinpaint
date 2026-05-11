@@ -166,11 +166,13 @@ export function server_init_db_queries(ds) {
 		} else q.getCohortSampleCount = () => `${totalCount} samples`
 	}
 
-	// term2role sidecar table maps (term_id, role) to declare which terms each role can see.
-	// The table is always created by create.sql but is empty unless a dataset's build supplied a tsv
-	// via buildTermdb's term2role= arg. When non-empty, load once into a Map<role, Set<termId>> and
-	// attach to ds.cohort.termdb._role2terms; the dataset's isTermVisible / filterClientCopy
-	// hooks consult it. When the table is empty the Map stays undefined and datasets are unaffected.
+	/*
+	term2role sidecar table maps (term_id, role) to declare which terms each role can see.
+	The table is always created by create.sql but is empty unless a dataset's build supplied a tsv
+	via buildTermdb's term2role= arg. When non-empty, load once into a Map<role, Set<termId>> and
+	attach to ds.cohort.termdb._role2terms; the dataset's isTermVisible / filterClientCopy
+	hooks consult it. When the table is empty the Map stays undefined and datasets are unaffected.
+	*/
 	if (tables.has('term2role')) {
 		const rows = cn.prepare('SELECT term_id, role FROM term2role').all() as Array<{
 			term_id: string
