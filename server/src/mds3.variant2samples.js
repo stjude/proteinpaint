@@ -424,8 +424,10 @@ export function combineSamplesById(inlst, samples, ssmid) {
 async function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
 	if (!twLst || twLst.length == 0) return
 
-	// Get data for all terms at once. fix is needed to handle sample hierarchy but inefficient as it pulls data for all samples.
-	const data = await getData({ terms: twLst }, ds)
+	// Get data for all terms at once.
+	// FIXME inefficient as it pulls data for all samples.
+	// FIXME hardcoded true as 3rd arg to obtain sample-level values for patient-level terms
+	const data = await getData({ terms: twLst }, ds, true)
 	if (data.error) throw data.error
 
 	// For every term, append term values to each sample
