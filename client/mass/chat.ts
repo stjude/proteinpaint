@@ -5,9 +5,11 @@ import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 
+import { sayerror } from '../dom/sayerror.ts'
+import { select } from 'd3-selection'
+
 class MassAiChatBot implements RxComponent {
 	static type = 'chat'
-
 	type: string
 	opts: any
 	app: MassAppApi
@@ -19,19 +21,52 @@ class MassAiChatBot implements RxComponent {
 		this.type = MassAiChatBot.type
 		this.opts = opts
 		this.app = opts.app
+		this.opts.usecase = this.opts.usecase ? this.opts.usecase : { target: 'summary', detail: 'term' }
+		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
+		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
-	async init() {
-		this.initDom()
+	getState(appState) {
+		return {
+			cohortStr:
+				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
+					? ''
+					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
+			search: appState.search,
+			nav: appState.nav
+		}
 	}
 
-	initDom() {
+	async init(appState) {
+		this.initDom(appState)
+	}
+
+	// Search method, adapted from MassSearch.doSearch
+	async doSearch(prompt: string) {
+		if (!prompt) {
+			this.clear({ hide: true })
+			return
+		}
+		const cohortStr = this.getState(this.app.getState()).cohortStr
+		const data = await this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType)
+		if (!data.lst || data.lst.length == 0) {
+			// Show the "No match..." message one time at the first miss
+			if (!this.dom.noMatchShown) {
+				this.dom.noMatchShown = true
+				this.noResult()
+			}
+		} else {
+			this.dom.noMatchShown = false
+			this.showTerms(data)
+		}
+	}
+
+	initDom(appState) {
+		const cohortStr = this.getState(appState).cohortStr
 		this.dom = {
-			tip: new Menu({ padding: '' }),
+			tip: new Menu({ padding: '5px' }),
 			div: this.opts.subheader,
-			// error div on top
 			error: this.opts.subheader.append('div').attr('id', 'sjpp-corrVolcano-error').style('opacity', 0.75),
-			// div with bubbles to show chat history
 			bubbleDiv: this.opts.subheader
 				.append('div')
 				.attr('class', 'sjpp_show_scrollbar')
@@ -41,47 +76,76 @@ class MassAiChatBot implements RxComponent {
 				.style('scroll-behavior', 'smooth')
 		}
 
-		this.dom.div
+		const inputSel = this.dom.div
 			.append('input')
+			.attr('type', 'search')
 			.style('margin', '15px')
 			.style('padding', '17px')
 			.style('border-radius', '34px')
 			.attr('size', 70)
 			.attr('placeholder', 'What are you looking for?')
-			.on('keyup', async event => {
+
+		// Store the input node so the search result tip can position under it
+		this.dom.inputNode = inputSel.node()
+
+		// Result panel inside the tip, mirroring MassSearch.initUI
+		this.dom.resultDiv = this.dom.tip.d
+			.style('border-left', 'solid 1px rgb(133,182,225)')
+			.style('padding-left', '5px')
+			.attr('tabindex', -1)
+
+		inputSel
+			.on('keyup.search', async (event: KeyboardEvent) => {
+				if (keyupEnter(event)) return
+				const prompt = (event.target as HTMLInputElement).value.trim()
+				if (!prompt) {
+					this.dom.noMatchShown = false
+					this.clear({ hide: true })
+					return
+				}
+				console.log(
+					`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
+				)
+				try {
+					await this.doSearch(prompt) // Search as user types
+				} catch (e: any) {
+					if (e.stack) console.log(e.stack)
+					sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
+				}
+			})
+			.on('keyup.submit', async event => {
 				if (!keyupEnter(event)) return
 				const prompt = event.target.value.trim()
-				if (!prompt) return // blank
-				if (prompt.length < 5) return // do not compute on short string
-				this.addBubble({ msg: prompt, me: 1 })
+				const serverBubble = this.addBubble({ msg: '...' })
+				if (!prompt) return
+				if (prompt.length <= 3) {
+					serverBubble.text('Your prompt is too short. Enter a longer prompt.')
+					return
+				}
 				const body: ChatRequest = {
 					genome: this.app.vocabApi.vocab.genome,
 					dslabel: this.app.vocabApi.vocab.dslabel,
 					filter: this.app.vocabApi.state.termfilter?.filter,
 					prompt
 				}
-				event.target.value = '' // clear input
-				const serverBubble = this.addBubble({ msg: '...' })
+				event.target.value = ''
 
 				try {
 					const data = await dofetch3('termdb/chat3', { body })
 					if (data.error) throw data.error
 
 					const result: ChatResponse = data
-					if (result.type == 'text') {
+					if (result.type === 'text') {
 						serverBubble.text(result.text)
-					} else if (result.type == 'html') {
+					} else if (result.type === 'html') {
 						serverBubble.html(result.html)
-					} else if (result.type == 'plot') {
+					} else if (result.type === 'plot') {
 						this.app.dispatch({
 							type: 'plot_create',
 							config: result.plot
 						})
-						serverBubble.text(`${result.msg ? result.msg + '.' : ''}Please refer to the plot generated below.`)
+						serverBubble.text(`${result.msg ? result.msg + '. ' : ''}Please refer to the plot generated below.`)
 					}
-					/** may switch by data.type
-					 * type=chat: server returns a chat msg
-					 * type=plot: server returns a plot obj */
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
 					serverBubble.html(`Error: ${e.message || e}`)
@@ -116,3 +180,70 @@ class MassAiChatBot implements RxComponent {
 }
 
 export const chatInit = getCompInit(MassAiChatBot)
+
+// Minimal renderers ported from MassSearch
+function setRenderers(self) {
+	self.noResult = () => {
+		self.clear()
+		self.dom.resultDiv
+			.append('div')
+			.text('No match. Using the chatbot...')
+			.style('padding', '3px 3px 3px 0px')
+			.style('opacity', 0.5)
+
+		// Hide the popup after 2 seconds
+		setTimeout(() => {
+			self.clear({ hide: true })
+		}, 1500)
+	}
+
+	self.showTerms = data => {
+		if (self.opts.disable_terms)
+			data.lst.forEach(t => {
+				if (t.disabled) self.opts.disable_terms.push(t)
+			})
+		self.clear({ hide: !data.lst.length })
+		if (data.lst.length) {
+			self.dom.resultDiv.append('table').selectAll().data(data.lst).enter().append('tr').each(self.showTerm)
+		}
+	}
+
+	self.showTerm = function (term) {
+		const tr = select(this)
+		const button = tr.append('td').text(term.name)
+
+		if (term.type) {
+			button
+				.style('cursor', 'pointer')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-mass-chat-term-${term.id}`)
+				.on('click', async () => {
+					if (self.state?.nav?.activeTab == 0) {
+						await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
+					}
+					self.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: term.type == 'survival' ? 'survival' : 'summary',
+							term: { term }
+						}
+					})
+					self.dom.inputNode.value = '' // clear the search box
+					self.clear({ hide: true })
+				})
+		} else {
+			button.style('padding', '5px 10px').style('opacity', 0.5)
+		}
+
+		tr.append('td')
+			.text((term.__ancestorNames || []).join(' > '))
+			.style('opacity', 0.5)
+			.style('font-size', '.7em')
+	}
+
+	self.clear = (opts: any = {}) => {
+		self.dom.tip.clear()
+		if (opts.hide) self.dom.tip.hide()
+		else self.dom.tip.showunder(self.dom.inputNode)
+	}
+}
