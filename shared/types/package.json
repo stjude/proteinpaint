@@ -12,7 +12,7 @@
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared",
-    "#shared/constants/*": "@sjcrh/proteinpaint-shared/constants/*"
+    "#shared/devTs": "@sjcrh/proteinpaint-shared/devTs"
   },
   "scripts": {
     "generate": "node dev.mjs",
