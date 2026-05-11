@@ -665,19 +665,8 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	GeneExpInput: ({ ds }) => ds.queries?.geneExpression || ds.queries?.singleCell?.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	proteomeAbundance: ({ ds }) => ds.queries?.proteome,
+	ProteomeInput: ({ ds }) => ds.queries?.proteome,
 	proteinView: ({ ds }) => ds.queries?.proteome,
-	dapVolcano: ({ ds }) => {
-		const organisms = ds.queries?.proteome?.organisms
-		if (!organisms) return false
-		for (const org of Object.values(organisms) as any[]) {
-			for (const assay of Object.values(org.assays || {}) as any[]) {
-				for (const cohort of Object.values(assay.cohorts || {}) as any[]) {
-					if (cohort.DAPfile) return true
-				}
-			}
-		}
-		return false
-	},
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case

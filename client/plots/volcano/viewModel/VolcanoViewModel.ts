@@ -203,10 +203,24 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (this.termType != GENE_EXPRESSION && this.termType != DNA_METHYLATION) return
+		if (this.termType != GENE_EXPRESSION && this.termType != DNA_METHYLATION && this.termType != PROTEOME_DAP) return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
+		}
+
+		if (this.termType == PROTEOME_DAP) {
+			return {
+				y: plotDim.top.y + 10,
+				first: {
+					label: getLabel(`Control (${this.response.sample_size1})`),
+					x: 0
+				},
+				second: {
+					label: getLabel(`Case (${this.response.sample_size2})`),
+					x: this.settings.width
+				}
+			}
 		}
 
 		return {
@@ -308,6 +322,17 @@ export class VolcanoViewModel {
 				},
 				{
 					label: this.config.samplelst.groups[1].name + ' sample size (case group)',
+					value: this.response.sample_size2
+				}
+			)
+		} else if (this.termType == PROTEOME_DAP) {
+			tableRows.push(
+				{
+					label: 'Control sample size',
+					value: this.response.sample_size1
+				},
+				{
+					label: 'Case sample size',
 					value: this.response.sample_size2
 				}
 			)

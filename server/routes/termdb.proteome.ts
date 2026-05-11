@@ -387,6 +387,14 @@ function buildFilterClause(filters: { columnIdx: number; columnValue: string | n
 	return { conditions, params }
 }
 
+export function countDistinctSamples(db: any, filters: { columnIdx: number; columnValue: string | number }[]) {
+	const { conditions, params } = buildFilterClause(filters)
+	const row = db
+		.prepare(`SELECT COUNT(DISTINCT sample) as cnt FROM proteome_abundance WHERE ${conditions.join(' AND ')}`)
+		.get(...params)
+	return row?.cnt || 0
+}
+
 function queryDbRows(
 	db,
 	matchColumn: 'gene' | 'identifier',

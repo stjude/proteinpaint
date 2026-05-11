@@ -8,7 +8,8 @@ export type DapVolcanoRequest = {
 	organism: string
 	assay: string
 	cohort: string
-	volcanoRender: VolcanoRenderRequest
+	volcanoRender?: VolcanoRenderRequest
+	countsOnly?: boolean
 }
 
 export type DapEntry = DataEntry & {

@@ -1,4 +1,3 @@
-import { NumericModes } from '#shared/terms.js'
 import type { ProteomeDetails } from '#types'
 
 type RenderAssayAndCohortRadiosOpts = {
@@ -200,79 +199,42 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 	const menuDiv = holder.append('div')
 
 	let selectedProteomeDetails: Partial<ProteomeDetails> | undefined
-	const launchOption = menuDiv
+
+	const toolsBtnHolder = menuDiv.append('div').style('text-align', 'center')
+	const toolsBtn = toolsBtnHolder
 		.append('button')
 		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn sja_sharp_border')
 		.style('display', 'block')
 		.style('margin', '10px auto 10px')
-		.text('Select Protein')
+		.text('Analytics Tools')
 		.on('click', () => {
 			const current = selectedProteomeDetails
 			if (!current?.organism || !current.assay || !current.cohort) return
-			const { organism, assay, cohort } = current
-			const assayCohortTitle = `${organism} ${assay}: ${cohort}`
-			const chart = {
-				label: 'Protein Abundance',
-				chartType: 'proteomeAbundance',
-				usecase: {
-					target: 'proteomeAbundance',
-					detail: 'term',
-					proteomeDetails: { organism, assay, cohort },
-					label: `Organism: ${organism}; Assay: ${assay}; Sample set: ${cohort}`
-				},
-				processSelection: (termlst: any[]) => termlst,
-				updateActionBySelectedTerms: (action: any, termlst: any[]) => {
-					action.config.assayCohortTitle = assayCohortTitle
-					const currentDetails = selectedProteomeDetails
-					if (!currentDetails?.organism || !currentDetails.assay || !currentDetails.cohort) return
-					const { organism, assay, cohort } = currentDetails
-					action.config.proteomeDetails = { organism, assay, cohort }
-					const twlst = termlst.map(term => {
-						const t = structuredClone(term)
-						t.dataTypeDetails = { organism, assay, cohort }
-						return { term: t, q: { mode: NumericModes.continuous } }
-					})
-
-					if (twlst.length == 1) {
-						action.config.chartType = 'summary'
-						action.config.term = twlst[0]
-						const proteomeOverlayTerm =
-							chartsInstance.state.termdbConfig?.queries?.proteome?.organisms?.[organism]?.overlayTerm
-						if (proteomeOverlayTerm) action.config.term2 = { term: structuredClone(proteomeOverlayTerm), q: {} }
-						return
-					}
-					if (twlst.length == 2) {
-						action.config.chartType = 'summary'
-						action.config.term = twlst[0]
-						action.config.term2 = twlst[1]
-						return
-					}
-
-					action.config.chartType = 'hierCluster'
-					action.config.dataType = 'proteomeAbundance'
-					action.config.termgroups = [{ name: 'Protein Abundance Cluster', lst: twlst, type: 'hierCluster' }]
+			chartsInstance.dom.tip.hide()
+			chartsInstance.prepPlot({
+				config: {
+					chartType: 'ProteomeInput',
+					proteomeDetails: { organism: current.organism, assay: current.assay, cohort: current.cohort },
+					hidePlotFilter: true
 				}
-			}
-			chartsInstance.dom.tip.clear()
-			chartsInstance.showTree_selectlst(chart)
+			})
 		})
 
-	const syncLaunchButtonState = () => {
-		if (!launchOption) return
-		if (selectedProteomeDetails?.cohort) launchOption.style('opacity', 1).style('pointer-events', 'auto')
-		else launchOption.style('opacity', 0.5).style('pointer-events', 'none')
+	const syncButtonState = () => {
+		if (selectedProteomeDetails?.cohort) toolsBtn.style('opacity', 1).style('pointer-events', 'auto')
+		else toolsBtn.style('opacity', 0.5).style('pointer-events', 'none')
 	}
 
 	renderAssayAndCohortRadios({
 		holder: menuDiv,
 		organisms,
-		onChange: proteomeDetails => {
-			selectedProteomeDetails = proteomeDetails
-			syncLaunchButtonState()
+		onChange: details => {
+			selectedProteomeDetails = details
+			syncButtonState()
 		}
 	})
 
-	syncLaunchButtonState()
+	syncButtonState()
 }
 
 export function toTvslstFilter(filterConfig: any): any {

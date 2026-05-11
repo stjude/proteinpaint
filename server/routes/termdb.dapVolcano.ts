@@ -6,6 +6,7 @@ import { dapVolcanoPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
 import { renderVolcano } from '../src/renderVolcano.ts'
 import serverconfig from '../src/serverconfig.js'
+import { countDistinctSamples } from './termdb.proteome.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/dapVolcano',
@@ -32,6 +33,19 @@ function init({ genomes }) {
 			const cohortConfig = ds.queries?.proteome?.organisms?.[q.organism]?.assays?.[q.assay]?.cohorts?.[q.cohort]
 			if (!cohortConfig?.DAPfile) throw 'DAP file not configured for this cohort'
 
+			const organismConfig = ds.queries.proteome.organisms[q.organism]
+			const assayConfig = organismConfig.assays[q.assay]
+			const organismFilter = [{ columnIdx: organismConfig.columnIdx, columnValue: organismConfig.columnValue }]
+			const assayFilter = [{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }]
+			const db = ds.queries.proteome.db
+			const controlCount = countDistinctSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.controlFilter])
+			const caseCount = countDistinctSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.caseFilter])
+
+			if (q.countsOnly) {
+				res.send({ sample_size1: controlCount, sample_size2: caseCount })
+				return
+			}
+
 			const filePath = path.join(serverconfig.tpmasterdir, cohortConfig.DAPfile)
 			const content = await fs.readFile(filePath, 'utf8')
 			const lines = content.trim().split('\n')
@@ -53,7 +67,11 @@ function init({ genomes }) {
 
 			const rendered = await renderVolcano(rustRows, q.volcanoRender)
 			for (const d of rendered.dots) delete (d as any).adjusted_p_value
-			res.send({ data: rendered as any })
+			res.send({
+				data: rendered as any,
+				sample_size1: controlCount,
+				sample_size2: caseCount
+			})
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
 			if (e instanceof Error && e.stack) console.log(e)

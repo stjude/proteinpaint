@@ -14,9 +14,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
 
-		case 'dapVolcano':
-			return await import('./dapVolcano.ts')
-
 		case 'DEinput':
 			return await import(`./DEinput.ts`)
 
@@ -98,6 +95,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'proteomeAbundance':
 			return await import(`./proteomeAbundance.ts`)
+
+		case 'ProteomeInput':
+			return await import('./ProteomeInput.ts')
 
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
