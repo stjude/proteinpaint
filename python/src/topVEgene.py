@@ -15,8 +15,7 @@ import pandas as pd
 #    max_genes: The max num of genes (for e.g 10) that need to be reported in the output.
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
-# echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"max_genes":10, "rank_type":"var"}' 
-#  | /Users/jsimps98/anaconda3/envs/pp_env/bin/python python/src/topVEgene.py
+# echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"max_genes":10, "rank_type":"var"}' | python python/src/topVEgene.py
 
 def create_gene_variance_list(filename: str, sample_list: list, filter_extreme_values: bool, rank_type: str, max_genes: int) -> pd.DataFrame:
     sample_list = [str(s) for s in sample_list]
@@ -39,7 +38,6 @@ def create_gene_variance_list(filename: str, sample_list: list, filter_extreme_v
         
         # Calculating one gene at a time to save on memory
         for i in range(matrix.shape[0]):
-            # TODO should I enforce minimum sample list size?
             gene_row=pd.Series(matrix[i], index=all_samples,name=gene_names[i]).loc[sample_list]
             selected_genes.append(calculate_variance(gene_row, filter_extreme_values, rank_type, len(sample_list)))
         gene_dict={gene:score for (gene, score) in selected_genes}
@@ -108,18 +106,14 @@ def main() -> int:
             raise ValueError("filter_extreme_values must be true or false")
 
         max_genes = json_args.get("max_genes")
-        if not isinstance(max_genes, int) or max_genes < 1 or max_genes > 1000:
-            raise ValueError("max_genes must be an integer between 1 and 1000")
+        if not isinstance(max_genes, int) or max_genes < 10 or max_genes > 1000:
+            raise ValueError("max_genes must be an integer between 10 and 1000")
 
         rank_type = json_args.get("rank_type")
         if rank_type not in ["iqr", "var"]:
             raise ValueError('rank_type must be either "iqr" or "var"')
 
-        gene_sample_matrix = input_data_hdf5(input_file, samples)
-        if gene_sample_matrix is None:
-            raise ValueError("Could not load input matrix from HDF5")
-
-        result = calculate_variance(gene_sample_matrix, filter_extreme_values, rank_type, max_genes)
+        result = create_gene_variance_list(input_file, samples, filter_extreme_values, rank_type, max_genes)
         print(json.dumps(result))
         return 0
     except Exception as e:
@@ -128,5 +122,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    print(create_gene_variance_list("/Users/jsimps98/data/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", ["2646", "2660", "2898", "3150", "3178", "3206", "3220", "3346", "3360", "1", "3", "7", "21", "22", "23", "37", "38", "39"], True, "var", 16))
-    # raise SystemExit(main())
+    raise SystemExit(main())
