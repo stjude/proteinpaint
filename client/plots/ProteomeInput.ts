@@ -367,7 +367,10 @@ export class ProteomeInput extends PlotBase implements RxComponent {
 					headerText: `${organism} ${assay}: ${cohort}`,
 					proteomeDetails: { organism, assay, cohort },
 					settings: {
-						volcano: getDefaultVolcanoSettings({}, { termType: PROTEOME_DAP }),
+						volcano: {
+							...getDefaultVolcanoSettings({}, { termType: PROTEOME_DAP }),
+							pValueType: 'original'
+						},
 						gsea: getDefaultGseaSettings({})
 					},
 					highlightedData: [],
