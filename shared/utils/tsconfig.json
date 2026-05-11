@@ -18,7 +18,7 @@
   // - constants ts files should not have imports, to avoid cyclical dependencies that breaks tsc and bundling startup
   // - shared/types may import type code from @sjcrh/proteinpaint-shared/constants
   // - src/ code is always allowed to import any type definition from shared/types
-  "include": ["./src/*"],
+  "include": ["./constants/*", "./src/*"],
   "exclude": [
     "./node_modules",
     "./dist/**/*",

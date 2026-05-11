@@ -1,6 +1,6 @@
 import type { RoutePayload } from './routeApi.ts'
 import type { WSImage } from './samplewsimages.ts'
-import type { FlagStatus } from '#shared/constants/AiHisto.d.ts'
+import type { FlagStatus } from '#shared/devTs'
 
 export type AiProjectSelectedWSImagesRequest = {
 	genome: string

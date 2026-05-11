@@ -9,15 +9,19 @@
     "#types/*": "@sjcrh/proteinpaint-types/*",
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
+  "//": "/constants",
   "exports": {
     ".": "./dist/src/index.js",
     "./*.ts": "./*.ts_SHOULD_BE_js",
     "./*": "./dist/src/*",
-    "./constants/*": "./dist/constants/*"
+    "./constants/*.ts": "./dist/constants/*.ts_SHOULD_BE_js",
+    "./constants/*": "./dist/constants/*",
+    "./devTs": "./constants/index.ts",
+    "./devTs/*": "./constants/*"
   },
   "scripts": {
     "build": "esbuild src/*.* constants/*.ts --platform=node --outdir=dist --format=esm --sourcemap",
-    "prepack": "rm -rf dist && npm run build && tsc --sourcemap --preserveWatchOutput",
+    "prepack": "rm -rf dist && npm run build && tsc --sourcemap --skipLibCheck --preserveWatchOutput",
     "dev": "rm -rf dist && concurrently 'npm run build -- --watch' 'npx tsc --watch --skipLibCheck --preserveWatchOutput'",
     "pretest": "mkdir -p test && node emitImports > test/internals-test.ts",
     "test": "tsx test/internals-test.ts",
