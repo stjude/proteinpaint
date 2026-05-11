@@ -1,5 +1,5 @@
 import { type TileSelection } from '@sjcrh/proteinpaint-types'
-import type { FeaturePrefixes, SelectionPrefixValues } from '../constants/AiHisto.ts'
+import type { FeaturePrefixes, SelectionPrefixValues } from '../constants/AiHisto.js'
 
 export function createSelectionID(prefix: SelectionPrefixValues, coordinates: [number, number]): string {
 	return prefix + JSON.stringify(coordinates)

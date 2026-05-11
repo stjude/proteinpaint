@@ -14,12 +14,13 @@ are specific to `nodejs` or `browser` environments, like `fs` or `DOM` elements
 ## Develop
 
 It is much simpler to import *runtime* code directly from `@sjcrh/proteinpaint-shared`, 
-or static code from `@sjcrch/proteinpaint-shared/devTs`, instead of specifying a code 
-filename. 
+or static code from `@sjcrh/proteinpaint-shared/devTs`, instead of specifying a code 
+filename.
 
 For server dev, the `tsx` library will accept imports with or without file extension.
-Server (consumer) code MUST use the `.js` file extension even when importing 
-`#shared/*.ts` or `#shared/constants/*.ts` files.
+Server (consumer) code should use `@sjcrh/proteinpaint-shared`, or if for some reason
+a shared file must be specific, it MUST use the `.js` file extension (e.g., 
+`#shared/someFile.js`).
 
 For client dev, the esbuild config will bundle the #shared imports correctly, even
 when `.js` extension is used to import what is actually a `.ts` file, by using

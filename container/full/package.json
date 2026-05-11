@@ -14,7 +14,7 @@
 	"dependencies": {
 		"@sjcrh/proteinpaint-front": "2.187.0",
 		"@sjcrh/proteinpaint-server": "2.187.0",
-		"@sjcrh/proteinpaint-shared": "^2.187.0"
+		"@sjcrh/proteinpaint-shared": "2.187.0"
 	},
 	"files": [
 		"app-full.js"
