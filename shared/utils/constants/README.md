@@ -1,6 +1,6 @@
 # Shared Constants
 
-The goal of the `constants` code to allow shared/types code to be able to import type definitions 
+The goal of the `constants` code is to allow shared/types code to be able to import type definitions 
 from shared/utils with no bundling or tsc compilation issues. Ideally, there would be a separate
 `shared/constants` workspace. However, due to time constraints and effort required to set up a 
 new workspace, this `shared/utils/constants` directory was created instead.
