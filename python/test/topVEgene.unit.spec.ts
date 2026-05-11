@@ -15,7 +15,7 @@ tape('topVEgene returns the expected top variable genes', async t => {
 	const input = {
 		input_file: rnaseqTestFile,
 		filter_extreme_values: false,
-		num_genes: 5,
+		max_genes: 10,
 		rank_type: 'var',
 		samples
 	}
@@ -25,7 +25,11 @@ tape('topVEgene returns the expected top variable genes', async t => {
 		const result = typeof out === 'string' ? JSON.parse(out) : out
 
 		t.ok(Array.isArray(result), 'Output should be an array of gene symbols')
-		t.deepEqual(result, ['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'ACAP3'], 'Should return the expected top genes')
+		t.deepEqual(
+			result,
+			['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'ACAP3', 'HES4', 'AGRN', 'DVL1', 'SKI', 'HES5'],
+			'Should return the expected top genes'
+		)
 	} catch (err) {
 		t.fail(`Expected success but got error: ${String(err)}`)
 	}
@@ -37,7 +41,7 @@ tape('topVEgene rejects an invalid rank_type', async t => {
 	const input = {
 		input_file: rnaseqTestFile,
 		filter_extreme_values: false,
-		num_genes: 5,
+		max_genes: 10,
 		rank_type: 'bad-rank',
 		samples
 	}
@@ -57,7 +61,7 @@ tape('topVEgene rejects a non-existing input file', async t => {
 	const input = {
 		input_file: 'server/test/tp/files/hg38/TermdbTest/rnaseq/does-not-exist.h5',
 		filter_extreme_values: false,
-		num_genes: 5,
+		max_genes: 10,
 		rank_type: 'var',
 		samples
 	}
