@@ -3,7 +3,6 @@
     "strictNullChecks": true,
     "baseUrl": "./",
     "rootDir": "./",
-    "allowJs": false,
     //"noEmit": true,
     "allowImportingTsExtensions": true,
     "emitDeclarationOnly": true,
