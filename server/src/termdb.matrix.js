@@ -623,7 +623,10 @@ export async function getSamples(q, rows, termWrappers) {
 	// if q.currentGeneNames is in use, must restrict to these samples
 	const limitMutatedSamples = await mayQueryMutatedSamples(q)
 	for (const { sample, key, term_id, value } of rows) {
-		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) return // this sample is not mutated for given genes
+		if (limitMutatedSamples && !limitMutatedSamples.has(sample)) {
+			// this sample is not mutated for given genes
+			continue
+		}
 		if (!samples[sample]) samples[sample] = { sample }
 		const v = tw$idsWithJson.has(term_id) && typeof value == 'string' ? JSON.parse(value) : value
 		// this assumes unique term key/value for a given sample
@@ -636,7 +639,7 @@ export async function getSamples(q, rows, termWrappers) {
 			// convert to .values[]
 			if (!samples[sample][term_id].values) {
 				const firstvalue = samples[sample][term_id] // first term value of the sample
-				if (firstvalue.key === key && firstvalue.value === v) return // duplicate
+				if (firstvalue.key === key && firstvalue.value === v) continue // duplicate
 				samples[sample][term_id] = { values: [firstvalue] } // convert to object with .values[]
 			}
 			// add next term value to .values[]
