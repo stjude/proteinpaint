@@ -70,6 +70,12 @@ export class VolcanoPlotView {
 		this.volcanoDom.yAxisLabel = svg.append('text').attr('id', 'sjpp-volcano-yAxisLabel').attr('text-anchor', 'middle')
 		this.volcanoDom.plot = svg.append('g').attr('id', 'sjpp-volcano-plot')
 
+		// Always clear the previous p-value table div before deciding whether
+		// to recreate it. Without this, toggling showPValueTable off leaves
+		// the old div in dom.holder (the table never closes), and toggling
+		// it on repeatedly appends additional divs.
+		this.dom.holder.select('#sjpp-volcano-pValueTable').remove()
+
 		if (!this.settings.showPValueTable) return
 		this.volcanoDom.pValueTable = this.dom.holder
 			.append('div')
@@ -99,7 +105,8 @@ export class VolcanoPlotView {
 			const sigText = this.termType == DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
-			this.addActionButton('Show p-value table', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], async () => {
+			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
+			this.addActionButton(pValueTableButtonText, [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], async () => {
 				/** TODO: This is very slow to render. Need to optimize rendering
 				 * and server response to increase performance.*/
 				const showTable = !this.settings.showPValueTable

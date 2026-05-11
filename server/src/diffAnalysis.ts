@@ -399,14 +399,14 @@ export async function runDeFresh(
 		data_type: 'do_DE',
 		input_file: q.file,
 		cachedir: serverconfig.cachedir,
-		min_count: param.min_count,
-		min_total_count: param.min_total_count,
-		cpm_cutoff: param.cpm_cutoff,
 		// Read storage_type from the dataset directly, not from the mutable
 		// request object — see note in resolveSampleGroups.
 		storage_type: q.storage_type,
 		DE_method: param.method,
-		mds_cutoff: 10000
+		mds_cutoff: 10000,
+		min_count: param.min_count,
+		min_total_count: param.min_total_count,
+		cpm_cutoff: param.cpm_cutoff
 	} as ExpressionInput
 
 	if (param.tw) {

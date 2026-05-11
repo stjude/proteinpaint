@@ -7,9 +7,9 @@ export type DERequest = {
 	dslabel: string
 	/* Object containing two arrays of RNA seq count for DE analysis */
 	samplelst: any //{number[]; number[];}
-	/** Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset */
+	/** Minimum count per sample for edgeR's filterByExpr */
 	min_count: number
-	/** Minimum total read count required for each sample */
+	/** Minimum total count across samples for edgeR's filterByExpr */
 	min_total_count: number
 	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
 	cpm_cutoff: number
@@ -134,10 +134,6 @@ export type ExpressionInput = {
 	data_type: 'do_DE'
 	/** File containing raw gene counts for DE analysis */
 	input_file: string
-	/** Relative cpm cutoff for filtering a gene compared to all samples and genes in dataset */
-	min_count: number
-	/** Minimum total read count required for each sample */
-	min_total_count: number
 	/** Type of storage file: HDF5 or text. Text will be deprecated in the future */
 	storage_type: 'HDF5' | 'text'
 	/** Confounding variable1 for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. */
@@ -154,6 +150,12 @@ export type ExpressionInput = {
 	DE_method: 'wilcoxon' | 'limma' | 'edgeR'
 	/** Cutoff for when mds plot will be generated for edgeR and limma test */
 	mds_cutoff: number
+	/** Minimum count per sample for edgeR's filterByExpr */
+	min_count: number
+	/** Minimum total count across samples for edgeR's filterByExpr */
+	min_total_count: number
+	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
+	cpm_cutoff: number
 }
 
 /** Response when DERequest.preAnalysis === true. Returns per-group sample

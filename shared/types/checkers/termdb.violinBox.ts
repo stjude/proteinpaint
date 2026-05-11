@@ -2,6 +2,9 @@
 import { createValidate } from 'typia'
 import type { ViolinBoxRequest, ViolinBoxResponse } from '../src/routes/termdb.violinBox.ts'
 
+export { isBoxPlotResponse } from '../src/routes/termdb.violinBox.ts'
+export { isErrorResponse } from '../src/routes/termdb.violinBox.ts'
+export { isViolinResponse } from '../src/routes/termdb.violinBox.ts'
 export { violinBoxPayload } from '../src/routes/termdb.violinBox.ts'
 
 export const validViolinBoxRequest = createValidate<ViolinBoxRequest>()

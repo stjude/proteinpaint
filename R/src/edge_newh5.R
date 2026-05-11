@@ -1,14 +1,40 @@
 # Test syntax: cat ~/sjpp/test.txt | time Rscript edge.R
 
+# Memory probe: returns peak MB used since the last call (gc reset = TRUE
+# captures the high-water mark, then resets the counter). gc(full=TRUE) forces
+# a full collection so freed objects from rm() are accounted for. Each call
+# costs a few ms; negligible relative to the steps we wrap.
+#
+# We compute MB from the "max used" cell counts (Ncells row 1, Vcells row 2)
+# rather than indexing the "(Mb)" formatted columns, because the number and
+# layout of "(Mb)" columns varies across R versions (e.g. newer R adds a
+# "limit (Mb)" column). The "max used" column name and the Ncells/Vcells row
+# names are stable. Cell sizes (56 / 8 bytes) match 64-bit R conventions and
+# mirror the conversion used in dmrcate_full.R. Wrapped in tryCatch so any
+# unexpected gc() shape returns NA instead of crashing the analysis.
+mem_probe <- function() {
+  tryCatch(
+    {
+      g <- gc(verbose = FALSE, full = TRUE, reset = TRUE)
+      unname((g[1, "max used"] * 56 + g[2, "max used"] * 8) / 1048576)
+    },
+    error = function(e) NA_real_
+  )
+}
+invisible(mem_probe()) # establish a baseline before any work is timed
+
 # Load required packages
-suppressWarnings({
-  library(jsonlite)
-  library(rhdf5)
-  library(stringr)
-  library(readr)
-  suppressPackageStartupMessages(library(edgeR))
-  suppressPackageStartupMessages(library(dplyr))
+pkg_load_time <- system.time({
+  suppressWarnings({
+    library(jsonlite)
+    library(rhdf5)
+    library(stringr)
+    library(readr)
+    suppressPackageStartupMessages(library(edgeR))
+    suppressPackageStartupMessages(library(dplyr))
+  })
 })
+pkg_load_mem <- mem_probe()
 
 # Filter based on CPM
 filter_using_cpm <- function(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cutoff) {
@@ -28,6 +54,7 @@ read_json_time <- system.time({
   combined <- c("geneSymbol", cases, controls)
   cpm_cutoff <- input$cpm_cutoff
 })
+read_json_mem <- mem_probe()
 #cat("Time to read JSON: ", as.difftime(read_json_time, units = "secs")[3], " seconds\n")
 
 # Read counts data
@@ -85,6 +112,7 @@ read_counts_time <- system.time({
     stop("Unknown storage type")
   }
 })
+read_counts_mem <- mem_probe()
 #cat("Time to read counts data: ", as.difftime(read_counts_time, units = "secs")[3], " seconds\n")
 
 # Create conditions vector
@@ -94,18 +122,21 @@ conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls))
 dge_list_time <- system.time({
   y <- DGEList(counts = read_counts, group = conditions, genes = geneNames)
 })
+dge_list_mem <- mem_probe()
 #cat("Time to generate DGEList: ", as.difftime(dge_list_time, units = "secs")[3], " seconds\n")
 
 # Filter and normalize counts
 filter_time <- system.time({
   keep <- filterByExpr(y, min.count = input$min_count, min.total.count = input$min_total_count)
 })
+filter_mem <- mem_probe()
 #cat("Time to filter by expression: ", as.difftime(filter_time, unit = "secs")[3], " seconds\n")
 
 normalization_time <- system.time({
   y <- y[keep, keep.lib.sizes = FALSE]
   y <- normLibSizes(y) # Using TMM method for normalization
 })
+normalization_mem <- mem_probe()
 #cat("Normalization time: ", as.difftime(normalization_time, units = "secs")[3], " seconds\n")
 
 # Cutoffs for cpm, will add them as UI options later
@@ -154,6 +185,7 @@ if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { 
     plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
     # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
   })
+  mds_plot_mem <- mem_probe()
   #cat("mds plot time: ", as.difftime(mds_plot_time, units = "secs")[3], " seconds\n")
 }
 
@@ -173,6 +205,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     model_gen_time <- system.time({
       design <- model.matrix(~ conditions + conf1, data = y$samples)
     })
+    model_gen_mem <- mem_probe()
     #cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
   } else {
     # Check the type of confounding variable 2
@@ -185,6 +218,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     model_gen_time <- system.time({
       design <- model.matrix(~ conditions + conf1 + conf2, data = y$samples)
     })
+    model_gen_mem <- mem_probe()
     #cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
 
   }
@@ -205,6 +239,7 @@ if (DE_method == "edgeR") {
       })
     })
   })
+  fit_mem <- mem_probe()
   #cat("QL fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
   test_time <- system.time({
     suppressWarnings({
@@ -213,7 +248,8 @@ if (DE_method == "edgeR") {
       })
     })
   })
-  #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")    
+  test_mem <- mem_probe()
+  #cat("QL test time: ", as.difftime(test_time, units = "secs")[3], " seconds\n")
   
   # Saving QL fit image
   ql_plot_time <- system.time({
@@ -226,6 +262,7 @@ if (DE_method == "edgeR") {
     plotQLDisp(fit) # Plot the edgeR fit
     # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
   })
+  ql_plot_mem <- mem_probe()
   #cat("ql plot time: ", as.difftime(ql_plot_time, units = "secs")[3], " seconds\n")
   logfc <- et$table$logFC
   logcpm <- et$table$logCPM
@@ -252,6 +289,7 @@ if (DE_method == "edgeR") {
       })
     })
   })
+  voom_transformation_lmfit_mem <- mem_probe()
   #cat("voom transformation + limma fit time: ", as.difftime(voom_transformation_lmfit_time, units = "secs")[3], " seconds\n")
 
   # Saving mean-difference plot (aka MA plot)
@@ -272,6 +310,7 @@ if (DE_method == "edgeR") {
       })
     })
   })
+  empirical_smoothing_mem <- mem_probe()
   #cat("Empirical smoothing time: ", as.difftime(empirical_smoothing_time, units = "secs")[3], " seconds\n")
 
   # Time for selecting top genes
@@ -286,6 +325,7 @@ if (DE_method == "edgeR") {
       })
     })
   })
+  top_genes_selection_mem <- mem_probe()
   #cat("Time for selecting top genes: ", as.difftime(top_genes_selection_time, units = "secs")[3], " seconds\n")
 } else { # Should not happen
   stop(paste0("Unknown method:", DE_method))
@@ -298,6 +338,7 @@ final_data_generation_time <- system.time({
   names(output)[3] <- "original_p_value"
   names(output)[4] <- "adjusted_p_value"
 })
+final_data_generation_mem <- mem_probe()
 final_output <- c()
 final_output$gene_data <- output
 final_output$edgeR_ql_image_name <- fit_image_name
@@ -313,6 +354,52 @@ if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { 
   final_output$edgeR_mds_image_name <- mds_image_name
 }
 #cat("Time for generating final dataframe: ", as.difftime(final_data_generation_time, unit = "secs")[3], " seconds\n")
+
+# Per-stage elapsed times (seconds). Reported as part of the JSON so the
+# server can log them without parsing stderr. Use elapsed (index 3), not
+# user/system CPU time. Method-specific stages (edgeR vs limma) and
+# conditional stages (mds_plot, model_gen) are only included when they ran.
+elapsed <- function(t) unbox(unname(t["elapsed"]))
+timings <- list(
+  pkg_load = elapsed(pkg_load_time),
+  read_json = elapsed(read_json_time),
+  read_counts = elapsed(read_counts_time),
+  dge_list = elapsed(dge_list_time),
+  filter = elapsed(filter_time),
+  normalization = elapsed(normalization_time),
+  final_data = elapsed(final_data_generation_time)
+)
+if (exists("mds_plot_time")) timings$mds_plot <- elapsed(mds_plot_time)
+if (exists("model_gen_time")) timings$model_gen <- elapsed(model_gen_time)
+if (exists("fit_time")) timings$fit <- elapsed(fit_time)
+if (exists("test_time")) timings$test <- elapsed(test_time)
+if (exists("ql_plot_time")) timings$ql_plot <- elapsed(ql_plot_time)
+if (exists("voom_transformation_lmfit_time")) timings$voom_transformation_lmfit <- elapsed(voom_transformation_lmfit_time)
+if (exists("empirical_smoothing_time")) timings$empirical_smoothing <- elapsed(empirical_smoothing_time)
+if (exists("top_genes_selection_time")) timings$top_genes_selection <- elapsed(top_genes_selection_time)
+final_output$timings <- timings
+
+# Per-stage peak memory (MB). Each value is the high-water mark of total R
+# heap usage during that step (Ncells + Vcells, "max used" from gc()).
+mem <- function(m) unbox(round(m, 1))
+memory_mb <- list(
+  pkg_load = mem(pkg_load_mem),
+  read_json = mem(read_json_mem),
+  read_counts = mem(read_counts_mem),
+  dge_list = mem(dge_list_mem),
+  filter = mem(filter_mem),
+  normalization = mem(normalization_mem),
+  final_data = mem(final_data_generation_mem)
+)
+if (exists("mds_plot_mem")) memory_mb$mds_plot <- mem(mds_plot_mem)
+if (exists("model_gen_mem")) memory_mb$model_gen <- mem(model_gen_mem)
+if (exists("fit_mem")) memory_mb$fit <- mem(fit_mem)
+if (exists("test_mem")) memory_mb$test <- mem(test_mem)
+if (exists("ql_plot_mem")) memory_mb$ql_plot <- mem(ql_plot_mem)
+if (exists("voom_transformation_lmfit_mem")) memory_mb$voom_transformation_lmfit <- mem(voom_transformation_lmfit_mem)
+if (exists("empirical_smoothing_mem")) memory_mb$empirical_smoothing <- mem(empirical_smoothing_mem)
+if (exists("top_genes_selection_mem")) memory_mb$top_genes_selection <- mem(top_genes_selection_mem)
+final_output$memory_mb <- memory_mb
 
 # Output results
 toJSON(final_output, digits = NA, na = "string") # Setting digits = NA makes toJSON() use the max precision. na='string' causes any "not a number" to be reported as string. This from ?toJSON() documentation

@@ -1,9 +1,10 @@
+import type { TileSelection } from '../index.ts'
 import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
 	genome: string
 	dslabel: string
-	coordinates: [number, number]
+	tileSelection: TileSelection
 	classId: number
 	projectId: number
 	wsimage: string

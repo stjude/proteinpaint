@@ -59,7 +59,6 @@ function init({ genomes }) {
 
 			let refSamples: number[] = [], // reference samples, those that are not in termdb and only present in prebuilt scatter map
 				cohortSamples // cohort (or termdb) samples, those are annotated by terms
-			// coordTwData // getData() returned obj. only when sample coordinates are determined by TW. if created, this will be used for colorAndShapeSamples()
 
 			const terms: any = []
 			if (q.colorTW) terms.push(q.colorTW)
@@ -77,10 +76,14 @@ function init({ genomes }) {
 			if (q.coordTWs && q.coordTWs.length > 0) {
 				const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
 				cohortSamples = tmp[0]
-				// coordTwData = tmp[1]
 			} else {
 				// no coordinate terms. check prebuilt map
 				if (!q.plotName) throw new Error('Neither plot name or coordinates where provided')
+				if (typeof ds.cohort?.scatterplots?.get == 'function') {
+					// getter returns list of permitted plot. check against this list to ensure the requested plot is allowed
+					const allowed = ds.cohort.scatterplots.get(q.__protected__?.clientAuthResult)
+					if (!allowed?.find(i => i.name == q.plotName)) throw new Error('No permission to display plot')
+				}
 				if (!Array.isArray(ds.cohort?.scatterplots?.plots)) throw new Error('not supported')
 				const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 				if (!plot) throw new Error(`plot not found with plotName ${q.plotName}`)

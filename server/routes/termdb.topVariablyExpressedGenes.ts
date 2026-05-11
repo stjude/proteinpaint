@@ -1,12 +1,8 @@
 import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse, RouteApi } from '#types'
 import { termdbTopVariablyExpressedGenesPayload } from '#types/checkers'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
-import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
-import { makeFilter } from '#src/mds3.gdc.js'
-import { cachedFetch } from '#src/utils.js'
-import { joinUrl } from '#shared/joinUrl.js'
-import { formatElapsedTime } from '#shared/time.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
+import { mayLog } from '#src/helpers.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -32,13 +28,13 @@ function init({ genomes }) {
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
+			q.ds = ds // helps ds getter
 
 			const t = Date.now()
 			result = {
 				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
 			}
-
-			console.log('compute top variably expressed genes:', formatElapsedTime(Date.now() - t))
+			mayLog('time for top variably expressed genes', Date.now() - t)
 		} catch (e: any) {
 			result = { status: e.status || 400, error: e.message || e }
 		}
@@ -47,17 +43,11 @@ function init({ genomes }) {
 	}
 }
 
-export function validate_query_TopVariablyExpressedGenes(ds: any, genome: any) {
+export function validate_query_TopVariablyExpressedGenes(ds: any) {
 	const q = ds.queries.topVariablyExpressedGenes
 	if (!q) return
-	if (q.src == 'gdcapi') {
-		gdcValidateQuery(ds, genome)
-	} else if (q.src == 'native') {
-		nativeValidateQuery(ds)
-	} else {
-		throw 'unknown topVariablyExpressedGenes.src'
-	}
-	// added getter: q.getGenes()
+	if (typeof q.getGenes == 'function') return // ds-supplied
+	nativeValidateQuery(ds)
 }
 
 function nativeValidateQuery(ds: any) {
@@ -103,21 +93,7 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 			id: 'filter_extreme_values',
 			label: 'Filter Extreme Values',
 			type: 'boolean',
-			value: true,
-			options: [
-				{
-					id: 'min_count',
-					label: 'Min count',
-					type: 'number',
-					value: 10
-				},
-				{
-					id: 'min_total_count',
-					label: 'Min total count',
-					type: 'number',
-					value: 15
-				}
-			]
+			value: true
 		},
 		{
 			id: 'rank_type',
@@ -157,141 +133,19 @@ ds can optionally provide overrides, e.g. to account for different exp value met
 }
 
 async function computeGenes4nativeDs(q: TermdbTopVariablyExpressedGenesRequest, gE: any, samples: string[]) {
+	if (!['number', 'boolean'].includes(typeof q.filter_extreme_values) || q.filter_extreme_values === undefined) {
+		q.filter_extreme_values = false
+	}
 	const input_json = {
 		input_file: gE.file,
 		samples: samples.join(','),
-		filter_extreme_values: q.filter_extreme_values,
-		num_genes: q.maxGenes,
-		rank_type: q.rank_type?.type
+		filter_extreme_values:
+			typeof q.filter_extreme_values === 'number' ? Boolean(q.filter_extreme_values) : q.filter_extreme_values,
+		max_genes: q.maxGenes,
+		rank_type: q.rank_type?.type ?? 'var'
 	}
 
-	if (q.filter_extreme_values == 1) {
-		input_json['min_count'] = q.min_count
-		input_json['min_total_count'] = q.min_total_count
-	}
-
-	// Handle new-format H5 file
-	if (gE.newformat) {
-		input_json['newformat'] = true
-	}
-
-	const rust_output = await run_rust('topGeneByExpressionVariance', JSON.stringify(input_json))
-	const rust_output_list = rust_output.split('\n')
-
-	let output_json
-	for (const item of rust_output_list) {
-		if (item.includes('output_json:')) {
-			output_json = JSON.parse(item.replace('output_json:', ''))
-		} else {
-			console.log(item)
-		}
-	}
-	const varGenes = output_json.map(i => i.gene_symbol)
+	const python_output = await run_python('topVEgene.py', JSON.stringify(input_json))
+	const varGenes: string[] = typeof python_output === 'string' ? JSON.parse(python_output) : []
 	return varGenes
-}
-
-function gdcValidateQuery(ds: any, genome: any) {
-	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
-		if (serverconfig.features.gdcGenes) {
-			console.error(
-				'!!GDC!! using serverconfig.features.gdcGenes[] but not live api query. only use this on DEV and never on PROD!'
-			)
-			return serverconfig.features.gdcGenes as string[]
-		}
-
-		// TODO: generalize to any dataset
-		if (ds.label === 'GDC' && !ds.__gdc?.doneCaching) {
-			// disable when caching is incomplete (particularly cases with gene exp data); to prevent showing wrong data on client
-			throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-		}
-		const { host, headers } = ds.getHostHeaders(q)
-		try {
-			// cachedFetch will only cache a response if an external API URL is enabled in serverconfig.features.extApiCache
-			const response = await cachedFetch(
-				joinUrl(host.rest, '/gene_expression/gene_selection'),
-				{
-					method: 'POST',
-					headers,
-					body: getGeneSelectionArg(q)
-				},
-				{
-					// noCache: true, // !!! for testing only !!!
-					getErrMessage: response => {
-						// TODO: may detect empty response or response body beforehand in utils:cachedFetch()
-						const body = response?.body || response
-						// no error message if there is a gene_selection array in the response payload
-						return Array.isArray(body?.gene_selection) ? '' : body?.message || body?.error || JSON.stringify(body)
-					}
-				}
-			)
-
-			const re = response.body
-			// {"gene_selection":[{"gene_id":"ENSG00000141510","log2_uqfpkm_median":3.103430497010492,"log2_uqfpkm_stddev":0.8692021350485105,"symbol":"TP53"}, ... ]}
-
-			const genes = [] as string[]
-			if (!Array.isArray(re.gene_selection)) {
-				throw 're.gene_selection[] is not array: ' + JSON.stringify(re)
-			}
-			for (const i of re.gene_selection) {
-				if (i.gene_id && typeof i.gene_id == 'string') {
-					// is ensg, convert to symbol
-					const t = genome.genedb.getNameByAlias.get(i.gene_id)
-					if (t) genes.push(t.name) // ensg
-				} else if (i.symbol && typeof i.symbol == 'string') {
-					genes.push(i.symbol)
-				} else {
-					throw 'one of re.gene_selection[] is missing both gene_id and symbol'
-				}
-			}
-			return genes
-		} catch (e: any) {
-			console.error(e.stack || e)
-			throw e
-		}
-	}
-
-	function getGeneSelectionArg(q: TermdbTopVariablyExpressedGenesRequest) {
-		const arg: any = {
-			// add any to avoid tsc err
-			case_filters: makeFilter(q),
-			selection_size: q.maxGenes,
-			min_median_log2_uqfpkm: q.min_median_log2_uqfpkm
-		}
-
-		if (q.geneSet) {
-			if (q.geneSet.type == 'all') {
-				arg.gene_type = 'protein_coding'
-			} else if (q.geneSet.type == 'custom' || q.geneSet.type == 'msigdb') {
-				if (!Array.isArray(q.geneSet.geneList)) throw 'q.geneSet.geneList is not array'
-				arg.gene_ids = map2ensg(q.geneSet.geneList, genome)
-				if (arg.gene_ids.length == 0) throw 'no valid genes from custom gene set'
-			} else {
-				throw 'unknown q.geneSet.type'
-			}
-		} else {
-			arg.gene_type = 'protein_coding'
-		}
-
-		return arg
-	}
-}
-
-function map2ensg(lst: string[], genome: any) {
-	const ensg: string[] = []
-	for (const name of lst) {
-		if (name.startsWith('ENSG') && name.length == 15) {
-			ensg.push(name)
-			continue
-		}
-		const tmp: any = genome.genedb.getAliasByName.all(name)
-		if (Array.isArray(tmp)) {
-			for (const a of tmp) {
-				if (a.alias.startsWith('ENSG')) {
-					ensg.push(a.alias)
-					break
-				}
-			}
-		}
-	}
-	return ensg
 }

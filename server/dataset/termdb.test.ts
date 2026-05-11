@@ -438,9 +438,7 @@ export default function (): Mds3 {
 					unit: 'M-value'
 				}
 			},
-			topVariablyExpressedGenes: {
-				src: 'native'
-			},
+			topVariablyExpressedGenes: {},
 			rnaseqGeneCount: {
 				storage_type: 'HDF5',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5'
