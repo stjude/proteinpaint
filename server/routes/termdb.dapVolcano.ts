@@ -30,14 +30,22 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome'
 			const [ds] = get_ds_tdb(genome, q)
 
-			const cohortConfig = ds.queries?.proteome?.organisms?.[q.organism]?.assays?.[q.assay]?.cohorts?.[q.cohort]
-			if (!cohortConfig?.DAPfile) throw 'DAP file not configured for this cohort'
+			const proteomeConfig = ds.queries?.proteome
+			if (!proteomeConfig) throw 'proteome not configured for this dataset'
 
-			const organismConfig = ds.queries.proteome.organisms[q.organism]
-			const assayConfig = organismConfig.assays[q.assay]
+			const organismConfig = proteomeConfig.organisms?.[q.organism]
+			if (!organismConfig) throw 'invalid organism'
+
+			const assayConfig = organismConfig.assays?.[q.assay]
+			if (!assayConfig) throw 'invalid assay'
+
+			const cohortConfig = assayConfig.cohorts?.[q.cohort]
+			if (!cohortConfig) throw 'invalid cohort'
+			if (!cohortConfig.DAPfile) throw 'DAP file not configured for this cohort'
+
 			const organismFilter = [{ columnIdx: organismConfig.columnIdx, columnValue: organismConfig.columnValue }]
 			const assayFilter = [{ columnIdx: assayConfig.columnIdx, columnValue: assayConfig.columnValue }]
-			const db = ds.queries.proteome.db
+			const db = proteomeConfig.db
 			const controlCount = countDistinctSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.controlFilter])
 			const caseCount = countDistinctSamples(db, [...organismFilter, ...assayFilter, ...cohortConfig.caseFilter])
 
