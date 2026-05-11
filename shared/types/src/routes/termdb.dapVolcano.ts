@@ -20,7 +20,9 @@ export type DapEntry = DataEntry & {
 export type DapVolcanoResponse =
 	| ErrorResponse
 	| {
-			data: VolcanoData<DapEntry>
+			sample_size1: number
+			sample_size2: number
+			data?: VolcanoData<DapEntry>
 	  }
 
 export const dapVolcanoPayload: RoutePayload = {
