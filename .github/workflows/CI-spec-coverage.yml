@@ -97,6 +97,8 @@ jobs:
         run: |
           cd shared/types
           npm run build
+          cd ../utils
+          npm run prepack
           cd ../../server
           cp ../container/ci/serverconfig.json .
           npm run spec:coverage

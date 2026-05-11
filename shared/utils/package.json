@@ -3,29 +3,37 @@
   "version": "2.187.0",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
-  "main": "src/index.js",
+  "main": "dist/src/index.js",
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
     "#types/*": "@sjcrh/proteinpaint-types/*",
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
+  "//": "all export aliases are meant for runtime code, except for devTs-aliased subpaths",
   "exports": {
-    ".": "./src/index.js",
-    "./*.ts": "./src/*.ts_SHOULD_BE_js",
-    "./*": "./src/*"
+    ".": "./dist/src/index.js",
+    "./*.ts": "./*.ts_SHOULD_BE_js",
+    "./constants/*.ts": "./dist/constants/*.ts_SHOULD_BE_js",
+    "./*": "./dist/src/*",
+    "./constants/*": "./dist/constants/*",
+    "./devTs": "./devTs.ts",
+    "./devTs/*": "./constants/*"
   },
   "scripts": {
-    "build": "esbuild src/*.ts --platform=node --outdir=src/ --format=esm && prettier --no-semi --use-tabs --write src/*.js",
-    "prepack": "npm run build",
+    "build": "esbuild src/*.* constants/*.ts --platform=node --outdir=dist --format=esm --sourcemap",
+    "prepack": "rm -rf dist && npm run build && tsc --sourcemap --skipLibCheck --preserveWatchOutput",
+    "dev": "rm -rf dist && concurrently 'npm run build -- --watch' 'npx tsc --watch --skipLibCheck --preserveWatchOutput'",
     "pretest": "mkdir -p test && node emitImports > test/internals-test.ts",
-    "spec:coverage": "node test/relevant.js",
     "test": "tsx test/internals-test.ts",
-    "test-x": "ls src/test/*.spec* | xargs -I % bash -c '{ tsx %; sleep 0.001; }'"
+    "test-x": "ls src/test/*.spec* | xargs -I % bash -c '{ tsx %; sleep 0.001; }'",
+    "spec:coverage": "node test/relevant.js"
   },
   "author": "",
   "license": "ISC",
   "files": [
-    "src/*.js"
+  	"constants",
+  	"devTs.ts",
+  	"dist"
   ],
   "devDependencies": {
     "esbuild": "^0.25.9"

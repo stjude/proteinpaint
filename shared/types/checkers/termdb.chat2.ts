@@ -3,6 +3,7 @@ import { createValidate } from 'typia'
 import type { ChatRequest, ChatResponse } from '../src/routes/termdb.chat2.ts'
 
 export { ChatPayload } from '../src/routes/termdb.chat2.ts'
+export { createAmbiguousPoints } from '../src/routes/termdb.chat2.ts'
 
 export const validChatRequest = createValidate<ChatRequest>()
 export const validChatResponse = createValidate<ChatResponse>()

@@ -1,4 +1,7 @@
-// please list in alphanumeric order
+// IMPORTANT: import .js extension, even though the actual code files are .ts
+export * from '../constants/AiHisto.js'
+
+// please list in alphanumeric order for readability
 export * from './aiHisto.js'
 export * from './bulk.js'
 export * from './clustering.js'
@@ -18,7 +21,6 @@ export * from './termdb.usecase.js'
 export * from './terms.js'
 export * from './time.js'
 export * from './tree.js'
-// do `npm run esm` to generate .js file from .ts file
 export * from './urljson.js'
 export * from './vcf.ann.js'
 export * from './vcf.csq.js'

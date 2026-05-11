@@ -16,7 +16,7 @@ import {
 	FeaturePrefixes,
 	checkSelectionType,
 	createFeatureID
-} from '#types/checkers'
+} from '#shared'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'

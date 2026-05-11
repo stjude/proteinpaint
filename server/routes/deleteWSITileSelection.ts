@@ -1,7 +1,7 @@
-import { type Mds3, type RouteApi } from '#types'
-import { deleteWSITileSelectionPayload, checkSelectionType, SelectionPrefixes, FlagStatus } from '#types/checkers'
+import { deleteWSITileSelectionPayload } from '#types/checkers'
+import { checkSelectionType, SelectionPrefixes, FlagStatus } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
-import type { DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
+import type { Mds3, RouteApi, DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
 import type Database from 'better-sqlite3'
 
 export const api: RouteApi = {

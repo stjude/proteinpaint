@@ -63,6 +63,7 @@ public/coverage/**/*
 !public/coverage/commitRef
 public/coverage/.*
 
+# NOTE: there is a separate `shared/utils/.gitignore` file
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
 /utils/vcf2genesamplematrix/bin.smat.js

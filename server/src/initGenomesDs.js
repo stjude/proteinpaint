@@ -13,7 +13,7 @@ import { clinsig } from '../dataset/clinvar.ts'
 // will pass below as argument to mds3_init()
 import { mayMapRefseq2ensembl, flattenCaseByFields, may_add_readdepth, mapGenes2isoforms } from './mds3.gdc.js'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
-import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types/checkers'
+import { SelectionPrefixes, createSelectionID, FlagStatus } from '#shared'
 import { mayLog } from './helpers.ts'
 
 const dsHelpers = {
