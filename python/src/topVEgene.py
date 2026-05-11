@@ -18,56 +18,59 @@ import pandas as pd
 # echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"max_genes":10, "rank_type":"var"}' 
 #  | /Users/jsimps98/anaconda3/envs/pp_env/bin/python python/src/topVEgene.py
 
-def input_data_hdf5(filename: str, sample_list: list) -> pd.DataFrame:
+def create_gene_variance_list(filename: str, sample_list: list, filter_extreme_values: bool, rank_type: str, max_genes: int) -> pd.DataFrame:
     sample_list = [str(s) for s in sample_list]
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
-        matrix = np.array(hdf_data["matrix"])
-
-    n_genes, n_samples = len(gene_names), len(all_samples)
-    if matrix.ndim != 2:
-        raise ValueError("Expected 2D matrix for expression matrix")
-    if matrix.shape[0] != n_genes:
-        raise ValueError(f"Matrix rows ({matrix.shape[0]}) must equal number of genes ({n_genes})")
-    if matrix.shape[1] != n_samples:
-        raise ValueError(f"Matrix columns ({matrix.shape[1]}) must equal number of samples ({n_samples})")
-
-    df = pd.DataFrame(matrix, index=gene_names, columns=all_samples)
-    if not set(sample_list).issubset(set(all_samples)):
-        missing_samples = set(sample_list) - set(all_samples)
-        raise ValueError(f"Sample(s) {missing_samples} not found in HDF5 file")
-    return df[sample_list]
-
+        matrix = hdf_data["matrix"]
+        if not set(sample_list).issubset(set(all_samples)):
+            missing_samples = set(sample_list) - set(all_samples)
+            raise ValueError(f"Sample(s) {missing_samples} not found in HDF5 file")
+        
+        n_genes, n_samples = len(gene_names), len(all_samples)
+        if matrix.ndim != 2:
+            raise ValueError("Expected 2D matrix for expression matrix")
+        if matrix.shape[0] != n_genes:
+            raise ValueError(f"Matrix rows ({matrix.shape[0]}) must equal number of genes ({n_genes})")
+        if matrix.shape[1] != n_samples:
+            raise ValueError(f"Matrix columns ({matrix.shape[1]}) must equal number of samples ({n_samples})")
+        selected_genes=[]
+        
+        # Calculating one gene at a time to save on memory
+        for i in range(matrix.shape[0]):
+            # TODO should I enforce minimum sample list size?
+            gene_row=pd.Series(matrix[i], index=all_samples,name=gene_names[i]).loc[sample_list]
+            selected_genes.append(calculate_variance(gene_row, filter_extreme_values, rank_type, len(sample_list)))
+        gene_dict={gene:score for (gene, score) in selected_genes}
+        sorted_genes = sorted(gene_dict, key=gene_dict.get, reverse=True)
+        return sorted_genes[:max_genes]
 
 def calculate_variance(
-    input_matrix: pd.DataFrame,
+    gene_row: pd.Series,
     filter_extreme_values: bool,
     rank_type: str,
-    max_genes: int = 100,
-) -> list[str]:
-    #TODO stop at 1000 and change to max genes
-    max_genes=np.clip(max_genes, 1, 1000)
+    original_sample_size: int
+) -> tuple[str, float | None]:
     # Minimum required percentage of samples after dropout from low expression
     MIN_PROP = 0.7
     #using 10% based on https://pmc.ncbi.nlm.nih.gov/articles/PMC4983432/, other discussions/papers have suggested cutoff is mostly arbitrary
-    cutoffs = (input_matrix.quantile(0.1, axis=1)) if filter_extreme_values else pd.Series(0.0, index=input_matrix.index)
+    cutoffs = (gene_row.quantile(0.1)) if filter_extreme_values else pd.Series(0.0, index=gene_row.index)
     #Finding genes that have enough samples with expression values above the cutoff and high enough expression
-    gene_sample_count = input_matrix.ge(cutoffs, axis=0).sum(axis=1)
-    # Minimum sample size based on 70% of total samples
-    min_sample_size = MIN_PROP * input_matrix.shape[1]
-    valid_genes = gene_sample_count >= (min_sample_size)
-    filtered_matrix = input_matrix.loc[valid_genes]
-
-    if rank_type == "var":
-        scores = filtered_matrix.var(axis=1)
+    gene_sample_count = gene_row.ge(cutoffs).sum()
+    # Minimum sample size based on 70% of user-provided sample list size after dropout from low expression
+    min_sample_size = MIN_PROP * original_sample_size
+    if gene_sample_count >= min_sample_size:
+        if rank_type == "var":
+            score = gene_row.var()
+        else:
+            fq1 = gene_row.quantile(0.25)
+            fq3 = gene_row.quantile(0.75)
+            score = fq3 - fq1
+        return (gene_row.name, score)
     else:
-        fq1 = filtered_matrix.quantile(0.25, axis=1)
-        fq3 = filtered_matrix.quantile(0.75, axis=1)
-        scores = fq3 - fq1
+        return (gene_row.name, None)
 
-    scores = scores[scores >= 0].dropna()
-    return scores.nlargest(max_genes).index.tolist()
 
 def _read_stdin_payload() -> str:
     payload = sys.stdin.read().strip()
@@ -125,4 +128,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    print(create_gene_variance_list("/Users/jsimps98/data/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", ["2646", "2660", "2898", "3150", "3178", "3206", "3220", "3346", "3360", "1", "3", "7", "21", "22", "23", "37", "38", "39"], True, "var", 16))
+    # raise SystemExit(main())
