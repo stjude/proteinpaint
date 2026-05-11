@@ -3,20 +3,20 @@
   "version": "2.187.0",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
-  "main": "src/index.js",
+  "main": "dist/src/index.js",
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
     "#types/*": "@sjcrh/proteinpaint-types/*",
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
-  "//": "/constants",
+  "//": "all export aliases are meant for runtime code, except for devTs-aliased subpaths",
   "exports": {
     ".": "./dist/src/index.js",
     "./*.ts": "./*.ts_SHOULD_BE_js",
-    "./*": "./dist/src/*",
     "./constants/*.ts": "./dist/constants/*.ts_SHOULD_BE_js",
+    "./*": "./dist/src/*",
     "./constants/*": "./dist/constants/*",
-    "./devTs": "./constants/index.ts",
+    "./devTs": "./devTs.ts",
     "./devTs/*": "./constants/*"
   },
   "scripts": {
@@ -31,6 +31,8 @@
   "author": "",
   "license": "ISC",
   "files": [
+  	"constants",
+  	"devTs.ts",
   	"dist"
   ],
   "devDependencies": {
