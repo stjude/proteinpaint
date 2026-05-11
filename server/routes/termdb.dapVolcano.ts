@@ -62,12 +62,14 @@ function init({ genomes }) {
 			for (let i = 1; i < lines.length; i++) {
 				const parts = lines[i].split('\t')
 				if (parts.length < 4) continue
+				const fc = Number(parts[2])
+				if (!Number.isFinite(fc)) continue
 				const pValue = Number(parts[3])
 				if (!Number.isFinite(pValue)) continue
 				rustRows.push({
 					gene_name: parts[0],
 					gene: parts[1],
-					fold_change: Number(parts[2]),
+					fold_change: fc,
 					original_p_value: pValue,
 					adjusted_p_value: pValue
 				})
