@@ -388,6 +388,7 @@ function buildFilterClause(filters: { columnIdx: number; columnValue: string | n
 }
 
 export function countDistinctSamples(db: any, filters: { columnIdx: number; columnValue: string | number }[]) {
+	if (!filters?.length) throw 'countDistinctSamples: filters must not be empty'
 	const { conditions, params } = buildFilterClause(filters)
 	const row = db
 		.prepare(`SELECT COUNT(DISTINCT sample) as cnt FROM proteome_abundance WHERE ${conditions.join(' AND ')}`)
