@@ -213,7 +213,8 @@ export async function run_chat_pipeline(
 			llm,
 			genes_list,
 			dataset_json,
-			ds
+			ds,
+			genome
 		)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
 		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {

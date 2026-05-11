@@ -447,7 +447,7 @@ Query: ${user_prompt}
 			if (!genes_list || !dataset_json || !ds || !dbPath) {
 				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and dbPath to be provided'
 			}
-			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath)
+			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				return filterTvs as { type: 'text'; text: string }
 			}
@@ -807,7 +807,7 @@ Query: ${user_prompt}
 			}
 		}
 	} else if (variableType === 'dictionary') {
-		return await hierarchicalDictionary(user_prompt, llm, ds, dbPath, genes_list, dataset_json)
+		return await hierarchicalDictionary(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
 	} else {
 		throw new Error(`Unexpected variableType "${variableType}" returned by hierarchical classifier`)
 	}
@@ -819,7 +819,8 @@ export async function hierarchicalDictionary(
 	ds: any,
 	dbPath: string,
 	genes_list: string[],
-	dataset_json: any
+	dataset_json: any,
+	genome: any
 ): Promise<HierarchicalScaffold | MsgToUser> {
 	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of dictionary (clinical) variables and an optional cohort filter from a user's natural language question.
 
@@ -894,7 +895,7 @@ Query: ${user_prompt}
 		}
 	} else {
 		if (parsed.filter) {
-			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath)
+			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				throw new Error(filterTvs.text)
 			}
@@ -957,7 +958,8 @@ async function generateFilterTerm(
 	genes_list: string[],
 	dataset_json: any,
 	ds: any,
-	dbPath: string
+	dbPath: string,
+	genome: any
 ): Promise<any | MsgToUser> {
 	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
 	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
@@ -966,7 +968,7 @@ async function generateFilterTerm(
 	const filterEntities: Entity[] = []
 	for (const leaf of leafPhrases) {
 		mayLog('generateFilterTerm evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in filterTw && filterTw.type === 'text') {
 			return filterTw as MsgToUser
 		}

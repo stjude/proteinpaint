@@ -161,7 +161,7 @@ Response:`
 		mayLog('classifyGeneSetDataType: unexpected dataType in LLM response:', result.dataType)
 		result.dataType = 'ambiguous'
 	}
-
+	console.log('classifyGeneSetDataType: LLM response parsed successfully:', result)
 	return result
 }
 

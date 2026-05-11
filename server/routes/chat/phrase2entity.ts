@@ -92,7 +92,9 @@ async function validateNonDictionaryTypes(
 	genes_list: string[],
 	dataset_json: any,
 	genome: any
-): Promise<MsgToUser | { geneFeatures: GeneDataTypeResult } | { geneSetFeatures: GeneSetDataTypeResult } | null> {
+): Promise<
+	MsgToUser | { geneFeatures: GeneDataTypeResult } | { geneSetFeatures: GeneSetDataTypeResult } | null | undefined
+> {
 	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
 	const msg: MsgToUser = { type: 'text', text: '' }
 	if (relevant_genes.length > 0) {
@@ -137,8 +139,7 @@ async function validateNonDictionaryTypes(
 			// This function uses an LLM to classify which specific gene-set features (e.g. ssGSEA enrichment score, gene variants of pathway members) are relevant to the user prompt.
 			phrase,
 			llm,
-			relevant_genesets,
-			dataset_json
+			relevant_genesets
 		)) as GeneSetDataTypeResult | MsgToUser
 		mayLog('classifyGeneSetDataTypePhrase result:', genesetDataTypeMessage)
 		// TODO: surface ssGSEA vs geneVariant downstream once consumers know how to handle genesetFeatures.
@@ -166,10 +167,8 @@ async function validateNonDictionaryTypes(
 async function classifyGeneSetDataTypePhrase(
 	phrase: string,
 	llm: LlmConfig,
-	genesets: string[],
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	dataset_json: any
-): Promise<GeneSetDataTypeResult | string | null> {
+	genesets: string[]
+): Promise<GeneSetDataTypeResult | MsgToUser> {
 	// Need to add string search based heuristics here similar to validateNonDictionaryTypes for certain keywords that may indicate ssGSEA vs geneVariant to reduce unnecessary LLM calls, but for now we will just call the LLM directly to classify the geneset data type based on the user prompt.
 	return await classifyGeneSetDataType(phrase, llm, genesets)
 }
