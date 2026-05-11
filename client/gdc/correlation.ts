@@ -35,6 +35,7 @@ export async function init(
 ): Promise<{ update: (updateArg: UpdateArg) => Promise<void> }> {
 	const useGenome = arg.genome || 'hg38'
 	const useDslabel = arg.dslabel || 'GDC'
+	if (!genomes[useGenome]) throw useGenome + ' missing'
 	const massApi = await appInit({
 		//debug: arg.debugmode, // is debug accepted?
 		genome: genomes[useGenome],
