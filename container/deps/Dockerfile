@@ -26,7 +26,7 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	libgsl0-dev \
 	libhdf5-dev \
 	liblzma-dev \
-    libdatrie1=0.2.14-1 \
+    libdatrie1=0.2.14-1+b1 \
 	libncurses5-dev \
 	libperl-dev \
 	libssl-dev \
