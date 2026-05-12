@@ -30,24 +30,26 @@ def create_gene_variance_list(
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
 
-        sample_to_idx = {sample: index for index, sample in enumerate(all_samples) if sample in sample_list}
-        missing = [s for s in sample_list if s not in sample_to_idx]
-        if missing:
+        sample_indexes = [index for index, sample in enumerate(all_samples) if sample in sample_list]
+        if len(sample_indexes) < len(sample_list):
+            missing=set(sample_list) - set(all_samples)
             raise ValueError(f"Sample(s) {set(missing)} not found in HDF5 file")
 
-        selected_cols = [sample_to_idx[s] for s in sample_list]
 
         selected_genes = []
         for i in range(matrix.shape[0]):
-            expression_values = np.asarray(matrix[i, selected_cols], dtype=float)
-            gene_info: tuple[str, float | None] = calculate_variance_fast(
+            expression_values = np.asarray(matrix[i, sample_indexes], dtype=float)
+            gene_info: tuple[float | None,str ] = calculate_variance_fast(
                 gene_names[i], expression_values, filter_extreme_values, rank_type, len(sample_list)
             )
-            if isinstance(gene_info[1], float | int):
-                selected_genes.append(gene_info)
 
-        top_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[1])
-        return [gene for gene, _ in top_genes]
+            if isinstance(gene_info[0], float | int):
+                heapq.heappush(selected_genes, gene_info)
+                if len(selected_genes) > max_genes:
+                    heapq.heappop(selected_genes)
+
+        top_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])
+        return [gene for _, gene in top_genes]
 
 def calculate_variance_fast(
     gene_name: str,
@@ -55,7 +57,7 @@ def calculate_variance_fast(
     filter_extreme_values: bool,
     rank_type: str,
     original_sample_size: int
-) -> tuple[str, float | None]:
+) -> tuple[float | None,str ]:
     # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
     cutoff = float(np.quantile(expression_values, 0.1)) if filter_extreme_values else 0.0
@@ -63,7 +65,7 @@ def calculate_variance_fast(
     min_sample_size = MIN_PROP * original_sample_size
 
     if gene_sample_count < min_sample_size:
-        return (gene_name, None)
+        return (None, gene_name)
 
     if rank_type == "var":
         score = float(np.var(expression_values))
@@ -73,7 +75,7 @@ def calculate_variance_fast(
     else:
         raise ValueError('rank_type must be either "iqr" or "var"')
 
-    return (gene_name, score)
+    return (score, gene_name)
 
 
 def _read_stdin_payload() -> str:
