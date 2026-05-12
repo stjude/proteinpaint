@@ -17,7 +17,7 @@ import type {
 } from './scaffoldTypes.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagent.ts'
-import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
 import { getTermObj, type Value } from './entity2termObj.ts'
 import { resolveToTvs } from './entity2twTvs.ts'
