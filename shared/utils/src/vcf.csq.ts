@@ -1,4 +1,4 @@
-import { vepinfo } from './common.js'
+import { vepinfo, dtsnvindel, mclassnonstandard } from './common.js'
 /*
 parse csq field from a variant line, not header
 CSQ header must have already been parsed
@@ -60,7 +60,7 @@ export function parse_CSQ(str, header, m) {
 	for (const thisannotation of str.split(',')) {
 		const lst = thisannotation.replace(/&/g, ',').split('|')
 
-		const o = {}
+		const o: Record<string, any> = {}
 
 		for (let i = 0; i < header.length; i++) {
 			if (lst[i]) {
@@ -70,7 +70,7 @@ export function parse_CSQ(str, header, m) {
 		if (!o.Allele) {
 			continue
 		}
-		let allele = null
+		let allele: any = null
 
 		//////////////////////////////////////
 		// NOTE

@@ -73,7 +73,7 @@ export function parseheader(line, flag) {
 export function parseline(i, line, flag) {
 	if (line == '' || line[0] == '#') return
 	const lst = line.split('\t')
-	const m = {}
+	const m: Record<string, any> = {}
 	for (let j = 0; j < flag.truncation.header.length; j++) {
 		m[flag.truncation.header[j]] = lst[j]
 	}

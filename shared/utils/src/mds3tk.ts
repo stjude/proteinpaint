@@ -24,7 +24,7 @@ output: sorted array. each element: [ class/dt, count of m ]
 */
 export function summarize_mclass(mlst) {
 	const m2c = new Map() // k: mclass, v: {}
-	const cnvs = []
+	const cnvs: any[] = []
 	for (const m of mlst) {
 		if (m.dt == dtcnv) {
 			cnvs.push(m)
