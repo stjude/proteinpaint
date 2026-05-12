@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Enabled tooltip hover, GSEA support, and nicer group labels in GDC SCCT
+
 
 ## 2.188.1
 
