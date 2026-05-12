@@ -845,7 +845,7 @@ export type SingleCellSamples = {
 
 type SingleCellDataBase = {
 	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
-	sameLegend: boolean
+	sameLegend?: boolean
 	/** name of ref cells? */
 	refName?: string
 	/** dynamically added getter */

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+# Unreleased
+Fixes:
+- Make sameLegend optional
+
+
 ## 2.188.0
 
 Features:
