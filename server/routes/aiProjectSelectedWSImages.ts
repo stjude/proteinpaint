@@ -253,7 +253,6 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 				return {
 					zoomCoordinates: coords,
 					class: r.label ?? '',
-					status: r.status,
 					flag: r.flagged === undefined ? FlagStatus.Normal : (r.flagged as FlagStatusValues),
 					timestamp: r.timestamp,
 					id: createSelectionID(SelectionPrefixes.Annotation, coords)
