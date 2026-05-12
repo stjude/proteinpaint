@@ -55,7 +55,6 @@ export function parse_ANN(str, header, m) {
 			o._mname = o['HGVS.p']
 		} else if (o['HGVS.c']) {
 			o._mname = o['HGVS.c']
-		} else {
 		}
 	}
 	return true

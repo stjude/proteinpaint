@@ -116,7 +116,7 @@ export function parseline(i, line, flag) {
 	m.class = common.mclassdel
 	m.mname = 'DEL'
 	flag.good++
-	var n = flag.geneToUpper ? m.gene.toUpperCase() : m.gene
+	const n = flag.geneToUpper ? m.gene.toUpperCase() : m.gene
 	if (!(n in flag.data)) {
 		flag.data[n] = []
 	}

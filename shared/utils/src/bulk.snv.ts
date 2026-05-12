@@ -148,7 +148,7 @@ export function parseline(linei, line, flag) {
 		if (m.maf_tumor_v2 == '') {
 			// no value, do not parse
 		} else {
-			let v1 = Number.parseInt(m.maf_tumor_v1),
+			const v1 = Number.parseInt(m.maf_tumor_v1),
 				v2 = Number.parseInt(m.maf_tumor_v2)
 			if (Number.isNaN(v1) || Number.isNaN(v2)) {
 				flag.snv.badlines.push([linei, 'invalid maf_tumor mutant and/or total read count', lst])
@@ -164,7 +164,7 @@ export function parseline(linei, line, flag) {
 		if (m.maf_normal_v2 == '') {
 			// no value
 		} else {
-			let v1 = Number.parseInt(m.maf_normal_v1),
+			const v1 = Number.parseInt(m.maf_normal_v1),
 				v2 = Number.parseInt(m.maf_normal_v2)
 			if (Number.isNaN(v1) || Number.isNaN(v2)) {
 				flag.snv.badlines.push([linei, 'invalid maf_normal mutant and/or total read count', lst])

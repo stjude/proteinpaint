@@ -107,27 +107,22 @@ export async function processResponse(r) {
 */
 
 export async function processFormData(res) {
-	const decoder = new TextDecoder()
 	const data = {}
-	try {
-		const form = await res.formData()
-		// The key of each form entry is a string, and the value is either a string or a Blob.
-		// see https://developer.mozilla.org/en-US/docs/Web/API/FormData/entries
-		for (const [key, value] of form.entries()) {
-			if (value.type) {
-				// value is a Blob
-				data[key] = { headers: { 'content-type': value.type }, body: value }
-			} else {
-				// value is a string, assume to be application/x-jsonlines (one json encoded value per line)
-				// and convert into an array of json-decoded values
-				const body = !value ? [] : value.trim().split('\n').map(JSON.parse)
-				data[key] = { headers: { 'content-type': 'application/json' }, body }
-			}
+	const form = await res.formData()
+	// The key of each form entry is a string, and the value is either a string or a Blob.
+	// see https://developer.mozilla.org/en-US/docs/Web/API/FormData/entries
+	for (const [key, value] of form.entries()) {
+		if (value.type) {
+			// value is a Blob
+			data[key] = { headers: { 'content-type': value.type }, body: value }
+		} else {
+			// value is a string, assume to be application/x-jsonlines (one json encoded value per line)
+			// and convert into an array of json-decoded values
+			const body = !value ? [] : value.trim().split('\n').map(JSON.parse)
+			data[key] = { headers: { 'content-type': 'application/json' }, body }
 		}
-		return data
-	} catch (e) {
-		throw e
 	}
+	return data
 }
 
 async function processNDJSON_nestedKey(r) {
@@ -138,7 +133,7 @@ async function processNDJSON_nestedKey(r) {
 
 	let buffer = ''
 
-	while (true) {
+	for (;;) {
 		const { value, done } = await reader.read()
 		if (done) break
 
@@ -146,7 +141,7 @@ async function processNDJSON_nestedKey(r) {
 		buffer += value
 
 		// 3. Split by newline
-		let parts = buffer.split('\n')
+		const parts = buffer.split('\n')
 
 		// 4. Keep the last partial line in the buffer
 		buffer = parts.pop()
