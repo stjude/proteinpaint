@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 import sys
 import h5py
+import heapq
 import numpy as np
-import pandas as pd
 
 
 # This script selects the top most variant genes by calculating the variance/interquartile region for each gene across samples.
@@ -17,57 +17,63 @@ import pandas as pd
 
 # echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"max_genes":10, "rank_type":"var"}' | python python/src/topVEgene.py
 
-def create_gene_variance_list(filename: str, sample_list: list, filter_extreme_values: bool, rank_type: str, max_genes: int) -> list[str]:
+def create_gene_variance_list(
+    filename: str,
+    sample_list: list,
+    filter_extreme_values: bool,
+    rank_type: str,
+    max_genes: int
+) -> list[str]:
     sample_list = [str(s) for s in sample_list]
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
-        if not set(sample_list).issubset(set(all_samples)):
-            missing_samples = set(sample_list) - set(all_samples)
-            raise ValueError(f"Sample(s) {missing_samples} not found in HDF5 file")
-        
-        n_genes, n_samples = len(gene_names), len(all_samples)
-        if matrix.ndim != 2:
-            raise ValueError("Expected 2D matrix for expression matrix")
-        if matrix.shape[0] != n_genes:
-            raise ValueError(f"Matrix rows ({matrix.shape[0]}) must equal number of genes ({n_genes})")
-        if matrix.shape[1] != n_samples:
-            raise ValueError(f"Matrix columns ({matrix.shape[1]}) must equal number of samples ({n_samples})")
-        selected_genes=[]
-        
-        # Calculating one gene at a time to save on memory
-        for i in range(matrix.shape[0]):
-            gene_row=pd.Series(matrix[i], index=all_samples,name=gene_names[i]).loc[sample_list]
-            selected_genes.append(calculate_variance(gene_row, filter_extreme_values, rank_type, len(sample_list)))
-        gene_dict={gene:score for (gene, score) in selected_genes if score is not None}
-        sorted_genes = sorted(gene_dict, key=gene_dict.get, reverse=True)
-        return sorted_genes[:max_genes]
 
-def calculate_variance(
-    gene_row: pd.Series,
+        sample_to_idx = {sample: index for index, sample in enumerate(all_samples) if sample in sample_list}
+        missing = [s for s in sample_list if s not in sample_to_idx]
+        if missing:
+            raise ValueError(f"Sample(s) {set(missing)} not found in HDF5 file")
+
+        selected_cols = [sample_to_idx[s] for s in sample_list]
+
+        selected_genes = []
+        for i in range(matrix.shape[0]):
+            expression_values = np.asarray(matrix[i, selected_cols], dtype=float)
+            gene_info: tuple[str, float | None] = calculate_variance_fast(
+                gene_names[i], expression_values, filter_extreme_values, rank_type, len(sample_list)
+            )
+            if isinstance(gene_info[1], float | int):
+                selected_genes.append(gene_info)
+
+        top_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[1])
+        return [gene for gene, _ in top_genes]
+
+def calculate_variance_fast(
+    gene_name: str,
+    expression_values: np.ndarray,
     filter_extreme_values: bool,
     rank_type: str,
     original_sample_size: int
 ) -> tuple[str, float | None]:
-    # Minimum required percentage of samples after dropout from low expression
+    # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
-    #using 10% based on https://pmc.ncbi.nlm.nih.gov/articles/PMC4983432/, other discussions/papers have suggested cutoff is mostly arbitrary
-    cutoffs = gene_row.quantile(0.1) if filter_extreme_values else pd.Series(0.0, index=gene_row.index)
-    #Finding genes that have enough samples with expression values above the cutoff and high enough expression
-    gene_sample_count = gene_row.ge(cutoffs).sum()
-    # Minimum sample size based on 70% of user-provided sample list size after dropout from low expression
+    cutoff = float(np.quantile(expression_values, 0.1)) if filter_extreme_values else 0.0
+    gene_sample_count = int(np.sum(expression_values >= cutoff))
     min_sample_size = MIN_PROP * original_sample_size
-    if gene_sample_count >= min_sample_size:
-        if rank_type == "var":
-            score = gene_row.var()
-        else:
-            fq1 = gene_row.quantile(0.25)
-            fq3 = gene_row.quantile(0.75)
-            score = fq3 - fq1
-        return (gene_row.name, score)
+
+    if gene_sample_count < min_sample_size:
+        return (gene_name, None)
+
+    if rank_type == "var":
+        score = float(np.var(expression_values))
+    elif rank_type == "iqr":
+        q1, q3 = np.quantile(expression_values, [0.25, 0.75])
+        score = float(q3 - q1)
     else:
-        return (gene_row.name, None)
+        raise ValueError('rank_type must be either "iqr" or "var"')
+
+    return (gene_name, score)
 
 
 def _read_stdin_payload() -> str:
@@ -114,6 +120,8 @@ def main() -> int:
             raise ValueError('rank_type must be either "iqr" or "var"')
 
         result = create_gene_variance_list(input_file, samples, filter_extreme_values, rank_type, max_genes)
+        if not result:
+            raise ValueError("No genes passed the filtering criteria")
         print(json.dumps(result))
         return 0
     except Exception as e:
