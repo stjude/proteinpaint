@@ -48,7 +48,7 @@ export function deepEqual(x, y) {
 			return false
 		}
 
-		for (const prop in x) {
+		for (const prop of Object.keys(x)) {
 			if (Object.prototype.hasOwnProperty.call(y, prop)) {
 				if (!deepEqual(x[prop], y[prop])) return false
 			} else {
