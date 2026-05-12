@@ -125,6 +125,7 @@ let numActiveQueriesAcrossUsers = 0,
 async function getSampleData(q, ds, onlyChildren = false) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
+	onlyChildren = maySetOnlyChildren(q.terms, ds, onlyChildren)
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, onlyChildren)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
@@ -474,6 +475,30 @@ export function divideTerms(lst) {
 	return [dict, geneVariantTws, nonDict]
 }
 
+// set value of onlyChildren boolean
+// currently only perfomred if ds has necessary flag
+// TODO: apply to other datasets
+function maySetOnlyChildren(twLst, ds, onlyChildren) {
+	if (!ds.cohort.termdb.setOnlyChildren) return onlyChildren
+	const sampleTypeConfig = ds.cohort.termdb.sampleTypes
+	if (!sampleTypeConfig) 'sample type config missing'
+	if (Object.keys(sampleTypeConfig).length != 2) 'unexpected number of sample types in config'
+	const sampleTypes = getSampleTypes(twLst, ds)
+	const types = [...sampleTypes]
+	if (!types.length) {
+		throw 'no sample types found'
+	} else if (types.length > 1) {
+		// multiple sample types
+		// onlyChildren should be true
+		return true
+	} else {
+		// single sample type
+		// if sample type is child, then onlyChildren should be true
+		const type = types[0]
+		return Number.isInteger(sampleTypeConfig[type].parent_id)
+	}
+}
+
 /*
 input:
 
@@ -501,7 +526,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = fal
 	}
 	if (q.ds.cohort.termdb.dictionary?.get) {
 		// ds-supplied getter to retrieve dictionary term data
-		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers)
+		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers, onlyChildren)
 	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
 	 */
