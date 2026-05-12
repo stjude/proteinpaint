@@ -1,7 +1,7 @@
 import type { LlmConfig, GeneDataTypeResult, GeneSetDataTypeResult } from '#types'
 import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { classifyGeneDataTypePhrase } from './genedatatypenew.ts'
-import { classifyGeneSetDataType, GENE_SET_KEYWORDS } from './genesetdatatypeagent.ts'
+import { classifyGeneSetDataType, GENE_SET_KEYWORDS } from './genesetdatatype.ts'
 import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
