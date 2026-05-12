@@ -211,7 +211,6 @@ export class WSIViewerInteractions {
 						}
 					})
 					try {
-						//Delete top variably expressed genes
 						const defaultColor = 'black'
 						const tileSelection = tileSelections[currentIndex]
 						const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)

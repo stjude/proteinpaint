@@ -23,7 +23,7 @@ export const SelectionPrefixes = {
 } as const
 
 export type SelectionPrefixValues = (typeof SelectionPrefixes)[keyof typeof SelectionPrefixes]
-//Didn't add Deleted to FlagStatusMessages because deleted annotations dont exist and deleted predictons are filtered out prior
+//Didn't add Deleted to FlagStatusMessages because deleted annotations dont exist and deleted predictons are filtered out in /Users/jsimps98/dev/sjpp/proteinpaint/server/routes/aiProjectSelectedWSImages.ts line 119
 export const FlagStatusMessages = {
 	[FlagStatus.Normal]: '',
 	[FlagStatus.Skipped]: '(Skipped)',
