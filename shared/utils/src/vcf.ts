@@ -28,12 +28,12 @@ export function vcfparsemeta(lines) {
 
 	*/
 
-	let sample = [],
-		errlst = [],
-		info = {},
-		hasinfo = false,
-		format = {},
-		hasformat = false
+	let sample = []
+	const errlst = []
+	const info = {}
+	let hasinfo = false
+	const format = {}
+	let hasformat = false
 
 	for (const line of lines) {
 		if (!line.startsWith('#')) {

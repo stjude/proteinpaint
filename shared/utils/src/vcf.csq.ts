@@ -146,7 +146,6 @@ export function parse_CSQ(str, header, m) {
 			o._mname = o.HGVSc.substr(o.HGVSc.indexOf(':') + 1)
 		} else if (o.Existing_variation) {
 			o._name = o.Existing_variation
-		} else {
 		}
 	}
 	return true

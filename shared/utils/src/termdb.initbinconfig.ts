@@ -47,7 +47,7 @@ export default function initBinConfig(data, opts = {}) {
 		// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
 		const firstBinStop = Math.max(min + binSize, p5)
 		// round the bin values
-		let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
+		const [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
 		// generate the bin configuration
 		binConfig = {
 			type: 'regular-bin',
