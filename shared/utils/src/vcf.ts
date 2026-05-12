@@ -29,10 +29,10 @@ export function vcfparsemeta(lines) {
 	*/
 
 	let sample = []
-	const errlst = []
-	const info = {}
+	const errlst: string[] = []
+	const info: Record<string, any> = {}
 	let hasinfo = false
-	const format = {}
+	const format: Record<string, any> = {}
 	let hasformat = false
 
 	for (const line of lines) {
@@ -66,7 +66,7 @@ export function vcfparsemeta(lines) {
 		}
 	}
 
-	const sampleobjlst = []
+	const sampleobjlst: any[] = []
 	for (const samplename of sample) {
 		const a = { name: samplename }
 
@@ -153,7 +153,7 @@ export function vcfparseline(line, vcf) {
 
 	const refallele = lst[4 - 1]
 
-	const m = {
+	const m: Record<string, any> = {
 		vcf_ID: lst[3 - 1],
 		chr: (vcf.nochr ? 'chr' : '') + lst[1 - 1],
 		pos: rawpos - 1,
@@ -178,9 +178,9 @@ export function vcfparseline(line, vcf) {
 	}
 
 	// parse alt
-	const altinvalid = []
+	const altinvalid: string[] = []
 	for (const alt of lst[5 - 1].split(',')) {
-		const a = {
+		const a: Record<string, any> = {
 			ref: m.ref, // may be corrected just below!
 			allele: alt,
 			// 5078356.TATCAGAGAA.GGGAGGA keep original allele for matching with csq which hardcodes original allele
@@ -226,7 +226,7 @@ export function vcfparseline(line, vcf) {
 
 	// info
 	const tmp = lst[8 - 1] == '.' ? [] : dissect_INFO(lst[8 - 1])
-	let badinfokeys = []
+	let badinfokeys: string[] = []
 
 	if (vcf.info) {
 		badinfokeys = parse_INFO(tmp, m, vcf)
@@ -235,9 +235,9 @@ export function vcfparseline(line, vcf) {
 		m.info = tmp
 	}
 
-	const mlst = []
+	const mlst: any[] = []
 	for (const a of m.alleles) {
-		const m2 = {}
+		const m2: Record<string, any> = {}
 		for (const k in m) {
 			if (k != 'alleles') {
 				m2[k] = m[k]
@@ -330,7 +330,7 @@ function parse_FORMAT2(lst, m, vcf) {
 		note that this sample may not actually have this allele
 		*/
 		for (let i = 1; i < m.alleles.length; i++) {
-			const sobj = {}
+			const sobj: Record<string, any> = {}
 			if (vcf.samples && vcf.samples[sampleidx]) {
 				for (const k in vcf.samples[sampleidx]) {
 					sobj[k] = vcf.samples[sampleidx][k]
@@ -357,7 +357,7 @@ function parse_FORMAT2(lst, m, vcf) {
 				const splitter = value.indexOf('/') != -1 ? '/' : '|'
 				let gtsum = 0 // for calculating gtallref=true, old
 				let unknowngt = false // if any is '.', then won't calculate gtallref
-				const gtalleles = []
+				const gtalleles: string[] = []
 				for (const i of value.split(splitter)) {
 					if (i == '.') {
 						unknowngt = true
@@ -473,8 +473,8 @@ function tohash(s, hash) {
 	/*
 	parse INFO
 	*/
-	const h = {},
-		err = []
+	const h: Record<string, any> = {},
+		err: string[] = []
 	let prev = 0,
 		prevdoublequote = false,
 		k = null
@@ -515,7 +515,7 @@ function tohash(s, hash) {
 		}
 	}
 	if (k) {
-		h[k] = s.substring(prev, i)
+		h[k] = s.substring(prev)
 	}
 	if (h.ID) {
 		hash[h.ID] = h
@@ -534,7 +534,7 @@ function parse_INFO(tmp, m, vcf) {
 
 	*/
 
-	const badinfokeys = []
+	const badinfokeys: string[] = []
 
 	for (const key in tmp) {
 		if (vcf.info[key] == undefined) {

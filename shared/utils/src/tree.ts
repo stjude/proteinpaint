@@ -74,7 +74,7 @@ export function stratinput(lst, levels) {
 				size[thisv] = 0
 			}
 			if (!(thisv in nodes)) {
-				const n = {
+				const n: Record<string, any> = {
 					lst: []
 				}
 				if (lev.full) {
@@ -101,7 +101,7 @@ export function stratinput(lst, levels) {
 		}
 	}
 
-	const nlst = [{ id: hardcode_root, name: hardcode_root }]
+	const nlst: any[] = [{ id: hardcode_root, name: hardcode_root }]
 
 	for (const chid in lp) {
 		const paid = lp[chid]

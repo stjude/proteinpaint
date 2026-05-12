@@ -35,7 +35,7 @@ export function parseheader(line, flag) {
 export function parseline(i, line, flag, header) {
 	if (line == '' || line[0] == '#') return
 	const lst = line.split('\t')
-	const m = {}
+	const m: Record<string, any> = {}
 	const badlines = flag.svjson.badlines
 
 	for (let j = 0; j < header.length; j++) {
@@ -61,7 +61,7 @@ export function parseline(i, line, flag, header) {
 		for (const pair of json) {
 			if (pair.a && pair.a.name && pair.a.isoform) {
 				flag.good++
-				const m2 = {
+				const m2: Record<string, any> = {
 					dt: common.dtfusionrna,
 					class: common.mclassfusionrna,
 					isoform: pair.a.isoform,
@@ -79,7 +79,7 @@ export function parseline(i, line, flag, header) {
 			}
 			if (pair.b && pair.b.name && pair.b.isoform) {
 				flag.good++
-				const m2 = {
+				const m2: Record<string, any> = {
 					dt: common.dtfusionrna,
 					class: common.mclassfusionrna,
 					isoform: pair.b.isoform,
@@ -144,9 +144,9 @@ export function parseline(i, line, flag, header) {
 }
 
 function duplicate(lst) {
-	const d = []
+	const d: any[] = []
 	for (const pair of lst) {
-		const p = { a: {}, b: {} }
+		const p: Record<string, any> = { a: {}, b: {} }
 		for (const k in pair) {
 			if (k != 'a' && k != 'b') p[k] = pair[k]
 		}

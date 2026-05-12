@@ -1,4 +1,4 @@
-import { vepinfo } from './common.js'
+import { vepinfo, dtsnvindel, mclassnonstandard } from './common.js'
 
 export function parse_ANN(str, header, m) {
 	// snpEff
@@ -8,7 +8,7 @@ export function parse_ANN(str, header, m) {
 	for (const thisannotation of str.split(',')) {
 		const lst = thisannotation.replace(/&/g, ',').split('|')
 
-		const o = {}
+		const o: Record<string, any> = {}
 
 		for (let i = 0; i < header.length; i++) {
 			if (lst[i]) {
@@ -18,7 +18,7 @@ export function parse_ANN(str, header, m) {
 		if (!o.Allele) {
 			continue
 		}
-		let allele = null
+		let allele: any = null
 		for (const a of m.alleles) {
 			if (a.allele == o.Allele) {
 				allele = a

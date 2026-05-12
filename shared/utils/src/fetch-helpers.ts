@@ -2,6 +2,9 @@ import { hash } from './hash.js'
 import { encode } from './urljson.js'
 import { deepFreeze } from './helpers.js'
 
+// tracks serverData objects so their associated cache entries can be cleared; uses WeakMap to avoid memory leaks
+const optsServerDataNames = new WeakMap()
+
 /*
 	ezFetch()
 	fetch wrapper with automatic response content-type detection and handling
@@ -18,7 +21,7 @@ import { deepFreeze } from './helpers.js'
 	init{headers?, body?}
 	- first two arguments are same as native fetch
 */
-export async function ezFetch(_url, init = {}, opts = {}) {
+export async function ezFetch(_url, init: Record<string, any> = {}, opts: Record<string, any> = {}) {
 	const url = opts.autoMethod ? mayAdjustRequest(_url, init) : _url
 	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 
@@ -33,7 +36,7 @@ export async function ezFetch(_url, init = {}, opts = {}) {
 	})
 }
 
-function mayAdjustRequest(url, init) {
+function mayAdjustRequest(url, init: Record<string, any>) {
 	const method = init.method?.toUpperCase() || 'GET'
 	if (method == 'POST') {
 		if (!init.headers) init.headers = {}
@@ -147,7 +150,7 @@ async function processNDJSON_nestedKey(r) {
 		const parts = buffer.split('\n')
 
 		// 4. Keep the last partial line in the buffer
-		buffer = parts.pop()
+		buffer = parts.pop() ?? ''
 
 		// 5. Process complete lines
 		for (const line of parts) {
@@ -196,7 +199,7 @@ const cacheLifetime = 1000 * 60 * 5
       cannot directly import non-native modules at the beginning of this code file 
     - for server side usage, client may be `xfetch()`, `ky` or other libraries 
 */
-export async function memFetch(url, init, opts = {}) {
+export async function memFetch(url, init: Record<string, any>, opts: Record<string, any> = {}) {
 	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 	const dataKey = opts.q || (await getDataName(url, init))
 	const { response, exp } = dataCache.get(dataKey) || {}
@@ -261,7 +264,7 @@ export function deleteCache(key) {
 
 export function manageCacheSize(_now) {
 	const now = _now || Date.now()
-	const keyExp = []
+	const keyExp: { key: any; exp: number }[] = []
 	for (const [key, result] of dataCache.entries()) {
 		if (result.exp < now) dataCache.delete(key)
 		else keyExp.push({ key, exp: result.exp })
@@ -283,7 +286,7 @@ export async function getDataName(url, init) {
 }
 
 //
-export function clearMemFetchDataCache(opts = {}) {
+export function clearMemFetchDataCache(opts: Record<string, any> = {}) {
 	if (!opts.serverData) {
 		dataCache.clear()
 		return

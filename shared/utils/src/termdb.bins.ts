@@ -189,8 +189,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 
 	if (!numericMax && !numericLastStart) return [] //throw 'unable to compute the last bin start or stop'
 
-	const bins = []
-	let currBin = {
+	const bins: any[] = []
+	let currBin: Record<string, any> = {
 		startunbounded: bc.first_bin.startunbounded,
 		start: bc.first_bin.startunbounded ? undefined : min,
 		stop: isStrictNumeric(bc.first_bin.stop_percentile)
@@ -363,7 +363,7 @@ export function get_bin_range_equation(bin, binconfig) {
 	// should always use computed (not user-customized) bin label to determine bin range text
 	const copy = structuredClone(bin)
 	copy.label = '' // mutate only the copy, and not the original bin argument
-	const bin_label = get_bin_label(copy, binconfig)
+	const bin_label = get_bin_label(copy, binconfig, undefined)
 	if (bin.startunbounded || bin.stopunbounded) {
 		// first or last bins, e.g. x ≤ 14 and x > 16
 		range_eq = x + ' ' + bin_label
@@ -378,7 +378,7 @@ export function get_bin_range_equation(bin, binconfig) {
 }
 
 export function target_percentiles(binconfig) {
-	const percentiles = []
+	const percentiles: any[] = []
 	const f = binconfig.first_bin
 	if (f && isStrictNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
 	if (f && isStrictNumeric(f.stop_percentile)) percentiles.push(f.stop_percentile)

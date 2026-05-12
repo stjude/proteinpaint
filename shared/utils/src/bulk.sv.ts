@@ -74,7 +74,7 @@ export function parseheader(line, flag, issv) {
 export function parseline(i, line, flag, issv) {
 	if (line == '' || line[0] == '#') return
 	const lst = line.split('\t')
-	const m = {}
+	const m: Record<string, any> = {}
 	const header = issv ? flag.sv.header : flag.fusion.header
 	const badlines = issv ? flag.sv.badlines : flag.fusion.badlines
 
@@ -219,7 +219,7 @@ export function parseline(i, line, flag, issv) {
 }
 
 export function duplicate(m) {
-	const n = {}
+	const n: Record<string, any> = {}
 	for (const k in m) {
 		if (k == 'pairlst') continue
 		const v = m[k]
@@ -232,7 +232,7 @@ export function duplicate(m) {
 	if (m.pairlst) {
 		n.pairlst = []
 		for (const pair of m.pairlst) {
-			const p = {}
+			const p: Record<string, any> = {}
 			for (const k in pair) {
 				if (k == 'a' || k == 'b' || k == 'interstitial') {
 					continue

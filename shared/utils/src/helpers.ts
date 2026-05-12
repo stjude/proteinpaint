@@ -70,8 +70,9 @@ export function deepFreeze(obj) {
 
 export class CustomError extends Error {
 	level = '' // '' | 'warn'
+	code?: string
 
-	constructor(message, opts = {}) {
+	constructor(message, opts: { name?: string; code?: string; level?: string } = {}) {
 		super(message)
 		if (opts.name) this.name = opts.name
 		if (opts.code) this.code = opts.code

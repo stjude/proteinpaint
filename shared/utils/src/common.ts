@@ -521,7 +521,7 @@ export const dt2color = {
 }
 
 // option to override mutation class attribute values
-export function applyOverrides(overrides = {}) {
+export function applyOverrides(overrides: Record<string, any> = {}) {
 	if (overrides.mclass) {
 		for (const key in overrides.mclass) {
 			// allow to fill-in mutation class that are missing from mclass;
@@ -635,7 +635,7 @@ export const vepinfo = function (s) {
 export const germlinelegend =
 	'<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle><path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="#858585" stroke="none"></path>'
 
-export const morigin = {}
+export const morigin: Record<string, any> = {}
 
 export const moriginsomatic = 'S'
 morigin[moriginsomatic] = {
@@ -797,7 +797,7 @@ export const codon_stop = '*'
 export function nt2aa(gm) {
 	// must convert genome seq to upper case!!!
 	if (!gm.genomicseq) return undefined
-	const enlst = []
+	const enlst: string[] = []
 	if (gm.coding) {
 		for (const [i, e] of gm.coding.entries()) {
 			const s = gm.genomicseq.substr(e[0] - gm.start, e[1] - e[0])
@@ -809,7 +809,7 @@ export function nt2aa(gm) {
 		}
 	}
 	const nt = enlst.join('')
-	const pep = []
+	const pep: string[] = []
 
 	/*
 	if startCodonFrame is set, will not begin translation from first nt, but will skip 1 or 2 nt at the beginning
@@ -866,7 +866,7 @@ export function basecompliment(nt) {
 }
 
 export function reversecompliment(s) {
-	const tmp = []
+	const tmp: string[] = []
 	for (let i = s.length - 1; i >= 0; i--) {
 		tmp.push(basecompliment(s[i]))
 	}
@@ -884,7 +884,7 @@ export function spliceeventchangegmexon(gm, evt) {
 		start: gm.start,
 		stop: gm.stop,
 		strand: gm.strand,
-		coding: []
+		coding: [] as number[][]
 	}
 	if (evt.isskipexon || evt.isaltexon) {
 		for (let i = 0; i < gm.exon.length; i++) {
@@ -951,6 +951,7 @@ export function fasta2gmframecheck(gm, str) {
 	gm.genomicseq = lines.join('').toUpperCase()
 
 	const aaseq = nt2aa(gm)
+	if (!aaseq) return OUT_frame
 
 	let thisframe = OUT_frame
 	const stopcodonidx = aaseq.indexOf(codon_stop)
@@ -996,7 +997,7 @@ export function validate_vcfinfofilter(obj) {
 			}
 		} else if (set.numericfilter) {
 			// otherwise, numerical value, the style of population frequency filter
-			const lst = []
+			const lst: any[] = []
 			for (const v of set.numericfilter) {
 				if (typeof v == 'number') {
 					/*
@@ -1174,7 +1175,7 @@ export function vcfcopymclass(m, block) {
 	} else if (m.ann) {
 		// there could be many applicable annotations, the first one not always desirable
 		// choose *colorful* annotation based on _csqrank
-		let useone = null
+		let useone: any = null
 		if (block.usegm) {
 			for (const q of m.ann) {
 				if (q._isoform != block.usegm.isoform) continue
@@ -1281,7 +1282,7 @@ export const schemeCategory2 = ['#e75480', 'blue']
 
 export function getColorScheme(number) {
 	if (number > 20) {
-		const scheme = []
+		const scheme: string[] = []
 		for (let i = 0; i < number; i++) scheme.push(d3.interpolateRainbow(i / number))
 		return scheme
 	}
@@ -1368,8 +1369,8 @@ const dtTerms_temp = [
 	}
 ]
 // add origin annotations to dt terms
-const dtTerms_temp2 = []
-for (const dtTerm of dtTerms_temp) {
+const dtTerms_temp2: any[] = []
+for (const dtTerm of dtTerms_temp as any[]) {
 	dtTerm.name_noOrigin = dtTerm.name // for labeling groups in groupsetting
 	dtTerms_temp2.push(dtTerm) // no origin
 	for (const origin of ['somatic', 'germline']) {
