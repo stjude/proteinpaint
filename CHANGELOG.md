@@ -11,6 +11,7 @@ Features:
 
 Fixes:
 - prevent loading unauthorized prebuild scatterplot
+- quick fix to hardcode to pull sample-level values for mds3 tk sample table to work with patient terms
 
 
 ## 2.187.0
