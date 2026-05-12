@@ -133,9 +133,12 @@ async function processNDJSON_nestedKey(r) {
 
 	let buffer = ''
 
-	for (;;) {
-		const { value, done } = await reader.read()
+	let done = false
+	while (!done) {
+		const readResult = await reader.read()
+		done = readResult.done
 		if (done) break
+		const value = readResult.value
 
 		// 2. Add new chunk to buffer
 		buffer += value
