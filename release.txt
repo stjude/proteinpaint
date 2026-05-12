@@ -1,1 +1,2 @@
-
+Features:
+- Enabled tooltip hover, GSEA support, and nicer group labels in GDC SCCT
