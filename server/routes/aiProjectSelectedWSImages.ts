@@ -1,7 +1,14 @@
-import { type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
-import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, FlagPredictionInfo } from '#types'
+import type {
+	Annotation,
+	Mds3,
+	RouteApi,
+	WSImage,
+	AiProjectSelectedWSImagesRequest,
+	AiProjectSelectedWSImagesResponse,
+	FlagPredictionInfo
+} from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
-import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#shared'
+import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '@sjcrh/proteinpaint-shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 /*
