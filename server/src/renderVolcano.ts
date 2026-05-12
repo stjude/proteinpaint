@@ -46,6 +46,14 @@ export async function renderVolcano<T extends DataEntry>(
 			? null
 			: clampedInt(req.maxInteractiveDots, 0, MAX_INTERACTIVE_DOTS, 'maxInteractiveDots')
 
+	// Clamp to a sane band. The client oversamples by 2× to keep post-render
+	// browser zoom sharp, so retina (DPR 2) sends 4 at base zoom and up to ~10
+	// at 250% zoom. Cap at 6 so the bitmap memory stays bounded (a 400px plot
+	// at DPR 6 is a 2400×2400 pixmap ≈ 23MB) while still oversampling the
+	// common cases. Without the upper bound, a malformed client value would
+	// blow up bitmap memory quadratically.
+	const devicePixelRatio = clampedFloat(req.devicePixelRatio ?? 1.0, 1.0, 6.0, 'devicePixelRatio')
+
 	const input = {
 		rows,
 		p_value_type: req.significanceThresholds.pValueType,
@@ -58,7 +66,8 @@ export async function renderVolcano<T extends DataEntry>(
 		color_significant_down: req.colorSignificantDown ?? null,
 		color_nonsignificant: req.colorNonsignificant ?? '#000000',
 		dot_radius: dotRadius,
-		max_interactive_dots: maxInteractiveDots
+		max_interactive_dots: maxInteractiveDots,
+		device_pixel_ratio: devicePixelRatio
 	}
 	const t0 = Date.now()
 	const raw = await run_rust('volcano', JSON.stringify(input))

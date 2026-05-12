@@ -8,11 +8,11 @@
 
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use plotters::prelude::*;
-use plotters::style::ShapeStyle;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::error::Error;
 use std::io::{self, Read};
+use tiny_skia::{Paint, PathBuilder, Pixmap, Stroke, Transform};
 
 #[derive(Deserialize)]
 struct Input {
@@ -36,6 +36,14 @@ struct Input {
     /// only the overlay list is truncated to the most-significant N.
     #[serde(default)]
     max_interactive_dots: Option<usize>,
+    /// Hi-DPI scale factor (e.g. 2.0 on retina). Defaults to 1.0 when absent
+    /// so existing callers don't change behavior. The PNG is rasterized at
+    /// `(pixel_* + pad) * dpr` device pixels and is rendered at the CSS-space
+    /// dimensions reported in `plot_extent.pixel_*` — the browser uses the
+    /// extra resolution for sharpness on hi-DPI displays. Mirror of
+    /// manhattan_plot.rs's `device_pixel_ratio` handling.
+    #[serde(default)]
+    device_pixel_ratio: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -189,14 +197,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     let x_max = x_max_unpadded + x_pad_data;
     let y_min = y_min_unpadded - y_pad_data;
     let y_max = y_max_unpadded + y_pad_data;
-    let mut buffer = vec![0u8; (w as usize) * (h as usize) * 3];
-    // Per-point pixel coords as plotters actually rasterizes them. Returned to
-    // the client so the SVG overlay rings sit exactly on top of the PNG dots
-    // instead of being recomputed from data coords (which loses sub-pixel
-    // precision under plotters' integer truncation).
-    let mut all_pixel_coords: Vec<(f64, f64)> = Vec::with_capacity(points.len());
+
+    // Hi-DPR scaling. The buffer/chart are sized in device pixels (CSS * dpr)
+    // and the drawn radius/stroke are scaled the same way, so the PNG is
+    // sharper on retina. backend_coord returns device-pixel coords; we divide
+    // by dpr below to keep `pixel_x/pixel_y` in CSS-space (which is what the
+    // SVG overlay coordinate system uses). Mirror of manhattan_plot.rs.
+    let dpr = input.device_pixel_ratio.unwrap_or(1.0).max(1.0);
+    let w_hd = ((w as f64) * dpr) as u32;
+    let h_hd = ((h as f64) * dpr) as u32;
+
+    let mut buffer = vec![0u8; (w_hd as usize) * (h_hd as usize) * 3];
+    // Per-point pixel coords as plotters' chart maps them. Captured in device
+    // pixels so tiny-skia can draw the AA rings exactly at those positions;
+    // we keep a CSS-space copy below for the SVG overlay.
+    let mut pixel_coords_hd: Vec<(f64, f64)> = Vec::with_capacity(points.len());
     {
-        let backend = BitMapBackend::with_buffer(&mut buffer, (w, h));
+        let backend = BitMapBackend::with_buffer(&mut buffer, (w_hd, h_hd));
         let root = backend.into_drawing_area();
         root.fill(&WHITE)?;
 
@@ -213,43 +230,76 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Threshold guide lines are drawn by the SVG overlay on the client, not
         // here — double-drawing them would add stray lines offset by axis padding.
+        // The dots themselves are drawn below with tiny-skia for true AA; here
+        // plotters just gives us a white-background buffer and the data-to-pixel
+        // mapping. Mirror of manhattan_plot.rs.
 
-        // Resolve colors once. Up/down fall back to `color_sig` when absent.
-        let color_sig = rgb(&input.color_significant, (214, 39, 40));
-        let color_non = rgb(&input.color_nonsignificant, (0, 0, 0));
-        let resolve = |o: &Option<String>| o.as_deref().map(|s| rgb(s, (214, 39, 40))).unwrap_or(color_sig);
-        let color_up = resolve(&input.color_significant_up);
-        let color_down = resolve(&input.color_significant_down);
-
-        // Stroke-only rings at full opacity so each ring is the exact configured
-        // group color — matching the hue the SVG overlay uses.
-        let ring = |c: RGBColor| ShapeStyle {
-            color: c.into(),
-            filled: false,
-            stroke_width: 1,
-        };
-
-        // Draw non-significant first so significant rings overlay on top.
-        chart.draw_series(
-            points
-                .iter()
-                .filter(|p| !p.significant)
-                .map(|p| Circle::new((p.fc, p.y), radius_px, ring(color_non))),
-        )?;
-        chart.draw_series(points.iter().filter(|p| p.significant).map(|p| {
-            let c = if p.fc > 0.0 { color_up } else { color_down };
-            Circle::new((p.fc, p.y), radius_px, ring(c))
-        }))?;
-
-        // Mirror manhattan_plot.rs: capture the exact pixel coords plotters
-        // used for each point so the client overlay can land on them precisely.
         for p in points.iter() {
             let (px, py) = chart.backend_coord(&(p.fc, p.y));
-            all_pixel_coords.push((px as f64, py as f64));
+            pixel_coords_hd.push((px as f64, py as f64));
         }
 
         root.present()?;
     }
+
+    // Convert plotters' RGB buffer to a tiny-skia RGBA pixmap, then stroke the
+    // dots on top with anti-aliasing — gives crisp rings even when the user
+    // zooms in past native DPR. Plotters' BitMapBackend has no AA on shapes,
+    // which is why ring edges looked chunky before this rewrite.
+    let mut pixmap = Pixmap::new(w_hd, h_hd).ok_or("failed to create pixmap")?;
+    {
+        let data = pixmap.data_mut();
+        for (src, dst) in buffer.chunks_exact(3).zip(data.chunks_exact_mut(4)) {
+            dst[..3].copy_from_slice(src);
+            dst[3] = 255;
+        }
+    }
+
+    // Resolve colors once. Up/down fall back to `color_sig` when absent.
+    let color_sig = rgb(&input.color_significant, (214, 39, 40));
+    let color_non = rgb(&input.color_nonsignificant, (0, 0, 0));
+    let resolve = |o: &Option<String>| o.as_deref().map(|s| rgb(s, (214, 39, 40))).unwrap_or(color_sig);
+    let color_up = resolve(&input.color_significant_up);
+    let color_down = resolve(&input.color_significant_down);
+
+    let radius_hd_f = radius_px as f32 * dpr as f32;
+    // 1 CSS-pixel-wide stroke at hi-DPR. The stroke straddles the path, so the
+    // visible ring thickness is `stroke_width` device px ≈ 1 CSS px.
+    let mut stroke = Stroke::default();
+    stroke.width = dpr as f32;
+    let mut paint = Paint::default();
+    paint.anti_alias = true;
+
+    let stroke_ring = |pixmap: &mut Pixmap, paint: &mut Paint, color: RGBColor, px: f32, py: f32| {
+        paint.set_color_rgba8(color.0, color.1, color.2, 255);
+        let mut pb = PathBuilder::new();
+        pb.push_circle(px, py, radius_hd_f);
+        if let Some(path) = pb.finish() {
+            pixmap.stroke_path(&path, paint, &stroke, Transform::identity(), None);
+        }
+    };
+
+    // Draw non-significant first so significant rings overlay on top.
+    for (i, p) in points.iter().enumerate() {
+        if p.significant {
+            continue;
+        }
+        let (px, py) = pixel_coords_hd[i];
+        stroke_ring(&mut pixmap, &mut paint, color_non, px as f32, py as f32);
+    }
+    for (i, p) in points.iter().enumerate() {
+        if !p.significant {
+            continue;
+        }
+        let (px, py) = pixel_coords_hd[i];
+        let c = if p.fc > 0.0 { color_up } else { color_down };
+        stroke_ring(&mut pixmap, &mut paint, c, px as f32, py as f32);
+    }
+
+    // CSS-space coords for the SVG overlay — divide the device-pixel positions
+    // by dpr. The overlay does not know about hi-DPR; the PNG sizing handles
+    // sharpness for us.
+    let all_pixel_coords: Vec<(f64, f64)> = pixel_coords_hd.iter().map(|(x, y)| (x / dpr, y / dpr)).collect();
 
     // Build the interactive `dots` list: threshold-passers sorted asc by the
     // chosen p-value column, optionally capped at `max_interactive_dots`.
@@ -273,7 +323,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect();
 
     let output = Output {
-        png: BASE64.encode(&encode_rgb_to_png(&buffer, w, h)?),
+        png: BASE64.encode(&pixmap.encode_png()?),
         plot_extent: PlotExtent {
             x_min,
             x_max,
@@ -301,14 +351,4 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("{}", serde_json::to_string(&output)?);
     Ok(())
-}
-
-/// Convert a plotters RGB buffer (3 bytes/px) to a PNG via tiny-skia (4 bytes/px).
-fn encode_rgb_to_png(rgb: &[u8], w: u32, h: u32) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut pixmap = tiny_skia::Pixmap::new(w, h).ok_or("failed to create pixmap")?;
-    for (src, dst) in rgb.chunks_exact(3).zip(pixmap.data_mut().chunks_exact_mut(4)) {
-        dst[..3].copy_from_slice(src);
-        dst[3] = 255;
-    }
-    Ok(pixmap.encode_png()?)
 }

@@ -230,17 +230,20 @@ export class VolcanoViewModel {
 		}
 
 		if (this.termType == SINGLECELL_CELLTYPE) {
-			// Positive fold-change = up in the selected cluster, so the cluster
+			// The "group name" prefix is the SC config's `DEgenes.termId`
+			// (e.g. "Cluster" for GDC) — it's the column whose value
+			// `categoryName` identifies, so the dataset already names it.
+			// Positive fold-change = up in the selected group, so the group
 			// label goes on the right and the complement on the left.
-			const clusterLabel = `Cluster ${this.config.categoryName}`
+			const groupLabel = `${this.config.termId} ${this.config.categoryName}`
 			return {
 				y: plotDim.top.y + 10,
 				first: {
-					label: getLabel(`Not in ${clusterLabel}`),
+					label: getLabel(`Not in ${groupLabel}`),
 					x: 0
 				},
 				second: {
-					label: getLabel(clusterLabel),
+					label: getLabel(groupLabel),
 					x: this.settings.width
 				}
 			}
