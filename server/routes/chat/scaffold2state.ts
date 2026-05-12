@@ -168,7 +168,5 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 	} else {
 		throw 'Only summary plot type is supported for now'
 	}
-
-	mayLog('Final plot state:', JSON.stringify(plotState))
 	return plotState
 }

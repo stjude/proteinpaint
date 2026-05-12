@@ -296,6 +296,7 @@ Always return ONLY a JSON object in this exact format:
   Output:
   {
     "tw1": "ABCD expression",
+    "tw2": "XXX and YYY subtypes",
     "filter": ["XXX", "YYY"]
   }
 - Query: "Show me the expression of EGFR."
