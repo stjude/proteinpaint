@@ -1,7 +1,7 @@
 import { type Annotation, type Mds3, type RouteApi, type WSImage } from '#types'
 import type { AiProjectSelectedWSImagesRequest, AiProjectSelectedWSImagesResponse, FlagPredictionInfo } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
-import { createSelectionID, SelectionPrefixes, FlagStatus } from '#shared'
+import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 /*
@@ -149,7 +149,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
 		status: number
-		flagged?: FlagStatus
+		flagged?: FlagStatusValues
 		label: string | null
 	}
 
@@ -158,7 +158,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 		project_id: number
 		coordinates: any // stored JSON string like "[x,y]" or JSON array
 		timestamp: string
-		flag_type: FlagStatus
+		flag_type: FlagStatusValues
 	}
 	const GET_ANNOTATIONS_SQL = `
 		SELECT *
@@ -247,7 +247,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 					zoomCoordinates: coords,
 					class: r.label ?? '',
 					status: r.status,
-					flag: r.flagged === undefined ? FlagStatus.Normal : (r.flagged as FlagStatus),
+					flag: r.flagged === undefined ? FlagStatus.Normal : (r.flagged as FlagStatusValues),
 					timestamp: r.timestamp,
 					id: createSelectionID(SelectionPrefixes.Annotation, coords)
 				}
@@ -297,7 +297,7 @@ export function validateWSIAnnotationsQuery(ds: any, connection: Database.Databa
 			const rows = stmt.all(projectId, imageId) || []
 			for (const p of rows) {
 				if (p.coordinates && typeof p.coordinates === 'string' && typeof p.flag_type === 'number')
-					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatus, timestamp: p.timestamp })
+					predictionMap.set(p.coordinates, { flag: p.flag_type as FlagStatusValues, timestamp: p.timestamp })
 			}
 			return predictionMap
 		} catch (error) {

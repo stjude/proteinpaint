@@ -15,7 +15,8 @@ import {
 	SelectionPrefixes,
 	FeaturePrefixes,
 	checkSelectionType,
-	createFeatureID
+	createFeatureID,
+	type FlagStatusValues
 } from '#shared'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
@@ -144,7 +145,7 @@ export class WSIViewerInteractions {
 					if (currentIndex === 0) {
 						// If at the starting tileselection, find the the most recent Annotation by checking for timestamp property
 						currentIndex = tileSelections.findIndex(
-							ts => ts.id.startsWith(SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
+							ts => checkSelectionType(ts, SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
 						)
 						if (currentIndex === -1) {
 							currentIndex = 0
@@ -210,13 +211,14 @@ export class WSIViewerInteractions {
 						}
 					})
 					try {
+						//Delete top variably expressed genes
 						const defaultColor = 'black'
 						const tileSelection = tileSelections[currentIndex]
 						const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
 						const justTileSelection = checkSelectionType(tileSelection, SelectionPrefixes.TileSelection)
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
-						let newFlag: FlagStatus | null = null
+						let newFlag: FlagStatusValues | null = null
 						const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 						if (event.key.toLowerCase() === 'f') {
 							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
