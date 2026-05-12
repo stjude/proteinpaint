@@ -420,13 +420,13 @@ async function resolveToTw(twValue: Value, llm: LlmConfig) {
 		// If it's a dictionary term and it is categorical, it doesn't support bins?
 		// Check if this assumption is true with Robin/Colleen/Xin
 		if (twValueTerm.type === 'categorical') {
-			return { id: twValueTerm.id, type: 'categorical', q: { mode: 'discrete' } }
+			return { id: twValueTerm.id, type: 'categorical', q: { mode: 'discrete' }, isDictionary: true }
 		} else {
 			// For numeric terms, check if the phrase contains any binning language (e.g. "binned into 5 groups", "divided into quartiles", etc.)
 			const binConfig = await parseBinConfig(twValue.phrase, llm)
 			if (!binConfig) throw new Error(`Failed to parse bin config from phrase: ${twValue.phrase}`)
 			mayLog('Parsed bin config:', JSON.stringify(binConfig))
-			return { id: twValueTerm.id, type: twValueTerm.type, q: binConfig }
+			return { id: twValueTerm.id, type: twValueTerm.type, q: binConfig, isDictionary: true }
 		}
 	} else {
 		if (twValue.type === 'geneExpression') {

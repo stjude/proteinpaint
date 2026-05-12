@@ -4,8 +4,8 @@ import { isNumericTerm } from '#shared/terms.js'
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
 function isDictionaryTerm(term: any) {
-	console.log('Checking if term is a dictionary term:', term)
-	if (term.id) return true
+	const isDictTerm = term.isDictionary
+	if (isDictTerm) return true
 	return false
 }
 
@@ -80,14 +80,17 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		// but, for dictionary term, it can be supplied as is
 		if (input.tw1) {
 			plotState.plot.term = isDictionaryTerm(input.tw1) ? input.tw1 : { term: input.tw1 }
+			if (plotState.plot.term.isDictionary) delete plotState.plot.term.isDictionary
 		}
 		if (input.tw2) {
 			// overlay term
 			plotState.plot.term2 = isDictionaryTerm(input.tw2) ? input.tw2 : { term: input.tw2 }
+			if (plotState.plot.term2.isDictionary) delete plotState.plot.term2.isDictionary
 		}
 		if (input.tw3) {
 			// divide by term
 			plotState.plot.term0 = isDictionaryTerm(input.tw3) ? input.tw3 : { term: input.tw3 }
+			if (plotState.plot.term0.isDictionary) delete plotState.plot.term0.isDictionary
 		}
 		if (input.filter) {
 			plotState.plot.filter = input.filter
@@ -117,6 +120,9 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		}
 	} else if (plotType === 'matrix') {
 		if (input.twLst && Array.isArray(input.twLst)) {
+			input.twLst.forEach((tw: any) => {
+				if (tw.isDictionary) delete tw.isDictionary
+			})
 			plotState.plot.termgroups = [{ name: '', lst: input.twLst.map((tw: any) => (tw.term ? tw : { term: tw })) }]
 		} else {
 			mayLog('Matrix plot requires a list of terms (twLst), but it is missing or not an array in the input.')
@@ -125,6 +131,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 
 		if (input.divideBy) {
 			plotState.plot.divideBy = isDictionaryTerm(input.divideBy) ? input.divideBy : { term: input.divideBy }
+			if (plotState.plot.divideBy.isDictionary) delete plotState.plot.divideBy.isDictionary
 		}
 
 		if (input.filter) {
@@ -140,16 +147,19 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			plotState.plot.colorTW = null
 		} else if (input.colorBy) {
 			plotState.plot.colorTW = isDictionaryTerm(input.colorBy) ? input.colorBy : { term: input.colorBy }
+			if (plotState.plot.colorTW.isDictionary) delete plotState.plot.colorTW.isDictionary
 		}
 
 		if (input.shapeBy && input.shapeBy === 'null') {
 			plotState.plot.shapeTW = null
 		} else if (input.shapeBy) {
 			plotState.plot.shapeTW = isDictionaryTerm(input.shapeBy) ? input.shapeBy : { term: input.shapeBy }
+			if (plotState.plot.shapeTW.isDictionary) delete plotState.plot.shapeTW.isDictionary
 		}
 
 		if (input.divideBy) {
 			plotState.plot.term0 = isDictionaryTerm(input.divideBy) ? input.divideBy : { term: input.divideBy }
+			if (plotState.plot.term0.isDictionary) delete plotState.plot.term0.isDictionary
 		}
 
 		if (input.filter) {
@@ -159,6 +169,6 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		throw 'Only summary plot type is supported for now'
 	}
 
-	mayLog('Final plot state:', plotState)
+	mayLog('Final plot state:', JSON.stringify(plotState))
 	return plotState
 }
