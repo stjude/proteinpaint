@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-shared",
-  "version": "2.187.0",
+  "version": "2.188.0",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
   "main": "dist/src/index.js",
@@ -31,9 +31,9 @@
   "author": "",
   "license": "ISC",
   "files": [
-  	"constants",
-  	"devTs.ts",
-  	"dist"
+    "constants",
+    "devTs.ts",
+    "dist"
   ],
   "devDependencies": {
     "esbuild": "^0.25.9"
