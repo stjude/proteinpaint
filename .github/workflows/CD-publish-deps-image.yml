@@ -56,6 +56,7 @@ jobs:
           npm run build
           npx tsc
           cd ../utils
+          npm run prepack
           npx tsc
           cd ../../server
           npx tsc

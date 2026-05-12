@@ -4,7 +4,7 @@ import type { QualTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory
 import { brainImagingPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { isNumericTerm } from '#shared'
-import { getColors } from '#shared/common.js'
+import { getColors } from '#shared'
 import { run_python } from '@sjcrh/proteinpaint-python'
 
 /*
