@@ -9,7 +9,7 @@
     "#types/*": "@sjcrh/proteinpaint-types/*",
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
-  "//": "all export aliases are meant for runtime code, except for devTs-aliased subpaths",
+  "//": "all export aliases below are meant for runtime code, except for devTs-aliased subpaths",
   "exports": {
     ".": "./dist/src/index.js",
     "./*.ts": "./*.ts_SHOULD_BE_js",

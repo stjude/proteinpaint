@@ -7,10 +7,10 @@
 		"release": ""
 	},
 	"imports": {
-		"#types": "@sjcrh/proteinpaint-types",
-		"#shared": "@sjcrh/proteinpaint-shared"
-	},
-	"//": "need to provide shared/utils code that are expected in production runtime by dataset files",
+    "#types": "@sjcrh/proteinpaint-types",
+    "#shared": "@sjcrh/proteinpaint-shared"
+  },
+	"//": "@sjcrh/proteinpaint-shared below provides shared/utils code that are expected in production runtime by dataset files",
 	"dependencies": {
 		"@sjcrh/proteinpaint-server": "2.188.0",
 		"@sjcrh/proteinpaint-shared": "2.188.0"
