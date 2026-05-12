@@ -1,6 +1,6 @@
 import type { RoutePayload } from './routeApi.ts'
 import type { WSImage } from './samplewsimages.ts'
-import type { FlagStatus } from '#shared/devTs'
+import type { FlagStatusValues } from '#shared'
 
 export type AiProjectSelectedWSImagesRequest = {
 	genome: string
@@ -15,7 +15,7 @@ export type AiProjectSelectedWSImagesResponse = {
 }
 
 export interface FlagPredictionInfo {
-	flag: FlagStatus
+	flag: FlagStatusValues
 	timestamp: string
 }
 
@@ -23,7 +23,7 @@ export interface FlagPredictionInfo {
 export interface TileSelection {
 	zoomCoordinates: [number, number]
 	class?: string
-	flag: FlagStatus
+	flag: FlagStatusValues
 	id: string
 	timestamp: string
 }
