@@ -203,7 +203,13 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (this.termType != GENE_EXPRESSION && this.termType != DNA_METHYLATION && this.termType != PROTEOME_DAP) return
+		if (
+			this.termType != GENE_EXPRESSION &&
+			this.termType != DNA_METHYLATION &&
+			this.termType != PROTEOME_DAP &&
+			this.termType != SINGLECELL_CELLTYPE
+		)
+			return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
@@ -218,6 +224,23 @@ export class VolcanoViewModel {
 				},
 				second: {
 					label: getLabel(`Case (${this.response.sample_size2})`),
+					x: this.settings.width
+				}
+			}
+		}
+
+		if (this.termType == SINGLECELL_CELLTYPE) {
+			// Positive fold-change = up in the selected cluster, so the cluster
+			// label goes on the right and the complement on the left.
+			const clusterLabel = `Cluster ${this.config.categoryName}`
+			return {
+				y: plotDim.top.y + 10,
+				first: {
+					label: getLabel(`Not in ${clusterLabel}`),
+					x: 0
+				},
+				second: {
+					label: getLabel(clusterLabel),
 					x: this.settings.width
 				}
 			}

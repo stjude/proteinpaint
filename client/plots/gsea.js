@@ -9,7 +9,7 @@ import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
 import { getDefaultVolcanoSettings } from '#plots/volcano/settings/defaults.ts'
 import { PlotBase } from '#plots/PlotBase.js'
 import { getCombinedTermFilter } from '#filter'
-import { PROTEOME_DAP } from '#shared/terms.js'
+import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 const tip = new Menu()
 
@@ -213,6 +213,40 @@ class gsea extends PlotBase {
 								dapParams: config.proteomeDetails,
 								genome: this.app.vocabApi.opts.state.vocab.genome,
 								dslabel: this.app.vocabApi.vocab.dslabel
+							}
+						}
+					})
+				} else if (config.termType === SINGLECELL_CELLTYPE) {
+					// SCCT has no DA cache — fetch the full DE gene list for the
+					// chosen cluster (omit volcanoRender so the route returns the
+					// raw gene array, not the threshold-passing `dots` subset)
+					// and pass genes + fold_change inline. `render_gsea` takes
+					// this path when neither cacheId nor dapParams is set.
+					const body = {
+						genome: this.app.vocabApi.vocab.genome,
+						dslabel: this.app.vocabApi.vocab.dslabel,
+						sample: config.sample,
+						termId: config.termId,
+						categoryName: config.categoryName
+					}
+					const response = await dofetch3('termdb/singlecellDEgenes', { body })
+					if (response.error) throw response.error
+					if (!Array.isArray(response.data) || response.data.length === 0) throw 'No DE genes returned for this cluster'
+					const genes = []
+					const fold_change = []
+					for (const g of response.data) {
+						genes.push(g.gene_name)
+						fold_change.push(g.fold_change)
+					}
+					await this.app.save({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							gsea_params: {
+								genes,
+								fold_change,
+								genes_length: genes.length,
+								genome: this.app.vocabApi.opts.state.vocab.genome
 							}
 						}
 					})

@@ -342,9 +342,6 @@ export class VolcanoPlotView {
 	}
 
 	private attachInteractions(plotDim: VolcanoPlotDimensions) {
-		// SCCT volcanoes have no per-dot interactions — preserve that by no-op'ing.
-		if (this.termType === SINGLECELL_CELLTYPE) return
-
 		const points = this.viewData.pointData as DataPointEntry[]
 		if (!points || points.length === 0) return
 
