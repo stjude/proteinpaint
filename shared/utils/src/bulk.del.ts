@@ -109,7 +109,7 @@ export function parseline(i, line, flag) {
 		m.chrpos2 = v
 	}
 
-	if (bulk.parsesample(m, flag, i, lst, flag.del.badlines)) {
+	if (bulk.parsesample(m, flag, i, lst)) {
 		return
 	}
 	m.dt = common.dtdel

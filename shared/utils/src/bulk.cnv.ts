@@ -73,7 +73,7 @@ export function parseline(i, line, flag) {
 	if (!m.class) {
 		return
 	}
-	if (bulk.parsesample(m, flag, i, lst, flag.cnv.badlines)) {
+	if (bulk.parsesample(m, flag, i, lst)) {
 		return
 	}
 	m.dt = common.dtcnv

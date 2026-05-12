@@ -11,7 +11,6 @@ exported functions
 import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
-import { getWrappedTvslst } from './filter.js'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
@@ -799,7 +798,7 @@ export function nt2aa(gm) {
 	if (!gm.genomicseq) return undefined
 	const enlst: string[] = []
 	if (gm.coding) {
-		for (const [i, e] of gm.coding.entries()) {
+		for (const e of gm.coding.values()) {
 			const s = gm.genomicseq.substr(e[0] - gm.start, e[1] - e[0])
 			if (gm.strand == '-') {
 				enlst.push(reversecompliment(s))
@@ -825,7 +824,7 @@ export function nt2aa(gm) {
 	return pep.join('')
 }
 
-export function bplen(len, isfile) {
+export function bplen(len, isfile?: boolean) {
 	// if "isfile" is true, to measure file size instead of basepair len
 	if (len >= 1000000000) return (len / 1000000000).toFixed(1) + ' Gb'
 	if (len >= 10000000) return Math.ceil(len / 1000000) + ' Mb'

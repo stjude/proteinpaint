@@ -20,7 +20,7 @@ export function isStrictNumeric(n) {
 }
 
 // converts a value from a unit to another unit
-export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact) {
+export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact?: boolean) {
 	// do floor() on toUnit
 	// do ceil() on fromUnit, in case v is decimal (from violin range selection) and to keep showing integer fromUnit
 	if (scaleFactor >= 1) {

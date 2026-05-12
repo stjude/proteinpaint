@@ -76,7 +76,7 @@ export function init_bulk_flag(genome) {
 	}
 }
 
-export function parsesample(m, flag, i, lst, badline) {
+export function parsesample(m, flag, i, lst) {
 	let variantorigin = common.moriginsomatic
 	if (m.sampletype) {
 		const s = m.sampletype.toLowerCase()
@@ -159,7 +159,7 @@ export function parsesample(m, flag, i, lst, badline) {
 	}
 
 	const nopatientname = 'no patient/individual name'
-	let p
+
 	if (m.patient) {
 		if (!flag.patient2st[m.patient]) {
 			flag.patient2st[m.patient] = {}

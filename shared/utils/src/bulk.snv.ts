@@ -123,7 +123,7 @@ export function parseline(linei, line, flag) {
 			return
 		}
 	}
-	if (bulk.parsesample(m, flag, linei, lst, flag.snv.badlines)) {
+	if (bulk.parsesample(m, flag, linei, lst)) {
 		return
 	}
 	if (!m.chr) {
