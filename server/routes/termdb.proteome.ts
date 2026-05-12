@@ -47,13 +47,13 @@ function init({ genomes }) {
 							term: {
 								name: term.name,
 								type: 'proteomeAbundance',
-								proteomeDetails: details
+								dataTypeDetails: details
 							}
 						}
 						// request data for each cohort
 						const cohortData = await ds.queries.proteome.get({
 							terms: [tw],
-							proteomeDetails: details,
+							dataTypeDetails: details,
 							filter: q.filter,
 							filter0: q.filter0,
 							for: 'proteinView',
@@ -288,7 +288,7 @@ export async function validate_query_proteome(ds) {
 		const proteins = arg?.proteins
 		if (!Array.isArray(proteins) || proteins.length == 0) throw 'queries.proteome.find arg.proteins[] missing'
 		const matches = new Set<string>()
-		const details = arg?.proteomeDetails || {}
+		const details = arg?.dataTypeDetails || {}
 		const organism = details.organism
 		const assay = details.assay
 		const cohort = details.cohort
@@ -297,7 +297,7 @@ export async function validate_query_proteome(ds) {
 		const filters: { columnIdx: number; columnValue: string }[] = []
 		if (Object.keys(details).length) {
 			if (!organism || !assay || !cohort)
-				throw 'queries.proteome.find arg.proteomeDetails.{organism,assay,cohort} missing'
+				throw 'queries.proteome.find arg.dataTypeDetails.{organism,assay,cohort} missing'
 			const organismConfig = q.organisms?.[organism]
 			if (!organismConfig) throw `queries.proteome.find invalid organism: ${organism}`
 			const assayConfig = organismConfig.assays?.[assay]
@@ -352,8 +352,8 @@ export async function validate_query_proteome(ds) {
 
 	q.get = async param => {
 		if (!param?.terms?.length) throw 'queries.proteome.get param.terms[] missing'
-		if (!param.proteomeDetails?.assay || !param.proteomeDetails?.cohort || !param.proteomeDetails?.organism)
-			throw 'queries.proteome.get param.proteomeDetails.{assay,cohort,organism} missing'
+		if (!param.dataTypeDetails?.assay || !param.dataTypeDetails?.cohort || !param.dataTypeDetails?.organism)
+			throw 'queries.proteome.get param.dataTypeDetails.{assay,cohort,organism} missing'
 		return await getProteomeValuesFromCohort(ds, param, q)
 	}
 }
@@ -387,6 +387,15 @@ function buildFilterClause(filters: { columnIdx: number; columnValue: string | n
 	return { conditions, params }
 }
 
+export function countDistinctSamples(db: any, filters: { columnIdx: number; columnValue: string | number }[]) {
+	if (!filters?.length) throw 'countDistinctSamples: filters must not be empty'
+	const { conditions, params } = buildFilterClause(filters)
+	const row = db
+		.prepare(`SELECT COUNT(DISTINCT sample) as cnt FROM proteome_abundance WHERE ${conditions.join(' AND ')}`)
+		.get(...params)
+	return row?.cnt || 0
+}
+
 function queryDbRows(
 	db,
 	matchColumn: 'gene' | 'identifier',
@@ -403,7 +412,7 @@ function queryDbRows(
 
 async function getProteomeValuesFromCohort(ds, param, q) {
 	const db = ds.queries.proteome.db
-	const { assay, cohort, organism } = param.proteomeDetails
+	const { assay, cohort, organism } = param.dataTypeDetails
 	const organismConfig = q.organisms?.[organism]
 
 	//organism

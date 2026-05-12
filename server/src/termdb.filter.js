@@ -521,7 +521,7 @@ async function get_metaboliteIntensity(tvs, CTEname, ds) {
 async function get_proteomeAbundance(tvs, CTEname, ds) {
 	const q = ds.queries?.proteome
 	if (!q) throw 'not supported'
-	const data = await q.get({ terms: [{ $id, term: tvs.term }], proteomeDetails: tvs.term.proteomeDetails })
+	const data = await q.get({ terms: [{ $id, term: tvs.term }], dataTypeDetails: tvs.term.dataTypeDetails })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 async function get_ssGSEA(tvs, CTEname, ds) {

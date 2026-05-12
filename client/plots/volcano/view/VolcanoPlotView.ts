@@ -3,7 +3,7 @@ import { axisBottom, axisLeft, rgb, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
@@ -411,6 +411,7 @@ export class VolcanoPlotView {
 
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
 		const isDM = this.termType === DNA_METHYLATION
+		const isDAP = this.termType === PROTEOME_DAP
 		const pValueType = this.settings.pValueType
 		const pLabel = `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
 		const pField = `${pValueType}_p_value` as 'original_p_value' | 'adjusted_p_value'
@@ -421,12 +422,22 @@ export class VolcanoPlotView {
 					{ label: 'log₂(FC)', sortable: true },
 					{ label: pLabel, sortable: true }
 			  ]
+			: isDAP
+			? [
+					{ label: 'Identifier' },
+					{ label: 'Gene' },
+					{ label: 'log₂(FC)', sortable: true },
+					{ label: pLabel, sortable: true }
+			  ]
 			: [{ label: 'Gene' }, { label: 'log₂(FC)', sortable: true }, { label: pLabel, sortable: true }]
 		const rows = dots.map(d => {
 			const fc = { value: roundValueAuto(d.fold_change) }
 			const pval = { value: roundValueAuto(d[pField]) }
 			if (isDM) {
 				return [{ value: (d as any).promoter_id || '' }, { value: d.gene_name || '' }, fc, pval]
+			}
+			if (isDAP) {
+				return [{ value: d.gene_name || '' }, { value: (d as any).gene || '' }, fc, pval]
 			}
 			return [{ value: d.gene_name || '' }, fc, pval]
 		})
@@ -484,12 +495,15 @@ export class VolcanoPlotView {
 		if (this.termType === DNA_METHYLATION) {
 			if ('promoter_id' in d) addTooltipRow(table, 'Promoter', (d as any).promoter_id)
 			if (d.gene_name) addTooltipRow(table, 'Gene(s)', d.gene_name)
+		} else if (this.termType === PROTEOME_DAP) {
+			addTooltipRow(table, 'Identifier', d.gene_name)
+			if ('gene' in d) addTooltipRow(table, 'Gene', (d as any).gene)
 		} else {
 			addTooltipRow(table, 'Gene name', d.gene_name)
 		}
 		addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
 		addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
-		addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+		if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
 	}
 }
 

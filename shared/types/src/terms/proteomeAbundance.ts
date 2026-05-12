@@ -21,7 +21,7 @@ export type ProteomeAbundanceTerm = NumericBaseTerm & {
 	bins?: PresetNumericBins
 	unit?: string
 	/** organism, assay and cohort this term belongs to */
-	proteomeDetails: ProteomeDetails
+	dataTypeDetails: ProteomeDetails
 }
 
 export type ProteomeAbundanceTW = NumTW & { term: ProteomeAbundanceTerm }

@@ -1,7 +1,6 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { Tabs, type RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
-// import { TermTypes } from '#shared/terms.js'
 
 export class DiffAnalysisView {
 	app: MassAppApi

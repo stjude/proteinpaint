@@ -96,6 +96,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'proteomeAbundance':
 			return await import(`./proteomeAbundance.ts`)
 
+		case 'ProteomeInput':
+			return await import('./ProteomeInput.ts')
+
 		case 'sampleScatter':
 			return await import(`./scatter/scatter.js`)
 

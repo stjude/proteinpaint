@@ -47,7 +47,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				filter0: q.filter0,
 				terms: [tw],
 				__abortSignal: q.__abortSignal,
-				proteomeDetails: tw.term.proteomeDetails
+				dataTypeDetails: tw.term.dataTypeDetails
 			}
 			const data = await queryHandler.get(args)
 			const termData = data.term2sample2value.get(tw.$id)

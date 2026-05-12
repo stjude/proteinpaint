@@ -4,7 +4,7 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
-import { GENE_EXPRESSION, termType2label, SINGLECELL_CELLTYPE, DNA_METHYLATION } from '#shared/terms.js'
+import { GENE_EXPRESSION, termType2label, SINGLECELL_CELLTYPE, DNA_METHYLATION, PROTEOME_DAP } from '#shared/terms.js'
 import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
@@ -134,7 +134,7 @@ export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
 //Use this as a sanity check.
-const enabledTermTypes = [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION]
+const enabledTermTypes = [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, PROTEOME_DAP]
 
 export function getPlotConfig(opts: any) {
 	if (!opts.termType) throw new Error('.termType is required')

@@ -665,6 +665,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	GeneExpInput: ({ ds }) => ds.queries?.geneExpression || ds.queries?.singleCell?.geneExpression,
 	metaboliteIntensity: ({ ds }) => ds.queries?.metaboliteIntensity,
 	proteomeAbundance: ({ ds }) => ds.queries?.proteome,
+	ProteomeInput: ({ ds }) => ds.queries?.proteome,
 	proteinView: ({ ds }) => ds.queries?.proteome,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,

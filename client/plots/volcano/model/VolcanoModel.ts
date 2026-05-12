@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
 import { getGroupColors, toHex } from '../colors'
 
 export class VolcanoModel {
@@ -41,9 +41,12 @@ export class VolcanoModel {
 		if (this.termType === SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
 			return await dofetch3('termdb/singlecellDEgenes', { body })
-		} else {
-			throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
 		}
+		if (this.termType === PROTEOME_DAP) {
+			const body = this.getDapRequestBody()
+			return await dofetch3('termdb/dapVolcano', { body })
+		}
+		throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
 	}
 
 	//Gene expression
@@ -135,6 +138,18 @@ export class VolcanoModel {
 			volcanoRender: this.getVolcanoRender()
 		}
 		return body
+	}
+
+	getDapRequestBody() {
+		const { organism, assay, cohort } = this.config.proteomeDetails
+		return {
+			genome: this.app.vocabApi.vocab.genome,
+			dslabel: this.app.vocabApi.vocab.dslabel,
+			organism,
+			assay,
+			cohort,
+			volcanoRender: this.getVolcanoRender()
+		}
 	}
 
 	/** retrieve the sampleId/sampleName for samples in

@@ -11,7 +11,7 @@ import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
 import { getGroupColors } from '../colors'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
 
 export class VolcanoViewModel {
 	config: any
@@ -103,6 +103,7 @@ export class VolcanoViewModel {
 		if (this.termType == GENE_EXPRESSION) return 'genes'
 		else if (this.termType == DNA_METHYLATION) return 'promoters'
 		else if (this.termType == SINGLECELL_CELLTYPE) return 'genes' //'cells'??
+		else if (this.termType == PROTEOME_DAP) return 'proteins'
 		else throw new Error(`Unknown termType: ${this.termType}`)
 	}
 
@@ -202,10 +203,24 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (this.termType != GENE_EXPRESSION && this.termType != DNA_METHYLATION) return
+		if (this.termType != GENE_EXPRESSION && this.termType != DNA_METHYLATION && this.termType != PROTEOME_DAP) return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
+		}
+
+		if (this.termType == PROTEOME_DAP) {
+			return {
+				y: plotDim.top.y + 10,
+				first: {
+					label: getLabel(`Control (${this.response.sample_size1})`),
+					x: 0
+				},
+				second: {
+					label: getLabel(`Case (${this.response.sample_size2})`),
+					x: this.settings.width
+				}
+			}
 		}
 
 		return {
@@ -243,10 +258,12 @@ export class VolcanoViewModel {
 				const row = [
 					{ value: roundValueAuto(d.fold_change) },
 					{ value: roundValueAuto(d.original_p_value) },
-					{ value: roundValueAuto(d.adjusted_p_value) }
+					{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
 				]
 				if (this.termType == DNA_METHYLATION) {
 					row.splice(0, 0, { value: d.promoter_id || '' }, { value: d.gene_name || '' })
+				} else if (this.termType == PROTEOME_DAP) {
+					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
 				} else {
 					row.splice(0, 0, { value: d.gene_name || '' })
 				}
@@ -308,6 +325,17 @@ export class VolcanoViewModel {
 					value: this.response.sample_size2
 				}
 			)
+		} else if (this.termType == PROTEOME_DAP) {
+			tableRows.push(
+				{
+					label: 'Control sample size',
+					value: this.response.sample_size1
+				},
+				{
+					label: 'Case sample size',
+					value: this.response.sample_size2
+				}
+			)
 		}
 
 		if (this.response.bcv !== undefined && this.response.bcv !== null) {
@@ -322,6 +350,8 @@ export class VolcanoViewModel {
 	setPTableColumns() {
 		if (this.termType == DNA_METHYLATION) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Promoter', sortable: true }, { label: 'Gene(s)', sortable: true })
+		} else if (this.termType == PROTEOME_DAP) {
+			this.pValueTable.columns.splice(0, 0, { label: 'Identifier', sortable: true }, { label: 'Gene', sortable: true })
 		} else {
 			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
 		}

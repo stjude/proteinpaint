@@ -1,5 +1,5 @@
 import { roundValue } from '#shared/roundValue.js'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
 import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,
@@ -63,7 +63,7 @@ function addSCCTDefaults(termType: string) {
 /*********** Setting Validation Functions ***********
  * Validates user input settings after merging with defaults */
 export function validateVolcanoSettings(config: any, opts: any) {
-	if (config.termType == SINGLECELL_CELLTYPE) return
+	if (config.termType == SINGLECELL_CELLTYPE || config.termType == PROTEOME_DAP) return
 	if (!config.settings.volcano) return
 
 	const settings = config.settings.volcano

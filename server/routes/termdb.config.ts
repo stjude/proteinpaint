@@ -291,6 +291,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 										JSON.stringify(src.caseFilter)
 									)
 								}
+								if (src.DAPfile) {
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].DAPfile = true
+								}
 							}
 						}
 					}

@@ -38,6 +38,8 @@ export type GenesetEnrichmentRequest = {
 	num_permutations?: number
 	/** Method used for GSEA blitzgsea/cerno */
 	method: 'blitzgsea' | 'cerno'
+	/** DAP-specific parameters: organism/assay/cohort identify the DAP file */
+	dapParams?: { organism: string; assay: string; cohort: string }
 }
 
 type blitzgsea_geneset_attributes = {
