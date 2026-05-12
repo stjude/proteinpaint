@@ -8,7 +8,7 @@ import type {
 	FlagPredictionInfo
 } from '#types'
 import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
-import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '@sjcrh/proteinpaint-shared'
+import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 /*
