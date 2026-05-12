@@ -671,8 +671,11 @@ function setRenderers(self) {
 			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
 			0
 		)
+		// When there's no overlay term (maxSeriesLabelLen is 0), add extra padding to prevent
+		// "Number at risk" text from overlapping with the config menu
+		const extraPaddingForNoOverlay = maxSeriesLabelLen === 0 ? 30 : 0
 		chart.atRiskLabelWidth = s.atRiskVisible
-			? maxSeriesLabelLen * (s.axisTitleFontSize - 2) * 0.4 + s.atRiskLabelOffset
+			? maxSeriesLabelLen * (s.axisTitleFontSize - 2) * 0.4 + s.atRiskLabelOffset + extraPaddingForNoOverlay
 			: 0
 	}
 
