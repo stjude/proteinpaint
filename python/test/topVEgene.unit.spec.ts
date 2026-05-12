@@ -76,3 +76,23 @@ tape('topVEgene rejects a non-existing input file', async t => {
 
 	t.end()
 })
+
+tape('topVEgene rejects sample IDs not present in HDF5', async t => {
+	const input = {
+		input_file: rnaseqTestFile,
+		filter_extreme_values: false,
+		max_genes: 10,
+		rank_type: 'var',
+		samples: `${samples},2646,2660,not-a-sample,999999,bad-sample-id`
+	}
+
+	try {
+		await run_python('topVEgene.py', JSON.stringify(input))
+		t.fail('Expected sample validation to fail for missing sample IDs')
+	} catch (err) {
+		const errorText = String(err)
+		t.ok(errorText.includes('not found in HDF5 file'), 'Error should mention missing sample IDs')
+	}
+
+	t.end()
+})
