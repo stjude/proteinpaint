@@ -169,7 +169,7 @@ type DictApi = {
 	// helpers at ds.cohort.termdb.q{}
 	build?: (ds: any) => void
 	// gets dictionary term data
-	get?: (q: any, twLst: any, useCache?: boolean) => void
+	get?: (q: any, twLst: any, onlyChildren?: boolean, useCache?: boolean) => void
 }
 
 type SnvIndelFormat = {
@@ -1743,6 +1743,8 @@ keep this setting here for reason of:
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
+	/** whether to set onlyChildren in getData() */
+	setOnlyChildren: true
 }
 
 type TermCollectionBase = {
