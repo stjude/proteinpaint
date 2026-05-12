@@ -117,7 +117,7 @@ export function parseline(i, line, flag, issv) {
 		return
 	}
 	m.position2 = v2
-	if (bulk.parsesample(m, flag, i, lst, badlines)) {
+	if (bulk.parsesample(m, flag, i, lst)) {
 		return
 	}
 	if (m.isoform1 && m.isoform1.indexOf(',') != -1) {

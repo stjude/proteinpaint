@@ -423,7 +423,7 @@ async function getPredefinedGroupsets(term: RawGvTerm, vocabApi: VocabApi) {
 				}
 			])
 			const name = `${geneName} ${dtTerm.name_noOrigin} ${dtTerm.origin ? `${v.label} (${dtTerm.origin})` : v.label}`
-			const color = mclass[v.key].color
+			const color = typeof v.key === 'string' && mclass[v.key].color
 			groupset.groups.push({ name, type: 'filter', filter, color })
 		}
 		// wildtype value

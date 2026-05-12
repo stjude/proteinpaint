@@ -108,23 +108,23 @@ export default function validate_bins(binconfig) {
 
 export function compute_bins(binconfig, summaryfxn, valueConversion) {
 	/*
-  Bins generator
-  
-binconfig   
-  configuration of bins per the Numerical Binning Scheme
+	  Bins generator
+	  
+	binconfig   
+	  configuration of bins per the Numerical Binning Scheme
 
-summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
-  - required function
+	summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
+	  - required function
 
-  - must accept an array of desired percentile values
-  and returns an object of computed properties
-  {
-    min: minimum value
-    max: maximum value
-    pX: percentile at X value, so p10 will be 10th percentile value
-    pY: .. corresponding to the desired percentile values 
-  }
-*/
+	  - must accept an array of desired percentile values
+	  and returns an object of computed properties
+	  {
+	    min: minimum value
+	    max: maximum value
+	    pX: percentile at X value, so p10 will be 10th percentile value
+	    pY: .. corresponding to the desired percentile values 
+	  }
+	*/
 	const bc = binconfig
 
 	validate_bins(bc)
@@ -263,10 +263,10 @@ function getNumDecimalsFormatter(bc) {
 	return 'rounding' in bc ? format(bc.rounding) : d => d // default to labeling using the start/stop value as-is
 }
 
-export function get_bin_label(bin, binconfig, valueConversion) {
+export function get_bin_label(bin, binconfig, valueConversion?: any) {
 	/*
-  Generate a numeric bin label given a bin configuration and an optional term valueConversion object
-*/
+	  Generate a numeric bin label given a bin configuration and an optional term valueConversion object
+	*/
 	if (!bin) return 'missing bin.label'
 	if (bin.label) return bin.label
 

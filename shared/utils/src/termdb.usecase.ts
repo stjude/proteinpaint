@@ -71,7 +71,7 @@ Returns
 	- 'branch' if the term can be used only as an expandable tree branch, but not in a plot
 	- an empty Set means that the term has no valid uses, i.e, it cannot be used either for plotting or as a tree branch
 */
-export function isUsableTerm(term, _usecase, termdbConfig, ds) {
+export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 	const usecase = _usecase || {}
 
 	// may apply dataset specific override filter for a use case

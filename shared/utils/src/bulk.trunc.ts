@@ -105,7 +105,7 @@ export function parseline(i, line, flag) {
 		flag.truncation.badlines.push([i, 'lossType value not "n" or "c"', lst])
 		return
 	}
-	if (bulk.parsesample(m, flag, i, lst, flag.truncation.badlines)) {
+	if (bulk.parsesample(m, flag, i, lst)) {
 		return
 	}
 	if (m.losstype == 'n') {

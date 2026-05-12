@@ -202,7 +202,7 @@ const cacheLifetime = 1000 * 60 * 5
 export async function memFetch(url, init: Record<string, any>, opts: Record<string, any> = {}) {
 	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
 	const dataKey = opts.q || (await getDataName(url, init))
-	const { response, exp } = dataCache.get(dataKey) || {}
+	const { response } = dataCache.get(dataKey) || {}
 	const now = Date.now()
 	let result = response // either a Promise or actual data
 

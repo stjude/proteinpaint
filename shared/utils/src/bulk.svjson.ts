@@ -10,7 +10,7 @@ import * as bulk from './bulk.js'
 // work for both sv/fusion
 // must tell if the data is fusion or sv
 
-export function parseheader(line, flag) {
+export function parseheader(line) {
 	const header = line.toLowerCase().split('\t')
 	if (header.length <= 1) return 'invalid file header for svjson'
 	const htry = (...lst) => {
@@ -45,13 +45,13 @@ export function parseline(i, line, flag, header) {
 		badlines.push([i, 'missing jsontext', lst])
 		return
 	}
-	if (bulk.parsesample(m, flag, i, lst, badlines)) {
+	if (bulk.parsesample(m, flag, i, lst)) {
 		return
 	}
 	let json
 	try {
 		json = JSON.parse(m.jsontext)
-	} catch (e) {
+	} catch (_) {
 		badlines.push([i, 'invalid JSON text', lst])
 		return
 	}
