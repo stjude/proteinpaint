@@ -513,7 +513,7 @@ async function mayValidateRestrictAcestries(tdb) {
 	}
 }
 
-async function call_barchart_data(twLst, q, combination, ds) {
+async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	// makes sense to call barchart function as it adds counting logic over getData output
 
 	const filter = combineFilterAndTid2value(q, ds) // optional filter, based on optional parameters
@@ -530,7 +530,7 @@ async function call_barchart_data(twLst, q, combination, ds) {
 				filter
 			}
 
-			const out = await barchart_data(_q, ds, ds.cohort.termdb)
+			const out = await barchart_data(_q, ds, ds.cohort.termdb, onlyChildren)
 
 			if (!out?.data?.charts?.[0]) {
 				// no data
@@ -3700,9 +3700,10 @@ function mayInitTermid2totalsize2(tdb, ds) {
 			a map, key is termid, value is array, each element: [category, total]
 		*/
 	tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
+		const onlyChildren = true // only get sample-level data for mds3 track
 		if (tdb.termid2totalsize2.gdcapi) {
 			return await gdc.get_termlst2size(twLst, q, combination, ds)
 		}
-		return await call_barchart_data(twLst, q, combination, ds)
+		return await call_barchart_data(twLst, q, combination, ds, onlyChildren)
 	}
 }

@@ -475,11 +475,14 @@ export function divideTerms(lst) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-// set value of onlyChildren boolean
-// currently only perfomred if ds has necessary flag
+// function to set the onlyChildren flag, which controls whether
+// sample-level or parent-level data is retrieved
+// currently, this function is only performed if:
+// 	- ds has necessary flag and
+// 	- onlyChildren is false
 // TODO: apply to other datasets
 function maySetOnlyChildren(twLst, ds, onlyChildren) {
-	if (!ds.cohort.termdb.setOnlyChildren) return onlyChildren
+	if (!ds.cohort.termdb.setOnlyChildren || onlyChildren) return onlyChildren
 	const sampleTypeConfig = ds.cohort.termdb.sampleTypes
 	if (!sampleTypeConfig) 'sample type config missing'
 	if (Object.keys(sampleTypeConfig).length != 2) 'unexpected number of sample types in config'
