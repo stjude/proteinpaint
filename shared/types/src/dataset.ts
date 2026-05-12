@@ -1744,7 +1744,7 @@ keep this setting here for reason of:
 	/** collections of dictionary terms (numeric or categorical) that are related and can be used together in some plots */
 	termCollections?: TermCollection[]
 	/** whether to set onlyChildren in getData() */
-	setOnlyChildren: true
+	setOnlyChildren?: true
 }
 
 type TermCollectionBase = {
