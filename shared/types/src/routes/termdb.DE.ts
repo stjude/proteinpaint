@@ -62,6 +62,12 @@ export type VolcanoRenderRequest = {
 	 * The server still renders every row into `volcanoPng`; this only caps the
 	 * interactive list. Capped to the most-significant rows (smallest p-value). */
 	maxInteractiveDots?: number
+	/** Hi-DPI scale factor from `window.devicePixelRatio` (e.g. 2.0 on retina).
+	 * The PNG is rasterized at `pixelWidth*dpr × pixelHeight*dpr` device pixels
+	 * but reported (and rendered in the SVG) at the CSS-space dimensions, so
+	 * the browser uses the extra resolution for sharpness. Defaults to 1.0
+	 * server-side. */
+	devicePixelRatio?: number
 }
 
 /** Everything the client needs to draw one volcano: the pre-rendered PNG of

@@ -114,7 +114,17 @@ export class VolcanoModel {
 			colorSignificantDown: controlColor,
 			colorNonsignificant: toHex(this.settings.defaultNonSignColor, 'black'),
 			dotRadius,
-			maxInteractiveDots: this.settings.maxInteractiveDots
+			maxInteractiveDots: this.settings.maxInteractiveDots,
+			// Render the PNG at device-pixel resolution so it stays sharp on
+			// retina screens. The server reports the plot extent in CSS-space,
+			// so SVG overlay coords are unaffected.
+			//
+			// Oversample by 2× so the PNG also stays sharp when the user
+			// *zooms in after* the initial render (the captured DPR is frozen
+			// at fetch time — bigger headroom = more tolerable post-render
+			// zoom before pixelation appears). The server clamp keeps the
+			// bitmap memory bounded.
+			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2
 		}
 	}
 
