@@ -101,10 +101,10 @@ export class VolcanoViewModel {
 
 	setDataType() {
 		if (this.termType == GENE_EXPRESSION) return 'genes'
-		else if (this.termType == DNA_METHYLATION) return 'promoters'
-		else if (this.termType == SINGLECELL_CELLTYPE) return 'genes' //'cells'??
-		else if (this.termType == PROTEOME_DAP) return 'proteins'
-		else throw new Error(`Unknown termType: ${this.termType}`)
+		if (this.termType == DNA_METHYLATION) return 'promoters'
+		if (this.termType == SINGLECELL_CELLTYPE) return 'genes'
+		if (this.termType == PROTEOME_DAP) return 'proteins'
+		throw new Error(`Unknown termType: ${this.termType}`)
 	}
 
 	setMinMaxValues() {
@@ -216,6 +216,7 @@ export class VolcanoViewModel {
 		}
 
 		if (this.termType == PROTEOME_DAP) {
+			// FIXME this shouldn't be needed. there should be a way for caller to supply names for each group, and avoid this special logic and SINGLECELL_CELLTYPE
 			return {
 				y: plotDim.top.y + 10,
 				first: {
@@ -230,11 +231,12 @@ export class VolcanoViewModel {
 		}
 
 		if (this.termType == SINGLECELL_CELLTYPE) {
-			// The "group name" prefix is the SC config's `DEgenes.termId`
-			// (e.g. "Cluster" for GDC) — it's the column whose value
-			// `categoryName` identifies, so the dataset already names it.
-			// Positive fold-change = up in the selected group, so the group
-			// label goes on the right and the complement on the left.
+			/* quick fix - this only works for gdc's precomputed DE genes (selected cluster vs rest of cells)
+			this won't work for dynamic DE (user-selected cluster A vs cluster B)
+			thus not okay to hardcode `Not in` here
+			!! FIXME !!
+			sc should come up with actual names, and cell counts, for precompute/dynamic groups
+			*/
 			const groupLabel = `${this.config.termId} ${this.config.categoryName}`
 			return {
 				y: plotDim.top.y + 10,
