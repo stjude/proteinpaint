@@ -673,7 +673,7 @@ function setRenderers(self) {
 		)
 		// When there's no overlay term (maxSeriesLabelLen is 0), add extra padding to prevent
 		// "Number at risk" text from overlapping with the config menu
-		const extraPaddingForNoOverlay = maxSeriesLabelLen === 0 ? 30 : 0
+		const extraPaddingForNoOverlay = maxSeriesLabelLen === 0 ? s.atRiskNoOverlayExtraPadding : 0
 		chart.atRiskLabelWidth = s.atRiskVisible
 			? maxSeriesLabelLen * (s.axisTitleFontSize - 2) * 0.4 + s.atRiskLabelOffset + extraPaddingForNoOverlay
 			: 0
@@ -1301,6 +1301,7 @@ export async function getPlotConfig(opts, app) {
 				timeUnit: 'years',
 				atRiskVisible: true,
 				atRiskLabelOffset: -20,
+				atRiskNoOverlayExtraPadding: 30, // Extra padding when there's no overlay term to prevent "Number at risk" text overlap
 				xTickValues: [], // if undefined or empty, will be ignored
 				seriesTipDecimals: 1,
 				svgPadding: {
