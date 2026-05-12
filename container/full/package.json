@@ -1,20 +1,20 @@
 {
 	"private": true,
 	"name": "@sjcrh/ppfull",
-	"version": "2.188.0",
+	"version": "2.188.1",
 	"bin": "app-full.js",
 	"scripts": {
 		"release": ""
 	},
 	"imports": {
-    "#types": "@sjcrh/proteinpaint-types",
-    "#shared": "@sjcrh/proteinpaint-shared"
-  },
+		"#types": "@sjcrh/proteinpaint-types",
+		"#shared": "@sjcrh/proteinpaint-shared"
+	},
 	"//": "@sjcrh/proteinpaint-shared below provides shared/utils code that are expected in production runtime by dataset files",
 	"dependencies": {
-		"@sjcrh/proteinpaint-front": "2.188.0",
-		"@sjcrh/proteinpaint-server": "2.188.0",
-		"@sjcrh/proteinpaint-shared": "2.188.0"
+		"@sjcrh/proteinpaint-front": "2.188.1",
+		"@sjcrh/proteinpaint-server": "2.188.1",
+		"@sjcrh/proteinpaint-shared": "2.188.1"
 	},
 	"files": [
 		"app-full.js"
