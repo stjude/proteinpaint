@@ -1,4 +1,7 @@
 import { addDemoTokenCred } from './auth.demoToken.ts'
+import mm from 'micromatch'
+
+const { isMatch } = mm
 
 // NOTES:
 // 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
@@ -91,10 +94,7 @@ type JwtCredEntry = {
 // 	}
 // }
 
-export async function validateDsCredentials(
-	creds: ServerConfigDsCredentials,
-	genomes: { [genomeName: string]: any } = {}
-) {
+export async function validateDsCredentials(creds: ServerConfigDsCredentials, genomes?: { [genomeName: string]: any }) {
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
@@ -104,21 +104,23 @@ export async function validateDsCredentials(
 	// track which domains are allowed to embed proteinpaint with credentials,
 	// to be used by app middleware to set CORS response headers
 	const credEmbedders: Set<string> = new Set()
-	// detect loaded datasets in order to filter out credentials that are not matched and does not need to be loaded
-	const loadedDslabels = Object.values(genomes).reduce((loadedDs: string[], g: any) => {
+	// detect loaded datasets in order to filter out credentials that are not matched and do not need to be loaded
+	const loadedDslabels = Object.values(genomes || {}).reduce((loadedDs: string[], g?: any) => {
 		if (typeof g.datasets === 'object') loadedDs.push(...Object.keys(g.datasets))
 		return loadedDs
 	}, [])
 
+	// dslabel may be exact or a pattern
 	for (const [dslabel, _ds] of Object.entries(creds)) {
 		if (dslabel[0] == '#') {
 			delete creds[dslabel]
 			continue
 		}
-		// For exact dslabels with no wildcard characters, delete the credentials entry
-		// if that exact dslabel is not detected as being loaded. This prevents healthcheck
-		// errors if there is a cred.processor.test() or cred.type == 'basic'.
-		if (!dslabel.includes('*') && !loadedDslabels.includes(dslabel)) {
+		// For dslabel exact strings or glob pattern, delete the credentials entry if:
+		// - there is a genomes argument, so support legacy validateDsCredentials() without a second argument.
+		// - that dslabel pattern is not detected as being loaded.
+		// This prevents healthcheck errors if there is a cred.processor.test() or cred.type == 'basic'.
+		if (genomes && !dslabel.includes('*') && !loadedDslabels.find(ds => isMatch(ds, dslabel))) {
 			delete creds[dslabel]
 			continue
 		}

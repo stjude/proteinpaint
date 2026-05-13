@@ -43,15 +43,28 @@ tape('validateDsCredentials: skips and removes comment keys starting with #', as
 
 tape('validateDsCredentials: removes entries for exact dslabels that were not loaded', async function (test) {
 	test.timeoutAfter(500)
-	test.plan(2)
+	test.plan(4)
 
-	const creds: any = {
-		someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
-		realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+	{
+		const creds: any = {
+			someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+			realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+		}
+		await validateDsCredentials(creds, { hg38: { datasets: { realDs: {} } } })
+		test.equal(creds['someDs'], undefined, 'should remove cred entries for dslabels that were not loaded')
+		test.ok(creds['realDs'], 'should keep cred entries for dslabels that were loaded')
 	}
-	await validateDsCredentials(creds, { hg38: { datasets: { realDs: {} } } })
-	test.equal(creds['someDs'], undefined, 'should remove cred entries for dslabels that were not loaded')
-	test.ok(creds['realDs'], 'should keep cred entries for dslabels that were loaded')
+
+	{
+		const creds: any = {
+			someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+			realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+		}
+		await validateDsCredentials(creds)
+		test.ok(creds['someDs'], 'should keep cred entries if the 2nd argument is not supplied')
+		test.ok(creds['realDs'], 'should keep cred entries for dslabels that were loaded')
+	}
+
 	test.end()
 })
 
