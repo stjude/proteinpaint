@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import sys
+import traceback
 import h5py
 import heapq
 import numpy as np
@@ -19,22 +20,21 @@ import numpy as np
 
 def create_gene_variance_list(
     filename: str,
-    sample_list: list,
+    sample_list: set[str],
     filter_extreme_values: bool,
     rank_type: str,
     max_genes: int
 ) -> list[str]:
-    sample_list = [str(s) for s in sample_list]
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
 
-        sample_indexes = [index for index, sample in enumerate(all_samples) if sample in sample_list]
-        if len(sample_indexes) < len(sample_list):
-            missing=set(sample_list) - set(all_samples)
-            raise ValueError(f"Sample(s) {set(missing)} not found in HDF5 file")
-
+        sample_to_idx = {sample: idx for idx, sample in enumerate(all_samples)}
+        missing = sample_list - set(sample_to_idx)
+        if missing:
+            raise ValueError(f"Sample(s) {missing} not found in HDF5 file")
+        sample_indexes = sorted(sample_to_idx[sample] for sample in sample_list)
 
         selected_genes = []
         for i in range(matrix.shape[0]):
@@ -43,7 +43,7 @@ def create_gene_variance_list(
                 gene_names[i], expression_values, filter_extreme_values, rank_type, len(sample_list)
             )
 
-            if isinstance(gene_info[0], float | int):
+            if isinstance(gene_info[0], float | int) and np.isfinite(gene_info[0]):
                 heapq.heappush(selected_genes, gene_info)
                 if len(selected_genes) > max_genes:
                     heapq.heappop(selected_genes)
@@ -68,7 +68,8 @@ def calculate_variance_fast(
         return (None, gene_name)
 
     if rank_type == "var":
-        score = float(np.var(expression_values))
+        #ddof for sample variance
+        score = float(np.var(expression_values, ddof=1))
     elif rank_type == "iqr":
         q1, q3 = np.quantile(expression_values, [0.25, 0.75])
         score = float(q3 - q1)
@@ -93,9 +94,10 @@ def main() -> int:
 
         samples_value = json_args.get("samples")
         if isinstance(samples_value, str):
-            samples = [sample.strip() for sample in samples_value.split(",") if sample.strip()]
+            samples = set(sample.strip() for sample in samples_value.split(",") if sample.strip())
         elif isinstance(samples_value, list):
-            samples = [str(sample).strip() for sample in samples_value if str(sample).strip()]
+            samples_value = set(samples_value)
+            samples = set(str(sample).strip() for sample in samples_value if str(sample).strip())
         else:
             raise ValueError("samples must be a comma-separated string or a JSON list")
         if len(samples) < 2:
@@ -127,7 +129,8 @@ def main() -> int:
         print(json.dumps(result))
         return 0
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        tb_last = traceback.extract_tb(e.__traceback__)[-1]
+        print(f"Error: {e} ({tb_last.filename}:{tb_last.lineno} in {tb_last.name})", file=sys.stderr)
         return 1
 
 
