@@ -1,40 +1,12 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
+
 /*
-Given a set of score terms, a filter, login site info, etc,
- this route returns the term scores calculated based on the samples selected by the filter.
-It allows to build the profile plots based on the scores
+Shared helper used by v1 profileFormScores route to fetch site/sample data.
+The v1 termdb/profileScores endpoint itself has been removed — the v2 charts
+(polar2/barchart2/radar2/radarFacility2) each own their dedicated routes.
+This file remains only because termdb.profileFormScores.ts imports getScoresData
+from it.
 */
-
-export const api: RouteApi = {
-	endpoint: 'termdb/profileScores',
-	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
-	return async (req, res): Promise<void> => {
-		try {
-			const g = genomes[req.query.genome]
-			if (!g) throw 'invalid genome name'
-			const ds = g.datasets?.[req.query.dslabel]
-			const result: any = await getScores(req.query, ds)
-			res.send(result)
-		} catch (e: any) {
-			console.log(e)
-			res.send({ status: 'error', error: e.message || e })
-		}
-	}
-}
 
 export async function getScoresData(query, ds, terms) {
 	// we show aggregated data for facility term, so we can ignore site-based access control
@@ -82,51 +54,4 @@ export async function getScoresData(query, ds, terms) {
 	}
 
 	return { samples, sampleData, sites, site }
-}
-
-async function getScores(query, ds) {
-	const terms: any[] = [query.facilityTW]
-	//score terms has a list of pairs of score and maxScore terms
-	for (const term of query.scoreTerms) {
-		terms.push(term.score)
-		if (term.maxScore?.term) {
-			terms.push(term.maxScore)
-		}
-	}
-	const data = await getScoresData(query, ds, terms)
-	const term2Score: any = {}
-	for (const d of query.scoreTerms) {
-		term2Score[d.score.term.id] = getPercentage(d, data.samples, data.sampleData)
-	}
-
-	const { clientAuthResult, activeCohort } = query.__protected__
-	const isPublic = !clientAuthResult[activeCohort]?.role || clientAuthResult[activeCohort].role === 'public'
-
-	return {
-		term2Score,
-		// Do not expose individual site IDs or names to public-role users
-		sites: isPublic ? [] : data.sites,
-		site: isPublic ? undefined : data.site,
-		n: data.sampleData ? 1 : data.samples.length
-	}
-}
-
-function getPercentage(d, samples, sampleData) {
-	if (!d) return null
-	// if not specified when called (not profileRadarFacility), if a sample is loaded do not aggregate
-	const isAggregate = sampleData == null
-	if (isAggregate) {
-		const scores = samples
-			.filter(sample => sample[d.score.$id]?.value)
-			.map(sample => (sample[d.score.$id].value / (sample[d.maxScore.$id]?.value || d.maxScore)) * 100)
-		scores.sort((s1, s2) => s1 - s2)
-		const middle = Math.floor(scores.length / 2)
-		const score = scores.length % 2 !== 0 ? scores[middle] : (scores[middle - 1] + scores[middle]) / 2 //calculated median
-		return Math.round(score)
-	} else {
-		const score = sampleData[d.score.$id]?.value
-		const maxScore = d.maxScore.term ? sampleData[d.maxScore.$id]?.value : d.maxScore //if maxScore is not a term, it is a number
-		const percentage = (score / maxScore) * 100
-		return Math.round(percentage)
-	}
 }

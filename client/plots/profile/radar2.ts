@@ -12,16 +12,19 @@ import {
 } from './profilePlot.js'
 
 /*
-profileRadar2 — redesigned radar chart that follows the per-plot dedicated
-route architecture established by profilePolar2 and profileBarchart2.
+profileRadar2 — client class for the profile radar chart.
 
-Key differences from profileBarchart:
-  - Dedicated server route: termdb/profileRadar2Scores.
-  - Server-side facility term derivation: client does not send facilityTW.
-  - Always aggregated: median percentage across eligible sites.
-  - Minimal client payload: scoreTerms stripped to { term: { id }, q }.
-  - Public role: sites is always [] in the response.
-  - Cleaner rendering structure: plot() split into focused private methods.
+Renders a two-series radar polygon (term1 vs term2) over module vertices. Each
+row in the dataset config's options[].terms contributes term1 and term2; the
+client flattens them into scoreTerms and posts to termdb/profileRadar2Scores.
+
+- The server derives the facility term id from term ID prefixes — no
+  client-supplied facilityTW.
+- Minimal payload: scoreTerms stripped to { term: { id }, q } before sending.
+- Always-aggregated response (median percentage across eligible sites).
+- d3.line().defined() lets per-module series contain nulls for modules whose
+  score the server omitted (no eligible data), producing polygon gaps instead
+  of NaN-poisoned paths.
 */
 
 class ProfileRadar2 extends profilePlot {
@@ -121,7 +124,7 @@ class ProfileRadar2 extends profilePlot {
 			.attr('transform', `translate(60, 40)`)
 			.attr('font-weight', 'bold')
 			.attr('font-size', '0.9rem')
-			.text(`${config.title} (v2)`)
+			.text(config.title)
 
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
@@ -239,10 +242,7 @@ class ProfileRadar2 extends profilePlot {
 			{ label: 'Module' },
 			{ label: config.term1.abbrev },
 			{ label: config.term2.abbrev },
-			{
-				label: 'Difference*',
-				tooltip: `* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20 and positive shown in blue, if negative shown in red.`
-			}
+			{ label: 'Difference*' }
 		]
 
 		if (!this.isComparison) {
@@ -254,6 +254,9 @@ class ProfileRadar2 extends profilePlot {
 				resize: true,
 				maxHeight: '60vh'
 			})
+			this.addDifferenceNote(
+				`* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20 and positive shown in blue, if negative shown in red.`
+			)
 
 			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
 			let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
@@ -264,6 +267,26 @@ class ProfileRadar2 extends profilePlot {
 			else this.addPOCNote(this.noteG)
 		}
 		this.addFilterLegend()
+	}
+
+	private addDifferenceNote(text: string) {
+		const noteDiv = this.dom.tableDiv
+			.append('div')
+			.attr('data-testid', 'sjpp-profileRadar2-difference-note')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+			.style('margin-top', '8px')
+			.style('font-size', '0.85em')
+			.style('font-style', 'italic')
+			.style('color', '#555')
+		noteDiv
+			.append('span')
+			.attr('aria-hidden', 'true')
+			.style('font-style', 'normal')
+			.style('font-size', '1.1em')
+			.text('ⓘ')
+		noteDiv.append('span').text(text)
 	}
 
 	private drawModuleLabel(module: string, iangle: number) {

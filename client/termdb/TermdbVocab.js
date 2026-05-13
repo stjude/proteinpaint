@@ -1395,26 +1395,6 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb/filterTermValues', { body })
 	}
 
-	async getProfileScores(args) {
-		const body = {
-			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel,
-			...args
-		}
-		if (body.filter) body.filter = getNormalRoot(body.filter)
-		body.facilityTW = structuredClone(body.facilityTW)
-		this.mayStripTwProps(body.facilityTW)
-		if (body.scoreTerms) {
-			// replace with a mutable copy
-			body.scoreTerms = structuredClone(body.scoreTerms)
-			for (const t of body.scoreTerms) {
-				if (typeof t.maxScore != 'number') this.mayStripTwProps(t.maxScore)
-				this.mayStripTwProps(t.score)
-			}
-		}
-		return await this.dofetch3('termdb/profileScores', { body })
-	}
-
 	async getProfileFormScores(args) {
 		const body = {
 			genome: this.vocab.genome,
