@@ -28,6 +28,7 @@ const ctx = await context({
 	entryPoints,
 	bundle: true,
 	platform: 'browser',
+	conditions: ENV == 'dev' || ENV == 'test' ? ['sjpp/dev', 'browser'] : ['prod'],
 	// - in dev, there is an existing public/dist -> client/dist symlink
 	//   to ensure that the same bundle is used for locally-developed
 	//   embedder portals like GFF

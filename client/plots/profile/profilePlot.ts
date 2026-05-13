@@ -23,7 +23,7 @@ All the profile plots have the same filters:
 - Year of implementation
 - Sites
 
-The profileRadarFacility adds at the top of these filters the facility select as here we compare a single facility with the average scores of all the facilities aggregated
+The profileRadarFacility2 adds at the top of these filters the facility select as here we compare a single facility with the average scores of all the facilities aggregated
 */
 
 //order for income groups and hospital volumes
@@ -271,20 +271,6 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				// profileRadarFacility2 fetches aggregate + single-site in one dedicated-route call;
 				// the subclass's fetchRadarFacility2Scores() also sets this.sampleData from the response
 				this.data = await (this as any).fetchRadarFacility2Scores()
-			else if (
-				this.type != 'profilePolar2' &&
-				this.type != 'profileBarchart2' &&
-				this.type != 'profileRadar2' &&
-				this.type != 'profileForms2'
-			)
-				// profilePolar2, profileBarchart2, profileRadar2, and profileForms2 skip this fetch —
-				// their subclass setControls() calls the dedicated termdb/profile<Plot>2Scores route instead
-				this.data = await this.app.vocabApi.getProfileScores({
-					scoreTerms: this.scoreTerms,
-					filter: this.filter,
-					facilityTW: this.config.facilityTW,
-					filterByUserSites: this.settings.filterByUserSites
-				})
 			if (this.data && 'error' in this.data) throw this.data.error
 			this.sites = this.filteredTermValues[this.config.facilityTW.id]?.filter(s => !s.disabled && s.value)
 
@@ -415,23 +401,10 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 					if (this.state.user != 'admin') inputs.unshift(userSitesFilterInput) //add filter by user sites only for non-admin users
 				}
 				if (isRadarFacility) {
-					if (this.type != 'profileRadarFacility2') {
-						// v1 facility radar: second round-trip to fetch the single-site row.
-						// profileRadarFacility2 skips this — its fetchRadarFacility2Scores() above
-						// already populated this.sampleData from the dedicated-route response.
-						const settings = { ...this.settings }
-						settings[this.config.facilityTW.term.id] = null //clear facility filter to get all the sites allowed
-						const filter = this.getFilterWithSettings(settings)
-						this.sampleData = await this.app.vocabApi.getProfileScores({
-							scoreTerms: this.scoreTerms,
-							filter, //filter excluding facility term
-							facilitySite: this.settings.facilitySite || null, //need to pass null not undefined, so the parameter is always passed to the server
-							facilityTW: this.config.facilityTW
-						})
-					}
-					// Skip the facility-site dropdown entirely when no sampleData is available
-					// (e.g. profileRadarFacility2 in public role, or when the current filter
-					// excludes all sites). This turns a would-be TypeError into a graceful no-op.
+					// profileRadarFacility2's fetchRadarFacility2Scores() above populated this.sampleData
+					// from the dedicated-route response. Skip the facility-site dropdown when sampleData
+					// is unavailable (e.g. public role, or when the filter excludes all sites) — turns
+					// a would-be TypeError into a graceful no-op.
 					if (this.sampleData?.sites?.length) {
 						const facilitySites = this.sampleData.sites
 						const facilitySite = this.settings.facilitySite
@@ -468,19 +441,19 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				const activeCohort = this.state.activeCohort
 				let link
 				if (activeCohort == ABBREV_COHORT) {
-					if (chartType == 'profileBarchart' || chartType == 'profileBarchart2')
+					if (chartType == 'profileBarchart2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-abbr-profiledash.pdf'
-					else if (chartType == 'profilePolar' || chartType == 'profilePolar2')
+					else if (chartType == 'profilePolar2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-abbr-profiledash.pdf'
 					else if (chartType.startsWith('profileRadar'))
 						link = 'https://global.stjude.org/content/dam/global/en-us/documents/no-index/radar-abbr-profiledash.pdf'
 				} else if (activeCohort == FULL_COHORT) {
-					if (chartType == 'profileBarchart' || chartType == 'profileBarchart2')
+					if (chartType == 'profileBarchart2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/bar-graph-full-profiledash.pdf'
-					else if (chartType == 'profilePolar' || chartType == 'profilePolar2')
+					else if (chartType == 'profilePolar2')
 						link =
 							'https://global.stjude.org/content/dam/global/en-us/documents/no-index/polar-graph-full-profiledash.pdf'
 					else if (chartType.startsWith('profileRadar'))

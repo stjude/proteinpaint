@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-types",
-  "version": "2.188.1",
+  "version": "2.189.0",
   "type": "module",
   "description": "Shared type definitions between ProteinPaint server and client code",
   "main": "src/index.ts",
@@ -16,7 +16,7 @@
   },
   "scripts": {
     "generate": "node dev.mjs",
-    "dev": "node --watch-path=src/routes dev.mjs",
+    "dev": "node --conditions=sjpp/dev --watch-path=src/routes dev.mjs",
     "prepare": "ts-patch install",
     "build": "./build.sh",
     "prepack": "./build.sh",

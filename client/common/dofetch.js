@@ -1,8 +1,8 @@
 import { deepFreeze, sleep } from '#rx'
-import { encode, getDataName, processResponse } from '#shared/index.js'
+import { encode, getDataName, processResponse } from '#shared'
 import { mayShowAuthUi, mayAddJwtToRequest, includeEmbedder, setDsAuthOk } from './auth.js'
 export * from './auth.js'
-export { processFormData } from '#shared/index.js'
+export { processFormData } from '#shared'
 
 /*
 	path: URL

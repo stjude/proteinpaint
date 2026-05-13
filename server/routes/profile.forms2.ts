@@ -3,15 +3,18 @@ import { ProfileForms2ScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
-profileForms2 route. Differs from termdb.profileFormScores:
-  - Facility term id read from dataset config (plotConfigByCohort[cohort].profileForms2.facilityTW.id),
-    not client-supplied or scanned from term IDs (forms2 score terms are POC*-prefixed).
-  - Always aggregated across eligible sites; no sampleData shortcut.
-  - Public role never sees site IDs (sites: []).
+Route for the profileForms2 (Templates) chart. Returns aggregated categorical
+dicts for each score term across all eligible sites for the active cohort.
 
-The Templates 2 picker config is read by clients directly from
-termdbConfig.plotConfigByCohort[cohort].profileForms2.domains — no
-helper is needed here.
+- The facility term id is read from the dataset config
+  (plotConfigByCohort[cohort].profileForms2.facilityTW.id) — clients do not
+  supply it.
+- Always aggregated across eligible sites; no sampleData shortcut.
+- Public role: `sites` is always [] in the response.
+
+The Templates 2 picker config is read directly from
+termdbConfig.plotConfigByCohort[cohort].profileForms2.domains on the client;
+no helper is needed here.
 */
 
 export const api: RouteApi = {
@@ -45,8 +48,8 @@ function init({ genomes }) {
 
 async function getScores(query: any, ds: any) {
 	const { activeCohort, clientAuthResult } = query.__protected__
-	// Facility term id from dataset config (forms2 scoreTerms are POC*, not F*/A* — can't
-	// reuse the polar2/barchart2/radar2 derivePrefix scan).
+	// Score terms use a POC* prefix, so the facility term id is read from the
+	// dataset config keyed by activeCohort rather than derived from the request.
 	const facilityTermId = ds.cohort.termdb.plotConfigByCohort?.[activeCohort]?.profileForms2?.facilityTW?.id
 	if (!facilityTermId) throw `profileForms2.facilityTW.id missing for cohort '${activeCohort}'`
 
@@ -56,7 +59,7 @@ async function getScores(query: any, ds: any) {
 	const terms: any[] = [facilityTW, ...query.scoreTerms]
 	if (query.scScoreTerms) terms.push(...query.scScoreTerms)
 
-	// Skip access control on facility term when aggregating globally (matches v1).
+	// Skip access control on the facility term when aggregating across all sites.
 	if (!query.filterByUserSites) query.__protected__.ignoredTermIds.push(facilityTermId)
 
 	const cohortAuth = clientAuthResult[activeCohort]

@@ -3,17 +3,17 @@ import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
-Route for profileRadar2.
+Route for the profile radar chart. Returns the aggregated median percentage
+per module across all eligible sites, for the two comparison series of the
+active cohort.
 
-Mirrors profile.polar2.ts / profile.barchart2.ts. Each radar row contributes
-term1 and term2 (the two comparison series). The client flattens them into
-scoreTerms, so this route is shape-identical to polar2/barchart2's request/response.
+Each radar row contributes term1 and term2 (the two comparison series); the
+client flattens them into a single scoreTerms[] before sending.
 
-Key differences from termdb.profileScores (the shared v1 route):
-  - Client does NOT send facilityTW — server derives it from term ID prefixes.
-  - Always returns aggregated (median across eligible sites).
-  - Public role: sites is always [].
-  - Zero-score sites included in the median (via != null filter).
+- The facility term id is derived server-side from term ID prefixes — no
+  client-supplied facilityTW.
+- Public role: `sites` is always [].
+- Zero-score sites are included in the median (via != null filter).
 */
 
 export const api: RouteApi = {

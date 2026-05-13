@@ -3,9 +3,9 @@
 
 The [`PrOFILE dashboard`](http://localhost:3000/profile/?role=admin) provides several interactive visualizations to explore and analyze data from participating hospitals. These plots are configured in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) and are available for both "Full" and "Abbreviated" PrOFILE versions. The Full Version is a “look within”, an institutional journey meant for institutions that want to define a local improvement strategy. The Abbreviated Version is a “look across” institutions; it is a multisite, collaborative journey that illustrates the PHO resource landscape for a subnational, national, or regional group of facilities.
 
- The plots within the PrOFILE dashboard inherit from the base [`profilePlot`]((../profilePlot.js)) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar`, `profileBarchart`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. 
+ The plots within the PrOFILE dashboard inherit from the base [`profilePlot`](./profilePlot.ts) that encapsulates common functionalities such as the data fetching and the creation of the chart filters. Each specific plot type (e.g., `profilePolar2`, `profileBarchart2`) inherits from this base component extending its logic to render their unique visualization. This structure promotes code reuse and consistency across the different plots. 
 
-The charts retrieve their data by calling dedicated or shared server endpoints, depending on the type of visualization. Most plots, such as polar, radar, and the profile barchart use the `termdb/profileScores` endpoint to obtain aggregated scores for each module or domain. The `profileForms` plot calls `termdb/profileFormScores` to fetch detailed, question-level survey responses per domain. Newer plots such as `profilePolar2` use their own dedicated endpoint (`termdb/profilePolar2Scores`), establishing a pattern where each plot owns its route and data logic independently. 
+Each chart owns a dedicated server endpoint and data logic: `termdb/profilePolar2Scores`, `termdb/profileBarchart2Scores`, `termdb/profileRadar2Scores`, `termdb/profileRadarFacility2Scores`, and `termdb/profileForms2Scores`. The cohort/facility information is derived server-side from the request — clients never send cohort-specific term wrappers. The legacy `profileForms` plot still uses `termdb/profileFormScores` and will be removed once an upgrade path lands.
 
 ### Term ID conventions
 
@@ -59,36 +59,28 @@ Data visibility is strictly controlled based on the user's role and access to si
 *   **Site-Level User:** Users are associated with one or more institutions. A filter is automatically applied to most of the queries to restrict data to only their assigned sites, unless the data returned is aggregated and therefore deidentified. This allows the users to see their own data and compare it with aggregated data from all other sites.
 *   **Public:** Public users can only view aggregated data. They do not have access to any institution-specific information.
 
-This role-based filtering is managed by the `getAdditionalFilter` function in the dataset configuration, which dynamically handles the data queries based on the user's `clientAuthResult`. Certain charts, like the `profileRadarFacility` chart, are hidden entirely for public users.
+This role-based filtering is managed by the `getAdditionalFilter` function in the dataset configuration, which dynamically handles the data queries based on the user's `clientAuthResult`. Certain charts, like the `profileRadarFacility2` chart, are hidden entirely for public users.
 
 Here is a breakdown of the main plot types:
 
 
-### Polar Chart
-**Class:** [profilePolar.js](../profilePolar.js)  
-**Title:** Score-based Results by PrOFILE Module  
-**Description:** This chart provides a high-level overview of the aggregated performance across different PrOFILE modules. Each slice of the polar represents a module (e.g., 'National Context', 'Personnel', 'Diagnostics').  
-**Calculation:** For each module, a percentage score is calculated for every participating institution by dividing its score by the maximum possible score. The value shown on the chart for each module is the **median** of these percentage scores across all institutions included in the current filter. This gives a snapshot of the central tendency of performance in each area.
-
-
-### Polar Chart v2 (profilePolar2)
+### Polar Chart (profilePolar2)
 **Class:** [polar2.ts](./polar2.ts)
 **Server route:** [`profile.polar2.ts`](../../../../server/routes/profile.polar2.ts) at endpoint `termdb/profilePolar2Scores`
-**Title:** Score-based Results by PrOFILE Module (v2)
-**Description:** A redesigned polar chart that establishes the per-plot dedicated route architecture. Visually identical to the original polar chart but with a cleaner, more secure data flow.
+**Title:** Score-based Results by PrOFILE Module
+**Description:** High-level overview of aggregated performance across PrOFILE modules. Each slice of the polar represents a module (e.g., 'National Context', 'Personnel', 'Diagnostics').
 
-**Key differences from the original Polar Chart:**
+**Implementation:**
 
-- **Dedicated server route:** Uses `termdb/profilePolar2Scores` instead of the shared `termdb/profileScores`. This is the first plot with its own route — future plots (radar, barchart, forms) will follow the same pattern.
 - **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` for full cohort, `AUNIT` for abbreviated) by inspecting term ID prefixes already present in the request (`scoreTerms` or `filter`), eliminating any client influence over which facility term is used.
-- **Always aggregated:** Always returns the median percentage across all eligible sites. There is no single-site mode — when only one site is accessible, the median of a single value equals that value.
+- **Always aggregated:** Returns the median percentage across all eligible sites. When only one site is accessible, the median of a single value equals that value.
 - **Minimal client payload:** The client strips `scoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`. No `facilityTW`, no `$id`, no client-only term wrapper properties are sent.
-- **Consistent eligible sample scoping:** `eligibleSamples` is filtered to `userSites` only when `filterByUserSites` is explicitly `true`. When `filterByUserSites` is `false`, the median is computed across all sites (global aggregate), consistent with the original polar chart.
-- **Public role security:** `sites` is always `[]` for public users in both this route and `termdb/profileScores` — no site IDs or names are ever exposed to public-role users.
-- **Cleaner rendering structure:** The `plot()` method is split into focused private methods (`createSvg`, `drawGrid`, `drawArcs`, `drawTable`, `drawLegend`) instead of one large function.
+- **Consistent eligible sample scoping:** `eligibleSamples` is filtered to `userSites` only when `filterByUserSites` is explicitly `true`. When `filterByUserSites` is `false`, the median is computed across all sites (global aggregate).
+- **Public role security:** `sites` is always `[]` for public users — no site IDs or names are ever exposed.
+- **Rendering structure:** The `plot()` method is split into focused private methods (`createSvg`, `drawGrid`, `drawArcs`, `drawTable`, `drawLegend`).
 - **Documentation icon:** The help icon in the controls panel is enabled for `profilePolar2` in [`controls.btns.js`](../../plots/controls.btns.js). Clicking it opens the polar graph PDF for the active cohort (Abbreviated or Full), configured in [`profilePlot.ts`](./profilePlot.ts).
 
-**Calculation:** Identical to the original polar chart — for each module, computes `(score / maxScore) * 100` per eligible site, then returns the median across all eligible sites, rounded to the nearest integer.
+**Calculation:** For each module, computes `(score / maxScore) * 100` per eligible site, then returns the median across all eligible sites, rounded to the nearest integer.
 
 **Role and cohort coverage:**
 
@@ -102,26 +94,23 @@ Here is a breakdown of the main plot types:
 Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically — `derivePrefix()` reads the `F`/`A` prefix from term IDs already present in the request, requiring no cohort-specific logic on the client.
 
 
-### Bar Chart v2 (profileBarchart2)
+### Bar Chart (profileBarchart2)
 **Class:** [barchart2.ts](./barchart2.ts)
 **Server route:** [`profile.barchart2.ts`](../../../../server/routes/profile.barchart2.ts) at endpoint `termdb/profileBarchart2Scores`
-**Title:** Score-based Results for the Component by Module and Domain (v2)
-**Description:** A redesigned bar chart that follows the per-plot dedicated route architecture established by `profilePolar2`. Visually identical to the original bar chart but with a cleaner, more secure data flow.
+**Title:** Score-based Results for the Component by Module and Domain
+**Description:** A detailed multi-level bar chart that breaks down scores by module/domain. It groups domains within larger components (`Context`, `Workforce`, `Diagnostics`, `Therapy`, `Patients and Outcomes`). Full PrOFILE shows side-by-side bars for objective data (Site Coordinator + MD Lead) vs subjective data (Point of Care Staff); Abbreviated PrOFILE shows scores per domain alongside the overall End-user Impression.
 
-**Key differences from the original Bar Chart:**
+**Implementation:**
 
-- **Dedicated server route:** Uses `termdb/profileBarchart2Scores` instead of the shared `termdb/profileScores`. Same pattern as `profilePolar2` — each v2 plot owns its route and data logic independently.
-- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` for full cohort, `AUNIT` for abbreviated) by inspecting term ID prefixes already present in the request (`scoreTerms` or `filter`), eliminating any client influence over which facility term is used.
-- **Always aggregated:** Always returns the median percentage across all eligible sites. There is no single-site mode — when only one site is accessible, the median of a single value equals that value.
-- **Minimal client payload:** The client strips `scoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`. No `facilityTW`, no `$id`, no client-only term wrapper properties are sent.
-- **Consistent eligible sample scoping:** `eligibleSamples` is filtered to `userSites` only when `filterByUserSites` is explicitly `true`. When `filterByUserSites` is `false`, the median is computed across all sites (global aggregate).
-- **Public role security:** `sites` is always `[]` for public users — no site IDs or names are ever exposed to public-role users.
-- **Cleaner rendering structure:** The `plot()` method is split into focused private methods (`createSvg`, `drawTitleAndDefs`, `drawColumnHeaders`, `drawComponentRows`, `drawGuideLines`, `drawLegend`) instead of one large function.
-- **Documentation icon:** The help icon in the controls panel is enabled for `profileBarchart2` in [`controls.btns.js`](../../plots/controls.btns.js). Clicking it opens the same bar graph PDF as `profileBarchart` for the active cohort.
+- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` for full cohort, `AUNIT` for abbreviated) by inspecting term ID prefixes already present in the request (`scoreTerms` or `filter`).
+- **Always aggregated:** Returns the median percentage across all eligible sites.
+- **Minimal client payload:** The client strips `scoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`.
+- **Consistent eligible sample scoping:** `eligibleSamples` is filtered to `userSites` only when `filterByUserSites` is explicitly `true`. Otherwise the median is computed across all sites (global aggregate).
+- **Public role security:** `sites` is always `[]` for public users — no site IDs or names are exposed.
+- **Rendering structure:** The `plot()` method is split into focused private methods (`createSvg`, `drawTitleAndDefs`, `drawColumnHeaders`, `drawComponentRows`, `drawGuideLines`, `drawLegend`).
+- **Documentation icon:** The help icon in the controls panel is enabled for `profileBarchart2` in [`controls.btns.js`](../../plots/controls.btns.js). Clicking it opens the bar graph PDF for the active cohort.
 
-**Calculation:** Identical to the original bar chart — for each score term, computes `(score / maxScore) * 100` per eligible site, then returns the median across all eligible sites, rounded to the nearest integer. Each row in the `plotByComponent` groups contributes `term1` (objective) and, when present, `term2` (subjective) into the flat `scoreTerms` list sent to the server.
-
-**Plot configuration:** Shares the same `plotByComponent` configuration as `profileBarchart` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — the v2 difference is architectural (route + data flow), not config shape.
+**Calculation:** For each score term, computes `(score / maxScore) * 100` per eligible site, then returns the median across all eligible sites, rounded to the nearest integer. Each row in the `plotByComponent` groups contributes `term1` (objective) and, when present, `term2` (subjective) into the flat `scoreTerms` list sent to the server.
 
 **Role and cohort coverage:**
 
@@ -133,59 +122,63 @@ Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically 
 | Site user | true | User's sites only | User's sites only |
 
 
-### Facility Radar Chart
-**Class:** [profileRadarFacility.js](../profileRadarFacility.js)  
-**Title:** Comparison of Institutional and Aggregated Score-based Results by Module  
-**Description:** This radar chart is designed for authenticated users (Site-Level Users and Administrators) to compare their own institution's performance against the aggregated results from all participating institutions.  
-**Functionality:**
-	- Institutional Score: The score of the user's specific institution for each module.
-	- Aggregated Score: The aggregated score for each module across all institutions.
-	- Allows institutions to benchmark their performance and identify areas of relative strength or weakness.
+### Radar Chart (profileRadar2)
+**Class:** [radar2.ts](./radar2.ts)
+**Server route:** [`profile.radar2.ts`](../../../../server/routes/profile.radar2.ts) at endpoint `termdb/profileRadar2Scores`
+**Description:** Two-series radar polygon comparing two metrics per module. Configurations differ by cohort:
+  - **Full PrOFILE:** Site Coordinator vs Point of Care Staff — either Impressions (subjective 1–10 scale) or Score-based Results (calculated scores).
+  - **Abbreviated PrOFILE:** Total Score vs End-User Impression per module — aligns objective capabilities against perceived performance.
+
+**Implementation:**
+
+- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the correct facility term (`FUNIT` / `AUNIT`) by inspecting term ID prefixes already present in the request.
+- **Always aggregated:** Returns the median percentage across all eligible sites for both series.
+- **Minimal client payload:** The client strips `scoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`. Each radar row contributes `term1` and `term2`; the client flattens them into `scoreTerms`.
+- **Public role security:** `sites` is always `[]` for public users.
+- **Zero-score handling:** Sites with a score of 0 are included in the median (`!= null` filter).
+- **Sparse-module rendering:** `d3.line().defined()` lets per-module series contain `null` for modules whose score the server omitted (no eligible data), producing polygon gaps instead of NaN-poisoned paths.
+
+**Calculation:** For each module and each of the two series, computes `(score / maxScore) * 100` per eligible site, then returns the median across all eligible sites, rounded to the nearest integer.
 
 
-### Radar Chart
-**Class:** [profileRadar.js](../profileRadar.js)  
+### Facility Radar Chart (profileRadarFacility2)
+**Class:** [radarFacility2.ts](./radarFacility2.ts)
+**Server route:** [`profile.radarFacility2.ts`](../../../../server/routes/profile.radarFacility2.ts) at endpoint `termdb/profileRadarFacility2Scores`
+**Description:** Two overlaid radar polygons: the aggregate median across eligible sites (the "Global" line, gray dashed) and a single facility's row (the "Facility" line, blue solid). Lets users benchmark a specific institution against the aggregated peer landscape.
 
-This chart type has different configurations for the "Full" and "Abbreviated" PrOFILE versions.
+**Access:** Auth-gated — hidden from public users via `isSupportedChartOverride.profileRadarFacility2` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts). Only logged-in users (site users and admins) see this chart.
 
-#### Full PrOFILE
-This chart allows for a comparison between two different respondent groups within an institution. Users can select from two different comparison views:  
-	- **Impressions Comparison:** Compares the subjective "impressions" (on a scale of 1-10) of the Site Coordinator versus the Point of Care (POC) Staff for each module.  
-	- **Score-based Results Comparison:** Compares the objective, calculated scores from the responses of the Site Coordinator versus the POC Staff for each module.  
+**Implementation:**
 
-#### Abbreviated PrOFILE
-This chart compares two different metrics for the same respondent group for each module.  
-**Title:** Comparison of Score-based Results and End-User Impressions by Module  
-**Functionality:** It plots the calculated Total Score against the subjective End-User Impression for each module, allowing users to see how objective capabilities align with perceived performance.  
+- **Single round-trip:** Returns both the aggregate (`term2Score`) and a single-site row (`sampleData`) in one response, eliminating the need for a second facility-site fetch.
+- **Server-side facility term derivation:** The client does not send `facilityTW`. The server derives the facility term from term ID prefixes already present in the request.
+- **Minimal client payload:** The client strips `scoreTerms` down to `{ term: { id }, q }` before sending via `dofetch3`.
+- **Public-role defense-in-depth:** Even though the chart is gated by `isSupportedChartOverride`, the server returns `sites: []` and omits `sampleData` for public-role requests.
+- **Zero-score handling:** Sites with a score of 0 are included in the median.
+- **Graceful degradation:** When `sampleData` is unavailable (e.g., filter excludes all sites), the facility-site dropdown is skipped — no TypeError.
 
-
-### Bar Chart
-**Class:** [profileBarchart.js](../profileBarchart.js)  
-**Title:** Score-based Results for the Component by Module and Domain Compared with End-User Impression  
-**Description:** This is a detailed, multi-level bar chart that breaks down the scores into more granular levels. It groups domains within larger components (like 'Context', 'Workforce', 'Diagnostics', 'Therapy', and 'Patients and Outcomes').  
-**Functionality:**
-	- It visualizes scores for each domain within a module.
-	- For Full PrOFILE: It presents a side-by-side comparison of scores derived from "Objective data" (from Site Coordinator and MD Lead) and "Subjective data" (from Point of Care Staff).
-	- For Abbreviated PrOFILE: For each module, it displays the calculated scores for its constituent domains and also shows the overall "End-user Impression" score for that module as a separate bar for comparison.
+**Calculation:** For each module, computes `(score / maxScore) * 100` per eligible site; the median across all eligible sites is returned as the aggregate. The single facility's raw percentages are returned as `sampleData.term2Score`.
 
 
-### Templates/Forms
+### Templates/Forms (legacy — profileForms)
 **Class:** [profileForms.js](../profileForms.js)  
 **Description:** This type of chart known as Templates for the users, allows for the visualization of the amount of response per type of response for each individual questions from the PrOFILE survey, which are not aggregated into scores. This is useful for detailed analysis of specific data points.  
 **Plot Types:**
 	- Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses.
 	- Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
 
-### Templates v2 (profileForms2)
+### Templates (profileForms2)
 **Class:** [forms2.ts](./forms2.ts)
 **Server route:** [`profile.forms2.ts`](../../../../server/routes/profile.forms2.ts) at endpoint `termdb/profileForms2Scores`
-**Description:** A redesigned Templates plot following the per-plot dedicated route architecture established by `profilePolar2`. Visually identical to v1 once a domain is picked. The picker UX, however, is different: chart types are categorized as **horizontal tabs at the top** of the picker, and each tab shows a domain dictionary filtered to only domains that offer that chart type.
+**Description:** Visualizes the distribution of survey responses per question (not aggregated into scores) — useful for detailed analysis of specific data points. Supports Yes/No barcharts and Likert-scale barcharts. The chart-type picker categorizes chart types as **horizontal tabs at the top**, with each tab showing a domain dictionary filtered to only domains that offer that chart type.
+
+Coexists with the legacy `profileForms` plot, which is still wired in the dataset config and uses the older shared route. Once the upgrade path lands, `profileForms` will be removed and this becomes the only Templates plot.
 
 **Picker UX (chart-type tabs above a filtered domain tree):** Clicking the `Templates 2` button opens a popover with horizontal tabs — one tab per chart type — and an embedded term-picker dictionary below. Switching tabs re-mounts the dictionary with a different chart-type filter, so the user can browse by chart type instead of seeing every domain mixed together. Tabs are ordered by their position in `profileFormsOptions` (the first option becomes the default active tab — currently `Yes/No Barchart`).
 
 The picker UI is defined entirely in [`forms2.ts`](./forms2.ts) (the `makeChartBtnMenu` export, invoked by `loadChartSpecificMenu` in [`mass/charts.js`](../../mass/charts.js)) — the generic [`tree.js`](../../termdb/tree.js) component is untouched. The same `Tabs` component used inside the rendered chart (Yes/No vs Likert) is reused for the picker tabs.
 
-`termdbConfig.plotConfigByCohort[cohort].profileForms2.domains` (`Array<{ id: domainId, plotTypes: friendlyLabel[] }>`) drives the tab list and per-tab tree filter. Declared as a static array in the dataset config in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — same array-of-structured-objects shape as the other profile charts (`profilePolar.terms`, `profileRadar.options[].terms`, etc.) — and shipped to the client as part of the existing `plotConfigByCohort` payload. No separate field on the wire, no SQL, no DB read. Adding or removing a template-bearing domain is a code edit reviewable in PRs. An empty `domains: []` (e.g., Abbreviated today) triggers the picker's empty-state message.
+`termdbConfig.plotConfigByCohort[cohort].profileForms2.domains` (`Array<{ id: domainId, plotTypes: friendlyLabel[] }>`) drives the tab list and per-tab tree filter. Declared as a static array in the dataset config in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — same array-of-structured-objects shape as the other profile charts (`profilePolar2.terms`, `profileRadar2.options[].terms`, etc.) — and shipped to the client as part of the existing `plotConfigByCohort` payload. No separate field on the wire, no SQL, no DB read. Adding or removing a template-bearing domain is a code edit reviewable in PRs. An empty `domains: []` (e.g., Abbreviated today) triggers the picker's empty-state message.
 
 [`isUsableTerm`](../../../../shared/utils/src/termdb.usecase.js) `case 'profileForms2'` honors `usecase.cohort` and `usecase.subtype` (set by the picker): depth-3 gets `'plot'` only if `domains.find(d => d.id === term.id)?.plotTypes` includes the active subtype; depth-1/2 gets `'branch'` only if any descendant matches (`domains.some(d => d.id.startsWith(prefix) && d.plotTypes.includes(subtype))`). Terms with empty `uses` are entirely excluded by `tree.js`'s filter.
 

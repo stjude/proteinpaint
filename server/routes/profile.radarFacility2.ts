@@ -3,11 +3,9 @@ import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
-Route for profileRadarFacility2.
-
-Unlike polar2/barchart2/radar2 which are aggregate-only, this route returns
-BOTH the aggregate median (the "Global" line) AND a single-site row (the
-"Facility" line) in ONE response, cutting v1's two-request pattern down to one.
+Route for the profile facility-radar chart. Returns both the aggregate median
+across eligible sites (the "Global" line) AND a single-site row (the "Facility"
+line) in one response, so the chart needs only one round-trip.
 
 Response shape:
   {
@@ -20,12 +18,11 @@ Response shape:
     n: eligibleCount
   }
 
-Key differences from termdb.profileScores:
-  - Client does NOT send facilityTW — server derives from term ID prefixes.
-  - Minimal client payload (scoreTerms stripped to { term: { id }, q }).
-  - Zero-score sites included in the median (!= null, not truthy).
-  - Public role: sites always [] and sampleData undefined (defense-in-depth;
-    the chart is also gated by isSupportedChartOverride).
+- The facility term id is derived server-side from term ID prefixes — no
+  client-supplied facilityTW.
+- Zero-score sites are included in the median (!= null, not truthy).
+- Public role: `sites` is always [] and `sampleData` is undefined
+  (defense-in-depth; the chart is also gated by isSupportedChartOverride).
 */
 
 export const api: RouteApi = {
@@ -150,8 +147,8 @@ async function getScores(query: any, ds: any) {
 				const percent = computeSinglePercentage(d, sampleRow)
 				if (percent !== null) singleSiteScore[d.score.term.id] = percent
 			}
-			// Keep sampleData shape compatible with v1 (term2Score + site + sites) so the base
-			// class's isRadarFacility dropdown logic can consume it unchanged.
+			// sampleData shape ({ term2Score, site, sites }) is consumed by the base class's
+			// isRadarFacility dropdown rendering in profilePlot.ts.
 			sampleData = { term2Score: singleSiteScore, site, sites, n: 1 }
 		}
 	}
@@ -185,8 +182,8 @@ function computeSinglePercentage(d: any, sample: any): number | null {
 }
 
 /**
- * Median of (score/maxScore)*100 across samples. Zero-score sites included.
- * Matches polar2/barchart2/radar2 implementations.
+ * Median of (score/maxScore)*100 across samples. Zero-score sites are included
+ * via the != null filter, so a site with score 0 still contributes to the median.
  */
 function computeMedianPercentage(d: any, samples: any[]): number | null {
 	const percentages: number[] = []
