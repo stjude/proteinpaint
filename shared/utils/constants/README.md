@@ -8,4 +8,4 @@ new workspace, this `shared/utils/constants` directory was created instead.
 The code files in proteinpaint/shared/utils/constants:
 - typescript files
 - must have no imports from outside this folder, to prevent cyclical references/imports that crash bundling and/or tsc compilation
-- must export constants that can be transitively exported to devTs.ts file and shared/utils/src/index.js
+- must export constants that can be transitively exported to shared/utils/devTs.ts file and shared/utils/src/index.js
