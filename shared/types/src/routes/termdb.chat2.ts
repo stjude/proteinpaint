@@ -55,7 +55,7 @@ export interface GeneDataTypeResult {
 
 export interface GeneSetDataTypeResult {
 	geneSet: string
-	dataType: 'ssGSEA' | 'geneVariant' | 'ambiguous'
+	dataType: 'ssGSEA' | 'geneVariant' | 'ambiguous' | 'geneExpression'
 }
 
 export type ChatResponse = TextResponse | HtmlResponse | PlotResponse

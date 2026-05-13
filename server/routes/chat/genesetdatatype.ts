@@ -176,7 +176,12 @@ Response:`
 		return { type: 'text', text: 'classifyGeneSetDataType: missing required fields in LLM response:' + response }
 	}
 
-	if (result.dataType !== 'ssGSEA' && result.dataType !== 'geneVariant' && result.dataType !== 'ambiguous') {
+	if (
+		result.dataType !== 'geneExpression' &&
+		result.dataType !== 'ssGSEA' &&
+		result.dataType !== 'geneVariant' &&
+		result.dataType !== 'ambiguous'
+	) {
 		mayLog('classifyGeneSetDataType: unexpected dataType in LLM response:', result.dataType)
 		result.dataType = 'ambiguous'
 	}

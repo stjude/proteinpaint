@@ -222,6 +222,8 @@ async function inferEntities(
 			return { termType: 'ssGSEA', phrase: phrase }
 		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneVariant') {
 			return { termType: 'geneVariant', phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneExpression') {
+			return { termType: 'geneExpression', phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneSetFeatures:' + validatedNonDict.geneSetFeatures
 		}
