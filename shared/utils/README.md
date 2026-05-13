@@ -10,8 +10,9 @@ workspace, those files should be saved in that workspace.
 IMPORTANT: 
 - Shared code must work in browser and nodejs: do not import libs, deps, or globals that
 are specific to `nodejs` or `browser` environments, like `fs` or `DOM` elements.
-- Do not import from `@sjcrh/proteinpaint-shared/` (a.k.a. `#shared`) into `shared/types` 
-as that will cause cyclical imports that break bundler startup or `tsc` compilation.
+- Except for contants, do not import from this workspace (aka `@sjcrh/proteinpaint-shared/` 
+or `#shared`) into `shared/types` as that will cause cyclical imports that break bundler 
+startup or `tsc` compilation.
 
 ## Develop
 
