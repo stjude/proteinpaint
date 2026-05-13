@@ -105,7 +105,7 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 	// to be used by app middleware to set CORS response headers
 	const credEmbedders: Set<string> = new Set()
 	// detect loaded datasets in order to filter out credentials that are not matched and do not need to be loaded
-	const loadedDslabels = Object.values(genomes || {}).reduce((loadedDs: string[], g?: any) => {
+	const loadedDslabels = Object.values(genomes || {}).reduce((loadedDs: string[], g: any) => {
 		if (typeof g.datasets === 'object') loadedDs.push(...Object.keys(g.datasets))
 		return loadedDs
 	}, [])
@@ -119,8 +119,9 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 		// For dslabel exact strings or glob pattern, delete the credentials entry if:
 		// - there is a genomes argument, so support legacy validateDsCredentials() without a second argument.
 		// - that dslabel pattern is not detected as being loaded.
-		// This prevents healthcheck errors if there is a cred.processor.test() or cred.type == 'basic'.
-		if (genomes && !dslabel.includes('*') && !loadedDslabels.find(ds => isMatch(ds, dslabel))) {
+		// Preserve the catch-all '*' entry, but prune any other unmatched pattern to prevent
+		// the /healthcheck route handler from processing credential test/checks for non-existent datasets.
+		if (genomes && dslabel != '*' && !loadedDslabels.find(ds => isMatch(ds, dslabel))) {
 			delete creds[dslabel]
 			continue
 		}
