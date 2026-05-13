@@ -70,6 +70,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	hiddenData?: any
 	tests?: { [name: string]: any }
 	term2toColor: { [name: string]: { orig: string; rgb: any; adjusted: string; hex: string } } = {}
+	currentTerm2Config: any = null
 
 	uniqueSeriesIds: Set<any> = new Set()
 
@@ -334,6 +335,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		this.app.vocabApi.syncTermData(this.state.config, data)
 		this.currData = this.processData(data)
 		this.refs = data.refs
+		this.currentTerm2Config = this.state.config.term2
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.symbol = this.getSymbol(7) // hardcode the symbol size for now
@@ -1385,7 +1387,7 @@ function getPj(self) {
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t2 = self.state.config.term2
+				const t2 = self.currentTerm2Config
 				if (!t2) return
 				const seriesId = context.self.seriesId
 				if (t2?.q?.type == 'predefined-groupset' || t2?.q?.type == 'custom-groupset') return seriesId
