@@ -741,12 +741,11 @@ A hierarchical clustering plot clusters samples based on a chosen feature type. 
   - "metaboliteIntensity": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
   - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
   - "ssGSEA": the user wants to cluster on ssGSEA scores for gene sets.
-  - "mixed": the user wants to cluster on a mix of variable types (e.g. gene expression + clinical variables) 
 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "ssGSEA" | "mixed"
+  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "ssGSEA"
 }
 
 ## EXAMPLES
@@ -797,12 +796,7 @@ Query: ${user_prompt}
 		throw new Error(`Failed to parse hierarchical variable-type classifier response: ${response}`)
 	}
 
-	if (variableType === 'mixed') {
-		return {
-			type: 'text',
-			text: 'Hierarchical clustering is only allowed for one type of variable at a time (e.g. only dictionary variables, only gene expression variables or only ssGSEA scores).'
-		}
-	} else if (variableType === 'geneExpression') {
+	if (variableType === 'geneExpression') {
 		if (allowedTermTypes.includes('geneExpression')) {
 			return await hierarchicalGeneExpression(user_prompt, llm, genome, genes_list, dataset_json, ds, dbPath)
 		} else {

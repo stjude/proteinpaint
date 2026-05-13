@@ -54,9 +54,9 @@ export async function classifyGeneSetDataType(
 				},
 				dataType: {
 					type: 'string',
-					enum: ['ssGSEA', 'geneVariant', 'ambiguous'],
+					enum: ['ssGSEA', 'geneVariant', 'geneExpression', 'ambiguous'],
 					description:
-						'"ssGSEA" if the user is asking about per-sample enrichment scores for the gene set; "geneVariant" if the user is asking about variants/mutations of the genes in the gene set; "ambiguous" if the intent is not clear.'
+						'"ssGSEA" if the user is asking about per-sample enrichment scores for the gene set; "geneVariant" if the user is asking about variants/mutations of the genes in the gene set; ; "geneExpression" if the user is asking about expression/upregulation/downregulation of the genes in the gene set; "ambiguous" if the intent is not clear.'
 				}
 			},
 			required: ['geneSet', 'dataType'],
@@ -71,6 +71,7 @@ export async function classifyGeneSetDataType(
 Valid gene-set data types are:
 - "ssGSEA"      — the user is asking about a per-sample single-sample GSEA enrichment score for the gene set as a whole. Trigger keywords/phrases: "ssGSEA", "single sample GSEA", "enrichment score", "pathway score", "pathway activity", "pathway enrichment", "geneset score", "score of the pathway", "activity of the pathway", "enriched", "upregulated pathway", "downregulated pathway", "high/low enrichment".
 - "geneVariant" — the user is asking about variants/mutations of the genes that belong to the gene set. Trigger keywords/phrases: "mutation(s)", "variant(s)", "SNV", "SNP", "indel", "deletion", "insertion", "fusion", "CNV", "copy number", "frameshift", "missense", "nonsense", "splice", "truncation", "altered", "alterations", "mutated genes in the pathway", "variants in the pathway".
+- "geneExpression" — the user is asking about expression/upregulation/downregulation of the genes in the gene set. Trigger keywords/phrases: "expression", "expressed", "upregulated", "downregulated", "overexpressed", "underexpressed", "expression of the pathway".
 - "ambiguous"   — the prompt does NOT clearly indicate either intent. Examples: the user only names the pathway (e.g. "show HALLMARK_APOPTOSIS"), or uses generic verbs ("show", "display", "look at") without any of the trigger keywords above.
 
 Rules:
@@ -86,69 +87,74 @@ JSON Schema:
 ${jsonSchema}
 
 Example 1 (ssGSEA — explicit):
-User prompt: "show ssGSEA scores for HALLMARK_APOPTOSIS"
-Geneset: HALLMARK_APOPTOSIS
-Response: {"geneSet":"HALLMARK_APOPTOSIS","dataType":"ssGSEA"}
+User prompt: "show ssGSEA scores for sdscd geneset"
+Geneset: sdscd
+Response: {"geneSet":"sdscd","dataType":"ssGSEA"}
 
 Example 2 (ssGSEA — enrichment score wording):
-User prompt: "what is the enrichment score of HALLMARK_P53_PATHWAY across samples"
-Geneset: HALLMARK_P53_PATHWAY
-Response: {"geneSet":"HALLMARK_P53_PATHWAY","dataType":"ssGSEA"}
+User prompt: "what is the enrichment score of AJSJDJ across samples"
+Geneset: AJSJDJ
+Response: {"geneSet":"AJSJDJ","dataType":"ssGSEA"}
 
-Example 3 (ssGSEA — pathway activity wording):
-User prompt: "compare HALLMARK_HYPOXIA pathway activity between subtypes"
-Geneset: HALLMARK_HYPOXIA
-Response: {"geneSet":"HALLMARK_HYPOXIA","dataType":"ssGSEA"}
+Example 3 (geneExpression — pathway activity wording):
+User prompt: "compare sdswf12_csw pathway activity between subtypes"
+Geneset: sdswf12_csw
+Response: {"geneSet":"sdswf12_csw","dataType":"geneExpression"}
+
+Example 3 (geneExpression — pathway activity wording):
+User prompt: "compare upregulation of BGSBD_dwdwd in pathway"
+Geneset: BGSBD_dwdwd
+Response: {"geneSet":"BGSBD_dwdwd","dataType":"geneExpression"}
 
 Example 4 (ssGSEA — single-sample GSEA shorthand):
-User prompt: "single sample GSEA of REACTOME_DNA_REPAIR"
-Geneset: REACTOME_DNA_REPAIR
-Response: {"geneSet":"REACTOME_DNA_REPAIR","dataType":"ssGSEA"}
+User prompt: "single sample GSEA of wefwef_wfwf22bgb"
+Geneset: wefwef_wfwf22bgb
+Response: {"geneSet":"wefwef_wfwf22bgb","dataType":"ssGSEA"}
 
 Example 5 (ssGSEA — upregulated pathway):
-User prompt: "is HALLMARK_INFLAMMATORY_RESPONSE upregulated in tumor samples"
-Geneset: HALLMARK_INFLAMMATORY_RESPONSE
-Response: {"geneSet":"HALLMARK_INFLAMMATORY_RESPONSE","dataType":"ssGSEA"}
+User prompt: "is Brdb34 upregulated in tumor samples"
+Geneset: Brdb34
+Response: {"geneSet":"Brdb34","dataType":"ssGSEA"}
 
 Example 6 (geneVariant — mutations of pathway genes):
-User prompt: "show mutations in genes of HALLMARK_P53_PATHWAY"
-Geneset: HALLMARK_P53_PATHWAY
-Response: {"geneSet":"HALLMARK_P53_PATHWAY","dataType":"geneVariant"}
+User prompt: "show mutations in genes of erfefr_3434_hrbrh"
+Geneset: erfefr_3434_hrbrh
+Response: {"geneSet":"erfefr_3434_hrbrh","dataType":"geneVariant"}
 
 Example 7 (geneVariant — variants in pathway):
-User prompt: "list variants in REACTOME_DNA_REPAIR genes"
-Geneset: REACTOME_DNA_REPAIR
-Response: {"geneSet":"REACTOME_DNA_REPAIR","dataType":"geneVariant"}
+User prompt: "list variants in wsefwef_3434_fewf genes"
+Geneset: wsefwef_3434_fewf
+Response: {"geneSet":"wsefwef_3434_fewf","dataType":"geneVariant"}
 
 Example 8 (geneVariant — copy number / fusions):
-User prompt: "show fusions and copy number alterations in HALLMARK_MYC_TARGETS_V1"
-Geneset: HALLMARK_MYC_TARGETS_V1
-Response: {"geneSet":"HALLMARK_MYC_TARGETS_V1","dataType":"geneVariant"}
+User prompt: "show fusions and copy number alterations in wfewfe_3434"
+Geneset: wfewfe_3434
+Response: {"geneSet":"wfewfe_3434","dataType":"geneVariant"}
 
 Example 9 (geneVariant — altered genes in pathway):
-User prompt: "which genes in HALLMARK_APOPTOSIS are altered in this cohort"
-Geneset: HALLMARK_APOPTOSIS
-Response: {"geneSet":"HALLMARK_APOPTOSIS","dataType":"geneVariant"}
+User prompt: "which genes in wed565cdwd are altered in this cohort"
+Geneset: wed565cdwd
+Response: {"geneSet":"wed565cdwd","dataType":"geneVariant"}
 
 Example 10 (geneVariant — SNV/indel):
-User prompt: "SNVs and indels in genes of REACTOME_CELL_CYCLE"
-Geneset: REACTOME_CELL_CYCLE
-Response: {"geneSet":"REACTOME_CELL_CYCLE","dataType":"geneVariant"}
+User prompt: "SNVs and indels in genes of sdwd878_csd"
+Geneset: sdwd878_csd
+Response: {"geneSet":"sdwd878_csd","dataType":"geneVariant"}
 
 Example 11 (ambiguous — bare pathway name):
-User prompt: "show HALLMARK_APOPTOSIS"
-Geneset: HALLMARK_APOPTOSIS
-Response: {"geneSet":"HALLMARK_APOPTOSIS","dataType":"ambiguous"}
+User prompt: "show adswd_565"
+Geneset: adswd_565
+Response: {"geneSet":"adswd_565","dataType":"ambiguous"}
 
 Example 12 (ambiguous — generic verb, no triggers):
-User prompt: "look at HALLMARK_HYPOXIA in PAX5alt subtype"
-Geneset: HALLMARK_HYPOXIA
-Response: {"geneSet":"HALLMARK_HYPOXIA","dataType":"ambiguous"}
+User prompt: "look at 23sdcwsd_dewd in PAX5alt subtype"
+Geneset: 23sdcwsd_dewd
+Response: {"geneSet":"23sdcwsd_dewd","dataType":"ambiguous"}
 
 Example 13 (ambiguous — both kinds of triggers in same prompt):
-User prompt: "show enrichment and mutations for HALLMARK_P53_PATHWAY"
+User prompt: "show enrichment and mutations for sdcsc_65454cwd
 Geneset: HALLMARK_P53_PATHWAY
-Response: {"geneSet":"HALLMARK_P53_PATHWAY","dataType":"ambiguous"}
+Response: {"geneSet":"sdcsc_65454cwd,"dataType":"ambiguous"}
 
 User prompt: "${user_prompt}"
 Geneset: ${genesetList}
