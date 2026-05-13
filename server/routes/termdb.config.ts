@@ -301,6 +301,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			}
 		}
 	}
+	if (q.multiomicRankings) {
+		q2.multiomicRankings = q.multiomicRankings
+	}
 	if (q.dnaMethylation) {
 		q2.dnaMethylation = { unit: q.dnaMethylation.unit }
 		if (q.dnaMethylation.promoter) {
