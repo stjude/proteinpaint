@@ -1,91 +1,107 @@
-// import { rgb } from 'd3-color'
+import { rgb } from 'd3-color'
 import * as THREE from 'three'
-import { ScatterViewModel } from './scatterViewModel.js'
+import { ScatterViewModel } from './scatterViewModel'
+import type { Scatter } from '../scatter'
 
 export class ScatterViewModel2DLarge extends ScatterViewModel {
-	constructor(scatter) {
+	isSingleCell: boolean = false
+
+	constructor(scatter: Scatter) {
 		super(scatter)
+		this.isSingleCell = scatter.config?.singleCellPlot
 	}
 
 	async renderSerie(chart) {
-		// const DragControls = await import('three/examples/jsm/controls/DragControls.js')
+		if (this.isSingleCell && chart.src) {
+			this.renderLargeSingleCell(chart)
+			return
+		}
+		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
+		this.view.dom.mainDiv.selectAll('*').remove()
+
+		this.canvas = this.view.dom.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
+		this.canvas.width = this.scatter.settings.svgw
+		this.canvas.height = this.scatter.settings.svgh
+		chart.chartDiv.style('margin', '20px 20px')
+
+		const fov = this.scatter.settings.threeFOV
+		const near = 0.1
+		const far = 1000
+		const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
+		const scene = new THREE.Scene()
+		camera.position.set(0, 0, 1.5)
+		camera.lookAt(scene.position)
+		camera.updateMatrix()
+		const whiteColor = new THREE.Color('rgb(255,255,255)')
+		scene.background = whiteColor
+
+		const geometry = new THREE.BufferGeometry()
+		const { vertices, colors } = this.getVertices(chart)
+
+		geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
+		geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+		const tex = getThreeCircle(128)
+		const material = new THREE.PointsMaterial({
+			size: this.scatter.settings.threeSize,
+			sizeAttenuation: true,
+			transparent: true,
+			opacity: this.scatter.settings.opacity,
+			map: tex,
+			vertexColors: true
+		})
+
+		const particles = new THREE.Points(geometry, material)
+
+		scene.add(particles)
+		const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
+		renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
+		renderer.setPixelRatio(window.devicePixelRatio)
+
+		new DragControls.DragControls([particles], camera, renderer.domElement)
+
+		document.addEventListener('mousewheel', (event: any) => {
+			if (event.ctrlKey) camera.position.z += event.deltaY / 500
+		})
+
+		this.addLegendSVG(chart)
+		this.animate(camera, scene, renderer)
+	}
+
+	animate(camera, scene, renderer) {
+		requestAnimationFrame(() => this.animate(camera, scene, renderer))
+		camera.zoom = this.scatter.vm.scatterZoom.zoom
+		camera.updateProjectionMatrix()
+		renderer.render(scene, camera)
+	}
+
+	getVertices(chart) {
+		const xAxisScale = chart.xAxisScale.range([-1, 1])
+		const yAxisScale = chart.yAxisScale.range([-1, 1])
+		const vertices: any = []
+		const colors: any = []
+		for (const sample of chart.data.samples) {
+			const opacity = this.model.getOpacity(sample)
+			if (opacity == 0) continue
+			const x = xAxisScale(sample.x)
+			const y = yAxisScale(sample.y)
+			const z = 0
+			vertices.push(x, y, z)
+			const color = new THREE.Color(rgb(this.model.getColor(sample, chart)).toString())
+			colors.push(color.r, color.g, color.b)
+		}
+		return { vertices, colors }
+	}
+
+	/** Renders the server rendered image for a single cell */
+	renderLargeSingleCell(chart) {
 		const div = this.view.dom.mainDiv
 		div.selectAll('*').remove()
-		const svg = div.append('svg').attr('width', this.scatter.settings.svgw).attr('height', this.scatter.settings.svgh)
+		const svg = div
+			.append('svg')
+			.attr('width', this.scatter.settings.svgw + 100)
+			.attr('height', this.scatter.settings.svgh + 100)
 		const imgG = svg.append('g')
 		this.canvas = imgG.append('image').attr('xlink:href', chart.src)
-
-		//  this.canvas = this.view.dom.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
-		// 	this.canvas.width = this.scatter.settings.svgw
-		// 	this.canvas.height = this.scatter.settings.svgh
-		// 	chart.chartDiv.style('margin', '20px 20px')
-
-		// 	const fov = this.scatter.settings.threeFOV
-		// 	const near = 0.1
-		// 	const far = 1000
-		// 	const camera = new THREE.PerspectiveCamera(fov, 1, near, far)
-		// 	const scene = new THREE.Scene()
-		// 	camera.position.set(0, 0, 1.5)
-		// 	camera.lookAt(scene.position)
-		// 	camera.updateMatrix()
-		// 	const whiteColor = new THREE.Color('rgb(255,255,255)')
-		// 	scene.background = whiteColor
-
-		// 	const geometry = new THREE.BufferGeometry()
-		// 	const { vertices, colors } = this.getVertices(chart)
-
-		// 	geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3))
-		// 	geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-		// 	const tex = getThreeCircle(128)
-		// 	const material = new THREE.PointsMaterial({
-		// 		size: this.scatter.settings.threeSize,
-		// 		sizeAttenuation: true,
-		// 		transparent: true,
-		// 		opacity: this.scatter.settings.opacity,
-		// 		map: tex,
-		// 		vertexColors: true
-		// 	})
-
-		// 	const particles = new THREE.Points(geometry, material)
-
-		// 	scene.add(particles)
-		// 	const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: this.canvas, preserveDrawingBuffer: true })
-		// 	renderer.setSize(this.scatter.settings.svgw, this.scatter.settings.svgh)
-		// 	renderer.setPixelRatio(window.devicePixelRatio)
-
-		// 	new DragControls.DragControls([particles], camera, renderer.domElement)
-
-		// 	document.addEventListener('mousewheel', (event: any) => {
-		// 		if (event.ctrlKey) camera.position.z += event.deltaY / 500
-		// 	})
-
-		// 	this.addLegendSVG(chart)
-		// 	this.animate(camera, scene, renderer)
-		// }
-
-		// animate(camera, scene, renderer) {
-		// 	requestAnimationFrame(() => this.animate(camera, scene, renderer))
-		// 	camera.zoom = this.scatter.vm.scatterZoom.zoom
-		// 	camera.updateProjectionMatrix()
-		// 	renderer.render(scene, camera)
-		// }
-
-		// getVertices(chart) {
-		// 	const xAxisScale = chart.xAxisScale.range([-1, 1])
-		// 	const yAxisScale = chart.yAxisScale.range([-1, 1])
-		// 	const vertices: any = []
-		// 	const colors: any = []
-		// 	for (const sample of chart.data.samples) {
-		// 		const opacity = this.model.getOpacity(sample)
-		// 		if (opacity == 0) continue
-		// 		const x = xAxisScale(sample.x)
-		// 		const y = yAxisScale(sample.y)
-		// 		const z = 0
-		// 		vertices.push(x, y, z)
-		// 		const color = new THREE.Color(rgb(this.model.getColor(sample, chart)).toString())
-		// 		colors.push(color.r, color.g, color.b)
-		// 	}
-		// 	return { vertices, colors }
 	}
 }
 
