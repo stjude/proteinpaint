@@ -37,6 +37,32 @@ tape('topVEgene returns the expected top variable genes', async t => {
 	t.end()
 })
 
+tape('topVEgene returns the expected top genes by iqr', async t => {
+	const input = {
+		input_file: rnaseqTestFile,
+		filter_extreme_values: false,
+		max_genes: 10,
+		rank_type: 'iqr',
+		samples
+	}
+
+	try {
+		const out = await run_python('topVEgene.py', JSON.stringify(input))
+		const result = typeof out === 'string' ? JSON.parse(out) : out
+
+		t.ok(Array.isArray(result), 'Output should be an array of gene symbols')
+		t.deepEqual(
+			result,
+			['ISG15', 'CCNL2', 'GNB1', 'AGRN', 'DVL1', 'SKI', 'ACAP3', 'MXRA8', 'SLC35E2B', 'NADK'],
+			'Should return the expected top genes when using iqr ranking'
+		)
+	} catch (err) {
+		t.fail(`Expected success but got error: ${String(err)}`)
+	}
+
+	t.end()
+})
+
 tape('topVEgene rejects an invalid rank_type', async t => {
 	const input = {
 		input_file: rnaseqTestFile,

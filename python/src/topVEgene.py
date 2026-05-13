@@ -30,6 +30,14 @@ def create_gene_variance_list(
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
 
+        n_genes, n_samples = len(gene_names), len(all_samples)
+        if matrix.ndim != 2:
+            raise ValueError("Expected 2D matrix for expression matrix")
+        if matrix.shape[0] != n_genes:
+            raise ValueError(f"Matrix rows ({matrix.shape[0]}) must equal number of genes ({n_genes})")
+        if matrix.shape[1] != n_samples:
+            raise ValueError(f"Matrix columns ({matrix.shape[1]}) must equal number of samples ({n_samples})")
+
         sample_to_idx = {sample: idx for idx, sample in enumerate(all_samples)}
         missing = sample_list - set(sample_to_idx)
         if missing:
@@ -61,17 +69,17 @@ def calculate_variance_fast(
     # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
     cutoff = float(np.quantile(expression_values, 0.1)) if filter_extreme_values else 0.0
-    gene_sample_count = int(np.sum(expression_values >= cutoff))
+    filtered_row=expression_values[(expression_values >= cutoff) & np.isfinite(expression_values)]
+    gene_sample_count = len(filtered_row)
     min_sample_size = MIN_PROP * original_sample_size
-
     if gene_sample_count < min_sample_size:
         return (None, gene_name)
 
     if rank_type == "var":
         #ddof for sample variance
-        score = float(np.var(expression_values, ddof=1))
+        score = float(np.var(filtered_row, ddof=1))
     elif rank_type == "iqr":
-        q1, q3 = np.quantile(expression_values, [0.25, 0.75])
+        q1, q3 = np.quantile(filtered_row, [0.25, 0.75])
         score = float(q3 - q1)
     else:
         raise ValueError('rank_type must be either "iqr" or "var"')
@@ -116,8 +124,8 @@ def main() -> int:
             raise ValueError("filter_extreme_values must be true or false")
 
         max_genes = json_args.get("max_genes")
-        if not isinstance(max_genes, int) or max_genes < 10 or max_genes > 1000:
-            raise ValueError("max_genes must be an integer between 10 and 1000")
+        if not isinstance(max_genes, int) or max_genes < 2 or max_genes > 1000:
+            raise ValueError("max_genes must be an integer between 2 and 1000")
 
         rank_type = json_args.get("rank_type")
         if rank_type not in ["iqr", "var"]:
@@ -129,8 +137,7 @@ def main() -> int:
         print(json.dumps(result))
         return 0
     except Exception as e:
-        tb_last = traceback.extract_tb(e.__traceback__)[-1]
-        print(f"Error: {e} ({tb_last.filename}:{tb_last.lineno} in {tb_last.name})", file=sys.stderr)
+        print(f"Error: {e}", file=sys.stderr)
         return 1
 
 
