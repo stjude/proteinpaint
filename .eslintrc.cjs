@@ -23,6 +23,14 @@ module.exports = {
 				argsIgnorePattern: '^_'
 			}
 		],
-		'@typescript-eslint/consistent-type-imports': errOrWarn
+		'@typescript-eslint/consistent-type-imports': errOrWarn,
+		'no-restricted-imports': [
+			'error',
+			{
+				// Blocks all imports except relative imports starting with './'
+				// note that using a subpath hash-prefixed #types pattern doesn't work
+				patterns: ['*/client*', '*/server*', '*proteinpaint-client*', '*proteinpaint-server*']
+			}
+		]
 	}
 }
