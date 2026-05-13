@@ -1,6 +1,5 @@
-// uncomment the imports below, save, and commit to trigger eslint checks in the
-// git pre-commit hook, or run the command below from the proteinpaint dir,
-// `npx eslint --env shared-node-browser shared/utils/constants/AiHisto.ts`
+// Uncomment the imports below, save, and run `npm run lint` from the proteinpaint dir,
+// or commit to trigger eslint checks in the git pre-commit hook.
 // -- start trigger eslint check failures --
 // import { joinUrl } from '../src/joinUrl.js'
 // import { type BaseTvs } from '#types'
