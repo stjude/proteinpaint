@@ -104,7 +104,8 @@ export class ScatterView {
 			processInput: async tw => {
 				//only discrete mode allowed so set discrete mode and fill term wrapper to add the bins
 				if (isNumericTerm(tw?.term)) {
-					tw.q = { mode: 'discrete' } //use discrete mode by default
+					if (!tw.q) tw.q = {}
+					tw.q.mode = 'discrete' //use discrete mode by default, but preserve other q properties like type
 					await fillTermWrapper(tw, this.scatter.app.vocabApi)
 				}
 			}
