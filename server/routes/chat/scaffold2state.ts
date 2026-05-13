@@ -105,16 +105,33 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		plotState.method = 'edgeR'
 	} else if (plotType === 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
-		// DictPhrases is an array of tw objects produced by resolveToTw() for dictionary terms
-		const DictPhrases = input.DictPhrases || []
+		// HierPhrases is an array of tw objects produced by resolveToTw() for dictionary terms
+		const HierTerms = input.HierTerms || []
+		if (HierTerms.length < 3) {
+			throw 'Hierarchical clustering plot requires at least three terms, but it is empty in the input.'
+		} else if (HierTerms.length >= 3 && HierTerms[0].isDictionary) {
+			plotState.plot.dataType = 'numericDictTerm'
+		} else if (HierTerms.length >= 3 && HierTerms[0].type === 'ssGSEA') {
+			plotState.plot.dataType = 'ssgsea'
+		}
+
 		const terms: any[] = []
-		for (const phrase of DictPhrases) {
-			const tm = { id: phrase.id, name: phrase.id, type: 'float' }
-			const term = { id: phrase.id, term: tm, q: { mode: 'continuous' } }
-			terms.push(term)
+		for (const HierTerm of HierTerms) {
+			console.log('HierTerm in HierTerms:', HierTerm)
+			if (HierTerm.isDictionary) {
+				const tm = { id: HierTerm.id, name: HierTerm.id, type: 'float' }
+				const term = { id: HierTerm.id, term: tm, q: { mode: 'continuous' } }
+				terms.push(term)
+			} else {
+				if (HierTerm.type === 'ssGSEA') {
+					HierTerm.type = 'ssgsea' // May need to convert the case to match what the plotting function expects
+				}
+				const term = { term: HierTerm }
+				terms.push(term)
+			}
 		}
 		plotState.plot.terms = terms
-		plotState.plot.dataType = 'numericDictTerm'
+
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}

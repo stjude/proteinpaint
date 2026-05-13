@@ -740,11 +740,13 @@ A hierarchical clustering plot clusters samples based on a chosen feature type. 
   - "geneExpression": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
   - "metaboliteIntensity": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
   - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
+  - "ssGSEA": the user wants to cluster on ssGSEA scores for gene sets.
+  - "mixed": the user wants to cluster on a mix of variable types (e.g. gene expression + clinical variables) 
 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary"
+  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "ssGSEA" | "mixed"
 }
 
 ## EXAMPLES
@@ -773,6 +775,15 @@ A: { "variableType": "dictionary" }
 Q: "Hierarchical clustering by clinical variables"
 A: { "variableType": "dictionary" }
 
+Q: "Hierarchical clustering of ABC, IGH, and HGT ssGSEA scores"
+A: { "variableType": "ssGSEA" }
+
+Q: "cluster ssGSEA scores from XYZ, PQR, and LMN genesets"
+A: { "variableType": "ssGSEA" }
+
+Q: "cluster ssGSEA scores from XYZ genesets along with ABC gene expression and age of diagnosis"
+A: { "variableType": "mixed" }
+
 Classify the following query:
 Query: ${user_prompt}
 `
@@ -786,7 +797,12 @@ Query: ${user_prompt}
 		throw new Error(`Failed to parse hierarchical variable-type classifier response: ${response}`)
 	}
 
-	if (variableType === 'geneExpression') {
+	if (variableType === 'mixed') {
+		return {
+			type: 'text',
+			text: 'Hierarchical clustering is only allowed for one type of variable at a time (e.g. only dictionary variables, only gene expression variables or only ssGSEA scores).'
+		}
+	} else if (variableType === 'geneExpression') {
 		if (allowedTermTypes.includes('geneExpression')) {
 			return await hierarchicalGeneExpression(user_prompt, llm, genome, genes_list, dataset_json, ds, dbPath)
 		} else {
@@ -807,14 +823,23 @@ Query: ${user_prompt}
 				text: 'Hierarchical clustering for metabolite intensity data is not supported because metabolite intensity data is not available for this dataset.'
 			}
 		}
+	} else if (variableType === 'ssGSEA') {
+		if (allowedTermTypes.includes('ssGSEA')) {
+			return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
+		} else {
+			return {
+				type: 'text',
+				text: 'Hierarchical clustering for ssGSEA is not supported because ssGSEA data is not available for this dataset.'
+			}
+		}
 	} else if (variableType === 'dictionary') {
-		return await hierarchicalDictionary(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
+		return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
 	} else {
 		throw new Error(`Unexpected variableType "${variableType}" returned by hierarchical classifier`)
 	}
 }
 
-export async function hierarchicalDictionary(
+export async function hierarchicalDictionaryssGSEA(
 	user_prompt: string,
 	llm: LlmConfig,
 	ds: any,
@@ -853,6 +878,18 @@ A: {
 Q: "Show a clinical-variable dendrogram for weight, height and lab values"
 A: {
   "hierarchicalPhrases": ["weight", "height", "lab values"]
+}
+
+--- Dendrogram for ssGSEA scores ---
+Q: "Show dendrogram of ssGSEA scores for ABC, PQR, and LMN genesets"
+A: {
+  "hierarchicalPhrases": ["ABC ssGSEA scores", "PQR ssGSEA scores", "LMN ssGSEA scores"]
+}
+
+--- Dendrogram for ssGSEA scores ---
+Q: "Cluster XYZ, VXD and HYT ssGSEA scores"
+A: {
+  "hierarchicalPhrases": ["XYZ ssGSEA scores", "VXD ssGSEA scores", "HYT ssGSEA scores"]
 }
 
 --- Subtype-restricted cluster ---

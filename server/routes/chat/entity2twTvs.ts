@@ -442,8 +442,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig) {
 			return {
 				id: twValueTerm.geneSet.toUpperCase(),
 				name: twValueTerm.geneSet.toUpperCase(),
-				type: twValueTerm.type,
-				q: { mode: 'continuous' }
+				type: twValueTerm.type
 			}
 		}
 	}
@@ -493,7 +492,8 @@ export async function resolveToTwTvs(
 		for (const gv of DictValues) {
 			const tw = await resolveToTw(gv, llm)
 			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
-			if (tw.type != 'float' && tw.type != 'integer') {
+			console.log(`Resolved Dict term for phrase "${gv.phrase}":`, JSON.stringify(tw))
+			if (tw.type != 'float' && tw.type != 'integer' && tw.type != 'ssGSEA') {
 				return {
 					type: 'text',
 					text: `Only numeric terms can be used in hierarchical clustering. Term "${gv.phrase}" is of type "${tw.type}". Please rephrase your request using only numeric terms for hierarchical clustering.`
@@ -501,7 +501,7 @@ export async function resolveToTwTvs(
 			}
 			DictTws.push(tw)
 		}
-		twTvsObjects['DictPhrases'] = DictTws
+		twTvsObjects['HierTerms'] = DictTws
 
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[]
