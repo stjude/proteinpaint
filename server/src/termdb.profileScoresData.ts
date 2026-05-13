@@ -1,11 +1,13 @@
-import { getData } from '../src/termdb.matrix.js'
+import { getData } from './termdb.matrix.js'
 
 /*
-Shared helper used by v1 profileFormScores route to fetch site/sample data.
-The v1 termdb/profileScores endpoint itself has been removed — the v2 charts
-(polar2/barchart2/radar2/radarFacility2) each own their dedicated routes.
-This file remains only because termdb.profileFormScores.ts imports getScoresData
-from it.
+Shared helper used by the v1 profileFormScores route to fetch site/sample data
+for facility-aware profile scoring.
+
+The v1 termdb/profileScores endpoint that previously lived here was removed
+when the v2 charts (polar2/barchart2/radar2/radarFacility2) moved to their
+own dedicated routes. termdb/profileFormScores is the last consumer; once
+forms2 ships, this helper can move into that route or be deleted.
 */
 
 export async function getScoresData(query, ds, terms) {
