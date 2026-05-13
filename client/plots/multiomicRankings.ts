@@ -4,7 +4,7 @@ import { getCompInit, copyMerge } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { PlotBase } from '#plots/PlotBase.js'
 
-const FDR_COLUMN = 'FDR'
+const Integrative_rank_COLUMN = 'Integrative rank'
 
 class MultiomicRankings extends PlotBase {
 	static type = 'multiomicRankings'
@@ -131,9 +131,9 @@ class MultiomicRankings extends PlotBase {
 				if (resp.error) throw resp.error
 				this.cachedData = { columns: resp.columns, rows: resp.rows }
 				this.dataKey = key
-				// default sort: FDR ascending
-				const fdrIdx = resp.columns.indexOf(FDR_COLUMN)
-				this.sortIdx = fdrIdx >= 0 ? fdrIdx : -1
+				// default sort: Integrative rank ascending
+				const integrativeRankIdx = resp.columns.indexOf(Integrative_rank_COLUMN)
+				this.sortIdx = integrativeRankIdx >= 0 ? integrativeRankIdx : -1
 				this.sortAsc = true
 				this.currentPage = 1
 				this.searchQuery = ''
