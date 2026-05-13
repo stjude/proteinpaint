@@ -117,7 +117,6 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 
 		const terms: any[] = []
 		for (const HierTerm of HierTerms) {
-			console.log('HierTerm in HierTerms:', HierTerm)
 			if (HierTerm.isDictionary) {
 				const tm = { id: HierTerm.id, name: HierTerm.id, type: 'float' }
 				const term = { id: HierTerm.id, term: tm, q: { mode: 'continuous' } }
