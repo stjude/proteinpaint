@@ -28,7 +28,7 @@ export interface GeneTerm {
 
 export interface GeneSetTerm {
 	geneSet: string
-	type: 'ssGSEA' | 'geneVariant'
+	type: 'ssGSEA' | 'geneVariant' | 'geneExpression'
 }
 
 export interface MethTerm {
@@ -51,19 +51,38 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 	switch (twEntity.termType) {
 		case 'geneExpression': {
 			const relevant_genes = extractGenesFromPrompt(twEntity.phrase, genes_list)
-			const twResult: GeneTerm = {
-				gene: relevant_genes.length > 0 ? relevant_genes[0] : 'UNKNOWN_GENE',
-				type: twEntity.termType
-			}
-			if ('logicalOperator' in twEntity) {
-				return {
-					term: twResult,
-					phrase: twEntity.phrase,
-					type: twEntity.termType,
-					logicalOperator: twEntity.logicalOperator
+			let twResult: Term
+			if (relevant_genes.length > 0) {
+				twResult = { gene: relevant_genes[0], type: twEntity.termType } as GeneTerm
+				if ('logicalOperator' in twEntity) {
+					return {
+						term: twResult,
+						phrase: twEntity.phrase,
+						type: twEntity.termType,
+						logicalOperator: twEntity.logicalOperator
+					}
+				} else {
+					return { term: twResult, phrase: twEntity.phrase, type: twEntity.termType }
 				}
 			} else {
-				return { term: twResult, phrase: twEntity.phrase, type: twEntity.termType }
+				// Check to see if the phrase contains a geneset
+				const relevant_genesets = extractGenesetsFromPromptNew(twEntity.phrase, getGenesetNames(genome))
+				if (relevant_genesets.length > 0) {
+					twResult = { geneSet: relevant_genesets[0], type: twEntity.termType } as GeneSetTerm
+				} else {
+					throw `No relevant genes or genesets found in phrase "${twEntity.phrase}" for gene expression term.`
+				}
+
+				if ('logicalOperator' in twEntity) {
+					return {
+						term: twResult,
+						phrase: twEntity.phrase,
+						type: twEntity.termType,
+						logicalOperator: twEntity.logicalOperator
+					}
+				} else {
+					return { term: twResult, phrase: twEntity.phrase, type: twEntity.termType }
+				}
 			}
 		}
 		case 'ssGSEA': {
@@ -460,15 +479,15 @@ async function findBestMatchLLM(
 	}
 	/*
 try {
-    const parsed = JSON.parse(response) as { term: string }
-    if (!parsed.term) {
-            console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
-            return undefined
-    }
-    parsedTerm = parsed.term
+const parsed = JSON.parse(response) as { term: string }
+if (!parsed.term) {
+        console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
+        return undefined
+}
+parsedTerm = parsed.term
 } catch (e) {
-    console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
-    return undefined
+console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+return undefined
 }*/
 
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)

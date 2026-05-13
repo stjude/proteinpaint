@@ -136,10 +136,18 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		}
 	} else if (plotType === 'matrix') {
 		if (input.twLst && Array.isArray(input.twLst)) {
+			const twLst: any[] = []
 			input.twLst.forEach((tw: any) => {
 				if (tw.isDictionary) delete tw.isDictionary
+				if (tw.geneSet && tw.type === 'geneExpression') {
+					for (const geneTerm of tw.geneSet) {
+						twLst.push(geneTerm)
+					}
+				} else {
+					twLst.push(tw)
+				}
 			})
-			plotState.plot.termgroups = [{ name: '', lst: input.twLst.map((tw: any) => (tw.term ? tw : { term: tw })) }]
+			plotState.plot.termgroups = [{ name: '', lst: twLst.map((tw: any) => (tw.term ? tw : { term: tw })) }]
 		} else {
 			mayLog('Matrix plot requires a list of terms (twLst), but it is missing or not an array in the input.')
 			throw 'Matrix plot requires a list of terms (twLst), but it is missing or not an array in the input.'
