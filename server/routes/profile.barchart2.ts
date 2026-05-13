@@ -7,8 +7,8 @@ Route for the profile bar chart. Returns the aggregated median percentage
 per module/domain across all eligible sites.
 
 Each bar chart row contributes term1 (objective) and optionally term2
-(subjective); the client flattens them into scoreTerms, so the request/response
-shape matches profile.polar2.ts and profile.radar2.ts.
+(subjective); the client flattens them into a single scoreTerms[] before
+sending.
 
 - The facility term id is derived server-side from term ID prefixes already in
   the request — no client-supplied facilityTW.

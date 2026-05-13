@@ -8,16 +8,17 @@ import { roundValueAuto } from '#shared'
 import { dofetch3 } from '#common/dofetch'
 
 /*
-profileForms2 — redesigned Templates plot following the per-plot dedicated route
-architecture established by profilePolar2.
+profileForms2 — Templates plot rendered for the active cohort (Full or
+Abbreviated).
 
-Key differences from profileForms:
-  - Dedicated server route: termdb/profileForms2Scores.
-  - Server-side facility term derivation from activeCohort: client does not send facilityTW.
-  - Always aggregated: server returns combined categorical dicts across all eligible sites.
-  - Minimal client payload: scoreTerms / scScoreTerms stripped to { term: { id }, q }.
-  - Public role: sites is always [] in the response.
-  - Available for both Full and Abbreviated cohorts (v1 only worked for Full).
+Talks to termdb/profileForms2Scores, which derives the facility term server-side
+from activeCohort and returns aggregated categorical dicts across all eligible
+sites. The client payload is intentionally minimal (scoreTerms / scScoreTerms
+are stripped to { term: { id }, q }) and never carries facilityTW. For the
+public role the server returns sites: [] so no site IDs are exposed.
+
+The picker config (tab list and per-tab tree filter) is read on the client
+directly from termdbConfig.plotConfigByCohort[cohort].profileForms2.domains.
 */
 
 const YES_NO_TAB = 'Yes/No Barchart'

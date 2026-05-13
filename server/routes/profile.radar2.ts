@@ -7,9 +7,8 @@ Route for the profile radar chart. Returns the aggregated median percentage
 per module across all eligible sites, for the two comparison series of the
 active cohort.
 
-Each radar row contributes term1 and term2; the client flattens them into
-scoreTerms, so the request/response shape matches profile.polar2.ts and
-profile.barchart2.ts.
+Each radar row contributes term1 and term2 (the two comparison series); the
+client flattens them into a single scoreTerms[] before sending.
 
 - The facility term id is derived server-side from term ID prefixes — no
   client-supplied facilityTW.

@@ -1,18 +1,23 @@
 import { getData } from './termdb.matrix.js'
 
 /*
-Shared helper used by the v1 profileFormScores route to fetch site/sample data
-for facility-aware profile scoring.
+Fetches site/sample data for facility-aware profile scoring.
 
-The v1 termdb/profileScores endpoint that previously lived here was removed
-when the v2 charts (polar2/barchart2/radar2/radarFacility2) moved to their
-own dedicated routes. termdb/profileFormScores is the last consumer; once
-forms2 ships, this helper can move into that route or be deleted.
+getScoresData() runs getData() against the facility term wrapper plus the
+caller-supplied score/maxScore terms, then returns:
+  - samples:    raw sample rows for the caller to aggregate
+  - sites:      [{ value, label }] list for the facility dropdown, sorted
+                alphabetically by label and filtered down to the user's
+                authorized sites (clientAuthResult[activeCohort].sites)
+  - sampleData: a single sample row when the caller requests a specific
+                facility (query.facilitySite) or when only one site remains
+                after access filtering — undefined otherwise
+  - site:       the {value, label} entry for sampleData, or undefined
 
-Pure transformation helpers (buildSitesList, filterSitesByUserAccess,
-sortSitesByLabel, pickSampleAndSite) are exported separately so they can be
-unit-tested without the getData() I/O boundary — see
-server/src/test/termdb.profileScores.unit.spec.ts.
+The orchestration calls four pure helpers (buildSitesList,
+filterSitesByUserAccess, sortSitesByLabel, pickSampleAndSite) exported
+alongside so they can be unit-tested without the getData() I/O boundary —
+see server/src/test/termdb.profileScores.unit.spec.ts.
 */
 
 export type Site = { value: any; label: string }

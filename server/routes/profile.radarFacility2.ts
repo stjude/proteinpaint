@@ -182,8 +182,8 @@ function computeSinglePercentage(d: any, sample: any): number | null {
 }
 
 /**
- * Median of (score/maxScore)*100 across samples. Zero-score sites included.
- * Same implementation as profile.polar2.ts / profile.barchart2.ts / profile.radar2.ts.
+ * Median of (score/maxScore)*100 across samples. Zero-score sites are included
+ * via the != null filter, so a site with score 0 still contributes to the median.
  */
 function computeMedianPercentage(d: any, samples: any[]): number | null {
 	const percentages: number[] = []
