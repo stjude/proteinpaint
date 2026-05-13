@@ -59,8 +59,9 @@ export class ScatterModel {
 					maxXScale: this.scatter.settings.maxXScale,
 					minYScale: this.scatter.settings.minYScale,
 					maxYScale: this.scatter.settings.maxYScale,
-					noExpColor,
-					expColor
+					noExpColor: rgb(noExpColor).toString(),
+					expColor: rgb(expColor).toString(),
+					opacity: this.scatter.settings.opacity
 				}
 			}
 		}

@@ -24,7 +24,8 @@ import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { createCanvas } from 'canvas'
-import { scaleLinear } from 'd3'
+import { scaleLinear } from 'd3-scale'
+import { rgb } from 'd3-color'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
@@ -264,7 +265,17 @@ async function getSingleCellScatter(req, res, ds) {
 
 async function makeCanvas(q, samples, colorMap, range, termType) {
 	const settings = q.canvasSettings
-	const canvas = createCanvas(settings.width, settings.height)
+
+	const offsetX = 80
+	const offsetY = 30
+	//extra space added to avoid clipping the particles on the X axis
+	const extraSpaceX = settings.minXScale != null || settings.maxXScale != null ? 0 : (range.xMax - range.xMin) * 0.01
+	//extra space added to avoid clipping the particles on the Y axis
+	const extraSpaceY = settings.minYScale != null || settings.maxYScale != null ? 0 : (range.yMax - range.yMin) * 0.01
+	const width = settings.width + offsetX + extraSpaceX + 20
+	const height = settings.height + offsetY + extraSpaceY + 20
+
+	const canvas = createCanvas(width, height)
 	const ctx = canvas.getContext('2d')
 
 	//This accounts for user defined min and max scales values
@@ -274,10 +285,16 @@ async function makeCanvas(q, samples, colorMap, range, termType) {
 		return val
 	}
 
-	const xScale = scaleLinear().domain([range.xMin, range.xMax]).range([0, settings.width])
-	const yScale = scaleLinear().domain([range.yMin, range.yMax]).range([settings.height, 0])
+	const xScale = scaleLinear()
+		.domain([range.xMin - extraSpaceX, range.xMax + extraSpaceX])
+		.range([offsetX, settings.width + offsetX])
+	const yScale = scaleLinear()
+		.domain([range.yMin + extraSpaceY, range.yMax - extraSpaceY])
+		.range([offsetY, settings.height + offsetY])
 	//This will need to be changed to accomodate user changes from the color scale
-	const colorGenerator = scaleLinear().domain([range.yMin, range.yMax]).range([settings.noExpColor, settings.ExpColor])
+	const colorGenerator = scaleLinear()
+		.domain([range.geMin, range.geMax])
+		.range([settings.noExpColor, settings.expColor])
 
 	for (const sample of samples) {
 		const color = () => {
@@ -297,7 +314,9 @@ async function makeCanvas(q, samples, colorMap, range, termType) {
 			return yScale(tmp)
 		}
 		// Draw each sample on the canvas
-		ctx.fillStyle = color()
+		const c = rgb(color())
+		c.opacity = settings.opacity
+		ctx.fillStyle = c.toString()
 		ctx.beginPath()
 		ctx.arc(x(), y(), settings.radius, 0, Math.PI * 2)
 		ctx.fill()
