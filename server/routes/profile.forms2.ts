@@ -45,8 +45,8 @@ function init({ genomes }) {
 
 async function getScores(query: any, ds: any) {
 	const { activeCohort, clientAuthResult } = query.__protected__
-	// Facility term id from dataset config (forms2 scoreTerms are POC*, not F*/A* — can't
-	// reuse the polar2/barchart2/radar2 derivePrefix scan).
+	// Facility term id from dataset config (forms2 scoreTerms are POC*, not F*/A* —
+	// can't reuse the prefix-scan approach used by the polar/barchart/radar routes).
 	const facilityTermId = ds.cohort.termdb.plotConfigByCohort?.[activeCohort]?.profileForms2?.facilityTW?.id
 	if (!facilityTermId) throw `profileForms2.facilityTW.id missing for cohort '${activeCohort}'`
 

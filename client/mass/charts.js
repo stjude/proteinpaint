@@ -168,12 +168,6 @@ function getChartTypeList(self, state) {
 		////////////////////// PROFILE PLOTS START //////////////////////
 		{
 			label: 'Polar',
-			chartType: 'profilePolar',
-			clickTo: self.prepPlot,
-			config: { chartType: 'profilePolar' }
-		},
-		{
-			label: 'Polar 2',
 			chartType: 'profilePolar2',
 			clickTo: self.prepPlot,
 			config: { chartType: 'profilePolar2' }
@@ -181,32 +175,16 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Barchart',
 			clickTo: self.prepPlot,
-			chartType: 'profileBarchart',
-			config: { chartType: 'profileBarchart' }
-		},
-		{
-			label: 'Barchart 2',
-			clickTo: self.prepPlot,
 			chartType: 'profileBarchart2',
 			config: { chartType: 'profileBarchart2' }
 		},
 		{
 			label: 'Facility Radar',
-			chartType: 'profileRadarFacility',
-			clickTo: self.loadChartSpecificMenu
-		},
-		{
-			label: 'Facility Radar 2',
 			chartType: 'profileRadarFacility2',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Radar',
-			chartType: 'profileRadar',
-			clickTo: self.loadChartSpecificMenu
-		},
-		{
-			label: 'Radar 2',
 			chartType: 'profileRadar2',
 			clickTo: self.loadChartSpecificMenu
 		},

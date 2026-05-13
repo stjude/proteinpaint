@@ -26,19 +26,9 @@ tape('\n', function (test) {
 	test.end()
 })
 
-tape('Test polar', function (test) {
-	//test.timeoutAfter(8000)
-	//openPlot('profilePolar', runTests)
-
-	async function runTests(plot) {
-		if (test._ok) self.app.destroy()
-		test.end()
-	}
-})
-
 tape('Test barchart', function (test) {
 	//test.timeoutAfter(8000)
-	//openPlot('profilePolar', runTests)
+	//openPlot('profileBarchart', runTests)
 
 	async function runTests(plot) {
 		//plot.on('postRender.test', null)

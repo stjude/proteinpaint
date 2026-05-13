@@ -12,16 +12,17 @@ import {
 } from './profilePlot.js'
 
 /*
-profileBarchart2 — redesigned bar chart that establishes the per-plot dedicated
-route architecture for the bar chart (following profilePolar2's lead).
+profileBarchart2 — client class for the profile bar chart.
 
-Key differences from profileBarchart:
-  - Dedicated server route: termdb/profileBarchart2Scores.
-  - Server-side facility term derivation: client does not send facilityTW.
-  - Always aggregated: median percentage across eligible sites.
-  - Minimal client payload: scoreTerms stripped to { term: { id }, q }.
-  - Public role: sites is always [] in the response.
-  - Cleaner rendering structure: plot() split into focused private methods.
+Renders a multi-component grouped bar chart of objective + subjective scores
+by module/domain. Each row in the dataset config's plotByComponent contributes
+term1 (objective) and optionally term2 (subjective); the client flattens them
+into scoreTerms and posts to termdb/profileBarchart2Scores.
+
+- The server derives the facility term id from term ID prefixes — no
+  client-supplied facilityTW.
+- Minimal payload: scoreTerms stripped to { term: { id }, q } before sending.
+- Always-aggregated response (median percentage across eligible sites).
 */
 
 const stepx = 500
@@ -152,7 +153,7 @@ class ProfileBarchart2 extends profilePlot {
 				: `Objective ${
 						this.profileComponent == 'Patients and Outcomes' ? '' : 'and Subjective '
 				  }Score-based Results for the ${this.profileComponent} Component by Module and Domain`
-		this.dom.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(`${title} (v2)`)
+		this.dom.svg.append('text').attr('transform', `translate(50, 30)`).attr('font-weight', 'bold').text(title)
 
 		const color = this.configProfileComponent.profileComponent.color
 		this.dom.svg

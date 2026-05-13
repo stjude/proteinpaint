@@ -40,12 +40,10 @@ class ProfilePolar2 extends profilePlot {
 	}
 
 	/**
-	 * Override setControls() to fetch data from the dedicated polar2 route.
-	 * The base class setControls() builds filter UI and sets this.filter but
-	 * skips the data fetch for profilePolar2 (see profilePlot.ts).
-	 * This method calls termdb/profilePolar2Scores, which derives the facility
-	 * term server-side from the request data and returns aggregated (median)
-	 * percentages across all eligible sites.
+	 * Fetches aggregated module scores from termdb/profilePolar2Scores after
+	 * super.setControls() builds the filter UI and sets this.filter. The server
+	 * derives the facility term from the request term IDs and returns the median
+	 * percentage across all eligible sites.
 	 */
 	async setControls(additionalInputs: any[] = []) {
 		await super.setControls(additionalInputs)
