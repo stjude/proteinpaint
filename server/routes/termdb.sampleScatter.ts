@@ -23,6 +23,8 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { createCanvas } from 'canvas'
+import { scaleLinear } from 'd3'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
@@ -48,6 +50,7 @@ function init({ genomes }) {
 	return async function (req, res) {
 		try {
 			const q: TermdbSampleScatterRequest & ReqQueryAddons = req.query
+
 			if (!q.genome || !q.dslabel) {
 				throw new Error('Genome and dataset label are required for termdb/sampleScatter request.')
 			}
@@ -203,9 +206,16 @@ async function getSingleCellScatter(req, res, ds) {
 				geneExp: cell.geneExp
 			}
 		})
-		const [xMin, xMax, yMin, yMax] = samples.reduce(
-			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[samples[0].x, samples[0].x, samples[0].y, samples[0].y]
+		const [xMin, xMax, yMin, yMax, geMin, geMax] = samples.reduce(
+			(s, d) => [
+				d.x < s[0] ? d.x : s[0],
+				d.x > s[1] ? d.x : s[1],
+				d.y < s[2] ? d.y : s[2],
+				d.y > s[3] ? d.y : s[3],
+				'geneExp' in d ? (d.geneExp! < s[4]! ? d.geneExp! : s[4]) : Number.POSITIVE_INFINITY,
+				'geneExp' in d ? (d.geneExp! > s[5]! ? d.geneExp! : s[5]) : Number.NEGATIVE_INFINITY
+			],
+			[samples[0].x, samples[0].x, samples[0].y, samples[0].y, samples[0].geneExp, samples[0].geneExp]
 		)
 		const categories: any = new Set(samples.map(s => s.category))
 		const colorMap = {}
@@ -233,14 +243,67 @@ async function getSingleCellScatter(req, res, ds) {
 		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
 		const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
 
-		res.send({
-			result: { Default: { samples, colorLegend, shapeLegend } },
-			range: { xMin, xMax, yMin, yMax }
-		} satisfies TermdbSampleScatterResponse)
+		const resp: any = {
+			range: { xMin, xMax, yMin, yMax, geMin, geMax },
+			result: { Default: { colorLegend, shapeLegend } }
+		}
+
+		if (samples.length >= q.canvasSettings.cutoff) {
+			const src = await makeCanvas(q, samples, colorMap, { xMin, xMax, yMin, yMax, geMin, geMax }, tw.term.type)
+			resp.result.Default.src = src
+		} else {
+			resp.result.Default.samples = samples
+		}
+
+		res.send(resp satisfies TermdbSampleScatterResponse)
 	} catch (e: any) {
 		console.log(e)
 		res.send({ error: e.message || e })
 	}
+}
+
+async function makeCanvas(q, samples, colorMap, range, termType) {
+	const settings = q.canvasSettings
+	const canvas = createCanvas(settings.width, settings.height)
+	const ctx = canvas.getContext('2d')
+
+	//This accounts for user defined min and max scales values
+	function getCoordinate(val: number, min: number | null, max: number | null) {
+		if (min != null && val < min) return min
+		if (max != null && val > max) return max
+		return val
+	}
+
+	const xScale = scaleLinear().domain([range.xMin, range.xMax]).range([0, settings.width])
+	const yScale = scaleLinear().domain([range.yMin, range.yMax]).range([settings.height, 0])
+	//This will need to be changed to accomodate user changes from the color scale
+	const colorGenerator = scaleLinear().domain([range.yMin, range.yMax]).range([settings.noExpColor, settings.ExpColor])
+
+	for (const sample of samples) {
+		const color = () => {
+			if (termType == SINGLECELL_GENE_EXPRESSION) {
+				if (!sample.geneExp) return settings.noExpColor
+				else if (sample.geneExp > range.geMax) return settings.expColor
+				else return colorGenerator(sample.geneExp)
+			}
+			return colorMap[sample.category] ? colorMap[sample.category].color : refColor
+		}
+		const x = () => {
+			const tmp = getCoordinate(sample.x, settings.minXScale, settings.maxXScale)
+			return xScale(tmp)
+		}
+		const y = () => {
+			const tmp = getCoordinate(sample.y, settings.minYScale, settings.maxYScale)
+			return yScale(tmp)
+		}
+		// Draw each sample on the canvas
+		ctx.fillStyle = color()
+		ctx.beginPath()
+		ctx.arc(x(), y(), settings.radius, 0, Math.PI * 2)
+		ctx.fill()
+	}
+
+	return canvas.toDataURL()
 }
 
 async function getSamples(ds: any, plot: any) {

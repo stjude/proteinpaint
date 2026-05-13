@@ -14,12 +14,6 @@ export type ShapeLegendItem = {
 
 export type ScatterLegendItem = ColorLegendItem | ShapeLegendItem
 
-export type ScatterDataResponse = { range: DataRange; result: { [index: string]: ScatterDataResult } }
-
-export type ErrorResponse = { error: string }
-
-export type ScatterResponse = ScatterDataResponse //| ErrorResponse
-
 export type ColorLegendEntry = [label: string, item: ColorLegendItem]
 export type ShapeLegendEntry = [label: string, item: ShapeLegendItem]
 
@@ -34,19 +28,20 @@ export type ScatterShapeMap = {
 	[key: string]: ShapeLegendItem
 }
 
-export type ScatterDataResult = {
-	colorLegend: ColorLegendEntry[]
-	shapeLegend: ShapeLegendEntry[]
-	colorMap: ScatterColorMap
-	shapeMap: ScatterShapeMap
-	samples: any[]
-}
-
 export type DataRange = {
 	xMin: number
 	xMax: number
 	yMin: number
 	yMax: number
+}
+
+export type ScatterDataResult = {
+	colorLegend: ColorLegendEntry[]
+	shapeLegend: ShapeLegendEntry[]
+	colorMap: ScatterColorMap
+	shapeMap: ScatterShapeMap
+	samples?: any[]
+	src?: string
 }
 
 export type ScatterChart = {
@@ -95,4 +90,11 @@ export type ScatterChart = {
 	shapeLegend: Map<string, ShapeLegendItem>
 	axisG?: any
 	labelsG?: any
+	src?: string
 }
+
+export type ValidScatterDataResponse = { range: DataRange; result: { [index: string]: ScatterDataResult } }
+
+export type ScatterErrorResponse = { error: string }
+
+export type ScatterResponse = ValidScatterDataResponse | ScatterErrorResponse

@@ -46,7 +46,24 @@ export class ScatterModel {
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
 
-		if (c.singleCellPlot) return c
+		if (c.singleCellPlot) {
+			// pass cutoff to avoid heavy svg rendering in single cell scatter
+			return {
+				...c,
+				canvasSettings: {
+					cutoff: maxSvgSamplesCutoff,
+					width: this.scatter.settings.svgw,
+					height: this.scatter.settings.svgh,
+					radius: this.scatter.settings.size,
+					minXScale: this.scatter.settings.minXScale,
+					maxXScale: this.scatter.settings.maxXScale,
+					minYScale: this.scatter.settings.minYScale,
+					maxYScale: this.scatter.settings.maxYScale,
+					noExpColor,
+					expColor
+				}
+			}
+		}
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
@@ -57,7 +74,8 @@ export class ScatterModel {
 			colorTW: c.colorTW,
 			filter,
 			coordTWs,
-			chartType: this.scatter.type
+			chartType: this.scatter.type,
+			excludeOutliers: this.scatter.settings.excludeOutliers
 		}
 		if (this.scatter.state.termfilter.filter0) opts.filter0 = this.scatter.state.termfilter.filter0
 		if (c.colorColumn) opts.colorColumn = c.colorColumn
@@ -68,7 +86,6 @@ export class ScatterModel {
 			opts.scaleDotTW = c.scaleDotTW
 		}
 		if (c.term0) opts.divideByTW = c.term0
-		opts.excludeOutliers = this.scatter.settings.excludeOutliers
 
 		return opts
 	}
@@ -82,14 +99,15 @@ export class ScatterModel {
 				reqOpts,
 				this.scatter.api?.getAbortSignal()
 			)
-			if ('error' in data) throw data.error
+			if ('error' in data) throw new Error(data?.['error'] || 'No data received')
 
 			this.charts = []
 
 			this.range = data.range
 			for (const [key, chartData] of Object.entries(data.result)) {
-				if (!Array.isArray(chartData.samples)) throw 'data.samples[] not array'
-				this.createChart(key, chartData)
+				const chart = chartData as ScatterDataResult
+				// if (!Array.isArray(chart.samples)) throw 'data.samples[] not array'
+				this.createChart(key, chart)
 			}
 
 			this.is3D = this.scatter.config.term0?.q.mode == 'continuous'
@@ -102,17 +120,22 @@ export class ScatterModel {
 	}
 
 	createChart(id: string, data: ScatterDataResult) {
-		const cohortSamples: any[] = data.samples.filter(sample => 'sampleId' in sample)
-		if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => 'sampleId' in sample) : []
+		// if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
 		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
 		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
-		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
+		const chart: ScatterChart = { id, data, cohortSamples, colorLegend, shapeLegend }
+		if (data.src) {
+			chart.src = data.src
+			this.is2DLarge = true
+		}
+		this.charts.push(chart)
 	}
 
 	async initRanges() {
 		let samples: any[] = []
-		for (const chart of this.charts) samples = samples.concat(chart.data.samples)
-		if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		for (const chart of this.charts) samples = samples.concat(chart.data?.samples || [])
+		// if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
 		if (samples.length == 0) return
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax, geMin, geMax] = samples.reduce(
@@ -305,7 +328,7 @@ export class ScatterModel {
 
 	initAxes(chart) {
 		const config = this.scatter.config
-		if (chart.data.samples.length == 0) return
+		if (!chart.data?.samples || chart.data.samples.length == 0) return
 		const offsetX = this.axisOffset.x
 		const offsetY = this.axisOffset.y
 		const xMin = chart.ranges.xMin

@@ -17,6 +17,7 @@ export type TermdbSampleScatterRequest = {
 	singleCellPlot?: any
 	colorColumn?: any
 	excludeOutliers?: any
+	canvasSettings?: { cutoff: number; width: number; height: number }
 }
 
 export type ScatterSample = {
@@ -27,6 +28,7 @@ export type ScatterSample = {
 	x: number
 	y: number
 	z: number
+	geneExp?: number
 }
 
 type ColorObject = { color: string; sampleCount: number; key: string }
@@ -40,8 +42,9 @@ export type ShapeMap = { [index: string]: ShapeObject }
 type ScatterResult = {
 	[index: string]: {
 		colorLegend: ColorLegendEntry[]
-		samples: ScatterSample[]
 		shapeLegend: ShapeLegendEntry[]
+		samples?: ScatterSample[]
+		src?: string
 	}
 }
 

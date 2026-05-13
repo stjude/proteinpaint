@@ -23,23 +23,29 @@ export class ScatterView {
 		this.scatter = scatter
 
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		const controlsHolder = leftDiv.insert('div').style('display', 'inline-block')
+		const controlsHolder = leftDiv
+			.insert('div')
+			.style('display', 'inline-block')
+			.attr('data-testid', 'sjpp-scatter-controls-div')
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const loadingDiv = rightDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-scatter-loading-div')
 			.style('display', 'inline-block')
 			.style('padding', '24px')
 			.text('Loading ...')
 		const bannerDiv = rightDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-scatter-banner-div')
 			.style('display', 'none')
 			.style('text-align', 'center')
 			.style('padding', '24px')
 			.style('font-size', '16px')
-		const headerDiv = rightDiv.append('div')
+		const headerDiv = rightDiv.append('div').attr('data-testid', 'sjpp-scatter-header-div')
 		const mainDiv = rightDiv
 			.append('div')
+			.attr('data-testid', 'sjpp-scatter-main-div')
 			.style('display', 'flex')
 			.style('flex-direction', 'row')
 			.style('flex-wrap', 'wrap')
@@ -69,7 +75,7 @@ export class ScatterView {
 	}
 
 	getControlInputs() {
-		const hasRef = this.scatter.model.charts[0]?.data.samples.find(s => !('sampleId' in s)) || false
+		const hasRef = this.scatter.model.charts[0]?.data?.samples?.find(s => !('sampleId' in s)) || false
 		const scaleDotOption = {
 			type: 'term',
 			configKey: 'scaleDotTW',

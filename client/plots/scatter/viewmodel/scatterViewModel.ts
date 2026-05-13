@@ -2,9 +2,9 @@ import { icons as icon_functions } from '#dom'
 import { d3lasso } from '#common/lasso'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys } from 'd3'
-import { ScatterLasso } from './scatterLasso.js'
-import type { Scatter } from '../scatter.js'
-import { ScatterViewModelBase } from './scatterViewModelBase.js'
+import { ScatterLasso } from './scatterLasso'
+import type { Scatter } from '../scatter'
+import { ScatterViewModelBase } from './scatterViewModelBase'
 
 export class ScatterViewModel extends ScatterViewModelBase {
 	scatterLasso: ScatterLasso
