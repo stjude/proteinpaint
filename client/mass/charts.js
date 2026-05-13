@@ -32,7 +32,7 @@ class MassCharts {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
+			currentCohortChartTypes: this.getVisibleCharts(appState),
 			termdbConfig: appState.termdbConfig
 		}
 		if (appState?.termfilter?.filter) {
@@ -43,6 +43,15 @@ class MassCharts {
 
 	main() {
 		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
+	}
+
+	getVisibleCharts(appState) {
+		const clst = getCurrentCohortChartTypes(appState)
+		if (!this.app.opts?.opts?.hideChartBtn) return clst
+		// some charts will be hidden according to this directive. this can be embedder-specified
+		const hiddenCharts = this.app.opts.opts.hideChartBtn[getActiveCohortStr(appState)]
+		if (!hiddenCharts) return clst // no hidden chart of this cohort
+		return clst.filter(c => !hiddenCharts.includes(c))
 	}
 
 	getBtnLabel_dict(state) {

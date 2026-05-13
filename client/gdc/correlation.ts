@@ -16,9 +16,16 @@ interface InitArg {
 	dslabel?: string
 	filter0?: object
 	state?: {
+		/** plot to open by default */
 		plots?: Array<{ chartType: string; [key: string]: any }>
 	}
 	opts?: {
+		/** key: cohort, value: array of strings for chart types
+		the "correlation" plot will show the nav subheader with all chart btns visible
+		if the ds does have some chart types enabled in supported-chart-types, 
+		but they can't be shown here, this will allow it
+		*/
+		hideChartBtn?: object
 		app?: Record<string, any>
 	}
 }
