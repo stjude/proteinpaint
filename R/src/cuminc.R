@@ -253,7 +253,7 @@ compute_counts <- function(res, chart) {
 
 # stream in json input
 con <- file("stdin", "r", encoding="UTF-8")
-json <- readLines(con, encoding="UTF-8")
+json <- readLines(con)
 close(con)
 input <- fromJSON(json)
 
