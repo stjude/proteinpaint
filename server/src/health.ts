@@ -9,7 +9,7 @@ const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../packag
 
 export async function getStat(genomes) {
 	if (!versionInfo.deps) setVersionInfoDeps() // set only once
-	const auth = (await authApi.getHealth()) as undefined | { errors?: string[] }
+	const auth = (await authApi.getHealth(genomes)) as undefined | { errors?: string[] }
 	const health = {
 		status: auth?.errors?.length ? 'error' : 'ok',
 		genomes: {},
