@@ -63,7 +63,7 @@ fi
 set -u # reenable unbound variable check
 
 # rm -rf .coverage
-node test/puppet.js "$PATTERNSLIST" "$TESTPORT"
+tsx --conditions=sjpp/dev test/puppet.js "$PATTERNSLIST" "$TESTPORT"
 
 # if [[ -d .coverage && -f .coverage/coverage-summary.json ]]; then
 #   cp .coverage/coverage-summary.json branch_coverage.json
