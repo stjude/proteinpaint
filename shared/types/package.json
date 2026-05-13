@@ -16,7 +16,7 @@
   },
   "scripts": {
     "generate": "node dev.mjs",
-    "dev": "node --watch-path=src/routes dev.mjs",
+    "dev": "node --conditions=sjpp/dev --watch-path=src/routes dev.mjs",
     "prepare": "ts-patch install",
     "build": "./build.sh",
     "prepack": "./build.sh",
