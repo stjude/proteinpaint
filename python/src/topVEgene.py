@@ -7,12 +7,11 @@ import numpy as np
 
 
 # This script selects the top most variant genes by calculating the variance/interquartile region for each gene across samples.
-
 # Various JSON parameters:
-#    samples: Enter the sample ID(s) separated by comma
+#    samples: Enter the sample ID(s) separated by comma, must contain at least 10 samples
 #    input_file: Path to input file (HDF5 format)
 #    filter_extreme_values: boolean (true/false). When true, this filter removes genes that have very low expression in most samples, which can be considered as noise and can interfere with the variance calculation.
-#    max_genes: The max num of genes between 2 and 1000 that need to be reported in the output.
+#    max_genes: The max num of genes between 1 and 1000 that need to be reported in the output.
 #    rank_type: var/iqr . This parameter decides whether to sort genes using variance or interquartile region. There is an article which states that its better to use interquartile region than variance for selecting genes for clustering https://www.frontiersin.org/articles/10.3389/fgene.2021.632620/full
 
 # echo '{"samples":"2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39","input_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5", "filter_extreme_values":true,"max_genes":10, "rank_type":"var"}' | python python/src/topVEgene.py
@@ -67,8 +66,9 @@ def calculate_variance_fast(
 ) -> tuple[float | None,str ]:
     # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
-    cutoff = float(np.quantile(expression_values, 0.1)) if filter_extreme_values else 0.0
-    filtered_row=expression_values[(expression_values >= cutoff) & np.isfinite(expression_values)]
+    filter_nan=expression_values[np.isfinite(expression_values)]
+    cutoff = float(np.quantile(filter_nan, 0.1)) if filter_extreme_values else 0.0
+    filtered_row=filter_nan[filter_nan >= cutoff]
     gene_sample_count = len(filtered_row)
     min_sample_size = MIN_PROP * original_sample_size
     if gene_sample_count < min_sample_size:
@@ -107,8 +107,9 @@ def main() -> int:
             samples = set(str(sample).strip() for sample in samples_value if str(sample).strip())
         else:
             raise ValueError("samples must be a comma-separated string or a JSON list")
-        if len(samples) < 2:
-            raise ValueError("samples must include at least 2 sample IDs")
+        MIN_SAMPLES = 10
+        if len(samples) < MIN_SAMPLES:
+            raise ValueError(f"samples must include at least {MIN_SAMPLES} sample IDs")
 
         input_file = json_args.get("input_file")
         if not isinstance(input_file, str):
@@ -123,8 +124,8 @@ def main() -> int:
             raise ValueError("filter_extreme_values must be true or false")
 
         max_genes = json_args.get("max_genes")
-        if not isinstance(max_genes, int) or max_genes < 2 or max_genes > 1000:
-            raise ValueError("max_genes must be an integer between 2 and 1000")
+        if not isinstance(max_genes, int) or max_genes < 1 or max_genes > 1000:
+            raise ValueError(f"max_genes must be an integer between 1 and 1000")
 
         rank_type = json_args.get("rank_type")
         if rank_type not in ["iqr", "var"]:
