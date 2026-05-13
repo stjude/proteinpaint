@@ -35,9 +35,6 @@ Object.assign(t0_t2_defaultQ, {
 	}
 })
 
-// Special series identifier for samples with missing gene expression data
-const MISSING_DATA_SERIES_ID = 'Missing data'
-
 class TdbSurvival extends PlotBase implements RxComponent {
 	static type = 'survival'
 
@@ -671,7 +668,13 @@ function setRenderers(self) {
 	function setVisibleSerieses(chart, s) {
 		chart.visibleSerieses =
 			chart.serieses?.filter(
-				series => !s.hidden.includes(series.seriesId) && series.seriesId !== MISSING_DATA_SERIES_ID
+				series =>
+					!s.hidden.includes(series.seriesId) &&
+					series.data &&
+					series.data.length > 0 &&
+					// Filter out series where all data points have the same survival probability
+					// (indicates no events, just censoring, resulting in a flat line that's not meaningful)
+					series.data.some((d, i, arr) => i === 0 || d.y !== arr[0].y)
 			) || []
 		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
 			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
