@@ -83,7 +83,7 @@ tape('topVEgene rejects sample IDs not present in HDF5', async t => {
 		filter_extreme_values: false,
 		max_genes: 10,
 		rank_type: 'var',
-		samples: `${samples},2646,2660,not-a-sample,999999,bad-sample-id`
+		samples: `${samples},not-a-sample,999999,bad-sample-id,-1`
 	}
 
 	try {
