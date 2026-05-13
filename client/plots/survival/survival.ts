@@ -666,7 +666,10 @@ function setRenderers(self) {
 	}
 
 	function setVisibleSerieses(chart, s) {
-		chart.visibleSerieses = chart.serieses?.filter(series => !s.hidden.includes(series.seriesId)) || []
+		chart.visibleSerieses =
+			chart.serieses?.filter(
+				series => !s.hidden.includes(series.seriesId) && series.seriesId !== 'Missing data'
+			) || []
 		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
 			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
 			0
