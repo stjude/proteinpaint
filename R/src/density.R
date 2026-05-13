@@ -8,8 +8,8 @@ library(jsonlite)
 # with your values: 
 # echo '{plot2Values: {"plotA": [1.2, 2, 3], "plotB": [4.5, 5, 6]}}' | Rscript ./density.R
 
-con <- file("stdin", "r")
-json <- readLines(con)
+con <- file("stdin", "r", encoding="UTF-8")
+json <- readLines(con, encoding="UTF-8")
 close(con)
 data <- fromJSON(json)
 plot2Values <- data$plot2Values

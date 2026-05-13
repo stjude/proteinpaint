@@ -84,8 +84,8 @@ benchmark <- list()
 
 # stream in json input
 stime <- Sys.time()
-con <- file("stdin", "r")
-json <- readLines(con)
+con <- file("stdin", "r", encoding="UTF-8")
+json <- readLines(con, encoding="UTF-8")
 close(con)
 input <- fromJSON(json)
 etime <- Sys.time()
