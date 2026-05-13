@@ -373,6 +373,11 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Multiomic Rankings',
+			chartType: 'multiomicRankings',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 			chartType: 'numericDictTermCluster',
 			clickTo: self.loadChartSpecificMenu

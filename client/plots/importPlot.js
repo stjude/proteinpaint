@@ -84,6 +84,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'proteomeAbundance':
 			return await import(`./proteomeAbundance.ts`)
 
+		case 'multiomicRankings':
+			return await import(`./multiomicRankings.ts`)
+
 		case 'ProteomeInput':
 			return await import('./ProteomeInput.ts')
 

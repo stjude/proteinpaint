@@ -159,4 +159,16 @@ export type TableArgs = {
 	allowRestoreRowOrder?: boolean
 	/** When true, places the restore button with footer buttons instead of separately */
 	restoreButtonInFooter?: boolean
+	/** When set, render pagination controls below the table and only display
+	 * one page worth of rows at a time. Sort still operates on the full rows[] array. */
+	pagination?: {
+		/** rows per page; one of pageSizeOptions */
+		pageSize: number
+		/** options offered in the page-size <select>; defaults to [10, 25, 50, 100] */
+		pageSizeOptions?: number[]
+		/** 1-based current page; defaults to 1 */
+		currentPage?: number
+		/** called when the user changes page or page size */
+		onChange?: (state: { currentPage: number; pageSize: number }) => void
+	}
 }

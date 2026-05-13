@@ -47,7 +47,8 @@ export function renderTable({
 	noAutoScroll = false,
 	hoverEffects,
 	allowRestoreRowOrder = false,
-	restoreButtonInFooter = false
+	restoreButtonInFooter = false,
+	pagination
 }: TableArgs) {
 	validateInput()
 	let _selectedRowStyle = selectedRowStyle
@@ -234,9 +235,26 @@ export function renderTable({
 	}
 
 	const tbody = table.append('tbody')
+
+	// Pagination state (only used when `pagination` is set)
+	const pageSizeOptions = pagination?.pageSizeOptions || [10, 25, 50, 100]
+	let pageSize = pagination?.pageSize ?? pageSizeOptions[0]
+	let currentPage = pagination?.currentPage ?? 1
+
+	function getPageSlice() {
+		if (!pagination) return { startIdx: 0, slice: rows }
+		const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
+		if (currentPage > totalPages) currentPage = totalPages
+		if (currentPage < 1) currentPage = 1
+		const startIdx = (currentPage - 1) * pageSize
+		return { startIdx, slice: rows.slice(startIdx, startIdx + pageSize) }
+	}
+
 	function updateRows() {
 		tbody.selectAll('tr').remove()
-		for (const [rowIdx, row] of rows.entries()) {
+		const { startIdx, slice } = getPageSlice()
+		for (const [sliceIdx, row] of slice.entries()) {
+			const rowIdx = pagination ? startIdx + sliceIdx : sliceIdx
 			let checkbox
 			const tr = tbody.append('tr').attr('class', 'sjpp_row_wrapper').attr('tabindex', 0)
 			if (striped && rowIdx % 2 == 1) tr.style('background-color', 'rgb(245,245,245)')
@@ -420,6 +438,113 @@ export function renderTable({
 
 	updateRows()
 
+	// Pagination controls (rendered below the table)
+	let pagerDiv: any
+	let pagerInfo: any
+	let pagerNav: any
+	let pageSizeSelect: any
+
+	function renderPager() {
+		if (!pagination) return
+		pagerNav.selectAll('*').remove()
+		const total = rows.length
+		const totalPages = Math.max(1, Math.ceil(total / pageSize))
+		if (currentPage > totalPages) currentPage = totalPages
+		if (currentPage < 1) currentPage = 1
+		const startIdx = (currentPage - 1) * pageSize
+		const endIdx = Math.min(startIdx + pageSize, total)
+		pagerInfo.text(
+			total === 0
+				? 'Showing 0 entries'
+				: `Showing ${(
+						startIdx + 1
+				  ).toLocaleString()} to ${endIdx.toLocaleString()} of ${total.toLocaleString()} entries`
+		)
+
+		const goTo = (p: number) => {
+			if (p < 1 || p > totalPages || p === currentPage) return
+			currentPage = p
+			updateRows()
+			renderPager()
+			pagination!.onChange?.({ currentPage, pageSize })
+		}
+
+		const addBtn = (label: string, page: number, opts: { disabled?: boolean; active?: boolean } = {}) => {
+			const btn = pagerNav
+				.append('button')
+				.text(label)
+				.style('margin', '0 2px')
+				.style('padding', '3px 8px')
+				.style('border', '1px solid #ccc')
+				.style('background-color', opts.active ? '#000' : 'white')
+				.style('color', opts.active ? 'white' : opts.disabled ? '#999' : '#000')
+				.style('cursor', opts.disabled ? 'not-allowed' : 'pointer')
+				.style('border-radius', '3px')
+			if (opts.disabled) btn.attr('disabled', 'disabled')
+			else btn.on('click', () => goTo(page))
+			return btn
+		}
+
+		const addEllipsis = () => {
+			pagerNav.append('span').text('…').style('margin', '0 4px').style('color', '#999')
+		}
+
+		addBtn('Previous', currentPage - 1, { disabled: currentPage === 1 })
+
+		const pages = new Set<number>()
+		pages.add(1)
+		pages.add(totalPages)
+		for (let p = currentPage - 2; p <= currentPage + 2; p++) {
+			if (p >= 1 && p <= totalPages) pages.add(p)
+		}
+		const ordered = [...pages].sort((a, b) => a - b)
+		let prev = 0
+		for (const p of ordered) {
+			if (prev && p - prev > 1) addEllipsis()
+			addBtn(String(p), p, { active: p === currentPage })
+			prev = p
+		}
+
+		addBtn('Next', currentPage + 1, { disabled: currentPage === totalPages })
+	}
+
+	if (pagination) {
+		pagerDiv = div
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('justify-content', 'space-between')
+			.style('flex-wrap', 'wrap')
+			.style('padding', '8px 4px')
+			.style('font-size', '0.9em')
+
+		const left = pagerDiv.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '8px')
+		left.append('span').text('Show')
+		pageSizeSelect = left
+			.append('select')
+			.style('padding', '2px 4px')
+			.on('change', function (this: HTMLSelectElement) {
+				pageSize = Number(this.value)
+				currentPage = 1
+				updateRows()
+				renderPager()
+				pagination!.onChange?.({ currentPage, pageSize })
+			})
+		for (const opt of pageSizeOptions) {
+			pageSizeSelect
+				.append('option')
+				.attr('value', opt)
+				.property('selected', opt === pageSize)
+				.text(opt)
+		}
+		left.append('span').text('entries')
+
+		pagerInfo = pagerDiv.append('div')
+		pagerNav = pagerDiv.append('div')
+
+		renderPager()
+	}
+
 	// Create footer div if we have buttons OR if restore button should be in footer
 	if (buttons || (allowRestoreRowOrder && restoreButtonInFooter)) {
 		const footerDiv = div
@@ -509,6 +634,7 @@ export function renderTable({
 
 			rows = newRows
 			updateRows()
+			if (pagination) renderPager()
 
 			// Show restore button when table is sorted (and allowRestoreRowOrder is true)
 			if (allowRestoreRowOrder) {

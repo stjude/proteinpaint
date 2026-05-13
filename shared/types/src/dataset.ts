@@ -1105,6 +1105,9 @@ type Mds3Queries = {
 		file: string
 	}
 	proteome?: ProteomeAbundanceQuery
+	/** key: human-readable label shown in chart-button menu (e.g. "AD multiomics");
+	 * value: relative path under tpmasterdir to a TSV ranking file */
+	multiomicRankings?: { [key: string]: string }
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
