@@ -2,7 +2,8 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "customConditions": ["sjpp/dev"]
   },
   "types": ["node"],
   "include": ["./**/*.ts"],

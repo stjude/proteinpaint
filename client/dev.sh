@@ -15,4 +15,4 @@ if [[ ! -d ../.sse/messages ]]; then
 	mkdir -p ../.sse/messages
 fi
 
-ENV=dev node esbuild.config.mjs
+ENV=dev node --conditions=sjpp/dev esbuild.config.mjs
