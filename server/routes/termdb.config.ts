@@ -82,7 +82,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// add attributes to this object to reveal to client
 
 	// add required attributes
-	const c: any = {
+	let c: any = {
 		selectCohort: getSelectCohort(ds, req),
 		supportedChartTypes: tdb.q?.getSupportedChartTypes(req),
 		renamedChartTypes: ds.cohort.renamedChartTypes,
@@ -147,9 +147,20 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// continue to add contents that may require auth
 	addScatterplots(c, ds, info)
 
-	// optional dataset hook to mutate the response based on the requesting user's role
-	// (e.g. to prune preset plot entries that reference role-restricted terms)
-	if (tdb.filterClientCopy) tdb.filterClientCopy(c, info?.clientAuthResult)
+	/*
+	Optional dataset hook to mutate the response based on the requesting user's role
+	(e.g. to prune preset plot entries that reference role-restricted terms).
+	Deep-clone c first: many fields above are assigned by reference from tdb (plotConfigByCohort,
+	matrix, hierCluster, colorMap, termCollections, ...), so any in-place mutation by a hook
+	would leak into the cached dataset and across subsequent requests/roles. Cloning once here
+	gives the hook a private copy it can prune freely. Skipped when no hook is configured to
+	avoid the serialize/parse cost on the common path.
+	Pass c.clientAuthResult (already normalized to {} above) so the hook always sees an object.
+	*/
+	if (tdb.filterClientCopy) {
+		c = JSON.parse(JSON.stringify(c))
+		tdb.filterClientCopy(c, c.clientAuthResult)
+	}
 
 	res.send({ termdbConfig: c })
 }
