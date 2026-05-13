@@ -155,7 +155,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			}
 		}
 		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
-		const { app, authApi } = await appInit(serverconfig)
+		const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { testDs: {} } } })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(middlewares, ['*'], 'should set a global middleware when dsCredentials is not empty')
 		const routes = Object.keys(app.routes)
@@ -169,7 +169,7 @@ tape(`initialization, non-empty credentials`, async test => {
 
 	{
 		const dsCredentials = {
-			testds: {
+			testDs: {
 				'*': {
 					'*': {
 						type: 'basic',
@@ -179,7 +179,7 @@ tape(`initialization, non-empty credentials`, async test => {
 			}
 		}
 		const serverconfig = { debugmode, cachedir, dsCredentials, secrets }
-		const { app, authApi } = await appInit(serverconfig)
+		const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { testDs: {} } } })
 		const middlewares = Object.keys(app.middlewares)
 		test.deepEqual(
 			middlewares,
@@ -290,7 +290,7 @@ tape('legacy reshape', async test => {
 		dsCredentials,
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {}, ds1: {} } } })
 
 	test.deepEqual(
 		JSON.parse(JSON.stringify(dsCredentials)),
@@ -435,7 +435,7 @@ tape(`a valid request`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	{
 		const req = {
@@ -482,7 +482,7 @@ tape(`mismatched ip address in /jwt-status`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
@@ -538,7 +538,7 @@ tape(`invalid embedder`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	{
 		const req = {
@@ -592,7 +592,7 @@ tape(`invalid dataset access`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	{
 		const req = {
@@ -646,7 +646,7 @@ tape(`invalid jwt`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	{
 		const req = {
@@ -758,7 +758,7 @@ tape(`session handling by the middleware`, async test => {
 		cachedir
 	}
 
-	const { app, authApi } = await appInit(serverconfig, {})
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	{
 		const message = 'should call the next function on a non-protected route'
@@ -931,7 +931,7 @@ tape(`/dslogin`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	let cookie
 	/*** valid /dslogin request ***/
@@ -1101,7 +1101,7 @@ tape(`req.query.filter, __protected__`, async test => {
 		},
 		cachedir
 	}
-	const { app, authApi } = await appInit(serverconfig)
+	const { app, authApi } = await appInit(serverconfig, { hg38: { datasets: { ds0: {} } } })
 
 	const tvslst = { type: 'tvslst', lst: [{ type: 'tvs', tvs: { term: {}, values: {} } }] }
 

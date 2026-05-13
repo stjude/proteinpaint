@@ -91,7 +91,10 @@ type JwtCredEntry = {
 // 	}
 // }
 
-export async function validateDsCredentials(creds: ServerConfigDsCredentials) {
+export async function validateDsCredentials(
+	creds: ServerConfigDsCredentials,
+	genomes: { [genomeName: string]: any } = {}
+) {
 	mayReshapeDsCredentials(creds)
 	const key = 'secrets' // to prevent a detect-secrets hook issue
 	if (typeof creds[key] == 'string') {
@@ -101,9 +104,21 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials) {
 	// track which domains are allowed to embed proteinpaint with credentials,
 	// to be used by app middleware to set CORS response headers
 	const credEmbedders: Set<string> = new Set()
+	// detect loaded datasets in order to filter out credentials that are not matched and does not need to be loaded
+	const loadedDslabels = Object.values(genomes).reduce((loadedDs: string[], g: any) => {
+		if (typeof g.datasets === 'object') loadedDs.push(...Object.keys(g.datasets))
+		return loadedDs
+	}, [])
 
 	for (const [dslabel, _ds] of Object.entries(creds)) {
 		if (dslabel[0] == '#') {
+			delete creds[dslabel]
+			continue
+		}
+		// For exact dslabels with no wildcard characters, delete the credentials entry
+		// if that exact dslabel is not detected as being loaded. This prevents healthcheck
+		// errors if there is a cred.processor.test() or cred.type == 'basic'.
+		if (!dslabel.includes('*') && !loadedDslabels.includes(dslabel)) {
 			delete creds[dslabel]
 			continue
 		}
@@ -115,7 +130,7 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials) {
 		const headerKey = ds.headerKey || 'x-ds-access-token'
 		delete ds.headerKey
 
-		for (const serverRoute in ds) {
+		for (const serverRoute of Object.keys(ds)) {
 			const route = ds[serverRoute]
 			for (const embedderHost in route) {
 				credEmbedders.add(embedderHost)
