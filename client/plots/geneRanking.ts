@@ -461,8 +461,9 @@ class GeneRanking extends PlotBase {
 		}
 
 		try {
-			const resp = await dofetch3('termdb/geneRanking/cluster', {
+			const resp = await dofetch3('termdb/geneRanking', {
 				body: {
+					for: 'cluster',
 					matrix,
 					row_names: geneNames,
 					col_names: usedCols,
