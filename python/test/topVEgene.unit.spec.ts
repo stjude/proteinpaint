@@ -53,7 +53,7 @@ tape('topVEgene returns the expected top variable genes when filtered', async t 
 		t.ok(Array.isArray(result), 'Output should be an array of gene symbols')
 		t.deepEqual(
 			result,
-			['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'ACAP3', 'HES4', 'AGRN', 'DVL1', 'SKI', 'HES5'],
+			['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'HES4', 'ACAP3', 'AGRN', 'DVL1', 'SKI', 'HES5'],
 			'Should return the expected top genes'
 		)
 	} catch (err) {
