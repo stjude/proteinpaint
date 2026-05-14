@@ -48,15 +48,17 @@ function init({ genomes }) {
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			const cfg = ds.queries?.multiomicRankings as Record<string, string> | undefined
-			if (!cfg) throw 'multiomicRankings not configured for this dataset'
+			const cfg = ds.queries?.multiomicRankings as
+				| { rankings: Record<string, string>; modalities?: string[]; description?: string }
+				| undefined
+			if (!cfg || !cfg.rankings) throw 'multiomicRankings not configured for this dataset'
 
 			if (!q.key) {
-				res.send({ keys: Object.keys(cfg) } satisfies MultiomicRankingsResponse)
+				res.send({ keys: Object.keys(cfg.rankings) } satisfies MultiomicRankingsResponse)
 				return
 			}
 
-			const relPath = cfg[q.key]
+			const relPath = cfg.rankings[q.key]
 			if (!relPath) throw 'invalid key'
 
 			const cacheKey = `${q.genome}|${q.dslabel}|${q.key}`

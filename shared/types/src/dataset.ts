@@ -1105,9 +1105,15 @@ type Mds3Queries = {
 		file: string
 	}
 	proteome?: ProteomeAbundanceQuery
-	/** key: human-readable label shown in chart-button menu (e.g. "AD multiomics");
-	 * value: relative path under tpmasterdir to a TSV ranking file */
-	multiomicRankings?: { [key: string]: string }
+	multiomicRankings?: {
+		/** key: human-readable label shown in chart-button menu (e.g. "AD multiomics");
+		 * value: relative path under tpmasterdir to a TSV ranking file */
+		rankings: { [key: string]: string }
+		/** column names of modalities to include in the heatmap, in display order */
+		modalities: string[]
+		/** intro text shown above the table */
+		description?: string
+	}
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
