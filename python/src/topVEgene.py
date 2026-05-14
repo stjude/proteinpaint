@@ -5,6 +5,7 @@ import sys
 import h5py
 import heapq
 import numpy as np
+import pandas as pd
 import psutil
 
 
@@ -37,6 +38,7 @@ def create_gene_variance_list(
     rank_type: str,
     max_genes: int
 ) -> list[str]:
+    chunk_target_elements = 500_000
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
@@ -55,66 +57,55 @@ def create_gene_variance_list(
         if missing:
             raise ValueError(f"Sample(s) {missing} not found in HDF5 file")
         sample_indexes = sorted(sample_to_idx[sample] for sample in sample_list)
+        rows_per_chunk = chunk_target_elements // len(sample_indexes)
         selected_genes = []
+        for start in range(0, matrix.shape[0], rows_per_chunk):
+            stop = min(start + rows_per_chunk, matrix.shape[0])
+            chunk = np.asarray(matrix[start:stop, sample_indexes], dtype=float)
+            chunk_df = pd.DataFrame(chunk, index=gene_names[start:stop],columns=tuple(sample_list))
+            selected_genes.extend(calculate_variance(chunk_df, filter_extreme_values, rank_type, len(sample_list)))
+            if len(selected_genes) > max_genes * 2:
+                selected_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])
+        return [gene for _, gene in heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])]
 
-        for i in range(matrix.shape[0]):
-            expression_values = np.asarray(matrix[i, sample_indexes], dtype=float)
-            gene_info: tuple[float | None,str ] = calculate_variance_fast(
-                gene_names[i], expression_values, filter_extreme_values, rank_type, len(sample_list)
-            )
-
-            if isinstance(gene_info[0], float | int) and np.isfinite(gene_info[0]):
-                heapq.heappush(selected_genes, gene_info)
-                if len(selected_genes) > max_genes:
-                    heapq.heappop(selected_genes)
-        top_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])
-        return [gene for _, gene in top_genes]
-
-def calculate_variance_fast(
-    gene_name: str,
-    expression_values: np.ndarray,
+def calculate_variance(
+    expression_values: pd.DataFrame,
     filter_extreme_values: bool,
     rank_type: str,
     original_sample_size: int
-) -> tuple[float | None,str ]:
+) -> list[tuple[float | None, str]]:
     # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
-    filter_nan = expression_values[(np.isfinite(expression_values)) & (expression_values > 0)]
-    if filter_nan.size == 0:
-        return (None, gene_name)
-
-    if filter_extreme_values:
-        cutoff = float(np.quantile(filter_nan, 0.1))
-        filtered_row = filter_nan[filter_nan >= cutoff]
-    else:
-        filtered_row = filter_nan
-
-    gene_sample_count = filtered_row.size
+    expression_cutoff = expression_values.quantile(0.1,numeric_only=True,axis=1) if filter_extreme_values else 0
+    gene_sample_count = expression_values.ge(expression_cutoff,axis=0).sum(axis=1)
     min_sample_size = MIN_PROP * original_sample_size
-    if gene_sample_count < min_sample_size:
-        return (None, gene_name)
-
+    valid_genes = gene_sample_count >= min_sample_size
+    filtered_matrix:pd.DataFrame = expression_values.loc[valid_genes]
+    if filtered_matrix.empty:
+            return []
     if rank_type == "var":
-        #ddof for sample variance
-        score = float(np.var(filtered_row, ddof=1))
+        scores = filtered_matrix.var(axis=1, numeric_only=True)
     elif rank_type == "iqr":
-        q1, q3 = np.quantile(filtered_row, [0.25, 0.75])
-        score = float(q3 - q1)
+        q1= filtered_matrix.quantile(0.25,numeric_only=True,axis=1)
+        q3= filtered_matrix.quantile(0.75,numeric_only=True,axis=1)
+        scores = q3 - q1
     else:
         raise ValueError('rank_type must be either "iqr" or "var"')
 
-    return (score, gene_name)
+    return [(score, gene_name) for gene_name, score in scores.items() if pd.notna(score)]
 
 
 def _read_stdin_payload() -> str:
     payload = sys.stdin.read().strip()
-    # ash_test_file = "/Users/jsimps98/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix7.h5"
+    # For testing purposes, you must comment the previous line and uncomment the following lines to 
+    # generate a test payload. Make sure to update the path to the test file as needed.
+    # ash_test_file = "~/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix7.h5"
     # payload = json.dumps({
     #     "samples": sorted(generate_test_samples(1, ash_test_file)),
     #     "input_file": ash_test_file,
     #     "filter_extreme_values": True,
     #     "max_genes": 10,
-    #     "rank_type": "var"
+    #     "rank_type": "iqr"
     # })
     if not payload:
         raise ValueError("No JSON payload provided on stdin")
