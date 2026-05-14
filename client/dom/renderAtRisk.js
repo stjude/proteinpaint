@@ -16,7 +16,9 @@ input parameter:
 */
 
 export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }) {
-	const bySeries = {}
+	// key: a visible seriesId
+	// value: {seriedId, seriesLabel, counts}
+	const bySeriesId = {}
 
 	// do not compute at-risk counts of tick values that are
 	// smaller than the first timepoint of the chart
@@ -56,7 +58,8 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor, nCensored])
 			}
 		}
-		bySeries[series.seriesId] = counts
+		const { seriesId, seriesLabel } = series
+		bySeriesId[seriesId] = { seriesId, seriesLabel, counts }
 	}
 
 	const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
@@ -70,7 +73,7 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 	if (s.atRiskVisible) {
 		// at-risk counts are visible
 		// sort the data
-		data = Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
+		data = Object.values(bySeriesId).sort((a, b) => seriesOrder.indexOf(a.seriesId) - seriesOrder.indexOf(b.seriesId))
 		// render the title
 		// add a y offset to title if there is no series id
 		const addYoffset = chart.serieses.length == 1 && !chart.serieses[0].seriesId
@@ -99,36 +102,31 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 	const sg = g
 		.attr('transform', `translate(0,${y})`)
 		.selectAll(':scope > g')
-		.data(data, seriesId => seriesId)
+		.data(data, s => s.seriesLabel || s.seriesId)
 
 	sg.exit().remove()
 
-	sg.each(function (seriesId, i) {
+	sg.each(function (series, i) {
+		const { seriesId, seriesLabel, counts } = series
 		const y = (i + 1) * (2 * s.axisTitleFontSize)
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
 			.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
-		
-		// Update the series label text for the update phase
-		const sObj = chart.serieses.find(series => series.seriesId === seriesId)
-		if (sObj) {
-			g.select('text[data-testid="sjpp-atrisk-seriesId"]')
-				.text(seriesId && seriesId !== '*' ? sObj.seriesLabel || seriesId : '')
-		}
-		
-		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
+			.text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
+
+		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, counts)
 	})
 
 	sg.enter()
 		.append('g')
-		.each(function (seriesId, i) {
+		.each(function (series, i) {
+			const { seriesId, seriesLabel, counts } = series
 			const y = (i + 1) * (2 * s.axisTitleFontSize)
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
 				.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted)
 				.on('click', e => onSerieClick({ seriesId }, e.clientX, e.clientY))
 
-			const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 			g.append('text')
 				.attr('data-testid', 'sjpp-atrisk-seriesId')
 				.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
@@ -136,9 +134,9 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 				.attr('cursor', 'pointer')
 				.datum({ seriesId })
-				.text(seriesId && seriesId !== '*' ? sObj.seriesLabel || seriesId : '')
+				.text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
 
-			renderAtRiskTick(g.append('g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
+			renderAtRiskTick(g.append('g'), chart, xTickValues, s, seriesId, counts)
 		})
 }
 
