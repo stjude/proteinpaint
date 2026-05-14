@@ -21,7 +21,7 @@ as listed in the [installation instructions](https://docs.google.com/document/d/
 ```bash
 cd proteinpaint
 npm run sethooks
-nvm use 20
+nvm use 24
 npm install
 # follow the instructions at https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit
 ```
