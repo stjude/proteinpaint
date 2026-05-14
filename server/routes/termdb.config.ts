@@ -302,9 +302,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.multiomicRankings) {
-		q2.multiomicRankings = {}
-		for (const ranking in q.multiomicRankings) {
-			q2.multiomicRankings[ranking] = true
+		q2.multiomicRankings = {
+			rankings: Object.fromEntries(Object.keys(q.multiomicRankings.rankings).map(k => [k, true])),
+			modalities: q.multiomicRankings.modalities,
+			description: q.multiomicRankings.description
 		}
 	}
 	if (q.dnaMethylation) {
