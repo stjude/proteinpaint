@@ -1,13 +1,13 @@
 import { run_R } from '@sjcrh/proteinpaint-r'
-import type { MultiomicRankingsClusterRequest, MultiomicRankingsClusterResponse, RouteApi } from '#types'
-import { multiomicRankingsClusterPayload } from '#types/checkers'
+import type { GeneRankingClusterRequest, GeneRankingClusterResponse, RouteApi } from '#types'
+import { geneRankingClusterPayload } from '#types/checkers'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 
 export const api: RouteApi = {
-	endpoint: 'termdb/multiomicRankings/cluster',
+	endpoint: 'termdb/geneRanking/cluster',
 	methods: {
-		get: { ...multiomicRankingsClusterPayload, init },
-		post: { ...multiomicRankingsClusterPayload, init }
+		get: { ...geneRankingClusterPayload, init },
+		post: { ...geneRankingClusterPayload, init }
 	}
 }
 
@@ -38,7 +38,7 @@ function zscorePerColumnIgnoringNull(matrix: (number | null)[][], ncol: number):
 function init() {
 	return async (req, res): Promise<void> => {
 		try {
-			const q: MultiomicRankingsClusterRequest = (req.method === 'POST' ? req.body : req.query) || ({} as any)
+			const q: GeneRankingClusterRequest = (req.method === 'POST' ? req.body : req.query) || ({} as any)
 			const { row_names, col_names } = q
 			if (!Array.isArray(q.matrix) || !Array.isArray(row_names) || !Array.isArray(col_names)) {
 				throw 'matrix, row_names, and col_names are required'
@@ -99,10 +99,10 @@ function init() {
 				usedRowNames: keptNames,
 				usedColNames: col_names,
 				matrix: orderedMatrix
-			} satisfies MultiomicRankingsClusterResponse)
+			} satisfies GeneRankingClusterResponse)
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
-			res.send({ error: e?.message || String(e) } satisfies MultiomicRankingsClusterResponse)
+			res.send({ error: e?.message || String(e) } satisfies GeneRankingClusterResponse)
 		}
 	}
 }
