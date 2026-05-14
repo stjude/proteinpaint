@@ -4,7 +4,6 @@ import { getCompInit, copyMerge } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { PlotBase } from '#plots/PlotBase.js'
 import { scaleLinear } from 'd3-scale'
-import { colorScaleMap } from '#shared/common.js'
 
 const Integrative_rank_COLUMN = 'Integrative rank'
 
@@ -18,8 +17,10 @@ const HEATMAP_MODALITIES = [
 	'Ubi-enriched',
 	'Interactome'
 ]
-const Z_CLAMP = 2 // diverging color scale clamp (±2 z-units)
 const MISSING_COLOR = '#d9d9d9'
+// sequential scale for per-column percentile rank: low (top rank) = dark, high = light
+const SEQ_COLOR_LOW = '#08306b'
+const SEQ_COLOR_HIGH = '#f7fbff'
 
 class MultiomicRankings extends PlotBase {
 	static type = 'multiomicRankings'
@@ -407,6 +408,21 @@ class MultiomicRankings extends PlotBase {
 			})
 		)
 
+		// per-column stats over the FULL dataset — the file values are already ranks,
+		// so use them as-is and normalize for color by each column's full-data min/max.
+		const fullStats = computeColStats(
+			this.cachedData.rows,
+			usedCols.map(c => colNameToIdx.get(c)!)
+		)
+		const toPct = (val: number | null, c: number): number | null => {
+			if (val === null || !Number.isFinite(val as number)) return null
+			const lo = fullStats.min[c]
+			const hi = fullStats.max[c]
+			if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi === lo) return 0
+			return ((val as number) - lo) / (hi - lo)
+		}
+		const buildPct = (raw: (number | null)[][]) => raw.map(row => row.map((v, c) => toPct(v, c)))
+
 		// fingerprint of the data so a late-arriving response from a previous
 		// render doesn't overwrite the current one
 		const renderKey = `${this.dataKey}|${this.heatmapOrder}|${this.minAssays}|${this.currentPage}|${this.pageSize}|${
@@ -421,21 +437,26 @@ class MultiomicRankings extends PlotBase {
 			.select('.sjpp-mr-min-assays-wrap')
 			.style('display', this.heatmapOrder === 'clustered' ? 'inline-flex' : 'none')
 
-		// ranking-score order: keep all rows on the page, z-score ignoring nulls, no clustering
+		// ranking-score order: keep all rows on the page, no clustering
 		if (this.heatmapOrder === 'rank') {
 			if (geneNames.length < 1) {
 				this.heatmapStatus.text('No rows to display.')
 				return
 			}
-			const zMatrix = zscorePerColumnIgnoringNull(matrix)
 			this.heatmapStatus.text(
-				`${geneNames.length} rows in current page order. Missing values shown in gray; z-scored per column ignoring missing.`
+				`${geneNames.length} rows in current page order. Missing values shown in gray; cells colored by rank within the full dataset per column (lower = better).`
 			)
-			this.drawHeatmap({ rowNames: geneNames, colNames: usedCols, matrix: zMatrix, dendrogram: null })
+			this.drawHeatmap({
+				rowNames: geneNames,
+				colNames: usedCols,
+				matrix: buildPct(matrix),
+				rankMatrix: matrix,
+				totals: fullStats.n,
+				dendrogram: null
+			})
 			return
 		}
 
-		// clustered order — server does z-score + clustering with pairwise-complete observations
 		try {
 			const resp = await dofetch3('termdb/multiomicRankings/cluster', {
 				body: {
@@ -449,12 +470,20 @@ class MultiomicRankings extends PlotBase {
 			if (resp.error) throw resp.error
 			const keptCount = resp.usedRowNames?.length ?? 0
 			this.heatmapStatus.text(
-				`${keptCount} of ${visible.length} rows shown (proteins with ≥${this.minAssays} assays). Missing values shown in gray; imputed to the column mean for clustering.`
+				`${keptCount} of ${visible.length} rows shown (proteins with ≥${this.minAssays} assays). Missing values shown in gray; cells colored by rank within the full dataset per column (lower = better).`
 			)
+			const nameToIdx = new Map(geneNames.map((n, i) => [n, i]))
+			const keptRawMatrix = (resp.usedRowNames as string[]).map(n => matrix[nameToIdx.get(n)!])
+			const keptNameToIdx = new Map((resp.usedRowNames as string[]).map((n, i) => [n, i]))
+			const orderedRowNames = resp.row.order.map((o: { name: string }) => o.name)
+			const orderedRank = orderedRowNames.map((name: string) => keptRawMatrix[keptNameToIdx.get(name)!])
+			const orderedPct = buildPct(orderedRank)
 			this.drawHeatmap({
-				rowNames: resp.row.order.map((o: { name: string }) => o.name),
+				rowNames: orderedRowNames,
 				colNames: resp.usedColNames,
-				matrix: resp.matrix,
+				matrix: orderedPct,
+				rankMatrix: orderedRank,
+				totals: fullStats.n,
 				dendrogram: resp.row
 			})
 		} catch (e: any) {
@@ -467,6 +496,8 @@ class MultiomicRankings extends PlotBase {
 		rowNames: string[]
 		colNames: string[]
 		matrix: (number | null)[][]
+		rankMatrix: (number | null)[][]
+		totals: number[]
 		dendrogram: null | {
 			merge: { n1: number; n2: number }[]
 			height: { height: number }[]
@@ -474,7 +505,7 @@ class MultiomicRankings extends PlotBase {
 			inputOrder: string[]
 		}
 	}) {
-		const { rowNames, colNames, matrix, dendrogram } = opts
+		const { rowNames, colNames, matrix, rankMatrix, totals, dendrogram } = opts
 		const cellW = 44
 		const cellH = 22
 		const dendroW = dendrogram ? 110 : 0
@@ -497,14 +528,9 @@ class MultiomicRankings extends PlotBase {
 			.attr('height', totalH)
 			.attr('font-family', 'sans-serif')
 
-		// color scale: blue (low) -> white -> red (high), matching hierCluster's
-		// shared blueWhiteRed scale from common.ts. Domain is clamped to ±Z_CLAMP.
-		const { domain: bwrDomain, range: bwrRange } = colorScaleMap.blueWhiteRed
-		const bwr = scaleLinear<string>()
-			.domain(bwrDomain.map(t => -Z_CLAMP + 2 * Z_CLAMP * t))
-			.range(bwrRange as readonly string[] as string[])
-			.clamp(true)
-		const color = (v: number) => bwr(v)
+		// sequential color scale on percentile rank in [0,1]: low (best rank) = dark, high = light
+		const seq = scaleLinear<string>().domain([0, 1]).range([SEQ_COLOR_LOW, SEQ_COLOR_HIGH]).clamp(true)
+		const color = (v: number) => seq(v)
 
 		// row dendrogram (left)
 		if (dendrogram) {
@@ -549,12 +575,34 @@ class MultiomicRankings extends PlotBase {
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 0.5)
 			.append('title')
-			.text(
-				d =>
-					`${rowNames[d.row]} — ${colNames[d.col]}\n${
-						d.v === null || !Number.isFinite(d.v) ? 'missing' : `z-score: ${(d.v as number).toFixed(3)}`
-					}`
-			)
+			.text(d => {
+				if (d.v === null || !Number.isFinite(d.v)) return `${rowNames[d.row]} — ${colNames[d.col]}\nmissing`
+				const r = rankMatrix[d.row][d.col] as number
+				const n = totals[d.col]
+				const rStr = Number.isInteger(r) ? String(r) : r.toFixed(1)
+				return `${rowNames[d.row]} — ${colNames[d.col]}\nrank: ${rStr} of ${n}\npercentile: ${(d.v as number).toFixed(
+					3
+				)}`
+			})
+
+		// rank number overlay on each non-null cell
+		cellsG
+			.selectAll('text.sjpp-mr-rank')
+			.data(cellData.filter(d => d.v !== null && Number.isFinite(d.v)))
+			.enter()
+			.append('text')
+			.attr('class', 'sjpp-mr-rank')
+			.attr('x', d => d.x + cellW / 2)
+			.attr('y', d => d.y + cellH / 2 + 3)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '9px')
+			.attr('font-weight', 300)
+			.attr('pointer-events', 'none')
+			.attr('fill', d => ((d.v as number) < 0.5 ? 'rgba(255,255,255,0.85)' : 'rgba(40,40,40,0.7)'))
+			.text(d => {
+				const r = rankMatrix[d.row][d.col] as number
+				return Number.isInteger(r) ? String(r) : r.toFixed(1)
+			})
 
 		// row labels (gene names) on the right
 		const rowLabelsG = svg.append('g').attr('transform', `translate(${gridX + gridW + 6},${colLabelH})`)
@@ -581,11 +629,11 @@ class MultiomicRankings extends PlotBase {
 			.attr('text-anchor', 'middle')
 			.attr('font-size', '11px')
 			.attr('fill', '#555')
-			.text('z-score (per column)')
+			.text('percentile rank (per column)')
 		const stops = 32
 		for (let i = 0; i < stops; i++) {
-			// top of legend = high z (red); bottom = low z (blue)
-			const v = Z_CLAMP - (2 * Z_CLAMP * i) / (stops - 1)
+			// top of legend = 0 (best rank, dark); bottom = 1 (worst rank, light)
+			const v = i / (stops - 1)
 			legendG
 				.append('rect')
 				.attr('x', 0)
@@ -609,19 +657,19 @@ class MultiomicRankings extends PlotBase {
 			.attr('x', legendGradW + 6)
 			.attr('y', 4)
 			.attr('font-size', '11px')
-			.text(`≥ ${Z_CLAMP}`)
+			.text('0 (top)')
 		legendG
 			.append('text')
 			.attr('x', legendGradW + 6)
 			.attr('y', legendGradH / 2 + 4)
 			.attr('font-size', '11px')
-			.text('0')
+			.text('0.5')
 		legendG
 			.append('text')
 			.attr('x', legendGradW + 6)
 			.attr('y', legendGradH)
 			.attr('font-size', '11px')
-			.text(`≤ −${Z_CLAMP}`)
+			.text('1 (bottom)')
 
 		// missing-value swatch below the gradient
 		const missingG = svg.append('g').attr('transform', `translate(${legendX},${legendY + legendGradH + 18})`)
@@ -663,26 +711,24 @@ function sortRows(rows: (string | number | null)[][], idx: number, asc: boolean)
 		.map(x => x.r)
 }
 
-function zscorePerColumnIgnoringNull(matrix: (number | null)[][]): (number | null)[][] {
-	if (matrix.length === 0) return matrix
-	const ncol = matrix[0].length
-	const out: (number | null)[][] = matrix.map(r => [...r])
-	for (let c = 0; c < ncol; c++) {
-		const vals: number[] = []
-		for (const r of matrix) {
-			const v = r[c]
-			if (v !== null && Number.isFinite(v as number)) vals.push(v as number)
-		}
-		if (vals.length === 0) continue
-		const mean = vals.reduce((s, v) => s + v, 0) / vals.length
-		const sd = Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length)
-		for (let r = 0; r < matrix.length; r++) {
-			const v = matrix[r][c]
-			if (v === null || !Number.isFinite(v as number)) out[r][c] = null
-			else out[r][c] = sd === 0 ? 0 : ((v as number) - mean) / sd
+function computeColStats(
+	allRows: (string | number | null)[][],
+	colIdxs: number[]
+): { min: number[]; max: number[]; n: number[] } {
+	const min: number[] = colIdxs.map(() => Infinity)
+	const max: number[] = colIdxs.map(() => -Infinity)
+	const n: number[] = colIdxs.map(() => 0)
+	for (const row of allRows) {
+		for (let i = 0; i < colIdxs.length; i++) {
+			const v = row[colIdxs[i]]
+			if (typeof v === 'number' && Number.isFinite(v)) {
+				if (v < min[i]) min[i] = v
+				if (v > max[i]) max[i] = v
+				n[i]++
+			}
 		}
 	}
-	return out
+	return { min, max, n }
 }
 
 /**
