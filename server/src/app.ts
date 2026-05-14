@@ -270,6 +270,8 @@ function processTrackedDs(trackedDatasets) {
 		const failed = trackedDatasets.filter(
 			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
 		)
+
+		let msg = ''
 		if (failed.length) {
 			const list = failed
 				.map(
@@ -278,11 +280,29 @@ function processTrackedDs(trackedDatasets) {
 						`: ${ds.init.fatalError || ds.init.recoverableError || ds.init.error || '(see startup logs)'}`
 				)
 				.join('\n')
-			const msg = `\n--- failed dataset init ---\n${list}\n`
+			msg += `\n--- failed dataset init ---\n${list}\n`
+		}
+
+		if (serverconfig.features.requiredDslabels) {
+			// NOTE: This option is separate from serverconfig.features.dslabelFilter since that is an option
+			// to limit the loaded datasets. Here, we detect required dslabels that were not loaded/processed
+			// during server startup.
+			const requiredDslabels: Set<string> = new Set(serverconfig.features.requiredDslabels)
+			const missingDslabels = requiredDslabels.difference(new Set(trackedDatasets.map(ds => ds.label)))
+			if (missingDslabels.size) {
+				msg += `\n--- these required datasets were not processed ---\n`
+				msg += [...missingDslabels].join(',') + '\n'
+				msg += `--- Check if the dslabel is not found as a serverconfig genome datasets entry,` + '\n'
+				msg += `or has 'skip: true', or is filtered out by dslabelFilter option. ---` + '\n'
+			}
+		}
+
+		if (msg.length) {
 			console.log(msg)
-			// not a fatal error for the server and will not trigger a deployment rollback notification,
-			// so must trigger a notification here
+
 			if (serverconfig.slackWebhookUrl) {
+				// not a fatal error for the server and will not trigger a deployment rollback notification,
+				// so must trigger a notification here
 				const hostname =
 					serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
 				sendMessageToSlack(
