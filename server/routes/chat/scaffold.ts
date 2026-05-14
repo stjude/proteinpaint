@@ -745,7 +745,7 @@ A hierarchical clustering plot clusters samples based on a chosen feature type. 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "ssGSEA"
+  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "ssGSEA" | "ambiguous"
 }
 
 ## EXAMPLES
@@ -780,8 +780,9 @@ A: { "variableType": "ssGSEA" }
 Q: "cluster ssGSEA scores from XYZ, PQR, and LMN genesets"
 A: { "variableType": "ssGSEA" }
 
-Q: "cluster ssGSEA scores from XYZ genesets along with ABC gene expression and age of diagnosis"
-A: { "variableType": "mixed" }
+Q: "cluster hvbjkbvk_gvjhv genes"
+Comment: Not clear what kind of gene (inside the geneset) dataType the user is referring to 
+A: { "variableType": "ambiguous" }
 
 Classify the following query:
 Query: ${user_prompt}
@@ -804,6 +805,12 @@ Query: ${user_prompt}
 				type: 'text',
 				text: 'Hierarchical clustering for gene expression data is not supported because gene expression data is not available for this dataset.'
 			}
+		}
+	}
+	if (variableType === 'ambiguous') {
+		return {
+			type: 'text',
+			text: 'Not clear what gene dataType the user is refrring to.'
 		}
 	} else if (variableType === 'metaboliteIntensity') {
 		if (allowedTermTypes.includes('metaboliteIntensity')) {
