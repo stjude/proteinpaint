@@ -44,3 +44,7 @@ export function getDefaultScatterSettings(opts: any = {}): Settings {
 
 	return Object.assign(defaults, overrides)
 }
+
+export const maxSvgSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
+export const noExpColor = '#F5F5F5' //light gray
+export const expColor = '#ff000d' //default color for gene expression

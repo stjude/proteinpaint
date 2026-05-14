@@ -1,7 +1,6 @@
-import { zoom as d3zoom } from 'd3-zoom'
+import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
-import { zoomIdentity } from 'd3-zoom'
 
 export class ScatterZoom {
 	scatter: Scatter

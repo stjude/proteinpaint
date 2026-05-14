@@ -1,11 +1,11 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
-import { Menu } from '#dom/menu'
 import { getFilter } from '../../../mass/groups.js'
-import { newSandboxDiv } from '../../../dom/sandbox.ts'
+import { Menu, newSandboxDiv } from '#dom'
 import { getId } from '#mass/nav'
 import { searchSampleInput } from '../../sampleView.js'
-import type { Scatter } from '../scatter.js'
+import type { Scatter } from '../scatter'
 import { select } from 'd3-selection'
+
 export class ScatterInteractivity {
 	scatter: Scatter
 	view: any

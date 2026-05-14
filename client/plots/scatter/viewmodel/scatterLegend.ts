@@ -2,12 +2,12 @@ import { ColorScale, getMaxLabelWidth, Menu } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import { morigin, dt2label } from '#shared/common.js'
-import { shapes } from '../model/scatterModel.js'
+import { shapes } from '../model/scatterModel'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { ScatterLegendInteractivity } from './scatterLegendInteractivity.js'
-import { minShapeSize, maxShapeSize } from '../view/scatterView.js'
-import type { Scatter } from '../scatter.js'
-import type { ScatterLegendItem } from '../scatterTypes.js'
+import { ScatterLegendInteractivity } from './scatterLegendInteractivity'
+import { minShapeSize, maxShapeSize } from '../view/scatterView'
+import type { Scatter } from '../scatter'
+import type { ScatterLegendItem } from '../scatterTypes'
 
 export class ScatterLegend {
 	scatter: Scatter

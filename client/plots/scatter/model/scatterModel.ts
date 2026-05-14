@@ -11,13 +11,10 @@ import type {
 	ColorLegendItem,
 	ShapeLegendItem,
 	ScatterDataResult
-} from '../scatterTypes.js'
+} from '../scatterTypes'
+import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
 //icons have size 16x16
 export const shapes = shapesArray
-
-const maxSvgSamplesCutoff = 20000 // if map is greater than cutoff, switch from svg to canvas rendering
-const noExpColor = '#F5F5F5' //light gray
-const expColor = '#ff000d' //default color for gene expression
 
 export class ScatterModel {
 	startGradient: any
