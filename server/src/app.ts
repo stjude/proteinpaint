@@ -245,11 +245,37 @@ function processTrackedDs(trackedDatasets) {
 	const nonblocking = trackedDatasets.filter(
 		ds => ds.init.status === 'nonblocking' || ds.init.status == 'recoverableError'
 	)
+
+	let msg = '',
+		missingDslabelMsg = ''
+	if (serverconfig.features.requiredDslabels) {
+		// NOTE: This option is separate from serverconfig.features.dslabelFilter since that is an option
+		// to limit the loaded datasets. Here, we detect required dslabels that were not loaded/processed
+		// during server startup.
+		const requiredDslabels: Set<string> = new Set(serverconfig.features.requiredDslabels)
+		const missingDslabels = requiredDslabels.difference(new Set(trackedDatasets.map(ds => ds.label)))
+		if (missingDslabels.size) {
+			missingDslabelMsg +=
+				`\n--- these required datasets were not processed ---\n` +
+				[...missingDslabels].join(',') +
+				'\n\n' +
+				`Check if the missing dslabel(s) above: ` +
+				'\n' +
+				`- was not found as a serverconfig genome datasets entry` +
+				'\n' +
+				`- has 'skip: true'` +
+				'\n' +
+				`- was filtered out by dslabelFilter option. ---` +
+				'\n'
+		}
+	}
+
 	if (!done.length && !nonblocking.length) {
 		// if no dataset loaded successfully, and only if there are genome + dataset entries,
 		// then assume that there may be something wrong with serverconfig and/or code,
 		// not with dataset js/ts files, and crash the server to trigger rollback
-		if (trackedDatasets.length) throw `${serverconfig.URL}: there were no datasets that loaded successfully`
+		if (trackedDatasets.length)
+			throw `${serverconfig.URL}: there were no datasets that loaded successfully` + missingDslabelMsg
 	} else {
 		if (done.length) {
 			console.log(`\n--- these datasets finished loading ---`)
@@ -271,7 +297,6 @@ function processTrackedDs(trackedDatasets) {
 			ds => !done.includes(ds) && !nonblocking.includes(ds) && !activeRetries.includes(ds)
 		)
 
-		let msg = ''
 		if (failed.length) {
 			const list = failed
 				.map(
@@ -283,34 +308,22 @@ function processTrackedDs(trackedDatasets) {
 			msg += `\n--- failed dataset init ---\n${list}\n`
 		}
 
-		if (serverconfig.features.requiredDslabels) {
-			// NOTE: This option is separate from serverconfig.features.dslabelFilter since that is an option
-			// to limit the loaded datasets. Here, we detect required dslabels that were not loaded/processed
-			// during server startup.
-			const requiredDslabels: Set<string> = new Set(serverconfig.features.requiredDslabels)
-			const missingDslabels = requiredDslabels.difference(new Set(trackedDatasets.map(ds => ds.label)))
-			if (missingDslabels.size) {
-				msg += `\n--- these required datasets were not processed ---\n`
-				msg += [...missingDslabels].join(',') + '\n'
-				msg += `--- Check if the dslabel is not found as a serverconfig genome datasets entry,` + '\n'
-				msg += `or has 'skip: true', or is filtered out by dslabelFilter option. ---` + '\n'
-			}
-		}
+		// we want this to be the
+		msg += missingDslabelMsg
+	}
 
-		if (msg.length) {
-			console.log(msg)
-
-			if (serverconfig.slackWebhookUrl) {
-				// not a fatal error for the server and will not trigger a deployment rollback notification,
-				// so must trigger a notification here
-				const hostname =
-					serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
-				sendMessageToSlack(
-					serverconfig.slackWebhookUrl,
-					`\n${serverconfig.URL} ${hostname}: ${msg}`,
-					path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
-				).catch(console.log)
-			}
+	if (msg.length) {
+		console.log(msg)
+		if (serverconfig.slackWebhookUrl) {
+			// not a fatal error for the server and will not trigger a deployment rollback notification,
+			// so must trigger a notification here
+			const hostname =
+				serverconfig.hostname || spawnSync('hostname', ['-s'], { encoding: 'utf-8' })?.stdout?.trim() || ''
+			sendMessageToSlack(
+				serverconfig.slackWebhookUrl,
+				`\n${serverconfig.URL} ${hostname}: ${msg}`,
+				path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
+			).catch(console.log)
 		}
 	}
 
