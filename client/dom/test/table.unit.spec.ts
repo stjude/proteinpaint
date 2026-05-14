@@ -181,10 +181,7 @@ tape('Missing columns array', async test => {
 	const message = `Should throw for missing columns array`
 
 	try {
-		async function testTable() {
-			return renderTable({ rows: testRowData, div: holder } as any)
-		}
-		await testTable()
+		await renderTable({ rows: testRowData, div: holder } as any)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -200,10 +197,7 @@ tape('Missing rows array', async test => {
 	const message = `Should throw for missing rows array`
 
 	try {
-		async function testTable() {
-			return renderTable({ columns: testColData, div: holder } as any)
-		}
-		await testTable()
+		await renderTable({ columns: testColData, div: holder } as any)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -218,10 +212,7 @@ tape('Missing div', async test => {
 	const message = `Should throw for missing div argument`
 
 	try {
-		async function testTable() {
-			return renderTable({ columns: testColData, rows: testRowData } as any)
-		}
-		await testTable()
+		await renderTable({ columns: testColData, rows: testRowData } as any)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
@@ -236,13 +227,10 @@ tape('Missing and excess row data', async test => {
 	const message = `Should throw for missing and additional row data`
 
 	try {
-		async function testTable() {
-			const rows2 = structuredClone(testRowData) as any[]
-			rows2[0].pop()
-			rows2[1].push({ value: 1 })
-			return renderTable({ columns: testColData, rows: rows2, div: holder } as any)
-		}
-		await testTable()
+		const rows2 = structuredClone(testRowData) as any[]
+		rows2[0].pop()
+		rows2[1].push({ value: 1 })
+		await renderTable({ columns: testColData, rows: rows2, div: holder } as any)
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
