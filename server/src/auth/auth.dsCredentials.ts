@@ -121,7 +121,7 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 		// - that dslabel pattern is not detected as being loaded.
 		// Preserve the catch-all '*' entry, but prune any other unmatched pattern to prevent
 		// the /healthcheck route handler from processing credential test/checks for non-existent datasets.
-		if (genomes && dslabel != '*' && !loadedDslabels.find(ds => isMatch(ds, dslabel))) {
+		if (genomes && dslabel != '*' && !loadedDslabels.find(ds => ds === dslabel || isMatch(ds, dslabel))) {
 			delete creds[dslabel]
 			continue
 		}

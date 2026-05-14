@@ -41,9 +41,9 @@ tape('validateDsCredentials: skips and removes comment keys starting with #', as
 	test.end()
 })
 
-tape('validateDsCredentials: removes entries for exact dslabels that were not loaded', async function (test) {
+tape('validateDsCredentials: removes entries for dslabel patterns that were not loaded', async function (test) {
 	test.timeoutAfter(500)
-	test.plan(4)
+	test.plan(6)
 
 	{
 		const creds: any = {
@@ -63,6 +63,16 @@ tape('validateDsCredentials: removes entries for exact dslabels that were not lo
 		await validateDsCredentials(creds)
 		test.ok(creds['someDs'], 'should keep cred entries if the 2nd argument is not supplied')
 		test.ok(creds['realDs'], 'should keep cred entries for dslabels that were loaded')
+	}
+
+	{
+		const creds: any = {
+			someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+			'realD*': { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+		}
+		await validateDsCredentials(creds, { hg38: { datasets: { realDs: {}, someDs: {}, ds0: {} } } })
+		test.ok(creds['someDs'], 'should keep cred entries for an exact dslabel match')
+		test.ok(creds['realD*'], 'should keep cred entries for a dslabel pattern match')
 	}
 
 	test.end()
