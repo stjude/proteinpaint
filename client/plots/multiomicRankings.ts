@@ -3,8 +3,23 @@ import { dofetch3 } from '#common/dofetch'
 import { getCompInit, copyMerge } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { PlotBase } from '#plots/PlotBase.js'
+import { scaleLinear } from 'd3-scale'
+import { colorScaleMap } from '#shared/common.js'
 
 const Integrative_rank_COLUMN = 'Integrative rank'
+
+// Modality columns to include in the heatmap, in biological order.
+const HEATMAP_MODALITIES = [
+	'GWAS',
+	'Transcriptome',
+	'Whole proteome',
+	'Insoluble proteome',
+	'Pho-enriched',
+	'Ubi-enriched',
+	'Interactome'
+]
+const Z_CLAMP = 2 // diverging color scale clamp (±2 z-units)
+const MISSING_COLOR = '#d9d9d9'
 
 class MultiomicRankings extends PlotBase {
 	static type = 'multiomicRankings'
@@ -25,6 +40,15 @@ class MultiomicRankings extends PlotBase {
 	toolbarDiv: any
 	noteDiv: any
 	searchInput: any
+	heatmapSection: any
+	heatmapControls: any
+	heatmapDiv: any
+	heatmapStatus: any
+	heatmapOrder: 'clustered' | 'rank' = 'clustered'
+	minAssays: number = 3
+	minAssaysSelect: any
+	/** identity-tag of the data the current heatmap was rendered for; used to abort stale responses */
+	heatmapRenderKey: string = ''
 
 	constructor(opts) {
 		super(opts)
@@ -40,6 +64,7 @@ class MultiomicRankings extends PlotBase {
 			.style('flex-wrap', 'wrap')
 			.style('gap', '8px')
 			.style('margin-bottom', '6px')
+			.style('font-size', '12px')
 		const leftBar = this.toolbarDiv
 			.append('div')
 			.style('display', 'flex')
@@ -84,7 +109,64 @@ class MultiomicRankings extends PlotBase {
 			.text(
 				'We ranked individual genes/proteins using order statistics to integrate multiple omics datasets, including GWAS, transcriptome, various proteomes, and the interactome. The proteomic datasets include the whole proteome, insoluble proteins, phosphoproteome, and ubiquitinome, if available. Genes/proteins in each dataset are ranked based on p/FDR values or log2FC-z scores, and finally sorted by the combined order statistic Q scores.'
 			)
-		this.tableDiv = main.append('div').attr('data-testid', 'sjpp-multiomicRankings-table')
+		this.tableDiv = main.append('div').attr('data-testid', 'sjpp-multiomicRankings-table').style('font-size', '12px')
+
+		this.heatmapSection = main
+			.append('div')
+			.style('display', 'none')
+			.style('margin-top', '24px')
+			.attr('data-testid', 'sjpp-multiomicRankings-heatmap')
+		const hmHeader = this.heatmapSection
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '12px')
+			.style('margin-bottom', '8px')
+		hmHeader.append('div').style('font-weight', 'bold').text('Heatmap of the current page')
+		this.heatmapControls = hmHeader
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+		this.heatmapControls.append('span').style('font-size', '0.85em').style('color', '#555').text('Row order:')
+		const orderSelect = this.heatmapControls
+			.append('select')
+			.style('padding', '2px 4px')
+			.on('change', (event: any) => {
+				this.heatmapOrder = event.target.value
+				this.renderHeatmap()
+			})
+		orderSelect.append('option').attr('value', 'clustered').text('Clustered').property('selected', true)
+		orderSelect.append('option').attr('value', 'rank').text('Ranking score')
+		// min-assays selector wrapper, hidden when order is "rank"
+		const minAssaysWrap = this.heatmapControls
+			.append('span')
+			.attr('class', 'sjpp-mr-min-assays-wrap')
+			.style('display', 'inline-flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+		minAssaysWrap.append('span').style('font-size', '0.85em').style('color', '#555').text('Min assays:')
+		this.minAssaysSelect = minAssaysWrap
+			.append('select')
+			.style('padding', '2px 4px')
+			.on('change', (event: any) => {
+				this.minAssays = Number(event.target.value)
+				this.renderHeatmap()
+			})
+		for (const n of [2, 3, 4, 5, 6, 7]) {
+			this.minAssaysSelect
+				.append('option')
+				.attr('value', n)
+				.text(String(n))
+				.property('selected', n === this.minAssays)
+		}
+		this.heatmapStatus = this.heatmapSection
+			.append('div')
+			.style('font-size', '0.85em')
+			.style('color', '#777')
+			.style('margin-bottom', '6px')
+		this.heatmapDiv = this.heatmapSection.append('div').style('overflow-x', 'auto')
+
 		this.dom = {
 			holder: main,
 			header: opts.header,
@@ -231,6 +313,7 @@ class MultiomicRankings extends PlotBase {
 				onChange: ({ currentPage, pageSize }) => {
 					this.currentPage = currentPage
 					this.pageSize = pageSize
+					this.renderHeatmap()
 				}
 			}
 		})
@@ -243,6 +326,8 @@ class MultiomicRankings extends PlotBase {
 			th.style.userSelect = 'none'
 			th.style.whiteSpace = 'nowrap'
 			th.style.color = '#000'
+			th.style.fontWeight = 'bold'
+			th.style.opacity = '1'
 			const colIdx = i
 			const label = columns[colIdx]
 			if (!label) return
@@ -279,6 +364,281 @@ class MultiomicRankings extends PlotBase {
 				this.noteDiv.style('width', px).style('box-sizing', 'border-box')
 			}
 		})
+		this.renderHeatmap()
+	}
+
+	/** rows displayed on the current page after filter + sort + pagination */
+	private getVisibleRows(): (string | number | null)[][] {
+		if (!this.cachedData) return []
+		const { rows } = this.cachedData
+		const filtered = this.searchQuery
+			? rows.filter(r => {
+					const gene = r[0]
+					return typeof gene === 'string' && gene.toLowerCase().includes(this.searchQuery)
+			  })
+			: rows
+		const sorted = this.sortIdx >= 0 ? sortRows(filtered, this.sortIdx, this.sortAsc) : filtered
+		const start = (this.currentPage - 1) * this.pageSize
+		return sorted.slice(start, start + this.pageSize)
+	}
+
+	async renderHeatmap() {
+		if (!this.cachedData) {
+			this.heatmapSection.style('display', 'none')
+			return
+		}
+		const { columns } = this.cachedData
+
+		// modality columns available in this dataset, intersected with biological order
+		const colNameToIdx = new Map(columns.map((c, i) => [c, i]))
+		const usedCols = HEATMAP_MODALITIES.filter(m => colNameToIdx.has(m))
+		if (usedCols.length < 2) {
+			this.heatmapSection.style('display', 'none')
+			return
+		}
+		this.heatmapSection.style('display', 'block')
+
+		const visible = this.getVisibleRows()
+		const geneNames = visible.map(r => String(r[0]))
+		const matrix: (number | null)[][] = visible.map(r =>
+			usedCols.map(c => {
+				const v = r[colNameToIdx.get(c)!]
+				return typeof v === 'number' && Number.isFinite(v) ? v : null
+			})
+		)
+
+		// fingerprint of the data so a late-arriving response from a previous
+		// render doesn't overwrite the current one
+		const renderKey = `${this.dataKey}|${this.heatmapOrder}|${this.minAssays}|${this.currentPage}|${this.pageSize}|${
+			this.searchQuery
+		}|${this.sortIdx}|${this.sortAsc}|${geneNames.join(',')}`
+		this.heatmapRenderKey = renderKey
+		this.heatmapDiv.selectAll('*').remove()
+		this.heatmapStatus.text('Computing heatmap…')
+
+		// show/hide min-assays selector based on order mode
+		this.heatmapControls
+			.select('.sjpp-mr-min-assays-wrap')
+			.style('display', this.heatmapOrder === 'clustered' ? 'inline-flex' : 'none')
+
+		// ranking-score order: keep all rows on the page, z-score ignoring nulls, no clustering
+		if (this.heatmapOrder === 'rank') {
+			if (geneNames.length < 1) {
+				this.heatmapStatus.text('No rows to display.')
+				return
+			}
+			const zMatrix = zscorePerColumnIgnoringNull(matrix)
+			this.heatmapStatus.text(
+				`${geneNames.length} rows in current page order. Missing values shown in gray; z-scored per column ignoring missing.`
+			)
+			this.drawHeatmap({ rowNames: geneNames, colNames: usedCols, matrix: zMatrix, dendrogram: null })
+			return
+		}
+
+		// clustered order — server does z-score + clustering with pairwise-complete observations
+		try {
+			const resp = await dofetch3('termdb/multiomicRankings/cluster', {
+				body: {
+					matrix,
+					row_names: geneNames,
+					col_names: usedCols,
+					minAssays: this.minAssays
+				}
+			})
+			if (renderKey !== this.heatmapRenderKey) return // stale
+			if (resp.error) throw resp.error
+			const keptCount = resp.usedRowNames?.length ?? 0
+			this.heatmapStatus.text(
+				`${keptCount} of ${visible.length} rows shown (proteins with ≥${this.minAssays} assays). Missing values shown in gray; imputed to the column mean for clustering.`
+			)
+			this.drawHeatmap({
+				rowNames: resp.row.order.map((o: { name: string }) => o.name),
+				colNames: resp.usedColNames,
+				matrix: resp.matrix,
+				dendrogram: resp.row
+			})
+		} catch (e: any) {
+			if (renderKey !== this.heatmapRenderKey) return
+			this.heatmapStatus.text(`Heatmap error: ${e?.message || e}`)
+		}
+	}
+
+	private drawHeatmap(opts: {
+		rowNames: string[]
+		colNames: string[]
+		matrix: (number | null)[][]
+		dendrogram: null | {
+			merge: { n1: number; n2: number }[]
+			height: { height: number }[]
+			order: { name: string }[]
+			inputOrder: string[]
+		}
+	}) {
+		const { rowNames, colNames, matrix, dendrogram } = opts
+		const cellW = 44
+		const cellH = 22
+		const dendroW = dendrogram ? 110 : 0
+		const dendroPad = dendrogram ? 8 : 0
+		const colLabelH = 110
+		const rowLabelW = 130
+		const legendBlockW = 110 // space reserved to the right of row labels for the vertical legend
+		const gridW = colNames.length * cellW
+		const gridH = rowNames.length * cellH
+		// legend dims (must match values used below when drawing)
+		const legendGradH = Math.max(120, Math.min(gridH, 240))
+		const missingSwatchExtra = 18 + 12 // gap + swatch height
+		const totalW = dendroW + dendroPad + gridW + 8 + rowLabelW + legendBlockW
+		const totalH = colLabelH + Math.max(gridH, legendGradH + missingSwatchExtra) + 16
+
+		this.heatmapDiv.selectAll('*').remove()
+		const svg = this.heatmapDiv
+			.append('svg')
+			.attr('width', totalW)
+			.attr('height', totalH)
+			.attr('font-family', 'sans-serif')
+
+		// color scale: blue (low) -> white -> red (high), matching hierCluster's
+		// shared blueWhiteRed scale from common.ts. Domain is clamped to ±Z_CLAMP.
+		const { domain: bwrDomain, range: bwrRange } = colorScaleMap.blueWhiteRed
+		const bwr = scaleLinear<string>()
+			.domain(bwrDomain.map(t => -Z_CLAMP + 2 * Z_CLAMP * t))
+			.range(bwrRange as readonly string[] as string[])
+			.clamp(true)
+		const color = (v: number) => bwr(v)
+
+		// row dendrogram (left)
+		if (dendrogram) {
+			const g = svg.append('g').attr('transform', `translate(0,${colLabelH})`)
+			drawRowDendrogram(g, dendrogram, dendroW, gridH, cellH)
+		}
+
+		// column labels (rotated)
+		const gridX = dendroW + dendroPad
+		const labelsG = svg.append('g').attr('transform', `translate(${gridX},${colLabelH - 4})`)
+		labelsG
+			.selectAll('text')
+			.data(colNames)
+			.enter()
+			.append('text')
+			.attr('x', (_d, i) => i * cellW + cellW / 2)
+			.attr('y', 0)
+			.attr('transform', (_d, i) => `rotate(-45,${i * cellW + cellW / 2},0)`)
+			.attr('text-anchor', 'start')
+			.attr('font-size', '13px')
+			.attr('fill', '#000')
+			.text(d => d)
+
+		// cells
+		const cellsG = svg.append('g').attr('transform', `translate(${gridX},${colLabelH})`)
+		const cellData: { x: number; y: number; v: number | null; row: number; col: number }[] = []
+		for (let r = 0; r < matrix.length; r++) {
+			for (let c = 0; c < matrix[r].length; c++) {
+				cellData.push({ x: c * cellW, y: r * cellH, v: matrix[r][c], row: r, col: c })
+			}
+		}
+		cellsG
+			.selectAll('rect')
+			.data(cellData)
+			.enter()
+			.append('rect')
+			.attr('x', d => d.x)
+			.attr('y', d => d.y)
+			.attr('width', cellW)
+			.attr('height', cellH)
+			.attr('fill', d => (d.v === null || !Number.isFinite(d.v) ? MISSING_COLOR : color(d.v as number)))
+			.attr('stroke', '#fff')
+			.attr('stroke-width', 0.5)
+			.append('title')
+			.text(
+				d =>
+					`${rowNames[d.row]} — ${colNames[d.col]}\n${
+						d.v === null || !Number.isFinite(d.v) ? 'missing' : `z-score: ${(d.v as number).toFixed(3)}`
+					}`
+			)
+
+		// row labels (gene names) on the right
+		const rowLabelsG = svg.append('g').attr('transform', `translate(${gridX + gridW + 6},${colLabelH})`)
+		rowLabelsG
+			.selectAll('text')
+			.data(rowNames)
+			.enter()
+			.append('text')
+			.attr('x', 0)
+			.attr('y', (_d, i) => i * cellH + cellH / 2 + 4)
+			.attr('font-size', '13px')
+			.attr('fill', '#000')
+			.text(d => d)
+
+		// vertical color legend (placed to the right of the row labels)
+		const legendGradW = 16
+		const legendX = gridX + gridW + 8 + rowLabelW + 8
+		const legendY = colLabelH
+		const legendG = svg.append('g').attr('transform', `translate(${legendX},${legendY})`)
+		// title rotated alongside the gradient
+		legendG
+			.append('text')
+			.attr('transform', `translate(-6,${legendGradH / 2}) rotate(-90)`)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', '11px')
+			.attr('fill', '#555')
+			.text('z-score (per column)')
+		const stops = 32
+		for (let i = 0; i < stops; i++) {
+			// top of legend = high z (red); bottom = low z (blue)
+			const v = Z_CLAMP - (2 * Z_CLAMP * i) / (stops - 1)
+			legendG
+				.append('rect')
+				.attr('x', 0)
+				.attr('y', (i * legendGradH) / stops)
+				.attr('width', legendGradW)
+				.attr('height', legendGradH / stops + 0.5)
+				.attr('fill', color(v))
+		}
+		legendG
+			.append('rect')
+			.attr('x', 0)
+			.attr('y', 0)
+			.attr('width', legendGradW)
+			.attr('height', legendGradH)
+			.attr('fill', 'none')
+			.attr('stroke', '#999')
+			.attr('stroke-width', 0.5)
+		// tick labels
+		legendG
+			.append('text')
+			.attr('x', legendGradW + 6)
+			.attr('y', 4)
+			.attr('font-size', '11px')
+			.text(`≥ ${Z_CLAMP}`)
+		legendG
+			.append('text')
+			.attr('x', legendGradW + 6)
+			.attr('y', legendGradH / 2 + 4)
+			.attr('font-size', '11px')
+			.text('0')
+		legendG
+			.append('text')
+			.attr('x', legendGradW + 6)
+			.attr('y', legendGradH)
+			.attr('font-size', '11px')
+			.text(`≤ −${Z_CLAMP}`)
+
+		// missing-value swatch below the gradient
+		const missingG = svg.append('g').attr('transform', `translate(${legendX},${legendY + legendGradH + 18})`)
+		missingG
+			.append('rect')
+			.attr('width', legendGradW)
+			.attr('height', 12)
+			.attr('fill', MISSING_COLOR)
+			.attr('stroke', '#999')
+			.attr('stroke-width', 0.5)
+		missingG
+			.append('text')
+			.attr('x', legendGradW + 6)
+			.attr('y', 10)
+			.attr('font-size', '11px')
+			.attr('fill', '#555')
+			.text('missing')
 	}
 }
 
@@ -303,6 +663,101 @@ function sortRows(rows: (string | number | null)[][], idx: number, asc: boolean)
 		.map(x => x.r)
 }
 
+function zscorePerColumnIgnoringNull(matrix: (number | null)[][]): (number | null)[][] {
+	if (matrix.length === 0) return matrix
+	const ncol = matrix[0].length
+	const out: (number | null)[][] = matrix.map(r => [...r])
+	for (let c = 0; c < ncol; c++) {
+		const vals: number[] = []
+		for (const r of matrix) {
+			const v = r[c]
+			if (v !== null && Number.isFinite(v as number)) vals.push(v as number)
+		}
+		if (vals.length === 0) continue
+		const mean = vals.reduce((s, v) => s + v, 0) / vals.length
+		const sd = Math.sqrt(vals.reduce((s, v) => s + (v - mean) ** 2, 0) / vals.length)
+		for (let r = 0; r < matrix.length; r++) {
+			const v = matrix[r][c]
+			if (v === null || !Number.isFinite(v as number)) out[r][c] = null
+			else out[r][c] = sd === 0 ? 0 : ((v as number) - mean) / sd
+		}
+	}
+	return out
+}
+
+/**
+ * Render a row dendrogram from hclust output into the given <g>.
+ * Adapted from matrix/hierCluster.renderers.js plotDendrogramHclust:
+ * we walk the merge tree, recording each cluster's (x, y) where y is the
+ * vertical center of its leaf range and x is its merge height. Branches
+ * extend leftward from the heatmap edge so the deepest merges sit at x=0.
+ */
+function drawRowDendrogram(
+	g: any,
+	dend: {
+		merge: { n1: number; n2: number }[]
+		height: { height: number }[]
+		order: { name: string }[]
+		inputOrder: string[]
+	},
+	width: number,
+	gridH: number,
+	cellH: number
+) {
+	const heights = dend.height.map(h => h.height)
+	const maxH = Math.max(...heights, 1e-9)
+	const hToX = scaleLinear().domain([0, maxH]).range([width, 0])
+
+	// position of each leaf in the dendrogram (y in pixels, leaf order from .order)
+	const leafYByName = new Map<string, number>()
+	dend.order.forEach((leaf, i) => {
+		leafYByName.set(leaf.name, i * cellH + cellH / 2)
+	})
+
+	// for each merged cluster, record {x, y}
+	const merged = new Map<number, { x: number; y: number }>()
+	for (let i = 0; i < dend.merge.length; i++) {
+		const { n1, n2 } = dend.merge[i]
+		const pos = (n: number): { x: number; y: number } => {
+			if (n < 0) {
+				// leaf: index in inputOrder is -n-1
+				const name = dend.inputOrder[-n - 1]
+				return { x: width, y: leafYByName.get(name) ?? 0 }
+			}
+			return merged.get(n) || { x: width, y: 0 }
+		}
+		const a = pos(n1)
+		const b = pos(n2)
+		const x = hToX(heights[i])
+		const y = (a.y + b.y) / 2
+
+		// horizontal segment from each child to the merge x, then a vertical between them
+		g.append('line')
+			.attr('x1', a.x)
+			.attr('x2', x)
+			.attr('y1', a.y)
+			.attr('y2', a.y)
+			.attr('stroke', '#000')
+			.attr('stroke-width', 1)
+		g.append('line')
+			.attr('x1', b.x)
+			.attr('x2', x)
+			.attr('y1', b.y)
+			.attr('y2', b.y)
+			.attr('stroke', '#000')
+			.attr('stroke-width', 1)
+		g.append('line')
+			.attr('x1', x)
+			.attr('x2', x)
+			.attr('y1', a.y)
+			.attr('y2', b.y)
+			.attr('stroke', '#000')
+			.attr('stroke-width', 1)
+
+		merged.set(i + 1, { x, y })
+	}
+}
+
 export async function getPlotConfig(opts) {
 	const config = {
 		chartType: MultiomicRankings.type,
@@ -317,19 +772,19 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	chartsInstance.dom.tip.clear()
 	const cfg = chartsInstance.state.termdbConfig?.queries?.multiomicRankings as Record<string, string> | undefined
 
-	const menu = holder.append('div').style('padding', '8px')
-
 	if (!cfg || !Object.keys(cfg).length) {
-		menu.append('div').style('color', '#888').text('No multiomic rankings available for this dataset.')
+		holder
+			.append('div')
+			.style('padding', '8px')
+			.style('color', '#888')
+			.text('No multiomic rankings available for this dataset.')
 		return
 	}
 
 	for (const key of Object.keys(cfg)) {
-		menu
+		holder
 			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('padding', '6px 12px')
-			.style('cursor', 'pointer')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(key)
 			.on('click', () => {
 				chartsInstance.dom.tip.hide()

@@ -509,7 +509,7 @@ export function renderTable({
 	}
 
 	if (pagination) {
-		pagerDiv = div
+		pagerDiv = parentDiv
 			.append('div')
 			.style('display', 'flex')
 			.style('align-items', 'center')
