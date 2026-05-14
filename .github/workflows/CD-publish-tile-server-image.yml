@@ -39,7 +39,7 @@ jobs:
         uses: docker/login-action@v3.4.0
         with:
           registry: ghcr.io
-          username: ${{ inputs.GITHUB_ACTOR }}
+          username: ${{ github.GITHUB_ACTOR }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
 
