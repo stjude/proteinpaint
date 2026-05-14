@@ -21,7 +21,7 @@ as listed in the [installation instructions](https://docs.google.com/document/d/
 ```bash
 cd proteinpaint
 npm run sethooks
-nvm use 20
+nvm use 24
 npm install
 # follow the instructions at https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit
 ```
@@ -40,7 +40,7 @@ cd container/dev
 ## Develop
 ### Host Machine development
 
-These scripts require npm v10.2+ and are tested with Node v20+.
+These scripts require npm v11+ and are tested with Node v24+.
 
 ```bash
 

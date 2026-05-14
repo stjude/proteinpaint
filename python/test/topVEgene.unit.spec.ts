@@ -15,7 +15,7 @@ tape('topVEgene returns the expected top variable genes', async t => {
 	const input = {
 		input_file: rnaseqTestFile,
 		filter_extreme_values: false,
-		num_genes: 5,
+		max_genes: 10,
 		rank_type: 'var',
 		samples
 	}
@@ -25,7 +25,63 @@ tape('topVEgene returns the expected top variable genes', async t => {
 		const result = typeof out === 'string' ? JSON.parse(out) : out
 
 		t.ok(Array.isArray(result), 'Output should be an array of gene symbols')
-		t.deepEqual(result, ['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'ACAP3'], 'Should return the expected top genes')
+		t.deepEqual(
+			result,
+			['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'ACAP3', 'HES4', 'AGRN', 'DVL1', 'HES5', 'SKI'],
+			'Should return the expected top genes'
+		)
+	} catch (err) {
+		t.fail(`Expected success but got error: ${String(err)}`)
+	}
+
+	t.end()
+})
+
+tape('topVEgene returns the expected top variable genes when filtered', async t => {
+	const input = {
+		input_file: rnaseqTestFile,
+		filter_extreme_values: true,
+		max_genes: 10,
+		rank_type: 'var',
+		samples
+	}
+
+	try {
+		const out = await run_python('topVEgene.py', JSON.stringify(input))
+		const result = typeof out === 'string' ? JSON.parse(out) : out
+
+		t.ok(Array.isArray(result), 'Output should be an array of gene symbols')
+		t.deepEqual(
+			result,
+			['ISG15', 'CCNL2', 'GNB1', 'MXRA8', 'HES4', 'ACAP3', 'AGRN', 'DVL1', 'SAMD11', 'SKI'],
+			'Should return the expected top genes'
+		)
+	} catch (err) {
+		t.fail(`Expected success but got error: ${String(err)}`)
+	}
+
+	t.end()
+})
+
+tape('topVEgene returns the expected top genes by iqr', async t => {
+	const input = {
+		input_file: rnaseqTestFile,
+		filter_extreme_values: false,
+		max_genes: 10,
+		rank_type: 'iqr',
+		samples
+	}
+
+	try {
+		const out = await run_python('topVEgene.py', JSON.stringify(input))
+		const result = typeof out === 'string' ? JSON.parse(out) : out
+
+		t.ok(Array.isArray(result), 'Output should be an array of gene symbols')
+		t.deepEqual(
+			result,
+			['ISG15', 'CCNL2', 'GNB1', 'AGRN', 'DVL1', 'SKI', 'ACAP3', 'MXRA8', 'SLC35E2B', 'NADK'],
+			'Should return the expected top genes when using iqr ranking'
+		)
 	} catch (err) {
 		t.fail(`Expected success but got error: ${String(err)}`)
 	}
@@ -37,7 +93,7 @@ tape('topVEgene rejects an invalid rank_type', async t => {
 	const input = {
 		input_file: rnaseqTestFile,
 		filter_extreme_values: false,
-		num_genes: 5,
+		max_genes: 10,
 		rank_type: 'bad-rank',
 		samples
 	}
@@ -57,7 +113,7 @@ tape('topVEgene rejects a non-existing input file', async t => {
 	const input = {
 		input_file: 'server/test/tp/files/hg38/TermdbTest/rnaseq/does-not-exist.h5',
 		filter_extreme_values: false,
-		num_genes: 5,
+		max_genes: 10,
 		rank_type: 'var',
 		samples
 	}
@@ -68,6 +124,26 @@ tape('topVEgene rejects a non-existing input file', async t => {
 	} catch (err) {
 		const errorText = String(err)
 		t.ok(errorText.includes('could not be found'), 'Error should mention missing input file')
+	}
+
+	t.end()
+})
+
+tape('topVEgene rejects sample IDs not present in HDF5', async t => {
+	const input = {
+		input_file: rnaseqTestFile,
+		filter_extreme_values: false,
+		max_genes: 10,
+		rank_type: 'var',
+		samples: `${samples},not-a-sample,999999,bad-sample-id,-1`
+	}
+
+	try {
+		await run_python('topVEgene.py', JSON.stringify(input))
+		t.fail('Expected sample validation to fail for missing sample IDs')
+	} catch (err) {
+		const errorText = String(err)
+		t.ok(errorText.includes('not found in HDF5 file'), 'Error should mention missing sample IDs')
 	}
 
 	t.end()

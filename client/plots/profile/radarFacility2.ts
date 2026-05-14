@@ -8,23 +8,20 @@ import { getDefaultProfilePlotSettings, makeChartBtnMenu, getProfilePlotConfig, 
 export { makeChartBtnMenu }
 
 /*
-profileRadarFacility2 — redesigned facility radar chart following the per-plot
-dedicated-route pattern.
+profileRadarFacility2 — client class for the profile facility-radar chart.
 
-Unlike polar2/barchart2/radar2 which are aggregate-only, this route returns
-BOTH the aggregate median (the "Global" line) AND a single-site row (the
-"Facility" line) in ONE response. The v1 chart made two sequential requests;
-v2 makes one.
+Renders two overlaid polygons: the aggregate median across eligible sites
+(the "Global" line, gray dashed) and a single facility's row (the "Facility"
+line, blue solid). Both are returned in one response from
+termdb/profileRadarFacility2Scores.
 
-Key differences from profileRadarFacility:
-  - Dedicated server route: termdb/profileRadarFacility2Scores.
-  - Server-side facility term derivation: client does not send facilityTW.
-  - Single round-trip: aggregate + single-site in one response.
-  - Minimal client payload: scoreTerms stripped to { term: { id }, q }.
-  - Zero-score sites included in the median (!= null filter).
-  - Cleaner rendering structure: plot() split into focused private methods.
+- The server derives the facility term id from term ID prefixes — no
+  client-supplied facilityTW.
+- Minimal payload: scoreTerms stripped to { term: { id }, q } before sending.
+- Single round-trip: aggregate + single-site in one response.
+- Zero-score sites included in the median.
 
-Still auth-gated — chart is hidden from public users via isSupportedChartOverride.
+Auth-gated — chart is hidden from public users via isSupportedChartOverride.
 */
 
 class ProfileRadarFacility2 extends profilePlot {
@@ -64,10 +61,9 @@ class ProfileRadarFacility2 extends profilePlot {
 	}
 
 	/**
-	 * Called by the base class's setControls() in place of the shared
-	 * getProfileScores fetch AND the second facility-site fetch — both are
-	 * covered by this single dedicated-route call. Sets `this.data` (aggregate)
-	 * and `this.sampleData` (single-site) from one response.
+	 * Called by the base class after super.setControls() builds the filter UI
+	 * and sets this.filter. One round-trip to termdb/profileRadarFacility2Scores
+	 * populates both this.data (aggregate) and this.sampleData (single-site).
 	 */
 	async fetchRadarFacility2Scores() {
 		const response = await dofetch3('termdb/profileRadarFacility2Scores', {
@@ -121,7 +117,7 @@ class ProfileRadarFacility2 extends profilePlot {
 			.append('text')
 			.attr('transform', `translate(90, 30)`)
 			.attr('font-weight', 'bold')
-			.text(`${this.config.title} (v2)`)
+			.text(this.config.title)
 		const x = 300
 		const y = 330
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
@@ -251,10 +247,7 @@ class ProfileRadarFacility2 extends profilePlot {
 			{ label: 'Module' },
 			{ label: 'Facility' },
 			{ label: 'Global' },
-			{
-				label: 'Difference*',
-				tooltip: `* Difference between site and aggregated scores. If bigger than 20 and positive shown in blue, if negative shown in red.`
-			}
+			{ label: 'Difference*' }
 		]
 		if (!this.isComparison) {
 			renderTable({
@@ -264,6 +257,9 @@ class ProfileRadarFacility2 extends profilePlot {
 				showLines: true,
 				resize: true
 			})
+			this.addDifferenceNote(
+				`* Difference between site and aggregated scores. If bigger than 20 and positive shown in blue, if negative shown in red.`
+			)
 		}
 		this.addFilterLegend()
 
@@ -286,6 +282,26 @@ class ProfileRadarFacility2 extends profilePlot {
 				this.addFacilityLegendItem(this.config.score, 'gray', 2, '5, 5')
 			}
 		}
+	}
+
+	private addDifferenceNote(text: string) {
+		const noteDiv = this.dom.tableDiv
+			.append('div')
+			.attr('data-testid', 'sjpp-profileRadarFacility2-difference-note')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+			.style('margin-top', '8px')
+			.style('font-size', '0.85em')
+			.style('font-style', 'italic')
+			.style('color', '#555')
+		noteDiv
+			.append('span')
+			.attr('aria-hidden', 'true')
+			.style('font-style', 'normal')
+			.style('font-size', '1.1em')
+			.text('ⓘ')
+		noteDiv.append('span').text(text)
 	}
 
 	private drawModuleLabel(module: string, iangle: number) {

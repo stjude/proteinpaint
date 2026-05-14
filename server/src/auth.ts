@@ -39,7 +39,7 @@ export async function getAuthApi(app, genomes, _serverconfig = null, assignShare
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
 
-	const credEmbedders = await validateDsCredentials(creds)
+	const credEmbedders = await validateDsCredentials(creds, genomes)
 	// no need to set up auth middleware and routes if there are no dsCredential entries
 	const _authApi = credEmbedders.size ? new AuthApi(creds, app, genomes, serverconfig) : AuthApiOpen
 	//console.log(44, credEmbedders, authApi === AuthApiProtected)

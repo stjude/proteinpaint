@@ -35,9 +35,46 @@ tape('validateDsCredentials: skips and removes comment keys starting with #', as
 		'#comment': { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
 		realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { realDs: {} } } })
 	test.equal(creds['#comment'], undefined, 'should remove comment keys starting with #')
 	test.ok(creds['realDs'], 'should keep non-comment keys')
+	test.end()
+})
+
+tape('validateDsCredentials: removes entries for dslabel patterns that were not loaded', async function (test) {
+	test.timeoutAfter(500)
+	test.plan(6)
+
+	{
+		const creds: any = {
+			someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+			realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+		}
+		await validateDsCredentials(creds, { hg38: { datasets: { realDs: {} } } })
+		test.equal(creds['someDs'], undefined, 'should remove cred entries for dslabels that were not loaded')
+		test.ok(creds['realDs'], 'should keep cred entries for dslabels that were loaded')
+	}
+
+	{
+		const creds: any = {
+			someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+			realDs: { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+		}
+		await validateDsCredentials(creds)
+		test.ok(creds['someDs'], 'should keep cred entries if the 2nd argument is not supplied')
+		test.ok(creds['realDs'], 'should keep cred entries for dslabels that were loaded')
+	}
+
+	{
+		const creds: any = {
+			someDs: { termdb: { '*': { type: 'basic', password: 'test' } } }, // pragma: allowlist secret
+			'realD*': { termdb: { '*': { type: 'basic', password: 'test' } } } // pragma: allowlist secret
+		}
+		await validateDsCredentials(creds, { hg38: { datasets: { realDs: {}, someDs: {}, ds0: {} } } })
+		test.ok(creds['someDs'], 'should keep cred entries for an exact dslabel match')
+		test.ok(creds['realD*'], 'should keep cred entries for a dslabel pattern match')
+	}
+
 	test.end()
 })
 
@@ -55,7 +92,7 @@ tape('validateDsCredentials: basic type gets expected defaults', async function 
 			}
 		}
 	}
-	const credEmbedders = await validateDsCredentials(creds)
+	const credEmbedders = await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 	const cred = creds.testDs.termdb['test.example.com']
 	test.equal(cred.secret, 'mypassword', 'should copy password to secret for basic type')
 	test.equal(cred.authRoute, '/dslogin', 'should set authRoute to /dslogin for basic type')
@@ -80,7 +117,7 @@ tape('validateDsCredentials: jwt type gets expected defaults', async function (t
 			}
 		}
 	}
-	const credEmbedders = await validateDsCredentials(creds)
+	const credEmbedders = await validateDsCredentials(creds, { hg38: { datasets: { jwtDs: {} } } })
 	const cred = creds.jwtDs.termdb['jwt.example.com']
 	test.equal(cred.authRoute, '/jwt-status', 'should set authRoute to /jwt-status for jwt type')
 	test.equal(cred.headerKey, 'x-ds-access-token', 'should set default headerKey for jwt type')
@@ -104,7 +141,7 @@ tape('validateDsCredentials: wildcard route is renamed from * to /**', async fun
 			}
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 	test.ok(creds.testDs['/**'], 'should rename * route to /**')
 	test.equal(creds.testDs['*'], undefined, 'should remove the original * route key')
 	test.end()
@@ -125,7 +162,7 @@ tape('validateDsCredentials: looseIpCheck is converted to ipCheck: loose', async
 			}
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 	const cred = creds.testDs.termdb['*']
 	test.equal(cred.ipCheck, 'loose', 'should convert looseIpCheck to ipCheck: loose')
 	test.equal(cred.looseIpCheck, undefined, 'should remove looseIpCheck property')
@@ -146,7 +183,7 @@ tape('validateDsCredentials: forbidden type is accepted without error', async fu
 		}
 	}
 	try {
-		await validateDsCredentials(creds)
+		await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 		test.pass('should not throw for forbidden type')
 	} catch (e) {
 		test.fail(`should not throw: ${e}`)
@@ -168,7 +205,7 @@ tape('validateDsCredentials: open type is accepted without error', async functio
 		}
 	}
 	try {
-		await validateDsCredentials(creds)
+		await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 		test.pass('should not throw for open type')
 	} catch (e) {
 		test.fail(`should not throw: ${e}`)
@@ -190,7 +227,7 @@ tape('validateDsCredentials: unknown type throws an error', async function (test
 		}
 	}
 	try {
-		await validateDsCredentials(creds)
+		await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 		test.fail('should throw for unknown credential type')
 	} catch (e) {
 		test.ok(String(e).includes('unknown cred.type'), 'should throw an error mentioning unknown cred.type')
@@ -213,7 +250,7 @@ tape('validateDsCredentials: cookieId is set from headerKey for termdb route', a
 			}
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 	const cred = creds.testDs.termdb['*']
 	test.equal(cred.cookieId, 'custom-header-key', 'should use headerKey as cookieId for termdb route')
 	test.end()
@@ -233,7 +270,7 @@ tape('validateDsCredentials: cookieId uses dslabel+route+embedder pattern for no
 			}
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { myDs: {} } } })
 	const cred = creds.myDs.burden['myEmbedder']
 	test.equal(
 		cred.cookieId,
@@ -253,7 +290,7 @@ tape('validateDsCredentials: legacy type=login is reshaped correctly', async fun
 			password: 'legacyPassword' // pragma: allowlist secret
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { legacyDs: {} } } })
 	test.equal(creds.legacyDs.type, undefined, 'should remove legacy type field')
 	test.ok(creds.legacyDs['/**'], 'should create /** route key from legacy login type')
 	const cred = creds.legacyDs['/**']['*']
@@ -277,7 +314,7 @@ tape('validateDsCredentials: legacy type=jwt with embedders is reshaped correctl
 			}
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { legacyJwtDs: {} } } })
 	test.equal(creds.legacyJwtDs.type, undefined, 'should remove legacy type field')
 	test.ok(creds.legacyJwtDs.termdb, 'should create termdb route key from legacy jwt type')
 	const cred = creds.legacyJwtDs.termdb['localhost']
@@ -293,7 +330,7 @@ tape('validateDsCredentials: deprecated secrets key throws an error', async func
 		secrets: 'deprecated-secrets-value' // pragma: allowlist secret
 	}
 	try {
-		await validateDsCredentials(creds)
+		await validateDsCredentials(creds, { hg38: { datasets: { termdb: {} } } })
 		test.fail('should throw for deprecated secrets key')
 	} catch (e) {
 		test.ok(String(e).includes('deprecated'), 'should throw an error mentioning deprecated')
@@ -316,7 +353,7 @@ tape('validateDsCredentials: ds-level headerKey overrides default for all routes
 			}
 		}
 	}
-	await validateDsCredentials(creds)
+	await validateDsCredentials(creds, { hg38: { datasets: { testDs: {} } } })
 	const cred = creds.testDs.termdb['*']
 	test.equal(
 		cred.headerKey,

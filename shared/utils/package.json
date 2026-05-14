@@ -9,20 +9,28 @@
     "#types/*": "@sjcrh/proteinpaint-types/*",
     "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
   },
-  "//": "all export aliases below are meant for runtime code, except for devTs-aliased subpaths",
+  "//": "all export aliases below are meant for runtime code, except for the devTs-aliased subpath",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./*.ts": "./*.ts_SHOULD_BE_js",
-    "./constants/*.ts": "./dist/constants/*.ts_SHOULD_BE_js",
-    "./*": "./dist/src/*",
-    "./constants/*": "./dist/constants/*",
-    "./devTs": "./devTs.ts",
-    "./devTs/*": "./constants/*"
+    ".": {
+      "sjpp/dev": "./src/index.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./*.ts": {
+      "sjpp/dev": "./src/*.ts",
+      "default": "./*.ts_SHOULD_BE_js"
+    },
+    "./*": {
+      "sjpp/dev": "./src/*",
+      "default": "./dist/src/*"
+    },
+    "./devTs": "./devTs.ts"
   },
   "scripts": {
-    "build": "esbuild src/*.* constants/*.ts --platform=node --outdir=dist --format=esm --sourcemap",
-    "prepack": "rm -rf dist && npm run build && tsc --sourcemap --skipLibCheck --preserveWatchOutput",
-    "dev": "rm -rf dist && concurrently 'npm run build -- --watch' 'npx tsc --watch --skipLibCheck --preserveWatchOutput'",
+    "ts2js": "esbuild src/*.* constants/*.ts --platform=node --outdir=dist --format=esm --sourcemap",
+    "build": "rm -rf dist && npm run ts2js && tsc --sourcemap --skipLibCheck",
+    "prepack": "npm run build",
+    "dev0": "rm -rf dist && 'npx tsc --watch --skipLibCheck --preserveWatchOutput'",
+    "dev": "echo '--- now using raw shared/utils/src exports under conditions=sjpp/dev ---'",
     "pretest": "mkdir -p test && node emitImports > test/internals-test.ts",
     "test": "tsx test/internals-test.ts",
     "test-x": "ls src/test/*.spec* | xargs -I % bash -c '{ tsx %; sleep 0.001; }'",
@@ -35,9 +43,6 @@
     "devTs.ts",
     "dist"
   ],
-  "devDependencies": {
-    "esbuild": "^0.25.9"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/stjude/proteinpaint",

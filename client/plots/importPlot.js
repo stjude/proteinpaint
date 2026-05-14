@@ -54,9 +54,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'frequencyChart':
 			return await import(`./runChart2/RunChart2.ts`)
 
-		case 'profileBarchart':
-			return await import('./profile/profileBarchart.ts')
-
 		case 'profileBarchart2':
 			return await import('./profile/barchart2.ts')
 
@@ -69,20 +66,11 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'profilePlot':
 			return await import('./profile/profilePlot.ts')
 
-		case 'profilePolar':
-			return await import('./profile/polar.ts')
-
 		case 'profilePolar2':
 			return await import('./profile/polar2.ts')
 
-		case 'profileRadar':
-			return await import('./profile/profileRadar.ts')
-
 		case 'profileRadar2':
 			return await import('./profile/radar2.ts')
-
-		case 'profileRadarFacility':
-			return await import('./profile/profileRadarFacility.ts')
 
 		case 'profileRadarFacility2':
 			return await import('./profile/radarFacility2.ts')

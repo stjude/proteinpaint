@@ -3,16 +3,14 @@ import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
-Route for profilePolar2.
+Route for the profile polar chart. Returns the aggregated median percentage
+per module across all eligible sites for the active cohort.
 
-Key differences from termdb.profileScores:
-  - Client does NOT send facilityTW.
-  - Server derives the facility term id by inspecting term ID prefixes already
-    present in the request (scoreTerms or filter), so no cohort-specific logic
-    is needed on the client side.
-  - Site data is queried server-side using getData(), same pattern as
-    termdb.profileScores.ts getScoresData().
-  - Always returns aggregated (median across all eligible sites) percentages.
+- The facility term id is derived server-side by scanning term ID prefixes
+  already in the request (scoreTerms or filter), so the client never needs
+  cohort-specific logic and never sends facilityTW.
+- Site data is queried via getData() (server/src/termdb.matrix.js).
+- Public role: `sites` is always [] in the response (no site IDs exposed).
 */
 
 export const api: RouteApi = {

@@ -279,7 +279,7 @@ export function manageCacheSize(_now) {
 	NOTE: When used in client-side code, an HttpOnly cookie for a logged in user will not be
 	tracked in init.headers below. 
 */
-export async function getDataName(url, init) {
+export async function getDataName(url: string, init: { [optKey: string]: any }) {
 	// IMPORTANT: must ensure dataName is unique to either public or logged-in user
 	const dataName = url + ' | ' + init.method + ' | ' + init.body + ' | ' + JSON.stringify(init.headers)
 	return await hash(dataName)
