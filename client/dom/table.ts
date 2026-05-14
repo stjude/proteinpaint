@@ -634,7 +634,11 @@ export function renderTable({
 
 			rows = newRows
 			updateRows()
-			if (pagination) renderPager()
+			if (pagination) {
+				currentPage = 1
+				renderPager()
+				pagination.onChange?.({ currentPage, pageSize })
+			}
 
 			// Show restore button when table is sorted (and allowRestoreRowOrder is true)
 			if (allowRestoreRowOrder) {

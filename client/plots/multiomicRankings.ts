@@ -8,7 +8,7 @@ import { scaleLinear } from 'd3-scale'
 const Integrative_rank_COLUMN = 'Integrative rank'
 
 const MISSING_COLOR = '#d9d9d9'
-// sequential scale for per-column percentile rank: low (top rank) = dark, high = light
+// sequential scale for per-column min-max-scaled rank: low (top rank) = dark, high = light
 const SEQ_COLOR_LOW = '#08306b'
 const SEQ_COLOR_HIGH = '#f7fbff'
 
@@ -141,13 +141,7 @@ class MultiomicRankings extends PlotBase {
 				this.minAssays = Number(event.target.value)
 				this.renderHeatmap()
 			})
-		for (const n of [2, 3, 4, 5, 6, 7]) {
-			this.minAssaysSelect
-				.append('option')
-				.attr('value', n)
-				.text(String(n))
-				.property('selected', n === this.minAssays)
-		}
+		// options are populated dynamically in renderHeatmap based on available modalities
 		this.heatmapStatus = this.heatmapSection
 			.append('div')
 			.style('font-size', '0.85em')
@@ -174,6 +168,7 @@ class MultiomicRankings extends PlotBase {
 
 	reactsTo(action) {
 		if (action.type.startsWith('plot_')) return action.id === this.id
+		return false
 	}
 
 	async main() {
@@ -388,6 +383,25 @@ class MultiomicRankings extends PlotBase {
 		}
 		this.heatmapSection.style('display', 'block')
 
+		// (re)populate min-assays options based on the available modality count
+		if (this.minAssays > usedCols.length) this.minAssays = usedCols.length
+		if (this.minAssays < 2) this.minAssays = 2
+		const optionVals = this.minAssaysSelect
+			.selectAll('option')
+			.nodes()
+			.map((o: HTMLOptionElement) => Number(o.value))
+		const want = Array.from({ length: usedCols.length - 1 }, (_, i) => i + 2)
+		if (optionVals.length !== want.length || optionVals.some((v, i) => v !== want[i])) {
+			this.minAssaysSelect.selectAll('option').remove()
+			for (const n of want) {
+				this.minAssaysSelect
+					.append('option')
+					.attr('value', n)
+					.text(String(n))
+					.property('selected', n === this.minAssays)
+			}
+		}
+
 		const visible = this.getVisibleRows()
 		const geneNames = visible.map(r => String(r[0]))
 		const matrix: (number | null)[][] = visible.map(r =>
@@ -517,7 +531,7 @@ class MultiomicRankings extends PlotBase {
 			.attr('height', totalH)
 			.attr('font-family', 'sans-serif')
 
-		// sequential color scale on percentile rank in [0,1]: low (best rank) = dark, high = light
+		// sequential color scale on min-max-scaled rank in [0,1]: low (best rank) = dark, high = light
 		const seq = scaleLinear<string>().domain([0, 1]).range([SEQ_COLOR_LOW, SEQ_COLOR_HIGH]).clamp(true)
 		const color = (v: number) => seq(v)
 
@@ -569,7 +583,7 @@ class MultiomicRankings extends PlotBase {
 				const r = rankMatrix[d.row][d.col] as number
 				const n = totals[d.col]
 				const rStr = Number.isInteger(r) ? String(r) : r.toFixed(1)
-				return `${rowNames[d.row]} — ${colNames[d.col]}\nrank: ${rStr} of ${n}\npercentile: ${(d.v as number).toFixed(
+				return `${rowNames[d.row]} — ${colNames[d.col]}\nrank: ${rStr} of ${n}\nscaled rank: ${(d.v as number).toFixed(
 					3
 				)}`
 			})
@@ -618,7 +632,7 @@ class MultiomicRankings extends PlotBase {
 			.attr('text-anchor', 'middle')
 			.attr('font-size', '11px')
 			.attr('fill', '#555')
-			.text('percentile rank (per column)')
+			.text('scaled rank (per column)')
 		const stops = 32
 		for (let i = 0; i < stops; i++) {
 			// top of legend = 0 (best rank, dark); bottom = 1 (worst rank, light)
