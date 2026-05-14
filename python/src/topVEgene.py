@@ -77,8 +77,8 @@ def calculate_variance(
     # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
     expression_cutoff = expression_values.quantile(0.1,numeric_only=True,axis=1) if filter_extreme_values else pd.Series([0]*expression_values.shape[0], index=expression_values.index)
-    masked_matrix=expression_values.mask(expression_values.lt(expression_cutoff, axis=0), other=np.nan)
-    gene_sample_count = masked_matrix.ge(expression_cutoff,axis=0).sum(axis=1)
+    masked_matrix=expression_values.mask(expression_values.le(expression_cutoff, axis=0), other=np.nan)
+    gene_sample_count = masked_matrix.gt(expression_cutoff,axis=0).sum(axis=1)
     min_sample_size = MIN_PROP * original_sample_size
     valid_genes = gene_sample_count >= min_sample_size
 
@@ -99,16 +99,6 @@ def calculate_variance(
 
 def _read_stdin_payload() -> str:
     payload = sys.stdin.read().strip()
-    # For testing purposes, you must comment the previous line and uncomment the following lines to 
-    # generate a test payload. Make sure to update the path to the test file as needed.
-    # ash_test_file = "/Users/jsimps98/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix7.h5"
-    # payload = json.dumps({
-    #     "samples": sorted(generate_test_samples(1, ash_test_file)),
-    #     "input_file": ash_test_file,
-    #     "filter_extreme_values": False,
-    #     "max_genes": 10,
-    #     "rank_type": "iqr"
-    # })
     if not payload:
         raise ValueError("No JSON payload provided on stdin")
     return payload
@@ -131,7 +121,8 @@ def main() -> int:
         MIN_SAMPLES = 10
         if len(samples) < MIN_SAMPLES:
             raise ValueError(f"samples must include at least {MIN_SAMPLES} sample IDs")
-        
+        if json_args.get('test'):
+            samples = generate_test_samples(0.5,json_args.get("input_file"))
 
         input_file = json_args.get("input_file")
         if not isinstance(input_file, str):
