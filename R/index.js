@@ -45,8 +45,12 @@ export async function run_R(filename, data, args, subdir = 'src') {
 		sp.on('error', err => reject(err))
 		// return stdout and stderr when R process closes
 		sp.on('close', code => {
-			const stdout = _stdout.join('').trim()
-			const stderr = _stderr.join('').trim()
+			// concatenate buffer chunks and then convert to string
+			// important to do this because a multibyte UTF-8 character like ≥ (e2 89 a5)
+			// may be split across chunks and it needs to be concatenated before string
+			// conversion
+			const stdout = Buffer.concat(_stdout).toString('utf8').trim()
+			const stderr = Buffer.concat(_stderr).toString('utf8').trim()
 			if (code !== 0) {
 				// handle non-zero exit status
 				let errmsg = `R process exited with non-zero status code=${code}`
