@@ -57,12 +57,12 @@ def create_gene_variance_list(
         if missing:
             raise ValueError(f"Sample(s) {missing} not found in HDF5 file")
         sample_indexes = sorted(sample_to_idx[sample] for sample in sample_list)
-        rows_per_chunk = chunk_target_elements // len(sample_indexes)
+        rows_per_chunk = max(1,chunk_target_elements // len(sample_indexes))
         selected_genes = []
         for start in range(0, matrix.shape[0], rows_per_chunk):
             stop = min(start + rows_per_chunk, matrix.shape[0])
             chunk = np.asarray(matrix[start:stop, sample_indexes], dtype=float)
-            chunk_df = pd.DataFrame(chunk, index=gene_names[start:stop],columns=tuple(sample_list))
+            chunk_df = pd.DataFrame(chunk, index=gene_names[start:stop])
             selected_genes.extend(calculate_variance(chunk_df, filter_extreme_values, rank_type, len(sample_list)))
             if len(selected_genes) > 1000:
                 selected_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])
@@ -76,13 +76,15 @@ def calculate_variance(
 ) -> list[tuple[float | None, str]]:
     # Minimum proportion of samples that must have expression above the cutoff for the gene to be considered valid
     MIN_PROP = 0.7
-    expression_cutoff = expression_values.quantile(0.1,numeric_only=True,axis=1) if filter_extreme_values else 0
-    gene_sample_count = expression_values.ge(expression_cutoff,axis=0).sum(axis=1)
+    expression_cutoff = expression_values.quantile(0.1,numeric_only=True,axis=1) if filter_extreme_values else pd.Series([0]*expression_values.shape[0], index=expression_values.index)
+    masked_matrix=expression_values.mask(expression_values.lt(expression_cutoff, axis=0), other=np.nan)
+    gene_sample_count = masked_matrix.ge(expression_cutoff,axis=0).sum(axis=1)
     min_sample_size = MIN_PROP * original_sample_size
     valid_genes = gene_sample_count >= min_sample_size
-    filtered_matrix:pd.DataFrame = expression_values.loc[valid_genes]
+
+    filtered_matrix:pd.DataFrame = masked_matrix[valid_genes]
     if filtered_matrix.empty:
-            return []
+        return []
     if rank_type == "var":
         scores = filtered_matrix.var(axis=1, numeric_only=True)
     elif rank_type == "iqr":
@@ -99,11 +101,11 @@ def _read_stdin_payload() -> str:
     payload = sys.stdin.read().strip()
     # For testing purposes, you must comment the previous line and uncomment the following lines to 
     # generate a test payload. Make sure to update the path to the test file as needed.
-    # ash_test_file = "~/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix7.h5"
+    # ash_test_file = "/Users/jsimps98/data/tp/files/hg38/ash/transcriptomics/ash.hg38.fpkm.matrix7.h5"
     # payload = json.dumps({
     #     "samples": sorted(generate_test_samples(1, ash_test_file)),
     #     "input_file": ash_test_file,
-    #     "filter_extreme_values": True,
+    #     "filter_extreme_values": False,
     #     "max_genes": 10,
     #     "rank_type": "iqr"
     # })
