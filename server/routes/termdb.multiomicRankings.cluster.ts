@@ -42,6 +42,7 @@ function init() {
 			if (!Array.isArray(q.matrix) || !Array.isArray(row_names) || !Array.isArray(col_names)) {
 				throw 'matrix, row_names, and col_names are required'
 			}
+			if (q.matrix.length !== row_names.length) throw 'matrix.length must equal row_names.length'
 			if (col_names.length < 2) throw 'need at least 2 modalities to cluster'
 			const minAssays = Math.max(2, q.minAssays ?? 3)
 
