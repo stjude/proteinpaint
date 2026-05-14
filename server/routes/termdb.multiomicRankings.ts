@@ -29,7 +29,11 @@ async function parseTsv(absPath: string): Promise<ParsedFile> {
 	const rows: (string | number | null)[][] = []
 	for (let i = 1; i < lines.length; i++) {
 		const fields = lines[i].split('\t').map(stripQuotes)
-		const row: (string | number | null)[] = fields.map(v => {
+		const normalizedFields =
+			fields.length < columns.length
+				? fields.concat(Array(columns.length - fields.length).fill(''))
+				: fields.slice(0, columns.length)
+		const row: (string | number | null)[] = normalizedFields.map(v => {
 			if (v === '' || v === 'NA' || v === 'NaN') return null
 			const n = Number(v)
 			return Number.isFinite(n) && v.trim() !== '' ? n : v
