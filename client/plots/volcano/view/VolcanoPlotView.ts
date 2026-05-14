@@ -1,5 +1,5 @@
 import { axisstyle, table2col, renderTable, DataPointInteractions, type ActionMenuItem } from '#dom'
-import { axisBottom, axisLeft, rgb, selectAll } from 'd3'
+import { axisBottom, axisLeft, rgb, select, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
@@ -95,9 +95,14 @@ export class VolcanoPlotView {
 		this.addActionButton('Highlight genes', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () =>
 			this.interactions.launchGeneSetEdit()
 		)
-		this.addActionButton('Statistics', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () => {
-			this.renderStatsMenu()
-		})
+		this.addActionButton(
+			'Statistics',
+			[GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION],
+			() => {
+				this.renderStatsMenu()
+			},
+			{ whenOpen: 'Hide statistics' }
+		)
 		const sigLabel =
 			this.termType == DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
 		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
@@ -129,8 +134,16 @@ export class VolcanoPlotView {
 		}
 	}
 
-	/** Use the termTypes arr to render the buttons in a consistent order */
-	addActionButton(text: string, termTypes: string[], callback: any) {
+	/** Use the termTypes arr to render the buttons in a consistent order.
+	 *
+	 * Pass `opts.whenOpen` to make the button a toggle: clicking once opens
+	 * the actionsTip with the callback's content and swaps the button text
+	 * to `whenOpen` ("Hide statistics", etc.); clicking again hides the tip
+	 * and restores the original text. The text also restores when the tip
+	 * closes via Esc or outside-click (Menu.onHide hook), and when another
+	 * action button hijacks the tip (the loop below resets all toggles
+	 * before showing the new content). */
+	addActionButton(text: string, termTypes: string[], callback: any, opts?: { whenOpen?: string }) {
 		if (this.viewData.userActions.noShow.has(text)) return
 		if (!termTypes.includes(this.termType)) return
 		const button = this.volcanoDom.actions
@@ -140,7 +153,65 @@ export class VolcanoPlotView {
 			.style('padding', '3px')
 			.text(text)
 			.on('click', async () => {
+				const whenOpen = opts?.whenOpen
+				if (whenOpen && button.text() === whenOpen) {
+					// Toggle close: tip is currently showing this button's
+					// content. Hide it; onHide resets the label and untags
+					// the button so the body's mousedown handler will treat
+					// it as outside the tip again.
+					this.dom.actionsTip.hide()
+					return
+				}
+				// Reset any other toggle buttons whose tip content we're
+				// about to overwrite. Tagging via data-attr keeps the state
+				// on the DOM node so we don't need a class field.
+				this.volcanoDom.actions.selectAll('button[data-volcano-toggle-open="1"]').each(function () {
+					const b = select(this as HTMLButtonElement)
+					const closed = b.attr('data-volcano-toggle-closed')
+					if (closed) b.text(closed).attr('data-volcano-toggle-open', null)
+					;(this as any).parent_menu = undefined
+					const eh = (this as any).__volcanoEscHandler
+					if (eh) {
+						document.removeEventListener('keydown', eh)
+						;(this as any).__volcanoEscHandler = undefined
+					}
+				})
 				this.dom.actionsTip.clear().showunder(button.node())
+				if (whenOpen) {
+					button.text(whenOpen).attr('data-volcano-toggle-open', '1').attr('data-volcano-toggle-closed', text)
+					// Tag the button as a "parent_menu" of the tip so Menu's
+					// body-mousedown outside-click handler skips it (see
+					// menu.js, body.on('mousedown.menu') — checks
+					// event.target.parent_menu === this.dnode). Without this,
+					// clicking the toggle button to close would fire the
+					// body handler first → tip hides + onHide resets label →
+					// the click handler then sees the closed label and
+					// reopens, repainting instead of closing.
+					;(button.node() as any).parent_menu = this.dom.actionsTip.dnode
+					// Menu has a built-in keyup Escape handler on its own div,
+					// but it only fires when the tip itself has keyboard
+					// focus — typically lost the moment the user moves their
+					// mouse over plot content. Attach a document-level
+					// listener for the lifetime of the open toggle so Esc
+					// closes from anywhere. Removed in both cleanup paths
+					// (onHide below + the toggle-reset loop above).
+					const escHandler = (e: KeyboardEvent) => {
+						if (e.key === 'Escape') this.dom.actionsTip.hide()
+					}
+					document.addEventListener('keydown', escHandler)
+					;(button.node() as any).__volcanoEscHandler = escHandler
+					this.dom.actionsTip.onHide = () => {
+						button.text(text).attr('data-volcano-toggle-open', null)
+						;(button.node() as any).parent_menu = undefined
+						document.removeEventListener('keydown', escHandler)
+						;(button.node() as any).__volcanoEscHandler = undefined
+					}
+				} else {
+					// Clear any stale onHide left by a previous toggle button
+					// so an outside-click after this non-toggle open doesn't
+					// reset the wrong button.
+					this.dom.actionsTip.onHide = undefined
+				}
 				await callback()
 			})
 	}

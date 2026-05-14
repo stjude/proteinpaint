@@ -162,6 +162,19 @@ export type ExpressionInput = {
 	min_total_count: number
 	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
 	cpm_cutoff: number
+	/** Server-cache directory passed through to R (used as a working dir
+	 * for any intermediate writes the R script doesn't have an explicit
+	 * path for). Set by the server, not the client. */
+	cachedir?: string
+	/** Absolute path where R should write the QL diagnostic plot
+	 * (`de/{cacheid}.ql.png`). Edge_newh5.R writes here on edgeR/limma
+	 * runs; the route handler reads it back as a base64 data URL for the
+	 * response. Wilcoxon (Rust) ignores this. Server-set. */
+	ql_image_path?: string
+	/** Absolute path where R should write the MDS diagnostic plot
+	 * (`de/{cacheid}.mds.png`), conditionally generated when the
+	 * read-counts matrix fits under `mds_cutoff`. Server-set. */
+	mds_image_path?: string
 }
 
 /** Response when DERequest.preAnalysis === true. Returns per-group sample
