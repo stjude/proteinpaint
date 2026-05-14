@@ -110,9 +110,11 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 			.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
 		
 		// Update the series label text for the update phase
-		const sObj = chart.serieses.find(s => s.seriesId === seriesId)
-		g.select('text[data-testid="sjpp-atrisk-seriesId"]')
-			.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
+		const sObj = chart.serieses.find(series => series.seriesId === seriesId)
+		if (sObj) {
+			g.select('text[data-testid="sjpp-atrisk-seriesId"]')
+				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
+		}
 		
 		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 	})
