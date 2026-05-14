@@ -34,7 +34,7 @@ export async function run_R(filename, data, args, subdir = 'src') {
 			} catch (e) {
 				sp.kill()
 				let errmsg = e
-				const stderr = _stderr.join('').trim()
+				const stderr = Buffer.concat(_stderr).toString('utf8').trim()
 				if (stderr) errmsg += `\nR stderr: ${stderr}`
 				reject(errmsg)
 			}
