@@ -64,7 +64,7 @@ def create_gene_variance_list(
             chunk = np.asarray(matrix[start:stop, sample_indexes], dtype=float)
             chunk_df = pd.DataFrame(chunk, index=gene_names[start:stop],columns=tuple(sample_list))
             selected_genes.extend(calculate_variance(chunk_df, filter_extreme_values, rank_type, len(sample_list)))
-            if len(selected_genes) > max_genes * 2:
+            if len(selected_genes) > 1000:
                 selected_genes = heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])
         return [gene for _, gene in heapq.nlargest(max_genes, selected_genes, key=lambda x: x[0])]
 
