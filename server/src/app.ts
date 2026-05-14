@@ -249,7 +249,7 @@ function processTrackedDs(trackedDatasets) {
 	let msg = '',
 		missingDslabelMsg = ''
 	const { requiredDslabels } = serverconfig.features
-	if (requiredDslabels) {
+	if (requiredDslabels !== undefined) {
 		if (!Array.isArray(requiredDslabels)) throw `serverconfig.features.requiredDslabels must be an array`
 		// NOTE: This option is separate from serverconfig.features.dslabelFilter since that is an option
 		// to limit the loaded datasets. Here, we detect required dslabels that were not loaded/processed
@@ -276,7 +276,7 @@ function processTrackedDs(trackedDatasets) {
 		// if no dataset loaded successfully, and only if there are genome + dataset entries,
 		// then assume that there may be something wrong with serverconfig and/or code,
 		// not with dataset js/ts files, and crash the server to trigger rollback
-		if (trackedDatasets.length)
+		if (trackedDatasets.length || missingDslabelMsg)
 			throw `${serverconfig.URL}: there were no datasets that loaded successfully` + missingDslabelMsg
 	} else {
 		if (done.length) {
