@@ -248,12 +248,14 @@ function processTrackedDs(trackedDatasets) {
 
 	let msg = '',
 		missingDslabelMsg = ''
-	if (serverconfig.features.requiredDslabels) {
+	const { requiredDslabels } = serverconfig.features
+	if (requiredDslabels) {
+		if (!Array.isArray(requiredDslabels)) throw `serverconfig.features.requiredDslabels must be an array`
 		// NOTE: This option is separate from serverconfig.features.dslabelFilter since that is an option
 		// to limit the loaded datasets. Here, we detect required dslabels that were not loaded/processed
 		// during server startup.
-		const requiredDslabels: Set<string> = new Set(serverconfig.features.requiredDslabels)
-		const missingDslabels = requiredDslabels.difference(new Set(trackedDatasets.map(ds => ds.label)))
+		const requiredDsSet: Set<string> = new Set(requiredDslabels)
+		const missingDslabels = requiredDsSet.difference(new Set(trackedDatasets.map(ds => ds.label)))
 		if (missingDslabels.size) {
 			missingDslabelMsg +=
 				`\n--- these required datasets were not processed ---\n` +
@@ -308,7 +310,7 @@ function processTrackedDs(trackedDatasets) {
 			msg += `\n--- failed dataset init ---\n${list}\n`
 		}
 
-		// we want this to be the
+		// add missingDslabelMsg to the bottom for readability, since it has extra lines of instructions
 		msg += missingDslabelMsg
 	}
 
