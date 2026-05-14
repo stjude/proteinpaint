@@ -1,6 +1,7 @@
 import { run_R } from '@sjcrh/proteinpaint-r'
 import type { MultiomicRankingsClusterRequest, MultiomicRankingsClusterResponse, RouteApi } from '#types'
 import { multiomicRankingsClusterPayload } from '#types/checkers'
+import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/multiomicRankings/cluster',
@@ -69,18 +70,22 @@ function init() {
 			// keeps the existing R-based hclust.R pipeline intact.
 			const matrixForR: number[][] = zMatrix.map(row => row.map(v => (v === null ? 0 : (v as number))))
 
+			const clusterMethod = q.clusterMethod || 'average'
+			const distanceMethod = q.distanceMethod || 'euclidean'
+			if (!clusterMethodLst.find(i => i.value == clusterMethod)) throw 'Invalid cluster method'
+			if (!distanceMethodLst.find(i => i.value == distanceMethod)) throw 'Invalid distance method'
+
 			const inputData = {
 				matrix: matrixForR,
 				row_names: keptNames,
 				col_names,
-				cluster_method: q.clusterMethod || 'average',
-				distance_method: q.distanceMethod || 'euclidean',
+				cluster_method: clusterMethod,
+				distance_method: distanceMethod,
 				plot_image: false
 			}
 
 			const Routput = JSON.parse(await run_R('hclust.R', JSON.stringify(inputData)))
 
-			// reorder z-scored matrix (with nulls preserved) by R's row order
 			const rowOrderIdx: number[] = Routput.RowOrder.map((row: { name: string }) => keptNames.indexOf(row.name))
 			const orderedMatrix: (number | null)[][] = rowOrderIdx.map(i => zMatrix[i])
 
