@@ -4,7 +4,7 @@ import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import type { Scatter } from '../scatter'
 import { table2col, shapesArray } from '#dom'
-import { getCoordinate } from '../model/scatterModel.ts'
+import { getCoordinate } from '#shared'
 
 export class ScatterTooltip {
 	scatter: Scatter

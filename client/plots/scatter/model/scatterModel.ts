@@ -5,35 +5,16 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
-import type {
-	ScatterResponse,
-	ScatterChart,
-	ColorLegendItem,
-	ShapeLegendItem,
-	ScatterDataResult
-} from '../scatterTypes'
+import type { ScatterResponse, ScatterDataResult } from '../scatterTypes'
 import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
+import { ScatterModelBase } from './ScatterModelBase'
+import { getCoordinate } from '#shared'
 //icons have size 16x16
 export const shapes = shapesArray
 
-export class ScatterModel {
-	startGradient: any
-	stopGradient: any
-	range: any
-	charts!: ScatterChart[]
-	is2DLarge: boolean
-	is3D: boolean
-	axisOffset: any
-	filterSampleStr: string | null = null
-	scatter: Scatter
-
+export class ScatterModel extends ScatterModelBase {
 	constructor(scatter: Scatter) {
-		this.startGradient = {}
-		this.stopGradient = {}
-		this.scatter = scatter
-		this.axisOffset = { x: 80, y: 30 }
-		this.is2DLarge = false
-		this.is3D = false
+		super(scatter)
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -43,25 +24,6 @@ export class ScatterModel {
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
 
-		if (c.singleCellPlot) {
-			// pass cutoff to avoid heavy svg rendering in single cell scatter
-			return {
-				...c,
-				canvasSettings: {
-					cutoff: maxSvgSamplesCutoff,
-					width: this.scatter.settings.svgw,
-					height: this.scatter.settings.svgh,
-					radius: this.scatter.settings.size,
-					minXScale: this.scatter.settings.minXScale,
-					maxXScale: this.scatter.settings.maxXScale,
-					minYScale: this.scatter.settings.minYScale,
-					maxYScale: this.scatter.settings.maxYScale,
-					noExpColor: rgb(noExpColor).toString(),
-					expColor: rgb(expColor).toString(),
-					opacity: this.scatter.settings.opacity
-				}
-			}
-		}
 		const coordTWs: any = []
 		if (c.term) coordTWs.push(c.term)
 		if (c.term2) coordTWs.push(c.term2)
@@ -97,9 +59,7 @@ export class ScatterModel {
 				reqOpts,
 				this.scatter.api?.getAbortSignal()
 			)
-			if ('error' in data) throw new Error(data?.['error'] || 'No data received')
-
-			this.charts = []
+			if ('error' in data || !data.result) throw new Error(data['error'] || 'No data received')
 
 			this.range = data.range
 			for (const [key, chartData] of Object.entries(data.result)) {
@@ -117,23 +77,10 @@ export class ScatterModel {
 		}
 	}
 
-	createChart(id: string, data: ScatterDataResult) {
-		const cohortSamples: any[] = data.samples ? data.samples.filter(sample => 'sampleId' in sample) : []
-		// if (cohortSamples.length > maxSvgSamplesCutoff) this.is2DLarge = true
-		const colorLegend: Map<string, ColorLegendItem> = new Map(data.colorLegend)
-		const shapeLegend: Map<string, ShapeLegendItem> = new Map(data.shapeLegend)
-		const chart: ScatterChart = { id, data, cohortSamples, colorLegend, shapeLegend }
-		if (data.src) {
-			chart.src = data.src
-			this.is2DLarge = true
-		}
-		this.charts.push(chart)
-	}
-
 	async initRanges() {
 		let samples: any[] = []
 		for (const chart of this.charts) samples = samples.concat(chart.data?.samples || [])
-		// if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
+		if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
 		if (samples.length == 0) return
 		const s0 = samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax, geMin, geMax] = samples.reduce(
@@ -448,10 +395,4 @@ export class ScatterModel {
 			chart.currentColorRange = { min, max }
 		}
 	}
-}
-
-export function getCoordinate(val: number, min: number | null, max: number | null) {
-	if (min != null && val < min) return min
-	if (max != null && val > max) return max
-	return val
 }

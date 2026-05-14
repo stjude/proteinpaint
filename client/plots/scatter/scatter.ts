@@ -10,6 +10,7 @@ import { select2Terms, DownloadMenu } from '#dom'
 import type { Settings } from './settings/Settings.ts'
 import { getDefaultScatterSettings } from './settings/defaults.js'
 import { ScatterModel } from './model/scatterModel.js'
+import { ScatterSingleCellModel } from './model/ScatterSingleCellModel'
 import { ScatterViewModel } from './viewmodel/scatterViewModel.js'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
@@ -31,7 +32,7 @@ export class Scatter extends PlotBase implements RxComponent {
 
 	config: any
 	view!: ScatterView
-	model!: ScatterModel
+	model!: ScatterModel | ScatterSingleCellModel
 	vm!: any
 	interactivity!: ScatterInteractivity
 	settings!: Settings
@@ -52,7 +53,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ScatterView(this)
-		this.model = new ScatterModel(this)
+		this.model = this.config?.singleCellPlots ? new ScatterSingleCellModel(this) : new ScatterModel(this)
 		this.interactivity = new ScatterInteractivity(this)
 		if (this.config.transform) {
 			const scaleRegex = /scale\(([^)]+)\)/

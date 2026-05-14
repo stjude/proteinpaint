@@ -1,6 +1,6 @@
-import type { Cell, ColorLegendEntry, RouteApi, ShapeLegendEntry } from '#types'
+import type { Cell, ColorLegendEntry, RouteApi, ShapeLegendEntry, SingleCellRange } from '#types'
 import { termdbSingleCellPlotsPayload } from '#types/checkers'
-import { getColors } from '#shared'
+import { getColors, getCoordinate } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { createCanvas } from 'canvas'
@@ -144,7 +144,7 @@ async function getSingleCellScatter(req, res, ds) {
 	}
 }
 
-async function makeCanvas(q, samples, colorMap, range, termType) {
+async function makeCanvas(q, samples, colorMap, range: SingleCellRange, termType: string) {
 	const settings = q.canvasSettings
 
 	const offsetX = 80
@@ -160,11 +160,6 @@ async function makeCanvas(q, samples, colorMap, range, termType) {
 	const ctx = canvas.getContext('2d')
 
 	//This accounts for user defined min and max scales values
-	function getCoordinate(val: number, min: number | null, max: number | null) {
-		if (min != null && val < min) return min
-		if (max != null && val > max) return max
-		return val
-	}
 
 	const xScale = scaleLinear()
 		.domain([range.xMin - extraSpaceX, range.xMax + extraSpaceX])
@@ -172,16 +167,17 @@ async function makeCanvas(q, samples, colorMap, range, termType) {
 	const yScale = scaleLinear()
 		.domain([range.yMin + extraSpaceY, range.yMax - extraSpaceY])
 		.range([offsetY, settings.height + offsetY])
-	//This will need to be changed to accomodate user changes from the color scale
-	const colorGenerator = scaleLinear()
-		.domain([range.geMin, range.geMax])
-		.range([settings.noExpColor, settings.expColor])
 
+	//This will need to be changed to accomodate user changes from the color scale
+	let colorGenerator
+	if (range.geMin != undefined && range.geMax != undefined) {
+		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.noExpColor, settings.expColor])
+	}
 	for (const sample of samples) {
 		const color = () => {
 			if (termType == SINGLECELL_GENE_EXPRESSION) {
 				if (!sample.geneExp) return settings.noExpColor
-				else if (sample.geneExp > range.geMax) return settings.expColor
+				else if (sample.geneExp > range.geMax!) return settings.expColor
 				else return colorGenerator(sample.geneExp)
 			}
 			return colorMap[sample.category] ? colorMap[sample.category].color : refColor

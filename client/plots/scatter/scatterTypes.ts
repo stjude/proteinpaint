@@ -1,4 +1,5 @@
 import type { AxisScale } from 'd3'
+import type { SingleCellPlotDataResult } from '#types'
 
 export type ColorLegendItem = {
 	key: string
@@ -83,7 +84,7 @@ export type ScatterChart = {
 	/** The title of the chart */
 	title?: string
 	/** The data for the chart */
-	data: ScatterDataResult
+	data: ScatterDataResult | SingleCellPlotDataResult
 	/** The color legend map for the chart */
 	colorLegend: Map<string, ColorLegendItem>
 	/** The shape legend map for the chart */
