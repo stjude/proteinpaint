@@ -1,0 +1,99 @@
+import type { DERequest, DiffMethRequest } from '#types'
+import { getData } from '#src/termdb.matrix.js'
+import { get_ds_tdb } from '#src/termdb.js'
+
+/** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
+ * carry the confounder values for samples that survived the per-confounder
+ * filter (see `buildGroupValues`). `alerts` is non-empty when the resolver
+ * detected a structural problem (empty group, overlap, etc.) and the
+ * caller should fail the request. Shape is shared between DE and DM and
+ * any future two-group analysis with optional confounders. */
+export type SampleGroups = {
+	group1names: string[]
+	group2names: string[]
+	conf1_group1: (string | number)[]
+	conf1_group2: (string | number)[]
+	conf2_group1: (string | number)[]
+	conf2_group2: (string | number)[]
+	alerts: string[]
+}
+
+/** Resolve the dataset + confounder term data for a DE or DM request.
+ * Generic over request type — the lookups (genome, tw, tw2, filter,
+ * filter0) live on both DERequest and DiffMethRequest with identical
+ * semantics. Used both by fresh-compute paths (which need ds for the
+ * runner) and by the preAnalysis short-circuit (which needs ds for
+ * sample-count derivation). */
+export async function resolveDaContext(
+	req: DERequest | DiffMethRequest,
+	genomes: any
+): Promise<{ ds: any; term_results: any; term_results2: any }> {
+	const genome = genomes[req.genome]
+	if (!genome) throw new Error('invalid genome')
+	const [ds] = get_ds_tdb(genome, req as any)
+
+	let term_results: any = []
+	if (req.tw) {
+		term_results = await getData(
+			{
+				filter: (req as any).filter,
+				filter0: (req as any).filter0,
+				terms: [req.tw]
+			},
+			ds
+		)
+		if (term_results.error) throw new Error(term_results.error)
+	}
+
+	let term_results2: any = []
+	if (req.tw2) {
+		term_results2 = await getData(
+			{
+				filter: (req as any).filter,
+				filter0: (req as any).filter0,
+				terms: [req.tw2]
+			},
+			ds
+		)
+		if (term_results2.error) throw new Error(term_results2.error)
+	}
+
+	return { ds, term_results, term_results2 }
+}
+
+/** Walk one sample group's values and collect names + confounder values.
+ * A name is included iff every configured confounder (tw, tw2) has data
+ * for that sample — the two early-return guards enforce that without a
+ * nested if/else cascade. Used by both DE and DM resolvers; the per-route
+ * wrappers add their own validation + alert messages around this. */
+export function buildGroupValues(
+	values: Array<{ sampleId: number }>,
+	q: { allSampleSet: Set<string> },
+	ds: any,
+	tw: any,
+	tw2: any,
+	term_results: any,
+	term_results2: any
+): { names: string[]; conf1: (string | number)[]; conf2: (string | number)[] } {
+	const names: string[] = []
+	const conf1: (string | number)[] = []
+	const conf2: (string | number)[] = []
+	for (const s of values) {
+		if (!Number.isInteger(s.sampleId)) continue
+		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
+		if (!n || !q.allSampleSet.has(n)) continue
+		// If a confounder is configured but missing for this sample, skip it.
+		if (tw && !term_results.samples?.[s.sampleId]) continue
+		if (tw2 && !term_results2.samples?.[s.sampleId]) continue
+		if (tw) {
+			const v = term_results.samples[s.sampleId][tw.$id]
+			conf1.push(tw.q.mode === 'continuous' ? v.value : v.key)
+		}
+		if (tw2) {
+			const v = term_results2.samples[s.sampleId][tw2.$id]
+			conf2.push(tw2.q.mode === 'continuous' ? v.value : v.key)
+		}
+		names.push(n)
+	}
+	return { names, conf1, conf2 }
+}

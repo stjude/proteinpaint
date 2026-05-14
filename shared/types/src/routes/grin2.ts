@@ -158,6 +158,11 @@ export type GRIN2Response = {
 			rows: string[][]
 		}>
 	}
+
+	/** True when the GRIN2 statistical analysis (Python step) was served from
+	 * cache rather than recomputed. The Manhattan plot (Rust step) is always
+	 * re-rendered because it depends on view params (width, height, colors). */
+	fromCache?: boolean
 }
 
 /**

@@ -1,6 +1,5 @@
 import type { DERequest, DiffMethRequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } from '#types'
 import { genesetEnrichmentPayload } from '#types/checkers'
-import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -8,8 +7,12 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readCacheFileOrRecompute, stableStringify } from '#src/diffAnalysis.ts'
+import { getDeEnvelope } from '#routes/termdb.DE.ts'
+import { getDmEnvelope } from '#routes/termdb.diffMeth.ts'
+import { cacheFilePath, cacheOrRecompute, generateHash, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
 import { get_ds_tdb } from '#src/termdb.js'
+import { file_not_exist } from '#src/utils.js'
+import type { GseaEnvelope } from './types.ts'
 
 export const api: RouteApi = {
 	endpoint: 'genesetEnrichment',
@@ -34,15 +37,12 @@ function init({ genomes }) {
 			// instead of trying to generalize the same function to do different things
 			const results = await run_genesetEnrichment_analysis(q, genomes)
 			if (!q.geneset_name) {
-				// req.query.geneset_name contains the geneset name which is defined only
-				// when a request for plotting the details of a particular geneset_name is made.
-				// During the initial computation this is not defined as this will be selected
-				// by the user from the client side. When this is not defined, it will send the
-				// table output. The python code saves the table in cachedir_gsea in a pickle file
-				// (gsea_<hash>.pkl) which will later be retrieved by a subsequent
-				// server request asking to plot the details of that geneset.
+				// Initial table request: computeGseaInitial returns the table
+				// either fresh or from the JSON envelope cache (no Python on
+				// hit). The pickle is still written as a sibling so subsequent
+				// detail-image requests can find it.
 				if (typeof results != 'object') throw new Error('gsea result is not object')
-				res.send(results satisfies GenesetEnrichmentResponse)
+				res.send(results as GenesetEnrichmentResponse)
 				return
 			}
 			// req.query.geneset_name is present, this will cause the geneset image to be generated.
@@ -74,7 +74,7 @@ function init({ genomes }) {
 async function run_genesetEnrichment_analysis(
 	q: GenesetEnrichmentRequest,
 	genomes: any
-): Promise<GenesetEnrichmentResponse | string> {
+): Promise<GenesetEnrichmentResponse | string | { error: string }> {
 	if (!genomes[q.genome].termdbs) throw new Error('termdb database is not available for ' + q.genome)
 
 	if (q.fetchDE) {
@@ -84,10 +84,12 @@ async function run_genesetEnrichment_analysis(
 	}
 
 	if (q.method == 'blitzgsea') {
-		// computeGSEA owns the whole blitzgsea path: genes/fold_change
-		// resolution, deterministic pickle filename, in-flight dedup, and
-		// the run_python invocation.
-		return await computeGSEA({ q, genomes })
+		// Initial table requests cache the result as JSON so cache hits skip
+		// Python startup entirely. Detail-image requests (geneset_name set)
+		// always invoke Python — image generation is per-geneset and not
+		// cached on disk.
+		if (q.geneset_name) return await computeGseaImage({ q, genomes })
+		return await computeGseaInitial({ q, genomes })
 	}
 
 	if (q.method == 'cerno') {
@@ -125,36 +127,29 @@ async function resolveGseaGenesAndFoldChange({
 		// A cacheId without daRequest is malformed — without the DA/DM
 		// snapshot there's no way to verify the id or recompute on a cache
 		// miss. The 'daCacheMissing' literal matches the client's sayerror
-		// regex so stale sessions still get the reopen-the-volcano
-		// message.
+		// regex so stale sessions still get the reopen-the-volcano message.
 		if (!q.daRequest) throw new Error('daCacheMissing')
-		// One unified read-or-recompute for both DE and DM. The orchestrator
-		// sniffs the request shape internally; we branch on `result.kind` to
-		// extract the right rows. For DM, multiple promoters can map to the
-		// same gene_name — blitzgsea/CERNO may warn or down-rank duplicates;
-		// we pass them through without dedup for now (collapsing strategy is
-		// a follow-up).
-		const result = await readCacheFileOrRecompute({
-			daRequest: q.daRequest as DERequest | DiffMethRequest,
-			genomes
-		})
-		if (result.cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
-		if (result.kind === 'DE') {
+		// Structural type guard: `min_count` is required on DERequest and
+		// absent on DiffMethRequest, so its presence reliably picks the
+		// right per-route helper without needing an explicit kind tag on
+		// the wire. For DM, multiple promoters can map to the same
+		// gene_name — blitzgsea/CERNO may warn or down-rank duplicates;
+		// we pass them through without dedup for now.
+		const isDe = 'min_count' in q.daRequest
+		if (isDe) {
+			const { envelope, cacheId } = await getDeEnvelope(q.daRequest as DERequest, genomes)
+			if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
 			return {
-				genes: result.geneData.map(g => g.gene_name),
-				fold_change: result.geneData.map(g => g.fold_change)
+				genes: envelope.geneRows.map(g => g.gene_name),
+				fold_change: envelope.geneRows.map(g => g.fold_change)
 			}
 		}
-		if (result.kind === 'DM') {
-			return {
-				genes: result.promoterData.map(p => p.gene_name),
-				fold_change: result.promoterData.map(p => p.fold_change)
-			}
+		const { envelope, cacheId } = await getDmEnvelope(q.daRequest as DiffMethRequest, genomes)
+		if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
+		return {
+			genes: envelope.promoterRows.map(p => p.gene_name),
+			fold_change: envelope.promoterRows.map(p => p.fold_change)
 		}
-		// Both branches handled explicitly above — any new result kind added
-		// to CacheOrRecomputeResult must extend this dispatcher rather than
-		// silently falling through into one of the existing branches.
-		throw new Error(`unexpected result kind: ${(result as any).kind}`)
 	}
 	// Inline path (legacy single-cell). Reject early so we don't pass
 	// undefined down to Python/Rust.
@@ -184,104 +179,203 @@ async function resolveGseaGenesAndFoldChange({
 	return { genes: q.genes, fold_change: q.fold_change }
 }
 
-/** In-flight blitzgsea work keyed by pickle filename. Dedupes concurrent
- * callers with identical inputs so only one Python invocation runs per
- * (pickleId, work-kind). Initial computes (no geneset_name) go in
- * `pendingTracker_gsea`; detail-plot image requests go in
- * `pendingTracker_img`. The two trackers are independent so both kinds
- * can be in flight concurrently on the same pickle. */
-const pendingTracker_gsea = new Map<string, Promise<GenesetEnrichmentResponse | string>>()
-const pendingTracker_img = new Map<string, Promise<GenesetEnrichmentResponse | string>>()
-
-/** Single entry point for GSEA (blitzgsea) — resolves genes+fold_change,
- * computes a deterministic pickle filename, calls Python which either
- * loads the pickle or computes and writes it, and returns the result.
- *
- * For cacheId-bearing requests, genes+fold_change are pulled from the DA
- * cache via `readCacheFileOrRecompute`. For the legacy single-cell path,
- * they come inline on the request. */
-async function computeGSEA({
-	q,
-	genomes
-}: {
-	q: GenesetEnrichmentRequest
-	genomes: any
-}): Promise<GenesetEnrichmentResponse | string> {
-	const { genes, fold_change } = await resolveGseaGenesAndFoldChange({ q, genomes })
-
-	// Inputs that determine the pickle filename. geneset_name is deliberately
-	// excluded so detail-plot requests resolve to the same pickle the initial
-	// enrichment wrote.
-	const gseaComputeArg = {
+/** Inputs that uniquely determine the GSEA enrichment pickle. `geneset_name`
+ * is deliberately excluded — it picks which row to render as a detail plot,
+ * not the underlying enrichment. The same cacheArg is used by both the
+ * initial-table and detail-image paths so they share one pickle. */
+function gseaCacheArg(q: GenesetEnrichmentRequest, genes: string[], fold_change: number[]) {
+	return {
 		genes,
 		fold_change,
 		geneSetGroup: q.geneSetGroup,
 		num_permutations: q.num_permutations,
 		filter_non_coding_genes: q.filter_non_coding_genes
 	}
-	const key = stableStringify(gseaComputeArg)
-	const pickle_file = crypto.createHash('sha256').update(key).digest('hex').slice(0, 32) + '.pkl'
-
-	const tracker = q.geneset_name ? pendingTracker_img : pendingTracker_gsea
-	const inFlight = tracker.get(pickle_file)
-	if (inFlight) return inFlight
-
-	const work = runGseaPython({ q, genomes, gseaComputeArg, pickle_file })
-	tracker.set(pickle_file, work)
-	return work.finally(() => tracker.delete(pickle_file))
 }
 
-async function runGseaPython({
+/** Initial GSEA request (no `geneset_name`): wraps the Python computation
+ * in cacheOrRecompute so a cache hit returns the table without starting a
+ * Python process. Python startup + blitzgsea/scipy import time was the
+ * dominant cost on hits in the previous implementation. */
+async function computeGseaInitial({
 	q,
-	genomes,
-	gseaComputeArg,
-	pickle_file
+	genomes
 }: {
 	q: GenesetEnrichmentRequest
 	genomes: any
-	gseaComputeArg: {
-		genes: string[]
-		fold_change: number[]
-		geneSetGroup: string
-		num_permutations: number | undefined
-		filter_non_coding_genes: boolean
+}): Promise<GenesetEnrichmentResponse> {
+	const { genes, fold_change } = await resolveGseaGenesAndFoldChange({ q, genomes })
+	const cacheArg = gseaCacheArg(q, genes, fold_change)
+
+	// Pre-check: if the envelope is on disk but the sibling pickle is gone
+	// (manual cleanup, partial eviction), unlink the envelope so the next
+	// cacheOrRecompute call misses cleanly and Python regenerates both.
+	const cacheId = generateHash(cacheArg)
+	const envelopePath = cacheFilePath('gsea', cacheId)
+	const pickleFile = path.join(serverconfig.cachedir, 'gsea', `${cacheId}.pkl`)
+	await evictGseaIfPickleMissing(envelopePath, pickleFile)
+
+	const { result: env } = await cacheOrRecompute<typeof cacheArg, GseaEnvelope>({
+		computeArgument: cacheArg,
+		cacheSubdir: 'gsea',
+		computeFresh: async (_args, _cacheId, envelopeFile) => {
+			const table = await runGseaPythonForTable({ q, genomes, cacheArg, pickleFile })
+			const envelope: GseaEnvelope = { kind: 'GSEA', table, pickleFile }
+			await writeJsonCache(envelopeFile, envelope)
+			return envelope
+		}
+	})
+	return env.table
+}
+
+/** If the JSON envelope at `envelopePath` exists but the sibling pickle
+ * does not, unlink the envelope so the next cacheOrRecompute call misses
+ * and Python regenerates both files together. */
+async function evictGseaIfPickleMissing(envelopePath: string, pickleFile: string): Promise<void> {
+	if (await file_not_exist(envelopePath)) return // envelope already absent — nothing to evict
+	if (await file_not_exist(pickleFile)) {
+		await fs.promises.unlink(envelopePath).catch(() => {})
 	}
-	pickle_file: string
-}): Promise<GenesetEnrichmentResponse | string> {
-	const cachedir_gsea = path.join(serverconfig.cachedir, 'gsea')
-	const genesetenrichment_input: any = {
-		genes: gseaComputeArg.genes,
-		fold_change: gseaComputeArg.fold_change,
-		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
-		geneset_group: gseaComputeArg.geneSetGroup,
-		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
-		filter_non_coding_genes: gseaComputeArg.filter_non_coding_genes,
-		cachedir: cachedir_gsea,
-		pickle_file,
-		geneset_name: q.geneset_name,
-		num_permutations: gseaComputeArg.num_permutations
+}
+
+/** In-flight detail-image requests keyed by pickleFile + geneset_name.
+ * The image itself is per-geneset and ephemeral (sent + deleted), so it
+ * isn't cached on disk — but concurrent callers asking for the same
+ * detail plot on the same pickle should still dedup to one Python run. */
+const pendingImageRequests = new Map<string, Promise<string>>()
+
+/** Detail-image GSEA request (`geneset_name` set): always invokes Python
+ * to render the per-geneset plot from the pickle. If the pickle has been
+ * evicted, falls back to running the initial path first to regenerate it.
+ * Returns either an image file path (success) or an `{ error }` object
+ * (gsea.py emits errors on the `result:` channel from any path). */
+async function computeGseaImage({
+	q,
+	genomes
+}: {
+	q: GenesetEnrichmentRequest
+	genomes: any
+}): Promise<string | { error: string }> {
+	const { genes, fold_change } = await resolveGseaGenesAndFoldChange({ q, genomes })
+	const cacheArg = gseaCacheArg(q, genes, fold_change)
+	const cacheId = generateHash(cacheArg)
+	const pickleFile = path.join(serverconfig.cachedir, 'gsea', `${cacheId}.pkl`)
+
+	// If the pickle is missing, regenerate it via the initial path. That
+	// also rewrites the JSON envelope so subsequent table requests stay
+	// fast. We deliberately ignore its return value here — only the side
+	// effect of writing the pickle matters for the image step.
+	if (await file_not_exist(pickleFile)) {
+		await computeGseaInitial({ q: { ...q, geneset_name: undefined } as GenesetEnrichmentRequest, genomes })
 	}
 
+	const dedupKey = `${cacheId}:${q.geneset_name}`
+	const inFlight = pendingImageRequests.get(dedupKey)
+	if (inFlight) return inFlight
+
+	const work: Promise<string | { error: string }> = runGseaPythonForImage({
+		q,
+		genomes,
+		cacheArg,
+		pickleFile
+	}).finally(() => pendingImageRequests.delete(dedupKey))
+	// Coerce: pendingImageRequests stores Promise<string> for happy-path dedup.
+	// Errors propagate via the same promise; the caller-facing return type
+	// widens to include the `{ error }` object that runGseaPythonForImage
+	// may surface.
+	pendingImageRequests.set(dedupKey, work as Promise<string>)
+	return work
+}
+
+/** Build the input object for gsea.py and parse one of its emitted result
+ * lines. Shared between the initial-table and detail-image runners — only
+ * the result-line prefix and post-processing differ. */
+function buildPyInput(
+	q: GenesetEnrichmentRequest,
+	genomes: any,
+	cacheArg: ReturnType<typeof gseaCacheArg>,
+	pickleFile: string
+) {
+	return {
+		genes: cacheArg.genes,
+		fold_change: cacheArg.fold_change,
+		db: genomes[q.genome].termdbs.msigdb.cohort.db.connection.name,
+		geneset_group: cacheArg.geneSetGroup,
+		genedb: path.join(serverconfig.tpmasterdir, genomes[q.genome].genedb.dbfile),
+		filter_non_coding_genes: cacheArg.filter_non_coding_genes,
+		cachedir: path.join(serverconfig.cachedir, 'gsea'),
+		// gsea.py expects just the basename; it joins with cachedir internally.
+		pickle_file: path.basename(pickleFile),
+		geneset_name: q.geneset_name,
+		num_permutations: cacheArg.num_permutations
+	}
+}
+
+async function runGseaPythonForTable({
+	q,
+	genomes,
+	cacheArg,
+	pickleFile
+}: {
+	q: GenesetEnrichmentRequest
+	genomes: any
+	cacheArg: ReturnType<typeof gseaCacheArg>
+	pickleFile: string
+}): Promise<GenesetEnrichmentResponse> {
+	const pyInput = buildPyInput(
+		{ ...q, geneset_name: undefined } as GenesetEnrichmentRequest,
+		genomes,
+		cacheArg,
+		pickleFile
+	)
 	const time1 = new Date().valueOf()
-	const gsea_output: string = await run_python('gsea.py', '/' + JSON.stringify(genesetenrichment_input))
+	const gsea_output: string = await run_python('gsea.py', '/' + JSON.stringify(pyInput))
 	mayLog('Time taken to run blitzgsea:', formatElapsedTime(Date.now() - time1))
 
-	let result: any
-	let data_found = false
-	let image_found = false
 	for (const line of gsea_output.split('\n')) {
 		if (line.startsWith('result: ')) {
-			result = JSON.parse(line.replace('result: ', ''))
-			data_found = true
-		} else if (line.startsWith('image: ')) {
-			result = JSON.parse(line.replace('image: ', ''))
-			image_found = true
-		} else {
-			mayLog(line)
+			const parsed = JSON.parse(line.replace('result: ', ''))
+			// gsea.py reports failures (e.g., degenerate input) on the same
+			// `result:` channel as success. Throw rather than return so
+			// cacheOrRecompute won't write the error into the JSON envelope
+			// and serve it as a fake "cache hit" on every subsequent request.
+			if (parsed?.error) throw new Error(parsed.error)
+			return parsed as GenesetEnrichmentResponse
 		}
+		mayLog(line)
 	}
+	throw new Error('gsea.py did not emit a result line on the initial path')
+}
 
-	if (data_found) return result as GenesetEnrichmentResponse
-	if (image_found) return path.join(cachedir_gsea, result.image_file)
-	throw new Error('data or image not found in gsea output; this should not happen')
+async function runGseaPythonForImage({
+	q,
+	genomes,
+	cacheArg,
+	pickleFile
+}: {
+	q: GenesetEnrichmentRequest
+	genomes: any
+	cacheArg: ReturnType<typeof gseaCacheArg>
+	pickleFile: string
+}): Promise<string | { error: string }> {
+	const pyInput = buildPyInput(q, genomes, cacheArg, pickleFile)
+	const time1 = new Date().valueOf()
+	const gsea_output: string = await run_python('gsea.py', '/' + JSON.stringify(pyInput))
+	mayLog('Time taken to render gsea image:', formatElapsedTime(Date.now() - time1))
+
+	for (const line of gsea_output.split('\n')) {
+		if (line.startsWith('image: ')) {
+			const parsed = JSON.parse(line.replace('image: ', ''))
+			return path.join(serverconfig.cachedir, 'gsea', parsed.image_file)
+		}
+		// gsea.py emits failures on the `result:` channel even from the
+		// detail-image path — forward those structurally so the route can
+		// surface a clean error response (matches the prior behavior).
+		if (line.startsWith('result: ')) {
+			const parsed = JSON.parse(line.replace('result: ', ''))
+			if (parsed?.error) return { error: parsed.error }
+		}
+		mayLog(line)
+	}
+	throw new Error('gsea.py did not emit an image line on the detail path')
 }

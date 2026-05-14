@@ -47,7 +47,7 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
-import { validate_query_rnaseqGeneCount } from '#routes/termdb.DE.ts'
+import { validate_query_rnaseqGeneCount } from '#src/validateRnaseqGeneCount.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import {
 	validate_query_getWSIAnnotations,
