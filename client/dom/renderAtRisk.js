@@ -113,7 +113,7 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 		const sObj = chart.serieses.find(series => series.seriesId === seriesId)
 		if (sObj) {
 			g.select('text[data-testid="sjpp-atrisk-seriesId"]')
-				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
+				.text(seriesId && seriesId !== '*' ? sObj.seriesLabel || seriesId : '')
 		}
 		
 		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
@@ -136,7 +136,7 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 				.attr('cursor', 'pointer')
 				.datum({ seriesId })
-				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
+				.text(seriesId && seriesId !== '*' ? sObj.seriesLabel || seriesId : '')
 
 			renderAtRiskTick(g.append('g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 		})
