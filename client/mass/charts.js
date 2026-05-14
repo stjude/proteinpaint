@@ -373,8 +373,8 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
-			label: 'Multiomic Rankings',
-			chartType: 'multiomicRankings',
+			label: state.termdbConfig.queries?.geneRanking?.appName || 'Gene Ranking',
+			chartType: 'geneRanking',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{

@@ -1,14 +1,14 @@
 import path from 'path'
 import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
-import type { MultiomicRankingsRequest, MultiomicRankingsResponse, RouteApi } from '#types'
-import { multiomicRankingsPayload } from '#types/checkers'
+import type { GeneRankingRequest, GeneRankingResponse, RouteApi } from '#types'
+import { geneRankingPayload } from '#types/checkers'
 
 export const api: RouteApi = {
-	endpoint: 'termdb/multiomicRankings',
+	endpoint: 'termdb/geneRanking',
 	methods: {
-		get: { ...multiomicRankingsPayload, init },
-		post: { ...multiomicRankingsPayload, init }
+		get: { ...geneRankingPayload, init },
+		post: { ...geneRankingPayload, init }
 	}
 }
 
@@ -46,18 +46,18 @@ async function parseTsv(absPath: string): Promise<ParsedFile> {
 function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
-			const q: MultiomicRankingsRequest = (req.method === 'POST' ? req.body : req.query) || {}
+			const q: GeneRankingRequest = (req.method === 'POST' ? req.body : req.query) || {}
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			const cfg = ds.queries?.multiomicRankings as
+			const cfg = ds.queries?.geneRanking as
 				| { rankings: Record<string, string>; modalities?: string[]; description?: string }
 				| undefined
-			if (!cfg || !cfg.rankings) throw 'multiomicRankings not configured for this dataset'
+			if (!cfg || !cfg.rankings) throw 'geneRanking not configured for this dataset'
 
 			if (!q.key) {
-				res.send({ keys: Object.keys(cfg.rankings) } satisfies MultiomicRankingsResponse)
+				res.send({ keys: Object.keys(cfg.rankings) } satisfies GeneRankingResponse)
 				return
 			}
 
@@ -76,10 +76,10 @@ function init({ genomes }) {
 				entry = { parsed: await parseTsv(absPath), mtimeMs: stat.mtimeMs }
 				fileCache.set(cacheKey, entry)
 			}
-			res.send({ columns: entry.parsed.columns, rows: entry.parsed.rows } satisfies MultiomicRankingsResponse)
+			res.send({ columns: entry.parsed.columns, rows: entry.parsed.rows } satisfies GeneRankingResponse)
 		} catch (e: any) {
 			if (e instanceof Error && e.stack) console.log(e)
-			res.send({ error: e?.message || String(e) } satisfies MultiomicRankingsResponse)
+			res.send({ error: e?.message || String(e) } satisfies GeneRankingResponse)
 		}
 	}
 }

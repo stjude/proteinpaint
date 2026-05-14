@@ -12,8 +12,8 @@ const MISSING_COLOR = '#d9d9d9'
 const SEQ_COLOR_LOW = '#08306b'
 const SEQ_COLOR_HIGH = '#f7fbff'
 
-class MultiomicRankings extends PlotBase {
-	static type = 'multiomicRankings'
+class GeneRanking extends PlotBase {
+	static type = 'geneRanking'
 
 	loadingDiv: any
 	errDiv: any
@@ -43,7 +43,7 @@ class MultiomicRankings extends PlotBase {
 
 	constructor(opts) {
 		super(opts)
-		this.type = MultiomicRankings.type
+		this.type = GeneRanking.type
 		const main = opts.holder.append('div').style('padding', '12px').style('max-width', '95vw')
 		this.errDiv = main.append('div').style('color', 'red').style('display', 'none').style('padding', '8px')
 		this.loadingDiv = main.append('div').style('padding', '8px').text('Loading...')
@@ -97,13 +97,13 @@ class MultiomicRankings extends PlotBase {
 			.style('white-space', 'normal')
 			.style('word-break', 'normal')
 			.style('overflow-wrap', 'break-word')
-		this.tableDiv = main.append('div').attr('data-testid', 'sjpp-multiomicRankings-table').style('font-size', '12px')
+		this.tableDiv = main.append('div').attr('data-testid', 'sjpp-geneRanking-table').style('font-size', '12px')
 
 		this.heatmapSection = main
 			.append('div')
 			.style('display', 'none')
 			.style('margin-top', '24px')
-			.attr('data-testid', 'sjpp-multiomicRankings-heatmap')
+			.attr('data-testid', 'sjpp-geneRanking-heatmap')
 		const hmHeader = this.heatmapSection
 			.append('div')
 			.style('display', 'flex')
@@ -186,7 +186,7 @@ class MultiomicRankings extends PlotBase {
 			this.loadingDiv.style('display', 'block')
 			this.tableDiv.selectAll('*').remove()
 			try {
-				const resp = await dofetch3('termdb/multiomicRankings', {
+				const resp = await dofetch3('termdb/geneRanking', {
 					body: {
 						genome: this.state.vocab.genome,
 						dslabel: this.state.vocab.dslabel,
@@ -211,7 +211,7 @@ class MultiomicRankings extends PlotBase {
 			this.loadingDiv.style('display', 'none')
 		}
 		this.toolbarDiv.style('display', 'flex')
-		const desc = this.state.termdbConfig?.queries?.multiomicRankings?.description
+		const desc = this.state.termdbConfig?.queries?.geneRanking?.description
 		this.noteDiv.style('display', desc ? 'block' : 'none').text(desc || '')
 		this.renderTable()
 	}
@@ -233,7 +233,7 @@ class MultiomicRankings extends PlotBase {
 		const blob = new Blob([lines.join('\n')], { type: 'text/tab-separated-values' })
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement('a')
-		const slug = (this.dataKey || 'multiomicRankings').replace(/[^A-Za-z0-9_-]+/g, '_')
+		const slug = (this.dataKey || 'geneRanking').replace(/[^A-Za-z0-9_-]+/g, '_')
 		a.href = url
 		a.download = `${slug}.tsv`
 		document.body.appendChild(a)
@@ -375,7 +375,7 @@ class MultiomicRankings extends PlotBase {
 
 		// modality columns available in this dataset, intersected with biological order
 		const colNameToIdx = new Map(columns.map((c, i) => [c, i]))
-		const modalities: string[] = this.state.termdbConfig?.queries?.multiomicRankings?.modalities || []
+		const modalities: string[] = this.state.termdbConfig?.queries?.geneRanking?.modalities || []
 		const usedCols = modalities.filter(m => colNameToIdx.has(m))
 		if (usedCols.length < 2) {
 			this.heatmapSection.style('display', 'none')
@@ -461,7 +461,7 @@ class MultiomicRankings extends PlotBase {
 		}
 
 		try {
-			const resp = await dofetch3('termdb/multiomicRankings/cluster', {
+			const resp = await dofetch3('termdb/geneRanking/cluster', {
 				body: {
 					matrix,
 					row_names: geneNames,
@@ -809,17 +809,17 @@ function drawRowDendrogram(
 
 export async function getPlotConfig(opts) {
 	const config = {
-		chartType: MultiomicRankings.type,
+		chartType: GeneRanking.type,
 		rankingKey: opts.rankingKey || ''
 	}
 	return copyMerge(config, opts)
 }
 
-export const componentInit = getCompInit(MultiomicRankings)
+export const componentInit = getCompInit(GeneRanking)
 
 export function makeChartBtnMenu(holder, chartsInstance) {
 	chartsInstance.dom.tip.clear()
-	const cfg = chartsInstance.state.termdbConfig?.queries?.multiomicRankings as
+	const cfg = chartsInstance.state.termdbConfig?.queries?.geneRanking as
 		| { rankings?: Record<string, string> }
 		| undefined
 	const rankings = cfg?.rankings
@@ -842,7 +842,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				chartsInstance.dom.tip.hide()
 				chartsInstance.prepPlot({
 					config: {
-						chartType: 'multiomicRankings',
+						chartType: 'geneRanking',
 						rankingKey: key
 					}
 				})

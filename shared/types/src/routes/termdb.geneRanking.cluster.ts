@@ -1,6 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 
-export type MultiomicRankingsClusterRequest = {
+export type GeneRankingClusterRequest = {
 	/** numeric matrix; rows = genes, cols = modalities. May contain nulls (treated as missing). */
 	matrix: (number | null)[][]
 	/** gene names, length = matrix.length */
@@ -15,7 +15,7 @@ export type MultiomicRankingsClusterRequest = {
 	minAssays?: number
 }
 
-export type MultiomicRankingsClusterResponse = {
+export type GeneRankingClusterResponse = {
 	/** hclust output for rows */
 	row?: {
 		merge: { n1: number; n2: number }[]
@@ -32,11 +32,11 @@ export type MultiomicRankingsClusterResponse = {
 	error?: string
 }
 
-export const multiomicRankingsClusterPayload: RoutePayload = {
+export const geneRankingClusterPayload: RoutePayload = {
 	request: {
-		typeId: 'MultiomicRankingsClusterRequest'
+		typeId: 'GeneRankingClusterRequest'
 	},
 	response: {
-		typeId: 'MultiomicRankingsClusterResponse'
+		typeId: 'GeneRankingClusterResponse'
 	}
 }

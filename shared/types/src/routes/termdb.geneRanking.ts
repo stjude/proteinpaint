@@ -1,13 +1,13 @@
 import type { RoutePayload } from './routeApi.js'
 
-export type MultiomicRankingsRequest = {
+export type GeneRankingRequest = {
 	genome: string
 	dslabel: string
 	/** when omitted, server returns the list of available keys */
 	key?: string
 }
 
-export type MultiomicRankingsResponse = {
+export type GeneRankingResponse = {
 	/** available ranking keys when no key was supplied */
 	keys?: string[]
 	/** column labels in file order */
@@ -17,11 +17,11 @@ export type MultiomicRankingsResponse = {
 	error?: string
 }
 
-export const multiomicRankingsPayload: RoutePayload = {
+export const geneRankingPayload: RoutePayload = {
 	request: {
-		typeId: 'MultiomicRankingsRequest'
+		typeId: 'GeneRankingRequest'
 	},
 	response: {
-		typeId: 'MultiomicRankingsResponse'
+		typeId: 'GeneRankingResponse'
 	}
 }
