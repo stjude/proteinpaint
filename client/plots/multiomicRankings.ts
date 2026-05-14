@@ -7,16 +7,6 @@ import { scaleLinear } from 'd3-scale'
 
 const Integrative_rank_COLUMN = 'Integrative rank'
 
-// Modality columns to include in the heatmap, in biological order.
-const HEATMAP_MODALITIES = [
-	'GWAS',
-	'Transcriptome',
-	'Whole proteome',
-	'Insoluble proteome',
-	'Pho-enriched',
-	'Ubi-enriched',
-	'Interactome'
-]
 const MISSING_COLOR = '#d9d9d9'
 // sequential scale for per-column percentile rank: low (top rank) = dark, high = light
 const SEQ_COLOR_LOW = '#08306b'
@@ -107,9 +97,6 @@ class MultiomicRankings extends PlotBase {
 			.style('white-space', 'normal')
 			.style('word-break', 'normal')
 			.style('overflow-wrap', 'break-word')
-			.text(
-				'We ranked individual genes/proteins using order statistics to integrate multiple omics datasets, including GWAS, transcriptome, various proteomes, and the interactome. The proteomic datasets include the whole proteome, insoluble proteins, phosphoproteome, and ubiquitinome, if available. Genes/proteins in each dataset are ranked based on p/FDR values or log2FC-z scores, and finally sorted by the combined order statistic Q scores.'
-			)
 		this.tableDiv = main.append('div').attr('data-testid', 'sjpp-multiomicRankings-table').style('font-size', '12px')
 
 		this.heatmapSection = main
@@ -182,7 +169,7 @@ class MultiomicRankings extends PlotBase {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
-		return { config, vocab: appState.vocab }
+		return { config, vocab: appState.vocab, termdbConfig: appState.termdbConfig }
 	}
 
 	reactsTo(action) {
@@ -229,7 +216,8 @@ class MultiomicRankings extends PlotBase {
 			this.loadingDiv.style('display', 'none')
 		}
 		this.toolbarDiv.style('display', 'flex')
-		this.noteDiv.style('display', 'block')
+		const desc = this.state.termdbConfig?.queries?.multiomicRankings?.description
+		this.noteDiv.style('display', desc ? 'block' : 'none').text(desc || '')
 		this.renderTable()
 	}
 
@@ -392,7 +380,8 @@ class MultiomicRankings extends PlotBase {
 
 		// modality columns available in this dataset, intersected with biological order
 		const colNameToIdx = new Map(columns.map((c, i) => [c, i]))
-		const usedCols = HEATMAP_MODALITIES.filter(m => colNameToIdx.has(m))
+		const modalities: string[] = this.state.termdbConfig?.queries?.multiomicRankings?.modalities || []
+		const usedCols = modalities.filter(m => colNameToIdx.has(m))
 		if (usedCols.length < 2) {
 			this.heatmapSection.style('display', 'none')
 			return
@@ -816,9 +805,12 @@ export const componentInit = getCompInit(MultiomicRankings)
 
 export function makeChartBtnMenu(holder, chartsInstance) {
 	chartsInstance.dom.tip.clear()
-	const cfg = chartsInstance.state.termdbConfig?.queries?.multiomicRankings as Record<string, string> | undefined
+	const cfg = chartsInstance.state.termdbConfig?.queries?.multiomicRankings as
+		| { rankings?: Record<string, string> }
+		| undefined
+	const rankings = cfg?.rankings
 
-	if (!cfg || !Object.keys(cfg).length) {
+	if (!rankings || !Object.keys(rankings).length) {
 		holder
 			.append('div')
 			.style('padding', '8px')
@@ -827,7 +819,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		return
 	}
 
-	for (const key of Object.keys(cfg)) {
+	for (const key of Object.keys(rankings)) {
 		holder
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
