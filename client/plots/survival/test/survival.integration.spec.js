@@ -855,6 +855,7 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 			}
 		})
 
+		await sleep(100) // todo: use improved Locator methods to avoid using sleep()
 		test.equal(
 			survivalDiv.selectAll('.sjpp-atrisk-title').size(),
 			0,
@@ -869,7 +870,7 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 })
 
 tape('survival term as term1, term2 = geneExpression', function (test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(8000)
 	runpp({
 		state: {
 			plots: [

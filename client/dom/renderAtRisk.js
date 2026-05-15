@@ -16,7 +16,7 @@ input parameter:
 */
 
 export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }) {
-	// {seriedId: string, seriesLabel: string, counts: number}[]
+	// {seriesId: string, seriesLabel: string, counts: [number, number, number][]}[]
 	const atRiskGroups = []
 
 	// do not compute at-risk counts of tick values that are
@@ -102,9 +102,7 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 		.selectAll(':scope > g')
 		.data(atRiskGroups, s => s.seriesLabel || s.seriesId)
 
-	sg.exit().each(function (d) {
-		this.remove()
-	})
+	sg.exit().remove()
 
 	sg.each(function (atRiskGroup, i) {
 		const { seriesId, seriesLabel, counts } = atRiskGroup
@@ -113,9 +111,14 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 			.attr('transform', `translate(0,${y})`)
 			.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
 
-		g.select(':scope>text').text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
+		let legendText = g.select(':scope>text')
+		if (!legendText.size()) legendText = g.append('text')
+		legendText.text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
 
-		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, atRiskGroup, counts)
+		let ticksG = g.select(':scope>g')
+		if (!ticksG.size()) ticksG = g.append('g')
+
+		renderAtRiskTick(ticksG, chart, xTickValues, s, atRiskGroup)
 	})
 
 	sg.enter()
@@ -137,16 +140,15 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 				.datum({ seriesId })
 				.text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
 
-			renderAtRiskTick(g.append('g'), chart, xTickValues, s, atRiskGroup, counts)
+			renderAtRiskTick(g.append('g'), chart, xTickValues, s, atRiskGroup)
 		})
 }
 
-function renderAtRiskTick(g, chart, xTickValues, s, atRiskGroup, series) {
-	if (!g.size()) return
-	const { seriesId } = atRiskGroup
-	const reversed = series.slice().reverse()
+function renderAtRiskTick(g, chart, xTickValues, s, atRiskGroup) {
+	const { seriesId, counts } = atRiskGroup
+	const reversed = counts.slice().reverse()
 	const data = xTickValues.map(tickVal => {
-		if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
+		if (tickVal === 0) return { seriesId, tickVal, atRisk: counts[0][1], nCensored: counts[0][2] }
 		const d = reversed.find(d => d[0] <= tickVal)
 		return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
 	})
