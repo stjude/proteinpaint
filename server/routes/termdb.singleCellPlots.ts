@@ -1,6 +1,6 @@
-import type { Cell, ColorLegendEntry, RouteApi, ShapeLegendEntry, SingleCellRange } from '#types'
+import type { Cell, ColorLegendEntry, ColorMap, RouteApi, ShapeLegendEntry, SingleCellRange } from '#types'
 import { termdbSingleCellPlotsPayload } from '#types/checkers'
-import { getColors, getCoordinate } from '#shared'
+import { getColors, getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { createCanvas } from 'canvas'
@@ -127,6 +127,7 @@ async function getSingleCellScatter(req, res, ds) {
 
 		const resp: any = {
 			range: { xMin, xMax, yMin, yMax, geMin, geMax },
+			//There should only be one chart
 			result: { Default: { colorLegend, shapeLegend } }
 		}
 
@@ -144,36 +145,30 @@ async function getSingleCellScatter(req, res, ds) {
 	}
 }
 
-async function makeCanvas(q, samples, colorMap, range: SingleCellRange, termType: string) {
+async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange, termType: string) {
 	const settings = q.canvasSettings
-
-	const offsetX = 80
-	const offsetY = 30
-	//extra space added to avoid clipping the particles on the X axis
-	const extraSpaceX = settings.minXScale != null || settings.maxXScale != null ? 0 : (range.xMax - range.xMin) * 0.01
-	//extra space added to avoid clipping the particles on the Y axis
-	const extraSpaceY = settings.minYScale != null || settings.maxYScale != null ? 0 : (range.yMax - range.yMin) * 0.01
-	const width = settings.width + offsetX + extraSpaceX + 20
-	const height = settings.height + offsetY + extraSpaceY + 20
+	const extraSpaceX = calculatePadding(settings.minXScale, settings.maxXScale, range.xMin, range.xMax) //extra space added to avoid clipping the particles on the X axis
+	const extraSpaceY = calculatePadding(settings.minYScale, settings.maxYScale, range.yMin, range.yMax) //extra space added to avoid clipping the particles on the Y axis
+	const width = settings.width + xAxisOffSet + extraSpaceX + 20
+	const height = settings.height + yAxisOffSet + extraSpaceY + 20
 
 	const canvas = createCanvas(width, height)
 	const ctx = canvas.getContext('2d')
 
 	//This accounts for user defined min and max scales values
-
 	const xScale = scaleLinear()
 		.domain([range.xMin - extraSpaceX, range.xMax + extraSpaceX])
-		.range([offsetX, settings.width + offsetX])
+		.range([xAxisOffSet, settings.width + xAxisOffSet])
 	const yScale = scaleLinear()
 		.domain([range.yMin + extraSpaceY, range.yMax - extraSpaceY])
-		.range([offsetY, settings.height + offsetY])
+		.range([yAxisOffSet, settings.height + yAxisOffSet])
 
 	//This will need to be changed to accomodate user changes from the color scale
 	let colorGenerator
 	if (range.geMin != undefined && range.geMax != undefined) {
 		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.noExpColor, settings.expColor])
 	}
-	for (const sample of samples.filter((s: any) => !s.hidden?.category)) {
+	for (const sample of samples.filter(s => !s.hidden?.category)) {
 		const color = () => {
 			if (termType == SINGLECELL_GENE_EXPRESSION) {
 				if (!sample.geneExp) return settings.noExpColor

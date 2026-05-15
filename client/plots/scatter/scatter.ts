@@ -11,6 +11,7 @@ import type { Settings } from './settings/Settings.ts'
 import { getDefaultScatterSettings } from './settings/defaults.js'
 import { ScatterModel } from './model/scatterModel.js'
 import { ScatterSingleCellModel } from './model/ScatterSingleCellModel'
+import type { ScatterModelBase } from './model/ScatterModelBase'
 import { ScatterViewModel } from './viewmodel/scatterViewModel.js'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
@@ -32,7 +33,7 @@ export class Scatter extends PlotBase implements RxComponent {
 
 	config: any
 	view!: ScatterView
-	model!: ScatterModel | ScatterSingleCellModel
+	model!: ScatterModelBase
 	vm!: any
 	interactivity!: ScatterInteractivity
 	settings!: Settings

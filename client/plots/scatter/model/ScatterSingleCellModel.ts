@@ -56,8 +56,4 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			throw new Error(e.message || e)
 		}
 	}
-
-	processData() {
-		//Empty for now whilst in development.
-	}
 }

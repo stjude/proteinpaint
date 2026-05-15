@@ -6,11 +6,12 @@ import { ScatterTooltip } from './scatterTooltip.js'
 import { getTitle } from './scatterLegend.js'
 import { ScatterZoom } from './scatterZoom.js'
 import type { Scatter } from '../scatter.js'
+import type { ScatterModelBase } from '../model/ScatterModelBase'
 
 export class ScatterViewModelBase {
 	scatter: Scatter
 	view: any
-	model: any
+	model: ScatterModelBase
 	interactivity: any
 	legendvm: ScatterLegend
 	scatterTooltip: ScatterTooltip
