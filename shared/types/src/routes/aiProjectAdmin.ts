@@ -29,7 +29,7 @@ export type AIProjectAdminResponse = {
 	projectId?: number
 	images: string[]
 	error?: string
-	data?: { cols: any[]; rows: any[]; images?: string[]; selectedImages?: string[] }[]
+	data?: { cols: any[]; rows: any[]; images?: string[]; selectedImages?: string[] }
 }
 
 // TODO: write payload examples to help with automated testing and documentation, for non-prod use only
