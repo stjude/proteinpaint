@@ -2,7 +2,7 @@
  * allowed to write to. Each entry must also be configured in
  * `CacheManager.ts` so the eviction lifecycle (TTL + max-size) still
  * applies. Add new analysis types here. */
-export type CacheSubdir = 'de' | 'dm' | 'gsea' | 'grin2'
+export type CacheSubdir = 'de' | 'dm' | 'gsea' | 'grin2' | 'topve'
 
 export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	/** Hashed to derive the cacheId. Pass the subset of the request whose
