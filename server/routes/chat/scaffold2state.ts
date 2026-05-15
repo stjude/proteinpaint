@@ -116,15 +116,31 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		}
 
 		const terms: any[] = []
+		let checkFirstTermType: string | null = null
+		let HierTermCount = 0
 		for (const HierTerm of HierTerms) {
+			// Check if the term types for hierarchical clustering are consistent across all terms.
+			if (HierTermCount > 0) {
+				const currentTermType = HierTerm.isDictionary ? 'numericDictTerm' : HierTerm.type
+				if (checkFirstTermType && currentTermType !== checkFirstTermType) {
+					throw 'Inconsistent term types in HierTerms: ' + checkFirstTermType + ' vs ' + currentTermType
+				}
+			}
 			if (HierTerm.isDictionary) {
+				if (HierTermCount === 0) {
+					checkFirstTermType = 'numericDictTerm'
+				}
 				const tm = { id: HierTerm.id, name: HierTerm.id, type: 'float' }
 				const term = { id: HierTerm.id, term: tm, q: { mode: 'continuous' } }
 				terms.push(term)
 			} else {
+				if (HierTermCount === 0) {
+					checkFirstTermType = HierTerm.type
+				}
 				const term = { term: HierTerm }
 				terms.push(term)
 			}
+			HierTermCount += 1
 		}
 		plotState.plot.terms = terms
 

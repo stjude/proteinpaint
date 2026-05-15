@@ -810,7 +810,7 @@ Query: ${user_prompt}
 	if (variableType === 'ambiguous') {
 		return {
 			type: 'text',
-			text: 'Not clear what gene dataType the user is refrring to.'
+			text: 'Not clear what gene dataType the user is referring to.'
 		}
 	} else if (variableType === 'metaboliteIntensity') {
 		if (allowedTermTypes.includes('metaboliteIntensity')) {
