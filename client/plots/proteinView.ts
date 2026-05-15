@@ -251,12 +251,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const cohortShapes = makeShapeMap(cohortNames)
 	const proteinShapes = makeShapeMap(proteinAccessions)
 
-	type ColorMode = 'none' | 'organism' | 'assayType' | 'cohort' | 'proteinAccession'
-	type ShapeMode = 'none' | 'organism' | 'assayType' | 'cohort' | 'proteinAccession'
+	type ColorMode = 'organism' | 'assayType' | 'cohort' | 'proteinAccession'
+	type ShapeMode = 'organism' | 'assayType' | 'cohort' | 'proteinAccession'
 
 	let colorMode: ColorMode = 'assayType'
 	let shapeMode: ShapeMode = 'organism'
-	const defaultDotColor = '#9ca3af'
 	const customGroupPrefix = '__custom_group__:'
 	const makeCustomGroupKey = (name: string) => `${customGroupPrefix}${name}`
 	const isCustomGroupKey = (value: string) => value.startsWith(customGroupPrefix)
@@ -270,7 +269,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const colorModesWithGroups: ColorMode[] = ['organism', 'assayType', 'cohort', 'proteinAccession']
 	const shapeModesWithGroups: ShapeMode[] = ['organism', 'assayType', 'cohort', 'proteinAccession']
 	const createModeMap = <T>(factory: () => T) => ({
-		none: factory(),
 		organism: factory(),
 		assayType: factory(),
 		cohort: factory(),
@@ -301,25 +299,21 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 	}
 	const getCustomGroupOfValue = (mode: ColorMode, value: string) => {
-		if (mode === 'none') return null
 		for (const [group, members] of customGroupsByMode[mode]) {
 			if (members.has(value)) return group
 		}
 		return null
 	}
 	const getCustomGroupOfDot = (d: any, mode: ColorMode) => {
-		if (mode === 'none') return null
 		return getCustomGroupOfValue(mode, getBaseColorValue(d, mode))
 	}
 	const getCustomShapeGroupOfValue = (mode: ShapeMode, value: string) => {
-		if (mode === 'none') return null
 		for (const [group, members] of customShapeGroupsByMode[mode]) {
 			if (members.has(value)) return group
 		}
 		return null
 	}
 	const getCustomShapeGroupOfDot = (d: any, mode: ShapeMode) => {
-		if (mode === 'none') return null
 		return getCustomShapeGroupOfValue(mode, getBaseColorValue(d, mode))
 	}
 	const getNextCustomColor = () => {
@@ -328,7 +322,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		return color
 	}
 	const addOrUpdateCustomGroup = (mode: ColorMode, name: string, baseValues: string[]) => {
-		if (!name || !baseValues.length || mode === 'none') return
+		if (!name || !baseValues.length) return
 		for (const members of customGroupsByMode[mode].values()) {
 			for (const val of baseValues) members.delete(val)
 		}
@@ -338,13 +332,12 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		if (!customGroupColorsByMode[mode].has(name)) customGroupColorsByMode[mode].set(name, getNextCustomColor())
 	}
 	const removeCustomGroup = (mode: ColorMode, name: string) => {
-		if (mode === 'none') return
 		customGroupsByMode[mode].delete(name)
 		customGroupColorsByMode[mode].delete(name)
 		hiddenColor[mode].delete(makeCustomGroupKey(name))
 	}
 	const addOrUpdateCustomShapeGroup = (mode: ShapeMode, name: string, baseValues: string[]) => {
-		if (!name || !baseValues.length || mode === 'none') return
+		if (!name || !baseValues.length) return
 		for (const members of customShapeGroupsByMode[mode].values()) {
 			for (const val of baseValues) members.delete(val)
 		}
@@ -357,22 +350,17 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 	}
 	const removeCustomShapeGroup = (mode: ShapeMode, name: string) => {
-		if (mode === 'none') return
 		customShapeGroupsByMode[mode].delete(name)
 		customShapeIndicesByMode[mode].delete(name)
 		hiddenShape[mode].delete(makeCustomShapeGroupKey(name))
 	}
 	const getCustomGroupItems = (mode: ColorMode) => {
-		if (mode === 'none') return [] as string[]
 		return [...customGroupsByMode[mode].keys()].sort().map(name => makeCustomGroupKey(name))
 	}
 	const getCustomShapeGroupItems = (mode: ShapeMode) => {
-		if (mode === 'none') return [] as string[]
 		return [...customShapeGroupsByMode[mode].keys()].sort().map(name => makeCustomShapeGroupKey(name))
 	}
 	const getLegendItemSampleCount = (mode: ColorMode | ShapeMode, item: string, dotsToCount: any[] = dots) => {
-		if (mode === 'none') return 0
-
 		if (isCustomGroupKey(item)) {
 			const groupName = getCustomGroupNameFromKey(item)
 			return dotsToCount.filter(
@@ -390,10 +378,8 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		return dotsToCount.filter(d => getBaseColorValue(d, mode as ColorMode) === item).length
 	}
 	const getColor = (d: any) => {
-		const customGroup = colorMode === 'none' ? undefined : getCustomGroupOfDot(d, colorMode)
+		const customGroup = getCustomGroupOfDot(d, colorMode)
 		switch (colorMode) {
-			case 'none':
-				return defaultDotColor
 			case 'organism':
 				if (customGroup) return customGroupColorsByMode[colorMode].get(customGroup) ?? '#888'
 				return organismColors.get(d.organismName) ?? '#888'
@@ -412,12 +398,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	}
 	const getShapeIndex = (d: any) => {
 		const customShapeGroup = getCustomShapeGroupOfDot(d, shapeMode)
-		if (customShapeGroup && shapeMode !== 'none') {
+		if (customShapeGroup) {
 			return customShapeIndicesByMode[shapeMode].get(customShapeGroup) ?? 0
 		}
 		switch (shapeMode) {
-			case 'none':
-				return 0
 			case 'organism':
 				return organismShapes.get(d.organismName) ?? 0
 			case 'assayType':
@@ -442,21 +426,18 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		return `translate(${x},${y}) scale(${scale})`
 	}
 	const colorGroupingModes: Array<{ key: ColorMode; label: string }> = [
-		{ key: 'none', label: 'Default' },
 		{ key: 'organism', label: 'Organism' },
 		{ key: 'assayType', label: 'Assay' },
 		{ key: 'cohort', label: 'Sample Set' },
 		{ key: 'proteinAccession', label: 'Isoform' }
 	]
 	const shapeGroupingModes: Array<{ key: ShapeMode; label: string }> = [
-		{ key: 'none', label: 'Default' },
 		{ key: 'organism', label: 'Organism' },
 		{ key: 'assayType', label: 'Assay' },
 		{ key: 'cohort', label: 'Sample Set' },
 		{ key: 'proteinAccession', label: 'Isoform' }
 	]
 	const makeHiddenState = () => ({
-		none: new Set<string>(),
 		organism: new Set<string>(),
 		assayType: new Set<string>(),
 		cohort: new Set<string>(),
@@ -466,8 +447,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const hiddenShape = makeHiddenState()
 	const getColorValueByMode = (d: any, mode: ColorMode) => {
 		switch (mode) {
-			case 'none':
-				return ''
 			case 'organism':
 				return getCustomGroupOfDot(d, mode)
 					? makeCustomGroupKey(getCustomGroupOfDot(d, mode) as string)
@@ -486,8 +465,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	}
 	const getShapeValueByMode = (d: any, mode: ShapeMode) => {
 		switch (mode) {
-			case 'none':
-				return ''
 			case 'organism':
 				return getCustomShapeGroupOfDot(d, mode)
 					? makeCustomShapeGroupKey(getCustomShapeGroupOfDot(d, mode) as string)
@@ -966,7 +943,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 					.attr('value', colorMap.get(name) ?? '#888')
 					.on('change', () => {
 						const newColor = input.node().value
-						if (isCustomGroupKey(name) && colorMode != 'none') {
+						if (isCustomGroupKey(name)) {
 							customGroupColorsByMode[colorMode].set(getCustomGroupNameFromKey(name), newColor)
 						} else if (!isCustomGroupKey(name)) {
 							if (colorMode == 'organism') organismColors.set(name, newColor)
@@ -1053,9 +1030,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const buildModeLegendItems = (baseItems: string[], baseColorMap: Map<string, string>) => {
-			if (colorMode === 'none') {
-				return { items: baseItems, colorMap: baseColorMap }
-			}
 			// Hide base items that have been absorbed into a custom group
 			const visibleBaseItems = baseItems.filter(name => !getCustomGroupOfValue(colorMode, name))
 			const mergedColorMap = new Map<string, string>()
@@ -1202,9 +1176,6 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const buildShapeLegendItems = (baseItems: string[]) => {
-			if (shapeMode === 'none') {
-				return { items: baseItems }
-			}
 			const visibleBaseItems = baseItems.filter(name => !getCustomShapeGroupOfValue(shapeMode, name))
 			return { items: [...visibleBaseItems, ...getCustomShapeGroupItems(shapeMode)] }
 		}
