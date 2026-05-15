@@ -1074,7 +1074,7 @@ function setInteractivity(self) {
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
 		if (i == -1) {
-			hidden.push(d.seriesId)
+			hidden.push(d.seriesId) // this setting data will be dispatched after clicking on the Hide menu option
 			self.showLegendItemMenu(d, hidden, x, y)
 		} else {
 			hidden.splice(i, 1)

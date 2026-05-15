@@ -800,7 +800,8 @@ tape('survival term as term1, term0 = agedx, custom bins', function (test) {
 })
 
 tape('survival term as term1, term2 = geneVariant', function (test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(5000)
+	test.plan(4)
 	runpp({
 		state: {
 			plots: [
@@ -838,8 +839,27 @@ tape('survival term as term1, term2 = geneVariant', function (test) {
 		const colorInput = await Locator.init(legendTip.d).shows('input[type="color"]').get(0)
 		colorInput.value = '#0000ff'
 		colorInput.dispatchEvent(new Event('change', { cancelable: true }))
+		legendTip.hide()
 		await sleep(100) // todo: use improved Locator methods to avoid using sleep()
 		test.equal(atRiskLegend0?.parentNode?.getAttribute('fill'), 'rgb(0, 0, 255)', 'should change the series color')
+
+		await survival.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: survival.id,
+			config: {
+				settings: {
+					survival: {
+						atRiskVisible: false
+					}
+				}
+			}
+		})
+
+		test.equal(
+			survivalDiv.selectAll('.sjpp-atrisk-title').size(),
+			0,
+			'should hide at-risk legend when settings.survival.atRiskVisible is false'
+		)
 		if (test._ok) {
 			survival.Inner.app.destroy()
 			legendTip.hide()

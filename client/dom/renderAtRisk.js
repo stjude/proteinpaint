@@ -16,9 +16,8 @@ input parameter:
 */
 
 export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }) {
-	// key: a visible seriesId
-	// value: {seriedId, seriesLabel, counts}
-	const bySeriesId = {}
+	// {seriedId: string, seriesLabel: string, counts: number}[]
+	const atRiskGroups = []
 
 	// do not compute at-risk counts of tick values that are
 	// smaller than the first timepoint of the chart
@@ -59,7 +58,7 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 			}
 		}
 		const { seriesId, seriesLabel } = series
-		bySeriesId[seriesId] = { seriesId, seriesLabel, counts }
+		atRiskGroups.push({ seriesId, seriesLabel, counts })
 	}
 
 	const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
@@ -68,12 +67,11 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 
 	const seriesOrder = order || chart.serieses.map(s => s.seriesId)
 
-	let data
 	g.selectAll('.sjpp-atrisk-title').remove()
 	if (s.atRiskVisible) {
 		// at-risk counts are visible
 		// sort the data
-		data = Object.values(bySeriesId).sort((a, b) => seriesOrder.indexOf(a.seriesId) - seriesOrder.indexOf(b.seriesId))
+		atRiskGroups.sort((a, b) => seriesOrder.indexOf(a.seriesId) - seriesOrder.indexOf(b.seriesId))
 		// render the title
 		// add a y offset to title if there is no series id
 		const addYoffset = chart.serieses.length == 1 && !chart.serieses[0].seriesId
@@ -95,32 +93,35 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 	} else {
 		// at-risk counts are not visible
 		// empty the data
-		data = []
+		atRiskGroups.length = 0
 	}
 
 	// render at-risk counts
 	const sg = g
 		.attr('transform', `translate(0,${y})`)
 		.selectAll(':scope > g')
-		.data(data, s => s.seriesLabel || s.seriesId)
+		.data(atRiskGroups, s => s.seriesLabel || s.seriesId)
 
-	sg.exit().remove()
+	sg.exit().each(function (d) {
+		this.remove()
+	})
 
-	sg.each(function (series, i) {
-		const { seriesId, seriesLabel, counts } = series
+	sg.each(function (atRiskGroup, i) {
+		const { seriesId, seriesLabel, counts } = atRiskGroup
 		const y = (i + 1) * (2 * s.axisTitleFontSize)
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
 			.attr('fill', term2toColor[''] ? s.defaultColor : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
-			.text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
 
-		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, counts)
+		g.select(':scope>text').text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
+
+		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, atRiskGroup, counts)
 	})
 
 	sg.enter()
 		.append('g')
-		.each(function (series, i) {
-			const { seriesId, seriesLabel, counts } = series
+		.each(function (atRiskGroup, i) {
+			const { seriesId, seriesLabel, counts } = atRiskGroup
 			const y = (i + 1) * (2 * s.axisTitleFontSize)
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
@@ -136,11 +137,13 @@ export function renderAtRiskG({ g, s, chart, order, term2toColor, onSerieClick }
 				.datum({ seriesId })
 				.text(seriesId && seriesId !== '*' ? seriesLabel || seriesId : '')
 
-			renderAtRiskTick(g.append('g'), chart, xTickValues, s, seriesId, counts)
+			renderAtRiskTick(g.append('g'), chart, xTickValues, s, atRiskGroup, counts)
 		})
 }
 
-function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
+function renderAtRiskTick(g, chart, xTickValues, s, atRiskGroup, series) {
+	if (!g.size()) return
+	const { seriesId } = atRiskGroup
 	const reversed = series.slice().reverse()
 	const data = xTickValues.map(tickVal => {
 		if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
