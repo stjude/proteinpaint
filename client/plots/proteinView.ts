@@ -1041,6 +1041,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const sizeToggleCheckbox = sizeModeRow
 		.append('input')
 		.attr('type', 'checkbox')
+		.attr('aria-label', 'Scale dot size by case sample size')
 		.property('checked', scaleDotSize)
 		.style('cursor', 'pointer')
 		.style('margin', '0')
