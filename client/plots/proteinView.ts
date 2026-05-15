@@ -1601,7 +1601,8 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		tklst: [tk],
 		mclassOverride,
 		debugmode: self.app.opts.debug,
-		query: gm.isoform
+		query: gm.isoform,
+		hide_dsHandles: true
 	}
 
 	const _ = await import('#src/block.init')
