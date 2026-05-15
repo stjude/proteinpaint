@@ -268,6 +268,22 @@ export function getParentType(types: Set<string>, ds: any) {
 	return null //no parent found
 }
 
+// whether the term annotates parent samples
+export function isParentType(term: any, ds: any) {
+	if (!ds.cohort.termdb.hasSampleAncestry) return false
+	const sampleType = getSampleType(term, ds)
+	if (!sampleType) throw 'sample type is not defined'
+	const sampleTypeObj = ds.cohort.termdb.sampleTypes[sampleType]
+	if (!sampleTypeObj) throw 'invalid sample type'
+	if (Number.isInteger(sampleTypeObj.parent_id)) {
+		// sample type has parent, so it is child sample type
+		return false
+	} else {
+		// sample type does not have parent, so it is parent sample type
+		return true
+	}
+}
+
 //Returns human readable label for each term type; label is just for printing and not computing
 const typeMap: { [key: string]: string } = {
 	categorical: 'Categorical',

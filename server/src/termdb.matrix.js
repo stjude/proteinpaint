@@ -8,8 +8,8 @@ import {
 	isDictionaryType,
 	isNonDictionaryType,
 	getBin,
-	getParentType,
 	getSampleType,
+	isParentType,
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
 	GENE_VARIANT,
@@ -41,16 +41,15 @@ Inputs:
 		.terms[] array of tw
 	ds{}
 		server-side dataset object
-	onlyChildren: boolean
-		true: the term annotates parent samples, the query will return annotations for the children of the samples that have the term
-		false: the term annotates child samples, the query will return annotations for the samples that have the term
+	mapParent2Children: boolean
+		whether to map annotations of parent samples onto child samples
 
 Returns:
 	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts for documentation
 	- please update types in shared/types/src/termdb.matrix.ts if the return object is changed
 */
 
-export async function getData(q, ds, onlyChildren = false) {
+export async function getData(q, ds, mapParent2Children) {
 	if (serverconfig.debugmode && !ds?.cohort?.db) trackXfetch(new Map())
 
 	try {
@@ -62,7 +61,7 @@ export async function getData(q, ds, onlyChildren = false) {
 
 		const { expandedTerms, tcMappings } = expandCustomTermCollection(q.terms)
 		q.terms = expandedTerms
-		const data = await getSampleData(q, ds, onlyChildren)
+		const data = await getSampleData(q, ds, mapParent2Children)
 		reconstituteCustomTermCollection(data, tcMappings)
 
 		checkAccessToSampleData(data, ds, q)
@@ -122,11 +121,15 @@ const maxPendingQueriesBeforeRejectingRequest = serverconfig.features?.maxPendin
 let numActiveQueriesAcrossUsers = 0,
 	numPendingQueriesAcrossUsers = 0
 
-async function getSampleData(q, ds, onlyChildren = false) {
+async function getSampleData(q, ds, mapParent2Children) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
-	onlyChildren = maySetOnlyChildren(q.terms, ds, onlyChildren)
-	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, onlyChildren)
+
+	// determine whether parent annotations should be mapped onto child samples
+	mapParent2Children = maySetMapParent2Children(q.terms, ds, mapParent2Children)
+
+	// query dictionary term data
+	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, mapParent2Children)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
 	non-dict term data will be appended to it
@@ -475,30 +478,46 @@ export function divideTerms(lst) {
 	return [dict, geneVariantTws, nonDict]
 }
 
-// function to set the onlyChildren flag, which controls whether
-// sample-level or parent-level data is retrieved
-// currently, this function is only performed if:
-// 	- ds has necessary flag and
-// 	- onlyChildren is false
-// TODO: apply to other datasets
-function maySetOnlyChildren(twLst, ds, onlyChildren) {
-	if (!ds.cohort.termdb.setOnlyChildren || onlyChildren) return onlyChildren
+// function to set the mapParent2Children flag, which controls
+// whether to map parent-level data onto child samples
+function maySetMapParent2Children(twLst, ds, mapParent2Children) {
+	if (!ds.cohort.termdb.hasSampleAncestry) {
+		// no sample ancestry, so should not map parent to children
+		return false
+	}
+	if (typeof mapParent2Children === 'boolean') {
+		// flag already defined so return it
+		return mapParent2Children
+	}
+	// ds has sample ancestry and mapParent2Children is undefined
 	const sampleTypeConfig = ds.cohort.termdb.sampleTypes
-	if (!sampleTypeConfig) 'sample type config missing'
-	if (Object.keys(sampleTypeConfig).length != 2) 'unexpected number of sample types in config'
 	const sampleTypes = getSampleTypes(twLst, ds)
 	const types = [...sampleTypes]
 	if (!types.length) {
 		throw 'no sample types found'
+	} else if (types.length == 1) {
+		// single sample type, no need to map parent to children
+		const type = types[0]
+		if (!sampleTypeConfig[type]) throw 'invalid sample type'
+		return false
 	} else if (types.length > 1) {
 		// multiple sample types
-		// onlyChildren should be true
+		// validate that one is parent and one is child
+		if (types.length != 2) throw 'unexpected number of sample types'
+		let parentType, childType
+		for (const type of types) {
+			const config = sampleTypeConfig[type]
+			if (!config) throw 'invalid sample type'
+			if (Number.isInteger(config.parent_id)) {
+				childType = type
+			} else {
+				parentType = type
+			}
+		}
+		if (!Number.isInteger(parentType)) throw 'invalid parent sample type'
+		if (!Number.isInteger(childType)) throw 'invalid child sample type'
+		// set flag to true to map parent annotations onto child samples
 		return true
-	} else {
-		// single sample type
-		// if sample type is child, then onlyChildren should be true
-		const type = types[0]
-		return Number.isInteger(sampleTypeConfig[type].parent_id)
 	}
 }
 
@@ -521,11 +540,11 @@ output:
 		{ byTermId: {} }
 }
 */
-async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = false) {
+async function getSampleData_dictionaryTerms(q, termWrappers, mapParent2Children) {
 	if (!termWrappers.length) return [{}, {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
-		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren)
+		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, mapParent2Children)
 	}
 	if (q.ds.cohort.termdb.dictionary?.get) {
 		// ds-supplied getter to retrieve dictionary term data
@@ -544,7 +563,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers, onlyChildren = fal
 	throw 'unknown method for dictionary terms'
 }
 
-export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, onlyChildren) {
+export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, mapParent2Children) {
 	const byTermId = {} // to return
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
@@ -581,9 +600,9 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, only
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	const types = filter ? filter.sampleTypes : sampleTypes //the filter adds the types in the filter, that need to be considered
-	if (!onlyChildren) onlyChildren = types.size > 1
-	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, types, onlyChildren)
+	// TODO: handle sample types in filter
+	/*const types = filter ? filter.sampleTypes : sampleTypes //the filter adds the types in the filter, that need to be considered*/
+	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, mapParent2Children)
 	const samples = await getSamples(q, rows, termWrappers)
 	return [samples, byTermId]
 }
@@ -601,28 +620,28 @@ export function getSampleTypes(termWrappers, ds) {
 When querying sample annotations for dictionary terms, the query is split into two parts:
 1. CTEs are generated for each term, and the CTEs are combined into a single SQL query
 2. The SQL query is executed and the results are processed into a map of samples
-The query for a term needs to be generated based on the sample types present in the query and
-considering if the current term is a parent term or a child term.:
-- If `onlyChildren` is true  and the term annotates parent samples, the query will return annotations for the children of the samples that have the term
-- If `onlyChildren` is false or the term annotates child samples, the query will return annotations for the samples that have the term
- */
-export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, types, onlyChildren) {
-	const parentType = getParentType(types, q.ds)
+
+Mapping parent annotations onto child samples: when a term annotates parent samples and mapParent2Children is true, then annotations will get mapped onto child samples
+*/
+export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, mapParent2Children) {
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
-			const sampleType = getSampleType(tw.term, q.ds)
 			let query
-			if (onlyChildren && parentType == sampleType && q.ds.cohort.termdb.hasSampleAncestry)
+			if (isParentType(tw.term, q.ds) && mapParent2Children) {
+				// term is parent-level term and need to map
+				// parent annotations onto child samples
 				query = ` select sa.sample_id as sample, key, value, ? as term_id
 				 from sample_ancestry sa join ${t.tablename} on sa.ancestor_id = sample
 				${filter ? ` WHERE sample_id IN ${filter.CTEname} ` : ''}`
-			else
+			} else {
+				// query annotations directly
 				query = ` SELECT sample, key, value, ? as term_id
 				FROM ${t.tablename}
 				${filter ? ` WHERE sample IN ${filter.CTEname} ` : ''}`
+			}
 			return query
 		}).join(`UNION ALL`)}`
 
