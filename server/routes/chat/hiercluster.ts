@@ -224,7 +224,14 @@ async function validate_hiercluster_gene_expression_response(
 		if (filterTerms) {
 			q.filter = filterTerms
 		}
-		topVEgenes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+		try {
+			topVEgenes = await ds.queries.topVariablyExpressedGenes.getGenes(q)
+		} catch (e) {
+			return {
+				type: 'text',
+				text: 'Error querying for top variably expressed genes: ' + e
+			}
+		}
 		for (const gene of topVEgenes) {
 			// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
 			seen_genes.add(gene.toLowerCase())
