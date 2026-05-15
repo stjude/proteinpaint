@@ -81,6 +81,13 @@ tape('defaults', function (test) {
 							skipMs: 43200000,
 							absPath: `${m.cachedir}/dm`,
 							skipUntil: 0
+						},
+						topve: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							absPath: `${m.cachedir}/topve`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -97,7 +104,8 @@ tape('defaults', function (test) {
 							massSessionTrash: { deletedCount: 0, totalCount: 0 },
 							grin2: { deletedCount: 0, totalCount: 0 },
 							de: { deletedCount: 0, totalCount: 0 },
-							dm: { deletedCount: 0, totalCount: 0 }
+							dm: { deletedCount: 0, totalCount: 0 },
+							topve: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -153,6 +161,7 @@ tape('move or delete by maxAge', test => {
 			grin2: undefined,
 			de: undefined,
 			dm: undefined,
+			topve: undefined,
 			test0: {
 				maxAge,
 				moveTo: 'trash'
@@ -278,6 +287,7 @@ tape('limit deletion by file extension', test => {
 			grin2: undefined,
 			de: undefined,
 			dm: undefined,
+			topve: undefined,
 			test0: {
 				maxAge: -10, // force deletion of all files (with matching extension) by maxAge
 				fileExtensions: new Set(['.txt'])
