@@ -572,7 +572,7 @@ export async function validate_cumburden(ds) {
 	if (dir.includes('..') && !serverconfig.debugmode) throw `'..' path segment is not allowed in ds.cohort.cumburden.dir`
 	if (!fs.existsSync(path.join(serverconfig.tpmasterdir, dir))) `ds.cohort.cumburden.dir='${dir}' not found`
 
-	if (!ds.cohort.cumburden.files) `missing ds.cohort.cumburden.files`
+	if (!ds.cohort.cumburden.files) throw `missing ds.cohort.cumburden.files`
 	const inputFiles = ds.cohort.cumburden.files
 	for (const name of ['fit', 'surv', 'sample']) {
 		const fname = inputFiles[name]

@@ -7,7 +7,7 @@ const { isMatch } = mm
 // 1. list keys in the desired matching order, for example, the catch-all '*' pattern should be entered last
 // 2. glob pattern: '*', '!', etc
 
-type ServerConfigDsCredentials = {
+export type ServerConfigDsCredentials = {
 	[dslabelPattern: string]: {
 		/** 
 		routePattern could be one of the following: 
@@ -70,17 +70,17 @@ type JwtCredEntry = {
 // 		},
 // 		burden: {
 // 			'*': {
-//         type: 'basic',
-//         password: '...'
-//      }
+//         		type: 'basic',
+//         		password: '...'
+//      	}
 // 		}
 // 	},
 // 	PNET: {
 // 		'*': { // equivalent to /** for a route path, all routes will be protected
 // 			'*': { // any embedder
-//         type: 'basic',
-//         password: '...'
-//      }
+//         	type: 'basic',
+//        	 password: '...'
+//      	}
 // 		}
 // 	},
 //
@@ -113,6 +113,7 @@ export async function validateDsCredentials(creds: ServerConfigDsCredentials, ge
 	// dslabel may be exact or a pattern
 	for (const [dslabel, _ds] of Object.entries(creds)) {
 		if (dslabel[0] == '#') {
+			// '#' is treated as a comment, no dslabel should start with this character in order to be loaded
 			delete creds[dslabel]
 			continue
 		}

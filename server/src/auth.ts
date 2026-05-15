@@ -1,4 +1,4 @@
-import { validateDsCredentials } from './auth/auth.dsCredentials.ts'
+import { validateDsCredentials, type ServerConfigDsCredentials } from './auth/auth.dsCredentials.ts'
 import { AuthApiOpen } from './auth/AuthApiOpen.ts'
 import { AuthApi } from './auth/AuthApi.ts'
 
@@ -18,6 +18,15 @@ export interface AuthInterface {
 	mayAdjustFilter: (q, ds, routeTwLst) => void
 }
 
+// app should call this as early as possible to avoid unnecessarily exposing to other code
+export async function extractValidatedCreds(_serverconfig) {
+	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
+	const creds = serverconfig.dsCredentials || {}
+	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
+	delete serverconfig.dsCredentials
+	return creds
+}
+
 // The authApi variable will be filled when the server/app.ts calls getAuthApi().
 // This is exported as a read-only live-binding where the importer sees the latest value.
 export let authApi
@@ -27,15 +36,24 @@ export let authApi
 const authApiByApp = new WeakMap()
 
 // these may be overriden within maySetAuthRoutes()
-export async function getAuthApi(app, genomes, _serverconfig = null, assignSharedApi = false) {
+// config: one of the following
+// - a loaded serverconfig with raw dsCredentials
+// - an object with validatedCreds that has been extracted from a serverconfig
+export async function getAuthApi(
+	app,
+	genomes,
+	config: null | { dsCredentials?: any; validatedCreds?: ServerConfigDsCredentials } = null,
+	assignSharedApi = false
+) {
 	if (assignSharedApi && authApi) {
 		throw `The shared authApi reference has already been assigned.`
 	}
 	// reuse an existing authApi if it already exists for an app
 	if (authApiByApp.has(app)) return authApiByApp.get(app)
 
-	const serverconfig = _serverconfig || (await import('./serverconfig.js')).default
-	const creds = serverconfig.dsCredentials || {}
+	const serverconfig = config || (await import('./serverconfig.js')).default
+	const creds =
+		config?.validatedCreds || (await extractValidatedCreds(config || (await import('./serverconfig.js')).default)) //serverconfig.dsCredentials || {}
 	// !!! do not expose the loaded dsCredentials to other code that imports serverconfig.json !!!
 	delete serverconfig.dsCredentials
 
