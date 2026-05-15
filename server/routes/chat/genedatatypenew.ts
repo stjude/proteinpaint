@@ -29,7 +29,6 @@ export async function classifyGeneOrGroup(
 ): Promise<{ term: string; role: string }[]> {
 	//const allTerms = relevant_genes.map(x => x.toUpperCase()).join(', ')
 	const ambiguousTerms = gene_group_intersection.join(', ')
-	console.log('ambiguousTerms:', ambiguousTerms)
 	const jsonSchema = JSON.stringify(
 		{
 			$schema: 'http://json-schema.org/draft-07/schema#',
@@ -137,7 +136,6 @@ Response:`
 
 	const geneTerms: { term: string; role: string }[] = results.filter(r => r.role === 'group')
 	//const filteredGenes = gene_group_intersection.filter(g => geneTerms.includes(g.toLowerCase()))
-	console.log('geneTerms:', geneTerms)
 	return geneTerms
 }
 

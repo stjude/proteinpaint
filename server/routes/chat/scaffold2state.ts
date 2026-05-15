@@ -105,7 +105,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		plotState.method = 'edgeR'
 	} else if (plotType === 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
-		// HierPhrases is an array of tw objects produced by resolveToTw() for dictionary terms
+		// HierTerms is an array of tw objects produced by resolveToTw() for dictionary terms as well as nonDict variables such as ssGSEA.
 		const HierTerms = input.HierTerms || []
 		if (HierTerms.length < 3) {
 			throw 'Hierarchical clustering plot requires at least three terms, but it is empty in the input.'

@@ -457,6 +457,10 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
 					name: twValueTerm.geneSet,
 					type: twValueTerm.type
 				}
+			} else {
+				throw new Error(
+					`Invalid geneExpression term: missing gene or geneSet field in geneExpression term for phrase "${twValue.phrase}"`
+				)
 			}
 		} else if (twValue.type === 'ssGSEA') {
 			const twValueTerm = twValue.term as GeneSetTerm
@@ -514,7 +518,6 @@ export async function resolveToTwTvs(
 		for (const gv of DictValues) {
 			const tw = await resolveToTw(gv, llm, genome)
 			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
-			console.log(`Resolved Dict term for phrase "${gv.phrase}":`, JSON.stringify(tw))
 			if (tw.type != 'float' && tw.type != 'integer' && tw.type != 'ssGSEA') {
 				return {
 					type: 'text',

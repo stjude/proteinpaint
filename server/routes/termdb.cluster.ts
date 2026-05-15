@@ -76,7 +76,7 @@ function init({ genomes }) {
 				const proteomeQuery = ds.queries?.proteome
 				if (!proteomeQuery?.get) throw `no ${PROTEOME_ABUNDANCE} data getter on this dataset`
 				if (!q.terms) throw `missing gene list`
-				if (!Array.isArray(q.terms)) throw `gene lisxot is not an array`
+				if (!Array.isArray(q.terms)) throw `gene list is not an array`
 				// TODO: there should be a fix on the client-side to handle this error more gracefully,
 				// instead of emitting the client-side instructions from the server response and forcing a reload
 				if (q.terms.length < 3)
@@ -120,11 +120,11 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	}
 
 	/* remove term with a sample2value map of size 0 from term2sample2value
-    such term will cause all samples to be dropped from clustering plot
-    this has two practical applications with gdc:
-    1. local testing with gdc using inconsistent gencode versions (gdc:36). for some genes local will use a geneid not found in gdc and cause issue for clustering
-    2. somehow in v36 genedb there can still be geneid not in gdc. this helps avoid app crashing in gdc environment
-    */
+such term will cause all samples to be dropped from clustering plot
+this has two practical applications with gdc:
+1. local testing with gdc using inconsistent gencode versions (gdc:36). for some genes local will use a geneid not found in gdc and cause issue for clustering
+2. somehow in v36 genedb there can still be geneid not in gdc. this helps avoid app crashing in gdc environment
+*/
 	const noValueTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {

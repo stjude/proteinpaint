@@ -54,7 +54,7 @@ export async function classifyGeneSetDataType(
 					type: 'string',
 					enum: ['ssGSEA', 'geneVariant', 'geneExpression', 'ambiguous'],
 					description:
-						'"ssGSEA" if the user is asking about per-sample enrichment scores for the gene set; "geneVariant" if the user is asking about variants/mutations of the genes in the gene set; ; "geneExpression" if the user is asking about expression/upregulation/downregulation of the genes in the gene set; "ambiguous" if the intent is not clear.'
+						'"ssGSEA" if the user is asking about per-sample enrichment scores for the gene set; "geneVariant" if the user is asking about variants/mutations of the genes in the gene set; "geneExpression" if the user is asking about expression/upregulation/downregulation of the genes in the gene set; "ambiguous" if the intent is not clear.'
 				}
 			},
 			required: ['geneSet', 'dataType'],
@@ -151,8 +151,8 @@ Response: {"geneSet":"23sdcwsd_dewd","dataType":"ambiguous"}
 
 Example 13 (ambiguous — both kinds of triggers in same prompt):
 User prompt: "show enrichment and mutations for sdcsc_65454cwd
-Geneset: HALLMARK_P53_PATHWAY
-Response: {"geneSet":"sdcsc_65454cwd,"dataType":"ambiguous"}
+Geneset: sdcsc_65454cwd
+Response: {"geneSet":"sdcsc_65454cwd","dataType":"ambiguous"}
 
 User prompt: "${user_prompt}"
 Geneset: ${geneset}
@@ -183,7 +183,6 @@ Response:`
 		mayLog('classifyGeneSetDataType: unexpected dataType in LLM response:', result.dataType)
 		result.dataType = 'ambiguous'
 	}
-	console.log('classifyGeneSetDataType: LLM response parsed successfully:', result)
 	return result
 }
 
