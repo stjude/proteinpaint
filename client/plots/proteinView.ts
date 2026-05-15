@@ -1,7 +1,7 @@
 import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { axisstyle, to_svg } from '#src/client'
-import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions } from '#dom'
+import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions, make_radios } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
 import { axisBottom, axisLeft, scaleLinear, rgb, select, creator } from 'd3'
@@ -181,53 +181,26 @@ class ProteinView extends PlotBase implements RxComponent {
 			.style('align-items', 'center')
 			.style('gap', '6px')
 		modeToggle.append('span').style('color', '#6b7280').text('Mode:')
-		const modeSwitch = modeToggle
-			.append('div')
-			.attr('role', 'radiogroup')
-			.attr('aria-label', 'Isoform view mode')
-			.style('display', 'inline-flex')
-			.style('border', '1px solid #d1d5db')
-			.style('border-radius', '3px')
-			.style('overflow', 'hidden')
-		const setMode = (asCompare: boolean) => {
-			if (asCompare === compareMode) return
-			compareMode = asCompare
-			singleOpt
-				.style('background', compareMode ? 'transparent' : '#2563eb')
-				.style('color', compareMode ? '#374151' : '#fff')
-				.attr('aria-checked', String(!compareMode))
-			compareOpt
-				.style('background', compareMode ? '#2563eb' : 'transparent')
-				.style('color', compareMode ? '#fff' : '#374151')
-				.attr('aria-checked', String(compareMode))
-			if (!compareMode && selectedKeys.size > 1) {
-				const first = selectedKeys.values().next().value as string
-				selectedKeys.clear()
-				selectedKeys.add(first)
+		make_radios({
+			holder: modeToggle.append('div').attr('aria-label', 'Isoform view mode'),
+			options: [
+				{ label: 'Single', value: 'single', checked: true },
+				{ label: 'Compare', value: 'compare' }
+			],
+			styles: { display: 'inline-block' },
+			callback: (value: string) => {
+				const asCompare = value === 'compare'
+				if (asCompare === compareMode) return
+				compareMode = asCompare
+				if (!compareMode && selectedKeys.size > 1) {
+					const first = selectedKeys.values().next().value as string
+					selectedKeys.clear()
+					selectedKeys.add(first)
+				}
+				renderSidebar()
+				void renderRight()
 			}
-			renderSidebar()
-			void renderRight()
-		}
-		const makeModeOption = (label: string, asCompare: boolean) =>
-			modeSwitch
-				.append('span')
-				.attr('role', 'radio')
-				.attr('aria-checked', String(asCompare === compareMode))
-				.attr('tabindex', '0')
-				.style('padding', '2px 8px')
-				.style('cursor', 'pointer')
-				.style('background', asCompare === compareMode ? '#2563eb' : 'transparent')
-				.style('color', asCompare === compareMode ? '#fff' : '#374151')
-				.text(label)
-				.on('click', () => setMode(asCompare))
-				.on('keydown', function (event: KeyboardEvent) {
-					if (event.key === 'Enter' || event.key === ' ') {
-						event.preventDefault()
-						setMode(asCompare)
-					}
-				})
-		const singleOpt = makeModeOption('Single', false)
-		const compareOpt = makeModeOption('Compare', true)
+		})
 
 		const sidebarList = sidebar.append('div')
 		const sectionsByOrganism = new Map<string, LollipopSection[]>()
