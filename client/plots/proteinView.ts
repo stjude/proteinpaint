@@ -211,6 +211,9 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const radiusScale = scaleLinear()
 		.domain([minTestedN, Math.max(minTestedN + 1, maxTestedN)])
 		.range(radiusRange)
+	let scaleDotSize = true
+	const getDotRadius = (d: any) =>
+		scaleDotSize ? radiusScale(Math.max(minTestedN, d.testedN || minTestedN)) : (radiusRange[0] + radiusRange[1]) / 2
 
 	const organismNames = [...new Set(dots.map((d: any) => d.organismName).filter(Boolean))].sort() as string[]
 	const assayNames = [...new Set(dots.map((d: any) => d.assayName))].sort() as string[]
@@ -419,7 +422,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		return prioritizedShapesArray[index]
 	}
 	const getShapeTransform = (d: any, sizeScale = 1) => {
-		const r = radiusScale(Math.max(minTestedN, d.testedN || minTestedN)) * sizeScale
+		const r = getDotRadius(d) * sizeScale
 		const scale = r / 8
 		const x = xScale(d.log2fc) - 8 * scale
 		const y = yScale(d.score) - 8 * scale
@@ -706,7 +709,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		// Function form because the size-legend menu mutates radiusRange at runtime;
 		// caching this once would leave the broad-query stale after dots are enlarged.
 		hitRadius: () => radiusRange[1] + COHORT_VOLCANO_HIT_RADIUS_PADDING_PX,
-		perDotRadius: (d: any) => radiusScale(Math.max(minTestedN, d.testedN || minTestedN)),
+		perDotRadius: (d: any) => getDotRadius(d),
 		perDotBuffer: COHORT_VOLCANO_HIT_BUFFER_PX,
 		isHidden: isDotHidden,
 		getCluster: (seed: any) => getClusterDots(seed),
@@ -814,13 +817,46 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const sizeLegendRow = legend
 		.append('div')
 		.style('display', 'flex')
-		.style('align-items', 'flex-start')
-		.style('gap', '8px')
+		.style('flex-direction', 'column')
+		.style('gap', '6px')
 		.style('margin-top', '8px')
 
-	sizeLegendRow.append('span').style('display', 'inline-block').style('margin-top', '42px').text('Case sample size')
+	sizeLegendRow.append('div').style('border-top', '1px solid #e5e7eb').style('margin', '8px 0 8px 0')
+
+	const sizeModeRow = sizeLegendRow
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('gap', '4px')
+		.style('flex-wrap', 'wrap')
+
+	const sizeToggleCheckbox = sizeModeRow
+		.append('input')
+		.attr('type', 'checkbox')
+		.property('checked', scaleDotSize)
+		.style('cursor', 'pointer')
+		.style('margin', '0')
+		.on('change', function (this: HTMLInputElement) {
+			scaleDotSize = this.checked
+			sizeModeText.style('opacity', scaleDotSize ? 1 : 0.4)
+			legendSvg.style('opacity', scaleDotSize ? 1 : 0.4)
+			updateDots()
+			renderSizeLegend()
+		})
+	void sizeToggleCheckbox
+
+	const sizeModeText = sizeModeRow.append('span').style('display', 'inline-flex').style('gap', '6px')
+	sizeModeText.append('span').text('Scale by')
+	sizeModeText
+		.append('span')
+		.text('Case sample size')
+		.style('font-weight', '600')
+		.style('text-decoration', 'underline')
+		.style('color', '#111')
+	sizeModeText.style('opacity', scaleDotSize ? 1 : 0.4)
 
 	const legendSvg = sizeLegendRow.append('svg').attr('width', 190).attr('height', 110).style('display', 'block')
+	legendSvg.style('opacity', scaleDotSize ? 1 : 0.4)
 
 	function renderColorLegend() {
 		colorLegendDiv.selectAll('*').remove()
