@@ -1,5 +1,6 @@
 import type { RoutePayload } from './routeApi.js'
 import type { DERequest } from './termdb.DE.js'
+import type { DiffMethRequest } from './termdb.diffMeth.js'
 
 export type GenesetEnrichmentRequest = {
 	/** Sample genes to be queried. Optional when `cacheId` is given — the
@@ -23,7 +24,7 @@ export type GenesetEnrichmentRequest = {
 	 * seen this request), the server uses this to recompute and rewrite
 	 * the cache. Without this field, a cache miss is unrecoverable.
 	 * This mirrors the partial DE payload shape sent by clients. */
-	daRequest?: Partial<DERequest>
+	daRequest?: Partial<DERequest> | Partial<DiffMethRequest>
 	fetchDE?: boolean
 	/** Filter non-coding genes */
 	filter_non_coding_genes: boolean

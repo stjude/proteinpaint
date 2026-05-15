@@ -15,6 +15,16 @@ import {
 } from '#src/utils/sampleGroups.ts'
 import type { DeCacheResult } from './types.ts'
 
+/*
+ * Cache flow (uniform across the four cacheOrRecompute consumers):
+ *   init  →  xKeyInputs  →  getXCacheResult  →  cacheOrRecompute  →  runXFresh
+ *
+ *   DE:    init → loadDeForResponse → getDeCacheResult → runDeFresh
+ *
+ * Within this file the function order mirrors that flow:
+ *   init → deKeyInputs → loadDeForResponse → getDeCacheResult → runDeFresh → helpers
+ */
+
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
 	methods: {
@@ -72,11 +82,7 @@ function init({ genomes }) {
 }
 
 /** The subset of a DERequest that determines the cache identity. Passed
- * to cacheOrRecompute as the computeArgument. storage_type is excluded:
- * it is dataset-pinned (derived from ds.queries.rnaseqGeneCount at
- * request time, not sent by the client) and `dslabel` already identifies
- * the dataset that determines it. Rendering parameters are excluded
- * because changing them does not change the DE result. */
+ * to cacheOrRecompute as the computeArgument. */
 function deKeyInputs(req: DERequest) {
 	return {
 		genome: req.genome,
@@ -120,58 +126,16 @@ export async function getDeCacheResult(
 	req: DERequest,
 	genomes: any
 ): Promise<{ result: DeCacheResult; cacheId: string }> {
+	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof deKeyInputs>, DeCacheResult>({
 		computeArgument: deKeyInputs(req),
 		cacheSubdir: 'de',
-		computeFresh: async (_args, _id, file) => {
+		computeFresh: async ({ cacheFilePath }) => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDeFresh(req, ds, term_results, term_results2, file)
+			return runDeFresh(req, ds, term_results, term_results2, cacheFilePath)
 		}
 	})
 	return { result, cacheId }
-}
-
-/** Resolve the two sample groups + any confounder value arrays for DE.
- * Wraps the shared `buildGroupValues` with DE-specific dataset query
- * lookup and engineer-facing alert messages. */
-export function resolveSampleGroups(param: DERequest, ds: any, term_results: any, term_results2: any): SampleGroups {
-	if (param.samplelst?.groups?.length != 2) throw new Error('.samplelst.groups.length!=2')
-	if (param.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
-	if (param.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
-
-	const q = ds.queries.rnaseqGeneCount
-	if (!q) throw new Error('rnaseqGeneCount query missing on ds')
-	if (!q.file) throw new Error('unknown data type for rnaseqGeneCount')
-	if (!q.storage_type) throw new Error('storage_type is not defined')
-
-	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
-	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
-
-	const alerts: string[] = []
-	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')
-	if (g2.names.length < 1) alerts.push('sample size of group2 < 1')
-	const commonnames = g1.names.filter(x => g2.names.includes(x))
-	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.join(', ')}`)
-
-	return {
-		group1names: g1.names,
-		group2names: g2.names,
-		conf1_group1: g1.conf1,
-		conf1_group2: g2.conf1,
-		conf2_group1: g1.conf2,
-		conf2_group2: g2.conf2,
-		alerts
-	}
-}
-
-/** Wrap a base64 PNG string from R into the `DEImage` shape the client
- * consumes. Returns null if R didn't emit the field (e.g. MDS was
- * skipped because the read counts matrix exceeded `mds_cutoff`). */
-function deImageFromB64(b64: string | undefined, key: string): DEImage | null {
-	if (!b64) return null
-	const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0
-	const size = Math.floor((b64.length * 3) / 4) - padding
-	return { src: `data:image/png;base64,${b64}`, size, key }
 }
 
 /** Run DE fresh and write the JSON cache result to `cacheFile`.
@@ -260,4 +224,49 @@ async function runDeFresh(
 	}
 	await writeJsonCache(cacheFile, cacheResult)
 	return cacheResult
+}
+
+// ─── helpers ─── //
+
+/** Resolve the two sample groups + any confounder value arrays for DE.
+ * Wraps the shared `buildGroupValues` with DE-specific dataset query
+ * lookup and engineer-facing alert messages. */
+export function resolveSampleGroups(param: DERequest, ds: any, term_results: any, term_results2: any): SampleGroups {
+	if (param.samplelst?.groups?.length != 2) throw new Error('.samplelst.groups.length!=2')
+	if (param.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
+	if (param.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
+
+	const q = ds.queries.rnaseqGeneCount
+	if (!q) throw new Error('rnaseqGeneCount query missing on ds')
+	if (!q.file) throw new Error('unknown data type for rnaseqGeneCount')
+	if (!q.storage_type) throw new Error('storage_type is not defined')
+
+	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
+	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
+
+	const alerts: string[] = []
+	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')
+	if (g2.names.length < 1) alerts.push('sample size of group2 < 1')
+	const commonnames = g1.names.filter(x => g2.names.includes(x))
+	if (commonnames.length) alerts.push(`Common elements found between both groups: ${commonnames.join(', ')}`)
+
+	return {
+		group1names: g1.names,
+		group2names: g2.names,
+		conf1_group1: g1.conf1,
+		conf1_group2: g2.conf1,
+		conf2_group1: g1.conf2,
+		conf2_group2: g2.conf2,
+		alerts
+	}
+}
+
+/** Wrap a base64 PNG string from R into the `DEImage` shape the client
+ * consumes. Returns null if R didn't emit the field (e.g. MDS was
+ * skipped because the read counts matrix exceeded `mds_cutoff`). */
+function deImageFromB64(b64: string | undefined, key: string): DEImage | null {
+	if (!b64) return null
+	const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0
+	const size = Math.floor((b64.length * 3) / 4) - padding
+	return { src: `data:image/png;base64,${b64}`, size, key }
 }

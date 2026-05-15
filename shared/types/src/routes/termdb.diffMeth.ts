@@ -2,6 +2,10 @@ import type { RoutePayload } from './routeApi.js'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
 export type DiffMethRequest = {
+	/** Discriminator tag. Matches the `kind` field on `DmCacheResult` and
+	 * lets the GSEA route tell a snapshot DM request apart from a snapshot
+	 * DE request without structural-shape probing. */
+	kind: 'DM'
 	/** Genome build name */
 	genome: string
 	/** Dataset label */

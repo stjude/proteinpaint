@@ -54,6 +54,7 @@ export class VolcanoModel {
 		await this.getOtherSamples(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {
+			kind: 'DE',
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			method: this.settings.method,
@@ -76,6 +77,7 @@ export class VolcanoModel {
 		await this.getOtherSamples(this.config.samplelst)
 		const state = this.app.getState()
 		const body = {
+			kind: 'DM',
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			samplelst: this.config.samplelst,
