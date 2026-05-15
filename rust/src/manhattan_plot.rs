@@ -7,7 +7,7 @@ use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
 use std::error::Error;
 use std::fs::File;
-use std::io::{self, BufRead, BufReader};
+use std::io::{self, BufReader};
 use tiny_skia::{FillRule, PathBuilder, Pixmap, Transform};
 
 // Define the JSON input structure
@@ -250,7 +250,22 @@ fn cumulative_chrom(
     Ok((chrom_data, cumulative_pos, sorted_chroms))
 }
 
-// Function to read the GRIN2 file
+// Envelope JSON written by the server (Grin2Envelope). Rust only needs
+// the geneHits rows from resultData; serde ignores other fields.
+#[derive(Deserialize)]
+struct Grin2Envelope {
+    #[serde(rename = "resultData")]
+    result_data: Grin2ResultData,
+}
+
+#[derive(Deserialize)]
+struct Grin2ResultData {
+    #[serde(rename = "geneHits")]
+    gene_hits: Vec<HashMap<String, serde_json::Value>>,
+}
+
+// Function to read the GRIN2 envelope JSON (grin2/{cacheid}.json) and
+// extract per-gene-per-mutation-type points for the Manhattan plot.
 fn grin2_file_read(
     grin2_file: &str,
     chrom_data: &HashMap<String, ChromInfo>,
@@ -281,59 +296,16 @@ fn grin2_file_read(
     let mut sig_indices: Vec<usize> = Vec::new();
     let mut zero_q_indices: Vec<usize> = Vec::new();
 
-    let grin2_file = File::open(grin2_file).expect("Failed to open grin2_result_file");
-    let mut reader = BufReader::new(grin2_file);
-    // get the first line (header line)
-    let mut header_line = String::new();
-    reader
-        .read_line(&mut header_line)
-        .expect("Failed to read the first line of grin2_result_file");
-    let header: Vec<String> = header_line
-        .trim_end()
-        .split('\t')
-        .map(|s| s.trim().to_string())
-        .collect();
+    let f = File::open(grin2_file).expect("Failed to open grin2 envelope file");
+    let envelope: Grin2Envelope =
+        serde_json::from_reader(BufReader::new(f)).expect("Failed to parse grin2 envelope JSON");
+    let gene_hits = envelope.result_data.gene_hits;
 
-    // define the mutation types from the header of grin2 result file
     let mutation_types = ["gain", "loss", "mutation", "fusion", "sv"];
-    let mut mutation_indices: HashMap<&str, (usize, Option<usize>)> = HashMap::new();
-    for name in &mutation_types {
-        let q_col = format!("q.nsubj.{name}");
-        let n_col = format!("nsubj.{name}");
-        if let Some(q_idx) = header.iter().position(|h| h == &q_col) {
-            let n_idx = header.iter().position(|h| h == &n_col);
-            mutation_indices.insert(*name, (q_idx, n_idx));
-        }
-    }
 
-    // extract the index for each required info
-    let chrom_idx = header
-        .iter()
-        .position(|h| h == "chrom")
-        .expect("Missing 'chrom' column");
-    let gene_idx = header.iter().position(|h| h == "gene").expect("Missing 'gene' column");
-    let loc_start_idx = header
-        .iter()
-        .position(|h| h == "loc.start")
-        .expect("Missing 'loc.start' column");
-    let loc_end_idx = header
-        .iter()
-        .position(|h| h == "loc.end")
-        .expect("Missing 'loc.end' column");
-
-    // loop all lines
     let mut mut_num: usize = 0;
-    for line_result in reader.lines() {
-        let line = match line_result {
-            Ok(l) => l,
-            Err(e) => {
-                eprintln!("Error reading line: {}", e);
-                continue;
-            }
-        };
-
-        let fields: Vec<&str> = line.trim_end().split('\t').collect();
-        let chrom = match fields.get(chrom_idx).map(|s| s.trim()) {
+    for row in &gene_hits {
+        let chrom = match row.get("chrom").and_then(|v| v.as_str()) {
             Some(s) if !s.is_empty() => s,
             _ => continue,
         };
@@ -341,30 +313,21 @@ fn grin2_file_read(
             Some(info) => info,
             None => continue,
         };
-        let gene_name = fields.get(gene_idx).unwrap_or(&"").to_string();
-        let loc_start_str = match fields.get(loc_start_idx).map(|s| s.trim()) {
-            Some(s) if !s.is_empty() => s,
-            _ => continue,
+        let gene_name = row.get("gene").and_then(|v| v.as_str()).unwrap_or("").to_string();
+        let gene_start: u64 = match row.get("loc.start").and_then(|v| v.as_u64()) {
+            Some(n) => n,
+            None => continue,
         };
-        let gene_start: u64 = loc_start_str
-            .parse()
-            .unwrap_or_else(|_| panic!("Invalid integer for loc.start: '{}' in line: {}", loc_start_str, line));
-        let loc_end_str = match fields.get(loc_end_idx).map(|s| s.trim()) {
-            Some(s) if !s.is_empty() => s,
-            _ => continue,
+        let gene_end: u64 = match row.get("loc.end").and_then(|v| v.as_u64()) {
+            Some(n) => n,
+            None => continue,
         };
-        let gene_end: u64 = loc_end_str
-            .parse()
-            .unwrap_or_else(|_| panic!("Invalid integer for loc.end: '{}' in line: {}", loc_end_str, line));
-        let x_pos = chrom_info.start + gene_start as u64;
+        let x_pos = chrom_info.start + gene_start;
 
-        for (mtype, (q_idx, n_idx_opt)) in &mutation_indices {
-            let q_val_str = match fields.get(*q_idx) {
-                Some(q) => q,
-                None => continue,
-            };
-            let original_q_val: f64 = match q_val_str.parse() {
-                Ok(v) if v >= 0.0 => v,
+        for mtype in &mutation_types {
+            let q_key = format!("q.nsubj.{mtype}");
+            let original_q_val: f64 = match row.get(&q_key).and_then(|v| v.as_f64()) {
+                Some(v) if v >= 0.0 => v,
                 _ => continue,
             };
 
@@ -377,9 +340,8 @@ fn grin2_file_read(
                 -original_q_val.log10()
             };
 
-            let n_subj_count: Option<i64> = n_idx_opt
-                .and_then(|i| fields.get(i))
-                .and_then(|s| s.parse::<i64>().ok());
+            let n_key = format!("nsubj.{mtype}");
+            let n_subj_count: Option<i64> = row.get(&n_key).and_then(|v| v.as_i64());
             let color = colors.get(*mtype).unwrap_or(&"#888888".to_string()).clone();
             // Add to plotting vectors
             xs.push(x_pos);

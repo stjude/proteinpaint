@@ -6,11 +6,11 @@ import serverconfig from '#src/serverconfig.js'
 import {
 	cacheFilePath,
 	cacheOrRecompute,
-	canonicalizeSamplelst,
 	generateHash,
 	stableStringify,
 	writeJsonCache
 } from '#src/utils/cacheOrRecompute.ts'
+import { canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
 
 /** Tests for the generic cache-or-recompute module. We use the existing
  * `de` subdir under serverconfig.cachedir (the test harness points
@@ -24,7 +24,7 @@ function ensureSubdir() {
 	fs.mkdirSync(SUBDIR_ABS, { recursive: true })
 }
 
-function trackEnvelopePath(cacheId: string) {
+function trackCachePath(cacheId: string) {
 	writtenFiles.push(path.join(SUBDIR_ABS, `${cacheId}.json`))
 }
 
@@ -68,7 +68,7 @@ tape('canonicalizeSamplelst sorts values by sampleId', t => {
 	t.end()
 })
 
-tape('first call: miss → computeFresh runs → fromCache:false; second call: hit', async t => {
+tape('first call: miss → computeFresh runs; second call: hit, no recompute', async t => {
 	ensureSubdir()
 	const tag = crypto.randomBytes(8).toString('hex')
 	const args = { tag, kind: 'miss-then-hit' }
@@ -81,19 +81,17 @@ tape('first call: miss → computeFresh runs → fromCache:false; second call: h
 			computeCount++
 			const env = { kind: 'TEST', payload: 'fresh-result', tag }
 			await writeJsonCache(file, env)
-			trackEnvelopePath(_id)
+			trackCachePath(_id)
 			return env
 		}
 	}
 
 	const r1 = await cacheOrRecompute(opts)
-	t.equal(r1.fromCache, false, 'first call is a miss')
 	t.equal(computeCount, 1, 'computeFresh ran exactly once on first call')
 	t.equal(r1.result.payload, 'fresh-result', 'returned payload from computeFresh')
 
 	const r2 = await cacheOrRecompute(opts)
-	t.equal(r2.fromCache, true, 'second call is a hit')
-	t.equal(computeCount, 1, 'computeFresh did not run on second call')
+	t.equal(computeCount, 1, 'computeFresh did not run on second call (hit)')
 	t.equal(r2.cacheId, r1.cacheId, 'same cacheId across calls with same args')
 
 	cleanup()
@@ -118,7 +116,7 @@ tape('100 concurrent same-input calls dedup to one computeFresh (conference-room
 			computeCount++
 			const env = { kind: 'TEST', payload: 'fresh', tag }
 			await writeJsonCache(file, env)
-			trackEnvelopePath(_id)
+			trackCachePath(_id)
 			return env
 		}
 	}
@@ -132,12 +130,6 @@ tape('100 concurrent same-input calls dedup to one computeFresh (conference-room
 	t.ok(
 		results.every(r => r.cacheId === results[0].cacheId),
 		'all callers share the same cacheId'
-	)
-	// First caller resolves with fromCache:false; the rest attach to the same
-	// promise so they share that same value (this is documented behavior).
-	t.ok(
-		results.every(r => r.fromCache === false),
-		'attached callers share the resolution of the in-flight promise'
 	)
 
 	cleanup()
@@ -168,7 +160,6 @@ tape('corrupted JSON file is treated as a miss and recomputed', async t => {
 	})
 
 	t.equal(computeCount, 1, 'computeFresh ran because JSON.parse failed on the corrupt file')
-	t.equal(result.fromCache, false, 'corrupted file reported as a miss')
 	t.equal(result.result.payload, 'recovered', 'fresh result is returned')
 
 	// Confirm the corrupt file was overwritten with valid JSON.
@@ -179,11 +170,10 @@ tape('corrupted JSON file is treated as a miss and recomputed', async t => {
 	t.end()
 })
 
-tape('caller can evict a stale envelope by unlinking before recompute', async t => {
-	// Pattern used by GRIN2/GSEA when a cross-process sibling artifact
-	// (.python.txt, .pkl) goes missing while the JSON envelope survives:
-	// the caller unlinks the envelope, then calls cacheOrRecompute, which
-	// misses cleanly and runs computeFresh.
+tape('caller can evict a stale cache file by unlinking before recompute', async t => {
+	// Generic eviction-by-unlink capability: a caller can delete the
+	// cache JSON and have the next cacheOrRecompute call miss cleanly
+	// and run computeFresh, without needing the module's cooperation.
 	ensureSubdir()
 	const tag = crypto.randomBytes(8).toString('hex')
 	const args = { tag, kind: 'caller-evict' }
@@ -196,21 +186,19 @@ tape('caller can evict a stale envelope by unlinking before recompute', async t 
 			computeCount++
 			const env = { kind: 'TEST', payload: `v${computeCount}`, tag }
 			await writeJsonCache(f, env)
-			trackEnvelopePath(_id)
+			trackCachePath(_id)
 			return env
 		}
 	}
 
 	const r1 = await cacheOrRecompute(opts)
-	t.equal(r1.fromCache, false, 'first call is a miss')
 	t.equal(computeCount, 1, 'computeFresh ran on first call')
 
-	// Caller-side eviction: unlink the envelope.
+	// Caller-side eviction: unlink the cache file.
 	await fs.promises.unlink(r1.cacheFilePath)
 
 	const r2 = await cacheOrRecompute(opts)
-	t.equal(r2.fromCache, false, 'after caller unlinks, next call is a miss again')
-	t.equal(computeCount, 2, 'computeFresh ran a second time')
+	t.equal(computeCount, 2, 'after caller unlinks, computeFresh ran a second time')
 	t.equal((r2.result as any).payload, 'v2', 'fresh payload from the second compute')
 
 	cleanup()
