@@ -63,3 +63,11 @@ export type GseaCacheResult = {
 	table: GenesetEnrichmentResponse
 	pickleB64: string
 }
+
+/** topve/{cacheid}.json. Self-contained: the list of gene names the
+ * Python topVEgene.py pipeline produced for a given (dslabel, filter,
+ * maxGenes, rank_type, filter_extreme_values) tuple. */
+export type TopVeCacheResult = {
+	kind: 'TOPVE'
+	genes: string[]
+}

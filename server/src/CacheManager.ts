@@ -102,6 +102,11 @@ const defaultOpts = {
 			...subdirOptsDefaults,
 			maxAge: day * 60,
 			skipMs: halfDay
+		},
+		topve: {
+			...subdirOptsDefaults,
+			maxAge: day * 60,
+			skipMs: halfDay
 		}
 		// bam: {
 		//  ...subdirOptsDefaults,

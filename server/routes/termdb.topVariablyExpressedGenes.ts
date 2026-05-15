@@ -3,6 +3,9 @@ import { termdbTopVariablyExpressedGenesPayload } from '#types/checkers'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
+import { formatElapsedTime } from '#shared'
+import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import type { TopVeCacheResult } from './types.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/topVariablyExpressedGenes',
@@ -34,7 +37,7 @@ function init({ genomes }) {
 			result = {
 				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
 			}
-			mayLog('time for top variably expressed genes', Date.now() - t)
+			mayLog('Time for top variably expressed genes', formatElapsedTime(Date.now() - t))
 		} catch (e: any) {
 			result = { status: e.status || 400, error: e.message || e }
 		}
@@ -58,27 +61,48 @@ function nativeValidateQuery(ds: any) {
 	addTopVEarg(ds.queries.topVariablyExpressedGenes)
 
 	ds.queries.topVariablyExpressedGenes.getGenes = async (q: TermdbTopVariablyExpressedGenesRequest) => {
-		// get list of samples that are used in current analysis; gE.samples[] contains all sample integer ids with exp data
-		const samples = [] as string[]
-		const param = { filter: q.filter, filter0: q.filter0 }
-		const limitSamples = await mayLimitSamples(param, gE.samples, ds)
-		if (limitSamples) {
-			// get samples passing filter
-			for (const sid of limitSamples) {
-				const n: string = ds.cohort.termdb.q.id2sampleName(sid)
-				if (!n) throw 'sample id cannot convert to string name'
-				samples.push(n)
+		const { result } = await cacheOrRecompute<ReturnType<typeof topVeKeyInputs>, TopVeCacheResult>({
+			computeArgument: topVeKeyInputs(q),
+			cacheSubdir: 'topve',
+			computeFresh: async ({ cacheFilePath }) => {
+				const samples = await resolveNativeSamples(q, gE, ds)
+				const genes = await computeGenes4nativeDs(q, gE, samples)
+				const cacheResult: TopVeCacheResult = { kind: 'TOPVE', genes }
+				await writeJsonCache(cacheFilePath, cacheResult)
+				return cacheResult
 			}
-		} else {
-			// no filter, use all samples with exp data
-			for (const i of gE.samples) {
-				const n: string = ds.cohort.termdb.q.id2sampleName(i)
-				if (!n) throw 'sample id cannot convert to string name'
-				samples.push(n)
-			}
-		}
-		return await computeGenes4nativeDs(q, gE, samples)
+		})
+		return result.genes
 	}
+}
+
+/** The subset of a TopVE request that determines the cache identity.
+ * Hash raw filter inputs (not resolved sample lists) to keep cache-hit
+ * work to zero — equivalent filters resolving to the same samples just
+ * don't share cache. Mirrors the DE/DM pattern. */
+function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
+	return {
+		genome: q.genome,
+		dslabel: q.dslabel,
+		maxGenes: q.maxGenes,
+		filter_extreme_values:
+			typeof q.filter_extreme_values === 'number' ? Boolean(q.filter_extreme_values) : !!q.filter_extreme_values,
+		rank_type: q.rank_type?.type ?? 'var',
+		filter: (q as any).filter ?? null,
+		filter0: (q as any).filter0 ?? null
+	}
+}
+
+async function resolveNativeSamples(q: TermdbTopVariablyExpressedGenesRequest, gE: any, ds: any): Promise<string[]> {
+	const samples: string[] = []
+	const limitSamples = await mayLimitSamples({ filter: q.filter, filter0: q.filter0 }, gE.samples, ds)
+	const sourceIds = limitSamples ?? gE.samples
+	for (const sid of sourceIds) {
+		const n: string = ds.cohort.termdb.q.id2sampleName(sid)
+		if (!n) throw 'sample id cannot convert to string name'
+		samples.push(n)
+	}
+	return samples
 }
 
 function addTopVEarg(q: any) {
