@@ -101,7 +101,7 @@ export class CreateProjectRender {
 				btn.attr('disabled', true) //Don't allow multiple clicks
 
 				const selections: AIProjectAdminResponse = await this.interactions.getFilteredImages(this.filter)
-				if (this.filter && (selections.status != 'ok' || selections.data?.length === 0)) {
+				if ((this.filter && selections.status !== 'ok') || selections.data?.selectedImages?.length === 0) {
 					alert('No images match your filter criteria.')
 					return
 				}

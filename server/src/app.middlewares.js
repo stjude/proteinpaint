@@ -191,7 +191,7 @@ function setHeaders(req, res, next) {
 	res.header('Vary', 'Origin')
 
 	// limit the allowed request methods for the PP server
-	res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS, HEAD')
+	res.header('Access-Control-Allow-Methods', 'GET, POST,PUT, DELETE, OPTIONS, HEAD')
 
 	const debugtest =
 		serverconfig.debugmode || serverconfig.defaultgenome == 'hg38-test' || serverconfig.features?.loosenCORS
