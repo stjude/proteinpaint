@@ -373,7 +373,7 @@ function setRenderers(self: any) {
 	self.mayshow_cuminc = async (result: any) => {
 		if (!result.cuminc) return
 		const holder = self.newDiv('Cumulative incidence test:' /*, 'p-value = ' + result.cuminc.pvalue*/)
-		const _ = await import('./cuminc')
+		const _ = await import('../cuminc')
 		const plotter = new _.Cuminc({
 			holder,
 			config: {
@@ -1723,7 +1723,7 @@ async function createGenomebrowser(self: any, input: any, resultLst: any[]) {
 			overrideTw.q.start = start
 			overrideTw.q.stop = stop
 			// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
-			const _ = await import('../termsetting/handlers/snplocus')
+			const _ = await import('../../termsetting/handlers/snplocus')
 			await _.fillTW(overrideTw, self.app.vocabApi)
 			/*
 			updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
@@ -1786,7 +1786,7 @@ async function createGenomebrowser(self: any, input: any, resultLst: any[]) {
 	})
 
 	first_genetrack_tolist(self.parent.genomeObj, arg.tklst)
-	const _ = await import('../src/block')
+	const _ = await import('../../src/block')
 	return new _.Block(arg)
 }
 
