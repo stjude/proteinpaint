@@ -269,6 +269,10 @@ class ProteinView extends PlotBase implements RxComponent {
 					}
 					const row = sidebarList
 						.append('div')
+						.attr('role', compareMode ? 'checkbox' : 'radio')
+						.attr('aria-checked', String(isSelected))
+						.attr('aria-label', `${s.organism} ${s.isoform}`)
+						.attr('tabindex', '0')
 						.style('display', 'flex')
 						.style('align-items', 'center')
 						.style('gap', '6px')
@@ -277,10 +281,18 @@ class ProteinView extends PlotBase implements RxComponent {
 						.style('background', isSelected ? '#eff6ff' : 'transparent')
 						.style('cursor', 'pointer')
 						.on('click', toggleSelection)
+						.on('keydown', (event: KeyboardEvent) => {
+							if (event.key === 'Enter' || event.key === ' ') {
+								event.preventDefault()
+								toggleSelection()
+							}
+						})
 					if (compareMode) {
 						row
 							.append('input')
 							.attr('type', 'checkbox')
+							.attr('tabindex', '-1')
+							.attr('aria-hidden', 'true')
 							.property('checked', isSelected)
 							.property('disabled', isSoleSelection)
 							.style('margin', '0')
