@@ -6,7 +6,7 @@ import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 import type { ScatterResponse, ScatterDataResult } from '../scatterTypes'
-import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
+import { noExpColor, expColor } from '../settings/defaults'
 import { ScatterModelBase } from './ScatterModelBase'
 import { getCoordinate } from '#shared'
 //icons have size 16x16
@@ -74,44 +74,6 @@ export class ScatterModel extends ScatterModelBase {
 			if (this.scatter.app.isAbortError(e)) return
 			console.error(e)
 			throw e.message || e
-		}
-	}
-
-	async initRanges() {
-		let samples: any[] = []
-		for (const chart of this.charts) samples = samples.concat(chart.data?.samples || [])
-		if (samples.length > maxSvgSamplesCutoff) this.is2DLarge = true
-		if (samples.length == 0) return
-		const s0 = samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax, zMin, zMax, scaleMin, scaleMax, geMin, geMax] = samples.reduce(
-			(s, d) => [
-				d.x < s[0] ? d.x : s[0],
-				d.x > s[1] ? d.x : s[1],
-				d.y < s[2] ? d.y : s[2],
-				d.y > s[3] ? d.y : s[3],
-				d.z < s[4] ? d.z : s[4],
-				d.z > s[5] ? d.z : s[5],
-				'scale' in d ? (d.scale < s[6] ? d.scale : s[6]) : Number.POSITIVE_INFINITY,
-				'scale' in d ? (d.scale > s[7] ? d.scale : s[7]) : Number.NEGATIVE_INFINITY,
-				'geneExp' in d ? (d.geneExp < s[8] ? d.geneExp : s[8]) : Number.POSITIVE_INFINITY,
-				'geneExp' in d ? (d.geneExp > s[9] ? d.geneExp : s[9]) : Number.NEGATIVE_INFINITY
-			],
-			[s0.x, s0.x, s0.y, s0.y, s0.z, s0.z, s0.scale, s0.scale, s0.geneExp, s0.geneExp]
-		)
-		const settings = this.scatter.settings
-		for (const chart of this.charts) {
-			chart.ranges = {
-				xMin: settings.minXScale != null ? settings.minXScale : settings.useGlobalMinMax ? this.range.xMin : xMin,
-				xMax: settings.maxXScale != null ? settings.maxXScale : settings.useGlobalMinMax ? this.range.xMax : xMax,
-				yMin: settings.minYScale != null ? settings.minYScale : settings.useGlobalMinMax ? this.range.yMin : yMin,
-				yMax: settings.maxYScale != null ? settings.maxYScale : settings.useGlobalMinMax ? this.range.yMax : yMax,
-				zMin,
-				zMax,
-				scaleMin,
-				scaleMax,
-				geMin,
-				geMax
-			}
 		}
 	}
 

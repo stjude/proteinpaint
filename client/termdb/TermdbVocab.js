@@ -1044,6 +1044,16 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb/sampleScatter', { headers, body, signal })
 	}
 
+	async getScatterSingleCellPlotData(opts, signal = undefined) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			...opts
+		}
+		return await this.dofetch3('termdb/singleCellPlots', { headers, body, signal })
+	}
+
 	async getDefaultBins(opts) {
 		// the scatter plot may still render when not in session,
 		// but not have an option to list samples

@@ -53,7 +53,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ScatterView(this)
-		this.model = this.config?.singleCellPlots ? new ScatterSingleCellModel(this) : new ScatterModel(this)
+		this.model = this.config?.singleCellPlot ? new ScatterSingleCellModel(this) : new ScatterModel(this)
 		this.interactivity = new ScatterInteractivity(this)
 		if (this.config.transform) {
 			const scaleRegex = /scale\(([^)]+)\)/

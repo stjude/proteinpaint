@@ -49,6 +49,7 @@ export type SingleCellRange = {
 export type SingleCellPlotDataResult = {
 	colorLegend: ColorLegendEntry[]
 	shapeLegend: ShapeLegendEntry[]
+	/** Returns cell data forrmatted in samples array for the sampleScatter */
 	samples?: Cell[]
 	/** If over the cutoff, will return image instead of sample array */
 	src?: string

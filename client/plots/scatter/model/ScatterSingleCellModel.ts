@@ -39,7 +39,7 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			//To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 			if (reqOpts.coordTWs?.length == 1 && this.scatter.type == 'sampleScatter') return
 
-			const data: TermdbSingleCellPlotsResponse = await this.scatter.app.vocabApi.getScatterData(
+			const data: TermdbSingleCellPlotsResponse = await this.scatter.app.vocabApi.getScatterSingleCellPlotData(
 				reqOpts,
 				this.scatter.api?.getAbortSignal()
 			)
@@ -47,8 +47,17 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			if ('error' in data || !data.result) throw new Error(data['error'] || 'No data received')
 
 			this.createChart('Default', data.result.Default)
-		} catch (e) {
-			throw new Error(`Failed to load single cell plot data: ${e instanceof Error ? e.message : e}`)
+
+			this.range = data.range
+			this.initRanges()
+		} catch (e: any) {
+			if (this.scatter.app.isAbortError(e)) return
+			console.error(e)
+			throw new Error(e.message || e)
 		}
+	}
+
+	processData() {
+		//Empty for now whilst in development.
 	}
 }
