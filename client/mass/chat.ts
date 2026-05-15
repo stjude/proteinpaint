@@ -16,6 +16,9 @@ class MassAiChatBot implements RxComponent {
 	dom!: any
 	state: any
 	id!: string
+	clear: any
+	showTerms: any
+	noResult: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -157,11 +160,11 @@ class MassAiChatBot implements RxComponent {
 
 	addBubble(arg: { msg: string; me?: number }) {
 		/** {
-            msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
-            me: if 1, is me; otherwise is ai
-        }
-            return the created bubble and allow to be modified
-        */
+    msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
+    me: if 1, is me; otherwise is ai
+}
+    return the created bubble and allow to be modified
+*/
 		const bubble = this.dom.bubbleDiv
 			.append('div')
 			.style('padding', '10px')
