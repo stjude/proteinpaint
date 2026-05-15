@@ -112,7 +112,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		} else if (HierTerms.length >= 3 && HierTerms[0].isDictionary) {
 			plotState.plot.dataType = 'numericDictTerm'
 		} else if (HierTerms.length >= 3 && HierTerms[0].type === 'ssGSEA') {
-			plotState.plot.dataType = 'ssgsea'
+			plotState.plot.dataType = 'ssGSEA'
 		}
 
 		const terms: any[] = []
@@ -122,9 +122,6 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 				const term = { id: HierTerm.id, term: tm, q: { mode: 'continuous' } }
 				terms.push(term)
 			} else {
-				if (HierTerm.type === 'ssGSEA') {
-					HierTerm.type = 'ssgsea' // May need to convert the case to match what the plotting function expects
-				}
 				const term = { term: HierTerm }
 				terms.push(term)
 			}

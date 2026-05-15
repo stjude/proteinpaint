@@ -69,12 +69,12 @@ export async function getPlotConfig(opts = {}, app) {
 		const promises = []
 		for (const i of opts.terms) {
 			const tw = i.term ? i : { term: i }
-
 			if (!tw.term.type) {
 				if (
 					config.dataType == TermTypes.GENE_EXPRESSION ||
 					config.dataType == TermTypes.METABOLITE_INTENSITY ||
-					config.dataType == TermTypes.PROTEOME_ABUNDANCE
+					config.dataType == TermTypes.PROTEOME_ABUNDANCE ||
+					config.dataType == TermTypes.SSGSEA
 				) {
 					// set missing term type based on data type
 					tw.term.type = config.dataType
