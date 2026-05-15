@@ -1,6 +1,10 @@
 import type { RoutePayload } from './routeApi.js'
 
 export type DERequest = {
+	/** Discriminator tag. Matches the `kind` field on `DeCacheResult` and
+	 * lets the GSEA route tell a snapshot DE request apart from a snapshot
+	 * DM request without structural-shape probing. */
+	kind: 'DE'
 	/** Genome build name */
 	genome: string
 	/** dataset label */

@@ -13,6 +13,15 @@ import {
 } from '#src/utils/sampleGroups.ts'
 import type { DmCacheResult } from './types.ts'
 
+/*
+ * Cache flow (uniform across the four cacheOrRecompute consumers):
+ *   init  →  xKeyInputs  →  getXCacheResult  →  cacheOrRecompute  →  runXFresh
+ *   DM:    init → getDmCacheResult → runDmFresh
+ *
+ * Within this file the function order mirrors that flow:
+ *   init → dmKeyInputs → getDmCacheResult → runDmFresh → helpers
+ */
+
 export const api: RouteApi = {
 	endpoint: 'termdb/diffMeth',
 	methods: {
@@ -71,8 +80,8 @@ function init({ genomes }) {
 }
 
 /** The subset of a DiffMethRequest that determines the cache identity.
- * Rendering parameters are excluded because changing them does not
- * change the DM result. */
+ * Passed to cacheOrRecompute as the computeArgument.
+ * preAnalysis is also excluded because it short-circuits before any cache lookup happens. */
 function dmKeyInputs(req: DiffMethRequest) {
 	return {
 		genome: req.genome,
@@ -94,59 +103,16 @@ export async function getDmCacheResult(
 	req: DiffMethRequest,
 	genomes: any
 ): Promise<{ result: DmCacheResult; cacheId: string }> {
+	// ─── cache lookup or recompute ─── //
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheResult>({
 		computeArgument: dmKeyInputs(req),
 		cacheSubdir: 'dm',
-		computeFresh: async (_args, _id, file) => {
+		computeFresh: async ({ cacheFilePath }) => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDmFresh(req, ds, term_results, term_results2, file)
+			return runDmFresh(req, ds, term_results, term_results2, cacheFilePath)
 		}
 	})
 	return { result, cacheId }
-}
-
-/** Resolve the two sample groups + any confounder value arrays for DM.
- * Wraps the shared `buildGroupValues` with DM-specific dataset query
- * lookup and user-facing alert messages (rendered directly in the
- * volcano UI, vs DE's engineer-facing strings). */
-export function resolveDmSampleGroups(
-	param: DiffMethRequest,
-	ds: any,
-	term_results: any,
-	term_results2: any
-): SampleGroups {
-	if (param.samplelst?.groups?.length != 2)
-		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
-	if (param.samplelst.groups[0].values?.length < 1)
-		throw new Error('Group 1 has no samples. Please select at least one sample.')
-	if (param.samplelst.groups[1].values?.length < 1)
-		throw new Error('Group 2 has no samples. Please select at least one sample.')
-
-	const q = ds.queries.dnaMethylation?.promoter
-	if (!q) throw new Error('This dataset does not have promoter-level methylation data configured.')
-	if (!q.file) throw new Error('Promoter methylation data file is not configured for this dataset.')
-
-	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
-	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
-
-	const alerts: string[] = []
-	if (g1.names.length < 1) alerts.push('No samples in group 1 have methylation data available.')
-	if (g2.names.length < 1) alerts.push('No samples in group 2 have methylation data available.')
-	const commonnames = g1.names.filter(x => g2.names.includes(x))
-	if (commonnames.length)
-		alerts.push(
-			`${commonnames.length} sample(s) appear in both groups: ${commonnames.join(', ')}. Please remove duplicates.`
-		)
-
-	return {
-		group1names: g1.names,
-		group2names: g2.names,
-		conf1_group1: g1.conf1,
-		conf1_group2: g2.conf1,
-		conf2_group1: g1.conf2,
-		conf2_group2: g2.conf2,
-		alerts
-	}
 }
 
 type DiffMethInput = {
@@ -204,4 +170,50 @@ async function runDmFresh(
 	}
 	await writeJsonCache(cacheFile, cacheResult)
 	return cacheResult
+}
+
+// ─── helpers ─── //
+
+/** Resolve the two sample groups + any confounder value arrays for DM.
+ * Wraps the shared `buildGroupValues` with DM-specific dataset query
+ * lookup and user-facing alert messages (rendered directly in the
+ * volcano UI, vs DE's engineer-facing strings). */
+export function resolveDmSampleGroups(
+	param: DiffMethRequest,
+	ds: any,
+	term_results: any,
+	term_results2: any
+): SampleGroups {
+	if (param.samplelst?.groups?.length != 2)
+		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
+	if (param.samplelst.groups[0].values?.length < 1)
+		throw new Error('Group 1 has no samples. Please select at least one sample.')
+	if (param.samplelst.groups[1].values?.length < 1)
+		throw new Error('Group 2 has no samples. Please select at least one sample.')
+
+	const q = ds.queries.dnaMethylation?.promoter
+	if (!q) throw new Error('This dataset does not have promoter-level methylation data configured.')
+	if (!q.file) throw new Error('Promoter methylation data file is not configured for this dataset.')
+
+	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
+	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
+
+	const alerts: string[] = []
+	if (g1.names.length < 1) alerts.push('No samples in group 1 have methylation data available.')
+	if (g2.names.length < 1) alerts.push('No samples in group 2 have methylation data available.')
+	const commonnames = g1.names.filter(x => g2.names.includes(x))
+	if (commonnames.length)
+		alerts.push(
+			`${commonnames.length} sample(s) appear in both groups: ${commonnames.join(', ')}. Please remove duplicates.`
+		)
+
+	return {
+		group1names: g1.names,
+		group2names: g2.names,
+		conf1_group1: g1.conf1,
+		conf1_group2: g2.conf1,
+		conf2_group1: g1.conf2,
+		conf2_group2: g2.conf2,
+		alerts
+	}
 }

@@ -77,11 +77,11 @@ tape('first call: miss → computeFresh runs; second call: hit, no recompute', a
 	const opts = {
 		computeArgument: args,
 		cacheSubdir: 'de' as const,
-		computeFresh: async (_a: any, _id: string, file: string) => {
+		computeFresh: async ({ cacheId, cacheFilePath }: { cacheId: string; cacheFilePath: string }) => {
 			computeCount++
 			const env = { kind: 'TEST', payload: 'fresh-result', tag }
-			await writeJsonCache(file, env)
-			trackCachePath(_id)
+			await writeJsonCache(cacheFilePath, env)
+			trackCachePath(cacheId)
 			return env
 		}
 	}
@@ -108,15 +108,15 @@ tape('100 concurrent same-input calls dedup to one computeFresh (conference-room
 	const opts = {
 		computeArgument: args,
 		cacheSubdir: 'de' as const,
-		computeFresh: async (_a: any, _id: string, file: string) => {
+		computeFresh: async ({ cacheId, cacheFilePath }: { cacheId: string; cacheFilePath: string }) => {
 			computeStartCount++
 			// Simulated work — long enough to ensure all 100 callers attach
 			// to the same in-flight promise before it resolves.
 			await new Promise(r => setTimeout(r, 50))
 			computeCount++
 			const env = { kind: 'TEST', payload: 'fresh', tag }
-			await writeJsonCache(file, env)
-			trackCachePath(_id)
+			await writeJsonCache(cacheFilePath, env)
+			trackCachePath(cacheId)
 			return env
 		}
 	}
@@ -151,16 +151,16 @@ tape('corrupted JSON file is treated as a miss and recomputed', async t => {
 	const result = await cacheOrRecompute({
 		computeArgument: args,
 		cacheSubdir: 'de',
-		computeFresh: async (_a, _id, f) => {
+		computeFresh: async ({ cacheFilePath }) => {
 			computeCount++
 			const env = { kind: 'TEST', payload: 'recovered', tag }
-			await writeJsonCache(f, env)
+			await writeJsonCache(cacheFilePath, env)
 			return env
 		}
 	})
 
 	t.equal(computeCount, 1, 'computeFresh ran because JSON.parse failed on the corrupt file')
-	t.equal(result.result.payload, 'recovered', 'fresh result is returned')
+	t.equal((result.result as any).payload, 'recovered', 'fresh result is returned')
 
 	// Confirm the corrupt file was overwritten with valid JSON.
 	const overwritten = JSON.parse(fs.readFileSync(file, 'utf8'))
@@ -182,11 +182,11 @@ tape('caller can evict a stale cache file by unlinking before recompute', async 
 	const opts = {
 		computeArgument: args,
 		cacheSubdir: 'de' as const,
-		computeFresh: async (_a: any, _id: string, f: string) => {
+		computeFresh: async ({ cacheId, cacheFilePath }: { cacheId: string; cacheFilePath: string }) => {
 			computeCount++
 			const env = { kind: 'TEST', payload: `v${computeCount}`, tag }
-			await writeJsonCache(f, env)
-			trackCachePath(_id)
+			await writeJsonCache(cacheFilePath, env)
+			trackCachePath(cacheId)
 			return env
 		}
 	}

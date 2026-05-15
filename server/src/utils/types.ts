@@ -15,12 +15,12 @@ export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	 * subdir so eviction applies. */
 	cacheSubdir: CacheSubdir
 
-	/** Compute fresh and persist the result. Receives the fully resolved
+	/** Compute fresh and persist the result. Receives the resolved
 	 * `cacheFilePath`; the callback is responsible for writing JSON to
 	 * that path (typically via `writeJsonCache(cacheFilePath, result)`).
 	 * All data the response builder needs on a cache hit must be
-	 * contained in the JSON — no on-disk sibling artifacts. */
-	computeFresh: (args: TArgs, cacheId: string, cacheFilePath: string) => Promise<TResult>
+	 * contained in the JSON. */
+	computeFresh: (ctx: { cacheId: string; cacheFilePath: string }) => Promise<TResult>
 }
 
 export type CacheOrRecomputeResult<TResult> = {

@@ -41,6 +41,17 @@ import { exec as execCallback } from 'node:child_process'
  * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
+/*
+ * Cache flow (uniform across the four cacheOrRecompute consumers):
+ *   init  →  xKeyInputs  →  getXCacheResult  →  cacheOrRecompute  →  runXFresh
+ *   GRIN2: init → runGrin2WithLimit → runGrin2 →
+ *          getGrin2CacheResult → runGrin2Fresh, then run_rust plot
+ *
+ * Within this file the function order mirrors that flow:
+ *   init → runGrin2WithLimit → runGrin2 → grin2KeyInputs →
+ *   getGrin2CacheResult → runGrin2Fresh → helpers
+ */
+
 // Constants & types
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
 const GRIN2_MEMORY_BUDGET_MB = 950
@@ -185,25 +196,6 @@ async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request, signal?
 	}
 }
 
-/** Data-determining inputs for the GRIN2 cache key. View/render params
- * (width, height, devicePixelRatio, pngDotRadius, lesionTypeColors,
- * qValueThreshold, logCutoff, maxCappedPoints, hardCap, binSize) are
- * deliberately excluded — they only affect the Rust manhattan_plot output,
- * not the underlying Python statistics. Changing only a render param
- * should still hit the Python cache; changing a data filter should miss. */
-function grin2ComputeArg(req: GRIN2Request) {
-	return {
-		genome: req.genome,
-		dslabel: req.dslabel,
-		filter: req.filter ?? null,
-		snvindelOptions: req.snvindelOptions ?? null,
-		cnvOptions: req.cnvOptions ?? null,
-		fusionOptions: req.fusionOptions ?? null,
-		svOptions: req.svOptions ?? null,
-		maxGenesToShow: req.maxGenesToShow ?? null
-	}
-}
-
 // Building the lesion map to send to python
 function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
 	const lesionTypeMap: Record<string, string> = {}
@@ -242,101 +234,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		chromosomelist[c] = g.majorchr[c]
 	}
 
-	// Track Python-only timing. On a cache hit these stay 0; on a fresh run
-	// they're populated inside the computeFresh closure. `freshCompute`
-	// flips to true iff computeFresh ran — used below to label the
-	// processing/gsea timing rows as "cached" on cache hits.
-	let processingTime = 0
-	let grin2AnalysisTime = 0
-	let freshCompute = false
-
-	const { result: cacheResult, cacheFilePath: cacheFile } = await cacheOrRecompute<
-		ReturnType<typeof grin2ComputeArg>,
-		Grin2CacheResult
-	>({
-		computeArgument: grin2ComputeArg(request),
-		cacheSubdir: 'grin2',
-		computeFresh: async (_args, _cacheId, file) => {
-			freshCompute = true
-			const startTime = Date.now()
-
-			// Step 1: Get samples using cohort infrastructure
-			const samples = await get_samples(
-				request,
-				ds,
-				true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
-			)
-
-			const cohortTime = Date.now() - startTime
-			mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
-
-			if (samples.length === 0) {
-				throw new Error('No samples found matching the provided filter criteria')
-			}
-
-			// Step 2: Process sample data, convert to lesion format, and apply overall lesion cap
-			const processingStartTime = Date.now()
-
-			const { lesions, processing } = await processSampleData(samples, ds, request)
-
-			// Guard against undefined processing summary so eslint doesn't complain
-			if (!processing) throw new Error('Processing summary is missing')
-
-			processingTime = Date.now() - processingStartTime
-			mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
-			mayLog(
-				`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
-					processing?.totalSamples ?? samples.length
-				} samples processed successfully`
-			)
-
-			if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
-				mayLog(`[GRIN2] Warning: ${processing.failedSamples} samples failed to process`)
-			}
-
-			if (lesions.length === 0) {
-				throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
-			}
-
-			// Step 3: Prepare input for Python script. Per-gene rows come back
-			// in the stdout JSON (geneHits) and get embedded in the cache
-			// result — Rust reads them straight from this JSON file, no
-			// sibling file.
-			const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
-
-			const pyInput = {
-				genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
-				chromosomelist,
-				lesion: JSON.stringify(lesions),
-				maxGenesToShow: request.maxGenesToShow,
-				lesionTypeMap: buildLesionTypeMap(availableDataTypes)
-			}
-
-			// Step 4: Run GRIN2 analysis via Python
-			const grin2AnalysisStart = Date.now()
-			const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput), { signal })
-
-			if (pyResult.stderr?.trim()) {
-				mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
-				if (pyResult.stderr.includes('ERROR:')) {
-					throw new Error(`Python script error: ${pyResult.stderr}`)
-				}
-			}
-
-			grin2AnalysisTime = Date.now() - grin2AnalysisStart
-			mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
-
-			const resultData = JSON.parse(pyResult)
-
-			const cacheResult: Grin2CacheResult = {
-				kind: 'GRIN2',
-				resultData,
-				processing
-			}
-			await writeJsonCache(file, cacheResult)
-			return cacheResult
-		}
-	})
+	const {
+		result: cacheResult,
+		cacheFile,
+		freshCompute,
+		processingTime,
+		grin2AnalysisTime
+	} = await getGrin2CacheResult(request, g, ds, chromosomelist, signal)
 
 	const { resultData, processing } = cacheResult
 
@@ -454,6 +358,167 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 
 	return response
 }
+
+/** Data-determining inputs for the GRIN2 cache key. Passed to
+ * cacheOrRecompute as the computeArgument. View/render params (width,
+ * height, devicePixelRatio, pngDotRadius, lesionTypeColors,
+ * qValueThreshold, logCutoff, maxCappedPoints, hardCap, binSize) are
+ * deliberately excluded — they only affect the Rust manhattan_plot
+ * output, not the underlying Python statistics. Changing only a render
+ * param should still hit the Python cache; changing a data filter
+ * should miss. */
+function grin2KeyInputs(req: GRIN2Request) {
+	return {
+		genome: req.genome,
+		dslabel: req.dslabel,
+		filter: req.filter ?? null,
+		snvindelOptions: req.snvindelOptions ?? null,
+		cnvOptions: req.cnvOptions ?? null,
+		fusionOptions: req.fusionOptions ?? null,
+		svOptions: req.svOptions ?? null,
+		maxGenesToShow: req.maxGenesToShow ?? null
+	}
+}
+
+/** Single read-or-recompute entry point for the GRIN2 cache. The Rust
+ * plot step lives in `runGrin2` (always rerun because it depends on
+ * view params not in the cache key) — this wrapper only owns the
+ * Python statistical step. Returns the cache result plus the telemetry
+ * fields the route handler uses to label `fromCache` and the
+ * processing/GRIN2 timing rows. */
+async function getGrin2CacheResult(
+	request: GRIN2Request,
+	g: any,
+	ds: any,
+	chromosomelist: { [key: string]: number },
+	signal?: AbortSignal
+): Promise<{
+	result: Grin2CacheResult
+	cacheId: string
+	cacheFile: string
+	freshCompute: boolean
+	processingTime: number
+	grin2AnalysisTime: number
+}> {
+	// Track Python-only timing. On a cache hit these stay 0; on a fresh
+	// run they're populated inside the computeFresh closure.
+	// `freshCompute` flips to true iff computeFresh ran — used by the
+	// route handler to label the processing/GRIN2 timing rows as
+	// "cached" on cache hits.
+	let processingTime = 0
+	let grin2AnalysisTime = 0
+	let freshCompute = false
+
+	// ─── cache lookup or recompute ─── //
+	const {
+		result,
+		cacheId,
+		cacheFilePath: cacheFile
+	} = await cacheOrRecompute<ReturnType<typeof grin2KeyInputs>, Grin2CacheResult>({
+		computeArgument: grin2KeyInputs(request),
+		cacheSubdir: 'grin2',
+		computeFresh: async ({ cacheFilePath }) => {
+			freshCompute = true
+			const out = await runGrin2Fresh(request, g, ds, chromosomelist, cacheFilePath, signal)
+			processingTime = out.processingTime
+			grin2AnalysisTime = out.grin2AnalysisTime
+			return out.cacheResult
+		}
+	})
+
+	return { result, cacheId, cacheFile, freshCompute, processingTime, grin2AnalysisTime }
+}
+
+/** Compute GRIN2 fresh: pull samples, build lesions, invoke Python,
+ * write the JSON cache result. Returns telemetry alongside the result
+ * so `getGrin2CacheResult` can surface it to the route handler. */
+async function runGrin2Fresh(
+	request: GRIN2Request,
+	g: any,
+	ds: any,
+	chromosomelist: { [key: string]: number },
+	cacheFile: string,
+	signal?: AbortSignal
+): Promise<{ cacheResult: Grin2CacheResult; processingTime: number; grin2AnalysisTime: number }> {
+	const startTime = Date.now()
+
+	// Step 1: Get samples using cohort infrastructure
+	const samples = await get_samples(
+		request,
+		ds,
+		true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
+	)
+
+	const cohortTime = Date.now() - startTime
+	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
+
+	if (samples.length === 0) {
+		throw new Error('No samples found matching the provided filter criteria')
+	}
+
+	// Step 2: Process sample data, convert to lesion format, and apply overall lesion cap
+	const processingStartTime = Date.now()
+
+	const { lesions, processing } = await processSampleData(samples, ds, request)
+
+	// Guard against undefined processing summary so eslint doesn't complain
+	if (!processing) throw new Error('Processing summary is missing')
+
+	const processingTime = Date.now() - processingStartTime
+	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
+	mayLog(
+		`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
+			processing?.totalSamples ?? samples.length
+		} samples processed successfully`
+	)
+
+	if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
+		mayLog(`[GRIN2] Warning: ${processing.failedSamples} samples failed to process`)
+	}
+
+	if (lesions.length === 0) {
+		throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
+	}
+
+	// Step 3: Prepare input for Python script. Per-gene rows come back
+	// in the stdout JSON (geneHits) and get embedded in the cache result —
+	// Rust reads them straight from this JSON file, no sibling file.
+	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
+
+	const pyInput = {
+		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
+		chromosomelist,
+		lesion: JSON.stringify(lesions),
+		maxGenesToShow: request.maxGenesToShow,
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
+	}
+
+	// Step 4: Run GRIN2 analysis via Python
+	const grin2AnalysisStart = Date.now()
+	const pyResult = await run_python('grin2PpWrapper.py', JSON.stringify(pyInput), { signal })
+
+	if (pyResult.stderr?.trim()) {
+		mayLog(`[GRIN2] Python stderr: ${pyResult.stderr}`)
+		if (pyResult.stderr.includes('ERROR:')) {
+			throw new Error(`Python script error: ${pyResult.stderr}`)
+		}
+	}
+
+	const grin2AnalysisTime = Date.now() - grin2AnalysisStart
+	mayLog(`[GRIN2] Python processing took ${formatElapsedTime(grin2AnalysisTime)}`)
+
+	const resultData = JSON.parse(pyResult)
+
+	const cacheResult: Grin2CacheResult = {
+		kind: 'GRIN2',
+		resultData,
+		processing
+	}
+	await writeJsonCache(cacheFile, cacheResult)
+	return { cacheResult, processingTime, grin2AnalysisTime }
+}
+
+// ─── helpers ─── //
 
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
