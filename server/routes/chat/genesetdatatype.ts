@@ -39,10 +39,8 @@ export const GENE_SET_KEYWORDS = [
 export async function classifyGeneSetDataType(
 	user_prompt: string,
 	llm: LlmConfig,
-	genesets: string[]
+	geneset: string
 ): Promise<GeneSetDataTypeResult | MsgToUser> {
-	const genesetList = genesets.join(', ')
-
 	const jsonSchema = JSON.stringify(
 		{
 			$schema: 'http://json-schema.org/draft-07/schema#',
@@ -157,7 +155,7 @@ Geneset: HALLMARK_P53_PATHWAY
 Response: {"geneSet":"sdcsc_65454cwd,"dataType":"ambiguous"}
 
 User prompt: "${user_prompt}"
-Geneset: ${genesetList}
+Geneset: ${geneset}
 Response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)

@@ -133,11 +133,14 @@ async function validateNonDictionaryTypes(
 	const relevant_genesets = extractGenesetsFromPromptNew(phrase, getGenesetNames(genome))
 	if (relevant_genesets.length > 0) {
 		// Similar validation for genesets. If the prompt includes a geneset keyword but no valid geneset is found, we want to return an error message to the user. If a valid geneset is found, we will return null so that the main phrase2entity function can continue processing it as a non-dictionary variable rather than a dictionary variable.
+		if (relevant_genesets.length > 1) {
+			throw 'More than one gene set found in phrase:' + relevant_genesets.join(', ')
+		}
 		const genesetDataTypeMessage: GeneSetDataTypeResult | MsgToUser = (await classifyGeneSetDataTypePhrase(
 			// This function uses an LLM to classify which specific gene-set features (e.g. ssGSEA enrichment score, gene variants of pathway members) are relevant to the user prompt.
 			phrase,
 			llm,
-			relevant_genesets
+			relevant_genesets[0]
 		)) as GeneSetDataTypeResult | MsgToUser
 		mayLog('classifyGeneSetDataTypePhrase result:', genesetDataTypeMessage)
 		// TODO: surface ssGSEA vs geneVariant downstream once consumers know how to handle genesetFeatures.
@@ -183,10 +186,10 @@ async function validateNonDictionaryTypes(
 async function classifyGeneSetDataTypePhrase(
 	phrase: string,
 	llm: LlmConfig,
-	genesets: string[]
+	geneset: string
 ): Promise<GeneSetDataTypeResult | MsgToUser> {
 	// Need to add string search based heuristics here similar to validateNonDictionaryTypes for certain keywords that may indicate ssGSEA vs geneVariant to reduce unnecessary LLM calls, but for now we will just call the LLM directly to classify the geneset data type based on the user prompt.
-	return await classifyGeneSetDataType(phrase, llm, genesets)
+	return await classifyGeneSetDataType(phrase, llm, geneset)
 }
 
 async function inferEntities(
