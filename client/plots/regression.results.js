@@ -139,6 +139,7 @@ export class RegressionResults {
 			includeUnivariate: c.includeUnivariate
 		}
 		opts.filter = this.parent.filter
+		opts.filter0 = this.state.termfilter.filter0
 		return opts
 	}
 

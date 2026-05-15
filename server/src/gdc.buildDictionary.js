@@ -742,7 +742,9 @@ function makeTermdbQueries(ds, id2term) {
 				'summarizeCnvGeneexp',
 				'summarizeMutationSurvival',
 				'summarizeMutationCnv',
-				'summarizeGeneexpSurvival'
+				'summarizeGeneexpSurvival',
+				'regression',
+				'cox'
 			]
 		}
 		const numericTypeCount = {}
