@@ -1,8 +1,8 @@
 import type { LlmConfig } from '@sjcrh/proteinpaint-types'
-import type { Value, DictTerm, GeneTerm } from './entity2termObj.ts'
+import type { Value, DictTerm, GeneSetTerm } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import { parse_dataset_db } from './utils.ts'
+import { parse_dataset_db, getGenesForGeneset } from './utils.ts'
 import { mayLog } from '#src/helpers.ts'
 
 //>>>> Bin Config Types Definitions start
@@ -215,7 +215,8 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 		} else if (
 			termObj.term.type === 'integer' ||
 			termObj.term.type === 'float' ||
-			termObj.term.type === 'geneExpression' // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
+			termObj.term.type === 'geneExpression' ||
+			termObj.term.type === 'ssGSEA' // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
 		) {
 			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
 			if (!numericFilterTerm) {
@@ -412,29 +413,61 @@ Analyze this phrase and return the appropriate JSON object: "${phrase}"
 	return parsed
 }
 
-async function resolveToTw(twValue: Value, llm: LlmConfig) {
+async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
 	// Main objective is to support bin configs
 	if (twValue.type === 'dictionary') {
 		const twValueTerm = twValue.term as DictTerm
 		// If it's a dictionary term and it is categorical, it doesn't support bins?
 		// Check if this assumption is true with Robin/Colleen/Xin
 		if (twValueTerm.type === 'categorical') {
-			return { id: twValueTerm.id, type: 'categorical', q: { mode: 'discrete' } }
+			return { id: twValueTerm.id, type: 'categorical', q: { mode: 'discrete' }, isDictionary: true }
 		} else {
 			// For numeric terms, check if the phrase contains any binning language (e.g. "binned into 5 groups", "divided into quartiles", etc.)
 			const binConfig = await parseBinConfig(twValue.phrase, llm)
 			if (!binConfig) throw new Error(`Failed to parse bin config from phrase: ${twValue.phrase}`)
 			mayLog('Parsed bin config:', JSON.stringify(binConfig))
-			return { id: twValueTerm.id, type: twValueTerm.type, q: binConfig }
+			return { id: twValueTerm.id, type: twValueTerm.type, q: binConfig, isDictionary: true }
 		}
 	} else {
 		if (twValue.type === 'geneExpression') {
-			const twValueTerm = twValue.term as GeneTerm
+			const twValueTerm = twValue.term
+			if ('gene' in twValueTerm && twValueTerm.gene) {
+				return {
+					gene: twValueTerm.gene.toUpperCase(),
+					name: twValueTerm.gene.toUpperCase(),
+					type: twValueTerm.type,
+					q: { mode: 'continuous' }
+				}
+			} else if ('geneSet' in twValueTerm && twValueTerm.geneSet) {
+				const genesForGeneset = getGenesForGeneset(genome, twValueTerm.geneSet)
+				const genes: any[] = []
+				if (!genesForGeneset || genesForGeneset.length === 0) {
+					throw new Error(`No genes found for gene set "${twValueTerm.geneSet}"`)
+				}
+				for (const gene of genesForGeneset) {
+					genes.push({
+						gene: gene.symbol.toUpperCase(),
+						name: gene.symbol.toUpperCase(),
+						type: twValueTerm.type,
+						q: { mode: 'continuous' }
+					})
+				}
+				return {
+					geneSet: genes,
+					name: twValueTerm.geneSet,
+					type: twValueTerm.type
+				}
+			} else {
+				throw new Error(
+					`Invalid geneExpression term: missing gene or geneSet field in geneExpression term for phrase "${twValue.phrase}"`
+				)
+			}
+		} else if (twValue.type === 'ssGSEA') {
+			const twValueTerm = twValue.term as GeneSetTerm
 			return {
-				gene: twValueTerm.gene.toUpperCase(),
-				name: twValueTerm.gene.toUpperCase(),
-				type: twValueTerm.type,
-				q: { mode: 'continuous' }
+				id: twValueTerm.geneSet.toUpperCase(),
+				name: twValueTerm.geneSet.toUpperCase(),
+				type: twValueTerm.type
 			}
 		}
 	}
@@ -444,7 +477,8 @@ export async function resolveToTwTvs(
 	entity: Record<string, Value | Value[] | string | undefined>,
 	plotType: string,
 	llm: LlmConfig,
-	dbPath: string
+	dbPath: string,
+	genome: any
 ) {
 	if (!entity) throw new Error('Undefined entity provided')
 
@@ -464,7 +498,7 @@ export async function resolveToTwTvs(
 			// For other keys (tw1, tw2, tw3), we expect a single Term in the array
 			const twValue = value as Value | undefined
 			if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
-			const termWrapper = await resolveToTw(twValue, llm)
+			const termWrapper = await resolveToTw(twValue, llm, genome)
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
 		}
@@ -482,9 +516,9 @@ export async function resolveToTwTvs(
 		if (!DictValues || DictValues.length === 0) throw new Error('Invalid Dict term entity for hierCluster')
 		const DictTws: any[] = []
 		for (const gv of DictValues) {
-			const tw = await resolveToTw(gv, llm)
+			const tw = await resolveToTw(gv, llm, genome)
 			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
-			if (tw.type != 'float' && tw.type != 'integer') {
+			if (tw.type != 'float' && tw.type != 'integer' && tw.type != 'ssGSEA') {
 				return {
 					type: 'text',
 					text: `Only numeric terms can be used in hierarchical clustering. Term "${gv.phrase}" is of type "${tw.type}". Please rephrase your request using only numeric terms for hierarchical clustering.`
@@ -492,7 +526,7 @@ export async function resolveToTwTvs(
 			}
 			DictTws.push(tw)
 		}
-		twTvsObjects['DictPhrases'] = DictTws
+		twTvsObjects['HierTerms'] = DictTws
 
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[]
@@ -519,7 +553,7 @@ export async function resolveToTwTvs(
 				const twLst: any[] = []
 				for (const twValue of twValues) {
 					if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
-					const termWrapper = await resolveToTw(twValue, llm)
+					const termWrapper = await resolveToTw(twValue, llm, genome)
 					if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
 					mayLog(`Resolved term for twLst item:`, JSON.stringify(termWrapper))
 					twLst.push(termWrapper)
@@ -530,7 +564,7 @@ export async function resolveToTwTvs(
 			// For divideBy keys we expect a single Term in the array
 			const twValue = value as Value | undefined
 			if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
-			const termWrapper = await resolveToTw(twValue, llm)
+			const termWrapper = await resolveToTw(twValue, llm, genome)
 			if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
@@ -548,7 +582,7 @@ export async function resolveToTwTvs(
 		} else if (entity['colorBy']) {
 			const colorByValue = entity['colorBy'] as Value | undefined
 			if (!colorByValue) throw new Error('Invalid colorBy term entity for prebuiltScatter')
-			const termWrapper = await resolveToTw(colorByValue, llm)
+			const termWrapper = await resolveToTw(colorByValue, llm, genome)
 			if (!termWrapper) throw new Error(`Failed to resolve colorBy term for phrase "${colorByValue.phrase}"`)
 			twTvsObjects['colorBy'] = termWrapper
 		}
@@ -558,7 +592,7 @@ export async function resolveToTwTvs(
 		} else if (entity['shapeBy']) {
 			const shapeByValue = entity['shapeBy'] as Value | undefined
 			if (!shapeByValue) throw new Error('Invalid shapeBy term entity for prebuiltScatter')
-			const termWrapper = await resolveToTw(shapeByValue, llm)
+			const termWrapper = await resolveToTw(shapeByValue, llm, genome)
 			if (!termWrapper) throw new Error(`Failed to resolve shapeBy term for phrase "${shapeByValue.phrase}"`)
 			twTvsObjects['shapeBy'] = termWrapper
 		}
@@ -566,7 +600,7 @@ export async function resolveToTwTvs(
 		if (entity['divideBy']) {
 			const divideByValue = entity['divideBy'] as Value | undefined
 			if (!divideByValue) throw new Error('Invalid divideBy term entity for prebuiltScatter')
-			const termWrapper = await resolveToTw(divideByValue, llm)
+			const termWrapper = await resolveToTw(divideByValue, llm, genome)
 			if (!termWrapper) throw new Error(`Failed to resolve divideBy term for phrase "${divideByValue.phrase}"`)
 			twTvsObjects['divideBy'] = termWrapper
 		}

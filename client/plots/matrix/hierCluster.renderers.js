@@ -11,6 +11,9 @@ export function maySetSandboxHeader(appState) {
 		case TermTypes.METABOLITE_INTENSITY:
 			this.dom.header.text('Metabolite Intensity Clustering')
 			break
+		case TermTypes.SSGSEA:
+			this.dom.header.text('ssGSEA Clustering')
+			break
 		case NUMERIC_DICTIONARY_TERM:
 			this.dom.header.text(
 				this.config.preBuiltPlotTitle

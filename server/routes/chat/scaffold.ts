@@ -17,7 +17,7 @@ import type {
 } from './scaffoldTypes.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 import { classifyGeneDataType } from './genedatatypeagent.ts'
-import { determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
 import { getTermObj, type Value } from './entity2termObj.ts'
 import { resolveToTvs } from './entity2twTvs.ts'
@@ -278,7 +278,7 @@ Always return ONLY a JSON object in this exact format:
  (e.g. "correlation", "distribution", "summary", "comparison") are NOT valid tw1 values — look past these words to the actual variable being analyzed).
 2. tw2 answers "compared across what groups?" — look for prepositions like "between", "across", "by", "among", etc. Use contextual understanding to confirm that it's a grouping variable
 3. tw3 answers "divided/faceted by what?" — look for "divided by", "split by", "per", "for each", "stratified by", etc. Use contextual understanding to confirm that it's a grouping variable
-4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable
+4. Use filter when the user query restricts to a SPECIFIC subgroup (e.g. "in women", "for AML patients", "from X to Y", "where <condition>", etc). Use contextual understanding to confirm that it's a grouping variable. If words such as "subtype", "group" are used, this implies there is a filter term also along with the tw2/tw3 variable.
 5. If tw2 and tw3 are ambiguous, prefer tw2 for binary/categorical comparisons and tw3 for a faceting/panel variable
 6. Its possible a term might be present in both tw1/tw2 as well as filter — for example, "Compare tp53 gene expression between XXX and YYY subtypes" — here the "XXX and YYY subtypes" is relevant to both the grouping variable (tw2) and the filter (restricting to subtypes). In such cases, put "XXX and YYY subtypes" both in tw2 as well as filter. 
 7. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
@@ -296,6 +296,7 @@ Always return ONLY a JSON object in this exact format:
   Output:
   {
     "tw1": "ABCD expression",
+    "tw2": "XXX and YYY subtypes",
     "filter": ["XXX", "YYY"]
   }
 - Query: "Show me the expression of EGFR."
@@ -308,6 +309,23 @@ Always return ONLY a JSON object in this exact format:
   {
 	"tw1": "XYZ",
 	"filter": ["black", "male"]
+  }
+- Query: "show diagnosis groups"
+  Output:
+  {
+	"tw1": "diagnosis groups"
+  }
+- Query: "show ABC and BNG groups"
+  Output:
+  {
+	"tw1": "ABC and BNG groups",
+        "filter": ["ABC group", "BNG group"]
+  }
+- Query: "show IJK and GHT subtypes"
+  Output:
+  {
+	"tw1": "IJK and GHT subtypes",
+	"filter": ["IJK subtype", "GHT subtype"]
   }
 - Query: "Show correlation between age at diagnosis and ancestry."
   Output:
@@ -430,7 +448,7 @@ Query: ${user_prompt}
 			if (!genes_list || !dataset_json || !ds || !dbPath) {
 				throw 'generateFilterTerm requires genes_list, dataset_json, ds, and dbPath to be provided'
 			}
-			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath)
+			filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				return filterTvs as { type: 'text'; text: string }
 			}
@@ -722,11 +740,12 @@ A hierarchical clustering plot clusters samples based on a chosen feature type. 
   - "geneExpression": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
   - "metaboliteIntensity": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
   - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
+  - "ssGSEA": the user wants to cluster on ssGSEA scores for gene sets.
 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary"
+  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "ssGSEA" | "ambiguous"
 }
 
 ## EXAMPLES
@@ -755,6 +774,16 @@ A: { "variableType": "dictionary" }
 Q: "Hierarchical clustering by clinical variables"
 A: { "variableType": "dictionary" }
 
+Q: "Hierarchical clustering of ABC, IGH, and HGT ssGSEA scores"
+A: { "variableType": "ssGSEA" }
+
+Q: "cluster ssGSEA scores from XYZ, PQR, and LMN genesets"
+A: { "variableType": "ssGSEA" }
+
+Q: "cluster hvbjkbvk_gvjhv genes"
+Comment: Not clear what kind of gene (inside the geneset) dataType the user is referring to 
+A: { "variableType": "ambiguous" }
+
 Classify the following query:
 Query: ${user_prompt}
 `
@@ -777,6 +806,12 @@ Query: ${user_prompt}
 				text: 'Hierarchical clustering for gene expression data is not supported because gene expression data is not available for this dataset.'
 			}
 		}
+	}
+	if (variableType === 'ambiguous') {
+		return {
+			type: 'text',
+			text: 'Not clear what gene dataType the user is referring to.'
+		}
 	} else if (variableType === 'metaboliteIntensity') {
 		if (allowedTermTypes.includes('metaboliteIntensity')) {
 			return {
@@ -789,20 +824,30 @@ Query: ${user_prompt}
 				text: 'Hierarchical clustering for metabolite intensity data is not supported because metabolite intensity data is not available for this dataset.'
 			}
 		}
+	} else if (variableType === 'ssGSEA') {
+		if (allowedTermTypes.includes('ssGSEA')) {
+			return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
+		} else {
+			return {
+				type: 'text',
+				text: 'Hierarchical clustering for ssGSEA is not supported because ssGSEA data is not available for this dataset.'
+			}
+		}
 	} else if (variableType === 'dictionary') {
-		return await hierarchicalDictionary(user_prompt, llm, ds, dbPath, genes_list, dataset_json)
+		return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
 	} else {
 		throw new Error(`Unexpected variableType "${variableType}" returned by hierarchical classifier`)
 	}
 }
 
-export async function hierarchicalDictionary(
+export async function hierarchicalDictionaryssGSEA(
 	user_prompt: string,
 	llm: LlmConfig,
 	ds: any,
 	dbPath: string,
 	genes_list: string[],
-	dataset_json: any
+	dataset_json: any,
+	genome: any
 ): Promise<HierarchicalScaffold | MsgToUser> {
 	const prompt = `You are a ProteinPaint hierarchical clustering assistant. Your task is to extract the list of dictionary (clinical) variables and an optional cohort filter from a user's natural language question.
 
@@ -834,6 +879,18 @@ A: {
 Q: "Show a clinical-variable dendrogram for weight, height and lab values"
 A: {
   "hierarchicalPhrases": ["weight", "height", "lab values"]
+}
+
+--- Dendrogram for ssGSEA scores ---
+Q: "Show dendrogram of ssGSEA scores for ABC, PQR, and LMN genesets"
+A: {
+  "hierarchicalPhrases": ["ABC ssGSEA scores", "PQR ssGSEA scores", "LMN ssGSEA scores"]
+}
+
+--- Dendrogram for ssGSEA scores ---
+Q: "Cluster XYZ, VXD and HYT ssGSEA scores"
+A: {
+  "hierarchicalPhrases": ["XYZ ssGSEA scores", "VXD ssGSEA scores", "HYT ssGSEA scores"]
 }
 
 --- Subtype-restricted cluster ---
@@ -877,7 +934,7 @@ Query: ${user_prompt}
 		}
 	} else {
 		if (parsed.filter) {
-			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath)
+			const filterTvs = await generateFilterTerm(parsed.filter, llm, genes_list, dataset_json, ds, dbPath, genome)
 			if (filterTvs && 'type' in filterTvs && filterTvs.type === 'text') {
 				throw new Error(filterTvs.text)
 			}
@@ -940,7 +997,8 @@ async function generateFilterTerm(
 	genes_list: string[],
 	dataset_json: any,
 	ds: any,
-	dbPath: string
+	dbPath: string,
+	genome: any
 ): Promise<any | MsgToUser> {
 	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
 	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
@@ -949,7 +1007,7 @@ async function generateFilterTerm(
 	const filterEntities: Entity[] = []
 	for (const leaf of leafPhrases) {
 		mayLog('generateFilterTerm evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in filterTw && filterTw.type === 'text') {
 			return filterTw as MsgToUser
 		}
@@ -961,7 +1019,7 @@ async function generateFilterTerm(
 	const filterValues: Value[] = []
 	for (const filterTerm of filterEntities) {
 		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
-		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list)
+		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
 		if (!termObj) continue
 		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
 		filterValues.push(termObj)

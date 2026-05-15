@@ -1,7 +1,8 @@
-import type { LlmConfig, GeneDataTypeResult } from '#types'
-import { extractGenesFromPrompt } from './utils.ts'
-import { classifyGeneDataTypePhrase } from './genedatatypeagentnew.ts'
-import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './ambiguousgeneagent.ts'
+import type { LlmConfig, GeneDataTypeResult, GeneSetDataTypeResult } from '#types'
+import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
+import { classifyGeneDataTypePhrase } from './genedatatypenew.ts'
+import { classifyGeneSetDataType, GENE_SET_KEYWORDS } from './genesetdatatype.ts'
+import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
@@ -89,8 +90,9 @@ async function validateNonDictionaryTypes(
 	phrase: string,
 	llm: LlmConfig,
 	genes_list: string[],
-	dataset_json: any
-): Promise<MsgToUser | { geneFeatures: GeneDataTypeResult } | null> {
+	dataset_json: any,
+	genome: any
+): Promise<MsgToUser | { geneFeatures: GeneDataTypeResult } | { geneSetFeatures: GeneSetDataTypeResult } | null> {
 	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
 	const msg: MsgToUser = { type: 'text', text: '' }
 	if (relevant_genes.length > 0) {
@@ -128,14 +130,50 @@ async function validateNonDictionaryTypes(
 			throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
 		}
 	}
-	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, ssGSEA)
+	const relevant_genesets = extractGenesetsFromPromptNew(phrase, getGenesetNames(genome))
+	if (relevant_genesets.length > 0) {
+		// Similar validation for genesets. If the prompt includes a geneset keyword but no valid geneset is found, we want to return an error message to the user. If a valid geneset is found, we will return null so that the main phrase2entity function can continue processing it as a non-dictionary variable rather than a dictionary variable.
+		if (relevant_genesets.length > 1) {
+			throw 'More than one gene set found in phrase:' + relevant_genesets.join(', ')
+		}
+		const genesetDataTypeMessage: GeneSetDataTypeResult | MsgToUser = (await classifyGeneSetDataTypePhrase(
+			// This function uses an LLM to classify which specific gene-set features (e.g. ssGSEA enrichment score, gene variants of pathway members) are relevant to the user prompt.
+			phrase,
+			llm,
+			relevant_genesets[0]
+		)) as GeneSetDataTypeResult | MsgToUser
+		mayLog('classifyGeneSetDataTypePhrase result:', genesetDataTypeMessage)
+		// TODO: surface ssGSEA vs geneVariant downstream once consumers know how to handle genesetFeatures.
+		if ('type' in genesetDataTypeMessage && genesetDataTypeMessage.type === 'text') {
+			return genesetDataTypeMessage
+		} else if ('dataType' in genesetDataTypeMessage && genesetDataTypeMessage.dataType === 'ambiguous') {
+			msg.text =
+				'The intent for geneset "' +
+				genesetDataTypeMessage.geneSet +
+				'" is ambiguous. Please clarify if you are asking about the ssGSEA enrichment score for the geneset, or the gene variants of the genes in the geneset.'
+			return msg
+		} else if ('geneSet' in genesetDataTypeMessage && genesetDataTypeMessage.geneSet) {
+			return { geneSetFeatures: genesetDataTypeMessage }
+		} else {
+			throw 'geneSetDataTypeMessage has unknown data type returned from classifyGeneSetDataType agent'
+		}
+	}
+	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, protein abundance, etc.)
 	else {
-		const NonDictKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, ssGSEA
-		if (NonDictKeyWords.length > 0) {
+		const NonDictGeneKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, protein abundance, etc.
+		if (NonDictGeneKeyWords.length > 0) {
 			msg.text =
 				"Prompt includes keyword(s) such as '" +
-				NonDictKeyWords.join(',') +
+				NonDictGeneKeyWords.join(',') +
 				"' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
+			return msg
+		}
+		const NonDictGeneSetKeyWords = extractGenesFromPrompt(phrase, GENE_SET_KEYWORDS) // Using the same function as extracting genes from a phrase.
+		if (NonDictGeneSetKeyWords.length > 0) {
+			msg.text =
+				"Prompt includes keyword(s) such as '" +
+				NonDictGeneSetKeyWords.join(',') +
+				"' that may refer to a nonDict type (e.g. geneset) but no such term was found in the prompt"
 			return msg
 		}
 		// else if // May go for an LLM based approach if the above string search based method is not sufficient
@@ -145,13 +183,23 @@ async function validateNonDictionaryTypes(
 	}
 }
 
+async function classifyGeneSetDataTypePhrase(
+	phrase: string,
+	llm: LlmConfig,
+	geneset: string
+): Promise<GeneSetDataTypeResult | MsgToUser> {
+	// Need to add string search based heuristics here similar to validateNonDictionaryTypes for certain keywords that may indicate ssGSEA vs geneVariant to reduce unnecessary LLM calls, but for now we will just call the LLM directly to classify the geneset data type based on the user prompt.
+	return await classifyGeneSetDataType(phrase, llm, geneset)
+}
+
 async function inferEntities(
 	phrase: string,
 	llm: LlmConfig,
 	genes_list: string[],
-	dataset_json: any
+	dataset_json: any,
+	genome: any
 ): Promise<Entity | MsgToUser> {
-	const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json)
+	const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json, genome)
 	if (!validatedNonDict) {
 		// No match, probably a dictionary term or a non-dictionary term we don't have a way to validate yet (e.g. ssGSEA score, metabolites, etc.)
 
@@ -172,6 +220,16 @@ async function inferEntities(
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
 		}
+	} else if ('geneSetFeatures' in validatedNonDict) {
+		if (validatedNonDict.geneSetFeatures.dataType === 'ssGSEA') {
+			return { termType: 'ssGSEA', phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneVariant') {
+			return { termType: 'geneVariant', phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneExpression') {
+			return { termType: 'geneExpression', phrase: phrase }
+		} else {
+			throw 'validateNonDictionaryTypes returned an unrecognized geneSetFeatures:' + validatedNonDict.geneSetFeatures
+		}
 	} else {
 		// Should not happen
 		throw (
@@ -186,9 +244,10 @@ export async function phrase2entitytw(
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any,
-	ds: any
+	ds: any,
+	genome: any
 ): Promise<MsgToUser | Entity> {
-	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json)
+	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json, genome)
 	if ('type' in tw1Result && tw1Result.type === 'text') {
 		return tw1Result // MsgToUser
 	}
@@ -452,9 +511,9 @@ Input: black males and white women
 Output: {
 "sexpr": "(&, (&, black, males), (&, white, women))",
 "tree": {
- "op": "&",
- "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
- "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+"op": "&",
+"left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+"right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
 }
 }
 
@@ -476,9 +535,9 @@ Output: {
 "tree": {
 "op": "|",
 "left": {
-  "op": "&",
-  "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
-  "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+"op": "&",
+"left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+"right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
 },
 "right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
 }
@@ -490,9 +549,9 @@ Output: {
 "tree": {
 "op": "&",
 "left": {
-  "op": "|",
-  "left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
-  "right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+"op": "|",
+"left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+"right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
 },
 "right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
 }
@@ -541,13 +600,14 @@ async function parseFilterTree(
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any,
-	ds: any
+	ds: any,
+	genome: any
 ): Promise<MsgToUser | Entity[]> {
 	const entities_result: Entity[] = []
 	const leafPhrases = collectLeaves(filterTree.tree)
 	for (const leaf of leafPhrases) {
 		mayLog('Evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
 		mayLog('filterTw:', filterTw)
 		if ('type' in filterTw && filterTw.type === 'text') {
 			return filterTw // MsgToUser
@@ -565,11 +625,12 @@ export async function phrase2entity(
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any,
-	ds: any
+	ds: any,
+	genome: any
 ): Promise<MsgToUser | Phrase2EntityResult> {
 	if (plotType === 'summary') {
 		const scaffoldResult = scaffold as SummaryScaffold
-		const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds)
+		const tw1 = await phrase2entitytw(scaffoldResult.tw1, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in tw1 && tw1.type === 'text') {
 			return tw1 // MsgToUser
 		} else {
@@ -578,7 +639,7 @@ export async function phrase2entity(
 				tw1: [tw1 as Entity]
 			}
 			if (scaffoldResult.tw2) {
-				const tw2 = await phrase2entitytw(scaffoldResult.tw2, llm, genes_list, dataset_json, ds)
+				const tw2 = await phrase2entitytw(scaffoldResult.tw2, llm, genes_list, dataset_json, ds, genome)
 				if ('type' in tw2 && tw2.type === 'text') {
 					return tw2 // MsgToUser
 				}
@@ -586,7 +647,7 @@ export async function phrase2entity(
 				summ_term.tw2 = [tw2 as Entity]
 			}
 			if (scaffoldResult.tw3) {
-				const tw3 = await phrase2entitytw(scaffoldResult.tw3, llm, genes_list, dataset_json, ds)
+				const tw3 = await phrase2entitytw(scaffoldResult.tw3, llm, genes_list, dataset_json, ds, genome)
 				if ('type' in tw3 && tw3.type === 'text') {
 					return tw3 // MsgToUser
 				}
@@ -601,7 +662,7 @@ export async function phrase2entity(
 				summ_term.filter = []
 				for (const leaf of leafPhrases) {
 					mayLog('Evaluating filter leaf:', leaf.phrase)
-					const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+					const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
 					mayLog('filterTw:', filterTw)
 
 					if ('type' in filterTw && filterTw.type === 'text') {
@@ -624,7 +685,7 @@ export async function phrase2entity(
 
 		// filter 1
 		let parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter1, llm)
-		const dge_term_filter1 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+		const dge_term_filter1 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in dge_term_filter1 && dge_term_filter1.type === 'text') {
 			return dge_term_filter1 // MsgToUser
 		}
@@ -633,7 +694,7 @@ export async function phrase2entity(
 
 		// filter 2
 		parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter2, llm)
-		const dge_term_filter2 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+		const dge_term_filter2 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in dge_term_filter2 && dge_term_filter2.type === 'text') {
 			return dge_term_filter2 // MsgToUser
 		}
@@ -643,7 +704,7 @@ export async function phrase2entity(
 		// filter ?
 		if (scaffoldResult.filter) {
 			parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
-			const dge_term_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			const dge_term_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in dge_term_filter && dge_term_filter.type === 'text') {
 				return dge_term_filter // MsgToUser
 			}
@@ -660,7 +721,7 @@ export async function phrase2entity(
 		const twLstEntities: Entity[] = []
 		for (const [index, twPhrase] of scaffoldResult.twLst.entries()) {
 			mayLog(`Processing term${index + 1} in twLst: "${twPhrase}"`)
-			const twEntity = await phrase2entitytw(twPhrase, llm, genes_list, dataset_json, ds)
+			const twEntity = await phrase2entitytw(twPhrase, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in twEntity && twEntity.type === 'text') {
 				return twEntity // MsgToUser
 			}
@@ -674,7 +735,7 @@ export async function phrase2entity(
 
 		// if divideBy is present, convert to entity as well
 		if (scaffoldResult.divideBy) {
-			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds)
+			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in divideByEntity && divideByEntity.type === 'text') {
 				return divideByEntity // MsgToUser
 			}
@@ -687,7 +748,7 @@ export async function phrase2entity(
 			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
 			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
-			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in filter_term && filter_term.type === 'text') {
 				return filter_term // MsgToUser
 			}
@@ -703,7 +764,7 @@ export async function phrase2entity(
 		if (scaffoldResult.colorBy === 'null') {
 			scatter_term.colorBy = 'null'
 		} else if (scaffoldResult.colorBy) {
-			const colorByEntity = await phrase2entitytw(scaffoldResult.colorBy, llm, genes_list, dataset_json, ds)
+			const colorByEntity = await phrase2entitytw(scaffoldResult.colorBy, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in colorByEntity && colorByEntity.type === 'text') {
 				return colorByEntity // MsgToUser
 			}
@@ -715,7 +776,7 @@ export async function phrase2entity(
 		if (scaffoldResult.shapeBy === 'null') {
 			scatter_term.shapeBy = 'null'
 		} else if (scaffoldResult.shapeBy) {
-			const shapeByEntity = await phrase2entitytw(scaffoldResult.shapeBy, llm, genes_list, dataset_json, ds)
+			const shapeByEntity = await phrase2entitytw(scaffoldResult.shapeBy, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in shapeByEntity && shapeByEntity.type === 'text') {
 				return shapeByEntity // MsgToUser
 			}
@@ -725,7 +786,7 @@ export async function phrase2entity(
 
 		// divideBy term
 		if (scaffoldResult.divideBy) {
-			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds)
+			const divideByEntity = await phrase2entitytw(scaffoldResult.divideBy, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in divideByEntity && divideByEntity.type === 'text') {
 				return divideByEntity // MsgToUser
 			}
@@ -738,7 +799,7 @@ export async function phrase2entity(
 			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
 			// mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
-			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds)
+			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in filter_term && filter_term.type === 'text') {
 				return filter_term // MsgToUser
 			}
@@ -750,7 +811,7 @@ export async function phrase2entity(
 		const scaffoldResult = scaffold as HierarchicalScaffold
 		const hier_term: HierPhrase2EntityResult = { phrases: [] }
 		for (const phrase of scaffoldResult.hierarchicalPhrases) {
-			const tw1 = await phrase2entitytw(phrase, llm, genes_list, dataset_json, ds)
+			const tw1 = await phrase2entitytw(phrase, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in tw1 && tw1.type === 'text') {
 				return tw1 // MsgToUser
 			} else {
@@ -765,7 +826,7 @@ export async function phrase2entity(
 			hier_term.filter = []
 			for (const leaf of leafPhrases) {
 				mayLog('Evaluating filter leaf:', leaf.phrase)
-				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds)
+				const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
 				mayLog('filterTw:', filterTw)
 
 				if ('type' in filterTw && filterTw.type === 'text') {

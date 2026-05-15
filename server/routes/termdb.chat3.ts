@@ -213,7 +213,8 @@ export async function run_chat_pipeline(
 			llm,
 			genes_list,
 			dataset_json,
-			ds
+			ds,
+			genome
 		)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
 		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
@@ -230,7 +231,8 @@ export async function run_chat_pipeline(
 			plotType,
 			llm,
 			dataset_db,
-			genes_list
+			genes_list,
+			genome
 		)
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
 		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))
@@ -239,7 +241,7 @@ export async function run_chat_pipeline(
 		mayLog('####### Fourth phase: From Term Objects to TwTvs Objects #######')
 		mayLog('#################################################')
 		time = new Date().valueOf()
-		const twTvsObj = await resolveToTwTvs(termObj, plotType, llm, dataset_db)
+		const twTvsObj = await resolveToTwTvs(termObj, plotType, llm, dataset_db, genome)
 		mayLog('Time taken to resolve to TwTvs object from termObj:', formatElapsedTime(Date.now() - time))
 		if ('type' in twTvsObj && twTvsObj.type === 'text') {
 			return twTvsObj // Return msg/error
