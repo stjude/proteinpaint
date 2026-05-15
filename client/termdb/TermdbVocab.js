@@ -293,7 +293,7 @@ export class TermdbVocab extends Vocab {
 		if (!isDictionaryType(opts.outcome.term.type)) throw 'outcome must be dictionary term'
 		const outcome = this.getTwMinCopy(opts.outcome)
 		outcome.id = outcome.term.id
-		outcome.q = JSON.parse(JSON.stringify(opts.outcome.q))
+		outcome.q = structuredClone(opts.outcome.q)
 		outcome.type = outcome.term.type // TODO: refactor backend to not require outcome.type (similar issue with independent variables, see below)
 		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
 		const contQkeys = ['mode', 'scale']
@@ -311,6 +311,8 @@ export class TermdbVocab extends Vocab {
 			getregression: 1,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
+			filter0: opts.filter0,
+			includeUnivariate: opts.includeUnivariate,
 			regressionType: opts.regressionType,
 			outcome,
 			independent: opts.independent.map(tw => {
@@ -340,10 +342,8 @@ export class TermdbVocab extends Vocab {
 				}
 			})
 		}
-
 		const filterData = getNormalRoot(opts.filter)
 		if (filterData.lst.length) body.filter = filterData
-		if (opts.includeUnivariate) body.includeUnivariate = opts.includeUnivariate
 		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
