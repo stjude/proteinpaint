@@ -12,7 +12,7 @@ import serverconfig from './serverconfig.js'
 import { genomes, initGenomesDs } from './initGenomesDs.js'
 import { setAppMiddlewares } from './app.middlewares.js'
 import * as oldApp from './app.unorg.js'
-import { getAuthApi } from './auth.ts'
+import { getAuthApi, extractValidatedCreds } from './auth.ts'
 import * as phewas from './termdb.phewas.js'
 import { sendMessageToSlack } from './postOnSlack.ts'
 import { routeFiles } from './app.routes.js'
@@ -32,7 +32,11 @@ export async function launch() {
 			})
 		)
 
-		const trackedDatasets = await initGenomesDs(serverconfig)
+		// extract creds early so it is not unnecessarily exposed to other code that imports serverconfig.json,
+		// and so that the validated creds can be passed into getAuthApi() for maySetAuthRoutes() to use in
+		// setting up auth routes before any other routes are set up
+		const validatedCreds = await extractValidatedCreds(serverconfig)
+		const trackedDatasets = await initGenomesDs(serverconfig, { credDslabels: Object.keys(validatedCreds) })
 		const doneLoading = processTrackedDs(trackedDatasets)
 
 		// no error from server initiation
@@ -51,7 +55,7 @@ export async function launch() {
 			- so that a request will be inspected by auth before allowing 
 			to proceed to any *protected* route handler
 		*/
-		const authApi = await getAuthApi(app, genomes, serverconfig, true)
+		const authApi = await getAuthApi(app, genomes, { validatedCreds }, true)
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
 
 		const routes = await Promise.all(routeFiles)

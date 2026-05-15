@@ -2158,6 +2158,8 @@ export type Mds3 = BaseMds & {
 		data during post-processing */
 		postProcessDtFilter?: boolean
 	}
+	/** option to require an auth dsCredentials entry for this dataset in serverconfig, in order to load this dataset during server startup */
+	requiresAuthCred?: boolean
 	demoJwtInput?: {
 		[role: string]: {
 			datasets?: string[]

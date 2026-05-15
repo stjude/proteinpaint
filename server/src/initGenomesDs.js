@@ -36,7 +36,7 @@ export const genomes = {} // { hg19: {...}, ... }
 
 const features = serverconfig.features
 
-export async function initGenomesDs(serverconfig) {
+export async function initGenomesDs(serverconfig, opts = {}) {
 	// verify if tp directory is readable
 	// ppr has this situation where its tp/ is from a nfs mount and can go down...
 	try {
@@ -452,6 +452,15 @@ export async function initGenomesDs(serverconfig) {
 			}
 
 			trackedDatasets.push(ds)
+			// do this check after trackedDatasets.push so that datasets with auth requirement
+			// but no provided creds can still be tracked with fatalError status, to be emitted
+			// in app.ts processTrackedDs() and inform user about missing creds via log and optional slack notification
+			if (ds.requiresAuthCred && !opts.credDslabels?.includes(ds.label)) {
+				ds.init.status = 'fatalError'
+				ds.init.fatalError = `${ds.label} ds.requiresAuthCred is true but no credential provided`
+				delete g.datasets[ds.label] // do not keep reference to this dataset since it will not be loaded
+				continue
+			}
 
 			// wrap ds init execution in a try-catch, to not crash when at least 1 dataset loaded successfully
 			try {
