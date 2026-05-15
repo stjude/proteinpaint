@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
-import { getDefaultViolinSettings } from './violin.js'
-import { appInit } from './plot.app'
+import { getDefaultViolinSettings } from '../violin.js'
+import { appInit } from '../plot.app'
 
 /*
 	dom elements for values table
@@ -16,7 +16,9 @@ import { appInit } from './plot.app'
 const row_hover_bgcolor = '#fff6dc'
 
 export class InputValuesTable {
-	constructor(opts) {
+	[key: string]: any
+
+	constructor(opts: any) {
 		// opts {holder, input, callback}
 		this.opts = opts
 		this.input = opts.input
@@ -66,8 +68,8 @@ export class InputValuesTable {
 	}
 }
 
-function setRenderers(self) {
-	self.setDOM = holder => {
+function setRenderers(self: any) {
+	self.setDOM = (holder: any) => {
 		self.dom = {
 			holder: holder
 				.style('margin', '10px')
@@ -113,7 +115,7 @@ function setRenderers(self) {
 		renderExcludedValues(input)
 	}
 
-	function renderTopInfo(input) {
+	function renderTopInfo(input: any) {
 		if (input.termStatus.topInfoStatus?.length) {
 			self.dom.top_info_div.style('display', 'block').html(input.termStatus.topInfoStatus.join('<br>'))
 		} else {
@@ -121,7 +123,7 @@ function setRenderers(self) {
 		}
 	}
 
-	async function renderValuesTable(input) {
+	async function renderValuesTable(input: any) {
 		if (input.term.q.mode == 'continuous' || input.term.q.mode == 'spline') {
 			// continuous or spline mode
 			// render values as violin plot
@@ -216,7 +218,7 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderBottomInfo(input) {
+	function renderBottomInfo(input: any) {
 		if (input.termStatus.bottomSummaryStatus) {
 			self.dom.bottom_info_div.style('display', 'block').html(input.termStatus.bottomSummaryStatus)
 		} else {
@@ -224,7 +226,7 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderExcludedValues(input) {
+	function renderExcludedValues(input: any) {
 		const data = input.termStatus.excludeCounts
 		if (!data || !data.length) {
 			self.dom.excluded_div.style('display', 'none')
@@ -240,7 +242,7 @@ function setRenderers(self) {
 		self.dom.excluded_div.selectAll('td').style('color', '#999')
 	}
 
-	function trEnter(item) {
+	function trEnter(this: any, item: any) {
 		const tr = select(this)
 		const input = this.parentNode.__data__
 		const t = input.term
@@ -288,7 +290,7 @@ function setRenderers(self) {
 	}
 	*/
 
-	function addTrBehavior({ input, item, tr, rendered }) {
+	function addTrBehavior({ input, item, tr, rendered }: { input: any; item: any; tr: any; rendered: boolean }) {
 		// don't add tr effects for excluded values
 		if (!item.bar_width_frac) return
 

@@ -3,7 +3,7 @@ import { get_bin_label } from '#shared/termdb.bins.js'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
-import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
+import { mayRunSnplstTask } from '../../termsetting/handlers/snplst.sampleSum.ts'
 import { get_defaultQ4fillTW } from './regression'
 import { isDictionaryType } from '#shared/terms.js'
 
@@ -12,7 +12,9 @@ class instance is an input
 */
 
 export class InputTerm {
-	constructor(opts) {
+	[key: string]: any
+
+	constructor(opts: any) {
 		// opts { section, term, parent }
 		this.opts = opts
 		this.section = opts.section
@@ -20,7 +22,7 @@ export class InputTerm {
 		this.parent = opts.parent // the inputs instance
 	}
 
-	async init(holder) {
+	async init(holder: any) {
 		// only run once when a new input variable is added to the user interface via data/enter() in inputs.js
 
 		const termRow = holder.append('div')
@@ -87,7 +89,7 @@ export class InputTerm {
 		}
 	}
 
-	furbishTsConstructorArg(arg) {
+	furbishTsConstructorArg(arg: any) {
 		// furbish termsetting constructor argument, based on regression type and if term is outcome/input
 		const type = this.parent.config.regressionType
 		if (this.section.configKey == 'outcome') {
@@ -117,7 +119,7 @@ export class InputTerm {
 		throw 'unknown section.configKey: ' + this.section.configKey
 	}
 
-	displayError(errors) {
+	displayError(errors: any) {
 		this.hasError = true
 		this.dom.err_div.selectAll('*').remove()
 		this.dom.err_div
@@ -147,7 +149,7 @@ export class InputTerm {
 		this.dom.err_div.style('display', 'none').text('')
 		this.hasError = false
 
-		const errors = []
+		const errors: any[] = []
 		try {
 			if (tw && this.setQ) {
 				const { app, state } = this.parent
@@ -331,7 +333,7 @@ export class InputTerm {
 		}
 	}
 
-	summarizeSample(tw, datalst) {
+	summarizeSample(tw: any, datalst: any[]) {
 		// sepeate include and exclude categories based on term.values.uncomputable
 		const excluded_values = new Set()
 		if (tw.term.values) {
@@ -363,7 +365,7 @@ export class InputTerm {
 			throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 	}
 
-	maySet_refGrp(tw) {
+	maySet_refGrp(tw: any) {
 		if (this.section.configKey == 'outcome' && this.parent.config.regressionType == 'cox') {
 			// no need to set refgrp
 			return
@@ -466,7 +468,7 @@ export class InputTerm {
 			.enter()
 			.append('div')
 			.style('margin', '5px')
-			.each(function (tw) {
+			.each(function (this: any, tw: any) {
 				const elem = select(this).append('label')
 				const checkbox = elem
 					.append('input')
@@ -483,7 +485,7 @@ export class InputTerm {
 			.on('click', () => {
 				self.dom.tip.hide()
 				self.term.interactions = []
-				self.dom.tip.d.selectAll('input').each(function (tw) {
+				self.dom.tip.d.selectAll('input').each(function (this: any, tw: any) {
 					if (select(this).property('checked')) self.term.interactions.push(tw.$id)
 				})
 				for (const tw of self.parent.config.independent) {
@@ -496,7 +498,7 @@ export class InputTerm {
 	}
 }
 
-function getQSetter4outcome(regressionType) {
+function getQSetter4outcome(regressionType: string): any {
 	// only for outcome term
 	return {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
@@ -510,7 +512,7 @@ function getQSetter4outcome(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(tw, vocabApi, filter, state) {
+async function maySetTwoBins(tw: any, vocabApi: any, filter: any, state: any) {
 	// if the bins are already binary, do not reset
 	if (tw.q.mode == 'binary' && tw.q.lst && tw.q.lst.length == 2) {
 		tw.q.mode = 'binary'
@@ -545,7 +547,7 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
-function setQ4tteOutcome(tw, vocabApi, filter, state) {
+function setQ4tteOutcome(tw: any, vocabApi: any, filter: any, state: any) {
 	// set q for time-to-event outcome (i.e., condition or survival term)
 	if (state.config.regressionType == 'logistic') {
 		// if refGrp missing, set to be first group, guaranteed to be "No event / Grade 0"
@@ -556,7 +558,7 @@ function setQ4tteOutcome(tw, vocabApi, filter, state) {
 	}
 }
 
-async function maySetTwoGroups(tw, vocabApi, filter, state) {
+async function maySetTwoGroups(tw: any, vocabApi: any, filter: any, state: any) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
 
@@ -581,9 +583,9 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// check the number of samples for computable categories, only use categories with >0 samples
 	const data = await vocabApi.getCategories(term, filter)
 	if (data.error) throw 'cannot get categories: ' + data.error
-	const category2samplecount = new Map() // k: category/grade, v: number of samples
-	const computableCategories = [] // list of computable keys
-	const uncomputableCategories = [] // list of computable keys
+	const category2samplecount = new Map<any, any>() // k: category/grade, v: number of samples
+	const computableCategories: any[] = [] // list of computable keys
+	const uncomputableCategories: any[] = [] // list of computable keys
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) uncomputableCategories.push(i.key)
@@ -652,7 +654,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	}
 
 	// step 5: last resort. divide values[] array into two groups
-	const customset = {
+	const customset: any = {
 		activeCohort: state.activeCohort,
 		// creating 3 groups instead of 2 groups since current groupset UI expects first group to be excluded group
 		// TODO: refactor client/termsetting/handlers/qualitative.ts to not consider the first group (i.e. group.currentIdx === 0) as the excluded group, but rather to consider group.excluded=true as the excluded group
@@ -686,11 +688,11 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	q.type = 'custom-groupset'
 }
 
-function setContMode(tw) {
+function setContMode(tw: any) {
 	tw.q.mode = 'continuous'
 }
 
-function groupsetNoEmptyGroup(gs, c2s) {
+function groupsetNoEmptyGroup(gs: any, c2s: Map<any, any>) {
 	// return true if a groupset does not have empty group
 	for (const g of gs.groups) {
 		let total = 0
@@ -702,7 +704,7 @@ function groupsetNoEmptyGroup(gs, c2s) {
 	return true
 }
 
-function getLogisticOutcomeNonref(outcome) {
+function getLogisticOutcomeNonref(outcome: any) {
 	// outcome is the outcome term-wrapper {q{}, refGrp, term{}}
 	if (outcome.term.type == 'condition') {
 		// condition term does not use q.type
@@ -749,7 +751,7 @@ function getLogisticOutcomeNonref(outcome) {
 	throw 'unknown outcome.q.type'
 }
 
-function getCoxOutcomeEventLabel(tw) {
+function getCoxOutcomeEventLabel(tw: any) {
 	let eventLabel
 	if (!tw.term.values) throw 'tw.term.values missing'
 	if (tw.term.type == 'condition') {

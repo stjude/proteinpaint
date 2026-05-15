@@ -76,7 +76,7 @@ export class TermSettingApi {
 		const self = this.#termsetting
 		/* optional termwrapper (tw) to override attributes of self.term{} and self.q{}
 		the override tw serves the "atypical" termsetting usage
-		as used in snplocus block pan/zoom update in regression.results.js
+		as used in snplocus block pan/zoom update in regression.results.ts
 		*/
 		const arg: any = self.term ? { term: self.term, q: self.q, isAtomic: true } : {}
 		arg.$id = '$id' in this ? this.$id : await get$id(arg)

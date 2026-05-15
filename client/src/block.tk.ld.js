@@ -1,6 +1,6 @@
 import { dofetch3 } from '#common/dofetch'
 import { legend_newrow } from '#src/block.legend'
-import { showLDlegend } from '../plots/regression.results'
+import { showLDlegend } from '../plots/regression/regression.results'
 import { interpolateRgb } from 'd3-interpolate'
 
 export async function loadTk(tk, block) {

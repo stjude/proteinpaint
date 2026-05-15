@@ -76,7 +76,7 @@ export class TermSettingActions {
 // 		delete q.binLabelFormatter
 // 		if (q.reuseId === 'Default') delete q.reuseId
 // 		// TODO: may need to delete non-relevant q attributes
-// 		// when setting defaults in regression.inputs.term.js
+// 		// when setting defaults in regression.inputs.term.ts
 // 		if (q.mode === 'continuous') delete q.mode
 // 		if (q.mode === 'discrete' && q.type == 'custom-bin' && q.lst) {
 // 			for (const bin of q.lst) {

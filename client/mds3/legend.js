@@ -2,7 +2,7 @@ import { legend_newrow } from '#src/block.legend'
 import { Menu, ColorScale, icons, shapes, renderCnvConfig } from '#dom'
 import { mds3tkMclass, mclass, dt2label, dtcnv, mclassfusionrna, mclasssv, bplen } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
-import { showLDlegend } from '../plots/regression.results'
+import { showLDlegend } from '../plots/regression/regression.results'
 import { rgb } from 'd3-color'
 import { renderShapePicker } from './leftlabel.variant'
 

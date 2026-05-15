@@ -1,7 +1,7 @@
 import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
-import { getCompInit, copyMerge } from '../rx'
-import { sayerror } from '../dom/sayerror.ts'
+import { getCompInit, copyMerge } from '../../rx'
+import { sayerror } from '../../dom/sayerror.ts'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase } from '#plots/PlotBase.js'
@@ -17,15 +17,16 @@ regression.js
 */
 
 class Regression extends PlotBase {
-	static type = 'regression'
+	static type = 'regression';
+	[key: string]: any
 
-	constructor(opts) {
+	constructor(opts: any) {
 		super(opts)
 		this.type = Regression.type
 		this.genomeObj = opts.app.opts.genome
 	}
 
-	async init(appState) {
+	async init(appState: any) {
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
@@ -53,7 +54,7 @@ class Regression extends PlotBase {
 		})
 	}
 
-	getState(appState, sub) {
+	getState(appState: any, sub?: any) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
@@ -113,7 +114,7 @@ class Regression extends PlotBase {
 		// regression analysis may have multiple
 		// filters (e.g. term filter + restrict ancestry filter)
 		// so track all filters here
-		const filters = []
+		const filters: any[] = []
 
 		// term filter
 		if (this.state.termfilter?.filter) filters.push(this.state.termfilter.filter)
@@ -146,7 +147,7 @@ export const componentInit = regressionInit
 
 let _ID_ = 1
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts: any, app: any) {
 	// TODO need to supply term filter of app to fillTermWrapper
 	if (!opts.outcome) opts.outcome = {}
 
@@ -168,7 +169,7 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
-	const config = { id }
+	const config: any = { id }
 	config.outcome = opts.outcome
 
 	if (opts.independent) {
@@ -187,8 +188,8 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-export function get_defaultQ4fillTW(regressionType, useCase = '') {
-	const defaultQ = {}
+export function get_defaultQ4fillTW(regressionType: string, useCase = '') {
+	const defaultQ: any = {}
 
 	// numeric term
 	defaultQ['numeric'] = regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
@@ -216,7 +217,7 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 	return defaultQ
 }
 
-export function makeChartBtnMenu(holder, chartsInstance) {
+export function makeChartBtnMenu(holder: any, chartsInstance: any) {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance

@@ -1,6 +1,6 @@
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
-import { first_genetrack_tolist } from '../common/1stGenetk'
+import { first_genetrack_tolist } from '../../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
 import { roundValue } from '#shared/roundValue.js'
@@ -54,7 +54,9 @@ const forestcolor = '#126e08' // forest plot color
 const boxplotcolor = forestcolor
 
 export class RegressionResults {
-	constructor(opts) {
+	[key: string]: any
+
+	constructor(opts: any) {
 		this.opts = opts
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
@@ -132,7 +134,7 @@ export class RegressionResults {
 	// creates an opts object for the vocabApi.getRegressionData()
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = {
+		const opts: any = {
 			regressionType: c.regressionType,
 			outcome: c.outcome,
 			independent: c.independent,
@@ -143,7 +145,7 @@ export class RegressionResults {
 		return opts
 	}
 
-	getIndependentInput(tid) {
+	getIndependentInput(tid: any) {
 		/* arg is independent tw $id or snpid
 		return input instance
 		for accessing input.orderedLabels and input.term{refGrp, term{}, q{}} which is term-wrapper
@@ -162,7 +164,7 @@ export class RegressionResults {
 					if (snp.snpid == tid) {
 						// tid matches with a snpid
 						// make up an object looking like an Input instance for this snp/variant
-						const tw = {
+						const tw: any = {
 							id: tid,
 							q: {
 								geneticModel: i.term.q.geneticModel
@@ -207,10 +209,10 @@ export class RegressionResults {
 	}
 }
 
-function setInteractivity(self) {}
+function setInteractivity(self: any) {}
 
-function setRenderers(self) {
-	self.displayResult = async result => {
+function setRenderers(self: any) {
+	self.displayResult = async (result: any) => {
 		/*
 		result {
 			resultLst [
@@ -251,7 +253,7 @@ function setRenderers(self) {
 		self.displayResult_oneset(result.resultLst[0].data)
 	}
 
-	self.displayResult_oneset = result => {
+	self.displayResult_oneset = (result: any) => {
 		self.dom.oneSetResultDiv.selectAll('*').remove()
 
 		// may be used when clicking snplocus dot
@@ -274,7 +276,7 @@ function setRenderers(self) {
 		self.mayshow_cuminc(result)
 	}
 
-	self.newDiv = (label, label2, getrow) => {
+	self.newDiv = (label: string, label2?: any, getrow?: boolean) => {
 		// create div to show a section of the result
 		// label is required, label2 is optional
 		// specify getrow=true to return row instead of div
@@ -287,7 +289,7 @@ function setRenderers(self) {
 		return getrow ? row : div.append('div').style('margin-left', '20px')
 	}
 
-	self.mayshow_warn = result => {
+	self.mayshow_warn = (result: any) => {
 		if (!result.warnings) return
 		const div = self.newDiv('Warnings')
 		const warnings = new Set(result.warnings)
@@ -296,7 +298,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_headerRow = result => {
+	self.mayshow_headerRow = (result: any) => {
 		if (!result.headerRow) return
 		const k = result.headerRow.k
 		const v = result.headerRow.v
@@ -340,7 +342,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_splinePlots = result => {
+	self.mayshow_splinePlots = (result: any) => {
 		if (!result.splinePlots) return
 		const div = self.newDiv('Cubic spline plots')
 		div.style('display', 'flex').style('align-items', 'center')
@@ -356,7 +358,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_residuals = result => {
+	self.mayshow_residuals = (result: any) => {
 		if (!result.residuals) return
 		const div = self.newDiv(result.residuals.label)
 		const table = div.append('table').style('border-spacing', '8px').attr('name', 'sjpp-residuals-table') //For integration tests
@@ -368,7 +370,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_cuminc = async result => {
+	self.mayshow_cuminc = async (result: any) => {
 		if (!result.cuminc) return
 		const holder = self.newDiv('Cumulative incidence test:' /*, 'p-value = ' + result.cuminc.pvalue*/)
 		const _ = await import('./cuminc')
@@ -395,7 +397,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_wilcoxon = result => {
+	self.mayshow_wilcoxon = (result: any) => {
 		if (!result.wilcoxon) return
 		const div = self.newDiv('Wilcoxon rank sum test:', 'p-value = ' + result.wilcoxon.pvalue)
 		if (result.wilcoxon.boxplots) {
@@ -455,7 +457,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_fisher = result => {
+	self.mayshow_fisher = (result: any) => {
 		if (!result.fisher) return
 		const div = self.newDiv(
 			result.fisher.isChi ? 'Chi-square test:' : "Fisher's exact test:",
@@ -474,7 +476,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_coefficients = result => {
+	self.mayshow_coefficients = (result: any) => {
 		if (!result.coefficients) {
 			if (result.coefficients_uni && result.coefficients_multi) {
 				// coefficients from univariate and multivariate analyses
@@ -694,7 +696,7 @@ function setRenderers(self) {
 		for (const v of header) tr.append('td')
 	}
 
-	self.mayshow_coefficients_uniMulti = result => {
+	self.mayshow_coefficients_uniMulti = (result: any) => {
 		// generate coefficients table for
 		// univariate and multivariate analyses
 		if (!result.coefficients_uni || !result.coefficients_multi) return
@@ -910,7 +912,7 @@ function setRenderers(self) {
 	}
 
 	// fill headers of data columns of coefficients table
-	self.fillDataHeaders = (header, tr, tr_label, label) => {
+	self.fillDataHeaders = (header: any, tr: any, tr_label: any, label: any) => {
 		const startColN = tr.selectAll('td').size()
 		// header for forest plot column
 		tr.append('td')
@@ -949,7 +951,7 @@ function setRenderers(self) {
 	}
 
 	// fill data columns of row of coefficients table
-	self.fillCoefDataCols = arg => {
+	self.fillCoefDataCols = (arg: any) => {
 		const { tr, cols, tw } = arg
 		// estimate (Beta/OR/HR) column
 		const est = cols.shift()
@@ -976,7 +978,7 @@ function setRenderers(self) {
 	}
 
 	// get tooltip message explaining the estimate value
-	self.getEstimateMsg = arg => {
+	self.getEstimateMsg = (arg: any) => {
 		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept, isUnivariate } = arg
 		const independentTws = self.independentTws
 		const outcomeTw = self.config.outcome
@@ -1087,7 +1089,7 @@ function setRenderers(self) {
 
 		/** helper functions **/
 		// function to style a variable (and its category)
-		function styleVariable(tw, category) {
+		function styleVariable(tw: any, category: any) {
 			const spans = [
 				`<span class="term_name_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2.5px 0px; border-radius: ${
 					category ? '6px 0px 0px 6px' : '6px'
@@ -1102,7 +1104,7 @@ function setRenderers(self) {
 		}
 
 		// function to get message for interaction term
-		function getInteractionMsg() {
+		function getInteractionMsg(): string {
 			let msg =
 				regtype == 'linear'
 					? `The difference in mean ${styleVariable(outcomeTw)}`
@@ -1150,7 +1152,7 @@ function setRenderers(self) {
 				- recessive model: homozygous for non-effect allele or heterozygous
 				- by genotype: same as categorical variable
 		*/
-		function getBaselines(tws) {
+		function getBaselines(tws: any[]) {
 			const baselines = tws.map(tw => {
 				if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 					// has refGrp, must be categorical variable
@@ -1183,7 +1185,7 @@ function setRenderers(self) {
 			return baselines
 		}
 
-		function joinVariables(variables) {
+		function joinVariables(variables: any[]) {
 			if (!variables.length) return ''
 			else if (variables.length == 1) return variables[0]
 			else if (variables.length == 2) return variables.join(' and ')
@@ -1207,7 +1209,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_totalSnpEffect = result => {
+	self.mayshow_totalSnpEffect = (result: any) => {
 		if (!result.totalSnpEffect) return
 		const div = self.newDiv(result.totalSnpEffect.label)
 		const table = div.append('table').style('border-spacing', '0px')
@@ -1297,7 +1299,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_tests = result => {
+	self.mayshow_tests = (result: any) => {
 		if (!result.tests || self.app.vocabApi.termdbConfig.regression?.settings?.hideTests) return
 		const div = self.newDiv(result.tests.label)
 		const table = div.append('table').style('border-spacing', '0px')
@@ -1314,7 +1316,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_other = result => {
+	self.mayshow_other = (result: any) => {
 		if (!result.other) return
 		const div = self.newDiv(result.other.label)
 		const table = div.append('table').style('border-spacing', '8px')
@@ -1337,7 +1339,7 @@ function setRenderers(self) {
 	in that case should use array[i+1] or next to find the smallest real number as axis min
 	an arbitary cap is used to guard against extreme estimate values
 	*/
-	self.getForestPlotter = (terms, interactions) => {
+	self.getForestPlotter = (terms: any, interactions: any) => {
 		// array indices are the same for both non-interacting and interacting rows
 		let midIdx, // array index of the beta/odds ratio
 			CIlow, // array(column) index of low end of confidence interval of midIdx
@@ -1491,7 +1493,7 @@ function setRenderers(self) {
 				.attr('stroke', forestcolor)
 		}
 		///////// helpers
-		function numbers2array(_lst) {
+		function numbers2array(_lst: any[]) {
 			const lst = self.config.regressionType == 'cox' ? _lst.slice(2) : _lst // exclude sample and event count columns
 			const m = Number(lst[midIdx])
 			if (!Number.isNaN(m)) values.push(m)
@@ -1504,7 +1506,7 @@ function setRenderers(self) {
 				values.push(h)
 			}
 		}
-		function get_scale(values) {
+		function get_scale(values: any[]) {
 			if (self.config.regressionType == 'logistic') {
 				// apply log to odds ratio
 				// iterate to find a non-0 value
@@ -1533,14 +1535,14 @@ function setRenderers(self) {
 	}
 }
 
-function fillTdName(td, name) {
+function fillTdName(td: any, name: string) {
 	if (name.length < 40) {
 		td.text(name)
 	} else {
 		td.text(name.substring(0, 35) + ' ...').attr('aria-label', name)
 	}
 }
-function fillCoefficientTermname(tw, td) {
+function fillCoefficientTermname(tw: any, td: any) {
 	// fill column 1 <td> using term name
 	fillTdName(td, tw.term.name || tid)
 	// fill refGrp or effect allele, if applicable
@@ -1575,7 +1577,7 @@ function fillCoefficientTermname(tw, td) {
 	}
 }
 
-function make_mds3_variants(tw, resultLst, regressionType) {
+function make_mds3_variants(tw: any, resultLst: any[], regressionType: string) {
 	/* return a list of variants as mds3 client-side custom data
 	tw:
 		term:
@@ -1690,7 +1692,7 @@ function make_mds3_variants(tw, resultLst, regressionType) {
 	return mlst
 }
 
-async function createGenomebrowser(self, input, resultLst) {
+async function createGenomebrowser(self: any, input: any, resultLst: any[]) {
 	// create block instance that harbors the mds3 track for showing variants from the snplocus term
 	// input is the snplocus Input instance
 	const arg = {
@@ -1788,7 +1790,7 @@ async function createGenomebrowser(self, input, resultLst) {
 	return new _.Block(arg)
 }
 
-async function updateMds3Tk(self, input, resultLst) {
+async function updateMds3Tk(self: any, input: any, resultLst: any[]) {
 	// browser is already created
 	// find the mds3 track
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
@@ -1812,7 +1814,7 @@ const LDcolor0 = '#2E6594',
 	LDcolor1 = '#ff0000',
 	LDcolorScale = interpolateRgb(LDcolor0, LDcolor1)
 
-async function mayCheckLD(m, input, self) {
+async function mayCheckLD(m: any, input: any, self: any) {
 	/*
 	m: the mutation data object for the clicked dot in mds3 tk
 		{chr, pos, ref, alt}
@@ -1866,7 +1868,7 @@ async function mayCheckLD(m, input, self) {
 	}
 }
 
-export function showLDlegend(div, colorScale) {
+export function showLDlegend(div: any, colorScale: any) {
 	const colorbardiv = div.append('span').style('margin-left', '10px')
 	const colorlst = []
 	for (let i = 0; i <= 1; i += 0.1) {
@@ -1897,7 +1899,7 @@ export function showLDlegend(div, colorScale) {
 	})
 }
 
-function getMtooltipValues(m, regressionType) {
+function getMtooltipValues(m: any, regressionType: string) {
 	const lst = [{ k: 'p-value', v: m.regressionPvalue }]
 	if (m.regressionResult.AFstr) {
 		lst.push({ k: 'AF', v: m.regressionResult.AFstr })
@@ -1914,7 +1916,7 @@ function getMtooltipValues(m, regressionType) {
 	return lst
 }
 
-function getSnpPvalueFromRegressionResults(d, snpid) {
+function getSnpPvalueFromRegressionResults(d: any, snpid: string) {
 	let str
 	if (d.totalSnpEffect) {
 		// snp has interactions
@@ -1935,7 +1937,7 @@ function getSnpPvalueFromRegressionResults(d, snpid) {
 	return undefined
 }
 
-function fillColumn2coefficientsTable(div, tw, categoryKey) {
+function fillColumn2coefficientsTable(div: any, tw: any, categoryKey: any) {
 	if (categoryKey) {
 		div.text(tw && tw.term.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey)
 		return

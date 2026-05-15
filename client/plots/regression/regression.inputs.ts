@@ -49,7 +49,9 @@ const allNonDictionaryTerms = [
 ]
 
 export class RegressionInputs {
-	constructor(opts) {
+	[key: string]: any
+
+	constructor(opts: any) {
 		this.opts = opts
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
@@ -149,15 +151,15 @@ export class RegressionInputs {
 		this.dom.submitBtn.property('disabled', true)
 	}
 
-	getNoTermPromptOptions(section) {
+	getNoTermPromptOptions(section: any) {
 		// only for independent section
 		if (section.configKey != 'independent') return
 		// return an array, each ele is an item in the mini menu at termsetting prompt
 		// okay for the array to be empty
 		// need to check if the dataset allows this
 		// if so, add to this array, to be shown as mini menu
-		const lst = []
-		for (const item of structuredClone(allNonDictionaryTerms)) {
+		const lst: any[] = []
+		for (const item of structuredClone(allNonDictionaryTerms) as any[]) {
 			// TODO do this via vocab api
 			if (!this.state.allowedTermTypes.includes(item.termtype)) {
 				// not allowed by this dataset
@@ -190,7 +192,7 @@ export class RegressionInputs {
 	}
 }
 
-function setRenderers(self) {
+function setRenderers(self: any) {
 	self.initUI = () => {
 		const controls = self.opts.holder.append('div').style('display', 'block')
 
@@ -266,7 +268,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addSection = function (section, div) {
+	self.addSection = function (section: any, div: any) {
 		div.style('display', 'none').style('margin', '3px 5px').style('padding', '3px 5px')
 
 		section.dom = {
@@ -288,7 +290,7 @@ function setRenderers(self) {
 		and later may do more section restyling based on
 		the state of inputs that are being edited
 	*/
-	self.renderSection = function (section) {
+	self.renderSection = function (section: any) {
 		// decide to show/hide this section
 		// only show when this section is for outcome,
 		// or this is independent and only show it when the outcome has been selected
@@ -308,7 +310,7 @@ function setRenderers(self) {
 		inputs.enter().append('div').each(addInput)
 	}
 
-	function syncInputsWithConfig(section) {
+	function syncInputsWithConfig(section: any) {
 		// get the input variables from config.outcome or config.independent
 		const selected = self.config[section.configKey]
 
@@ -351,7 +353,7 @@ function setRenderers(self) {
 
 	// interactions[] from url will contain term ids
 	// convert these to $ids
-	function mayConvertInteractionIds(selectedArray, section) {
+	function mayConvertInteractionIds(selectedArray: any[], section: any) {
 		if (section.configKey != 'independent') return
 		const id2$id = new Map() // id => $id
 		// first populate id2$id map
@@ -369,13 +371,13 @@ function setRenderers(self) {
 		}
 	}
 
-	async function addInput(input) {
+	async function addInput(this: any, input: any) {
 		await input.init(
 			select(this).style('width', 'fit-content').style('margin', '0px 15px 35px 25px').style('padding', '0px 5px')
 		)
 	}
 
-	function removeInput(input) {
+	function removeInput(this: any, input: any) {
 		/* NOTE: editConfig deletes this input from the section.inputLst array */
 		input.remove()
 		for (const key in input.dom) {
@@ -415,11 +417,11 @@ function setRenderers(self) {
 	}
 }
 
-function setInteractivity(self) {
+function setInteractivity(self: any) {
 	/* this function is called when any change is made to a term of an input
 	e.g. by termsetting callback
 	*/
-	self.editConfig = async (input, variable) => {
+	self.editConfig = async (input: any, variable: any) => {
 		if (!variable) {
 			// the variable has been deleted from this input; will delete this input from section
 			const i = input.section.inputLst.findIndex(d => d === input)
@@ -468,7 +470,7 @@ function setInteractivity(self) {
 			}
 		}
 
-		const selected = []
+		const selected: any[] = []
 		for (const i of input.section.inputLst) {
 			if (i.term) selected.push(i.term)
 		}
@@ -516,7 +518,7 @@ decide if a blank input needs to be added to this section
 for outcome section, there can just be one input, it's either blank or filled
 for independent, there should always be one blank input, among other filled inputs
 */
-function mayAddBlankInput(section, self) {
+function mayAddBlankInput(section: any, self: any) {
 	if (section.inputLst.length >= section.limit) {
 		// number of inputs in this section is beyond limit, do not create more
 		return
