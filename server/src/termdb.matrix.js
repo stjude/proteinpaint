@@ -548,7 +548,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers, mapParent2Children
 	}
 	if (q.ds.cohort.termdb.dictionary?.get) {
 		// ds-supplied getter to retrieve dictionary term data
-		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers, onlyChildren)
+		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers, mapParent2Children)
 	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
 	 */
