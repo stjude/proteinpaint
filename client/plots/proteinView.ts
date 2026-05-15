@@ -99,33 +99,229 @@ class ProteinView extends PlotBase implements RxComponent {
 			}
 		}
 
-		let allGenomes: any = null
-		for (const [, ptmDataByIsoform] of ptmDataByOrganism) {
-			for (const [isoform, ptmCohorts] of ptmDataByIsoform) {
-				const genomeName: string = ptmCohorts[0].genomeName
-				let genome = this.app.opts.genome
-				if (genomeName !== genome.name) {
-					if (!allGenomes) {
-						const result = await dofetch3('genomes')
-						allGenomes = result.genomes || {}
-						// build chrlookup for each genome
-						for (const g of Object.values(allGenomes) as any[]) {
-							if (g.chrlookup || g.name == genome.name) continue
-							g.chrlookup = {}
-							for (const chr in g.majorchr) {
-								g.chrlookup[chr.toUpperCase()] = { name: chr, len: g.majorchr[chr], major: true }
-							}
-							for (const chr in g.minorchr || {}) {
-								g.chrlookup[chr.toUpperCase()] = { name: chr, len: g.minorchr[chr] }
-							}
-						}
-					}
-					genome = allGenomes[genomeName]
-					if (!genome) throw `genome ${genomeName} not supported`
-				}
-				await renderPTMLollipop(this.dom.body, ptmCohorts, this, isoform, genome)
+		type LollipopSection = { organism: string; isoform: string; cohorts: any[]; genomeName: string }
+		const sections: LollipopSection[] = []
+		for (const [organism, byIso] of ptmDataByOrganism) {
+			for (const [isoform, cohorts] of byIso) {
+				sections.push({ organism, isoform, cohorts, genomeName: cohorts[0].genomeName })
 			}
 		}
+		if (sections.length === 0) return
+
+		let allGenomes: any = null
+		const baseGenome = this.app.opts.genome
+		const getGenome = async (genomeName: string) => {
+			if (genomeName === baseGenome.name) return baseGenome
+			if (!allGenomes) {
+				const result = await dofetch3('genomes')
+				allGenomes = result.genomes || {}
+				for (const g of Object.values(allGenomes) as any[]) {
+					if (g.chrlookup || g.name == baseGenome.name) continue
+					g.chrlookup = {}
+					for (const chr in g.majorchr) {
+						g.chrlookup[chr.toUpperCase()] = { name: chr, len: g.majorchr[chr], major: true }
+					}
+					for (const chr in g.minorchr || {}) {
+						g.chrlookup[chr.toUpperCase()] = { name: chr, len: g.minorchr[chr] }
+					}
+				}
+			}
+			const g = allGenomes[genomeName]
+			if (!g) throw `genome ${genomeName} not supported`
+			return g
+		}
+
+		if (sections.length === 1) {
+			const s = sections[0]
+			const genome = await getGenome(s.genomeName)
+			await renderPTMLollipop(this.dom.body.append('div'), s.cohorts, this, s.isoform, genome)
+			return
+		}
+
+		const keyOf = (s: LollipopSection) => `${s.organism}\u0001${s.isoform}`
+		const selectedKeys = new Set<string>([keyOf(sections[0])])
+		let compareMode = false
+
+		const layoutDiv = this.dom.body
+			.append('div')
+			.style('display', 'flex')
+			.style('gap', '16px')
+			.style('margin-top', '10px')
+			.style('align-items', 'flex-start')
+		const sidebar = layoutDiv
+			.append('div')
+			.style('flex', '0 0 220px')
+			.style('border', '1px solid #e5e7eb')
+			.style('border-radius', '4px')
+			.style('padding', '8px')
+			.style('font-size', '.85em')
+			.style('position', 'sticky')
+			.style('top', '8px')
+			.style('margin-top', '20px')
+			.style('max-height', '85vh')
+			.style('overflow', 'auto')
+		const rightPane = layoutDiv.append('div').style('flex', '1 1 auto').style('min-width', '0')
+
+		const sidebarHeader = sidebar
+			.append('div')
+			.style('display', 'flex')
+			.style('flex-direction', 'column')
+			.style('gap', '6px')
+			.style('margin-bottom', '8px')
+		sidebarHeader
+			.append('span')
+			.style('font-weight', '600')
+			.style('font-size', '1.5em')
+			.style('text-transform', 'uppercase')
+			.text('Isoforms')
+
+		const modeToggle = sidebarHeader
+			.append('div')
+			.style('display', 'inline-flex')
+			.style('align-items', 'center')
+			.style('gap', '6px')
+		modeToggle.append('span').style('color', '#6b7280').text('Mode:')
+		const modeSwitch = modeToggle
+			.append('div')
+			.attr('role', 'radiogroup')
+			.attr('aria-label', 'Isoform view mode')
+			.style('display', 'inline-flex')
+			.style('border', '1px solid #d1d5db')
+			.style('border-radius', '3px')
+			.style('overflow', 'hidden')
+		const setMode = (asCompare: boolean) => {
+			if (asCompare === compareMode) return
+			compareMode = asCompare
+			singleOpt
+				.style('background', compareMode ? 'transparent' : '#2563eb')
+				.style('color', compareMode ? '#374151' : '#fff')
+				.attr('aria-checked', String(!compareMode))
+			compareOpt
+				.style('background', compareMode ? '#2563eb' : 'transparent')
+				.style('color', compareMode ? '#fff' : '#374151')
+				.attr('aria-checked', String(compareMode))
+			if (!compareMode && selectedKeys.size > 1) {
+				const first = selectedKeys.values().next().value as string
+				selectedKeys.clear()
+				selectedKeys.add(first)
+			}
+			renderSidebar()
+			void renderRight()
+		}
+		const makeModeOption = (label: string, asCompare: boolean) =>
+			modeSwitch
+				.append('span')
+				.attr('role', 'radio')
+				.attr('aria-checked', String(asCompare === compareMode))
+				.attr('tabindex', '0')
+				.style('padding', '2px 8px')
+				.style('cursor', 'pointer')
+				.style('background', asCompare === compareMode ? '#2563eb' : 'transparent')
+				.style('color', asCompare === compareMode ? '#fff' : '#374151')
+				.text(label)
+				.on('click', () => setMode(asCompare))
+				.on('keydown', function (event: KeyboardEvent) {
+					if (event.key === 'Enter' || event.key === ' ') {
+						event.preventDefault()
+						setMode(asCompare)
+					}
+				})
+		const singleOpt = makeModeOption('Single', false)
+		const compareOpt = makeModeOption('Compare', true)
+
+		const sidebarList = sidebar.append('div')
+		const sectionsByOrganism = new Map<string, LollipopSection[]>()
+		for (const s of sections) {
+			const arr = sectionsByOrganism.get(s.organism) || []
+			arr.push(s)
+			sectionsByOrganism.set(s.organism, arr)
+		}
+		const showOrganismHeading = sectionsByOrganism.size > 1
+
+		const renderSidebar = () => {
+			sidebarList.selectAll('*').remove()
+			for (const [organism, items] of sectionsByOrganism) {
+				if (showOrganismHeading) {
+					sidebarList
+						.append('div')
+						.text(organism)
+						.style('font-weight', '600')
+						.style('color', '#374151')
+						.style('margin', '6px 0 4px 0')
+				}
+				for (const s of items) {
+					const key = keyOf(s)
+					const isSelected = selectedKeys.has(key)
+					const isSoleSelection = isSelected && selectedKeys.size === 1
+					const toggleSelection = () => {
+						if (compareMode) {
+							if (selectedKeys.has(key)) {
+								if (selectedKeys.size > 1) selectedKeys.delete(key)
+								else return // keep at least one
+							} else selectedKeys.add(key)
+						} else {
+							if (selectedKeys.has(key) && selectedKeys.size === 1) return
+							selectedKeys.clear()
+							selectedKeys.add(key)
+						}
+						renderSidebar()
+						void renderRight()
+					}
+					const row = sidebarList
+						.append('div')
+						.style('display', 'flex')
+						.style('align-items', 'center')
+						.style('gap', '6px')
+						.style('padding', '3px 4px')
+						.style('border-radius', '3px')
+						.style('background', isSelected ? '#eff6ff' : 'transparent')
+						.style('cursor', 'pointer')
+						.on('click', toggleSelection)
+					if (compareMode) {
+						row
+							.append('input')
+							.attr('type', 'checkbox')
+							.property('checked', isSelected)
+							.property('disabled', isSoleSelection)
+							.style('margin', '0')
+							.style('cursor', isSoleSelection ? 'not-allowed' : 'pointer')
+							.on('click', (event: Event) => {
+								event.stopPropagation()
+								toggleSelection()
+							})
+					}
+					row.append('span').text(s.isoform)
+					row.append('span').style('color', '#6b7280').style('margin-left', 'auto').text(String(s.cohorts.length))
+				}
+			}
+		}
+
+		const renderRight = async () => {
+			rightPane.selectAll('*').remove()
+			const selected = sections.filter(s => selectedKeys.has(keyOf(s)))
+			if (!selected.length) return
+			const cols = rightPane
+				.append('div')
+				.style('display', 'flex')
+				.style('flex-direction', 'column')
+				.style('gap', '16px')
+			for (const s of selected) {
+				const col = cols.append('div').style('min-width', '0')
+				try {
+					const genome = await getGenome(s.genomeName)
+					await renderPTMLollipop(col, s.cohorts, this, s.isoform, genome)
+				} catch (err: any) {
+					col
+						.append('div')
+						.style('color', '#b91c1c')
+						.style('padding', '6px')
+						.text(`Failed to render ${s.organism} · ${s.isoform}: ${err?.message || err}`)
+				}
+			}
+		}
+
+		renderSidebar()
+		await renderRight()
 	}
 }
 
