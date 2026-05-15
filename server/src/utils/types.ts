@@ -18,13 +18,8 @@ export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	/** Compute fresh and persist the result. Receives the fully resolved
 	 * `cacheFilePath`; the callback is responsible for writing JSON to
 	 * that path (typically via `writeJsonCache(cacheFilePath, result)`).
-	 *
-	 * For cross-process artifacts (e.g., a Python-written txt that Rust
-	 * reads), persist a JSON envelope at `cacheFilePath` that names the
-	 * sibling artifact paths. The caller is responsible for verifying
-	 * sibling artifacts before calling this module — if a sibling has
-	 * been evicted, unlink the envelope first so the next call misses
-	 * cleanly and recomputes both files together. */
+	 * All data the response builder needs on a cache hit must be
+	 * contained in the JSON — no on-disk sibling artifacts. */
 	computeFresh: (args: TArgs, cacheId: string, cacheFilePath: string) => Promise<TResult>
 }
 
@@ -32,5 +27,4 @@ export type CacheOrRecomputeResult<TResult> = {
 	result: TResult
 	cacheId: string
 	cacheFilePath: string
-	fromCache: boolean
 }

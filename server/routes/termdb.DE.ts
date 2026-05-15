@@ -1,5 +1,3 @@
-import fs from 'fs'
-import path from 'path'
 import type { DEFullResponse, DEImage, DERequest, ExpressionInput, GeneDEEntry, RouteApi } from '#types'
 import { diffExpPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
@@ -8,10 +6,14 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { cacheFilePath, cacheOrRecompute, canonicalizeSamplelst, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
-import { buildGroupValues, resolveDaContext, type SampleGroups } from '#src/utils/sampleGroups.ts'
-import { file_not_exist } from '#src/utils.js'
-import type { DeCacheEnvelope } from './types.ts'
+import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import {
+	buildGroupValues,
+	canonicalizeSamplelst,
+	resolveDaContext,
+	type SampleGroups
+} from '#src/utils/sampleGroups.ts'
+import type { DeCacheResult } from './types.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/DE',
@@ -48,19 +50,19 @@ function init({ genomes }) {
 				return
 			}
 
-			const { envelope, cacheId, images } = await loadDeForResponse(q, genomes)
+			const { result, cacheId, images } = await loadDeForResponse(q, genomes)
 
-			const rendered = await renderVolcano<GeneDEEntry>(envelope.geneRows, q.volcanoRender)
+			const rendered = await renderVolcano<GeneDEEntry>(result.geneRows, q.volcanoRender)
 			rendered.cacheId = cacheId
 
 			const output: DEFullResponse = {
 				data: rendered,
-				sample_size1: envelope.sample_size1,
-				sample_size2: envelope.sample_size2,
-				method: envelope.method
+				sample_size1: result.sample_size1,
+				sample_size2: result.sample_size2,
+				method: result.method
 			}
 			if (images.length) output.images = images
-			if (envelope.bcv != null) output.bcv = envelope.bcv
+			if (result.bcv != null) output.bcv = result.bcv
 			res.send(output)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -91,64 +93,42 @@ function deKeyInputs(req: DERequest) {
 	}
 }
 
-/** Wrap getDeEnvelope with the route-handler-only steps: verify the
- * sibling PNGs are still on disk for cached envelopes (evict + recompute
- * on partial-eviction or pre-migration envelopes that lack siblings),
- * then materialize the PNGs as base64 data URLs for the response.
+/** Wrap getDeCacheResult with the route-handler-only step of pulling the
+ * embedded diagnostic PNGs out of the cache result for the response.
  *
- * gsea bypasses this layer — it calls `getDeEnvelope` directly because
- * it only needs gene_name + fold_change and would waste work loading
- * PNGs it doesn't use. */
+ * gsea bypasses this layer — it calls `getDeCacheResult` directly because
+ * it only needs gene_name + fold_change and would waste work shuttling
+ * around image payloads it doesn't use. */
 async function loadDeForResponse(
 	req: DERequest,
 	genomes: any
-): Promise<{ envelope: DeCacheEnvelope; cacheId: string; images: DEImage[] }> {
-	let { envelope, cacheId, fromCache } = await getDeEnvelope(req, genomes)
-	const expectsQl = envelope.method === 'edgeR' // 'edgeR' covers limma too — runDeFresh sets method='edgeR' in both branches
-	let png = dePngPaths(cacheId)
-
-	// Cache-hit sibling check: a missing QL on an edgeR envelope means the
-	// PNG was evicted (manual cleanup, partial CacheManager eviction) or
-	// the envelope is from before the sibling-files migration. Either way,
-	// evict the envelope and let cacheOrRecompute regenerate everything.
-	// Bounded: a fresh run always writes the PNG, so the retry can only
-	// fail by throwing.
-	if (fromCache && expectsQl && (await file_not_exist(png.ql))) {
-		await fs.promises.unlink(cacheFilePath('de', cacheId)).catch(() => {})
-		;({ envelope, cacheId, fromCache } = await getDeEnvelope(req, genomes))
-		png = dePngPaths(cacheId)
-	}
-
+): Promise<{ result: DeCacheResult; cacheId: string; images: DEImage[] }> {
+	const { result, cacheId } = await getDeCacheResult(req, genomes)
 	const images: DEImage[] = []
-	if (expectsQl) {
-		images.push(await readPngAsDEImage(png.ql, 'ql_image'))
-		// MDS is only generated when the read-counts matrix fits under R's
-		// `mds_cutoff` — its absence is normal, not an eviction signal.
-		if (!(await file_not_exist(png.mds))) images.push(await readPngAsDEImage(png.mds, 'mds_image'))
-	}
-
-	return { envelope, cacheId, images }
+	if (result.qlImage) images.push(result.qlImage)
+	if (result.mdsImage) images.push(result.mdsImage)
+	return { result, cacheId, images }
 }
 
 /** Single read-or-recompute entry point for the DE cache. Used both by
  * `loadDeForResponse` above and by genesetEnrichment.ts when it needs
- * to project gene_name + fold_change off a cached DE envelope. The
+ * to project gene_name + fold_change off a cached DE result. The
  * cacheOrRecompute pending map dedupes concurrent identical calls so
  * doubling up here is free on hits and produces one shared compute on
  * misses. */
-export async function getDeEnvelope(
+export async function getDeCacheResult(
 	req: DERequest,
 	genomes: any
-): Promise<{ envelope: DeCacheEnvelope; cacheId: string; fromCache: boolean }> {
-	const { result, cacheId, fromCache } = await cacheOrRecompute<ReturnType<typeof deKeyInputs>, DeCacheEnvelope>({
+): Promise<{ result: DeCacheResult; cacheId: string }> {
+	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof deKeyInputs>, DeCacheResult>({
 		computeArgument: deKeyInputs(req),
 		cacheSubdir: 'de',
-		computeFresh: async (_args, id, file) => {
+		computeFresh: async (_args, _id, file) => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDeFresh(req, ds, term_results, term_results2, id, file)
+			return runDeFresh(req, ds, term_results, term_results2, file)
 		}
 	})
-	return { envelope: result, cacheId, fromCache }
+	return { result, cacheId }
 }
 
 /** Resolve the two sample groups + any confounder value arrays for DE.
@@ -163,10 +143,6 @@ export function resolveSampleGroups(param: DERequest, ds: any, term_results: any
 	if (!q) throw new Error('rnaseqGeneCount query missing on ds')
 	if (!q.file) throw new Error('unknown data type for rnaseqGeneCount')
 	if (!q.storage_type) throw new Error('storage_type is not defined')
-	// Do NOT mutate `param.storage_type` here. `param` is the request object
-	// used for cacheId hashing; mutating it would cause hash drift between
-	// call sites that hash before this runs and those that hash after.
-	// Readers should pull from ds.queries.rnaseqGeneCount.storage_type.
 
 	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
 	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
@@ -188,46 +164,32 @@ export function resolveSampleGroups(param: DERequest, ds: any, term_results: any
 	}
 }
 
-/** Read a sibling PNG (the QL or MDS plot R wrote to disk for this
- * cacheId) and return it as a base64 data URL the client can render
- * directly. Used by the route handler on every response — fresh runs
- * just wrote the PNG, cache hits find it as a sibling of the JSON
- * envelope. */
-async function readPngAsDEImage(file: string, key: string): Promise<DEImage> {
-	const plot = await fs.promises.readFile(file)
-	return {
-		src: `data:image/png;base64,${Buffer.from(plot).toString('base64')}`,
-		size: plot.length,
-		key
-	}
+/** Wrap a base64 PNG string from R into the `DEImage` shape the client
+ * consumes. Returns null if R didn't emit the field (e.g. MDS was
+ * skipped because the read counts matrix exceeded `mds_cutoff`). */
+function deImageFromB64(b64: string | undefined, key: string): DEImage | null {
+	if (!b64) return null
+	const padding = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0
+	const size = Math.floor((b64.length * 3) / 4) - padding
+	return { src: `data:image/png;base64,${b64}`, size, key }
 }
 
-/** Deterministic sibling paths for the diagnostic PNGs that R writes for
- * a given cacheId. Layout matches what runDeFresh hands to R. */
-function dePngPaths(cacheId: string): { ql: string; mds: string } {
-	const dir = path.join(serverconfig.cachedir, 'de')
-	return { ql: path.join(dir, `${cacheId}.ql.png`), mds: path.join(dir, `${cacheId}.mds.png`) }
-}
-
-/** Run DE fresh and write the JSON cache envelope to `cacheFile`.
+/** Run DE fresh and write the JSON cache result to `cacheFile`.
  * Mutates param.method to the canonical label ('edgeR' or 'wilcoxon')
- * to match the pipeline that actually ran. For edgeR/limma, R writes
- * the QL plot (and optional MDS plot) to deterministic sibling paths
- * derived from `cacheId`; the route handler reads them off disk on
- * every response. */
+ * to match the pipeline that actually ran. For edgeR/limma, R hands
+ * the diagnostic PNGs back inline (base64) in its stdout JSON, so no
+ * intermediate files touch disk. */
 async function runDeFresh(
 	param: DERequest,
 	ds: any,
 	term_results: any,
 	term_results2: any,
-	cacheId: string,
 	cacheFile: string
-): Promise<DeCacheEnvelope> {
+): Promise<DeCacheResult> {
 	const groups = resolveSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
 	const q = ds.queries.rnaseqGeneCount
-	const png = dePngPaths(cacheId)
 
 	const expression_input = {
 		case: groups.group2names.join(','),
@@ -235,20 +197,12 @@ async function runDeFresh(
 		data_type: 'do_DE',
 		input_file: q.file,
 		cachedir: serverconfig.cachedir,
-		// Read storage_type from the dataset directly, not from the mutable
-		// request object — see note in resolveSampleGroups.
 		storage_type: q.storage_type,
 		DE_method: param.method,
 		mds_cutoff: 10000,
 		min_count: param.min_count,
 		min_total_count: param.min_total_count,
-		cpm_cutoff: param.cpm_cutoff,
-		// R writes the diagnostic PNGs directly to these deterministic
-		// sibling paths so they survive as cache artifacts. Only used by
-		// the edgeR / limma branches; the wilcoxon (Rust) branch ignores
-		// them and produces no images.
-		ql_image_path: png.ql,
-		mds_image_path: png.mds
+		cpm_cutoff: param.cpm_cutoff
 	} as ExpressionInput
 
 	if (param.tw) {
@@ -275,15 +229,21 @@ async function runDeFresh(
 		mayLog('Time taken to run edgeR:', formatElapsedTime(Date.now() - time1))
 		param.method = 'edgeR'
 
-		const envelope: DeCacheEnvelope = {
+		const qlImage = deImageFromB64(result.ql_image_b64, 'ql_image')
+		const mdsImage = deImageFromB64(result.mds_image_b64, 'mds_image')
+
+		const cacheResult: DeCacheResult = {
+			kind: 'DE',
 			geneRows: result.gene_data,
 			sample_size1: result.num_controls[0],
 			sample_size2: result.num_cases[0],
 			method: param.method,
-			bcv: result.bcv && result.bcv[0] != null ? result.bcv[0] : undefined
+			bcv: result.bcv && result.bcv[0] != null ? result.bcv[0] : undefined,
+			...(qlImage ? { qlImage } : {}),
+			...(mdsImage ? { mdsImage } : {})
 		}
-		await writeJsonCache(cacheFile, envelope)
-		return envelope
+		await writeJsonCache(cacheFile, cacheResult)
+		return cacheResult
 	}
 
 	const time1 = new Date().valueOf()
@@ -291,12 +251,13 @@ async function runDeFresh(
 	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 
-	const envelope: DeCacheEnvelope = {
+	const cacheResult: DeCacheResult = {
+		kind: 'DE',
 		geneRows: result,
 		sample_size1: groups.group1names.length,
 		sample_size2: groups.group2names.length,
 		method: param.method
 	}
-	await writeJsonCache(cacheFile, envelope)
-	return envelope
+	await writeJsonCache(cacheFile, cacheResult)
+	return cacheResult
 }

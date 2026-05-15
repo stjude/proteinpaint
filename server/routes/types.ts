@@ -1,7 +1,7 @@
 // these are route type definitions that are only known on the server-side,
 // the client does not know about them, so do not put this in shared/types
 
-import type { DiffMethEntry, GeneDEEntry, GenesetEnrichmentResponse } from '#types'
+import type { DEImage, DiffMethEntry, GeneDEEntry, GenesetEnrichmentResponse } from '#types'
 
 // these req.query key-values are not submitted from the client
 export type ReqQueryAddons = {
@@ -13,56 +13,53 @@ export type ReqQueryAddons = {
 	__abortSignal?: AbortSignal
 }
 
-// ---- Cache envelopes ----
-//
-// Each analysis route writes a JSON envelope to its cacheOrRecompute
-// subdir (de/, dm/, grin2/, gsea/). The envelope is what survives a
-// cache hit — it must carry everything the response builder needs
-// without re-running the underlying R/Rust/Python pipeline. Cross-process
-// artifacts (Python pickles, edgeR PNGs) live as siblings under the same
-// subdir; the envelope only references their existence.
+/** ---- Cache results ----
+ Each analysis route writes a JSON cache result to its cacheOrRecompute
+ subdir (de/, dm/, grin2/, gsea/). The cache result is what survives a
+ cache hit — it must carry everything the response builder needs
+ without re-running the underlying R/Rust/Python pipeline. */
 
-/** de/{cacheid}.json. Carries the rows, sample sizes (R-reported for
- * edgeR, group-derived for wilcoxon), the engine label, and BCV. The
- * diagnostic PNGs live as sibling files at de/{cacheid}.ql.png and
- * de/{cacheid}.mds.png — the route handler reads + base64-encodes them
- * for the response. */
-export type DeCacheEnvelope = {
+/** de/{cacheid}.json. Self-contained: gene rows, sample sizes
+ * (R-reported for edgeR, group-derived for wilcoxon), engine label, BCV,
+ * and — for the edgeR/limma engines — the two diagnostic PNGs already
+ * base64-encoded as `DEImage` objects ready to hand to the client. */
+export type DeCacheResult = {
+	kind: 'DE'
 	geneRows: GeneDEEntry[]
 	sample_size1: number
 	sample_size2: number
 	method: string
 	bcv?: number
+	qlImage?: DEImage
+	mdsImage?: DEImage
 }
 
 /** dm/{cacheid}.json. Carries the promoter rows and sample sizes —
  * enough for the volcano response on either a fresh run or a cache hit
  * without any extra dataset access. */
-export type DmCacheEnvelope = {
+export type DmCacheResult = {
+	kind: 'DM'
 	promoterRows: DiffMethEntry[]
 	sample_size1: number
 	sample_size2: number
 }
 
-/** grin2/{cacheid}.json. The Python txt is a sibling at
- * {cacheid}.python.txt — Rust reads that directly, so the envelope just
- * names the path. The caller (runGrin2) does a pre-check on the sibling
- * and unlinks the envelope if the sibling has been evicted, so the next
- * call misses cleanly and recomputes both. */
-export type Grin2Envelope = {
+/** grin2/{cacheid}.json. Self-contained: the per-gene rows Rust needs
+ * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
+ * step opens this file directly. */
+export type Grin2CacheResult = {
 	kind: 'GRIN2'
-	pythonCacheFile: string
 	resultData: any
 	processing: any
 }
 
-/** gsea/{cacheid}.json. The pickle is a sibling at {cacheid}.pkl —
- * Python writes both in computeFresh; on cache hit the server reads the
- * table directly out of the envelope and skips Python entirely. The
- * caller pre-checks the pickle's existence and unlinks the envelope if
- * the sibling has been evicted. */
-export type GseaEnvelope = {
+/** gsea/{cacheid}.json. Self-contained: the blitzgsea result is pickled
+ * by Python, base64-encoded, and rides inside this cache result alongside
+ * the rendered table. Detail-image requests feed `pickleB64` back to
+ * Python via stdin so it can plot a per-geneset running-sum without
+ * re-running gsea. */
+export type GseaCacheResult = {
 	kind: 'GSEA'
 	table: GenesetEnrichmentResponse
-	pickleFile: string
+	pickleB64: string
 }

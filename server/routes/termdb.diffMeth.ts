@@ -4,9 +4,14 @@ import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { cacheOrRecompute, canonicalizeSamplelst, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
-import { buildGroupValues, resolveDaContext, type SampleGroups } from '#src/utils/sampleGroups.ts'
-import type { DmCacheEnvelope } from './types.ts'
+import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import {
+	buildGroupValues,
+	canonicalizeSamplelst,
+	resolveDaContext,
+	type SampleGroups
+} from '#src/utils/sampleGroups.ts'
+import type { DmCacheResult } from './types.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/diffMeth',
@@ -42,9 +47,9 @@ function init({ genomes }) {
 				return
 			}
 
-			const { envelope, cacheId, fromCache } = await getDmEnvelope(q, genomes)
+			const { result, cacheId } = await getDmCacheResult(q, genomes)
 
-			const rendered = await renderVolcano<DiffMethEntry>(envelope.promoterRows, q.volcanoRender)
+			const rendered = await renderVolcano<DiffMethEntry>(result.promoterRows, q.volcanoRender)
 			rendered.cacheId = cacheId
 
 			// Empty dots is valid (strict thresholds) and the PNG should still
@@ -54,10 +59,9 @@ function init({ genomes }) {
 
 			const output: DiffMethFullResponse = {
 				data: rendered,
-				sample_size1: envelope.sample_size1,
-				sample_size2: envelope.sample_size2
+				sample_size1: result.sample_size1,
+				sample_size2: result.sample_size2
 			}
-			void fromCache
 			res.send(output)
 		} catch (e: any) {
 			res.send({ status: 'error', error: e.message || e })
@@ -84,13 +88,13 @@ function dmKeyInputs(req: DiffMethRequest) {
 
 /** Single read-or-recompute entry point for the DM cache. Used by the
  * route handler above and by genesetEnrichment.ts when projecting
- * gene_name + fold_change off a cached DM envelope. cacheOrRecompute's
+ * gene_name + fold_change off a cached DM result. cacheOrRecompute's
  * pending map dedupes concurrent identical calls. */
-export async function getDmEnvelope(
+export async function getDmCacheResult(
 	req: DiffMethRequest,
 	genomes: any
-): Promise<{ envelope: DmCacheEnvelope; cacheId: string; fromCache: boolean }> {
-	const { result, cacheId, fromCache } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheEnvelope>({
+): Promise<{ result: DmCacheResult; cacheId: string }> {
+	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheResult>({
 		computeArgument: dmKeyInputs(req),
 		cacheSubdir: 'dm',
 		computeFresh: async (_args, _id, file) => {
@@ -98,7 +102,7 @@ export async function getDmEnvelope(
 			return runDmFresh(req, ds, term_results, term_results2, file)
 		}
 	})
-	return { envelope: result, cacheId, fromCache }
+	return { result, cacheId }
 }
 
 /** Resolve the two sample groups + any confounder value arrays for DM.
@@ -162,7 +166,7 @@ async function runDmFresh(
 	term_results: any,
 	term_results2: any,
 	cacheFile: string
-): Promise<DmCacheEnvelope> {
+): Promise<DmCacheResult> {
 	const groups = resolveDmSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
@@ -192,11 +196,12 @@ async function runDmFresh(
 	const result = JSON.parse(await run_R('diffMeth.R', JSON.stringify(diffMethInput)))
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
 
-	const envelope: DmCacheEnvelope = {
+	const cacheResult: DmCacheResult = {
+		kind: 'DM',
 		promoterRows: result.promoter_data,
 		sample_size1: groups.group1names.length,
 		sample_size2: groups.group2names.length
 	}
-	await writeJsonCache(cacheFile, envelope)
-	return envelope
+	await writeJsonCache(cacheFile, cacheResult)
+	return cacheResult
 }

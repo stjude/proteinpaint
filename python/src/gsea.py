@@ -6,6 +6,8 @@ import time
 import sys
 import sqlite3
 import os
+import base64
+import io
 import numpy as np
 import pandas as pd
 
@@ -51,28 +53,6 @@ try:
             table_name = json_object['geneset_group']  # Get the gene set group from the JSON object
             filter_non_coding_genes = json_object['filter_non_coding_genes']  # Get the filter_non_coding_genes flag from the JSON object
             db = json_object['db']  # Get the database path from the JSON object
-
-            # Fast-path cache hit for initial-compute requests (no
-            # geneset_name). The msigdb/library load below and the
-            # coding-genes filter are both unnecessary when we already have
-            # a pickled result — library is only needed for fresh compute
-            # or for the detail-plot's running_sum, and the filter only
-            # affects the signature that feeds blitzgsea. Short-circuiting
-            # here drops the cache-hit latency by the SQL library load
-            # (~0.4s typical) plus any coding-genes query time.
-            if __name__ == "__main__" and 'geneset_name' not in json_object and 'pickle_file' in json_object:
-                pickle_filename = json_object['pickle_file']
-                pickle_path = os.path.join(cachedir, pickle_filename)
-                if os.path.isfile(pickle_path):
-                    start_gsea_time = time.time()
-                    result = pd.read_pickle(pickle_path)
-                    # pickle_file is server-computed deterministically from
-                    # the GSEA inputs; the server can always regenerate it
-                    # on the detail-plot request, so we don't echo it back
-                    # in the response.
-                    print(f'result: {{"data": {result.to_json()}}}')
-                    print(f"GSEA time: {time.time() - start_gsea_time} seconds")
-                    continue
 
             # Create a DataFrame for the signature
             df = {'Genes': genes, 'fold_change': fold_change}  # Create a dictionary with genes and fold change
@@ -127,51 +107,34 @@ try:
                 coding_genes_list = list(map(lambda x: x[0], coding_genes_list))  # Extract the gene symbols
                 signature = signature[signature['Genes'].isin(coding_genes_list)]  # Filter the signature to include only coding genes
             
-            try:
-                # Check if geneset_name and pickle_file are present for generating the plot
-                geneset_name = json_object['geneset_name']  # Get the gene set name from the JSON object
-                pickle_file = json_object['pickle_file']  # Get the pickle file name from the JSON object
-                if os.path.isfile(os.path.join(cachedir, pickle_file)): # Check if the pickle file exists as it may not be in the same server that did the original GSEA computation
-                    result = pd.read_pickle(os.path.join(cachedir, pickle_file))  # Load the result from the pickle file
-                    fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
-                else: # If pickle file is not found, redo the GSEA computation from scratch
+            if 'geneset_name' in json_object:
+                # Detail-image path. The server delivers the previously
+                # computed gsea result inline as a base64-encoded pickle,
+                # so we never touch disk for the data.
+                geneset_name = json_object['geneset_name']
+                pickle_b64 = json_object['pickle_b64']
+                result = pd.read_pickle(io.BytesIO(base64.b64decode(pickle_b64)))
+                fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)
+                random_num = np.random.rand()  # Generate a random number for unique png filename
+                png_filename = f"gsea_plot_{random_num}.png"  # Create a filename for the plot
+                fig.savefig(os.path.join(cachedir, png_filename), bbox_inches='tight')  # Save the plot as a PNG file
+                print(f'image: {{"image_file": "{png_filename}"}}')
+            else:
+                # Initial-table path. We always run blitzgsea fresh — Node
+                # owns the cache; if we got here the envelope was missing.
+                # Pickle the result into a BytesIO and base64-encode it so
+                # the server can stash it inside the JSON envelope and feed
+                # it back on a later detail-image request.
+                start_gsea_time = time.time()
+                if __name__ == "__main__":
                     gsea_result = _safe_blitz_gsea(signature, msigdb_library, num_permutations)
                     if gsea_result is None:
                         continue
                     result = gsea_result.T
-                    fig = blitz.plot.running_sum(signature, geneset_name, msigdb_library, result=result.T, compact=True)  # Generate the running sum plot
-                    result.to_pickle(os.path.join(cachedir, pickle_file))  # Save the result to a pickle file with same name
-                random_num = np.random.rand()  # Generate a random number for unique png filename
-                png_filename = f"gsea_plot_{random_num}.png"  # Create a filename for the plot
-                fig.savefig(os.path.join(cachedir, png_filename), bbox_inches='tight')  # Save the plot as a PNG file
-                print(f'image: {{"image_file": "{png_filename}"}}')  # Print the image file path in JSON format
-            except KeyError:
-                # Initial GSEA calculation. The server-side computeGSEA() in
-                # diffAnalysis.ts provides a deterministic pickle_file name
-                # hashed from the blitzgsea inputs. If the pickle already
-                # exists we load it (cache hit); otherwise we compute and
-                # save under that exact name (cache miss).
-                start_gsea_time = time.time()
-                if __name__ == "__main__":
-                    pickle_filename = json_object['pickle_file']  # Server-supplied deterministic name
-                    pickle_path = os.path.join(cachedir, pickle_filename)
-                    if os.path.isfile(pickle_path):
-                        # Cache hit: load the previously-computed result and
-                        # return it without re-running blitzgsea.
-                        result = pd.read_pickle(pickle_path)
-                    else:
-                        # Cache miss: run blitzgsea and persist the result
-                        # under the server-supplied filename.
-                        gsea_result = _safe_blitz_gsea(signature, msigdb_library, num_permutations)
-                        if gsea_result is None:
-                            continue
-                        result = gsea_result.T
-                        result.to_pickle(pickle_path)
-                    # pickle_file is server-computed deterministically from
-                    # the GSEA inputs; the server can always regenerate it
-                    # on the detail-plot request, so we don't echo it back
-                    # in the response.
-                    print(f'result: {{"data": {result.to_json()}}}')
+                    buf = io.BytesIO()
+                    result.to_pickle(buf)
+                    pickle_b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+                    print(f'result: {{"data": {result.to_json()}, "pickle_b64": "{pickle_b64}"}}')
                 stop_gsea_time = time.time()
                 gsea_time = stop_gsea_time - start_gsea_time
                 print(f"GSEA time: {gsea_time} seconds")

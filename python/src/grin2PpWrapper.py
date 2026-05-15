@@ -10,8 +10,7 @@ Input JSON:
  genedb: gene db file path
  chromosomelist={ <key>: <len>, }
  lesion: JSON string containing array of lesion data
- cacheFileName: string - will save GRIN2 results to this file
- maxGenesToShow: int (default=500) 
+ maxGenesToShow: int (default=500)
  lesionTypeMap: dict {lesionType: displayName} - maps GRIN2 lesion types to user-friendly names
 }
 
@@ -21,7 +20,7 @@ Output JSON:
  totalGenes: int
  showingTop: int
  lesionCounts: {byType: dict{type: count}}
- cacheFileName: string
+ geneHits: [{gene, chrom, loc.start, loc.end, nsubj.<type>, q.nsubj.<type>, ...}, ...]
 }
 """
 
@@ -243,38 +242,33 @@ try:
 		write_error("grin_stats returned invalid results")
 		sys.exit(1)
 	
-	# 6. Sort and cache results
+	# 6. Sort results and build gene hits payload for Rust
 	sorted_results = sort_grin2_data(grin_results["gene.hits"])
-	
-	cache_file_path = input_data.get("cacheFileName")
-	if cache_file_path:
-		cache_columns = ['gene', 'chrom'] + [
-			f'{prefix}.{t}'
-			for t in lesion_types
-			for prefix in ['nsubj', 'q.nsubj']
-			if f'{prefix}.{t}' in sorted_results.columns
-		]
-		
-		# Save cache file
-		results_to_cache = sorted_results[cache_columns + ['loc.start', 'loc.end']].copy()
-		col_order = ['gene', 'chrom', 'loc.start', 'loc.end'] + [
-			c for c in cache_columns if c not in ['gene', 'chrom']
-		]
-		results_to_cache[col_order].to_csv(cache_file_path, index=False, sep='\t')
-	
+
+	type_cols = [
+		f'{prefix}.{t}'
+		for t in lesion_types
+		for prefix in ['nsubj', 'q.nsubj']
+		if f'{prefix}.{t}' in sorted_results.columns
+	]
+	gene_hits_cols = ['gene', 'chrom', 'loc.start', 'loc.end'] + type_cols
+	gene_hits_df = sorted_results[gene_hits_cols]
+	# Replace NaN with None so JSON serialization yields nulls (not NaN, which is invalid JSON)
+	gene_hits = gene_hits_df.astype(object).where(pd.notna(gene_hits_df), None).to_dict(orient='records')
+
 	# 7. Generate table
 	max_genes = input_data.get("maxGenesToShow", 500)
 	num_rows = min(len(sorted_results), max_genes)
 	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map)
-	
+
 	# 8. Output response
 	print(json.dumps({
 		"topGeneTable": table_result,
 		"totalGenes": len(sorted_results),
 		"showingTop": num_rows,
-		"cacheFileName": cache_file_path,
 		"lesionCounts": {"byType": lesion_counts.to_dict()},
-		"memory": grin_results.get("memory_profile", {})
+		"memory": grin_results.get("memory_profile", {}),
+		"geneHits": gene_hits
 	}))
 
 except json.JSONDecodeError as e:

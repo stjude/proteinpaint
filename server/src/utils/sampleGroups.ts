@@ -97,3 +97,27 @@ export function buildGroupValues(
 	}
 	return { names, conf1, conf2 }
 }
+
+/** Caller-side normalizer for two-group analyses (DE, DM): returns a
+ * `samplelst` copy with each group's `values` sorted by sampleId, so a
+ * client sending the same samples in a different order still hashes to
+ * the same cacheId. Each route is responsible for calling this (or
+ * otherwise guaranteeing sorted order) before passing samplelst into
+ * cacheOrRecompute — the cache module trusts its inputs. */
+export function canonicalizeSamplelst(s: any): any {
+	if (!s || !Array.isArray(s.groups)) return s
+	return {
+		groups: s.groups.map((g: any) => ({
+			name: g.name,
+			in: g.in,
+			values: Array.isArray(g.values)
+				? [...g.values].sort((a, b) => {
+						const A = a?.sampleId
+						const B = b?.sampleId
+						if (A === B) return 0
+						return A < B ? -1 : 1
+				  })
+				: g.values
+		}))
+	}
+}

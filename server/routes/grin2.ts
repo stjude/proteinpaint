@@ -1,18 +1,17 @@
 import type { GRIN2Request, GRIN2Response, RouteApi } from '#types'
 import { GRIN2Payload } from '#types/checkers'
 import serverconfig from '#src/serverconfig.js'
-import fs from 'fs'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import os from 'os'
 import { get_samples } from '#src/termdb.sql.js'
-import { read_file, file_is_readable, file_not_exist } from '#src/utils.js'
+import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { mayFilterByMaf } from '#src/mds3.init.js'
-import { cacheFilePath, cacheOrRecompute, generateHash, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
-import type { Grin2Envelope } from './types.ts'
+import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import type { Grin2CacheResult } from './types.ts'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
 
@@ -38,7 +37,7 @@ import { exec as execCallback } from 'node:child_process'
  *    - SV: Filter by 5' and 3' flanking sizes
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply overall lesion cap
- * 5. Pass lesion data, maxGenesToShow, and cacheFileName to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
+ * 5. Pass lesion data and maxGenesToShow to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
  * 6. Return Manhattan plot from Rust as base64 string, top gene table, timing information, statistically significant results that are displayed as an interactive svg, and cache file name for future use
  */
 
@@ -205,19 +204,6 @@ function grin2ComputeArg(req: GRIN2Request) {
 	}
 }
 
-/** If the JSON envelope at `envelopeFile` exists but the sibling Python
- * txt at `pythonCacheFile` does not, unlink the envelope so the next
- * cacheOrRecompute call misses and regenerates both files together.
- * Returns true if it evicted a stale envelope. */
-async function evictIfSiblingMissing(envelopeFile: string, pythonCacheFile: string): Promise<boolean> {
-	if (await file_not_exist(envelopeFile)) return false // envelope already absent — nothing to evict
-	if (await file_not_exist(pythonCacheFile)) {
-		await fs.promises.unlink(envelopeFile).catch(() => {})
-		return true
-	}
-	return false // both present — cache is consistent
-}
-
 // Building the lesion map to send to python
 function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
 	const lesionTypeMap: Record<string, string> = {}
@@ -257,23 +243,21 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 	}
 
 	// Track Python-only timing. On a cache hit these stay 0; on a fresh run
-	// they're populated inside the computeFresh closure.
+	// they're populated inside the computeFresh closure. `freshCompute`
+	// flips to true iff computeFresh ran — used below to label the
+	// processing/gsea timing rows as "cached" on cache hits.
 	let processingTime = 0
 	let grin2AnalysisTime = 0
+	let freshCompute = false
 
-	// Pre-check: if the JSON envelope is on disk but its sibling Python txt
-	// is gone, unlink the envelope so cacheOrRecompute misses and the next
-	// computeFresh regenerates both consistently.
-	const computeArg = grin2ComputeArg(request)
-	const cacheId = generateHash(computeArg)
-	const envelopeFile = cacheFilePath('grin2', cacheId)
-	const pythonCacheFile = path.join(serverconfig.cachedir, 'grin2', `${cacheId}.python.txt`)
-	await evictIfSiblingMissing(envelopeFile, pythonCacheFile)
-
-	const { result: env, fromCache } = await cacheOrRecompute<ReturnType<typeof grin2ComputeArg>, Grin2Envelope>({
-		computeArgument: computeArg,
+	const { result: cacheResult, cacheFilePath: cacheFile } = await cacheOrRecompute<
+		ReturnType<typeof grin2ComputeArg>,
+		Grin2CacheResult
+	>({
+		computeArgument: grin2ComputeArg(request),
 		cacheSubdir: 'grin2',
-		computeFresh: async (_args, _cacheId, _envelopeFile) => {
+		computeFresh: async (_args, _cacheId, file) => {
+			freshCompute = true
 			const startTime = Date.now()
 
 			// Step 1: Get samples using cohort infrastructure
@@ -314,17 +298,16 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 				throw new Error('No lesions found after processing all samples. Check filter criteria and input data.')
 			}
 
-			// Step 3: Prepare input for Python script. Python writes its results
-			// to `pythonCacheFile` (computed in the outer scope from the
-			// deterministic cacheId), which sits as a sibling to the JSON
-			// envelope under the grin2 cache subdir.
+			// Step 3: Prepare input for Python script. Per-gene rows come back
+			// in the stdout JSON (geneHits) and get embedded in the cache
+			// result — Rust reads them straight from this JSON file, no
+			// sibling file.
 			const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 
 			const pyInput = {
 				genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 				chromosomelist,
 				lesion: JSON.stringify(lesions),
-				cacheFileName: pythonCacheFile,
 				maxGenesToShow: request.maxGenesToShow,
 				lesionTypeMap: buildLesionTypeMap(availableDataTypes)
 			}
@@ -345,28 +328,22 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 
 			const resultData = JSON.parse(pyResult)
 
-			const envelope: Grin2Envelope = {
+			const cacheResult: Grin2CacheResult = {
 				kind: 'GRIN2',
-				pythonCacheFile,
 				resultData,
 				processing
 			}
-			// envelopeFile from the closure is the same path cacheOrRecompute
-			// would pass in via the third arg — use it directly.
-			await writeJsonCache(envelopeFile, envelope)
-			return envelope
+			await writeJsonCache(file, cacheResult)
+			return cacheResult
 		}
 	})
 
-	// pythonCacheFile is already in scope from the pre-check above; the
-	// envelope's own copy is used by other callers but we trust the
-	// deterministic name here.
-	const { resultData, processing } = env
+	const { resultData, processing } = cacheResult
 
 	// Step 5: Prepare Rust input. Always re-rendered because rendering
 	// depends on view params (width, height, etc.) that aren't in the cache key.
 	const rustInput = {
-		file: pythonCacheFile,
+		file: cacheFile,
 		type: 'grin2',
 		chrSizes: chromosomelist,
 		plot_width: request.width,
@@ -423,12 +400,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		])
 	}
 
-	// On a cache hit, the Python step didn't run this request — but the
-	// row historically named the file. Show it either way; the path is the
-	// deterministic envelope sibling.
 	const response: GRIN2Response = {
 		status: 'success',
-		fromCache,
+		fromCache: !freshCompute,
 		pngImg: manhattanPlotData.png,
 		plotData: manhattanPlotData.plot_data,
 		topGeneTable: resultData.topGeneTable,
@@ -439,7 +413,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 					rows: [
 						['Total Genes', resultData.totalGenes.toLocaleString()],
 						['Showing Top', resultData.showingTop.toLocaleString()],
-						['Cache File Name', pythonCacheFile],
+						['Cache File Name', cacheFile],
 						['Total Samples', processing.totalSamples!.toLocaleString()],
 						['Processed Samples', processing.processedSamples!.toLocaleString()],
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
@@ -467,8 +441,8 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 				{
 					name: 'Timing',
 					rows: [
-						['Processing', fromCache ? 'cached' : formatElapsedTime(processingTime)],
-						['GRIN2', fromCache ? 'cached' : formatElapsedTime(grin2AnalysisTime)],
+						['Processing', freshCompute ? formatElapsedTime(processingTime) : 'cached'],
+						['GRIN2', freshCompute ? formatElapsedTime(grin2AnalysisTime) : 'cached'],
 						['Plotting', formatElapsedTime(manhattanPlotTime)],
 						['Total', formatElapsedTime(totalTime)],
 						...capWarningRows

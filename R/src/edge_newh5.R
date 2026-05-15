@@ -175,13 +175,18 @@ if (dim(y)[2]==0) { # Its possible after filtering there might not be any sample
 
 if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { # If the dimensions of the read counts matrix is below this threshold, only then the mds image will be generated as its very compute intensive
   mds_plot_time <- system.time({
-    # Server passes the absolute output path (de/{cacheid}.mds.png) so the
-    # PNG is deterministic and survives as a cache sibling artifact.
-    png(filename = input$mds_image_path, width = 1000, height = 1000, res = 200) # Opening a png device
+    # PNG goes straight into the JSON output as base64 — no on-disk
+    # artifact. tempfile() lives just long enough for plotMDS to write
+    # bytes we read back and unlink. capture.output(try(dev.off()))
+    # swallows the "null device 1" auto-print that would corrupt JSON.
+    mds_tmp <- tempfile(fileext = ".png")
+    png(filename = mds_tmp, width = 1000, height = 1000, res = 200)
     par(oma = c(0, 0, 0, 0)) # Creating a margin
     mds_conditions <- c(rep("T", length(cases)), rep("C", length(controls))) # Case samples are labelled "T" and control samples are labelled "C". Single-letter labelling added because otherwise labels get overwritten on each other.
     plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
-    # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+    invisible(capture.output(try(dev.off(), silent = TRUE)))
+    mds_image_b64 <- base64_enc(readBin(mds_tmp, "raw", n = file.info(mds_tmp)$size))
+    unlink(mds_tmp)
   })
   mds_plot_mem <- mem_probe()
   #cat("mds plot time: ", as.difftime(mds_plot_time, units = "secs")[3], " seconds\n")
@@ -251,12 +256,15 @@ if (DE_method == "edgeR") {
   
   # Saving QL fit image
   ql_plot_time <- system.time({
-    # Server passes the absolute output path (de/{cacheid}.ql.png) so the
-    # PNG is deterministic and survives as a cache sibling artifact.
-    png(filename = input$ql_image_path, width = 1000, height = 1000, res = 200) # Opening a png device
+    # PNG goes straight into the JSON output as base64 — see the MDS
+    # block above for the rationale on tempfile + capture.output.
+    ql_tmp <- tempfile(fileext = ".png")
+    png(filename = ql_tmp, width = 1000, height = 1000, res = 200)
     par(oma = c(0, 0, 0, 0)) # Creating a margin
     plotQLDisp(fit) # Plot the edgeR fit
-    # dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+    invisible(capture.output(try(dev.off(), silent = TRUE)))
+    ql_image_b64 <- base64_enc(readBin(ql_tmp, "raw", n = file.info(ql_tmp)$size))
+    unlink(ql_tmp)
   })
   ql_plot_mem <- mem_probe()
   #cat("ql plot time: ", as.difftime(ql_plot_time, units = "secs")[3], " seconds\n")
@@ -270,17 +278,20 @@ if (DE_method == "edgeR") {
   voom_transformation_lmfit_time <- system.time({
     suppressWarnings({
       suppressMessages({
-        # Server passes the absolute output path (de/{cacheid}.ql.png) — same
-        # slot as the edgeR QL fit so the cache sibling layout matches
-        # regardless of method.
-        png(filename = input$ql_image_path, width = 1000, height = 1000, res = 200) # Opening a png device
+        # PNG is captured by the voomLmFit(..., plot = TRUE) call below
+        # and streamed back as base64 in the JSON output — see the MDS
+        # block above for rationale.
+        ql_tmp <- tempfile(fileext = ".png")
+        png(filename = ql_tmp, width = 1000, height = 1000, res = 200)
         par(oma = c(0, 0, 0, 0)) # Creating a margin
         suppressWarnings({
           suppressMessages({
             fit <- voomLmFit(y, design, plot = TRUE) # This is base don the recommendation of the edgeR limma/voom authors https://support.bioconductor.org/p/9161585/
           })
         })
-        dev.off() # Gives a null device message which breaks JSON. Commenting it out for now, will investigate it later
+        invisible(capture.output(try(dev.off(), silent = TRUE)))
+        ql_image_b64 <- base64_enc(readBin(ql_tmp, "raw", n = file.info(ql_tmp)$size))
+        unlink(ql_tmp)
       })
     })
   })
@@ -343,10 +354,11 @@ final_output$num_controls <- length(controls)
 if (DE_method == "edgeR") {
   final_output$bcv <- bcv
 }
-# QL/MDS PNGs were written to server-supplied paths (input$ql_image_path
-# and input$mds_image_path). The server discovers which were written via
-# fs.access on those paths after the script returns — no marker needed
-# in this JSON output.
+# Diagnostic PNGs ride along in the JSON output as base64 strings. ql is
+# always present for edgeR/limma; mds is only present when the read
+# counts matrix fits under input$mds_cutoff.
+if (exists("ql_image_b64")) final_output$ql_image_b64 <- unbox(ql_image_b64)
+if (exists("mds_image_b64")) final_output$mds_image_b64 <- unbox(mds_image_b64)
 #cat("Time for generating final dataframe: ", as.difftime(final_data_generation_time, unit = "secs")[3], " seconds\n")
 
 # Per-stage elapsed times (seconds). Reported as part of the JSON so the

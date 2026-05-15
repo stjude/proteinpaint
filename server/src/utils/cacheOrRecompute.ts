@@ -25,31 +25,6 @@ export function generateHash(args: any): string {
 	return crypto.createHash('sha256').update(stableStringify(args)).digest('hex').slice(0, 32)
 }
 
-/** Caller-side utility for analyses with two-group comparisons (DE, DM,
- * future). Sorts each group's `values` by sampleId so clients sending the
- * same samples in different orders produce the same cacheId. The cache
- * module itself does NOT invoke this — the caller is responsible for
- * shaping its `computeArgument` deterministically before passing it in.
- * Lives here purely for colocation with the other cache-shaping helpers
- * (generateHash, stableStringify). */
-export function canonicalizeSamplelst(s: any): any {
-	if (!s || !Array.isArray(s.groups)) return s
-	return {
-		groups: s.groups.map((g: any) => ({
-			name: g.name,
-			in: g.in,
-			values: Array.isArray(g.values)
-				? [...g.values].sort((a, b) => {
-						const A = a?.sampleId
-						const B = b?.sampleId
-						if (A === B) return 0
-						return A < B ? -1 : 1
-				  })
-				: g.values
-		}))
-	}
-}
-
 const HASH_RE = /^[0-9a-f]{32}$/
 
 /** Build the canonical cache file path. Validates the cacheId shape so a
@@ -60,10 +35,7 @@ export function cacheFilePath(subdir: CacheSubdir, cacheId: string): string {
 }
 
 /** Persist a result as JSON to the given path. Companion to the module's
- * built-in JSON read; use this from `computeFresh` callbacks whose result
- * is built entirely in JS. Cross-process callbacks (where Python/Rust
- * writes the artifact directly) skip this and use the JSON envelope
- * pattern documented on `CacheOrRecomputeOpts.computeFresh`. */
+ * built-in JSON read; use this from `computeFresh` callbacks. */
 export async function writeJsonCache(filePath: string, result: unknown): Promise<void> {
 	await fs.promises.writeFile(filePath, JSON.stringify(result))
 }
@@ -82,9 +54,7 @@ const pending = new Map<string, Promise<CacheOrRecomputeResult<any>>>()
 
 /** Generic cache-or-recompute: hash the inputs, look for a JSON file under
  * the canonical path, return its parsed contents on hit, otherwise call
- * `computeFresh` and have it write the file. JSON-only by design — see
- * `CacheOrRecomputeOpts.computeFresh` for the cross-process artifact
- * pattern when the cache content is owned by a subprocess. */
+ * `computeFresh` and have it write the file. JSON-only by design. */
 export async function cacheOrRecompute<TArgs, TResult>(
 	opts: CacheOrRecomputeOpts<TArgs, TResult>
 ): Promise<CacheOrRecomputeResult<TResult>> {
@@ -98,9 +68,9 @@ export async function cacheOrRecompute<TArgs, TResult>(
 
 	const work = (async (): Promise<CacheOrRecomputeResult<TResult>> => {
 		const cached = await tryReadJson<TResult>(file)
-		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file, fromCache: true }
+		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
 		const fresh = await computeFresh(computeArgument, cacheId, file)
-		return { result: fresh, cacheId, cacheFilePath: file, fromCache: false }
+		return { result: fresh, cacheId, cacheFilePath: file }
 	})()
 	pending.set(dedupKey, work)
 	return work.finally(() => pending.delete(dedupKey)) as Promise<CacheOrRecomputeResult<TResult>>
