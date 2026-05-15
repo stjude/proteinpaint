@@ -1539,6 +1539,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			assayName: ptm.assayName || null,
 			cohortName: ptm.cohortName || null,
 			proteinAccession: ptm.proteinAccession || null,
+			PTMStr: ptm.uniqueIdentifier || null,
 			htmlSections: [
 				{
 					key: 'Action',
@@ -1579,6 +1580,7 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 						{ k: 'Organism', v: m.organism ?? 'NA' },
 						{ k: 'Assay', v: m.assayName ?? 'NA' },
 						{ k: 'Sample set', v: m.cohortName ?? 'NA' },
+						{ k: 'PTM', v: m.PTMStr ?? 'NA' },
 						{ k: 'Log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
 						{ k: 'P value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
 						{ k: 'Case samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
