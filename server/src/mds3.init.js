@@ -56,6 +56,7 @@ import {
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes, TermTypes } from '#shared/terms.js'
+import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from '#routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from '#routes/deleteWSITileSelection.ts'
@@ -323,6 +324,9 @@ export async function validate_termdb(ds) {
 	await mayInitiateNumericDictionaryTermplots(ds)
 	await validate_correlationVolcano(ds)
 
+	// validate sample types
+	mayValidateSampleTypes(tdb)
+
 	if ('minTimeSinceDx' in tdb) {
 		if (!Number.isFinite(tdb.minTimeSinceDx)) throw 'termdb.minTimeSinceDx not number'
 		if (tdb.minTimeSinceDx <= 0) throw 'termdb.minTimeSinceDx<=0'
@@ -511,6 +515,31 @@ async function mayValidateRestrictAcestries(tdb) {
 			throw 'unknown PC source and configuration for restrictAncestries'
 		}
 	}
+}
+
+function mayValidateSampleTypes(tdb) {
+	if (!tdb.hasSampleAncestry) {
+		// for now, only validating sample types if ds has sample ancestry
+		// TODO: validate sample types for all datasets
+		return
+	}
+	// dataset has sample ancestry, therefore must have
+	// two sample types: parent and child
+	const sampleTypeConfig = tdb.sampleTypes
+	if (!sampleTypeConfig) 'sample type config missing'
+	if (Object.keys(sampleTypeConfig).length != 2) throw 'sample type config must have 2 sample types'
+	let parentSampleType, childSampleType
+	for (const [k, v] of Object.entries(sampleTypeConfig)) {
+		if (!isNumeric(k)) throw 'sample type is non-numeric'
+		const sampleType = Number(k)
+		if (Number.isInteger(v.parent_id)) {
+			childSampleType = sampleType
+		} else {
+			parentSampleType = sampleType
+		}
+	}
+	if (!Number.isInteger(parentSampleType)) throw 'invalid parent sample type'
+	if (!Number.isInteger(childSampleType)) throw 'invalid child sample type'
 }
 
 async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
