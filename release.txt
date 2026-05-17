@@ -1,2 +1,1 @@
-Fixes:
-- show Loading on selecting a term into regression ui
+

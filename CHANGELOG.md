@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- show Loading on selecting a term into regression ui
+
 
 ## 2.189.0
 
