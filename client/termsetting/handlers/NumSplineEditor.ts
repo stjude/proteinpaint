@@ -210,9 +210,9 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 		this.dom.knot_select_div
 			.append('button')
 			.style('margin', '15px')
-			// .property('disabled', knot_count == knot_ct_select.node().value)
-			.html('Compute')
+			.text('Compute')
 			.on('click', async () => {
+				this.dom.knots_div.style('pointer-events', 'none').style('opacity', 0.5)
 				const desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
 				let requested_knots_ct = desired_knots_ct
 				// request knots until desired_knots are available
@@ -224,6 +224,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 					this.q.knots = result.knots
 					requested_knots_ct = requested_knots_ct + 1
 				}
+				this.dom.knots_div.style('pointer-events', 'auto').style('opacity', 1)
 				this.updateCustomSplineInputs()
 				this.handler.density.setBinLines(this.getBoundaryOpts())
 			})
