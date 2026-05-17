@@ -174,8 +174,21 @@ export async function getPlotConfig(opts, app) {
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
-			// for numeric variables, set default mode to continuous
-			const defaultQ = !t.q?.mode ? { numeric: { mode: 'continuous' } } : undefined
+			// for numeric dictionary variables, set default mode to continuous;
+			// for non-dictionary numeric variables (e.g. geneExpression), default
+			// to discrete (regular-bin), to match how dictionary numeric variables
+			// behave when added via the UI for a regression analysis
+			const defaultQ = !t.q?.mode
+				? {
+						numeric: { mode: 'continuous' },
+						geneExpression: { mode: 'discrete' },
+						isoformExpression: { mode: 'discrete' },
+						metaboliteIntensity: { mode: 'discrete' },
+						proteomeAbundance: { mode: 'discrete' },
+						ssGSEA: { mode: 'discrete' },
+						dnaMethylation: { mode: 'discrete' }
+				  }
+				: undefined
 			await fillTermWrapper(t, app.vocabApi, defaultQ)
 		}
 		config.independent = opts.independent
@@ -192,6 +205,23 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 
 	// numeric term
 	defaultQ['numeric'] = regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
+
+	// non-dictionary numeric terms (e.g. geneExpression) should default to the
+	// same mode as dictionary numeric terms in regression, so that adding such
+	// a term as an independent variable yields a binned (regular-bin) variable
+	// rather than a continuous one
+	const nonDictNumericDefault =
+		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
+	for (const t of [
+		'geneExpression',
+		'isoformExpression',
+		'metaboliteIntensity',
+		'proteomeAbundance',
+		'ssGSEA',
+		'dnaMethylation'
+	]) {
+		defaultQ[t] = nonDictNumericDefault
+	}
 
 	// categorical term
 	defaultQ['categorical'] =
