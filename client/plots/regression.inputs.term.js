@@ -208,7 +208,9 @@ export class InputTerm {
 		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: tw.q }
 
 		// get term categories
+		const wait = this.dom.holder.append('div').style('padding', '5px').text('Loading...') // getCategories may wait long time e.g. gdc. adding this to indicate its loading to avoid just showing a nopill prompt
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
+		wait.remove()
 		if (!data) throw `no data for term.id='${tw.term.id}'`
 		if (data.error) throw data.error
 
