@@ -214,13 +214,18 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 			.html('Compute')
 			.on('click', async () => {
 				const desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
-				let requested_knots_ct = Number.parseInt(knot_ct_select.node().value)
-				// request knots util desired_knots are available
+				let requested_knots_ct = desired_knots_ct
+				// request knots until desired_knots are available
+				// (backend dedups identical percentile values, so retry with more if needed)
 				while (this.q.knots.length != desired_knots_ct) {
-					await this.getKnots(requested_knots_ct)
+					// stop incrementing before percentile_lst would contain values outside 1-99
+					if (requested_knots_ct > 99) break
+					const result = await this.getKnots(requested_knots_ct)
+					this.q.knots = result.knots
 					requested_knots_ct = requested_knots_ct + 1
 				}
 				this.updateCustomSplineInputs()
+				this.handler.density.setBinLines(this.getBoundaryOpts())
 			})
 
 		this.dom.knot_select_div
