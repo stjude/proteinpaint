@@ -271,7 +271,16 @@ export class InputTerm {
 
 			this.summarizeSample(tw, data.lst)
 
-			if (tw.term.type == 'float' || tw.term.type == 'integer') {
+			if (
+				tw.term.type == 'float' ||
+				tw.term.type == 'integer' ||
+				tw.term.type == 'geneExpression' ||
+				tw.term.type == 'isoformExpression' ||
+				tw.term.type == 'metaboliteIntensity' ||
+				tw.term.type == 'proteomeAbundance' ||
+				tw.term.type == 'ssGSEA' ||
+				tw.term.type == 'dnaMethylation'
+			) {
 				if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
 					this.termStatus.allowToSelectRefGrp = true
 				}
