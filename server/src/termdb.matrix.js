@@ -123,7 +123,7 @@ let numActiveQueriesAcrossUsers = 0,
 
 async function getSampleData(q, ds, mapParent2Children) {
 	// dictionary and non-dictionary terms require different methods for data query
-	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
+	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q, ds)
 
 	// determine whether parent annotations should be mapped onto child samples
 	mapParent2Children = maySetMapParent2Children(q, ds, mapParent2Children)
@@ -451,12 +451,18 @@ async function mayGetSampleFilterSet4snplst(q, nonDictTerms) {
 	return new Set((await get_samples(q, q.ds)).map(i => i.id))
 }
 
-export function divideTerms(lst) {
-	// divide query list of tw into following lists based on term type
+export function divideTerms(q, ds) {
+	/*
+	Divide q.terms into dict / gene-variant / non-dict lists by term type. This is the central
+	choke point every sample-data route flows through, so role-based term visibility is enforced
+	inline at every dict-push site: when the dataset declares an isTermVisible hook, dict terms
+	the requester cannot see are dropped before downstream queries are issued. Datasets without
+	the hook are unaffected — every dict term flows through.
+	*/
 	const dict = [],
 		geneVariantTws = [],
 		nonDict = []
-	for (const tw of lst) {
+	for (const tw of q.terms) {
 		const type = tw.term?.type
 		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
 		if (type) {
@@ -466,11 +472,23 @@ export function divideTerms(lst) {
 			} else if (isNonDictionaryType(type)) {
 				nonDict.push(tw)
 			} else {
-				dict.push(tw)
+				if (ds.cohort.termdb.isTermVisible) {
+					if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term.id)) {
+						dict.push(tw)
+					}
+				} else {
+					dict.push(tw)
+				}
 			}
 		} else if (tw.term?.id) {
 			// term.type missing and has term.id, assume it is shorthand for coding up dict term on client
-			dict.push(tw)
+			if (ds.cohort.termdb.isTermVisible) {
+				if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term.id)) {
+					dict.push(tw)
+				}
+			} else {
+				dict.push(tw)
+			}
 		} else {
 			nonDict.push(tw)
 		}

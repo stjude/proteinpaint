@@ -1750,14 +1750,15 @@ keep this setting here for reason of:
 	disableAssayAvailability?: (path: string, query: { [key: string]: any }) => boolean
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
+	/** Optional dataset hook to filter the per-request /termdb/config response based on the
+	 * requesting user's role. Implementations MUST delegate every per-term decision to
+	 * ds.cohort.termdb.isTermVisible(q.__protected__, termId) — do not consult _role2terms or
+	 * any other role state directly. The hook MUST build fresh arrays/objects (no in-place
+	 * mutation of the cached dataset). Invoked from termdb.config.ts after the response is
+	 * populated; skipped when undefined. */
+	filterTermdbConfig?: (c: any, q: any, ds: any) => void
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
-	/** Optional hook to mutate the per-request /termdb/config response based on the requesting user's role.
-	 * Invoked from termdb.config.ts after the response object has been populated, so the dataset can prune
-	 * preset plot entries (or any other client-visible config) that should not be exposed to a given role.
-	 * Implementations should deep-clone any shared objects before mutating to avoid leaking changes into
-	 * the cached dataset across requests. */
-	filterClientCopy?: (c: any, clientAuthResult: any) => void
 	/** Populated by server_init_db_queries from the term2role sidecar table when it is non-empty.
 	 * Map keys are role names; values are the Set of term IDs visible to that role. Undefined when
 	 * the table is empty (no role-based term restriction for this dataset). */
