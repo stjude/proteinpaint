@@ -306,7 +306,11 @@ export class ScatterViewModelBase {
 		this.scatterZoom.initZoom(toolsDiv)
 	}
 
-	//2D large and 3D add an svg for the legend
+	/** Applies to the ViewModel only
+	 * Note: legendvm.renderLegend called in this file applies to all
+	 * inherited classes. The g dimensions are different
+	 * between the svg rendered scatter and the 2D Large/3D scatter.
+	 * Hence the similar function in scatterViewModel. */
 	addLegendSVG(chart) {
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = this.view.dom.mainDiv

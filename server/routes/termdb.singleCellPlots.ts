@@ -134,6 +134,9 @@ async function getSingleCellScatter(req, res, ds) {
 		if (samples.length >= q.canvasSettings.cutoff) {
 			const src = await makeCanvas(q, samples, colorMap, { xMin, xMax, yMin, yMax, geMin, geMax }, tw.term.type)
 			resp.result.Default.src = src
+			const count = Object.values(colorMap).reduce((sum: number, c: any) => sum + c.sampleCount, 0)
+			/** Since the sample array is not returned, send the sample count for the legend */
+			resp.result.Default.totalSampleCount = count
 		} else {
 			resp.result.Default.samples = samples
 		}

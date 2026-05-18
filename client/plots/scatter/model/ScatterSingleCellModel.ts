@@ -45,7 +45,7 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			)
 
 			if ('error' in data || !data.result) throw new Error(data['error'] || 'No data received')
-
+			this.charts = []
 			this.createChart('Default', data.result.Default)
 
 			this.range = data.range

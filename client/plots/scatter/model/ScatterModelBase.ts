@@ -15,7 +15,7 @@ export const shapes = shapesArray
 
 export abstract class ScatterModelBase {
 	scatter: Scatter
-	charts: ScatterChart[]
+	charts!: ScatterChart[]
 	is3D: boolean
 	is2DLarge: boolean
 	axisOffset: { x: number; y: number }
@@ -39,8 +39,6 @@ export abstract class ScatterModelBase {
 		this.is3D = false
 		this.is2DLarge = false
 		this.axisOffset = { x: xAxisOffSet, y: yAxisOffSet }
-
-		this.charts = []
 	}
 
 	abstract getDataRequestOpts(): any
@@ -54,6 +52,7 @@ export abstract class ScatterModelBase {
 		const chart: ScatterChart = { id, data, cohortSamples, colorLegend, shapeLegend }
 		if (data.src) {
 			chart.src = data.src
+			if (data.totalSampleCount) chart.totalSampleCount = data.totalSampleCount
 			this.is2DLarge = true
 		}
 		this.charts.push(chart)

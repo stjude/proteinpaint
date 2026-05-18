@@ -52,7 +52,7 @@ export class ScatterModel extends ScatterModelBase {
 				this.scatter.api?.getAbortSignal()
 			)
 			if ('error' in data || !data.result) throw new Error(data['error'] || 'No data received')
-
+			this.charts = []
 			this.range = data.range
 			for (const [key, chartData] of Object.entries(data.result)) {
 				const chart = chartData as ScatterDataResult

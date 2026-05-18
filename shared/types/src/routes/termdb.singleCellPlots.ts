@@ -53,6 +53,9 @@ export type SingleCellPlotDataResult = {
 	samples?: Cell[]
 	/** If over the cutoff, will return image instead of sample array */
 	src?: string
+	/** When no sample array is returned, send the total sample count for
+	 * the legend. */
+	totalSampleCount?: number
 }
 
 export type ValidSingleCellPlotsResponse = {

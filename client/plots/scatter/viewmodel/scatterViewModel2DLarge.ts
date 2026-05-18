@@ -92,15 +92,13 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		return { vertices, colors }
 	}
 
-	/** Renders the server rendered image for a single cell */
+	/** Renders the server generated image for a single cell */
 	renderLargeSingleCell(chart) {
-		const div = this.view.dom.mainDiv
-		div.selectAll('*').remove()
-		const svg = div
-			.append('svg')
-			.attr('width', this.scatter.settings.svgw + 100)
-			.attr('height', this.scatter.settings.svgh + 100)
-		const imgG = svg.append('g')
+		/** No need to remove elements or call the legend in this fn.
+		 * Unlike the renderSerie above, this fn finishes in renderChart -> renderSVG
+		 * before legendvm.renderLegend is called. renderChart handles dom additions
+		 * and removal. A new legend is rendered each time. Simply add the image. */
+		const imgG = chart.svg.append('g')
 		this.canvas = imgG.append('image').attr('xlink:href', chart.src)
 	}
 }

@@ -43,6 +43,7 @@ export type ScatterDataResult = {
 	shapeMap: ScatterShapeMap
 	samples?: any[]
 	src?: string
+	totalSampleCount?: number
 }
 
 export type ScatterChart = {
@@ -92,6 +93,7 @@ export type ScatterChart = {
 	axisG?: any
 	labelsG?: any
 	src?: string
+	totalSampleCount?: number
 }
 
 export type ValidScatterDataResponse = { range: DataRange; result: { [index: string]: ScatterDataResult } }
