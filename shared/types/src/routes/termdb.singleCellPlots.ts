@@ -42,7 +42,7 @@ export type SingleCellRange = {
 	yMax: number
 	/** Gene expression min */
 	geMin: number | undefined
-	/** Gene expression min */
+	/** Gene expression max */
 	geMax: number | undefined
 }
 

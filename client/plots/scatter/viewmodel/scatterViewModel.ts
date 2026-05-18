@@ -56,7 +56,7 @@ export class ScatterViewModel extends ScatterViewModelBase {
 				const l = line()
 					.x(d => d[0])
 					.y(d => d[1])
-				const regressionPath = chart.regressionG.append('path')
+				const regressionPath = chart.regressionG!.append('path')
 				regressionPath
 					.attr('d', l(chart.regressionCurve))
 					.attr('stroke', 'blue')

@@ -5,7 +5,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
 import { getDateFromNumber, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
-import type { ColorLegendItem, ScatterChart, ScatterDataResult, ShapeLegendItem } from '../scatterTypes'
+import type { ColorLegendItem, ScatterChart, ScatterDataResult, ScatterRanges, ShapeLegendItem } from '../scatterTypes'
 import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
 import type { SingleCellPlotDataResult } from '#types'
 import { xAxisOffSet, yAxisOffSet, getCoordinate, calculatePadding } from '#shared'
@@ -21,16 +21,7 @@ export abstract class ScatterModelBase {
 	axisOffset: { x: number; y: number }
 	startGradient: any
 	stopGradient: any
-	range!: {
-		xMin: number
-		xMax: number
-		yMin: number
-		yMax: number
-		scaleMin?: number
-		scaleMax?: number
-		geMin?: number
-		geMax?: number
-	}
+	range!: ScatterRanges
 	filterSampleStr: string | null = null
 
 	constructor(scatter: Scatter) {

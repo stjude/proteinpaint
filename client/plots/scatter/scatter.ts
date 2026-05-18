@@ -17,6 +17,7 @@ import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteract
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
 import { ScatterView } from './view/scatterView.js'
+import type { ScatterChart } from './scatterTypes'
 
 export class Scatter extends PlotBase implements RxComponent {
 	static type = 'sampleScatter'
@@ -37,7 +38,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	vm!: any
 	interactivity!: ScatterInteractivity
 	settings!: Settings
-	charts: any
+	charts!: ScatterChart[]
 	opts: any
 	state!: any
 	transform: any
