@@ -4,23 +4,14 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult, CacheSubdir } from '#src/utils/types.ts'
 
-/** Stable, structural JSON serialization. Sort keys so {a:1,b:2} and
- * {b:2,a:1} produce the same string — input objects from different code
- * paths must hash to the same id.*/
-export function stableStringify(v: any): string {
-	if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null'
-	if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']'
-	const keys = Object.keys(v).sort()
-	return '{' + keys.map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}'
-}
-
 /** Hash the given object to a 32-hex-char cacheId via
- * sha256(stableStringify(args)). Truncation at 32 chars is safe for
- * cache keys — collision probability is negligible at realistic cache
- * sizes. Callers shape `args` to include only the fields whose identity
- * determines the cache key */
+ * sha256(JSON.stringify(args)). Truncation at 32 chars is safe for cache
+ * keys — collision probability is negligible at realistic cache sizes.
+ * Callers shape `args` to include only the fields whose identity
+ * determines the cache key, and must construct it with a stable key order
+ * (object literals do this naturally). */
 export function generateHash(args: any): string {
-	return crypto.createHash('sha256').update(stableStringify(args)).digest('hex').slice(0, 32)
+	return crypto.createHash('sha256').update(JSON.stringify(args)).digest('hex').slice(0, 32)
 }
 
 const HASH_RE = /^[0-9a-f]{32}$/

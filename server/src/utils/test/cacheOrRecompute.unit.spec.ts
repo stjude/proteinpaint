@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import serverconfig from '#src/serverconfig.js'
-import { cacheFilePath, cacheOrRecompute, generateHash, stableStringify } from '#src/utils/cacheOrRecompute.ts'
+import { cacheFilePath, cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
 import { canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
 
 /** Tests for the generic cache-or-recompute module. We use the existing
@@ -33,19 +33,10 @@ tape('\n', t => {
 	t.end()
 })
 
-tape('stableStringify is key-order independent', t => {
-	t.equal(stableStringify({ a: 1, b: 2 }), stableStringify({ b: 2, a: 1 }), 'top-level key order')
-	t.equal(stableStringify({ outer: { a: 1, b: 2 } }), stableStringify({ outer: { b: 2, a: 1 } }), 'nested key order')
-	t.equal(stableStringify(null), 'null', 'null serializes as "null"')
-	t.equal(stableStringify(undefined), 'null', 'undefined falls back to "null"')
-	t.equal(stableStringify([1, 2, 3]), '[1,2,3]', 'arrays preserve order')
-	t.end()
-})
-
-tape('generateHash is deterministic, key-order independent, 32 hex chars', t => {
-	const h1 = generateHash({ a: 1, b: 'x' })
-	const h2 = generateHash({ b: 'x', a: 1 })
-	t.equal(h1, h2, 'same hash regardless of input key order')
+tape('generateHash is deterministic and 32 hex chars', t => {
+	const args = { a: 1, b: 'x' }
+	const h1 = generateHash(args)
+	t.equal(h1, generateHash(args), 'same input produces the same hash')
 	t.match(h1, /^[0-9a-f]{32}$/, 'hash matches the validator regex used by cacheFilePath')
 	t.notEqual(h1, generateHash({ a: 1, b: 'y' }), 'different inputs produce different hashes')
 	t.end()
