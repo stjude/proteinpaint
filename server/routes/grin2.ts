@@ -10,7 +10,7 @@ import { get_samples } from '#src/termdb.sql.js'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { mayFilterByMaf } from '#src/mds3.init.js'
-import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { Grin2CacheResult } from './types.ts'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
@@ -417,9 +417,9 @@ async function getGrin2CacheResult(
 	} = await cacheOrRecompute<ReturnType<typeof grin2KeyInputs>, Grin2CacheResult>({
 		computeArgument: grin2KeyInputs(request),
 		cacheSubdir: 'grin2',
-		computeFresh: async ({ cacheFilePath }) => {
+		computeFresh: async () => {
 			freshCompute = true
-			const out = await runGrin2Fresh(request, g, ds, chromosomelist, cacheFilePath, signal)
+			const out = await runGrin2Fresh(request, g, ds, chromosomelist, signal)
 			processingTime = out.processingTime
 			grin2AnalysisTime = out.grin2AnalysisTime
 			return out.cacheResult
@@ -429,15 +429,15 @@ async function getGrin2CacheResult(
 	return { result, cacheId, cacheFile, freshCompute, processingTime, grin2AnalysisTime }
 }
 
-/** Compute GRIN2 fresh: pull samples, build lesions, invoke Python,
- * write the JSON cache result. Returns telemetry alongside the result
- * so `getGrin2CacheResult` can surface it to the route handler. */
+/** Compute GRIN2 fresh: pull samples, build lesions, invoke Python.
+ * `cacheOrRecompute` persists the returned cacheResult. Returns telemetry
+ * alongside the result so `getGrin2CacheResult` can surface it to the
+ * route handler. */
 async function runGrin2Fresh(
 	request: GRIN2Request,
 	g: any,
 	ds: any,
 	chromosomelist: { [key: string]: number },
-	cacheFile: string,
 	signal?: AbortSignal
 ): Promise<{ cacheResult: Grin2CacheResult; processingTime: number; grin2AnalysisTime: number }> {
 	const startTime = Date.now()
@@ -510,11 +510,9 @@ async function runGrin2Fresh(
 	const resultData = JSON.parse(pyResult)
 
 	const cacheResult: Grin2CacheResult = {
-		kind: 'GRIN2',
 		resultData,
 		processing
 	}
-	await writeJsonCache(cacheFile, cacheResult)
 	return { cacheResult, processingTime, grin2AnalysisTime }
 }
 
