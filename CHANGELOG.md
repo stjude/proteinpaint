@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Added data-agnostic json-based caching framework
+
 Fixes:
 - show Loading on selecting a term into regression ui
 
