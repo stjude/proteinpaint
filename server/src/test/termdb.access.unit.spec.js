@@ -1,9 +1,26 @@
 import tape from 'tape'
 import { filterTerms } from '../termdb.server.init.ts'
-import careregConfig from '../../../../dataset/sjglobal.carereg.ts'
+
+/*
+filterTermdbConfig tests need the carereg dataset, which lives one repo up at
+sjpp/dataset/sjglobal.carereg.ts and isn't reachable when the proteinpaint workspace
+is cloned standalone (CI). Try to load it dynamically; if it's absent, mark those
+tape() calls as skipped via tape.skip so the rest of the suite still runs.
+*/
+let careregConfig = null
+try {
+	const mod = await import('../../../../dataset/sjglobal.carereg.ts')
+	careregConfig = mod.default
+} catch (_e) {
+	// dataset/ not present in this checkout; filterTermdbConfig tests will be skipped below
+}
+const tapeCarereg = careregConfig ? tape : tape.skip
 
 tape('\n', function (test) {
 	test.comment('-***- termdb access control specs -***-')
+	if (!careregConfig) {
+		test.comment('NOTE: dataset/sjglobal.carereg.ts not reachable; filterTermdbConfig tests will be skipped')
+	}
 	test.end()
 })
 
@@ -103,7 +120,7 @@ function buildTermdbConfig() {
 	}
 }
 
-tape('filterTermdbConfig(): public role drops non-allowlisted plots and empty sections', t => {
+tapeCarereg('filterTermdbConfig(): public role drops non-allowlisted plots and empty sections', t => {
 	const ds = buildCareregDs({ public: ['AGE'] })
 	const c = buildTermdbConfig()
 	const q = { __protected__: { clientAuthResult: { role: 'public' } } }
@@ -129,7 +146,7 @@ tape('filterTermdbConfig(): public role drops non-allowlisted plots and empty se
 	t.end()
 })
 
-tape('filterTermdbConfig(): admin role keeps every plot', t => {
+tapeCarereg('filterTermdbConfig(): admin role keeps every plot', t => {
 	const ds = buildCareregDs({ public: ['AGE'] })
 	const c = buildTermdbConfig()
 	const q = { __protected__: { clientAuthResult: { role: 'admin' } } }
@@ -142,7 +159,7 @@ tape('filterTermdbConfig(): admin role keeps every plot', t => {
 	t.end()
 })
 
-tape('filterTermdbConfig(): fail-closed when _role2terms is undefined', t => {
+tapeCarereg('filterTermdbConfig(): fail-closed when _role2terms is undefined', t => {
 	const ds = buildCareregDs(undefined)
 	const c = buildTermdbConfig()
 	const q = { __protected__: { clientAuthResult: { role: 'public' } } }
@@ -155,7 +172,7 @@ tape('filterTermdbConfig(): fail-closed when _role2terms is undefined', t => {
 	t.end()
 })
 
-tape('filterTermdbConfig(): no-op when isTermVisible is absent', t => {
+tapeCarereg('filterTermdbConfig(): no-op when isTermVisible is absent', t => {
 	const ds = {
 		cohort: {
 			termdb: { filterTermdbConfig: careregConfig.cohort.termdb.filterTermdbConfig }
@@ -168,7 +185,7 @@ tape('filterTermdbConfig(): no-op when isTermVisible is absent', t => {
 	t.end()
 })
 
-tape('filterTermdbConfig(): does not mutate cached plotConfigByCohort across calls', t => {
+tapeCarereg('filterTermdbConfig(): does not mutate cached plotConfigByCohort across calls', t => {
 	// Same source object passed twice with different roles — admin run must NOT see a config
 	// that was already pruned by an earlier public run, which would indicate shared-reference mutation.
 	const sharedSrc = buildTermdbConfig().plotConfigByCohort
