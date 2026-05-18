@@ -38,12 +38,21 @@ def create_gene_variance_list(
     rank_type: str,
     max_genes: int
 ) -> list[str]:
-    chunk_target_elements = 500_000
+    chunk_target_elements=250_000 # About 200MB of memory per chunk
+    mb_element_conversion = lambda mb: int(349.59296*1.04207**mb)
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
-        
+        #~/dev/sjpp/proteinpaint/python/serverconfig.json
+        serverconfig_path = Path("python/serverconfig.json") if Path("python/serverconfig.json").is_file() else Path("proteinpaint/python/serverconfig.json")
+        if serverconfig_path.is_file():
+            with open(serverconfig_path) as f:
+                serverconfig = json.load(f)
+            config_var = serverconfig.get("geneVarianceMemoryMBAlloc", 200)
+            if isinstance(chunk_target_elements, (int, float)):
+                chunk_target_elements = int(mb_element_conversion(config_var))
+        chunk_target_elements=max(chunk_target_elements, len(all_samples))
         n_genes, n_samples = len(gene_names), len(all_samples)
         if matrix.ndim != 2:
             raise ValueError("Expected 2D matrix for expression matrix")
@@ -109,20 +118,21 @@ def main() -> int:
         json_args = json.loads(params_str)
         if not isinstance(json_args, dict):
             raise ValueError("Input JSON must be an object")
-
-        samples_value = json_args.get("samples")
-        if isinstance(samples_value, str):
-            samples = set(sample.strip() for sample in samples_value.split(",") if sample.strip())
-        elif isinstance(samples_value, list):
-            samples_value = set(samples_value)
-            samples = set(str(sample).strip() for sample in samples_value if str(sample).strip())
-        else:
-            raise ValueError("samples must be a comma-separated string or a JSON list")
-        MIN_SAMPLES = 10
-        if len(samples) < MIN_SAMPLES:
-            raise ValueError(f"samples must include at least {MIN_SAMPLES} sample IDs")
         if json_args.get('test'):
             samples = generate_test_samples(0.5,json_args.get("input_file"))
+        else:
+            samples_value = json_args.get("samples")
+            if isinstance(samples_value, str):
+                samples = set(sample.strip() for sample in samples_value.split(",") if sample.strip())
+            elif isinstance(samples_value, list):
+                samples_value = set(samples_value)
+                samples = set(str(sample).strip() for sample in samples_value if str(sample).strip())
+            else:
+                raise ValueError("samples must be a comma-separated string or a JSON list")
+            MIN_SAMPLES = 10
+            if len(samples) < MIN_SAMPLES:
+                raise ValueError(f"samples must include at least {MIN_SAMPLES} sample IDs")
+        
 
         input_file = json_args.get("input_file")
         if not isinstance(input_file, str):
