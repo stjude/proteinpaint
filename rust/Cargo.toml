@@ -41,7 +41,6 @@ num_cpus = "1.16.0"
 memchr = "2"
 r2d2_sqlite = "0.29.0"
 r2d2 = "0.8.10"
-rig-core = "0.22.0"
 url = "2.5.7"
 async-stream = "0.3.6"
 base64 = "0.22.1"
@@ -123,14 +122,6 @@ path="src/readH5.rs"
 [[bin]]
 name="manhattan_plot"
 path="src/manhattan_plot.rs"
-
-[[bin]]
-name="query_classification"
-path="src/query_classification.rs"
-
-[[bin]]
-name="summary_agent"
-path="src/summary_agent.rs"
 
 [[bin]]
 name="dmrcate"
