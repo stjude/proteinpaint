@@ -7,6 +7,9 @@ import type { ChatRequest, ChatResponse } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 
+const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
+const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
+
 class MassAiChatBot implements RxComponent {
 	static type = 'chat'
 	type: string
@@ -105,14 +108,16 @@ class MassAiChatBot implements RxComponent {
 					this.clear({ hide: true })
 					return
 				}
-				console.log(
-					`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
-				)
-				try {
-					await this.doSearch(prompt) // Search as user types
-				} catch (e: any) {
-					if (e.stack) console.log(e.stack)
-					sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
+				if (MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH) {
+					console.log(
+						`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
+					)
+					try {
+						await this.doSearch(prompt) // Search as user types
+					} catch (e: any) {
+						if (e.stack) console.log(e.stack)
+						sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
+					}
 				}
 			})
 			.on('keyup.submit', async event => {
