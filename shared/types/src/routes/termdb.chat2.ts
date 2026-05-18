@@ -1,6 +1,11 @@
 import type { Filter } from '../filter.ts'
 import type { RoutePayload } from './routeApi.js'
 
+/** */
+// Helps track ambiguous points in the LLM reasoning process for debugging and improvement purposes.
+// Create a fresh array per request/pipeline run to avoid sharing mutable state across module consumers.
+export const createAmbiguousPoints = (): string[] => []
+
 export type ChatRequest = {
 	genome: string
 	dslabel: string

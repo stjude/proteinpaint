@@ -4,7 +4,6 @@ import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
-
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 
@@ -119,8 +118,10 @@ class MassAiChatBot implements RxComponent {
 			.on('keyup.submit', async event => {
 				if (!keyupEnter(event)) return
 				const prompt = event.target.value.trim()
-				const serverBubble = this.addBubble({ msg: '...' })
 				if (!prompt) return
+				this.addBubble({ msg: prompt, me: 1 })
+				event.target.value = ''
+				const serverBubble = this.addBubble({ msg: '...' })
 				if (prompt.length <= 3) {
 					serverBubble.text('Your prompt is too short. Enter a longer prompt.')
 					return
@@ -131,8 +132,6 @@ class MassAiChatBot implements RxComponent {
 					filter: this.app.vocabApi.state.termfilter?.filter,
 					prompt
 				}
-				event.target.value = ''
-
 				try {
 					const data = await dofetch3('termdb/chat3', { body })
 					if (data.error) throw data.error
@@ -160,10 +159,10 @@ class MassAiChatBot implements RxComponent {
 
 	addBubble(arg: { msg: string; me?: number }) {
 		/** {
-    msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
-    me: if 1, is me; otherwise is ai
+msg: add a chat bubble for this msg; msg is html as it might contain hyperlinks
+me: if 1, is me; otherwise is ai
 }
-    return the created bubble and allow to be modified
+return the created bubble and allow to be modified
 */
 		const bubble = this.dom.bubbleDiv
 			.append('div')
