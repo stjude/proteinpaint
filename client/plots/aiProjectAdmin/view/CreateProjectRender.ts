@@ -101,6 +101,7 @@ export class CreateProjectRender {
 				btn.attr('disabled', true) //Don't allow multiple clicks
 				// Theres something wrong here, selections.data is supposed to be an array but comes back as an object,
 				// AIProjectInteractions and buildAdHocDictionary treat it like an object so I changed the typing, but need to investigate further
+				// Old error handling would check for length of selections.data equals 0, but since its an object it came back undefined and broke silently
 				const selections: AIProjectAdminResponse = await this.interactions.getFilteredImages(this.filter)
 				if ((this.filter && selections.status !== 'ok') || selections.data?.selectedImages?.length === 0) {
 					alert('No images match your filter criteria.')
