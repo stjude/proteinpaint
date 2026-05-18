@@ -21,16 +21,19 @@ term1=categorical (no values)
 term1=termCollection categorical
 term1=categorical, term2=defaultbins
 term0=defaultbins, term1=categorical
+term1=categorical, term2=categorical (patient-level)
 term1=geneVariant no group
 term1=geneVariant with groups
 term1=geneVariant, term2=geneVariant using region but not gene
 term1=geneVariant geneset with groups
 term1=categorical, term2=geneVariant
+term1=categorical (patient-level), term2=geneVariant
 term1=geneExp, term2=geneVariant SKIPPED
 term1=geneVariant, term2=geneExp
 term1=geneExp
 term1=numeric term2=geneExp with default bins
 term1=geneExp, term2=categorical
+term1=geneExp, term2=categorical (patient-level)
 term1=condition, term2=gene exp with default bins
 term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins
 term1=categorical, term0=gene exp with default bins
@@ -39,6 +42,7 @@ series visibility - numeric
 series visibility - condition
 
 single barchart, categorical filter
+single barchart (patient-level), compound filter (patient-level + sample-level) SKIPPED
 genevariant barchart, compound filter
 single barchart, TP53 mutation dtTerm filter
 
@@ -355,6 +359,45 @@ tape('term0=defaultbins, term1=categorical', function (test) {
 	}
 })
 
+tape('term1=categorical, term2=categorical (patient-level)', function (test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					term2: { id: 'sex' }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
+		testBarCount()
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testBarCount() {
+		// no need to await, the bar order will tested after the initial postRender event
+		const minBars = 5
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
+		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
+	}
+})
+
 tape('term1=geneVariant with groups', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
@@ -458,6 +501,45 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('term1=categorical (patient-level), term2=geneVariant', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'genetic_race' },
+					term2: { term: { type: 'geneVariant', gene: 'TP53' }, q: { type: 'predefined-groupset' } }
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
+		testBarCount()
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testBarCount() {
+		// no need to await, the bar order will tested after the initial postRender event
+		const minBars = 2
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} bars`)
+		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 })
 
@@ -630,6 +712,51 @@ tape('term1=geneExp, term2=categorical', function (test) {
 		)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('term1=geneExp, term2=categorical (patient-level)', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { gene: 'TP53', type: 'geneExpression' },
+						q: { mode: 'discrete' }
+					},
+					term2: {
+						id: 'sex'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
+		testBarCount()
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testBarCount() {
+		// no need to await, the bar order will tested after the initial postRender event
+		const minBars = 5
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} bars`)
+		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 })
 
@@ -956,6 +1083,61 @@ tape('single barchart, categorical filter', function (test) {
 				filter: {
 					type: 'tvslst',
 					in: 1,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: { term: { id: 'diaggrp' }, values: [{ key: 'Acute lymphoblastic leukemia' }] }
+						}
+					]
+				}
+			},
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'agedx'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
+		testBarCount()
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testBarCount() {
+		// no need to await, the bar order will tested after the initial postRender event
+		const minBars = 3
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} bars`)
+		test.true(numOverlays == numBars, 'number of overlays should equal number of bars')
+	}
+})
+
+// skipping until sample-level + patient-level terms can be
+// resupported in filter
+tape.skip('single barchart (patient-level), compound filter (patient-level + sample-level)', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					in: 1,
 					join: 'and',
 					lst: [
 						{
@@ -1001,6 +1183,7 @@ tape('single barchart, categorical filter', function (test) {
 		test.end()
 	}
 })
+
 tape('genevariant barchart, compound filter', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
