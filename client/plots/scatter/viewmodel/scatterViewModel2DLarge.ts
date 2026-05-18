@@ -98,7 +98,8 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		 * Unlike the renderSerie above, this fn finishes in renderChart -> renderSVG
 		 * before legendvm.renderLegend is called. renderChart handles dom additions
 		 * and removal. A new legend is rendered each time. Simply add the image. */
-		const imgG = chart.svg.append('g')
+		chart.svg.selectAll('.sjpp-scatter-img-g').remove()
+		const imgG = chart.svg.append('g').attr('class', 'sjpp-scatter-img-g')
 		this.canvas = imgG.append('image').attr('xlink:href', chart.src)
 	}
 }

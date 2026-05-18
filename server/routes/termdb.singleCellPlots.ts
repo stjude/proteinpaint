@@ -171,7 +171,7 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 	if (range.geMin != undefined && range.geMax != undefined) {
 		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.noExpColor, settings.expColor])
 	}
-	for (const sample of samples.filter(s => !s.hidden?.category)) {
+	for (const sample of samples.filter(s => !s.hidden.category)) {
 		const color = () => {
 			if (termType == SINGLECELL_GENE_EXPRESSION) {
 				if (!sample.geneExp) return settings.noExpColor
