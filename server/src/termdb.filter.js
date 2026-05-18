@@ -1,12 +1,4 @@
-import {
-	isDictionaryType,
-	TermTypes,
-	getBin,
-	annoNumericTypes,
-	getParentType,
-	getSampleType,
-	dtTermTypes
-} from '#shared/terms.js'
+import { TermTypes, getBin, annoNumericTypes, isParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
 import { validateTermCollectionTvs } from '#shared/filter.js'
 import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
@@ -27,7 +19,7 @@ A superCTE is made to cap this level, with name "CTEname"
 // dummy $id for making up tw from tvs ({$id,term:tvs:term}) as required by getters
 const $id = 'xx'
 
-export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname = 'f') {
+export async function getFilterCTEs(filter, ds, mapParent2Children, CTEname = 'f') {
 	if (!filter) return
 	if (filter.type != 'tvslst') throw 'filter.type is not "tvslst" but: ' + filter.type
 	if (!Array.isArray(filter.lst)) throw 'filter.lst must be an array'
@@ -56,11 +48,8 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 	const CTEs = []
 	// cumulative values
 	const values = []
-	sampleTypes = getFilterSampleTypes(filter, ds, sampleTypes) //add filter types to sampleTypes
 	for (const [i, item] of filter.lst.entries()) {
 		const sample_type = getSampleType(item.tvs?.term, ds)
-		const parentType = getParentType(sampleTypes, ds)
-		const onlyChildren = sampleTypes.size > 1 && sample_type == parentType
 
 		if (item.tvs?.term?.id && (!item.tvs.term.type || !item.tvs.term.name)) {
 			// handle stripped-down dictionary termwrapper
@@ -73,7 +62,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		if (item.type == 'tvslst') {
 			if (item.lst.length == 0) continue // do not process blank list
 
-			f = await getFilterCTEs(item, ds, sampleTypes, CTEname_i)
+			f = await getFilterCTEs(item, ds, mapParent2Children, CTEname_i)
 			// .filters: str, the CTE cascade, not used here!
 			// .CTEs: [] list of individual CTE string
 			// .values: []
@@ -95,22 +84,22 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'categorical') {
-			f = get_categorical(item.tvs, CTEname_i, ds, onlyChildren)
+			f = get_categorical(item.tvs, CTEname_i, ds, mapParent2Children)
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
 		} else if (item.tvs.term.type == 'survival') {
-			f = get_survival(item.tvs, CTEname_i, ds, onlyChildren)
+			f = get_survival(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'samplelst') {
-			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, onlyChildren)
+			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, mapParent2Children)
 		} else if (annoNumericTypes.has(item.tvs.term.type)) {
-			f = get_numerical(item.tvs, CTEname_i, ds, onlyChildren)
+			f = get_numerical(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'condition') {
 			f = get_condition(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'geneVariant') {
-			f = await get_geneVariant(item.tvs, CTEname_i, ds, onlyChildren)
+			f = await get_geneVariant(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'termCollection') {
-			f = await get_termCollection(item.tvs, CTEname_i, ds, onlyChildren)
+			f = await get_termCollection(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'snp') {
 			f = await get_snp(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'multivalue') {
@@ -145,8 +134,7 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 		filters: CTEs.join(',\n'),
 		CTEs,
 		values,
-		CTEname,
-		sampleTypes
+		CTEname
 	}
 }
 
@@ -154,12 +142,12 @@ export async function getFilterCTEs(filter, ds, sampleTypes = new Set(), CTEname
 // put here instead of inside makesql_by_tvsfilter
 // to parse function once at server start instead of
 // multiple times per server request
-function get_categorical(tvs, CTEname, ds, onlyChildren) {
+function get_categorical(tvs, CTEname, ds, mapParent2Children) {
 	let query = `SELECT sample
 	FROM anno_categorical 
 	WHERE term_id = ?
 	AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
 		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
@@ -167,14 +155,14 @@ function get_categorical(tvs, CTEname, ds, onlyChildren) {
 	}
 }
 
-function get_survival(tvs, CTEname, ds, onlyChildren) {
+function get_survival(tvs, CTEname, ds, mapParent2Children) {
 	let query = `SELECT sample
 	FROM survival
 	WHERE term_id = ?
 	${tvs.q?.cutoff ? 'AND tte >= ' + tvs.q?.cutoff : ''}
 	AND exit_code ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})`
 
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 	return {
 		CTEs: [
 			`
@@ -187,7 +175,7 @@ function get_survival(tvs, CTEname, ds, onlyChildren) {
 	}
 }
 
-function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
+function get_samplelst(tvs, CTEname, ds, sample_type, mapParent2Children) {
 	const samples = []
 	for (const field in tvs.term.values) {
 		const list = tvs.term.values[field].list
@@ -205,7 +193,7 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 		query += `and sample_type = ?` //later on need to cleanup the list handling in samplelst
 		values.push(sample_type)
 	}
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 	return {
 		CTEs: [
 			`
@@ -220,7 +208,7 @@ function get_samplelst(tvs, CTEname, ds, sample_type, onlyChildren) {
 
 // TODO: may retire get_geneVariant() as geneVariant filtering is now
 // performed by get_dtTerm()
-async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
+async function get_geneVariant(tvs, CTEname, ds, mapParent2Children) {
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await ds.mayGetGeneVariantData(tw, { genome: ds.genomename })
 	/*
@@ -266,7 +254,7 @@ async function get_geneVariant(tvs, CTEname, ds, onlyChildren) {
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -289,22 +277,22 @@ function isInRange(val, range, isnot) {
 	return isnot ? !(left && right) : left && right
 }
 
-function emptyFilterResult(CTEname, onlyChildren, ds) {
+function emptyFilterResult(CTEname, mapParent2Children, ds) {
 	let query = `SELECT id as sample FROM sampleidmap WHERE 0`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 	return { CTEs: [`${CTEname} AS (${query})`], values: [], CTEname }
 }
 
 /** Custom termCollection filter: call query handlers directly for each member term,
  *  then filter samples by value range on the selected member. */
-async function get_termCollection_custom(tvs, CTEname, ds, onlyChildren) {
+async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
 	const memberKey = tvs.values?.[0]?.key
 	const range = tvs.ranges?.[0]
-	if (!memberKey || !range) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!memberKey || !range) return emptyFilterResult(CTEname, mapParent2Children, ds)
 
 	// Find the member term being filtered on
 	const mt = tvs.term.termlst?.find(t => (t.id || t.name) === memberKey)
-	if (!mt) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!mt) return emptyFilterResult(CTEname, mapParent2Children, ds)
 
 	// Call the existing query handler for this member's dataType
 	const dataType = mt.dataType || 'isoformExpression'
@@ -314,7 +302,7 @@ async function get_termCollection_custom(tvs, CTEname, ds, onlyChildren) {
 	const tw = { $id, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
 	const data = await queryHandler.get({ terms: [tw] }, ds)
 	const values = data.term2sample2value?.get($id)
-	if (!values) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!values) return emptyFilterResult(CTEname, mapParent2Children, ds)
 
 	return numericSampleData2tvs(tvs, CTEname, values)
 }
@@ -327,12 +315,12 @@ async function get_termCollection_custom(tvs, CTEname, ds, onlyChildren) {
  *  evaluation path. Instead, call the underlying query handlers (e.g.
  *  isoformExpression HDF5 handler) directly for each member term, then compute
  *  the numerator/denominator percentage client-side and filter samples. */
-async function get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildren) {
+async function get_termCollection_custom_percentage(tvs, CTEname, ds, mapParent2Children) {
 	const range = tvs.ranges?.[0]
-	if (!range) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!range) return emptyFilterResult(CTEname, mapParent2Children, ds)
 	const termlst = tvs.term.termlst || []
 	const numerators = tvs.term.numerators || []
-	if (!termlst.length) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!termlst.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
 	if (numerators.length) {
 		validateTermCollectionTvs(
 			numerators,
@@ -390,12 +378,12 @@ async function get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildr
 		if (isInRange(percentage, range, tvs.isnot)) samplenames.push(sid)
 	}
 
-	if (!samplenames.length) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!samplenames.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
 
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(() => '?').join(', ')})`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 
 	return {
 		CTEs: [`${CTEname} AS (${query})`],
@@ -404,7 +392,7 @@ async function get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildr
 	}
 }
 
-async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
+async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 	if (tvs.term.memberType === 'categorical') {
 		throw new Error('termcollection memberType=categorical not supported yet')
 	}
@@ -413,7 +401,7 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 		// Custom collections bypass the getData() path below because getData()
 		// requires __protected__ auth context that is unavailable during filter
 		// CTE evaluation. Use direct query handler calls instead.
-		return await get_termCollection_custom_percentage(tvs, CTEname, ds, onlyChildren)
+		return await get_termCollection_custom_percentage(tvs, CTEname, ds, mapParent2Children)
 	}
 	if (tvs.term.numerators) {
 		validateTermCollectionTvs(
@@ -424,7 +412,7 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData({ terms: [tw] }, ds)
 	const samplenames = []
-	if (!data.samples) return emptyFilterResult(CTEname, onlyChildren, ds)
+	if (!data.samples) return emptyFilterResult(CTEname, mapParent2Children, ds)
 	for (const [key, value] of Object.entries(data.samples)) {
 		const sampleEntry = value[$id]
 		if (!sampleEntry) continue
@@ -460,7 +448,7 @@ async function get_termCollection(tvs, CTEname, ds, onlyChildren) {
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -593,7 +581,7 @@ async function get_dtTerm(tvs, CTEname, ds) {
 	return result
 }
 
-function get_numerical(tvs, CTEname, ds, onlyChildren) {
+function get_numerical(tvs, CTEname, ds, mapParent2Children) {
 	/*
 for the case e.g. '0' is for "Not exposed", range.value can be either '0' or 0, string or number
 as it cannot be decided what client will provide
@@ -658,7 +646,7 @@ so here need to allow both string and number as range.value
 					${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
 					${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')}) ` : ''}`
 
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 
 	return {
 		CTEs: [
@@ -733,7 +721,7 @@ function get_condition(tvs, CTEname) {
 
 const validTvsJoin = new Set(['and', 'or'])
 
-function get_multivalue(tvs, CTEname, ds, onlyChildren) {
+function get_multivalue(tvs, CTEname, ds, mapParent2Children) {
 	// default to join = 'or', more permissive/less likely to break,
 	// and also compatible with default join operator for categorical terms
 	if (!tvs.join) tvs.join = 'or'
@@ -750,23 +738,12 @@ function get_multivalue(tvs, CTEname, ds, onlyChildren) {
 	let query = `SELECT sample
 	FROM anno_multivalue
 	WHERE term_id = ? AND ${expectedValues}`
-	if (onlyChildren && ds.cohort.termdb.hasSampleAncestry) query = getChildren(query)
+	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
 	return {
 		CTEs: [` ${CTEname} AS (${query})`],
 		values: [tvs.term.id],
 		CTEname
 	}
-}
-
-function getFilterSampleTypes(filter, ds, sampleTypes) {
-	for (const [i, item] of filter.lst.entries()) {
-		if (!item.tvs || item.tvs.term.id == 'subcohort') continue
-
-		const term_id = item.tvs.term
-		const sample_type = getSampleType(term_id, ds)
-		if (sample_type != null) sampleTypes.add(sample_type)
-	}
-	return sampleTypes
 }
 
 function getChildren(query) {
