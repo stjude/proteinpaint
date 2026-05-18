@@ -94,10 +94,12 @@ async function getSingleCellScatter(req, res, ds) {
 				d.x > s[1] ? d.x : s[1],
 				d.y < s[2] ? d.y : s[2],
 				d.y > s[3] ? d.y : s[3],
-				'geneExp' in d ? (d.geneExp! < s[4]! ? d.geneExp! : s[4]) : Number.POSITIVE_INFINITY,
-				'geneExp' in d ? (d.geneExp! > s[5]! ? d.geneExp! : s[5]) : Number.NEGATIVE_INFINITY
+				Number.isFinite(d.geneExp!) && d.geneExp! < s[4]! ? d.geneExp! : s[4],
+				Number.isFinite(d.geneExp!) && d.geneExp! > s[5]! ? d.geneExp! : s[5]
 			],
-			[samples[0].x, samples[0].x, samples[0].y, samples[0].y, samples[0].geneExp, samples[0].geneExp]
+			/** geneExp maybe null. Use Number.POSITIVE_INFINITY and
+			 * Number.NEGATIVE_INFINITY in case the initial values are null. */
+			[samples[0].x, samples[0].x, samples[0].y, samples[0].y, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]
 		)
 		const categories: any = new Set(samples.map(s => s.category))
 		const colorMap = {}
@@ -134,9 +136,8 @@ async function getSingleCellScatter(req, res, ds) {
 		if (samples.length >= q.canvasSettings.cutoff) {
 			const src = await makeCanvas(q, samples, colorMap, { xMin, xMax, yMin, yMax, geMin, geMax }, tw.term.type)
 			resp.result.Default.src = src
-			const count = Object.values(colorMap).reduce((sum: number, c: any) => sum + c.sampleCount, 0)
 			/** Since the sample array is not returned, send the sample count for the legend */
-			resp.result.Default.totalSampleCount = count
+			resp.result.Default.totalSampleCount = samples.length
 		} else {
 			resp.result.Default.samples = samples
 		}
@@ -166,16 +167,15 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 		.domain([range.yMin + extraSpaceY, range.yMax - extraSpaceY])
 		.range([yAxisOffSet, settings.height + yAxisOffSet])
 
-	//This will need to be changed to accomodate user changes from the color scale
 	let colorGenerator
-	if (range.geMin != undefined && range.geMax != undefined) {
-		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.noExpColor, settings.expColor])
+	if (Number.isFinite(range.geMin) && Number.isFinite(range.geMax)) {
+		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.startColor, settings.stopColor])
 	}
 	for (const sample of samples.filter(s => !s.hidden.category)) {
 		const color = () => {
 			if (termType == SINGLECELL_GENE_EXPRESSION) {
-				if (!sample.geneExp) return settings.noExpColor
-				else if (sample.geneExp > range.geMax!) return settings.expColor
+				if (!sample.geneExp) return settings.startColor //settings.noExpColor
+				else if (sample.geneExp > range.geMax!) return settings.stopColor //settings.expColor
 				else return colorGenerator(sample.geneExp)
 			}
 			return colorMap[sample.category] ? colorMap[sample.category].color : refColor

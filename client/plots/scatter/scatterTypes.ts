@@ -115,6 +115,12 @@ export type ScatterChart = {
 	src?: string
 	/** Total number of samples in a plot. */
 	totalSampleCount?: number
+	/** d3 linear scale mapping data values to colors for continuous color mode */
+	colorGenerator?: any
+	/** Sorted color values used for color scale calculations */
+	colorValues?: number[]
+	/** Current min/max range used by the color generator */
+	currentColorRange?: { min: number; max: number }
 }
 
 export type ValidScatterDataResponse = { range: DataRange; result: { [index: string]: ScatterDataResult } }

@@ -41,9 +41,9 @@ export type SingleCellRange = {
 	yMin: number
 	yMax: number
 	/** Gene expression min */
-	geMin: number | undefined
+	geMin: number
 	/** Gene expression max */
-	geMax: number | undefined
+	geMax: number
 }
 
 export type SingleCellPlotDataResult = {

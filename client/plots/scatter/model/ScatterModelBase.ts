@@ -248,6 +248,14 @@ export abstract class ScatterModelBase {
 
 		chart.zAxisScale = d3Linear().domain([chart.ranges.zMin, chart.ranges.zMax]).range([0, settings.svgd])
 
+		this.initColorGenerator(chart)
+	}
+
+	initColorGenerator(chart) {
+		const config = this.scatter.config
+		const settings = this.scatter.settings
+		if (!chart.ranges) return
+
 		const gradientColor = rgb(settings.defaultColor)
 		if (!config.startColor) {
 			// FIXME should move these to getPlotConfig
@@ -341,6 +349,7 @@ export abstract class ScatterModelBase {
 		}
 		for (const chart of this.charts) {
 			this.initAxes(chart)
+			if (!chart.colorGenerator) this.initColorGenerator(chart)
 			const regressionType = this.scatter.settings.regression
 
 			if (!regressionType || regressionType == 'None') continue
