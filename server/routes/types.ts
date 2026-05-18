@@ -24,7 +24,6 @@ export type ReqQueryAddons = {
  * and — for the edgeR/limma engines — the two diagnostic PNGs already
  * base64-encoded as `DEImage` objects ready to hand to the client. */
 export type DeCacheResult = {
-	kind: 'DE'
 	geneRows: GeneDEEntry[]
 	sample_size1: number
 	sample_size2: number
@@ -38,7 +37,6 @@ export type DeCacheResult = {
  * enough for the volcano response on either a fresh run or a cache hit
  * without any extra dataset access. */
 export type DmCacheResult = {
-	kind: 'DM'
 	promoterRows: DiffMethEntry[]
 	sample_size1: number
 	sample_size2: number
@@ -48,7 +46,6 @@ export type DmCacheResult = {
  * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
  * step opens this file directly. */
 export type Grin2CacheResult = {
-	kind: 'GRIN2'
 	resultData: any
 	processing: any
 }
@@ -59,7 +56,6 @@ export type Grin2CacheResult = {
  * Python via stdin so it can plot a per-geneset running-sum without
  * re-running gsea. */
 export type GseaCacheResult = {
-	kind: 'GSEA'
 	table: GenesetEnrichmentResponse
 	pickleB64: string
 }
@@ -68,6 +64,5 @@ export type GseaCacheResult = {
  * Python topVEgene.py pipeline produced for a given (dslabel, filter,
  * maxGenes, rank_type, filter_extreme_values) tuple. */
 export type TopVeCacheResult = {
-	kind: 'TOPVE'
 	genes: string[]
 }

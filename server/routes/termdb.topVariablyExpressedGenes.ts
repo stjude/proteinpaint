@@ -4,7 +4,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { TopVeCacheResult } from './types.ts'
 
 export const api: RouteApi = {
@@ -64,11 +64,10 @@ function nativeValidateQuery(ds: any) {
 		const { result } = await cacheOrRecompute<ReturnType<typeof topVeKeyInputs>, TopVeCacheResult>({
 			computeArgument: topVeKeyInputs(q),
 			cacheSubdir: 'topve',
-			computeFresh: async ({ cacheFilePath }) => {
+			computeFresh: async () => {
 				const samples = await resolveNativeSamples(q, gE, ds)
 				const genes = await computeGenes4nativeDs(q, gE, samples)
-				const cacheResult: TopVeCacheResult = { kind: 'TOPVE', genes }
-				await writeJsonCache(cacheFilePath, cacheResult)
+				const cacheResult: TopVeCacheResult = { genes }
 				return cacheResult
 			}
 		})

@@ -71,12 +71,10 @@ const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
 	interval: minute,
 	subdirs: {
-		// TODO: What is generating .pkl files?
 		gsea: {
 			...subdirOptsDefaults,
 			maxAge: day * 60,
-			skipMs: halfDay,
-			fileExtensions: new Set(['.pkl'])
+			skipMs: halfDay
 		},
 		massSession: {
 			...subdirOptsDefaults,
@@ -104,6 +102,16 @@ const defaultOpts = {
 			skipMs: halfDay
 		},
 		topve: {
+			...subdirOptsDefaults,
+			maxAge: day * 60,
+			skipMs: halfDay
+		},
+		// Legacy combined DE/DM cache dir. Nothing writes here anymore
+		// (DE → de/, DM → dm/), but registering it keeps the TTL sweep
+		// running so leftover files from pre-upgrade deployments drain
+		// naturally instead of sitting forever. Safe to delete this entry
+		// once all environments have been upgraded and the dir is empty.
+		daAnalysis: {
 			...subdirOptsDefaults,
 			maxAge: day * 60,
 			skipMs: halfDay

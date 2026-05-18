@@ -4,7 +4,7 @@ import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
@@ -107,9 +107,9 @@ export async function getDmCacheResult(
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof dmKeyInputs>, DmCacheResult>({
 		computeArgument: dmKeyInputs(req),
 		cacheSubdir: 'dm',
-		computeFresh: async ({ cacheFilePath }) => {
+		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDmFresh(req, ds, term_results, term_results2, cacheFilePath)
+			return runDmFresh(req, ds, term_results, term_results2)
 		}
 	})
 	return { result, cacheId }
@@ -130,8 +130,7 @@ async function runDmFresh(
 	param: DiffMethRequest,
 	ds: any,
 	term_results: any,
-	term_results2: any,
-	cacheFile: string
+	term_results2: any
 ): Promise<DmCacheResult> {
 	const groups = resolveDmSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
@@ -163,12 +162,10 @@ async function runDmFresh(
 	mayLog('Time taken to run diffMeth:', formatElapsedTime(Date.now() - time1))
 
 	const cacheResult: DmCacheResult = {
-		kind: 'DM',
 		promoterRows: result.promoter_data,
 		sample_size1: groups.group1names.length,
 		sample_size2: groups.group2names.length
 	}
-	await writeJsonCache(cacheFile, cacheResult)
 	return cacheResult
 }
 

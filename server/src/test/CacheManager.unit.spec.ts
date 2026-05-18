@@ -43,7 +43,6 @@ tape('defaults', function (test) {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
-							fileExtensions: new Set(['.pkl']),
 							absPath: `${m.cachedir}/gsea`,
 							skipUntil: 0
 						},
@@ -88,6 +87,13 @@ tape('defaults', function (test) {
 							skipMs: 43200000,
 							absPath: `${m.cachedir}/topve`,
 							skipUntil: 0
+						},
+						daAnalysis: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							absPath: `${m.cachedir}/daAnalysis`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -105,7 +111,8 @@ tape('defaults', function (test) {
 							grin2: { deletedCount: 0, totalCount: 0 },
 							de: { deletedCount: 0, totalCount: 0 },
 							dm: { deletedCount: 0, totalCount: 0 },
-							topve: { deletedCount: 0, totalCount: 0 }
+							topve: { deletedCount: 0, totalCount: 0 },
+							daAnalysis: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
@@ -162,6 +169,7 @@ tape('move or delete by maxAge', test => {
 			de: undefined,
 			dm: undefined,
 			topve: undefined,
+			daAnalysis: undefined,
 			test0: {
 				maxAge,
 				moveTo: 'trash'
@@ -288,6 +296,7 @@ tape('limit deletion by file extension', test => {
 			de: undefined,
 			dm: undefined,
 			topve: undefined,
+			daAnalysis: undefined,
 			test0: {
 				maxAge: -10, // force deletion of all files (with matching extension) by maxAge
 				fileExtensions: new Set(['.txt'])

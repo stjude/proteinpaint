@@ -9,7 +9,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { getDeCacheResult } from '#routes/termdb.DE.ts'
 import { getDmCacheResult } from '#routes/termdb.diffMeth.ts'
-import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import { get_ds_tdb } from '#src/termdb.js'
 import type { GseaCacheResult } from './types.ts'
 
@@ -156,10 +156,9 @@ async function getGseaCacheResult({
 	const { result, cacheId } = await cacheOrRecompute<typeof cacheArg, GseaCacheResult>({
 		computeArgument: cacheArg,
 		cacheSubdir: 'gsea',
-		computeFresh: async ({ cacheFilePath }) => {
+		computeFresh: async () => {
 			const { table, pickleB64 } = await runGseaPythonForTable({ q, genomes, cacheArg })
-			const cacheResult: GseaCacheResult = { kind: 'GSEA', table, pickleB64 }
-			await writeJsonCache(cacheFilePath, cacheResult)
+			const cacheResult: GseaCacheResult = { table, pickleB64 }
 			return cacheResult
 		}
 	})
@@ -325,11 +324,16 @@ async function resolveGseaGenesAndFoldChange({
 		// regex so stale sessions still get the reopen-the-volcano message.
 		if (!q.daRequest) throw new Error('daCacheMissing')
 		// Discriminate on the explicit `kind` tag carried by the request
-		// types (mirrors the matching tag on DeCacheResult/DmCacheResult).
+		// types. `daRequest` is typed Partial<DERequest>|Partial<DiffMethRequest>,
+		// so `kind` may be absent (legacy snapshots, malformed external
+		// callers); validate up-front rather than silently falling through to
+		// one branch and producing a confusing cacheId-mismatch error.
 		// For DM, multiple promoters can map to the same gene_name —
 		// blitzgsea/CERNO may warn or down-rank duplicates; we pass them
 		// through without dedup for now.
-		if (q.daRequest.kind === 'DE') {
+		const kind = q.daRequest.kind
+		if (kind !== 'DE' && kind !== 'DM') throw new Error('daRequest.kind must be "DE" or "DM"')
+		if (kind === 'DE') {
 			const { result, cacheId } = await getDeCacheResult(q.daRequest as DERequest, genomes)
 			if (cacheId !== q.cacheId) throw new Error('cacheId does not match daRequest')
 			return {

@@ -32,8 +32,10 @@ export function cacheFilePath(subdir: CacheSubdir, cacheId: string): string {
 	return path.join(serverconfig.cachedir, subdir, `${cacheId}.json`)
 }
 
-/** Write a result JSON to the given path. */
-export async function writeJsonCache(filePath: string, result: unknown): Promise<void> {
+/** Write a result JSON to the given path. Internal — callers never invoke
+ * this directly; `cacheOrRecompute` persists the value returned by
+ * `computeFresh` automatically. */
+async function writeJsonCache(filePath: string, result: unknown): Promise<void> {
 	await fs.promises.writeFile(filePath, JSON.stringify(result))
 }
 
@@ -50,7 +52,8 @@ const pending = new Map<string, Promise<CacheOrRecomputeResult<any>>>()
 
 /** Generic cache-or-recompute: hash the inputs, look for a JSON file under
  * the canonical path, return its parsed contents on hit, otherwise call
- * `computeFresh` and have it write the file. */
+ * `computeFresh` to produce the value and persist it to disk transparently
+ * before returning. Callers only need to return the result. */
 export async function cacheOrRecompute<TArgs, TResult>(
 	opts: CacheOrRecomputeOpts<TArgs, TResult>
 ): Promise<CacheOrRecomputeResult<TResult>> {
@@ -65,7 +68,8 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	const work = (async (): Promise<CacheOrRecomputeResult<TResult>> => {
 		const cached = await tryReadJson<TResult>(file)
 		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
-		const fresh = await computeFresh({ cacheId, cacheFilePath: file })
+		const fresh = await computeFresh({ cacheId })
+		await writeJsonCache(file, fresh)
 		return { result: fresh, cacheId, cacheFilePath: file }
 	})()
 	pending.set(dedupKey, work)

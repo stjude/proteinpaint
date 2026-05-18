@@ -6,7 +6,7 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { formatElapsedTime } from '#shared'
 import { renderVolcano } from '../src/renderVolcano.ts'
-import { cacheOrRecompute, writeJsonCache } from '#src/utils/cacheOrRecompute.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import {
 	buildGroupValues,
 	canonicalizeSamplelst,
@@ -130,26 +130,20 @@ export async function getDeCacheResult(
 	const { result, cacheId } = await cacheOrRecompute<ReturnType<typeof deKeyInputs>, DeCacheResult>({
 		computeArgument: deKeyInputs(req),
 		cacheSubdir: 'de',
-		computeFresh: async ({ cacheFilePath }) => {
+		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDeFresh(req, ds, term_results, term_results2, cacheFilePath)
+			return runDeFresh(req, ds, term_results, term_results2)
 		}
 	})
 	return { result, cacheId }
 }
 
-/** Run DE fresh and write the JSON cache result to `cacheFile`.
- * Mutates param.method to the canonical label ('edgeR' or 'wilcoxon')
- * to match the pipeline that actually ran. For edgeR/limma, R hands
- * the diagnostic PNGs back inline (base64) in its stdout JSON, so no
+/** Run DE fresh and return the cache result; `cacheOrRecompute` persists
+ * it. Mutates param.method to the canonical label ('edgeR' or 'wilcoxon')
+ * to match the pipeline that actually ran. For edgeR/limma, R hands the
+ * diagnostic PNGs back inline (base64) in its stdout JSON, so no
  * intermediate files touch disk. */
-async function runDeFresh(
-	param: DERequest,
-	ds: any,
-	term_results: any,
-	term_results2: any,
-	cacheFile: string
-): Promise<DeCacheResult> {
+async function runDeFresh(param: DERequest, ds: any, term_results: any, term_results2: any): Promise<DeCacheResult> {
 	const groups = resolveSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
@@ -197,7 +191,6 @@ async function runDeFresh(
 		const mdsImage = deImageFromB64(result.mds_image_b64, 'mds_image')
 
 		const cacheResult: DeCacheResult = {
-			kind: 'DE',
 			geneRows: result.gene_data,
 			sample_size1: result.num_controls[0],
 			sample_size2: result.num_cases[0],
@@ -206,7 +199,6 @@ async function runDeFresh(
 			...(qlImage ? { qlImage } : {}),
 			...(mdsImage ? { mdsImage } : {})
 		}
-		await writeJsonCache(cacheFile, cacheResult)
 		return cacheResult
 	}
 
@@ -216,13 +208,11 @@ async function runDeFresh(
 	param.method = 'wilcoxon'
 
 	const cacheResult: DeCacheResult = {
-		kind: 'DE',
 		geneRows: result,
 		sample_size1: groups.group1names.length,
 		sample_size2: groups.group2names.length,
 		method: param.method
 	}
-	await writeJsonCache(cacheFile, cacheResult)
 	return cacheResult
 }
 
