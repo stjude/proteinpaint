@@ -126,7 +126,7 @@ async function getSampleData(q, ds, mapParent2Children) {
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q.terms)
 
 	// determine whether parent annotations should be mapped onto child samples
-	mapParent2Children = maySetMapParent2Children(q.terms, ds, mapParent2Children)
+	mapParent2Children = maySetMapParent2Children(q, ds, mapParent2Children)
 
 	// query dictionary term data
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, mapParent2Children)
@@ -480,7 +480,7 @@ export function divideTerms(lst) {
 
 // function to set the mapParent2Children flag, which controls
 // whether to map parent-level data onto child samples
-function maySetMapParent2Children(twLst, ds, mapParent2Children) {
+function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (!ds.cohort.termdb.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
 		return false
@@ -491,7 +491,7 @@ function maySetMapParent2Children(twLst, ds, mapParent2Children) {
 	}
 	// ds has sample ancestry and mapParent2Children is undefined
 	const sampleTypeConfig = ds.cohort.termdb.sampleTypes
-	const sampleTypes = getSampleTypes(twLst, ds)
+	const sampleTypes = getSampleTypes(q, ds)
 	const types = [...sampleTypes]
 	if (!types.length) {
 		throw 'no sample types found'
@@ -568,8 +568,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, mapP
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
-	const sampleTypes = getSampleTypes(termWrappers, q.ds)
-	const filter = await getFilterCTEs(q.filter, q.ds, sampleTypes)
+	const filter = await getFilterCTEs(q.filter, q.ds, mapParent2Children)
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
@@ -600,18 +599,39 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, mapP
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	// TODO: handle sample types in filter
-	/*const types = filter ? filter.sampleTypes : sampleTypes //the filter adds the types in the filter, that need to be considered*/
 	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, mapParent2Children)
 	const samples = await getSamples(q, rows, termWrappers)
 	return [samples, byTermId]
 }
 
-export function getSampleTypes(termWrappers, ds) {
+function getSampleTypes(q, ds) {
+	const twLst = q.terms
+	const filter = q.filter
+	const twTypes = getTwSampleTypes(twLst, ds)
+	const filterTypes = getFilterSampleTypes(filter, ds)
+	const types = new Set([...twTypes, ...filterTypes])
+	return types
+}
+
+function getTwSampleTypes(twLst, ds) {
 	const types = new Set()
-	for (const tw of termWrappers) {
+	for (const tw of twLst) {
 		const type = getSampleType(tw.term, ds)
 		types.add(type)
+	}
+	return types
+}
+
+function getFilterSampleTypes(filter, ds) {
+	const types = new Set()
+	for (const item of filter.lst) {
+		if (item.type == 'tvslst') {
+			for (const type of getFilterSampleTypes(item, ds)) types.add(type)
+		} else {
+			if (item.tag == 'cohortFilter') continue
+			const type = getSampleType(item.tvs.term, ds)
+			if (Number.isInteger(type)) types.add(type)
+		}
 	}
 	return types
 }
