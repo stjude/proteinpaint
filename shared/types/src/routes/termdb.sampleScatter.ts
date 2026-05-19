@@ -1,4 +1,4 @@
-import type { RoutePayload } from './routeApi.ts'
+import type { Filter } from '../index.ts'
 
 //TermWrapper defined in client/types/terms/tw.ts
 //Do not use #types TermWrapper here as it will be deprecated
@@ -11,12 +11,12 @@ export type TermdbSampleScatterRequest = {
 	scaleDotTW?: any //TermWrapper
 	coordTWs?: any[] //TermWrapper[]
 	plotName?: string
-	filter?: any
+	filter?: Filter
 	filter0?: any
 	chartType?: string
 	singleCellPlot?: any
 	colorColumn?: any
-	excludeOutliers?: any
+	excludeOutliers?: boolean
 }
 
 export type ScatterSample = {
@@ -50,13 +50,4 @@ type ScatterResult = {
 export type TermdbSampleScatterResponse = {
 	range: { xMin: number; xMax: number; yMin: number; yMax: number }
 	result: ScatterResult
-}
-
-export const termdbSampleScatterPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbSampleScatterRequest'
-	},
-	response: {
-		typeId: 'TermdbSampleScatterResponse'
-	}
 }
