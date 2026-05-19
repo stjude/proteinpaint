@@ -228,7 +228,11 @@ export class ScatterView {
 				chartType: 'sampleScatter',
 				settingsKey: 'showContour',
 				title:
-					"Shows the density of point clouds. If 'Color' is used in continous mode, it uses it to weight the points when calculating the density contours. If 'Z/Divide by' is added in continous mode, it used it instead."
+					"Shows the density of point clouds. If 'Color' is used in continous mode, it uses it to weight the points when calculating the density contours. If 'Z/Divide by' is added in continous mode, it used it instead.",
+				getDisplayStyle: () => {
+					//Disabling contour option for large single cell plots for now
+					return this.scatter.config?.singleCellPlot && this.scatter.model.is2DLarge ? 'none' : ''
+				}
 			},
 			{
 				label: 'Save zoom transform',
@@ -237,7 +241,11 @@ export class ScatterView {
 				chartType: 'sampleScatter',
 				settingsKey: 'saveZoomTransform',
 				title: `Option to save the zoom transformation in the state. Needed if you want to save a session with the actual zoom and pan applied`,
-				processInput: value => this.saveZoomTransform(value)
+				processInput: value => this.saveZoomTransform(value),
+				getDisplayStyle: () => {
+					//Disabling all zoom functionality for large single cell plots for now
+					return this.scatter.config?.singleCellPlot && this.scatter.model.is2DLarge ? 'none' : ''
+				}
 			}
 		]
 		if (this.scatter.settings.showContour)

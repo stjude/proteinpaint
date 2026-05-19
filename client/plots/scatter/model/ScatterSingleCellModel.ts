@@ -26,8 +26,6 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 				maxXScale: this.scatter.settings.maxXScale,
 				minYScale: this.scatter.settings.minYScale,
 				maxYScale: this.scatter.settings.maxYScale,
-				// noExpColor: rgb(noExpColor).toString(),
-				// expColor: rgb(expColor).toString(),
 				startColor: c.startColor?.['Default'] || rgb(noExpColor).toString(),
 				stopColor: c.stopColor?.['Default'] || rgb(expColor).toString(),
 				opacity: this.scatter.settings.opacity
