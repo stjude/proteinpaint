@@ -34,16 +34,8 @@ export class SectionRenderer {
 	async update(sc: SCViewer, subplots: any, groupBy: (typeof GroupByOptions)[number]) {
 		if (groupBy !== this.groupBy) {
 			this.groupBy = groupBy
-			this.holder.selectAll('*').remove()
-			/** Reset sections and plotId2Key map when groupBy changes as the keys will be different
-			 *
-			 * TODO: evaluate if there's a more performant way to update sections when
-			 * groupBy changes without needing to re-render all the sections and sandboxes.*/
-			this.sections = {}
-			this.plotId2Key = new Map()
-			for (const subplotId of Object.keys(sc.components.plots)) {
-				sc.removeComponent(subplotId)
-			}
+			this.regroupSections(sc, subplots)
+			return
 		}
 		const activeSubplots = new Set(subplots.map(s => s.id))
 
@@ -56,8 +48,7 @@ export class SectionRenderer {
 		}
 
 		for (const subplot of subplots) {
-			const key =
-				groupBy == 'none' ? 'none' : groupBy == 'sample' ? this.getSampleId(subplot) : this.getPlotName(subplot)
+			const key = this.getKey(subplot)
 			if (!key) continue
 			if (!this.sections[key]) this.initSection(key, sc)
 			if (!this.sections[key].sandboxes[subplot.id]) {
@@ -73,6 +64,57 @@ export class SectionRenderer {
 				this.removeSection(key, sc)
 			}
 		}
+	}
+
+	/** Reparent existing sandboxes into new section containers
+	 * without destroying/recreating plot components. */
+	private regroupSections(sc: SCViewer, subplots: any[]) {
+		// Detach existing sandbox from their parents before clearing
+		const detached: Map<string, any> = new Map()
+		for (const [plotId, key] of this.plotId2Key) {
+			const sandboxNode = this.sections[key]?.sandboxes[plotId]
+			if (sandboxNode) {
+				// Remove from current parent without destroying
+				sandboxNode.remove()
+				detached.set(plotId, sandboxNode)
+			}
+		}
+
+		// Clear the section wrappers since sandboxes are already detached
+		this.holder.selectAll('*').remove()
+		this.sections = {}
+		this.plotId2Key = new Map()
+
+		const activeSubplots = new Set(subplots.map(s => s.id))
+
+		// Remove components that are no longer active
+		for (const plotId of Object.keys(sc.components.plots)) {
+			if (!activeSubplots.has(plotId)) {
+				sc.removeComponent(plotId)
+				detached.delete(plotId)
+			}
+		}
+
+		// Regroup into new sections, reparenting existing sandbox
+		for (const subplot of subplots) {
+			const key = this.getKey(subplot)
+			if (!key) continue
+			if (!this.sections[key]) this.initSection(key, sc)
+
+			this.plotId2Key.set(subplot.id, key)
+			const existing = detached.get(subplot.id)
+			if (existing) {
+				// Reparent the existing sandbox into the new section
+				this.sections[key].subplots.node()!.prepend(existing.node())
+				this.sections[key].sandboxes[subplot.id] = existing
+			}
+		}
+	}
+
+	getKey(subplot: any): string | undefined {
+		if (this.groupBy === 'none') return 'none'
+		if (this.groupBy === 'sample') return this.getSampleId(subplot)
+		return this.getPlotName(subplot)
 	}
 
 	/** Extract sID from a subplot's config.
