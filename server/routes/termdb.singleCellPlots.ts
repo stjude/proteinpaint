@@ -80,64 +80,61 @@ async function getSingleCellScatter(req, res, ds) {
 				}
 			}
 		}
-		const samples: FormattedCell2Sample[] = cells.map(cell => {
+		const samples: FormattedCell2Sample[] = []
+		const categoryCounts = new Map<string, number>()
+		let xMin = Infinity,
+			xMax = -Infinity,
+			yMin = Infinity,
+			yMax = -Infinity,
+			geMin = Infinity,
+			geMax = -Infinity
+		let totalCellCount = 0
+
+		for (const cell of cells) {
 			/** Since getData() from termdb.matrix is not called again for single cell scatter,
 			 * the groups formatting logic for category (i.e. value) is recreated here. */
 			let category = cell.category
 			const groupName = cat2GrpName.get(category)
 			if (groupName !== undefined) category = groupName
-			const hidden = {
-				category: tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
-			}
-			return {
-				sample: cell.cellId,
+
+			const isHidden = tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
+			totalCellCount++
+			categoryCounts.set(category, (categoryCounts.get(category) || 0) + 1)
+
+			if (cell.x < xMin) xMin = cell.x
+			if (cell.x > xMax) xMax = cell.x
+			if (cell.y < yMin) yMin = cell.y
+			if (cell.y > yMax) yMax = cell.y
+			if (Number.isFinite(cell.geneExp!) && cell.geneExp! < geMin) geMin = cell.geneExp!
+			if (Number.isFinite(cell.geneExp!) && cell.geneExp! > geMax) geMax = cell.geneExp!
+
+			if (isHidden) continue
+
+			samples.push({
 				sampleId: cell.cellId,
 				x: cell.x,
 				y: cell.y,
 				z: 0,
 				category,
 				shape: 'Ref',
-				hidden,
+				hidden: { category: false },
 				geneExp: cell.geneExp
-			}
-		})
-		const [xMin, xMax, yMin, yMax, geMin, geMax] = samples.reduce(
-			(s, d) => [
-				d.x < s[0] ? d.x : s[0],
-				d.x > s[1] ? d.x : s[1],
-				d.y < s[2] ? d.y : s[2],
-				d.y > s[3] ? d.y : s[3],
-				Number.isFinite(d.geneExp!) && d.geneExp! < s[4]! ? d.geneExp! : s[4],
-				Number.isFinite(d.geneExp!) && d.geneExp! > s[5]! ? d.geneExp! : s[5]
-			],
-			/** geneExp maybe null. Use Number.POSITIVE_INFINITY and
-			 * Number.NEGATIVE_INFINITY in case the initial values are null. */
-			[samples[0].x, samples[0].x, samples[0].y, samples[0].y, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]
-		)
-		const categories: any = new Set(samples.map(s => s.category))
+			})
+		}
+
 		const colorMap = {}
 
 		if (tw.term.type == SINGLECELL_CELLTYPE) {
-			const defaultK2c = getColors(categories.size)
-			const k2c = category => {
-				/** Only assign default color after checking term.values
-				 * and ds defined colors. */
-				const dsTerm = ds.queries.singleCell?.terms
-					? ds.queries.singleCell.terms.find(t => t.name == tw.term.name)
-					: undefined
-				return tw.term.values?.[category]?.color || dsTerm?.values?.[category]?.color || defaultK2c(category)
-			}
-
-			for (const category of categories) {
-				const color = k2c(category)
-				colorMap[category] = {
-					sampleCount: samples.filter((s: any) => s.category == category).length,
-					color,
-					key: category
-				}
+			const defaultK2c = getColors(categoryCounts.size)
+			const dsTerm = ds.queries.singleCell?.terms
+				? ds.queries.singleCell.terms.find(t => t.name == tw.term.name)
+				: undefined
+			for (const [category, count] of categoryCounts) {
+				const color = tw.term.values?.[category]?.color || dsTerm?.values?.[category]?.color || defaultK2c(category)
+				colorMap[category] = { sampleCount: count, color, key: category }
 			}
 		}
-		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
+		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: totalCellCount, shape: 0, key: 'Ref' }]]
 		const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
 
 		const output: ValidSingleCellPlotsResponse = {
@@ -146,11 +143,11 @@ async function getSingleCellScatter(req, res, ds) {
 			result: { Default: { colorLegend, shapeLegend } }
 		}
 
-		if (samples.length >= q.canvasSettings.cutoff) {
+		if (totalCellCount >= q.canvasSettings.cutoff) {
 			const src = await makeCanvas(q, samples, colorMap, { xMin, xMax, yMin, yMax, geMin, geMax }, tw.term.type)
 			output.result.Default.src = src
 			/** Since the sample array is not returned, send the sample count for the legend */
-			output.result.Default.totalSampleCount = samples.length
+			output.result.Default.totalSampleCount = totalCellCount
 		} else {
 			output.result.Default.samples = samples
 		}
@@ -184,23 +181,23 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 	if (Number.isFinite(range.geMin) && Number.isFinite(range.geMax)) {
 		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.startColor, settings.stopColor])
 	}
-	const color = sample => {
+	const color = (sample: FormattedCell2Sample) => {
 		if (termType == SINGLECELL_GENE_EXPRESSION) {
 			if (!Number.isFinite(sample.geneExp)) return settings.startColor //settings.noExpColor
-			else if (sample.geneExp > range.geMax!) return settings.stopColor //settings.expColor
+			else if (sample.geneExp! > range.geMax!) return settings.stopColor //settings.expColor
 			else return colorGenerator(sample.geneExp)
 		}
 		return colorMap[sample.category] ? colorMap[sample.category].color : refColor
 	}
-	const x = sample => {
+	const x = (sample: FormattedCell2Sample) => {
 		const tmp = getCoordinate(sample.x, settings.minXScale, settings.maxXScale)
 		return xScale(tmp)
 	}
-	const y = sample => {
+	const y = (sample: FormattedCell2Sample) => {
 		const tmp = getCoordinate(sample.y, settings.minYScale, settings.maxYScale)
 		return yScale(tmp)
 	}
-	for (const sample of samples.filter(s => !s.hidden.category)) {
+	for (const sample of samples) {
 		// Draw each sample on the canvas
 		const c = rgb(color(sample))
 		c.opacity = settings.opacity
