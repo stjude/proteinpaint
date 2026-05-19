@@ -35,3 +35,5 @@ export interface Prediction extends TileSelection {
 	class: string
 	uncertainty: number
 }
+
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

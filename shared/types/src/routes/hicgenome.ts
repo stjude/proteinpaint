@@ -1,5 +1,4 @@
 import type { BaseHicRequest, XYZCoord } from './hicdata.ts'
-import type { RoutePayload } from './routeApi.ts'
 
 export type HicGenomeRequest = BaseHicRequest & {
 	/** Entire chromosome list read from the file (see hicstate) */
@@ -22,13 +21,9 @@ export type HicGenomeResponse = {
 	error?: string
 }
 
-export const hicGenomePayload: RoutePayload = {
-	request: {
-		typeId: 'HicGenomeRequest'
-	},
-	response: {
-		typeId: 'HicGenomeResponse'
-	},
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only
+// The example below will not work in github CI where only termdb test
+export const hicGenomePayloadExample = {
 	examples: [
 		{
 			request: {
@@ -40,7 +35,7 @@ export const hicGenomePayload: RoutePayload = {
 					pos1: '3',
 					pos2: '2',
 					resolution: 1000000
-				}
+				} // satisfies HicGenomeRequest // TODO: fix the type or example
 			},
 			response: {
 				header: { status: 200 }

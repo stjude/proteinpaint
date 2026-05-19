@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type HicstatRequestWithFile = {
 	/** HiC file path from tp/ */
 	file: string
@@ -46,12 +44,4 @@ export type HicstatResponse = {
 	normalization: string[]
 }
 
-export const hicstatPayload: RoutePayload = {
-	request: {
-		typeId: 'HicstatRequest'
-	},
-	response: {
-		typeId: 'HicstatResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

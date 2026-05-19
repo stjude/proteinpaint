@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type RunChartRequest = {
 	genome: string
 	dslabel: string
@@ -56,11 +54,4 @@ type Point = {
 	sampleCount: number
 }
 
-export const runChartPayload: RoutePayload = {
-	request: {
-		typeId: 'RunChartRequest'
-	},
-	response: {
-		typeId: 'RunChartResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

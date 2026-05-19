@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type alphaGenomeTypesRequest = {
 	dslabel: string
 }
@@ -11,11 +9,4 @@ export type alphaGenomeTypesResponse = {
 	intervals: number[]
 }
 
-export const alphaGenomeTypesPayload: RoutePayload = {
-	request: {
-		typeId: 'alphaGenomeTypesRequest'
-	},
-	response: {
-		typeId: 'alphaGenomeTypesResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

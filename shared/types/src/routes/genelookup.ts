@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type GeneLookupRequest = {
 	input: string
 	genome: string
@@ -11,12 +9,4 @@ export type GeneLookupResponse = {
 	hits: string[]
 }
 
-export const geneLookupPayload: RoutePayload = {
-	request: {
-		typeId: 'GeneLookupRequest'
-	},
-	response: {
-		typeId: 'GeneLookupResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

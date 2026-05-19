@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type WSISamplesRequest = {
 	genome: string
 	dslabel: string
@@ -15,11 +13,4 @@ export type WSISample = {
 	wsimages: Array<string>
 }
 
-export const wsiSamplesPayload: RoutePayload = {
-	request: {
-		typeId: 'WSISamplesRequest'
-	},
-	response: {
-		typeId: 'WSISamplesResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

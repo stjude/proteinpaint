@@ -1,5 +1,4 @@
 import type { TileSelection } from '../index.ts'
-import type { RoutePayload } from './routeApi.ts'
 
 export type SaveWSIAnnotationRequest = {
 	genome: string
@@ -15,11 +14,4 @@ export type SaveWSIAnnotationResponse = {
 	error?: string
 }
 
-export const saveWSIAnnotationPayload: RoutePayload = {
-	request: {
-		typeId: 'SaveWSIAnnotationRequest'
-	},
-	response: {
-		typeId: 'SaveWSIAnnotationResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

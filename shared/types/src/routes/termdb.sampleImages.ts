@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type TermdbSampleImagesRequest = {
 	genome: string
 	/** Ds label */
@@ -15,12 +13,4 @@ export type TermdbSampleImagesResponse = {
 	images: Image[]
 }
 
-export const termdbSampleImagesPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbSampleImagesRequest'
-	},
-	response: {
-		typeId: 'TermdbSampleImagesResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

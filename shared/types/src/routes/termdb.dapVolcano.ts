@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
@@ -24,12 +23,3 @@ export type DapVolcanoResponse =
 			sample_size2: number
 			data?: VolcanoData<DapEntry>
 	  }
-
-export const dapVolcanoPayload: RoutePayload = {
-	request: {
-		typeId: 'DapVolcanoRequest'
-	},
-	response: {
-		typeId: 'DapVolcanoResponse'
-	}
-}

@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { TermWrapper } from '../terms/tw.ts'
 import type { Filter } from '../filter.ts'
 
@@ -40,12 +39,4 @@ export type VariableItemEntry = {
 	sampleSize: number
 }
 
-export const CorrelationVolcanoPayload: RoutePayload = {
-	request: {
-		typeId: 'CorrelationVolcanoRequest'
-	},
-	response: {
-		typeId: 'CorrelationVolcanoResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

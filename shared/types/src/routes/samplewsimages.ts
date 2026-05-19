@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
 import type { WSIClass } from '../dataset.ts'
 import type { Annotation, Prediction } from './aiProjectSelectedWSImages.ts'
 
@@ -33,12 +32,4 @@ export class WSImage {
 	}
 }
 
-export const sampleWSImagesPayload: RoutePayload = {
-	request: {
-		typeId: 'SampleWSImagesRequest'
-	},
-	response: {
-		typeId: 'SampleWSImagesResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only
