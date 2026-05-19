@@ -10,8 +10,8 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 
 const rnaseqTestFile = 'server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5'
 const samples = '2646,2660,2898,3150,3178,3206,3220,3346,3360,1,3,7,21,22,23,37,38,39'
-// last two expected elements will sometimes swap between runs I can tell the cause
-//All the same items keep showing and were similar to rust outptu so Im not as concerned
+// last two expected elements will sometimes swap between runs. I cant tell the cause, but
+//All the same items keep showing and were similar to rust output so Im not as concerned
 tape('topVEgene returns the expected top variable genes', async t => {
 	const input = {
 		input_file: rnaseqTestFile,

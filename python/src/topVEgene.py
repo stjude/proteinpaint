@@ -38,21 +38,38 @@ def create_gene_variance_list(
     rank_type: str,
     max_genes: int
 ) -> list[str]:
-    chunk_target_elements=250_000 # About 200MB of memory per chunk
-    mb_element_conversion = lambda mb: int(349.59296*1.04207**mb)
+    chunk_target_elements = 250_000  # About 200MB of memory per chunk
+    mb_element_conversion = lambda mb: int(349.59296 * 1.04207 ** mb)
+
+    # Robust serverconfig.json search
+    def find_serverconfig():
+        candidates = [
+            Path(__file__).parent / "serverconfig.json",
+            Path(__file__).parent.parent / "python" / "serverconfig.json",
+            Path.cwd() / "python" / "serverconfig.json",
+            Path.cwd() / "proteinpaint" / "python" / "serverconfig.json",
+        ]
+        for p in candidates:
+            try:
+                resolved = p.resolve()
+                if resolved.is_file():
+                    return resolved
+            except Exception:
+                continue
+        return None
+
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
-        #~/dev/sjpp/proteinpaint/python/serverconfig.json
-        serverconfig_path = Path("python/serverconfig.json") if Path("python/serverconfig.json").is_file() else Path("proteinpaint/python/serverconfig.json")
-        if serverconfig_path.is_file():
+        serverconfig_path = find_serverconfig()
+        if serverconfig_path:
             with open(serverconfig_path) as f:
                 serverconfig = json.load(f)
             config_var = serverconfig.get("geneVarianceMemoryMBAlloc", 200)
-            if isinstance(chunk_target_elements, (int, float)):
+            if isinstance(config_var, (int, float)):
                 chunk_target_elements = int(mb_element_conversion(config_var))
-        chunk_target_elements=max(chunk_target_elements, len(all_samples))
+        chunk_target_elements = max(chunk_target_elements, len(all_samples))
         n_genes, n_samples = len(gene_names), len(all_samples)
         if matrix.ndim != 2:
             raise ValueError("Expected 2D matrix for expression matrix")
@@ -66,7 +83,7 @@ def create_gene_variance_list(
         if missing:
             raise ValueError(f"Sample(s) {missing} not found in HDF5 file")
         sample_indexes = sorted(sample_to_idx[sample] for sample in sample_list)
-        rows_per_chunk = max(1,chunk_target_elements // len(sample_indexes))
+        rows_per_chunk = max(1, chunk_target_elements // len(sample_indexes))
         selected_genes = []
         for start in range(0, matrix.shape[0], rows_per_chunk):
             stop = min(start + rows_per_chunk, matrix.shape[0])
