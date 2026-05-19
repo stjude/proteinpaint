@@ -7,7 +7,7 @@ import type {
 	AiProjectSelectedWSImagesResponse,
 	FlagPredictionInfo
 } from '#types'
-import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
+import { aiProjectSelectedWSImagesPayload } from '#types/checkers'
 import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
@@ -19,11 +19,11 @@ export const api: RouteApi = {
 	endpoint: 'aiProjectSelectedWSImages',
 	methods: {
 		get: {
-			...aiProjectSelectedWSImagesResponsePayload,
+			...aiProjectSelectedWSImagesPayload,
 			init
 		},
 		post: {
-			...aiProjectSelectedWSImagesResponsePayload,
+			...aiProjectSelectedWSImagesPayload,
 			init
 		}
 	}
