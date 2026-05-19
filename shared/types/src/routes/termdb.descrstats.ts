@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 
@@ -28,7 +27,9 @@ export type DescrStats = {
 
 export type DescrStatsResponse = DescrStats
 
-export const descrStatsPayload: RoutePayload = {
+// TODO: write more payload examples to help with automated testing and documentation, for non-prod use only
+
+export const descrStatsPayloadExamples = {
 	request: {
 		typeId: 'DescrStatsRequest'
 	},
@@ -65,7 +66,7 @@ export const descrStatsPayload: RoutePayload = {
 							}
 						]
 					}
-				}
+				} // satisfies DescrStatsRequest // TODO: enable type check
 			},
 			response: {
 				header: { status: 200 }

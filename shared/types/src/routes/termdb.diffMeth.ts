@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
 export type DiffMethRequest = {
@@ -57,11 +56,4 @@ export type DiffMethEntry = DataEntry & {
 	stop: number
 }
 
-export const diffMethPayload: RoutePayload = {
-	request: {
-		typeId: 'DiffMethRequest'
-	},
-	response: {
-		typeId: 'DiffMethResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

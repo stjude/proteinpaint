@@ -1,7 +1,6 @@
 import type { BurdenRequest, BurdenResponse, RouteApi, CumBurdenData } from '#types'
 import { burdenPayload } from '#types/checkers'
 // may decide to use these checkers later
-//import { validBurdenRequest, validBurdenResponse } from '#types/checkers/routes.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'

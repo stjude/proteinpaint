@@ -1,13 +1,4 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type SnpRequest = any
 export type SnpResponse = any
 
-export const snpPayload: RoutePayload = {
-	request: {
-		typeId: 'SnpRequest'
-	},
-	response: {
-		typeId: 'SnpResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type DERequest = {
 	/** Discriminator tag. Matches the `kind` field on `DeCacheResult` and
 	 * lets the GSEA route tell a snapshot DE request apart from a snapshot
@@ -222,13 +220,4 @@ export type DEImage = {
 	key: string
 }
 
-export const diffExpPayload: RoutePayload = {
-	request: {
-		typeId: 'DERequest'
-	},
-	response: {
-		typeId: 'DEResponse'
-		// will combine this with type checker
-		//valid: (t) => {}
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

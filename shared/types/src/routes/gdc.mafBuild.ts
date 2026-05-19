@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type GdcMafBuildRequest = {
 	/** List of input file uuids in gdc */
 	fileIdLst: string[]
@@ -9,12 +7,4 @@ export type GdcMafBuildRequest = {
 
 export type GdcMafBuildResponse = any
 
-export const GdcMafPayload: RoutePayload = {
-	request: {
-		typeId: 'GdcMafBuildRequest'
-	},
-	response: {
-		typeId: 'GdcMafBuildResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

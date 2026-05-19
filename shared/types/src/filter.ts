@@ -18,7 +18,13 @@ Filter
 export type BaseTvs = {
 	join?: string //and, or
 	isnot?: boolean
+	/** 'cohortFilter' or other tag to help extract a nested filter entry
+	 * this was mostly designed for client-side use, should verify where in server-side
+	 * this is used
+	 * */
+	tag?: string
 	// Additional properties used in runtime
+	// TODO: move this to condition terms only
 	bar_by_grade?: boolean
 	bar_by_children?: boolean
 	value_by_max_grade?: boolean

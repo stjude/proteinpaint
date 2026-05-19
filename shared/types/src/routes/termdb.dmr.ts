@@ -1,5 +1,4 @@
 import type { Filter } from '../filter.ts'
-import type { RoutePayload } from './routeApi.ts'
 
 export type TermdbDmrRequest = {
 	genome: string
@@ -111,11 +110,4 @@ export type TermdbDmrErrorResponse = {
 
 export type TermdbDmrResponse = TermdbDmrSuccessResponse | TermdbDmrErrorResponse
 
-export const TermdbDmrPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbDmrRequest'
-	},
-	response: {
-		typeId: 'TermdbDmrResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

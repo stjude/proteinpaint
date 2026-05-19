@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type TermChildrenRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
@@ -7,6 +5,7 @@ export type TermChildrenRequest = {
 	dslabel: string
 	embedder: string
 	get_children: number
+	cohortValues?: string
 	tid: string
 }
 
@@ -22,7 +21,7 @@ export type TermChildrenResponse = {
 	lst: Entries[]
 }
 
-export const termChildrenPayload: RoutePayload = {
+export const termChildrenPayloadExamples = {
 	request: {
 		typeId: 'TermChildrenRequest'
 	},
@@ -39,7 +38,7 @@ export const termChildrenPayload: RoutePayload = {
 					get_children: 1,
 					cohortValues: 'ABC',
 					tid: 'GO:0000001'
-				}
+				} satisfies TermChildrenRequest // TODO: enable type check
 			},
 			response: {
 				header: { status: 200 }

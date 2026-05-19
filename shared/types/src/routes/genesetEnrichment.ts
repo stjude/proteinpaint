@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { DERequest } from './termdb.DE.js'
 import type { DiffMethRequest } from './termdb.diffMeth.js'
 
@@ -106,12 +105,4 @@ export type GenesetEnrichmentResponse = {
 	data: blitzgseaResult | cernoResult
 }
 
-export const genesetEnrichmentPayload: RoutePayload = {
-	request: {
-		typeId: 'GenesetEnrichmentRequest'
-	},
-	response: {
-		typeId: 'GenesetEnrichmentResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

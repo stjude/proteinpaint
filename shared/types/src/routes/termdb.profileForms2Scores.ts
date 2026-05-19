@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type ProfileForms2ScoresRequest = {
 	// q is optional: term wrappers from getMultivalueTWs() carry no q field,
 	// and JSON.stringify drops `q: undefined`, so the field may be absent on the wire.
@@ -15,11 +13,4 @@ export type ProfileForms2ScoresResponse = {
 	n: number
 }
 
-export const ProfileForms2ScoresPayload: RoutePayload = {
-	request: {
-		typeId: 'ProfileForms2ScoresRequest'
-	},
-	response: {
-		typeId: 'ProfileForms2ScoresResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

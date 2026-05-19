@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 
 /** GRIN2 request */
@@ -167,14 +166,4 @@ export type GRIN2Response = {
 	fromCache?: boolean
 }
 
-/**
- * Route payload definitions for type checking
- */
-export const GRIN2Payload: RoutePayload = {
-	request: {
-		typeId: 'GRIN2Request'
-	},
-	response: {
-		typeId: 'GRIN2Response'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

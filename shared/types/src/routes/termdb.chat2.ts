@@ -1,5 +1,4 @@
 import type { Filter } from '../filter.ts'
-import type { RoutePayload } from './routeApi.js'
 
 /** */
 // Helps track ambiguous points in the LLM reasoning process for debugging and improvement purposes.
@@ -59,16 +58,6 @@ export interface GeneSetDataTypeResult {
 }
 
 export type ChatResponse = TextResponse | HtmlResponse | PlotResponse
-
-export const ChatPayload: RoutePayload = {
-	request: {
-		typeId: 'ChatRequest'
-	},
-	response: {
-		typeId: 'ChatResponse'
-	}
-	//examples: []
-}
 
 export type SummaryType = {
 	/** Name of 1st term */
