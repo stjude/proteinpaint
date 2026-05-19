@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type AIProjectAdminRequest = {
 	genome: string
 	dslabel: string
@@ -25,13 +23,4 @@ export type AIProjectAdminResponse = {
 	images: string[]
 	error?: string
 	data?: { cols: any[]; rows: any[]; images?: string[]; selectedImages?: string[] }[]
-}
-
-export const aiProjectAdminPayload: RoutePayload = {
-	request: {
-		typeId: 'AIProjectAdminRequest'
-	},
-	response: {
-		typeId: 'AIProjectAdminResponse'
-	}
 }
