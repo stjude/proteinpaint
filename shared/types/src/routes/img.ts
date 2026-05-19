@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type imgRequest = {
 	file: string
 }
@@ -13,11 +11,4 @@ export type imgResponse = {
 	size: string
 }
 
-export const imgPayload: RoutePayload = {
-	request: {
-		typeId: 'imgRequest'
-	},
-	response: {
-		typeId: 'imgResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

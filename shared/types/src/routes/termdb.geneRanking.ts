@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type GeneRankingRequest =
 	| {
 			/** fetch a ranking TSV (or list of available keys when key is omitted) */
@@ -53,11 +51,4 @@ export type GeneRankingResponse = {
 	error?: string
 }
 
-export const geneRankingPayload: RoutePayload = {
-	request: {
-		typeId: 'GeneRankingRequest'
-	},
-	response: {
-		typeId: 'GeneRankingResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

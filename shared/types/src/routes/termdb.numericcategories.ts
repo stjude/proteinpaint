@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 
 export type NumericCategoriesRequest = {
@@ -21,12 +20,4 @@ export type NumericCategoriesResponse = {
 	lst: entries[]
 }
 
-export const numericCategoriesPayload: RoutePayload = {
-	request: {
-		typeId: 'NumericCategoriesRequest'
-	},
-	response: {
-		typeId: 'NumericCategoriesResponse'
-	},
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

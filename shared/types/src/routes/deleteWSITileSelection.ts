@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
 import type { TileSelection } from './aiProjectSelectedWSImages.ts'
 
 export type DeleteWSITileSelectionRequest = {
@@ -13,13 +12,4 @@ export type DeleteWSITileSelectionRequest = {
 export type DeleteWSITileSelectionResponse = {
 	status: string
 	error?: string
-}
-
-export const deleteWSITileSelectionPayload: RoutePayload = {
-	request: {
-		typeId: 'DeleteWSITileSelectionRequest'
-	},
-	response: {
-		typeId: 'DeleteWSITileSelectionResponse'
-	}
 }

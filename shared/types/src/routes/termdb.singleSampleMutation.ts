@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
 export type TermdbSingleSampleMutationRequest = {
@@ -40,12 +39,4 @@ type ValidResponse = {
 
 export type TermdbSingleSampleMutationResponse = ErrorResponse | ValidResponse
 
-export const termdbSingleSampleMutationPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbSingleSampleMutationRequest'
-	},
-	response: {
-		typeId: 'TermdbSingleSampleMutationResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

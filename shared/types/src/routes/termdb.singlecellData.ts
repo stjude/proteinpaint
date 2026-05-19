@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 
 export type Cell = {
@@ -64,12 +63,4 @@ export type NodataResponse = {
 
 export type TermdbSingleCellDataResponse = NodataResponse | ErrorResponse | HasdataResponse
 
-export const termdbSingleCellDataPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbSingleCellDataRequest'
-	},
-	response: {
-		typeId: 'TermdbSingleCellDataResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

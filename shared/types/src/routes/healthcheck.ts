@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type HealthCheckRequest = {
 	dslabel?: string
 }
@@ -58,23 +56,4 @@ export type HealthCheckResponse = {
 	dsInitStatus: any[]
 }
 
-export const healthcheckPayload: RoutePayload = {
-	request: {
-		typeId: 'HealthCheckRequest'
-	},
-	response: {
-		typeId: 'HealthCheckResponse'
-	},
-	examples: [
-		{
-			request: { body: {} }
-			//response: {}
-		},
-		{
-			request: {
-				body: { dsLabel: 'TermdbTest' }
-			}
-			//response: {}
-		}
-	]
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

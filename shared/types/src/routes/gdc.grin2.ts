@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 /**
  * Represents a file from GDC API (MAF)
  */
@@ -224,23 +222,5 @@ export type RunGRIN2Response = {
 		totalTime: number
 	}
 }
-/**
- * Route payload definitions for type checking
- */
-export const gdcGRIN2listPayload: RoutePayload = {
-	request: {
-		typeId: 'GdcGRIN2listRequest'
-	},
-	response: {
-		typeId: 'GdcGRIN2listResponse'
-	}
-}
 
-export const runGRIN2Payload: RoutePayload = {
-	request: {
-		typeId: 'RunGRIN2Request'
-	},
-	response: {
-		typeId: 'RunGRIN2Response'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

@@ -176,6 +176,8 @@ export type BoxPlotResponse = {
 	uncomputableValues: { label: string; value: number }[] | null
 }
 
+// TODO: write more payload examples to help with automated testing and documentation, for non-prod use only
+
 export const violinBoxPayload: RoutePayload = {
 	request: {
 		typeId: 'ViolinBoxRequest'
@@ -200,7 +202,7 @@ export const violinBoxPayload: RoutePayload = {
 					datasymbol: 'rug',
 					radius: 5,
 					isLogScale: false
-				}
+				} // satisfies ViolinBoxRequest // TODO: enable type check
 			},
 			response: {
 				header: { status: 200 }
@@ -220,7 +222,7 @@ export const violinBoxPayload: RoutePayload = {
 						term: { id: 'sex', type: 'categorical' }
 					},
 					orderByMedian: true
-				}
+				} // satisfies ViolinBoxRequest // TODO: enable type check
 			},
 			response: {
 				header: { status: 200 }

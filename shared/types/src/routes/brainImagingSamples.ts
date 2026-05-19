@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type BrainImagingSamplesRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
@@ -15,11 +13,4 @@ export type BrainImagingSamplesResponse = {
 
 export type BrainSample = { [key: string]: string }
 
-export const brainImagingSamplesPayload: RoutePayload = {
-	request: {
-		typeId: 'BrainImagingSamplesRequest'
-	},
-	response: {
-		typeId: 'BrainImagingSamplesResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

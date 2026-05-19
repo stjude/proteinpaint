@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type RootTermRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
 	genome: string
@@ -23,7 +21,7 @@ export type RootTermResponse = {
 	lst: Entries[]
 }
 
-export const rootTermPayload: RoutePayload = {
+export const rootTermPayloadExamples = {
 	request: {
 		typeId: 'RootTermRequest'
 	},
@@ -39,7 +37,7 @@ export const rootTermPayload: RoutePayload = {
 					embedder: 'localhost',
 					default_rootterm: 1,
 					cohortValues: 'ABC'
-				}
+				} // satisfies RootTermRequest // TODO: enable type check
 			},
 			response: {
 				header: { status: 200 }

@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type topMutatedGeneRequest = {
 	genome: string
 	dslabel: string
@@ -40,12 +38,4 @@ export type topMutatedGeneResponse = {
 	genes: MutatedGene[]
 }
 
-export const topMutatedGenePayload: RoutePayload = {
-	request: {
-		typeId: 'topMutatedGeneRequest'
-	},
-	response: {
-		typeId: 'topMutatedGeneResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

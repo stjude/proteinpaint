@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from './termdb.DE.js'
 
@@ -38,13 +37,3 @@ export type HasDataResponse = {
 }
 
 export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse
-
-export const termdbSingleCellDEgenesPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbSingleCellDEgenesRequest'
-	},
-	response: {
-		typeId: 'TermdbSingleCellDEgenesResponse'
-	}
-	// examples: []
-}

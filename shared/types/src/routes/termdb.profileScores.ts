@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type ProfileScoresRequest = {
 	scoreTerms: { score: any; maxScore?: any }[]
 	filter?: any
@@ -17,11 +15,4 @@ export type ProfileScoresResponse = {
 	n: number
 }
 
-export const ProfileScoresPayload: RoutePayload = {
-	request: {
-		typeId: 'ProfileScoresRequest'
-	},
-	response: {
-		typeId: 'ProfileScoresResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

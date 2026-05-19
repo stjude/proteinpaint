@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type DZImagesRequest = {
 	genome: string
 	dslabel: string
@@ -13,13 +11,3 @@ export type DZImagesRequest = {
 }
 
 export type DZImagesResponse = string
-
-export const dzImagesPayload: RoutePayload = {
-	request: {
-		typeId: 'DZImagesRequest'
-	},
-	response: {
-		typeId: 'DZImagesResponse'
-	}
-	// examples: []
-}
