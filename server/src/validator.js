@@ -1,3 +1,29 @@
+import * as checkers from '../checkers/index.ts'
+
+export function middleware(req, res, next) {
+	try {
+		// NOTE: a preceding middleware combines req.query with req.body in a POST request
+		const q = req.query
+
+		const routeHandler = req.path
+			.slice(1)
+			.split('/')
+			.map(p => p[0].toUpperCase() + p.slice(1))
+			.join('')
+		const checker = checkers[`{routeHandler}Payload`]?.request.checker
+		if (checker) checker(req.query)
+		else {
+			for (const key in q) {
+				if (key in byReqKey) q[key] = byReqKey[key](q[key])
+			}
+			// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
+		}
+		next()
+	} catch (e) {
+		floodCatch(req, res, e.message || e)
+	}
+}
+
 const byIpAddr = {}
 
 export function floodCatch(req, res, error) {
@@ -20,30 +46,12 @@ export function floodCatch(req, res, error) {
 	throw new Date() + ' ' + error
 }
 
-export function middleware(req, res, next) {
-	try {
-		// NOTE: a preceding middleware combines req.query with req.body in a POST request
-		const q = req.query
-		for (const key in q) {
-			if (key in byReqKey) q[key] = byReqKey[key](q[key])
-		}
-		// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
-		next()
-	} catch (e) {
-		floodCatch(req, res, e.message || e)
-	}
-}
-
-// consolidate validation functions here
-// for server request parameters that are
-// shared across different route handlers
+// below are generic validation functions for request payloads
+// that do not have dedicated payload validators as coded in server/checkers
 
 export const byReqKey = {
-	genome(value) {
-		if (typeof value != 'string') throw 'genome should be a non-empty string'
-		if (/\s+/.test(value)) throw 'invalid genome character'
-		return value
-	},
+	genome: validGenome,
+	dslabel: validDslabel,
 	chr(value) {
 		if (typeof value != 'string') throw 'chr should be a string'
 		if (/\s+/.test(value)) throw 'invalid chr character'
