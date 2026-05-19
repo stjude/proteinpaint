@@ -40,11 +40,44 @@ tape('defaults', function (test) {
 				test.deepEqual(
 					Object.fromEntries(m.subdirs.entries()),
 					{
+						de: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							maxPending: 5,
+							absPath: `${m.cachedir}/de`,
+							skipUntil: 0
+						},
+						dm: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							maxPending: 5,
+							absPath: `${m.cachedir}/dm`,
+							skipUntil: 0
+						},
 						gsea: {
 							maxAge: 5184000000,
 							maxSize: 5000000000,
 							skipMs: 43200000,
+							maxPending: 5,
 							absPath: `${m.cachedir}/gsea`,
+							skipUntil: 0
+						},
+						grin2: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							maxPending: 5,
+							absPath: `${m.cachedir}/grin2`,
+							skipUntil: 0
+						},
+						topve: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							maxPending: 5,
+							absPath: `${m.cachedir}/topve`,
 							skipUntil: 0
 						},
 						massSession: {
@@ -59,34 +92,6 @@ tape('defaults', function (test) {
 							maxSize: 5000000000,
 							skipMs: 43200000,
 							absPath: `${m.cachedir}/massSessionTrash`,
-							skipUntil: 0
-						},
-						grin2: {
-							maxAge: 5184000000,
-							maxSize: 5000000000,
-							skipMs: 43200000,
-							absPath: `${m.cachedir}/grin2`,
-							skipUntil: 0
-						},
-						de: {
-							maxAge: 5184000000,
-							maxSize: 5000000000,
-							skipMs: 43200000,
-							absPath: `${m.cachedir}/de`,
-							skipUntil: 0
-						},
-						dm: {
-							maxAge: 5184000000,
-							maxSize: 5000000000,
-							skipMs: 43200000,
-							absPath: `${m.cachedir}/dm`,
-							skipUntil: 0
-						},
-						topve: {
-							maxAge: 5184000000,
-							maxSize: 5000000000,
-							skipMs: 43200000,
-							absPath: `${m.cachedir}/topve`,
 							skipUntil: 0
 						},
 						daAnalysis: {

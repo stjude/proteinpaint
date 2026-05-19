@@ -8,7 +8,7 @@ const halfDay = day / 2
  * omitted. To add a new analysis type, append a new entry here — no
  * other file needs to be edited. */
 export const CACHE_OR_RECOMPUTE_SUBDIRS = {
-	de: { maxAge: day * 60, skipMs: halfDay, maxPending: 3 },
+	de: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
 	dm: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
 	gsea: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
 	grin2: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
