@@ -82,14 +82,15 @@ export class SectionRenderer {
 	}
 
 	getPlotName(subplot: any): string {
-		let plotName = subplot?.plotName || subplot?.singleCellPlot?.name || subplot?.term?.term?.plot
+		let plotName = subplot?.plotName || subplot?.singleCellPlot?.name
 		if (!plotName) {
 			/** Harcoding logic for some transient and parent plots for now. May consider
 			 * adding to the config if this becomes more complex. Must weight against
 			 * adding unnecessary complexity to the config for edge cases though.*/
 			if (subplot.chartType === 'dictionary') plotName = 'Summary'
-			if (subplot.chartType === 'summary') plotName = 'Summary'
-			if (subplot.chartType === 'GeneExpInput') plotName = 'Gene expression'
+			else if (subplot.chartType === 'summary') plotName = 'Summary'
+			else if (subplot.chartType === 'GeneExpInput') plotName = 'Gene expression'
+			else if (subplot?.term?.term?.plot) plotName = subplot.term.term.plot
 		}
 		return plotName
 	}
@@ -157,7 +158,7 @@ export class SectionRenderer {
 	}
 
 	makeSectionTitleText(key: string, item?: SingleCellSample) {
-		if (this.groupBy === 'none') return ''
+		if (this.groupBy === 'none') return 'All plots'
 		if (this.groupBy === 'plot') return key
 		const caseText = item?.sample && item.sample !== key ? `Case: ${item.sample}` : ''
 		const itemText = `Sample: ${key}`

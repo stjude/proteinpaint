@@ -20,6 +20,7 @@ export class SCViewRenderer {
 	//Eventually maybe an app dispatch and not a flag
 	static inUse: boolean = true
 	sectionRenderer: SectionRenderer
+	sampleTableRenderer!: SampleTableRenderer
 	sc: SCViewer
 
 	constructor(sc: SCViewer, state: any) {
@@ -33,7 +34,7 @@ export class SCViewRenderer {
 	render(tableData: SCTableData, settings: SCSettings) {
 		this.renderSelectBtn()
 		this.renderGroupByOptions(settings)
-		new SampleTableRenderer(this.dom, this.interactions, tableData)
+		this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
 		this.dom.plotsBtnsDiv.style('display', 'none')
 	}
 
@@ -94,5 +95,20 @@ export class SCViewRenderer {
 		this.plotBtns.update(settings, data)
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
 		await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
+
+		// Derive sample → sandbox divs from existing state to update the table
+		const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
+		for (const subplot of subplots) {
+			const sampleId = this.sectionRenderer.getSampleId(subplot)
+			const key = this.sectionRenderer.plotId2Key.get(subplot.id)
+			if (!sampleId || !key) continue
+			const div = this.sectionRenderer.sections[key]?.sandboxes[subplot.id]
+			if (!div) continue
+			const plotName = this.sectionRenderer.getPlotName(subplot) || subplot.id
+			if (!sandboxes.has(sampleId)) sandboxes.set(sampleId, [])
+			sandboxes.get(sampleId)!.push({ plotId: subplot.id, div, plotName })
+		}
+
+		this.sampleTableRenderer.updateTable(settings.sc.item?.sID, sandboxes)
 	}
 }

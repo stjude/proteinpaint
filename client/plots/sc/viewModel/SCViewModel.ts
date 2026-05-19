@@ -43,7 +43,10 @@ export class SCViewModel {
 		const hasExperiments = items.some(i => i.experiments)
 
 		// first column is sample and is hardcoded
-		const columns: TableColumn[] = [{ label: plotConfig.settings.sc.columns.sample, sortable: true }]
+		const columns: TableColumn[] = [
+			{ label: plotConfig.settings.sc.columns.sample, sortable: true },
+			{ label: 'Shown plots' }
+		]
 		if (hasExperiments) columns.push({ label: 'Sample', sortable: true }) //add after the case column
 
 		// add in optional sample columns
@@ -84,6 +87,8 @@ export class SCViewModel {
 				const row: { [index: string]: any }[] = item.isMetaResult
 					? [{ html: item.sample.replace(/_/g, ' '), value: item.sample }]
 					: [{ value: item.sample }]
+				//Empty cell for shown plot buttons
+				row.push({ value: '' })
 				// optional sample columns
 				for (const col of sampleColumns || []) {
 					const value = item[col.termid]
