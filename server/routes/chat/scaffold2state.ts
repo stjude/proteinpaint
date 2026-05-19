@@ -1,6 +1,6 @@
 import { mayLog } from '#src/helpers.ts'
 import { isNumericTerm } from '#shared/terms.js'
-import { SSGSEA } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
@@ -100,7 +100,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		// default method for differential gene expression analysis
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
-		plotState.plot.termType = 'geneExpression' // placeholder(can this be something else as well?)
+		plotState.plot.termType = GENE_EXPRESSION // placeholder(can this be something else as well?)
 		const groups = [input.filter1, input.filter2]
 		plotState.plot.samplelst = groups
 		plotState.method = 'edgeR'
@@ -153,7 +153,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			const twLst: any[] = []
 			input.twLst.forEach((tw: any) => {
 				if (tw.isDictionary) delete tw.isDictionary
-				if (tw.geneSet && tw.type === 'geneExpression') {
+				if (tw.geneSet && tw.type === GENE_EXPRESSION) {
 					for (const geneTerm of tw.geneSet) {
 						twLst.push(geneTerm)
 					}

@@ -20,7 +20,7 @@ import type {
 	PrebuiltScatterScaffold
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
-import { SSGSEA } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 import assert from 'assert'
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
@@ -211,7 +211,7 @@ async function inferEntities(
 		return validatedNonDict // This means we encountered an error or an ambiguous gene prompt, and we want to return early with a user-facing message.
 	} else if ('geneFeatures' in validatedNonDict) {
 		if (validatedNonDict.geneFeatures.dataType == 'expression') {
-			return { termType: 'geneExpression', phrase: phrase }
+			return { termType: GENE_EXPRESSION, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
 			return { termType: 'dnaMethylation', phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'variant') {
@@ -226,8 +226,8 @@ async function inferEntities(
 			return { termType: SSGSEA, phrase: phrase }
 		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneVariant') {
 			return { termType: 'geneVariant', phrase: phrase }
-		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneExpression') {
-			return { termType: 'geneExpression', phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === GENE_EXPRESSION) {
+			return { termType: GENE_EXPRESSION, phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneSetFeatures:' + validatedNonDict.geneSetFeatures
 		}

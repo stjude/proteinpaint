@@ -4,7 +4,7 @@ import type { MsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { parse_dataset_db, getGenesForGeneset } from './utils.ts'
 import { mayLog } from '#src/helpers.ts'
-import { SSGSEA } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 
 //>>>> Bin Config Types Definitions start
 interface BinEntry {
@@ -216,7 +216,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 		} else if (
 			termObj.term.type === 'integer' ||
 			termObj.term.type === 'float' ||
-			termObj.term.type === 'geneExpression' ||
+			termObj.term.type === GENE_EXPRESSION ||
 			termObj.term.type === SSGSEA // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
 		) {
 			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
@@ -430,7 +430,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
 			return { id: twValueTerm.id, type: twValueTerm.type, q: binConfig, isDictionary: true }
 		}
 	} else {
-		if (twValue.type === 'geneExpression') {
+		if (twValue.type === GENE_EXPRESSION) {
 			const twValueTerm = twValue.term
 			if ('gene' in twValueTerm && twValueTerm.gene) {
 				return {
@@ -460,7 +460,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
 				}
 			} else {
 				throw new Error(
-					`Invalid geneExpression term: missing gene or geneSet field in geneExpression term for phrase "${twValue.phrase}"`
+					`Invalid ${GENE_EXPRESSION} term: missing gene or geneSet field in ${GENE_EXPRESSION} term for phrase "${twValue.phrase}"`
 				)
 			}
 		} else if (twValue.type === SSGSEA) {

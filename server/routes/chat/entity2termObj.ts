@@ -1,5 +1,5 @@
 import type { LlmConfig } from '#types'
-import { SSGSEA } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 import type {
 	SummaryPhrase2EntityResult,
 	Phrase2EntityResult,
@@ -29,7 +29,7 @@ export interface GeneTerm {
 
 export interface GeneSetTerm {
 	geneSet: string
-	type: typeof SSGSEA | 'geneVariant' | 'geneExpression'
+	type: typeof SSGSEA | 'geneVariant' | typeof GENE_EXPRESSION
 }
 
 export interface MethTerm {
@@ -50,7 +50,7 @@ export type Value = {
 
 function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any): Value | undefined {
 	switch (twEntity.termType) {
-		case 'geneExpression': {
+		case GENE_EXPRESSION: {
 			const relevant_genes = extractGenesFromPrompt(twEntity.phrase, genes_list)
 			let twResult: Term
 			if (relevant_genes.length > 0) {

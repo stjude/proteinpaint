@@ -1,5 +1,5 @@
 import type { DbRows, DbValue, GeneDataTypeResult } from '#types'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, GENE_EXPRESSION } from '#shared/terms.js'
 import { FILTER_DESCRIPTION } from './filter.ts'
 import { mayLog } from '#src/helpers.ts'
 import fs from 'fs'
@@ -23,7 +23,7 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 
 	// check if it supports heirarchical clustering charts
 	// TODO:
-	if (plotTypes.includes('geneExpression')) {
+	if (plotTypes.includes(GENE_EXPRESSION)) {
 		// || plotTypes.includes('proteomeAbundance') || plotTypes.includes('dnaMethylation'))
 		plotTypes.push('hiercluster')
 	}
@@ -47,7 +47,7 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 type IdentifierMode = 'gene' | 'name'
 
 export interface DataTypeConfig {
-	/** TermTypes value, e.g. 'geneExpression' */
+	/** TermTypes value, e.g. '${GENE_EXPRESSION}' */
 	termType: string
 	/** Returns true when the dataset supports this data type.
 	 *  ds may be null in testing mode — use dataset_json flags as fallback. */
@@ -90,7 +90,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of genes to include as gene expression rows in the matrix'
 		},
 		identifierMode: 'gene',
-		buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: 'geneExpression' } }),
+		buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: '${GENE_EXPRESSION}' } }),
 		promptFieldDescription:
 			'The "geneNames" field should ONLY contain gene names. These will be shown as gene expression rows.'
 	},
