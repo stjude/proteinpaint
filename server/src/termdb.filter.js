@@ -279,7 +279,7 @@ function isInRange(val, range, isnot) {
 
 function emptyFilterResult(CTEname, mapParent2Children, ds) {
 	let query = `SELECT id as sample FROM sampleidmap WHERE 0`
-	if (isParentType(tvs.term, ds) && mapParent2Children) query = getChildren(query)
+	if (mapParent2Children) query = getChildren(query)
 	return { CTEs: [`${CTEname} AS (${query})`], values: [], CTEname }
 }
 

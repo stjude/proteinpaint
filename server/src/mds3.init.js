@@ -525,8 +525,9 @@ function mayValidateSampleTypes(tdb) {
 	}
 	// dataset has sample ancestry, therefore must have
 	// two sample types: parent and child
+	// TODO: later will support other sample type hierarchies
 	const sampleTypeConfig = tdb.sampleTypes
-	if (!sampleTypeConfig) 'sample type config missing'
+	if (!sampleTypeConfig) throw 'sample type config missing'
 	if (Object.keys(sampleTypeConfig).length != 2) throw 'sample type config must have 2 sample types'
 	let parentSampleType, childSampleType
 	for (const [k, v] of Object.entries(sampleTypeConfig)) {
