@@ -121,7 +121,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 				'Names of gene sets (e.g. HALLMARK pathways) to include as ssGSEA enrichment score rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { id: name, name, type: 'ssGSEA' } }),
+		buildTermWrapper: (name: string) => ({ term: { id: name, name, type: '${SSGSEA}' } }),
 		promptFieldDescription:
 			'The "genesetNames" field should contain gene set pathway names (e.g. HALLMARK_P53_PATHWAY).',
 		dataTypeDescription: 'Gene set pathway names (e.g. HALLMARK_APOPTOSIS, HALLMARK_ADIPOGENESIS)'
