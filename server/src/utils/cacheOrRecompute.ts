@@ -33,8 +33,13 @@ async function writeJsonCache(filePath: string, result: unknown): Promise<void> 
 	const t0 = Date.now()
 	const body = JSON.stringify(result)
 	await fs.promises.writeFile(filePath, body)
+	// Buffer.byteLength gives the actual UTF-8 byte count that hits disk;
+	// `body.length` would report UTF-16 code units, which under-counts
+	// any multi-byte character.
 	mayLog(
-		`cacheOrRecompute write ${shortLabel(filePath)} (${fileSize(body.length)}) in ${formatElapsedTime(Date.now() - t0)}`
+		`cacheOrRecompute write ${shortLabel(filePath)} (${fileSize(
+			Buffer.byteLength(body, 'utf8')
+		)}) in ${formatElapsedTime(Date.now() - t0)}`
 	)
 }
 
@@ -84,6 +89,15 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	const inFlight = pending.get(dedupKey)
 	if (inFlight) return inFlight as Promise<CacheOrRecomputeResult<TResult>>
 
+	/** `maxAge`, `skipMs`, `maxSize` for each subdir are already
+	 deployer-overrideable via `serverconfig.features.cacheMonitor.subdirs`
+	 — that override flows through CacheManager's constructor merge. But
+	 `maxPending` is read straight from the static import below, so the
+	 same override path does NOT reach it. Close this gap when a workload
+	 with a different concurrency profile (e.g. GDC BAM slice or MAF) is
+	 routed through cacheOrRecompute: at boot, merge
+	 `serverconfig.features?.cacheMonitor?.subdirs?.[subdir]?.maxPending`
+	 into a module-local map and read from that here instead. */
 	const cap = CACHE_OR_RECOMPUTE_SUBDIRS[cacheSubdir].maxPending
 	const inUse = pendingCount.get(cacheSubdir) ?? 0
 	if (inUse >= cap) throw makeBusyError()
@@ -116,10 +130,13 @@ async function tryReadJson<T>(filePath: string): Promise<T | null> {
 	}
 	try {
 		const parsed = JSON.parse(text) as T
+		// Buffer.byteLength gives the actual UTF-8 byte count read from
+		// disk; `text.length` would report UTF-16 code units, which
+		// under-counts any multi-byte character.
 		mayLog(
-			`cacheOrRecompute read ${shortLabel(filePath)} (${fileSize(text.length)}) in ${formatElapsedTime(
-				Date.now() - t0
-			)}`
+			`cacheOrRecompute read ${shortLabel(filePath)} (${fileSize(
+				Buffer.byteLength(text, 'utf8')
+			)}) in ${formatElapsedTime(Date.now() - t0)}`
 		)
 		return parsed
 	} catch (e: any) {
