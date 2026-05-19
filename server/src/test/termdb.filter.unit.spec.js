@@ -59,8 +59,8 @@ tape('simple filter', async function (test) {
 	//console.log(filter.values)
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'sampleTypes', 'values'],
-		'should return an object with the five expected keys'
+		['CTEname', 'CTEs', 'filters', 'values'],
+		'should return an object with the four expected keys'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
@@ -137,8 +137,8 @@ tape('nested filter', async function (test) {
 	//console.log(filter.values)
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'sampleTypes', 'values'],
-		'should return an object with the five expected keys'
+		['CTEname', 'CTEs', 'filters', 'values'],
+		'should return an object with the four expected keys'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.equal(
@@ -192,8 +192,8 @@ tape('custom termCollection percentage filter', async function (test) {
 
 	test.deepEqual(
 		Object.keys(filter).sort((a, b) => (a < b ? -1 : 1)),
-		['CTEname', 'CTEs', 'filters', 'sampleTypes', 'values'],
-		'should return an object with the five expected keys'
+		['CTEname', 'CTEs', 'filters', 'values'],
+		'should return an object with the four expected keys'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
 	test.ok(filter.values.length > 0, 'should return matching samples (percentage > 0)')
