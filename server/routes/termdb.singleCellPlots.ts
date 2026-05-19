@@ -117,7 +117,7 @@ async function getSingleCellScatter(req, res, ds) {
 		const categories: any = new Set(samples.map(s => s.category))
 		const colorMap = {}
 
-		if (tw.term.type != SINGLECELL_GENE_EXPRESSION) {
+		if (tw.term.type == SINGLECELL_CELLTYPE) {
 			const defaultK2c = getColors(categories.size)
 			const k2c = category => {
 				/** Only assign default color after checking term.values
