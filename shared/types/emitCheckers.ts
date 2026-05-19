@@ -39,7 +39,6 @@ for (const f of files) {
 	if (!Object.keys(_).find(k => k.endsWith('Payload'))) continue
 	transitiveExports.push(`export * from './${f}'`)
 
-	if (f.startsWith('aiProjectAdmin' || f.startsWith('termdb.sampleScatter'))) continue
 	const outfile = path.join(__dirname, outDir, `checkers/${f}`)
 	// comment out below to generate template files for new routes
 	if (fs.existsSync(outfile)) continue
