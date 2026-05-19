@@ -293,15 +293,14 @@ export abstract class ScatterModelBase {
 			chart.colorValues = colorValues // to use it in renderLegend
 			// Determine min/max based on current mode
 			let min, max, index
-			//Commenting out until it's known why this isn't this.scatter.settings.
-			// const settings = this.scatter.config.settings.sampleScatter
+			const colorScaleSettings = config.settings.sampleScatter
 
-			switch (settings.colorScaleMode) {
+			switch (colorScaleSettings.colorScaleMode) {
 				// Fixed mode: Use user-defined min/max values
 				// This is useful when you want consistent scaling across different views
 				case 'fixed':
-					min = settings.colorScaleMinFixed
-					max = settings.colorScaleMaxFixed
+					min = colorScaleSettings.colorScaleMinFixed
+					max = colorScaleSettings.colorScaleMaxFixed
 					break
 
 				case 'percentile':
@@ -309,7 +308,7 @@ export abstract class ScatterModelBase {
 					min = colorValues[0] // Start at the first value of the array for percentile mode
 					// Calculate the value at the specified percentile
 					// This helps handle outliers by focusing on the main distribution
-					index = Math.floor((colorValues.length * settings.colorScalePercentile) / 100)
+					index = Math.floor((colorValues.length * colorScaleSettings.colorScalePercentile) / 100)
 					max = colorValues[index]
 					break
 
