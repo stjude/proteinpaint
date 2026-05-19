@@ -6,7 +6,7 @@ import { mayLog } from '#src/helpers.ts'
 const TermTypeDefinitions: Record<string, string> = {
 	survival:
 		'Supports survival analysis, time-to-event analysis, and Kaplan-Meier / Cox regression workflows. Represents a variable capturing the time until an event of interest occurs (e.g., death, relapse, progression), typically paired with an event/censoring indicator.',
-	geneVariant:
+	GENE_VARIANT:
 		'Supports genetic variant analysis, mutation analysis, somatic/germline variant queries, and genotype-phenotype association studies. Represents a specific genetic variant or mutation (e.g., SNV, indel, copy number change) at the gene or locus level.',
 	GENE_EXPRESSION:
 		'Supports gene expression analysis, hierarchical clustering, bulk RNA-seq / microarray expression queries, differential expression comparisons, and expression-based correlation or stratification. Represents the expression level of a gene.',
