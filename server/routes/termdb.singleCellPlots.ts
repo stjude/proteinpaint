@@ -161,13 +161,15 @@ async function getSingleCellScatter(req, res, ds) {
 
 async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange, termType: string) {
 	const settings = q.canvasSettings
+	const dpr = settings.devicePixelRatio || 1
 	const extraSpaceX = calculatePadding(settings.minXScale, settings.maxXScale, range.xMin, range.xMax) //extra space added to avoid clipping the particles on the X axis
 	const extraSpaceY = calculatePadding(settings.minYScale, settings.maxYScale, range.yMin, range.yMax) //extra space added to avoid clipping the particles on the Y axis
 	const width = settings.width + xAxisOffSet + extraSpaceX + 20
 	const height = settings.height + yAxisOffSet + extraSpaceY + 20
 
-	const canvas = createCanvas(width, height)
+	const canvas = createCanvas(width * dpr, height * dpr)
 	const ctx = canvas.getContext('2d')
+	if (devicePixelRatio > 1) ctx.scale(dpr, dpr)
 
 	//This accounts for user defined min and max scales values
 	const xScale = scaleLinear()

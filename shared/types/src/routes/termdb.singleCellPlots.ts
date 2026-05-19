@@ -43,6 +43,8 @@ export type TermdbSingleCellPlotsRequest = {
 		/** Required non expression color for scge plots. 'stopColor' is the
 		 * settings key in the scatter. */
 		stopColor: string
+		/** Device pixel ratio from the client for HiDPI rendering */
+		devicePixelRatio?: number
 	}
 	/** Term wrapper for coloring the single cell plot */
 	colorTW?: any

@@ -31,7 +31,8 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 				maxYScale: this.scatter.settings.maxYScale,
 				startColor: c.startColor?.['Default'] || rgb(noExpColor).toString(),
 				stopColor: c.stopColor?.['Default'] || rgb(expColor).toString(),
-				opacity: this.scatter.settings.opacity
+				opacity: this.scatter.settings.opacity,
+				devicePixelRatio: window.devicePixelRatio || 1
 			}
 		}
 	}
