@@ -5,7 +5,9 @@ import { rgb } from 'd3-color'
 import type { TermdbSingleCellPlotsResponse } from '#types'
 
 /** Some large scale single cell plots are server side rendered and
- * ported to the ScatterViewModel2DLarge.ts. */
+ * ported to the ScatterViewModel2DLarge.ts.
+ *
+ * TODO: Incorporate the plot filter in to the request. */
 
 export class ScatterSingleCellModel extends ScatterModelBase {
 	constructor(scatter: Scatter) {
@@ -16,7 +18,8 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 		const c: any = this.scatter.config
 
 		return {
-			...c,
+			colorTW: c.colorTW,
+			singleCellPlot: c.singleCellPlot,
 			canvasSettings: {
 				cutoff: maxSvgSamplesCutoff,
 				width: this.scatter.settings.svgw,
@@ -36,8 +39,6 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 	async initData() {
 		try {
 			const reqOpts = this.getDataRequestOpts()
-			//To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
-			if (reqOpts.coordTWs?.length == 1 && this.scatter.type == 'sampleScatter') return
 
 			const data: TermdbSingleCellPlotsResponse = await this.scatter.app.vocabApi.getScatterSingleCellPlotData(
 				reqOpts,
@@ -45,7 +46,9 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			)
 
 			if ('error' in data || !data.result) throw new Error(data['error'] || 'No data received')
+
 			this.charts = []
+			/** There should only be one chart */
 			this.createChart('Default', data.result.Default)
 
 			this.range = data.range

@@ -1040,10 +1040,10 @@ export class TermdbVocab extends Vocab {
 		if (opts.shapeTW) body.shapeTW = this.getTwMinCopy(opts.shapeTW)
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
-		if (opts.canvasSettings) body.canvasSettings = opts.canvasSettings
 		return await this.dofetch3('termdb/sampleScatter', { headers, body, signal })
 	}
 
+	//TODO: Will need to add in filter
 	async getScatterSingleCellPlotData(opts, signal = undefined) {
 		const headers = await this.mayGetAuthHeaders('termdb')
 		const body = {

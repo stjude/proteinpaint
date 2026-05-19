@@ -17,7 +17,6 @@ export type TermdbSampleScatterRequest = {
 	singleCellPlot?: any
 	colorColumn?: any
 	excludeOutliers?: any
-	canvasSettings?: { cutoff: number; width: number; height: number }
 }
 
 export type ScatterSample = {

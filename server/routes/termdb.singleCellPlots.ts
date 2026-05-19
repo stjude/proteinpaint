@@ -1,4 +1,14 @@
-import type { Cell, ColorLegendEntry, ColorMap, RouteApi, ShapeLegendEntry, SingleCellRange } from '#types'
+import type {
+	Cell,
+	ColorLegendEntry,
+	ColorMap,
+	FormattedCell2Sample,
+	RouteApi,
+	ShapeLegendEntry,
+	SingleCellRange,
+	TermdbSingleCellPlotsRequest,
+	ValidSingleCellPlotsResponse
+} from '#types'
 import { termdbSingleCellPlotsPayload } from '#types/checkers'
 import { getColors, getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
@@ -26,7 +36,7 @@ export const api: RouteApi = {
 function init({ genomes }) {
 	return async function (req, res) {
 		try {
-			const q = req.query
+			const q = req.query as TermdbSingleCellPlotsRequest
 			if (!q.genome || !q.dslabel) {
 				throw new Error('Genome and dataset label are required for termdb/singleCellPlots request.')
 			}
@@ -67,7 +77,7 @@ async function getSingleCellScatter(req, res, ds) {
 				}
 			}
 		}
-		const samples = cells.map(cell => {
+		const samples: FormattedCell2Sample[] = cells.map(cell => {
 			/** Since getData() from termdb.matrix is not called again for single cell scatter,
 			 * the groups formatting logic for category (i.e. value) is recreated here. */
 			let category = cell.category
@@ -127,7 +137,7 @@ async function getSingleCellScatter(req, res, ds) {
 		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
 		const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
 
-		const resp: any = {
+		const output: ValidSingleCellPlotsResponse = {
 			range: { xMin, xMax, yMin, yMax, geMin, geMax },
 			//There should only be one chart
 			result: { Default: { colorLegend, shapeLegend } }
@@ -135,14 +145,14 @@ async function getSingleCellScatter(req, res, ds) {
 
 		if (samples.length >= q.canvasSettings.cutoff) {
 			const src = await makeCanvas(q, samples, colorMap, { xMin, xMax, yMin, yMax, geMin, geMax }, tw.term.type)
-			resp.result.Default.src = src
+			output.result.Default.src = src
 			/** Since the sample array is not returned, send the sample count for the legend */
-			resp.result.Default.totalSampleCount = samples.length
+			output.result.Default.totalSampleCount = samples.length
 		} else {
-			resp.result.Default.samples = samples
+			output.result.Default.samples = samples
 		}
 
-		res.send(resp)
+		res.send(output)
 	} catch (e: any) {
 		console.log(e)
 		res.send({ error: e.message || e })
