@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/stjude/proteinpaint#readme",
   "scripts": {
-    "test": "cd ../; shopt -s nullglob; for f in python/test/*.spec.js python/test/*.spec.ts; do node \"$f\"; done"
+    "test": "bash -c 'cd ../; shopt -s nullglob; for f in python/test/*.spec.js python/test/*.spec.ts; do node \"$f\"; done'"
   },
   "keywords": []
 }
