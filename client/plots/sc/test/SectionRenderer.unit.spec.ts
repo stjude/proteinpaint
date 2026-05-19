@@ -14,7 +14,11 @@ import { SectionRenderer } from '../view/SectionRenderer.ts'
  *   - getPlotName() should return 'Summary' for dictionary chartType
  *   - getPlotName() should return 'Summary' for summary chartType
  *   - getPlotName() should return 'Gene expression' for GeneExpInput chartType
- *   - makeSectionTitleText() should return empty string when groupBy is 'none'
+ *   - getKey() should return 'none' when groupBy is 'none'
+ *   - getKey() should return sampleId when groupBy is 'sample'
+ *   - getKey() should return plotName when groupBy is 'plot'
+ *   - getKey() should return undefined when no value can be determined
+ *   - makeSectionTitleText() should return 'All plots' when groupBy is 'none'
  *   - makeSectionTitleText() should return key when groupBy is 'plot'
  *   - makeSectionTitleText() should return sample info when groupBy is 'sample'
  *   - makeSectionTitleText() should include case and project info when available
@@ -25,6 +29,9 @@ import { SectionRenderer } from '../view/SectionRenderer.ts'
  *   - removeSandbox() should remove sandbox, clean up plotId2Key, and call sc.removeComponent
  *   - removeSandbox() should use provided key over plotId2Key lookup
  *   - removeSandbox() should return early when key is not found
+ *   - removeSection() should remove all sandboxes and dispatch app_refresh
+ *   - removeSection() should delete section from sections map and remove all elements from DOM
+ *   - removeSection() should not dispatch when section has no sandboxes
  */
 
 /**************
@@ -147,7 +154,7 @@ tape("getPlotName() should return 'Gene expression' for GeneExpInput chartType",
 
 tape("makeSectionTitleText() should return 'All plots' when groupBy is 'none'", test => {
 	const sr = new SectionRenderer(getMockDiv(), 'none')
-	test.equal(sr.makeSectionTitleText('anyKey'), 'All plots', 'Should return All plots for none groupBy')
+	test.equal(sr.makeSectionTitleText('anyKey'), 'All plots', "Should return 'All plots' for none groupBy")
 	test.end()
 })
 
@@ -269,5 +276,129 @@ tape('removeSandbox() should return early when key is not found', test => {
 
 	test.true(removedComponent, 'Should still call sc.removeComponent')
 	test.equal(sr.plotId2Key.size, 0, 'plotId2Key should remain empty')
+	test.end()
+})
+
+/* ---- getKey ---- */
+
+tape("getKey() should return 'none' when groupBy is 'none'", test => {
+	const sr = new SectionRenderer(getMockDiv(), 'none')
+	test.equal(sr.getKey({ sample: { sID: 'S1' } }), 'none', "Should always return 'none' regardless of subplot")
+	test.equal(sr.getKey({}), 'none', "Should return 'none' even for empty subplot")
+	test.end()
+})
+
+tape("getKey() should return sampleId when groupBy is 'sample'", test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	test.equal(sr.getKey({ sample: { sID: 'S1' } }), 'S1', 'Should return sID from subplot.sample')
+	test.equal(
+		sr.getKey({ singleCellPlot: { sample: { sID: 'S2' } } }),
+		'S2',
+		'Should return sID from singleCellPlot.sample'
+	)
+	test.equal(sr.getKey({ term: { term: { sample: { sID: 'S3' } } } }), 'S3', 'Should return sID from term.term.sample')
+	test.end()
+})
+
+tape("getKey() should return plotName when groupBy is 'plot'", test => {
+	const sr = new SectionRenderer(getMockDiv(), 'plot')
+	test.equal(sr.getKey({ plotName: 'UMAP' }), 'UMAP', 'Should return plotName')
+	test.equal(sr.getKey({ singleCellPlot: { name: 'tSNE' } }), 'tSNE', 'Should return singleCellPlot.name')
+	test.equal(sr.getKey({ chartType: 'dictionary' }), 'Summary', 'Should return Summary for dictionary chartType')
+	test.end()
+})
+
+tape('getKey() should return undefined when no value can be determined', test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	test.equal(sr.getKey({}), undefined, 'Should return undefined when sample has no sID')
+	test.equal(sr.getKey({ sample: {} }), undefined, 'Should return undefined when sID is missing')
+	test.end()
+})
+
+/* ---- removeSection ---- */
+
+tape('removeSection() should remove all sandboxes and dispatch app_refresh', test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	const removedComponents: string[] = []
+	let dispatched: any = null
+	const sc = getMockSCViewer({
+		removeComponent: (id: string) => {
+			removedComponents.push(id)
+		},
+		dispatch: (action: any) => {
+			dispatched = action
+		}
+	})
+	// Override app.dispatch since getMockSCViewer nests it
+	sc.app.dispatch = (action: any) => {
+		dispatched = action
+	}
+
+	const mockSandbox1 = { remove: () => {} }
+	const mockSandbox2 = { remove: () => {} }
+	sr.sections['S1'] = {
+		sectionWrapper: { remove: () => {} } as any,
+		title: {} as any,
+		subplots: {} as any,
+		sandboxes: { plot1: mockSandbox1, plot2: mockSandbox2 }
+	}
+	sr.plotId2Key.set('plot1', 'S1')
+	sr.plotId2Key.set('plot2', 'S1')
+
+	sr.removeSection('S1', sc)
+
+	test.deepEqual(removedComponents.sort(), ['plot1', 'plot2'], 'Should call removeComponent for each sandbox')
+	test.equal(dispatched.type, 'app_refresh', 'Should dispatch app_refresh')
+	test.equal(dispatched.subactions.length, 2, 'Should include a subaction for each sandbox')
+	test.equal(dispatched.subactions[0].type, 'plot_delete', 'Subaction type should be plot_delete')
+	test.equal(dispatched.subactions[0].parentId, 'sc1', 'Subaction parentId should be sc.id')
+	test.end()
+})
+
+tape('removeSection() should delete section from sections map and remove all elements from DOM', test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	let wrapperRemoved = false
+	const sc = getMockSCViewer()
+
+	const mockSandbox = { remove: () => {} }
+	sr.sections['S1'] = {
+		sectionWrapper: {
+			remove: () => {
+				wrapperRemoved = true
+			}
+		} as any,
+		title: {} as any,
+		subplots: {} as any,
+		sandboxes: { plot1: mockSandbox }
+	}
+	sr.plotId2Key.set('plot1', 'S1')
+
+	sr.removeSection('S1', sc)
+
+	test.equal(sr.sections['S1'], undefined, 'Should delete the section from sections map')
+	test.true(wrapperRemoved, 'Should call remove() on sectionWrapper')
+	test.false(sr.plotId2Key.has('plot1'), 'Should clean up plotId2Key entries')
+	test.end()
+})
+
+tape('removeSection() should not dispatch when section has no sandboxes', test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	let dispatched = false
+	const sc = getMockSCViewer()
+	sc.app.dispatch = () => {
+		dispatched = true
+	}
+
+	sr.sections['S1'] = {
+		sectionWrapper: { remove: () => {} } as any,
+		title: {} as any,
+		subplots: {} as any,
+		sandboxes: {}
+	}
+
+	sr.removeSection('S1', sc)
+
+	test.false(dispatched, 'Should not dispatch when there are no sandboxes')
+	test.equal(sr.sections['S1'], undefined, 'Should still delete the section')
 	test.end()
 })
