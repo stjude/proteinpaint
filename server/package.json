@@ -8,7 +8,7 @@
   "bin": "start.js",
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
-    "#types/checkers": "@sjcrh/proteinpaint-types/checkers",
+    "#types/checkers": "./checkers/index.ts",
     "#shared": "@sjcrh/proteinpaint-shared",
     "#shared/*": "@sjcrh/proteinpaint-shared/*",
     "#src/*": "./src/*",
