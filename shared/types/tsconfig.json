@@ -2,15 +2,12 @@
   "compilerOptions": {
     "strictNullChecks": true,
     "baseUrl": "./",
+    "noEmit": true,
     "allowImportingTsExtensions": true,
-    "plugins": [
-      { "transform": "typia/lib/transform" }
-    ],
     "target": "es2016",
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
-    "noEmit": true
+    "moduleResolution": "bundler"
   },
   "exclude": [
     "./node_modules",

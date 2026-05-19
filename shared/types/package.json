@@ -6,35 +6,29 @@
   "main": "src/index.ts",
   "module": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./routes/*": "./src/routes/*",
-    "./checkers": "./dist/index.js"
+    ".": {
+      "sjpp/dev": "./src/index.ts",
+      "default": "non-prod-only.ts"
+    },
+    "./routes/*": {
+      "sjpp/dev": "./src/routes/*",
+      "default": "non-prod-only.ts"
+    }
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared",
     "#shared/devTs": "@sjcrh/proteinpaint-shared/devTs"
   },
   "scripts": {
-    "generate": "node dev.mjs",
     "dev": "echo '--- using server/checkers for request payload validation ---'",
-    "prepare": "ts-patch install",
     "build": "./build.sh",
-    "prepack": "./build.sh",
-    "postpack": "rm dist/*.js && mv dist/index.ts dist/index.js",
-    "test": "tsc",
-    "doc": "./doc.sh"
+    "test": "tsc"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2",
-    "ts-patch": "^3.2.1",
-    "typedoc": "^0.26.11",
-    "typedoc-plugin-missing-exports": "^3.0.0",
-    "typedoc-plugin-replace-text": "^4.0.0",
-    "typescript": "^5.6.3",
-    "typia": "^4.1.14"
+    "typescript": "^5.6.3"
   },
   "files": [
-    "src"
+    "non-prod-only.ts"
   ],
   "repository": {
     "type": "git",

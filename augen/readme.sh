@@ -2,7 +2,7 @@
 
 # call from the proteinpaint project root dir
 
-md=$(find . -type f -name "*.md" -not -path "**/tmp*/*" -not -path '**/node_modules*/*')
+md=$(find . -type f -name "*.md" -not -path "**/tmp*/*" -not -path '**/node_modules*/*' -not -path '**/.*/*')
 parentModule=''
 
 if [[ -d '../.git/modules/proteinpaint' ]];then
