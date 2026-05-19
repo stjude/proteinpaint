@@ -41,7 +41,7 @@ CHANGEDWS=$(./build/bump.cjs prerelease)
 cd container
 echo "$CHANGEDWS"
 
-for shareddir in types utils
+for shareddir in utils
 do
 	if [[ "$shareddir" == "utils" ]]; then
 		sharedws="shared"
