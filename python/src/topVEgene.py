@@ -38,38 +38,11 @@ def create_gene_variance_list(
     rank_type: str,
     max_genes: int
 ) -> list[str]:
-    chunk_target_elements = 250_000  # About 200MB of memory per chunk
-    mb_element_conversion = lambda mb: int(349.59296 * 1.04207 ** mb)
-
-    # Robust serverconfig.json search
-    def find_serverconfig():
-        candidates = [
-            Path(__file__).parent / "serverconfig.json",
-            Path(__file__).parent.parent / "python" / "serverconfig.json",
-            Path.cwd() / "python" / "serverconfig.json",
-            Path.cwd() / "proteinpaint" / "python" / "serverconfig.json",
-        ]
-        for p in candidates:
-            try:
-                resolved = p.resolve()
-                if resolved.is_file():
-                    return resolved
-            except Exception:
-                continue
-        return None
-
+    chunk_target_elements = 400_000
     with h5py.File(filename, "r") as hdf_data:
         gene_names = hdf_data["item"].asstr()[:]
         all_samples = hdf_data["samples"].asstr()[:]
         matrix = hdf_data["matrix"]
-        serverconfig_path = find_serverconfig()
-        if serverconfig_path:
-            with open(serverconfig_path) as f:
-                serverconfig = json.load(f)
-            config_var = serverconfig.get("geneVarianceMemoryMBAlloc", 200)
-            if isinstance(config_var, (int, float)):
-                chunk_target_elements = int(mb_element_conversion(config_var))
-        chunk_target_elements = max(chunk_target_elements, len(all_samples))
         n_genes, n_samples = len(gene_names), len(all_samples)
         if matrix.ndim != 2:
             raise ValueError("Expected 2D matrix for expression matrix")
