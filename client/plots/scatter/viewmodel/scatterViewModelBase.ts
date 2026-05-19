@@ -304,7 +304,7 @@ export class ScatterViewModelBase {
 		toolsDiv.selectAll('*').remove()
 
 		//Disabling all zoom functionality for large single cell plots for now
-		if (!this.model.is2DLarge && this.scatter.config.singleCellPlot) this.scatterZoom.initZoom(toolsDiv)
+		if (!(this.model.is2DLarge && this.scatter.config.singleCellPlot)) this.scatterZoom.initZoom(toolsDiv)
 	}
 
 	/** Applies to the ViewModel only
