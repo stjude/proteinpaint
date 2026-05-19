@@ -1,3 +1,4 @@
+import type { SSGSEA } from '../../../utils/dist/src/terms.js'
 import type { Filter } from '../filter.ts'
 
 /** */
@@ -54,7 +55,7 @@ export interface GeneDataTypeResult {
 
 export interface GeneSetDataTypeResult {
 	geneSet: string
-	dataType: 'ssGSEA' | 'geneVariant' | 'ambiguous' | 'geneExpression'
+	dataType: typeof SSGSEA | 'geneVariant' | 'ambiguous' | 'geneExpression'
 }
 
 export type ChatResponse = TextResponse | HtmlResponse | PlotResponse

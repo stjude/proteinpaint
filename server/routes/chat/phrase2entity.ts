@@ -20,6 +20,7 @@ import type {
 	PrebuiltScatterScaffold
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
+import { SSGSEA } from '#shared/terms.js'
 import assert from 'assert'
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
@@ -221,8 +222,8 @@ async function inferEntities(
 			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
 		}
 	} else if ('geneSetFeatures' in validatedNonDict) {
-		if (validatedNonDict.geneSetFeatures.dataType === 'ssGSEA') {
-			return { termType: 'ssGSEA', phrase: phrase }
+		if (validatedNonDict.geneSetFeatures.dataType === SSGSEA) {
+			return { termType: SSGSEA, phrase: phrase }
 		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneVariant') {
 			return { termType: 'geneVariant', phrase: phrase }
 		} else if (validatedNonDict.geneSetFeatures.dataType === 'geneExpression') {

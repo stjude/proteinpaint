@@ -1,5 +1,6 @@
 import { mayLog } from '#src/helpers.ts'
 import { isNumericTerm } from '#shared/terms.js'
+import { SSGSEA } from '#shared/terms.js'
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
@@ -111,8 +112,8 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			throw 'Hierarchical clustering plot requires at least three terms, but it is empty in the input.'
 		} else if (HierTerms.length >= 3 && HierTerms[0].isDictionary) {
 			plotState.plot.dataType = 'numericDictTerm'
-		} else if (HierTerms.length >= 3 && HierTerms[0].type === 'ssGSEA') {
-			plotState.plot.dataType = 'ssGSEA'
+		} else if (HierTerms.length >= 3 && HierTerms[0].type === SSGSEA) {
+			plotState.plot.dataType = SSGSEA
 		}
 
 		const terms: any[] = []
