@@ -41,7 +41,10 @@ function init({ genomes }) {
 				throw new Error('Genome and dataset label are required for termdb/singleCellPlots request.')
 			}
 			const g = genomes[q.genome]
+			if (!g) throw new Error('Invalid genome name')
 			const ds = g.datasets[q.dslabel]
+			if (!ds) throw new Error('Invalid dataset label')
+			if (!ds.queries?.singleCell) throw new Error('No single cell data on this dataset')
 
 			return getSingleCellScatter(req, res, ds)
 		} catch (err) {
@@ -52,7 +55,7 @@ function init({ genomes }) {
 }
 
 async function getSingleCellScatter(req, res, ds) {
-	const q = req.query
+	const q = req.query as TermdbSingleCellPlotsRequest
 	const { name, sample } = q.singleCellPlot
 	try {
 		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
