@@ -8,12 +8,12 @@ const TermTypeDefinitions: Record<string, string> = {
 		'Supports survival analysis, time-to-event analysis, and Kaplan-Meier / Cox regression workflows. Represents a variable capturing the time until an event of interest occurs (e.g., death, relapse, progression), typically paired with an event/censoring indicator.',
 	geneVariant:
 		'Supports genetic variant analysis, mutation analysis, somatic/germline variant queries, and genotype-phenotype association studies. Represents a specific genetic variant or mutation (e.g., SNV, indel, copy number change) at the gene or locus level.',
-	geneExpression:
+	GENE_EXPRESSION:
 		'Supports gene expression analysis, hierarchical clustering, bulk RNA-seq / microarray expression queries, differential expression comparisons, and expression-based correlation or stratification. Represents the expression level of a gene.',
 	isoformExpression:
 		'Supports isoform-level expression analysis, transcript-level quantification, alternative splicing analysis, and isoform-specific differential expression. Represents the expression level of a specific isoform (transcript) of a gene.',
-	'${SSGSEA}':
-		'Supports single-sample gene set enrichment analysis ("${SSGSEA}"), pathway activity scoring, gene set / signature scoring, and pathway-level comparisons across samples. Represents a per-sample enrichment score for a given gene set or pathway.',
+	SSGSEA:
+		'Supports single-sample gene set enrichment analysis ("ssGSEA"), pathway activity scoring, gene set / signature scoring, and pathway-level comparisons across samples. Represents a per-sample enrichment score for a given gene set or pathway.',
 	dnaMethylation:
 		'Supports DNA methylation analysis, epigenetic analysis, differential methylation queries, and methylation-expression correlation studies. Represents the methylation status or beta value of a DNA region (e.g., CpG site, promoter, or region).',
 	singleCellCellType:

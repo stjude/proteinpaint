@@ -4,7 +4,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { extract_hiercluster_terms_from_query } from './hiercluster.ts'
-import { SSGSEA } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 import type {
 	Scaffold,
 	SummaryScaffold,
@@ -491,7 +491,7 @@ Query: ${user_prompt}
 			genome,
 			ds,
 			geneFeatures,
-			'geneExpression',
+			GENE_EXPRESSION,
 			filterTvs
 		)
 		mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
@@ -738,7 +738,7 @@ export async function getScaffold_hierarchical(
 	const prompt = `You are a ProteinPaint hierarchical clustering classifier. Your task is to determine what kind of variable the user wants to cluster on.
 
 A hierarchical clustering plot clusters samples based on a chosen feature type. Classify the user's query into exactly one of the following categories:
-  - "geneExpression": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
+  - "${GENE_EXPRESSION}": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
   - "metaboliteIntensity": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
   - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
   - "${SSGSEA}": the user wants to cluster on ssGSEA scores for gene sets.
@@ -746,19 +746,19 @@ A hierarchical clustering plot clusters samples based on a chosen feature type. 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-  "variableType": "geneExpression" | "metaboliteIntensity" | "dictionary" | "${SSGSEA}" | "ambiguous"
+  "variableType": "${GENE_EXPRESSION}" | "metaboliteIntensity" | "dictionary" | "${SSGSEA}" | "ambiguous"
 }
 
 ## EXAMPLES
 
 Q: "Cluster ABC, PQR and XYZ gene expression"
-A: { "variableType": "geneExpression" }
+A: { "variableType": "${GENE_EXPRESSION}" }
 
 Q: "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
-A: { "variableType": "geneExpression" }
+A: { "variableType": "${GENE_EXPRESSION}" }
 
 Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
-A: { "variableType": "geneExpression" }
+A: { "variableType": "${GENE_EXPRESSION}" }
 
 Q: "Cluster patients by glucose and lactate metabolite intensity"
 A: { "variableType": "metaboliteIntensity" }
@@ -797,8 +797,8 @@ Query: ${user_prompt}
 	} catch {
 		throw new Error(`Failed to parse hierarchical variable-type classifier response: ${response}`)
 	}
-	if (variableType === 'geneExpression') {
-		if (allowedTermTypes.includes('geneExpression')) {
+	if (variableType === GENE_EXPRESSION) {
+		if (allowedTermTypes.includes(GENE_EXPRESSION)) {
 			return await hierarchicalGeneExpression(user_prompt, llm, genome, genes_list, dataset_json, ds, dbPath)
 		} else {
 			return {
