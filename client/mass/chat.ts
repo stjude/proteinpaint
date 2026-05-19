@@ -138,7 +138,7 @@ class MassAiChatBot implements RxComponent {
 					prompt
 				}
 				try {
-					const data = await dofetch3('termdb/chat3', { body })
+					const data = await dofetch3('termdb/chat', { body })
 					if (data.error) throw data.error
 
 					const result: ChatResponse = data

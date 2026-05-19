@@ -4,7 +4,7 @@
 import serverconfig from '../../serverconfig.js'
 import { getDsAllowedTermTypes } from '../../../routes/termdb.config.ts'
 import { readJSONFile, getChatRelatedPlotTypes } from '../../../routes/chat/utils.ts' // getGenesetNames
-import { run_chat_pipeline } from '../../../routes/termdb.chat3.ts'
+import { run_chat_pipeline } from '../../../routes/termdb.chat.ts'
 import assert from 'node:assert/strict'
 import path from 'path'
 import fs from 'fs'
