@@ -72,9 +72,23 @@ jobs:
       - name: 🔎 Run shared/utils test
         if: contains(env.WS_TO_TEST, 'shared/utils')
         run: npm test --workspace="shared/utils"
+
+      - name: Setup Python
+      # if: contains(env.WS_TO_TEST, 'python')
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Python dependencies
+      # if: contains(env.WS_TO_TEST, 'python')
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r python/requirements.txt
       - name: 🔎 Run python test
-        #if: contains(env.WS_TO_TEST, 'python')
-        run: npm run test --workspace="python"
+        # if: contains(env.WS_TO_TEST, 'python')
+        run: npm test --workspace="python"
+      -
+        
       # TODO: no need to run pack test once esbuild is used for package release 
       - name: 🔎 Run client pack test
         if: contains(env.WS_TO_TEST, 'client')
