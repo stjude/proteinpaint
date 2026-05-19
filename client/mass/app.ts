@@ -208,8 +208,13 @@ class MassApp extends AppBase implements RxApp {
 		this.bus.emit('error')
 		/** .printError() maybe called from any component without a helpful
 		 * message or error object. Include the trace when in debug mode to
-		 * help identify the source of the error.*/
-		if (this.opts?.debug) console.trace('Trace from MassApp.printError() call')
+		 * help identify the source of the error.
+		 * Collapsed for convenience. */
+		if (this.opts?.debug) {
+			console.groupCollapsed('Stack trace from MassApp.printError() call.')
+			console.trace()
+			console.groupEnd()
+		}
 	}
 
 	skipPrevActionAbort(action) {
