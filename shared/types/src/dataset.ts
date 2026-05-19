@@ -1750,13 +1750,22 @@ keep this setting here for reason of:
 	disableAssayAvailability?: (path: string, query: { [key: string]: any }) => boolean
 	//terms  are shown in the dictionary based on term and user role.
 	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
-	/** Optional dataset hook to filter the per-request /termdb/config response based on the
-	 * requesting user's role. Implementations MUST delegate every per-term decision to
-	 * ds.cohort.termdb.isTermVisible(q.__protected__, termId) — do not consult _role2terms or
-	 * any other role state directly. The hook MUST build fresh arrays/objects (no in-place
-	 * mutation of the cached dataset). Invoked from termdb.config.ts after the response is
-	 * populated; skipped when undefined. */
-	filterTermdbConfig?: (c: any, q: any, ds: any) => void
+	/** Optional dataset hook to prune the per-request /termdb/config response.
+	 * Typical use is hiding plots/sections/etc. based on the requester's role.
+	 *
+	 * Contract:
+	 * - `c` is the response object being built for this request. termdb.config.ts deep-clones
+	 *   cached attributes (currently plotConfigByCohort) onto `c` before invoking this hook,
+	 *   so the hook MAY mutate those cloned attributes freely without affecting the cached
+	 *   dataset. Any attribute not deep-cloned at that call site is shared by reference and
+	 *   must NOT be mutated — see the NOTE near the cloning block in termdb.config.ts.
+	 * - `q` is the incoming request; auth info is at q.__protected__.clientAuthResult.
+	 * - `ds` is the dataset; treat as read-only.
+	 * - Per-term visibility decisions SHOULD route through ds.cohort.termdb.isTermVisible
+	 *   when applicable, so a single role policy governs both the dictionary tree and pruned
+	 *   config.
+	 * - Skipped when undefined. */
+	pruneTermdbConfig?: (c: any, q: any, ds: any) => void
 	hiddenIds?: string[]
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** Populated by server_init_db_queries from the term2role sidecar table when it is non-empty.

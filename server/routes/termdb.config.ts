@@ -110,7 +110,14 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	}
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
-	if (tdb.plotConfigByCohort) c.plotConfigByCohort = tdb.plotConfigByCohort
+	/*
+	NOTE: any attribute the pruneTermdbConfig hook (invoked near the end of this fn) may
+	mutate MUST be deep-copied onto `c` rather than assigned by reference — otherwise the
+	hook mutates the cached `tdb` object on the dataset and leaks pruning across requests.
+	plotConfigByCohort is cloned defensively below for this reason; duplicate any further
+	pruneable attributes the same way. (See pruneTermdbConfig JSDoc in dataset.ts.)
+	*/
+	if (tdb.plotConfigByCohort) c.plotConfigByCohort = structuredClone(tdb.plotConfigByCohort)
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
@@ -147,8 +154,10 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// continue to add contents that may require auth
 	addScatterplots(c, ds, info)
 
-	// optional per-dataset role-based pruning; see filterTermdbConfig JSDoc in dataset.ts
-	tdb.filterTermdbConfig?.(c, q, ds)
+	// Optional per-dataset hook to prune the response (e.g. drop role-restricted plots).
+	// Operates on `c` only; cached attributes touched here are deep-cloned above so the
+	// hook cannot leak mutations into `tdb`. See pruneTermdbConfig JSDoc in dataset.ts.
+	tdb.pruneTermdbConfig?.(c, q, ds)
 
 	res.send({ termdbConfig: c })
 }
