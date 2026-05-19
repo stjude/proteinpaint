@@ -2,7 +2,7 @@ import type { LlmConfig, GeneSetDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
-import { SSGSEA } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 
 // List of keywords/phrases that may indicate a gene set is being referenced in the user prompt. This is useful when no geneset keywords are found but the user intends to use a geneset. This helps to generate a helpful error message stating no relevant genesets were found in the prompt.
 export const GENE_SET_KEYWORDS = [
@@ -53,9 +53,9 @@ export async function classifyGeneSetDataType(
 				},
 				dataType: {
 					type: 'string',
-					enum: [SSGSEA, 'geneVariant', 'geneExpression', 'ambiguous'],
+					enum: [SSGSEA, 'geneVariant', GENE_EXPRESSION, 'ambiguous'],
 					description:
-						'"${SSGSEA}" if the user is asking about per-sample enrichment scores for the gene set; "geneVariant" if the user is asking about variants/mutations of the genes in the gene set; "geneExpression" if the user is asking about expression/upregulation/downregulation of the genes in the gene set; "ambiguous" if the intent is not clear.'
+						'"${SSGSEA}" if the user is asking about per-sample enrichment scores for the gene set; "geneVariant" if the user is asking about variants/mutations of the genes in the gene set; "${GENE_EXPRESSION}" if the user is asking about expression/upregulation/downregulation of the genes in the gene set; "ambiguous" if the intent is not clear.'
 				}
 			},
 			required: ['geneSet', 'dataType'],
@@ -70,7 +70,7 @@ export async function classifyGeneSetDataType(
 Valid gene-set data types are:
 - "${SSGSEA}"      — the user is asking about a per-sample single-sample GSEA enrichment score for the gene set as a whole. Trigger keywords/phrases: "${SSGSEA}", "single sample GSEA", "enrichment score", "pathway score", "pathway activity", "pathway enrichment", "geneset score", "score of the pathway", "activity of the pathway", "enriched", "upregulated pathway", "downregulated pathway", "high/low enrichment".
 - "geneVariant" — the user is asking about variants/mutations of the genes that belong to the gene set. Trigger keywords/phrases: "mutation(s)", "variant(s)", "SNV", "SNP", "indel", "deletion", "insertion", "fusion", "CNV", "copy number", "frameshift", "missense", "nonsense", "splice", "truncation", "altered", "alterations", "mutated genes in the pathway", "variants in the pathway".
-- "geneExpression" — the user is asking about expression/upregulation/downregulation of the genes in the gene set. Trigger keywords/phrases: "expression", "expressed", "upregulated", "downregulated", "overexpressed", "underexpressed", "expression of the pathway".
+- "${GENE_EXPRESSION}" — the user is asking about expression/upregulation/downregulation of the genes in the gene set. Trigger keywords/phrases: "expression", "expressed", "upregulated", "downregulated", "overexpressed", "underexpressed", "expression of the pathway".
 - "ambiguous"   — the prompt does NOT clearly indicate either intent. Examples: the user only names the pathway (e.g. "show HALLMARK_APOPTOSIS"), or uses generic verbs ("show", "display", "look at") without any of the trigger keywords above.
 
 Rules:
@@ -95,15 +95,15 @@ User prompt: "what is the enrichment score of AJSJDJ across samples"
 Geneset: AJSJDJ
 Response: {"geneSet":"AJSJDJ","dataType":"${SSGSEA}"}
 
-Example 3 (geneExpression — pathway activity wording):
+Example 3 (${GENE_EXPRESSION} — pathway activity wording):
 User prompt: "compare sdswf12_csw pathway activity between subtypes"
 Geneset: sdswf12_csw
-Response: {"geneSet":"sdswf12_csw","dataType":"geneExpression"}
+Response: {"geneSet":"sdswf12_csw","dataType":"${GENE_EXPRESSION}"}
 
-Example 3 (geneExpression — pathway activity wording):
+Example 3 (${GENE_EXPRESSION} — pathway activity wording):
 User prompt: "compare upregulation of BGSBD_dwdwd in pathway"
 Geneset: BGSBD_dwdwd
-Response: {"geneSet":"BGSBD_dwdwd","dataType":"geneExpression"}
+Response: {"geneSet":"BGSBD_dwdwd","dataType":"${GENE_EXPRESSION}"}
 
 Example 4 (${SSGSEA} — single-sample GSEA shorthand):
 User prompt: "single sample GSEA of wefwef_wfwf22bgb"
@@ -176,7 +176,7 @@ Response:`
 	}
 
 	if (
-		result.dataType !== 'geneExpression' &&
+		result.dataType !== GENE_EXPRESSION &&
 		result.dataType !== SSGSEA &&
 		result.dataType !== 'geneVariant' &&
 		result.dataType !== 'ambiguous'
