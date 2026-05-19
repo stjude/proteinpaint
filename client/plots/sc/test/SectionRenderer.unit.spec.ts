@@ -145,9 +145,9 @@ tape("getPlotName() should return 'Gene expression' for GeneExpInput chartType",
 
 /* ---- makeSectionTitleText ---- */
 
-tape("makeSectionTitleText() should return empty string when groupBy is 'none'", test => {
+tape("makeSectionTitleText() should return 'All plots' when groupBy is 'none'", test => {
 	const sr = new SectionRenderer(getMockDiv(), 'none')
-	test.equal(sr.makeSectionTitleText('anyKey'), '', 'Should return empty string for none groupBy')
+	test.equal(sr.makeSectionTitleText('anyKey'), 'All plots', 'Should return All plots for none groupBy')
 	test.end()
 })
 
