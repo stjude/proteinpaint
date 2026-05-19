@@ -624,6 +624,7 @@ function getTwSampleTypes(twLst, ds) {
 
 function getFilterSampleTypes(filter, ds) {
 	const types = new Set()
+	if (!filter) return types
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') {
 			for (const type of getFilterSampleTypes(item, ds)) types.add(type)
