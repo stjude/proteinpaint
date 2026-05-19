@@ -91,11 +91,11 @@ tape('getTabelData() should add sampleColumns when provided', test => {
 
 	const vm = new SCViewModel(app, config, items as any, sampleColumns)
 
-	test.equal(vm.tableData.columns.length, 2, 'Should have sample column + 1 extra column')
-	test.equal(vm.tableData.columns[1].label, 'Sex', 'Extra column label should match')
-	test.equal(vm.tableData.columns[1].sortable, true, 'Extra column should be sortable')
+	test.equal(vm.tableData.columns.length, 3, 'Should have sample column + 1 extra column')
+	test.equal(vm.tableData.columns[2].label, 'Sex', 'Extra column label should match')
+	test.equal(vm.tableData.columns[2].sortable, true, 'Extra column should be sortable')
 	const row = vm.tableData.rows[0] as any[]
-	test.equal(row[1].value, 'Male', 'Row should include sample column value')
+	test.equal(row[2].value, 'Male', 'Row should include sample column value')
 	test.end()
 })
 
@@ -106,7 +106,7 @@ tape('getTabelData() should handle samples without experiments', test => {
 
 	const vm = new SCViewModel(app, config, items as any)
 
-	test.equal(vm.tableData.columns.length, 1, 'Should only have the sample column')
+	test.equal(vm.tableData.columns.length, 2, 'Should only have the sample and shown plots columns')
 	test.equal(vm.tableData.rows.length, 2, 'Should have one row per sample')
 	const row0 = vm.tableData.rows[0] as any[]
 	test.equal(row0[0].value, 'S1', 'First row value should be sample name')
@@ -130,9 +130,9 @@ tape('getTabelData() should expand experiments into separate rows', test => {
 
 	test.equal(vm.tableData.rows.length, 2, 'Should create one row per experiment')
 	// Columns: Sample, Sample (experiment sample name), Experiment
-	test.equal(vm.tableData.columns.length, 3, 'Should have sample + Sample + Experiment columns')
-	test.equal(vm.tableData.columns[1].label, 'Sample', 'Second column should be Sample for experiment sample name')
-	test.equal(vm.tableData.columns[2].label, 'Experiment', 'Third column should be Experiment')
+	test.equal(vm.tableData.columns.length, 4, 'Should have Sample + Shown plots + Sample + Experiment columns')
+	test.equal(vm.tableData.columns[2].label, 'Sample', 'Second column should be Sample for experiment sample name')
+	test.equal(vm.tableData.columns[3].label, 'Experiment', 'Third column should be Experiment')
 
 	const row0 = vm.tableData.rows[0] as any[]
 	test.equal(row0[0].value, 'Case1', 'Row should have case/sample name')
@@ -194,8 +194,8 @@ tape('getTabelData() should include sampleColumns with experiments', test => {
 	const vm = new SCViewModel(app, config, items as any, sampleColumns)
 
 	// Columns: Sample, Sample (exp), Sex, Experiment
-	test.equal(vm.tableData.columns.length, 4, 'Should have 4 columns')
-	test.equal(vm.tableData.columns[2].label, 'Sex', 'Third column should be Sex')
+	test.equal(vm.tableData.columns.length, 5, 'Should have 5 columns')
+	test.equal(vm.tableData.columns[3].label, 'Sex', 'Third column should be Sex')
 
 	const row0 = vm.tableData.rows[0] as any[]
 	test.equal(row0[2].value, 'Female', 'Row should include sample column value')
