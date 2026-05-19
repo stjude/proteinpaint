@@ -20,7 +20,7 @@ import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './chat/scaf
 import { resolveToPlotState } from './chat/scaffold2state.ts'
 
 export const api: RouteApi = {
-	endpoint: 'termdb/chat3',
+	endpoint: 'termdb/chat',
 	methods: {
 		get: {
 			...ChatPayload,
@@ -35,31 +35,31 @@ export const api: RouteApi = {
 
 /*
 async function doOmnisearch(prompt: string, q, genome: any, ds: any) {
-	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
+        const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 
-	// to allow search to work, must unescape special char, e.g. %20 to space
-	// const str = decodeURIComponent(q.findterm).toUpperCase()
+        // to allow search to work, must unescape special char, e.g. %20 to space
+        // const str = decodeURIComponent(q.findterm).toUpperCase()
 
-	let terms: any = []
+        let terms: any = []
 
-	let termdb:any
-	if (ds) {
-		// matches with dataset
-		if (ds?.cohort?.termdb) termdb = ds.cohort.termdb
-		else throw '.cohort.termdb not found on this dataset'
-	}
-	try {
-		console.log(`Running omnisearch for prompt: "${prompt}" on dataset: "${ds.label}"...`)
-		console.log(`q.cohortStr: "${q.cohortStr}", q.usecase: "${q.usecase}", q.treeFilter: ${JSON.stringify(q.treeFilter)}`)
-		const _terms = await termdb.q.findTermByName(prompt, q.cohortStr)
-		console.log(`Omnisearch found ${_terms.length} terms matching the prompt "${prompt}" in dataset "${ds.label}".`)
-		// console.log('Sample of matched terms:', _terms.slice(0, 5))
-		terms.push(..._terms.map(copy_term))
-	} catch (e) {
-		// if (e.stack) console.log(e.stack)
-		throw e 
-	}
-	return terms
+        let termdb:any
+        if (ds) {
+                // matches with dataset
+                if (ds?.cohort?.termdb) termdb = ds.cohort.termdb
+                else throw '.cohort.termdb not found on this dataset'
+        }
+        try {
+                console.log(`Running omnisearch for prompt: "${prompt}" on dataset: "${ds.label}"...`)
+                console.log(`q.cohortStr: "${q.cohortStr}", q.usecase: "${q.usecase}", q.treeFilter: ${JSON.stringify(q.treeFilter)}`)
+                const _terms = await termdb.q.findTermByName(prompt, q.cohortStr)
+                console.log(`Omnisearch found ${_terms.length} terms matching the prompt "${prompt}" in dataset "${ds.label}".`)
+                // console.log('Sample of matched terms:', _terms.slice(0, 5))
+                terms.push(..._terms.map(copy_term))
+        } catch (e) {
+                // if (e.stack) console.log(e.stack)
+                throw e 
+        }
+        return terms
 }
 */
 
