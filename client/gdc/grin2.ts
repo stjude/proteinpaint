@@ -10,7 +10,7 @@ Author: PP Team
 */
 
 import { dofetch3 } from '#common/dofetch'
-import { renderTable, sayerror, make_one_checkbox } from '#dom'
+import { renderTable, sayerror, sayinfo, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass, dtsnvindel, class2SOterm, bplen } from '#shared'
@@ -1686,7 +1686,7 @@ async function getFilesAndShowTable(obj) {
 			// console.log('GRIN2 request structure:', JSON.stringify(caseFiles, null, 2))
 			const response = await dofetch3('gdc/runGRIN2', { body: caseFiles })
 			if (!response) throw 'invalid response'
-			if (response.error) throw response.error
+			if (response.error) throw Object.assign(new Error(response.error), { code: response.code })
 
 			console.log('GRIN2 response:', response)
 
@@ -2214,7 +2214,12 @@ async function getFilesAndShowTable(obj) {
 					.text('No significant genes found in the analysis.')
 			}
 		} catch (e: any) {
-			sayerror(obj.errDiv, e.message || e)
+			if (e?.code === 'CACHE_BUSY') {
+				sayinfo(obj.errDiv, e.message || e, {
+					actionLabel: 'Retry',
+					onAction: () => runGRIN2Analysis(lst, button, obj, filteredFiles)
+				})
+			} else sayerror(obj.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
 		// Reset button state

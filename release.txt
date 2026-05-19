@@ -1,1 +1,2 @@
-
+Features:
+- Added limit logic for pending number of cache requests. Introduced new sayinfo() in dom modeled after sayerror() to notify user. Other improvements

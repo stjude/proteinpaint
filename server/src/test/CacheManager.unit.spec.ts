@@ -2,6 +2,7 @@ import tape from 'tape'
 import path from 'path'
 import fs from 'fs'
 import { CacheManager } from '#src/CacheManager.ts'
+import { CACHE_OR_RECOMPUTE_SUBDIRS } from '#src/utils/types.ts'
 
 /** Tests
  * - init() cache files
@@ -142,7 +143,7 @@ tape('defaults', function (test) {
 
 tape('move or delete by maxAge', test => {
 	test.timeoutAfter(2000)
-	test.plan(10)
+	test.plan(11)
 
 	const cachedir = path.join(process.cwd(), '.cache-test2')
 	// clear any previously created test cache dir
@@ -162,13 +163,12 @@ tape('move or delete by maxAge', test => {
 		cachedir,
 		interval,
 		subdirs: {
-			gsea: undefined, // clear default entries, so they are not included in the test
+			// Clear optional default entries so they are not included in the test.
+			// cacheOrRecompute subdirs (de/dm/gsea/grin2/topve) cannot be disabled
+			// — they auto-register from utils/types.ts — but their presence does
+			// not affect this test, which only seeds files into test0/trash.
 			massSession: undefined,
 			massSessionTrash: undefined,
-			grin2: undefined,
-			de: undefined,
-			dm: undefined,
-			topve: undefined,
 			daAnalysis: undefined,
 			test0: {
 				maxAge,
@@ -183,27 +183,30 @@ tape('move or delete by maxAge', test => {
 		},
 		callbacks: {
 			preStart: m => {
+				const subdirs = Object.fromEntries(m.subdirs.entries())
 				test.deepEqual(
-					Object.fromEntries(m.subdirs.entries()),
+					subdirs.test0,
 					{
-						test0: {
-							maxAge,
-							maxSize: 5000000000,
-							skipMs: 0,
-							absPath: `${cachedir}/test0`,
-							skipUntil: 0,
-							moveTo: 'trash',
-							movePath: `${cachedir}/trash`
-						},
-						trash: {
-							maxAge: maxAge * 2,
-							maxSize: 5000000000,
-							skipMs: interval * 2,
-							absPath: `${cachedir}/trash`,
-							skipUntil: 0
-						}
+						maxAge,
+						maxSize: 5000000000,
+						skipMs: 0,
+						absPath: `${cachedir}/test0`,
+						skipUntil: 0,
+						moveTo: 'trash',
+						movePath: `${cachedir}/trash`
 					},
-					`should set override subdir properties`
+					`should set override test0 subdir properties`
+				)
+				test.deepEqual(
+					subdirs.trash,
+					{
+						maxAge: maxAge * 2,
+						maxSize: 5000000000,
+						skipMs: interval * 2,
+						absPath: `${cachedir}/trash`,
+						skipUntil: 0
+					},
+					`should set override trash subdir properties`
 				)
 
 				const now = Date.now()
@@ -289,13 +292,10 @@ tape('limit deletion by file extension', test => {
 		cachedir,
 		interval,
 		subdirs: {
-			gsea: undefined, // clear default entries, so they are not included in the test
+			// Clear optional default entries; required cacheOrRecompute
+			// subdirs auto-register but stay empty during this test.
 			massSession: undefined,
 			massSessionTrash: undefined,
-			grin2: undefined,
-			de: undefined,
-			dm: undefined,
-			topve: undefined,
 			daAnalysis: undefined,
 			test0: {
 				maxAge: -10, // force deletion of all files (with matching extension) by maxAge
@@ -385,4 +385,42 @@ tape('may skip start()', test => {
 		test.equal(numChecks, 0, 'must not start checking cache files when opts.mustExitPendingValidation=true')
 		test.end()
 	}, 200)
+})
+
+tape('auto-registers every cacheOrRecompute subdir', test => {
+	const cachedir = path.join(process.cwd(), '.cache-test5')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	const monitor = new CacheManager({
+		quiet: true,
+		cachedir,
+		mustExitPendingValidation: true,
+		callbacks: {}
+	})
+	for (const [name, opts] of Object.entries(CACHE_OR_RECOMPUTE_SUBDIRS)) {
+		const registered = monitor.subdirs.get(name)
+		test.ok(registered, `subdir '${name}' from CACHE_OR_RECOMPUTE_SUBDIRS is registered`)
+		test.equal(registered?.maxAge, opts.maxAge, `subdir '${name}' uses its configured maxAge`)
+		test.equal(registered?.skipMs, opts.skipMs, `subdir '${name}' uses its configured skipMs`)
+	}
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
+})
+
+tape('rejects attempts to disable a required cacheOrRecompute subdir', test => {
+	const cachedir = path.join(process.cwd(), '.cache-test6')
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.throws(
+		() =>
+			new CacheManager({
+				quiet: true,
+				cachedir,
+				mustExitPendingValidation: true,
+				subdirs: { de: undefined },
+				callbacks: {}
+			}),
+		/Cannot disable required cacheOrRecompute subdir 'de'/,
+		'constructor throws synchronously when a required subdir is set to undefined'
+	)
+	fs.rmSync(cachedir, { force: true, recursive: true })
+	test.end()
 })

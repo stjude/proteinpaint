@@ -4,6 +4,7 @@ import path from 'path'
 import crypto from 'crypto'
 import serverconfig from '#src/serverconfig.js'
 import { cacheFilePath, cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
+import { CACHE_OR_RECOMPUTE_SUBDIRS } from '#src/utils/types.ts'
 import { canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
 
 /** Tests for the generic cache-or-recompute module. We use the existing
@@ -181,6 +182,185 @@ tape('caller can evict a stale cache file by unlinking before recompute', async 
 	const r2 = await cacheOrRecompute(opts)
 	t.equal(computeCount, 2, 'after caller unlinks, computeFresh ran a second time')
 	t.equal((r2.result as any).payload, 'v2', 'fresh payload from the second compute')
+
+	cleanup()
+	t.end()
+})
+
+tape('debugmode emits one write log and one read log per cache cycle', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const args = { tag, kind: 'timing-log' }
+
+	const originalDebugmode = serverconfig.debugmode
+	const originalLog = console.log
+	const captured: string[] = []
+	serverconfig.debugmode = true
+	console.log = (...parts: any[]) => captured.push(parts.join(' '))
+
+	try {
+		const opts = {
+			computeArgument: args,
+			cacheSubdir: 'de' as const,
+			computeFresh: async ({ cacheId }: { cacheId: string }) => {
+				trackCachePath(cacheId)
+				return { kind: 'TEST', payload: 'timing', tag }
+			}
+		}
+		await cacheOrRecompute(opts) // write (cold miss)
+		await cacheOrRecompute(opts) // read (warm hit)
+	} finally {
+		console.log = originalLog
+		serverconfig.debugmode = originalDebugmode
+	}
+
+	const writeLines = captured.filter(l => l.startsWith('cacheOrRecompute write '))
+	const readLines = captured.filter(l => l.startsWith('cacheOrRecompute read '))
+	t.equal(writeLines.length, 1, 'one write log line emitted')
+	t.equal(readLines.length, 1, 'one read log line emitted')
+	const lineShape =
+		/^cacheOrRecompute (write|read) de\/[0-9a-f]{32}\.json \([\d.]+ (Bytes|KB|MB|GB)\) in [\d.]+(ms|s|m \d)/
+	t.match(writeLines[0], lineShape, 'write log line has the expected shape (subdir/cacheId.json, bytes, elapsed)')
+	t.match(readLines[0], lineShape, 'read log line has the expected shape')
+
+	cleanup()
+	t.end()
+})
+
+tape('timing logs are silent when debugmode is off', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const args = { tag, kind: 'timing-silent' }
+
+	const originalDebugmode = serverconfig.debugmode
+	const originalLog = console.log
+	const captured: string[] = []
+	serverconfig.debugmode = false
+	console.log = (...parts: any[]) => captured.push(parts.join(' '))
+
+	try {
+		const opts = {
+			computeArgument: args,
+			cacheSubdir: 'de' as const,
+			computeFresh: async ({ cacheId }: { cacheId: string }) => {
+				trackCachePath(cacheId)
+				return { kind: 'TEST', payload: 'silent', tag }
+			}
+		}
+		await cacheOrRecompute(opts)
+		await cacheOrRecompute(opts)
+	} finally {
+		console.log = originalLog
+		serverconfig.debugmode = originalDebugmode
+	}
+
+	const timingLines = captured.filter(l => l.startsWith('cacheOrRecompute '))
+	t.equal(timingLines.length, 0, 'no cacheOrRecompute timing log lines when debugmode is off')
+
+	cleanup()
+	t.end()
+})
+
+tape('pool gates DISTINCT keys, not same-key attachers', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const cap = CACHE_OR_RECOMPUTE_SUBDIRS.de.maxPending
+
+	const slowOpts = (n: number) => ({
+		computeArgument: { tag, n, kind: 'pool-dedup' },
+		cacheSubdir: 'de' as const,
+		computeFresh: async ({ cacheId }: { cacheId: string }) => {
+			trackCachePath(cacheId)
+			await new Promise(r => setTimeout(r, 80))
+			return { kind: 'TEST', tag, n }
+		}
+	})
+
+	// Fill the pool with `cap` distinct in-flight computes.
+	const inflight = Array.from({ length: cap }, (_, i) => cacheOrRecompute(slowOpts(i)))
+
+	// Fire 100 same-input callers for slot 0. They should all dedup onto
+	// the in-flight promise for slot 0 — none should trip the busy gate.
+	const sameKeyCallers = Array.from({ length: 100 }, () => cacheOrRecompute(slowOpts(0)))
+	const sameKeyResults = await Promise.all(sameKeyCallers)
+	t.equal(sameKeyResults.length, 100, 'all 100 same-key callers resolved')
+	t.ok(
+		sameKeyResults.every(r => r.cacheId === sameKeyResults[0].cacheId),
+		'all 100 share the same cacheId (deduped onto one promise)'
+	)
+
+	await Promise.all(inflight)
+	cleanup()
+	t.end()
+})
+
+tape('distinct key beyond the cap rejects with CACHE_BUSY and status 429', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const cap = CACHE_OR_RECOMPUTE_SUBDIRS.de.maxPending
+
+	const slowOpts = (n: number) => ({
+		computeArgument: { tag, n, kind: 'pool-busy' },
+		cacheSubdir: 'de' as const,
+		computeFresh: async ({ cacheId }: { cacheId: string }) => {
+			trackCachePath(cacheId)
+			await new Promise(r => setTimeout(r, 80))
+			return { kind: 'TEST', tag, n }
+		}
+	})
+
+	const inflight = Array.from({ length: cap }, (_, i) => cacheOrRecompute(slowOpts(i)))
+
+	let busyErr: any
+	try {
+		await cacheOrRecompute(slowOpts(cap + 1))
+		t.fail('expected (cap+1)th distinct request to reject with CACHE_BUSY')
+	} catch (e: any) {
+		busyErr = e
+	}
+	t.equal(busyErr.status, 429, 'busy error carries status 429')
+	t.equal(busyErr.statusCode, 429, 'busy error carries statusCode 429')
+	t.equal(busyErr.code, 'CACHE_BUSY', 'busy error carries code CACHE_BUSY')
+	t.match(busyErr.message, /Cache compute pool is full/, 'busy message identifies a busy cache pool')
+	t.match(busyErr.message, /try again shortly/i, 'busy message tells the client to retry')
+
+	await Promise.all(inflight)
+	cleanup()
+	t.end()
+})
+
+tape('client retry works once a slot frees (no negative caching of busy state)', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const cap = CACHE_OR_RECOMPUTE_SUBDIRS.de.maxPending
+
+	const slowOpts = (n: number) => ({
+		computeArgument: { tag, n, kind: 'pool-retry' },
+		cacheSubdir: 'de' as const,
+		computeFresh: async ({ cacheId }: { cacheId: string }) => {
+			trackCachePath(cacheId)
+			await new Promise(r => setTimeout(r, 80))
+			return { kind: 'TEST', tag, n }
+		}
+	})
+
+	const inflight = Array.from({ length: cap }, (_, i) => cacheOrRecompute(slowOpts(i)))
+
+	// First attempt of the (cap+1)th distinct request — should reject.
+	let firstAttemptErr: any
+	try {
+		await cacheOrRecompute(slowOpts(cap + 1))
+	} catch (e) {
+		firstAttemptErr = e
+	}
+	t.ok(firstAttemptErr, 'first attempt rejected while pool is full')
+
+	// Drain the pool.
+	await Promise.all(inflight)
+
+	// Retry the same input — should now succeed without negative caching.
+	const retried = await cacheOrRecompute(slowOpts(cap + 1))
+	t.equal((retried.result as any).n, cap + 1, 'retry returned the fresh result for the previously-busy input')
 
 	cleanup()
 	t.end()

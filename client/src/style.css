@@ -197,6 +197,15 @@ by normalize.css are covered here
     /*border-width: 1px 0px;*/
 }
 
+.sja_infobar {
+    position: relative;
+    padding: 5px 50px 5px 10px;
+    background-color: rgba(0, 100, 200, .1);
+    color: rgba(0, 80, 180, .8);
+    border: solid 1px rgba(0, 100, 200, .25);
+    border-radius: 5px;
+}
+
 
 
 .sja_inset_a {

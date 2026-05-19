@@ -131,6 +131,8 @@ export type GRIN2Response = {
 	status: 'success' | 'error'
 	/** Error message if status is 'error' */
 	error?: string
+	/** Programmatic error code when status='error' (e.g., 'CACHE_BUSY' for 429 backpressure) */
+	code?: string
 	/** Base64-encoded PNG Manhattan plot image */
 	pngImg?: string
 	/** Plot data for the Manhattan plot */
