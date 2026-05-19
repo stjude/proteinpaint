@@ -95,9 +95,7 @@ jobs:
 
       - name: Run server unit tests outside of container
         run: |
-          cd shared/types
-          npm run build
-          cd ../utils
+          cd shared/utils
           npm run prepack
           cd ../../server
           cp ../container/ci/serverconfig.json .

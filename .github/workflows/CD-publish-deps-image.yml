@@ -53,7 +53,6 @@ jobs:
       - name: TSC
         run: |
           cd shared/types
-          npm run build
           npx tsc
           cd ../utils
           npm run prepack
