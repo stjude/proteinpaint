@@ -1,5 +1,5 @@
 // Below are request payload validator functions that are likely to be reused across many server routes.
-// Route-specific validators should be coded in server/routes handler files or in server/checkers files.
+// Route-specific validators should be coded in server/routes or server/checkers files.
 
 export function validBoolean(input, err?: string): boolean {
 	if (typeof input != 'boolean') throw err || `input must be a boolean`
@@ -16,14 +16,14 @@ export function validGenomeDs(input): { genome: string; dslabel: string } {
 }
 
 export function validGenome(value) {
-	if (typeof value != 'string') throw 'genome should be a non-empty string'
+	if (typeof value != 'string' || !value) throw 'genome should be a non-empty string'
 	if (/\s+/.test(value)) throw 'invalid genome character'
 	return value
 }
 
 export function validDslabel(value) {
-	if (typeof value != 'string') throw 'genome should be a non-empty string'
-	if (/\s+/.test(value)) throw 'invalid genome character'
+	if (typeof value != 'string') throw 'dslabel should be a non-empty string'
+	if (/\s+/.test(value)) throw 'invalid dslabel character'
 	return value
 }
 

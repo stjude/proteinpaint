@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
 import type { WSImage } from './samplewsimages.ts'
 import type { FlagStatusValues } from '#shared/devTs'
 
@@ -35,13 +34,4 @@ export interface Annotation extends TileSelection {
 export interface Prediction extends TileSelection {
 	class: string
 	uncertainty: number
-}
-
-export const aiProjectSelectedWSImagesResponsePayload: RoutePayload = {
-	request: {
-		typeId: 'AiProjectSelectedWSImagesRequest'
-	},
-	response: {
-		typeId: 'AiProjectSelectedWSImagesResponse'
-	}
 }
