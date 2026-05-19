@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 import type { TermWrapper } from '../terms/tw.ts'
 
@@ -27,7 +26,9 @@ export type CategoriesResponse = {
 	orderedLabels?: []
 }
 
-export const termdbCategoriesPayload: RoutePayload = {
+// TODO: write more payload examples to help with automated testing and documentation, for non-prod use only
+
+export const termdbCategoriesPayloadExamples = {
 	request: {
 		typeId: 'CategoriesRequest'
 	},
@@ -41,14 +42,14 @@ export const termdbCategoriesPayload: RoutePayload = {
 					genome: 'hg38-test',
 					dslabel: 'TermdbTest',
 					embedder: 'localhost',
-					term: { id: 'diaggrp' },
+					tw: { id: 'diaggrp' },
 					filter: {
 						type: 'tvslst',
 						in: true,
 						join: '',
 						lst: [
 							{
-								tag: 'cohortFilter',
+								//tag: 'cohortFilter',
 								type: 'tvs',
 								tvs: {
 									term: {
@@ -64,7 +65,7 @@ export const termdbCategoriesPayload: RoutePayload = {
 							}
 						]
 					}
-				}
+				} // satisfies CategoriesRequest // TODO: use the type definition
 			},
 			response: {
 				header: { status: 200 }

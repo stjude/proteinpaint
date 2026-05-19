@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 //import GdcFilter0 from './filter.gdc'
 
 // an object representing gdc maf file, to be shown on client table
@@ -41,12 +40,4 @@ export type GdcMafResponse = {
 	maxTotalSizeCompressed: number
 }
 
-export const gdcMafPayload: RoutePayload = {
-	request: {
-		typeId: 'GdcMafRequest'
-	},
-	response: {
-		typeId: 'GdcMafResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

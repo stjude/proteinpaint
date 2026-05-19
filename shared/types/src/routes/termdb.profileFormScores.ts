@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type ProfileFormScoresRequest = {
 	scoreTerms: any[]
 	scScoreTerms?: any[]
@@ -16,11 +14,4 @@ export type ProfileFormScoresResponse = {
 	n: number
 }
 
-export const ProfileFormScoresPayload: RoutePayload = {
-	request: {
-		typeId: 'ProfileFormScoresRequest'
-	},
-	response: {
-		typeId: 'ProfileFormScoresResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type WSImagesRequest = {
 	genome: string
 	dslabel: string
@@ -23,12 +21,4 @@ export type PredictionOverlay = {
 	predictionOverlayType: string
 }
 
-export const wsImagesPayload: RoutePayload = {
-	request: {
-		typeId: 'WSImagesRequest'
-	},
-	response: {
-		typeId: 'WSImagesResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

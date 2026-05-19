@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type TermdbIsoformAvailabilityRequest = {
 	genome: string
 	dslabel: string
@@ -12,11 +10,4 @@ export type TermdbIsoformAvailabilityResponse = {
 	available: string[]
 }
 
-export const TermdbIsoformAvailabilityPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbIsoformAvailabilityRequest'
-	},
-	response: {
-		typeId: 'TermdbIsoformAvailabilityResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

@@ -1,13 +1,4 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type TermdbProteomeRequest = any
 export type TermdbProteomeResponse = any
 
-export const termdbProteomePayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbProteomeRequest'
-	},
-	response: {
-		typeId: 'TermdbProteomeResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

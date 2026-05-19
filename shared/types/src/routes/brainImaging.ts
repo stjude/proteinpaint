@@ -1,5 +1,4 @@
 import type { QualTW } from '../terms/qualitative.ts'
-import type { RoutePayload } from './routeApi.ts'
 
 export type BrainImagingRequest = {
 	/** a user-defined genome label in the serverconfig.json, hg38, hg19, mm10, etc */
@@ -37,11 +36,4 @@ export type BrainImagingResponse = {
 
 export type FilesByCategory = { [category: string]: { samples: string[]; color?: any } }
 
-export const brainImagingPayload: RoutePayload = {
-	request: {
-		typeId: 'BrainImagingRequest'
-	},
-	response: {
-		typeId: 'BrainImagingResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

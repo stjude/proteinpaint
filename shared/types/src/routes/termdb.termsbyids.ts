@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { TermWrapper } from '../terms/tw.ts'
 
 export type TermsByIdsRequest = {
@@ -15,12 +14,4 @@ export type TermsByIdsResponse = {
 	terms: { [id: string]: TermWrapper }
 }
 
-export const termsByIdsPayload: RoutePayload = {
-	request: {
-		typeId: 'TermsByIdsRequest'
-	},
-	response: {
-		typeId: 'TermsByIdsResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

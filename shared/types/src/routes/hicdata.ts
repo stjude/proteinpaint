@@ -1,5 +1,4 @@
 import type { FileORURL } from '../fileOrUrl.ts'
-import type { RoutePayload } from './routeApi.ts'
 
 export type BaseHicRequest = FileORURL & {
 	/** Value relates to the 1st parameter of straw tool, which accepts 'observed', 'expected', 'oe', 'norm', and 'distance' */
@@ -37,12 +36,4 @@ export type HicdataResponse = {
 	items: XYZCoord[]
 }
 
-export const hicdataPayload: RoutePayload = {
-	request: {
-		typeId: 'HicdataRequest'
-	},
-	response: {
-		typeId: 'HicdataResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

@@ -1,3 +1,6 @@
+// TODO: use expressjs routing instead of this payload parameter
+export type AIProjectAdminForValues = 'list' | 'admin' | 'filterImages' | 'images'
+
 export type AIProjectAdminRequest = {
 	genome: string
 	dslabel: string
@@ -6,7 +9,7 @@ export type AIProjectAdminRequest = {
 	 * filterImages: filter metadata for images
 	 * images: get images for a project
 	 */
-	for: 'list' | 'admin' | 'filterImages' | 'images'
+	for: AIProjectAdminForValues // TODO: use expressjs routing instead of this payload parameter
 	/** required for 'project' and 'selection' requests */
 	project?: {
 		name: string
@@ -24,3 +27,5 @@ export type AIProjectAdminResponse = {
 	error?: string
 	data?: { cols: any[]; rows: any[]; images?: string[]; selectedImages?: string[] }[]
 }
+
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

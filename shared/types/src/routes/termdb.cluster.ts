@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
@@ -123,12 +122,4 @@ export type SingletermResponse = {
 
 export type TermdbClusterResponse = ErrorResponse | ValidResponse | SingletermResponse
 
-export const termdbClusterPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbClusterRequest'
-	},
-	response: {
-		typeId: 'TermdbClusterResponse'
-	}
-	//examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

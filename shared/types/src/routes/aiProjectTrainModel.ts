@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.ts'
-
 export type AIProjectTrainModelRequest = {
 	genome: string
 	dslabel: string
@@ -10,11 +8,4 @@ export type AIProjectTrainModelResponse = {
 	status: 'ok' | 'error'
 }
 
-export const aiProjectTrainModelPayload: RoutePayload = {
-	request: {
-		typeId: 'AIProjectTrainModelRequest'
-	},
-	response: {
-		typeId: 'AIProjectTrainModelResponse'
-	}
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only

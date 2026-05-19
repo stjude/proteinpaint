@@ -1,4 +1,4 @@
-import type { RoutePayload, AIProjectAdminRequest /*, AIProjectAdminResponse*/ } from '#types'
+import type { RoutePayload, AIProjectAdminRequest, AIProjectAdminForValues } from '#types'
 import { validGenomeDs, validString, validNumber, validStringArr } from './common.ts'
 
 // this payload object helps with documentation
@@ -20,7 +20,7 @@ export function validAIProjectAdminRequest(input): AIProjectAdminRequest {
 	}
 }
 
-const allowedAIProjectForStrings = new Set(['list', 'admin', 'filterImages', 'images'])
+const allowedAIProjectForStrings: Set<AIProjectAdminForValues> = new Set(['list', 'admin', 'filterImages', 'images'])
 
 function validAIProjectFor(val) {
 	if (!allowedAIProjectForStrings.has(val)) throw `invalid aiProjectAdminPayload request payload.for='${val}'`

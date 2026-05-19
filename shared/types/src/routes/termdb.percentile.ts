@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
 
@@ -19,7 +18,9 @@ export type PercentileResponse = {
 	values: number[]
 }
 
-export const percentilePayload: RoutePayload = {
+// TODO: write more payload examples to help with automated testing and documentation, for non-prod use only
+
+export const percentilePayloadExamples = {
 	request: {
 		typeId: 'PercentileRequest'
 	},
@@ -57,7 +58,7 @@ export const percentilePayload: RoutePayload = {
 							}
 						]
 					}
-				}
+				} // satisfies PercentileRequest // TODO: enable type check
 			},
 			response: {
 				header: { status: 200 }
