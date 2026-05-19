@@ -105,7 +105,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 		},
 		identifierMode: 'gene',
 		buildTermWrapper: (gene: string) => ({
-			term: { gene: gene.toUpperCase(), name: gene.toUpperCase(), type: 'geneVariant' }
+			term: { gene: gene.toUpperCase(), name: gene.toUpperCase(), type: '${GENE_VARIANT}' }
 		}),
 		promptFieldDescription:
 			'The "geneNames" field should ONLY contain gene names. These will be shown as gene variant/mutation rows.'
