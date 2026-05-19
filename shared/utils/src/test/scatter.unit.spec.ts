@@ -13,7 +13,7 @@ import { getCoordinate, calculatePadding } from '../scatter.js'
  test sections
 ***************/
 tape('\n', function (test) {
-	test.comment('-***- date convert specs -***-')
+	test.comment('-***- shared/scatter -***-')
 	test.end()
 })
 

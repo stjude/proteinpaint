@@ -16,7 +16,7 @@ export type TermdbSingleCellPlotsRequest = {
 	/** When sample size is too large, canvas rendering uses
 	 * these settings to control how the plot is rendered. */
 	canvasSettings: {
-		/** Maxium number of samples to render on the client side.
+		/** Maximum number of samples to render on the client side.
 		 * If over the cutoff, will return an image instead of sample array.
 		 * Matches the maxSvgSamplesCutoff in scatter settings.*/
 		cutoff: number

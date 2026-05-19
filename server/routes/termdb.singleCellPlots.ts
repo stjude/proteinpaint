@@ -174,7 +174,7 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 		.domain([range.xMin - extraSpaceX, range.xMax + extraSpaceX])
 		.range([xAxisOffSet, settings.width + xAxisOffSet])
 	const yScale = scaleLinear()
-		.domain([range.yMin + extraSpaceY, range.yMax - extraSpaceY])
+		.domain([range.yMax + extraSpaceY, range.yMin - extraSpaceY])
 		.range([yAxisOffSet, settings.height + yAxisOffSet])
 
 	let colorGenerator
@@ -184,7 +184,7 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 	for (const sample of samples.filter(s => !s.hidden.category)) {
 		const color = () => {
 			if (termType == SINGLECELL_GENE_EXPRESSION) {
-				if (!sample.geneExp) return settings.startColor //settings.noExpColor
+				if (!Number.isFinite(sample.geneExp)) return settings.startColor //settings.noExpColor
 				else if (sample.geneExp > range.geMax!) return settings.stopColor //settings.expColor
 				else return colorGenerator(sample.geneExp)
 			}

@@ -81,7 +81,7 @@ export type GeneSetEditArg = {
 	mode?: 'geneVariant' | 'geneExpression'
 	/** Minimum number of genes to return in the callback */
 	minNumGenes?: number
-	/** Maxiumum number of genes allowed in gene set */
+	/** Maximum number of genes allowed in gene set */
 	maxNumGenes?: number
 	/** What to do with the genes returned */
 	callback: (arg: CallbackArg) => void

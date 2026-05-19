@@ -56,7 +56,7 @@ export class ScatterModel extends ScatterModelBase {
 			this.range = data.range
 			for (const [key, chartData] of Object.entries(data.result)) {
 				const chart = chartData as ScatterDataResult
-				// if (!Array.isArray(chart.samples)) throw 'data.samples[] not array'
+				if (!Array.isArray(chart.samples)) throw new Error('data.samples[] not array')
 				this.createChart(key, chart)
 			}
 

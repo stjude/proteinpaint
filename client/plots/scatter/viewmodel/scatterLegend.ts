@@ -70,7 +70,7 @@ export class ScatterLegend {
 		let title
 		let title0 = this.scatter.config.term0
 			? `${this.scatter.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
-			: `${chart.cohortSamples?.length || chart.totalSampleCount} ${
+			: `${chart.cohortSamples?.length ?? chart.totalSampleCount} ${
 					this.scatter.config.sampleType
 						? this.scatter.config.sampleType + 's'
 						: `${this.scatter.settings.itemLabel.toLowerCase()}s`
