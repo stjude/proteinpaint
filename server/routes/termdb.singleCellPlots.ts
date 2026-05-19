@@ -184,29 +184,29 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 	if (Number.isFinite(range.geMin) && Number.isFinite(range.geMax)) {
 		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.startColor, settings.stopColor])
 	}
+	const color = sample => {
+		if (termType == SINGLECELL_GENE_EXPRESSION) {
+			if (!Number.isFinite(sample.geneExp)) return settings.startColor //settings.noExpColor
+			else if (sample.geneExp > range.geMax!) return settings.stopColor //settings.expColor
+			else return colorGenerator(sample.geneExp)
+		}
+		return colorMap[sample.category] ? colorMap[sample.category].color : refColor
+	}
+	const x = sample => {
+		const tmp = getCoordinate(sample.x, settings.minXScale, settings.maxXScale)
+		return xScale(tmp)
+	}
+	const y = sample => {
+		const tmp = getCoordinate(sample.y, settings.minYScale, settings.maxYScale)
+		return yScale(tmp)
+	}
 	for (const sample of samples.filter(s => !s.hidden.category)) {
-		const color = () => {
-			if (termType == SINGLECELL_GENE_EXPRESSION) {
-				if (!Number.isFinite(sample.geneExp)) return settings.startColor //settings.noExpColor
-				else if (sample.geneExp > range.geMax!) return settings.stopColor //settings.expColor
-				else return colorGenerator(sample.geneExp)
-			}
-			return colorMap[sample.category] ? colorMap[sample.category].color : refColor
-		}
-		const x = () => {
-			const tmp = getCoordinate(sample.x, settings.minXScale, settings.maxXScale)
-			return xScale(tmp)
-		}
-		const y = () => {
-			const tmp = getCoordinate(sample.y, settings.minYScale, settings.maxYScale)
-			return yScale(tmp)
-		}
 		// Draw each sample on the canvas
-		const c = rgb(color())
+		const c = rgb(color(sample))
 		c.opacity = settings.opacity
 		ctx.fillStyle = c.toString()
 		ctx.beginPath()
-		ctx.arc(x(), y(), settings.radius, 0, Math.PI * 2)
+		ctx.arc(x(sample), y(sample), settings.radius, 0, Math.PI * 2)
 		ctx.fill()
 	}
 
