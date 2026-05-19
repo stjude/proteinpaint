@@ -1,4 +1,5 @@
 import type { LlmConfig } from '#types'
+import { SSGSEA } from '#shared/terms.js'
 import type {
 	SummaryPhrase2EntityResult,
 	Phrase2EntityResult,
@@ -28,7 +29,7 @@ export interface GeneTerm {
 
 export interface GeneSetTerm {
 	geneSet: string
-	type: 'ssGSEA' | 'geneVariant' | 'geneExpression'
+	type: typeof SSGSEA | 'geneVariant' | 'geneExpression'
 }
 
 export interface MethTerm {
@@ -85,11 +86,11 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 				}
 			}
 		}
-		case 'ssGSEA': {
+		case SSGSEA: {
 			const geneSetNames = extractGenesetsFromPromptNew(twEntity.phrase, getGenesetNames(genome))
 			const twResult: GeneSetTerm = {
 				geneSet: geneSetNames.length > 0 ? geneSetNames[0] : 'UNKNOWN_GENESET',
-				type: 'ssGSEA'
+				type: SSGSEA
 			}
 			if ('logicalOperator' in twEntity) {
 				return {
@@ -481,8 +482,8 @@ async function findBestMatchLLM(
 try {
 const parsed = JSON.parse(response) as { term: string }
 if (!parsed.term) {
-        console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
-        return undefined
+console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
+return undefined
 }
 parsedTerm = parsed.term
 } catch (e) {

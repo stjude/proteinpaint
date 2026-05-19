@@ -1,3 +1,5 @@
+import type { SSGSEA } from '#shared/terms.js'
+
 export type MsgToUser = {
 	type: 'text'
 	text: string
@@ -70,7 +72,13 @@ export function isHierarchicalScaffold(s: Scaffold): s is HierarchicalScaffold {
 }
 
 // *** Entity Temp Types *** //
-type TermTypes = 'dictionary' | 'geneExpression' | 'dnaMethylation' | 'geneVariant' | 'proteomeAbundance' | 'ssGSEA'
+type TermTypes =
+	| 'dictionary'
+	| 'geneExpression'
+	| 'dnaMethylation'
+	| 'geneVariant'
+	| 'proteomeAbundance'
+	| typeof SSGSEA
 
 export type Entity = {
 	termType: TermTypes

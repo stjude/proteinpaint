@@ -4,6 +4,7 @@ import type { MsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { parse_dataset_db, getGenesForGeneset } from './utils.ts'
 import { mayLog } from '#src/helpers.ts'
+import { SSGSEA } from '#shared/terms.js'
 
 //>>>> Bin Config Types Definitions start
 interface BinEntry {
@@ -216,7 +217,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			termObj.term.type === 'integer' ||
 			termObj.term.type === 'float' ||
 			termObj.term.type === 'geneExpression' ||
-			termObj.term.type === 'ssGSEA' // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
+			termObj.term.type === SSGSEA // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
 		) {
 			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
 			if (!numericFilterTerm) {
@@ -462,7 +463,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
 					`Invalid geneExpression term: missing gene or geneSet field in geneExpression term for phrase "${twValue.phrase}"`
 				)
 			}
-		} else if (twValue.type === 'ssGSEA') {
+		} else if (twValue.type === SSGSEA) {
 			const twValueTerm = twValue.term as GeneSetTerm
 			return {
 				id: twValueTerm.geneSet.toUpperCase(),
@@ -518,7 +519,7 @@ export async function resolveToTwTvs(
 		for (const gv of DictValues) {
 			const tw = await resolveToTw(gv, llm, genome)
 			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
-			if (tw.type != 'float' && tw.type != 'integer' && tw.type != 'ssGSEA') {
+			if (tw.type != 'float' && tw.type != 'integer' && tw.type != SSGSEA) {
 				return {
 					type: 'text',
 					text: `Only numeric terms can be used in hierarchical clustering. Term "${gv.phrase}" is of type "${tw.type}". Please rephrase your request using only numeric terms for hierarchical clustering.`
