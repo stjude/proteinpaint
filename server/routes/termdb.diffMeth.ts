@@ -73,7 +73,7 @@ function init({ genomes }) {
 			}
 			res.send(output)
 		} catch (e: any) {
-			res.send({ status: 'error', error: e.message || e })
+			res.status(e.status || 500).send({ status: 'error', error: e.message || e, code: e.code })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}

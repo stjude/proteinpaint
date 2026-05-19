@@ -2,6 +2,9 @@ import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
+import { mayLog } from '#src/helpers.ts'
+import { fileSize, formatElapsedTime } from '#shared'
+import { CACHE_OR_RECOMPUTE_SUBDIRS } from '#src/utils/types.ts'
 import type { CacheOrRecomputeOpts, CacheOrRecomputeResult, CacheSubdir } from '#src/utils/types.ts'
 
 /** Hash the given object to a 32-hex-char cacheId via
@@ -27,7 +30,18 @@ export function cacheFilePath(subdir: CacheSubdir, cacheId: string): string {
  * this directly; `cacheOrRecompute` persists the value returned by
  * `computeFresh` automatically. */
 async function writeJsonCache(filePath: string, result: unknown): Promise<void> {
-	await fs.promises.writeFile(filePath, JSON.stringify(result))
+	const t0 = Date.now()
+	const body = JSON.stringify(result)
+	await fs.promises.writeFile(filePath, body)
+	mayLog(
+		`cacheOrRecompute write ${shortLabel(filePath)} (${fileSize(body.length)}) in ${formatElapsedTime(Date.now() - t0)}`
+	)
+}
+
+/** Last two path segments, e.g. "de/abc123…json". Keeps timing log lines
+ * readable without leaking the full absolute cachedir path. */
+function shortLabel(filePath: string): string {
+	return filePath.split(path.sep).slice(-2).join('/')
 }
 
 /** In-flight work keyed by `${subdir}:${cacheId}`. Deduplicates
@@ -40,6 +54,20 @@ async function writeJsonCache(filePath: string, result: unknown): Promise<void> 
  * Subsequent attached callers resolve to the same result. Entry is cleared
  * once the promise settles so later, genuinely new requests start fresh. */
 const pending = new Map<string, Promise<CacheOrRecomputeResult<any>>>()
+
+/** Count of in-flight DISTINCT cacheIds per subdir. A X1st same-key
+ * caller attaches to the existing `pending` entry and does NOT increment
+ * this count, so the cap protects against thundering herds of distinct
+ * computes without penalizing innocent dedup. */
+const pendingCount = new Map<CacheSubdir, number>()
+
+function makeBusyError(): Error {
+	const err: any = new Error('Cache compute pool is full. Please try again shortly.')
+	err.status = 429
+	err.statusCode = 429
+	err.code = 'CACHE_BUSY'
+	return err
+}
 
 /** Generic cache-or-recompute: hash the inputs, look for a JSON file under
  * the canonical path, return its parsed contents on hit, otherwise call
@@ -56,6 +84,10 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	const inFlight = pending.get(dedupKey)
 	if (inFlight) return inFlight as Promise<CacheOrRecomputeResult<TResult>>
 
+	const cap = CACHE_OR_RECOMPUTE_SUBDIRS[cacheSubdir].maxPending
+	const inUse = pendingCount.get(cacheSubdir) ?? 0
+	if (inUse >= cap) throw makeBusyError()
+
 	const work = (async (): Promise<CacheOrRecomputeResult<TResult>> => {
 		const cached = await tryReadJson<TResult>(file)
 		if (cached !== null) return { result: cached, cacheId, cacheFilePath: file }
@@ -64,12 +96,17 @@ export async function cacheOrRecompute<TArgs, TResult>(
 		return { result: fresh, cacheId, cacheFilePath: file }
 	})()
 	pending.set(dedupKey, work)
-	return work.finally(() => pending.delete(dedupKey)) as Promise<CacheOrRecomputeResult<TResult>>
+	pendingCount.set(cacheSubdir, inUse + 1)
+	return work.finally(() => {
+		pending.delete(dedupKey)
+		pendingCount.set(cacheSubdir, (pendingCount.get(cacheSubdir) ?? 1) - 1)
+	}) as Promise<CacheOrRecomputeResult<TResult>>
 }
 
 /** Returns null on ENOENT (cache miss) or JSON parse failure (corruption or
  * partial write). */
 async function tryReadJson<T>(filePath: string): Promise<T | null> {
+	const t0 = Date.now()
 	let text: string
 	try {
 		text = await fs.promises.readFile(filePath, 'utf8')
@@ -78,7 +115,13 @@ async function tryReadJson<T>(filePath: string): Promise<T | null> {
 		throw e
 	}
 	try {
-		return JSON.parse(text) as T
+		const parsed = JSON.parse(text) as T
+		mayLog(
+			`cacheOrRecompute read ${shortLabel(filePath)} (${fileSize(text.length)}) in ${formatElapsedTime(
+				Date.now() - t0
+			)}`
+		)
+		return parsed
 	} catch (e: any) {
 		if (e instanceof SyntaxError) return null
 		throw e

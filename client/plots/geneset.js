@@ -2,6 +2,7 @@ import { getCompInit, copyMerge, sleep } from '../rx'
 import { GeneSetEditUIwithTabs /*, GeneSetEditArg, CallbackArg*/ } from '../dom/GeneSetEdit/GeneSetEditUIwithTabs.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
+import { sayinfo } from '#dom'
 
 // This is a reactive geneset component, meant for use within plotApp.
 // The usage in client/gdc/oncomatrix.js and geneExpClustering.js is as follows:
@@ -99,12 +100,14 @@ class GenesetComp {
 		} catch (e) {
 			// may ignore this error
 			if (e == 'stale sequenceId' || e.name == 'AbortError') return
-			else {
-				if (this.opts.showWaitMessage) {
-					this.dom.body.style('margin', '20px').html(e)
-				}
-				throw e
+			if (e?.code === 'CACHE_BUSY' && this.opts.showWaitMessage) {
+				sayinfo(this.dom.body, e.message || e, { actionLabel: 'Retry', onAction: () => this.main() })
+				return
 			}
+			if (this.opts.showWaitMessage) {
+				this.dom.body.style('margin', '20px').html(e)
+			}
+			throw e
 		}
 	}
 
@@ -156,7 +159,10 @@ class GenesetComp {
 		}
 
 		if (!data) throw 'invalid server response'
-		if (data.error) throw data.error
+		if (data.error) {
+			if (data.status === 429) throw Object.assign(new Error(data.error), { code: 'CACHE_BUSY' })
+			throw data.error
+		}
 
 		if (!data.genes) return [] // do not throw and halt. downstream will detect no genes and handle it by showing edit ui
 		waitDiv.remove()

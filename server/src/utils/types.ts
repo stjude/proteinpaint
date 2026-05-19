@@ -1,8 +1,21 @@
-/** Subdirs of serverconfig.cachedir that the cacheOrRecompute module is
- * allowed to write to. Each entry must also be configured in
- * `CacheManager.ts` so the eviction lifecycle (TTL + max-size) still
- * applies. Add new analysis types here. */
-export type CacheSubdir = 'de' | 'dm' | 'gsea' | 'grin2' | 'topve'
+const day = 1000 * 60 * 60 * 24
+const halfDay = day / 2
+
+/** Subdirs of serverconfig.cachedir that the cacheOrRecompute module
+ * writes JSON cache files to. CacheManager imports this object and
+ * registers every entry automatically with the eviction policy below;
+ * `maxSize` falls back to CacheManager's 5 GB per-subdir default when
+ * omitted. To add a new analysis type, append a new entry here — no
+ * other file needs to be edited. */
+export const CACHE_OR_RECOMPUTE_SUBDIRS = {
+	de: { maxAge: day * 60, skipMs: halfDay, maxPending: 3 },
+	dm: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
+	gsea: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
+	grin2: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 },
+	topve: { maxAge: day * 60, skipMs: halfDay, maxPending: 5 }
+} as const satisfies Record<string, { maxAge: number; skipMs: number; maxSize?: number; maxPending: number }>
+
+export type CacheSubdir = keyof typeof CACHE_OR_RECOMPUTE_SUBDIRS
 
 export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	/** Hashed to derive the cacheId. Pass the subset of the request whose
