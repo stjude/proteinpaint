@@ -1,4 +1,4 @@
-import type { SSGSEA, GENE_EXPRESSION } from '../../../utils/dist/src/terms.js'
+import type { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
 import type { Filter } from '../filter.ts'
 
 /** */

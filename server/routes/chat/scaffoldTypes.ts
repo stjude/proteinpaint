@@ -1,4 +1,4 @@
-import type { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
+import type { SSGSEA, GENE_EXPRESSION, GENE_VARIANT } from '#shared/terms.js'
 
 export type MsgToUser = {
 	type: 'text'
@@ -76,7 +76,7 @@ type TermTypes =
 	| 'dictionary'
 	| typeof GENE_EXPRESSION
 	| 'dnaMethylation'
-	| 'geneVariant'
+	| typeof GENE_VARIANT
 	| 'proteomeAbundance'
 	| typeof SSGSEA
 

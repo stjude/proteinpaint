@@ -1,5 +1,5 @@
 import type { LlmConfig } from '#types'
-import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
+import { SSGSEA, GENE_EXPRESSION, GENE_VARIANT } from '#shared/terms.js'
 import type {
 	SummaryPhrase2EntityResult,
 	Phrase2EntityResult,
@@ -29,7 +29,7 @@ export interface GeneTerm {
 
 export interface GeneSetTerm {
 	geneSet: string
-	type: typeof SSGSEA | 'geneVariant' | typeof GENE_EXPRESSION
+	type: typeof SSGSEA | typeof GENE_VARIANT | typeof GENE_EXPRESSION
 }
 
 export interface MethTerm {
@@ -106,7 +106,7 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 		case 'dnaMethylation': {
 			return undefined
 		}
-		case 'geneVariant': {
+		case GENE_VARIANT: {
 			return undefined
 		}
 		case 'proteomeAbundance': {
