@@ -1,5 +1,5 @@
 import type { RoutePayload, AIProjectAdminRequest /*, AIProjectAdminResponse*/ } from '#types'
-import { validGenome, validString, validNumber, validStringArr } from './common.ts'
+import { validGenomeDs, validString, validNumber, validStringArr } from './common.ts'
 
 // this payload object helps with documentation
 export const aiProjectAdminPayload: RoutePayload = {
@@ -13,8 +13,7 @@ export const aiProjectAdminPayload: RoutePayload = {
 //
 export function validAIProjectAdminRequest(input): AIProjectAdminRequest {
 	return {
-		genome: validGenome(input.genome),
-		dslabel: validString(input.dslabel),
+		...validGenomeDs(input),
 		for: validAIProjectFor(input.for),
 		/** required for 'project' and 'selection' requests */
 		project: getValidAIAdminProject(input.project)

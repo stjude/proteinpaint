@@ -8,13 +8,13 @@ export function middleware(req, res, next) {
 		const routeHandler = req.path
 			.slice(1)
 			.split('/')
-			.map(p => p[0].toUpperCase() + p.slice(1))
+			.map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
 			.join('')
-		const checker = checkers[`{routeHandler}Payload`]?.request.checker
-		if (checker) checker(req.query)
+		const checker = checkers[`${routeHandler}Payload`]?.request.checker
+		if (typeof checker == 'function') checker(q)
 		else {
-			for (const key in q) {
-				if (key in byReqKey) q[key] = byReqKey[key](q[key])
+			for (const [key, val] of Object.entries(q)) {
+				if (genericParams.includes(key)) q[key] = byReqKey[key](q[key])
 			}
 			// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
 		}
@@ -50,8 +50,8 @@ export function floodCatch(req, res, error) {
 // that do not have dedicated payload validators as coded in server/checkers
 
 export const byReqKey = {
-	genome: validGenome,
-	dslabel: validDslabel,
+	genome: checkers.validGenome,
+	dslabel: checkers.validDslabel,
 	chr(value) {
 		if (typeof value != 'string') throw 'chr should be a string'
 		if (/\s+/.test(value)) throw 'invalid chr character'
@@ -64,6 +64,8 @@ export const byReqKey = {
 		return v
 	}
 }
+
+const genericParams = Object.keys(byReqKey)
 
 export const byExpectedVal = {
 	alphaNumeric(key, value, res) {
