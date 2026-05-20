@@ -1,20 +1,9 @@
-import { deleteWSITileSelectionPayload } from '#types/checkers'
 import { checkSelectionType, SelectionPrefixes, FlagStatus } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
-import type { Mds3, RouteApi, DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
+import type { Mds3, DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
 import type Database from 'better-sqlite3'
 
-export const api: RouteApi = {
-	endpoint: `deleteWSITileSelection`,
-	methods: {
-		delete: {
-			...deleteWSITileSelectionPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query = req.query satisfies DeleteWSITileSelectionRequest

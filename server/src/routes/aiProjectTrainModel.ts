@@ -6,7 +6,7 @@ import { getDbConnection } from '#src/aiHistoDBConnection.js'
 import type Database from 'better-sqlite3'
 import { getImages } from '#routes/aiProjectAdmin.js'
 
-export const payload: RoutePayload = {
+const payload: RoutePayload = {
 	init,
 	request: { typeId: 'AIProjectTrainModelRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'AIProjectTrainModelResponse' }
