@@ -8,6 +8,11 @@ import type { SnpRequest, SnpResponse, RouteApi } from '#types'
 // imported payload is typed as RoutePayload
 import { snpPayload } from '#types/checkers'
 
+// Note that snpPayload has the RoutePayload type, and should really have
+// checker validation functions even though they are currently optional.
+// See validTermdbSampleScatterRequest() in server/routes/checkers/termdb.sampleScatter.ts
+// for an example.
+
 export const api: RouteApi = {
 	// route endpoint
 	// - no need for trailing slash
@@ -34,7 +39,7 @@ export const api: RouteApi = {
 // such as `app.get(api.endpoint, init({app, genomes}))`
 function init({ genomes }) {
 	return async function (req, res) {
-		// use the colon syntax for clarity, the type is seen upfront instead of at the end
+		// use the colon syntax for clarity, the 'as' syntax is an assertion that skips type check
 		const q: SnpRequest = req.query
 		console.log(genomes[q.genome])
 		// can also use 'satisfies' keyword instead of colon syntax;
