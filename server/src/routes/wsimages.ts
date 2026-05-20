@@ -3,7 +3,7 @@ import { wsImagesPayload } from '#types/checkers'
 import { init } from '../../routes/wsimages.ts'
 
 export const api: RouteApi = {
-	endpoint: `${routePath}`,
+	endpoint: 'wsimages',
 	methods: {
 		get: {
 			...wsImagesPayload,

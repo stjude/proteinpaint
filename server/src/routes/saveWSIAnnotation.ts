@@ -3,7 +3,7 @@ import { saveWSIAnnotationPayload } from '#types/checkers'
 import { init } from '../../routes/saveWSIAnnotation.ts'
 
 export const api: RouteApi = {
-	endpoint: `${routePath}`,
+	endpoint: 'saveWSIAnnotation',
 	methods: {
 		post: {
 			...saveWSIAnnotationPayload,
