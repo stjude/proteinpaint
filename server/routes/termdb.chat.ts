@@ -58,7 +58,7 @@ export function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			// check if ds supports termdb chat
 			if (!ds.queries.chat) {
-				res.send({
+				return res.send({
 					type: 'text',
 					text: 'Only search functionality supported for this data. No chat functionality supported.'
 				})

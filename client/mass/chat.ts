@@ -119,6 +119,10 @@ class MassAiChatBot implements RxComponent {
 						if (e.stack) console.log(e.stack)
 						sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
 					}
+				} else {
+					this.dom.noMatchShown = false
+					this.clear({ hide: true })
+					return
 				}
 			})
 			.on('keyup.submit', async event => {
