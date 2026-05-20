@@ -16,7 +16,7 @@
   "scripts": {
     "predev": "tsx test/prep.js",
     "dev": "npm run doc && tsx watch test/app.js",
-    "pretest": "tsx src/test/toyApp/prep.js && typia generate --input src/test/toyApp/checkers-raw --output src/test/toyApp/checkers",
+    "pretest": "tsx src/test/toyApp/prep.js",
     "test": "c8 tsx src/test/runSpecs.js",
     "spec:coverage": "tsx src/test/relevant.js -p",
     "doc": "./build.sh test/routes test/types test/checkers public/docs"
