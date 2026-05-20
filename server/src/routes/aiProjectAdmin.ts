@@ -1,13 +1,51 @@
-import type { RoutePayload, AIProjectAdminRequest, AIProjectAdminForValues, AIProjectAdminProject } from '#types'
+import type { RouteApi, AIProjectAdminRequest, AIProjectAdminForValues, AIProjectAdminProject } from '#types'
 import { validGenomeDs, validString, validNumber, validStringArr } from './common.ts'
+import { init } from '../../routes/aiProjectAdmin.ts'
 
-// this payload object helps with documentation
-export const aiProjectAdminPayload: RoutePayload = {
-	request: {
-		typeId: 'AIProjectAdminRequest',
-		checker: validAIProjectAdminRequest
-	},
-	response: { typeId: 'AIProjectAdminResponse' }
+export const api: RouteApi = {
+	endpoint: 'aiProjectAdmin',
+	methods: {
+		get: {
+			// read-only requests
+			init,
+			// TODO: the init, request/response typeId and checker should all be specific to the get method
+			request: {
+				typeId: 'AIProjectAdminRequest',
+				checker: validAIProjectAdminRequest
+			},
+			response: { typeId: 'AIProjectAdminResponse' }
+		},
+		post: {
+			//'admin' -> edit
+			init,
+			// TODO: the init, request/response typeId and checker should all be specific to the post method
+			request: {
+				typeId: 'AIProjectAdminRequest',
+				checker: validAIProjectAdminRequest
+			},
+			response: { typeId: 'AIProjectAdminResponse' }
+		},
+		put: {
+			//'admin' -> add
+			init,
+			// TODO: the init, request/response typeId and checker should all be specific to the put method
+			request: {
+				typeId: 'AIProjectAdminRequest',
+				checker: validAIProjectAdminRequest
+			},
+			response: { typeId: 'AIProjectAdminResponse' }
+		},
+		delete: {
+			//'admin' -> delete
+			init,
+			// TODO: the init, request/response typeId and checker should all be specific to the delete method
+			request: {
+				typeId: 'AIProjectAdminRequest',
+				checker: validAIProjectAdminRequest
+			},
+			response: { typeId: 'AIProjectAdminResponse' }
+		}
+	}
 }
 
 //

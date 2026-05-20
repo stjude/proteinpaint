@@ -1,13 +1,27 @@
-import type { RoutePayload, TermdbSampleScatterRequest, Filter } from '#types'
+import type { RouteApi, RoutePayload, TermdbSampleScatterRequest, Filter } from '#types'
 import { validGenomeDs, validString, validBoolean } from './common.ts'
+import { init } from '../../routes/termdb.sampleScatter.ts'
 
-export const termdbSampleScatterPayload: RoutePayload = {
+const payload: RoutePayload = {
+	init,
 	request: {
 		typeId: 'TermdbSampleScatterRequest',
-		checker: validTermdbSampleScatterRequest
+		checker: validTermdbSampleScatterRequest,
 	},
 	response: {
 		typeId: 'TermdbSampleScatterResponse'
+	}
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/sampleScatter',
+	methods: {
+		// This endpoint does not support write operation, the same readonly request/response 
+		// payload init/typeId/checker is expected for both GET and POST methods, where POST
+		// is used when the request payload is to large to be encoded as URL parameters.
+		// may switch to using HTTP QUERY method once that is stable and widely supported
+		get: payload,
+		post: payload
 	}
 }
 

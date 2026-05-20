@@ -1,36 +1,8 @@
-import type { RouteApi /*, AIProjectAdminRequest*/ } from '#types'
-import { aiProjectAdminPayload } from '#types/checkers'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
 import type Database from 'better-sqlite3'
 
-export const api: RouteApi = {
-	endpoint: 'aiProjectAdmin',
-	methods: {
-		get: {
-			//all requests
-			...aiProjectAdminPayload,
-			init
-		},
-		post: {
-			//'admin' -> edit
-			...aiProjectAdminPayload,
-			init
-		},
-		delete: {
-			//'admin' -> delete
-			...aiProjectAdminPayload,
-			init
-		},
-		put: {
-			//'admin' -> add
-			...aiProjectAdminPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query /*: AIProjectAdminRequest*/ = req.query // todo: enable type check
