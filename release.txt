@@ -1,1 +1,2 @@
-
+Fixes:
+- non-dict numeric terms now defaults to mode=discrete with median cutoff as regression input terms
