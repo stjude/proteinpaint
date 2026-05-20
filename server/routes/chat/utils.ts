@@ -1,5 +1,5 @@
 import type { DbRows, DbValue, GeneDataTypeResult } from '#types'
-import { TermTypes, SSGSEA, METABOLITE_INTENSITY, GENE_EXPRESSION } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 import { FILTER_DESCRIPTION } from './filter.ts'
 import { mayLog } from '#src/helpers.ts'
 import fs from 'fs'
@@ -23,8 +23,8 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 
 	// check if it supports heirarchical clustering charts
 	// TODO:
-	if (plotTypes.includes(GENE_EXPRESSION)) {
-		// || plotTypes.includes(PROTEOME_ABUNDANCE) || plotTypes.includes(DNA_METHYLATION))
+	if (plotTypes.includes(TermTypes.GENE_EXPRESSION)) {
+		// || plotTypes.includes(TermTypes.PROTEOME_ABUNDANCE) || plotTypes.includes(TermTypes.DNA_METHYLATION))
 		plotTypes.push('hiercluster')
 	}
 	// check if it supports dge
@@ -47,7 +47,7 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 type IdentifierMode = 'gene' | 'name'
 
 export interface DataTypeConfig {
-	/** TermTypes value, e.g. '${GENE_EXPRESSION}' */
+	/** TermTypes value, e.g. '${TermTypes.GENE_EXPRESSION}' */
 	termType: string
 	/** Returns true when the dataset supports this data type.
 	 *  ds may be null in testing mode — use dataset_json flags as fallback. */
@@ -90,7 +90,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of genes to include as gene expression rows in the matrix'
 		},
 		identifierMode: 'gene',
-		buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: GENE_EXPRESSION } }),
+		buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: TermTypes.GENE_EXPRESSION } }),
 		promptFieldDescription:
 			'The "geneNames" field should ONLY contain gene names. These will be shown as gene expression rows.'
 	},
@@ -105,7 +105,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 		},
 		identifierMode: 'gene',
 		buildTermWrapper: (gene: string) => ({
-			term: { gene: gene.toUpperCase(), name: gene.toUpperCase(), type: '${GENE_VARIANT}' }
+			term: { gene: gene.toUpperCase(), name: gene.toUpperCase(), type: '${TermTypes.GENE_VARIANT}' }
 		}),
 		promptFieldDescription:
 			'The "geneNames" field should ONLY contain gene names. These will be shown as gene variant/mutation rows.'
@@ -121,7 +121,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 				'Names of gene sets (e.g. HALLMARK pathways) to include as ssGSEA enrichment score rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { id: name, name, type: SSGSEA } }),
+		buildTermWrapper: (name: string) => ({ term: { id: name, name, type: TermTypes.SSGSEA } }),
 		promptFieldDescription:
 			'The "genesetNames" field should contain gene set pathway names (e.g. HALLMARK_P53_PATHWAY).',
 		dataTypeDescription: 'Gene set pathway names (e.g. HALLMARK_APOPTOSIS, HALLMARK_ADIPOGENESIS)'
@@ -136,7 +136,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of metabolites to include as metabolite intensity rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { name, metabolite: name, type: METABOLITE_INTENSITY } }),
+		buildTermWrapper: (name: string) => ({ term: { name, metabolite: name, type: TermTypes.METABOLITE_INTENSITY } }),
 		promptFieldDescription: 'The "metaboliteNames" field should contain metabolite names.',
 		dataTypeDescription: 'Metabolite names'
 	},

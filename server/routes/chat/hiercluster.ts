@@ -1,7 +1,7 @@
 import type { LlmConfig, GeneDataTypeResult, TermdbTopVariablyExpressedGenesRequest } from '#types'
 import { getGenesForGeneset, extractGenesetsFromPromptNew, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import { GENE_EXPRESSION } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 //import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------
@@ -20,7 +20,7 @@ export async function extract_hiercluster_terms_from_query(
 	// Will later optionally allow hierarchical clustering if metabolite intensity or other numeric data types are present,
 	// but for now require gene expression
 	let response: any
-	if (dataType == GENE_EXPRESSION) {
+	if (dataType == TermTypes.GENE_EXPRESSION) {
 		// This is to extract any geneset names mentioned in the prompt, which will then be used as additional context for the gene data type
 		// classification and hierarchical clustering term extraction agents. For hierarchical clustering, users might mention geneset names instead of
 		// individual gene names, so this is to capture those geneset names and use them as additional context for the downstream agents.
@@ -192,7 +192,7 @@ async function validate_hiercluster_gene_expression_response(
 		for (const gene of genesInGeneset) {
 			// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
 			seen_genes.add(gene.symbol.toLowerCase())
-			terms.push({ term: { gene: gene.symbol, type: GENE_EXPRESSION } })
+			terms.push({ term: { gene: gene.symbol, type: TermTypes.GENE_EXPRESSION } })
 		}
 	} else if (response_type.topVariablyExpressedGenes) {
 		if (!ds.queries.topVariablyExpressedGenes)
@@ -236,7 +236,7 @@ async function validate_hiercluster_gene_expression_response(
 		for (const gene of topVEgenes) {
 			// Ensure genesetNames-resolved genes don't duplicate geneNames-provided genes
 			seen_genes.add(gene.toLowerCase())
-			terms.push({ term: { gene: gene, type: GENE_EXPRESSION } })
+			terms.push({ term: { gene: gene, type: TermTypes.GENE_EXPRESSION } })
 		}
 	}
 
@@ -250,7 +250,7 @@ async function validate_hiercluster_gene_expression_response(
 			if (gene_hit.dataType === 'expression') {
 				if (seen_genes.has(gene_hit.gene.toLowerCase())) continue
 				seen_genes.add(gene_hit.gene.toLowerCase())
-				terms.push({ term: { gene: gene_hit.gene, type: GENE_EXPRESSION } })
+				terms.push({ term: { gene: gene_hit.gene, type: TermTypes.GENE_EXPRESSION } })
 			} else {
 				text +=
 					'Gene ' +
@@ -276,7 +276,7 @@ async function validate_hiercluster_gene_expression_response(
 		// hierCluster expects terms as an array of term objects (like { gene, type })
 		// and a dataType to configure the clustering type
 		pp_plot_json.terms = terms
-		pp_plot_json.dataType = GENE_EXPRESSION // For now only support gene expression clustering, but will add metabolite intensity and other data types later
+		pp_plot_json.dataType = TermTypes.GENE_EXPRESSION // For now only support gene expression clustering, but will add metabolite intensity and other data types later
 		if (filterTerms) {
 			pp_plot_json.filter = filterTerms
 		}
@@ -297,7 +297,7 @@ async function validate_hiercluster_response(
 	filterTerms: any
 ) {
 	switch (dataType) {
-		case GENE_EXPRESSION:
+		case TermTypes.GENE_EXPRESSION:
 			return await validate_hiercluster_gene_expression_response(response, ds, genome, geneFeatures, filterTerms)
 		default:
 			return {
