@@ -1,24 +1,26 @@
 import * as checkers from '#types/checkers'
 
-const checkerEntries = Object.entries(checkers).map(kv => [kv[0].toLowerCase(), kv[1]])
+const checkerMap: Map<string, (payload: any) => any> = new Map()
+for (const [key, val] of Object.entries(checkers)) {
+	if (key.endsWith('Payload') && typeof val === 'object') checkerMap.set(key, val.request?.checker)
+}
 
 export function middleware(req, res, next) {
 	try {
 		// NOTE: a preceding middleware combines req.query with req.body in a POST request
 		const q = req.query
 
-		const payloadName = req.path.slice(1).replaceAll('/', '').toLowerCase() + 'payload'
-		const entry = checkerEntries.find(c => c.includes(payloadName))
-		const checker = entry?.[1]?.request?.checker
+		const payloadName = req.path.slice(1).replaceAll('/', '') + 'Payload'
+		const checker = checkerMap.get(payloadName)
 		if (typeof checker == 'function') Object.assign(req.query, checker(q))
 		else {
 			for (const [key, val] of Object.entries(q)) {
-				if (genericParams.includes(key)) q[key] = byReqKey[key](q[key])
+				if (genericParams.includes(key)) q[key] = byReqKey[key](val)
 			}
 			// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
 		}
 		next()
-	} catch (e) {
+	} catch (e: any) {
 		floodCatch(req, res, e.message || e)
 	}
 }

@@ -1,4 +1,4 @@
-import type { RoutePayload, AIProjectAdminRequest, AIProjectAdminForValues } from '#types'
+import type { RoutePayload, AIProjectAdminRequest, AIProjectAdminForValues, AIProjectAdminProject } from '#types'
 import { validGenomeDs, validString, validNumber, validStringArr } from './common.ts'
 
 // this payload object helps with documentation
@@ -28,7 +28,7 @@ function validAIProjectFor(val) {
 	return val
 }
 
-function getValidAIAdminProject(input) {
+function getValidAIAdminProject(input): AIProjectAdminProject {
 	return {
 		name: validString(input.name),
 		id: input.project === undefined ? undefined : validNumber(input.id),
@@ -37,6 +37,8 @@ function getValidAIAdminProject(input) {
 		images:
 			input.project === undefined
 				? undefined
-				: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`)
+				: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`),
+		type: input.project === undefined ? undefined : validString(input.type),
+		users: input.project === undefined ? undefined : validStringArr(input.type)
 	}
 }
