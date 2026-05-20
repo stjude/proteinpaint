@@ -14,8 +14,8 @@ export const termdbSampleScatterPayload: RoutePayload = {
 export function validTermdbSampleScatterRequest(input): TermdbSampleScatterRequest {
 	return {
 		...validGenomeDs(input),
-		colorTW: input.colorTW as any, //TermWrapper
-		shapeTW: input.shapeTW as any, //TermWrapper
+		colorTW: input.colorTW as any, //TermWrapper, TODO: use a validator function or, even better, a class instance
+		shapeTW: input.shapeTW as any, //TermWrapper Discrete
 		divideByTW: input.divideByTW as any, //TermWrapper
 		scaleDotTW: input.scaleDotTW as any, //TermWrapper
 		coordTWs: input.coordTWs as any[], //TermWrapper[]
