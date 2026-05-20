@@ -1,4 +1,4 @@
-import * as checkers from '../checkers/index.ts'
+import * as checkers from '#types/checkers'
 
 const checkerEntries = Object.entries(checkers).map(kv => [kv[0].toLowerCase(), kv[1]])
 
