@@ -3,7 +3,7 @@ import { deleteWSITileSelectionPayload } from '#types/checkers'
 import { init } from '../../routes/deleteWSITileSelection.ts'
 
 export const api: RouteApi = {
-	endpoint: `deleteWSITileSelection`,
+	endpoint: 'deleteWSITileSelection',
 	methods: {
 		delete: {
 			...deleteWSITileSelectionPayload,

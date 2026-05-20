@@ -9,7 +9,7 @@ return .dzi file and deep zoom image tiles for specified sample and dataset
 */
 
 export const api: RouteApi = {
-	endpoint: `dzimages/:sampleId`,
+	endpoint: 'dzimages/:sampleId',
 	methods: {
 		get: {
 			...dzImagesPayload,

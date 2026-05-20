@@ -9,7 +9,7 @@ import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 
 export const api: RouteApi = {
-	endpoint: `tileserver/layer/:type/:sessionId/zoomify/:TileGroup/:z-:x-:y@1x.jpg`,
+	endpoint: 'tileserver/layer/:type/:sessionId/zoomify/:TileGroup/:z-:x-:y@1x.jpg',
 	methods: {
 		get: {
 			...tilePayload,

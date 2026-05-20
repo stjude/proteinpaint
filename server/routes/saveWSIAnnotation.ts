@@ -3,8 +3,6 @@ import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 
-const routePath = 'saveWSIAnnotation'
-
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {

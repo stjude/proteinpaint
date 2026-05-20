@@ -11,7 +11,6 @@ import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlg
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import serverconfig from '#src/serverconfig.js'
 
-const routePath = 'wsimages'
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
