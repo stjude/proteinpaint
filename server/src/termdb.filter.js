@@ -1,4 +1,4 @@
-import { TermTypes, getBin, annoNumericTypes, isParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
+import { TermTypes, getBin, dictionaryNumericTypes, isParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
 import { validateTermCollectionTvs } from '#shared/filter.js'
 import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
@@ -92,7 +92,7 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, CTEname = 'f
 			f = get_survival(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'samplelst') {
 			f = get_samplelst(item.tvs, CTEname_i, ds, sample_type, mapParent2Children)
-		} else if (annoNumericTypes.has(item.tvs.term.type)) {
+		} else if (dictionaryNumericTypes.has(item.tvs.term.type)) {
 			f = get_numerical(item.tvs, CTEname_i, ds, mapParent2Children)
 		} else if (item.tvs.term.type == 'condition') {
 			f = get_condition(item.tvs, CTEname_i, ds)
@@ -593,7 +593,7 @@ so here need to allow both string and number as range.value
 	// get term object
 	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
 	const annoTable = `anno_${term.type}`
-	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numerical()`
+	if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numerical()`
 
 	const rangeclauses = []
 	let hasactualrange = false // if true, will exclude special categories

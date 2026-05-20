@@ -1,10 +1,11 @@
 import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
 import { getCompInit, copyMerge } from '../rx'
-import { sayerror } from '../dom/sayerror.ts'
+import { sayerror } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase } from '#plots/PlotBase.js'
+import { numericTypes, dictionaryNumericTypes } from '#shared'
 
 /*
 Code architecture:
@@ -150,22 +151,7 @@ export async function getPlotConfig(opts, app) {
 	// TODO need to supply term filter of app to fillTermWrapper
 	if (!opts.outcome) opts.outcome = {}
 
-	{
-		/* for condition term as outcome, it will have q.mode='binary', rather than default "discrete"
-		as required by logistic/cox regression
-		*/
-		// const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
-		// if (!plot) throw 'regression plot missing in state'
-		// await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, 'outcome'))
-
-		// !!!
-		// the code above assumes that a regression plot exists, and that the first one
-		// relates to this particular opts.outcome, which may not be true when recovering a saved session
-		// with multiple regression plots
-		// !!!
-		// should check that the conditions are actually matched before using fillTermWrapper
-		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(opts.regressionType, 'outcome'))
-	}
+	await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(opts.regressionType, 'outcome'))
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
@@ -174,25 +160,13 @@ export async function getPlotConfig(opts, app) {
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
-			// for numeric dictionary variables, set default mode to continuous;
-			// for non-dictionary numeric variables (e.g. geneExpression), default
-			// to discrete (regular-bin), to match how dictionary numeric variables
-			// behave when added via the UI for a regression analysis
-			const defaultQ = !t.q?.mode
-				? {
-						numeric: { mode: 'continuous' },
-						geneExpression: { mode: 'discrete' },
-						isoformExpression: { mode: 'discrete' },
-						metaboliteIntensity: { mode: 'discrete' },
-						proteomeAbundance: { mode: 'discrete' },
-						ssGSEA: { mode: 'discrete' },
-						dnaMethylation: { mode: 'discrete' }
-				  }
-				: undefined
-			await fillTermWrapper(t, app.vocabApi, defaultQ)
+			await fillTermWrapper(
+				t,
+				app.vocabApi,
+				t.q?.mode ? undefined : get_defaultQ4fillTW(opts.regressionType, 'independent')
+			)
 		}
 		config.independent = opts.independent
-		//delete opts.independent // not sure why this has to be deleted? it causes an issue with file-based session recovery
 	} else {
 		config.independent = []
 	}
@@ -206,21 +180,13 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 	// numeric term
 	defaultQ['numeric'] = regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
 
-	// non-dictionary numeric terms (e.g. geneExpression) should default to the
-	// same mode as dictionary numeric terms in regression, so that adding such
-	// a term as an independent variable yields a binned (regular-bin) variable
-	// rather than a continuous one
-	const nonDictNumericDefault =
-		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
-	for (const t of [
-		'geneExpression',
-		'isoformExpression',
-		'metaboliteIntensity',
-		'proteomeAbundance',
-		'ssGSEA',
-		'dnaMethylation'
-	]) {
-		defaultQ[t] = nonDictNumericDefault
+	// non-dictionary numeric terms will default to 2-bin using median cutoff
+	for (const t of numericTypes) {
+		if (dictionaryNumericTypes.has(t)) continue // already covered by defaultQ['numeric']
+		defaultQ[t] =
+			regressionType == 'logistic' && useCase == 'outcome'
+				? { mode: 'binary' }
+				: { mode: 'discrete', type: 'custom-bin', preferredBins: 'median' }
 	}
 
 	// categorical term
