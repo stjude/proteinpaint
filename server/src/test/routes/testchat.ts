@@ -118,9 +118,9 @@ export async function test_chatbot_by_dataset(
 	const failed_prompts: string[] = [] // List of prompts that failed the test for this dataset
 
 	// Read test data from separate test.json file
-	if (!fs.existsSync(path.join(aiFilesDir, 'test3.json')))
+	if (!fs.existsSync(path.join(aiFilesDir, 'test.json')))
 		throw 'Test data file is not specified for dataset:' + ds.label
-	const testData = await readJSONFile(path.join(aiFilesDir, 'test3.json'))
+	const testData = await readJSONFile(path.join(aiFilesDir, 'test.json'))
 	const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 	//console.log("dataset_json:", dataset_json)
 	for (const test_data of testData) {
