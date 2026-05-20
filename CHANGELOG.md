@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - Added data-agnostic json-based caching framework
+- Added a limit for the number of pending cache requests.
 
 Fixes:
 - show Loading on selecting a term into regression ui
