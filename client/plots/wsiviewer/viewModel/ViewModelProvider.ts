@@ -161,7 +161,7 @@ export class ViewModelProvider {
 			}
 
 			const zoomifyUrl = `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
-
+			// something wrong here get 401 error, is this just a test to see if the tileserver is working?
 			const source = new Zoomify({
 				url: zoomifyUrl,
 				size: [imgWidth, imgHeight],

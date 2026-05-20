@@ -191,7 +191,7 @@ export async function makeAdHocDicTermdbQueries(ds: Mds3) {
 }
 
 async function readSourceFile(source: string) {
-	const sourceFilePath = path.join(serverconfig.features?.tileserver?.mount, source)
+	const sourceFilePath = path.join(serverconfig.features?.tileserver?.hostMount, source)
 	if (!fs.existsSync(sourceFilePath)) return
 	try {
 		return fs.readFileSync(sourceFilePath, 'utf8')

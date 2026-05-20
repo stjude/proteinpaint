@@ -7,7 +7,7 @@ let connection: Database.Database | null = null
 
 export function getDbConnection(ds: any): Database.Database | null {
 	// TODO introduce new mount property
-	const mount = serverconfig.features?.tileserver?.mount
+	const mount = serverconfig.features?.tileserver?.hostMount
 	if (!mount) throw new Error('No mount available for TileServer')
 
 	const dbFile = ds.queries.WSImages?.db?.file

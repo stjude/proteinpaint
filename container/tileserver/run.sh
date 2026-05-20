@@ -34,7 +34,7 @@ sh ../createPPNetwork.sh
 docker run -d \
 	--name $CONTAINER_NAME \
 	--network pp_network \
-	--mount type=bind,source=$TP,target=$TP,readonly \
+	--mount type=bind,source=$TP,target=$CONTAINER_MOUNT,readonly \
 	-e PORT=$PORT \
 	-e TILESERVER_HOST_MOUNT=$TP \
 	-e TILESERVER_CONTAINER_MOUNT=$CONTAINER_MOUNT \

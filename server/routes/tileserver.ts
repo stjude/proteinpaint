@@ -39,7 +39,7 @@ function init({ genomes }) {
 			const projectId = query.ai_project_id
 			if (!sampleId && !projectId) throw new Error('Either sample_id or project_id must be provided')
 
-			const mount = serverconfig.features?.tileserver?.mount
+			const mount = serverconfig.features?.tileserver?.hostMount
 			if (!mount) throw new Error('No mount available for TileServer')
 
 			let wsiImagePath: string

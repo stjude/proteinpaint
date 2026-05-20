@@ -78,7 +78,7 @@ function init({ genomes }) {
 }
 
 async function getWSImagePath(ds: any, wSImagesRequest: WSImagesRequest) {
-	const mount = serverconfig.features?.tileserver?.mount
+	const mount = serverconfig.features?.tileserver?.containerMount
 
 	if (!mount) throw new Error('No mount available for TileServer')
 
