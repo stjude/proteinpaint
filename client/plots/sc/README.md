@@ -1,7 +1,5 @@
-_This document is a draft. App is in development_
-
-# Single Cell App
-The sc 'super' app is designed to showcase single cell data in multiple modalities. SC.ts is the parent component for the mass UI. The child components are launched based on the configuration in the dataset file from the parent. 
+# Single Cell (SC) App
+The SC 'super' app is designed to showcase single cell data in multiple modalities. SC.ts is the parent component for the mass UI. The child components are launched based on the configuration in the dataset file from the parent. 
 
 # Code architecture
 
@@ -12,7 +10,7 @@ The SC app makes two server requests via SCModel, each corresponding to a differ
 Called during `init()` to populate the sample selection table. The request sends the genome, dslabel, and an optional filter. The response returns an array of `SingleCellSample` objects along with `fields` and `columnNames` used to build the table columns. SCViewModel.getTableData() transforms the samples and column metadata into the table structure rendered by the view. This data drives the rest of the app: the user must select a sample from the table before any plots can be created.
 
 ### Plot Data (`termdb/singlecellData`)
-Called during `main()` once a sample is selected (`config.settings.sc.item`). The request sends the sample identifier, the list of plot names to fetch (e.g. `['umap', 'tsne']`), and optional gene/colorBy parameters. The response returns an array of plot objects, each containing cell coordinate arrays (`expCells`, `noExpCells`), color columns, and color mappings. `formatPlotData()` merges and sorts the cell arrays before the view renders them.
+Called during `main()` once a sample is selected (`config.settings.sc.item`). The request sends the sample identifier, the list of plot names to fetch (e.g. `['umap', 'tsne']`), and `checkPlotAvailability` (default true). When `checkPlotAvailability` is true, the response returns which plots are available for the sample but not the actual cell data. The available plot names drive the plot buttons rendered by `SCViewRenderer`. Individual subplot components fetch their own cell data independently.
 
 ## Subplots
 Subplot creation and rendering: 
@@ -23,11 +21,11 @@ Subplot creation and rendering:
 Once added as a component, the plot will update every time `app.dispatch` is called.
 
 ### Sections (`SectionRenderer`)
-`SectionRenderer` (in `view/SectionRenderer.ts`) groups subplots by sample into collapsible sections. It maintains a `sections` map keyed by sample id and a `plotId2Sample` map that links each subplot id back to its sample.
+`SectionRenderer` (in `view/SectionRenderer.ts`) groups subplots into collapsible sections based on the `groupBy` setting (`'none'`, `'sample'`, or `'plot'`). It maintains a `sections` map keyed by the grouping key (a fixed `'none'` string, a sample id, or a plot name) and a `plotId2Key` map that links each subplot id back to its section key.
 
-`update()` runs three passes on every render cycle:
+`update()` first checks whether `groupBy` has changed. If so, it delegates to `regroupSections()` which reparents existing sandboxes into new section containers without destroying or recreating plot components. Otherwise it runs three passes:
 1. **Remove stale subplots** — builds an active set from the current state and calls `removeSandbox()` for any component in `sc.components.plots` that is no longer active.
-2. **Initialize new subplots** — for each subplot in state, creates its section (via `initSection()`) if one does not exist for the sample, then creates a sandbox (via `initSandbox()`) if one does not exist for the subplot. `initSandbox()` calls `sc.initPlotComponent()` which dynamically imports the chart module and stores the component.
+2. **Initialize new subplots** — for each subplot in state, derives the section key via `getKey()`, creates its section (via `initSection()`) if one does not exist for that key, then creates a sandbox (via `initSandbox()`) if one does not exist for the subplot. `initSandbox()` calls `sc.initPlotComponent()` which dynamically imports the chart module and stores the component.
 3. **Remove empty sections** — deletes any section whose sandboxes map is empty.
 
 Users can also remove subplots and sections directly:
