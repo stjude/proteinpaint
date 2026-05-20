@@ -1,10 +1,10 @@
 import { getUncomputableClause, get_bins } from './termdb.sql.js'
-import { annoNumericTypes } from '#shared/terms.js'
+import { dictionaryNumericTypes } from '#shared/terms.js'
 
 export const continuous = {
 	getCTE(tablename, term, ds, q, values, index, filter) {
 		const annoTable = `anno_${term.type}`
-		if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (continuous.getCTE)`
+		if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (continuous.getCTE)`
 
 		values.push(term.id)
 		const uncomputable = getUncomputableClause(term, q)
@@ -41,7 +41,7 @@ export const discrete = {
 	*/
 	getCTE(tablename, term, ds, q, values, index, filter) {
 		const annoTable = `anno_${term.type}`
-		if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (discrete.getCTE)`
+		if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table (discrete.getCTE)`
 
 		values.push(term.id)
 		const bins = get_bins(q, term, ds, index, filter)

@@ -1,11 +1,10 @@
 import { termsettingInit, get$id } from '#termsetting'
-import { get_bin_label } from '#shared/termdb.bins.js'
+import { isDictionaryType, get_bin_label, isNumericTerm } from '#shared'
 import { InputValuesTable } from './regression.inputs.values.table'
-import { Menu } from '#dom/menu'
+import { Menu } from '#dom'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
 import { get_defaultQ4fillTW } from './regression'
-import { isDictionaryType } from '#shared/terms.js'
 
 /*
 class instance is an input
@@ -271,16 +270,7 @@ export class InputTerm {
 
 			this.summarizeSample(tw, data.lst)
 
-			if (
-				tw.term.type == 'float' ||
-				tw.term.type == 'integer' ||
-				tw.term.type == 'geneExpression' ||
-				tw.term.type == 'isoformExpression' ||
-				tw.term.type == 'metaboliteIntensity' ||
-				tw.term.type == 'proteomeAbundance' ||
-				tw.term.type == 'ssGSEA' ||
-				tw.term.type == 'dnaMethylation'
-			) {
+			if (isNumericTerm(tw.term)) {
 				if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
 					this.termStatus.allowToSelectRefGrp = true
 				}

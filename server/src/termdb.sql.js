@@ -7,7 +7,7 @@ import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
 import { termCollectionCategorical, termCollectionNumeric } from './termdb.sql.termCollection.js'
 import { boxplot_getvalue } from './utils.js'
-import { DEFAULT_SAMPLE_TYPE, isNumericTerm, annoNumericTypes } from '#shared/terms.js'
+import { DEFAULT_SAMPLE_TYPE, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
 /*
 
@@ -162,7 +162,7 @@ export async function get_summary_numericcategories(q) {
 	}
 	if (q.ds.cohort.termdb.q.getSummaryNumericCategories) return q.ds.cohort.termdb.q.getSummaryNumericCategories(term)
 	const annoTable = `anno_${term.type}`
-	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_summary_numericcategories()`
+	if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_summary_numericcategories()`
 
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	const values = filter ? filter.values.slice() : []
@@ -694,7 +694,7 @@ at a numeric barchart
 
 */
 	const annoTable = `anno_${term.type}`
-	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericsummary()`
+	if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericsummary()`
 
 	const qfilter = typeof q.filter == 'string' ? JSON.parse(decodeURIComponent(q.filter)) : q.filter
 
@@ -762,7 +762,7 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 		and so on ...
 */
 	const annoTable = `anno_${term.type}`
-	if (!annoNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericMinMaxPct()`
+	if (!dictionaryNumericTypes.has(term.type)) throw `unknown '${annoTable}' table in get_numericMinMaxPct()`
 
 	const values = []
 	if (filter) {
