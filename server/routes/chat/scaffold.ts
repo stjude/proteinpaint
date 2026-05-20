@@ -4,7 +4,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { extract_hiercluster_terms_from_query } from './hiercluster.ts'
-import { SSGSEA, METABOLITE_INTENSITY, GENE_EXPRESSION } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 import type {
 	Scaffold,
 	SummaryScaffold,
@@ -491,7 +491,7 @@ Query: ${user_prompt}
 			genome,
 			ds,
 			geneFeatures,
-			GENE_EXPRESSION,
+			TermTypes.GENE_EXPRESSION,
 			filterTvs
 		)
 		mayLog('Time taken for hierCluster agent:', formatElapsedTime(Date.now() - time))
@@ -738,33 +738,33 @@ export async function getScaffold_hierarchical(
 	const prompt = `You are a ProteinPaint hierarchical clustering classifier. Your task is to determine what kind of variable the user wants to cluster on.
 
 A hierarchical clustering plot clusters samples based on a chosen feature type. Classify the user's query into exactly one of the following categories:
-  - "${GENE_EXPRESSION}": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
-- "${METABOLITE_INTENSITY}": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
+  - "${TermTypes.GENE_EXPRESSION}": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
+- "${TermTypes.METABOLITE_INTENSITY}": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
   - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
-  - "${SSGSEA}": the user wants to cluster on ssGSEA scores for gene sets.
+  - "${TermTypes.SSGSEA}": the user wants to cluster on ssGSEA scores for gene sets.
 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-"variableType": "${GENE_EXPRESSION}" | "${METABOLITE_INTENSITY}" | "dictionary" | "${SSGSEA}" | "ambiguous"
+"variableType": "${TermTypes.GENE_EXPRESSION}" | "${TermTypes.METABOLITE_INTENSITY}" | "dictionary" | "${TermTypes.SSGSEA}" | "ambiguous"
 }
 
 ## EXAMPLES
 
 Q: "Cluster ABC, PQR and XYZ gene expression"
-A: { "variableType": "${GENE_EXPRESSION}" }
+A: { "variableType": "${TermTypes.GENE_EXPRESSION}" }
 
 Q: "Show a gene expression dendrogram for XYZ4, CDE5 and AZF1"
-A: { "variableType": "${GENE_EXPRESSION}" }
+A: { "variableType": "${TermTypes.GENE_EXPRESSION}" }
 
 Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
-A: { "variableType": "${GENE_EXPRESSION}" }
+A: { "variableType": "${TermTypes.GENE_EXPRESSION}" }
 
 Q: "Cluster patients by glucose and lactate metabolite intensity"
-A: { "variableType": "${METABOLITE_INTENSITY}" }
+A: { "variableType": "${TermTypes.METABOLITE_INTENSITY}" }
 
 Q: "Show a hierarchical clustering of metabolites"
-A: { "variableType": "${METABOLITE_INTENSITY}" }
+A: { "variableType": "${TermTypes.METABOLITE_INTENSITY}" }
 
 Q: "Cluster samples using age, sex, and treatment response"
 A: { "variableType": "dictionary" }
@@ -776,10 +776,10 @@ Q: "Hierarchical clustering by clinical variables"
 A: { "variableType": "dictionary" }
 
 Q: "Hierarchical clustering of ABC, IGH, and HGT ssGSEA scores"
-A: { "variableType": "${SSGSEA}" }
+A: { "variableType": "${TermTypes.SSGSEA}" }
 
 Q: "cluster ssGSEA scores from XYZ, PQR, and LMN genesets"
-A: { "variableType": "${SSGSEA}" }
+A: { "variableType": "${TermTypes.SSGSEA}" }
 
 Q: "cluster hvbjkbvk_gvjhv genes"
 Comment: Not clear what kind of gene (inside the geneset) dataType the user is referring to 
@@ -797,8 +797,8 @@ Query: ${user_prompt}
 	} catch {
 		throw new Error(`Failed to parse hierarchical variable-type classifier response: ${response}`)
 	}
-	if (variableType === GENE_EXPRESSION) {
-		if (allowedTermTypes.includes(GENE_EXPRESSION)) {
+	if (variableType === TermTypes.GENE_EXPRESSION) {
+		if (allowedTermTypes.includes(TermTypes.GENE_EXPRESSION)) {
 			return await hierarchicalGeneExpression(user_prompt, llm, genome, genes_list, dataset_json, ds, dbPath)
 		} else {
 			return {
@@ -812,8 +812,8 @@ Query: ${user_prompt}
 			type: 'text',
 			text: 'Not clear what gene dataType the user is referring to.'
 		}
-	} else if (variableType === METABOLITE_INTENSITY) {
-		if (allowedTermTypes.includes(METABOLITE_INTENSITY)) {
+	} else if (variableType === TermTypes.METABOLITE_INTENSITY) {
+		if (allowedTermTypes.includes(TermTypes.METABOLITE_INTENSITY)) {
 			return {
 				type: 'text',
 				text: 'Hierarchical clustering for metabolite intensity is not currently supported.'
@@ -824,8 +824,8 @@ Query: ${user_prompt}
 				text: 'Hierarchical clustering for metabolite intensity data is not supported because metabolite intensity data is not available for this dataset.'
 			}
 		}
-	} else if (variableType === SSGSEA) {
-		if (allowedTermTypes.includes(SSGSEA)) {
+	} else if (variableType === TermTypes.SSGSEA) {
+		if (allowedTermTypes.includes(TermTypes.SSGSEA)) {
 			return await hierarchicalDictionaryssGSEA(user_prompt, llm, ds, dbPath, genes_list, dataset_json, genome)
 		} else {
 			return {

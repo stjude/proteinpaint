@@ -1,5 +1,5 @@
 import type { LlmConfig } from '#types'
-import { PROTEOME_ABUNDANCE, SSGSEA, GENE_EXPRESSION, GENE_VARIANT } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 import type {
 	SummaryPhrase2EntityResult,
 	Phrase2EntityResult,
@@ -29,7 +29,7 @@ export interface GeneTerm {
 
 export interface GeneSetTerm {
 	geneSet: string
-	type: typeof SSGSEA | typeof GENE_VARIANT | typeof GENE_EXPRESSION
+	type: typeof TermTypes.SSGSEA | typeof TermTypes.GENE_VARIANT | typeof TermTypes.GENE_EXPRESSION
 }
 
 export interface MethTerm {
@@ -50,7 +50,7 @@ export type Value = {
 
 function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any): Value | undefined {
 	switch (twEntity.termType) {
-		case GENE_EXPRESSION: {
+		case TermTypes.GENE_EXPRESSION: {
 			const relevant_genes = extractGenesFromPrompt(twEntity.phrase, genes_list)
 			let twResult: Term
 			if (relevant_genes.length > 0) {
@@ -86,11 +86,11 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 				}
 			}
 		}
-		case SSGSEA: {
+		case TermTypes.SSGSEA: {
 			const geneSetNames = extractGenesetsFromPromptNew(twEntity.phrase, getGenesetNames(genome))
 			const twResult: GeneSetTerm = {
 				geneSet: geneSetNames.length > 0 ? geneSetNames[0] : 'UNKNOWN_GENESET',
-				type: SSGSEA
+				type: TermTypes.SSGSEA
 			}
 			if ('logicalOperator' in twEntity) {
 				return {
@@ -106,10 +106,10 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 		case 'dnaMethylation': {
 			return undefined
 		}
-		case GENE_VARIANT: {
+		case TermTypes.GENE_VARIANT: {
 			return undefined
 		}
-		case PROTEOME_ABUNDANCE: {
+		case TermTypes.PROTEOME_ABUNDANCE: {
 			return undefined
 		}
 		default: {

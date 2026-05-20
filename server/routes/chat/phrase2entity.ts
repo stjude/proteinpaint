@@ -20,7 +20,7 @@ import type {
 	PrebuiltScatterScaffold
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
-import { PROTEOME_ABUNDANCE, SSGSEA, GENE_EXPRESSION, GENE_VARIANT, DNA_METHYLATION } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 import assert from 'assert'
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
@@ -83,7 +83,7 @@ export function collectLeaves(
  * receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
  *
  * For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid
- * because "expression of TP53" can be resolved to a GENE_EXPRESSION term type which is present in the dataset)
+ * because "expression of TP53" can be resolved to a TermTypes.GENE_EXPRESSION term type which is present in the dataset)
  * We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
  * nondictionary types such as metabolites, genesets, etc.
  */
@@ -211,23 +211,23 @@ async function inferEntities(
 		return validatedNonDict // This means we encountered an error or an ambiguous gene prompt, and we want to return early with a user-facing message.
 	} else if ('geneFeatures' in validatedNonDict) {
 		if (validatedNonDict.geneFeatures.dataType == 'expression') {
-			return { termType: GENE_EXPRESSION, phrase: phrase }
+			return { termType: TermTypes.GENE_EXPRESSION, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
-			return { termType: DNA_METHYLATION, phrase: phrase }
+			return { termType: TermTypes.DNA_METHYLATION, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'variant') {
-			return { termType: GENE_VARIANT, phrase: phrase }
+			return { termType: TermTypes.GENE_VARIANT, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'proteome') {
-			return { termType: PROTEOME_ABUNDANCE, phrase: phrase }
+			return { termType: TermTypes.PROTEOME_ABUNDANCE, phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
 		}
 	} else if ('geneSetFeatures' in validatedNonDict) {
-		if (validatedNonDict.geneSetFeatures.dataType === SSGSEA) {
-			return { termType: SSGSEA, phrase: phrase }
-		} else if (validatedNonDict.geneSetFeatures.dataType === GENE_VARIANT) {
-			return { termType: GENE_VARIANT, phrase: phrase }
-		} else if (validatedNonDict.geneSetFeatures.dataType === GENE_EXPRESSION) {
-			return { termType: GENE_EXPRESSION, phrase: phrase }
+		if (validatedNonDict.geneSetFeatures.dataType === TermTypes.SSGSEA) {
+			return { termType: TermTypes.SSGSEA, phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === TermTypes.GENE_VARIANT) {
+			return { termType: TermTypes.GENE_VARIANT, phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === TermTypes.GENE_EXPRESSION) {
+			return { termType: TermTypes.GENE_EXPRESSION, phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneSetFeatures:' + validatedNonDict.geneSetFeatures
 		}

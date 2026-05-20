@@ -1,4 +1,4 @@
-import type { SSGSEA, GENE_EXPRESSION, GENE_VARIANT, PROTEOME_ABUNDANCE, DNA_METHYLATION } from '#shared/terms.js'
+import type { TermTypes } from '#shared/terms.js'
 
 export type MsgToUser = {
 	type: 'text'
@@ -74,11 +74,11 @@ export function isHierarchicalScaffold(s: Scaffold): s is HierarchicalScaffold {
 // *** Entity Temp Types *** //
 type TermTypes =
 	| 'dictionary'
-	| typeof GENE_EXPRESSION
-	| typeof DNA_METHYLATION
-	| typeof GENE_VARIANT
-	| typeof PROTEOME_ABUNDANCE
-	| typeof SSGSEA
+	| typeof TermTypes.GENE_EXPRESSION
+	| typeof TermTypes.DNA_METHYLATION
+	| typeof TermTypes.GENE_VARIANT
+	| typeof TermTypes.PROTEOME_ABUNDANCE
+	| typeof TermTypes.SSGSEA
 
 export type Entity = {
 	termType: TermTypes
