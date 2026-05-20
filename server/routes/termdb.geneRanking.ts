@@ -2,15 +2,22 @@ import path from 'path'
 import fs from 'fs'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
-import type { GeneRankingRequest, GeneRankingResponse, RouteApi } from '#types'
-import { geneRankingPayload } from '#types/checkers'
+import type { GeneRankingRequest, GeneRankingResponse } from '#types'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/geneRanking',
-	methods: {
-		get: { ...geneRankingPayload, init },
-		post: { ...geneRankingPayload, init }
+export function init({ genomes }) {
+	return async (req, res): Promise<void> => {
+		try {
+			const q: GeneRankingRequest = (req.method === 'POST' ? req.body : req.query) || ({} as any)
+			if ((q as any).for === 'cluster') {
+				await handleCluster(q, res)
+			} else {
+				await handleData(q, res, genomes)
+			}
+		} catch (e: any) {
+			if (e instanceof Error && e.stack) console.log(e)
+			res.send({ error: e?.message || String(e) } satisfies GeneRankingResponse)
+		}
 	}
 }
 
@@ -160,20 +167,4 @@ async function handleCluster(q: any, res): Promise<void> {
 		usedColNames: col_names,
 		matrix: orderedMatrix
 	} satisfies GeneRankingResponse)
-}
-
-function init({ genomes }) {
-	return async (req, res): Promise<void> => {
-		try {
-			const q: GeneRankingRequest = (req.method === 'POST' ? req.body : req.query) || ({} as any)
-			if ((q as any).for === 'cluster') {
-				await handleCluster(q, res)
-			} else {
-				await handleData(q, res, genomes)
-			}
-		} catch (e: any) {
-			if (e instanceof Error && e.stack) console.log(e)
-			res.send({ error: e?.message || String(e) } satisfies GeneRankingResponse)
-		}
-	}
 }

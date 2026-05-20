@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { TermWrapper } from '../terms/tw.ts'
 import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
@@ -178,7 +177,7 @@ export type BoxPlotResponse = {
 
 // TODO: write more payload examples to help with automated testing and documentation, for non-prod use only
 
-export const violinBoxPayload: RoutePayload = {
+export const violinBoxPayload = {
 	request: {
 		typeId: 'ViolinBoxRequest'
 	},

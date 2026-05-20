@@ -1,6 +1,5 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
-import { getData } from '../src/termdb.matrix.js'
+import type { RouteApi, RoutePayload } from '#types'
+import { getData } from '#src/termdb.matrix.js'
 
 /*
 Route for the profile facility-radar chart. Returns both the aggregate median
@@ -24,18 +23,17 @@ Response shape:
 - Public role: `sites` is always [] and `sampleData` is undefined
   (defense-in-depth; the chart is also gated by isSupportedChartOverride).
 */
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'any' /*, checkers: TODO write validator */ },
+	response: { typeId: 'any' }
+}
 
 export const api: RouteApi = {
 	endpoint: 'termdb/profileRadarFacility2Scores',
 	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
+		get: payload,
+		post: payload
 	}
 }
 

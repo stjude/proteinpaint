@@ -1,24 +1,9 @@
-import type { CategoriesRequest, CategoriesResponse, RouteApi } from '#types'
+import type { CategoriesRequest, CategoriesResponse } from '#types'
 import type { ReqQueryAddons } from './types.ts'
-import { termdbCategoriesPayload } from '#types/checkers'
 import { getOrderedLabels } from '#src/termdb.barchart.js'
 import { getData } from '#src/termdb.matrix.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/categories',
-	methods: {
-		get: {
-			...termdbCategoriesPayload,
-			init
-		},
-		post: {
-			...termdbCategoriesPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		const q: CategoriesRequest = req.query
 		try {

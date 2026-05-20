@@ -1,5 +1,4 @@
-import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest, RouteApi } from '#types'
-import { diffMethPayload } from '#types/checkers'
+import type { DiffMethEntry, DiffMethFullResponse, DiffMethRequest } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { formatElapsedTime } from '#shared'
@@ -22,21 +21,7 @@ import type { DmCacheResult } from './types.ts'
  *   init → dmKeyInputs → getDmCacheResult → runDmFresh → helpers
  */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/diffMeth',
-	methods: {
-		get: {
-			...diffMethPayload,
-			init
-		},
-		post: {
-			...diffMethPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const q = req.query as DiffMethRequest

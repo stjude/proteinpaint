@@ -4,17 +4,7 @@ import { get_samples } from '#src/termdb.sql.js'
 //import { createGenerator } from 'ts-json-schema-generator'
 //import type { SchemaGenerator } from 'ts-json-schema-generator'
 //import path from 'path'
-import type {
-	ChatRequest,
-	ChatResponse,
-	LlmConfig,
-	RouteApi,
-	DbRows,
-	DbValue,
-	ClassificationType,
-	FilterTerm
-} from '#types'
-import { ChatPayload } from '#types/checkers'
+import type { ChatRequest, ChatResponse, LlmConfig, DbRows, DbValue, ClassificationType, FilterTerm } from '#types'
 import { extractResourceResponse } from './chat/resource.ts'
 import serverconfig from '../src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
@@ -157,21 +147,7 @@ function resolveChildType(
 	}
 }
 
-export const api: RouteApi = {
-	endpoint: 'termdb/chat',
-	methods: {
-		get: {
-			...ChatPayload,
-			init
-		},
-		post: {
-			...ChatPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res) => {
 		const q: ChatRequest = req.query
 		try {

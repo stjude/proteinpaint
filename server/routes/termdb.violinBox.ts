@@ -6,12 +6,10 @@ import type {
 	BoxPlotEntry,
 	BoxPlotData,
 	DescrStats,
-	RouteApi,
 	ValidGetDataResponse,
 	TermWrapper
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
-import { violinBoxPayload } from '#types/checkers'
 import { scaleLinear, scaleLog } from 'd3'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -28,21 +26,7 @@ import { mayLog } from '#src/helpers.ts'
  *  tempValues is stripped before sending the response to the client. */
 type InternalBoxPlotEntry = BoxPlotEntry & { tempValues?: number[] }
 
-export const api: RouteApi = {
-	endpoint: 'termdb/violinBox',
-	methods: {
-		get: {
-			...violinBoxPayload,
-			init
-		},
-		post: {
-			...violinBoxPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		const q: ViolinBoxRequest & ReqQueryAddons = req.query
 		let result
