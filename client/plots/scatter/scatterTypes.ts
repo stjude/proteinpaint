@@ -113,6 +113,10 @@ export type ScatterChart = {
 	labelsG?: SvgG
 	/** Server generated image for a single cell plot */
 	src?: string
+	/** css width of the server-rendered canvas image */
+	canvasWidth?: number
+	/** css height of the server-rendered canvas image */
+	canvasHeight?: number
 	/** Total number of samples in a plot. */
 	totalSampleCount?: number
 	/** d3 linear scale mapping data values to colors for continuous color mode */

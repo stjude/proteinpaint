@@ -144,8 +144,16 @@ async function getSingleCellScatter(req, res, ds) {
 		}
 
 		if (totalCellCount >= q.canvasSettings.cutoff) {
-			const src = await makeCanvas(q, samples, colorMap, { xMin, xMax, yMin, yMax, geMin, geMax }, tw.term.type)
+			const { src, canvasWidth, canvasHeight } = await makeCanvas(
+				q,
+				samples,
+				colorMap,
+				{ xMin, xMax, yMin, yMax, geMin, geMax },
+				tw.term.type
+			)
 			output.result.Default.src = src
+			output.result.Default.canvasWidth = canvasWidth
+			output.result.Default.canvasHeight = canvasHeight
 			/** Since the sample array is not returned, send the sample count for the legend */
 			output.result.Default.totalSampleCount = totalCellCount
 		} else {
@@ -169,7 +177,7 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 
 	const canvas = createCanvas(width * dpr, height * dpr)
 	const ctx = canvas.getContext('2d')
-	if (devicePixelRatio > 1) ctx.scale(dpr, dpr)
+	if (dpr > 1) ctx.scale(dpr, dpr)
 
 	//This accounts for user defined min and max scales values
 	const xScale = scaleLinear()
@@ -209,5 +217,5 @@ async function makeCanvas(q, samples, colorMap: ColorMap, range: SingleCellRange
 		ctx.fill()
 	}
 
-	return canvas.toDataURL()
+	return { src: canvas.toDataURL(), canvasWidth: width, canvasHeight: height }
 }

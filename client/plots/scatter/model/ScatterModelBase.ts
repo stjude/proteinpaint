@@ -43,6 +43,8 @@ export abstract class ScatterModelBase {
 		const chart: ScatterChart = { id, data, cohortSamples, colorLegend, shapeLegend }
 		if (data.src) {
 			chart.src = data.src
+			if ('canvasWidth' in data) chart.canvasWidth = data.canvasWidth
+			if ('canvasHeight' in data) chart.canvasHeight = data.canvasHeight
 			if (data.totalSampleCount) chart.totalSampleCount = data.totalSampleCount
 			this.is2DLarge = true
 		}

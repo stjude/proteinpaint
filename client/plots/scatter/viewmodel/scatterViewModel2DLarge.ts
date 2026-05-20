@@ -100,7 +100,10 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 		 * and removal. A new legend is rendered each time. Simply add the image. */
 		chart.svg.selectAll('.sjpp-scatter-img-g').remove()
 		const imgG = chart.svg.append('g').attr('class', 'sjpp-scatter-img-g')
-		this.canvas = imgG.append('image').attr('xlink:href', chart.src)
+		const img = imgG.append('image').attr('xlink:href', chart.src)
+		if (chart.canvasWidth) img.attr('width', chart.canvasWidth)
+		if (chart.canvasHeight) img.attr('height', chart.canvasHeight)
+		this.canvas = img
 	}
 }
 

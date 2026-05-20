@@ -98,6 +98,10 @@ export type SingleCellPlotDataResult = {
 	samples?: FormattedCell2Sample[]
 	/** If over the cutoff, will return image instead of sample array */
 	src?: string
+	/** css dimensions of the canvas image, used to display at
+	 * the correct size when devicePixelRatio > 1 */
+	canvasWidth?: number
+	canvasHeight?: number
 	/** When no sample array is returned, send the total sample count for
 	 * the legend. */
 	totalSampleCount?: number
