@@ -10,7 +10,7 @@ Author: PP Team
 */
 
 import { dofetch3 } from '#common/dofetch'
-import { renderTable, sayerror, sayinfo, make_one_checkbox } from '#dom'
+import { renderTable, sayerror, make_one_checkbox } from '#dom'
 import { select } from 'd3-selection'
 import type { GdcGRIN2listRequest } from '#types'
 import { mclass, dtsnvindel, class2SOterm, bplen } from '#shared'
@@ -2215,10 +2215,9 @@ async function getFilesAndShowTable(obj) {
 			}
 		} catch (e: any) {
 			if (e?.code === 'CACHE_BUSY') {
-				sayinfo(obj.errDiv, e.message || e, {
-					actionLabel: 'Retry',
-					onAction: () => runGRIN2Analysis(lst, button, obj, filteredFiles)
-				})
+				if (window.confirm(e.message || String(e))) {
+					runGRIN2Analysis(lst, button, obj, filteredFiles)
+				}
 			} else sayerror(obj.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
 		}

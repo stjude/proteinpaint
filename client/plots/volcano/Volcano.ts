@@ -2,7 +2,7 @@ import type { MassState, BasePlotConfig } from '#mass/types/mass'
 import { getCompInit, copyMerge, type RxComponent, type AppApi } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { fillTermWrapper } from '#termsetting'
-import { Menu, sayerror, sayinfo } from '#dom'
+import { Menu, sayerror } from '#dom'
 import { controlsInit } from '../controls'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from './settings/defaults'
 import type { VolcanoOpts, VolcanoDom } from './VolcanoTypes'
@@ -128,7 +128,7 @@ class Volcano extends PlotBase implements RxComponent {
 			if (!response || response.error || !response.data || !response.data.volcanoPng || !response.data.totalRows) {
 				const msg = response?.error || 'No data returned from server'
 				if (response?.code === 'CACHE_BUSY') {
-					sayinfo(this.dom.error, msg, { actionLabel: 'Retry', onAction: () => this.main() })
+					if (window.confirm(msg)) this.main()
 				} else sayerror(this.dom.error, msg)
 				clearTimeout(showWait)
 				this.dom.wait.style('display', 'none')

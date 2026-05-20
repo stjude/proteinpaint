@@ -4,8 +4,24 @@ import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { mayLog } from '#src/helpers.ts'
 import { fileSize, formatElapsedTime } from '#shared'
-import { CACHE_OR_RECOMPUTE_SUBDIRS } from '#src/utils/types.ts'
-import type { CacheOrRecomputeOpts, CacheOrRecomputeResult, CacheSubdir } from '#src/utils/types.ts'
+import type { CacheOrRecomputeOpts, CacheOrRecomputeResult } from '#src/utils/types.ts'
+
+/** Subdirs of serverconfig.cachedir that the cacheOrRecompute module
+ * writes JSON cache files to. `maxPending` caps the concurrent compute
+ * jobs per subdir and is the only field cacheOrRecompute itself reads.
+ * CacheManager registers every entry automatically and supplies the
+ * eviction policy (maxAge/skipMs/maxSize) from its own defaults. To add
+ * a new analysis type, append a new entry here — no other file needs
+ * to be edited. */
+export const cacheJobPolicies = {
+	de: { maxPending: 5 },
+	dm: { maxPending: 5 },
+	gsea: { maxPending: 5 },
+	grin2: { maxPending: 5 },
+	topve: { maxPending: 5 }
+} as const satisfies Record<string, { maxPending: number }>
+
+export type CacheSubdir = keyof typeof cacheJobPolicies
 
 /** Hash the given object to a 32-hex-char cacheId via
  * sha256(JSON.stringify(args)). Truncation at 32 chars is safe for cache
@@ -98,7 +114,10 @@ export async function cacheOrRecompute<TArgs, TResult>(
 	 routed through cacheOrRecompute: at boot, merge
 	 `serverconfig.features?.cacheMonitor?.subdirs?.[subdir]?.maxPending`
 	 into a module-local map and read from that here instead. */
-	const cap = CACHE_OR_RECOMPUTE_SUBDIRS[cacheSubdir].maxPending
+	if (!cacheJobPolicies[cacheSubdir]) {
+		throw new Error(`Unknown cacheSubdir '${cacheSubdir}'. Add it to cacheJobPolicies in utils/cacheOrRecompute.ts.`)
+	}
+	const cap = cacheJobPolicies[cacheSubdir].maxPending
 	const inUse = pendingCount.get(cacheSubdir) ?? 0
 	if (inUse >= cap) throw makeBusyError()
 
