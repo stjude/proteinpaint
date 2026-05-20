@@ -1,5 +1,5 @@
 import type { RoutePayload, TermdbSampleScatterRequest, Filter } from '#types'
-import { validGenomeDs, validString } from './common.ts'
+import { validGenomeDs, validString, validBoolean } from './common.ts'
 
 export const termdbSampleScatterPayload: RoutePayload = {
 	request: {
@@ -25,6 +25,6 @@ export function validTermdbSampleScatterRequest(input): TermdbSampleScatterReque
 		chartType: !input.chartType ? undefined : validString(input.chartType, 'invalid chartType'),
 		singleCellPlot: input.singleCellPlot as any,
 		colorColumn: input.colorColumn as any,
-		excludeOutliers: input.excludeOutliers
+		excludeOutliers: validBoolean(input.excludeOutliers)
 	}
 }

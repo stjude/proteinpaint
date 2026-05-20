@@ -17,7 +17,7 @@ export function validAIProjectAdminRequest(input): AIProjectAdminRequest {
 		for: validAIProjectFor(input.for),
 		/** required for 'project' and 'selection' requests */
 		/* TODO: create separate init functions for each route method, so project will be either optional or required */
-		project: input.project ? undefined : getValidAIAdminProject(input.project)
+		project: !input.project ? undefined : getValidAIAdminProject(input.project)
 	}
 }
 
@@ -31,9 +31,12 @@ function validAIProjectFor(val) {
 function getValidAIAdminProject(input) {
 	return {
 		name: validString(input.name),
-		id: validNumber(input.id),
-		filter: validString(input.filter),
+		id: input.project === undefined ? undefined : validNumber(input.id),
+		filter: input.project === undefined ? undefined : validString(input.filter),
 		classes: input.classes as any, // TODO: convert to a validator function call
-		images: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`)
+		images:
+			input.project === undefined
+				? undefined
+				: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`)
 	}
 }
