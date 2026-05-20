@@ -11,13 +11,17 @@ export type AIProjectAdminRequest = {
 	 */
 	for: AIProjectAdminForValues // TODO: use expressjs routing instead of this payload parameter
 	/** required for 'project' and 'selection' requests */
-	project?: {
-		name: string
-		id?: number
-		filter?: string
-		classes?: any[]
-		images?: string[]
-	}
+	project?: AIProjectAdminProject
+}
+
+export type AIProjectAdminProject = {
+	name: string
+	id?: number
+	filter?: string
+	classes?: any[]
+	images?: string[]
+	type?: string
+	users?: string[]
 }
 
 export type AIProjectAdminResponse = {
