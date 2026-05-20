@@ -1,32 +1,28 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
-import { getData } from '../src/termdb.matrix.js'
+import type { RouteApi, RoutePayload } from '#types'
+import { getData } from '#src/termdb.matrix.js'
 
 /*
-Route for the profile bar chart. Returns the aggregated median percentage
-per module/domain across all eligible sites.
+Route for the profile polar chart. Returns the aggregated median percentage
+per module across all eligible sites for the active cohort.
 
-Each bar chart row contributes term1 (objective) and optionally term2
-(subjective); the client flattens them into a single scoreTerms[] before
-sending.
-
-- The facility term id is derived server-side from term ID prefixes already in
-  the request — no client-supplied facilityTW.
+- The facility term id is derived server-side by scanning term ID prefixes
+  already in the request (scoreTerms or filter), so the client never needs
+  cohort-specific logic and never sends facilityTW.
 - Site data is queried via getData() (server/src/termdb.matrix.js).
-- Public role: `sites` is always [] in the response.
+- Public role: `sites` is always [] in the response (no site IDs exposed).
 */
 
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'any' /*, checkers: TODO write validator */ },
+	response: { typeId: 'any' }
+}
+
 export const api: RouteApi = {
-	endpoint: 'termdb/profileBarchart2Scores',
+	endpoint: 'termdb/profilePolar2Scores',
 	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
+		get: payload,
+		post: payload
 	}
 }
 
@@ -65,11 +61,14 @@ function derivePrefix(query: any): string {
 
 async function getScores(query: any, ds: any) {
 	// 1. Derive facility term id from term IDs already in the request.
-	const { activeCohort, clientAuthResult } = query.__protected__
+	//    scoreTerms and filter terms share the same cohort prefix as the facility term,
+	//    so no client-supplied facilityTW is needed.
+	const { activeCohort, clientAuthResult } = query.__protected__ // still needed for auth
 	const prefix = derivePrefix(query)
 	const facilityTermId = `${prefix}UNIT`
 
 	// Minimal term wrapper — getData will fill term.values, $id, etc.
+	// via ds.cohort.termdb.q.termjsonByOneid(facilityTermId)
 	const facilityTW: any = { term: { id: facilityTermId }, q: {} }
 
 	// 2. Collect all terms for getData: facility + every score/maxScore pair
@@ -79,7 +78,7 @@ async function getScores(query: any, ds: any) {
 		if (t.maxScore?.term) terms.push(t.maxScore)
 	}
 
-	// 3. Allow facility term to be seen by all users when not filtering by user sites
+	// 3. Allow facility term to be seen by all users (same logic as existing route)
 	if (!query.filterByUserSites) {
 		query.__protected__.ignoredTermIds.push(facilityTermId)
 	}
@@ -107,12 +106,19 @@ async function getScores(query: any, ds: any) {
 		return { value: val, label }
 	})
 	if (userSites && query.filterByUserSites) {
+		// getData() already enforces access control via checkAccessToSampleData();
+		// this further narrows the site list to what the user is authorised to see
 		sites = sites.filter(s => userSites.includes(s.value))
 	}
 	sites.sort((a, b) => a.label.localeCompare(b.label))
 
-	// 6. Compute median percentage per score term across all eligible sites.
+	// 6. Compute median percentage per module across all eligible sites.
+	//    When only one site is accessible (sites.length == 1) the median of a
+	//    single value equals that value — identical to the old route's sampleData shortcut.
 	const samples: any[] = Object.values(raw.samples)
+	// Only filter to userSites when filterByUserSites is explicitly enabled.
+	// When filterByUserSites is false, facilityTW is in ignoredTermIds so getData()
+	// returns all sites — median should be computed across all sites (global aggregate)
 	const eligibleSamples =
 		userSites && query.filterByUserSites ? samples.filter(s => userSites.includes(s[facilityTW.$id].value)) : samples
 
@@ -133,32 +139,12 @@ async function getScores(query: any, ds: any) {
 /**
  * For each sample (site), computes (score / maxScore) * 100,
  * collects all values, sorts them, and returns the median — rounded to integer.
- * d.maxScore can be either a number or a term wrapper.
- * Skips samples where score or maxScore are missing or maxScore is zero (to avoid NaN/Infinity).
- * Returns null when no samples have valid data for the term.
+ * Returns null when no samples have data for the term.
  */
 function computeMedianPercentage(d: any, samples: any[]): number | null {
-	const percentages: number[] = []
-
-	for (const s of samples) {
-		const scoreValue = s[d.score.$id]?.value
-		if (scoreValue == null) continue
-
-		// Resolve maxScore: either a number or a term wrapper
-		let maxScoreValue: number | null = null
-		if (typeof d.maxScore === 'number') {
-			maxScoreValue = d.maxScore
-		} else {
-			// d.maxScore is a term wrapper
-			maxScoreValue = s[d.maxScore.$id]?.value
-		}
-
-		// Skip if max score is null or zero (avoid NaN or Infinity)
-		if (maxScoreValue == null || maxScoreValue === 0) continue
-
-		const percentage = (scoreValue / maxScoreValue) * 100
-		percentages.push(percentage)
-	}
+	const percentages = samples
+		.filter(s => s[d.score.$id]?.value != null)
+		.map(s => (s[d.score.$id].value / (s[d.maxScore.$id]?.value || d.maxScore)) * 100)
 
 	if (percentages.length === 0) return null
 	percentages.sort((a, b) => a - b)

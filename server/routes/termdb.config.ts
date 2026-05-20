@@ -14,22 +14,7 @@ import {
 } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
-export const api: any = {
-	endpoint: 'termdb/config',
-	methods: {
-		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res) => {
 		const q = req.query
 		try {

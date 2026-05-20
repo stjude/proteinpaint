@@ -4,7 +4,7 @@ import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHa
 import SessionManager from '#src/wsisessions/SessionManager.ts'
 import { getDbConnection } from '#src/aiHistoDBConnection.js'
 import type Database from 'better-sqlite3'
-import { getImages } from '#routes/aiProjectAdmin.js'
+import { getImages } from '../../routes/aiProjectAdmin.js'
 
 const payload: RoutePayload = {
 	init,

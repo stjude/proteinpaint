@@ -1,5 +1,5 @@
 import { decimalPlacesUntilFirstNonZero } from '#shared/roundValue.js'
-import { getDescrStats } from '#routes/termdb.descrstats.ts'
+import { getDescrStats } from '../../routes/termdb.descrstats.ts'
 
 /** Helper functions for building ad hoc dictionaries.
  * Only used in the build script. */

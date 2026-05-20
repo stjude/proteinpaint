@@ -1,25 +1,10 @@
-import type { DescrStatsRequest, DescrStatsResponse, DescrStats, RouteApi } from '#types'
+import type { DescrStatsRequest, DescrStatsResponse, DescrStats } from '#types'
 import type { ReqQueryAddons } from './types.ts'
-import { descrStatsPayload } from '#types/checkers'
 import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/descrstats',
-	methods: {
-		get: {
-			...descrStatsPayload,
-			init
-		},
-		post: {
-			...descrStatsPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		const q: DescrStatsRequest & ReqQueryAddons = req.query
 		try {

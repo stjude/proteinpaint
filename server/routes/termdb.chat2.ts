@@ -1,5 +1,4 @@
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification, GeneDataTypeResult } from '#types'
-import { ChatPayload } from '#types/checkers'
+import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification, GeneDataTypeResult } from '#types'
 import { classifyQuery } from './chat/classify1.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
 import { classifyPlotType } from './chat/plot.ts'
@@ -18,21 +17,7 @@ import path from 'path'
 import fs from 'fs'
 import { readJSONFile } from './chat/utils.ts'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/chat2',
-	methods: {
-		get: {
-			...ChatPayload,
-			init
-		},
-		post: {
-			...ChatPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res) => {
 		const q: ChatRequest = req.query
 		try {

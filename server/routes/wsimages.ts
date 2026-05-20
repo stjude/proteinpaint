@@ -3,8 +3,7 @@ import qs from 'qs'
 import path from 'path'
 import { CookieJar } from 'tough-cookie'
 import { promisify } from 'util'
-import type { PredictionOverlay, RouteApi, WSImagesRequest, WSImagesResponse } from '#types'
-import { wsImagesPayload } from '#types/checkers'
+import type { PredictionOverlay, WSImagesRequest, WSImagesResponse } from '#types'
 import SessionManager from '../src/wsisessions/SessionManager.ts'
 import type { SessionData } from '../src/wsisessions/SessionManager.ts'
 import { ShardManager } from '#src/sharding/ShardManager.ts'
@@ -12,22 +11,7 @@ import { TileServerShardingAlgorithm } from '#src/sharding/TileServerShardingAlg
 import type { TileServerShard } from '#src/sharding/TileServerShard.ts'
 import serverconfig from '#src/serverconfig.js'
 
-const routePath = 'wsimages'
-export const api: RouteApi = {
-	endpoint: `${routePath}`,
-	methods: {
-		get: {
-			...wsImagesPayload,
-			init
-		},
-		post: {
-			...wsImagesPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const wSImagesRequest: WSImagesRequest = req.query

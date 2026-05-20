@@ -1,5 +1,5 @@
 import type { RoutePayload, RouteApi } from '#types'
-import { init } from '../../routes/termdb.chat2.ts'
+import { init } from '../../routes/termdb.chat.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -8,7 +8,7 @@ const payload: RoutePayload = {
 }
 
 export const api: RouteApi = {
-	endpoint: 'termdb/chat2',
+	endpoint: 'termdb/chat',
 	methods: {
 		get: payload,
 		post: payload

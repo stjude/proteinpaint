@@ -9,7 +9,7 @@ export type RouteApi = {
 }
 
 export type RoutePayload = {
-	init?: RouteInit
+	init: RouteInit
 	request: RouteMethod
 	response: RouteMethod
 	/** if examples are not provided, will not test */

@@ -1,6 +1,5 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
-import { getData } from '../src/termdb.matrix.js'
+import type { RouteApi, RoutePayload } from '#types'
+import { getData } from '#src/termdb.matrix.js'
 
 /*
 Route for the profile radar chart. Returns the aggregated median percentage
@@ -16,17 +15,17 @@ client flattens them into a single scoreTerms[] before sending.
 - Zero-score sites are included in the median (via != null filter).
 */
 
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'any' /*, checkers: TODO write validator */ },
+	response: { typeId: 'any' }
+}
+
 export const api: RouteApi = {
 	endpoint: 'termdb/profileRadar2Scores',
 	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
+		get: payload,
+		post: payload
 	}
 }
 

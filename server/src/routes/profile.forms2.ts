@@ -1,6 +1,5 @@
-import type { RouteApi } from '#types'
-import { ProfileForms2ScoresPayload } from '#types/checkers'
-import { getData } from '../src/termdb.matrix.js'
+import type { RouteApi, RoutePayload } from '#types'
+import { getData } from '#src/termdb.matrix.js'
 
 /*
 Route for the profileForms2 (Templates) chart. Returns aggregated categorical
@@ -17,17 +16,17 @@ termdbConfig.plotConfigByCohort[cohort].profileForms2.domains on the client;
 no helper is needed here.
 */
 
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'ProfileForms2ScoresRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'ProfileForms2ScoresResponse' }
+}
+
 export const api: RouteApi = {
 	endpoint: 'termdb/profileForms2Scores',
 	methods: {
-		get: {
-			...ProfileForms2ScoresPayload,
-			init
-		},
-		post: {
-			...ProfileForms2ScoresPayload,
-			init
-		}
+		get: payload,
+		post: payload
 	}
 }
 

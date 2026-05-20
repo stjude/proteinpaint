@@ -8,7 +8,7 @@ const payload: RoutePayload = {
 }
 
 export const api: RouteApi = {
-	endpoint: 'termdb/chat2',
+	endpoint: 'termdb/chat3',
 	methods: {
 		get: payload,
 		post: payload

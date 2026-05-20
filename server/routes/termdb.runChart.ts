@@ -1,6 +1,22 @@
-import type { RouteApi, RunChartRequest, RunChartSeries, RunChartSuccessResponse } from '#types'
-import { runChartPayload } from '#types/checkers'
+import type { RunChartRequest, RunChartSeries, RunChartSuccessResponse } from '#types'
 import { getDateFromNumber, getNumberFromDate } from '#shared/terms.js'
+
+export function init({ genomes }) {
+	return async (req, res): Promise<void> => {
+		try {
+			const q: RunChartRequest = req.query
+			const genome = genomes[q.genome]
+			if (!genome) throw new Error('invalid genome name')
+			const ds = genome.datasets?.[q.dslabel]
+			if (!ds) throw new Error('invalid ds')
+
+			const result = await getRunChart(q, ds)
+			res.send(result)
+		} catch (e: any) {
+			res.send(runChartErrorPayload(e.message || e))
+		}
+	}
+}
 
 /**
  * Parse numeric x (decimal year or legacy YYYY.MM) to year and month for bucketing.
@@ -33,20 +49,6 @@ export function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNu
 	}
 	if (!Number.isFinite(month) || month < 1 || month > 12) return null
 	return { yearNum: year, monthNum: month }
-}
-
-export const api: RouteApi = {
-	endpoint: 'termdb/runChart',
-	methods: {
-		get: {
-			...runChartPayload,
-			init
-		},
-		post: {
-			...runChartPayload,
-			init
-		}
-	}
 }
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartSuccessResponse> {
@@ -405,21 +407,4 @@ function buildOneSeries(
 /** Builds the error response body so it always includes required fields (e.g. series: []). */
 export function runChartErrorPayload(message: string): { error: string; series: RunChartSeries[] } {
 	return { error: String(message), series: [] }
-}
-
-function init({ genomes }) {
-	return async (req, res): Promise<void> => {
-		try {
-			const q: RunChartRequest = req.query
-			const genome = genomes[q.genome]
-			if (!genome) throw new Error('invalid genome name')
-			const ds = genome.datasets?.[q.dslabel]
-			if (!ds) throw new Error('invalid ds')
-
-			const result = await getRunChart(q, ds)
-			res.send(result)
-		} catch (e: any) {
-			res.send(runChartErrorPayload(e.message || e))
-		}
-	}
 }

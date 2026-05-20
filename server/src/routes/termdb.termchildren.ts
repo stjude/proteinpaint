@@ -1,6 +1,57 @@
-import type { RoutePayload } from '#types'
+import type { TermChildrenRequest, TermChildrenResponse, RouteApi, RoutePayload } from '#types'
+import { copy_term, get_ds_tdb } from '#src/termdb.js'
 
-export const termChildrenPayload: RoutePayload = {
+export const payload: RoutePayload = {
+	init,
 	request: { typeId: 'TermChildrenRequest' /*, checkers: TODO write validator */ },
 	response: { typeId: 'TermChildrenResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/termchildren',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
+
+function init({ genomes }) {
+	return async (req: any, res: any): Promise<void> => {
+		const q: TermChildrenRequest = req.query
+		try {
+			const g = genomes[req.query.genome]
+			if (!g) throw 'invalid genome name'
+			const [ds, tdb] = await get_ds_tdb(g, q)
+			if (!ds) throw 'invalid dataset name'
+			if (!tdb) throw 'invalid termdb object'
+			const result: TermChildrenResponse = await trigger_children(req, q, tdb)
+			res.send(result)
+		} catch (e) {
+			res.send({ error: e instanceof Error ? e.message : e })
+			if (e instanceof Error && e.stack) console.log(e)
+		}
+	}
+}
+
+async function trigger_children(
+	req: any,
+	q: {
+		genome?: string
+		dslabel?: string
+		embedder?: string
+		get_children?: number
+		tid: any
+		cohortValues?: any
+		treeFilter?: any
+	},
+	tdb: { q: { getTermChildren: (req: any, arg0: any, arg1: any, arg2: any) => any } }
+): Promise<TermChildrenResponse> {
+	/* get children terms
+may apply ssid: a premade sample set
+*/
+	if (!q.tid) throw 'no parent term id'
+	const cohortValues = q.cohortValues ? q.cohortValues : ''
+	const treeFilter = q.treeFilter ? q.treeFilter : ''
+	const terms = await tdb.q.getTermChildren(req, q.tid, cohortValues, treeFilter)
+	return { lst: terms.map(copy_term) }
 }
