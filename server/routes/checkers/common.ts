@@ -36,15 +36,15 @@ export function validString(input, err?: string): string {
 }
 
 export function validStringArr(input, err?: string): string[] {
-	if (!Array.isArray(input)) throw `input must be an array`
+	if (!Array.isArray(input)) throw err || `input must be an array`
 	for (const v of input) {
 		if (typeof v != 'string' || !v) throw err || `array entry must be a non-empty string`
 	}
 	return input
 }
 
-export function validNumber(input): number {
-	if (typeof input != 'number') throw 'input should be a number'
+export function validNumber(input, err?: string): number {
+	if (typeof input != 'number') throw err || 'input should be a number'
 	return input
 }
 

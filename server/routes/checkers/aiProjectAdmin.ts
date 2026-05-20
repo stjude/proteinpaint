@@ -31,14 +31,14 @@ function validAIProjectFor(val) {
 function getValidAIAdminProject(input): AIProjectAdminProject {
 	return {
 		name: validString(input.name),
-		id: input.project === undefined ? undefined : validNumber(input.id),
-		filter: input.project === undefined ? undefined : validString(input.filter),
+		id: input.id === undefined ? undefined : validNumber(input.id, 'invalid ai project.id'),
+		filter: input.filter === undefined ? undefined : validString(input.filter, 'invalid ai project.filter'),
 		classes: input.classes as any, // TODO: convert to a validator function call
 		images:
-			input.project === undefined
+			input.images === undefined
 				? undefined
 				: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`),
-		type: input.project === undefined ? undefined : validString(input.type),
-		users: input.project === undefined ? undefined : validStringArr(input.type)
+		type: input.type === undefined ? undefined : validString(input.type, 'invalid ai project.type'),
+		users: input.users === undefined ? undefined : validStringArr(input.users, 'invalid ai project.users')
 	}
 }
