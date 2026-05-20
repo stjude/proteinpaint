@@ -1,6 +1,6 @@
 import { mayLog } from '#src/helpers.ts'
 import { isNumericTerm } from '#shared/terms.js'
-import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
@@ -100,7 +100,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		// default method for differential gene expression analysis
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
-		plotState.plot.termType = GENE_EXPRESSION // placeholder(can this be something else as well?)
+		plotState.plot.termType = TermTypes.GENE_EXPRESSION // placeholder(can this be something else as well?)
 		const groups = [input.filter1, input.filter2]
 		plotState.plot.samplelst = groups
 		plotState.method = 'edgeR'
@@ -112,8 +112,8 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			throw 'Hierarchical clustering plot requires at least three terms, but it is empty in the input.'
 		} else if (HierTerms.length >= 3 && HierTerms[0].isDictionary) {
 			plotState.plot.dataType = 'numericDictTerm'
-		} else if (HierTerms.length >= 3 && HierTerms[0].type === SSGSEA) {
-			plotState.plot.dataType = SSGSEA
+		} else if (HierTerms.length >= 3 && HierTerms[0].type === TermTypes.SSGSEA) {
+			plotState.plot.dataType = TermTypes.SSGSEA
 		}
 
 		const terms: any[] = []
@@ -153,7 +153,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			const twLst: any[] = []
 			input.twLst.forEach((tw: any) => {
 				if (tw.isDictionary) delete tw.isDictionary
-				if (tw.geneSet && tw.type === GENE_EXPRESSION) {
+				if (tw.geneSet && tw.type === TermTypes.GENE_EXPRESSION) {
 					for (const geneTerm of tw.geneSet) {
 						twLst.push(geneTerm)
 					}
