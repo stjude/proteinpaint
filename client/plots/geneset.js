@@ -1,8 +1,7 @@
-import { getCompInit, copyMerge, sleep } from '../rx'
+import { getCompInit, copyMerge } from '../rx'
 import { GeneSetEditUIwithTabs /*, GeneSetEditArg, CallbackArg*/ } from '../dom/GeneSetEdit/GeneSetEditUIwithTabs.ts'
 import { fillTermWrapper } from '#termsetting'
 import { dofetch3 } from '#common/dofetch'
-import { sayinfo } from '#dom'
 
 // This is a reactive geneset component, meant for use within plotApp.
 // The usage in client/gdc/oncomatrix.js and geneExpClustering.js is as follows:
@@ -101,7 +100,7 @@ class GenesetComp {
 			// may ignore this error
 			if (e == 'stale sequenceId' || e.name == 'AbortError') return
 			if (e?.code === 'CACHE_BUSY' && this.opts.showWaitMessage) {
-				sayinfo(this.dom.body, e.message || e, { actionLabel: 'Retry', onAction: () => this.main() })
+				if (window.confirm(e.message || String(e))) this.main()
 				return
 			}
 			if (this.opts.showWaitMessage) {

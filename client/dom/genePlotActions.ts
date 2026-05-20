@@ -29,7 +29,6 @@ export function createLollipopFromGene(geneSymbol: string, app: any) {
  * to the user's selection.
  */
 export async function createMatrixFromGenes(geneSymbols: string[], app: any): Promise<void> {
-	// TODO: Improve this by maybe adding sayInfo that has a little div that shows a message letting the user know the matrix is being created with only the first N genes if they selected too many
 	const MAX_GENES = 100
 	const genesToUse = geneSymbols.slice(0, MAX_GENES)
 

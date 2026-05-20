@@ -4,7 +4,7 @@ import path from 'path'
 import crypto from 'crypto'
 import serverconfig from '#src/serverconfig.js'
 import { cacheFilePath, cacheOrRecompute, generateHash } from '#src/utils/cacheOrRecompute.ts'
-import { CACHE_OR_RECOMPUTE_SUBDIRS } from '#src/utils/types.ts'
+import { cacheJobPolicies } from '#src/utils/cacheOrRecompute.ts'
 import { canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
 
 /** Tests for the generic cache-or-recompute module. We use the existing
@@ -264,7 +264,7 @@ tape('timing logs are silent when debugmode is off', async t => {
 tape('pool gates DISTINCT keys, not same-key attachers', async t => {
 	ensureSubdir()
 	const tag = crypto.randomBytes(8).toString('hex')
-	const cap = CACHE_OR_RECOMPUTE_SUBDIRS.de.maxPending
+	const cap = cacheJobPolicies.de.maxPending
 
 	const slowOpts = (n: number) => ({
 		computeArgument: { tag, n, kind: 'pool-dedup' },
@@ -297,7 +297,7 @@ tape('pool gates DISTINCT keys, not same-key attachers', async t => {
 tape('distinct key beyond the cap rejects with CACHE_BUSY and status 429', async t => {
 	ensureSubdir()
 	const tag = crypto.randomBytes(8).toString('hex')
-	const cap = CACHE_OR_RECOMPUTE_SUBDIRS.de.maxPending
+	const cap = cacheJobPolicies.de.maxPending
 
 	const slowOpts = (n: number) => ({
 		computeArgument: { tag, n, kind: 'pool-busy' },
@@ -332,7 +332,7 @@ tape('distinct key beyond the cap rejects with CACHE_BUSY and status 429', async
 tape('client retry works once a slot frees (no negative caching of busy state)', async t => {
 	ensureSubdir()
 	const tag = crypto.randomBytes(8).toString('hex')
-	const cap = CACHE_OR_RECOMPUTE_SUBDIRS.de.maxPending
+	const cap = cacheJobPolicies.de.maxPending
 
 	const slowOpts = (n: number) => ({
 		computeArgument: { tag, n, kind: 'pool-retry' },

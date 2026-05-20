@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { CACHE_OR_RECOMPUTE_SUBDIRS } from './utils/types.ts'
+import { cacheJobPolicies } from './utils/cacheOrRecompute.ts'
 
 // configuration for each cache subdir
 type SubdirOpts = {
@@ -66,11 +66,22 @@ const subdirOptsDefaults: SubdirOpts = {
 	skipMs: 0 // run on every interval check
 }
 
+// Eviction policy shared by every cacheOrRecompute subdir. Lives here
+// (not in cacheJobPolicies) because cacheOrRecompute itself doesn't read
+// these fields — only CacheManager does.
+const cacheOrRecomputeEvictionDefaults = {
+	maxAge: day * 60,
+	skipMs: halfDay
+}
+
 // Auto-registered subdirs owned by cacheOrRecompute. The single source
 // of truth is utils/types.ts so adding a new analysis type there
 // automatically activates eviction here.
 const cacheOrRecomputeSubdirDefaults = Object.fromEntries(
-	Object.entries(CACHE_OR_RECOMPUTE_SUBDIRS).map(([name, opts]) => [name, { ...subdirOptsDefaults, ...opts }])
+	Object.entries(cacheJobPolicies).map(([name, opts]) => [
+		name,
+		{ ...subdirOptsDefaults, ...cacheOrRecomputeEvictionDefaults, ...opts }
+	])
 )
 
 // these configurations can be overriden by the argument to CacheManager constructor(),
@@ -139,10 +150,10 @@ export class CacheManager {
 		const subdirs = Object.assign({}, defaultOpts.subdirs, opts.subdirs || {})
 		for (const [dirName, dirOpts] of Object.entries(subdirs)) {
 			if (dirOpts === undefined) {
-				if (dirName in CACHE_OR_RECOMPUTE_SUBDIRS) {
+				if (dirName in cacheJobPolicies) {
 					throw new Error(
 						`Cannot disable required cacheOrRecompute subdir '${dirName}'. ` +
-							`Remove it from CACHE_OR_RECOMPUTE_SUBDIRS in utils/types.ts if it is no longer used.`
+							`Remove it from cacheJobPolicies in utils/cacheOrRecompute.ts if it is no longer used.`
 					)
 				}
 				delete subdirs[dirName]

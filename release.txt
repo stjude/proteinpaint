@@ -1,3 +1,2 @@
 Features:
  - Added a limit for the number of pending cache requests.
- - Introduced `sayinfo()` in `dom`, modeled after `sayerror()`, to notify the user with informational messages.

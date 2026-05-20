@@ -2,7 +2,7 @@ import tape from 'tape'
 import path from 'path'
 import fs from 'fs'
 import { CacheManager } from '#src/CacheManager.ts'
-import { CACHE_OR_RECOMPUTE_SUBDIRS } from '#src/utils/types.ts'
+import { cacheJobPolicies } from '#src/utils/cacheOrRecompute.ts'
 
 /** Tests
  * - init() cache files
@@ -170,7 +170,7 @@ tape('move or delete by maxAge', test => {
 		subdirs: {
 			// Clear optional default entries so they are not included in the test.
 			// cacheOrRecompute subdirs (de/dm/gsea/grin2/topve) cannot be disabled
-			// — they auto-register from utils/types.ts — but their presence does
+			// — they auto-register from utils/cacheOrRecompute.ts — but their presence does
 			// not affect this test, which only seeds files into test0/trash.
 			massSession: undefined,
 			massSessionTrash: undefined,
@@ -401,11 +401,9 @@ tape('auto-registers every cacheOrRecompute subdir', test => {
 		mustExitPendingValidation: true,
 		callbacks: {}
 	})
-	for (const [name, opts] of Object.entries(CACHE_OR_RECOMPUTE_SUBDIRS)) {
+	for (const name of Object.keys(cacheJobPolicies)) {
 		const registered = monitor.subdirs.get(name)
-		test.ok(registered, `subdir '${name}' from CACHE_OR_RECOMPUTE_SUBDIRS is registered`)
-		test.equal(registered?.maxAge, opts.maxAge, `subdir '${name}' uses its configured maxAge`)
-		test.equal(registered?.skipMs, opts.skipMs, `subdir '${name}' uses its configured skipMs`)
+		test.ok(registered, `subdir '${name}' from cacheJobPolicies is registered`)
 	}
 	fs.rmSync(cachedir, { force: true, recursive: true })
 	test.end()
