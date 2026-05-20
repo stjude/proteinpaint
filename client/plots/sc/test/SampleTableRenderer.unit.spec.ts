@@ -14,7 +14,6 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
  *   - renderSamplesTable() noButtonCallback should call interactions.updateItem
  *   - renderSamplesTable() noButtonCallback should show plotsBtnsDiv
  *   - updateTable() should return early when sampleId is undefined
- *   - updateTable() should return early when row does not match sampleId
  *   - updateTable() should clear previous plot buttons
  *   - updateTable() should return early when no sandboxes exist for sample
  *   - updateTable() should append plot buttons for each sandbox
@@ -44,7 +43,8 @@ function getTestTableData() {
 			[{ value: 'S2' }, { value: '' }, { value: 'EXP2' }],
 			[{ value: 'S3' }, { value: '' }, { value: 'EXP3' }]
 		],
-		selectedRows: []
+		selectedRows: [],
+		sampleColIdx: 0
 	}
 }
 
@@ -88,7 +88,6 @@ tape('constructor should set dom, interactions, tableData, and rowIndex', test =
 	test.equal(renderer.dom, dom, 'Should set dom reference')
 	test.equal(renderer.interactions, interactions, 'Should set interactions reference')
 	test.equal(renderer.tableData, tableData, 'Should set tableData reference')
-	test.equal(renderer.rowIndex, -1, 'Should initialize rowIndex to -1')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -163,7 +162,8 @@ tape('renderSamplesTable() noButtonCallback should map custom column labels to k
 			{ label: 'Project', sortable: true }
 		],
 		rows: [[{ value: 'S1' }, { value: '' }, { value: 'EXP1' }, { value: 'PROJ1' }]],
-		selectedRows: []
+		selectedRows: [],
+		sampleColIdx: 0
 	}
 
 	const holder = getHolder()
@@ -184,24 +184,21 @@ tape('renderSamplesTable() noButtonCallback should map custom column labels to k
 	test.end()
 })
 
-tape.skip('renderSamplesTable() noButtonCallback should throw when sID is missing', test => {
+tape('renderSamplesTable() noButtonCallback should throw when sID is missing', test => {
 	const tableData = {
 		columns: [{ label: 'Project', sortable: true }],
 		rows: [[{ value: 'PROJ1' }]],
-		selectedRows: []
+		selectedRows: [],
+		sampleColIdx: 0
 	}
 
-	const holder = getHolder()
-	const dom = getMockDom(holder)
-	const interactions = getMockInteractions()
-	new SampleTableRenderer(dom, interactions, tableData)
+	const { renderer, holder } = getRenderer()
 
-	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
 	test.throws(
 		() => {
-			firstRow.click()
+			renderer.buildItemFromRow(tableData as any, 0)
 		},
-		/sID/,
+		/Selected item must have sID property/,
 		'Should throw error about missing sID'
 	)
 
@@ -241,22 +238,12 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 /* ---- updateTable() ---- */
 
 tape('updateTable() should return early when sampleId is undefined', test => {
+	test.plan(1)
 	const { renderer, holder } = getRenderer()
 
 	// Should not throw
 	renderer.updateTable(undefined, new Map())
 	test.pass('Should return early without error')
-
-	if ((test as any)._ok) holder.remove()
-	test.end()
-})
-
-tape('updateTable() should return early when row does not match sampleId', test => {
-	const { renderer, holder } = getRenderer()
-
-	// rowIndex is -1, so no row matches
-	renderer.updateTable('S1', new Map())
-	test.pass('Should return early when rowIndex row does not match sampleId')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -340,7 +327,7 @@ tape('appendPlotBtn() should truncate long plot names', test => {
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 
 	const longName = 'This is a very long plot name that exceeds 25 chars'
-	renderer.appendPlotBtn(cell, mockDiv, longName)
+	renderer.appendPlotBtn(cell, mockDiv, longName, 'S1')
 
 	const btn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	test.equal(btn.textContent, 'This is a ve...', 'Should truncate to 12 chars + ...')
@@ -358,7 +345,7 @@ tape('appendPlotBtn() should not truncate short plot names', test => {
 	const cell = (renderer.tableData.rows[0] as any)[1].__td
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 
-	renderer.appendPlotBtn(cell, mockDiv, 'UMAP')
+	renderer.appendPlotBtn(cell, mockDiv, 'UMAP', 'S1')
 
 	const btn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	test.equal(btn.textContent, 'UMAP', 'Should show full name for short plot names')
@@ -383,7 +370,7 @@ tape('appendPlotBtn() should scroll sandbox into view on click', test => {
 		})
 	}
 
-	renderer.appendPlotBtn(cell, mockDiv, 'UMAP')
+	renderer.appendPlotBtn(cell, mockDiv, 'UMAP', 'S1')
 
 	const btn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	btn.click()

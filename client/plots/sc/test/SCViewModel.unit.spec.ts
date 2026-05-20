@@ -131,14 +131,14 @@ tape('getTabelData() should expand experiments into separate rows', test => {
 	test.equal(vm.tableData.rows.length, 2, 'Should create one row per experiment')
 	// Columns: Sample, Sample (experiment sample name), Experiment
 	test.equal(vm.tableData.columns.length, 4, 'Should have Sample + Shown plots + Sample + Experiment columns')
-	test.equal(vm.tableData.columns[2].label, 'Sample', 'Second column should be Sample for experiment sample name')
+	test.equal(vm.tableData.columns[1].label, 'Sample', 'Second column should be Sample for experiment sample name')
 	test.equal(vm.tableData.columns[3].label, 'Experiment', 'Third column should be Experiment')
 
 	const row0 = vm.tableData.rows[0] as any[]
 	test.equal(row0[0].value, 'Case1', 'Row should have case/sample name')
 	test.equal(row0[0].__experimentID, 'EXP1', 'Row should sneak in experimentID')
 	test.equal(row0[1].value, 'exp_sample_1', 'Row should have experiment sample name')
-	test.equal(row0[2].value, 'EXP1', 'Row should have experiment ID')
+	test.equal(row0[3].value, 'EXP1', 'Row should have experiment ID')
 	test.end()
 })
 
@@ -198,6 +198,6 @@ tape('getTabelData() should include sampleColumns with experiments', test => {
 	test.equal(vm.tableData.columns[3].label, 'Sex', 'Third column should be Sex')
 
 	const row0 = vm.tableData.rows[0] as any[]
-	test.equal(row0[2].value, 'Female', 'Row should include sample column value')
+	test.equal(row0[3].value, 'Female', 'Row should include sample column value')
 	test.end()
 })

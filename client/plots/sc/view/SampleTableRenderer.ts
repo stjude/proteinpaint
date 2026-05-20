@@ -9,14 +9,12 @@ import type { SCInteractions } from '../interactions/SCInteractions'
 export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
-	rowIndex: number
 	tableData: SCTableData
 	lastSampleSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> | undefined
 
 	constructor(dom: SCDom, interactions: SCInteractions, tableData: SCTableData) {
 		this.dom = dom
 		this.interactions = interactions
-		this.rowIndex = -1
 		this.tableData = tableData
 		this.renderSamplesTable(tableData)
 	}
@@ -45,22 +43,29 @@ export class SampleTableRenderer {
 				}
 			},
 			noButtonCallback: index => {
-				const item = {} as { sID: string; eID: string; [key: string]: any }
-				tableData.rows[index].forEach((r: TableCell, idx: number) => {
-					if (!r.value) return
-					let key = tableData.columns[idx].label.toLowerCase()
-					/** Convert the column labels into the required sample structure keys.
-					 * Maintains the sample obj used throughout the app whilst allowing for
-					 * dynamic column labels based on the config. */
-					key = key === 'sample' ? 'sID' : key === 'experiment' ? 'eID' : key
-					item[key] = r.value
-				})
-				this.rowIndex = index
-				if (!item.sID) throw new Error('Selected item must have sID property')
+				const item = this.buildItemFromRow(tableData, index)
 				this.interactions.updateItem(item)
 				this.dom.plotsBtnsDiv.style('display', 'block')
 			}
 		})
+	}
+
+	/** Builds an item object from a table row, mapping column labels to keys.
+	 * Converts 'sample' -> 'sID' and 'experiment' -> 'eID'.
+	 * Extracted out from noButtonCallback for testing.  */
+	buildItemFromRow(tableData: SCTableData, index: number) {
+		const item = {} as { sID: string; eID: string; [key: string]: any }
+		tableData.rows[index].forEach((r: TableCell, idx: number) => {
+			if (!r.value) return
+			let key = tableData.columns[idx].label.toLowerCase()
+			/** Convert the column labels into the required sample structure keys.
+			 * Maintains the sample obj used throughout the app whilst allowing for
+			 * dynamic column labels based on the config. */
+			key = key === 'sample' ? 'sID' : key === 'experiment' ? 'eID' : key
+			item[key] = r.value
+		})
+		if (!item.sID) throw new Error('Selected item must have sID property')
+		return item
 	}
 
 	updateTable(
