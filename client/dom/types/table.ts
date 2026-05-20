@@ -159,6 +159,9 @@ export type TableArgs = {
 	allowRestoreRowOrder?: boolean
 	/** When true, places the restore button with footer buttons instead of separately */
 	restoreButtonInFooter?: boolean
+	/** Called after rows are rendered (e.g. after sort, pagination,
+	 * or restore). Use with __td references to apply custom html */
+	afterRender?: () => void
 	/** When set, render pagination controls below the table and only display
 	 * one page worth of rows at a time. Sort still operates on the full rows[] array. */
 	pagination?: {

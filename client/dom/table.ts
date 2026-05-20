@@ -46,6 +46,7 @@ export function renderTable({
 	download = undefined,
 	noAutoScroll = false,
 	hoverEffects,
+	afterRender,
 	allowRestoreRowOrder = false,
 	restoreButtonInFooter = false,
 	pagination
@@ -434,6 +435,7 @@ export function renderTable({
 			//Allows for hover effects to remain consistent when the rows are updated.
 			if (hoverEffects) hoverEffects(tr, row)
 		}
+		if (afterRender) afterRender()
 	}
 
 	updateRows()

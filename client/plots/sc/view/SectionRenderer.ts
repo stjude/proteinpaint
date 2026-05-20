@@ -276,4 +276,21 @@ export class SectionRenderer {
 		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
 		this.plotId2Key.delete(plotId)
 	}
+
+	/** Derives a map of sampleId → sandbox info for all active subplots.
+	 * Used by SampleTableRenderer to render scroll-to buttons. */
+	getSampleSandboxes(subplots: any[]): Map<string, { plotId: string; div: any; plotName: string }[]> {
+		const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
+		for (const subplot of subplots) {
+			const sampleId = this.getSampleId(subplot)
+			const key = this.plotId2Key.get(subplot.id)
+			if (!sampleId || !key) continue
+			const div = this.sections[key]?.sandboxes[subplot.id]
+			if (!div) continue
+			const plotName = this.getPlotName(subplot) || subplot.id
+			if (!sandboxes.has(sampleId)) sandboxes.set(sampleId, [])
+			sandboxes.get(sampleId)!.push({ plotId: subplot.id, div, plotName })
+		}
+		return sandboxes
+	}
 }
