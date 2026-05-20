@@ -69,6 +69,8 @@ export type SCTableData = {
 	rows: TableRow[]
 	columns: TableColumn[]
 	selectedRows: number[]
+	/** Column idx with sample IDs */
+	sampleColIdx: number
 }
 
 /** Slightly modified from termdbConfig.queries.singleCell.samples.sampleColumns */

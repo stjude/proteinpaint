@@ -59,14 +59,14 @@ export class SampleTableRenderer {
 		sampleId: string | undefined,
 		sampleSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>
 	) {
+		const sampleIdx = this.tableData.sampleColIdx
 		if (!sampleId) return
 		const row = this.tableData.rows[this.rowIndex]
-		if (!row || row[0].value !== sampleId) return
+		if (!row || row[sampleIdx].value !== sampleId) return
 
-		const cell = row[1].__td
+		const cell = row[sampleIdx + 1].__td
 		// Clear previous plot buttons before re-rendering
 		cell.selectAll('.sjpp-sc-table-plot-btn').remove()
-
 		const sandboxes = sampleSandboxes.get(sampleId)
 		if (!sandboxes || sandboxes.length === 0) return
 

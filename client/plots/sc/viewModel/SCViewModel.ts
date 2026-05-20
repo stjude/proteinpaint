@@ -17,7 +17,7 @@ export class SCViewModel {
 		const items = _items.sort((a, b) => (b.isMetaResult === a.isMetaResult ? 0 : b.isMetaResult ? 1 : -1))
 
 		//Should only be called once
-		const [rows, columns] = this.getTabelData(config, items, sampleColumns)
+		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, sampleColumns)
 		const selectedRows: number[] = []
 		const sID = config.settings.sc.item?.sID
 		const i = sID
@@ -30,7 +30,8 @@ export class SCViewModel {
 		this.tableData = {
 			rows: rows as any,
 			columns: columns as any,
-			selectedRows
+			selectedRows,
+			sampleColIdx
 		}
 	}
 
@@ -38,16 +39,18 @@ export class SCViewModel {
 		plotConfig: SCConfig,
 		items: SingleCellSample[],
 		sampleColumns?: SampleColumn[]
-	): [TableRow[], TableColumn[]] {
+	): [TableRow[], TableColumn[], number] {
 		const rows: TableRow[] = []
 		const hasExperiments = items.some(i => i.experiments)
+		let sampleColIdx = -1
 
 		// first column is sample and is hardcoded
-		const columns: TableColumn[] = [
-			{ label: plotConfig.settings.sc.columns.sample, sortable: true },
-			{ label: 'Shown plots' }
-		]
-		if (hasExperiments) columns.push({ label: 'Sample', sortable: true }) //add after the case column
+		const columns: TableColumn[] = [{ label: plotConfig.settings.sc.columns.sample, sortable: true }]
+		if (hasExperiments) {
+			columns.push({ label: 'Sample', sortable: true }) //add after the case column
+			sampleColIdx = 1
+		} else sampleColIdx = 0
+		columns.push({ label: 'Shown plots' }) //Empty column for plot buttons
 
 		// add in optional sample columns
 		for (const col of sampleColumns || []) {
@@ -70,6 +73,7 @@ export class SCViewModel {
 					const row: { [index: string]: any }[] = [{ value: item.sample, __experimentID: exp.experimentID }]
 					// hardcode to expect exp.sampleName and add this as a column
 					row.push({ value: exp.sampleName })
+					row.push({ value: '' }) //Empty cell for shown plot buttons
 					// optional sample and experiment columns
 					for (const col of sampleColumns || []) {
 						row.push({ value: item[col.termid] })
@@ -98,6 +102,6 @@ export class SCViewModel {
 				rows.push(row)
 			}
 		}
-		return [rows, columns]
+		return [rows, columns, sampleColIdx]
 	}
 }
