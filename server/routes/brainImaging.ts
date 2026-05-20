@@ -1,7 +1,6 @@
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { QualTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory, RouteApi } from '#types'
-import { brainImagingPayload } from '#types/checkers'
+import type { QualTW, BrainImagingRequest, BrainImagingResponse, FilesByCategory } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { isNumericTerm } from '#shared'
 import { getColors } from '#shared'
@@ -10,21 +9,8 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 /*
 given one or more samples, map the sample(s) to brain template and return the image
 */
-export const api: RouteApi = {
-	endpoint: 'brainImaging',
-	methods: {
-		get: {
-			...brainImagingPayload,
-			init
-		},
-		post: {
-			...brainImagingPayload,
-			init
-		}
-	}
-}
 
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: BrainImagingRequest = req.query

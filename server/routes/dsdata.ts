@@ -2,28 +2,9 @@ import path from 'path'
 import { spawn } from 'child_process'
 import serverconfig from '#src/serverconfig.js'
 import * as common from '#shared/common.js'
-import type { DsDataRequest, DsDataResponse, RouteApi } from '#types'
-import { dsDataPayload } from '#types/checkers'
+import type { DsDataRequest, DsDataResponse } from '#types'
 
-export const api: RouteApi = {
-	// route endpoint
-	// - no need for trailing slash
-	// - should be a noun (method is based on HTTP GET, POST, etc)
-	// - don't add 'Data' as response is assumed to be data
-	endpoint: 'dsdata',
-	methods: {
-		get: {
-			...dsDataPayload,
-			init
-		},
-		post: {
-			...dsDataPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async function handle_dsdata(req, res) {
 		/*
 	    poor mechanism, only for old-style official dataset

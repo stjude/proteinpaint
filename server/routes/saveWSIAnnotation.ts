@@ -1,22 +1,9 @@
-import type { Mds3, RouteApi, TileSelection, SaveWSIAnnotationRequest } from '#types'
-import { saveWSIAnnotationPayload } from '#types/checkers'
+import type { Mds3, TileSelection, SaveWSIAnnotationRequest } from '#types'
 import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 
-const routePath = 'saveWSIAnnotation'
-
-export const api: RouteApi = {
-	endpoint: `${routePath}`,
-	methods: {
-		post: {
-			...saveWSIAnnotationPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: SaveWSIAnnotationRequest = req.query

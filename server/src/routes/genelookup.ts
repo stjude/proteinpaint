@@ -1,6 +1,5 @@
-import type { RoutePayload } from '#types'
 import { getResult } from '#src/gene.js'
-import type { GeneLookupRequest, GeneLookupResponse, RouteApi } from '#types'
+import type { GeneLookupRequest, GeneLookupResponse, RoutePayload, RouteApi } from '#types'
 
 export const payload: RoutePayload = {
 	init,

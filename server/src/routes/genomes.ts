@@ -2,23 +2,19 @@ import fs from 'fs'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { versionInfo } from '#src/health.ts'
+import type { RoutePayload, RouteApi } from '#types'
 
-export const api: any = {
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'any' /*, checkers: TODO write validator */ },
+	response: { typeId: 'any' }
+}
+
+export const api: RouteApi = {
 	endpoint: 'genomes',
 	methods: {
-		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
-		},
-		post: {
-			alternativeFor: 'get',
-			init
-		}
+		get: payload,
+		post: payload
 	}
 }
 

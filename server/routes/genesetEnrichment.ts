@@ -1,5 +1,4 @@
-import type { DERequest, DiffMethRequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse, RouteApi } from '#types'
-import { genesetEnrichmentPayload } from '#types/checkers'
+import type { DERequest, DiffMethRequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse } from '#types'
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -27,21 +26,7 @@ import type { GseaCacheResult } from './types.ts'
  *   runGseaPythonForTable → runGseaPythonForImage → helpers
  */
 
-export const api: RouteApi = {
-	endpoint: 'genesetEnrichment',
-	methods: {
-		get: {
-			...genesetEnrichmentPayload,
-			init
-		},
-		post: {
-			...genesetEnrichmentPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: GenesetEnrichmentRequest = req.query

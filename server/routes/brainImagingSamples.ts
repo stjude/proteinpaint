@@ -1,28 +1,10 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { BrainSample, BrainImagingSamplesRequest, BrainImagingSamplesResponse, RouteApi } from '#types'
+import type { BrainSample, BrainImagingSamplesRequest, BrainImagingSamplesResponse } from '#types'
 import { getData } from '#src/termdb.matrix.js'
 
-/*
-given one or more samples, map the sample(s) to brain template and return the image
-*/
-export const api: RouteApi = {
-	endpoint: 'brainImagingSamples',
-	methods: {
-		get: {
-			init,
-			request: {
-				typeId: 'BrainImagingSamplesRequest'
-			},
-			response: {
-				typeId: 'BrainImagingSamplesResponse'
-			}
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const query: BrainImagingSamplesRequest = req.query
@@ -60,16 +42,16 @@ async function getBrainImageSamples(query: BrainImagingSamplesRequest, genomes: 
 				term: { id: term.termid },
 				q: {}
 			}))
-			
+
 			// Get data for all terms at once
 			const data = await getData({ terms }, ds)
 			if (data.error) throw data.error
-			
+
 			const samples = {}
 			for (const s of sampleNames) {
 				const annoForOneS = { sample: s }
 				const sid = ds.cohort.termdb.q.sampleName2id(s)
-				
+
 				// Extract values from getData result
 				const sampleData = data.samples?.[sid]
 				if (sampleData) {
