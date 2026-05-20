@@ -9,6 +9,7 @@ import { select } from 'd3-selection'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
+const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
 
 class MassAiChatBot implements RxComponent {
 	static type = 'chat'
@@ -127,7 +128,7 @@ class MassAiChatBot implements RxComponent {
 				this.addBubble({ msg: prompt, me: 1 })
 				event.target.value = ''
 				const serverBubble = this.addBubble({ msg: '...' })
-				if (prompt.length <= 3) {
+				if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
 					serverBubble.text('Your prompt is too short. Enter a longer prompt.')
 					return
 				}
