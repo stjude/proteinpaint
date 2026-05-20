@@ -1,5 +1,4 @@
-import type { GRIN2Request, GRIN2Response, RouteApi } from '#types'
-import { GRIN2Payload } from '#types/checkers'
+import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -60,21 +59,7 @@ const MEMORY_BASE_MB = 260
 const MEMORY_PER_1K_LESIONS = 2.4
 const MIN_LESIONS = 50000
 
-export const api: RouteApi = {
-	endpoint: 'grin2',
-	methods: {
-		get: {
-			...GRIN2Payload,
-			init
-		},
-		post: {
-			...GRIN2Payload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		// __abortSignal is set by maySetAbortCtrl() middleware in app.middlewares.js
 		const signal: AbortSignal | undefined = req.query.__abortSignal

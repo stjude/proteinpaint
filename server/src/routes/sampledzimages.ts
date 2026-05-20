@@ -1,8 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
-import type { DZImagesRequest, /*DZImagesResponse,*/ RouteApi } from '#types'
-import { dzImagesPayload } from '#types/checkers'
+import type { DZImagesRequest, RoutePayload, RouteApi } from '#types'
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'SampleDZImagesRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'SampleDZImagesResponse' }
+}
 
 /*
 given a sample, return all deep zoom images for specified dataset
@@ -11,14 +16,8 @@ given a sample, return all deep zoom images for specified dataset
 export const api: RouteApi = {
 	endpoint: 'sampledzimages',
 	methods: {
-		get: {
-			init,
-			...dzImagesPayload
-		},
-		post: {
-			init,
-			...dzImagesPayload
-		}
+		get: payload,
+		post: payload
 	}
 }
 

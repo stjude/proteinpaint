@@ -1,27 +1,12 @@
-import type { BurdenRequest, BurdenResponse, RouteApi, CumBurdenData } from '#types'
-import { burdenPayload } from '#types/checkers'
+import type { BurdenRequest, BurdenResponse, CumBurdenData } from '#types'
 // may decide to use these checkers later
 import { run_R } from '@sjcrh/proteinpaint-r'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 
-export const api: RouteApi = {
-	endpoint: 'burden',
-	methods: {
-		get: {
-			init,
-			...burdenPayload
-		},
-		post: {
-			init,
-			...burdenPayload
-		}
-	}
-}
-
 //const MAXBOOTNUM = 20
 
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async function handler(req, res): Promise<void> {
 		try {
 			const genome = genomes[req.query.genome]

@@ -1,5 +1,4 @@
-import type { GdcGRIN2listRequest, GdcGRIN2listResponse, GdcGRIN2File, RouteApi } from '#types'
-import { gdcGRIN2listPayload } from '#types/checkers'
+import type { GdcGRIN2listRequest, GdcGRIN2listResponse, GdcGRIN2File } from '#types'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
@@ -19,21 +18,7 @@ const maxFileSizeAllowed = 1000000 // 1Mb; this is to avoid sending large files 
 // change to 400 so it won't limit number of files; should keep this setting as a safeguard; also it's fast to check file size (.5s in gdc.mafBuild.ts)
 export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
 
-export const api: RouteApi = {
-	endpoint: 'gdc/GRIN2list',
-	methods: {
-		get: {
-			...gdcGRIN2listPayload,
-			init
-		},
-		post: {
-			...gdcGRIN2listPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const g = genomes.hg38

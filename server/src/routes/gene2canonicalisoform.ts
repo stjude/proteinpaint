@@ -1,19 +1,16 @@
-export const api: any = {
+import type { RoutePayload, RouteApi } from '#types'
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'any' /*, checkers: TODO write validator */ },
+	response: { typeId: 'any' }
+}
+
+export const api: RouteApi = {
 	endpoint: 'gene2canonicalisoform', // should rename to simply 'canonicalIsoform' or 'isoform', gene and type: 'canonical' can be part of payload
 	methods: {
-		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
-		},
-		post: {
-			alternativeFor: 'get',
-			init
-		}
+		get: payload,
+		post: payload
 	}
 }
 
