@@ -30,7 +30,7 @@ import { SectionRenderer } from '../view/SectionRenderer.ts'
  *   - removeSandbox() should use provided key over plotId2Key lookup
  *   - removeSandbox() should return early when key is not found
  *   - removeSection() should remove all sandboxes and dispatch app_refresh
- *   - removeSection() should delete section from sections map and remove all elements from DOM
+ *   - removeSection() should delete section from sections map and remove all elements from dom
  *   - removeSection() should not dispatch when section has no sandboxes
  */
 
@@ -355,7 +355,7 @@ tape('removeSection() should remove all sandboxes and dispatch app_refresh', tes
 	test.end()
 })
 
-tape('removeSection() should delete section from sections map and remove all elements from DOM', test => {
+tape('removeSection() should delete section from sections map and remove all elements from dom', test => {
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
 	let wrapperRemoved = false
 	const sc = getMockSCViewer()
