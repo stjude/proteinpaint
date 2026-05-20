@@ -16,7 +16,8 @@ export function validAIProjectAdminRequest(input): AIProjectAdminRequest {
 		...validGenomeDs(input),
 		for: validAIProjectFor(input.for),
 		/** required for 'project' and 'selection' requests */
-		project: getValidAIAdminProject(input.project)
+		/* TODO: create separate init functions for each route method, so project will be either optional or required */
+		project: input.project ? undefined : getValidAIAdminProject(input.project)
 	}
 }
 
