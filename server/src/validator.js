@@ -1,17 +1,16 @@
 import * as checkers from '../checkers/index.ts'
 
+const checkerEntries = Object.entries(checkers).map(kv => [kv[0].toLowerCase(), kv[1]])
+
 export function middleware(req, res, next) {
 	try {
 		// NOTE: a preceding middleware combines req.query with req.body in a POST request
 		const q = req.query
 
-		const routeHandler = req.path
-			.slice(1)
-			.split('/')
-			.map((p, i) => (i === 0 ? p : p[0].toUpperCase() + p.slice(1)))
-			.join('')
-		const checker = checkers[`${routeHandler}Payload`]?.request.checker
-		if (typeof checker == 'function') checker(q)
+		const payloadName = req.path.slice(1).replace('/', '').toLowerCase() + 'payload'
+		const entry = checkerEntries.find(c => c.includes(payloadName))
+		const checker = entry?.[1].request.checker
+		if (typeof checker == 'function') req.query = checker(q)
 		else {
 			for (const [key, val] of Object.entries(q)) {
 				if (genericParams.includes(key)) q[key] = byReqKey[key](q[key])

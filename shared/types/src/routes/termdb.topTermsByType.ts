@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 //import GdcFilter0 from './filter.gdc'
 import type { Term } from '../terms/term.ts'
 import type { Filter } from '../filter.ts'
@@ -21,12 +20,4 @@ export type TermdbTopTermsByTypeResponse = {
 	terms: Term[]
 }
 
-export const termdbTopTermsByTypePayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbTopTermsByTypeRequest'
-	},
-	response: {
-		typeId: 'TermdbTopTermsByTypeResponse'
-	},
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only
