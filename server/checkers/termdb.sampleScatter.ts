@@ -16,13 +16,13 @@ export function validTermdbSampleScatterRequest(input): TermdbSampleScatterReque
 		...validGenomeDs(input),
 		colorTW: input.colorTW as any, //TermWrapper
 		shapeTW: input.shapeTW as any, //TermWrapper
-		divideByTW: input.shapeTW as any, //TermWrapper
+		divideByTW: input.divideByTW as any, //TermWrapper
 		scaleDotTW: input.scaleDotTW as any, //TermWrapper
 		coordTWs: input.coordTWs as any[], //TermWrapper[]
 		plotName: !input.plotName ? undefined : validString(input.plotName, 'invalid plotName'),
 		filter: input.filter as Filter, // TODO: use a filter validator
 		filter0: input.filter0 as any,
-		chartType: validString(input.chartType, 'invalid chartType'),
+		chartType: !input.chartType ? undefined : validString(input.chartType, 'invalid chartType'),
 		singleCellPlot: input.singleCellPlot as any,
 		colorColumn: input.colorColumn as any,
 		excludeOutliers: input.excludeOutliers

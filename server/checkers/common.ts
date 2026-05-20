@@ -15,15 +15,15 @@ export function validGenomeDs(input): { genome: string; dslabel: string } {
 	return { genome, dslabel }
 }
 
-export function validGenome(value) {
+export function validGenome(value): string {
 	if (typeof value != 'string' || !value) throw 'genome should be a non-empty string'
-	if (/\s+/.test(value)) throw 'invalid genome character'
+	if (!/^[a-zA-Z0-9._-]+$/.test(value)) throw 'invalid genome character'
 	return value
 }
 
-export function validDslabel(value) {
+export function validDslabel(value): string {
 	if (typeof value != 'string') throw 'dslabel should be a non-empty string'
-	if (/\s+/.test(value)) throw 'invalid dslabel character'
+	if (!/^[a-zA-Z0-9._-]+$/.test(value)) throw 'invalid dslabel character'
 	return value
 }
 
@@ -33,7 +33,7 @@ export function validString(input, err?: string): string {
 }
 
 export function validStringArr(input, err?: string): string[] {
-	if (Array.isArray(input)) throw `input must be an array`
+	if (!Array.isArray(input)) throw `input must be an array`
 	for (const v of input) {
 		if (typeof v != 'string' || !v) throw err || `array entry must be a non-empty string`
 	}
@@ -41,12 +41,12 @@ export function validStringArr(input, err?: string): string[] {
 }
 
 export function validNumber(input): number {
-	if (typeof input != 'number') throw 'dslabel should be a non-empty string'
+	if (typeof input != 'number') throw 'dslabel should be a number'
 	return input
 }
 
-export function validNumberArr(input, err?: string): string[] {
-	if (Array.isArray(input)) throw `input must be an array`
+export function validNumberArr(input, err?: string): number[] {
+	if (!Array.isArray(input)) throw `input must be an array`
 	for (const v of input) {
 		if (typeof v != 'number') throw err || `array entry must be a number`
 	}

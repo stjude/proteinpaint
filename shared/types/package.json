@@ -8,11 +8,11 @@
   "exports": {
     ".": {
       "sjpp/dev": "./src/index.ts",
-      "default": "non-prod-only.ts"
+      "default": "./non-prod-only.ts"
     },
     "./routes/*": {
       "sjpp/dev": "./src/routes/*",
-      "default": "non-prod-only.ts"
+      "default": "./non-prod-only.ts"
     }
   },
   "imports": {
@@ -21,7 +21,6 @@
   },
   "scripts": {
     "dev": "echo '--- using server/checkers for request payload validation ---'",
-    "build": "./build.sh",
     "test": "tsc"
   },
   "devDependencies": {
