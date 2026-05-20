@@ -73,10 +73,10 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			// check if ds supports termdb chat
 			if (!ds.queries.chat) {
-				return {
+				res.send({
 					type: 'text',
 					text: 'Only search functionality supported for this data. No chat functionality supported.'
-				}
+				})
 			}
 
 			const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + q.dslabel // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
