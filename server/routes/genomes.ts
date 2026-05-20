@@ -3,26 +3,7 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { versionInfo } from '#src/health.ts'
 
-export const api: any = {
-	endpoint: 'genomes',
-	methods: {
-		get: {
-			init,
-			request: {
-				typeId: 'any'
-			},
-			response: {
-				typeId: 'any'
-			}
-		},
-		post: {
-			alternativeFor: 'get',
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async function handle_genomes(req, res) {
 		try {
 			await fs.promises.stat(serverconfig.tpmasterdir)

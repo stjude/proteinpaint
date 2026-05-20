@@ -1,5 +1,4 @@
-import type { RouteApi, RunChartRequest, RunChartSeries, RunChartSuccessResponse } from '#types'
-import { runChartPayload } from '#types/checkers'
+import type { RunChartRequest, RunChartSeries, RunChartSuccessResponse } from '#types'
 import { getDateFromNumber, getNumberFromDate } from '#shared/terms.js'
 
 /**
@@ -33,20 +32,6 @@ export function decimalYearToYearMonth(xRaw: number): { yearNum: number; monthNu
 	}
 	if (!Number.isFinite(month) || month < 1 || month > 12) return null
 	return { yearNum: year, monthNum: month }
-}
-
-export const api: RouteApi = {
-	endpoint: 'termdb/runChart',
-	methods: {
-		get: {
-			...runChartPayload,
-			init
-		},
-		post: {
-			...runChartPayload,
-			init
-		}
-	}
 }
 
 export async function getRunChart(q: RunChartRequest, ds: any): Promise<RunChartSuccessResponse> {
@@ -407,7 +392,7 @@ export function runChartErrorPayload(message: string): { error: string; series: 
 	return { error: String(message), series: [] }
 }
 
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: RunChartRequest = req.query

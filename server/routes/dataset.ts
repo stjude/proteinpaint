@@ -1,23 +1,8 @@
 import * as mds3_init from '#src/mds3.init.js'
 import * as common from '#shared/common.js'
-import type { DatasetRequest, DatasetResponse, RouteApi } from '#types'
-import { datasetPayload } from '#types/checkers'
+import type { DatasetRequest, DatasetResponse } from '#types'
 
-export const api: RouteApi = {
-	endpoint: 'getDataset', // should rename to simply 'dataset', method is based on HTTP method
-	methods: {
-		get: {
-			init,
-			...datasetPayload
-		},
-		post: {
-			init,
-			...datasetPayload
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return function (req, res) {
 		/*
 		q.genome=str, case-sensitive match with genome name

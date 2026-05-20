@@ -11,10 +11,8 @@ import type {
 	SingletermResponse,
 	GeneExpressionQuery,
 	IsoformExpressionQuery,
-	RouteApi
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
-import { termdbClusterPayload } from '#types/checkers'
 import * as utils from '#src/utils.js'
 import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
@@ -32,21 +30,7 @@ import {
 } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/cluster',
-	methods: {
-		get: {
-			...termdbClusterPayload,
-			init
-		},
-		post: {
-			...termdbClusterPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		const q: TermdbClusterRequest & ReqQueryAddons = req.query
 		let result

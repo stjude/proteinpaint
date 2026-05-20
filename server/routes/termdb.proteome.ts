@@ -1,24 +1,8 @@
-import type { RouteApi } from '#types'
-import { termdbProteomePayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/proteome',
-	methods: {
-		get: {
-			...termdbProteomePayload,
-			init
-		},
-		post: {
-			...termdbProteomePayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res) => {
 		const q: any = req.query
 		try {

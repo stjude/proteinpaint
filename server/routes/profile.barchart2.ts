@@ -1,5 +1,3 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
@@ -16,21 +14,7 @@ sending.
 - Public role: `sites` is always [] in the response.
 */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/profileBarchart2Scores',
-	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]

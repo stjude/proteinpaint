@@ -6,14 +6,12 @@ import type {
 	ShapeMap,
 	TermdbSampleScatterRequest,
 	TermdbSampleScatterResponse,
-	RouteApi,
 	TermWrapper,
 	Term,
 	ValidGetDataResponse,
 	Cell
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
-import { termdbSampleScatterPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import path from 'path'
 import serverconfig from '../src/serverconfig.js'
@@ -24,27 +22,13 @@ import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/sampleScatter',
-	methods: {
-		get: {
-			...termdbSampleScatterPayload,
-			init
-		},
-		post: {
-			...termdbSampleScatterPayload,
-			init
-		}
-	}
-}
-
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
 const refColor = '#F5F5DC'
 
 /** sample coordinates are retrieved from one of two sources:
 1. from a prebuilt plot. q.plotName is required to identify the plot on server
 2. from two numeric terms. determined by q.coordTWs[] */
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async function (req, res) {
 		try {
 			const q: TermdbSampleScatterRequest & ReqQueryAddons = req.query

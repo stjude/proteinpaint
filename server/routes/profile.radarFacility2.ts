@@ -1,5 +1,3 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
@@ -25,21 +23,7 @@ Response shape:
   (defense-in-depth; the chart is also gated by isSupportedChartOverride).
 */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/profileRadarFacility2Scores',
-	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]

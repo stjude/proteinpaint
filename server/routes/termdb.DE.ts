@@ -1,5 +1,4 @@
-import type { DEFullResponse, DEImage, DERequest, ExpressionInput, GeneDEEntry, RouteApi } from '#types'
-import { diffExpPayload } from '#types/checkers'
+import type { DEFullResponse, DEImage, DERequest, ExpressionInput, GeneDEEntry } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '../src/serverconfig.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
@@ -25,21 +24,7 @@ import type { DeCacheResult } from './types.ts'
  *   init → deKeyInputs → loadDeForResponse → getDeCacheResult → runDeFresh → helpers
  */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/DE',
-	methods: {
-		get: {
-			...diffExpPayload,
-			init
-		},
-		post: {
-			...diffExpPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const q = req.query as DERequest

@@ -1,24 +1,9 @@
-import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse, RouteApi } from '#types'
-import { termdbTopTermsByTypePayload } from '#types/checkers'
+import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_samples } from '#src/termdb.sql.js'
 import { TermTypes } from '#shared/terms.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/getTopTermsByType',
-	methods: {
-		get: {
-			...termdbTopTermsByTypePayload,
-			init
-		},
-		post: {
-			...termdbTopTermsByTypePayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: TermdbTopTermsByTypeRequest = req.query

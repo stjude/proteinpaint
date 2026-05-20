@@ -15,9 +15,7 @@ import type {
 	Cell,
 	Plot,
 	TermdbSingleCellDataRequest,
-	RouteApi
 } from '#types'
-import { termdbSingleCellSamplesPayload } from '#types/checkers'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
@@ -27,21 +25,7 @@ import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 this is due to the fact that sometimes not all samples in a dataset has sc data
 */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/singlecellSamples',
-	methods: {
-		get: {
-			...termdbSingleCellSamplesPayload,
-			init
-		},
-		post: {
-			...termdbSingleCellSamplesPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		const q: TermdbSingleCellSamplesRequest = req.query
 		let result

@@ -1,26 +1,9 @@
-import type { RouteApi } from '#types'
-import { FilterTermValuesPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 import { authApi } from '#src/auth.js'
 import { filterJoin } from '#shared/filter.js'
 import { get_samples } from '../src/termdb.sql.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/filterTermValues',
-	methods: {
-		get: {
-			...FilterTermValuesPayload,
-
-			init
-		},
-		post: {
-			...FilterTermValuesPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]

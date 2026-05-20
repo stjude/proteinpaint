@@ -3,7 +3,7 @@ import { imgPayload } from '#types/checkers'
 
 import path from 'path'
 import fs from 'fs'
-import * as utils from '../src/utils.js'
+import * as utils from '../../src/utils.js'
 import { imageSize } from 'image-size'
 
 export const api: RouteApi = {

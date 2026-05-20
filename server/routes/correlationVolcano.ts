@@ -1,5 +1,4 @@
-import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse, RouteApi } from '#types'
-import { CorrelationVolcanoPayload } from '#types/checkers'
+import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse } from '#types'
 import { getData } from '../src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
@@ -8,21 +7,7 @@ import { getStdDev } from './termdb.descrstats.ts'
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values
 
-export const api: RouteApi = {
-	endpoint: 'termdb/correlationVolcano',
-	methods: {
-		get: {
-			...CorrelationVolcanoPayload,
-			init
-		},
-		post: {
-			...CorrelationVolcanoPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res) => {
 		const q: CorrelationVolcanoRequest = req.query
 		try {

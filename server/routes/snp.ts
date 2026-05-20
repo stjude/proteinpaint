@@ -1,26 +1,7 @@
-import type { SnpRequest, SnpResponse, RouteApi } from '#types'
-import { snpPayload } from '#types/checkers'
+import type { SnpRequest, SnpResponse } from '#types'
 import * as utils from '#src/utils.js'
 
-export const api: RouteApi = {
-	// route endpoint
-	// - no need for trailing slash
-	// - should be a noun (method is based on HTTP GET, POST, etc)
-	// - don't add 'Data' as response is assumed to be data
-	endpoint: 'snp',
-	methods: {
-		get: {
-			...snpPayload,
-			init
-		},
-		post: {
-			...snpPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async function handle_snp(req, res) {
 		// TODO move to routes
 		try {

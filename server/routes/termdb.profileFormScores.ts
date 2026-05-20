@@ -1,5 +1,3 @@
-import type { RouteApi } from '#types'
-import { ProfileFormScoresPayload } from '#types/checkers'
 import { getScoresData } from '../src/termdb.profileScores.ts'
 
 /*
@@ -7,21 +5,7 @@ Given a set of multivalue score terms, a filter, login site info, etc.,
  this route returns the  scores dictionary for each term. The dict is calculated based on the samples selected by the filter.
 It allows to build the profile forms based on the number of people who selected an answer to a question/term for a given site/hospital
 */
-export const api: RouteApi = {
-	endpoint: 'termdb/profileFormScores',
-	methods: {
-		get: {
-			...ProfileFormScoresPayload,
-			init
-		},
-		post: {
-			...ProfileFormScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]

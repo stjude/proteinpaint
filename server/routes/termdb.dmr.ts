@@ -1,5 +1,4 @@
-import type { RouteApi, TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
-import { TermdbDmrPayload } from '#types/checkers'
+import type { TermdbDmrRequest, TermdbDmrSuccessResponse } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { invalidcoord } from '#shared/common.js'
@@ -7,21 +6,7 @@ import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { formatElapsedTime } from '#shared'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/dmr',
-	methods: {
-		get: {
-			...TermdbDmrPayload,
-			init
-		},
-		post: {
-			...TermdbDmrPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: TermdbDmrRequest = req.query

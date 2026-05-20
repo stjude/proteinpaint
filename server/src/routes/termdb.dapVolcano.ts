@@ -4,9 +4,9 @@ import type { RouteApi } from '#types'
 import type { DapVolcanoRequest, DapEntry } from '#types'
 import { dapVolcanoPayload } from '#types/checkers'
 import { get_ds_tdb } from '#src/termdb.js'
-import { renderVolcano } from '../src/renderVolcano.ts'
-import serverconfig from '../src/serverconfig.js'
-import { countDistinctSamples } from './termdb.proteome.ts'
+import { renderVolcano } from '../../src/renderVolcano.ts'
+import serverconfig from '../../src/serverconfig.js'
+import { countDistinctSamples } from '#routes/termdb.proteome.ts'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/dapVolcano',

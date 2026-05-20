@@ -1,23 +1,8 @@
-import type { topMutatedGeneRequest, topMutatedGeneResponse, MutatedGene, RouteApi } from '#types'
-import { topMutatedGenePayload } from '#types/checkers'
+import type { topMutatedGeneRequest, topMutatedGeneResponse, MutatedGene } from '#types'
 import { get_samples } from '#src/termdb.sql.js'
 import { mayLog } from '#src/helpers.ts'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/topMutatedGenes',
-	methods: {
-		get: {
-			init,
-			...topMutatedGenePayload
-		},
-		post: {
-			init,
-			...topMutatedGenePayload
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			const q: topMutatedGeneRequest = req.query

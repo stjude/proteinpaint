@@ -1,5 +1,3 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
@@ -13,21 +11,7 @@ per module across all eligible sites for the active cohort.
 - Public role: `sites` is always [] in the response (no site IDs exposed).
 */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/profilePolar2Scores',
-	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]

@@ -1,5 +1,4 @@
-import type { RunGRIN2Request, RunGRIN2Response, RouteApi } from '#types'
-import { runGRIN2Payload } from '#types/checkers'
+import type { RunGRIN2Request, RunGRIN2Response } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import path from 'path'
@@ -26,21 +25,7 @@ const MAX_RECORD = 100000 // Maximum number of records to process
  * 6. Return generated PNG as base64 string, the top gene table as JSON, and the Rust summary stats
  */
 
-export const api: RouteApi = {
-	endpoint: 'gdc/runGRIN2',
-	methods: {
-		get: {
-			...runGRIN2Payload,
-			init
-		},
-		post: {
-			...runGRIN2Payload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
 			await runGrin2(genomes, req, res)

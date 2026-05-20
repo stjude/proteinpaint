@@ -1,13 +1,11 @@
 import type {
 	Annotation,
 	Mds3,
-	RouteApi,
 	WSImage,
 	AiProjectSelectedWSImagesRequest,
 	AiProjectSelectedWSImagesResponse,
 	FlagPredictionInfo
 } from '#types'
-import { aiProjectSelectedWSImagesResponsePayload } from '#types/checkers'
 import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#shared'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
@@ -15,21 +13,7 @@ import type Database from 'better-sqlite3'
 given a sample, return all whole slide images for specified datasets
 */
 
-export const api: RouteApi = {
-	endpoint: 'aiProjectSelectedWSImages',
-	methods: {
-		get: {
-			...aiProjectSelectedWSImagesResponsePayload,
-			init
-		},
-		post: {
-			...aiProjectSelectedWSImagesResponsePayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: AiProjectSelectedWSImagesRequest = req.query

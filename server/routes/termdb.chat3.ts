@@ -1,6 +1,5 @@
-import type { ChatRequest, ChatResponse, LlmConfig, RouteApi, QueryClassification } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification } from '#types'
 // import { ambiguousPoints } from '#types'
-import { ChatPayload } from '#types/checkers'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './chat/utils.ts'
@@ -19,21 +18,7 @@ import fs from 'fs'
 import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './chat/scaffoldTypes.ts'
 import { resolveToPlotState } from './chat/scaffold2state.ts'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/chat3',
-	methods: {
-		get: {
-			...ChatPayload,
-			init
-		},
-		post: {
-			...ChatPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res) => {
 		const q: ChatRequest = req.query
 		try {

@@ -1,5 +1,3 @@
-import type { RouteApi } from '#types'
-import { ProfileForms2ScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
@@ -17,21 +15,7 @@ termdbConfig.plotConfigByCohort[cohort].profileForms2.domains on the client;
 no helper is needed here.
 */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/profileForms2Scores',
-	methods: {
-		get: {
-			...ProfileForms2ScoresPayload,
-			init
-		},
-		post: {
-			...ProfileForms2ScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]

@@ -2,17 +2,8 @@ import path from 'path'
 import fs from 'fs'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '#src/serverconfig.js'
-import type { GeneRankingRequest, GeneRankingResponse, RouteApi } from '#types'
-import { geneRankingPayload } from '#types/checkers'
+import type { GeneRankingRequest, GeneRankingResponse } from '#types'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-
-export const api: RouteApi = {
-	endpoint: 'termdb/geneRanking',
-	methods: {
-		get: { ...geneRankingPayload, init },
-		post: { ...geneRankingPayload, init }
-	}
-}
 
 type ParsedFile = { columns: string[]; rows: (string | number | null)[][] }
 type CacheEntry = { parsed: ParsedFile; mtimeMs: number }
@@ -162,7 +153,7 @@ async function handleCluster(q: any, res): Promise<void> {
 	} satisfies GeneRankingResponse)
 }
 
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const q: GeneRankingRequest = (req.method === 'POST' ? req.body : req.query) || ({} as any)

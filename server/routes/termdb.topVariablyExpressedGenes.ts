@@ -1,5 +1,4 @@
-import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse, RouteApi } from '#types'
-import { termdbTopVariablyExpressedGenesPayload } from '#types/checkers'
+import type { TermdbTopVariablyExpressedGenesRequest, TermdbTopVariablyExpressedGenesResponse } from '#types'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { mayLog } from '#src/helpers.ts'
@@ -7,21 +6,7 @@ import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { TopVeCacheResult } from './types.ts'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/topVariablyExpressedGenes',
-	methods: {
-		get: {
-			...termdbTopVariablyExpressedGenesPayload,
-			init
-		},
-		post: {
-			...termdbTopVariablyExpressedGenesPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		let result
 		try {

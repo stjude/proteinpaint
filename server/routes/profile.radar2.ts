@@ -1,5 +1,3 @@
-import type { RouteApi } from '#types'
-import { ProfileScoresPayload } from '#types/checkers'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
@@ -16,21 +14,7 @@ client flattens them into a single scoreTerms[] before sending.
 - Zero-score sites are included in the median (via != null filter).
 */
 
-export const api: RouteApi = {
-	endpoint: 'termdb/profileRadar2Scores',
-	methods: {
-		get: {
-			...ProfileScoresPayload,
-			init
-		},
-		post: {
-			...ProfileScoresPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const g = genomes[req.query.genome]
