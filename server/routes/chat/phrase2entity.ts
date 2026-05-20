@@ -20,7 +20,7 @@ import type {
 	PrebuiltScatterScaffold
 } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
-import { SSGSEA, GENE_EXPRESSION, GENE_VARIANT } from '#shared/terms.js'
+import { PROTEOME_ABUNDANCE, SSGSEA, GENE_EXPRESSION, GENE_VARIANT, DNA_METHYLATION } from '#shared/terms.js'
 import assert from 'assert'
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
@@ -213,11 +213,11 @@ async function inferEntities(
 		if (validatedNonDict.geneFeatures.dataType == 'expression') {
 			return { termType: GENE_EXPRESSION, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
-			return { termType: 'dnaMethylation', phrase: phrase }
+			return { termType: DNA_METHYLATION, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'variant') {
 			return { termType: GENE_VARIANT, phrase: phrase }
 		} else if (validatedNonDict.geneFeatures.dataType === 'proteome') {
-			return { termType: 'proteomeAbundance', phrase: phrase }
+			return { termType: PROTEOME_ABUNDANCE, phrase: phrase }
 		} else {
 			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
 		}

@@ -1,5 +1,5 @@
 import type { LlmConfig } from '#types'
-import { SSGSEA, GENE_EXPRESSION, GENE_VARIANT } from '#shared/terms.js'
+import { PROTEOME_ABUNDANCE, SSGSEA, GENE_EXPRESSION, GENE_VARIANT } from '#shared/terms.js'
 import type {
 	SummaryPhrase2EntityResult,
 	Phrase2EntityResult,
@@ -109,7 +109,7 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 		case GENE_VARIANT: {
 			return undefined
 		}
-		case 'proteomeAbundance': {
+		case PROTEOME_ABUNDANCE: {
 			return undefined
 		}
 		default: {

@@ -1,5 +1,5 @@
 import type { DbRows, DbValue, GeneDataTypeResult } from '#types'
-import { TermTypes, GENE_EXPRESSION } from '#shared/terms.js'
+import { TermTypes, SSGSEA, METABOLITE_INTENSITY, GENE_EXPRESSION } from '#shared/terms.js'
 import { FILTER_DESCRIPTION } from './filter.ts'
 import { mayLog } from '#src/helpers.ts'
 import fs from 'fs'
@@ -24,7 +24,7 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 	// check if it supports heirarchical clustering charts
 	// TODO:
 	if (plotTypes.includes(GENE_EXPRESSION)) {
-		// || plotTypes.includes('proteomeAbundance') || plotTypes.includes('dnaMethylation'))
+		// || plotTypes.includes(PROTEOME_ABUNDANCE) || plotTypes.includes(DNA_METHYLATION))
 		plotTypes.push('hiercluster')
 	}
 	// check if it supports dge
@@ -90,7 +90,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of genes to include as gene expression rows in the matrix'
 		},
 		identifierMode: 'gene',
-		buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: '${GENE_EXPRESSION}' } }),
+		buildTermWrapper: (gene: string) => ({ term: { gene: gene.toUpperCase(), type: GENE_EXPRESSION } }),
 		promptFieldDescription:
 			'The "geneNames" field should ONLY contain gene names. These will be shown as gene expression rows.'
 	},
@@ -121,7 +121,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 				'Names of gene sets (e.g. HALLMARK pathways) to include as ssGSEA enrichment score rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { id: name, name, type: '${SSGSEA}' } }),
+		buildTermWrapper: (name: string) => ({ term: { id: name, name, type: SSGSEA } }),
 		promptFieldDescription:
 			'The "genesetNames" field should contain gene set pathway names (e.g. HALLMARK_P53_PATHWAY).',
 		dataTypeDescription: 'Gene set pathway names (e.g. HALLMARK_APOPTOSIS, HALLMARK_ADIPOGENESIS)'
@@ -136,7 +136,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of metabolites to include as metabolite intensity rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { name, metabolite: name, type: 'metaboliteIntensity' } }),
+		buildTermWrapper: (name: string) => ({ term: { name, metabolite: name, type: METABOLITE_INTENSITY } }),
 		promptFieldDescription: 'The "metaboliteNames" field should contain metabolite names.',
 		dataTypeDescription: 'Metabolite names'
 	},
