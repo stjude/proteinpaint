@@ -4,7 +4,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { extract_hiercluster_terms_from_query } from './hiercluster.ts'
-import { SSGSEA, GENE_EXPRESSION } from '#shared/terms.js'
+import { SSGSEA, METABOLITE_INTENSITY, GENE_EXPRESSION } from '#shared/terms.js'
 import type {
 	Scaffold,
 	SummaryScaffold,
@@ -739,14 +739,14 @@ export async function getScaffold_hierarchical(
 
 A hierarchical clustering plot clusters samples based on a chosen feature type. Classify the user's query into exactly one of the following categories:
   - "${GENE_EXPRESSION}": the user wants to cluster on gene expression (e.g. clustering by individual genes such as TP53, BRCA1, KMT2A, or by gene sets / pathways such as GO_T67_PATHWAY).
-  - "metaboliteIntensity": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
+- "${METABOLITE_INTENSITY}": the user wants to cluster on metabolite intensity (e.g. clustering by metabolites such as glucose, lactate, alanine).
   - "dictionary": the user wants to cluster on dictionary / clinical variables (e.g. clustering by age, sex, treatment response, lab values, diagnosis).
   - "${SSGSEA}": the user wants to cluster on ssGSEA scores for gene sets.
 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure and no extra text, fields, or code fences:
 {
-  "variableType": "${GENE_EXPRESSION}" | "metaboliteIntensity" | "dictionary" | "${SSGSEA}" | "ambiguous"
+"variableType": "${GENE_EXPRESSION}" | "${METABOLITE_INTENSITY}" | "dictionary" | "${SSGSEA}" | "ambiguous"
 }
 
 ## EXAMPLES
@@ -761,10 +761,10 @@ Q: "Hierarchical clustering of GO_T67_PATHWAY and HGC_676 genesets"
 A: { "variableType": "${GENE_EXPRESSION}" }
 
 Q: "Cluster patients by glucose and lactate metabolite intensity"
-A: { "variableType": "metaboliteIntensity" }
+A: { "variableType": "${METABOLITE_INTENSITY}" }
 
 Q: "Show a hierarchical clustering of metabolites"
-A: { "variableType": "metaboliteIntensity" }
+A: { "variableType": "${METABOLITE_INTENSITY}" }
 
 Q: "Cluster samples using age, sex, and treatment response"
 A: { "variableType": "dictionary" }
@@ -812,8 +812,8 @@ Query: ${user_prompt}
 			type: 'text',
 			text: 'Not clear what gene dataType the user is referring to.'
 		}
-	} else if (variableType === 'metaboliteIntensity') {
-		if (allowedTermTypes.includes('metaboliteIntensity')) {
+	} else if (variableType === METABOLITE_INTENSITY) {
+		if (allowedTermTypes.includes(METABOLITE_INTENSITY)) {
 			return {
 				type: 'text',
 				text: 'Hierarchical clustering for metabolite intensity is not currently supported.'
