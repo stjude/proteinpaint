@@ -9,8 +9,7 @@ import type {
 	RouteApi,
 	TermWrapper,
 	Term,
-	ValidGetDataResponse,
-	Cell
+	ValidGetDataResponse
 } from '#types'
 import type { ReqQueryAddons } from './types.ts'
 import { termdbSampleScatterPayload } from '#types/checkers'
@@ -22,7 +21,6 @@ import { authApi } from '../src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '../src/utils.js'
 import { getDescrStats } from '#routes/termdb.descrstats.ts'
-import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 export const api: RouteApi = {
 	endpoint: 'termdb/sampleScatter',
@@ -39,7 +37,7 @@ export const api: RouteApi = {
 }
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
-const refColor = '#F5F5DC'
+export const refColor = '#F5F5DC'
 
 /** sample coordinates are retrieved from one of two sources:
 1. from a prebuilt plot. q.plotName is required to identify the plot on server
@@ -48,14 +46,12 @@ function init({ genomes }) {
 	return async function (req, res) {
 		try {
 			const q: TermdbSampleScatterRequest & ReqQueryAddons = req.query
+
 			if (!q.genome || !q.dslabel) {
 				throw new Error('Genome and dataset label are required for termdb/sampleScatter request.')
 			}
 			const g = genomes[q.genome]
 			const ds = g.datasets[q.dslabel]
-			if (q.singleCellPlot)
-				//single cell plot
-				return getSingleCellScatter(req, res, ds)
 
 			let refSamples: number[] = [], // reference samples, those that are not in termdb and only present in prebuilt scatter map
 				cohortSamples // cohort (or termdb) samples, those are annotated by terms
@@ -153,93 +149,6 @@ function init({ genomes }) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
-	}
-}
-
-async function getSingleCellScatter(req, res, ds) {
-	const q = req.query satisfies TermdbSampleScatterRequest
-	const { name, sample } = q.singleCellPlot
-	try {
-		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
-		if (!tw || !isSingleCellTerm(tw.term))
-			throw new Error('colorTW must be provided and be a single cell term for single cell scatter plot')
-		const arg: any = { plots: [name], sample }
-
-		if (tw.term.type == SINGLECELL_GENE_EXPRESSION) arg.gene = tw.term.gene
-		else if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
-		else throw new Error(`unsupported single cell term type: ${tw.term.type}`)
-
-		const data = await ds.queries.singleCell.data.get(arg)
-
-		const plot = data.plots[0]
-		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
-		const groups = tw.q?.customset?.groups
-		const cat2GrpName = new Map<any, string>()
-		if (groups) {
-			for (const group of groups) {
-				for (const value of Object.values(group.values) as any[]) {
-					cat2GrpName.set(value.key, group.name)
-				}
-			}
-		}
-		const samples: ScatterSample[] = cells.map(cell => {
-			/** Since getData() from termdb.matrix is not called again for single cell scatter,
-			 * the groups formatting logic for category (i.e. value) is recreated here. */
-			let category = cell.category
-			const groupName = cat2GrpName.get(category)
-			if (groupName !== undefined) category = groupName
-			const hidden = {
-				category: tw?.q?.hiddenValues ? category in tw.q.hiddenValues : false
-			}
-			return {
-				sample: cell.cellId,
-				sampleId: cell.cellId,
-				x: cell.x,
-				y: cell.y,
-				z: 0,
-				category,
-				shape: 'Ref',
-				hidden,
-				geneExp: cell.geneExp
-			}
-		})
-		const [xMin, xMax, yMin, yMax] = samples.reduce(
-			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[samples[0].x, samples[0].x, samples[0].y, samples[0].y]
-		)
-		const categories: any = new Set(samples.map(s => s.category))
-		const colorMap = {}
-
-		if (tw.term.type != SINGLECELL_GENE_EXPRESSION) {
-			const defaultK2c = getColors(categories.size)
-			const k2c = category => {
-				/** Only assign default color after checking term.values
-				 * and ds defined colors. */
-				const dsTerm = ds.queries.singleCell?.terms
-					? ds.queries.singleCell.terms.find(t => t.name == tw.term.name)
-					: undefined
-				return tw.term.values?.[category]?.color || dsTerm?.values?.[category]?.color || defaultK2c(category)
-			}
-
-			for (const category of categories) {
-				const color = k2c(category)
-				colorMap[category] = {
-					sampleCount: samples.filter((s: any) => s.category == category).length,
-					color,
-					key: category
-				}
-			}
-		}
-		const shapeLegend: ShapeLegendEntry[] = [['Ref', { sampleCount: samples.length, shape: 0, key: 'Ref' }]]
-		const colorLegend: ColorLegendEntry[] = Object.entries(colorMap)
-
-		res.send({
-			result: { Default: { samples, colorLegend, shapeLegend } },
-			range: { xMin, xMax, yMin, yMax }
-		} satisfies TermdbSampleScatterResponse)
-	} catch (e: any) {
-		console.log(e)
-		res.send({ error: e.message || e })
 	}
 }
 

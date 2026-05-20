@@ -1,15 +1,22 @@
 import { rgb } from 'd3-color'
 import * as THREE from 'three'
-import { ScatterViewModel } from './scatterViewModel.js'
+import { ScatterViewModel } from './scatterViewModel'
+import type { Scatter } from '../scatter'
 
 export class ScatterViewModel2DLarge extends ScatterViewModel {
-	constructor(scatter) {
+	isSingleCell: boolean = false
+
+	constructor(scatter: Scatter) {
 		super(scatter)
+		this.isSingleCell = scatter.config?.singleCellPlot
 	}
 
 	async renderSerie(chart) {
+		if (this.isSingleCell && chart.src) {
+			this.renderLargeSingleCell(chart)
+			return
+		}
 		const DragControls = await import('three/examples/jsm/controls/DragControls.js')
-
 		this.view.dom.mainDiv.selectAll('*').remove()
 
 		this.canvas = this.view.dom.mainDiv.insert('div').style('display', 'inline-block').append('canvas').node()
@@ -83,6 +90,20 @@ export class ScatterViewModel2DLarge extends ScatterViewModel {
 			colors.push(color.r, color.g, color.b)
 		}
 		return { vertices, colors }
+	}
+
+	/** Renders the server generated image for a single cell */
+	renderLargeSingleCell(chart) {
+		/** No need to remove elements or call the legend in this fn.
+		 * Unlike the renderSerie above, this fn finishes in renderChart -> renderSVG
+		 * before legendvm.renderLegend is called. renderChart handles dom additions
+		 * and removal. A new legend is rendered each time. Simply add the image. */
+		chart.svg.selectAll('.sjpp-scatter-img-g').remove()
+		const imgG = chart.svg.append('g').attr('class', 'sjpp-scatter-img-g')
+		const img = imgG.append('image').attr('xlink:href', chart.src)
+		if (chart.canvasWidth) img.attr('width', chart.canvasWidth)
+		if (chart.canvasHeight) img.attr('height', chart.canvasHeight)
+		this.canvas = img
 	}
 }
 

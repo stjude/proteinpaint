@@ -1,6 +1,7 @@
 import tape from 'tape'
-import { ScatterModel, getCoordinate } from '../model/scatterModel.ts'
+import { ScatterModel } from '../model/scatterModel.ts'
 import { getDefaultScatterSettings } from '../settings/defaults.ts'
+import { getCoordinate } from '#shared'
 
 /** Tests:
  *  - getDataRequestOpts builds expected request payload

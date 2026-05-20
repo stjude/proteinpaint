@@ -2,12 +2,12 @@ import { ColorScale, getMaxLabelWidth, Menu } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import { morigin, dt2label } from '#shared/common.js'
-import { shapes } from '../model/scatterModel.js'
+import { shapes } from '../model/scatterModel'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { ScatterLegendInteractivity } from './scatterLegendInteractivity.js'
-import { minShapeSize, maxShapeSize } from '../view/scatterView.js'
-import type { Scatter } from '../scatter.js'
-import type { ScatterLegendItem } from '../scatterTypes.js'
+import { ScatterLegendInteractivity } from './scatterLegendInteractivity'
+import { minShapeSize, maxShapeSize } from '../view/scatterView'
+import type { Scatter } from '../scatter'
+import type { ScatterLegendItem } from '../scatterTypes'
 
 export class ScatterLegend {
 	scatter: Scatter
@@ -70,7 +70,7 @@ export class ScatterLegend {
 		let title
 		let title0 = this.scatter.config.term0
 			? `${this.scatter.config.term0.term.name + ' ' + chart.id}, n=${chart.cohortSamples.length}`
-			: `${chart.cohortSamples.length} ${
+			: `${chart.totalSampleCount ?? chart.cohortSamples?.length} ${
 					this.scatter.config.sampleType
 						? this.scatter.config.sampleType + 's'
 						: `${this.scatter.settings.itemLabel.toLowerCase()}s`

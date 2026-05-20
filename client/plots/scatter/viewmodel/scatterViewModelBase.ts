@@ -6,11 +6,12 @@ import { ScatterTooltip } from './scatterTooltip.js'
 import { getTitle } from './scatterLegend.js'
 import { ScatterZoom } from './scatterZoom.js'
 import type { Scatter } from '../scatter.js'
+import type { ScatterModelBase } from '../model/ScatterModelBase'
 
 export class ScatterViewModelBase {
 	scatter: Scatter
 	view: any
-	model: any
+	model: ScatterModelBase
 	interactivity: any
 	legendvm: ScatterLegend
 	scatterTooltip: ScatterTooltip
@@ -282,7 +283,7 @@ export class ScatterViewModelBase {
 				const l = line()
 					.x(d => d[0])
 					.y(d => d[1])
-				const regressionPath = chart.regressionG.append('path')
+				const regressionPath = chart.regressionG!.append('path')
 				regressionPath
 					.attr('d', l(chart.regressionCurve))
 					.attr('stroke', 'blue')
@@ -302,10 +303,15 @@ export class ScatterViewModelBase {
 		const toolsDiv = this.view.dom.toolsDiv.style('background-color', 'white')
 		toolsDiv.selectAll('*').remove()
 
-		this.scatterZoom.initZoom(toolsDiv)
+		//Disabling all zoom functionality for large single cell plots for now
+		if (!(this.model.is2DLarge && this.scatter.config.singleCellPlot)) this.scatterZoom.initZoom(toolsDiv)
 	}
 
-	//2D large and 3D add an svg for the legend
+	/** Applies to the ViewModel only
+	 * Note: legendvm.renderLegend called in this file applies to all
+	 * inherited classes. The g dimensions are different
+	 * between the svg rendered scatter and the 2D Large/3D scatter.
+	 * Hence the similar function in scatterViewModel. */
 	addLegendSVG(chart) {
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = this.view.dom.mainDiv

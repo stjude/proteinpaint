@@ -1,11 +1,10 @@
 import { mclass } from '#shared/common.js'
-import { shapesArray } from '../../../dom/shapes.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getDateStrFromNumber } from '#shared/terms.js'
 import { rgb } from 'd3-color'
-import type { Scatter } from '../scatter.js'
-import { table2col } from '#dom'
-import { getCoordinate } from '../model/scatterModel.ts'
+import type { Scatter } from '../scatter'
+import { table2col, shapesArray } from '#dom'
+import { getCoordinate } from '#shared'
 
 export class ScatterTooltip {
 	scatter: Scatter

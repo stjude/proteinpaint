@@ -1,7 +1,6 @@
-import { zoom as d3zoom } from 'd3-zoom'
+import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom'
 import type { Scatter } from '../scatter.js'
-import { zoomIdentity } from 'd3-zoom'
 
 export class ScatterZoom {
 	scatter: Scatter
@@ -63,7 +62,7 @@ export class ScatterZoom {
 		})
 
 		for (const chart of this.scatter.model.charts) {
-			chart.mainG.call(this.zoomD3)
+			chart.mainG!.call(this.zoomD3)
 		}
 
 		if (this.scatter.config.scaleDotTW && this.zoom > 4) this.resetToIdentity()
@@ -77,8 +76,8 @@ export class ScatterZoom {
 			const new_yScale = transform.rescaleY(chart.yAxisScale)
 			chart.serie.attr('transform', transform)
 			chart.regressionG?.attr('transform', transform)
-			chart.xAxis.call(chart.axisBottom.scale(new_xScale))
-			chart.yAxis.call(chart.axisLeft.scale(new_yScale))
+			chart.xAxis!.call(chart.axisBottom.scale(new_xScale))
+			chart.yAxis!.call(chart.axisLeft.scale(new_yScale))
 			if (this.scatter.config.lassoOn)
 				chart.lasso.selectedItems().attr('transform', c => this.scatter.model.transform(chart, c, 1.2))
 			if (this.scatter.config.scaleDotTW) this.scatter.vm.legendvm.drawScaleDotLegend(chart)
@@ -88,19 +87,19 @@ export class ScatterZoom {
 	zoomIn() {
 		this.zoom = this.zoom * 1.2
 		if (!this.scatter.model.is2DLarge)
-			for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 1.2)
+			for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG!.transition().duration(500), 1.2)
 	}
 
 	zoomOut() {
 		this.zoom = this.zoom * 0.8
 		if (!this.scatter.model.is2DLarge)
-			for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG.transition().duration(500), 0.8)
+			for (const chart of this.scatter.model.charts) this.zoomD3.scaleBy(chart.mainG!.transition().duration(500), 0.8)
 	}
 
 	resetToIdentity() {
 		this.zoom = 1
 		if (!this.scatter.model.is2DLarge)
 			for (const chart of this.scatter.model.charts)
-				chart.mainG.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
+				chart.mainG!.transition().duration(500).call(this.zoomD3.transform, zoomIdentity)
 	}
 }

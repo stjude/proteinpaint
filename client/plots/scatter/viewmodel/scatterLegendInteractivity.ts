@@ -1,8 +1,8 @@
-import { Menu } from '#dom/menu'
+import { Menu, shapeSelector } from '#dom'
 import { rgb } from 'd3-color'
-import { shapeSelector } from '../../../dom/shapes.js'
-import type { Scatter } from '../scatter.js'
+import type { Scatter } from '../scatter'
 import { scaleLinear as d3Linear } from 'd3-scale'
+
 export class ScatterLegendInteractivity {
 	scatter: Scatter
 	shapeTW: any

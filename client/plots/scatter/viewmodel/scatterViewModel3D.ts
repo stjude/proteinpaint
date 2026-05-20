@@ -8,6 +8,7 @@ import { getContourImage } from '../../singleCellPlot.js'
 import { ScatterViewModel } from './scatterViewModel.js'
 import { getThreeCircle } from './scatterViewModel2DLarge.js'
 import type { Scatter } from '../scatter.js'
+
 export class ScatterViewModel3D extends ScatterViewModel {
 	scatter!: Scatter
 	canvas: any

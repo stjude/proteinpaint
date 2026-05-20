@@ -2,9 +2,9 @@ import { icons as icon_functions } from '#dom'
 import { d3lasso } from '#common/lasso'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { line, extent, contourDensity, geoPath, scaleSequential, max, interpolateGreys } from 'd3'
-import { ScatterLasso } from './scatterLasso.js'
-import type { Scatter } from '../scatter.js'
-import { ScatterViewModelBase } from './scatterViewModelBase.js'
+import { ScatterLasso } from './scatterLasso'
+import type { Scatter } from '../scatter'
+import { ScatterViewModelBase } from './scatterViewModelBase'
 
 export class ScatterViewModel extends ScatterViewModelBase {
 	scatterLasso: ScatterLasso
@@ -56,7 +56,7 @@ export class ScatterViewModel extends ScatterViewModelBase {
 				const l = line()
 					.x(d => d[0])
 					.y(d => d[1])
-				const regressionPath = chart.regressionG.append('path')
+				const regressionPath = chart.regressionG!.append('path')
 				regressionPath
 					.attr('d', l(chart.regressionCurve))
 					.attr('stroke', 'blue')
@@ -97,7 +97,11 @@ export class ScatterViewModel extends ScatterViewModelBase {
 		}
 	}
 
-	//2D large and 3D add an svg for the legend
+	/** Applies to 2D large and 3D add an svg for the legend
+	 * Note: legendvm.renderLegend called in ViewModeBase applies to all
+	 * inherited classes. The g dimensions are different
+	 * between the svg rendered scatter and the 2D Large/3D scatter.
+	 * Hence the similar function in scatterViewModelBase.*/
 	addLegendSVG(chart) {
 		chart.chartDiv.style('margin', '20px 20px')
 		chart.legendDiv = this.view.dom.mainDiv

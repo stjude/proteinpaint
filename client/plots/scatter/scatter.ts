@@ -1,23 +1,27 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
-import { fillTermWrapper } from '#termsetting'
-import { ScatterModel } from './model/scatterModel.js'
-import { ScatterViewModel } from './viewmodel/scatterViewModel.js'
-import { ScatterView } from './view/scatterView.js'
-import { getCurrentCohortChartTypes } from '#mass/charts'
-import { rebaseGroupFilter } from '#mass/groups'
 import { filterJoin, getCombinedTermFilter } from '#filter'
+import { fillTermWrapper } from '#termsetting'
+import type { MassState } from '#mass/types/mass'
+import { rebaseGroupFilter } from '#mass/groups'
+import { getCurrentCohortChartTypes } from '#mass/charts'
+import { PlotBase } from '#plots/PlotBase.js'
+import { controlsInit } from '../controls'
+import { select2Terms, DownloadMenu } from '#dom'
+import type { Settings } from './settings/Settings.ts'
+import { getDefaultScatterSettings } from './settings/defaults.js'
+import { ScatterModel } from './model/scatterModel.js'
+import { ScatterSingleCellModel } from './model/ScatterSingleCellModel'
+import type { ScatterModelBase } from './model/ScatterModelBase'
+import { ScatterViewModel } from './viewmodel/scatterViewModel.js'
 import { ScatterInteractivity, downloadImage } from './viewmodel/scatterInteractivity.js'
 import { ScatterViewModel2DLarge } from './viewmodel/scatterViewModel2DLarge.js'
 import { ScatterViewModel3D } from './viewmodel/scatterViewModel3D.js'
-import { controlsInit } from '../controls'
-import { select2Terms, DownloadMenu } from '#dom'
-import type { MassState } from '../../mass/types/mass.js'
-import { PlotBase } from '#plots/PlotBase.js'
-import type { Settings } from './settings/Settings.ts'
-import { getDefaultScatterSettings } from './settings/defaults.js'
+import { ScatterView } from './view/scatterView.js'
+import type { ScatterChart } from './scatterTypes'
 
 export class Scatter extends PlotBase implements RxComponent {
 	static type = 'sampleScatter'
+
 	type: string
 	parentId?: string
 	dom!: {
@@ -30,11 +34,11 @@ export class Scatter extends PlotBase implements RxComponent {
 
 	config: any
 	view!: ScatterView
-	model!: ScatterModel
+	model!: ScatterModelBase
 	vm!: any
 	interactivity!: ScatterInteractivity
 	settings!: Settings
-	charts: any
+	charts!: ScatterChart[]
 	opts: any
 	state!: any
 	transform: any
@@ -51,7 +55,7 @@ export class Scatter extends PlotBase implements RxComponent {
 	async init(appState) {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.view = new ScatterView(this)
-		this.model = new ScatterModel(this)
+		this.model = this.config?.singleCellPlot ? new ScatterSingleCellModel(this) : new ScatterModel(this)
 		this.interactivity = new ScatterInteractivity(this)
 		if (this.config.transform) {
 			const scaleRegex = /scale\(([^)]+)\)/

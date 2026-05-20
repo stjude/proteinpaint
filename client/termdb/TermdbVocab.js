@@ -1032,15 +1032,26 @@ export class TermdbVocab extends Vocab {
 			filter0: opts.filter0,
 			embedder: window.location.hostname,
 			singleCellPlot: opts.singleCellPlot,
-			chartType: opts.chartType
+			chartType: opts.chartType,
+			excludeOutliers: opts.excludeOutliers
 		}
 		if (opts.colorColumn) body.colorColumn = opts.colorColumn
 		if (opts.colorTW) body.colorTW = this.getTwMinCopy(opts.colorTW)
 		if (opts.shapeTW) body.shapeTW = this.getTwMinCopy(opts.shapeTW)
 		if (opts.divideByTW) body.divideByTW = this.getTwMinCopy(opts.divideByTW)
 		if (opts.scaleDotTW) body.scaleDotTW = this.getTwMinCopy(opts.scaleDotTW)
-		body.excludeOutliers = opts.excludeOutliers
 		return await this.dofetch3('termdb/sampleScatter', { headers, body, signal })
+	}
+
+	//TODO: Will need to add in filter
+	async getScatterSingleCellPlotData(opts, signal = undefined) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		const body = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			...opts
+		}
+		return await this.dofetch3('termdb/singleCellPlots', { headers, body, signal })
 	}
 
 	async getDefaultBins(opts) {
