@@ -71,15 +71,17 @@ export class SampleTableRenderer {
 		if (!sandboxes || sandboxes.length === 0) return
 
 		for (const { div, plotName } of sandboxes) {
-			this.appendPlotBtn(cell, div, plotName)
+			this.appendPlotBtn(cell, div, plotName, sampleId)
 		}
 	}
 
-	appendPlotBtn(cell: any, sandboxDiv: any, plotName: string) {
+	appendPlotBtn(cell: any, sandboxDiv: any, plotName: string, sampleId: string) {
 		const text = plotName.length > 25 ? plotName.slice(0, 12) + '...' : plotName
+		const label = `Scroll to ${plotName}`
 		cell
-			.append('span')
+			.append('button')
 			.attr('class', 'sjpp-sc-table-plot-btn')
+			.attr('data-testid', `sjpp-sc-table-${sampleId}-${plotName}-btn`)
 			.style('padding', '2px 5px')
 			.style('margin-left', '4px')
 			.style('font-size', '0.8em')
@@ -87,7 +89,9 @@ export class SampleTableRenderer {
 			.style('border', '0.5px solid black')
 			.style('cursor', 'pointer')
 			.text(text)
-			.attr('title', `Scroll to ${plotName}`)
+			.attr('aria-label', label)
+			.attr('title', label)
+			.attr('tabindex', 0)
 			.on('click', () => {
 				sandboxDiv.node().scrollIntoView({ behavior: 'smooth', block: 'start' })
 			})
