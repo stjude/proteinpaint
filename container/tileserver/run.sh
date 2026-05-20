@@ -27,14 +27,17 @@ set -e
 sh ../createPPNetwork.sh
 # theeres a problem that the container and the machine makes inquiries about aihisto data, but the container is looking in this "/home/root/tileserver/tp" path 
 # (side note I dont think you want tp bu actually aihisto data path) and the machine wants to look in the "/Users/jsimps98/data/aihisto" path, but both seem to be  using the mount path from serverconfig.
+#Theres also a problem that data and model are put up by symlnks so when the links are mounted they point to data thats not actually there, so the overlays dont show up
 # I think there are 3 solutions
 # 1. have two variables in serverconfig for host and container paths 
-# 2. mount the data path with the same path as the host files (probably the simplest)
+# 2. mount the data path with the same path as the host files including real ppaihal data (probably the simplest)
 # 3. use this translate path function in app.py from copilot (seems fragile)
 docker run -d \
 	--name $CONTAINER_NAME \
 	--network pp_network \
-	--mount type=bind,source=$TP,target=$CONTAINER_MOUNT,readonly \
+	--mount type=bind,source=$TP,target=$TP,readonly \
+	--mount type=bind,source=/Users/jsimps98/dev/sjpp/ppaihal/data,target=/Users/jsimps98/dev/sjpp/ppaihal/data,readonly \
+	--mount type=bind,source=/Users/jsimps98/dev/sjpp/ppaihal/model,target=/Users/jsimps98/dev/sjpp/ppaihal/model,readonly \
 	-e PORT=$PORT \
 	-e TILESERVER_HOST_MOUNT=$TP \
 	-e TILESERVER_CONTAINER_MOUNT=$CONTAINER_MOUNT \

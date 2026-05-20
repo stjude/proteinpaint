@@ -79,7 +79,6 @@ function init({ genomes }) {
 
 async function getWSImagePath(ds: any, wSImagesRequest: WSImagesRequest) {
 	const mount = serverconfig.features?.tileserver?.containerMount
-
 	if (!mount) throw new Error('No mount available for TileServer')
 
 	if (wSImagesRequest.sampleId) {
@@ -152,7 +151,7 @@ async function getSessionId(
 	if (ds.queries.WSImages.getPredictionLayers) {
 		const predictionLayers: Map<string, string> | Record<string, string> | undefined =
 			await ds.queries.WSImages.getPredictionLayers(projectId, wsimage)
-
+		console.log('Retrieved prediction layers:', predictionLayers)
 		if (predictionLayers) {
 			const resolveFilename = (key: string): string | undefined => {
 				if (!predictionLayers) return undefined
