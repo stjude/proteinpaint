@@ -55,7 +55,7 @@ import { exec as execCallback } from 'node:child_process'
 // Constants & types
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
 const GRIN2_MEMORY_BUDGET_MB = 950
-const GRIN2_CONCURRENCY_LIMIT = 10
+const GRIN2_CONCURRENCY_LIMIT = 5
 const MEMORY_BASE_MB = 260
 const MEMORY_PER_1K_LESIONS = 2.4
 const MIN_LESIONS = 50000
@@ -104,10 +104,11 @@ function init({ genomes }) {
 
 			const errorResponse: GRIN2Response = {
 				status: 'error',
-				error: e.message || String(e)
+				error: e.message || String(e),
+				code: e.code
 			}
 
-			res.status(500).send(errorResponse)
+			res.status(e.status || 500).send(errorResponse)
 		}
 	}
 }

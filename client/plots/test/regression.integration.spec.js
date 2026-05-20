@@ -483,7 +483,7 @@ tape('Logistic: continuous outcome = "hrtavg", continuous independent = "agedx"'
 						id: 'hrtavg',
 						isAtomic: true
 					},
-					independent: [{ id: 'agedx' }]
+					independent: [{ id: 'agedx', q: { mode: 'continuous' } }]
 				}
 			]
 		},
@@ -579,7 +579,7 @@ tape('Logistic: categorical outcome = "diaggrp", continuous independent = "agedx
 						id: 'diaggrp',
 						isAtomic: true
 					},
-					independent: [{ id: 'agedx' }]
+					independent: [{ id: 'agedx', q: { mode: 'continuous' } }]
 				}
 			]
 		},
@@ -674,7 +674,7 @@ tape('Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"', te
 					outcome: {
 						id: 'Arrhythmias'
 					},
-					independent: [{ id: 'agedx' }]
+					independent: [{ id: 'agedx', q: { mode: 'continuous' } }]
 				}
 			]
 		},
@@ -786,7 +786,7 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 					outcome: {
 						id: 'os'
 					},
-					independent: [{ id: 'agedx' }]
+					independent: [{ id: 'agedx', q: { mode: 'continuous' } }]
 				}
 			]
 		},

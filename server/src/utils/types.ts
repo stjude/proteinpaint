@@ -1,8 +1,4 @@
-/** Subdirs of serverconfig.cachedir that the cacheOrRecompute module is
- * allowed to write to. Each entry must also be configured in
- * `CacheManager.ts` so the eviction lifecycle (TTL + max-size) still
- * applies. Add new analysis types here. */
-export type CacheSubdir = 'de' | 'dm' | 'gsea' | 'grin2' | 'topve'
+import type { CacheSubdir } from '#src/utils/cacheOrRecompute.ts'
 
 export type CacheOrRecomputeOpts<TArgs, TResult> = {
 	/** Hashed to derive the cacheId. Pass the subset of the request whose

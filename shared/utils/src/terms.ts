@@ -149,9 +149,8 @@ export const numericTypes = new Set([
 	DATE
 ])
 
-// available termdb numeric table names used as anno_<term.type>,
-// for example anno_integer, anno_float, anno_date
-export const annoNumericTypes = new Set([INTEGER, FLOAT, DATE])
+// dictionary numeric term types, exists in db tables, exclude non-dictionary term types
+export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 

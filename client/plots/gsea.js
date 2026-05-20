@@ -434,7 +434,7 @@ add:
 		}
 		output = await rungsea(body, self.dom)
 		if (output.error) {
-			throw output.error
+			throw Object.assign(new Error(output.error), { code: output.code })
 		}
 	} catch (e) {
 		// Inline error block instead of alert(). Mirror the detail-plot
@@ -444,6 +444,10 @@ add:
 		// stale-session cache regen).
 		self.dom.holder.selectAll('*').remove()
 		const msg = String(e?.message || e)
+		if (e?.code === 'CACHE_BUSY') {
+			if (window.confirm(msg)) render_gsea(self)
+			return
+		}
 		const userMsg = /daCacheMissing|ENOENT|no such file/i.test(msg)
 			? 'The differential-analysis cache for this GSEA is no longer available. Reopen the volcano plot to regenerate it.'
 			: msg
@@ -482,7 +486,7 @@ add:
 					const deResp = await dofetch3('genesetEnrichment', {
 						body: fetchBody
 					})
-					if (deResp.error) throw deResp.error
+					if (deResp.error) throw Object.assign(new Error(deResp.error), { code: deResp.code })
 					self.rankedDE = deResp.data
 				}
 				render_cerno_plot(self, output)
@@ -492,6 +496,10 @@ add:
 		} catch (e) {
 			self.dom.holder.selectAll('*').remove()
 			const msg = String(e?.message || e)
+			if (e?.code === 'CACHE_BUSY') {
+				if (window.confirm(msg)) render_gsea(self)
+				return
+			}
 			const userMsg = /daCacheMissing|ENOENT|no such file/i.test(msg)
 				? 'The differential-analysis cache for this GSEA is no longer available. Reopen the volcano plot to regenerate it.'
 				: msg

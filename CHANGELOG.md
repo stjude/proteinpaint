@@ -9,6 +9,7 @@ Features:
 
 Fixes:
 - show Loading on selecting a term into regression ui
+- non-dict numeric terms now defaults to mode=discrete with median cutoff as regression input terms
 
 
 ## 2.189.0

@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { cacheJobPolicies } from './utils/cacheOrRecompute.ts'
 
 // configuration for each cache subdir
 type SubdirOpts = {
@@ -65,17 +66,31 @@ const subdirOptsDefaults: SubdirOpts = {
 	skipMs: 0 // run on every interval check
 }
 
+// Eviction policy shared by every cacheOrRecompute subdir. Lives here
+// (not in cacheJobPolicies) because cacheOrRecompute itself doesn't read
+// these fields — only CacheManager does.
+const cacheOrRecomputeEvictionDefaults = {
+	maxAge: day * 60,
+	skipMs: halfDay
+}
+
+// Auto-registered subdirs owned by cacheOrRecompute. The single source
+// of truth is utils/types.ts so adding a new analysis type there
+// automatically activates eviction here.
+const cacheOrRecomputeSubdirDefaults = Object.fromEntries(
+	Object.entries(cacheJobPolicies).map(([name, opts]) => [
+		name,
+		{ ...subdirOptsDefaults, ...cacheOrRecomputeEvictionDefaults, ...opts }
+	])
+)
+
 // these configurations can be overriden by the argument to CacheManager constructor(),
 // which is primarily specified in serverconfig.features.cache
 const defaultOpts = {
 	cachedir: path.join(process.cwd(), '.cache'),
 	interval: minute,
 	subdirs: {
-		gsea: {
-			...subdirOptsDefaults,
-			maxAge: day * 60,
-			skipMs: halfDay
-		},
+		...cacheOrRecomputeSubdirDefaults,
 		massSession: {
 			...subdirOptsDefaults,
 			maxAge: day * 30, // total milliseconds in 30 days
@@ -85,26 +100,6 @@ const defaultOpts = {
 			...subdirOptsDefaults,
 			maxAge: day * 60, // total milliseconds in 60 days
 			skipMs: halfDay // run every 12 hours
-		},
-		grin2: {
-			...subdirOptsDefaults,
-			maxAge: day * 60,
-			skipMs: halfDay
-		},
-		de: {
-			...subdirOptsDefaults,
-			maxAge: day * 60,
-			skipMs: halfDay
-		},
-		dm: {
-			...subdirOptsDefaults,
-			maxAge: day * 60,
-			skipMs: halfDay
-		},
-		topve: {
-			...subdirOptsDefaults,
-			maxAge: day * 60,
-			skipMs: halfDay
 		},
 		// Legacy combined DE/DM cache dir. Nothing writes here anymore
 		// (DE → de/, DM → dm/), but registering it keeps the TTL sweep
@@ -146,20 +141,32 @@ export class CacheManager {
 		if (opts.quiet) this.quiet = opts.quiet
 		/* v8 ignore stop */
 		this.subdirs = new Map()
-		this.init(opts) // do not await, since contructor() can only return an object instance and not a Promise
-	}
 
-	async init(opts) {
+		// Synchronous setup: cachedir, subdir registration, and the
+		// required-subdir guard. Kept out of init() so the guard's throw
+		// surfaces as a real constructor error instead of an unhandled
+		// promise rejection.
 		if (!fs.existsSync(this.cachedir)) fs.mkdirSync(this.cachedir, { recursive: true })
-
 		const subdirs = Object.assign({}, defaultOpts.subdirs, opts.subdirs || {})
 		for (const [dirName, dirOpts] of Object.entries(subdirs)) {
-			if (dirOpts === undefined) delete subdirs[dirName]
-			else {
+			if (dirOpts === undefined) {
+				if (dirName in cacheJobPolicies) {
+					throw new Error(
+						`Cannot disable required cacheOrRecompute subdir '${dirName}'. ` +
+							`Remove it from cacheJobPolicies in utils/cacheOrRecompute.ts if it is no longer used.`
+					)
+				}
+				delete subdirs[dirName]
+			} else {
 				const subdirOpts = Object.assign({}, subdirOptsDefaults, dirOpts)
 				this.setComputedOpts(dirName, subdirOpts)
 			}
 		}
+
+		this.init(opts) // do not await, since contructor() can only return an object instance and not a Promise
+	}
+
+	async init(opts) {
 		if (this.callbacks.preStart) await this.callbacks.preStart(this)
 		if (!opts.mustExitPendingValidation) await this.start()
 	}
