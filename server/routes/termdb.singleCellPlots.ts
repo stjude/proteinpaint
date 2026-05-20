@@ -47,9 +47,9 @@ function init({ genomes }) {
 			if (!ds.queries?.singleCell) throw new Error('No single cell data on this dataset')
 
 			return getSingleCellScatter(req, res, ds)
-		} catch (err) {
+		} catch (err: any) {
 			console.error(err)
-			res.status(500).json({ error: 'Internal server error' })
+			res.status(500).json({ error: err.message || String(err) })
 		}
 	}
 }
