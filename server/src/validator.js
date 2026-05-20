@@ -7,10 +7,10 @@ export function middleware(req, res, next) {
 		// NOTE: a preceding middleware combines req.query with req.body in a POST request
 		const q = req.query
 
-		const payloadName = req.path.slice(1).replace('/', '').toLowerCase() + 'payload'
+		const payloadName = req.path.slice(1).replaceAll('/', '').toLowerCase() + 'payload'
 		const entry = checkerEntries.find(c => c.includes(payloadName))
-		const checker = entry?.[1].request.checker
-		if (typeof checker == 'function') req.query = checker(q)
+		const checker = entry?.[1]?.request?.checker
+		if (typeof checker == 'function') Object.assign(req.query, checker(q))
 		else {
 			for (const [key, val] of Object.entries(q)) {
 				if (genericParams.includes(key)) q[key] = byReqKey[key](q[key])

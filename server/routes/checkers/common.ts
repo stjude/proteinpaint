@@ -2,6 +2,9 @@
 // Route-specific validators should be coded in server/routes or server/checkers files.
 
 export function validBoolean(input, err?: string): boolean {
+	// urlJsonDecode(req.query) as called in app.middleware will convert '1' and '0' to a number
+	if (input === 1) return true // normalize value to a boolean
+	if (input === 0 || input === undefined) return false // normalize value to a boolean
 	if (typeof input != 'boolean') throw err || `input must be a boolean`
 	return input
 }
@@ -41,7 +44,7 @@ export function validStringArr(input, err?: string): string[] {
 }
 
 export function validNumber(input): number {
-	if (typeof input != 'number') throw 'dslabel should be a number'
+	if (typeof input != 'number') throw 'input should be a number'
 	return input
 }
 
