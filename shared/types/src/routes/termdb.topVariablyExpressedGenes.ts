@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 //import GdcFilter0 from './filter.gdc'
 import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
@@ -43,12 +42,4 @@ type ValidResponse = {
 
 export type TermdbTopVariablyExpressedGenesResponse = ErrorResponse | ValidResponse
 
-export const termdbTopVariablyExpressedGenesPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbTopVariablyExpressedGenesRequest'
-	},
-	response: {
-		typeId: 'TermdbTopVariablyExpressedGenesResponse'
-	}
-	// examples: []
-}
+// TODO: write payload examples to help with automated testing and documentation, for non-prod use only
