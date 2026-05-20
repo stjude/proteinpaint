@@ -42,8 +42,8 @@ class MassAiChatBot implements RxComponent {
 		}
 	}
 
-	async init(appState) {
-		this.initDom(appState)
+	async init() {
+		this.initDom()
 	}
 
 	// Search method, adapted from MassSearch.doSearch
@@ -66,8 +66,8 @@ class MassAiChatBot implements RxComponent {
 		}
 	}
 
-	initDom(appState) {
-		const cohortStr = this.getState(appState).cohortStr
+	initDom() {
+		//const cohortStr = this.getState(appState).cohortStr
 		this.dom = {
 			tip: new Menu({ padding: '5px' }),
 			div: this.opts.subheader,
@@ -109,9 +109,9 @@ class MassAiChatBot implements RxComponent {
 					return
 				}
 				if (MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH) {
-					console.log(
-						`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
-					)
+					//console.log(
+					//	`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
+					//)
 					try {
 						await this.doSearch(prompt) // Search as user types
 					} catch (e: any) {
