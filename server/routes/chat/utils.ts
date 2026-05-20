@@ -105,7 +105,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 		},
 		identifierMode: 'gene',
 		buildTermWrapper: (gene: string) => ({
-			term: { gene: gene.toUpperCase(), name: gene.toUpperCase(), type: '${TermTypes.GENE_VARIANT}' }
+			term: { gene: gene.toUpperCase(), name: gene.toUpperCase(), type: TermTypes.GENE_VARIANT }
 		}),
 		promptFieldDescription:
 			'The "geneNames" field should ONLY contain gene names. These will be shown as gene variant/mutation rows.'
@@ -150,7 +150,7 @@ export const DATA_TYPE_REGISTRY: DataTypeConfig[] = [
 			description: 'Names of proteins to include as whole proteome abundance rows in the matrix'
 		},
 		identifierMode: 'name',
-		buildTermWrapper: (name: string) => ({ term: { name, protein: name, type: 'proteomeAbundance' } }),
+		buildTermWrapper: (name: string) => ({ term: { name, protein: name, type: TermTypes.PROTEOME_ABUNDANCE } }),
 		promptFieldDescription: 'The "proteinNames" field should contain protein names.',
 		dataTypeDescription: 'Protein names'
 	}
