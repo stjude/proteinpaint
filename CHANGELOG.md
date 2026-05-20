@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Added data-agnostic json-based caching framework
 - Added a limit for the number of pending cache requests.
+- For large-scale single cell plots, the server now renders the image. The scatter and single cell plot server requests were decoupled. Decoupling is the first step in future plans to allow cohort level filtering via local plot filter.
 
 Fixes:
 - show Loading on selecting a term into regression ui

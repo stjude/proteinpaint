@@ -1,2 +1,1 @@
-Features
-- For large-scale single cell plots, the server now renders the image. The scatter and single cell plot server requests were decoupled. Decoupling is the first step in future plans to allow cohort level filtering via local plot filter. 
+
