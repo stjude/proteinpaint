@@ -20,5 +20,6 @@ of server or client workspace.
 
 ## Instructions
 
-To create a `server/route` file, follow the comments/instructions in `shared/types/src/routes/_template_.ts`
-
+To create a `server/route` file, follow the comments/instructions in `shared/types/src/routes/_template_.ts`.
+Note that a corresponding `server/routes/checkers` file is optional, but very important in cleaning up
+and improving backend code.
