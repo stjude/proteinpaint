@@ -19,7 +19,7 @@ import { mayLog } from './helpers.ts'
 const basepath = serverconfig.basepath || ''
 
 // NOTE: auth middleware is set in auth.js
-export function setAppMiddlewares(app, genomes, doneLoading) {
+export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	app.use(setHeaders)
 
 	if (serverconfig.users) {
@@ -163,7 +163,7 @@ export function setAppMiddlewares(app, genomes, doneLoading) {
 	})
 
 	app.catch = validator.floodCatch
-	app.use(validator.middleware)
+	app.use(validator.getMiddleware(routes))
 }
 
 const hiddenQueryKeys = new Set(['jwt', '__protected__', '__abortSignal'])

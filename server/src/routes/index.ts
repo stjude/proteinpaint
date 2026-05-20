@@ -1,7 +1,10 @@
+<<<<<<<< HEAD:shared/types/checkers/index.js
 // this file was auto-generated using 'npm run generate' or 'npm run dev' from the shared/types dir
 export * from './aiProjectAdmin.ts'
 export * from './aiProjectSelectedWSImages.ts'
 export * from './aiProjectTrainModel.ts'
+========
+>>>>>>>> e7a9287fb (combine route api and checker code in the same file, under server/src/routes):server/src/routes/index.ts
 export * from './alphaGenome.ts'
 export * from './alphaGenomeTypes.ts'
 export * from './brainImaging.ts'
@@ -16,11 +19,9 @@ export * from './dzimages.ts'
 export * from './gdc.grin2.ts'
 export * from './gdc.maf.ts'
 export * from './gdc.mafBuild.ts'
-export * from './genelookup.ts'
 export * from './genesetEnrichment.ts'
 export * from './genesetOverrepresentation.ts'
 export * from './grin2.ts'
-export * from './healthcheck.ts'
 export * from './hicdata.ts'
 export * from './hicgenome.ts'
 export * from './hicstat.ts'
@@ -53,8 +54,11 @@ export * from './termdb.proteome.ts'
 export * from './termdb.rootterm.ts'
 export * from './termdb.runChart.ts'
 export * from './termdb.sampleImages.ts'
+<<<<<<<< HEAD:shared/types/checkers/index.js
 export * from './termdb.sampleScatter.ts'
 export * from './termdb.singleCellPlots.ts'
+========
+>>>>>>>> e7a9287fb (combine route api and checker code in the same file, under server/src/routes):server/src/routes/index.ts
 export * from './termdb.singleSampleMutation.ts'
 export * from './termdb.singlecellDEgenes.ts'
 export * from './termdb.singlecellData.ts'

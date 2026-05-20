@@ -1,22 +1,26 @@
+import type { RoutePayload } from '#types'
 import type { RouteApi, AIProjectTrainModelRequest } from '#types'
-import { aiProjectTrainModelPayload } from '#types/checkers'
 import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.ts'
 import SessionManager from '#src/wsisessions/SessionManager.ts'
 import { getDbConnection } from '#src/aiHistoDBConnection.js'
 import type Database from 'better-sqlite3'
 import { getImages } from '#routes/aiProjectAdmin.js'
 
+export const payload: RoutePayload = {
+	init,
+	request: { typeId: 'AIProjectTrainModelRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'AIProjectTrainModelResponse' }
+}
+
 export const api: RouteApi = {
 	endpoint: 'aiProjectTrainModel',
 	methods: {
-		get: {
-			...aiProjectTrainModelPayload,
-			init
-		},
-		post: {
-			...aiProjectTrainModelPayload,
-			init
-		}
+		// This endpoint does not support write operation, the same readonly request/response
+		// payload init/typeId/checker is expected for both GET and POST methods, where POST
+		// is used when the request payload is to large to be encoded as URL parameters.
+		// May switch to using HTTP QUERY method once that is stable and widely supported.
+		get: payload,
+		post: payload
 	}
 }
 

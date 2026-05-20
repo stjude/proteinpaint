@@ -4,16 +4,24 @@ import path from 'path'
 export * from './ReqResCache.js'
 
 export function setRoutes(app, routes, _opts = {}) {
-	const opts = Object.assign({ basepath: '' }, _opts)
-	for (const route of routes) {
-		const api = route.api
-		for (const method in api.methods) {
-			const m = api.methods[method]
-			app[method](`${opts.basepath}/${api.endpoint}`, m.init(opts))
+	try {
+		const opts = Object.assign({ basepath: '' }, _opts)
+		for (const route of routes) {
+			const api = route.api
+			for (const [method, m] of Object.entries(api.methods)) {
+				const m = api.methods[method]
+				try {
+					app[method](`${opts.basepath}/${api.endpoint}`, m.init(opts))
+				} catch (e) {
+					throw new Error(`${api.endpoint} ${method}: ${e}`)
+				}
+			}
 		}
+		//emitFiles(routes, opts)
+	} catch (e) {
+		console.trace(e)
+		throw e
 	}
-
-	emitFiles(routes, opts)
 }
 
 export function emitFiles(routes, opts) {
