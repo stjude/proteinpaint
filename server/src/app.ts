@@ -45,7 +45,9 @@ export async function launch() {
 		console.log('setting app middlewares ...')
 		const app = express()
 		app.disable('x-powered-by')
-		setAppMiddlewares(app, genomes, doneLoading)
+
+		const routes = await Promise.all(routeFiles)
+		setAppMiddlewares(app, genomes, doneLoading, routes)
 
 		console.log('setting server routes ...')
 		const routeCallbacks = await setOptionalRoutes(app, genomes)
@@ -57,8 +59,6 @@ export async function launch() {
 		*/
 		const authApi = await getAuthApi(app, genomes, { validatedCreds }, true)
 		await authApi.maySetAuthRoutes(app, genomes, basepath, serverconfig)
-
-		const routes = await Promise.all(routeFiles)
 
 		const __dirname = import.meta.dirname || new URL('.', import.meta.url).pathname
 
