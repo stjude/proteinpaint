@@ -96,19 +96,7 @@ export class SCViewRenderer {
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
 		await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
 
-		// Derive sample → sandbox divs from existing state to update the table
-		const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
-		for (const subplot of subplots) {
-			const sampleId = this.sectionRenderer.getSampleId(subplot)
-			const key = this.sectionRenderer.plotId2Key.get(subplot.id)
-			if (!sampleId || !key) continue
-			const div = this.sectionRenderer.sections[key]?.sandboxes[subplot.id]
-			if (!div) continue
-			const plotName = this.sectionRenderer.getPlotName(subplot) || subplot.id
-			if (!sandboxes.has(sampleId)) sandboxes.set(sampleId, [])
-			sandboxes.get(sampleId)!.push({ plotId: subplot.id, div, plotName })
-		}
-
+		const sandboxes = this.sectionRenderer.getSampleSandboxes(subplots)
 		this.sampleTableRenderer.updateTable(settings.sc.item?.sID, sandboxes)
 	}
 }

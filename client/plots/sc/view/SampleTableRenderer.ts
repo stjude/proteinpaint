@@ -11,6 +11,7 @@ export class SampleTableRenderer {
 	interactions: SCInteractions
 	rowIndex: number
 	tableData: SCTableData
+	lastSampleSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> | undefined
 
 	constructor(dom: SCDom, interactions: SCInteractions, tableData: SCTableData) {
 		this.dom = dom
@@ -36,6 +37,13 @@ export class SampleTableRenderer {
 			},
 			striped: true,
 			selectedRows: tableData.selectedRows,
+			afterRender: () => {
+				/** Sort removes all custom html.
+				 * Re-apply the plot buttons after sort. */
+				if (this.lastSampleSandboxes) {
+					this.reapplyAllPlotButtons()
+				}
+			},
 			noButtonCallback: index => {
 				const item = {} as { sID: string; eID: string; [key: string]: any }
 				tableData.rows[index].forEach((r: TableCell, idx: number) => {
@@ -59,10 +67,28 @@ export class SampleTableRenderer {
 		sampleId: string | undefined,
 		sampleSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>
 	) {
-		const sampleIdx = this.tableData.sampleColIdx
+		this.lastSampleSandboxes = sampleSandboxes
 		if (!sampleId) return
-		const row = this.tableData.rows[this.rowIndex]
-		if (!row || row[sampleIdx].value !== sampleId) return
+		this.applyButtonsForSample(sampleId)
+	}
+
+	/** Called by afterRender to re-apply buttons for all samples with subplots. */
+	private reapplyAllPlotButtons() {
+		if (!this.lastSampleSandboxes) return
+		for (const sampleId of this.lastSampleSandboxes.keys()) {
+			this.applyButtonsForSample(sampleId)
+		}
+	}
+
+	/** Applies plot buttons to a single sample's row. */
+	private applyButtonsForSample(sampleId: string) {
+		const sampleSandboxes = this.lastSampleSandboxes
+		const sampleIdx = this.tableData.sampleColIdx
+		if (!sampleSandboxes) return
+
+		/** Rows array mutates on sort. Find the row by matching sampleId.*/
+		const row = this.tableData.rows.find(r => r[sampleIdx].value === sampleId)
+		if (!row) return
 
 		const cell = row[sampleIdx + 1].__td
 		// Clear previous plot buttons before re-rendering
