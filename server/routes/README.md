@@ -32,9 +32,7 @@ The following are suggested destinations:
 
 The auto-generated payload checkers are hard-to-read, do not emit easy-to-trace error messages,
 and uses an `IS` assertion for the validator's returned value, instead of type checking the
-shape of the returned value. More importantaly, manually written validation code is more likely
-to have custom logic that can be tailored to specific route handler needs, which is very hard
-to do with auto-generated payload validation code.
+shape of the returned value. More importantly, manually written validation code is more likely to have custom logic that can be tailored to specific route handler needs, which is very hard to do with auto-generated payload validation code.
 
 The auto-generated documentation were also tricky to set up and provided little value for
 developers who can readily view payload type definitions and validation code in their favorite IDE.
