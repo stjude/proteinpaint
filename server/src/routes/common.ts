@@ -25,7 +25,7 @@ export function validGenome(value): string {
 }
 
 export function validDslabel(value): string {
-	if (typeof value != 'string') throw 'dslabel should be a non-empty string'
+	if (typeof value != 'string' || !value) throw 'dslabel should be a non-empty string'
 	if (!/^[a-zA-Z0-9._-]+$/.test(value)) throw 'invalid dslabel character'
 	return value
 }
