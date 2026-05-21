@@ -8,53 +8,7 @@ import {
 	TermTypeGroups,
 	dtTerms
 } from './common.js'
-
-// moved TermTypeGroups to `server/src/common.js`, so now has to re-export
-export { TermTypeGroups } from './common.js'
-
-/*
-For datasets with multiple types of samples the ROOT_SAMPLE_TYPE is used to represent the root sample type, for example, 
-the type patient, that has one or more samples associated to it. This should be the id used as sample_type, when generating the db to identify the root samples
-in sampleidmap or the terms annotating root samples in the terms table.
-The samples associated to a patient have annotations that are specific to a timepoint, for example, the age of the patient,
-the doses of the drugs the patient was taking at the time of the data collection, etc. These annotations are associated to a sample.
-*/
-export const ROOT_SAMPLE_TYPE = 1
-
-//For datasets with one sample type the DEFAULT_SAMPLE_TYPE is used to represent the sample type
-export const DEFAULT_SAMPLE_TYPE = 2
-
-export const NumericModes = {
-	continuous: 'continuous',
-	discrete: 'discrete'
-}
-
-export const CATEGORICAL = 'categorical'
-export const CONDITION = 'condition'
-export const DATE = 'date'
-export const DNA_METHYLATION = 'dnaMethylation'
-export const FLOAT = 'float'
-export const GENE_VARIANT = 'geneVariant'
-export const GENE_EXPRESSION = 'geneExpression'
-export const ISOFORM_EXPRESSION = 'isoformExpression'
-export const INTEGER = 'integer'
-export const METABOLITE_INTENSITY = 'metaboliteIntensity'
-export const MULTIVALUE = 'multivalue'
-export const SAMPLELST = 'samplelst'
-export const SINGLECELL_CELLTYPE = 'singleCellCellType'
-export const SINGLECELL_GENE_EXPRESSION = 'singleCellGeneExpression'
-export const SNP = 'snp'
-export const SNP_LIST = 'snplst'
-export const SNP_LOCUS = 'snplocus'
-export const SSGSEA = 'ssGSEA'
-export const SURVIVAL = 'survival'
-export const TERM_COLLECTION = 'termCollection'
-export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
-export const PROTEOME_DAP = 'proteomeDAP'
-
-//Term types should be used gradually using these constants instead of hardcoding the values,
-// eg: type == CATEGORICAL instead of type == 'categorical'
-export const TermTypes: { [key: string]: string } = {
+import {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
@@ -75,8 +29,31 @@ export const TermTypes: { [key: string]: string } = {
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
 	DATE,
-	TERM_COLLECTION
+	TERM_COLLECTION,
+	TermTypes
+} from '#constants/terms.ts'
+
+export * from '#constants/terms.ts'
+// moved TermTypeGroups to `server/src/common.js`, so now has to re-export
+export { TermTypeGroups } from './common.js'
+
+/*
+For datasets with multiple types of samples the ROOT_SAMPLE_TYPE is used to represent the root sample type, for example, 
+the type patient, that has one or more samples associated to it. This should be the id used as sample_type, when generating the db to identify the root samples
+in sampleidmap or the terms annotating root samples in the terms table.
+The samples associated to a patient have annotations that are specific to a timepoint, for example, the age of the patient,
+the doses of the drugs the patient was taking at the time of the data collection, etc. These annotations are associated to a sample.
+*/
+export const ROOT_SAMPLE_TYPE = 1
+
+//For datasets with one sample type the DEFAULT_SAMPLE_TYPE is used to represent the sample type
+export const DEFAULT_SAMPLE_TYPE = 2
+
+export const NumericModes = {
+	continuous: 'continuous',
+	discrete: 'discrete'
 }
+
 export const dtTermTypes: Set<string> = new Set(dtTerms.map((t: any) => t.type))
 for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType

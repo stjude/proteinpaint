@@ -1,4 +1,4 @@
-import type { TermTypes } from '../../../utils/src/terms.js'
+import type { TermTypes } from '#shared/devTs'
 import type { Filter } from '../filter.ts'
 
 /** */

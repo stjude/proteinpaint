@@ -7,7 +7,7 @@
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
     "#types/*": "@sjcrh/proteinpaint-types/*",
-    "#types/checkers": "@sjcrh/proteinpaint-types/checkers"
+    "#constants/*": "./constants/*"
   },
   "//": "all export aliases below are meant for runtime code, except for the devTs-aliased subpath",
   "exports": {
