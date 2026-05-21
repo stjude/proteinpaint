@@ -19,7 +19,6 @@ import { authApi } from '#src/auth.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { read_file } from '#src/utils.js'
 import { getDescrStats } from './termdb.descrstats.ts'
-import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
 export const refColor = '#F5F5DC'

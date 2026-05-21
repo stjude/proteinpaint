@@ -3,13 +3,11 @@ import type {
 	ColorLegendEntry,
 	ColorMap,
 	FormattedCell2Sample,
-	RouteApi,
 	ShapeLegendEntry,
 	SingleCellRange,
 	TermdbSingleCellPlotsRequest,
 	ValidSingleCellPlotsResponse
 } from '#types'
-import { termdbSingleCellPlotsPayload } from '#types/checkers'
 import { getColors, getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
@@ -19,21 +17,7 @@ import { rgb } from 'd3-color'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { refColor } from './termdb.sampleScatter.js'
 
-export const api: RouteApi = {
-	endpoint: 'termdb/singleCellPlots',
-	methods: {
-		get: {
-			...termdbSingleCellPlotsPayload,
-			init
-		},
-		post: {
-			...termdbSingleCellPlotsPayload,
-			init
-		}
-	}
-}
-
-function init({ genomes }) {
+export function init({ genomes }) {
 	return async function (req, res) {
 		try {
 			const q = req.query as TermdbSingleCellPlotsRequest
