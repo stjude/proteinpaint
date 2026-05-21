@@ -163,7 +163,8 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 	})
 
 	app.catch = validator.floodCatch
-	app.use(validator.getMiddleware(routes))
+	// augen.setRoutes will use this default if there is no route api.methods[?].request.checker
+	validator.setRouteLevelMiddleware({ routes })
 }
 
 const hiddenQueryKeys = new Set(['jwt', '__protected__', '__abortSignal'])
