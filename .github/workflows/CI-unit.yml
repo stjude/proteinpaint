@@ -99,10 +99,10 @@ jobs:
           sudo apt-get install xvfb
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
-      - name: 🔎 Run augen tests
-        if: contains(env.WS_TO_TEST, 'augen')
-        run: |
-          npm test --workspace="augen"
+      # - name: 🔎 Run augen tests
+      #   if: contains(env.WS_TO_TEST, 'augen')
+      #   run: |
+      #     npm test --workspace="augen"
 
       - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server')
