@@ -1,34 +1,28 @@
 import { type RouteApi } from '#types'
 import * as checkers from './routes/common.ts'
 
-export function getMiddleware(routes: { api: RouteApi }[]) {
-	//const routes: ({api: RouteApi})[] = await Promise.all(routeFiles)
-	const checkerMap: Map<string, (payload: any) => any> = new Map()
-	for (const r of routes) {
+export function setRouteLevelMiddleware(opts: { routes: { api: RouteApi }[] }) {
+	for (const r of opts.routes) {
 		if (!r.api) continue
-		for (const method of Object.keys(r.api.methods)) {
-			const checker = r.api.methods[method]?.request?.checker
-			if (checker) checkerMap.set(`${r.api.endpoint} ${method.toLowerCase()}`, checker)
+		for (const handler of Object.values(r.api.methods)) {
+			if (handler.middleware) continue
+			const checker = handler.request.checker || defaultValidator
+			handler.middleware = (req, res, next) => {
+				try {
+					checker(req.query)
+					next()
+				} catch (e: any) {
+					floodCatch(req, res, e.message || e)
+				}
+			}
 		}
 	}
+}
 
-	return function validatorMiddleware(req, res, next) {
-		try {
-			// NOTE: a preceding middleware combines req.query with req.body in a POST request
-			const q = req.query
-			const payloadName = `${req.path.slice(1)} ${req.method.toLowerCase()}`
-			const checker = checkerMap.get(payloadName)
-			if (typeof checker == 'function') Object.assign(req.query, checker(q))
-			else {
-				for (const [key, val] of Object.entries(q)) {
-					if (genericParams.includes(key)) q[key] = byReqKey[key](val)
-				}
-				// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
-			}
-			next()
-		} catch (e: any) {
-			floodCatch(req, res, e.message || e)
-		}
+function defaultValidator(query) {
+	// NOTE: a preceding middleware combines req.query with req.body in a POST request
+	for (const [key, val] of Object.entries(query)) {
+		if (genericParams.includes(key)) query[key] = byReqKey[key](val)
 	}
 }
 

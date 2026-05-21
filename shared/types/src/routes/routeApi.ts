@@ -12,6 +12,7 @@ export type RoutePayload = {
 	init: RouteInit
 	request: RouteMethod
 	response: RouteMethod
+	middleware?: (req, res, next) => void
 	/** if examples are not provided, will not test */
 	examples?: PayloadExample[]
 }
