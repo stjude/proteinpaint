@@ -9,7 +9,9 @@ export function setRouteLevelMiddleware(opts: { routes: { api: RouteApi }[] }) {
 			const checker = handler.request.checker || defaultValidator
 			handler.middleware = (req, res, next) => {
 				try {
-					checker(req.query)
+					// NOTE: a preceding middleware combines req.query with req.body in a POST request
+					Object.assign(req.query, checker(req.query))
+					// TODO: create and use a ReqQueryAddons() validator here
 					next()
 				} catch (e: any) {
 					floodCatch(req, res, e.message || e)
