@@ -1,4 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { ColorLegendEntry, ShapeLegendEntry } from './termdb.sampleScatter.ts'
 
@@ -110,14 +109,4 @@ export type SingleCellPlotDataResult = {
 export type ValidSingleCellPlotsResponse = {
 	range: SingleCellRange
 	result: { Default: SingleCellPlotDataResult }
-}
-
-export const termdbSingleCellPlotsPayload: RoutePayload = {
-	request: {
-		typeId: 'TermdbSingleCellPlotsRequest'
-	},
-	response: {
-		typeId: 'TermdbSingleCellPlotsResponse'
-	}
-	// examples: []
 }

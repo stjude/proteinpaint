@@ -67,6 +67,7 @@ export const routeFiles = [
 	import('./routes/termdb.singleSampleMutation.ts'),
 	import('./routes/termdb.singlecellDEgenes.ts'),
 	import('./routes/termdb.singlecellData.ts'),
+	import('./routes/termdb.singleCellPlots.ts'),
 	import('./routes/termdb.singlecellSamples.ts'),
 	import('./routes/termdb.termchildren.ts'),
 	import('./routes/termdb.termsbyids.ts'),
