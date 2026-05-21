@@ -19,9 +19,12 @@ export class ScatterInteractivity {
 		this.scatter = scatter
 		this.view = scatter.view
 		document.addEventListener('scroll', () => {
+			//Quick fix. Fires after the plot has been destroyed.
+			if (!this.scatter.view.dom.tooltip) return
 			if (!this.scatter.vm?.scatterTooltip?.onClick) this.scatter.view.dom.tooltip.hide()
 		})
 		select('.sjpp-output-sandbox-content').on('scroll', () => {
+			if (!this.scatter.view.dom.tooltip) return
 			if (!this.scatter.vm?.scatterTooltip?.onClick) this.view.dom.tooltip.hide()
 		})
 	}
