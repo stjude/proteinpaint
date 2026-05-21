@@ -4,7 +4,7 @@ export type SnpRequest = {
 } & (
 	| {
 			/** if true, query bigbed file by coordinate */
-			byCoord: true | 1
+			byCoord: boolean
 			chr: string
 			ranges: {
 				start: number
@@ -15,7 +15,7 @@ export type SnpRequest = {
 	  }
 	| {
 			/** if true, query bigbed file by rs id */
-			byName: true | 1
+			byName: boolean
 			lst: string[]
 	  }
 )
