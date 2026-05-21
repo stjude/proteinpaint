@@ -7,8 +7,8 @@ export function getMiddleware(routes: { api: RouteApi }[]) {
 	for (const r of routes) {
 		if (!r.api) continue
 		for (const method of Object.keys(r.api.methods)) {
-			const payload = r.api.methods[method]
-			if (payload.checker) checkerMap.set(`${r.api.endpoint} ${method.toLowerCase()}`, payload.checker)
+			const checker = r.api.methods[method]?.request?.checker
+			if (checker) checkerMap.set(`${r.api.endpoint} ${method.toLowerCase()}`, checker)
 		}
 	}
 
@@ -16,7 +16,7 @@ export function getMiddleware(routes: { api: RouteApi }[]) {
 		try {
 			// NOTE: a preceding middleware combines req.query with req.body in a POST request
 			const q = req.query
-			const payloadName = req.path + req.method.toLowerCase()
+			const payloadName = `${req.path.slice(1)} ${req.method.toLowerCase()}`
 			const checker = checkerMap.get(payloadName)
 			if (typeof checker == 'function') Object.assign(req.query, checker(q))
 			else {

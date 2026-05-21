@@ -8,10 +8,9 @@ export function setRoutes(app, routes, _opts = {}) {
 		const opts = Object.assign({ basepath: '' }, _opts)
 		for (const route of routes) {
 			const api = route.api
-			for (const [method, m] of Object.entries(api.methods)) {
-				const m = api.methods[method]
+			for (const [method, handler] of Object.entries(api.methods)) {
 				try {
-					app[method](`${opts.basepath}/${api.endpoint}`, m.init(opts))
+					app[method](`${opts.basepath}/${api.endpoint}`, handler.init(opts))
 				} catch (e) {
 					throw new Error(`${api.endpoint} ${method}: ${e}`)
 				}
