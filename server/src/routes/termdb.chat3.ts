@@ -1,5 +1,5 @@
 import type { RoutePayload, RouteApi } from '#types'
-import { init } from '../../routes/termdb.chat2.ts'
+import { init } from '../../routes/termdb.chat3.ts'
 
 const payload: RoutePayload = {
 	init,

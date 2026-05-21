@@ -8,7 +8,7 @@ const payload: RoutePayload = {
 }
 
 export const api: RouteApi = {
-	endpoint: 'gdc/GRIN2run',
+	endpoint: 'gdc/runGRIN2',
 	methods: {
 		get: payload,
 		post: payload
