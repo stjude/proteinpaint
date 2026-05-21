@@ -49,7 +49,7 @@ export function validNumber(input, err?: string): number {
 }
 
 export function validNumberArr(input, err?: string): number[] {
-	if (!Array.isArray(input)) throw `input must be an array`
+	if (!Array.isArray(input)) throw err || `input must be an array`
 	for (const v of input) {
 		if (typeof v != 'number') throw err || `array entry must be a number`
 	}
