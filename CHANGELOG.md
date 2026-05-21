@@ -8,10 +8,12 @@ Features:
 - Added data-agnostic json-based caching framework
 - Added a limit for the number of pending cache requests.
 - For large-scale single cell plots, the server now renders the image. The scatter and single cell plot server requests were decoupled. Decoupling is the first step in future plans to allow cohort level filtering via local plot filter.
+- Buttons for shown plots appear in the sample table of the SC app when a plot button is clicked. This allows users to see what plots are available. On click, the page scrolls to that plot.
 
 Fixes:
 - show Loading on selecting a term into regression ui
 - non-dict numeric terms now defaults to mode=discrete with median cutoff as regression input terms
+- Refactored the SC app SectionRenderer code to detach and reattach plots when groupBy changes. This optimization prevents unnecessary dispatches and state changes.
 
 
 ## 2.189.0

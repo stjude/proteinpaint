@@ -1,4 +1,1 @@
-Features
-- Buttons for shown plots appear in the sample table of the SC app when a plot button is clicked. This allows users to see what plots are available. On click, the page scrolls to that plot.
-Fixes
-- Refactored the SC app SectionRenderer code to detach and reattach plots when groupBy changes. This optimization prevents unnecessary dispatches and state changes.
+
