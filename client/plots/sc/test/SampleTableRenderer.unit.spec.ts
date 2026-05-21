@@ -13,7 +13,6 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
  *   - renderSamplesTable() noButtonCallback should throw when sID is missing
  *   - renderSamplesTable() noButtonCallback should call interactions.updateItem
  *   - renderSamplesTable() noButtonCallback should show plotsBtnsDiv
- *   - updateTable() should return early when sampleId is undefined
  *   - updateTable() should clear previous plot buttons
  *   - updateTable() should return early when no sandboxes exist for sample
  *   - updateTable() should append plot buttons for each sandbox
@@ -236,18 +235,6 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 })
 
 /* ---- updateTable() ---- */
-
-tape('updateTable() should return early when sampleId is undefined', test => {
-	test.plan(1)
-	const { renderer, holder } = getRenderer()
-
-	// Should not throw
-	renderer.updateTable(undefined, new Map())
-	test.pass('Should return early without error')
-
-	if ((test as any)._ok) holder.remove()
-	test.end()
-})
 
 tape('updateTable() should clear previous plot buttons', test => {
 	const { renderer, holder } = getRenderer()

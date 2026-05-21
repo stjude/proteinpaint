@@ -96,7 +96,8 @@ export class SCViewRenderer {
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
 		await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
 
+		if (!settings.sc.item?.sID) return
 		const sandboxes = this.sectionRenderer.getSampleSandboxes(subplots)
-		this.sampleTableRenderer.updateTable(settings.sc.item?.sID, sandboxes)
+		this.sampleTableRenderer.updateTable(settings.sc.item!.sID, sandboxes)
 	}
 }
