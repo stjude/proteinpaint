@@ -2190,6 +2190,8 @@ export type Mds3 = BaseMds & {
 			email?: string
 		}
 	}
+	/** mmrf-specific helpers */
+	__mmrf?: any
 	// !!! TODO: improve these type definitions below !!!
 	serverconfigFeatures?: any
 	/** a dataset may supply custom URL host and headers to use when making external API requests, such as for GDC */
