@@ -10,7 +10,7 @@ export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
 	tableData: SCTableData
-	lastSampleSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> | undefined
+	sandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> = new Map()
 
 	constructor(dom: SCDom, interactions: SCInteractions, tableData: SCTableData) {
 		this.dom = dom
@@ -36,11 +36,7 @@ export class SampleTableRenderer {
 			striped: true,
 			selectedRows: tableData.selectedRows,
 			afterRender: () => {
-				/** Sort removes all custom html.
-				 * Re-apply the plot buttons after sort. */
-				if (this.lastSampleSandboxes) {
-					this.reapplyAllPlotButtons()
-				}
+				this.reapplyAllPlotButtons()
 			},
 			noButtonCallback: index => {
 				const item = this.buildItemFromRow(tableData, index)
@@ -68,28 +64,22 @@ export class SampleTableRenderer {
 		return item
 	}
 
-	updateTable(
-		sampleId: string | undefined,
-		sampleSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>
-	) {
-		this.lastSampleSandboxes = sampleSandboxes
-		if (!sampleId) return
+	updateTable(sampleId: string, sandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>) {
+		this.sandboxes = sandboxes
 		this.applyButtonsForSample(sampleId)
 	}
 
 	/** Called by afterRender to re-apply buttons for all samples with subplots. */
-	private reapplyAllPlotButtons() {
-		if (!this.lastSampleSandboxes) return
-		for (const sampleId of this.lastSampleSandboxes.keys()) {
+	reapplyAllPlotButtons() {
+		for (const sampleId of this.sandboxes.keys()) {
 			this.applyButtonsForSample(sampleId)
 		}
 	}
 
-	/** Applies plot buttons to a single sample's row. */
-	private applyButtonsForSample(sampleId: string) {
-		const sampleSandboxes = this.lastSampleSandboxes
+	/** Applies buttons for a single sample after plot button click */
+	applyButtonsForSample(sampleId: string) {
 		const sampleIdx = this.tableData.sampleColIdx
-		if (!sampleSandboxes) return
+		if (!this.sandboxes) return
 
 		/** Rows array mutates on sort. Find the row by matching sampleId.*/
 		const row = this.tableData.rows.find(r => r[sampleIdx].value === sampleId)
@@ -98,10 +88,10 @@ export class SampleTableRenderer {
 		const cell = row[sampleIdx + 1].__td
 		// Clear previous plot buttons before re-rendering
 		cell.selectAll('.sjpp-sc-table-plot-btn').remove()
-		const sandboxes = sampleSandboxes.get(sampleId)
-		if (!sandboxes || sandboxes.length === 0) return
+		const sampleSandboxes = this.sandboxes.get(sampleId)
+		if (!sampleSandboxes || sampleSandboxes.length === 0) return
 
-		for (const { div, plotName } of sandboxes) {
+		for (const { div, plotName } of sampleSandboxes) {
 			this.appendPlotBtn(cell, div, plotName, sampleId)
 		}
 	}
