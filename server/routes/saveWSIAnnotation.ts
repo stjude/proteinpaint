@@ -1,5 +1,5 @@
 import type { Mds3, TileSelection, SaveWSIAnnotationRequest } from '#types'
-import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#shared'
+import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 

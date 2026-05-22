@@ -52,6 +52,7 @@ jobs:
         shell: bash
         run: |
           cd shared/types
+          npm run prepack
           cd ../utils
           npm run prepack
           npx tsc

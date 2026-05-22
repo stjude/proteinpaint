@@ -1,12 +1,12 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { NumericModes, PROTEOME_DAP } from '#shared/terms.js'
+import { NumericModes } from '#shared/terms.js'
 import { sayerror, Tabs, Menu, table2col } from '#dom'
 import { TermTypeGroups } from '#shared/common.js'
 import { getDefaultVolcanoSettings } from './volcano/settings/defaults.ts'
 import { getDefaultGseaSettings } from './gsea.js'
 import { dofetch3 } from '#common/dofetch'
-import type { ProteomeDetails } from '#types'
+import { PROTEOME_DAP, type ProteomeDetails } from '#types'
 
 export class ProteomeInput extends PlotBase implements RxComponent {
 	static type = 'ProteomeInput'

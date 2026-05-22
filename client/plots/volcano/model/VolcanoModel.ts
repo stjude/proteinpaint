@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
 import { getGroupColors, toHex } from '../colors'
 
 export class VolcanoModel {

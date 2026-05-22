@@ -47,6 +47,7 @@ jobs:
         run: |
           # !!! TODO: run type check at the proteinpaint dir !!!
           cd shared/types
+          npm run prepack
           npx tsc
           cd ../utils
           npm run prepack

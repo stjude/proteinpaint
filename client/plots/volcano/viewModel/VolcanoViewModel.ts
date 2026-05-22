@@ -11,7 +11,7 @@ import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
 import { getGroupColors } from '../colors'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
 
 export class VolcanoViewModel {
 	config: any

@@ -1,5 +1,5 @@
 import { roundValue } from '#shared/roundValue.js'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
 import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,

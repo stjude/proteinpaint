@@ -1,18 +1,20 @@
 import { dofetch3, getSavedToken } from '#common/dofetch'
-import type { SampleWSImagesResponse, WSImage, WSImagesRequest, WSImagesResponse } from '@sjcrh/proteinpaint-types'
 import { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import type { WSImageLayers } from '#plots/wsiviewer/viewModel/WSImageLayers.ts'
 import Zoomify from 'ol/source/Zoomify'
 import TileLayer from 'ol/layer/Tile'
 import VectorLayer from 'ol/layer/Vector'
 import VectorSource from 'ol/source/Vector'
-import {
-	type AiProjectSelectedWSImagesRequest,
-	type AiProjectSelectedWSImagesResponse
-} from '@sjcrh/proteinpaint-types/routes/aiProjectSelectedWSImages.ts'
+import type {
+	AiProjectSelectedWSImagesRequest,
+	AiProjectSelectedWSImagesResponse,
+	SampleWSImagesResponse,
+	WSImage,
+	WSImagesRequest,
+	WSImagesResponse
+} from '#types'
+import { FeaturePrefixes, createFeatureID, FlagStatus } from '#types'
 import type { ImageTile } from 'ol'
-import { FeaturePrefixes, createFeatureID, FlagStatus } from '#shared'
-
 import { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'
 import { Polygon } from 'ol/geom'

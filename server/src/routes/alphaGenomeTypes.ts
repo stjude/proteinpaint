@@ -1,6 +1,5 @@
-import type { RoutePayload, RouteApi } from '#types'
+import type { alphaGenomeTypesResponse, RoutePayload, RouteApi } from '#types'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import type { alphaGenomeTypesResponse } from '@sjcrh/proteinpaint-types/routes/alphaGenomeTypes.js'
 import serverconfig from '#src/serverconfig.js'
 
 const payload: RoutePayload = {
