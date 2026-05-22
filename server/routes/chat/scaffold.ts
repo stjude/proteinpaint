@@ -11,6 +11,7 @@ import type {
 	DEScaffold,
 	HierarchicalGeneExpressionScaffold,
 	HierarchicalScaffold,
+	genomeBrowserScaffold,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
 	MsgToUser,
@@ -22,6 +23,231 @@ import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
 import { getTermObj, type Value } from './entity2termObj.ts'
 import { resolveToTvs } from './entity2twTvs.ts'
+
+async function getScaffold_genomeBrowser(user_prompt: string, llm: LlmConfig): Promise<any> {
+	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to extract the phrase describing the genomic region (and an optional cohort filter) from a user's natural language question, and return them in a strict JSON scaffold for configuring a genome browser view.
+
+A genome browser view is defined by a genomic region — typically described by a chromosome and start/stop coordinates (e.g. "chr17:7,571,720-7,590,868", "chromosome 1 from 1Mb to 2Mb"). Do NOT parse the chromosome, start, or stop into separate fields here — that happens in a later step. In THIS step, just extract the entire phrase that describes the region as a single string.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
+{
+  "genomeBrowserPhrase": "<phrase>",   // REQUIRED - the phrase describing the genomic region (chromosome + start + stop coordinates)
+  "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
+}
+
+## FIELD DEFINITIONS
+- genomeBrowserPhrase (REQUIRED): The portion of the user's query that describes the genomic region — chromosome plus start/stop coordinates. Preserve the EXACT wording from the user's query (including the original chromosome formatting, commas, unit suffixes such as "kb"/"Mb", and the start-stop separator). Do NOT normalize, paraphrase, or parse the chromosome/start/stop into separate fields.
+- filter (OPTIONAL): A cohort/subpopulation restriction phrase (e.g. "in pediatric patients", "for AML cases", "in women"). Preserve the EXACT wording from the user's query. Omit entirely if the user does not specify one.
+
+## EXTRACTION RULES
+1. genomeBrowserPhrase is REQUIRED. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000.
+2. genomeBrowserPhrase should contain ONLY the region description — do not include the cohort filter, surrounding verbs ("show", "open"), or plot-type words ("genome browser", "browser view") unless they are inseparable from the region phrase.
+3. filter is ONLY set when the user restricts the view to a specific subpopulation. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
+4. If the user does not provide a region (no chromosome and/or no coordinates), return:
+   { "error": "No genomic region found", "reason": "<brief explanation>" }
+
+## EXAMPLES
+
+--- Region string format ---
+Q: "Show chr17:7,571,720-7,590,868 in the genome browser"
+A: {
+  "genomeBrowserPhrase": "chr17:7,571,720-7,590,868"
+}
+
+--- Natural language coordinates ---
+Q: "Open the genome browser at chromosome 1 from 1000000 to 2000000"
+A: {
+  "genomeBrowserPhrase": "chromosome 1 from 1000000 to 2000000"
+}
+
+--- Unit suffix preserved ---
+Q: "View chrX from 5kb to 10kb"
+A: {
+  "genomeBrowserPhrase": "chrX from 5kb to 10kb"
+}
+
+--- Region with cohort filter ---
+Q: "Show chr7:140000000-141000000 in pediatric patients"
+A: {
+  "genomeBrowserPhrase": "chr7:140000000-141000000",
+  "filter": "pediatric patients"
+}
+
+--- Comma-formatted coordinates with cohort filter ---
+Q: "Genome browser at chr22 from 16,000,000 to 16,500,000 for AML cases"
+A: {
+  "genomeBrowserPhrase": "chr22 from 16,000,000 to 16,500,000",
+  "filter": "AML cases"
+}
+
+## NEGATIVE EXAMPLES — WHAT NOT TO DO
+Q: "Show chr1:1000-2000 in women"
+WRONG:
+{
+  "genomeBrowserPhrase": "chr1:1000-2000 in women"   // filter cohort must be split out into the filter field
+}
+RIGHT:
+{
+  "genomeBrowserPhrase": "chr1:1000-2000",
+  "filter": "women"
+}
+
+Q: "Open the genome browser at chromosome 1 from 1Mb to 2Mb"
+WRONG:
+{
+  "genomeBrowserPhrase": "chr1:1000000-2000000"   // do NOT normalize chromosome formatting or unit suffixes
+}
+RIGHT:
+{
+  "genomeBrowserPhrase": "chromosome 1 from 1Mb to 2Mb"
+}
+
+Parse the following user query into the JSON scaffold according to the rules and schema defined above:
+Query: "${user_prompt}"
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Genome browser scaffold: ${response}`)
+	try {
+		const parsed = JSON.parse(response) as genomeBrowserScaffold
+		parsed.plotType = 'genomeBrowser'
+		if (!parsed.genomeBrowserPhrase) {
+			throw new Error(`LLM response is missing required genomeBrowserPhrase field: ${response}`)
+		}
+		const genomicCoordinates = await parseGenomicCoordinates(parsed.genomeBrowserPhrase, llm)
+		const pp_plot_json = {
+			chartType: 'genomeBrowser',
+			geneSearchResult: {
+				chr: genomicCoordinates.chromosome,
+				start: genomicCoordinates.start,
+				stop: genomicCoordinates.stop
+			}
+		}
+		return { type: 'plot', plot: pp_plot_json }
+	} catch {
+		throw new Error(`Failed to parse genomeBrowserScaffold from LLM response: ${response}`)
+	}
+}
+
+async function parseGenomicCoordinates(
+	phrase: string,
+	llm: LlmConfig
+): Promise<{ chromosome: string; start: number; stop: number }> {
+	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to parse the genomic region phrase extracted from the user's query into its component parts: chromosome, start coordinate, and stop coordinate.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
+{
+  "chromosome": "<string>",   // REQUIRED - the chromosome name normalized to include the "chr" prefix (e.g. "chr1", "chrX", "chr17")
+  "start": <number>,          // REQUIRED - the start coordinate as a JSON number (1-based integer)
+  "stop": <number>            // REQUIRED - the stop coordinate as a JSON number (1-based integer)
+}
+
+## FIELD DEFINITIONS
+- chromosome (REQUIRED): The chromosome described in the phrase. Always emit it as a string with the "chr" prefix (e.g. "chr1", "chrX", "chrY", "chrM"). If the phrase contains just "1", "X", "chromosome 1", or "Chr1", normalize all of them to "chr1" / "chrX" with lowercase "chr".
+- start (REQUIRED): The start coordinate as a JSON NUMBER (not a string). Strip commas, underscores, and unit suffixes ("kb" -> *1000, "Mb" -> *1000000, "Gb" -> *1000000000). Examples: "1,234,567" -> 1234567, "5kb" -> 5000, "2Mb" -> 2000000.
+- stop (REQUIRED): The stop coordinate as a JSON NUMBER. Same normalization rules as start.
+
+## EXTRACTION RULES
+1. All three fields are REQUIRED. If the phrase is missing any of chromosome, start, or stop, return:
+   { "error": "Missing genomic coordinates", "reason": "<brief explanation>" }
+2. Always normalize the chromosome to lowercase "chr" + identifier (e.g. "Chromosome 1" -> "chr1", "CHRX" -> "chrX", "chr17" -> "chr17"). Keep the identifier's original case where it matters (X, Y, M).
+3. start and stop MUST be JSON numbers, not strings.
+4. Strip commas, underscores, and whitespace from numeric literals.
+5. Resolve unit suffixes: "kb" / "Kb" / "KB" -> ×1000, "Mb" / "MB" -> ×1000000, "Gb" / "GB" -> ×1000000000.
+6. If the phrase uses "chrN:start-stop" syntax, parse the three fields directly from the colon/hyphen separators.
+7. If start > stop after normalization, swap them so that start <= stop.
+
+## EXAMPLES
+
+--- Colon/hyphen region string ---
+Phrase: "chr17:7,571,720-7,590,868"
+Output: {
+  "chromosome": "chr17",
+  "start": 7571720,
+  "stop": 7590868
+}
+
+--- Natural language "chromosome N from X to Y" ---
+Phrase: "chromosome 1 from 1000000 to 2000000"
+Output: {
+  "chromosome": "chr1",
+  "start": 1000000,
+  "stop": 2000000
+}
+
+--- Unit suffix normalization (kb) ---
+Phrase: "chrX from 5kb to 10kb"
+Output: {
+  "chromosome": "chrX",
+  "start": 5000,
+  "stop": 10000
+}
+
+--- Unit suffix normalization (Mb) ---
+Phrase: "chr1 from 1Mb to 2Mb"
+Output: {
+  "chromosome": "chr1",
+  "start": 1000000,
+  "stop": 2000000
+}
+
+--- Comma-formatted coordinates without colon ---
+Phrase: "chr22 from 16,000,000 to 16,500,000"
+Output: {
+  "chromosome": "chr22",
+  "start": 16000000,
+  "stop": 16500000
+}
+
+--- Missing "chr" prefix ---
+Phrase: "7:140000000-141000000"
+Output: {
+  "chromosome": "chr7",
+  "start": 140000000,
+  "stop": 141000000
+}
+
+## NEGATIVE EXAMPLES — WHAT NOT TO DO
+Phrase: "chr1:1000-2000"
+WRONG:
+{
+  "chromosome": "chr1",
+  "start": "1000",          // start must be a NUMBER, not a string
+  "stop": "2000"            // stop must be a NUMBER, not a string
+}
+
+Phrase: "chromosome 1 from 1000 to 2000"
+WRONG:
+{
+  "chromosome": "1",        // must include the "chr" prefix
+  "start": 1000,
+  "stop": 2000
+}
+
+Phrase: "chr1 from 1Mb to 2Mb"
+WRONG:
+{
+  "chromosome": "chr1",
+  "start": "1Mb",           // must resolve unit suffix to a numeric value
+  "stop": "2Mb"
+}
+
+Parse the following genomic region phrase into the JSON object according to the rules and schema defined above:
+Phrase: "${phrase}"
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Genomic coordinates parse: ${response}`)
+	try {
+		const parsed = JSON.parse(response) as { chromosome: string; start: number; stop: number }
+		if (!parsed.chromosome || typeof parsed.start !== 'number' || typeof parsed.stop !== 'number') {
+			throw new Error(`LLM response is missing required chromosome/start/stop fields: ${response}`)
+		}
+		return parsed
+	} catch {
+		throw new Error(`Failed to parse genomic coordinates from LLM response: ${response}`)
+	}
+}
 
 async function getScaffold_matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
 	const prompt = ` You are a ProteinPaint matrix plot assistant. Your task is to extract the necessary variables from a user's natural language question to populate a strict JSON scaffold for configuring a matrix plot. 
@@ -961,6 +1187,8 @@ export async function inferScaffold(
 			return await getScaffold_summary(user_prompt, llm)
 		case 'dge':
 			return await getScaffold_dge(user_prompt, llm)
+		case 'genomeBrowser':
+			return await getScaffold_genomeBrowser(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,

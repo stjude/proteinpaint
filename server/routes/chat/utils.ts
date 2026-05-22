@@ -36,6 +36,11 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 	if (plotTypes.includes('sampleScatter')) {
 		plotTypes.push('prebuiltscatter')
 	}
+
+	// For genomeBrowser
+	if (plotTypes.includes('genomeBrowser')) {
+		plotTypes.push('genomeBrowser')
+	}
 	return Array.from(new Set(plotTypes))
 }
 
