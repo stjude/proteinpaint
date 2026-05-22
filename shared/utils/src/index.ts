@@ -1,8 +1,5 @@
 // IMPORTANT: import .js extension, even though the actual code files are .ts
-export * from '../constants/AiHisto.js'
-
 // please list in alphanumeric order for readability
-export * from './aiHisto.js'
 export * from './bulk.js'
 export * from './clustering.js'
 export * from './common.js'

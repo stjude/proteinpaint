@@ -9,7 +9,7 @@ import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
 import { getDefaultVolcanoSettings } from '#plots/volcano/settings/defaults.ts'
 import { PlotBase } from '#plots/PlotBase.js'
 import { getCombinedTermFilter } from '#filter'
-import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
 
 const tip = new Menu()
 

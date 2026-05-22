@@ -16,11 +16,9 @@ startup or `tsc` compilation.
 
 ## Develop
 
-It is much simpler to import *runtime* code directly from `@sjcrh/proteinpaint-shared`
-or static code from `@sjcrh/proteinpaint-shared/devTs`, instead of specifying a code 
-filename such as `@scjrh/proteinpaint-shared/filter.js`. Also, using aliases such as
-`#shared` and `#shared/devTs` shields importers from getting affected by shared code
-file renames or reorganizations.
+It is much simpler to import directly from `@sjcrh/proteinpaint-shared`, but importing from
+a specific file such as `@shared/proteinpaint-shared/filter.js`. Also, using aliases such as
+`#shared` shields importers from getting affected by shared code file renames or reorganizations.
 
 For server dev, the `tsx` library will accept imports with or without file extension.
 Server (consumer) code should use `@sjcrh/proteinpaint-shared`, or if for some reason
@@ -30,10 +28,9 @@ a shared file must be specific, it MUST use the `.js` file extension (e.g.,
 For client dev, the esbuild config will bundle the `#shared` imports correctly, even
 when `.js` extension is used to import what is actually a `.ts` file.
 
-When importing types that are defined in `shared/utils` to `shared/types` dev, 
-always use `@sjcrh/proteinpaint-shared/devTs` (or an alias such as `#shared/devTs`).
-Do not import from `@sjcrh/proteinpaint-shared/` (a.k.a. `#shared`) into `shared/types` 
-as that will cause cyclical imports that break bundler startup or `tsc` compilation.
+Do not import from `#shared/utils` to `#shared/types` - it may cause `tsc` compilation or `esbuild`
+build errots. Only imports in the opposite direction, from `shared/types` to `shared/utils`, is allowed
+to to ensure that there are no cyclical imports that breaks type checks or bundling.
 
 ## Build
 

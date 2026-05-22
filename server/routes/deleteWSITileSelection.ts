@@ -1,6 +1,6 @@
-import { checkSelectionType, SelectionPrefixes, FlagStatus } from '#shared'
-import { getDbConnection } from '#src/aiHistoDBConnection.ts'
+import { checkSelectionType, SelectionPrefixes, FlagStatus } from '#types'
 import type { Mds3, DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
+import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 
 export function init({ genomes }) {

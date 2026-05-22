@@ -3,7 +3,7 @@ import { axisBottom, axisLeft, rgb, select, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#shared/terms.js'
+import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 

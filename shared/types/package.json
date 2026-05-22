@@ -12,10 +12,10 @@
     }
   },
   "imports": {
-    "#shared": "@sjcrh/proteinpaint-shared",
-    "#shared/devTs": "@sjcrh/proteinpaint-shared/devTs"
+    "#shared": "@sjcrh/proteinpaint-shared"
   },
-  "scripts": {    
+  "scripts": {
+    "dev": "echo '--- now using raw shared/types/src exports under conditions=sjpp/dev ---\n'",
     "prepack": "rm -rf dist && ./build.sh",
     "test": "tsc"
   },

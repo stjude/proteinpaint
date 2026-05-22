@@ -1,7 +1,7 @@
 import { getCompInit } from '#rx'
 import wsiSamplesDefaults from '#plots/wsisamples/defaults.ts'
 import { dofetch3 } from '#src/client'
-import type { WSISample, WSISamplesResponse } from '@sjcrh/proteinpaint-types/routes/wsisamples.ts'
+import type { WSISample, WSISamplesResponse } from '#types'
 import type Settings from '#plots/wsisamples/Settings.ts'
 import type { TableCell, TableColumn, TableRow } from '#dom'
 import { renderTable } from '#dom'

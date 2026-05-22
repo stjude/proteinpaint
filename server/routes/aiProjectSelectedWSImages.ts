@@ -6,7 +6,7 @@ import type {
 	AiProjectSelectedWSImagesResponse,
 	FlagPredictionInfo
 } from '#types'
-import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#shared'
+import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 /*

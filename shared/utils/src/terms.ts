@@ -31,9 +31,34 @@ import {
 	DATE,
 	TERM_COLLECTION,
 	TermTypes
-} from '../constants/terms.js'
+} from '#types'
 
-export * from '../constants/terms.js'
+// legacy support - comsumers should import directly from #types (aka @sjcrh/proteinpaint-types)
+export {
+	GENE_VARIANT,
+	GENE_EXPRESSION,
+	ISOFORM_EXPRESSION,
+	SSGSEA,
+	DNA_METHYLATION,
+	CATEGORICAL,
+	INTEGER,
+	FLOAT,
+	SNP,
+	SNP_LIST,
+	SNP_LOCUS,
+	CONDITION,
+	SURVIVAL,
+	SAMPLELST,
+	METABOLITE_INTENSITY,
+	PROTEOME_ABUNDANCE,
+	SINGLECELL_CELLTYPE,
+	SINGLECELL_GENE_EXPRESSION,
+	MULTIVALUE,
+	DATE,
+	TERM_COLLECTION,
+	TermTypes
+} from '#types'
+
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
 

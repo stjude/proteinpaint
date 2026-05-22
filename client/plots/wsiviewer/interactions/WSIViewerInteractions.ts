@@ -8,7 +8,6 @@ import { Polygon } from 'ol/geom'
 import type { Geometry } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
-import { type TileSelection } from '#types'
 import {
 	FlagStatus,
 	createSelectionID,
@@ -17,12 +16,12 @@ import {
 	checkSelectionType,
 	createFeatureID,
 	type FlagStatusValues
-} from '#shared'
+} from '#types'
+import type { SaveWSIAnnotationRequest, DeleteWSITileSelectionRequest, TileSelection } from '#types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
-import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
-import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
 import { createDimSquareFeature, createStarFeature } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { DownloadCSVButtonRenderer } from '../view/DownloadCSVButtonRenderer'
+
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
 	zoomInEffectListener: (
