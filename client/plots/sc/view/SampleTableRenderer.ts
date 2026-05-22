@@ -10,7 +10,9 @@ export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
 	tableData: SCTableData
-	sandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> = new Map()
+	activeSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> = new Map()
+	/** Tracks rendered btns per sample to avoid unnecessary destroy/recreate pattern. */
+	rendered: Map<string, { cell: any; plotIds: string }> = new Map()
 
 	constructor(dom: SCDom, interactions: SCInteractions, tableData: SCTableData) {
 		this.dom = dom
@@ -64,33 +66,53 @@ export class SampleTableRenderer {
 		return item
 	}
 
-	updateTable(sampleId: string, sandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>) {
-		this.sandboxes = sandboxes
-		this.applyButtonsForSample(sampleId)
+	updateTable(activeSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>) {
+		this.activeSandboxes = activeSandboxes
+		this.reapplyAllPlotButtons()
 	}
 
-	/** Called by afterRender to re-apply buttons for all samples with subplots. */
+	/** Called by afterRender to re-apply buttons for all samples with subplots.
+	 * Also called in updateTable when the active sandboxes (i.e. subplots) change.*/
 	reapplyAllPlotButtons() {
-		for (const sampleId of this.sandboxes.keys()) {
+		/** Check btns still apply to active sandboxes. If not delete
+		 * from table and tracker. */
+		for (const sampleId of this.rendered.keys()) {
+			if (!this.activeSandboxes.has(sampleId)) {
+				this.deleteBtns(sampleId)
+			}
+		}
+		for (const sampleId of this.activeSandboxes.keys()) {
 			this.applyButtonsForSample(sampleId)
 		}
 	}
 
-	/** Applies buttons for a single sample after plot button click */
+	deleteBtns(sampleId: string) {
+		const cached = this.rendered.get(sampleId)
+		if (cached) {
+			cached.cell.selectAll('.sjpp-sc-table-plot-btn').remove()
+			this.rendered.delete(sampleId)
+		}
+	}
+
+	/** Applies buttons for a single sample. Skips DOM work if cell and plots are unchanged. */
 	applyButtonsForSample(sampleId: string) {
 		const sampleIdx = this.tableData.sampleColIdx
-		if (!this.sandboxes) return
 
 		/** Rows array mutates on sort. Find the row by matching sampleId.*/
 		const row = this.tableData.rows.find(r => r[sampleIdx].value === sampleId)
 		if (!row) return
 
 		const cell = row[sampleIdx + 1].__td
-		// Clear previous plot buttons before re-rendering
-		cell.selectAll('.sjpp-sc-table-plot-btn').remove()
-		const sampleSandboxes = this.sandboxes.get(sampleId)
+		const sampleSandboxes = this.activeSandboxes.get(sampleId)
 		if (!sampleSandboxes || sampleSandboxes.length === 0) return
 
+		const plotIds = sampleSandboxes.map(s => s.plotId).join(',')
+		const cached = this.rendered.get(sampleId)
+		/** Guard against rerendering btns */
+		if (cached && cached.cell === cell && cached.plotIds === plotIds) return
+
+		cell.selectAll('.sjpp-sc-table-plot-btn').remove()
+		this.rendered.set(sampleId, { cell, plotIds })
 		for (const { div, plotName } of sampleSandboxes) {
 			this.appendPlotBtn(cell, div, plotName, sampleId)
 		}
