@@ -38,7 +38,7 @@ tape('constructor should set app, id, and state', test => {
 tape('getSampleRequestOpts() should return genome, dslabel, and filter0', test => {
 	const app = getMockSCApp()
 	const model = new SCModel(app, 'plot1')
-	const opts = model.getSampleRequestOpts()
+	const opts = model.getAllSampleReqOpts()
 
 	test.equal(opts.genome, 'hg38-test', 'Should include genome')
 	test.equal(opts.dslabel, 'TermdbTest', 'Should include dslabel')
@@ -50,7 +50,7 @@ tape('getSampleRequestOpts() should pass through filter0 when present', test => 
 	const filter0 = { type: 'tvslst', lst: [{ tag: 'cohortFilter' }] }
 	const app = getMockSCApp({ termfilter: { filter0 } })
 	const model = new SCModel(app, 'plot1')
-	const opts = model.getSampleRequestOpts()
+	const opts = model.getAllSampleReqOpts()
 
 	test.deepEqual(opts.filter0, filter0, 'Should pass filter0 from state')
 	test.end()

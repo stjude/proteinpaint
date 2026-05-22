@@ -25,7 +25,8 @@ export type TermdbSingleCellSamplesRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	//filter0?: Filter0 // for gdc
+	filter?: any // for termdb
+	filter0?: any //Filter0 // for gdc
 }
 type ValidResponse = {
 	/** List of sample names with singlecell data */

@@ -6,18 +6,22 @@ import type { SingleCellSample } from '#types'
 export class SCViewModel {
 	app: AppApi
 	state: SCFormattedState
-	tableData: SCTableData
+	tableData!: SCTableData
+	sampleColumns: SampleColumn[]
 
-	constructor(app: AppApi, config: SCConfig, _items: SingleCellSample[], sampleColumns?: SampleColumn[]) {
+	constructor(app: AppApi, sampleColumns?: SampleColumn[]) {
 		this.app = app
 		this.state = this.app.getState()
+		this.sampleColumns = sampleColumns || []
+	}
 
+	processData(config: SCConfig, _items: SingleCellSample[]) {
 		//Sort meta analysis results to show at the beginning of the table.
 		//Prevents breaking the logic for selected rows after formating the table data.
 		const items = _items.sort((a, b) => (b.isMetaResult === a.isMetaResult ? 0 : b.isMetaResult ? 1 : -1))
 
 		//Should only be called once
-		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, sampleColumns)
+		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns)
 		const selectedRows: number[] = []
 		const sID = config.settings.sc.item?.sID
 		const i = sID

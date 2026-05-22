@@ -248,14 +248,14 @@ tape('updateTable() should remove buttons when sample no longer in activeSandbox
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
-	renderer.updateTable(sandboxes)
+	renderer.updatePlotBtns(sandboxes)
 
 	const row = renderer.tableData.rows[0] as any
 	const cell = row[1].__td
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should have 1 button before removal')
 
 	// Update with empty map - sample no longer active
-	renderer.updateTable(new Map())
+	renderer.updatePlotBtns(new Map())
 
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 0, 'Should remove buttons when sample removed')
 	test.false(renderer.rendered.has('S1'), 'Should remove from rendered map')
@@ -272,7 +272,7 @@ tape('updateTable() should not append buttons when no sandboxes exist for sample
 
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [])
-	renderer.updateTable(sandboxes)
+	renderer.updatePlotBtns(sandboxes)
 
 	const row = renderer.tableData.rows[0] as any
 	const cell = row[1].__td
@@ -295,7 +295,7 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 		{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' },
 		{ plotId: 'p2', div: mockDiv, plotName: 'tSNE' }
 	])
-	renderer.updateTable(sandboxes)
+	renderer.updatePlotBtns(sandboxes)
 
 	const row = renderer.tableData.rows[0] as any
 	const cell = row[1].__td
@@ -315,7 +315,7 @@ tape('updateTable() should skip rerendering btn when cell and plotIds are unchan
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
-	renderer.updateTable(sandboxes)
+	renderer.updatePlotBtns(sandboxes)
 
 	const row = renderer.tableData.rows[0] as any
 	const cell = row[1].__td
@@ -324,7 +324,7 @@ tape('updateTable() should skip rerendering btn when cell and plotIds are unchan
 	;(btn as any).__marker = true
 
 	// Call again with same data
-	renderer.updateTable(sandboxes)
+	renderer.updatePlotBtns(sandboxes)
 
 	const sameBtn = cell.select('.sjpp-sc-table-plot-btn').node() as HTMLElement
 	test.ok((sameBtn as any).__marker, 'Should preserve existing btn elements (no re-render)')
@@ -342,7 +342,7 @@ tape('updateTable() should re-render when plotIds change', test => {
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 	const sandboxes1 = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes1.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
-	renderer.updateTable(sandboxes1)
+	renderer.updatePlotBtns(sandboxes1)
 
 	const row = renderer.tableData.rows[0] as any
 	const cell = row[1].__td
@@ -354,7 +354,7 @@ tape('updateTable() should re-render when plotIds change', test => {
 		{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' },
 		{ plotId: 'p3', div: mockDiv, plotName: 'Violin' }
 	])
-	renderer.updateTable(sandboxes2)
+	renderer.updatePlotBtns(sandboxes2)
 
 	test.equal(cell.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 2, 'Should re-render with 2 buttons')
 
@@ -373,7 +373,7 @@ tape('deleteBtns() should remove buttons and clear rendered entry', test => {
 	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
 	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
 	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
-	renderer.updateTable(sandboxes)
+	renderer.updatePlotBtns(sandboxes)
 
 	test.true(renderer.rendered.has('S1'), 'Should have rendered entry before delete')
 

@@ -24,6 +24,8 @@ export class SampleTableRenderer {
 	/** Users select one item at a time to render the plot buttons
 	 * to init() plots in the dashboard.*/
 	renderSamplesTable(tableData: SCTableData) {
+		this.dom.tableDiv.selectAll('*').remove()
+
 		renderTable({
 			rows: tableData.rows,
 			columns: tableData.columns,
@@ -66,7 +68,13 @@ export class SampleTableRenderer {
 		return item
 	}
 
-	updateTable(activeSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>) {
+	updateTable(tableData: SCTableData) {
+		this.tableData = tableData
+		this.dom.tableDiv.selectAll('*').remove()
+		this.renderSamplesTable(tableData)
+	}
+
+	updatePlotBtns(activeSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>) {
 		this.activeSandboxes = activeSandboxes
 		this.reapplyAllPlotButtons()
 	}

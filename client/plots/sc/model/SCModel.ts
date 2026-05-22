@@ -1,6 +1,7 @@
 import type { AppApi } from '#rx'
 import type { SCFormattedState } from '../SCTypes'
 import { dofetch3 } from '#common/dofetch'
+import type { SCViewer } from '../SC'
 
 /** Fetches data for sc app */
 export class SCModel {
@@ -8,27 +9,21 @@ export class SCModel {
 	id?: string
 	state: SCFormattedState
 
-	constructor(app: AppApi, id: string) {
-		this.app = app
-		this.id = id
-		//Should only use immutable state attributes (e.g. vocab.genome)
-		this.state = this.app.getState()
+	constructor(sc: SCViewer) {
+		this.app = sc.app
+		this.id = sc.id
+		this.state = sc.app.getState()
 	}
 
-	/********** Single Cell SAMPLES for rendering the table ********
-	 * The table data does not update. Should only need to run once. */
-	async getSampleData() {
-		const body = this.getSampleRequestOpts()
-		return await dofetch3('termdb/singlecellSamples', { body })
-	}
-
-	//May involve more complicated logic later
-	getSampleRequestOpts() {
-		return {
-			genome: this.state.vocab.genome,
-			dslabel: this.state.vocab.dslabel,
-			filter0: this.state.termfilter.filter0 || null
+	/********** All Single Cell SAMPLES for rendering the sample table ******** */
+	async getAllSampleData(state) {
+		const body = {
+			genome: state.vocab.genome,
+			dslabel: state.vocab.dslabel,
+			filter: state.termfilter.filter || null,
+			filter0: state.termfilter.filter0 || null
 		}
+		return await dofetch3('termdb/singlecellSamples', { body })
 	}
 
 	//Fetches optional name for ds defined columns
@@ -56,7 +51,7 @@ export class SCModel {
 	/********** Single Cell DATA for rendering plots ********
 	 * This is for the plot buttons. Returns an array plots with found files or
 	 * available data. */
-	async getData() {
+	async getSampleData() {
 		const body = this.getDataRequestOpts()
 		if (!body) return
 		return await dofetch3('termdb/singlecellData', { body })
