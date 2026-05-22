@@ -9,6 +9,7 @@ import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { importPlot } from '#plots/importPlot.js'
+import { getCombinedTermFilter } from '#filter'
 
 export class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
@@ -66,10 +67,12 @@ export class SCViewer extends PlotBase implements RxComponent {
 				`No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 			)
 		}
+		const termfilter = getCombinedTermFilter(appState, config.filter)
+
 		return {
 			config,
 			subplots: appState.plots.filter(p => p.parentId === this.id),
-			termfilter: appState.termfilter,
+			termfilter,
 			termdbConfig: appState.termdbConfig,
 			vocab: appState.vocab
 		}
@@ -80,15 +83,8 @@ export class SCViewer extends PlotBase implements RxComponent {
 		/** ds defines defaults in termdbConfig.queries.singleCell
 		 * see Dataset type when resuming development */
 		const dsScSamples = state.termdbConfig.queries?.singleCell?.samples
-		this.model = new SCModel(this.app, this.id)
+		this.model = new SCModel(this)
 		try {
-			/** Fetches the single cell sample data for the table */
-			const response = await this.model.getSampleData()
-			if (response.error || !response.samples || !response.samples.length) {
-				this.app.printError('No samples found for this dataset')
-				return
-			}
-			this.items = response.samples
 			this.itemColumns = await this.model.getColumnLabels(dsScSamples)
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC init()]`)
@@ -96,42 +92,49 @@ export class SCViewer extends PlotBase implements RxComponent {
 			throw new Error(e.message || e)
 		}
 		this.interactions = new SCInteractions(this)
-		this.viewModel = new SCViewModel(this.app, state.config, this.items!, this.itemColumns)
-		this.view = new SCViewRenderer(this, state)
-
-		/** The item data and table rendering should only occur once
-		 * .update() in main() handles changes to the buttons and plots */
-		this.view.render(this.viewModel.tableData, state.config.settings.sc)
+		this.viewModel = new SCViewModel(this.app, this.itemColumns)
+		this.view = new SCViewRenderer(this)
+		/** Only renders the controls above the table */
+		this.view.render(state.config.settings.sc, state)
 	}
 
 	async main() {
-		const state = structuredClone(this.state) as SCFormattedState
-		const config = state.config
-
 		if (!this.model) throw new Error(`Model not initialized`)
 		if (!this.viewModel) throw new Error(`ViewModel not initialized`)
 		if (!this.view) throw new Error(`View not initialized`)
 		if (!this.interactions) throw new Error(`Interactions not initialized`)
 
+		const state = structuredClone(this.state) as SCFormattedState
+		const config = state.config
+
 		this.interactions.toggleLoading(true)
 
-		let data: any = null
-		if (config.settings.sc.item) {
-			try {
-				data = await this.model.getData()
-				if (data.error || !data.plots || !data.plots.length) {
+		let data: any
+		try {
+			const allSampleData = await this.model.getAllSampleData(state)
+			if (!allSampleData || allSampleData.error) {
+				this.interactions.toggleLoading(false)
+				this.app.printError(allSampleData?.error || 'No samples found for this dataset')
+				return
+			}
+			this.viewModel.processData(config, allSampleData.samples)
+
+			if (config.settings?.sc?.item) {
+				const sampleData = await this.model.getSampleData()
+				if (!sampleData || sampleData.error) {
 					this.interactions.toggleLoading(false)
-					this.app.printError(data.error)
+					this.app.printError(sampleData?.error || 'No data found for this sample')
 					return
 				}
-			} catch (e: any) {
-				this.interactions.toggleLoading(false)
-				if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
-				else if (e.stack) console.log(e.stack)
-				throw new Error(e.message || e)
+				data = sampleData
 			}
+		} catch (e: any) {
+			if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
+			else if (e.stack) console.log(e.stack)
+			this.app.printError(e.message || e)
+			return
 		}
-		await this.view.update(config.settings, data, state.subplots)
+		await this.view.update(config.settings, data, state.subplots, this.viewModel.tableData)
 		this.interactions.toggleLoading(false)
 	}
 
@@ -152,7 +155,7 @@ export const componentInit = SCInit
 export function getPlotConfig(opts: SCConfigOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'sc',
-		hidePlotFilter: true,
+		// hidePlotFilter: true,
 		settings: getDefaultSCAppSettings(opts.overrides, app)
 	} as any
 

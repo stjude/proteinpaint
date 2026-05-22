@@ -1,4 +1,4 @@
-import type { SCDom, SCTableData } from '../SCTypes'
+import type { SCDom, SCFormattedState, SCTableData } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
@@ -6,36 +6,36 @@ import { SectionRenderer } from './SectionRenderer'
 import type { SCViewer } from '../SC.ts'
 import { GroupByOptions, type SCSettings, type Settings } from '../settings/Settings'
 import { make_radios } from '#dom'
-import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
+// import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
 import type { PlotBase } from '#plots/PlotBase.ts'
 
 /** Manages the initial rendering of the sample table and the dynamic
  * rendering of the plot buttons and sections based on the selected sample and plots.
  * .update() from sc.main() updates the plot buttons and sections. */
 export class SCViewRenderer {
-	dom: SCDom
-	interactions: SCInteractions
-	plotBtns: PlotButtons
 	//On load, show table
 	//Eventually maybe an app dispatch and not a flag
 	static inUse: boolean = true
-	sectionRenderer: SectionRenderer
-	sampleTableRenderer!: SampleTableRenderer
-	sc: SCViewer
 
-	constructor(sc: SCViewer, state: any) {
+	sc: SCViewer
+	dom: SCDom
+	interactions: SCInteractions
+	plotBtns!: PlotButtons
+	sectionRenderer!: SectionRenderer
+	sampleTableRenderer!: SampleTableRenderer
+
+	constructor(sc: SCViewer) {
 		this.sc = sc
 		this.dom = sc.dom
 		this.interactions = sc.interactions
-		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv, state)
-		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, state.config.settings.sc.groupBy)
 	}
 
-	render(tableData: SCTableData, settings: SCSettings) {
+	render(settings: SCSettings, state: SCFormattedState) {
 		this.renderSelectBtn()
 		this.renderGroupByOptions(settings)
-		this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
-		this.dom.plotsBtnsDiv.style('display', 'none')
+		this.plotBtns = new PlotButtons(this.interactions, this.dom.plotsBtnsDiv, state.termdbConfig)
+		this.sectionRenderer = new SectionRenderer(this.dom.sectionsDiv, settings.groupBy)
+		// this.dom.plotsBtnsDiv.style('display', 'none')
 	}
 
 	/** Renders the select btn at the top of the page that
@@ -91,12 +91,12 @@ export class SCViewRenderer {
 		})
 	}
 
-	async update(settings: Settings, data: SingleCellDataNative | SingleCellDataGdc, subplots: PlotBase[]) {
-		this.plotBtns.update(settings, data)
-		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
-		await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
-
-		const activeSandboxes = this.sectionRenderer.getSampleSandboxes(subplots)
-		this.sampleTableRenderer.updateTable(activeSandboxes)
+	async update(settings: Settings, data: any, subplots: PlotBase[], tableData: SCTableData) {
+		this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
+		// this.plotBtns.update(settings, data)
+		// //Also handles when settings.sc.groupBy == 'none' to show all plots in one section
+		// await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
+		// const activeSandboxes = this.sectionRenderer.getSampleSandboxes(subplots)
+		// this.sampleTableRenderer.updatePlotBtns(activeSandboxes)
 	}
 }

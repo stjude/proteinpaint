@@ -1,12 +1,15 @@
 import type { Elem, Div } from '../../types/d3'
 import type { TableRow, TableColumn } from '#dom'
 import type { Settings } from './settings/Settings'
+import type { Filter } from '#types'
 
 /** WIP config for the sc app */
 export type SCConfig = {
 	chartType: 'sc'
 	/** Common settings and settings for each child component/plot */
 	settings: Settings
+	/** Local plot filter object. Not present when filter is not applied */
+	filter?: Filter
 }
 
 /** Opts defined in getPlotConfig() */
@@ -47,7 +50,7 @@ export type SCFormattedState = {
 	 * Allows for non-nested plot objects in state.plots.
 	 * This is ** not ** saved in the state */
 	subplots: any[]
-	termfilter: any //Filter
+	termfilter: { filter: Filter; filter0?: Filter }
 	termdbConfig: any
 	vocab: {
 		dslabel: string

@@ -20,6 +20,7 @@ import { validate_query_singleCell_DEgenes } from '../src/routes/termdb.singlece
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { getData } from '#src/termdb.matrix.js'
 
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
@@ -104,7 +105,7 @@ function validateImages(images) {
  * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
  * Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
  * defined in the ds file, for use in vocabApi methods later.
- * @param q query
+ * @param q ds.queries.singleCell. ***NOT** the req.query
  * @param ds Entire dataset configuration from the ds file
  */
 async function validateSamples(q: SingleCellQuery, ds: any) {
@@ -170,9 +171,16 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 		}
 	}
 
-	S.get = () => {
-		// FIXME must get q.filter and apply filter to list!!
+	S.get = async (_q: TermdbSingleCellSamplesRequest) => {
 		const re: any = { samples: [...samples.values()] as SingleCellSample[] }
+		if (_q.filter?.lst?.length) {
+			const terms = _q.filter.lst.map(t => t?.tvs)
+			const data = await getData({ filter: _q.filter, filter0: _q.filter0, terms }, ds, true)
+			if (data?.refs?.bySampleId) {
+				const filteredSamples = new Set(Object.values(data.refs.bySampleId).map((s: any) => s.label))
+				re.samples = re.samples.filter(s => filteredSamples.has(s.sample))
+			}
+		}
 		if (q.metaResults) {
 			// meta analysis results exist. pass it along with samples
 			re.metaResults = q.metaResults.map(i => {
