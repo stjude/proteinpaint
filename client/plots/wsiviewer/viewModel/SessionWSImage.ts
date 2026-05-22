@@ -1,7 +1,6 @@
 import type { Annotation, Prediction, TileSelection } from '@sjcrh/proteinpaint-types'
 import { WSImage } from '@sjcrh/proteinpaint-types'
 import { SelectionPrefixes, checkSelectionType, FlagStatusMessages, FlagStatus } from '#shared'
-import type Settings from '#plots/wsiviewer/Settings.ts'
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
@@ -19,16 +18,26 @@ export class SessionWSImage extends WSImage {
 		this.predictions = ws.predictions
 		this.sessionsTileSelections = sessionsTileSelections
 	}
-	public static getNextTileID(sessionWSImage: SessionWSImage, settings: Settings, currentIndex: number): string {
-		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+	public static getNextTileID(
+		sessionWSImage: SessionWSImage,
+		renderSkip: boolean,
+		renderOnlyFlagged: boolean,
+		currentIndex: number
+	): string {
+		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, renderSkip, renderOnlyFlagged) || []
 		if (allSelections.length < 2) return ''
 		const nextID: string =
 			currentIndex === allSelections.length - 1 ? allSelections[0].id : allSelections[currentIndex + 1].id
 		return nextID
 	}
 
-	public static findTileIndexByID(tileID: string, sessionWSImage: SessionWSImage, settings: Settings): number {
-		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+	public static findTileIndexByID(
+		tileID: string,
+		sessionWSImage: SessionWSImage,
+		renderSkip: boolean,
+		renderOnlyFlagged: boolean
+	): number {
+		const allSelections = SessionWSImage.getTileSelections(sessionWSImage, renderSkip, renderOnlyFlagged) || []
 		const foundIndex = allSelections.findIndex(ts => ts.id === tileID)
 		if (foundIndex === -1) return 0
 		return foundIndex
@@ -42,7 +51,11 @@ export class SessionWSImage extends WSImage {
 		return sessionWSImage.sessionsTileSelections
 	}
 
-	public static getTileSelections(sessionWSImage: SessionWSImage, settings: Settings): TileSelection[] {
+	public static getTileSelections(
+		sessionWSImage: SessionWSImage,
+		renderSkip: boolean,
+		renderOnlyFlagged: boolean
+	): TileSelection[] {
 		const [selections, flagged_selections] = partition(
 			sessionWSImage.sessionsTileSelections || [],
 			ts => ts.flag === FlagStatus.Normal
@@ -62,8 +75,8 @@ export class SessionWSImage extends WSImage {
 			array.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 		}
 		const filtered_arrays = desired_arrays.flat().filter(ts => {
-			if (ts.flag === FlagStatus.Skipped && !settings.renderSkipped) return false
-			if (ts.flag !== FlagStatus.Flagged && settings.renderOnlyFlagged) return false
+			if (ts.flag === FlagStatus.Skipped && !renderSkip) return false
+			if (ts.flag !== FlagStatus.Flagged && renderOnlyFlagged) return false
 			if (ts.flag === FlagStatus.Deleted) return false
 			return true
 		})
@@ -80,7 +93,8 @@ export class SessionWSImage extends WSImage {
 	public static getTilesTableRows(
 		sessionWSImage: SessionWSImage,
 		selectedTileIndex: number,
-		settings: Settings
+		renderSkip: boolean,
+		renderOnlyFlagged: boolean
 	): any[] {
 		let row_index = 0
 		const incrementIndex = () => {
@@ -88,7 +102,7 @@ export class SessionWSImage extends WSImage {
 		}
 		const selectedColor = '#fcfc8b'
 
-		const selectionRows: any[] = SessionWSImage.getTileSelections(sessionWSImage, settings)
+		const selectionRows: any[] = SessionWSImage.getTileSelections(sessionWSImage, renderSkip, renderOnlyFlagged)
 			.map(tileSelection => {
 				const color = sessionWSImage.classes?.find(c => c.label === tileSelection.class)?.color
 				const firstCell: any = { value: row_index }

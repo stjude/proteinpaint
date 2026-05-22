@@ -12,9 +12,11 @@ export class SkipFlagCheckRenderer {
 		settings: Settings
 	) {
 		function calculateNewIndex(currentIndex: number, newSettings: Settings) {
-			const oldTileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+			const oldTileSelections: TileSelection[] =
+				SessionWSImage.getTileSelections(sessionWSImage, settings.renderSkipped, settings.renderOnlyFlagged) || []
 			const currentID = oldTileSelections[currentIndex]?.id
-			const newTileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage, newSettings) || []
+			const newTileSelections: TileSelection[] =
+				SessionWSImage.getTileSelections(sessionWSImage, newSettings.renderSkipped, newSettings.renderOnlyFlagged) || []
 			const newIndex = newTileSelections.findIndex(tileSelection => tileSelection.id === currentID)
 			return newIndex != -1 ? newIndex : 0
 		}

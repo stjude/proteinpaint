@@ -118,7 +118,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 							SessionWSImage.findTileIndexByID(
 								settings.activeID,
 								viewModel.sampleWSImages[settings.displayedImageIndex],
-								settings
+								settings.renderSkipped,
+								settings.renderOnlyFlagged
 							) || 0,
 						renderAnnotationTable: true
 					}
