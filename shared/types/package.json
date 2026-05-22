@@ -8,26 +8,22 @@
   "exports": {
     ".": {
       "sjpp/dev": "./src/index.ts",
-      "default": "./non-prod-only.ts"
-    },
-    "./routes/*": {
-      "sjpp/dev": "./src/routes/*",
-      "default": "./non-prod-only.ts"
+      "default": "./dist/index.js"
     }
   },
   "imports": {
     "#shared": "@sjcrh/proteinpaint-shared",
     "#shared/devTs": "@sjcrh/proteinpaint-shared/devTs"
   },
-  "scripts": {
-    "dev": "echo '--- using server/checkers for request payload validation ---'",
+  "scripts": {    
+    "prepack": "rm -rf dist && ./build.sh",
     "test": "tsc"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
   },
   "files": [
-    "non-prod-only.ts"
+    "dist"
   ],
   "repository": {
     "type": "git",
