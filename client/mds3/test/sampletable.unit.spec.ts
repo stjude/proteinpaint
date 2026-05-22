@@ -37,11 +37,17 @@ tape('value2urlsOrText()', test => {
 		'<a href=https://doi.org/10.1000/xyz target=_blank>doi: 10.1000/xyz</a>',
 		'should generate DOI link'
 	)
-	// single pmid
+	// single pmid as string
 	test.equal(
 		value2urlsOrText('12345678', { pmidOrDoi: true }),
 		'<a href=https://pubmed.ncbi.nlm.nih.gov/12345678 target=_blank>12345678</a>',
-		'should generate PubMed link'
+		'should generate PubMed link from numeric string'
+	)
+	// single pmid as number (TSV/JSON parsers commonly hand us integers)
+	test.equal(
+		value2urlsOrText(12345678, { pmidOrDoi: true }),
+		'<a href=https://pubmed.ncbi.nlm.nih.gov/12345678 target=_blank>12345678</a>',
+		'should generate PubMed link from number value'
 	)
 	// mixed pmid and doi
 	test.equal(
