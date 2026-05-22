@@ -36,6 +36,10 @@ The state of each plot is added to the appState plots array, so that these plots
 const idPrefix = '_MASS_AUTOID_' + Math.random().toString().slice(-6)
 let id = 0 // Number((+new Date()).toString().slice(-8))
 
+// will be used to track plotId's that have already been used, so that plot_prep() and
+// plot_create() will avoid conflicts from having a plotId that's used by different plots
+const usedPlotIds = new Set()
+
 function getId() {
 	return idPrefix + '_' + id++
 }
@@ -317,11 +321,14 @@ MassStore.prototype.actions = {
 	// dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
 	// example: table, scatterplot which requires user to select two terms
 	async plot_prep(this: MassStore, action) {
+		if (usedPlotIds.has(action.id)) delete action.id // prevent potential conflicts
+
 		const plot = {
-			// rx.getComponents() relies on parsing dot-separate key names that breaks if a key has a dot,
+			// rx.getComponents() relies on parsing dot-separated key names that breaks if a key has a dot,
 			// the plot.id value should be assumed to be auto-generated and to not have any non-rx usage expectations
 			id: 'id' in action && !action.id.includes('.') ? action.id : getId()
 		}
+		usedPlotIds.add(plot.id)
 		if (!action.config) throw '.config{} missing for plot_prep'
 		if (action.config.chartType && Object.keys(action.config).length == 1) {
 			const _ = await importPlot(action.config.chartType)
@@ -333,12 +340,15 @@ MassStore.prototype.actions = {
 	},
 
 	async plot_create(this: MassStore, action) {
+		if (usedPlotIds.has(action.id)) delete action.id // prevent potential conflicts
+
 		const _ = await importPlot(action.config.chartType)
 		const plot = await _.getPlotConfig(action.config, this.app, this.state.activeCohort)
-		// rx.getComponents() relies on parsing dot-separate key names that breaks if a key has a dot,
+		// rx.getComponents() relies on parsing dot-separated key names that breaks if a key has a dot,
 		// the plot.id value should be assumed to be auto-generated and to not have any non-rx usage expectations
 		if (!('id' in action) || action.id.includes('.')) action.id = getId()
 		plot.id = action.id
+		usedPlotIds.add(plot.id)
 
 		if (plot.mayAdjustConfig) {
 			plot.mayAdjustConfig(plot)
