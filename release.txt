@@ -1,2 +1,1 @@
-Fixes:
-- Now properly display non-PMIDs or non-DOIs in sampletable.js
+

@@ -14,6 +14,7 @@ Fixes:
 - show Loading on selecting a term into regression ui
 - non-dict numeric terms now defaults to mode=discrete with median cutoff as regression input terms
 - Refactored the SC app SectionRenderer code to detach and reattach plots when groupBy changes. This optimization prevents unnecessary dispatches and state changes.
+- Now properly display non-PMIDs or non-DOIs in sampletable.js
 
 
 ## 2.189.0
