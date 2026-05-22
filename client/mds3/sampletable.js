@@ -575,17 +575,23 @@ export function value2urlsOrText(v, tw) {
 	if (tw.pmidOrDoi) {
 		const h = []
 		for (const i of Array.isArray(v) ? v : [v]) {
-			if (typeof i === 'string' && i.startsWith('doi: ')) {
-				// preserve the visual "/" separators inside a DOI but URL-encode each segment
-				const safeDoi = i.slice(5).split('/').map(encodeURIComponent).join('/')
-				h.push(`<a href=https://doi.org/${safeDoi} target=_blank>${escapeHtml(i)}</a>`)
-			} else if (/^\d+$/.test(String(i))) {
-				// numeric -> pmid (regex above guarantees i is safe to interpolate)
+			if (Number.isFinite(i)) {
+				// numeric value -> pmid
 				h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
-			} else {
-				// not a citation (e.g. "unpublished") -- render as plain text, escaped
-				h.push(escapeHtml(String(i)))
+			} else if (typeof i === 'string') {
+				if (i.startsWith('doi: ')) {
+					// preserve the visual "/" separators inside a DOI but URL-encode each segment
+					const safeDoi = i.slice(5).split('/').map(encodeURIComponent).join('/')
+					h.push(`<a href=https://doi.org/${safeDoi} target=_blank>${escapeHtml(i)}</a>`)
+				} else if (/^\d+$/.test(i)) {
+					// numeric string -> pmid (regex guarantees i is safe to interpolate)
+					h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
+				} else {
+					// not a citation (e.g. "unpublished") -- render as plain text, escaped
+					h.push(escapeHtml(i))
+				}
 			}
+			// other types (null, undefined, object) are skipped
 		}
 		return h.join('<br>')
 	}
