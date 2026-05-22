@@ -1,2 +1,2 @@
 Fixes:
-- Now properly display non PMIDs or DOIs in sampletable.js
+- Now properly display non-PMIDs or non-DOIs in sampletable.js
