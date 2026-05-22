@@ -61,5 +61,17 @@ tape('value2urlsOrText()', test => {
 		'<a href=https://pubmed.ncbi.nlm.nih.gov/12345678 target=_blank>12345678</a><br>unpublished',
 		'should mix PMID link with plain-text non-citation value'
 	)
+	// HTML-injection attempt in a non-citation value -- must be escaped
+	test.equal(
+		value2urlsOrText('<script>alert(1)</script>', { pmidOrDoi: true }),
+		'&lt;script&gt;alert(1)&lt;/script&gt;',
+		'should HTML-escape non-citation values to prevent injection'
+	)
+	// DOI with characters that need URL-encoding in href and HTML-escaping in link text
+	test.equal(
+		value2urlsOrText('doi: 10.1/<bad>&"', { pmidOrDoi: true }),
+		'<a href=https://doi.org/10.1/%3Cbad%3E%26%22 target=_blank>doi: 10.1/&lt;bad&gt;&amp;&quot;</a>',
+		'should URL-encode DOI path segments and HTML-escape the link text'
+	)
 	test.end()
 })
