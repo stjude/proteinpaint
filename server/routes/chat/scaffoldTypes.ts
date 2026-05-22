@@ -31,7 +31,8 @@ export type MatrixScaffold = {
 
 export type genomeBrowserScaffold = {
 	plotType: 'genomeBrowser'
-	genomeBrowserPhrase: string
+	genomeBrowserPhrase?: string
+	genePhrase?: string
 	filter?: string
 }
 

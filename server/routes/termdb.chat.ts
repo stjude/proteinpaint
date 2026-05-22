@@ -1,5 +1,4 @@
 import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification } from '#types'
-// import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './chat/utils.ts'
@@ -209,7 +208,6 @@ export async function run_chat_pipeline(
 		mayLog('ScaffoldResult: ', scaffoldResult)
 		if (
 			(plotType === 'hiercluster' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
-			(plotType === 'genomeBrowser' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
 			('text' in scaffoldResult && scaffoldResult.type === 'text')
 		) {
 			// In case of geneExpression clustering, the plot state is generated through a single LLM call and invoking downstream steps is not necessary.
@@ -237,10 +235,11 @@ export async function run_chat_pipeline(
 			genes_list,
 			dataset_json,
 			ds,
-			genome
+			genome,
+			dataset_db
 		)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
-		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
+		if (('type' in phrase2entityResult && phrase2entityResult.type === 'text') || plotType === 'genomeBrowser') {
 			return phrase2entityResult // Return msg/error
 		}
 		mayLog(phrase2entityResult)

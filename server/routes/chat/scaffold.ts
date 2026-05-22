@@ -1,5 +1,4 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
-// import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -14,17 +13,13 @@ import type {
 	genomeBrowserScaffold,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
-	MsgToUser,
-	Entity
+	MsgToUser
 } from './scaffoldTypes.ts'
-import { extractGenesFromPrompt } from './utils.ts'
+import { extractGenesFromPrompt, generateFilterTerm } from './utils.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
-import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
-import { getTermObj, type Value } from './entity2termObj.ts'
-import { resolveToTvs } from './entity2twTvs.ts'
 
-async function getScaffold_genomeBrowser(user_prompt: string, llm: LlmConfig): Promise<any> {
+async function getScaffold_genomeBrowser(user_prompt: string, llm: LlmConfig): Promise<genomeBrowserScaffold> {
 	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to extract the phrase describing the genomic region (and an optional cohort filter) from a user's natural language question, and return them in a strict JSON scaffold for configuring a genome browser view.
 
 A genome browser view is defined by a genomic region — typically described by a chromosome and start/stop coordinates (e.g. "chr17:7,571,720-7,590,868", "chromosome 1 from 1Mb to 2Mb"). Do NOT parse the chromosome, start, or stop into separate fields here — that happens in a later step. In THIS step, just extract the entire phrase that describes the region as a single string.
@@ -32,7 +27,8 @@ A genome browser view is defined by a genomic region — typically described by 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
 {
-  "genomeBrowserPhrase": "<phrase>",   // REQUIRED - the phrase describing the genomic region (chromosome + start + stop coordinates)
+  "genePhrase": "<phrase>",   // OPTIONAL - the word containing the gene name
+  "genomeBrowserPhrase": "<phrase>",   // OPTIONAL - the phrase describing the genomic region (chromosome + start + stop coordinates)
   "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
 }
 
@@ -41,10 +37,11 @@ Return ONLY a valid JSON object with this structure — no extra fields, no surr
 - filter (OPTIONAL): A cohort/subpopulation restriction phrase (e.g. "in pediatric patients", "for AML cases", "in women"). Preserve the EXACT wording from the user's query. Omit entirely if the user does not specify one.
 
 ## EXTRACTION RULES
-1. genomeBrowserPhrase is REQUIRED. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000.
-2. genomeBrowserPhrase should contain ONLY the region description — do not include the cohort filter, surrounding verbs ("show", "open"), or plot-type words ("genome browser", "browser view") unless they are inseparable from the region phrase.
-3. filter is ONLY set when the user restricts the view to a specific subpopulation. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
-4. If the user does not provide a region (no chromosome and/or no coordinates), return:
+1. genomeBrowserPhrase is OPTIONAL. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000.
+2. genomeBrowserPhrase (if present) should contain ONLY the region description — do not include the cohort filter, surrounding verbs ("show", "open"), or plot-type words ("genome browser", "browser view") unless they are inseparable from the region phrase.
+3. genePhrase is OPTIONAL. If the user's query contains a recognizable gene name, extract the phrase containing the gene name along with information such as (mutation/variant/expression/methylation) into the genePhrase field. This is for downstream use in highlighting the gene in the genome browser, but it should be separate from the genomeBrowserPhrase which focuses on the region description.
+4. filter is ONLY set when the user restricts the view to a specific subpopulation. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
+5. If the user does not provide a region (no chromosome and/or no coordinates), return:
    { "error": "No genomic region found", "reason": "<brief explanation>" }
 
 ## EXAMPLES
@@ -59,6 +56,19 @@ A: {
 Q: "Open the genome browser at chromosome 1 from 1000000 to 2000000"
 A: {
   "genomeBrowserPhrase": "chromosome 1 from 1000000 to 2000000"
+}
+
+--- Natural language genes ---
+Q: "show YGT5 mutations"
+A: {
+  "genePhrase": "YGT5 mutations"
+}
+
+--- Natural language genes ---
+Q: "show lollipop plot of FRVT85 mutations for men"
+A: {
+  "genePhrase": "FRVT85 mutations",
+  "filter": "men"
 }
 
 --- Unit suffix preserved ---
@@ -111,141 +121,9 @@ Query: "${user_prompt}"
 	try {
 		const parsed = JSON.parse(response) as genomeBrowserScaffold
 		parsed.plotType = 'genomeBrowser'
-		if (!parsed.genomeBrowserPhrase) {
-			throw new Error(`LLM response is missing required genomeBrowserPhrase field: ${response}`)
-		}
-		const genomicCoordinates = await parseGenomicCoordinates(parsed.genomeBrowserPhrase, llm)
-		const pp_plot_json = {
-			chartType: 'genomeBrowser',
-			geneSearchResult: {
-				chr: genomicCoordinates.chromosome,
-				start: genomicCoordinates.start,
-				stop: genomicCoordinates.stop
-			}
-		}
-		return { type: 'plot', plot: pp_plot_json }
-	} catch {
-		throw new Error(`Failed to parse genomeBrowserScaffold from LLM response: ${response}`)
-	}
-}
-
-async function parseGenomicCoordinates(
-	phrase: string,
-	llm: LlmConfig
-): Promise<{ chromosome: string; start: number; stop: number }> {
-	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to parse the genomic region phrase extracted from the user's query into its component parts: chromosome, start coordinate, and stop coordinate.
-
-## OUTPUT SCHEMA
-Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
-{
-  "chromosome": "<string>",   // REQUIRED - the chromosome name normalized to include the "chr" prefix (e.g. "chr1", "chrX", "chr17")
-  "start": <number>,          // REQUIRED - the start coordinate as a JSON number (1-based integer)
-  "stop": <number>            // REQUIRED - the stop coordinate as a JSON number (1-based integer)
-}
-
-## FIELD DEFINITIONS
-- chromosome (REQUIRED): The chromosome described in the phrase. Always emit it as a string with the "chr" prefix (e.g. "chr1", "chrX", "chrY", "chrM"). If the phrase contains just "1", "X", "chromosome 1", or "Chr1", normalize all of them to "chr1" / "chrX" with lowercase "chr".
-- start (REQUIRED): The start coordinate as a JSON NUMBER (not a string). Strip commas, underscores, and unit suffixes ("kb" -> *1000, "Mb" -> *1000000, "Gb" -> *1000000000). Examples: "1,234,567" -> 1234567, "5kb" -> 5000, "2Mb" -> 2000000.
-- stop (REQUIRED): The stop coordinate as a JSON NUMBER. Same normalization rules as start.
-
-## EXTRACTION RULES
-1. All three fields are REQUIRED. If the phrase is missing any of chromosome, start, or stop, return:
-   { "error": "Missing genomic coordinates", "reason": "<brief explanation>" }
-2. Always normalize the chromosome to lowercase "chr" + identifier (e.g. "Chromosome 1" -> "chr1", "CHRX" -> "chrX", "chr17" -> "chr17"). Keep the identifier's original case where it matters (X, Y, M).
-3. start and stop MUST be JSON numbers, not strings.
-4. Strip commas, underscores, and whitespace from numeric literals.
-5. Resolve unit suffixes: "kb" / "Kb" / "KB" -> ×1000, "Mb" / "MB" -> ×1000000, "Gb" / "GB" -> ×1000000000.
-6. If the phrase uses "chrN:start-stop" syntax, parse the three fields directly from the colon/hyphen separators.
-7. If start > stop after normalization, swap them so that start <= stop.
-
-## EXAMPLES
-
---- Colon/hyphen region string ---
-Phrase: "chr17:7,571,720-7,590,868"
-Output: {
-  "chromosome": "chr17",
-  "start": 7571720,
-  "stop": 7590868
-}
-
---- Natural language "chromosome N from X to Y" ---
-Phrase: "chromosome 1 from 1000000 to 2000000"
-Output: {
-  "chromosome": "chr1",
-  "start": 1000000,
-  "stop": 2000000
-}
-
---- Unit suffix normalization (kb) ---
-Phrase: "chrX from 5kb to 10kb"
-Output: {
-  "chromosome": "chrX",
-  "start": 5000,
-  "stop": 10000
-}
-
---- Unit suffix normalization (Mb) ---
-Phrase: "chr1 from 1Mb to 2Mb"
-Output: {
-  "chromosome": "chr1",
-  "start": 1000000,
-  "stop": 2000000
-}
-
---- Comma-formatted coordinates without colon ---
-Phrase: "chr22 from 16,000,000 to 16,500,000"
-Output: {
-  "chromosome": "chr22",
-  "start": 16000000,
-  "stop": 16500000
-}
-
---- Missing "chr" prefix ---
-Phrase: "7:140000000-141000000"
-Output: {
-  "chromosome": "chr7",
-  "start": 140000000,
-  "stop": 141000000
-}
-
-## NEGATIVE EXAMPLES — WHAT NOT TO DO
-Phrase: "chr1:1000-2000"
-WRONG:
-{
-  "chromosome": "chr1",
-  "start": "1000",          // start must be a NUMBER, not a string
-  "stop": "2000"            // stop must be a NUMBER, not a string
-}
-
-Phrase: "chromosome 1 from 1000 to 2000"
-WRONG:
-{
-  "chromosome": "1",        // must include the "chr" prefix
-  "start": 1000,
-  "stop": 2000
-}
-
-Phrase: "chr1 from 1Mb to 2Mb"
-WRONG:
-{
-  "chromosome": "chr1",
-  "start": "1Mb",           // must resolve unit suffix to a numeric value
-  "stop": "2Mb"
-}
-
-Parse the following genomic region phrase into the JSON object according to the rules and schema defined above:
-Phrase: "${phrase}"
-`
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
-	mayLog(`--> Genomic coordinates parse: ${response}`)
-	try {
-		const parsed = JSON.parse(response) as { chromosome: string; start: number; stop: number }
-		if (!parsed.chromosome || typeof parsed.start !== 'number' || typeof parsed.stop !== 'number') {
-			throw new Error(`LLM response is missing required chromosome/start/stop fields: ${response}`)
-		}
 		return parsed
 	} catch {
-		throw new Error(`Failed to parse genomic coordinates from LLM response: ${response}`)
+		throw new Error(`Failed to parse genomeBrowserScaffold from LLM response: ${response}`)
 	}
 }
 
@@ -1207,51 +1085,4 @@ export async function inferScaffold(
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
-}
-
-/**
- * Convert a natural-language filter phrase into a tvslst object that can be sent to the UI.
- * Pipeline:
- *   1. evaluateFilterTerm() — parse the phrase into a binary AND/OR tree of leaf phrases
- *   2. phrase2entitytw() per leaf — resolve each leaf phrase into an Entity (mirrors the
- *      filter-loop pattern used in phrase2entity.ts)
- *   3. getTermObj() per Entity — resolve each Entity into a Value (mirrors lines 210-219 of
- *      entity2termObj.ts, which does the same conversion for hierCluster filter entities)
- *   4. resolveToTvs() — assemble the Value[] into a final tvslst object
- */
-async function generateFilterTerm(
-	phrase: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any,
-	ds: any,
-	dbPath: string,
-	genome: any
-): Promise<any | MsgToUser> {
-	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
-	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
-
-	const leafPhrases = collectLeaves(filterTree.tree)
-	const filterEntities: Entity[] = []
-	for (const leaf of leafPhrases) {
-		mayLog('generateFilterTerm evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
-		if ('type' in filterTw && filterTw.type === 'text') {
-			return filterTw as MsgToUser
-		}
-		const filterEntity = filterTw as Entity
-		if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-		filterEntities.push(filterEntity)
-	}
-
-	const filterValues: Value[] = []
-	for (const filterTerm of filterEntities) {
-		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
-		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
-		if (!termObj) continue
-		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
-		filterValues.push(termObj)
-	}
-
-	return await resolveToTvs(filterValues, dbPath, llm)
 }
