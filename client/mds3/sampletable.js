@@ -553,6 +553,10 @@ export async function samples2columnsRows(samples, tk) {
 	}
 	return [columns, rows]
 }
+// TODO: Apply same html escaping to other places (e.g. baseURL)
+function escapeHtml(s) {
+	return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
 
 /*
 v can be:
@@ -572,13 +576,15 @@ export function value2urlsOrText(v, tw) {
 		const h = []
 		for (const i of Array.isArray(v) ? v : [v]) {
 			if (typeof i === 'string' && i.startsWith('doi: ')) {
-				h.push(`<a href=https://doi.org/${i.slice(5)} target=_blank>${i}</a>`)
+				// preserve the visual "/" separators inside a DOI but URL-encode each segment
+				const safeDoi = i.slice(5).split('/').map(encodeURIComponent).join('/')
+				h.push(`<a href=https://doi.org/${safeDoi} target=_blank>${escapeHtml(i)}</a>`)
 			} else if (/^\d+$/.test(String(i))) {
-				// numeric -> pmid
+				// numeric -> pmid (regex above guarantees i is safe to interpolate)
 				h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
 			} else {
-				// not a citation (e.g. "unpublished") -- render as plain text
-				h.push(i)
+				// not a citation (e.g. "unpublished") -- render as plain text, escaped
+				h.push(escapeHtml(String(i)))
 			}
 		}
 		return h.join('<br>')
