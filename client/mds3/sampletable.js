@@ -571,11 +571,14 @@ export function value2urlsOrText(v, tw) {
 	if (tw.pmidOrDoi) {
 		const h = []
 		for (const i of Array.isArray(v) ? v : [v]) {
-			if (i.startsWith('doi: ')) {
+			if (typeof i === 'string' && i.startsWith('doi: ')) {
 				h.push(`<a href=https://doi.org/${i.slice(5)} target=_blank>${i}</a>`)
-			} else {
-				// must be pmid
+			} else if (/^\d+$/.test(String(i))) {
+				// numeric -> pmid
 				h.push(`<a href=https://pubmed.ncbi.nlm.nih.gov/${i} target=_blank>${i}</a>`)
+			} else {
+				// not a citation (e.g. "unpublished") -- render as plain text
+				h.push(i)
 			}
 		}
 		return h.join('<br>')

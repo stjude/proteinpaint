@@ -49,5 +49,17 @@ tape('value2urlsOrText()', test => {
 		'<a href=https://doi.org/10.1/abc target=_blank>doi: 10.1/abc</a><br><a href=https://pubmed.ncbi.nlm.nih.gov/87654321 target=_blank>87654321</a>',
 		'should handle mixed array of DOI and PMID'
 	)
+	// non-citation string (e.g. "unpublished") -- plain text, no link
+	test.equal(
+		value2urlsOrText('unpublished', { pmidOrDoi: true }),
+		'unpublished',
+		'should render non-citation string as plain text'
+	)
+	// mixed pmid and "unpublished"
+	test.equal(
+		value2urlsOrText(['12345678', 'unpublished'], { pmidOrDoi: true }),
+		'<a href=https://pubmed.ncbi.nlm.nih.gov/12345678 target=_blank>12345678</a><br>unpublished',
+		'should mix PMID link with plain-text non-citation value'
+	)
 	test.end()
 })

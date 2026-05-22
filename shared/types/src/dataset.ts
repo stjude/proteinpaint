@@ -1844,7 +1844,8 @@ type Tw = {
 	cannot use ds-defined callback to compute the link as the links are only generated on client
 	thus this work around for client code to apply the url-building logic
 	a doi value must be defined as "doi: 10.1038/s41408-025-01309-6", beginning with "doi: ", this allows client code to recognize it is doi;
-	otherwise it is treated as pmid and joined to pubmed link as-is
+	a numeric value is treated as a pmid and joined to the pubmed link;
+	any other value (e.g. "unpublished") is rendered as plain text with no hyperlink
 	*/
 	pmidOrDoi?: true
 }
