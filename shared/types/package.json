@@ -3,8 +3,8 @@
   "version": "2.189.0",
   "type": "module",
   "description": "Shared type definitions between ProteinPaint server and client code",
-  "main": "src/index.ts",
-  "module": "src/index.ts",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
   "exports": {
     ".": {
       "sjpp/dev": "./src/index.ts",
