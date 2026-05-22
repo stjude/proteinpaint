@@ -454,7 +454,6 @@ export async function getPlotConfig(opts, app) {
 	const config = {
 		chartType: 'summary',
 		childType: 'barchart',
-		//id: opts.term.term.id,
 		term: opts.term,
 		groups: [],
 		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),

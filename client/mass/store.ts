@@ -318,7 +318,9 @@ MassStore.prototype.actions = {
 	// example: table, scatterplot which requires user to select two terms
 	async plot_prep(this: MassStore, action) {
 		const plot = {
-			id: 'id' in action ? action.id : getId()
+			// rx.getComponents() relies on parsing dot-separate key names that breaks if a key has a dot,
+			// the plot.id value should be assumed to be auto-generated and to not have any non-rx usage expectations
+			id: 'id' in action && !action.id.includes('.') ? action.id : getId()
 		}
 		if (!action.config) throw '.config{} missing for plot_prep'
 		if (action.config.chartType && Object.keys(action.config).length == 1) {
@@ -333,8 +335,11 @@ MassStore.prototype.actions = {
 	async plot_create(this: MassStore, action) {
 		const _ = await importPlot(action.config.chartType)
 		const plot = await _.getPlotConfig(action.config, this.app, this.state.activeCohort)
-		if (!('id' in action)) action.id = getId()
+		// rx.getComponents() relies on parsing dot-separate key names that breaks if a key has a dot,
+		// the plot.id value should be assumed to be auto-generated and to not have any non-rx usage expectations
+		if (!('id' in action) || action.id.includes('.')) action.id = getId()
 		plot.id = action.id
+
 		if (plot.mayAdjustConfig) {
 			plot.mayAdjustConfig(plot)
 			this.plotAdjusters.set(plot, plot.mayAdjustConfig)

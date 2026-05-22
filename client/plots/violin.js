@@ -481,7 +481,6 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	const config = {
-		id: opts.term.term.id,
 		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
