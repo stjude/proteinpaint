@@ -458,10 +458,20 @@ export function divideTerms(q, ds) {
 	inline at every dict-push site: when the dataset declares an isTermVisible hook, dict terms
 	the requester cannot see are dropped before downstream queries are issued. Datasets without
 	the hook are unaffected — every dict term flows through.
+
+	A termCollection has no scalar `id` — it's identified by `name` + `termIds[]`. Calling
+	isTermVisible(undefined) returns false for any role consulting an allowlist, which would
+	silently drop the collection before SQL. Decide visibility from the members instead: the
+	collection is visible iff every member id is visible to the requesting role.
 	*/
 	const dict = [],
 		geneVariantTws = [],
 		nonDict = []
+	const isTermCollectionVisible = tw => {
+		const memberIds = tw.term?.termIds || tw.term?.termlst?.map(t => t?.id).filter(Boolean) || []
+		if (!memberIds.length) return false
+		return memberIds.every(id => ds.cohort.termdb.isTermVisible(q.__protected__, id))
+	}
 	for (const tw of q.terms) {
 		const type = tw.term?.type
 		// TODO FIXME should require valid term type, reject if not and remove assumptions and guesses
@@ -471,6 +481,12 @@ export function divideTerms(q, ds) {
 				geneVariantTws.push(tw) // collect into own list to process separately later
 			} else if (isNonDictionaryType(type)) {
 				nonDict.push(tw)
+			} else if (type == 'termCollection') {
+				if (ds.cohort.termdb.isTermVisible) {
+					if (isTermCollectionVisible(tw)) dict.push(tw)
+				} else {
+					dict.push(tw)
+				}
 			} else {
 				if (ds.cohort.termdb.isTermVisible) {
 					if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term.id)) {
