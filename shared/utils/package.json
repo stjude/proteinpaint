@@ -6,8 +6,7 @@
   "main": "dist/src/index.js",
   "imports": {
     "#types": "@sjcrh/proteinpaint-types",
-    "#types/*": "@sjcrh/proteinpaint-types/*",
-    "#constants/*": "./constants/*"
+    "#types/*": "@sjcrh/proteinpaint-types/*"
   },
   "//": "all export aliases below are meant for runtime code, except for the devTs-aliased subpath",
   "exports": {

@@ -31,9 +31,9 @@ import {
 	DATE,
 	TERM_COLLECTION,
 	TermTypes
-} from '#constants/terms.ts'
+} from '../constants/terms.js'
 
-export * from '#constants/terms.ts'
+export * from '../constants/terms.js'
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
 
