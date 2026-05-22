@@ -468,7 +468,16 @@ export function divideTerms(q, ds) {
 		geneVariantTws = [],
 		nonDict = []
 	const isTermCollectionVisible = tw => {
-		const memberIds = tw.term?.termIds || tw.term?.termlst?.map(t => t?.id).filter(Boolean) || []
+		// Fail-closed against malformed input: a request that arrives with termIds or
+		// termlst as a non-array (string, object, etc.) is treated as having no resolvable
+		// members. Guarding here keeps a malformed payload from crashing the whole request
+		// with a TypeError when .every()/.map() is called on a non-array.
+		const raw = Array.isArray(tw.term?.termIds)
+			? tw.term.termIds
+			: Array.isArray(tw.term?.termlst)
+			? tw.term.termlst.map(t => t?.id)
+			: []
+		const memberIds = [...new Set(raw.filter(id => typeof id === 'string' && id))]
 		if (!memberIds.length) return false
 		return memberIds.every(id => ds.cohort.termdb.isTermVisible(q.__protected__, id))
 	}

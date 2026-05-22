@@ -209,3 +209,54 @@ tape('divideTerms: termCollection flows through when dataset has no isTermVisibl
 	t.deepEqual(dict, [collection], 'termCollection passes through unconditionally when no hook is declared')
 	t.end()
 })
+
+tape('divideTerms: malformed termCollection (termIds is not an array) is dropped, not thrown', t => {
+	// A request that arrives with termIds as a string/object must not crash the whole request
+	// with a TypeError. Fail-closed: drop the collection instead.
+	const collection = {
+		term: {
+			type: 'termCollection',
+			name: 'Bad termIds',
+			termIds: 'EXCHEMYN' // not an array
+		}
+	}
+	const ds = buildRestrictedDs(['EXCHEMYN'])
+	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
+	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on non-array termIds')
+	const [dict] = divideTerms(q, ds)
+	t.deepEqual(dict, [], 'malformed termCollection is dropped under a restricted role')
+	t.end()
+})
+
+tape('divideTerms: malformed termCollection (termlst is not an array) is dropped, not thrown', t => {
+	const collection = {
+		term: {
+			type: 'termCollection',
+			name: 'Bad termlst',
+			termlst: { id: 'A' } // not an array
+		}
+	}
+	const ds = buildRestrictedDs(['A'])
+	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
+	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on non-array termlst')
+	const [dict] = divideTerms(q, ds)
+	t.deepEqual(dict, [], 'malformed termCollection is dropped under a restricted role')
+	t.end()
+})
+
+tape('divideTerms: termCollection ignores non-string and duplicate ids in termIds', t => {
+	// Numbers, objects, undefined, empty strings are filtered out; duplicates are deduped.
+	// The collection should still be authorized when every remaining (valid, unique) id is visible.
+	const collection = {
+		term: {
+			type: 'termCollection',
+			name: 'Mixed ids',
+			termIds: ['A', '', null, 42, { id: 'B' }, 'A', 'B', undefined]
+		}
+	}
+	const ds = buildRestrictedDs(['A', 'B'])
+	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
+	const [dict] = divideTerms(q, ds)
+	t.deepEqual(dict, [collection], 'collection passes when the deduped, valid id set is fully visible')
+	t.end()
+})
