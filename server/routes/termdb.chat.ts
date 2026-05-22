@@ -119,7 +119,6 @@ export function init({ genomes }) {
 				chatSupportedPlotTypes,
 				allowedTermTypes,
 				genome
-				// 	testing
 			)
 			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
@@ -178,7 +177,7 @@ export async function run_chat_pipeline(
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
 
 		// Check if the classified plot type is supported by this dataset
-		if (!supportedPlotTypes.includes(plotType)) {
+		if (!supportedPlotTypes.map(s => s.toLowerCase()).includes(plotType.toLowerCase())) {
 			const log = 'Plot type: "' + plotType + '" is not supported.'
 			ai_output_json = {
 				type: 'text',
@@ -210,6 +209,7 @@ export async function run_chat_pipeline(
 		mayLog('ScaffoldResult: ', scaffoldResult)
 		if (
 			(plotType === 'hiercluster' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
+			(plotType === 'genomeBrowser' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
 			('text' in scaffoldResult && scaffoldResult.type === 'text')
 		) {
 			// In case of geneExpression clustering, the plot state is generated through a single LLM call and invoking downstream steps is not necessary.
