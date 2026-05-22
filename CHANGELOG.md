@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.190.0
 
 Features:
 - Added data-agnostic json-based caching framework
