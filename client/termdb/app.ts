@@ -193,14 +193,14 @@ class TdbApp extends AppBase implements RxApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.components = await this.getComponents()
+			this.components = await this.initComponents()
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
 		}
 	}
 
-	async getComponents() {
+	async initComponents() {
 		const header_mode = this.state.nav?.header_mode
 		const compPromises: { [name: string]: Promise<ComponentApi> } = {
 			search: searchInit({
