@@ -37,8 +37,6 @@
   "author": "",
   "license": "ISC",
   "files": [
-    "constants",
-    "devTs.ts",
     "dist"
   ],
   "repository": {
