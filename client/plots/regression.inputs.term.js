@@ -17,6 +17,7 @@ export class InputTerm {
 		this.section = opts.section
 		this.term = opts.term // term wrapper {id, term, q}; will be missing for a blank input
 		this.parent = opts.parent // the inputs instance
+		this.vocabApi = this.parent.parent.vocabApi || this.parent.app.vocabApi
 	}
 
 	async init(holder) {
@@ -150,7 +151,7 @@ export class InputTerm {
 		try {
 			if (tw && this.setQ) {
 				const { app, state } = this.parent
-				await this.setQ[tw.term.type](tw, app.vocabApi, this.parent.parent.filter, state)
+				await this.setQ[tw.term.type](tw, this.vocabApi, this.parent.parent.filter, state)
 			}
 
 			try {
@@ -210,7 +211,7 @@ export class InputTerm {
 		const wait = this.dom.holder.append('div').style('padding', '5px').text('Loading...') // getCategories may wait long time e.g. gdc. adding this to indicate its loading to avoid just showing a nopill prompt
 		let data
 		try {
-			data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
+			data = await this.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
 			if (!data) throw `no data for term.id='${tw.term.id}'`
 			if (data.error) throw data.error
 		} finally {
