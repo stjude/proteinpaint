@@ -46,7 +46,7 @@ export class PlotBase {
 			// usage example: `const signal = this.getAbortSignal?.()` inside TermdbVocab.getCategories()
 			// This overrides the TermdbVocab.getAbortSignal() that is not plot-level, where the app-wide
 			// cancellation may affect fetch requests that shouldn't be cancelled.
-			// Details at https://docs.google.com/drawings/d/1fQUq6icJORgJncwW-Fh3npq1vt9-3GvaVPLgXptTGWU/edit.
+			// Details at https://github.com/stjude/proteinpaint/wiki/Using-AbortController-to-prevent-race-condition
 			getAbortSignal: {
 				value: () => {
 					return this.api?.getAbortSignal?.()
@@ -61,7 +61,7 @@ export class PlotBase {
 		if (!config || !this.configTermKeys?.length) return structuredClone(config)
 
 		const opts = {
-			vocabApi: this.app.vocabApi
+			vocabApi: this.vocabApi
 		}
 
 		for (const key of this.configTermKeys) {

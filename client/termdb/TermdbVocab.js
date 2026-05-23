@@ -16,7 +16,7 @@ export class TermdbVocab extends Vocab {
 	//
 	// A more targeted, plot-level cancellation may override this and should be preferred,
 	// which is done in PlotBase constructor using prototypal inheritance. See details at
-	// https://docs.google.com/drawings/d/1fQUq6icJORgJncwW-Fh3npq1vt9-3GvaVPLgXptTGWU/edit.
+	// https://github.com/stjude/proteinpaint/wiki/Using-AbortController-to-prevent-race-condition
 	getAbortSignal() {
 		return this.app?.getAbortSignal?.()
 	}
