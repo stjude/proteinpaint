@@ -230,12 +230,14 @@ export function dofetch3(path, init = {}, opts = {}) {
 	// init.signal option, or for a vocabApi method to supply a default
 	// init.signal.
 	//
-	// 'this' is a Vocab or TermdbVocab instance, where the Vocab constructor
-	// sets a this.dofetch3 method that has access to this.app.getAbortSignal.
+	// 'this' is a Vocab or TermdbVocab instance, where the Vocab constructor sets a
+	// this.dofetch3 method that has access to a plot-level or app-level getAbortSignal.
 	// In Javascript, a function that's attached to an object and called as
 	// object.method() will have its `this` context set to the object that it's
 	// attached to.
-	if (!init.signal && typeof this?.app?.getAbortSignal == 'function') init.signal = this.app.getAbortSignal()
+	if (!init.signal && this) {
+		init.signal = this.getAbortSignal?.() || this.app?.getAbortSignal?.()
+	}
 
 	opts.serverData = defaultServerDataCache
 	return dofetch2(path, init, opts)

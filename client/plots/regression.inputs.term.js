@@ -50,7 +50,7 @@ export class InputTerm {
 				placeholder: this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
-				vocabApi: app.vocabApi,
+				vocabApi: this.vocabApi,
 				noTermPromptOptions: this.opts.noTermPromptOptions,
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
@@ -167,7 +167,7 @@ export class InputTerm {
 			// $id needs to be filled in here for non-dictionary terms
 			// TODO: should have a centralized location for filling in
 			// $id for non-dictionary terms
-			if (tw && !tw.$id) tw.$id = await get$id(this.parent.app.vocabApi.getTwMinCopy(tw))
+			if (tw && !tw.$id) tw.$id = await get$id(this.vocabApi.getTwMinCopy(tw))
 			const e = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
 			if (errors.length) throw errors
@@ -296,7 +296,7 @@ export class InputTerm {
 				}
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
 					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
-					const tdb = this.parent.app.vocabApi.termdbConfig
+					const tdb = this.vocabApi.termdbConfig
 
 					this.termStatus.topInfoStatus.push(`Time axis: ${tw.q.timeScale == 'time' ? tdb.timeUnit : 'age'}`)
 
@@ -424,7 +424,7 @@ export class InputTerm {
 		if (!this.term) return // missing term
 		if (this.section.configKey != 'independent') return
 		if (this.term.q.mode == 'spline') return // not on a spline term
-		if (this.parent.app.vocabApi.termdbConfig.regression?.settings?.disableInteractions) return
+		if (this.vocabApi.termdbConfig.regression?.settings?.disableInteractions) return
 		{
 			// require minimum of 2 independent terms eligible for interaction
 			let count = 0
