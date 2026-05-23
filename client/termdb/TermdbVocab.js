@@ -5,6 +5,22 @@ import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
 import { isDictionaryType } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
+	// getAbortSignal() will be used to cancel async fetch requests or canvas rendering that may
+	// lead to a mismatch between cohort label and rendered data due to race condition.
+	// Assume that the rarely used FrontendVocab will not require fetch/rendering cancellation,
+	// so there is no need to have this on the parent Vocab class as an inherited method.
+	// (May revisit this assumption as needed.)
+	//
+	// The default is to trigger cancellation at the beginning of every app.dispatch(),
+	// if the signal option is provided to fetch().
+	//
+	// A more targeted, plot-level cancellation may override this and should be preferred,
+	// which is done in PlotBase constructor using prototypal inheritance. See details at
+	// https://docs.google.com/drawings/d/1fQUq6icJORgJncwW-Fh3npq1vt9-3GvaVPLgXptTGWU/edit.
+	getAbortSignal() {
+		return this.app?.getAbortSignal?.()
+	}
+
 	// migrated from termdb/store
 	async getTermdbConfig() {
 		if (this.opts.getDatasetAccessToken) {
@@ -510,7 +526,7 @@ export class TermdbVocab extends Vocab {
 			if (termfilter.filter) body.filter = getNormalRoot(termfilter.filter)
 			if (termfilter.filter0) body.filter0 = termfilter.filter0
 		}
-		const signal = this.app?.getAbortSignal?.() // ok to be undefined
+		const signal = this.getAbortSignal() // ok to be undefined
 		return await this.dofetch3('termdb/getpercentile', { body, signal })
 	}
 
@@ -582,7 +598,7 @@ export class TermdbVocab extends Vocab {
 	optionally, caller can supply a {term1_q: {...}} key-object value in _body to customize categories
 	*/
 	async getCategories(term, filter, _body = {}) {
-		const signal = this.app?.getAbortSignal?.()
+		const signal = this.getAbortSignal()
 		const headers = await this.mayGetAuthHeaders()
 		if (term.type == 'snplst' || term.type == 'snplocus') {
 			const body = Object.assign(
@@ -790,7 +806,7 @@ export class TermdbVocab extends Vocab {
 
 		const warnings = []
 		const frozenEmptyObj = Object.freeze({})
-		const signal = opts.signal || this.app?.getAbortSignal?.()
+		const signal = opts.signal || this.getAbortSignal()
 
 		while (true) {
 			const copies = getTerms2update(allTerms2update, maxNumTerms) // list of unique terms to update in this round
@@ -1076,7 +1092,7 @@ export class TermdbVocab extends Vocab {
 			if (tf.filter) body.filter = getNormalRoot(tf.filter)
 			if (tf.filter0) body.filter0 = tf.filter0
 		}
-		const signal = opts.signal || this.app?.getAbortSignal?.()
+		const signal = opts.signal || this.getAbortSignal()
 		return await this.dofetch3('termdb', { headers, body, signal })
 	}
 

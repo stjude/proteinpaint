@@ -190,6 +190,9 @@ export class ComponentApi {
 	// }
 	//
 
+	// !!! detectStale() has been deprecated !!!
+	// TODO: Replace all detectStale() usage with vocabApi.getAbortSignal()
+	//
 	// When an async function takes a while to resolve, such as for server requests,
 	// a subsequent action may trigger another request before the first one resolves,
 	// in that case should ignore the stale response/result from the async function.
