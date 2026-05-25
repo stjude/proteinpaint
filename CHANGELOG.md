@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- implement a unique plot-level vocabApi to cancel fetch requests only for affected charts and child components
+
 
 ## 2.190.0
 
