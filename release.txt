@@ -1,2 +1,2 @@
 Fixes:
-- compute the currBin.label and stopunbounded when the bin entries exceeds the maxNumBins
+- compute the currBin.label and stopunbounded when the number of bin entries exceeds the maxNumBins

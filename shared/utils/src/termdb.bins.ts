@@ -106,7 +106,7 @@ export default function validate_bins(binconfig) {
 	}
 }
 
-const maxNumBins = 100 // harcoded limit for now to not stress sqlite
+const maxNumBins = 100 // hardcoded limit for now to not stress sqlite
 
 export function compute_bins(binconfig, summaryfxn, valueConversion) {
 	/*
@@ -131,6 +131,8 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 
 	validate_bins(bc)
 	if (bc.lst) {
+		if (!Array.isArray(bc.lst)) throw `bc.lst is not an array`
+		if (bc.lst.length > maxNumBins) throw `bc.lst exceed the maximum of ${maxNumBins} allowed entries`
 		const k2c = getColors(bc.lst.length) //to color bins
 		for (const bin of bc.lst) bin.color = k2c(bin.label)
 	}
@@ -250,10 +252,7 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 			currBin.stopunbounded = true
 			currBin.label = get_bin_label(currBin, bc, valueConversion)
 			if (!bins.includes(currBin)) bins.push(currBin)
-			const hint =
-				bc.type == 'regular-bin'
-					? 'Please increase the bin_size or first bin stop, or have a lower last bin start.'
-					: `Please have less than ${maxNumBins} bins.`
+			const hint = 'Please increase the bin_size or first bin stop, or have a lower last bin start.'
 			bc.error = hint + ' (max_num_bins_reached)'
 			break
 		}
