@@ -17,7 +17,7 @@ IMAGE_NAME="ghcr.io/stjude/tile-server"
 
 # temporarily ignore bash error
 set +e
-echo "finding any matching blat containers to stop and remove ..."
+echo "finding any matching tile-server containers to stop and remove ..."
   docker ps -aq --filter "name=$CONTAINER_NAME" | xargs -r docker rm -f
 # re-enable exit on errors
 set -e
