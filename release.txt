@@ -1,1 +1,2 @@
-
+Fixes:
+- enable cubic spline for gdc numeric terms
