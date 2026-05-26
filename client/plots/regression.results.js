@@ -85,6 +85,7 @@ export class RegressionResults {
 	async main() {
 		try {
 			this.parent.inputs.dom.submitBtn.text('Running...')
+			this.parent.dom.inputs.style('opacity', 0.5).style('pointer-events', 'none') // disables all interactivities on input ui; if ref category is switched while loading, it will abort current request
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state

@@ -392,6 +392,7 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
 			.property('disabled', self.hasError)
+		self.parent.dom.inputs.style('opacity', 1).style('pointer-events', 'auto')
 	}
 
 	self.mayShowUnivariateCheckbox = () => {
