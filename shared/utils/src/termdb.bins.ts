@@ -106,6 +106,8 @@ export default function validate_bins(binconfig) {
 	}
 }
 
+const maxNumBins = 100 // harcoded limit for now to not stress sqlite
+
 export function compute_bins(binconfig, summaryfxn, valueConversion) {
 	/*
 	  Bins generator
@@ -203,7 +205,6 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 	}
 
 	if (!isStrictNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
-	const maxNumBins = 100 // harcoded limit for now to not stress sqlite
 
 	while ((numericMax && currBin.stop <= max) || (currBin.startunbounded && !bins.length) || currBin.stopunbounded) {
 		bins.push(currBin)
@@ -245,7 +246,15 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 			else break
 		}
 		if (bins.length + 1 >= maxNumBins) {
-			bc.error = 'max_num_bins_reached'
+			delete currBin.stop
+			currBin.stopunbounded = true
+			currBin.label = get_bin_label(currBin, bc, valueConversion)
+			if (!bins.includes(currBin)) bins.push(currBin)
+			const hint =
+				bc.type == 'regular-bin'
+					? 'Please increase the bin_size or first bin stop, or have a lower last bin start.'
+					: `Please have less than ${maxNumBins} bins.`
+			bc.error = hint + ' (max_num_bins_reached)'
 			break
 		}
 	}
