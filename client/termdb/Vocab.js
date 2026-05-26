@@ -32,6 +32,41 @@ export class Vocab {
 		this.dofetch3 = dofetch3
 	}
 
+	create(componentGetAbortSignal) {
+		// This creates a vocabApi instance that is unique to a component instance,
+		// but inherits all the methods and properties of this "active" current instance,
+		// which is updated on every app dispatch. This prototypal inheritance makes
+		// up-to-date state.termfilter available inside every vocabApi method call.
+		//
+		// In contrast, classical inheritance (using the "new" keyword) would require calling
+		// vocabApi.main() on all plot-related instance on every componentApi.update().
+		// In this current use case, the tradeoff is between faster property/method lookup
+		// in classical inheritance versus being able to inherit dynamically updated state
+		// of the prototype.
+		//
+		return Object.create(this, {
+			// Make a component-level abort signal easily accessible inside all vocabApi methods,
+			// usage example: `init.signal = this.getAbortSignal?.() || this.app?.getAbortSignal?.()` in dofetch3()
+			// This overrides the TermdbVocab.getAbortSignal() that is not plot-level, where the app-wide
+			// cancellation may affect fetch requests that shouldn't be cancelled.
+			// Details at https://github.com/stjude/proteinpaint/wiki/Using-AbortController-to-prevent-race-condition
+			getAbortSignal: {
+				value: () => componentGetAbortSignal()
+			}
+		})
+
+		// NOTE: May easily switch to classical inheritance approach if the prototypal
+		// inheritance leads to confusing behavior or debugging. For example:
+		//
+		// const vocabApi = new TermdbVocab(this.state.vocab)
+		// this.trackedApis.add(vocabApi)
+		// return vocabApi
+		//
+		// then inside vocabApi.main() when it is called by app.main(),
+		// for(const api of trackedApis) api.main()
+		//
+	}
+
 	async main(stateOverride = null) {
 		if (stateOverride) Object.assign(this.state, stateOverride)
 		else this.state = structuredClone(this.app?.getState?.() || this.opts.state)
