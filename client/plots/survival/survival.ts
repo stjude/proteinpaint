@@ -391,6 +391,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
+		this.msg = ''
+
 		const rows: any[] = []
 		const estKeys = ['survival', 'lower', 'upper']
 		for (const d of data.case) {
@@ -727,7 +729,7 @@ function setRenderers(self) {
 		renderSVG(div.select('svg'), chart, s, s.duration)
 
 		// div for chart-specific legends
-		div.select('.pp-survival-chartLegends').selectAll('*').remove()
+		div.select('.pp-survival-chartLegends').style('display', 'none').selectAll('*').remove()
 
 		// p-values legend
 		if (self.tests && chart.rawChartId in self.tests) {
