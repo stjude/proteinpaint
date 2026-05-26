@@ -41,20 +41,18 @@ import { exec as execCallback } from 'node:child_process'
  */
 
 /*
- * Cache flow (uniform across the four cacheOrRecompute consumers):
+ * Cache flow (uniform across cacheOrRecompute consumers):
  *   init  →  xKeyInputs  →  getXCacheResult  →  cacheOrRecompute  →  runXFresh
- *   GRIN2: init → runGrin2WithLimit → runGrin2 →
- *          getGrin2CacheResult → runGrin2Fresh, then run_rust plot
+ *   GRIN2 follows this with a trailing run_rust plot step in runGrin2.
  *
  * Within this file the function order mirrors that flow:
- *   init → runGrin2WithLimit → runGrin2 → grin2KeyInputs →
- *   getGrin2CacheResult → runGrin2Fresh → helpers
+ *   init → runGrin2 → grin2KeyInputs → getGrin2CacheResult →
+ *   runGrin2Fresh → helpers
  */
 
 // Constants & types
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
 const GRIN2_MEMORY_BUDGET_MB = 950
-const GRIN2_CONCURRENCY_LIMIT = 5
 const MEMORY_BASE_MB = 260
 const MEMORY_PER_1K_LESIONS = 2.4
 const MIN_LESIONS = 50000
@@ -76,7 +74,7 @@ export function init({ genomes }) {
 
 			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
 
-			const result = await runGrin2WithLimit(g, ds, request, signal)
+			const result = await runGrin2(g, ds, request, signal)
 			res.json(result)
 		} catch (e: any) {
 			if (signal?.aborted) {
@@ -99,7 +97,7 @@ export function init({ genomes }) {
 }
 
 // =============================================================================
-// CONCURRENCY and MEMORY MANAGEMENT
+// MEMORY MANAGEMENT
 // =============================================================================
 
 const exec = promisify(execCallback)
@@ -155,31 +153,6 @@ async function getMaxLesions(): Promise<number> {
 	}
 
 	return MAX_LESIONS
-}
-
-let activeGrin2Jobs = 0
-
-async function runGrin2WithLimit(g: any, ds: any, request: GRIN2Request, signal?: AbortSignal): Promise<GRIN2Response> {
-	if (activeGrin2Jobs >= GRIN2_CONCURRENCY_LIMIT) {
-		const error: any = new Error(
-			`GRIN2 analysis queue is full (${GRIN2_CONCURRENCY_LIMIT} concurrent analyses). Please try again in a few minutes.`
-		)
-
-		// Explicitly set status code for rate limiting so we ensure this error doesn't get cached
-		error.status = 429
-		error.statusCode = 429
-		throw error
-	}
-
-	activeGrin2Jobs++
-	mayLog(`[GRIN2] Starting analysis. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
-
-	try {
-		return await runGrin2(g, ds, request, signal)
-	} finally {
-		activeGrin2Jobs--
-		mayLog(`[GRIN2] Analysis complete. Active jobs: ${activeGrin2Jobs}/${GRIN2_CONCURRENCY_LIMIT}`)
-	}
 }
 
 // Building the lesion map to send to python

@@ -1,11 +1,15 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
 import type { GRIN2Dom, GRIN2Opts } from './GRIN2Types'
-import { getCombinedTermFilter, getNormalRoot, filterInit } from '#filter'
-import { Menu, table2col, make_one_checkbox, sayerror, showResultsTable } from '#dom'
-import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
+import { GRIN2Model } from './model/GRIN2Model'
+import { GRIN2ViewModel } from './viewModel/GRIN2ViewModel'
+import { GRIN2ResultsView } from './view/GRIN2ResultsView'
+import { GRIN2ControlsView } from './view/GRIN2ControlsView'
+import { getDefaultGRIN2Settings } from './settings/defaults'
+import { getCombinedTermFilter, getNormalRoot } from '#filter'
+import { sayerror } from '#dom'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { plotManhattan } from '#plots/manhattan/manhattan.ts'
 import { controlsInit } from '#plots/controls.js'
 
 class GRIN2 extends PlotBase implements RxComponent {
@@ -13,80 +17,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 	readonly type = 'grin2'
 	dom: GRIN2Dom
 	components: { controls: ComponentApi }
-	private snvindelMafFilter: any // active MAF filter state, updated by filterInit UI
-
-	// Colors
-	readonly borderColor = '#eee'
-	readonly backgroundColor = '#f8f8f8'
-	readonly optionsTextColor = '#666'
-	readonly btnBackgroundColor = '#f0f0f0'
-	readonly btnBorderColor = '#ccc'
-	readonly btnTextColor = '#333'
-	readonly btnHoverBackgroundColor = '#e0e0e0'
-
-	// Typography
-	readonly optionsTextFontSize: number = 12
-	readonly btnFontSize: number = 12
-	readonly headerFontSize: number = 14
-	readonly headerFontWeight: number = 600
-	readonly tableFontSize: number = 11
-	readonly statsTableFontWeight: string = 'bold'
-
-	// Spacing & Layout
-	readonly btnPadding = '8px 16px'
-	readonly btnSmallPadding = '2px 8px' // for Select All/Clear All
-	readonly btnBorderRadius = '3px'
-	readonly btnMargin = '10px'
-	readonly tableCellPadding = '8px'
-	readonly controlsMargin = '5px'
-	readonly controlsPadding = '10px'
-
-	// Input fields
-	readonly inputWidth = '80px'
-	readonly inputPadding = '2px 4px'
-	readonly inputBorderColor = '#ddd'
-	readonly inputBorderRadius = '2px'
-
-	// Containers
-	readonly checkboxContainerMaxHeight = '150px'
-	readonly checkboxContainerBackground = '#fafafa'
-	readonly checkboxContainerBorder = '1px solid #ddd'
-	readonly checkboxContainerPadding = '4px'
-	readonly checkboxContainerBorderRadius = '3px'
-
-	// Interactive states
-	readonly disabledOpacity = '0.6'
-	readonly enabledOpacity = '1'
-
-	// Gaps and offsets
-	readonly controlGap = '8px'
-	readonly checkboxMarginBottom = '2px'
-	readonly headerMargin = '0 10px 0 0'
-	readonly sectionMargin = '20px 0'
+	private model!: GRIN2Model
+	private resultsView!: GRIN2ResultsView
+	private controlsView: GRIN2ControlsView | null = null
 
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.opts = opts
-		this.components = {
-			controls: {} as ComponentApi
-		}
+		this.components = { controls: {} as ComponentApi }
 		opts.holder.classed('sjpp-grin2-main', true)
 		this.dom = {
 			massControls: opts.holder.append('div').style('display', 'inline-block'),
 			headerText: opts.holder.append('div').style('display', 'inline-block'),
-			controls: opts.holder.append('div'), // controls ui on top
-			div: opts.holder.append('div').style('margin', '20px'), // result ui on bottom
-			tip: new Menu({ padding: '' }),
-			geneTip: new Menu({ padding: '' }),
-			snvindelCheckbox: null,
-			cnvCheckbox: null,
-			fusionCheckbox: null,
-			svCheckbox: null,
-			runButton: null,
-			consequenceCheckboxes: {},
-			snvindelSelectAllBtn: null,
-			snvindelClearAllBtn: null,
-			snvindelDefaultBtn: null
+			controls: opts.holder.append('div'),
+			div: opts.holder.append('div').style('margin', '20px')
 		}
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
 	}
@@ -97,541 +41,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const parentConfig = appState.plots.find((p: BasePlotConfig) => p.id === this.parentId)
-		// Get combined term filter from global app state and plot-specific config
 		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
-		return {
-			config,
-			termfilter
-		}
-	}
-
-	private addSnvindelRow = (table: any) => {
-		const [left, right] = table.addRow()
-
-		// Options table
-		const t2 = table2col({ holder: right })
-
-		// if 5/3 flanking size will be needed in future, can create a helper this.addFlankingOption() to dedup
-
-		// TODO: Enable once talk to collaborators about supporting these options
-		// // 5' flanking size
-		// this.dom.snvindel_five_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"5' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-		// // 3' flanking size
-		// this.dom.snvindel_three_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"3' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		// Consequences section header + checkbox grid
-		{
-			const [labelCell, containerCell] = t2.addRow()
-			labelCell.text('Consequences').style('padding-top', '8px')
-
-			// Build the consequence checkboxes in the right cell
-			this.createConsequenceCheckboxes(containerCell)
-		}
-
-		// MAF filter UI, if mafFilter is defined in the dataset config
-		const mafFilterConfig = this.app.vocabApi.termdbConfig.queries?.snvindel?.mafFilter
-		if (mafFilterConfig) {
-			this.snvindelMafFilter = structuredClone(
-				this.state.config.settings?.snvindelOptions?.mafFilter || mafFilterConfig.filter
-			)
-			const [td1, td2] = t2.addRow()
-			td1.text('MAF filter')
-			filterInit({
-				emptyLabel: '+',
-				holder: td2,
-				header_mode: 'hide_search',
-				vocab: { terms: mafFilterConfig.terms },
-				callback: async (filter: any) => {
-					this.snvindelMafFilter = filter
-				}
-			}).main(this.snvindelMafFilter)
-		}
-
-		// ----- Left-side SNV/INDEL checkbox -----
-		const isChecked = this.state.config.settings.dtUsage[dtsnvindel].checked
-		t2.table.style('display', isChecked ? '' : 'none')
-		this.dom.snvindelCheckbox = make_one_checkbox({
-			holder: left,
-			labeltext: dt2lesion[dtsnvindel].uilabel,
-			checked: isChecked,
-			testid: 'sjpp-grin2-checkbox-snvindel',
-			callback: (checked: boolean) => {
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonFromCheckboxes()
-			}
-		})
-	}
-
-	// Add CNV row
-	private addCnvRow = (table: any) => {
-		const [left, right] = table.addRow()
-
-		// CNV options table
-		const t2 = table2col({ holder: right })
-
-		// We need this extra useSaved because of having a ds specific value set. Only use saved CNV settings if we know they came from a completed run
-		// TODO: Long term we will need to do this for snvindel once we support ds specific values there also
-		const useSaved = this.state.config.settings.runAnalysis === true
-		const savedCnv = useSaved ? this.state.config.settings.cnvOptions : undefined
-
-		// Loss Threshold
-		this.dom.cnv_lossThreshold = this.addOptionRowToTable(
-			t2,
-			'Loss Threshold',
-			savedCnv?.lossThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvLossCutoff ?? -0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the hardcoded default value
-			-5, // min
-			0, // max
-			0.05 // step
-		)
-
-		// Gain Threshold
-		this.dom.cnv_gainThreshold = this.addOptionRowToTable(
-			t2,
-			'Gain Threshold',
-			savedCnv?.gainThreshold ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvGainCutoff ?? 0.4, // default. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the hardcoded default value
-			0, // min
-			5, // max
-			0.05 // step
-		)
-
-		// Max Segment Length (0 = no cap)
-		this.dom.cnv_maxSegLength = this.addOptionRowToTable(
-			t2,
-			'Max Segment Length',
-			savedCnv?.maxSegLength ?? this.app.vocabApi.termdbConfig.queries.cnv?.cnvMaxLength ?? 2e6, // default 2Mb. We first check if we have saved state, then we check the ds specific value, if that is undefined we fall back to the hardcoded default value
-			0, // min
-			1e9, // max
-			1000 // step
-		)
-
-		// // 5' flanking size
-		// this.dom.cnv_five_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"5' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		// // 3' flanking size
-		// this.dom.cnv_three_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"3' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		// ----- Left-side CNV checkbox -----
-		const dtUsage = this.state.config.settings.dtUsage
-		const isChecked =
-			useSaved && dtUsage[dtcnv]?.checked !== undefined
-				? dtUsage[dtcnv].checked
-				: !!this.app.vocabApi.termdbConfig.queries.cnv
-
-		t2.table.style('display', isChecked ? '' : 'none')
-
-		this.dom.cnvCheckbox = make_one_checkbox({
-			holder: left,
-			labeltext: dt2lesion[dtcnv].uilabel,
-			checked: isChecked,
-			testid: 'sjpp-grin2-checkbox-cnv',
-			callback: (checked: boolean) => {
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonFromCheckboxes()
-			}
-		})
-	}
-
-	// Add Fusion row
-	private addFusionRow = (table: any) => {
-		const [left, right] = table.addRow()
-
-		// Fusion options table
-		const t2 = table2col({ holder: right })
-
-		// // 5' flanking size
-		// this.dom.fusion_five_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"5' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		// // 3' flanking size
-		// this.dom.fusion_three_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"3' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		const isChecked = this.state.config.settings.dtUsage[dtfusionrna].checked
-		t2.table.style('display', isChecked ? '' : 'none')
-
-		this.dom.fusionCheckbox = make_one_checkbox({
-			holder: left,
-			labeltext: dt2lesion[dtfusionrna].uilabel,
-			checked: isChecked,
-			testid: 'grin2-checkbox-fusion',
-			callback: (checked: boolean) => {
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonFromCheckboxes()
-			}
-		})
-	}
-
-	// Add SV row
-	private addSvRow = (table: any) => {
-		const [left, right] = table.addRow()
-
-		// SV options table
-		const t2 = table2col({ holder: right })
-
-		// // 5' flanking size
-		// this.dom.sv_five_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"5' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		// // 3' flanking size
-		// this.dom.sv_three_prime_flank_size = this.addOptionRowToTable(
-		// 	t2,
-		// 	"3' Flanking Size",
-		// 	500, // default
-		// 	0, // min
-		// 	1e9, // max
-		// 	500 // step
-		// )
-
-		const isChecked = this.state.config.settings.dtUsage[dtsv].checked
-		t2.table.style('display', isChecked ? '' : 'none')
-
-		this.dom.svCheckbox = make_one_checkbox({
-			holder: left,
-			labeltext: dt2lesion[dtsv].uilabel,
-			checked: isChecked,
-			testid: 'sjpp-grin2-checkbox-sv',
-			callback: (checked: boolean) => {
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonFromCheckboxes()
-			}
-		})
-	}
-
-	// Enable the run button only if at least one data type is checked
-	private updateRunButtonState(dtu?: Record<number, { checked: boolean; label: string }>) {
-		const dtUsage = dtu || (this.state.config.settings.dtUsage as Record<number, { checked: boolean; label: string }>)
-		const anyChecked = Object.values(dtUsage).some(info => info.checked)
-		this.dom.runButton.property('disabled', !anyChecked)
-	}
-
-	private createConfigTable() {
-		// Add citation text
-		this.dom.headerText
-			.style('margin', '15px')
-			.html(
-				'GRIN2 stands for Genomic Random Interval (GRIN) statistical model. For details, see <a href=https://pubmed.ncbi.nlm.nih.gov/23842812/ target=_blank>Pounds, S. et al. Bioinformatics 2013</a>.'
-			)
-
-		const table = table2col({ holder: this.dom.controls, disableScroll: true })
-		const queries = this.app.vocabApi.termdbConfig.queries
-		if (queries.snvindel) {
-			this.addSnvindelRow(table)
-		}
-
-		if (queries.cnv) {
-			this.addCnvRow(table)
-		}
-		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) {
-			this.addFusionRow(table)
-		}
-		if (queries.svfusion?.dtLst?.includes(dtsv)) {
-			this.addSvRow(table)
-		}
-
-		// Run Button
-		this.dom.runButton = this.dom.controls
-			.append('button')
-			.attr('data-testid', 'sjpp-grin2-run-button')
-			.style('margin-left', '100px')
-			.text('Run GRIN2')
-			.on('click', () => {
-				this.runAnalysis()
-			})
-
-		if (this.state.config.settings.runAnalysis) {
-			this.runAnalysis()
-		} else {
-			// Set initial button state
-			this.updateRunButtonState()
-		}
-	}
-
-	// Helper method to add option rows to table2col instances
-	private addOptionRowToTable(
-		table: any,
-		label: string,
-		defaultValue: number,
-		min?: number,
-		max?: number,
-		step?: number
-	) {
-		const [labelCell, inputCell] = table.addRow()
-		labelCell.text(label)
-
-		const input = inputCell
-			.append('input')
-			.attr('type', 'number')
-			.attr('value', defaultValue)
-			.style('width', this.inputWidth)
-			.style('padding', this.inputPadding)
-			.style('border', `1px solid ${this.inputBorderColor}`)
-			.style('border-radius', this.inputBorderRadius)
-			.style('font-size', `${this.optionsTextFontSize}px`)
-
-		if (min !== null && min !== undefined) input.attr('min', min)
-		if (max !== null && max !== undefined) input.attr('max', max)
-		if (step !== null && step !== undefined) input.attr('step', step)
-
-		return input
-	}
-
-	private createConsequenceCheckboxes(container: any) {
-		const snvIndelClasses = Object.entries(mclass).filter(
-			([key, cls]: [string, any]) => cls.dt === dtsnvindel && key !== 'Blank' && key !== 'WT'
-		)
-
-		const saved = this.state.config.settings.snvindelOptions?.consequences as string[] | undefined
-		const useSaved = this.state.config.settings.runAnalysis === true && !!saved && saved.length > 0
-
-		// Canonical default set = protein-changing + StartLost + StopLost
-		const canonicalDefault = new Set<string>([...proteinChangingMutations, 'StartLost', 'StopLost'])
-
-		// What we use for initial rendering:
-		const initialChecked = useSaved ? new Set<string>(saved!) : canonicalDefault
-
-		// --- Controls row ---
-		const controlDiv = container
-			.append('div')
-			.style('margin-bottom', '6px')
-			.style('display', 'flex')
-			.style('gap', this.controlGap)
-
-		this.dom.snvindelSelectAllBtn = controlDiv
-			.append('button')
-			.style('font-size', `${this.tableFontSize}px`)
-			.text('Select All')
-
-		this.dom.snvindelClearAllBtn = controlDiv
-			.append('button')
-			.style('font-size', `${this.tableFontSize}px`)
-			.text('Clear All')
-
-		this.dom.snvindelDefaultBtn = controlDiv
-			.append('button')
-			.style('font-size', `${this.tableFontSize}px`)
-			.text('Default')
-
-		// --- Checkbox list ---
-		const checkboxContainer = container
-			.append('div')
-			.style('max-height', this.checkboxContainerMaxHeight)
-			.style('overflow-y', 'auto')
-			.style('border', this.checkboxContainerBorder)
-
-		this.dom.consequenceCheckboxes = {}
-
-		snvIndelClasses.forEach(([classKey, classInfo]: [string, any]) => {
-			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', this.checkboxMarginBottom)
-
-			const checkbox = make_one_checkbox({
-				holder: checkboxDiv,
-				labeltext: classInfo.label,
-				checked: initialChecked.has(classKey),
-				divstyle: { 'font-size': `${this.tableFontSize}px` },
-				callback: () => {}
-			})
-
-			checkboxDiv.select('label').attr('title', classInfo.desc)
-			this.dom.consequenceCheckboxes[classKey] = checkbox
-		})
-
-		// Select All
-		this.dom.snvindelSelectAllBtn.on('click', () => {
-			Object.values(this.dom.consequenceCheckboxes).forEach(cb => cb.property('checked', true))
-		})
-
-		// Clear All
-		this.dom.snvindelClearAllBtn.on('click', () => {
-			Object.values(this.dom.consequenceCheckboxes).forEach(cb => cb.property('checked', false))
-		})
-
-		// Default: always reset to canonical (protein-changing + StartLost + StopLost)
-		this.dom.snvindelDefaultBtn.on('click', () => {
-			Object.entries(this.dom.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
-				checkbox.property('checked', canonicalDefault.has(classKey))
-			})
-		})
-	}
-
-	private getConfigValues(dtUsage: Record<number, { checked: boolean; label: string }>): any {
-		const requestConfig: any = {}
-		const usage = dtUsage || this.state.config.settings.dtUsage
-
-		if (usage[dtsnvindel]?.checked) {
-			requestConfig.snvindelOptions = {
-				// minTotalDepth: parseFloat(this.dom.snvindel_minTotalDepth.property('value')),
-				// minAltAlleleCount: parseFloat(this.dom.snvindel_minAltAlleleCount.property('value')),
-				consequences: this.getSelectedConsequences()
-			}
-			if (this.snvindelMafFilter) {
-				requestConfig.snvindelOptions.mafFilter = this.snvindelMafFilter
-			}
-		}
-
-		if (usage[dtcnv]?.checked) {
-			requestConfig.cnvOptions = {
-				lossThreshold: parseFloat(this.dom.cnv_lossThreshold.property('value')),
-				gainThreshold: parseFloat(this.dom.cnv_gainThreshold.property('value')),
-				maxSegLength: parseFloat(this.dom.cnv_maxSegLength.property('value'))
-			}
-		}
-
-		if (usage[dtfusionrna]?.checked) {
-			requestConfig.fusionOptions = {}
-		}
-
-		if (usage[dtsv]?.checked) {
-			requestConfig.svOptions = {}
-		}
-
-		return requestConfig
-	}
-
-	private getDtUsageFromCheckboxes(): Record<number, { checked: boolean; label: string }> {
-		const dtUsage = structuredClone(this.state.config.settings.dtUsage)
-
-		if (dtUsage[dtsnvindel]) {
-			dtUsage[dtsnvindel].checked = this.dom.snvindelCheckbox.property('checked')
-		}
-		if (dtUsage[dtcnv]) {
-			dtUsage[dtcnv].checked = this.dom.cnvCheckbox.property('checked')
-		}
-		if (dtUsage[dtfusionrna]) {
-			dtUsage[dtfusionrna].checked = this.dom.fusionCheckbox.property('checked')
-		}
-		if (dtUsage[dtsv]) {
-			dtUsage[dtsv].checked = this.dom.svCheckbox.property('checked')
-		}
-
-		return dtUsage
-	}
-
-	private getSelectedConsequences(): string[] {
-		const consequences: string[] = []
-
-		Object.entries(this.dom.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
-			if (checkbox.property('checked')) {
-				consequences.push(classKey)
-			}
-		})
-
-		return consequences
-	}
-
-	private updateRunButtonFromCheckboxes() {
-		const dtUsage = this.getDtUsageFromCheckboxes()
-		this.updateRunButtonState(dtUsage)
-	}
-	private async runAnalysis() {
-		this.dom.controls.style('pointer-events', 'none').style('opacity', '0.5')
-		try {
-			// Get checkbox states
-			const dtUsage = this.getDtUsageFromCheckboxes()
-
-			this.dom.runButton.property('disabled', true).text('Running GRIN2...')
-
-			// Clear previous results
-			this.dom.div.selectAll('*').remove()
-
-			// Get configuration and make request using the dtUsage we just read
-			const configValues = this.getConfigValues(dtUsage)
-			const requestData = {
-				filter: getNormalRoot(this.state.termfilter.filter),
-				filter0: this.state.termfilter.filter0,
-				width: this.state.config.settings.manhattan?.plotWidth,
-				height: this.state.config.settings.manhattan?.plotHeight,
-				pngDotRadius: this.state.config.settings.manhattan?.pngDotRadius,
-				devicePixelRatio: window.devicePixelRatio,
-				maxGenesToShow: this.state.config.settings?.manhattan?.maxGenesToShow,
-				lesionTypeColors: this.state.config.settings?.manhattan?.lesionTypeColors,
-				qValueThreshold: this.state.config.settings?.manhattan?.qValueThreshold,
-				maxCappedPoints: this.state.config.settings?.manhattan?.maxCappedPoints,
-				hardCap: this.state.config.settings?.manhattan?.hardCap,
-				binSize: this.state.config.settings?.manhattan?.binSize,
-				...configValues
-			}
-
-			const response = await this.app.vocabApi.getGrin2Data(requestData, this.api!.getAbortSignal())
-
-			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
-
-			this.renderResults(response)
-
-			// After the analysis completes successfully, dispatch with the updated config to save state
-			const updatedConfig = {
-				...this.state.config,
-				settings: {
-					...this.state.config.settings,
-					...configValues,
-					dtUsage: dtUsage,
-					runAnalysis: true
-				}
-			}
-
-			this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: updatedConfig
-			})
-		} catch (error) {
-			if (this.dom.div) {
-				sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
-			} else {
-				// while request running and sandbox deleted by user, it reaches here but dom.* are undefined and should not crash
-			}
-		} finally {
-			this.dom.controls?.style('pointer-events', 'auto').style('opacity', '1')
-			this.dom.runButton?.property('disabled', false).text('Run GRIN2')
-		}
+		return { config, termfilter }
 	}
 
 	async init() {
+		this.model = new GRIN2Model(this.app.vocabApi)
+		this.resultsView = new GRIN2ResultsView(this.dom.div, this.app)
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -639,7 +55,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			inputs: []
 		})
 
-		/** Removing the burger and download btn for now. Will implement later.*/
+		// Remove the burger and download buttons for now (will be implemented later)
 		const burgerMenu = this.dom.massControls.select('div > svg.bi.bi-copy')
 		if (burgerMenu) burgerMenu.remove()
 		const downloadBtn = this.dom.massControls.select('div > svg.bi.bi-download')
@@ -651,140 +67,73 @@ class GRIN2 extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		// Initialize the table with the different data types and options
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
-		if (!this.dom.runButton) {
-			this.createConfigTable()
+		if (!this.controlsView) {
+			this.controlsView = new GRIN2ControlsView({
+				headerHolder: this.dom.headerText,
+				controlsHolder: this.dom.controls,
+				config: this.state.config,
+				vocabApi: this.app.vocabApi,
+				callbacks: { onRun: () => this.handleRun() }
+			})
+			this.controlsView.build()
+			if (this.state.config.settings.runAnalysis) this.handleRun()
 		}
 	}
 
-	private renderResults(result: any) {
-		// Display Manhattan plot
-		if (result.pngImg) {
-			const plotData = result
-			const plotDiv = this.dom.div
-			const manhattanSettings = this.state.config.settings.manhattan
-			plotManhattan(plotDiv, plotData, manhattanSettings, this.app)
-		}
+	private async handleRun() {
+		if (!this.controlsView) return
+		this.controlsView.setBusy(true)
+		try {
+			const dtUsage = this.controlsView.getDtUsage()
+			this.resultsView.clear()
 
-		// Display top genes table
-		if (result.topGeneTable) {
-			const tableContainer = this.dom.div.append('div').style('margin', this.sectionMargin)
+			const configValues = this.controlsView.getConfigValues(dtUsage)
+			const manhattan = this.state.config.settings.manhattan
+			const requestData = {
+				filter: getNormalRoot(this.state.termfilter.filter),
+				filter0: this.state.termfilter.filter0,
+				width: manhattan?.plotWidth,
+				height: manhattan?.plotHeight,
+				pngDotRadius: manhattan?.pngDotRadius,
+				devicePixelRatio: window.devicePixelRatio,
+				maxGenesToShow: manhattan?.maxGenesToShow,
+				lesionTypeColors: manhattan?.lesionTypeColors,
+				qValueThreshold: manhattan?.qValueThreshold,
+				maxCappedPoints: manhattan?.maxCappedPoints,
+				hardCap: manhattan?.hardCap,
+				binSize: manhattan?.binSize,
+				...configValues
+			}
 
-			// Create header with title
-			const headerDiv = tableContainer
-				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('margin', this.btnMargin)
+			const response = await this.model.fetchGrin2Data(requestData, this.api!.getAbortSignal())
+			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
 
-			headerDiv
-				.append('h3')
-				.style('margin', this.headerMargin)
-				.style('font-size', `${this.headerFontSize}px`)
-				.text(`Top Genes (showing ${result.stats.lst[0].rows[1][1]} of ${result.stats.lst[0].rows[0][1]})`)
+			const vm = new GRIN2ViewModel(response, manhattan, dtUsage)
+			this.resultsView.render(vm.viewData)
 
-			const tableDiv = tableContainer.append('div')
-
-			// Define lesion type colors and q-value threshold
-			const lesionTypeColors = this.state.config.settings.manhattan.lesionTypeColors
-			const qValueThreshold = this.state.config.settings.manhattan.qValueThreshold
-
-			// Find column indices for q-values
-			const columns = result.topGeneTable.columns
-
-			// Map dt types to their column labels and lesion types
-			const dtMapping = {}
-			Object.entries(dt2lesion).forEach(([dt, config]) => {
-				dtMapping[dt] = config.lesionTypes.map(lt => ({
-					col: `Q-value (${lt.name})`,
-					type: lt.lesionType
-				}))
-			})
-
-			// Build qValue entries for enabled data types
-			const qValueEntries: Array<{ colIndex: number; type: string }> = []
-			Object.entries(this.state.config.settings.dtUsage).forEach(([key, isChecked]) => {
-				if (isChecked && dtMapping[key]) {
-					dtMapping[key].forEach(({ col, type }) => {
-						const colIndex = columns.findIndex(c => c.label === col)
-						if (colIndex !== -1) qValueEntries.push({ colIndex, type })
-					})
-				}
-			})
-
-			// Add significance column to the beginning
-			const modifiedColumns = [{ label: '', width: '20px' }, ...result.topGeneTable.columns]
-
-			// Cache the circles HTML
-			const lesionTypeCircleCache = new Map(
-				Object.entries(lesionTypeColors).map(([type, color]) => [
-					type,
-					`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background-color:${color};margin-right:3px;"></span>`
-				])
-			)
-
-			// Process rows to add significance indicators
-			const processedRows = result.topGeneTable.rows.map(row => {
-				const circles = qValueEntries
-					.filter(({ colIndex }) => {
-						const qValue = row[colIndex]?.value
-						return typeof qValue === 'number' && qValue < qValueThreshold
-					})
-					.map(({ type }) => lesionTypeCircleCache.get(type)!)
-
-				return [{ value: '', html: circles.join('') }, ...row]
-			})
-
-			// Use showResultsTable for consistent table rendering
-			showResultsTable({
-				tableDiv,
-				app: this.app,
-				columns: modifiedColumns,
-				rows: processedRows,
-				dataItems: result.topGeneTable.rows,
-				getRowKey: (row: any) => row[0]?.value,
-				matrixButtonFormat: 'Matrix ({n} genes selected)',
-				maxHeight: '400px',
-				maxWidth: '100%',
-				dataTestId: 'sjpp-grin2-top-genes-table',
-				resize: 'both',
-				selectAll: false,
-				allowRestoreRowOrder: true,
-				restoreButtonInFooter: true,
-				download: {
-					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
-				},
-				header: {
-					allowSort: true,
-					style: {
-						'font-weight': this.statsTableFontWeight,
-						'background-color': this.backgroundColor
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: {
+					...this.state.config,
+					settings: {
+						...this.state.config.settings,
+						...configValues,
+						dtUsage,
+						runAnalysis: true
 					}
 				}
 			})
-		}
-
-		// Display run stats information
-		if (result.stats?.lst) {
-			const tablesContainer = this.dom.div.append('div').style('margin-top', '50px')
-
-			// Skip first section (contains Total Genes and Showing Top used in header)
-			for (const section of result.stats.lst.slice(1)) {
-				tablesContainer
-					.append('h4')
-					.style('margin', this.headerMargin)
-					.style('margin-top', '15px')
-					.style('font-size', `${this.headerFontSize - 2}px`)
-					.text(section.name)
-
-				const table = table2col({ holder: tablesContainer.append('div'), margin: '2px 8px' })
-				for (const [k, v] of section.rows) {
-					table.addRow(k, v)
-				}
+		} catch (error) {
+			// dom.div may be undefined if the sandbox was deleted mid-request — don't crash in that case
+			if (this.dom.div) {
+				sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
 			}
+		} finally {
+			this.controlsView?.setBusy(false)
 		}
 	}
 }
@@ -792,77 +141,9 @@ class GRIN2 extends PlotBase implements RxComponent {
 export const grin2Init = getCompInit(GRIN2)
 export const componentInit = grin2Init
 
-export function getDefaultSettings(opts) {
-	const defaults = {
-		manhattan: {
-			// Core plot dimensions
-			plotWidth: 1000,
-			plotHeight: 400,
-			pngDotRadius: 2,
-
-			// Layout spacing
-			yAxisX: 70,
-			yAxisY: 40,
-			yAxisSpace: 20,
-			xAxisLabelPad: 30,
-			yAxisPad: 5,
-			axisColor: '#545454',
-			showYAxisLine: true,
-
-			// Typography
-			fontSize: 12,
-
-			// Legend settings
-			showLegend: true,
-			legendItemWidth: 80,
-			legendDotRadius: 3,
-			legendRightOffset: 15,
-			legendTextOffset: 12,
-			legendVerticalOffset: 4,
-			legendFontSize: 12,
-
-			// Interactive dots
-			showInteractiveDots: true,
-			interactiveDotRadius: 2,
-			interactiveDotStrokeWidth: 1,
-
-			// Download options
-			showDownload: true,
-
-			// Max genes to show in table, interactive dots cap, and tooltip genes
-			maxGenesToShow: 500,
-			interactiveDotsCap: 5000,
-			maxTooltipGenes: 5,
-
-			// Q-value threshold for significance indicators in the table, tooltips, and for determining which dots become interactive
-			qValueThreshold: 0.05,
-
-			// Colors for lesion types (currently used for table significance indicators. Long term will also be used for the rust code colors)
-			lesionTypeColors: {
-				mutation: '#44AA44', // green
-				loss: '#4444FF', // blue
-				gain: '#FF4444', // red
-				fusion: '#FFA500', // orange
-				sv: '#9932CC' // purple
-			},
-
-			// Threshold for the rust code when determining if we need to raise the cap value from the default
-			maxCappedPoints: 5,
-
-			// Bin size for cap calculations
-			binSize: 10,
-
-			// Hard cap regardless of data distribution
-			hardCap: 200
-		}
-	}
-
-	return Object.assign(defaults, opts?.overrides)
-}
-
 export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	const queries = app.vocabApi.termdbConfig.queries
-	const defaultSettings = getDefaultSettings(opts)
+	const defaultSettings = getDefaultGRIN2Settings(opts)
 
 	const dtUsage: any = {}
 
@@ -870,11 +151,9 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	if (queries?.snvindel) {
 		dtUsage[dtsnvindel] = { checked: true, label: dt2lesion[dtsnvindel].uilabel }
 	}
-
 	if (queries?.cnv) {
 		dtUsage[dtcnv] = { checked: true, label: dt2lesion[dtcnv].uilabel }
 	}
-
 	if (queries?.svfusion) {
 		if (queries.svfusion.dtLst.includes(dtfusionrna)) {
 			dtUsage[dtfusionrna] = { checked: false, label: dt2lesion[dtfusionrna].uilabel }
@@ -884,34 +163,22 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 		}
 	}
 
+	// snvindelOptions / cnvOptions / fusionOptions / svOptions are intentionally not seeded here.
+	// ControlsView supplies the user-visible defaults via its own fallback chain
+	// (savedCnv ?? dsConfig ?? CNV_*_FALLBACK), and handleRun writes the live form values
+	// back into settings on each Run. So before the first Run these stay undefined; after,
+	// they are always present from the form. Seeding them here would only add magic numbers
+	// that no code reads.
 	const config = {
 		chartType: 'grin2',
 		settings: {
 			controls: {},
-			dtUsage: dtUsage,
+			dtUsage,
 			runAnalysis: false,
 			manhattan: {
 				...defaultSettings.manhattan,
 				...opts?.manhattan
-			},
-			snvindelOptions: queries?.snvindel
-				? {
-						// minTotalDepth: 10,
-						// minAltAlleleCount: 2,
-						consequences: [],
-						hyperMutator: 1000
-				  }
-				: undefined,
-			cnvOptions: queries?.cnv
-				? {
-						lossThreshold: -0.4,
-						gainThreshold: 0.3,
-						maxSegLength: 0,
-						hyperMutator: 500
-				  }
-				: undefined,
-			fusionOptions: queries?.svfusion?.dtLst?.includes(dtfusionrna) ? {} : undefined,
-			svOptions: queries?.svfusion?.dtLst?.includes(dtsv) ? {} : undefined
+			}
 		}
 	}
 
