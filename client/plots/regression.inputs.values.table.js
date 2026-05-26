@@ -133,7 +133,8 @@ function setRenderers(self) {
 					type: 'app_refresh',
 					state: {
 						termfilter: {
-							filter: self.input.parent.parent.filter
+							filter: self.input.parent.parent.filter,
+							filter0: self.input.parent.parent.filter0
 						}
 					},
 					subactions: [
@@ -158,7 +159,8 @@ function setRenderers(self) {
 							dslabel: self.input.parent.app.vocabApi.dslabel
 						},
 						termfilter: {
-							filter: self.input.parent.parent.filter
+							filter: self.input.parent.parent.filter,
+							filter0: self.input.parent.parent.filter0
 						},
 						plots: [
 							{

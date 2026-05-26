@@ -1366,7 +1366,7 @@ function mayApplyBinning(samples, twLst) {
 					s[tw.term.id] = { key: bin.label, value: v }
 				}
 			}
-		} else if (tw.q.mode == 'continuous') {
+		} else if (tw.q.mode == 'continuous' || tw.q.mode == 'spline') {
 			// do not compute bin
 		} else {
 			throw 'mayApplyBinning: unknown numeric q.mode'
