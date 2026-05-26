@@ -23,7 +23,7 @@ export class PlotBase {
 	// dom: any
 	// config: any
 	configTermKeys?: string[]
-	vocabApi: TermdbVocab
+	vocabApi?: TermdbVocab
 
 	constructor(opts, plotApi?: ComponentApi) {
 		if (plotApi) this.api = plotApi
@@ -32,27 +32,9 @@ export class PlotBase {
 		this.app = opts?.app
 		this.parentId = opts?.parentId
 		// Below creates a vocabApi instance that is unique to the plot instance,
-		// but inherits all the methods and properties of an "active" instance that
-		// is updated on every app dispatch. This prototypal inheritance makes up-to-date
-		// state.termfilter available inside every vocabApi method call.
-		//
-		// In contrast, classical inheritance (using the "new" keyword) would require calling
-		// vocabApi.main() on all plot-related instance on every componentApi.update().
-		// In this current use case, the tradeoff is between faster property/method lookup
-		// in classical inheritance versus being able to inherit dynamically updated state
-		// of the prototype.
-		this.vocabApi = Object.create(this.app?.vocabApi || {}, {
-			// Below makes a plot-level abort signal easily accessible inside all vocabApi methods,
-			// usage example: `const signal = this.getAbortSignal?.()` inside TermdbVocab.getCategories()
-			// This overrides the TermdbVocab.getAbortSignal() that is not plot-level, where the app-wide
-			// cancellation may affect fetch requests that shouldn't be cancelled.
-			// Details at https://github.com/stjude/proteinpaint/wiki/Using-AbortController-to-prevent-race-condition
-			getAbortSignal: {
-				value: () => {
-					return this.api?.getAbortSignal?.()
-				}
-			}
-		})
+		// so that there'd be a plot-level request cancellation using
+		// plotApi.getAbortContoller()
+		if (this.app) this.vocabApi = this.app.vocabApi.create(() => this.api?.getAbortSignal())
 	}
 
 	async getMutableConfig() {
