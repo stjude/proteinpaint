@@ -102,11 +102,16 @@ export async function get_survival(q, ds) {
 			byChartSeries[chart].push({ time, status, series })
 		}
 
+		// FIXME: data.refs.byTermId[q.term2.id] should be queried instead of
+		// data.refs[q.term2.id]
 		const bins = (q.term2_id && data.refs[q.term2.id]?.bins) || []
 		const final_data = {
 			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk'],
 			case: [],
-			refs: { bins }
+			refs: {
+				bins,
+				byTermId: data.refs.byTermId
+			}
 		}
 
 		// perform survival analysis for each chart

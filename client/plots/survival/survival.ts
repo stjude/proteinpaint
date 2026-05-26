@@ -62,6 +62,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 	colorScale: any
 
 	refs: any
+	msg?: string
 	symbol: any
 	serverData?: any
 	currData?: any
@@ -420,6 +421,17 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			}
 		}
 
+		// process refs
+		if (data.refs.byTermId) {
+			const byTermId = data.refs.byTermId
+			const msg = byTermId[this.state.config.term.term.id]?.survMsg
+			if (msg) {
+				// message to be displayed in survival plot
+				// will be rendered in .pp-survival-chartLegends of each chart
+				this.msg = msg
+			}
+		}
+
 		return rows
 	}
 
@@ -649,7 +661,11 @@ function setRenderers(self) {
 
 			// p-values legend
 			if (self.tests && chart.rawChartId in self.tests) {
-				const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
+				const holder = div
+					.select('.pp-survival-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+					.style('margin-bottom', '30px')
 				renderPvalues({
 					title: 'Group comparisons (log-rank test)',
 					holder,
@@ -661,6 +677,16 @@ function setRenderers(self) {
 					setActiveMenu,
 					updateHiddenPvalues
 				})
+			}
+
+			// message
+			if (self.msg) {
+				const fontSize = s.axisTitleFontSize ? s.axisTitleFontSize - 2 : 15
+				const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
+				holder
+					.style('font-size', fontSize + 'px')
+					.style('font-style', 'italic')
+					.text(self.msg)
 			}
 		}
 	}
@@ -705,7 +731,11 @@ function setRenderers(self) {
 
 		// p-values legend
 		if (self.tests && chart.rawChartId in self.tests) {
-			const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
+			const holder = div
+				.select('.pp-survival-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin-bottom', '30px')
 			renderPvalues({
 				title: 'Group comparisons (log-rank test)',
 				holder,
@@ -717,6 +747,16 @@ function setRenderers(self) {
 				setActiveMenu,
 				updateHiddenPvalues
 			})
+		}
+
+		// message
+		if (self.msg) {
+			const fontSize = s.axisTitleFontSize ? s.axisTitleFontSize - 2 : 15
+			const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
+			holder
+				.style('font-size', fontSize + 'px')
+				.style('font-style', 'italic')
+				.text(self.msg)
 		}
 	}
 
