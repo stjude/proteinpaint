@@ -32,9 +32,8 @@ export class PlotBase {
 		this.app = opts?.app
 		this.parentId = opts?.parentId
 		// Below creates a vocabApi instance that is unique to the plot instance,
-		// so that there'd be a plot-level request cancellation using
-		// plotApi.getAbortContoller()
-		if (this.app) this.vocabApi = this.app.vocabApi.create(() => this.api?.getAbortSignal())
+		// so that there'd be a plot-level request cancellation using plotApi.getAbortSignal()
+		if (this.app?.vocabApi) this.vocabApi = this.app.vocabApi.create(() => this.api?.getAbortSignal())
 	}
 
 	async getMutableConfig() {

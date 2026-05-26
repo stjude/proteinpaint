@@ -47,8 +47,9 @@ export class Vocab {
 		return Object.create(this, {
 			// Make a component-level abort signal easily accessible inside all vocabApi methods,
 			// usage example: `init.signal = this.getAbortSignal?.() || this.app?.getAbortSignal?.()` in dofetch3()
-			// This overrides the TermdbVocab.getAbortSignal() that is not plot-level, where the app-wide
-			// cancellation may affect fetch requests that shouldn't be cancelled.
+			// This overrides the default app-level cancellation fallback with a component/plot-level
+			// signal, so app-wide state changes do not cancel fetch requests that should remain scoped
+			// to the current component instance.
 			// Details at https://github.com/stjude/proteinpaint/wiki/Using-AbortController-to-prevent-race-condition
 			getAbortSignal: {
 				value: () => componentGetAbortSignal()
