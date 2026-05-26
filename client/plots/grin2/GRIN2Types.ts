@@ -1,37 +1,14 @@
-import type { Menu } from '#dom'
 import type { Elem } from '../../types/d3'
+import type { GRIN2Settings } from './settings/Settings'
 
 export interface GRIN2Dom {
 	massControls: Elem
 	headerText: Elem
+	/** Holder for the GRIN2 config form (owned by GRIN2ControlsView). */
 	controls: any
+	/** Holder for the analysis results (owned by GRIN2ResultsView). */
 	div: any
-	tip: Menu
-	geneTip: Menu
 	header?: any
-	snvindelCheckbox: any | null
-	cnvCheckbox: any | null
-	fusionCheckbox: any | null
-	svCheckbox: any | null
-	runButton: any | null
-	snvindel_minTotalDepth?: any | null
-	snvindel_minAltAlleleCount?: any
-	snvindel_consequences?: any
-	snvindel_five_prime_flank_size?: any
-	snvindel_three_prime_flank_size?: any
-	cnv_lossThreshold?: any
-	cnv_gainThreshold?: any
-	cnv_maxSegLength?: any
-	cnv_five_prime_flank_size?: any
-	cnv_three_prime_flank_size?: any
-	fusion_five_prime_flank_size?: any
-	fusion_three_prime_flank_size?: any
-	sv_five_prime_flank_size?: any
-	sv_three_prime_flank_size?: any
-	consequenceCheckboxes: Record<string, any | null>
-	snvindelSelectAllBtn?: any | null
-	snvindelClearAllBtn?: any | null
-	snvindelDefaultBtn?: any | null
 }
 
 export interface GRIN2Opts {
@@ -60,41 +37,57 @@ export interface GRIN2Opts {
 	[key: string]: any
 }
 
-export interface GRIN2Settings {
-	/** Options for filtering SNV/indel file content */
-	snvindelOptions: {
-		/** Minimum total depth of returned SNV/indel files */
-		minTotalDepth: number
-		/** Minimum alternate allele count of returned SNV/indel files */
-		minAltAlleleCount: number
-		/** String array of consequence types to include */
-		consequences: string[]
-		/** Maximum mutation count cutoff for highly mutated scenarios */
-		hyperMutator: number
-	}
+/** Per-data-type usage flag carried in config.settings.dtUsage. Keyed by dt numeric id. */
+export type DtUsage = Record<number, { checked: boolean; label: string }>
 
-	/** Options for filtering CNV file content */
-	cnvOptions: {
-		/** Threshold for copy number loss detection */
-		lossThreshold: number
-		/** Threshold for copy number gain detection */
-		gainThreshold: number
-		/** Maximum segment length to include (0 = no filter) */
-		maxSegLength: number
-		/** Hypermutator max cut off for CNVs per case */
-		hyperMutator: number
-	}
+/** Request body posted to the GRIN2 backend by the Model. */
+export interface GRIN2RequestData {
+	filter: any
+	filter0?: any
+	width?: number
+	height?: number
+	pngDotRadius?: number
+	devicePixelRatio?: number
+	maxGenesToShow?: number
+	lesionTypeColors?: Record<string, string>
+	qValueThreshold?: number
+	maxCappedPoints?: number
+	hardCap?: number
+	binSize?: number
+	snvindelOptions?: { consequences: string[]; mafFilter?: any }
+	cnvOptions?: { lossThreshold: number; gainThreshold: number; maxSegLength: number }
+	fusionOptions?: Record<string, any>
+	svOptions?: Record<string, any>
+}
 
-	/** Options for filtering fusion file content (optional). For now we won't have any options */
-	fusionOptions?: {
-		[key: string]: any
+/** Raw response from vocabApi.getGrin2Data. */
+export interface GRIN2Response {
+	status: 'success' | 'error'
+	error?: string
+	pngImg?: any
+	topGeneTable?: {
+		columns: { label: string; width?: string }[]
+		rows: any[][]
 	}
-	/** Options for filtering structural variant file content (optional). For now we won't have any options */
-	svOptions?: {
-		[key: string]: any
-	}
-	/** Options for general GRIN2 settings (optional) */
-	generalOptions?: {
-		[key: string]: any
-	}
+	stats?: { lst: { name: string; rows: [string, any][] }[] }
+}
+
+/** Display-ready data shaped by the ViewModel and consumed by GRIN2ResultsView. */
+export interface GRIN2ViewData {
+	/** Pass-through payload for plotManhattan plus the manhattan settings slice. */
+	manhattan: { plotData: GRIN2Response; settings: any } | null
+	topGenes: {
+		headerText: string
+		columns: { label: string; width?: string }[]
+		rows: { value?: any; html?: string }[][]
+		/** Original (un-augmented) rows; needed by showResultsTable's matrix integration. */
+		dataItems: any[]
+	} | null
+	/** Stats sections to render below the table (skipping the header section consumed by topGenes.headerText). */
+	statsSections: { name: string; rows: [string, any][] }[]
+}
+
+/** Callbacks supplied by the controller to GRIN2ControlsView. */
+export interface GRIN2ControlsCallbacks {
+	onRun: () => void
 }

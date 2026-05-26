@@ -68,7 +68,7 @@ tape('grin2 fusion-only', function (test) {
 		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
 		// Run analysis
-		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
 
 		// Validate results
 		await validateGRIN2(g, test)
@@ -110,7 +110,7 @@ tape('grin2 cnv-only', function (test) {
 		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
 		// Run analysis
-		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
 
 		await validateGRIN2(g, test)
 
@@ -176,7 +176,7 @@ tape('grin2 snvindel-only', function (test) {
 		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
 		// Run analysis
-		g.Inner.dom.runButton.node().dispatchEvent(new Event('click', { bubbles: true }))
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
 
 		await validateGRIN2(g, test)
 
@@ -215,8 +215,7 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 		svInput.dispatchEvent(new Event('input', { bubbles: true }))
 
 		// Check Run button is disabled
-		const runBtn = g.Inner.dom.runButton.node() as HTMLButtonElement
-		test.equal(runBtn.disabled, true, 'Run button is disabled when no data types are selected')
+		test.equal(getRunButton(g).disabled, true, 'Run button is disabled when no data types are selected')
 
 		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
@@ -236,16 +235,31 @@ const runpp = getRunPp('mass', {
 })
 
 /**
+ * Returns the controls container DOM node where checkboxes and the run button live.
+ */
+function getControlsRoot(g: any): HTMLElement {
+	return g.Inner.dom.controls.node()
+}
+
+/**
+ * Returns the GRIN2 run button DOM element.
+ */
+function getRunButton(g: any): HTMLButtonElement {
+	return getControlsRoot(g).querySelector('[data-testid="sjpp-grin2-run-button"]') as HTMLButtonElement
+}
+
+/**
  * Validates that GRIN2 plot and table are rendered
  * @param g - GRIN2 component instance
  * @param test - Tape test instance
  * @returns Promise<boolean> - true if validation passes
  */
 async function validateGRIN2(g: any, test: any) {
-	test.ok(g.Inner.dom.runButton, 'Run button is created')
+	const runButton = getRunButton(g)
+	test.ok(runButton, 'Run button is created')
 
 	// click submit button to run analysis
-	g.Inner.dom.runButton.node().dispatchEvent(new Event('click'), { bubbles: true })
+	runButton.dispatchEvent(new Event('click', { bubbles: true }))
 	const svg = await detectOne({
 		elem: g.Inner.dom.div.node(),
 		selector: '[data-testid="sjpp-manhattan"]'
@@ -262,16 +276,17 @@ async function validateGRIN2(g: any, test: any) {
 }
 
 /**
- * Gets all GRIN2 checkbox inputs
+ * Gets all GRIN2 checkbox inputs by querying the controls DOM via stable data-testids.
  * @param g - GRIN2 component instance
  * @returns Object containing all checkbox inputs
  */
 function getGRIN2Checkboxes(g: any) {
+	const root = getControlsRoot(g)
 	return {
-		snvInput: g.Inner.dom.snvindelCheckbox.node() as HTMLInputElement,
-		cnvInput: g.Inner.dom.cnvCheckbox.node() as HTMLInputElement,
-		fusionInput: g.Inner.dom.fusionCheckbox.node() as HTMLInputElement,
-		svInput: g.Inner.dom.svCheckbox.node() as HTMLInputElement
+		snvInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-snvindel"]') as HTMLInputElement,
+		cnvInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-cnv"]') as HTMLInputElement,
+		fusionInput: root.querySelector('[data-testid="grin2-checkbox-fusion"]') as HTMLInputElement,
+		svInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-sv"]') as HTMLInputElement
 	}
 }
 
