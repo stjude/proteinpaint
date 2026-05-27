@@ -694,7 +694,11 @@ export class Barchart extends PlotBase {
 
 		series.visibleData.sort(this.overlaySorter)
 		let seriesLogTotal = 0
-		for (const result of series.visibleData) {
+		for (const result of series.data) {
+			this.setTerm2Color(chart, result)
+			// still assign series color to show in the legend, whether visible or not
+			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
+			if (!series.visibleData.includes(result)) continue
 			result.colgrp = '-'
 			result.rowgrp = '-'
 			result.chartId = chart.chartId
@@ -708,8 +712,6 @@ export class Barchart extends PlotBase {
 			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
 			seriesLogTotal += result.logTotal
-			this.setTerm2Color(chart, result)
-			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
 		}
 		if (seriesLogTotal > chart.maxSeriesLogTotal) {
 			chart.maxSeriesLogTotal = seriesLogTotal
@@ -916,7 +918,7 @@ export class Barchart extends PlotBase {
 				items: s.rows
 					.flatMap(d => {
 						const total = chart ? this.totalsByDataId[d]?.[chart.chartId] : this.totalsByDataId[d]
-						if (!total) return []
+						if (this.visibleCharts.length && !total) return []
 						const ntotal = total ? ', n=' + total : ''
 						const label = this.getCategoryKeyLabel(t1, t2, d)
 						return [
@@ -981,6 +983,13 @@ function setRenderers(self) {
 		charts.each(self.updateChart)
 		charts.enter().append('div').each(self.addChart)
 
+		if (!self.visibleCharts.length) {
+			// generate legend data from all hidden charts/serieses, to enable crossed-out, clickable legend entries
+			for (const chart of self.charts) {
+				chart.serieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
+			}
+		}
+
 		self.dom.holder.selectAll('.pp-chart-title').style('display', self.visibleCharts.length < 2 ? 'none' : 'block')
 		const grps = self.getLegendGrps()
 		self.legendRenderer(grps)
@@ -993,7 +1002,9 @@ function setRenderers(self) {
 			self.dom.banner
 				.html(`<span>No visible barchart data to render</span>${clickLegendMessage}`)
 				.style('display', 'block')
-			self.dom.legendDiv.selectAll('*').remove()
+
+			// do not hide legend div, there should be clickable legend entries to toggle a chart series into visiblility
+			// self.dom.legendDiv.selectAll('*').remove()
 		} else {
 			self.dom.banner.text('').style('display', 'none')
 		}
