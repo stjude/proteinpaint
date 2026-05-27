@@ -1,1 +1,2 @@
-
+Fixes:
+- show the barchart legend even when there are no rendered visible chart data
