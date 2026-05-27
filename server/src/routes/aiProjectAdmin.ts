@@ -67,16 +67,38 @@ function validAIProjectFor(val) {
 }
 
 function getValidAIAdminProject(input): AIProjectAdminProject {
+	const id = input?.id == null ? undefined : validNumber(input.id, 'invalid ai project.id')
+	// If payload contains only id (delete), return minimal valid shape
+	if (input && Object.keys(input).length === 1 && 'id' in input) {
+		return {
+			id,
+			// `name` is required by the type; use empty string as a safe placeholder for delete
+			name: '',
+			filter: undefined,
+			classes: undefined,
+			images: undefined,
+			type: undefined,
+			users: undefined
+		}
+	}
+
+	const filter = typeof input?.filter === 'string' && input.filter !== '' ? input.filter : undefined
+	const images =
+		input?.images == null
+			? undefined
+			: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`)
+	const users =
+		input?.users == null || (Array.isArray(input.users) && input.users.length === 0)
+			? undefined
+			: validStringArr(input.users, 'invalid ai project.users')
+
 	return {
 		name: validString(input.name),
-		id: input.id === undefined ? undefined : validNumber(input.id, 'invalid ai project.id'),
-		filter: input.filter === undefined ? undefined : validString(input.filter, 'invalid ai project.filter'),
+		id,
+		filter,
 		classes: input.classes as any, // TODO: convert to a validator function call
-		images:
-			input.images === undefined
-				? undefined
-				: validStringArr(input.images, `AIProjectAdminRequest must be an array of strings`),
-		type: input.type === undefined ? undefined : validString(input.type, 'invalid ai project.type'),
-		users: input.users === undefined ? undefined : validStringArr(input.users, 'invalid ai project.users')
+		images,
+		type: input?.type == null ? undefined : validString(input.type, 'invalid ai project.type'),
+		users
 	}
 }
