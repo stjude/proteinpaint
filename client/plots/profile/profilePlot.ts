@@ -678,8 +678,7 @@ export async function loadFilterTerms(config, activeCohort, app) {
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	config.countryTW = { id: cohortPreffix + 'country' }
 	config.regionTW = { id: cohortPreffix + 'WHO_region' }
-	config.sjgRegionTW = { id: cohortPreffix + 'WHO_region' }
-	// TODO - termid needs to be updated.
+	config.sjgRegionTW = { id: cohortPreffix + 'SJG_region' }
 	config.incomeTW = { id: cohortPreffix + 'Income_group' }
 	config.typeTW = { id: cohortPreffix + 'FC_TypeofFacility' }
 	config.teachingStatusTW = { id: cohortPreffix + 'FC_TeachingFacility' }
