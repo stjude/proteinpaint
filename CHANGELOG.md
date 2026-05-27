@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Fixes:
 - implement a unique plot-level vocabApi to cancel fetch requests only for affected charts and child components
 - compute the currBin.label and stopunbounded when the number of bin entries exceeds the maxNumBins
+- show the barchart legend even when there are no rendered visible chart data
 
 
 ## 2.190.0
