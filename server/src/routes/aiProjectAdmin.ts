@@ -68,6 +68,8 @@ function validAIProjectFor(val) {
 
 function getValidAIAdminProject(input): AIProjectAdminProject {
 	const id = input?.id == null ? undefined : validNumber(input.id, 'invalid ai project.id')
+	// TODO fixed validation for delete requests, which only require id.
+	//  Separate init functions for each route method to allow for different required fields
 	// If payload contains only id (delete), return minimal valid shape
 	if (input && Object.keys(input).length === 1 && 'id' in input) {
 		return {
