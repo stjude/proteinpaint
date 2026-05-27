@@ -96,6 +96,18 @@ jobs:
         if: contains(env.WS_TO_TEST, 'client')
         run: npm pack --workspace="client"
 
+      - name: Clean Puppeteer browser cache
+        if: contains(env.WS_TO_TEST, 'client')
+        run: |
+          echo "Removing Puppeteer cache to avoid incomplete downloads from previous runs"
+          rm -rf ~/.cache/puppeteer
+
+      - name: Install Puppeteer Chrome browser
+        if: contains(env.WS_TO_TEST, 'client')
+        run: |
+          # Ensure Chrome is installed for Puppeteer. This will print installed buildId and path.
+          npx puppeteer browsers install chrome
+
       - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client')
         run: |
