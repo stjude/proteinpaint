@@ -101,6 +101,7 @@ jobs:
         run: |
           echo "Removing Puppeteer cache to avoid incomplete downloads from previous runs"
           rm -rf ~/.cache/puppeteer
+          rm ~rf /home/runner/.cache/puppeteer/chrome
 
       - name: Install Puppeteer Chrome browser
         if: contains(env.WS_TO_TEST, 'client')
