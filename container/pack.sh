@@ -14,6 +14,9 @@ PKGPATH=/home/root/pp/tmppack
 TMPDIR=/home/root/pp/tmppack
 RUST_BINARIES_DIR=../rust-binaries
 
+# this script should test packing and bundling, should not set up dev aliased exports
+# export NODE_OPTIONS='--conditions=sjpp/dev'
+
 if (( $# == 1 )); then
   PKGPATH="$1"
 fi
@@ -49,10 +52,12 @@ do
 		sharedws=$shareddir
 	fi
 
+	# client will require these for bundling even if the shared workspace has not changed
+	cd ../shared/$shareddir
+	echo "packing shared/$sharedws ..."
+	npm pack --loglevel error
+
 	if [[ "$CHANGEDWS" == *"shared/$shareddir"* ]]; then
-		cd ../shared/$shareddir
-		echo "packing shared/$sharedws ..."
-		npm pack --loglevel error
 		SHAREDPKGVER=$(node -p "require('./package.json').version")
 		SHAREDTGZ=sjcrh-proteinpaint-$sharedws-$SHAREDPKGVER.tgz
 		mv $SHAREDTGZ ../../container/tmppack/
@@ -64,6 +69,8 @@ do
 		# may reset the dep new version temporarily, for package testing
 		npm pkg set "dependencies.$SHAREDDEPNAME"=$PKGPATH/$SHAREDTGZ
 		cd ../container
+	else
+		cd ../../container
 	fi
 done
 
