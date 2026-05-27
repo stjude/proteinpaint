@@ -43,6 +43,7 @@ export class Barchart extends PlotBase {
 			holder,
 			banner: holder
 				.append('div')
+				.attr('data-testid', 'sjpp-barchart-banner')
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
@@ -692,13 +693,13 @@ export class Barchart extends PlotBase {
 			? this.getColor(chart, this.config.term, series.seriesId, this.bins?.[1])
 			: this.settings.defaultColor
 
-		series.visibleData.sort(this.overlaySorter)
+		series.visibleData?.sort(this.overlaySorter)
 		let seriesLogTotal = 0
 		for (const result of series.data) {
 			this.setTerm2Color(chart, result)
 			// still assign series color to show in the legend, whether visible or not
 			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
-			if (!series.visibleData.includes(result)) continue
+			if (series.visibleData && !series.visibleData.includes(result)) continue
 			result.colgrp = '-'
 			result.rowgrp = '-'
 			result.chartId = chart.chartId
@@ -1003,7 +1004,7 @@ function setRenderers(self) {
 				.html(`<span>No visible barchart data to render</span>${clickLegendMessage}`)
 				.style('display', 'block')
 
-			// do not hide legend div, there should be clickable legend entries to toggle a chart series into visiblility
+			// do not hide legend div, there should be clickable legend entries to toggle a chart series into visibility
 			// self.dom.legendDiv.selectAll('*').remove()
 		} else {
 			self.dom.banner.text('').style('display', 'none')

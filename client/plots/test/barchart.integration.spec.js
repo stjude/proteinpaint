@@ -8,7 +8,7 @@ import {
 	getCategoricalTermcollectionTw
 } from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
-import { sleep, detectLst, detectGte, detectOne } from '../../test/test.helpers.js'
+import { sleep, detectLst, detectGte, detectOne, Locator } from '../../test/test.helpers.js'
 import { getFilterItemByTag } from '../../filter/filter'
 import * as vocabData from '../../termdb/test/vocabData'
 import { hideCategory } from '../barchart.events.js'
@@ -2181,94 +2181,49 @@ tape('minimum sample size', test => {
 	}
 })
 
-// tape.skip('no visible series data, no overlay', function (test) {
-// 	test.timeoutAfter(3000)
+tape('no visible series data, no overlay', function (test) {
+	test.timeoutAfter(3000)
 
-// 	runpp({
-// 		state: {
-// 			nav: {
-// 				header_mode: 'search_only'
-// 			},
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: {
-// 						id: 'cisplateq_5'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'search_only'
+			},
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'cisplateq_5'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
 
-// 	function runTests(barchart) {
-// 		barchart.on('postRender.test', null)
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		const barLoc = Locator.init(barchart.Inner.dom.holder)
+		//const bars = await barDiv.shows('.bars-cell-grp').length()
+		const banner = await barLoc.shows('[data-testid="sjpp-barchart-banner"]').get()
 
-// 		helpers
-// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-// 			.run(testBarCount)
-// 			.use(triggerHideBar, { wait: 1000 })
-// 			.to(testEmptyChart, { wait: 100 })
-// 			.use(triggerUnhideBar, { wait: 1100 })
-// 			.to(testUnhiddenChart, { wait: 100 })
-// 			.done(test)
-// 	}
+		test.equal(banner.length, 1, 'should show the banner')
 
-// 	let barDiv
-// 	function testBarCount(barchart) {
-// 		barDiv = barchart.Inner.dom.barDiv
-// 		const numBars = barDiv.node().querySelectorAll('.bars-cell-grp').length
-// 		test.equal(
-// 			numBars,
-// 			1,
-// 			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
-// 		)
-// 		test.equal(
-// 			barchart.Inner.dom.banner.style('display'),
-// 			'none',
-// 			'should hide the banner when at least one chart is visible'
-// 		)
-// 	}
+		test.true(
+			banner[0]?.innerText.includes('No visible barchart data '),
+			'should show a banner for no visible data to render'
+		)
 
-// 	function triggerHideBar(barchart) {
-// 		barDiv
-// 			.node()
-// 			.querySelector('.bars-rowlabels text')
-// 			.dispatchEvent(new Event('click', { bubbles: true }))
-// 	}
+		test.equal(await barLoc.shows('.sjpp-hidden-legend-item').length(), 1, 'should show a legend entry')
 
-// 	function testEmptyChart(barchart) {
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(numBars, 0, 'should have 0 visible bars when the only visible row label is clicked')
-// 		test.equal(
-// 			barchart.Inner.dom.banner.style('display'),
-// 			'block',
-// 			'should display a banner when no charts are visible'
-// 		)
-// 		test.true(barchart.Inner.dom.banner.text().includes('No visible'), 'should label the banner with no visible data')
-// 	}
-
-// 	function triggerUnhideBar(barchart) {
-// 		barchart.Inner.dom.legendDiv
-// 			.node()
-// 			.querySelector('.legend-row')
-// 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
-// 	}
-
-// 	function testUnhiddenChart(barchart) {
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(numBars, 1, 'should have 1 visible bar1 when the hidden row legend is clicked')
-// 		/*test.equal(
-// 			barchart.Inner.dom.banner.style("display"),
-// 			'none',
-// 			'should hide the banner when the chart is unhidden'
-// 		)*/
-// 	}
-// })
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
 
 // tape.skip('all hidden + with overlay, legend click', function (test) {
 // 	test.timeoutAfter(9000)
