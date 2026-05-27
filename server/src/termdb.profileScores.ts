@@ -26,12 +26,14 @@ const LABEL_MAX_LENGTH = 50
 const LABEL_TRUNCATE_AT = 47
 
 export function buildSitesList(samples: any[], facilityTW: any): Site[] {
-	return samples.map(s => {
-		const rawValue = s[facilityTW.$id].value
-		let label = facilityTW.term.values[rawValue]?.label || rawValue
-		if (label.length > LABEL_MAX_LENGTH) label = label.slice(0, LABEL_TRUNCATE_AT) + '...'
-		return { value: rawValue, label }
-	})
+	return samples
+		.filter(s => s[facilityTW.$id])
+		.map(s => {
+			const rawValue = s[facilityTW.$id].value
+			let label = facilityTW.term.values[rawValue]?.label || rawValue
+			if (label.length > LABEL_MAX_LENGTH) label = label.slice(0, LABEL_TRUNCATE_AT) + '...'
+			return { value: rawValue, label }
+		})
 }
 
 export function filterSitesByUserAccess(sites: Site[], userSites: any[] | undefined): Site[] {
@@ -54,7 +56,7 @@ export function pickSampleAndSite(
 ): { sampleData: any; site: Site | undefined } {
 	if ('facilitySite' in query) {
 		const facilitySite = query.facilitySite || sites[0]?.value
-		const sampleData = samplesList.find(s => s[facilityTW.$id].value == facilitySite)
+		const sampleData = samplesList.find(s => s[facilityTW.$id]?.value == facilitySite)
 		const site = sites.find(s => s.value == facilitySite)
 		return { sampleData, site }
 	}

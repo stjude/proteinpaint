@@ -101,12 +101,14 @@ async function getScores(query: any, ds: any) {
 	const samples: any[] = Object.values(raw.samples)
 
 	// Build the sites list — user sees their own accessible sites; admin sees all.
-	let sites = samples.map(s => {
-		const val = s[facilityTW.$id].value
-		let label = facilityTW.term.values?.[val]?.label || val
-		if (label.length > 50) label = label.slice(0, 47) + '...'
-		return { value: val, label }
-	})
+	let sites = samples
+		.filter(s => s[facilityTW.$id])
+		.map(s => {
+			const val = s[facilityTW.$id].value
+			let label = facilityTW.term.values?.[val]?.label || val
+			if (label.length > 50) label = label.slice(0, 47) + '...'
+			return { value: val, label }
+		})
 	if (userSites && !isAdmin) {
 		sites = sites.filter(s => userSites.includes(s.value))
 	}
@@ -114,7 +116,9 @@ async function getScores(query: any, ds: any) {
 
 	// Aggregate median — scope depends on filterByUserSites
 	const eligibleSamples =
-		userSites && query.filterByUserSites ? samples.filter(s => userSites.includes(s[facilityTW.$id].value)) : samples
+		userSites && query.filterByUserSites
+			? samples.filter(s => s[facilityTW.$id] && userSites.includes(s[facilityTW.$id].value))
+			: samples
 
 	const aggregateScore: Record<string, number> = {}
 	for (const d of query.scoreTerms) {
@@ -134,7 +138,7 @@ async function getScores(query: any, ds: any) {
 
 	let sampleData: any = undefined
 	if (!isPublic && targetSiteValue) {
-		const sampleRow = samples.find(s => s[facilityTW.$id].value == targetSiteValue)
+		const sampleRow = samples.find(s => s[facilityTW.$id]?.value == targetSiteValue)
 		if (sampleRow) {
 			const site = sites.find(s => s.value == targetSiteValue) || {
 				value: targetSiteValue,

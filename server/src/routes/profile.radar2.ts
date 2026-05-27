@@ -91,12 +91,14 @@ async function getScores(query: any, ds: any) {
 	if (raw.error) throw raw.error
 
 	const sampleList: any[] = Object.values(raw.samples)
-	let sites = sampleList.map(s => {
-		const val = s[facilityTW.$id].value
-		let label = facilityTW.term.values?.[val]?.label || val
-		if (label.length > 50) label = label.slice(0, 47) + '...'
-		return { value: val, label }
-	})
+	let sites = sampleList
+		.filter(s => s[facilityTW.$id])
+		.map(s => {
+			const val = s[facilityTW.$id].value
+			let label = facilityTW.term.values?.[val]?.label || val
+			if (label.length > 50) label = label.slice(0, 47) + '...'
+			return { value: val, label }
+		})
 	if (userSites && query.filterByUserSites) {
 		sites = sites.filter(s => userSites.includes(s.value))
 	}
@@ -104,7 +106,9 @@ async function getScores(query: any, ds: any) {
 
 	const samples: any[] = Object.values(raw.samples)
 	const eligibleSamples =
-		userSites && query.filterByUserSites ? samples.filter(s => userSites.includes(s[facilityTW.$id].value)) : samples
+		userSites && query.filterByUserSites
+			? samples.filter(s => s[facilityTW.$id] && userSites.includes(s[facilityTW.$id].value))
+			: samples
 
 	const term2Score: Record<string, number> = {}
 	for (const d of query.scoreTerms) {
