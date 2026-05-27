@@ -3001,6 +3001,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				if (!Array.isArray(m.samples)) continue
 
 				for (const s of m.samples) {
+					if (s.sample_id === null || s.sample_id === undefined) continue
 					// create new m2{} for each mutation in each sample
 					const m2 = {
 						gene: gene.name,
@@ -3629,6 +3630,12 @@ async function mayValidateAssayAvailability(ds) {
 	if (!ds.assayAvailability) return
 
 	// has this setting. at server launch it should query assay availability status for all samples and cache it
+
+	if (ds.assayAvailability.get) {
+		// ds-supplied getter
+		await ds.assayAvailability.get(ds)
+		return
+	}
 
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
