@@ -38,10 +38,9 @@ jobs:
       
       - run: npm ci
         env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Skips Chromium download during 'npm <ci|install>'
           PUPPETEER_SKIP_DOWNLOAD: 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run ESLint
         run: npm run lint
