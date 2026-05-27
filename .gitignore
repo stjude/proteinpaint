@@ -95,6 +95,7 @@ client/test/bundle/*
 client/test/branch-coverage.json
 client/.nyc_output*/*
 client/.coverage*/*
+client/passedTests.txt
 
 cairo-*/*
 canvas/*

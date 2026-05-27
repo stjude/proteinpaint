@@ -62,6 +62,7 @@ ENV=test node esbuild.config.mjs
 # fi
 # set -u # reenable unbound variable check
 
+rm -f passedTests.txt
 # rm -rf .coverage
 tsx --conditions=sjpp/dev test/puppet.js "$PATTERNSLIST" "$TESTPORT"
 
