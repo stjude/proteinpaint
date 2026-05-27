@@ -67,7 +67,7 @@ export class NumericDensity {
 	}
 
 	async setData() {
-		if (this.density_data) return this.density_data
+		//if (this.density_data) return this.density_data
 		const self = this.termsetting
 		const d = await self.vocabApi.getViolinBox(
 			{
