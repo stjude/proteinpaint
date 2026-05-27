@@ -147,9 +147,9 @@ async function runTest(patternsStr) {
 					//page.coverage.stopCSSCoverage(),
 				])
 
-				if (!lastLines.find(l => l.startsWith('# ok'))) {
+				const passedTests = lastLines.findIndex(l => l.startsWith('# ok')) !== -1
+				if (!passedTests) {
 					console.error(`\n!!! test failed !!!\n`)
-
 					reject(lastLines.join('\n'))
 				}
 
@@ -223,7 +223,7 @@ async function runTest(patternsStr) {
 								relevantCoverage[key.replace('client/', '')] = summary[key]
 								//relevantCoverage[f].link = `/coverage/client/${dirname}/`
 
-								if (Object.hasOwn(json, f)) console.log(51, `non-unique coverage result for client file='${f}'`)
+								if (Object.hasOwn(json, f)) console.log(`non-unique coverage result for client file='${f}'`)
 								else json[f] = summary[key]
 							}
 						}
@@ -232,7 +232,7 @@ async function runTest(patternsStr) {
 
 				// delete all entries
 				lastLines.splice(0, lastLines.length)
-				resolve()
+				if (passedTests) resolve()
 			}, 100)
 		}).catch(error => {
 			errors[pattern] = error
@@ -251,7 +251,9 @@ async function runTest(patternsStr) {
 	if (fs.existsSync(path.dirname(extractFiles.json)))
 		fs.writeFileSync(extractFiles.json, JSON.stringify(json, null, '  '), { encoding: 'utf8' })
 
-	if (Object.keys(errors).length) {
+	if (!Object.keys(errors).length) {
+		fs.writeFileSync('passedTests.txt', lastLines.join('\n'), { encoding: 'utf8' })
+	} else {
 		console.log(`\n!!! Errors detected !!!`)
 		for (const [pattern, error] of Object.entries(errors)) {
 			console.log(`\nErrors testing spec pattern=${pattern}`)
