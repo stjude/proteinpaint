@@ -85,7 +85,8 @@ runs:
       id: check-tests
       shell: bash
       run: |
-        if [ -f ./client/pass ]; then
+        # client/test/puppet.js emits the passedTests.txt file
+        if [ -f ./client/passedTests.txt ]; then
           echo "INTEGRATION_TEST_PASSED=true" >> "$GITHUB_ENV"
         fi
 
