@@ -1,5 +1,6 @@
 // TODO: use expressjs routing instead of this payload parameter
-export type AIProjectAdminForValues = 'list' | 'admin' | 'filterImages' | 'images'
+// updated allowedAIProjectForStrings in proteinpaint/server/src/routes/aiProjectAdmin.ts
+export type AIProjectAdminForValues = 'list' | 'admin' | 'filterImages' | 'images' | 'logout' | 'role'
 
 export type AIProjectAdminRequest = {
 	genome: string

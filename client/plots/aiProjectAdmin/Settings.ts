@@ -2,6 +2,6 @@ export default interface Settings {
 	project?: {
 		name: string
 		id?: number
-		type: 'new' | 'edit' | 'existing'
+		type: 'new' | 'edit' | 'existing' | 'logout'
 	}
 }

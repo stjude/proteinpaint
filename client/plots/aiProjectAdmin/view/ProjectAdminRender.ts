@@ -20,6 +20,7 @@ export class ProjectAdminRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-projects')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
+		console.log('Rendering ProjectAdmin with projects:', this.projects)
 		this.renderCreateProject(projectDiv)
 		this.renderProjectSelection(projectDiv)
 	}
@@ -44,6 +45,7 @@ export class ProjectAdminRender {
 			.on('click', async () => {
 				const projectName = input.property('value')
 				const prjtNameLen = projectName.trim().length
+				const role = await this.interactions.getRole()
 
 				const showError = (msg: string) => {
 					sayerror(this.dom.errorDiv, msg)
@@ -54,6 +56,9 @@ export class ProjectAdminRender {
 					setTimeout(() => {
 						this.dom.errorDiv.selectAll('*').remove()
 					}, 3000)
+				}
+				if (role !== 'admin') {
+					return showError('Only users with admin role can create projects')
 				}
 
 				if (prjtNameLen == 0) {
@@ -100,6 +105,7 @@ export class ProjectAdminRender {
 				callback: async (_, idx) => {
 					/** TODO: open wsisamples plot ||
 					 *  get project details rather than edit the db */
+
 					const project = this.projects[idx]
 					await this.interactions.appDispatchEdit({ settings: { project } })
 					// remove 'dev' for production
@@ -126,14 +132,16 @@ export class ProjectAdminRender {
 				class: 'sja_menuoption',
 				callback: (_, i) => {
 					const project = this.projects[i]
-					this.interactions.deleteProject(project)
-
-					//Update UI after deletion. Maybe cleaner way to handle this?
-					//Maybe app.dispatch and rerender instead?
-					this.projects.splice(i, 1)
-					//Remove the table from the projectDiv and re-render
-					projectDiv.select('.sjpp-project-select-table').remove()
-					this.renderProjectSelection(projectDiv)
+					this.interactions.deleteProject(project).then(success => {
+						if (success) {
+							//Update UI after deletion. Maybe cleaner way to handle this?
+							//Maybe app.dispatch and rerender instead?
+							this.projects.splice(i, 1)
+							//Remove the table from the projectDiv and re-render
+							projectDiv.select('.sjpp-project-select-table').remove()
+							this.renderProjectSelection(projectDiv)
+						}
+					})
 				}
 			}
 		]

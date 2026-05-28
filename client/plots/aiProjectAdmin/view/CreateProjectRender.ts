@@ -108,11 +108,11 @@ export class CreateProjectRender {
 					return
 				}
 				// TODO: Enable user assignment after SSO is ready
-				// if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
-				// 	alert('Please add at least one user.')
-				// 	btn.attr('disabled', null)
-				// 	return
-				// }
+				if (!this.usersRender || !Array.isArray(this.usersRender.users) || this.usersRender.users.length === 0) {
+					alert('Please add at least one user.')
+					btn.attr('disabled', null)
+					return
+				}
 
 				await this.interactions.addProject({
 					project: {

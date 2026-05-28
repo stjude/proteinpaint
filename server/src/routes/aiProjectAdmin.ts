@@ -59,7 +59,14 @@ export function validAIProjectAdminRequest(input): AIProjectAdminRequest {
 	}
 }
 
-const allowedAIProjectForStrings: Set<AIProjectAdminForValues> = new Set(['list', 'admin', 'filterImages', 'images'])
+const allowedAIProjectForStrings: Set<AIProjectAdminForValues> = new Set([
+	'list',
+	'admin',
+	'filterImages',
+	'images',
+	'logout',
+	'role'
+])
 
 function validAIProjectFor(val) {
 	if (!allowedAIProjectForStrings.has(val)) throw `invalid aiProjectAdminPayload request payload.for='${val}'`

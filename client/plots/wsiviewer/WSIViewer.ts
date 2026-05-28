@@ -198,7 +198,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
-
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(this, settings, this.wsiViewerInteractions)
 			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
 			this.dom.legendHolder.selectAll('*').remove()

@@ -62,6 +62,8 @@ export class ProjectReposity {
 	}
 
 	async getAnnotations(genome: string, dslabel: string, projectId: number) {
+		console.log('ProjectReposity.updateProject called with body')
+
 		try {
 			const body = {
 				genome,

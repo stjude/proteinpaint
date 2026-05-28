@@ -1,7 +1,9 @@
 import type { ProjectReposity } from '../repo/ProjectReposity'
 import type { AIProjectAdminResponse } from '#types'
 import { buildAnnotationsCsv } from '#plots/wsiviewer/interactions/annotationsCsv.ts'
-
+import type Settings from '../Settings'
+import { dofetch3, clearServerDataCache } from '#common/dofetch'
+import { LogoutRenderer } from '../view/LogoutRenderer'
 export class AIProjectAdminInteractions {
 	app: any
 	id: string
@@ -17,9 +19,30 @@ export class AIProjectAdminInteractions {
 		this.prjtRepo = prjtRepo
 	}
 
+	async getRole(): Promise<'user' | 'admin' | ''> {
+		// TODO make a user type
+		let role: 'user' | 'admin' | '' = ''
+		try {
+			const response = await dofetch3('aiProjectAdmin', {
+				body: {
+					genome: this.genome,
+					dslabel: this.dslabel,
+					for: 'role'
+				}
+			})
+			console.log('Role response:', response)
+			role = response.role
+		} catch (e: any) {
+			console.error('Error getting role:', e.message || e)
+			throw e
+		}
+		return role
+	}
+
 	async addProject(opts: { project: any }): Promise<void> {
 		const config = this.getConfig()
-		const projectObject = Object.assign({}, config.settings.project, opts.project)
+		const settings: Settings = config.settings || {}
+		const projectObject = Object.assign({}, settings.project, opts.project)
 
 		const body = {
 			genome: this.genome,
@@ -36,9 +59,10 @@ export class AIProjectAdminInteractions {
 
 	async editProject(opts: { project: any }): Promise<void> {
 		const config = this.getConfig()
+		const settings: Settings = config.settings || {}
 		const project = Object.assign(
 			{},
-			config.settings.project,
+			settings.project,
 			{
 				type: 'edit'
 			},
@@ -60,7 +84,8 @@ export class AIProjectAdminInteractions {
 		await this.appDispatchEdit({ settings: { project } }, config)
 	}
 
-	async deleteProject(project: { value: string; id: number }): Promise<void> {
+	async deleteProject(project: { value: string; id: number }): Promise<boolean> {
+		let success = false
 		const body = {
 			genome: this.genome,
 			dslabel: this.dslabel,
@@ -71,22 +96,28 @@ export class AIProjectAdminInteractions {
 		}
 
 		try {
-			await this.prjtRepo.updateProject(body, 'DELETE')
+			const response = await this.prjtRepo.updateProject(body, 'DELETE')
+			if (response && response.status === 'ok') {
+				success = true
+			}
 		} catch (e: any) {
 			console.error('Error deleting project:', e.message || e)
 			throw e
 		}
+		return success
 	}
 
 	async getFilteredImages(filter: any): Promise<AIProjectAdminResponse> {
 		const config = this.getConfig()
-		return await this.app.vocabApi.getFilteredAiImages(config.settings.project, filter)
+		const settings: Settings = config.settings || {}
+		return await this.app.vocabApi.getFilteredAiImages(settings.project, filter)
 	}
 
 	async launchViewer(holder: any, _images?: string[]): Promise<void> {
 		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 
 		const config = this.getConfig()
+		const settings: Settings = config.settings || {}
 		let images: string[] = []
 
 		if (_images && _images.length > 0) {
@@ -95,16 +126,21 @@ export class AIProjectAdminInteractions {
 			const response: AIProjectAdminResponse = await this.prjtRepo.getImagePaths(
 				this.genome,
 				this.dslabel,
-				config.settings.project
+				settings.project
 			)
 			images = response.images
 		}
-
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, config.settings.project.id, images, true)
+		if (!settings.project || !settings.project.id) throw new Error('Project is required to launch viewer')
+		const genome = this.genome
+		const dslabel = this.dslabel
+		const logoutRenderer = new LogoutRenderer(this)
+		logoutRenderer.render(holder, settings.project.id, genome, dslabel)
+		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, settings.project.id, images, true)
 	}
 
-	public async appDispatchEdit(settings: any, config: any = {}): Promise<void> {
+	public async appDispatchEdit(settings: { settings: Settings }, config: any = {}): Promise<void> {
+		const configSettings: Settings = config.settings || settings.settings
 		if (!config?.settings) {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
@@ -113,7 +149,7 @@ export class AIProjectAdminInteractions {
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: Object.assign(settings, config.settings)
+			config: Object.assign(settings, configSettings)
 		})
 	}
 
@@ -124,7 +160,7 @@ export class AIProjectAdminInteractions {
 	public async exportAnnotations(projectId: number): Promise<void> {
 		const config = this.getConfig()
 		if (!config || !config.settings) throw new Error(`No plot with id='${this.id}' found.`)
-
+		const settings: Settings = config.settings || {}
 		// fetch annotations for the entire project (server endpoint will expand ['all'] to all images)
 		let annotations: any[] = []
 		try {
@@ -146,10 +182,7 @@ export class AIProjectAdminInteractions {
 		}
 
 		// build a safe filename for download: prefer project name, fallback to projectId
-		const rawName =
-			config.settings && config.settings.project && config.settings.project.name
-				? String(config.settings.project.name)
-				: `project-${projectId}`
+		const rawName = settings.project && settings.project.name ? String(settings.project.name) : `project-${projectId}`
 		const safeName = rawName.replace(/[^a-z0-9_.-]/gi, '_').slice(0, 200)
 		const filename = `${safeName}-annotations.csv`
 
@@ -166,6 +199,23 @@ export class AIProjectAdminInteractions {
 		} catch (e: any) {
 			console.error('Error creating annotation download:', e?.message || e)
 			throw e
+		}
+	}
+
+	async onLogOut(genome: string, dslabel: string, projectId: number): Promise<void> {
+		try {
+			await dofetch3('aiProjectAdmin', {
+				body: {
+					genome,
+					dslabel,
+					projectId,
+					for: 'logout'
+				}
+			})
+			clearServerDataCache()
+			await this.appDispatchEdit({ settings: { project: { name: '', type: 'logout' } } })
+		} catch (e: any) {
+			this.app.printError('Error logging out: ' + (e.message || e))
 		}
 	}
 }
