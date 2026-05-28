@@ -65,6 +65,7 @@ async function runTest(patternsStr) {
 
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance
+		headless: 'shell',
 		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
 	})
 	const page = await browser.newPage()
