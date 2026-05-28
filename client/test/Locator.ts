@@ -143,6 +143,11 @@ export class Locator {
 		return this.shows(selector, { visibility: false })
 	}
 
+	async first(fxn) {
+		const elems = await this.get()
+		return elems.find(fxn)
+	}
+
 	async click(arg) {
 		const elems = await this.get(arg)
 		const arr = Array.isArray(elems) ? elems : [elems]
