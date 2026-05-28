@@ -185,6 +185,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 		btnDiv
 			.append('button')
 			.style('margin', '5px')
+			.attr('data-testId', 'sjpp_numeric_edit_apply')
 			.html('Apply')
 			.on('click', () => {
 				this.termsetting.q = this.editHandler.getEditedQ()
@@ -195,6 +196,7 @@ export class NumericHandler extends HandlerBase implements Handler {
 		btnDiv
 			.append('button')
 			.style('margin', '5px')
+			.attr('data-testId', 'sjpp_numeric_edit_reset')
 			.html('Reset')
 			.on('click', () => {
 				this.editHandler.undoEdits()

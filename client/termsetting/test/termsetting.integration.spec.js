@@ -349,7 +349,7 @@ tape('Numerical term: fixed bins', async test => {
 
 	{
 		// count only visible lines
-		test.equal(await tipLoc.shows('.binsize_g line').length(), 7, 'should have 7 lines')
+		test.equal(await tipLoc.shows('.binsize_g line', { count: 7 }).length(), 7, 'should have 7 lines')
 		// first line should be draggable
 		// other lines should not be draggable if there is no q.last_bin
 		const trs = tip.d.node().querySelectorAll('tr')
@@ -368,7 +368,7 @@ tape('Numerical term: fixed bins', async test => {
 	}
 
 	{
-		const trs = await tipLoc.shows('tr').get()
+		const trs = await tipLoc.shows('tr', { count: 2 }).get()
 		//await sleep(10)
 
 		test.equal(trs[0].querySelector('input').value, '5', 'Should change "bin size" from input')
@@ -382,12 +382,8 @@ tape('Numerical term: fixed bins', async test => {
 	}
 
 	{
-		const trs = await tipLoc.shows('tr').get()
-		test.equal(
-			tip.d.node().querySelectorAll('tr')[1].querySelector('input').value,
-			'7',
-			'Should change "first bin" from input'
-		)
+		const trs = await tipLoc.shows('tr', { count: 3 }).get()
+		test.equal(trs[1].querySelector('input').value, '7', 'Should change "first bin" from input')
 
 		//trigger and test last_bin change
 		const last_bin_custom_radio = trs[2].querySelectorAll('div')[0].querySelectorAll('input')[1]
@@ -396,7 +392,7 @@ tape('Numerical term: fixed bins', async test => {
 	}
 
 	{
-		const trs = await tipLoc.shows('tr').get()
+		const trs = await tipLoc.shows('tr', { count: 3 }).get()
 		const last_bin_input = trs[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
 		last_bin_input.value = 20
 		//trigger 'change' to update bins
@@ -404,7 +400,7 @@ tape('Numerical term: fixed bins', async test => {
 	}
 
 	{
-		const tr2 = await tipLoc.shows('tr').get(2)
+		const tr2 = await tipLoc.shows('tr', { count: 2 }).get(2)
 		test.equal(
 			tr2.querySelectorAll('div')[1].querySelectorAll('input')[0].value,
 			'20',
@@ -412,7 +408,7 @@ tape('Numerical term: fixed bins', async test => {
 		)
 	}
 
-	const apply_btn = await tipLoc.shows('button').first(e => e.innerText === 'Apply')
+	const apply_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_apply"]').get(0)
 	apply_btn.click()
 	await sleep(50)
 	await opts.pillMenuClick('Edit')
@@ -423,7 +419,7 @@ tape('Numerical term: fixed bins', async test => {
 	)
 
 	// test 'reset' button
-	const reset_btn = await tipLoc.shows('button').first(e => e.innerText === 'Reset')
+	const reset_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_reset"]').get(0)
 	reset_btn.click()
 	await sleep(50)
 	await opts.pillMenuClick('Edit')
@@ -432,7 +428,7 @@ tape('Numerical term: fixed bins', async test => {
 		['3'],
 		'Should reset the bins by "Reset" button'
 	)
-	if (test._ok) opts.pill.destroy()
+	//if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: float custom bins', async test => {
