@@ -62,10 +62,9 @@ async function runTest(patternsStr) {
 	const startTime = Date.now()
 	const server = initServer()
 	const patternsArr = patternsStr.split(' ')
-
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance
-		headless: 'shell',
+		headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
 		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
 	})
 	const page = await browser.newPage()
