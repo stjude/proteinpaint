@@ -1901,8 +1901,20 @@ type Mds3AssayAvailability = {
 	/** if true, ds will use both filter and filter0 to filter samples (this is a temp quick fix)
 	 */
 	useFilter0?: true
-	/** optional getter for filling in assay availability */
-	get?: (ds: any) => void
+}
+
+// assay availability with getter that will generate byDt{}
+type Mds3AssayAvailabilityGet = {
+	/** getter for filling in assay availability */
+	get: (ds: any) => void
+	/** object of key-value pairs. keys are dt values */
+	byDt?: {
+		/** each index is a dt value */
+		[index: number]: DtAssayAvailabilityByOrigin | DtAssayAvailabilityTerm
+	}
+	/** if true, ds will use both filter and filter0 to filter samples (this is a temp quick fix)
+	 */
+	useFilter0?: true
 }
 
 // mds legacy; delete when all are migrated to mds3
@@ -2031,7 +2043,7 @@ type ViewMode = {
 /*** types supporting Mds Dataset types ***/
 type BaseMds = {
 	genome?: string //Not declared in TermdbTest
-	assayAvailability?: Mds3AssayAvailability | LegacyAssayAvailability
+	assayAvailability?: Mds3AssayAvailability | Mds3AssayAvailabilityGet | LegacyAssayAvailability
 }
 
 export type Mds = BaseMds & {
