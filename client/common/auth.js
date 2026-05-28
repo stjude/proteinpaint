@@ -127,6 +127,7 @@ export async function isInSession(dslabel, route) {
 		if (payload.exp && Math.ceil(Date.now() / 1000) > payload.exp) return false
 		const data = await dofetch3('/jwt-status', {
 			method: 'POST',
+			credentials: 'include',
 			headers: {
 				//authorization: `Bearer ${btoa(jwt)}`
 				[a.headerKey]: jwt

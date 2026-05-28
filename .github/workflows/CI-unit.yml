@@ -35,7 +35,7 @@ jobs:
         with:
           cache: 'npm'
           node-version: '24'
-      
+
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,8 +91,8 @@ jobs:
       - name: 🔎 Run python test
         if: contains(env.WS_TO_TEST, 'python')
         run: npm test --workspace="python"
-        
-      # TODO: no need to run pack test once esbuild is used for package release 
+
+      # TODO: no need to run pack test once esbuild is used for package release
       - name: 🔎 Run client pack test
         if: contains(env.WS_TO_TEST, 'client')
         run: npm pack --workspace="client"
