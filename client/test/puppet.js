@@ -64,7 +64,8 @@ async function runTest(patternsStr) {
 	const patternsArr = patternsStr.split(' ')
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance
-		headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
+		/// headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
+		executablePath: '/usr/bin/google-chrome ',
 		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
 	})
 	const page = await browser.newPage()
