@@ -98,7 +98,6 @@ jobs:
         if: contains(env.WS_TO_TEST, 'client')
         run: |
           sudo apt-get install xvfb
-          # NOTE: puppeteer installs chrome inside test.sh as called by the `npm run test:unit` script
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: 🔎 Run augen tests

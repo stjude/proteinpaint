@@ -55,6 +55,11 @@ node emitImports.mjs $SPECPATTERN > ./$TESTFILE
 
 ENV=test node esbuild.config.mjs
 
+# NOTE: npmc ci/install does not have to use PUPPETEER_SKIP_DOWNLOAD=true,
+# in which case chrome and chrome headless will be installed automatically 
+# as part of npm ci/install and puppet.js can use `headless: 'shell'`,
+# so commenting below for now because of unreliable/flaky install
+#
 # puppeteer needs headless chrome, install as needed
 # set +u # disable unbound variable check
 # if [[ "$PUPPETEER_SKIP_DOWNLOAD" != "" ]]; then
