@@ -58,8 +58,6 @@ ENV=test node esbuild.config.mjs
 # puppeteer needs headless chrome, install as needed
 # set +u # disable unbound variable check
 # if [[ "$PUPPETEER_SKIP_DOWNLOAD" != "" ]]; then
-# 	rm -rf ~/.cache/puppeteer
-#   rm -rf /home/runner/.cache/puppeteer/chrome
 NODE_TLS_REJECT_UNAUTHORIZED=0 npx puppeteer browsers install chrome
 # fi
 # set -u # reenable unbound variable check

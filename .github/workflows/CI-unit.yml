@@ -96,23 +96,11 @@ jobs:
         if: contains(env.WS_TO_TEST, 'client')
         run: npm pack --workspace="client"
 
-      # - name: Clean Puppeteer browser cache
-      #   if: contains(env.WS_TO_TEST, 'client')
-      #   run: |
-      #     echo "Removing Puppeteer cache to avoid incomplete downloads from previous runs"
-      #     rm -rf ~/.cache/puppeteer
-      #     rm -rf /home/runner/.cache/puppeteer/chrome
-
-      # - name: Install Puppeteer Chrome browser
-      #   if: contains(env.WS_TO_TEST, 'client')
-      #   run: |
-      #     # Ensure Chrome is installed for Puppeteer. This will print installed buildId and path.
-      #     npx puppeteer browsers install chrome
-
       - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client')
         run: |
           sudo apt-get install xvfb
+          # NOTE: puppeteer installs chrome inside test.sh as called by the `npm run test:unit` script
           xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: 🔎 Run augen tests
