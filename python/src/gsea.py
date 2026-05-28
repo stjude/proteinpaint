@@ -64,11 +64,11 @@ try:
 
             msigdb_library = {}  # Initialize an empty dictionary for the gene set library
             if table_name == "REACTOME--blitzgsea": # Parse from blitzgsea reactome library
-              msigdb_library = blitz.enrichr.get_library("Reactome_2022")
+              msigdb_library = blitz.enrichr.get_library("Reactome_Pathways_2024")
             elif table_name == "KEGG--blitzgsea": # Parse from blitzgsea KEGG library
-              msigdb_library = blitz.enrichr.get_library("KEGG_2021_Human")
+              msigdb_library = blitz.enrichr.get_library("KEGG_2026")
             elif table_name == "WikiPathways--blitzgsea": # Parse from blitzgsea WikiPathways library
-              msigdb_library = blitz.enrichr.get_library("WikiPathways_2019_Human")              
+              msigdb_library = blitz.enrichr.get_library("WikiPathways_2024_Human")
             else: # Use geneset groups from msigdb    
               # Query to get gene set IDs
               query = f"SELECT id FROM terms WHERE parent_id='{table_name}'"  # SQL query to get gene set IDs

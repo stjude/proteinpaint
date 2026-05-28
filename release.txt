@@ -1,1 +1,2 @@
-
+Features:
+- bump GSEA blitzgsea libraries to newer Enrichr versions

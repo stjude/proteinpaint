@@ -109,6 +109,13 @@ async function run_genesetEnrichment_analysis(
 	throw new Error('Unknown method:' + q.method)
 }
 
+// Bump whenever the blitzgsea library version(s) referenced in
+// python/src/gsea.py or the MSigDB SQLite version change. The cache key
+// already covers geneSetGroup, but the underlying library version isn't
+// part of the group name, so we add it here to retire old entries
+// automatically when libraries are swapped.
+const GSEA_LIBRARY_VERSION = 'reactome-2024+kegg-2026+wiki-2024+msigdb-2023.3'
+
 /** Inputs that uniquely determine the GSEA enrichment table + pickle.
  * Passed to cacheOrRecompute as the computeArgument. `geneset_name` is
  * deliberately excluded — it picks which row to render as a detail
@@ -120,7 +127,8 @@ function gseaKeyInputs(q: GenesetEnrichmentRequest, genes: string[], fold_change
 		fold_change,
 		geneSetGroup: q.geneSetGroup,
 		num_permutations: q.num_permutations,
-		filter_non_coding_genes: q.filter_non_coding_genes
+		filter_non_coding_genes: q.filter_non_coding_genes,
+		libraryVersion: GSEA_LIBRARY_VERSION
 	}
 }
 
