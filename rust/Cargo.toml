@@ -126,7 +126,3 @@ path="src/manhattan_plot.rs"
 [[bin]]
 name="dmrcate"
 path="src/dmrcate.rs"
-
-[[bin]]
-name="volcano"
-path="src/volcano.rs"

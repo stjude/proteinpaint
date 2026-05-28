@@ -835,6 +835,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.attr('fill-opacity', 0.5)
 		.attr('stroke', (d: any) => getColor(d))
 		.attr('stroke-width', 1)
+		.attr('vector-effect', 'non-scaling-stroke')
 
 	cohortDots
 		.transition()
