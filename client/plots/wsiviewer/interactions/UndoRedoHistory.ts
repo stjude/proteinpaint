@@ -2,7 +2,6 @@ import { clearServerDataCache, dofetch3 } from '#common/dofetch'
 import type { TileSelection } from '#types'
 import type { SaveWSIAnnotationRequest } from '@sjcrh/proteinpaint-types/routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from '@sjcrh/proteinpaint-types/routes/deleteWSITileSelection.ts'
-import type VectorSource from 'ol/source/Vector'
 import type VectorLayer from 'ol/layer/Vector'
 import type { Feature } from 'ol'
 import type { Geometry } from 'ol/geom'
@@ -10,9 +9,17 @@ import type { WSIViewerInteractions } from './WSIViewerInteractions'
 import type { SessionWSImage } from '../viewModel/SessionWSImage'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import { checkSelectionType, SelectionPrefixes } from '@sjcrh/proteinpaint-shared'
+export type UndoRedoContext = {
+	wsiApp: any
+	wsiInteractions: WSIViewerInteractions
+	sessionImage: SessionWSImage
+	vectorLayer: VectorLayer<any, any>
+	serverCtx: ServerContext
+}
+
 interface Command {
-	undo(): Promise<void>
-	redo(): Promise<void>
+	undo(ctx: UndoRedoContext): Promise<void>
+	redo(ctx: UndoRedoContext): Promise<void>
 }
 
 export type ServerContext = {
@@ -22,10 +29,10 @@ export type ServerContext = {
 	wsimage: string
 }
 
-function dispatchRerender(wsiApp: any, sessionsTileSelection: TileSelection[]) {
-	wsiApp.app.dispatch({
+function dispatchRerender(ctx: UndoRedoContext, sessionsTileSelection: TileSelection[]) {
+	ctx.wsiApp.app.dispatch({
 		type: 'plot_edit',
-		id: wsiApp.id,
+		id: ctx.wsiApp.id,
 		config: {
 			settings: {
 				renderWSIViewer: true,
@@ -39,21 +46,19 @@ function dispatchRerender(wsiApp: any, sessionsTileSelection: TileSelection[]) {
 	})
 }
 
-/** Map click — new unclassified session tile. Manages OL features directly to avoid zoom-out. */
+// Done
 export class CreateTileCommand implements Command {
 	constructor(
-		private wsiApp: any,
 		private borderFeature: Feature<Geometry>,
-		private source: VectorSource<Feature<Geometry>>,
 		private tileSelection: TileSelection,
 		private prevSessionsTileSelections: TileSelection[]
 	) {}
 
-	async undo() {
-		this.source.removeFeature(this.borderFeature)
-		this.wsiApp.app.dispatch({
+	async undo(ctx: UndoRedoContext) {
+		ctx.vectorLayer.getSource()!.removeFeature(this.borderFeature)
+		ctx.wsiApp.app.dispatch({
 			type: 'plot_edit',
-			id: this.wsiApp.id,
+			id: ctx.wsiApp.id,
 			config: {
 				settings: {
 					renderWSIViewer: false,
@@ -66,11 +71,11 @@ export class CreateTileCommand implements Command {
 		})
 	}
 
-	async redo() {
-		this.source.addFeature(this.borderFeature)
-		this.wsiApp.app.dispatch({
+	async redo(ctx: UndoRedoContext) {
+		ctx.vectorLayer.getSource()!.addFeature(this.borderFeature)
+		ctx.wsiApp.app.dispatch({
 			type: 'plot_edit',
-			id: this.wsiApp.id,
+			id: ctx.wsiApp.id,
 			config: {
 				settings: {
 					renderWSIViewer: false,
@@ -83,17 +88,15 @@ export class CreateTileCommand implements Command {
 		})
 	}
 }
+
 // TODO No Skip implementation
 type SaveData = {
 	/** Tile with Annotation ID after classification. */
 	postTileSelection: TileSelection
 	/** Original session tile before id/flag mutation (null if tile was a prediction). */
-	prevTileSelection: TileSelection | null
+	prevTileSelection: TileSelection
 	prevSessionsTileSelections: TileSelection[]
 	classId: number
-	serverCtx: ServerContext
-	vectorLayer: VectorLayer<any, any>
-	sessionImage: SessionWSImage
 	eventCode: string
 }
 // save Tile undo: create tileselection again afer delete anno
@@ -101,29 +104,24 @@ type SaveData = {
 // TODO gotta have exceptions for flagged and skippedtiles
 /** Number key or Enter — classifies a tile. Syncs with server on undo/redo. */
 export class SaveTileCommand implements Command {
-	constructor(
-		private wsiApp: any,
-		private data: SaveData,
-		private wsiInteractions: WSIViewerInteractions,
-		private settings: Settings
-	) {}
+	constructor(private data: SaveData, private settings: Settings) {}
 
-	async undo() {
-		await this.wsiInteractions.fullDelete(
-			this.wsiApp,
-			this.data.vectorLayer,
-			this.data.sessionImage,
+	async undo(ctx: UndoRedoContext) {
+		console.log(this.data.prevTileSelection, this.data.postTileSelection)
+		await ctx.wsiInteractions.fullDelete(
+			ctx.wsiApp,
+			ctx.vectorLayer,
+			ctx.sessionImage,
 			this.data.postTileSelection.id,
-			this.data.prevSessionsTileSelections,
-			this.settings
+			this.data.prevTileSelection.id
 		)
 		if (this.data.prevTileSelection) {
-			// TODO make sure prediction comes back
+			//TODO make sure prediction comes back
 			if (checkSelectionType(this.data.prevTileSelection, SelectionPrefixes.TileSelection)) {
-				this.wsiInteractions.addTileSelection(
-					this.wsiApp,
+				ctx.wsiInteractions.addTileSelection(
+					ctx.wsiApp,
 					this.data.prevTileSelection,
-					this.data.vectorLayer.getSource(),
+					ctx.vectorLayer,
 					this.settings.selectedPatchBorderColor,
 					this.data.prevSessionsTileSelections,
 					this.settings.tileSize
@@ -132,21 +130,19 @@ export class SaveTileCommand implements Command {
 		}
 	}
 
-	async redo() {
-		await this.wsiInteractions.fullSave(
-			this.data.sessionImage,
+	async redo(ctx: UndoRedoContext) {
+		await ctx.wsiInteractions.fullSave(
+			ctx.sessionImage,
 			this.data.eventCode,
 			this.settings,
-			this.data.postTileSelection.id,
-			this.data.vectorLayer,
-			this.data.prevSessionsTileSelections,
-			this.data.serverCtx.projectId
+			ctx.vectorLayer,
+			this.data.prevTileSelection,
+			ctx.serverCtx.projectId
 		)
 	}
 }
 
 type SessionSkipFlagData = {
-	source: VectorSource<Feature<Geometry>>
 	/** Features present before the flag action (captured by reference before removal). */
 	preActionFeatures: Feature<Geometry>[]
 	/** Features present after the flag action. */
@@ -157,19 +153,20 @@ type SessionSkipFlagData = {
 
 /** F/S key on an unclassified session tile (no server call). Manages OL features directly. */
 export class SessionSkipFlagCommand implements Command {
-	constructor(private wsiApp: any, private data: SessionSkipFlagData) {}
+	constructor(private data: SessionSkipFlagData) {}
 
-	async undo() {
-		const { source, preActionFeatures, postActionFeatures } = this.data
+	async undo(ctx: UndoRedoContext) {
+		const source = ctx.vectorLayer.getSource()!
+		const { preActionFeatures, postActionFeatures } = this.data
 		for (const f of postActionFeatures) {
 			if (!preActionFeatures.includes(f)) source.removeFeature(f)
 		}
 		for (const f of preActionFeatures) {
 			if (!postActionFeatures.includes(f)) source.addFeature(f)
 		}
-		this.wsiApp.app.dispatch({
+		ctx.wsiApp.app.dispatch({
 			type: 'plot_edit',
-			id: this.wsiApp.id,
+			id: ctx.wsiApp.id,
 			config: {
 				settings: {
 					renderWSIViewer: false,
@@ -182,17 +179,18 @@ export class SessionSkipFlagCommand implements Command {
 		})
 	}
 
-	async redo() {
-		const { source, preActionFeatures, postActionFeatures } = this.data
+	async redo(ctx: UndoRedoContext) {
+		const source = ctx.vectorLayer.getSource()!
+		const { preActionFeatures, postActionFeatures } = this.data
 		for (const f of preActionFeatures) {
 			if (!postActionFeatures.includes(f)) source.removeFeature(f)
 		}
 		for (const f of postActionFeatures) {
 			if (!preActionFeatures.includes(f)) source.addFeature(f)
 		}
-		this.wsiApp.app.dispatch({
+		ctx.wsiApp.app.dispatch({
 			type: 'plot_edit',
-			id: this.wsiApp.id,
+			id: ctx.wsiApp.id,
 			config: {
 				settings: {
 					renderWSIViewer: false,
@@ -210,69 +208,68 @@ type AnnotationFlagData = {
 	tileSelectionBefore: TileSelection
 	tileSelectionAfter: TileSelection
 	classId: number
-	serverCtx: ServerContext
 	sessionsTileSelections: TileSelection[]
 }
 
 /** F/S key on a server-stored annotation. Persists flag change via saveWSIAnnotation. */
 export class AnnotationFlagCommand implements Command {
-	constructor(private wsiApp: any, private data: AnnotationFlagData) {}
+	constructor(private data: AnnotationFlagData) {}
 
-	async undo() {
+	async undo(ctx: UndoRedoContext) {
 		try {
 			const body: SaveWSIAnnotationRequest = {
-				genome: this.data.serverCtx.genome,
-				dslabel: this.data.serverCtx.dslabel,
+				genome: ctx.serverCtx.genome,
+				dslabel: ctx.serverCtx.dslabel,
 				tileSelection: { ...this.data.tileSelectionBefore },
 				classId: this.data.classId,
-				projectId: this.data.serverCtx.projectId,
-				wsimage: this.data.serverCtx.wsimage
+				projectId: ctx.serverCtx.projectId,
+				wsimage: ctx.serverCtx.wsimage
 			}
 			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 			clearServerDataCache()
 		} catch (e: any) {
 			console.error('Undo annotation flag:', e)
 		}
-		dispatchRerender(this.wsiApp, this.data.sessionsTileSelections)
+		dispatchRerender(ctx, this.data.sessionsTileSelections)
 	}
 
-	async redo() {
+	async redo(ctx: UndoRedoContext) {
 		try {
 			const body: SaveWSIAnnotationRequest = {
-				genome: this.data.serverCtx.genome,
-				dslabel: this.data.serverCtx.dslabel,
+				genome: ctx.serverCtx.genome,
+				dslabel: ctx.serverCtx.dslabel,
 				tileSelection: { ...this.data.tileSelectionAfter },
 				classId: this.data.classId,
-				projectId: this.data.serverCtx.projectId,
-				wsimage: this.data.serverCtx.wsimage
+				projectId: ctx.serverCtx.projectId,
+				wsimage: ctx.serverCtx.wsimage
 			}
 			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 			clearServerDataCache()
 		} catch (e: any) {
 			console.error('Redo annotation flag:', e)
 		}
-		dispatchRerender(this.wsiApp, this.data.sessionsTileSelections)
+		dispatchRerender(ctx, this.data.sessionsTileSelections)
 	}
 }
 
 type DeleteSessionData = {
 	tileSelection: TileSelection
 	prevSessionsTileSelections: TileSelection[]
-	source: VectorSource<Feature<Geometry>>
 	capturedFeatures: Feature<Geometry>[]
 }
 
 /** Backspace on an unclassified session tile. Manages OL features directly. */
 export class DeleteSessionTileCommand implements Command {
-	constructor(private wsiApp: any, private data: DeleteSessionData) {}
+	constructor(private data: DeleteSessionData) {}
 
-	async undo() {
+	async undo(ctx: UndoRedoContext) {
+		const source = ctx.vectorLayer.getSource()!
 		for (const f of this.data.capturedFeatures) {
-			this.data.source.addFeature(f)
+			source.addFeature(f)
 		}
-		this.wsiApp.app.dispatch({
+		ctx.wsiApp.app.dispatch({
 			type: 'plot_edit',
-			id: this.wsiApp.id,
+			id: ctx.wsiApp.id,
 			config: {
 				settings: {
 					renderWSIViewer: false,
@@ -285,13 +282,14 @@ export class DeleteSessionTileCommand implements Command {
 		})
 	}
 
-	async redo() {
+	async redo(ctx: UndoRedoContext) {
+		const source = ctx.vectorLayer.getSource()!
 		for (const f of this.data.capturedFeatures) {
-			this.data.source.removeFeature(f)
+			source.removeFeature(f)
 		}
-		this.wsiApp.app.dispatch({
+		ctx.wsiApp.app.dispatch({
 			type: 'plot_edit',
-			id: this.wsiApp.id,
+			id: ctx.wsiApp.id,
 			config: {
 				settings: {
 					renderWSIViewer: false,
@@ -308,48 +306,47 @@ export class DeleteSessionTileCommand implements Command {
 type DeleteAnnotationData = {
 	tileSelection: TileSelection
 	classId: number
-	serverCtx: ServerContext
 	prevSessionsTileSelections: TileSelection[]
 }
 
 /** Backspace on a server-stored annotation or prediction. Syncs with server on undo/redo. */
 export class DeleteAnnotationCommand implements Command {
-	constructor(private wsiApp: any, private data: DeleteAnnotationData) {}
+	constructor(private data: DeleteAnnotationData) {}
 
-	async undo() {
+	async undo(ctx: UndoRedoContext) {
 		try {
 			const body: SaveWSIAnnotationRequest = {
-				genome: this.data.serverCtx.genome,
-				dslabel: this.data.serverCtx.dslabel,
+				genome: ctx.serverCtx.genome,
+				dslabel: ctx.serverCtx.dslabel,
 				tileSelection: { ...this.data.tileSelection },
 				classId: this.data.classId,
-				projectId: this.data.serverCtx.projectId,
-				wsimage: this.data.serverCtx.wsimage
+				projectId: ctx.serverCtx.projectId,
+				wsimage: ctx.serverCtx.wsimage
 			}
 			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 			clearServerDataCache()
 		} catch (e: any) {
 			console.error('Undo delete annotation:', e)
 		}
-		dispatchRerender(this.wsiApp, this.data.prevSessionsTileSelections)
+		dispatchRerender(ctx, this.data.prevSessionsTileSelections)
 	}
 
-	async redo() {
+	async redo(ctx: UndoRedoContext) {
 		try {
 			const body: DeleteWSITileSelectionRequest = {
-				genome: this.data.serverCtx.genome,
-				dslabel: this.data.serverCtx.dslabel,
-				projectId: this.data.serverCtx.projectId,
+				genome: ctx.serverCtx.genome,
+				dslabel: ctx.serverCtx.dslabel,
+				projectId: ctx.serverCtx.projectId,
 				classID: this.data.classId,
 				tileSelection: this.data.tileSelection,
-				wsimage: this.data.serverCtx.wsimage
+				wsimage: ctx.serverCtx.wsimage
 			}
 			await dofetch3('deleteWSITileSelection', { method: 'DELETE', body })
 			clearServerDataCache()
 		} catch (e: any) {
 			console.error('Redo delete annotation:', e)
 		}
-		dispatchRerender(this.wsiApp, this.data.prevSessionsTileSelections)
+		dispatchRerender(ctx, this.data.prevSessionsTileSelections)
 	}
 }
 
@@ -366,17 +363,23 @@ export class UndoRedoHistory {
 		this.redoStack = []
 	}
 
-	async undo(): Promise<void> {
+	async undo(ctx: UndoRedoContext): Promise<void> {
 		const cmd = this.undoStack.pop()
-		if (!cmd) return
-		await cmd.undo()
+		if (!cmd) {
+			console.warn('Nothing to undo')
+			return
+		}
+		await cmd.undo(ctx)
 		this.redoStack.push(cmd)
 	}
 
-	async redo(): Promise<void> {
+	async redo(ctx: UndoRedoContext): Promise<void> {
 		const cmd = this.redoStack.pop()
-		if (!cmd) return
-		await cmd.redo()
+		if (!cmd) {
+			console.warn('Nothing to redo')
+			return
+		}
+		await cmd.redo(ctx)
 		this.undoStack.push(cmd)
 	}
 
