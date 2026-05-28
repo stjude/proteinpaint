@@ -18,9 +18,11 @@ if [[ -f ./build/unpublishedPkgs.txt ]]; then
   rm ./build/unpublishedPkgs.txt
 fi
 
-# ensure that shared/utils/dist for any updated workspace that needs
+# ensure that shared for any updated workspace that needs
 # to bundle it when packing
-cd shared/utils
+cd shared/types
+npm run prepack
+cd ../utils
 npm run build
 cd ../..
 
