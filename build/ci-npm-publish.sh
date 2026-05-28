@@ -18,6 +18,12 @@ if [[ -f ./build/unpublishedPkgs.txt ]]; then
   rm ./build/unpublishedPkgs.txt
 fi
 
+# ensure that shared/utils/dist for any updated workspace that needs
+# to bundle it when packing
+cd shared/utils
+npm run build
+cd ../..
+
 PPDIR=$PWD
 for WS in ${WORKSPACES}; do
   PRIVATE=$(node -p "require('./$WS/package.json').private")
