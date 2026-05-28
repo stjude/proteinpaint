@@ -345,103 +345,90 @@ tape('Numerical term: fixed bins', async test => {
 	await opts.pill.main(opts.tsData)
 	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-	await detectGte({ target: tip.d.node(), selector: '.binsize_g', count: 1 })
-	const lines = tip.d.select('.binsize_g').node().querySelectorAll('line')
-	test.equal(lines.length, 8, 'should have 8 lines')
-	// first line should be draggable
-	// other lines should not be draggable if there is no q.last_bin
+	const tipLoc = opts.tipLoc // pill.Inner.dom.tip
 
-	// test numeric bin menu
-	test.equal(
-		tip.d.node().querySelector('tr').querySelector('td').innerText,
-		'Bin Size',
-		'Should have section for "bin size" edit'
-	)
-	test.equal(
-		tip.d.node().querySelectorAll('tr')[1].querySelector('td').innerText,
-		'First Bin Stop',
-		'Should have section for "First bin" edit'
-	)
-	test.equal(
-		tip.d.node().querySelectorAll('tr')[2].querySelector('td').innerText,
-		'Last Bin Start',
-		'Should have section for "Last bin" edit'
-	)
+	{
+		// count only visible lines
+		test.equal(await tipLoc.shows('.binsize_g line', { count: 7 }).length(), 7, 'should have 7 lines')
+		// first line should be draggable
+		// other lines should not be draggable if there is no q.last_bin
+		const trs = tip.d.node().querySelectorAll('tr')
 
-	//trigger and test bin_size change
-	const bin_size_input = tip.d.node().querySelector('tr').querySelector('input')
-	bin_size_input.value = 5
+		// test numeric bin menu
+		test.equal(trs[0].querySelector('td').innerText, 'Bin Size', 'Should have section for "bin size" edit')
+		test.equal(trs[1].querySelector('td').innerText, 'First Bin Stop', 'Should have section for "First bin" edit')
+		test.equal(trs[2].querySelector('td').innerText, 'Last Bin Start', 'Should have section for "Last bin" edit')
 
-	//trigger 'change' to update bins
-	bin_size_input.dispatchEvent(new Event('change'))
-	await sleep(10)
-	test.equal(tip.d.node().querySelector('tr').querySelector('input').value, '5', 'Should change "bin size" from input')
+		//trigger and test bin_size change
+		const bin_size_input = trs[0].querySelector('input')
+		bin_size_input.value = 5
 
-	//trigger and test first_bin_change
-	const first_bin_input = tip.d.node().querySelectorAll('tr')[1].querySelector('input')
-	first_bin_input.value = 7
+		//trigger 'change' to update bins
+		bin_size_input.dispatchEvent(new Event('change'))
+	}
 
-	//trigger 'change' to update bins
-	first_bin_input.dispatchEvent(new Event('change'))
-	await sleep(10)
-	test.equal(
-		tip.d.node().querySelectorAll('tr')[1].querySelector('input').value,
-		'7',
-		'Should change "first bin" from input'
-	)
+	{
+		const trs = await tipLoc.shows('tr', { count: 2 }).get()
+		//await sleep(10)
 
-	//trigger and test last_bin change
-	const last_bin_custom_radio = tip.d
-		.node()
-		.querySelectorAll('tr')[2]
-		.querySelectorAll('div')[0]
-		.querySelectorAll('input')[1]
-	last_bin_custom_radio.checked = true
-	last_bin_custom_radio.dispatchEvent(new Event('change'))
-	await sleep(50)
-	const last_bin_input = tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
+		test.equal(trs[0].querySelector('input').value, '5', 'Should change "bin size" from input')
 
-	last_bin_input.value = 20
+		//trigger and test first_bin_change
+		const first_bin_input = trs[1].querySelector('input')
+		first_bin_input.value = 7
 
-	//trigger 'change' to update bins
-	last_bin_input.dispatchEvent(new Event('change'))
-	await sleep(50)
-	test.equal(
-		tip.d.node().querySelectorAll('tr')[2].querySelectorAll('div')[1].querySelectorAll('input')[0].value,
-		'20',
-		'Should change "last bin" from input'
-	)
+		//trigger 'change' to update bins
+		first_bin_input.dispatchEvent(new Event('change'))
+	}
 
-	// test 'apply' button
-	const apply_btn = tip.d
-		.selectAll('button')
-		.nodes()
-		.find(b => b.innerHTML == 'Apply')
+	{
+		const trs = await tipLoc.shows('tr', { count: 3 }).get()
+		test.equal(trs[1].querySelector('input').value, '7', 'Should change "first bin" from input')
+
+		//trigger and test last_bin change
+		const last_bin_custom_radio = trs[2].querySelectorAll('div')[0].querySelectorAll('input')[1]
+		last_bin_custom_radio.checked = true
+		last_bin_custom_radio.dispatchEvent(new Event('change'))
+	}
+
+	{
+		const trs = await tipLoc.shows('tr', { count: 3 }).get()
+		const last_bin_input = trs[2].querySelectorAll('div')[1].querySelectorAll('input')[0]
+		last_bin_input.value = 20
+		//trigger 'change' to update bins
+		last_bin_input.dispatchEvent(new Event('change'))
+	}
+
+	{
+		const tr2 = await tipLoc.shows('tr', { count: 2 }).get(2)
+		test.equal(
+			tr2.querySelectorAll('div')[1].querySelectorAll('input')[0].value,
+			'20',
+			'Should change "last bin" from input'
+		)
+	}
+
+	const apply_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_apply"]').get(0)
 	apply_btn.click()
+	await sleep(50)
 	await opts.pillMenuClick('Edit')
-	await sleep(100)
-	test.equal(
-		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
-		'5',
+	test.deepEqual(
+		await tipLoc.shows('[data-testid="sjpp-num-reg-bin-editor-size"]').value(),
+		['5'],
 		'Should apply the change by "Apply" button'
 	)
 
 	// test 'reset' button
-	const reset_btn = tip.d
-		.selectAll('button')
-		.nodes()
-		.find(b => b.innerHTML == 'Reset')
+	const reset_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_reset"]').get(0)
 	reset_btn.click()
-	await sleep(100)
-	apply_btn.click()
-	await sleep(100)
+	await sleep(50)
 	await opts.pillMenuClick('Edit')
-	test.equal(
-		tip.d.node().querySelectorAll('tr')[0].querySelectorAll('input')[0].value,
-		'3',
+	test.deepEqual(
+		await tipLoc.shows('[data-testid="sjpp-num-reg-bin-editor-size"]').value(),
+		['3'],
 		'Should reset the bins by "Reset" button'
 	)
-	if (test._ok) opts.pill.destroy()
+	//if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: float custom bins', async test => {
