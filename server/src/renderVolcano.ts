@@ -16,6 +16,39 @@ import { formatElapsedTime } from '#shared'
 const MAX_PIXEL_DIM = 4000
 const MAX_INTERACTIVE_DOTS = 50000
 const MAX_DOT_RADIUS = 20
+// Hard cap on per-side device-pixel canvas dimension. 8192² × 4 bytes ≈
+// 256 MB worst case — comfortable server headroom and well above the
+// common 400 CSS × DPR 6 = 2400 device px case. The CSS-space cap
+// (MAX_PIXEL_DIM) and the DPR cap alone are not enough: at 4000 CSS ×
+// DPR 6 the canvas would be 24000² × 4 ≈ 2.3 GB, an easy DoS vector. We
+// instead clamp the effective DPR downward when (w × dpr) or (h × dpr)
+// would exceed this, so big plots just get less PNG oversampling
+// without changing the CSS-space contract.
+const MAX_DEVICE_PIXELS_PER_SIDE = 8192
+
+// Concurrency gate around the heavy render+encode section. The async
+// `canvas.toBuffer(cb, 'image/png')` form below moves libpng work to
+// libuv's thread pool, but the JS draw loops and worst-case 256 MB
+// bitmaps still need a ceiling so a burst of requests can't pile
+// canvases on top of each other and starve the event loop. 3 is a
+// pragmatic value for a server that also handles unrelated traffic.
+const MAX_CONCURRENT_RENDERS = 3
+let activeRenders = 0
+const renderQueue: Array<() => void> = []
+async function acquireRenderSlot(): Promise<void> {
+	if (activeRenders < MAX_CONCURRENT_RENDERS) {
+		activeRenders++
+		return
+	}
+	await new Promise<void>(resolve => renderQueue.push(resolve))
+}
+function releaseRenderSlot(): void {
+	const next = renderQueue.shift()
+	// Hand the slot to the next waiter without decrement/increment; only
+	// drop activeRenders when the queue is empty.
+	if (next) next()
+	else activeRenders--
+}
 
 const DEFAULT_REQ: VolcanoRenderRequest = {
 	significanceThresholds: { pValueCutoff: 1.3, pValueType: 'adjusted', foldChangeCutoff: 0.3 },
@@ -132,44 +165,80 @@ export async function renderVolcano<T extends DataEntry>(
 	const xScale = scaleLinear().domain([xMin, xMax]).range([0, w])
 	const yScale = scaleLinear().domain([yMin, yMax]).range([h, 0])
 
-	const canvas = createCanvas(w * devicePixelRatio, h * devicePixelRatio)
-	const ctx = canvas.getContext('2d')
-	ctx.scale(devicePixelRatio, devicePixelRatio)
-	ctx.fillStyle = '#ffffff'
-	ctx.fillRect(0, 0, w, h)
-	// 1 CSS px stroke → devicePixelRatio device px, matching the previous
-	// Rust path's stroke.width = dpr device px (≈ 1 CSS px visible).
-	ctx.lineWidth = 1
-
+	// Precompute pixel coords once — used for both the PNG draw loop and
+	// the returned `dots` overlay positions. Done before the concurrency
+	// gate so the cheap JS work doesn't sit behind the queue.
 	const pxCss: Array<[number, number]> = new Array(points.length)
 	for (let i = 0; i < points.length; i++) {
 		pxCss[i] = [xScale(points[i].fc), yScale(points[i].y)]
 	}
 
-	// Non-significant first so significant rings sit on top.
-	ctx.strokeStyle = colorNonsignificant
-	for (let i = 0; i < points.length; i++) {
-		if (points[i].significant) continue
-		const [px, py] = pxCss[i]
+	// Clamp DPR downward when the resulting device-pixel canvas would
+	// exceed MAX_DEVICE_PIXELS_PER_SIDE on either axis. CSS-space outputs
+	// (plotExtent dims, dots pixel_x/y) are unaffected — only PNG
+	// oversampling degrades, which is the right tradeoff for pathological
+	// inputs. With the current MAX_PIXEL_DIM=4000 and cap=8192, the
+	// effective DPR floor is ≥ 2.048, so well-behaved retina requests
+	// still come through unchanged.
+	const effectiveDpr = Math.min(devicePixelRatio, MAX_DEVICE_PIXELS_PER_SIDE / Math.max(w, h))
+
+	// Gate the heavy render+encode section. Cheap input prep above runs
+	// without waiting; bitmap allocation, draw loops, and PNG encode all
+	// happen under the slot so peak memory/CPU stays bounded under burst.
+	await acquireRenderSlot()
+	let png: string
+	try {
+		const canvas = createCanvas(w * effectiveDpr, h * effectiveDpr)
+		const ctx = canvas.getContext('2d')
+		ctx.scale(effectiveDpr, effectiveDpr)
+		ctx.fillStyle = '#ffffff'
+		ctx.fillRect(0, 0, w, h)
+		// 1 CSS px stroke → effectiveDpr device px, matching the previous
+		// Rust path's stroke.width = dpr device px (≈ 1 CSS px visible).
+		ctx.lineWidth = 1
+
+		// Non-significant first so significant rings sit on top. Each batch
+		// accumulates every ring as a subpath in one path, then strokes once
+		// — collapses JS↔native overhead from O(N) calls to O(1) per batch.
+		// `moveTo(cx + r, cy)` before each `arc(cx, cy, r, 0, 2π)` breaks the
+		// implicit straight line from the previous subpath's endpoint to the
+		// next arc's start point (angle 0 = +x direction = cx + r, cy).
+		ctx.strokeStyle = colorNonsignificant
 		ctx.beginPath()
-		ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
-		ctx.stroke()
-	}
-	// Significant on top, batched by up/down so we only set strokeStyle twice.
-	for (const dir of ['down', 'up'] as const) {
-		ctx.strokeStyle = dir === 'up' ? colorSignificantUp : colorSignificantDown
 		for (let i = 0; i < points.length; i++) {
-			const p = points[i]
-			if (!p.significant) continue
-			if (p.fc > 0 !== (dir === 'up')) continue
+			if (points[i].significant) continue
 			const [px, py] = pxCss[i]
-			ctx.beginPath()
+			ctx.moveTo(px + radiusPx, py)
 			ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
+		}
+		ctx.stroke()
+		// Significant on top, batched by up/down so we only set strokeStyle twice.
+		for (const dir of ['down', 'up'] as const) {
+			ctx.strokeStyle = dir === 'up' ? colorSignificantUp : colorSignificantDown
+			ctx.beginPath()
+			for (let i = 0; i < points.length; i++) {
+				const p = points[i]
+				if (!p.significant) continue
+				if (p.fc > 0 !== (dir === 'up')) continue
+				const [px, py] = pxCss[i]
+				ctx.moveTo(px + radiusPx, py)
+				ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
+			}
 			ctx.stroke()
 		}
-	}
 
-	const png = canvas.toBuffer('image/png').toString('base64')
+		// Async PNG encode — runs on libuv's thread pool so the libpng
+		// pass doesn't block the event loop. Often the heaviest single
+		// step for large bitmaps.
+		png = await new Promise<string>((resolve, reject) => {
+			canvas.toBuffer((err: Error | null, buf: Buffer) => {
+				if (err) reject(err)
+				else resolve(buf.toString('base64'))
+			}, 'image/png')
+		})
+	} finally {
+		releaseRenderSlot()
+	}
 
 	// Build the interactive `dots` list: threshold-passers sorted asc by the
 	// chosen p-value column, optionally capped at maxInteractiveDots.
