@@ -25,6 +25,8 @@ runs:
 
     - name: Install PP packages
       shell: bash
+      env:
+        PUPPETEER_SKIP_DOWNLOAD: 'true'
       run: |
         npm ci    
 
@@ -63,7 +65,13 @@ runs:
         ./run.sh ghcr.io/stjude/ppserver:$TAG
         sleep 10
         cd ..
-        xvfb-run --auto-servernum npm run test:integration
+        # Install Google Chrome so Puppeteer can find a system Chrome binary
+        wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - # pragma: allowlist secret
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        export PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+        npm run test:integration
 
         HASH=$(git rev-parse --short HEAD 2>/dev/null)
         docker push ghcr.io/stjude/ppbase:latest

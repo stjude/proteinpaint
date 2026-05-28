@@ -69,8 +69,14 @@ jobs:
       - name: Create cache folder
         run: mkdir cache
 
-      - name: Install xvfb
-        run: sudo apt-get install xvfb
+      - name: Install Google Chrome for Puppeteer
+        run: | # pragma: allowlist secret
+          # Install Google Chrome so Puppeteer can use a system Chrome binary
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - # pragma: allowlist secret
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list # pragma: allowlist secret
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable" >> $GITHUB_ENV
 
       - name: Login to Github
         uses: docker/login-action@v3.4.0
@@ -131,9 +137,12 @@ jobs:
           # cache-to: type=gha,mode=max
 
       - name: Generate coverate reports from combined unit and integration tests
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
           cd ./container/coverage
-          xvfb-run --auto-servernum ./test.sh
+          # Run coverage tests using headless Chrome (no X server / xvfb required)
+          ./test.sh
 
       - name: Display coverage results
         run: |

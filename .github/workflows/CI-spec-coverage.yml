@@ -72,8 +72,14 @@ jobs:
         run: |
           npm ci
 
-      - name: Install xvfb
-        run: sudo apt-get install xvfb
+      - name: Install Google Chrome for Puppeteer
+        run: | # pragma: allowlist secret
+          # Install Google Chrome so Puppeteer can use a system Chrome binary
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - # pragma: allowlist secret
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list # pragma: allowlist secret
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable" >> $GITHUB_ENV
 
       - name: Fetch commitRef
         run: |
@@ -143,18 +149,24 @@ jobs:
         # doesn't need ppcov here since there are no server *.integration.spec.js
         # that needs to run separately, only client has integration tests right now
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
           cd ./container
           ./run.sh ppserver:latest
           sleep 10
           cd ../client
-          xvfb-run --auto-servernum npm run spec:coverage || echo "TEST_FAILED=true" >> $GITHUB_ENV
+          # Run tests using headless Chrome (no X server / xvfb required)
+          npm run spec:coverage || echo "TEST_FAILED=true" >> $GITHUB_ENV
 
       - name: Generate client unit-spec-only coverage report
         if: ${{ !contains(env.HAS_INTEGRATION_TESTS, 'true') }}
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
           cd client
-          xvfb-run --auto-servernum npm run spec:coverage || echo "TEST_FAILED=true" >> $GITHUB_ENV
+          # Run tests using headless Chrome (no X server / xvfb required)
+          npm run spec:coverage || echo "TEST_FAILED=true" >> $GITHUB_ENV
 
       - name: Display coverage results
         run: |
