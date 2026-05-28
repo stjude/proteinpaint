@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- add type definition to support getter function in ds.assayAvailability{}
+
 
 ## 2.190.1
 

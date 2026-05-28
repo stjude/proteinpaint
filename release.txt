@@ -1,2 +1,1 @@
-Fixes
-- add type definition to support getter function in ds.assayAvailability{}
+
