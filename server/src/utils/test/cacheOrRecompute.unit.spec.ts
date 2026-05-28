@@ -7,6 +7,25 @@ import { cacheFilePath, cacheOrRecompute, generateHash } from '#src/utils/cacheO
 import { cacheJobPolicies } from '#src/utils/cacheOrRecompute.ts'
 import { canonicalizeSamplelst } from '#src/utils/sampleGroups.ts'
 
+/*
+test sections:
+
+generateHash is deterministic and 32 hex chars
+canonicalizeSamplelst sorts values by sampleId
+first call: miss → computeFresh runs; second call: hit, no recompute
+100 concurrent same-input calls dedup to one computeFresh (conference-room property)
+corrupted JSON file is treated as a miss and recomputed
+caller can evict a stale cache file by unlinking before recompute
+debugmode emits one write log and one read log per cache cycle
+timing logs are silent when debugmode is off
+pool gates DISTINCT keys, not same-key attachers
+distinct key beyond the cap rejects with CACHE_BUSY and status 429
+client retry works once a slot frees (no negative caching of busy state)
+cacheFilePath rejects ids that don't match the 32-hex shape
+cacheOrRecompute rejects an unknown cacheSubdir with a helpful error
+non-ENOENT read errors propagate (e.g. a directory at the cache path triggers EISDIR)
+*/
+
 /** Tests for the generic cache-or-recompute module. We use the existing
  * `de` subdir under serverconfig.cachedir (the test harness points
  * cachedir at test/cache/) and namespace each test's payload with random
@@ -374,5 +393,55 @@ tape('cacheFilePath rejects ids that don’t match the 32-hex shape', t => {
 	)
 	t.throws(() => cacheFilePath('de', 'TOO-SHORT'), /invalid cacheId/, 'rejects short ids')
 	t.throws(() => cacheFilePath('de', 'g'.repeat(32)), /invalid cacheId/, 'rejects non-hex characters')
+	t.end()
+})
+
+tape('cacheOrRecompute rejects an unknown cacheSubdir with a helpful error', async t => {
+	let err: any
+	try {
+		await cacheOrRecompute({
+			computeArgument: { tag: 'bad-subdir' },
+			// Bypass the static type-check so we can verify the runtime guard.
+			cacheSubdir: 'not-a-real-subdir' as any,
+			computeFresh: async () => ({ kind: 'TEST' })
+		})
+	} catch (e) {
+		err = e
+	}
+	t.ok(err, 'cacheOrRecompute threw for an unregistered subdir')
+	t.match(err.message, /Unknown cacheSubdir/, 'error message points at the unknown cacheSubdir guard')
+	t.match(err.message, /cacheJobPolicies/, 'error message tells the developer where to register the subdir')
+	t.end()
+})
+
+tape('non-ENOENT read errors propagate (e.g. a directory at the cache path triggers EISDIR)', async t => {
+	ensureSubdir()
+	const tag = crypto.randomBytes(8).toString('hex')
+	const args = { tag, kind: 'eisdir' }
+	const cacheId = generateHash(args)
+	const dirAsFile = path.join(SUBDIR_ABS, `${cacheId}.json`)
+
+	// Plant a directory at the exact path tryReadJson will try to read as a
+	// file. readFile() on a directory throws an error with code 'EISDIR'
+	// (not 'ENOENT'), so the early-return-on-miss guard does not apply and
+	// the error must be rethrown.
+	fs.mkdirSync(dirAsFile, { recursive: true })
+
+	let caught: any
+	try {
+		await cacheOrRecompute({
+			computeArgument: args,
+			cacheSubdir: 'de',
+			computeFresh: async () => ({ kind: 'TEST', tag })
+		})
+		t.fail('expected EISDIR (or equivalent non-ENOENT) read error to surface')
+	} catch (e: any) {
+		caught = e
+	} finally {
+		fs.rmdirSync(dirAsFile)
+	}
+
+	t.ok(caught, 'read error was rethrown (not swallowed as a cache miss)')
+	t.notEqual(caught.code, 'ENOENT', 'rethrown error is NOT an ENOENT (that path would be silenced)')
 	t.end()
 })
