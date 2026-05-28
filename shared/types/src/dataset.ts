@@ -1901,6 +1901,8 @@ type Mds3AssayAvailability = {
 	/** if true, ds will use both filter and filter0 to filter samples (this is a temp quick fix)
 	 */
 	useFilter0?: true
+	/** optional getter for filling in assay availability */
+	get?: (ds: any) => void
 }
 
 // mds legacy; delete when all are migrated to mds3
