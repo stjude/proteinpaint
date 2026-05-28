@@ -81,6 +81,8 @@ runs:
     - name: Run local server and integration tests
       id: integration
       shell: bash
+      env:
+        PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
       run: |
         set -e
         cd ./container

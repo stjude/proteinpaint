@@ -149,6 +149,8 @@ jobs:
         # doesn't need ppcov here since there are no server *.integration.spec.js
         # that needs to run separately, only client has integration tests right now
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
           cd ./container
           ./run.sh ppserver:latest
@@ -159,6 +161,8 @@ jobs:
 
       - name: Generate client unit-spec-only coverage report
         if: ${{ !contains(env.HAS_INTEGRATION_TESTS, 'true') }}
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
           cd client
           # Run tests using headless Chrome (no X server / xvfb required)

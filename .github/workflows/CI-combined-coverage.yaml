@@ -137,6 +137,8 @@ jobs:
           # cache-to: type=gha,mode=max
 
       - name: Generate coverate reports from combined unit and integration tests
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
           cd ./container/coverage
           # Run coverage tests using headless Chrome (no X server / xvfb required)
