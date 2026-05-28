@@ -47,6 +47,9 @@ jobs:
       - name: Install PP packages
         run: |
           npm ci
+        env:
+          # Prevent Puppeteer from downloading Chromium during npm install
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
       - name: TSC
         shell: bash

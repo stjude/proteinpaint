@@ -39,6 +39,9 @@ jobs:
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prevent Puppeteer from downloading Chromium during npm install
+          # so we can rely on the system Chrome installed on the runner.
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
       - name: Run ESLint
         run: npm run lint
@@ -96,9 +99,16 @@ jobs:
 
       - name: 🔎 Run client tests
         if: contains(env.WS_TO_TEST, 'client')
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome-stable
         run: |
-          sudo apt-get install xvfb
-          xvfb-run --auto-servernum npm run test:unit --workspace="client"
+          # Install Google Chrome so Puppeteer can find a system Chrome binary
+          wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add - # pragma: allowlist secret
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          # Run tests using headless Chrome (no X server / xvfb required)
+          npm run test:unit --workspace="client"
 
       - name: 🔎 Run augen tests
         if: contains(env.WS_TO_TEST, 'augen')

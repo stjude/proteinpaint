@@ -11,8 +11,12 @@ set -exo pipefail
 USAGE="Usage:
   ./build.sh [-x] [-z]
 
-  -x XVFB: use xvfb-run when running browser tests
-  -z USETGZ: use local tarballs for the server package
+  By default tests run in headless mode (no X server). Use -x to enable
+  running browser tests under an X virtual framebuffer (xvfb-run) for
+  legacy or debugging scenarios.
+
+  -x: enable xvfb-run wrapper when running browser tests
+  -z: use local tarballs for the server package
 "
 
 USETGZ=""
