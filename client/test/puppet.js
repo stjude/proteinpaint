@@ -46,6 +46,8 @@ if (patternsStr === 'RELEVANT_SPECS_ONLY') {
 	if (fs.existsSync(extractFiles.json)) fs.rmSync(extractFiles.json, { force: true, recursive: true })
 }
 
+const isDevEnv = fs.existsSync(path.join(__dirname, '../../../../sjpp'))
+
 if (patternsStr) {
 	if (patternsStr === 'NO_BRANCH_COVERAGE_UPDATE') {
 		// a coverage run is requested, but there are no relevant files that have been updated in the branch
@@ -64,7 +66,10 @@ async function runTest(patternsStr) {
 	const patternsArr = patternsStr.split(' ')
 	const browser = await puppeteer.launch({
 		// headless: false, // uncomment to see puppeteer chrome instance
-		headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
+		/// headless: fs.existsSync(path.join(__dirname, '../../../../sjpp')) ? true : 'shell',
+		executablePath: isDevEnv
+			? undefined
+			: '/home/pptruser/.cache/puppeteer/chrome/linux-149.0.7827.22/chrome-linux64/chrome',
 		args: [`--no-sandbox`, `--disable-setuid-sandbox`]
 	})
 	const page = await browser.newPage()
