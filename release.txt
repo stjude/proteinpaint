@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Refactored client code into MVVM pattern. Removed custom cache handling logic and used cacheOrRecompute module instead

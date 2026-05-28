@@ -55,7 +55,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 			inputs: []
 		})
 
-		// Remove the burger and download buttons for now (will be implemented later)
+		// Remove the burger and download buttons for now
 		const burgerMenu = this.dom.massControls.select('div > svg.bi.bi-copy')
 		if (burgerMenu) burgerMenu.remove()
 		const downloadBtn = this.dom.massControls.select('div > svg.bi.bi-download')
