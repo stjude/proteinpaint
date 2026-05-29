@@ -2,7 +2,8 @@ import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
 import type { AIProjectUserRoles } from '#types'
 import type Database from 'better-sqlite3'
-import jsonwebtoken from 'jsonwebtoken'
+import { authApi } from '#src/auth.js'
+
 type JWTTokenPayload = {
 	dslabel: string
 	iat: number
@@ -15,6 +16,7 @@ type JWTTokenPayload = {
 	email: string
 	datasets: string[]
 }
+
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -26,7 +28,10 @@ export function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
-
+			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**') as JWTTokenPayload
+			console.log('JWT payload extracted from request:', jwtPayload)
+			const role: AIProjectUserRoles | undefined = jwtPayload?.clientAuthResult?.role
+			if (!role) throw new Error('Unauthorized: No role found in request payload.')
 			const connection = getDbConnection(ds) as Database.Database
 
 			/** get list of projects from db */
@@ -34,14 +39,12 @@ export function init({ genomes }) {
 				const projects = getProjects(connection)
 				res.send(projects)
 			} else if (query.for === 'role') {
-				const role = getPayload(req)?.clientAuthResult?.role
 				if (!role) throw new Error('Unauthorized: No role found in request payload.')
 				res.status(200).send({
 					status: 'ok',
 					role
 				})
 			} else if (query.for === 'admin') {
-				const role = getPayload(req)?.clientAuthResult?.role
 				if (role !== 'admin') throw new Error('Unauthorized: Admin role required to perform this action.')
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
@@ -84,10 +87,10 @@ export function init({ genomes }) {
 				})
 			} else if (query.for === 'images') {
 				const images = getImages(connection, query.project)
-				const userEmail = getPayload(req)?.email
+				const userEmail = jwtPayload?.email
 				if (!userEmail) throw new Error('User email not found in request.')
 				const users = getUsers(connection, query.project)
-				if (!users.includes(userEmail)) throw new Error(`User ${userEmail} ${users}for project ${query.project.name}`)
+				if (!users.includes(userEmail)) throw new Error(`User not authorized for project ${query.project.name}`)
 				setUser(connection, query.project.id, userEmail)
 				res.send({ images })
 			} else if (query.for === 'logout') {
@@ -113,39 +116,6 @@ export function init({ genomes }) {
 	}
 }
 
-function getPayload(req: any): Partial<JWTTokenPayload> | undefined {
-	try {
-		const headers: any = req.headers || {}
-		let token: string | undefined
-		if (headers.authorization) {
-			const parts = String(headers.authorization).split(' ')
-			if (parts.length > 1) {
-				// client may send "Bearer <base64(jwt)>"
-				const b64 = parts.slice(1).join(' ')
-				try {
-					// try base64 decode first
-					token = Buffer.from(b64, 'base64').toString()
-				} catch (_) {
-					token = b64
-				}
-			} else token = parts[0]
-		} else if (headers['x-ds-access-token']) {
-			const raw = String(headers['x-ds-access-token'])
-			try {
-				token = Buffer.from(raw, 'base64').toString()
-			} catch (_) {
-				token = raw
-			}
-		}
-		if (token) {
-			const payload = jsonwebtoken.decode(token) as Partial<JWTTokenPayload>
-			return payload
-		}
-	} catch (e) {
-		console.log('Failed to decode auth JWT for debugging:', e)
-	}
-}
-
 function getProjects(connection: Database.Database): Database.RunResult | any[] {
 	const sql = 'SELECT name, id FROM project'
 	return runSQL(connection, sql)
@@ -160,18 +130,17 @@ function getUsers(connection: Database.Database, project: any): string[] {
 function setUser(connection: Database.Database, projectId: number, requestingUser: string | null): void {
 	if (requestingUser === null) {
 		connection.prepare('UPDATE project SET current_user = NULL WHERE id = ?').run(projectId)
+		return
 	}
 	const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
 		current_user: string | null
 	}
 	if (currentUser?.current_user === null) {
-		// No user assigned yet, set the requesting user as the project user
 		connection.prepare('UPDATE project SET current_user = ? WHERE id = ?').run(requestingUser, projectId)
+		return
 	} else if (currentUser.current_user !== requestingUser) {
-		// User is different from the current assigned user, update the project user
 		// TODO Need to find a way to get this error to frontend
-		const message = `Project is assigned to a different user: ${currentUser.current_user}. Please contact the administrator if you believe this is an error.`
-		window.alert(message)
+		const message = `Project is assigned to a different user. Please contact the administrator if you believe this is an error.`
 		throw new Error(message)
 	}
 }

@@ -7,7 +7,7 @@ export class LogoutRenderer {
 		this.interactions = interactions
 	}
 
-	render(holder, projectId: number, genome: string, dslabel: string) {
+	render(holder, genome: string, dslabel: string) {
 		holder
 			.append('div')
 			.style('position', 'absolute')
@@ -25,7 +25,7 @@ export class LogoutRenderer {
 			.style('cursor', 'pointer')
 			.text('Finish Annotating')
 			.on('click', async () => {
-				await this.interactions.onLogOut(genome, dslabel, projectId)
+				await this.interactions.onLogOut(genome, dslabel, holder)
 			})
 	}
 }

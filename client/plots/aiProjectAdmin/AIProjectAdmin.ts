@@ -106,8 +106,6 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 			await this.interactions.launchViewer(this.dom.holder, [])
 		}
 		if (project.type === 'logout') {
-			this.dom.holder.selectAll('*').remove()
-
 			await this.displayProjects(state, this.interactions)
 		}
 	}

@@ -134,17 +134,16 @@ export class AIProjectAdminInteractions {
 		const genome = this.genome
 		const dslabel = this.dslabel
 		const logoutRenderer = new LogoutRenderer(this)
-		logoutRenderer.render(holder, settings.project.id, genome, dslabel)
+		logoutRenderer.render(holder, genome, dslabel)
 		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, settings.project.id, images, true)
 	}
 
 	public async appDispatchEdit(settings: { settings: Settings }, config: any = {}): Promise<void> {
-		const configSettings: Settings = config.settings || settings.settings
 		if (!config?.settings) {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
 		}
-
+		const configSettings: Settings = config.settings
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
@@ -201,20 +200,21 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	async onLogOut(genome: string, dslabel: string, projectId: number): Promise<void> {
+	async onLogOut(genome: string, dslabel: string, holder): Promise<void> {
+		holder.selectAll('*').remove()
 		try {
 			await dofetch3('aiProjectAdmin', {
 				body: {
 					genome,
 					dslabel,
-					projectId,
 					for: 'logout'
 				}
 			})
 			clearServerDataCache()
 			await this.appDispatchEdit({ settings: { project: { name: '', type: 'logout' } } })
 		} catch (e: any) {
-			this.app.printError('Error logging out: ' + (e.message || e))
+			console.error('Error logging out: ' + (e.message || e))
+			throw e
 		}
 	}
 }
