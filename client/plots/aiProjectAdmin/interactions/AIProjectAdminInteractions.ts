@@ -217,7 +217,7 @@ export class AIProjectAdminInteractions {
 				}
 			})
 			clearServerDataCache()
-			await this.appDispatchEdit({ project: { name: 'Log', type: 'logout' } })
+			await this.appDispatchEdit({ project: { name: '', type: 'logout' } })
 		} catch (e: any) {
 			console.error('Error logging out: ' + (e.message || e))
 			throw e
