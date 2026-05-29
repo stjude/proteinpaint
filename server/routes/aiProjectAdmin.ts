@@ -38,7 +38,6 @@ export function init({ genomes }) {
 				const projects = getProjects(connection)
 				res.send(projects)
 			} else if (query.for === 'role') {
-				if (!role) throw new Error('Unauthorized: No role found in request payload.')
 				res.status(200).send({
 					status: 'ok',
 					role
