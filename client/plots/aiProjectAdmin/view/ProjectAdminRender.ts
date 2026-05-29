@@ -76,7 +76,7 @@ export class ProjectAdminRender {
 				if (this.dom.header) this.dom.header.text(`Project: ${projectName}`)
 
 				//calls main() to trigger CreateProjectRender
-				await this.interactions.appDispatchEdit({ settings: { project: { name: projectName, type: 'new' } } })
+				await this.interactions.appDispatchEdit({ project: { name: projectName, type: 'new' } })
 			})
 
 		input.on('keydown', () => {
@@ -104,11 +104,10 @@ export class ProjectAdminRender {
 				callback: async (_, idx) => {
 					/** TODO: open wsisamples plot ||
 					 *  get project details rather than edit the db */
-
 					const project = this.projects[idx]
-					await this.interactions.appDispatchEdit({ settings: { project } })
+					await this.interactions.appDispatchEdit({ project })
 					// remove 'dev' for production
-					this.interactions.launchViewer(this.dom.holder, [])
+					await this.interactions.launchViewer(this.dom.holder, [])
 				}
 			},
 			{

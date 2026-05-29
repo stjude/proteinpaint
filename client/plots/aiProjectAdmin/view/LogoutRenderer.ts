@@ -25,7 +25,9 @@ export class LogoutRenderer {
 			.style('cursor', 'pointer')
 			.text('Finish Annotating')
 			.on('click', async () => {
-				await this.interactions.onLogOut(genome, dslabel, holder)
+				holder.selectAll('*').remove()
+
+				await this.interactions.onLogOut(genome, dslabel)
 			})
 	}
 }

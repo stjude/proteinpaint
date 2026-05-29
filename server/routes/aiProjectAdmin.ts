@@ -29,7 +29,6 @@ export function init({ genomes }) {
 
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**') as JWTTokenPayload
-			console.log('JWT payload extracted from request:', jwtPayload)
 			const role: AIProjectUserRoles | undefined = jwtPayload?.clientAuthResult?.role
 			if (!role) throw new Error('Unauthorized: No role found in request payload.')
 			const connection = getDbConnection(ds) as Database.Database
@@ -91,8 +90,12 @@ export function init({ genomes }) {
 				if (!userEmail) throw new Error('User email not found in request.')
 				const users = getUsers(connection, query.project)
 				if (!users.includes(userEmail)) throw new Error(`User not authorized for project ${query.project.name}`)
-				setUser(connection, query.project.id, userEmail)
-				res.send({ images })
+				const loginStatus = setUser(connection, query.project.id, userEmail)
+				if (loginStatus !== 'ok') {
+					res.send({ status: 'error', error: loginStatus })
+					return
+				}
+				res.send({ images, status: 'ok' })
 			} else if (query.for === 'logout') {
 				setUser(connection, query.projectId, null)
 
@@ -127,21 +130,22 @@ function getUsers(connection: Database.Database, project: any): string[] {
 	return rows.map(r => r.email)
 }
 
-function setUser(connection: Database.Database, projectId: number, requestingUser: string | null): void {
+function setUser(connection: Database.Database, projectId: number, requestingUser: string | null): string | undefined {
 	if (requestingUser === null) {
 		connection.prepare('UPDATE project SET current_user = NULL WHERE id = ?').run(projectId)
-		return
+		return 'Logged Out'
 	}
 	const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
 		current_user: string | null
 	}
-	if (currentUser?.current_user === null) {
+	if (currentUser?.current_user === requestingUser) {
+		return 'ok'
+	} else if (currentUser?.current_user === null) {
 		connection.prepare('UPDATE project SET current_user = ? WHERE id = ?').run(requestingUser, projectId)
-		return
+		return 'ok'
 	} else if (currentUser.current_user !== requestingUser) {
 		// TODO Need to find a way to get this error to frontend
-		const message = `Project is assigned to a different user. Please contact the administrator if you believe this is an error.`
-		throw new Error(message)
+		return `Project is assigned to a different user. Please contact the administrator if you believe this is an error.`
 	}
 }
 

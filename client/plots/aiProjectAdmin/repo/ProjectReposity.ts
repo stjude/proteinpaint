@@ -1,6 +1,5 @@
 import { dofetch2, dofetch3 } from '#common/dofetch'
 import type { AIProjectAdminRequest, AIProjectAdminResponse } from '#types'
-
 export class ProjectReposity {
 	public async getProjects(genome: string, dslabel: string): Promise<string[]> {
 		const body: AIProjectAdminRequest = {

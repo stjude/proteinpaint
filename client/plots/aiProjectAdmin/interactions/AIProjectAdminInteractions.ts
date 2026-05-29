@@ -4,6 +4,8 @@ import { buildAnnotationsCsv } from '#plots/wsiviewer/interactions/annotationsCs
 import type Settings from '../Settings'
 import { dofetch3, clearServerDataCache } from '#common/dofetch'
 import { LogoutRenderer } from '../view/LogoutRenderer'
+import { sayerror } from '#dom'
+
 export class AIProjectAdminInteractions {
 	app: any
 	id: string
@@ -80,7 +82,7 @@ export class AIProjectAdminInteractions {
 			console.error('Error editing project:', e.message || e)
 			throw e
 		}
-		await this.appDispatchEdit({ settings: { project } }, config)
+		await this.appDispatchEdit({ project }, config)
 	}
 
 	async deleteProject(project: { value: string; id: number }): Promise<boolean> {
@@ -113,12 +115,10 @@ export class AIProjectAdminInteractions {
 	}
 
 	async launchViewer(holder: any, _images?: string[]): Promise<void> {
-		holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
-
 		const config = this.getConfig()
-		const settings: Settings = config.settings || {}
+		const settings: Settings = config.settings
+		if (!settings.project || !settings.project.id) throw new Error('Project is required to launch viewer')
 		let images: string[] = []
-
 		if (_images && _images.length > 0) {
 			images = _images
 		} else {
@@ -127,10 +127,16 @@ export class AIProjectAdminInteractions {
 				this.dslabel,
 				settings.project
 			)
+			if (response.status !== 'ok') {
+				await this.appDispatchEdit({ project: { name: '', type: 'logout' } }, config)
+
+				sayerror(holder, response.error || 'Error fetching images')
+				return
+			}
+			holder.selectAll('.sjpp-deletable-ai-prjt-admin-div').remove()
 			images = response.images
 		}
 		const wsiViewer = await import('#plots/wsiviewer/plot.wsi.js')
-		if (!settings.project || !settings.project.id) throw new Error('Project is required to launch viewer')
 		const genome = this.genome
 		const dslabel = this.dslabel
 		const logoutRenderer = new LogoutRenderer(this)
@@ -138,16 +144,17 @@ export class AIProjectAdminInteractions {
 		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, settings.project.id, images, true)
 	}
 
-	public async appDispatchEdit(settings: { settings: Settings }, config: any = {}): Promise<void> {
+	public async appDispatchEdit(settings: Settings, config: any = {}): Promise<void> {
 		if (!config?.settings) {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
 		}
 		const configSettings: Settings = config.settings
+
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: Object.assign(settings, configSettings)
+			config: { settings: Object.assign({}, configSettings, settings) }
 		})
 	}
 
@@ -200,8 +207,7 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	async onLogOut(genome: string, dslabel: string, holder): Promise<void> {
-		holder.selectAll('*').remove()
+	async onLogOut(genome: string, dslabel: string): Promise<void> {
 		try {
 			await dofetch3('aiProjectAdmin', {
 				body: {
@@ -211,7 +217,7 @@ export class AIProjectAdminInteractions {
 				}
 			})
 			clearServerDataCache()
-			await this.appDispatchEdit({ settings: { project: { name: '', type: 'logout' } } })
+			await this.appDispatchEdit({ project: { name: 'Log', type: 'logout' } })
 		} catch (e: any) {
 			console.error('Error logging out: ' + (e.message || e))
 			throw e
