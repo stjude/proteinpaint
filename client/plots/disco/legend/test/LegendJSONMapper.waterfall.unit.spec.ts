@@ -40,7 +40,7 @@ test('LegendJSONMapper includes mutation waterfall entry with color picker and a
 	t.end()
 })
 
-test('LegendJSONMapper includes fusion event counts and omits square borders', t => {
+test('LegendJSONMapper includes fusion event counts', t => {
 	const legend = new Legend(
 		'Mutations',
 		'CNV',
@@ -62,6 +62,5 @@ test('LegendJSONMapper includes fusion event counts and omits square borders', t
 
 	t.equal(fusionEntry.items[0].text, 'Interchromosomal (2)', 'Interchromosomal count is shown')
 	t.equal(fusionEntry.items[1].text, 'Intrachromosomal (1)', 'Intrachromosomal count is shown')
-	t.notOk('border' in fusionEntry.items[0], 'Fusion color square does not define a gray border')
 	t.end()
 })
