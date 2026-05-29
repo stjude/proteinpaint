@@ -105,10 +105,7 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 
 			await this.interactions.launchViewer(this.dom.holder, [])
 		}
-		console.log('Project type:', project.type)
 		if (project.type === 'logout') {
-			// WSI viewer appends nodes without the ai-project-admin deletable class.
-			// Explicitly clear viewer containers before re-rendering the project admin UI.
 			this.dom.holder.selectAll('*').remove()
 
 			await this.displayProjects(state, this.interactions)

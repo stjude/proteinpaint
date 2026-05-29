@@ -1,5 +1,5 @@
 import type { ProjectReposity } from '../repo/ProjectReposity'
-import type { AIProjectAdminResponse } from '#types'
+import type { AIProjectAdminResponse, AIProjectUserRoles } from '#types'
 import { buildAnnotationsCsv } from '#plots/wsiviewer/interactions/annotationsCsv.ts'
 import type Settings from '../Settings'
 import { dofetch3, clearServerDataCache } from '#common/dofetch'
@@ -19,9 +19,9 @@ export class AIProjectAdminInteractions {
 		this.prjtRepo = prjtRepo
 	}
 
-	async getRole(): Promise<'user' | 'admin' | ''> {
+	async getRole(): Promise<AIProjectUserRoles | ''> {
 		// TODO make a user type
-		let role: 'user' | 'admin' | '' = ''
+		let role: AIProjectUserRoles | '' = ''
 		try {
 			const response = await dofetch3('aiProjectAdmin', {
 				body: {
@@ -30,7 +30,6 @@ export class AIProjectAdminInteractions {
 					for: 'role'
 				}
 			})
-			console.log('Role response:', response)
 			role = response.role
 		} catch (e: any) {
 			console.error('Error getting role:', e.message || e)

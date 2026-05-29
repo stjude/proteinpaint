@@ -20,7 +20,6 @@ export class ProjectAdminRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-projects')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
-		console.log('Rendering ProjectAdmin with projects:', this.projects)
 		this.renderCreateProject(projectDiv)
 		this.renderProjectSelection(projectDiv)
 	}

@@ -1,5 +1,6 @@
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
+import type { AIProjectUserRoles } from '#types'
 import type Database from 'better-sqlite3'
 import jsonwebtoken from 'jsonwebtoken'
 type JWTTokenPayload = {
@@ -10,7 +11,7 @@ type JWTTokenPayload = {
 	embedder: string
 	route: string
 	exp: number
-	clientAuthResult: { role: 'admin' | 'user' }
+	clientAuthResult: { role: AIProjectUserRoles }
 	email: string
 	datasets: string[]
 }
@@ -91,7 +92,6 @@ export function init({ genomes }) {
 				res.send({ images })
 			} else if (query.for === 'logout') {
 				setUser(connection, query.projectId, null)
-				console.log('User logged out successfully')
 
 				res.status(200).send({
 					status: 'ok',
@@ -159,7 +159,6 @@ function getUsers(connection: Database.Database, project: any): string[] {
 
 function setUser(connection: Database.Database, projectId: number, requestingUser: string | null): void {
 	if (requestingUser === null) {
-		console.log(`Logging out user from project ${projectId}`)
 		connection.prepare('UPDATE project SET current_user = NULL WHERE id = ?').run(projectId)
 	}
 	const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
