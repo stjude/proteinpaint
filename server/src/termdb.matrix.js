@@ -62,9 +62,9 @@ export async function getData(q, ds, mapParent2Children) {
 		const { expandedTerms, tcMappings } = expandCustomTermCollection(q.terms)
 		q.terms = expandedTerms
 
-		// migrate the flag to q
-		// TODO: do the same when calling getData()
-		q.mapParent2Children = mapParent2Children
+		// set flag for mapping from parent to children
+		q.mapParent2Children = mapParent2Children // TODO: pass this flag in q{} when calling getData()
+		maySetMapParent2Children(q, ds)
 
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
@@ -129,9 +129,6 @@ let numActiveQueriesAcrossUsers = 0,
 async function getSampleData(q, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q, ds)
-
-	// determine whether parent annotations should be mapped onto child samples
-	maySetMapParent2Children(q, ds)
 
 	// query dictionary term data
 	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
@@ -272,7 +269,8 @@ async function getSampleData(q, ds) {
 				terms: [tw],
 				filter: q.filter,
 				filter0: q.filter0,
-				dataTypeDetails: tw.term.dataTypeDetails
+				dataTypeDetails: tw.term.dataTypeDetails,
+				mapParent2Children: q.mapParent2Children
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
