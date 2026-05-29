@@ -3491,7 +3491,8 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 			filter0: q.filter0, // hidden filter
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 			sessionid: q.sessionid,
-			__abortSignal: q.__abortSignal
+			__abortSignal: q.__abortSignal,
+			mapParent2Children: q.mapParent2Children
 		},
 		ds.mayGetGeneVariantDataParam || {}
 	)
@@ -3520,6 +3521,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		mapParent2Children: q.mapParent2Children,
 		sessionid: q.sessionid
 	}
 	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
@@ -3559,6 +3561,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		mapParent2Children: q.mapParent2Children,
 		sessionid: q.sessionid,
 		...(tw?.q?.type === 'values' && {
 			cnvMaxLength: tw?.q?.cnvMaxLength,
@@ -3590,6 +3593,7 @@ async function getProbe2cnvByTw(ds, tw, genome, q) {
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0,
+		mapParent2Children: q.mapParent2Children,
 		sessionid: q.sessionid,
 		__abortSignal: q.__abortSignal
 	}

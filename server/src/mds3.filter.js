@@ -8,6 +8,7 @@ param={}
 	.filterObj = pp filter
 	.filter = pp filter
 	.filter0 = gdc/mmrf filter
+	.mapParent2Children = whether to map parent term annotations onto child samples
 _allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
@@ -40,7 +41,9 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		}
 		// get samples that match filter
 		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-		filterSamples = new Set((await get_samples({ filter }, ds)).map(i => i.id))
+		filterSamples = new Set(
+			(await get_samples({ filter, mapParent2Children: param.mapParent2Children }, ds)).map(i => i.id)
+		)
 	} else if (typeof ds.cohort?.termdb?.getSamples === 'function') {
 		// dataset supplies getSamples() function
 		if (!filter && !filter0) {
