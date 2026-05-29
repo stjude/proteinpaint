@@ -61,7 +61,12 @@ export async function getData(q, ds, mapParent2Children) {
 
 		const { expandedTerms, tcMappings } = expandCustomTermCollection(q.terms)
 		q.terms = expandedTerms
-		const data = await getSampleData(q, ds, mapParent2Children)
+
+		// migrate the flag to q
+		// TODO: do the same when calling getData()
+		q.mapParent2Children = mapParent2Children
+
+		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
 
 		checkAccessToSampleData(data, ds, q)
@@ -121,15 +126,15 @@ const maxPendingQueriesBeforeRejectingRequest = serverconfig.features?.maxPendin
 let numActiveQueriesAcrossUsers = 0,
 	numPendingQueriesAcrossUsers = 0
 
-async function getSampleData(q, ds, mapParent2Children) {
+async function getSampleData(q, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, geneVariantTws, nonDictTerms] = divideTerms(q, ds)
 
 	// determine whether parent annotations should be mapped onto child samples
-	mapParent2Children = maySetMapParent2Children(q, ds, mapParent2Children)
+	maySetMapParent2Children(q, ds)
 
 	// query dictionary term data
-	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms, mapParent2Children)
+	const [samples, byTermId] = await getSampleData_dictionaryTerms(q, dictTerms)
 	/* samples={}
 	this object collects term annotation data on all samples; even if there's no dict term it still return blank {}
 	non-dict term data will be appended to it
@@ -523,14 +528,15 @@ export function divideTerms(q, ds) {
 
 // function to set the mapParent2Children flag, which controls
 // whether to map parent-level data onto child samples
-function maySetMapParent2Children(q, ds, mapParent2Children) {
+function maySetMapParent2Children(q, ds) {
 	if (!ds.cohort.termdb.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
-		return false
+		q.mapParent2Children = false
+		return
 	}
-	if (typeof mapParent2Children === 'boolean') {
-		// flag already defined so return it
-		return mapParent2Children
+	if (typeof q.mapParent2Children === 'boolean') {
+		// flag already defined, do not override it
+		return
 	}
 	// ds has sample ancestry and mapParent2Children is undefined
 	const sampleTypeConfig = ds.cohort.termdb.sampleTypes
@@ -542,8 +548,8 @@ function maySetMapParent2Children(q, ds, mapParent2Children) {
 		// single sample type, no need to map parent to children
 		const type = types[0]
 		if (!sampleTypeConfig[type]) throw 'invalid sample type'
-		return false
-	} else if (types.length > 1) {
+		q.mapParent2Children = false
+	} else {
 		// multiple sample types
 		// validate that one is parent and one is child
 		if (types.length != 2) throw 'unexpected number of sample types'
@@ -560,7 +566,7 @@ function maySetMapParent2Children(q, ds, mapParent2Children) {
 		if (!Number.isInteger(parentType)) throw 'invalid parent sample type'
 		if (!Number.isInteger(childType)) throw 'invalid child sample type'
 		// set flag to true to map parent annotations onto child samples
-		return true
+		q.mapParent2Children = true
 	}
 }
 
@@ -583,15 +589,15 @@ output:
 		{ byTermId: {} }
 }
 */
-async function getSampleData_dictionaryTerms(q, termWrappers, mapParent2Children) {
+async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (!termWrappers.length) return [{}, {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
-		return await getSampleData_dictionaryTerms_termdb(q, termWrappers, mapParent2Children)
+		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
 	}
 	if (q.ds.cohort.termdb.dictionary?.get) {
 		// ds-supplied getter to retrieve dictionary term data
-		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers, mapParent2Children)
+		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers)
 	}
 	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
 	 */
@@ -606,12 +612,12 @@ async function getSampleData_dictionaryTerms(q, termWrappers, mapParent2Children
 	throw 'unknown method for dictionary terms'
 }
 
-export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, mapParent2Children) {
+export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const byTermId = {} // to return
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
-	const filter = await getFilterCTEs(q.filter, q.ds, mapParent2Children)
+	const filter = await getFilterCTEs(q.filter, q.ds, q.mapParent2Children)
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
@@ -642,7 +648,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers, mapP
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.$id || tw.term.id || tw.term.name))
-	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values, mapParent2Children)
+	const rows = await getAnnotationRows(q, termWrappers, filter, CTEs, values)
 	const samples = await getSamples(q, rows, termWrappers)
 	return [samples, byTermId]
 }
@@ -687,14 +693,14 @@ When querying sample annotations for dictionary terms, the query is split into t
 
 Mapping parent annotations onto child samples: when a term annotates parent samples and mapParent2Children is true, then annotations will get mapped onto child samples
 */
-export async function getAnnotationRows(q, termWrappers, filter, CTEs, values, mapParent2Children) {
+export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map((t, i) => {
 			const tw = termWrappers[i]
 			let query
-			if (isParentType(tw.term, q.ds) && mapParent2Children) {
+			if (isParentType(tw.term, q.ds) && q.mapParent2Children) {
 				// term is parent-level term and need to map
 				// parent annotations onto child samples
 				query = ` select sa.sample_id as sample, key, value, ? as term_id
