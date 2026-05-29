@@ -2,7 +2,7 @@ import type { Mds3, TileSelection, SaveWSIAnnotationRequest } from '#types'
 import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
-
+import { authApi } from '#src/auth.js'
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -17,7 +17,7 @@ export function init({ genomes }) {
 			if (!ds) throw new Error('invalid dataset name')
 
 			if (typeof ds.queries?.WSImages?.saveWSIAnnotation === 'function') {
-				const result = await ds.queries.WSImages.saveWSIAnnotation(query)
+				const result = await ds.queries.WSImages.saveWSIAnnotation(query, req)
 				if (result?.status === 'error') {
 					return res.status(500).send(result)
 				}
@@ -44,8 +44,9 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 }
 
 function validateQuery(ds: any, connection: Database.Database) {
-	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
+	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest, req: any) => {
 		try {
+			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**')
 			const tileSelection: TileSelection = annotation.tileSelection
 			const timestamp = new Date().toISOString()
 			const projectId = annotation.projectId
@@ -116,24 +117,8 @@ function validateQuery(ds: any, connection: Database.Database) {
 				.run(projectId, imageId, coords)
 
 			if (isAnnotation) {
-				// Query first user id from project_users table, later replace with actual user management
-				const userRow = connection
-					.prepare(
-						`SELECT id
-						  FROM project_users
-						  ORDER BY id
-						  LIMIT 1`
-					)
-					.get() as { id: number } | undefined
+				// Right now user_id can be null, do we want to be able to work on this without auth?
 
-				const userId = userRow?.id
-
-				if (userId === undefined) {
-					return {
-						status: 'error',
-						error: 'No users found in project_users table.'
-					}
-				}
 				if (tileSelection.flag === FlagStatus.Normal) {
 					connection
 						.prepare(
@@ -143,7 +128,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 						) VALUES (?, ?, ?, ?, ?, ?)
 					`
 						)
-						.run(projectId, userId, coords, timestamp, classId, imageId)
+						.run(projectId, jwtPayload?.email ?? '', coords, timestamp, classId, imageId)
 				} else {
 					connection
 						.prepare(
@@ -153,10 +138,11 @@ function validateQuery(ds: any, connection: Database.Database) {
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
 				`
 						)
-						.run(projectId, userId, coords, timestamp, flag, classId, imageId)
+						.run(projectId, jwtPayload?.email ?? '', coords, timestamp, flag, classId, imageId)
 				}
 			} else if (isPrediction) {
 				// Not inserting if flag is normal
+				// Do we want to label flagged predictions with user_id
 				if (tileSelection.flag !== FlagStatus.Normal) {
 					const insertSql = `
                     INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)

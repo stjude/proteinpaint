@@ -1,6 +1,7 @@
 import { renderTable, sayerror } from '#dom'
 import { debounce } from 'debounce'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
+import type { AIProjectAuthInfo } from '#types'
 
 export class ProjectAdminRender {
 	dom: any
@@ -20,8 +21,12 @@ export class ProjectAdminRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-projects')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
-		this.renderCreateProject(projectDiv)
-		this.renderProjectSelection(projectDiv)
+		this.interactions.getRole().then((res: AIProjectAuthInfo) => {
+			if (!res?.authRequired || res?.role === 'admin') {
+				this.renderCreateProject(projectDiv)
+			}
+			this.renderProjectSelection(projectDiv, res)
+		})
 	}
 
 	/** Users submit a new project name before sample
@@ -44,7 +49,7 @@ export class ProjectAdminRender {
 			.on('click', async () => {
 				const projectName = input.property('value')
 				const prjtNameLen = projectName.trim().length
-				const role = await this.interactions.getRole()
+				const authInfo: AIProjectAuthInfo = await this.interactions.getRole()
 
 				const showError = (msg: string) => {
 					sayerror(this.dom.errorDiv, msg)
@@ -56,7 +61,7 @@ export class ProjectAdminRender {
 						this.dom.errorDiv.selectAll('*').remove()
 					}, 3000)
 				}
-				if (role !== 'admin') {
+				if (authInfo?.role !== 'admin') {
 					return showError('Only users with admin role can create projects')
 				}
 
@@ -90,8 +95,16 @@ export class ProjectAdminRender {
 	/** Users may select an existing project from a table
 	 * returned for the db to edit or delete, depending
 	 * on user roles.*/
-	renderProjectSelection(projectDiv) {
-		if (!this.projects.length) return
+	renderProjectSelection(projectDiv, authInfo?: AIProjectAuthInfo) {
+		if (!this.projects.length) {
+			projectDiv
+				.append('div')
+				.attr('class', 'sjpp-project-select-table')
+				.style('padding', '10px')
+				.append('div')
+				.text('No projects found. Please create a new project or request one from your admin.')
+			return
+		}
 
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
 		const columns = [{ label: 'Project', sortable: true }]
@@ -122,13 +135,13 @@ export class ProjectAdminRender {
 						sayerror(this.dom.errorDiv, 'Failed to export annotations')
 					}
 				}
-			},
-			{
-				//TODO: Add logic for admins only once user roles are implemented
-				//Leave here for development
+			}
+		]
+		if (!authInfo?.authRequired || authInfo?.role === 'admin') {
+			columnButtons.push({
 				text: 'Delete',
 				class: 'sja_menuoption',
-				callback: (_, i) => {
+				callback: async (_, i) => {
 					const project = this.projects[i]
 					this.interactions.deleteProject(project).then(success => {
 						if (success) {
@@ -141,9 +154,8 @@ export class ProjectAdminRender {
 						}
 					})
 				}
-			}
-		]
-
+			})
+		}
 		renderTable({
 			div: tableDiv,
 			rows: this.projects.map((p: any) => {

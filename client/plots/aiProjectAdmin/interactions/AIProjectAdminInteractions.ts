@@ -21,9 +21,8 @@ export class AIProjectAdminInteractions {
 		this.prjtRepo = prjtRepo
 	}
 
-	async getRole(): Promise<AIProjectUserRoles | ''> {
+	async getRole(): Promise<{ role: AIProjectUserRoles | ''; user: string; authRequired: boolean } | undefined> {
 		// TODO make a user type
-		let role: AIProjectUserRoles | '' = ''
 		try {
 			const response = await dofetch3('aiProjectAdmin', {
 				body: {
@@ -32,12 +31,11 @@ export class AIProjectAdminInteractions {
 					for: 'role'
 				}
 			})
-			role = response.role
+			return response.message
 		} catch (e: any) {
 			console.error('Error getting role:', e.message || e)
 			throw e
 		}
-		return role
 	}
 
 	async addProject(opts: { project: any }): Promise<void> {
@@ -145,16 +143,20 @@ export class AIProjectAdminInteractions {
 	}
 
 	public async appDispatchEdit(settings: Settings, config: any = {}): Promise<void> {
+		// I dont understand this function, its originally configured to overwrite any settings you input with the existing settings,
+		// it narrowly escapes an infinite project creation loop because it send s type new  instead of the new edit type from edit projects
 		if (!config?.settings) {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
 		}
 		const configSettings: Settings = config.settings
-
+		const mergedSettings: Settings = {
+			project: { name: '', type: 'logout', ...configSettings?.project, ...settings.project }
+		}
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: { settings: Object.assign({}, configSettings, settings) }
+			config: { settings: mergedSettings }
 		})
 	}
 

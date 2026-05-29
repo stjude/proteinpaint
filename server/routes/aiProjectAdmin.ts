@@ -1,6 +1,6 @@
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
-import type { AIProjectUserRoles } from '#types'
+import type { AIProjectAuthInfo, AIProjectUserRoles } from '#types'
 import type Database from 'better-sqlite3'
 import { authApi } from '#src/auth.js'
 
@@ -26,24 +26,29 @@ export function init({ genomes }) {
 			}
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
-
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**') as JWTTokenPayload
 			const role: AIProjectUserRoles | undefined = jwtPayload?.clientAuthResult?.role
-			if (!role) throw new Error('Unauthorized: No role found in request payload.')
+			const authFound: boolean = authApi.getRequiredCredForDsEmbedder(query.dslabel, query.embedder).length > 0
+			const isAuthenticated = !authFound || (role && ['admin', 'annotator'].includes(role))
+			if (!isAuthenticated) throw new Error('Unauthorized: No role found in request payload.')
 			const connection = getDbConnection(ds) as Database.Database
 
 			/** get list of projects from db */
 			if (query.for === 'list') {
-				const projects = getProjects(connection)
+				let projects = getProjects(connection) as { name: string; id: number }[]
+				if (authFound && role !== 'admin') {
+					projects = projects.filter(p => getUsers(connection, p.id).includes(jwtPayload.email))
+				}
 				res.send(projects)
 			} else if (query.for === 'role') {
 				res.status(200).send({
 					status: 'ok',
-					role
+					message: { role: role || '', user: jwtPayload?.email || '', authRequired: authFound } as AIProjectAuthInfo
 				})
 			} else if (query.for === 'admin') {
-				if (role !== 'admin') throw new Error('Unauthorized: Admin role required to perform this action.')
+				if (role !== 'admin' && !isAuthenticated)
+					throw new Error('Unauthorized: Admin role required to perform this action.')
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
@@ -85,14 +90,17 @@ export function init({ genomes }) {
 				})
 			} else if (query.for === 'images') {
 				const images = getImages(connection, query.project)
-				const userEmail = jwtPayload?.email
-				if (!userEmail) throw new Error('User email not found in request.')
-				const users = getUsers(connection, query.project)
-				if (!users.includes(userEmail)) throw new Error(`User not authorized for project ${query.project.name}`)
-				const loginStatus = setUser(connection, query.project.id, userEmail)
-				if (loginStatus !== 'ok') {
-					res.send({ status: 'error', error: loginStatus })
-					return
+				if (authFound) {
+					const userEmail = jwtPayload?.email
+					if (!userEmail) throw new Error('User email not found in request.')
+					const users = getUsers(connection, query.project.id)
+					if (!users.includes(userEmail) && role !== 'admin')
+						throw new Error(`User not authorized for project ${query.project.name}`)
+					const loginStatus = setUser(connection, query.project.id, userEmail)
+					if (loginStatus !== 'ok') {
+						res.send({ status: 'error', error: loginStatus })
+						return
+					}
 				}
 				res.send({ images, status: 'ok' })
 			} else if (query.for === 'logout') {
@@ -123,9 +131,9 @@ function getProjects(connection: Database.Database): Database.RunResult | any[] 
 	return runSQL(connection, sql)
 }
 
-function getUsers(connection: Database.Database, project: any): string[] {
+function getUsers(connection: Database.Database, projectID: number): string[] {
 	const sql = 'SELECT email FROM project_users WHERE project_id = ?'
-	const rows = connection.prepare(sql).all(project.id) as { email: string }[]
+	const rows = connection.prepare(sql).all(projectID) as { email: string }[]
 	return rows.map(r => r.email)
 }
 
