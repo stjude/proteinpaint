@@ -54,7 +54,10 @@ export function getVafEntries(vafs: Data['vafs']): VafEntry[] {
 			const totalCount = vaf?.totalCount
 			const altCount = vaf?.altCount
 			if (!label || altCount == null || (refCount == null && totalCount == null)) continue
-			entries.push({ label, refCount, totalCount, altCount })
+			const entry: VafEntry = { label, altCount }
+			if (refCount != null) entry.refCount = refCount
+			if (totalCount != null) entry.totalCount = totalCount
+			entries.push(entry)
 		}
 	}
 	return entries

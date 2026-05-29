@@ -45,11 +45,7 @@ test('hasAnyValidVafEntry accepts mixed vaf input with at least one valid entry'
 test('getVafEntries and hasAnyValidVafEntry support total/alt read counts', t => {
 	const entries = getVafEntries([{ id: 'DNA', totalCount: 20, altCount: 5 }] as any)
 
-	t.deepEqual(
-		entries,
-		[{ label: 'DNA', refCount: undefined, totalCount: 20, altCount: 5 }],
-		'Should keep total/alt VAF entries'
-	)
+	t.deepEqual(entries, [{ label: 'DNA', totalCount: 20, altCount: 5 }], 'Should keep total/alt VAF entries')
 	t.equal(
 		hasAnyValidVafEntry([{ id: 'DNA', totalCount: 20, altCount: 5 }] as any),
 		true,
