@@ -7,6 +7,7 @@ import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
 import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common.js'
 import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
 import type { MutationWaterfallDatum } from '#plots/disco/waterfall/MutationWaterfallDatum.ts'
+import { getMaxMutationFraction } from '#plots/disco/snv/vafTooltip.ts'
 
 export default class DataMapper {
 	// remove fields and extract filters to seperate classes
@@ -49,6 +50,7 @@ export default class DataMapper {
 	private cnvMaxPercentileAbs = 0
 
 	private mutationWaterfallData: Array<MutationWaterfallDatum> = []
+	private hasMutationFractionData = false
 	private mutationWaterfallInnerRadius = 0
 	private mutationWaterfallRangeMin = Infinity
 	private mutationWaterfallRangeMax = -Infinity
@@ -129,8 +131,12 @@ export default class DataMapper {
 		this.mutationWaterfallInnerRadius = 0
 		this.mutationWaterfallRangeMin = Infinity
 		this.mutationWaterfallRangeMax = -Infinity
+		this.hasMutationFractionData = false
 
 		data.forEach(dObject => {
+			if (dObject.dt == dtsnvindel && getMaxMutationFraction(dObject.vafs) != null) {
+				this.hasMutationFractionData = true
+			}
 			const index = this.reference.chromosomesOrder.indexOf(dObject.chr)
 			const indexA = this.reference.chromosomesOrder.indexOf(dObject.chrA)
 			const indexB = this.reference.chromosomesOrder.indexOf(dObject.chrB)
@@ -312,6 +318,8 @@ export default class DataMapper {
 			lohMaxValue: this.lohMaxValue,
 			lohMinValue: this.lohMinValue,
 
+			hasMutationFractionData: this.hasMutationFractionData,
+
 			mutationWaterfallData: this.mutationWaterfallData,
 			mutationWaterfallInnerRadius: this.mutationWaterfallInnerRadius,
 			mutationWaterfallLogRange: this.mutationWaterfallData.length
@@ -338,7 +346,7 @@ export default class DataMapper {
 	}
 
 	private filterNonExonicSnvData(data: Data) {
-		if (this.snvFilter(data)) {
+		if (this.snvFilter(data) && this.passesMutationFractionFilter(data)) {
 			if (this.settings.rings.nonExonicRingEnabled && this.nonExonicFilter(data)) {
 				this.nonExonicSnvData.push(data)
 			}
@@ -349,7 +357,7 @@ export default class DataMapper {
 		if (this.snvFilter(data)) {
 			this.snvData.push(data)
 
-			if (this.snvRingFilter(data)) {
+			if (this.passesMutationFractionFilter(data) && this.snvRingFilter(data)) {
 				if (this.snvInnerRadius == 0) {
 					this.snvInnerRadius = this.lastInnerRadious - this.settings.rings.snvRingWidth
 					this.lastInnerRadious = this.snvInnerRadius
@@ -375,6 +383,14 @@ export default class DataMapper {
 				this.snvRingDataMap.set(arcAngle, dataArray)
 			}
 		}
+	}
+
+	private passesMutationFractionFilter(data: Data): boolean {
+		const minMutationFraction = this.settings.Disco.minMutationFraction || 0
+		if (minMutationFraction <= 0) return true
+
+		const fraction = getMaxMutationFraction(data.vafs)
+		return fraction != null && fraction >= minMutationFraction
 	}
 
 	private filterFusion(data: Data) {

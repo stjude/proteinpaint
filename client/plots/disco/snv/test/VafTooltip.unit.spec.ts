@@ -1,5 +1,5 @@
 import test from 'tape'
-import { getVafEntries, hasAnyValidVafEntry } from '#plots/disco/snv/vafTooltip.ts'
+import { getMaxMutationFraction, getVafEntries, hasAnyValidVafEntry } from '#plots/disco/snv/vafTooltip.ts'
 
 test('getVafEntries extracts labeled entries from vafs array', t => {
 	const entries = getVafEntries([
@@ -39,5 +39,31 @@ test('hasAnyValidVafEntry accepts mixed vaf input with at least one valid entry'
 	] as any)
 
 	t.equal(hasAny, true, 'Should detect at least one valid vaf entry')
+	t.end()
+})
+
+test('getVafEntries and hasAnyValidVafEntry support total/alt read counts', t => {
+	const entries = getVafEntries([{ id: 'DNA', totalCount: 20, altCount: 5 }] as any)
+
+	t.deepEqual(
+		entries,
+		[{ label: 'DNA', refCount: undefined, totalCount: 20, altCount: 5 }],
+		'Should keep total/alt VAF entries'
+	)
+	t.equal(
+		hasAnyValidVafEntry([{ id: 'DNA', totalCount: 20, altCount: 5 }] as any),
+		true,
+		'Should validate total/alt entries'
+	)
+	t.end()
+})
+
+test('getMaxMutationFraction supports explicit DNA/RNA mutation fractions', t => {
+	const maxFraction = getMaxMutationFraction([
+		{ id: 'DNA', fraction: 0.12 },
+		{ id: 'RNA', mutationFraction: '0.33' }
+	] as any)
+
+	t.equal(maxFraction, 0.33, 'Should use the highest explicit mutation fraction')
 	t.end()
 })

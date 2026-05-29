@@ -30,6 +30,7 @@ export interface DataHolder {
 
 	hasPrioritizedGenes: boolean
 	hasWaterfallEligibleChromosome: boolean
+	hasMutationFractionData: boolean
 
 	cnvGainMaxValue?: number
 	cnvLossMaxValue?: number

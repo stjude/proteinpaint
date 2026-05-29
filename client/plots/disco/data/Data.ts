@@ -2,7 +2,10 @@ export type Vaf = {
 	readonly id?: string
 	readonly name?: string
 	readonly refCount?: string | number
+	readonly totalCount?: string | number
 	readonly altCount?: string | number
+	readonly fraction?: string | number
+	readonly mutationFraction?: string | number
 }
 
 export default interface Data {

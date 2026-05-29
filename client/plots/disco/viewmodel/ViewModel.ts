@@ -34,6 +34,7 @@ export default class ViewModel {
 	positivePercentile?: number
 	invalidDataInfo?: InvalidDataInfo
 	canShowMutationWaterfallPlot: boolean
+	hasMutationFractionData: boolean
 
 	constructor(
 		settings: Settings,
@@ -84,6 +85,7 @@ export default class ViewModel {
 		this.positivePercentile = dataHolder.percentilePositive
 		this.invalidDataInfo = dataHolder.invalidDataInfo
 		this.canShowMutationWaterfallPlot = dataHolder.hasWaterfallEligibleChromosome
+		this.hasMutationFractionData = dataHolder.hasMutationFractionData
 	}
 
 	getElements(ringType: RingType): Array<Arc> {

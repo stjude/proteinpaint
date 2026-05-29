@@ -93,3 +93,43 @@ test('DataMapper.map() flags SNV positions outside chromosome size', t => {
 	t.equal(res.snvData.length, 0, 'Invalid SNV should be skipped')
 	t.end()
 })
+
+test('DataMapper.map() filters rendered SNVs by minimum DNA/RNA mutation fraction', t => {
+	const fractionSettings = discoDefaults({
+		Disco: {
+			cnvCapping: 2,
+			prioritizeGeneLabelsByGeneSets: false,
+			cnvPercentile: 0.8,
+			minMutationFraction: 0.2
+		},
+		rings: {}
+	})
+	const fractionReference = new Reference(fractionSettings, chromosomesOrder, chromosomes)
+	const mapper = new DataMapper(fractionSettings, fractionReference, 'SampleA', [])
+	const res = mapper.map([
+		{
+			dt: dtsnvindel,
+			chr: 'chr1',
+			position: 100,
+			gene: 'LOW',
+			class: 'M',
+			mname: 'low',
+			vafs: [{ id: 'DNA', totalCount: 100, altCount: 10 }]
+		},
+		{
+			dt: dtsnvindel,
+			chr: 'chr1',
+			position: 200,
+			gene: 'HIGH',
+			class: 'M',
+			mname: 'high',
+			vafs: [{ id: 'RNA', totalCount: 100, altCount: 25 }]
+		}
+	])
+
+	t.equal(res.snvData.length, 2, 'All valid SNVs are retained in unfiltered data')
+	t.equal(res.filteredSnvData.length, 1, 'Only SNVs meeting the fraction threshold are rendered')
+	t.equal(res.filteredSnvData[0].gene, 'HIGH', 'SNV with mutation fraction above threshold remains')
+	t.equal(res.hasMutationFractionData, true, 'Data holder reports available mutation fraction data')
+	t.end()
+})

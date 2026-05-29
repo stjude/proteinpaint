@@ -125,6 +125,21 @@ export default class Disco {
 			configInputsOptions.push(...cnvConfigInputOptions)
 		}
 
+		if (viewModel.hasMutationFractionData) {
+			configInputsOptions.push({
+				boxLabel: '',
+				label: 'Minimum mutation fraction',
+				type: 'number',
+				chartType: 'Disco',
+				settingsKey: 'minMutationFraction',
+				title: 'Only show SNV/indel mutations with at least one DNA/RNA mutation fraction at or above this value.',
+				step: 0.01,
+				min: 0,
+				max: 1,
+				debounceInterval: 500
+			})
+		}
+
 		configInputsOptions.push({
 			boxLabel: '',
 			label: 'Show gene names',

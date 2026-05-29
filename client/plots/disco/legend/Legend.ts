@@ -9,6 +9,11 @@ export type MutationWaterfallLegend = {
 	onColorChange: (color: string) => void
 }
 
+export type FusionLegendCounts = {
+	interchromosomal: number
+	intrachromosomal: number
+}
+
 export default class Legend {
 	snvTitle: string
 	snvClassMap: Map<string, SnvLegendElement>
@@ -23,6 +28,7 @@ export default class Legend {
 
 	fusionTitle: string
 	fusionLegend: boolean
+	fusionLegendCounts: FusionLegendCounts
 	cnvRenderingType: string
 
 	discoInteractions: DiscoInteractions
@@ -42,7 +48,8 @@ export default class Legend {
 		fusionLegend: boolean,
 		discoInteractions: DiscoInteractions,
 		lohLegend?: LohLegend,
-		mutationWaterfallLegend?: MutationWaterfallLegend
+		mutationWaterfallLegend?: MutationWaterfallLegend,
+		fusionLegendCounts: FusionLegendCounts = { interchromosomal: 0, intrachromosomal: 0 }
 	) {
 		this.snvTitle = snvTitle
 		this.cnvTitle = cnvTitle
@@ -55,6 +62,7 @@ export default class Legend {
 		this.cnvRenderingType = cnvRenderingType
 		this.lohLegend = lohLegend
 		this.fusionLegend = fusionLegend
+		this.fusionLegendCounts = fusionLegendCounts
 		this.discoInteractions = discoInteractions
 		this.mutationWaterfallLegend = mutationWaterfallLegend
 	}

@@ -39,3 +39,29 @@ test('LegendJSONMapper includes mutation waterfall entry with color picker and a
 	t.equal(waterfallEntry.items[1].text, 'Axis: log10 intermutation distance', 'axis note is appended')
 	t.end()
 })
+
+test('LegendJSONMapper includes fusion event counts and omits square borders', t => {
+	const legend = new Legend(
+		'Mutations',
+		'CNV',
+		'LOH',
+		'SV',
+		90,
+		'percentile',
+		emptyMap,
+		emptyMap,
+		'heatmap',
+		true,
+		{} as any,
+		undefined,
+		undefined,
+		{ interchromosomal: 2, intrachromosomal: 1 }
+	)
+	const mapped = legendJSONMapper.map(legend)
+	const fusionEntry = mapped.find(group => group.name === 'SV')
+
+	t.equal(fusionEntry.items[0].text, 'Interchromosomal (2)', 'Interchromosomal count is shown')
+	t.equal(fusionEntry.items[1].text, 'Intrachromosomal (1)', 'Intrachromosomal count is shown')
+	t.notOk('border' in fusionEntry.items[0], 'Fusion color square does not define a gray border')
+	t.end()
+})

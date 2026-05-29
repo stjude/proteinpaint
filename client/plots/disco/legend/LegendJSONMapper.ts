@@ -53,8 +53,7 @@ export default class LegendJSONMapper {
 				key: snvKey,
 				text: `${snvLegendElement.snvType} (${snvLegendElement.count})`,
 				color: snvLegendElement.color,
-				order: snvOrder++,
-				border: '1px solid #ccc'
+				order: snvOrder++
 			})
 		}
 
@@ -80,8 +79,7 @@ export default class LegendJSONMapper {
 					key: CnvType.Gain,
 					text: `Max: ${gain.value}`,
 					color: gain.color,
-					order: cnvOrder++,
-					border: '1px solid #ccc'
+					order: cnvOrder++
 				})
 			}
 
@@ -91,8 +89,7 @@ export default class LegendJSONMapper {
 					key: CnvType.Loss,
 					text: `Min: ${loss.value}`,
 					color: loss.color,
-					order: cnvOrder++,
-					border: '1px solid #ccc'
+					order: cnvOrder++
 				})
 			}
 
@@ -101,8 +98,7 @@ export default class LegendJSONMapper {
 				key: CnvType.Cap,
 				text: `Capping: ${cap.value}`,
 				color: cap.color,
-				order: cnvOrder++,
-				border: '1px solid #ccc'
+				order: cnvOrder++
 				// ,
 				// onClickCallback: this.onClickCallback
 			})
@@ -201,8 +197,7 @@ export default class LegendJSONMapper {
 			key: 'min',
 			text: 'min',
 			color: legend.lohLegend.colorStartValue,
-			order: 0,
-			border: '1px solid #ccc'
+			order: 0
 		})
 
 		lohItems.push({
@@ -210,8 +205,7 @@ export default class LegendJSONMapper {
 			key: 'max',
 			text: 'max',
 			color: legend.lohLegend.colorEndValue,
-			order: 1,
-			border: '1px solid #ccc'
+			order: 1
 		})
 
 		legendJSON.push({
@@ -227,19 +221,17 @@ export default class LegendJSONMapper {
 		fusionItems.push({
 			termid: legend.fusionTitle,
 			key: FusionLegend.Interchromosomal,
-			text: 'Interchromosomal',
+			text: `Interchromosomal (${legend.fusionLegendCounts.interchromosomal})`,
 			color: FusionLegend.Interchromosomal.valueOf(),
-			order: 0,
-			border: '1px solid #ccc'
+			order: 0
 		})
 
 		fusionItems.push({
 			termid: legend.fusionTitle,
 			key: FusionLegend.Intrachromosomal,
-			text: 'Intrachromosomal',
+			text: `Intrachromosomal (${legend.fusionLegendCounts.intrachromosomal})`,
 			color: FusionLegend.Intrachromosomal.valueOf(),
-			order: 1,
-			border: '1px solid #ccc'
+			order: 1
 		})
 
 		legendJSON.push({
