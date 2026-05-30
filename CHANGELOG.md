@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GRIN2: Refactored client code into MVVM pattern. Removed custom cache handling logic and used cacheOrRecompute module instead
+- Covered server/src/utils/test/sampleGroups.ts and closed gaps in server/src/utils/test/cacheOrRecompute unit tests
 
 
 ## 2.190.2
