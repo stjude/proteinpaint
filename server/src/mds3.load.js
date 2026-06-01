@@ -4,6 +4,7 @@ import { validate_variant2samples } from './mds3.variant2samples.js'
 import { dtcnv, mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { plotWiggle } from './bw.js'
+import { maySetMapParent2Children } from './termdb.matrix.js'
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -255,6 +256,11 @@ async function get_ds(q, genome) {
 export async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
+
+	// assuming genomic data in mds3 tk is at sample-level, so setting
+	// mapParent2Children=true to allow parent-level term data to be mapped
+	// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
+	maySetMapParent2Children(q, ds, true)
 
 	if (q.singleSampleGenomeQuantification) {
 		if (!ds.queries.singleSampleGenomeQuantification) throw 'not supported on this dataset'
