@@ -29,7 +29,7 @@ export function init({ genomes }) {
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**') as JWTTokenPayload
 			const role: AIProjectUserRoles | undefined = jwtPayload?.clientAuthResult?.role
-			const authFound: boolean = authApi.getRequiredCredForDsEmbedder(query.dslabel, query.embedder).length > 0
+			const authFound: boolean = (authApi.getRequiredCredForDsEmbedder(query.dslabel, query.embedder)?.length ?? 0) > 0
 			const isAuthenticated = !authFound || (role && ['admin', 'annotator'].includes(role))
 			if (!isAuthenticated) throw new Error('Unauthorized: No role found in request payload.')
 			const connection = getDbConnection(ds) as Database.Database
