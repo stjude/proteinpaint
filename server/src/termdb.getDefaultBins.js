@@ -1,5 +1,6 @@
 import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#shared/terms.js'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
+import { maySetMapParent2Children } from './termdb.matrix.js'
 
 // TODO convert to route
 
@@ -10,6 +11,11 @@ export async function trigger_getDefaultBins(q, ds, res) {
 		2. bin cache is indexed by term.name
 	CAUTION if a datatype naming in ds.queries{} cannot follow this pattern then it breaks!
 	*/
+
+	// determine if parent term annotations need to be mapped to child samples (e.g. if
+	// parent term(s) present in filter)
+	maySetMapParent2Children(q, ds)
+
 	const tw = q.tw
 	const lst = []
 	let min = Infinity
@@ -46,6 +52,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				filter: q.filter,
 				filter0: q.filter0,
 				terms: [tw],
+				mapParent2Children: q.mapParent2Children,
 				__abortSignal: q.__abortSignal,
 				dataTypeDetails: tw.term.dataTypeDetails
 			}

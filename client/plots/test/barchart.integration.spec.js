@@ -43,6 +43,7 @@ series visibility - condition
 
 single barchart, categorical filter
 single barchart, categorical filter (patient-level)
+single geneExp barchart, categorical filter (patient-level)
 single barchart (patient-level), compound filter (patient-level + sample-level)
 genevariant barchart, compound filter SKIPPED
 single barchart, TP53 mutation dtTerm filter
@@ -1151,6 +1152,61 @@ tape('single barchart, categorical filter (patient-level)', function (test) {
 					chartType: 'barchart',
 					term: {
 						id: 'agedx'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let barDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
+		testBarCount()
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	function testBarCount() {
+		// no need to await, the bar order will tested after the initial postRender event
+		const minBars = 3
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} bars`)
+		test.true(numOverlays == numBars, 'number of overlays should equal number of bars')
+	}
+})
+
+tape('single geneExp barchart, categorical filter (patient-level)', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			termfilter: {
+				filter: {
+					type: 'tvslst',
+					in: 1,
+					join: '',
+					lst: [
+						{
+							type: 'tvs',
+							tvs: { term: { id: 'sex' }, values: [{ key: '2' }] }
+						}
+					]
+				}
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						term: { type: 'geneExpression', gene: 'TP53' },
+						q: { mode: 'discrete' }
 					}
 				}
 			]
