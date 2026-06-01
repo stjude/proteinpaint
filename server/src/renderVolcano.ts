@@ -1,8 +1,9 @@
-import { createCanvas } from 'canvas'
 import { scaleLinear } from 'd3-scale'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from '#types'
 import { mayLog } from './helpers.ts'
 import { formatElapsedTime } from '#shared'
+import { FLAG_SIGNIFICANT, FLAG_FC_POSITIVE } from './renderVolcanoDraw.ts'
+import { runOnPool } from './renderVolcanoPool.ts'
 
 /**
  * Rasterize a volcano scatter PNG and return the threshold-passing rows
@@ -26,29 +27,10 @@ const MAX_DOT_RADIUS = 20
 // without changing the CSS-space contract.
 const MAX_DEVICE_PIXELS_PER_SIDE = 8192
 
-// Concurrency gate around the heavy render+encode section. The async
-// `canvas.toBuffer(cb, 'image/png')` form below moves libpng work to
-// libuv's thread pool, but the JS draw loops and worst-case 256 MB
-// bitmaps still need a ceiling so a burst of requests can't pile
-// canvases on top of each other and starve the event loop. 3 is a
-// pragmatic value for a server that also handles unrelated traffic.
-const MAX_CONCURRENT_RENDERS = 3
-let activeRenders = 0
-const renderQueue: Array<() => void> = []
-async function acquireRenderSlot(): Promise<void> {
-	if (activeRenders < MAX_CONCURRENT_RENDERS) {
-		activeRenders++
-		return
-	}
-	await new Promise<void>(resolve => renderQueue.push(resolve))
-}
-function releaseRenderSlot(): void {
-	const next = renderQueue.shift()
-	// Hand the slot to the next waiter without decrement/increment; only
-	// drop activeRenders when the queue is empty.
-	if (next) next()
-	else activeRenders--
-}
+// The heavy draw+encode section runs in a worker-thread pool
+// (renderVolcanoPool.ts) so it never blocks the main server event loop. The
+// pool size is the concurrency gate — at most a few renders run at once and the
+// rest queue — which replaces the former in-process semaphore here.
 
 const DEFAULT_REQ: VolcanoRenderRequest = {
 	significanceThresholds: { pValueCutoff: 1.3, pValueType: 'adjusted', foldChangeCutoff: 0.3 },
@@ -182,63 +164,45 @@ export async function renderVolcano<T extends DataEntry>(
 	// still come through unchanged.
 	const effectiveDpr = Math.min(devicePixelRatio, MAX_DEVICE_PIXELS_PER_SIDE / Math.max(w, h))
 
-	// Gate the heavy render+encode section. Cheap input prep above runs
-	// without waiting; bitmap allocation, draw loops, and PNG encode all
-	// happen under the slot so peak memory/CPU stays bounded under burst.
-	await acquireRenderSlot()
-	let png: string
-	try {
-		const canvas = createCanvas(w * effectiveDpr, h * effectiveDpr)
-		const ctx = canvas.getContext('2d')
-		ctx.scale(effectiveDpr, effectiveDpr)
-		ctx.fillStyle = '#ffffff'
-		ctx.fillRect(0, 0, w, h)
-		// 1 CSS px stroke → effectiveDpr device px, matching the previous
-		// Rust path's stroke.width = dpr device px (≈ 1 CSS px visible).
-		ctx.lineWidth = 1
-
-		// Non-significant first so significant rings sit on top. Each batch
-		// accumulates every ring as a subpath in one path, then strokes once
-		// — collapses JS↔native overhead from O(N) calls to O(1) per batch.
-		// `moveTo(cx + r, cy)` before each `arc(cx, cy, r, 0, 2π)` breaks the
-		// implicit straight line from the previous subpath's endpoint to the
-		// next arc's start point (angle 0 = +x direction = cx + r, cy).
-		ctx.strokeStyle = colorNonsignificant
-		ctx.beginPath()
-		for (let i = 0; i < points.length; i++) {
-			if (points[i].significant) continue
-			const [px, py] = pxCss[i]
-			ctx.moveTo(px + radiusPx, py)
-			ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
-		}
-		ctx.stroke()
-		// Significant on top, batched by up/down so we only set strokeStyle twice.
-		for (const dir of ['down', 'up'] as const) {
-			ctx.strokeStyle = dir === 'up' ? colorSignificantUp : colorSignificantDown
-			ctx.beginPath()
-			for (let i = 0; i < points.length; i++) {
-				const p = points[i]
-				if (!p.significant) continue
-				if (p.fc > 0 !== (dir === 'up')) continue
-				const [px, py] = pxCss[i]
-				ctx.moveTo(px + radiusPx, py)
-				ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
-			}
-			ctx.stroke()
-		}
-
-		// Async PNG encode — runs on libuv's thread pool so the libpng
-		// pass doesn't block the event loop. Often the heaviest single
-		// step for large bitmaps.
-		png = await new Promise<string>((resolve, reject) => {
-			canvas.toBuffer((err: Error | null, buf: Buffer) => {
-				if (err) reject(err)
-				else resolve(buf.toString('base64'))
-			}, 'image/png')
-		})
-	} finally {
-		releaseRenderSlot()
+	// Pack per-point draw data into transferable typed arrays. These cross the
+	// worker boundary (zero-copy via transferList) instead of the row objects —
+	// the draw loop only needs pixel coords, significance, and fold-change sign.
+	const n = points.length
+	const xArr = new Float64Array(n)
+	const yArr = new Float64Array(n)
+	const flags = new Uint8Array(n)
+	for (let i = 0; i < n; i++) {
+		const [px, py] = pxCss[i]
+		xArr[i] = px
+		yArr[i] = py
+		let f = 0
+		if (points[i].significant) f |= FLAG_SIGNIFICANT
+		if (points[i].fc > 0) f |= FLAG_FC_POSITIVE
+		flags[i] = f
 	}
+
+	// Run the heavy draw+encode in the worker pool so it never blocks the main
+	// event loop. The pool size bounds concurrent renders (replaces the former
+	// in-process semaphore). Returns the raw PNG bytes; base64 here to preserve
+	// the `volcanoPng` string contract.
+	const pngBuf = await runOnPool(
+		{
+			w,
+			h,
+			effectiveDpr,
+			radiusPx,
+			colors: {
+				nonsignificant: colorNonsignificant,
+				significantUp: colorSignificantUp,
+				significantDown: colorSignificantDown
+			},
+			x: xArr,
+			y: yArr,
+			flags
+		},
+		[xArr.buffer, yArr.buffer, flags.buffer]
+	)
+	const png = pngBuf.toString('base64')
 
 	// Build the interactive `dots` list: threshold-passers sorted asc by the
 	// chosen p-value column, optionally capped at maxInteractiveDots.
