@@ -13,6 +13,41 @@ import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
 
 const tip = new Menu()
 
+/* Curated blitzgsea/Enrichr library versions per gene-set group, newest first.
+ * The first entry is the current default; its value is '' so "latest" is
+ * resolved server-side (gsea.py BLITZ_LIBRARIES) — old sessions auto-adopt a
+ * new default. Older versions carry the exact Enrichr library name, encoded as
+ * a 3rd '--' segment in geneSetGroup (e.g. 'KEGG--blitzgsea--KEGG_2021_Human'),
+ * which gsea.py's resolve_blitz_library() honors.
+ *
+ * When the nightly enrichr-freshness workflow flags a newer year: prepend it
+ * here (value ''), demote the prior latest to an explicit libraryName entry,
+ * and bump BLITZ_LIBRARIES (python/src/gsea.py) + GSEA_LIBRARY_VERSION
+ * (server/routes/genesetEnrichment.ts) together. */
+const blitzgseaVersions = {
+	'REACTOME--blitzgsea': [
+		{ label: 'Reactome 2024 (latest)', value: '' },
+		{ label: 'Reactome 2022', value: 'Reactome_2022' }
+	],
+	'KEGG--blitzgsea': [
+		{ label: 'KEGG 2026 (latest)', value: '' },
+		{ label: 'KEGG 2021 Human', value: 'KEGG_2021_Human' }
+	],
+	'WikiPathways--blitzgsea': [
+		{ label: 'WikiPathways 2024 Human (latest)', value: '' },
+		{ label: 'WikiPathways 2019 Human', value: 'WikiPathways_2019_Human' }
+	]
+}
+
+/** Combine a base blitzgsea group with the chosen version into the geneSetGroup
+ * sent to the server. Empty version ('' = latest) leaves the base untouched so
+ * the server resolves the current default; a pinned libraryName is appended as
+ * a 3rd '--' segment. Non-blitzgsea (MSigDB) groups pass through unchanged. */
+function buildGeneSetGroup(pathway, blitzgseaVersion) {
+	if (blitzgseaVersion && blitzgseaVersions[pathway]) return `${pathway}--${blitzgseaVersion}`
+	return pathway
+}
+
 class gsea extends PlotBase {
 	static type = 'gsea'
 
@@ -127,6 +162,19 @@ class gsea extends PlotBase {
 				title: 'Number of permutations to be used for GSEA. Higher number increases accuracy but also compute time.',
 				min: 0,
 				max: 40000 // Setting it to pretty lenient limit for testing
+			})
+		}
+		// Library-version picker, shown only when the chosen gene set group is a
+		// blitzgsea/Enrichr library that has curated versions. Lets users
+		// reproduce results against an older Enrichr release; defaults to latest.
+		if (blitzgseaVersions[this.settings.pathway]) {
+			inputs.push({
+				label: 'Gene Set Library Version',
+				type: 'dropdown',
+				chartType: 'gsea',
+				settingsKey: 'blitzgsea_version',
+				title: 'Enrichr library version. Newest is the default; older versions reproduce prior results.',
+				options: blitzgseaVersions[this.settings.pathway]
 			})
 		}
 		if (this.settings.fdr_or_top == 'fdr') {
@@ -354,6 +402,9 @@ async function renderPathwayDropdown(self) {
 
 		const idx = event.target.selectedIndex
 		settings.pathway = pathwayOpts[idx].value
+		// Version values are library-specific; reset to '' (latest) when the
+		// group changes so a stale pin doesn't carry across libraries.
+		settings.blitzgsea_version = ''
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -399,7 +450,10 @@ add:
 	self.dom.detailsDiv.selectAll('*').remove()
 	self.dom.holder.selectAll('*').remove()
 	self.dom.tableDiv.selectAll('*').remove()
-	self.config.gsea_params.geneSetGroup = self.settings.pathway
+	// Encode any pinned blitzgsea library version into the group identifier
+	// (3rd '--' segment); '' keeps the base so the server resolves the latest.
+	const geneSetGroup = buildGeneSetGroup(self.settings.pathway, self.settings.blitzgsea_version)
+	self.config.gsea_params.geneSetGroup = geneSetGroup
 	self.config.gsea_params.filter_non_coding_genes = self.settings.filter_non_coding_genes
 	self.config.gsea_params.num_permutations = self.settings.num_permutations
 
@@ -408,7 +462,7 @@ add:
 		const p = self.config.gsea_params
 		const body = {
 			genome: p.genome,
-			geneSetGroup: self.settings.pathway,
+			geneSetGroup,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
 			method: self.settings.gsea_method
 		}
@@ -916,16 +970,16 @@ export function getDefaultGseaSettings(overrides = {}) {
 		num_permutations: 1000,
 		top_genesets: 40,
 		pathway: undefined,
+		/** Pinned blitzgsea library version ('' = current/latest, resolved
+		 * server-side). Only meaningful for blitzgsea library groups; see
+		 * blitzgseaVersions. */
+		blitzgsea_version: '',
 		geneset_name: null,
 		min_gene_set_size_cutoff: 0,
 		max_gene_set_size_cutoff: 20000,
 		filter_non_coding_genes: true,
 		fdr_or_top: 'top',
 		gsea_method: 'blitzgsea'
-	}
-	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
-		// set default method to CERNO when serverconfig flag gsea_test is defined
-		defaults.gsea_method = 'cerno'
 	}
 	return Object.assign(defaults, overrides)
 }
