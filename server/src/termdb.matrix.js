@@ -48,7 +48,7 @@ Returns:
 	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts for documentation
 	- please update types in shared/types/src/termdb.matrix.ts if the return object is changed
 
-// TODO: pass mapParent2Children in q{} when calling getData()
+TODO: pass mapParent2Children in q{}, instead of as a separate arg, when calling getData()
 */
 
 export async function getData(q, ds, mapParent2Children) {
@@ -528,7 +528,7 @@ export function divideTerms(q, ds) {
 // function to set the mapParent2Children flag, which controls
 // whether to map parent-level data onto child samples
 export function maySetMapParent2Children(q, ds, mapParent2Children) {
-	if (!ds.cohort.termdb.hasSampleAncestry) {
+	if (!ds.cohort?.termdb?.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
 		q.mapParent2Children = false
 		return
