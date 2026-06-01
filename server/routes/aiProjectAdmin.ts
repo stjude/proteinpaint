@@ -2,21 +2,8 @@ import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
 import type { AIProjectAuthInfo, AIProjectUserRoles } from '#types'
 import type Database from 'better-sqlite3'
-import { authApi } from '#src/auth.js'
 
-type JWTTokenPayload = {
-	dslabel: string
-	iat: number
-	time: number
-	ip: string
-	embedder: string
-	route: string
-	exp: number
-	clientAuthResult: { role: AIProjectUserRoles }
-	email: string
-	datasets: string[]
-}
-
+const SESSION_TIMEOUT = 12 // hours
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -27,9 +14,9 @@ export function init({ genomes }) {
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
-			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**') as JWTTokenPayload
-			const role: AIProjectUserRoles | undefined = jwtPayload?.clientAuthResult?.role
-			const authFound: boolean = (authApi.getRequiredCredForDsEmbedder(query.dslabel, query.embedder)?.length ?? 0) > 0
+			const clientAuthResult = req.query.__protected__.clientAuthResult as AIProjectAuthInfo
+			const role: '' | AIProjectUserRoles | undefined = clientAuthResult?.role
+			const authFound: boolean = !(clientAuthResult === undefined || Object.keys(clientAuthResult).length === 0)
 			const isAuthenticated = !authFound || (role && ['admin', 'annotator'].includes(role))
 			if (!isAuthenticated) throw new Error('Unauthorized: No role found in request payload.')
 			const connection = getDbConnection(ds) as Database.Database
@@ -38,17 +25,11 @@ export function init({ genomes }) {
 			if (query.for === 'list') {
 				let projects = getProjects(connection) as { name: string; id: number }[]
 				if (authFound && role !== 'admin') {
-					projects = projects.filter(p => getUsers(connection, p.id).includes(jwtPayload.email))
+					projects = projects.filter(p => getUsers(connection, p.id).includes(clientAuthResult?.email || ''))
 				}
 				res.send(projects)
-			} else if (query.for === 'role') {
-				res.status(200).send({
-					status: 'ok',
-					message: { role: role || '', user: jwtPayload?.email || '', authRequired: authFound } as AIProjectAuthInfo
-				})
 			} else if (query.for === 'admin') {
-				if (authFound && role !== 'admin')
-					throw new Error('Unauthorized: Admin role required to perform this action.')
+				if (role !== 'admin' && authFound) throw new Error('Unauthorized: Admin role required to perform this action.')
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
@@ -89,9 +70,8 @@ export function init({ genomes }) {
 					data
 				})
 			} else if (query.for === 'images') {
-				const images = getImages(connection, query.project)
 				if (authFound) {
-					const userEmail = jwtPayload?.email
+					const userEmail = clientAuthResult?.email
 					if (!userEmail) throw new Error('User email not found in request.')
 					const users = getUsers(connection, query.project.id)
 					if (!users.includes(userEmail) && role !== 'admin')
@@ -102,6 +82,7 @@ export function init({ genomes }) {
 						return
 					}
 				}
+				const images = getImages(connection, query.project)
 				res.send({ images, status: 'ok' })
 			} else if (query.for === 'logout') {
 				setUser(connection, query.projectId, null)
@@ -137,10 +118,22 @@ function getUsers(connection: Database.Database, projectID: number): string[] {
 	return rows.map(r => r.email)
 }
 
+function getLoginTimeDifference(lastLogin: string): number {
+	const lastLoginDate = new Date(lastLogin)
+	const currentDate = new Date()
+	return (currentDate.getTime() - lastLoginDate.getTime()) / 1000 / 60 / 60 // difference in hours
+}
+
 function setUser(connection: Database.Database, projectId: number, requestingUser: string | null): string | undefined {
-	if (requestingUser === null) {
-		connection.prepare('UPDATE project SET current_user = NULL WHERE id = ?').run(projectId)
-		return 'Logged Out'
+	const loginTime = connection.prepare('SELECT last_login FROM project WHERE id = ?').get(projectId) as {
+		last_login: string | null
+	}
+	if (
+		requestingUser === null ||
+		(loginTime.last_login && getLoginTimeDifference(loginTime.last_login || new Date().toISOString()) > SESSION_TIMEOUT)
+	) {
+		connection.prepare('UPDATE project SET current_user = NULL, last_login = NULL WHERE id = ?').run(projectId)
+		if (requestingUser === null) return 'Logged Out'
 	}
 	const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
 		current_user: string | null
@@ -148,10 +141,11 @@ function setUser(connection: Database.Database, projectId: number, requestingUse
 	if (currentUser?.current_user === requestingUser) {
 		return 'ok'
 	} else if (currentUser?.current_user === null) {
-		connection.prepare('UPDATE project SET current_user = ? WHERE id = ?').run(requestingUser, projectId)
+		connection
+			.prepare('UPDATE project SET current_user = ?, last_login = ? WHERE id = ?')
+			.run(requestingUser, new Date().toISOString(), projectId)
 		return 'ok'
 	} else if (currentUser.current_user !== requestingUser) {
-		// TODO Need to find a way to get this error to frontend
 		return `Project is assigned to a different user. Please contact the administrator if you believe this is an error.`
 	}
 }

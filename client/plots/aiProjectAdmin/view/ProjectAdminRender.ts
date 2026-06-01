@@ -7,11 +7,13 @@ export class ProjectAdminRender {
 	dom: any
 	projects: any[]
 	interactions: AIProjectAdminInteractions
+	wsiApp: any
 
-	constructor(dom: any, projects: any[], interactions: AIProjectAdminInteractions) {
+	constructor(dom: any, projects: any[], interactions: AIProjectAdminInteractions, wsiApp: any) {
 		this.dom = dom
 		this.projects = projects //returns as [{ value: 'Project1' }, { value: 'Project2' }, ...]
 		this.interactions = interactions
+		this.wsiApp = wsiApp
 	}
 
 	/** Renders project administration UI, allowing users to
@@ -21,12 +23,12 @@ export class ProjectAdminRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-projects')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
-		this.interactions.getRole().then((res: AIProjectAuthInfo) => {
-			if (!res?.authRequired || res?.role === 'admin') {
-				this.renderCreateProject(projectDiv)
-			}
-			this.renderProjectSelection(projectDiv, res)
-		})
+		const clientAuth = this.wsiApp.vocabApi.termdbConfig.clientAuthResult as AIProjectAuthInfo
+		const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
+		if (!authFound || clientAuth?.role === 'admin') {
+			this.renderCreateProject(projectDiv)
+		}
+		this.renderProjectSelection(projectDiv)
 	}
 
 	/** Users submit a new project name before sample
@@ -49,7 +51,8 @@ export class ProjectAdminRender {
 			.on('click', async () => {
 				const projectName = input.property('value')
 				const prjtNameLen = projectName.trim().length
-				const authInfo: AIProjectAuthInfo = await this.interactions.getRole()
+				const clientAuth = this.wsiApp.vocabApi.termdbConfig.clientAuthResult as AIProjectAuthInfo
+				const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
 
 				const showError = (msg: string) => {
 					sayerror(this.dom.errorDiv, msg)
@@ -61,7 +64,7 @@ export class ProjectAdminRender {
 						this.dom.errorDiv.selectAll('*').remove()
 					}, 3000)
 				}
-				if (authInfo?.role !== 'admin') {
+				if (clientAuth?.role !== 'admin' && authFound) {
 					return showError('Only users with admin role can create projects')
 				}
 
@@ -95,7 +98,7 @@ export class ProjectAdminRender {
 	/** Users may select an existing project from a table
 	 * returned for the db to edit or delete, depending
 	 * on user roles.*/
-	renderProjectSelection(projectDiv, authInfo?: AIProjectAuthInfo) {
+	renderProjectSelection(projectDiv) {
 		if (!this.projects.length) {
 			projectDiv
 				.append('div')
@@ -137,7 +140,9 @@ export class ProjectAdminRender {
 				}
 			}
 		]
-		if (!authInfo?.authRequired || authInfo?.role === 'admin') {
+		const clientAuth = this.wsiApp.vocabApi.termdbConfig.clientAuthResult as AIProjectAuthInfo
+		const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
+		if (!authFound || clientAuth?.role === 'admin') {
 			columnButtons.push({
 				text: 'Delete',
 				class: 'sja_menuoption',

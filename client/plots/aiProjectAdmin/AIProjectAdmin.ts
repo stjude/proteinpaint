@@ -53,7 +53,7 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 			console.error('Error initializing AIProjectAdmin:', e)
 			throw e
 		}
-		this.prjtAdminUI = new ProjectAdminRender(this.dom, this.projects, interactions)
+		this.prjtAdminUI = new ProjectAdminRender(this.dom, this.projects, interactions, this.app)
 		this.prjtAdminUI.renderProjectAdmin()
 	}
 

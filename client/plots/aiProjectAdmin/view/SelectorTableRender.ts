@@ -129,7 +129,8 @@ export class SelectorTableRender {
 			const images = Array.from(this.selectedRows).map(i => `${this.images.rows[i][0].value}.svs`)
 			await this.interactions.editProject({
 				project: {
-					images
+					images,
+					type: 'edit'
 				}
 			})
 			;(this.dom.holder as any).selectAll('*').remove()

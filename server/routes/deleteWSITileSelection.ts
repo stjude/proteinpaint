@@ -1,5 +1,5 @@
 import { checkSelectionType, SelectionPrefixes, FlagStatus } from '#types'
-import type { Mds3, DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse } from '#types'
+import type { Mds3, DeleteWSITileSelectionRequest, DeleteWSITileSelectionResponse, AIProjectAuthInfo } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
 
@@ -21,7 +21,7 @@ export function init({ genomes }) {
 			if (!ds) throw new Error('invalid dataset name')
 
 			if (typeof ds.queries?.WSImages?.deleteAnnotation === 'function') {
-				const result = await ds.queries.WSImages.deleteAnnotation(query)
+				const result = await ds.queries.WSImages.deleteAnnotation(query, req)
 				if (result?.status === 'error') {
 					return res.status(500).send(result)
 				}
@@ -49,9 +49,19 @@ export async function validate_query_deleteWSIAnnotation(ds: Mds3) {
 }
 
 function validateQuery(ds: any, connection: Database.Database) {
-	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest) => {
+	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest, req: any) => {
 		const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
-
+		const clientAuth = req.query.__protected__.clientAuthResult as AIProjectAuthInfo
+		const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
+		const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(query.projectId) as {
+			current_user: string | null
+		}
+		if (currentUser.current_user !== clientAuth?.email && authFound) {
+			return {
+				status: 'error',
+				error: 'Another user is currently logged in to this project.'
+			}
+		}
 		if (
 			checkSelectionType(query.tileSelection, SelectionPrefixes.Prediction) &&
 			query.tileSelection.flag !== FlagStatus.Normal

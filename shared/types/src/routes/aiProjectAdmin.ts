@@ -2,7 +2,7 @@
 // updated allowedAIProjectForStrings in proteinpaint/server/src/routes/aiProjectAdmin.ts
 export type AIProjectAdminForValues = 'list' | 'admin' | 'filterImages' | 'images' | 'logout' | 'role'
 export type AIProjectUserRoles = 'annotator' | 'admin'
-export type AIProjectAuthInfo = { role: AIProjectUserRoles | ''; user: string; authRequired: boolean } | undefined
+export type AIProjectAuthInfo = { role: AIProjectUserRoles | ''; email: string } | undefined
 export type AIProjectAdminRequest = {
 	genome: string
 	dslabel: string

@@ -1,8 +1,7 @@
-import type { Mds3, TileSelection, SaveWSIAnnotationRequest } from '#types'
+import type { Mds3, TileSelection, SaveWSIAnnotationRequest, AIProjectAuthInfo } from '#types'
 import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
-import { authApi } from '#src/auth.js'
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -46,7 +45,7 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest, req: any) => {
 		try {
-			const jwtPayload = authApi.getPayloadFromHeaderAuth(req, '/**')
+			const clientAuth = req.query.__protected__.clientAuthResult as AIProjectAuthInfo
 			const tileSelection: TileSelection = annotation.tileSelection
 			const timestamp = new Date().toISOString()
 			const projectId = annotation.projectId
@@ -56,6 +55,17 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const classId = annotation.classId
 			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
 			const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
+			const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
+			const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
+				current_user: string | null
+			}
+			if (currentUser.current_user !== clientAuth?.email && authFound) {
+				return {
+					status: 'error',
+					error: 'Another user is currently logged in to this project.'
+				}
+			}
+
 			if (!isAnnotation && !isPrediction) {
 				return {
 					status: 'error',
@@ -76,8 +86,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				  AND image_path = ?
 				LIMIT 1
 			`
-			const getImageStmt = connection.prepare(getImageIdSql)
-			const imageRow = getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined
+			const imageRow = connection.prepare(getImageIdSql).get(projectId, wsimageFilename) as { id: number } | undefined
 
 			if (!imageRow?.id) {
 				return {
@@ -128,7 +137,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 						) VALUES (?, ?, ?, ?, ?, ?)
 					`
 						)
-						.run(projectId, jwtPayload?.email ?? '', coords, timestamp, classId, imageId)
+						.run(projectId, clientAuth?.email ?? '', coords, timestamp, classId, imageId)
 				} else {
 					connection
 						.prepare(
@@ -138,7 +147,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
 				`
 						)
-						.run(projectId, jwtPayload?.email ?? '', coords, timestamp, flag, classId, imageId)
+						.run(projectId, clientAuth?.email ?? '', coords, timestamp, flag, classId, imageId)
 				}
 			} else if (isPrediction) {
 				// Not inserting if flag is normal
