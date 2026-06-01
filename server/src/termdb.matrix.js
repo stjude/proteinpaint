@@ -47,6 +47,8 @@ Inputs:
 Returns:
 	- see ValidGetDataResponse type in shared/types/src/termdb.matrix.ts for documentation
 	- please update types in shared/types/src/termdb.matrix.ts if the return object is changed
+
+// TODO: pass mapParent2Children in q{} when calling getData()
 */
 
 export async function getData(q, ds, mapParent2Children) {
@@ -63,8 +65,7 @@ export async function getData(q, ds, mapParent2Children) {
 		q.terms = expandedTerms
 
 		// set flag for mapping from parent to children
-		q.mapParent2Children = mapParent2Children // TODO: pass this flag in q{} when calling getData()
-		maySetMapParent2Children(q, ds)
+		maySetMapParent2Children(q, ds, mapParent2Children)
 
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
@@ -526,14 +527,15 @@ export function divideTerms(q, ds) {
 
 // function to set the mapParent2Children flag, which controls
 // whether to map parent-level data onto child samples
-function maySetMapParent2Children(q, ds) {
+export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (!ds.cohort.termdb.hasSampleAncestry) {
 		// no sample ancestry, so should not map parent to children
 		q.mapParent2Children = false
 		return
 	}
-	if (typeof q.mapParent2Children === 'boolean') {
-		// flag already defined, do not override it
+	if (typeof mapParent2Children === 'boolean') {
+		// flag supplied by caller
+		q.mapParent2Children = mapParent2Children
 		return
 	}
 	// ds has sample ancestry and mapParent2Children is undefined
