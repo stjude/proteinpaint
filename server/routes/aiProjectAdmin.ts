@@ -47,7 +47,7 @@ export function init({ genomes }) {
 					message: { role: role || '', user: jwtPayload?.email || '', authRequired: authFound } as AIProjectAuthInfo
 				})
 			} else if (query.for === 'admin') {
-				if (role !== 'admin' && !isAuthenticated)
+				if (authFound && role !== 'admin')
 					throw new Error('Unauthorized: Admin role required to perform this action.')
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
