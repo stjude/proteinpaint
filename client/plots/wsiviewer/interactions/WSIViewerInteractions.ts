@@ -21,6 +21,15 @@ import type { SaveWSIAnnotationRequest, DeleteWSITileSelectionRequest, TileSelec
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import { createDimSquareFeature, createStarFeature } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { DownloadCSVButtonRenderer } from '../view/DownloadCSVButtonRenderer'
+import {
+	UndoRedoHistory,
+	SessionSkipFlagCommand,
+	AnnotationFlagCommand,
+	SaveTileCommand,
+	DeleteSessionTileCommand,
+	DeleteAnnotationCommand,
+	type ServerContext
+} from '#plots/wsiviewer/interactions/UndoRedoHistory.ts'
 
 export class WSIViewerInteractions {
 	thumbnailClickListener: (index: number) => void
@@ -43,8 +52,162 @@ export class WSIViewerInteractions {
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
 	toggleThumbnails: (start: number) => void
+	fullSave: (
+		sessionWSImage: SessionWSImage,
+		eventCode: string,
+		settings: Settings,
+		currentID: string,
+		vectorLayer: VectorLayer<any, any>,
+		tileSelections: TileSelection[],
+		aiProjectID: number
+	) => Promise<void>
+	fullDelete: (
+		wsiApp: any,
+		vectorLayer: VectorLayer<any, any>,
+		sessionWSImage: SessionWSImage,
+		currentID: string,
+		tileSelections: TileSelection[],
+		settings: Settings
+	) => Promise<void>
+	readonly undoRedoHistory = new UndoRedoHistory()
+
 	constructor(wsiApp: any, opts: any) {
+		this.fullDelete = async (
+			wsiApp: any,
+			vectorLayer: VectorLayer<any, any>,
+			sessionWSImage: SessionWSImage,
+			currentID: string,
+			tileSelections: TileSelection[]
+		) => {
+			const state = wsiApp.app.getState()
+			const tileToDelete = tileSelections.find(ts => ts.id === currentID)
+			if (tileToDelete === undefined) {
+				console.error(`fullDelete could not find id ${currentID} in tileSelections`)
+				return
+			}
+			const classID: number | undefined = sessionWSImage?.classes?.find(c => c.label === tileToDelete.class)?.id
+			const wasSessionTile = SessionWSImage.isSessionTileSelection(tileToDelete, sessionWSImage)
+			const prevSessionsTileSelections = (sessionWSImage.sessionsTileSelections ?? []).map(ts => ({ ...ts }))
+			const delSource = vectorLayer!.getSource()
+			const capturedFeatures = [
+				createFeatureID(FeaturePrefixes.PredBorder, tileToDelete.zoomCoordinates),
+				createFeatureID(FeaturePrefixes.Square, tileToDelete.zoomCoordinates),
+				createFeatureID(FeaturePrefixes.Border, tileToDelete.zoomCoordinates),
+				createFeatureID(FeaturePrefixes.Star, tileToDelete.zoomCoordinates)
+			]
+				.map(id => delSource?.getFeatureById(id))
+				.filter((f): f is Feature<Geometry> => f != null)
+
+			await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentID, classID)
+
+			const serverCtx: ServerContext = {
+				genome: state.vocab.genome,
+				dslabel: state.vocab.dslabel,
+				projectId: state.aiProjectID,
+				wsimage: sessionWSImage.filename
+			}
+			if (wasSessionTile) {
+				this.undoRedoHistory.push(
+					new DeleteSessionTileCommand(wsiApp, {
+						tileSelection: { ...tileToDelete },
+						prevSessionsTileSelections,
+						source: delSource!,
+						capturedFeatures
+					})
+				)
+			} else if (classID !== undefined) {
+				this.undoRedoHistory.push(
+					new DeleteAnnotationCommand(wsiApp, {
+						tileSelection: { ...tileToDelete },
+						classId: classID,
+						serverCtx,
+						prevSessionsTileSelections
+					})
+				)
+			}
+		}
+
+		this.fullSave = async (
+			sessionWSImage: SessionWSImage,
+			eventCode: string,
+			settings: Settings,
+			currentID: string,
+			vectorLayer: VectorLayer<any, any>,
+			tileSelections: TileSelection[],
+			aiProjectID: number
+		) => {
+			const state = wsiApp.app.getState()
+			const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === eventCode)
+			if (!matchingClass) return
+			const currentIndex = tileSelections.findIndex(ts => ts.id === currentID)
+			if (currentIndex === -1) {
+				console.error(`fullSave could not find id ${currentID} in tileSelections`)
+				return
+			}
+			const nextID = SessionWSImage.getNextTileID(
+				sessionWSImage,
+				settings.renderSkipped,
+				settings.renderOnlyFlagged,
+				currentIndex
+			)
+			// TODO: Issue where if you press shortcuts too fast, annotation table doesnt get updated with correct class
+			//My guess is that if you press this fast enough, saveAnnotation doesnt update fast enough
+			wsiApp.app.dispatch({
+				type: 'plot_edit',
+				id: wsiApp.id,
+				config: {
+					settings: {
+						isSavingAnnotation: true,
+						changeTrigger: Date.now(),
+						renderWSIViewer: false
+					}
+				}
+			})
+			// Visual add
+			this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
+
+			const selectedClassId = matchingClass.id
+			const tileSelection = tileSelections[currentIndex]
+			const prevTileSelection = { ...tileSelection }
+			const prevSessionsTileSelections = (sessionWSImage.sessionsTileSelections ?? []).map(ts => ({ ...ts }))
+			tileSelection.id = createSelectionID(SelectionPrefixes.Annotation, tileSelection.zoomCoordinates)
+			tileSelection.flag = FlagStatus.Normal
+			const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+			const oldStar = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
+			if (oldStar) {
+				source?.removeFeature(oldStar)
+			}
+
+			// Persist and finalize via helper
+			await this.saveAndFinalizeAnnotation(wsiApp, sessionWSImage, tileSelection, selectedClassId, aiProjectID, nextID)
+			this.undoRedoHistory.push(
+				new SaveTileCommand(
+					wsiApp,
+					{
+						postTileSelection: { ...tileSelection },
+						prevTileSelection: prevTileSelection,
+						prevSessionsTileSelections: prevSessionsTileSelections,
+						classId: selectedClassId,
+						serverCtx: {
+							genome: state.vocab.genome,
+							dslabel: state.vocab.dslabel,
+							projectId: state.aiProjectID,
+							wsimage: sessionWSImage.filename
+						},
+						sessionImage: sessionWSImage,
+						vectorLayer: vectorLayer,
+						eventCode: eventCode
+					},
+					this,
+					settings
+				)
+			)
+
+			return
+		}
+
 		this.thumbnailClickListener = (index: number) => {
+			this.undoRedoHistory.clear()
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
@@ -123,13 +286,25 @@ export class WSIViewerInteractions {
 			holder.attr('tabindex', 0)
 			holder.node()?.focus()
 
-			const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings) || []
+			const tileSelections =
+				SessionWSImage.getTileSelections(sessionWSImage, settings.renderSkipped, settings.renderOnlyFlagged) || []
 
 			holder.on('keydown', async (event: KeyboardEvent) => {
 				let currentIndex = settings.activeAnnotation
 
 				event.preventDefault()
 				event.stopPropagation()
+
+				if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+					if (settings.isSavingAnnotation) return
+					if (event.shiftKey) {
+						await this.undoRedoHistory.redo()
+					} else {
+						await this.undoRedoHistory.undo()
+					}
+					return
+				}
+
 				const idx = currentIndex
 				if (event.key == '.') {
 					//Do not react if at the last annotation
@@ -139,6 +314,7 @@ export class WSIViewerInteractions {
 						currentIndex += 1
 					}
 				}
+
 				if (event.key == ',') {
 					//Do not react if at the starting annotation
 					if (currentIndex === 0) {
@@ -179,12 +355,9 @@ export class WSIViewerInteractions {
 					.find(l => l instanceof VectorLayer)!
 
 				if (event.key == 'Backspace') {
-					//Delete
-					const classID: number | undefined = sessionWSImage?.classes?.find(
-						c => c.label === tileSelections[currentIndex].class
-					)?.id
-					await this.deleteAnnotation(wsiApp, vectorLayer!, sessionWSImage, currentIndex, classID)
+					console.log('Delete key pressed')
 				}
+
 				if (event.key.toLowerCase() === 'r') {
 					this.toggleLoadingDiv(true)
 					await this.onRetrainModelClicked(
@@ -193,10 +366,12 @@ export class WSIViewerInteractions {
 						state.aiProjectID
 					)
 				}
+
 				if (event.key.toLowerCase() === 'x') {
 					if (!sessionWSImage) return
 					downloadCSVRenderer.downloadAllAsCsv(sessionWSImage)
 				}
+
 				if (['f', 's'].includes(event.key.toLowerCase()) && !settings.isSavingAnnotation) {
 					wsiApp.app.dispatch({
 						type: 'plot_edit',
@@ -217,7 +392,12 @@ export class WSIViewerInteractions {
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
 						let newFlag: FlagStatusValues | null = null
-						const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
+						const nextID = SessionWSImage.getNextTileID(
+							sessionWSImage,
+							settings.renderSkipped,
+							settings.renderOnlyFlagged,
+							currentIndex
+						)
 						if (event.key.toLowerCase() === 'f') {
 							newFlag = tileSelection.flag === FlagStatus.Flagged ? FlagStatus.Normal : FlagStatus.Flagged
 						} else if (!justTileSelection && event.key.toLowerCase() === 's') {
@@ -226,23 +406,20 @@ export class WSIViewerInteractions {
 						if (newFlag === null) throw new Error("Couldn't identify new flag to save.")
 
 						const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+						const tileSelectionBefore = { ...tileSelection }
+						const prevSessionsTileSelections = (sessionWSImage.sessionsTileSelections ?? []).map(ts => ({ ...ts }))
+						const flagFeatureIds = [
+							createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates),
+							createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates),
+							createFeatureID(FeaturePrefixes.Border, tileSelection.zoomCoordinates),
+							createFeatureID(FeaturePrefixes.PredBorder, tileSelection.zoomCoordinates)
+						]
+						const preActionFeatures = flagFeatureIds
+							.map(id => source?.getFeatureById(id))
+							.filter((f): f is Feature<Geometry> => f != null)
 						tileSelection.flag = newFlag
-						const oldStar = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
-						if (oldStar) {
-							source?.removeFeature(oldStar)
-						}
-						const oldSquare = source?.getFeatureById(
-							createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates)
-						)
-						if (oldSquare) {
-							source?.removeFeature(oldSquare)
-						}
-						const annotationBorderFeat = source?.getFeatureById(
-							createFeatureID(FeaturePrefixes.Border, tileSelection.zoomCoordinates)
-						)
-						if (annotationBorderFeat) {
-							source?.removeFeature(annotationBorderFeat)
-						}
+
+						this.removeFeaturesByIds(source!, flagFeatureIds)
 
 						if (newFlag === FlagStatus.Flagged) {
 							const newStar = createStarFeature(
@@ -265,6 +442,9 @@ export class WSIViewerInteractions {
 						} else if (isAnnotation) {
 							this.addAnnotation(vectorLayer!, tileSelections, currentIndex, classColor, settings)
 						}
+						const postActionFeatures = flagFeatureIds
+							.map(id => source?.getFeatureById(id))
+							.filter((f): f is Feature<Geometry> => f != null)
 						if (justTileSelection) {
 							SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)
 							tileSelection.timestamp = new Date().toISOString()
@@ -285,6 +465,15 @@ export class WSIViewerInteractions {
 									}
 								}
 							})
+							this.undoRedoHistory.push(
+								new SessionSkipFlagCommand(wsiApp, {
+									source: source!,
+									preActionFeatures,
+									postActionFeatures,
+									prevSessionsTileSelections,
+									newSessionsTileSelections: sessionsTileSelection.map(ts => ({ ...ts }))
+								})
+							)
 							return
 						} else if (matchingClass) {
 							await this.saveAndFinalizeAnnotation(
@@ -294,6 +483,20 @@ export class WSIViewerInteractions {
 								matchingClass.id,
 								aiProjectID,
 								nextID
+							)
+							this.undoRedoHistory.push(
+								new AnnotationFlagCommand(wsiApp, {
+									tileSelectionBefore,
+									tileSelectionAfter: { ...tileSelection },
+									classId: matchingClass.id,
+									serverCtx: {
+										genome: state.vocab.genome,
+										dslabel: state.vocab.dslabel,
+										projectId: state.aiProjectID,
+										wsimage: sessionWSImage.filename
+									},
+									sessionsTileSelections: [...settings.sessionsTileSelection]
+								})
 							)
 						}
 					} catch (error: any) {
@@ -317,86 +520,38 @@ export class WSIViewerInteractions {
 				// New Enter key branch: check for prediction uncertainty and save annotation
 				if (event.key === 'Enter') {
 					// Only proceed if this selection has a prediction uncertainty
-					if (!checkSelectionType(tileSelections[currentIndex], SelectionPrefixes.Prediction)) {
+					const tileSelection = tileSelections[currentIndex]
+					if (!checkSelectionType(tileSelection, SelectionPrefixes.Prediction)) {
 						return
 					}
 					const predictions = sessionWSImage?.predictions
 					if (!predictions || !predictions[currentIndex]) return
-					const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
-
-					// Find class by prediction label
-					const matchingClass = sessionWSImage?.classes?.find(c => c.label === predictions[currentIndex].class)
-
-					if (!matchingClass) {
-						// Nothing to annotate against
-						return
-					}
-
-					// Draw annotation visually
-					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
-
-					const selectedClassId = matchingClass.id
-					const tileSelection = tileSelections[currentIndex]
-					tileSelection.id = createSelectionID(SelectionPrefixes.Annotation, tileSelection.zoomCoordinates)
-					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(
-						wsiApp,
+					this.fullSave(
 						sessionWSImage,
-						tileSelections[currentIndex],
-						selectedClassId,
-						aiProjectID,
-						nextID
+						event.code,
+						settings,
+						tileSelection.id,
+						vectorLayer!,
+						tileSelections,
+						aiProjectID
 					)
-
-					return
 				}
 
 				if (shortcuts.includes(event.code) && !settings.isSavingAnnotation) {
 					// Resolve class either by key_shortcut
-					const matchingClass = sessionWSImage?.classes?.find(c => c.key_shortcut === event.code)
-
-					if (!matchingClass) return
-					const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
-					// TODO: Issue where if you press shortcuts too fast, annotation table doesnt get updated with correct class
-					//My guess is that if you press this fast enough, saveAnnotation doesnt update fast enough
-					wsiApp.app.dispatch({
-						type: 'plot_edit',
-						id: wsiApp.id,
-						config: {
-							settings: {
-								isSavingAnnotation: true,
-								changeTrigger: Date.now(),
-								renderWSIViewer: false
-							}
-						}
-					})
-					// Visual add
-					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
-
-					const selectedClassId = matchingClass.id
 					const tileSelection = tileSelections[currentIndex]
-					tileSelection.id = createSelectionID(SelectionPrefixes.Annotation, tileSelection.zoomCoordinates)
-					tileSelection.flag = FlagStatus.Normal
-					const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-					const oldStar = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
-					if (oldStar) {
-						source?.removeFeature(oldStar)
-					}
-					// Persist and finalize via helper
-					await this.saveAndFinalizeAnnotation(
-						wsiApp,
+					this.fullSave(
 						sessionWSImage,
-						tileSelection,
-						selectedClassId,
-						aiProjectID,
-						nextID
+						event.code,
+						settings,
+						tileSelection.id,
+						vectorLayer!,
+						tileSelections,
+						aiProjectID
 					)
-
-					return
 				}
 			})
 		}
-
 		this.viewerClickListener = (
 			coordinateX: number,
 			coordinateY: number,
@@ -484,38 +639,14 @@ export class WSIViewerInteractions {
 				timestamp: new Date().toISOString()
 			}
 
-			const vectorLayer = map
-				.getLayers()
-				.getArray()
-				.find(l => l instanceof VectorLayer)!
-
-			const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-
-			const topLeft: [number, number] = [coordinateX, -coordinateY]
-			const borderFeature = this.createBorderFeature(
-				topLeft,
-				settings.tileSize,
-				30,
+			this.addTileSelection(
+				wsiApp,
+				newTileSelection,
+				map,
 				settings.selectedPatchBorderColor,
-				createFeatureID(FeaturePrefixes.PredBorder, newTileSelection.zoomCoordinates)
+				[newTileSelection, ...sessionsTileSelection],
+				settings.tileSize
 			)
-			//Add border feature
-
-			source?.addFeature(borderFeature)
-
-			wsiApp.app.dispatch({
-				type: 'plot_edit',
-				id: wsiApp.id,
-				config: {
-					settings: {
-						renderWSIViewer: false,
-						renderAnnotationTable: true,
-						activeAnnotation: 0,
-						changeTrigger: Date.now(),
-						sessionsTileSelection: [newTileSelection, ...sessionsTileSelection]
-					}
-				}
-			})
 		}
 
 		this.onRetrainModelClicked = async (genome: string, dslabel: string, projectId: string) => {
@@ -578,6 +709,55 @@ export class WSIViewerInteractions {
 			})
 		}
 	}
+	public addTileSelection(
+		wsiApp: any,
+		tileSelection: TileSelection,
+		map: OLMap,
+		borderColor: string,
+		newSessionsTileSelections: TileSelection[],
+		tileSize: number = 512
+	) {
+		const vectorLayer = map
+			.getLayers()
+			.getArray()
+			.find(l => l instanceof VectorLayer)!
+
+		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
+
+		const topLeft: [number, number] = [tileSelection.zoomCoordinates[0], -tileSelection.zoomCoordinates[1]]
+		const borderFeature = this.createBorderFeature(
+			topLeft,
+			tileSize,
+			30,
+			borderColor,
+			createFeatureID(FeaturePrefixes.PredBorder, tileSelection.zoomCoordinates)
+		)
+		//Add border feature
+
+		source?.addFeature(borderFeature)
+
+		wsiApp.app.dispatch({
+			type: 'plot_edit',
+			id: wsiApp.id,
+			config: {
+				settings: {
+					renderWSIViewer: false,
+					renderAnnotationTable: true,
+					activeAnnotation: 0,
+					changeTrigger: Date.now(),
+					sessionsTileSelection: [...newSessionsTileSelections]
+				}
+			}
+		})
+	}
+	private removeFeaturesByIds(source: VectorSource<Feature<Geometry>>, featureIds: string[]) {
+		for (const id of featureIds) {
+			const feature = source.getFeatureById(id)
+			if (feature) {
+				source.removeFeature(feature)
+			}
+		}
+	}
 
 	private addAnnotation(
 		vectorLayer: VectorLayer,
@@ -634,13 +814,18 @@ export class WSIViewerInteractions {
 		wsiApp: any,
 		vectorLayer: VectorLayer<any, any>,
 		sessionWSImage: SessionWSImage,
-		currentIndex: number,
+		currentId: string,
 		classID: number | undefined
 	) {
 		const state = wsiApp.app.getState()
 		const settings: Settings = state.plots.find(p => p.id === wsiApp.id).settings
-		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(sessionWSImage, settings)
-		const tileSelection = tileSelections[currentIndex]
+		const tileSelections: TileSelection[] = SessionWSImage.getTileSelections(
+			sessionWSImage,
+			settings.renderSkipped,
+			settings.renderOnlyFlagged
+		)
+		const tileSelection = tileSelections.find(ts => ts.id === currentId)
+		const currentIndex = tileSelections.findIndex(ts => ts.id === currentId)
 		if (!tileSelection) {
 			console.warn('deleteAnnotation called with no tileSelection for currentIndex', {
 				currentIndex,
@@ -648,41 +833,21 @@ export class WSIViewerInteractions {
 			})
 			return
 		}
-		const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
+		const nextID = SessionWSImage.getNextTileID(
+			sessionWSImage,
+			settings.renderSkipped,
+			settings.renderOnlyFlagged,
+			currentIndex
+		)
 		const source: VectorSource<Feature<Geometry>> | null = vectorLayer.getSource()
-
-		//Remove annotated square
-		const annotationFeature = source?.getFeatureById(
-			createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates)
-		)
-		if (annotationFeature) {
-			source?.removeFeature(annotationFeature)
-		}
-		// Remove active border
-		const activeBorderFeature = source?.getFeatureById('active-border')
-		if (activeBorderFeature) {
-			source?.removeFeature(activeBorderFeature)
-		}
-		// Remove prediction border
-		const predictionBorderFeature = source?.getFeatureById(
-			createFeatureID(FeaturePrefixes.PredBorder, tileSelection.zoomCoordinates)
-		)
-		if (predictionBorderFeature) {
-			source?.removeFeature(predictionBorderFeature)
-		}
-
-		// Remove annotation border
-		const annotationBorderFeat = source?.getFeatureById(
-			createFeatureID(FeaturePrefixes.Border, tileSelection.zoomCoordinates)
-		)
-		if (annotationBorderFeat) {
-			source?.removeFeature(annotationBorderFeat)
-		}
-
-		const starFeat = source?.getFeatureById(createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates))
-		if (starFeat) {
-			source?.removeFeature(starFeat)
-		}
+		const featuresToRemove: string[] = [
+			createFeatureID(FeaturePrefixes.PredBorder, tileSelection.zoomCoordinates),
+			createFeatureID(FeaturePrefixes.Square, tileSelection.zoomCoordinates),
+			createFeatureID(FeaturePrefixes.Border, tileSelection.zoomCoordinates),
+			createFeatureID(FeaturePrefixes.Star, tileSelection.zoomCoordinates),
+			'active-border'
+		]
+		this.removeFeaturesByIds(source!, featuresToRemove)
 
 		if (SessionWSImage.isSessionTileSelection(tileSelection, sessionWSImage)) {
 			const sessionsTileSelection = SessionWSImage.removeTileSelection(tileSelection, sessionWSImage)

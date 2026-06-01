@@ -52,13 +52,18 @@ export class ViewModel {
 
 	public getInitialZoomInCoordinate(settings: Settings) {
 		const image = this.sampleWSImages[settings.displayedImageIndex]
-		return SessionWSImage.getTileSelections(image, settings)
+		return SessionWSImage.getTileSelections(image, settings.renderSkipped, settings.renderOnlyFlagged)
 			.map(a => a.zoomCoordinates)
 			.slice(settings.activeAnnotation, settings.activeAnnotation + 1)
 	}
 
 	private setAnnonationsTableData(imageViewData: ImageViewData, imageData: SessionWSImage, settings: Settings) {
-		const mergedRows: any[] = SessionWSImage.getTilesTableRows(imageData, this.selectedTileIndex, settings)
+		const mergedRows: any[] = SessionWSImage.getTilesTableRows(
+			imageData,
+			this.selectedTileIndex,
+			settings.renderSkipped,
+			settings.renderOnlyFlagged
+		)
 
 		const columns = [
 			{ label: 'Index', sortable: true, align: 'center' },
