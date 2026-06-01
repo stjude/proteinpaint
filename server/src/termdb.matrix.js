@@ -654,7 +654,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 }
 
 function getSampleTypes(q, ds) {
-	const twLst = q.terms
+	const twLst = q.terms ? q.terms : q.tw ? [q.tw] : []
 	const filter = q.filter
 	const twTypes = getTwSampleTypes(twLst, ds)
 	const filterTypes = getFilterSampleTypes(filter, ds)
