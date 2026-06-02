@@ -678,7 +678,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 
 	genomeBrowser: ({ ds }) => {
 		// will need to add more logic
-		if (ds.queries?.snvindel || ds.queries?.trackLst) return true
+		if (ds.queries?.snvindel || ds.queries.svfusion || ds.queries.cnv || ds.queries?.trackLst) return true
 		return false
 	},
 	singleCellPlot: ({ ds }) => ds.queries?.singleCell,
