@@ -6,7 +6,7 @@ import { classifyQuery } from './chat/classify1.ts'
 import { classifyPlotType } from './chat/plot.ts'
 import { classifyNotPlot } from './chat/classify2.ts'
 import { inferScaffold } from './chat/scaffold.ts'
-import serverconfig from '../serverconfig.js'
+import serverconfig from '#src/serverconfig.js'
 import { getDsAllowedTermTypes } from '../../routes/termdb.config.ts'
 import { phrase2entity } from './chat/phrase2entity.ts'
 import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
@@ -16,6 +16,20 @@ import path from 'path'
 import fs from 'fs'
 import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './chat/scaffoldTypes.ts'
 import { resolveToPlotState } from './chat/scaffold2state.ts'
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'ChatRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'ChatResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/chat',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
 
 /*
 async function doOmnisearch(prompt: string, q, genome: any, ds: any) {
