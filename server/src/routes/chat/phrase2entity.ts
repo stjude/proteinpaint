@@ -3,7 +3,7 @@ import { generateFilterTerm, extractGenesetsFromPromptNew, extractGenesFromPromp
 import { classifyGeneDataTypePhrase } from './genedatatypenew.ts'
 import { classifyGeneSetDataType, GENE_SET_KEYWORDS } from './genesetdatatype.ts'
 import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
-import { getDsAllowedTermTypes } from '../termdb.config.ts'
+import { getDsAllowedTermTypes } from '../../../routes/termdb.config.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
 	Scaffold,
