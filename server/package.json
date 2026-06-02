@@ -102,7 +102,6 @@
     "routes/*.js",
     "start.js",
     "src/app.js",
-    "src/renderVolcanoWorker.js",
     "src/serverconfig.js",
     "src/mds3.gdc.filter.js",
     "src/checkReadingFrame.js",
