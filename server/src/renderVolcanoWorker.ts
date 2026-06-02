@@ -27,8 +27,8 @@ port.on('message', async (msg: JobMessage) => {
 	try {
 		const buf = await drawVolcanoPng(input)
 		// View over the exact PNG bytes; transfer its backing ArrayBuffer so the
-		// bytes move to the main thread without a copy. node-canvas returns a
-		// dedicated (non-pooled) buffer, so transferring its buffer is safe.
+		// bytes move to the main thread without a copy.
+		const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 		const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 		port.postMessage({ id, ok: true, png: bytes }, [bytes.buffer])
 	} catch (e: any) {
