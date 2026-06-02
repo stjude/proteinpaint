@@ -463,27 +463,24 @@ export function divideTerms(q, ds) {
 	the requester cannot see are dropped before downstream queries are issued. Datasets without
 	the hook are unaffected — every dict term flows through.
 
-	A termCollection has no scalar `id` — it's identified by `name` + `termIds[]`. Calling
-	isTermVisible(undefined) returns false for any role consulting an allowlist, which would
-	silently drop the collection before SQL. Decide visibility from the members instead: the
-	collection is visible iff every member id is visible to the requesting role.
+	A termCollection has no scalar `id` — it's identified by `name` + its member terms. Passing
+	the collection term to isTermVisible would yield false for any role consulting an allowlist
+	(no id to match), which would silently drop the collection before SQL. Decide visibility
+	from the members instead: the collection is visible iff every member term is visible to the
+	requesting role. term.termlst — the list of member term objects — is always populated
+	server-side (mds3.init builds it from termIds) for both dict and non-dict collections, so it
+	is the source of truth here; the legacy termIds[] is not consulted.
 	*/
 	const dict = [],
 		geneVariantTws = [],
 		nonDict = []
 	const isTermCollectionVisible = tw => {
-		// Fail-closed against malformed input: a request that arrives with termIds or
-		// termlst as a non-array (string, object, etc.) is treated as having no resolvable
-		// members. Guarding here keeps a malformed payload from crashing the whole request
-		// with a TypeError when .every()/.map() is called on a non-array.
-		const raw = Array.isArray(tw.term?.termIds)
-			? tw.term.termIds
-			: Array.isArray(tw.term?.termlst)
-			? tw.term.termlst.map(t => t?.id)
-			: []
-		const memberIds = [...new Set(raw.filter(id => typeof id === 'string' && id))]
-		if (!memberIds.length) return false
-		return memberIds.every(id => ds.cohort.termdb.isTermVisible(q.__protected__, id))
+		// Fail-closed against malformed input: a payload whose termlst is not an array is
+		// treated as having no resolvable members. Guarding here keeps it from crashing the
+		// whole request with a TypeError when .every() is called on a non-array.
+		const members = Array.isArray(tw.term?.termlst) ? tw.term.termlst : []
+		if (!members.length) return false
+		return members.every(term => ds.cohort.termdb.isTermVisible(q.__protected__, term))
 	}
 	for (const tw of q.terms) {
 		const type = tw.term?.type
@@ -502,7 +499,7 @@ export function divideTerms(q, ds) {
 				}
 			} else {
 				if (ds.cohort.termdb.isTermVisible) {
-					if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term.id)) {
+					if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term)) {
 						dict.push(tw)
 					}
 				} else {
@@ -512,7 +509,7 @@ export function divideTerms(q, ds) {
 		} else if (tw.term?.id) {
 			// term.type missing and has term.id, assume it is shorthand for coding up dict term on client
 			if (ds.cohort.termdb.isTermVisible) {
-				if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term.id)) {
+				if (ds.cohort.termdb.isTermVisible(q.__protected__, tw.term)) {
 					dict.push(tw)
 				}
 			} else {

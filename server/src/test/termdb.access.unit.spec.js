@@ -28,10 +28,10 @@ tape('filterTerms()', async function (test) {
 	}
 
 	// mock a controller on ds
-	ds.cohort.termdb.isTermVisible = (authResult, id) => {
+	ds.cohort.termdb.isTermVisible = (authResult, term) => {
 		// FIXME authResult is undefined
 		//console.log(2,authResult)
-		return id == 'termRole1'
+		return term.id == 'termRole1'
 	}
 
 	{
