@@ -1,2 +1,2 @@
 Features:
-- Moved volcano rendering from Rust to Node.js canvas
+- Moved volcano rendering from Rust to Node.js skia-canvas
