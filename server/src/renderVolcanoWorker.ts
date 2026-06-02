@@ -29,8 +29,7 @@ port.on('message', async (msg: JobMessage) => {
 		// View over the exact PNG bytes; transfer its backing ArrayBuffer so the
 		// bytes move to the main thread without a copy.
 		const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
-		const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
-		port.postMessage({ id, ok: true, png: bytes }, [bytes.buffer])
+		port.postMessage({ id, ok: true, png: bytes }, [bytes.buffer as ArrayBuffer])
 	} catch (e: any) {
 		port.postMessage({
 			id,
