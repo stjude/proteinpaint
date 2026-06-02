@@ -8,7 +8,7 @@ import type { VolcanoDrawInput } from './renderVolcanoDraw.ts'
  * renders run at once; overflow waits in a FIFO queue.
  *
  * Workers are spawned lazily (so a server that never renders pays no
- * node-canvas init cost) and kept alive for reuse. A crashed worker is dropped
+ * skia-canvas init cost) and kept alive for reuse. A crashed worker is dropped
  * and recreated on the next demand, so a single poison render can't
  * permanently kill a slot.
  */
