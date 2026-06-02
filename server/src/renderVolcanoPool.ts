@@ -157,7 +157,7 @@ export function runOnPool(input: VolcanoDrawInput, transferList: ArrayBuffer[]):
 
 /**
  * Spawn (up to `count`, capped at POOL_SIZE) workers ahead of demand so the
- * first render doesn't pay the ~one-time worker-spawn + node-canvas init cost.
+ * first render doesn't pay the ~one-time worker-spawn + skia-canvas init cost.
  * Safe to call repeatedly; workers stay unref'd while idle so this never keeps
  * the process alive. Failures are swallowed — a warm-up crash just falls back
  * to lazy spawn on the next real render.
