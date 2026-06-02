@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification, RouteApi, RoutePayload } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './chat/utils.ts'
