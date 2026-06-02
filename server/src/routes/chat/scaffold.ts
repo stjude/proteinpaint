@@ -494,7 +494,7 @@ async function hierarchicalGeneExpression(
 A hierarchical clustering plot clusters samples and features (such as genes) and displays the result as a heatmap with dendrograms.
 
 ## OUTPUT SCHEMA
-Return ONLY a valid JSON object with this structure:
+Return ONLY a valid JSON object with this structure, with NO extra fields, no surrounding text, no explanation, and no code fences:
 {
 "hierarchicalPhrase": "<phrase>",   // REQUIRED - the phrase indicating details for hierarchical clustering which may include gene names, geneset names or calculating the top variably expressed genes, etc. Extract the entire phrase that indicates hierarchical clustering intent, preserving the exact wording.
 "filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase that narrows the sample set used for clustering
