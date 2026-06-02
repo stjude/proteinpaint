@@ -16,7 +16,8 @@ export async function route_to_appropriate_llm_provider(
 		response = await call_ollama_llm(prompt, model, llm.api)
 	} else if ((llm.provider as string) === 'azure') {
 		// Azure server
-		response = await call_azure_llm(prompt, model, llm.api, (llm as any).apiVersion, (llm as any).apiToken)
+		if (!llm.apiToken) throw 'Azure provider requires apiToken'
+		response = await call_azure_llm(prompt, model, llm.api, llm.apiToken)
 	} else {
 		throw 'Unknown LLM provider'
 	}
@@ -169,41 +170,27 @@ export async function callHuggingFaceEmbedding(
 	})
 }
 
-async function call_azure_llm(
-	prompt: string,
-	model_name: string,
-	apilink: string,
-	apiVersion?: string,
-	apiToken?: string
-) {
-	const temperature = 1
-	const top_p = 1
+async function call_azure_llm(prompt: string, modelName: string, apilink: string, apiToken: string) {
 	const timeout = 200000
-	const max_completion_tokens = 2048
-	if (!apiVersion) throw 'Azure API requires apiVersion'
-	const version = apiVersion
-	// Azure APIM URL pattern: {apilink}/{deployment}/models/chat/completions?api-version={version}
-	// The deployment name is the model name.
-	const base = apilink.replace(/\/+$/, '')
-	const url = `${base}/${model_name}/models/chat/completions?api-version=${encodeURIComponent(version)}`
+	const max_completion_tokens = 5000
+	const temperature = 0.01
 	const payload = {
-		messages: [{ role: 'user', content: prompt }],
-		max_completion_tokens,
-		temperature,
-		top_p,
-		frequency_penalty: 0,
-		presence_penalty: 0,
-		model: model_name
+		model: modelName,
+		temperature: temperature,
+		messages: [
+			{ role: 'system', content: 'You are a helpful assistant' },
+			{ role: 'user', content: prompt }
+		],
+		max_completion_tokens
 	}
-
-	const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-	if (apiToken) headers['api-key'] = apiToken
-
 	try {
-		const response = await ezFetch(url, {
+		const response = await ezFetch(apilink, {
 			method: 'POST',
 			body: payload,
-			headers,
+			headers: {
+				'Content-Type': 'application/json',
+				'api-key': apiToken
+			},
 			timeout: { request: timeout }
 		})
 		const content = response?.choices?.[0]?.message?.content
