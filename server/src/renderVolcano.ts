@@ -35,13 +35,31 @@ const MAX_DEVICE_PIXELS_PER_SIDE = 8192
 // matches our max pending requests in cacheOrRecompute.ts; raise it
 // to trade memory for throughput under heavier concurrent volcano load.
 const MAX_CONCURRENT_RENDERS = 5
+// Hard cap on renders waiting for a slot. Past this we reject immediately with
+// a 429 rather than letting the wait-queue grow without bound — an unbounded
+// queue is a memory/DoS risk and holds HTTP requests open indefinitely under
+// sustained overload. Mirrors cacheOrRecompute's CACHE_BUSY rejection once its
+// pool is full. Sized to absorb the anticipated concurrent burst (~20) with
+// headroom while still shedding a runaway flood.
+const MAX_QUEUED_RENDERS = 50
 let activeRenders = 0
 const renderQueue: Array<() => void> = []
+
+// 429 so it reads as "retry later", not a client error in the request shape.
+function makeRenderBusyError(): Error {
+	const err: any = new Error('Volcano render pool is full. Please try again shortly.')
+	err.status = 429
+	err.statusCode = 429
+	err.code = 'RENDER_BUSY'
+	return err
+}
+
 async function acquireRenderSlot(): Promise<void> {
 	if (activeRenders < MAX_CONCURRENT_RENDERS) {
 		activeRenders++
 		return
 	}
+	if (renderQueue.length >= MAX_QUEUED_RENDERS) throw makeRenderBusyError()
 	await new Promise<void>(resolve => renderQueue.push(resolve))
 }
 function releaseRenderSlot(): void {
@@ -71,6 +89,15 @@ function clampedFloat(value: number, min: number, max: number, name: string): nu
 	return value
 }
 
+// For thresholds with no meaningful upper bound (a huge cutoff just classifies
+// everything as non-significant, which is valid). `Number.isFinite` rejects
+// non-numbers (string/undefined/NaN) without coercion, so malformed requests
+// throw rather than silently making every row non-significant.
+function finiteAtLeast(value: number, min: number, name: string): number {
+	if (!Number.isFinite(value) || value < min) throw new Error(`${name} must be a finite number >= ${min}`)
+	return value
+}
+
 export async function renderVolcano<T extends DataEntry>(
 	rows: T[],
 	req: VolcanoRenderRequest = DEFAULT_REQ
@@ -91,10 +118,20 @@ export async function renderVolcano<T extends DataEntry>(
 	// blow up bitmap memory quadratically.
 	const devicePixelRatio = clampedFloat(req.devicePixelRatio ?? 1.0, 1.0, 6.0, 'devicePixelRatio')
 
+	// Validate pValueType explicitly — don't let an unexpected value silently
+	// fall through to 'original_p_value' (a regression vs the Rust renderer,
+	// which rejected invalid values).
+	const pValueType = req.significanceThresholds.pValueType
+	if (pValueType !== 'adjusted' && pValueType !== 'original')
+		throw new Error(`pValueType must be 'adjusted' or 'original' (got ${JSON.stringify(pValueType)})`)
 	const pField: 'adjusted_p_value' | 'original_p_value' =
-		req.significanceThresholds.pValueType === 'adjusted' ? 'adjusted_p_value' : 'original_p_value'
-	const pValueCutoff = req.significanceThresholds.pValueCutoff
-	const foldChangeCutoff = req.significanceThresholds.foldChangeCutoff
+		pValueType === 'adjusted' ? 'adjusted_p_value' : 'original_p_value'
+	// Validate the numeric thresholds so a non-numeric value can't quietly
+	// classify every row as non-significant. Both are >= 0 (pValueCutoff is on
+	// the -log10 scale, foldChangeCutoff is a magnitude); neither has a
+	// meaningful upper bound.
+	const pValueCutoff = finiteAtLeast(req.significanceThresholds.pValueCutoff, 0, 'pValueCutoff')
+	const foldChangeCutoff = finiteAtLeast(req.significanceThresholds.foldChangeCutoff, 0, 'foldChangeCutoff')
 
 	const colorSignificant = req.colorSignificant ?? '#d62728'
 	const colorSignificantUp = req.colorSignificantUp ?? colorSignificant
