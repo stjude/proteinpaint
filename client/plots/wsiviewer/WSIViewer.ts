@@ -20,7 +20,6 @@ import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import { sayerror } from '#dom'
 import { DownloadCSVButtonRenderer } from '#plots/wsiviewer/view/DownloadCSVButtonRenderer.ts'
-import { SessionWSImage } from './viewModel/SessionWSImage'
 
 class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
@@ -110,27 +109,27 @@ class WSIViewer extends PlotBase implements RxComponent {
 			aiProjectID,
 			aiWSIMageFiles
 		)
-		if (settings.activeID) {
-			this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: {
-					settings: {
-						renderWSIViewer: false,
-						changeTrigger: Date.now(),
-						activeID: '',
-						activeAnnotation:
-							SessionWSImage.findTileIndexByID(
-								settings.activeID,
-								viewModel.sampleWSImages[settings.displayedImageIndex],
-								settings
-							) || 0,
-						renderAnnotationTable: true
-					}
-				}
-			})
-			return
-		}
+		// if (settings.activeID) {
+		// 	this.app.dispatch({
+		// 		type: 'plot_edit',
+		// 		id: this.id,
+		// 		config: {
+		// 			settings: {
+		// 				renderWSIViewer: false,
+		// 				changeTrigger: Date.now(),
+		// 				activeID: '',
+		// 				activeAnnotation:
+		// 					SessionWSImage.findTileIndexByID(
+		// 						settings.activeID,
+		// 						viewModel.sampleWSImages[settings.displayedImageIndex],
+		// 						settings
+		// 					) || 0,
+		// 				renderAnnotationTable: true
+		// 			}
+		// 		}
+		// 	})
+		// 	return
+		// }
 		const wsimages = viewModel.sampleWSImages
 
 		const wsimageLayers = viewModel.wsimageLayers
@@ -169,7 +168,9 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.wsiViewerInteractions.viewerClickListener,
 			viewModel.sampleWSImages[settings.displayedImageIndex]
 		)
-
+		if (!settings.isSavingAnnotation) {
+			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
+		}
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
@@ -197,9 +198,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			}
 		}
 		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
-		if (!settings.isSavingAnnotation) {
-			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
-		}
+
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()

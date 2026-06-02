@@ -10,7 +10,7 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		nonActiveThumbnailBorderStyle: '2px solid black',
 		thumbnailWidth: '60px',
 		thumbnailHeight: '80px',
-		numDisplayedThumbnails: 10,
+		numDisplayedThumbnails: 1,
 		thumbnailRangeStart: 0,
 		iconDimensions: 20, //20px
 		renderWSIViewer: true,
