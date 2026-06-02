@@ -443,7 +443,7 @@ async function findBestMatchLLM(
 		"possible": ["<field1>", "<field2>", "<field3>"]
 	}
 
-	Return ONLY valid JSON. No explanation. No markdown. No code fences.
+	Always return ONLY valid JSON. No explanation. No markdown. No code fences.
 
 	Dictionary rows:
 	${rag_docs.map((doc, i) => `Row ${i + 1}: ${doc}`).join('\n')}
