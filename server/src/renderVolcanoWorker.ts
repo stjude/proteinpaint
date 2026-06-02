@@ -10,7 +10,7 @@ import { drawVolcanoPng, type VolcanoDrawInput } from './renderVolcanoDraw.ts'
  * with their prototype.
  *
  * This module is bundled standalone by build.sh into renderVolcanoWorker.js
- * (node-canvas stays external). In dev it runs as .ts via the tsx loader that
+ * (skia-canvas stays external). In dev it runs as .ts via the tsx loader that
  * the pool registers inside the worker.
  */
 
