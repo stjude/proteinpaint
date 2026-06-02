@@ -272,7 +272,15 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				// profileRadarFacility2 fetches aggregate + single-site in one dedicated-route call;
 				// the subclass's fetchRadarFacility2Scores() also sets this.sampleData from the response
 				this.data = await (this as any).fetchRadarFacility2Scores()
-			if (this.data && 'error' in this.data) throw this.data.error
+			/*
+			Only profileForms and profileRadarFacility2 fetch this.data here; polar2/barchart2
+			fetch in their own setControls() override and run their own error check afterwards.
+			Restrict this throw to those two types so we don't re-throw a stale this.data error
+			left over from a previous render, which would otherwise block recovery (e.g. clearing
+			filters after an error) before the subclass re-fetches.
+			*/
+			if ((this.type == 'profileForms' || this.type == 'profileRadarFacility2') && this.data && 'error' in this.data)
+				throw this.data.error
 			this.sites = this.filteredTermValues[this.config.facilityTW.id]?.filter(s => !s.disabled && s.value)
 
 			if (this.settings[this.config.facilityTW?.term?.id])
@@ -663,14 +671,14 @@ export function makeChartBtnMenu(holder, chartsInstance, chartType) {
 
 export async function getProfilePlotConfig(activeCohort, app, opts) {
 	const key = activeCohort == FULL_COHORT ? 'full' : 'abbrev'
-	const config = app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType]
+	const config = structuredClone(app.vocabApi.termdbConfig?.plotConfigByCohort[key]?.[opts.chartType])
 	if (!config) throw `No data available for the plot ${opts.chartType} in this dataset`
 	const cohortPreffix = activeCohort == FULL_COHORT ? 'F' : 'A'
 	config.facilityTW = { id: cohortPreffix + 'UNIT' } //All the plots want the facility term to show the hospital name if a site is selected
 	config.hidePlotFilter = true
 	await fillTermWrapper(config.facilityTW, app.vocabApi)
 	await loadFilterTerms(config, activeCohort, app)
-	return structuredClone(config)
+	return config
 }
 
 export async function loadFilterTerms(config, activeCohort, app) {

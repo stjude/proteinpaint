@@ -12,7 +12,7 @@ divideTerms: assigns $id from term.name if id missing
 divideTerms: drops role-restricted dict terms via isTermVisible
 divideTerms: shorthand dict terms (no type, just id) are also gated by isTermVisible
 divideTerms: q.__protected__ is forwarded to the isTermVisible hook
-divideTerms: termCollection visibility decided by member ids
+divideTerms: termCollection visibility decided by member terms (term.termlst)
 */
 
 tape('\n', function (test) {
@@ -61,8 +61,8 @@ tape('divideTerms: drops role-restricted dict terms via isTermVisible', t => {
 	const ds = {
 		cohort: {
 			termdb: {
-				isTermVisible(_clientAuth, id) {
-					return id !== 'blocked'
+				isTermVisible(_clientAuth, term) {
+					return term.id !== 'blocked'
 				}
 			}
 		}
@@ -81,8 +81,8 @@ tape('divideTerms: shorthand dict terms (no type, just id) are also gated by isT
 	const ds = {
 		cohort: {
 			termdb: {
-				isTermVisible(_clientAuth, id) {
-					return id !== 'blocked'
+				isTermVisible(_clientAuth, term) {
+					return term.id !== 'blocked'
 				}
 			}
 		}
@@ -105,7 +105,7 @@ tape('divideTerms: q.__protected__ is forwarded to the isTermVisible hook', t =>
 	const ds = {
 		cohort: {
 			termdb: {
-				isTermVisible(auth, _id) {
+				isTermVisible(auth, _term) {
 					receivedAuth = auth
 					return true
 				}
@@ -119,30 +119,32 @@ tape('divideTerms: q.__protected__ is forwarded to the isTermVisible hook', t =>
 })
 
 /*
-termCollection terms have no scalar .id — they're identified by .name + .termIds[].
-Previous behavior called isTermVisible(undefined) and silently dropped the collection
-for any role consulting an allowlist. The fix decides visibility from the members
-instead: visible iff every member id is visible to the role.
+termCollection terms have no scalar .id — they're identified by .name + their member terms.
+Passing the collection term to isTermVisible yields false for any role consulting an
+allowlist (no id to match), silently dropping the collection. The fix decides visibility
+from the members instead: visible iff every member term is visible to the role. term.termlst
+(the list of member term objects, populated server-side) is the source of truth; the legacy
+termIds[] is not consulted. Each member term object is forwarded to isTermVisible as-is.
 */
 function buildRestrictedDs(allowlist) {
 	const allow = new Set(allowlist)
 	return {
 		cohort: {
 			termdb: {
-				isTermVisible(_auth, id) {
-					return allow.has(id)
+				isTermVisible(_auth, term) {
+					return allow.has(term.id)
 				}
 			}
 		}
 	}
 }
 
-tape('divideTerms: termCollection visible when every member id is visible', t => {
+tape('divideTerms: termCollection visible when every member term is visible', t => {
 	const collection = {
 		term: {
 			type: 'termCollection',
 			name: 'Yes/No flags',
-			termIds: ['A', 'B', 'C']
+			termlst: [{ id: 'A' }, { id: 'B' }, { id: 'C' }]
 		}
 	}
 	const ds = buildRestrictedDs(['A', 'B', 'C'])
@@ -151,12 +153,12 @@ tape('divideTerms: termCollection visible when every member id is visible', t =>
 	t.end()
 })
 
-tape('divideTerms: termCollection dropped when any member id is not visible', t => {
+tape('divideTerms: termCollection dropped when any member term is not visible', t => {
 	const collection = {
 		term: {
 			type: 'termCollection',
 			name: 'Yes/No flags',
-			termIds: ['A', 'B', 'C']
+			termlst: [{ id: 'A' }, { id: 'B' }, { id: 'C' }]
 		}
 	}
 	// 'C' is missing from the allowlist
@@ -166,28 +168,45 @@ tape('divideTerms: termCollection dropped when any member id is not visible', t 
 	t.end()
 })
 
-tape('divideTerms: termCollection falls back to termlst[].id when termIds is absent', t => {
+tape('divideTerms: termCollection forwards the full member term object to isTermVisible', t => {
+	// Locks in the review contract: members come from termlst as term objects, and each is
+	// passed to the hook as-is (not reduced to an id), so future non-dict members keeping
+	// visibility state on other props still work.
 	const collection = {
 		term: {
 			type: 'termCollection',
-			name: 'From termlst',
-			termlst: [{ id: 'A' }, { id: 'B' }]
+			name: 'Members',
+			termlst: [{ id: 'A', type: 'categorical' }]
 		}
 	}
-	const ds = buildRestrictedDs(['A', 'B'])
-	const [dict] = divideTerms({ terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }, ds)
-	t.deepEqual(dict, [collection], 'termCollection uses termlst[].id when termIds is missing')
+	const received = []
+	const ds = {
+		cohort: {
+			termdb: {
+				isTermVisible(_auth, term) {
+					received.push(term)
+					return true
+				}
+			}
+		}
+	}
+	divideTerms({ terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }, ds)
+	t.deepEqual(
+		received,
+		[{ id: 'A', type: 'categorical' }],
+		'member term object forwarded by reference, not just its id'
+	)
 	t.end()
 })
 
 tape('divideTerms: empty-member termCollection is dropped (fail-closed)', t => {
-	// A collection with no resolvable member ids cannot be authorized for a restricted role.
+	// A collection with no resolvable members cannot be authorized for a restricted role.
 	// Better to drop it than to expose a query whose membership is unknown.
 	const collection = {
 		term: {
 			type: 'termCollection',
 			name: 'Empty',
-			termIds: []
+			termlst: []
 		}
 	}
 	const ds = buildRestrictedDs(['A', 'B'])
@@ -202,7 +221,7 @@ tape('divideTerms: termCollection flows through when dataset has no isTermVisibl
 		term: {
 			type: 'termCollection',
 			name: 'No-hook collection',
-			termIds: ['A', 'B']
+			termlst: [{ id: 'A' }, { id: 'B' }]
 		}
 	}
 	const [dict] = divideTerms({ terms: [collection] }, emptyDs)
@@ -210,25 +229,9 @@ tape('divideTerms: termCollection flows through when dataset has no isTermVisibl
 	t.end()
 })
 
-tape('divideTerms: malformed termCollection (termIds is not an array) is dropped, not thrown', t => {
-	// A request that arrives with termIds as a string/object must not crash the whole request
-	// with a TypeError. Fail-closed: drop the collection instead.
-	const collection = {
-		term: {
-			type: 'termCollection',
-			name: 'Bad termIds',
-			termIds: 'EXCHEMYN' // not an array
-		}
-	}
-	const ds = buildRestrictedDs(['EXCHEMYN'])
-	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
-	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on non-array termIds')
-	const [dict] = divideTerms(q, ds)
-	t.deepEqual(dict, [], 'malformed termCollection is dropped under a restricted role')
-	t.end()
-})
-
 tape('divideTerms: malformed termCollection (termlst is not an array) is dropped, not thrown', t => {
+	// A payload that arrives with termlst as a string/object must not crash the whole request
+	// with a TypeError. Fail-closed: drop the collection instead.
 	const collection = {
 		term: {
 			type: 'termCollection',
@@ -241,22 +244,5 @@ tape('divideTerms: malformed termCollection (termlst is not an array) is dropped
 	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on non-array termlst')
 	const [dict] = divideTerms(q, ds)
 	t.deepEqual(dict, [], 'malformed termCollection is dropped under a restricted role')
-	t.end()
-})
-
-tape('divideTerms: termCollection ignores non-string and duplicate ids in termIds', t => {
-	// Numbers, objects, undefined, empty strings are filtered out; duplicates are deduped.
-	// The collection should still be authorized when every remaining (valid, unique) id is visible.
-	const collection = {
-		term: {
-			type: 'termCollection',
-			name: 'Mixed ids',
-			termIds: ['A', '', null, 42, { id: 'B' }, 'A', 'B', undefined]
-		}
-	}
-	const ds = buildRestrictedDs(['A', 'B'])
-	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
-	const [dict] = divideTerms(q, ds)
-	t.deepEqual(dict, [collection], 'collection passes when the deduped, valid id set is fully visible')
 	t.end()
 })

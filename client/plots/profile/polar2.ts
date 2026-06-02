@@ -264,7 +264,7 @@ export async function getPlotConfig(opts: any, app: MassAppApi, _activeCohort: n
 
 		return config
 	} catch (e) {
-		throw new Error(`${e} [profilePolar2 getPlotConfig()]`)
+		throw `${e} [profilePolar2 getPlotConfig()]`
 	}
 }
 

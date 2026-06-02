@@ -1748,8 +1748,10 @@ keep this setting here for reason of:
 	maxAnnoTermsPerClientRequest?: number
 	/** option to disable mayAddDataAvailability() based on request path and query parameters */
 	disableAssayAvailability?: (path: string, query: { [key: string]: any }) => boolean
-	//terms  are shown in the dictionary based on term and user role.
-	isTermVisible?: (clientAuthResult: any, ids: string) => boolean
+	/* terms are shown in the dictionary based on term and user role.
+	Accepts the term object (not just an id) so the hook can generalize to non-dictionary
+	terms in the future, which may key visibility off properties other than id. */
+	isTermVisible?: (clientAuthResult: any, term: { id?: string; [key: string]: any }) => boolean
 	/** Optional dataset hook to prune the per-request /termdb/config response.
 	 * Typical use is hiding plots/sections/etc. based on the requester's role.
 	 *
