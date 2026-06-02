@@ -76,7 +76,7 @@ export async function get_matrix(q, req, res, ds, genome) {
 			? ds.cohort.termdb.disableAssayAvailability(req.path, q)
 			: false
 
-	const data = await getData(q, ds, true) // FIXME hardcoded to true
+	const data = await getData(q, ds)
 	if (data.error) {
 		if (String(data.error).includes('operation was aborted')) console.log(`(!) abort error`)
 		else console.trace(data)
