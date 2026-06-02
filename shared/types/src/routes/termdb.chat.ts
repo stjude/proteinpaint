@@ -37,6 +37,7 @@ export type LlmConfig = {
 	EmbeddingProvider: 'SJ' | 'ollama' | 'huggingface'
 	EmbeddingProviderApi: string
 	api: string
+	apiToken?: string
 	EmbeddingProviderApiToken?: string
 	modelName: string
 	embeddingModelName: string
