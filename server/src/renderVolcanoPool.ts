@@ -169,5 +169,12 @@ export function prewarmVolcanoPool(count = 1): void {
 
 // Warm one worker in the background at startup (this module is imported when the
 // routes register), so the first user render hits a ready worker instead of a
-// cold one. Idle workers are unref'd, so this adds no shutdown/test hang.
-prewarmVolcanoPool(1)
+// cold one. Idle workers are unref'd, so this adds no shutdown hang.
+//
+// Prod only: under tsx (dev + the single-process unit suite) the worker is
+// spawned via the tsx/esm/api register() bootstrap, and doing that at
+// module-import time races against tsx's Atomics-based ESM loader while the
+// suite's module graph is still resolving — a nondeterministic mid-suite hang.
+// renderVolcano.ts mirrors this: under tsx it draws on the main thread and never
+// calls runOnPool, so the pool stays inert on import there.
+if (!isTs) prewarmVolcanoPool(1)

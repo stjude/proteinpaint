@@ -2,7 +2,7 @@ import { scaleLinear } from 'd3-scale'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from '#types'
 import { mayLog } from './helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { FLAG_SIGNIFICANT, FLAG_FC_POSITIVE } from './renderVolcanoDraw.ts'
+import { FLAG_SIGNIFICANT, FLAG_FC_POSITIVE, drawVolcanoPng, type VolcanoDrawInput } from './renderVolcanoDraw.ts'
 import { runOnPool } from './renderVolcanoPool.ts'
 
 /**
@@ -181,27 +181,33 @@ export async function renderVolcano<T extends DataEntry>(
 		flags[i] = f
 	}
 
-	// Run the heavy draw+encode in the worker pool so it never blocks the main
-	// event loop. The pool size bounds concurrent renders (replaces the former
-	// in-process semaphore). Returns the raw PNG bytes; base64 here to preserve
-	// the `volcanoPng` string contract.
-	const pngBuf = await runOnPool(
-		{
-			w,
-			h,
-			effectiveDpr,
-			radiusPx,
-			colors: {
-				nonsignificant: colorNonsignificant,
-				significantUp: colorSignificantUp,
-				significantDown: colorSignificantDown
-			},
-			x: xArr,
-			y: yArr,
-			flags
+	const drawInput: VolcanoDrawInput = {
+		w,
+		h,
+		effectiveDpr,
+		radiusPx,
+		colors: {
+			nonsignificant: colorNonsignificant,
+			significantUp: colorSignificantUp,
+			significantDown: colorSignificantDown
 		},
-		[xArr.buffer, yArr.buffer, flags.buffer]
-	)
+		x: xArr,
+		y: yArr,
+		flags
+	}
+
+	// In the compiled prod runtime, run the heavy draw+encode in the worker pool
+	// so it never blocks the main server event loop; the pool size bounds
+	// concurrent renders (replaces the former in-process semaphore). Under tsx
+	// (dev + the single-process unit suite) we draw on the main thread instead:
+	// spawning a worker that re-registers the tsx ESM loader mid-suite races
+	// against tsx's Atomics-based loader and hangs. `import.meta.url` ends with
+	// .ts under tsx and .js in the prod bundle. Returns the raw PNG bytes; base64
+	// here to preserve the `volcanoPng` string contract.
+	const isTsRuntime = import.meta.url.endsWith('.ts')
+	const pngBuf = isTsRuntime
+		? await drawVolcanoPng(drawInput)
+		: await runOnPool(drawInput, [xArr.buffer, yArr.buffer, flags.buffer])
 	const png = pngBuf.toString('base64')
 
 	// Build the interactive `dots` list: threshold-passers sorted asc by the
