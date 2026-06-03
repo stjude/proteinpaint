@@ -37,11 +37,29 @@ export type ConcurrencyLimiterOpts = {
 	 * Defaults to a generic 429 (`code: 'POOL_BUSY'`). Supply your own to
 	 * carry a caller-specific code/message (e.g. volcano's `RENDER_BUSY`). */
 	makeBusyError?: () => Error
+
+	/** Per-task execution timeout (ms). A task that holds its slot longer than
+	 * this has its slot released (so the queue advances) and its `run()`
+	 * rejected with the timeout error; the `AbortSignal` passed to `fn` is
+	 * aborted so cooperative tasks can stop. A non-cooperative task keeps
+	 * running orphaned — JS can't force-kill it — but it no longer holds a slot.
+	 * Defaults to `DEFAULT_TASK_TIMEOUT_MS` (30000) when omitted; pass `Infinity`
+	 * to disable (unbounded) for legitimately long-running tasks. */
+	taskTimeoutMs?: number
+
+	/** Optional factory for the error thrown when a task times out. Defaults to
+	 * a 504 (`code: 'TASK_TIMEOUT'`). Supply your own for a caller-specific
+	 * code/message (e.g. volcano's `RENDER_TIMEOUT`). */
+	makeTimeoutError?: () => Error
 }
+
+/** Context handed to each `run()` callback. `signal` is aborted if the task
+ * exceeds the limiter's `taskTimeoutMs`, letting cooperative tasks bail early. */
+export type ConcurrencyLimiterRunContext = { signal: AbortSignal }
 
 export type ConcurrencyLimiter = {
 	/** Acquire a slot (waiting or rejecting per the caps), run `fn`, and
 	 * release the slot in a `finally` so it can never leak — even if `fn`
-	 * throws. Resolves/rejects with `fn`'s own result. */
-	run<T>(fn: () => Promise<T>): Promise<T>
+	 * throws or times out. Resolves/rejects with `fn`'s own result. */
+	run<T>(fn: (ctx: ConcurrencyLimiterRunContext) => Promise<T>): Promise<T>
 }

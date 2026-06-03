@@ -52,6 +52,18 @@ const renderLimiter = createConcurrencyLimiter({
 		err.statusCode = 429
 		err.code = 'RENDER_BUSY'
 		return err
+	},
+	// taskTimeoutMs is left unset, so it inherits the limiter's 30s default — a
+	// safety net for a render that somehow hangs (it would otherwise hold its
+	// slot forever and stall the queue). skia's toBuffer can't observe the
+	// AbortSignal, so an evicted render keeps running until it finishes; freeing
+	// the slot is what keeps the queue alive. 504 so it reads as "took too long".
+	makeTimeoutError: () => {
+		const err: any = new Error('Volcano render timed out.')
+		err.status = 504
+		err.statusCode = 504
+		err.code = 'RENDER_TIMEOUT'
+		return err
 	}
 })
 
