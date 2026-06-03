@@ -321,8 +321,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.chat) {
 		q2.chat = {}
 	}
-	if (q.alphaGenome) q2.alphaGenome = q.alphaGenome
-
 	if (q.NIdata && serverconfig.features.showBrainImaging) {
 		q2.NIdata = {}
 		for (const k in q.NIdata) {
