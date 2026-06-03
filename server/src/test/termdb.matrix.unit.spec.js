@@ -170,13 +170,14 @@ tape('divideTerms: termCollection dropped when any member term is not visible', 
 
 tape('divideTerms: termCollection forwards the full member term object to isTermVisible', t => {
 	// Locks in the review contract: members come from termlst as term objects, and each is
-	// passed to the hook as-is (not reduced to an id), so future non-dict members keeping
-	// visibility state on other props still work.
+	// passed to the hook as-is (the same instance, not reduced to an id), so future non-dict
+	// members keeping visibility state on other props still work.
+	const member = { id: 'A', type: 'categorical' }
 	const collection = {
 		term: {
 			type: 'termCollection',
 			name: 'Members',
-			termlst: [{ id: 'A', type: 'categorical' }]
+			termlst: [member]
 		}
 	}
 	const received = []
@@ -191,11 +192,8 @@ tape('divideTerms: termCollection forwards the full member term object to isTerm
 		}
 	}
 	divideTerms({ terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }, ds)
-	t.deepEqual(
-		received,
-		[{ id: 'A', type: 'categorical' }],
-		'member term object forwarded by reference, not just its id'
-	)
+	t.equal(received.length, 1, 'hook called once for the single member')
+	t.equal(received[0], member, 'the exact member instance from termlst is forwarded, not a structural copy')
 	t.end()
 })
 
@@ -244,5 +242,40 @@ tape('divideTerms: malformed termCollection (termlst is not an array) is dropped
 	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on non-array termlst')
 	const [dict] = divideTerms(q, ds)
 	t.deepEqual(dict, [], 'malformed termCollection is dropped under a restricted role')
+	t.end()
+})
+
+tape('divideTerms: termCollection normalizes bare id-string members to { id }', t => {
+	// The payload is client-supplied; an older client may list members as bare id strings.
+	// Each is normalized to { id } so the visibility hook always receives a term object.
+	const collection = {
+		term: {
+			type: 'termCollection',
+			name: 'String members',
+			termlst: ['A', 'B']
+		}
+	}
+	const ds = buildRestrictedDs(['A', 'B'])
+	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
+	const [dict] = divideTerms(q, ds)
+	t.deepEqual(dict, [collection], 'string members are normalized and authorized when visible')
+	t.end()
+})
+
+tape('divideTerms: termCollection with a non-object member is dropped, not thrown', t => {
+	// null/number entries carry no resolvable identity. A hook that reads term.id would throw
+	// on null; normalization drops such members and the collection fails closed instead.
+	const collection = {
+		term: {
+			type: 'termCollection',
+			name: 'Bad member',
+			termlst: [{ id: 'A' }, null, 42]
+		}
+	}
+	const ds = buildRestrictedDs(['A'])
+	const q = { terms: [collection], __protected__: { clientAuthResult: { role: 'public' } } }
+	t.doesNotThrow(() => divideTerms(q, ds), 'does not throw on null/number member')
+	const [dict] = divideTerms(q, ds)
+	t.deepEqual(dict, [], 'collection with an unresolvable member is dropped')
 	t.end()
 })
