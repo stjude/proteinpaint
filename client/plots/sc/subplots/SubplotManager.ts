@@ -65,7 +65,7 @@ export class SubplotManager {
 		this.records.delete(subplotId)
 	}
 
-	async initSubplotSandbox(sandboxHolder, subplot) {
+	async initSubplotSandbox(sandboxHolder, subplot, initOpts: { sectionKey?: string; onClose?: () => void } = {}) {
 		const sandbox = newSandboxDiv(sandboxHolder, {
 			close: () => {
 				/** destroy this dom and component before app.dispatch.
@@ -77,27 +77,22 @@ export class SubplotManager {
 					id: subplot.id,
 					parentId: this.sc.id
 				})
+				if (initOpts.onClose) initOpts.onClose()
 			},
 			plotId: subplot.id
 		})
 
-		const opts = Object.assign({}, subplot, {
+		const subplotOpts = Object.assign({}, subplot, {
 			app: this.sc.app,
 			parentId: this.sc.id,
 			id: subplot.id,
 			holder: sandbox
 		})
 
-		// /** Summary is expecting entire sandbox object. Most other plots
-		//  * expect the header and the holder (i.e. body).*/
-		// if (subplot.chartType == 'summary') {
-		//     opts.holder = sandbox
-		// } else {
-		//     opts.holder = sandbox.body
-		//     opts.header = sandbox.header
-		// }
-		// await this.sc.initPlotComponent(subplot.id, opts)
-		return await dynamicSubplotInit(opts)
+		this.scCompPlots[subplot.id] = await dynamicSubplotInit(subplotOpts)
+		this.setSandbox(subplot.id, sandbox.app_div)
+		if (initOpts.sectionKey) this.setSectionKey(subplot.id, initOpts.sectionKey)
+		return sandbox.app_div
 	}
 
 	setSandbox(plotId: string, sandboxDiv: any) {
@@ -142,9 +137,5 @@ export class SubplotManager {
 			sandboxes.get(active.sampleId)!.push({ plotId: active.plotId, div: active.sandboxDiv, plotName: active.plotName })
 		}
 		return sandboxes
-	}
-
-	activeSandboxes(activeSubplots: SCActiveSubplot[] = this.getActiveSubplotsFlat()) {
-		return this.getSampleSandboxes(activeSubplots)
 	}
 }

@@ -1,6 +1,5 @@
 import type { Sections } from './Sections'
 import type { Div, Elem } from '../../../types/d3'
-import { newSandboxDiv } from '#dom'
 import type { SCViewer } from '../SC'
 import type { SingleCellSample } from '#types'
 import type { GroupByOptions } from '../settings/Settings'
@@ -91,7 +90,7 @@ export class SectionRenderer {
 		// Remove components that are no longer active
 		for (const plotId of Object.keys(sc.components.plots)) {
 			if (!activeSubplots.has(plotId)) {
-				sc.removeComponent(plotId)
+				sc.subplotManager.removeSubplot(plotId)
 				detached.delete(plotId)
 			}
 		}
@@ -215,35 +214,13 @@ export class SectionRenderer {
 			.insert('div', ':first-child')
 			.attr('data-testid', `sjpp-sc-sandbox-${subplot.id}`) as any as Elem
 
-		const sandbox = newSandboxDiv(sandboxHolder, {
-			close: () => {
+		const sandboxDiv = await sc.subplotManager.initSubplotSandbox(sandboxHolder, subplot, {
+			sectionKey: key,
+			onClose: () => {
 				this.removeSandbox(subplot.id, sc)
-				sc.app.dispatch({
-					type: 'plot_delete',
-					id: subplot.id,
-					parentId: sc.id
-				})
-			},
-			plotId: subplot.id
+			}
 		})
-
-		const opts = Object.assign({}, subplot, {
-			app: sc.app,
-			parentId: sc.id,
-			id: subplot.id
-		})
-
-		/** Summary is expecting entire sandbox object. Most other plots
-		 * expect the header and the holder (i.e. body).*/
-		if (subplot.chartType == 'summary') {
-			opts.holder = sandbox
-		} else {
-			opts.holder = sandbox.body
-			opts.header = sandbox.header
-		}
-		await sc.initPlotComponent(subplot.id, opts)
-		this.sections[key].sandboxes[subplot.id] = sandbox.app_div
-		sc.subplotManager.setSandbox(subplot.id, sandbox.app_div)
+		this.sections[key].sandboxes[subplot.id] = sandboxDiv
 	}
 
 	removeSection(key: string, sc: SCViewer) {
@@ -269,15 +246,10 @@ export class SectionRenderer {
 	}
 
 	removeSandbox(plotId: string, sc: SCViewer, _key?: string) {
-		//Delete the component before calling dispatch
-		//Prevents main attempting to re-init the component
-		sc.removeComponent(plotId)
 		const key = _key || this.plotId2Key.get(plotId)
 		if (!key) return
 		this.sections[key].sandboxes[plotId].remove()
 		delete this.sections[key].sandboxes[plotId]
-		sc.subplotManager.setSandbox(plotId, undefined)
-		sc.subplotManager.setSectionKey(plotId, undefined)
 		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
 		this.plotId2Key.delete(plotId)
 	}
