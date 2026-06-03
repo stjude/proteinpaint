@@ -1,6 +1,6 @@
 import type { AppApi } from '#rx'
 import type { TableColumn, TableRow } from '#dom'
-import type { SCActiveSubplot, SCConfig, SCFormattedState, SampleColumn, SCTableData } from '../SCTypes'
+import type { SCConfig, SCFormattedState, SampleColumn, SCTableData } from '../SCTypes'
 import type { SingleCellSample } from '#types'
 
 export class SCViewModel {
@@ -8,19 +8,21 @@ export class SCViewModel {
 	state: SCFormattedState
 	tableData!: SCTableData
 	sampleColumns: SampleColumn[]
+	metaResultIds: Set<string>
 
 	constructor(app: AppApi, sampleColumns?: SampleColumn[]) {
 		this.app = app
 		this.state = this.app.getState()
 		this.sampleColumns = sampleColumns || []
+		this.metaResultIds = new Set()
 	}
 
-	processData(config: SCConfig, _items: SingleCellSample[], activeSubplots: SCActiveSubplot[] = []) {
+	processData(config: SCConfig, _items: SingleCellSample[]) {
 		//Sort meta analysis results to show at the beginning of the table.
 		//Prevents breaking the logic for selected rows after formating the table data.
 		const items = _items.sort((a, b) => (b.isMetaResult === a.isMetaResult ? 0 : b.isMetaResult ? 1 : -1))
 
-		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns, activeSubplots)
+		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns)
 		const selectedRows: number[] = []
 		const sID = config.settings.sc.item?.sID
 		const i = sID
@@ -34,16 +36,14 @@ export class SCViewModel {
 			rows: rows as any,
 			columns: columns as any,
 			selectedRows,
-			sampleColIdx,
-			activeSubplots
+			sampleColIdx
 		}
 	}
 
 	getTabelData(
 		plotConfig: SCConfig,
 		items: SingleCellSample[],
-		sampleColumns?: SampleColumn[],
-		_activeSubplots: SCActiveSubplot[] = []
+		sampleColumns?: SampleColumn[]
 	): [TableRow[], TableColumn[], number] {
 		const rows: TableRow[] = []
 		const hasExperiments = items.some(i => i.experiments)
@@ -70,6 +70,7 @@ export class SCViewModel {
 		if (hasExperiments) columns.push({ label: 'Experiment', sortable: true }) // corresponds to this.samples[].experiments[].experimentID
 
 		for (const item of items) {
+			if (item.isMetaResult) this.metaResultIds.add(item.sample)
 			if (hasExperiments)
 				//GDC
 				for (const exp of item.experiments!) {

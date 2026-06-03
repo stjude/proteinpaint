@@ -33,9 +33,8 @@ export class PlotButtons {
 	scctTerms?: any[]
 	availablePlots!: Set<string>
 
-	/** This is the initial state. scctTerms and the termdbConfig are created on
-	 * server init and will not change. */
-	constructor(interactions: SCInteractions, holder: Div, state) {
+	/** scctTerms and the scTermdbConfig are created on server init and will not change. */
+	constructor(interactions: SCInteractions, holder: Div, termdbConfig) {
 		holder.style('padding', '10px')
 		const promptDiv = holder.append('div').style('padding', '10px 0').text('Select data from')
 		this.plotBtnsDom = {
@@ -45,8 +44,8 @@ export class PlotButtons {
 			tip: new Menu({ padding: '' })
 		}
 		this.interactions = interactions
-		this.scctTerms = state.termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
-		this.scTermdbConfig = state.termdbConfig.queries.singleCell
+		this.scctTerms = termdbConfig?.termType2terms?.[TermTypeGroups.SINGLECELL_CELLTYPE]
+		this.scTermdbConfig = termdbConfig.queries.singleCell
 	}
 
 	update(settings: Settings, data) {
@@ -72,7 +71,7 @@ export class PlotButtons {
 
 		this.plotBtnsDom.btnsDiv
 			.selectAll('button')
-			.data(btns.filter(b => b.isVisible()))
+			.data(btns.filter(b => (b.isVisible ? b.isVisible() : true)))
 			.enter()
 			.append('button')
 			.attr('type', 'button')
@@ -100,15 +99,15 @@ export class PlotButtons {
 	getChartBtnOpts() {
 		const btns: {
 			label: string
-			isVisible: () => boolean
+			isVisible?: () => boolean
 			open?: (plot: any, self: PlotButtons) => void
 			getPlotConfig?: (f?: any) => any
 		}[] = []
 
 		for (const plot of this.scTermdbConfig?.data?.plots || []) {
+			if (!this.availablePlots.has(plot.name)) continue
 			btns.push({
 				label: plot.name,
-				isVisible: () => this.availablePlots.has(plot.name),
 				getPlotConfig: async () => {
 					return await this.getSingleCellConfig(plot.name)
 				}
@@ -126,7 +125,6 @@ export class PlotButtons {
 						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
-							hidePlotFilter: true,
 							headerText: `Sample: ${this.item!.sID}`,
 							sample
 						},
@@ -156,7 +154,6 @@ export class PlotButtons {
 						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
-							hidePlotFilter: true,
 							headerText
 						}
 					}
@@ -173,7 +170,8 @@ export class PlotButtons {
 						categoryName: `${value}`,
 						headerText: `Sample: ${this.item!.sID} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
 						termId: this.scTermdbConfig.DEgenes.termId,
-						sample: this.item!
+						sample: this.item!,
+						plotName: 'Differential expression'
 					}
 				}
 			},

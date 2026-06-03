@@ -106,7 +106,7 @@ export class SCViewRenderer {
 			activeSubplots.map(s => s.subplot),
 			settings.sc.groupBy
 		)
-		const activeSandboxes = subplotManager.getSampleSandboxes(activeSubplots)
+		const activeSandboxes = subplotManager.getSampleSandboxes()
 		this.sampleTableRenderer.updatePlotBtns(activeSandboxes)
 	}
 }
