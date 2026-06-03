@@ -1,13 +1,16 @@
-import type { LlmConfig, DbRows, DbValue, GeneDataTypeResult } from '#types'
+import type { LlmConfig, DbRows, DbValue, GeneDataTypeResult, GeneSetDataTypeResult } from '#types'
 import { TermTypes } from '#shared/terms.js'
-import { FILTER_DESCRIPTION } from './filter.ts'
 import { mayLog } from '#src/helpers.ts'
+import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import type { MsgToUser, Entity, FilterTreeNode, FilterLeafNode, FilterTreeResult } from './scaffoldTypes.ts'
+import { filterTreeJsonSchema } from './scaffoldTypes.ts'
 import fs from 'fs'
+import { getDsAllowedTermTypes } from '../../../routes/termdb.config.ts'
 import Database from 'better-sqlite3'
-import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
-import { getTermObj, type Value } from './entity2termObj.ts'
-import { resolveToTvs } from './entity2twTvs.ts'
-import type { MsgToUser, Entity } from './scaffoldTypes.ts'
+import { GENE_FEATURE_KEYWORDS, determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
+import { GENE_SET_KEYWORDS } from './genesetdatatype.ts'
+import { classifyGeneDataTypePhrase } from './genedatatypenew.ts'
+import { classifyGeneSetDataType } from './genesetdatatype.ts'
 
 export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
 	if (!supportedPlotTypes) {
@@ -245,68 +248,6 @@ export function extractGenesetsFromPromptNew(prompt: string, genesetNames: strin
 	// Simple approach - works for primitives
 	const common_tokens = genesetNames.filter(item => tokens.includes(item.toLowerCase()))
 	return common_tokens
-}
-
-/** Builds the common suffix shared by all agent system prompts:
- *  filter description, dataset/chart prompts, DB context, training data,
- *  gene list, geneset list, data type mentions, and the question. */
-export function buildCommonPrompt(opts: {
-	ds: any
-	dataset_json: any
-	chart_ds: any
-	dataset_db_output: { rag_docs: string[] }
-	training_data: string
-	common_genes: string[]
-	prompt: string
-	/** Term field names used by this agent (e.g. ['term','term2'] or ['colorTW','shapeTW','term0']).
-	 *  When provided, appends data-type mentions telling the LLM those names are valid values.
-	 *  Omit for agents that handle data-type descriptions themselves (e.g. matrix). */
-	termFieldNames?: string[]
-	/** Geneset names matched from the user prompt against the genome-level geneset termdb.
-	 *  When provided, includes these as valid geneset options in the prompt. */
-	matchedGenesets?: string[]
-}): string {
-	let s = ''
-
-	// Filter guidance
-	s +=
-		' The "simpleFilter" field is optional and should contain an array of JSON terms with which the dataset will be filtered. '
-	s += FILTER_DESCRIPTION
-
-	// Dataset-level and chart-specific prompts from the config JSON
-	s += checkField(opts.dataset_json.DatasetPrompt)
-	s += checkField(opts.chart_ds.SystemPrompt)
-
-	// DB context and training data
-	s += '\n The DB content is as follows: ' + opts.dataset_db_output.rag_docs.join(',')
-	s += ' training data is as follows:' + opts.training_data
-
-	// Gene list — check registry for gene expression availability
-	const hasGeneExpr = DATA_TYPE_REGISTRY.some(
-		c => c.identifierMode === 'gene' && c.detectAvailability(opts.ds, opts.dataset_json)
-	)
-	if (hasGeneExpr && opts.common_genes.length > 0) {
-		s += '\n List of relevant genes are as follows (separated by comma(,)):' + opts.common_genes.join(',')
-	}
-
-	// Geneset list — matched genesets from the genome-level geneset termdb
-	if (opts.matchedGenesets && opts.matchedGenesets.length > 0) {
-		mayLog('Matched genesets from prompt:', opts.matchedGenesets.length, opts.matchedGenesets.slice(0, 10))
-		s += '\n List of available gene set pathways matching the query (use exact names):' + opts.matchedGenesets.join(',')
-	}
-
-	// Data type mentions for name-based types (ssGSEA, metabolite, etc.)
-	if (opts.termFieldNames) {
-		const fieldNamesStr = opts.termFieldNames.join(', ')
-		for (const config of DATA_TYPE_REGISTRY) {
-			if (!config.dataTypeDescription) continue
-			if (!config.detectAvailability(opts.ds, opts.dataset_json)) continue
-			s += ' ' + config.dataTypeDescription + ' can also be used as ' + fieldNamesStr + '.'
-		}
-	}
-
-	s += ' Question: {' + opts.prompt + '} answer:'
-	return s
 }
 
 /** Format few-shot training examples into a prompt string. */
@@ -551,49 +492,534 @@ export function parse_db_rows(db_row: DbRows) {
 	return output_string
 }
 
-/**
- * Convert a natural-language filter phrase into a tvslst object that can be sent to the UI.
- * Pipeline:
- *   1. evaluateFilterTerm() — parse the phrase into a binary AND/OR tree of leaf phrases
- *   2. phrase2entitytw() per leaf — resolve each leaf phrase into an Entity (mirrors the
- *      filter-loop pattern used in phrase2entity.ts)
- *   3. getTermObj() per Entity — resolve each Entity into a Value (mirrors lines 210-219 of
- *      entity2termObj.ts, which does the same conversion for hierCluster filter entities)
- *   4. resolveToTvs() — assemble the Value[] into a final tvslst object
- */
-export async function generateFilterTerm(
+export async function phrase2entitytw(
 	phrase: string,
 	llm: LlmConfig,
 	genes_list: string[],
 	dataset_json: any,
 	ds: any,
-	dbPath: string,
 	genome: any
-): Promise<any | MsgToUser> {
-	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
-	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
-
-	const leafPhrases = collectLeaves(filterTree.tree)
-	const filterEntities: Entity[] = []
-	for (const leaf of leafPhrases) {
-		mayLog('generateFilterTerm evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
-		if ('type' in filterTw && filterTw.type === 'text') {
-			return filterTw as MsgToUser
+): Promise<MsgToUser | Entity> {
+	const tw1Result = await inferEntities(phrase, llm, genes_list, dataset_json, genome)
+	if ('type' in tw1Result && tw1Result.type === 'text') {
+		return tw1Result // MsgToUser
+	}
+	//mayLog("getDsAllowedTermTypes(ds):", getDsAllowedTermTypes(ds))
+	if ((tw1Result as Entity).termType == 'dictionary') {
+		return tw1Result // Dictionary term
+	} else if (getDsAllowedTermTypes(ds).includes((tw1Result as Entity).termType)) {
+		return tw1Result
+	} else {
+		return {
+			type: 'text',
+			text: `The termType "${
+				(tw1Result as Entity).termType
+			}" in phrase "${phrase}" is not an allowed termType for this dataset`
 		}
-		const filterEntity = filterTw as Entity
-		if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-		filterEntities.push(filterEntity)
 	}
+}
 
-	const filterValues: Value[] = []
-	for (const filterTerm of filterEntities) {
-		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
-		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
-		if (!termObj) continue
-		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
-		filterValues.push(termObj)
+async function inferEntities(
+	phrase: string,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	genome: any
+): Promise<Entity | MsgToUser> {
+	const validatedNonDict = await validateNonDictionaryTypes(phrase, llm, genes_list, dataset_json, genome)
+	if (!validatedNonDict) {
+		// No match, probably a dictionary term or a non-dictionary term we don't have a way to validate yet (e.g. ssGSEA score, metabolites, etc.)
+
+		// TODO: This incorrectly fails when a gene is not present in the genes_list, it assumes it's a dictionary term
+		// Need a way to handle this correctly and gracefully
+		return { termType: 'dictionary', phrase: phrase }
+	} else if ('type' in validatedNonDict && validatedNonDict.type === 'text') {
+		return validatedNonDict // This means we encountered an error or an ambiguous gene prompt, and we want to return early with a user-facing message.
+	} else if ('geneFeatures' in validatedNonDict) {
+		if (validatedNonDict.geneFeatures.dataType == 'expression') {
+			return { termType: TermTypes.GENE_EXPRESSION, phrase: phrase }
+		} else if (validatedNonDict.geneFeatures.dataType === 'methylation') {
+			return { termType: TermTypes.DNA_METHYLATION, phrase: phrase }
+		} else if (validatedNonDict.geneFeatures.dataType === 'variant') {
+			return { termType: TermTypes.GENE_VARIANT, phrase: phrase }
+		} else if (validatedNonDict.geneFeatures.dataType === 'proteome') {
+			return { termType: TermTypes.PROTEOME_ABUNDANCE, phrase: phrase }
+		} else {
+			throw 'validateNonDictionaryTypes returned an unrecognized geneFeatures:' + validatedNonDict.geneFeatures
+		}
+	} else if ('geneSetFeatures' in validatedNonDict) {
+		if (validatedNonDict.geneSetFeatures.dataType === TermTypes.SSGSEA) {
+			return { termType: TermTypes.SSGSEA, phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === TermTypes.GENE_VARIANT) {
+			return { termType: TermTypes.GENE_VARIANT, phrase: phrase }
+		} else if (validatedNonDict.geneSetFeatures.dataType === TermTypes.GENE_EXPRESSION) {
+			return { termType: TermTypes.GENE_EXPRESSION, phrase: phrase }
+		} else {
+			throw 'validateNonDictionaryTypes returned an unrecognized geneSetFeatures:' + validatedNonDict.geneSetFeatures
+		}
+	} else {
+		// Should not happen
+		throw (
+			'validatedNonDict has unknown data type returned from validateNonDictionaryTypes function:' +
+			JSON.stringify(validatedNonDict)
+		)
 	}
+}
 
-	return await resolveToTvs(filterValues, dbPath, llm)
+/* This function checks if the non-dictionary types mentioned in the scaffold result (e.g. gene names) are valid based
+ * on the corresponding db (e.g. genedb). If any invalid terms are found, it throws an error which is caught in the main
+ * function and returned as a text response to the user. This is an important validation step to ensure that downstream agents
+ * receive valid inputs and can function properly, and also to provide clear feedback to the user if they mention invalid terms.
+ *
+ * For e.g. ("Show TP53" is invalid because its not clear what term type TP53 is, but "Show expression of TP53" is valid
+ * because "expression of TP53" can be resolved to a TermTypes.GENE_EXPRESSION term type which is present in the dataset)
+ * We are looking for gene terms against an exhaustive list of genes from a db, but we will need a similar approach for other
+ * nondictionary types such as metabolites, genesets, etc.
+ */
+export async function validateNonDictionaryTypes(
+	phrase: string,
+	llm: LlmConfig,
+	genes_list: string[],
+	dataset_json: any,
+	genome: any
+): Promise<MsgToUser | { geneFeatures: GeneDataTypeResult } | { geneSetFeatures: GeneSetDataTypeResult } | null> {
+	const relevant_genes = extractGenesFromPrompt(phrase, genes_list)
+	const msg: MsgToUser = { type: 'text', text: '' }
+	if (relevant_genes.length > 0) {
+		// for e.g. classifying prompts such as "Show TP53". If not clear which feature (gene expression, mutation, etc.) of TP53 the user is referring to,
+		// we want to classify this as an "ambiguous_gene_prompt" plot type and prompt the user to clarify their question. This function does NOT use an LLM
+		// and searches for specific keywords in the user prompt to determine if the prompt is ambiguous with respect to which gene feature the user is referring to.
+		const AmbiguousGeneMessage = determineAmbiguousGenePrompt(phrase, relevant_genes, dataset_json)
+		if (AmbiguousGeneMessage.length > 0) {
+			msg.text = AmbiguousGeneMessage
+			return msg
+		}
+		const geneDataTypeMessage: GeneDataTypeResult | string | null = (await classifyGeneDataTypePhrase(
+			// This function uses an LLM to classify which specific gene features (e.g. expression, mutation, etc.) are relevant to the user prompt for each of the relevant genes mentioned in the prompt.
+			phrase,
+			llm,
+			relevant_genes,
+			dataset_json
+		)) as GeneDataTypeResult | string | null
+
+		if (geneDataTypeMessage === null) {
+			// This will be null when a word could be both a gene/metabolite and a dictionary variable for e.g. A molecular subtype named "KMT2A" which is also a gene. When classifyGeneDataTypePhrase() classifies it as a dictionary variable, it returns null for geneDataTypeMessage, and then we want to return null from this function so that the main phrase2entity function can continue processing it as a dictionary variable rather than a nonDictionary variable.
+			return null
+		} else if (typeof geneDataTypeMessage === 'string') {
+			if (geneDataTypeMessage.length > 0) {
+				// This shows error is any of the genes are missing relevant features
+				msg.text = geneDataTypeMessage
+				return msg
+			} else {
+				// Should not happen
+				throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
+			}
+		} else if (geneDataTypeMessage.gene) {
+			return { geneFeatures: geneDataTypeMessage }
+		} else {
+			throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
+		}
+	}
+	const relevant_genesets = extractGenesetsFromPromptNew(phrase, getGenesetNames(genome))
+	if (relevant_genesets.length > 0) {
+		// Similar validation for genesets. If the prompt includes a geneset keyword but no valid geneset is found, we want to return an error message to the user. If a valid geneset is found, we will return null so that the main phrase2entity function can continue processing it as a non-dictionary variable rather than a dictionary variable.
+		if (relevant_genesets.length > 1) {
+			throw 'More than one gene set found in phrase:' + relevant_genesets.join(', ')
+		}
+		const genesetDataTypeMessage: GeneSetDataTypeResult | MsgToUser = (await classifyGeneSetDataTypePhrase(
+			// This function uses an LLM to classify which specific gene-set features (e.g. ssGSEA enrichment score, gene variants of pathway members) are relevant to the user prompt.
+			phrase,
+			llm,
+			relevant_genesets[0]
+		)) as GeneSetDataTypeResult | MsgToUser
+		mayLog('classifyGeneSetDataTypePhrase result:', genesetDataTypeMessage)
+		// TODO: surface ssGSEA vs geneVariant downstream once consumers know how to handle genesetFeatures.
+		if ('type' in genesetDataTypeMessage && genesetDataTypeMessage.type === 'text') {
+			return genesetDataTypeMessage
+		} else if ('dataType' in genesetDataTypeMessage && genesetDataTypeMessage.dataType === 'ambiguous') {
+			msg.text =
+				'The intent for geneset "' +
+				genesetDataTypeMessage.geneSet +
+				'" is ambiguous. Please clarify if you are asking about the ssGSEA enrichment score for the geneset, or the gene variants of the genes in the geneset.'
+			return msg
+		} else if ('geneSet' in genesetDataTypeMessage && genesetDataTypeMessage.geneSet) {
+			return { geneSetFeatures: genesetDataTypeMessage }
+		} else {
+			throw 'geneSetDataTypeMessage has unknown data type returned from classifyGeneSetDataType agent'
+		}
+	}
+	// else if {} // Implement similar keyword searches for other nondictionary types later (e.g. metabolite Intensity, protein abundance, etc.)
+	else {
+		const NonDictGeneKeyWords = extractGenesFromPrompt(phrase, GENE_FEATURE_KEYWORDS) // Using the same function as extracting genes from a phrase. Will later add similar list as GENE_FEATURE_KEYWORDS for other nonDict types such as metabolite Intensity, protein abundance, etc.
+		if (NonDictGeneKeyWords.length > 0) {
+			msg.text =
+				"Prompt includes keyword(s) such as '" +
+				NonDictGeneKeyWords.join(',') +
+				"' that may refer to a nonDict type (e.g. genes) but no such term was found in the prompt"
+			return msg
+		}
+		const NonDictGeneSetKeyWords = extractGenesFromPrompt(phrase, GENE_SET_KEYWORDS) // Using the same function as extracting genes from a phrase.
+		if (NonDictGeneSetKeyWords.length > 0) {
+			msg.text =
+				"Prompt includes keyword(s) such as '" +
+				NonDictGeneSetKeyWords.join(',') +
+				"' that may refer to a nonDict type (e.g. geneset) but no such term was found in the prompt"
+			return msg
+		}
+		// else if // May go for an LLM based approach if the above string search based method is not sufficient
+		else {
+			return null // This means the term could be some other non-dictionary type (e.g. ssGSEA score, metabolites, etc.) or it could be a dictionary term.
+		}
+	}
+}
+
+function isLeafNode(node: FilterTreeNode): node is FilterLeafNode {
+	return 'leaf' in node
+}
+
+/** Collect all leaf values from a filter tree, preserving the logical operator that connects each leaf to the previous one */
+export function collectLeaves(
+	node: FilterTreeNode,
+	parentOp?: '&' | '|'
+): { phrase: string; logicalOperator?: '&' | '|' }[] {
+	if (isLeafNode(node)) return [{ phrase: node.leaf, logicalOperator: parentOp }]
+	return [...collectLeaves(node.left, parentOp), ...collectLeaves(node.right, node.op)]
+}
+
+async function classifyGeneSetDataTypePhrase(
+	phrase: string,
+	llm: LlmConfig,
+	geneset: string
+): Promise<GeneSetDataTypeResult | MsgToUser> {
+	// Need to add string search based heuristics here similar to validateNonDictionaryTypes for certain keywords that may indicate ssGSEA vs geneVariant to reduce unnecessary LLM calls, but for now we will just call the LLM directly to classify the geneset data type based on the user prompt.
+	return await classifyGeneSetDataType(phrase, llm, geneset)
+}
+
+/*
+ * For filter phrases that have literal or conceptual "ands", they're grouped in a single array
+ * If "or", they're grouped into separate array elements
+ * For examples:
+ * "young and black patients" -> ["young", "black"]
+ * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
+ */
+export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
+	const prompt = `You are an assistant that analyzes a filter term written in natural language and converts it into a nested binary S-expression tree using two operators: AND (&) and OR (|).
+Do NOT generate code. You yourself must produce the tree. Return ONLY a JSON string — no explanations, no markdown, no extra keys.
+
+## CORE PRINCIPLE: WHAT IS A LEAF?
+A leaf represents ONE filter constraint along ONE dimension (e.g. sex, race, age, diagnosis, gene expression). A leaf is whatever phrase, taken as a whole, expresses a single criterion along a single dimension.
+
+To decide whether a phrase is one leaf or multiple leaves, ask: "Does this phrase combine constraints from MORE THAN ONE dimension?"
+  - If YES → split it into one leaf per dimension, joined by implicit AND.
+  - If NO → it is a single leaf.
+
+### Dimensions (each is independent and produces a separate leaf)
+Examples of independent dimensions: sex/gender, race/ethnicity, age, diagnosis, treatment, mutation status, gene expression, time/year, etc.
+
+### Scope nouns (NEVER a leaf on their own)
+Generic population words — "patients", "people", "subjects", "individuals", "cases", "participants" — are scope words, not constraints. They introduce the population being filtered. When a scope noun appears with a modifier, the leaf is the modifier-noun unit as a whole; the scope noun does NOT become a separate leaf.
+
+## LEAF EXTRACTION EXAMPLES
+
+Single dimension → ONE leaf:
+  "female patients"           → leaf: "female patients"          (sex only; "patients" is scope)
+  "young patients"            → leaf: "young patients"           (age only)
+  "diabetic patients"         → leaf: "diabetic patients"        (diagnosis only)
+  "patients with diabetes"    → leaf: "diabetes"                 (diagnosis only)
+  "patients older than 60"    → leaf: "age > 60"                 (age only)
+  "TP53 expression < 10"      → leaf: "TP53 expression < 10"     (gene expression only)
+
+Multiple dimensions → SPLIT into one leaf per dimension, joined by implicit AND:
+  "black males"               → (&, black, males)                (race + sex)
+  "white women"               → (&, white, women)                (race + sex)
+  "young black women"         → (&, (&, young, black), women)    (age + race + sex; chain left-to-right)
+  "black diabetic patients"   → (&, black, diabetic patients)    (race + diagnosis; "patients" stays attached to "diabetic")
+  "young women with diabetes" → (&, young women, diabetes)       ("young women" already covers age+sex as ONE unit only if you consider them inseparable — but since age and sex are independent dimensions, prefer (&, (&, young, women), diabetes))
+
+When in doubt, split along independent biological/clinical dimensions. Do NOT, however, split a modifier away from a scope noun: "female patients" stays as ONE leaf because "patients" is scope, not a dimension.
+
+## PARSING RULES
+
+1. IDENTIFY LEAVES FIRST. Read the whole phrase and find each independent filter constraint along its own dimension. Each constraint is one leaf.
+
+2. IMPLICIT AND (multi-dimensional descriptors). When adjacent words describe DIFFERENT dimensions of the same group (e.g. "black males" = race + sex), join them with implicit AND, chained left-to-right.
+   "black males"     → (&, black, males)
+   "tall old man"    → (&, (&, tall, old), man)
+   "young black women" → (&, (&, young, black), women)
+
+3. EXPLICIT AND. The word "and" between two groups produces an & operator node.
+   "black males and white women" → (&, (&, black, males), (&, white, women))
+
+4. EXPLICIT OR. The word "or" between two groups produces an | operator node.
+   "black males or white women" → (|, (&, black, males), (&, white, women))
+
+5. NO OPERATOR PRECEDENCE. Parse strictly left-to-right. The operator encountered first wraps the groups encountered first.
+   "A and B or C"  → (|, (&, A, B), C)
+   "A or B or C"   → (|, (|, A, B), C)
+   "A or B and C"  → (&, (|, A, B), C)
+
+6. BINARY TREE ONLY. Every operator node has exactly two children. For three or more groups joined by the same operator, chain left-to-right.
+   "A and B and C"     → (&, (&, A, B), C)
+   "A or B or C or D"  → (|, (|, (|, A, B), C), D)
+
+7. SINGLE-CONSTRAINT QUERIES. If the entire phrase expresses one constraint with no AND/OR and no multi-dimensional descriptor, the "tree" field is just the leaf string (no operator node).
+
+## OUTPUT FORMAT
+Return ONLY valid JSON conforming to this schema:
+
+${JSON.stringify(filterTreeJsonSchema, null, 2)}
+
+Each node is one of:
+  Operator node: { "op": "&" | "|", "left": <node>, "right": <node> }
+  Leaf node:     { "leaf": "phrase representing one constraint along one dimension" }
+
+## EXAMPLES
+
+Input: female patients
+Output: {
+  "sexpr": "(female patients)",
+  "tree": {"leaf":"female patients"}
+}
+
+Input: patients with age of diagnosis less than 15yrs
+Output: {
+  "sexpr": "(age of diagnosis < 15yrs)",
+  "tree": {"leaf":"age of diagnosis < 15yrs"}
+}
+
+Input: patients with TP53 expression less than 10
+Output: {
+  "sexpr": "(TP53 expression < 10)",
+  "tree": {"leaf":"TP53 expression < 10"}
+}
+
+Input: age > 60yrs
+Output: {
+  "sexpr": "(age > 60yrs)",
+  "tree": {"leaf":"age > 60yrs"}
+}
+
+Input: black males
+Output: {
+  "sexpr": "(&, black, males)",
+  "tree": {
+    "op": "&",
+    "left":  { "leaf": "black" },
+    "right": { "leaf": "males" }
+  }
+}
+
+Input: black males and white women
+Output: {
+  "sexpr": "(&, (&, black, males), (&, white, women))",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "&",
+      "left":  { "leaf": "black" },
+      "right": { "leaf": "males" }
+    },
+    "right": {
+      "op": "&",
+      "left":  { "leaf": "white" },
+      "right": { "leaf": "women" }
+    }
+  }
+}
+
+Input: black males or white women and asian men
+Output: {
+  "sexpr": "(&, (|, (&, black, males), (&, white, women)), (&, asian, men))",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "|",
+      "left": {
+        "op": "&",
+        "left":  { "leaf": "black" },
+        "right": { "leaf": "males" }
+      },
+      "right": {
+        "op": "&",
+        "left":  { "leaf": "white" },
+        "right": { "leaf": "women" }
+      }
+    },
+    "right": {
+      "op": "&",
+      "left":  { "leaf": "asian" },
+      "right": { "leaf": "men" }
+    }
+  }
+}
+
+Input: female patients with TP53 expression greater than 5
+Output: {
+  "sexpr": "(&, female patients, TP53 expression > 5)",
+  "tree": {
+    "op": "&",
+    "left":  { "leaf": "female patients" },
+    "right": { "leaf": "TP53 expression > 5" }
+  }
+}
+
+Input: young black women with diabetes
+Output: {
+  "sexpr": "(&, (&, (&, young, black), women), diabetes)",
+  "tree": {
+    "op": "&",
+    "left": {
+      "op": "&",
+      "left": {
+        "op": "&",
+        "left":  { "leaf": "young" },
+        "right": { "leaf": "black" }
+      },
+      "right": { "leaf": "women" }
+    },
+    "right": { "leaf": "diabetes" }
+  }
+}
+
+Parse the following query:
+Query: ${phrase}
+`
+	/*
+const prompt = `You are an assistant that analyzes filter term written in natural language and convert into a nested binary S-expression tree using two operators: AND (&) and OR (|). Do NOT generate code that does it, you are supposed to do it yourself. DO NOT give any explanations, just return a JSON string. 
+Avoid using general common nouns (e.g. "patients", "people") as leaves in the tree — instead, try to add specific types of patients as leaves (e.g. "young patients", "black patients", "men", "women", etc.).  
+
+### Scope nouns (NEVER a leaf on their own)
+Generic population words — "patients", "people", "subjects", "individuals", "cases", "participants" — are scope words, not constraints. They introduce the population being filtered. When a scope noun appears with a modifier, the leaf is the modifier-noun unit as a whole; the scope noun does NOT become a separate leaf.
+
+PARSING RULES:
+
+1. IMPLICIT AND (adjacency)
+Adjacent words that form a single semantic unit (adjective + noun, modifier + noun) are grouped with an implicit AND.
+"black males"  → (&, black, males)
+"white women"  → (&, white, women)
+"tall old man" → (&, (&, tall, old), man)  [chain left-to-right]
+
+2. EXPLICIT AND
+The word "and" between two groups produces an & operator node.
+"black males and white women" → (&, (&, black, males), (&, white, women))
+
+3. EXPLICIT OR
+The word "or" between two groups produces a | operator node.
+"black males or white women" → (|, (&, black, males), (&, white, women))
+
+4. NO OPERATOR PRECEDENCE
+Do NOT apply any precedence rules. Do NOT reorder or regroup based on operator type.
+Parse strictly left-to-right. The operator encountered first wraps the groups encountered first.
+"A and B or C"  → (|, (&, A, B), C)   [NOT (&, A, (|, B, C))]
+"A or B or C"   → (|, (|, A, B), C)    [NOT (&, A, (|, B, C))]
+"A or B and C"  → (&, (|, A, B), C)    [NOT (|, A, (&, B, C))]
+
+5. BINARY TREE ONLY
+Every operator node has exactly two children: left and right.
+For three or more groups connected by the same operator, chain left-to-right:
+"A and B and C"       → (&, (&, A, B), C)
+"A or B or C or D"    → (|, (|, (|, A, B), C), D)
+
+6. LEAVES
+A leaf is a single word or a multi-word unit already grouped by implicit AND.
+Leaves have no operator — they are atomic terms in the tree.
+
+OUTPUT FORMAT:
+Return ONLY valid JSON conforming to the following JSON schema. No explanation. No markdown. No extra keys.
+
+JSON Schema:
+${JSON.stringify(filterTreeJsonSchema, null, 2)}
+
+Each node is one of:
+Operator node: { "op": "&" | "|", "left": <node>, "right": <node> }
+Leaf node:     { "leaf": "word or phrase" }
+
+EXAMPLES:
+
+Input: black males and white women
+Output: {
+"sexpr": "(&, (&, black, males), (&, white, women))",
+"tree": {
+"op": "&",
+"left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+"right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+}
+}
+
+Input: patients with age of diagnosis less than 15yrs
+Output: {
+"sexpr": "(age < 15yrs)",
+"tree": "age < 15yrs"
+}
+
+Input: patients with TP53 expression less than 10
+Output: {
+"sexpr": "(TP53 expression < 10)",
+"tree": "TP53 expression < 10"
+}
+
+Input: black males and white women or asian men
+Output: {
+"sexpr": "(|, (&, (&, black, males), (&, white, women)), (&, asian, men))",
+"tree": {
+"op": "|",
+"left": {
+"op": "&",
+"left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+"right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+},
+"right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
+}
+}
+
+Input: black males or white women and asian men
+Output: {
+"sexpr": "(&, (|, (&, black, males), (&, white, women)), (&, asian, men))",
+"tree": {
+"op": "&",
+"left": {
+"op": "|",
+"left":  { "op": "&", "left": {"leaf":"black"}, "right": {"leaf":"males"} },
+"right": { "op": "&", "left": {"leaf":"white"}, "right": {"leaf":"women"} }
+},
+"right": { "op": "&", "left": {"leaf":"asian"}, "right": {"leaf":"men"} }
+}
+}
+
+Input: age > 60yrs
+Output: {
+"sexpr": "(age > 60yrs)",
+"tree": "age > 60yrs"
+}
+
+Input: men with age greater than 60 years
+Output: {
+"sexpr": "(&, (men), (age > 60 years))",
+"tree": {
+"op": "&",
+"left": { "leaf": "men" },
+"right": { "leaf": "age > 60 years" }
+}
+}
+
+Parse the following query:
+Query: ${phrase}
+`
+*/
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog('filter response:', response)
+	try {
+		const parsed = JSON.parse(response) as FilterTreeResult
+		if (!parsed.tree || !parsed.sexpr) {
+			throw 'Response missing required fields "tree" or "sexpr"'
+		}
+		return parsed
+	} catch (e) {
+		console.warn('Failed to parse LLM filter response, wrapping phrase as single leaf:', response, e)
+		// Fallback: wrap the entire phrase as a single-leaf tree conforming to the schema
+		return {
+			sexpr: phrase,
+			tree: { leaf: phrase }
+		}
+	}
 }

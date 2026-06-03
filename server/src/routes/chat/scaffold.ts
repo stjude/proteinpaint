@@ -15,7 +15,8 @@ import type {
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
-import { extractGenesFromPrompt, generateFilterTerm } from './utils.ts'
+import { extractGenesFromPrompt } from './utils.ts'
+import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 

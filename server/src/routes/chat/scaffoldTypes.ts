@@ -138,3 +138,44 @@ export type Phrase2EntityResult =
 	| HierPhrase2EntityResult
 	| MatrixPhrase2EntityResult
 	| PrebuiltScatterPhrase2EntityResult
+
+// JSON schema types for the filter tree returned by evaluateFilterTerm()
+export type FilterLeafNode = { leaf: string }
+export type FilterOperatorNode = { op: '&' | '|'; left: FilterTreeNode; right: FilterTreeNode }
+export type FilterTreeNode = FilterLeafNode | FilterOperatorNode
+export type FilterTreeResult = { sexpr: string; tree: FilterTreeNode }
+
+// The JSON schema definition passed to the LLM prompt
+export const filterTreeJsonSchema = {
+	type: 'object',
+	required: ['sexpr', 'tree'],
+	properties: {
+		sexpr: { type: 'string', description: 'The full S-expression as a string' },
+		tree: { $ref: '#/$defs/node' }
+	},
+	$defs: {
+		node: {
+			oneOf: [
+				{
+					type: 'object',
+					required: ['op', 'left', 'right'],
+					properties: {
+						op: { type: 'string', enum: ['&', '|'] },
+						left: { $ref: '#/$defs/node' },
+						right: { $ref: '#/$defs/node' }
+					},
+					additionalProperties: false
+				},
+				{
+					type: 'object',
+					required: ['leaf'],
+					properties: {
+						leaf: { type: 'string' }
+					},
+					additionalProperties: false
+				}
+			]
+		}
+	},
+	additionalProperties: false
+}
