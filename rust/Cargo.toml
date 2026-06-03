@@ -120,9 +120,5 @@ name="readH5"
 path="src/readH5.rs"
 
 [[bin]]
-name="manhattan_plot"
-path="src/manhattan_plot.rs"
-
-[[bin]]
 name="dmrcate"
 path="src/dmrcate.rs"
