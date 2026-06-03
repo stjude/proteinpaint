@@ -84,8 +84,6 @@ export class RegressionResults {
 
 	async main() {
 		try {
-			this.parent.inputs.dom.submitBtn.text('Running...')
-			this.parent.dom.inputs.style('opacity', 0.5).style('pointer-events', 'none') // disables all interactivities on input ui; if ref category is switched while loading, it will abort current request
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
@@ -108,6 +106,9 @@ export class RegressionResults {
 				this.snplocusBlock.cloakOn()
 			}
 
+			this.parent.inputs.dom.submitBtn.text('Running...')
+			this.parent.dom.inputs.style('opacity', 0.5).style('pointer-events', 'none') // disables all interactivities on input ui; if ref category is switched while loading, it will abort current request
+
 			// submit server request to run analysis
 			const data = await this.app.vocabApi.getRegressionData(this.getDataRequestOpts())
 			if (data.error) throw data.error
@@ -127,6 +128,8 @@ export class RegressionResults {
 			sayerror(this.dom.err_div, 'Error: ' + (e.error || e))
 			this.parent.inputs.dom.submitBtn.property('disabled', true)
 			console.error(e)
+		} finally {
+			this.parent.dom.inputs.style('opacity', 1).style('pointer-events', 'auto')
 		}
 	}
 
