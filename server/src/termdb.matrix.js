@@ -22,7 +22,7 @@ import {
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
-import { getCategories } from '../routes/termdb.categories.ts'
+import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
 import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
 
