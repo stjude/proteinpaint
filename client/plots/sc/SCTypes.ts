@@ -73,6 +73,7 @@ export type SCActiveSubplot = {
 	sectionKey?: string
 	subplot: any
 	sandboxDiv?: any
+	isMetaResult?: boolean
 }
 
 /** Sample-table button payload grouped by sample id. */
@@ -91,8 +92,6 @@ export type SCTableData = {
 	selectedRows: number[]
 	/** Column idx with sample IDs */
 	sampleColIdx: number
-	/** Flat list of active subplots from SubplotManager.map() */
-	activeSubplots: SCActiveSubplot[]
 }
 
 /** Slightly modified from termdbConfig.queries.singleCell.samples.sampleColumns */

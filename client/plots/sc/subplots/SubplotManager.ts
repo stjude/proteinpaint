@@ -20,6 +20,7 @@ import type { SCActiveSubplot, SCSampleSandbox } from '../SCTypes'
 export class SubplotManager {
 	sc: SCViewer
 	scCompPlots: { [key: string]: any }
+	/** Maps plotId to active subplot information */
 	records: Map<string, SCActiveSubplot>
 
 	constructor(sc: SCViewer) {
@@ -49,13 +50,16 @@ export class SubplotManager {
 
 	initSubplot(subplot) {
 		const existing = this.records.get(subplot.id)
+		const sampleId = this.getSampleId(subplot)
+		const isMeta = (sampleId && this.sc.viewModel.metaResultIds.has(sampleId)) || false
 		this.records.set(subplot.id, {
 			plotId: subplot.id,
-			sampleId: this.getSampleId(subplot),
+			sampleId,
 			plotName: this.getPlotName(subplot),
 			sectionKey: existing?.sectionKey,
 			subplot,
-			sandboxDiv: existing?.sandboxDiv
+			sandboxDiv: existing?.sandboxDiv,
+			isMetaResult: isMeta
 		})
 	}
 
@@ -86,7 +90,8 @@ export class SubplotManager {
 			app: this.sc.app,
 			parentId: this.sc.id,
 			id: subplot.id,
-			holder: sandbox
+			holder: sandbox,
+			isMetaResult: this.records.get(subplot.id)?.isMetaResult || false
 		})
 
 		this.scCompPlots[subplot.id] = await dynamicSubplotInit(subplotOpts)

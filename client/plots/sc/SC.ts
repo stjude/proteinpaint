@@ -1,5 +1,5 @@
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { SCActiveSubplot, SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
+import type { SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
@@ -112,7 +112,6 @@ export class SCViewer extends PlotBase implements RxComponent {
 		this.interactions.toggleLoading(true)
 
 		let data: any
-		let activeSubplots: SCActiveSubplot[] = []
 		try {
 			const allSampleData = await this.model.getAllSampleData(state)
 			if (!allSampleData || allSampleData.error) {
@@ -121,8 +120,8 @@ export class SCViewer extends PlotBase implements RxComponent {
 				return
 			}
 			this.items = allSampleData.samples
-			activeSubplots = this.subplotManager.map(state.subplots)
-			this.viewModel.processData(config, allSampleData.samples, activeSubplots)
+
+			this.viewModel.processData(config, allSampleData.samples)
 
 			if (config.settings?.sc?.item) {
 				const sampleData = await this.model.getSampleData()
@@ -139,6 +138,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 			this.app.printError(e.message || e)
 			return
 		}
+		const activeSubplots = this.subplotManager.map(state.subplots)
 		await this.view.update(config.settings, data, activeSubplots, this.viewModel.tableData, this.subplotManager)
 		this.interactions.toggleLoading(false)
 	}

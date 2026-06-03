@@ -46,8 +46,7 @@ function getTestTableData() {
 			[{ value: 'S3' }, { value: '' }, { value: 'EXP3' }]
 		],
 		selectedRows: [],
-		sampleColIdx: 0,
-		activeSubplots: []
+		sampleColIdx: 0
 	}
 }
 
@@ -166,8 +165,7 @@ tape('renderSamplesTable() noButtonCallback should map custom column labels to k
 		],
 		rows: [[{ value: 'S1' }, { value: '' }, { value: 'EXP1' }, { value: 'PROJ1' }]],
 		selectedRows: [],
-		sampleColIdx: 0,
-		activeSubplots: []
+		sampleColIdx: 0
 	}
 
 	const holder = getHolder()
@@ -193,8 +191,7 @@ tape('renderSamplesTable() noButtonCallback should throw when sID is missing', t
 		columns: [{ label: 'Project', sortable: true }],
 		rows: [[{ value: 'PROJ1' }]],
 		selectedRows: [],
-		sampleColIdx: 0,
-		activeSubplots: []
+		sampleColIdx: 0
 	}
 
 	const { renderer, holder } = getRenderer()

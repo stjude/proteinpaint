@@ -37,11 +37,17 @@ class DynamicSubplot implements RxComponent {
 	}
 
 	async init() {
+		this.opts.holder.app_div.attr('data-testid', 'sjpp-sc-subplot-sandbox-' + this.opts.chartType)
+
+		/** Summary expects the entire sandbox. No need to create dom. */
+		if (this.opts.chartType == 'summary') return
+
 		this.dom = {
 			holder: this.opts.holder,
 			viz: this.opts.holder.body.append('div').style('position', 'relative'),
 			paneTitleDiv: this.opts.holder.header.append('div').style('position', 'relative'),
-			filterDiv: this.opts.holder.header.append('div').style('position', 'relative')
+			filterDiv: this.opts.holder.header.append('div').style('position', 'relative'),
+			errorDiv: this.opts.holder.body.append('div').style('position', 'relative')
 		}
 	}
 
@@ -56,23 +62,29 @@ class DynamicSubplot implements RxComponent {
 	}
 
 	async main() {
-		if (!this.components) await this.setComponents(this.opts)
+		if (!this.components) await this.setComponents()
 	}
 
-	async setComponents(opts) {
-		const _ = await importPlot(opts.chartType)
+	async setComponents() {
+		const _ = await importPlot(this.opts.chartType)
+		const chartOpts: { [index: string]: any } = {
+			app: this.app,
+			id: this.id,
+			parentId: this.opts.parentId
+			// plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
+		}
+		if (this.opts.chartType == 'summary') {
+			chartOpts.holder = this.opts.holder
+		} else {
+			chartOpts.holder = this.dom.viz
+			chartOpts.header = this.dom.paneTitleDiv
+		}
 		const promises: { [index: string]: any } = {
-			chart: _.componentInit({
-				app: this.app,
-				holder: this.dom.viz,
-				header: this.dom.paneTitleDiv,
-				id: this.id,
-				parentId: this.opts.parentId
-				// plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
-			})
+			chart: _.componentInit(chartOpts)
 		}
 
-		if (!this.state.config.hidePlotFilter)
+		/** Summary inits its own plot filter */
+		if (!this.state.config?.hidePlotFilter && this.opts.isMetaResult && this.opts.chartType != 'summary') {
 			promises.filter = filterRxCompInit({
 				app: this.app,
 				vocabApi: this.app.vocabApi,
@@ -88,6 +100,7 @@ class DynamicSubplot implements RxComponent {
 					})
 				}
 			})
+		}
 
 		this.components = await multiInit(promises)
 	}
