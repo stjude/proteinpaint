@@ -26,34 +26,28 @@ const NEVER_ABORT = new AbortController().signal
  * pattern that gates concurrent compute jobs. The `ConcurrencyLimiterOpts` and
  * `ConcurrencyLimiter` types live in utils/types.ts alongside cacheOrRecompute's. */
 
-/** Generic 429 so it reads as "retry later", not a client error in the
- * request shape. Mirrors the busy-error shape in utils/cacheOrRecompute.ts. */
-function defaultBusyError(): Error {
-	const err: any = new Error('Concurrency pool is full. Please try again shortly.')
-	err.status = 429
-	err.statusCode = 429
-	err.code = 'POOL_BUSY'
-	return err
-}
-
-/** Generic 504 so it reads as "the work took too long", not a client error.
- * Mirrors the busy-error shape above. */
-function defaultTimeoutError(): Error {
-	const err: any = new Error('Task exceeded its time limit and was evicted.')
-	err.status = 504
-	err.statusCode = 504
-	err.code = 'TASK_TIMEOUT'
-	return err
-}
-
 export function createConcurrencyLimiter(opts: ConcurrencyLimiterOpts): ConcurrencyLimiter {
-	const {
-		maxConcurrent,
-		maxQueued,
-		makeBusyError = defaultBusyError,
-		makeTimeoutError = defaultTimeoutError,
-		taskTimeoutMs = DEFAULT_TASK_TIMEOUT_MS
-	} = opts
+	const { maxConcurrent, maxQueued, taskName = 'task', taskTimeoutMs = DEFAULT_TASK_TIMEOUT_MS } = opts
+
+	// Closured error builders — `taskName` names the gated resource so the
+	// message identifies which pool is full / what timed out, while the status
+	// and code stay fixed (429 "retry later", 504 "took too long"). Both read as
+	// transient server states, not client request errors. If a caller ever needs
+	// a custom statusCode, add it to opts rather than reintroducing a factory.
+	function busyError(): Error {
+		const err: any = new Error(`The ${taskName} pool is full. Please try again shortly.`)
+		err.status = 429
+		err.statusCode = 429
+		err.code = 'POOL_BUSY'
+		return err
+	}
+	function timeoutError(): Error {
+		const err: any = new Error(`The ${taskName} exceeded its time limit and was evicted.`)
+		err.status = 504
+		err.statusCode = 504
+		err.code = 'TASK_TIMEOUT'
+		return err
+	}
 	// Validate the caps at construction — these are programmer config, not
 	// request input, so fail fast and loudly rather than degrading silently:
 	// a non-integer or <1 maxConcurrent would never let tasks run (or drive
@@ -79,7 +73,7 @@ export function createConcurrencyLimiter(opts: ConcurrencyLimiterOpts): Concurre
 			active++
 			return
 		}
-		if (queue.length >= maxQueued) throw makeBusyError()
+		if (queue.length >= maxQueued) throw busyError()
 		await new Promise<void>(resolve => queue.push(resolve))
 	}
 
@@ -126,7 +120,7 @@ export function createConcurrencyLimiter(opts: ConcurrencyLimiterOpts): Concurre
 				timer = setTimeout(() => {
 					controller.abort()
 					releaseOnce()
-					reject(makeTimeoutError())
+					reject(timeoutError())
 				}, taskTimeoutMs)
 			})
 			return await Promise.race([task, timeout])

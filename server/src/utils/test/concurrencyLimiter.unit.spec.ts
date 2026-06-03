@@ -9,13 +9,13 @@ run propagates fn's rejection and frees the slot for the next run
 up to maxConcurrent tasks run at once; the next stays pending until one frees
 a queued task runs once a slot frees, in FIFO order
 queue full → run rejects synchronously with the default POOL_BUSY 429 error
-a provided makeBusyError is used instead of the default
+taskName names the gated resource in the busy error message
 pool recovers: a new run succeeds after the busy queue drains
 maxConcurrent=1 hands slots to waiters one at a time without over-decrementing
 task timeout: hung task evicted with TASK_TIMEOUT 504, slot freed for the queue
 task timeout: AbortSignal fires so a cooperative task can bail
 task timeout: a task finishing in time is not evicted and the timer is cleared
-task timeout: custom makeTimeoutError overrides the default
+task timeout: taskName names the gated resource in the timeout error message
 task timeout: Infinity disables eviction; invalid values rejected at construction
 */
 
@@ -165,6 +165,7 @@ tape('queue full → run rejects synchronously with the default POOL_BUSY 429 er
 		t.equal(e.code, 'POOL_BUSY', 'default busy error code is POOL_BUSY')
 		t.equal(e.status, 429, 'default busy error carries status 429')
 		t.equal(e.statusCode, 429, 'default busy error carries statusCode 429')
+		t.match(e.message, /\btask pool is full\b/, 'default taskName "task" names the pool in the message')
 	}
 
 	blocker.resolve()
@@ -172,15 +173,8 @@ tape('queue full → run rejects synchronously with the default POOL_BUSY 429 er
 	t.end()
 })
 
-tape('a provided makeBusyError is used instead of the default', async t => {
-	const makeBusyError = () => {
-		const err: any = new Error('custom full')
-		err.status = 429
-		err.statusCode = 429
-		err.code = 'RENDER_BUSY'
-		return err
-	}
-	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, makeBusyError })
+tape('taskName names the gated resource in the busy error message', async t => {
+	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskName: 'volcano render' })
 	const blocker = defer()
 	const running = limiter.run(async () => {
 		await blocker.promise
@@ -189,10 +183,15 @@ tape('a provided makeBusyError is used instead of the default', async t => {
 
 	try {
 		await limiter.run(async () => 'overflow')
-		t.fail('expected rejection from the custom busy error')
+		t.fail('expected rejection from the busy error')
 	} catch (e: any) {
-		t.equal(e.code, 'RENDER_BUSY', 'the caller-supplied error factory is used')
-		t.equal(e.message, 'custom full', 'custom message is preserved')
+		t.equal(e.code, 'POOL_BUSY', 'code stays the fixed POOL_BUSY')
+		t.equal(e.statusCode, 429, 'status stays the fixed 429')
+		t.equal(
+			e.message,
+			'The volcano render pool is full. Please try again shortly.',
+			'taskName is woven into the message'
+		)
 	}
 
 	blocker.resolve()
@@ -279,6 +278,7 @@ tape('a hung task is evicted with TASK_TIMEOUT (504) and its slot is freed', asy
 		t.equal(e.code, 'TASK_TIMEOUT', 'default timeout error code')
 		t.equal(e.status, 504, 'status 504')
 		t.equal(e.statusCode, 504, 'statusCode 504')
+		t.match(e.message, /\btask exceeded its time limit\b/, 'default taskName "task" names the work in the message')
 	}
 
 	t.equal(await queuedRun, 'ok', 'the queued task ran after the hung one was evicted')
@@ -323,22 +323,25 @@ tape('a task finishing before the timeout is not evicted and the timer is cleare
 	t.end()
 })
 
-tape('a provided makeTimeoutError overrides the default', async t => {
-	const makeTimeoutError = () => {
-		const err: any = new Error('custom slow')
-		err.status = 504
-		err.statusCode = 504
-		err.code = 'RENDER_TIMEOUT'
-		return err
-	}
-	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: 15, makeTimeoutError })
+tape('taskName names the gated resource in the timeout error message', async t => {
+	const limiter = createConcurrencyLimiter({
+		maxConcurrent: 1,
+		maxQueued: 0,
+		taskTimeoutMs: 15,
+		taskName: 'volcano render'
+	})
 	const hung = defer()
 	try {
 		await limiter.run(() => hung.promise)
 		t.fail('expected timeout rejection')
 	} catch (e: any) {
-		t.equal(e.code, 'RENDER_TIMEOUT', 'the caller-supplied timeout error is used')
-		t.equal(e.message, 'custom slow', 'custom message is preserved')
+		t.equal(e.code, 'TASK_TIMEOUT', 'code stays the fixed TASK_TIMEOUT')
+		t.equal(e.statusCode, 504, 'status stays the fixed 504')
+		t.equal(
+			e.message,
+			'The volcano render exceeded its time limit and was evicted.',
+			'taskName is woven into the message'
+		)
 	}
 	t.end()
 })

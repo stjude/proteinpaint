@@ -33,10 +33,10 @@ export type ConcurrencyLimiterOpts = {
 	 * immediately with the busy error instead of enqueuing. */
 	maxQueued: number
 
-	/** Optional factory for the error thrown when the wait-queue is full.
-	 * Defaults to a generic 429 (`code: 'POOL_BUSY'`). Supply your own to
-	 * carry a caller-specific code/message (e.g. volcano's `RENDER_BUSY`). */
-	makeBusyError?: () => Error
+	/** Names the gated resource for the busy/timeout error messages — e.g.
+	 * 'volcano render' yields "The volcano render pool is full…". Defaults to
+	 * 'task'. The error status (429 busy / 504 timeout) and code are fixed. */
+	taskName?: string
 
 	/** Per-task execution timeout (ms). A task that holds its slot longer than
 	 * this has its slot released (so the queue advances) and its `run()`
@@ -46,11 +46,6 @@ export type ConcurrencyLimiterOpts = {
 	 * Defaults to `DEFAULT_TASK_TIMEOUT_MS` (30000) when omitted; pass `Infinity`
 	 * to disable (unbounded) for legitimately long-running tasks. */
 	taskTimeoutMs?: number
-
-	/** Optional factory for the error thrown when a task times out. Defaults to
-	 * a 504 (`code: 'TASK_TIMEOUT'`). Supply your own for a caller-specific
-	 * code/message (e.g. volcano's `RENDER_TIMEOUT`). */
-	makeTimeoutError?: () => Error
 }
 
 /** Context handed to each `run()` callback. `signal` is aborted if the task
