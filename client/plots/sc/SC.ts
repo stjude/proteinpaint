@@ -8,7 +8,6 @@ import { SCViewModel } from './viewModel/SCViewModel'
 import { SCInteractions } from './interactions/SCInteractions'
 import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './settings/defaults.ts'
-import { importPlot } from '#plots/importPlot.js'
 import { getCombinedTermFilter } from '#filter'
 import { SubplotManager } from './subplots/SubplotManager.ts'
 
@@ -142,16 +141,6 @@ export class SCViewer extends PlotBase implements RxComponent {
 		}
 		await this.view.update(config.settings, data, activeSubplots, this.viewModel.tableData, this.subplotManager)
 		this.interactions.toggleLoading(false)
-	}
-
-	async initPlotComponent(subplotId, opts) {
-		const { componentInit } = await importPlot(opts.chartType)
-		this.components.plots[subplotId] = await componentInit(opts)
-	}
-
-	removeComponent(subplotId) {
-		this.components.plots[subplotId].destroy()
-		delete this.components.plots[subplotId]
 	}
 }
 

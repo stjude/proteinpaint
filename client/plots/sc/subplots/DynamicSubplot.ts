@@ -2,6 +2,7 @@ import { importPlot } from '#plots/importPlot.js'
 import { getCompInit, multiInit, type RxComponent, type ComponentApi } from '#rx'
 import { filterRxCompInit } from '#filter'
 import type { MassAppApi } from '#mass/types/mass'
+// import { select as d3select } from 'd3-selection'
 
 /** Wrapper for subplot sanbdoxes created dynamically.
  * Builds out the expected dom structure and extra functionality (e.g. plot filter)
@@ -23,15 +24,16 @@ class DynamicSubplot implements RxComponent {
 
 	type: string
 	opts!: { [index: string]: any }
-	app!: MassAppApi
+	app: MassAppApi
 	id!: string
 	state: any
-	components: { [name: string]: ComponentApi } = {}
+	components!: { [name: string]: ComponentApi }
 	dom: { [index: string]: any } = {}
 
 	constructor(opts) {
 		this.type = DynamicSubplot.type
 		this.opts = opts
+		this.app = opts.app
 	}
 
 	async init() {
@@ -40,6 +42,16 @@ class DynamicSubplot implements RxComponent {
 			viz: this.opts.holder.body.append('div').style('position', 'relative'),
 			paneTitleDiv: this.opts.holder.header.append('div').style('position', 'relative'),
 			filterDiv: this.opts.holder.header.append('div').style('position', 'relative')
+		}
+	}
+
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		return {
+			config
 		}
 	}
 
@@ -56,6 +68,7 @@ class DynamicSubplot implements RxComponent {
 				header: this.dom.paneTitleDiv,
 				id: this.id,
 				parentId: this.opts.parentId
+				// plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
 			})
 		}
 

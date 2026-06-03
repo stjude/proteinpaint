@@ -239,8 +239,7 @@ export async function getPlotConfig(opts, app) {
 			sampleScatter: getDefaultScatterSettings(opts),
 			startColor: {}, //dict to store the start color of the gradient for each chart when using continuous color
 			stopColor: {} //dict to store the stop color of the gradient for each chart when using continuous color
-		},
-		hidePlotFilter: opts.singleCellPlot ? true : false
+		}
 	}
 
 	try {
