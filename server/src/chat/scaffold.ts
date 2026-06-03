@@ -1,5 +1,4 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
-// import { ambiguousPoints } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -11,17 +10,122 @@ import type {
 	DEScaffold,
 	HierarchicalGeneExpressionScaffold,
 	HierarchicalScaffold,
+	GenomeBrowserScaffold,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
-	MsgToUser,
-	Entity
+	MsgToUser
 } from './scaffoldTypes.ts'
 import { extractGenesFromPrompt } from './utils.ts'
+import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
-import { evaluateFilterTerm, phrase2entitytw, collectLeaves, type FilterTreeResult } from './phrase2entity.ts'
-import { getTermObj, type Value } from './entity2termObj.ts'
-import { resolveToTvs } from './entity2twTvs.ts'
+
+async function getScaffold_genomeBrowser(
+	user_prompt: string,
+	llm: LlmConfig
+): Promise<GenomeBrowserScaffold | MsgToUser> {
+	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to extract the phrase describing the genomic region (and an optional cohort filter) from a user's natural language question, and return them in a strict JSON scaffold for configuring a genome browser view.
+
+A genome browser view is defined by a genomic region — typically described by a chromosome and start/stop coordinates (e.g. "chr17:7,571,720-7,590,868", "chromosome 1 from 1Mb to 2Mb"). Do NOT parse the chromosome, start, or stop into separate fields here — that happens in a later step. In THIS step, just extract the entire phrase that describes the region as a single string.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
+{
+  "genePhrase": "<phrase>",   // OPTIONAL - the word containing the gene name
+  "genomeBrowserPhrase": "<phrase>",   // OPTIONAL - the phrase describing the genomic region (chromosome + start + stop coordinates)
+  "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
+}
+
+## EXTRACTION RULES
+1. genomeBrowserPhrase is OPTIONAL. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000. Preserve the EXACT wording from the user's query (including the original chromosome formatting, commas, unit suffixes such as "kb"/"Mb", and the start-stop separator).
+2. genomeBrowserPhrase (if present) should contain ONLY the region description — do not include the cohort filter, surrounding verbs ("show", "open"), or plot-type words ("genome browser", "browser view") unless they are inseparable from the region phrase.
+3. genePhrase is OPTIONAL. If the user's query contains a recognizable gene name, extract the phrase containing the gene name along with information such as (mutation/variant/expression/methylation) into the genePhrase field. This is for downstream use in highlighting the gene in the genome browser, but it should be separate from the genomeBrowserPhrase which focuses on the region description.
+4. filter is ONLY set when the user restricts the view to a specific subpopulation or cohort. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
+5. If the user does not provide a region (no chromosome and/or no coordinates), return:
+{ "type": "text","text": "No genomic region found" }
+
+## EXAMPLES
+
+--- Region string format ---
+Q: "Show chr17:7,571,720-7,590,868 in the genome browser"
+A: {
+  "genomeBrowserPhrase": "chr17:7,571,720-7,590,868"
+}
+
+--- Natural language coordinates ---
+Q: "Open the genome browser at chromosome 1 from 1000000 to 2000000"
+A: {
+  "genomeBrowserPhrase": "chromosome 1 from 1000000 to 2000000"
+}
+
+--- Natural language genes ---
+Q: "show YGT5 mutations"
+A: {
+  "genePhrase": "YGT5 mutations"
+}
+
+--- Natural language genes ---
+Q: "show lollipop plot of FRVT85 mutations for men"
+A: {
+  "genePhrase": "FRVT85 mutations",
+  "filter": "men"
+}
+
+--- Unit suffix preserved ---
+Q: "View chrX from 5kb to 10kb"
+A: {
+  "genomeBrowserPhrase": "chrX from 5kb to 10kb"
+}
+
+--- Region with cohort filter ---
+Q: "Show chr7:140000000-141000000 in pediatric patients"
+A: {
+  "genomeBrowserPhrase": "chr7:140000000-141000000",
+  "filter": "pediatric patients"
+}
+
+--- Comma-formatted coordinates with cohort filter ---
+Q: "Genome browser at chr22 from 16,000,000 to 16,500,000 for AML cases"
+A: {
+  "genomeBrowserPhrase": "chr22 from 16,000,000 to 16,500,000",
+  "filter": "AML cases"
+}
+
+## NEGATIVE EXAMPLES — WHAT NOT TO DO
+Q: "Show chr1:1000-2000 in women"
+WRONG:
+{
+  "genomeBrowserPhrase": "chr1:1000-2000 in women"   // filter cohort must be split out into the filter field
+}
+RIGHT:
+{
+  "genomeBrowserPhrase": "chr1:1000-2000",
+  "filter": "women"
+}
+
+Q: "Open the genome browser at chromosome 1 from 1Mb to 2Mb"
+WRONG:
+{
+  "genomeBrowserPhrase": "chr1:1000000-2000000"   // do NOT normalize chromosome formatting or unit suffixes
+}
+RIGHT:
+{
+  "genomeBrowserPhrase": "chromosome 1 from 1Mb to 2Mb"
+}
+
+Parse the following user query into the JSON scaffold according to the rules and schema defined above:
+Query: "${user_prompt}"
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Genome browser scaffold: ${response}`)
+	try {
+		const parsed = JSON.parse(response) as GenomeBrowserScaffold
+		parsed.plotType = 'genomeBrowser'
+		return parsed
+	} catch {
+		throw new Error(`Failed to parse GenomeBrowserScaffold from LLM response: ${response}`)
+	}
+}
 
 async function getScaffold_matrix(user_prompt: string, llm: LlmConfig): Promise<MatrixScaffold> {
 	const prompt = ` You are a ProteinPaint matrix plot assistant. Your task is to extract the necessary variables from a user's natural language question to populate a strict JSON scaffold for configuring a matrix plot. 
@@ -390,7 +494,7 @@ async function hierarchicalGeneExpression(
 A hierarchical clustering plot clusters samples and features (such as genes) and displays the result as a heatmap with dendrograms.
 
 ## OUTPUT SCHEMA
-Return ONLY a valid JSON object with this structure:
+Return ONLY a valid JSON object with this structure, with NO extra fields, no surrounding text, no explanation, and no code fences:
 {
 "hierarchicalPhrase": "<phrase>",   // REQUIRED - the phrase indicating details for hierarchical clustering which may include gene names, geneset names or calculating the top variably expressed genes, etc. Extract the entire phrase that indicates hierarchical clustering intent, preserving the exact wording.
 "filter": "<phrase>"                // OPTIONAL — a cohort restriction phrase that narrows the sample set used for clustering
@@ -961,6 +1065,8 @@ export async function inferScaffold(
 			return await getScaffold_summary(user_prompt, llm)
 		case 'dge':
 			return await getScaffold_dge(user_prompt, llm)
+		case 'genomeBrowser':
+			return await getScaffold_genomeBrowser(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,
@@ -979,51 +1085,4 @@ export async function inferScaffold(
 		default:
 			throw `No scaffold function defined for plot type: ${plotType}`
 	}
-}
-
-/**
- * Convert a natural-language filter phrase into a tvslst object that can be sent to the UI.
- * Pipeline:
- *   1. evaluateFilterTerm() — parse the phrase into a binary AND/OR tree of leaf phrases
- *   2. phrase2entitytw() per leaf — resolve each leaf phrase into an Entity (mirrors the
- *      filter-loop pattern used in phrase2entity.ts)
- *   3. getTermObj() per Entity — resolve each Entity into a Value (mirrors lines 210-219 of
- *      entity2termObj.ts, which does the same conversion for hierCluster filter entities)
- *   4. resolveToTvs() — assemble the Value[] into a final tvslst object
- */
-async function generateFilterTerm(
-	phrase: string,
-	llm: LlmConfig,
-	genes_list: string[],
-	dataset_json: any,
-	ds: any,
-	dbPath: string,
-	genome: any
-): Promise<any | MsgToUser> {
-	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
-	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
-
-	const leafPhrases = collectLeaves(filterTree.tree)
-	const filterEntities: Entity[] = []
-	for (const leaf of leafPhrases) {
-		mayLog('generateFilterTerm evaluating filter leaf:', leaf.phrase)
-		const filterTw = await phrase2entitytw(leaf.phrase, llm, genes_list, dataset_json, ds, genome)
-		if ('type' in filterTw && filterTw.type === 'text') {
-			return filterTw as MsgToUser
-		}
-		const filterEntity = filterTw as Entity
-		if (leaf.logicalOperator) filterEntity.logicalOperator = leaf.logicalOperator
-		filterEntities.push(filterEntity)
-	}
-
-	const filterValues: Value[] = []
-	for (const filterTerm of filterEntities) {
-		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
-		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
-		if (!termObj) continue
-		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
-		filterValues.push(termObj)
-	}
-
-	return await resolveToTvs(filterValues, dbPath, llm)
 }

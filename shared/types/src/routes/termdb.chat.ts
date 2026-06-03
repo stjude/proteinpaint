@@ -37,6 +37,7 @@ export type LlmConfig = {
 	EmbeddingProvider: 'SJ' | 'ollama' | 'huggingface'
 	EmbeddingProviderApi: string
 	api: string
+	apiToken?: string
 	EmbeddingProviderApiToken?: string
 	modelName: string
 	embeddingModelName: string
@@ -123,7 +124,7 @@ export type plot_type = {
 	type: 'plot'
 	/** The type of plot to be displayed on the UI.
 	 *  Standard categories are listed; datasets may define additional custom categories. */
-	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster' | 'lollipop'
+	plot: 'summary' | 'dge' | 'survival' | 'matrix' | 'sampleScatter' | 'hierCluster' | 'genomeBrowser'
 }
 
 export type resource_type = {
@@ -140,7 +141,7 @@ export type none_type = {
 export type QueryClassification = { type: 'plot' } | { type: 'notplot' } | { type: 'binaryQuery' }
 
 /** Specific plot type returned by classifyPlotType in plot.ts */
-export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'samplescatter' | 'hiercluster' | 'lollipop'
+export type PlotType = 'summary' | 'dge' | 'survival' | 'matrix' | 'prebuiltscatter' | 'hiercluster' | 'genomeBrowser'
 
 export type DEType = {
 	/** Name of group1 which is an array of filter terms */

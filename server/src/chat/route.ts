@@ -1,22 +1,35 @@
-import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification } from '#types'
-// import { ambiguousPoints } from '#types'
+import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification, RouteApi, RoutePayload } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
-import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './chat/utils.ts'
-import { classifyQuery } from './chat/classify1.ts'
-import { classifyPlotType } from './chat/plot.ts'
-import { classifyNotPlot } from './chat/classify2.ts'
-import { inferScaffold } from './chat/scaffold.ts'
-import serverconfig from '../src/serverconfig.js'
-import { getDsAllowedTermTypes } from '../src/routes/termdb.config.ts'
-import { phrase2entity } from './chat/phrase2entity.ts'
-import { inferTermObjFromEntity } from './chat/entity2termObj.ts'
-import { resolveToTwTvs } from './chat/entity2twTvs.ts'
-import { answerDataQueries } from './chat/dataQueries.ts'
+import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './utils.ts'
+import { classifyQuery } from './classify1.ts'
+import { classifyPlotType } from './plot.ts'
+import { classifyNotPlot } from './classify2.ts'
+import { inferScaffold } from './scaffold.ts'
+import serverconfig from '#src/serverconfig.js'
+import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
+import { phrase2entity } from './phrase2entity.ts'
+import { inferTermObjFromEntity } from './entity2termObj.ts'
+import { resolveToTwTvs } from './entity2twTvs.ts'
+import { answerDataQueries } from './dataQueries.ts'
+import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './scaffoldTypes.ts'
+import { resolveToPlotState } from './scaffold2state.ts'
 import path from 'path'
 import fs from 'fs'
-import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './chat/scaffoldTypes.ts'
-import { resolveToPlotState } from './chat/scaffold2state.ts'
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'ChatRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'ChatResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/chat',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
 
 /*
 async function doOmnisearch(prompt: string, q, genome: any, ds: any) {
@@ -68,7 +81,7 @@ export function init({ genomes }) {
 			let agentFiles: string[] = []
 			try {
 				// Read dataset JSON file
-				agentFiles = await fs.readdirSync(aiFilesDir).filter(file => file.endsWith('.json'))
+				agentFiles = (await fs.promises.readdir(aiFilesDir)).filter(file => file.endsWith('.json'))
 			} catch (err: any) {
 				if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
 				if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
@@ -119,7 +132,6 @@ export function init({ genomes }) {
 				chatSupportedPlotTypes,
 				allowedTermTypes,
 				genome
-				// 	testing
 			)
 			mayLog('From init: Final AI output JSON:', JSON.stringify(ai_output_json))
 			res.send(ai_output_json as ChatResponse)
@@ -178,7 +190,7 @@ export async function run_chat_pipeline(
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
 
 		// Check if the classified plot type is supported by this dataset
-		if (!supportedPlotTypes.includes(plotType)) {
+		if (!supportedPlotTypes.map(s => s.toLowerCase()).includes(plotType.toLowerCase())) {
 			const log = 'Plot type: "' + plotType + '" is not supported.'
 			ai_output_json = {
 				type: 'text',
@@ -207,6 +219,8 @@ export async function run_chat_pipeline(
 			ds,
 			dataset_db
 		)
+		if (!scaffoldResult)
+			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
 		mayLog('ScaffoldResult: ', scaffoldResult)
 		if (
 			(plotType === 'hiercluster' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
@@ -217,8 +231,6 @@ export async function run_chat_pipeline(
 		}
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
-		if (!scaffoldResult)
-			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
 		if ('type' in scaffoldResult && scaffoldResult.type === 'text') {
 			return scaffoldResult // Return msg/error
 		}
@@ -237,10 +249,11 @@ export async function run_chat_pipeline(
 			genes_list,
 			dataset_json,
 			ds,
-			genome
+			genome,
+			dataset_db
 		)
 		mayLog('Time taken to phrase 2 entity:', formatElapsedTime(Date.now() - time))
-		if ('type' in phrase2entityResult && phrase2entityResult.type === 'text') {
+		if (('type' in phrase2entityResult && phrase2entityResult.type === 'text') || plotType === 'genomeBrowser') {
 			return phrase2entityResult // Return msg/error
 		}
 		mayLog(phrase2entityResult)

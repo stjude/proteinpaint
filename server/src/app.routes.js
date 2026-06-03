@@ -6,6 +6,7 @@
 // must add route file paths below so that esbuild knows exactly what to bundle),
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
+	import('./chat/route.ts'),
 	import('./grin2/route.ts'),
 	import('./routes/aiProjectAdmin.ts'),
 	import('./routes/aiProjectSelectedWSImages.ts'),
@@ -43,7 +44,6 @@ export const routeFiles = [
 	import('./routes/termdb.dapVolcano.ts'),
 	import('./routes/termdb.diffMeth.ts'),
 	import('./routes/termdb.violinBox.ts'),
-	import('./routes/termdb.chat.ts'),
 	import('./routes/termdb.categories.ts'),
 	import('./routes/termdb.cluster.ts'),
 	import('./routes/termdb.cohort.summary.ts'),
