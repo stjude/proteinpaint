@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { createConcurrencyLimiter } from '#src/utils/concurrencyLimiter.ts'
+import { createConcurrencyLimiter, DEFAULT_TASK_TIMEOUT_MS } from '#src/utils/concurrencyLimiter.ts'
 
 /*
 test sections:
@@ -12,6 +12,11 @@ queue full → run rejects synchronously with the default POOL_BUSY 429 error
 a provided makeBusyError is used instead of the default
 pool recovers: a new run succeeds after the busy queue drains
 maxConcurrent=1 hands slots to waiters one at a time without over-decrementing
+task timeout: hung task evicted with TASK_TIMEOUT 504, slot freed for the queue
+task timeout: AbortSignal fires so a cooperative task can bail
+task timeout: a task finishing in time is not evicted and the timer is cleared
+task timeout: custom makeTimeoutError overrides the default
+task timeout: Infinity disables eviction; invalid values rejected at construction
 */
 
 /** Tests for the generic concurrency gating device. Concurrency is driven
@@ -26,10 +31,41 @@ function defer<T = void>(): { promise: Promise<T>; resolve: (v: T) => void } {
 	return { promise, resolve }
 }
 
-const tick = () => new Promise<void>(r => setTimeout(r, 0))
+/** Yield one microtask checkpoint. The limiter's handoffs all resume via
+ * promise microtasks (`acquire` awaits a queued resolver; `release` resolves
+ * it), so a single microtask drain lets every ready continuation run, in order
+ * — no macrotask timer needed, which keeps ordering exact and deterministic. */
+const tick = () => Promise.resolve()
+
+/** Real-time delay. The timeout feature is inherently time-based, so the
+ * timeout cases below use small real timers (~15–40ms); the microtask-driven
+ * tests above don't. */
+const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
 tape('\n', t => {
 	t.comment('-***- utils/concurrencyLimiter specs -***-')
+	t.end()
+})
+
+tape('rejects invalid caps at construction', t => {
+	for (const bad of [0, -1, 2.5, NaN, Infinity]) {
+		t.throws(
+			() => createConcurrencyLimiter({ maxConcurrent: bad, maxQueued: 5 }),
+			/maxConcurrent must be an integer >= 1/,
+			`maxConcurrent=${bad} is rejected`
+		)
+	}
+	for (const bad of [-1, 1.5, NaN, Infinity]) {
+		t.throws(
+			() => createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: bad }),
+			/maxQueued must be an integer >= 0/,
+			`maxQueued=${bad} is rejected`
+		)
+	}
+	t.doesNotThrow(
+		() => createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0 }),
+		'maxQueued=0 (no waiting room) is allowed'
+	)
 	t.end()
 })
 
@@ -213,5 +249,126 @@ tape('maxConcurrent=1 hands slots to waiters one at a time without over-decremen
 		Array.from({ length: N }, (_, i) => i),
 		'every task completed exactly once with its own value'
 	)
+	t.end()
+})
+
+/* -------------------------------- timeouts -------------------------------- */
+
+tape('DEFAULT_TASK_TIMEOUT_MS is 30s', t => {
+	t.equal(DEFAULT_TASK_TIMEOUT_MS, 30000, 'documented safety default')
+	t.end()
+})
+
+tape('a hung task is evicted with TASK_TIMEOUT (504) and its slot is freed', async t => {
+	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 5, taskTimeoutMs: 15 })
+	const hung = defer() // never resolved → the task hangs
+	let queuedRan = false
+
+	// This run holds the only slot and will time out at 15ms.
+	const hungRun = limiter.run(() => hung.promise)
+	// This run is queued behind it; it can only proceed once the slot frees.
+	const queuedRun = limiter.run(async () => {
+		queuedRan = true
+		return 'ok'
+	})
+
+	try {
+		await hungRun
+		t.fail('expected the hung run to reject')
+	} catch (e: any) {
+		t.equal(e.code, 'TASK_TIMEOUT', 'default timeout error code')
+		t.equal(e.status, 504, 'status 504')
+		t.equal(e.statusCode, 504, 'statusCode 504')
+	}
+
+	t.equal(await queuedRun, 'ok', 'the queued task ran after the hung one was evicted')
+	t.ok(queuedRan, 'the freed slot let the queue advance')
+	t.end()
+})
+
+tape('the AbortSignal is aborted on timeout, letting a cooperative task bail', async t => {
+	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: 15 })
+	let observedAbort = false
+	try {
+		await limiter.run(
+			({ signal }) =>
+				new Promise((_, reject) => {
+					signal.addEventListener('abort', () => {
+						observedAbort = true
+						reject(new Error('aborted by signal'))
+					})
+				})
+		)
+		t.fail('expected rejection')
+	} catch {
+		t.ok(observedAbort, 'fn observed the abort signal firing on timeout')
+	}
+	t.end()
+})
+
+tape('a task finishing before the timeout is not evicted and the timer is cleared', async t => {
+	// 15ms timeout, but the task resolves immediately. If the timer were not
+	// cleared it would abort the signal at 15ms; we wait 40ms and assert it didn't.
+	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: 15 })
+	let abortedLater = false
+	const out = await limiter.run(({ signal }) => {
+		signal.addEventListener('abort', () => {
+			abortedLater = true
+		})
+		return Promise.resolve('done')
+	})
+	t.equal(out, 'done', 'returns fn’s value with no spurious timeout rejection')
+	await delay(40)
+	t.notOk(abortedLater, 'signal was not aborted after a clean finish (timer cleared)')
+	t.end()
+})
+
+tape('a provided makeTimeoutError overrides the default', async t => {
+	const makeTimeoutError = () => {
+		const err: any = new Error('custom slow')
+		err.status = 504
+		err.statusCode = 504
+		err.code = 'RENDER_TIMEOUT'
+		return err
+	}
+	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: 15, makeTimeoutError })
+	const hung = defer()
+	try {
+		await limiter.run(() => hung.promise)
+		t.fail('expected timeout rejection')
+	} catch (e: any) {
+		t.equal(e.code, 'RENDER_TIMEOUT', 'the caller-supplied timeout error is used')
+		t.equal(e.message, 'custom slow', 'custom message is preserved')
+	}
+	t.end()
+})
+
+tape('taskTimeoutMs: Infinity disables eviction; invalid values rejected at construction', async t => {
+	for (const bad of [0, -1, NaN]) {
+		t.throws(
+			() => createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: bad }),
+			/taskTimeoutMs must be a positive number or Infinity/,
+			`taskTimeoutMs=${bad} is rejected`
+		)
+	}
+	t.doesNotThrow(
+		() => createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: Infinity }),
+		'Infinity (disabled) is allowed'
+	)
+
+	// With the timeout disabled, a long-running task is NOT evicted.
+	const limiter = createConcurrencyLimiter({ maxConcurrent: 1, maxQueued: 0, taskTimeoutMs: Infinity })
+	const gate = defer<string>()
+	let settled = false
+	const p = limiter
+		.run(() => gate.promise)
+		.then(v => {
+			settled = true
+			return v
+		})
+	await delay(40) // longer than any of the small timeouts above
+	t.notOk(settled, 'task still in-flight, not evicted, well past a normal timeout window')
+	gate.resolve('late')
+	t.equal(await p, 'late', 'the task completes normally once it finally resolves')
 	t.end()
 })

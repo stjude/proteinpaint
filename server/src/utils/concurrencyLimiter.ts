@@ -1,4 +1,17 @@
-import type { ConcurrencyLimiterOpts, ConcurrencyLimiter } from '#src/utils/types.ts'
+import type { ConcurrencyLimiterOpts, ConcurrencyLimiter, ConcurrencyLimiterRunContext } from './types.ts'
+
+/** Default per-task execution timeout. A task holding its slot longer than this
+ * is evicted (slot freed, caller rejected) so one hung task can't stall the
+ * whole queue. 30s is deliberately generous — orders of magnitude above any
+ * healthy task — so it only ever fires on a genuine hang, not a merely slow
+ * task. Callers with legitimately long-running work pass `taskTimeoutMs:
+ * Infinity` to disable, or a tuned value to override. */
+export const DEFAULT_TASK_TIMEOUT_MS = 30000
+
+/** A shared, never-aborted signal handed to `fn` when a limiter's timeout is
+ * disabled (`Infinity`), so the run context always carries a real `AbortSignal`
+ * without allocating an AbortController per call on the no-timeout fast path. */
+const NEVER_ABORT = new AbortController().signal
 
 /** A generic concurrency gating device. `createConcurrencyLimiter` returns a
  * limiter that runs at most `maxConcurrent` async tasks at once; further tasks
@@ -23,8 +36,41 @@ function defaultBusyError(): Error {
 	return err
 }
 
+/** Generic 504 so it reads as "the work took too long", not a client error.
+ * Mirrors the busy-error shape above. */
+function defaultTimeoutError(): Error {
+	const err: any = new Error('Task exceeded its time limit and was evicted.')
+	err.status = 504
+	err.statusCode = 504
+	err.code = 'TASK_TIMEOUT'
+	return err
+}
+
 export function createConcurrencyLimiter(opts: ConcurrencyLimiterOpts): ConcurrencyLimiter {
-	const { maxConcurrent, maxQueued, makeBusyError = defaultBusyError } = opts
+	const {
+		maxConcurrent,
+		maxQueued,
+		makeBusyError = defaultBusyError,
+		makeTimeoutError = defaultTimeoutError,
+		taskTimeoutMs = DEFAULT_TASK_TIMEOUT_MS
+	} = opts
+	// Validate the caps at construction — these are programmer config, not
+	// request input, so fail fast and loudly rather than degrading silently:
+	// a non-integer or <1 maxConcurrent would never let tasks run (or drive
+	// `active` negative), and a negative/non-integer maxQueued would shed or
+	// queue unpredictably. maxQueued === 0 is allowed (no waiting room: shed
+	// immediately once all slots are busy).
+	if (!Number.isInteger(maxConcurrent) || maxConcurrent < 1)
+		throw new Error(`createConcurrencyLimiter: maxConcurrent must be an integer >= 1 (got ${maxConcurrent})`)
+	if (!Number.isInteger(maxQueued) || maxQueued < 0)
+		throw new Error(`createConcurrencyLimiter: maxQueued must be an integer >= 0 (got ${maxQueued})`)
+	// `Infinity` disables the timeout; otherwise require a positive finite ms.
+	// Reject 0/negative/NaN so a misconfigured value can't silently evict every
+	// task immediately (0) or behave unpredictably.
+	if (taskTimeoutMs !== Infinity && (!Number.isFinite(taskTimeoutMs) || taskTimeoutMs <= 0))
+		throw new Error(
+			`createConcurrencyLimiter: taskTimeoutMs must be a positive number or Infinity (got ${taskTimeoutMs})`
+		)
 	let active = 0
 	const queue: Array<() => void> = []
 
@@ -45,12 +91,48 @@ export function createConcurrencyLimiter(opts: ConcurrencyLimiterOpts): Concurre
 		else active--
 	}
 
-	async function run<T>(fn: () => Promise<T>): Promise<T> {
+	async function run<T>(fn: (ctx: ConcurrencyLimiterRunContext) => Promise<T>): Promise<T> {
 		await acquire()
-		try {
-			return await fn()
-		} finally {
+
+		// Disabled-timeout fast path: no timer, no AbortController — hand `fn` a
+		// shared never-aborted signal and just release the slot when it settles.
+		if (taskTimeoutMs === Infinity) {
+			try {
+				return await fn({ signal: NEVER_ABORT })
+			} finally {
+				release()
+			}
+		}
+
+		// Bounded path: race `fn` against a timer. `releaseOnce` guarantees the
+		// slot is released exactly once — by the timer on timeout, otherwise by
+		// the `finally`. On timeout we free the slot immediately so the queue can
+		// advance even though the orphaned task may keep running (JS can't kill
+		// it); the AbortSignal lets a cooperative task stop itself.
+		const controller = new AbortController()
+		let released = false
+		const releaseOnce = () => {
+			if (released) return
+			released = true
 			release()
+		}
+		let timer: ReturnType<typeof setTimeout> | undefined
+		try {
+			const task = fn({ signal: controller.signal })
+			// The orphaned task may reject after we've already timed out; swallow
+			// that late rejection so it can't surface as an unhandledRejection.
+			task.catch(() => {})
+			const timeout = new Promise<never>((_, reject) => {
+				timer = setTimeout(() => {
+					controller.abort()
+					releaseOnce()
+					reject(makeTimeoutError())
+				}, taskTimeoutMs)
+			})
+			return await Promise.race([task, timeout])
+		} finally {
+			if (timer) clearTimeout(timer)
+			releaseOnce()
 		}
 	}
 
