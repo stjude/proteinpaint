@@ -33,26 +33,34 @@ class ViolinPlot extends PlotBase {
 			.style('padding-left', this.opts.mode != 'minimal' ? '20px' : '0px')
 			.attr('id', 'sjpp-vp-holder')
 
+		const banner = holder
+			.append('div')
+			.attr('data-testid', 'sjpp-violin-banner')
+			.style('display', 'none')
+			.style('text-align', 'center')
+			.style('padding', '24px')
+			.style('font-size', '16px')
+
+		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+
+		const renderedDiv = holder.append('div')
+
 		this.dom = {
 			hovertip: new Menu({ padding: '3px' }), // separate tips for hover & click on violin labels to avoid interfering
 			clicktip: new Menu({ padding: '0px' }),
 			sampletabletip: new Menu({ padding: '3px' }), // sampletable is lauched from option shown in clicktip which closes on clicking, thus need its own menu..
 			header: this.opts.header,
 			controls,
-			banner: holder
-				.append('div')
-				.attr('data-testid', 'sjpp-violin-banner')
-				.style('display', 'none')
-				.style('text-align', 'center')
-				.style('padding', '24px')
-				.style('font-size', '16px'),
-			loadingDiv: holder
+			banner,
+			errdiv,
+			renderedDiv,
+			loadingDiv: renderedDiv
 				.append('div')
 				.attr('data-testid', 'sjpp-violin-loading-div')
 				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
 				.style('padding', '24px')
 				.text('Loading ...'),
-			violinDiv: holder
+			violinDiv: renderedDiv
 				.append('div')
 				.attr('class', 'sjpp-vp-violinDiv')
 				.attr('data-testid', 'sjpp-violin-div')
@@ -60,7 +68,7 @@ class ViolinPlot extends PlotBase {
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw'),
-			legendDiv: holder
+			legendDiv: renderedDiv
 				.append('div')
 				.classed('sjpp-vp-legend', true)
 				.attr('data-testid', 'sjpp-violin-legend')
@@ -379,6 +387,7 @@ class ViolinPlot extends PlotBase {
 		setTimeout(
 			() => {
 				this.render()
+				this.dom.renderedDiv.style('display', '')
 			},
 			this.opts.mode == 'minimal' ? 0 : 500
 		)

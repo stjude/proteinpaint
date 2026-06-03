@@ -97,9 +97,10 @@ export class Scatter extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		this.toggleLoadingDiv()
 		this.config = await this.getMutableConfig()
+		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = structuredClone(this.config.settings.sampleScatter)
+		this.toggleLoadingDiv()
 
 		try {
 			this.dom.bannerDiv.style('display', '').selectAll('*').remove()
@@ -108,6 +109,11 @@ export class Scatter extends PlotBase implements RxComponent {
 			this.toggleLoadingDiv('none')
 			if (this.app.isAbortError(e)) return
 			throw e
+		} finally {
+			// always show control inputs, even if there is an error,
+			// so that a user may edit an invalid plot config/settings
+			// to fix an error
+			if (!this.config.colorColumn) await this.setControls()
 		}
 		if (!this.model.charts?.length) {
 			this.toggleLoadingDiv('none')
@@ -116,13 +122,18 @@ export class Scatter extends PlotBase implements RxComponent {
 			return
 		}
 
+		// if (!this.testN) this.testN = 1; console.log(120, this.testN, this.testN % 2 === 1)
+		// this.testN++
+		// if (this.testN % 2 === 1) throw '--- test error ---'
+
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
-		if (!this.config.colorColumn) await this.setControls()
+
 		await this.model.processData()
 		this.dom.mainDiv.style('display', '')
 		this.vm.render()
+		this.dom.renderedDiv.style('display', '')
 		this.toggleLoadingDiv('none')
 
 		if (!this.model.is3D) this.vm.setTools()

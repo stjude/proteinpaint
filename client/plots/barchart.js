@@ -1,8 +1,8 @@
-import { getCompInit, copyMerge, deepEqual } from '../rx'
+import { getCompInit, copyMerge, deepEqual, sleep } from '../rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import { rendererSettings, plotLength } from './bars.settings'
-import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu } from '#dom'
+import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu, DivWithLoadingOverlay } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
@@ -36,25 +36,32 @@ export class Barchart extends PlotBase {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
+		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+		const loadingDiv = holder.append('div').style('display', 'none').style('padding', '24px').html('Loading ...')
+		const banner = holder
+			.append('div')
+			.attr('data-testid', 'sjpp-barchart-banner')
+			.style('display', 'none')
+			.style('text-align', 'center')
+			.style('padding', '24px')
+			.style('font-size', '16px')
+		const divWithOverlay = new DivWithLoadingOverlay(holder.append('div'))
+
 		this.dom = {
-			loadingDiv: holder.append('div').style('display', 'none').style('padding', '24px').html('Loading ...'),
+			loadingDiv,
+			errdiv,
 			header: opts.header,
 			controls,
 			holder,
-			banner: holder
-				.append('div')
-				.attr('data-testid', 'sjpp-barchart-banner')
-				.style('display', 'none')
-				.style('text-align', 'center')
-				.style('padding', '24px')
-				.style('font-size', '16px'),
-			barDiv: holder
+			banner,
+			renderedDiv: divWithOverlay.baseDiv,
+			barDiv: divWithOverlay.baseDiv
 				.append('div')
 				.style('display', 'flex')
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: divWithOverlay.baseDiv.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
 		this.settings = JSON.parse(rendererSettings)
@@ -387,8 +394,8 @@ export class Barchart extends PlotBase {
 			this.toggleLoadingDiv()
 
 			const reqOpts = this.getDataRequestOpts()
-			await this.getDescrStats()
 			await this.setControls() //needs to be called after getDescrStats() to set hasStats
+			await this.getDescrStats()
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api.getAbortSignal())
 			if (results.error) throw results
 			const data = results.data
@@ -396,7 +403,6 @@ export class Barchart extends PlotBase {
 			this.sampleType = results.sampleType
 			this.bins = results.bins
 			if (results.chartid2dtterm) this.chartid2dtterm = results.chartid2dtterm
-			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
 			this.currServerData = data
 			if (this.currServerData.refs && this.currServerData.refs.q) {
@@ -416,12 +422,12 @@ export class Barchart extends PlotBase {
 				chart.colorScale = getColors(numColors)
 			}
 			this.chartsData = this.processData(this.currServerData)
+			this.toggleLoadingDiv('none')
 			this.render()
-			this.dom.barDiv.style('display', 'flex')
+			this.dom.renderedDiv.style('display', '')
 		} catch (e) {
 			if (this.app.isAbortError(e)) return
 			this.toggleLoadingDiv('none')
-			this.dom.barDiv.style('display', 'none')
 			throw e
 		}
 	}
@@ -964,8 +970,10 @@ export class Barchart extends PlotBase {
 				.transition()
 				.duration('loadingWait' in this ? this.loadingWait : 0)
 				.style('opacity', 1)
+			//this.dom.renderedDiv.style('opacity', 0).style('display', 'none')
 		} else {
 			this.dom.loadingDiv.style('display', display)
+			//this.dom.charts.style('opacity', 1).style('display', '')
 		}
 		// do not transition on initial chart load
 		this.loadingWait = 1000

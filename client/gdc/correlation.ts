@@ -44,7 +44,7 @@ export async function init(
 			genome: useGenome,
 			dslabel: useDslabel,
 			termfilter: { filter0: arg.filter0 },
-			nav: { activeTab: 1, header_mode: 'only_buttons' },
+			nav: { activeTab: 1, header_mode: window.location.pathname.includes('example.gdc') ? undefined : 'only_buttons' },
 			plots: arg.state?.plots || [
 				{ chartType: 'summaryInput' } // default shows summaryInput ui, can change
 				//{ chartType: 'barchart', term: {id: 'case.demographic.gender'} }, // uncomment for quicker testing

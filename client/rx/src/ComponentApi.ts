@@ -44,6 +44,7 @@ export class ComponentApi {
 	// TODO: may use #incompleteUpdate property, if the shared app abortController signal is used
 	// #incompleteUpdate: boolean = true
 	#bus?: Bus
+	#errdiv: any
 
 	static getInitFxn(__Class__) {
 		return async opts => {
@@ -97,6 +98,7 @@ export class ComponentApi {
 		Object.freeze(this)
 
 		if (self.init) await self.init(this.#Component.app.getState())
+		this.#errdiv = self.dom?.errdiv || self.dom?.error || { style: () => 'none' }
 		// lessen confusing behavior
 		if (self.state && !self.hasStatePreMain) {
 			delete self.state
@@ -119,9 +121,16 @@ export class ComponentApi {
 		const componentState = self.getState ? self.getState(current.appState) : current.appState
 		// no new state computed for this component
 		if (!componentState) return
+		const errDisplay = this.#errdiv.style('display')
+		// hide error div
+		this.#errdiv.style('display', 'none')
 		// force update if there is no action, or
 		// if the current and pending state is not equal
-		if (!current.action /*|| this.#incompleteUpdate*/ || !deepEqual(componentState, self.state)) {
+		if (
+			!current.action /*|| this.#incompleteUpdate*/ ||
+			errDisplay !== 'none' ||
+			!deepEqual(componentState, self.state)
+		) {
 			//this.#incompleteUpdate = true
 			if (current.action) this.#latestActionSequenceId = current.action.sequenceId
 			if (this.#abortController) {
@@ -150,8 +159,9 @@ export class ComponentApi {
 						// this.#abortController = undefined
 					} catch (e) {
 						if (self.app.isAbortError(e)) return
+						if (self.printError) self.printError(e)
 						if (self.bus) self.bus.emit('error')
-						throw e
+						if (!self.printError) throw e
 					}
 				}
 			}

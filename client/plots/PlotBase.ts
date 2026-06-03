@@ -3,7 +3,7 @@ import type { TermdbVocab } from '../termdb/TermdbVocab.js'
 import { TwRouter, routedTermTypes } from '#tw'
 
 export class PlotBase {
-	//type: string
+	type!: string // assigned by child class
 	//id: string
 	api?: ComponentApi
 	opts: any
@@ -75,6 +75,17 @@ export class PlotBase {
 		}
 
 		return config
+	}
+
+	printError(err) {
+		let errdiv = this.dom?.errdiv || this.dom?.error || this.dom?.holder?.select('.sja_errorbar')
+		if (!errdiv) {
+			if (!this.dom?.holder) throw err + ` (also missing ${this.type}.dom.holder)`
+			this.dom.errdiv = this.dom.holder.insert('div', 'div').attr('class', 'sja_errorbar')
+			errdiv = this.dom.errdiv
+		}
+		errdiv.text(err).style('display', '')
+		if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
 	}
 }
 

@@ -27,23 +27,26 @@ export class ScatterView {
 			.insert('div')
 			.style('display', 'inline-block')
 			.attr('data-testid', 'sjpp-scatter-controls-div')
+		const toolsDiv = leftDiv.insert('div')
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const loadingDiv = rightDiv
+		const errdiv = rightDiv.append('div').attr('class', 'sja_errorbar')
+		const renderedDiv = rightDiv.append('div')
+		const loadingDiv = renderedDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-scatter-loading-div')
 			.style('display', 'inline-block')
 			.style('padding', '24px')
 			.text('Loading ...')
-		const bannerDiv = rightDiv
+		const bannerDiv = renderedDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-scatter-banner-div')
 			.style('display', 'none')
 			.style('text-align', 'center')
 			.style('padding', '24px')
 			.style('font-size', '16px')
-		const headerDiv = rightDiv.append('div').attr('data-testid', 'sjpp-scatter-header-div')
-		const mainDiv = rightDiv
+		const headerDiv = renderedDiv.append('div').attr('data-testid', 'sjpp-scatter-header-div')
+		const mainDiv = renderedDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-scatter-main-div')
 			.style('display', 'flex')
@@ -52,6 +55,10 @@ export class ScatterView {
 			.style('max-width', '100vw')
 
 		this.dom = {
+			toolsDiv,
+			controlsHolder,
+			errdiv,
+			renderedDiv,
 			loadingDiv,
 			bannerDiv,
 			headerDiv,
@@ -59,9 +66,7 @@ export class ScatterView {
 			header: this.opts.header,
 			//holder,
 			tip: new Menu({ padding: '0px' }),
-			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 }),
-			controlsHolder,
-			toolsDiv: leftDiv.insert('div')
+			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 })
 		}
 
 		if (this.dom.header) {
@@ -75,7 +80,7 @@ export class ScatterView {
 	}
 
 	getControlInputs() {
-		const hasRef = this.scatter.model.charts[0]?.data?.samples?.find(s => !('sampleId' in s)) || false
+		const hasRef = this.scatter.model.charts?.[0]?.data?.samples?.find(s => !('sampleId' in s)) || false
 		const scaleDotOption = {
 			type: 'term',
 			configKey: 'scaleDotTW',
@@ -443,12 +448,13 @@ export class ScatterView {
 	}
 
 	getMinMaxInputs() {
-		const xMin = roundValueAuto(this.scatter.model.range.xMin)
-		const xMax = roundValueAuto(this.scatter.model.range.xMax)
-		const xStep = (xMax - xMin) / 10
-		const yMin = roundValueAuto(this.scatter.model.range.yMin)
-		const yMax = roundValueAuto(this.scatter.model.range.yMax)
-		const yStep = (yMax - yMin) / 10
+		const range = this.scatter.model.range
+		const xMin = range && roundValueAuto(range.xMin)
+		const xMax = range && roundValueAuto(range.xMax)
+		const xStep = range && (xMax - xMin) / 10
+		const yMin = range && roundValueAuto(range.yMin)
+		const yMax = range && roundValueAuto(range.yMax)
+		const yStep = range && (yMax - yMin) / 10
 
 		const inputs = [
 			{
