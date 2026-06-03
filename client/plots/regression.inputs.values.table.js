@@ -131,12 +131,7 @@ function setRenderers(self) {
 				// violin plot already created, refresh the plot
 				const action = {
 					type: 'app_refresh',
-					state: {
-						termfilter: {
-							filter: self.input.parent.parent.filter,
-							filter0: self.input.parent.parent.filter0
-						}
-					},
+					state: { termfilter: structuredClone(self.input.parent.state?.termfilter) },
 					subactions: [
 						{
 							type: 'plot_edit',
@@ -158,10 +153,7 @@ function setRenderers(self) {
 							genome: self.input.parent.app.vocabApi.genome,
 							dslabel: self.input.parent.app.vocabApi.dslabel
 						},
-						termfilter: {
-							filter: self.input.parent.parent.filter,
-							filter0: self.input.parent.parent.filter0
-						},
+						termfilter: structuredClone(self.input.parent.state?.termfilter),
 						plots: [
 							{
 								chartType: 'violin',
