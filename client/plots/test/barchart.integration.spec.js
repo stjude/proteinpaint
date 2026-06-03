@@ -2125,9 +2125,10 @@ tape('max number of bins: exceeded', test => {
 
 	async function testExceedMaxBin(barchart) {
 		//Fix for removing sleep()
-		const numBars = await detectLst({ elem: barDiv.node(), selector: '.bars-cell-grp', count: 22, matchAs: '>=' })
-		test.equal(numBars.length, 22, 'should still have 22 age bars and not re-render on error')
-		const errorbar = await detectOne({ elem: barchart.Inner.app.Inner.dom.holder.node(), selector: '.sja_errorbar' })
+		const barLoc = Locator.init(barchart.Inner.dom.holder.node())
+		const numBars = await barLoc.hides('.bars-cell-grp').get()
+		test.equal(numBars.length, 22, 'should hide the previously rendered 22 age bars on error and not re-render')
+		const errorbar = await barLoc.shows('.sja_errorbar').get(0)
 		test.true(errorbar?.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}
 })
@@ -2193,15 +2194,16 @@ tape('minimum sample size', test => {
 	async function runTests(barchart) {
 		barchart.on('postRender.test', null).on('error', null)
 		barDiv = barchart.Inner.dom.barDiv
-		errDiv = barchart.Inner.app.Inner.components.plots['diaggrp'].Inner.dom.errdiv
-		testBarCount(0, 'with stricter filter')
+		errDiv = barchart.Inner.dom.errdiv
+		await testBarCount(0, 'with stricter filter')
 		test.true(errDiv.text().includes('has less than 10 samples'), 'should display the expected error message')
 		test.notEqual(errDiv.style('display'), 'none', 'should have a visible red error div')
 		await triggerClearedError(barchart)
 	}
 
-	function testBarCount(expected, testcase) {
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+	async function testBarCount(expected, testcase) {
+		const method = expected > 0 ? 'shows' : 'find'
+		const numBars = await Locator.init(barDiv.node())[method]('.bars-cell-grp').length()
 		test.equal(numBars, expected, `should have ${expected} bars ${testcase}`)
 	}
 
@@ -2226,12 +2228,11 @@ tape('minimum sample size', test => {
 		})
 	}
 
-	function testClearedError(barchart) {
+	async function testClearedError(barchart) {
 		barchart.on('postRender.test', null).on('error', null)
-		testBarCount(3, 'with looser filter')
+		await testBarCount(3, 'with looser filter')
 		test.equal(errDiv.text(), '', 'should have an empty error message')
 		test.equal(errDiv.style('display'), 'none', 'should have a hidden red error div')
-
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
