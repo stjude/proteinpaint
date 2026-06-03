@@ -121,13 +121,11 @@ export class AIProjectAdminInteractions {
 		const genome = this.genome
 		const dslabel = this.dslabel
 		const logoutRenderer = new LogoutRenderer(this)
-		logoutRenderer.render(holder, genome, dslabel)
+		logoutRenderer.render(holder, genome, dslabel, settings.project.id)
 		wsiViewer.default(this.dslabel, holder, { name: this.genome }, null, settings.project.id, images, true)
 	}
 
 	public async appDispatchEdit(settings: Settings, config: any = {}): Promise<void> {
-		// I dont understand this function, its originally configured to overwrite any settings you input with the existing settings,
-		// it narrowly escapes an infinite project creation loop because it send s type new  instead of the new edit type from edit projects
 		if (!config?.settings) {
 			config = this.getConfig()
 			if (!config) throw new Error(`No plot with id='${this.id}' found.`)
@@ -192,17 +190,18 @@ export class AIProjectAdminInteractions {
 		}
 	}
 
-	async onLogOut(genome: string, dslabel: string): Promise<void> {
+	async onLogOut(genome: string, dslabel: string, projectId: number): Promise<void> {
 		try {
 			await dofetch3('aiProjectAdmin', {
 				body: {
 					genome,
 					dslabel,
-					for: 'logout'
+					for: 'logout',
+					project: { id: projectId }
 				}
 			})
 			clearServerDataCache()
-			await this.appDispatchEdit({ project: { name: '', type: 'logout' } })
+			await this.appDispatchEdit({ project: { name: '', id: projectId, type: 'logout' } })
 		} catch (e: any) {
 			console.error('Error logging out: ' + (e.message || e))
 			throw e

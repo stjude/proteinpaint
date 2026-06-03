@@ -56,16 +56,18 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
 			const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
 			const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
+			console.log('clientAuth:', clientAuth, tileSelection, annotation)
 			const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
 				current_user: string | null
 			}
 			if (currentUser.current_user !== clientAuth?.email && authFound) {
+				console.log('got into logout condition')
 				return {
 					status: 'error',
-					error: 'Another user is currently logged in to this project.'
+					error: 'logout'
 				}
 			}
-
+			console.log('howd you go further')
 			if (!isAnnotation && !isPrediction) {
 				return {
 					status: 'error',

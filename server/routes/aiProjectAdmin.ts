@@ -23,7 +23,7 @@ export function init({ genomes }) {
 
 			/** get list of projects from db */
 			if (query.for === 'list') {
-				let projects = getProjects(connection) as { name: string; id: number }[]
+				let projects = getProjects(connection) as { name: string; id: number; current_user: string | null }[]
 				if (authFound && role !== 'admin') {
 					projects = projects.filter(p => getUsers(connection, p.id).includes(clientAuthResult?.email || ''))
 				}
@@ -36,7 +36,7 @@ export function init({ genomes }) {
 				 * is added to the db.*/
 				if (req.method === 'PUT' || query.project.type === 'new') addProject(connection, query.project)
 				else if (req.method === 'POST') {
-					editProject(connection, query.project)
+					editProject(connection, query.project, clientAuthResult?.email || 'admin')
 				} else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
@@ -85,7 +85,7 @@ export function init({ genomes }) {
 				const images = getImages(connection, query.project)
 				res.send({ images, status: 'ok' })
 			} else if (query.for === 'logout') {
-				setUser(connection, query.projectId, null)
+				setUser(connection, query.project.id, null)
 
 				res.status(200).send({
 					status: 'ok',
@@ -108,7 +108,7 @@ export function init({ genomes }) {
 }
 
 function getProjects(connection: Database.Database): Database.RunResult | any[] {
-	const sql = 'SELECT name, id FROM project'
+	const sql = 'SELECT name, id, current_user FROM project'
 	return runSQL(connection, sql)
 }
 
@@ -162,11 +162,10 @@ export function getImages(connection: Database.Database, project: any): string[]
 	const imageRows = connection
 		.prepare(`SELECT image_path FROM project_images WHERE project_id = ? ORDER BY id ASC`)
 		.all(project.id) as { image_path: string }[]
-
 	return imageRows.map(r => r.image_path)
 }
 
-function editProject(connection: Database.Database, project: any): void {
+function editProject(connection: Database.Database, project: any, adminUser: string): void {
 	const stmts: { sql: string; params: any[] }[] = []
 
 	if (!project.id) {
@@ -217,6 +216,7 @@ function editProject(connection: Database.Database, project: any): void {
 			stmts.push({ sql: insertClass, params: multiParams })
 		}
 	}
+	setUser(connection, project.id, adminUser)
 	runMultiStmtSQL(connection, stmts, 'add')
 }
 

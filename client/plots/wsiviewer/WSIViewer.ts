@@ -91,6 +91,11 @@ class WSIViewer extends PlotBase implements RxComponent {
 		const state = structuredClone(this.state)
 		const settings = state.plots.find(p => p.id === this.id).settings as Settings
 		const holder = this.opts.holder
+		if (settings.loggedOut) {
+			holder.selectAll('*').remove()
+			sayerror(holder, 'You have been logged out by an admin or inactivity.')
+			return
+		}
 		// TODO verify if state.vocab.genome is needed?
 		const genome = state.genome || state.vocab.genome
 		const dslabel = state.dslabel || state.vocab.dslabel

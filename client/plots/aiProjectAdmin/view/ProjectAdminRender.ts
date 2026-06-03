@@ -110,7 +110,10 @@ export class ProjectAdminRender {
 		}
 
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
-		const columns = [{ label: 'Project', sortable: true }]
+		const columns = [
+			{ label: 'Project', sortable: true },
+			{ label: 'User', sortable: false }
+		]
 
 		const columnButtons = [
 			{
@@ -121,7 +124,7 @@ export class ProjectAdminRender {
 					/** TODO: open wsisamples plot ||
 					 *  get project details rather than edit the db */
 					const project = this.projects[idx]
-					await this.interactions.appDispatchEdit({ project })
+					await this.interactions.appDispatchEdit({ project: { ...project, type: 'edit' } })
 					// remove 'dev' for production
 					await this.interactions.launchViewer(this.dom.holder, [])
 				}
@@ -161,10 +164,20 @@ export class ProjectAdminRender {
 				}
 			})
 		}
+		if (authFound && clientAuth?.role === 'admin') {
+			columnButtons.push({
+				text: 'Log Out',
+				class: 'sja_menuoption',
+				callback: async (_, i) => {
+					const project = this.projects[i]
+					await this.interactions.onLogOut(this.interactions.genome, this.interactions.dslabel, project.id)
+				}
+			})
+		}
 		renderTable({
 			div: tableDiv,
 			rows: this.projects.map((p: any) => {
-				return [{ value: p.name }]
+				return [{ value: p.name }, { value: p.current_user ?? 'Open' }]
 			}),
 			header: {
 				allowSort: true

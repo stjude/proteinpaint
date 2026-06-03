@@ -59,7 +59,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 		if (currentUser.current_user !== clientAuth?.email && authFound) {
 			return {
 				status: 'error',
-				error: 'Another user is currently logged in to this project.'
+				error: 'logout'
 			}
 		}
 		if (

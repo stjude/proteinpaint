@@ -29,4 +29,5 @@ export default interface Settings {
 	defaultZoom: number
 	renderOnlyFlagged: boolean
 	renderSkipped: boolean
+	loggedOut: boolean
 }
