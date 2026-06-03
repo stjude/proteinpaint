@@ -15,7 +15,7 @@ import { exec as execCallback } from 'node:child_process'
 /** grin2/{cacheid}.json. Self-contained: the per-gene rows Rust needs
  * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
  * step opens this file directly. */
-export type Grin2CacheResult = {
+type Grin2CacheResult = {
 	resultData: any
 	processing: any
 }
@@ -279,11 +279,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		stats: {
 			lst: [
 				{
-					name: 'GRIN2 Processing Summary',
+					name: 'Summary',
 					rows: [
 						['Total Genes', resultData.totalGenes.toLocaleString()],
-						['Showing Top', resultData.showingTop.toLocaleString()],
-						['Cache File Name', cacheFile],
 						['Total Samples', processing.totalSamples!.toLocaleString()],
 						['Processed Samples', processing.processedSamples!.toLocaleString()],
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
@@ -300,10 +298,10 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 					name: 'Memory Usage',
 					rows: [
 						['Start', `${resultData.memory?.start} MB`],
-						['After prep', `${resultData.memory?.after_prep} MB`],
-						['After overlaps', `${resultData.memory?.after_overlaps} MB`],
-						['After counts', `${resultData.memory?.after_counts} MB`],
-						['After stats', `${resultData.memory?.after_stats} MB`],
+						['After Prep', `${resultData.memory?.after_prep} MB`],
+						['After Overlaps', `${resultData.memory?.after_overlaps} MB`],
+						['After Counts', `${resultData.memory?.after_counts} MB`],
+						['After Stats', `${resultData.memory?.after_stats} MB`],
 						['Peak', `${resultData.memory?.peak} MB`]
 					]
 				},
@@ -562,8 +560,7 @@ async function processSampleData(
 			const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request)
 
 			// Filter out chrM lesions
-			const skipChrM = ds.queries.singleSampleMutation.discoPlot?.skipChrM
-			const filteredLesions = skipChrM
+			const filteredLesions = ds.queries.singleSampleMutation.discoPlot?.skipChrM
 				? sampleLesions.filter(lesion => lesion[1].toLowerCase() !== 'chrm')
 				: sampleLesions
 
@@ -579,9 +576,9 @@ async function processSampleData(
 
 			processing.processedSamples! += 1
 			processing.totalLesions! += filteredLesions.length
-		} catch (e) {
+		} catch (e: any) {
 			processing.failedSamples! += 1
-			mayLog(`[GRIN2] Error processing sample ${sample.name} ${e.message || e}`)
+			mayLog(`[GRIN2] Error processing sample ${sample.name}: ${e.message || e}`)
 		}
 	}
 
