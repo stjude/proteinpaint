@@ -2,7 +2,7 @@ import { dt2lesion } from '#shared/common.js'
 import type { GRIN2Response, GRIN2ViewData, DtUsage } from '../GRIN2Types'
 
 /** Transforms a GRIN2 server response into display-ready ViewData.
- *  All conditional shaping (significance circles, header text, stats slicing)
+ *  All conditional shaping (significance circles, header text)
  *  lives here so the View stays a thin renderer. */
 export class GRIN2ViewModel {
 	viewData: GRIN2ViewData
@@ -11,7 +11,7 @@ export class GRIN2ViewModel {
 		this.viewData = {
 			manhattan: response.pngImg ? { plotData: response, settings: manhattanSettings } : null,
 			topGenes: this.buildTopGenes(response, manhattanSettings, dtUsage),
-			statsSections: response.stats?.lst ? response.stats.lst.slice(1) : []
+			statsSections: response.stats?.lst || []
 		}
 	}
 
