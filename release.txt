@@ -1,2 +1,3 @@
 Features:
-- Generalized concurrency limiter and covered it with unit tests.  Improved unit test coverage of renderVolcano.ts
+- Generalized concurrency limiter and covered it with unit tests.
+- Improved unit test coverage of renderVolcano.ts
