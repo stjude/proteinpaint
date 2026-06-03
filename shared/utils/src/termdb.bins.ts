@@ -248,12 +248,17 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 			else break
 		}
 		if (bins.length + 1 >= maxNumBins) {
+			// this limit is computed before processing actual numeric values, since
+			// the computation with actual values may be problematic when there are lots of bins
 			delete currBin.stop
 			currBin.stopunbounded = true
 			currBin.label = get_bin_label(currBin, bc, valueConversion)
 			if (!bins.includes(currBin)) bins.push(currBin)
 			const hint = 'Please increase the bin_size or first bin stop, or have a lower last bin start.'
-			bc.error = hint + ' (max_num_bins_reached)'
+			// throw instead of making the error handling dependent on client code,
+			// to make the error behavior consistent across different chart types
+			throw hint + ' (max_num_bins_reached)'
+			// bc.error = hint + ' (max_num_bins_reached)'
 			break
 		}
 	}
