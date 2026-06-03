@@ -81,7 +81,7 @@ export function init({ genomes }) {
 			let agentFiles: string[] = []
 			try {
 				// Read dataset JSON file
-				agentFiles = await fs.readdirSync(aiFilesDir).filter(file => file.endsWith('.json'))
+				agentFiles = (await fs.promises.readdir(aiFilesDir)).filter(file => file.endsWith('.json'))
 			} catch (err: any) {
 				if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
 				if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
@@ -219,6 +219,8 @@ export async function run_chat_pipeline(
 			ds,
 			dataset_db
 		)
+		if (!scaffoldResult)
+			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
 		mayLog('ScaffoldResult: ', scaffoldResult)
 		if (
 			(plotType === 'hiercluster' && 'plot' in scaffoldResult && scaffoldResult.type === 'plot') ||
@@ -229,8 +231,6 @@ export async function run_chat_pipeline(
 		}
 		mayLog('Time taken to infer scaffold:', formatElapsedTime(Date.now() - time))
 
-		if (!scaffoldResult)
-			throw 'Scaffold result is empty or undefined, which is unexpected. Please check the inferScaffold agent for potential issues.'
 		if ('type' in scaffoldResult && scaffoldResult.type === 'text') {
 			return scaffoldResult // Return msg/error
 		}

@@ -5,7 +5,7 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
 	Scaffold,
 	SummaryScaffold,
-	genomeBrowserScaffold,
+	GenomeBrowserScaffold,
 	DEScaffold,
 	HierarchicalScaffold,
 	Entity,
@@ -236,10 +236,14 @@ export async function phrase2entity(
 		}
 		return scatter_term
 	} else if (plotType === 'genomeBrowser') {
-		const scaffoldResult = scaffold as genomeBrowserScaffold
+		const scaffoldResult = scaffold as GenomeBrowserScaffold
 		if (!scaffoldResult.genomeBrowserPhrase && !scaffoldResult.genePhrase) {
 			throw new Error(
 				`LLM response is missing both genomeBrowserPhrase as well as genePhrase: ${JSON.stringify(scaffoldResult)}`
+			)
+		} else if (scaffoldResult.genomeBrowserPhrase && scaffoldResult.genePhrase) {
+			throw new Error(
+				`LLM response contains both genomeBrowserPhrase as well as genePhrase: ${JSON.stringify(scaffoldResult)}`
 			)
 		}
 		const pp_plot_json: any = {

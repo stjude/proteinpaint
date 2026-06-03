@@ -10,7 +10,7 @@ import type {
 	DEScaffold,
 	HierarchicalGeneExpressionScaffold,
 	HierarchicalScaffold,
-	genomeBrowserScaffold,
+	GenomeBrowserScaffold,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
 	MsgToUser
@@ -20,7 +20,10 @@ import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 
-async function getScaffold_genomeBrowser(user_prompt: string, llm: LlmConfig): Promise<genomeBrowserScaffold> {
+async function getScaffold_genomeBrowser(
+	user_prompt: string,
+	llm: LlmConfig
+): Promise<GenomeBrowserScaffold | MsgToUser> {
 	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to extract the phrase describing the genomic region (and an optional cohort filter) from a user's natural language question, and return them in a strict JSON scaffold for configuring a genome browser view.
 
 A genome browser view is defined by a genomic region — typically described by a chromosome and start/stop coordinates (e.g. "chr17:7,571,720-7,590,868", "chromosome 1 from 1Mb to 2Mb"). Do NOT parse the chromosome, start, or stop into separate fields here — that happens in a later step. In THIS step, just extract the entire phrase that describes the region as a single string.
@@ -33,17 +36,13 @@ Return ONLY a valid JSON object with this structure — no extra fields, no surr
   "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
 }
 
-## FIELD DEFINITIONS
-- genomeBrowserPhrase (REQUIRED): The portion of the user's query that describes the genomic region — chromosome plus start/stop coordinates. Preserve the EXACT wording from the user's query (including the original chromosome formatting, commas, unit suffixes such as "kb"/"Mb", and the start-stop separator). Do NOT normalize, paraphrase, or parse the chromosome/start/stop into separate fields.
-- filter (OPTIONAL): A cohort/subpopulation restriction phrase (e.g. "in pediatric patients", "for AML cases", "in women"). Preserve the EXACT wording from the user's query. Omit entirely if the user does not specify one.
-
 ## EXTRACTION RULES
-1. genomeBrowserPhrase is OPTIONAL. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000.
+1. genomeBrowserPhrase is OPTIONAL. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000. Preserve the EXACT wording from the user's query (including the original chromosome formatting, commas, unit suffixes such as "kb"/"Mb", and the start-stop separator).
 2. genomeBrowserPhrase (if present) should contain ONLY the region description — do not include the cohort filter, surrounding verbs ("show", "open"), or plot-type words ("genome browser", "browser view") unless they are inseparable from the region phrase.
 3. genePhrase is OPTIONAL. If the user's query contains a recognizable gene name, extract the phrase containing the gene name along with information such as (mutation/variant/expression/methylation) into the genePhrase field. This is for downstream use in highlighting the gene in the genome browser, but it should be separate from the genomeBrowserPhrase which focuses on the region description.
-4. filter is ONLY set when the user restricts the view to a specific subpopulation. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
+4. filter is ONLY set when the user restricts the view to a specific subpopulation or cohort. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
 5. If the user does not provide a region (no chromosome and/or no coordinates), return:
-   { "error": "No genomic region found", "reason": "<brief explanation>" }
+{ "type": "text","text": "No genomic region found" }
 
 ## EXAMPLES
 
@@ -120,11 +119,11 @@ Query: "${user_prompt}"
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Genome browser scaffold: ${response}`)
 	try {
-		const parsed = JSON.parse(response) as genomeBrowserScaffold
+		const parsed = JSON.parse(response) as GenomeBrowserScaffold
 		parsed.plotType = 'genomeBrowser'
 		return parsed
 	} catch {
-		throw new Error(`Failed to parse genomeBrowserScaffold from LLM response: ${response}`)
+		throw new Error(`Failed to parse GenomeBrowserScaffold from LLM response: ${response}`)
 	}
 }
 
