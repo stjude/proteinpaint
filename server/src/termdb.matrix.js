@@ -467,20 +467,28 @@ export function divideTerms(q, ds) {
 	the collection term to isTermVisible would yield false for any role consulting an allowlist
 	(no id to match), which would silently drop the collection before SQL. Decide visibility
 	from the members instead: the collection is visible iff every member term is visible to the
-	requesting role. term.termlst — the list of member term objects — is always populated
-	server-side (mds3.init builds it from termIds) for both dict and non-dict collections, so it
-	is the source of truth here; the legacy termIds[] is not consulted.
+	requesting role. term.termlst — the list of member term objects — is the source of truth
+	(mds3.init builds it from termIds, and the client echoes it back in the payload); the legacy
+	termIds[] is not consulted.
 	*/
 	const dict = [],
 		geneVariantTws = [],
 		nonDict = []
 	const isTermCollectionVisible = tw => {
-		// Fail-closed against malformed input: a payload whose termlst is not an array is
-		// treated as having no resolvable members. Guarding here keeps it from crashing the
-		// whole request with a TypeError when .every() is called on a non-array.
+		/*
+		Members arrive in the request payload, so normalize each to a consistent term-object
+		shape before the visibility hook sees it: a bare id string becomes { id } (the shape
+		older clients use), and a member that isn't an object — including a non-array termlst or
+		a null/number entry — carries no resolvable identity and drops the whole collection. This
+		keeps the hook's input uniform and preserves the fail-closed default for partial lists.
+		*/
 		const members = Array.isArray(tw.term?.termlst) ? tw.term.termlst : []
 		if (!members.length) return false
-		return members.every(term => ds.cohort.termdb.isTermVisible(q.__protected__, term))
+		return members.every(m => {
+			const term = typeof m === 'string' ? { id: m } : m
+			if (!term || typeof term !== 'object') return false
+			return ds.cohort.termdb.isTermVisible(q.__protected__, term)
+		})
 	}
 	for (const tw of q.terms) {
 		const type = tw.term?.type
