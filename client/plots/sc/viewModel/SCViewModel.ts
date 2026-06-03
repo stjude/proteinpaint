@@ -15,14 +15,11 @@ export class SCViewModel {
 		this.sampleColumns = sampleColumns || []
 	}
 
-	// processData(config: SCConfig, _items: SingleCellSample[]) {
 	processData(config: SCConfig, _items: SingleCellSample[], activeSubplots: SCActiveSubplot[] = []) {
 		//Sort meta analysis results to show at the beginning of the table.
 		//Prevents breaking the logic for selected rows after formating the table data.
 		const items = _items.sort((a, b) => (b.isMetaResult === a.isMetaResult ? 0 : b.isMetaResult ? 1 : -1))
 
-		//Should only be called once
-		// const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns)
 		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns, activeSubplots)
 		const selectedRows: number[] = []
 		const sID = config.settings.sc.item?.sID

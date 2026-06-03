@@ -1,4 +1,4 @@
-import type { SCDom, SCTableData } from '../SCTypes'
+import type { SCDom, SCSampleSandbox, SCTableData } from '../SCTypes'
 import type { TableCell } from '#dom'
 import { renderTable } from '#dom'
 import type { SCInteractions } from '../interactions/SCInteractions'
@@ -10,7 +10,7 @@ export class SampleTableRenderer {
 	dom: SCDom
 	interactions: SCInteractions
 	tableData: SCTableData
-	activeSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]> = new Map()
+	activeSandboxes: Map<string, SCSampleSandbox[]> = new Map()
 	/** Tracks rendered btns per sample to avoid unnecessary destroy/recreate pattern. */
 	rendered: Map<string, { cell: any; plotIds: string }> = new Map()
 
@@ -31,7 +31,7 @@ export class SampleTableRenderer {
 			columns: tableData.columns,
 			div: this.dom.tableDiv,
 			singleMode: true,
-			maxWidth: tableData.columns.length > 3 ? '95vw' : 'auto',
+			// maxWidth: tableData.columns.length > 3 ? '95vw' : 'auto',
 			maxHeight: '30vh',
 			header: {
 				allowSort: true,
@@ -74,7 +74,7 @@ export class SampleTableRenderer {
 		this.renderSamplesTable(tableData)
 	}
 
-	updatePlotBtns(activeSandboxes: Map<string, { plotId: string; div: any; plotName: string }[]>) {
+	updatePlotBtns(activeSandboxes: Map<string, SCSampleSandbox[]>) {
 		this.activeSandboxes = activeSandboxes
 		this.reapplyAllPlotButtons()
 	}
