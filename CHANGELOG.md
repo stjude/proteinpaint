@@ -8,6 +8,8 @@ Features:
 - GRIN2: Refactored client code into MVVM pattern. Removed custom cache handling logic and used cacheOrRecompute module instead
 - Covered server/src/utils/test/sampleGroups.ts and closed gaps in server/src/utils/test/cacheOrRecompute unit tests
 - Moved volcano rendering from Rust to Node.js skia-canvas
+- Generalized concurrency limiter and covered it with unit tests.
+- Improved unit test coverage of renderVolcano.ts
 
 Fixes:
 - enable cubic spline for gdc numeric terms
