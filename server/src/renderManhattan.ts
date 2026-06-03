@@ -2,6 +2,7 @@ import { Canvas } from 'skia-canvas'
 import { scaleLinear } from 'd3-scale'
 import { mayLog } from './helpers.ts'
 import { formatElapsedTime } from '#shared'
+import { createConcurrencyLimiter } from './utils/concurrencyLimiter.ts'
 
 /**
  * Rasterize a GRIN2 Manhattan PNG and return interactive points (rows that
@@ -26,37 +27,11 @@ const MAX_DOT_RADIUS = 20
 // worst-case bitmap memory bounded (~256 MB at 8192² × 4 bytes).
 const MAX_DEVICE_PIXELS_PER_SIDE = 8192
 
-// Concurrency gate around the heavy render+encode section, mirroring the
-// volcano renderer's gate. skia-canvas's toBuffer runs rasterize+encode on
-// its own thread pool, but each in-flight render still holds a device-pixel
-// bitmap. Cap how many run at once so a burst can't pile up bitmaps and
-// spike memory.
-const MAX_CONCURRENT_RENDERS = 5
-const MAX_QUEUED_RENDERS = 50
-let activeRenders = 0
-const renderQueue: Array<() => void> = []
-
-function makeRenderBusyError(): Error {
-	const err: any = new Error('Manhattan render pool is full. Please try again shortly.')
-	err.status = 429
-	err.statusCode = 429
-	err.code = 'RENDER_BUSY'
-	return err
-}
-
-async function acquireRenderSlot(): Promise<void> {
-	if (activeRenders < MAX_CONCURRENT_RENDERS) {
-		activeRenders++
-		return
-	}
-	if (renderQueue.length >= MAX_QUEUED_RENDERS) throw makeRenderBusyError()
-	await new Promise<void>(resolve => renderQueue.push(resolve))
-}
-function releaseRenderSlot(): void {
-	const next = renderQueue.shift()
-	if (next) next()
-	else activeRenders--
-}
+const renderLimiter = createConcurrencyLimiter({
+	maxConcurrent: 5,
+	maxQueued: 50,
+	taskName: 'manhattan render'
+})
 
 function clampedInt(value: number, min: number, max: number, name: string): number {
 	if (!Number.isFinite(value) || value < min || value > max)
@@ -262,6 +237,12 @@ function calculateDynamicYCap(
 }
 
 export async function renderManhattan(req: ManhattanRenderRequest): Promise<ManhattanRenderResult> {
+	return await renderLimiter.run(async () => {
+		return await renderManhattan_actual(req)
+	})
+}
+
+async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<ManhattanRenderResult> {
 	const pixelWidth = clampedInt(req.plotWidth, 1, MAX_PIXEL_DIM, 'plotWidth')
 	const pixelHeight = clampedInt(req.plotHeight, 1, MAX_PIXEL_DIM, 'plotHeight')
 	const dotRadius = clampedFloat(req.pngDotRadius ?? 2, 0.1, MAX_DOT_RADIUS, 'pngDotRadius')
@@ -407,65 +388,59 @@ export async function renderManhattan(req: ManhattanRenderRequest): Promise<Manh
 	// MAX_DEVICE_PIXELS_PER_SIDE; CSS-space outputs unaffected (see renderVolcano).
 	const effectiveDpr = Math.min(devicePixelRatio, MAX_DEVICE_PIXELS_PER_SIDE / Math.max(w, h))
 
-	await acquireRenderSlot()
-	let png: string
-	try {
-		const canvas = new Canvas(w * effectiveDpr, h * effectiveDpr)
-		const ctx = canvas.getContext('2d')
-		ctx.scale(effectiveDpr, effectiveDpr)
+	const canvas = new Canvas(w * effectiveDpr, h * effectiveDpr)
+	const ctx = canvas.getContext('2d')
+	ctx.scale(effectiveDpr, effectiveDpr)
 
-		// White background (matches Rust root.fill(WHITE)).
-		ctx.fillStyle = '#ffffff'
-		ctx.fillRect(0, 0, w, h)
+	// White background (matches Rust root.fill(WHITE)).
+	ctx.fillStyle = '#ffffff'
+	ctx.fillRect(0, 0, w, h)
 
-		// 7. Alternating chromosome backgrounds. Even bands are white (already
-		// painted), odd bands are light gray rendered with 0.5 alpha — matches
-		// the `RGBColor(211,211,211).mix(0.5).filled()` from the Rust port,
-		// which on a white background yields ~rgb(233,233,233).
-		const bandTop = yScale(yMax - yPadding)
-		const bandBottom = yScale(yMin + yPadding)
-		ctx.save()
-		ctx.fillStyle = 'rgba(211,211,211,0.5)'
-		for (let i = 0; i < sortedChroms.length; i++) {
-			if (i % 2 === 0) continue
-			const info = chromData[sortedChroms[i]]
-			const x0 = xScale(info.start)
-			const x1 = xScale(info.start + info.size)
-			ctx.fillRect(x0, bandTop, x1 - x0, bandBottom - bandTop)
-		}
-		ctx.restore()
-
-		// 8. Filled, anti-aliased dots. skia-canvas anti-aliases fills by
-		// default, replacing the tiny-skia step in the Rust port. Group by
-		// color so each strokeStyle/fillStyle change happens once per type.
-		const byColor = new Map<string, number[]>()
-		for (let i = 0; i < pts.length; i++) {
-			const c = pts[i].color
-			let bucket = byColor.get(c)
-			if (!bucket) {
-				bucket = []
-				byColor.set(c, bucket)
-			}
-			bucket.push(i)
-		}
-		for (const [color, idxs] of byColor) {
-			ctx.fillStyle = color
-			ctx.beginPath()
-			for (const i of idxs) {
-				const [px, py] = pxCss[i]
-				// `moveTo` before each `arc` breaks the implicit line from the
-				// previous subpath's endpoint to (cx+r, cy) — see renderVolcano.ts.
-				ctx.moveTo(px + radiusPx, py)
-				ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
-			}
-			ctx.fill()
-		}
-
-		// Async rasterize+encode on skia's thread pool.
-		png = (await canvas.toBuffer('png')).toString('base64')
-	} finally {
-		releaseRenderSlot()
+	// 7. Alternating chromosome backgrounds. Even bands are white (already
+	// painted), odd bands are light gray rendered with 0.5 alpha — matches
+	// the `RGBColor(211,211,211).mix(0.5).filled()` from the Rust port,
+	// which on a white background yields ~rgb(233,233,233).
+	const bandTop = yScale(yMax - yPadding)
+	const bandBottom = yScale(yMin + yPadding)
+	ctx.save()
+	ctx.fillStyle = 'rgba(211,211,211,0.5)'
+	for (let i = 0; i < sortedChroms.length; i++) {
+		if (i % 2 === 0) continue
+		const info = chromData[sortedChroms[i]]
+		const x0 = xScale(info.start)
+		const x1 = xScale(info.start + info.size)
+		ctx.fillRect(x0, bandTop, x1 - x0, bandBottom - bandTop)
 	}
+	ctx.restore()
+
+	// 8. Filled, anti-aliased dots. skia-canvas anti-aliases fills by
+	// default, replacing the tiny-skia step in the Rust port. Group by
+	// color so each strokeStyle/fillStyle change happens once per type.
+	const byColor = new Map<string, number[]>()
+	for (let i = 0; i < pts.length; i++) {
+		const c = pts[i].color
+		let bucket = byColor.get(c)
+		if (!bucket) {
+			bucket = []
+			byColor.set(c, bucket)
+		}
+		bucket.push(i)
+	}
+	for (const [color, idxs] of byColor) {
+		ctx.fillStyle = color
+		ctx.beginPath()
+		for (const i of idxs) {
+			const [px, py] = pxCss[i]
+			// `moveTo` before each `arc` breaks the implicit line from the
+			// previous subpath's endpoint to (cx+r, cy) — see renderVolcano.ts.
+			ctx.moveTo(px + radiusPx, py)
+			ctx.arc(px, py, radiusPx, 0, Math.PI * 2)
+		}
+		ctx.fill()
+	}
+
+	// Async rasterize+encode on skia's thread pool.
+	const png = (await canvas.toBuffer('png')).toString('base64')
 
 	// 9. Build interactive points: only those with q <= threshold. Pixel
 	// coords in CSS space so the SVG overlay aligns with the PNG.
