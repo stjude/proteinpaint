@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getDsAllowedTermTypes } from '../../src/routes/termdb.config.ts'
+import { getDsAllowedTermTypes } from '../termdb.config.ts'
 import {
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
