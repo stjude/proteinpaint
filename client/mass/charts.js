@@ -423,13 +423,6 @@ function getChartTypeList(self, state) {
 			chartType: 'summarizeGeneexpSurvival',
 			usecase: { target: 'summarizeGeneexpSurvival' },
 			clickTo: self.loadChartSpecificMenu
-		},
-		{
-			label: 'Alpha Genome',
-			chartType: 'alphaGenome',
-			usecase: { target: 'alphaGenome' },
-			clickTo: self.prepPlot,
-			config: { chartType: 'alphaGenome' }
 		}
 	]
 

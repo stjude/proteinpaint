@@ -1124,18 +1124,6 @@ type Mds3Queries = {
 	WSImages?: WSImages
 	images?: Images
 	chat?: any
-	alphaGenome?: {
-		ontologyTerm?: string // default ontology term for a dataset
-		default: {
-			gene: string
-			chromosome: string
-			position: number
-			reference: string
-			alternate: string
-			ontologyTerm: string
-			outputType: number
-		}
-	}
 }
 
 /** chat app support
