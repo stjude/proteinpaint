@@ -2,7 +2,7 @@ import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
 import os from 'os'
 import { get_samples } from '../termdb.sql.js'
@@ -202,7 +202,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 
 	const {
 		result: cacheResult,
-		cacheFile,
 		freshCompute,
 		processingTime,
 		grin2AnalysisTime
@@ -210,36 +209,30 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 
 	const { resultData, processing } = cacheResult
 
-	// Step 5: Prepare Rust input. Always re-rendered because rendering
+	// Step 5: Render Manhattan PNG. Always re-rendered because rendering
 	// depends on view params (width, height, etc.) that aren't in the cache key.
-	const rustInput = {
-		file: cacheFile,
-		type: 'grin2',
-		chrSizes: chromosomelist,
-		plot_width: request.width,
-		plot_height: request.height,
-		device_pixel_ratio: request.devicePixelRatio,
-		png_dot_radius: request.pngDotRadius,
-		lesion_type_colors: request.lesionTypeColors,
-		q_value_threshold: request.qValueThreshold,
-		max_capped_points: request.maxCappedPoints,
-		hard_cap: request.hardCap,
-		bin_size: request.binSize
-	}
-
-	// Step 6: Generate manhattan plot via rust
+	// `geneHits` is read straight from the cached Python result rather than
+	// re-parsed from the cache JSON file (the Rust binary used to do the latter).
 	const manhattanPlotStart = Date.now()
-	const rsResult = await run_rust('manhattan_plot', JSON.stringify(rustInput), [], { signal })
+	const manhattanPlotData = await renderManhattan({
+		geneHits: resultData?.geneHits ?? [],
+		chrSizes: chromosomelist,
+		plotWidth: request.width!,
+		plotHeight: request.height!,
+		devicePixelRatio: request.devicePixelRatio ?? 1,
+		pngDotRadius: request.pngDotRadius ?? 2,
+		qValueThreshold: request.qValueThreshold ?? 0.05,
+		maxCappedPoints: request.maxCappedPoints,
+		hardCap: request.hardCap,
+		binSize: request.binSize,
+		lesionTypeColors: request.lesionTypeColors
+	})
 	const manhattanPlotTime = Date.now() - manhattanPlotStart
 	mayLog(`[GRIN2] Manhattan plot generation took ${formatElapsedTime(manhattanPlotTime)}`)
 
-	const manhattanPlotData = JSON.parse(rsResult)
-
-	// Step 6: Parse results and respond
-
-	// Validate Rust script output
+	// Validate render output
 	if (!manhattanPlotData?.png) {
-		throw new Error('Invalid Rust output: missing PNG data')
+		throw new Error('Invalid manhattan render output: missing PNG data')
 	}
 
 	const totalTime = processingTime + grin2AnalysisTime + manhattanPlotTime
@@ -274,7 +267,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		status: 'success',
 		fromCache: !freshCompute,
 		pngImg: manhattanPlotData.png,
-		plotData: manhattanPlotData.plot_data,
+		plotData: manhattanPlotData.plot_data as any,
 		topGeneTable: resultData.topGeneTable,
 		stats: {
 			lst: [
