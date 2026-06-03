@@ -2,7 +2,7 @@
 
 // Test URL: http://localhost:3000/testchat
 import serverconfig from '../../serverconfig.js'
-import { getDsAllowedTermTypes } from '../../../routes/termdb.config.ts'
+import { getDsAllowedTermTypes } from '../../routes/termdb.config.ts'
 import { readJSONFile, getChatRelatedPlotTypes } from '../../../routes/chat/utils.ts' // getGenesetNames
 import { run_chat_pipeline } from '../../../routes/termdb.chat.ts'
 import assert from 'node:assert/strict'
