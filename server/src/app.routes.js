@@ -6,8 +6,8 @@
 // must add route file paths below so that esbuild knows exactly what to bundle),
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
-	import('./grin2/route.ts'),
 	import('./chat/route.ts'),
+	import('./grin2/route.ts'),
 	import('./routes/aiProjectAdmin.ts'),
 	import('./routes/aiProjectSelectedWSImages.ts'),
 	import('./routes/aiProjectTrainModel.ts'),
