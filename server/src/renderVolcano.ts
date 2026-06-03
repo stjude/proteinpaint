@@ -3,6 +3,7 @@ import { scaleLinear } from 'd3-scale'
 import type { DataEntry, VolcanoData, VolcanoRenderRequest } from '#types'
 import { mayLog } from './helpers.ts'
 import { formatElapsedTime } from '#shared'
+import { createConcurrencyLimiter } from './utils/concurrencyLimiter.ts'
 
 /**
  * Rasterize a volcano scatter PNG and return the threshold-passing rows
@@ -26,49 +27,33 @@ const MAX_DOT_RADIUS = 20
 // without changing the CSS-space contract.
 const MAX_DEVICE_PIXELS_PER_SIDE = 8192
 
-// Concurrency gate around the heavy render+encode section. skia's
-// `canvas.toBuffer('png')` runs the rasterize+encode on skia's own thread
-// pool, so it doesn't block the event loop, but each in-flight render still
-// holds a device-pixel bitmap (worst case ~256 MB). Cap how many run at once
-// so a burst of requests can't pile bitmaps up and spike memory. 5 is a
-// pragmatic value for a server that also handles unrelated traffic and
-// matches our max pending requests in cacheOrRecompute.ts; raise it
-// to trade memory for throughput under heavier concurrent volcano load.
-const MAX_CONCURRENT_RENDERS = 5
-// Hard cap on renders waiting for a slot. Past this we reject immediately with
-// a 429 rather than letting the wait-queue grow without bound — an unbounded
-// queue is a memory/DoS risk and holds HTTP requests open indefinitely under
-// sustained overload. Mirrors cacheOrRecompute's CACHE_BUSY rejection once its
-// pool is full. Sized to absorb the anticipated concurrent burst (~20) with
-// headroom while still shedding a runaway flood.
-const MAX_QUEUED_RENDERS = 50
-let activeRenders = 0
-const renderQueue: Array<() => void> = []
-
-// 429 so it reads as "retry later", not a client error in the request shape.
-function makeRenderBusyError(): Error {
-	const err: any = new Error('Volcano render pool is full. Please try again shortly.')
-	err.status = 429
-	err.statusCode = 429
-	err.code = 'RENDER_BUSY'
-	return err
-}
-
-async function acquireRenderSlot(): Promise<void> {
-	if (activeRenders < MAX_CONCURRENT_RENDERS) {
-		activeRenders++
-		return
+// Volcano's policy for the generic gating device (see utils/concurrencyLimiter.ts).
+// The module owns the mechanism; this block owns the volcano-specific caps and
+// busy signal — tuned to the render+encode section's memory profile.
+const renderLimiter = createConcurrencyLimiter({
+	// skia's `canvas.toBuffer('png')` runs the rasterize+encode on skia's own
+	// thread pool, so it doesn't block the event loop, but each in-flight render
+	// still holds a device-pixel bitmap (worst case ~256 MB). Cap how many run at
+	// once so a burst of requests can't pile bitmaps up and spike memory. 5 is a
+	// pragmatic value for a server that also handles unrelated traffic and matches
+	// our max pending requests in cacheOrRecompute.ts; raise it to trade memory
+	// for throughput under heavier concurrent volcano load.
+	maxConcurrent: 5,
+	// Hard cap on renders waiting for a slot. Past this we reject immediately with
+	// a 429 rather than letting the wait-queue grow without bound — an unbounded
+	// queue is a memory/DoS risk and holds HTTP requests open indefinitely under
+	// sustained overload. Sized to absorb the anticipated concurrent burst (~20)
+	// with headroom while still shedding a runaway flood.
+	maxQueued: 50,
+	// 429 so it reads as "retry later", not a client error in the request shape.
+	makeBusyError: () => {
+		const err: any = new Error('Volcano render pool is full. Please try again shortly.')
+		err.status = 429
+		err.statusCode = 429
+		err.code = 'RENDER_BUSY'
+		return err
 	}
-	if (renderQueue.length >= MAX_QUEUED_RENDERS) throw makeRenderBusyError()
-	await new Promise<void>(resolve => renderQueue.push(resolve))
-}
-function releaseRenderSlot(): void {
-	const next = renderQueue.shift()
-	// Hand the slot to the next waiter without decrement/increment; only
-	// drop activeRenders when the queue is empty.
-	if (next) next()
-	else activeRenders--
-}
+})
 
 const DEFAULT_REQ: VolcanoRenderRequest = {
 	significanceThresholds: { pValueCutoff: 1.3, pValueType: 'adjusted', foldChangeCutoff: 0.3 },
@@ -225,9 +210,7 @@ export async function renderVolcano<T extends DataEntry>(
 	// and spike memory. skia's toBuffer runs the rasterize+encode on its own
 	// thread pool, so the event loop stays responsive — only the lightweight
 	// path-building below is synchronous on the main thread.
-	await acquireRenderSlot()
-	let png: string
-	try {
+	const png = await renderLimiter.run(async () => {
 		const canvas = new Canvas(w * effectiveDpr, h * effectiveDpr)
 		const ctx = canvas.getContext('2d')
 		ctx.scale(effectiveDpr, effectiveDpr)
@@ -268,10 +251,8 @@ export async function renderVolcano<T extends DataEntry>(
 
 		// Async rasterize+encode on skia's thread pool. Base64 here to preserve
 		// the `volcanoPng` string contract on the route response.
-		png = (await canvas.toBuffer('png')).toString('base64')
-	} finally {
-		releaseRenderSlot()
-	}
+		return (await canvas.toBuffer('png')).toString('base64')
+	})
 
 	// Build the interactive `dots` list: threshold-passers sorted asc by the
 	// chosen p-value column, optionally capped at maxInteractiveDots.
