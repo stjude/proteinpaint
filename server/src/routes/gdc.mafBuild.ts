@@ -39,7 +39,7 @@ export function init({ genomes }) {
 type EmitJsonDataArg =
 	| string
 	| {
-			status?: 'string'
+			status?: string
 			ok?: boolean
 			error?: string
 			errors?: any[]

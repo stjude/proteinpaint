@@ -91,7 +91,7 @@ export function init({ genomes }) {
 				error: e.message || e
 			} as TermdbClusterResponse
 		}
-		res.send(result satisfies TermdbClusterRequest)
+		res.send(result satisfies TermdbClusterResponse)
 	}
 }
 

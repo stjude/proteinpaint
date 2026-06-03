@@ -76,7 +76,7 @@ async function compute(q: CorrelationVolcanoRequest, ds: any) {
 	 * 2) both vectors have a standard deviation >0
 	If not, show term in legend on client
 	*/
-	const acceptedVariables: { v1: number; v2: number; id: string }[] = [],
+	const acceptedVariables: { v1: number[]; v2: number[]; id: string }[] = [],
 		skippedVariables: { tw$id: string }[] = []
 	for (const [tid, v] of vtid2array) {
 		if (v.v1.length < minArrayLength || v.v2.length < minArrayLength || getStdDev(v.v1) == 0 || getStdDev(v.v2) == 0) {

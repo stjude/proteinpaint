@@ -142,7 +142,7 @@ export function getCategories(data, q, ds, $id) {
 				samplecount: count,
 				key,
 				label:
-					data.refs?.byTermId?.[$id]?.events?.find((e: { event: any }) => e.event === key).label ||
+					data.refs?.byTermId?.[$id]?.events?.find((e: { event: any }) => e.event === key)?.label ||
 					q.tw.term?.values?.[key]?.label ||
 					key
 			})
