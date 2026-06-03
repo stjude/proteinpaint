@@ -28,19 +28,6 @@ export class SubplotManager {
 		this.records = new Map()
 	}
 
-	// map(subplots: any[]) {
-	//     const subplotIds = new Set(subplots.map(s => s.id))
-	//     for (const compPlotId of Object.keys(this.scCompPlots)) {
-	//         if (!subplotIds.has(compPlotId)) {
-	//             this.removeSubplot(compPlotId)
-	//         }
-	//     }
-	//     for (const subplot of subplots) {
-	//         if (!this.scCompPlots[subplot.id]) {
-	//             this.initSubplot(subplot)
-	//         }
-	//     }
-	// }
 	map(subplots: any[]): SCActiveSubplot[] {
 		const subplotIds = new Set(subplots.map(s => s.id))
 		for (const compPlotId of Object.keys(this.scCompPlots)) {
@@ -60,18 +47,13 @@ export class SubplotManager {
 		return this.getActiveSubplotsFlat()
 	}
 
-	/** TODO: Should make lookups needed for sample table and section renderer,
-	 * if necessary. Otherwise init lookups in constructor.
-	 */
-	// initSubplot(subplot){
-
-	// }
 	initSubplot(subplot) {
 		const existing = this.records.get(subplot.id)
 		this.records.set(subplot.id, {
 			plotId: subplot.id,
 			sampleId: this.getSampleId(subplot),
 			plotName: this.getPlotName(subplot),
+			sectionKey: existing?.sectionKey,
 			subplot,
 			sandboxDiv: existing?.sandboxDiv
 		})
@@ -125,6 +107,13 @@ export class SubplotManager {
 		this.records.set(plotId, record)
 	}
 
+	setSectionKey(plotId: string, sectionKey?: string) {
+		const record = this.records.get(plotId)
+		if (!record) return
+		record.sectionKey = sectionKey
+		this.records.set(plotId, record)
+	}
+
 	getActiveSubplotsFlat(): SCActiveSubplot[] {
 		return Array.from(this.records.values())
 	}
@@ -155,7 +144,6 @@ export class SubplotManager {
 		return sandboxes
 	}
 
-	// activeSandboxes() { }
 	activeSandboxes(activeSubplots: SCActiveSubplot[] = this.getActiveSubplotsFlat()) {
 		return this.getSampleSandboxes(activeSubplots)
 	}

@@ -70,6 +70,7 @@ export type SCActiveSubplot = {
 	plotId: string
 	sampleId?: string
 	plotName: string
+	sectionKey?: string
 	subplot: any
 	sandboxDiv?: any
 }

@@ -91,7 +91,6 @@ export class SCViewRenderer {
 		})
 	}
 
-	// async update(settings: Settings, data: any, subplots: PlotBase[], tableData: SCTableData) {
 	async update(
 		settings: Settings,
 		data: any,
@@ -102,13 +101,11 @@ export class SCViewRenderer {
 		this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
 		this.plotBtns.update(settings, data)
 		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
-		// await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
 		await this.sectionRenderer.update(
 			this.sc,
 			activeSubplots.map(s => s.subplot),
 			settings.sc.groupBy
 		)
-		// const activeSandboxes = this.sectionRenderer.getSampleSandboxes(subplots)
 		const activeSandboxes = subplotManager.getSampleSandboxes(activeSubplots)
 		this.sampleTableRenderer.updatePlotBtns(activeSandboxes)
 	}

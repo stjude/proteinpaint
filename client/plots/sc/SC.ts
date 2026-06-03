@@ -121,7 +121,6 @@ export class SCViewer extends PlotBase implements RxComponent {
 				this.app.printError(allSampleData?.error || 'No samples found for this dataset')
 				return
 			}
-			// this.viewModel.processData(config, allSampleData.samples)
 			this.items = allSampleData.samples
 			activeSubplots = this.subplotManager.map(state.subplots)
 			this.viewModel.processData(config, allSampleData.samples, activeSubplots)
@@ -141,7 +140,6 @@ export class SCViewer extends PlotBase implements RxComponent {
 			this.app.printError(e.message || e)
 			return
 		}
-		// await this.view.update(config.settings, data, state.subplots, this.viewModel.tableData)
 		await this.view.update(config.settings, data, activeSubplots, this.viewModel.tableData, this.subplotManager)
 		this.interactions.toggleLoading(false)
 	}
@@ -163,7 +161,6 @@ export const componentInit = SCInit
 export function getPlotConfig(opts: SCConfigOpts, app: MassAppApi) {
 	const config = {
 		chartType: 'sc',
-		// hidePlotFilter: true,
 		settings: getDefaultSCAppSettings(opts.overrides, app)
 	} as any
 
