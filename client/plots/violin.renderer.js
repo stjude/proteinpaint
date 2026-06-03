@@ -516,6 +516,7 @@ export default function setViolinRenderer(self) {
 	}
 
 	self.toggleLoadingDiv = function (display = '') {
+		self.dom.renderedDiv.style('display', '')
 		if (display != 'none') {
 			self.dom.loadingDiv
 				.style('opacity', 0)

@@ -39,10 +39,11 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
-		const div = holder.append('div')
-		const errorDiv = div.append('div').attr('class', 'sjpp-boxplot-error') //.style('opacity', 0.75)
-		const loading = div.append('div').style('padding', '24px').text('Loading ...')
-		const chartsDiv = div
+		const mainDiv = holder.append('div')
+		const errorDiv = mainDiv.append('div').attr('class', 'sja_errorbar') //.style('opacity', 0.75)
+		const renderedDiv = mainDiv.append('div')
+		const loading = renderedDiv.append('div').style('padding', '24px').text('Loading ...')
+		const chartsDiv = renderedDiv
 			.append('div')
 			.attr('class', 'sjpp-boxplot-charts')
 			.style('display', 'flex')
@@ -51,11 +52,12 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			.style('max-width', '100vw')
 		this.dom = {
 			controls: controls as Elem,
-			div,
+			div: mainDiv,
 			error: errorDiv,
 			loading,
+			renderedDiv,
 			charts: chartsDiv,
-			legend: div.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '25px'),
+			legend: renderedDiv.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '25px'),
 			tip: new Menu()
 		}
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
@@ -205,6 +207,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			})
 		}
 		this.toggleLoadingDiv('none')
+		this.dom.renderedDiv.style('display', '')
 		new View(viewModel.viewData, settings, this.dom, this.app, this.interactions)
 		/** Enables downloading the chart images for DownloadMenu after rendering. */
 		this.data.charts = viewModel.viewData.charts
@@ -232,8 +235,10 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 	toggleLoadingDiv(display = '') {
 		if (display != 'none') {
 			this.dom.loading.style('opacity', 0).style('display', display).transition().duration(3000).style('opacity', 1)
+			this.dom.charts.style('display', 'none')
 		} else {
 			this.dom.loading.style('display', display)
+			this.dom.charts.style('display', 'flex')
 		}
 	}
 }

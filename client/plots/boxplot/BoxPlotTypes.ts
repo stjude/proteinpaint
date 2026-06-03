@@ -41,10 +41,12 @@ export type BoxPlotDom = {
 	loading: Div
 	/** Sandbox header */
 	header?: Elem
-	/** Legend */
-	legend: Div
+	/** wrapper div for rendered charts, legend, stat tables, etc */
+	renderedDiv: Div
 	/** Div for charts, each chart contains a set of boxplots */
 	charts: Div
+	/** Legend */
+	legend: Div
 	/** box plot tooltip (e.g. over the outliers) */
 	tip: Menu
 }
