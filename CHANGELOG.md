@@ -9,6 +9,9 @@ Features:
 - Covered server/src/utils/test/sampleGroups.ts and closed gaps in server/src/utils/test/cacheOrRecompute unit tests
 - Moved volcano rendering from Rust to Node.js skia-canvas
 
+Fixes:
+- enable cubic spline for gdc numeric terms
+
 
 ## 2.190.2
 
