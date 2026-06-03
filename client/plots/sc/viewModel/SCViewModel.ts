@@ -1,6 +1,6 @@
 import type { AppApi } from '#rx'
 import type { TableColumn, TableRow } from '#dom'
-import type { SCConfig, SCFormattedState, SampleColumn, SCTableData } from '../SCTypes'
+import type { SCActiveSubplot, SCConfig, SCFormattedState, SampleColumn, SCTableData } from '../SCTypes'
 import type { SingleCellSample } from '#types'
 
 export class SCViewModel {
@@ -15,13 +15,15 @@ export class SCViewModel {
 		this.sampleColumns = sampleColumns || []
 	}
 
-	processData(config: SCConfig, _items: SingleCellSample[]) {
+	// processData(config: SCConfig, _items: SingleCellSample[]) {
+	processData(config: SCConfig, _items: SingleCellSample[], activeSubplots: SCActiveSubplot[] = []) {
 		//Sort meta analysis results to show at the beginning of the table.
 		//Prevents breaking the logic for selected rows after formating the table data.
 		const items = _items.sort((a, b) => (b.isMetaResult === a.isMetaResult ? 0 : b.isMetaResult ? 1 : -1))
 
 		//Should only be called once
-		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns)
+		// const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns)
+		const [rows, columns, sampleColIdx] = this.getTabelData(config, items, this.sampleColumns, activeSubplots)
 		const selectedRows: number[] = []
 		const sID = config.settings.sc.item?.sID
 		const i = sID
@@ -35,14 +37,16 @@ export class SCViewModel {
 			rows: rows as any,
 			columns: columns as any,
 			selectedRows,
-			sampleColIdx
+			sampleColIdx,
+			activeSubplots
 		}
 	}
 
 	getTabelData(
 		plotConfig: SCConfig,
 		items: SingleCellSample[],
-		sampleColumns?: SampleColumn[]
+		sampleColumns?: SampleColumn[],
+		_activeSubplots: SCActiveSubplot[] = []
 	): [TableRow[], TableColumn[], number] {
 		const rows: TableRow[] = []
 		const hasExperiments = items.some(i => i.experiments)

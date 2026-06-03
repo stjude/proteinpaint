@@ -65,6 +65,22 @@ export type SCViewerOpts = {
 	header: Elem
 }
 
+/** Normalized source-of-truth subplot entry managed by SubplotManager. */
+export type SCActiveSubplot = {
+	plotId: string
+	sampleId?: string
+	plotName: string
+	subplot: any
+	sandboxDiv?: any
+}
+
+/** Sample-table button payload grouped by sample id. */
+export type SCSampleSandbox = {
+	plotId: string
+	div: any
+	plotName: string
+}
+
 /** On init() only the table is rendered.
  * This data is static and not subject to change like
  * the (eventual) viewData. */
@@ -74,6 +90,8 @@ export type SCTableData = {
 	selectedRows: number[]
 	/** Column idx with sample IDs */
 	sampleColIdx: number
+	/** Flat list of active subplots from SubplotManager.map() */
+	activeSubplots: SCActiveSubplot[]
 }
 
 /** Slightly modified from termdbConfig.queries.singleCell.samples.sampleColumns */

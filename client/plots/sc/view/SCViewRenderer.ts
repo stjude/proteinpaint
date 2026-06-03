@@ -1,13 +1,13 @@
-import type { SCDom, SCFormattedState, SCTableData } from '../SCTypes'
+import type { SCActiveSubplot, SCDom, SCFormattedState, SCTableData } from '../SCTypes'
 import type { SCInteractions } from '../interactions/SCInteractions'
 import { SampleTableRenderer } from './SampleTableRenderer'
 import { PlotButtons } from './PlotButtons'
 import { SectionRenderer } from './SectionRenderer'
 import type { SCViewer } from '../SC.ts'
+import type { SubplotManager } from '../subplots/SubplotManager.ts'
 import { GroupByOptions, type SCSettings, type Settings } from '../settings/Settings'
 import { make_radios } from '#dom'
 // import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
-import type { PlotBase } from '#plots/PlotBase.ts'
 
 /** Manages the initial rendering of the sample table and the dynamic
  * rendering of the plot buttons and sections based on the selected sample and plots.
@@ -91,12 +91,25 @@ export class SCViewRenderer {
 		})
 	}
 
-	async update(settings: Settings, data: any, subplots: PlotBase[], tableData: SCTableData) {
+	// async update(settings: Settings, data: any, subplots: PlotBase[], tableData: SCTableData) {
+	async update(
+		settings: Settings,
+		data: any,
+		activeSubplots: SCActiveSubplot[],
+		tableData: SCTableData,
+		subplotManager: SubplotManager
+	) {
 		this.sampleTableRenderer = new SampleTableRenderer(this.dom, this.interactions, tableData)
-		// this.plotBtns.update(settings, data)
-		// //Also handles when settings.sc.groupBy == 'none' to show all plots in one section
+		this.plotBtns.update(settings, data)
+		//Also handles when settings.sc.groupBy == 'none' to show all plots in one section
 		// await this.sectionRenderer.update(this.sc, subplots, settings.sc.groupBy)
+		await this.sectionRenderer.update(
+			this.sc,
+			activeSubplots.map(s => s.subplot),
+			settings.sc.groupBy
+		)
 		// const activeSandboxes = this.sectionRenderer.getSampleSandboxes(subplots)
-		// this.sampleTableRenderer.updatePlotBtns(activeSandboxes)
+		const activeSandboxes = subplotManager.getSampleSandboxes(activeSubplots)
+		this.sampleTableRenderer.updatePlotBtns(activeSandboxes)
 	}
 }

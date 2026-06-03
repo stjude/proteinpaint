@@ -241,6 +241,7 @@ export class SectionRenderer {
 		}
 		await sc.initPlotComponent(subplot.id, opts)
 		this.sections[key].sandboxes[subplot.id] = sandbox.app_div
+		sc.subplotManager.setSandbox(subplot.id, sandbox.app_div)
 	}
 
 	removeSection(key: string, sc: SCViewer) {
@@ -273,6 +274,7 @@ export class SectionRenderer {
 		if (!key) return
 		this.sections[key].sandboxes[plotId].remove()
 		delete this.sections[key].sandboxes[plotId]
+		sc.subplotManager.setSandbox(plotId, undefined)
 		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
 		this.plotId2Key.delete(plotId)
 	}
@@ -287,7 +289,7 @@ export class SectionRenderer {
 			if (!sampleId || !key) continue
 			const div = this.sections[key]?.sandboxes[subplot.id]
 			if (!div) continue
-			const plotName = this.getPlotName(subplot) || subplot.id
+			const plotName = this.getPlotName(subplot)
 			if (!sandboxes.has(sampleId)) sandboxes.set(sampleId, [])
 			sandboxes.get(sampleId)!.push({ plotId: subplot.id, div, plotName })
 		}
