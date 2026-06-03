@@ -1,5 +1,5 @@
 import type { BasePlotConfig, MassAppApi, MassState } from '#mass/types/mass'
-import type { SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
+import type { SCActiveSubplot, SCConfigOpts, SCDom, SCFormattedState, SCViewerOpts, SampleColumn } from './SCTypes'
 import type { SingleCellSample } from '#types'
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, copyMerge, type RxComponent } from '#rx'
@@ -10,6 +10,7 @@ import { SCViewRenderer } from './view/SCViewRenderer'
 import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { importPlot } from '#plots/importPlot.js'
 import { getCombinedTermFilter } from '#filter'
+import { SubplotManager } from './subplots/SubplotManager.ts'
 
 export class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
@@ -21,6 +22,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 	items!: SingleCellSample[]
 	itemColumns!: SampleColumn[]
 	model!: SCModel
+	subplotManager!: SubplotManager
 	view!: SCViewRenderer
 	viewModel!: SCViewModel
 
@@ -93,6 +95,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 		}
 		this.interactions = new SCInteractions(this)
 		this.viewModel = new SCViewModel(this.app, this.itemColumns)
+		this.subplotManager = new SubplotManager(this)
 		this.view = new SCViewRenderer(this)
 		/** Only renders the controls above the table */
 		this.view.render(state.config.settings.sc, state)
@@ -110,6 +113,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 		this.interactions.toggleLoading(true)
 
 		let data: any
+		let activeSubplots: SCActiveSubplot[] = []
 		try {
 			const allSampleData = await this.model.getAllSampleData(state)
 			if (!allSampleData || allSampleData.error) {
@@ -117,7 +121,10 @@ export class SCViewer extends PlotBase implements RxComponent {
 				this.app.printError(allSampleData?.error || 'No samples found for this dataset')
 				return
 			}
-			this.viewModel.processData(config, allSampleData.samples)
+			// this.viewModel.processData(config, allSampleData.samples)
+			this.items = allSampleData.samples
+			activeSubplots = this.subplotManager.map(state.subplots)
+			this.viewModel.processData(config, allSampleData.samples, activeSubplots)
 
 			if (config.settings?.sc?.item) {
 				const sampleData = await this.model.getSampleData()
@@ -134,7 +141,8 @@ export class SCViewer extends PlotBase implements RxComponent {
 			this.app.printError(e.message || e)
 			return
 		}
-		await this.view.update(config.settings, data, state.subplots, this.viewModel.tableData)
+		// await this.view.update(config.settings, data, state.subplots, this.viewModel.tableData)
+		await this.view.update(config.settings, data, activeSubplots, this.viewModel.tableData, this.subplotManager)
 		this.interactions.toggleLoading(false)
 	}
 
