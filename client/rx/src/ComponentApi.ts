@@ -123,7 +123,7 @@ export class ComponentApi {
 		if (!componentState) return
 		const errDisplay = this.#errdiv.style('display')
 		// hide error div
-		this.#errdiv.style('display', 'none')
+		this.#errdiv.style('display', 'none').html?.('')
 		// force update if there is no action, or
 		// if the current and pending state is not equal
 		if (
@@ -146,8 +146,9 @@ export class ComponentApi {
 					await self.main(componentState)
 				} catch (e) {
 					if (self.app.isAbortError(e)) return
+					if (self.printError) self.printError(e)
 					if (self.bus) self.bus.emit('error')
-					throw e
+					if (!self.printError) throw e
 				}
 			} else {
 				self.state = componentState

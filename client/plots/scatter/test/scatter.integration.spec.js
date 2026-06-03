@@ -9,7 +9,8 @@ import {
 	detectChildAttr,
 	detectChildStyle,
 	detectGte,
-	sleep
+	sleep,
+	Locator
 } from '../../../test/test.helpers'
 import { openSummaryPlot, openPlot, getSamplelstTW } from '../../../mass/groups.js'
 import { mclass } from '#shared/common.js'
@@ -734,7 +735,7 @@ tape('Invalid plot name', async function (test) {
 				]
 			}
 		})
-		const errorbar = await detectGte({ elem: holder.node(), selector: '.sja_errorbar' })
+		const errorbar = await Locator.init(holder.node()).shows('.sja_errorbar').get()
 		test.equal(errorbar.length, 1, 'Should display only one error message.')
 		test.ok(
 			errorbar[0].innerText.includes(`plot not found with plotName`),
