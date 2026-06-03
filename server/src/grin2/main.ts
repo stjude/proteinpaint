@@ -78,7 +78,8 @@ export function init({ genomes }) {
 			const ds = g.datasets?.[request.dslabel]
 			if (!ds) throw new Error('ds missing')
 
-			if (typeof ds.queries?.singleSampleMutation?.get != 'function') throw new Error('singleSampleMutation query missing from dataset')
+			if (typeof ds.queries?.singleSampleMutation?.get != 'function')
+				throw new Error('singleSampleMutation query missing from dataset')
 
 			const result = await runGrin2(g, ds, request, signal)
 			res.json(result)
@@ -556,7 +557,7 @@ async function processSampleData(
 		const sample = samples[i]
 
 		try {
-			const {mlst} = await ds.queries.singleSampleMutation.get({sample: sample.name})
+			const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name })
 
 			const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request)
 
@@ -578,9 +579,9 @@ async function processSampleData(
 
 			processing.processedSamples! += 1
 			processing.totalLesions! += filteredLesions.length
-		} catch (error) {
+		} catch (e) {
 			processing.failedSamples! += 1
-			mayLog(`[GRIN2] Error processing sample ${sample.name}`)
+			mayLog(`[GRIN2] Error processing sample ${sample.name} ${e.message || e}`)
 		}
 	}
 
