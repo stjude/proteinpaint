@@ -29,7 +29,7 @@ export type MatrixScaffold = {
 	filter?: string
 }
 
-export type genomeBrowserScaffold = {
+export type GenomeBrowserScaffold = {
 	plotType: 'genomeBrowser'
 	genomeBrowserPhrase?: string
 	genePhrase?: string
@@ -65,7 +65,7 @@ export type Scaffold =
 	| MatrixScaffold
 	| HierarchicalScaffold
 	| PrebuiltScatterScaffold
-	| genomeBrowserScaffold
+	| GenomeBrowserScaffold
 
 // Helper functions to determine scaffold type
 export function isSummaryScaffold(s: Scaffold): s is SummaryScaffold {
