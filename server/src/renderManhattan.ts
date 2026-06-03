@@ -245,7 +245,7 @@ export async function renderManhattan(req: ManhattanRenderRequest): Promise<Manh
 async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<ManhattanRenderResult> {
 	const pixelWidth = clampedInt(req.plotWidth, 1, MAX_PIXEL_DIM, 'plotWidth')
 	const pixelHeight = clampedInt(req.plotHeight, 1, MAX_PIXEL_DIM, 'plotHeight')
-	const dotRadius = clampedFloat(req.pngDotRadius ?? 2, 0.1, MAX_DOT_RADIUS, 'pngDotRadius')
+	const dotRadius = clampedInt(req.pngDotRadius ?? 2, 1, MAX_DOT_RADIUS, 'pngDotRadius')
 	const devicePixelRatio = clampedFloat(req.devicePixelRatio ?? 1.0, 1.0, 6.0, 'devicePixelRatio')
 	const qValueThreshold = finiteAtLeast(req.qValueThreshold, 0, 'qValueThreshold')
 	const hardCap = finiteAtLeast(req.hardCap, 0, 'hardCap')
