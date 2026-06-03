@@ -1,19 +1,4 @@
 import type { RoutePayload, RouteApi } from '#types'
-
-export const payload: RoutePayload = {
-	init,
-	request: { typeId: 'DERequest' /*, checkers: TODO write validator */ },
-	response: { typeId: 'DEResponse' }
-}
-
-export const api: RouteApi = {
-	endpoint: 'termdb/DE',
-	methods: {
-		get: payload,
-		post: payload
-	}
-}
-
 import type { DEFullResponse, DEImage, DERequest, ExpressionInput, GeneDEEntry } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
@@ -29,6 +14,20 @@ import {
 	type SampleGroups
 } from '#src/utils/sampleGroups.ts'
 import type { DeCacheResult } from '../../routes/types.ts'
+
+export const payload: RoutePayload = {
+	init,
+	request: { typeId: 'DERequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'DEResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/DE',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
 
 /*
  * Cache flow (uniform across the four cacheOrRecompute consumers):

@@ -1,4 +1,10 @@
 import type { RoutePayload, RouteApi } from '#types'
+import ky from 'ky'
+import { joinUrl } from '#shared/joinUrl.js'
+import { stream_rust } from '@sjcrh/proteinpaint-rust'
+import type { GdcMafBuildRequest } from '#types'
+import { maxTotalSizeCompressed } from './gdc.maf.ts'
+import { mayLog } from '#src/helpers.ts'
 
 export const GdcMafPayload: RoutePayload = {
 	init,
@@ -13,13 +19,6 @@ export const api: RouteApi = {
 		post: GdcMafPayload
 	}
 }
-
-import ky from 'ky'
-import { joinUrl } from '#shared/joinUrl.js'
-import { stream_rust } from '@sjcrh/proteinpaint-rust'
-import type { GdcMafBuildRequest } from '#types'
-import { maxTotalSizeCompressed } from './gdc.maf.ts'
-import { mayLog } from '#src/helpers.ts'
 
 export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {

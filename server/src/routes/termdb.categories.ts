@@ -1,4 +1,8 @@
 import type { RoutePayload, RouteApi } from '#types'
+import type { CategoriesRequest, CategoriesResponse } from '#types'
+import type { ReqQueryAddons } from '../../routes/types.ts'
+import { getOrderedLabels } from '#src/termdb.barchart.js'
+import { getData } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -13,11 +17,6 @@ export const api: RouteApi = {
 		post: payload
 	}
 }
-
-import type { CategoriesRequest, CategoriesResponse } from '#types'
-import type { ReqQueryAddons } from '../../routes/types.ts'
-import { getOrderedLabels } from '#src/termdb.barchart.js'
-import { getData } from '#src/termdb.matrix.js'
 
 export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {

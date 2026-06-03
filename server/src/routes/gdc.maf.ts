@@ -1,4 +1,9 @@
 import type { RoutePayload, RouteApi } from '#types'
+import type { GdcMafRequest, GdcMafResponse, GdcMafFile } from '#types'
+import ky from 'ky'
+import { joinUrl } from '#shared/joinUrl.js'
+import serverconfig from '#src/serverconfig.js'
+import { getGdcSampletypes } from '#src/mds3.gdc.js'
 
 const payload: RoutePayload = {
 	init,
@@ -13,12 +18,6 @@ export const api: RouteApi = {
 		post: payload
 	}
 }
-
-import type { GdcMafRequest, GdcMafResponse, GdcMafFile } from '#types'
-import ky from 'ky'
-import { joinUrl } from '#shared/joinUrl.js'
-import serverconfig from '#src/serverconfig.js'
-import { getGdcSampletypes } from '#src/mds3.gdc.js'
 
 /*
 this route lists available gdc MAF files based on user's cohort filter

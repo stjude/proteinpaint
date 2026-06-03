@@ -1,4 +1,9 @@
 import type { RoutePayload, RouteApi } from '#types'
+import path from 'path'
+import { spawn } from 'child_process'
+import serverconfig from '#src/serverconfig.js'
+import * as common from '#shared/common.js'
+import type { DsDataRequest, DsDataResponse } from '#types'
 
 const payload: RoutePayload = {
 	init,
@@ -17,12 +22,6 @@ export const api: RouteApi = {
 		post: payload
 	}
 }
-
-import path from 'path'
-import { spawn } from 'child_process'
-import serverconfig from '#src/serverconfig.js'
-import * as common from '#shared/common.js'
-import type { DsDataRequest, DsDataResponse } from '#types'
 
 export function init({ genomes }) {
 	return async function handle_dsdata(req, res) {

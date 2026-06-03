@@ -1,18 +1,4 @@
 import type { RouteApi, RoutePayload } from '#types'
-
-const payload: RoutePayload = {
-	init,
-	request: { typeId: 'any' },
-	response: { typeId: 'any' }
-}
-
-export const api: RouteApi = {
-	endpoint: 'termdb/config',
-	methods: {
-		get: payload
-	}
-}
-
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
@@ -28,6 +14,19 @@ import {
 	SSGSEA
 } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'any' },
+	response: { typeId: 'any' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/config',
+	methods: {
+		get: payload
+	}
+}
 
 export function init({ genomes }) {
 	return async (req, res) => {

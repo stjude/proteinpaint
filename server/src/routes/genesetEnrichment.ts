@@ -1,4 +1,17 @@
 import type { RoutePayload, RouteApi } from '#types'
+import type { DERequest, DiffMethRequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse } from '#types'
+import fs from 'fs'
+import path from 'path'
+import serverconfig from '#src/serverconfig.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { mayLog } from '#src/helpers.ts'
+import { formatElapsedTime } from '#shared'
+import { getDeCacheResult } from './termdb.DE.ts'
+import { getDmCacheResult } from '../../routes/termdb.diffMeth.ts'
+import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
+import { get_ds_tdb } from '#src/termdb.js'
+import type { GseaCacheResult } from '../../routes/types.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -13,20 +26,6 @@ export const api: RouteApi = {
 		post: payload
 	}
 }
-
-import type { DERequest, DiffMethRequest, GenesetEnrichmentRequest, GenesetEnrichmentResponse } from '#types'
-import fs from 'fs'
-import path from 'path'
-import serverconfig from '#src/serverconfig.js'
-import { run_python } from '@sjcrh/proteinpaint-python'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { mayLog } from '#src/helpers.ts'
-import { formatElapsedTime } from '#shared'
-import { getDeCacheResult } from './termdb.DE.ts'
-import { getDmCacheResult } from '../../routes/termdb.diffMeth.ts'
-import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import { get_ds_tdb } from '#src/termdb.js'
-import type { GseaCacheResult } from '../../routes/types.ts'
 
 /*
  * Cache flow (uniform across the four cacheOrRecompute consumers):

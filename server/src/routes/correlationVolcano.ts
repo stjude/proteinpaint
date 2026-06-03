@@ -1,4 +1,9 @@
 import type { RoutePayload, RouteApi } from '#types'
+import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse } from '#types'
+import { getData } from '#src/termdb.matrix.js'
+import { run_R } from '@sjcrh/proteinpaint-r'
+import { mayLog } from '#src/helpers.ts'
+import { getStdDev } from '../../routes/termdb.descrstats.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -13,12 +18,6 @@ export const api: RouteApi = {
 		post: payload
 	}
 }
-
-import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse } from '#types'
-import { getData } from '#src/termdb.matrix.js'
-import { run_R } from '@sjcrh/proteinpaint-r'
-import { mayLog } from '#src/helpers.ts'
-import { getStdDev } from '../../routes/termdb.descrstats.ts'
 
 // to avoid crashing r, an array must meet below; otherwise the variable is skipped
 const minArrayLength = 3 // minimum number of values

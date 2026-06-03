@@ -1,19 +1,4 @@
 import type { RouteApi, RoutePayload } from '#types'
-
-const payload: RoutePayload = {
-	init,
-	request: { typeId: 'TermdbClusterRequest' /*, checkers: TODO write validator */ },
-	response: { typeId: 'TermdbClusterResponse' }
-}
-
-export const api: RouteApi = {
-	endpoint: 'termdb/cluster',
-	methods: {
-		get: payload,
-		post: payload
-	}
-}
-
 import path from 'path'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
@@ -45,6 +30,20 @@ import {
 	PROTEOME_ABUNDANCE
 } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'TermdbClusterRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'TermdbClusterResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/cluster',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
 
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
