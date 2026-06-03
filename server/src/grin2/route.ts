@@ -1,5 +1,5 @@
 import type { RouteApi, RoutePayload } from '#types'
-import { init } from '../../routes/grin2.ts'
+import { init } from './main.ts'
 
 export const payload: RoutePayload = {
 	init,

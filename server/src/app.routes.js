@@ -6,11 +6,10 @@
 // must add route file paths below so that esbuild knows exactly what to bundle),
 // since dynamic import plugin is not yet supported
 export const routeFiles = [
+	import('./grin2/route.ts'),
 	import('./routes/aiProjectAdmin.ts'),
 	import('./routes/aiProjectSelectedWSImages.ts'),
 	import('./routes/aiProjectTrainModel.ts'),
-	import('./routes/alphaGenome.ts'),
-	import('./routes/alphaGenomeTypes.ts'),
 	import('./routes/brainImaging.ts'),
 	import('./routes/brainImagingSamples.ts'),
 	import('./routes/burden.ts'),
@@ -23,7 +22,6 @@ export const routeFiles = [
 	import('./routes/gdc.grin2.list.ts'),
 	import('./routes/gdc.maf.ts'),
 	import('./routes/gdc.mafBuild.ts'),
-	import('./routes/grin2.ts'),
 	import('./routes/termdb.topMutatedGenes.ts'),
 	import('./routes/gene2canonicalisoform.ts'),
 	import('./routes/genelookup.ts'),

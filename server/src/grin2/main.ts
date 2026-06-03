@@ -1,18 +1,24 @@
 import type { GRIN2Request, GRIN2Response } from '#types'
-import serverconfig from '#src/serverconfig.js'
+import serverconfig from '../serverconfig.js'
 import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { mayLog } from '#src/helpers.ts'
+import { mayLog } from '../helpers.ts'
 import os from 'os'
-import { get_samples } from '#src/termdb.sql.js'
-import { read_file, file_is_readable } from '#src/utils.js'
+import { get_samples } from '../termdb.sql.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
-import { mayFilterByMaf } from '#src/mds3.init.js'
-import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
-import type { Grin2CacheResult } from './types.ts'
+import { mayFilterByMaf } from '../mds3.init.js'
+import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
+
+/** grin2/{cacheid}.json. Self-contained: the per-gene rows Rust needs
+ * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
+ * step opens this file directly. */
+export type Grin2CacheResult = {
+	resultData: any
+	processing: any
+}
 
 /**
  * General GRIN2 analysis route
@@ -72,7 +78,7 @@ export function init({ genomes }) {
 			const ds = g.datasets?.[request.dslabel]
 			if (!ds) throw new Error('ds missing')
 
-			if (!ds.queries?.singleSampleMutation) throw new Error('singleSampleMutation query missing from dataset')
+			if (typeof ds.queries?.singleSampleMutation?.get != 'function') throw new Error('singleSampleMutation query missing from dataset')
 
 			const result = await runGrin2(g, ds, request, signal)
 			res.json(result)
@@ -281,7 +287,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 						['Processed Samples', processing.processedSamples!.toLocaleString()],
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
 						['Failed Samples', processing.failedSamples!.toLocaleString()],
-						['Failed Files', (processing.failedFiles?.length ?? 0).toLocaleString()],
 						['Total Lesions', processing.totalLesions!.toLocaleString()],
 						['Processed Lesions', processing.processedLesions!.toLocaleString()]
 					]
@@ -493,7 +498,6 @@ async function processSampleData(
 		totalSamples: number
 		processedSamples: number
 		failedSamples: number
-		failedFiles: Array<{ sampleName: string; filePath: string; error: string }>
 		totalLesions: number
 		processedLesions: number
 		unprocessedSamples: number
@@ -524,7 +528,6 @@ async function processSampleData(
 		totalSamples: samples.length,
 		processedSamples: 0,
 		failedSamples: 0,
-		failedFiles: [],
 		totalLesions: 0,
 		processedLesions: 0,
 		unprocessedSamples: 0
@@ -532,7 +535,6 @@ async function processSampleData(
 		totalSamples: number
 		processedSamples: number
 		failedSamples: number
-		failedFiles: Array<{ sampleName: string; filePath: string; error: string }>
 		totalLesions: number
 		processedLesions: number
 		unprocessedSamples: number
@@ -552,11 +554,9 @@ async function processSampleData(
 		}
 
 		const sample = samples[i]
-		const filepath = path.join(serverconfig.tpmasterdir, ds.queries.singleSampleMutation.folder, sample.name)
 
 		try {
-			await file_is_readable(filepath)
-			const mlst = JSON.parse(await read_file(filepath))
+			const {mlst} = await ds.queries.singleSampleMutation.get({sample: sample.name})
 
 			const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request)
 
@@ -580,11 +580,6 @@ async function processSampleData(
 			processing.totalLesions! += filteredLesions.length
 		} catch (error) {
 			processing.failedSamples! += 1
-			processing.failedFiles!.push({
-				sampleName: sample.name,
-				filePath: filepath,
-				error: error instanceof Error ? error.message || 'Unknown error' : String(error)
-			})
 			mayLog(`[GRIN2] Error processing sample ${sample.name}`)
 		}
 	}

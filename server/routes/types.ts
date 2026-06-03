@@ -42,14 +42,6 @@ export type DmCacheResult = {
 	sample_size2: number
 }
 
-/** grin2/{cacheid}.json. Self-contained: the per-gene rows Rust needs
- * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
- * step opens this file directly. */
-export type Grin2CacheResult = {
-	resultData: any
-	processing: any
-}
-
 /** gsea/{cacheid}.json. Self-contained: the blitzgsea result is pickled
  * by Python, base64-encoded, and rides inside this cache result alongside
  * the rendered table. Detail-image requests feed `pickleB64` back to
