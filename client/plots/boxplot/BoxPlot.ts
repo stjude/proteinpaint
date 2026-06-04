@@ -40,7 +40,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
 		const controls = opts.controls ? holder : holder.append('div')
 		const mainDiv = holder.append('div')
-		const errorDiv = mainDiv.append('div').attr('class', 'sja_errorbar') //.style('opacity', 0.75)
+		const errorDiv = mainDiv.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 		const loading = mainDiv.append('div').style('padding', '24px').text('Loading ...')
 		const renderedDiv = mainDiv.append('div')
 		const chartsDiv = renderedDiv
