@@ -248,6 +248,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		// 	maxHistoryLen: 10,
 		// 	margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
 		// })
+		if (config?.hidePlotFilter) return
 		this.components.filter = await filterRxCompInit({
 			app: this.app,
 			vocabApi: this.app.vocabApi,
@@ -457,6 +458,8 @@ export async function getPlotConfig(opts, app) {
 		term: opts.term,
 		groups: [],
 		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
+		//Allow hiding the plot filter when appropriate (e.g. single cell summary plots)
+		hidePlotFilter: opts.hidePlotFilter || false,
 		settings: {
 			controls: {
 				isOpen: false

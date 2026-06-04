@@ -37,7 +37,7 @@ export type SCDom = {
 }
 
 /** Standardized sample identifier used throughout the SC app */
-export type SCSample = { sID: string; eID: string }
+export type SCSample = { sID: string; eID: string; isMetaResult?: boolean }
 
 /** State retrieved from this.getState()
  * specific to SC chartType. ** NOT ** reflective

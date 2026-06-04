@@ -17,13 +17,11 @@ export class SCInteractions {
 		this.model = sc.model
 	}
 
-	/** Used in the gene search menu shown on click from a plot btn
-	 * Add the plot to the state.plots array with .parentId. Adding
-	 * .parentId prevents the plot from launching in a new sandbox.
+	/** Add the plot to the state.plots array with .parentId. Adding
+	 * .parentId prevents the plot from launching in a new sandbox outside SC.
 	 * Pass the .parentId to both the plotConfig and the action.
 	 * this.getState() in SC.ts will find all the subplots with the parentId==this.id
-	 * SC.main() initializes the subplots as components in chartsDiv
-	 */
+	 * SC.main() initializes the subplots as components in chartsDiv */
 	async createSubplot(config) {
 		const c = Object.assign({}, config, { parentId: this.id })
 		await this.app.dispatch({
