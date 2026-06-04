@@ -8,8 +8,6 @@ export type SCConfig = {
 	chartType: 'sc'
 	/** Common settings and settings for each child component/plot */
 	settings: Settings
-	/** Local plot filter object. Not present when filter is not applied */
-	filter?: Filter
 }
 
 /** Opts defined in getPlotConfig() */

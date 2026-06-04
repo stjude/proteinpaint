@@ -30,7 +30,8 @@ tape('constructor should set tableData with rows, columns, and selectedRows', te
 	const config = getMockSCConfig()
 	const items = [{ sample: 'S1' }, { sample: 'S2' }]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	test.true(Array.isArray(vm.tableData.rows), 'Should have rows array')
 	test.true(Array.isArray(vm.tableData.columns), 'Should have columns array')
@@ -49,7 +50,8 @@ tape('constructor should set selectedRows when item matches a sample', test => {
 	})
 	const items = [{ sample: 'S1' }, { sample: 'S2' }, { sample: 'S3' }]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	test.deepEqual(vm.tableData.selectedRows, [1], 'Should select the matching sample index')
 	test.end()
@@ -60,7 +62,8 @@ tape('constructor should have empty selectedRows when no item is set', test => {
 	const config = getMockSCConfig()
 	const items = [{ sample: 'S1' }]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	test.deepEqual(vm.tableData.selectedRows, [], 'Should have empty selectedRows')
 	test.end()
@@ -76,7 +79,8 @@ tape('getTabelData() should create sample column as first column', test => {
 	})
 	const items = [{ sample: 'S1' }]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	test.equal(vm.tableData.columns[0].label, 'Case', 'First column label should match config')
 	test.equal(vm.tableData.columns[0].sortable, true, 'First column should be sortable')
@@ -89,7 +93,8 @@ tape('getTabelData() should add sampleColumns when provided', test => {
 	const items = [{ sample: 'S1', sex: 'Male' }]
 	const sampleColumns = [{ termid: 'sex', label: 'Sex' }]
 
-	const vm = new SCViewModel(app, config, items as any, sampleColumns)
+	const vm = new SCViewModel(app, sampleColumns)
+	vm.processData(config, items)
 
 	test.equal(vm.tableData.columns.length, 3, 'Should have sample column + 1 extra column')
 	test.equal(vm.tableData.columns[2].label, 'Sex', 'Extra column label should match')
@@ -104,7 +109,8 @@ tape('getTabelData() should handle samples without experiments', test => {
 	const config = getMockSCConfig()
 	const items = [{ sample: 'S1' }, { sample: 'S2' }]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	test.equal(vm.tableData.columns.length, 2, 'Should only have the sample and shown plots columns')
 	test.equal(vm.tableData.rows.length, 2, 'Should have one row per sample')
@@ -126,7 +132,8 @@ tape('getTabelData() should expand experiments into separate rows', test => {
 		}
 	]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	test.equal(vm.tableData.rows.length, 2, 'Should create one row per experiment')
 	// Columns: Sample, Sample (experiment sample name), Experiment
@@ -152,7 +159,8 @@ tape('getTabelData() should add GDC URL for experiment column when dslabel is GD
 		}
 	]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	const row0 = vm.tableData.rows[0] as any[]
 	const expCell = row0[row0.length - 1]
@@ -170,7 +178,8 @@ tape('getTabelData() should not add GDC URL for non-GDC datasets', test => {
 		}
 	]
 
-	const vm = new SCViewModel(app, config, items as any)
+	const vm = new SCViewModel(app)
+	vm.processData(config, items)
 
 	const row0 = vm.tableData.rows[0] as any[]
 	const expCell = row0[row0.length - 1]
@@ -191,7 +200,8 @@ tape('getTabelData() should include sampleColumns with experiments', test => {
 	]
 	const sampleColumns = [{ termid: 'sex', label: 'Sex' }]
 
-	const vm = new SCViewModel(app, config, items as any, sampleColumns)
+	const vm = new SCViewModel(app, sampleColumns)
+	vm.processData(config, items)
 
 	// Columns: Sample, Sample (exp), Sex, Experiment
 	test.equal(vm.tableData.columns.length, 5, 'Should have 5 columns')
