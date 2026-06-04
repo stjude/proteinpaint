@@ -2126,7 +2126,7 @@ tape('max number of bins: exceeded', test => {
 	async function testExceedMaxBin(barchart) {
 		//Fix for removing sleep()
 		const barLoc = Locator.init(barchart.Inner.dom.holder.node())
-		const numBars = await barLoc.hides('.bars-cell-grp', { visibility: false, count: 22 }).get()
+		const numBars = await barLoc.shows('.bars-cell-grp', { visibility: false, count: 22 }).get()
 		test.equal(numBars.length, 22, 'should hide the previously rendered 22 age bars on error and not re-render')
 		const errorbar = await barLoc.shows('.sja_errorbar').get(0)
 		test.true(errorbar?.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')

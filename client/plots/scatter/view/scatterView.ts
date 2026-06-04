@@ -24,8 +24,12 @@ export class ScatterView {
 
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const domOpts = { controlsWrapper: leftDiv, mainWrapper: rightDiv }
-		const { controls, errdiv, loadingDiv, banner, renderedData, charts, legendDiv } = scatter.getStandardDomLayout(
+		const controlsHolder = leftDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.attr('data-testid', 'sjpp-scatter-controls-div')
+		const domOpts = { controls: controlsHolder, mainWrapper: rightDiv }
+		const { errdiv, loadingDiv, banner, renderedData, charts, legendDiv } = scatter.getStandardDomLayout(
 			this.opts.holder,
 			domOpts
 		)
@@ -35,7 +39,7 @@ export class ScatterView {
 		legendDiv.remove()
 
 		this.dom = {
-			controlsHolder: controls.style('display', 'inline-block').attr('data-testid', 'sjpp-scatter-controls-div'),
+			controlsHolder,
 			toolsDiv: leftDiv.insert('div'),
 			errdiv,
 			renderedData,
@@ -50,7 +54,6 @@ export class ScatterView {
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw'),
 			header: this.opts.header,
-			//holder,
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 })
 		}
