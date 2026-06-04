@@ -83,9 +83,17 @@ export class PlotBase {
 	}
 
 	getStandardDomLayout(holder, opts: any = {}) {
-		const controls = opts.controls
-			? null
-			: opts.controlsWrapper || holder.append('div').style('display', 'inline-block')
+		const optsControlsHolderIsSelection =
+			opts.controls && typeof opts.controls.append == 'function' && typeof opts.controls.selectAll == 'function'
+		const controls =
+			opts.controls && !optsControlsHolderIsSelection
+				? null
+				: opts.controls && optsControlsHolderIsSelection
+				? opts.controls
+				: opts.controlsWrapper
+				? opts.controlsWrapper
+				: holder.append('div').style('display', 'inline-block')
+
 		const mainWrapper = opts.mainWrapper || holder.append('div').style('display', 'inline-block')
 		//const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		const errdiv = mainWrapper.append('div').attr('class', 'sja_errorbar').style('display', 'none')
