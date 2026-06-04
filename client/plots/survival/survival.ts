@@ -119,7 +119,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
-		const errdiv = holder.append('div').attr('class', 'sja_errorbar')
+		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 		const loadingDiv = holder
 			.append('div')
 			.style('position', 'absolute')

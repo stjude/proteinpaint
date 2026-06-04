@@ -5,9 +5,9 @@ export class DivWithLoadingOverlay {
 	overlay: Div
 
 	constructor(div: Div) {
-		this.baseDiv = div.append('div').style('position', 'relative')
+		if (!div.style('position')) div.style('position', 'relative')
+		this.baseDiv = div.append('div')
 		this.overlay = div.append('div').style('height', '100%').style('width', '100%')
-
 		this.overlay.append('div').attr('class', 'sjpp-spinner').style('display', 'none').style('position', 'absolute')
 		//.style('top', '49%')
 		//.style('left', '49%')

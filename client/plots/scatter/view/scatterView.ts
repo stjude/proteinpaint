@@ -30,7 +30,7 @@ export class ScatterView {
 		const toolsDiv = leftDiv.insert('div')
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const errdiv = rightDiv.append('div').attr('class', 'sja_errorbar')
+		const errdiv = rightDiv.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 		const loadingDiv = rightDiv
 			.append('div')
 			.append('div')
@@ -450,12 +450,13 @@ export class ScatterView {
 
 	getMinMaxInputs() {
 		const range = this.scatter.model.range
-		const xMin = range && roundValueAuto(range.xMin)
-		const xMax = range && roundValueAuto(range.xMax)
-		const xStep = range && (xMax - xMin) / 10
-		const yMin = range && roundValueAuto(range.yMin)
-		const yMax = range && roundValueAuto(range.yMax)
-		const yStep = range && (yMax - yMin) / 10
+		if (!range) return []
+		const xMin = roundValueAuto(range.xMin)
+		const xMax = roundValueAuto(range.xMax)
+		const xStep = (xMax - xMin) / 10
+		const yMin = roundValueAuto(range.yMin)
+		const yMax = roundValueAuto(range.yMax)
+		const yStep = (yMax - yMin) / 10
 
 		const inputs = [
 			{

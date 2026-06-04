@@ -111,7 +111,7 @@ export class PlotBase {
 		// and rendered charts
 		if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
 		let errdiv = this.dom?.errdiv || this.dom?.error || this.dom?.holder?.select('.sja_errorbar')
-		if (!errdiv) {
+		if (!errdiv?.node()) {
 			if (!this.dom?.holder) throw err + ` (also missing ${this.type}.dom.holder)`
 			this.dom.errdiv = this.dom.holder.insert('div', 'div').attr('class', 'sja_errorbar')
 			errdiv = this.dom.errdiv

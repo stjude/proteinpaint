@@ -392,8 +392,8 @@ export class Barchart extends PlotBase {
 				)
 
 			this.toggleLoadingDiv()
+			await this.setControls() // render controls early so users can fix config/settings even if a data request errors
 			const reqOpts = this.getDataRequestOpts()
-			await this.setControls() //needs to be called after getDescrStats() to set hasStats
 			await this.getDescrStats()
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api.getAbortSignal())
 			if (results.error) throw results

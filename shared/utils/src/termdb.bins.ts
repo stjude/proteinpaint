@@ -256,10 +256,9 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 			if (!bins.includes(currBin)) bins.push(currBin)
 			const hint = 'Please increase the bin_size or first bin stop, or have a lower last bin start.'
 			// throw instead of making the error handling dependent on client code,
-			// to make the error behavior consistent across different chart types
+			// to make the error behavior consistent across different chart types;
+			// previously, the error message was not thrown but assigned as bc.error
 			throw hint + ' (max_num_bins_reached)'
-			// bc.error = hint + ' (max_num_bins_reached)'
-			break
 		}
 	}
 	delete bc.binLabelFormatter
