@@ -133,7 +133,7 @@ export class Scatter extends PlotBase implements RxComponent {
 		await this.model.processData()
 		this.dom.mainDiv.style('display', '')
 		this.vm.render()
-		this.dom.renderedDiv.style('display', '')
+		this.dom.renderedData.style('display', '')
 		this.toggleLoadingDiv('none')
 
 		if (!this.model.is3D) this.vm.setTools()

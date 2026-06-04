@@ -24,8 +24,10 @@ export class PlotBase {
 	// config: any
 	configTermKeys?: string[]
 	vocabApi?: TermdbVocab
+
 	/** wait time to show loading div to avoid rapid flicker */
 	loadingWait = 1000
+	/** update cycle counter to help simulate error display */
 	testUpdateNum = 0
 
 	constructor(opts, plotApi?: ComponentApi) {
@@ -80,13 +82,54 @@ export class PlotBase {
 		return config
 	}
 
+	getStandardDomLayout(holder, opts: any = {}) {
+		const controls = opts.controls
+			? null
+			: opts.controlsWrapper || holder.append('div').style('display', 'inline-block')
+		const mainWrapper = opts.mainWrapper || holder.append('div').style('display', 'inline-block')
+		//const holder = opts.controls ? opts.holder : opts.holder.append('div')
+		const errdiv = mainWrapper.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+		const loadingDiv = mainWrapper.append('div').style('display', 'none').style('padding', '24px').html('Loading ...')
+		const banner = mainWrapper
+			.append('div')
+			.style('display', 'none')
+			.style('text-align', 'center')
+			.style('padding', '24px')
+			.style('font-size', '16px')
+
+		const mainDiv = mainWrapper.append('div').style('position', 'relative')
+
+		const renderedData = mainDiv.append('div')
+		const charts = renderedData.append('div')
+		const legendDiv = renderedData.append('div')
+
+		// TODO: activate and test the loading overlay with a spinner below
+		// const overlay = mainDiv.append('div').style('height', '100%').style('width', '100%')
+		// 	.style('position', 'absolute')
+		// 	.style('top', '0')
+		// 	.style('right', '0')
+		// 	.style('bottom', '0')
+		// 	.style('left', '0')
+		// 	.style('pointer-events', 'none')
+		// overlay
+		// 	.append('div')
+		// 	.attr('class', 'sjpp-spinner')
+		// 	.style('display', 'none')
+		// 	.style('position', 'absolute')
+		// 	.style('top', '50%')
+		// 	.style('left', '50%')
+		// 	.style('transform', 'translate(-50%, -50%)')
+
+		return { controls, errdiv, loadingDiv, banner, mainDiv, renderedData, charts, legendDiv }
+	}
+
 	// helper so that 'Loading...' does not flash when not needed
 	toggleLoadingDiv(display = '', dataDisplay = '') {
 		const loadingDiv = this.dom.loadingDiv || this.dom.loading
 		if (!loadingDiv) return
 		if (display == 'none') {
 			loadingDiv.style('display', display)
-			if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', dataDisplay || '')
+			if (this.dom.renderedData) this.dom.renderedData.style('display', dataDisplay || '')
 		} else {
 			loadingDiv
 				.style('opacity', 0)
@@ -94,7 +137,7 @@ export class PlotBase {
 				.transition()
 				.duration('loadingWait' in this ? this.loadingWait : 0)
 				.style('opacity', 1)
-			if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
+			if (this.dom.renderedData) this.dom.renderedData.style('display', 'none')
 		}
 
 		// uncomment below to manually test error and chart visibility
@@ -106,17 +149,22 @@ export class PlotBase {
 	}
 
 	printError(err) {
+		console.debug(err)
 		// should not show any rendered data when there is an error,
 		// to avoid potential inconsistency between configured settings (like bins, medians)
 		// and rendered charts
-		if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
+		if (this.dom.renderedData) this.dom.renderedData.style('display', 'none')
 		let errdiv = this.dom?.errdiv || this.dom?.error || this.dom?.holder?.select('.sja_errorbar')
 		if (!errdiv?.node()) {
-			if (!this.dom?.holder) throw err + ` (also missing ${this.type}.dom.holder)`
-			this.dom.errdiv = this.dom.holder.insert('div', 'div').attr('class', 'sja_errorbar')
-			errdiv = this.dom.errdiv
+			if (!this.dom?.holder) {
+				this.app.printError(err + ` (also missing ${this.type}.dom.holder)`)
+				return
+			} else {
+				this.dom.errdiv = this.dom.holder.insert('div', 'div').attr('class', 'sja_errorbar')
+				errdiv = this.dom.errdiv
+			}
 		}
-		errdiv.text(err).style('display', '')
+		if (errdiv) errdiv.text(err?.message || err?.error || err).style('display', '')
 	}
 }
 

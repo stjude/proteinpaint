@@ -117,33 +117,23 @@ class TdbSurvival extends PlotBase implements RxComponent {
 
 	getDom() {
 		const opts = this.opts
-		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
-		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
-		const loadingDiv = holder
-			.append('div')
-			.style('position', 'absolute')
-			.style('display', 'none')
-			.style('padding', '20px')
-			.html('Loading ...')
-		const renderedDiv = holder.append('div')
-		const chartsDiv = renderedDiv
-			.append('div')
-			.style('margin', '10px')
-			.style('display', 'flex')
-			.style('flex-direction', 'row')
-			.style('flex-wrap', 'wrap')
-			.style('max-width', '100vw')
+		const { controls, errdiv, loadingDiv, renderedData, charts, legendDiv } = this.getStandardDomLayout(holder, opts)
 		const dom = {
 			loadingDiv,
-			header: opts.header,
+			header: opts.header?.html('Survival Plot'),
 			controls,
 			holder,
 			errdiv,
-			renderedDiv,
-			chartsDiv,
-			legendDiv: renderedDiv.append('div').style('margin', '5px 5px 15px 5px'),
-			hiddenDiv: renderedDiv.append('div').style('margin', '5px 5px 15px 5px'),
+			renderedData,
+			chartsDiv: charts
+				.style('margin', '10px')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
+				.style('max-width', '100vw'),
+			legendDiv: legendDiv.style('margin', '5px 5px 15px 5px'),
+			hiddenDiv: renderedData.append('div').style('margin', '5px 5px 15px 5px'),
 			tip: new Menu({ padding: '5px' }),
 			legendTip: new Menu({ padding: '5px' })
 		}
@@ -152,7 +142,6 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			this.activeMenu = false
 		}
 
-		if (dom.header) dom.header.html('Survival Plot')
 		return dom
 	}
 

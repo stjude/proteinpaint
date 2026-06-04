@@ -23,45 +23,32 @@ class ViolinPlot extends PlotBase {
 	}
 
 	async init(appState) {
-		const controls = this.opts.holder.append('div').attr('class', 'sjpp-plot-controls').style('display', 'inline-block')
 		const config = appState.plots.find(p => p.id === this.id)
-
 		const holder = this.opts.holder
 			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', this.opts.mode != 'minimal' ? '5px' : '0px')
-			.style('padding-left', this.opts.mode != 'minimal' ? '20px' : '0px')
+			//.style('display', 'inline-block')
+			//.style('padding', this.opts.mode != 'minimal' ? '5px' : '0px')
+			//.style('padding-left', this.opts.mode != 'minimal' ? '20px' : '0px')
 			.attr('id', 'sjpp-vp-holder')
 
-		const banner = holder
-			.append('div')
-			.attr('data-testid', 'sjpp-violin-banner')
-			.style('display', 'none')
-			.style('text-align', 'center')
-			.style('padding', '24px')
-			.style('font-size', '16px')
-
-		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
-		const loadingDiv = holder
-			.append('div')
-			.attr('data-testid', 'sjpp-violin-loading-div')
-			.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
-			.style('padding', '24px')
-			.text('Loading ...')
-
-		const renderedDiv = holder.append('div')
+		const { controls, errdiv, loadingDiv, banner, renderedData, charts, legendDiv } = this.getStandardDomLayout(
+			holder,
+			this.opts
+		)
 
 		this.dom = {
 			hovertip: new Menu({ padding: '3px' }), // separate tips for hover & click on violin labels to avoid interfering
 			clicktip: new Menu({ padding: '0px' }),
 			sampletabletip: new Menu({ padding: '3px' }), // sampletable is lauched from option shown in clicktip which closes on clicking, thus need its own menu..
 			header: this.opts.header,
-			controls,
-			banner,
+			controls: controls.attr('class', 'sjpp-plot-controls').style('display', 'inline-block'),
+			banner: banner.attr('data-testid', 'sjpp-violin-banner'),
 			errdiv,
-			loadingDiv,
-			renderedDiv,
-			violinDiv: renderedDiv
+			loadingDiv: loadingDiv
+				.attr('data-testid', 'sjpp-violin-loading-div')
+				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none'),
+			renderedData,
+			violinDiv: charts
 				.append('div')
 				.attr('class', 'sjpp-vp-violinDiv')
 				.attr('data-testid', 'sjpp-violin-div')
@@ -69,8 +56,7 @@ class ViolinPlot extends PlotBase {
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw'),
-			legendDiv: renderedDiv
-				.append('div')
+			legendDiv: legendDiv
 				.classed('sjpp-vp-legend', true)
 				.attr('data-testid', 'sjpp-violin-legend')
 				.style('margin-left', '-15px')
@@ -388,7 +374,7 @@ class ViolinPlot extends PlotBase {
 		setTimeout(
 			() => {
 				this.render()
-				this.dom.renderedDiv.style('display', '')
+				this.dom.renderedData.style('display', '')
 			},
 			this.opts.mode == 'minimal' ? 0 : 500
 		)

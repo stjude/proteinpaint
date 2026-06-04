@@ -23,47 +23,32 @@ export class ScatterView {
 		this.scatter = scatter
 
 		const leftDiv = this.opts.holder.insert('div').style('display', 'inline-block')
-		const controlsHolder = leftDiv
-			.insert('div')
-			.style('display', 'inline-block')
-			.attr('data-testid', 'sjpp-scatter-controls-div')
-		const toolsDiv = leftDiv.insert('div')
-
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
-		const errdiv = rightDiv.append('div').attr('class', 'sja_errorbar').style('display', 'none')
-		const loadingDiv = rightDiv
-			.append('div')
-			.append('div')
-			.attr('data-testid', 'sjpp-scatter-loading-div')
-			.style('display', 'inline-block')
-			.style('padding', '24px')
-			.text('Loading ...')
-		const renderedDiv = rightDiv.append('div')
-		const bannerDiv = renderedDiv
-			.append('div')
-			.attr('data-testid', 'sjpp-scatter-banner-div')
-			.style('display', 'none')
-			.style('text-align', 'center')
-			.style('padding', '24px')
-			.style('font-size', '16px')
-		const headerDiv = renderedDiv.append('div').attr('data-testid', 'sjpp-scatter-header-div')
-		const mainDiv = renderedDiv
-			.append('div')
-			.attr('data-testid', 'sjpp-scatter-main-div')
-			.style('display', 'flex')
-			.style('flex-direction', 'row')
-			.style('flex-wrap', 'wrap')
-			.style('max-width', '100vw')
+		const domOpts = { controlsWrapper: leftDiv, mainWrapper: rightDiv }
+		const { controls, errdiv, loadingDiv, banner, renderedData, charts, legendDiv } = scatter.getStandardDomLayout(
+			this.opts.holder,
+			domOpts
+		)
+
+		// scatter uses the mainDiv to remove and recreate that charts and legend div on every component update
+		charts.remove()
+		legendDiv.remove()
 
 		this.dom = {
-			toolsDiv,
-			controlsHolder,
+			controlsHolder: controls.style('display', 'inline-block').attr('data-testid', 'sjpp-scatter-controls-div'),
+			toolsDiv: leftDiv.insert('div'),
 			errdiv,
-			renderedDiv,
-			loadingDiv,
-			bannerDiv,
-			headerDiv,
-			mainDiv,
+			renderedData,
+			loadingDiv: loadingDiv.attr('data-testid', 'sjpp-scatter-loading-div'),
+			bannerDiv: banner,
+			headerDiv: renderedData.append('div').attr('data-testid', 'sjpp-scatter-header-div'),
+			mainDiv: renderedData
+				.append('div')
+				.attr('data-testid', 'sjpp-scatter-main-div')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
+				.style('max-width', '100vw'),
 			header: this.opts.header,
 			//holder,
 			tip: new Menu({ padding: '0px' }),
