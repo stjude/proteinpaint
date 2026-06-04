@@ -44,16 +44,16 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		filterSamples = new Set(
 			(await get_samples({ filter, mapParent2Children: param.mapParent2Children }, ds)).map(i => i.id)
 		)
-	} else if (typeof ds.cohort?.termdb?.getSamples === 'function') {
-		// dataset supplies getSamples() function
-		if (!filter && !filter0) {
-			// no filtering, use all samples
-			return
-		}
-		// get samples that match filter/filter0
-		filterSamples = await ds.cohort.termdb.getSamples({ filter, filter0, ds })
+	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// ds-supplied filter method
+		filterSamples = await ds.cohort.termdb.filterSamples({ filter, filter0, ds })
 	} else {
 		throw new Error('no method available to get samples')
+	}
+
+	if (!filterSamples) {
+		// no filtering performed, use all samples
+		return
 	}
 
 	// filterSamples is the set of samples in dataset that match filter/filter0

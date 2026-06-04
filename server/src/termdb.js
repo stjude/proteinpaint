@@ -142,9 +142,9 @@ async function getSampleList(req, q, ds) {
 	if (ds.cohort?.db) {
 		// dataset is sqlite-based
 		samples = await termdbsql.get_samples(q, ds, canDisplay)
-	} else if (typeof ds.cohort?.termdb?.getSamples === 'function') {
-		// dataset has getSamples() method
-		const temp = await ds.cohort.termdb.getSamples({ filter: q.filter, filter0: q.filter0, ds })
+	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// dataset supplied method
+		const temp = await ds.cohort.termdb.filterSamples({ filter: q.filter, filter0: q.filter0, ds })
 		samples = [...temp]
 	} else {
 		throw new Error('no method available to get sample list')
