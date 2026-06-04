@@ -1538,7 +1538,7 @@ if missing, name is value of m[url.namekey], as used in url itself (e.g. snp rsi
 	linkText?: string
 }
 
-export type GetSamplesOpts = {
+export type FilterSamplesOpts = {
 	filter: any // pp filter
 	filter0: any // mmrf filter
 	ds: any
@@ -1575,8 +1575,8 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
-	/** get samples that match supplied filter */
-	getSamples?: (opts: GetSamplesOpts) => Promise<Set<any>>
+	/** filter samples based on supplied filter(s) */
+	filterSamples?: (opts: FilterSamplesOpts) => Promise<Set<any>>
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
