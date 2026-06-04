@@ -101,7 +101,7 @@ export class PlotButtons {
 	getChartBtnOpts() {
 		const btns: {
 			label: string
-			isVisible?: () => boolean
+			isVisible: () => boolean
 			open?: (plot: any, self: PlotButtons) => void
 			getPlotConfig?: (f?: any) => any
 		}[] = []
@@ -110,6 +110,7 @@ export class PlotButtons {
 			if (!this.availablePlots.has(plot.name)) continue
 			btns.push({
 				label: plot.name,
+				isVisible: () => true,
 				getPlotConfig: async () => {
 					return await this.getSingleCellConfig(plot.name)
 				}

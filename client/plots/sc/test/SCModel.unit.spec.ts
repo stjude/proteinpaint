@@ -5,8 +5,6 @@ import { SCModel } from '../model/SCModel.ts'
 /**
  * Tests
  *   - SCModel constructor should set app, id, and state
- *   - getSampleRequestOpts() should return genome, dslabel, and filter0
- *   - getSampleRequestOpts() should pass through filter0 when present
  *   - getDataRequestOpts() should return correct request body
  *   - getDataRequestOpts() should return undefined when item is not set
  *   - getDataRequestOpts() should throw when singleCell.data is not configured
@@ -23,7 +21,7 @@ tape('\n', function (test) {
 
 tape('constructor should set app, id, and state', test => {
 	const app = getMockSCApp()
-	const model = new SCModel(app, 'plot1')
+	const model = new SCModel(app)
 
 	test.equal(model.app, app, 'Should set app reference')
 	test.equal(model.id, 'plot1', 'Should set id')
@@ -35,30 +33,9 @@ tape('constructor should set app, id, and state', test => {
 	test.end()
 })
 
-tape('getSampleRequestOpts() should return genome, dslabel, and filter0', test => {
-	const app = getMockSCApp()
-	const model = new SCModel(app, 'plot1')
-	const opts = model.getAllSampleReqOpts()
-
-	test.equal(opts.genome, 'hg38-test', 'Should include genome')
-	test.equal(opts.dslabel, 'TermdbTest', 'Should include dslabel')
-	test.equal(opts.filter0, null, 'Should include filter0')
-	test.end()
-})
-
-tape('getSampleRequestOpts() should pass through filter0 when present', test => {
-	const filter0 = { type: 'tvslst', lst: [{ tag: 'cohortFilter' }] }
-	const app = getMockSCApp({ termfilter: { filter0 } })
-	const model = new SCModel(app, 'plot1')
-	const opts = model.getAllSampleReqOpts()
-
-	test.deepEqual(opts.filter0, filter0, 'Should pass filter0 from state')
-	test.end()
-})
-
 tape('getDataRequestOpts() should return correct request body', test => {
 	const app = getMockSCApp()
-	const model = new SCModel(app, 'plot1')
+	const model = new SCModel(app)
 	const opts = model.getDataRequestOpts()
 
 	test.equal(opts!.genome, 'hg38-test', 'Should include genome')
@@ -72,7 +49,7 @@ tape('getDataRequestOpts() should return undefined when item is not set', test =
 	const app = getMockSCApp({
 		plots: [{ id: 'plot1', settings: { sc: { item: undefined } } }]
 	})
-	const model = new SCModel(app, 'plot1')
+	const model = new SCModel(app)
 	const opts = model.getDataRequestOpts()
 
 	test.equal(opts, undefined, 'Should return undefined when no item is selected')
@@ -83,7 +60,7 @@ tape('getDataRequestOpts() should throw when singleCell.data is not configured',
 	const app = getMockSCApp({
 		termdbConfig: { queries: { singleCell: {} } }
 	})
-	const model = new SCModel(app, 'plot1')
+	const model = new SCModel(app)
 
 	test.throws(
 		() => model.getDataRequestOpts(),
