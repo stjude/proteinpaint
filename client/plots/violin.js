@@ -6,7 +6,7 @@ import { htmlLegend, Menu } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { plotColor } from '#shared/common.js'
-import { isNumericTerm, isSingleCellTerm } from '#shared/terms.js'
+import { isNumericTerm } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 /*
@@ -104,18 +104,8 @@ class ViolinPlot extends PlotBase {
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
 
-		let specialCase = 'default'
-		if (isSingleCellTerm(this.config.term.term)) {
-			//Do not prevent loading if no sample is specified but log the error.
-			if (!this.config.term.term.sample)
-				console.error('single cell term without sample specified in config, unexpected')
-			else {
-				specialCase = {
-					type: 'singleCell',
-					config: { sample: this.config.term.term.sample }
-				}
-			}
-		}
+		const specialCase = getSpecialCase(this.config)
+
 		const inputs = [
 			{
 				type: 'term',
