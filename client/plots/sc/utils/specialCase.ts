@@ -1,15 +1,17 @@
 import { isSingleCellTerm } from '#shared/terms.js'
 
-export function getSingleCellSpecialCase(config) {
+export function getSingleCellSpecialCase(config, key = 'term') {
 	let specialCase: string | { [index: string]: any } = 'default'
-	if (isSingleCellTerm(config.term.term)) {
-		const sample = config.term.term?.sample
+	const term = config[key]
+	if (isSingleCellTerm(term.term)) {
+		const sample = term.term?.sample
 		//Do not prevent from loading if no sample is specified but log the error.
 		if (!sample) {
 			const chartType = config.childType || config.chartType || 'unknown'
 			console.error(`Single cell term missing sample information in ${chartType} config for term selection.`)
 		} else {
-			const isMeta = config.term.term.sample?.isMetaResult
+			//Always return true/false here to avoid downstream errors
+			const isMeta: boolean = term.term.sample?.isMetaResult || false
 			specialCase = {
 				type: 'singleCell',
 				isMeta,

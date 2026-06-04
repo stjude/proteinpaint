@@ -167,8 +167,8 @@ export class ScatterView {
 			title: `Option to show/hide plot axes`,
 			testid: 'showAxes'
 		}
-
-		const specialCase = getSingleCellSpecialCase(this.scatter.config)
+		console.log(this.scatter.config)
+		const specialCase = getSingleCellSpecialCase(this.scatter.config, 'colorTW')
 
 		const inputs: any = [
 			{

@@ -75,6 +75,7 @@ class DynamicSubplot implements RxComponent {
 		}
 		if (this.opts.chartType == 'summary') {
 			chartOpts.holder = this.opts.holder
+			chartOpts.hidePlotFilter = this.opts.isMetaResult
 		} else {
 			chartOpts.holder = this.dom.viz
 			chartOpts.header = this.dom.paneTitleDiv

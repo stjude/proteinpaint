@@ -123,12 +123,14 @@ export class PlotButtons {
 				isVisible: () => true,
 				getPlotConfig: () => {
 					const sample = { ...this.item!, plots: Array.from(this.availablePlots) }
+					const isMeta = sample?.isMetaResult || false
 					return {
 						chartType: 'dictionary',
 						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
 							headerText: `Sample: ${this.item!.sID}`,
+							hidePlotFilter: !isMeta,
 							sample
 						},
 						tree: {
