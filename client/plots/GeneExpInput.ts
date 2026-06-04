@@ -99,7 +99,7 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 			},
 			{
 				label: 'Hierarchical clustering',
-				isVisible: () => chartTypes.has('matrix') && this.termType === GENE_EXPRESSION, // hierarchical clustering doesn't support scge
+				isVisible: () => chartTypes.has('matrix'),
 				callback: (event, tab) => {
 					this.renderGeneMultiSelect(tab)
 					delete tab.callback
