@@ -119,13 +119,15 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
+		const errdiv = holder.append('div').attr('class', 'sja_errorbar')
 		const loadingDiv = holder
 			.append('div')
 			.style('position', 'absolute')
 			.style('display', 'none')
 			.style('padding', '20px')
 			.html('Loading ...')
-		const chartsDiv = holder
+		const renderedDiv = holder.append('div')
+		const chartsDiv = renderedDiv
 			.append('div')
 			.style('margin', '10px')
 			.style('display', 'flex')
@@ -137,9 +139,11 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			header: opts.header,
 			controls,
 			holder,
+			errdiv,
+			renderedDiv,
 			chartsDiv,
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
-			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			legendDiv: renderedDiv.append('div').style('margin', '5px 5px 15px 5px'),
+			hiddenDiv: renderedDiv.append('div').style('margin', '5px 5px 15px 5px'),
 			tip: new Menu({ padding: '5px' }),
 			legendTip: new Menu({ padding: '5px' })
 		}
@@ -313,21 +317,22 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			return
 		}
 
-		this.state.config = await this.getMutableConfig()
-		this.maySetSandboxHeader()
-		this.toggleLoadingDiv()
-
-		Object.assign(this.settings, this.state.config.settings)
-		this.settings.defaultHidden = this.getDefaultHidden()
-		this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
-		this.settings.xTitleLabel = this.getXtitleLabel()
-		const reqOpts = this.getDataRequestOpts()
 		let data
 		try {
+			this.state.config = await this.getMutableConfig()
+			this.maySetSandboxHeader()
+			this.toggleLoadingDiv()
+
+			Object.assign(this.settings, this.state.config.settings)
+			this.settings.defaultHidden = this.getDefaultHidden()
+			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
+			this.settings.xTitleLabel = this.getXtitleLabel()
+			const reqOpts = this.getDataRequestOpts()
 			// do not directly set this.serverData to response, since it could be an error
 			data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api?.getAbortSignal())
 		} catch (e) {
 			if (this.app.isAbortError(e)) return
+			this.toggleLoadingDiv('none', 'none')
 			throw e
 		}
 		this.serverData = data
@@ -557,22 +562,6 @@ class TdbSurvival extends PlotBase implements RxComponent {
 				}
 			}
 		}
-	}
-
-	// helper so that 'Loading...' does not flash when not needed
-	toggleLoadingDiv(display = '') {
-		if (display != 'none') {
-			this.dom.loadingDiv
-				.style('opacity', 0)
-				.style('display', display)
-				.transition()
-				.duration('loadingWait' in this ? this.loadingWait : 0)
-				.style('opacity', 1)
-		} else {
-			this.dom.loadingDiv.style('display', display)
-		}
-		// do not transition on initial chart load
-		this.loadingWait = 1000
 	}
 }
 

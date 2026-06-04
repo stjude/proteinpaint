@@ -100,9 +100,9 @@ export class Scatter extends PlotBase implements RxComponent {
 		this.config = await this.getMutableConfig()
 		if (this.config.chartType != this.type && this.config.childType != this.type) return
 		this.settings = structuredClone(this.config.settings.sampleScatter)
-		this.toggleLoadingDiv()
 
 		try {
+			this.toggleLoadingDiv()
 			this.dom.bannerDiv.style('display', '').selectAll('*').remove()
 			await this.model.initData()
 		} catch (e: any) {
