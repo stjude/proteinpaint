@@ -90,8 +90,6 @@ export class PlotBase {
 				? null
 				: opts.controls && optsControlsHolderIsSelection
 				? opts.controls
-				: opts.controlsWrapper
-				? opts.controlsWrapper
 				: holder.append('div').style('display', 'inline-block')
 
 		const mainWrapper = opts.mainWrapper || holder.append('div').style('display', 'inline-block')
