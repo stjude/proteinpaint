@@ -51,6 +51,7 @@ export class SelectorTableRender {
 	}
 
 	private render() {
+		if (this.images === undefined) this.dom.tableDiv.append('div').text('No images found').style('color', 'red')
 		const columns = this.images.cols.map(c => ({ ...c, sortable: true })) || []
 
 		// If columns missing, show a friendly message instead of throwing

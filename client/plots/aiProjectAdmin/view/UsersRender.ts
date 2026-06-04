@@ -10,8 +10,6 @@ export class UsersRender {
 	}
 
 	render() {
-		// TODO remove this if check after sso is enabled
-		// container
 		const container = this.dom.holder
 			.append('div')
 			.attr('id', 'sjpp-users-render')

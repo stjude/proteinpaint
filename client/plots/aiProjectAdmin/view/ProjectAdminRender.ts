@@ -1,7 +1,6 @@
 import { renderTable, sayerror } from '#dom'
 import { debounce } from 'debounce'
 import type { AIProjectAdminInteractions } from '../interactions/AIProjectAdminInteractions'
-import type { AIProjectAuthInfo } from '#types'
 
 export class ProjectAdminRender {
 	dom: any
@@ -23,12 +22,22 @@ export class ProjectAdminRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-projects')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
-		const clientAuth = this.wsiApp.vocabApi.termdbConfig.clientAuthResult as AIProjectAuthInfo
-		const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
-		if (!authFound || clientAuth?.role === 'admin') {
-			this.renderCreateProject(projectDiv)
-		}
-		this.renderProjectSelection(projectDiv)
+		//can this be async?
+		this.interactions
+			.getAuthorization(['addProject'])
+			.then(isAuthorized => {
+				console.log(isAuthorized)
+				if (isAuthorized.addProject) {
+					this.renderCreateProject(projectDiv)
+				}
+			})
+			.catch(e => {
+				console.error('Error checking authorization:', e.message || e)
+				sayerror(this.dom.errorDiv, 'Error checking user authorization. Please try again later.')
+			})
+			.finally(() => {
+				this.renderProjectSelection(projectDiv)
+			})
 	}
 
 	/** Users submit a new project name before sample
@@ -51,8 +60,6 @@ export class ProjectAdminRender {
 			.on('click', async () => {
 				const projectName = input.property('value')
 				const prjtNameLen = projectName.trim().length
-				const clientAuth = this.wsiApp.vocabApi.termdbConfig.clientAuthResult as AIProjectAuthInfo
-				const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
 
 				const showError = (msg: string) => {
 					sayerror(this.dom.errorDiv, msg)
@@ -64,7 +71,7 @@ export class ProjectAdminRender {
 						this.dom.errorDiv.selectAll('*').remove()
 					}, 3000)
 				}
-				if (clientAuth?.role !== 'admin' && authFound) {
+				if (!(await this.interactions.getAuthorization(['addProject'])).addProject) {
 					return showError('Only users with admin role can create projects')
 				}
 
@@ -110,11 +117,9 @@ export class ProjectAdminRender {
 		}
 
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
-		const columns = [
-			{ label: 'Project', sortable: true },
-			{ label: 'User', sortable: false }
-		]
 
+		const columns = [{ label: 'Project', sortable: true }]
+		let rows
 		const columnButtons = [
 			{
 				text: 'Edit',
@@ -143,48 +148,60 @@ export class ProjectAdminRender {
 				}
 			}
 		]
-		const clientAuth = this.wsiApp.vocabApi.termdbConfig.clientAuthResult as AIProjectAuthInfo
-		const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
-		if (!authFound || clientAuth?.role === 'admin') {
-			columnButtons.push({
-				text: 'Delete',
-				class: 'sja_menuoption',
-				callback: async (_, i) => {
-					const project = this.projects[i]
-					this.interactions.deleteProject(project).then(success => {
-						if (success) {
-							//Update UI after deletion. Maybe cleaner way to handle this?
-							//Maybe app.dispatch and rerender instead?
-							this.projects.splice(i, 1)
-							//Remove the table from the projectDiv and re-render
-							projectDiv.select('.sjpp-project-select-table').remove()
-							this.renderProjectSelection(projectDiv)
+		this.interactions
+			.getAuthorization(['deleteProject', 'logOut', 'required'])
+			.then(isAuthorized => {
+				if (isAuthorized.required) {
+					columns.push({ label: 'User', sortable: false })
+					rows = this.projects.map(p => [{ value: p.name }, { value: p.current_user ?? 'Open' }])
+				} else {
+					rows = this.projects.map(p => [{ value: p.name }])
+				}
+				if (isAuthorized.deleteProject) {
+					columnButtons.push({
+						text: 'Delete',
+						class: 'sja_menuoption',
+						callback: async (_, i) => {
+							const project = this.projects[i]
+							this.interactions.deleteProject(project).then(success => {
+								if (success) {
+									//Update UI after deletion. Maybe cleaner way to handle this?
+									//Maybe app.dispatch and rerender instead?
+									this.projects.splice(i, 1)
+									//Remove the table from the projectDiv and re-render
+									projectDiv.select('.sjpp-project-select-table').remove()
+									this.renderProjectSelection(projectDiv)
+								}
+							})
+						}
+					})
+				}
+				if (isAuthorized.logOut) {
+					columnButtons.push({
+						text: 'Log Out',
+						class: 'sja_menuoption',
+						callback: async (_, i) => {
+							const project = this.projects[i]
+							await this.interactions.onLogOut(this.interactions.genome, this.interactions.dslabel, project.id)
 						}
 					})
 				}
 			})
-		}
-		if (authFound && clientAuth?.role === 'admin') {
-			columnButtons.push({
-				text: 'Log Out',
-				class: 'sja_menuoption',
-				callback: async (_, i) => {
-					const project = this.projects[i]
-					await this.interactions.onLogOut(this.interactions.genome, this.interactions.dslabel, project.id)
-				}
+			.catch(e => {
+				console.error('Error checking authorization:', e.message || e)
+				sayerror(this.dom.errorDiv, 'Error checking user authorization. Please try again later.')
 			})
-		}
-		renderTable({
-			div: tableDiv,
-			rows: this.projects.map((p: any) => {
-				return [{ value: p.name }, { value: p.current_user ?? 'Open' }]
-			}),
-			header: {
-				allowSort: true
-			},
-			columns,
-			singleMode: true,
-			columnButtons
-		})
+			.finally(() => {
+				renderTable({
+					div: tableDiv,
+					rows,
+					header: {
+						allowSort: true
+					},
+					columns,
+					singleMode: true,
+					columnButtons
+				})
+			})
 	}
 }

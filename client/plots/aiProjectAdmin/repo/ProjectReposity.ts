@@ -1,6 +1,27 @@
 import { dofetch2, dofetch3 } from '#common/dofetch'
-import type { AIProjectAdminRequest, AIProjectAdminResponse } from '#types'
+import type { AIProjectAdminActions, AIProjectAdminRequest, AIProjectAdminResponse } from '#types'
 export class ProjectReposity {
+	public async getAuthorization(
+		genome: string,
+		dslabel: string,
+		actions: AIProjectAdminActions[]
+	): Promise<{ [key in AIProjectAdminActions]: boolean }> {
+		const body: AIProjectAdminRequest = {
+			genome,
+			dslabel,
+			for: 'auth',
+			auth: actions
+		}
+
+		try {
+			const response = await dofetch3('aiProjectAdmin', { body })
+			return response || {}
+		} catch (error) {
+			console.error('Error fetching authorizations:', error)
+			throw error
+		}
+	}
+
 	public async getProjects(genome: string, dslabel: string): Promise<string[]> {
 		const body: AIProjectAdminRequest = {
 			genome,

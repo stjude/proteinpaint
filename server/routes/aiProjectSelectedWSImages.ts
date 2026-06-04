@@ -89,7 +89,6 @@ export function init({ genomes }) {
 						wsimage.predictions = (predictions || [])
 							.map((p: any) => {
 								const label = classMap.get(p.class) ?? p.class
-								console.log('Mapping prediction class id to label:', classMap, '=>', label)
 								const flagged_counterpart = flaggedPredictions.get(JSON.stringify(p.zoomCoordinates))
 								return {
 									...p,

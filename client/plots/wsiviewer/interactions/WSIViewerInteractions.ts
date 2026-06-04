@@ -222,7 +222,6 @@ export class WSIViewerInteractions {
 						const justTileSelection = checkSelectionType(tileSelection, SelectionPrefixes.TileSelection)
 						const matchingClass = sessionWSImage?.classes?.find(c => c.label === tileSelection.class)
 						const classColor: string = matchingClass ? matchingClass.color : defaultColor
-						console.log('Current tile selection before flagging/skipping:', tileSelection, sessionWSImage.classes)
 						let newFlag: FlagStatusValues | null = null
 						const nextID = SessionWSImage.getNextTileID(sessionWSImage, settings, currentIndex)
 						if (event.key.toLowerCase() === 'f') {
@@ -855,12 +854,10 @@ export class WSIViewerInteractions {
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}
-		console.log('Saving annotation with body:', body)
 		try {
 			// TODO add UI rollback
 			const response: SaveWSIAnnotationResponse = await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 			// TODO find another way to clear server cache
-			console.log('saveWSIAnnotation response:', response)
 			if (response.status === 'error' && response.error === 'logout') {
 				wsiApp.app.dispatch({
 					type: 'plot_edit',

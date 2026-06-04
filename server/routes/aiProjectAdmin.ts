@@ -1,9 +1,8 @@
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
-import type { AIProjectAuthInfo, AIProjectUserRoles } from '#types'
+import type { AIProjectAdminActions } from '#types'
 import type Database from 'better-sqlite3'
 
-const SESSION_TIMEOUT = 12 // hours
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -14,30 +13,29 @@ export function init({ genomes }) {
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
-			const clientAuthResult = req.query.__protected__.clientAuthResult as AIProjectAuthInfo
-			const role: '' | AIProjectUserRoles | undefined = clientAuthResult?.role
-			const authFound: boolean = !(clientAuthResult === undefined || Object.keys(clientAuthResult).length === 0)
-			const isAuthenticated = !authFound || (role && ['admin', 'annotator'].includes(role))
-			if (!isAuthenticated) throw new Error('Unauthorized: No role found in request payload.')
 			const connection = getDbConnection(ds) as Database.Database
-
+			const aiHalAuth = ds.queries?.AIHalAuth
+			if (!aiHalAuth) throw new Error('AIHalAuth queries not found in dataset.')
+			const userEmail = req.query.__protected__.clientAuthResult?.email || ''
 			/** get list of projects from db */
 			if (query.for === 'list') {
 				let projects = getProjects(connection) as { name: string; id: number; current_user: string | null }[]
-				if (authFound && role !== 'admin') {
-					projects = projects.filter(p => getUsers(connection, p.id).includes(clientAuthResult?.email || ''))
+				if (!aiHalAuth.checkAuthorization(req, 'listAllProjects')) {
+					projects = projects.filter(p => aiHalAuth.getUsers(connection, p.id).includes(userEmail))
 				}
 				res.send(projects)
 			} else if (query.for === 'admin') {
-				if (role !== 'admin' && authFound) throw new Error('Unauthorized: Admin role required to perform this action.')
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
 				 * is added to the db.*/
-				if (req.method === 'PUT' || query.project.type === 'new') addProject(connection, query.project)
-				else if (req.method === 'POST') {
-					editProject(connection, query.project, clientAuthResult?.email || 'admin')
-				} else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
+				if (req.method === 'PUT' || (query.project.type === 'new' && aiHalAuth.checkAuthorization(req, 'addProject')))
+					addProject(connection, query.project)
+				else if (req.method === 'POST' && aiHalAuth.checkAuthorization(req, 'editProject')) {
+					editProject(connection, query.project)
+					aiHalAuth.setUser(connection, query.project.id, userEmail || 'admin', 12)
+				} else if (req.method === 'DELETE' && aiHalAuth.checkAuthorization(req, 'deleteProject'))
+					deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
 				let projectId = query.project.id
@@ -62,6 +60,8 @@ export function init({ genomes }) {
 			} else if (query.for === 'filterImages') {
 				/** get selections (i.e. slides) matching the project
 				 * from the ad hoc dictionary. */
+				const parsedLogin = aiHalAuth.parseLogin(req, connection)
+				if (parsedLogin.status === 'error') throw new Error('Authentication failed: ' + parsedLogin.error)
 				const q = ds.cohort.termdb.q
 				const data = await q.getFilteredImages(query.project.filter)
 				data.selectedImages = await ds.queries?.WSImages?.selectWSIImages()
@@ -70,27 +70,24 @@ export function init({ genomes }) {
 					data
 				})
 			} else if (query.for === 'images') {
-				if (authFound) {
-					const userEmail = clientAuthResult?.email
-					if (!userEmail) throw new Error('User email not found in request.')
-					const users = getUsers(connection, query.project.id)
-					if (!users.includes(userEmail) && role !== 'admin')
-						throw new Error(`User not authorized for project ${query.project.name}`)
-					const loginStatus = setUser(connection, query.project.id, userEmail)
-					if (loginStatus !== 'ok') {
-						res.send({ status: 'error', error: loginStatus })
-						return
-					}
-				}
+				const parsedLogin = aiHalAuth.parseLogin(req, connection)
+				if (parsedLogin.status === 'error') throw new Error('Authentication failed: ' + parsedLogin.error)
 				const images = getImages(connection, query.project)
 				res.send({ images, status: 'ok' })
 			} else if (query.for === 'logout') {
-				setUser(connection, query.project.id, null)
+				aiHalAuth.setUser(connection, query.project.id, null)
 
 				res.status(200).send({
 					status: 'ok',
 					message: 'User logged out successfully'
 				})
+			} else if (query.for === 'auth') {
+				const authorizations: { [key in AIProjectAdminActions]: boolean } = {}
+				const actions = query.auth || []
+				for (const action of actions) {
+					authorizations[action] = aiHalAuth.checkAuthorization(req, action)
+				}
+				res.status(200).send(authorizations)
 			} else {
 				res.send({
 					status: 'error',
@@ -112,44 +109,6 @@ function getProjects(connection: Database.Database): Database.RunResult | any[] 
 	return runSQL(connection, sql)
 }
 
-function getUsers(connection: Database.Database, projectID: number): string[] {
-	const sql = 'SELECT email FROM project_users WHERE project_id = ?'
-	const rows = connection.prepare(sql).all(projectID) as { email: string }[]
-	return rows.map(r => r.email)
-}
-
-function getLoginTimeDifference(lastLogin: string): number {
-	const lastLoginDate = new Date(lastLogin)
-	const currentDate = new Date()
-	return (currentDate.getTime() - lastLoginDate.getTime()) / 1000 / 60 / 60 // difference in hours
-}
-
-function setUser(connection: Database.Database, projectId: number, requestingUser: string | null): string | undefined {
-	const loginTime = connection.prepare('SELECT last_login FROM project WHERE id = ?').get(projectId) as {
-		last_login: string | null
-	}
-	if (
-		requestingUser === null ||
-		(loginTime.last_login && getLoginTimeDifference(loginTime.last_login || new Date().toISOString()) > SESSION_TIMEOUT)
-	) {
-		connection.prepare('UPDATE project SET current_user = NULL, last_login = NULL WHERE id = ?').run(projectId)
-		if (requestingUser === null) return 'Logged Out'
-	}
-	const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
-		current_user: string | null
-	}
-	if (currentUser?.current_user === requestingUser) {
-		return 'ok'
-	} else if (currentUser?.current_user === null) {
-		connection
-			.prepare('UPDATE project SET current_user = ?, last_login = ? WHERE id = ?')
-			.run(requestingUser, new Date().toISOString(), projectId)
-		return 'ok'
-	} else if (currentUser.current_user !== requestingUser) {
-		return `Project is assigned to a different user. Please contact the administrator if you believe this is an error.`
-	}
-}
-
 export function getImages(connection: Database.Database, project: any): string[] {
 	// Get project ID if not provided
 	if (!project.id) {
@@ -165,7 +124,7 @@ export function getImages(connection: Database.Database, project: any): string[]
 	return imageRows.map(r => r.image_path)
 }
 
-function editProject(connection: Database.Database, project: any, adminUser: string): void {
+function editProject(connection: Database.Database, project: any): void {
 	const stmts: { sql: string; params: any[] }[] = []
 
 	if (!project.id) {
@@ -216,7 +175,7 @@ function editProject(connection: Database.Database, project: any, adminUser: str
 			stmts.push({ sql: insertClass, params: multiParams })
 		}
 	}
-	setUser(connection, project.id, adminUser)
+
 	runMultiStmtSQL(connection, stmts, 'add')
 }
 

@@ -45,7 +45,7 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 function validateQuery(ds: any, connection: Database.Database) {
 	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest, req: any) => {
 		try {
-			const clientAuth = req.query.__protected__.clientAuthResult as AIProjectAuthInfo
+			const { email = '' } = req.query.__protected__.clientAuthResult ?? ({} as AIProjectAuthInfo)
 			const tileSelection: TileSelection = annotation.tileSelection
 			const timestamp = new Date().toISOString()
 			const projectId = annotation.projectId
@@ -55,19 +55,15 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const classId = annotation.classId
 			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
 			const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
-			const authFound: boolean = !(clientAuth === undefined || Object.keys(clientAuth).length === 0)
-			console.log('clientAuth:', clientAuth, tileSelection, annotation)
 			const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
 				current_user: string | null
 			}
-			if (currentUser.current_user !== clientAuth?.email && authFound) {
-				console.log('got into logout condition')
+			if (!(await ds.queries?.AIHalAuth?.checkAuthorization(req, 'annotate', currentUser?.current_user ?? null))) {
 				return {
 					status: 'error',
 					error: 'logout'
 				}
 			}
-			console.log('howd you go further')
 			if (!isAnnotation && !isPrediction) {
 				return {
 					status: 'error',
@@ -139,7 +135,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 						) VALUES (?, ?, ?, ?, ?, ?)
 					`
 						)
-						.run(projectId, clientAuth?.email ?? '', coords, timestamp, classId, imageId)
+						.run(projectId, email, coords, timestamp, classId, imageId)
 				} else {
 					connection
 						.prepare(
@@ -149,19 +145,20 @@ function validateQuery(ds: any, connection: Database.Database) {
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
 				`
 						)
-						.run(projectId, clientAuth?.email ?? '', coords, timestamp, flag, classId, imageId)
+						.run(projectId, email, coords, timestamp, flag, classId, imageId)
 				}
 			} else if (isPrediction) {
 				// Not inserting if flag is normal
 				// Do we want to label flagged predictions with user_id
 				if (tileSelection.flag !== FlagStatus.Normal) {
 					const insertSql = `
-                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)
-                    VALUES (?, ?, ?, ?,?,?)
+                    INSERT INTO project_flagged_predictions (project_id, user_email, prediction_class_id, coordinates, flag_type,image_id,timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 `
 					const insertStmt = connection.prepare(insertSql)
 					insertStmt.run(
 						annotation.projectId,
+						email,
 						annotation.classId,
 						JSON.stringify(tileSelection.zoomCoordinates),
 						tileSelection.flag,
