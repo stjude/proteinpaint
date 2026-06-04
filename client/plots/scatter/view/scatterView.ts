@@ -31,13 +31,14 @@ export class ScatterView {
 
 		const rightDiv = this.opts.holder.insert('div').style('display', 'inline-block').style('vertical-align', 'top')
 		const errdiv = rightDiv.append('div').attr('class', 'sja_errorbar')
-		const renderedDiv = rightDiv.append('div')
-		const loadingDiv = renderedDiv
+		const loadingDiv = rightDiv
+			.append('div')
 			.append('div')
 			.attr('data-testid', 'sjpp-scatter-loading-div')
 			.style('display', 'inline-block')
 			.style('padding', '24px')
 			.text('Loading ...')
+		const renderedDiv = rightDiv.append('div')
 		const bannerDiv = renderedDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-scatter-banner-div')

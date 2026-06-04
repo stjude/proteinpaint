@@ -41,8 +41,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const controls = opts.controls ? holder : holder.append('div')
 		const mainDiv = holder.append('div')
 		const errorDiv = mainDiv.append('div').attr('class', 'sja_errorbar') //.style('opacity', 0.75)
+		const loading = mainDiv.append('div').style('padding', '24px').text('Loading ...')
 		const renderedDiv = mainDiv.append('div')
-		const loading = renderedDiv.append('div').style('padding', '24px').text('Loading ...')
 		const chartsDiv = renderedDiv
 			.append('div')
 			.attr('class', 'sjpp-boxplot-charts')
@@ -158,7 +158,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			}
 			this.data = data
 		} catch (e: any) {
-			this.toggleLoadingDiv('none')
+			this.toggleLoadingDiv('none', 'none')
 			if (this.app.isAbortError(e)) return
 			if (e.stack) console.log(e.stack)
 			if (e instanceof Error) console.error(e.message || e)
@@ -230,16 +230,6 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const name2svg = this.getChartImages()
 		const dm = new DownloadMenu(name2svg, this.state.config.term.term.name)
 		dm.show(event.clientX, event.clientY, event.target)
-	}
-
-	toggleLoadingDiv(display = '') {
-		if (display != 'none') {
-			this.dom.loading.style('opacity', 0).style('display', display).transition().duration(3000).style('opacity', 1)
-			this.dom.charts.style('display', 'none')
-		} else {
-			this.dom.loading.style('display', display)
-			this.dom.charts.style('display', 'flex')
-		}
 	}
 }
 

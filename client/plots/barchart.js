@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge, deepEqual, sleep } from '../rx'
+import { getCompInit, copyMerge, deepEqual } from '../rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import { rendererSettings, plotLength } from './bars.settings'
@@ -392,7 +392,6 @@ export class Barchart extends PlotBase {
 				)
 
 			this.toggleLoadingDiv()
-
 			const reqOpts = this.getDataRequestOpts()
 			await this.setControls() //needs to be called after getDescrStats() to set hasStats
 			await this.getDescrStats()
@@ -427,7 +426,7 @@ export class Barchart extends PlotBase {
 			this.dom.renderedDiv.style('display', '')
 		} catch (e) {
 			if (this.app.isAbortError(e)) return
-			this.toggleLoadingDiv('none')
+			this.toggleLoadingDiv('none', 'none')
 			throw e
 		}
 	}
@@ -959,24 +958,6 @@ export class Barchart extends PlotBase {
 		}
 
 		return legendGrps
-	}
-
-	// helper so that 'Loading...' does not flash when not needed
-	toggleLoadingDiv(display = '') {
-		if (display != 'none') {
-			this.dom.loadingDiv
-				.style('opacity', 0)
-				.style('display', display)
-				.transition()
-				.duration('loadingWait' in this ? this.loadingWait : 0)
-				.style('opacity', 1)
-			//this.dom.renderedDiv.style('opacity', 0).style('display', 'none')
-		} else {
-			this.dom.loadingDiv.style('display', display)
-			//this.dom.charts.style('opacity', 1).style('display', '')
-		}
-		// do not transition on initial chart load
-		this.loadingWait = 1000
 	}
 }
 

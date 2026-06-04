@@ -42,6 +42,12 @@ class ViolinPlot extends PlotBase {
 			.style('font-size', '16px')
 
 		const errdiv = holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
+		const loadingDiv = holder
+			.append('div')
+			.attr('data-testid', 'sjpp-violin-loading-div')
+			.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
+			.style('padding', '24px')
+			.text('Loading ...')
 
 		const renderedDiv = holder.append('div')
 
@@ -53,13 +59,8 @@ class ViolinPlot extends PlotBase {
 			controls,
 			banner,
 			errdiv,
+			loadingDiv,
 			renderedDiv,
-			loadingDiv: renderedDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-violin-loading-div')
-				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
-				.style('padding', '24px')
-				.text('Loading ...'),
 			violinDiv: renderedDiv
 				.append('div')
 				.attr('class', 'sjpp-vp-violinDiv')
@@ -371,14 +372,14 @@ class ViolinPlot extends PlotBase {
 			this.toggleLoadingDiv()
 			data = await this.app.vocabApi.getViolinBox(args, null, this.api.getAbortSignal())
 		} catch (e) {
-			this.toggleLoadingDiv('none')
+			this.toggleLoadingDiv('none', 'none')
 			if (this.app.isAbortError(e)) return
 			throw e
 		}
 
 		this.data = data
 		if (this.data.error) {
-			this.toggleLoadingDiv('none')
+			this.toggleLoadingDiv('none', 'none')
 			throw this.data.error
 		}
 		args.tw.q.descrStats = this.data.descrStats

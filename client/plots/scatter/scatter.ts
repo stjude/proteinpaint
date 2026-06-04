@@ -106,7 +106,7 @@ export class Scatter extends PlotBase implements RxComponent {
 			this.dom.bannerDiv.style('display', '').selectAll('*').remove()
 			await this.model.initData()
 		} catch (e: any) {
-			this.toggleLoadingDiv('none')
+			this.toggleLoadingDiv('none', 'none')
 			if (this.app.isAbortError(e)) return
 			throw e
 		} finally {
@@ -137,20 +137,6 @@ export class Scatter extends PlotBase implements RxComponent {
 		this.toggleLoadingDiv('none')
 
 		if (!this.model.is3D) this.vm.setTools()
-	}
-
-	// helper so that 'Loading...' does not flash when not needed
-	toggleLoadingDiv(display = '') {
-		if (display != 'none') {
-			this.view.dom.loadingDiv
-				.style('opacity', 0)
-				.style('display', display)
-				.transition()
-				.duration(this.loadingWait)
-				.style('opacity', 1)
-		} else {
-			this.view.dom.loadingDiv.style('display', display)
-		}
 	}
 
 	getFilter() {
