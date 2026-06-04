@@ -24,6 +24,8 @@ export class PlotBase {
 	// config: any
 	configTermKeys?: string[]
 	vocabApi?: TermdbVocab
+	/** wait time to show loading div to avoid rapid flicker */
+	loadingWait = 1000
 
 	constructor(opts, plotApi?: ComponentApi) {
 		if (plotApi) this.api = plotApi
@@ -77,7 +79,29 @@ export class PlotBase {
 		return config
 	}
 
+	// helper so that 'Loading...' does not flash when not needed
+	toggleLoadingDiv(display = '', dataDisplay = '') {
+		const loadingDiv = this.dom.loadingDiv || this.dom.loading
+		if (!loadingDiv) return
+		if (display == 'none') {
+			loadingDiv.style('display', display)
+			if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', dataDisplay || '')
+		} else {
+			loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration('loadingWait' in this ? this.loadingWait : 0)
+				.style('opacity', 1)
+			if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
+		}
+	}
+
 	printError(err) {
+		// should not show any rendered data when there is an error,
+		// to avoid potential inconsistency between configured settings (like bins, medians)
+		// and rendered charts
+		if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
 		let errdiv = this.dom?.errdiv || this.dom?.error || this.dom?.holder?.select('.sja_errorbar')
 		if (!errdiv) {
 			if (!this.dom?.holder) throw err + ` (also missing ${this.type}.dom.holder)`
@@ -85,7 +109,6 @@ export class PlotBase {
 			errdiv = this.dom.errdiv
 		}
 		errdiv.text(err).style('display', '')
-		if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
 	}
 }
 

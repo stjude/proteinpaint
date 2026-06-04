@@ -514,21 +514,6 @@ export default function setViolinRenderer(self) {
 			}
 		}
 	}
-
-	self.toggleLoadingDiv = function (display = '') {
-		self.dom.renderedDiv.style('display', '')
-		if (display != 'none') {
-			self.dom.loadingDiv
-				.style('opacity', 0)
-				.style('display', display)
-				.transition()
-				.duration('loadingWait' in self ? self.loadingWait : 3000)
-				.style('opacity', 1)
-		} else {
-			self.dom.loadingDiv.style('display', display)
-		}
-		self.loadingWait = 1000
-	}
 }
 
 // creates numeric axis
