@@ -38,26 +38,24 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		}
 
 		const holder = opts.holder.classed('sjpp-boxplot-main', true)
-		const controls = opts.controls ? holder : holder.append('div')
-		const mainDiv = holder.append('div')
-		const errorDiv = mainDiv.append('div').attr('class', 'sja_errorbar').style('display', 'none')
-		const loading = mainDiv.append('div').style('padding', '24px').text('Loading ...')
-		const renderedDiv = mainDiv.append('div')
-		const chartsDiv = renderedDiv
-			.append('div')
-			.attr('class', 'sjpp-boxplot-charts')
-			.style('display', 'flex')
-			.style('flex-direction', 'row')
-			.style('flex-wrap', 'wrap')
-			.style('max-width', '100vw')
+		const { controls, errdiv, loadingDiv, mainDiv, renderedData, charts, legendDiv } = this.getStandardDomLayout(
+			holder,
+			opts
+		)
+
 		this.dom = {
 			controls: controls as Elem,
 			div: mainDiv,
-			error: errorDiv,
-			loading,
-			renderedDiv,
-			charts: chartsDiv,
-			legend: renderedDiv.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '25px'),
+			error: errdiv,
+			loading: loadingDiv,
+			renderedData,
+			charts: charts
+				.attr('class', 'sjpp-boxplot-charts')
+				.style('display', 'flex')
+				.style('flex-direction', 'row')
+				.style('flex-wrap', 'wrap')
+				.style('max-width', '100vw'),
+			legend: legendDiv.append('div').attr('class', 'sjpp-boxplot-legend').style('margin-top', '25px'),
 			tip: new Menu()
 		}
 		if (opts.header) this.dom.header = opts.header.html('Box plot')
@@ -207,7 +205,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			})
 		}
 		this.toggleLoadingDiv('none')
-		this.dom.renderedDiv.style('display', '')
+		this.dom.renderedData.style('display', '')
 		new View(viewModel.viewData, settings, this.dom, this.app, this.interactions)
 		/** Enables downloading the chart images for DownloadMenu after rendering. */
 		this.data.charts = viewModel.viewData.charts

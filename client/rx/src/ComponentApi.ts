@@ -23,7 +23,7 @@ export interface RxComponent {
 	hasStatePreMain?: boolean
 	main: (arg?: any) => void
 	mainArg?: any
-	printError?: (any) => void
+	printError?: null | ((any) => void)
 	destroy?: () => void
 	getChartImages?: () => any
 
@@ -98,7 +98,6 @@ export class ComponentApi {
 		Object.freeze(this)
 
 		if (self.init) await self.init(this.#Component.app.getState())
-		this.#errdiv = self.dom?.errdiv || self.dom?.error || { style: () => 'none' }
 		// lessen confusing behavior
 		if (self.state && !self.hasStatePreMain) {
 			delete self.state
@@ -121,14 +120,19 @@ export class ComponentApi {
 		const componentState = self.getState ? self.getState(current.appState) : current.appState
 		// no new state computed for this component
 		if (!componentState) return
-		const errDisplay = this.#errdiv.style('display')
-		// hide error div
-		this.#errdiv.style('display', 'none').html?.('')
-		// force update if there is no action, or
-		// if the current and pending state is not equal
+		let detectedErrDisplay = 'none'
+		// The logic below handles cases where the errdiv is created only as-needed and not during class instantiation.
+		// For example PlotBase.printError() will create the errdiv if it doesn't already exist.
+		if (!this.#errdiv) this.#errdiv = self.dom?.errdiv || self.dom?.error
+		if (this.#errdiv) {
+			detectedErrDisplay = this.#errdiv.style('display') // detect if an error message is visible
+			// hide and empty out the error div, it will be shown again if main() re-encounters an error that hasn't been addressed
+			this.#errdiv.style('display', 'none').html?.('')
+		}
+		// force an update if there is no action, or if there is an error from the previous update, or if the current and pending state is not equal
 		if (
 			!current.action /*|| this.#incompleteUpdate*/ ||
-			errDisplay !== 'none' ||
+			detectedErrDisplay !== 'none' ||
 			!deepEqual(componentState, self.state)
 		) {
 			//this.#incompleteUpdate = true
