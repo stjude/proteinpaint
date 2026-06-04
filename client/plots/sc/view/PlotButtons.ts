@@ -20,6 +20,7 @@ import type { Settings } from '../settings/Settings'
  * */
 export class PlotButtons {
 	plotBtnsDom: {
+		holder: Div
 		promptDiv: Div
 		selectPrompt: Elem
 		btnsDiv: Div
@@ -38,6 +39,7 @@ export class PlotButtons {
 		holder.style('padding', '10px')
 		const promptDiv = holder.append('div').style('padding', '10px 0').text('Select data from')
 		this.plotBtnsDom = {
+			holder,
 			promptDiv,
 			selectPrompt: promptDiv.append('span'),
 			btnsDiv: holder.append('div'),
@@ -53,7 +55,7 @@ export class PlotButtons {
 		 * the select item/plots btn above the table, the prompt appears
 		 * unnecessarily */
 		const item = settings.sc.item
-		this.plotBtnsDom.promptDiv.style('display', !item ? 'none' : 'block')
+		this.plotBtnsDom.holder.style('display', !item ? 'none' : 'block')
 		if (!item) return
 		if (data != null && data.plots) this.data = data
 		//Show buttons for plots with found data files (see note above).
