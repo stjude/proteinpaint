@@ -258,7 +258,7 @@ export function compute_bins(binconfig, summaryfxn, valueConversion) {
 			// throw instead of making the error handling dependent on client code,
 			// to make the error behavior consistent across different chart types;
 			// previously, the error message was not thrown but assigned as bc.error
-			throw hint + ' (max_num_bins_reached)'
+			throw new Error(hint + ' (max_num_bins_reached)')
 		}
 	}
 	delete bc.binLabelFormatter
