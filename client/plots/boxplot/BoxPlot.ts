@@ -139,12 +139,12 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		if (c.childType != this.type && c.chartType != this.type) return
 		if (!this.interactions) throw new Error('Interactions not initialized [box plot main()]')
 
-		this.toggleLoadingDiv()
 		const config = await this.getMutableConfig()
 		const settings = config.settings.boxplot
 		const model = new Model(this, config)
 
 		try {
+			this.toggleLoadingDiv()
 			const data = await model.getData()
 			if (isErrorResponse(data)) throw new Error(data.error)
 			config.term.q.descrStats = data.descrStats

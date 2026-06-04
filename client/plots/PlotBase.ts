@@ -26,6 +26,7 @@ export class PlotBase {
 	vocabApi?: TermdbVocab
 	/** wait time to show loading div to avoid rapid flicker */
 	loadingWait = 1000
+	testUpdateNum = 0
 
 	constructor(opts, plotApi?: ComponentApi) {
 		if (plotApi) this.api = plotApi
@@ -95,6 +96,13 @@ export class PlotBase {
 				.style('opacity', 1)
 			if (this.dom.renderedDiv) this.dom.renderedDiv.style('display', 'none')
 		}
+
+		// uncomment below to manually test error and chart visibility
+		// if (display !== 'none' && !dataDisplay) {
+		// 	this.testUpdateNum++
+		// 	// simulate an error on every 3rd call to show the overlay
+		// 	if (this.testUpdateNum % 3 === 0) throw '~~~ test update error, should hide charts + legend ~~~'
+		// }
 	}
 
 	printError(err) {
