@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.191.0
 
 Features:
 - GRIN2: Refactored client code into MVVM pattern. Removed custom cache handling logic and used cacheOrRecompute module instead
