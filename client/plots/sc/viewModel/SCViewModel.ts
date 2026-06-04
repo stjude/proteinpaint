@@ -95,7 +95,7 @@ export class SCViewModel {
 				// sample does not use experiment
 				// first cell is sample name
 				const row: { [index: string]: any }[] = item.isMetaResult
-					? [{ html: item.sample.replace(/_/g, ' '), value: item.sample }]
+					? [{ html: item.sample.replace(/_/g, ' '), value: item.sample, elemId: 'isMetaResult' }]
 					: [{ value: item.sample }]
 				//Empty cell for shown plot buttons
 				row.push({ value: '' })

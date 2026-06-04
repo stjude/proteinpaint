@@ -63,6 +63,7 @@ export class SampleTableRenderer {
 			 * dynamic column labels based on the config. */
 			key = key === 'sample' ? 'sID' : key === 'experiment' ? 'eID' : key
 			item[key] = r.value
+			if (r.elemId == 'isMetaResult') item.isMetaResult = true
 		})
 		if (!item.sID) throw new Error('Selected item must have sID property')
 		return item

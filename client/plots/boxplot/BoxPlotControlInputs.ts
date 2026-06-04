@@ -1,21 +1,12 @@
 import { term0_term2_defaultQ, renderTerm1Label } from '../controls'
-import { isNumTermCollection, isSingleCellTerm } from '#shared/terms.js'
+import { isNumTermCollection } from '#shared/terms.js'
+import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
 export function setBoxPlotControlInputs(state: any, app: any, opts: any, getCharts: any, useDefaultSettings: boolean) {
 	const controlLabels = state.config.controlLabels
 	if (!controlLabels) throw new Error('controls labels not found')
 
-	let specialCase: any = 'default'
-	if (isSingleCellTerm(state.config.term.term)) {
-		//Do not prevent loading if no sample is specified but log the error.
-		if (!state.config.term.term.sample) console.error('single cell term without sample specified in config, unexpected')
-		else {
-			specialCase = {
-				type: 'singleCell',
-				config: { sample: state.config.term.term.sample }
-			}
-		}
-	}
+	const specialCase = getSingleCellSpecialCase(state.config)
 
 	const inputs: { [index: string]: any }[] = [
 		{

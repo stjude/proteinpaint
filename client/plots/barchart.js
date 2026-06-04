@@ -14,7 +14,7 @@ import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { rebaseGroupFilter } from '../mass/groups.js'
-import { isSingleCellTerm } from '#shared/terms.js'
+import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
 export class Barchart extends PlotBase {
 	static type = 'barchart'
@@ -95,18 +95,7 @@ export class Barchart extends PlotBase {
 			this.dom.holder.attr('class', 'pp-termdb-plot-viz').style('display', 'inline-block').style('min-width', '300px')
 			//.style('margin-left', '10px')
 
-			let specialCase = 'default'
-			if (isSingleCellTerm(this.state.config.term.term)) {
-				//Do not prevent from loading if no sample is specified but log the error.
-				if (!this.state.config.term.term.sample)
-					console.error('single cell term without sample specified in config, unexpected')
-				else {
-					specialCase = {
-						type: 'singleCell',
-						config: { sample: this.state.config.term.term.sample }
-					}
-				}
-			}
+			const specialCase = getSingleCellSpecialCase(this.state.config)
 
 			const inputs = [
 				{

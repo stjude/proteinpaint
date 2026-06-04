@@ -3,6 +3,7 @@ import { Menu } from '#dom'
 import type { Scatter } from '../scatter.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.js'
 
 export const minShapeSize = 0.2
 export const maxShapeSize = 6
@@ -167,15 +168,7 @@ export class ScatterView {
 			testid: 'showAxes'
 		}
 
-		//TODO: Revisit this implementation
-		//see note in termdb.usecase.js
-		let specialCase: any = 'default'
-		if (this.scatter.config?.singleCellPlot) {
-			specialCase = {
-				type: 'singleCell',
-				config: this.scatter.config.singleCellPlot
-			}
-		}
+		const specialCase = getSingleCellSpecialCase(this.scatter.config)
 
 		const inputs: any = [
 			{
