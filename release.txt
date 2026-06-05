@@ -1,2 +1,1 @@
-Fixes:
-- render control inputs even when there is a correlation plot error, to allow a user to fix a config/setting error
+
