@@ -49,7 +49,7 @@ export default function setRoutes(app, basepath, genomes) {
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
 					const genedb = serverconfig.tpmasterdir + '/' + (genome as any).genedb.dbfile
 					console.log('genedb path for dataset ' + label + ': ' + genedb)
-					const overrideDir = path.join(process.cwd(), 'ai', label)
+					const overrideDir = path.join(process.cwd(), 'dataset', 'ai', label)
 					const aiFilesDir = fs.existsSync(overrideDir)
 						? overrideDir
 						: path.join(serverconfig.binpath, '../../dataset/ai', label) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
