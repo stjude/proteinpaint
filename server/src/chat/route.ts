@@ -76,7 +76,8 @@ export function init({ genomes }) {
 					text: 'Only search functionality supported for this data. No chat functionality supported.'
 				})
 			}
-			const overrideDir = path.join(process.cwd(), 'ai', q.dslabel)
+			const overrideDir = path.join(process.cwd(), '../../dataset/ai', q.dslabel)
+			console.log('Checking for AI files in override directory:', process.cwd())
 			const aiFilesDir = fs.existsSync(overrideDir)
 				? overrideDir
 				: path.join(serverconfig.binpath, '../../dataset/ai', q.dslabel) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
