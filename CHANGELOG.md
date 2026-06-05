@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.191.2
 
 Fixes:
 - render control inputs even when there is a correlation plot error, to allow a user to fix a config/setting error

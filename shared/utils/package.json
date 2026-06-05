@@ -1,6 +1,6 @@
 {
   "name": "@sjcrh/proteinpaint-shared",
-  "version": "2.190.1",
+  "version": "2.191.2",
   "description": "ProteinPaint code that is shared between server and client-side workspaces",
   "type": "module",
   "main": "dist/src/index.js",
