@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 Fixes:
 - render control inputs even when there is a correlation plot error, to allow a user to fix a config/setting error
+- avoid showing stale numeric edit input values by always resetting the referenced tw and q objects in a numeric edit handler instance
 
 
 ## 2.191.1
