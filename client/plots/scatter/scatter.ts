@@ -122,10 +122,6 @@ export class Scatter extends PlotBase implements RxComponent {
 			return
 		}
 
-		// if (!this.testN) this.testN = 1; console.log(120, this.testN, this.testN % 2 === 1)
-		// this.testN++
-		// if (this.testN % 2 === 1) throw '--- test error ---'
-
 		if (this.model.is3D) this.vm = new ScatterViewModel3D(this)
 		else if (this.model.is2DLarge) this.vm = new ScatterViewModel2DLarge(this)
 		else this.vm = new ScatterViewModel(this)
