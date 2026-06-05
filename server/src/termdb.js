@@ -144,7 +144,7 @@ async function getSampleList(req, q, ds) {
 		samples = await termdbsql.get_samples(q, ds, canDisplay)
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
 		// dataset supplied method
-		const temp = await ds.cohort.termdb.filterSamples({ filter: q.filter, filter0: q.filter0, ds })
+		const temp = await ds.cohort.termdb.filterSamples(q, ds)
 		samples = [...temp]
 	} else {
 		throw new Error('no method available to get sample list')
