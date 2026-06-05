@@ -124,18 +124,32 @@ export class Locator {
 		throw `invalid Locator.get() argument='${arg}'`
 	}
 
-	// TODO: support .set(arg, value)???
+	// propName: string property name, can be dot-separated like 'style.padding'
+	// value: string, number, boolean, any valid value for the given property name
+	async set(propName, value) {
+		const keyChain = propName.split('.')
+		const lastKey = keyChain.pop()
+		const elems = await this.get()
+		for (const elem of elems) {
+			let obj = elem
+			for (const key of keyChain) obj = obj[key]
+			obj[lastKey] = value
+		}
+		return elems
+	}
 
 	/*** convenient aliased methods for .get(arg) ***/
 	async length() {
 		return await this.get('length')
 	}
 
-	async value() {
+	async value(val?: number | string | boolean) {
+		if (arguments.length) return await this.set('value', val)
 		return await this.get('.value')
 	}
 
-	async text() {
+	async text(str?: string) {
+		if (arguments.length) return await this.set('innerText', str)
 		return await this.get('.innerText')
 	}
 

@@ -70,6 +70,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 	}
 
 	async showEditMenu(div) {
+		this.tw = this.handler.tw as NumSpline
 		if (this.dom.density_div) {
 			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) {
 				await this.handler.density.showViolin(this.dom.density_div, this.getBoundaryOpts())

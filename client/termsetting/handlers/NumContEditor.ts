@@ -32,6 +32,8 @@ export class NumContEditor extends HandlerBase implements Handler {
 	}
 
 	async showEditMenu(div: any) {
+		this.tw = this.handler.tw as NumCont
+		this.q = this.setDefaultQ()
 		if (this.dom.inputsDiv) {
 			if (div.node().contains(this.dom.inputsDiv.node())) return
 			else delete this.dom.inputsDiv

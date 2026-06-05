@@ -419,16 +419,12 @@ tape('Numerical term: fixed bins', async test => {
 	)
 
 	// test 'reset' button
+	const binSizeInputId = '[data-testid="sjpp-num-reg-bin-editor-size"]'
+	await tipLoc.shows(binSizeInputId).set('value', 9)
 	const reset_btn = await tipLoc.shows('[data-testid="sjpp_numeric_edit_reset"]').get(0)
 	reset_btn.click()
-	await sleep(50)
-	await opts.pillMenuClick('Edit')
-	test.deepEqual(
-		await tipLoc.shows('[data-testid="sjpp-num-reg-bin-editor-size"]').value(),
-		['3'],
-		'Should reset the bins by "Reset" button'
-	)
-	//if (test._ok) opts.pill.destroy()
+	test.deepEqual(await tipLoc.shows(binSizeInputId).value(), ['5'], 'Should reset the bins by "Reset" button')
+	if (test._ok) opts.pill.destroy()
 })
 
 tape('Numerical term: float custom bins', async test => {
