@@ -144,7 +144,7 @@ export class PlotBase {
 				.duration('loadingWait' in this ? this.loadingWait : 0)
 				.style('opacity', 1)
 			// When the loadingDiv is visible, the renderedData should not be displayed unless
-			// vall its child elements have been removed. This may be the case if temporary elements
+			// all its child elements have been removed. This may be the case if temporary elements
 			// like svg text labels are measured to compute the target svg width.
 			if (this.dom.renderedData) this.dom.renderedData.style('display', dataDisplay || 'none')
 		}
