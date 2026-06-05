@@ -29,30 +29,26 @@ export class ScatterView {
 			.style('display', 'inline-block')
 			.attr('data-testid', 'sjpp-scatter-controls-div')
 		const domOpts = { controls: controlsHolder, mainWrapper: rightDiv }
-		const { errdiv, loadingDiv, banner, renderedData, charts, legendDiv } = scatter.getStandardDomLayout(
-			this.opts.holder,
-			domOpts
-		)
+		const { errdiv, loadingDiv, banner, renderedData } = scatter.getStandardDomLayout(this.opts.holder, domOpts)
 
-		// scatter uses the mainDiv to remove and recreate that charts and legend div on every component update
-		charts.remove()
-		legendDiv.remove()
+		// scatter uses the mainDiv to remove and recreate that charts and legend div on every component update,
+		// so the standard charts and legend div inside it will not be needed/persisted
+		renderedData.selectAll('*').remove()
 
 		this.dom = {
 			controlsHolder,
 			toolsDiv: leftDiv.insert('div'),
 			errdiv,
-			renderedData,
 			loadingDiv: loadingDiv.attr('data-testid', 'sjpp-scatter-loading-div'),
 			bannerDiv: banner,
 			headerDiv: renderedData.append('div').attr('data-testid', 'sjpp-scatter-header-div'),
-			mainDiv: renderedData
-				.append('div')
+			renderedData: renderedData
 				.attr('data-testid', 'sjpp-scatter-main-div')
 				.style('display', 'flex')
 				.style('flex-direction', 'row')
 				.style('flex-wrap', 'wrap')
 				.style('max-width', '100vw'),
+			mainDiv: renderedData,
 			header: this.opts.header,
 			tip: new Menu({ padding: '0px' }),
 			tooltip: new Menu({ padding: '2px', offsetX: 10, offsetY: 0 })

@@ -369,16 +369,14 @@ class ViolinPlot extends PlotBase {
 			throw this.data.error
 		}
 		args.tw.q.descrStats = this.data.descrStats
-
-		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
-		setTimeout(
-			() => {
-				this.render()
-				this.dom.renderedData.style('display', '')
-			},
-			this.opts.mode == 'minimal' ? 0 : 500
-		)
+		//this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
+		// setTimeout(
+		// 	() => {
+		this.render()
 		this.toggleLoadingDiv('none')
+		// 	},
+		// 	this.opts.mode == 'minimal' ? 0 : 500
+		// )
 	}
 
 	validateArgs() {
