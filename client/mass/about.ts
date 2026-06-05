@@ -22,6 +22,7 @@ const cohortTableActiveColor = 'yellow'
 type AboutObj = {
 	html: string
 	activeItems?: { items: any }
+	disclaimer?: any
 }
 
 type MassAboutOpts = {
@@ -114,6 +115,7 @@ export class MassAbout {
 		this.initCohort(appState)
 		this.initCustomHtml()
 		this.initActiveItems()
+		this.initDisclaimer()
 		//Always show the release version and server launch date at the bottom
 		this.showServerInfo()
 	}
@@ -336,7 +338,7 @@ export class MassAbout {
 		const div = this.subheader
 			.append('div')
 			.attr('data-testid', 'sjpp-custom-about-activeItems')
-			.style('padding', '0px 0px 20px 20px')
+			.style('padding', '0px 0px 10px 20px')
 
 		for (const item of this.aboutOverrides.activeItems.items) {
 			// todo: by item.type, item.divStyle{}
@@ -365,6 +367,23 @@ export class MassAbout {
 					})
 				})
 		}
+	}
+
+	initDisclaimer = () => {
+		const d = this.aboutOverrides?.disclaimer
+		if (!d) return
+		// customize styling from d{}
+		const div = this.subheader
+			.append('div')
+			.attr('data-testid', 'sjpp-custom-about-disclaimer')
+			.style('margin', '10px 0 20px 10px')
+			.style('opacity', 0.7)
+			.style('padding', '10px')
+			.style('background-color', '#f8f9fa')
+			.style('border-left', '4px solid #6c757d')
+			.style('font-size', '0.8em')
+		div.append('div').style('margin-bottom', '8px').style('font-weight', 'bold').text('DISCLAIMER')
+		div.append('div').text(d.text)
 	}
 
 	showServerInfo = () => {
