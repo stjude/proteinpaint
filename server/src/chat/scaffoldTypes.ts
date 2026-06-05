@@ -36,6 +36,13 @@ export type GenomeBrowserScaffold = {
 	filter?: string
 }
 
+export type SurvivalScaffold = {
+	plotType: 'survival'
+	term: string
+	term2: string
+	filter?: string
+}
+
 export type HierarchicalScaffold = {
 	plotType: 'hiercluster'
 	hierarchicalPhrases: string[]

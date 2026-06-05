@@ -472,6 +472,42 @@ export async function parse_dataset_db(dataset_db: string) {
 	return { db_rows: db_rows, rag_docs: rag_docs }
 }
 
+export async function parse_survival_terms_from_db(dataset_db: string) {
+	const db = new Database(dataset_db)
+	const rag_docs: string[] = []
+	const db_rows: DbRows[] = []
+	try {
+		const rows = db.prepare("SELECT * FROM terms WHERE type = 'survival'").all()
+
+		rows.forEach((row: any) => {
+			const jsondata = row.jsondata ? JSON.parse(row.jsondata) : {}
+
+			const values: DbValue[] = []
+			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
+				for (const key of Object.keys(jsondata.values)) {
+					const value = jsondata.values[key]
+					const db_val: DbValue = { key: key, value: value }
+					values.push(db_val)
+				}
+			}
+			const db_row: DbRows = {
+				name: row.id,
+				description: jsondata.name || row.id,
+				values: values,
+				term_type: row.type
+			}
+			const stringified_db = parse_db_rows(db_row)
+			rag_docs.push(stringified_db)
+			db_rows.push(db_row)
+		})
+	} catch (error) {
+		throw 'Error in parsing survival terms from dataset DB:' + error
+	} finally {
+		db.close()
+	}
+	return { db_rows: db_rows, rag_docs: rag_docs }
+}
+
 export function parse_db_rows(db_row: DbRows) {
 	let output_string: string =
 		'Name of the field is:"' +
