@@ -9,6 +9,7 @@ import { MassAbout } from '../about'
     .initCohort() - .selectCohort content and .about.html
     .initCustomHtml()
 	.initActiveItems()
+	.initDisclaimer()
 
 TODO:
     - initCohort
@@ -209,6 +210,31 @@ tape('.initActiveItems()', test => {
 
 	test.true(itemNode, 'Should render a node as activeItem')
 	test.equal(itemNode.firstChild.innerHTML, itemTitle, 'activeItem first child dom prints correct item title')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('.initDisclaimer()', test => {
+	test.timeoutAfter(100)
+
+	const holder = getHolder() as any
+	const opts = {
+		holder,
+		aboutOverrides: {
+			disclaimer: {
+				text: 'xx'
+			}
+		}
+	}
+
+	const mockAbout = getAbout(opts)
+	mockAbout.initDisclaimer()
+
+	// type any avoids tsc err: 'itemNode' is possibly 'null'
+	const itemNode: any = mockAbout.subheader.select('[data-testid="sjpp-custom-about-disclaimer"]').node()
+
+	test.true(itemNode, 'Should render a node as disclaimer')
 
 	if (test['_ok']) holder.remove()
 	test.end()
