@@ -1073,8 +1073,6 @@ export async function inferScaffold(
 		case 'genomeBrowser':
 			return await getScaffold_genomeBrowser(user_prompt, llm)
 		case 'survival':
-			//const surival_output = await getScaffold_Survival(user_prompt, llm)
-			//mayLog('Survival scaffold output:', surival_output) // Need to delete this print statement, added this just for the sake of committing
 			return await getScaffold_Survival(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
