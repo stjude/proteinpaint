@@ -142,7 +142,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 		const model = new Model(this, config)
 
 		try {
-			this.toggleLoadingDiv()
+			this.toggleLoadingDiv('block', 'block')
 			const data = await model.getData()
 			if (isErrorResponse(data)) throw new Error(data.error)
 			config.term.q.descrStats = data.descrStats

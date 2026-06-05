@@ -355,7 +355,7 @@ class ViolinPlot extends PlotBase {
 		const args = this.validateArgs()
 		let data
 		try {
-			this.toggleLoadingDiv()
+			this.toggleLoadingDiv('block', 'block')
 			data = await this.app.vocabApi.getViolinBox(args, null, this.api.getAbortSignal())
 		} catch (e) {
 			this.toggleLoadingDiv('none', 'none')
@@ -370,13 +370,13 @@ class ViolinPlot extends PlotBase {
 		}
 		args.tw.q.descrStats = this.data.descrStats
 		//this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
-		// setTimeout(
-		// 	() => {
-		this.render()
-		this.toggleLoadingDiv('none')
-		// 	},
-		// 	this.opts.mode == 'minimal' ? 0 : 500
-		// )
+		setTimeout(
+			() => {
+				this.render()
+				this.toggleLoadingDiv('none')
+			},
+			this.opts.mode == 'minimal' ? 0 : 500
+		)
 	}
 
 	validateArgs() {

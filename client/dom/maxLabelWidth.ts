@@ -40,6 +40,13 @@ import type { Svg, SvgG } from '../types/d3'
  * @returns The width in pixels of the widest label in the provided items array
  */
 export function getMaxLabelWidth(svg: Svg | SvgG, items: string[], size = 1): number {
+	const svgNode = svg.node()
+	// Proactively detect incorrect usage of this helper function, where the computed dimension is inaccurate.
+	// This visiblity error helps troubleshooting when refactoring render code for plots, legends, etc.
+	// The opacity argument to checkVisiblity is not used in case a temporary hidden temp svg is used.
+	if (!svgNode || !svgNode.checkVisibility())
+		console.debug(new Error(`The svg is not rendered or visible in getMaxLabelWidth().`))
+
 	let maxLabelLgth = 0
 	for (const item of items) {
 		// Create temporary text element for measurement
