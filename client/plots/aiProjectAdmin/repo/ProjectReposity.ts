@@ -5,7 +5,7 @@ export class ProjectReposity {
 		genome: string,
 		dslabel: string,
 		actions: AIProjectAdminActions[]
-	): Promise<{ [key in AIProjectAdminActions]: boolean }> {
+	): Promise<{ [key in AIProjectAdminActions]?: boolean }> {
 		const body: AIProjectAdminRequest = {
 			genome,
 			dslabel,
@@ -14,7 +14,7 @@ export class ProjectReposity {
 		}
 
 		try {
-			const response = await dofetch3('aiProjectAdmin', { body })
+			const response = await dofetch2('aiProjectAdmin', { body })
 			return response || {}
 		} catch (error) {
 			console.error('Error fetching authorizations:', error)

@@ -2,6 +2,7 @@ import type { Mds3, TileSelection, SaveWSIAnnotationRequest, AIProjectAuthInfo }
 import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
+
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {

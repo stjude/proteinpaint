@@ -119,7 +119,7 @@ export class ProjectAdminRender {
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
 
 		const columns = [{ label: 'Project', sortable: true }]
-		let rows
+		let rows = this.projects.map(p => [{ value: p.name }])
 		const columnButtons = [
 			{
 				text: 'Edit',
@@ -153,9 +153,7 @@ export class ProjectAdminRender {
 			.then(isAuthorized => {
 				if (isAuthorized.required) {
 					columns.push({ label: 'User', sortable: false })
-					rows = this.projects.map(p => [{ value: p.name }, { value: p.current_user ?? 'Open' }])
-				} else {
-					rows = this.projects.map(p => [{ value: p.name }])
+					rows = this.projects.map(p => [{ value: p.name }, { value: p.current_user ?? 'Editable' }])
 				}
 				if (isAuthorized.deleteProject) {
 					columnButtons.push({
@@ -178,7 +176,7 @@ export class ProjectAdminRender {
 				}
 				if (isAuthorized.logOut) {
 					columnButtons.push({
-						text: 'Log Out',
+						text: 'Force Checkout',
 						class: 'sja_menuoption',
 						callback: async (_, i) => {
 							const project = this.projects[i]

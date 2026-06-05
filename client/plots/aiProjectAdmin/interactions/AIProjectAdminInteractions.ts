@@ -20,7 +20,7 @@ export class AIProjectAdminInteractions {
 		this.dslabel = app.vocabApi.vocab.dslabel
 		this.prjtRepo = prjtRepo
 	}
-	async getAuthorization(actions: AIProjectAdminActions[]): Promise<{ [key in AIProjectAdminActions]: boolean }> {
+	async getAuthorization(actions: AIProjectAdminActions[]): Promise<{ [key in AIProjectAdminActions]?: boolean }> {
 		try {
 			return await this.prjtRepo.getAuthorization(this.genome, this.dslabel, actions)
 		} catch (e: any) {

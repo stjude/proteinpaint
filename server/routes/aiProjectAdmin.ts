@@ -82,8 +82,8 @@ export function init({ genomes }) {
 					message: 'User logged out successfully'
 				})
 			} else if (query.for === 'auth') {
-				const authorizations: { [key in AIProjectAdminActions]: boolean } = {}
-				const actions = query.auth || []
+				const authorizations: { [key in AIProjectAdminActions]?: boolean } = {}
+				const actions: AIProjectAdminActions[] = query.auth || []
 				for (const action of actions) {
 					authorizations[action] = aiHalAuth.checkAuthorization(req, action)
 				}

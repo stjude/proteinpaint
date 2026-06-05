@@ -23,7 +23,7 @@ export class LogoutRenderer {
 			.style('border', '1px solid black')
 			.style('background-color', 'white')
 			.style('cursor', 'pointer')
-			.text('Finish Annotating')
+			.text('Check Out')
 			.on('click', async () => {
 				holder.selectAll('*').remove()
 

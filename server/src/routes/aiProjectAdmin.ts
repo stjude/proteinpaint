@@ -65,7 +65,6 @@ const allowedAIProjectForStrings: Set<AIProjectAdminForValues> = new Set([
 	'filterImages',
 	'images',
 	'logout',
-	'role',
 	'auth'
 ])
 
