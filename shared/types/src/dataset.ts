@@ -2012,6 +2012,10 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		items: ActiveItem[]
 		// can add holderStyle to customize
 	}
+	/** disclaimer text. can expand with rendering customizations */
+	disclaimer?: {
+		text?: string
+	}
 }
 
 type ActiveItem = {
