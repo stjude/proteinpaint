@@ -12,6 +12,7 @@ import type {
 	HierarchicalScaffold,
 	GenomeBrowserScaffold,
 	MatrixScaffold,
+	SurvivalScaffold,
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
@@ -19,6 +20,10 @@ import { extractGenesFromPrompt } from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
+
+async function getScaffold_Survival(_user_prompt: string, _llm: LlmConfig): Promise<SurvivalScaffold | MsgToUser> {
+	return { type: 'text', text: 'Survival scaffold is not yet implemented.' }
+}
 
 async function getScaffold_genomeBrowser(
 	user_prompt: string,
@@ -1067,6 +1072,10 @@ export async function inferScaffold(
 			return await getScaffold_dge(user_prompt, llm)
 		case 'genomeBrowser':
 			return await getScaffold_genomeBrowser(user_prompt, llm)
+		case 'survival':
+			//const surival_output = await getScaffold_Survival(user_prompt, llm)
+			//mayLog('Survival scaffold output:', surival_output) // Need to delete this print statement, added this just for the sake of committing
+			return await getScaffold_Survival(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,
