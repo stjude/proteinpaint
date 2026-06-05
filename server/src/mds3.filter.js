@@ -46,7 +46,7 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		)
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
 		// ds-supplied filter method
-		filterSamples = await ds.cohort.termdb.filterSamples({ filter, filter0, ds })
+		filterSamples = await ds.cohort.termdb.filterSamples(param, ds)
 	} else {
 		throw new Error('no method available to get samples')
 	}

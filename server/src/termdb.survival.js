@@ -68,8 +68,7 @@ export async function get_survival(q, ds) {
 				__protected__: q.__protected__,
 				__abortSignal: q.__abortSignal
 			},
-			ds,
-			ifIsOnlyChildren(q, st, ot, ds)
+			ds
 		)
 		if (data.error) throw data.error
 		const results = getSampleArray(data, st)
@@ -184,16 +183,6 @@ export async function get_survival(q, ds) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
-}
-
-function ifIsOnlyChildren(q, st, ot, ds) {
-	const types = new Set()
-	const ids = [st.id]
-	if (ot) ids.push(ot.id)
-	if (q.term0) ids.push(q.term0.id)
-	for (const id of ids) types.add(ds.cohort.termdb.term2SampleType.get(id))
-	// true if there are multiple sample types, false if there is a single sample type
-	return types.size > 1
 }
 
 function getSurvTermIndex(q) {
