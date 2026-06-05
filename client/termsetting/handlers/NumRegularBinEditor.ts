@@ -28,7 +28,8 @@ export class NumRegularBinEditor {
 	}
 
 	render(div) {
-		if (this.q?.type != 'regular-bin') this.q = this.getDefaultQ()
+		this.tw = this.editHandler.tw as NumRegularBin
+		this.q = this.getDefaultQ()
 		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.binsTable) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.binsTable.node())) return

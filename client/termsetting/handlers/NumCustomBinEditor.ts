@@ -26,7 +26,8 @@ export class NumCustomBinEditor {
 	}
 
 	async render(div) {
-		if (this.q?.type != 'custom-bin') this.q = this.getDefaultQ()
+		this.tw = this.editHandler.tw as NumCustomBins
+		this.q = this.getDefaultQ()
 		await this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
 		if (this.dom.inputsDiv) {
 			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())) return

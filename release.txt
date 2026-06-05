@@ -1,1 +1,2 @@
-
+Fixes:
+- avoid showing stale numeric edit input values by always resetting the referenced tw and q objects in a numeric edit handler instance
