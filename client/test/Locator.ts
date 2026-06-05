@@ -126,9 +126,11 @@ export class Locator {
 
 	// propName: string property name, can be dot-separated like 'style.padding'
 	// value: string, number, boolean, any valid value for the given property name
-	async set(propName, value) {
+	async set(propName: string, value: any) {
+		if (!propName) throw `invalid Locator.set() propName='${propName}'`
 		const keyChain = propName.split('.')
 		const lastKey = keyChain.pop()
+		if (!lastKey) throw `invalid Locator.set() propName='${propName}'`
 		const elems = await this.get()
 		for (const elem of elems) {
 			let obj = elem
