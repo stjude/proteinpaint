@@ -76,8 +76,11 @@ export function init({ genomes }) {
 					text: 'Only search functionality supported for this data. No chat functionality supported.'
 				})
 			}
-
-			const aiFilesDir = serverconfig.binpath + '/../../dataset/ai/' + q.dslabel // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+			const overrideDir = path.join(process.cwd(), 'ai', q.dslabel)
+			const aiFilesDir = fs.existsSync(overrideDir)
+				? overrideDir
+				: path.join(serverconfig.binpath, '../../dataset/ai', q.dslabel) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+			mayLog('Using AI files directory:', aiFilesDir)
 			let agentFiles: string[] = []
 			try {
 				// Read dataset JSON file
