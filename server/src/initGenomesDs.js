@@ -26,6 +26,7 @@ const dsHelpers = {
 	ezFetch,
 	xfetch: utils.xfetch,
 	cachedFetch: utils.cachedFetch,
+	filterByItem: mds3_init.filterByItem,
 	mayLog,
 	createSelectionID,
 	SelectionPrefixes,
