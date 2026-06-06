@@ -3548,13 +3548,6 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 }
 async function getCnvByTw(ds, tw, genome, q) {
 	// tw.term.type is "geneVariant"
-
-	if (ds.queries.cnv.requiresHardcodeCnvOnlyFlag && !q.hardcodeCnvOnly) {
-		// in gdc, the cnv segment datatype can only work for "cnv tool" but not any other case; this allow it to be disabled in oncomatrix and summary tool; these tools will use geneCnv instead
-		// later if ever cnv seg must be used for such in gdc, need a different solution
-		return
-	}
-
 	// note: when there is groupsetting, do not set cnvGainCutoff, cnvLossCutoff, or cnvMaxLength cutoffs here
 	// as these will be applied when filtering by groupsetting (see filterByItem())
 	const arg = {

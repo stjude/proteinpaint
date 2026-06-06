@@ -1,1 +1,2 @@
-
+Fixes:
+- tk.hiddenMclassDt to streamline handling of special flags for snv-/cnv-only views

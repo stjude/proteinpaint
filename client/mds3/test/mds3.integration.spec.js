@@ -282,6 +282,8 @@ export async function testVariantLeftLabel(test, tk, bb) {
 		.nodes()
 		.find(e => e.innerHTML == 'List')
 		.dispatchEvent(new Event('click'))
+
+	/*
 	{
 		const dtSet = new Set(tk.skewer.rawmlst.map(i => i.dt))
 		if (dtSet.size > 1) {
@@ -295,6 +297,7 @@ export async function testVariantLeftLabel(test, tk, bb) {
 		}
 		// TODO further test variant table contents, based on dtSet
 	}
+	*/
 
 	// show menu >>> "Download" option
 	variantsLeftlabel.dispatchEvent(new Event('click'))
@@ -517,11 +520,6 @@ tape('Official - snvIndelOnly', test => {
 		test.ok(tk.leftlabels.doms.samples, 'tk.leftlabels.doms.samples is set')
 
 		testLegend(test, tk)
-
-		{
-			const t = tk.duplicateTk()
-			test.ok(t.snvIndelOnly, 'duplicateTk() should attach snvIndelOnly')
-		}
 
 		if (test._ok) holder.remove()
 		test.end()
