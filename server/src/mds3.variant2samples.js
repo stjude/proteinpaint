@@ -450,13 +450,13 @@ get list of samples that harbor any variant in rglst[]
 async function queryServerFileByRglst(q, twLst, ds) {
 	const samples = new Map() // same as in previous function
 
-	if (ds.queries.snvindel && !q.hardcodeCnvOnly) {
+	if (ds.queries.snvindel && !q.hiddenmclass?.has(dtsnvindel)) {
 		const mlst = await ds.queries.snvindel.byrange.get(q)
 		for (const m of mlst) {
 			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}
-	if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
+	if (ds.queries.svfusion && !q.hiddenmclass?.has(dtsv) && !q.hiddenmclass?.has(dtfusionrna)) {
 		const mlst = await ds.queries.svfusion.byrange.get(q)
 		for (const m of mlst) {
 			combineSamplesById(m.samples, samples, m.ssm_id)

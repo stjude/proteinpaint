@@ -81,8 +81,7 @@ function getParameter(tk, block) {
 		// including skewer or non-skewer
 		forTrack: 1,
 		// may not pass skewerRim if it is not in use (turn off)
-		skewerRim: tk.mds.queries?.snvindel?.skewerRim, // instructions for counting rim counts per variant
-		hardcodeCnvOnly: tk.hardcodeCnvOnly
+		skewerRim: tk.mds.queries?.snvindel?.skewerRim // instructions for counting rim counts per variant
 	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -152,9 +151,11 @@ function getParameter(tk, block) {
 
 	rangequery_rglst(tk, block, par)
 
-	if (tk.legend?.mclass.hiddenvalues.size) {
-		// contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
-		par.hiddenmclasslst = JSON.stringify([...tk.legend.mclass.hiddenvalues])
+	{
+		const lst = []
+		if (tk.legend?.mclass?.hiddenvalues?.size) for (const c of tk.legend.mclass.hiddenvalues) lst.push(c)
+		for (const c of tk.hiddenMclassDt) lst.push(c)
+		if (lst.length) par.hiddenmclasslst = JSON.stringify(lst) // lst contains mixture of mclass(str) and dt(int), pass json array instead of comma-joined string
 	}
 
 	if (tk.legend?.bcfInfo) {

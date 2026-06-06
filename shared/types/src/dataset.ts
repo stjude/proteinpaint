@@ -644,14 +644,6 @@ type CnvSegmentQuery = {
 	cnvMaxCopynumber?: number
 	 */
 
-	/** quick fix for gdc cnv tool:
-	if not set, mds3 tk & matrix will load cnv segments and show them together with ssm & fusion
-	if set: 
-		- for mds3 tk loading via mds3.load.js, only when tk.hardcodeCnvOnly=true, this will be loaded and shown
-		- for others using mayGetGeneVariantData(), this is always disabled, as request won't have this flag
-	*/
-	requiresHardcodeCnvOnlyFlag?: true
-
 	/** CNV cutoffs (such as cnvGainCutoff, cnvLossCutoff, cnvMaxLength) that are applied to specific genes */
 	cnvCutoffsByGene?: {
 		[geneName: string]: {

@@ -17,6 +17,7 @@ tape('\n', test => {
 tape('mayInitCnv()', test => {
 	{
 		const tk: any = {
+			hiddenMclassDt: new Set(),
 			mds: {},
 			custom_variants: [{ dt: 1 }]
 		}
@@ -25,6 +26,7 @@ tape('mayInitCnv()', test => {
 	}
 	{
 		const tk: any = {
+			hiddenMclassDt: new Set(),
 			mds: { termdbConfig: { queries: { cnv: {} } } },
 			glider: { append: () => {} }
 		}
@@ -33,14 +35,8 @@ tape('mayInitCnv()', test => {
 	}
 	{
 		const tk: any = {
-			mds: { termdbConfig: { queries: { cnv: { requiresHardcodeCnvOnlyFlag: true } } } }
-		}
-		mayInitCnv(tk)
-		test.false(tk.cnv, 'tk.cnv{} is not set')
-	}
-	{
-		const tk: any = {
-			mds: { termdbConfig: { queries: { cnv: { requiresHardcodeCnvOnlyFlag: true } } } },
+			hiddenMclassDt: new Set(),
+			mds: { termdbConfig: { queries: { cnv: {} } } },
 			hardcodeCnvOnly: true,
 			glider: { append: () => {} }
 		}
@@ -49,6 +45,7 @@ tape('mayInitCnv()', test => {
 	}
 	{
 		const tk: any = {
+			hiddenMclassDt: new Set(),
 			mds: {},
 			custom_variants: [{ dt: 4, class: 's' }],
 			glider: { append: () => {} }
@@ -59,6 +56,7 @@ tape('mayInitCnv()', test => {
 	}
 	{
 		const tk: any = {
+			hiddenMclassDt: new Set(),
 			mds: {},
 			custom_variants: [{ dt: 4, class: 's', value: 1 }],
 			glider: { append: () => {} }
@@ -95,6 +93,7 @@ tape('prepData()', test => {
 })
 
 const mockTk = {
+	hiddenMclassDt: new Set(),
 	cnv: {
 		absoluteValueRenderMax: 1
 	}

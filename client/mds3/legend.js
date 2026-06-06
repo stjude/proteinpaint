@@ -1,6 +1,18 @@
 import { legend_newrow } from '#src/block.legend'
 import { Menu, ColorScale, icons, shapes, renderCnvConfig } from '#dom'
-import { mds3tkMclass, mclass, dt2label, dtcnv, mclassfusionrna, mclasssv, bplen } from '#shared/common.js'
+import {
+	mds3tkMclass,
+	mclass,
+	dt2label,
+	dtcnv,
+	dtitd,
+	dtsnvindel,
+	dtsv,
+	dtfusionrna,
+	mclassfusionrna,
+	mclasssv,
+	bplen
+} from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
 import { showLDlegend } from '../plots/regression.results'
 import { rgb } from 'd3-color'
@@ -77,6 +89,11 @@ legend.mclass{}
 function create_mclass(tk, block) {
 	if (!tk.legend.mclass) tk.legend.mclass = {}
 	if (!tk.legend.mclass.hiddenvalues) tk.legend.mclass.hiddenvalues = new Set()
+
+	if (tk.mds?.hiddenmclass) {
+		// some mclass to be hidden by default according to ds
+		for (const c of tk.mds.hiddenmclass) tk.legend.mclass.hiddenvalues.add(c)
+	}
 
 	tk.legend.mclass.row = tk.legend.table.append('tr')
 	if (tk.hardcodeCnvOnly) {
@@ -530,11 +547,6 @@ function update_mclass(tk) {
 	const showlst = [],
 		hiddenlst = []
 	for (const [k, count] of tk.legend.mclass.currentData) {
-		if (tk.snvIndelOnly) {
-			// only show snvindel
-			// exclude non-snvindel classes from legend
-			if (tk.legend.mclass.nonSnvIndelClasses?.has(k)) continue
-		}
 		const v = { k, count }
 		if (tk.legend.mclass.hiddenvalues.has(k)) {
 			hiddenlst.push(v)
@@ -548,11 +560,6 @@ function update_mclass(tk) {
 	// items in hiddenvalues{} can still be absent in hiddenlst,
 	// e.g. if class filter is done at backend, and currentData is calculated just from visible data items
 	for (const k of tk.legend.mclass.hiddenvalues) {
-		if (tk.snvIndelOnly) {
-			// only show snvindel
-			// exclude non-snvindel classes from legend
-			if (tk.legend.mclass.nonSnvIndelClasses?.has(k)) continue
-		}
 		if (!hiddenlst.find(i => i.k == k)) {
 			hiddenlst.push({ k })
 		}

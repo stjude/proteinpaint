@@ -1,7 +1,17 @@
 import { fileurl, validateRglst } from './utils.js'
 import { snvindelByRangeGetter_bcf } from './mds3.init.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
-import { dtcnv, mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel } from '#shared/common.js'
+import {
+	dtsnvindel,
+	dtsv,
+	dtfusionrna,
+	dtcnv,
+	dtitd,
+	mclasscnvgain,
+	mclasscnvAmp,
+	mclasscnvloss,
+	mclasscnvHomozygousDel
+} from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { plotWiggle } from './bw.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
@@ -305,7 +315,7 @@ export async function load_driver(q, ds) {
 			// get skewer data
 			result.skewer = [] // for skewer track
 
-			if (ds.queries.snvindel && !q.hardcodeCnvOnly) {
+			if (ds.queries.snvindel && !q.hiddenmclass?.has(dtsnvindel)) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
 				const mlst = await query_snvindel(q, ds)
 				/* mlst=[], each element:
@@ -318,20 +328,14 @@ export async function load_driver(q, ds) {
 				result.skewer.push(...mlst)
 			}
 
-			if (ds.queries.svfusion && !q.hardcodeCnvOnly) {
+			if (ds.queries.svfusion && !q.hiddenmclass?.has(dtsv) && !q.hiddenmclass?.has(dtfusionrna)) {
 				const d = await query_svfusion(q, ds)
 				if (d) result.skewer.push(...d)
 			}
 
-			if (ds.queries.cnv) {
-				if (q.hiddenmclass?.has(dtcnv)) {
-					// cnv is hidden, do not load
-				} else if (ds.queries.cnv.requiresHardcodeCnvOnlyFlag && !q.hardcodeCnvOnly) {
-					// the required flag is missing. do not load
-				} else {
-					result.cnv = await ds.queries.cnv.get(q)
-					if (!Array.isArray(result.cnv?.cnvs)) throw 'result.cnv.cnvs[] not array'
-				}
+			if (ds.queries.cnv && !q.hiddenmclass?.has(dtcnv)) {
+				result.cnv = await ds.queries.cnv.get(q)
+				if (!Array.isArray(result.cnv?.cnvs)) throw 'result.cnv.cnvs[] not array'
 			}
 
 			filter_data(q, result)
