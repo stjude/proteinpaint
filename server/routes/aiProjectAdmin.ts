@@ -1,5 +1,6 @@
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
+import type { AIProjectAdminActions } from '#types'
 import type Database from 'better-sqlite3'
 
 export function init({ genomes }) {
@@ -11,23 +12,30 @@ export function init({ genomes }) {
 			}
 			const g = genomes[query.genome]
 			const ds = g.datasets[query.dslabel]
-
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
-
 			const connection = getDbConnection(ds) as Database.Database
-
+			const aiHalAuth = ds.queries?.AIHalAuth
+			if (!aiHalAuth) throw new Error('AIHalAuth queries not found in dataset.')
+			const userEmail = req.query.__protected__.clientAuthResult?.email || ''
 			/** get list of projects from db */
 			if (query.for === 'list') {
-				const projects = getProjects(connection)
+				let projects = getProjects(connection) as { name: string; id: number; current_user: string | null }[]
+				if (!aiHalAuth.checkAuthorization(req, 'listAllProjects')) {
+					projects = projects.filter(p => aiHalAuth.getUsers(connection, p.id).includes(userEmail))
+				}
 				res.send(projects)
 			} else if (query.for === 'admin') {
 				/** update projects in db */
 				/** If the url is too long, the method will be changed to POST
 				 * in dofetch. Checking if project.type == 'new' ensures the project
 				 * is added to the db.*/
-				if (req.method === 'PUT' || query.project.type === 'new') addProject(connection, query.project)
-				else if (req.method === 'POST') editProject(connection, query.project)
-				else if (req.method === 'DELETE') deleteProject(connection, query.project.id)
+				if (req.method === 'PUT' || (query.project.type === 'new' && aiHalAuth.checkAuthorization(req, 'addProject')))
+					addProject(connection, query.project)
+				else if (req.method === 'POST' && aiHalAuth.checkAuthorization(req, 'editProject')) {
+					editProject(connection, query.project)
+					aiHalAuth.setUser(connection, query.project.id, userEmail || 'admin', 12)
+				} else if (req.method === 'DELETE' && aiHalAuth.checkAuthorization(req, 'deleteProject'))
+					deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
 
 				let projectId = query.project.id
@@ -52,6 +60,8 @@ export function init({ genomes }) {
 			} else if (query.for === 'filterImages') {
 				/** get selections (i.e. slides) matching the project
 				 * from the ad hoc dictionary. */
+				const parsedLogin = aiHalAuth.parseLogin(req, connection)
+				if (parsedLogin.status === 'error') throw new Error('Authentication failed: ' + parsedLogin.error)
 				const q = ds.cohort.termdb.q
 				const data = await q.getFilteredImages(query.project.filter)
 				data.selectedImages = await ds.queries?.WSImages?.selectWSIImages()
@@ -60,8 +70,24 @@ export function init({ genomes }) {
 					data
 				})
 			} else if (query.for === 'images') {
+				const parsedLogin = aiHalAuth.parseLogin(req, connection)
+				if (parsedLogin.status === 'error') throw new Error('Authentication failed: ' + parsedLogin.error)
 				const images = getImages(connection, query.project)
-				res.send({ images })
+				res.send({ images, status: 'ok' })
+			} else if (query.for === 'logout') {
+				aiHalAuth.setUser(connection, query.project.id, null)
+
+				res.status(200).send({
+					status: 'ok',
+					message: 'User logged out successfully'
+				})
+			} else if (query.for === 'auth') {
+				const authorizations: { [key in AIProjectAdminActions]?: boolean } = {}
+				const actions: AIProjectAdminActions[] = query.auth || []
+				for (const action of actions) {
+					authorizations[action] = aiHalAuth.checkAuthorization(req, action)
+				}
+				res.status(200).send(authorizations)
 			} else {
 				res.send({
 					status: 'error',
@@ -79,7 +105,7 @@ export function init({ genomes }) {
 }
 
 function getProjects(connection: Database.Database): Database.RunResult | any[] {
-	const sql = 'SELECT name, id FROM project'
+	const sql = 'SELECT name, id, current_user FROM project'
 	return runSQL(connection, sql)
 }
 
@@ -95,12 +121,12 @@ export function getImages(connection: Database.Database, project: any): string[]
 	const imageRows = connection
 		.prepare(`SELECT image_path FROM project_images WHERE project_id = ? ORDER BY id ASC`)
 		.all(project.id) as { image_path: string }[]
-
 	return imageRows.map(r => r.image_path)
 }
 
 function editProject(connection: Database.Database, project: any): void {
 	const stmts: { sql: string; params: any[] }[] = []
+
 	if (!project.id) {
 		const res: any = connection.prepare(`SELECT id FROM project WHERE name = ?`).get(project.name)
 		project.id = res.id
@@ -149,6 +175,7 @@ function editProject(connection: Database.Database, project: any): void {
 			stmts.push({ sql: insertClass, params: multiParams })
 		}
 	}
+
 	runMultiStmtSQL(connection, stmts, 'add')
 }
 

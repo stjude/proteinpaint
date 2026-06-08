@@ -46,17 +46,20 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init(appState: MassState) {
-		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.prjtRepo)
-
+	async displayProjects(state: MassState, interactions: AIProjectAdminInteractions) {
 		try {
-			this.projects = await this.prjtRepo.getProjects(appState.vocab.genome, appState.vocab.dslabel)
+			this.projects = await this.prjtRepo.getProjects(state.vocab.genome, state.vocab.dslabel)
 		} catch (e: any) {
 			console.error('Error initializing AIProjectAdmin:', e)
 			throw e
 		}
-		this.prjtAdminUI = new ProjectAdminRender(this.dom, this.projects, this.interactions)
+		this.prjtAdminUI = new ProjectAdminRender(this.dom, this.projects, interactions, this.app)
 		this.prjtAdminUI.renderProjectAdmin()
+	}
+
+	async init(appState: MassState) {
+		this.interactions = new AIProjectAdminInteractions(this.app, this.id, this.prjtRepo)
+		await this.displayProjects(appState, this.interactions)
 	}
 
 	async main() {
@@ -99,11 +102,14 @@ class AIProjectAdmin extends PlotBase implements RxComponent {
 					config: { settings: { project: { id: existingProject.id } } }
 				})
 			}
+
 			await this.interactions.launchViewer(this.dom.holder, [])
+		}
+		if (project.type === 'logout') {
+			await this.displayProjects(state, this.interactions)
 		}
 	}
 }
-
 export const aiProjectAdminInit = getCompInit(AIProjectAdmin)
 export const componentInit = aiProjectAdminInit
 

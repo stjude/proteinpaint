@@ -1,6 +1,18 @@
 // TODO: use expressjs routing instead of this payload parameter
-export type AIProjectAdminForValues = 'list' | 'admin' | 'filterImages' | 'images'
-
+// You need to update allowedAIProjectForStrings in proteinpaint/server/src/routes/aiProjectAdmin.ts when ading for values
+export type AIProjectAdminForValues = 'list' | 'admin' | 'filterImages' | 'images' | 'logout' | 'auth'
+export type AIProjectAdminActions =
+	| 'listAllProjects'
+	| 'addProject'
+	| 'editProject'
+	| 'deleteProject'
+	| 'getImages'
+	| 'filterImages'
+	| 'logOut'
+	| 'annotate'
+	| 'required'
+export type AIProjectUserRoles = 'annotator' | 'admin'
+export type AIProjectAuthInfo = { role?: AIProjectUserRoles | ''; email?: string } | undefined
 export type AIProjectAdminRequest = {
 	genome: string
 	dslabel: string
@@ -12,6 +24,7 @@ export type AIProjectAdminRequest = {
 	for: AIProjectAdminForValues // TODO: use expressjs routing instead of this payload parameter
 	/** required for 'project' and 'selection' requests */
 	project?: AIProjectAdminProject
+	auth?: AIProjectAdminActions[]
 }
 
 export type AIProjectAdminProject = {

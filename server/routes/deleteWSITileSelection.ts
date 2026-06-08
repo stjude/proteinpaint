@@ -21,7 +21,7 @@ export function init({ genomes }) {
 			if (!ds) throw new Error('invalid dataset name')
 
 			if (typeof ds.queries?.WSImages?.deleteAnnotation === 'function') {
-				const result = await ds.queries.WSImages.deleteAnnotation(query)
+				const result = await ds.queries.WSImages.deleteAnnotation(query, req)
 				if (result?.status === 'error') {
 					return res.status(500).send(result)
 				}
@@ -49,9 +49,20 @@ export async function validate_query_deleteWSIAnnotation(ds: Mds3) {
 }
 
 function validateQuery(ds: any, connection: Database.Database) {
-	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest) => {
+	ds.queries.WSImages.deleteAnnotation = async (query: DeleteWSITileSelectionRequest, req: any) => {
 		const zoomCoordinates = JSON.stringify(query.tileSelection.zoomCoordinates)
-
+		const { current_user: currentUser } = connection
+			.prepare('SELECT current_user FROM project WHERE id = ?')
+			.get(query.projectId) as {
+			current_user: string | null
+		}
+		if (!(await ds.queries?.AIHalAuth?.checkAuthorization(req, 'annotate', currentUser))) {
+			return {
+				status: 'error',
+				error: 'logout'
+			}
+		}
+		const email = req.query.__protected__.clientAuthResult?.email || ''
 		if (
 			checkSelectionType(query.tileSelection, SelectionPrefixes.Prediction) &&
 			query.tileSelection.flag !== FlagStatus.Normal
@@ -106,11 +117,11 @@ function validateQuery(ds: any, connection: Database.Database) {
 					.prepare(
 						`
 				INSERT INTO project_flagged_predictions 
-				(project_id, prediction_class_id, coordinates, flag_type, timestamp, image_id)
-				VALUES (?, ?, ?, ?, ?, ?)
+				(project_id, user_email, prediction_class_id, coordinates, flag_type, timestamp, image_id)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
 			    `
 					)
-					.run(projectId, predictionId, zoomCoordinates, flagType, new Date().toISOString(), imageId)
+					.run(projectId, email, predictionId, zoomCoordinates, flagType, new Date().toISOString(), imageId)
 
 				return { status: 'ok' }
 			} catch (error: any) {

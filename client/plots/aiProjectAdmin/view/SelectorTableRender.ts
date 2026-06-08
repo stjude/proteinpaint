@@ -51,6 +51,7 @@ export class SelectorTableRender {
 	}
 
 	private render() {
+		if (this.images === undefined) this.dom.tableDiv.append('div').text('No images found').style('color', 'red')
 		const columns = this.images.cols.map(c => ({ ...c, sortable: true })) || []
 
 		// If columns missing, show a friendly message instead of throwing
@@ -129,7 +130,8 @@ export class SelectorTableRender {
 			const images = Array.from(this.selectedRows).map(i => `${this.images.rows[i][0].value}.svs`)
 			await this.interactions.editProject({
 				project: {
-					images
+					images,
+					type: 'edit'
 				}
 			})
 			;(this.dom.holder as any).selectAll('*').remove()

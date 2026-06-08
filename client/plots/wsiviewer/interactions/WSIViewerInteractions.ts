@@ -17,7 +17,13 @@ import {
 	createFeatureID,
 	type FlagStatusValues
 } from '#types'
-import type { SaveWSIAnnotationRequest, DeleteWSITileSelectionRequest, TileSelection } from '#types'
+import type {
+	SaveWSIAnnotationRequest,
+	SaveWSIAnnotationResponse,
+	DeleteWSITileSelectionRequest,
+	TileSelection,
+	DeleteWSITileSelectionResponse
+} from '#types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import { createDimSquareFeature, createStarFeature } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { DownloadCSVButtonRenderer } from '../view/DownloadCSVButtonRenderer'
@@ -720,7 +726,22 @@ export class WSIViewerInteractions {
 		}
 
 		try {
-			await dofetch3('deleteWSITileSelection', { method: 'DELETE', body })
+			const response: DeleteWSITileSelectionResponse = await dofetch3('deleteWSITileSelection', {
+				method: 'DELETE',
+				body
+			})
+			if (response.status === 'error' && response.error === 'logout') {
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: wsiApp.id,
+					config: {
+						settings: {
+							loggedOut: true
+						}
+					}
+				})
+				return
+			}
 		} catch (e: any) {
 			console.error('Error in deleteWSITileSelection request:', e.message || e)
 		}
@@ -833,11 +854,22 @@ export class WSIViewerInteractions {
 			projectId: aiProjectID,
 			wsimage: sessionWSImage.filename
 		}
-
 		try {
 			// TODO add UI rollback
-			await dofetch3('saveWSIAnnotation', { method: 'POST', body })
+			const response: SaveWSIAnnotationResponse = await dofetch3('saveWSIAnnotation', { method: 'POST', body })
 			// TODO find another way to clear server cache
+			if (response.status === 'error' && response.error === 'logout') {
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: wsiApp.id,
+					config: {
+						settings: {
+							loggedOut: true
+						}
+					}
+				})
+				return
+			}
 			clearServerDataCache()
 		} catch (e) {
 			console.error('Error in saveWSIAnnotation request:', e)

@@ -6,11 +6,13 @@ export class ProjectAdminRender {
 	dom: any
 	projects: any[]
 	interactions: AIProjectAdminInteractions
+	wsiApp: any
 
-	constructor(dom: any, projects: any[], interactions: AIProjectAdminInteractions) {
+	constructor(dom: any, projects: any[], interactions: AIProjectAdminInteractions, wsiApp: any) {
 		this.dom = dom
 		this.projects = projects //returns as [{ value: 'Project1' }, { value: 'Project2' }, ...]
 		this.interactions = interactions
+		this.wsiApp = wsiApp
 	}
 
 	/** Renders project administration UI, allowing users to
@@ -20,8 +22,22 @@ export class ProjectAdminRender {
 			.append('div')
 			.attr('id', 'sjpp-ai-prjt-admin-projects')
 			.attr('class', 'sjpp-deletable-ai-prjt-admin-div')
-		this.renderCreateProject(projectDiv)
-		this.renderProjectSelection(projectDiv)
+		//can this be async?
+		this.interactions
+			.getAuthorization(['addProject'])
+			.then(isAuthorized => {
+				console.log(isAuthorized)
+				if (isAuthorized.addProject) {
+					this.renderCreateProject(projectDiv)
+				}
+			})
+			.catch(e => {
+				console.error('Error checking authorization:', e.message || e)
+				sayerror(this.dom.errorDiv, 'Error checking user authorization. Please try again later.')
+			})
+			.finally(() => {
+				this.renderProjectSelection(projectDiv)
+			})
 	}
 
 	/** Users submit a new project name before sample
@@ -55,6 +71,9 @@ export class ProjectAdminRender {
 						this.dom.errorDiv.selectAll('*').remove()
 					}, 3000)
 				}
+				if (!(await this.interactions.getAuthorization(['addProject'])).addProject) {
+					return showError('Only users with admin role can create projects')
+				}
 
 				if (prjtNameLen == 0) {
 					//Shouldn't be necessary because of the debouncer
@@ -72,7 +91,7 @@ export class ProjectAdminRender {
 				if (this.dom.header) this.dom.header.text(`Project: ${projectName}`)
 
 				//calls main() to trigger CreateProjectRender
-				await this.interactions.appDispatchEdit({ settings: { project: { name: projectName, type: 'new' } } })
+				await this.interactions.appDispatchEdit({ project: { name: projectName, type: 'new' } })
 			})
 
 		input.on('keydown', () => {
@@ -87,11 +106,20 @@ export class ProjectAdminRender {
 	 * returned for the db to edit or delete, depending
 	 * on user roles.*/
 	renderProjectSelection(projectDiv) {
-		if (!this.projects.length) return
+		if (!this.projects.length) {
+			projectDiv
+				.append('div')
+				.attr('class', 'sjpp-project-select-table')
+				.style('padding', '10px')
+				.append('div')
+				.text('No projects found. Please create a new project or request one from your admin.')
+			return
+		}
 
 		const tableDiv = projectDiv.append('div').attr('class', 'sjpp-project-select-table').style('padding', '10px')
-		const columns = [{ label: 'Project', sortable: true }]
 
+		const columns = [{ label: 'Project', sortable: true }]
+		let rows = this.projects.map(p => [{ value: p.name }])
 		const columnButtons = [
 			{
 				text: 'Edit',
@@ -101,9 +129,9 @@ export class ProjectAdminRender {
 					/** TODO: open wsisamples plot ||
 					 *  get project details rather than edit the db */
 					const project = this.projects[idx]
-					await this.interactions.appDispatchEdit({ settings: { project } })
+					await this.interactions.appDispatchEdit({ project: { ...project, type: 'edit' } })
 					// remove 'dev' for production
-					this.interactions.launchViewer(this.dom.holder, [])
+					await this.interactions.launchViewer(this.dom.holder, [])
 				}
 			},
 			{
@@ -118,37 +146,60 @@ export class ProjectAdminRender {
 						sayerror(this.dom.errorDiv, 'Failed to export annotations')
 					}
 				}
-			},
-			{
-				//TODO: Add logic for admins only once user roles are implemented
-				//Leave here for development
-				text: 'Delete',
-				class: 'sja_menuoption',
-				callback: (_, i) => {
-					const project = this.projects[i]
-					this.interactions.deleteProject(project)
-
-					//Update UI after deletion. Maybe cleaner way to handle this?
-					//Maybe app.dispatch and rerender instead?
-					this.projects.splice(i, 1)
-					//Remove the table from the projectDiv and re-render
-					projectDiv.select('.sjpp-project-select-table').remove()
-					this.renderProjectSelection(projectDiv)
-				}
 			}
 		]
-
-		renderTable({
-			div: tableDiv,
-			rows: this.projects.map((p: any) => {
-				return [{ value: p.name }]
-			}),
-			header: {
-				allowSort: true
-			},
-			columns,
-			singleMode: true,
-			columnButtons
-		})
+		this.interactions
+			.getAuthorization(['deleteProject', 'logOut', 'required'])
+			.then(isAuthorized => {
+				if (isAuthorized.required) {
+					columns.push({ label: 'User', sortable: false })
+					rows = this.projects.map(p => [{ value: p.name }, { value: p.current_user ?? 'Editable' }])
+				}
+				if (isAuthorized.deleteProject) {
+					columnButtons.push({
+						text: 'Delete',
+						class: 'sja_menuoption',
+						callback: async (_, i) => {
+							const project = this.projects[i]
+							this.interactions.deleteProject(project).then(success => {
+								if (success) {
+									//Update UI after deletion. Maybe cleaner way to handle this?
+									//Maybe app.dispatch and rerender instead?
+									this.projects.splice(i, 1)
+									//Remove the table from the projectDiv and re-render
+									projectDiv.select('.sjpp-project-select-table').remove()
+									this.renderProjectSelection(projectDiv)
+								}
+							})
+						}
+					})
+				}
+				if (isAuthorized.logOut) {
+					columnButtons.push({
+						text: 'Force Checkout',
+						class: 'sja_menuoption',
+						callback: async (_, i) => {
+							const project = this.projects[i]
+							await this.interactions.onLogOut(this.interactions.genome, this.interactions.dslabel, project.id)
+						}
+					})
+				}
+			})
+			.catch(e => {
+				console.error('Error checking authorization:', e.message || e)
+				sayerror(this.dom.errorDiv, 'Error checking user authorization. Please try again later.')
+			})
+			.finally(() => {
+				renderTable({
+					div: tableDiv,
+					rows,
+					header: {
+						allowSort: true
+					},
+					columns,
+					singleMode: true,
+					columnButtons
+				})
+			})
 	}
 }

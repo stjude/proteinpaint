@@ -28,7 +28,8 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		animationDelay: 200,
 		defaultZoom: 5,
 		renderOnlyFlagged: false,
-		renderSkipped: false
+		renderSkipped: false,
+		loggedOut: false
 	}
 	return copyMerge(defaults, overrides)
 }

@@ -1,4 +1,4 @@
-import type { Mds3, TileSelection, SaveWSIAnnotationRequest } from '#types'
+import type { Mds3, TileSelection, SaveWSIAnnotationRequest, AIProjectAuthInfo } from '#types'
 import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
@@ -17,7 +17,7 @@ export function init({ genomes }) {
 			if (!ds) throw new Error('invalid dataset name')
 
 			if (typeof ds.queries?.WSImages?.saveWSIAnnotation === 'function') {
-				const result = await ds.queries.WSImages.saveWSIAnnotation(query)
+				const result = await ds.queries.WSImages.saveWSIAnnotation(query, req)
 				if (result?.status === 'error') {
 					return res.status(500).send(result)
 				}
@@ -44,8 +44,9 @@ export async function validate_query_saveWSIAnnotation(ds: Mds3) {
 }
 
 function validateQuery(ds: any, connection: Database.Database) {
-	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest) => {
+	ds.queries.WSImages.saveWSIAnnotation = async (annotation: SaveWSIAnnotationRequest, req: any) => {
 		try {
+			const { email = '' } = req.query.__protected__.clientAuthResult ?? ({} as AIProjectAuthInfo)
 			const tileSelection: TileSelection = annotation.tileSelection
 			const timestamp = new Date().toISOString()
 			const projectId = annotation.projectId
@@ -55,6 +56,15 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const classId = annotation.classId
 			const isAnnotation = checkSelectionType(tileSelection, SelectionPrefixes.Annotation)
 			const isPrediction = checkSelectionType(tileSelection, SelectionPrefixes.Prediction)
+			const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
+				current_user: string | null
+			}
+			if (!(await ds.queries?.AIHalAuth?.checkAuthorization(req, 'annotate', currentUser?.current_user ?? null))) {
+				return {
+					status: 'error',
+					error: 'logout'
+				}
+			}
 			if (!isAnnotation && !isPrediction) {
 				return {
 					status: 'error',
@@ -75,8 +85,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 				  AND image_path = ?
 				LIMIT 1
 			`
-			const getImageStmt = connection.prepare(getImageIdSql)
-			const imageRow = getImageStmt.get(projectId, wsimageFilename) as { id: number } | undefined
+			const imageRow = connection.prepare(getImageIdSql).get(projectId, wsimageFilename) as { id: number } | undefined
 
 			if (!imageRow?.id) {
 				return {
@@ -116,24 +125,8 @@ function validateQuery(ds: any, connection: Database.Database) {
 				.run(projectId, imageId, coords)
 
 			if (isAnnotation) {
-				// Query first user id from project_users table, later replace with actual user management
-				const userRow = connection
-					.prepare(
-						`SELECT id
-						  FROM project_users
-						  ORDER BY id
-						  LIMIT 1`
-					)
-					.get() as { id: number } | undefined
+				// Right now user_id can be null, do we want to be able to work on this without auth?
 
-				const userId = userRow?.id
-
-				if (userId === undefined) {
-					return {
-						status: 'error',
-						error: 'No users found in project_users table.'
-					}
-				}
 				if (tileSelection.flag === FlagStatus.Normal) {
 					connection
 						.prepare(
@@ -143,7 +136,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 						) VALUES (?, ?, ?, ?, ?, ?)
 					`
 						)
-						.run(projectId, userId, coords, timestamp, classId, imageId)
+						.run(projectId, email, coords, timestamp, classId, imageId)
 				} else {
 					connection
 						.prepare(
@@ -153,18 +146,20 @@ function validateQuery(ds: any, connection: Database.Database) {
 				) VALUES (?, ?, ?, ?, ?, ?, ?)
 				`
 						)
-						.run(projectId, userId, coords, timestamp, flag, classId, imageId)
+						.run(projectId, email, coords, timestamp, flag, classId, imageId)
 				}
 			} else if (isPrediction) {
 				// Not inserting if flag is normal
+				// Do we want to label flagged predictions with user_id
 				if (tileSelection.flag !== FlagStatus.Normal) {
 					const insertSql = `
-                    INSERT INTO project_flagged_predictions (project_id, prediction_class_id, coordinates, flag_type,image_id,timestamp)
-                    VALUES (?, ?, ?, ?,?,?)
+                    INSERT INTO project_flagged_predictions (project_id, user_email, prediction_class_id, coordinates, flag_type,image_id,timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 `
 					const insertStmt = connection.prepare(insertSql)
 					insertStmt.run(
 						annotation.projectId,
+						email,
 						annotation.classId,
 						JSON.stringify(tileSelection.zoomCoordinates),
 						tileSelection.flag,
