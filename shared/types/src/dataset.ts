@@ -1451,8 +1451,6 @@ type NumericDictTermClusterPlotsEntry = {
 type Survival = {
 	/** default settings for survival plot */
 	settings?: SurvivalSettings
-	/** when set, disable (grey out) the term0/term2 stratification controls with this tooltip; used to restrict the public/unauthenticated view */
-	stratificationDisabledMessage?: string
 }
 
 type Regression = {
@@ -1599,9 +1597,6 @@ keep this setting here for reason of:
 	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
 	regression?: Regression
-	/** when set, the per-plot local filter in every mass plot header is rendered disabled (greyed,
-	 * non-interactive) with this tooltip; used to restrict the public/unauthenticated view */
-	plotFilter?: { disabledMessage?: string }
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
 	/** Functionality */
@@ -2007,10 +2002,6 @@ type MassNavTabEntry = {
 	btm?: string
 	/** if true, does not show the tab */
 	hide?: boolean
-	/** if true, render the tab as disabled (visible but non-clickable) instead of active */
-	disabled?: boolean
-	/** tooltip shown on hover when the tab is disabled */
-	disabledMessage?: string
 }
 
 type MassNavAboutTabEntry = MassNavTabEntry & {
