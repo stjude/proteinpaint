@@ -333,6 +333,20 @@ export class Barchart extends PlotBase {
 		}
 	}
 
+	setSampleType(sampleType) {
+		if (!sampleType) return
+		const keys = Object.keys(sampleType)
+		if (!keys.includes('name') || !keys.includes('plural_name')) return
+		this.sampleType = sampleType
+		// override control labels with sample type metadata
+		Object.assign(this.config.controlLabels, {
+			sample: sampleType.name,
+			samples: sampleType.plural_name,
+			Sample: sampleType.name.charAt(0).toUpperCase() + sampleType.name.slice(1),
+			Samples: sampleType.plural_name.charAt(0).toUpperCase() + sampleType.plural_name.slice(1)
+		})
+	}
+
 	reactsTo(action) {
 		if (action.type.startsWith('plot_')) {
 			return (
@@ -391,7 +405,7 @@ export class Barchart extends PlotBase {
 			if (results.error) throw results
 			const data = results.data
 			this.charts = data.charts
-			this.sampleType = results.sampleType
+			this.setSampleType(results.sampleType)
 			this.bins = results.bins
 			if (results.chartid2dtterm) this.chartid2dtterm = results.chartid2dtterm
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)

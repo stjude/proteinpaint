@@ -410,7 +410,7 @@ export async function validate_termdb(ds) {
 
 	// minimum empty holder required for all datasets (later gdc should populate it)
 	// k: sampleid, v: type of that sample
-	ds.sampleId2Type = new Map()
+	if (!ds.sampleId2Type) ds.sampleId2Type = new Map()
 
 	if (ds.cohort?.db?.connection) {
 		// gdc does not use db connection
