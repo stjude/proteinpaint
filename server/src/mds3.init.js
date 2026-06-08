@@ -52,14 +52,14 @@ import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import {
 	validate_query_getWSIAnnotations,
 	validate_query_getWSIClassesQuery
-} from '../routes/aiProjectSelectedWSImages.ts'
+} from './aiProjectAdmin/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes, TermTypes } from '#shared/terms.js'
 import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
-import { validate_query_saveWSIAnnotation } from '../routes/saveWSIAnnotation.ts'
-import { validate_query_deleteWSIAnnotation } from '../routes/deleteWSITileSelection.ts'
+import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
+import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
 import { scaleOrdinal } from 'd3-scale'
 
 /*
