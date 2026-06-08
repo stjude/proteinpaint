@@ -1,4 +1,4 @@
-import type { LlmConfig, GeneDataTypeResult, DbRows } from '#types'
+import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -16,84 +16,118 @@ import type {
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
-import { extractGenesFromPrompt, parse_survival_terms_from_db } from './utils.ts'
+import { extractGenesFromPrompt } from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
 
-async function getScaffold_Survival(
-	user_prompt: string,
-	llm: LlmConfig,
-	dbPath: string
-): Promise<SurvivalScaffold | MsgToUser> {
-	const survival_terms = await find_survival_terms(user_prompt, llm, dbPath)
-	mayLog('surival_terms:', survival_terms)
-	return { type: 'text', text: 'Survival scaffold is not yet implemented.' }
-}
+async function getScaffold_Survival(user_prompt: string, llm: LlmConfig): Promise<SurvivalScaffold | MsgToUser> {
+	const prompt = `You are a ProteinPaint survival plot assistant. Your task is to extract the survival term, the stratification variable (term2), and an optional cohort filter from a user's natural language question, and return them in a strict JSON scaffold for configuring a survival (Kaplan-Meier) plot.
 
-async function find_survival_terms(
-	user_prompt: string,
-	llm: LlmConfig,
-	dbPath: string
-): Promise<string | DbRows[] | null> {
-	const { db_rows } = await parse_survival_terms_from_db(dbPath)
-	if (db_rows.length === 0) return null
-
-	const survivalTermList = db_rows.map(r => `  - "${r.name}": ${r.description}`).join('\n')
-
-	const prompt = `You are a ProteinPaint survival-term classifier. Given a user query and the list of survival terms available in the dataset, identify which survival term the user is referring to.
-
-## AVAILABLE SURVIVAL TERMS
-${survivalTermList}
+A survival plot shows survival probability over time for one or more groups of samples. It is defined by:
+  - A survival time-to-event term (e.g. "overall survival", "OS", "event-free survival", "EFS", "progression-free survival", "PFS", "relapse-free survival", "RFS", "disease-free survival", "DFS").
+  - A stratification variable (term2) used to split the cohort into curves (e.g. "sex", "BCR-ABL1 subtype", "TP53 mutation status", "age groups", "treatment arm"). Without term2, only a single overall curve can be drawn.
+  - An OPTIONAL cohort filter that restricts the sample set.
 
 ## OUTPUT SCHEMA
 Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
 {
-  "survivalTerm": "<exact name from the list above>" | null
+  "term": "<phrase>",     // OPTIONAL - the phrase describing the survival time-to-event term (e.g. "overall survival", "EFS")
+  "term2": "<phrase>",    // REQUIRED - the phrase describing the stratification variable used to split curves
+  "filter": "<phrase>"    // OPTIONAL - a cohort restriction phrase that narrows the sample set
 }
 
-## RULES
-1. The "survivalTerm" value MUST be an EXACT match (case-sensitive, character-for-character) of one of the names in the AVAILABLE SURVIVAL TERMS list above, or null.
-2. Map common abbreviations and synonyms to the corresponding term, e.g.:
-   - "overall survival", "os" → the term whose name corresponds to overall survival
-   - "event-free survival", "efs" → the term whose name corresponds to event-free survival
-   - "progression-free survival", "pfs" → the term whose name corresponds to progression-free survival
-   - "relapse-free survival", "rfs" → the term whose name corresponds to relapse-free survival
-   - "disease-free survival", "dfs" → the term whose name corresponds to disease-free survival
-3. If the user query does not mention or refer to any of the listed survival terms, return { "survivalTerm": null }.
-4. If the user query mentions survival generally but is ambiguous between multiple available terms, return { "survivalTerm": null }.
-5. Do NOT invent, paraphrase, or modify term names — copy verbatim from the list.
+## EXTRACTION RULES
+1. term is OPTIONAL. Extract the phrase that describes the survival type. Preserve the user's EXACT wording (do not expand "OS" to "overall survival", do not normalize hyphenation). If the user does not mention a specific survival type, omit term entirely.
+2. term2 is REQUIRED. Extract the phrase that describes the variable used to split survival curves (e.g. "by sex", "stratified by subtype", "across treatment arms"). Preserve the EXACT wording of the variable (e.g. keep "BCR-ABL1 subtype" not "subtype", keep "TP53 mutation status" not "TP53"). Drop only prepositions/connectors like "by", "stratified by", "across", "for each", "split by" — keep the variable phrase itself.
+3. filter is OPTIONAL and only set when the user restricts the cohort to a specific subpopulation (e.g. "in pediatric patients", "for AML cases", "among women"). Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
+4. Do NOT put the same information in both term2 AND filter. If a phrase describes the grouping variable, it belongs in term2; if it restricts the overall cohort, it belongs in filter.
+5. If the user does not provide a stratification variable (no term2 can be extracted), return:
+{ "type": "text", "text": "No stratification variable found for survival plot" }
 
 ## EXAMPLES
-Query: "Show overall survival for AML patients"
-Output: { "survivalTerm": "<exact name corresponding to overall survival, or null if not in list>" }
 
-Query: "Plot EFS by sex"
-Output: { "survivalTerm": "<exact name corresponding to event-free survival, or null if not in list>" }
+--- Survival term + stratification ---
+Q: "Show overall survival by sex"
+A: {
+  "term": "overall survival",
+  "term2": "sex"
+}
 
-Query: "Show gene expression of TP53"
-Output: { "survivalTerm": null }
+--- Abbreviation + stratification ---
+Q: "Plot EFS stratified by BCR-ABL1 subtype"
+A: {
+  "term": "EFS",
+  "term2": "BCR-ABL1 subtype"
+}
 
-Classify the following user query:
-Query: ${user_prompt}
+--- Stratification only (no survival type specified) ---
+Q: "Survival curves by treatment arm"
+A: {
+  "term2": "treatment arm"
+}
+
+--- Survival term + stratification + cohort filter ---
+Q: "Compare OS across TP53 mutation status in pediatric AML patients"
+A: {
+  "term": "OS",
+  "term2": "TP53 mutation status",
+  "filter": "pediatric AML patients"
+}
+
+--- Natural-language stratification phrasing ---
+Q: "Show progression-free survival for each age group in women"
+A: {
+  "term": "progression-free survival",
+  "term2": "age group",
+  "filter": "women"
+}
+
+## NEGATIVE EXAMPLES — WHAT NOT TO DO
+Q: "Plot OS by sex in pediatric patients"
+WRONG:
+{
+  "term": "OS",
+  "term2": "sex in pediatric patients"   // cohort filter must be split out into the filter field
+}
+RIGHT:
+{
+  "term": "OS",
+  "term2": "sex",
+  "filter": "pediatric patients"
+}
+
+Q: "Plot EFS stratified by BCR-ABL1 subtype"
+WRONG:
+{
+  "term": "event-free survival",         // do NOT expand the user's exact wording "EFS"
+  "term2": "subtype"                     // do NOT drop the qualifier "BCR-ABL1"
+}
+RIGHT:
+{
+  "term": "EFS",
+  "term2": "BCR-ABL1 subtype"
+}
+
+Parse the following user query into the JSON scaffold according to the rules and schema defined above:
+Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
-	mayLog(`--> Survival term classifier: ${response}`)
+	mayLog(`--> Survival scaffold: ${response}`)
 	try {
 		const parsed = JSON.parse(response)
-		const picked = parsed.survivalTerm
-		if (!picked || picked === 'null') return db_rows
-		const match = db_rows.find(r => r.name === picked)
-		if (!match) {
-			mayLog(
-				`Survival term classifier returned "${picked}" which is not in db_rows; returning full list for user disambiguation.`
-			)
-			return db_rows
+		if (parsed && parsed.type === 'text') return parsed as MsgToUser
+		if (!parsed.term2) {
+			return {
+				type: 'text',
+				text: 'No stratification variable (term2) could be extracted from the prompt for the survival plot.'
+			}
 		}
-		return match.name
+		const scaffold = parsed as SurvivalScaffold
+		scaffold.plotType = 'survival'
+		return scaffold
 	} catch {
-		mayLog(`Failed to parse survival term classifier response: ${response}`)
-		throw `Failed to parse survival term classifier response: ${response}`
+		throw new Error(`Failed to parse SurvivalScaffold from LLM response: ${response}`)
 	}
 }
 
@@ -1145,7 +1179,7 @@ export async function inferScaffold(
 		case 'genomeBrowser':
 			return await getScaffold_genomeBrowser(user_prompt, llm)
 		case 'survival':
-			return await getScaffold_Survival(user_prompt, llm, dbPath)
+			return await getScaffold_Survival(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,
