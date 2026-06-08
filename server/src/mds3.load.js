@@ -337,6 +337,13 @@ export async function load_driver(q, ds) {
 				result.cnv = await ds.queries.cnv.get(q)
 				if (!Array.isArray(result.cnv?.cnvs)) throw 'result.cnv.cnvs[] not array'
 			}
+			if (ds.queries.itd && !q.hiddenmclass?.has(dtitd)) {
+				const r = await ds.queries.itd.get(q)
+				if (Array.isArray(r.itds)) {
+					if (!result.cnv) result.cnv = { cnvs: [] }
+					result.cnv.cnvs.push(...r.itds)
+				}
+			}
 
 			filter_data(q, result)
 

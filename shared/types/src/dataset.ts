@@ -661,9 +661,18 @@ type CnvSegmentQuery = {
 	/** this cutoff is applied in ds.queries.cnv.get(), in that up to this number of segments will be returned
 	overrides default 10k
 	this applies to matrix, geneVariant, and mds3 tk
-	todo there lacks a way for getter to message downstream code of exceeding limit
 	*/
 	maxReturnCutoff?: number
+}
+/** ITDs */
+type ITDQuery = {
+	/** file is bgzipped with columns:
+	1. chr
+	2. start, 0-based
+	3. stop
+	4. { "sample": "3332"}
+	*/
+	file?: string
 }
 
 /*
@@ -1050,6 +1059,7 @@ type Mds3Queries = {
 	snvindel?: SnvIndelQuery
 	svfusion?: SvFusion
 	cnv?: CnvSegmentQuery
+	itd?: ITDQuery
 	/** gene-level cnv, only available on gdc; query by gene symbol, ds must define getter
 	 */
 	geneCnv?: {

@@ -19,14 +19,16 @@ import serverconfig from './serverconfig.js'
 import {
 	dtsnvindel,
 	dtfusionrna,
-	dt2label,
 	dtsv,
 	dtcnv,
+	dtitd,
+	dt2label,
 	mclass,
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
 	mclasscnvloss,
+	mclassitd,
 	dtTerms,
 	getColors
 } from '#shared/common.js'
@@ -169,6 +171,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		await validate_query_svfusion(ds, genome)
 		await validate_query_geneCnv(ds, genome)
 		await validate_query_cnv(ds, genome)
+		await validate_query_itd(ds, genome)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validateQueryIsoformExpression(ds, genome)
@@ -1655,6 +1658,88 @@ async function validate_query_cnv(ds, genome) {
 	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
 	q.get = await addCnvGetter(ds, genome)
 	mayValidateSampleHeader(ds, q.samples, 'cnv')
+}
+async function validate_query_itd(ds, genome) {
+	const q = ds.queries.itd
+	if (!q) return
+	if (!q.file) throw 'itd.file missing'
+	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
+	await utils.validate_tabixfile(q.file)
+	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+		q.samples = validateSampleHeader2(ds, q.samples, 'itd')
+	}
+	q.get = async param => {
+		if (param.hiddenmclass?.has(dtitd)) {
+			return { itds: [] }
+		}
+		utils.validateRglst(param, genome)
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return { itds: [] }
+		}
+		const itds = [] // list of itd events to be returned
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: (line, ps) => {
+					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('cnv json err')
+						return
+					}
+					j.dt = dtitd
+					j.class = mclassitd
+					j.chr = r.chr
+					j.start = start
+					j.stop = stop
+					if (j.sample) {
+						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (j.sample === undefined) {
+							// skip unmapped samples here as there are already
+							// handled during validation (see validateSampleHeader2())
+							return
+						}
+						if (limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
+
+						const sampleObj = { sample_id: j.sample }
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, '', j.sample].join(ssmIdFieldsSeparator)
+
+						delete j.sample
+						j.samples = [sampleObj]
+						j.occurrence = 1 // each itd is hardcoded to only have 1 sample
+					} else {
+						// itd without sample
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, ''].join(ssmIdFieldsSeparator)
+					}
+					itds.push(j)
+				}
+			})
+		}
+		return { itds }
+	}
 }
 
 async function validate_query_ld(ds, genome) {

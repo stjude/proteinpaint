@@ -389,6 +389,9 @@ export default function (): Mds3 {
 			cnv: {
 				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			},
+			itd: {
+				file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz'
+			},
 			singleSampleMutation: {
 				src: 'native',
 				sample_id_key: 'sample_id',

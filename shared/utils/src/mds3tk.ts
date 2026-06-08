@@ -1,4 +1,4 @@
-import { dtcnv, dtsnvindel, dtsv, dtfusionrna } from './common.js'
+import { dtcnv, dtsnvindel, dtsv, dtfusionrna, dtitd, mclassitd } from './common.js'
 
 // this script should contain mds3 track-related stuff shared between client and backend
 
@@ -63,8 +63,11 @@ export function guessSsmid(ssmid) {
 		return { dt: dtsnvindel, l: [chr, pos, ref, alt] }
 	}
 	if (l.length == 5) {
-		// cnv. if type=cat, _value is blank string
 		const [chr, _start, _stop, _class, _value] = l
+		if (_class == mclassitd) {
+			return { dt: dtitd, l: [chr, start, stop, _class, value] }
+		}
+		// cnv. if type=cat, _value is blank string
 		const start = Number(_start),
 			stop = Number(_stop),
 			value = _value == '' ? null : Number(_value)
