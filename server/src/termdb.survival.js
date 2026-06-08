@@ -50,8 +50,15 @@ export async function get_survival(q, ds) {
 		carries a divide-by or overlay term so the restriction holds even if a client bypasses
 		the disabled UI controls. Datasets without the hook are unaffected.
 		*/
-		if ((dt || ot) && ds.cohort.termdb.restrictSurvivalStratification?.(q.__protected__)) {
-			throw 'Survival stratification (divide-by and overlay) requires an authenticated login, please email to Registry@stjude.org'
+		if (dt || ot) {
+			// the hook returns the dataset's own rejection message (so the server reason matches the
+			// UI tooltip on the disabled controls), or just `true` to reject with a generic message
+			const restrict = ds.cohort.termdb.restrictSurvivalStratification?.(q.__protected__)
+			if (restrict) {
+				throw typeof restrict == 'string'
+					? restrict
+					: 'Survival stratification (divide-by and overlay) is not available for this view'
+			}
 		}
 		const data = await getData(
 			{
