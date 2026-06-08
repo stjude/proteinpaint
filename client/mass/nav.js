@@ -402,6 +402,7 @@ function setRenderers(self) {
 			.style('color', '#aaa')
 			.style('opacity', d => (d.disabled ? 0.5 : 1))
 			.style('cursor', d => (d.disabled ? 'not-allowed' : 'pointer'))
+			.attr('title', d => d.disabledMessage || '')
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				self.setTab(event, d)
@@ -576,13 +577,6 @@ function setInteractivity(self) {
 	}
 
 	self.mouseover = (event, d) => {
-		if (d.disabled && d.disabledMessage) {
-			self.dom.tip.clear()
-			self.dom.tip.d.append('div').text(d.disabledMessage)
-			self.dom.tip.showunder(event.target)
-		} else {
-			self.dom.tip.hide()
-		}
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
