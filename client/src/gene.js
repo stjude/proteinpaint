@@ -6,7 +6,7 @@ let tip
 
 export function gene_searchbox(p) {
 	if (!tip) {
-		tip = new Menu({ padding: '' })
+		tip = new client.Menu({ padding: '' })
 		tip.d.style('z-index', 1000)
 	}
 
