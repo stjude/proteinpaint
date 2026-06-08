@@ -378,7 +378,15 @@ function setRenderers(self) {
 			.selectAll('td')
 			.data((key, i) =>
 				self.tabs.map((row, colNum) => {
-					return { rowNum: i, key, colNum, label: row[key], subheader: row.subheader }
+					return {
+						rowNum: i,
+						key,
+						colNum,
+						label: row[key],
+						subheader: row.subheader,
+						disabled: row.disabled,
+						disabledMessage: row.disabledMessage
+					}
 				})
 			)
 			.enter()
@@ -392,7 +400,8 @@ function setRenderers(self) {
 			.style('border-left', '1px solid #ccc')
 			.style('border-right', '1px solid #ccc')
 			.style('color', '#aaa')
-			.style('cursor', 'pointer')
+			.style('opacity', d => (d.disabled ? 0.5 : 1))
+			.style('cursor', d => (d.disabled ? 'not-allowed' : 'pointer'))
 			.html(d => d.label)
 			.on('click', (event, d) => {
 				self.setTab(event, d)
@@ -538,6 +547,8 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.setTab = async (event, d) => {
+		// a disabled tab is shown to advertise the capability but cannot be activated
+		if (d.disabled) return
 		//Reset the activeTab to the current tab if no tab is selected
 		if (self.activeTab == -1) self.activeTab == d.colNum
 		if (d.colNum === self.activeTab && !self.searching) {
@@ -567,6 +578,13 @@ function setInteractivity(self) {
 	}
 
 	self.mouseover = (event, d) => {
+		if (d.disabled && d.disabledMessage) {
+			self.dom.tip.clear()
+			self.dom.tip.d.append('div').text(d.disabledMessage)
+			self.dom.tip.showunder(event.target)
+		} else {
+			self.dom.tip.hide()
+		}
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => {
 			//light yellow for inactive tabs and grey-yellow for this active tab
@@ -579,6 +597,7 @@ function setInteractivity(self) {
 	}
 
 	self.mouseout = () => {
+		self.dom.tip.hide()
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}

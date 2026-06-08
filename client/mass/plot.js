@@ -94,12 +94,22 @@ class MassPlot {
 			})
 		}
 
-		if (!this.state.config.hidePlotFilter)
+		if (!this.state.config.hidePlotFilter) {
+			const filterDisabledMsg = this.app.vocabApi.termdbConfig?.plotFilter?.disabledMessage
+			/*
+			When the local filter is disabled (e.g. for the public/unauthenticated view), render it
+			into an inner greyed, non-interactive div while the outer filterDiv keeps pointer events
+			so its tooltip explaining why still appears on hover.
+			*/
+			const filterHolder = filterDisabledMsg
+				? this.dom.filterDiv.append('div').style('pointer-events', 'none').style('opacity', 0.5)
+				: this.dom.filterDiv
+			if (filterDisabledMsg) this.dom.filterDiv.attr('title', filterDisabledMsg).style('cursor', 'not-allowed')
 			promises.filter = filterRxCompInit({
 				app: this.app,
 				vocabApi: this.app.vocabApi,
 				parentId: this.id,
-				holder: this.dom.filterDiv,
+				holder: filterHolder,
 				hideLabel: true,
 				emptyLabel: '+Add new filter',
 				callback: filter => {
@@ -110,6 +120,7 @@ class MassPlot {
 					})
 				}
 			})
+		}
 
 		this.components = await multiInit(promises)
 	}

@@ -805,13 +805,31 @@ async function setTermInput(opts) {
 		}
 	}
 
+	/*
+	When disabled, the pill sits in a wrapper: the outer div carries the tooltip and "not-allowed"
+	cursor (and still receives hover events) while the inner div turns off pointer events and greys
+	out — a native title on the pill itself would not fire once its pointer-events are off. When not
+	disabled the pill holder is a plain div, leaving the common-case DOM unchanged.
+	*/
+	if (opts.disabledMessage) {
+		self.dom.pillDiv = self.dom.inputTd
+			.append('div')
+			.attr('title', opts.disabledMessage)
+			.style('cursor', 'not-allowed')
+			.append('div')
+			.style('pointer-events', 'none')
+			.style('opacity', 0.5)
+	} else {
+		self.dom.pillDiv = self.dom.inputTd.append('div')
+	}
+
 	const pill = await termsettingInit({
 		menuOptions: opts.menuOptions || '*',
 		numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
 		vocabApi: opts.vocabApi || opts.app.vocabApi,
 		vocab: opts.state?.vocab,
 		activeCohort: opts.state?.activeCohort,
-		holder: self.dom.inputTd.append('div'),
+		holder: self.dom.pillDiv,
 		debug: opts.debug,
 		usecase: opts.usecase,
 		disable_terms: opts.disable_terms,
