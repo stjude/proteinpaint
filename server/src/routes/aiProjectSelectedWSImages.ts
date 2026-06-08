@@ -1,5 +1,5 @@
 import type { RoutePayload, RouteApi } from '#types'
-import { init } from '../../routes/aiProjectSelectedWSImages.ts'
+import { init } from '../aiProjectAdmin/aiProjectSelectedWSImages.ts'
 
 const payload: RoutePayload = {
 	init,

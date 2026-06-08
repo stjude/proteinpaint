@@ -1,6 +1,6 @@
 import type { RouteApi, AIProjectAdminRequest, AIProjectAdminForValues, AIProjectAdminProject } from '#types'
 import { validGenomeDs, validString, validNumber, validStringArr } from './common.ts'
-import { init } from '../../routes/aiProjectAdmin.ts'
+import { init } from '../aiProjectAdmin/aiProjectAdmin.ts'
 
 export const api: RouteApi = {
 	endpoint: 'aiProjectAdmin',
