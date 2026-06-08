@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.191.3
 
 Fixes:
 - tk.hiddenMclassDt to streamline handling of special flags for snv-/cnv-only views
