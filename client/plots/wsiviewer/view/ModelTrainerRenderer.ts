@@ -22,11 +22,11 @@ export class ModelTrainerRenderer {
 			.style('border', '1px solid black')
 			.style('background-color', 'transparent')
 			.style('margin', '0 10px')
-			.style('cursor', 'pointer')
 			.text('Retrain Model')
 			.on('click', async () => {
 				this.wsiinteractions.toggleLoadingDiv(true)
 				await this.wsiinteractions.onRetrainModelClicked(genome, dslabel, projectId)
+
 				//temp implementation to call route
 				//Spinner will be removed when main() is called
 			})

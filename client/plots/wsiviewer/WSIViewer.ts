@@ -11,7 +11,6 @@ import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
-import { SpinnerRenderer } from '#plots/wsiviewer/view/SpinnerRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
 import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import { SkipFlagCheckRenderer } from './view/SkipFlagCheckRenderer'
@@ -40,7 +39,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 	// New: persistent MapRenderer instance reused across main() calls
 	private mapRenderer: MapRenderer | undefined
 	private skipFlagRenderer = new SkipFlagCheckRenderer()
-	private spinnerRenderer = new SpinnerRenderer()
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -109,31 +107,18 @@ class WSIViewer extends PlotBase implements RxComponent {
 			aiProjectID,
 			aiWSIMageFiles
 		)
-		// if (settings.activeID) {
-		// 	this.app.dispatch({
-		// 		type: 'plot_edit',
-		// 		id: this.id,
-		// 		config: {
-		// 			settings: {
-		// 				renderWSIViewer: false,
-		// 				changeTrigger: Date.now(),
-		// 				activeID: '',
-		// 				activeAnnotation:
-		// 					SessionWSImage.findTileIndexByID(
-		// 						settings.activeID,
-		// 						viewModel.sampleWSImages[settings.displayedImageIndex],
-		// 						settings
-		// 					) || 0,
-		// 				renderAnnotationTable: true
-		// 			}
-		// 		}
-		// 	})
-		// 	return
-		// }
 		const wsimages = viewModel.sampleWSImages
 
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
+		const renderSpinner = settings.isSavingAnnotation || settings.isChangingImages
+
+		if (renderSpinner) {
+			this.wsiViewerInteractions.toggleSpinner(true, this.dom.holder)
+		} else {
+			this.wsiViewerInteractions.toggleSpinner(false, this.dom.holder)
+		}
+
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
 			this.wsiViewerInteractions.toggleLoadingDiv(false)
@@ -168,9 +153,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			this.wsiViewerInteractions.viewerClickListener,
 			viewModel.sampleWSImages[settings.displayedImageIndex]
 		)
-		if (!settings.isSavingAnnotation) {
-			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
-		}
+		// this.wsiViewerInteractions.toggleSpinner(renderSpinner)
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
 
@@ -189,6 +172,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.wsiViewerInteractions,
 				numTotalFiles
 			)
+			this.wsiViewerInteractions.toggleSpinner(false, this.dom.holder)
 
 			// Use the reused mapRenderer instance to render/update the map
 			this.map = this.mapRenderer.render(this.dom.mapHolder, settings)
@@ -204,9 +188,15 @@ class WSIViewer extends PlotBase implements RxComponent {
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(this, settings, this.wsiViewerInteractions)
 			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
+			if (!renderSpinner) {
+				this.dom.annotationsHolder.selectAll('tr').style('cursor', 'pointer')
+			}
 			this.dom.legendHolder.selectAll('*').remove()
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
 			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
+			if (!renderSpinner) {
+				this.dom.legendHolder.selectAll('button').style('cursor', 'pointer')
+			}
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 			this.dom.mapHolder.select('#SFField').remove()
 			this.skipFlagRenderer.render(
@@ -235,10 +225,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
-		if (settings.isSavingAnnotation) {
-			this.spinnerRenderer.renderSpinner(this.dom.holder)
-		}
-
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
 	}
 }

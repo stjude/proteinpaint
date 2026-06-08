@@ -35,7 +35,6 @@ export class WSIAnnotationsRenderer {
 				const isSelected = selectedIdx === rowIdx
 				const origColor = tr.style('background-color') || 'transparent'
 
-				tr.style('cursor', 'pointer')
 				//Show selected row in yellow on render
 				tr.style('background-color', isSelected ? selectedColor : origColor)
 

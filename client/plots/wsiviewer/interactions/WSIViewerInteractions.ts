@@ -43,6 +43,7 @@ export class WSIViewerInteractions {
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
 	toggleThumbnails: (start: number) => void
+	toggleSpinner: (spin: boolean, holder: any) => void
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -53,7 +54,8 @@ export class WSIViewerInteractions {
 						activeAnnotation: 0,
 						sessionsTileSelection: [],
 						displayedImageIndex: index,
-						renderWSIViewer: true
+						renderWSIViewer: true,
+						isChangingImages: true
 					}
 				}
 			})
@@ -352,7 +354,6 @@ export class WSIViewerInteractions {
 						aiProjectID,
 						currentIndex
 					)
-
 					return
 				}
 
@@ -374,6 +375,7 @@ export class WSIViewerInteractions {
 							}
 						}
 					})
+					this.toggleSpinner(true, holder)
 					// Visual add
 					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
 
@@ -579,14 +581,39 @@ export class WSIViewerInteractions {
 			}
 		}
 
-		this.toggleThumbnails = (start: number) => {
+		this.toggleThumbnails = (start: number, doneRendering: boolean = false) => {
+			if (doneRendering) {
+				wsiApp.app.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							renderWSIViewer: true,
+							isChangingImages: false
+						}
+					}
+				})
+			}
+
 			wsiApp.app.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
-					settings: { thumbnailRangeStart: start, displayedImageIndex: start, renderWSIViewer: true }
+					settings: {
+						thumbnailRangeStart: start,
+						displayedImageIndex: start,
+						renderWSIViewer: true,
+						isChangingImages: true
+					}
 				}
 			})
+		}
+		this.toggleSpinner = (spin: boolean) => {
+			if (spin) {
+				wsiApp.dom.holder.selectAll('*').style('cursor', 'wait')
+			} else {
+				wsiApp.dom.holder.selectAll('*').style('cursor', 'default')
+			}
 		}
 	}
 
