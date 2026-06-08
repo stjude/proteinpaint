@@ -1059,7 +1059,6 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('termdb/sampleScatter', { headers, body, signal })
 	}
 
-	//TODO: Will need to add in filter
 	async getScatterSingleCellPlotData(opts, signal = undefined) {
 		const headers = await this.mayGetAuthHeaders('termdb')
 		const body = {
@@ -1067,6 +1066,9 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.state.vocab.dslabel,
 			...opts
 		}
+		if (body.colorTW) body.colorTW = this.getTwMinCopy(opts.colorTW)
+		if (body.filter) body.filter = getNormalRoot(opts.filter)
+
 		return await this.dofetch3('termdb/singleCellPlots', { headers, body, signal })
 	}
 

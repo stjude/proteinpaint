@@ -45,7 +45,8 @@ async function getSingleCellScatter(req, res, ds) {
 		const tw = q.colorTW as any // not using "TermWrapper" due to tsc err
 		if (!tw || !isSingleCellTerm(tw.term))
 			throw new Error('colorTW must be provided and be a single cell term for single cell scatter plot')
-		const arg: any = { plots: [name], sample }
+		const terms = [tw]
+		const arg: any = { plots: [name], sample, terms, filter: q.filter, filter0: q.filter0 }
 
 		if (tw.term.type == SINGLECELL_GENE_EXPRESSION) arg.gene = tw.term.gene
 		else if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
