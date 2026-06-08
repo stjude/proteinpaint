@@ -155,6 +155,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		const state = this.getState(this.app.getState())
 		const controlLabels = state.config.controlLabels
 		if (!controlLabels) throw 'controls labels not found'
+		// public/unauthenticated views disable stratification to limit inference from aggregated data; admin/user are unaffected
+		const stratDisabledMsg = this.app.vocabApi.termdbConfig?.survival?.stratificationDisabledMessage
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.survival', this.download)
 		} else {
@@ -175,7 +177,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							label: controlLabels.term2.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: t0_t2_defaultQ
+							defaultQ4fillTW: t0_t2_defaultQ,
+							disabledMessage: stratDisabledMsg
 						},
 						{
 							type: 'term',
@@ -186,7 +189,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							label: controlLabels.term0.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: t0_t2_defaultQ
+							defaultQ4fillTW: t0_t2_defaultQ,
+							disabledMessage: stratDisabledMsg
 						},
 						{
 							label: 'Chart width',

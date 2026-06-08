@@ -1451,6 +1451,8 @@ type NumericDictTermClusterPlotsEntry = {
 type Survival = {
 	/** default settings for survival plot */
 	settings?: SurvivalSettings
+	/** when set, disable (grey out) the term0/term2 stratification controls with this tooltip; used to restrict the public/unauthenticated view */
+	stratificationDisabledMessage?: string
 }
 
 type Regression = {
@@ -1597,6 +1599,9 @@ keep this setting here for reason of:
 	numericDictTermCluster?: NumericDictTermCluster
 	survival?: Survival
 	regression?: Regression
+	/** when set, the per-plot local filter in every mass plot header is rendered disabled (greyed,
+	 * non-interactive) with this tooltip; used to restrict the public/unauthenticated view */
+	plotFilter?: { disabledMessage?: string }
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
 	/** Functionality */
@@ -1762,6 +1767,12 @@ keep this setting here for reason of:
 	 * - Skipped when undefined. */
 	pruneTermdbConfig?: (c: any, q: any, ds: any) => void
 	hiddenIds?: string[]
+	/* (server-side) when this returns true, a survival request carrying a stratification term
+	(term0 divide-by, or an overlay/series term2) is rejected. Pairs with the client-side
+	termdbConfig.survival.stratificationDisabledMessage flag to enforce the same policy server-side
+	against crafted requests. First arg is the request's __protected__ payload (same shape
+	isTermVisible/getAdditionalFilter receive). Skipped when undefined. */
+	restrictSurvivalStratification?: (__protected__: any) => boolean
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** Populated by server_init_db_queries from the term2role sidecar table when it is non-empty.
 	 * Map keys are role names; values are the Set of term IDs visible to that role. Undefined when
@@ -1993,6 +2004,10 @@ type MassNavTabEntry = {
 	btm?: string
 	/** if true, does not show the tab */
 	hide?: boolean
+	/** if true, render the tab as disabled (visible but non-clickable) instead of active */
+	disabled?: boolean
+	/** tooltip shown on hover when the tab is disabled */
+	disabledMessage?: string
 }
 
 type MassNavAboutTabEntry = MassNavTabEntry & {

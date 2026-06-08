@@ -43,6 +43,16 @@ export async function get_survival(q, ds) {
 		const ot = q[`term${survTermIndex == 1 ? 2 : 1}`]
 		// dt: divideBy term, the chart term
 		const dt = q.term0
+
+		/*
+		Some datasets restrict stratification for unauthenticated/aggregate views to limit
+		inference from small subgroups. When the dataset opts in, reject any request that
+		carries a divide-by or overlay term so the restriction holds even if a client bypasses
+		the disabled UI controls. Datasets without the hook are unaffected.
+		*/
+		if ((dt || ot) && ds.cohort.termdb.restrictSurvivalStratification?.(q.__protected__)) {
+			throw 'Survival stratification (divide-by and overlay) requires an authenticated login, please email to Registry@stjude.org'
+		}
 		const data = await getData(
 			{
 				terms: twLst,
