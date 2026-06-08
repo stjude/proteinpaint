@@ -589,7 +589,6 @@ function setInteractivity(self) {
 	}
 
 	self.mouseout = () => {
-		self.dom.tip.hide()
 		const defaultActiveColor = self.state.termdbConfig.massNav?.activeColor || activeTabBgColor
 		self.dom.tds.style('background-color', t => (self.activeTab == t.colNum ? defaultActiveColor : 'transparent'))
 	}
