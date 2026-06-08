@@ -9,6 +9,7 @@ import { plotColor } from '#shared/common.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
+import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
 
@@ -104,7 +105,7 @@ class ViolinPlot extends PlotBase {
 		this.components = {}
 		if (this.opts.mode == 'minimal') return
 
-		const specialCase = getSpecialCase(this.config)
+		const specialCase = getSingleCellSpecialCase(this.config)
 
 		const inputs = [
 			{
