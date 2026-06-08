@@ -5,9 +5,7 @@ import { rgb } from 'd3-color'
 import type { TermdbSingleCellPlotsResponse } from '#types'
 
 /** Some large scale single cell plots are server side rendered and
- * ported to the ScatterViewModel2DLarge.ts.
- *
- * TODO: Incorporate the plot filter in to the request. */
+ * ported to the ScatterViewModel2DLarge.ts.*/
 
 export class ScatterSingleCellModel extends ScatterModelBase {
 	constructor(scatter: Scatter) {
@@ -16,10 +14,13 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 
 	getDataRequestOpts() {
 		const c: any = this.scatter.config
+		const state = this.scatter.state
 
 		return {
 			colorTW: c.colorTW,
 			singleCellPlot: c.singleCellPlot,
+			filter: state.termfilter.filter,
+			filter0: state.termfilter.filter0,
 			canvasSettings: {
 				cutoff: maxSvgSamplesCutoff,
 				width: this.scatter.settings.svgw,
@@ -51,7 +52,6 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 			this.charts = []
 			/** There should only be one chart */
 			this.createChart('Default', data.result.Default)
-
 			this.range = data.range
 			this.initRanges()
 		} catch (e: any) {

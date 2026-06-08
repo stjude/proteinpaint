@@ -1,3 +1,4 @@
+import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { ColorLegendEntry, ShapeLegendEntry } from './termdb.sampleScatter.ts'
 
@@ -12,6 +13,8 @@ export type TermdbSingleCellPlotsRequest = {
 		/** Sample name, optional */
 		sample?: string
 	}
+	filter: Filter
+	filter0: Filter
 	/** When sample size is too large, canvas rendering uses
 	 * these settings to control how the plot is rendered. */
 	canvasSettings: {

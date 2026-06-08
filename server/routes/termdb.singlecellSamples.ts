@@ -15,6 +15,8 @@ import type {
 	Cell,
 	Plot,
 	TermdbSingleCellDataRequest
+	// ValidGetDataResponse,
+	// GetDataResponse
 } from '#types'
 import { validate_query_singleCell_DEgenes } from '../src/routes/termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
@@ -207,7 +209,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	// caches files contents between requests so each file is only loaded once
 	const file2Lines = {} // key: file path, value: string[]
 
-	D.get = async (q: TermdbSingleCellDataRequest) => {
+	D.get = async (q: TermdbSingleCellDataRequest, bySampleId = false) => {
 		const sampleId = q.sample?.eID || q.sample?.sID
 		/** Only return plots with available data files. */
 		if (q.checkPlotAvailability) {
@@ -242,7 +244,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			}
 			return { plots }
 		}
-
 		// if sample is int, may convert to string
 		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
@@ -251,6 +252,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			if (!sample) throw new Error('sample is required for gene expression query')
 			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 		}
+
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
@@ -279,6 +281,20 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			const expCells: Cell[] = []
 			const noExpCells: Cell[] = []
 
+			/** Work around for summary plots
+			 * The tsv files contain the sample ids but the termdb matches records
+			 * by primary key. Pull all the primary keys and make a map when necessary.
+			 * Later match the primary key to the sampleId. */
+			const idMap = new Map()
+			if (bySampleId) {
+				if (!ds?.cohort?.db?.connection) throw new Error('db not available for single cell request')
+				const sql = 'SELECT id, name FROM sampleidmap'
+				const ids = ds.cohort.db.connection.prepare(sql).all()
+				for (const i of ids) {
+					if (!idMap.has(i.name)) idMap.set(i.name, i.id)
+				}
+			}
+
 			for (const l of file2Lines[tsvfile]) {
 				const cellId = l[0],
 					x = Number(l[plot.coordsColumns.x]),
@@ -286,7 +302,14 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				const category = l[colorColumn?.index] || ''
 				if (!cellId) throw new Error('cell id missing')
 				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
-				const cell: Cell = { cellId, x, y, category }
+				const id = () => {
+					if (bySampleId) {
+						const id = idMap.get(l[1])
+						if (!id) console.log('No matching primary key found')
+						return id || l[1]
+					} else return cellId
+				}
+				const cell: Cell = { cellId: id(), x, y, category }
 				if (geneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]
