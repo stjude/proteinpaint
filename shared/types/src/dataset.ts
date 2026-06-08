@@ -1756,12 +1756,15 @@ keep this setting here for reason of:
 	 * - Skipped when undefined. */
 	pruneTermdbConfig?: (c: any, q: any, ds: any) => void
 	hiddenIds?: string[]
-	/* (server-side) when this returns true, a survival request carrying a stratification term
-	(term0 divide-by, or an overlay/series term2) is rejected. Pairs with the client-side
-	termdbConfig.survival.stratificationDisabledMessage flag to enforce the same policy server-side
-	against crafted requests. First arg is the request's __protected__ payload (same shape
-	isTermVisible/getAdditionalFilter receive). Skipped when undefined. */
-	restrictSurvivalStratification?: (__protected__: any) => boolean
+	/* (server-side) when this returns a truthy value, a survival request carrying a stratification
+	term (term0 divide-by, or an overlay/series term2) is rejected. Return a non-empty string to use
+	it as the rejection message (let the dataset reuse the same wording it shows on the disabled UI
+	controls, e.g. termdbConfig.survival.stratificationDisabledMessage), or `true` to reject with a
+	generic, dataset-agnostic message. Returning falsy allows the request. Keeping the message on the
+	return value (rather than hard-coded in the server) lets other datasets reuse the hook without
+	inheriting an unrelated contact instruction. First arg is the request's __protected__ payload
+	(same shape isTermVisible/getAdditionalFilter receive). Skipped when undefined. */
+	restrictSurvivalStratification?: (__protected__: any) => boolean | string
 	getAdditionalFilter?: (__protected__: any, term: any) => Filter | undefined
 	/** Populated by server_init_db_queries from the term2role sidecar table when it is non-empty.
 	 * Map keys are role names; values are the Set of term IDs visible to that role. Undefined when

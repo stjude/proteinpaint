@@ -549,8 +549,6 @@ function setInteractivity(self) {
 	self.setTab = async (event, d) => {
 		// a disabled tab is shown to advertise the capability but cannot be activated
 		if (d.disabled) return
-		//Reset the activeTab to the current tab if no tab is selected
-		if (self.activeTab == -1) self.activeTab == d.colNum
 		if (d.colNum === self.activeTab && !self.searching) {
 			// The about tab should not be hidden on double click with or without plots
 			if (self.activeTab == 0) return
