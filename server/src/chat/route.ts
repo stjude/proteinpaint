@@ -86,6 +86,7 @@ export function init({ genomes }) {
 				// Read dataset JSON file
 				agentFiles = (await fs.promises.readdir(aiFilesDir)).filter(file => file.endsWith('.json'))
 			} catch (err: any) {
+				console.log({ overrideDir }, 'exists=', fs.existsSync(overrideDir))
 				console.log('Chat directory Err:', err)
 				if (err.code === 'ENOENT') throw new Error(`Directory not found: ${aiFilesDir}`)
 				if (err.code === 'ENOTDIR') throw new Error(`Path is not a directory: ${aiFilesDir}`)
