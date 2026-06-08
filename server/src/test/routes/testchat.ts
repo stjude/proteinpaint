@@ -52,7 +52,7 @@ export default function setRoutes(app, basepath, genomes) {
 					const overrideDir = path.join(process.cwd(), 'dataset', 'ai', label)
 					const aiFilesDir = fs.existsSync(overrideDir)
 						? overrideDir
-						: path.join(serverconfig.binpath, '../../dataset/ai', label) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
+						: path.join(serverconfig.binpath, 'dataset', 'ai', label) // This is the directory where the AI JSON files are stored for this dataset. This will use this as the base directory for resolving all agent file paths specified in the dataset JSON file.
 					const results = await test_chatbot_by_dataset(ds, genome, genedb, aiFilesDir, chatSupportedPlotTypes)
 					if (results.num_errors == 0) {
 						console.log(
