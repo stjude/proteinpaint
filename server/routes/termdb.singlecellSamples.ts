@@ -118,6 +118,7 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
+	D['metaIdMap'] = new Map()
 	for (const plot of D.plots) {
 		if (plot.isMetaResult) {
 			/** Meta analysis results may not be separated into folders like the sample files
@@ -133,6 +134,16 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 				/** Files should exist for each meta analysis result. */
 				await file_is_readable(tsvfile)
 				samples.set(sampleName, { sample: sampleName, isMetaResult: true })
+				const text = await read_file(tsvfile)
+				const lines = text.trim().split('\n')
+				const cellIdMap = new Map()
+				for (let i = 1; i < lines.length; i++) {
+					const [cellId, sampleId] = lines[i].split('\t')
+					if (!cellId) throw new Error(`meta result row missing, index = ${i}, cell id: ${cellId}`)
+					if (!sampleId) throw new Error(`meta result row missing sample id, index = ${i}, sample id: ${sampleId}`)
+					cellIdMap.set(cellId, sampleId)
+				}
+				D['metaIdMap'].set(sampleName, cellIdMap)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
 			}
@@ -209,7 +220,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 	// caches files contents between requests so each file is only loaded once
 	const file2Lines = {} // key: file path, value: string[]
 
-	D.get = async (q: TermdbSingleCellDataRequest, bySampleId = false) => {
+	D.get = async (q: TermdbSingleCellDataRequest) => {
 		const sampleId = q.sample?.eID || q.sample?.sID
 		/** Only return plots with available data files. */
 		if (q.checkPlotAvailability) {
@@ -281,20 +292,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			const expCells: Cell[] = []
 			const noExpCells: Cell[] = []
 
-			/** Work around for summary plots
-			 * The tsv files contain the sample ids but the termdb matches records
-			 * by primary key. Pull all the primary keys and make a map when necessary.
-			 * Later match the primary key to the sampleId. */
-			const idMap = new Map()
-			if (bySampleId) {
-				if (!ds?.cohort?.db?.connection) throw new Error('db not available for single cell request')
-				const sql = 'SELECT id, name FROM sampleidmap'
-				const ids = ds.cohort.db.connection.prepare(sql).all()
-				for (const i of ids) {
-					if (!idMap.has(i.name)) idMap.set(i.name, i.id)
-				}
-			}
-
 			for (const l of file2Lines[tsvfile]) {
 				const cellId = l[0],
 					x = Number(l[plot.coordsColumns.x]),
@@ -302,14 +299,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				const category = l[colorColumn?.index] || ''
 				if (!cellId) throw new Error('cell id missing')
 				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
-				const id = () => {
-					if (bySampleId) {
-						const id = idMap.get(l[1])
-						if (!id) console.log('No matching primary key found')
-						return id || l[1]
-					} else return cellId
-				}
-				const cell: Cell = { cellId: id(), x, y, category }
+				const cell: Cell = { cellId, x, y, category }
 				if (geneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]

@@ -7,6 +7,7 @@ import { read_file, trackXfetch } from './utils.js'
 import {
 	isDictionaryType,
 	isNonDictionaryType,
+	isSingleCellTerm,
 	getBin,
 	getSampleType,
 	isParentType,
@@ -288,7 +289,8 @@ async function getSampleData(q, ds) {
 				samples[sampleId][tw.$id] = { key, value }
 			}
 		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
-			if (!q.ds.queries?.singleCell?.geneExpression) throw 'not supported by dataset: singleCell.geneExpression'
+			if (!q.ds.queries?.singleCell?.geneExpression)
+				throw new Error('not supported by dataset: singleCell.geneExpression')
 			let lst // list of bins based on tw config
 			if (tw.q?.mode == 'discrete') {
 				const min = tw.term.bins.min
@@ -322,24 +324,16 @@ async function getSampleData(q, ds) {
 				samples[sampleId][tw.$id] = { value, key }
 			}
 		} else if (tw.term.type == SINGLECELL_CELLTYPE) {
-			if (!q.ds.queries?.singleCell?.data) throw 'not supported by dataset: singleCell.data'
-			const data = await q.ds.queries.singleCell.data.get(
-				{
-					sample: tw.term.sample,
-					plots: [tw.term.plot],
-					//No idea where tw.term.colorBy comes from.
-					//Commenting out until clear.
-					// colorBy: { [tw.term.plot]: tw.term.colorBy }
-					colorBy: { [tw.term.plot]: tw.term.name }
-				},
-				true
-			)
+			if (!q.ds.queries?.singleCell?.data) throw new Error('not supported by dataset: singleCell.data')
+			const data = await q.ds.queries.singleCell.data.get({
+				sample: tw.term.sample,
+				plots: [tw.term.plot],
+				colorBy: { [tw.term.plot]: tw.term.name }
+			})
 			const groups = tw.q?.customset?.groups
 			for (const cell of data.plots[0].noExpCells) {
 				const sampleId = cell.cellId
-				if (!(sampleId in samples)) {
-					samples[sampleId] = { sample: sampleId }
-				}
+				if (!(sampleId in samples)) samples[sampleId] = getSingleCellSampleEntry(samples, q.ds, tw, cell)
 				let value = cell.category
 				if (groups) {
 					//custom groups where created
@@ -351,6 +345,8 @@ async function getSampleData(q, ds) {
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
+
+		if (isSingleCellTerm(tw.term)) hydrateMetaResultCellRows(samples)
 	}
 
 	/* for samples collected into samples{}, register them in refs.bySampleId{} with display name
@@ -365,10 +361,11 @@ async function getSampleData(q, ds) {
 	*/
 	const bySampleId = {}
 	for (const sid in samples) {
+		const sampleId = samples[sid]?.sampleId
 		if (q.ds.cohort?.termdb?.q?.id2sampleRefs) {
-			bySampleId[sid] = q.ds.cohort.termdb.q.id2sampleRefs(Number(sid))
+			bySampleId[sid] = q.ds.cohort.termdb.q.id2sampleRefs(Number(sampleId ?? sid))
 		} else if (q.ds.cohort?.termdb?.q?.id2sampleName) {
-			bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sid)) }
+			bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sampleId ?? sid)) }
 		} else if (q.ds.__gdc?.caseid2submitter) {
 			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
 		}
@@ -376,13 +373,52 @@ async function getSampleData(q, ds) {
 	const sids = Object.keys(samples)
 	let sampleType
 	if (sids.length > 0) {
-		const sid = Number(sids[0]) || sids[0]
+		const firstComparableId = samples[sids[0]]?.sampleId
+		const sid = Number(firstComparableId ?? sids[0]) || firstComparableId || sids[0]
 		const stid = q.ds.sampleId2Type?.get?.(sid)
 		if (stid !== undefined && q.ds.cohort?.termdb?.sampleTypes) {
 			sampleType = q.ds.cohort.termdb.sampleTypes[stid]
 		}
 	}
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
+}
+
+function getSingleCellSampleEntry(samples, ds, tw, _cell) {
+	const sampleId = getSampleId4Cell(ds, tw, _cell)
+	if (!sampleId) return { sample: _cell.cellId }
+	const sample = samples[sampleId]
+	const cell = sample ? structuredClone(sample) : {}
+	cell.sample = _cell.cellId
+	cell.sampleId = sampleId
+	return cell
+}
+
+function getSampleId4Cell(ds, tw, cell) {
+	if (!tw.term.sample?.isMetaResult) return
+	/** Note: Do not use .eID. Only for GDC in separate pathway */
+	const metaResultId = tw.term.sample.sID
+	const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(metaResultId)
+	const sampleName = metaIdMap?.get?.(cell.cellId) || cell.sampleId
+	if (!sampleName) return
+	const sampleId = ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
+	if (sampleId == undefined) {
+		throw new Error(`single cell meta result cannot map sample name = ${sampleName} to sample id`)
+	}
+	return String(sampleId)
+}
+
+function hydrateMetaResultCellRows(samples) {
+	for (const _sampleId in samples) {
+		const row = samples[_sampleId]
+		const sampleId = row?.sampleId
+		if (!sampleId) continue
+		const parentRow = samples[sampleId]
+		if (!parentRow) continue
+		for (const [termId, value] of Object.entries(parentRow)) {
+			if (termId == 'sample' || termId == 'sampleId') continue
+			if (!(termId in row)) row[termId] = value
+		}
+	}
 }
 
 function twlstGeneCountReducer(sum, tw) {
@@ -1286,11 +1322,12 @@ function checkAccessToSampleData(data, ds, q) {
 		count: names.length,
 		names
 	})
-	if (!access.canAccess)
+	if (!access.canAccess) {
 		throw {
 			message: access.message || `One or more terms has less than ${access.minSize} samples with data.`,
 			code: 'ERR_MIN_SIZE'
 		}
+	}
 	// more detailed check
 	const sampleSizeByTermId = new Map()
 	for (const [sid, dataByTermId] of Object.entries(data.samples)) {
@@ -1301,9 +1338,10 @@ function checkAccessToSampleData(data, ds, q) {
 	}
 	const counts = [...sampleSizeByTermId.values()].map(v => v.size) // list of sample counts for each and every term
 	const access1 = ds.cohort.termdb.checkAccessToSampleData(q, { count: Math.min(...counts) })
-	if (!access1.canAccess)
+	if (!access1.canAccess) {
 		throw {
 			message: `One or more terms has less than ${access1.minSize} samples with data.`,
 			code: 'ERR_MIN_SIZE'
 		}
+	}
 }
