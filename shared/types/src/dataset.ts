@@ -1570,7 +1570,7 @@ export type Termdb = {
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
 	/** filter samples by supplied filter(s) */
-	filterSamples?: (q: any, ds: any) => Promise<Set<any>>
+	filterSamples?: (q: any, ds: any) => Promise<Set<any> | undefined>
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number
