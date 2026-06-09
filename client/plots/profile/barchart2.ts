@@ -65,6 +65,7 @@ class ProfileBarchart2 extends profilePlot {
 	}
 
 	async main() {
+		this.dom.loadingDiv.style('display', '')
 		try {
 			await super.main()
 			this.configProfileComponent =
@@ -84,6 +85,8 @@ class ProfileBarchart2 extends profilePlot {
 		} catch (e) {
 			console.error(e)
 			throw `${e} [profileBarchart2 main()]`
+		} finally {
+			this.dom.loadingDiv.style('display', 'none')
 		}
 	}
 

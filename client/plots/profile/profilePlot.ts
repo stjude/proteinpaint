@@ -121,12 +121,20 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 		const holder = rightDiv.insert('div').style('display', 'inline-block')
 
 		const plotDiv = holder.append('div')
+		// loading overlay shown over the chart sandbox while the chart's data is fetched/rendered.
+		// Reuses the shared .sjpp-loading-overlay box + .sjpp-spinner glyph; anchored on the
+		// full-width sandbox holder (opts.holder) so the spinner stays centered even on first
+		// open when the inner plot area is still empty.
+		this.opts.holder.style('position', 'relative')
+		const loadingDiv = this.opts.holder.append('div').attr('class', 'sjpp-loading-overlay').style('display', 'none')
+		loadingDiv.append('div').attr('class', 'sjpp-spinner')
 		this.dom = {
 			controlsDiv,
 			holder,
 			iconsDiv,
 			rightDiv,
-			plotDiv
+			plotDiv,
+			loadingDiv
 		}
 		select('.sjpp-output-sandbox-content').on('scroll', event => {
 			if (this.onMouseOut) this.onMouseOut(event)

@@ -132,27 +132,32 @@ class ProfileForms2 extends profilePlot {
 	}
 
 	async main() {
-		super.main()
-		if (this.tabs.length == 0) return
-		const activeTab = this.state.config.activeTab || this.tabs[0].label
-		this.activePlot = this.state.config.options.find(p => p.name == activeTab)
-		this.scoreTerms = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
-		this.scScoreTerms = this.activePlot.hasSC ? Object.values(this.id2SCTW[this.activePlot.name]) : []
-		const parents = this.config.tw.term.id.split('__')
-		this.module = parents[1]
-		const domain = parents.slice(1).join(' / ')
-		this.dom.domainDiv.text(domain)
-		this.categories = new Set()
-		this.dom.mainG.selectAll('*').remove()
-		this.dom.gridG.selectAll('*').remove()
-		this.dom.labelsG.selectAll('*').remove()
-		this.dom.xAxisG.selectAll('*').remove()
-		this.dom.scaleAxisG.selectAll('*').remove()
-		this.dom.legendG.selectAll('*').remove()
-		await this.setControls()
-		this.renderPlot()
-		this.filterG.selectAll('*').remove()
-		this.addFilterLegend()
+		this.dom.loadingDiv.style('display', '')
+		try {
+			super.main()
+			if (this.tabs.length == 0) return
+			const activeTab = this.state.config.activeTab || this.tabs[0].label
+			this.activePlot = this.state.config.options.find(p => p.name == activeTab)
+			this.scoreTerms = this.twLst.filter(tw => tw.term.subtype == this.activePlot.subtype)
+			this.scScoreTerms = this.activePlot.hasSC ? Object.values(this.id2SCTW[this.activePlot.name]) : []
+			const parents = this.config.tw.term.id.split('__')
+			this.module = parents[1]
+			const domain = parents.slice(1).join(' / ')
+			this.dom.domainDiv.text(domain)
+			this.categories = new Set()
+			this.dom.mainG.selectAll('*').remove()
+			this.dom.gridG.selectAll('*').remove()
+			this.dom.labelsG.selectAll('*').remove()
+			this.dom.xAxisG.selectAll('*').remove()
+			this.dom.scaleAxisG.selectAll('*').remove()
+			this.dom.legendG.selectAll('*').remove()
+			await this.setControls()
+			this.renderPlot()
+			this.filterG.selectAll('*').remove()
+			this.addFilterLegend()
+		} finally {
+			this.dom.loadingDiv.style('display', 'none')
+		}
 	}
 
 	/**

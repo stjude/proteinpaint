@@ -28,11 +28,15 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
+		// chartType of the most recently opened profile plot (profile plots stack, so the last
+		// profile entry in plots[] is the newest); only this chart's nav button is disabled
+		const profilePlots = (appState.plots || []).filter(p => p.chartType?.startsWith('profile'))
 		const state = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
+			latestProfileChartType: profilePlots.length ? profilePlots[profilePlots.length - 1].chartType : undefined,
 			termdbConfig: appState.termdbConfig
 		}
 		if (appState?.termfilter?.filter) {
@@ -42,7 +46,12 @@ class MassCharts {
 	}
 
 	main() {
-		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
+		this.dom.btns
+			.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
+			// disable only the nav button of the most recently opened profile chart, so the user
+			// can see which profile chart they last opened. Profile charts still stack one below
+			// the other; previously opened charts' buttons are re-enabled.
+			.property('disabled', d => d.chartType === this.state.latestProfileChartType)
 	}
 
 	getBtnLabel_dict(state) {
@@ -442,6 +451,7 @@ function setRenderers(self) {
 			.data(chartTypeList)
 			.enter()
 			.append('button')
+			.attr('class', 'sjpp-chart-btn')
 			.attr('data-testid', d => `sjpp-chart-btn-${d.label.toLowerCase().replace(/\s/g, '-')}`)
 			.style('margin', '10px')
 			.style('padding', '10px 15px')
@@ -450,7 +460,7 @@ function setRenderers(self) {
 			.html(d => d.label)
 			.on('click', function (event, chart) {
 				self.dom.tip.clear().showunder(this)
-				chart.clickTo(chart)
+				chart.clickTo(chart, this)
 			})
 			.on('mouseover', (e, d) => {
 				if (d.tooltip) self.dom.tooltip.clear().showunder(e.target).d.text(d.tooltip)
@@ -553,10 +563,20 @@ function setRenderers(self) {
 		_.makeChartBtnMenu(self.dom.tip.d, self, chart.chartType)
 	}
 
-	self.prepPlot = function (chart) {
+	self.prepPlot = async function (chart, btnNode) {
 		self.dom.tip.hide()
+		// disable the clicked button while the chart loads so rapid clicks don't stack up plots;
+		// app.dispatch() resolves only after the plot has fully rendered (incl. its data fetch)
+		if (btnNode) btnNode.disabled = true
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
-		self.app.dispatch(action)
+		try {
+			await self.app.dispatch(action)
+			// on success main() reconciles each button's disabled state from the open plots:
+			// profile charts stay disabled (now open), non-singleton charts get re-enabled
+		} catch (e) {
+			if (btnNode) btnNode.disabled = false // recover the button if the plot failed to open
+			throw e
+		}
 	}
 
 	self.plotCreate = function (chart) {
