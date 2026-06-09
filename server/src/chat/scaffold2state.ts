@@ -203,6 +203,35 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
+	} else if (plotType === 'survival') {
+		// input.term holds the resolved survival term: a string (the matched term id) when it was
+		// successfully determined, or an array of DbRows when it could not be resolved (not named
+		// in the prompt, or ambiguous between multiple available terms).
+		if (typeof input.term === 'string') {
+			plotState.plot.term = { id: input.term }
+		} else if (Array.isArray(input.term)) {
+			// Could not pin down a single survival term — return the list of available survival
+			// terms so the user can pick one.
+			const list = input.term
+				.map((r: any) => `  - "${r.name}"${r.description && r.description !== r.name ? `: ${r.description}` : ''}`)
+				.join('\n')
+			return {
+				type: 'text',
+				text: `Could not determine which survival term to plot. Please specify one of the available survival terms:\n${list}`
+			}
+		} else {
+			throw 'Survival plot requires a survival term, but none was provided in the input.'
+		}
+
+		// term2 is the stratification/overlay variable
+		if (input.term2) {
+			plotState.plot.term2 = isDictionaryTerm(input.term2) ? input.term2 : { term: input.term2 }
+			if (plotState.plot.term2.isDictionary) delete plotState.plot.term2.isDictionary
+		}
+
+		if (input.filter) {
+			plotState.plot.filter = input.filter
+		}
 	} else {
 		throw 'Only summary plot type is supported for now'
 	}

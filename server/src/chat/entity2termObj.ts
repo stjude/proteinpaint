@@ -6,6 +6,7 @@ import type {
 	Entity,
 	DEPhrase2EntityResult,
 	HierPhrase2EntityResult,
+	SurvivalPhrase2EntityResult,
 	MatrixPhrase2EntityResult,
 	PrebuiltScatterPhrase2EntityResult
 } from './scaffoldTypes.ts'
@@ -234,6 +235,39 @@ export async function inferTermObjFromEntity(
 			}
 			mayLog('Final filter values:', filterValues)
 			twObjects[key] = filterValues
+		}
+		return twObjects
+	} else if (plotType === 'survival') {
+		const survivalEntity = entity as SurvivalPhrase2EntityResult
+
+		// term holds the already-resolved survival term(s) (a matched name string, or the full
+		// list of dataset survival terms when none/ambiguous). Pass it through unchanged.
+		if (survivalEntity.term !== undefined) {
+			twObjects['term'] = survivalEntity.term as unknown as Value
+		}
+
+		// term2 is the REQUIRED stratification variable; resolve it like a single tw entity.
+		const term2Obj = await getTermObj('term2', survivalEntity.term2, llm, dbPath, genes_list, genome)
+		if (!term2Obj) {
+			throw `Failed to get term object for key "term2" and phrase "${survivalEntity.term2.phrase}".`
+		}
+		twObjects['term2'] = term2Obj
+
+		// optional cohort filter
+		if (survivalEntity.filter) {
+			const filterValues: Value[] = []
+			for (const filterTerm of survivalEntity.filter) {
+				mayLog('Evaluating survival filter term:', filterTerm)
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+				if (!termObj) {
+					continue
+				}
+				const filterEntity = filterTerm as Entity
+				if (filterEntity.logicalOperator) termObj.logicalOperator = filterEntity.logicalOperator
+				filterValues.push(termObj)
+			}
+			mayLog('Final survival filter values:', filterValues)
+			twObjects['filter'] = filterValues
 		}
 		return twObjects
 	} else if (plotType === 'hiercluster') {
