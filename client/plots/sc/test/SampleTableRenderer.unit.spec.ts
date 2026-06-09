@@ -4,18 +4,22 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
 
 /**
  * Tests
- *   - constructor should set dom, interactions, tableData, and rowIndex
+ *   - constructor should set dom, interactions, and tableData
  *   - renderSamplesTable() should render table headers from columns
  *   - renderSamplesTable() should render correct number of rows
  *   - renderSamplesTable() noButtonCallback should build item with sID from sample column
  *   - renderSamplesTable() noButtonCallback should build item with eID from experiment column
  *   - renderSamplesTable() noButtonCallback should map custom column labels to keys
+ *   - buildItemFromRow() should set isMetaResult for metadata result rows
+ *   - buildItemFromRow() should skip empty cell values
  *   - renderSamplesTable() noButtonCallback should throw when sID is missing
  *   - renderSamplesTable() noButtonCallback should call interactions.updateItem
  *   - renderSamplesTable() noButtonCallback should show plotsBtnsDiv
+ *   - reapplyAllPlotButtons() should apply buttons for each active sample
  *   - updateTable() should remove buttons when sample no longer in activeSandboxes
  *   - updateTable() should not append buttons when no sandboxes exist for sample
  *   - updateTable() should append plot buttons for each sandbox
+ *   - applyButtonsForSample() should find row by sample ID after sort mutation
  *   - updateTable() should skip rerendering btn when cell and plotIds are unchanged
  *   - updateTable() should re-render when plotIds change
  *   - deleteBtns() should remove buttons and clear rendered entry
@@ -84,12 +88,47 @@ tape('\n', function (test) {
 
 /* ---- constructor ---- */
 
-tape('constructor should set dom, interactions, tableData, and rowIndex', test => {
+tape('constructor should set dom, interactions, and tableData', test => {
 	const { renderer, holder, dom, interactions, tableData } = getRenderer()
 
 	test.equal(renderer.dom, dom, 'Should set dom reference')
 	test.equal(renderer.interactions, interactions, 'Should set interactions reference')
 	test.equal(renderer.tableData, tableData, 'Should set tableData reference')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('buildItemFromRow() should set isMetaResult for metadata result rows', test => {
+	const tableData = {
+		columns: [{ label: 'Sample', sortable: true }, { label: 'Shown plots' }, { label: 'Experiment', sortable: true }],
+		rows: [[{ value: 'S1' }, { value: 'meta', elemId: 'isMetaResult' }, { value: 'EXP1' }]],
+		selectedRows: [],
+		sampleColIdx: 0
+	}
+
+	const { renderer, holder } = getRenderer()
+	const item = renderer.buildItemFromRow(tableData as any, 0)
+
+	test.true(item.isMetaResult, 'Should set isMetaResult=true when row contains isMetaResult elemId')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('buildItemFromRow() should skip empty cell values', test => {
+	const tableData = {
+		columns: [{ label: 'Sample', sortable: true }, { label: 'Shown plots' }, { label: 'Experiment', sortable: true }],
+		rows: [[{ value: 'S1' }, { value: '' }, { value: '' }]],
+		selectedRows: [],
+		sampleColIdx: 0
+	}
+
+	const { renderer, holder } = getRenderer()
+	const item = renderer.buildItemFromRow(tableData as any, 0)
+
+	test.equal(item.sID, 'S1', 'Should keep required sID field')
+	test.equal('eID' in item, false, 'Should omit mapped keys for empty values')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
@@ -239,6 +278,25 @@ tape('renderSamplesTable() noButtonCallback should show plotsBtnsDiv', test => {
 
 /* ---- updateTable() ---- */
 
+tape('reapplyAllPlotButtons() should apply buttons for each active sample', test => {
+	const { renderer, holder } = getRenderer()
+
+	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
+	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
+	sandboxes.set('S2', [{ plotId: 'p2', div: mockDiv, plotName: 'tSNE' }])
+
+	renderer.updatePlotBtns(sandboxes)
+
+	const s1Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S1') as any
+	const s2Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S2') as any
+	test.equal(s1Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S1')
+	test.equal(s2Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length, 1, 'Should render button for S2')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
 tape('updateTable() should remove buttons when sample no longer in activeSandboxes', test => {
 	const { renderer, holder } = getRenderer()
 
@@ -301,6 +359,37 @@ tape('updateTable() should append plot buttons for each sandbox', test => {
 	const cell = row[1].__td
 	const btns = cell.selectAll('.sjpp-sc-table-plot-btn').nodes()
 	test.equal(btns.length, 2, 'Should append 2 plot buttons')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
+tape('applyButtonsForSample() should find row by sample ID after sort mutation', test => {
+	const { renderer, holder } = getRenderer()
+
+	const firstRow = holder.select('tr.sjpp_row_wrapper').node() as HTMLElement
+	firstRow.click()
+
+	const rows = renderer.tableData.rows
+	renderer.tableData.rows = [rows[1], rows[0], rows[2]]
+
+	const mockDiv = { node: () => ({ scrollIntoView: () => {} }) }
+	const sandboxes = new Map<string, { plotId: string; div: any; plotName: string }[]>()
+	sandboxes.set('S1', [{ plotId: 'p1', div: mockDiv, plotName: 'UMAP' }])
+	renderer.updatePlotBtns(sandboxes)
+
+	const s1Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S1') as any
+	const s2Row = renderer.tableData.rows.find(r => r[renderer.tableData.sampleColIdx].value === 'S2') as any
+	test.equal(
+		s1Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length,
+		1,
+		'Should render button in the moved S1 row'
+	)
+	test.equal(
+		s2Row[1].__td.selectAll('.sjpp-sc-table-plot-btn').nodes().length,
+		0,
+		'Should not render button in other rows'
+	)
 
 	if ((test as any)._ok) holder.remove()
 	test.end()
