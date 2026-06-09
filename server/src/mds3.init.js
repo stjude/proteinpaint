@@ -215,7 +215,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 	} catch (e) {
 		if (!ds.init) ds.init = {}
-		if (ds.init.step != 'gdcBuildDictionary()') {
+		if (ds.init.step != 'gdcBuildDictionary()' || !ds.init.recoverableError) {
 			delete ds.init.recoverableError
 			ds.init.fatalError = e.error || e
 			ds.init.status = 'fatalError'
