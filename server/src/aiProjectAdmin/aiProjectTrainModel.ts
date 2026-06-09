@@ -1,10 +1,9 @@
-import type { RoutePayload } from '#types'
-import type { RouteApi, AIProjectTrainModelRequest } from '#types'
+import type { RouteApi, AIProjectTrainModelRequest, RoutePayload } from '#types'
 import { TileServerSessionsHandler } from '#src/wsisessions/TileServerSessionsHandler.ts'
 import SessionManager from '#src/wsisessions/SessionManager.ts'
 import { getDbConnection } from '#src/aiHistoDBConnection.js'
 import type Database from 'better-sqlite3'
-import { getImages } from '../../routes/aiProjectAdmin.js'
+import { getImages } from '../aiProjectAdmin/aiProjectAdmin.ts'
 
 const payload: RoutePayload = {
 	init,

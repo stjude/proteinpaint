@@ -54,14 +54,14 @@ import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import {
 	validate_query_getWSIAnnotations,
 	validate_query_getWSIClassesQuery
-} from '../routes/aiProjectSelectedWSImages.ts'
+} from './aiProjectAdmin/aiProjectSelectedWSImages.ts'
 import { validate_query_getWSISamples } from '#routes/wsisamples.ts'
 import { mds3InitNonblocking } from './mds3.init.nonblocking.js'
 import { dtTermTypes, TermTypes } from '#shared/terms.js'
 import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
-import { validate_query_saveWSIAnnotation } from '../routes/saveWSIAnnotation.ts'
-import { validate_query_deleteWSIAnnotation } from '../routes/deleteWSITileSelection.ts'
+import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
+import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
 import { scaleOrdinal } from 'd3-scale'
 
 /*
@@ -160,6 +160,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (response?.status != 'OK') throw response
 	}
 
+  try {
 	// must validate termdb first
 	await validate_termdb(ds)
 	validateDemoJwtInputs(ds)
@@ -215,6 +216,15 @@ export async function init(ds, genome, totalDsLst = 0) {
 	// if (ds.label == 'GDC') {ds.init = {status: 'fatalError', fatalError: 'test server crash'}; throw ds.init.fatalError}
 
 	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
+	} catch (e) {
+		if (!ds.init) ds.init = {}
+		if (ds.init.step != 'gdcBuildDictionary()' || !ds.init.recoverableError) {
+			delete ds.init.recoverableError
+			ds.init.fatalError = e.error || e
+			ds.init.status = 'fatalError'
+		}
+		throw e
+	}
 
 	// invoke non-blocking initialization steps at the end, after validation is complete,
 	// otherwise it will be difficult to coordinate the handling of errors from either
@@ -223,7 +233,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 	if (ds.init?.hasNonblockingSteps) {
 		// if only one dataset is being loaded by the server,
 		// then await to allow server to crash on fatal error
-		if (totalDsLst > 1) await mds3InitNonblocking(ds)
+		if (totalDsLst == 1) await mds3InitNonblocking(ds)
 		else mds3InitNonblocking(ds)
 	} else {
 		if (!ds.init) ds.init = {}
@@ -303,7 +313,10 @@ export async function validate_termdb(ds) {
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
 	} else if (tdb.dictionary?.gdcapi) {
+		if (!ds.init) ds.init = {}
+		ds.init.step = 'gdcBuildDictionary()'
 		await gdcBuildDictionary(ds)
+		ds.init.step = ''
 	} else if (ds.cohort.db) {
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)

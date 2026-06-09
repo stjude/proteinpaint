@@ -8,9 +8,9 @@
 export const routeFiles = [
 	import('./chat/route.ts'),
 	import('./grin2/route.ts'),
-	import('./routes/aiProjectAdmin.ts'),
-	import('./routes/aiProjectSelectedWSImages.ts'),
-	import('./routes/aiProjectTrainModel.ts'),
+	import('./aiProjectAdmin/aiProjectAdmin.ts'),
+	import('./aiProjectAdmin/aiProjectSelectedWSImages.ts'),
+	import('./aiProjectAdmin/aiProjectTrainModel.ts'),
 	import('./routes/brainImaging.ts'),
 	import('./routes/brainImagingSamples.ts'),
 	import('./routes/burden.ts'),
