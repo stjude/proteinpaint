@@ -1,12 +1,12 @@
 export function getMockSCApp(overrides: any = {}) {
 	const state = getMockSCState(overrides)
 	return {
-		getState: () => state,
 		app: {
 			vocabApi: {
 				getterm: async (termid: string) => ({ name: `Label for ${termid}` }),
 				...(overrides.vocabApi || {})
-			}
+			},
+			getState: () => state
 		},
 		id: 'testApp'
 	} as any
