@@ -393,47 +393,67 @@ function mayInitSkewer(tk) {
 	setSkewerMode(tk) // adds skewer.viewModes[]
 }
 
+function noCnvAndItd(tk) {
+	let hasCount = 0
+	if ((tk.mds.has_cnv || tk.mds.termdbConfig?.queries?.cnv) && !tk.hiddenMclassDt.has(dtcnv)) hasCount++
+	if ((tk.mds.has_itd || tk.mds.termdbConfig?.queries?.itd) && !tk.hiddenMclassDt.has(dtitd)) hasCount++
+	return hasCount == 0
+}
+
+/*
+!! TRICKY !!
+tk.cnv{} is created if either cnv or itd are present
+both cnv and itd are rendered into tk.cnv.g<>
+*/
 export function mayInitCnv(tk) {
-	if (tk.hiddenMclassDt.has(dtcnv)) return
-	let cfg // cnv config obj
-	if (tk.mds.termdbConfig?.queries?.cnv) {
-		// cnv present
-		cfg = tk.mds.termdbConfig.queries.cnv
-	} else if (tk.custom_variants?.find(i => i.dt == dtcnv)) {
-		// has custom cnv; require that all are same type (using value or using category)
-		let useValue = false,
-			useCat = false
-		for (const m of tk.custom_variants) {
-			if (m.dt == dtcnv) {
-				if (Number.isFinite(m.value)) useValue = true
-				else useCat = true
+	if (noCnvAndItd(tk)) return
+
+	{
+		let cfg // cnv config obj
+		if (tk.mds.termdbConfig?.queries?.cnv) {
+			// cnv present
+			cfg = tk.mds.termdbConfig.queries.cnv
+		} else if (tk.mds.has_cnv) {
+			// has custom cnv; require that all are same type (using value or using category)
+			let useValue = false,
+				useCat = false
+			for (const m of tk.custom_variants) {
+				if (m.dt == dtcnv) {
+					if (Number.isFinite(m.value)) useValue = true
+					else useCat = true
+				}
+			}
+			if (useValue && useCat) throw 'custom cnv should be either using numeric value or not, but cannot be mixture'
+			if (useValue) {
+				cfg = {
+					cnvGainCutoff: 0, // use 0 for not filtering and show all events
+					cnvLossCutoff: 0
+				}
+			} else if (useCat) {
+				cfg = {} // no need for flags
+			} else {
+				throw 'custom cnv is neither value or category, should not happen'
 			}
 		}
-		if (useValue && useCat) throw 'custom cnv should be either using numeric value or not, but cannot be mixture'
-		if (useValue) {
-			cfg = {
-				cnvGainCutoff: 0, // use 0 for not filtering and show all events
-				cnvLossCutoff: 0
+
+		if (cfg) {
+			if (!tk.cnv) tk.cnv = {} // preserve existing setting
+			tk.cnv.g = tk.glider.append('g')
+			tk.cnv.cnvMaxLength = cfg.cnvMaxLength // if missing do not filter
+			tk.cnv.cnvGainCutoff = cfg.cnvGainCutoff // if missing do not filter
+			tk.cnv.cnvLossCutoff = cfg.cnvLossCutoff
+			tk.cnv.absoluteValueRenderMax = cfg.absoluteValueRenderMax || 5
+			tk.cnv.gainColor = cfg.gainColor || '#D6683C'
+			tk.cnv.lossColor = cfg.lossColor || '#67a9cf'
+			tk.cnv.density = {
+				barheight: 60
 			}
-		} else if (useCat) {
-			cfg = {} // no need for flags
-		} else {
-			throw 'custom cnv is neither value or category, should not happen'
 		}
 	}
-
-	if (!cfg) return // no cnv from this tk
-
-	if (!tk.cnv) tk.cnv = {} // preserve existing setting
-	tk.cnv.g = tk.glider.append('g')
-	tk.cnv.cnvMaxLength = cfg.cnvMaxLength // if missing do not filter
-	tk.cnv.cnvGainCutoff = cfg.cnvGainCutoff // if missing do not filter
-	tk.cnv.cnvLossCutoff = cfg.cnvLossCutoff
-	tk.cnv.absoluteValueRenderMax = cfg.absoluteValueRenderMax || 5
-	tk.cnv.gainColor = cfg.gainColor || '#D6683C'
-	tk.cnv.lossColor = cfg.lossColor || '#67a9cf'
-	tk.cnv.density = {
-		barheight: 60
+	// presence of itd is handled separately of cnv
+	if (tk.mds.has_itd || tk.mds.termdbConfig?.queries?.itd) {
+		if (!tk.cnv) tk.cnv = {} // preserve existing setting
+		if (!tk.cnv.g) tk.cnv.g = tk.glider.append('g')
 	}
 }
 
@@ -904,6 +924,12 @@ function validateCustomVariants(tk, block) {
 		}
 		if (m.dt == dtcnv) {
 			m.ssm_id = [m.chr, m.start, m.stop, m.class].join(ssmIdFieldsSeparator)
+			tk.mds.has_cnv = true // quick fix
+			continue
+		}
+		if (m.dt == dtitd) {
+			m.ssm_id = [m.chr, m.start, m.stop, m.class, ''].join(ssmIdFieldsSeparator)
+			tk.mds.has_itd = true // quick fix
 			continue
 		}
 		throw 'unknown dt for a custom variant'

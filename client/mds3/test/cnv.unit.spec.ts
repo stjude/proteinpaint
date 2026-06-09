@@ -46,7 +46,7 @@ tape('mayInitCnv()', test => {
 	{
 		const tk: any = {
 			hiddenMclassDt: new Set(),
-			mds: {},
+			mds: { has_cnv: true },
 			custom_variants: [{ dt: 4, class: 's' }],
 			glider: { append: () => {} }
 		}
@@ -57,13 +57,32 @@ tape('mayInitCnv()', test => {
 	{
 		const tk: any = {
 			hiddenMclassDt: new Set(),
-			mds: {},
+			mds: { has_cnv: true },
 			custom_variants: [{ dt: 4, class: 's', value: 1 }],
 			glider: { append: () => {} }
 		}
 		mayInitCnv(tk)
 		test.true(tk.cnv, 'tk.cnv{} is set from custom cnv data')
 		test.equal(tk.cnv.cnvGainCutoff, 0, 'tk.cnv.cnvGainCutoff=0 for custom numeric cnv')
+	}
+	{
+		const tk: any = {
+			hiddenMclassDt: new Set(),
+			mds: { has_cnv: true, has_itd: true },
+			custom_variants: [{ dt: 4, class: 's', value: 1 }, { dt: 6 }],
+			glider: { append: () => {} }
+		}
+		mayInitCnv(tk)
+		test.true(tk.cnv, 'tk.cnv{} is set from custom cnv & itd data')
+	}
+	{
+		const tk: any = {
+			hiddenMclassDt: new Set(),
+			mds: { has_itd: true },
+			glider: { append: () => {} }
+		}
+		mayInitCnv(tk)
+		test.true(tk.cnv, 'tk.cnv{} is set from custom itd')
 	}
 	test.end()
 })

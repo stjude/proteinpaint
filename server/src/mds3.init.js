@@ -1677,7 +1677,7 @@ async function validate_query_itd(ds, genome) {
 		q.samples = validateSampleHeader2(ds, q.samples, 'itd')
 	}
 	q.get = async param => {
-		if (param.hiddenmclass?.has(dtitd)) {
+		if (param.hiddenmclass?.has(dtitd) || param.hiddenmclass?.has(mclassitd)) {
 			return { itds: [] }
 		}
 		utils.validateRglst(param, genome)

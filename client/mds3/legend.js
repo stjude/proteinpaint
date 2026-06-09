@@ -822,8 +822,13 @@ function may_update_ld(tk) {
 	tk.legend.ld.showHolder.style('display', 'block')
 }
 
+/*
+	tk.cnv{} will be set if either cnv or itd is shown
+	only cnv needs legend, but not itd
+	*/
 function may_create_cnv(tk, block) {
 	if (!tk.cnv) return
+	if (!tk.mds.has_cnv && !tk.mds.termdbConfig?.queries?.cnv) return // no cnv, itd only; in such case do not show cnv legend as when there's just itd, it doesn't need its own legend entry (it's already shown in mclass legend)
 
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')

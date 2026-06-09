@@ -1346,10 +1346,17 @@ function testLegend_mclass(test, tk) {
 				)
 			} else {
 				// value is mclass
-				test.ok(
-					tk.skewer.rawmlst.find(i => i.class == value),
-					`mclass ${value} matched to some m`
-				)
+				if (value == 'ITD') {
+					test.ok(
+						tk.cnv.cnvLst.find(i => i.class == value),
+						`mclass ${value} matched to some m`
+					)
+				} else {
+					test.ok(
+						tk.skewer.rawmlst.find(i => i.class == value),
+						`mclass ${value} matched to some m`
+					)
+				}
 			}
 		} else {
 			// this legend entry is about dt

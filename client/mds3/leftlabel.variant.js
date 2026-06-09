@@ -5,7 +5,7 @@ import { makelabel, positionLeftlabelg } from './leftlabel'
 import { to_textfile, Tabs, make_radios, shapes, shapeSelector } from '#dom'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows, block2source, findMbyId } from './sampletable'
-import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtfusionrna } from '#shared/common.js'
+import { dt2label, mclass, dtsnvindel, dtsv, dtcnv, dtitd, dtfusionrna } from '#shared/common.js'
 
 /*
 variant label covers any data item rendered in a mds3 tk
@@ -333,7 +333,14 @@ async function listVariantData(tk, block) {
 	}
 
 	if (tk.cnv?.cnvLst?.length) {
-		dt2mlst.set(dtcnv, tk.cnv.cnvLst)
+		{
+			const s = tk.cnv.cnvLst.filter(i => i.dt == dtcnv)
+			if (s.length) dt2mlst.set(dtcnv, s)
+		}
+		{
+			const s = tk.cnv.cnvLst.filter(i => i.dt == dtitd)
+			if (s.length) dt2mlst.set(dtitd, s)
+		}
 	}
 
 	if (dt2mlst.size == 1) {

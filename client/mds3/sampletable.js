@@ -1,6 +1,6 @@
 import { rgb } from 'd3-color'
 import { fillbar, renderTable, newSandboxDiv, table2col } from '#dom'
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, dtitd } from '#shared/common.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { print_snv, printSvPair, cnv2str } from './itemtable'
 import { convertUnits } from '#shared/helpers.js'
@@ -500,8 +500,11 @@ export async function samples2columnsRows(samples, tk) {
 							const v = cnv2str(m, tk)
 							oneHtml.push(v.value + ' ' + v.pos)
 							showClass = Number.isFinite(m.value) // display class when using numeric value
+						} else if (m.dt == dtitd) {
+							const v = cnv2str(m, tk)
+							oneHtml.push(v.value + ' ' + v.pos)
 						} else {
-							throw 'unknown dt'
+							throw new Error('unknown dt')
 						}
 
 						if (showClass) {
