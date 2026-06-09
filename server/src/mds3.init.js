@@ -3313,7 +3313,15 @@ async function filterSamples4assayAvailability(q, ds) {
 		return null
 	}
 	// not gdc
-	return q.filter && q.filter.lst.length ? new Set((await get_samples(q, ds)).map(i => i.id)) : null
+	if (ds.cohort?.db) {
+		// sql-based dataset
+		if (q.filter && q.filter.lst.length) {
+			return new Set((await get_samples(q, ds)).map(i => i.id))
+		}
+	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// ds-supplied filter method
+		return await ds.cohort.termdb.filterSamples(q, ds)
+	}
 }
 
 function addDataAvailability(sid, sample2mlst, dtKey, c, origin, sampleFilter, gene) {
