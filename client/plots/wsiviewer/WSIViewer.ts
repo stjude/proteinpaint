@@ -111,13 +111,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
-		const renderSpinner = settings.isSavingAnnotation || settings.isChangingImages
-
-		if (renderSpinner) {
-			this.wsiViewerInteractions.toggleSpinner(true, this.dom.holder)
-		} else {
-			this.wsiViewerInteractions.toggleSpinner(false, this.dom.holder)
-		}
+		this.wsiViewerInteractions.toggleSpinner(settings.isSavingAnnotation)
 
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
@@ -147,16 +141,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (!this.mapRenderer) {
 			this.mapRenderer = new MapRenderer()
 		}
+		if (!settings.isSavingAnnotation) this.wsiViewerInteractions.toggleSpinner(false)
 
 		this.mapRenderer.setState(
 			activeLayerData,
 			this.wsiViewerInteractions.viewerClickListener,
 			viewModel.sampleWSImages[settings.displayedImageIndex]
 		)
-		// this.wsiViewerInteractions.toggleSpinner(renderSpinner)
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
-
+			if (settings.isChangingImages) this.wsiViewerInteractions.toggleSpinner(true)
 			if (this.thumbnailsContainer != undefined) {
 				this.thumbnailsContainer.remove()
 				this.thumbnailsContainer = undefined
@@ -172,7 +166,11 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.wsiViewerInteractions,
 				numTotalFiles
 			)
-			this.wsiViewerInteractions.toggleSpinner(false, this.dom.holder)
+			await new Promise(resolve => setTimeout(resolve, 400))
+			// Not actually reseting image, just saving that thumbnail is done rendering
+			// so spinner isnt rendering next call
+			this.wsiViewerInteractions.toggleThumbnails(0, true)
+			if (!settings.isSavingAnnotation) this.wsiViewerInteractions.toggleSpinner(false)
 
 			// Use the reused mapRenderer instance to render/update the map
 			this.map = this.mapRenderer.render(this.dom.mapHolder, settings)
@@ -188,15 +186,9 @@ class WSIViewer extends PlotBase implements RxComponent {
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
 			const wsiAnnotationsRenderer = new WSIAnnotationsRenderer(this, settings, this.wsiViewerInteractions)
 			this.annotationTable = wsiAnnotationsRenderer.render(this.dom.annotationsHolder, imageViewData)
-			if (!renderSpinner) {
-				this.dom.annotationsHolder.selectAll('tr').style('cursor', 'pointer')
-			}
 			this.dom.legendHolder.selectAll('*').remove()
 			modelTrainerRenderer.render(this.dom.legendHolder, aiProjectID, genome, dslabel)
 			downloadCSVButtonRenderer.render(this.dom.legendHolder, viewModel.sampleWSImages[settings.displayedImageIndex])
-			if (!renderSpinner) {
-				this.dom.legendHolder.selectAll('button').style('cursor', 'pointer')
-			}
 			this.legendRenderer.render(this.dom.legendHolder, imageViewData)
 			this.dom.mapHolder.select('#SFField').remove()
 			this.skipFlagRenderer.render(
@@ -226,6 +218,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 			}
 		}
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
+		//
+		if (!settings.isSavingAnnotation) {
+			for (const element of [
+				this.thumbnailsContainer.selectAll('div').selectAll('*'),
+				this.dom.annotationsHolder.selectAll('*'),
+				this.dom.legendHolder.selectAll('*')
+			]) {
+				element.style('cursor', 'pointer')
+			}
+		}
 	}
 }
 
