@@ -26,12 +26,15 @@ import { SectionRenderer } from '../view/SectionRenderer.ts'
  *   - findSampleMetadata() should find item by experiment sampleName
  *   - findSampleMetadata() should return undefined when sc has no items
  *   - findSampleMetadata() should return undefined when no match found
- *   - removeSandbox() should remove sandbox, clean up plotId2Key, and call sc.removeComponent
+ *   - removeSandbox() should remove sandbox and clean up plotId2Key
  *   - removeSandbox() should use provided key over plotId2Key lookup
  *   - removeSandbox() should return early when key is not found
  *   - removeSection() should remove all sandboxes and dispatch app_refresh
  *   - removeSection() should delete section from sections map and remove all elements from dom
  *   - removeSection() should not dispatch when section has no sandboxes
+ *   - update() should regroup and return early when groupBy changes
+ *   - update() should remove inactive plots and init missing sandboxes
+ *   - regroupSections() should reparent active sandbox and remove inactive subplot components
  */
 
 /**************
@@ -54,12 +57,16 @@ function getMockSCViewer(overrides: any = {}) {
 		id: 'sc1',
 		items: overrides.items || [],
 		components: { plots: overrides.plots || {} },
+		subplotManager: {
+			setSectionKey: overrides.setSectionKey || (() => {}),
+			removeSubplot: overrides.removeSubplot || (() => {}),
+			initSubplotSandbox: overrides.initSubplotSandbox || (async () => ({ remove: () => {} })),
+			...(overrides.subplotManager || {})
+		},
 		app: {
 			dispatch: overrides.dispatch || (() => {}),
 			...(overrides.app || {})
 		},
-		removeComponent: overrides.removeComponent || (() => {}),
-		initPlotComponent: overrides.initPlotComponent || (async () => {}),
 		...overrides
 	} as any
 }
@@ -217,14 +224,9 @@ tape('findSampleMetadata() should return undefined when no match found', test =>
 
 /* ---- removeSandbox ---- */
 
-tape('removeSandbox() should remove sandbox, clean up plotId2Key, and call sc.removeComponent', test => {
+tape('removeSandbox() should remove sandbox and clean up plotId2Key', test => {
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
-	let removedComponent = ''
-	const sc = getMockSCViewer({
-		removeComponent: (id: string) => {
-			removedComponent = id
-		}
-	})
+	const sc = getMockSCViewer()
 
 	const mockSandboxDiv = { remove: () => {} }
 	sr.sections['S1'] = {
@@ -237,7 +239,6 @@ tape('removeSandbox() should remove sandbox, clean up plotId2Key, and call sc.re
 
 	sr.removeSandbox('plot1', sc)
 
-	test.equal(removedComponent, 'plot1', 'Should call sc.removeComponent with plotId')
 	test.equal(sr.sections['S1'].sandboxes['plot1'], undefined, 'Should delete sandbox from sections')
 	test.false(sr.plotId2Key.has('plot1'), 'Should delete plotId from plotId2Key')
 	test.end()
@@ -264,17 +265,11 @@ tape('removeSandbox() should use provided key over plotId2Key lookup', test => {
 
 tape('removeSandbox() should return early when key is not found', test => {
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
-	let removedComponent = false
-	const sc = getMockSCViewer({
-		removeComponent: () => {
-			removedComponent = true
-		}
-	})
+	const sc = getMockSCViewer()
 
 	// No sections or plotId2Key entries set up
 	sr.removeSandbox('plot1', sc)
 
-	test.true(removedComponent, 'Should still call sc.removeComponent')
 	test.equal(sr.plotId2Key.size, 0, 'plotId2Key should remain empty')
 	test.end()
 })
@@ -319,12 +314,8 @@ tape('getKey() should return undefined when no value can be determined', test =>
 
 tape('removeSection() should remove all sandboxes and dispatch app_refresh', test => {
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
-	const removedComponents: string[] = []
 	let dispatched: any = null
 	const sc = getMockSCViewer({
-		removeComponent: (id: string) => {
-			removedComponents.push(id)
-		},
 		dispatch: (action: any) => {
 			dispatched = action
 		}
@@ -347,7 +338,6 @@ tape('removeSection() should remove all sandboxes and dispatch app_refresh', tes
 
 	sr.removeSection('S1', sc)
 
-	test.deepEqual(removedComponents.sort(), ['plot1', 'plot2'], 'Should call removeComponent for each sandbox')
 	test.equal(dispatched.type, 'app_refresh', 'Should dispatch app_refresh')
 	test.equal(dispatched.subactions.length, 2, 'Should include a subaction for each sandbox')
 	test.equal(dispatched.subactions[0].type, 'plot_delete', 'Subaction type should be plot_delete')
@@ -400,5 +390,120 @@ tape('removeSection() should not dispatch when section has no sandboxes', test =
 
 	test.false(dispatched, 'Should not dispatch when there are no sandboxes')
 	test.equal(sr.sections['S1'], undefined, 'Should still delete the section')
+	test.end()
+})
+
+/* ---- update / regroupSections ---- */
+
+tape('update() should regroup and return early when groupBy changes', async test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	let regroupCalled = false
+	;(sr as any).regroupSections = (_sc: any, _subplots: any[]) => {
+		regroupCalled = true
+	}
+
+	const sc = getMockSCViewer()
+	await sr.update(sc, [{ id: 'plot1', plotName: 'UMAP' }], 'plot')
+
+	test.equal(sr.groupBy, 'plot', 'Should update groupBy')
+	test.true(regroupCalled, 'Should call regroupSections()')
+	test.end()
+})
+
+tape('update() should remove inactive plots and init missing sandboxes', async test => {
+	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	const removed: string[] = []
+	const initialized: string[] = []
+	const sectionKeyUpdates: { plotId: string; key: string }[] = []
+
+	const sc = getMockSCViewer({
+		plots: { activePlot: {}, stalePlot: {} },
+		subplotManager: {
+			setSectionKey: (plotId: string, key: string) => {
+				sectionKeyUpdates.push({ plotId, key })
+			}
+		}
+	})
+
+	;(sr as any).removeSandbox = (plotId: string) => removed.push(plotId)
+	sr.getKey = () => 'S1'
+	sr.initSection = (key: string) => {
+		sr.sections[key] = {
+			sectionWrapper: { remove: () => {} } as any,
+			title: {} as any,
+			subplots: { style: () => 'block' } as any,
+			sandboxes: {}
+		}
+	}
+	;(sr as any).initSandbox = async (_sc: any, subplot: any, key: string) => {
+		sr.sections[key].sandboxes[subplot.id] = { remove: () => {} } as any
+		initialized.push(subplot.id)
+	}
+
+	await sr.update(sc, [{ id: 'activePlot', sample: { sID: 'S1' } }], 'sample')
+
+	test.deepEqual(removed, ['stalePlot'], 'Should remove stale component sandboxes')
+	test.deepEqual(initialized, ['activePlot'], 'Should initialize missing active sandbox')
+	test.equal(sr.plotId2Key.get('activePlot'), 'S1', 'Should track reverse lookup for active subplot')
+	test.deepEqual(sectionKeyUpdates, [{ plotId: 'activePlot', key: 'S1' }], 'Should update subplot section key mapping')
+	test.end()
+})
+
+tape('regroupSections() should reparent active sandbox and remove inactive subplot components', test => {
+	const sr = new SectionRenderer(getMockDiv(), 'plot')
+	const setSectionKeyCalls: { plotId: string; key: string }[] = []
+	const removedSubplots: string[] = []
+	const prependedNodes: any[] = []
+
+	const sc = getMockSCViewer({
+		plots: { plot1: {}, stalePlot: {} },
+		subplotManager: {
+			setSectionKey: (plotId: string, key: string) => setSectionKeyCalls.push({ plotId, key }),
+			removeSubplot: (plotId: string) => removedSubplots.push(plotId)
+		}
+	})
+
+	const existingNode = { id: 'existingNode' }
+	let detached = 0
+	const existingSandbox = {
+		remove: () => {
+			detached++
+		},
+		node: () => existingNode
+	}
+
+	sr.sections = {
+		OLD: {
+			sectionWrapper: {} as any,
+			title: {} as any,
+			subplots: {} as any,
+			sandboxes: { plot1: existingSandbox as any }
+		}
+	}
+	sr.plotId2Key.set('plot1', 'OLD')
+	;(sr as any).holder = {
+		selectAll: () => ({
+			remove: () => {}
+		})
+	}
+
+	sr.initSection = (key: string) => {
+		sr.sections[key] = {
+			sectionWrapper: {} as any,
+			title: {} as any,
+			subplots: {
+				node: () => ({ prepend: (node: any) => prependedNodes.push(node) })
+			} as any,
+			sandboxes: {}
+		}
+	}
+	;(sr as any).regroupSections(sc, [{ id: 'plot1', plotName: 'UMAP' }])
+
+	test.equal(detached, 1, 'Should detach existing sandbox from old section')
+	test.deepEqual(removedSubplots, ['stalePlot'], 'Should remove inactive subplot components')
+	test.deepEqual(prependedNodes, [existingNode], 'Should prepend existing sandbox node into new section')
+	test.equal(sr.plotId2Key.get('plot1'), 'UMAP', 'Should update reverse lookup to new key')
+	test.equal(sr.sections['UMAP'].sandboxes['plot1'], existingSandbox, 'Should reattach sandbox to regrouped section')
+	test.deepEqual(setSectionKeyCalls, [{ plotId: 'plot1', key: 'UMAP' }], 'Should sync subplot section key')
 	test.end()
 })
