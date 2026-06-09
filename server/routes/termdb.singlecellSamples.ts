@@ -118,9 +118,15 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
-	D['metaIdMap'] = new Map()
 	for (const plot of D.plots) {
 		if (plot.isMetaResult) {
+			/** Meta analysis files are read on init to create a sample name 2 cell id
+			 * 2 sample id map. The map is a lookup for data getters to retrieve the
+			 * sampleId to match with cohort level terms. Attaching the map to
+			 * ds.queries.singleCell.data allows getters (e.g. getData() in termdb.matrix)
+			 * access to when needed.
+			 * Becomes <plotName(i.e metaResultID), <cellId, sampleId >> */
+			if (!D.metaIdMap) D.metaIdMap = new Map()
 			/** Meta analysis results may not be separated into folders like the sample files
 			 * for other plots. Check the file exists with the appropriate "sample name". This
 			 * method ensure the file can be queried as intended later.
@@ -143,7 +149,7 @@ async function validateSamples(q: SingleCellQuery, ds: any) {
 					if (!sampleId) throw new Error(`meta result row missing sample id, index = ${i}, sample id: ${sampleId}`)
 					cellIdMap.set(cellId, sampleId)
 				}
-				D['metaIdMap'].set(sampleName, cellIdMap)
+				D.metaIdMap.set(sampleName, cellIdMap)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
 			}
