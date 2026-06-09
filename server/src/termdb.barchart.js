@@ -162,7 +162,7 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 					if (id) {
 						const value = values[id]
 						if (!value) {
-							//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
+							// console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
 							samplesMap.set(sampleId, null)
 						} else {
 							if (tw.term.type == 'geneVariant') {

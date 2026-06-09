@@ -382,6 +382,21 @@ async function getSampleData(q, ds) {
 	}
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
+/********** Start single cell helpers **********
+ * 
+ * Single cell data is unique. Cells, not samples, are displayed. At times, those cells are 
+ * compared against cohort level terms in the termdb. The sampleId from the tsv file is mapped
+ * to the primary key in the termdb to match the cohort level data to the cell data. 
+ * 
+ * The helpers below are used to:
+ * 1. map the cell to the sampleId in the termdb, and then get the cohort level data for that 
+ * sampleId, and attach it to the cell data. This is done in getSingleCellSampleEntry() and 
+ * getSampleId4Cell()
+ * 2. for single cell meta analysis results, the "cell" is actually a pseudo-sample that 
+ * represents a group of cells. The sampleId of this pseudo-sample is mapped to the sampleId 
+ * in the termdb, and then get the cohort level data for that sampleId, and attach it to 
+ * the pseudo-sample data. This is done in hydrateMetaResultCellRows()
+ */
 
 function getSingleCellSampleEntry(samples, ds, tw, _cell) {
 	const sampleId = getSampleId4Cell(ds, tw, _cell)
@@ -393,6 +408,7 @@ function getSingleCellSampleEntry(samples, ds, tw, _cell) {
 	return cell
 }
 
+//See documentation above
 function getSampleId4Cell(ds, tw, cell) {
 	if (!tw.term.sample?.isMetaResult) return
 	/** Note: Do not use .eID. Only for GDC in separate pathway */
@@ -407,6 +423,7 @@ function getSampleId4Cell(ds, tw, cell) {
 	return String(sampleId)
 }
 
+//See documentation above
 function hydrateMetaResultCellRows(samples) {
 	for (const _sampleId in samples) {
 		const row = samples[_sampleId]
@@ -420,6 +437,7 @@ function hydrateMetaResultCellRows(samples) {
 		}
 	}
 }
+//********** End single cell helpers **********
 
 function twlstGeneCountReducer(sum, tw) {
 	return sum + (tw.term.genes?.length || 1)

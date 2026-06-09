@@ -929,6 +929,9 @@ export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'
 	/** available tsne type of plots for each sample */
 	plots: SingleCellPlot[]
+	/** created on init for meta analysis plots
+	 * <plotName(i.e metaResultID), <cellId, sampleId >> */
+	metaIdMap?: Map<string, Map<string, string>>
 }
 
 export type SingleCellQuery = {
