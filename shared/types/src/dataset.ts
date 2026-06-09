@@ -2175,6 +2175,7 @@ export type Mds3 = BaseMds & {
 	// TODO FIXME nest termdb under cohort
 	termdb?: Termdb
 	validate_filter0?: (f: any) => void
+	getFilter0SampleTypes?: (filter: any, ds: any) => void
 	ssm2canonicalisoform?: GdcApi
 	variant2samples?: Variant2Samples
 	scatterplots?: Scatterplots
