@@ -11,6 +11,8 @@ import {
 	dtfusionrna,
 	mclassfusionrna,
 	mclasssv,
+	mclassitd,
+	CNVClasses,
 	bplen
 } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
@@ -603,8 +605,8 @@ function update_mclass(tk) {
 					{
 						isChangeShape: true,
 						isVisible: () => {
-							if (c.k == dtcnv) return false // no changing shape for cnv
-							return !tk.skewer.viewModes.find(v => v.type === 'numeric')?.inuse
+							if (c.k == dtcnv || CNVClasses.includes(c.k) || c.k == mclassitd) return false // no changing shape for cnv
+							return !tk.skewer?.viewModes?.find?.(v => v.type === 'numeric')?.inuse
 								? tk.mds?.termdbConfig?.tracks?.allowSkewerChanges ?? true
 								: false
 						},
@@ -919,6 +921,7 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
+	if (!tk.legend.cnv) return // only has itd but not cnv. in such case legend.cnv is not created
 
 	// tk is equipped with cnv. determine if cnv data is actually shown
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {

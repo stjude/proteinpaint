@@ -672,7 +672,7 @@ type ITDQuery = {
 	3. stop
 	4. { "sample": "3332"}
 	*/
-	file?: string
+	file: string
 }
 
 /*

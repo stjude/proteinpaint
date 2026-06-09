@@ -18,14 +18,23 @@ Official - hardcodeCnvOnly hidegenelegend
 Official - hardcodeCnvOnly
 Official - snvIndelOnly
 Incorrect dslabel
-Custom cnv only, no sample
+Custom cnv, numeric, no sample
+Custom cnv, categorical, no sample
+Custom ITD no sample
+Custom cnv both num and categorical, and ITD, no sample
+Custom cnv numerical and ITD, no sample
 
 (todo) Custom fusion
 
 Custom ssm only, no sample
-Custom cnv and ssm, no sample
-Custom cnv and ssm, WITH sample
-Custom cnv (category but not numeric value), WITH sample
+Custom cnv numerical and ssm, no sample
+Custom cnv numerical and ssm, WITH sample
+Custom cnv category and ssm with sample
+Custom ITD with sample
+Custom ssm and ITD with sample
+Custom cnv category and ssm and ITD with sample
+Custom cnv numeric and ssm and ITD with sample
+
 Custom variants, missing or invalid mclass
 Custom variants WITH samples (allows some to be without)
 Custom data with samples and sample selection
@@ -849,7 +858,7 @@ tape('Custom data with samples and sample selection', test => {
 	}
 })
 
-tape('Custom cnv only, no sample', test => {
+tape('Custom cnv, numeric, no sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -865,14 +874,7 @@ tape('Custom cnv only, no sample', test => {
 		noheader: true,
 		genome: 'hg38-test',
 		gene: 'NM_000546',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Custom data',
-				custom_variants,
-				callbackOnRender
-			}
-		]
+		tracks: [{ type: 'mds3', custom_variants, callbackOnRender }]
 	})
 	async function callbackOnRender(tk) {
 		test.equal(
@@ -900,8 +902,142 @@ tape('Custom cnv only, no sample', test => {
 		test.end()
 	}
 })
+tape('Custom cnv, categorical, no sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
 
-tape('Custom cnv and ssm, no sample', test => {
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_loss' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants, callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.length,
+			`All ${custom_variants.length} segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} CNVs`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+tape('Custom ITD no sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 6, class: 'ITD' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants, callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.length,
+			`All ${custom_variants.length} segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} ITDs`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+tape('Custom cnv numerical and ITD, no sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp', value: 1 },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_loss', value: -1 },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss', value: -0.5 },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 6, class: 'ITD' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants, callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.length,
+			`All ${custom_variants.length} segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+
+tape('Custom cnv numerical and ssm, no sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -920,14 +1056,7 @@ tape('Custom cnv and ssm, no sample', test => {
 		noheader: true,
 		genome: 'hg38-test',
 		gene: 'NM_000546',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Custom data',
-				custom_variants,
-				callbackOnRender
-			}
-		]
+		tracks: [{ type: 'mds3', name: 'Custom data', custom_variants, callbackOnRender }]
 	})
 	async function callbackOnRender(tk) {
 		test.equal(
@@ -957,7 +1086,7 @@ tape('Custom cnv and ssm, no sample', test => {
 	}
 })
 
-tape('Custom cnv and ssm, WITH sample', test => {
+tape('Custom cnv numerical and ssm, WITH sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -976,14 +1105,7 @@ tape('Custom cnv and ssm, WITH sample', test => {
 		noheader: true,
 		genome: 'hg38-test',
 		gene: 'NM_000546',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Custom data',
-				custom_variants: JSON.parse(JSON.stringify(custom_variants)),
-				callbackOnRender
-			}
-		]
+		tracks: [{ type: 'mds3', custom_variants: structuredClone(custom_variants), callbackOnRender }]
 	})
 	async function callbackOnRender(tk) {
 		test.equal(
@@ -1023,7 +1145,176 @@ tape('Custom cnv and ssm, WITH sample', test => {
 	}
 })
 
-tape('Custom cnv (category but not numeric value), WITH sample', test => {
+tape('Custom cnv category and ssm and ITD with sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp', sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amplification', sample: 's2' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss', sample: 's3' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_homozygous_deletion', sample: 's4' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD', sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 6, class: 'ITD', sample: 's3' },
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 's3' },
+		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 's4' },
+		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 's1' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants: structuredClone(custom_variants), callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.filter(i => i.dt == 4 || i.dt == 6).length,
+			`All cnv segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+
+		{
+			// Test sample leftlabel
+			const lab = tk.leftlabels.doms.samples
+			test.ok(lab, '"Samples" leftlabel should be displayed')
+
+			const set = new Set(custom_variants.map(i => i.sample))
+			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
+		}
+
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+tape('Custom ssm and ITD with sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD', sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 6, class: 'ITD', sample: 's3' },
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 's3' },
+		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 's4' },
+		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 's1' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants: structuredClone(custom_variants), callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.filter(i => i.dt == 6).length,
+			`All ITD segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+
+		{
+			// Test sample leftlabel
+			const lab = tk.leftlabels.doms.samples
+			test.ok(lab, '"Samples" leftlabel should be displayed')
+
+			const set = new Set(custom_variants.map(i => i.sample))
+			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
+		}
+
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+tape('Custom ITD with sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD', sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 6, class: 'ITD', sample: 's3' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants: structuredClone(custom_variants), callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.filter(i => i.dt == 6).length,
+			`All cnv segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} ITDs`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+
+		{
+			// Test sample leftlabel
+			const lab = tk.leftlabels.doms.samples
+			test.ok(lab, '"Samples" leftlabel should be displayed')
+
+			const set = new Set(custom_variants.map(i => i.sample))
+			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
+		}
+
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+tape('Custom cnv category and ssm with sample', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -1043,19 +1334,72 @@ tape('Custom cnv (category but not numeric value), WITH sample', test => {
 		noheader: true,
 		genome: 'hg38-test',
 		gene: 'NM_000546',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Custom data',
-				custom_variants: JSON.parse(JSON.stringify(custom_variants)),
-				callbackOnRender
-			}
-		]
+		tracks: [{ type: 'mds3', custom_variants: structuredClone(custom_variants), callbackOnRender }]
 	})
 	async function callbackOnRender(tk) {
 		test.equal(
 			tk.cnv.g.selectAll('rect')._groups[0].length,
 			custom_variants.filter(i => i.dt == 4).length,
+			`All cnv segments should be rendered`
+		)
+
+		{
+			//Test variant label left of track
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(
+				lab.node().innerHTML,
+				`${custom_variants.length} variants`,
+				`Variant leftlabel should print "${custom_variants.length} variants"`
+			)
+		}
+
+		{
+			// Test sample leftlabel
+			const lab = tk.leftlabels.doms.samples
+			test.ok(lab, '"Samples" leftlabel should be displayed')
+
+			const set = new Set(custom_variants.map(i => i.sample))
+			test.equal(lab.node().innerHTML, `${set.size} samples`, `Samples leftlabel should print "${set.size} samples"`)
+		}
+
+		testLegend(test, tk)
+
+		if (test._ok) {
+			tk.menutip.d.remove()
+			holder.remove()
+		}
+		test.end()
+	}
+})
+tape('Custom cnv numeric and ssm and ITD with sample', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amp', value: 2, sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 4, class: 'CNV_amplification', value: 4, sample: 's2' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_loss', value: -1, sample: 's3' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 4, class: 'CNV_homozygous_deletion', value: -2, sample: 's4' },
+		{ chr: 'chr17', start: 7670699, stop: 7674000, dt: 6, class: 'ITD', sample: 's1' },
+		{ chr: 'chr17', start: 7670699, stop: 7676000, dt: 6, class: 'ITD', sample: 's3' },
+		{ chr: 'chr17', pos: 7675993, mname: 'point 1', class: 'M', dt: 1, sample: 's3' },
+		{ chr: 'chr17', pos: 7676520, mname: 'point 2', class: 'M', dt: 1, sample: 's4' },
+		{ chr: 'chr17', pos: 7676381, mname: 'point 3', class: 'M', dt: 1, sample: 's1' }
+	]
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38-test',
+		gene: 'NM_000546',
+		tracks: [{ type: 'mds3', custom_variants: structuredClone(custom_variants), callbackOnRender }]
+	})
+	async function callbackOnRender(tk) {
+		test.equal(
+			tk.cnv.g.selectAll('rect')._groups[0].length,
+			custom_variants.filter(i => i.dt == 4 || i.dt == 6).length,
 			`All cnv segments should be rendered`
 		)
 
@@ -1438,6 +1782,14 @@ function testLegend_cnv(test, tk) {
 		test.ok(!tk.legend.cnv, 'tk.legend.cnv is missing when tk has no cnv')
 		return
 	}
+	if (!tk.mds.has_cnv && !tk.mds.termdbConfig?.queries?.cnv) {
+		test.ok(
+			!tk.legend.cnv,
+			'either mds.has_cnv=false or native ds missing cnv query, means tk only has itd but no cnv. in such case cnv legend is not shown'
+		)
+		return
+	}
+
 	test.ok(tk.legend.cnv, 'tk.legend.cnv is set when tk has cnv')
 
 	const cnvItems = tk.legend.cnv.row.selectAll('*').nodes()
