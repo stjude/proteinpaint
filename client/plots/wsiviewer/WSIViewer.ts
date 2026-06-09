@@ -166,7 +166,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 				this.wsiViewerInteractions,
 				numTotalFiles
 			)
-			await new Promise(resolve => setTimeout(resolve, 400))
+
 			// Not actually reseting image, just saving that thumbnail is done rendering
 			// so spinner isnt rendering next call
 			this.wsiViewerInteractions.toggleThumbnails(0, true)
@@ -218,7 +218,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			}
 		}
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
-		//
+		//Selection objects you want to add cursor style go here because the spinner changes all to default
 		if (!settings.isSavingAnnotation) {
 			for (const element of [
 				this.thumbnailsContainer.selectAll('div').selectAll('*'),
