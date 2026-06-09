@@ -536,7 +536,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		ds.init.currentRetry = currentRetry
 		try {
 			console.log(`Retrying ${gdlabel} init(), attempt #${currentRetry} ...`)
-			if (ds.isMds3) await mds3_init.init(ds, g)
+			if (ds.isMds3) await mds3_init.init(ds, g, totalRawDsLst)
 			else if (ds.isMds) await mds_init(ds, g, d)
 			else initLegacyDataset(ds, g, serverconfig)
 			// as long as no error bubbles up to here, the retry is considered successful
@@ -557,7 +557,10 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 					)
 				}
 				// this will crash the server with an uncaught error, the server will stop responding to HTTP requests
-				if (totalRawDsLst === 1) throw msg
+				if (totalRawDsLst === 1)
+					setImmediate(() => {
+						throw new Error(msg)
+					})
 			} else {
 				console.warn(
 					`${gdlabel} init() failed. Retrying in ${Math.round(ds.init.retryDelay / 1000)} second(s) ... (${

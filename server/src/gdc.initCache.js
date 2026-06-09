@@ -88,7 +88,7 @@ async function mayRefreshCache(ds) {
 		clearMemFetchDataCache()
 
 		// on first call, ds.__gdc.doneCaching will be false as expected,
-		// and `gdcBuildDictionary(ds)` would have been called once in mds3.init.js within validated_termdb(),
+		// and `gdcBuildDictionary(ds)` would have been called once in mds3.init.js within validate_termdb(),
 		// so no need to repeat `gdcBuildDictionary(ds)` on the first call;
 		// rebuild the dictionary only after the initial cache and subsequent calls to mayRefreshCache()
 		if (ds.__gdc?.doneCaching) await gdcBuildDictionary(ds)
