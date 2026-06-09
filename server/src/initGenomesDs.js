@@ -516,6 +516,11 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		// will not be able to recover even with retries
 		ds.init.status = `fatalError`
 		if (!ds.init.error) ds.init.error = JSON.stringify(e)
+		if (totalRawDsLst === 1)
+			setImmediate(() => {
+				const msg = ds.init.fatalError === e ? e : ds.init.fatalError + ': ' + e
+				throw new Error(gdlabel + ' ' + msg)
+			})
 		return
 	}
 	if (!ds.init.retryMax) {
@@ -544,8 +549,9 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 			if (!ds.init.status) ds.init.status = 'done'
 		} catch (e) {
 			if (ds.init.status != 'recoverableError' && !ds.init.recoverableError && !utils.isRecoverableError(e)) {
-				const msg =
-					`Fatal error on ${gdlabel} retry, stopping retry` + (ds.init?.fatalError ? ': ' + ds.init?.fatalError : '')
+				const msg = `Fatal error on ${gdlabel} retry, stopping retry${
+					ds.init?.fatalError ? ': ' + ds.init?.fatalError : ''
+				} [${e?.error || e}]`
 				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
