@@ -1,6 +1,7 @@
 import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
+import { existsSync } from 'node:fs'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
@@ -441,12 +442,25 @@ async function runGrin2Fresh(
 	// Rust reads them straight from this JSON file, no sibling file.
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 
+	// Optional artifact-region BEDs (UCSC segmental duplications + ENCODE blacklist
+	// v2) used by the Python wrapper to flag genes that lie within known
+	// germline-CNV / low-mappability regions. Bundled per-genome in tp/anno/; any
+	// that are absent (e.g. hg19, or a deployment without these files) are simply
+	// omitted, and the wrapper then drops the Blacklist/Segdup column.
+	const artifactBeds = [
+		`anno/genomicSuperDups.${request.genome}.bed.gz`,
+		`anno/encodeBlacklist.${request.genome}.bed.gz`
+	]
+		.map(rel => path.join(serverconfig.tpmasterdir, rel))
+		.filter(p => existsSync(p))
+
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist,
 		lesion: JSON.stringify(lesions),
 		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
+		artifactBeds
 	}
 
 	// Step 4: Run GRIN2 analysis via Python

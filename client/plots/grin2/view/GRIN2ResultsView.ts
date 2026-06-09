@@ -37,36 +37,100 @@ export class GRIN2ResultsView {
 				.append('div')
 				.style('display', 'flex')
 				.style('align-items', 'center')
+				.style('flex-wrap', 'wrap')
 				.style('margin', btnMargin)
 
-			headerDiv.append('h3').style('margin', headerMargin).style('font-size', `${headerFontSize}px`).text(headerText)
+			const headerH3 = headerDiv
+				.append('h3')
+				.style('margin', headerMargin)
+				.style('font-size', `${headerFontSize}px`)
+				.text(headerText)
 
-			showResultsTable({
-				tableDiv: tableContainer.append('div'),
-				app: this.app,
-				columns,
-				rows,
-				dataItems,
-				getRowKey: (row: any) => row[0]?.value,
-				matrixButtonFormat: 'Matrix ({n} genes selected)',
-				maxHeight: '400px',
-				maxWidth: '100%',
-				dataTestId: 'sjpp-grin2-top-genes-table',
-				resize: 'both',
-				selectAll: false,
-				allowRestoreRowOrder: true,
-				restoreButtonInFooter: true,
-				download: {
-					fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
-				},
-				header: {
-					allowSort: true,
-					style: {
-						'font-weight': statsTableFontWeight,
-						'background-color': backgroundColor
+			// Artifact-flag filter toggles. Each flag column produced by the Python
+			// wrapper (Bidirectional Artifact, Blacklist/Segdup) gets a "Hide …"
+			// checkbox; checking it drops rows flagged 'Yes' for that column. The
+			// `columns` array (and each row) is prepended with the significance-circle
+			// column, so colIndex here indexes into both directly.
+			const flagLabels: Record<string, string> = {
+				'Bidirectional Artifact': 'Hide bidirectional artifacts',
+				'Blacklist/Segdup': 'Hide blacklist/segdup artifacts',
+				'Gene Family': 'Hide gene-family artifacts'
+			}
+			const flagCols = Object.keys(flagLabels)
+				.map(label => ({ label, colIndex: columns.findIndex(c => c.label === label) }))
+				.filter(f => f.colIndex !== -1)
+			const hidden = new Set<string>()
+			// A cell counts as "flagged" when it is truthy and not the literal 'No'.
+			// This covers both the Yes/No flag columns and the labeled Gene Family
+			// column (where the value is a family acronym like 'OR' / 'HLA').
+			const isFlagged = (v: any) => v && v !== 'No'
+
+			const tableDiv = tableContainer.append('div')
+			const renderGenes = () => {
+				const keep = rows
+					.map((_, i) => i)
+					.filter(i => !flagCols.some(f => hidden.has(f.label) && isFlagged(rows[i][f.colIndex]?.value)))
+				const fRows = keep.map(i => rows[i])
+				const fData = keep.map(i => dataItems[i])
+				headerH3.text(hidden.size ? `${headerText} — ${fRows.length} shown after filter` : headerText)
+				tableDiv.selectAll('*').remove()
+				showResultsTable({
+					tableDiv: tableDiv.append('div'),
+					app: this.app,
+					columns,
+					rows: fRows,
+					dataItems: fData,
+					getRowKey: (row: any) => row[0]?.value,
+					matrixButtonFormat: 'Matrix ({n} genes selected)',
+					maxHeight: '400px',
+					maxWidth: '100%',
+					dataTestId: 'sjpp-grin2-top-genes-table',
+					resize: 'both',
+					selectAll: false,
+					allowRestoreRowOrder: true,
+					restoreButtonInFooter: true,
+					download: {
+						fileName: `grin2_top_genes_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}.tsv`
+					},
+					header: {
+						allowSort: true,
+						style: {
+							'font-weight': statsTableFontWeight,
+							'background-color': backgroundColor
+						}
 					}
+				})
+			}
+
+			if (flagCols.length) {
+				const filterDiv = headerDiv
+					.append('div')
+					.style('display', 'inline-flex')
+					.style('align-items', 'center')
+					.style('gap', '12px')
+					.style('margin-left', '12px')
+				for (const f of flagCols) {
+					const lbl = filterDiv
+						.append('label')
+						.style('display', 'inline-flex')
+						.style('align-items', 'center')
+						.style('font-size', '12px')
+						.style('cursor', 'pointer')
+					lbl
+						.append('input')
+						.attr('type', 'checkbox')
+						.attr('data-testid', `sjpp-grin2-hide-${f.colIndex}`)
+						.style('margin-right', '4px')
+						.on('change', function (this: HTMLInputElement) {
+							if (this.checked) hidden.add(f.label)
+							else hidden.delete(f.label)
+							renderGenes()
+						})
+					lbl.append('span').text(flagLabels[f.label])
 				}
-			})
+			}
+
+			renderGenes()
 		}
 
 		if (viewData.statsSections.length > 0) {

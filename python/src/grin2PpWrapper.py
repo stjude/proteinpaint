@@ -24,7 +24,7 @@ Output JSON:
 }
 """
 
-import warnings, json, sys
+import warnings, json, sys, os, re
 import sqlite3
 import pandas as pd
 import numpy as np
@@ -33,8 +33,119 @@ from grin2_core import grin_stats
 
 warnings.filterwarnings('ignore')
 
+# Bidirectional-artifact flag threshold. A gene significant for BOTH gain and loss
+# (q.nsubj.gain < alpha AND q.nsubj.loss < alpha) is far more consistent with a
+# germline CNV / mappability artifact (e.g. OR clusters, FAM90A) than a directional
+# somatic driver. Pure post-hoc annotation; see GRIN2 hardening report (Tier 1).
+BIDIRECTIONAL_ALPHA = 0.05
+
+# Blacklist / segmental-duplication overlap threshold. A gene is flagged as a
+# region artifact when at least this fraction of its span lies within a known
+# artifact region (UCSC segmental duplications and/or the ENCODE blacklist v2).
+# Fraction-based (not any-overlap) so genuine drivers that merely abut a segdup
+# (e.g. KRAS, ~10% covered) are spared, while germline/segdup-embedded gene
+# families (FAM90A, POTE, GOLGA8, DUX, DEFB, HLA; ~100% covered) are flagged.
+# See GRIN2 hardening report (Tier 1 overlap-annotation / Tier 2 region mask).
+BLACKLIST_OVERLAP_FRAC = 0.5
+
 def write_error(msg):
 	print(f"ERROR: {msg}", file=sys.stderr)
+
+def load_merged_bed(path):
+	"""Load a BED(.gz) of artifact regions and merge overlapping intervals per
+	chromosome. Returns {chrom: (starts, ends)} of merged, start-sorted intervals
+	as numpy arrays, suitable for fast coverage queries."""
+	bed = pd.read_csv(
+		path, sep="\t", header=None, usecols=[0, 1, 2],
+		names=["chrom", "start", "end"], comment="#"
+	)
+	idx = {}
+	for chrom, sub in bed.groupby("chrom"):
+		iv = sub[["start", "end"]].to_numpy()
+		iv = iv[np.argsort(iv[:, 0])]
+		merged = []
+		cs, ce = iv[0]
+		for s, e in iv[1:]:
+			if s <= ce:
+				ce = max(ce, e)
+			else:
+				merged.append((cs, ce))
+				cs, ce = s, e
+		merged.append((cs, ce))
+		m = np.array(merged)
+		idx[chrom] = (m[:, 0], m[:, 1])
+	return idx
+
+def covered_fraction(idx, chrom, gstart, gend):
+	"""Fraction of the gene span [gstart, gend) covered by merged artifact
+	intervals on `chrom`. Uses prefix search over start-sorted merged intervals."""
+	glen = gend - gstart
+	if glen <= 0 or chrom not in idx:
+		return 0.0
+	starts, ends = idx[chrom]
+	k = np.searchsorted(starts, gend, side="left")  # intervals starting before gene end
+	if k == 0:
+		return 0.0
+	s = starts[:k]
+	e = ends[:k]
+	mask = e > gstart  # ... that also end after gene start
+	if not mask.any():
+		return 0.0
+	s = np.maximum(s[mask], gstart)
+	e = np.minimum(e[mask], gend)
+	return float(np.clip(e - s, 0, None).sum()) / glen
+
+def compute_blacklist_flag(data, bed_paths, threshold=BLACKLIST_OVERLAP_FRAC):
+	"""Boolean Series (aligned to `data`) flagging genes whose span is at least
+	`threshold` covered by any provided artifact BED. Missing/unreadable BEDs are
+	skipped; returns None when no usable BED is available so callers can omit the
+	column entirely (e.g. genomes without bundled artifact tracks)."""
+	indexes = []
+	for p in bed_paths or []:
+		if p and os.path.exists(p):
+			try:
+				indexes.append(load_merged_bed(p))
+			except Exception as e:
+				write_error(f"Could not load artifact BED {p}: {e}")
+	if not indexes:
+		return None
+	chroms = data["chrom"].to_numpy()
+	starts = data["loc.start"].to_numpy()
+	ends = data["loc.end"].to_numpy()
+	flags = np.zeros(len(data), dtype=bool)
+	for i in range(len(data)):
+		frac = max(
+			(covered_fraction(idx, chroms[i], int(starts[i]), int(ends[i])) for idx in indexes),
+			default=0.0
+		)
+		flags[i] = frac >= threshold
+	return pd.Series(flags, index=data.index)
+
+# Artifact-prone gene families (symbol-based). These multi-allelic /
+# segmental-duplication-embedded / immune-locus families are routinely flagged
+# in cancer CNV-recurrence analyses (report Tier 1 gene-family label). Catches
+# the unidirectional OR/HLA/MUC/KRTAP residuals that the bidirectional and
+# blacklist/segdup flags miss. Symbol-prefix matched, first match wins; patterns
+# are deliberately precise to avoid real drivers (e.g. ORC/ORAI, TRADD/TRAF, IGF).
+GENE_FAMILY_PATTERNS = [
+	("OR", re.compile(r"^OR\d{1,2}[A-Z]")),   # olfactory receptors (OR4K5, OR52N1, OR2T10)
+	("HLA", re.compile(r"^HLA-")),            # MHC class I/II
+	("IG", re.compile(r"^IG[HKL][VDJ]")),     # immunoglobulin V/D/J segments
+	("TR", re.compile(r"^TR[ABGD][VDJ]\d")),  # T-cell receptor V/D/J segments
+	("MUC", re.compile(r"^MUC\d")),           # mucins
+	("DEF", re.compile(r"^DEF[AB]\d")),       # defensins
+	("KRTAP", re.compile(r"^KRTAP")),         # keratin-associated proteins
+	("ZNF", re.compile(r"^ZNF\d")),           # zinc-finger clusters
+]
+
+def classify_gene_family(symbol):
+	"""Return the artifact-prone gene-family acronym for a gene symbol, or None."""
+	if not isinstance(symbol, str):
+		return None
+	for name, pat in GENE_FAMILY_PATTERNS:
+		if pat.match(symbol):
+			return name
+	return None
 
 def get_sig_values(data):
 	"""Find existing p/q/n columns for all data types by discovering them from column names"""
@@ -93,7 +204,7 @@ def get_user_friendly_label(col_name, lesion_type_map):
 	
 	return col_name
 
-def simple_column_filter(sorted_results, num_rows, lesion_type_map):
+def simple_column_filter(sorted_results, num_rows, lesion_type_map, blacklist_flag=None):
 	"""Generate columns and rows for topGeneTable"""
 	result = get_sig_values(sorted_results)
 	p_cols, q_cols, n_cols = result["p_cols"], result["q_cols"], result["n_cols"]
@@ -104,13 +215,31 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map):
 		f'p{i}.nsubj' in sorted_results.columns and f'q{i}.nsubj' in sorted_results.columns
 		for i in range(1, 6)
 	]
-	
+
+	# Bidirectional-artifact flag: a gene significant for both gain AND loss. Only
+	# applicable when both q-value columns exist; NaN q-values compare False, so a
+	# gene with a missing q-value is correctly not flagged.
+	has_gain_loss = {'q.nsubj.gain', 'q.nsubj.loss'} <= set(sorted_results.columns)
+	if has_gain_loss:
+		g = sorted_results['q.nsubj.gain'].iloc[:num_rows]
+		l = sorted_results['q.nsubj.loss'].iloc[:num_rows]
+		bidirectional_flag = (g < BIDIRECTIONAL_ALPHA) & (l < BIDIRECTIONAL_ALPHA)
+
+	# Gene-family artifact label (symbol-based; always available). Shows the
+	# family acronym (OR/HLA/MUC/...) for artifact-prone families, else "No".
+	gene_family = sorted_results['gene'].iloc[:num_rows].map(lambda s: classify_gene_family(s) or "No")
+
 	# Build columns
 	columns = [
 		{"label": "Gene", "sortable": True},
 		{"label": "Chromosome", "sortable": True}
 	]
-	
+	if has_gain_loss:
+		columns.append({"label": "Bidirectional Artifact", "sortable": True})
+	if blacklist_flag is not None:
+		columns.append({"label": "Blacklist/Segdup", "sortable": True})
+	columns.append({"label": "Gene Family", "sortable": True})
+
 	# Add data type columns - safely check n_cols length
 	for i, has_data_flag in enumerate(data_type_has_data):
 		if has_data_flag and i < len(n_cols):
@@ -149,7 +278,12 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map):
 			{"value": row_vals["gene"]},
 			{"value": row_vals["chrom"]}
 		]
-		
+		if has_gain_loss:
+			row_data.append({"value": "Yes" if bool(bidirectional_flag.iloc[idx]) else "No"})
+		if blacklist_flag is not None:
+			row_data.append({"value": "Yes" if bool(blacklist_flag.iloc[idx]) else "No"})
+		row_data.append({"value": gene_family.iloc[idx]})
+
 		# Add data type values - safely check n_cols length
 		for i, has_data_flag in enumerate(data_type_has_data):
 			if has_data_flag and i < len(n_cols):
@@ -183,6 +317,9 @@ try:
 	if not lesion_type_map:
 		write_error("lesionTypeMap not provided")
 		sys.exit(1)
+	# Optional artifact-region BEDs (segdup, ENCODE blacklist) for the
+	# Blacklist/Segdup overlap flag. Absent/unreadable -> column is omitted.
+	artifact_beds = input_data.get("artifactBeds") or []
 	
 	# 2. Load gene annotations
 	with sqlite3.connect(input_data["genedb"]) as con:
@@ -259,7 +396,9 @@ try:
 	# 7. Generate table
 	max_genes = input_data.get("maxGenesToShow", 500)
 	num_rows = min(len(sorted_results), max_genes)
-	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map)
+	# Flag displayed genes whose span is largely within a segdup/blacklist region
+	blacklist_flag = compute_blacklist_flag(sorted_results.iloc[:num_rows], artifact_beds)
+	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map, blacklist_flag)
 
 	# 8. Output response
 	print(json.dumps({
