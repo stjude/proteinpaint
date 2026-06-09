@@ -64,14 +64,14 @@ export function guessSsmid(ssmid) {
 	}
 	if (l.length == 5) {
 		const [chr, _start, _stop, _class, _value] = l
+		const start = Number(_start),
+			stop = Number(_stop)
+		if (Number.isNaN(start) || Number.isNaN(stop)) throw new Error('ssmid cnv start/stop not integer')
 		if (_class == mclassitd) {
 			return { dt: dtitd, l: [chr, start, stop, _class, value] }
 		}
 		// cnv. if type=cat, _value is blank string
-		const start = Number(_start),
-			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value)
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
+		const value = _value == '' ? null : Number(_value)
 		return { dt: dtcnv, l: [chr, start, stop, _class, value] }
 	}
 	if (l.length == 6) {
