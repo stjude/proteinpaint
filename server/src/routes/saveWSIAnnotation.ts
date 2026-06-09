@@ -20,8 +20,8 @@ export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
 			const query: SaveWSIAnnotationRequest = req.query
-			if (!query.genome) throw new Error('.genome is required for deleteWSIAnnotation request.')
-			if (!query.dslabel) throw new Error('.dslabel is required for deleteWSIAnnotation request.')
+			if (!query.genome) throw new Error('.genome is required for saveWSIAnnotation request.')
+			if (!query.dslabel) throw new Error('.dslabel is required for saveWSIAnnotation request.')
 
 			const g = genomes[query.genome]
 			if (!g) throw new Error('invalid genome name')
