@@ -1216,7 +1216,14 @@ sandbox header
     border-radius: 6px;
 }
 
-#sjpp-loading-overlay {
+/* greyed-out look while a chart button's plot is loading, or is the latest open profile chart (see mass/charts.js) */
+.sjpp-chart-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#sjpp-loading-overlay,
+.sjpp-loading-overlay {
     position: absolute;
     top: 0;
     left: 0;

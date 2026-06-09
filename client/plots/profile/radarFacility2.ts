@@ -55,9 +55,14 @@ class ProfileRadarFacility2 extends profilePlot {
 	}
 
 	async main() {
-		await super.main()
-		await this.setControls()
-		this.plot()
+		this.dom.loadingDiv.style('display', '')
+		try {
+			await super.main()
+			await this.setControls()
+			this.plot()
+		} finally {
+			this.dom.loadingDiv.style('display', 'none')
+		}
 	}
 
 	/**

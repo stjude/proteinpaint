@@ -15,4 +15,6 @@ export type ProfilePlotDom = {
 	iconsDiv: Elem
 	rightDiv: Elem
 	plotDiv: Elem
+	/** overlay shown over the plot area while the chart's data is fetched/rendered */
+	loadingDiv: Elem
 }
