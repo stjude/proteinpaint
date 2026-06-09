@@ -42,10 +42,8 @@ printSvPair
 */
 
 const cutoff_tableview = 10
-//let ontologyTerms
 
 export async function itemtable(arg) {
-	//if (arg.mlst.find(m => m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv)) { throw 'mlst[] contains unknown dt' }
 	if (arg.mlst.length == 1) {
 		await itemtable_oneItem(arg)
 	} else {
