@@ -10,7 +10,8 @@ import {
 	mclasscnvgain,
 	mclasscnvAmp,
 	mclasscnvloss,
-	mclasscnvHomozygousDel
+	mclasscnvHomozygousDel,
+	mclassitd
 } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { plotWiggle } from './bw.js'
@@ -336,6 +337,13 @@ export async function load_driver(q, ds) {
 			if (ds.queries.cnv && !q.hiddenmclass?.has(dtcnv)) {
 				result.cnv = await ds.queries.cnv.get(q)
 				if (!Array.isArray(result.cnv?.cnvs)) throw 'result.cnv.cnvs[] not array'
+			}
+			if (ds.queries.itd && !q.hiddenmclass?.has(dtitd) && !q.hiddenmclass?.has(mclassitd)) {
+				const r = await ds.queries.itd.get(q)
+				if (Array.isArray(r.itds)) {
+					if (!result.cnv) result.cnv = { cnvs: [] }
+					result.cnv.cnvs.push(...r.itds)
+				}
 			}
 
 			filter_data(q, result)

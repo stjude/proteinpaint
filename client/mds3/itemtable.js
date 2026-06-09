@@ -1,4 +1,4 @@
-import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, bplen, dt2label } from '#shared/common.js'
+import { mclass, dtsnvindel, dtfusionrna, dtsv, dtcnv, dtitd, bplen, dt2label } from '#shared/common.js'
 import { init_sampletable } from './sampletable'
 import { appear, renderTable, table2col, makeSsmLink } from '#dom'
 import { dofetch3 } from '#common/dofetch'
@@ -42,13 +42,8 @@ printSvPair
 */
 
 const cutoff_tableview = 10
-//let ontologyTerms
 
 export async function itemtable(arg) {
-	if (arg.mlst.find(m => m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv && m.dt != dtcnv)) {
-		throw 'mlst[] contains unknown dt'
-	}
-
 	if (arg.mlst.length == 1) {
 		await itemtable_oneItem(arg)
 	} else {
@@ -97,10 +92,10 @@ export async function itemtable_oneItem(arg) {
 		table_snvindel(arg, table)
 	} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 		await table_svfusion(arg, table)
-	} else if (m.dt == dtcnv) {
+	} else if (m.dt == dtcnv || m.dt == dtitd) {
 		table_cnv(arg, table)
 	} else {
-		throw 'itemtable_oneItem: unknown dt'
+		throw new Error('unknown dt')
 	}
 
 	// if the variant has only one sample,
@@ -161,8 +156,12 @@ async function itemtable_multiItems(arg) {
 				} else if (m.dt == dtcnv) {
 					const cs = cnv2str(m, arg.tk)
 					td.html(cs.value + '&nbsp;&nbsp;' + cs.pos)
+				} else if (m.dt == dtitd) {
+					const cs = cnv2str(m, arg.tk)
+					td.html(cs.value + '&nbsp;&nbsp;' + cs.pos)
 				} else {
 					td.text('error: unknown m.dt')
+					throw new Error('unknown dt')
 				}
 			}
 		}
@@ -366,7 +365,10 @@ function table_snvindel_mayInsertHtmlSections(m, tk, table) {
 		const [td1, td2] = table.addRow()
 		if (section.callback) {
 			if (section.key) td1.text(section.key)
-			td2.append('button').text(section.label || 'Run').on('click', section.callback)
+			td2
+				.append('button')
+				.text(section.label || 'Run')
+				.on('click', section.callback)
 		} else if (section.key && section.html) {
 			td1.text(section.key)
 			td2.html(section.html)
@@ -507,10 +509,11 @@ async function table_svfusion(arg, table) {
 }
 
 export function table_cnv(arg, table) {
-	const cs = cnv2str(arg.mlst[0], arg.tk)
+	const m = arg.mlst[0]
+	const cs = cnv2str(m, arg.tk)
 	{
 		const [c1, c2] = table.addRow()
-		c1.text('Copy number change')
+		c1.text(mclass[m.class]?.desc)
 		c2.html(cs.value)
 	}
 	{

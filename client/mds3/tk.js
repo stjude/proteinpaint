@@ -3,7 +3,7 @@ import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
 import { may_render_cnv } from './cnv'
 import { make_leftlabels } from './leftlabel'
-import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv } from '#shared/common.js'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtcnv, dtitd } from '#shared/common.js'
 import { summarize_mclass } from '#shared/mds3tk.js'
 import { unannotatedKey } from './legend'
 
@@ -369,7 +369,7 @@ async function dataFromCustomVariants(tk, block) {
 			}
 			if (skip) continue
 		}
-		if (m.dt == dtcnv) {
+		if (m.dt == dtcnv || m.dt == dtitd) {
 			if (m.chr != block.rglst[0].chr) continue
 			if (Math.max(m.start, bbstart) > Math.min(m.stop, bbstop)) continue
 			data.cnv.cnvs.push(m)
@@ -386,7 +386,7 @@ async function dataFromCustomVariants(tk, block) {
 
 			data.skewer.push(m)
 		} else {
-			throw 'unknown custom data dt'
+			throw new Error('unknown custom data dt')
 		}
 	}
 

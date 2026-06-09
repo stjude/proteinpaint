@@ -214,7 +214,7 @@ mclass[mclassitd] = {
 	label: 'ITD',
 	color: '#ff70ff',
 	dt: dtitd,
-	desc: 'In-frame internal tandem duplication.',
+	desc: 'In-frame internal tandem duplication',
 	key: mclassitd
 }
 
@@ -223,7 +223,7 @@ mclass[mclassdel] = {
 	label: 'DELETION, intragenic',
 	color: '#858585',
 	dt: dtdel,
-	desc: 'Intragenic deletion.',
+	desc: 'Intragenic deletion',
 	key: mclassdel
 }
 
@@ -250,7 +250,7 @@ mclass[mclassutr3] = {
 	label: 'UTR_3',
 	color: '#998199',
 	dt: dtsnvindel,
-	desc: "A variant in the 3' untranslated region.",
+	desc: "A variant in the 3' untranslated region",
 	key: mclassutr3
 }
 
@@ -259,7 +259,7 @@ mclass[mclassutr5] = {
 	label: 'UTR_5',
 	color: '#819981',
 	dt: dtsnvindel,
-	desc: "A variant in the 5' untranslated region.",
+	desc: "A variant in the 5' untranslated region",
 	key: mclassutr5
 }
 
@@ -268,7 +268,7 @@ mclass[mclassnonstandard] = {
 	label: 'NONSTANDARD',
 	color: 'black',
 	dt: dtsnvindel,
-	desc: 'A mutation class that either does not match our notation, or is unspecified.',
+	desc: 'A mutation class that either does not match our notation, or is unspecified',
 	key: mclassnonstandard
 }
 
@@ -277,7 +277,7 @@ mclass[mclassnoncoding] = {
 	label: 'NONCODING',
 	color: 'black',
 	dt: dtsnvindel,
-	desc: 'Noncoding mutation.',
+	desc: 'Noncoding mutation',
 	key: mclassnoncoding
 }
 

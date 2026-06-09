@@ -242,6 +242,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			if (k in q.cnv) q2.cnv[k] = q.cnv[k]
 		}
 	}
+	if (q.itd) {
+		q2.itd = {}
+	}
 	if (q.geneCnv) {
 		// gdc cnv is gene-level cnv but still expose as ".cnv{}" to see if client can handle it the same way as segment-based cnv.
 		// if it won't work, change to q2.geneCnv{} instead

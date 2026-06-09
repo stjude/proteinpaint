@@ -1,4 +1,4 @@
-import { dtcnv, dtsnvindel, dtsv, dtfusionrna } from './common.js'
+import { dtcnv, dtsnvindel, dtsv, dtfusionrna, dtitd, mclassitd } from './common.js'
 
 // this script should contain mds3 track-related stuff shared between client and backend
 
@@ -63,12 +63,15 @@ export function guessSsmid(ssmid) {
 		return { dt: dtsnvindel, l: [chr, pos, ref, alt] }
 	}
 	if (l.length == 5) {
-		// cnv. if type=cat, _value is blank string
 		const [chr, _start, _stop, _class, _value] = l
 		const start = Number(_start),
-			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value)
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
+			stop = Number(_stop)
+		if (Number.isNaN(start) || Number.isNaN(stop)) throw new Error('ssmid cnv start/stop not integer')
+		const value = _value == '' ? null : Number(_value)
+		if (_class == mclassitd) {
+			return { dt: dtitd, l: [chr, start, stop, _class, value] }
+		}
+		// cnv. if type=cat, _value is blank string
 		return { dt: dtcnv, l: [chr, start, stop, _class, value] }
 	}
 	if (l.length == 6) {
@@ -86,13 +89,16 @@ export function guessSsmid(ssmid) {
 			if (Number.isNaN(pairlstIdx)) throw 'ssmid pairlstIdx not integer'
 			return { dt, l: [dt, chr, pos, strand, pairlstIdx, mname] }
 		}
-		// cnv with sample
+		// cnv or itd with sample
 		const [chr, _start, _stop, _class, _value, sample] = l
 		const start = Number(_start),
-			stop = Number(_stop),
-			value = _value == '' ? null : Number(_value) // if cnv not using value, must avoid `Number('')=0`
-		if (Number.isNaN(start) || Number.isNaN(stop)) throw 'ssmid cnv start/stop not integer'
+			stop = Number(_stop)
+		if (Number.isNaN(start) || Number.isNaN(stop)) throw new Error('ssmid cnv start/stop not integer')
+		if (_class == mclassitd) {
+			return { dt: dtitd, l: [chr, start, stop, _class, _value, sample] }
+		}
+		const value = _value == '' ? null : Number(_value) // if cnv not using value, must avoid `Number('')=0`
 		return { dt: dtcnv, l: [chr, start, stop, _class, value, sample] }
 	}
-	throw 'unknown ssmid'
+	throw new Error('unknown ssmid')
 }

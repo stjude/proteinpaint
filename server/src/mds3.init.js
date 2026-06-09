@@ -19,14 +19,16 @@ import serverconfig from './serverconfig.js'
 import {
 	dtsnvindel,
 	dtfusionrna,
-	dt2label,
 	dtsv,
 	dtcnv,
+	dtitd,
+	dt2label,
 	mclass,
 	mclassfusionrna,
 	mclasssv,
 	mclasscnvgain,
 	mclasscnvloss,
+	mclassitd,
 	dtTerms,
 	getColors
 } from '#shared/common.js'
@@ -158,61 +160,62 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (response?.status != 'OK') throw response
 	}
 
-	try {
-		// must validate termdb first
-		await validate_termdb(ds)
-		validateDemoJwtInputs(ds)
+  try {
+	// must validate termdb first
+	await validate_termdb(ds)
+	validateDemoJwtInputs(ds)
 
-		if (ds.queries) {
-			// must validate snvindel query before variant2sample
-			// as vcf header must be parsed to supply samples for variant2samples
-			await validate_query_snvindel(ds, genome)
-			await validate_query_svfusion(ds, genome)
-			await validate_query_geneCnv(ds, genome)
-			await validate_query_cnv(ds, genome)
-			await validate_query_ld(ds, genome)
-			await validate_query_geneExpression(ds, genome)
-			await validateQueryIsoformExpression(ds, genome)
-			await validate_query_ssGSEA(ds, genome)
-			await validate_query_dnaMethylation(ds, genome)
-			await validate_query_metaboliteIntensity(ds, genome)
-			await validate_query_proteome(ds, genome)
-			await validate_query_getTopTermsByType(ds, genome)
-			await validate_query_getTopMutatedGenes(ds, genome)
-			await validate_query_getSampleImages(ds, genome)
-			await validate_query_getWSIAnnotations(ds)
-			await validate_query_getWSIClassesQuery(ds)
-			await validate_query_getSampleWSImages(ds, genome)
-			await validate_query_deleteWSIAnnotation(ds)
-			await validate_query_saveWSIAnnotation(ds)
-			await validate_query_getWSISamples(ds, genome)
-			await makeAdHocDicTermdbQueries(ds)
-			await validate_query_rnaseqGeneCount(ds, genome)
-			await validate_query_singleSampleMutation(ds, genome)
-			await validate_query_singleSampleGenomeQuantification(ds, genome)
-			await validate_query_singleSampleGbtk(ds, genome)
-			//await validate_query_probe2cnv(ds, genome)
-			await validate_query_singleCell(ds, genome)
-			await validate_query_TopVariablyExpressedGenes(ds)
-			await validate_query_trackLst(ds, genome)
+	if (ds.queries) {
+		// must validate snvindel query before variant2sample
+		// as vcf header must be parsed to supply samples for variant2samples
+		await validate_query_snvindel(ds, genome)
+		await validate_query_svfusion(ds, genome)
+		await validate_query_geneCnv(ds, genome)
+		await validate_query_cnv(ds, genome)
+		await validate_query_itd(ds, genome)
+		await validate_query_ld(ds, genome)
+		await validate_query_geneExpression(ds, genome)
+		await validateQueryIsoformExpression(ds, genome)
+		await validate_query_ssGSEA(ds, genome)
+		await validate_query_dnaMethylation(ds, genome)
+		await validate_query_metaboliteIntensity(ds, genome)
+		await validate_query_proteome(ds, genome)
+		await validate_query_getTopTermsByType(ds, genome)
+		await validate_query_getTopMutatedGenes(ds, genome)
+		await validate_query_getSampleImages(ds, genome)
+		await validate_query_getWSIAnnotations(ds)
+		await validate_query_getWSIClassesQuery(ds)
+		await validate_query_getSampleWSImages(ds, genome)
+		await validate_query_deleteWSIAnnotation(ds)
+		await validate_query_saveWSIAnnotation(ds)
+		await validate_query_getWSISamples(ds, genome)
+		await makeAdHocDicTermdbQueries(ds)
+		await validate_query_rnaseqGeneCount(ds, genome)
+		await validate_query_singleSampleMutation(ds, genome)
+		await validate_query_singleSampleGenomeQuantification(ds, genome)
+		await validate_query_singleSampleGbtk(ds, genome)
+		//await validate_query_probe2cnv(ds, genome)
+		await validate_query_singleCell(ds, genome)
+		await validate_query_TopVariablyExpressedGenes(ds)
+		await validate_query_trackLst(ds, genome)
 
-			await validate_variant2samples(ds)
-			await validate_ssm2canonicalisoform(ds)
+		await validate_variant2samples(ds)
+		await validate_ssm2canonicalisoform(ds)
 
-			await mayAdd_refseq2ensembl(ds, genome)
+		await mayAdd_refseq2ensembl(ds, genome)
 
-			await mayAdd_mayGetGeneVariantData(ds, genome)
-		}
+		await mayAdd_mayGetGeneVariantData(ds, genome)
+	}
 
-		await mayValidateAssayAvailability(ds)
-		await mayValidateViewModes(ds)
+	await mayValidateAssayAvailability(ds)
+	await mayValidateViewModes(ds)
 
-		// uncomment below to manually trigger server crash if there is only 1 dataset;
-		// make sure that serverconfig only has one genome and datasets[] entry,
-		// and that the ds.label below matches that entry
-		// if (ds.label == 'GDC') {ds.init = {status: 'fatalError', fatalError: 'test server crash'}; throw ds.init.fatalError}
+	// uncomment below to manually trigger server crash if there is only 1 dataset;
+	// make sure that serverconfig only has one genome and datasets[] entry,
+	// and that the ds.label below matches that entry
+	// if (ds.label == 'GDC') {ds.init = {status: 'fatalError', fatalError: 'test server crash'}; throw ds.init.fatalError}
 
-		if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
+	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 	} catch (e) {
 		if (!ds.init) ds.init = {}
 		if (ds.init.step != 'gdcBuildDictionary()' || !ds.init.recoverableError) {
@@ -1668,6 +1671,88 @@ async function validate_query_cnv(ds, genome) {
 	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
 	q.get = await addCnvGetter(ds, genome)
 	mayValidateSampleHeader(ds, q.samples, 'cnv')
+}
+async function validate_query_itd(ds, genome) {
+	const q = ds.queries.itd
+	if (!q) return
+	if (!q.file) throw 'itd.file missing'
+	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
+	await utils.validate_tabixfile(q.file)
+	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+		q.samples = validateSampleHeader2(ds, q.samples, 'itd')
+	}
+	q.get = async param => {
+		if (param.hiddenmclass?.has(dtitd) || param.hiddenmclass?.has(mclassitd)) {
+			return { itds: [] }
+		}
+		utils.validateRglst(param, genome)
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return { itds: [] }
+		}
+		const itds = [] // list of itd events to be returned
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: (line, ps) => {
+					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('cnv json err')
+						return
+					}
+					j.dt = dtitd
+					j.class = mclassitd
+					j.chr = r.chr
+					j.start = start
+					j.stop = stop
+					if (j.sample) {
+						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (j.sample === undefined) {
+							// skip unmapped samples here as there are already
+							// handled during validation (see validateSampleHeader2())
+							return
+						}
+						if (limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
+
+						const sampleObj = { sample_id: j.sample }
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, '', j.sample].join(ssmIdFieldsSeparator)
+
+						delete j.sample
+						j.samples = [sampleObj]
+						j.occurrence = 1 // each itd is hardcoded to only have 1 sample
+					} else {
+						// itd without sample
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, ''].join(ssmIdFieldsSeparator)
+					}
+					itds.push(j)
+				}
+			})
+		}
+		return { itds }
+	}
 }
 
 async function validate_query_ld(ds, genome) {

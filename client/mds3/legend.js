@@ -11,6 +11,8 @@ import {
 	dtfusionrna,
 	mclassfusionrna,
 	mclasssv,
+	mclassitd,
+	CNVClasses,
 	bplen
 } from '#shared/common.js'
 import { interpolateRgb } from 'd3-interpolate'
@@ -603,8 +605,8 @@ function update_mclass(tk) {
 					{
 						isChangeShape: true,
 						isVisible: () => {
-							if (c.k == dtcnv) return false // no changing shape for cnv
-							return !tk.skewer.viewModes.find(v => v.type === 'numeric')?.inuse
+							if (c.k == dtcnv || CNVClasses.includes(c.k) || c.k == mclassitd) return false // no changing shape for cnv
+							return !tk.skewer?.viewModes?.find?.(v => v.type === 'numeric')?.inuse
 								? tk.mds?.termdbConfig?.tracks?.allowSkewerChanges ?? true
 								: false
 						},
@@ -822,8 +824,13 @@ function may_update_ld(tk) {
 	tk.legend.ld.showHolder.style('display', 'block')
 }
 
+/*
+	tk.cnv{} will be set if either cnv or itd is shown
+	only cnv needs legend, but not itd
+	*/
 function may_create_cnv(tk, block) {
 	if (!tk.cnv) return
+	if (!tk.mds.has_cnv && !tk.mds.termdbConfig?.queries?.cnv) return // no cnv, itd only; in such case do not show cnv legend as when there's just itd, it doesn't need its own legend entry (it's already shown in mclass legend)
 
 	const R = (tk.legend.cnv = {})
 	R.row = tk.legend.table.append('tr')
@@ -914,6 +921,7 @@ function may_create_cnv(tk, block) {
 
 function may_update_cnv(tk) {
 	if (!tk.cnv) return
+	if (!tk.legend.cnv) return // only has itd but not cnv. in such case legend.cnv is not created
 
 	// tk is equipped with cnv. determine if cnv data is actually shown
 	if (!tk.cnv.cnvLst || tk.cnv.cnvLst.length == 0) {

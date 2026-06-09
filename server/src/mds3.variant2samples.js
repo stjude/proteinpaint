@@ -2,7 +2,7 @@ import { stratinput } from '#shared/tree.js'
 import { querySamples_gdcapi } from './mds3.gdc.js'
 import { get_densityplot } from './mds3.densityPlot.js'
 import * as utils from './utils.js'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtitd, dtfusionrna, dtsv, mclassitd } from '#shared/common.js'
 import * as geneDbSearch from './gene.js'
 import { getSampleData_dictionaryTerms_termdb, getData } from './termdb.matrix.js'
 import { ssmIdFieldsSeparator, guessSsmid } from '#shared/mds3tk.js'
@@ -374,7 +374,21 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 			}
 			continue
 		}
-		throw 'unknown format of ssm id'
+		if (_g.dt == dtitd) {
+			if (!ds.queries.itd) throw new Error('queries.itd missing')
+			const [chr, start, stop, _class, value, sample] = _g.l
+			const param = Object.assign({}, q, { rglst: [{ chr, start, stop }] })
+			const r = await ds.queries.itd.get(param)
+			if (!Array.isArray(r?.itds)) throw new Error('r.itds[] not array')
+			for (const m of r.itds) {
+				if (m.start != start || m.stop != stop) continue
+				if (sample && m.samples?.[0].sample_id != sample) continue
+				combineSamplesById(m.samples, samples, m.ssm_id)
+			}
+			continue
+		}
+
+		throw new Error('unknown format of ssm id')
 	}
 
 	await mayAddSampleAnnotationByTwLst(samples, twLst, ds)
@@ -462,10 +476,17 @@ async function queryServerFileByRglst(q, twLst, ds) {
 			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}
-	if (ds.queries.cnv) {
+	if (ds.queries.cnv && !q.hiddenmclass?.has(dtcnv)) {
 		const cnv = await ds.queries.cnv.get(q)
 		if (!Array.isArray(cnv?.cnvs)) throw 'cnv.cnvs[] not array'
 		for (const m of cnv.cnvs) {
+			combineSamplesById(m.samples, samples, m.ssm_id)
+		}
+	}
+	if (ds.queries.itd && !q.hiddenmclass?.has(dtitd) && !q.hiddenmclass?.has(mclassitd)) {
+		const r = await ds.queries.itd.get(q)
+		if (!Array.isArray(r?.itds)) throw 'r.itds not array'
+		for (const m of r.itds) {
 			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}
