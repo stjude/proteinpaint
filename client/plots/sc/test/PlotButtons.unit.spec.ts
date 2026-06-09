@@ -5,7 +5,7 @@ import { getMockSCState } from './getMockSCApp.ts'
 /**
  * Tests
  *   - constructor should set interactions, scTermdbConfig, and plotBtnsDom
- *   - update() should hide promptDiv when no item is selected
+ *   - update() should hide holder when no item is selected
  *   - update() should set data, settings, and item when item is selected
  *   - update() should retain previous data when new data is null
  *   - getChartBtnOpts() should return configured plot buttons
@@ -13,7 +13,7 @@ import { getMockSCState } from './getMockSCApp.ts'
  *   - getChartBtnOpts() Gene expression button should be visible when geneExpression is configured
  *   - getChartBtnOpts() Gene expression button should not be visible when geneExpression is not configured
  *   - getChartBtnOpts() Differential expression button should be visible when DEgenes is configured
- *   - getChartBtnOpts() plot button isVisible() should return false when plot is not in data
+ *   - getChartBtnOpts() should include only plots found in availablePlots
  *   - getSingleCellConfig() should return sampleScatter config
  *   - getSingleCellConfig() should throw when no item is selected
  *   - getSingleCellConfig() should throw when plot name is not found
@@ -82,7 +82,7 @@ function getMockInteractions(overrides: any = {}) {
 function getPlotButtons(overrides: any = {}) {
 	const interactions = getMockInteractions(overrides)
 	const holder = getMockDiv()
-	const pb = new PlotButtons(interactions, holder, interactions.getState)
+	const pb = new PlotButtons(interactions, holder, interactions.getState.termdbConfig)
 	return pb
 }
 
@@ -109,19 +109,19 @@ tape('constructor should set interactions, scTermdbConfig, and plotBtnsDom', tes
 
 /* ---- update() ---- */
 
-tape('update() should hide promptDiv when no item is selected', test => {
+tape('update() should hide holder when no item is selected', test => {
 	const pb = getPlotButtons()
 	let displayValue
-	;(pb.plotBtnsDom.promptDiv as any).style = (prop: string, val?: string) => {
+	;(pb.plotBtnsDom.holder as any).style = (prop: string, val?: string) => {
 		if (prop === 'display' && typeof val === 'string' && val !== undefined) {
 			displayValue = val
 		}
-		return pb.plotBtnsDom.promptDiv
+		return pb.plotBtnsDom.holder
 	}
 	const settings = { sc: { item: undefined } } as any
 	pb.update(settings, null)
 
-	test.equal(displayValue, 'none', 'Should hide promptDiv when no item')
+	test.equal(displayValue, 'none', 'Should hide holder when no item')
 	test.end()
 })
 
@@ -160,6 +160,7 @@ tape('getChartBtnOpts() should return configured plot buttons', test => {
 	const pb = getPlotButtons()
 	pb.data = { plots: [{ name: 'umap' }, { name: 'tsne' }] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set(['umap', 'tsne'])
 
 	const btns = pb.getChartBtnOpts()
 	const labels = btns.map(b => b.label)
@@ -176,6 +177,7 @@ tape('getChartBtnOpts() Summary button should always be visible', test => {
 	const pb = getPlotButtons()
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set()
 
 	const btns = pb.getChartBtnOpts()
 	const summary = btns.find(b => b.label === 'Summary')
@@ -189,6 +191,7 @@ tape('getChartBtnOpts() Gene expression button should be visible when geneExpres
 	const pb = getPlotButtons({ geneExpression: true })
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set()
 
 	const btns = pb.getChartBtnOpts()
 	const geneExp = btns.find(b => b.label === 'Gene expression')
@@ -201,6 +204,7 @@ tape('getChartBtnOpts() Gene expression button should not be visible when geneEx
 	const pb = getPlotButtons()
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set()
 
 	const btns = pb.getChartBtnOpts()
 	const geneExp = btns.find(b => b.label === 'Gene expression')
@@ -213,6 +217,7 @@ tape('getChartBtnOpts() Differential expression button should be visible when DE
 	const pb = getPlotButtons({ DEgenes: { termId: 'cluster' } })
 	pb.data = { plots: [] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
+	pb.availablePlots = new Set()
 
 	const btns = pb.getChartBtnOpts()
 	const de = btns.find(b => b.label === 'Differential expression')
@@ -221,7 +226,7 @@ tape('getChartBtnOpts() Differential expression button should be visible when DE
 	test.end()
 })
 
-tape('getChartBtnOpts() plot button isVisible() should return false when plot is not in data', test => {
+tape('getChartBtnOpts() should include only plots found in availablePlots', test => {
 	const pb = getPlotButtons()
 	pb.data = { plots: [{ name: 'umap' }] }
 	pb.item = { sID: 'S1', eID: 'EXP1' }
@@ -231,8 +236,8 @@ tape('getChartBtnOpts() plot button isVisible() should return false when plot is
 	const umap = btns.find(b => b.label === 'umap')
 	const tsne = btns.find(b => b.label === 'tsne')
 
-	test.ok(umap!.isVisible(), 'umap should be visible when in data.plots')
-	test.notOk(tsne!.isVisible(), 'tsne should not be visible when not in data.plots')
+	test.ok(umap, 'umap button should be present when in availablePlots')
+	test.notOk(tsne, 'tsne button should not be present when not in availablePlots')
 	test.end()
 })
 
