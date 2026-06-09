@@ -158,60 +158,70 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (response?.status != 'OK') throw response
 	}
 
-	// must validate termdb first
-	await validate_termdb(ds)
-	validateDemoJwtInputs(ds)
+	try {
+		// must validate termdb first
+		await validate_termdb(ds)
+		validateDemoJwtInputs(ds)
 
-	if (ds.queries) {
-		// must validate snvindel query before variant2sample
-		// as vcf header must be parsed to supply samples for variant2samples
-		await validate_query_snvindel(ds, genome)
-		await validate_query_svfusion(ds, genome)
-		await validate_query_geneCnv(ds, genome)
-		await validate_query_cnv(ds, genome)
-		await validate_query_ld(ds, genome)
-		await validate_query_geneExpression(ds, genome)
-		await validateQueryIsoformExpression(ds, genome)
-		await validate_query_ssGSEA(ds, genome)
-		await validate_query_dnaMethylation(ds, genome)
-		await validate_query_metaboliteIntensity(ds, genome)
-		await validate_query_proteome(ds, genome)
-		await validate_query_getTopTermsByType(ds, genome)
-		await validate_query_getTopMutatedGenes(ds, genome)
-		await validate_query_getSampleImages(ds, genome)
-		await validate_query_getWSIAnnotations(ds)
-		await validate_query_getWSIClassesQuery(ds)
-		await validate_query_getSampleWSImages(ds, genome)
-		await validate_query_deleteWSIAnnotation(ds)
-		await validate_query_saveWSIAnnotation(ds)
-		await validate_query_getWSISamples(ds, genome)
-		await makeAdHocDicTermdbQueries(ds)
-		await validate_query_rnaseqGeneCount(ds, genome)
-		await validate_query_singleSampleMutation(ds, genome)
-		await validate_query_singleSampleGenomeQuantification(ds, genome)
-		await validate_query_singleSampleGbtk(ds, genome)
-		//await validate_query_probe2cnv(ds, genome)
-		await validate_query_singleCell(ds, genome)
-		await validate_query_TopVariablyExpressedGenes(ds)
-		await validate_query_trackLst(ds, genome)
+		if (ds.queries) {
+			// must validate snvindel query before variant2sample
+			// as vcf header must be parsed to supply samples for variant2samples
+			await validate_query_snvindel(ds, genome)
+			await validate_query_svfusion(ds, genome)
+			await validate_query_geneCnv(ds, genome)
+			await validate_query_cnv(ds, genome)
+			await validate_query_ld(ds, genome)
+			await validate_query_geneExpression(ds, genome)
+			await validateQueryIsoformExpression(ds, genome)
+			await validate_query_ssGSEA(ds, genome)
+			await validate_query_dnaMethylation(ds, genome)
+			await validate_query_metaboliteIntensity(ds, genome)
+			await validate_query_proteome(ds, genome)
+			await validate_query_getTopTermsByType(ds, genome)
+			await validate_query_getTopMutatedGenes(ds, genome)
+			await validate_query_getSampleImages(ds, genome)
+			await validate_query_getWSIAnnotations(ds)
+			await validate_query_getWSIClassesQuery(ds)
+			await validate_query_getSampleWSImages(ds, genome)
+			await validate_query_deleteWSIAnnotation(ds)
+			await validate_query_saveWSIAnnotation(ds)
+			await validate_query_getWSISamples(ds, genome)
+			await makeAdHocDicTermdbQueries(ds)
+			await validate_query_rnaseqGeneCount(ds, genome)
+			await validate_query_singleSampleMutation(ds, genome)
+			await validate_query_singleSampleGenomeQuantification(ds, genome)
+			await validate_query_singleSampleGbtk(ds, genome)
+			//await validate_query_probe2cnv(ds, genome)
+			await validate_query_singleCell(ds, genome)
+			await validate_query_TopVariablyExpressedGenes(ds)
+			await validate_query_trackLst(ds, genome)
 
-		await validate_variant2samples(ds)
-		await validate_ssm2canonicalisoform(ds)
+			await validate_variant2samples(ds)
+			await validate_ssm2canonicalisoform(ds)
 
-		await mayAdd_refseq2ensembl(ds, genome)
+			await mayAdd_refseq2ensembl(ds, genome)
 
-		await mayAdd_mayGetGeneVariantData(ds, genome)
+			await mayAdd_mayGetGeneVariantData(ds, genome)
+		}
+
+		await mayValidateAssayAvailability(ds)
+		await mayValidateViewModes(ds)
+
+		// uncomment below to manually trigger server crash if there is only 1 dataset;
+		// make sure that serverconfig only has one genome and datasets[] entry,
+		// and that the ds.label below matches that entry
+		// if (ds.label == 'GDC') {ds.init = {status: 'fatalError', fatalError: 'test server crash'}; throw ds.init.fatalError}
+
+		if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
+	} catch (e) {
+		if (!ds.init) ds.init = {}
+		if (ds.init.step != 'gdcBuildDictionary()') {
+			delete ds.init.recoverableError
+			ds.init.fatalError = e.error || e
+			ds.init.status = 'fatalError'
+		}
+		throw e
 	}
-
-	await mayValidateAssayAvailability(ds)
-	await mayValidateViewModes(ds)
-
-	// uncomment below to manually trigger server crash if there is only 1 dataset;
-	// make sure that serverconfig only has one genome and datasets[] entry,
-	// and that the ds.label below matches that entry
-	// if (ds.label == 'GDC') {ds.init = {status: 'fatalError', fatalError: 'test server crash'}; throw ds.init.fatalError}
-
-	if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 
 	// invoke non-blocking initialization steps at the end, after validation is complete,
 	// otherwise it will be difficult to coordinate the handling of errors from either
@@ -220,7 +230,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 	if (ds.init?.hasNonblockingSteps) {
 		// if only one dataset is being loaded by the server,
 		// then await to allow server to crash on fatal error
-		if (totalDsLst > 1) await mds3InitNonblocking(ds)
+		if (totalDsLst == 1) await mds3InitNonblocking(ds)
 		else mds3InitNonblocking(ds)
 	} else {
 		if (!ds.init) ds.init = {}
@@ -300,7 +310,10 @@ export async function validate_termdb(ds) {
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
 	} else if (tdb.dictionary?.gdcapi) {
+		if (!ds.init) ds.init = {}
+		ds.init.step = 'gdcBuildDictionary()'
 		await gdcBuildDictionary(ds)
+		ds.init.step = ''
 	} else if (ds.cohort.db) {
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)

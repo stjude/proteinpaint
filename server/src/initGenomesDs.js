@@ -472,7 +472,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				// no error bubbled up to be caught, and there are no nonblocking step being performed, init is done
 				if (ds.init.status == 'started') ds.init.status = 'done'
 			} catch (e) {
-				mayRetryInit(g, ds, d, e)
+				mayRetryInit(g, ds, d, e, totalRawDsLst)
 			}
 		}
 		delete g.rawdslst
@@ -480,7 +480,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 	return trackedDatasets
 }
 
-function mayRetryInit(g, ds, d, e) {
+function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 	// if initial attempt fails, can stop or retry
 	const gdlabel = `${g.label}/${ds.label}`
 	console.log(`Init error with ${gdlabel}`)
@@ -544,7 +544,8 @@ function mayRetryInit(g, ds, d, e) {
 			if (!ds.init.status) ds.init.status = 'done'
 		} catch (e) {
 			if (ds.init.status != 'recoverableError' && !ds.init.recoverableError && !utils.isRecoverableError(e)) {
-				const msg = `Fatal error on ${gdlabel} retry, stopping retry`
+				const msg =
+					`Fatal error on ${gdlabel} retry, stopping retry` + (ds.init?.fatalError ? ': ' + ds.init?.fatalError : '')
 				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
@@ -555,6 +556,8 @@ function mayRetryInit(g, ds, d, e) {
 						path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
 					)
 				}
+				// this will crash the server with an uncaught error, the server will stop responding to HTTP requests
+				if (totalRawDsLst === 1) throw msg
 			} else {
 				console.warn(
 					`${gdlabel} init() failed. Retrying in ${Math.round(ds.init.retryDelay / 1000)} second(s) ... (${
