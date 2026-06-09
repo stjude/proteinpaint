@@ -30,7 +30,7 @@ tape('constructor should set tableData with rows, columns, and selectedRows', te
 	const config = getMockSCConfig()
 	const items = [{ sample: 'S1' }, { sample: 'S2' }]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	test.true(Array.isArray(vm.tableData.rows), 'Should have rows array')
@@ -50,7 +50,7 @@ tape('constructor should set selectedRows when item matches a sample', test => {
 	})
 	const items = [{ sample: 'S1' }, { sample: 'S2' }, { sample: 'S3' }]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	test.deepEqual(vm.tableData.selectedRows, [1], 'Should select the matching sample index')
@@ -62,7 +62,7 @@ tape('constructor should have empty selectedRows when no item is set', test => {
 	const config = getMockSCConfig()
 	const items = [{ sample: 'S1' }]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	test.deepEqual(vm.tableData.selectedRows, [], 'Should have empty selectedRows')
@@ -79,7 +79,7 @@ tape('getTabelData() should create sample column as first column', test => {
 	})
 	const items = [{ sample: 'S1' }]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	test.equal(vm.tableData.columns[0].label, 'Case', 'First column label should match config')
@@ -93,7 +93,7 @@ tape('getTabelData() should add sampleColumns when provided', test => {
 	const items = [{ sample: 'S1', sex: 'Male' }]
 	const sampleColumns = [{ termid: 'sex', label: 'Sex' }]
 
-	const vm = new SCViewModel(app, sampleColumns)
+	const vm = new SCViewModel(app.app, sampleColumns)
 	vm.processData(config, items)
 
 	test.equal(vm.tableData.columns.length, 3, 'Should have sample column + 1 extra column')
@@ -109,7 +109,7 @@ tape('getTabelData() should handle samples without experiments', test => {
 	const config = getMockSCConfig()
 	const items = [{ sample: 'S1' }, { sample: 'S2' }]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	test.equal(vm.tableData.columns.length, 2, 'Should only have the sample and shown plots columns')
@@ -132,7 +132,7 @@ tape('getTabelData() should expand experiments into separate rows', test => {
 		}
 	]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	test.equal(vm.tableData.rows.length, 2, 'Should create one row per experiment')
@@ -159,7 +159,7 @@ tape('getTabelData() should add GDC URL for experiment column when dslabel is GD
 		}
 	]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	const row0 = vm.tableData.rows[0] as any[]
@@ -178,7 +178,7 @@ tape('getTabelData() should not add GDC URL for non-GDC datasets', test => {
 		}
 	]
 
-	const vm = new SCViewModel(app)
+	const vm = new SCViewModel(app.app)
 	vm.processData(config, items)
 
 	const row0 = vm.tableData.rows[0] as any[]
@@ -200,7 +200,7 @@ tape('getTabelData() should include sampleColumns with experiments', test => {
 	]
 	const sampleColumns = [{ termid: 'sex', label: 'Sex' }]
 
-	const vm = new SCViewModel(app, sampleColumns)
+	const vm = new SCViewModel(app.app, sampleColumns)
 	vm.processData(config, items)
 
 	// Columns: Sample, Sample (exp), Sex, Experiment
