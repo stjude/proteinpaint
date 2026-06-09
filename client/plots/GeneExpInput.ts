@@ -32,11 +32,6 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 	unit!: string
 	dom!: { [index: string]: any }
 	tabs!: any
-	/** Helper function to create term with any additional properties */
-	makeTerm: (term: any) => object
-	/** Helper function to create config or the spawning plot with
-	 * any additional properties. Used in the violin, scatter, and hierCluster */
-	makeConfig: (config: any) => object
 
 	constructor(opts: GeneExpInputOpts, api: ComponentApi) {
 		super(opts, api)
@@ -45,17 +40,18 @@ export class GeneExpInput extends PlotBase implements RxComponent {
 		this.components = {
 			plots: {}
 		}
+	}
 
-		const termProperties = opts?.termProperties || {}
-		this.makeTerm = term => ({ ...term, ...termProperties, type: this.termType, unit: this.unit })
+	makeTerm(_term) {
+		const termProperties = this.state.config?.termProperties || {}
+		const term = { ..._term, ...termProperties, type: this.termType, unit: this.unit }
+		return term
+	}
 
-		const spawnConfig = opts?.spawnConfig || {}
-		this.makeConfig = config => {
-			const tmp = { ...config, ...spawnConfig }
-			/** TODO: Single cell terms cannot be filtered. */
-			if (this.termType === SINGLECELL_GENE_EXPRESSION) tmp.hidePlotFilter = true
-			return tmp
-		}
+	makeConfig(_config) {
+		const spawnConfig = this.state.config?.spawnConfig || {}
+		const tmp = { ..._config, ...spawnConfig }
+		return tmp
 	}
 
 	getState(appState) {
