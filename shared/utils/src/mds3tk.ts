@@ -67,11 +67,11 @@ export function guessSsmid(ssmid) {
 		const start = Number(_start),
 			stop = Number(_stop)
 		if (Number.isNaN(start) || Number.isNaN(stop)) throw new Error('ssmid cnv start/stop not integer')
+		const value = _value == '' ? null : Number(_value)
 		if (_class == mclassitd) {
 			return { dt: dtitd, l: [chr, start, stop, _class, value] }
 		}
 		// cnv. if type=cat, _value is blank string
-		const value = _value == '' ? null : Number(_value)
 		return { dt: dtcnv, l: [chr, start, stop, _class, value] }
 	}
 	if (l.length == 6) {
