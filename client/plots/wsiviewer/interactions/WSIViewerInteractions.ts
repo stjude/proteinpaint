@@ -42,8 +42,8 @@ export class WSIViewerInteractions {
 
 	onRetrainModelClicked: (genome: string, dslabel: string, projectId: string) => void
 	toggleLoadingDiv: (show: boolean) => void
-	toggleThumbnails: (start: number) => void
-	toggleSpinner: (spin: boolean, holder: any) => void
+	toggleThumbnails: (start: number, doneRendering?: boolean) => void
+	toggleSpinner: (spin: boolean) => void
 	constructor(wsiApp: any, opts: any) {
 		this.thumbnailClickListener = (index: number) => {
 			wsiApp.app.dispatch({
@@ -583,16 +583,16 @@ export class WSIViewerInteractions {
 
 		this.toggleThumbnails = (start: number, doneRendering: boolean = false) => {
 			if (doneRendering) {
-				wsiApp.app.dispatch({
+				wsiApp.app.save({
 					type: 'plot_edit',
 					id: opts.id,
 					config: {
 						settings: {
-							renderWSIViewer: true,
 							isChangingImages: false
 						}
 					}
 				})
+				return
 			}
 
 			wsiApp.app.dispatch({

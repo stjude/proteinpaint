@@ -56,9 +56,6 @@ export class ThumbnailRenderer {
 					.on('click', () => {
 						wsiViewerInteractions.thumbnailClickListener(i)
 					})
-				if (!setting.isChangingImages && !setting.isSavingAnnotation) {
-					thumbnail.style('cursor', 'pointer')
-				}
 
 				thumbnail
 					.append('img')
@@ -122,7 +119,7 @@ export class ThumbnailRenderer {
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
 			}
 		}
-
+		// wsiViewerInteractions.toggleThumbnails(this.newStart(setting, numTotalFiles), true)
 		return thumbnailsContainer
 	}
 
