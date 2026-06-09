@@ -309,10 +309,19 @@ async function getSampleData(q, ds) {
 				sample: tw.term.sample,
 				gene: tw.term.gene
 			})
-			//samples are cells
+			/** geneExpMap returns cells => (cellId: value), not samples.
+			 * The cellId is never in the samples object, as cells are not in
+			 * the termdb. Get the sampleId and add object to samples with the value.
+			 *
+			 * NOTE: ds.queries.singleCell.data.metaIdMap required for matching the
+			 * cohort level term to the cell is made on init from the single cell
+			 * plot files. The hdf5 does not contain the sampleId to map to the
+			 * cohort level term. This will need to addressed if plot files do not
+			 * exist but the hdf5 does. */
 			for (const sampleId in geneExpMap) {
 				if (!(sampleId in samples)) {
-					samples[sampleId] = { sample: sampleId }
+					const cell = { cellId: sampleId }
+					samples[sampleId] = getSingleCellSampleEntry(samples, q.ds, tw, cell)
 				}
 				const value = geneExpMap[sampleId]
 				let key = value
@@ -383,18 +392,18 @@ async function getSampleData(q, ds) {
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
 /********** Start single cell helpers **********
- * 
- * Single cell data is unique. Cells, not samples, are displayed. At times, those cells are 
+ *
+ * Single cell data is unique. Cells, not samples, are displayed. At times, those cells are
  * compared against cohort level terms in the termdb. The sampleId from the tsv file is mapped
- * to the primary key in the termdb to match the cohort level data to the cell data. 
- * 
+ * to the primary key in the termdb to match the cohort level data to the cell data.
+ *
  * The helpers below are used to:
- * 1. map the cell to the sampleId in the termdb, and then get the cohort level data for that 
- * sampleId, and attach it to the cell data. This is done in getSingleCellSampleEntry() and 
+ * 1. map the cell to the sampleId in the termdb, and then get the cohort level data for that
+ * sampleId, and attach it to the cell data. This is done in getSingleCellSampleEntry() and
  * getSampleId4Cell()
- * 2. for single cell meta analysis results, the "cell" is actually a pseudo-sample that 
- * represents a group of cells. The sampleId of this pseudo-sample is mapped to the sampleId 
- * in the termdb, and then get the cohort level data for that sampleId, and attach it to 
+ * 2. for single cell meta analysis results, the "cell" is actually a pseudo-sample that
+ * represents a group of cells. The sampleId of this pseudo-sample is mapped to the sampleId
+ * in the termdb, and then get the cohort level data for that sampleId, and attach it to
  * the pseudo-sample data. This is done in hydrateMetaResultCellRows()
  */
 
