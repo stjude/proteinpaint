@@ -151,15 +151,18 @@ export class PlotButtons {
 				getPlotConfig: () => {
 					const sample = this.item!
 					const headerText = `Sample: ${this.item!.sID}`
+					const isMeta = sample?.isMetaResult || false
 					return {
 						chartType: 'GeneExpInput',
 						termType: SINGLECELL_GENE_EXPRESSION,
 						headerText,
 						termProperties: { sample },
+						parentId: this.interactions.id,
 						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
-							headerText
+							headerText,
+							hidePlotFilter: !isMeta
 						}
 					}
 				}
