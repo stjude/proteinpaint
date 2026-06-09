@@ -4,14 +4,36 @@ import type {
 	WSImage,
 	AiProjectSelectedWSImagesRequest,
 	AiProjectSelectedWSImagesResponse,
-	FlagPredictionInfo
+	FlagPredictionInfo,
+	FlagStatusValues,
+	RoutePayload,
+	RouteApi
 } from '#types'
-import { createSelectionID, SelectionPrefixes, FlagStatus, type FlagStatusValues } from '#types'
+import { createSelectionID, SelectionPrefixes, FlagStatus } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
+
 /*
 given a sample, return all whole slide images for specified datasets
 */
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'AiProjectSelectedWSImagesRequest' /*, checker: TODO write validator */ },
+	response: { typeId: 'AiProjectSelectedWSImagesResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'aiProjectSelectedWSImages',
+	methods: {
+		// This endpoint does not support write operation, the same readonly request/response
+		// payload init/typeId/checker is expected for both GET and POST methods, where POST
+		// is used when the request payload is to large to be encoded as URL parameters.
+		// May switch to using HTTP QUERY method once that is stable and widely supported.
+		get: payload,
+		post: payload
+	}
+}
 
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
