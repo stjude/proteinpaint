@@ -375,7 +375,7 @@ export class WSIViewerInteractions {
 							}
 						}
 					})
-					this.toggleSpinner(true, holder)
+					this.toggleSpinner(true)
 					// Visual add
 					this.addAnnotation(vectorLayer!, tileSelections, currentIndex, matchingClass.color, settings)
 
