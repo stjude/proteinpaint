@@ -21,6 +21,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			showGeneNames: true,
 			mutationWaterfallPlot: false,
 			mutationWaterfallColor: '#4d4d4d',
+			minMutationFraction: 0,
 			cnvRenderingType: CnvRenderingType.heatmap,
 			cnvPercentile: 90, // 90th percentile for removing outliers
 			cnvCutoffMode: 'percentile',
@@ -76,7 +77,7 @@ export default function discoDefaults(overrides: any = {}, app?: any): Settings 
 			maxMutationCount: 10000
 		},
 		legend: {
-			snvTitle: 'SNV',
+			snvTitle: 'Mutations',
 			cnvTitle: 'CNV',
 			lohTitle: 'LOH',
 			fusionTitle: 'SV', // Structural Variants (color by co-location)

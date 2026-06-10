@@ -26,6 +26,8 @@ export default interface Settings {
 		showGeneNames: boolean
 		mutationWaterfallPlot: boolean
 		mutationWaterfallColor: string
+		/** Minimum DNA/RNA mutation fraction (0-1) required to render SNV/indel mutations. */
+		minMutationFraction: number
 	}
 
 	rings: {

@@ -171,6 +171,19 @@ export default class ViewModelProvider {
 			lohLegend = new LohLegend(dataHolder.lohMinValue, dataHolder.lohMaxValue)
 		}
 
+		const fusionLegendCounts = fusions.reduce(
+			(counts, fusion) => {
+				if (
+					fusion.target &&
+					fusion.source.positionInChromosome.chromosome == fusion.target.positionInChromosome.chromosome
+				)
+					counts.intrachromosomal++
+				else counts.interchromosomal++
+				return counts
+			},
+			{ interchromosomal: 0, intrachromosomal: 0 }
+		)
+
 		const legend = new Legend(
 			this.settings.legend.snvTitle,
 			this.settings.legend.cnvTitle,
@@ -186,10 +199,11 @@ export default class ViewModelProvider {
 			lohLegend,
 			this.settings.Disco.mutationWaterfallPlot && this.mutationWaterfallRing
 				? {
-					color: this.settings.Disco.mutationWaterfallColor || '#4d4d4d',
-					onColorChange: this.discoInteractions.onMutationWaterfallColorChange
-				}
-				: undefined
+						color: this.settings.Disco.mutationWaterfallColor || '#4d4d4d',
+						onColorChange: this.discoInteractions.onMutationWaterfallColorChange
+				  }
+				: undefined,
+			fusionLegendCounts
 		)
 
 		const rings = new Rings(

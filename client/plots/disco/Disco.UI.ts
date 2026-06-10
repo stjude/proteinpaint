@@ -128,10 +128,14 @@ function makeDataTypeTabs(dataTypeTabs_div: Selection<HTMLDivElement, any, any, 
 					<li>position</li>
 					<li>gene</li>
 					<li>aachange</li>
-					<li>class</li></ol>
+					<li>class</li>
+					<li>DNA total reads (optional)</li>
+					<li>DNA alt reads (optional)</li>
+					<li>RNA total reads (optional)</li>
+					<li>RNA alt reads (optional)</li></ol>
 					<p>Example:</p>
 <pre style="margin-left: 10px;">
-chr1	226252135	H3F3A	K28M	M
+chr1	226252135	H3F3A	K28M	M	100	25	80	16
 chr2	98765432	TestGene	TestMutation	F
 </pre>`
 				mainTabCallback(dataTypeTab, obj, listHTML)

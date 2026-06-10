@@ -11,6 +11,7 @@ type SnvEntry = {
 	gene: string
 	mname: string
 	class: string
+	vafs?: Array<{ id: string; totalCount: number; altCount: number }>
 }
 type CnvEntry = {
 	dt: 4
@@ -52,6 +53,8 @@ export type DiscoPlotArgs = {
 	3. gene
 	4. aachange
 	5. class
+	Optionally, provide DNA total/alt read counts in columns 6-7 and RNA total/alt 
+	read counts in columns 8-9.
 	each line is parsed into an object:
 	{dt:1, chr:, position:, gene:, class:} */
 	snvText?: string
@@ -181,8 +184,8 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 	for (const line of text.trim().split('\n')) {
 		const l = line.trim().split('\t')
 
-		if (l.length != 5) {
-			errors.push('snv input not equal to 5 columns')
+		if (![5, 7, 9].includes(l.length)) {
+			errors.push('snv input not equal to 5, 7, or 9 columns')
 			continue
 		}
 
@@ -196,12 +199,39 @@ function parseSnvText(text: string, mlst: MutationListEntry[], errors: string[])
 				mname: l[3],
 				class: validateMutation(l[4], errors)
 			}
+			const vafs = parseOptionalVafs(l, errors)
+			if (vafs.length) m.vafs = vafs
 		} catch (e: any) {
 			errors.push(e)
 			continue
 		}
 		mlst.push(m)
 	}
+}
+
+function parseOptionalVafs(line: string[], errors: string[]) {
+	const vafs: Array<{ id: string; totalCount: number; altCount: number }> = []
+	const addVaf = (id: string, totalIndex: number, altIndex: number) => {
+		if (line.length <= altIndex) return
+		const totalCount = Number(line[totalIndex])
+		const altCount = Number(line[altIndex])
+		if (
+			!Number.isInteger(totalCount) ||
+			!Number.isInteger(altCount) ||
+			totalCount <= 0 ||
+			altCount < 0 ||
+			altCount > totalCount
+		) {
+			errors.push(`${id} total/alt counts must be integers with total > 0, alt >= 0, and alt cannot exceed total`)
+			return
+		}
+
+		vafs.push({ id, totalCount, altCount })
+	}
+
+	addVaf('DNA', 5, 6)
+	addVaf('RNA', 7, 8)
+	return vafs
 }
 
 function parseSvText(text: string, mlst: MutationListEntry[], errors: string[]) {
