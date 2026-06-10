@@ -11,6 +11,7 @@ import { getDefaultSCAppSettings } from './settings/defaults.ts'
 import { getCombinedTermFilter } from '#filter'
 import { SubplotManager } from './subplots/SubplotManager.ts'
 
+/** Viewer for single cell data. Renders a sample table and associated subplots for each sample.*/
 export class SCViewer extends PlotBase implements RxComponent {
 	static type = 'sc'
 

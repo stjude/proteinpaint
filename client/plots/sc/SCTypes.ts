@@ -63,27 +63,35 @@ export type SCViewerOpts = {
 	header: Elem
 }
 
-/** Normalized source-of-truth subplot entry managed by SubplotManager. */
+/** Normalized source-of-truth subplot entry managed by SubplotManager.
+ * Represents an active subplot instance with its associated metadata and DOM elements. */
 export type SCActiveSubplot = {
+	/** Unique identifier for the plot */
 	plotId: string
+	/** Unique identifier for the sample */
 	sampleId?: string
+	/** Human-readable name of the plot */
 	plotName: string
+	/** Key identifying the section containing this subplot */
 	sectionKey?: string
+	/** The subplot instance or configuration object */
 	subplot: any
+	/** sandbox div */
 	sandboxDiv?: any
+	/** Whether this represents a meta-analysis result */
 	isMetaResult?: boolean
 }
 
-/** Sample-table button payload grouped by sample id. */
+/** Sample-table button payload grouped by sample id.
+ * Represents a button control associated with a sample in the sample table. */
 export type SCSampleSandbox = {
 	plotId: string
+	/** subplot sandbox div */
 	div: any
+	/** Human-readable name of the plot */
 	plotName: string
 }
 
-/** On init() only the table is rendered.
- * This data is static and not subject to change like
- * the (eventual) viewData. */
 export type SCTableData = {
 	rows: TableRow[]
 	columns: TableColumn[]
