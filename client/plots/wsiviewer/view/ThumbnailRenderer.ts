@@ -119,7 +119,6 @@ export class ThumbnailRenderer {
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
 			}
 		}
-		// wsiViewerInteractions.toggleThumbnails(this.newStart(setting, numTotalFiles), true)
 		return thumbnailsContainer
 	}
 
