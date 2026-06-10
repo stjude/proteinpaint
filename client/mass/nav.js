@@ -347,14 +347,16 @@ function setRenderers(self) {
 		}
 		/** When chat is enabled for a ds, show name as "CHAT". When not enabled, it should show "SEARCH" with ONLY omnisearch functionality
 		 **/
-		if (appState.termdbConfig?.queries?.chat && !massNav.tabs?.chat?.hide) {
-			const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
-			self.tabs.push(chatTab)
-			Object.assign(chatTab, massNav.tabs?.chat)
-		} else {
-			const searchTab = { top: 'SEARCH', mid: '', btm: '', subheader: 'chat' }
-			self.tabs.push(searchTab)
-			Object.assign(searchTab, massNav.tabs?.chat)
+		if (!massNav.tabs?.chat?.hide) {
+			if (appState.termdbConfig?.queries?.chat) {
+				const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
+				self.tabs.push(chatTab)
+				Object.assign(chatTab, massNav.tabs?.chat)
+			} else {
+				const searchTab = { top: 'SEARCH', mid: '', btm: '', subheader: 'chat' }
+				self.tabs.push(searchTab)
+				Object.assign(searchTab, massNav.tabs?.chat)
+			}
 		}
 
 		const table = self.dom.tabDiv

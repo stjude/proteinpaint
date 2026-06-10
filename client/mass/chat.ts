@@ -128,16 +128,16 @@ class MassAiChatBot implements RxComponent {
 			})
 			.on('keyup.submit', async event => {
 				if (!keyupEnter(event)) return
-				const prompt = event.target.value.trim()
-				if (!prompt) return
-				this.addBubble({ msg: prompt, me: 1 })
-				event.target.value = ''
 				const serverBubble = this.addBubble({ msg: '...' })
 				if (!this.getState(this.app.getState()).chat) {
 					// Prevents unnecessary server side call when chat not supported by ds
 					serverBubble.text('Chat not available for this dataset.')
 					return
 				}
+				const prompt = event.target.value.trim()
+				if (!prompt) return
+				this.addBubble({ msg: prompt, me: 1 })
+				event.target.value = ''
 				if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
 					serverBubble.text('Your prompt is too short. Enter a longer prompt.')
 					return
