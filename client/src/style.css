@@ -1216,7 +1216,7 @@ sandbox header
     border-radius: 6px;
 }
 
-/* greyed-out look while a chart button's plot is loading, or is the latest open profile chart (see mass/charts.js) */
+/* greyed-out look while a chart button's plot is loading (see mass/charts.js prepPlot) */
 .sjpp-chart-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;

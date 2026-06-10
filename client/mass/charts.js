@@ -28,18 +28,11 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		/* when a dataset opts in via massNav.disableActiveChartBtn, the chart buttons double as
-		an indicator of the chart the user last opened: only the most recently opened chart's
-		button is disabled (charts still stack one below the other). Datasets that don't set
-		the flag keep their normal behavior, where charts can be opened multiple times. */
-		const plots = appState.plots || []
-		const disableActiveChartBtn = appState.termdbConfig?.massNav?.disableActiveChartBtn
 		const state = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
-			latestChartType: disableActiveChartBtn && plots.length ? plots[plots.length - 1].chartType : undefined,
 			termdbConfig: appState.termdbConfig
 		}
 		if (appState?.termfilter?.filter) {
@@ -49,13 +42,7 @@ class MassCharts {
 	}
 
 	main() {
-		this.dom.btns
-			.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
-			/* for datasets with massNav.disableActiveChartBtn, disable only the most recently
-			opened chart's button so the user can see which chart they last opened; other
-			buttons are re-enabled. Otherwise latestChartType is undefined and nothing is
-			disabled here. */
-			.property('disabled', d => d.chartType === this.state.latestChartType)
+		this.dom.btns.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 
 	getBtnLabel_dict(state) {
@@ -575,17 +562,15 @@ function setRenderers(self) {
 
 	self.prepPlot = async function (chart, btnNode) {
 		self.dom.tip.hide()
-		// disable the clicked button while the chart loads so rapid clicks don't stack up plots;
-		// app.dispatch() resolves only after the plot has fully rendered (incl. its data fetch)
+		/* disable the clicked button while its chart loads so rapid clicks don't stack up plots.
+		app.dispatch() resolves only after the plot has fully rendered (incl. its data fetch); the
+		button is re-enabled once the load settles, on success or error. */
 		if (btnNode) btnNode.disabled = true
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
 		try {
 			await self.app.dispatch(action)
-			// on success main() reconciles each button's disabled state from the open plots:
-			// profile charts stay disabled (now open), non-singleton charts get re-enabled
-		} catch (e) {
-			if (btnNode) btnNode.disabled = false // recover the button if the plot failed to open
-			throw e
+		} finally {
+			if (btnNode) btnNode.disabled = false
 		}
 	}
 
