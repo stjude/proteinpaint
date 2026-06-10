@@ -10,8 +10,7 @@ export type TermdbSingleCellPlotsRequest = {
 	singleCellPlot: {
 		/** Name of the single cell plot type, e.g. "umap", "tsne" */
 		name: string
-		/** Sample name, optional */
-		sample?: string
+		sample?: { [index: string]: any }
 	}
 	filter: Filter
 	filter0: Filter

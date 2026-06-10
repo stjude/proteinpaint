@@ -15,10 +15,10 @@ import type {
 	TermdbSingleCellSamplesResponse,
 	Cell,
 	Plot,
-	TermdbSingleCellDataRequest
-	// ValidGetDataResponse,
-	// GetDataResponse
+	TermdbSingleCellDataRequest,
+	Filter
 } from '#types'
+import { validGenomeDs } from './common.ts'
 import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
@@ -27,7 +27,10 @@ import { getData } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	init,
-	request: { typeId: 'TermdbSingleCellSamplesRequest' /*, checkers: TODO write validator */ },
+	request: {
+		typeId: 'TermdbSingleCellSamplesRequest',
+		checker: validTermdbSingleCellSamplesRequest
+	},
 	response: { typeId: 'TermdbSingleCellSamplesResponse' }
 }
 
@@ -40,6 +43,14 @@ export const api: RouteApi = {
 	methods: {
 		get: payload,
 		post: payload
+	}
+}
+
+function validTermdbSingleCellSamplesRequest(input): TermdbSingleCellSamplesRequest {
+	return {
+		...validGenomeDs(input),
+		filter: input.filter as Filter, // TODO: use a filter validator
+		filter0: input.filter0 as any
 	}
 }
 

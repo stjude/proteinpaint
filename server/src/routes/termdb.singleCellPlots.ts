@@ -3,12 +3,14 @@ import type {
 	Cell,
 	ColorLegendEntry,
 	ColorMap,
+	Filter,
 	FormattedCell2Sample,
 	ShapeLegendEntry,
 	SingleCellRange,
 	TermdbSingleCellPlotsRequest,
 	ValidSingleCellPlotsResponse
 } from '#types'
+import { validGenomeDs, validString, validNumber } from './common.ts'
 import { getColors, getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
@@ -20,7 +22,10 @@ import { refColor } from './termdb.sampleScatter.js'
 
 const payload: RoutePayload = {
 	init,
-	request: { typeId: 'TermdbSingleCellPlotsRequest' /*, checkers: TODO write validator */ },
+	request: {
+		typeId: 'TermdbSingleCellPlotsRequest',
+		checker: validTermdbSingleCellPlotsRequest
+	},
 	response: { typeId: 'TermdbSingleCellPlotsResponse' }
 }
 
@@ -29,6 +34,34 @@ export const api: RouteApi = {
 	methods: {
 		get: payload,
 		post: payload
+	}
+}
+
+function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest {
+	return {
+		...validGenomeDs(input),
+		singleCellPlot: {
+			name: validString(input.singleCellPlot?.name),
+			sample: input.singleCellPlot?.sample
+		},
+		filter: input.filter as Filter, // TODO: use a filter validator
+		filter0: input.filter0 as any,
+		canvasSettings: {
+			cutoff: validNumber(input.canvasSettings?.cutoff) || 1000,
+			width: validNumber(input.canvasSettings?.width) || 800,
+			height: validNumber(input.canvasSettings?.height) || 600,
+			radius: validNumber(input.canvasSettings?.radius) || 3,
+			minXScale: input.canvasSettings?.minXScale != null ? validNumber(input.canvasSettings.minXScale) : null,
+			maxXScale: input.canvasSettings?.maxXScale != null ? validNumber(input.canvasSettings.maxXScale) : null,
+			minYScale: input.canvasSettings?.minYScale != null ? validNumber(input.canvasSettings.minYScale) : null,
+			maxYScale: input.canvasSettings?.maxYScale != null ? validNumber(input.canvasSettings.maxYScale) : null,
+			opacity: input.canvasSettings?.opacity != null ? validNumber(input.canvasSettings.opacity) : 1,
+			startColor: validString(input.canvasSettings?.startColor) || '#d3d3d3',
+			stopColor: validString(input.canvasSettings?.stopColor) || '#ff0000',
+			devicePixelRatio:
+				input.canvasSettings?.devicePixelRatio != null ? validNumber(input.canvasSettings.devicePixelRatio) : undefined
+		},
+		colorTW: input.colorTW as any //Termwrapper
 	}
 }
 
