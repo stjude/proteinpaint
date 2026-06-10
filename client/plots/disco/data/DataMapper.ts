@@ -386,6 +386,8 @@ export default class DataMapper {
 	}
 
 	private passesMutationFractionFilter(data: Data): boolean {
+		// If the dataset has no usable mutation-fraction info anywhere, don't apply the threshold.
+		if (!this.hasMutationFractionData) return true
 		const minMutationFraction = this.settings.Disco.minMutationFraction || 0
 		if (minMutationFraction <= 0) return true
 

@@ -218,13 +218,14 @@ function parseOptionalVafs(line: string[], errors: string[]) {
 		if (
 			!Number.isInteger(totalCount) ||
 			!Number.isInteger(altCount) ||
-			totalCount < 0 ||
+			totalCount <= 0 ||
 			altCount < 0 ||
 			altCount > totalCount
 		) {
-			errors.push(`${id} total/alt counts must be non-negative integers and alt cannot exceed total`)
+			errors.push(`${id} total/alt counts must be integers with total > 0, alt >= 0, and alt cannot exceed total`)
 			return
 		}
+
 		vafs.push({ id, totalCount, altCount })
 	}
 
