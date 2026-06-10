@@ -32,14 +32,15 @@ class MassAiChatBot implements RxComponent {
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
-	getState(appState) {
+	getState(appState: any) {
 		return {
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
 					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
 			search: appState.search,
-			nav: appState.nav
+			nav: appState.nav,
+			chat: appState.termdbConfig?.queries?.chat
 		}
 	}
 
@@ -132,6 +133,11 @@ class MassAiChatBot implements RxComponent {
 				this.addBubble({ msg: prompt, me: 1 })
 				event.target.value = ''
 				const serverBubble = this.addBubble({ msg: '...' })
+				if (!this.getState(this.app.getState()).chat) {
+					// Prevents unnecessary server side call when chat not supported by ds
+					serverBubble.text('Chat not available for this dataset.')
+					return
+				}
 				if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
 					serverBubble.text('Your prompt is too short. Enter a longer prompt.')
 					return
@@ -195,13 +201,13 @@ export const chatInit = getCompInit(MassAiChatBot)
 
 // Minimal renderers ported from MassSearch
 function setRenderers(self) {
+	let text = 'No match'
+	if (self.getState(self.app.getState()).chat) {
+		text = 'No match. Using the chatbot...'
+	}
 	self.noResult = () => {
 		self.clear()
-		self.dom.resultDiv
-			.append('div')
-			.text('No match. Using the chatbot...')
-			.style('padding', '3px 3px 3px 0px')
-			.style('opacity', 0.5)
+		self.dom.resultDiv.append('div').text(text).style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
 
 		// Hide the popup after 2 seconds
 		setTimeout(() => {
