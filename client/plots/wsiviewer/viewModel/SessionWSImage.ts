@@ -50,10 +50,7 @@ export class SessionWSImage extends WSImage {
 		// Note here that these calculations will have to change if tileselection sorting change. This calulation is assuming that
 		// All flagged/skipped/annotated items are collected together, sorted by descending timestamp (newest first), and
 		// put in the back half og the table, with sessiontilesections and predictions up front
-		const tileSelections =
-			SessionWSImage.getTileSelections(sessionWSImage, settings) ||
-			(((([] + (settings.renderOnlyFlagged ? 'WithCheck' : 'WithoutCheck')) as ProvokingActions) +
-				(settings.renderSkipped ? 'WithCheck' : 'WithoutCheck')) as ProvokingActions)
+		const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings)
 		let action = provokingAction as string
 		if ('flagging' === provokingAction) {
 			action = provokingAction + (settings.renderOnlyFlagged ? 'WithCheck' : 'WithoutCheck')
@@ -61,9 +58,10 @@ export class SessionWSImage extends WSImage {
 			action = provokingAction + (settings.renderSkipped ? 'WithCheck' : 'WithoutCheck')
 		}
 		const isLastIndex = currentIndex >= tileSelections.length - 1
-		const secondHalfIndex = tileSelections.findIndex(
+		let secondHalfIndex = tileSelections.findIndex(
 			ts => checkSelectionType(ts, SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
 		)
+		if (secondHalfIndex === -1) secondHalfIndex = tileSelections.length
 		const inFirstHalf = currentIndex < secondHalfIndex
 		switch (action) {
 			case 'annotation':
@@ -73,7 +71,7 @@ export class SessionWSImage extends WSImage {
 			case 'delete':
 			case 'skippingWithoutCheck':
 			case 'flaggingWithCheck':
-				return isLastIndex ? currentIndex - 1 : currentIndex
+				return isLastIndex ? Math.max(0, currentIndex - 1) : currentIndex
 			default:
 				return 0
 		}
