@@ -574,9 +574,9 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 			.attr('class', 'sjpp-abc-bubble')
 			.attr('transform', (d: Bubble) => `translate(${d.x},${d.y})`)
 			.style('cursor', 'pointer')
-			.style('outline', 'none') // suppress browser focus square on click
-			.attr('tabindex', -1) // ensure no focus rectangle even when focused programmatically
-
+			.attr('role', 'button')
+			.attr('tabindex', 0)
+			.attr('aria-label', (d: Bubble) => `Open protein view for ${d.gene}`)
 		// Invisible hit-area circle covering the entire bubble (outer radius). Sits behind
 		// every visible element so it doesn't obscure anything, but captures pointer events
 		// across the inner-circle ↔ ring gap. Without it, mouseenter/mouseleave fires
