@@ -17,7 +17,14 @@ import {
 	createFeatureID,
 	type FlagStatusValues
 } from '#types'
-import type { SaveWSIAnnotationRequest, DeleteWSITileSelectionRequest, TileSelection, ProvokingActions } from '#types'
+import type {
+	SaveWSIAnnotationRequest,
+	SaveWSIAnnotationResponse,
+	DeleteWSITileSelectionRequest,
+	DeleteWSITileSelectionResponse,
+	TileSelection,
+	ProvokingActions
+} from '#types'
 import { SessionWSImage } from '#plots/wsiviewer/viewModel/SessionWSImage.ts'
 import { createDimSquareFeature, createStarFeature } from '#plots/wsiviewer/viewModel/ViewModelProvider.ts'
 import { DownloadCSVButtonRenderer } from '../view/DownloadCSVButtonRenderer'
