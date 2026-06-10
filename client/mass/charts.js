@@ -28,10 +28,10 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		// when a dataset opts in via massNav.disableActiveChartBtn, the chart buttons double as
-		// an indicator of the chart the user last opened: only the most recently opened chart's
-		// button is disabled (charts still stack one below the other). Datasets that don't set
-		// the flag keep their normal behavior, where charts can be opened multiple times.
+		/* when a dataset opts in via massNav.disableActiveChartBtn, the chart buttons double as
+		an indicator of the chart the user last opened: only the most recently opened chart's
+		button is disabled (charts still stack one below the other). Datasets that don't set
+		the flag keep their normal behavior, where charts can be opened multiple times. */
 		const plots = appState.plots || []
 		const disableActiveChartBtn = appState.termdbConfig?.massNav?.disableActiveChartBtn
 		const state = {
@@ -51,10 +51,10 @@ class MassCharts {
 	main() {
 		this.dom.btns
 			.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
-			// for datasets with massNav.disableActiveChartBtn, disable only the most recently
-			// opened chart's button so the user can see which chart they last opened; other
-			// buttons are re-enabled. Otherwise latestChartType is undefined and nothing is
-			// disabled here.
+			/* for datasets with massNav.disableActiveChartBtn, disable only the most recently
+			opened chart's button so the user can see which chart they last opened; other
+			buttons are re-enabled. Otherwise latestChartType is undefined and nothing is
+			disabled here. */
 			.property('disabled', d => d.chartType === this.state.latestChartType)
 	}
 
