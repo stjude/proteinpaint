@@ -115,7 +115,7 @@ export class profileForms extends profilePlot {
 	async main() {
 		this.dom.loadingDiv.style('display', '')
 		try {
-			super.main()
+			await super.main()
 			if (this.tabs.length == 0) return // no plots to show
 			const activeTab = this.state.config.activeTab || this.tabs[0].label
 			this.activePlot = this.state.config.options.find(p => p.name == activeTab)
