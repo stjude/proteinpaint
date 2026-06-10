@@ -145,7 +145,11 @@ async function getSampleList(req, q, ds) {
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
 		// dataset supplied method
 		const temp = await ds.cohort.termdb.filterSamples(q, ds)
-		samples = [...temp]
+		if (temp) {
+			samples = [...temp].map(sid => {
+				return { id: sid }
+			})
+		}
 	} else {
 		throw new Error('no method available to get sample list')
 	}
