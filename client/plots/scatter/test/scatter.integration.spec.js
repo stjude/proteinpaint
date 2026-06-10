@@ -1312,7 +1312,16 @@ tape('singlecell map', function (test) {
 
 tape('singlecell geneexp', function (test) {
 	runpp({
-		state: state2scgeneexp,
+		state: {
+			nav: { header_mode: 'hidden' },
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					colorTW: getScgeneexpTw(),
+					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+				}
+			]
+		},
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(scatter) {
