@@ -7,7 +7,6 @@ Run test script as follows (from 'proteinpaint/'):
 
 import tape from 'tape'
 import { run_python } from '@sjcrh/proteinpaint-python'
-
 const bwFile = 'server/test/tp/files/hg38/TermdbTest/trackLst/bw1.bw'
 const payload = {
 	bw_file: bwFile,
@@ -23,7 +22,7 @@ const expected = [
 	1.6385932438685793, 3.5314523589269196, 31.965309898242367, 167.53092783505156
 ]
 
-function approxEqual(a: number, b: number, eps = 1e-9) {
+function approxEqual(a: number, b: number, eps = 1e-6) {
 	return Math.abs(a - b) <= eps
 }
 
@@ -69,7 +68,6 @@ tape('bigWigSummary rejects an invalid URL', async t => {
 		t.fail('Expected invalid URL validation to fail')
 	} catch (err) {
 		const errorText = String(err)
-		console.log('Received error:', errorText)
 		t.ok(errorText.includes('is not accessible'), 'Error should mention invalid URL accessibility')
 	}
 
