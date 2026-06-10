@@ -204,7 +204,8 @@ export class SectionRenderer {
 		if (this.groupBy === 'none') return 'All plots'
 		if (this.groupBy === 'plot') return key
 		const caseText = item?.sample && item.sample !== key ? `Case: ${item.sample}` : ''
-		const itemText = `Sample: ${key}`
+		const isMeta = item?.isMetaResult || false
+		const itemText = `${isMeta ? '' : 'Sample: '}${key}`
 		const projectText = item?.['project id'] ? `Project: ${item['project id']}` : ''
 		return [itemText, caseText, projectText].filter(Boolean).join(' ')
 	}
