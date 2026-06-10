@@ -2,7 +2,6 @@ import { importPlot } from '#plots/importPlot.js'
 import { getCompInit, multiInit, type RxComponent, type ComponentApi } from '#rx'
 import { filterRxCompInit } from '#filter'
 import type { MassAppApi } from '#mass/types/mass'
-// import { select as d3select } from 'd3-selection'
 
 /** Wrapper for subplot sanbdoxes created dynamically.
  * Builds out the expected dom structure and extra functionality (e.g. plot filter)
@@ -12,13 +11,6 @@ import type { MassAppApi } from '#mass/types/mass'
  * The functionality here is sligthly different from MassPlot && plotInit()
  * in #mass/plot.js to support dynamic creation and destory within the parent */
 
-/**
- * TODO:
- * - Init plot filters:
- *     - Hide plot filters if !isMetaResult
- *     - Or consider, with server route changes, only allowing filters for certain term types
- * (i.e. scge since it's cell specific)
- */
 class DynamicSubplot implements RxComponent {
 	static type = 'dynamicSubplot'
 
@@ -71,7 +63,6 @@ class DynamicSubplot implements RxComponent {
 			app: this.app,
 			id: this.id,
 			parentId: this.opts.parentId
-			// plotDiv: d3select(this.dom.holder.app_div.node().parentNode)
 		}
 		if (this.opts.chartType == 'summary') {
 			chartOpts.holder = this.opts.holder

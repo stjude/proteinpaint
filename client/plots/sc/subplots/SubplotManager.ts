@@ -6,15 +6,6 @@ import type { SCActiveSubplot, SCSampleSandbox } from '../SCTypes'
 /** Instead of managing multiple maps of the subplots (e.g within the 
  * SampleTableRenderer, SectionRenderer, etc.), use this manager to keep track
  * of all the subplots, their dom, sections, etc. 
- * 
- * Note: In this future, this can be reuseable by changing this.sc to this.parentPlot
- * 
- * TODO: 
- * - Need to delete subplots by sample when filtering removes the sample.
- * - Tie into both the viewModel for the tableData and view. 
- *      - Should use the manager here to decide plot buttons in the sample table renderer
- *     - The manager should also handle passing the correct section info to the subplots 
- *      within the section renderer
 ) */
 
 export class SubplotManager {

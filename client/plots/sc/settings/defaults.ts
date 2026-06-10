@@ -6,7 +6,6 @@ export function getDefaultSCAppSettings(overrides = {}, app): Settings {
 	const defaults: Settings = {
 		sc: {
 			columns: {
-				// TODO: Implement ds specific column name
 				sample: 'Sample'
 			},
 			item: undefined,
