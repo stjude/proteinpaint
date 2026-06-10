@@ -1,10 +1,7 @@
 import * as utils from './utils.js'
-import serverconfig from './serverconfig.js'
-import { spawn } from 'child_process'
 import { createCanvas } from 'canvas'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { rgb } from 'd3-color'
-
+import { run_python } from '@sjcrh/proteinpaint-python'
 /*
 
 NOTE:
@@ -75,10 +72,10 @@ async function handle_tkbigwig(req, res, genomes) {
 	}
 
 	for (const r of req.query.rglst) {
-		const out = await run_bigwigsummary(req, r, file)
+		const bins = await run_bigwigsummary(req, r, file)
 
-		if (out) {
-			r.values = out.trim().split('\t').map(Number.parseFloat)
+		if (bins) {
+			r.values = bins
 			if (req.query.dividefactor) {
 				r.values = r.values.map(i => i / req.query.dividefactor)
 			}
@@ -361,33 +358,16 @@ function makeyscale() {
 	return yscale
 }
 
-function run_bigwigsummary(req, r, file) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(serverconfig.bigwigsummary, [
-			'-udcDir=' + serverconfig.cachedir,
-			file,
-			r.chr,
-			r.start,
-			r.stop,
-			Math.ceil(r.width * (req.query.dotplotfactor || 1))
-		])
-		const out = []
-		const out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
-			const err = out2.join('')
-			if (err.length) {
-				if (err.startsWith('no data')) {
-					resolve()
-				} else {
-					// in case of invalid file the message is "Couldn't open /path/to/tp/..."
-					// must not give away the tp path!!
-					reject('Cannot read bigWig file')
-				}
-			} else {
-				resolve(out.join(''))
-			}
-		})
-	})
+async function run_bigwigsummary(req, r, file) {
+	const input_json = {
+		bw_file: file,
+		chromosome: r.chr,
+		start: r.start,
+		end: r.stop,
+		n_bins: Math.ceil(r.width * (req.query.dotplotfactor || 1))
+	}
+	const python_output = await run_python('bigWigSummary.py', JSON.stringify(input_json))
+	const bins = typeof python_output === 'string' ? JSON.parse(python_output) : []
+	if (bins.length == 0) throw `Couldn't find data for ${file}`
+	return bins
 }

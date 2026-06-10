@@ -12,6 +12,7 @@ numba==0.61.2
 numpy>=1.22
 pandas==2.2.3
 psutil==7.2.1
+pyBigWig==0.3.25
 pydantic==2.12.3
 typing_extensions==4.15.0
 xlsxwriter==3.2.5

@@ -139,19 +139,6 @@ if (UC.URL) {
 // if binpath is provided, will download binaries
 if (UC.BINPATH) {
 	{
-		const a = path.join(UC.BINPATH, 'bigWigSummary')
-		trydownload(
-			a,
-			UC.MAC
-				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigWigSummary'
-				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary'
-		)
-		if (!validateurlmode) {
-			exec('chmod +x ' + a)
-			SC.bigwigsummary = a
-		}
-	}
-	{
 		const a = path.join(UC.BINPATH, 'bigBedNamedItems')
 		trydownload(
 			a,
