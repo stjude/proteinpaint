@@ -92,6 +92,18 @@ export type GRIN2Request = {
 		/** Number of bases to include as 3' flank around the sv position */
 		threePrimeFlankSize?: number
 	}
+	/** Artifact-region exclude mask applied to lesions before the GRIN2 statistics run.
+	 * Lesions whose span lies predominantly inside low-mappability / segmental-duplication /
+	 * ENCODE-blacklist / assembly-gap regions are dropped. Literature-backed (nullranges/bootRanges
+	 * `exclude`, ENCODE blacklist, Umap/Bismap, UCSC segdups). Mask BEDs are resolved server-side
+	 * by genome name; absent BEDs are skipped gracefully. */
+	excludeOptions?: {
+		/** Whether to apply the region mask (default: true) */
+		enabled?: boolean
+		/** Drop a lesion when >= this fraction of its span overlaps masked regions (default: 0.5) */
+		overlapFrac?: number
+	}
+
 	maxGenesToShow?: number // Default: 500
 }
 

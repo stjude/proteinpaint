@@ -58,6 +58,7 @@ export interface GRIN2RequestData {
 	cnvOptions?: { lossThreshold: number; gainThreshold: number; maxSegLength: number }
 	fusionOptions?: Record<string, any>
 	svOptions?: Record<string, any>
+	excludeOptions?: { enabled: boolean; overlapFrac: number }
 }
 
 /** Raw response from vocabApi.getGrin2Data. */
