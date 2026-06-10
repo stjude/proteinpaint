@@ -21,6 +21,7 @@ class SampleView {
 	}
 
 	setDom(opts) {
+		opts.holder.style('position', 'relative')
 		const div = opts.holder.append('div')
 
 		const controlsDiv = div.append('div').style('display', 'inline-block')
@@ -37,12 +38,18 @@ class SampleView {
 		const sampleDiv = headerDiv.insert('div').style('display', 'inline-block')
 		const showPlotsDiv = headerDiv.append('div').style('display', 'inline-block').style('vertical-align', 'top')
 
+		// loading overlay shown over the sandbox while sample data is fetched/rendered;
+		// reuses the shared .sjpp-loading-overlay box + .sjpp-spinner glyph
+		const loadingDiv = opts.holder.append('div').attr('class', 'sjpp-loading-overlay').style('display', 'none')
+		loadingDiv.append('div').attr('class', 'sjpp-spinner')
+
 		this.dom = {
 			header: opts.header,
 			holder: opts.holder,
 			controlsDiv,
 			sampleDiv,
 			showPlotsDiv,
+			loadingDiv,
 
 			plotsDiv
 		}
@@ -196,23 +203,28 @@ class SampleView {
 
 	async main() {
 		if (this.mayRequireToken()) return
-		this.config = structuredClone(this.state.config)
-		this.settings = this.state.config.settings.sampleView
-		this.dom.plotsDiv.selectAll('*').remove()
+		this.dom.loadingDiv.style('display', '')
+		try {
+			this.config = structuredClone(this.state.config)
+			this.settings = this.state.config.settings.sampleView
+			this.dom.plotsDiv.selectAll('*').remove()
 
-		this.termsById = this.getTermsById(this.state)
-		this.sampleDataByTermId = {}
-		const root = this.termsById[root_ID]
-		root.terms = await this.requestTermRecursive(root)
-		this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
-		if (this.dom.downloadbt)
-			this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
+			this.termsById = this.getTermsById(this.state)
+			this.sampleDataByTermId = {}
+			const root = this.termsById[root_ID]
+			root.terms = await this.requestTermRecursive(root)
+			this.orderedVisibleTerms = this.getOrderedVisibleTerms(root)
+			if (this.dom.downloadbt)
+				this.dom.downloadbt.style('display', this.settings.showDictionary ? 'inline-block' : 'none')
 
-		if (this.settings.showDictionary) this.renderSampleDictionary()
-		this.dom.tableDiv.style('display', this.settings.showDictionary ? 'block' : 'none')
+			if (this.settings.showDictionary) this.renderSampleDictionary()
+			this.dom.tableDiv.style('display', this.settings.showDictionary ? 'block' : 'none')
 
-		await this.renderPlots(this.state, this.state.samples)
-		this.showVisiblePlots()
+			await this.renderPlots(this.state, this.state.samples)
+			this.showVisiblePlots()
+		} finally {
+			this.dom.loadingDiv.style('display', 'none')
+		}
 	}
 
 	async setControls(state) {

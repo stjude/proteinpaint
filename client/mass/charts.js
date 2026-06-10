@@ -28,15 +28,18 @@ class MassCharts {
 	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		// chartType of the most recently opened profile plot (profile plots stack, so the last
-		// profile entry in plots[] is the newest); only this chart's nav button is disabled
-		const profilePlots = (appState.plots || []).filter(p => p.chartType?.startsWith('profile'))
+		// in the profile portal the chart buttons double as an indicator of the chart the user
+		// last opened: only the most recently opened chart's button is disabled (charts still
+		// stack one below the other). Scope this to the profile portal (detected via its
+		// defaultChartType) so other datasets keep their normal multi-open behavior.
+		const plots = appState.plots || []
+		const isProfilePortal = appState.termdbConfig?.defaultChartType?.startsWith('profile')
 		const state = {
 			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			currentCohortChartTypes: getCurrentCohortChartTypes(appState),
-			latestProfileChartType: profilePlots.length ? profilePlots[profilePlots.length - 1].chartType : undefined,
+			latestChartType: isProfilePortal && plots.length ? plots[plots.length - 1].chartType : undefined,
 			termdbConfig: appState.termdbConfig
 		}
 		if (appState?.termfilter?.filter) {
@@ -48,10 +51,10 @@ class MassCharts {
 	main() {
 		this.dom.btns
 			.style('display', d => (this.state.currentCohortChartTypes.includes(d.chartType) ? '' : 'none'))
-			// disable only the nav button of the most recently opened profile chart, so the user
-			// can see which profile chart they last opened. Profile charts still stack one below
-			// the other; previously opened charts' buttons are re-enabled.
-			.property('disabled', d => d.chartType === this.state.latestProfileChartType)
+			// in the profile portal, disable only the most recently opened chart's button so the
+			// user can see which chart they last opened; other buttons are re-enabled. Outside the
+			// profile portal latestChartType is undefined, so no button is disabled here.
+			.property('disabled', d => d.chartType === this.state.latestChartType)
 	}
 
 	getBtnLabel_dict(state) {
