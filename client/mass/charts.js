@@ -373,6 +373,12 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Bubble Chart',
+			chartType: 'animatedBubbleChart',
+			clickTo: self.plotCreate,
+			config: { chartType: 'animatedBubbleChart' }
+		},
+		{
 			label: state.termdbConfig.queries?.geneRanking?.appName || 'Gene Ranking',
 			chartType: 'geneRanking',
 			clickTo: self.loadChartSpecificMenu

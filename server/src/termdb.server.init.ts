@@ -691,6 +691,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	ProteomeInput: ({ ds }) => ds.queries?.proteome,
 	proteinView: ({ ds }) => ds.queries?.proteome,
 	geneRanking: ({ ds }) => ds.queries?.geneRanking,
+	animatedBubbleChart: ({ ds }) => ds.queries?.geneRanking,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case

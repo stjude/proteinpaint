@@ -84,6 +84,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'proteomeAbundance':
 			return await import(`./proteomeAbundance.ts`)
 
+		case 'animatedBubbleChart':
+			return await import(`./animatedBubbleChart.ts`)
+
 		case 'geneRanking':
 			return await import(`./geneRanking.ts`)
 
