@@ -154,7 +154,7 @@ export function plotWiggle(q, pa) {
 		for (const r of q.rglst) {
 			if (r.values) {
 				for (const v of r.values) {
-					if (Number.isNaN(v)) continue
+					if (Number.isNaN(Number(v))) continue
 					if (v >= 0) positive.push(v)
 					if (v <= 0) negative.push(v)
 				}
@@ -195,7 +195,7 @@ export function plotWiggle(q, pa) {
 			if (r.values) {
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
-					if (Number.isNaN(v)) continue
+					if (Number.isNaN(Number(v))) continue
 					ctx.fillStyle =
 						v >= maxv
 							? q.pcolor2
@@ -220,7 +220,7 @@ export function plotWiggle(q, pa) {
 			if (r.values) {
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
-					if (Number.isNaN(v)) continue
+					if (Number.isNaN(Number(v))) continue
 
 					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
 
@@ -368,6 +368,6 @@ async function run_bigwigsummary(req, r, file) {
 	}
 	const python_output = await run_python('bigWigSummary.py', JSON.stringify(input_json))
 	const bins = typeof python_output === 'string' ? JSON.parse(python_output) : []
-	if (bins.length == 0) throw `Couldn't find data for ${file}`
+	if (bins.length == 0) throw `Couldn't find data for provided file`
 	return bins
 }
