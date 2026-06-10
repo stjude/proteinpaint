@@ -18,7 +18,7 @@ export class WSIAnnotationsRenderer {
 		holder.select('div[id="annotations-table"]').remove()
 		if (!imageViewData.tilesTable) return
 		const selectedColor = '#fcfc8b'
-
+		const selectedRowId = 'selected-annotation-row'
 		renderTable({
 			columns: imageViewData.tilesTable.columns,
 			rows: imageViewData.tilesTable.rows,
@@ -34,10 +34,10 @@ export class WSIAnnotationsRenderer {
 				const rowIdx = row[0].value as number
 				const isSelected = selectedIdx === rowIdx
 				const origColor = tr.style('background-color') || 'transparent'
-
+				const originalId = tr.attr('id') || ''
 				//Show selected row in yellow on render
 				tr.style('background-color', isSelected ? selectedColor : origColor)
-
+				tr.attr('id', isSelected ? selectedRowId : originalId)
 				tr.style('outline', 'none') //Remove the default outline on click
 
 				tr.on('click', () => {
