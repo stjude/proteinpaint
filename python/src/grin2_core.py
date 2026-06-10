@@ -1074,6 +1074,193 @@ def row_prob_subj_hit(P, IDs):
 
 
 # =============================================================================
+# REGION EXCLUSION / MASKING
+# =============================================================================
+#
+# Hard region mask applied to lesions BEFORE the GRIN statistics run. This is
+# the literature-backed `exclude` step: removing lesions that fall in
+# low-mappability / segmental-duplication / blacklist / assembly-gap regions
+# stops those artifact-dense loci (e.g. OR clusters, FAM90, POTE, GOLGA8, HLA)
+# from accruing spurious recurrence under GRIN's uniform random-interval null.
+# Mirrors Bioconductor nullranges/bootRanges `exclude`; see Amemiya/Kundaje/Boyle
+# 2019 (ENCODE blacklist), Karimzadeh 2018 (Umap/Bismap mappability), Sharp 2005
+# (segmental duplications), Ogata/Mu 2023 (excluderanges).
+#
+# The mask BEDs are small enough to read fully via gzip, so no pysam/tabix
+# dependency is required.
+
+def load_exclude_intervals(bed_paths):
+    """
+    Load one or more (optionally bgzip'd) BED files into per-chromosome,
+    sorted, overlap-merged interval arrays.
+
+    Parameters
+    ----------
+    bed_paths : list[str]
+        Paths to BED files. Plain or gzip/bgzip-compressed (".gz") are both
+        accepted. Only the first three columns (chrom, start, end) are used.
+        BED is 0-based half-open; lesion coords are treated on the same axis
+        for overlap (the small 1-bp convention difference is immaterial to a
+        fractional-overlap drop decision).
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        chrom -> (N, 2) int64 array of merged [start, end) intervals, sorted
+        by start. Chrom names are normalized to be `chr`-prefixed to match
+        lesion chrom values.
+    """
+    import gzip
+
+    raw = {}  # chrom -> list of [start, end]
+    for path in bed_paths or []:
+        if not path:
+            continue
+        opener = gzip.open if str(path).endswith(".gz") else open
+        try:
+            with opener(path, "rt") as fh:
+                for line in fh:
+                    if not line or line[0] in "#tb":
+                        # skip comments and UCSC "track"/"browser" header lines
+                        if line.startswith(("#", "track", "browser")):
+                            continue
+                    fields = line.rstrip("\n").split("\t")
+                    if len(fields) < 3:
+                        continue
+                    chrom = fields[0]
+                    if not chrom.startswith("chr"):
+                        chrom = f"chr{chrom}"
+                    try:
+                        start = int(fields[1])
+                        end = int(fields[2])
+                    except ValueError:
+                        continue
+                    if end <= start:
+                        continue
+                    raw.setdefault(chrom, []).append([start, end])
+        except FileNotFoundError:
+            write_error(f"exclude BED not found, skipping: {path}")
+            continue
+
+    merged = {}
+    for chrom, intervals in raw.items():
+        arr = np.asarray(intervals, dtype=np.int64)
+        arr = arr[np.argsort(arr[:, 0], kind="mergesort")]
+        # merge overlapping/adjacent intervals
+        out = []
+        cur_start, cur_end = arr[0, 0], arr[0, 1]
+        for s, e in arr[1:]:
+            if s <= cur_end:
+                if e > cur_end:
+                    cur_end = e
+            else:
+                out.append([cur_start, cur_end])
+                cur_start, cur_end = s, e
+        out.append([cur_start, cur_end])
+        merged[chrom] = np.asarray(out, dtype=np.int64)
+    return merged
+
+
+def _masked_overlap_bp(start, end, intervals):
+    """Total bp of [start, end) covered by the sorted, merged `intervals` (N,2)."""
+    if intervals is None or len(intervals) == 0 or end <= start:
+        return 0
+    starts = intervals[:, 0]
+    # first interval whose end > start, via the interval starts: find candidates
+    # whose start < end and end > start. Use searchsorted on starts for a window.
+    lo = np.searchsorted(starts, start, side="right") - 1
+    if lo < 0:
+        lo = 0
+    hi = np.searchsorted(starts, end, side="left")
+    total = 0
+    for i in range(lo, hi):
+        s = intervals[i, 0]
+        e = intervals[i, 1]
+        if e <= start:
+            continue
+        if s >= end:
+            break
+        ov = min(end, e) - max(start, s)
+        if ov > 0:
+            total += ov
+    return int(total)
+
+
+def apply_gene_mask(gene_data, mask, frac=0.5):
+    """
+    Drop GENES whose span lies predominantly inside masked (artifact) regions,
+    BEFORE the gene-lesion overlap/counting step.
+
+    This is the correct primitive for a gene-level recurrence test. Masking
+    lesions instead fails for these artifacts: the artifact genes (OR clusters,
+    HLA, FAM90, POTE, APOBEC) are tiny, but the lesions hitting them are often
+    broad (arm/chromosome-scale) passenger deletions whose fraction-inside-mask
+    is small — so the lesion survives and still hits the gene. Removing the
+    gene from consideration collapses the artifact regardless of lesion size.
+
+    A gene is dropped when the fraction of its span overlapping masked regions
+    is >= `frac` (default 0.5). This spares true drivers that merely abut an
+    artifact region (e.g. KRAS overlaps a segdup by ~10%).
+
+    Parameters
+    ----------
+    gene_data : DataFrame
+        Gene annotations with columns: gene, chrom, loc.start, loc.end
+    mask : dict[str, np.ndarray]
+        Output of load_exclude_intervals(): chrom -> sorted merged intervals.
+    frac : float
+        Overlap-fraction threshold for dropping a gene (default 0.5).
+
+    Returns
+    -------
+    (DataFrame, dict)
+        Kept genes (same schema), and a report dict:
+        {genes_in, genes_dropped, dropped_examples, genome_fraction_masked, overlap_frac}
+    """
+    n_in = len(gene_data)
+    empty_report = {
+        "genes_in": n_in,
+        "genes_dropped": 0,
+        "dropped_examples": [],
+        "genome_fraction_masked": 0.0,
+        "overlap_frac": frac,
+    }
+    if n_in == 0 or not mask:
+        return gene_data, empty_report
+
+    chroms = gene_data["chrom"].to_numpy()
+    starts = gene_data["loc.start"].to_numpy()
+    ends = gene_data["loc.end"].to_numpy()
+
+    drop = np.zeros(n_in, dtype=bool)
+    for i in range(n_in):
+        intervals = mask.get(chroms[i])
+        if intervals is None:
+            continue
+        s = int(starts[i])
+        e = max(int(ends[i]), s + 1)
+        ov = _masked_overlap_bp(s, e, intervals)
+        if ov / (e - s) >= frac:
+            drop[i] = True
+
+    kept = gene_data.loc[~drop].reset_index(drop=True)
+    dropped_genes = gene_data.loc[drop, "gene"].astype(str).tolist()
+
+    total_masked_bp = int(sum(int((iv[:, 1] - iv[:, 0]).sum()) for iv in mask.values()))
+    # hg38 ~3.1e9 bp; report a coarse fraction for sanity-checking the mask size
+    genome_fraction_masked = round(total_masked_bp / 3.1e9, 4)
+
+    report = {
+        "genes_in": n_in,
+        "genes_dropped": int(drop.sum()),
+        "dropped_examples": dropped_genes[:20],
+        "genome_fraction_masked": genome_fraction_masked,
+        "overlap_frac": frac,
+    }
+    return kept, report
+
+
+# =============================================================================
 # MAIN ENTRY POINT
 # =============================================================================
 

@@ -1,6 +1,7 @@
 import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
+import { file_is_readable } from '#src/utils.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
@@ -252,6 +253,23 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		}
 	}
 
+	// Build region-mask report rows (artifact-region exclude mask). Only shown
+	// when the mask actually ran (resultData.maskReport is non-null).
+	const maskReport = resultData?.maskReport
+	const maskRows: string[][] = []
+	if (maskReport) {
+		const examples: string[] = maskReport.dropped_examples || []
+		const examplesStr =
+			examples.length > 0 ? `${examples.slice(0, 12).join(', ')}${examples.length > 12 ? ', …' : ''}` : 'none'
+		maskRows.push(
+			['Genes In', Number(maskReport.genes_in ?? 0).toLocaleString()],
+			['Genes Excluded', Number(maskReport.genes_dropped ?? 0).toLocaleString()],
+			['Examples', examplesStr],
+			['Genome Fraction Masked', `${((maskReport.genome_fraction_masked ?? 0) * 100).toFixed(2)}%`],
+			['Overlap Threshold', `${maskReport.overlap_frac ?? 0.5}`]
+		)
+	}
+
 	// Build cap warning if applicable
 	const capWarningRows: string[][] = []
 	const expectedToProcess = processing.totalSamples! - processing.failedSamples!
@@ -287,6 +305,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 					name: 'Lesion Counts',
 					rows: lesionTypeRows
 				},
+				...(maskRows.length > 0 ? [{ name: 'Region Mask (excluded artifact genes)', rows: maskRows }] : []),
 				{
 					name: 'Memory Usage',
 					rows: [
@@ -332,8 +351,31 @@ function grin2KeyInputs(req: GRIN2Request) {
 		cnvOptions: req.cnvOptions ?? null,
 		fusionOptions: req.fusionOptions ?? null,
 		svOptions: req.svOptions ?? null,
+		excludeOptions: req.excludeOptions ?? null,
 		maxGenesToShow: req.maxGenesToShow ?? null
 	}
+}
+
+/** Resolve the artifact-region mask BEDs bundled under tp/anno by genome name.
+ * Returns absolute paths to the BEDs that exist on disk; missing ones are
+ * skipped so the mask degrades gracefully. The Python wrapper unions + merges
+ * whatever it receives. Mask set: ENCODE/Kundaje blacklist + segmental duplications +
+ * assembly gaps + common germline CNVs (DGV Gold Standard, freq>=1%). The germline-CNV
+ * layer is essential — the dominant artifacts (OR clusters, HLA, KANSL1) are well-mapped but
+ * copy-number-polymorphic in the normal population, so mappability does not catch them. */
+async function resolveExcludeBeds(genome: string): Promise<string[]> {
+	const names = ['encodeBlacklist', 'genomicSuperDups', 'gaps', 'dgvCommon']
+	const beds: string[] = []
+	for (const name of names) {
+		const p = path.join(serverconfig.tpmasterdir, 'anno', `${name}.${genome}.bed.gz`)
+		try {
+			await file_is_readable(p)
+			beds.push(p)
+		} catch (e) {
+			mayLog(`[GRIN2] exclude BED not found, skipping: ${p} (${e})`)
+		}
+	}
+	return beds
 }
 
 /** Single read-or-recompute entry point for the GRIN2 cache. The Rust
@@ -441,12 +483,18 @@ async function runGrin2Fresh(
 	// Rust reads them straight from this JSON file, no sibling file.
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 
+	const excludeEnabled = request.excludeOptions?.enabled ?? true
+	const excludeBeds = excludeEnabled ? await resolveExcludeBeds(request.genome) : []
+
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),
 		chromosomelist,
 		lesion: JSON.stringify(lesions),
 		maxGenesToShow: request.maxGenesToShow,
-		lesionTypeMap: buildLesionTypeMap(availableDataTypes)
+		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
+		excludeEnabled,
+		excludeBeds,
+		excludeOverlapFrac: request.excludeOptions?.overlapFrac ?? 0.5
 	}
 
 	// Step 4: Run GRIN2 analysis via Python

@@ -28,7 +28,7 @@ import warnings, json, sys
 import sqlite3
 import pandas as pd
 import numpy as np
-from grin2_core import grin_stats
+from grin2_core import grin_stats, load_exclude_intervals, apply_gene_mask
 # from grin2_core import timed_grin_stats
 
 warnings.filterwarnings('ignore')
@@ -231,10 +231,26 @@ try:
 	)
 	
 	lesion_counts = lesion_df["lsn.type"].value_counts()
-	
+
 	# Lesion types are the keys of lesionTypeMap (e.g. "mutation", "gain", "loss")
 	lesion_types = list(lesion_type_map.keys())
-	
+
+	# 4b. Apply artifact-region exclude mask (literature-backed; see grin2_core).
+	# Drops GENES whose span lies in low-mappability/segdup/blacklist/gap regions
+	# before the statistics run — the correct primitive for a gene-level recurrence
+	# test (masking lesions misses broad passenger deletions that clip a tiny
+	# artifact gene). No-op when disabled or no BEDs are resolved.
+	mask_report = None
+	exclude_beds = input_data.get("excludeBeds") or []
+	exclude_enabled = input_data.get("excludeEnabled", True)
+	exclude_frac = float(input_data.get("excludeOverlapFrac", 0.5))
+	if exclude_enabled and exclude_beds:
+		mask = load_exclude_intervals(exclude_beds)
+		gene_anno, mask_report = apply_gene_mask(gene_anno, mask, exclude_frac)
+		if gene_anno.empty:
+			write_error("No genes remain after applying the exclude mask")
+			sys.exit(1)
+
 	# 5. Run GRIN2
 	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
 	# grin_results = timed_grin_stats(lesion_df, gene_anno, chrom_size)
@@ -267,6 +283,7 @@ try:
 		"totalGenes": len(sorted_results),
 		"showingTop": num_rows,
 		"lesionCounts": {"byType": lesion_counts.to_dict()},
+		"maskReport": mask_report,
 		"memory": grin_results.get("memory_profile", {}),
 		"geneHits": gene_hits
 	}))

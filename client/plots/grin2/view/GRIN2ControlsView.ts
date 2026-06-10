@@ -5,7 +5,9 @@ import type { GRIN2ControlsCallbacks, DtUsage } from '../GRIN2Types'
 import {
 	CNV_LOSS_THRESHOLD_FALLBACK,
 	CNV_GAIN_THRESHOLD_FALLBACK,
-	CNV_MAX_SEG_LENGTH_FALLBACK
+	CNV_MAX_SEG_LENGTH_FALLBACK,
+	EXCLUDE_ENABLED_FALLBACK,
+	EXCLUDE_OVERLAP_FRAC_FALLBACK
 } from '../settings/defaults'
 
 // Styling constants used only by the controls view
@@ -43,6 +45,9 @@ export class GRIN2ControlsView {
 	private cnv_gainThreshold: any = null
 	private cnv_maxSegLength: any = null
 
+	private excludeCheckbox: any = null
+	private exclude_overlapFrac: any = null
+
 	private snvindelMafFilter: any = null
 
 	constructor(opts: {
@@ -72,6 +77,9 @@ export class GRIN2ControlsView {
 		if (queries.cnv) this.addCnvRow(table)
 		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) this.addFusionRow(table)
 		if (queries.svfusion?.dtLst?.includes(dtsv)) this.addSvRow(table)
+
+		// Artifact-region exclude mask (applies to all lesion types).
+		this.addExcludeRow(table)
 
 		this.runButton = this.controlsHolder
 			.append('button')
@@ -111,6 +119,12 @@ export class GRIN2ControlsView {
 		}
 		if (dtUsage[dtfusionrna]?.checked) requestConfig.fusionOptions = {}
 		if (dtUsage[dtsv]?.checked) requestConfig.svOptions = {}
+		requestConfig.excludeOptions = {
+			enabled: this.excludeCheckbox ? this.excludeCheckbox.property('checked') : EXCLUDE_ENABLED_FALLBACK,
+			overlapFrac: this.exclude_overlapFrac
+				? parseFloat(this.exclude_overlapFrac.property('value'))
+				: EXCLUDE_OVERLAP_FRAC_FALLBACK
+		}
 		return requestConfig
 	}
 
@@ -259,6 +273,36 @@ export class GRIN2ControlsView {
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()
+			}
+		})
+	}
+
+	private addExcludeRow(table: any) {
+		const [left, right] = table.addRow()
+		const t2 = table2col({ holder: right })
+
+		const useSaved = this.config.settings.runAnalysis === true
+		const savedExclude = useSaved ? this.config.settings.excludeOptions : undefined
+		const isChecked = savedExclude?.enabled ?? EXCLUDE_ENABLED_FALLBACK
+
+		this.exclude_overlapFrac = this.addOptionRowToTable(
+			t2,
+			'Min gene overlap',
+			savedExclude?.overlapFrac ?? EXCLUDE_OVERLAP_FRAC_FALLBACK,
+			0,
+			1,
+			0.05
+		)
+
+		t2.table.style('display', isChecked ? '' : 'none')
+
+		this.excludeCheckbox = make_one_checkbox({
+			holder: left,
+			labeltext: 'Exclude artifact genes (segmental dups + blacklist + gaps + common germline CNVs)',
+			checked: isChecked,
+			testid: 'sjpp-grin2-checkbox-exclude',
+			callback: (checked: boolean) => {
+				t2.table.style('display', checked ? '' : 'none')
 			}
 		})
 	}
