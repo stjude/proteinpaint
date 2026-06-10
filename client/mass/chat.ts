@@ -39,8 +39,7 @@ class MassAiChatBot implements RxComponent {
 					? ''
 					: appState.termdbConfig.selectCohort.values[appState.activeCohort].keys.slice().sort().join(','),
 			search: appState.search,
-			nav: appState.nav,
-			chat: appState.termdbConfig?.queries?.chat
+			nav: appState.nav
 		}
 	}
 
@@ -70,6 +69,12 @@ class MassAiChatBot implements RxComponent {
 
 	initDom() {
 		//const cohortStr = this.getState(appState).cohortStr
+		let text = 'Search an item'
+		let height = '1px' // No white space needed for search only
+		if (this.app.getState().termdbConfig?.queries?.chat) {
+			text = 'Ask a question'
+			height = '200px'
+		}
 		this.dom = {
 			tip: new Menu({ padding: '5px' }),
 			div: this.opts.subheader,
@@ -78,7 +83,7 @@ class MassAiChatBot implements RxComponent {
 				.append('div')
 				.attr('class', 'sjpp_show_scrollbar')
 				.style('margin', '5px 20px 0px 20px')
-				.style('height', '200px')
+				.style('height', height)
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
@@ -90,7 +95,7 @@ class MassAiChatBot implements RxComponent {
 			.style('padding', '17px')
 			.style('border-radius', '34px')
 			.attr('size', 70)
-			.attr('placeholder', 'What are you looking for?')
+			.attr('placeholder', text)
 
 		// Store the input node so the search result tip can position under it
 		this.dom.inputNode = inputSel.node()
@@ -126,14 +131,13 @@ class MassAiChatBot implements RxComponent {
 					return
 				}
 			})
-			.on('keyup.submit', async event => {
+			.on('keyup.submit', async (event: any) => {
 				if (!keyupEnter(event)) return
-				const serverBubble = this.addBubble({ msg: '...' })
-				if (!this.getState(this.app.getState()).chat) {
+				if (!this.app.getState().termdbConfig?.queries?.chat) {
 					// Prevents unnecessary server side call when chat not supported by ds
-					serverBubble.text('Chat not available for this dataset.')
 					return
 				}
+				const serverBubble = this.addBubble({ msg: '...' })
 				const prompt = event.target.value.trim()
 				if (!prompt) return
 				this.addBubble({ msg: prompt, me: 1 })
@@ -200,9 +204,9 @@ return the created bubble and allow to be modified
 export const chatInit = getCompInit(MassAiChatBot)
 
 // Minimal renderers ported from MassSearch
-function setRenderers(self) {
+function setRenderers(self: any) {
 	let text = 'No match'
-	if (self.getState(self.app.getState()).chat) {
+	if (self.app.getState().termdbConfig?.queries?.chat) {
 		text = 'No match. Using the chatbot...'
 	}
 	self.noResult = () => {
@@ -215,9 +219,9 @@ function setRenderers(self) {
 		}, 1500)
 	}
 
-	self.showTerms = data => {
+	self.showTerms = (data: any) => {
 		if (self.opts.disable_terms)
-			data.lst.forEach(t => {
+			data.lst.forEach((t: any) => {
 				if (t.disabled) self.opts.disable_terms.push(t)
 			})
 		self.clear({ hide: !data.lst.length })
@@ -226,7 +230,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.showTerm = function (term) {
+	self.showTerm = function (term: any) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
 
