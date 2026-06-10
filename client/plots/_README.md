@@ -36,13 +36,15 @@ Additional sections describe special considerations for parent and transient plo
 
 Plots are tracked in the MassApp as `app.components.plots{[plotId]: plot_instance}`. Each plot instance is wrapped in the `MassPlot` component defined in `mass/plots.ts`. `MassPlot` handles conveniences like local plot filtering (see section below).
 
-## Local Filters
+## Local Plot Filters
 
 Local filters are plot-specific filters that adhere to the same TermTypeSearch and tree.usecase{} declarations. These filters are enabled by **default** from `MassPlot`. Setting `config.hidePlotFilter: true` disables the filter. 
 
+Note: Plot filters are not available by default to subplots, as described in later sections.
+
 # Transient Plots
 
-Transient plots (e.g. dictionary, summaryInput, DEInput, etc.) serve as forms that spawn another plot. On submit, the form should dispatch a `plot_create` for the new plot and a `plot_delete` to destroy itself. Both may be submitted in one dispatch with: 
+Transient plots (e.g. dictionary, summaryInput, DEInput, GeneExpInput, etc.) serve as user input forms that spawn another plot. On submit, the form should dispatch a `plot_create` for the new plot and a `plot_delete` to destroy itself. Both may be submitted in one dispatch with: 
 ```
 this.app.dispatch({
     type: 'app_refresh',
@@ -84,15 +86,18 @@ The parent plot is responsible for initializing new plots with the following:
 2. Importing the correct chartType componentInit
 3. Add plot to parent component `this.components.plots[plotKey] = await componentInit(opts)`
 
+** Note: This process becomes more complicated if components, like the local plot filter, are required. In that case, 
+a plot wrapper, like sc/subplots/DyanmicSubplot.ts, is required. 
+
 Running this **after** cleanup in Phase 1 avoids stale id collisions.
 
 ### Destroying subplots
 
 The parent must destroy the component **and** remove its DOM holder. mass/app.ts cannot remove components that live inside a parent plot. This is especially important when a subplot is replaced by another action (i.e. transient plots). This must be done in phase 1 **and** the sandbox close() method. 
 
-Ex. In the SC app, `removeSandbox()` handles both: it calls `sc.removeComponent(plotId)` (which calls `destroy()` and deletes from `sc.components.plots`) and removes the sandbox DOM element from the section.
+Ex. In the SC app, subplot lifecycle is handled by `sc/subplots/SubplotManager.ts` and `sc/subplots/DynamicSubplot.ts`: `initSubplotSandbox()` creates the sandbox and initializes `dynamicSubplotInit()`, while `removeSubplot(plotId)` destroys the subplot component (via `DynamicSubplot.destroy()`), removes it from `sc.components.plots`, and clears manager records. The sandbox `close()` callback calls `removeSubplot()` before dispatching `plot_delete`.
 
-## Persistent Child Plots (e.g. DifferentialAnalysis — `setComponent`)
+## Persistent Child Plots (e.g. Summary and DifferentialAnalysis — `setComponent`)
 
 Persistent child plots **share the parent's `this.id`** and config; the active child is selected by `config.childType`. Only one instance per chart type exists. `setComponent()` is called lazily in `main()` only the first time a `childType` is needed, and the component persists for the lifetime of the parent.
 
