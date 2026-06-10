@@ -52,7 +52,16 @@ class MassDict {
 		if (config?.tree?.usecase) {
 			opts.tree.usecase = config.tree.usecase
 		}
-		this.tree = await appInit(opts)
+		// loading overlay shown over the sandbox while the dictionary tree initializes;
+		// reuses the shared .sjpp-loading-overlay box + .sjpp-spinner glyph
+		this.dom.holder.style('position', 'relative')
+		const loadingDiv = this.dom.holder.append('div').attr('class', 'sjpp-loading-overlay').style('display', '')
+		loadingDiv.append('div').attr('class', 'sjpp-spinner')
+		try {
+			this.tree = await appInit(opts)
+		} finally {
+			loadingDiv.remove()
+		}
 	}
 
 	getState(appState) {
