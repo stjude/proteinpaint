@@ -1,6 +1,5 @@
 import { getCompInit, multiInit } from '#rx'
 import { recoverInit } from '../rx/src/recover'
-import { searchInit } from './search'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { sessionBtnInit } from './sessionBtn'
@@ -38,7 +37,6 @@ const aboutTab = { top: 'ABOUT', mid: '', btm: '', subheader: 'about' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
 const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
-const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
 const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 
 export function getId() {
@@ -74,12 +72,6 @@ class TdbNav {
 			}
 
 			this.components = await multiInit({
-				search: searchInit({
-					app: this.app,
-					holder: this.dom.searchDiv,
-					usecase: { target: 'summary', detail: 'term' },
-					targetType: 'Dictionary Variables'
-				}),
 				filter: filterRxCompInit({
 					app: this.app,
 					vocabApi: this.app.vocabApi,
@@ -353,12 +345,16 @@ function setRenderers(self) {
 			self.tabs.push(filterTab)
 			Object.assign(filterTab, massNav.tabs?.filter)
 		}
-		/** For now, limit to only datasets with chat enabled.
-		 * In the future, may show search instead of chat but use
-		 * the same component.  */
+		/** When chat is enabled for a ds, show name as "CHAT". When not enabled, it should show "SEARCH" with ONLY omnisearch functionality
+		 **/
 		if (appState.termdbConfig?.queries?.chat && !massNav.tabs?.chat?.hide) {
+			const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
 			self.tabs.push(chatTab)
 			Object.assign(chatTab, massNav.tabs?.chat)
+		} else {
+			const searchTab = { top: 'SEARCH', mid: '', btm: '', subheader: 'chat' }
+			self.tabs.push(searchTab)
+			Object.assign(searchTab, massNav.tabs?.chat)
 		}
 
 		const table = self.dom.tabDiv
