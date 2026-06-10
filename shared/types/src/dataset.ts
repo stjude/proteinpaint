@@ -1989,6 +1989,11 @@ type MassNav = {
 	activeColor?: string
 	/** customize background color of active navigation tab on hover */
 	activeColorHover?: string
+	/** when true, disable the nav button of the most recently opened chart, so the chart
+	buttons indicate which chart was last opened. Charts still stack; previously opened
+	charts' buttons re-enable. Used by portals (e.g. profile) where this acts as an
+	active-chart indicator; left unset elsewhere so charts can be opened multiple times. */
+	disableActiveChartBtn?: boolean
 }
 
 type MassNavTabEntry = {
