@@ -10,7 +10,6 @@ import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 const tabix = serverconfig.tabix
 // const samtools = serverconfig.samtools
 // const bcftools = serverconfig.bcftools
-// const bigwigsummary = serverconfig.bigwigsummary
 // const hicstraw = serverconfig.hicstraw
 
 export async function mds_init(ds, genome, rawds) {

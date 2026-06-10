@@ -112,7 +112,6 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://proteinpaint.stjude.org/ppdemo/tools/linux/straw -P /home/root/pp/tools/ && \
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
