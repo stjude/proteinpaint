@@ -5,6 +5,11 @@ export function getSingleCellSpecialCase(config, key = 'term') {
 	const term = config[key]
 	if (isSingleCellTerm(term.term)) {
 		const sample = term.term?.sample
+		/** Note the termdb handler needs either sample.plots or sample.name to filter
+		 * the terms.*/
+		if (!sample.name && !sample.plots) {
+			if (term.term?.plot) sample.plots = [term.term.plot]
+		}
 		//Do not prevent from loading if no sample is specified but log the error.
 		if (!sample) {
 			const chartType = config.childType || config.chartType || 'unknown'
