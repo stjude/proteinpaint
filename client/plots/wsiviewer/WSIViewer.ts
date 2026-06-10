@@ -218,15 +218,11 @@ class WSIViewer extends PlotBase implements RxComponent {
 			}
 		}
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
-		//Selection objects you want to add cursor style go here because the spinner changes all to default
+		// Selection objects you want to add cursor style go here because the spinner changes all to default
 		if (!settings.isSavingAnnotation) {
-			for (const element of [
-				this.thumbnailsContainer.selectAll('div').selectAll('*'),
-				this.dom.annotationsHolder.selectAll('*'),
-				this.dom.legendHolder.selectAll('*')
-			]) {
-				element.style('cursor', 'pointer')
-			}
+			this.thumbnailsContainer?.selectAll('div').selectAll('*').style('cursor', 'pointer')
+			this.dom.annotationsHolder.selectAll('*').style('cursor', 'pointer')
+			this.dom.legendHolder.selectAll('*').style('cursor', 'pointer')
 		}
 	}
 }
