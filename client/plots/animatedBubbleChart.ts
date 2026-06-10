@@ -726,8 +726,7 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 							}
 						}
 					}
-				}
-			})
+				})
 			})
 
 		// Animate entry — circles & ring slices grow/fade in
