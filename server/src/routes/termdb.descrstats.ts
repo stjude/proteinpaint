@@ -1,13 +1,17 @@
-import type { RoutePayload, RouteApi } from '#types'
+import type { Filter, RoutePayload, RouteApi } from '#types'
 import type { ReqQueryAddons } from './types.js'
 import { getData } from '#src/termdb.matrix.js'
 import computePercentile from '#shared/compute.percentile.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { DescrStatsRequest, DescrStatsResponse, DescrStats } from '#types'
+import { validGenomeDs, validBoolean } from './common.ts'
 
 export const payload: RoutePayload = {
 	init,
-	request: { typeId: 'DescrStatsRequest' /*, checkers: TODO write validator */ },
+	request: {
+		typeId: 'DescrStatsRequest',
+		checker: validDescrStatsRequest
+	},
 	response: { typeId: 'DescrStatsResponse' }
 }
 
@@ -16,6 +20,16 @@ export const api: RouteApi = {
 	methods: {
 		get: payload,
 		post: payload
+	}
+}
+
+function validDescrStatsRequest(input): DescrStatsRequest {
+	return {
+		...validGenomeDs(input),
+		tw: input.tw,
+		logScale: validBoolean(input.logScale),
+		filter: input.filter as Filter, // TODO: use a filter validator
+		filter0: input.filter0 as any
 	}
 }
 

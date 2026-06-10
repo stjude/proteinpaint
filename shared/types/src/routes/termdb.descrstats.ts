@@ -6,7 +6,7 @@ export type DescrStatsRequest = {
 	genome: string
 	/** dataset label for the given genome */
 	dslabel: string
-	embedder: string
+	// embedder: string
 	/** wrapper of a numeric term, q.mode can be any as getData() will always pull sample-level values for summarizing */
 	tw: TermWrapper
 	/** if true, the (violin) plot is in log scale and must exclude 0-values from the stat */
