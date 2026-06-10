@@ -705,7 +705,12 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 				}
 				tip.hide()
 			})
-			.on('click', (_event: MouseEvent, d: Bubble) => {
+			.on('click keydown', (event: MouseEvent | KeyboardEvent, d: Bubble) => {
+				if (event.type === 'keydown') {
+					const ke = event as KeyboardEvent
+					if (ke.key !== 'Enter' && ke.key !== ' ') return
+					ke.preventDefault()
+				}
 				// Launch a proteinView chart for the clicked gene — same dispatch shape used
 				// by the "Protein Selection" chart-button menu after a gene is typed in.
 				tip.hide()
@@ -721,7 +726,8 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 							}
 						}
 					}
-				})
+				}
+			})
 			})
 
 		// Animate entry — circles & ring slices grow/fade in
