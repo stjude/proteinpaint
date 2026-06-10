@@ -129,7 +129,7 @@ export class PlotButtons {
 						sample,
 						spawnConfig: {
 							parentId: this.interactions.id,
-							headerText: `Sample: ${this.item!.sID}`,
+							headerText: `${isMeta ? '' : 'Sample: '}${this.item!.sID}`,
 							hidePlotFilter: !isMeta,
 							sample
 						},
@@ -150,8 +150,9 @@ export class PlotButtons {
 				isVisible: () => this.scTermdbConfig?.geneExpression,
 				getPlotConfig: () => {
 					const sample = this.item!
-					const headerText = `Sample: ${this.item!.sID}`
 					const isMeta = sample?.isMetaResult || false
+					const headerText = `${isMeta ? '' : 'Sample: '}${this.item!.sID}`
+
 					return {
 						chartType: 'GeneExpInput',
 						termType: SINGLECELL_GENE_EXPRESSION,
@@ -172,11 +173,12 @@ export class PlotButtons {
 				isVisible: () => this.scTermdbConfig?.DEgenes,
 				open: this.termDropdownMenu,
 				getPlotConfig: value => {
+					const isMeta = this.item?.isMetaResult || false
 					return {
 						chartType: 'differentialAnalysis',
 						termType: SINGLECELL_CELLTYPE,
 						categoryName: `${value}`,
-						headerText: `Sample: ${this.item!.sID} ${this.scTermdbConfig.DEgenes.termId} ${value}`,
+						headerText: `${isMeta ? '' : 'Sample: '}${this.item!.sID}, ${this.scTermdbConfig.DEgenes.termId} ${value}`,
 						termId: this.scTermdbConfig.DEgenes.termId,
 						sample: this.item!,
 						plotName: 'Differential expression'
@@ -188,11 +190,12 @@ export class PlotButtons {
 				isVisible: () =>
 					this.scTermdbConfig?.images && this.availablePlots.has(this.scTermdbConfig.images.label || 'Image'),
 				getPlotConfig: () => {
+					const isMeta = this.item?.isMetaResult || false
 					return {
 						chartType: 'imagePlot',
 						sample: this.item!,
 						imgDir: this.scTermdbConfig?.images,
-						headerText: `Sample: ${this.item!.sID}`,
+						headerText: `${isMeta ? '' : 'Sample: '}${this.item!.sID}`,
 						settings: { imagePlot: { width: '', height: 400 } }
 					}
 				}
@@ -243,9 +246,10 @@ export class PlotButtons {
 		const plot = this.scTermdbConfig.data.plots.find(p => p.name == plotName)
 		if (!plot) throw new Error(`No plot by name ${plotName} in data.plots.`)
 		const sample = this.item
+		const isMeta = sample?.isMetaResult || false
 		const config: any = {
 			chartType: 'sampleScatter',
-			name: `Sample: ${this.item.sID}`,
+			name: `${isMeta ? '' : 'Sample: '}${this.item.sID}`,
 			sample,
 			singleCellPlot: {
 				name: plotName,
