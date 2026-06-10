@@ -3,7 +3,7 @@ import type { CorrelationVolcanoRequest, CorrelationVolcanoResponse } from '#typ
 import { getData } from '#src/termdb.matrix.js'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import { mayLog } from '#src/helpers.ts'
-import { getStdDev } from '../../routes/termdb.descrstats.ts'
+import { getStdDev } from './termdb.descrstats.ts'
 
 export const payload: RoutePayload = {
 	init,
