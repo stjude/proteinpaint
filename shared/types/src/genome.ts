@@ -126,4 +126,15 @@ export type Genome = MinGenome & {
 	geneset?: GeneSet[]
 	hicdomain?: HicDomain
 	minorchr?: string
+	/** sources of blacklisted genomic regions */
+	blacklists?: {
+		/** name to identify this source */
+		name: string
+		/** tabular text file with columns:
+		1. chr
+		2. start
+		3. stop
+		*/
+		file: string
+	}[]
 }

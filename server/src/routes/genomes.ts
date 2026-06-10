@@ -44,7 +44,7 @@ return error message as the service is out
 		}
 
 		const hash = {}
-		if (req.query && req.query.genome) {
+		if (req.query?.genome) {
 			hash[req.query.genome] = clientcopy_genome(req.query.genome, genomes)
 		} else {
 			for (const genomename in genomes) {
@@ -94,6 +94,11 @@ function clientcopy_genome(genomename, genomes) {
 		hideOnClient: g.hideOnClient
 	}
 
+	if (g.blacklists) {
+		g2.blacklists = g.blacklists.map(i => {
+			return { name: i.name }
+		})
+	}
 	if (g.termdbs) {
 		g2.termdbs = {}
 		for (const k in g.termdbs) {
