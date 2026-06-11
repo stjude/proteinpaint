@@ -1,9 +1,6 @@
 import json
 import sys
-from numpy import average
-import pandas as pd
 import pyBigWig as pybw
-import requests
 
 # This script reads a bigWig file and computes summary statistics (mean values) for a specified genomic region, divided into a specified number of bins. The results are returned as a JSON array of mean values for each bin.
 # Various JSON parameters:
@@ -19,14 +16,12 @@ def _read_stdin_payload() -> str:
         raise ValueError("No JSON payload provided on stdin")
     return payload
 
-def get_bigwig_stats(bw_file:str, chrom:str, start:int, end:int, n_bins:int) -> list[float | str] | None:
+def get_bigwig_stats(bw_file:str, chrom:str, start:int, end:int, n_bins:int) -> list[float | None]:
     try:
         bw = pybw.open(bw_file)
         if not bw.isBigWig():
             raise ValueError(f"{bw_file} is not a valid bigWig file")
-        # returns tuple of (start, end, value) for each interval in the specified region
-        
-        stats = [stat or 'NaN' for stat in bw.stats(chrom, start, end, nBins=n_bins, type="mean")]
+        stats = bw.stats(chrom, start, end, nBins=n_bins, type="mean")
         bw.close()
         return stats
     except Exception as e:
@@ -42,11 +37,6 @@ def main() -> int:
         bw_file = json_args.get("bw_file")
         if not isinstance(bw_file, str):
             raise ValueError("bw_file must be a string path or url")
-        if bw_file.startswith("http://") or bw_file.startswith("https://"):
-            response=requests.head(bw_file, timeout=10).ok
-            if not response:
-                raise ValueError(f"URL {bw_file} is not accessible")
-        
         chrom = json_args.get("chromosome")
         if not isinstance(chrom, str):
             raise ValueError("chromosome must be a string")
