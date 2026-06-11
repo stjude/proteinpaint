@@ -1125,10 +1125,8 @@ def load_exclude_intervals(bed_paths):
         try:
             with opener(path, "rt") as fh:
                 for line in fh:
-                    if not line or line[0] in "#tb":
-                        # skip comments and UCSC "track"/"browser" header lines
-                        if line.startswith(("#", "track", "browser")):
-                            continue
+                    if not line.strip() or line.startswith(("#", "track", "browser")):
+                        continue
                     fields = line.rstrip("\n").split("\t")
                     if len(fields) < 3:
                         continue
@@ -1247,8 +1245,10 @@ def apply_gene_mask(gene_data, mask, frac=0.5):
         ov = _masked_overlap_bp(s, e, intervals)
         if ov / (e - s) >= frac:
             drop[i] = True
-    # report a coarse fraction for sanity-checking mask size; defaults to ~hg38 size when not provided
-    genome_fraction_masked = round(total_masked_bp / float(genome_size_bp or 3.1e9), 4)
+    # report a coarse fraction for sanity-checking mask size; defaults to ~hg38 size when not provided
+
+    genome_fraction_masked = round(total_masked_bp / float(genome_size_bp or 3.1e9), 4)
+
     dropped_genes = gene_data.loc[drop, "gene"].astype(str).tolist()
 
     total_masked_bp = int(sum(int((iv[:, 1] - iv[:, 0]).sum()) for iv in mask.values()))
