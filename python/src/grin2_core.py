@@ -1125,8 +1125,8 @@ def load_exclude_intervals(bed_paths):
         try:
             with opener(path, "rt") as fh:
                 for line in fh:
-                    if not line.strip() or line.startswith(("#", "track", "browser")):
-                        continue
+                    if not line.strip() or line.startswith(("#", "track", "browser")):
+                        continue
                     fields = line.rstrip("\n").split("\t")
                     if len(fields) < 3:
                         continue
@@ -1189,7 +1189,7 @@ def _masked_overlap_bp(start, end, intervals):
     return int(total)
 
 
-def apply_gene_mask(gene_data, mask, frac=0.5):
+def apply_gene_mask(gene_data, mask, frac=0.5, genome_size_bp=None):
     """
     Drop GENES whose span lies predominantly inside masked (artifact) regions,
     BEFORE the gene-lesion overlap/counting step.
@@ -1245,15 +1245,14 @@ def apply_gene_mask(gene_data, mask, frac=0.5):
         ov = _masked_overlap_bp(s, e, intervals)
         if ov / (e - s) >= frac:
             drop[i] = True
-    # report a coarse fraction for sanity-checking mask size; defaults to ~hg38 size when not provided
 
-    genome_fraction_masked = round(total_masked_bp / float(genome_size_bp or 3.1e9), 4)
-
+    kept = gene_data.loc[~drop].reset_index(drop=True)
     dropped_genes = gene_data.loc[drop, "gene"].astype(str).tolist()
 
     total_masked_bp = int(sum(int((iv[:, 1] - iv[:, 0]).sum()) for iv in mask.values()))
-    # hg38 ~3.1e9 bp; report a coarse fraction for sanity-checking the mask size
-    genome_fraction_masked = round(total_masked_bp / 3.1e9, 4)
+    # coarse fraction for sanity-checking mask size; genome_size_bp is passed by the caller
+    # (sum of chromosome sizes) so this is genome-agnostic, with a human-genome fallback
+    genome_fraction_masked = round(total_masked_bp / float(genome_size_bp or 3.1e9), 4)
 
     report = {
         "genes_in": n_in,

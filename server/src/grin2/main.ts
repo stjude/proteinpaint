@@ -349,7 +349,7 @@ function grin2KeyInputs(req: GRIN2Request) {
 		cnvOptions: req.cnvOptions ?? null,
 		fusionOptions: req.fusionOptions ?? null,
 		svOptions: req.svOptions ?? null,
-		excludeOptions: req.excludeOptions ?? null,
+		excludeOptions: normalizeExcludeOptions(req.excludeOptions),
 		maxGenesToShow: req.maxGenesToShow ?? null
 	}
 }
@@ -363,6 +363,22 @@ function resolveExcludeBeds(g: any, selectedNames?: string[]): string[] {
 	if (!all?.length) return []
 	const wanted = new Set(selectedNames ?? all.map(b => b.name))
 	return all.filter(b => wanted.has(b.name)).map(b => b.file)
+}
+
+/** Normalize excludeOptions so the cache key and the Python input always agree and never carry a
+ * non-finite overlapFrac. A NaN (e.g. from an empty client input) would be serialized by
+ * JSON.stringify to null, and the Python wrapper's float(None) would then throw. Clamp to a finite
+ * value in [0, 1] (default 0.5). Returns null when no excludeOptions are provided. */
+function normalizeExcludeOptions(opts: GRIN2Request['excludeOptions']): {
+	blacklists?: string[]
+	overlapFrac: number
+} | null {
+	if (!opts) return null
+	const frac = Number(opts.overlapFrac)
+	return {
+		blacklists: Array.isArray(opts.blacklists) ? opts.blacklists : undefined,
+		overlapFrac: Number.isFinite(frac) ? Math.min(Math.max(frac, 0), 1) : 0.5
+	}
 }
 
 /** Single read-or-recompute entry point for the GRIN2 cache. The Rust
@@ -470,7 +486,9 @@ async function runGrin2Fresh(
 	// Rust reads them straight from this JSON file, no sibling file.
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 
-	const excludeBeds = resolveExcludeBeds(g, request.excludeOptions?.blacklists)
+	// normalized once so pyInput matches the cache key (and never carries a non-finite overlapFrac)
+	const excludeOpts = normalizeExcludeOptions(request.excludeOptions)
+	const excludeBeds = resolveExcludeBeds(g, excludeOpts?.blacklists)
 	const excludeEnabled = excludeBeds.length > 0
 
 	const pyInput = {
@@ -481,7 +499,7 @@ async function runGrin2Fresh(
 		lesionTypeMap: buildLesionTypeMap(availableDataTypes),
 		excludeEnabled,
 		excludeBeds,
-		excludeOverlapFrac: request.excludeOptions?.overlapFrac ?? 0.5
+		excludeOverlapFrac: excludeOpts?.overlapFrac ?? 0.5
 	}
 
 	// Step 4: Run GRIN2 analysis via Python
