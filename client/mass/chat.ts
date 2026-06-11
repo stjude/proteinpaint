@@ -139,9 +139,9 @@ class MassAiChatBot implements RxComponent {
 					// Prevents unnecessary server side call when chat not supported by ds
 					return
 				}
-				const serverBubble = this.addBubble({ msg: '...' })
 				const prompt = event.target.value.trim()
 				if (!prompt) return
+				const serverBubble = this.addBubble({ msg: '...' })
 				this.addBubble({ msg: prompt, me: 1 })
 				event.target.value = ''
 				if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
@@ -200,7 +200,7 @@ return the created bubble and allow to be modified
 	main() {
 		// If the subheader is hidden, it means the chat component is not visible, so we skip focusing the input to avoid accidental typing into the search/chat bar. The user can click on the chat again to focus when they want to use it.
 		if (this.opts.subheader.style('display') == 'none') {
-			if (this.dom.inputNode.focus()) this.dom.inputNode.blur()
+			this.dom.inputNode.blur()
 			return
 		}
 		if (this.opts?.focus != 'off') this.dom.inputNode.focus()
