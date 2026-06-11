@@ -350,12 +350,14 @@ function setRenderers(self) {
 		if (!massNav.tabs?.chat?.hide) {
 			if (appState.termdbConfig?.queries?.chat) {
 				const chatTab = { top: 'CHAT', mid: '', btm: '', subheader: 'chat' }
-				self.tabs.push(chatTab)
 				Object.assign(chatTab, massNav.tabs?.chat)
+				chatTab.top = 'CHAT' // Copilot mentioned that Object.assign may overwrite {chat/search}.top. Therefore this line has been added.
+				self.tabs.push(chatTab)
 			} else {
 				const searchTab = { top: 'SEARCH', mid: '', btm: '', subheader: 'chat' }
-				self.tabs.push(searchTab)
 				Object.assign(searchTab, massNav.tabs?.chat)
+				searchTab.top = 'SEARCH' // Copilot mentioned that Object.assign may overwrite {chat/search}.top. Therefore this line has been added.
+				self.tabs.push(searchTab)
 			}
 		}
 
