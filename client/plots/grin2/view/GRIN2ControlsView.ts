@@ -129,11 +129,12 @@ export class GRIN2ControlsView {
 			const blacklists = Object.entries(this.excludeCheckboxes)
 				.filter(([, cb]) => cb.property('checked'))
 				.map(([name]) => name)
+			const overlapFracRaw = this.exclude_overlapFrac
+				? parseFloat(this.exclude_overlapFrac.property('value'))
+				: EXCLUDE_OVERLAP_FRAC_FALLBACK
 			requestConfig.excludeOptions = {
 				blacklists,
-				overlapFrac: this.exclude_overlapFrac
-					? parseFloat(this.exclude_overlapFrac.property('value'))
-					: EXCLUDE_OVERLAP_FRAC_FALLBACK
+				overlapFrac: Number.isFinite(overlapFracRaw) ? overlapFracRaw : EXCLUDE_OVERLAP_FRAC_FALLBACK
 			}
 		}
 		return requestConfig
