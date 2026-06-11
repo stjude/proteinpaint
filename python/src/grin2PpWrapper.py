@@ -253,7 +253,8 @@ try:
 	exclude_frac = min(max(exclude_frac, 0.0), 1.0)
 	if exclude_enabled and exclude_beds:
 		mask = load_exclude_intervals(exclude_beds)
-		gene_anno, mask_report = apply_gene_mask(gene_anno, mask, exclude_frac)
+		genome_size_bp = int(chrom_size["size"].sum())
+		gene_anno, mask_report = apply_gene_mask(gene_anno, mask, exclude_frac, genome_size_bp=genome_size_bp)
 		if gene_anno.empty:
 			write_error("No genes remain after applying the exclude mask")
 			sys.exit(1)
