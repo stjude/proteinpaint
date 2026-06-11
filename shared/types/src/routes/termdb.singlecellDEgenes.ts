@@ -13,7 +13,7 @@ export type TermdbSingleCellDEgenesRequest = {
 	 *
 	 * Eventually, all requests will use the object and
 	 * **not** the string format.*/
-	sample: string | { sID: string; eID: string }
+	sample: string | { sID: string; eID?: string }
 	/** column name to provide cell groups/clustering,
 	 * for which DE genes are precomputed.  */
 	termId: string
