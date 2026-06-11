@@ -25,15 +25,8 @@ def get_bigwig_stats(bw_file:str, chrom:str, start:int, end:int, n_bins:int) -> 
         if not bw.isBigWig():
             raise ValueError(f"{bw_file} is not a valid bigWig file")
         # returns tuple of (start, end, value) for each interval in the specified region
-        interval_values:tuple[tuple[int,int,float]] = bw.intervals(chrom, start, end)
-        intervals_df=pd.DataFrame([{'start': interval[0], 'end': interval[1], 'value': interval[2]} for interval in interval_values])
-        intervals_length = (end - start) / n_bins
-        def compute_bin_mean(bin_start:int, bin_end:int) -> float | str:
-            bin_intervals = intervals_df[(intervals_df['start'] < bin_end) & (intervals_df['end'] > bin_start)]
-            if bin_intervals.empty:
-                return 'NaN'
-            return average(bin_intervals['value'], weights=bin_intervals.apply(lambda row: min(row['end'], bin_end) - max(row['start'], bin_start), axis=1))
-        stats = [compute_bin_mean(start + n * intervals_length, start + (n + 1) * intervals_length) for n in range(n_bins)]
+        
+        stats = [stat or 'NaN' for stat in bw.stats(chrom, start, end, nBins=n_bins, type="mean")]
         bw.close()
         return stats
     except Exception as e:
