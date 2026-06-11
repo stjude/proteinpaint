@@ -4,7 +4,7 @@ import discoDefaults from '../../defaults'
 
 /*
 Tests:
-ViewModelMapper scales rings and dimensions using the radius setting
+ViewModelMapper scales plot diameter dimensions using the radius setting while keeping ring widths and font sizes fixed
 */
 
 const settings = discoDefaults({ Disco: { autoRadius: false, radius: 500 } })
@@ -26,7 +26,7 @@ test('\n', function (t) {
 	t.end()
 })
 
-test('ViewModelMapper.applyRadius adjusts settings and ViewModel dimensions', t => {
+test('ViewModelMapper.applyRadius adjusts diameter settings while preserving widths and font sizes', t => {
 	const vmSettings = viewModel.settings
 	const scale = settings.Disco.radius! / settings.rings.labelLinesInnerRadius
 
@@ -54,44 +54,46 @@ test('ViewModelMapper.applyRadius adjusts settings and ViewModel dimensions', t 
 
 	t.equal(
 		vmSettings.rings.chromosomeWidth,
-		timesScale(settings.rings.chromosomeWidth),
-		'Should calculate chromosomeWidth based on radius setting'
+		settings.rings.chromosomeWidth,
+		'Should keep chromosomeWidth fixed when radius changes'
 	)
 
 	t.equal(
 		vmSettings.rings.nonExonicRingWidth,
-		timesScale(settings.rings.nonExonicRingWidth),
-		'Should calculate nonExonicRingWidth based on radius setting'
+		settings.rings.nonExonicRingWidth,
+		'Should keep nonExonicRingWidth fixed when radius changes'
 	)
 
 	t.equal(
 		vmSettings.rings.snvRingWidth,
-		timesScale(settings.rings.snvRingWidth),
-		'Should calculate snvRingWidth based on radius setting'
+		settings.rings.snvRingWidth,
+		'Should keep snvRingWidth fixed when radius changes'
 	)
 
 	t.equal(
 		vmSettings.rings.lohRingWidth,
-		timesScale(settings.rings.lohRingWidth),
-		'Should calculate lohRingWidth based on radius setting'
+		settings.rings.lohRingWidth,
+		'Should keep lohRingWidth fixed when radius changes'
 	)
 
 	t.equal(
 		vmSettings.rings.cnvRingWidth,
-		timesScale(settings.rings.cnvRingWidth),
-		'Should calculate cnvRingWidth based on radius setting'
+		settings.rings.cnvRingWidth,
+		'Should keep cnvRingWidth fixed when radius changes'
 	)
 
 	t.equal(
-		vmSettings.label.fontSize,
-		timesScale(settings.label.fontSize),
-		'Should calculate label font size based on radius setting'
+		vmSettings.rings.mutationWaterfallRingWidth,
+		settings.rings.mutationWaterfallRingWidth,
+		'Should keep mutationWaterfallRingWidth fixed when radius changes'
 	)
+
+	t.equal(vmSettings.label.fontSize, settings.label.fontSize, 'Should keep label font size fixed when radius changes')
 
 	t.equal(
 		vmSettings.legend.fontSize,
-		timesScale(settings.legend.fontSize),
-		'Should calculate legend font size based on radius setting'
+		settings.legend.fontSize,
+		'Should keep legend font size fixed when radius changes'
 	)
 
 	t.end()
