@@ -141,9 +141,9 @@ class MassAiChatBot implements RxComponent {
 				}
 				const prompt = event.target.value.trim()
 				if (!prompt) return
-				const serverBubble = this.addBubble({ msg: '...' })
 				this.addBubble({ msg: prompt, me: 1 })
 				event.target.value = ''
+				const serverBubble = this.addBubble({ msg: '...' }) // Keep server bubble always below prompt bubble so that responses are below the prompt always
 				if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
 					serverBubble.text('Your prompt is too short. Enter a longer prompt.')
 					return
