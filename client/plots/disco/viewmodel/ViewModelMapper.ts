@@ -48,14 +48,6 @@ export class ViewModelMapper {
 		this.settings.rings.labelLinesInnerRadius *= scale
 		this.settings.rings.labelsToLinesDistance *= scale
 		this.settings.rings.chromosomeInnerRadius *= scale
-		this.settings.rings.chromosomeWidth *= scale
-		this.settings.rings.nonExonicRingWidth *= scale
-		this.settings.rings.snvRingWidth *= scale
-		this.settings.rings.lohRingWidth *= scale
-		this.settings.rings.cnvRingWidth *= scale
-		this.settings.rings.mutationWaterfallRingWidth *= scale
-		this.settings.label.fontSize *= scale
-		this.settings.legend.fontSize *= scale
 	}
 
 	static computeDynamicRadius(data: Array<any>): number {

@@ -6,7 +6,7 @@ import { dtsnvindel, dtcnv, dtloh } from '#shared/common.js'
 /*
 Tests:
 	computeDynamicRadius returns correct radius for 1, 2, and 3 ring-type combinations
-	Auto-radius path computes radius and scales settings accordingly
+	Auto-radius path computes radius and scales diameter settings while preserving ring widths and font sizes
 	Explicit radius is used when autoRadius is false
 */
 
@@ -66,7 +66,7 @@ test('computeDynamicRadius returns 300 for SNV + CNV + LOH data (3 ring types)',
 
 // ───── Integration: auto-radius path through map() ─────
 
-test('Auto-radius path computes radius=200 and scales settings for SNV-only data', t => {
+test('Auto-radius path computes radius=200 and scales diameter settings for SNV-only data', t => {
 	const settings = discoDefaults({ Disco: { autoRadius: true } })
 	const baseLabel = settings.rings.labelLinesInnerRadius
 	const mapper = new ViewModelMapper(structuredClone(settings as any), {} as any)
@@ -91,6 +91,21 @@ test('Auto-radius path computes radius=200 and scales settings for SNV-only data
 		vm.settings.rings.labelsToLinesDistance,
 		settings.rings.labelsToLinesDistance * expectedScale,
 		'labelsToLinesDistance should be scaled using auto-computed radius 200'
+	)
+	t.equal(
+		vm.settings.rings.snvRingWidth,
+		settings.rings.snvRingWidth,
+		'snvRingWidth should remain fixed when auto-radius changes the plot diameter'
+	)
+	t.equal(
+		vm.settings.label.fontSize,
+		settings.label.fontSize,
+		'label font size should remain fixed when auto-radius changes the plot diameter'
+	)
+	t.equal(
+		vm.settings.legend.fontSize,
+		settings.legend.fontSize,
+		'legend font size should remain fixed when auto-radius changes the plot diameter'
 	)
 	t.end()
 })
