@@ -2,6 +2,7 @@ import * as utils from './utils.js'
 import { createCanvas } from 'canvas'
 import { rgb } from 'd3-color'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { mayLog } from './helpers.ts'
 /*
 
 NOTE:
@@ -71,6 +72,7 @@ async function handle_tkbigwig(req, res, genomes) {
 		return await getBedgraph(req, res, file, pa)
 	}
 
+	const t = new Date()
 	for (const r of req.query.rglst) {
 		const bins = await run_bigwigsummary(req, r, file)
 
@@ -81,8 +83,10 @@ async function handle_tkbigwig(req, res, genomes) {
 			}
 		}
 	}
+	mayLog('bw python', Date.now() - t)
 
 	res.send(plotWiggle(req.query, pa))
+	mayLog('bw python+rendering', Date.now() - t)
 }
 
 /*
@@ -139,9 +143,6 @@ export function plotWiggle(q, pa) {
 		return { src: canvas.toDataURL(), nodata: true }
 	}
 
-	const pointwidth = 1 // line/dot plot width
-	const pointshift = q.dotplotfactor ? 1 / q.dotplotfactor : 1 // shift distance
-
 	let maxv = 0,
 		minv = 0
 
@@ -193,6 +194,7 @@ export function plotWiggle(q, pa) {
 		let x = 0
 		for (const r of q.rglst) {
 			if (r.values) {
+				const [pointwidth, pointshift] = getP(r, q)
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
 					if (Number.isNaN(Number(v))) continue
@@ -204,7 +206,7 @@ export function plotWiggle(q, pa) {
 							: v <= minv
 							? q.ncolor2
 							: 'rgba(' + rgbn + ',' + v / minv + ')'
-					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
+					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * (i + 1) : pointshift * i))
 					ctx.fillRect(x2, 0, pointwidth, q.barheight)
 				}
 			}
@@ -218,11 +220,12 @@ export function plotWiggle(q, pa) {
 		let x = 0
 		for (const r of q.rglst) {
 			if (r.values) {
+				const [pointwidth, pointshift] = getP(r, q)
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
 					if (Number.isNaN(Number(v))) continue
-
-					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
+					// for reverse region, i+1 is needed to correctly compute plot start position
+					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * (i + 1) : pointshift * i))
 
 					if (q.bgcolor) {
 						// track defines bg color. draw it for all loci with valid value
@@ -259,6 +262,17 @@ export function plotWiggle(q, pa) {
 	}
 	result.src = canvas.toDataURL()
 	return result
+}
+
+function getP(r, q) {
+	// returns [pointwidth, pointshift]
+	let w
+	if (r.stop - r.start >= r.width) {
+		w = 1
+	} else {
+		w = r.width / (r.stop - r.start)
+	}
+	return [w, q.dotplotfactor ? w / q.dotplotfactor : w]
 }
 
 async function getBedgraph(req, res, file, pa) {
@@ -364,7 +378,7 @@ async function run_bigwigsummary(req, r, file) {
 		chromosome: r.chr,
 		start: r.start,
 		end: r.stop,
-		n_bins: Math.ceil(r.width * (req.query.dotplotfactor || 1))
+		n_bins: Math.ceil(Math.min(r.stop - r.start, r.width) * (req.query.dotplotfactor || 1))
 	}
 	const python_output = await run_python('bigWigSummary.py', JSON.stringify(input_json))
 	const bins = typeof python_output === 'string' ? JSON.parse(python_output) : []
