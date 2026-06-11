@@ -6,7 +6,6 @@ import {
 	CNV_LOSS_THRESHOLD_FALLBACK,
 	CNV_GAIN_THRESHOLD_FALLBACK,
 	CNV_MAX_SEG_LENGTH_FALLBACK,
-	EXCLUDE_ENABLED_FALLBACK,
 	EXCLUDE_OVERLAP_FRAC_FALLBACK
 } from '../settings/defaults'
 
@@ -45,22 +44,27 @@ export class GRIN2ControlsView {
 	private cnv_gainThreshold: any = null
 	private cnv_maxSegLength: any = null
 
-	private excludeCheckbox: any = null
+	// one checkbox per genome-declared blacklist source, keyed by source name
+	private excludeCheckboxes: Record<string, any> = {}
 	private exclude_overlapFrac: any = null
 
 	private snvindelMafFilter: any = null
+
+	private genome: any
 
 	constructor(opts: {
 		headerHolder: any
 		controlsHolder: any
 		config: any
 		vocabApi: any
+		genome: any
 		callbacks: GRIN2ControlsCallbacks
 	}) {
 		this.headerHolder = opts.headerHolder
 		this.controlsHolder = opts.controlsHolder
 		this.config = opts.config
 		this.vocabApi = opts.vocabApi
+		this.genome = opts.genome
 		this.callbacks = opts.callbacks
 	}
 
@@ -119,11 +123,18 @@ export class GRIN2ControlsView {
 		}
 		if (dtUsage[dtfusionrna]?.checked) requestConfig.fusionOptions = {}
 		if (dtUsage[dtsv]?.checked) requestConfig.svOptions = {}
-		requestConfig.excludeOptions = {
-			enabled: this.excludeCheckbox ? this.excludeCheckbox.property('checked') : EXCLUDE_ENABLED_FALLBACK,
-			overlapFrac: this.exclude_overlapFrac
-				? parseFloat(this.exclude_overlapFrac.property('value'))
-				: EXCLUDE_OVERLAP_FRAC_FALLBACK
+		// excludeOptions.blacklists = names of the checked genome-declared sources.
+		// Only emitted when the genome declares blacklists (otherwise the mask is unavailable).
+		if (Object.keys(this.excludeCheckboxes).length > 0) {
+			const blacklists = Object.entries(this.excludeCheckboxes)
+				.filter(([, cb]) => cb.property('checked'))
+				.map(([name]) => name)
+			requestConfig.excludeOptions = {
+				blacklists,
+				overlapFrac: this.exclude_overlapFrac
+					? parseFloat(this.exclude_overlapFrac.property('value'))
+					: EXCLUDE_OVERLAP_FRAC_FALLBACK
+			}
 		}
 		return requestConfig
 	}
@@ -277,14 +288,36 @@ export class GRIN2ControlsView {
 		})
 	}
 
+	/** Artifact-region mask row. Renders one checkbox per blacklist source declared for the genome
+	 * (Genome.blacklists, exposed to the client as {name}[]), plus the gene-overlap-fraction input.
+	 * Skipped entirely when the genome declares no blacklists. Unchecking all sources disables the
+	 * mask (server resolves an empty source list to no masking). */
 	private addExcludeRow(table: any) {
+		const blacklists: { name: string }[] = this.genome?.blacklists || []
+		if (!blacklists.length) return
+
 		const [left, right] = table.addRow()
+		left.text('Exclude genes overlapping').style('padding-top', '4px')
+
+		// default = all sources on; if a previous run saved a selection, restore exactly that set
+		const savedExclude = this.config.settings.runAnalysis === true ? this.config.settings.excludeOptions : undefined
+		const savedNames: string[] | undefined = savedExclude?.blacklists
+		const isChecked = (name: string) => (savedNames ? savedNames.includes(name) : true)
+
+		this.excludeCheckboxes = {}
+		const cbContainer = right.append('div').style('margin-bottom', '6px')
+		blacklists.forEach(bl => {
+			const div = cbContainer.append('div').style('margin-bottom', checkboxMarginBottom)
+			this.excludeCheckboxes[bl.name] = make_one_checkbox({
+				holder: div,
+				labeltext: bl.name,
+				checked: isChecked(bl.name),
+				divstyle: { 'font-size': `${tableFontSize}px` },
+				callback: () => {}
+			})
+		})
+
 		const t2 = table2col({ holder: right })
-
-		const useSaved = this.config.settings.runAnalysis === true
-		const savedExclude = useSaved ? this.config.settings.excludeOptions : undefined
-		const isChecked = savedExclude?.enabled ?? EXCLUDE_ENABLED_FALLBACK
-
 		this.exclude_overlapFrac = this.addOptionRowToTable(
 			t2,
 			'Min gene overlap',
@@ -293,18 +326,6 @@ export class GRIN2ControlsView {
 			1,
 			0.05
 		)
-
-		t2.table.style('display', isChecked ? '' : 'none')
-
-		this.excludeCheckbox = make_one_checkbox({
-			holder: left,
-			labeltext: 'Exclude artifact genes (segmental dups + blacklist + gaps + common germline CNVs)',
-			checked: isChecked,
-			testid: 'sjpp-grin2-checkbox-exclude',
-			callback: (checked: boolean) => {
-				t2.table.style('display', checked ? '' : 'none')
-			}
-		})
 	}
 
 	private addOptionRowToTable(

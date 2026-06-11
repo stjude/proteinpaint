@@ -76,6 +76,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				controlsHolder: this.dom.controls,
 				config: this.state.config,
 				vocabApi: this.app.vocabApi,
+				genome: this.app.opts.genome,
 				callbacks: { onRun: () => this.handleRun() }
 			})
 			this.controlsView.build()

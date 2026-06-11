@@ -378,6 +378,26 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			}
 		}
 
+		if (g.blacklists) {
+			// genome-level blacklisted region sources (e.g. consumed by GRIN2). Absolutize file
+			// paths in place (kept server-side; clientcopy_genome exposes only name). Lenient:
+			// an unreadable file is warned + dropped so a deployment missing a BED still boots.
+			if (!Array.isArray(g.blacklists)) throw genomename + '.blacklists should be an array'
+			const keptBlacklists = []
+			for (const bl of g.blacklists) {
+				if (!bl.name) throw genomename + ': .name missing for one element of blacklists[]'
+				if (!bl.file) throw genomename + ': .file missing for one element of blacklists[]'
+				bl.file = path.join(serverconfig.tpmasterdir, bl.file)
+				try {
+					await utils.file_is_readable(bl.file)
+					keptBlacklists.push(bl)
+				} catch (e) {
+					console.warn(`[genome ${genomename}] blacklist '${bl.name}' skipped: ${e}`)
+				}
+			}
+			g.blacklists = keptBlacklists
+		}
+
 		if (g.hicdomain) {
 			if (!g.hicdomain.groups) throw '.groups{} missing from hicdomain'
 			for (const groupname in g.hicdomain.groups) {

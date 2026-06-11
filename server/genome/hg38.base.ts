@@ -126,6 +126,15 @@ export function getHg38(): Genome {
 			}
 		],
 
+		// sources of blacklisted genomic regions (artifact-prone / germline-CNV loci),
+		// consumed e.g. by GRIN2 to drop genes lying in these regions before recurrence testing
+		blacklists: [
+			{ name: 'ENCODE blacklist', file: 'anno/encodeBlacklist.hg38.bed.gz' },
+			{ name: 'Segmental duplications', file: 'anno/genomicSuperDups.hg38.bed.gz' },
+			{ name: 'Assembly gaps', file: 'anno/gaps.hg38.bed.gz' },
+			{ name: 'Common germline CNVs (DGV)', file: 'anno/dgvCommon.hg38.bed.gz' }
+		],
+
 		geneset: [
 			{
 				name: 'Cancer Gene Census',
