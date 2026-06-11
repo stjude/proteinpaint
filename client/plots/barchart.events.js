@@ -497,6 +497,21 @@ function handle_click(event, self, chart) {
 		})
 	}
 
+	if (self.opts.allow2selectSamples) {
+		const ss = self.opts.allow2selectSamples
+		options.push({
+			label: ss.buttonText,
+			callback: async () => {
+				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
+				const samples = await getSamples(arg)
+				ss.callback({
+					samples: await self.app.vocabApi.convertSampleId(samples, ss.attributes),
+					source: ss.defaultSelectionLabel || `Selected from barchart`
+				})
+			}
+		})
+	}
+
 	// TODO: add to cart
 	//
 	// if (self.opts.bar_click_opts.includes('add_to_cart')) {
@@ -798,6 +813,40 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		})
 	}
 }
+
+async function getSamples(arg) {
+	// query sample data
+	const { self, terms, tvslst, geneVariant } = arg
+	const opts = {
+		terms,
+		filter: filterJoin([self.state.termfilter.filter, tvslst]),
+		filter0: self.state.termfilter.filter0,
+		isSummary: true
+	}
+	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
+	const samples = []
+	for (const sample of data.lst) {
+		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
+		if (!pass) continue
+		const t1entry = sample[self.config.term.$id]
+		if (!t1entry) continue
+		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
+		if (self.config.term2) {
+			const t2entry = sample[self.config.term2.$id]
+			if (!t2entry) continue
+			if (self.config.term2.q?.hiddenValues && self.config.term2.q.hiddenValues[t2entry.value]) continue
+		}
+		if (self.config.term0) {
+			const t0entry = sample[self.config.term0.$id]
+			if (!t0entry) continue
+			//Don't show hidden values in the results
+			if (self.config.term0.q?.hiddenValues && self.config.term0.q.hiddenValues[t0entry.value]) continue
+		}
+		samples.push(sample)
+	}
+	return samples
+}
+
 async function getSampleGrp(arg) {
 	// query sample data
 	const { event, self, terms, tvslst, geneVariant, tip } = arg
