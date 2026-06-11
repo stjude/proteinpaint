@@ -612,6 +612,7 @@ function getTvs(termIndex, value, self, geneVariant) {
 	return tvs
 }
 
+// TODO: merge with "getSamples()" and dom/summary/ListSamples.ts
 export async function listSamples(arg, seriesId, dataId, chartId) {
 	// validate arg
 	for (const k of Object.keys(arg)) {
@@ -848,28 +849,12 @@ async function getSamples(arg) {
 }
 
 async function getSampleGrp(arg) {
-	// query sample data
-	const { event, self, terms, tvslst, geneVariant, tip } = arg
-	const opts = {
-		terms,
-		filter: filterJoin([self.state.termfilter.filter, tvslst]),
-		filter0: self.state.termfilter.filter0,
-		isSummary: true
-	}
-	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
-	const samples = []
-	for (const sample of data.lst) {
-		const pass = mayFilterByGeneVariant(sample, self, geneVariant)
-		if (!pass) continue
-		const t1entry = sample[self.config.term.$id]
-		if (!t1entry) continue
-		if (self.config.term.q?.hiddenValues && self.config.term.q.hiddenValues[t1entry.value]) continue
-		samples.push({ sampleId: sample.sample })
-	}
-
+	const samples = await getSamples(arg)
 	const group = {
 		name: 'Group',
-		items: samples
+		items: samples.map(s => {
+			return { sampleId: s.sample }
+		})
 	}
 	return group
 }
