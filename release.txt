@@ -1,1 +1,3 @@
-
+Fixes:
+- make the fatal error consistent message consistent on initial validation and retries
+- do not show regression chart buttons in the Correlation Plot tool

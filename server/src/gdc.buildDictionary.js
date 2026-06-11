@@ -121,6 +121,11 @@ re.expand: []
 const mapping_prefix = 'ssm_occurrence_centrics'
 
 export async function gdcBuildDictionary(ds) {
+	if (!ds.init) ds.init = {}
+	// track this step so that an error may be associated with the dictionary build step;
+	// this steps typically takes about 0.7 seconds from start to finish
+	ds.init.step = 'gdcBuildDictionary()'
+
 	const id2term = new Map()
 	// k: term id, string with full path
 	// v: term obj
@@ -341,6 +346,10 @@ export async function gdcBuildDictionary(ds) {
 		ds.cohort.termdb.termtypeByCohort.push({ cohort: '', termType: 'survival', termCount: survivalCount })
 		ds.cohort.termdb.termtypeByCohort.nested[''].survival = survivalCount
 	}
+
+	// dictionary build completed successfully, a subsequent error
+	// will not be related to this initialization step
+	ds.init.step = ''
 }
 
 function mayAddTermAttribute(t) {
@@ -742,9 +751,9 @@ function makeTermdbQueries(ds, id2term) {
 				'summarizeCnvGeneexp',
 				'summarizeMutationSurvival',
 				'summarizeMutationCnv',
-				'summarizeGeneexpSurvival',
-				'regression',
-				'cox'
+				'summarizeGeneexpSurvival'
+				// 'regression',  // re-enable thee after Xanthopoulos release
+				// 'cox'
 			]
 		}
 		const numericTypeCount = {}
