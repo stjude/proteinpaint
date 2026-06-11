@@ -243,7 +243,14 @@ try:
 	mask_report = None
 	exclude_beds = input_data.get("excludeBeds") or []
 	exclude_enabled = input_data.get("excludeEnabled", True)
-	exclude_frac = float(input_data.get("excludeOverlapFrac", 0.5))
+	exclude_frac_raw = input_data.get("excludeOverlapFrac", 0.5)
+	try:
+		exclude_frac = float(exclude_frac_raw)
+	except (TypeError, ValueError):
+		exclude_frac = 0.5
+	if not np.isfinite(exclude_frac):
+		exclude_frac = 0.5
+	exclude_frac = min(max(exclude_frac, 0.0), 1.0)
 	if exclude_enabled and exclude_beds:
 		mask = load_exclude_intervals(exclude_beds)
 		gene_anno, mask_report = apply_gene_mask(gene_anno, mask, exclude_frac)
