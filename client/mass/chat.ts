@@ -141,7 +141,7 @@ class MassAiChatBot implements RxComponent {
 				}
 				const prompt = event.target.value.trim()
 				if (!prompt) return
-				this.addBubble({ msg: prompt, me: 1 })
+				this.addBubble({ msg: escapeHtml(prompt), me: 1 })
 				event.target.value = ''
 				const serverBubble = this.addBubble({ msg: '...' }) // Keep server bubble always below prompt bubble so that responses are below the prompt always
 				if (prompt.length <= MIN_PROMPT_LENGTH_FOR_CHAT) {
@@ -208,6 +208,16 @@ return the created bubble and allow to be modified
 }
 
 export const chatInit = getCompInit(MassAiChatBot)
+
+// Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
+function escapeHtml(s: string): string {
+	return s
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}
 
 // Minimal renderers ported from MassSearch
 function setRenderers(self: any) {
