@@ -28,7 +28,7 @@ class MassAiChatBot implements RxComponent {
 		this.type = MassAiChatBot.type
 		this.opts = opts
 		this.app = opts.app
-		this.opts.usecase = this.opts.usecase ? this.opts.usecase : { target: 'summary', detail: 'term' }
+		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
