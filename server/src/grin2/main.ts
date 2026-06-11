@@ -1,7 +1,6 @@
 import type { GRIN2Request, GRIN2Response } from '#types'
 import serverconfig from '../serverconfig.js'
 import path from 'path'
-import { file_is_readable } from '#src/utils.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
@@ -259,8 +258,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 	const maskRows: string[][] = []
 	if (maskReport) {
 		const examples: string[] = maskReport.dropped_examples || []
-		const examplesStr =
-			examples.length > 0 ? `${examples.slice(0, 12).join(', ')}${examples.length > 12 ? ', …' : ''}` : 'none'
+		const examplesStr = examples.length > 0 ? examples.join(', ') : 'none'
 		maskRows.push(
 			['Genes In', Number(maskReport.genes_in ?? 0).toLocaleString()],
 			['Genes Excluded', Number(maskReport.genes_dropped ?? 0).toLocaleString()],
@@ -305,7 +303,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 					name: 'Lesion Counts',
 					rows: lesionTypeRows
 				},
-				...(maskRows.length > 0 ? [{ name: 'Region Mask (excluded artifact genes)', rows: maskRows }] : []),
+				...(maskRows.length > 0 ? [{ name: 'Excluded Genes (region mask)', rows: maskRows }] : []),
 				{
 					name: 'Memory Usage',
 					rows: [
@@ -356,26 +354,15 @@ function grin2KeyInputs(req: GRIN2Request) {
 	}
 }
 
-/** Resolve the artifact-region mask BEDs bundled under tp/anno by genome name.
- * Returns absolute paths to the BEDs that exist on disk; missing ones are
- * skipped so the mask degrades gracefully. The Python wrapper unions + merges
- * whatever it receives. Mask set: ENCODE/Kundaje blacklist + segmental duplications +
- * assembly gaps + common germline CNVs (DGV Gold Standard, freq>=1%). The germline-CNV
- * layer is essential — the dominant artifacts (OR clusters, HLA, KANSL1) are well-mapped but
- * copy-number-polymorphic in the normal population, so mappability does not catch them. */
-async function resolveExcludeBeds(genome: string): Promise<string[]> {
-	const names = ['encodeBlacklist', 'genomicSuperDups', 'gaps', 'dgvCommon']
-	const beds: string[] = []
-	for (const name of names) {
-		const p = path.join(serverconfig.tpmasterdir, 'anno', `${name}.${genome}.bed.gz`)
-		try {
-			await file_is_readable(p)
-			beds.push(p)
-		} catch (e) {
-			mayLog(`[GRIN2] exclude BED not found, skipping: ${p} (${e})`)
-		}
-	}
-	return beds
+/** Resolve genome-declared blacklist BED files for GRIN2's gene mask. Blacklist sources are declared
+ * in the genome config (Genome.blacklists) and their file paths absolutized at genome init.
+ * `selectedNames` chooses which sources to apply: undefined = all declared, [] = none, otherwise the
+ * named subset. Unknown names are ignored. Returns absolute BED file paths. */
+function resolveExcludeBeds(g: any, selectedNames?: string[]): string[] {
+	const all = g.blacklists as { name: string; file: string }[] | undefined
+	if (!all?.length) return []
+	const wanted = new Set(selectedNames ?? all.map(b => b.name))
+	return all.filter(b => wanted.has(b.name)).map(b => b.file)
 }
 
 /** Single read-or-recompute entry point for the GRIN2 cache. The Rust
@@ -483,8 +470,8 @@ async function runGrin2Fresh(
 	// Rust reads them straight from this JSON file, no sibling file.
 	const availableDataTypes = Object.keys(optionToDt).filter(key => key in request)
 
-	const excludeEnabled = request.excludeOptions?.enabled ?? true
-	const excludeBeds = excludeEnabled ? await resolveExcludeBeds(request.genome) : []
+	const excludeBeds = resolveExcludeBeds(g, request.excludeOptions?.blacklists)
+	const excludeEnabled = excludeBeds.length > 0
 
 	const pyInput = {
 		genedb: path.join(serverconfig.tpmasterdir, g.genedb.dbfile),

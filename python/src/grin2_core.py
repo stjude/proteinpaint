@@ -1253,7 +1253,7 @@ def apply_gene_mask(gene_data, mask, frac=0.5):
     report = {
         "genes_in": n_in,
         "genes_dropped": int(drop.sum()),
-        "dropped_examples": dropped_genes[:20],
+        "dropped_examples": sorted(dropped_genes)[:20],
         "genome_fraction_masked": genome_fraction_masked,
         "overlap_frac": frac,
     }

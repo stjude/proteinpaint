@@ -3,9 +3,10 @@ export const CNV_LOSS_THRESHOLD_FALLBACK = -0.4
 export const CNV_GAIN_THRESHOLD_FALLBACK = 0.4
 export const CNV_MAX_SEG_LENGTH_FALLBACK = 2_000_000
 
-/** Artifact-region exclude mask fallbacks. When enabled, lesions overlapping
- * low-mappability / segdup / blacklist / gap regions are dropped before stats. */
-export const EXCLUDE_ENABLED_FALLBACK = true
+/** Default gene-overlap-fraction for the artifact-region mask: a gene is excluded when at least
+ * this fraction of its span lies inside a selected blacklist region. The set of blacklist sources
+ * (and whether the mask runs at all) comes from the per-source checkboxes, which are populated from
+ * the genome's declared blacklists. */
 export const EXCLUDE_OVERLAP_FRAC_FALLBACK = 0.5
 
 export function getDefaultGRIN2Settings(opts: any) {

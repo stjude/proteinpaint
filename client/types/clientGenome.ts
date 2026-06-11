@@ -46,6 +46,8 @@ export type ClientGenome = {
 	/** Common name of the animal (e.g. human, mouse, etc.) */
 	species: string
 	termdbs?: { [index: string]: { label: string } }
+	/** genome-level blacklisted region sources; only names are exposed to the client */
+	blacklists?: { name: string }[]
 	tkset?: any
 	tracks: Track[]
 }
