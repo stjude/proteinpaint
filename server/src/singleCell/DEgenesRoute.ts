@@ -1,21 +1,37 @@
 import type { RoutePayload, TermdbSingleCellDEgenesRequest, TermdbSingleCellDEgenesResponse, RouteApi } from '#types'
 import { gdc_validate_query_singleCell_DEgenes } from '#src/mds3.gdc.js'
+import { validGenomeDs, validString } from '#routes/common.ts'
 
 export const payload: RoutePayload = {
 	init,
-	request: { typeId: 'TermdbSingleCellDEgenesRequest' /*, checkers: TODO write validator */ },
+	request: {
+		typeId: 'TermdbSingleCellDEgenesRequest',
+		checker: validTermdbSingleCellDEgenesRequest
+	},
 	response: { typeId: 'TermdbSingleCellDEgenesResponse' }
 }
 
-/* 
-for a singlecell experiment, user selects a cell cluster, and the route returns DE genes of the cluster against rest of the cells
- */
+/* for a singlecell experiment, user selects a cell cluster, and the 
+route returns DE genes of the cluster against rest of the cells */
 
 export const api: RouteApi = {
 	endpoint: 'termdb/singlecellDEgenes',
 	methods: {
 		get: payload,
 		post: payload
+	}
+}
+
+function validTermdbSingleCellDEgenesRequest(input): TermdbSingleCellDEgenesRequest {
+	return {
+		...validGenomeDs(input),
+		sample: {
+			sID: validString(input.sample?.sID),
+			eID: input.sample?.eID ? validString(input.sample.eID) : undefined
+		},
+		termId: validString(input.termId),
+		categoryName: validString(input.categoryName),
+		volcanoRender: input.volcanoRender
 	}
 }
 
