@@ -18,8 +18,8 @@ import type {
 	TermdbSingleCellDataRequest,
 	Filter
 } from '#types'
-import { validGenomeDs } from './common.ts'
-import { validate_query_singleCell_DEgenes } from './termdb.singlecellDEgenes.ts'
+import { validGenomeDs } from '#routes/common.ts'
+import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import ky from 'ky'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'

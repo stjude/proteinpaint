@@ -10,7 +10,7 @@ import type {
 	TermdbSingleCellPlotsRequest,
 	ValidSingleCellPlotsResponse
 } from '#types'
-import { validGenomeDs, validString, validNumber } from './common.ts'
+import { validGenomeDs, validString, validNumber } from '#routes/common.ts'
 import { getColors, getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
@@ -18,7 +18,7 @@ import { createCanvas } from 'canvas'
 import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
-import { refColor } from './termdb.sampleScatter.js'
+import { refColor } from '#routes/termdb.sampleScatter.js'
 
 const payload: RoutePayload = {
 	init,
