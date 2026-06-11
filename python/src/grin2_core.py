@@ -1077,11 +1077,16 @@ def row_prob_subj_hit(P, IDs):
 # REGION EXCLUSION / MASKING
 # =============================================================================
 #
-# Hard region mask applied to GENES BEFORE the GRIN statistics run. This is the
-# literature-backed `exclude` step: removing genes that sit in low-mappability /
-# segmental-duplication / blacklist / assembly-gap / common-CNV regions stops
-# artifact-dense loci (e.g. OR clusters, FAM90, POTE, GOLGA8, HLA) from
-# accruing spurious recurrence under GRIN's uniform random-interval null.
+# Hard region mask applied to GENES BEFORE the GRIN statistics run. This is the
+
+# literature-backed `exclude` step: removing genes that sit in low-mappability /
+
+# segmental-duplication / blacklist / assembly-gap / common-CNV regions stops
+
+# artifact-dense loci (e.g. OR clusters, FAM90, POTE, GOLGA8, HLA) from
+
+# accruing spurious recurrence under GRIN's uniform random-interval null.
+
 # Mirrors Bioconductor nullranges/bootRanges `exclude`; see Amemiya/Kundaje/Boyle
 # 2019 (ENCODE blacklist), Karimzadeh 2018 (Umap/Bismap mappability), Sharp 2005
 # (segmental duplications), Ogata/Mu 2023 (excluderanges).
@@ -1242,8 +1247,8 @@ def apply_gene_mask(gene_data, mask, frac=0.5):
         ov = _masked_overlap_bp(s, e, intervals)
         if ov / (e - s) >= frac:
             drop[i] = True
-
-    kept = gene_data.loc[~drop].reset_index(drop=True)
+    # report a coarse fraction for sanity-checking mask size; defaults to ~hg38 size when not provided
+    genome_fraction_masked = round(total_masked_bp / float(genome_size_bp or 3.1e9), 4)
     dropped_genes = gene_data.loc[drop, "gene"].astype(str).tolist()
 
     total_masked_bp = int(sum(int((iv[:, 1] - iv[:, 0]).sum()) for iv in mask.values()))
