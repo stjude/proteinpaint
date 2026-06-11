@@ -73,28 +73,16 @@ async function handle_tkbigwig(req, res, genomes) {
 	}
 
 	const t = new Date()
-	const MAX_CONCURRENCY = 2
-
-	async function mapWithConcurrency(items, limit, fn) {
-		const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-			while (items.length) {
-				const item = items.shift()
-				await fn(item)
-			}
-		})
-		await Promise.all(workers)
-	}
-
-	const regions = [...req.query.rglst] // copy because workers shift()
-	await mapWithConcurrency(regions, MAX_CONCURRENCY, async r => {
+	for (const r of req.query.rglst) {
 		const bins = await run_bigwigsummary(req, r, file)
+
 		if (bins) {
 			r.values = bins
 			if (req.query.dividefactor) {
 				r.values = r.values.map(i => i / req.query.dividefactor)
 			}
 		}
-	})
+	}
 	mayLog('bw python', Date.now() - t)
 
 	res.send(plotWiggle(req.query, pa))
