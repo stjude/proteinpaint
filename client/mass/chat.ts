@@ -22,6 +22,7 @@ class MassAiChatBot implements RxComponent {
 	clear: any
 	showTerms: any
 	noResult: any
+	isChat: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -29,6 +30,7 @@ class MassAiChatBot implements RxComponent {
 		this.app = opts.app
 		this.opts.usecase = this.opts.usecase ? this.opts.usecase : { target: 'summary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
+		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -71,7 +73,7 @@ class MassAiChatBot implements RxComponent {
 		//const cohortStr = this.getState(appState).cohortStr
 		let text = 'Search an item'
 		let height = '1px' // No white space needed for search only
-		if (this.app.getState().termdbConfig?.queries?.chat) {
+		if (this.isChat) {
 			text = 'Ask a question'
 			height = '200px'
 		}
@@ -133,7 +135,7 @@ class MassAiChatBot implements RxComponent {
 			})
 			.on('keyup.submit', async (event: any) => {
 				if (!keyupEnter(event)) return
-				if (!this.app.getState().termdbConfig?.queries?.chat) {
+				if (!this.isChat) {
 					// Prevents unnecessary server side call when chat not supported by ds
 					return
 				}
@@ -196,8 +198,12 @@ return the created bubble and allow to be modified
 	}
 
 	main() {
-		/** Comment because main() is required for RxComponent
-		 * but chat does not have any main logic for now. May add in the future.*/
+		// If the subheader is hidden, it means the chat component is not visible, so we skip focusing the input to avoid accidental typing into the search/chat bar. The user can click on the chat again to focus when they want to use it.
+		if (this.opts.subheader.style('display') == 'none') {
+			if (this.dom.inputNode.focus()) this.dom.inputNode.blur()
+			return
+		}
+		if (this.opts?.focus != 'off') this.dom.inputNode.focus()
 	}
 }
 
@@ -206,7 +212,7 @@ export const chatInit = getCompInit(MassAiChatBot)
 // Minimal renderers ported from MassSearch
 function setRenderers(self: any) {
 	let text = 'No match'
-	if (self.app.getState().termdbConfig?.queries?.chat) {
+	if (self.isChat) {
 		text = 'No match. Using the chatbot...'
 	}
 	self.noResult = () => {
