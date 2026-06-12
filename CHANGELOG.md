@@ -8,6 +8,7 @@ Features:
 - The plot filter in the SC app is enabled, allowing users to filter samples by cohort level terms
 - In meta analysis results subplots in the SC app, users may use cohort level terms to overlay, divide by and/or filter the cells. The server routes now ingest global and local filters for this purpose.
 - All single cell, sample scatter, and descriptive stats routes were converted into the new server/src/route code pattern
+- Extended MAF filter to support allelic-depth filtering
 
 
 ## 2.191.4

@@ -1,2 +1,1 @@
-Features:
-- Extended MAF filter to support allelic-depth filtering
+
