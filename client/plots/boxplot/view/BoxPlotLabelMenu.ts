@@ -54,7 +54,7 @@ export class BoxPlotLabelMenu {
 			const ss = app.opts.boxplot.allow2selectSamples
 			options.push({
 				text: ss.buttonText,
-				isVisible: () => true,
+				isVisible: (state: MassState) => state.termdbConfig.displaySampleIds && app.vocabApi.hasVerifiedToken(),
 				callback: async () => {
 					const table = await interactions.listSamples(plot)
 					const samples = table[2]

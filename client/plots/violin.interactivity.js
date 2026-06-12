@@ -70,16 +70,17 @@ export function setInteractivity(self) {
 					await self.callListSamples(event, plot, start, end)
 				}
 			})
-		}
-		if (self.opts.allow2selectSamples) {
-			const ss = self.opts.allow2selectSamples
-			options.push({
-				label: ss.buttonText,
-				callback: async () => {
-					const [start, end] = [self.data.min, self.data.max]
-					await self.selectSamples(plot, start, end, ss)
-				}
-			})
+
+			if (self.opts.allow2selectSamples) {
+				const ss = self.opts.allow2selectSamples
+				options.push({
+					label: ss.buttonText,
+					callback: async () => {
+						const [start, end] = [self.data.min, self.data.max]
+						await self.selectSamples(plot, start, end, ss)
+					}
+				})
+			}
 		}
 		self.displayMenu(event, options)
 	}
@@ -105,16 +106,16 @@ export function setInteractivity(self) {
 				testid: 'sjpp-violinBrushOpt-list',
 				callback: async () => self.callListSamples(event.sourceEvent, plot, start, end)
 			})
-		}
 
-		if (self.opts.allow2selectSamples) {
-			const ss = self.opts.allow2selectSamples
-			options.push({
-				label: ss.buttonText,
-				callback: async () => {
-					await self.selectSamples(plot, start, end, ss)
-				}
-			})
+			if (self.opts.allow2selectSamples) {
+				const ss = self.opts.allow2selectSamples
+				options.push({
+					label: ss.buttonText,
+					callback: async () => {
+						await self.selectSamples(plot, start, end, ss)
+					}
+				})
+			}
 		}
 
 		self.displayMenu(event.sourceEvent, options, start, end)
