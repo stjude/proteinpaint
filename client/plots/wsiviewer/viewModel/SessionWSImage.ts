@@ -1,6 +1,14 @@
 import type { Annotation, Prediction, TileSelection } from '#types'
-import { WSImage, SelectionPrefixes, checkSelectionType, FlagStatusMessages, FlagStatus } from '#types'
+import {
+	WSImage,
+	SelectionPrefixes,
+	checkSelectionType,
+	FlagStatusMessages,
+	FlagStatus,
+	type ProvokingActions
+} from '#types'
 import type Settings from '#plots/wsiviewer/Settings.ts'
+
 export class SessionWSImage extends WSImage {
 	sessionsTileSelections?: TileSelection[]
 
@@ -33,6 +41,42 @@ export class SessionWSImage extends WSImage {
 		return foundIndex
 	}
 
+	public static calculateNewActiveIndex(
+		currentIndex: number,
+		sessionWSImage: SessionWSImage,
+		provokingAction: ProvokingActions,
+		settings: Settings
+	): number {
+		// Note here that these calculations will have to change if tileselection sorting change. This calulation is assuming that
+		// All flagged/skipped/annotated items are collected together, sorted by descending timestamp (newest first), and
+		// put in the back half og the table, with sessiontilesections and predictions up front
+		const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings)
+		let action = provokingAction as string
+		if ('flagging' === provokingAction) {
+			action = provokingAction + (settings.renderOnlyFlagged ? 'WithCheck' : 'WithoutCheck')
+		} else if ('skipping' === provokingAction) {
+			action = provokingAction + (settings.renderSkipped ? 'WithCheck' : 'WithoutCheck')
+		}
+		const isLastIndex = currentIndex >= tileSelections.length - 1
+		let secondHalfIndex = tileSelections.findIndex(
+			ts => checkSelectionType(ts, SelectionPrefixes.Annotation) || ts.flag !== FlagStatus.Normal
+		)
+		if (secondHalfIndex === -1) secondHalfIndex = tileSelections.length
+		const inFirstHalf = currentIndex < secondHalfIndex
+		switch (action) {
+			case 'annotation':
+			case 'skippingWithCheck':
+			case 'flaggingWithoutCheck':
+				return inFirstHalf || isLastIndex ? currentIndex : currentIndex + 1
+			case 'delete':
+			case 'skippingWithoutCheck':
+			case 'flaggingWithCheck':
+				return isLastIndex ? Math.max(0, currentIndex - 1) : currentIndex
+			default:
+				return 0
+		}
+	}
+
 	public static removeTileSelection(tileSelection: TileSelection, sessionWSImage: SessionWSImage): TileSelection[] {
 		if (!sessionWSImage.sessionsTileSelections) return []
 		sessionWSImage.sessionsTileSelections = sessionWSImage.sessionsTileSelections.filter(
@@ -42,16 +86,18 @@ export class SessionWSImage extends WSImage {
 	}
 
 	public static getTileSelections(sessionWSImage: SessionWSImage, settings: Settings): TileSelection[] {
+		const allTileSelections = SessionWSImage.getUnfilteredTileSelections(sessionWSImage)
+		if (allTileSelections.length === 0) return []
 		const [selections, flagged_selections] = partition(
-			sessionWSImage.sessionsTileSelections || [],
+			allTileSelections.filter(ts => checkSelectionType(ts, SelectionPrefixes.TileSelection)) || [],
 			ts => ts.flag === FlagStatus.Normal
 		)
-		const [preds, flagged_preds] = partition(sessionWSImage.predictions || [], ts => ts.flag === FlagStatus.Normal) as [
-			Prediction[],
-			Prediction[]
-		]
+		const [preds, flagged_preds] = partition(
+			allTileSelections.filter(ts => checkSelectionType(ts, SelectionPrefixes.Prediction)) || [],
+			ts => ts.flag === FlagStatus.Normal
+		) as [Prediction[], Prediction[]]
 		const [annotations, flagged_annotations] = partition(
-			sessionWSImage.annotations || [],
+			allTileSelections.filter(ts => checkSelectionType(ts, SelectionPrefixes.Annotation)) || [],
 			ts => ts.flag === FlagStatus.Normal
 		) as [Annotation[], Annotation[]]
 

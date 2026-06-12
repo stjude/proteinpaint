@@ -11,7 +11,6 @@ import { ViewModelProvider } from '#plots/wsiviewer/viewModel/ViewModelProvider.
 import { ThumbnailRenderer } from '#plots/wsiviewer/view/ThumbnailRenderer.ts'
 import { MapRenderer } from '#plots/wsiviewer/view/MapRenderer.ts'
 import { MetadataRenderer } from '#plots/wsiviewer/view/MetadataRenderer.ts'
-import { SpinnerRenderer } from '#plots/wsiviewer/view/SpinnerRenderer.ts'
 import { LegendRenderer } from '#plots/wsiviewer/view/LegendRenderer.ts'
 import { ModelTrainerRenderer } from './view/ModelTrainerRenderer'
 import { SkipFlagCheckRenderer } from './view/SkipFlagCheckRenderer'
@@ -20,7 +19,6 @@ import type { ImageViewData } from '#plots/wsiviewer/viewModel/ImageViewData.ts'
 import type { ViewModel } from '#plots/wsiviewer/viewModel/ViewModel.ts'
 import { sayerror } from '#dom'
 import { DownloadCSVButtonRenderer } from '#plots/wsiviewer/view/DownloadCSVButtonRenderer.ts'
-import { SessionWSImage } from './viewModel/SessionWSImage'
 
 class WSIViewer extends PlotBase implements RxComponent {
 	static type = 'WSIViewer'
@@ -41,7 +39,6 @@ class WSIViewer extends PlotBase implements RxComponent {
 	// New: persistent MapRenderer instance reused across main() calls
 	private mapRenderer: MapRenderer | undefined
 	private skipFlagRenderer = new SkipFlagCheckRenderer()
-	private spinnerRenderer = new SpinnerRenderer()
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -110,31 +107,12 @@ class WSIViewer extends PlotBase implements RxComponent {
 			aiProjectID,
 			aiWSIMageFiles
 		)
-		if (settings.activeID) {
-			this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: {
-					settings: {
-						renderWSIViewer: false,
-						changeTrigger: Date.now(),
-						activeID: '',
-						activeAnnotation:
-							SessionWSImage.findTileIndexByID(
-								settings.activeID,
-								viewModel.sampleWSImages[settings.displayedImageIndex],
-								settings
-							) || 0,
-						renderAnnotationTable: true
-					}
-				}
-			})
-			return
-		}
 		const wsimages = viewModel.sampleWSImages
 
 		const wsimageLayers = viewModel.wsimageLayers
 		const wsimageLayersLoadError = viewModel.wsimageLayersLoadError
+		this.wsiViewerInteractions.toggleSpinner(settings.isSavingAnnotation)
+
 		if (wsimages.length === 0) {
 			sayerror(this.dom.errorDiv, 'No WSI images found.')
 			this.wsiViewerInteractions.toggleLoadingDiv(false)
@@ -163,16 +141,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 		if (!this.mapRenderer) {
 			this.mapRenderer = new MapRenderer()
 		}
+		if (!settings.isSavingAnnotation) this.wsiViewerInteractions.toggleSpinner(false)
 
 		this.mapRenderer.setState(
 			activeLayerData,
 			this.wsiViewerInteractions.viewerClickListener,
 			viewModel.sampleWSImages[settings.displayedImageIndex]
 		)
-
 		if (settings.renderWSIViewer) {
 			this.wsiViewerInteractions.toggleLoadingDiv(settings.renderAnnotationTable)
-
+			if (settings.isChangingImages) this.wsiViewerInteractions.toggleSpinner(true)
 			if (this.thumbnailsContainer != undefined) {
 				this.thumbnailsContainer.remove()
 				this.thumbnailsContainer = undefined
@@ -189,6 +167,11 @@ class WSIViewer extends PlotBase implements RxComponent {
 				numTotalFiles
 			)
 
+			// Not actually reseting image, just saving that thumbnail is done rendering
+			// so spinner isnt rendering next call
+			this.wsiViewerInteractions.toggleThumbnails(0, true)
+			if (!settings.isSavingAnnotation) this.wsiViewerInteractions.toggleSpinner(false)
+
 			// Use the reused mapRenderer instance to render/update the map
 			this.map = this.mapRenderer.render(this.dom.mapHolder, settings)
 
@@ -197,9 +180,7 @@ class WSIViewer extends PlotBase implements RxComponent {
 			}
 		}
 		this.metadataRenderer.renderMetadata(this.dom.holder, imageViewData)
-		if (!settings.isSavingAnnotation) {
-			this.spinnerRenderer.renderDefaultCursor(this.dom.holder)
-		}
+
 		if (settings.renderAnnotationTable && this.map) {
 			const modelTrainerRenderer = new ModelTrainerRenderer(this.wsiViewerInteractions)
 			const downloadCSVButtonRenderer = new DownloadCSVButtonRenderer()
@@ -236,11 +217,13 @@ class WSIViewer extends PlotBase implements RxComponent {
 				)
 			}
 		}
-		if (settings.isSavingAnnotation) {
-			this.spinnerRenderer.renderSpinner(this.dom.holder)
-		}
-
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
+		// Selection objects you want to add cursor style go here because the spinner changes all to default
+		if (!settings.isSavingAnnotation) {
+			this.thumbnailsContainer?.selectAll('div').selectAll('*').style('cursor', 'pointer')
+			this.dom.annotationsHolder.selectAll('*').style('cursor', 'pointer')
+			this.dom.legendHolder.selectAll('*').style('cursor', 'pointer')
+		}
 	}
 }
 

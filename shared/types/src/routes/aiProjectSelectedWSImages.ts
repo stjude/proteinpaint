@@ -6,7 +6,8 @@ export const FlagStatus = {
 	Flagged: 2,
 	Deleted: 3
 } as const
-
+// These are action that will change the active index/highlight for the table in AIHAL project
+export type ProvokingActions = 'annotation' | 'delete' | 'skipping' | 'flagging'
 export type FlagStatusValues = (typeof FlagStatus)[keyof typeof FlagStatus]
 
 export const FeaturePrefixes = {

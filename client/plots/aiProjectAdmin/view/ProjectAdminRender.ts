@@ -26,7 +26,6 @@ export class ProjectAdminRender {
 		this.interactions
 			.getAuthorization(['addProject'])
 			.then(isAuthorized => {
-				console.log(isAuthorized)
 				if (isAuthorized.addProject) {
 					this.renderCreateProject(projectDiv)
 				}

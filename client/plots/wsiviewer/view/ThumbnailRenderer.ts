@@ -53,7 +53,6 @@ export class ThumbnailRenderer {
 					.style('align-items', 'center')
 					.style('justify-content', 'center')
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
-					.style('cursor', 'pointer')
 					.on('click', () => {
 						wsiViewerInteractions.thumbnailClickListener(i)
 					})
@@ -112,7 +111,7 @@ export class ThumbnailRenderer {
 			// Update borders only for visible thumbnails
 			const startIndex = setting.thumbnailRangeStart
 			const endIndex = Math.min(setting.thumbnailRangeStart + setting.numDisplayedThumbnails, layers.length)
-			
+
 			for (let i = startIndex; i < endIndex; i++) {
 				const isActive = i === setting.displayedImageIndex
 				holder
@@ -120,7 +119,6 @@ export class ThumbnailRenderer {
 					.style('border', isActive ? setting.activeThumbnailBorderStyle : setting.nonActiveThumbnailBorderStyle)
 			}
 		}
-
 		return thumbnailsContainer
 	}
 

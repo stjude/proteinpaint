@@ -19,7 +19,6 @@ export class DownloadCSVButtonRenderer {
 			.style('border', '1px solid black')
 			.style('background-color', 'transparent')
 			.style('margin', '0 10px')
-			.style('cursor', 'pointer')
 			.text('Export Annotations')
 		btn.on('click', () => {
 			if (!sessionWSImage) {
