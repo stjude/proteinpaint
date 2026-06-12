@@ -6,7 +6,20 @@ import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
 import os from 'os'
 import { get_samples } from '../termdb.sql.js'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
+import {
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	dtsv,
+	dt2lesion,
+	optionToDt,
+	formatElapsedTime,
+	mclasscnvgain,
+	mclasscnvloss
+} from '#shared'
+
+/** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. See CnvSegmentQuery in #types. */
+type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
 import { mayFilterByMaf } from '../mds3.init.js'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { promisify } from 'node:util'
@@ -557,6 +570,10 @@ async function processSampleData(
 	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
+	// How this ds quantifies cnv values; drives gain/loss classification.
+	// Absent => 'log2ratio' (legacy default, diploid baseline 0).
+	const cnvType: CnvType = ds.queries?.cnv?.type ?? 'log2ratio'
+
 	// Track unique samples per lesion type for reporting
 	const samplesPerType = new Map<number, Set<string>>()
 	const enabledTypes: number[] = []
@@ -603,7 +620,7 @@ async function processSampleData(
 		try {
 			const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name })
 
-			const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request)
+			const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
 
 			// Filter out chrM lesions
 			const filteredLesions = ds.queries.singleSampleMutation.discoPlot?.skipChrM
@@ -667,7 +684,8 @@ async function processSampleData(
 function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
-	request: GRIN2Request
+	request: GRIN2Request,
+	cnvType: CnvType
 ): { sampleLesions: any[]; contributedTypes: Set<number> } {
 	const sampleLesions: any[] = []
 	const contributedTypes = new Set<number>()
@@ -688,7 +706,7 @@ function processSampleMlst(
 			case dtcnv: {
 				if (!request.cnvOptions) break
 
-				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions)
+				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions, cnvType)
 				if (les) {
 					sampleLesions.push(les)
 					contributedTypes.add(dtcnv)
@@ -791,35 +809,40 @@ function filterAndConvertSnvIndel(
 	return [sampleName, entry.chr, start, end, dt2lesion[dtsnvindel].lesionTypes[0].lesionType]
 }
 
-function filterAndConvertCnv(sampleName: string, entry: any, options: GRIN2Request['cnvOptions']): string[] | null {
-	// Must check that options are defined for typescript
-	if (
-		!options ||
-		options.gainThreshold === undefined ||
-		options.lossThreshold === undefined ||
-		options.maxSegLength === undefined
-	) {
-		return null
-	}
+function filterAndConvertCnv(
+	sampleName: string,
+	entry: any,
+	options: GRIN2Request['cnvOptions'],
+	cnvType: CnvType
+): string[] | null {
+	if (!options || options.maxSegLength === undefined) return null
 
-	if (!Number.isInteger(entry.start)) {
-		return null
-	}
+	if (!Number.isInteger(entry.start)) return null
+	if (!Number.isInteger(entry.stop)) return null
 
-	if (!Number.isInteger(entry.stop)) {
-		return null
-	}
-
-	// Filter max segment length
+	// Filter max segment length (applies to every cnv type)
 	if (options.maxSegLength > 0 && entry.stop - entry.start > options.maxSegLength) {
 		return null
 	}
 
-	// Must be either gain or loss
-	// This determines the lesion type
-	const isGain = entry.value >= options.gainThreshold
-	const isLoss = entry.value <= options.lossThreshold
-	if (!isGain && !isLoss) return null
+	// Classify the segment as gain or loss according to how this ds quantifies cnv.
+	let isGain: boolean
+	if (cnvType == 'category') {
+		// qualitative call carried in the segment's class; no numeric thresholds
+		if (entry.class == mclasscnvgain) isGain = true
+		else if (entry.class == mclasscnvloss) isGain = false
+		else return null
+	} else {
+		// numeric value: log2ratio/segmean (baseline 0) or copyNumber (baseline 2).
+		// The comparison is identical across these; only the threshold values differ,
+		// e.g. copyNumber uses positive cutoffs straddling baseline 2 (loss<=1, gain>=3).
+		if (options.gainThreshold === undefined || options.lossThreshold === undefined) return null
+		if (!Number.isFinite(entry.value)) return null
+		if (entry.value >= options.gainThreshold) isGain = true
+		else if (entry.value <= options.lossThreshold) isGain = false
+		else return null // between thresholds = neutral
+	}
+
 	const lesionType = getCnvLesionType(isGain)
 
 	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)

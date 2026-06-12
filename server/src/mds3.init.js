@@ -1730,6 +1730,10 @@ async function validate_query_cnv(ds, genome) {
 	// cnv segments, compared to geneCnv
 	const q = ds.queries.cnv
 	if (!q) return
+	if (q.type !== undefined) {
+		const allowed = ['log2ratio', 'segmean', 'category', 'copyNumber']
+		if (!allowed.includes(q.type)) throw `cnv.type must be one of ${allowed.join('/')}`
+	}
 	if (!q.densityViewCutoff) q.densityViewCutoff = 1000
 	if (!Number.isInteger(q.densityViewCutoff)) throw 'cnv.densityViewCutoff not integer'
 	if (!q.maxReturnCutoff) q.maxReturnCutoff = 10000

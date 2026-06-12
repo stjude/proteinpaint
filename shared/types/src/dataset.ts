@@ -632,7 +632,13 @@ type CnvSegmentQuery = {
 	allow to be missing, in such case will always show all */
 	cnvMaxLength?: number
 
-	/// quick fix: following sets of properties are mutually exclusive. TODO may improve with "type" property
+	/** declares how cnv values are quantified; drives gain/loss classification and the GRIN2 UI threshold controls.
+	- 'log2ratio' | 'segmean': numeric value, diploid baseline 0 (gain when value>=gainCutoff, loss when value<=lossCutoff)
+	- 'copyNumber': numeric absolute integer copy number, diploid baseline 2 (e.g. gain>=3, loss<=1, neutral=2)
+	- 'category': qualitative call carried in m.class (mclasscnvgain/mclasscnvloss), no numeric value
+	absent => 'log2ratio' (legacy default). cnvGainCutoff/cnvLossCutoff/cnvMaxLength below are the per-ds default
+	thresholds, now interpreted according to this type. */
+	type?: 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
 
 	/** presence of these properties indicate cnv is quantified as log(ratio) or similar
 	filter segments by following two cutoffs only apply to log ratio, cnv gain value is positive, cnv loss value is negative
