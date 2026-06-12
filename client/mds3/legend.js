@@ -698,11 +698,14 @@ function may_update_skewerRim(data, tk) {
 	const sk = tk.mds.queries?.snvindel?.skewerRim
 	if (!sk) return // not enabled
 	let rim1total = 0, // count number of cases, not unique
+		rim2total = 0,
 		noRimTotal = 0
 	for (const m of data.skewer) {
 		const r1 = m.rim1count || 0
+		const r2 = m.rim2count || 0
 		rim1total += r1
-		noRimTotal += m.occurrence - r1
+		rim2total += r2
+		noRimTotal += m.occurrence - r1 - r2
 	}
 	const R = tk.legend.skewerRim
 	R.headerTd.text(getSkewerRimLegendHeaderName(tk))
@@ -750,6 +753,27 @@ function may_update_skewerRim(data, tk) {
 					})
 			})
 	}
+	// rim2
+	if (sk.rim2value && rim2total > 0) {
+		R.holder
+			.append('div')
+			.attr('class', 'sja_clb')
+			.style('display', 'inline-block')
+			.html(`${getRimSvg(2)}${sk.rim2value}, n=${rim2total}`)
+			.on('click', event => {
+				tk.legend.tip
+					.clear()
+					.showunder(event.target)
+					.d.append('div')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', `sjpp-hide-${sk.rim2value}-option`)
+					.text('Hide')
+					.on('click', () => {
+						sk.hiddenvaluelst.push(sk.rim2value)
+						reload(tk)
+					})
+			})
+	}
 
 	// hidden ones
 	for (const c of sk.hiddenvaluelst) {
@@ -778,7 +802,7 @@ function getRimSvg(rim) {
 		(rim == 1
 			? '<path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="#858585" stroke="none"></path>'
 			: rim == 2
-			? '' // hollow rim2, not done yet
+			? '<path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="none" stroke="#858585"></path>' // hollow rim2
 			: '') + // blank for no rim
 		'</svg>'
 	)

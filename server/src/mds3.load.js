@@ -199,10 +199,11 @@ function mayAddSkewerRimCount(m, q, ds) {
 	// using rim; rim reflects number of samples, out of all harboring this variant, with a common attribute
 	if (q.skewerRim.type == 'format') {
 		m.rim1count = 0
+		m.rim2count = 0
 		for (const s of m.samples) {
-			if (s.formatK2v?.[q.skewerRim.formatKey] == q.skewerRim.rim1value) {
-				m.rim1count++
-			}
+			const v = s.formatK2v?.[q.skewerRim.formatKey]
+			if (v == q.skewerRim.rim1value) m.rim1count++
+			else if (q.skewerRim.rim2value && v == q.skewerRim.rim2value) m.rim2count++
 		}
 		return
 	}
