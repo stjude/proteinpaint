@@ -4,7 +4,20 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import { axisstyle, Menu, newSandboxDiv, sayerror, appear, disappear, isoformSelect, allgm2sum, sketchGene, sketchSplicerna, sketchRna, sketchProtein2 } from '#dom'
+import {
+	axisstyle,
+	Menu,
+	newSandboxDiv,
+	sayerror,
+	appear,
+	disappear,
+	isoformSelect,
+	allgm2sum,
+	sketchGene,
+	sketchSplicerna,
+	sketchRna,
+	sketchProtein2
+} from '#dom'
 import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common.js'
 import * as coord from './coord'
@@ -382,6 +395,29 @@ export class Block {
 			// do this after legend is set
 			// fills this.rglst[], this.startidx, this.stopidx
 			this.setgmmode(arg.gmmode || client.gmmode.genomic)
+			if (arg.aarange) {
+				const a = coord.aa2gmcoord(arg.aarange[0], this.usegm)
+				const b = coord.aa2gmcoord(arg.aarange[1], this.usegm)
+				if (!Number.isInteger(a) || !Number.isInteger(b)) throw new Error('invalid aarange')
+				for (const [i, r] of this.rglst.entries()) {
+					if (a > r.start && a < r.stop) {
+						this.startidx = i
+						if (r.reverse) {
+							r.stop = a
+						} else {
+							r.start = a
+						}
+					}
+					if (b > r.start && b < r.stop) {
+						this.stopidx = i
+						if (r.reverse) {
+							r.start = b
+						} else {
+							r.stop = b
+						}
+					}
+				}
+			}
 		}
 
 		// rglst is set, can process ideogram
