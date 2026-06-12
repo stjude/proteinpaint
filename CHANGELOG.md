@@ -10,6 +10,9 @@ Features:
 - All single cell, sample scatter, and descriptive stats routes were converted into the new server/src/route code pattern
 - Extended MAF filter to support allelic-depth filtering
 
+Fixes:
+- aarange=[a,b] to zoom in on block protein mode
+
 
 ## 2.191.4
 
