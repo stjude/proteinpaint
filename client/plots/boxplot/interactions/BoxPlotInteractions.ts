@@ -96,8 +96,8 @@ export class BoxPlotInteractions {
 	async listSamples(plot: any) {
 		const sampleList = this.initListSamples(plot)
 		const data = await sampleList.getData()
-		const [rows, columns] = sampleList.setTableData(data)
-		return [rows, columns]
+		const [rows, columns, samples] = sampleList.setTableData(data)
+		return [rows, columns, samples]
 	}
 
 	/** Callback for color picker in plot(s) label menu */

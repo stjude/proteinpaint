@@ -22,6 +22,7 @@ interface InitArg {
 		app?: Record<string, any>
 		barchart?: Record<string, any>
 		violin?: Record<string, any>
+		boxplot?: Record<string, any>
 	}
 }
 
@@ -62,6 +63,7 @@ export async function init(
 		),
 		barchart: arg.opts?.barchart || {},
 		violin: arg.opts?.violin || {},
+		boxplot: arg.opts?.boxplot || {},
 		app: arg.opts?.app || {}
 	})
 	const api = {

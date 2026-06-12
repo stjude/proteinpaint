@@ -50,6 +50,22 @@ export class BoxPlotLabelMenu {
 				}
 			})
 
+		if (app.opts?.boxplot?.allow2selectSamples) {
+			const ss = app.opts.boxplot.allow2selectSamples
+			options.push({
+				text: ss.buttonText,
+				isVisible: () => true,
+				callback: async () => {
+					const table = await interactions.listSamples(plot)
+					const samples = table[2]
+					ss.callback({
+						samples: await app.vocabApi.convertSampleId(samples, ss.attributes),
+						source: ss.defaultSelectionLabel || `Selected from boxplot`
+					})
+				}
+			})
+		}
+
 		plot.boxplot.labelG.on('click', (event: MouseEvent) => {
 			tip.clear()
 			if (isVertical) tip.show(event.clientX, event.clientY)
