@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- make the fatal error message consistent on initial validation and retries
+- do not show regression chart buttons in the Correlation Plot tool
+
+
 ## 2.191.4
 
 Fixes:
