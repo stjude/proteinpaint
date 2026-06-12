@@ -877,6 +877,10 @@ export type SingleCellGeneExpressionGdc = {
 	src: 'gdcapi'
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
+	/** created in single cell samples route on init */
+	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
+	/** created in single cell samples route on init */
+	get?: (param: any, ds: any) => void
 }
 
 export type SingleCellSamples = {
@@ -946,7 +950,7 @@ type ColorColumn = {
 }
 
 /** defines a tsne type of plot for cells from one sample */
-type SingleCellPlot = {
+export type SingleCellPlot = {
 	/** value is display as plot name on ui and also used as identifier for a plot, must be unique */
 	name: string
 	/** folder in which per-sample files are stored.
@@ -1025,7 +1029,7 @@ export type SingleCellMetaResult = {
 	colorColumns: ColorColumn[]
 }
 
-type SCImages = {
+export type SCImages = {
 	/** folder where the per-sample image files are stored, as "SCImages/<folder>/<sample>/<fileName>" */
 	folder: string
 	/** see above */

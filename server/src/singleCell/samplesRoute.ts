@@ -1,27 +1,31 @@
-import type { RoutePayload, RouteApi } from '#types'
-import fs from 'fs'
-import path from 'path'
-import { read_file, file_is_readable } from '#src/utils.js'
-import { mayLog } from '#src/helpers.ts'
-import { joinUrl } from '#shared/joinUrl.js'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
-import serverconfig from '#src/serverconfig.js'
 import type {
+	SCImages,
 	SingleCellQuery,
 	SingleCellDataNative,
+	SingleCellGeneExpressionGdc,
 	SingleCellGeneExpressionNative,
+	SingleCellPlot,
 	SingleCellSample,
 	TermdbSingleCellSamplesRequest,
 	TermdbSingleCellSamplesResponse,
 	Cell,
 	Plot,
 	TermdbSingleCellDataRequest,
-	Filter
+	Filter,
+	RoutePayload,
+	RouteApi
 } from '#types'
+import fs from 'fs'
+import path from 'path'
+import ky from 'ky'
+import { read_file, file_is_readable } from '#src/utils.js'
+import { mayLog } from '#src/helpers.ts'
+import { joinUrl } from '#shared/joinUrl.js'
+import { run_rust } from '@sjcrh/proteinpaint-rust'
+import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
-import ky from 'ky'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { getData } from '#src/termdb.matrix.js'
 
@@ -78,7 +82,7 @@ export function init({ genomes }) {
 
 /////////////////// ds query validator
 //runs during mds3.init()
-export async function validate_query_singleCell(ds: any, genome: any) {
+export async function validate_query_singleCell(ds: any, genome: any): Promise<void> {
 	const q: SingleCellQuery = ds.queries.singleCell
 	if (!q) return
 
@@ -111,7 +115,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 		if (q.geneExpression.src == 'native') {
 			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
 		} else if (q.geneExpression.src == 'gdcapi') {
-			gdc_validateGeneExpression(q.geneExpression, ds, genome)
+			gdc_validateGeneExpression(q.geneExpression as SingleCellGeneExpressionGdc, ds, genome)
 		} else {
 			throw new Error('unknown singleCell.geneExpression.src')
 		}
@@ -127,7 +131,7 @@ export async function validate_query_singleCell(ds: any, genome: any) {
 	}
 }
 
-function validateImages(images) {
+function validateImages(images: SCImages): void {
 	if (!images.folder) throw new Error('images.folder missing')
 	if (!images.label) images.label = 'Images'
 	if (!images.fileName) throw new Error('images.fileName missing')
@@ -140,7 +144,7 @@ function validateImages(images) {
  * @param q ds.queries.singleCell. ***NOT** the req.query
  * @param ds Entire dataset configuration from the ds file
  */
-async function validateSamples(q: SingleCellQuery, ds: any) {
+async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
 	const S: SingleCellQuery['samples'] = q.samples,
 		D = q.data as SingleCellDataNative
@@ -260,36 +264,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		const sampleId = q.sample?.eID || q.sample?.sID
 		/** Only return plots with available data files. */
 		if (q.checkPlotAvailability) {
-			const plots: any = []
-			for (const plot of D.plots) {
-				if (!q.plots.includes(plot.name)) continue
-				if (plot.isMetaResult) {
-					/** Check to see if the plot name is the same as the sampleId to
-					 * prevent showing all meta analysis results when a single meta analysis
-					 * result is selected as a sample. */
-					const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
-					if (sampleName != sampleId) continue
-				}
-				const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
-				try {
-					await file_is_readable(tsvfile)
-					// file exists for this sample
-					plots.push({ name: plot.name })
-				} catch (_) {
-					// file doesn't exist for this sample. this is allowed
-				}
-			}
-			const imgs = ds.queries.singleCell?.images
-			if (imgs) {
-				const imgFile = path.join(serverconfig.tpmasterdir, imgs.folder, sampleId, imgs.fileName)
-				try {
-					await file_is_readable(imgFile)
-					plots.push({ name: imgs?.label || 'Image' })
-				} catch (_) {
-					// image doesn't exist for this sample.
-				}
-			}
-			return { plots }
+			return await getAvailablePlots(q.plots, D.plots, ds, sampleId)
 		}
 		// if sample is int, may convert to string
 		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
@@ -363,6 +338,46 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		return { plots }
 	}
 }
+
+/** When q.checkPlotAvailability is true, returns only plots with available data files. */
+async function getAvailablePlots(
+	Qplots: string[],
+	DsPlots: SingleCellPlot[],
+	ds: any,
+	sampleId: string
+): Promise<{ plots: { name: string }[] }> {
+	const plots: { name: string }[] = []
+	for (const plot of DsPlots) {
+		if (!Qplots.includes(plot.name)) continue
+		if (plot.isMetaResult) {
+			/** Check to see if the plot name is the same as the sampleId to
+			 * prevent showing all meta analysis results when a single meta analysis
+			 * result is selected as a sample. */
+			const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
+			if (sampleName != sampleId) continue
+		}
+		const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
+		try {
+			await file_is_readable(tsvfile)
+			// file exists for this sample
+			plots.push({ name: plot.name })
+		} catch (_) {
+			// file doesn't exist for this sample. this is allowed
+		}
+	}
+	const imgs = ds.queries.singleCell?.images
+	if (imgs) {
+		const imgFile = path.join(serverconfig.tpmasterdir, imgs.folder, sampleId, imgs.fileName)
+		try {
+			await file_is_readable(imgFile)
+			plots.push({ name: imgs?.label || 'Image' })
+		} catch (_) {
+			// image doesn't exist for this sample.
+		}
+	}
+	return { plots }
+}
+
 /** Adds ds.queries.singleCell.geneExpression.get() on init() if geneExpression.src is 'native'.
  * @param G ds.queries.singleCell.geneExpression
  */
@@ -394,7 +409,12 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 	}
 }
 
-function gdc_validateGeneExpression(G, ds, genome) {
+/** Adds ds.queries.singleCell.geneExpression.get() on init() if geneExpression.src is 'gdcapi'.
+ * @param G ds.queries.singleCell.geneExpression
+ * @param ds entire ds config
+ * @param genome entire genome config
+ * */
+function gdc_validateGeneExpression(G: SingleCellGeneExpressionGdc, ds: any, genome: any): void {
 	G.sample2gene2expressionBins = {} // cache for binning gene expression values
 	// client actually queries /termdb/singlecellData route for gene exp data
 	G.get = async (q: TermdbSingleCellDataRequest) => {
@@ -453,7 +473,7 @@ function gdc_validateGeneExpression(G, ds, genome) {
 	}
 }
 
-function colorColumn2terms(plots, ds) {
+function colorColumn2terms(plots: SingleCellPlot[], ds: any): void {
 	/** Collect all possible tws defined per plot and make available
 	 * for vocabApi methods later.*/
 	const termSet = new Set()
