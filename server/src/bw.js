@@ -1,10 +1,8 @@
 import * as utils from './utils.js'
-import serverconfig from './serverconfig.js'
-import { spawn } from 'child_process'
 import { createCanvas } from 'canvas'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { rgb } from 'd3-color'
-
+import { run_python } from '@sjcrh/proteinpaint-python'
+import { mayLog } from './helpers.ts'
 /*
 
 NOTE:
@@ -74,18 +72,21 @@ async function handle_tkbigwig(req, res, genomes) {
 		return await getBedgraph(req, res, file, pa)
 	}
 
+	const t = new Date()
 	for (const r of req.query.rglst) {
-		const out = await run_bigwigsummary(req, r, file)
+		const bins = await run_bigwigsummary(req, r, file)
 
-		if (out) {
-			r.values = out.trim().split('\t').map(Number.parseFloat)
+		if (bins) {
+			r.values = bins
 			if (req.query.dividefactor) {
 				r.values = r.values.map(i => i / req.query.dividefactor)
 			}
 		}
 	}
+	mayLog('bw python', Date.now() - t)
 
 	res.send(plotWiggle(req.query, pa))
+	mayLog('bw python+rendering', Date.now() - t)
 }
 
 /*
@@ -142,9 +143,6 @@ export function plotWiggle(q, pa) {
 		return { src: canvas.toDataURL(), nodata: true }
 	}
 
-	const pointwidth = 1 // line/dot plot width
-	const pointshift = q.dotplotfactor ? 1 / q.dotplotfactor : 1 // shift distance
-
 	let maxv = 0,
 		minv = 0
 
@@ -157,7 +155,7 @@ export function plotWiggle(q, pa) {
 		for (const r of q.rglst) {
 			if (r.values) {
 				for (const v of r.values) {
-					if (Number.isNaN(v)) continue
+					if (Number.isNaN(Number(v))) continue
 					if (v >= 0) positive.push(v)
 					if (v <= 0) negative.push(v)
 				}
@@ -196,9 +194,10 @@ export function plotWiggle(q, pa) {
 		let x = 0
 		for (const r of q.rglst) {
 			if (r.values) {
+				const [pointwidth, pointshift] = getP(r, q)
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
-					if (Number.isNaN(v)) continue
+					if (Number.isNaN(Number(v))) continue
 					ctx.fillStyle =
 						v >= maxv
 							? q.pcolor2
@@ -207,7 +206,7 @@ export function plotWiggle(q, pa) {
 							: v <= minv
 							? q.ncolor2
 							: 'rgba(' + rgbn + ',' + v / minv + ')'
-					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
+					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * (i + 1) : pointshift * i))
 					ctx.fillRect(x2, 0, pointwidth, q.barheight)
 				}
 			}
@@ -221,11 +220,12 @@ export function plotWiggle(q, pa) {
 		let x = 0
 		for (const r of q.rglst) {
 			if (r.values) {
+				const [pointwidth, pointshift] = getP(r, q)
 				for (let i = 0; i < r.values.length; i++) {
 					const v = r.values[i]
-					if (Number.isNaN(v)) continue
-
-					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
+					if (Number.isNaN(Number(v))) continue
+					// for reverse region, i+1 is needed to correctly compute plot start position
+					const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * (i + 1) : pointshift * i))
 
 					if (q.bgcolor) {
 						// track defines bg color. draw it for all loci with valid value
@@ -262,6 +262,17 @@ export function plotWiggle(q, pa) {
 	}
 	result.src = canvas.toDataURL()
 	return result
+}
+
+function getP(r, q) {
+	// returns [pointwidth, pointshift]
+	let w
+	if (r.stop - r.start >= r.width) {
+		w = 1
+	} else {
+		w = r.width / (r.stop - r.start)
+	}
+	return [w, q.dotplotfactor ? w / q.dotplotfactor : w]
 }
 
 async function getBedgraph(req, res, file, pa) {
@@ -361,33 +372,16 @@ function makeyscale() {
 	return yscale
 }
 
-function run_bigwigsummary(req, r, file) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(serverconfig.bigwigsummary, [
-			'-udcDir=' + serverconfig.cachedir,
-			file,
-			r.chr,
-			r.start,
-			r.stop,
-			Math.ceil(r.width * (req.query.dotplotfactor || 1))
-		])
-		const out = []
-		const out2 = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.stderr.on('data', i => out2.push(i))
-		ps.on('close', code => {
-			const err = out2.join('')
-			if (err.length) {
-				if (err.startsWith('no data')) {
-					resolve()
-				} else {
-					// in case of invalid file the message is "Couldn't open /path/to/tp/..."
-					// must not give away the tp path!!
-					reject('Cannot read bigWig file')
-				}
-			} else {
-				resolve(out.join(''))
-			}
-		})
-	})
+async function run_bigwigsummary(req, r, file) {
+	const input_json = {
+		bw_file: file,
+		chromosome: r.chr,
+		start: r.start,
+		end: r.stop,
+		n_bins: Math.ceil(Math.min(r.stop - r.start, r.width) * (req.query.dotplotfactor || 1))
+	}
+	const python_output = await run_python('bigWigSummary.py', JSON.stringify(input_json))
+	const bins = typeof python_output === 'string' ? JSON.parse(python_output) : []
+	if (bins.length == 0) throw `Couldn't find data for provided file`
+	return bins
 }

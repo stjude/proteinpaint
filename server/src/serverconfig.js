@@ -53,7 +53,6 @@ if (!serverconfig.tabix) serverconfig.tabix = 'tabix'
 if (!serverconfig.samtools) serverconfig.samtools = 'samtools'
 if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
 if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'
-if (!serverconfig.bigwigsummary) serverconfig.bigwigsummary = 'bigWigSummary'
 if (!serverconfig.bigBedToBed) serverconfig.bigBedToBed = 'bigBedToBed'
 if (!serverconfig.bigBedInfo) serverconfig.bigBedInfo = 'bigBedInfo'
 if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
@@ -228,7 +227,6 @@ if (process.env.PP_MODE?.startsWith('container')) {
 		tpmasterdir: '/home/root/pp/tp',
 		cachedir: '/home/root/pp/cache',
 		hicstraw: '/home/root/pp/tools/straw',
-		bigwigsummary: '/home/root/pp/tools/bigWigSummary',
 		bigBedToBed: '/home/root/pp/tools/bigBedToBed',
 		bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems',
 		bigBedInfo: '/home/root/pp/tools/bigBedInfo'
