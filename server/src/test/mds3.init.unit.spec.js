@@ -1568,7 +1568,7 @@ test('mayFilterByMaf: OR combination of maf and alt depth', t => {
 })
 
 test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
-	t.plan(7)
+	t.plan(11)
 
 	const format = {
 		tumor_DNA_WGS: { ID: 'tumor_DNA_WGS', Number: 'R', Type: 'Integer', Description: 'Tumor DNA WGS' },
@@ -1610,6 +1610,57 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	const qNoFormat = makeQ()
 	delete qNoFormat.byrange._tk.format
 	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /byrange._tk.format is missing/, 'throws when format missing')
+
+	// a dataset-configured depth term with a valid mafFormatKey passes validation
+	const qDepth = makeQ()
+	qDepth.mafFilter.terms.push({
+		id: 'my_total_depth',
+		name: 'my total depth',
+		parent_id: null,
+		isleaf: true,
+		type: 'integer',
+		mafFilterMode: 'totalDepth',
+		mafFormatKey: 'tumor_DNA_WGS'
+	})
+	t.doesNotThrow(() => mayValidateBcfMafFilter(qDepth), 'configured depth term with valid mafFormatKey passes')
+
+	// a configured depth term missing mafFormatKey throws
+	const qNoKey = makeQ()
+	qNoKey.mafFilter.terms.push({
+		id: 'bad_depth',
+		name: 'bad',
+		parent_id: null,
+		isleaf: true,
+		type: 'integer',
+		mafFilterMode: 'altDepth'
+	})
+	t.throws(
+		() => mayValidateBcfMafFilter(qNoKey),
+		/missing mafFormatKey/,
+		'configured depth term without mafFormatKey throws'
+	)
+
+	// a configured depth term with an unknown mafFormatKey throws
+	const qBadKey = makeQ()
+	qBadKey.mafFilter.terms.push({
+		id: 'bad_depth',
+		name: 'bad',
+		parent_id: null,
+		isleaf: true,
+		type: 'integer',
+		mafFilterMode: 'totalDepth',
+		mafFormatKey: 'no_such_field'
+	})
+	t.throws(
+		() => mayValidateBcfMafFilter(qBadKey),
+		/unknown FORMAT key/,
+		'configured depth term with unknown mafFormatKey throws'
+	)
+
+	// an unknown mafFilterMode throws
+	const qBadMode = makeQ()
+	qBadMode.mafFilter.terms[0].mafFilterMode = 'bogus'
+	t.throws(() => mayValidateBcfMafFilter(qBadMode), /unknown mafFilterMode/, 'unknown mafFilterMode throws')
 })
 
 const mafFilter = {

@@ -867,12 +867,23 @@ export function mayValidateBcfMafFilter(q) {
 	if (!format) throw 'snvindel.mafFilter is set but byrange._tk.format is missing'
 	if (q.mafFilter._depthTermsAdded) return // already processed (init may run more than once)
 
-	// validate that user-defined terms reference real FORMAT keys
+	// validate that every term references real FORMAT keys, branching by mode.
+	// (depth terms are appended below, after this loop, so only user-defined terms are seen here.)
 	for (const term of q.mafFilter.terms) {
-		if (term.mafFilterMode) continue // generated depth term, skip
-		const keys = term.child_ids?.length ? term.child_ids : [term.id]
-		for (const key of keys) {
-			if (!format[key]) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${key}"`
+		const mode = term.mafFilterMode || 'maf'
+		if (mode == 'maf') {
+			// maf-mode term reads term.id, or sums across term.child_ids[]
+			const keys = term.child_ids?.length ? term.child_ids : [term.id]
+			for (const key of keys) {
+				if (!format[key]) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${key}"`
+			}
+		} else if (mode == 'totalDepth' || mode == 'altDepth') {
+			// depth-mode term reads a single raw FORMAT key from term.mafFormatKey
+			if (!term.mafFormatKey) throw `snvindel.mafFilter term "${term.id}" (${mode}) is missing mafFormatKey`
+			if (!format[term.mafFormatKey])
+				throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${term.mafFormatKey}"`
+		} else {
+			throw `snvindel.mafFilter term "${term.id}" has unknown mafFilterMode "${term.mafFilterMode}"`
 		}
 	}
 
