@@ -293,7 +293,7 @@ export async function run_chat_pipeline(
 		mayLog('####### Fifth/Final phase: From TwTvs Objects to Plot States #######')
 		mayLog('#################################################')
 		time = new Date().valueOf()
-		ai_output_json = resolveToPlotState(twTvsObj, plotType, subplotType)
+		ai_output_json = await resolveToPlotState(twTvsObj, plotType, ds, subplotType)
 		mayLog('Time taken to resolve to plot state:', formatElapsedTime(Date.now() - time))
 		// TODO: might need a validation step here to check if the scaffoldResult contains valid term types that
 		// are present in the dataset and compatible with the plot type, and if not return an error message to the user.

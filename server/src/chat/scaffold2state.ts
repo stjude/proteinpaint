@@ -1,6 +1,8 @@
 import { mayLog } from '#src/helpers.ts'
+import { get_samples } from '#src/termdb.sql.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { TermTypes } from '#shared/terms.js'
+import { generate_group_name_from_tvslst } from './utils.ts'
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
@@ -63,7 +65,7 @@ function isValidSubplot(subplotType: string, input: any): boolean {
  * input: is Tw or TVS object
  * output: a plot state object that can be used to generate the appropriate plot
  */
-export function resolveToPlotState(input: any, plotType: string, subplotType?: string) {
+export async function resolveToPlotState(input: any, plotType: string, ds: any, subplotType?: string) {
 	// }, llm: LlmConfig) {
 	const plotState: any = { type: 'plot', plot: { chartType: plotType } }
 
@@ -98,11 +100,60 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		}
 	} else if (plotType === 'dge') {
 		// default method for differential gene expression analysis
+		const name1 = generate_group_name_from_tvslst(input.filter1)
+		const name2 = generate_group_name_from_tvslst(input.filter2)
+		const samples1 = await get_samples({ filter: input.filter1 }, ds, true) // true is to bypass permission check
+		const samples2 = await get_samples({ filter: input.filter2 }, ds, true) // true is to bypass permission check
+
+		const samples1lst = samples1.map((item: any) => ({
+			sampleId: item.id,
+			sample: item.name
+		}))
+		const samples2lst = samples2.map((item: any) => ({
+			sampleId: item.id,
+			sample: item.name
+		}))
+
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
 		plotState.plot.termType = TermTypes.GENE_EXPRESSION // placeholder(can this be something else as well?)
-		const groups = [input.filter1, input.filter2]
-		plotState.plot.samplelst = groups
+		const groups = [
+			{
+				name: name1,
+				in: true,
+				values: samples1lst
+			},
+			{
+				name: name2,
+				in: true,
+				values: samples2lst
+			}
+		]
+		plotState.plot.samplelst = { groups }
+		const tw = {
+			q: {
+				groups
+			},
+			term: {
+				name: name1 + ' vs ' + name2,
+				type: 'samplelst',
+				values: {
+					[name1]: {
+						color: 'purple',
+						key: name1,
+						label: name1,
+						list: samples1lst
+					},
+					[name2]: {
+						color: 'blue',
+						key: name2,
+						label: name2,
+						list: samples2lst
+					}
+				}
+			}
+		}
+		plotState.plot.tw = tw
 		plotState.method = 'edgeR'
 	} else if (plotType === 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
