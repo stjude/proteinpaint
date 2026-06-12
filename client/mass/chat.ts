@@ -164,11 +164,20 @@ class MassAiChatBot implements RxComponent {
 					} else if (result.type === 'html') {
 						serverBubble.html(result.html)
 					} else if (result.type === 'plot') {
-						this.app.dispatch({
-							type: 'plot_create',
-							config: result.plot
-						})
-						serverBubble.text(`${result.msg ? result.msg + '. ' : ''}Please refer to the plot generated below.`)
+						// Determine if plot state is complete or not. A field whose value carries a
+						// `possible_options` array means the server could not resolve that term and
+						// is offering the user a choice. If found, show click boxes; otherwise the
+						// plot state is complete and can be dispatched directly.
+						const optionField = findPossibleOptionsField(result.plot)
+						if (optionField) {
+							this.showPossibleOptions(serverBubble, result.plot, optionField, result.msg)
+						} else {
+							this.app.dispatch({
+								type: 'plot_create',
+								config: result.plot
+							})
+							serverBubble.text(`${result.msg ? result.msg + '. ' : ''}Please refer to the plot generated below.`)
+						}
 					}
 				} catch (e: any) {
 					if (e.stack) console.log(e.stack)
@@ -197,6 +206,38 @@ return the created bubble and allow to be modified
 		return bubble
 	}
 
+	// Render click boxes for an incomplete plot state. `fieldKey` is the field of `plot` whose
+	// value holds `possible_options`. Clicking a box completes the plot state by replacing that
+	// field with the chosen option's id and dispatches plot_create.
+	showPossibleOptions(bubble: any, plot: any, fieldKey: string, msg?: string) {
+		const options = plot[fieldKey].possible_options || []
+		bubble.text(`${msg ? msg + '. ' : ''}Multiple options are available. Please select one:`)
+		const boxDiv = bubble.append('div').style('margin-top', '5px')
+		for (const opt of options) {
+			boxDiv
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-mass-chat-option-${opt.id}`)
+				.style('display', 'inline-block')
+				.style('margin', '3px')
+				.style('padding', '5px 10px')
+				.style('border-radius', '5px')
+				.style('cursor', 'pointer')
+				.text(opt.name)
+				.on('click', () => {
+					// Complete the plot state with the chosen option's id and dispatch the plot.
+					const config = JSON.parse(JSON.stringify(plot))
+					config[fieldKey] = { id: opt.id }
+					this.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+					bubble.selectAll('*').remove()
+					bubble.text(`Selected "${opt.name}". Please refer to the plot generated below.`)
+				})
+		}
+	}
+
 	main() {
 		// If the subheader is hidden, it means the chat component is not visible, so we skip focusing the input to avoid accidental typing into the search/chat bar. The user can click on the chat again to focus when they want to use it.
 		if (this.opts.subheader.style('display') == 'none') {
@@ -217,6 +258,18 @@ function escapeHtml(s: string): string {
 		.replace(/>/g, '&gt;')
 		.replace(/"/g, '&quot;')
 		.replace(/'/g, '&#39;')
+}
+
+// Scan a plot state for a field whose value carries a `possible_options` array, indicating the
+// server could not resolve that term and is offering the user a list of choices. Returns the field
+// name (e.g. 'term') or null if the plot state is complete.
+function findPossibleOptionsField(plot: any): string | null {
+	if (!plot || typeof plot !== 'object') return null
+	for (const key of Object.keys(plot)) {
+		const val = plot[key]
+		if (val && typeof val === 'object' && Array.isArray(val.possible_options)) return key
+	}
+	return null
 }
 
 // Minimal renderers ported from MassSearch
