@@ -308,6 +308,52 @@ export function generate_group_name(filters: any[], db_rows: DbRows[]): string {
 	return name
 }
 
+/**
+ * Build a suitable differential-expression plot name from the two sample-group filters
+ * (filter1 vs filter2) assembled by resolveToTvs(). Each group name lists its individual filter
+ * variables separated by their boolean flags ('&' for AND, '|' for OR)
+ *
+ * Adapted from the legacy generate_group_name(): instead of walking a flat filter array it walks
+ * the tvslst structure ({ type:'tvslst', join, lst:[{ type:'tvs', tvs }, ...] }), since that is
+ * what the dge branch of resolveToPlotState() receives as input.filter1 / input.filter2.
+ */
+
+/** Recursively turn a tvslst into its filter-variable labels separated by boolean flags. */
+export function generate_group_name_from_tvslst(tvslst: any): string {
+	if (!tvslst || !Array.isArray(tvslst.lst) || tvslst.lst.length === 0) return ''
+	// 'and' → '&', 'or' → '|'; default to '&' when join is absent (single leaf or LLM omission)
+	const flag = tvslst.join === 'or' ? '|' : '&'
+	const parts: string[] = []
+	for (const item of tvslst.lst) {
+		if (item.type === 'tvslst') {
+			// nested group — wrap in parentheses to preserve grouping
+			const nested = generate_group_name_from_tvslst(item)
+			if (nested) parts.push(`(${nested})`)
+		} else if (item.type === 'tvs' && item.tvs) {
+			parts.push(generate_tvs_label(item.tvs))
+		}
+	}
+	return parts.join(flag)
+}
+
+/** Label for a single tvs leaf: variable name plus its category value(s) or numeric range. */
+function generate_tvs_label(tvs: any): string {
+	const termName = tvs.term?.name || tvs.term?.id || ''
+	if (Array.isArray(tvs.values) && tvs.values.length > 0) {
+		// categorical leaf
+		const labels = tvs.values.map((v: any) => v.label || v.key).join(', ')
+		return `${termName}=${labels}`
+	}
+	if (Array.isArray(tvs.ranges) && tvs.ranges.length > 0) {
+		// numeric leaf
+		const r = tvs.ranges[0]
+		if (r.start != null && r.stop != null) return `${r.start}<=${termName}<=${r.stop}`
+		if (r.start != null) return `${termName}>=${r.start}`
+		if (r.stop != null) return `${termName}<=${r.stop}`
+	}
+	return termName
+}
+
 function find_label(filter: any, db_rows: DbRows[]): string {
 	let label = ''
 	for (const row of db_rows) {
