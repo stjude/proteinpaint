@@ -495,21 +495,21 @@ function handle_click(event, self, chart) {
 				}
 			}
 		})
-	}
 
-	if (self.opts.allow2selectSamples) {
-		const ss = self.opts.allow2selectSamples
-		options.push({
-			label: ss.buttonText,
-			callback: async () => {
-				const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
-				const samples = await getSamples(arg)
-				ss.callback({
-					samples: await self.app.vocabApi.convertSampleId(samples, ss.attributes),
-					source: ss.defaultSelectionLabel || `Selected from barchart`
-				})
-			}
-		})
+		if (self.opts.allow2selectSamples) {
+			const ss = self.opts.allow2selectSamples
+			options.push({
+				label: ss.buttonText,
+				callback: async () => {
+					const arg = getListSamplesArg(event, self, data.seriesId, data.dataId, chart.chartId)
+					const samples = await getSamples(arg)
+					ss.callback({
+						samples: await self.app.vocabApi.convertSampleId(samples, ss.attributes),
+						source: ss.defaultSelectionLabel || `Selected from barchart`
+					})
+				}
+			})
+		}
 	}
 
 	// TODO: add to cart
