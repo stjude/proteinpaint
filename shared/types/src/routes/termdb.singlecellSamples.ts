@@ -1,4 +1,5 @@
 import type { ErrorResponse } from './errorResponse.ts'
+import type { Filter } from '../filter.ts'
 
 export type SingleCellSample = {
 	/** Sample name, required */
@@ -25,7 +26,7 @@ export type TermdbSingleCellSamplesRequest = {
 	genome: string
 	/** Dataset label */
 	dslabel: string
-	filter?: any // for termdb
+	filter?: Filter // for termdb
 	filter0?: any //Filter0 // for gdc
 }
 type ValidResponse = {
