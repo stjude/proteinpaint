@@ -1,4 +1,3 @@
-import type { RouteApi, RoutePayload } from '#types'
 import type {
 	Cell,
 	ColorLegendEntry,
@@ -8,8 +7,11 @@ import type {
 	ShapeLegendEntry,
 	SingleCellRange,
 	TermdbSingleCellPlotsRequest,
+	RouteApi,
+	RoutePayload,
 	ValidSingleCellPlotsResponse
 } from '#types'
+import { TermdbSingleCellPlotsExample } from '#types'
 import { validGenomeDs, validString, validNumber } from '#routes/common.ts'
 import { getColors, getCoordinate, calculatePadding, xAxisOffSet, yAxisOffSet } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
@@ -26,7 +28,8 @@ const payload: RoutePayload = {
 		typeId: 'TermdbSingleCellPlotsRequest',
 		checker: validTermdbSingleCellPlotsRequest
 	},
-	response: { typeId: 'TermdbSingleCellPlotsResponse' }
+	response: { typeId: 'TermdbSingleCellPlotsResponse' },
+	examples: [TermdbSingleCellPlotsExample]
 }
 
 export const api: RouteApi = {
