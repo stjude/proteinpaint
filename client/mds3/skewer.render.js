@@ -293,14 +293,16 @@ export function skewer_make(tk, block) {
 			click_variant(d, tk, block, event.target.getBoundingClientRect(), event.target)
 		})
 	// disc rims
+	// precompute rim1 start angle for every disc, so rim2-only (e.g. relapse-only) discs
+	// still get a valid startAngle even when rim1count==0 and the rim1 arc below is skipped
+	discg.each(d => {
+		d.rim1_startangle = (Math.PI * 2 * (d.rim1count || 0)) / d.occurrence
+	})
 	const rimfunc = d3arc()
 		.innerRadius(d => d.radius)
 		.outerRadius(d => d.radius + d.rimwidth)
 		.startAngle(0)
-		.endAngle(d => {
-			d.rim1_startangle = (Math.PI * 2 * d.rim1count) / d.occurrence
-			return d.rim1_startangle
-		})
+		.endAngle(d => d.rim1_startangle)
 	discg
 		.filter(d => d.rim1count > 0)
 		.append('path')

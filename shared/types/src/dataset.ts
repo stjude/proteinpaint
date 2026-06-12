@@ -140,6 +140,8 @@ type SkewerRim = {
 	formatKey: string
 	/** 'somatic' or 'germline', generally germline */
 	rim1value: string
+	/** optional second rim, e.g. 'relapse' */
+	rim2value?: string
 	/** 'somatic' or 'germline', generally somatic */
 	noRimValue: string
 }
