@@ -123,7 +123,7 @@ const mapping_prefix = 'ssm_occurrence_centrics'
 export async function gdcBuildDictionary(ds) {
 	if (!ds.init) ds.init = {}
 	// track this step so that an error may be associated with the dictionary build step;
-	// this steps typically takes about 0.7 seconds from start to finish
+	// this step typically takes about 0.7 seconds from start to finish
 	ds.init.step = 'gdcBuildDictionary()'
 
 	const id2term = new Map()
@@ -752,8 +752,8 @@ function makeTermdbQueries(ds, id2term) {
 				'summarizeMutationSurvival',
 				'summarizeMutationCnv',
 				'summarizeGeneexpSurvival'
-				// 'regression',  // re-enable thee after Xanthopoulos release
-				// 'cox'
+				// 'regression',  // re-enable after Xanthopoulos release
+				// 'cox', // re-enable after Xanthopoulos release
 			]
 		}
 		const numericTypeCount = {}
