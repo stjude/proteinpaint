@@ -231,6 +231,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.cnv) {
 		q2.cnv = {}
 		for (const k of [
+			'type',
 			'cnvMaxLength',
 			'cnvGainCutoff',
 			'cnvLossCutoff',

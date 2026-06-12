@@ -387,6 +387,9 @@ export default function (): Mds3 {
 				dtLst: [2, 5]
 			},
 			cnv: {
+				// cnv values in this ds are log2 ratios (diploid baseline 0); declared explicitly so
+				// GRIN2 classifies gain/loss with baseline-0 semantics. Absent => same default.
+				type: 'log2ratio',
 				file: 'files/hg38/TermdbTest/TermdbTest_CNV_gene.gz'
 			},
 			itd: {

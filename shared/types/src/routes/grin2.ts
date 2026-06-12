@@ -61,12 +61,16 @@ export type GRIN2Request = {
 		mafFilter?: Filter
 	}
 
-	/** Options for filtering CNV file content */
+	/** Options for filtering CNV file content. Threshold semantics depend on the dataset's
+	 * cnv value type (ds.queries.cnv.type): 'log2ratio'/'segmean' use a diploid baseline of 0
+	 * (defaults -0.4/0.4); 'copyNumber' uses absolute integer copy number, baseline 2 (e.g. loss<=1,
+	 * gain>=3); 'category' is a qualitative gain/loss call and ignores these thresholds. The type is
+	 * read server-side from ds config, so it is not part of this request. */
 	cnvOptions?: {
-		/** Threshold for copy number loss detection */
-		lossThreshold?: number // Default: -0.4
-		/** Threshold for copy number gain detection */
-		gainThreshold?: number // Default: 0.3
+		/** Loss threshold; interpreted per ds.queries.cnv.type. Ignored for 'category'. Default: -0.4 (log2ratio/segmean) */
+		lossThreshold?: number
+		/** Gain threshold; interpreted per ds.queries.cnv.type. Ignored for 'category'. Default: 0.4 (log2ratio/segmean) */
+		gainThreshold?: number
 		/** Maximum segment length to include (0 = no filter) */
 		maxSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */
