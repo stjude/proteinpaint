@@ -239,7 +239,9 @@ function addRangeTableNoDensity(self, tvs) {
 	brush.equation_td = rangeTr.append('td')
 	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => {}, { width: '125px' })
 
-	if (self.opts.isMafFilter) {
+	// for maf filter tvs, the term's mode determines which metric is filtered
+	const mafFilterMode = self.opts.isMafFilter ? tvs.term.mafFilterMode || 'maf' : null
+	if (mafFilterMode == 'maf') {
 		// maf filter tvs
 		// render maf range input and min allelic depth input
 		rangeLabelTd.text('MAF Range (0-1)')
@@ -259,6 +261,20 @@ function addRangeTableNoDensity(self, tvs) {
 			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 			.style('border-radius', '13px')
 			.style('margin-top', '10px')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('apply')
+			.on('click', clickApply)
+	} else if (mafFilterMode == 'totalDepth' || mafFilterMode == 'altDepth') {
+		// allelic depth filter tvs; render an integer range input
+		rangeLabelTd.text(mafFilterMode == 'totalDepth' ? 'Total Depth' : 'Alt Allele Depth')
+		brush.apply_btn = rangeTr
+			.append('td')
+			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
+			.style('border-radius', '13px')
+			.style('margin', '5px')
+			.style('margin-left', '10px')
+			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.text('apply')
