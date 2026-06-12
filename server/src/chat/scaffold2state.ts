@@ -154,7 +154,15 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 			}
 		}
 		plotState.plot.tw = tw
-		plotState.method = 'edgeR'
+		let method = 'edgeR' // default method
+		if (!input.method) {
+			method = 'edgeR'
+		} else if (input.method === 'edger') {
+			method = 'edgeR'
+		} else if (input.method === 'limma' || input.method === 'wilcoxon') {
+			method = input.method
+		}
+		plotState.plot.settings = { volcano: { method: method } }
 	} else if (plotType === 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
 		// HierTerms is an array of tw objects produced by resolveToTw() for dictionary terms as well as nonDict variables such as ssGSEA.

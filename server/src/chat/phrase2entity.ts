@@ -147,7 +147,12 @@ export async function phrase2entity(
 			dge_term.filter = dge_term_filter as Entity[]
 			mayLog('Validation result for optional filter term:', JSON.stringify(dge_term.filter))
 		}
-
+		if (scaffoldResult.method) {
+			const method = scaffoldResult.method.toLowerCase()
+			if (method === 'edger' || method === 'limma' || method === 'wilcoxon') {
+				dge_term.method = method
+			}
+		}
 		return dge_term
 	} else if (plotType === 'survival') {
 		const scaffoldResult = scaffold as SurvivalScaffold

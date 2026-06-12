@@ -351,6 +351,7 @@ filter2: The second group in the comparison. Preserve the exact phrase from the 
 filter:  A global constraint that applies to BOTH groups — i.e. the overall cohort being 
          studied. Only populate this when the user restricts the analysis to a specific 
          subpopulation BEFORE or AFTER stating the two groups.
+method: The method specified by the user for performing differential expression analysis (e.g. "edger", "limma", "wilcoxon"). This is optional; if the user does not specify a method, this field can be omitted and the system will default to "edger".
 
 ## Extraction RULES
 1. ALWAYS extract exactly two groups into filter1 and filter2 — no more, no less.
@@ -395,6 +396,24 @@ A: {
   "filter1": "men",
   "filter2": "women",
   "filter": "Wilms tumor patients"
+}
+
+--- Two demographic groups with a cohort filter ---
+Q: "Compare gene expression between men and women in Wilms tumor patients using wilcoxon method"
+A: {
+  "filter1": "men",
+  "filter2": "women",
+  "filter": "Wilms tumor patients"
+  "method": "wilcoxon"
+}
+
+--- Two demographic groups with a cohort filter ---
+Q: "Compare gene expression between men and women in Wilms tumor patients using limma method"
+A: {
+  "filter1": "men",
+  "filter2": "women",
+  "filter": "Wilms tumor patients"
+  "method": "limma"
 }
 
 --- Implicit second group ---

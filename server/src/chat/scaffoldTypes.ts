@@ -20,7 +20,7 @@ export type DEScaffold = {
 	filter1: string
 	filter2: string
 	filter?: string
-	method?: 'edgeR' | 'DESeq2' | 'limma' // optional, default to edgeR if not provided
+	method?: 'edger' | 'wilcoxon' | 'limma' // optional, default to edgeR if not provided
 }
 
 export type MatrixScaffold = {
@@ -119,7 +119,7 @@ export type DEPhrase2EntityResult = {
 	filter1: Entity[] // will actually be nested structure later on
 	filter2: Entity[] // will actually be nested structure later on
 	filter?: Entity[]
-	method?: 'edgeR' | 'DESeq2' | 'limma' // optional, default to edgeR if not provided
+	method?: 'edger' | 'wilcoxon' | 'limma' // optional, default to edgeR if not provided
 }
 
 export type HierPhrase2EntityResult = {
