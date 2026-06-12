@@ -4,6 +4,7 @@ import { axisstyle, to_svg } from '#src/client'
 import { Menu, table2col, LegendCircleReference, addGeneSearchbox, DataPointInteractions, make_radios } from '#dom'
 import { PlotBase } from './PlotBase'
 import { dofetch3 } from '#common/dofetch'
+import { drawBrainRegionSamples } from './brainRegions.samples'
 import { axisBottom, axisLeft, scaleLinear, rgb, select, creator } from 'd3'
 import { shapeSelector, shapes } from '../dom/shapes.js'
 import { NumericModes, TermTypes } from '#shared/terms.js'
@@ -81,7 +82,19 @@ class ProteinView extends PlotBase implements RxComponent {
 		const data = await dofetch3('termdb/proteome', { body })
 		if (data.error) throw data.error
 		this.dom.body.selectAll('*').remove()
-		renderCohortVolcano(this.dom.body, data, this)
+
+		const topRow = this.dom.body
+			.append('div')
+			.style('display', 'flex')
+			.style('gap', '16px')
+			.style('align-items', 'flex-start')
+			.style('flex-wrap', 'wrap')
+		const volcanoApi = renderCohortVolcano(topRow, data, this)
+
+		const termdbConfig = this.app.vocabApi.termdbConfig
+		if (termdbConfig?.queries?.proteome?.brainRegions) {
+			await renderBrainRegionSamplesPanel(topRow, data, this, volcanoApi)
+		}
 
 		// group PTM cohorts by organism first, then isoform.
 		const ptmDataByOrganism = new Map<string, Map<string, any[]>>()
@@ -147,6 +160,7 @@ class ProteinView extends PlotBase implements RxComponent {
 			.style('display', 'flex')
 			.style('gap', '16px')
 			.style('margin-top', '10px')
+			.style('margin-left', '70px')
 			.style('align-items', 'flex-start')
 		const sidebar = layoutDiv
 			.append('div')
@@ -310,8 +324,177 @@ class ProteinView extends PlotBase implements RxComponent {
 	}
 }
 
+// Draws the brain "sample distribution" panel next to the cohort volcano, kept in
+// sync with it: the brain counts the exact samples the visible volcano dots represent,
+// and clicking a region hides the dots whose samples fall only in hidden regions.
+async function renderBrainRegionSamplesPanel(holder: any, data: any, self: ProteinView, volcanoApi: VolcanoApi) {
+	const brConfig = self.app.vocabApi.termdbConfig?.queries?.proteome?.brainRegions
+	if (!brConfig?.regions) return
+	const regions: { [code: string]: string } = brConfig.regions
+	const allRegionCodes = Object.keys(regions)
+	// Global sample-id → region-code map (deduped, sent once by the proteome route).
+	const sampleRegionById: { [sid: string]: string } = data?.sampleRegions || {}
+
+	// Each volcano dot is a proteome cohort entry carrying its own sample ids; a
+	// sample's region is looked up in sampleRegionById. Driving the brain from these
+	// (instead of a separate endpoint) makes the brain's counts match the volcano exactly.
+	const allDots: any[] = (data?.cohorts || []).filter((d: any) => Array.isArray(d.sampleIds) && d.sampleIds.length)
+	if (!allDots.length) return
+
+	// Created lazily on the first redraw so a stub volcano (no valid dots, hence no
+	// visibility callback) doesn't leave an empty panel div behind.
+	let panel: any
+
+	// Sentinel for samples that carry no configured brain-region annotation. Held
+	// in hiddenRegions only by "Show only" (and cleared by "Show all"), so a dot
+	// made up of unannotated samples is hidden when isolating a single region but
+	// stays visible under a plain per-region Hide.
+	const NO_REGION = '__no_region__'
+
+	const hiddenRegions = new Set<string>()
+	// Overwritten by the immediate onVisibilityChange fire below, before the first redraw.
+	let visibleDots: any[] = []
+
+	// Count DISTINCT samples (case + control) per region across the given dots.
+	// Distinct is required because isoform dots of one cohort share samples.
+	// unmappedCount = distinct samples whose region isn't one of the configured
+	// regions (so they're absent from the brain), surfaced as a legend note.
+	const countFromDots = (dotList: any[]) => {
+		const seen = new Set<string>()
+		const counts: { [code: string]: number } = {}
+		for (const code of allRegionCodes) counts[code] = 0
+		let totalSamples = 0
+		for (const dot of dotList) {
+			for (const sid of dot.sampleIds) {
+				if (seen.has(sid)) continue
+				seen.add(sid)
+				const code = sampleRegionById[sid]
+				if (code && counts[code] !== undefined) {
+					counts[code]++
+					totalSamples++
+				}
+			}
+		}
+		return { counts, totalSamples, unmappedCount: seen.size - totalSamples }
+	}
+
+	// A cohort is hidden if every region its samples occupy is hidden. Collect
+	// those cohort names to drive the volcano's external hide (the volcano hides
+	// by cohort name). Region-pinned cohorts map to a single region, so hiding a
+	// region hides exactly its cohorts.
+	const deriveHiddenCohorts = (): Set<string> => {
+		const hidden = new Set<string>()
+		if (!hiddenRegions.size) return hidden
+		const regionsByCohort = new Map<string, Set<string>>()
+		for (const dot of allDots) {
+			const set = regionsByCohort.get(dot.cohortName) || new Set<string>()
+			for (const sid of dot.sampleIds) {
+				// unannotated samples count as NO_REGION so "Show only" can hide them.
+				set.add(sampleRegionById[sid] || NO_REGION)
+			}
+			regionsByCohort.set(dot.cohortName, set)
+		}
+		for (const [cohort, set] of regionsByCohort) {
+			if (!set.size) continue
+			let allHidden = true
+			for (const code of set) {
+				if (!hiddenRegions.has(code)) {
+					allHidden = false
+					break
+				}
+			}
+			if (allHidden) hidden.add(cohort)
+		}
+		return hidden
+	}
+
+	// Separate Menu so the click popup doesn't fight with hover tooltips.
+	const regionMenu = new Menu({ padding: '0px' })
+
+	const applyHiddenRegions = () => {
+		volcanoApi.setExternallyHiddenCohorts(deriveHiddenCohorts())
+	}
+
+	const openRegionMenu = (code: string, event: MouseEvent) => {
+		self.dom.tip.hide()
+		regionMenu.clear()
+		const list = regionMenu.d.append('div').style('min-width', '140px').style('font-size', '13px')
+		const addItem = (label: string, action: () => void) => {
+			list
+				.append('div')
+				.style('padding', '6px 12px')
+				.style('cursor', 'pointer')
+				.style('user-select', 'none')
+				.text(label)
+				.on('mouseover', function (this: HTMLDivElement) {
+					this.style.background = '#f3f4f6'
+				})
+				.on('mouseout', function (this: HTMLDivElement) {
+					this.style.background = ''
+				})
+				.on('click', () => {
+					regionMenu.hide()
+					action()
+				})
+		}
+		const isHidden = hiddenRegions.has(code)
+		if (isHidden) {
+			addItem(`Show ${code}`, () => {
+				hiddenRegions.delete(code)
+				applyHiddenRegions()
+			})
+		} else {
+			addItem(`Hide ${code}`, () => {
+				hiddenRegions.add(code)
+				applyHiddenRegions()
+			})
+		}
+		addItem(`Show only ${code}`, () => {
+			hiddenRegions.clear()
+			for (const r of allRegionCodes) if (r !== code) hiddenRegions.add(r)
+			// also hide dots whose samples have no brain-region annotation
+			hiddenRegions.add(NO_REGION)
+			applyHiddenRegions()
+		})
+		if (hiddenRegions.size) {
+			addItem('Show all', () => {
+				hiddenRegions.clear()
+				applyHiddenRegions()
+			})
+		}
+		regionMenu.show(event.clientX, event.clientY)
+	}
+
+	const redraw = async () => {
+		if (!panel) panel = holder.append('div').style('margin-bottom', '14px')
+		panel.selectAll('*').remove()
+		const { counts, totalSamples, unmappedCount } = countFromDots(visibleDots)
+		await drawBrainRegionSamples(panel, {
+			regions,
+			counts,
+			totalSamples,
+			unmappedCount,
+			templateUrl: brConfig.templateUrl,
+			svgUrl: brConfig.svgUrl,
+			tip: self.dom.tip,
+			onRegionClick: openRegionMenu,
+			// A region with no visible-dot samples has count 0, which is exactly when it
+			// should be dimmed — so no separate "visible regions" set is needed.
+			isRegionDimmed: (code: string) => hiddenRegions.has(code) || (counts[code] ?? 0) === 0
+		})
+	}
+
+	// Fires once immediately with the initial visible dots, then on every change.
+	volcanoApi.onVisibilityChange(({ dots }) => {
+		visibleDots = dots
+		redraw()
+	})
+}
+
 function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const dots: any[] = []
+	// Global sample-id → region-code map (deduped, sent once by the proteome route).
+	const sampleRegionById: { [sid: string]: string } = data?.sampleRegions || {}
 
 	for (const cohortData of data?.cohorts || []) {
 		const log2fc = getLog2Ratio(cohortData.foldChange)
@@ -332,7 +515,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			pValue,
 			score: -Math.log10(Math.max(pValue, 1e-300)),
 			testedN: Number.isFinite(testedN) ? testedN : 0,
-			controlN: Number.isFinite(controlN) ? controlN : 0
+			controlN: Number.isFinite(controlN) ? controlN : 0,
+			// per-dot sample identity (case + control); each sample's region comes from the
+			// response-level sampleRegions map, used to count brain-region samples that
+			// exactly match the visible dots.
+			sampleIds: Array.isArray(cohortData.sampleIds) ? cohortData.sampleIds : []
 		})
 	}
 
@@ -355,12 +542,12 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 			.style('font-size', '.85em')
 			.style('color', '#666')
 			.text('No cohorts with valid fold-change and p-value to plot.')
-		return
+		return { setExternallyHiddenCohorts() {}, onVisibilityChange() {} }
 	}
 
-	const width = 640
-	const height = 660
-	const margin = { top: 40, right: 70, bottom: 120, left: 70 }
+	const width = 500
+	const height = 480
+	const margin = { top: 20, right: 30, bottom: 60, left: 70 }
 	const innerW = width - margin.left - margin.right
 	const innerH = height - margin.top - margin.bottom
 
@@ -629,6 +816,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	})
 	const hiddenColor = makeHiddenState()
 	const hiddenShape = makeHiddenState()
+	// Cohorts hidden by an external driver (the brain plot). Kept separate from
+	// hiddenColor so manual hide/show in the legend doesn't fight with it.
+	let externalHiddenCohorts: Set<string> = new Set()
+	const visibilityChangeListeners: ((v: { dots: any[] }) => void)[] = []
 	const getColorValueByMode = (d: any, mode: ColorMode) => {
 		switch (mode) {
 			case 'organism':
@@ -672,7 +863,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	const isDotHidden = (d: any) => {
 		const colorValue = getColorValueByMode(d, colorMode)
 		const shapeValue = getShapeValueByMode(d, shapeMode)
-		return hiddenColor[colorMode].has(colorValue) || hiddenShape[shapeMode].has(shapeValue)
+		return (
+			hiddenColor[colorMode].has(colorValue) ||
+			hiddenShape[shapeMode].has(shapeValue) ||
+			externalHiddenCohorts.has(d.cohortName)
+		)
 	}
 	const getDotDistancePx = (d1: any, d2: any) => {
 		const x = xScale(d1.log2fc) - xScale(d2.log2fc)
@@ -767,7 +962,7 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		.append('div')
 		.style('display', 'flex')
 		.style('align-items', 'flex-start')
-		.style('gap', '14px')
+		.style('gap', '4px')
 		.style('flex-wrap', 'wrap')
 
 	const svg = plotAndLegend
@@ -866,6 +1061,20 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		tbl.addRow('Disease', d.disease)
 		tbl.addRow('Assay', d.assayName)
 		tbl.addRow('Sample Set', d.cohortName)
+		// Distinct brain regions the dot's samples come from (names when configured).
+		const dotRegions = [
+			...new Set((d.sampleIds || []).map((sid: string) => sampleRegionById[sid]).filter(Boolean))
+		] as string[]
+		if (dotRegions.length) {
+			const regionNames = self.app.vocabApi.termdbConfig?.queries?.proteome?.brainRegions?.regions || {}
+			tbl.addRow(
+				'Brain Region',
+				dotRegions
+					.sort()
+					.map(c => (regionNames[c] ? `${regionNames[c]} (${c})` : c))
+					.join(', ')
+			)
+		}
 		tbl.addRow('Protein Accession', d.proteinAccession)
 		if (d.PTMType) {
 			tbl.addRow('PTM Type', d.PTMType)
@@ -955,6 +1164,10 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		updateDots()
 		renderColorLegend()
 		renderSizeLegend()
+		if (visibilityChangeListeners.length) {
+			const visibleDots = getVisibleDots()
+			for (const cb of visibilityChangeListeners) cb({ dots: visibleDots })
+		}
 	}
 
 	const termName = self.state.config?.tw?.term?.name || ''
@@ -1109,8 +1322,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const makeLegendItems = (items: string[], colorMap: Map<string, string>) => {
-			// Filter dots to exclude those hidden by shape filtering
-			const dotsVisibleByShape = dots.filter(d => !hiddenShape[shapeMode].has(getShapeValueByMode(d, shapeMode)))
+			// Filter dots to exclude those hidden by shape filtering or by the brain
+			// plot's region hide (externalHiddenCohorts), so legend n= reflects both.
+			const dotsVisibleByShape = dots.filter(
+				d => !hiddenShape[shapeMode].has(getShapeValueByMode(d, shapeMode)) && !externalHiddenCohorts.has(d.cohortName)
+			)
 			const openColorMenu = (event: any, name: string, swatch: any) => {
 				const menu = new Menu({ padding: '0px' })
 				const div = menu.d.append('div')
@@ -1400,8 +1616,11 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 		}
 
 		const drawShapeLegend = (items: string[], shapeMap: Map<string, number>) => {
-			// Filter dots to exclude those hidden by color filtering
-			const dotsVisibleByColor = dots.filter(d => !hiddenColor[colorMode].has(getColorValueByMode(d, colorMode)))
+			// Filter dots to exclude those hidden by color filtering or by the brain
+			// plot's region hide (externalHiddenCohorts), so legend n= reflects both.
+			const dotsVisibleByColor = dots.filter(
+				d => !hiddenColor[colorMode].has(getColorValueByMode(d, colorMode)) && !externalHiddenCohorts.has(d.cohortName)
+			)
 			const openShapeMenu = (event: any, name: string) => {
 				const menu = new Menu({ padding: '0px' })
 				const activeShapeMap = isCustomShapeGroupKey(name) ? customShapeIndicesByMode[shapeMode] : getShapeMapInUse()
@@ -1656,6 +1875,30 @@ function renderCohortVolcano(holder: any, data: any, self: ProteinView) {
 	updateRadiusScaleForVisibleDots()
 	renderColorLegend()
 	renderSizeLegend()
+
+	const api: VolcanoApi = {
+		setExternallyHiddenCohorts(cohorts: Set<string>) {
+			externalHiddenCohorts = cohorts
+			refreshAfterVisibilityChange()
+		},
+		onVisibilityChange(cb) {
+			visibilityChangeListeners.push(cb)
+			// Fire once immediately so the subscriber gets the initial state.
+			cb({ dots: getVisibleDots() })
+		}
+	}
+	return api
+}
+
+export type VolcanoApi = {
+	// Set the list of cohort names to hide externally (e.g. driven by the brain
+	// plot). Replaces any previously-set external hides.
+	setExternallyHiddenCohorts(cohorts: Set<string>): void
+	// Subscribe to visibility changes. Called once on subscribe with the current
+	// state, then on every subsequent change. `dots` is the currently-visible dot
+	// list (each carrying sampleIds) so subscribers can count the exact samples the
+	// volcano represents (region per sample comes from the response sampleRegions map).
+	onVisibilityChange(cb: (v: { dots: any[] }) => void): void
 }
 
 function launchViolinPlot(

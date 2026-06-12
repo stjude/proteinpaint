@@ -736,6 +736,32 @@ type ProteomeAssayConfig = {
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
+	/** Brain-region visualization config: powers the Brain Regional Proteome chart
+	 *  and the Protein View sample-distribution panel */
+	brainRegions?: {
+		organism: string
+		assay: string
+		diseases: string[]
+		regions: { [code: string]: string }
+		/** Column index in proteome_abundance carrying the disease value */
+		diseaseColumnIdx: number
+		/** Column index in proteome_abundance carrying the brain-region value */
+		regionColumnIdx: number
+		/** Optional extra filter values the matched cohort's caseFilter must include
+		 *  (e.g. to restrict cohort lookup to the Brain9 cohort) */
+		cohortFilter?: { columnIdx: number; columnValue: string | number }[]
+		/** URL of the grayscale brain template image (PNG) */
+		templateUrl: string
+		/** URL of the traced SVG defining region paths (one `<path id="{code}">` per region) */
+		svgUrl: string
+		/** Optional intro paragraph shown above the Brain Regional Proteome plot */
+		description?: string
+		/** Optional map: raw brain_region value in proteome_abundance → configured region code.
+		 *  Lets the Protein View sample-distribution panel consolidate raw values (e.g. FG, BM36)
+		 *  onto a single region code (TC). Values whose raw form already matches a configured
+		 *  region code don't need to appear here. */
+		regionValueRemap?: { [rawValue: string]: string }
+	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
 		[organism: string]: {

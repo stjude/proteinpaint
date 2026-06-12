@@ -15,6 +15,12 @@ export function init({ genomes }) {
 			if (!term?.name) throw 'term.name missing'
 
 			const cohorts: any[] = []
+			const brConfig = ds.queries.proteome.brainRegions
+			const regionRemap: { [raw: string]: string } = brConfig?.regionValueRemap || {}
+			// Global sample-id → region-code map, deduped across all dots: a sample's region
+			// is independent of which isoform/cohort dot it appears in, so it's recorded once
+			// in the response instead of being repeated on every dot.
+			const sampleRegions: { [sid: string]: string } = {}
 			for (const organismName in ds.queries.proteome.organisms) {
 				const organism = ds.queries.proteome.organisms[organismName]
 				for (const assayName in organism.assays) {
@@ -48,20 +54,34 @@ export function init({ genomes }) {
 						const prior = assay.cohorts[cohortName].prior
 						for (const entry of cohortData.allEntries || []) {
 							const s2v = entry.s2v
+							const sampleRegionsRaw = entry.sampleRegionsRaw || {}
 							const stats = getCohortStats(s2v, controlSampleIds, prior)
 							delete entry.s2v
+							delete entry.sampleRegionsRaw
 							entry.foldChange = stats.foldChange
 							entry.pValue = stats.pValue
 							entry.testedN = stats.testedN
 							entry.controlN = stats.controlN
 							if (assay.mclassOverride) entry.mclassOverride = assay.mclassOverride
 							if (organism.genomeName) entry.genomeName = organism.genomeName
+							// Per-dot sample identity so the brain plot can count exactly the samples
+							// this volcano dot represents (case + control); each sample's region is
+							// recorded once in the response-level sampleRegions map.
+							if (brConfig) {
+								entry.sampleIds = Object.keys(s2v)
+								for (const sid in sampleRegionsRaw) {
+									const raw = sampleRegionsRaw[sid]
+									if (raw == null) continue
+									const code = regionRemap[String(raw)] ?? String(raw)
+									if (brConfig.regions[code] !== undefined) sampleRegions[sid] = code
+								}
+							}
 							cohorts.push(entry)
 						}
 					}
 				}
 			}
-			res.send({ protein: term.name, cohorts })
+			res.send({ protein: term.name, cohorts, sampleRegions: brConfig ? sampleRegions : undefined })
 		} catch (e: any) {
 			if (e?.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
@@ -69,7 +89,7 @@ export function init({ genomes }) {
 	}
 }
 
-function getCohortStats(allS2v, controlSampleIds, prior: { d0: number; s0sq: number }) {
+export function getCohortStats(allS2v, controlSampleIds, prior: { d0: number; s0sq: number }) {
 	if (!allS2v || typeof allS2v != 'object') return { foldChange: null, pValue: null, testedN: 0, controlN: 0 }
 	const controlValues: number[] = []
 	const testedValues: number[] = []
@@ -380,7 +400,7 @@ export function countDistinctSamples(db: any, filters: { columnIdx: number; colu
 	return row?.cnt || 0
 }
 
-function queryDbRows(
+export function queryDbRows(
 	db,
 	matchColumn: 'gene' | 'identifier',
 	matchValue: string,
@@ -388,7 +408,7 @@ function queryDbRows(
 ) {
 	const { conditions, params } = buildFilterClause(filters)
 	const allConditions = [`${matchColumn} = ? COLLATE NOCASE`, ...conditions]
-	const sql = `SELECT organism, disease, identifier, protein_accession, isoform, modsite, gene, sample, value
+	const sql = `SELECT organism, disease, identifier, protein_accession, isoform, modsite, gene, sample, value, brain_region
 		FROM proteome_abundance
 		WHERE ${allConditions.join(' AND ')}`
 	return db.prepare(sql).all(matchValue, ...params)
@@ -396,6 +416,10 @@ function queryDbRows(
 
 async function getProteomeValuesFromCohort(ds, param, q) {
 	const db = ds.queries.proteome.db
+	// Only collect per-sample brain regions when the dataset configures brainRegions;
+	// otherwise it's wasted work that the proteome route would discard. (brain_region
+	// is a standard proteome_abundance column, so the SELECT always includes it.)
+	const hasBrainRegions = !!q.brainRegions
 	const { assay, cohort, organism } = param.dataTypeDetails
 	const organismConfig = q.organisms?.[organism]
 
@@ -493,10 +517,14 @@ async function getProteomeValuesFromCohort(ds, param, q) {
 						proteinAccession: row.protein_accession,
 						isoform: row.isoform, // refSeq transcript ID mapped from protein_accession
 						geneName: row.gene,
-						s2v: {}
+						s2v: {},
+						// raw brain_region per sample id (only when brainRegions is configured);
+						// remapped + finalized into entry.sampleRegions in the route's init().
+						sampleRegionsRaw: hasBrainRegions ? {} : undefined
 					})
 				}
 				entryMap.get(row.identifier).s2v[sid] = row.value
+				if (hasBrainRegions) entryMap.get(row.identifier).sampleRegionsRaw[sid] = row.brain_region
 			}
 			for (const entry of entryMap.values()) allEntries.push(entry)
 		} else {
