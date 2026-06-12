@@ -794,6 +794,7 @@ async function validate_query_snvindel(ds, genome) {
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
+		mayValidateBcfMafFilter(q)
 	}
 
 	if (q.byisoform) {
@@ -846,6 +847,65 @@ async function validate_query_snvindel(ds, genome) {
 			}
 		}
 	}
+}
+
+/*
+validates queries.snvindel.mafFilter against the bcf FORMAT fields, and auto-populates
+allelic-depth filter terms.
+
+q = ds.queries.snvindel
+
+- verifies every FORMAT key referenced by mafFilter.terms[] (via term.id or term.child_ids[])
+  exists in q.byrange._tk.format{}
+- for every FORMAT key with Number=="R" (one value per allele incl. reference, i.e. AD-style
+  "<ref>,<alt>"), appends two depth terms to mafFilter.terms[]: one for total depth (ref+alt)
+  and one for alternate-allele depth (alt). these surface as additional terms in the maf filter UI.
+*/
+export function mayValidateBcfMafFilter(q) {
+	if (!q.mafFilter) return // no maf filter on this ds
+	const format = q.byrange?._tk?.format
+	if (!format) throw 'snvindel.mafFilter is set but byrange._tk.format is missing'
+	if (q.mafFilter._depthTermsAdded) return // already processed (init may run more than once)
+
+	// validate that user-defined terms reference real FORMAT keys
+	for (const term of q.mafFilter.terms) {
+		if (term.mafFilterMode) continue // generated depth term, skip
+		const keys = term.child_ids?.length ? term.child_ids : [term.id]
+		for (const key of keys) {
+			if (!format[key]) throw `snvindel.mafFilter term "${term.id}" references unknown FORMAT key "${key}"`
+		}
+	}
+
+	// auto-populate allelic-depth terms, one pair per Number=="R" FORMAT key
+	for (const id in format) {
+		const f = format[id]
+		if (f.isGT) continue // genotype field, not a depth field
+		// mirror vcf parsing: AD is coerced to Number==R even if header omits it
+		if (f.Number != 'R' && id != 'AD') continue
+		q.mafFilter.terms.push({
+			id: id + '__totalDepth',
+			name: (f.Description || id) + ' total depth',
+			parent_id: null,
+			isleaf: true,
+			type: 'integer',
+			mafFilterMode: 'totalDepth',
+			mafFormatKey: id,
+			min: 0,
+			tvs: { ranges: [] }
+		})
+		q.mafFilter.terms.push({
+			id: id + '__altDepth',
+			name: (f.Description || id) + ' alt depth',
+			parent_id: null,
+			isleaf: true,
+			type: 'integer',
+			mafFilterMode: 'altDepth',
+			mafFormatKey: id,
+			min: 0,
+			tvs: { ranges: [] }
+		})
+	}
+	q.mafFilter._depthTermsAdded = true
 }
 
 // this function assumes file header uses integer sample id. TODO when all files are migrated to using string sample name, delete this function
@@ -3486,37 +3546,55 @@ export function mayFilterByMaf(mafFilter, m) {
 		let pass = false
 		if (item.type != 'tvs') throw 'unexpected item.type' // not supporting nested tvslst
 		const tvs = item.tvs
+		// each maf filter term has a mode that determines which metric is computed and tested:
+		// - 'maf': minor allele frequency, alt/(ref+alt), gated by minimum total depth (default)
+		// - 'totalDepth': total read depth, ref+alt
+		// - 'altDepth': alternate-allele read depth, alt
+		const mode = tvs.term.mafFilterMode || 'maf'
 		const alleleCnts = { ref: 0, alt: 0 } // allele counts for maf filter term
-		const minAllelicDepth = Number.isFinite(tvs.minAllelicDepth) && tvs.minAllelicDepth != 0 ? tvs.minAllelicDepth : 1
-		if (tvs.term.child_ids?.length) {
-			// maf filter term has child terms
-			// sum allele counts across child terms
+		let annotated = false
+		if (mode == 'maf' && tvs.term.child_ids?.length) {
+			// maf filter term has child terms; sum allele counts across child terms
 			for (const id of tvs.term.child_ids) {
-				addAlleleCnts(m, id, alleleCnts)
+				if (addAlleleCnts(m, id, alleleCnts)) annotated = true
 			}
 		} else {
-			// maf filter term does not have child terms
-			// get allele counts of term directly
-			addAlleleCnts(m, tvs.term.id, alleleCnts)
+			// single field: term.id for maf terms, mafFormatKey for depth terms
+			const fieldId = mode == 'maf' ? tvs.term.id : tvs.term.mafFormatKey
+			if (addAlleleCnts(m, fieldId, alleleCnts)) annotated = true
 		}
-		const { ref, alt } = alleleCnts
-		const total = ref + alt
-		if (total < minAllelicDepth) {
-			// allelic depth does not meet cutoff
-			// sample does not pass
+		if (!annotated) {
+			// sample is not annotated for this field; does not pass
 			passLst.push(pass)
 			continue
 		}
-		const maf = alt / total
-		// test if maf is in range of tvs
+		const { ref, alt } = alleleCnts
+		const total = ref + alt
+		let metric
+		if (mode == 'maf') {
+			const minAllelicDepth = Number.isFinite(tvs.minAllelicDepth) && tvs.minAllelicDepth != 0 ? tvs.minAllelicDepth : 1
+			if (total < minAllelicDepth) {
+				// allelic depth does not meet cutoff; sample does not pass
+				passLst.push(pass)
+				continue
+			}
+			metric = alt / total
+		} else if (mode == 'totalDepth') {
+			metric = total
+		} else if (mode == 'altDepth') {
+			metric = alt
+		} else {
+			throw 'unexpected mafFilterMode'
+		}
+		// test if metric is in range of tvs
 		const intvs = tvs.ranges.every(r => {
 			let startPass = true
 			let stopPass = true
 			if (Number.isFinite(r.start)) {
-				startPass = r.startinclusive ? maf >= r.start : maf > r.start
+				startPass = r.startinclusive ? metric >= r.start : metric > r.start
 			}
 			if (Number.isFinite(r.stop)) {
-				stopPass = r.stopinclusive ? maf <= r.stop : maf < r.stop
+				stopPass = r.stopinclusive ? metric <= r.stop : metric < r.stop
 			}
 			return startPass && stopPass
 		})
@@ -3528,15 +3606,17 @@ export function mayFilterByMaf(mafFilter, m) {
 }
 
 // add allele counts of maf field to total allele counts
+// returns true if the sample was annotated for this field, false otherwise
 function addAlleleCnts(m, mafFieldId, alleleCnts) {
 	const mafField = m[mafFieldId] // <ref read count>,<alt read count>
-	if (!mafField) return // sample not annotated for maf field
+	if (!mafField) return false // sample not annotated for maf field
 	const alleles = mafField.split(',').map(Number)
-	if (alleles.length != 2) return // skip multi-allelic variants
+	if (alleles.length != 2) return false // skip multi-allelic variants
 	const [ref, alt] = alleles
-	if (!Number.isFinite(ref) || !Number.isFinite(alt)) return
+	if (!Number.isFinite(ref) || !Number.isFinite(alt)) return false
 	alleleCnts.ref += ref
 	alleleCnts.alt += alt
+	return true
 }
 
 // may filter cnv segment by a minimum overlap with query

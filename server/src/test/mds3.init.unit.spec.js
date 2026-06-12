@@ -1,5 +1,5 @@
 import test from 'tape'
-import { filterByItem, filterByTvsLst, mayFilterByMaf } from '../mds3.init.js'
+import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter } from '../mds3.init.js'
 
 /*
 Tests:
@@ -1520,6 +1520,98 @@ test('mayFilterByMaf: mafFilter with child ids, min allelic depth', t => {
 	}
 })
 
+test('mayFilterByMaf: total depth filter', t => {
+	t.plan(4)
+	// total depth >= 100
+	t.equal(mayFilterByMaf(mafFilter_totalDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '70,40' }), true, '110 passes')
+	t.equal(
+		mayFilterByMaf(mafFilter_totalDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '70,20' }),
+		false,
+		'90 does not pass'
+	)
+	t.equal(
+		mayFilterByMaf(mafFilter_totalDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }),
+		true,
+		'100 passes (inclusive)'
+	)
+	t.equal(mayFilterByMaf(mafFilter_totalDepth, { dt: 1, class: 'M' }), false, 'unannotated does not pass')
+})
+
+test('mayFilterByMaf: alt allele depth filter', t => {
+	t.plan(3)
+	// alt depth >= 20
+	t.equal(mayFilterByMaf(mafFilter_altDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '10,25' }), true, 'alt 25 passes')
+	t.equal(
+		mayFilterByMaf(mafFilter_altDepth, { dt: 1, class: 'M', tumor_DNA_WGS: '10,15' }),
+		false,
+		'alt 15 does not pass'
+	)
+	t.equal(mayFilterByMaf(mafFilter_altDepth, { dt: 1, class: 'M' }), false, 'unannotated does not pass')
+})
+
+test('mayFilterByMaf: AND combination of maf and alt depth', t => {
+	t.plan(4)
+	// maf > 0.1 AND alt depth >= 20
+	t.equal(mayFilterByMaf(mafFilter_and, { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }), true, 'both pass')
+	t.equal(mayFilterByMaf(mafFilter_and, { dt: 1, class: 'M', tumor_DNA_WGS: '10,15' }), false, 'only maf passes')
+	t.equal(mayFilterByMaf(mafFilter_and, { dt: 1, class: 'M', tumor_DNA_WGS: '300,25' }), false, 'only alt depth passes')
+	t.equal(mayFilterByMaf(mafFilter_and, { dt: 1, class: 'M', tumor_DNA_WGS: '300,5' }), false, 'neither passes')
+})
+
+test('mayFilterByMaf: OR combination of maf and alt depth', t => {
+	t.plan(4)
+	// maf > 0.1 OR alt depth >= 20
+	t.equal(mayFilterByMaf(mafFilter_or, { dt: 1, class: 'M', tumor_DNA_WGS: '70,30' }), true, 'both pass')
+	t.equal(mayFilterByMaf(mafFilter_or, { dt: 1, class: 'M', tumor_DNA_WGS: '10,15' }), true, 'only maf passes')
+	t.equal(mayFilterByMaf(mafFilter_or, { dt: 1, class: 'M', tumor_DNA_WGS: '300,25' }), true, 'only alt depth passes')
+	t.equal(mayFilterByMaf(mafFilter_or, { dt: 1, class: 'M', tumor_DNA_WGS: '300,5' }), false, 'neither passes')
+})
+
+test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
+	t.plan(7)
+
+	const format = {
+		tumor_DNA_WGS: { ID: 'tumor_DNA_WGS', Number: 'R', Type: 'Integer', Description: 'Tumor DNA WGS' },
+		GT: { ID: 'GT', Number: '1', Type: 'String', isGT: true }
+	}
+	const makeQ = () => ({
+		byrange: { _tk: { format } },
+		mafFilter: {
+			opts: { joinWith: ['and', 'or'] },
+			filter: { type: 'tvslst', join: '', in: true, lst: [] },
+			terms: [{ id: 'tumor_DNA_WGS', name: 'Tumor DNA WGS', parent_id: null, isleaf: true, type: 'float' }]
+		}
+	})
+
+	const q = makeQ()
+	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'does not throw on valid filter')
+	t.equal(q.mafFilter.terms.length, 3, 'appended exactly 2 depth terms (1 user term + 2 generated)')
+	const generated = q.mafFilter.terms.filter(tm => tm.mafFilterMode)
+	t.deepEqual(
+		generated.map(tm => tm.mafFilterMode).sort(),
+		['altDepth', 'totalDepth'],
+		'generated totalDepth and altDepth terms'
+	)
+	t.ok(
+		generated.every(tm => tm.mafFormatKey == 'tumor_DNA_WGS'),
+		'generated terms reference the source FORMAT key, GT skipped'
+	)
+
+	// idempotency: a second call does not double-append
+	mayValidateBcfMafFilter(q)
+	t.equal(q.mafFilter.terms.length, 3, 'second call does not double-append')
+
+	// missing FORMAT key throws
+	const qBad = makeQ()
+	qBad.mafFilter.terms[0].id = 'no_such_field'
+	t.throws(() => mayValidateBcfMafFilter(qBad), /unknown FORMAT key/, 'throws on unknown FORMAT key')
+
+	// no byrange format throws when mafFilter present
+	const qNoFormat = makeQ()
+	delete qNoFormat.byrange._tk.format
+	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /byrange._tk.format is missing/, 'throws when format missing')
+})
+
 const mafFilter = {
 	type: 'tvslst',
 	join: '',
@@ -1551,6 +1643,59 @@ const mafFilter = {
 		}
 	]
 }
+
+const mafFilter_totalDepth = {
+	type: 'tvslst',
+	join: '',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id: 'tumor_DNA_WGS__totalDepth',
+					name: 'Tumor DNA WGS total depth',
+					parent_id: null,
+					isleaf: true,
+					type: 'integer',
+					mafFilterMode: 'totalDepth',
+					mafFormatKey: 'tumor_DNA_WGS',
+					min: 0
+				},
+				ranges: [{ start: 100, startinclusive: true, startunbounded: false, stopunbounded: true }]
+			}
+		}
+	]
+}
+
+const mafFilter_altDepth = {
+	type: 'tvslst',
+	join: '',
+	in: true,
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: {
+					id: 'tumor_DNA_WGS__altDepth',
+					name: 'Tumor DNA WGS alt depth',
+					parent_id: null,
+					isleaf: true,
+					type: 'integer',
+					mafFilterMode: 'altDepth',
+					mafFormatKey: 'tumor_DNA_WGS',
+					min: 0
+				},
+				ranges: [{ start: 20, startinclusive: true, startunbounded: false, stopunbounded: true }]
+			}
+		}
+	]
+}
+
+// maf > 0.1 combined with alt depth >= 20, used for AND/OR combination tests
+const mafComboLst = [structuredClone(mafFilter.lst[0]), structuredClone(mafFilter_altDepth.lst[0])]
+const mafFilter_and = { type: 'tvslst', join: 'and', in: true, lst: structuredClone(mafComboLst) }
+const mafFilter_or = { type: 'tvslst', join: 'or', in: true, lst: structuredClone(mafComboLst) }
 
 const mafFilter_childIds = {
 	type: 'tvslst',

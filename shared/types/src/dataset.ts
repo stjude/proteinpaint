@@ -221,11 +221,21 @@ export type FilterTermEntry = BaseTvsFilter & {
 	tvs?: TvsFilter
 	min?: number
 	max?: number
+	/** child term ids whose allele counts are summed for a maf filter term */
+	child_ids?: string[]
+	/** marks the default maf filter term */
+	default?: boolean
+	/** metric computed for a maf filter term; defaults to 'maf' when absent */
+	mafFilterMode?: 'maf' | 'totalDepth' | 'altDepth'
+	/** underlying bcf FORMAT key read by an auto-generated allelic-depth term */
+	mafFormatKey?: string
 }
 
 type FilterLstTvs = BaseTvsFilter & {
 	term: FilterTermEntry
 	values: (string | number | FilterValues)[]
+	/** minimum total read depth gate for a maf-mode filter term */
+	minAllelicDepth?: number
 }
 
 type FilterLstEntry = {
@@ -244,6 +254,8 @@ type VariantFilter = {
 	opts: { joinWith: string[] }
 	filter?: Filter
 	terms: FilterTermEntry[]
+	/** set once allelic-depth terms have been auto-populated, to keep init idempotent */
+	_depthTermsAdded?: boolean
 }
 
 /** one set of AC and AN info fields to retrieve data for this population */
