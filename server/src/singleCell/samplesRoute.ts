@@ -27,7 +27,6 @@ import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
-import { getData } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -227,12 +226,10 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	S.get = async (_q: TermdbSingleCellSamplesRequest) => {
 		const re: any = { samples: [...samples.values()] as SingleCellSample[] }
 		if (_q.filter?.lst?.length) {
-			const terms = _q.filter.lst.map(t => t?.tvs)
-			const data = await getData({ filter: _q.filter, filter0: _q.filter0, terms }, ds, true)
-			if (data?.refs?.bySampleId) {
-				const filteredSamples = new Set(Object.values(data.refs.bySampleId).map((s: any) => s.label))
-				re.samples = re.samples.filter(s => filteredSamples.has(s.sample))
-			}
+			const { get_samples } = await import('#src/termdb.sql.js')
+			const filtered = await get_samples({ filter: _q.filter, mapParent2Children: true }, ds, true)
+			const filteredSamples = new Set(filtered.map((s: any) => s.name))
+			re.samples = re.samples.filter(s => filteredSamples.has(s.sample))
 		}
 		if (q.metaResults) {
 			// meta analysis results exist. pass it along with samples
