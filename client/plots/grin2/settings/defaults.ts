@@ -3,6 +3,74 @@ export const CNV_LOSS_THRESHOLD_FALLBACK = -0.4
 export const CNV_GAIN_THRESHOLD_FALLBACK = 0.4
 export const CNV_MAX_SEG_LENGTH_FALLBACK = 2_000_000
 
+/** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. Mirrors CnvSegmentQuery in #types. */
+export type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
+
+/** Per-type defaults and slider bounds for the GRIN2 CNV threshold controls.
+ * - log2ratio/segmean: diploid baseline 0 (loss<0, gain>0)
+ * - copyNumber: absolute integer copy number, diploid baseline 2 (loss<=1, gain>=3, neutral=2)
+ * - category: qualitative gain/loss call, no numeric thresholds (controls hidden) */
+export type CnvTypeConfig = {
+	lossDefault: number
+	gainDefault: number
+	lossMin: number
+	lossMax: number
+	gainMin: number
+	gainMax: number
+	step: number
+	/** when true, the gain/loss threshold rows are not shown (qualitative call) */
+	hideThresholds: boolean
+	/** appended to the threshold row labels to convey units */
+	unitLabel: string
+}
+
+export const CNV_TYPE_CONFIG: Record<CnvType, CnvTypeConfig> = {
+	log2ratio: {
+		lossDefault: CNV_LOSS_THRESHOLD_FALLBACK,
+		gainDefault: CNV_GAIN_THRESHOLD_FALLBACK,
+		lossMin: -5,
+		lossMax: 0,
+		gainMin: 0,
+		gainMax: 5,
+		step: 0.05,
+		hideThresholds: false,
+		unitLabel: 'log2 ratio'
+	},
+	segmean: {
+		lossDefault: CNV_LOSS_THRESHOLD_FALLBACK,
+		gainDefault: CNV_GAIN_THRESHOLD_FALLBACK,
+		lossMin: -5,
+		lossMax: 0,
+		gainMin: 0,
+		gainMax: 5,
+		step: 0.05,
+		hideThresholds: false,
+		unitLabel: 'segment mean'
+	},
+	copyNumber: {
+		lossDefault: 1,
+		gainDefault: 3,
+		lossMin: 0,
+		lossMax: 2,
+		gainMin: 2,
+		gainMax: 20,
+		step: 1,
+		hideThresholds: false,
+		unitLabel: 'copy number'
+	},
+	category: {
+		lossDefault: 0,
+		gainDefault: 0,
+		lossMin: 0,
+		lossMax: 0,
+		gainMin: 0,
+		gainMax: 0,
+		step: 1,
+		hideThresholds: true,
+		unitLabel: ''
+	}
+}
+
 /** Default gene-overlap-fraction for the artifact-region mask: a gene is excluded when at least
  * this fraction of its span lies inside a selected blacklist region. The set of blacklist sources
  * (and whether the mask runs at all) comes from the per-source checkboxes, which are populated from
