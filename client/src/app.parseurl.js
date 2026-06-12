@@ -556,6 +556,14 @@ upon error, throw err message as a string
 			}
 			if (lst.length) par.hlregions = lst
 		}
+		if (urlp.has('aarange')) {
+			const [a, b] = urlp.get('aarange').split(',').map(Number)
+			if (Number.isInteger(a) && Number.isInteger(b) && a > 0 && b > a) {
+				par.aarange = [a, b]
+			} else {
+				throw 'invalid aarange'
+			}
+		}
 
 		par.tklst = await get_tklst(urlp, par.genome)
 

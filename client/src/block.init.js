@@ -325,6 +325,7 @@ async function step3(arg) {
 		hlaachange: arg.hlaachange,
 		hlvariants: arg.hlvariants,
 		hlregions: arg.hlregions,
+		aarange: arg.aarange,
 		gmmode: mode,
 		hidedatasetexpression: arg.hidedatasetexpression,
 		hidegenecontrol: arg.hidegenecontrol,
