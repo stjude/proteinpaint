@@ -210,14 +210,12 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		if (typeof input.term === 'string') {
 			plotState.plot.term = { id: input.term }
 		} else if (Array.isArray(input.term)) {
-			// Could not pin down a single survival term — return the list of available survival
-			// terms so the user can pick one.
-			const list = input.term
-				.map((r: any) => `  - "${r.name}"${r.description && r.description !== r.name ? `: ${r.description}` : ''}`)
-				.join('\n')
-			return {
-				type: 'text',
-				text: `Could not determine which survival term to plot. Please specify one of the available survival terms:\n${list}`
+			// Could not pin down a single survival term (not named in the prompt, or ambiguous) —
+			// return the list of available survival terms so the user can pick one. Each db_row's
+			// `name` is the survival term id (used downstream to build the plot state) and its
+			// `description` is the human-readable name shown in the UI.
+			plotState.plot.term = {
+				possible_options: input.term.map((r: any) => ({ id: r.name, name: r.description }))
 			}
 		} else {
 			throw 'Survival plot requires a survival term, but none was provided in the input.'
@@ -233,7 +231,7 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 			plotState.plot.filter = input.filter
 		}
 	} else {
-		throw 'Only summary plot type is supported for now'
+		throw 'Plot type: ' + plotType + ' not supported for now'
 	}
 	return plotState
 }
