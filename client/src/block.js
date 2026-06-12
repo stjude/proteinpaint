@@ -400,7 +400,7 @@ export class Block {
 				const b = coord.aa2gmcoord(arg.aarange[1], this.usegm)
 				if (!Number.isInteger(a) || !Number.isInteger(b)) throw new Error('invalid aarange')
 				for (const [i, r] of this.rglst.entries()) {
-					if (a > r.start && a < r.stop) {
+					if (a >= r.start && a <= r.stop) {
 						this.startidx = i
 						if (r.reverse) {
 							r.stop = a
@@ -408,7 +408,7 @@ export class Block {
 							r.start = a
 						}
 					}
-					if (b > r.start && b < r.stop) {
+					if (b >= r.start && b <= r.stop) {
 						this.stopidx = i
 						if (r.reverse) {
 							r.start = b
