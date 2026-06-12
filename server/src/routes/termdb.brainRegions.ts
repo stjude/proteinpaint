@@ -131,7 +131,8 @@ function init({ genomes }) {
 				svgUrl: brConfig.svgUrl
 			})
 		} catch (e: any) {
-			res.send({ error: e.message || e })
+			const status = typeof e?.status === 'number' ? e.status : 400
+			res.status(status).send({ status, error: e.message || String(e) })
 			if (e instanceof Error && e.stack) console.log(e)
 		}
 	}
