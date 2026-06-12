@@ -505,6 +505,10 @@ export async function resolveToTwTvs(
 		}
 	} else if (plotType === 'dge') {
 		for (const [key, value] of Object.entries(entity)) {
+			if (key === 'method') {
+				twTvsObjects[key] = typeof value === 'string' ? value.toLowerCase() : value
+				continue
+			}
 			const filterValues = value as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
