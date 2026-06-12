@@ -10,10 +10,10 @@ export type TermdbSingleCellPlotsRequest = {
 	singleCellPlot: {
 		/** Name of the single cell plot type, e.g. 'umap', 'tsne' */
 		name: string
-		sample?: { [index: string]: any }
+		sample?: { eID?: string; sID: string }
 	}
-	filter: Filter
-	filter0: Filter
+	filter?: Filter
+	filter0?: any //ds specific filter, specifically for api requests
 	/** When sample size is too large, canvas rendering uses
 	 * these settings to control how the plot is rendered. */
 	canvasSettings: {
@@ -118,7 +118,7 @@ const TermdbSingleCellPlotsRequestExample = {
 	dslabel: 'TermdbTest',
 	singleCellPlot: {
 		name: 'umap',
-		sample: { id: 'sample1' }
+		sample: { sID: 'sample1' }
 	},
 	filter: {
 		type: 'tvslst',
