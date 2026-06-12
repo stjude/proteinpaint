@@ -219,6 +219,10 @@ export async function inferTermObjFromEntity(
 	} else if (plotType === 'dge') {
 		const deEntity = entity as DEPhrase2EntityResult
 		for (const [key, value] of Object.entries(deEntity)) {
+			if (key === 'method') {
+				twObjects[key] = value as string
+				continue // method is not a term, so skip it
+			}
 			assert(value != undefined)
 			const filterResult = deEntity[key] as Entity[]
 			const filterValues: Value[] = []
