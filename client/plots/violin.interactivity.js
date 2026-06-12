@@ -71,6 +71,16 @@ export function setInteractivity(self) {
 				}
 			})
 		}
+		if (self.opts.allow2selectSamples) {
+			const ss = self.opts.allow2selectSamples
+			options.push({
+				label: ss.buttonText,
+				callback: async () => {
+					const [start, end] = [self.data.min, self.data.max]
+					await self.selectSamples(plot, start, end, ss)
+				}
+			})
+		}
 		self.displayMenu(event, options)
 	}
 
@@ -96,6 +106,17 @@ export function setInteractivity(self) {
 				callback: async () => self.callListSamples(event.sourceEvent, plot, start, end)
 			})
 		}
+
+		if (self.opts.allow2selectSamples) {
+			const ss = self.opts.allow2selectSamples
+			options.push({
+				label: ss.buttonText,
+				callback: async () => {
+					await self.selectSamples(plot, start, end, ss)
+				}
+			})
+		}
+
 		self.displayMenu(event.sourceEvent, options, start, end)
 	}
 
@@ -127,6 +148,17 @@ export function setInteractivity(self) {
 				await d.callback()
 				tip.hide()
 			})
+	}
+
+	self.selectSamples = async function (plot, start, end, ss) {
+		const ls = self.getSampleList(plot, start, end)
+		const data = await ls.getData()
+		const table = ls.setTableData(data)
+		const samples = table[2]
+		ss.callback({
+			samples: await self.app.vocabApi.convertSampleId(samples, ss.attributes),
+			source: ss.defaultSelectionLabel || `Selected from violin`
+		})
 	}
 
 	//get sample list for menu option callbacks

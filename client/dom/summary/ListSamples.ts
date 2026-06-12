@@ -252,7 +252,13 @@ export class ListSamples {
 	}
 
 	/** Formats the data for #dom/table/renderTable() */
-	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[]] {
+	// also returning a samples[] array that includes samples
+	// that pass the filtering steps
+	// TODO: make a general function to get and filter sample data upon
+	// selecting a bar/violin (similar to "getSamples" in
+	// "client/plots/barchart.events.js"). This sample data can then be used
+	// for listing samples, create group, create cohort, create filter, etc.
+	setTableData(data: AnnotatedSampleData): [TableRow[], TableColumn[], AnnotatedSampleEntry[]] {
 		//Validation check
 		const foundInvalidGvTerm = [this.t1, this.t2, this.t0].find(tw => {
 			return tw && tw.term.type === TermTypes.GENE_VARIANT && (tw?.q as any)?.type == 'values'
@@ -263,6 +269,7 @@ export class ListSamples {
 		const rows: { value: string | number }[][] = []
 		const urlTemplate = this.app.vocabApi.termdbConfig?.urlTemplates?.sample
 
+		const samples: AnnotatedSampleEntry[] = []
 		for (const s of Object.values(data.lst)) {
 			const filterSample = this.mayFilterGVSample(s)
 			if (filterSample) continue
@@ -296,6 +303,7 @@ export class ListSamples {
 				this.addRowValue(s, this.t0, row)
 			}
 			rows.push(row)
+			samples.push(s)
 		}
 
 		//Formatting columns
@@ -304,7 +312,7 @@ export class ListSamples {
 		if (this.t2) this.addColValue(this.t2, columns)
 		if (this.t0) this.addColValue(this.t0, columns)
 
-		return [rows, columns]
+		return [rows, columns, samples]
 	}
 
 	mayFilterGVSample(sample: AnnotatedSampleEntry): boolean {
