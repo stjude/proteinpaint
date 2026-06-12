@@ -3,11 +3,14 @@ import { isSingleCellTerm } from '#shared/terms.js'
 export function getSingleCellSpecialCase(config, key = 'term') {
 	let specialCase: string | { [index: string]: any } = 'default'
 	const term = config[key]
-	if (isSingleCellTerm(term.term)) {
+	const chartType = config.childType || config.chartType || 'unknown'
+	if (!term || !term.term) {
+		//Do not prevent from loading if no term information is provided but log the error.
+		console.error(`Term missing to determine if special case handling is needed for ${chartType} chart.`)
+	} else if (isSingleCellTerm(term.term)) {
 		const sample = term.term?.sample
 		//Do not prevent from loading if no sample is specified but log the error.
 		if (!sample) {
-			const chartType = config.childType || config.chartType || 'unknown'
 			console.error(`Single cell term missing sample information in ${chartType} config for term selection.`)
 		} else {
 			/** Note the termdb handler needs either sample.plots or sample.name to filter
