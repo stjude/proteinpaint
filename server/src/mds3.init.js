@@ -40,7 +40,7 @@ import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from '.
 import { add_bcf_variant_filter } from './termdb.snp.js'
 import { validate_correlationVolcano } from './routes/correlationVolcano.ts'
 import { validate_query_singleCell } from './singleCell/samplesRoute.ts'
-import { validate_query_proteome } from './routes/termdb.proteome.ts'
+import { validate_query_proteome } from '../routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
