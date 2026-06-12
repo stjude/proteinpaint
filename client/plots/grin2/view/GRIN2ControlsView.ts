@@ -2,12 +2,8 @@ import { table2col, make_one_checkbox } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { filterInit } from '#filter'
 import type { GRIN2ControlsCallbacks, DtUsage } from '../GRIN2Types'
-import {
-	CNV_LOSS_THRESHOLD_FALLBACK,
-	CNV_GAIN_THRESHOLD_FALLBACK,
-	CNV_MAX_SEG_LENGTH_FALLBACK,
-	EXCLUDE_OVERLAP_FRAC_FALLBACK
-} from '../settings/defaults'
+import { CNV_MAX_SEG_LENGTH_FALLBACK, CNV_TYPE_CONFIG, EXCLUDE_OVERLAP_FRAC_FALLBACK } from '../settings/defaults'
+import type { CnvType } from '../settings/defaults'
 
 // Styling constants used only by the controls view
 const optionsTextFontSize = 12
@@ -43,6 +39,8 @@ export class GRIN2ControlsView {
 	private cnv_lossThreshold: any = null
 	private cnv_gainThreshold: any = null
 	private cnv_maxSegLength: any = null
+	/** how this ds quantifies cnv values; from ds.queries.cnv.type, default 'log2ratio' */
+	private cnvType: CnvType = 'log2ratio'
 
 	// one checkbox per genome-declared blacklist source, keyed by source name
 	private excludeCheckboxes: Record<string, any> = {}
@@ -116,9 +114,12 @@ export class GRIN2ControlsView {
 		}
 		if (dtUsage[dtcnv]?.checked) {
 			requestConfig.cnvOptions = {
-				lossThreshold: parseFloat(this.cnv_lossThreshold.property('value')),
-				gainThreshold: parseFloat(this.cnv_gainThreshold.property('value')),
 				maxSegLength: parseFloat(this.cnv_maxSegLength.property('value'))
+			}
+			// 'category' is a qualitative call with no numeric thresholds; the rows aren't rendered
+			if (this.cnv_lossThreshold && this.cnv_gainThreshold) {
+				requestConfig.cnvOptions.lossThreshold = parseFloat(this.cnv_lossThreshold.property('value'))
+				requestConfig.cnvOptions.gainThreshold = parseFloat(this.cnv_gainThreshold.property('value'))
 			}
 		}
 		if (dtUsage[dtfusionrna]?.checked) requestConfig.fusionOptions = {}
@@ -212,22 +213,30 @@ export class GRIN2ControlsView {
 		const savedCnv = useSaved ? this.config.settings.cnvOptions : undefined
 		const cnvQuery = this.vocabApi.termdbConfig.queries.cnv
 
-		this.cnv_lossThreshold = this.addOptionRowToTable(
-			t2,
-			'Loss Threshold',
-			savedCnv?.lossThreshold ?? cnvQuery?.cnvLossCutoff ?? CNV_LOSS_THRESHOLD_FALLBACK,
-			-5,
-			0,
-			0.05
-		)
-		this.cnv_gainThreshold = this.addOptionRowToTable(
-			t2,
-			'Gain Threshold',
-			savedCnv?.gainThreshold ?? cnvQuery?.cnvGainCutoff ?? CNV_GAIN_THRESHOLD_FALLBACK,
-			0,
-			5,
-			0.05
-		)
+		// How this ds quantifies cnv values drives the threshold controls.
+		// Numeric types (log2ratio/segmean/copyNumber) show loss/gain thresholds with type-specific
+		// defaults and ranges; 'category' is qualitative and hides them.
+		this.cnvType = cnvQuery?.type ?? 'log2ratio'
+		const cfg = CNV_TYPE_CONFIG[this.cnvType]
+
+		if (!cfg.hideThresholds) {
+			this.cnv_lossThreshold = this.addOptionRowToTable(
+				t2,
+				cfg.unitLabel ? `Loss Threshold (${cfg.unitLabel})` : 'Loss Threshold',
+				savedCnv?.lossThreshold ?? cnvQuery?.cnvLossCutoff ?? cfg.lossDefault,
+				cfg.lossMin,
+				cfg.lossMax,
+				cfg.step
+			)
+			this.cnv_gainThreshold = this.addOptionRowToTable(
+				t2,
+				cfg.unitLabel ? `Gain Threshold (${cfg.unitLabel})` : 'Gain Threshold',
+				savedCnv?.gainThreshold ?? cnvQuery?.cnvGainCutoff ?? cfg.gainDefault,
+				cfg.gainMin,
+				cfg.gainMax,
+				cfg.step
+			)
+		}
 		this.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
 			'Max Segment Length',
