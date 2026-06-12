@@ -22,6 +22,28 @@ tape('\n', test => {
 	test.end()
 })
 
+tape('getSingleCellSpecialCase: returns default with invalid key', test => {
+	const config = {
+		term: {
+			term: { sample: { name: 'sample1' } }
+		}
+	}
+	const result = getSingleCellSpecialCase(config, 'sample')
+	test.equal(result, 'default', 'should return "default" when invalid key is provided')
+	test.end()
+})
+
+tape('getSingleCellSpecialCase: returns default when term object is missing', test => {
+	const config = {
+		term: {
+			notTerm: { sample: { name: 'sample1' } }
+		}
+	}
+	const result = getSingleCellSpecialCase(config)
+	test.equal(result, 'default', 'should return "default" when term object is missing')
+	test.end()
+})
+
 tape('getSingleCellSpecialCase: returns default when isSingleCellTerm is false', test => {
 	const config = {
 		term: {
