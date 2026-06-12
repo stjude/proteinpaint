@@ -87,6 +87,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'animatedBubbleChart':
 			return await import(`./animatedBubbleChart.ts`)
 
+		case 'brainRegions':
+			return await import('./brainRegions.ts')
+
 		case 'geneRanking':
 			return await import(`./geneRanking.ts`)
 

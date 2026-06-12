@@ -274,6 +274,15 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.proteome) {
 		q2.proteome = {}
+		if (q.proteome.brainRegions) {
+			const br = q.proteome.brainRegions
+			q2.proteome.brainRegions = {
+				regions: br.regions,
+				templateUrl: br.templateUrl,
+				svgUrl: br.svgUrl,
+				description: br.description
+			}
+		}
 		if (q.proteome.organisms) {
 			q2.proteome.organisms = {}
 			for (const organism in q.proteome.organisms) {

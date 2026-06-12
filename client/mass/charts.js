@@ -379,6 +379,11 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'animatedBubbleChart' }
 		},
 		{
+			label: 'Brain Regional Proteome',
+			chartType: 'brainRegions',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: state.termdbConfig.queries?.geneRanking?.appName || 'Gene Ranking',
 			chartType: 'geneRanking',
 			clickTo: self.loadChartSpecificMenu
