@@ -8,7 +8,7 @@ export type TermdbSingleCellPlotsRequest = {
 	/** Dataset label */
 	dslabel: string
 	singleCellPlot: {
-		/** Name of the single cell plot type, e.g. "umap", "tsne" */
+		/** Name of the single cell plot type, e.g. 'umap', 'tsne' */
 		name: string
 		sample?: { [index: string]: any }
 	}
@@ -55,7 +55,7 @@ export type TermdbSingleCellPlotsResponse = ErrorResponse | ValidSingleCellPlots
 
 /** The computed coordinate and gene expression range for cells
  * returned in a single request. Scoped to the specific plot type
- * (e.g. "umap", "tsne") and optional sample filter — not a global
+ * (e.g. 'umap', 'tsne') and optional sample filter — not a global
  * range across all plots or samples. Used to define axis domains
  * and color scale domains for rendering. */
 export type SingleCellRange = {
@@ -111,4 +111,171 @@ export type SingleCellPlotDataResult = {
 export type ValidSingleCellPlotsResponse = {
 	range: SingleCellRange
 	result: { Default: SingleCellPlotDataResult }
+}
+
+const TermdbSingleCellPlotsRequestExample = {
+	genome: 'hg38-test',
+	dslabel: 'TermdbTest',
+	singleCellPlot: {
+		name: 'umap',
+		sample: { id: 'sample1' }
+	},
+	filter: {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				tag: 'cohortFilter',
+				type: 'tvs',
+				tvs: {
+					term: { id: 'subcohort', type: 'multivalue' },
+					values: [{ key: 'ABC', label: 'ABC' }]
+				}
+			}
+		]
+	},
+	filter0: undefined,
+	canvasSettings: {
+		cutoff: 10000,
+		width: 800,
+		height: 600,
+		radius: 3,
+		minXScale: null,
+		maxXScale: null,
+		minYScale: null,
+		maxYScale: null,
+		opacity: 0.8,
+		startColor: '#0000ff',
+		stopColor: '#ff0000',
+		devicePixelRatio: 2
+	},
+	colorTW: {
+		term: {
+			name: 'Cell Type',
+			plot: 'UMAP',
+			type: 'singleCellCellType',
+			sample: { sID: '1_patient' },
+			groupsetting: { disabled: false },
+			values: {}
+		},
+		q: { mode: 'discrete', type: 'values', hiddenValues: {} }
+	}
+}
+
+const TermdbSingleCellPlotsResponseExample = {
+	range: {
+		xMin: -2.45230826499861,
+		xMax: 2.02116419939392,
+		yMin: -2.670907125487,
+		yMax: 2.97596441655721,
+		geMin: null,
+		geMax: null
+	},
+	result: {
+		Default: {
+			colorLegend: [
+				[
+					'T_NK',
+					{
+						sampleCount: 20,
+						color: '#1b9e77',
+						key: 'T_NK'
+					}
+				],
+				[
+					'Blast',
+					{
+						sampleCount: 54,
+						color: '#030303',
+						key: 'Blast'
+					}
+				],
+				[
+					'Monocyte',
+					{
+						sampleCount: 26,
+						color: '#7570b3',
+						key: 'Monocyte'
+					}
+				]
+			],
+			shapeLegend: [
+				[
+					'Ref',
+					{
+						sampleCount: 100,
+						shape: 0,
+						key: 'Ref'
+					}
+				]
+			],
+			samples: [
+				{
+					sampleId: 'cell1',
+					x: 0.958429213345285,
+					y: 1.94008987552318,
+					z: 0,
+					category: 'T_NK',
+					shape: 'Ref',
+					hidden: {
+						category: false
+					}
+				},
+				{
+					sampleId: 'cell2',
+					x: 0.678836078621254,
+					y: -1.13854914348622,
+					z: 0,
+					category: 'T_NK',
+					shape: 'Ref',
+					hidden: {
+						category: false
+					}
+				},
+				{
+					sampleId: 'cell3',
+					x: -2.11135267144421,
+					y: -2.33519450621652,
+					z: 0,
+					category: 'T_NK',
+					shape: 'Ref',
+					hidden: {
+						category: false
+					}
+				},
+				{
+					sampleId: 'cell4',
+					x: 0.551783876521269,
+					y: -1.24685552943596,
+					z: 0,
+					category: 'T_NK',
+					shape: 'Ref',
+					hidden: {
+						category: false
+					}
+				},
+				{
+					sampleId: 'cell5',
+					x: 1.84959385901015,
+					y: 2.68311790617899,
+					z: 0,
+					category: 'T_NK',
+					shape: 'Ref',
+					hidden: {
+						category: false
+					}
+				}
+			]
+		}
+	}
+}
+
+export const TermdbSingleCellPlotsExample = {
+	request: {
+		body: TermdbSingleCellPlotsRequestExample
+	},
+	response: {
+		body: TermdbSingleCellPlotsResponseExample
+	}
 }
