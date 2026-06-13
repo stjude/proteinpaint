@@ -4,11 +4,11 @@ import { mayAdjustConfig } from '../summary.ts'
 /*
 Tests:
 	mayAdjustConfig() - categorical termCollection should set childType to barchart
-	mayAdjustConfig() - numeric termCollection without childType should default to violin
+	mayAdjustConfig() - numeric termCollection without childType should default to boxplot with violin mode
 	mayAdjustConfig() - numeric termCollection with boxplot childType should preserve boxplot
-	mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to violin
+	mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to boxplot with violin mode
 	mayAdjustConfig() - two continuous terms should set childType to sampleScatter
-	mayAdjustConfig() - single continuous term should default to violin
+	mayAdjustConfig() - single continuous term should default to boxplot with violin mode
 	mayAdjustConfig() - discrete terms should default to barchart
 */
 
@@ -62,7 +62,7 @@ function createConfig(term, term2?, childType?) {
 		term,
 		term2,
 		groups: [],
-		settings: {}
+		settings: {} as any
 	}
 }
 
@@ -87,8 +87,8 @@ tape('mayAdjustConfig() - categorical termCollection should set childType to bar
 	test.equal(config.childType, 'barchart', 'Should set childType to barchart for categorical termCollection')
 })
 
-tape('mayAdjustConfig() - numeric termCollection without childType should default to violin', test => {
-	test.plan(1)
+tape('mayAdjustConfig() - numeric termCollection without childType should default to boxplot with violin mode', test => {
+	test.plan(2)
 
 	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
@@ -96,7 +96,12 @@ tape('mayAdjustConfig() - numeric termCollection without childType should defaul
 
 	mayAdjustConfig(config, opts)
 
-	test.equal(config.childType, 'violin', 'Should default to violin for numeric termCollection without childType')
+	test.equal(config.childType, 'boxplot', 'Should default to boxplot for numeric termCollection without childType')
+	test.equal(
+		config.settings?.boxplot?.mode,
+		'violin',
+		'Should default settings.boxplot.mode to violin for numeric termCollection without childType'
+	)
 })
 
 tape('mayAdjustConfig() - numeric termCollection with boxplot childType should preserve boxplot', test => {
@@ -115,8 +120,8 @@ tape('mayAdjustConfig() - numeric termCollection with boxplot childType should p
 	)
 })
 
-tape('mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to violin', test => {
-	test.plan(1)
+tape('mayAdjustConfig() - numeric termCollection with barchart childType should overwrite to boxplot with violin mode', test => {
+	test.plan(2)
 
 	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
@@ -126,8 +131,13 @@ tape('mayAdjustConfig() - numeric termCollection with barchart childType should 
 
 	test.equal(
 		config.childType,
+		'boxplot',
+		'Should overwrite barchart to boxplot for numeric termCollection (wrong type)'
+	)
+	test.equal(
+		config.settings?.boxplot?.mode,
 		'violin',
-		'Should overwrite barchart to violin for numeric termCollection (wrong type)'
+		'Should set settings.boxplot.mode to violin when overwriting barchart for numeric termCollection'
 	)
 })
 
@@ -140,6 +150,8 @@ tape('mayAdjustConfig() - numeric termCollection with violin childType should pr
 
 	mayAdjustConfig(config, opts)
 
+	// Legacy 'violin' childType is preserved (not auto-normalized) when explicitly set;
+	// the summary tabs now always emit 'boxplot' with mode='violin' instead.
 	test.equal(config.childType, 'violin', 'Should preserve violin childType for numeric termCollection')
 })
 
@@ -172,8 +184,8 @@ tape('mayAdjustConfig() - two continuous terms should set childType to sampleSca
 	test.equal(config.childType, 'sampleScatter', 'Should set childType to sampleScatter for two continuous terms')
 })
 
-tape('mayAdjustConfig() - single continuous term without termCollection should default to violin', test => {
-	test.plan(1)
+tape('mayAdjustConfig() - single continuous term without termCollection should default to boxplot with violin mode', test => {
+	test.plan(2)
 
 	const opts = {}
 	const term = createTermWrapper('float', 'continuous')
@@ -181,7 +193,12 @@ tape('mayAdjustConfig() - single continuous term without termCollection should d
 
 	mayAdjustConfig(config, opts)
 
-	test.equal(config.childType, 'violin', 'Should default to violin for single continuous term')
+	test.equal(config.childType, 'boxplot', 'Should default to boxplot for single continuous term')
+	test.equal(
+		config.settings?.boxplot?.mode,
+		'violin',
+		'Should default settings.boxplot.mode to violin for single continuous term'
+	)
 })
 
 tape('mayAdjustConfig() - discrete terms should default to barchart', test => {

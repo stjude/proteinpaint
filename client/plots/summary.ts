@@ -3,7 +3,6 @@ import { PlotBase, defaultUiLabels } from './PlotBase.ts'
 import { Menu, Tabs } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 // import { recoverInit } from '../rx/src/recover'
-import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultBoxplotSettings } from './boxplot/defaults'
 import { getDefaultScatterSettings } from './scatter/settings/defaults'
@@ -118,7 +117,8 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				callback
 			},
 			{
-				childType: 'violin',
+				childType: 'boxplot',
+				mode: 'violin',
 				label: 'Violin',
 				disabled: () => false,
 				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
@@ -156,7 +156,12 @@ class SummaryPlot extends PlotBase implements RxComponent {
 						_term2 = await this.getWrappedTermCopy(term2, 'discrete')
 						this.violinContTerm = 'term'
 					}
-					const config = { childType: 'violin', term: _term, term2: _term2 }
+					const config = {
+						childType: 'boxplot',
+						term: _term,
+						term2: _term2,
+						settings: { boxplot: { mode: 'violin' } }
+					}
 					return config
 				},
 				active: false,
@@ -164,6 +169,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 			},
 			{
 				childType: 'boxplot',
+				mode: 'box',
 				label: 'Boxplot',
 				disabled: () => false,
 				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
@@ -202,7 +208,8 @@ class SummaryPlot extends PlotBase implements RxComponent {
 					const config = {
 						childType: 'boxplot',
 						term,
-						term2
+						term2,
+						settings: { boxplot: { mode: 'box' } }
 					}
 					return config
 				},
@@ -308,7 +315,13 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		this.dom.loading.style('display', 'none')
 		this.render()
 
-		const activeTabIndex = this.tabsData.findIndex(tab => tab.childType == this.config.childType)
+		const currentMode = this.config.settings?.boxplot?.mode || 'box'
+		const activeTabIndex = this.tabsData.findIndex(tab => {
+			if (tab.childType != this.config.childType) return false
+			// for boxplot childType, also match on the violin/box mode
+			if (tab.childType == 'boxplot') return tab.mode === currentMode
+			return true
+		})
 		this.chartToggles.update(activeTabIndex)
 
 		//Only show tabs when more than one are present
@@ -475,8 +488,6 @@ export async function getPlotConfig(opts, app) {
 
 			barchart: getDefaultBarSettings(app),
 
-			violin: getDefaultViolinSettings(app),
-
 			boxplot: getDefaultBoxplotSettings(app),
 
 			sampleScatter: getDefaultScatterSettings(opts)
@@ -498,7 +509,15 @@ export async function getPlotConfig(opts, app) {
 	return config
 }
 
-const discreteByContinuousPlots = new Set(['violin', 'boxplot'])
+const discreteByContinuousPlots = new Set(['boxplot'])
+
+/** Set settings.boxplot.mode = 'violin' on a config without clobbering an
+ * already-set mode. */
+function setViolinMode(config) {
+	if (!config.settings) config.settings = {}
+	if (!config.settings.boxplot) config.settings.boxplot = {}
+	if (!config.settings.boxplot.mode) config.settings.boxplot.mode = 'violin'
+}
 
 /**
  * Adjusts the childType of a summary plot config based on the term types and modes.
@@ -534,13 +553,15 @@ export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}
 			if (config.childType) {
 				// already given.
 				if (config.childType == 'barchart') {
-					// wrong type, overwrite with default
-					config.childType = 'violin'
+					// wrong type, overwrite with default (violin-mode boxplot)
+					config.childType = 'boxplot'
+					setViolinMode(config)
 				} else {
 					// do not overwrite e.g. if value is boxplot. though this is not further validated
 				}
 			} else {
-				config.childType = 'violin'
+				config.childType = 'boxplot'
+				setViolinMode(config)
 			}
 		} else {
 			throw new Error('config.term.term.memberType not categorical or numeric')
@@ -552,9 +573,11 @@ export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}
 				console.warn(
 					`ignoring summary opts.childType='${opts.childType}' since it does not support plotting discrete by continuous tw's`
 				)
-				config.childType = 'violin'
+				config.childType = 'boxplot'
+				setViolinMode(config)
 			} else {
-				config.childType = opts.childType || 'violin'
+				config.childType = opts.childType || 'boxplot'
+				if (!opts.childType) setViolinMode(config)
 			}
 		}
 	} else {
