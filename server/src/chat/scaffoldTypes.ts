@@ -1,4 +1,5 @@
 import type { TermTypes } from '#shared/terms.js'
+import type { DbRows } from '#types'
 
 export type MsgToUser = {
 	type: 'text'
@@ -19,7 +20,7 @@ export type DEScaffold = {
 	filter1: string
 	filter2: string
 	filter?: string
-	method?: 'edgeR' | 'DESeq2' | 'limma' // optional, default to edgeR if not provided
+	method?: 'edger' | 'wilcoxon' | 'limma' // optional, default to edgeR if not provided
 }
 
 export type MatrixScaffold = {
@@ -33,6 +34,13 @@ export type GenomeBrowserScaffold = {
 	plotType: 'genomeBrowser'
 	genomeBrowserPhrase?: string
 	genePhrase?: string
+	filter?: string
+}
+
+export type SurvivalScaffold = {
+	plotType: 'survival'
+	term?: string
+	term2: string
 	filter?: string
 }
 
@@ -66,6 +74,7 @@ export type Scaffold =
 	| HierarchicalScaffold
 	| PrebuiltScatterScaffold
 	| GenomeBrowserScaffold
+	| SurvivalScaffold
 
 // Helper functions to determine scaffold type
 export function isSummaryScaffold(s: Scaffold): s is SummaryScaffold {
@@ -110,11 +119,21 @@ export type DEPhrase2EntityResult = {
 	filter1: Entity[] // will actually be nested structure later on
 	filter2: Entity[] // will actually be nested structure later on
 	filter?: Entity[]
-	method?: 'edgeR' | 'DESeq2' | 'limma' // optional, default to edgeR if not provided
+	method?: 'edger' | 'wilcoxon' | 'limma' // optional, default to edgeR if not provided
 }
 
 export type HierPhrase2EntityResult = {
 	phrases: Entity[]
+	filter?: Entity[]
+}
+
+export type SurvivalPhrase2EntityResult = {
+	/** When the survival term was named in the prompt and resolved to a single dataset
+	 *  term, this is the matched name (string). When the prompt did not name one (or was
+	 *  ambiguous), this is the full list of survival terms available in the dataset
+	 *  (DbRows[]) so the UI can prompt the user to pick one. */
+	term?: string | DbRows[]
+	term2: Entity
 	filter?: Entity[]
 }
 
@@ -138,6 +157,7 @@ export type Phrase2EntityResult =
 	| HierPhrase2EntityResult
 	| MatrixPhrase2EntityResult
 	| PrebuiltScatterPhrase2EntityResult
+	| SurvivalPhrase2EntityResult
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
 export type FilterLeafNode = { leaf: string }

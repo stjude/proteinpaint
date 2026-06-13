@@ -1,5 +1,11 @@
-import type { LlmConfig } from '#types'
-import { extractGenesFromPrompt, phrase2entitytw, collectLeaves, evaluateFilterTerm } from './utils.ts'
+import type { LlmConfig, DbRows } from '#types'
+import {
+	extractGenesFromPrompt,
+	phrase2entitytw,
+	collectLeaves,
+	evaluateFilterTerm,
+	parse_survival_terms_from_db
+} from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
@@ -7,12 +13,14 @@ import type {
 	SummaryScaffold,
 	GenomeBrowserScaffold,
 	DEScaffold,
+	SurvivalScaffold,
 	HierarchicalScaffold,
 	Entity,
 	Phrase2EntityResult,
 	DEPhrase2EntityResult,
 	PrebuiltScatterPhrase2EntityResult,
 	HierPhrase2EntityResult,
+	SurvivalPhrase2EntityResult,
 	MsgToUser,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
@@ -139,8 +147,56 @@ export async function phrase2entity(
 			dge_term.filter = dge_term_filter as Entity[]
 			mayLog('Validation result for optional filter term:', JSON.stringify(dge_term.filter))
 		}
-
+		if (scaffoldResult.method) {
+			const method = scaffoldResult.method.toLowerCase()
+			if (method === 'edger' || method === 'limma' || method === 'wilcoxon') {
+				dge_term.method = method
+			}
+		}
 		return dge_term
+	} else if (plotType === 'survival') {
+		const scaffoldResult = scaffold as SurvivalScaffold
+
+		// Resolve term2 (REQUIRED stratification variable) to an Entity
+		const term2Entity = await phrase2entitytw(scaffoldResult.term2, llm, genes_list, dataset_json, ds, genome)
+		if ('type' in term2Entity && term2Entity.type === 'text') {
+			return term2Entity // MsgToUser
+		}
+		mayLog('Validation result for survival term2:', term2Entity)
+
+		const survival_term: SurvivalPhrase2EntityResult = {
+			term2: term2Entity as Entity
+		}
+
+		// Resolve term (OPTIONAL survival type)
+		if (scaffoldResult.term) {
+			const resolved = await find_survival_terms(scaffoldResult.term, llm, dbPath)
+			if (resolved === null) {
+				return { type: 'text', text: 'No survival terms available in this dataset.' }
+			}
+			// string = matched single term; DbRows[] = ambiguous, list for user disambiguation
+			survival_term.term = resolved
+		} else {
+			// term not named in prompt; send full list to client so user can pick
+			const { db_rows } = await parse_survival_terms_from_db(dbPath)
+			if (db_rows.length === 0) {
+				return { type: 'text', text: 'No survival terms available in this dataset.' }
+			}
+			survival_term.term = db_rows
+		}
+
+		// Resolve filter (OPTIONAL cohort filter) to Entity[]
+		if (scaffoldResult.filter) {
+			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
+			if ('type' in filter_term && filter_term.type === 'text') {
+				return filter_term // MsgToUser
+			}
+			survival_term.filter = filter_term as Entity[]
+			mayLog('Validation result for survival filter:', JSON.stringify(survival_term.filter))
+		}
+
+		return survival_term
 	} else if (plotType === 'matrix') {
 		const scaffoldResult = scaffold as MatrixScaffold
 		assert(scaffoldResult.twLst.length > 0) // 'At least one term is required for matrix plot'
@@ -475,5 +531,71 @@ Phrase: "${phrase}"
 		return parsed
 	} catch {
 		throw new Error(`Failed to parse genomic coordinates from LLM response: ${response}`)
+	}
+}
+
+async function find_survival_terms(
+	user_prompt: string,
+	llm: LlmConfig,
+	dbPath: string
+): Promise<string | DbRows[] | null> {
+	const { db_rows } = await parse_survival_terms_from_db(dbPath)
+	if (db_rows.length === 0) return null
+
+	const survivalTermList = db_rows.map(r => `  - "${r.name}": ${r.description}`).join('\n')
+
+	const prompt = `You are a ProteinPaint survival-term classifier. Given a user query and the list of survival terms available in the dataset, identify which survival term the user is referring to.
+
+## AVAILABLE SURVIVAL TERMS
+${survivalTermList}
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
+{
+  "survivalTerm": "<exact name from the list above>" | null
+}
+
+## RULES
+1. The "survivalTerm" value MUST be an EXACT match (case-sensitive, character-for-character) of one of the names in the AVAILABLE SURVIVAL TERMS list above, or null.
+2. Map common abbreviations and synonyms to the corresponding term, e.g.:
+   - "overall survival", "os" → the term whose name corresponds to overall survival
+   - "event-free survival", "efs" → the term whose name corresponds to event-free survival
+   - "progression-free survival", "pfs" → the term whose name corresponds to progression-free survival
+   - "relapse-free survival", "rfs" → the term whose name corresponds to relapse-free survival
+   - "disease-free survival", "dfs" → the term whose name corresponds to disease-free survival
+3. If the user query does not mention or refer to any of the listed survival terms, return { "survivalTerm": null }.
+4. If the user query mentions survival generally but is ambiguous between multiple available terms, return { "survivalTerm": null }.
+5. Do NOT invent, paraphrase, or modify term names — copy verbatim from the list.
+
+## EXAMPLES
+Query: "Show overall survival for AML patients"
+Output: { "survivalTerm": "<exact name corresponding to overall survival, or null if not in list>" }
+
+Query: "Plot EFS by sex"
+Output: { "survivalTerm": "<exact name corresponding to event-free survival, or null if not in list>" }
+
+Query: "Show gene expression of TP53"
+Output: { "survivalTerm": null }
+
+Classify the following user query:
+Query: ${user_prompt}
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Survival term classifier: ${response}`)
+	try {
+		const parsed = JSON.parse(response)
+		const picked = parsed.survivalTerm
+		if (!picked || picked === 'null') return db_rows
+		const match = db_rows.find(r => r.name === picked)
+		if (!match) {
+			mayLog(
+				`Survival term classifier returned "${picked}" which is not in db_rows; returning full list for user disambiguation.`
+			)
+			return db_rows
+		}
+		return match.name
+	} catch {
+		mayLog(`Failed to parse survival term classifier response: ${response}`)
+		throw `Failed to parse survival term classifier response: ${response}`
 	}
 }

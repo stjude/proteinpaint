@@ -12,6 +12,7 @@ import type {
 	HierarchicalScaffold,
 	GenomeBrowserScaffold,
 	MatrixScaffold,
+	SurvivalScaffold,
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
@@ -19,6 +20,116 @@ import { extractGenesFromPrompt } from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
+
+async function getScaffold_Survival(user_prompt: string, llm: LlmConfig): Promise<SurvivalScaffold | MsgToUser> {
+	const prompt = `You are a ProteinPaint survival plot assistant. Your task is to extract the survival term, the stratification variable (term2), and an optional cohort filter from a user's natural language question, and return them in a strict JSON scaffold for configuring a survival (Kaplan-Meier) plot.
+
+A survival plot shows survival probability over time for one or more groups of samples. It is defined by:
+  - A survival time-to-event term (e.g. "overall survival", "OS", "event-free survival", "EFS", "progression-free survival", "PFS", "relapse-free survival", "RFS", "disease-free survival", "DFS").
+  - A stratification variable (term2) used to split the cohort into curves (e.g. "sex", "BCR-ABL1 subtype", "TP53 mutation status", "age groups", "treatment arm"). Without term2, only a single overall curve can be drawn.
+  - An OPTIONAL cohort filter that restricts the sample set.
+
+## OUTPUT SCHEMA
+Return ONLY a valid JSON object with this structure — no extra fields, no surrounding text, no explanation, no code fences:
+{
+  "term": "<phrase>",     // OPTIONAL - the phrase describing the survival time-to-event term (e.g. "overall survival", "EFS")
+  "term2": "<phrase>",    // REQUIRED - the phrase describing the stratification variable used to split curves
+  "filter": "<phrase>"    // OPTIONAL - a cohort restriction phrase that narrows the sample set
+}
+
+## EXTRACTION RULES
+1. term is OPTIONAL. Extract the phrase that describes the survival type. Preserve the user's EXACT wording (do not expand "OS" to "overall survival", do not normalize hyphenation). If the user does not mention a specific survival type, omit term entirely.
+2. term2 is REQUIRED. Extract the phrase that describes the variable used to split survival curves (e.g. "by sex", "stratified by subtype", "across treatment arms"). Preserve the EXACT wording of the variable (e.g. keep "BCR-ABL1 subtype" not "subtype", keep "TP53 mutation status" not "TP53"). Drop only prepositions/connectors like "by", "stratified by", "across", "for each", "split by" — keep the variable phrase itself.
+3. filter is OPTIONAL and only set when the user restricts the cohort to a specific subpopulation (e.g. "in pediatric patients", "for AML cases", "among women"). Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
+4. Do NOT put the same information in both term2 AND filter. If a phrase describes the grouping variable, it belongs in term2; if it restricts the overall cohort, it belongs in filter.
+5. If the user does not provide a stratification variable (no term2 can be extracted), return:
+{ "type": "text", "text": "No stratification variable found for survival plot" }
+
+## EXAMPLES
+
+--- Survival term + stratification ---
+Q: "Show overall survival by sex"
+A: {
+  "term": "overall survival",
+  "term2": "sex"
+}
+
+--- Abbreviation + stratification ---
+Q: "Plot EFS stratified by BCR-ABL1 subtype"
+A: {
+  "term": "EFS",
+  "term2": "BCR-ABL1 subtype"
+}
+
+--- Stratification only (no survival type specified) ---
+Q: "Survival curves by treatment arm"
+A: {
+  "term2": "treatment arm"
+}
+
+--- Survival term + stratification + cohort filter ---
+Q: "Compare OS across TP53 mutation status in pediatric AML patients"
+A: {
+  "term": "OS",
+  "term2": "TP53 mutation status",
+  "filter": "pediatric AML patients"
+}
+
+--- Natural-language stratification phrasing ---
+Q: "Show progression-free survival for each age group in women"
+A: {
+  "term": "progression-free survival",
+  "term2": "age group",
+  "filter": "women"
+}
+
+## NEGATIVE EXAMPLES — WHAT NOT TO DO
+Q: "Plot OS by sex in pediatric patients"
+WRONG:
+{
+  "term": "OS",
+  "term2": "sex in pediatric patients"   // cohort filter must be split out into the filter field
+}
+RIGHT:
+{
+  "term": "OS",
+  "term2": "sex",
+  "filter": "pediatric patients"
+}
+
+Q: "Plot EFS stratified by BCR-ABL1 subtype"
+WRONG:
+{
+  "term": "event-free survival",         // do NOT expand the user's exact wording "EFS"
+  "term2": "subtype"                     // do NOT drop the qualifier "BCR-ABL1"
+}
+RIGHT:
+{
+  "term": "EFS",
+  "term2": "BCR-ABL1 subtype"
+}
+
+Parse the following user query into the JSON scaffold according to the rules and schema defined above:
+Query: "${user_prompt}"
+`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	mayLog(`--> Survival scaffold: ${response}`)
+	try {
+		const parsed = JSON.parse(response)
+		if (parsed && parsed.type === 'text') return parsed as MsgToUser
+		if (!parsed.term2) {
+			return {
+				type: 'text',
+				text: 'No stratification variable (term2) could be extracted from the prompt for the survival plot.'
+			}
+		}
+		const scaffold = parsed as SurvivalScaffold
+		scaffold.plotType = 'survival'
+		return scaffold
+	} catch {
+		throw new Error(`Failed to parse SurvivalScaffold from LLM response: ${response}`)
+	}
+}
 
 async function getScaffold_genomeBrowser(
 	user_prompt: string,
@@ -240,6 +351,7 @@ filter2: The second group in the comparison. Preserve the exact phrase from the 
 filter:  A global constraint that applies to BOTH groups — i.e. the overall cohort being 
          studied. Only populate this when the user restricts the analysis to a specific 
          subpopulation BEFORE or AFTER stating the two groups.
+method: The method specified by the user for performing differential expression analysis (e.g. "edger", "limma", "wilcoxon"). This is optional; if the user does not specify a method, this field can be omitted and the system will default to "edger".
 
 ## Extraction RULES
 1. ALWAYS extract exactly two groups into filter1 and filter2 — no more, no less.
@@ -284,6 +396,24 @@ A: {
   "filter1": "men",
   "filter2": "women",
   "filter": "Wilms tumor patients"
+}
+
+--- Two demographic groups with a cohort filter ---
+Q: "Compare gene expression between men and women in Wilms tumor patients using wilcoxon method"
+A: {
+  "filter1": "men",
+  "filter2": "women",
+  "filter": "Wilms tumor patients"
+  "method": "wilcoxon"
+}
+
+--- Two demographic groups with a cohort filter ---
+Q: "Compare gene expression between men and women in Wilms tumor patients using limma method"
+A: {
+  "filter1": "men",
+  "filter2": "women",
+  "filter": "Wilms tumor patients"
+  "method": "limma"
 }
 
 --- Implicit second group ---
@@ -1067,6 +1197,8 @@ export async function inferScaffold(
 			return await getScaffold_dge(user_prompt, llm)
 		case 'genomeBrowser':
 			return await getScaffold_genomeBrowser(user_prompt, llm)
+		case 'survival':
+			return await getScaffold_Survival(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,

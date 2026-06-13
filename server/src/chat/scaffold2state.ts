@@ -1,6 +1,8 @@
 import { mayLog } from '#src/helpers.ts'
+import { get_samples } from '#src/termdb.sql.js'
 import { isNumericTerm } from '#shared/terms.js'
 import { TermTypes } from '#shared/terms.js'
+import { generate_group_name_from_tvslst } from './utils.ts'
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)
  */
@@ -63,7 +65,7 @@ function isValidSubplot(subplotType: string, input: any): boolean {
  * input: is Tw or TVS object
  * output: a plot state object that can be used to generate the appropriate plot
  */
-export function resolveToPlotState(input: any, plotType: string, subplotType?: string) {
+export async function resolveToPlotState(input: any, plotType: string, ds: any, subplotType?: string) {
 	// }, llm: LlmConfig) {
 	const plotState: any = { type: 'plot', plot: { chartType: plotType } }
 
@@ -98,12 +100,69 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		}
 	} else if (plotType === 'dge') {
 		// default method for differential gene expression analysis
+		const name1 = generate_group_name_from_tvslst(input.filter1)
+		const name2 = generate_group_name_from_tvslst(input.filter2)
+		const samples1 = await get_samples({ filter: input.filter1 }, ds, true) // true is to bypass permission check
+		const samples2 = await get_samples({ filter: input.filter2 }, ds, true) // true is to bypass permission check
+
+		const samples1lst = samples1.map((item: any) => ({
+			sampleId: item.id,
+			sample: item.name
+		}))
+		const samples2lst = samples2.map((item: any) => ({
+			sampleId: item.id,
+			sample: item.name
+		}))
+
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
 		plotState.plot.termType = TermTypes.GENE_EXPRESSION // placeholder(can this be something else as well?)
-		const groups = [input.filter1, input.filter2]
-		plotState.plot.samplelst = groups
-		plotState.method = 'edgeR'
+		const groups = [
+			{
+				name: name1,
+				in: true,
+				values: samples1lst
+			},
+			{
+				name: name2,
+				in: true,
+				values: samples2lst
+			}
+		]
+		plotState.plot.samplelst = { groups }
+		const tw = {
+			q: {
+				groups
+			},
+			term: {
+				name: name1 + ' vs ' + name2,
+				type: 'samplelst',
+				values: {
+					[name1]: {
+						color: 'purple',
+						key: name1,
+						label: name1,
+						list: samples1lst
+					},
+					[name2]: {
+						color: 'blue',
+						key: name2,
+						label: name2,
+						list: samples2lst
+					}
+				}
+			}
+		}
+		plotState.plot.tw = tw
+		let method = 'edgeR' // default method
+		if (!input.method) {
+			method = 'edgeR'
+		} else if (input.method === 'edger') {
+			method = 'edgeR'
+		} else if (input.method === 'limma' || input.method === 'wilcoxon') {
+			method = input.method
+		}
+		plotState.plot.settings = { volcano: { method: method } }
 	} else if (plotType === 'hiercluster') {
 		plotState.plot.chartType = 'hierCluster'
 		// HierTerms is an array of tw objects produced by resolveToTw() for dictionary terms as well as nonDict variables such as ssGSEA.
@@ -203,8 +262,35 @@ export function resolveToPlotState(input: any, plotType: string, subplotType?: s
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
+	} else if (plotType === 'survival') {
+		// input.term holds the resolved survival term: a string (the matched term id) when it was
+		// successfully determined, or an array of DbRows when it could not be resolved (not named
+		// in the prompt, or ambiguous between multiple available terms).
+		if (typeof input.term === 'string') {
+			plotState.plot.term = { id: input.term }
+		} else if (Array.isArray(input.term)) {
+			// Could not pin down a single survival term (not named in the prompt, or ambiguous) —
+			// return the list of available survival terms so the user can pick one. Each db_row's
+			// `name` is the survival term id (used downstream to build the plot state) and its
+			// `description` is the human-readable name shown in the UI.
+			plotState.plot.term = {
+				possible_options: input.term.map((r: any) => ({ id: r.name, name: r.description }))
+			}
+		} else {
+			throw 'Survival plot requires a survival term, but none was provided in the input.'
+		}
+
+		// term2 is the stratification/overlay variable
+		if (input.term2) {
+			plotState.plot.term2 = isDictionaryTerm(input.term2) ? input.term2 : { term: input.term2 }
+			if (plotState.plot.term2.isDictionary) delete plotState.plot.term2.isDictionary
+		}
+
+		if (input.filter) {
+			plotState.plot.filter = input.filter
+		}
 	} else {
-		throw 'Only summary plot type is supported for now'
+		throw 'Plot type: ' + plotType + ' not supported for now'
 	}
 	return plotState
 }

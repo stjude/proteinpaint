@@ -505,6 +505,10 @@ export async function resolveToTwTvs(
 		}
 	} else if (plotType === 'dge') {
 		for (const [key, value] of Object.entries(entity)) {
+			if (key === 'method') {
+				twTvsObjects[key] = typeof value === 'string' ? value.toLowerCase() : value
+				continue
+			}
 			const filterValues = value as Value[] | undefined
 			if (!filterValues) throw new Error(`Invalid term entity for key ${key}`)
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
@@ -529,6 +533,28 @@ export async function resolveToTwTvs(
 		}
 		twTvsObjects['HierTerms'] = DictTws
 
+		if (entity['filter']) {
+			const filterValues = entity['filter'] as Value[]
+			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects['filter'] = termWrapper
+		}
+	} else if (plotType === 'survival') {
+		// term holds the already-resolved survival term(s) (a matched name string, or the full
+		// list of dataset survival terms when none/ambiguous). Pass it through unchanged.
+		if (entity['term'] !== undefined) {
+			twTvsObjects['term'] = entity['term']
+		}
+
+		// term2 is the required stratification variable; resolve it like a single tw.
+		const term2Value = entity['term2'] as Value | undefined
+		if (!term2Value) throw new Error('Invalid term2 entity for survival')
+		const term2Wrapper = await resolveToTw(term2Value, llm, genome)
+		if (!term2Wrapper) throw new Error(`Failed to resolve term2 for phrase "${term2Value.phrase}"`)
+		mayLog('Resolved survival term2:', JSON.stringify(term2Wrapper))
+		twTvsObjects['term2'] = term2Wrapper
+
+		// optional cohort filter
 		if (entity['filter']) {
 			const filterValues = entity['filter'] as Value[]
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
