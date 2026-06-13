@@ -1,6 +1,7 @@
 import { sample_match_termvaluesetting } from '#shared/filter.js'
 import { getSampleSorter, getTermSorter, getSampleGroupSorter, getMclassSorter } from './matrix.sort'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv } from '#shared/common.js'
+import { ROOT_SAMPLE_TYPE } from '#shared/terms.js'
 
 export function getTermOrder(data) {
 	const s = this.settings.matrix
@@ -133,6 +134,37 @@ export function getSampleGroups(data) {
 				}
 				if (ref.bins && s.sortSampleGrpsBy == 'name') grp.order = ref.bins.findIndex(bin => bin.name == key)
 				else delete grp.order
+				sampleGroups.set(key, grp)
+			}
+			sampleGroups.get(key).lst.push(row)
+		} else if (this.state.termdbConfig.hasSampleAncestry) {
+			// has sample ancestry
+			// group samples by sample type (hardcoded to be root sample type)
+			let key, name
+			if (!row._ref_) continue
+			if (row._ref_.sampleType === ROOT_SAMPLE_TYPE) {
+				// sample is root sample
+				key = row.sample
+				name = row.label
+			} else {
+				// sample is not root sample
+				// check its ancestors
+				if (!row._ref_.ancestors?.length) continue
+				const ancestors = row._ref_.ancestors.filter(a => a.sample_type === ROOT_SAMPLE_TYPE)
+				if (!ancestors.length) continue
+				if (ancestors.length > 1) throw new Error('multiple root samples present')
+				const ancestor = ancestors[0]
+				key = ancestor.ancestor_id
+				name = ancestor.ancestor_name
+			}
+			if (!key) continue
+			if (!sampleGroups.has(key)) {
+				const grp = {
+					name,
+					id: key,
+					lst: [],
+					legendGroups: {}
+				}
 				sampleGroups.set(key, grp)
 			}
 			sampleGroups.get(key).lst.push(row)
