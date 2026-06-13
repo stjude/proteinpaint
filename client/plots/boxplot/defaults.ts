@@ -13,7 +13,8 @@ export function getDefaultBoxplotSettings(app, overrides = {}) {
 		rowHeight: 50,
 		rowSpace: 15,
 		removeOutliers: false,
-		showAssocTests: true
+		showAssocTests: true,
+		mode: 'box'
 	}
 	return Object.assign(defaults, overrides)
 }

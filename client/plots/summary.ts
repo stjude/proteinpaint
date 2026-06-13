@@ -531,6 +531,20 @@ export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}
 		may still need to be filled or reshaped with new state config/settings.
 	*/
 
+	// Back-compat: the standalone 'violin' childType has been folded into the
+	// boxplot childType with settings.boxplot.mode='violin'. Migrate any
+	// legacy/external callers (saved states, volcano plot, etc.) up-front so
+	// the rest of this function (and downstream) only sees 'boxplot'.
+	if (config.childType === 'violin') {
+		config.childType = 'boxplot'
+		setViolinMode(config)
+	}
+	if (opts?.childType === 'violin') opts.childType = 'boxplot'
+	if (edits?.childType === 'violin') {
+		edits.childType = 'boxplot'
+		setViolinMode(config)
+	}
+
 	if (edits.childType) {
 		// no need to set config.childType if a value is already specified
 		// in an edits object (optional second argument), as processed by mass store

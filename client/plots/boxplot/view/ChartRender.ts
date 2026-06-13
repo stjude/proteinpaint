@@ -1,5 +1,6 @@
 import { drawBoxplot, Menu } from '#dom'
 import { scaleLinear, scaleLog, type ScaleLinear } from 'd3-scale'
+import { line, curveBasis } from 'd3-shape'
 import { axisstyle } from '#src/client'
 import { axisTop, axisLeft } from 'd3-axis'
 import type { PlotDimensions, FormattedBoxPlotChartsEntry } from '../BoxPlotTypes'
@@ -121,6 +122,13 @@ export class ChartRender {
 		/** Draw boxplots, incrementing by the total row height */
 		for (const plot of chart.plots) {
 			const g = dom.boxplots.append('g').attr('class', 'sjpp-boxplot-plot').attr('padding', '5px')
+
+			// In violin mode, render the violin (mirrored density) shape first
+			// so the box-and-whisker is drawn on top of it.
+			if (settings.mode === 'violin' && (plot as any).density?.bins?.length) {
+				this.renderViolin(g, plot, scale, settings)
+			}
+
 			drawBoxplot({
 				bp: plot.boxplot,
 				g,
@@ -159,5 +167,55 @@ export class ChartRender {
 				)
 			}
 		}
+	}
+
+	/** Render a violin (mirrored density) shape behind the box. The local
+	 * coordinate system mirrors drawBoxplot(): the value axis runs along x
+	 * (via `scale`), and the perpendicular axis spans [0, rowHeight] with the
+	 * box centered at rowHeight/2. The g is rotated -90deg by the caller in
+	 * vertical orientation. */
+	renderViolin(
+		g: any,
+		plot: any,
+		scale: ScaleLinear<number, number, never>,
+		settings: BoxPlotSettings
+	) {
+		const density = plot.density
+		if (!density?.bins?.length || density.densityMax === density.densityMin) return
+
+		// Allow the violin to extend a bit beyond the box thickness so its
+		// shape is visible around the central box.
+		const violinThickness = settings.rowHeight * 2
+		const center = settings.rowHeight / 2
+		const wScale = scaleLinear().domain([density.densityMin, density.densityMax]).range([0, violinThickness / 2])
+
+		const upper = line<{ x0: number; density: number }>()
+			.curve(curveBasis)
+			.x(d => scale(d.x0))
+			.y(d => center - wScale(d.density))
+		const lower = line<{ x0: number; density: number }>()
+			.curve(curveBasis)
+			.x(d => scale(d.x0))
+			.y(d => center + wScale(d.density))
+
+		const fill = settings.displayMode == 'filled' ? plot.color : settings.displayMode == 'dark' ? plot.color : plot.color
+		const stroke = settings.displayMode == 'filled' ? 'black' : plot.color
+
+		g.append('path')
+			.attr('class', 'sjpp-boxplot-violin')
+			.attr('d', upper(density.bins) as string)
+			.attr('fill', fill)
+			.attr('fill-opacity', 0.3)
+			.attr('stroke', stroke)
+			.attr('stroke-width', 1)
+			.attr('stroke-linejoin', 'round')
+		g.append('path')
+			.attr('class', 'sjpp-boxplot-violin')
+			.attr('d', lower(density.bins) as string)
+			.attr('fill', fill)
+			.attr('fill-opacity', 0.3)
+			.attr('stroke', stroke)
+			.attr('stroke-width', 1)
+			.attr('stroke-linejoin', 'round')
 	}
 }

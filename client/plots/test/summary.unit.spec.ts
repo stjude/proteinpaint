@@ -141,8 +141,8 @@ tape('mayAdjustConfig() - numeric termCollection with barchart childType should 
 	)
 })
 
-tape('mayAdjustConfig() - numeric termCollection with violin childType should preserve violin', test => {
-	test.plan(1)
+tape('mayAdjustConfig() - legacy violin childType should migrate to boxplot with violin mode', test => {
+	test.plan(2)
 
 	const opts = {}
 	const term = createTermCollectionWrapper('numeric')
@@ -150,9 +150,15 @@ tape('mayAdjustConfig() - numeric termCollection with violin childType should pr
 
 	mayAdjustConfig(config, opts)
 
-	// Legacy 'violin' childType is preserved (not auto-normalized) when explicitly set;
-	// the summary tabs now always emit 'boxplot' with mode='violin' instead.
-	test.equal(config.childType, 'violin', 'Should preserve violin childType for numeric termCollection')
+	// Legacy 'violin' childType (e.g. from saved states or external callers
+	// such as the volcano plot) is migrated to 'boxplot' + mode='violin' so
+	// the standalone violin childType can be retired.
+	test.equal(config.childType, 'boxplot', 'Should migrate legacy violin childType to boxplot')
+	test.equal(
+		config.settings?.boxplot?.mode,
+		'violin',
+		'Should set settings.boxplot.mode to violin when migrating legacy violin childType'
+	)
 })
 
 tape('mayAdjustConfig() - categorical termCollection should always be barchart even if childType provided', test => {

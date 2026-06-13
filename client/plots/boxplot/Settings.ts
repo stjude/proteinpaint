@@ -30,4 +30,9 @@ export type BoxPlotSettings = {
 	removeOutliers: boolean
 	/** If true, show association tests table */
 	showAssocTests: boolean
+	/** Display mode toggle.
+	 * 'box' (default): renders the box-and-whisker only.
+	 * 'violin': renders a violin (mirrored density) shape behind the box.
+	 * The mode is driven from the summary plot tabs. */
+	mode: 'box' | 'violin'
 }
