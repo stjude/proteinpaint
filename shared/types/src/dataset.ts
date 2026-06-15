@@ -6,6 +6,7 @@ import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from './routes/deleteWSITileSelection.ts'
 import type { Prediction } from './routes/aiProjectSelectedWSImages.ts'
+import type { TermdbSingleCellSamplesRequest } from './index.ts'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -901,6 +902,7 @@ export type SingleCellSamples = {
 	get?: (q: any) => any
 	/** extra label to show along with sample, must be a term id as in sampleColumns[] and allow to retrieve value from sample object */
 	extraSampleTabLabel?: string
+	getFilteredSingleCellSamples?: (q: TermdbSingleCellSamplesRequest, includeMeta: boolean) => any
 }
 
 type SingleCellDataBase = {
