@@ -50,7 +50,7 @@ tape('bigWigSummary rejects non-integer n_bins', async t => {
 		t.fail('Expected n_bins validation to fail')
 	} catch (err) {
 		const errorText = String(err)
-		t.ok(errorText.includes('n_bins must be an integer'), 'Error should mention n_bins validation')
+		t.ok(errorText.includes('n_bins must be a positive integer'), 'Error should mention n_bins validation')
 	}
 
 	t.end()
@@ -68,7 +68,7 @@ tape('bigWigSummary rejects an invalid URL', async t => {
 		t.fail('Expected invalid URL validation to fail')
 	} catch (err) {
 		const errorText = String(err)
-		t.ok(errorText.includes('is not accessible'), 'Error should mention invalid URL accessibility')
+		t.ok(errorText.includes('Received an error during file opening!'), 'Should mention file opening error')
 	}
 
 	t.end()
