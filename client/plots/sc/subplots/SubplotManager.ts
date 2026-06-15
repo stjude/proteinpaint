@@ -33,13 +33,13 @@ export class SubplotManager {
 		}
 
 		for (const subplot of subplots) {
-			this.initSubplot(subplot)
+			this.updateSubplotRecord(subplot)
 		}
 
 		return this.getActiveSubplotsFlat()
 	}
 
-	initSubplot(subplot) {
+	updateSubplotRecord(subplot) {
 		const existing = this.records.get(subplot.id)
 		const sampleId = this.getSampleId(subplot)
 		const isMeta = (sampleId && this.sc.viewModel.metaResultIds.has(sampleId)) || false
