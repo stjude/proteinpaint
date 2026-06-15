@@ -97,6 +97,7 @@ validate_query_geneCnv
 validate_query_cnv
 	addCnvGetter
 		validateSampleHeader2
+validate_query_itd
 validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
