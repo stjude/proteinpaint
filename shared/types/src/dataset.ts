@@ -1905,8 +1905,6 @@ type Variant2Samples = GdcApi & {
 	variantkey: string
 	twLst?: Tw[]
 	sunburst_twLst?: Tw[]
-	/** ds-supplied getter */
-	getMutatedSamples?: (q: any, ds: any) => void
 }
 
 type MutationSet = {
@@ -2220,6 +2218,11 @@ export type Mds3 = BaseMds & {
 	validate_filter0?: (f: any) => void
 	getFilter0SampleTypes?: (filter: any, ds: any) => void
 	ssm2canonicalisoform?: GdcApi
+	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration
+	when clicking on an alteration (as well as other tasks) it will need to identify actual alteration-harboring samples
+	this setting enables this action
+	it is dependent on at least one type of genomic alteration supported in ds.queries{}
+	*/
 	variant2samples?: Variant2Samples
 	scatterplots?: Scatterplots
 	/** disables switching to genomic mode for the protein view mds3 tk of this ds
