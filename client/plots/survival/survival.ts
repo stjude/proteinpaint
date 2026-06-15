@@ -215,6 +215,14 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							title: 'Display the 95% confidence interval'
 						},
 						{
+							label: 'Median Survival',
+							boxLabel: 'Visible',
+							type: 'checkbox',
+							chartType: 'survival',
+							settingsKey: 'medianSurvivalVisible',
+							title: 'Display dashed lines indicating the median survival time (50% probability)'
+						},
+						{
 							label: 'Censored Symbol',
 							type: 'radio',
 							chartType: 'survival',
@@ -759,7 +767,8 @@ function setRenderers(self) {
 			.style('padding-left', '5px')
 
 		/* eslint-disable */
-		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, medianSurvivalG] =
+			getSvgSubElems(svg)
 		/* eslint-enable */
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 10 //adding 10 avoids clipping of the svg when downloading
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
@@ -781,6 +790,7 @@ function setRenderers(self) {
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+		renderMedianSurvival(medianSurvivalG, chart, s)
 		renderAtRiskG({
 			g: atRiskG,
 			s,
@@ -821,10 +831,11 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg) {
-		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line, medianSurvivalG
 		if (!svg.select('.sjpp-survival-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpp-survival-mainG')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-survival-seriesesG')
+			medianSurvivalG = mainG.append('g').attr('class', 'sjpp-survival-median')
 			axisG = mainG.append('g').attr('class', 'sjpp-survival-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpp-survival-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
@@ -840,6 +851,7 @@ function setRenderers(self) {
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			seriesesG = mainG.select('.sjpcb-survival-seriesesG')
+			medianSurvivalG = mainG.select('.sjpp-survival-median')
 			axisG = mainG.select('.sjpp-survival-axis')
 			xAxis = axisG.select('.sjpp-survival-x-axis')
 			yAxis = axisG.select('.sjpp-survival-y-axis')
@@ -854,7 +866,7 @@ function setRenderers(self) {
 			svg.seriesTip = getSeriesTip(line, plotRect, self.dom.tip)
 		}
 
-		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
+		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, medianSurvivalG]
 	}
 
 	function renderSeries(g, chart, series, i, s) {
@@ -1041,6 +1053,58 @@ function setRenderers(self) {
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(yTitleLabel)
+	}
+
+	function renderMedianSurvival(g, chart, s) {
+		g.selectAll('*').remove()
+		if (!s.medianSurvivalVisible) return
+
+		const yMid = chart.yScale(0.5)
+		const yBottom = chart.yScale(0)
+
+		// Collect median times (first time point where survival <= 0.5) for each visible series
+		const medianTimes: number[] = []
+		for (const series of chart.visibleSerieses) {
+			let processedData = series.data
+			if (s.maxTimeToEvent) {
+				processedData = series.data.filter((d: any) => d.x <= s.maxTimeToEvent)
+			}
+			const medianPoint = (processedData as any[]).find((d: any) => d.y <= 0.5)
+			if (medianPoint) medianTimes.push(medianPoint.x)
+		}
+
+		if (!medianTimes.length) return
+
+		// Horizontal dashed line at 50% survival from y-axis to the rightmost median time
+		const maxMedianX = chart.xScale(Math.max(...medianTimes))
+		g.append('line')
+			.attr('x1', 0)
+			.attr('y1', yMid)
+			.attr('x2', maxMedianX)
+			.attr('y2', yMid)
+			.attr('stroke', '#000')
+			.attr('stroke-width', 1)
+			.attr('stroke-dasharray', '4,4')
+
+		// Vertical dashed line from 50% down to x-axis for each series with a median
+		for (const series of chart.visibleSerieses) {
+			let processedData = series.data
+			if (s.maxTimeToEvent) {
+				processedData = series.data.filter((d: any) => d.x <= s.maxTimeToEvent)
+			}
+			const medianPoint = (processedData as any[]).find((d: any) => d.y <= 0.5)
+			if (!medianPoint) continue
+
+			const scaledX = chart.xScale(medianPoint.x)
+			g.append('line')
+				.attr('x1', scaledX)
+				.attr('y1', yMid)
+				.attr('x2', scaledX)
+				.attr('y2', yBottom)
+				.attr('stroke', '#000')
+				.attr('stroke-width', 1)
+				.attr('stroke-dasharray', '4,4')
+		}
 	}
 
 	self.getSymbol = function (size) {
@@ -1313,6 +1377,7 @@ export async function getPlotConfig(opts, app) {
 			survival: {
 				radius: 5,
 				ciVisible: true,
+				medianSurvivalVisible: false,
 				fill: '#fff',
 				stroke: '#000',
 				symbol: 'vtick', // 'x', 'vtick'
