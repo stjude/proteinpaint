@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 import sys
 import pyBigWig as pybw
 
@@ -20,8 +21,8 @@ def get_bigwig_stats(bw_file:str, chrom:str, start:int, end:int, n_bins:int) -> 
     try:
         bw = pybw.open(bw_file)
         if not bw.isBigWig():
-            raise ValueError(f"{bw_file} is not a valid bigWig file")
-        stats = bw.stats(chrom, start, end, nBins=n_bins, type="mean")
+            raise ValueError(f"Error reading non-valid bigWig file")
+        stats = [stat if stat is not None else 'NA' for stat in bw.stats(chrom, start, end, nBins=n_bins, type="mean")]
         bw.close()
         return stats
     except Exception as e:
