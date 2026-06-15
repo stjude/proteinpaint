@@ -7,6 +7,7 @@ import type {
 	ShapeLegendEntry,
 	SingleCellRange,
 	TermdbSingleCellPlotsRequest,
+	Plot,
 	RouteApi,
 	RoutePayload,
 	ValidSingleCellPlotsResponse
@@ -47,7 +48,7 @@ function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest 
 			name: validString(input.singleCellPlot?.name),
 			sample: input.singleCellPlot?.sample
 		},
-		filter: input.filter as Filter, // TODO: use a filter validator
+		filter: input.filter ? (input.filter as Filter) : undefined, // TODO: use a filter validator
 		filter0: input.filter0 as any,
 		canvasSettings: {
 			cutoff: validNumber(input.canvasSettings?.cutoff) || 1000,
@@ -103,7 +104,7 @@ async function getSingleCellScatter(req, res, ds) {
 		else if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
 		else throw new Error(`unsupported single cell term type: ${tw.term.type}`)
 
-		const data = await ds.queries.singleCell.data.get(arg)
+		const data: { plots: Plot[] } = await ds.queries.singleCell.data.get(arg)
 
 		const plot = data.plots[0]
 		const cells: Cell[] = [...plot.expCells, ...plot.noExpCells]
@@ -125,8 +126,20 @@ async function getSingleCellScatter(req, res, ds) {
 			geMin = Infinity,
 			geMax = -Infinity
 		let totalCellCount = 0
+		let filteredSamples: Set<string> = new Set()
+
+		if (q.filter?.lst?.length) {
+			const samples = await ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
+			filteredSamples = new Set(samples.map(s => s.sample))
+		}
 
 		for (const cell of cells) {
+			if (filteredSamples.size > 0) {
+				const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(sample!.sID)
+				const sampleName = metaIdMap?.get?.(cell.cellId)
+				if (sampleName && !filteredSamples.has(sampleName)) continue
+			}
+
 			/** Since getData() from termdb.matrix is not called again for single cell scatter,
 			 * the groups formatting logic for category (i.e. value) is recreated here. */
 			let category = cell.category

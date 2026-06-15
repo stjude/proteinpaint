@@ -27,6 +27,7 @@ import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { mayLimitSamples } from '#src/mds3.filter.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -52,7 +53,7 @@ export const api: RouteApi = {
 function validTermdbSingleCellSamplesRequest(input): TermdbSingleCellSamplesRequest {
 	return {
 		...validGenomeDs(input),
-		filter: input.filter as Filter, // TODO: use a filter validator
+		filter: input.filter ? (input.filter as Filter) : undefined, // TODO: use a filter validator
 		filter0: input.filter0 as any
 	}
 }
@@ -223,13 +224,23 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		}
 	}
 
+	/** For filtering
+	 * Create lookups for getFilteredSingleCellSamples. Created on server
+	 * init for performance. */
+	const sample2Id = new Map()
+	const sampleIds = new Set()
+	const _samples = [...samples.values()] as SingleCellSample[]
+	for (const s of _samples) {
+		const sampleId = ds.cohort.termdb.q.sampleName2id(s.sample)
+		if (!Number.isFinite(sampleId)) continue
+		sampleIds.add(sampleId)
+		sample2Id.set(s.sample, sampleId)
+	}
+
 	S.get = async (_q: TermdbSingleCellSamplesRequest) => {
 		const re: any = { samples: [...samples.values()] as SingleCellSample[] }
 		if (_q.filter?.lst?.length) {
-			const { get_samples } = await import('#src/termdb.sql.js')
-			const filtered = await get_samples({ filter: _q.filter, mapParent2Children: true }, ds, true)
-			const filteredSamples = new Set(filtered.map((s: any) => s.name))
-			re.samples = re.samples.filter(s => filteredSamples.has(s.sample))
+			re.samples = await S.getFilteredSingleCellSamples!(_q, true)
 		}
 		if (q.metaResults) {
 			// meta analysis results exist. pass it along with samples
@@ -238,6 +249,15 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			})
 		}
 		return re
+	}
+
+	S.getFilteredSingleCellSamples = async (_q: TermdbSingleCellSamplesRequest, includeMeta = false) => {
+		const allowedSamples = await mayLimitSamples(_q, [...sampleIds], ds)
+		const conditional = sample => {
+			if (includeMeta) return allowedSamples?.has(sample2Id.get(sample)) || D?.metaIdMap?.has(sample)
+			else return allowedSamples?.has(sample2Id.get(sample))
+		}
+		return _samples.filter(s => conditional(s.sample))
 	}
 }
 
