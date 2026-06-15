@@ -6,8 +6,6 @@ import type { WSISample } from './routes/wsisamples.ts'
 import type { SaveWSIAnnotationRequest } from './routes/saveWSIAnnotation.ts'
 import type { DeleteWSITileSelectionRequest } from './routes/deleteWSITileSelection.ts'
 import type { Prediction } from './routes/aiProjectSelectedWSImages.ts'
-import type { AIProjectAdminActions } from './index.ts'
-import type Database from 'better-sqlite3'
 /*** General usage types ***/
 type FileObj = {
 	file: string
@@ -1168,7 +1166,6 @@ type Mds3Queries = {
 	/** deprecated. replaced by WSImages */
 	DZImages?: DZImages
 	WSImages?: WSImages
-	AIHalAuth?: AIHalAuth
 	images?: Images
 	chat?: any
 }
@@ -1243,15 +1240,6 @@ export type WSImages = {
 	selectWSIImages?: () => Promise<string[]>
 }
 
-export type AIHalAuth = {
-	isAuthRequired: (req: any) => boolean
-	checkAuthorization: (req: any, action: AIProjectAdminActions) => boolean
-	SessionHourTimeout: number
-	getLoginTimeOut: (lastLogin: string, hourLimit: number) => boolean
-	parseLogin: (req: any, connection: Database.Database) => { status: 'ok' } | { status: 'error'; error: string }
-	getUsers: (connection: Database.Database, projectID: number) => string[]
-	setUser: (connection: Database.Database, projectId: number, requestingUser: string | null) => string
-}
 export type WSIClass = { id: number; key_shortcut: string; label: string; color: string }
 
 /*** types supporting Termdb ***/

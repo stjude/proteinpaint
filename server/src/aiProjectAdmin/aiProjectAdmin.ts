@@ -1,6 +1,7 @@
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import { runMultiStmtSQL, runSQL } from '#src/runSQLHelpers.ts'
 import type Database from 'better-sqlite3'
+import { AIHalAuth } from './AIHalAuth.ts'
 import type {
 	RouteApi,
 	AIProjectAdminRequest,
@@ -20,7 +21,7 @@ export function init({ genomes }) {
 			const ds = g.datasets[query.dslabel]
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 			const connection = getDbConnection(ds) as Database.Database
-			const aiHalAuth = ds.queries?.AIHalAuth
+			const aiHalAuth = AIHalAuth
 			if (!aiHalAuth) throw new Error('AIHalAuth queries not found in dataset.')
 			const userEmail = req.query.__protected__.clientAuthResult?.email || ''
 			/** get list of projects from db */

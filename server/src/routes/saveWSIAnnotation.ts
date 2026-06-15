@@ -2,6 +2,7 @@ import type { Mds3, TileSelection, SaveWSIAnnotationRequest, AIProjectAuthInfo, 
 import { FlagStatus, SelectionPrefixes, checkSelectionType } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
+import { AIHalAuth } from '#src/aiProjectAdmin/AIHalAuth.ts'
 
 const payload: RoutePayload = {
 	init,
@@ -72,7 +73,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 			const currentUser = connection.prepare('SELECT current_user FROM project WHERE id = ?').get(projectId) as {
 				current_user: string | null
 			}
-			if (!(await ds.queries?.AIHalAuth?.checkAuthorization(req, 'annotate', currentUser?.current_user ?? null))) {
+			if (!AIHalAuth?.checkAuthorization(req, 'annotate', currentUser?.current_user ?? null)) {
 				return {
 					status: 'error',
 					error: 'logout'

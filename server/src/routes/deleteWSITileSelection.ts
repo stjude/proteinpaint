@@ -8,6 +8,7 @@ import type {
 } from '#types'
 import { getDbConnection } from '#src/aiHistoDBConnection.ts'
 import type Database from 'better-sqlite3'
+import { AIHalAuth } from '#src/aiProjectAdmin/AIHalAuth.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -75,7 +76,7 @@ function validateQuery(ds: any, connection: Database.Database) {
 			.get(query.projectId) as {
 			current_user: string | null
 		}
-		if (!(await ds.queries?.AIHalAuth?.checkAuthorization(req, 'annotate', currentUser))) {
+		if (!AIHalAuth?.checkAuthorization(req, 'annotate', currentUser)) {
 			return {
 				status: 'error',
 				error: 'logout'
