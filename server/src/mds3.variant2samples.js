@@ -26,7 +26,10 @@ variant2samples_getresult()
 export async function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
-	// throw `!!! fake validate_variant2samples() failure !!!` // uncomment to test
+	if (!ds.queries) throw 'variant2sample is set but ds.queries{} is missing'
+	// this is optional but at least one of below must be set
+	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.cnv && !ds.queries.itd)
+		throw 'at least one query type must be provided for variant2sample to be enabled'
 
 	if (ds.preInit?.getStatus) {
 		// should wait for dataset or API to be "healthy" before attempting to validate,
@@ -85,13 +88,15 @@ export async function validate_variant2samples(ds) {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
 		let hasSamples = false
-		if (ds.queries?.snvindel?.byrange?._tk?.samples) {
+		if (ds.queries.snvindel?.byrange?._tk?.samples) {
 			// this file has samples
 			hasSamples = true
 		}
-		if (ds.queries?.svfusion?.byrange?.samples) {
+		if (ds.queries.svfusion?.byrange?.samples) {
 			hasSamples = true
 		}
+		if (ds.queries.cnv?.samples) hasSamples = true
+		if (ds.queries.itd?.samples) hasSamples = true
 		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
 
