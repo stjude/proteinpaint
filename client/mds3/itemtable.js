@@ -416,6 +416,13 @@ function print_mname(div, m) {
 		.style('color', mclass[m.class].color)
 		.style('font-size', '.8em')
 		.text(mclass[m.class].label.toUpperCase())
+	if (m.__cim) {
+		div
+			.append('span')
+			.html('&#9888;')
+			.style('margin-left', '5px')
+			.title('Consequence annotation is not based on current gene isoform')
+	}
 }
 
 export function print_snv(holder, m, tk, block) {

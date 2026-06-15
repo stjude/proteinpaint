@@ -1140,10 +1140,18 @@ export function vcfcopymclass(m, block) {
 		if (block.usegm) {
 			// block is in gm mode, find a csq matching with the genemodel isoform
 			useone = m.csq.find(i => i._isoform == block.usegm.isoform)
+			if (!useone) {
+				// no match to usegm isoform
+				if (block.gmmode == 'genomic') {
+					// in genomic mode and zoomed out, where this variant is from a neighboring gene near block.usegm and is expected not to match
+				} else {
+					// not in genomic mode and all variants must be within range of this isoform, the csq may mismatch with the isoform. set this flag to alert on client
+					m.__cim = true
+				}
+			}
 		}
 
 		if (!useone) {
-			// no match to usegm isoform; can be due to in genomic mode and zoomed out, where this variant is from a neighboring gene near block.usegm
 			// find one using canonical isoform
 			useone = m.csq.find(i => i.CANONICAL)
 
