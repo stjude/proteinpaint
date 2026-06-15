@@ -93,8 +93,8 @@ export class SCViewer extends PlotBase implements RxComponent {
 			else if (e.stack) console.log(e.stack)
 			throw new Error(e.message || e)
 		}
-		this.interactions = new SCInteractions(this)
 		this.viewModel = new SCViewModel(this.app, this.itemColumns)
+		this.interactions = new SCInteractions(this)
 		this.subplotManager = new SubplotManager(this)
 		this.view = new SCViewRenderer(this)
 		/** Only renders the controls above the table */
