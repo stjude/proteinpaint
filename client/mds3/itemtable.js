@@ -421,7 +421,7 @@ function print_mname(div, m) {
 			.append('span')
 			.html('&#9888;')
 			.style('margin-left', '5px')
-			.title('Consequence annotation is not based on current gene isoform')
+			.attr('title', 'Consequence annotation is not based on current gene isoform')
 	}
 }
 
