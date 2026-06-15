@@ -11,6 +11,7 @@ export type TermdbSingleCellPlotsRequest = {
 		/** Name of the single cell plot type, e.g. 'umap', 'tsne' */
 		name: string
 		sample?: { eID?: string; sID: string }
+		isMetaResult?: boolean
 	}
 	filter?: Filter
 	filter0?: any //ds specific filter, specifically for api requests

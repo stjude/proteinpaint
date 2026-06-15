@@ -2,6 +2,7 @@ import type { AppApi } from '#rx'
 import type { SCModel } from '../model/SCModel.ts'
 import type { SCViewer } from '../SC.ts'
 import type { SCDom } from '../SCTypes'
+import type { SCViewModel } from '../viewModel/SCViewModel.ts'
 
 /** Handles the interactivity from the view */
 export class SCInteractions {
@@ -9,12 +10,14 @@ export class SCInteractions {
 	dom: SCDom
 	id: string
 	model: SCModel
+	viewModel: SCViewModel
 
 	constructor(sc: SCViewer) {
 		this.app = sc.app
 		this.dom = sc.dom
 		this.id = sc.id
 		this.model = sc.model
+		this.viewModel = sc.viewModel
 	}
 
 	/** Add the plot to the state.plots array with .parentId. Adding
@@ -33,6 +36,7 @@ export class SCInteractions {
 
 	/** Updates the item in the plot settings */
 	async updateItem(item) {
+		item.isMetaResult = this.viewModel.metaResultIds.has(item.sID)
 		await this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
