@@ -119,7 +119,7 @@ tape('initSubplot() should derive sample and plot metadata from subplot shape', 
 		sandboxDiv: { id: 'sandbox-1' }
 	} as any)
 
-	manager.initSubplot(
+	manager.updateSubplotRecord(
 		getMockSubplot({
 			id: 'plot1',
 			singleCellPlot: { name: 'UMAP', sample: { sID: 'meta-1' } }
