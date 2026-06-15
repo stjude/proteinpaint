@@ -1062,40 +1062,33 @@ function setRenderers(self) {
 		const yMid = chart.yScale(0.5)
 		const yBottom = chart.yScale(0)
 
-		// Collect median times (first time point where survival <= 0.5) for each visible series
-		const medianTimes: number[] = []
-		for (const series of chart.visibleSerieses) {
-			let processedData = series.data
-			if (s.maxTimeToEvent) {
-				processedData = series.data.filter((d: any) => d.x <= s.maxTimeToEvent)
-			}
-			const medianPoint = (processedData as any[]).find((d: any) => d.y <= 0.5)
-			if (medianPoint) medianTimes.push(medianPoint.x)
+		// Find the first data point where survival <= 0.5 (median) for a series
+		const getMedianPoint = (series: any) => {
+			const data = s.maxTimeToEvent ? series.data.filter((d: any) => d.x <= s.maxTimeToEvent) : series.data
+			return (data as any[]).find((d: any) => d.y <= 0.5)
 		}
 
-		if (!medianTimes.length) return
+		// Collect scaled x positions for all visible series that have a median
+		const medianScaledXs: number[] = []
+		for (const series of chart.visibleSerieses) {
+			const medianPoint = getMedianPoint(series)
+			if (medianPoint) medianScaledXs.push(chart.xScale(medianPoint.x))
+		}
+
+		if (!medianScaledXs.length) return
 
 		// Horizontal dashed line at 50% survival from y-axis to the rightmost median time
-		const maxMedianX = chart.xScale(Math.max(...medianTimes))
 		g.append('line')
 			.attr('x1', 0)
 			.attr('y1', yMid)
-			.attr('x2', maxMedianX)
+			.attr('x2', Math.max(...medianScaledXs))
 			.attr('y2', yMid)
 			.attr('stroke', '#000')
 			.attr('stroke-width', 1)
 			.attr('stroke-dasharray', '4,4')
 
 		// Vertical dashed line from 50% down to x-axis for each series with a median
-		for (const series of chart.visibleSerieses) {
-			let processedData = series.data
-			if (s.maxTimeToEvent) {
-				processedData = series.data.filter((d: any) => d.x <= s.maxTimeToEvent)
-			}
-			const medianPoint = (processedData as any[]).find((d: any) => d.y <= 0.5)
-			if (!medianPoint) continue
-
-			const scaledX = chart.xScale(medianPoint.x)
+		for (const scaledX of medianScaledXs) {
 			g.append('line')
 				.attr('x1', scaledX)
 				.attr('y1', yMid)
