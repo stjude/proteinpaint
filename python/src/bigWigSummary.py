@@ -19,15 +19,13 @@ def _read_stdin_payload() -> str:
 
 def get_bigwig_stats(bw_file:str, chrom:str, start:int, end:int, n_bins:int) -> list[float | None]:
     try:
-        bw = pybw.open(bw_file)
-        if not bw.isBigWig():
-            raise ValueError(f"Error reading non-valid bigWig file")
-        stats = [stat if stat is not None else 'NA' for stat in bw.stats(chrom, start, end, nBins=n_bins, type="mean")]
-        bw.close()
-        return stats
+        with pybw.open(bw_file) as bw:
+            if not bw.isBigWig():
+                raise ValueError(f"Error reading non-valid bigWig file")
+            stats = [stat if stat is not None else 'NA' for stat in bw.stats(chrom, start, end, nBins=n_bins, type="mean")]
+            return stats
     except Exception as e:
         raise ValueError(f"Error reading bigWig file: {e}")
-
 
 def main() -> int:
     try:
