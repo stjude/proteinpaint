@@ -47,7 +47,7 @@ export default function setRoutes(app, basepath, genomes) {
 					const supportedPlotTypes = (ds as any).cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 					const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
 					console.log('\x1b[32m%s\x1b[0m', 'Testing chatbot for dataset: ' + label)
-					const genedb = serverconfig.tpmasterdir + '/' + (genome as any).genedb.dbfile
+					const genedb = path.join(serverconfig.tpmasterdir, (genome as any).genedb.dbfile)
 					console.log('genedb path for dataset ' + label + ': ' + genedb)
 					const overrideDir = path.join(process.cwd(), 'dataset', 'ai', label)
 					const aiFilesDir = fs.existsSync(overrideDir)

@@ -26,7 +26,7 @@ async function getScaffold_Survival(user_prompt: string, llm: LlmConfig): Promis
 
 A survival plot shows survival probability over time for one or more groups of samples. It is defined by:
   - A survival time-to-event term (e.g. "overall survival", "OS", "event-free survival", "EFS", "progression-free survival", "PFS", "relapse-free survival", "RFS", "disease-free survival", "DFS").
-  - A stratification variable (term2) used to split the cohort into curves (e.g. "sex", "BCR-ABL1 subtype", "TP53 mutation status", "age groups", "treatment arm"). Without term2, only a single overall curve can be drawn.
+  - A stratification variable (term2) used to split the cohort into curves (e.g. "sex", "BCR-ABL1 subtype", "TP53 mutation status", "age groups", "treatment arm").
   - An OPTIONAL cohort filter that restricts the sample set.
 
 ## OUTPUT SCHEMA
@@ -369,10 +369,17 @@ method: The method specified by the user for performing differential expression 
 
 ## EXAMPLES
 --- Two explicit categorical groups ---
-Q: "Compare gene expression between BCR-ABL1 and ETV6-RUNX1 subtypes"
+Q: "Compare gene expression between X and Y subtypes"
 A: {
-  "filter1": "BCR-ABL1 subtypes",
-  "filter2": "ETV6-RUNX1 subtypes"
+  "filter1": "X subtypes",
+  "filter2": "Y subtypes"
+}
+
+--- Two explicit categorical groups ---
+Q: "Compare gene expression between group C and D"
+A: {
+  "filter1": "group C",
+  "filter2": "group D"
 }
 
 --- Two groups defined by a numeric threshold ---
