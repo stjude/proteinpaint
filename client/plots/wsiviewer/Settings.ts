@@ -22,7 +22,6 @@ export default interface Settings {
 	isSavingAnnotation: boolean
 	tileSize: number
 	activeAnnotation: number
-	activeID: string
 	sessionsTileSelection: Array<TileSelection>
 	changeTrigger: number
 	animationTime: number

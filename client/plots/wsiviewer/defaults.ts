@@ -21,7 +21,6 @@ export default function wsiViewerDefaults(overrides = {}): Settings {
 		annotatedPatchBorderColor: '#D3D3D3',
 		tileSize: 512, // 512px
 		activeAnnotation: 0,
-		activeID: '',
 		sessionsTileSelection: [],
 		changeTrigger: 0,
 		isSavingAnnotation: false,
