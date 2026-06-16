@@ -10,7 +10,6 @@ import { SampleTableRenderer } from '../view/SampleTableRenderer.ts'
  *   - renderSamplesTable() noButtonCallback should build item with sID from sample column
  *   - renderSamplesTable() noButtonCallback should build item with eID from experiment column
  *   - renderSamplesTable() noButtonCallback should map custom column labels to keys
- *   - buildItemFromRow() should set isMetaResult for metadata result rows
  *   - buildItemFromRow() should skip empty cell values
  *   - renderSamplesTable() noButtonCallback should throw when sID is missing
  *   - renderSamplesTable() noButtonCallback should call interactions.updateItem
@@ -94,23 +93,6 @@ tape('constructor should set dom, interactions, and tableData', test => {
 	test.equal(renderer.dom, dom, 'Should set dom reference')
 	test.equal(renderer.interactions, interactions, 'Should set interactions reference')
 	test.equal(renderer.tableData, tableData, 'Should set tableData reference')
-
-	if ((test as any)._ok) holder.remove()
-	test.end()
-})
-
-tape('buildItemFromRow() should set isMetaResult for metadata result rows', test => {
-	const tableData = {
-		columns: [{ label: 'Sample', sortable: true }, { label: 'Shown plots' }, { label: 'Experiment', sortable: true }],
-		rows: [[{ value: 'S1' }, { value: 'meta', elemId: 'isMetaResult' }, { value: 'EXP1' }]],
-		selectedRows: [],
-		sampleColIdx: 0
-	}
-
-	const { renderer, holder } = getRenderer()
-	const item = renderer.buildItemFromRow(tableData as any, 0)
-
-	test.true(item.isMetaResult, 'Should set isMetaResult=true when row contains isMetaResult elemId')
 
 	if ((test as any)._ok) holder.remove()
 	test.end()

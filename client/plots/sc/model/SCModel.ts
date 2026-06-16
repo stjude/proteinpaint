@@ -2,6 +2,7 @@ import type { AppApi } from '#rx'
 import type { SCFormattedState } from '../SCTypes'
 import { dofetch3 } from '#common/dofetch'
 import type { SCViewer } from '../SC'
+import { getNormalRoot } from '#filter/filter.utils'
 
 /** Fetches data for sc app */
 export class SCModel {
@@ -20,8 +21,8 @@ export class SCModel {
 		const body = {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
-			filter: state.termfilter.filter || null,
-			filter0: state.termfilter.filter0 || null
+			filter: getNormalRoot(state.termfilter.filter),
+			filter0: getNormalRoot(state.termfilter.filter0)
 		}
 		return await dofetch3('termdb/singlecellSamples', { body })
 	}
