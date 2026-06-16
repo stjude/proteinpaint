@@ -578,7 +578,7 @@ Query: "Show gene expression of TP53"
 Output: { "survivalTerm": null }
 
 Classify the following user query:
-Query: ${user_prompt}
+Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Survival term classifier: ${response}`)
@@ -596,6 +596,6 @@ Query: ${user_prompt}
 		return match.name
 	} catch {
 		mayLog(`Failed to parse survival term classifier response: ${response}`)
-		throw `Failed to parse survival term classifier response: ${response}`
+		throw new Error(`Failed to parse survival term classifier response: ${response}`)
 	}
 }

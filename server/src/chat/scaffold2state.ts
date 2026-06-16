@@ -105,14 +105,11 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		const samples1 = await get_samples({ filter: input.filter1 }, ds, true) // true is to bypass permission check
 		const samples2 = await get_samples({ filter: input.filter2 }, ds, true) // true is to bypass permission check
 
-		const samples1lst = samples1.map((item: any) => ({
-			sampleId: item.id,
-			sample: item.name
-		}))
-		const samples2lst = samples2.map((item: any) => ({
-			sampleId: item.id,
-			sample: item.name
-		}))
+		// Get unique sample ids for each group and format them as required for the plot state
+		const sampleIds1 = Array.from(new Set(samples1.map((item: any) => item.id)))
+		const sampleIds2 = Array.from(new Set(samples2.map((item: any) => item.id)))
+		const samples1lst = sampleIds1.map(sampleId => ({ sampleId }))
+		const samples2lst = sampleIds2.map(sampleId => ({ sampleId }))
 
 		plotState.plot.chartType = 'differentialAnalysis'
 		plotState.plot.childType = 'volcano'
@@ -277,7 +274,7 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 				possible_options: input.term.map((r: any) => ({ id: r.name, name: r.description }))
 			}
 		} else {
-			throw 'Survival plot requires a survival term, but none was provided in the input.'
+			throw new Error('Survival plot requires a survival term, but none was provided in the input.')
 		}
 
 		// term2 is the stratification/overlay variable
@@ -290,7 +287,7 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 			plotState.plot.filter = input.filter
 		}
 	} else {
-		throw 'Plot type: ' + plotType + ' not supported for now'
+		throw new Error('Plot type: ' + plotType + ' not supported for now')
 	}
 	return plotState
 }

@@ -547,7 +547,7 @@ export async function parse_survival_terms_from_db(dataset_db: string) {
 			db_rows.push(db_row)
 		})
 	} catch (error) {
-		throw 'Error in parsing survival terms from dataset DB:' + error
+		throw new Error('Error in parsing survival terms from dataset DB:' + error)
 	} finally {
 		db.close()
 	}

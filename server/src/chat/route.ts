@@ -125,7 +125,7 @@ export function init({ genomes }) {
 			const cohortKey = cohortFilter ? cohortFilter.tvs.values[0].key : ''
 			const supportedPlotTypes = ds.cohort.termdb.q?.getSupportedChartTypes(req)?.[cohortKey]
 			const chatSupportedPlotTypes = getChatRelatedPlotTypes(supportedPlotTypes)
-			const genedb = serverconfig.tpmasterdir + '/' + genome.genedb.dbfile
+			const genedb = path.join(serverconfig.tpmasterdir, genome.genedb.dbfile)
 			const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 			const ai_output_json = await run_chat_pipeline(
 				q.prompt,
