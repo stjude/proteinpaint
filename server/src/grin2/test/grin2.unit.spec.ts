@@ -156,6 +156,12 @@ tape('filterAndConvertCnv: maxSegLength + shared guards', test => {
 		null,
 		'non-integer start => null'
 	)
+	// omitted maxSegLength must default to 0 (no filter), not silently drop the segment
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, value: 1.0 }, { lossThreshold: -0.4, gainThreshold: 0.4 }, 'log2ratio'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'omitted maxSegLength => no length filter (kept)'
+	)
 	test.end()
 })
 
