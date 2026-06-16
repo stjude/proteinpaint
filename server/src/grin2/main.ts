@@ -810,13 +810,15 @@ export function filterAndConvertCnv(
 	options: GRIN2Request['cnvOptions'],
 	cnvType: CnvType
 ): string[] | null {
-	if (!options || options.maxSegLength === undefined) return null
+	if (!options) return null
 
 	if (!Number.isInteger(entry.start)) return null
 	if (!Number.isInteger(entry.stop)) return null
 
-	// Filter max segment length (applies to every cnv type)
-	if (options.maxSegLength > 0 && entry.stop - entry.start > options.maxSegLength) {
+	// Filter max segment length (applies to every cnv type). Default 0 = no filter, matching the
+	// request contract; an omitted maxSegLength must not silently drop all segments.
+	const maxSegLength = options.maxSegLength ?? 0
+	if (maxSegLength > 0 && entry.stop - entry.start > maxSegLength) {
 		return null
 	}
 
