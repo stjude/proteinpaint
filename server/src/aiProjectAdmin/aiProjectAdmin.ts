@@ -10,6 +10,7 @@ import type {
 	AIProjectAdminActions
 } from '#types'
 import { validGenomeDs, validString, validNumber, validStringArr } from '../routes/common.ts'
+
 export function init({ genomes }) {
 	return async (req, res): Promise<void> => {
 		try {
@@ -22,7 +23,6 @@ export function init({ genomes }) {
 			if (!ds.queries?.WSImages?.db) throw new Error('WSImages database not found.')
 			const connection = getDbConnection(ds) as Database.Database
 			const aiHalAuth = AIHalAuth
-			if (!aiHalAuth) throw new Error('AIHalAuth queries not found in dataset.')
 			const userEmail = req.query.__protected__.clientAuthResult?.email || ''
 			/** get list of projects from db */
 			if (query.for === 'list') {
