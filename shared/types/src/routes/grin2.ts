@@ -43,20 +43,13 @@ export type GRIN2Request = {
 	/** pp filter */
 	filter?: Filter
 
-	/** Options for filtering SNV/indel file content */
+	/** Options for filtering SNV/indel file content. Note: total depth and alt-allele count are now
+	 * handled by mafFilter (the refined replacement for the former minTotalDepth/minAltAlleleCount cutoffs). */
 	snvindelOptions?: {
-		/** Minimum total depth of returned SNV/indel files */
-		minTotalDepth?: number // Default: 10
-		/** Minimum alternate allele count of returned SNV/indel files */
-		minAltAlleleCount?: number // Default: 2
 		/** String array of consequence types to include */
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
 		hyperMutator?: number // Default: 1000
-		/** Number of bases to include as 5' flank around the mutation position */
-		fivePrimeFlankSize?: number
-		/** Number of bases to include as 3' flank around the mutation position */
-		threePrimeFlankSize?: number
 		/** MAF filter object (tvslst) to filter mutations by allele frequency */
 		mafFilter?: Filter
 	}
@@ -75,27 +68,13 @@ export type GRIN2Request = {
 		maxSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
-		/** Number of bases to include as 5' flank around the segment position */
-		fivePrimeFlankSize?: number
-		/** Number of bases to include as 3' flank around the segment position */
-		threePrimeFlankSize?: number
 	}
 
-	/** Options for filtering fusion file content */
-	fusionOptions?: {
-		/** Number of bases to include as 5' flank around the fusion position */
-		fivePrimeFlankSize?: number
-		/** Number of bases to include as 3' flank around the fusion position */
-		threePrimeFlankSize?: number
-	}
+	/** Presence enables fusions in the analysis; no per-fusion filtering options yet */
+	fusionOptions?: Record<string, never>
 
-	/** Options for filtering structural variant file content */
-	svOptions?: {
-		/** Number of bases to include as 5' flank around the sv position */
-		fivePrimeFlankSize?: number
-		/** Number of bases to include as 3' flank around the sv position */
-		threePrimeFlankSize?: number
-	}
+	/** Presence enables SVs in the analysis; no per-sv filtering options yet */
+	svOptions?: Record<string, never>
 	/** Artifact-region exclude mask applied before the GRIN2 statistics run: genes whose span lies
 	 * >= overlapFrac inside the selected blacklist regions are dropped. Blacklist sources are
 	 * declared per genome (Genome.blacklists) and selected here by name; their BED files are

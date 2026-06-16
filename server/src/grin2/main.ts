@@ -18,20 +18,11 @@ import {
 	mclasscnvloss
 } from '#shared'
 
-/** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. See CnvSegmentQuery in #types. */
-type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
 import { mayFilterByMaf } from '../mds3.init.js'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
-
-/** grin2/{cacheid}.json. Self-contained: the per-gene rows Rust needs
- * for the Manhattan plot live inside `resultData.geneHits`, so the Rust
- * step opens this file directly. */
-type Grin2CacheResult = {
-	resultData: any
-	processing: any
-}
+import type { CnvType, Grin2CacheResult } from './types.ts'
 
 /**
  * General GRIN2 analysis route
@@ -49,10 +40,17 @@ type Grin2CacheResult = {
  *        - loc.end: End position of the lesion
  *        - lsn.type: Type of lesion ("mutation", "gain", "loss", "fusion", "sv"). A comprehensive set of lesion types can be found in dt2lesion
  * 3. Read and filter file contents based on snvindelOptions, cnvOptions, fusionOptions, and svOptions:
- *    - SNV/indel: Filter by total depth, alternate allele count, consequence types, and 5' and 3' flanking sizes
- *    - CNV: Filter by copy number thresholds, max segment length, and 5' and 3' flanking sizes
- *    - Fusion: Filter by 5' and 3' flanking sizes
- *    - SV: Filter by 5' and 3' flanking sizes
+ *    - SNV/indel: Filter by consequence types and an optional MAF filter. The MAF filter is the refined
+ *      replacement for the original minTotalDepth/minAltAlleleCount cutoffs (it covers total depth and
+ *      alt-allele count), so those original request fields are superseded and have been removed.
+ *    - CNV: Filter by max segment length, then classify each segment as gain/loss according to how the
+ *      dataset quantifies cnv values (ds.queries.cnv.type, defaulting to 'log2ratio'):
+ *        - 'log2ratio'/'segmean': numeric value, diploid baseline 0 (gain >= gainThreshold, loss <= lossThreshold)
+ *        - 'copyNumber': numeric absolute copy number, diploid baseline 2 (e.g. loss <= 1, gain >= 3, neutral = 2)
+ *        - 'category': qualitative call carried in the segment's class (CNV_amp/CNV_loss); thresholds ignored
+ *      See filterAndConvertCnv() and the CnvType type in ./types.ts
+ *    - Fusion: No filtering applied; each breakpoint (chrA, and chrB when present) becomes a lesion.
+ *    - SV: No filtering applied; same breakpoint-to-lesion conversion as fusion.
  *    - Hypermutator: To be implemented at later date
  * 4. Convert filtered data to lesion format and apply overall lesion cap
  * 5. Pass lesion data and maxGenesToShow to Python for GRIN2 statistical analysis and then pass device pixel ratio, width, and height to Rust for plot generation
@@ -69,7 +67,7 @@ type Grin2CacheResult = {
  *   runGrin2Fresh → helpers
  */
 
-// Constants & types
+// Constants
 const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
 const GRIN2_MEMORY_BUDGET_MB = 950
 const MEMORY_BASE_MB = 260
@@ -176,7 +174,7 @@ async function getMaxLesions(): Promise<number> {
 }
 
 // Building the lesion map to send to python
-function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
+export function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
 	const lesionTypeMap: Record<string, string> = {}
 
 	for (const option of availableOptions) {
@@ -192,7 +190,7 @@ function buildLesionTypeMap(availableOptions: string[]): Record<string, string> 
 }
 
 // Function to get CNV lesion type based on gain or loss in a more robust way
-function getCnvLesionType(isGain: boolean): string {
+export function getCnvLesionType(isGain: boolean): string {
 	const cnvConfig = dt2lesion[dtcnv]
 	const targetName = isGain ? 'Gain' : 'Loss'
 
@@ -353,7 +351,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
  * output, not the underlying Python statistics. Changing only a render
  * param should still hit the Python cache; changing a data filter
  * should miss. */
-function grin2KeyInputs(req: GRIN2Request) {
+export function grin2KeyInputs(req: GRIN2Request) {
 	return {
 		genome: req.genome,
 		dslabel: req.dslabel,
@@ -371,7 +369,7 @@ function grin2KeyInputs(req: GRIN2Request) {
  * in the genome config (Genome.blacklists) and their file paths absolutized at genome init.
  * `selectedNames` chooses which sources to apply: undefined = all declared, [] = none, otherwise the
  * named subset. Unknown names are ignored. Returns absolute BED file paths. */
-function resolveExcludeBeds(g: any, selectedNames?: string[]): string[] {
+export function resolveExcludeBeds(g: any, selectedNames?: string[]): string[] {
 	const all = g.blacklists as { name: string; file: string }[] | undefined
 	if (!all?.length) return []
 	const wanted = new Set(selectedNames ?? all.map(b => b.name))
@@ -382,7 +380,7 @@ function resolveExcludeBeds(g: any, selectedNames?: string[]): string[] {
  * non-finite overlapFrac. A NaN (e.g. from an empty client input) would be serialized by
  * JSON.stringify to null, and the Python wrapper's float(None) would then throw. Clamp to a finite
  * value in [0, 1] (default 0.5). Returns null when no excludeOptions are provided. */
-function normalizeExcludeOptions(opts: GRIN2Request['excludeOptions']): {
+export function normalizeExcludeOptions(opts: GRIN2Request['excludeOptions']): {
 	blacklists?: string[]
 	overlapFrac: number
 } | null {
@@ -681,7 +679,7 @@ async function processSampleData(
 }
 
 /** Process the MLST data for each sample - no per-type caps, just filter and convert */
-function processSampleMlst(
+export function processSampleMlst(
 	sampleName: string,
 	mlst: any[],
 	request: GRIN2Request,
@@ -762,7 +760,7 @@ function processSampleMlst(
 	return { sampleLesions, contributedTypes }
 }
 
-function filterAndConvertSnvIndel(
+export function filterAndConvertSnvIndel(
 	sampleName: string,
 	entry: any,
 	options: GRIN2Request['snvindelOptions']
@@ -798,9 +796,6 @@ function filterAndConvertSnvIndel(
 		}
 	}
 
-	// Apply 5' and 3' flanking to the point mutation
-	// const flanking5p = options.fivePrimeFlankSize || 0
-	// const flanking3p = options.threePrimeFlankSize || 0
 	const start = entry.pos
 	const end = entry.pos
 
@@ -809,7 +804,7 @@ function filterAndConvertSnvIndel(
 	return [sampleName, entry.chr, start, end, dt2lesion[dtsnvindel].lesionTypes[0].lesionType]
 }
 
-function filterAndConvertCnv(
+export function filterAndConvertCnv(
 	sampleName: string,
 	entry: any,
 	options: GRIN2Request['cnvOptions'],
@@ -847,16 +842,13 @@ function filterAndConvertCnv(
 
 	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
 
-	// Apply 5' and 3' flanking to the segment
-	// const flanking5p = options.fivePrimeFlankSize || 0
-	// const flanking3p = options.threePrimeFlankSize || 0
 	const start = entry.start
 	const end = entry.stop
 
 	return [sampleName, entry.chr, start, end, lesionType]
 }
 
-function filterAndConvertFusion(
+export function filterAndConvertFusion(
 	sampleName: string,
 	entry: any,
 	_options: GRIN2Request['fusionOptions']
@@ -865,10 +857,6 @@ function filterAndConvertFusion(
 	if (!entry.chrA || entry.posA === undefined) {
 		return null
 	}
-
-	// Get flanking parameters
-	// const flanking5p = options.fivePrimeFlankSize || 0
-	// const flanking3p = options.threePrimeFlankSize || 0
 
 	// First breakpoint on chrA
 	const startA = entry.posA
@@ -893,7 +881,7 @@ function filterAndConvertFusion(
 	return lesionA
 }
 
-function filterAndConvertSV(
+export function filterAndConvertSV(
 	sampleName: string,
 	entry: any,
 	_options: GRIN2Request['svOptions']
@@ -902,10 +890,6 @@ function filterAndConvertSV(
 	if (!entry.chrA || entry.posA === undefined) {
 		return null
 	}
-
-	// Get flanking parameters
-	// const flanking5p = options.fivePrimeFlankSize || 0
-	// const flanking3p = options.threePrimeFlankSize || 0
 
 	// First breakpoint on chrA
 	const startA = entry.posA
