@@ -12,7 +12,7 @@ export class SelectorTableRender {
 	interactions: AIProjectAdminInteractions
 	selectedRows: Set<number> = new Set<number>()
 	sortedIndexMap: number[] = []
-
+	fileColumn = 0
 	constructor(holder: Elem, interactions: AIProjectAdminInteractions, images: any) {
 		this.dom = {
 			holder,
@@ -40,9 +40,10 @@ export class SelectorTableRender {
 		const selectedSet = new Set((selectedList || []).map(normalizeImageName))
 
 		// Build set of selected row indices whose image (assumed in first column value) is in selectedSet
+		this.fileColumn = 0
 		this.selectedRows = new Set<number>()
 		;(this.images?.rows ?? []).forEach((row: any, i: number) => {
-			const candidate = row?.[0]?.value
+			const candidate = row?.[this.fileColumn]?.value
 			const n = normalizeImageName(candidate)
 			if (selectedSet.has(n)) this.selectedRows.add(i)
 		})
@@ -93,9 +94,10 @@ export class SelectorTableRender {
 			selectedRows: selectedRowsForRender,
 			striped: true,
 			header: { allowSort: true },
-			noButtonCallback: (sortedIdx, node) => {
-				// map back to original index when toggling selection
-				const orig = this.sortedIndexMap?.[sortedIdx]
+			noButtonCallback: (_, node) => {
+				// Use checkbox value from renderTable as a stable index even after user sorting.
+				const initialIdx = Number((node as HTMLInputElement)?.value)
+				const orig = this.sortedIndexMap?.[initialIdx]
 				if (orig === undefined) return
 				if (node.checked) {
 					this.selectedRows.add(orig)
@@ -127,7 +129,7 @@ export class SelectorTableRender {
 			//Don't allow multiple clicks
 			btn.attr('disabled', true)
 
-			const images = Array.from(this.selectedRows).map(i => `${this.images.rows[i][0].value}.svs`)
+			const images = Array.from(this.selectedRows).map(i => `${this.images.rows[i][this.fileColumn].value}.svs`)
 			await this.interactions.editProject({
 				project: {
 					images,
