@@ -309,6 +309,11 @@ async function getSampleData(q, ds) {
 				sample: tw.term.sample,
 				gene: tw.term.gene
 			})
+			let filteredSamples = new Set()
+			if (q.filter?.lst?.length || q.filter?.lst?.length) {
+				const tmp = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
+				filteredSamples = new Set(tmp.map(s => s.sample))
+			}
 			/** geneExpMap returns cells => (cellId: value), not samples.
 			 * The cellId is never in the samples object, as cells are not in
 			 * the termdb. Get the sampleId and add object to samples with the value.
@@ -321,7 +326,9 @@ async function getSampleData(q, ds) {
 			for (const sampleId in geneExpMap) {
 				if (!(sampleId in samples)) {
 					const cell = { cellId: sampleId }
-					samples[sampleId] = getSingleCellSampleEntry(samples, q.ds, tw, cell)
+					const scEntry = getSingleCellSampleEntry(samples, q.ds, tw, cell, filteredSamples)
+					if (!scEntry) continue // cell is filtered out based on cohort level term filter
+					samples[sampleId] = scEntry
 				}
 				const value = geneExpMap[sampleId]
 				let key = value
@@ -339,10 +346,19 @@ async function getSampleData(q, ds) {
 				plots: [tw.term.plot],
 				colorBy: { [tw.term.plot]: tw.term.name }
 			})
+			let filteredSamples = new Set()
+			if (q.filter?.lst?.length || q.filter?.lst?.length) {
+				const tmp = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
+				filteredSamples = new Set(tmp.map(s => s.sample))
+			}
 			const groups = tw.q?.customset?.groups
 			for (const cell of data.plots[0].noExpCells) {
 				const sampleId = cell.cellId
-				if (!(sampleId in samples)) samples[sampleId] = getSingleCellSampleEntry(samples, q.ds, tw, cell)
+				if (!(sampleId in samples)) {
+					const scEntry = getSingleCellSampleEntry(samples, q.ds, tw, cell, filteredSamples)
+					if (!scEntry) continue // cell is filtered out based on cohort level term filter
+					samples[sampleId] = scEntry
+				}
 				let value = cell.category
 				if (groups) {
 					//custom groups where created
@@ -414,9 +430,9 @@ async function getSampleData(q, ds) {
  * the pseudo-sample data. This is done in hydrateMetaResultCellRows()
  */
 
-function getSingleCellSampleEntry(samples, ds, tw, _cell) {
-	const sampleId = getSampleId4Cell(ds, tw, _cell)
-	if (!sampleId) return { sample: _cell.cellId }
+function getSingleCellSampleEntry(samples, ds, tw, _cell, filteredSamples) {
+	const sampleId = getSampleId4Cell(ds, tw, _cell, filteredSamples)
+	if (!sampleId) return null
 	const sample = samples[sampleId]
 	const cell = sample ? structuredClone(sample) : {}
 	cell.sample = _cell.cellId
@@ -425,13 +441,14 @@ function getSingleCellSampleEntry(samples, ds, tw, _cell) {
 }
 
 //See documentation above
-function getSampleId4Cell(ds, tw, cell) {
+function getSampleId4Cell(ds, tw, cell, filteredSamples) {
 	if (!tw.term.sample?.isMetaResult) return
 	/** Note: Do not use .eID. Only for GDC in separate pathway */
 	const metaResultId = tw.term.sample.sID
 	const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(metaResultId)
 	const sampleName = metaIdMap?.get?.(cell.cellId) || cell.sampleId
 	if (!sampleName) return
+	if (filteredSamples.size > 0 && !filteredSamples.has(sampleName)) return
 	const sampleId = ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
 	if (sampleId == undefined) {
 		throw new Error(`single cell meta result cannot map sample name = ${sampleName} to sample id`)

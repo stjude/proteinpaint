@@ -138,8 +138,10 @@ function validateImages(images: SCImages): void {
 }
 
 /** Runs on mds3.init()
- * Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
- * Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
+ * - Adds ds.queries.singleCell.samples.get() for native ds (see route init() above).
+ * - Adds ds.queries.singleCell.samples.getFilteredSingleCellSamples() for filtering
+ * samples based on cohort level terms.
+ * - Adds ds.queries.singleCell.terms which is list of all possible colorBy terms
  * defined in the ds file, for use in vocabApi methods later.
  * @param q ds.queries.singleCell. ***NOT** the req.query
  * @param ds Entire dataset configuration from the ds file
@@ -252,6 +254,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	}
 
 	S.getFilteredSingleCellSamples = async (_q: TermdbSingleCellSamplesRequest, includeMeta = false) => {
+		if (!_q.filter && !_q.filter0) return
 		const allowedSamples = await mayLimitSamples(_q, [...sampleIds], ds)
 		const conditional = sample => {
 			if (includeMeta) return allowedSamples?.has(sample2Id.get(sample)) || D?.metaIdMap?.has(sample)
