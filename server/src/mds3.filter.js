@@ -41,12 +41,12 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 		}
 		// get samples that match filter
 		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-		filterSamples = new Set(
-			(await get_samples({ filter, mapParent2Children: param.mapParent2Children }, ds)).map(i => i.id)
-		)
+		const q = { filter, mapParent2Children: param.mapParent2Children }
+		filterSamples = new Set((await get_samples(q, ds)).map(i => i.id))
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
 		// ds-supplied filter method
-		filterSamples = await ds.cohort.termdb.filterSamples(param, ds)
+		const q = { filter, filter0, mapParent2Children: param.mapParent2Children }
+		filterSamples = await ds.cohort.termdb.filterSamples(q, ds)
 	} else {
 		throw new Error('no method available to get samples')
 	}
