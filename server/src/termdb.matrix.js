@@ -310,7 +310,7 @@ async function getSampleData(q, ds) {
 				gene: tw.term.gene
 			})
 			let filteredSamples = new Set()
-			if (q.filter?.lst?.length || q.filter?.lst?.length) {
+			if ((q.filter?.lst?.length || q.filter?.lst?.length) && tw.term.sample?.isMetaResult) {
 				const tmp = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 				filteredSamples = new Set(tmp.map(s => s.sample))
 			}
@@ -347,7 +347,7 @@ async function getSampleData(q, ds) {
 				colorBy: { [tw.term.plot]: tw.term.name }
 			})
 			let filteredSamples = new Set()
-			if (q.filter?.lst?.length || q.filter?.lst?.length) {
+			if ((q.filter?.lst?.length || q.filter?.lst?.length) && tw.term.sample?.isMetaResult) {
 				const tmp = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 				filteredSamples = new Set(tmp.map(s => s.sample))
 			}
@@ -432,7 +432,10 @@ async function getSampleData(q, ds) {
 
 function getSingleCellSampleEntry(samples, ds, tw, _cell, filteredSamples) {
 	const sampleId = getSampleId4Cell(ds, tw, _cell, filteredSamples)
-	if (!sampleId) return null
+	if (!sampleId) {
+		if (!tw.term.sample?.isMetaResult) return { sample: _cell.cellId }
+		else return null
+	}
 	const sample = samples[sampleId]
 	const cell = sample ? structuredClone(sample) : {}
 	cell.sample = _cell.cellId
