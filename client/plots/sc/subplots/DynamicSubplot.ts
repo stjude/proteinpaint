@@ -21,11 +21,13 @@ class DynamicSubplot implements RxComponent {
 	state: any
 	components!: { [name: string]: ComponentApi }
 	dom: { [index: string]: any } = {}
+	parentId?: string
 
 	constructor(opts) {
 		this.type = DynamicSubplot.type
 		this.opts = opts
 		this.app = opts.app
+		this.parentId = opts?.parentId
 	}
 
 	async init() {
@@ -62,7 +64,7 @@ class DynamicSubplot implements RxComponent {
 		const chartOpts: { [index: string]: any } = {
 			app: this.app,
 			id: this.id,
-			parentId: this.opts.parentId
+			parentId: this.parentId
 		}
 		if (this.opts.chartType == 'summary') {
 			chartOpts.holder = this.opts.holder

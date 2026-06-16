@@ -209,7 +209,7 @@ async function getSampleData(q, ds) {
 			}
 		}
 	}
-
+	let processedSingleCellTerm = false
 	// for each non dictionary term type
 	// query sample data with its own method and append results to "samples"
 	for (const tw of nonDictTerms) {
@@ -355,7 +355,11 @@ async function getSampleData(q, ds) {
 			throw 'unknown type of non-dictionary term'
 		}
 
-		if (isSingleCellTerm(tw.term)) hydrateMetaResultCellRows(samples)
+		/** Only hydrate meta result cell rows once */
+		if (isSingleCellTerm(tw.term) && !processedSingleCellTerm) {
+			hydrateMetaResultCellRows(samples)
+			processedSingleCellTerm = true
+		}
 	}
 
 	/* for samples collected into samples{}, register them in refs.bySampleId{} with display name
@@ -382,6 +386,9 @@ async function getSampleData(q, ds) {
 	const sids = Object.keys(samples)
 	let sampleType
 	if (sids.length > 0) {
+		/** Work around since sc cells are ** not ** in db or derived from api.
+		 * Will not appear in the sample lookups below. */
+		if ((processedSingleCellTerm = true)) sampleType = { name: 'cell', plural_name: 'cells' }
 		const firstComparableId = samples[sids[0]]?.sampleId
 		const sid = Number(firstComparableId ?? sids[0]) || firstComparableId || sids[0]
 		const stid = q.ds.sampleId2Type?.get?.(sid)

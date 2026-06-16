@@ -338,12 +338,16 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		this.dom.plotDivs[config.childType] = this.dom.viz.append('div')
 
 		// assumes only 1 chart per chartType would be rendered in the summary sandbox
-		this.components.plots[config.childType] = await _.componentInit({
+		const componentOpts: { [index: string]: any } = {
 			app: this.app,
 			holder: this.dom.plotDivs[config.childType],
 			id: this.id,
 			parent: this.api
-		})
+		}
+		/** Summary child plots may have two parents (e.g. SC -> summary -> child plot).
+		 * Pass the root parentId to the child plot.*/
+		if (config.parentId) componentOpts.parentId = config.parentId
+		this.components.plots[config.childType] = await _.componentInit(componentOpts)
 	}
 
 	destroy() {
