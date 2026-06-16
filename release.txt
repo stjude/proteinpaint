@@ -1,1 +1,2 @@
-
+Features:
+- Imroved GRIN2 CNV support by allowing datasets to declare the way their CNV data is quantified via type
