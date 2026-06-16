@@ -1,28 +1,27 @@
 {
 	"ppcalls": [
 		{
-			"label": "Whole Exome",
-			"urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
+			"label": "Mutation",
+			"urlparam": "?genome=hg19&block=1&position=chr17:7577039-7577195&bamfile=Test,proteinpaint_demo/hg19/bam/tp53snv.bam",
 			"runargs": {
 				"parseurl": true,
 				"block": true,
 				"nobox": 1,
 				"noheader": 1,
 				"genome": "hg19",
-				"position": "chr4:55589707-55589907",
+				"position": "chr17:7577039-7577195",
 				"nativetracks": "RefGene",
 				"tracks": [
 					{
 						"type": "bedj",
 						"file": "anno/refGene.hg19.gz",
 						"color": "#1D591D",
-						"name": "RefGene",
-						"filterByName": "NM_000222"
+						"name": "RefGene"
 					},
 					{
 						"type": "bam",
-						"file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
-						"name": "WES KIT exon mutation demo"
+						"file": "proteinpaint_demo/hg19/bam/tp53snv.bam",
+						"name": "Mutation demo"
 					}
 				]
 			},

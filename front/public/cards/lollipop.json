@@ -12,7 +12,8 @@
                 "tracks": [
                     {
                         "type": "mds3",
-                        "dslabel": "GDC"
+                        "dslabel": "GDC",
+						"snvIndelOnly":1
                     }
                 ]
             },
@@ -46,7 +47,8 @@
             }
         },
         {
-            "label": "Custom Variants",
+            "label": "Custom Genomic Alterations",
+			"message":"This example display supported genomic alterations including mutation, CNV, SV, fusion, ITD.",
             "runargs": {
                 "parseurl": true,
                 "noheader": true,
@@ -56,7 +58,7 @@
                 "tracks": [
                     {
                         "type": "mds3",
-                        "name": "custom snvindel and fusion",
+                        "name": "custom alterations",
                         "custom_variants": [
                             {
                                 "chr": "chr9",
@@ -66,6 +68,7 @@
                                 "dt": 1,
                                 "ref": "G",
                                 "alt": "C",
+								"sample":"Sample 1",
 								"info":{"Pathogenicity":"P"}
                             },
                             {
@@ -76,6 +79,7 @@
                                 "dt": 1,
                                 "ref": "G",
                                 "alt": "C",
+								"sample":"Sample 1",
 								"info":{"Pathogenicity":"LP"}
                             },
                             {
@@ -103,6 +107,49 @@
                                 "dt": 5,
                                 "class": "SV",
                                 "sample": "SV Sample ID"
+                            },
+                            {
+                                "chr": "chr9",
+                                "start": 36923400,
+                                "stop": 37015000,
+                                "dt": 4,
+                                "class": "CNV_amp",
+								"sample":"Sample 1",
+                                "value": 1
+                            },
+                            {
+                                "chr": "chr9",
+                                "start": 36923535,
+                                "stop": 37034010,
+                                "dt": 4,
+                                "class": "CNV_loss",
+								"sample":"Sample 2",
+                                "value": -1
+                            },
+                            {
+                                "chr": "chr9",
+                                "start": 36923333,
+                                "stop": 36923456,
+                                "dt": 4,
+                                "class": "CNV_loss",
+                                "value": -0.5,
+								"sample":"Sample 3"
+                            },
+                            {
+                                "chr": "chr9",
+                                "start": 37015191,
+                                "stop": 37020799,
+                                "dt": 6,
+                                "class": "ITD",
+								"sample":"Sample 1"
+                            },
+                            {
+                                "chr": "chr9",
+                                "start": 37015191,
+                                "stop": 37020799,
+                                "dt": 6,
+                                "class": "ITD",
+								"sample":"Sample 2"
                             }
                         ]
                     }
@@ -116,79 +163,12 @@
             "buttons": [
                 {
                     "name": "Custom Data Documentation",
-                    "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#tkskewermodes"
+                    "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#tkcustom_variants"
                 }
             ]
         },
         {
-            "label": "Custom CNV and SNV Data",
-            "runargs": {
-                "nobox": 1,
-                "noheader": 1,
-                "genome": "hg38",
-                "gene": "NM_000546",
-                "tracks": [
-                    {
-                        "type": "mds3",
-                        "name": "Custom data",
-                        "custom_variants": [
-                            {
-                                "chr": "chr17",
-                                "start": 7670699,
-                                "stop": 7674000,
-                                "dt": 4,
-                                "class": "CNV_amp",
-                                "value": 1
-                            },
-                            {
-                                "chr": "chr17",
-                                "start": 7670699,
-                                "stop": 7674000,
-                                "dt": 4,
-                                "class": "CNV_loss",
-                                "value": -1
-                            },
-                            {
-                                "chr": "chr17",
-                                "start": 7670699,
-                                "stop": 7676000,
-                                "dt": 4,
-                                "class": "CNV_loss",
-                                "value": -0.5
-                            },
-                            {
-                                "chr": "chr17",
-                                "pos": 7675993,
-                                "mname": "Custom snv 1",
-                                "class": "M",
-                                "dt": 1
-                            },
-                            {
-                                "chr": "chr17",
-                                "pos": 7676520,
-                                "mname": "Custom snv 2",
-                                "class": "M",
-                                "dt": 1
-                            },
-                            {
-                                "chr": "chr17",
-                                "pos": 7676381,
-                                "mname": "Custom snv 3",
-                                "class": "M",
-                                "dt": 1
-                            }
-                        ]
-                    }
-                ]
-            },
-            "testSpec": {
-                "expected": {
-                    "rect": 3
-                }
-            }
-        },
-        {
-            "label": "Custom Data (Differential Phosphorylation)",
+            "label": "Differential Phosphorylation",
             "message": "Create custom datasets with the <span style='font-family: Courier; opacity: 0.6;'>mds3</span> track. In this example, custom data points with a specified value and custom mutatiion classes are shown. See the <span style='font-family: Courier; opacity: 0.6;'>skewerModes</span> attributes applied to the custom variants. <br><br><em>Tip:</em> Clicking on a class label in the legend shows and hides the mutation data.",
             "runargs": {
                 "nobox": 1,
@@ -697,7 +677,7 @@
             ]
         },
         {
-            "label": "Data Point Shapes (Differential Phosphorylation)",
+            "label": "Data Point Shapes",
             "message": "Add additional detail to lollipops by specifying the data point shape. Available shapes are described in <a href='https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3#mshape' target='__blank' >the lollipop wiki page</a>. With the <span style='font-family: Courier; opacity: 0.6;'>.legend.customShapeLabels</span> object, the count and additional details appears in the legend for each shape.",
             "runargs": {
                 "nobox": 1,
@@ -1253,21 +1233,22 @@
             }
         },
         {
-            "label": "Official dataset",
-            "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
+            "label": "Default zoom",
+            "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC&aarange=4,50",
             "runargs": {
-                "gene": "jak2",
+                "gene": "ENST00000407796",
                 "nobox": 1,
                 "noheader": 1,
-                "genome": "hg19",
-                "dataset": "Pediatric"
+                "genome": "hg38",
+				"aarange":[4,50],
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "dslabel": "GDC",
+						"snvIndelOnly":1
+                    }
+                ]
             },
-            "buttons": [
-                {
-                    "name": "Build an Official Dataset",
-                    "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
-                }
-            ],
             "testSpec": {
                 "expected": {
                     "circle": 10
@@ -1278,9 +1259,8 @@
     "buttons": [
         {
             "name": "Documentation",
-            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+            "link": "https://github.com/stjude/proteinpaint/wiki/Lollipop-%E2%80%90-mds3"
         }
     ],
-    "ribbonMessage": "Please see our newest examples for displaying cnv data: GDC CNV and Custom CNV and SNV Data.",
     "citation_id": 1001
 }
