@@ -40,7 +40,7 @@ export function init({ genomes }) {
 					addProject(connection, query.project)
 				else if (req.method === 'POST' && aiHalAuth.checkAuthorization(req, 'editProject')) {
 					editProject(connection, query.project)
-					aiHalAuth.setUser(connection, query.project.id, userEmail || 'admin', 12)
+					aiHalAuth.setUser(connection, query.project.id, userEmail || 'admin')
 				} else if (req.method === 'DELETE' && aiHalAuth.checkAuthorization(req, 'deleteProject'))
 					deleteProject(connection, query.project.id)
 				else throw new Error('Invalid request method for="admin" in aiProjectAdmin route.')
