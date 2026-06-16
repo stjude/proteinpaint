@@ -167,8 +167,8 @@ class WSIViewer extends PlotBase implements RxComponent {
 				numTotalFiles
 			)
 
-			// Not actually reseting image, just saving that thumbnail is done rendering
-			// so spinner isnt rendering next call
+			// Not actually resetting image, just saving in settings that thumbnail is done rendering
+			// so spinner isn't rendering next call
 			this.wsiViewerInteractions.toggleThumbnails(0, true)
 			if (!settings.isSavingAnnotation) this.wsiViewerInteractions.toggleSpinner(false)
 
@@ -220,9 +220,16 @@ class WSIViewer extends PlotBase implements RxComponent {
 		this.wsiViewerInteractions.toggleLoadingDiv(false)
 		// Selection objects you want to add cursor style go here because the spinner changes all to default
 		if (!settings.isSavingAnnotation) {
-			this.thumbnailsContainer?.selectAll('div').selectAll('*').style('cursor', 'pointer')
-			this.dom.annotationsHolder.selectAll('*').style('cursor', 'pointer')
-			this.dom.legendHolder.selectAll('*').style('cursor', 'pointer')
+			const pointersToAdd = [
+				this.thumbnailsContainer?.selectAll('div').selectAll('*'),
+				this.dom.annotationsHolder.selectAll('*'),
+				this.dom.legendHolder.selectAll('*')
+			]
+			pointersToAdd.forEach(container => {
+				if (container) {
+					container?.style('cursor', 'pointer')
+				}
+			})
 		}
 	}
 }

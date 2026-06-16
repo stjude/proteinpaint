@@ -49,7 +49,7 @@ export class SessionWSImage extends WSImage {
 	): number {
 		// Note here that these calculations will have to change if tileselection sorting change. This calulation is assuming that
 		// All flagged/skipped/annotated items are collected together, sorted by descending timestamp (newest first), and
-		// put in the back half og the table, with sessiontilesections and predictions up front
+		// put in the back half of the table, with sessiontilesections and predictions up front
 		const tileSelections = SessionWSImage.getTileSelections(sessionWSImage, settings)
 		let action = provokingAction as string
 		if ('flagging' === provokingAction) {
