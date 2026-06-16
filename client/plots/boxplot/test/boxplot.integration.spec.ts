@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import { detectGte } from '../../../test/test.helpers.js'
-import { getGeneVariantTw } from '../../../test/testdata/data.ts'
+import { getGeneVariantTw, getScctTw, getScgeneexpTw } from '../../../test/testdata/data.ts'
 
 /*
 Tests:
@@ -12,6 +12,9 @@ Tests:
 	Box plot: term1=geneExp term2=geneVariant
 	Box plot with divide term = sex
 	Box plot with overlay term = aaclassic_5 and divide term = sex
+	Box plot with term = scct and overlay = scge
+	Box plot with term = scge
+
 	Box plot with user settings
  */
 
@@ -297,6 +300,78 @@ tape('Box plot with overlay term = aaclassic_5 and divide term = sex', test => {
 		test.equal(chartDivs.length, 2, 'Should render 2 charts')
 		const boxplots = await detectGte({ elem: dom.charts.node(), selector: 'g[class="sjpp-boxplot-plot"]' })
 		test.equal(boxplots.length, 10, 'Should render 10 boxplots')
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Box plot with term = scct and overlay = scge', test => {
+	test.timeoutAfter(3000)
+
+	const scctTw: any = getScctTw()
+	scctTw.term.sample.name = 'UMAP'
+	const scgeTw: any = getScgeneexpTw('TP53')
+	scgeTw.term.sample.name = 'UMAP'
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: scctTw,
+					term2: scgeTw
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chart-wrapper' })
+		test.equal(chartDivs.length, 1, 'Should render a chart')
+		const boxplots = await detectGte({ elem: dom.charts.node(), selector: 'g[class="sjpp-boxplot-plot"]' })
+		test.equal(boxplots.length, 3, 'Should render 3 boxplots')
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Box plot with term = scge', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: getScgeneexpTw('TP53')
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chart-wrapper' })
+		test.equal(chartDivs.length, 1, 'Should render a chart')
+		const boxplots = await detectGte({ elem: dom.charts.node(), selector: 'g[class="sjpp-boxplot-plot"]' })
+		test.equal(boxplots.length, 1, 'Should render a boxplot')
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()

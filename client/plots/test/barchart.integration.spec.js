@@ -5,7 +5,8 @@ import {
 	getCategoryGroupsetting,
 	getGeneVariantTw,
 	getGenesetMutTw,
-	getCategoricalTermcollectionTw
+	getCategoricalTermcollectionTw,
+	getScctTw
 } from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne, Locator } from '../../test/test.helpers.js'
@@ -37,6 +38,7 @@ term1=geneExp, term2=categorical (patient-level)
 term1=condition, term2=gene exp with default bins
 term1=TP53 gene exp, term2=BCR gene exp, both terms with default bins
 term1=categorical, term0=gene exp with default bins
+term1=scct
 series visibility - q.hiddenValue
 series visibility - numeric
 series visibility - condition
@@ -873,6 +875,39 @@ tape('term1=categorical, term0=gene exp with default bins', function (test) {
 			8,
 			'Should display the correct number of barcharts when a categorical term is overlaid by a gene expression term.'
 		)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=scct', function (test) {
+	test.timeoutAfter(3000)
+
+	const scctTw = getScctTw()
+	scctTw.term.sample.name = 'UMAP'
+
+	runpp({
+		state: {
+			nav: { header_mode: 'hidden' },
+			plots: [
+				{
+					chartType: 'summary',
+					term: scctTw
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const count = 1
+
+		const numBarchart = await detectGte({ elem: barDiv.node(), selector: '.pp-bars-svg', count })
+		test.equal(numBarchart.length, count, 'Should display a barchart for a single cell cell type term.')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
