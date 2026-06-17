@@ -45,6 +45,35 @@ export function safeExtractJsonObject(response: unknown): Record<string, any> | 
 	return undefined
 }
 
+/**
+ * Tolerantly extract a JSON array from an LLM response. Array counterpart to
+ * safeExtractJsonObject() — handles markdown code fences and surrounding prose.
+ * Never throws: returns the first parseable JSON array, or undefined.
+ */
+export function safeExtractJsonArray(response: unknown): any[] | undefined {
+	if (typeof response !== 'string') return undefined
+	const candidates: string[] = []
+	const trimmed = response.trim()
+	candidates.push(trimmed)
+	// Strip a leading/trailing markdown code fence such as ```json ... ```
+	const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
+	if (fenceMatch) candidates.push(fenceMatch[1].trim())
+	// Fall back to the first balanced-looking [...] block embedded in the text
+	const bracketMatch = trimmed.match(/\[[\s\S]*\]/)
+	if (bracketMatch) candidates.push(bracketMatch[0])
+
+	for (const candidate of candidates) {
+		if (!candidate) continue
+		try {
+			const parsed = JSON.parse(candidate)
+			if (Array.isArray(parsed)) return parsed
+		} catch {
+			// try the next candidate
+		}
+	}
+	return undefined
+}
+
 export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
 	if (!supportedPlotTypes) {
 		mayLog(
