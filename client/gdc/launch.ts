@@ -25,7 +25,7 @@ export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 	}
 	if (arg.launchGdcGrin2) {
 		const _ = await import('./grin2.ts')
-		return await _.gdcGRIN2ui(arg, app.holder0)
+		return await _.gdcGRIN2ui(arg, app.holder0, app.genomes)
 	}
 	if (arg.launchGdcScRNAseq) {
 		const _ = await import('./singlecell.ts')
@@ -84,7 +84,7 @@ export async function mayLaunchGdcPlotFromUrlparam(urlp, arg) {
 			debugmode: arg.debugmode
 		}
 		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
-		_.gdcGRIN2ui(p, arg.holder)
+		_.gdcGRIN2ui(p, arg.holder, arg.genomes)
 		return true
 	}
 	if (urlp.has('gdccorrelation')) {
