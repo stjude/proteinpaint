@@ -8,7 +8,8 @@ import type {
 	HierPhrase2EntityResult,
 	SurvivalPhrase2EntityResult,
 	MatrixPhrase2EntityResult,
-	PrebuiltScatterPhrase2EntityResult
+	PrebuiltScatterPhrase2EntityResult,
+	MsgToUser
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import {
@@ -52,6 +53,11 @@ export type Value = {
 	phrase: string
 	type: string
 	logicalOperator?: '&' | '|'
+}
+
+/** Discriminate a MsgToUser (a {type:'text', text} message to surface to the client) from a resolved Value. */
+export function isMsgToUser(x: unknown): x is MsgToUser {
+	return !!x && typeof x === 'object' && (x as any).type === 'text' && 'text' in (x as any)
 }
 
 function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any): Value | undefined {
@@ -132,7 +138,7 @@ export async function getTermObj(
 	dbPath: string,
 	genes_list: string[],
 	genome: any
-): Promise<Value | undefined> {
+): Promise<Value | MsgToUser | undefined> {
 	// Nested LLM-based replacement for semanticSearch.findBestMatch(). Parses the dataset DB
 	// via parse_dataset_db() to get the full rag_docs list and hands it to the classifier LLM
 	// with the user phrase; the LLM returns the single rag_docs row whose term best matches.
@@ -152,12 +158,14 @@ const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
 const topK: number = 3
 const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
         */
-		let match: any
+		let match: { id: string; type: string; name: string; score: number; msg?: string } | MsgToUser | undefined
 		try {
 			match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
 		} catch (e) {
 			console.error(`Error in findBestMatchLLM for phrase "${twEntity.phrase}":`, e)
 		}
+		// findBestMatchLLM returns a MsgToUser when it cannot resolve the phrase; surface it to the client.
+		if (isMsgToUser(match)) return match
 		if (!match) {
 			console.warn(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
 			return undefined
@@ -189,7 +197,7 @@ export async function inferTermObjFromEntity(
 	dbPath: string,
 	genes_list: string[], // redundant (must be fixed)
 	genome: any
-): Promise<Record<string, Value | Value[] | string>> {
+): Promise<Record<string, Value | Value[] | string> | MsgToUser> {
 	const twObjects: Record<string, Value | Value[] | string> = {}
 	if (plotType === 'summary') {
 		const summaryEntity = entity as SummaryPhrase2EntityResult
@@ -203,6 +211,7 @@ export async function inferTermObjFromEntity(
 				for (const filterTerm of filterResult) {
 					mayLog('Evaluating filter term:', filterTerm)
 					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
+					if (isMsgToUser(termObj)) return termObj
 					if (!termObj) {
 						continue
 					}
@@ -220,6 +229,7 @@ export async function inferTermObjFromEntity(
 			if (!entry) continue
 			const twEntity = entry[0]
 			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
 			if (!termObj) {
 				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
 			}
@@ -239,6 +249,7 @@ export async function inferTermObjFromEntity(
 			for (const filterTerm of filterResult) {
 				mayLog(`Evaluating ${key} term:`, filterTerm)
 				const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
+				if (isMsgToUser(termObj)) return termObj
 				if (!termObj) {
 					console.warn(`Skipping filter term "${filterTerm.phrase}" — failed to get term object`)
 					continue
@@ -262,6 +273,7 @@ export async function inferTermObjFromEntity(
 
 		// term2 is the REQUIRED stratification variable; resolve it like a single tw entity.
 		const term2Obj = await getTermObj('term2', survivalEntity.term2, llm, dbPath, genes_list, genome)
+		if (isMsgToUser(term2Obj)) return term2Obj
 		if (!term2Obj) {
 			throw `Failed to get term object for key "term2" and phrase "${survivalEntity.term2.phrase}".`
 		}
@@ -273,6 +285,7 @@ export async function inferTermObjFromEntity(
 			for (const filterTerm of survivalEntity.filter) {
 				mayLog('Evaluating survival filter term:', filterTerm)
 				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+				if (isMsgToUser(termObj)) return termObj
 				if (!termObj) {
 					continue
 				}
@@ -290,6 +303,7 @@ export async function inferTermObjFromEntity(
 		for (const phrase of hierEntity.phrases) {
 			mayLog('Evaluating hierCluster phrase:', phrase)
 			const termObj = await getTermObj('DictPhrases', phrase, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
 			if (!termObj) {
 				console.warn(`Skipping hierCluster gene "${phrase.phrase}" — failed to get term object`)
 				continue
@@ -306,6 +320,7 @@ export async function inferTermObjFromEntity(
 			for (const filterTerm of hierEntity.filter) {
 				mayLog('Evaluating hierCluster filter term:', filterTerm)
 				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+				if (isMsgToUser(termObj)) return termObj
 				if (!termObj) continue
 				if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
 				filterValues.push(termObj)
@@ -325,6 +340,7 @@ export async function inferTermObjFromEntity(
 				for (const filterTerm of filterResult) {
 					mayLog('Evaluating filter term:', filterTerm)
 					const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
+					if (isMsgToUser(termObj)) return termObj
 					if (!termObj) {
 						continue
 					}
@@ -343,6 +359,7 @@ export async function inferTermObjFromEntity(
 				for (const [index, twEntity] of twEntities.entries()) {
 					mayLog(`Evaluating twLst[${index}] entity:`, twEntity)
 					const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
+					if (isMsgToUser(termObj)) return termObj
 					if (!termObj) {
 						console.warn(`Skipping twLst[${index}] — failed to get term object for phrase "${twEntity.phrase}"`)
 						continue
@@ -362,6 +379,7 @@ export async function inferTermObjFromEntity(
 			const twEntity = value as Entity | undefined
 			if (!twEntity) continue
 			const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
 			if (!termObj) {
 				throw `Failed to get term object for key "${key}" and phrase "${twEntity.phrase}".`
 			}
@@ -381,6 +399,7 @@ export async function inferTermObjFromEntity(
 			twObjects['colorBy'] = 'null'
 		} else if (scatterEntity.colorBy) {
 			const termObj = await getTermObj('colorBy', scatterEntity.colorBy, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
 			if (termObj) {
 				twObjects['colorBy'] = termObj
 			} else {
@@ -393,6 +412,7 @@ export async function inferTermObjFromEntity(
 			twObjects['shapeBy'] = 'null'
 		} else if (scatterEntity.shapeBy) {
 			const termObj = await getTermObj('shapeBy', scatterEntity.shapeBy, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
 			if (termObj) {
 				twObjects['shapeBy'] = termObj
 			} else {
@@ -404,6 +424,7 @@ export async function inferTermObjFromEntity(
 
 		if (scatterEntity.divideBy) {
 			const termObj = await getTermObj('divideBy', scatterEntity.divideBy, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
 			if (termObj) {
 				twObjects['divideBy'] = termObj
 			} else {
@@ -425,6 +446,7 @@ export async function inferTermObjFromEntity(
 			for (const filterTerm of filterResult) {
 				mayLog('Evaluating filter term:', filterTerm)
 				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+				if (isMsgToUser(termObj)) return termObj
 				if (!termObj) {
 					continue
 				}
@@ -445,12 +467,12 @@ async function findBestMatchLLM(
 	phrase: string,
 	dbPath: string,
 	llm: LlmConfig
-): Promise<{ id: string; type: string; name: string; score: number; msg?: string } | undefined> {
+): Promise<{ id: string; type: string; name: string; score: number; msg?: string } | MsgToUser> {
 	const dataset_db_output = await parse_dataset_db(dbPath)
 	const { db_rows, rag_docs } = dataset_db_output
 	if (rag_docs.length === 0) {
 		console.warn('findBestMatchLLM: no rag_docs in DB')
-		return undefined
+		return { type: 'text', text: `Could not match "${phrase}" because the dataset dictionary has no terms to search.` }
 	}
 	const prompt = `You are an assistant that maps a user phrase to a dataset dictionary term.
 	IMPORTANT: Your goal is NOT to always select a match. Your goal is to AVOID incorrect matches.
@@ -504,16 +526,22 @@ async function findBestMatchLLM(
 	if (!response) {
 		// Gracefully handle a missing/empty response instead of throwing (which can crash the server).
 		console.warn('findBestMatchLLM: no response from LLM')
-		return undefined
+		return {
+			type: 'text',
+			text: `Could not match "${phrase}" to a dataset term: the language model returned no response.`
+		}
 	}
 	// mayLog("Raw Response: ", JSON.stringify(response))
 
 	// Tolerantly parse the LLM output. If the model did not return usable JSON,
-	// bail out gracefully rather than throwing.
+	// surface a message to the user rather than throwing.
 	const parsed = safeExtractJsonObject(response)
 	if (!parsed) {
 		console.warn(`findBestMatchLLM: LLM response was not valid JSON, skipping: ${response}`)
-		return undefined
+		return {
+			type: 'text',
+			text: `Could not match "${phrase}" to a dataset term: the language model did not return a valid response.`
+		}
 	}
 
 	let parsedTerm: string
@@ -531,7 +559,10 @@ async function findBestMatchLLM(
 	} else {
 		// JSON parsed, but it doesn't contain a usable "term" field.
 		console.warn(`findBestMatchLLM: LLM response missing a valid "term" field: ${response}`)
-		return undefined
+		return {
+			type: 'text',
+			text: `Could not match "${phrase}" to a dataset term: the language model response did not identify a term.`
+		}
 	}
 	/*
 try {
@@ -549,7 +580,10 @@ return undefined
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)
 	if (!matchedRow) {
 		console.warn(`findBestMatchLLM: LLM returned term "${parsedTerm}" that was not found in db_rows`)
-		return undefined
+		return {
+			type: 'text',
+			text: `Could not match "${phrase}" to a dataset term: no dictionary term corresponds to the suggested match.`
+		}
 	}
 	// db_rows.name is the dictionary term id (see parse_dataset_db in utils.ts).
 	// LLM doesn't produce a native similarity score; use 1 so the downstream threshold treats this as confident.

@@ -1,6 +1,6 @@
 import { phrase2entitytw, collectLeaves, evaluateFilterTerm } from './utils.ts'
 import type { FilterTreeResult } from './scaffoldTypes.ts'
-import { getTermObj, type Value } from './entity2termObj.ts'
+import { getTermObj, isMsgToUser, type Value } from './entity2termObj.ts'
 import { resolveToTvs } from './entity2twTvs.ts'
 import type { MsgToUser, Entity } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -45,6 +45,7 @@ export async function generateFilterTerm(
 	for (const filterTerm of filterEntities) {
 		mayLog('generateFilterTerm evaluating filter term:', filterTerm)
 		const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+		if (isMsgToUser(termObj)) return termObj
 		if (!termObj) continue
 		if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
 		filterValues.push(termObj)
