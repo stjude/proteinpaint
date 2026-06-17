@@ -9,6 +9,7 @@ Features:
 - Filtering cohort level terms in the SC app (i.e. parent header) is applied to all meta result subplots. This ensures the data in the plot matches the samples found in the sample table.
 - New integration tests in the barchart and box plot for single cell cell type and single cell gene expression terms.
 - 'cells' instead of 'samples' will appear in the barchart title when a single cell term is present by default.
+- Imroved GRIN2 CNV support by allowing datasets to declare the way their CNV data is quantified via type
 
 
 ## 2.192.0
