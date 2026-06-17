@@ -9,24 +9,18 @@ thin bootstrap — the shared route (/grin2) and UI (client/plots/grin2) hold th
 up the GDC vocab + mass app and open the grin2 plot, the same way the GDC OncoMatrix (oncomatrix.js) and
 other GDC tools launch. Passes the GDC cohort via termfilter.filter0.
 
-Part of unifying onto one GRIN2 route + UI: this replaces the custom GDC GRIN2 UI (client/gdc/grin2.ts);
-once that file is removed, this launcher can take its place as client/gdc/grin2.ts.
-
-Cohort-driven: there is no per-file selection table — the unified /grin2 route discovers each case's
-MAF/CNV files server-side from filter0 (server/src/mds3.gdc.js discoverGdcGrin2CaseFiles), and the shared
-GRIN2 plot's handleRun already forwards filter0 in its request.
+Cohort-driven: there is no per-file selection table. The shared GRIN2 plot's handleRun forwards the GDC
+cohort (filter0) to the general /grin2 route, which uses the same cohort→sample path as native datasets
+and reads each case's mutation data from the general getter ds.queries.singleSampleMutation.get().
 
 runpp() arg:
   .filter0{}   optional GDC cohort filter
   .holder      DOM node to render into (a .sja_root_holder is created inside it by the pp app wrapper)
 */
 
-const gdcGenome = 'hg38'
-const gdcDslabel = 'GDC'
-
-export async function init(arg: any, _holder: any, genomes: any) {
-	const toolGenome = arg.genome || gdcGenome
-	const toolDslabel = arg.dslabel || gdcDslabel
+export async function gdcGRIN2ui(arg: any, _holder: any, genomes: any) {
+	const toolGenome = arg.genome || 'hg38'
+	const toolDslabel = arg.dslabel || 'GDC'
 	const genome = genomes[toolGenome]
 	if (!genome) throw toolGenome + ' missing'
 	if (arg.filter0 && typeof arg.filter0 != 'object') throw 'arg.filter0 not object'
