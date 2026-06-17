@@ -22,7 +22,7 @@ export class SCModel {
 			genome: state.vocab.genome,
 			dslabel: state.vocab.dslabel,
 			filter: getNormalRoot(state.termfilter.filter),
-			filter0: getNormalRoot(state.termfilter.filter0)
+			filter0: state.termfilter.filter0
 		}
 		return await dofetch3('termdb/singlecellSamples', { body })
 	}

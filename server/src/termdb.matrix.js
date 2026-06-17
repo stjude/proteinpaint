@@ -310,7 +310,7 @@ async function getSampleData(q, ds) {
 				gene: tw.term.gene
 			})
 			let filteredSamples = new Set()
-			if ((q.filter?.lst?.length || q.filter?.lst?.length) && tw.term.sample?.isMetaResult) {
+			if ((q.filter?.lst?.length || q.filter0?.lst?.length) && tw.term.sample?.isMetaResult) {
 				const tmp = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 				filteredSamples = new Set(tmp.map(s => s.sample))
 			}
@@ -347,7 +347,7 @@ async function getSampleData(q, ds) {
 				colorBy: { [tw.term.plot]: tw.term.name }
 			})
 			let filteredSamples = new Set()
-			if ((q.filter?.lst?.length || q.filter?.lst?.length) && tw.term.sample?.isMetaResult) {
+			if ((q.filter?.lst?.length || q.filter0?.lst?.length) && tw.term.sample?.isMetaResult) {
 				const tmp = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 				filteredSamples = new Set(tmp.map(s => s.sample))
 			}
@@ -404,7 +404,7 @@ async function getSampleData(q, ds) {
 	if (sids.length > 0) {
 		/** Work around since sc cells are ** not ** in db or derived from api.
 		 * Will not appear in the sample lookups below. */
-		if ((processedSingleCellTerm = true)) sampleType = { name: 'cell', plural_name: 'cells' }
+		if (processedSingleCellTerm === true) sampleType = { name: 'cell', plural_name: 'cells' }
 		const firstComparableId = samples[sids[0]]?.sampleId
 		const sid = Number(firstComparableId ?? sids[0]) || firstComparableId || sids[0]
 		const stid = q.ds.sampleId2Type?.get?.(sid)

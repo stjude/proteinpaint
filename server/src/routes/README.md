@@ -20,6 +20,6 @@ workspace instead of server or client workspace.
 
 ## Instructions
 
-To create a `server/src/route` file, follow the comments/instructions in `server/src/routes/_template_.ts`.
+To create a `server/src/routes` file, follow the comments/instructions in `server/src/routes/_template_.ts`.
 Note that a payload validator or checker code in each file is optional, but it's very important in 
 cleaning up and ensuring a stable, reliable backend code.
