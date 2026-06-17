@@ -146,8 +146,13 @@ export async function getTermObj(
 const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
 const topK: number = 3
 const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
-*/
-		const match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
+        */
+		let match: any
+		try {
+			match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
+		} catch (e) {
+			console.error(`Error in findBestMatchLLM for phrase "${twEntity.phrase}":`, e)
+		}
 		if (!match) {
 			console.warn(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
 			return undefined
