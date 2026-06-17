@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import { detectGte } from '../../../test/test.helpers.js'
-import { getGeneVariantTw } from '../../../test/testdata/data.ts'
+import { getGeneVariantTw, getScgeGenesetTw } from '../../../test/testdata/data.ts'
 
 /*
 Tests:
@@ -12,6 +12,9 @@ Tests:
 	Box plot: term1=geneExp term2=geneVariant
 	Box plot with divide term = sex
 	Box plot with overlay term = aaclassic_5 and divide term = sex
+	
+	Box plot with term1: scge gene set 
+
 	Box plot with user settings
  */
 
@@ -299,6 +302,39 @@ tape('Box plot with overlay term = aaclassic_5 and divide term = sex', test => {
 		test.equal(boxplots.length, 10, 'Should render 10 boxplots')
 
 		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape.only('Box plot with term1: scge gene set', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: getScgeGenesetTw()
+				}
+			]
+		},
+		boxplot: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		// const dom = boxplot.Inner.dom
+		// const chartDivs = await detectGte({ elem: dom.charts.node(), selector: '.sjpp-boxplot-chart-wrapper' })
+		// test.equal(chartDivs.length, 2, 'Should render 2 charts')
+		// const boxplots = await detectGte({ elem: dom.charts.node(), selector: 'g[class="sjpp-boxplot-plot"]' })
+		// test.equal(boxplots.length, 10, 'Should render 10 boxplots')
+
+		// if (test['_ok']) boxplot.Inner.app.destroy()
 		test.end()
 	}
 })

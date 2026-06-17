@@ -1,4 +1,4 @@
-import type { RawSingleCellGeneExpTerm, SingleCellGeneExpressionTerm } from '#types'
+import type { RawSingleCellGeneExpTerm, SingleCellGeneExpressionTerm, ScgeGene } from '#types'
 import type { TwOpts } from './TwBase.ts'
 import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
@@ -6,7 +6,7 @@ const termType = SINGLECELL_GENE_EXPRESSION
 
 export class SingleCellGeneExpressionBase {
 	type = termType
-	gene: string
+	genes: any
 	sample: string
 	unit: string
 
@@ -23,13 +23,15 @@ export class SingleCellGeneExpressionBase {
 		if (!term || typeof term !== 'object') throw new Error('term is not an object')
 		if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
 		if (!term.gene && !term.name) throw new Error('no gene or name present')
-		if (!term.gene || typeof term.gene != 'string') throw new Error(`${termType} term.gene must be non-empty string`)
-		if (!term.sample) throw new Error('missing sample name')
+		if (!term.gene && !term.genes) throw new Error(`${termType} term must have either gene or genes property`)
+		if (term.gene && typeof term.gene != 'string') throw new Error(`${termType} term.gene must be non-empty string`)
+		if (term.genes && !Array.isArray(term.genes)) throw new Error(`${termType} term.genes must be an array`)
+		if (!term.sample) throw new Error('missing sample')
 	}
 
 	constructor(term: RawSingleCellGeneExpTerm | SingleCellGeneExpressionTerm, opts: TwOpts) {
 		SingleCellGeneExpressionBase.validate(term)
-		this.gene = term.gene
+		this.genes = term.gene ? [term.gene] : (term.genes as ScgeGene[])
 		this.sample = term.sample
 		this.unit = term.unit || getSCGEunit(opts.vocabApi)
 	}

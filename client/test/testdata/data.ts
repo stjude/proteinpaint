@@ -614,6 +614,24 @@ export function getScgeneexpTw(gene = 'KRAS') {
 		}
 	}
 }
+export function getScgeGenesetTw() {
+	return {
+		term: {
+			name: 'Example scge gene set',
+			genes: [
+				{ kind: 'gene', gene: 'TP53', type: tt.SINGLECELL_GENE_EXPRESSION },
+				{ kind: 'gene', gene: 'KRAS', type: tt.SINGLECELL_GENE_EXPRESSION },
+				{ kind: 'gene', gene: 'AKT1', type: tt.SINGLECELL_GENE_EXPRESSION },
+				{ kind: 'gene', gene: 'BCR', type: tt.SINGLECELL_GENE_EXPRESSION }
+			],
+			type: tt.SINGLECELL_GENE_EXPRESSION,
+			sample: {
+				sID: '1_patient'
+			}
+		},
+		q: { type: 'predefined-groupset' }
+	}
+}
 export function getScctTw() {
 	return {
 		term: {

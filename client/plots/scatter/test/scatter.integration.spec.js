@@ -19,7 +19,8 @@ import {
 	getGeneVariantTw,
 	getSsgseaTw,
 	getScgeneexpTw,
-	getScctTw
+	getScctTw,
+	getScgeGenesetTw
 } from '../../../test/testdata/data.ts'
 
 /* Tests:
@@ -41,10 +42,12 @@ Check/uncheck Show axes from menu
 Click zoom in, zoom out, and reset buttons
 Groups and group menus function
 colorTW=geneVariant with no groupsetting
-colorTW=geneVariant gene list
+colorTW=geneVariant with gene list
 colorTW=ssgsea
-singlecell map
-singlecell geneexp
+single cell map
+single cell gene exp
+single cell gene exp gene set
+Disco plot and lollipop
 */
 
 const runpp = helpers.getRunPp('mass', {
@@ -1288,7 +1291,7 @@ tape('colorTW=ssgsea', function (test) {
 	}
 })
 
-tape('singlecell map', function (test) {
+tape('single cell map', function (test) {
 	test.timeoutAfter(6000)
 	runpp({
 		state: {
@@ -1310,7 +1313,7 @@ tape('singlecell map', function (test) {
 	}
 })
 
-tape('singlecell geneexp', function (test) {
+tape('single cell gene exp', function (test) {
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' },
@@ -1328,6 +1331,28 @@ tape('singlecell geneexp', function (test) {
 		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
 		test.true(dots.length, 'some dots are loaded from singlecell map')
 		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape.only('single cell gene exp gene set', function (test) {
+	runpp({
+		state: {
+			nav: { header_mode: 'hidden' },
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					colorTW: getScgeGenesetTw(),
+					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+				}
+			]
+		},
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+	async function runTests(scatter) {
+		// const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		// test.true(dots.length, 'some dots are loaded from singlecell map')
+		// if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 })

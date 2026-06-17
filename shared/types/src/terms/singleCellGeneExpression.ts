@@ -1,7 +1,6 @@
-// import type { BaseTerm } from '../index.ts'
 import type { PresetNumericBins, NumericBaseTerm, NumTW, RawNumTW } from '../index.ts'
 
-type Gene = {
+export type ScgeGene = {
 	kind?: 'gene'
 	gene: string
 	chr?: string
@@ -9,21 +8,22 @@ type Gene = {
 	stop?: number
 }
 
-type Coord = {
-	kind?: 'coord'
-	gene?: string
-	chr: string
-	start: number
-	stop: number
-}
+// export type ScgeCoord = {
+// 	kind?: 'coord'
+// 	gene?: string
+// 	chr: string
+// 	start: number
+// 	stop: number
+// }
 
 export type SingleCellGeneExpressionTerm = NumericBaseTerm & {
 	type: 'singleCellGeneExpression'
-	gene: string
+	gene?: string
+	genes: ScgeGene[]
 	sample: string
 	unit: string
 	bins?: PresetNumericBins
-} & (Gene | Coord)
+}
 
 export type SingleCellGeneExpressionTermTW = NumTW & { term: SingleCellGeneExpressionTerm }
 
