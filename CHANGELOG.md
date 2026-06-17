@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.192.0
 
 Features:
 - The plot filter in the SC app is enabled, allowing users to filter samples by cohort level terms
