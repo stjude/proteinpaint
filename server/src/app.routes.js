@@ -43,6 +43,7 @@ export const routeFiles = [
 	import('./routes/termdb.DE.ts'),
 	import('./routes/termdb.animatedBubbleChart.ts'),
 	import('./routes/termdb.brainRegions.ts'),
+	import('./routes/termdb.bubbleHeatmap.ts'),
 	import('./routes/termdb.dapVolcano.ts'),
 	import('./routes/termdb.diffMeth.ts'),
 	import('./routes/termdb.violinBox.ts'),

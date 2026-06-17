@@ -693,6 +693,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	geneRanking: ({ ds }) => ds.queries?.geneRanking,
 	animatedBubbleChart: ({ ds }) => ds.queries?.geneRanking,
 	brainRegions: ({ ds }) => ds.queries?.proteome?.brainRegions,
+	bubbleHeatmap: ({ ds }) => ds.queries?.proteome?.bubbleHeatmap,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
