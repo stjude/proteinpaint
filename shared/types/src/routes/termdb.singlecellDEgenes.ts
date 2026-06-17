@@ -15,8 +15,11 @@ export type TermdbSingleCellDEgenesRequest = {
 	 * **not** the string format.*/
 	sample: string | { sID: string; eID?: string }
 	/** column name to provide cell groups/clustering,
-	 * for which DE genes are precomputed.  */
-	termId: string
+	 * for which DE genes are precomputed.
+	 *
+	 * Old singleCellPlot does not use termId. Optional to support
+	 * legacy plot. */
+	termId?: string
 	/** User selected cell group/cluster, corresponds to termId,
 	 * for which DE genes will be returned to client */
 	categoryName: string
