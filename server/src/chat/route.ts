@@ -276,6 +276,9 @@ export async function run_chat_pipeline(
 			genome
 		)
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
+		if ('type' in termObj && termObj.type === 'text') {
+			return termObj // Return msg/error to client for display
+		}
 		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))
 
 		mayLog('#################################################')
