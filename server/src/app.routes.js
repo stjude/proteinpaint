@@ -19,8 +19,6 @@ export const routeFiles = [
 	import('./routes/deleteWSITileSelection.ts'),
 	import('./routes/dsdata.ts'),
 	import('./routes/dzimages.ts'),
-	import('./routes/gdc.grin2.run.ts'),
-	import('./routes/gdc.grin2.list.ts'),
 	import('./routes/gdc.maf.ts'),
 	import('./routes/gdc.mafBuild.ts'),
 	import('./routes/termdb.topMutatedGenes.ts'),

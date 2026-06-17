@@ -3,15 +3,12 @@ import { joinUrl, memFetch } from '#shared/index.js'
 import { compute_bins } from '#shared/termdb.bins.js'
 import { getBin } from '#shared/terms.js'
 import { renderVolcano } from './renderVolcano.ts'
-import ky from 'ky'
+// import ky from 'ky'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
 import { write_tmpfile, xfetch, sleep } from './utils.js'
 import { mayLog } from './helpers.ts'
-import { parseGdcCnvFile } from './gdc.cnvFile.ts'
-import { parseGdcMafFile, gunzipIfNeeded } from './gdc.mafFile.ts'
-import { detectCnvValueType, pickLargestFilePerCase, selectCnvFilePerCase } from './grin2/gdcFiles.ts'
 import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases that will be used for gene exp clustering; okay just to hardcode in code and not to define in ds
@@ -900,144 +897,74 @@ export function getGdcSampletypes(c) {
 }
 
 /*
-cnv files come in different formats. detect by header line.
-fetch the file then delegate parsing to the pure, reusable parseGdcCnvFile() in gdc.cnvFile.ts
+cnv files come in different formats. detect by header line
 */
-/* Fetch a GDC data file as text, transparently gunzipping when needed. The GDC /data endpoint serves a
-file's stored bytes: CNV segment files are plain TSV, but MAF files are stored as .maf.gz (Content-Type
-application/gzip, NOT Content-Encoding), so the body must be decompressed by us. We fetch raw bytes and
-gunzip when the gzip magic (0x1f 0x8b) is present, so either form is handled. */
-async function fetchGdcFileText(host, fid, signal) {
-	const buf = Buffer.from(await ky(joinUrl(host.rest, 'data', fid), { timeout: false, signal }).arrayBuffer())
-	return gunzipIfNeeded(buf)
-}
-
-export async function loadCnvFile(host, fid, signal) {
-	return parseGdcCnvFile(await fetchGdcFileText(host, fid, signal))
-}
-
-export async function loadMafFile(host, fid, signal) {
-	return parseGdcMafFile(await fetchGdcFileText(host, fid, signal))
-}
-
-/*
-Discover the per-case MAF/CNV file selection for a GRIN2 cohort, so the unified /grin2 route can run a
-GDC cohort directly (no manual file-selection table). Mirrors the queries in gdc.grin2.list.ts and
-reuses the same pure selection helpers (detectCnvValueType, pickLargestFilePerCase, selectCnvFilePerCase)
-so discovery and the list table never disagree on which file/value type a case uses.
-
-q: GRIN2Request-like { filter0?, cnvOptions?{dataType}, snvindelOptions?, __abortSignal? }
-returns: { [caseSubmitterId]: { maf?: fileId, cnv?: fileId } }
-*/
-export async function discoverGdcGrin2CaseFiles(q, ds) {
-	const { host, headers } = ds.getHostHeaders(q)
-	const case_filters = makeFilter(q)
-	const caseFiles = {}
-
-	// --- CNV files ---
-	{
-		const body = {
-			size: 10000,
-			fields: [
-				'cases.submitter_id',
-				'cases.case_id',
-				'cases.project.project_id',
-				'data_type',
-				'file_id',
-				'file_size',
-				'data_format',
-				'analysis.workflow_type'
-			].join(',')
-		}
-		body.filters = {
-			op: 'in',
-			content: {
-				field: 'data_type',
-				value: ['Copy Number Segment', 'Masked Copy Number Segment', 'Allele-specific Copy Number Segment']
+async function loadCnvFile(host, fid) {
+	const re = await xfetch(joinUrl(host.rest, 'data', fid), { timeout: false })
+	const lines = re.trim().split('\n')
+	const mlst = []
+	switch (lines[0]) {
+		case 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
+		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				if (l.length != 6) throw 'cnv file line not 6 columns: ' + l
+				if (!l[1]) throw 'cnv file line missing chr: ' + l
+				let chr = l[1]
+				if (!l[1].startsWith('chr')) chr = 'chr' + l[1] // snp file chr doesn't start with "chr"
+				const cnv = {
+					dt: common.dtcnv,
+					chr,
+					start: Number(l[2]),
+					stop: Number(l[3]),
+					value: Number(l[5])
+				}
+				if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value))
+					throw 'start/stop/value not a number in cnv file: ' + l
+				mlst.push(cnv)
 			}
-		}
-		if (case_filters.content.length) body.case_filters = case_filters
-		const re = await xfetch(joinUrl(host.rest, 'files'), {
-			method: 'POST',
-			timeout: false,
-			headers,
-			body,
-			signal: q.__abortSignal
-		})
-		if (!Array.isArray(re?.data?.hits)) throw 'gdc cnv files discovery: re.data.hits[] not array'
-		const cnvFiles = []
-		for (const h of re.data.hits) {
-			if (h.data_format != 'TXT') continue
-			const value_type = detectCnvValueType(h.data_type, h.analysis?.workflow_type)
-			if (!value_type) continue
-			const c = h.cases?.[0]
-			if (!c) continue
-			cnvFiles.push({
-				id: h.file_id || h.id,
-				project_id: c.project?.project_id || 'unknown',
-				file_size: h.file_size,
-				case_submitter_id: c.submitter_id,
-				case_uuid: c.case_id,
-				sample_types: [],
-				value_type
-			})
-		}
-		const selected = selectCnvFilePerCase(cnvFiles, q.cnvOptions?.dataType)
-		for (const [caseId, file] of selected) {
-			caseFiles[caseId] = { ...(caseFiles[caseId] || {}), cnv: file.id }
-		}
-	}
+			break
+		case 'GDC_Aliquot\tChromosome\tStart\tEnd\tCopy_Number\tMajor_Copy_Number\tMinor_Copy_Number':
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				if (l.length != 7) continue
+				const total = Number(l[4]),
+					major = Number(l[5]),
+					minor = Number(l[6])
+				if (Number.isNaN(total) || Number.isNaN(major) || Number.isNaN(minor)) continue
+				const cnv = {
+					dt: common.dtcnv,
+					chr: l[1],
+					start: Number(l[2]),
+					stop: Number(l[3]),
+					value: total
+				}
+				if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
+				mlst.push(cnv)
 
-	// --- MAF files (only when snvindel is requested) ---
-	if (q.snvindelOptions) {
-		const body = {
-			size: 10000,
-			fields: ['id', 'file_size', 'cases.submitter_id', 'cases.case_id', 'cases.project.project_id'].join(','),
-			filters: {
-				op: 'and',
-				content: [
-					{ op: '=', content: { field: 'data_format', value: 'MAF' } },
-					{
-						op: '=',
-						content: { field: 'experimental_strategy', value: q.snvindelOptions.experimentalStrategy || 'WXS' }
-					},
-					{
-						op: '=',
-						content: { field: 'analysis.workflow_type', value: 'Aliquot Ensemble Somatic Variant Merging and Masking' }
-					},
-					{ op: '=', content: { field: 'access', value: 'open' } }
-				]
+				if (total > 0) {
+					// total copy number is >0, detect loh
+					if (minor == 0 && major > 0) {
+						// zhenyu 4/25/23 detect strict one allele loss
+						mlst.push({
+							dt: common.dtloh,
+							chr: cnv.chr,
+							start: cnv.start,
+							stop: cnv.stop,
+							// hardcode a value for plot to work.
+							// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
+							// otherwise, the value quantifies allelic imbalance and is plotted with color shading
+							// all loh events in a plot should be uniformlly quanlitative or quantitative
+							segmean: 0.5
+						})
+					}
+				}
 			}
-		}
-		if (case_filters.content.length) body.case_filters = case_filters
-		const re = await xfetch(joinUrl(host.rest, 'files'), {
-			method: 'POST',
-			timeout: false,
-			headers,
-			body,
-			signal: q.__abortSignal
-		})
-		if (!Array.isArray(re?.data?.hits)) throw 'gdc maf files discovery: re.data.hits[] not array'
-		const mafFiles = []
-		for (const h of re.data.hits) {
-			const c = h.cases?.[0]
-			if (!c) continue
-			mafFiles.push({
-				id: h.id,
-				project_id: c.project?.project_id || 'unknown',
-				file_size: h.file_size,
-				case_submitter_id: c.submitter_id,
-				case_uuid: c.case_id,
-				sample_types: []
-			})
-		}
-		const { kept } = pickLargestFilePerCase(mafFiles)
-		for (const file of kept) {
-			caseFiles[file.case_submitter_id] = { ...(caseFiles[file.case_submitter_id] || {}), maf: file.id }
-		}
+			break
+		default:
+			throw 'unknown CNV file header line: ' + lines[0]
 	}
-
-	return caseFiles
+	return mlst
 }
 
 // must use headers to access controlled fusion file

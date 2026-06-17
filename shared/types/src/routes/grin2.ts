@@ -50,38 +50,20 @@ export type GRIN2Request = {
 	/** pp filter */
 	filter?: Filter
 
-	/** GDC-backed datasets only: read-only GDC cohort filter, passed to the GDC API as-is. When present
-	 * (and caseFiles is not), the run discovers each case's MAF/CNV files server-side via the GDC API. */
+	/** GDC-backed datasets only: read-only GDC cohort filter, passed through to the GDC API as-is to
+	 * select the cohort's cases. The run uses the same cohort→sample path as native datasets; per-case
+	 * mutation data comes from the general getter ds.queries.singleSampleMutation.get(). */
 	filter0?: any
 
-	/** GDC-backed datasets only: an explicit per-case file selection (as produced by the GDC GRIN2
-	 * list step). When present, the run fetches and classifies these files directly instead of the
-	 * native cohort→sample path. Maps case id → file uuids. CNV is fetched and parsed server-side
-	 * (parseGdcCnvFile stamps each segment's value type). Takes precedence over filter0. */
-	caseFiles?: {
-		[caseId: string]: {
-			maf?: string
-			cnv?: string
-		}
-	}
-
-	/** Options for filtering SNV/indel file content. Note: total depth and alt-allele count are now
-	 * handled by mafFilter (the refined replacement for the former minTotalDepth/minAltAlleleCount cutoffs). */
+	/** Options for filtering SNV/indel content: consequence types and an optional MAF filter. */
 	snvindelOptions?: {
-		/** String array of consequence types to include. For GDC files these are matched against the
-		 * MAF One_Consequence column (VEP/SO terms, e.g. 'missense_variant'). */
+		/** String array of consequence types to include (pp mclass keys, as emitted by the shared GRIN2 UI). */
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
 		hyperMutator?: number // Default: 1000
-		/** MAF filter object (tvslst) to filter mutations by allele frequency (native file-based datasets). */
+		/** MAF filter object (tvslst) to filter mutations by allele frequency / read depth, sourced from
+		 * queries.snvindel.mafFilter (bcf-backed datasets that expose per-sample allelic depth). */
 		mafFilter?: Filter
-		/** GDC file-based path only: per-row tumor read-depth / alt-allele-count cutoffs, applied to the GDC
-		 * MAF t_depth / t_alt_count columns (native datasets use mafFilter instead, which is why these were
-		 * removed from the native contract). */
-		minTotalDepth?: number // Default (GDC): 10
-		minAltAlleleCount?: number // Default (GDC): 2
-		/** GDC file discovery only: which experimental strategy's MAF files to use (default 'WXS'). */
-		experimentalStrategy?: string
 	}
 
 	/** Options for filtering CNV file content. Threshold semantics depend on the dataset's
