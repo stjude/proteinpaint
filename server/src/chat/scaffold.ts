@@ -729,6 +729,8 @@ Query: ${user_prompt}
 				throw 'classifyGeneDataType agent returned an empty string, which is unexpected.'
 			} else if (Array.isArray(geneDataTypeMessage)) {
 				geneFeatures = geneDataTypeMessage
+			} else if (geneDataTypeMessage && geneDataTypeMessage.type === 'text') {
+				return geneDataTypeMessage // MsgToUser — surface to the client for display
 			} else {
 				throw 'geneDataTypeMessage has unknown data type returned from classifyGeneDataType agent'
 			}
