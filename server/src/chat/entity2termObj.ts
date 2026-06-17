@@ -11,7 +11,12 @@ import type {
 	PrebuiltScatterPhrase2EntityResult
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
-import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
+import {
+	extractGenesetsFromPromptNew,
+	extractGenesFromPrompt,
+	getGenesetNames,
+	safeExtractJsonObject
+} from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import Database from 'better-sqlite3'
 import assert from 'assert'
@@ -497,28 +502,35 @@ async function findBestMatchLLM(
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	if (!response) {
-		throw new Error('No response from LLM for findBestMatchLLM')
+		// Gracefully handle a missing/empty response instead of throwing (which can crash the server).
+		console.warn('findBestMatchLLM: no response from LLM')
+		return undefined
 	}
 	// mayLog("Raw Response: ", JSON.stringify(response))
+
+	// Tolerantly parse the LLM output. If the model did not return usable JSON,
+	// bail out gracefully rather than throwing.
+	const parsed = safeExtractJsonObject(response)
+	if (!parsed) {
+		console.warn(`findBestMatchLLM: LLM response was not valid JSON, skipping: ${response}`)
+		return undefined
+	}
+
 	let parsedTerm: string
-	// let msg: string
-	try {
-		const parsed = JSON.parse(response) as { term: string; possible?: string[] }
-		if (parsed.term === 'ambiguous') {
-			mayLog('Ambiguous!!! Possible matches: ')
-			if (parsed.possible) {
-				parsedTerm = parsed.possible[0]
-				mayLog(parsed.possible)
-				mayLog('But choosing the first choice: ', parsedTerm)
-			} else {
-				parsedTerm = 'ambiguous_no_candidates'
-			}
+	if (parsed.term === 'ambiguous') {
+		mayLog('Ambiguous!!! Possible matches: ')
+		if (Array.isArray(parsed.possible) && parsed.possible.length > 0) {
+			parsedTerm = String(parsed.possible[0])
+			mayLog(parsed.possible)
+			mayLog('But choosing the first choice: ', parsedTerm)
 		} else {
-			parsedTerm = parsed.term
-			// msg = ''
+			parsedTerm = 'ambiguous_no_candidates'
 		}
-	} catch (e) {
-		console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+	} else if (typeof parsed.term === 'string' && parsed.term.length > 0) {
+		parsedTerm = parsed.term
+	} else {
+		// JSON parsed, but it doesn't contain a usable "term" field.
+		console.warn(`findBestMatchLLM: LLM response missing a valid "term" field: ${response}`)
 		return undefined
 	}
 	/*
