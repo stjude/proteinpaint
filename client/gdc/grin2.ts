@@ -1587,6 +1587,82 @@ async function getFilesAndShowTable(obj) {
 	 *
 	 */
 
+	/**
+	 * Experimental: run the selected GDC case files through the UNIFIED /grin2 route (no Rust).
+	 * Maps the GDC selections to a GRIN2Request, posts, and renders the unified response (pngImg +
+	 * topGeneTable). Opt-in via URL ?grin2unified; the default Rust path is unchanged.
+	 */
+	async function runUnifiedGrin2(obj, button, caseFilesWrap, { mafSelected, cnvSelected }) {
+		const req: any = {
+			genome: 'hg38',
+			dslabel: 'GDC',
+			caseFiles: caseFilesWrap.caseFiles,
+			// plot/render fields required by the unified route
+			width: 1000,
+			height: 400,
+			devicePixelRatio: typeof window != 'undefined' ? window.devicePixelRatio || 1 : 1,
+			pngDotRadius: 2,
+			qValueThreshold: 0.05,
+			maxCappedPoints: 5,
+			hardCap: 200,
+			binSize: 10,
+			maxGenesToShow: 500
+		}
+		if (cnvSelected) {
+			req.cnvOptions = {
+				lossThreshold: obj.cnvOptions.lossThreshold ?? -0.4,
+				gainThreshold: obj.cnvOptions.gainThreshold ?? 0.3,
+				maxSegLength: obj.cnvOptions.segLength ?? 0
+			}
+		}
+		if (mafSelected) {
+			// the unified route expects pp mclass keys and translates to SO terms server-side (same
+			// vocabulary the shared GRIN2 UI uses), so pass the mclass consequences through as-is
+			req.snvindelOptions = {
+				consequences: obj.mafOptions.consequences,
+				minTotalDepth: obj.mafOptions.minTotalDepth,
+				minAltAlleleCount: obj.mafOptions.minAltAlleleCount,
+				experimentalStrategy: obj.mafOptions.experimentalStrategy
+			}
+		}
+
+		const oldText = button.innerHTML
+		button.innerHTML = 'Analyzing (unified)... Please wait'
+		button.disabled = true
+		obj.resultDiv.selectAll('*').remove()
+		try {
+			obj.busy = true
+			const response = await dofetch3('grin2', { body: req })
+			if (!response || response.status == 'error') throw response?.error || 'invalid response'
+			const resultContainer = obj.resultDiv.append('div').style('margin-top', '40px')
+			if (response.pngImg) {
+				resultContainer
+					.append('img')
+					.attr(
+						'src',
+						response.pngImg.startsWith('data:') ? response.pngImg : `data:image/png;base64,${response.pngImg}`
+					)
+			}
+			const tgt = response.topGeneTable
+			if (tgt?.rows?.length) {
+				resultContainer.append('h4').text('Top genes').style('text-align', 'left')
+				renderTable({
+					columns: tgt.columns,
+					rows: tgt.rows,
+					div: resultContainer.append('div'),
+					showLines: true,
+					maxHeight: '400px'
+				})
+			}
+		} catch (e: any) {
+			sayerror(obj.resultDiv, e.message || e)
+		} finally {
+			obj.busy = false
+			button.innerHTML = oldText
+			button.disabled = false
+		}
+	}
+
 	async function runGRIN2Analysis(lst, button, obj, filteredFiles = result.files) {
 		// Check what data types are selected
 		const mafSelected = obj.dataTypeStates.maf
@@ -1664,6 +1740,19 @@ async function getFilesAndShowTable(obj) {
 		}
 
 		if (Object.keys(caseFiles.caseFiles).length === 0) return
+
+		// Experimental opt-in: route the run through the UNIFIED /grin2 handler instead of gdc/runGRIN2.
+		// Enabled either by the launch arg (useUnifiedRoute, e.g. the gdcgrin2unified test page) or the
+		// URL ?grin2unified. Same per-case file selection; CNV/MAF are fetched + classified server-side in
+		// TS (no Rust). Renders the unified GRIN2Response (pngImg + topGeneTable). The default GDC (Rust)
+		// path below is unchanged. TODO consolidate rendering + verify live, then make this the default.
+		const unifiedOptIn =
+			obj.opts?.useUnifiedRoute ||
+			(typeof window != 'undefined' && new URLSearchParams(window.location.search).has('grin2unified'))
+		if (unifiedOptIn) {
+			await runUnifiedGrin2(obj, button, caseFiles, { mafSelected, cnvSelected })
+			return
+		}
 
 		const oldText = button.innerHTML
 		button.innerHTML = 'Analyzing... Please wait'
@@ -2235,7 +2324,7 @@ async function getFilesAndShowTable(obj) {
  * @param config - Configuration object containing holder, filters, and callbacks
  * @returns Public API object with update method
  */
-export async function gdcGRIN2ui({ filter0, callbacks, debugmode = false }, holder) {
+export async function gdcGRIN2ui({ filter0, callbacks, debugmode = false, useUnifiedRoute = false }, holder) {
 	if (debugmode) {
 		// Debug logic
 	}
@@ -2267,7 +2356,9 @@ export async function gdcGRIN2ui({ filter0, callbacks, debugmode = false }, hold
 			resultDiv: holder.append('div').style('margin-top', '20px'),
 			opts: {
 				filter0,
-				experimentalStrategy: 'WXS'
+				experimentalStrategy: 'WXS',
+				// route the run through the unified /grin2 handler (no Rust) instead of gdc/runGRIN2
+				useUnifiedRoute
 			},
 			busy: false, // when analyzing, set to true for disabling ui interactivity
 			mafTableArg: null,

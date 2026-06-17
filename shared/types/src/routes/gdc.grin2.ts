@@ -16,6 +16,9 @@ export type GdcGRIN2File = {
 	project_id: string
 	/** The format of the file (MAF) */
 	file_format?: 'MAF'
+	/** For CNV files: how the file's cnv values are quantified, detected from GDC data_type/workflow_type.
+	 * 'segmean' = log2 ratio (baseline 0); 'copyNumber' = absolute integer copy number (baseline 2). */
+	value_type?: 'segmean' | 'copyNumber'
 }
 
 type ExperimentalStrategy = {
