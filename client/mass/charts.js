@@ -379,6 +379,11 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'animatedBubbleChart' }
 		},
 		{
+			label: 'Bubble Heatmap',
+			chartType: 'bubbleHeatmap',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Brain Regional Proteome',
 			chartType: 'brainRegions',
 			clickTo: self.loadChartSpecificMenu

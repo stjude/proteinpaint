@@ -774,6 +774,22 @@ export type ProteomeAbundanceQuery = {
 		 *  region code don't need to appear here. */
 		regionValueRemap?: { [rawValue: string]: string }
 	}
+	/** Bubble Heatmap chart config: a (assays × cohorts) grid of per-site dots per
+	 *  isoform, read from the per-cohort DAPfiles. PTM assays render one dot per
+	 *  modification site; protein-level assays render one dot. Cells where the cohort
+	 *  doesn't exist under the assay are rendered empty. */
+	bubbleHeatmap?: {
+		organism: string
+		/** Row order, top-to-bottom */
+		assays: string[]
+		/** Column order, left-to-right */
+		cohorts: string[]
+		/** assay used as the total-protein baseline for protein-abundance adjustment of
+		 *  the other (non-reference) assays — both PTM and insoluble. Must be a configured
+		 *  assay for the organism (typically the whole-proteome assay, and usually also in
+		 *  `assays` so its own row shows). When omitted, no adjustment is offered. */
+		proteinReferenceAssay?: string
+	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
 		[organism: string]: {

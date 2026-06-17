@@ -14,7 +14,7 @@ export type LegendCircleReferenceOpts = {
 	/** Default max radius in pixels or a scale */
 	maxRadius: number
 	/** If provided, renders a menu on click */
-	menu: {
+	menu?: {
 		/** If provided, displays a prompt (e.g. pixels, scales, etc.)
 		 * next to the min and max inputs*/
 		minMaxLabel?: string
