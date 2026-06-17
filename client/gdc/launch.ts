@@ -23,11 +23,6 @@ export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 		const _ = await import('./maf.js')
 		return await _.gdcMAFui(arg, app.holder0)
 	}
-	if (arg.launchGdcGrin2Shared) {
-		// unified path: mount the shared GRIN2 plot (client/plots/grin2) on GDC, cohort-driven via filter0
-		const _ = await import('./grin2.gdc.ts')
-		return await _.init(arg, app.holder0, app.genomes)
-	}
 	if (arg.launchGdcGrin2) {
 		const _ = await import('./grin2.ts')
 		return await _.gdcGRIN2ui(arg, app.holder0)
