@@ -23,13 +23,23 @@ export const api: RouteApi = {
 }
 
 function validTermdbSingleCellDEgenesRequest(input): TermdbSingleCellDEgenesRequest {
+	const validateSample = () => {
+		/** This is legacy support for the old singleCellPlot that passes the sample
+		 * as a single string. */
+		if (typeof input.sample === 'string') validString(input.sample)
+		else {
+			if (typeof input.sample != 'object' || !input.sample.sID)
+				throw 'sample should be a string or an object with a non-empty sID string property'
+			validString(input.sample.sID)
+			if (input.sample.eID) validString(input.sample.eID)
+		}
+		return input.sample
+	}
+
 	return {
 		...validGenomeDs(input),
-		sample: {
-			sID: validString(input.sample?.sID),
-			eID: input.sample?.eID ? validString(input.sample.eID) : undefined
-		},
-		termId: validString(input.termId),
+		sample: validateSample(),
+		termId: input.termId ? validString(input.termId) : undefined,
 		categoryName: validString(input.categoryName),
 		volcanoRender: input.volcanoRender
 	}
