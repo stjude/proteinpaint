@@ -15,11 +15,18 @@ import {
 	optionToDt,
 	formatElapsedTime,
 	mclasscnvgain,
-	mclasscnvloss
+	mclasscnvloss,
+	SOterm2class
 } from '#shared'
 
 import { mayFilterByMaf } from '../mds3.init.js'
+import {
+	loadCnvFile as loadCnvFileFromGdc,
+	loadMafFile as loadMafFileFromGdc,
+	discoverGdcGrin2CaseFiles
+} from '../mds3.gdc.js'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
+import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.ts'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
 import type { CnvType, Grin2CacheResult } from './types.ts'
@@ -356,6 +363,8 @@ export function grin2KeyInputs(req: GRIN2Request) {
 		genome: req.genome,
 		dslabel: req.dslabel,
 		filter: req.filter ?? null,
+		filter0: req.filter0 ?? null,
+		caseFiles: req.caseFiles ?? null,
 		snvindelOptions: req.snvindelOptions ?? null,
 		cnvOptions: req.cnvOptions ?? null,
 		fusionOptions: req.fusionOptions ?? null,
@@ -454,33 +463,52 @@ async function runGrin2Fresh(
 ): Promise<{ cacheResult: Grin2CacheResult; processingTime: number; grin2AnalysisTime: number }> {
 	const startTime = Date.now()
 
-	// Step 1: Get samples using cohort infrastructure
-	const samples = await get_samples(
-		request,
-		ds,
-		true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
-	)
+	// Steps 1-2: acquire the cohort's data and convert it to lesions. Two acquisition modes feed the
+	// same downstream pipeline:
+	//  - file-centric (GDC): an explicit per-case file selection (request.caseFiles) is fetched and
+	//    parsed server-side. Used to unify the GDC GRIN2 path into this route.
+	//  - native cohort: termdb cohort query → per-sample mlst via singleSampleMutation.get().
+	let lesions: any[]
+	let processing: any
+	if (request.caseFiles || request.filter0) {
+		const processingStartTime = Date.now()
+		// caseFiles (explicit selection from the GDC list step) wins; otherwise discover the cohort's
+		// per-case files from the GDC cohort filter (filter0) server-side.
+		const caseFiles: NonNullable<GRIN2Request['caseFiles']> =
+			request.caseFiles ?? ((await discoverGdcGrin2CaseFiles(request, ds)) as NonNullable<GRIN2Request['caseFiles']>)
+		;({ lesions, processing } = await processGdcCaseFiles(caseFiles, request, ds, signal))
+		mayLog(
+			`[GRIN2] Processed ${Object.keys(caseFiles).length} GDC cases in ${formatElapsedTime(
+				Date.now() - processingStartTime
+			)}`
+		)
+	} else {
+		// Step 1: Get samples using cohort infrastructure
+		const samples = await get_samples(
+			request,
+			ds,
+			true // must set to true to return sample name to be able to access file. FIXME this can let names revealed to grin2 client, may need to apply access control
+		)
 
-	const cohortTime = Date.now() - startTime
-	mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
+		const cohortTime = Date.now() - startTime
+		mayLog(`[GRIN2] Retrieved ${samples.length.toLocaleString()} samples in ${formatElapsedTime(cohortTime)}`)
 
-	if (samples.length === 0) {
-		throw new Error('No samples found matching the provided filter criteria')
+		if (samples.length === 0) {
+			throw new Error('No samples found matching the provided filter criteria')
+		}
+
+		// Step 2: Process sample data, convert to lesion format, and apply overall lesion cap
+		;({ lesions, processing } = await processSampleData(samples, ds, request))
 	}
-
-	// Step 2: Process sample data, convert to lesion format, and apply overall lesion cap
-	const processingStartTime = Date.now()
-
-	const { lesions, processing } = await processSampleData(samples, ds, request)
 
 	// Guard against undefined processing summary so eslint doesn't complain
 	if (!processing) throw new Error('Processing summary is missing')
 
-	const processingTime = Date.now() - processingStartTime
+	const processingTime = Date.now() - startTime
 	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
 		`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
-			processing?.totalSamples ?? samples.length
+			processing?.totalSamples ?? 0
 		} samples processed successfully`
 	)
 
@@ -537,6 +565,185 @@ async function runGrin2Fresh(
 }
 
 // ─── helpers ─── //
+
+/** Loader that returns a case's CNV mlst (parseGdcCnvFile output: dt:dtcnv entries with valueType). */
+export type CnvFileLoader = (cnvFileId: string) => Promise<any[]>
+/** Loader that returns a case's MAF mlst (parseGdcMafFile output: dt:dtsnvindel entries). */
+export type MafFileLoader = (mafFileId: string) => Promise<any[]>
+
+/** GDC default MAF read-depth / alt-allele-count cutoffs (native datasets use mafFilter instead). */
+const GDC_MAF_MIN_TOTAL_DEPTH = 10
+const GDC_MAF_MIN_ALT_COUNT = 2
+
+/** Convert a parsed GDC MAF row to a 'mutation' lesion, applying GDC's consequence + depth/alt-count
+ * filters. Returns null when the row is filtered out. Kept separate from the native filterAndConvertSnvIndel
+ * because GDC filters on the MAF One_Consequence column + per-row tumor depth/alt counts.
+ *
+ * The consequence filter is expressed in pp mclass keys (what the shared GRIN2 UI's SNV/indel checkboxes
+ * emit, e.g. 'M'), while the MAF carries VEP/SO consequence terms (e.g. 'missense_variant'); we translate
+ * the row's SO term to its pp class via SOterm2class before comparing, so the shared UI's vocabulary works
+ * directly without any GDC-specific conversion on the client. */
+function filterAndConvertGdcMaf(caseId: string, entry: any, options: GRIN2Request['snvindelOptions']): string[] | null {
+	if (!Number.isInteger(entry.pos)) return null
+	const consequences = options?.consequences
+	if (consequences && consequences.length > 0) {
+		const cls = SOterm2class.get(entry.class) // SO term -> pp mclass key
+		if (cls && !consequences.includes(cls)) return null
+	}
+	const minDepth = options?.minTotalDepth ?? GDC_MAF_MIN_TOTAL_DEPTH
+	const minAlt = options?.minAltAlleleCount ?? GDC_MAF_MIN_ALT_COUNT
+	if (entry.totalDepth < minDepth) return null
+	if (entry.altCount < minAlt) return null
+	return [caseId, entry.chr, entry.pos, entry.pos, dt2lesion[dtsnvindel].lesionTypes[0].lesionType]
+}
+
+/**
+ * GDC file-centric acquisition: build lesions directly from a per-case file selection (an explicit
+ * caseFiles from the GDC list step, or discovered server-side from a cohort filter0). For each case,
+ * fetch+parse its CNV and/or MAF file and classify via the same converters used by the native path, so
+ * GDC and native produce identical lesion tuples. Returns the same {lesions, processing} shape as
+ * processSampleData so the downstream Python/plot steps are unchanged.
+ *
+ * CNV uses filterAndConvertCnv (each segment carries its own valueType); MAF uses filterAndConvertGdcMaf
+ * (consequence + depth/alt-count). The file loaders are injectable (default to the GDC fetchers) so the
+ * assembly is unit-testable without the GDC network.
+ */
+export async function processGdcCaseFiles(
+	caseFiles: NonNullable<GRIN2Request['caseFiles']>,
+	request: GRIN2Request,
+	ds: any,
+	signal?: AbortSignal,
+	loaders?: { loadCnv?: CnvFileLoader; loadMaf?: MafFileLoader }
+): Promise<{ lesions: any[]; processing: any }> {
+	const maxLesions = await getMaxLesions()
+	const cnvSamples = new Set<string>()
+	const snvSamples = new Set<string>()
+
+	// default loaders fetch+parse the GDC file by uuid; tests inject fixture-backed loaders
+	const loadCnv: CnvFileLoader =
+		loaders?.loadCnv ??
+		(async fid => loadCnvFileFromGdc(ds.getHostHeaders({ __abortSignal: signal }).host, fid, signal))
+	const loadMaf: MafFileLoader =
+		loaders?.loadMaf ??
+		(async fid => loadMafFileFromGdc(ds.getHostHeaders({ __abortSignal: signal }).host, fid, signal))
+
+	const lesions: any[] = []
+	let processedCases = 0
+	let failedCases = 0
+	let skippedForCap = 0
+
+	// Process one case: fetch+classify its CNV and MAF files (the two file downloads run in parallel).
+	// Pushes straight into the shared `lesions`/sample sets — safe because JS runs these synchronously
+	// between awaits (no true parallelism). Throws propagate to the pool, which counts the case failed.
+	// The per-entry `>= maxLesions` checks stop adding the moment the cap is reached, so an in-flight
+	// case can't blow far past it.
+	async function handleCase(caseId: string, files: any) {
+		const tasks: Promise<void>[] = []
+		if (files.cnv && request.cnvOptions) {
+			tasks.push(
+				loadCnv(files.cnv).then(mlst => {
+					for (const m of mlst) {
+						if (lesions.length >= maxLesions) break
+						if (m.dt !== dtcnv) continue // CNV-only here; LOH/other dt handled in later phases
+						// entry.valueType (set by parseGdcCnvFile) overrides the 'segmean' default per segment
+						const les = filterAndConvertCnv(caseId, m, request.cnvOptions, 'segmean')
+						if (les) {
+							lesions.push(les)
+							cnvSamples.add(caseId)
+						}
+					}
+				})
+			)
+		}
+		if (files.maf && request.snvindelOptions) {
+			tasks.push(
+				loadMaf(files.maf).then(mlst => {
+					for (const m of mlst) {
+						if (lesions.length >= maxLesions) break
+						const les = filterAndConvertGdcMaf(caseId, m, request.snvindelOptions)
+						if (les) {
+							lesions.push(les)
+							snvSamples.add(caseId)
+						}
+					}
+				})
+			)
+		}
+		await Promise.all(tasks)
+	}
+
+	// Download/parse cases with bounded concurrency. Hundreds of per-case file downloads run serially
+	// would appear to hang; the shared concurrency limiter keeps GDC fetches in flight (the Rust path
+	// parallelized too). Sized as a pure batch pool — maxQueued = case count so no case is shed, and
+	// taskTimeoutMs disabled because we rely on the request-level abort signal (threaded into the GDC
+	// fetches) rather than a per-case timer (a large MAF over a slow link can legitimately exceed 30s).
+	const entries = Object.entries(caseFiles)
+	let doneCount = 0
+	if (entries.length) {
+		const limiter = createConcurrencyLimiter({
+			maxConcurrent: Math.min(16, entries.length),
+			maxQueued: entries.length,
+			taskName: 'GDC GRIN2 case download',
+			taskTimeoutMs: Infinity
+		})
+		mayLog(`[GRIN2] Fetching ${entries.length} GDC cases (concurrency ${Math.min(16, entries.length)})`)
+		await Promise.all(
+			entries.map(([caseId, files]) =>
+				limiter.run(async () => {
+					if (signal?.aborted) return
+					// Stop once the overall lesion cap is reached: queued cases short-circuit before any
+					// download/parse, so we don't fetch hundreds of files we'd only trim away. In-flight
+					// cases finish (bounded by the concurrency), so a small trim below is a safety net.
+					if (lesions.length >= maxLesions) {
+						skippedForCap++
+						return
+					}
+					try {
+						await handleCase(caseId, files as any)
+						processedCases++
+					} catch (e: any) {
+						failedCases++
+						mayLog(`[GRIN2] Error processing GDC case ${caseId}: ${e.message || e}`)
+					}
+					if (++doneCount % 50 === 0) mayLog(`[GRIN2] processed ${doneCount}/${entries.length} GDC cases`)
+				})
+			)
+		)
+	}
+
+	if (skippedForCap > 0) {
+		mayLog(
+			`[GRIN2] Overall lesion cap (${maxLesions.toLocaleString()}) reached; skipped ${skippedForCap.toLocaleString()} of ${entries.length.toLocaleString()} GDC cases without downloading`
+		)
+	}
+	// Safety net: in-flight cases may push slightly past the cap before the per-entry checks catch up.
+	if (lesions.length > maxLesions) lesions.length = maxLesions
+
+	// mirror processSampleData's {lesions, processing} shape so downstream steps are unchanged
+	const mutationType = dt2lesion[dtsnvindel].lesionTypes[0].lesionType
+	const processing = {
+		totalSamples: Object.keys(caseFiles).length,
+		processedSamples: processedCases,
+		failedSamples: failedCases,
+		totalLesions: lesions.length,
+		processedLesions: lesions.length,
+		unprocessedSamples: skippedForCap,
+		lesionCap: maxLesions,
+		lesionCounts: {
+			total: lesions.length,
+			byType: {
+				gain: { count: lesions.filter(l => l[4] === 'gain').length, samples: cnvSamples.size },
+				loss: { count: lesions.filter(l => l[4] === 'loss').length, samples: cnvSamples.size },
+				[mutationType]: { count: lesions.filter(l => l[4] === mutationType).length, samples: snvSamples.size }
+			}
+		}
+	}
+	mayLog(
+		`[GRIN2] GDC caseFiles produced ${lesions.length.toLocaleString()} lesions (${cnvSamples.size.toLocaleString()} cnv cases, ${snvSamples.size.toLocaleString()} snv cases)`
+	)
+
+	return { lesions, processing }
+}
 
 /**
  * Process sample data by reading per-sample JSON files and converting to lesion format
@@ -804,6 +1011,20 @@ export function filterAndConvertSnvIndel(
 	return [sampleName, entry.chr, start, end, dt2lesion[dtsnvindel].lesionTypes[0].lesionType]
 }
 
+/** Pick the gain/loss thresholds for a cnv segment's resolved value type. A per-type entry in
+ * cnvOptions.byType (mixed cohort) wins over the flat lossThreshold/gainThreshold (single-type
+ * cohort). Returns null when neither supplies a complete pair. 'category' never reaches here. */
+function resolveCnvThresholds(
+	options: NonNullable<GRIN2Request['cnvOptions']>,
+	effectiveType: CnvType
+): { lossThreshold: number; gainThreshold: number } | null {
+	const byType = options.byType?.[effectiveType as 'log2ratio' | 'segmean' | 'copyNumber']
+	const lossThreshold = byType?.lossThreshold ?? options.lossThreshold
+	const gainThreshold = byType?.gainThreshold ?? options.gainThreshold
+	if (lossThreshold === undefined || gainThreshold === undefined) return null
+	return { lossThreshold, gainThreshold }
+}
+
 export function filterAndConvertCnv(
 	sampleName: string,
 	entry: any,
@@ -822,9 +1043,12 @@ export function filterAndConvertCnv(
 		return null
 	}
 
-	// Classify the segment as gain or loss according to how this ds quantifies cnv.
+	// Classify the segment as gain or loss according to how this cnv value is quantified.
+	// A per-entry valueType (stamped at the data source, e.g. GDC loadCnvFile) wins over the
+	// dataset-level default, so a single cohort may mix segmean and copyNumber segments.
+	const effectiveType: CnvType = entry.valueType ?? cnvType
 	let isGain: boolean
-	if (cnvType == 'category') {
+	if (effectiveType == 'category') {
 		// qualitative call carried in the segment's class; no numeric thresholds
 		if (entry.class == mclasscnvgain) isGain = true
 		else if (entry.class == mclasscnvloss) isGain = false
@@ -833,10 +1057,13 @@ export function filterAndConvertCnv(
 		// numeric value: log2ratio/segmean (baseline 0) or copyNumber (baseline 2).
 		// The comparison is identical across these; only the threshold values differ,
 		// e.g. copyNumber uses positive cutoffs straddling baseline 2 (loss<=1, gain>=3).
-		if (options.gainThreshold === undefined || options.lossThreshold === undefined) return null
+		// In a mixed cohort, cnvOptions.byType[effectiveType] supplies the right cutoffs for this
+		// segment; otherwise fall back to the flat lossThreshold/gainThreshold (single-type cohort).
+		const thresholds = resolveCnvThresholds(options, effectiveType)
+		if (!thresholds) return null
 		if (!Number.isFinite(entry.value)) return null
-		if (entry.value >= options.gainThreshold) isGain = true
-		else if (entry.value <= options.lossThreshold) isGain = false
+		if (entry.value >= thresholds.gainThreshold) isGain = true
+		else if (entry.value <= thresholds.lossThreshold) isGain = false
 		else return null // between thresholds = neutral
 	}
 

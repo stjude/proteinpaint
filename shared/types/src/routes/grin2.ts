@@ -1,5 +1,12 @@
 import type { Filter } from '../filter.ts'
 
+/** A gain/loss threshold pair for one cnv value type. Both interpreted in that type's units
+ * (log2 ratio baseline 0, or absolute copy number baseline 2). */
+export type CnvThresholdPair = {
+	lossThreshold: number
+	gainThreshold: number
+}
+
 /** GRIN2 request */
 export type GRIN2Request = {
 	/** Genome build identifier (e.g., 'hg38', 'hg19') */
@@ -43,15 +50,38 @@ export type GRIN2Request = {
 	/** pp filter */
 	filter?: Filter
 
+	/** GDC-backed datasets only: read-only GDC cohort filter, passed to the GDC API as-is. When present
+	 * (and caseFiles is not), the run discovers each case's MAF/CNV files server-side via the GDC API. */
+	filter0?: any
+
+	/** GDC-backed datasets only: an explicit per-case file selection (as produced by the GDC GRIN2
+	 * list step). When present, the run fetches and classifies these files directly instead of the
+	 * native cohort→sample path. Maps case id → file uuids. CNV is fetched and parsed server-side
+	 * (parseGdcCnvFile stamps each segment's value type). Takes precedence over filter0. */
+	caseFiles?: {
+		[caseId: string]: {
+			maf?: string
+			cnv?: string
+		}
+	}
+
 	/** Options for filtering SNV/indel file content. Note: total depth and alt-allele count are now
 	 * handled by mafFilter (the refined replacement for the former minTotalDepth/minAltAlleleCount cutoffs). */
 	snvindelOptions?: {
-		/** String array of consequence types to include */
+		/** String array of consequence types to include. For GDC files these are matched against the
+		 * MAF One_Consequence column (VEP/SO terms, e.g. 'missense_variant'). */
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
 		hyperMutator?: number // Default: 1000
-		/** MAF filter object (tvslst) to filter mutations by allele frequency */
+		/** MAF filter object (tvslst) to filter mutations by allele frequency (native file-based datasets). */
 		mafFilter?: Filter
+		/** GDC file-based path only: per-row tumor read-depth / alt-allele-count cutoffs, applied to the GDC
+		 * MAF t_depth / t_alt_count columns (native datasets use mafFilter instead, which is why these were
+		 * removed from the native contract). */
+		minTotalDepth?: number // Default (GDC): 10
+		minAltAlleleCount?: number // Default (GDC): 2
+		/** GDC file discovery only: which experimental strategy's MAF files to use (default 'WXS'). */
+		experimentalStrategy?: string
 	}
 
 	/** Options for filtering CNV file content. Threshold semantics depend on the dataset's
@@ -60,10 +90,20 @@ export type GRIN2Request = {
 	 * gain>=3); 'category' is a qualitative gain/loss call and ignores these thresholds. The type is
 	 * read server-side from ds config, so it is not part of this request. */
 	cnvOptions?: {
-		/** Loss threshold; interpreted per ds.queries.cnv.type. Ignored for 'category'. Default: -0.4 (log2ratio/segmean) */
+		/** Flat loss threshold, used when the cohort has a single cnv value type. Interpreted per the
+		 * entry's resolved type. Ignored for 'category'. Default: -0.4 (log2ratio/segmean) */
 		lossThreshold?: number
-		/** Gain threshold; interpreted per ds.queries.cnv.type. Ignored for 'category'. Default: 0.4 (log2ratio/segmean) */
+		/** Flat gain threshold (see lossThreshold). Default: 0.4 (log2ratio/segmean) */
 		gainThreshold?: number
+		/** Per-value-type thresholds for cohorts that mix cnv quantifications (e.g. GDC segmean +
+		 * copyNumber across cases). When an entry's resolved value type has an entry here, these
+		 * thresholds override the flat lossThreshold/gainThreshold above. 'category' needs no
+		 * thresholds and is intentionally absent. */
+		byType?: {
+			log2ratio?: CnvThresholdPair
+			segmean?: CnvThresholdPair
+			copyNumber?: CnvThresholdPair
+		}
 		/** Maximum segment length to include (0 = no filter) */
 		maxSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */

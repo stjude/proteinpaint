@@ -139,6 +139,70 @@ tape('filterAndConvertCnv: category (qualitative class, thresholds ignored)', te
 	test.end()
 })
 
+tape('filterAndConvertCnv: per-entry valueType overrides the ds default', test => {
+	// ds default is numeric (log2ratio), but a category-tagged entry must classify by class
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'category', class: mclasscnvgain }, log2ratioOpts, 'log2ratio'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'entry.valueType=category overrides ds log2ratio => classified by class'
+	)
+	// ds default is category, but a numeric-tagged entry must classify by value/threshold
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'segmean', value: 1.0 }, log2ratioOpts, 'category'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'entry.valueType=segmean overrides ds category => classified by value'
+	)
+	// absent entry.valueType falls back to the ds default
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, class: mclasscnvloss }, categoryOpts, 'category'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'loss'],
+		'no entry.valueType => falls back to ds default (category)'
+	)
+	test.end()
+})
+
+tape('filterAndConvertCnv: per-type thresholds (byType) for a mixed cohort', test => {
+	// One cnvOptions object carries the right cutoffs for each value type present in the cohort.
+	const mixedOpts = {
+		maxSegLength: 0,
+		byType: {
+			segmean: { lossThreshold: -0.4, gainThreshold: 0.4 },
+			copyNumber: { lossThreshold: 1, gainThreshold: 3 }
+		}
+	}
+	// segmean value 1.0 is a gain under segmean cutoffs (>=0.4)...
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'segmean', value: 1.0 }, mixedOpts, 'log2ratio'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'segmean entry classified by byType.segmean cutoffs => gain'
+	)
+	// ...and copyNumber value 4 is a gain under copyNumber cutoffs (>=3), in the SAME request
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'copyNumber', value: 4 }, mixedOpts, 'log2ratio'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'copyNumber entry classified by byType.copyNumber cutoffs => gain'
+	)
+	// copyNumber value 1.0 would be a loss under segmean cutoffs but neutral here is not asserted;
+	// under copyNumber cutoffs (loss<=1) it is a loss — proves the copyNumber cutoffs are applied
+	test.deepEqual(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'copyNumber', value: 1 }, mixedOpts, 'log2ratio'),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'loss'],
+		'copyNumber CN 1 <= byType.copyNumber loss cutoff => loss'
+	)
+	// byType falls back to flat thresholds when the resolved type is absent from byType
+	test.deepEqual(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'segmean', value: 1.0 },
+			{ maxSegLength: 0, lossThreshold: -0.4, gainThreshold: 0.4 },
+			'log2ratio'
+		),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'no byType entry => falls back to flat lossThreshold/gainThreshold'
+	)
+	test.end()
+})
+
 tape('filterAndConvertCnv: maxSegLength + shared guards', test => {
 	const segLen = SEG.stop - SEG.start
 	test.equal(
@@ -241,6 +305,28 @@ tape('processSampleMlst: routing, breakpoint expansion, cnvType threading', test
 	)
 	test.deepEqual([...snvOnly.contributedTypes], [dtsnvindel], 'absent option groups are skipped')
 	test.equal(snvOnly.sampleLesions.length, 1, 'only the snvindel lesion remains')
+
+	// mixed cohort: one sample carrying both a segmean and a copyNumber segment, each classified
+	// under its own byType cutoffs within a single run
+	const mixedMlst = [
+		{ dt: dtcnv, ...SEG, valueType: 'segmean', value: 1.0 },
+		{ dt: dtcnv, ...SEG, valueType: 'copyNumber', value: 4 }
+	]
+	const mixedRequest = {
+		cnvOptions: {
+			maxSegLength: 0,
+			byType: {
+				segmean: { lossThreshold: -0.4, gainThreshold: 0.4 },
+				copyNumber: { lossThreshold: 1, gainThreshold: 3 }
+			}
+		}
+	} as unknown as GRIN2Request
+	const mixed = processSampleMlst(sample, mixedMlst, mixedRequest, 'log2ratio')
+	test.deepEqual(
+		mixed.sampleLesions.map(l => l[4]),
+		['gain', 'gain'],
+		'mixed segmean+copyNumber segments both classify as gain under their own byType cutoffs'
+	)
 	test.end()
 })
 
