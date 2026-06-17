@@ -1,5 +1,1 @@
-Features
-- The single cell routes were reorganized into server/src/singleCell (see server/src/singleCell/README). Each route includes the new validation method, checker, to match ongoing efforts to improve route stability and maintainability. 
-- Filtering cohort level terms in the SC app (i.e. parent header) is applied to all meta result subplots. This ensures the data in the plot matches the samples found in the sample table.
-- New integration tests in the barchart and box plot for single cell cell type and single cell gene expression terms. 
-- 'cells' instead of 'samples' will appear in the barchart title when a single cell term is present by default. 
+
