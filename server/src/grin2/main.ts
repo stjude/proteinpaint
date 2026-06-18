@@ -474,6 +474,7 @@ async function runGrin2Fresh(
 			ds
 		)
 		// undefined => no filter => use all cohort cases, mirroring the sqlite "no filter => all samples" path
+		// Following implementation done by MMRF
 		const ids = set ?? new Set<any>(ds.__gdc?.caseid2submitter?.keys() ?? [])
 		samples = [...ids].map(name => ({ name }))
 	} else {
