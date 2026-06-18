@@ -1,24 +1,29 @@
-import * as d3axis from 'd3-axis'
-import { Menu, renderTable, table2col, axisstyle, sayerror } from '#dom'
-import { dofetch3 } from '#common/dofetch'
-import { controlsInit } from './controls'
-import { getCompInit, copyMerge } from '#rx'
-import { scaleLinear } from 'd3-scale'
-import { roundValueAuto } from '#shared/roundValue.js'
-import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
-import { getDefaultVolcanoSettings } from '#plots/volcano/settings/defaults.ts'
+import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase } from '#plots/PlotBase.js'
 import { getCombinedTermFilter } from '#filter'
+import { controlsInit } from '../controls'
+import { renderTable, table2col, axisstyle, sayerror } from '#dom'
+import { dofetch3 } from '#common/dofetch'
+import { roundValueAuto } from '#shared/roundValue.js'
 import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
+import * as d3axis from 'd3-axis'
+import { scaleLinear } from 'd3-scale'
+import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
+import { getDefaultVolcanoSettings } from '#plots/volcano/settings/defaults.ts'
 
-const tip = new Menu()
 
-class gsea extends PlotBase {
+class GSEA extends PlotBase implements RxComponent{
 	static type = 'gsea'
+
+	type: string
+	settings!: any
+	components!: { controls: any }
+	imageUrl: any
+	config!: any
 
 	constructor(opts) {
 		super(opts)
-		this.type = gsea.type
+		this.type = GSEA.type
 		this.opts = opts
 		this.components = {
 			controls: {}
@@ -67,7 +72,7 @@ class gsea extends PlotBase {
 
 	async setControls() {
 		this.dom.controlsDiv.selectAll('*').remove()
-		const inputs = [
+		const inputs: any = [
 			{
 				label: 'Minimum Gene Set Size Filter Cutoff',
 				type: 'number',
@@ -105,7 +110,7 @@ class gsea extends PlotBase {
 			}
 		]
 
-		if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+		if (JSON.parse(sessionStorage?.getItem('optionalFeatures') || '{}')?.gsea_test) {
 			inputs.push({
 				label: 'GSEA method',
 				type: 'radio',
@@ -229,11 +234,11 @@ class gsea extends PlotBase {
 						termId: config.termId,
 						categoryName: config.categoryName
 					}
-					const response = await dofetch3('termdb/singlecellDEgenes', { body })
+					const response: any = await dofetch3('termdb/singlecellDEgenes', { body })
 					if (response.error) throw response.error
 					if (!Array.isArray(response.data) || response.data.length === 0) throw 'No DE genes returned for this cluster'
-					const genes = []
-					const fold_change = []
+					const genes: string[] = []
+					const fold_change: number[] = []
 					for (const g of response.data) {
 						genes.push(g.gene_name)
 						fold_change.push(g.fold_change)
@@ -280,7 +285,7 @@ class gsea extends PlotBase {
 						}
 					})
 				}
-			} catch (e) {
+			} catch (e: any) {
 				if (e instanceof Error) console.error(e.message || e)
 				else if (e.stack) console.log(e.stack)
 				throw e
@@ -321,7 +326,7 @@ async function renderPathwayDropdown(self) {
 	const settings = structuredClone(self.settings)
 	const pathwayOpts = structuredClone(self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups) // duplicate to avoid repeated insertion on each app launch
 
-	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test && self.settings.gsea_method == 'blitzgsea') {
+	if (JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')?.gsea_test && self.settings.gsea_method == 'blitzgsea') {
 		// This contains geneset groups that are specific to blitzgsea itself
 		// TEMPORARY FIX to test this library that will trigger auto download support files in python
 		// NEVER ENABLE ON PROD especially gdc prod, where container has firewall and it crashes..
@@ -406,7 +411,7 @@ add:
 	let output
 	try {
 		const p = self.config.gsea_params
-		const body = {
+		const body: any = {
 			genome: p.genome,
 			geneSetGroup: self.settings.pathway,
 			filter_non_coding_genes: self.settings.filter_non_coding_genes,
@@ -436,7 +441,7 @@ add:
 		if (output.error) {
 			throw Object.assign(new Error(output.error), { code: output.code })
 		}
-	} catch (e) {
+	} catch (e: any) {
 		// Inline error block instead of alert(). Mirror the detail-plot
 		// branch below so the GSEA pane shows the failure in-context (e.g.
 		// blitzgsea calibration failures on small/degenerate signatures
@@ -469,7 +474,7 @@ add:
 				self.dom.holder.append('img').attr('width', png_width).attr('height', png_height).attr('src', self.imageUrl)
 			} else if (self.settings.gsea_method == 'cerno') {
 				if (!self.rankedDE && (self.config.gsea_params.cacheId || self.config.gsea_params.dapParams)) {
-					const fetchBody = {
+					const fetchBody: any = {
 						genome: self.config.gsea_params.genome,
 						dslabel: self.config.gsea_params.dslabel,
 						fetchDE: true,
@@ -493,7 +498,7 @@ add:
 			} else {
 				throw 'Unknown method:' + self.settings.gsea_method
 			}
-		} catch (e) {
+		} catch (e: any) {
 			self.dom.holder.selectAll('*').remove()
 			const msg = String(e?.message || e)
 			if (e?.code === 'CACHE_BUSY') {
@@ -603,7 +608,9 @@ add:
 	} else {
 		throw 'Unknown method:' + self.settings.gsea_method
 	}
-	let download = {}
+	const download = {
+		fileName: ''
+	}
 
 	if (self.config.chartType == 'differentialAnalysis') {
 		//Highlight genes button
@@ -649,7 +656,7 @@ add:
 		header: { allowSort: true },
 		selectedRows: selectedRows,
 		noButtonCallback: async index => {
-			const config = {
+			const config: any = {
 				gsea_params: {
 					geneset_name: self.gsea_table_rows[index][0].value
 				}
@@ -720,15 +727,16 @@ function render_cerno_plot(self, cerno_output) {
 	const svg = holder.append('svg').attr('width', svg_width).attr('height', svg_height)
 	const toppad = 20
 	const rightpad = 5
-	const yaxisw = 50 //Math.max(50, svg_width / 8)
-	const xaxish = 50 //Math.max(50, svg_height / 8)
+	//Not in use. Comment out for now.
+	// const yaxisw = 50 //Math.max(50, svg_width / 8)
+	// const xaxish = 50 //Math.max(50, svg_height / 8)
 	const yaxisg = svg.append('g')
 	const xaxisg = svg.append('g')
 	const xpad = 50
 	const ypad = 100
 
 	const rankedDE = self.rankedDE || self.config.gsea_params
-	const DE_output = []
+	const DE_output: {gene: string, fold_change: number}[] = []
 	for (let i = 0; i < rankedDE.genes.length; i++) {
 		const item = { gene: rankedDE.genes[i], fold_change: rankedDE.fold_change[i] }
 		DE_output.push(item)
@@ -796,13 +804,13 @@ function render_cerno_plot(self, cerno_output) {
 	}
 
 	axisstyle({
-		axis: yaxisg.call(d3axis.axisLeft().scale(yscale)),
+		axis: yaxisg.call(d3axis.axisLeft(yscale)),
 		color: 'black',
 		showline: true,
 		fontsize: '10'
 	})
 	axisstyle({
-		axis: xaxisg.call(d3axis.axisBottom().scale(xscale)),
+		axis: xaxisg.call(d3axis.axisBottom(xscale)),
 		color: 'black',
 		showline: true,
 		fontsize: '10'
@@ -923,7 +931,7 @@ export function getDefaultGseaSettings(overrides = {}) {
 		fdr_or_top: 'top',
 		gsea_method: 'blitzgsea'
 	}
-	if (JSON.parse(sessionStorage.getItem('optionalFeatures')).gsea_test) {
+	if (JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')?.gsea_test) {
 		// set default method to CERNO when serverconfig flag gsea_test is defined
 		defaults.gsea_method = 'cerno'
 	}
@@ -946,7 +954,7 @@ export async function getPlotConfig(opts, app) {
 	}
 }
 
-export const gseaInit = getCompInit(gsea)
+export const gseaInit = getCompInit(GSEA)
 // this alias will allow abstracted dynamic imports
 export const componentInit = gseaInit
 
