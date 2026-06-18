@@ -32,8 +32,6 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 
 	addGEDefaults(opts.termType, defaults)
 	addDMDefaults(opts.termType, defaults)
-	addScctDefaults(opts.termType)
-	addScgeDefaults(opts.termType)
 
 	return Object.assign(defaults, overrides)
 }
@@ -56,16 +54,6 @@ function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
 	defaults.minSamplesPerGroup = 3
 }
 
-function addScctDefaults(termType: string) {
-	if (termType != tt.SINGLECELL_CELLTYPE) return
-	//add SCCT specific defaults when there are any
-}
-
-function addScgeDefaults(termType: string) {
-	if (termType != tt.SINGLECELL_GENE_EXPRESSION) return
-	//add SCGE specific defaults when there are any
-}
-
 /*********** Setting Validation Functions ***********
  * Validates user input settings after merging with defaults */
 const typesUseDefaultSettings = new Set([tt.SINGLECELL_CELLTYPE, tt.PROTEOME_DAP, tt.SINGLECELL_GENE_EXPRESSION])
@@ -83,15 +71,12 @@ export function validateVolcanoSettings(config: any, opts: any) {
 
 	validateGESettings(config.termType, settings, sampleNum, opts)
 	validateDMSettings(config.termType, settings)
-	validateSCCTSettings(config.termType)
 }
 
 export function getSampleNum(config: any) {
 	if (config.termType == tt.GENE_EXPRESSION || config.termType == tt.DNA_METHYLATION) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
-	}
-	if (config.termType == tt.SINGLECELL_CELLTYPE) {
-		//Only returning maxSampleCutoff for now.
+	} else {
 		return maxSampleCutoff
 	}
 }
@@ -115,9 +100,4 @@ function validateDMSettings(termType: string, settings?: DMVolcanoSettings) {
 	if (!Number.isFinite(min) || !Number.isInteger(min) || min < 3) {
 		settings.minSamplesPerGroup = 3
 	}
-}
-
-function validateSCCTSettings(termType: string) {
-	if (termType != tt.SINGLECELL_CELLTYPE) return
-	//add validations when there are settings for SCCT
 }
