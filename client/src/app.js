@@ -953,6 +953,7 @@ async function launchgeneview(arg, app) {
 		tklst: arg.tracks,
 		gmmode: arg.gmmode,
 		aarange: arg.aarange,
+		hidePdomain: arg.hidePdomain,
 		geneDomains: arg.geneDomains,
 		mclassOverride: arg.mclassOverride,
 		hide_dsHandles: arg.hide_dsHandles,

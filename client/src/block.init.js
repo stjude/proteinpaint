@@ -206,6 +206,11 @@ async function step2_getseq(arg) {
 }
 
 async function step2_getpdomain(arg) {
+	if (arg.hidePdomain) {
+		// bypass pdomain loading
+		await step3(arg)
+		return
+	}
 	/*
 	block.init special treatment:
 	will get pdomain for all isoforms, not just the isoform that's used
