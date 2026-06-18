@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { createConcurrencyLimiter, DEFAULT_TASK_TIMEOUT_MS } from '#src/utils/concurrencyLimiter.ts'
+import { createConcurrencyLimiter, mapConcurrent, DEFAULT_TASK_TIMEOUT_MS } from '#src/utils/concurrencyLimiter.ts'
 
 /*
 test sections:
@@ -17,6 +17,13 @@ task timeout: AbortSignal fires so a cooperative task can bail
 task timeout: a task finishing in time is not evicted and the timer is cleared
 task timeout: taskName names the gated resource in the timeout error message
 task timeout: Infinity disables eviction; invalid values rejected at construction
+
+mapConcurrent: resolves all items, results align with input order
+mapConcurrent: keeps at most `concurrency` tasks in flight
+mapConcurrent: a throwing item settles as rejected without aborting the batch
+mapConcurrent: stopWhen halts scheduling new items, leaving unstarted holes
+mapConcurrent: empty input resolves to empty results
+mapConcurrent: rejects invalid concurrency
 */
 
 /** Tests for the generic concurrency gating device. Concurrency is driven
@@ -373,5 +380,108 @@ tape('taskTimeoutMs: Infinity disables eviction; invalid values rejected at cons
 	t.notOk(settled, 'task still in-flight, not evicted, well past a normal timeout window')
 	gate.resolve('late')
 	t.equal(await p, 'late', 'the task completes normally once it finally resolves')
+	t.end()
+})
+
+/* ------------------------------ mapConcurrent ----------------------------- */
+
+tape('mapConcurrent: resolves all items, results align with input order', async t => {
+	const items = [1, 2, 3, 4, 5]
+	const results = await mapConcurrent(items, 2, async (n, i) => `${i}:${n * 10}`)
+	t.deepEqual(
+		results.map(r => (r.status === 'fulfilled' ? r.value : `ERR`)),
+		['0:10', '1:20', '2:30', '3:40', '4:50'],
+		'every item is fulfilled and results[i] aligns with items[i]'
+	)
+	t.end()
+})
+
+tape('mapConcurrent: keeps at most `concurrency` tasks in flight', async t => {
+	const N = 6
+	const gates = Array.from({ length: N }, () => defer())
+	let concurrent = 0
+	let maxObserved = 0
+
+	const p = mapConcurrent(
+		Array.from({ length: N }, (_, i) => i),
+		2,
+		async i => {
+			concurrent++
+			maxObserved = Math.max(maxObserved, concurrent)
+			await gates[i].promise
+			concurrent--
+			return i
+		}
+	)
+
+	await tick()
+	t.equal(maxObserved, 2, 'only `concurrency` (2) workers start initially; the rest wait')
+
+	// Release in index order: each freed worker pulls the next item off the cursor.
+	for (let i = 0; i < N; i++) {
+		gates[i].resolve()
+		await tick()
+	}
+
+	const results = await p
+	t.equal(maxObserved, 2, 'never exceeded `concurrency` across the whole run')
+	t.deepEqual(
+		results.map(r => (r as PromiseFulfilledResult<number>).value),
+		[0, 1, 2, 3, 4, 5],
+		'all items processed exactly once, aligned by index'
+	)
+	t.end()
+})
+
+tape('mapConcurrent: a throwing item settles as rejected without aborting the batch', async t => {
+	const results = await mapConcurrent([0, 1, 2], 2, async n => {
+		if (n === 1) throw new Error('boom-1')
+		return n
+	})
+	t.equal(results[0].status, 'fulfilled', 'item 0 fulfilled')
+	t.equal(results[1].status, 'rejected', 'the throwing item settles as rejected, not as a batch failure')
+	t.equal((results[1] as PromiseRejectedResult).reason.message, 'boom-1', 'rejection carries fn’s own error')
+	t.equal(results[2].status, 'fulfilled', 'item 2 still ran despite the sibling failure')
+	t.end()
+})
+
+tape('mapConcurrent: stopWhen halts scheduling new items, leaving unstarted holes', async t => {
+	const processed: number[] = []
+	let count = 0
+	// concurrency 1 makes ordering exact: items run 0,1,2 then stopWhen fires.
+	const results = await mapConcurrent(
+		[0, 1, 2, 3, 4, 5, 6, 7],
+		1,
+		async n => {
+			processed.push(n)
+			count++
+			return n
+		},
+		{ stopWhen: () => count >= 3 }
+	)
+	t.deepEqual(processed, [0, 1, 2], 'stopped pulling new items once stopWhen returned true')
+	t.equal(
+		results.filter(r => r?.status === 'fulfilled').length,
+		3,
+		'only started items have results; unstarted indices are holes'
+	)
+	t.end()
+})
+
+tape('mapConcurrent: empty input resolves to empty results', async t => {
+	const results = await mapConcurrent([], 4, async (x: number) => x)
+	t.deepEqual(results, [], 'no items → empty results, no workers spawned')
+	t.end()
+})
+
+tape('mapConcurrent: rejects invalid concurrency', async t => {
+	for (const bad of [0, -1, 2.5, NaN]) {
+		try {
+			await mapConcurrent([1], bad, async x => x)
+			t.fail(`concurrency=${bad} should be rejected`)
+		} catch (e: any) {
+			t.match(e.message, /concurrency must be an integer >= 1/, `concurrency=${bad} is rejected`)
+		}
+	}
 	t.end()
 })

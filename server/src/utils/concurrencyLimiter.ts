@@ -1,4 +1,9 @@
-import type { ConcurrencyLimiterOpts, ConcurrencyLimiter, ConcurrencyLimiterRunContext } from './types.ts'
+import type {
+	ConcurrencyLimiterOpts,
+	ConcurrencyLimiter,
+	ConcurrencyLimiterRunContext,
+	MapConcurrentOpts
+} from './types.ts'
 
 /** Default per-task execution timeout. A task holding its slot longer than this
  * is evicted (slot freed, caller rejected) so one hung task can't stall the
@@ -131,4 +136,63 @@ export function createConcurrencyLimiter(opts: ConcurrencyLimiterOpts): Concurre
 	}
 
 	return { run }
+}
+
+/** Bounded-concurrency map over a *known, finite* collection — the sibling of
+ * `createConcurrencyLimiter` for the other concurrency shape.
+ *
+ * Use `createConcurrencyLimiter` when many independent callers contend for a
+ * shared resource and you want a bounded queue + load shedding (a long-lived
+ * gate). Use `mapConcurrent` when a single caller has a fixed list of work and
+ * just wants at most `concurrency` items in flight at once.
+ *
+ * It runs a worker pool: `min(concurrency, items.length)` workers each pull the
+ * next item from a shared cursor until the list is exhausted. So exactly
+ * `concurrency` tasks run at a time with O(concurrency) memory — there is no
+ * upfront queue of N pending tasks, and nothing is ever shed. (Feeding N items
+ * through a gating limiter's `run()` would instead enqueue N-`maxConcurrent`
+ * resolvers at once, which is why that tool is the wrong fit for batches.)
+ *
+ * Settled semantics, like `Promise.allSettled`: a thrown `fn` becomes a
+ * `rejected` entry rather than failing the whole batch, so one bad item can't
+ * abort the rest. `results[i]` aligns with `items[i]`. Items left unstarted by
+ * `opts.stopWhen`/`opts.signal` are holes (unset) in the returned array.
+ *
+ * `fn` receives `(item, index)`; if it needs the abort signal it can close over
+ * `opts.signal`. Side-effecting `fn`s that return void are fine — just ignore
+ * the results. */
+export async function mapConcurrent<T, R>(
+	items: readonly T[],
+	concurrency: number,
+	fn: (item: T, index: number) => Promise<R>,
+	opts: MapConcurrentOpts = {}
+): Promise<PromiseSettledResult<R>[]> {
+	// Same fail-fast validation as the gating limiter: a non-integer or <1
+	// concurrency is programmer config, not request input.
+	if (!Number.isInteger(concurrency) || concurrency < 1)
+		throw new Error(`mapConcurrent: concurrency must be an integer >= 1 (got ${concurrency})`)
+
+	const { signal, stopWhen } = opts
+	const results: PromiseSettledResult<R>[] = new Array(items.length)
+	let nextIndex = 0
+
+	async function worker(): Promise<void> {
+		// Pull the next index off the shared cursor until a caller-side stop fires
+		// (signal aborted / stopWhen) or the list is drained. The `nextIndex++`
+		// read+increment is atomic in single-threaded JS (no await between them),
+		// so two workers never grab the same index.
+		while (!(signal?.aborted || stopWhen?.())) {
+			const i = nextIndex++
+			if (i >= items.length) return
+			try {
+				results[i] = { status: 'fulfilled', value: await fn(items[i], i) }
+			} catch (reason) {
+				results[i] = { status: 'rejected', reason }
+			}
+		}
+	}
+
+	const workerCount = Math.min(concurrency, items.length)
+	await Promise.all(Array.from({ length: workerCount }, () => worker()))
+	return results
 }
