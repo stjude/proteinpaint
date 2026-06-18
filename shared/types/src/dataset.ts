@@ -1628,8 +1628,10 @@ export type Termdb = {
 	}
 	/** if true, backend is allowed to send sample names to client in charts */
 	displaySampleIds?: (clientAuthResult: any) => boolean
-	/** filter samples by supplied filter(s) */
-	filterSamples?: (q: any, ds: any) => Promise<Set<any> | undefined>
+	/** filter samples by supplied filter(s). When no filter is supplied, returns undefined
+	 * unless returnAllSamples is true, in which case it returns the full set
+	 * of cohort sample ids (for callers like grin2 that must enumerate the cohort explicitly). */
+	filterSamples?: (q: any, ds: any, returnAllSamples?: boolean) => Promise<Set<any> | undefined>
 	converSampleIds?: boolean
 	alwaysShowBranchTerms?: boolean
 	minimumSampleAllowed4filter?: number

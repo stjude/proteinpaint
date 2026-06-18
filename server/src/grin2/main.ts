@@ -469,28 +469,16 @@ async function runGrin2Fresh(
 			true // must set to true to return sample name to be able to access data. FIXME this can let names revealed to grin2 client, may need to apply access control
 		)
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
-		const set = await ds.cohort.termdb.filterSamples(
-			{ filter: request.filter, filter0: request.filter0, __abortSignal: signal },
-			ds
-		)
-		let ids: Set<any>
-		if (set) {
-			ids = set
-		} else {
-			// filterSamples() returns undefined when no filter is applied => need the whole cohort,
-			// mirroring the sqlite "no filter => all samples" path. Only GDC currently exposes a full
-			// id set (case uuids in ds.__gdc.caseid2submitter). Without one we cannot enumerate the
-			// cohort, so fail loudly here rather than silently producing an empty list (which would
-			// later surface as a misleading "No samples found matching the provided filter criteria").
-			const allIds = ds.__gdc?.caseid2submitter
-			if (!allIds?.size) {
-				throw new Error(
-					'GRIN2: dataset supplies filterSamples() but cannot enumerate an unfiltered cohort (no all-samples id set available)'
-				)
-			}
-			ids = new Set<any>(allIds.keys())
-		}
-		samples = [...ids].map(name => ({ name }))
+		// Pass returnAllSamples=true: grin2 must enumerate the cohort explicitly, so an unfiltered
+		// cohort should yield all samples (mirroring the sqlite "no filter => all samples" path) rather
+		// than undefined. The dataset owns how "all samples" is sourced (and throws if it cannot).
+		samples = [
+			...((await ds.cohort.termdb.filterSamples(
+				{ filter: request.filter, filter0: request.filter0, __abortSignal: signal },
+				ds,
+				true
+			)) ?? [])
+		].map(name => ({ name }))
 	} else {
 		throw new Error('no method available to get the sample list for this dataset')
 	}
