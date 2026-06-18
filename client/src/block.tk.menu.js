@@ -256,6 +256,9 @@ function hardlist4block(block, div) {
 			// allowed to toggle show/hide of this tk, show button over tk name
 			handle.attr('class', 'sja_menuoption').on('click', () => {
 				tkhandleclick(block, tk, td1)
+				if (block.onAddRemoveTk) {
+					block.onAddRemoveTk(tk, block.tklst.findIndex(i => i.tkid == tk.tkid) != -1)
+				}
 			})
 		}
 
