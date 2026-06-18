@@ -613,7 +613,7 @@ export async function parse_dataset_db(
 			try {
 				jsonhtml = JSON.parse(row.jsonhtml)
 			} catch (e) {
-				console.warn(`Failed to parse jsonhtml for row id ${row.id}, name ${row.name}:`, e)
+				mayLog(`Failed to parse jsonhtml for row id ${row.id}, name ${row.name}:`, e)
 				// Surface a message to the client instead of crashing on the malformed term definition below.
 				return {
 					type: 'text',
@@ -621,7 +621,16 @@ export async function parse_dataset_db(
 				}
 			}
 			const description: string = jsonhtml.description[0].value
-			const jsondata = JSON.parse(row.jsondata)
+			let jsondata: any
+			try {
+				jsondata = JSON.parse(row.jsondata)
+			} catch (e) {
+				mayLog(`Failed to parse jsondata for row id ${row.id}, name ${row.name}:`, e)
+				return {
+					type: 'text',
+					text: `Failed to read the dataset dictionary: the data for term "${row.name}" is malformed. Error response: ${e}`
+				}
+			}
 
 			const values: DbValue[] = []
 			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
