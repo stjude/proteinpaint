@@ -1,2 +1,3 @@
 Features:
 - GRIN2: Adding support for GDC sample querying
+- concurrencyLimiter.ts: Added support for a bounded, fixed list case
