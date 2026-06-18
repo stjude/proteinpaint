@@ -12,68 +12,6 @@ import { GENE_SET_KEYWORDS } from './genesetdatatype.ts'
 import { classifyGeneDataTypePhrase } from './genedatatypenew.ts'
 import { classifyGeneSetDataType } from './genesetdatatype.ts'
 
-/**
- * Tolerantly extract a JSON object from an LLM response.
- * LLMs frequently wrap JSON in markdown code fences or prepend/append prose
- * (e.g. reasoning text), which makes a direct JSON.parse() throw. This helper
- * never throws: it returns the first parseable JSON object, or undefined.
- */
-export function safeExtractJsonObject(response: unknown): Record<string, any> | undefined {
-	if (typeof response !== 'string') return undefined
-	const candidates: string[] = []
-	const trimmed = response.trim()
-	candidates.push(trimmed)
-	// Strip a leading/trailing markdown code fence such as ```json ... ```
-	const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-	if (fenceMatch) candidates.push(fenceMatch[1].trim())
-	// Fall back to the first balanced-looking {...} block embedded in the text
-	const braceMatch = trimmed.match(/\{[\s\S]*\}/)
-	if (braceMatch) candidates.push(braceMatch[0])
-
-	for (const candidate of candidates) {
-		if (!candidate) continue
-		try {
-			const parsed = JSON.parse(candidate)
-			// Only accept a non-null JSON object (reject strings, numbers, arrays, null)
-			if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-				return parsed as Record<string, any>
-			}
-		} catch {
-			// try the next candidate
-		}
-	}
-	return undefined
-}
-
-/**
- * Tolerantly extract a JSON array from an LLM response. Array counterpart to
- * safeExtractJsonObject() — handles markdown code fences and surrounding prose.
- * Never throws: returns the first parseable JSON array, or undefined.
- */
-export function safeExtractJsonArray(response: unknown): any[] | undefined {
-	if (typeof response !== 'string') return undefined
-	const candidates: string[] = []
-	const trimmed = response.trim()
-	candidates.push(trimmed)
-	// Strip a leading/trailing markdown code fence such as ```json ... ```
-	const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)
-	if (fenceMatch) candidates.push(fenceMatch[1].trim())
-	// Fall back to the first balanced-looking [...] block embedded in the text
-	const bracketMatch = trimmed.match(/\[[\s\S]*\]/)
-	if (bracketMatch) candidates.push(bracketMatch[0])
-
-	for (const candidate of candidates) {
-		if (!candidate) continue
-		try {
-			const parsed = JSON.parse(candidate)
-			if (Array.isArray(parsed)) return parsed
-		} catch {
-			// try the next candidate
-		}
-	}
-	return undefined
-}
-
 export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined): string[] {
 	if (!supportedPlotTypes) {
 		mayLog(

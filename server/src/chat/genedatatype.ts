@@ -1,7 +1,6 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
-import { safeExtractJsonArray } from './utils.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 
 // ---------------------------------------------------------------------------
@@ -127,12 +126,14 @@ Response:`
 
 	// Tolerantly parse the LLM output (handles code fences / surrounding prose). If the model
 	// did not return a valid JSON array, surface a message to the user instead of throwing.
-	const results = safeExtractJsonArray(response) as GeneOrGroupOrAmbiguousResult[] | undefined
-	if (!results) {
+	let results
+	try {
+		results = JSON.parse(response) as GeneOrGroupOrAmbiguousResult[]
+	} catch {
 		mayLog('classifyGeneOrGroup: failed to parse LLM response as JSON:', response)
 		return {
 			type: 'text',
-			text: `Could not classify the ambiguous terms (${ambiguousTerms}): the language model did not return a valid response.`
+			text: `Could not classify the ambiguous terms (${ambiguousTerms}): the language model did not return a valid response.${response}`
 		}
 	}
 

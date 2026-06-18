@@ -12,12 +12,7 @@ import type {
 	MsgToUser
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
-import {
-	extractGenesetsFromPromptNew,
-	extractGenesFromPrompt,
-	getGenesetNames,
-	safeExtractJsonObject
-} from './utils.ts'
+import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import Database from 'better-sqlite3'
 import assert from 'assert'
@@ -157,7 +152,7 @@ export async function getTermObj(
 const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
 const topK: number = 3
 const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
-        */
+*/
 		let match: { id: string; type: string; name: string; score: number; msg?: string } | MsgToUser | undefined
 		try {
 			match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
@@ -535,12 +530,14 @@ async function findBestMatchLLM(
 
 	// Tolerantly parse the LLM output. If the model did not return usable JSON,
 	// surface a message to the user rather than throwing.
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
 		console.warn(`findBestMatchLLM: LLM response was not valid JSON, skipping: ${response}`)
 		return {
 			type: 'text',
-			text: `Could not match "${phrase}" to a dataset term: the language model did not return a valid response.`
+			text: `Could not match "${phrase}" to a dataset term: the language model did not return a valid response:${response}`
 		}
 	}
 
