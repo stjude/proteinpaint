@@ -8,7 +8,7 @@ import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
-import { getDefaultGseaSettings } from '#plots/gsea.js'
+import { getDefaultGseaSettings } from '#plots/gsea/gsea.ts'
 import { DATermTypes, enabledTermTypes } from './enabledTermTypes'
 
 const { SINGLECELL_CELLTYPE } = DATermTypes

@@ -4,7 +4,7 @@ import { NumericModes } from '#shared/terms.js'
 import { sayerror, Tabs, Menu, table2col } from '#dom'
 import { TermTypeGroups } from '#shared/common.js'
 import { getDefaultVolcanoSettings } from './volcano/settings/defaults.ts'
-import { getDefaultGseaSettings } from './gsea.js'
+import { getDefaultGseaSettings } from './gsea/gsea.ts'
 import { dofetch3 } from '#common/dofetch'
 import { PROTEOME_DAP, type ProteomeDetails } from '#types'
 
