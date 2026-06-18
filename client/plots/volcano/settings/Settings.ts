@@ -49,4 +49,6 @@ export type DMVolcanoSettings = DefaultVolcanoSettings & {
 
 export type SCCTVolcanoSettings = DefaultVolcanoSettings & {}
 
-export type ValidatedVolcanoSettings = GEVolcanoSettings | DMVolcanoSettings | SCCTVolcanoSettings
+export type SCGEVolcanoSettings = DefaultVolcanoSettings & {}
+
+export type ValidatedVolcanoSettings = GEVolcanoSettings | DMVolcanoSettings | SCCTVolcanoSettings | SCGEVolcanoSettings

@@ -11,7 +11,7 @@ import { scaleLinear } from 'd3-scale'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getSampleNum } from '../settings/defaults'
 import { getGroupColors } from '../colors'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
+import { DATermTypes as tt, enabledTermTypes } from '../../diffAnalysis/enabledTermTypes'
 
 export class VolcanoViewModel {
 	config: any
@@ -100,10 +100,11 @@ export class VolcanoViewModel {
 	}
 
 	setDataType() {
-		if (this.termType == GENE_EXPRESSION) return 'genes'
-		if (this.termType == DNA_METHYLATION) return 'promoters'
-		if (this.termType == SINGLECELL_CELLTYPE) return 'genes'
-		if (this.termType == PROTEOME_DAP) return 'proteins'
+		if (this.termType == tt.GENE_EXPRESSION) return 'genes'
+		if (this.termType == tt.DNA_METHYLATION) return 'promoters'
+		if (this.termType == tt.SINGLECELL_CELLTYPE) return 'genes'
+		if (this.termType == tt.PROTEOME_DAP) return 'proteins'
+		if (this.termType == tt.SINGLECELL_GENE_EXPRESSION) return 'cells'
 		throw new Error(`Unknown termType: ${this.termType}`)
 	}
 
@@ -203,19 +204,13 @@ export class VolcanoViewModel {
 		// caseColor: string,
 		// controlColor: string
 	) {
-		if (
-			this.termType != GENE_EXPRESSION &&
-			this.termType != DNA_METHYLATION &&
-			this.termType != PROTEOME_DAP &&
-			this.termType != SINGLECELL_CELLTYPE
-		)
-			return
+		if (!enabledTermTypes.has(this.termType as any)) return
 		const getLabel = (name: string) => {
 			if (name.length >= 25) return name.substring(0, 20) + '...'
 			return name
 		}
 
-		if (this.termType == PROTEOME_DAP) {
+		if (this.termType == tt.PROTEOME_DAP) {
 			// FIXME this shouldn't be needed. there should be a way for caller to supply names for each group, and avoid this special logic and SINGLECELL_CELLTYPE
 			return {
 				y: plotDim.top.y + 10,
@@ -230,7 +225,7 @@ export class VolcanoViewModel {
 			}
 		}
 
-		if (this.termType == SINGLECELL_CELLTYPE) {
+		if (this.termType == tt.SINGLECELL_CELLTYPE) {
 			/* quick fix - this only works for gdc's precomputed DE genes (selected cluster vs rest of cells)
 			this won't work for dynamic DE (user-selected cluster A vs cluster B)
 			thus not okay to hardcode `Not in` here
@@ -276,7 +271,7 @@ export class VolcanoViewModel {
 		const radius = this.dotRadiusPx
 		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
-			const highlightKey = this.termType === DNA_METHYLATION ? d.promoter_id : d.gene_name
+			const highlightKey = this.termType === tt.DNA_METHYLATION ? d.promoter_id : d.gene_name
 			d.highlighted = this.config?.highlightedData?.includes(highlightKey)
 			// Every row in response.data passed the server's thresholds by definition.
 			d.significant = true
@@ -288,9 +283,9 @@ export class VolcanoViewModel {
 					{ value: roundValueAuto(d.original_p_value) },
 					{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
 				]
-				if (this.termType == DNA_METHYLATION) {
+				if (this.termType == tt.DNA_METHYLATION) {
 					row.splice(0, 0, { value: d.promoter_id || '' }, { value: d.gene_name || '' })
-				} else if (this.termType == PROTEOME_DAP) {
+				} else if (this.termType == tt.PROTEOME_DAP) {
 					row.splice(0, 0, { value: d.gene_name || '' }, { value: d.gene || '' })
 				} else {
 					row.splice(0, 0, { value: d.gene_name || '' })
@@ -319,7 +314,7 @@ export class VolcanoViewModel {
 	}
 
 	getGenesColor(d: DataPointEntry, significant: boolean, controlColor: string, caseColor: string) {
-		if (!d.gene_name && this.termType != DNA_METHYLATION)
+		if (!d.gene_name && this.termType != tt.DNA_METHYLATION)
 			throw new Error(`Missing gene_name in data: ${JSON.stringify(d)}`)
 		if (significant) {
 			if (controlColor && caseColor) d.color = d.fold_change > 0 ? caseColor : controlColor
@@ -342,7 +337,7 @@ export class VolcanoViewModel {
 				value: this.numSignificant + this.numNonSignificant
 			}
 		]
-		if (this.termType == GENE_EXPRESSION || this.termType == DNA_METHYLATION) {
+		if (this.termType == tt.GENE_EXPRESSION || this.termType == tt.DNA_METHYLATION) {
 			tableRows.push(
 				{
 					label: this.config.samplelst.groups[0].name + ' sample size (control group)',
@@ -353,7 +348,7 @@ export class VolcanoViewModel {
 					value: this.response.sample_size2
 				}
 			)
-		} else if (this.termType == PROTEOME_DAP) {
+		} else if (this.termType == tt.PROTEOME_DAP) {
 			tableRows.push(
 				{
 					label: 'Control sample size',
@@ -376,9 +371,9 @@ export class VolcanoViewModel {
 	}
 
 	setPTableColumns() {
-		if (this.termType == DNA_METHYLATION) {
+		if (this.termType == tt.DNA_METHYLATION) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Promoter', sortable: true }, { label: 'Gene(s)', sortable: true })
-		} else if (this.termType == PROTEOME_DAP) {
+		} else if (this.termType == tt.PROTEOME_DAP) {
 			this.pValueTable.columns.splice(0, 0, { label: 'Identifier', sortable: true }, { label: 'Gene', sortable: true })
 		} else {
 			this.pValueTable.columns.splice(0, 0, { label: 'Gene Name', sortable: true })
@@ -389,7 +384,7 @@ export class VolcanoViewModel {
 		const userActions = {
 			noShow: new Set<string>()
 		}
-		if (this.termType == GENE_EXPRESSION) {
+		if (this.termType == tt.GENE_EXPRESSION) {
 			if (this.settings.method == 'edgeR' && getSampleNum(this.config) > 100) {
 				userActions.noShow.add('Confounding factors')
 			}

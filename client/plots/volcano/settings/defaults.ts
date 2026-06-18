@@ -1,5 +1,5 @@
 import { roundValue } from '#shared/roundValue.js'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
+import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import type {
 	ValidatedVolcanoSettings,
 	GEVolcanoSettings,
@@ -23,7 +23,7 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 		pValue: roundValue(-Math.log10(0.05), 2),
 		pValueType: 'adjusted',
 		//Only declare this value in one place
-		sampleNumCutoff: opts.termType == GENE_EXPRESSION ? maxGESampleCutoff : maxSampleCutoff,
+		sampleNumCutoff: opts.termType == tt.GENE_EXPRESSION ? maxGESampleCutoff : maxSampleCutoff,
 		showPValueTable: false,
 		width: 400,
 		maxInteractiveDots: 5000,
@@ -32,13 +32,14 @@ export function getDefaultVolcanoSettings(overrides = {}, opts: any): ValidatedV
 
 	addGEDefaults(opts.termType, defaults)
 	addDMDefaults(opts.termType, defaults)
-	addSCCTDefaults(opts.termType)
+	addScctDefaults(opts.termType)
+	addScgeDefaults(opts.termType)
 
 	return Object.assign(defaults, overrides)
 }
 
 function addGEDefaults(termType: string, defaults: Partial<GEVolcanoSettings>) {
-	if (termType != GENE_EXPRESSION) return
+	if (termType != tt.GENE_EXPRESSION) return
 
 	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') as string)
 	const method = features?.runDE_methods?.includes('Wilcoxon') ? 'wilcoxon' : 'edgeR'
@@ -51,19 +52,25 @@ function addGEDefaults(termType: string, defaults: Partial<GEVolcanoSettings>) {
 }
 
 function addDMDefaults(termType: string, defaults: Partial<DMVolcanoSettings>) {
-	if (termType != DNA_METHYLATION) return
+	if (termType != tt.DNA_METHYLATION) return
 	defaults.minSamplesPerGroup = 3
 }
 
-function addSCCTDefaults(termType: string) {
-	if (termType != SINGLECELL_CELLTYPE) return
+function addScctDefaults(termType: string) {
+	if (termType != tt.SINGLECELL_CELLTYPE) return
 	//add SCCT specific defaults when there are any
+}
+
+function addScgeDefaults(termType: string) {
+	if (termType != tt.SINGLECELL_GENE_EXPRESSION) return
+	//add SCGE specific defaults when there are any
 }
 
 /*********** Setting Validation Functions ***********
  * Validates user input settings after merging with defaults */
+const typesUseDefaultSettings = new Set([tt.SINGLECELL_CELLTYPE, tt.PROTEOME_DAP, tt.SINGLECELL_GENE_EXPRESSION])
 export function validateVolcanoSettings(config: any, opts: any) {
-	if (config.termType == SINGLECELL_CELLTYPE || config.termType == PROTEOME_DAP) return
+	if (typesUseDefaultSettings.has(config.termType)) return
 	if (!config.settings.volcano) return
 
 	const settings = config.settings.volcano
@@ -80,20 +87,17 @@ export function validateVolcanoSettings(config: any, opts: any) {
 }
 
 export function getSampleNum(config: any) {
-	if (config.termType == GENE_EXPRESSION) {
+	if (config.termType == tt.GENE_EXPRESSION || config.termType == tt.DNA_METHYLATION) {
 		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
 	}
-	if (config.termType == DNA_METHYLATION) {
-		return config.samplelst.groups.reduce((sum: number, g: any) => sum + g.values.length, 0)
-	}
-	if (config.termType == SINGLECELL_CELLTYPE) {
+	if (config.termType == tt.SINGLECELL_CELLTYPE) {
 		//Only returning maxSampleCutoff for now.
 		return maxSampleCutoff
 	}
 }
 
 function validateGESettings(termType: string, settings: GEVolcanoSettings, sampleNum: number, opts: any) {
-	if (termType != GENE_EXPRESSION) return
+	if (termType != tt.GENE_EXPRESSION) return
 
 	const largeNum = sampleNum > settings.sampleNumCutoff
 	if (!opts.overrides && largeNum) {
@@ -106,7 +110,7 @@ function validateGESettings(termType: string, settings: GEVolcanoSettings, sampl
 }
 
 function validateDMSettings(termType: string, settings?: DMVolcanoSettings) {
-	if (termType != DNA_METHYLATION || !settings) return
+	if (termType != tt.DNA_METHYLATION || !settings) return
 	const min = settings.minSamplesPerGroup
 	if (!Number.isFinite(min) || !Number.isInteger(min) || min < 3) {
 		settings.minSamplesPerGroup = 3
@@ -114,6 +118,6 @@ function validateDMSettings(termType: string, settings?: DMVolcanoSettings) {
 }
 
 function validateSCCTSettings(termType: string) {
-	if (termType != SINGLECELL_CELLTYPE) return
+	if (termType != tt.SINGLECELL_CELLTYPE) return
 	//add validations when there are settings for SCCT
 }
