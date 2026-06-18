@@ -332,6 +332,7 @@ Query: "${user_prompt}"
 	try {
 		parsed = JSON.parse(response)
 	} catch {
+		mayLog(`Could not parse a matrix plot configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a matrix plot configuration from the response: ${response}` }
 	}
 	const scaffold = parsed as MatrixScaffold
@@ -625,6 +626,7 @@ Query: ${user_prompt}
 	try {
 		parsed = JSON.parse(response)
 	} catch {
+		mayLog(`Could not parse a summary plot configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a summary plot configuration from the response: ${response}` }
 	}
 	const scaffold = parsed as SummaryScaffold
@@ -700,6 +702,7 @@ Query: ${user_prompt}
 		try {
 			parsedObj = JSON.parse(response)
 		} catch {
+			mayLog(`Could not parse a hierarchical clustering configuration from the response: ${response}`)
 			return {
 				type: 'text',
 				text: `Could not parse a hierarchical clustering configuration from the response: ${response}`
@@ -972,6 +975,7 @@ Query: ${user_prompt}
 	try {
 		parsed = JSON.parse(response)
 	} catch {
+		mayLog(`Could not parse a prebuilt scatter configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a prebuilt scatter configuration from the response: ${response}` }
 	}
 	if (!parsed.name)
@@ -1060,6 +1064,7 @@ Query: ${user_prompt}
 	try {
 		parsedClassifier = JSON.parse(response)
 	} catch {
+		mayLog(`Could not parse the hierarchical variable-type classification from the response: ${response}`)
 		return {
 			type: 'text',
 			text: `Could not parse the hierarchical variable-type classification from the response: ${response}`
@@ -1182,6 +1187,7 @@ Query: ${user_prompt}
 	try {
 		parsedObj = JSON.parse(response)
 	} catch {
+		mayLog(`Could not parse hierarchical clustering configuration from the response: ${response}`)
 		return {
 			type: 'text',
 			text: `Could not parse hierarchical clustering configuration from the response: ${response}`
