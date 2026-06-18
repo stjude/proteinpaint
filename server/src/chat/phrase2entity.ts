@@ -173,6 +173,8 @@ export async function phrase2entity(
 			const resolved = await find_survival_terms(scaffoldResult.term, llm, dbPath)
 			if (resolved === null) {
 				return { type: 'text', text: 'No survival terms available in this dataset.' }
+			} else if (typeof resolved === 'object' && 'type' in resolved) {
+				return resolved // MsgToUser
 			}
 			// string = matched single term; DbRows[] = ambiguous, list for user disambiguation
 			survival_term.term = resolved
@@ -307,6 +309,9 @@ export async function phrase2entity(
 		}
 		if (scaffoldResult.genomeBrowserPhrase) {
 			const genomicCoordinates = await parseGenomicCoordinates(scaffoldResult.genomeBrowserPhrase, llm)
+			if ('type' in genomicCoordinates) {
+				return genomicCoordinates // MsgToUser
+			}
 			pp_plot_json.geneSearchResult = {
 				chr: genomicCoordinates.chromosome,
 				start: genomicCoordinates.start,
@@ -417,7 +422,7 @@ export async function phrase2entity(
 async function parseGenomicCoordinates(
 	phrase: string,
 	llm: LlmConfig
-): Promise<{ chromosome: string; start: number; stop: number }> {
+): Promise<{ chromosome: string; start: number; stop: number } | MsgToUser> {
 	const prompt = `You are a ProteinPaint genome browser assistant. Your task is to parse the genomic region phrase extracted from the user's query into its component parts: chromosome, start coordinate, and stop coordinate.
 
 ## OUTPUT SCHEMA
@@ -523,22 +528,29 @@ Phrase: "${phrase}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Genomic coordinates parse: ${response}`)
+	let parsed: any
 	try {
-		const parsed = JSON.parse(response) as { chromosome: string; start: number; stop: number }
-		if (!parsed.chromosome || typeof parsed.start !== 'number' || typeof parsed.stop !== 'number') {
-			throw new Error(`LLM response is missing required chromosome/start/stop fields: ${response}`)
-		}
-		return parsed
+		parsed = JSON.parse(response) as { chromosome: string; start: number; stop: number }
 	} catch {
-		throw new Error(`Failed to parse genomic coordinates from LLM response: ${response}`)
+		return {
+			type: 'text',
+			text: `Failed to parse genomic coordinates from LLM response: ${response}`
+		}
 	}
+	if (!parsed.chromosome || typeof parsed.start !== 'number' || typeof parsed.stop !== 'number') {
+		return {
+			type: 'text',
+			text: `LLM response is missing required chromosome/start/stop fields: ${response}`
+		}
+	}
+	return parsed
 }
 
 async function find_survival_terms(
 	user_prompt: string,
 	llm: LlmConfig,
 	dbPath: string
-): Promise<string | DbRows[] | null> {
+): Promise<string | DbRows[] | null | MsgToUser> {
 	const { db_rows } = await parse_survival_terms_from_db(dbPath)
 	if (db_rows.length === 0) return null
 
@@ -582,20 +594,24 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Survival term classifier: ${response}`)
+	let parsed: { survivalTerm: string | null }
 	try {
-		const parsed = JSON.parse(response)
-		const picked = parsed.survivalTerm
-		if (!picked || picked === 'null') return db_rows
-		const match = db_rows.find(r => r.name === picked)
-		if (!match) {
-			mayLog(
-				`Survival term classifier returned "${picked}" which is not in db_rows; returning full list for user disambiguation.`
-			)
-			return db_rows
-		}
-		return match.name
+		parsed = JSON.parse(response)
 	} catch {
 		mayLog(`Failed to parse survival term classifier response: ${response}`)
-		throw new Error(`Failed to parse survival term classifier response: ${response}`)
+		return {
+			type: 'text',
+			text: `Failed to parse survival term classifier response: ${response}`
+		}
 	}
+	const picked = parsed.survivalTerm
+	if (!picked || picked === 'null') return db_rows
+	const match = db_rows.find(r => r.name === picked)
+	if (!match) {
+		mayLog(
+			`Survival term classifier returned "${picked}" which is not in db_rows; returning full list for user disambiguation.`
+		)
+		return db_rows
+	}
+	return match.name
 }

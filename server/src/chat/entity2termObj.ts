@@ -464,6 +464,8 @@ async function findBestMatchLLM(
 	llm: LlmConfig
 ): Promise<{ id: string; type: string; name: string; score: number; msg?: string } | MsgToUser> {
 	const dataset_db_output = await parse_dataset_db(dbPath)
+	// parse_dataset_db returns a MsgToUser if the dictionary could not be read; propagate it to the client.
+	if (isMsgToUser(dataset_db_output)) return dataset_db_output
 	const { db_rows, rag_docs } = dataset_db_output
 	if (rag_docs.length === 0) {
 		console.warn('findBestMatchLLM: no rag_docs in DB')
@@ -593,7 +595,9 @@ return undefined
 	return retVal
 }
 
-export async function parse_dataset_db(dataset_db: string) {
+export async function parse_dataset_db(
+	dataset_db: string
+): Promise<{ db_rows: DbRows[]; rag_docs: string[] } | MsgToUser> {
 	const db = new Database(dataset_db)
 	const rag_docs: string[] = []
 	const db_rows: DbRows[] = []
@@ -604,8 +608,18 @@ export async function parse_dataset_db(dataset_db: string) {
 			)
 			.all()
 
-		rows.forEach((row: any) => {
-			const jsonhtml = JSON.parse(row.jsonhtml)
+		for (const row of rows as any[]) {
+			let jsonhtml: any
+			try {
+				jsonhtml = JSON.parse(row.jsonhtml)
+			} catch (e) {
+				console.warn(`Failed to parse jsonhtml for row id ${row.id}, name ${row.name}:`, e)
+				// Surface a message to the client instead of crashing on the malformed term definition below.
+				return {
+					type: 'text',
+					text: `Failed to read the dataset dictionary: the definition for term "${row.name}" is malformed.`
+				}
+			}
 			const description: string = jsonhtml.description[0].value
 			const jsondata = JSON.parse(row.jsondata)
 
@@ -627,7 +641,7 @@ export async function parse_dataset_db(dataset_db: string) {
 			const stringified_db = parse_db_rows(db_row)
 			rag_docs.push(stringified_db)
 			db_rows.push(db_row)
-		})
+		}
 	} catch (error) {
 		throw 'Error in parsing dataset DB:' + error
 	} finally {
