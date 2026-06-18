@@ -77,16 +77,28 @@ export class Interactions {
 				}
 			}
 		}
+		let facetActiveTracksChanged = false
 		if (config.trackLst?.activeTracks) {
 			// active facet tracks are inuse; if user deletes such tracks from block ui, must update state
 			const newLst = config.trackLst.activeTracks.filter(n => blockInstance.tklst.find(i => i.name == n))
+			if (newLst.length != config.trackLst.activeTracks.length) facetActiveTracksChanged = true
 			config.trackLst.activeTracks = newLst
 		}
-		this.app.save({
-			type: 'plot_edit',
-			id: this.id,
-			config
-		})
+		if (facetActiveTracksChanged) {
+			// a facet track was removed via block ui (e.g. block.tk.menu);
+			// must dispatch so the facet table ui re-renders to reflect the change
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config
+			})
+		} else {
+			this.app.save({
+				type: 'plot_edit',
+				id: this.id,
+				config
+			})
+		}
 	}
 
 	launchFacet = config => {
