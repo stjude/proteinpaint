@@ -1,70 +1,70 @@
+import type { GSEA } from '../gsea'
 // import * as d3axis from 'd3-axis'
 // import { scaleLinear } from 'd3-scale'
 // import { renderTable, table2col, axisstyle, sayerror } from '#dom'
 // import { dofetch3 } from '#common/dofetch'
 // import { roundValueAuto } from '#shared/roundValue.js'
 
-// async function renderPathwayDropdown(self) {
-// 	const settings = structuredClone(self.settings)
-// 	const pathwayOpts = structuredClone(self.app.opts.genome.termdbs.msigdb.analysisGenesetGroups) // duplicate to avoid repeated insertion on each app launch
+export class GSEAView {
+	gsea: GSEA
+	dom: any
+	pathwayDropDown: any
 
-// 	if (JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')?.gsea_test && self.settings.gsea_method == 'blitzgsea') {
-// 		// This contains geneset groups that are specific to blitzgsea itself
-// 		// TEMPORARY FIX to test this library that will trigger auto download support files in python
-// 		// NEVER ENABLE ON PROD especially gdc prod, where container has firewall and it crashes..
-// 		// delete this if library is replaced
-// 		pathwayOpts.push(
-// 			{ label: 'REACTOME (blitzgsea)', value: 'REACTOME--blitzgsea' },
-// 			{ label: 'KEGG (blitzgsea)', value: 'KEGG--blitzgsea' },
-// 			{ label: 'WikiPathways (blitzgsea)', value: 'WikiPathways--blitzgsea' }
-// 		)
-// 	}
+	constructor(gsea: GSEA) {
+		this.gsea = gsea
+		this.dom = gsea.dom
+	}
 
-// 	if (settings.pathway) {
-// 		pathwayOpts.shift()
-// 		pathwayOpts.find(opt => opt.value == settings.pathway).selected = true
-// 	}
+	initRender() {
+		this.renderActions()
+	}
 
-// 	self.dom.actionsDiv
-// 		.append('span')
-// 		.attr('data-testid', 'sjpp-gsea-pathway')
-// 		.style('margin-right', '10px')
-// 		.text('Select a gene set group:')
+	renderActions() {
+		this.dom.actionsDiv
+			.append('span')
+			.attr('data-testid', 'sjpp-gsea-pathway')
+			.style('margin-right', '10px')
+			.style('display', 'inline-block')
+			.text('Select a gene set group:')
 
-// 	const dropdown = self.dom.actionsDiv.append('select').on('change', event => {
-// 		if (!settings.pathway) {
-// 			//Remove placeholder from dropdown on first change
-// 			const placeholder = dropdown.select('option[value="-"]')
-// 			placeholder.remove()
-// 			pathwayOpts.shift()
-// 		}
+		this.pathwayDropDown = this.dom.actionsDiv
+			.append('select')
+			.style('display', 'inline-block')
+			.on('change', async () => {
+				const value = this.pathwayDropDown.node().value
+				const settings = structuredClone(this.gsea.state.config.settings.gsea)
+				settings.pathway = value
+				await this.gsea.app.dispatch({
+					type: 'plot_edit',
+					id: this.gsea.id,
+					config: {
+						//Need to clear the gsea_params completely
+						gsea_params: {
+							geneset_name: null,
+							pathway: value
+						},
+						highlightGenes: [],
+						settings: {
+							gsea: settings
+						}
+					}
+				})
+			})
+	}
 
-// 		const idx = event.target.selectedIndex
-// 		settings.pathway = pathwayOpts[idx].value
-// 		self.app.dispatch({
-// 			type: 'plot_edit',
-// 			id: self.id,
-// 			config: {
-// 				//Need to clear the gsea_params completely
-// 				gsea_params: {
-// 					geneset_name: null,
-// 					pathway: pathwayOpts[idx].value
-// 				},
-// 				highlightGenes: [],
-// 				settings: {
-// 					gsea: settings
-// 				}
-// 			}
-// 		})
-// 	})
-// 	for (const opt of pathwayOpts) {
-// 		dropdown
-// 			.append('option')
-// 			.text(opt.label)
-// 			.attr('value', opt.value)
-// 			.attr('selected', opt.selected ? true : null)
-// 	}
-// }
+	update() {
+		/** Refresh pathway options on every change. Ensures options are available
+		 * when the method changes. */
+		this.pathwayDropDown
+			.selectAll('option')
+			.data(this.gsea.viewModel.viewData.pathwayOpts)
+			.enter()
+			.append('option')
+			.text(d => d.label)
+			.property('value', d => d.value)
+			.property('selected', d => d.selected)
+	}
+}
 
 // async function render_gsea(self) {
 // 	/*
