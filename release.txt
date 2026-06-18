@@ -1,1 +1,2 @@
-
+Features:
+- GRIN2: Adding support for GDC sample querying
