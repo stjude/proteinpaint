@@ -78,14 +78,30 @@ export class Interactions {
 			}
 		}
 		let facetActiveTracksChanged = false
-		if (config.trackLst?.activeTracks) {
-			// active facet tracks are inuse; if user deletes such tracks from block ui, must update state
+		if (config.trackLst?.activeTracks && config.trackLst.facets) {
+			// collect names of all facet tracks (across all facet tables)
+			const facetTrackNames = new Set<string>()
+			for (const f of config.trackLst.facets) {
+				for (const t of f.tracks) facetTrackNames.add(t.name)
+			}
+			// active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks
 			const newLst = config.trackLst.activeTracks.filter(n => blockInstance.tklst.find(i => i.name == n))
-			if (newLst.length != config.trackLst.activeTracks.length) facetActiveTracksChanged = true
+			// if user re-adds a facet track from block ui (e.g. block.tk.menu), add it back to activeTracks
+			for (const t of blockInstance.tklst) {
+				if (t.name && facetTrackNames.has(t.name) && !newLst.includes(t.name)) {
+					newLst.push(t.name)
+				}
+			}
+			if (
+				newLst.length != config.trackLst.activeTracks.length ||
+				newLst.some(n => !config.trackLst.activeTracks.includes(n))
+			) {
+				facetActiveTracksChanged = true
+			}
 			config.trackLst.activeTracks = newLst
 		}
 		if (facetActiveTracksChanged) {
-			// a facet track was removed via block ui (e.g. block.tk.menu);
+			// a facet track was added or removed via block ui (e.g. block.tk.menu);
 			// must dispatch so the facet table ui re-renders to reflect the change
 			this.app.dispatch({
 				type: 'plot_edit',
