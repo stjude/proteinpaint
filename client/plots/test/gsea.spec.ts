@@ -48,6 +48,9 @@ tape('Default gsea', function (test) {
 			plots: [
 				{
 					chartType: 'gsea',
+					termType: 'singleCellCellType',
+					categoryName: '2',
+					termId: 'Cluster',
 					gsea_params: {
 						fold_change: [
 							0.113097310076855, 0.157254679903013, -0.127936030474977, 0.16699322548421, 0.619875078541592,
