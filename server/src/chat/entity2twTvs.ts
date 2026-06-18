@@ -1,5 +1,6 @@
 import type { LlmConfig } from '@sjcrh/proteinpaint-types'
 import type { Value, DictTerm, GeneSetTerm } from './entity2termObj.ts'
+import { isMsgToUser } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { parse_dataset_db, getGenesForGeneset } from './utils.ts'
@@ -182,6 +183,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 	for (const termObj of tvsValues) {
 		if (termObj.term.type === 'categorical') {
 			const categoricalFilterTerm = await getCategoricalFilterTermValues(termObj, dbPath, llm)
+			if (isMsgToUser(categoricalFilterTerm)) return categoricalFilterTerm
 			if (!categoricalFilterTerm) {
 				console.warn(`resolveToTvs: skipping categorical filter term (no result): "${termObj.phrase}"`)
 				continue
@@ -190,7 +192,9 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			// (similar logic to generate_filter_term() in filter.ts)
 			let cat: string | undefined
 			if ('id' in termObj.term) {
-				const { db_rows } = await parse_dataset_db(dbPath)
+				const dataset_db_output = await parse_dataset_db(dbPath)
+				if (isMsgToUser(dataset_db_output)) return dataset_db_output
+				const { db_rows } = dataset_db_output
 				const dbRow = db_rows.find(r => r.name === (termObj.term as DictTerm).id)
 				if (dbRow) {
 					for (const dbVal of dbRow.values) {
@@ -220,6 +224,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			termObj.term.type === TermTypes.SSGSEA // Will need to add more nonDict term types here as needed, e.g. methylation, CNV, etc.
 		) {
 			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
+			if (isMsgToUser(numericFilterTerm)) return numericFilterTerm
 			if (!numericFilterTerm) {
 				console.warn(`resolveToTvs: skipping numeric filter term (no result): "${termObj.phrase}"`)
 				continue
@@ -649,13 +654,14 @@ async function getCategoricalFilterTermValues(
 	termObj: Value,
 	dbPath: string,
 	llm: LlmConfig
-): Promise<{ term: string; value: string } | undefined> {
+): Promise<{ term: string; value: string } | MsgToUser | undefined> {
 	// For categorical filters, we need to determine both the term and the specific value being filtered on
 	// (e.g. "T cell" → term="cell_type" value="T_cell"). We ask an LLM to pick the rag_docs row whose
 	// term + one of its enumerated values best matches termObj.phrase.
 	if ('id' in termObj.term) {
 		// Assuming categorical terms from the dictionary will have an 'id' field, while non-dictionary terms won't.
 		const dataset_db_output = await parse_dataset_db(dbPath)
+		if (isMsgToUser(dataset_db_output)) return dataset_db_output
 		const { db_rows, rag_docs } = dataset_db_output
 
 		// Narrow to rows that actually describe a categorical term with enumerated values,
@@ -713,7 +719,7 @@ async function getNumericFilterTermValues(
 	termObj: Value,
 	dbPath: string,
 	llm: LlmConfig
-): Promise<{ term: string; start?: string; stop?: string } | undefined> {
+): Promise<{ term: string; start?: string; stop?: string } | MsgToUser | undefined> {
 	// For numeric filters, we need to determine the term being filtered on and any specified cutoffs
 	// (e.g. "age > 60" → term="age" start="60"). Branch by termObj.term shape:
 	//   - DictTerm: use an LLM against numeric (integer/float) rag_docs rows to pick the term
@@ -723,6 +729,7 @@ async function getNumericFilterTermValues(
 
 	if ('id' in termObj.term) {
 		const dataset_db_output = await parse_dataset_db(dbPath)
+		if (isMsgToUser(dataset_db_output)) return dataset_db_output
 		const { db_rows, rag_docs } = dataset_db_output
 
 		const candidateDocs: string[] = []

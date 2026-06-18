@@ -16,7 +16,7 @@ import type {
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
-import { extractGenesFromPrompt, safeExtractJsonObject } from './utils.ts'
+import { extractGenesFromPrompt } from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
 import { determineAmbiguousGenePrompt } from './determineAmbiguousGene.ts'
@@ -114,8 +114,11 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Survival scaffold: ${response}`)
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse a survival plot configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a survival plot configuration from the response: ${response}` }
 	}
 	if (parsed.type === 'text') return parsed as MsgToUser
@@ -228,8 +231,11 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Genome browser scaffold: ${response}`)
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse a genome browser configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a genome browser configuration from the response: ${response}` }
 	}
 	const scaffold = parsed as GenomeBrowserScaffold
@@ -322,8 +328,11 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm)
 	mayLog(`--> Matrix Scaffold LLM response: ${response}`)
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse a matrix plot configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a matrix plot configuration from the response: ${response}` }
 	}
 	const scaffold = parsed as MatrixScaffold
@@ -485,8 +494,11 @@ Query: ${user_prompt}
 	// let response = summaryScaffold
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> DE scaffold: ${response}`)
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse a differential expression configuration from the response: ${response}`)
 		return {
 			type: 'text',
 			text: `Could not parse a differential expression configuration from the response: ${response}`
@@ -610,8 +622,11 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Summary scaffold: ${response}`)
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse a summary plot configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a summary plot configuration from the response: ${response}` }
 	}
 	const scaffold = parsed as SummaryScaffold
@@ -683,8 +698,11 @@ Query: ${user_prompt}
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical scaffold: ${response}`)
 	{
-		const parsedObj = safeExtractJsonObject(response)
-		if (!parsedObj) {
+		let parsedObj: any
+		try {
+			parsedObj = JSON.parse(response)
+		} catch {
+			mayLog(`Could not parse a hierarchical clustering configuration from the response: ${response}`)
 			return {
 				type: 'text',
 				text: `Could not parse a hierarchical clustering configuration from the response: ${response}`
@@ -953,8 +971,11 @@ Query: ${user_prompt}
 `*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Prebuilt scatter scaffold: ${response}`)
-	const parsed = safeExtractJsonObject(response) as PrebuiltScatterScaffold | undefined
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse a prebuilt scatter configuration from the response: ${response}`)
 		return { type: 'text', text: `Could not parse a prebuilt scatter configuration from the response: ${response}` }
 	}
 	if (!parsed.name)
@@ -1039,8 +1060,11 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical variable-type classifier: ${response}`)
-	const parsedClassifier = safeExtractJsonObject(response)
-	if (!parsedClassifier) {
+	let parsedClassifier: any
+	try {
+		parsedClassifier = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse the hierarchical variable-type classification from the response: ${response}`)
 		return {
 			type: 'text',
 			text: `Could not parse the hierarchical variable-type classification from the response: ${response}`
@@ -1159,11 +1183,14 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical dictionary scaffold: ${response}`)
-	const parsedObj = safeExtractJsonObject(response)
-	if (!parsedObj) {
+	let parsedObj: any
+	try {
+		parsedObj = JSON.parse(response)
+	} catch {
+		mayLog(`Could not parse hierarchical clustering configuration from the response: ${response}`)
 		return {
 			type: 'text',
-			text: `Could not parse a hierarchical clustering configuration from the response: ${response}`
+			text: `Could not parse hierarchical clustering configuration from the response: ${response}`
 		}
 	}
 	const parsed = parsedObj as HierarchicalScaffold

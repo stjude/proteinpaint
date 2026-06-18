@@ -1,6 +1,7 @@
 import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import type { MsgToUser } from './scaffoldTypes.ts'
 
 // ---------------------------------------------------------------------------
 //  Function 1: Classify each term as "gene" or "group"
@@ -26,7 +27,7 @@ export async function classifyGeneOrGroup(
 	user_prompt: string,
 	llm: LlmConfig,
 	gene_group_intersection: string[] // Genes from db that are present in the user prompt
-): Promise<{ term: string; role: string }[]> {
+): Promise<{ term: string; role: string }[] | MsgToUser> {
 	//const allTerms = relevant_genes.map(x => x.toUpperCase()).join(', ')
 	const ambiguousTerms = gene_group_intersection.join(', ')
 	const jsonSchema = JSON.stringify(
@@ -129,7 +130,10 @@ Response:`
 		results = JSON.parse(cleaned)
 	} catch {
 		mayLog('classifyGeneOrGroup: failed to parse LLM response as JSON:', response)
-		throw 'Failed to parse LLM response as JSON'
+		return {
+			type: 'text',
+			text: 'classifyGeneOrGroup: failed to parse LLM response as JSON:' + response
+		}
 	}
 
 	if (!Array.isArray(results)) throw 'classifyGeneOrGroup response is not an array'
@@ -157,16 +161,24 @@ export async function classifyGeneDataTypePhrase(
 	llm: LlmConfig,
 	relevant_genes: string[],
 	dataset_json: any
-): Promise<GeneDataTypeResult | string | null> {
+): Promise<GeneDataTypeResult | string | null | MsgToUser> {
 	const exclude_keywords: string[] = dataset_json?.ExcludedKeywords ?? []
 	let genes: string[] = []
 	if (exclude_keywords.length > 0) {
 		const gene_group_intersection = exclude_keywords.filter(x => relevant_genes.includes(x.toLowerCase()))
 		if (gene_group_intersection.length > 0) {
-			const classified_genes = (await classifyGeneOrGroup(user_prompt, llm, gene_group_intersection))
-				.filter(geneTerm => geneTerm.role === 'group')
-				.map(g => g.term.toLowerCase())
-			genes = relevant_genes.filter(x => !classified_genes.includes(x))
+			const GeneOrGroup = await classifyGeneOrGroup(user_prompt, llm, gene_group_intersection)
+			if ('type' in GeneOrGroup) {
+				return {
+					type: 'text',
+					text: GeneOrGroup.text
+				}
+			} else {
+				const classified_genes = GeneOrGroup.filter(geneTerm => geneTerm.role === 'group').map(g =>
+					g.term.toLowerCase()
+				)
+				genes = relevant_genes.filter(x => !classified_genes.includes(x))
+			}
 		} else {
 			genes = relevant_genes
 		}
@@ -219,11 +231,14 @@ Response:`
 			result = JSON.parse(cleaned)
 		} catch {
 			mayLog('classifyGeneDataType: failed to parse LLM response as JSON:', response)
-			return ''
+			return {
+				type: 'text',
+				text: 'classifyGeneDataType: failed to parse LLM response as JSON:' + response
+			}
 		}
 
 		if (result.dataType === 'missing') {
-			return `Gene data type is missing for ${result.gene}. Please specify what you would like to see for this gene (e.g. expression, variant, methylation).`
+			return `Gene data type is missing for ${result.gene}. Please specify what you would like to see for this gene(e.g.expression, variant, methylation).`
 		} else {
 			return result
 		}
@@ -239,7 +254,7 @@ Response:`
 function stripMarkdownFencing(text: string): string {
 	return text
 		.trim()
-		.replace(/^```json\s*/, '')
+		.replace(/^```json\s * /, '')
 		.replace(/^```\s*/, '')
 		.replace(/\s*```$/, '')
 		.trim()
