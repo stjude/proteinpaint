@@ -12,12 +12,7 @@ import type {
 	MsgToUser
 } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
-import {
-	extractGenesetsFromPromptNew,
-	extractGenesFromPrompt,
-	getGenesetNames,
-	safeExtractJsonObject
-} from './utils.ts'
+import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import Database from 'better-sqlite3'
 import assert from 'assert'
@@ -157,7 +152,7 @@ export async function getTermObj(
 const refEmbedding = await loadOrBuildEmbeddings(dbPath, llm)
 const topK: number = 3
 const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
-        */
+*/
 		let match: { id: string; type: string; name: string; score: number; msg?: string } | MsgToUser | undefined
 		try {
 			match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
@@ -469,6 +464,8 @@ async function findBestMatchLLM(
 	llm: LlmConfig
 ): Promise<{ id: string; type: string; name: string; score: number; msg?: string } | MsgToUser> {
 	const dataset_db_output = await parse_dataset_db(dbPath)
+	// parse_dataset_db returns a MsgToUser if the dictionary could not be read; propagate it to the client.
+	if (isMsgToUser(dataset_db_output)) return dataset_db_output
 	const { db_rows, rag_docs } = dataset_db_output
 	if (rag_docs.length === 0) {
 		console.warn('findBestMatchLLM: no rag_docs in DB')
@@ -535,12 +532,14 @@ async function findBestMatchLLM(
 
 	// Tolerantly parse the LLM output. If the model did not return usable JSON,
 	// surface a message to the user rather than throwing.
-	const parsed = safeExtractJsonObject(response)
-	if (!parsed) {
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
 		console.warn(`findBestMatchLLM: LLM response was not valid JSON, skipping: ${response}`)
 		return {
 			type: 'text',
-			text: `Could not match "${phrase}" to a dataset term: the language model did not return a valid response.`
+			text: `Could not match "${phrase}" to a dataset term: the language model did not return a valid response:${response}`
 		}
 	}
 
@@ -596,7 +595,9 @@ return undefined
 	return retVal
 }
 
-export async function parse_dataset_db(dataset_db: string) {
+export async function parse_dataset_db(
+	dataset_db: string
+): Promise<{ db_rows: DbRows[]; rag_docs: string[] } | MsgToUser> {
 	const db = new Database(dataset_db)
 	const rag_docs: string[] = []
 	const db_rows: DbRows[] = []
@@ -607,10 +608,29 @@ export async function parse_dataset_db(dataset_db: string) {
 			)
 			.all()
 
-		rows.forEach((row: any) => {
-			const jsonhtml = JSON.parse(row.jsonhtml)
+		for (const row of rows as any[]) {
+			let jsonhtml: any
+			try {
+				jsonhtml = JSON.parse(row.jsonhtml)
+			} catch (e) {
+				mayLog(`Failed to parse jsonhtml for row id ${row.id}, name ${row.name}:`, e)
+				// Surface a message to the client instead of crashing on the malformed term definition below.
+				return {
+					type: 'text',
+					text: `Failed to read the dataset dictionary: the definition for term "${row.name}" is malformed.`
+				}
+			}
 			const description: string = jsonhtml.description[0].value
-			const jsondata = JSON.parse(row.jsondata)
+			let jsondata: any
+			try {
+				jsondata = JSON.parse(row.jsondata)
+			} catch (e) {
+				mayLog(`Failed to parse jsondata for row id ${row.id}, name ${row.name}:`, e)
+				return {
+					type: 'text',
+					text: `Failed to read the dataset dictionary: the data for term "${row.name}" is malformed. Error response: ${e}`
+				}
+			}
 
 			const values: DbValue[] = []
 			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
@@ -630,7 +650,7 @@ export async function parse_dataset_db(dataset_db: string) {
 			const stringified_db = parse_db_rows(db_row)
 			rag_docs.push(stringified_db)
 			db_rows.push(db_row)
-		})
+		}
 	} catch (error) {
 		throw 'Error in parsing dataset DB:' + error
 	} finally {
