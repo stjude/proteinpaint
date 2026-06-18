@@ -126,7 +126,7 @@ Response:`
 
 	// Tolerantly parse the LLM output (handles code fences / surrounding prose). If the model
 	// did not return a valid JSON array, surface a message to the user instead of throwing.
-	let results
+	let results: any
 	try {
 		results = JSON.parse(response) as GeneOrGroupOrAmbiguousResult[]
 	} catch {
@@ -216,7 +216,10 @@ Response:`
 		results = JSON.parse(cleaned)
 	} catch {
 		mayLog('classifyGeneDataType: failed to parse LLM response as JSON:', response)
-		return ''
+		return {
+			type: 'text',
+			text: 'classifyGeneDataType: failed to parse LLM response as JSON:' + response
+		}
 	}
 	if (!Array.isArray(results)) throw 'classifyGeneDataType response is not an array'
 
