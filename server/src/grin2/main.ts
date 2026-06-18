@@ -20,7 +20,7 @@ import {
 
 import { mayFilterByMaf } from '../mds3.init.js'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
-import { createConcurrencyLimiter } from '../utils/concurrencyLimiter.ts'
+import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
 import { promisify } from 'node:util'
 import { exec as execCallback } from 'node:child_process'
 import type { CnvType, Grin2CacheResult } from './types.ts'
@@ -473,9 +473,23 @@ async function runGrin2Fresh(
 			{ filter: request.filter, filter0: request.filter0, __abortSignal: signal },
 			ds
 		)
-		// undefined => no filter => use all cohort cases, mirroring the sqlite "no filter => all samples" path
-		// Following implementation done by MMRF
-		const ids = set ?? new Set<any>(ds.__gdc?.caseid2submitter?.keys() ?? [])
+		let ids: Set<any>
+		if (set) {
+			ids = set
+		} else {
+			// filterSamples() returns undefined when no filter is applied => need the whole cohort,
+			// mirroring the sqlite "no filter => all samples" path. Only GDC currently exposes a full
+			// id set (case uuids in ds.__gdc.caseid2submitter). Without one we cannot enumerate the
+			// cohort, so fail loudly here rather than silently producing an empty list (which would
+			// later surface as a misleading "No samples found matching the provided filter criteria").
+			const allIds = ds.__gdc?.caseid2submitter
+			if (!allIds?.size) {
+				throw new Error(
+					'GRIN2: dataset supplies filterSamples() but cannot enumerate an unfiltered cohort (no all-samples id set available)'
+				)
+			}
+			ids = new Set<any>(allIds.keys())
+		}
 		samples = [...ids].map(name => ({ name }))
 	} else {
 		throw new Error('no method available to get the sample list for this dataset')
@@ -625,62 +639,49 @@ async function processSampleData(
 
 	// Fetch and convert per-sample mutation data with bounded concurrency. For sqlite datasets each
 	// get() is a fast local file read; for API-backed datasets (e.g. GDC) each is a network round-trip,
-	// so running them one-at-a-time over a large cohort is prohibitively slow. Gate the fetches through
-	// the shared concurrency limiter at the dataset's configured query concurrency (GDC=10) — the same
-	// cap the matrix code uses for GDC API calls. Each sample's lesions are merged inline as its fetch
-	// settles; the merge has no await, so concurrent tasks can't interleave the lesion-cap arithmetic.
+	// so running them one-at-a-time over a large cohort is prohibitively slow. mapConcurrent() runs a
+	// worker pool at the dataset's configured query concurrency (GDC=10 — the same cap the matrix code
+	// uses for GDC API calls), keeping exactly that many fetches in flight. Each sample's lesions are
+	// merged inline (the merge has no await, so concurrent workers can't interleave the cap math); we
+	// handle per-sample errors ourselves so they count toward failedSamples, and stop scheduling new
+	// fetches once the overall lesion cap is reached.
 	const concurrency = Math.max(1, ds.cohort?.termdb?.maxConcurrentQueries || 10)
-	const limiter = createConcurrencyLimiter({
-		maxConcurrent: concurrency,
-		maxQueued: samples.length, // batch job: queue every sample, never shed load
-		taskName: 'GRIN2 sample mutation fetch',
-		taskTimeoutMs: Infinity // GDC per-sample queries set no timeout of their own; don't evict slow ones
-	})
-	let capReached = false
 
-	await Promise.all(
-		samples.map(sample =>
-			limiter.run(async () => {
-				// Once the overall lesion cap is hit, skip the remaining queued fetches entirely
-				if (capReached || lesions.length >= maxLesions) {
-					capReached = true
-					return
+	await mapConcurrent(
+		samples,
+		concurrency,
+		async sample => {
+			try {
+				const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name })
+
+				const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
+
+				// Filter out chrM lesions
+				const filteredLesions = ds.queries.singleSampleMutation.discoPlot?.skipChrM
+					? sampleLesions.filter(lesion => lesion[1].toLowerCase() !== 'chrm')
+					: sampleLesions
+
+				// Merge synchronously (no await below) so concurrent workers can't interleave the cap math
+				const remainingCapacity = maxLesions - lesions.length
+				if (remainingCapacity <= 0) return
+				lesions.push(...filteredLesions.slice(0, remainingCapacity))
+
+				// Track samples for each type they contributed to
+				for (const type of contributedTypes) {
+					samplesPerType.get(type)?.add(sample.name)
 				}
 
-				try {
-					const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name })
+				processing.processedSamples! += 1
+				processing.totalLesions! += filteredLesions.length
 
-					const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
-
-					// Filter out chrM lesions
-					const filteredLesions = ds.queries.singleSampleMutation.discoPlot?.skipChrM
-						? sampleLesions.filter(lesion => lesion[1].toLowerCase() !== 'chrm')
-						: sampleLesions
-
-					// Merge synchronously (no await below) so concurrent tasks can't interleave the cap math
-					const remainingCapacity = maxLesions - lesions.length
-					if (remainingCapacity <= 0) {
-						capReached = true
-						return
-					}
-					lesions.push(...filteredLesions.slice(0, remainingCapacity))
-
-					// Track samples for each type they contributed to
-					for (const type of contributedTypes) {
-						samplesPerType.get(type)?.add(sample.name)
-					}
-
-					processing.processedSamples! += 1
-					processing.totalLesions! += filteredLesions.length
-
-					const done = processing.processedSamples! + processing.failedSamples!
-					if (done % 200 === 0) mayLog(`[GRIN2] Processed ${done}/${samples.length} samples`)
-				} catch (e: any) {
-					processing.failedSamples! += 1
-					mayLog(`[GRIN2] Error processing sample ${sample.name}: ${e.message || e}`)
-				}
-			})
-		)
+				const done = processing.processedSamples! + processing.failedSamples!
+				if (done % 200 === 0) mayLog(`[GRIN2] Processed ${done}/${samples.length} samples`)
+			} catch (e: any) {
+				processing.failedSamples! += 1
+				mayLog(`[GRIN2] Error processing sample ${sample.name}: ${e.message || e}`)
+			}
+		},
+		{ stopWhen: () => lesions.length >= maxLesions }
 	)
 
 	// Samples neither processed nor failed were skipped after the lesion cap was reached

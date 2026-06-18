@@ -58,3 +58,18 @@ export type ConcurrencyLimiter = {
 	 * throws or times out. Resolves/rejects with `fn`'s own result. */
 	run<T>(fn: (ctx: ConcurrencyLimiterRunContext) => Promise<T>): Promise<T>
 }
+
+/** Options for `mapConcurrent` (the bounded-batch sibling of the gating
+ * limiter — see utils/concurrencyLimiter.ts). */
+export type MapConcurrentOpts = {
+	/** Once aborted, no further items are started; items already in flight still
+	 * run to completion and settle. Items never started are left unset (holes)
+	 * in the returned results array. */
+	signal?: AbortSignal
+
+	/** Checked before each item is started; returning true stops scheduling new
+	 * items (those already in flight still settle). Use for early-exit once a
+	 * caller-side budget/cap is reached. Like an aborted `signal`, unstarted
+	 * items are left unset in the results array. */
+	stopWhen?: () => boolean
+}
