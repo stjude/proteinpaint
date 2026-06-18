@@ -697,8 +697,9 @@ Phrase: "${termObj.phrase}"
 JSON response:`
 
 		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+		let parsed: { term: string; value: string }
 		try {
-			const parsed = JSON.parse(response) as { term: string; value: string }
+			parsed = JSON.parse(response) as { term: string; value: string }
 			if (!parsed.term || !parsed.value) {
 				console.warn(`getCategoricalFilterTermValues: LLM response missing term/value: ${response}`)
 				return undefined
@@ -708,13 +709,17 @@ JSON response:`
 			)
 			return parsed
 		} catch (e) {
-			console.warn(`getCategoricalFilterTermValues: failed to parse LLM response: ${response}`, e)
-			return undefined
+			mayLog(`getCategoricalFilterTermValues: failed to parse LLM response: ${response}`, e)
+			return {
+				type: 'text',
+				text: `getCategoricalFilterTermValues: failed to parse LLM response: ${response}` + e
+			}
 		}
 	} else {
 		throw 'getCategoricalFilterTermValues: termObj.term is not from dictionary, cannot determine categorical filter values'
 	}
 }
+
 async function getNumericFilterTermValues(
 	termObj: Value,
 	dbPath: string,
@@ -762,15 +767,19 @@ Phrase: "${termObj.phrase}"
 JSON response:`
 
 		const termResponse = await route_to_appropriate_llm_provider(termPrompt, llm, llm.classifierModelName)
+		let parsed: { term: string }
 		try {
-			const parsed = JSON.parse(termResponse) as { term: string }
-			if (!parsed.term) {
-				console.warn(`getNumericFilterTermValues: LLM response missing term: ${termResponse}`)
-				return undefined
-			}
+			parsed = JSON.parse(termResponse) as { term: string }
 			termName = parsed.term
 		} catch (e) {
-			console.warn(`getNumericFilterTermValues: failed to parse term response: ${termResponse}`, e)
+			mayLog(`getNumericFilterTermValues: failed to parse term response: ${termResponse}`, e)
+			return {
+				type: 'text',
+				text: `getNumericFilterTermValues: failed to parse term response: ${termResponse}` + e
+			} as MsgToUser
+		}
+		if (!parsed.term) {
+			mayLog(`getNumericFilterTermValues: LLM response missing term: ${termResponse}`)
 			return undefined
 		}
 	} else if ('gene' in termObj.term) {
@@ -807,7 +816,11 @@ JSON response:`
 		start = parsed.start
 		stop = parsed.stop
 	} catch (e) {
-		console.warn(`getNumericFilterTermValues: failed to parse cutoff response: ${cutoffResponse}`, e)
+		mayLog(`getNumericFilterTermValues: failed to parse cutoff response: ${cutoffResponse}`, e)
+		return {
+			type: 'text',
+			text: `getNumericFilterTermValues: failed to parse cutoff response: ${cutoffResponse}` + e
+		} as MsgToUser
 	}
 
 	if (!start && !stop) {
