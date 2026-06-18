@@ -1,7 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
+import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { getGroupColors, toHex } from '../colors'
 import type { Volcano } from '../Volcano'
 
@@ -23,7 +23,7 @@ export class VolcanoModel {
 		this.config = config
 		this.settings = settings
 
-		if (this.termType === GENE_EXPRESSION) {
+		if (this.termType === tt.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
 			const response = await dofetch3('termdb/DE', { body, signal: this.volcano.api?.getAbortSignal() })
 			// Surface the DE request so downstream plots (GSEA) can snapshot
@@ -32,7 +32,7 @@ export class VolcanoModel {
 			if (response && !response.error) response.daRequest = body
 			return response
 		}
-		if (this.termType === DNA_METHYLATION) {
+		if (this.termType === tt.DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
 			const response = await dofetch3('termdb/diffMeth', { body, signal: this.volcano.api?.getAbortSignal() })
 			// Surface the DM request the same way the GE branch above does so
@@ -41,13 +41,16 @@ export class VolcanoModel {
 			if (response && !response.error) response.daRequest = body
 			return response
 		}
-		if (this.termType === SINGLECELL_CELLTYPE) {
+		if (this.termType === tt.SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
 			return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.volcano.api?.getAbortSignal() })
 		}
-		if (this.termType === PROTEOME_DAP) {
+		if (this.termType === tt.PROTEOME_DAP) {
 			const body = this.getDapRequestBody()
 			return await dofetch3('termdb/dapVolcano', { body, signal: this.volcano.api?.getAbortSignal() })
+		}
+		if (this.termType === tt.SINGLECELL_GENE_EXPRESSION) {
+			//TODO
 		}
 		throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
 	}
