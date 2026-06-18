@@ -6,6 +6,8 @@ import { getDefaultGseaSettings } from './settings/defaults'
 import { GSEAModel } from './model/GSEAModel'
 import { isValidGseaParams } from './model/GseaParams'
 import { setControls } from './view/GSEAControls'
+import { GSEAViewModel } from './viewModel/GSEAViewModel'
+import { GSEAView } from './view/GSEAView'
 
 export class GSEA extends PlotBase implements RxComponent {
 	static type = 'gsea'
@@ -18,6 +20,8 @@ export class GSEA extends PlotBase implements RxComponent {
 	testEnabled: boolean
 	gsea_params!: any
 	model!: GSEAModel
+	viewModel!: GSEAViewModel
+	view!: GSEAView
 
 	constructor(opts) {
 		super(opts)
@@ -100,6 +104,10 @@ export class GSEA extends PlotBase implements RxComponent {
 		}
 
 		await setControls(this.dom.controlsDiv, this)
+		this.viewModel = new GSEAViewModel(this)
+		this.view = new GSEAView(this)
+
+		this.view.initRender()
 	}
 
 	async main() {
@@ -115,6 +123,8 @@ export class GSEA extends PlotBase implements RxComponent {
 		}
 		this.imageUrl = null // Reset the image URL
 
+		this.viewModel.processData()
+		this.view.update()
 		// render_gsea(this)
 	}
 }
