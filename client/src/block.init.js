@@ -206,11 +206,6 @@ async function step2_getseq(arg) {
 }
 
 async function step2_getpdomain(arg) {
-	if (arg.hidePdomain) {
-		// bypass pdomain loading
-		await step3(arg)
-		return
-	}
 	/*
 	block.init special treatment:
 	will get pdomain for all isoforms, not just the isoform that's used
@@ -241,6 +236,11 @@ async function step2_getpdomain(arg) {
 	for (const a of data.lst) {
 		for (const m of isoform2gm.get(a.name)) {
 			m.pdomains = a.pdomains
+			if (arg.hidePdomain) {
+				for (const i of a.pdomains) {
+					m.domain_hidden[i.name + i.description] = 1
+				}
+			}
 		}
 	}
 	if (arg.geneDomains) {
