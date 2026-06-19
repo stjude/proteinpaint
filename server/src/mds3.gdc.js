@@ -1538,7 +1538,7 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 		survFilter = structuredClone(q.filterObj)
 		survFilter.lst = q.filterObj.lst.filter(item => item.tvs.term.type == 'survival')
 	}
-	addTid2value_to_filter(q.tid2value, filter.content, ds)
+	addTid2value_to_filter0(q.tid2value, filter.content, ds)
 
 	// the survival term itself is not used in api query, since there's just one type of survival data from gdc and no need to distinguish
 	const { host, headers } = ds.getHostHeaders(q)
@@ -2140,7 +2140,7 @@ function termid2size_filters(p, ds) {
 		}
 	}
 
-	addTid2value_to_filter(p?.tid2value, f.filters.content, ds)
+	addTid2value_to_filter0(p?.tid2value, f.filters.content, ds)
 
 	if (p && p.ssm_id_lst) {
 		f.filters.content.push({
@@ -2713,7 +2713,7 @@ const isoform2ssm_query2_getcase = {
 			const g = filter2GDCfilter(p.filterObj)
 			if (g) f.case_filters.content.push(g)
 		}
-		addTid2value_to_filter(p.tid2value, f.case_filters.content, ds)
+		addTid2value_to_filter0(p.tid2value, f.case_filters.content, ds)
 		if (!f.case_filters.content.length) delete f.case_filters // do not use empty case_filters to speed up query (Jason Stiles 3/28/24)
 		return f
 	}
@@ -2868,11 +2868,11 @@ Arguments:
 
 No return.
 */
-function addTid2value_to_filter(tid2value, content, ds) {
+function addTid2value_to_filter0(tid2value, content, ds) {
 	if (!tid2value) return
 	for (const termid in tid2value) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(termid)
-		if (!t) continue
+		if (!t) throw new Error('unknown termid')
 		const newTermid = termid.replace(/^case\./, 'cases.') // MUST replace "case." with "cases." to use as field (why!?)
 		if (t.type == 'categorical') {
 			content.push({
@@ -2886,6 +2886,8 @@ function addTid2value_to_filter(tid2value, content, ds) {
 					content: { field: newTermid, value: val.range }
 				})
 			}
+		} else {
+			throw new Error('unknown t.type')
 		}
 	}
 }

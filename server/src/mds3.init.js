@@ -14,7 +14,6 @@ import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import computePercentile from '#shared/compute.percentile.js'
-import { filterJoin } from '#shared/filter.js'
 import serverconfig from './serverconfig.js'
 import {
 	dtsnvindel,
@@ -44,7 +43,7 @@ import { validate_query_proteome } from '../routes/termdb.proteome.ts'
 import { validate_query_TopVariablyExpressedGenes } from '#routes/termdb.topVariablyExpressedGenes.ts'
 import { validate_query_singleSampleMutation } from '#routes/termdb.singleSampleMutation.ts'
 import { validate_query_geneExpression, validateQueryIsoformExpression } from './routes/termdb.cluster.ts'
-import { mayLimitSamples, tid2value2filter } from './mds3.filter.js'
+import { mayLimitSamples, combinePPfilterAndTid2value } from './mds3.filter.js'
 import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
@@ -82,7 +81,6 @@ validate_query_snvindel
 		validateSampleHeader2
 		mayLimitSamples
 			param2filter
-				tid2value2filter
 		mayDropMbyInfoFilter
 		addSamplesFromBcfLine
 			vcfFormat2sample
@@ -563,7 +561,7 @@ function mayValidateSampleTypes(tdb) {
 async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	// makes sense to call barchart function as it adds counting logic over getData output
 
-	const filter = combineFilterAndTid2value(q, ds) // optional filter, based on optional parameters
+	const filter = combinePPfilterAndTid2value(q, ds) // optional filter, based on optional parameters
 
 	const termid2values = new Map()
 	// k: term id
@@ -593,20 +591,6 @@ async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	}
 	if (combination) return [termid2values, combination]
 	return termid2values
-}
-
-/*
-detect following two optional attributes. if only one present, return the single filter; if both present, return joined filter
-q.filterObj
-q.tid2value
-*/
-function combineFilterAndTid2value(q, ds) {
-	const lst = []
-	if (q.filterObj) lst.push(q.filterObj)
-	if (q.tid2value) lst.push(tid2value2filter(q.tid2value, ds))
-	if (lst.length == 0) return
-	if (lst.length == 1) return lst[0]
-	return filterJoin(lst)
 }
 
 export async function validate_cumburden(ds) {
