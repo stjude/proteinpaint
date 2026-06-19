@@ -10,6 +10,8 @@ Features:
 - New integration tests in the barchart and box plot for single cell cell type and single cell gene expression terms.
 - 'cells' instead of 'samples' will appear in the barchart title when a single cell term is present by default.
 - Imroved GRIN2 CNV support by allowing datasets to declare the way their CNV data is quantified via type
+- GRIN2: Adding support for GDC sample querying
+- concurrencyLimiter.ts: Added support for a bounded, fixed list case
 
 
 ## 2.192.0
