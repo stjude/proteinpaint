@@ -1,4 +1,5 @@
 import { get_samples } from './termdb.sql.js'
+import { filterJoin } from '#shared/filter.js'
 
 /*
 input:
@@ -23,9 +24,8 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	if (!_allSamples) return // no samples from this big file
 	const allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
 
-	// TODO: use param.filter/filter0 directly, no need for conversion
-	const filter = param2filter(param, ds)
-	const filter0 = param2filter0(param)
+	const filter = combinePPfilterAndTid2value(param, ds) // pp filter
+	const filter0 = param.filter0
 
 	if (!filter && !filter0) {
 		// no filters specified, use all samples
@@ -66,38 +66,23 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	return useSet
 }
 
-function param2filter(param, ds) {
-	{
-		const f = param.filter || param.filterObj
-		if (f) {
-			if (!Array.isArray(f.lst)) throw 'filterObj.lst is not array'
-			if (f.lst.length == 0) {
-				// blank filter, do not return obj as that will break get_samples()
-				return null
-			}
-			return f
-		}
-	}
-	if (param.tid2value) {
-		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
-		return tid2value2filter(param.tid2value, ds)
-	}
-}
+/*
+detect and harmonize following optional filter-related constructs from q{}.
+.filterObj
+.filter
+.tid2value
 
-function param2filter0(param) {
-	// both gdc and mmrf have filter0, but only mmrf uses
-	// this code (gdc uses server/src/mds3.gdc.filter.js)
-	// so only supporting mmrf filter0 structure here
-	// empty mmrf filter0 is "{ and: [] }"
-	const f = param.filter0
-	if (f) {
-		if (typeof f !== 'object') throw new Error('unexpected filter0 structure')
-		if (Object.keys(f).length) {
-			if (Array.isArray(f.and) && f.and.length) {
-				return f
-			}
-		}
-	}
+if only one present, return the single filter; if more than 1, return joined filter
+note they are pp filters, and are not filter0
+*/
+export function combinePPfilterAndTid2value(q, ds) {
+	const lst = []
+	if (q.filterObj) lst.push(q.filterObj)
+	if (q.filter) lst.push(q.filter)
+	if (q.tid2value) lst.push(tid2value2filter(q.tid2value, ds))
+	if (lst.length == 0) return
+	if (lst.length == 1) return lst[0]
+	return filterJoin(lst)
 }
 
 // temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
