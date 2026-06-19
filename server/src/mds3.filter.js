@@ -77,9 +77,18 @@ note they are pp filters, and are not filter0
 */
 export function combinePPfilterAndTid2value(q, ds) {
 	const lst = []
-	if (q.filterObj) lst.push(q.filterObj)
-	if (q.filter) lst.push(q.filter)
-	if (q.tid2value) lst.push(tid2value2filter(q.tid2value, ds))
+	if (q.filterObj) {
+		if (!Array.isArray(q.filterObj.lst)) throw new Error('filterObj.lst is not an array')
+		if (q.filterObj.lst.length) lst.push(q.filterObj)
+	}
+	if (q.filter) {
+		if (!Array.isArray(q.filter.lst)) throw new Error('filter.lst is not an array')
+		if (q.filter.lst.length) lst.push(q.filter)
+	}
+	if (q.tid2value) {
+		if (typeof q.tid2value !== 'object' || Array.isArray(q.tid2value)) throw new Error('q.tid2value must be an object')
+		lst.push(tid2value2filter(q.tid2value, ds))
+	}
 	if (lst.length == 0) return
 	if (lst.length == 1) return lst[0]
 	return filterJoin(lst)
