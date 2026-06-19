@@ -25,7 +25,7 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	const allSamples = typeof _allSamples[0] === 'object' ? new Set(_allSamples.map(i => i.name)) : new Set(_allSamples)
 
 	const filter = combinePPfilterAndTid2value(param, ds) // pp filter
-	const filter0 = param.filter0
+	const filter0 = getFilter0(param, ds)
 
 	if (!filter && !filter0) {
 		// no filters specified, use all samples
@@ -116,4 +116,10 @@ export function tid2value2filter(t, ds) {
 		})
 	}
 	return f
+}
+function getFilter0(param, ds) {
+	if (!param.filter0) return
+	// has filter0. ds must supply the validator
+	if (typeof ds.validate_filter0 != 'function') throw new Error('filter0 used but ds.validate_filter0 not func')
+	return ds.validate_filter0(param.filter0)
 }
