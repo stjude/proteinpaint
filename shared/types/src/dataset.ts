@@ -2233,6 +2233,10 @@ export type Mds3 = BaseMds & {
 	isSupportedChartOverride?: isSupportedChartCallbacks
 	// TODO FIXME nest termdb under cohort
 	termdb?: Termdb
+	/** if ds uses filter0, ds must supply this method
+	input: unverified filter0 obj
+	output: validated filter0 obj, or undefined
+	*/
 	validate_filter0?: (f: any) => void
 	getFilter0SampleTypes?: (filter: any, ds: any) => void
 	ssm2canonicalisoform?: GdcApi
