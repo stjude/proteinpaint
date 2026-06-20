@@ -1467,6 +1467,8 @@ async function querySamplesWithCnv(q, dictTwLst, ds) {
 		dictTwLst,
 		cnvMaxLength: q.cnvMaxLength,
 		hiddenmclass: q.hiddenmclass,
+		filterObj: q.filterObj,
+		filter0: q.filter0,
 		__abortSignal: q.__abortSignal
 	}
 	if (q.rglst) {
