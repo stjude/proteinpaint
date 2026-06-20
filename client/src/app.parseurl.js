@@ -685,6 +685,7 @@ export async function mayGetTkobj(key, value, urlp, genomeobj) {
 			}
 			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
 			if (urlp.has('filterobj')) tk.filterObj = urlp.get('filterobj')
+			if (urlp.has('filter0')) tk.filter0 = urlp.get('filter0')
 			if (urlp.has('cnvonly')) tk.hardcodeCnvOnly = true // for testing cnv-only mode via url param; in actual use this flag should be set in runpp()
 			if (urlp.has('snvindelonly')) tk.snvIndelOnly = true // for testing snvindel-only mode
 			tks.push(tk)

@@ -181,6 +181,7 @@ export function skewer_make(tk, block) {
 		.append('text')
 		.text(d => d.occurrence)
 		.attr('class', 'sja_aa_discnum')
+		.attr('data-testid', d => `sjpp-mds3skewerdiscnum-${d.mlst[0].mname}`)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('stroke-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('dominant-baseline', d => (tk.shapes ? setNumBaseline(d.shape, tk.skewer.pointup) : ''))
