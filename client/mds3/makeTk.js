@@ -1107,26 +1107,34 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_sunburst = 'sunburst'
 }
 
-/* wip
-hardcode for Type="string", no auto detecting numeric values to set Type="Float"
-*/
-function mayAddInfoField(tk) {
+export function mayAddInfoField(tk) {
 	if (!tk.custom_variants.some(i => i.info)) return // no variant has info field
-	const info = {} // replicate same structure as native tk
+	const nkeys = new Set() // keys of numeric fields
+	const ckeys = new Map() // keys of categorical fields. k: info key, v: true/false for numeric value
 	for (const m of tk.custom_variants) {
 		if (typeof m.info != 'object') continue
 		for (const k in m.info) {
 			const v = m.info[k]
-			if (v == null || v == undefined) continue
-			if (!info[k]) info[k] = { ID: k, Number: '.', Type: 'String', categories: {} }
-			if (!info[k].categories[v]) info[k].categories[v] = {}
+			if (Number.isFinite(v)) {
+				// value is number
+				if (ckeys.has(k)) throw new Error(`info field ${k} cannot have both categorical and numerical values`)
+				nkeys.add(k)
+			} else {
+				if (!ckeys.has(k)) ckeys.set(k, { ID: k, Number: '.', Type: 'String', categories: {} })
+				ckeys.get(k).categories[v] = {}
+			}
 		}
 	}
-	for (const k in info) {
-		const colors = getColors(Object.keys(info[k].categories).length)
-		for (const c in info[k].categories) {
-			info[k].categories[c].color = colors(c)
+	const info = {}
+	for (const [k, o] of ckeys) {
+		info[k] = o
+		const colors = getColors(Object.keys(o.categories))
+		for (const c in o.categories) {
+			o.categories[c].color = colors(c)
 		}
+	}
+	for (const k of nkeys) {
+		info[k] = { ID: k, Number: '.', Type: 'Float' }
 	}
 	tk.mds.bcf = { info }
 }
