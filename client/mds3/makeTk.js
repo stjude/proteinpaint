@@ -1119,9 +1119,13 @@ export function mayAddInfoField(tk) {
 				// value is number
 				if (ckeys.has(k)) throw new Error(`info field ${k} cannot have both categorical and numerical values`)
 				nkeys.add(k)
-			} else {
+			} else if (typeof v == 'string') {
+				// value is string
+				if (nkeys.has(k)) throw new Error(`info field ${k} cannot have both categorical and numerical values`)
 				if (!ckeys.has(k)) ckeys.set(k, { ID: k, Number: '.', Type: 'String', categories: {} })
 				ckeys.get(k).categories[v] = {}
+			} else {
+				throw new Error(`value for info field ${k} neither string or number`)
 			}
 		}
 	}
