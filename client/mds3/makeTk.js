@@ -1110,9 +1110,9 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 export function mayAddInfoField(tk) {
 	if (!tk.custom_variants.some(i => i.info)) return // no variant has info field
 	const nkeys = new Set() // keys of numeric fields
-	const ckeys = new Map() // keys of categorical fields. k: info key, v: true/false for numeric value
+	const ckeys = new Map() // keys of categorical fields. k: info key, v: info obj
 	for (const m of tk.custom_variants) {
-		if (typeof m.info != 'object') continue
+		if (!m.info || typeof m.info != 'object') continue
 		for (const k in m.info) {
 			const v = m.info[k]
 			if (Number.isFinite(v)) {
@@ -1125,14 +1125,14 @@ export function mayAddInfoField(tk) {
 				if (!ckeys.has(k)) ckeys.set(k, { ID: k, Number: '.', Type: 'String', categories: {} })
 				ckeys.get(k).categories[v] = {}
 			} else {
-				throw new Error(`value for info field ${k} neither string or number`)
+				throw new Error(`value for info field ${k} neither string nor number`)
 			}
 		}
 	}
 	const info = {}
 	for (const [k, o] of ckeys) {
 		info[k] = o
-		const colors = getColors(Object.keys(o.categories))
+		const colors = getColors(Object.keys(o.categories).length)
 		for (const c in o.categories) {
 			o.categories[c].color = colors(c)
 		}
