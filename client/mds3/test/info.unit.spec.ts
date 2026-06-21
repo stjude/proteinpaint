@@ -131,7 +131,7 @@ tape('mayAddInfoField() - non-string non-number value (e.g. object): throws', te
 	}
 	test.throws(
 		() => mayAddInfoField(tk),
-		/value for info field flag neither string or number/,
+		/value for info field flag neither string nor number/,
 		'throws when info value is neither string nor finite number'
 	)
 	test.end()
@@ -144,7 +144,7 @@ tape('mayAddInfoField() - boolean info value: throws', test => {
 	}
 	test.throws(
 		() => mayAddInfoField(tk),
-		/value for info field flag neither string or number/,
+		/value for info field flag neither string nor number/,
 		'throws when info value is boolean (not string or finite number)'
 	)
 	test.end()
