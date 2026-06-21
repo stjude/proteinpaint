@@ -123,13 +123,14 @@
             }
         },
         {
-            "label": "Custom protein domains  for specified isoforms",
-            "message": "Add custom protein domains with the <span style='font-family: Courier; opacity: 0.6;'>.geneDomains:{}</span> argument. Custom domains in this example are shown in bright red and blue in the protein view and included in the legend.",
+            "label": "Custom protein domains",
+            "message": "Add custom protein domains for specific isoforms with the <span style='font-family: Courier; opacity: 0.6;'>.geneDomains:{}</span> argument. Hide server-supplied domains with the <span style='font-family: Courier; opacity: 0.6;'>.hidePdomain:true</span> property.",
             "runargs": {
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg38",
                 "gene": "TP53",
+				"hidePdomain":true,
                 "geneDomains": {
                     "NM_000546": [
                         {
