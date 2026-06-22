@@ -8,7 +8,9 @@ export type MsgToUser = {
 
 /** Discriminate a MsgToUser (a {type:'text', text} message to surface to the client) from any other value. */
 export function isMsgToUser(x: unknown): x is MsgToUser {
-	return !!x && typeof x === 'object' && (x as any).type === 'text' && 'text' in (x as any)
+	if (!x || typeof x !== 'object') return false
+	const o = x as Record<string, unknown>
+	return o.type === 'text' && Object.prototype.hasOwnProperty.call(o, 'text') && typeof o.text === 'string'
 }
 
 // *** Scaffold Temp Types *** //
