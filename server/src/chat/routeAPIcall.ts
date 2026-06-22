@@ -1,13 +1,14 @@
 import type { LlmConfig } from '#types'
 import { ezFetch } from '#shared'
+import type { MsgToUser } from './scaffoldTypes.ts'
 
 export async function route_to_appropriate_llm_provider(
 	prompt: string,
 	llm: LlmConfig,
 	modelOverride?: string
-): Promise<string> {
+): Promise<string | MsgToUser> {
 	const model = modelOverride ?? llm.modelName
-	let response: string
+	let response: string | MsgToUser
 	if (llm.provider === 'SJ') {
 		// Local SJ server
 		response = await call_sj_llm(prompt, model, llm.api)
@@ -54,7 +55,7 @@ export async function route_to_appropriate_embedding_provider(
 	}
 }
 
-async function call_sj_llm(prompt: string, model_name: string, apilink: string) {
+async function call_sj_llm(prompt: string, model_name: string, apilink: string): Promise<string | MsgToUser> {
 	const temperature = 0.01
 	const top_p = 0.95
 	const timeout = 200000
@@ -94,9 +95,10 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string) 
 		if (error && typeof error == 'object' && 'cause' in error)
 			console.error('Cause:', (error as { cause?: unknown }).cause)
 		// Re-throw a real Error that preserves the original
-		throw new Error('SJ API request failed: ' + ((error as { message?: string })?.message ?? error), {
-			cause: error
-		})
+		return {
+			type: 'text',
+			text: 'SJ API request failed: ' + ((error as { message?: string })?.message ?? error)
+		}
 		// throw 'SJ API request failed:' + error
 	}
 }
@@ -170,7 +172,12 @@ export async function callHuggingFaceEmbedding(
 	})
 }
 
-async function call_azure_llm(prompt: string, modelName: string, apilink: string, apiToken: string) {
+async function call_azure_llm(
+	prompt: string,
+	modelName: string,
+	apilink: string,
+	apiToken: string
+): Promise<string | MsgToUser> {
 	const timeout = 200000
 	const max_completion_tokens = 5000
 	const temperature = 0.01
@@ -198,11 +205,11 @@ async function call_azure_llm(prompt: string, modelName: string, apilink: string
 		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
 	} catch (error) {
 		console.log(error)
-		throw 'Azure API request failed:' + error
+		return { type: 'text', text: 'Azure API request failed:' + error }
 	}
 }
 
-async function call_ollama_llm(prompt: string, model_name: string, apilink: string) {
+async function call_ollama_llm(prompt: string, model_name: string, apilink: string): Promise<string | MsgToUser> {
 	const temperature = 0.01
 	const top_p = 0.95
 	const timeout = 200000
@@ -232,6 +239,6 @@ async function call_ollama_llm(prompt: string, model_name: string, apilink: stri
 			throw 'Error: Received an unexpected response format:' + result
 		}
 	} catch (error) {
-		throw 'Ollama API request failed:' + error
+		return { type: 'text', text: 'Ollama API request failed:' + error }
 	}
 }
