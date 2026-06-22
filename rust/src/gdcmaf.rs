@@ -241,7 +241,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 },
                 Ok(resp) => {
-                    let error_msg = format!("HTTP error: {:?}", resp.status());
+                    let error_msg = format!("HTTP error: {}", resp.status());
                     Err((url.clone(), error_msg))
                 }
                 Err(e) => {
