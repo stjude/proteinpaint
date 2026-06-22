@@ -1,6 +1,7 @@
 import type { LlmConfig, GeneDataTypeResult, TermdbTopVariablyExpressedGenesRequest } from '#types'
 import { getGenesForGeneset, extractGenesetsFromPromptNew, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { TermTypes } from '#shared/terms.js'
 //import { mayLog } from '#src/helpers.ts'
 
@@ -142,6 +143,8 @@ export async function extract_hiercluster_terms_from_query(
 		system_prompt += '.\n' + 'User query: ' + prompt
 
 		response = await route_to_appropriate_llm_provider(system_prompt, llm)
+		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+		if (isMsgToUser(response)) return response
 	} else {
 		return {
 			type: 'text',

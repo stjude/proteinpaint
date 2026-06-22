@@ -12,7 +12,8 @@ import { phrase2entity } from './phrase2entity.ts'
 import { inferTermObjFromEntity } from './entity2termObj.ts'
 import { resolveToTwTvs } from './entity2twTvs.ts'
 import { answerDataQueries } from './dataQueries.ts'
-import type { Scaffold, Phrase2EntityResult, SummaryScaffold } from './scaffoldTypes.ts'
+import type { Scaffold, Phrase2EntityResult, SummaryScaffold, MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { resolveToPlotState } from './scaffold2state.ts'
 import path from 'path'
 import fs from 'fs'
@@ -166,8 +167,9 @@ export async function run_chat_pipeline(
 
 	// Plot vs Not-plot classification
 	const time1 = new Date().valueOf()
-	const class_response: QueryClassification = await classifyQuery(userPrompt, llm)
+	const class_response: QueryClassification | MsgToUser = await classifyQuery(userPrompt, llm)
 	mayLog('Time taken for classification:', formatElapsedTime(Date.now() - time1))
+	if (isMsgToUser(class_response)) return class_response
 
 	let ai_output_json: any
 	if (class_response.type === 'notplot') {
@@ -175,6 +177,7 @@ export async function run_chat_pipeline(
 		const time2 = new Date().valueOf()
 		const notPlotResult = await classifyNotPlot(userPrompt, llm, agentFiles, aiFilesDir) //, allowedTermTypes)
 		mayLog('Time taken for classify2:', formatElapsedTime(Date.now() - time2))
+		if (isMsgToUser(notPlotResult)) return notPlotResult
 
 		if (notPlotResult.type === 'html') {
 			ai_output_json = notPlotResult
@@ -193,7 +196,7 @@ export async function run_chat_pipeline(
 		let time = new Date().valueOf()
 		const plotType = await classifyPlotType(userPrompt, llm)
 		mayLog('Time taken to classify plot type:', formatElapsedTime(Date.now() - time))
-
+		if (isMsgToUser(plotType)) return plotType
 		// Check if the classified plot type is supported by this dataset
 		if (!supportedPlotTypes.map(s => s.toLowerCase()).includes(plotType.toLowerCase())) {
 			const log = 'Plot type: "' + plotType + '" is not supported.'
@@ -276,7 +279,7 @@ export async function run_chat_pipeline(
 			genome
 		)
 		mayLog('Time taken to infer term objects:', formatElapsedTime(Date.now() - time))
-		if ('type' in termObj && termObj.type === 'text') {
+		if (isMsgToUser(termObj)) {
 			return termObj // Return msg/error to client for display
 		}
 		mayLog('Inferred termObj from entity:', JSON.stringify(termObj))

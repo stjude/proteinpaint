@@ -3,7 +3,7 @@ import { TermTypes } from '#shared/terms.js'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser, Entity, FilterTreeNode, FilterLeafNode, FilterTreeResult } from './scaffoldTypes.ts'
-import { filterTreeJsonSchema } from './scaffoldTypes.ts'
+import { filterTreeJsonSchema, isMsgToUser } from './scaffoldTypes.ts'
 import fs from 'fs'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
 import Database from 'better-sqlite3'
@@ -494,16 +494,24 @@ export async function parse_dataset_db(
 			try {
 				jsonhtml = JSON.parse(row.jsonhtml)
 			} catch (e) {
-				console.warn(`Failed to parse jsonhtml for row id ${row.id}:`, e)
+				mayLog(`Failed to parse jsonhtml for row id ${row.id}:`, e)
 				// Surface a message to the client instead of crashing on the malformed term definition below.
 				return {
 					type: 'text',
-					text: `Failed to read the dataset dictionary: the definition for term "${row.id}" is malformed.`
+					text: `Failed to read the dataset dictionary: the definition for term "${row.id}" is malformed. The error message is: ${e}.`
 				}
 			}
 			const description: string = jsonhtml.description[0].value
-			const jsondata = JSON.parse(row.jsondata)
-
+			let jsondata: any
+			try {
+				jsondata = JSON.parse(row.jsondata)
+			} catch (e) {
+				mayLog(`Failed to parse jsondata for row id ${row.id}:`, e)
+				return {
+					type: 'text',
+					text: `Failed to read the dataset dictionary: the data for term "${row.id}" is malformed. The error message is: ${e}.`
+				}
+			}
 			const values: DbValue[] = []
 			if (jsondata.values && Object.keys(jsondata.values).length > 0) {
 				for (const key of Object.keys(jsondata.values)) {
@@ -796,7 +804,7 @@ async function classifyGeneSetDataTypePhrase(
  * "young and black patients" -> ["young", "black"]
  * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
  */
-export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
+export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult | MsgToUser> {
 	const prompt = `You are an assistant that analyzes a filter term written in natural language and converts it into a nested binary S-expression tree using two operators: AND (&) and OR (|).
 Do NOT generate code. You yourself must produce the tree. Return ONLY a JSON string — no explanations, no markdown, no extra keys.
 
@@ -1101,15 +1109,25 @@ Query: ${phrase}
 `
 */
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	mayLog('filter response:', response)
+	if (isMsgToUser(response)) return response
+	let parsed: FilterTreeResult
 	try {
-		const parsed = JSON.parse(response) as FilterTreeResult
+		parsed = JSON.parse(response) as FilterTreeResult
+	} catch (e) {
+		return {
+			type: 'text',
+			text: `Failed to parse LLM filter response for phrase: "${phrase}". Error message is "${e}"`
+		} as MsgToUser
+	}
+	try {
 		if (!parsed.tree || !parsed.sexpr) {
 			throw 'Response missing required fields "tree" or "sexpr"'
 		}
 		return parsed
 	} catch (e) {
-		console.warn('Failed to parse LLM filter response, wrapping phrase as single leaf:', response, e)
+		mayLog('Failed to parse LLM filter response, wrapping phrase as single leaf:', response, ' error message:', e)
 		// Fallback: wrap the entire phrase as a single-leaf tree conforming to the schema
 		return {
 			sexpr: phrase,

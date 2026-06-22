@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import fs from 'fs'
 import path from 'path'
 import type { LlmConfig } from '#types'
+import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_embedding_provider } from './routeAPIcall.ts'
 
 // Return type
@@ -82,7 +83,7 @@ function extractSentences(row: TermRow): string[] {
 			.map(d => d.value)
 			.filter(v => v && v.trim().length > 0)
 	} catch (e) {
-		console.warn(`Failed to parse jsonhtml for id="${row.id}":`, e)
+		mayLog(`Failed to parse jsonhtml for id="${row.id}":`, e)
 		return []
 	}
 }

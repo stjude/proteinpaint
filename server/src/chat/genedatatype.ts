@@ -2,6 +2,7 @@ import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 
 // ---------------------------------------------------------------------------
 //  Function 1: Classify each term as "gene" or "group"
@@ -123,6 +124,8 @@ Ambiguous terms (both gene and group name): [${ambiguousTerms}]
 Response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 
 	// Tolerantly parse the LLM output (handles code fences / surrounding prose). If the model
 	// did not return a valid JSON array, surface a message to the user instead of throwing.
@@ -134,6 +137,13 @@ Response:`
 		return {
 			type: 'text',
 			text: `Could not classify the ambiguous terms (${ambiguousTerms}): the language model did not return a valid response.${response}`
+		}
+	}
+
+	if (!Array.isArray(results)) {
+		return {
+			type: 'text',
+			text: `classifyGeneOrGroup response is not an array: ${JSON.stringify(results)}`
 		}
 	}
 
@@ -209,6 +219,8 @@ Genes: [${geneList}]
 Response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 
 	let results: GeneDataTypeResult[]
 	try {
@@ -221,8 +233,12 @@ Response:`
 			text: 'classifyGeneDataType: failed to parse LLM response as JSON:' + response
 		}
 	}
-	if (!Array.isArray(results)) throw 'classifyGeneDataType response is not an array'
-
+	if (!Array.isArray(results)) {
+		return {
+			type: 'text',
+			text: 'classifyGeneDataType response is not an array'
+		} as MsgToUser
+	}
 	const missingGenes = results.filter(r => r.dataType === 'missing').map(r => r.gene)
 	const classifiedGenes = results.filter(r => r.dataType !== 'missing')
 

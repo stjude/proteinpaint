@@ -11,6 +11,7 @@ import type {
 	PrebuiltScatterPhrase2EntityResult,
 	MsgToUser
 } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -48,11 +49,6 @@ export type Value = {
 	phrase: string
 	type: string
 	logicalOperator?: '&' | '|'
-}
-
-/** Discriminate a MsgToUser (a {type:'text', text} message to surface to the client) from a resolved Value. */
-export function isMsgToUser(x: unknown): x is MsgToUser {
-	return !!x && typeof x === 'object' && (x as any).type === 'text' && 'text' in (x as any)
 }
 
 function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any): Value | undefined {
@@ -120,7 +116,7 @@ function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any
 			return undefined
 		}
 		default: {
-			console.warn(`Unrecognized termType "${twEntity.termType}" for phrase "${twEntity.phrase}".`)
+			mayLog(`Unrecognized termType "${twEntity.termType}" for phrase "${twEntity.phrase}".`)
 			return undefined
 		}
 	}
@@ -143,7 +139,7 @@ export async function getTermObj(
 	if (twEntity.termType !== 'dictionary') {
 		const twRes = buildNonDictTermObj(twEntity, genes_list, genome)
 		if (!twRes) {
-			console.warn(`Skipping ${key} — could not build term for type "${twEntity.termType}"`)
+			mayLog(`Skipping ${key} — could not build term for type "${twEntity.termType}"`)
 			return undefined
 		}
 		return twRes
@@ -157,18 +153,19 @@ const match = await findBestMatch(twEntity.phrase, refEmbedding, llm, topK)
 		try {
 			match = await findBestMatchLLM(twEntity.phrase, dbPath, llm)
 		} catch (e) {
-			console.error(`Error in findBestMatchLLM for phrase "${twEntity.phrase}":`, e)
+			mayLog(`Error in findBestMatchLLM for phrase "${twEntity.phrase}":`, e)
+			return { type: 'text', text: `Error in findBestMatchLLM for phrase "${twEntity.phrase}": ${e}` } as MsgToUser
 		}
 		// findBestMatchLLM returns a MsgToUser when it cannot resolve the phrase; surface it to the client.
 		if (isMsgToUser(match)) return match
 		if (!match) {
-			console.warn(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
+			mayLog(`findBestMatchLLM returned no match for query "${twEntity.phrase}"`)
 			return undefined
 		}
 		const similarityThreshold = 0.85
 		if (match.score < similarityThreshold) {
 			// Threshold for "good enough" match, can be tuned
-			console.warn(`Low similarity score (${(match.score * 100).toFixed(1)}%) for query "${twEntity.phrase}"`)
+			mayLog(`Low similarity score (${(match.score * 100).toFixed(1)}%) for query "${twEntity.phrase}"`)
 		} else {
 			mayLog(
 				`${key}: "${twEntity.phrase}" → best match: id="${match.id}" type="${match.type}" name="${match.name}" score=${(
@@ -246,7 +243,7 @@ export async function inferTermObjFromEntity(
 				const termObj = await getTermObj(key, filterTerm, llm, dbPath, genes_list, genome)
 				if (isMsgToUser(termObj)) return termObj
 				if (!termObj) {
-					console.warn(`Skipping filter term "${filterTerm.phrase}" — failed to get term object`)
+					mayLog(`Skipping filter term "${filterTerm.phrase}" — failed to get term object`)
 					continue
 				}
 				const filterEntity = filterTerm as Entity
@@ -300,7 +297,7 @@ export async function inferTermObjFromEntity(
 			const termObj = await getTermObj('DictPhrases', phrase, llm, dbPath, genes_list, genome)
 			if (isMsgToUser(termObj)) return termObj
 			if (!termObj) {
-				console.warn(`Skipping hierCluster gene "${phrase.phrase}" — failed to get term object`)
+				mayLog(`Skipping hierCluster gene "${phrase.phrase}" — failed to get term object`)
 				continue
 			}
 			DictValues.push(termObj)
@@ -356,7 +353,7 @@ export async function inferTermObjFromEntity(
 					const termObj = await getTermObj(key, twEntity, llm, dbPath, genes_list, genome)
 					if (isMsgToUser(termObj)) return termObj
 					if (!termObj) {
-						console.warn(`Skipping twLst[${index}] — failed to get term object for phrase "${twEntity.phrase}"`)
+						mayLog(`Skipping twLst[${index}] — failed to get term object for phrase "${twEntity.phrase}"`)
 						continue
 					}
 					termObjs.push(termObj)
@@ -364,7 +361,7 @@ export async function inferTermObjFromEntity(
 				if (termObjs.length > 0) {
 					twObjects[key] = termObjs
 				} else {
-					console.warn('No valid term objects could be resolved for any entries in twLst.')
+					mayLog('No valid term objects could be resolved for any entries in twLst.')
 				}
 				continue
 			}
@@ -398,7 +395,7 @@ export async function inferTermObjFromEntity(
 			if (termObj) {
 				twObjects['colorBy'] = termObj
 			} else {
-				console.warn(
+				mayLog(
 					`Failed to resolve colorBy term "${scatterEntity.colorBy.phrase}" for prebuilt scatter — skipping this attribute.`
 				)
 			}
@@ -411,7 +408,7 @@ export async function inferTermObjFromEntity(
 			if (termObj) {
 				twObjects['shapeBy'] = termObj
 			} else {
-				console.warn(
+				mayLog(
 					`Failed to resolve shapeBy term "${scatterEntity.shapeBy.phrase}" for prebuilt scatter — skipping this attribute.`
 				)
 			}
@@ -423,7 +420,7 @@ export async function inferTermObjFromEntity(
 			if (termObj) {
 				twObjects['divideBy'] = termObj
 			} else {
-				console.warn(
+				mayLog(
 					`Failed to resolve divideBy term "${scatterEntity.divideBy.phrase}" for prebuilt scatter — skipping this attribute.`
 				)
 			}
@@ -432,7 +429,7 @@ export async function inferTermObjFromEntity(
 		if (scatterEntity.filter) {
 			const filterResult = scatterEntity.filter as Entity[]
 			if (!filterResult) {
-				console.warn(
+				mayLog(
 					`Failed to resolve filter term "${scatterEntity.filter}" for prebuilt scatter — skipping this attribute.`
 				)
 			}
@@ -468,7 +465,7 @@ async function findBestMatchLLM(
 	if (isMsgToUser(dataset_db_output)) return dataset_db_output
 	const { db_rows, rag_docs } = dataset_db_output
 	if (rag_docs.length === 0) {
-		console.warn('findBestMatchLLM: no rag_docs in DB')
+		mayLog('findBestMatchLLM: no rag_docs in DB')
 		return { type: 'text', text: `Could not match "${phrase}" because the dataset dictionary has no terms to search.` }
 	}
 	const prompt = `You are an assistant that maps a user phrase to a dataset dictionary term.
@@ -520,9 +517,11 @@ async function findBestMatchLLM(
 	JSON response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 	if (!response) {
 		// Gracefully handle a missing/empty response instead of throwing (which can crash the server).
-		console.warn('findBestMatchLLM: no response from LLM')
+		mayLog('findBestMatchLLM: no response from LLM')
 		return {
 			type: 'text',
 			text: `Could not match "${phrase}" to a dataset term: the language model returned no response.`
@@ -536,7 +535,7 @@ async function findBestMatchLLM(
 	try {
 		parsed = JSON.parse(response)
 	} catch {
-		console.warn(`findBestMatchLLM: LLM response was not valid JSON, skipping: ${response}`)
+		mayLog(`findBestMatchLLM: LLM response was not valid JSON, skipping: ${response}`)
 		return {
 			type: 'text',
 			text: `Could not match "${phrase}" to a dataset term: the language model did not return a valid response:${response}`
@@ -557,7 +556,7 @@ async function findBestMatchLLM(
 		parsedTerm = parsed.term
 	} else {
 		// JSON parsed, but it doesn't contain a usable "term" field.
-		console.warn(`findBestMatchLLM: LLM response missing a valid "term" field: ${response}`)
+		mayLog(`findBestMatchLLM: LLM response missing a valid "term" field: ${response}`)
 		return {
 			type: 'text',
 			text: `Could not match "${phrase}" to a dataset term: the language model response did not identify a term.`
@@ -567,18 +566,18 @@ async function findBestMatchLLM(
 try {
 const parsed = JSON.parse(response) as { term: string }
 if (!parsed.term) {
-console.warn(`findBestMatchLLM: LLM response missing term: ${response}`)
+mayLog(`findBestMatchLLM: LLM response missing term: ${response}`)
 return undefined
 }
 parsedTerm = parsed.term
 } catch (e) {
-console.warn(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
+mayLog(`findBestMatchLLM: failed to parse LLM response: ${response}`, e)
 return undefined
 }*/
 
 	const matchedRow = db_rows.find(r => r.name === parsedTerm)
 	if (!matchedRow) {
-		console.warn(`findBestMatchLLM: LLM returned term "${parsedTerm}" that was not found in db_rows`)
+		mayLog(`findBestMatchLLM: LLM returned term "${parsedTerm}" that was not found in db_rows`)
 		return {
 			type: 'text',
 			text: `Could not match "${phrase}" to a dataset term: no dictionary term corresponds to the suggested match.`

@@ -4,6 +4,8 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { mayLog } from '#src/helpers.ts'
 import type { LlmConfig } from '#types'
 import path from 'path'
+import { isMsgToUser } from './scaffoldTypes.ts'
+import type { MsgToUser } from './scaffoldTypes.ts'
 
 /**
  * Ask the LLM to select a resource index from the dataset's `resources` array.
@@ -17,7 +19,7 @@ export async function extractResourceResponse(
 	prompt: string,
 	llm: LlmConfig,
 	aiFilesDir: string
-): Promise<{ type: 'none' } | { type: 'html'; html: string }> {
+): Promise<{ type: 'none' } | { type: 'html'; html: string } | MsgToUser> {
 	//const classification_ds = dataset_json.charts?.find((chart: any) => chart.type == 'Classification')
 	const resources: { label: string; html: string }[] =
 		(await readJSONFile(path.join(aiFilesDir, 'resources.json')))?.Resources ?? []
@@ -40,11 +42,12 @@ export async function extractResourceResponse(
 		prompt +
 		'} answer:'
 
-	const response: string = await route_to_appropriate_llm_provider(
+	const response: string | MsgToUser = await route_to_appropriate_llm_provider(
 		system_prompt,
 		llm,
 		llm.classifierModelName ?? llm.modelName
 	)
+	if (isMsgToUser(response)) return response
 	const idx = parseInt(response.trim())
 
 	// LLM returned something that isn't a number

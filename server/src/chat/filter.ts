@@ -1,8 +1,8 @@
 import { phrase2entitytw, collectLeaves, evaluateFilterTerm } from './utils.ts'
-import type { FilterTreeResult } from './scaffoldTypes.ts'
-import { getTermObj, isMsgToUser, type Value } from './entity2termObj.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
+import { getTermObj, type Value } from './entity2termObj.ts'
 import { resolveToTvs } from './entity2twTvs.ts'
-import type { MsgToUser, Entity } from './scaffoldTypes.ts'
+import type { FilterTreeResult, MsgToUser, Entity } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
 import type { LlmConfig } from '#types'
 
@@ -25,7 +25,9 @@ export async function generateFilterTerm(
 	dbPath: string,
 	genome: any
 ): Promise<any | MsgToUser> {
-	const filterTree: FilterTreeResult = await evaluateFilterTerm(phrase, llm)
+	const filterTree: FilterTreeResult | MsgToUser = await evaluateFilterTerm(phrase, llm)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(filterTree)) return filterTree
 	mayLog('generateFilterTerm parsed filter tree:', JSON.stringify(filterTree, null, 2))
 
 	const leafPhrases = collectLeaves(filterTree.tree)

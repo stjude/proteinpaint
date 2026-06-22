@@ -1,5 +1,6 @@
 import type { LlmConfig } from '#types'
 import { mayLog } from '#src/helpers.ts'
+import type { MsgToUser } from './scaffoldTypes.ts'
 import { extractResourceResponse } from './resource.ts'
 
 /**
@@ -19,7 +20,7 @@ export async function classifyNotPlot(
 	agentFiles: string[],
 	aiFilesDir: string
 	// _allowedTermTypes: string[]
-): Promise<{ type: 'none' } | { type: 'html'; html: string }> {
+): Promise<{ type: 'none' } | { type: 'html'; html: string } | MsgToUser> {
 	if (agentFiles.includes('resources.json')) {
 		mayLog('classify2: dataset has resources, delegating to resource agent')
 		return await extractResourceResponse(userPrompt, llm, aiFilesDir)

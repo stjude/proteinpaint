@@ -26,6 +26,7 @@ import type {
 	PrebuiltScatterScaffold,
 	FilterTreeResult
 } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
 import { TermTypes } from '#shared/terms.js'
 import assert from 'assert'
@@ -91,8 +92,9 @@ export async function phrase2entity(
 				summ_term.tw3 = [tw3 as Entity]
 			}
 			if (scaffoldResult.filter) {
-				const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+				const parseFilterResult: FilterTreeResult | MsgToUser = await evaluateFilterTerm(scaffoldResult.filter, llm)
 				mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+				if (isMsgToUser(parseFilterResult)) return parseFilterResult
 				// Extract all leaf phrases from the filter tree and resolve each to an entity
 				const leafPhrases = collectLeaves(parseFilterResult.tree)
 				summ_term.filter = []
@@ -120,7 +122,8 @@ export async function phrase2entity(
 		}
 
 		// filter 1
-		let parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter1, llm)
+		let parseFilterResult: FilterTreeResult | MsgToUser = await evaluateFilterTerm(scaffoldResult.filter1, llm)
+		if (isMsgToUser(parseFilterResult)) return parseFilterResult
 		const dge_term_filter1 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in dge_term_filter1 && dge_term_filter1.type === 'text') {
 			return dge_term_filter1 // MsgToUser
@@ -130,6 +133,7 @@ export async function phrase2entity(
 
 		// filter 2
 		parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter2, llm)
+		if (isMsgToUser(parseFilterResult)) return parseFilterResult
 		const dge_term_filter2 = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 		if ('type' in dge_term_filter2 && dge_term_filter2.type === 'text') {
 			return dge_term_filter2 // MsgToUser
@@ -140,6 +144,7 @@ export async function phrase2entity(
 		// filter ?
 		if (scaffoldResult.filter) {
 			parseFilterResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			if (isMsgToUser(parseFilterResult)) return parseFilterResult
 			const dge_term_filter = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in dge_term_filter && dge_term_filter.type === 'text') {
 				return dge_term_filter // MsgToUser
@@ -189,7 +194,8 @@ export async function phrase2entity(
 
 		// Resolve filter (OPTIONAL cohort filter) to Entity[]
 		if (scaffoldResult.filter) {
-			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const parseFilterResult: FilterTreeResult | MsgToUser = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			if (isMsgToUser(parseFilterResult)) return parseFilterResult
 			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
 			if ('type' in filter_term && filter_term.type === 'text') {
 				return filter_term // MsgToUser
@@ -231,7 +237,8 @@ export async function phrase2entity(
 
 		// if filter is present, convert to entity as well
 		if (scaffoldResult.filter) {
-			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const parseFilterResult: FilterTreeResult | MsgToUser = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			if (isMsgToUser(parseFilterResult)) return parseFilterResult
 			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
 			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
@@ -282,7 +289,8 @@ export async function phrase2entity(
 
 		// Filter term
 		if (scaffoldResult.filter) {
-			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const parseFilterResult: FilterTreeResult | MsgToUser = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			if (isMsgToUser(parseFilterResult)) return parseFilterResult
 			// mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
 			const filter_term = await parseFilterTree(parseFilterResult, llm, genes_list, dataset_json, ds, genome)
@@ -390,8 +398,9 @@ export async function phrase2entity(
 			}
 		}
 		if (scaffoldResult.filter) {
-			const parseFilterResult: FilterTreeResult = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			const parseFilterResult: FilterTreeResult | MsgToUser = await evaluateFilterTerm(scaffoldResult.filter, llm)
 			mayLog('Parsed filter tree:', JSON.stringify(parseFilterResult, null, 2))
+			if (isMsgToUser(parseFilterResult)) return parseFilterResult
 			// Extract all leaf phrases from the filter tree and resolve each to an entity
 			const leafPhrases = collectLeaves(parseFilterResult.tree)
 			hier_term.filter = []
@@ -527,6 +536,8 @@ Parse the following genomic region phrase into the JSON object according to the 
 Phrase: "${phrase}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 	mayLog(`--> Genomic coordinates parse: ${response}`)
 	let parsed: any
 	try {
@@ -593,6 +604,8 @@ Classify the following user query:
 Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 	mayLog(`--> Survival term classifier: ${response}`)
 	let parsed: { survivalTerm: string | null }
 	try {
