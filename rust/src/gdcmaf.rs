@@ -245,7 +245,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err((url.clone(), error_msg))
                 }
                 Err(e) => {
-                    let error_msg = format!("Server request failed: {:?}", e);
+                    let error_msg = format!("Server request failed: {}", e);
                     Err((url.clone(), error_msg))
                 }
             }
