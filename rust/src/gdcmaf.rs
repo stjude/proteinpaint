@@ -201,25 +201,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )) as Box<dyn std::error::Error>);
     };
 
+    let client = reqwest::Client::builder()
+        .user_agent("MyCustomApp/1.0")
+        .timeout(Duration::from_secs(60)) // 60-second timeout per request
+        .connect_timeout(Duration::from_secs(15))
+        .default_headers(req_headers.clone())
+        .build()
+        .map_err(|e| {
+            let client_error = ErrorEntry {
+                url: String::new(),
+                error: format!("Client build error: {}", e),
+            };
+            let client_error_js = serde_json::to_string(&client_error)
+                .unwrap_or_else(|_| "{\"url\":\"\",\"error\":\"Failed to serialize client build error\"}".to_string());
+            writeln!(io::stderr(), "{}", client_error_js)
+                .expect("Failed to write client build error to stderr");
+            std::io::Error::other(format!("Client build error: {}", e))
+        })?;
+
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
-        let req_headers_clone = req_headers.clone();
+        let client = client.clone();
         async move {
-            let client = reqwest::Client::builder()
-                .user_agent("MyCustomApp/1.0")
-                .timeout(Duration::from_secs(60)) // 60-second timeout per request
-                .connect_timeout(Duration::from_secs(15))
-                .default_headers(req_headers_clone.clone())
-                .build()
-                .map_err(|_e| {
-                    let client_error = ErrorEntry {
-                        url: url.clone(),
-                        error: "Client build error".to_string(),
-                    };
-                    let client_error_js = serde_json::to_string(&client_error).unwrap();
-                    writeln!(io::stderr(), "{}", client_error_js).expect("Failed to build reqwest client!");
-                });
-            match client.unwrap().get(&url).send().await {
+            match client.get(&url).send().await {
                 Ok(resp) if resp.status().is_success() => match resp.bytes().await {
                     Ok(content) => {
                         let mut decoder = GzDecoder::new(&content[..]);
