@@ -202,7 +202,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let client = reqwest::Client::builder()
-        .user_agent("MyCustomApp/1.0")
         .timeout(Duration::from_secs(60)) // 60-second timeout per request
         .connect_timeout(Duration::from_secs(15))
         .build()
