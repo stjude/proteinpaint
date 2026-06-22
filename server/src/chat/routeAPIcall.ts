@@ -94,7 +94,7 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string):
 		console.error('SJ API request failed. Underlying error:', error)
 		if (error && typeof error == 'object' && 'cause' in error)
 			console.error('Cause:', (error as { cause?: unknown }).cause)
-		// Re-throw a real Error that preserves the original
+		// Return a user-facing message instead of throwing, so the UI can surface the failure.
 		return {
 			type: 'text',
 			text: 'SJ API request failed: ' + ((error as { message?: string })?.message ?? error)
