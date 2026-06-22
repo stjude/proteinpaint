@@ -239,6 +239,6 @@ async function call_ollama_llm(prompt: string, model_name: string, apilink: stri
 			throw 'Error: Received an unexpected response format:' + result
 		}
 	} catch (error) {
-		return { type: 'text', text: 'Ollama API request failed:' + error }
+		return { type: 'text', text: 'Ollama API request failed:' + (error instanceof Error ? error.message : String(error)) }
 	}
 }
