@@ -11,6 +11,7 @@ import type {
 	PrebuiltScatterPhrase2EntityResult,
 	MsgToUser
 } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 //import { loadOrBuildEmbeddings, findBestMatch } from './semanticSearch.ts'
 import { extractGenesetsFromPromptNew, extractGenesFromPrompt, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
@@ -48,11 +49,6 @@ export type Value = {
 	phrase: string
 	type: string
 	logicalOperator?: '&' | '|'
-}
-
-/** Discriminate a MsgToUser (a {type:'text', text} message to surface to the client) from a resolved Value. */
-export function isMsgToUser(x: unknown): x is MsgToUser {
-	return !!x && typeof x === 'object' && (x as any).type === 'text' && 'text' in (x as any)
 }
 
 function buildNonDictTermObj(twEntity: Entity, genes_list: string[], genome: any): Value | undefined {
@@ -520,6 +516,8 @@ async function findBestMatchLLM(
 	JSON response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 	if (!response) {
 		// Gracefully handle a missing/empty response instead of throwing (which can crash the server).
 		console.warn('findBestMatchLLM: no response from LLM')

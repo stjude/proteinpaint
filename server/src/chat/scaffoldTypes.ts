@@ -6,6 +6,11 @@ export type MsgToUser = {
 	text: string
 }
 
+/** Discriminate a MsgToUser (a {type:'text', text} message to surface to the client) from any other value. */
+export function isMsgToUser(x: unknown): x is MsgToUser {
+	return !!x && typeof x === 'object' && (x as any).type === 'text' && 'text' in (x as any)
+}
+
 // *** Scaffold Temp Types *** //
 export type SummaryScaffold = {
 	plotType: 'summary'

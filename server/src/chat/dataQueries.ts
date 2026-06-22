@@ -1,6 +1,7 @@
 import type { LlmConfig } from '#types'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
 import { TermTypes } from '#shared/terms.js'
 
@@ -88,6 +89,8 @@ export async function answerDataQueries(
     Answer:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response) as { ans: string; term: string }

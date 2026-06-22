@@ -3,7 +3,7 @@ import { TermTypes } from '#shared/terms.js'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser, Entity, FilterTreeNode, FilterLeafNode, FilterTreeResult } from './scaffoldTypes.ts'
-import { filterTreeJsonSchema } from './scaffoldTypes.ts'
+import { filterTreeJsonSchema, isMsgToUser } from './scaffoldTypes.ts'
 import fs from 'fs'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
 import Database from 'better-sqlite3'
@@ -796,7 +796,7 @@ async function classifyGeneSetDataTypePhrase(
  * "young and black patients" -> ["young", "black"]
  * "young and black patients or old and white patients" -> [["young", "black"], ["old", "white"]]
  */
-export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult> {
+export async function evaluateFilterTerm(phrase: string, llm: LlmConfig): Promise<FilterTreeResult | MsgToUser> {
 	const prompt = `You are an assistant that analyzes a filter term written in natural language and converts it into a nested binary S-expression tree using two operators: AND (&) and OR (|).
 Do NOT generate code. You yourself must produce the tree. Return ONLY a JSON string — no explanations, no markdown, no extra keys.
 
@@ -1101,6 +1101,8 @@ Query: ${phrase}
 `
 */
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 	mayLog('filter response:', response)
 	try {
 		const parsed = JSON.parse(response) as FilterTreeResult

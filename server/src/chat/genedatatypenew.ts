@@ -2,6 +2,7 @@ import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 
 // ---------------------------------------------------------------------------
 //  Function 1: Classify each term as "gene" or "group"
@@ -123,6 +124,8 @@ Ambiguous terms (both gene and group name): [${ambiguousTerms}]
 Response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 
 	let results: GeneOrGroupOrAmbiguousResult[]
 	try {
@@ -224,6 +227,8 @@ Genes: [${geneList}]
 Response:`
 
 		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+		if (isMsgToUser(response)) return response
 
 		let result: GeneDataTypeResult
 		try {

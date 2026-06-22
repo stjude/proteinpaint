@@ -1,5 +1,7 @@
 import type { LlmConfig, PlotType } from '#types'
 import { mayLog } from '#src/helpers.ts'
+import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 
 /**
@@ -9,7 +11,7 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
  * @param llm          LLM configuration (provider, model names, API endpoint).
  * @returns            The specific plot type (e.g. 'summary', 'dge', 'survival', 'matrix', 'prebuiltscatter', 'hiercluster', 'genomeBrowser').
  */
-export async function classifyPlotType(user_prompt: string, llm: LlmConfig): Promise<PlotType> {
+export async function classifyPlotType(user_prompt: string, llm: LlmConfig): Promise<PlotType | MsgToUser> {
 	/** Currently commented out because we are not using training examples for the plot type classifier, but this is where you would add them if desired in the future. 
 // Parse out training data from the dataset JSON and add it to a string
 const plot_ds = dataset_json.charts.find((chart: any) => chart.type == 'Plot')
@@ -37,6 +39,7 @@ Classification:`
 
 	//Training examples: "${training_data}"
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	if (isMsgToUser(response)) return response
 	const plotType = response.trim() as PlotType
 	mayLog(`--> classifyPlotType: ${plotType}`)
 	return plotType
