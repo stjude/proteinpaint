@@ -7,6 +7,10 @@ export type TermdbSingleSampleMutationRequest = {
 	dslabel: string
 	/** sample id, allow string or number; for native ds, sample name in number will be cast into string */
 	sample: string | number
+	/** optional set of dt (data type) numbers to skip fetching, for callers (e.g. GRIN2) that only need
+	a subset of mutation types. Server-internal only — not sent over HTTP, so it's a Set rather than JSON.
+	When omitted, all dt are returned. */
+	skipDt?: Set<number>
 }
 type ValidResponse = {
 	/** List of mutation data points from this sample TODO change to type of M elements */
