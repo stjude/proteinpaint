@@ -206,6 +206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let req_headers_clone = req_headers.clone();
         async move {
             let client = reqwest::Client::builder()
+                .user_agent("MyCustomApp/1.0")
                 .timeout(Duration::from_secs(60)) // 60-second timeout per request
                 .connect_timeout(Duration::from_secs(15))
                 .default_headers(req_headers_clone.clone())
@@ -240,11 +241,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 },
                 Ok(resp) => {
-                    let error_msg = format!("HTTP error: {}", resp.status());
+                    let error_msg = format!("HTTP error: {:?}", resp.status());
                     Err((url.clone(), error_msg))
                 }
                 Err(e) => {
-                    let error_msg = format!("Server request failed: {}", e);
+                    let error_msg = format!("Server request failed: {:?}", e);
                     Err((url.clone(), error_msg))
                 }
             }
