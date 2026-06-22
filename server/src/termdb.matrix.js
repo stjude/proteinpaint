@@ -402,9 +402,13 @@ async function getSampleData(q, ds) {
 	const sids = Object.keys(samples)
 	let sampleType
 	if (sids.length > 0) {
-		/** Work around since sc cells are ** not ** in db or derived from api.
-		 * Will not appear in the sample lookups below. */
-		if (processedSingleCellTerm === true) sampleType = { name: 'cell', plural_name: 'cells' }
+		/** Work around for single cell cases. The sample ids are either not in
+		 * the termdb/api response or assigned to a different type in ds.cohort.termdb.sampleTypes.
+		 * Force 'cells' sample type when using cell data but returning sample ids. */
+		if (processedSingleCellTerm === true) {
+			sampleType = { name: 'cell', plural_name: 'cells' }
+			return { samples, refs: { byTermId, bySampleId }, sampleType }
+		}
 		const firstComparableId = samples[sids[0]]?.sampleId
 		const sid = Number(firstComparableId ?? sids[0]) || firstComparableId || sids[0]
 		const stid = q.ds.sampleId2Type?.get?.(sid)
