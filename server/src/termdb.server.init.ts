@@ -127,16 +127,19 @@ export function server_init_db_queries(ds) {
 	}
 	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
-			s2i = new Map()
+			s2i = new Map(),
+			i2type = new Map()
 		const rows = cn.prepare('SELECT * FROM sampleidmap').all()
 		let totalCount = 0
-		for (const { id, name } of rows) {
+		for (const { id, name, sample_type } of rows) {
 			i2s.set(id, name)
 			s2i.set(name, id)
+			i2type.set(id, sample_type)
 			totalCount++ //for dbs without cohorts or types
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		q.id2sampleType = id => i2type.get(id)
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {
@@ -592,6 +595,43 @@ export function server_init_db_queries(ds) {
 		const sql = cn.prepare(query)
 		const rows = sql.all()
 		return rows
+	}
+
+	if (ds.cohort.termdb.hasSampleAncestry) {
+		// ds has sample ancestry
+		// store sample ancestry in sample refs
+		const i2ancestors = new Map()
+		{
+			const rows = cn.prepare('SELECT * FROM sample_ancestry').all()
+			for (const row of rows) {
+				const id = row.sample_id
+				if (!i2ancestors.has(id)) i2ancestors.set(id, [])
+				const ancestors = i2ancestors.get(id)
+				const ancestor = {
+					ancestor_id: row.ancestor_id,
+					ancestor_name: q.id2sampleName(row.ancestor_id),
+					sample_type: q.id2sampleType(row.ancestor_id),
+					distance: row.distance
+				}
+				ancestors.push(ancestor)
+			}
+		}
+
+		const i2refs = new Map()
+		{
+			const rows = cn.prepare('SELECT * FROM sampleidmap').all()
+			for (const row of rows) {
+				const id = row.id
+				const name = row.name
+				const refs: any = { label: name, sample: id, sampleType: q.id2sampleType(id) }
+				const ancestors = i2ancestors.get(row.id)
+				if (ancestors) refs.ancestors = ancestors
+				Object.freeze(refs)
+				i2refs.set(id, refs)
+			}
+		}
+
+		q.id2sampleRefs = id => structuredClone(i2refs.get(id)) // returns sample refs to be used in bySampleId{} object, returning clone as some code (e.g. server/src/termdb.get_matrix.js) needs to modify the sample refs object
 	}
 }
 
