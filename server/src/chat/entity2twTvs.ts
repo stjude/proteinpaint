@@ -1,7 +1,7 @@
 import type { LlmConfig } from '@sjcrh/proteinpaint-types'
 import type { Value, DictTerm, GeneSetTerm } from './entity2termObj.ts'
-import { isMsgToUser } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { parse_dataset_db, getGenesForGeneset } from './utils.ts'
 import { mayLog } from '#src/helpers.ts'
@@ -185,7 +185,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			const categoricalFilterTerm = await getCategoricalFilterTermValues(termObj, dbPath, llm)
 			if (isMsgToUser(categoricalFilterTerm)) return categoricalFilterTerm
 			if (!categoricalFilterTerm) {
-				console.warn(`resolveToTvs: skipping categorical filter term (no result): "${termObj.phrase}"`)
+				mayLog(`resolveToTvs: skipping categorical filter term (no result): "${termObj.phrase}"`)
 				continue
 			}
 			// Validate the category value against the term's actual values
@@ -226,7 +226,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 			const numericFilterTerm = await getNumericFilterTermValues(termObj, dbPath, llm)
 			if (isMsgToUser(numericFilterTerm)) return numericFilterTerm
 			if (!numericFilterTerm) {
-				console.warn(`resolveToTvs: skipping numeric filter term (no result): "${termObj.phrase}"`)
+				mayLog(`resolveToTvs: skipping numeric filter term (no result): "${termObj.phrase}"`)
 				continue
 			}
 			resolved.push({
@@ -275,7 +275,7 @@ export async function resolveToTvs(tvsValues: Value[], dbPath: string, llm: LlmC
 }
 
 // This function's main task is to detect if custom binning is requested in the user prompt
-async function parseBinConfig(phrase: string, llm: LlmConfig): Promise<BinConfig> {
+async function parseBinConfig(phrase: string, llm: LlmConfig): Promise<BinConfig | MsgToUser> {
 	const prompt = `You are a bioinformatics visualization assistant specialized in data binning configuration.
 Your task is to analyze a user phrase and determine if it contains a request for custom binning of a numeric variable.
 Respond ONLY with a valid JSON object. No explanation, no markdown, no code blocks.
@@ -388,6 +388,8 @@ Output:
 Analyze this phrase and return the appropriate JSON object: "${phrase}"
 `
 	const raw = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(raw)) return raw
 
 	// ── Parse and validate response ───────────────────────────────────────
 	const text = raw
@@ -401,7 +403,7 @@ Analyze this phrase and return the appropriate JSON object: "${phrase}"
 	try {
 		parsed = JSON.parse(text)
 	} catch {
-		console.warn('Failed to parse bin config response:', text)
+		mayLog('Failed to parse bin config response:', text)
 		// Safe fallback — return regular bin if parsing fails
 		return { type: 'regular-bin', mode: 'discrete' } as RegularBinConfig
 	}
@@ -409,7 +411,7 @@ Analyze this phrase and return the appropriate JSON object: "${phrase}"
 	// ── Validate structure ────────────────────────────────────────────────
 	if (parsed.type === 'custom-bin') {
 		if (!Array.isArray(parsed.lst) || parsed.lst.length === 0) {
-			console.warn('custom-bin response missing lst array — falling back to regular-bin')
+			mayLog('custom-bin response missing lst array — falling back to regular-bin')
 			return { type: 'regular-bin', mode: 'discrete' } as RegularBinConfig
 		}
 		// Ensure first bin has startunbounded and last bin has stopunbounded
@@ -430,6 +432,8 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
 		} else {
 			// For numeric terms, check if the phrase contains any binning language (e.g. "binned into 5 groups", "divided into quartiles", etc.)
 			const binConfig = await parseBinConfig(twValue.phrase, llm)
+			// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+			if (isMsgToUser(binConfig)) return binConfig
 			if (!binConfig) throw new Error(`Failed to parse bin config from phrase: ${twValue.phrase}`)
 			mayLog('Parsed bin config:', JSON.stringify(binConfig))
 			return { id: twValueTerm.id, type: twValueTerm.type, q: binConfig, isDictionary: true }
@@ -505,6 +509,7 @@ export async function resolveToTwTvs(
 			const twValue = value as Value | undefined
 			if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
 			const termWrapper = await resolveToTw(twValue, llm, genome)
+			if (isMsgToUser(termWrapper)) return termWrapper
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
 		}
@@ -527,6 +532,7 @@ export async function resolveToTwTvs(
 		const DictTws: any[] = []
 		for (const gv of DictValues) {
 			const tw = await resolveToTw(gv, llm, genome)
+			if (isMsgToUser(tw)) return tw
 			if (!tw) throw new Error(`Failed to resolve Dict tw for phrase "${gv.phrase}"`)
 			if (tw.type != 'float' && tw.type != 'integer' && tw.type != TermTypes.SSGSEA) {
 				return {
@@ -555,6 +561,7 @@ export async function resolveToTwTvs(
 		const term2Value = entity['term2'] as Value | undefined
 		if (!term2Value) throw new Error('Invalid term2 entity for survival')
 		const term2Wrapper = await resolveToTw(term2Value, llm, genome)
+		if (isMsgToUser(term2Wrapper)) return term2Wrapper
 		if (!term2Wrapper) throw new Error(`Failed to resolve term2 for phrase "${term2Value.phrase}"`)
 		mayLog('Resolved survival term2:', JSON.stringify(term2Wrapper))
 		twTvsObjects['term2'] = term2Wrapper
@@ -586,6 +593,7 @@ export async function resolveToTwTvs(
 				for (const twValue of twValues) {
 					if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
 					const termWrapper = await resolveToTw(twValue, llm, genome)
+					if (isMsgToUser(termWrapper)) return termWrapper
 					if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
 					mayLog(`Resolved term for twLst item:`, JSON.stringify(termWrapper))
 					twLst.push(termWrapper)
@@ -597,6 +605,7 @@ export async function resolveToTwTvs(
 			const twValue = value as Value | undefined
 			if (!twValue) throw new Error(`Invalid term entity for key ${key}`)
 			const termWrapper = await resolveToTw(twValue, llm, genome)
+			if (isMsgToUser(termWrapper)) return termWrapper
 			if (!termWrapper) throw new Error(`Failed to resolve tw for phrase "${twValue.phrase}"`)
 			mayLog(`Resolved term for key ${key}:`, JSON.stringify(termWrapper))
 			twTvsObjects[key] = termWrapper
@@ -615,6 +624,7 @@ export async function resolveToTwTvs(
 			const colorByValue = entity['colorBy'] as Value | undefined
 			if (!colorByValue) throw new Error('Invalid colorBy term entity for prebuiltScatter')
 			const termWrapper = await resolveToTw(colorByValue, llm, genome)
+			if (isMsgToUser(termWrapper)) return termWrapper
 			if (!termWrapper) throw new Error(`Failed to resolve colorBy term for phrase "${colorByValue.phrase}"`)
 			twTvsObjects['colorBy'] = termWrapper
 		}
@@ -625,6 +635,7 @@ export async function resolveToTwTvs(
 			const shapeByValue = entity['shapeBy'] as Value | undefined
 			if (!shapeByValue) throw new Error('Invalid shapeBy term entity for prebuiltScatter')
 			const termWrapper = await resolveToTw(shapeByValue, llm, genome)
+			if (isMsgToUser(termWrapper)) return termWrapper
 			if (!termWrapper) throw new Error(`Failed to resolve shapeBy term for phrase "${shapeByValue.phrase}"`)
 			twTvsObjects['shapeBy'] = termWrapper
 		}
@@ -633,6 +644,7 @@ export async function resolveToTwTvs(
 			const divideByValue = entity['divideBy'] as Value | undefined
 			if (!divideByValue) throw new Error('Invalid divideBy term entity for prebuiltScatter')
 			const termWrapper = await resolveToTw(divideByValue, llm, genome)
+			if (isMsgToUser(termWrapper)) return termWrapper
 			if (!termWrapper) throw new Error(`Failed to resolve divideBy term for phrase "${divideByValue.phrase}"`)
 			twTvsObjects['divideBy'] = termWrapper
 		}
@@ -673,7 +685,7 @@ async function getCategoricalFilterTermValues(
 			}
 		}
 		if (candidateDocs.length === 0) {
-			console.warn('getCategoricalFilterTermValues: no categorical rows in DB')
+			mayLog('getCategoricalFilterTermValues: no categorical rows in DB')
 			return undefined
 		}
 
@@ -697,17 +709,11 @@ Phrase: "${termObj.phrase}"
 JSON response:`
 
 		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+		if (isMsgToUser(response)) return response
 		let parsed: { term: string; value: string }
 		try {
 			parsed = JSON.parse(response) as { term: string; value: string }
-			if (!parsed.term || !parsed.value) {
-				console.warn(`getCategoricalFilterTermValues: LLM response missing term/value: ${response}`)
-				return undefined
-			}
-			mayLog(
-				`getCategoricalFilterTermValues: phrase="${termObj.phrase}" → term="${parsed.term}" value="${parsed.value}"`
-			)
-			return parsed
 		} catch (e) {
 			mayLog(`getCategoricalFilterTermValues: failed to parse LLM response: ${response}`, e)
 			return {
@@ -715,6 +721,12 @@ JSON response:`
 				text: `getCategoricalFilterTermValues: failed to parse LLM response: ${response}` + e
 			}
 		}
+		if (!parsed.term || !parsed.value) {
+			mayLog(`getCategoricalFilterTermValues: LLM response missing term/value: ${response}`)
+			return undefined
+		}
+		mayLog(`getCategoricalFilterTermValues: phrase="${termObj.phrase}" → term="${parsed.term}" value="${parsed.value}"`)
+		return parsed
 	} else {
 		throw 'getCategoricalFilterTermValues: termObj.term is not from dictionary, cannot determine categorical filter values'
 	}
@@ -744,7 +756,7 @@ async function getNumericFilterTermValues(
 			}
 		}
 		if (candidateDocs.length === 0) {
-			console.warn('getNumericFilterTermValues: no numeric rows in DB')
+			mayLog('getNumericFilterTermValues: no numeric rows in DB')
 			return undefined
 		}
 
@@ -767,6 +779,8 @@ Phrase: "${termObj.phrase}"
 JSON response:`
 
 		const termResponse = await route_to_appropriate_llm_provider(termPrompt, llm, llm.classifierModelName)
+		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+		if (isMsgToUser(termResponse)) return termResponse
 		let parsed: { term: string }
 		try {
 			parsed = JSON.parse(termResponse) as { term: string }
@@ -809,6 +823,8 @@ Phrase: "${termObj.phrase}"
 JSON response:`
 
 	const cutoffResponse = await route_to_appropriate_llm_provider(cutoffPrompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(cutoffResponse)) return cutoffResponse
 	let start: string | undefined
 	let stop: string | undefined
 	try {

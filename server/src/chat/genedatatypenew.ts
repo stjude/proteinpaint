@@ -2,6 +2,7 @@ import type { LlmConfig, GeneDataTypeResult } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 
 // ---------------------------------------------------------------------------
 //  Function 1: Classify each term as "gene" or "group"
@@ -123,6 +124,8 @@ Ambiguous terms (both gene and group name): [${ambiguousTerms}]
 Response:`
 
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+	if (isMsgToUser(response)) return response
 
 	let results: GeneOrGroupOrAmbiguousResult[]
 	try {
@@ -224,21 +227,23 @@ Genes: [${geneList}]
 Response:`
 
 		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
+		if (isMsgToUser(response)) return response
 
 		let result: GeneDataTypeResult
 		try {
 			const cleaned = stripMarkdownFencing(response)
 			result = JSON.parse(cleaned)
-		} catch {
+		} catch (e) {
 			mayLog('classifyGeneDataType: failed to parse LLM response as JSON:', response)
 			return {
 				type: 'text',
-				text: 'classifyGeneDataType: failed to parse LLM response as JSON:' + response
+				text: 'classifyGeneDataType: failed to parse LLM response as JSON:' + response + ' error message:' + e
 			}
 		}
 
 		if (result.dataType === 'missing') {
-			return `Gene data type is missing for ${result.gene}. Please specify what you would like to see for this gene(e.g.expression, variant, methylation).`
+			return `Gene data type is missing for ${result.gene}. Please specify what you would like to see for this gene (e.g. expression, variant, methylation).`
 		} else {
 			return result
 		}
@@ -254,7 +259,7 @@ Response:`
 function stripMarkdownFencing(text: string): string {
 	return text
 		.trim()
-		.replace(/^```json\s * /, '')
+		.replace(/^```json\s*/, '')
 		.replace(/^```\s*/, '')
 		.replace(/\s*```$/, '')
 		.trim()

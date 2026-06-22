@@ -1,5 +1,6 @@
 import type { LlmConfig } from '#types'
 import { ezFetch } from '#shared'
+import { mayLog } from '#src/helpers.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 
 export async function route_to_appropriate_llm_provider(
@@ -94,7 +95,7 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string):
 		console.error('SJ API request failed. Underlying error:', error)
 		if (error && typeof error == 'object' && 'cause' in error)
 			console.error('Cause:', (error as { cause?: unknown }).cause)
-		// Re-throw a real Error that preserves the original
+		// Return a user-facing message instead of throwing, so the UI can surface the failure.
 		return {
 			type: 'text',
 			text: 'SJ API request failed: ' + ((error as { message?: string })?.message ?? error)
@@ -153,7 +154,7 @@ export async function callHuggingFaceEmbedding(
 	})
 
 	if (result?.error && modelName !== HF_FALLBACK_MODEL) {
-		console.warn(`Model ${modelName} returned error — falling back to ${HF_FALLBACK_MODEL}`)
+		mayLog(`Model ${modelName} returned error — falling back to ${HF_FALLBACK_MODEL}`)
 		return callHuggingFaceEmbedding(texts, HF_FALLBACK_MODEL, api, apiToken)
 	}
 
@@ -205,7 +206,10 @@ async function call_azure_llm(
 		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
 	} catch (error) {
 		console.log(error)
-		return { type: 'text', text: 'Azure API request failed:' + error }
+		return {
+			type: 'text',
+			text: 'Azure API request failed:' + (error instanceof Error ? error.message : String(error))
+		}
 	}
 }
 
@@ -239,6 +243,9 @@ async function call_ollama_llm(prompt: string, model_name: string, apilink: stri
 			throw 'Error: Received an unexpected response format:' + result
 		}
 	} catch (error) {
-		return { type: 'text', text: 'Ollama API request failed:' + error }
+		return {
+			type: 'text',
+			text: 'Ollama API request failed:' + (error instanceof Error ? error.message : String(error))
+		}
 	}
 }

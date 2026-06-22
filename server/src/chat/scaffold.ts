@@ -16,6 +16,7 @@ import type {
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
 import { extractGenesFromPrompt } from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
 import { classifyGeneDataType } from './genedatatype.ts'
@@ -114,6 +115,7 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Survival scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response)
@@ -231,6 +233,7 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Genome browser scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response)
@@ -328,6 +331,7 @@ Query: "${user_prompt}"
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm)
 	mayLog(`--> Matrix Scaffold LLM response: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response)
@@ -494,6 +498,7 @@ Query: ${user_prompt}
 	// let response = summaryScaffold
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> DE scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response)
@@ -622,6 +627,7 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Summary scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response)
@@ -697,6 +703,7 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	{
 		let parsedObj: any
 		try {
@@ -971,6 +978,7 @@ Query: ${user_prompt}
 `*/
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Prebuilt scatter scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsed: any
 	try {
 		parsed = JSON.parse(response)
@@ -1060,6 +1068,7 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical variable-type classifier: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsedClassifier: any
 	try {
 		parsedClassifier = JSON.parse(response)
@@ -1183,6 +1192,7 @@ Query: ${user_prompt}
 `
 	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
 	mayLog(`--> Hierarchical dictionary scaffold: ${response}`)
+	if (isMsgToUser(response)) return response
 	let parsedObj: any
 	try {
 		parsedObj = JSON.parse(response)
