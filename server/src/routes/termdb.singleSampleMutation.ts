@@ -85,8 +85,12 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 			await file_is_readable(file)
 			const data = await read_file(file)
 			let mlst = JSON.parse(data)
-			// caller (e.g. GRIN2) may only want a subset of dt; drop the rest before returning
-			if (q.skipDt?.size) mlst = mlst.filter((m: any) => !q.skipDt!.has(m.dt))
+			// caller (e.g. GRIN2) may only want a subset of dt; drop the rest before returning.
+			// skipDt is a server-internal Set; guard with instanceof so a malformed client-sent value
+			// (POST bodies merge into req.query) can't reach .has() and turn into a 500
+			if (q.skipDt instanceof Set && q.skipDt.size && Array.isArray(mlst)) {
+				mlst = mlst.filter((m: any) => !q.skipDt!.has(m.dt))
+			}
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
 			return { mlst }
 		}
