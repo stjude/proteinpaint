@@ -84,8 +84,11 @@ export async function validate_query_singleSampleMutation(ds: any, genome: any) 
 			if (!file) throw 'no file returned'
 			await file_is_readable(file)
 			const data = await read_file(file)
+			let mlst = JSON.parse(data)
+			// caller (e.g. GRIN2) may only want a subset of dt; drop the rest before returning
+			if (q.skipDt?.size) mlst = mlst.filter((m: any) => !q.skipDt!.has(m.dt))
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
-			return { mlst: JSON.parse(data) }
+			return { mlst }
 		}
 	} else {
 		throw 'unknown singleSampleMutation.src'

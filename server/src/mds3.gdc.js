@@ -765,6 +765,12 @@ opts{}
 	.case_id=str
 */
 async function getCnvFusion4oneCase(opts, ds) {
+	// caller may only want a subset of dt; skip loading files for unrequested ones to avoid network reads
+	const skipCnv = opts.skipDt?.has(common.dtcnv)
+	const skipFusion = opts.skipDt?.has(common.dtfusionrna)
+	// neither cnv nor fusion requested: skip the files listing fetch entirely
+	if (skipCnv && skipFusion) return {}
+
 	const fields = [
 		'cases.samples.tissue_type',
 		'cases.samples.tumor_descriptor',
@@ -797,6 +803,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	for (const h of re.data.hits) {
 		if (!h.cases?.[0]) throw new Error(`h.cases[0] missing for file =${h.file_id}`)
 		if (h.data_format == 'BEDPE') {
+			if (skipFusion) continue
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
 			if (h.data_type != 'Transcript Fusion') continue
@@ -813,6 +820,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 		}
 
 		if (h.data_format == 'TXT') {
+			if (skipCnv) continue
 			if (h.experimental_strategy == 'Genotyping Array') {
 				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == ascns) {
 					cnvfiles.push({
@@ -2456,7 +2464,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 	}
 
 	// ssm
-	{
+	if (!query.skipDt?.has(common.dtsnvindel)) {
 		const { host, headers } = ds.getHostHeaders(query)
 
 		const re = await xfetch(joinUrl(host.rest, isoform2ssm_query1_getvariant.endpoint), {

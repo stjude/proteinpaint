@@ -635,12 +635,17 @@ async function processSampleData(
 	// fetches once the overall lesion cap is reached.
 	const concurrency = Math.max(1, ds.cohort?.termdb?.maxConcurrentQueries || 10)
 
+	// dt types this query may return but that the caller didn't request; pass to the getter so backends
+	// can avoid fetching them. For GDC this skips per-sample snvindel/cnv/fusion file reads (network round-trips)
+	// when those options are off; for native ds it filters out unrequested dt before merge.
+	const skipDt = new Set<number>([dtsnvindel, dtcnv, dtfusionrna, dtsv].filter(dt => !enabledTypes.includes(dt)))
+
 	await mapConcurrent(
 		samples,
 		concurrency,
 		async sample => {
 			try {
-				const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name })
+				const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name, skipDt })
 
 				const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
 
