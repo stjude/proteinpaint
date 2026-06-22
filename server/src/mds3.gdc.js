@@ -2171,6 +2171,10 @@ function termid2size_filters(p, ds) {
 
 export function gdcValidate_query_singleSampleMutation(ds, genome) {
 	ds.queries.singleSampleMutation.get = async q => {
+		// skipDt is a server-internal Set (set by GRIN2). A client could send a look-alike value via the
+		// route (POST bodies merge into req.query); drop anything that isn't a real Set so the downstream
+		// ?.has() guards can't throw and turn malformed input into a 500
+		if (q.skipDt && !(q.skipDt instanceof Set)) q.skipDt = undefined
 		/*
 		q.sample value can be multiple types:
 		- sample submitter id from mds3 tk (if cached, if not cached it is aliquot id)

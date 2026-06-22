@@ -639,9 +639,6 @@ async function processSampleData(
 	// can avoid fetching them. For GDC this skips per-sample snvindel/cnv/fusion file reads (network round-trips)
 	// when those options are off; for native ds it filters out unrequested dt before return.
 	const skipDt = new Set<number>(Object.values(optionToDt).filter(dt => !enabledTypes.includes(dt)))
-	console.log('[GRIN2] enabledTypes: ', enabledTypes.join(', '))
-	console.log('[GRIN2] optionToDt: ', JSON.stringify(optionToDt))
-	console.log('[GRIN2] skipDt: ', Array.from(skipDt).join(', '))
 
 	await mapConcurrent(
 		samples,
