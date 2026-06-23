@@ -310,7 +310,7 @@ async function getSampleData(q, ds) {
 				gene: tw.term.gene
 			})
 			let filteredSamples = new Set()
-			if ((q.filter?.lst?.length || q.filter0?.lst?.length) && tw.term.sample?.isMetaResult) {
+			if ((q.filter?.lst?.length || q.filter0) && tw.term.sample?.isMetaResult) {
 				filteredSamples = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 			}
 			/** geneExpMap returns cells => (cellId: value), not samples.
@@ -346,7 +346,7 @@ async function getSampleData(q, ds) {
 				colorBy: { [tw.term.plot]: tw.term.name }
 			})
 			let filteredSamples = new Set()
-			if ((q.filter?.lst?.length || q.filter0?.lst?.length) && tw.term.sample?.isMetaResult) {
+			if ((q.filter?.lst?.length || q.filter0) && tw.term.sample?.isMetaResult) {
 				filteredSamples = await q.ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 			}
 			const groups = tw.q?.customset?.groups

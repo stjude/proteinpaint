@@ -128,7 +128,7 @@ async function getSingleCellScatter(req, res, ds) {
 		let totalCellCount = 0
 		let filteredSamples: Set<string> = new Set()
 
-		if (q.filter?.lst?.length || q.filter0?.lst?.length) {
+		if (q.filter?.lst?.length || q.filter0) {
 			filteredSamples = await ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 		}
 
