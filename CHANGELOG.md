@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.191.6
 
 Fixes:
 - fix the GDC MAF rust code to limit HTTP connection reuse and improve error handling
