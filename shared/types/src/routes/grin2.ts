@@ -90,6 +90,11 @@ export type GRIN2Request = {
 		maxSegLength?: number // Default: 0
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
+		/** For datasets that expose multiple cnv file types (ds.queries.singleSampleMutation.cnvTypes),
+		 * the id of the user-selected type. The server resolves this id to a source-specific data_type
+		 * and a valueType, loads only the matching file, and classifies segments with that type's
+		 * baseline. Omitted for single-type datasets, which classify by ds.queries.cnv.type. */
+		cnvType?: string
 	}
 
 	/** Presence enables fusions in the analysis; no per-fusion filtering options yet */

@@ -55,7 +55,7 @@ export interface GRIN2RequestData {
 	hardCap?: number
 	binSize?: number
 	snvindelOptions?: { consequences: string[]; mafFilter?: any }
-	cnvOptions?: { lossThreshold: number; gainThreshold: number; maxSegLength: number }
+	cnvOptions?: { lossThreshold?: number; gainThreshold?: number; maxSegLength: number; cnvType?: string }
 	fusionOptions?: Record<string, any>
 	svOptions?: Record<string, any>
 	excludeOptions?: { blacklists?: string[]; overlapFrac?: number }

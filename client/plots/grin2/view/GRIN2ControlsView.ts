@@ -1,4 +1,4 @@
-import { table2col, make_one_checkbox } from '#dom'
+import { table2col, make_one_checkbox, make_radios } from '#dom'
 import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
 import { filterInit } from '#filter'
 import type { GRIN2ControlsCallbacks, DtUsage } from '../GRIN2Types'
@@ -39,8 +39,10 @@ export class GRIN2ControlsView {
 	private cnv_lossThreshold: any = null
 	private cnv_gainThreshold: any = null
 	private cnv_maxSegLength: any = null
-	/** how this ds quantifies cnv values; from ds.queries.cnv.type, default 'log2ratio' */
+	/** how this ds quantifies cnv values; from the selected cnv type or ds.queries.cnv.type, default 'log2ratio' */
 	private cnvType: CnvType = 'log2ratio'
+	/** id of the user-selected cnv file type, when the ds exposes singleSampleMutation.cnvTypes (else null) */
+	private cnvSelectedTypeId: string | null = null
 
 	// one checkbox per genome-declared blacklist source, keyed by source name
 	private excludeCheckboxes: Record<string, any> = {}
@@ -76,7 +78,7 @@ export class GRIN2ControlsView {
 		const table = table2col({ holder: this.controlsHolder, disableScroll: true })
 		const queries = this.vocabApi.termdbConfig.queries
 		if (queries.snvindel) this.addSnvindelRow(table)
-		if (queries.cnv) this.addCnvRow(table)
+		if (queries.cnv || queries.singleSampleMutation?.cnvTypes?.length) this.addCnvRow(table)
 		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) this.addFusionRow(table)
 		if (queries.svfusion?.dtLst?.includes(dtsv)) this.addSvRow(table)
 
@@ -116,6 +118,8 @@ export class GRIN2ControlsView {
 			requestConfig.cnvOptions = {
 				maxSegLength: parseFloat(this.cnv_maxSegLength.property('value'))
 			}
+			// id of the selected cnv file type (datasets exposing singleSampleMutation.cnvTypes, e.g. GDC)
+			if (this.cnvSelectedTypeId) requestConfig.cnvOptions.cnvType = this.cnvSelectedTypeId
 			// 'category' is a qualitative call with no numeric thresholds; the rows aren't rendered
 			if (this.cnv_lossThreshold && this.cnv_gainThreshold) {
 				requestConfig.cnvOptions.lossThreshold = parseFloat(this.cnv_lossThreshold.property('value'))
@@ -206,18 +210,82 @@ export class GRIN2ControlsView {
 
 	private addCnvRow(table: any) {
 		const [left, right] = table.addRow()
-		const t2 = table2col({ holder: right })
+		// container toggled by the cnv checkbox; holds the type radios (if any) + threshold inputs
+		const cnvBody = right.append('div')
 
 		// Only use saved CNV settings if a previous run completed
 		const useSaved = this.config.settings.runAnalysis === true
 		const savedCnv = useSaved ? this.config.settings.cnvOptions : undefined
 		const cnvQuery = this.vocabApi.termdbConfig.queries.cnv
+		// datasets that serve multiple cnv file types per sample (e.g. GDC masked vs allele-specific)
+		const cnvTypes = this.vocabApi.termdbConfig.queries.singleSampleMutation?.cnvTypes as
+			| { id: string; label: string; valueType: CnvType; dataType: string }[]
+			| undefined
 
-		// How this ds quantifies cnv values drives the threshold controls.
-		// Numeric types (log2ratio/segmean/copyNumber) show loss/gain thresholds with type-specific
-		// defaults and ranges; 'category' is qualitative and hides them.
-		this.cnvType = cnvQuery?.type ?? 'log2ratio'
-		const cfg = CNV_TYPE_CONFIG[this.cnvType]
+		// radios (if any) sit above the threshold inputs, which are rebuilt when the selected type changes
+		const radioHolder = cnvTypes?.length ? cnvBody.append('div').style('margin-bottom', '6px') : null
+		const thresholdHolder = cnvBody.append('div')
+
+		if (cnvTypes?.length) {
+			// initial selection: a saved & still-valid type, else the first declared type
+			const savedId = savedCnv?.cnvType
+			this.cnvSelectedTypeId = (savedId && cnvTypes.find(t => t.id === savedId)?.id) || cnvTypes[0].id
+
+			// one radio per declared cnv type; switching rebuilds the threshold rows for the new valueType
+			make_radios({
+				holder: radioHolder,
+				options: cnvTypes.map(t => ({
+					label: t.label,
+					value: t.id,
+					checked: t.id === this.cnvSelectedTypeId,
+					testid: `sjpp-grin2-cnvtype-${t.id}`
+				})),
+				styles: { display: 'block' },
+				callback: (value: string) => {
+					this.cnvSelectedTypeId = value
+					const def = cnvTypes.find(t => t.id === value)
+					// only reuse saved thresholds when the user is back on the saved type; otherwise show defaults
+					const savedForType = value === savedCnv?.cnvType ? savedCnv : undefined
+					this.renderCnvThresholdRows(thresholdHolder, def?.valueType ?? 'log2ratio', savedForType, cnvQuery)
+				}
+			})
+		} else {
+			this.cnvSelectedTypeId = null
+		}
+
+		// initial threshold rows. valueType from the selected type (cnvTypes ds) or ds-level cnv.type (file ds)
+		const initialValueType: CnvType =
+			(cnvTypes?.length ? cnvTypes.find(t => t.id === this.cnvSelectedTypeId)?.valueType : cnvQuery?.type) ??
+			'log2ratio'
+		// savedCnv only applies to the initially-selected type (or to the single-type file ds case)
+		const initialSaved = !cnvTypes?.length || this.cnvSelectedTypeId === savedCnv?.cnvType ? savedCnv : undefined
+		this.renderCnvThresholdRows(thresholdHolder, initialValueType, initialSaved, cnvQuery)
+
+		const dtUsage = this.config.settings.dtUsage
+		const isChecked =
+			useSaved && dtUsage[dtcnv]?.checked !== undefined ? dtUsage[dtcnv].checked : !!(cnvQuery || cnvTypes?.length)
+		cnvBody.style('display', isChecked ? '' : 'none')
+
+		this.cnvCheckbox = make_one_checkbox({
+			holder: left,
+			labeltext: dt2lesion[dtcnv].uilabel,
+			checked: isChecked,
+			testid: 'sjpp-grin2-checkbox-cnv',
+			callback: (checked: boolean) => {
+				cnvBody.style('display', checked ? '' : 'none')
+				this.updateRunButtonFromCheckboxes()
+			}
+		})
+	}
+
+	/** (Re)build the loss/gain/maxSeg inputs for a given cnv value type. Called on first render and whenever
+	 *  the user switches cnv type — segmean/copyNumber/log2ratio have type-specific defaults and ranges, and
+	 *  'category' is qualitative and hides the thresholds entirely. */
+	private renderCnvThresholdRows(holder: any, valueType: CnvType, savedCnv: any, cnvQuery: any) {
+		holder.selectAll('*').remove()
+		this.cnvType = valueType
+		const cfg = CNV_TYPE_CONFIG[valueType]
+		const t2 = table2col({ holder })
 
 		if (!cfg.hideThresholds) {
 			this.cnv_lossThreshold = this.addOptionRowToTable(
@@ -236,6 +304,10 @@ export class GRIN2ControlsView {
 				cfg.gainMax,
 				cfg.step
 			)
+		} else {
+			// qualitative call: no numeric thresholds; clear any stale inputs so getConfigValues omits them
+			this.cnv_lossThreshold = null
+			this.cnv_gainThreshold = null
 		}
 		this.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
@@ -245,21 +317,6 @@ export class GRIN2ControlsView {
 			1e9,
 			1000
 		)
-
-		const dtUsage = this.config.settings.dtUsage
-		const isChecked = useSaved && dtUsage[dtcnv]?.checked !== undefined ? dtUsage[dtcnv].checked : !!cnvQuery
-		t2.table.style('display', isChecked ? '' : 'none')
-
-		this.cnvCheckbox = make_one_checkbox({
-			holder: left,
-			labeltext: dt2lesion[dtcnv].uilabel,
-			checked: isChecked,
-			testid: 'sjpp-grin2-checkbox-cnv',
-			callback: (checked: boolean) => {
-				t2.table.style('display', checked ? '' : 'none')
-				this.updateRunButtonFromCheckboxes()
-			}
-		})
 	}
 
 	private addFusionRow(table: any) {
