@@ -10,8 +10,10 @@ export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 		return await _.init(arg, app.holder0, app.genomes)
 	}
 	if (arg.launchIdc) {
-		const _ = await import('./IDC/idc.ts')
-		return await _.init(arg, app.holder0)
+		console.log('launching IDC app', arg)
+		const _ = await import('./idc.ts')
+		console.log('imported idc.ts', app)
+		return await _.init(arg, app.holder0, app.genomes)
 	}
 	if (arg.launchGdcGb) {
 		const _ = await import('./gb.ts')
