@@ -154,11 +154,15 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
-	/** For filtering
-	 * Create lookups for getFilteredSingleCellSamples. Created on server
-	 * init for performance. */
-	const cohortSampleIds = new Set()
-	const cohortId2SampleName = new Map() // maps numeric cohort ID to sample name
+	/** Create lookups for getFilteredSingleCellSamples. Created on server
+	 * init for performance.
+	 *
+	 * Captures ids and names that may exist only in a meta result file but
+	 * there is no corresponding tsv file. Do not include in samples map which
+	 * returns samples with available files. */
+	const sampleIntIds = new Set()
+	const sampleIntId2Name = new Map() // maps numeric cohort ID to sample name
+	const sampleName2IntId = new Map() // maps sample name to numeric cohort ID
 	for (const plot of D.plots) {
 		if (plot.isMetaResult) {
 			/** Meta analysis files are read on init to create a sample name 2 cell id
@@ -185,15 +189,16 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 				const lines = text.trim().split('\n')
 				const cellIdMap = new Map()
 				for (let i = 1; i < lines.length; i++) {
-					const [cellId, sampleId] = lines[i].split('\t')
+					const [cellId, sampleId] = lines[i].split('\t').map(s => s.trim())
 					if (!cellId) throw new Error(`meta result row missing, index = ${i}, cell id: ${cellId}`)
 					if (!sampleId) throw new Error(`meta result row missing sample id, index = ${i}, sample id: ${sampleId}`)
 					cellIdMap.set(cellId, sampleId)
 					// Treat sampleId from file as a sample name and look up the cohort sample ID
-					const cohortSampleId = ds.cohort.termdb.q.sampleName2id(sampleId)
-					if (cohortSampleId !== undefined) {
-						cohortSampleIds.add(cohortSampleId)
-						cohortId2SampleName.set(cohortSampleId, sampleId)
+					const sampleIntId = ds.cohort.termdb.q.sampleName2id(sampleId)
+					if (sampleIntId !== undefined) {
+						sampleIntIds.add(sampleIntId)
+						sampleIntId2Name.set(sampleIntId, sampleId)
+						sampleName2IntId.set(sampleId, sampleIntId)
 					}
 				}
 				D.metaIdMap.set(sampleName, cellIdMap)
@@ -215,9 +220,10 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			if (sid == undefined) throw new Error(`singlecell.sample: unknown sample name ${sampleName}`)
 			// is valid sample, add to holder
 			samples.set(sid, { sample: sampleName })
-			/** Add to lookups for filtering. This is a fallback if no meta results*/
-			cohortSampleIds.add(sid)
-			cohortId2SampleName.set(sid, sampleName)
+			/** Add to lookups for filtering. This is a fallback if no meta results */
+			sampleIntIds.add(sid)
+			sampleIntId2Name.set(sid, sampleName)
+			sampleName2IntId.set(sampleName, sid)
 		}
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
@@ -246,7 +252,9 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		if (_q.filter?.lst?.length || _q.filter0) {
 			const tmp = await S.getFilteredSingleCellSamples!(_q, true)
 			re.samples = Array.from(tmp).map(s => {
-				return { sample: s }
+				if (samples.has(s)) return samples.get(s)
+				else if (samples.has(sampleName2IntId.get(s))) return samples.get(sampleName2IntId.get(s))
+				else return { sample: s }
 			})
 		}
 		if (q.metaResults) {
@@ -269,18 +277,18 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		const arg = {
 			filter: _q.filter,
 			filter0: _q.filter0,
-			/** Harcoded here as there's no use case for passing false.
+			/** Hardcoded here as there's no use case for passing false.
 			 * If changing the future, note: getData() passes _q.mapParent2Children
 			 * as true by default. mapParent2Children passed from getSingleCellScatter
 			 * is missing.*/
 			mapParent2Children: true
 		}
-		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(cohortSampleIds), ds)) || new Set()
+		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(sampleIntIds), ds)) || new Set()
 
 		// Convert cohort sample IDs to sample names
 		const result = new Set<string>()
 		for (const sid of filteredSampleIds) {
-			const sampleName = cohortId2SampleName.get(sid)
+			const sampleName = sampleIntId2Name.get(sid)
 			if (sampleName) result.add(sampleName)
 		}
 		// Add meta result names if requested
