@@ -154,6 +154,12 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
+	/** For filtering
+	 * Create lookups for getFilteredSingleCellSamples. Created on server
+	 * init for performance. */
+	const sample2CohortId = new Map()
+	const cohortSampleIds = new Set()
+	const cohortId2SampleName = new Map() // maps numeric cohort ID to sample name
 	for (const plot of D.plots) {
 		if (plot.isMetaResult) {
 			/** Meta analysis files are read on init to create a sample name 2 cell id
@@ -184,6 +190,13 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					if (!cellId) throw new Error(`meta result row missing, index = ${i}, cell id: ${cellId}`)
 					if (!sampleId) throw new Error(`meta result row missing sample id, index = ${i}, sample id: ${sampleId}`)
 					cellIdMap.set(cellId, sampleId)
+					// Treat sampleId from file as a sample name and look up the cohort sample ID
+					const cohortSampleId = ds.cohort.termdb.q.sampleName2id(sampleId)
+					if (cohortSampleId !== undefined) {
+						cohortSampleIds.add(cohortSampleId)
+						cohortId2SampleName.set(cohortSampleId, sampleId)
+						if (!sample2CohortId.has(cohortSampleId)) sample2CohortId.set(sampleId, cohortSampleId)
+					}
 				}
 				D.metaIdMap.set(sampleName, cellIdMap)
 			} catch (e: any) {
@@ -204,12 +217,15 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			if (sid == undefined) throw new Error(`singlecell.sample: unknown sample name ${sampleName}`)
 			// is valid sample, add to holder
 			samples.set(sid, { sample: sampleName })
+			/** Add to lookups for filtering. This is a fallback if no meta results*/
+			cohortSampleIds.add(sid)
+			cohortId2SampleName.set(sid, sampleName)
+			sample2CohortId.set(sampleName, sid)
 		}
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
 	if (samples.size == 0) throw new Error('no scrna samples found')
-	console.log(samples.size, 'singleCell samples loaded from ' + ds.label)
 
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
@@ -226,23 +242,15 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		}
 	}
 
-	/** For filtering
-	 * Create lookups for getFilteredSingleCellSamples. Created on server
-	 * init for performance. */
-	const sample2Id = new Map()
-	const sampleIds = new Set()
 	const _samples = [...samples.values()] as SingleCellSample[]
-	for (const s of _samples) {
-		const sampleId = ds.cohort.termdb.q.sampleName2id(s.sample)
-		if (!Number.isFinite(sampleId)) continue
-		sampleIds.add(sampleId)
-		sample2Id.set(s.sample, sampleId)
-	}
 
 	S.get = async (_q: TermdbSingleCellSamplesRequest) => {
-		const re: any = { samples: [...samples.values()] as SingleCellSample[] }
-		if (_q.filter?.lst?.length) {
-			re.samples = await S.getFilteredSingleCellSamples!(_q, true)
+		const re: any = { samples: _samples }
+		if (_q.filter?.lst?.length || _q.filter0?.lst?.length) {
+			const tmp = await S.getFilteredSingleCellSamples!(_q, true)
+			re.samples = Array.from(tmp).map(s => {
+				return { sample: s }
+			})
 		}
 		if (q.metaResults) {
 			// meta analysis results exist. pass it along with samples
@@ -253,14 +261,39 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		return re
 	}
 
+	/** This function allows filtering by cohort level terms for the sample table in the SC
+	 * app and meta results plots.
+	 *
+	 * *** NOTE: This logic accounts for when a sample id is present in the meta result file but
+	 * a sample file is not available. It's possible this use case is seen in development only.
+	 * If so, this logic can be simplified to only check for sample ids in the cohort. *** */
 	S.getFilteredSingleCellSamples = async (_q: TermdbSingleCellSamplesRequest, includeMeta = false) => {
-		if (!_q.filter && !_q.filter0) return
-		const allowedSamples = await mayLimitSamples(_q, [...sampleIds], ds)
-		const conditional = sample => {
-			if (includeMeta) return allowedSamples?.has(sample2Id.get(sample)) || D?.metaIdMap?.has(sample)
-			else return allowedSamples?.has(sample2Id.get(sample))
+		if (!_q.filter && !_q.filter0) return new Set()
+		const arg = {
+			filter: _q.filter,
+			filter0: _q.filter0,
+			/** Harcoded here as there's no use case for passing false.
+			 * If changing the future, note: getData() passes _q.mapParent2Children
+			 * as true by default. mapParent2Children passed from getSingleCellScatter
+			 * is missing.*/
+			mapParent2Children: true
 		}
-		return _samples.filter(s => conditional(s.sample))
+		const allowedSamples = await mayLimitSamples(arg, Array.from(cohortSampleIds), ds)
+		const filteredSampleIds = allowedSamples?.intersection(cohortSampleIds) || new Set()
+
+		// Convert cohort sample IDs to sample names
+		const result = new Set<string>()
+		for (const sid of filteredSampleIds) {
+			const sampleName = cohortId2SampleName.get(sid)
+			if (sampleName) result.add(sampleName)
+		}
+		// Add meta result names if requested
+		if (includeMeta) {
+			for (const metaResultName of D.metaIdMap?.keys() || []) {
+				result.add(metaResultName)
+			}
+		}
+		return result
 	}
 }
 
