@@ -157,7 +157,6 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	/** For filtering
 	 * Create lookups for getFilteredSingleCellSamples. Created on server
 	 * init for performance. */
-	const sample2CohortId = new Map()
 	const cohortSampleIds = new Set()
 	const cohortId2SampleName = new Map() // maps numeric cohort ID to sample name
 	for (const plot of D.plots) {
@@ -195,7 +194,6 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					if (cohortSampleId !== undefined) {
 						cohortSampleIds.add(cohortSampleId)
 						cohortId2SampleName.set(cohortSampleId, sampleId)
-						if (!sample2CohortId.has(cohortSampleId)) sample2CohortId.set(sampleId, cohortSampleId)
 					}
 				}
 				D.metaIdMap.set(sampleName, cellIdMap)
@@ -220,7 +218,6 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			/** Add to lookups for filtering. This is a fallback if no meta results*/
 			cohortSampleIds.add(sid)
 			cohortId2SampleName.set(sid, sampleName)
-			sample2CohortId.set(sampleName, sid)
 		}
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
@@ -246,7 +243,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 
 	S.get = async (_q: TermdbSingleCellSamplesRequest) => {
 		const re: any = { samples: _samples }
-		if (_q.filter?.lst?.length || _q.filter0?.lst?.length) {
+		if (_q.filter?.lst?.length || _q.filter0) {
 			const tmp = await S.getFilteredSingleCellSamples!(_q, true)
 			re.samples = Array.from(tmp).map(s => {
 				return { sample: s }
@@ -278,8 +275,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			 * is missing.*/
 			mapParent2Children: true
 		}
-		const allowedSamples = await mayLimitSamples(arg, Array.from(cohortSampleIds), ds)
-		const filteredSampleIds = allowedSamples?.intersection(cohortSampleIds) || new Set()
+		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(cohortSampleIds), ds)) || new Set()
 
 		// Convert cohort sample IDs to sample names
 		const result = new Set<string>()
