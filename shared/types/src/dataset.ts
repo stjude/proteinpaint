@@ -1018,6 +1018,21 @@ export type SingleCellQuery = {
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
 	terms?: object[]
+	/** one array element is one set of pseudobulk results, for a set of cell types.
+	array allows to support multiple sets of results  */
+	geneExpPseudobulk?: {
+		/** single cell cell type term id, to which the cell type categories belong. this allows to match it to terms */
+		scctId: string
+		values: {
+			/** each key is a cell type name */
+			[index: string]: {
+				/** path to h5 file. matrix of sample-gene
+				values are average expression value for cells of this cell type */
+				mean: string
+				// later add sum and percent
+			}
+		}
+	}[]
 }
 
 export type SingleCellMetaResult = {
