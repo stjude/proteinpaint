@@ -1027,9 +1027,12 @@ export type SingleCellQuery = {
 			/** each key is a cell type name */
 			[index: string]: {
 				/** path to h5 file. matrix of sample-gene
-				values are average expression value for cells of this cell type */
+				values are average of per-cell log1p values, used for gene exp term */
 				mean: string
-				// later add sum and percent
+				/** path to h5 file. matrix of sample-gene. values are sum of umi count
+				when present, can do DE
+				*/
+				total?: string
 			}
 		}
 	}[]
