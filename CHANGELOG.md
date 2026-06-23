@@ -12,6 +12,7 @@ Features:
 - Imroved GRIN2 CNV support by allowing datasets to declare the way their CNV data is quantified via type
 - GRIN2: Adding support for GDC sample querying
 - concurrencyLimiter.ts: Added support for a bounded, fixed list case
+- GRIN2: Enable skipping of specific dt types in both GDC and non-GDC fetches
 
 Fixes:
 - combine tid2value with pp filter for mds3 tk bug fix

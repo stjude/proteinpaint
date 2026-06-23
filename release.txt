@@ -1,2 +1,1 @@
-Features:
-- GRIN2: Enable skipping of specific dt types in both GDC and non-GDC fetches
+
