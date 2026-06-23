@@ -307,6 +307,10 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 						['Processed Samples', processing.processedSamples!.toLocaleString()],
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
 						['Failed Samples', processing.failedSamples!.toLocaleString()],
+						// only shown when a cnv-type selection actually dropped some samples' cnv
+						...(processing.droppedCnvNoType
+							? [['Dropped (CNV type unavailable)', processing.droppedCnvNoType.toLocaleString()]]
+							: []),
 						['Total Lesions', processing.totalLesions!.toLocaleString()],
 						['Processed Lesions', processing.processedLesions!.toLocaleString()]
 					]
@@ -577,6 +581,7 @@ async function processSampleData(
 		totalLesions: number
 		processedLesions: number
 		unprocessedSamples: number
+		droppedCnvNoType: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -588,12 +593,25 @@ async function processSampleData(
 	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
-	// How this ds quantifies cnv values; drives gain/loss classification.
-	// Absent => 'log2ratio' (legacy default, diploid baseline 0).
-	const cnvType: CnvType = ds.queries?.cnv?.type ?? 'log2ratio'
+	// The user may select one of several cnv file types the ds declares (ds.queries.singleSampleMutation.cnvTypes,
+	// e.g. GDC masked-segment vs allele-specific). The selected def's valueType is the authoritative cnv
+	// quantification for this run; pass the def to the getter so it loads only that file type.
+	const cnvTypeDefs = ds.queries?.singleSampleMutation?.cnvTypes as
+		| { id: string; label: string; valueType: CnvType; dataType: string }[]
+		| undefined
+	const selectedCnvDef = request.cnvOptions?.cnvType
+		? cnvTypeDefs?.find(t => t.id === request.cnvOptions!.cnvType)
+		: undefined
+
+	// How this ds quantifies cnv values; drives gain/loss classification. The selected type wins; else the
+	// ds-level default (file-based datasets); else 'log2ratio' (legacy default, diploid baseline 0).
+	const cnvType: CnvType = selectedCnvDef?.valueType ?? ds.queries?.cnv?.type ?? 'log2ratio'
 
 	// Track unique samples per lesion type for reporting
 	const samplesPerType = new Map<number, Set<string>>()
+	// Track unique samples per *lesion type* (gain/loss/mutation/...) so the summary can report, e.g.,
+	// how many samples have a gain vs a loss — distinct from samplesPerType, which is per data type.
+	const samplesPerLesionType = new Map<string, Set<string>>()
 	const enabledTypes: number[] = []
 	if (request.snvindelOptions) enabledTypes.push(dtsnvindel)
 	if (request.cnvOptions) enabledTypes.push(dtcnv)
@@ -610,7 +628,9 @@ async function processSampleData(
 		failedSamples: 0,
 		totalLesions: 0,
 		processedLesions: 0,
-		unprocessedSamples: 0
+		unprocessedSamples: 0,
+		// cases that had cnv file(s) but none of the user-selected cnv type (their cnv was dropped, ssm kept)
+		droppedCnvNoType: 0
 	} as {
 		totalSamples: number
 		processedSamples: number
@@ -618,6 +638,7 @@ async function processSampleData(
 		totalLesions: number
 		processedLesions: number
 		unprocessedSamples: number
+		droppedCnvNoType: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -645,7 +666,17 @@ async function processSampleData(
 		concurrency,
 		async sample => {
 			try {
-				const { mlst } = await ds.queries.singleSampleMutation.get({ sample: sample.name, skipDt })
+				const { mlst, droppedCnvNoMatch } = await ds.queries.singleSampleMutation.get({
+					sample: sample.name,
+					skipDt,
+					// only set when the user selected a specific cnv type; the getter loads only this type and
+					// flags droppedCnvNoMatch when the case has cnv but not of this type
+					cnvType: selectedCnvDef
+						? { id: selectedCnvDef.id, dataType: selectedCnvDef.dataType, valueType: selectedCnvDef.valueType }
+						: undefined
+				})
+
+				if (droppedCnvNoMatch) processing.droppedCnvNoType! += 1
 
 				const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
 
@@ -657,11 +688,23 @@ async function processSampleData(
 				// Merge synchronously (no await below) so concurrent workers can't interleave the cap math
 				const remainingCapacity = maxLesions - lesions.length
 				if (remainingCapacity <= 0) return
-				lesions.push(...filteredLesions.slice(0, remainingCapacity))
+				const usedLesions = filteredLesions.slice(0, remainingCapacity)
+				lesions.push(...usedLesions)
 
 				// Track samples for each type they contributed to
 				for (const type of contributedTypes) {
 					samplesPerType.get(type)?.add(sample.name)
+				}
+
+				// Track samples per lesion type from the lesions actually used (consistent with lesionTypeCounts)
+				for (const lesion of usedLesions) {
+					const lt = lesion[4]
+					let set = samplesPerLesionType.get(lt)
+					if (!set) {
+						set = new Set<string>()
+						samplesPerLesionType.set(lt, set)
+					}
+					set.add(sample.name)
 				}
 
 				processing.processedSamples! += 1
@@ -697,7 +740,6 @@ async function processSampleData(
 	}
 
 	for (const type of enabledTypes) {
-		const sampleCount = samplesPerType.get(type)?.size || 0
 		const dtConfig = dt2lesion[type]
 
 		if (!dtConfig) continue
@@ -705,7 +747,8 @@ async function processSampleData(
 		dtConfig.lesionTypes.forEach(lt => {
 			lesionCounts.byType[lt.lesionType] = {
 				count: lesionTypeCounts[lt.lesionType] || 0,
-				samples: sampleCount
+				// samples with at least one lesion of this specific lesion type (e.g. gain vs loss separately)
+				samples: samplesPerLesionType.get(lt.lesionType)?.size || 0
 			}
 		})
 	}

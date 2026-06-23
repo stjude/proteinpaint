@@ -152,7 +152,9 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 	if (queries?.snvindel) {
 		dtUsage[dtsnvindel] = { checked: true, label: dt2lesion[dtsnvindel].uilabel }
 	}
-	if (queries?.cnv) {
+	// CNV is available either via a ds-level cnv query (file-based ds) or via per-sample cnv file types
+	// declared on singleSampleMutation (e.g. GDC, which has no queries.cnv but serves cnv per case).
+	if (queries?.cnv || queries?.singleSampleMutation?.cnvTypes?.length) {
 		dtUsage[dtcnv] = { checked: true, label: dt2lesion[dtcnv].uilabel }
 	}
 	if (queries?.svfusion) {

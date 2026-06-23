@@ -769,7 +769,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const skipCnv = opts.skipDt?.has(common.dtcnv)
 	const skipFusion = opts.skipDt?.has(common.dtfusionrna)
 	// neither cnv nor fusion requested: skip the files listing fetch entirely
-	if (skipCnv && skipFusion) return {}
+	if (skipCnv && skipFusion) return { dt2files: {}, cnvAnyType: false }
 
 	const fields = [
 		'cases.samples.tissue_type',
@@ -800,6 +800,12 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const cnvfiles = [],
 		fusionfiles = []
 
+	// when a specific cnv type is requested (GRIN2 radio selection), load only files of that GDC data_type.
+	// cnvAnyType still flips true for any cnv-eligible hit (pre-filter) so the caller can tell apart
+	// "case has no cnv at all" from "case has cnv but not the requested type".
+	const wantDataType = opts.cnvType?.dataType
+	let cnvAnyType = false
+
 	for (const h of re.data.hits) {
 		if (!h.cases?.[0]) throw new Error(`h.cases[0] missing for file =${h.file_id}`)
 		if (h.data_format == 'BEDPE') {
@@ -823,6 +829,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 			if (skipCnv) continue
 			if (h.experimental_strategy == 'Genotyping Array') {
 				if (h.data_type == 'Masked Copy Number Segment' || h.data_type == ascns) {
+					cnvAnyType = true
+					if (wantDataType && h.data_type != wantDataType) continue
 					cnvfiles.push({
 						nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
 						mlst: await loadCnvFile(host, h.file_id),
@@ -835,6 +843,8 @@ async function getCnvFusion4oneCase(opts, ds) {
 				// is wgs, no need to check tissue_type, the file is usable
 				if (!h.file_id) continue
 				if (h.data_type != ascns) continue
+				cnvAnyType = true
+				if (wantDataType && h.data_type != wantDataType) continue
 				cnvfiles.push({
 					nameHtml: `<a href=https://portal.gdc.cancer.gov/files/${h.file_id} target=_blank>${h.file_name}</a>`,
 					mlst: await loadCnvFile(host, h.file_id),
@@ -847,7 +857,7 @@ async function getCnvFusion4oneCase(opts, ds) {
 	const dt2files = {}
 	if (fusionfiles.length) dt2files[common.dtfusionrna] = fusionfiles
 	if (cnvfiles.length) dt2files[common.dtcnv] = cnvfiles
-	return dt2files
+	return { dt2files, cnvAnyType }
 
 	function getAttr(h) {
 		return {
@@ -909,7 +919,17 @@ cnv files come in different formats. detect by header line
 */
 async function loadCnvFile(host, fid) {
 	const re = await xfetch(joinUrl(host.rest, 'data', fid), { timeout: false })
-	const lines = re.trim().split('\n')
+	return parseGdcCnvFile(re)
+}
+
+/*
+Parse the text content of a GDC cnv file into an mlst[]. Kept pure (no network) so it can be unit tested.
+The file format is detected by header line; each format stamps a cnv valueType that drives downstream
+gain/loss classification (segment-mean => 'segmean' baseline 0; total copy number => 'copyNumber' baseline 2).
+The copy-number format additionally emits a dtloh event for strict one-allele loss (minor==0, major>0).
+*/
+export function parseGdcCnvFile(text) {
+	const lines = text.trim().split('\n')
 	const mlst = []
 	switch (lines[0]) {
 		case 'GDC_Aliquot_ID\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean':
@@ -925,7 +945,9 @@ async function loadCnvFile(host, fid) {
 					chr,
 					start: Number(l[2]),
 					stop: Number(l[3]),
-					value: Number(l[5])
+					value: Number(l[5]),
+					// segment-mean header => log2ratio-style value, diploid baseline 0
+					valueType: 'segmean'
 				}
 				if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value))
 					throw 'start/stop/value not a number in cnv file: ' + l
@@ -945,7 +967,9 @@ async function loadCnvFile(host, fid) {
 					chr: l[1],
 					start: Number(l[2]),
 					stop: Number(l[3]),
-					value: total
+					value: total,
+					// total-copy-number header => absolute copy number, diploid baseline 2
+					valueType: 'copyNumber'
 				}
 				if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
 				mlst.push(cnv)
@@ -2175,6 +2199,10 @@ export function gdcValidate_query_singleSampleMutation(ds, genome) {
 		// route (POST bodies merge into req.query); drop anything that isn't a real Set so the downstream
 		// ?.has() guards can't throw and turn malformed input into a 500
 		if (q.skipDt && !(q.skipDt instanceof Set)) q.skipDt = undefined
+		// cnvType is a server-internal descriptor {id,dataType,valueType} set by GRIN2 to pick a cnv file
+		// type. Drop anything that isn't a well-formed object so a client look-alike can't influence which
+		// file loads or crash the getter
+		if (q.cnvType && (typeof q.cnvType != 'object' || typeof q.cnvType.dataType != 'string')) q.cnvType = undefined
 		/*
 		q.sample value can be multiple types:
 		- sample submitter id from mds3 tk (if cached, if not cached it is aliquot id)
@@ -2517,8 +2545,11 @@ async function getSingleSampleMutations(query, ds, genome) {
 	}
 
 	// cnv and fusion are loaded from per-sample text files
-	const dt2files = await getCnvFusion4oneCase(query, ds)
+	const { dt2files, cnvAnyType } = await getCnvFusion4oneCase(query, ds)
 	const cfs = dt2files[common.dtcnv]
+	// GRIN2 may request a specific cnv type. If the case had cnv file(s) but none of the requested
+	// type, drop only its cnv contribution (ssm/fusion are untouched) and let the caller report it.
+	if (query.cnvType && cnvAnyType && !cfs?.length) result.droppedCnvNoMatch = true
 	if (cfs) {
 		// select a default set of cnvs to insert to mlst so it shows on disco;
 		const usefile = cfs.find(f => f.attrs['Experimental Strategy'] == 'WGS' || f.attrs['Data Type'] == ascns) || cfs[0]

@@ -12,9 +12,11 @@ export interface GRIN2Settings {
 
 	/** Persisted CNV options. Populated after the first Run from the form. */
 	cnvOptions?: {
-		lossThreshold: number
-		gainThreshold: number
+		lossThreshold?: number
+		gainThreshold?: number
 		maxSegLength: number
+		/** id of the selected cnv file type, for datasets exposing queries.singleSampleMutation.cnvTypes */
+		cnvType?: string
 	}
 
 	/** Persisted fusion options (currently no user-configurable fields). */

@@ -425,6 +425,20 @@ type SingleSampleMutationQuery = {
 		/** if true, filter mutations by predefined geneset by default */
 		prioritizeGeneLabelsByGeneSets?: true
 	}
+	/** CNV file types this ds can serve for a single sample. Present when a sample may have more than one
+	 * CNV file type (e.g. GDC: masked segment-mean vs allele-specific copy-number). GRIN2 renders these as
+	 * radio buttons and passes the chosen id to get() so only the matching file is loaded and classified.
+	 * Absent for single-type datasets, which classify by ds.queries.cnv.type. */
+	cnvTypes?: {
+		/** stable id sent in the request (GRIN2Request.cnvOptions.cnvType) */
+		id: string
+		/** radio button label */
+		label: string
+		/** how this type quantifies cnv values; drives gain/loss thresholds and classification */
+		valueType: 'log2ratio' | 'segmean' | 'copyNumber' | 'category'
+		/** source-specific selector the getter matches files against (GDC files-API data_type) */
+		dataType: string
+	}[]
 	/** rest of properties are required for native ds without ds-supplied getter
 	TODO migrate gdc to get() and delete .src=native
 	*/

@@ -259,6 +259,15 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			sample_id_key: q.singleSampleMutation.sample_id_key,
 			discoPlot: q.singleSampleMutation.discoPlot
 		}
+		// supported cnv file types (e.g. GDC masked vs allele-specific). GRIN2 renders these as radios.
+		if (Array.isArray(q.singleSampleMutation.cnvTypes) && q.singleSampleMutation.cnvTypes.length) {
+			q2.singleSampleMutation.cnvTypes = q.singleSampleMutation.cnvTypes.map(t => ({
+				id: t.id,
+				label: t.label,
+				valueType: t.valueType,
+				dataType: t.dataType
+			}))
+		}
 	}
 	if (q.singleSampleGenomeQuantification) {
 		q2.singleSampleGenomeQuantification = {}
