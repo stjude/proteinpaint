@@ -202,8 +202,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(60)) // 60-second timeout per request
+        .timeout(Duration::from_secs(30)) // 30-second timeout per request
         .connect_timeout(Duration::from_secs(15))
+        .pool_max_idle_per_host(0) // avoid "connection closed before message completed" race
         .build()
         .map_err(|e| {
             let client_error = ErrorEntry {
@@ -225,7 +226,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (name, value) in req_headers.iter() {
                 request = request.header(name.clone(), value.clone()); // == .header("X-Forwarded-Agent", …) etc.
             }
-            match request.send().await {
+
+            // bounded retry for transient transport failures
+            // (IncompleteMessage / TimedOut / connect), up to 3 attempts with backoff
+            let mut attempt: u32 = 0;
+            let send_result = loop {
+                attempt += 1;
+                let req = request.try_clone().expect("GET request must be cloneable");
+                match req.send().await {
+                    Ok(resp) => break Ok(resp),
+                    Err(e) if attempt < 3 && (e.is_request() || e.is_timeout() || e.is_connect()) => {
+                        tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
+                        continue;
+                    }
+                    Err(e) => break Err(e),
+                }
+            };
+            match send_result {
                 Ok(resp) if resp.status().is_success() => match resp.bytes().await {
                     Ok(content) => {
                         let mut decoder = GzDecoder::new(&content[..]);
@@ -271,7 +288,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     download_futures
-        .buffer_unordered(20)
+        .buffer_unordered(10)
         .for_each(|result| {
             let encoder = Arc::clone(&encoder); // Clone the Arc for each task
             let maf_col_cp = maf_col.clone();
