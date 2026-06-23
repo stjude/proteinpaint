@@ -222,18 +222,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let client = client.clone();
         let req_headers = req_headers.clone();
         async move {
-            let mut request = client.get(&url);
-            for (name, value) in req_headers.iter() {
-                request = request.header(name.clone(), value.clone()); // == .header("X-Forwarded-Agent", …) etc.
-            }
-
             // bounded retry for transient transport failures
             // (IncompleteMessage / TimedOut / connect), up to 3 attempts with backoff
             let mut attempt: u32 = 0;
             let send_result = loop {
                 attempt += 1;
-                let req = request.try_clone().expect("GET request must be cloneable");
-                match req.send().await {
+                let mut request = client.get(&url);
+                for (name, value) in req_headers.iter() {
+                    request = request.header(name.clone(), value.clone()); // == .header("X-Forwarded-Agent", …) etc.
+                }
+                match request.send().await {
                     Ok(resp) => break Ok(resp),
                     Err(e) if attempt < 3 && (e.is_request() || e.is_timeout() || e.is_connect()) => {
                         tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
