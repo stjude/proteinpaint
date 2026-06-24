@@ -7,7 +7,41 @@ import { detectGt, detectOne } from '../../../test/test.helpers.js'
     protein mode
     genomic mode
     add variants track
+    protein mode with global filter (state.termfilter.filter)
+    protein mode with local filter (config.filter)
+    protein mode with both global and local filter
 ********************/
+
+// reusable TermdbTest tvs filters used by the filter-related tests below
+const globalFilter = {
+	type: 'tvslst',
+	in: true,
+	join: 'and',
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: { id: 'sex' },
+				values: [{ key: '1', label: 'Male' }]
+			}
+		}
+	]
+}
+
+const localFilter = {
+	type: 'tvslst',
+	in: true,
+	join: 'and',
+	lst: [
+		{
+			type: 'tvs',
+			tvs: {
+				term: { id: 'diaggrp' },
+				values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
+			}
+		}
+	]
+}
 
 /*************************
  reusable helper functions
@@ -136,6 +170,122 @@ tape('add variants track', (test: any) => {
 		if (activeTabAfterCheckbox) {
 			test.equal(activeTabAfterCheckbox.label, 'Variants', 'Variants tab should remain active after checkbox toggle')
 		}
+		if (test._ok) gb.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('protein mode with global filter (state.termfilter.filter)', (test: any) => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			termfilter: { filter: globalFilter },
+			plots: [
+				{
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: 'TP53' }
+				}
+			]
+		},
+		genomeBrowser: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(gb) {
+		gb.on('postRender.test', null)
+		const dom = gb.Inner.dom
+		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
+		test.ok(blockDiv, 'Should render block with a global termfilter applied')
+		const tklst = blockDiv.querySelectorAll('[data-testid="sja_sample_menu_opener"]')
+		test.equal(tklst.length, 3, 'Block has 3 tracks with global filter')
+		// verify state was wired with the global filter
+		const state = gb.Inner.app.getState()
+		test.deepEqual(
+			state.termfilter.filter,
+			globalFilter,
+			'state.termfilter.filter should equal the supplied global filter'
+		)
+		const proteinTk = tklst[2]
+		const rects = await detectGt({ elem: proteinTk, selector: 'rect' })
+		test.ok(rects, 'Should have rect elements in protein track when a global filter is set')
+		if (test._ok) gb.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('protein mode with local filter (config.filter)', (test: any) => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: 'TP53' },
+					filter: localFilter
+				}
+			]
+		},
+		genomeBrowser: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(gb) {
+		gb.on('postRender.test', null)
+		const dom = gb.Inner.dom
+		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
+		test.ok(blockDiv, 'Should render block with a local plot config.filter applied')
+		const tklst = blockDiv.querySelectorAll('[data-testid="sja_sample_menu_opener"]')
+		test.equal(tklst.length, 3, 'Block has 3 tracks with local filter')
+		// verify the plot config carried the local filter into app state
+		const state = gb.Inner.app.getState()
+		const plotConfig = state.plots.find(p => p.id === gb.Inner.id)
+		test.ok(plotConfig, 'Should find plot config in app state')
+		test.deepEqual(plotConfig.filter, localFilter, 'plot config.filter should equal the supplied local filter')
+		const proteinTk = tklst[2]
+		const rects = await detectGt({ elem: proteinTk, selector: 'rect' })
+		test.ok(rects, 'Should have rect elements in protein track when a local filter is set')
+		if (test._ok) gb.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('protein mode with both global and local filter', (test: any) => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			termfilter: { filter: globalFilter },
+			plots: [
+				{
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: 'TP53' },
+					filter: localFilter
+				}
+			]
+		},
+		genomeBrowser: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(gb) {
+		gb.on('postRender.test', null)
+		const dom = gb.Inner.dom
+		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
+		test.ok(blockDiv, 'Should render block with both global and local filters applied')
+		const tklst = blockDiv.querySelectorAll('[data-testid="sja_sample_menu_opener"]')
+		test.equal(tklst.length, 3, 'Block has 3 tracks with combined global+local filter')
+		// verify both filters made it into app state
+		const state = gb.Inner.app.getState()
+		test.deepEqual(
+			state.termfilter.filter,
+			globalFilter,
+			'state.termfilter.filter should equal the supplied global filter'
+		)
+		const plotConfig = state.plots.find(p => p.id === gb.Inner.id)
+		test.ok(plotConfig, 'Should find plot config in app state')
+		test.deepEqual(plotConfig.filter, localFilter, 'plot config.filter should equal the supplied local filter')
+		const proteinTk = tklst[2]
+		const rects = await detectGt({ elem: proteinTk, selector: 'rect' })
+		test.ok(rects, 'Should have rect elements in protein track when both filters are set')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
 	}
