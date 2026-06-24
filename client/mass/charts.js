@@ -202,6 +202,12 @@ function getChartTypeList(self, state) {
 			usecase: { target: 'profileForms2', detail: 'tw' },
 			config: { chartType: 'profileForms2' }
 		},
+		{
+			// Picker only — its menu renders a Module → Domain → chart-type matrix/list and creates the chosen plot.
+			label: 'Templates 3',
+			chartType: 'profileForms3',
+			clickTo: self.loadChartSpecificMenu
+		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
 		{
