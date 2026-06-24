@@ -1,2 +1,1 @@
-Features:
-- GRIN2: per-type CNV selection with drop reporting
+
