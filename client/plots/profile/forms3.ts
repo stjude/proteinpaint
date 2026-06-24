@@ -4,14 +4,12 @@ Templates 3 chart-button menu: a Module → Domain → Chart-type matrix/list vi
 Unlike Templates 2 (chart-type tabs over a termdb tree), this surfaces every
 template-bearing domain grouped under its PrOFILE module, with each available
 chart type shown as a labelled button next to the domain. A domain may expose
-multiple chart types, and a single visualization may span several domains; both
-are first-class here so users can see at a glance what exists and open it in one click.
+multiple chart types, so users can see at a glance what exists and open it in one click.
 
 Config is read on the client from termdbConfig.plotConfigByCohort[cohort].profileForms2:
-  - domains[]            forms3 reads only each entry's `id` (the template-bearing domains to surface).
-                         The same entries carry `plotTypes` for Templates v1/v2, which forms3 ignores.
-  - options[]            { name, subtype }  the subtype → chart-type-name map (profileFormsOptions)
-  - crossDomainCharts[]  { label, chartType, domains[], config } charts spanning domains (e.g. heatmaps)
+	- domains[]            forms3 reads only each entry's `id` (the template-bearing domains to surface).
+												 The same entries carry `plotTypes` for Templates v1/v2, which forms3 ignores.
+	- options[]            { name, subtype }  the subtype → chart-type-name map (profileFormsOptions)
 
 Each domain's chart types are derived from the database via getChartTypesByDomain (the child terms'
 subtypes), NOT from the config's plotTypes — so this picker can never drift from the data and a
@@ -22,36 +20,22 @@ Module + domain display names are derived from the domain id, which the build en
   <Component>__<Module>__<Domain>   e.g. 'FContext__National Context__Care Access and Utilization'
 so no extra metadata is needed. Module accent color comes from termdbConfig.colorMap[module].
 
-Forms buttons dispatch a profileForms2 plot pre-selected to that chart type (config.activeTab);
-cross-domain buttons dispatch the chart type declared in config. Invoked by mass/charts.js
-loadChartSpecificMenu via the standard chart-specific menu pattern.
+Forms buttons dispatch a profileForms2 plot pre-selected to that chart type (config.activeTab).
+Invoked by mass/charts.js loadChartSpecificMenu via the standard chart-specific menu pattern.
 */
 
 import { getChartTypesByDomain, type FormsOption } from './formsChartTypes'
 
 export type FormsDomain = { id: string }
-/*
-PLACEHOLDER contract — a chart that spans multiple domains (e.g. a heatmap). Dispatched as-is via
-{ chartType, ...config }. No such plot is wired in PrOFILE yet; the dataset's example points at the
-generic 'matrix' chart until real heatmap terms/config land. See openCross() below.
-*/
-export type CrossDomainChart = {
-	label: string
-	chartType: string
-	domains?: string[]
-	config?: { [key: string]: unknown }
-}
 export type Forms2Config = {
 	options?: FormsOption[]
 	domains?: FormsDomain[]
-	crossDomainCharts?: CrossDomainChart[]
 }
 
 export type DomainEntry = {
 	id: string
 	name: string
 	plotTypes: string[]
-	cross: CrossDomainChart[]
 	searchText: string
 }
 export type ModuleGroup = { module: string; domains: DomainEntry[] }
@@ -60,9 +44,8 @@ export type ModuleGroup = { module: string; domains: DomainEntry[] }
 Pure model builder: group template-bearing domains under their PrOFILE module, preserving
 first-seen order from the config. Module/domain display names come from the domain id
 (<Component>__<Module>__<Domain>). Each domain's chart-type buttons come from chartTypesByDomain
-(derived from the DB by getChartTypesByDomain, already in canonical options order). Cross-domain
-charts are attached under each domain they span. Exported separately from the DOM rendering and the
-DB fetch so the grouping is unit-testable with a plain map.
+(derived from the DB by getChartTypesByDomain, already in canonical options order). Exported
+separately from the DOM rendering and the DB fetch so the grouping is unit-testable with a plain map.
 */
 export function buildTemplates3Model(cfg: Forms2Config, chartTypesByDomain: Map<string, string[]>): ModuleGroup[] {
 	const order: string[] = []
@@ -84,7 +67,6 @@ export function buildTemplates3Model(cfg: Forms2Config, chartTypesByDomain: Map<
 				id,
 				name: domainName,
 				plotTypes: [],
-				cross: [],
 				searchText: `${moduleName} ${domainName}`.toLowerCase()
 			}
 			domains.set(id, entry)
@@ -96,8 +78,6 @@ export function buildTemplates3Model(cfg: Forms2Config, chartTypesByDomain: Map<
 		const entry = ensure(d.id)
 		entry.plotTypes = chartTypesByDomain.get(d.id) || []
 	}
-	// A cross-domain chart is discoverable under each domain it spans (functional req: charts across domains).
-	for (const c of cfg.crossDomainCharts || []) for (const did of c.domains || []) ensure(did).cross.push(c)
 
 	return order.map(module => ({ module, domains: [...byModule.get(module)!.values()] }))
 }
@@ -144,16 +124,6 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			tw: { term: { id: domainId } },
 			activeTab: plotType
 		})
-	/*
-	PLACEHOLDER — not yet backed by data. Cross-domain charts (e.g. heatmaps) are dispatched
-	generically from their dataset-declared chartType + config. PrOFILE has no dedicated heatmap
-	plot today; the only cross-domain target that exists is the generic 'matrix' chart, which is
-	admin-only here and whose example config (in sjglobal.profile.ts crossDomainCharts) uses domain
-	multivalue terms as a stand-in. When real heatmap terms/config land, only that dataset entry
-	changes — this dispatch path stays the same.
-	*/
-	const openCross = (c: CrossDomainChart) =>
-		dispatch({ chartType: c.chartType, activeCohort: chartsInstance.state.activeCohort, ...(c.config || {}) })
 
 	const container = holder.append('div').attr('class', 'sjpp-templates3').style('max-width', '520px')
 
@@ -216,7 +186,6 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			row.append('div').style('min-width', '180px').style('font-size', '.9em').text(entry.name)
 			const btns = row.append('div')
 			for (const plotType of entry.plotTypes) makeBtn(btns, plotType, () => openForms(entry.id, plotType))
-			for (const c of entry.cross) makeBtn(btns, c.label, () => openCross(c))
 		}
 	}
 }

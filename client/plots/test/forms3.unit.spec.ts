@@ -12,7 +12,6 @@ subtypesToChartTypes() — maps the child subtypes present under a domain to cha
 buildTemplates3Model() — groups domains under their module using a derived chartTypesByDomain map:
 	- groups by the module segment of the id, preserving first-seen order; derives domain display name
 	- per-domain chart-type buttons come straight from the map
-	- a cross-domain chart is attached under every domain it spans
 	- empty config yields no groups
 */
 
@@ -83,21 +82,7 @@ tape('buildTemplates3Model - multi chart-type domain carries both from the map',
 	test.end()
 })
 
-tape('buildTemplates3Model - cross-domain chart attached under each spanned domain', test => {
-	const heatmap = { label: 'Heat Map', chartType: 'matrix', domains: ['FContext__A__Alpha', 'FContext__B__Beta'] }
-	const cfg = { options: OPTIONS, domains: [{ id: 'FContext__A__Alpha' }], crossDomainCharts: [heatmap] }
-	const types = new Map([['FContext__A__Alpha', ['Likert Scale']]])
-	const groups = buildTemplates3Model(cfg, types)
-	const alpha = groups.find(g => g.module == 'A')!.domains[0]
-	const beta = groups.find(g => g.module == 'B')!.domains[0]
-	test.equal(alpha.cross[0]?.label, 'Heat Map', 'heatmap attached to a forms domain it spans')
-	test.equal(beta.name, 'Beta', 'spanned domain with no forms charts is created from the id')
-	test.equal(beta.cross[0]?.label, 'Heat Map', 'heatmap also attached to the cross-only domain')
-	test.deepEqual(beta.plotTypes, [], 'cross-only domain has no forms chart-type buttons')
-	test.end()
-})
-
 tape('buildTemplates3Model - empty config yields no groups', test => {
-	test.deepEqual(buildTemplates3Model({}, new Map()), [], 'no domains and no cross-domain charts => empty')
+	test.deepEqual(buildTemplates3Model({}, new Map()), [], 'no domains and no chart groups => empty')
 	test.end()
 })
