@@ -245,15 +245,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             e
         })?;
 
-    // Number of files downloaded concurrently. Kept modest by default so stricter GDC
-    // environments (e.g. qa-int, which appears to cap simultaneous connections) are not
-    // overwhelmed; prod tolerated the previous value of 10. Overridable via the input JSON
-    // "concurrency" field so it can be tuned per environment without a rebuild.
+    // Number of files downloaded concurrently. Driven by the input JSON "concurrency" field,
+    // which the /gdc/mafBuild handler sets from serverconfig.features.gdcMafConcurrency, so it
+    // can be dialed down per environment (e.g. qa-int, which appears to cap simultaneous
+    // connections) without a rebuild; falls back to 20 when absent.
     let concurrency = file_id_lst_js
         .get("concurrency")
         .and_then(|v| v.as_u64())
         .filter(|n| *n >= 1)
-        .unwrap_or(3) as usize;
+        .unwrap_or(20) as usize;
 
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
