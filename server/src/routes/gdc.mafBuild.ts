@@ -3,8 +3,9 @@ import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import type { GdcMafBuildRequest } from '#types'
-import { maxTotalSizeCompressed, gdcMafMaxElapsed, gdcMafConcurrency } from './gdc.maf.ts'
+import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
+import serverconfig from '#src/serverconfig.js'
 
 // GDC's stricter environments (e.g. qa-int) sit behind a proxy/WAF that can reject requests
 // from header-less HTTP clients. Identify the file downloads with a normal browser User-Agent.
@@ -12,6 +13,16 @@ import { mayLog } from '#src/helpers.ts'
 // descriptive UA if a browser-like agent turns out not to be required.)
 const gdcDownloadUserAgent =
 	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+
+// watchdog kill threshold (ms) for the gdcmaf rust process; a safety backstop against a
+// hung/leaked download. Defaults to 5 minutes; overridable via serverconfig for slower
+// GDC environments (e.g. qa-int) where a legitimate large download may need more time.
+const gdcMafMaxElapsed = serverconfig.features.gdcMafMaxElapsed || 300000 // 5 min
+
+// number of MAF files the gdcmaf rust tool downloads concurrently. Defaults to 20 (matching the
+// gdcGRIN2 downloader); overridable via serverconfig to dial down for stricter GDC environments
+// (e.g. qa-int, which appears to cap simultaneous connections) without a rebuild.
+const gdcMafConcurrency = serverconfig.features.gdcMafConcurrency || 20
 
 export const GdcMafPayload: RoutePayload = {
 	init,
