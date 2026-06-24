@@ -30,6 +30,30 @@ struct ErrorEntry {
     error: String,
 }
 
+// Flatten a std::error::Error (e.g. reqwest::Error) and its `source()` chain into
+// a single string, so the real transport-level cause (e.g. "connection closed
+// before message completed", connection reset, HTTP/2 stream error) is visible in
+// the per-file error rather than only the top-level wrapper message.
+fn format_error_chain(e: &dyn std::error::Error) -> String {
+    let mut msg = e.to_string();
+    let mut src = e.source();
+    while let Some(s) = src {
+        msg.push_str(" -> ");
+        msg.push_str(&s.to_string());
+        src = s.source();
+    }
+    msg
+}
+
+// Render the first bytes of a response body for diagnostics: helps tell whether the
+// server returned gzip (magic 1f 8b), plain text, or an HTML/JSON error page.
+fn preview_bytes(content: &[u8]) -> String {
+    let n = content.len().min(64);
+    let hex: Vec<String> = content[..n].iter().map(|b| format!("{:02x}", b)).collect();
+    let ascii = String::from_utf8_lossy(&content[..n]);
+    format!("hex=[{}] ascii=\"{}\"", hex.join(" "), ascii.escape_default())
+}
+
 fn select_maf_col(d: String, columns: &Vec<String>, url: &str) -> Result<(Vec<u8>, i32), (String, String)> {
     let mut maf_str: String = String::new();
     let mut header_indices: Vec<usize> = Vec::new();
@@ -241,32 +265,81 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             };
             match send_result {
-                Ok(resp) if resp.status().is_success() => match resp.bytes().await {
-                    Ok(content) => {
-                        let mut decoder = GzDecoder::new(&content[..]);
-                        let mut decompressed_content = Vec::new();
-                        match decoder.read_to_end(&mut decompressed_content) {
-                            Ok(_) => {
-                                let text = String::from_utf8_lossy(&decompressed_content).to_string();
-                                return Ok((url.clone(), text));
+                Ok(resp) => {
+                    // Capture response metadata before the body is consumed, so it can be
+                    // included in any error message below for diagnosing qa-int failures.
+                    let status = resp.status();
+                    let version = format!("{:?}", resp.version());
+                    let content_type = resp
+                        .headers()
+                        .get(reqwest::header::CONTENT_TYPE)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("")
+                        .to_string();
+                    let content_encoding = resp
+                        .headers()
+                        .get(reqwest::header::CONTENT_ENCODING)
+                        .and_then(|v| v.to_str().ok())
+                        .unwrap_or("")
+                        .to_string();
+
+                    if status.is_success() {
+                        match resp.bytes().await {
+                            Ok(content) => {
+                                let mut decoder = GzDecoder::new(&content[..]);
+                                let mut decompressed_content = Vec::new();
+                                match decoder.read_to_end(&mut decompressed_content) {
+                                    Ok(_) => {
+                                        let text = String::from_utf8_lossy(&decompressed_content).to_string();
+                                        return Ok((url.clone(), text));
+                                    }
+                                    Err(e) => {
+                                        // genuine decompression failure: the body arrived but is not valid gzip
+                                        let error_msg = format!(
+                                            "Failed to decompress MAF file (HTTP {}, {}, content-type '{}', content-encoding '{}', body {} bytes, first bytes {}): {}",
+                                            status,
+                                            version,
+                                            content_type,
+                                            content_encoding,
+                                            content.len(),
+                                            preview_bytes(&content),
+                                            e
+                                        );
+                                        Err((url.clone(), error_msg))
+                                    }
+                                }
                             }
                             Err(e) => {
-                                let error_msg = format!("Failed to decompress downloaded MAF file: {}", e);
+                                // transport/read failure AFTER headers (e.g. "connection closed
+                                // before message completed") - distinct from a decompression failure
+                                let error_msg = format!(
+                                    "Failed to read response body (HTTP {}, {}, content-type '{}', content-encoding '{}'): {}",
+                                    status,
+                                    version,
+                                    content_type,
+                                    content_encoding,
+                                    format_error_chain(&e)
+                                );
                                 Err((url.clone(), error_msg))
                             }
                         }
-                    }
-                    Err(e) => {
-                        let error_msg = format!("Failed to decompress downloaded MAF file: {}", e);
+                    } else {
+                        // non-2xx: capture a snippet of the error body (often an HTML/JSON
+                        // page from a proxy/WAF) to reveal why qa-int rejected the request
+                        let body_snippet = match resp.text().await {
+                            Ok(t) => t.chars().take(200).collect::<String>().escape_default().to_string(),
+                            Err(_) => String::new(),
+                        };
+                        let error_msg = format!(
+                            "HTTP error {} ({}, content-type '{}', content-encoding '{}'), body: {}",
+                            status, version, content_type, content_encoding, body_snippet
+                        );
                         Err((url.clone(), error_msg))
                     }
-                },
-                Ok(resp) => {
-                    let error_msg = format!("HTTP error: {:?}", resp.status());
-                    Err((url.clone(), error_msg))
                 }
                 Err(e) => {
-                    let error_msg = format!("Server request failed: {:?}", e);
+                    // request never completed (connect/timeout/transport) after retries
+                    let error_msg = format!("Server request failed: {}", format_error_chain(&e));
                     Err((url.clone(), error_msg))
                 }
             }
