@@ -35,16 +35,6 @@ const allowedWorkflowType = 'Aliquot Ensemble Somatic Variant Merging and Maskin
 // change to 400 so it won't limit number of files; should keep this setting as a safeguard; also it's fast to check file size (.5s in gdc.mafBuild.ts)
 export const maxTotalSizeCompressed = serverconfig.features.gdcMafMaxFileSize || 400000000 // 400Mb
 
-// watchdog kill threshold (ms) for the gdcmaf rust process; a safety backstop against a
-// hung/leaked download. Defaults to 5 minutes; overridable via serverconfig for slower
-// GDC environments (e.g. qa-int) where a legitimate large download may need more time.
-export const gdcMafMaxElapsed = serverconfig.features.gdcMafMaxElapsed || 300000 // 5 min
-
-// number of MAF files the gdcmaf rust tool downloads concurrently. Defaults to 20 (matching the
-// gdcGRIN2 downloader); overridable via serverconfig to dial down for stricter GDC environments
-// (e.g. qa-int, which appears to cap simultaneous connections) without a rebuild.
-export const gdcMafConcurrency = serverconfig.features.gdcMafConcurrency || 20
-
 export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
