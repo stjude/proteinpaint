@@ -33,13 +33,17 @@ export async function getChartTypesByDomain(
 	options: FormsOption[]
 ): Promise<Map<string, string[]>> {
 	/*
-	TEMP DEMO (revert before commit): force these domains to look multi-chart-type in the Templates 3
-	picker WITHOUT touching the db — they get every option as a button. The real per-domain derivation
-	is the `subtypesToChartTypes(present, options)` line below; this only overrides the demo ids.
-	Caveat: the forms2 plot still builds its tabs from real db children, so clicking the mocked type
-	opens a plot whose tab has no data — this demos the picker UI, not a fully-populated plot.
+	Demo override while the multi-chart-type data isn't in the db yet. Every domain currently has a
+	single subtype, so there's no way to see how the Templates 3 picker lays out a domain that offers
+	more than one chart type. To unblock that review, we force these two domains to expose every
+	option as a button; every other domain still goes through the real db-derived list below
+	(subtypesToChartTypes). Remove this block once a domain genuinely carries two subtypes.
+
+	Note for whoever clicks through it: this only shapes the picker. The forms2 plot still builds its
+	tabs from the actual db children, so opening the forced type lands on an empty tab — that's
+	expected here; we're validating the picker UI, not a populated plot.
 	*/
-	const TEMP_MULTITYPE = new Set([
+	const DEMO_MULTITYPE_DOMAINS = new Set([
 		'FContext__National Context__Care Access and Utilization',
 		'FWorkforce__Service Integration__Communication'
 	])
@@ -48,7 +52,7 @@ export async function getChartTypesByDomain(
 			const twLst = await vocabApi.getMultivalueTWs({ parent_id: id })
 			const present = new Set<string>()
 			for (const tw of twLst) if (tw.term.subtype) present.add(tw.term.subtype)
-			const types = TEMP_MULTITYPE.has(id) ? options.map(o => o.name) : subtypesToChartTypes(present, options)
+			const types = DEMO_MULTITYPE_DOMAINS.has(id) ? options.map(o => o.name) : subtypesToChartTypes(present, options)
 			return [id, types] as const
 		})
 	)
