@@ -88,7 +88,12 @@ export function run_rust(binfile, input_data, args = [], { signal } = {}) {
 // will already trigger an error. `stream_rust()` was heavily tested manually
 // while troubleshooting and fixing the idle rust processes the led to memory leaks
 // as part of `/gdc/mafBuild` handler code, leave this code as-is for now.
-export function stream_rust(binfile, input_data, emitJson) {
+// opts.maxElapsed (ms): how long a tracked 'gdcmaf' process may run before the
+// watchdog kills it. Defaults to 300000 (5 min) when omitted. This is a safety
+// BACKSTOP against leaked/hung processes (e.g. a download that stalls against a
+// slow GDC environment) - it is not itself the cause of a hang; tightening the
+// rust-side per-request timeouts is what makes a stuck download fail fast.
+export function stream_rust(binfile, input_data, emitJson, opts = {}) {
 	const binpath = path.join(__dirname, '/target/release/', binfile)
 
 	const ps = spawn(binpath)
@@ -99,7 +104,7 @@ export function stream_rust(binfile, input_data, emitJson) {
 		}
 	})
 	// we only want to run this interval loop inside a container, not in dev/test CI
-	if (binfile == 'gdcmaf') trackByPid(ps.pid, binfile)
+	if (binfile == 'gdcmaf') trackByPid(ps.pid, binfile, opts.maxElapsed)
 	const stderr = []
 	try {
 		// from route handler -> input_data -> ps.stdin -> ps.stdout -> transformed stream -> express response.pipe()
@@ -193,8 +198,9 @@ const killedPids = new Set() // will be used to detect killed processes, to help
 const PSKILL_INTERVAL_MS = 30000 // every 30 seconds
 let psKillInterval
 
-// default maxElapsed = 5 * 60 * 1000 millisecond = 300000 or 5 minutes, change to 0 to test
-// may allow configuration of maxElapsed by dataset/argument
+// maxElapsed: the watchdog kill threshold in ms; defaults to 5 minutes (300000).
+// Configurable per call via stream_rust(..., { maxElapsed }) (wired from
+// serverconfig.features.gdcMafMaxElapsed by the /gdc/mafBuild handler).
 function trackByPid(pid, name, maxElapsed = 300000) {
 	if (!pid) return
 	// only track by value (integer, string), not reference object
