@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.193.0
 
 Features:
 - The single cell routes were reorganized into server/src/singleCell (see server/src/singleCell/README). Each route includes the new validation method, checker, to match ongoing efforts to improve route stability and maintainability.
