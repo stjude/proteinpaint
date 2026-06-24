@@ -23,6 +23,29 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio::time::timeout;
 
+// ===== TEMP VERIFICATION — DO NOT COMMIT =====
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+// RAII guard: decrements the in-flight counter when the future ends by ANY path —
+// normal return, error, panic, or cancellation. This is why the count reflects
+// "concurrent" rather than "cumulative". Logs to a FILE (never stderr) so the app's
+// x-jsonlines error stream stays valid JSON. No assert!() here, so it can never
+// panic into stderr while running through the app.
+struct InflightGuard(Arc<AtomicUsize>);
+impl Drop for InflightGuard {
+    fn drop(&mut self) {
+        let after = self.0.fetch_sub(1, Ordering::SeqCst) - 1; // value after this decrement
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("/tmp/gdcmaf_inflight.log")
+        {
+            let _ = writeln!(f, "[inflight] done  -> {}", after);
+        }
+    }
+}
+// ===== END TEMP VERIFICATION =====
+
 // Struct to hold error information
 #[derive(serde::Serialize)]
 struct ErrorEntry {
@@ -201,24 +224,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )) as Box<dyn std::error::Error>);
     };
 
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30)) // 30-second timeout per request
+        .connect_timeout(Duration::from_secs(15))
+        .pool_max_idle_per_host(0) // avoid "connection closed before message completed" race
+        .build()
+        .map_err(|e| {
+            let client_error = ErrorEntry {
+                url: String::new(),
+                error: format!("Client build error: {}", e),
+            };
+            let client_error_js = serde_json::to_string(&client_error)
+                .unwrap_or_else(|_| "{\"url\":\"\",\"error\":\"Failed to serialize client build error\"}".to_string());
+            writeln!(io::stderr(), "{}", client_error_js).expect("Failed to write client build error to stderr");
+            e
+        })?;
+
+    // ===== TEMP VERIFICATION — DO NOT COMMIT =====
+    // Counts futures that have started but not finished. With buffer_unordered(10)
+    // this must stay <= 10. Read the peak from /tmp/gdcmaf_inflight.log after a run:
+    //   grep 'start ->' /tmp/gdcmaf_inflight.log | awk '{print $NF}' | sort -n | tail -1
+    let inflight = Arc::new(AtomicUsize::new(0));
+    // ===== END TEMP VERIFICATION =====
+
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
-        let req_headers_clone = req_headers.clone();
+        let client = client.clone();
+        let req_headers = req_headers.clone();
+
+        // ===== TEMP VERIFICATION — DO NOT COMMIT =====
+        let inflight = inflight.clone();
+        // ===== END TEMP VERIFICATION =====
+
         async move {
-            let client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(60)) // 60-second timeout per request
-                .connect_timeout(Duration::from_secs(15))
-                .default_headers(req_headers_clone.clone())
-                .build()
-                .map_err(|_e| {
-                    let client_error = ErrorEntry {
-                        url: url.clone(),
-                        error: "Client build error".to_string(),
-                    };
-                    let client_error_js = serde_json::to_string(&client_error).unwrap();
-                    writeln!(io::stderr(), "{}", client_error_js).expect("Failed to build reqwest client!");
-                });
-            match client.unwrap().get(&url).send().await {
+            // ===== TEMP VERIFICATION — DO NOT COMMIT =====
+            let n = inflight.fetch_add(1, Ordering::SeqCst) + 1; // fetch_add returns the prior value
+            let _guard = InflightGuard(inflight.clone()); // decrements on EVERY exit path
+            if let Ok(mut f) = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("/tmp/gdcmaf_inflight.log")
+            {
+                let _ = writeln!(f, "[inflight] start -> {}", n);
+            }
+            // ===== END TEMP VERIFICATION =====
+
+            // bounded retry for transient transport failures
+            // (IncompleteMessage / TimedOut / connect), up to 3 attempts with backoff
+            let mut attempt: u32 = 0;
+            let send_result = loop {
+                attempt += 1;
+                let mut request = client.get(&url);
+                for (name, value) in req_headers.iter() {
+                    request = request.header(name.clone(), value.clone()); // == .header("X-Forwarded-Agent", …) etc.
+                }
+                match request.send().await {
+                    Ok(resp) => break Ok(resp),
+                    Err(e) if attempt < 3 && (e.is_request() || e.is_timeout() || e.is_connect()) => {
+                        tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
+                        continue;
+                    }
+                    Err(e) => break Err(e),
+                }
+            };
+            match send_result {
                 Ok(resp) if resp.status().is_success() => match resp.bytes().await {
                     Ok(content) => {
                         let mut decoder = GzDecoder::new(&content[..]);
@@ -240,11 +309,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 },
                 Ok(resp) => {
-                    let error_msg = format!("HTTP error: {}", resp.status());
+                    let error_msg = format!("HTTP error: {:?}", resp.status());
                     Err((url.clone(), error_msg))
                 }
                 Err(e) => {
-                    let error_msg = format!("Server request failed: {}", e);
+                    let error_msg = format!("Server request failed: {:?}", e);
                     Err((url.clone(), error_msg))
                 }
             }
@@ -264,7 +333,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     download_futures
-        .buffer_unordered(20)
+        .buffer_unordered(10)
         .for_each(|result| {
             let encoder = Arc::clone(&encoder); // Clone the Arc for each task
             let maf_col_cp = maf_col.clone();
@@ -299,6 +368,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         })
         .await;
+
+    // ===== TEMP VERIFICATION — DO NOT COMMIT =====
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("/tmp/gdcmaf_inflight.log")
+    {
+        let _ = writeln!(f, "[inflight] run complete");
+    }
+    // ===== END TEMP VERIFICATION =====
 
     // Finalize output
 
