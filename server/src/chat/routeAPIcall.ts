@@ -2,13 +2,43 @@ import type { LlmConfig } from '#types'
 import { ezFetch } from '#shared'
 import { mayLog } from '#src/helpers.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
+import { isMsgToUser } from './scaffoldTypes.ts'
+
+/**
+ * Approximate the number of tokens in a prompt and report whether it
+ * exceeds the maximum allowed prompt length.
+ *
+ * A character-based heuristic (~4 characters per token) is used to approximate the number of counts.
+ */
+async function check_prompt_token_length(
+	prompt: string,
+	llm: LlmConfig
+): Promise<{ limitExceeded: boolean; tokenCount: number; maxTokens: number } | MsgToUser> {
+	if (!llm.model.maxTokens) {
+		return {
+			type: 'text',
+			text: 'LLM model configuration is missing maxTokens value in serverconfig.'
+		} as MsgToUser
+	}
+	const maxTokens = llm.model.maxTokens
+	const tokenCount: number = Math.ceil(prompt.length / 4)
+	return { limitExceeded: tokenCount > maxTokens, tokenCount, maxTokens }
+}
 
 export async function route_to_appropriate_llm_provider(
 	prompt: string,
 	llm: LlmConfig,
 	modelOverride?: string
 ): Promise<string | MsgToUser> {
-	const model = modelOverride ?? llm.modelName
+	const model = modelOverride ?? llm.model.modelName
+	const tokenLengthResult = await check_prompt_token_length(prompt, llm)
+	if (isMsgToUser(tokenLengthResult)) return tokenLengthResult
+	if (tokenLengthResult.limitExceeded) {
+		return {
+			type: 'text',
+			text: `Prompt exceeds maximum token length for the selected model. Token count for the prompt: ${tokenLengthResult.tokenCount}. Max token limit for ${model} is ${tokenLengthResult.maxTokens}.`
+		} as MsgToUser
+	}
 	let response: string | MsgToUser
 	if (llm.provider === 'SJ') {
 		// Local SJ server
@@ -89,7 +119,10 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string):
 			const result = response.outputs[0].generated_text
 			return result
 		} else {
-			throw 'Error: Received an unexpected response format:' + response
+			return {
+				type: 'text',
+				text: 'Error: Received an unexpected response format:' + JSON.stringify(response)
+			}
 		}
 	} catch (error: unknown) {
 		console.error('SJ API request failed. Underlying error:', error)
@@ -203,13 +236,16 @@ async function call_azure_llm(
 		})
 		const content = response?.choices?.[0]?.message?.content
 		if (content && content.length > 0) return content
-		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
+		return {
+			type: 'text',
+			text: 'Error: Received an unexpected response format:' + JSON.stringify(response)
+		} as MsgToUser
 	} catch (error) {
 		console.log(error)
 		return {
 			type: 'text',
 			text: 'Azure API request failed:' + (error instanceof Error ? error.message : String(error))
-		}
+		} as MsgToUser
 	}
 }
 
