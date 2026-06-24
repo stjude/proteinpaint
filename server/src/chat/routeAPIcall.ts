@@ -3,12 +3,57 @@ import { ezFetch } from '#shared'
 import { mayLog } from '#src/helpers.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 
+/** Fallback max prompt-token limit (llama3's native context window) used when llm.model.maxTokens is not configured. */
+const MAX_PROMPT_TOKENS = 8192
+
+/**
+ * Compute (or approximate) the number of tokens in a prompt and report whether it
+ * exceeds the maximum allowed prompt length.
+ *
+ * Token counting prefers the optional `llama3-tokenizer-js` package for an accurate
+ * count. Its availability is re-checked at runtime on every call (it is loaded via a
+ * dynamic import each time); if it is not installed or fails to load, a character-based
+ * heuristic (~4 characters per token) is used as a fallback. Node caches the module
+ * after the first successful import, so repeat calls stay cheap.
+ */
+async function check_prompt_token_length(
+	prompt: string,
+	llm: LlmConfig
+): Promise<{ limitExceeded: boolean; tokenCount: number; maxTokens: number }> {
+	const maxTokens = llm.model.maxTokens || MAX_PROMPT_TOKENS
+	let tokenCount: number
+	try {
+		// Typed as `string` (not a string literal) so the build does not try to statically
+		// resolve the module when it isn't installed — the presence check happens at runtime.
+		const moduleName: string = 'llama3-tokenizer-js'
+		const mod: any = await import(moduleName)
+		const tokenizer = mod?.default ?? mod
+		if (!tokenizer || typeof tokenizer.encode !== 'function') {
+			throw new Error('llama3-tokenizer-js loaded but has no encode() method')
+		}
+		tokenCount = tokenizer.encode(prompt).length
+	} catch {
+		// llama3-tokenizer-js is not installed (or unusable) — fall back to an approximation.
+		// ~4 characters per token is a widely used heuristic for English-language text.
+		tokenCount = Math.ceil(prompt.length / 4)
+	}
+	mayLog(`check_prompt_token_length: tokenCount=${tokenCount}, maxTokens=${maxTokens}`)
+	return { limitExceeded: tokenCount > maxTokens, tokenCount, maxTokens }
+}
+
 export async function route_to_appropriate_llm_provider(
 	prompt: string,
 	llm: LlmConfig,
 	modelOverride?: string
 ): Promise<string | MsgToUser> {
-	const model = modelOverride ?? llm.modelName
+	const model = modelOverride ?? llm.model.modelName
+	const tokenLengthResult = await check_prompt_token_length(prompt, llm)
+	if (tokenLengthResult.limitExceeded) {
+		return {
+			type: 'text',
+			text: `Prompt exceeds maximum token length for the selected model. Token count for the prompt: ${tokenLengthResult.tokenCount}. Max token limit for ${model} is ${tokenLengthResult.maxTokens}.`
+		} as MsgToUser
+	}
 	let response: string | MsgToUser
 	if (llm.provider === 'SJ') {
 		// Local SJ server
