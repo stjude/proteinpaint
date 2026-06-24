@@ -65,7 +65,8 @@ function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest 
 			devicePixelRatio:
 				input.canvasSettings?.devicePixelRatio != null ? validNumber(input.canvasSettings.devicePixelRatio) : undefined
 		},
-		colorTW: input.colorTW as any //Termwrapper
+		colorTW: input.colorTW || undefined,
+		coordTWs: input.coordTWs || undefined
 	}
 }
 
