@@ -1,2 +1,0 @@
-Fixes:
-- forward the end user's real User-Agent onto the GDC cohort MAF file downloads instead of a hardcoded browser User-Agent
