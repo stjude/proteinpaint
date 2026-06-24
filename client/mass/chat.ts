@@ -23,6 +23,7 @@ class MassAiChatBot implements RxComponent {
 	showTerms: any
 	noResult: any
 	isChat: any
+	hasGeneExp: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -31,6 +32,7 @@ class MassAiChatBot implements RxComponent {
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
+		this.hasGeneExp = this.app.getState().termdbConfig?.queries?.geneExpression // Whether the dataset supports gene expression, gating gene search in omnisearch
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -56,7 +58,21 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		const data = await this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType)
+		// Search dictionary variables and (when supported) gene names in parallel.
+		const [data, geneHits] = await Promise.all([
+			this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType),
+			this.hasGeneExp ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([])
+		])
+		if (!Array.isArray(data.lst)) data.lst = []
+		// Append matching genes as geneExpression entries, skipping any whose name already
+		// appears among the dictionary results to avoid duplicate rows.
+		if (geneHits.length) {
+			const seen = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
+			for (const gene of geneHits) {
+				if (seen.has(gene.toUpperCase())) continue
+				data.lst.push({ name: gene, gene, type: 'geneExpression', isGene: true })
+			}
+		}
 		if (!data.lst || data.lst.length == 0) {
 			// Show the "No match..." message one time at the first miss
 			if (!this.dom.noMatchShown) {
@@ -307,18 +323,23 @@ function setRenderers(self: any) {
 			button
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-term-${term.id}`)
+				.attr('data-testid', `sjpp-mass-chat-term-${term.id ?? term.gene}`)
 				.on('click', async () => {
 					if (self.state?.nav?.activeTab == 0) {
 						await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
 					}
-					self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: { term }
-						}
-					})
+					// Gene entries build a clean geneExpression term wrapper; dictionary terms are
+					// dispatched as-is (survival for survival terms, otherwise a summary plot).
+					const config = term.isGene
+						? {
+								chartType: 'summary',
+								term: { term: { gene: term.gene, name: term.name, type: 'geneExpression' } }
+						  }
+						: {
+								chartType: term.type == 'survival' ? 'survival' : 'summary',
+								term: { term }
+						  }
+					self.app.dispatch({ type: 'plot_create', config })
 					self.dom.inputNode.value = '' // clear the search box
 					self.clear({ hide: true })
 				})
@@ -327,7 +348,7 @@ function setRenderers(self: any) {
 		}
 
 		tr.append('td')
-			.text((term.__ancestorNames || []).join(' > '))
+			.text(term.isGene ? 'Gene expression' : (term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
