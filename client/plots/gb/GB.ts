@@ -1,7 +1,7 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { Menu, sayerror } from '#dom'
-import { getCombinedTermFilter, getNormalRoot } from '#filter'
+import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
@@ -20,6 +20,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	} = {}
 	interactions: any
 	blockInstance: any
+	_prevFilterSig?: string
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -77,6 +78,30 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
 		const opts = this.getOpts()
+
+		// ---- force UI/track refresh when effective filters changed ----
+		// include:
+		// - global/local combined filter (state.filter)
+		// - filter0 mass filter
+		// - snvindel local filter (used by mds3 filterObj merge in View.generateTracks)
+		const mergedTkFilter =
+			state.filter && state.config.snvindel?.filter
+				? filterJoin([state.filter, state.config.snvindel.filter])
+				: state.filter || state.config.snvindel?.filter || null
+
+		const filterSig = JSON.stringify({
+			filter: mergedTkFilter || null,
+			filter0: state.filter0 || null
+		})
+
+		if (this._prevFilterSig && this._prevFilterSig !== filterSig && this.blockInstance) {
+			// clear stale block so View.main() launches a fresh block+tracks from latest filters
+			// this guarantees mds3 main/sub tracks re-materialize with updated filterObj/filter0
+			this.dom.blockHolder.selectAll('*').remove()
+			this.blockInstance = null
+		}
+		this._prevFilterSig = filterSig
+
 		try {
 			const model = new Model(state, this.app)
 			const data = await model.preComputeData()
