@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Fixes:
+- forward the end user's real User-Agent (x-forwarded-agent, else the request user-agent) onto the GDC cohort MAF file downloads instead of a hardcoded browser User-Agent
+
+
 ## 2.191.7
 
 Fixes:
