@@ -228,7 +228,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30)) // 30-second timeout per request
         .connect_timeout(Duration::from_secs(15))
-        .pool_max_idle_per_host(0) // avoid "connection closed before message completed" race
+        // Allow keep-alive connection reuse. Previously this was pool_max_idle_per_host(0)
+        // to dodge a "connection closed before message completed" race, but disabling reuse
+        // forces a brand-new connection per file, which is far harsher on a server that caps
+        // concurrent connections (e.g. qa-int). Mid-body drops are now handled by retrying the
+        // whole download (see the retry loop below) rather than by refusing to reuse connections.
         .build()
         .map_err(|e| {
             let client_error = ErrorEntry {
@@ -241,107 +245,123 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             e
         })?;
 
+    // Number of files downloaded concurrently. Kept modest by default so stricter GDC
+    // environments (e.g. qa-int, which appears to cap simultaneous connections) are not
+    // overwhelmed; prod tolerated the previous value of 10. Overridable via the input JSON
+    // "concurrency" field so it can be tuned per environment without a rebuild.
+    let concurrency = file_id_lst_js
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .filter(|n| *n >= 1)
+        .unwrap_or(3) as usize;
+
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
         let client = client.clone();
         let req_headers = req_headers.clone();
         async move {
-            // bounded retry for transient transport failures
-            // (IncompleteMessage / TimedOut / connect), up to 3 attempts with backoff
+            // Bounded retry for transient transport failures, up to MAX_ATTEMPTS with backoff.
+            // The whole download (send + body read) is inside the loop so a mid-body drop
+            // ("connection closed before message completed") is retried, not just connect/send
+            // failures. Non-2xx responses and decompression failures are NOT transient and break
+            // immediately. The metadata captured before consuming the body feeds the error text.
+            const MAX_ATTEMPTS: u32 = 3;
             let mut attempt: u32 = 0;
-            let send_result = loop {
+            loop {
                 attempt += 1;
+
                 let mut request = client.get(&url);
                 for (name, value) in req_headers.iter() {
-                    request = request.header(name.clone(), value.clone()); // == .header("X-Forwarded-Agent", …) etc.
+                    request = request.header(name.clone(), value.clone());
                 }
-                match request.send().await {
-                    Ok(resp) => break Ok(resp),
-                    Err(e) if attempt < 3 && (e.is_request() || e.is_timeout() || e.is_connect()) => {
+
+                // --- send ---
+                let resp = match request.send().await {
+                    Ok(resp) => resp,
+                    Err(e) if attempt < MAX_ATTEMPTS && (e.is_request() || e.is_timeout() || e.is_connect()) => {
                         tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
                         continue;
                     }
-                    Err(e) => break Err(e),
-                }
-            };
-            match send_result {
-                Ok(resp) => {
-                    // Capture response metadata before the body is consumed, so it can be
-                    // included in any error message below for diagnosing qa-int failures.
-                    let status = resp.status();
-                    let version = format!("{:?}", resp.version());
-                    let content_type = resp
-                        .headers()
-                        .get(reqwest::header::CONTENT_TYPE)
-                        .and_then(|v| v.to_str().ok())
-                        .unwrap_or("")
-                        .to_string();
-                    let content_encoding = resp
-                        .headers()
-                        .get(reqwest::header::CONTENT_ENCODING)
-                        .and_then(|v| v.to_str().ok())
-                        .unwrap_or("")
-                        .to_string();
+                    Err(e) => {
+                        break Err((url.clone(), format!("Server request failed: {}", format_error_chain(&e))));
+                    }
+                };
 
-                    if status.is_success() {
-                        match resp.bytes().await {
-                            Ok(content) => {
-                                let mut decoder = GzDecoder::new(&content[..]);
-                                let mut decompressed_content = Vec::new();
-                                match decoder.read_to_end(&mut decompressed_content) {
-                                    Ok(_) => {
-                                        let text = String::from_utf8_lossy(&decompressed_content).to_string();
-                                        return Ok((url.clone(), text));
-                                    }
-                                    Err(e) => {
-                                        // genuine decompression failure: the body arrived but is not valid gzip
-                                        let error_msg = format!(
-                                            "Failed to decompress MAF file (HTTP {}, {}, content-type '{}', content-encoding '{}', body {} bytes, first bytes {}): {}",
-                                            status,
-                                            version,
-                                            content_type,
-                                            content_encoding,
-                                            content.len(),
-                                            preview_bytes(&content),
-                                            e
-                                        );
-                                        Err((url.clone(), error_msg))
-                                    }
-                                }
-                            }
-                            Err(e) => {
-                                // transport/read failure AFTER headers (e.g. "connection closed
-                                // before message completed") - distinct from a decompression failure
-                                let error_msg = format!(
-                                    "Failed to read response body (HTTP {}, {}, content-type '{}', content-encoding '{}'): {}",
-                                    status,
-                                    version,
-                                    content_type,
-                                    content_encoding,
-                                    format_error_chain(&e)
-                                );
-                                Err((url.clone(), error_msg))
-                            }
-                        }
-                    } else {
-                        // non-2xx: capture a snippet of the error body (often an HTML/JSON
-                        // page from a proxy/WAF) to reveal why qa-int rejected the request
-                        let body_snippet = match resp.text().await {
-                            Ok(t) => t.chars().take(200).collect::<String>().escape_default().to_string(),
-                            Err(_) => String::new(),
-                        };
-                        let error_msg = format!(
+                // Capture response metadata before the body is consumed, for diagnostics.
+                let status = resp.status();
+                let version = format!("{:?}", resp.version());
+                let content_type = resp
+                    .headers()
+                    .get(reqwest::header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("")
+                    .to_string();
+                let content_encoding = resp
+                    .headers()
+                    .get(reqwest::header::CONTENT_ENCODING)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("")
+                    .to_string();
+
+                if !status.is_success() {
+                    // non-2xx: a server-side decision, not transient - capture a snippet of the
+                    // error body (often an HTML/JSON page from a proxy/WAF) and stop.
+                    let body_snippet = match resp.text().await {
+                        Ok(t) => t.chars().take(200).collect::<String>().escape_default().to_string(),
+                        Err(_) => String::new(),
+                    };
+                    break Err((
+                        url.clone(),
+                        format!(
                             "HTTP error {} ({}, content-type '{}', content-encoding '{}'), body: {}",
                             status, version, content_type, content_encoding, body_snippet
-                        );
-                        Err((url.clone(), error_msg))
+                        ),
+                    ));
+                }
+
+                // --- read body ---
+                let content = match resp.bytes().await {
+                    Ok(content) => content,
+                    Err(_e) if attempt < MAX_ATTEMPTS => {
+                        // transport/read failure AFTER headers (e.g. "connection closed before
+                        // message completed") - typically transient, so retry the whole download
+                        tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
+                        continue;
                     }
-                }
-                Err(e) => {
-                    // request never completed (connect/timeout/transport) after retries
-                    let error_msg = format!("Server request failed: {}", format_error_chain(&e));
-                    Err((url.clone(), error_msg))
-                }
+                    Err(e) => {
+                        break Err((
+                            url.clone(),
+                            format!(
+                                "Failed to read response body (HTTP {}, {}, content-type '{}', content-encoding '{}'): {}",
+                                status,
+                                version,
+                                content_type,
+                                content_encoding,
+                                format_error_chain(&e)
+                            ),
+                        ));
+                    }
+                };
+
+                // --- decompress (not transient: do not retry) ---
+                let mut decoder = GzDecoder::new(&content[..]);
+                let mut decompressed_content = Vec::new();
+                break match decoder.read_to_end(&mut decompressed_content) {
+                    Ok(_) => Ok((url.clone(), String::from_utf8_lossy(&decompressed_content).to_string())),
+                    Err(e) => Err((
+                        url.clone(),
+                        format!(
+                            "Failed to decompress MAF file (HTTP {}, {}, content-type '{}', content-encoding '{}', body {} bytes, first bytes {}): {}",
+                            status,
+                            version,
+                            content_type,
+                            content_encoding,
+                            content.len(),
+                            preview_bytes(&content),
+                            e
+                        ),
+                    )),
+                };
             }
         }
     }));
@@ -359,7 +379,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     download_futures
-        .buffer_unordered(10)
+        .buffer_unordered(concurrency)
         .for_each(|result| {
             let encoder = Arc::clone(&encoder); // Clone the Arc for each task
             let maf_col_cp = maf_col.clone();
