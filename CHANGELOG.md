@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.191.7
 
 Fixes:
 - fix GDC cohort MAF multi-file download failures against stricter GDC environments (e.g. qa-int): send only auth and a User-Agent on the file downloads, reuse keep-alive connections, retry mid-download connection drops, and make download concurrency configurable via serverconfig.features.gdcMafConcurrency
