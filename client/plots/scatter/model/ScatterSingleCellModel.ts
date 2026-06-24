@@ -16,8 +16,15 @@ export class ScatterSingleCellModel extends ScatterModelBase {
 		const c: any = this.scatter.config
 		const state = this.scatter.state
 
+		/** SCGE terms may be applied as term/term2 from the summary plot.
+		 * Capture as coordTWs[] to pass to the server for the single cell plot data request. */
+		const coordTWs: any = []
+		if (c.term) coordTWs.push(c.term)
+		if (c.term2) coordTWs.push(c.term2)
+
 		return {
 			colorTW: c.colorTW,
+			coordTWs,
 			singleCellPlot: c.singleCellPlot,
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
