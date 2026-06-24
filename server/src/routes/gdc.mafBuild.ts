@@ -3,7 +3,7 @@ import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import type { GdcMafBuildRequest } from '#types'
-import { maxTotalSizeCompressed } from './gdc.maf.ts'
+import { maxTotalSizeCompressed, gdcMafMaxElapsed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
 
 // GDC's stricter environments (e.g. qa-int) sit behind a proxy/WAF that can reject requests
@@ -94,7 +94,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
 	try {
-		const streams = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
+		const streams = stream_rust('gdcmaf', JSON.stringify(arg), emitJson, { maxElapsed: gdcMafMaxElapsed })
 		if (streams) {
 			const { rustStream, endStream } = streams
 			// Important: rustStream.pipe(res, { end: false }) may cause a stalemate
