@@ -3,7 +3,7 @@ import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import type { GdcMafBuildRequest } from '#types'
-import { maxTotalSizeCompressed, gdcMafMaxElapsed } from './gdc.maf.ts'
+import { maxTotalSizeCompressed, gdcMafMaxElapsed, gdcMafConcurrency } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
 
 // GDC's stricter environments (e.g. qa-int) sit behind a proxy/WAF that can reject requests
@@ -81,7 +81,8 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		fileIdLst: fileLst2,
 		columns: q.columns,
 		host: joinUrl(host.rest, 'data'), // must use the /data/ endpoint from current host
-		headers: downloadHeaders
+		headers: downloadHeaders,
+		concurrency: gdcMafConcurrency
 	}
 	// uncomment for manual error testing
 	// const arg = {"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "83ea587b-1e92-41b3-a8e3-12df30496724"]};
