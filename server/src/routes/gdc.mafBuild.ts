@@ -7,13 +7,6 @@ import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 
-// GDC's stricter environments (e.g. qa-int) sit behind a proxy/WAF that can reject requests
-// from header-less HTTP clients. Identify the file downloads with a normal browser User-Agent.
-// (prod works without it; this is a defensive measure for qa-int and can be swapped for a
-// descriptive UA if a browser-like agent turns out not to be required.)
-const gdcDownloadUserAgent =
-	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
-
 // watchdog kill threshold (ms) for the gdcmaf rust process; a safety backstop against a
 // hung/leaked download. Defaults to 5 minutes; overridable via serverconfig for slower
 // GDC environments (e.g. qa-int) where a legitimate large download may need more time.
@@ -46,7 +39,11 @@ export function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 			const q: GdcMafBuildRequest = req.query
-			await buildMaf(q, res, ds)
+			// the end user's real User-Agent: set by an upstream proxy as x-forwarded-agent,
+			// otherwise the direct request's user-agent. Forwarded onto the GDC file downloads
+			// so GDC's proxy/WAF sees the actual client rather than a header-less rust client.
+			const userAgent = req.headers['x-forwarded-agent'] || req.headers['user-agent']
+			await buildMaf(q, res, ds, userAgent)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ status: 'error', error: e.message || e })
@@ -68,7 +65,7 @@ type EmitJsonDataArg =
 q{}
 res{}
 */
-async function buildMaf(q: GdcMafBuildRequest, res, ds) {
+async function buildMaf(q: GdcMafBuildRequest, res, ds, userAgent?: string) {
 	const t0 = Date.now()
 	const { host, headers } = ds.getHostHeaders(q)
 	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)
@@ -81,8 +78,10 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// defeats keep-alive and forces a brand-new connection per file, and the application/json
 	// content-negotiation is wrong for a gzip download. Against a stricter GDC environment
 	// (e.g. qa-int, behind a proxy/WAF) this can cause all but the first concurrent download to
-	// be rejected. Forward only what a download needs: auth, plus a browser-like User-Agent.
-	const downloadHeaders: { [key: string]: string } = { 'User-Agent': gdcDownloadUserAgent }
+	// be rejected. Forward only what a download needs: auth, plus the end user's real User-Agent
+	// (so GDC's proxy/WAF sees the actual client).
+	const downloadHeaders: { [key: string]: string } = {}
+	if (userAgent) downloadHeaders['User-Agent'] = userAgent
 	for (const [k, v] of Object.entries(headers)) {
 		const lk = k.toLowerCase()
 		if (lk === 'cookie' || lk === 'x-auth-token') downloadHeaders[k] = v as string
