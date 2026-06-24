@@ -384,6 +384,9 @@ export class TermdbVocab extends Vocab {
 		if (usecase) body.usecase = usecase
 		if (this.state.treeFilter) body.treeFilter = this.state.treeFilter
 		if (targetType) body.targetType = targetType
+		console.log('body:', body)
+		console.log('usecase:', usecase)
+		console.log('targetType:', targetType)
 		const data = await this.dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		// sort results
@@ -398,6 +401,31 @@ export class TermdbVocab extends Vocab {
 		}
 		data.lst = [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes]
 		return data
+	}
+
+	// Look up gene symbols matching a search string via the genome-level genelookup route.
+	// Returns an array of gene-name strings (sorted by relevance the same way findTerm sorts terms).
+	// Used by the mass omnisearch (client/mass/chat.ts) to offer gene results alongside dictionary terms.
+	async findGene(str) {
+		if (!str) return []
+		const body = {
+			genome: this.vocab.genome,
+			input: str,
+			deep: false // false → response.hits is an array of gene-name strings (deep:true returns gene models instead)
+		}
+		const data = await this.dofetch3('genelookup', { body })
+		if (data.error) throw data.error
+		const hits = Array.isArray(data.hits) ? data.hits : []
+		// sort results the same way as findTerm: exact match, prefix match, then the rest
+		const n = str.toUpperCase()
+		const r = { equals: [], startsWith: [], includes: [] }
+		for (const name of hits) {
+			const up = name.toUpperCase()
+			if (up === n) r.equals.push(name)
+			else if (up.startsWith(n)) r.startsWith.push(name)
+			else r.includes.push(name)
+		}
+		return [...r.equals, ...r.startsWith, ...r.includes]
 	}
 
 	// from termdb/terminfo
