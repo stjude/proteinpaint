@@ -411,3 +411,135 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     io::stderr().flush().expect("Failed to flush stderr");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- select_maf_col ----
+
+    // Minimal MAF-like content: a comment line, a header line (detected by the
+    // "Hugo_Symbol" substring), then data rows.
+    const MAF: &str = "# version 2.4\n\
+        Hugo_Symbol\tEntrez_Gene_Id\tChromosome\tStart_Position\n\
+        TP53\t7157\tchr17\t7577120\n\
+        KRAS\t3845\tchr12\t25398284\n";
+
+    fn cols(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn select_maf_col_selects_and_orders_requested_columns() {
+        // request a subset, in an order different from the file's column order
+        let (bytes, rows) = select_maf_col(MAF.to_string(), &cols(&["Chromosome", "Hugo_Symbol"]), "u").unwrap();
+        assert_eq!(rows, 2, "two data rows should be emitted");
+        assert_eq!(String::from_utf8(bytes).unwrap(), "chr17\tTP53\nchr12\tKRAS\n");
+    }
+
+    #[test]
+    fn select_maf_col_skips_comment_lines_and_header() {
+        // comment (#) and header lines must not be counted or emitted as data
+        let (bytes, rows) = select_maf_col(MAF.to_string(), &cols(&["Hugo_Symbol"]), "u").unwrap();
+        assert_eq!(rows, 2);
+        assert_eq!(String::from_utf8(bytes).unwrap(), "TP53\nKRAS\n");
+    }
+
+    #[test]
+    fn select_maf_col_errors_on_missing_column() {
+        let err = select_maf_col(MAF.to_string(), &cols(&["No_Such_Column"]), "the-url").unwrap_err();
+        assert_eq!(err.0, "the-url", "error should carry the url");
+        assert!(
+            err.1.contains("No_Such_Column"),
+            "error should name the missing column: {}",
+            err.1
+        );
+    }
+
+    #[test]
+    fn select_maf_col_header_only_yields_no_rows() {
+        let header_only = "Hugo_Symbol\tChromosome\n";
+        let (bytes, rows) = select_maf_col(header_only.to_string(), &cols(&["Hugo_Symbol"]), "u").unwrap();
+        assert_eq!(rows, 0);
+        assert!(bytes.is_empty());
+    }
+
+    // NOTE: a data row with fewer fields than the header currently panics
+    // (maf_cont_lst[*x] index out of bounds); that ragged-row hardening is
+    // deferred to Step 5, where a test for graceful handling should be added.
+
+    // ---- format_error_chain ----
+
+    #[derive(Debug)]
+    struct TestErr {
+        msg: String,
+        src: Option<Box<dyn std::error::Error + 'static>>,
+    }
+    impl std::fmt::Display for TestErr {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.msg)
+        }
+    }
+    impl std::error::Error for TestErr {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            self.src.as_deref()
+        }
+    }
+
+    #[test]
+    fn format_error_chain_single_error() {
+        let e = TestErr {
+            msg: "top".into(),
+            src: None,
+        };
+        assert_eq!(format_error_chain(&e), "top");
+    }
+
+    #[test]
+    fn format_error_chain_walks_source_chain() {
+        let root = TestErr {
+            msg: "root".into(),
+            src: None,
+        };
+        let middle = TestErr {
+            msg: "middle".into(),
+            src: Some(Box::new(root)),
+        };
+        let top = TestErr {
+            msg: "top".into(),
+            src: Some(Box::new(middle)),
+        };
+        assert_eq!(format_error_chain(&top), "top -> middle -> root");
+    }
+
+    // ---- preview_bytes ----
+
+    #[test]
+    fn preview_bytes_shows_gzip_magic() {
+        // gzip magic 1f 8b should be visible so we can tell gzip from plaintext
+        let out = preview_bytes(&[0x1f, 0x8b, 0x08, 0x00]);
+        assert!(out.contains("hex=[1f 8b 08 00]"), "got: {}", out);
+    }
+
+    #[test]
+    fn preview_bytes_renders_plaintext_in_ascii() {
+        let out = preview_bytes(b"Hugo_Symbol");
+        assert!(
+            out.contains("Hugo_Symbol"),
+            "ascii preview should show plaintext: {}",
+            out
+        );
+    }
+
+    #[test]
+    fn preview_bytes_truncates_to_64_bytes() {
+        // 100 'A' (0x41) bytes -> only 64 should be rendered in the hex section
+        let out = preview_bytes(&[0x41u8; 100]);
+        assert_eq!(
+            out.matches("41").count(),
+            64,
+            "should cap the hex preview at 64 bytes: {}",
+            out
+        );
+    }
+}
