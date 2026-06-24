@@ -533,6 +533,10 @@ Always return ONLY a JSON object in this exact format:
 - filter (OPTIONAL): A RESTRICTION on the data or cohort constraints — only when the user restricts to a specific subgroup based on a condition (e.g., "age from 10 to 40", "only female patients", "stage I only", "asian males").
 - chartType (OPTIONAL): The specific type of summary chart the user wants (ONLY among "violin", "boxplot", "barchart", "sampleScatter"). Only populate this when the user explicitly specifies a chart type in the prompt.
 
+## Binning of continuous variables
+A continuous/numeric variable (tw1, tw2, or tw3) may be binned into groups. Binning is described by a bin SIZE (the width of each bin, e.g. "in bins of 5", "bin size of 10", "every 5 years", "10-year intervals") and/or a bin START (the first bin's boundary, e.g. "starting at 20", "beginning from 0", "from age 10").
+Do NOT create separate fields for binning. Instead, KEEP the binning information INSIDE the phrase of the term it pertains to (tw1/tw2/tw3). Break the prompt into phrases so that the bin size / bin start words travel with the variable they modify. For example, if the user wants tw1 binned, the bin words must remain part of the tw1 phrase; if a grouping variable (tw2/tw3) is binned, the bin words must remain part of that term's phrase.
+
 ## Extraction Rules
 1. Always identify tw1 first — it answers "what is the primary data variable being plotted/summarized?" tw1 must be a DATA VARIABLE and when extracting tw1, preserve biological/analytical qualifiers that modify the variable
  (e.g. "overexpressed", "mutated", "deleted", "amplified", "methylated", "expressed", "activated"). These qualifiers are part of the analysis intent and must not be dropped. tw1 is never an analytical method or plot descriptor 
@@ -543,7 +547,8 @@ Always return ONLY a JSON object in this exact format:
 5. If tw2 and tw3 are ambiguous, prefer tw2 for binary/categorical comparisons and tw3 for a faceting/panel variable
 6. Its possible a term might be present in both tw1/tw2 as well as filter — for example, "Compare tp53 gene expression between XXX and YYY subtypes" — here the "XXX and YYY subtypes" is relevant to both the grouping variable (tw2) and the filter (restricting to subtypes). In such cases, put "XXX and YYY subtypes" both in tw2 as well as filter. 
 7. OPTIONAL fields should not be included in the JSON if they cannot be confidently extracted from the query. Do not fabricate or guess values that are not explicitly stated in the user prompt.
-8. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
+8. When the user requests binning of a continuous variable (e.g. "bins of 5", "in 10-year intervals", "starting at 20"), DO NOT add any new field. Keep the bin size / bin start words inside the phrase of the term (tw1/tw2/tw3) they pertain to, so each phrase fully describes its variable together with its binning. Attach the bin words to whichever variable they modify.
+9. Return ONLY the JSON  with appropriate fields filled in — no explanation, no markdown fences, no extra text
 
 ## Examples:
 -Query: "compare tp53 expression vs age using a scatter plot"
@@ -619,6 +624,28 @@ Always return ONLY a JSON object in this exact format:
   {
 	"tw1": "overall survival distribution",
 	"filter": "stage I patients"
+  }
+- Query: "Show age distribution in bins of 5 years"
+  Output:
+  {
+	"tw1": "age in bins of 5 years"
+  }
+- Query: "Show age distribution in 10-year bins starting at 20"
+  Output:
+  {
+	"tw1": "age in 10-year bins starting at 20"
+  }
+- Query: "Compare TP53 expression across age binned in intervals of 2 starting from 0"
+  Output:
+  {
+	"tw1": "TP53 expression",
+	"tw2": "age binned in intervals of 2 starting from 0"
+  }
+- Query: "Plot BMI with bin size 1.5 for AML patients"
+  Output:
+  {
+	"tw1": "BMI with bin size 1.5",
+	"filter": "AML patients"
   }
 
 
