@@ -1,7 +1,7 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { Menu, sayerror } from '#dom'
-import { getNormalRoot } from '#filter'
+import { getCombinedTermFilter, getNormalRoot } from '#filter'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
@@ -61,10 +61,12 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 		return {
 			config,
-			filter: getNormalRoot(appState.termfilter.filter),
-			filter0: appState.termfilter.filter0,
+			filter: getNormalRoot(termfilter.filter),
+			filter0: termfilter.filter0,
 			vocab: appState.vocab
 		}
 	}
