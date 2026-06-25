@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 
-## Unreleased
+## 2.191.9
 
 Fixes:
 - send x-forwarded-* headers in the request for GDC MAF data
