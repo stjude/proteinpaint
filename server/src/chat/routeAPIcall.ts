@@ -2,42 +2,26 @@ import type { LlmConfig } from '#types'
 import { ezFetch } from '#shared'
 import { mayLog } from '#src/helpers.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
-
-/** Fallback max prompt-token limit (llama3's native context window) used when llm.model.maxTokens is not configured. */
-const MAX_PROMPT_TOKENS = 8192
+import { isMsgToUser } from './scaffoldTypes.ts'
 
 /**
- * Compute (or approximate) the number of tokens in a prompt and report whether it
+ * Approximate the number of tokens in a prompt and report whether it
  * exceeds the maximum allowed prompt length.
  *
- * Token counting prefers the optional `llama3-tokenizer-js` package for an accurate
- * count. Its availability is re-checked at runtime on every call (it is loaded via a
- * dynamic import each time); if it is not installed or fails to load, a character-based
- * heuristic (~4 characters per token) is used as a fallback. Node caches the module
- * after the first successful import, so repeat calls stay cheap.
+ * A character-based heuristic (~4 characters per token) is used to approximate the number of counts.
  */
 async function check_prompt_token_length(
 	prompt: string,
 	llm: LlmConfig
-): Promise<{ limitExceeded: boolean; tokenCount: number; maxTokens: number }> {
-	const maxTokens = llm.model.maxTokens || MAX_PROMPT_TOKENS
-	let tokenCount: number
-	try {
-		// Typed as `string` (not a string literal) so the build does not try to statically
-		// resolve the module when it isn't installed — the presence check happens at runtime.
-		const moduleName: string = 'llama3-tokenizer-js'
-		const mod: any = await import(moduleName)
-		const tokenizer = mod?.default ?? mod
-		if (!tokenizer || typeof tokenizer.encode !== 'function') {
-			throw new Error('llama3-tokenizer-js loaded but has no encode() method')
-		}
-		tokenCount = tokenizer.encode(prompt).length
-	} catch {
-		// llama3-tokenizer-js is not installed (or unusable) — fall back to an approximation.
-		// ~4 characters per token is a widely used heuristic for English-language text.
-		tokenCount = Math.ceil(prompt.length / 4)
+): Promise<{ limitExceeded: boolean; tokenCount: number; maxTokens: number } | MsgToUser> {
+	if (!llm.model.maxTokens) {
+		return {
+			type: 'text',
+			text: 'LLM model configuration is missing maxTokens value in serverconfig.'
+		} as MsgToUser
 	}
-	mayLog(`check_prompt_token_length: tokenCount=${tokenCount}, maxTokens=${maxTokens}`)
+	const maxTokens = llm.model.maxTokens
+	const tokenCount: number = Math.ceil(prompt.length / 4)
 	return { limitExceeded: tokenCount > maxTokens, tokenCount, maxTokens }
 }
 
@@ -48,6 +32,7 @@ export async function route_to_appropriate_llm_provider(
 ): Promise<string | MsgToUser> {
 	const model = modelOverride ?? llm.model.modelName
 	const tokenLengthResult = await check_prompt_token_length(prompt, llm)
+	if (isMsgToUser(tokenLengthResult)) return tokenLengthResult
 	if (tokenLengthResult.limitExceeded) {
 		return {
 			type: 'text',
@@ -134,7 +119,10 @@ async function call_sj_llm(prompt: string, model_name: string, apilink: string):
 			const result = response.outputs[0].generated_text
 			return result
 		} else {
-			throw 'Error: Received an unexpected response format:' + response
+			return {
+				type: 'text',
+				text: 'Error: Received an unexpected response format:' + JSON.stringify(response)
+			}
 		}
 	} catch (error: unknown) {
 		console.error('SJ API request failed. Underlying error:', error)
@@ -248,13 +236,16 @@ async function call_azure_llm(
 		})
 		const content = response?.choices?.[0]?.message?.content
 		if (content && content.length > 0) return content
-		throw 'Error: Received an unexpected response format:' + JSON.stringify(response)
+		return {
+			type: 'text',
+			text: 'Error: Received an unexpected response format:' + JSON.stringify(response)
+		} as MsgToUser
 	} catch (error) {
 		console.log(error)
 		return {
 			type: 'text',
 			text: 'Azure API request failed:' + (error instanceof Error ? error.message : String(error))
-		}
+		} as MsgToUser
 	}
 }
 
