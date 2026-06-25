@@ -39,10 +39,7 @@ export function init({ genomes }) {
 			const ds = g.datasets.GDC
 			if (!ds) throw 'hg38 GDC missing'
 			const q: GdcMafBuildRequest = req.query
-			// the end user's real User-Agent, forwarded onto the GDC file downloads so GDC's
-			// proxy/WAF sees the actual client rather than a header-less rust client
-			const userAgent = req.headers['user-agent']
-			await buildMaf(q, res, ds, userAgent)
+			await buildMaf(q, res, ds)
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			res.send({ status: 'error', error: e.message || e })
@@ -64,7 +61,7 @@ type EmitJsonDataArg =
 q{}
 res{}
 */
-async function buildMaf(q: GdcMafBuildRequest, res, ds, userAgent?: string) {
+async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
 	const { host, headers } = ds.getHostHeaders(q)
 	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)
@@ -77,13 +74,12 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds, userAgent?: string) {
 	// defeats keep-alive and forces a brand-new connection per file, and the application/json
 	// content-negotiation is wrong for a gzip download. Against a stricter GDC environment
 	// (e.g. qa-int, behind a proxy/WAF) this can cause all but the first concurrent download to
-	// be rejected. Forward only what a download needs: auth, plus the end user's real User-Agent
+	// be rejected. Forward only what a download needs: auth, plus X-Forwarded-* from ds.getHostHeaders()
 	// (passed in from the route handler) so GDC's proxy/WAF sees the actual client.
 	const downloadHeaders: { [key: string]: string } = {}
-	if (userAgent) downloadHeaders['User-Agent'] = userAgent
 	for (const [k, v] of Object.entries(headers)) {
 		const lk = k.toLowerCase()
-		if (lk === 'cookie' || lk === 'x-auth-token') downloadHeaders[k] = v as string
+		if (lk === 'cookie' || lk === 'x-auth-token' || lk.startsWith('x-forwarded')) downloadHeaders[k] = v as string
 	}
 
 	const arg = {
