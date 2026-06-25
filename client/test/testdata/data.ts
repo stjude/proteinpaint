@@ -187,7 +187,7 @@ export function getFilter_agedx() {
 				lst: [
 					{
 						tvs: {
-							term: { id: 'agedx' },
+							term: { id: 'agedx', type: 'float', name: 'Age of diagnosis' },
 							ranges: [
 								{
 									start: 10,
@@ -198,6 +198,29 @@ export function getFilter_agedx() {
 									stopunbounded: false
 								}
 							]
+						},
+						type: 'tvs'
+					}
+				]
+			}
+		]
+	}
+}
+export function getFilter_male() {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'filterUiRoot',
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						tvs: {
+							term: { id: 'sex' },
+							values: [{ key: '1', label: 'Male' }]
 						},
 						type: 'tvs'
 					}
