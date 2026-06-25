@@ -6,7 +6,8 @@ import type {
 	IDCParquetData,
 	IDCParquetIndexResult,
 	IDCParquetLoadResult,
-	IDCVersionedEntry
+	IDCVersionedEntry,
+	IDCViewerOpts
 } from '../IDCTypes'
 import {
 	IDC_BUCKET_URL,
@@ -15,8 +16,6 @@ import {
 	IDC_PARQUET_COLUMNS,
 	IDC_PARQUET_CURRENT_URL,
 	IDC_PARQUET_KEY_SUFFIX,
-	MAX_GDC_CASES,
-	MAX_RETRY
 } from '../settings/defaults'
 
 // ---------------------------------------------------------------------------
@@ -60,11 +59,11 @@ async function verifyParquetUrlWithSidecar(url: string): Promise<boolean> {
 /** Handles all data fetching for the IDC viewer: parquet loading and GDC API calls. */
 export class IDCModel {
 	/** Load the IDC parquet mapping, falling back through versioned archives if needed. */
-	async loadParquetWithFallback(): Promise<IDCParquetLoadResult | undefined> {
+	async loadParquetWithFallback(retries: number): Promise<IDCParquetLoadResult | undefined> {
 		const current = await this.tryLoadValidatedParquet(IDC_PARQUET_CURRENT_URL, IDC_CURRENT_VERSION_LABEL)
 		if (current) return current
 
-		const versioned = await this.fetchVersionedParquetEntries()
+		const versioned = await this.fetchVersionedParquetEntries(retries)
 		for (const entry of versioned) {
 			const result = await this.tryLoadValidatedParquet(entry.url, entry.version)
 			if (result) {
@@ -78,19 +77,44 @@ export class IDCModel {
 	}
 
 	/** Fetch cases from the GDC API matching the given filter. */
-	async getCaseFromCurrentCohort(filter0: any): Promise<CasesResponse['data']> {
+	async getCaseFromCurrentCohort({ searchFilter = '', pageSize = 20, currentPage=1,filter0 }: IDCViewerOpts): Promise<CasesResponse['data']> {
+		const normalizedSearchFilter = `*${searchFilter.trim()}*`
+		const operator ='='
+		const body = {
+			fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id',
+			case_filters: filter0,
+			from: (currentPage - 1) * pageSize ,
+			size: pageSize,
+			...(normalizedSearchFilter
+				? {
+						filters: {
+							op: 'or',
+							content: [
+								{ op: operator, content: { field: 'case_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'submitter_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'samples.sample_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'samples.submitter_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'samples.portions.portion_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'samples.portions.submitter_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'samples.portions.analytes.analyte_id', value: normalizedSearchFilter } },
+								{ op: operator, content: { field: 'samples.portions.analytes.submitter_id', value: normalizedSearchFilter } },
+								{op: operator,content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: normalizedSearchFilter }},
+								{op: operator,content: { field: 'samples.portions.analytes.aliquots.submitter_id', value: normalizedSearchFilter }}
+							]
+						}
+				  }
+				: {}),
+			expand: 'samples.portions.slides,project.program',
+			sort: 'submitter_id:asc',
+			sortBy: [{ field: 'submitter_id', direction: 'ac' }]
+		}
+
 		const re: CasesResponse = await fetch('https://api.gdc.cancer.gov/cases', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json', connection: 'close' },
-			body: JSON.stringify({
-				fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id',
-				case_filters: filter0,
-				size: MAX_GDC_CASES,
-				expand: 'samples.portions.slides,project.program',
-				sort: 'submitter_id:asc',
-				sortBy: [{ field: 'submitter_id', direction: 'ac' }]
-			})
+			body: JSON.stringify(body)
 		}).then(r => r.json())
+		console.log('GDC API response:', re)
 		if (!Array.isArray(re?.data?.hits)) throw new Error('re.data.hits not array')
 		if (!Number.isFinite(re.data.pagination?.total)) throw new Error('re.data.pagination.total not number')
 		const caseHits = re.data.hits.map(hit => {
@@ -152,7 +176,7 @@ export class IDCModel {
 		return semver.compare(sa, sb)
 	}
 
-	async fetchVersionedParquetEntries(): Promise<IDCVersionedEntry[]> {
+	async fetchVersionedParquetEntries(retries: number): Promise<IDCVersionedEntry[]> {
 		try {
 			const resp = await fetch(IDC_BUCKET_URL)
 			if (!resp.ok) return []
@@ -166,7 +190,7 @@ export class IDCModel {
 			const sorted = Array.from(new Set(versions)).sort((a, b) => this.compareVersions(b, a))
 			return sorted
 				.map(version => ({ version, url: `${IDC_BUCKET_URL}${version}${IDC_PARQUET_KEY_SUFFIX}` }))
-				.slice(0, MAX_RETRY)
+				.slice(0, retries)
 		} catch {
 			return []
 		}
