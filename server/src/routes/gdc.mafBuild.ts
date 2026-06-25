@@ -74,7 +74,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// defeats keep-alive and forces a brand-new connection per file, and the application/json
 	// content-negotiation is wrong for a gzip download. Against a stricter GDC environment
 	// (e.g. qa-int, behind a proxy/WAF) this can cause all but the first concurrent download to
-	// be rejected. Forward only what a download needs: auth, plus the end user's real User-Agent
+	// be rejected. Forward only what a download needs: auth, plus X-Forwarded-* from ds.getHostHeaders()
 	// (passed in from the route handler) so GDC's proxy/WAF sees the actual client.
 	const downloadHeaders: { [key: string]: string } = {}
 	for (const [k, v] of Object.entries(headers)) {
