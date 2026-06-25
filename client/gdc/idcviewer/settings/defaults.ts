@@ -1,4 +1,4 @@
-import { IDCViewerOpts } from "../types"
+import type { IDCViewerOpts } from '../types'
 
 export const IDC_BUCKET_URL = 'https://storage.googleapis.com/idc-index-data-artifacts/'
 export const IDC_PARQUET_KEY_SUFFIX = '/release_artifacts/gdc_idc_mapping.parquet'
