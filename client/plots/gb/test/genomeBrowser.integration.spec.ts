@@ -11,6 +11,7 @@ import { getFilter_male, getFilter_agedx } from '../../../test/testdata/data'
     protein mode with global filter (state.termfilter.filter)
     protein mode with local filter (config.filter)
     protein mode with both global and local filter
+    filter change triggers block recreation
 ********************/
 
 tape('\n', test => {
@@ -236,6 +237,51 @@ tape('protein mode with both global and local filter', (test: any) => {
 		test.ok(rects, 'Should have rect elements in protein track when both filters are set')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('filter change triggers block recreation', (test: any) => {
+	test.timeoutAfter(6000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: 'TP53' }
+				}
+			]
+		},
+		genomeBrowser: { callbacks: { 'postRender.test': firstRender } }
+	})
+
+	async function firstRender(gb) {
+		gb.on('postRender.test', null)
+		const dom = gb.Inner.dom
+		const blockDivBefore = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
+		test.ok(blockDivBefore, 'Should render block before filter change')
+
+		// set up second-render callback before dispatching so it is ready
+		gb.on('postRender.test', async function secondRender(gb2) {
+			gb2.on('postRender.test', null)
+			const blockDivAfter = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
+			test.ok(blockDivAfter, 'Should render block after filter change')
+			test.notEqual(
+				blockDivBefore,
+				blockDivAfter,
+				'Block DOM node should be recreated (old node removed) after filter change'
+			)
+			const state = gb2.Inner.app.getState()
+			test.ok(state.termfilter.filter.lst.length > 0, 'Global filter should be applied in state after dispatch')
+			if (test._ok) gb2.Inner.app.destroy()
+			test.end()
+		})
+
+		// dispatch a global filter change to trigger _prevFilterSig mismatch and block reset
+		await gb.Inner.app.dispatch({
+			type: 'filter_replace',
+			filter: getFilter_male()
+		})
 	}
 })
 
