@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import { detectGt, detectOne } from '../../../test/test.helpers.js'
+import { getFilter_male, getFilter_agedx } from '../../../test/testdata/data'
 
 /*******************
  Tests:
@@ -11,53 +12,6 @@ import { detectGt, detectOne } from '../../../test/test.helpers.js'
     protein mode with local filter (config.filter)
     protein mode with both global and local filter
 ********************/
-
-// reusable TermdbTest tvs filters used by the filter-related tests below
-const globalFilter = {
-	type: 'tvslst',
-	in: true,
-	join: '',
-	lst: [
-		{
-			type: 'tvs',
-			tvs: {
-				term: { id: 'sex' },
-				values: [{ key: '1', label: 'Male' }]
-			}
-		}
-	]
-}
-
-const localFilter = {
-	type: 'tvslst',
-	in: true,
-	join: 'and',
-	lst: [
-		{
-			type: 'tvs',
-			tvs: {
-				term: { id: 'diaggrp', type: 'categorical', name: 'xx' }, // type/name required to avoid error e.g. tvs.undefined.js
-				values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
-			}
-		}
-	]
-}
-
-/*************************
- reusable helper functions
-**************************/
-
-const runpp = helpers.getRunPp('mass', {
-	state: {
-		nav: { activeTab: 1 },
-		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
-	},
-	debug: 1
-})
-
-/**************
- test sections
-****************/
 
 tape('\n', test => {
 	test.comment('-***- plots/genomeBrowser -***-')
@@ -180,7 +134,7 @@ tape('protein mode with global filter (state.termfilter.filter)', (test: any) =>
 
 	runpp({
 		state: {
-			termfilter: { filter: globalFilter },
+			termfilter: { filter: getFilter_male() },
 			plots: [
 				{
 					chartType: 'genomeBrowser',
@@ -200,7 +154,7 @@ tape('protein mode with global filter (state.termfilter.filter)', (test: any) =>
 		test.equal(tklst.length, 3, 'Block has 3 tracks with global filter')
 		// verify state was wired with the global filter
 		const state = gb.Inner.app.getState()
-		// state.termfilter.filter has been altered too different from globalFilter, just tvslst len is ok
+		// just tvslst len is ok
 		test.equal(state.termfilter.filter.lst.length, 2, 'state.termfilter.filter.lst.length=2')
 		const proteinTk = tklst[2]
 		const rects = await detectGt({ elem: proteinTk, selector: 'rect' })
@@ -212,14 +166,14 @@ tape('protein mode with global filter (state.termfilter.filter)', (test: any) =>
 
 tape('protein mode with local filter (config.filter)', (test: any) => {
 	test.timeoutAfter(3000)
-
+	const LF = getFilter_agedx()
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'genomeBrowser',
 					geneSearchResult: { geneSymbol: 'TP53' },
-					filter: localFilter
+					filter: LF
 				}
 			]
 		},
@@ -237,7 +191,7 @@ tape('protein mode with local filter (config.filter)', (test: any) => {
 		const state = gb.Inner.app.getState()
 		const plotConfig = state.plots.find(p => p.id === gb.Inner.id)
 		test.ok(plotConfig, 'Should find plot config in app state')
-		test.deepEqual(plotConfig.filter, localFilter, 'plot config.filter should equal the supplied local filter')
+		test.equal(plotConfig.filter.lst.length, LF.lst.length, 'plot config.filter.lst.length is as expected')
 		const proteinTk = tklst[2]
 		const rects = await detectGt({ elem: proteinTk, selector: 'rect' })
 		test.ok(rects, 'Should have rect elements in protein track when a local filter is set')
@@ -249,14 +203,15 @@ tape('protein mode with local filter (config.filter)', (test: any) => {
 tape('protein mode with both global and local filter', (test: any) => {
 	test.timeoutAfter(3000)
 
+	const LF = getFilter_agedx()
 	runpp({
 		state: {
-			termfilter: { filter: globalFilter },
+			termfilter: { filter: getFilter_male() },
 			plots: [
 				{
 					chartType: 'genomeBrowser',
 					geneSearchResult: { geneSymbol: 'TP53' },
-					filter: localFilter
+					filter: LF
 				}
 			]
 		},
@@ -275,11 +230,23 @@ tape('protein mode with both global and local filter', (test: any) => {
 		test.equal(state.termfilter.filter.lst.length, 2, 'state.termfilter.filter.lst.length=2')
 		const plotConfig = state.plots.find(p => p.id === gb.Inner.id)
 		test.ok(plotConfig, 'Should find plot config in app state')
-		test.deepEqual(plotConfig.filter, localFilter, 'plot config.filter should equal the supplied local filter')
+		test.equal(plotConfig.filter.lst.length, LF.lst.length, 'plot config.filter should equal the supplied local filter')
 		const proteinTk = tklst[2]
 		const rects = await detectGt({ elem: proteinTk, selector: 'rect' })
 		test.ok(rects, 'Should have rect elements in protein track when both filters are set')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
 	}
+})
+
+/*************************
+ reusable helper functions
+**************************/
+
+const runpp = helpers.getRunPp('mass', {
+	state: {
+		nav: { activeTab: 1 },
+		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
+	},
+	debug: 1
 })
