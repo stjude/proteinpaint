@@ -3,7 +3,16 @@ import { SubplotManager } from '../subplots/SubplotManager'
 
 /**
  * Tests
- *
+ *	- constructor should initialize manager state from sc components
+ *	- map() should remove stale plots and keep existing sandbox state for active plots
+ *	- initSubplot() should derive sample and plot metadata from subplot shape
+ *	- removeSubplot() should destroy the component and delete the record
+ *	- setSandbox() and setSectionKey() should update existing records only
+ *	- getActiveSubplotsFlat() should preserve insertion order
+ *	- getSampleId() should read sample ids from supported subplot shapes
+ *	- getPlotName() should resolve names from plot metadata and chart types
+ *	- getPlotName() should resolve imagePlot labels and defaults
+ *	- getSampleSandboxes() should group active plots by sample id
  * */
 
 /**************
@@ -243,6 +252,19 @@ tape('getPlotName() should resolve names from plot metadata and chart types', te
 	)
 	test.equal(manager.getPlotName({ term: { term: { plot: 'Violin' } } }), 'Violin', 'Should read term.term.plot')
 	test.equal(manager.getPlotName({ chartType: 'scatter' }), 'scatter', 'Should fall back to chartType')
+	test.end()
+})
+
+tape('getPlotName() should resolve imagePlot labels and defaults', test => {
+	const sc = getMockSCViewer()
+	const manager = new SubplotManager(sc)
+
+	test.equal(
+		manager.getPlotName({ chartType: 'imagePlot', imgDir: { label: 'Tumor image' } }),
+		'Tumor image',
+		'Should use imgDir.label for imagePlot names when present'
+	)
+	test.equal(manager.getPlotName({ chartType: 'imagePlot' }), 'Image', 'Should default imagePlot names to Image')
 	test.end()
 })
 
