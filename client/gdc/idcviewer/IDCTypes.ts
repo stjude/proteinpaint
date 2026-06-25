@@ -1,4 +1,7 @@
 
+import type { Selection } from 'd3-selection'
+
+
 export type IDCParquetData = {
 	PatientID: string
 	collection_id: string
@@ -78,4 +81,16 @@ export interface Pagination {
 
 export interface CasesResponse {
 	data: { hits: Array<ResponseHit>; pagination: Pagination }
+}
+
+
+export interface IDCViewerOpts {
+	holder?: Selection<HTMLDivElement, unknown, any, any>
+	filter0?: any
+	searchFilter?: string
+	action?: 'search'
+	pageSize: number
+	pageSizeOptions: number[]
+	retries: number
+	currentPage: number
 }

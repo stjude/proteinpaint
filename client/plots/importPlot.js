@@ -32,9 +32,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'DziViewer':
 			return await import(`./dziviewer/DziViewer.ts`)
 
-		case 'IDCViewer':
-			return await import(`./idcviewer/IDCViewer.ts`)
-
 		case 'GeneExpInput':
 			return await import(`./GeneExpInput.ts`)
 
