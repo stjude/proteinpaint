@@ -116,11 +116,16 @@ export class SubplotManager {
 	getPlotName(subplot: any): string {
 		let plotName = subplot?.plotName || subplot?.singleCellPlot?.name
 		if (!plotName) {
+			/** Harcoding logic for some transient and parent plots for now. May consider
+			 * adding to the config if this becomes more complex. Must weight against
+			 * adding unnecessary complexity to the config for edge cases though.*/
 			if (subplot.chartType === 'dictionary') plotName = 'Summary'
 			else if (subplot.chartType === 'summary') plotName = 'Summary'
 			else if (subplot.chartType === 'GeneExpInput') plotName = 'Gene expression'
-			else if (subplot?.term?.term?.plot) plotName = subplot.term.term.plot
-			else plotName = subplot.chartType || 'Plot'
+			else if (subplot.chartType === 'imagePlot') {
+				plotName = subplot?.imgDir?.label || 'Image'
+			} else if (subplot?.term?.term?.plot) plotName = subplot.term.term.plot
+			else plotName = subplot.chartType
 		}
 		return plotName
 	}
