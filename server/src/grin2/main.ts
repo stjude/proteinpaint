@@ -215,6 +215,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 	const {
 		result: cacheResult,
 		freshCompute,
+		cohortTime,
 		processingTime,
 		grin2AnalysisTime
 	} = await getGrin2CacheResult(request, g, ds, chromosomelist, signal)
@@ -247,7 +248,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		throw new Error('Invalid manhattan render output: missing PNG data')
 	}
 
-	const totalTime = processingTime + grin2AnalysisTime + manhattanPlotTime
+	const totalTime = cohortTime + processingTime + grin2AnalysisTime + manhattanPlotTime
 
 	// Build lesion type display rows
 	const lesionTypeRows: string[][] = []
@@ -305,6 +306,12 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 						['Total Genes', resultData.totalGenes.toLocaleString()],
 						['Total Samples', processing.totalSamples!.toLocaleString()],
 						['Processed Samples', processing.processedSamples!.toLocaleString()],
+						// unique samples that actually had >=1 qualifying lesion — distinct from the cohort size
+						// above, so users don't misread "Processed Samples" as "samples with mutations"
+						[
+							'Samples with data',
+							`${(processing.samplesWithData ?? 0).toLocaleString()} / ${processing.processedSamples!.toLocaleString()}`
+						],
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
 						['Failed Samples', processing.failedSamples!.toLocaleString()],
 						// only shown when a cnv-type selection actually dropped some samples' cnv
@@ -334,6 +341,9 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 				{
 					name: 'Timing',
 					rows: [
+						// Sample retrieval is the cohort fetch before processing. For API-backed datasets (GDC)
+						// it's a network round-trip; for sqlite it's a fast local query (sub-second).
+						['Sample retrieval', freshCompute ? formatElapsedTime(cohortTime) : 'cached'],
 						['Processing', freshCompute ? formatElapsedTime(processingTime) : 'cached'],
 						['GRIN2', freshCompute ? formatElapsedTime(grin2AnalysisTime) : 'cached'],
 						['Plotting', formatElapsedTime(manhattanPlotTime)],
@@ -415,14 +425,16 @@ async function getGrin2CacheResult(
 	cacheId: string
 	cacheFile: string
 	freshCompute: boolean
+	cohortTime: number
 	processingTime: number
 	grin2AnalysisTime: number
 }> {
-	// Track Python-only timing. On a cache hit these stay 0; on a fresh
+	// Track per-phase timing. On a cache hit these stay 0; on a fresh
 	// run they're populated inside the computeFresh closure.
 	// `freshCompute` flips to true iff computeFresh ran — used by the
-	// route handler to label the processing/GRIN2 timing rows as
+	// route handler to label the retrieval/processing/GRIN2 timing rows as
 	// "cached" on cache hits.
+	let cohortTime = 0
 	let processingTime = 0
 	let grin2AnalysisTime = 0
 	let freshCompute = false
@@ -438,13 +450,14 @@ async function getGrin2CacheResult(
 		computeFresh: async () => {
 			freshCompute = true
 			const out = await runGrin2Fresh(request, g, ds, chromosomelist, signal)
+			cohortTime = out.cohortTime
 			processingTime = out.processingTime
 			grin2AnalysisTime = out.grin2AnalysisTime
 			return out.cacheResult
 		}
 	})
 
-	return { result, cacheId, cacheFile, freshCompute, processingTime, grin2AnalysisTime }
+	return { result, cacheId, cacheFile, freshCompute, cohortTime, processingTime, grin2AnalysisTime }
 }
 
 /** Compute GRIN2 fresh: pull samples, build lesions, invoke Python.
@@ -457,7 +470,12 @@ async function runGrin2Fresh(
 	ds: any,
 	chromosomelist: { [key: string]: number },
 	signal?: AbortSignal
-): Promise<{ cacheResult: Grin2CacheResult; processingTime: number; grin2AnalysisTime: number }> {
+): Promise<{
+	cacheResult: Grin2CacheResult
+	cohortTime: number
+	processingTime: number
+	grin2AnalysisTime: number
+}> {
 	const startTime = Date.now()
 
 	// Acquire the cohort's samples, then convert their per-sample mutation data to lesions. Per-sample mlst
@@ -494,13 +512,16 @@ async function runGrin2Fresh(
 		throw new Error('No samples found matching the provided filter criteria')
 	}
 
-	// Process sample data, convert to lesion format, and apply overall lesion cap
-	const { lesions, processing } = await processSampleData(samples, ds, request)
+	// Process sample data, convert to lesion format, and apply overall lesion cap. Time this separately
+	// from the cohort retrieval above so the two costs are reported as distinct stats — for API-backed
+	// datasets (GDC) the retrieval is a real network step, whereas for sqlite it's a fast local query.
+	const processStart = Date.now()
+	const { lesions, processing } = await processSampleData(samples, ds, request, signal)
 
 	// Guard against undefined processing summary so eslint doesn't complain
 	if (!processing) throw new Error('Processing summary is missing')
 
-	const processingTime = Date.now() - startTime
+	const processingTime = Date.now() - processStart
 	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
 		`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
@@ -557,7 +578,7 @@ async function runGrin2Fresh(
 		resultData,
 		processing
 	}
-	return { cacheResult, processingTime, grin2AnalysisTime }
+	return { cacheResult, cohortTime, processingTime, grin2AnalysisTime }
 }
 
 // ─── helpers ─── //
@@ -571,7 +592,8 @@ async function runGrin2Fresh(
 async function processSampleData(
 	samples: any[],
 	ds: any,
-	request: GRIN2Request
+	request: GRIN2Request,
+	signal?: AbortSignal
 ): Promise<{
 	lesions: any[]
 	processing: {
@@ -639,6 +661,9 @@ async function processSampleData(
 		processedLesions: number
 		unprocessedSamples: number
 		droppedCnvNoType: number
+		// unique samples that contributed >=1 lesion to the final result (union across all lesion types).
+		// distinct from processedSamples: many cohort cases have no qualifying mutation, so this is smaller.
+		samplesWithData?: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -661,20 +686,51 @@ async function processSampleData(
 	// when those options are off; for native ds it filters out unrequested dt before return.
 	const skipDt = new Set<number>(Object.values(optionToDt).filter(dt => !enabledTypes.includes(dt)))
 
+	// If the ds offers a batch SNV/indel getter (GDC) and snvindel is requested, fetch all SNV/indel up
+	// front in batched requests (GDC: one ssm_occurrences POST per chunk of cases) instead of one per
+	// sample. cnv/fusion still come from the per-sample get() below. ssmBySample maps sample name -> {mlst}.
+	const ssmBatchGet = ds.queries.singleSampleMutation.batchGet
+	const useBatchSsm = typeof ssmBatchGet == 'function' && enabledTypes.includes(dtsnvindel)
+	let ssmBySample: Map<string, { mlst: any[] }> | undefined
+	if (useBatchSsm) {
+		ssmBySample = await ssmBatchGet({
+			samples: samples.map(s => s.name),
+			skipDt,
+			ds, // batch getter reads ds from q.ds (gdc.hg38.ts convention)
+			filter0: request.filter0,
+			__abortSignal: signal
+		})
+	}
+	// When ssm is batched, skip it in the per-sample loop so get() doesn't re-fetch it.
+	const loopSkipDt = useBatchSsm ? new Set<number>(skipDt).add(dtsnvindel) : skipDt
+	// If batching ssm leaves no other enabled dt for this case, the per-sample get() has nothing to
+	// fetch — skip the call entirely (avoids one empty round-trip per sample for snvindel-only runs).
+	const needPerSampleGet = enabledTypes.some(dt => !loopSkipDt.has(dt))
+
 	await mapConcurrent(
 		samples,
 		concurrency,
 		async sample => {
 			try {
-				const { mlst, droppedCnvNoMatch } = await ds.queries.singleSampleMutation.get({
-					sample: sample.name,
-					skipDt,
-					// only set when the user selected a specific cnv type; the getter loads only this type and
-					// flags droppedCnvNoMatch when the case has cnv but not of this type
-					cnvType: selectedCnvDef
-						? { id: selectedCnvDef.id, dataType: selectedCnvDef.dataType, valueType: selectedCnvDef.valueType }
-						: undefined
-				})
+				// batched SNV/indel for this sample (fetched up front); [] when not batched / none found
+				const ssmMlst = ssmBySample?.get(sample.name)?.mlst ?? []
+
+				let getMlst: any[] = []
+				let droppedCnvNoMatch = false
+				if (needPerSampleGet) {
+					const r = await ds.queries.singleSampleMutation.get({
+						sample: sample.name,
+						skipDt: loopSkipDt,
+						// only set when the user selected a specific cnv type; the getter loads only this type and
+						// flags droppedCnvNoMatch when the case has cnv but not of this type
+						cnvType: selectedCnvDef
+							? { id: selectedCnvDef.id, dataType: selectedCnvDef.dataType, valueType: selectedCnvDef.valueType }
+							: undefined
+					})
+					getMlst = r.mlst || []
+					droppedCnvNoMatch = r.droppedCnvNoMatch
+				}
+				const mlst = ssmMlst.length ? [...ssmMlst, ...getMlst] : getMlst
 
 				if (droppedCnvNoMatch) processing.droppedCnvNoType! += 1
 
@@ -754,6 +810,15 @@ async function processSampleData(
 	}
 
 	processing.lesionCounts = lesionCounts
+
+	// Unique samples that contributed at least one lesion (union across all lesion types). Lets the
+	// summary show "samples with data" alongside the full cohort size, so users don't read the cohort
+	// count (processedSamples) as "samples that had mutations".
+	const samplesWithData = new Set<string>()
+	for (const set of samplesPerLesionType.values()) {
+		for (const s of set) samplesWithData.add(s)
+	}
+	processing.samplesWithData = samplesWithData.size
 
 	return { lesions, processing }
 }
