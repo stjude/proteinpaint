@@ -416,6 +416,10 @@ type SingleSampleMutationQuery = {
 	returns same json array as native. see example below
 	*/
 	get?: (f: any) => void
+	/** optional ds-supplied batch getter (GDC v1: SNV/indel only). takes {samples[], skipDt, ...} and
+	returns a Map<sampleId, {mlst}> so callers (e.g. GRIN2) can fetch many samples in one network round-trip
+	instead of one get() per sample. cnv/fusion stay on the per-sample get() path. */
+	batchGet?: (q: any) => Promise<Map<any, { mlst: any[] }>>
 	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
 	sample_id_key: string
 	/** disco plot will be launched when singleSampleMutation is enabled. supply customization options here */
