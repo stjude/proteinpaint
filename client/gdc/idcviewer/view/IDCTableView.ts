@@ -1,7 +1,9 @@
-import { type BaseType, type Selection } from 'd3-selection'
-import type { IDCViewerOpts, IDCViewerRow, Pagination } from '../IDCTypes'
+import { type Selection } from 'd3-selection'
+import type { IDCViewerOpts, IDCViewerRow, Pagination, SortByField } from '../IDCTypes'
 import type { IDCViewer } from '../IDCViewer'
+import { makeTransparentButton, addSvg, makeCenteredFlex } from '../utils'
 import { sayerror } from '#dom/sayerror'
+import { IDCViewerDefaults } from '../settings/defaults'
 
 const borderColor = '#4c4c4c'
 const mainHeaderBgColor = '#f5f5f5'
@@ -28,37 +30,15 @@ const doubleRightChevronPath = [
 	'M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708',
 	'M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708'
 ]
-
-function makeTransparentButton(
-	button: Selection<HTMLButtonElement, unknown, any, any>
-): Selection<HTMLButtonElement, unknown, any, any> {
-	return button
-		.style('cursor', 'pointer')
-		.style('background', 'transparent')
-		.style('border', 'none')
-		.style('padding', '0')
-		.style('margin', '0')
-		.style('appearance', 'none')
-}
-
-export function addSvg<GElement extends BaseType, Datum, PElement extends BaseType, PDatum>(
-	selection: Selection<GElement, Datum, PElement, PDatum>,
-	paths: string[]
-): Selection<GElement, Datum, PElement, PDatum> {
-	const svg = selection
-		.style('display', 'flex')
-		.style('align-items', 'center')
-		.style('justify-content', 'center')
-		.append('svg')
-		.attr('xmlns', 'http://www.w3.org/2000/svg')
-		.attr('viewBox', '0 0 16 16')
-		.attr('width', '16')
-		.attr('height', '16')
-	paths.forEach(path => {
-		svg.append('path').attr('d', path).attr('fill', 'currentColor')
-	})
-	return selection
-}
+const alphabetAscendingPath = [
+	'M10.082 5.629 9.664 7H8.598l1.789-5.332h1.234L13.402 7h-1.12l-.419-1.371zm1.57-.785L11 2.687h-.047l-.652 2.157z',
+	'M12.96 14H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645zM4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z'
+]
+const alphabetDescendingPath = [
+	'M12.96 7H9.028v-.691l2.579-3.72v-.054H9.098v-.867h3.785v.691l-2.567 3.72v.054h2.645z',
+	'M10.082 12.629 9.664 14H8.598l1.789-5.332h1.234L13.402 14h-1.12l-.419-1.371zm1.57-.785L11 9.688h-.047l-.652 2.156z',
+	'M4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z'
+]
 /** Renders the IDC studies table with expandable row`s and page-size control. */
 export class IDCTableView {
 	private holder: Selection<HTMLDivElement, unknown, any, any>
@@ -79,7 +59,7 @@ export class IDCTableView {
 		this.holder.select('#idc-table').selectAll('*').remove()
 		this.holder.selectAll('.idcviewer-pagination').remove()
 	}
-
+	// aria-sort 'ascending' 'descending 'none'
 	render(tableData: ReadonlyArray<IDCViewerRow>, pagination: Pagination): void {
 		this.clear()
 		if (tableData.length === 0) {
@@ -97,7 +77,12 @@ export class IDCTableView {
 				.style('font-size', '14px')
 				.style('border', `1px solid ${borderColor}`)
 		}
-		const headers = ['GDC Case ID', 'Program', 'Project', 'IDC Studies (Click to expand)']
+		const headers = {
+			'GDC Case ID': 'submitter_id',
+			Program: 'project.program.name',
+			Project: 'project.project_id',
+			'IDC Studies (Click to expand)': undefined
+		}
 		const expandableHeaders = [
 			'IDC Study Instance UID',
 			'Collection',
@@ -113,23 +98,59 @@ export class IDCTableView {
 			.style('background-color', mainHeaderBgColor)
 			.style('border-bottom', `2px solid ${borderColor}`)
 			.style('height', '3rem')
-
-		headers.forEach(header => {
+		const sortDirection = this.args.sortDirection === 'asc' ? 'ascending' : 'descending'
+		Object.entries(headers).forEach(([header, sortKey]) => {
+			const chosenKey = this.args.sortBy === sortKey
 			const th = headerRow
 				.append('th')
 				.style('text-align', 'left')
-				.style('padding', '10px')
+				.style('align-items', 'center')
 				.style('background-color', mainHeaderBgColor)
-				.on('mouseenter', function () {
-					;(this as HTMLTableCellElement).style.backgroundColor = mainHeaderHoverBgColor
-				})
+				.attr('aria-sort', chosenKey ? sortDirection : 'none')
+				.style('font-family', 'Montserrat, sans-serif')
+				.style('font-weight', '600')
+				.style('padding', '10px')
+				.style('gap', '5px')
+				.style('cursor', sortKey === undefined ? 'default' : 'pointer')
+			const headerDiv = th.append('div').style('display', 'flex').style('align-items', 'left').style('gap', '5px')
+			headerDiv.append('span').text(header)
+			if (sortKey === undefined) return
+
+			th.on('mouseenter', function () {
+				;(this as HTMLTableCellElement).style.backgroundColor = mainHeaderHoverBgColor
+			})
 				.on('mouseleave', function () {
 					;(this as HTMLTableCellElement).style.backgroundColor = mainHeaderBgColor
 				})
-			makeTransparentButton(th.append('button'))
-				.style('font-family', 'Montserrat, sans-serif')
-				.style('font-weight', '600')
-				.text(header)
+				.on('click', () => {
+					switch (th.attr('aria-sort')) {
+						case 'none':
+							this.args.sortDirection = 'asc'
+							this.args.sortBy = sortKey as SortByField
+							break
+						case 'ascending':
+							this.args.sortDirection = 'desc'
+							this.args.sortBy = sortKey as SortByField
+							break
+						case 'descending':
+							this.args.sortBy = IDCViewerDefaults.sortBy
+							this.args.sortDirection = IDCViewerDefaults.sortDirection
+							break
+					}
+					this.viewer.main({ ...this.args, currentPage: 1 }).catch(e => {
+						sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+					})
+				})
+
+			addSvg(
+				headerDiv,
+				chosenKey
+					? this.args.sortDirection === 'asc'
+						? alphabetAscendingPath
+						: alphabetDescendingPath
+					: alphabetAscendingPath
+			)
+			if (chosenKey) th.select('svg').style('color', '#c7501a')
 		})
 
 		const tbody = table.append('tbody')
@@ -354,24 +375,28 @@ export class IDCTableView {
 				.style('justify-content', 'center')
 			const buttonsToDisable: Selection<HTMLButtonElement, unknown, any, any>[] = []
 			const beginningButton = makeTransparentButton(pageControlsDiv.append('button'))
-			addSvg(beginningButton, doubleLeftChevronPath).on('click', () => {
-				if (this.args.currentPage === 1) return
-				this.viewer.main({ ...this.args, currentPage: 1 }).catch(e => {
-					sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+			makeCenteredFlex(
+				addSvg(beginningButton, doubleLeftChevronPath).on('click', () => {
+					if (this.args.currentPage === 1) return
+					this.viewer.main({ ...this.args, currentPage: 1 }).catch(e => {
+						sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+					})
 				})
-			})
+			)
 			const singlePageTurnBack = makeTransparentButton(pageControlsDiv.append('button'))
-			addSvg(singlePageTurnBack, leftChevronPath).on('click', () => {
-				if (this.args.currentPage === 1) return
-				this.viewer.main({ ...this.args, currentPage: this.args.currentPage - 1 }).catch(e => {
-					sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+			makeCenteredFlex(
+				addSvg(singlePageTurnBack, leftChevronPath).on('click', () => {
+					if (this.args.currentPage === 1) return
+					this.viewer.main({ ...this.args, currentPage: this.args.currentPage - 1 }).catch(e => {
+						sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+					})
 				})
-			})
+			)
 			const setofPages = new Set([1])
-			let startPage = Math.max(2, this.args.currentPage - Math.floor((numPagesToShow - 2) / 2))
-			startPage = Math.min(startPage, totalPages - (numPagesToShow - 2))
-			console.log('startPage:', startPage, Math.floor((numPagesToShow - 2) / 2), 'currentPage:', this.args.currentPage)
-			for (let i = startPage; i < totalPages && setofPages.size <= numPagesToShow - 2; i++) {
+			const actualShow = Math.min(numPagesToShow, totalPages)
+			let startPage = Math.max(2, this.args.currentPage - Math.floor((actualShow - 2) / 2))
+			startPage = Math.min(startPage, totalPages - (actualShow - 2))
+			for (let i = startPage; i < totalPages && setofPages.size <= actualShow - 2; i++) {
 				setofPages.add(i)
 			}
 			setofPages.add(totalPages)
@@ -380,23 +405,30 @@ export class IDCTableView {
 				buttonsToDisable.push(beginningButton, singlePageTurnBack)
 			}
 
-			if (totalPages > numPagesToShow) {
+			if (totalPages > actualShow) {
 				const secondLowestPage = 2
 				const secondHighestPage = totalPages - 1
 				const secondLowestPageIncluded = listOfPages.includes(secondLowestPage.toString())
 				const secondHighestPageIncluded = listOfPages.includes(secondHighestPage.toString())
 				if (!secondHighestPageIncluded) {
-					listOfPages.splice(listOfPages.length - 2, 1, pagePlaceHolder)
+					listOfPages.splice(listOfPages.length - 2, 1, 'secondHighestPage')
 				}
 				if (!secondLowestPageIncluded) {
-					listOfPages.splice(1, 1, pagePlaceHolder)
+					listOfPages.splice(1, 1, 'secondLowestPage')
 				}
 			}
 
 			for (const page of listOfPages) {
 				const pageButton = makeTransparentButton(pageControlsDiv.append('button')).text(page)
-				if (page === pagePlaceHolder) {
-					buttonsToDisable.push(pageButton)
+				if (page === 'secondLowestPage' || page === 'secondHighestPage') {
+					// buttonsToDisable.push(pageButton)
+					pageButton.text(pagePlaceHolder)
+					pageButton.on('click', () => {
+						const middlePoint = Math.floor((this.args.currentPage + (page === 'secondLowestPage' ? 1 : totalPages)) / 2)
+						this.viewer.main({ ...this.args, currentPage: middlePoint }).catch(e => {
+							sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+						})
+					})
 				} else if (Number(page) === this.args.currentPage) {
 					pageButton
 						.style('font-weight', 'bold')
@@ -413,19 +445,23 @@ export class IDCTableView {
 				}
 			}
 			const singlePageTurnForward = makeTransparentButton(pageControlsDiv.append('button'))
-			addSvg(singlePageTurnForward, rightChevronPath).on('click', () => {
-				if (this.args.currentPage === totalPages) return
-				this.viewer.main({ ...this.args, currentPage: this.args.currentPage + 1 }).catch(e => {
-					sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+			makeCenteredFlex(
+				addSvg(singlePageTurnForward, rightChevronPath).on('click', () => {
+					if (this.args.currentPage === totalPages) return
+					this.viewer.main({ ...this.args, currentPage: this.args.currentPage + 1 }).catch(e => {
+						sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+					})
 				})
-			})
+			)
 			const endButton = makeTransparentButton(pageControlsDiv.append('button'))
-			addSvg(endButton, doubleRightChevronPath).on('click', () => {
-				if (this.args.currentPage === totalPages) return
-				this.viewer.main({ ...this.args, currentPage: totalPages }).catch(e => {
-					sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+			makeCenteredFlex(
+				addSvg(endButton, doubleRightChevronPath).on('click', () => {
+					if (this.args.currentPage === totalPages) return
+					this.viewer.main({ ...this.args, currentPage: totalPages }).catch(e => {
+						sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
+					})
 				})
-			})
+			)
 			if (this.args.currentPage === totalPages) {
 				buttonsToDisable.push(singlePageTurnForward, endButton)
 			}
@@ -451,7 +487,7 @@ export class IDCTableView {
 			.style('display', 'flex')
 			.style('align-items', 'center')
 		if (hasStudy) {
-			addSvg(cell, externalLinkPath)
+			makeCenteredFlex(addSvg(cell, externalLinkPath))
 			cell
 				.append('a')
 				.text('Open Study')

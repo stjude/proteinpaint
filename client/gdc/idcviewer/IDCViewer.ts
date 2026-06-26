@@ -12,11 +12,11 @@ export async function init(
 	holder: Selection<HTMLDivElement, unknown, any, any>
 ): Promise<{ update: (arg: { filter0: any }) => Promise<void> }> {
 	const viewer = new IDCViewer(holder)
-	viewer.main({ ...IDCViewerDefaults, filter0: filter0 }).catch(e => {
+	viewer.main({ ...IDCViewerDefaults, filter0: filter0 }, true).catch(e => {
 		sayerror(viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
 	})
 	async function update({ filter0 }) {
-		await viewer.main({ ...IDCViewerDefaults, filter0: filter0 })
+		await viewer.main({ ...IDCViewerDefaults, filter0: filter0 }, true)
 	}
 
 	const publicApi = { update }
@@ -27,13 +27,23 @@ export class IDCViewer {
 	private model = new IDCModel()
 	private viewModel = new IDCViewModel()
 	private tableView: IDCTableView | undefined
+	private searchView: IDCSearchView | undefined
 	private loadResult: IDCParquetLoadResult | undefined
-	public opts: any
 	public dom: { [name: string]: any } = {}
 
 	constructor(holder: Selection<HTMLDivElement, unknown, any, any>) {
 		this.dom = {
 			holder: holder,
+			loadingDiv: holder
+				.append('div')
+				.attr('class', 'idcviewer-loading-holder')
+				.style('display', 'none')
+				.style('background-color', 'rgba(255, 255, 255, 0.8)')
+				.style('position', 'absolute')
+				.style('top', '0')
+				.style('left', '0')
+				.style('width', '100%')
+				.style('height', '100%'),
 			searchDiv: holder
 				.append('div')
 				.attr('class', 'idcviewer-search-holder')
@@ -47,12 +57,12 @@ export class IDCViewer {
 		}
 	}
 
-	async main(args: IDCViewerOpts): Promise<void> {
+	async main(args: IDCViewerOpts, newCohort: boolean = false): Promise<void> {
 		this.dom.errorDiv.selectAll('*').remove()
-		if (!this.dom.searchView) {
-			this.dom.searchView = new IDCSearchView(this.dom.searchDiv, this, args)
+		if (!this.searchView) {
+			this.searchView = new IDCSearchView(this.dom.searchDiv, this, args)
 		} else {
-			this.dom.searchView.setArgs(args)
+			this.searchView.setArgs(args)
 		}
 
 		if (!this.tableView) {
@@ -78,51 +88,19 @@ export class IDCViewer {
 		}
 
 		try {
+			this.dom.loadingDiv.style('display', 'flex')
 			const caseData = await this.model.getCaseFromCurrentCohort(args)
 			const tableData = this.viewModel.buildTableData(this.loadResult.idc_data, caseData.hits)
 			this.tableView.render(tableData, caseData.pagination)
-			console.trace('Rendering table with args:', args)
-			if (!(args.action === 'search')) {
-				this.dom.searchView.render(caseData.pagination)
-			} else {
-				args.action = undefined
-				this.dom.searchView.setArgs(args)
-				this.tableView.setArgs(args)
+			if (newCohort) {
+				this.searchView.render(caseData.pagination)
 			}
 		} catch (e: any) {
 			if (this.dom.errorDiv) {
 				sayerror(this.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
 			}
+		} finally {
+			this.dom.loadingDiv.style('display', 'none')
 		}
 	}
 }
-
-// case "=":
-//       return handler.handleEquals(op, hooks);
-//     case "!=":
-//       return handler.handleNotEquals(op, hooks);
-//     case "<":
-//       return handler.handleLessThan(op, hooks);
-//     case "<=":
-//       return handler.handleLessThanOrEquals(op, hooks);
-//     case ">":
-//       return handler.handleGreaterThan(op, hooks);
-//     case ">=":
-//       return handler.handleGreaterThanOrEquals(op, hooks);
-//     case "missing":
-//       return handler.handleMissing(op, hooks);
-//     case "exists":
-//       return handler.handleExists(op, hooks);
-//     case "includes":
-//       return handler.handleIncludes(op, hooks);
-//     case "excludes":
-//       return handler.handleExcludes(op, hooks);
-//     case "excludeifany":
-//       return handler.handleExcludeIfAny(op, hooks);
-//     case "and":
-//       return handler.handleIntersection(op, hooks);
-//     case "or":
-//       return handler.handleUnion(op, hooks);
-//     default:
-//       return assertNever(op);
-//   }

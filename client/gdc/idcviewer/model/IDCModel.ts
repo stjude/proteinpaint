@@ -15,7 +15,7 @@ import {
 	IDC_DATA_VERSION_METADATA_KEY,
 	IDC_PARQUET_COLUMNS,
 	IDC_PARQUET_CURRENT_URL,
-	IDC_PARQUET_KEY_SUFFIX,
+	IDC_PARQUET_KEY_SUFFIX
 } from '../settings/defaults'
 
 // ---------------------------------------------------------------------------
@@ -77,13 +77,20 @@ export class IDCModel {
 	}
 
 	/** Fetch cases from the GDC API matching the given filter. */
-	async getCaseFromCurrentCohort({ searchFilter = '', pageSize = 20, currentPage=1,filter0 }: IDCViewerOpts): Promise<CasesResponse['data']> {
+	async getCaseFromCurrentCohort({
+		searchFilter = '',
+		pageSize = 20,
+		currentPage = 1,
+		filter0,
+		sortBy,
+		sortDirection
+	}: IDCViewerOpts): Promise<CasesResponse['data']> {
 		const normalizedSearchFilter = `*${searchFilter.trim()}*`
-		const operator ='='
+		const operator = '='
 		const body = {
 			fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id',
 			case_filters: filter0,
-			from: (currentPage - 1) * pageSize ,
+			from: (currentPage - 1) * pageSize,
 			size: pageSize,
 			...(normalizedSearchFilter
 				? {
@@ -96,25 +103,36 @@ export class IDCModel {
 								{ op: operator, content: { field: 'samples.submitter_id', value: normalizedSearchFilter } },
 								{ op: operator, content: { field: 'samples.portions.portion_id', value: normalizedSearchFilter } },
 								{ op: operator, content: { field: 'samples.portions.submitter_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'samples.portions.analytes.analyte_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'samples.portions.analytes.submitter_id', value: normalizedSearchFilter } },
-								{op: operator,content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: normalizedSearchFilter }},
-								{op: operator,content: { field: 'samples.portions.analytes.aliquots.submitter_id', value: normalizedSearchFilter }}
+								{
+									op: operator,
+									content: { field: 'samples.portions.analytes.analyte_id', value: normalizedSearchFilter }
+								},
+								{
+									op: operator,
+									content: { field: 'samples.portions.analytes.submitter_id', value: normalizedSearchFilter }
+								},
+								{
+									op: operator,
+									content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: normalizedSearchFilter }
+								},
+								{
+									op: operator,
+									content: { field: 'samples.portions.analytes.aliquots.submitter_id', value: normalizedSearchFilter }
+								}
 							]
 						}
 				  }
 				: {}),
 			expand: 'samples.portions.slides,project.program',
-			sort: 'submitter_id:asc',
-			sortBy: [{ field: 'submitter_id', direction: 'ac' }]
+			sort: `${sortBy}:${sortDirection}`,
+			sortBy: [{ field: sortBy, direction: sortDirection }]
 		}
-
+		// [{field: "project.project_id", direction: "asc"desc}]
 		const re: CasesResponse = await fetch('https://api.gdc.cancer.gov/cases', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json', connection: 'close' },
 			body: JSON.stringify(body)
 		}).then(r => r.json())
-		console.log('GDC API response:', re)
 		if (!Array.isArray(re?.data?.hits)) throw new Error('re.data.hits not array')
 		if (!Number.isFinite(re.data.pagination?.total)) throw new Error('re.data.pagination.total not number')
 		const caseHits = re.data.hits.map(hit => {

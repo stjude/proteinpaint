@@ -20,6 +20,8 @@ export const IDC_PARQUET_COLUMNS = [
 const pageSizeOptions = [10, 20, 50, 100]
 export const IDCViewerDefaults: IDCViewerOpts = {
 	pageSizeOptions,
+	sortBy: 'submitter_id',
+	sortDirection: 'asc',
 	pageSize: pageSizeOptions[0],
 	retries: 3,
 	currentPage: 1
