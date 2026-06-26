@@ -83,6 +83,13 @@ export async function mayLaunchGdcPlotFromUrlparam(urlp, arg) {
 		_.gdcMAFui(p, arg.holder)
 		return true
 	}
+	if (urlp.has('gdcidc')) {
+		const _ = await import('./idcviewer/IDCViewer.ts')
+		const p: any = {
+			filter0: urlp.get('filter0')
+		}
+		return await _.init(p, arg.holder0)
+	}
 	if (urlp.has('gdcgrin2')) {
 		// for local testing, not used in gdc portal
 		const _ = await import('./grin2.ts')
