@@ -1,6 +1,4 @@
-
 import type { Selection } from 'd3-selection'
-
 
 export type IDCParquetData = {
 	PatientID: string
@@ -83,11 +81,13 @@ export interface CasesResponse {
 	data: { hits: Array<ResponseHit>; pagination: Pagination }
 }
 
-
+export type SortByField = 'submitter_id' | 'project.project_id' | 'project.program.name'
 export interface IDCViewerOpts {
 	holder?: Selection<HTMLDivElement, unknown, any, any>
 	filter0?: any
 	searchFilter?: string
+	sortBy: SortByField
+	sortDirection: 'asc' | 'desc'
 	action?: 'search'
 	pageSize: number
 	pageSizeOptions: number[]
