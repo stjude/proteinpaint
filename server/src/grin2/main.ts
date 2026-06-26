@@ -737,6 +737,10 @@ async function processSampleData(
 		concurrency,
 		async sample => {
 			try {
+				// Worker may start after the client already disconnected/cancelled; bail before doing any
+				// per-sample work (including the GDC network call below) once the request is aborted.
+				if (signal?.aborted) return
+
 				// batched SNV/indel for this sample (fetched up front); [] when not batched / none found
 				const ssmMlst = ssmBySample?.get(sample.name)?.mlst ?? []
 
@@ -746,6 +750,9 @@ async function processSampleData(
 					const r = await ds.queries.singleSampleMutation.get({
 						sample: sample.name,
 						skipDt: loopSkipDt,
+						// propagate the request abort signal so the GDC getter's xfetch stops issuing network
+						// requests once the client disconnects/cancels (the getter reads q.__abortSignal)
+						__abortSignal: signal,
 						// only set when the user selected a specific cnv type; the getter loads only this type and
 						// flags droppedCnvNoMatch when the case has cnv but not of this type
 						cnvType: selectedCnvDef
