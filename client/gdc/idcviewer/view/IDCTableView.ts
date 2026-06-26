@@ -9,6 +9,7 @@ const borderColor = '#4c4c4c'
 const mainHeaderBgColor = '#f5f5f5'
 const mainHeaderHoverBgColor = '#e6e6e6'
 const detailsHeaderBgColor = '#e0e0e0'
+const fullWhiteBgColor = '#ffffff'
 // only make this an odd number greater than 1
 const numPagesToShow = 7
 // https://primer.style/octicons/icon/
@@ -39,7 +40,6 @@ const alphabetDescendingPath = [
 	'M10.082 12.629 9.664 14H8.598l1.789-5.332h1.234L13.402 14h-1.12l-.419-1.371zm1.57-.785L11 9.688h-.047l-.652 2.156z',
 	'M4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z'
 ]
-/** Renders the IDC studies table with expandable row`s and page-size control. */
 export class IDCTableView {
 	private holder: Selection<HTMLDivElement, unknown, any, any>
 	private viewer: IDCViewer
@@ -137,7 +137,7 @@ export class IDCTableView {
 							this.args.sortDirection = IDCViewerDefaults.sortDirection
 							break
 					}
-					this.viewer.main({ ...this.args, currentPage: 1 }).catch(e => {
+					this.viewer.main({ ...this.args }).catch(e => {
 						sayerror(this.viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
 					})
 				})
@@ -158,16 +158,17 @@ export class IDCTableView {
 		const renderRows = () => {
 			tbody.selectAll('*').remove()
 			dataToRender.forEach((row, rowIdx) => {
-				const bgColor = rowIdx % 2 === 0 ? '#ffffff' : '#f9f9f9'
+				const caseRowPadding = '10px'
+				const bgColor = rowIdx % 2 === 0 ? fullWhiteBgColor : '#f9f9f9'
 				const tr = tbody
 					.append('tr')
 					.style('background-color', bgColor)
 					.style('border-bottom', `1px solid ${borderColor}`)
-				tr.append('td').style('padding', '10px').text(row.caseId)
-				tr.append('td').style('padding', '10px').text(row.programName)
-				tr.append('td').style('padding', '10px').text(row.project)
+				tr.append('td').style('padding', caseRowPadding).text(row.caseId)
+				tr.append('td').style('padding', caseRowPadding).text(row.programName)
+				tr.append('td').style('padding', caseRowPadding).text(row.project)
 
-				const studyCellButton = makeTransparentButton(tr.append('td').style('padding', '10px').append('button'))
+				const studyCellButton = makeTransparentButton(tr.append('td').style('padding', caseRowPadding).append('button'))
 					.style('color', '#4272a5')
 					.on('click', () => {
 						const expanded = studyCellButton.attr('aria-expanded') === 'true'
@@ -205,23 +206,25 @@ export class IDCTableView {
 							})
 
 							const detailsTbody = detailsTable.append('tbody')
+							const studyRowPadding = '8px'
+
 							row.studiesList.forEach(study => {
 								const studyRow = detailsTbody.append('tr').style('border-bottom', `1px solid ${borderColor}`)
 								studyRow
 									.append('td')
-									.style('padding', '8px')
+									.style('padding', studyRowPadding)
 									.text(study.StudyInstanceUID || 'N/A')
 								studyRow
 									.append('td')
-									.style('padding', '8px')
+									.style('padding', studyRowPadding)
 									.text(study.collectionId || 'N/A')
 								studyRow
 									.append('td')
-									.style('padding', '8px')
+									.style('padding', studyRowPadding)
 									.text(study.StudyDate || 'N/A')
 								studyRow
 									.append('td')
-									.style('padding', '8px')
+									.style('padding', studyRowPadding)
 									.text(study.StudyDescription || 'N/A')
 								this.addCellLinkToRow(
 									studyRow,
@@ -278,15 +281,13 @@ export class IDCTableView {
 			.append('button')
 			.attr('type', 'button')
 			.style('min-width', '55px')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('justify-content', 'center')
 			.style('gap', '0.5rem')
 			.style('padding', '0.3rem 0.45rem')
 			.style('border-radius', '4px')
 			.style('border', `1px solid ${borderColor}`)
-			.style('background-color', '#ffffff')
+			.style('background-color', fullWhiteBgColor)
 			.style('cursor', 'pointer')
+		makeCenteredFlex(pageSizeButton)
 		const pageSizeChevron = pageSizeButton.append('span').style('font-size', '15px')
 		const changePageSizeText = (isOpen: boolean) => {
 			pageSizeChevron.text((!isOpen ? '▾ ' : '▴ ') + this.args.pageSize)
@@ -301,7 +302,7 @@ export class IDCTableView {
 			.style('min-width', '100%')
 			.style('border', `1px solid ${borderColor}`)
 			.style('border-radius', '4px')
-			.style('background-color', '#ffffff')
+			.style('background-color', fullWhiteBgColor)
 			.style('box-shadow', '0 4px 12px rgba(0,0,0,0.12)')
 			.style('z-index', '1')
 
@@ -317,7 +318,7 @@ export class IDCTableView {
 					.style('justify-content', 'space-between')
 					.style('align-items', 'center')
 					.style('border', 'none')
-					.style('background-color', '#ffffff')
+					.style('background-color', fullWhiteBgColor)
 					.style('cursor', 'pointer')
 
 				btn.append('span').text(String(option))
@@ -330,7 +331,7 @@ export class IDCTableView {
 						;(this as HTMLButtonElement).style.backgroundColor = '#f5f5f5'
 					})
 					.on('mouseleave', function () {
-						;(this as HTMLButtonElement).style.backgroundColor = '#ffffff'
+						;(this as HTMLButtonElement).style.backgroundColor = fullWhiteBgColor
 					})
 					.on('click', () => {
 						this.viewer.main({ ...this.args, pageSize: option }).catch(e => {
@@ -393,10 +394,10 @@ export class IDCTableView {
 				})
 			)
 			const setofPages = new Set([1])
-			const actualShow = Math.min(numPagesToShow, totalPages)
-			let startPage = Math.max(2, this.args.currentPage - Math.floor((actualShow - 2) / 2))
-			startPage = Math.min(startPage, totalPages - (actualShow - 2))
-			for (let i = startPage; i < totalPages && setofPages.size <= actualShow - 2; i++) {
+			const actualShown = Math.min(numPagesToShow, totalPages)
+			let startPage = Math.max(2, this.args.currentPage - Math.floor((actualShown - 2) / 2))
+			startPage = Math.min(startPage, totalPages - (actualShown - 2))
+			for (let i = startPage; i < totalPages && setofPages.size <= actualShown - 2; i++) {
 				setofPages.add(i)
 			}
 			setofPages.add(totalPages)
@@ -405,7 +406,7 @@ export class IDCTableView {
 				buttonsToDisable.push(beginningButton, singlePageTurnBack)
 			}
 
-			if (totalPages > actualShow) {
+			if (totalPages > actualShown) {
 				const secondLowestPage = 2
 				const secondHighestPage = totalPages - 1
 				const secondLowestPageIncluded = listOfPages.includes(secondLowestPage.toString())
@@ -421,8 +422,8 @@ export class IDCTableView {
 			for (const page of listOfPages) {
 				const pageButton = makeTransparentButton(pageControlsDiv.append('button')).text(page)
 				if (page === 'secondLowestPage' || page === 'secondHighestPage') {
-					// buttonsToDisable.push(pageButton)
 					pageButton.text(pagePlaceHolder)
+					// I have set page buttons with ellipses to take you to the middle of the range of pages that are not being shown
 					pageButton.on('click', () => {
 						const middlePoint = Math.floor((this.args.currentPage + (page === 'secondLowestPage' ? 1 : totalPages)) / 2)
 						this.viewer.main({ ...this.args, currentPage: middlePoint }).catch(e => {
@@ -470,7 +471,6 @@ export class IDCTableView {
 				button.attr('disabled', true)
 			})
 		}
-
 		renderPageControls()
 	}
 
