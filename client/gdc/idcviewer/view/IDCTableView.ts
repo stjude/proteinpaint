@@ -164,7 +164,7 @@ export class IDCTableView {
 					.append('tr')
 					.style('background-color', bgColor)
 					.style('border-bottom', `1px solid ${borderColor}`)
-				tr.append('td').style('padding', caseRowPadding).text(row.caseId)
+				tr.append('td').style('padding', caseRowPadding).text(row.caseId).attr('data-testid', `case-id-${row.caseId}`)
 				tr.append('td').style('padding', caseRowPadding).text(row.programName)
 				tr.append('td').style('padding', caseRowPadding).text(row.project)
 
@@ -173,7 +173,8 @@ export class IDCTableView {
 					.on('click', () => {
 						const expanded = studyCellButton.attr('aria-expanded') === 'true'
 						studyCellButton.attr('aria-expanded', String(!expanded))
-						const detailsRowID = 'study-details' + row.caseId.replace('.', '')
+						//
+						const detailsRowID = 'study-details' + row.caseId.replace(/\./g, '')
 						if (!expanded) {
 							const detailsRow = tbody
 								.insert('tr', function (this: HTMLTableSectionElement) {
@@ -354,6 +355,7 @@ export class IDCTableView {
 		paginationDiv
 			.append('div')
 			.style('font-size', '18px')
+			.attr('data-testid', 'pagination-summary')
 			.html(
 				`Showing <b>${pagination.from + 1}</b> - <b>${Math.min(
 					pagination.from + dataLength,
@@ -375,7 +377,7 @@ export class IDCTableView {
 				.style('align-items', 'center')
 				.style('justify-content', 'center')
 			const buttonsToDisable: Selection<HTMLButtonElement, unknown, any, any>[] = []
-			const beginningButton = makeTransparentButton(pageControlsDiv.append('button'))
+			const beginningButton = makeTransparentButton(pageControlsDiv.append('button')).attr('class', 'beginning-button')
 			makeCenteredFlex(
 				addSvg(beginningButton, doubleLeftChevronPath).on('click', () => {
 					if (this.args.currentPage === 1) return
@@ -384,7 +386,10 @@ export class IDCTableView {
 					})
 				})
 			)
-			const singlePageTurnBack = makeTransparentButton(pageControlsDiv.append('button'))
+			const singlePageTurnBack = makeTransparentButton(pageControlsDiv.append('button')).attr(
+				'class',
+				'single-page-turn-back'
+			)
 			makeCenteredFlex(
 				addSvg(singlePageTurnBack, leftChevronPath).on('click', () => {
 					if (this.args.currentPage === 1) return
@@ -420,7 +425,9 @@ export class IDCTableView {
 			}
 
 			for (const page of listOfPages) {
-				const pageButton = makeTransparentButton(pageControlsDiv.append('button')).text(page)
+				const pageButton = makeTransparentButton(pageControlsDiv.append('button'))
+					.text(page)
+					.attr('data-testid', `page-button-${page}`)
 				if (page === 'secondLowestPage' || page === 'secondHighestPage') {
 					pageButton.text(pagePlaceHolder)
 					// I have set page buttons with ellipses to take you to the middle of the range of pages that are not being shown
@@ -445,7 +452,10 @@ export class IDCTableView {
 					})
 				}
 			}
-			const singlePageTurnForward = makeTransparentButton(pageControlsDiv.append('button'))
+			const singlePageTurnForward = makeTransparentButton(pageControlsDiv.append('button')).attr(
+				'class',
+				'single-page-turn-forward'
+			)
 			makeCenteredFlex(
 				addSvg(singlePageTurnForward, rightChevronPath).on('click', () => {
 					if (this.args.currentPage === totalPages) return
@@ -454,7 +464,7 @@ export class IDCTableView {
 					})
 				})
 			)
-			const endButton = makeTransparentButton(pageControlsDiv.append('button'))
+			const endButton = makeTransparentButton(pageControlsDiv.append('button')).attr('class', 'end-button')
 			makeCenteredFlex(
 				addSvg(endButton, doubleRightChevronPath).on('click', () => {
 					if (this.args.currentPage === totalPages) return
@@ -477,7 +487,7 @@ export class IDCTableView {
 	private addCellLinkToRow(
 		row: Selection<HTMLTableRowElement, unknown, any, any>,
 		url: string,
-		_text: string,
+		text: string,
 		hasStudy: boolean
 	): void {
 		const cell = row
@@ -490,8 +500,9 @@ export class IDCTableView {
 			makeCenteredFlex(addSvg(cell, externalLinkPath))
 			cell
 				.append('a')
-				.text('Open Study')
+				.text(text)
 				.attr('href', url)
+				.attr('rel', 'noopener noreferrer')
 				.attr('target', '_blank')
 				.style('color', 'black')
 				.style('font-size', '16px')

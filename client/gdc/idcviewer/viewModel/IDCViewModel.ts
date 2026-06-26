@@ -4,19 +4,22 @@ import type { IDCParquetData, IDCStudy, IDCViewerRow, ResponseHit } from '../IDC
  *  All conditional shaping lives here so the View stays a thin renderer. */
 export class IDCViewModel {
 	buildTableData(idcData: ReadonlyArray<IDCParquetData>, caseHits: ResponseHit[]): IDCViewerRow[] {
-		const rowsByCase = new Map<ResponseHit, IDCParquetData[]>()
-		caseHits.forEach(hit => {
-			rowsByCase.set(hit, [])
-			const filteredData = idcData.filter(data => hit.case_id === data.gdc_case_id)
-			if (filteredData.length > 0) {
-				rowsByCase.get(hit)!.push(...filteredData)
+		const rowsByCaseId = new Map<string, IDCParquetData[]>()
+		for (const hit of caseHits) {
+			rowsByCaseId.set(hit.case_id, [])
+		}
+		for (const data of idcData) {
+			const rows = rowsByCaseId.get(data.gdc_case_id)
+			if (rows) {
+				rows.push(data)
 			}
-		})
+		}
 
 		const viewerRows: IDCViewerRow[] = []
-		for (const [hit, idcArray] of rowsByCase) {
+		for (const hit of caseHits) {
+			const idcArray = rowsByCaseId.get(hit.case_id) || []
 			const studiesMap = new Map<string, IDCStudy>()
-			;(idcArray || []).forEach((r: IDCParquetData) => {
+			idcArray.forEach((r: IDCParquetData) => {
 				const studyId = r?.StudyInstanceUID ?? 'n/a'
 				if (!studiesMap.has(studyId)) {
 					studiesMap.set(studyId, {
@@ -32,7 +35,9 @@ export class IDCViewModel {
 				const st = studiesMap.get(studyId)
 				if (st) {
 					st.series.push(r)
-					const mod = r.study_type.toString().trim().toUpperCase()
+					const mod = String(r.study_type ?? '')
+						.trim()
+						.toUpperCase()
 					if (mod === 'M') st.hasWSI = true
 					if (mod === 'R') st.hasRadiology = true
 				}
