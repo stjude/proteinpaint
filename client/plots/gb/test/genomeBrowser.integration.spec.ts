@@ -261,7 +261,15 @@ tape('filter change triggers block recreation', (test: any) => {
 		const blockDivBefore = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
 		test.ok(blockDivBefore, 'Should render block before filter change')
 
-		// set up second-render callback before dispatching so it is ready
+		let ended = false
+		function safeEnd() {
+			if (!ended) {
+				ended = true
+				gb.Inner.app.destroy() // always destroy
+				test.end()
+			}
+		}
+
 		gb.on('postRender.test', async function secondRender(gb2) {
 			gb2.on('postRender.test', null)
 			const blockDivAfter = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
@@ -273,18 +281,15 @@ tape('filter change triggers block recreation', (test: any) => {
 			)
 			const state = gb2.Inner.app.getState()
 			test.ok(state.termfilter.filter.lst.length > 0, 'Global filter should be applied in state after dispatch')
-			if (test._ok) gb2.Inner.app.destroy()
-			test.end()
+			safeEnd()
 		})
 
-		// dispatch a global filter change to trigger _prevFilterSig mismatch and block reset
 		await gb.Inner.app.dispatch({
 			type: 'filter_replace',
 			filter: getFilter_male()
 		})
 	}
 })
-
 /*************************
  reusable helper functions
 **************************/
