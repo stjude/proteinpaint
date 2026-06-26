@@ -290,6 +290,16 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
 				`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
 		])
+	} else if (processing.ssmCapReached) {
+		// The batched SNV/indel fetch hit the cap and skipped some samples' mutations, but the per-sample
+		// loop still processed every sample — so the check above won't catch it. Warn the same way.
+		capWarningRows.push([
+			'Note',
+			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached while loading mutations. ` +
+				`SNV/indel data was not loaded for ${(
+					processing.ssmSamplesDropped ?? 0
+				).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		])
 	}
 
 	const response: GRIN2Response = {
@@ -664,6 +674,10 @@ async function processSampleData(
 		// unique samples that contributed >=1 lesion to the final result (union across all lesion types).
 		// distinct from processedSamples: many cohort cases have no qualifying mutation, so this is smaller.
 		samplesWithData?: number
+		// set when the batched SNV/indel fetch (GDC) hit maxLesions and skipped some samples' ssm. distinct
+		// from the loop cap (unprocessedSamples) because the loop still processed those samples.
+		ssmCapReached?: boolean
+		ssmSamplesDropped?: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -693,13 +707,24 @@ async function processSampleData(
 	const useBatchSsm = typeof ssmBatchGet == 'function' && enabledTypes.includes(dtsnvindel)
 	let ssmBySample: Map<string, { mlst: any[] }> | undefined
 	if (useBatchSsm) {
-		ssmBySample = await ssmBatchGet({
+		const batch = await ssmBatchGet({
 			samples: samples.map(s => s.name),
 			skipDt,
 			ds, // batch getter reads ds from q.ds (gdc.hg38.ts convention)
 			filter0: request.filter0,
+			// cap the up-front ssm fetch at the run's lesion budget so a huge cohort / entire GDC doesn't
+			// pull millions of ssm before the per-sample loop's cap would ever discard them
+			maxLesions,
 			__abortSignal: signal
 		})
+		ssmBySample = batch.bySample
+		// If the cap truncated the batch fetch, some samples got no SNV/indel data even though the loop
+		// below still "processes" them — so the loop's "ran on N of M" check won't catch it. Record it here
+		// so the summary can warn the user, like the non-batched path does.
+		if (batch.capReached) {
+			processing.ssmCapReached = true
+			processing.ssmSamplesDropped = batch.droppedSamples
+		}
 	}
 	// When ssm is batched, skip it in the per-sample loop so get() doesn't re-fetch it.
 	const loopSkipDt = useBatchSsm ? new Set<number>(skipDt).add(dtsnvindel) : skipDt
