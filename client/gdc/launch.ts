@@ -88,7 +88,8 @@ export async function mayLaunchGdcPlotFromUrlparam(urlp, arg) {
 		const p: any = {
 			filter0: urlp.get('filter0')
 		}
-		return await _.init(p, arg.holder0)
+		console.log('launching gdcidc with filter0', arg)
+		return await _.init(p, arg.holder)
 	}
 	if (urlp.has('gdcgrin2')) {
 		// for local testing, not used in gdc portal

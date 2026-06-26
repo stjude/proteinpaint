@@ -1,7 +1,3 @@
-/** Re-exports for backward compatibility. Canonical sources: model/IDCModel.ts, viewModel/IDCViewModel.ts, view/IDCTableView.ts */
-export { IDCModel } from './model/IDCModel'
-export { IDCViewModel } from './viewModel/IDCViewModel'
-export { IDCTableView } from './view/IDCTableView'
 import { type BaseType, type Selection } from 'd3-selection'
 
 export function makeTransparentButton(

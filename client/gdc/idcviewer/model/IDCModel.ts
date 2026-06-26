@@ -38,18 +38,11 @@ function parseSha256Sidecar(text: string): string {
 	return firstLine.split(/\s+/)[0].toLowerCase()
 }
 
-async function verifyDownloadedParquet(parquetBuffer: ArrayBuffer, sha256SidecarText: string): Promise<boolean> {
+async function verifyParquetUrlWithSidecar(parquetBuffer: ArrayBuffer, sidecarResp: Response): Promise<boolean> {
+	const sidecarText = await sidecarResp.text()
 	const actual = (await sha256FromArrayBuffer(parquetBuffer)).toLowerCase()
-	const expected = parseSha256Sidecar(sha256SidecarText)
+	const expected = parseSha256Sidecar(sidecarText)
 	return expected.length > 0 && actual === expected
-}
-
-async function verifyParquetUrlWithSidecar(url: string): Promise<boolean> {
-	const [parquetResp, sidecarResp] = await Promise.all([fetch(url), fetch(`${url}.sha256`)])
-	if (!parquetResp.ok) throw new Error(`Failed to fetch parquet: ${parquetResp.status} ${parquetResp.statusText}`)
-	if (!sidecarResp.ok) throw new Error(`Failed to fetch sidecar: ${sidecarResp.status} ${sidecarResp.statusText}`)
-	const [buffer, sidecarText] = await Promise.all([parquetResp.arrayBuffer(), sidecarResp.text()])
-	return verifyDownloadedParquet(buffer, sidecarText)
 }
 
 // ---------------------------------------------------------------------------
@@ -93,7 +86,7 @@ export class IDCModel {
 			case_filters: filter0,
 			from: (currentPage - 1) * pageSize,
 			size: pageSize,
-			...(normalizedSearchFilter
+			...(searchFilter.trim()
 				? {
 						filters: {
 							op: 'or',
@@ -180,10 +173,11 @@ export class IDCModel {
 	}
 
 	async loadParquetFromUrl(url: string = IDC_PARQUET_CURRENT_URL): Promise<IDCParquetIndexResult> {
-		const resp = await fetch(url)
-		if (!resp.ok) throw new Error(`Failed to fetch parquet: ${resp.status} ${resp.statusText}`)
-		const arrayBuffer = await resp.arrayBuffer()
-		const hashValidated = await verifyParquetUrlWithSidecar(url)
+		const [parquetResp, sidecarResp] = await Promise.all([fetch(url), fetch(`${url}.sha256`)])
+		if (!parquetResp.ok) throw new Error(`Failed to fetch parquet: ${parquetResp.status} ${parquetResp.statusText}`)
+		if (!sidecarResp.ok) throw new Error(`Failed to fetch sidecar: ${sidecarResp.status} ${sidecarResp.statusText}`)
+		const arrayBuffer = await parquetResp.arrayBuffer()
+		const hashValidated = await verifyParquetUrlWithSidecar(arrayBuffer, sidecarResp)
 		if (hashValidated) return this.readParquetIndex(arrayBuffer)
 		throw new Error('File download failed validation. Please refresh to retry.')
 	}

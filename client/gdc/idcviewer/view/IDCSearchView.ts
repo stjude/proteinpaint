@@ -49,7 +49,7 @@ export class IDCSearchView {
 			.attr('class', 'idcviewer-search-case-count')
 			.style('font-size', '18px')
 			.style('font-family', 'Noto Sans, sans-serif')
-			.html(`Total Cases:&nbsp;<b>${pagination.total}<b/>`)
+			.html(`Total Cases:&nbsp;<b>${pagination.total}</b>`)
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('padding', '5px 10px')
@@ -89,7 +89,7 @@ export class IDCSearchView {
 			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.attr('placeholder', 'Press Enter to Search')
-			.text(this.args.searchFilter || '')
+			.property('value', this.args.searchFilter || '')
 			.attr('class', 'idcviewer-search-input')
 			.on('keypress', event => {
 				if (event.key === 'Enter') {
