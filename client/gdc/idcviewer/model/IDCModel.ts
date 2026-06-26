@@ -85,6 +85,7 @@ export class IDCModel {
 		sortBy,
 		sortDirection
 	}: IDCViewerOpts): Promise<CasesResponse['data']> {
+		// Search is case-sensitve, and these asterisks are used to match substrings
 		const normalizedSearchFilter = `*${searchFilter.trim()}*`
 		const operator = '='
 		const body = {
@@ -127,7 +128,6 @@ export class IDCModel {
 			sort: `${sortBy}:${sortDirection}`,
 			sortBy: [{ field: sortBy, direction: sortDirection }]
 		}
-		// [{field: "project.project_id", direction: "asc"desc}]
 		const re: CasesResponse = await fetch('https://api.gdc.cancer.gov/cases', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json', connection: 'close' },
