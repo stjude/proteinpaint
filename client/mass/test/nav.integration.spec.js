@@ -82,7 +82,7 @@ tape('default hidden tabs, no filter', function (test) {
 })
 
 tape('filter subheader and tab', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000) // increased: addDemographicSexFilter uses detectLst with up to 12s internally
 	runpp({
 		state: {
 			activeCohort: 0,
@@ -98,20 +98,39 @@ tape('filter subheader and tab', function (test) {
 	})
 
 	let tds, trs
-	function runTests(nav) {
+	async function runTests(nav) {
 		nav.on('postRender.test', null)
 		tds = nav.Inner.dom.tabDiv.selectAll('td')
 		trs = nav.Inner.dom.tabDiv.node().querySelectorAll('tr')
-		helpers
-			.rideInit({ arg: nav, bus: nav, eventType: 'postRender.test' })
-			.use(triggerTabSwitch)
-			.to(testTabSwitch, 100)
-			.use(triggerFilterAdd)
-			.to(testFilterAdd, 100)
-			.done(test)
+
+		// Step 1: click the filter tab and assert subheader is shown
+		triggerTabSwitch()
+		// wait for the re-render triggered by the tab click
+		await new Promise(resolve =>
+			nav.on('postRender.test', () => {
+				nav.on('postRender.test', null)
+				resolve()
+			})
+		)
+		testTabSwitch(nav)
+
+		// Step 2: add a filter and assert results — fully await the async chain
+		const newBtn = nav.Inner.dom.subheader.filter.node().querySelector('.sja_new_filter_btn')
+		await addDemographicSexFilter({ filter: nav.getComponents('filter') }, newBtn)
+		// wait for the re-render triggered by the filter dispatch
+		await new Promise(resolve =>
+			nav.on('postRender.test', () => {
+				nav.on('postRender.test', null)
+				resolve()
+			})
+		)
+		testFilterAdd(nav)
+
+		if (test._ok) nav.Inner.app.destroy()
+		test.end()
 	}
 
-	function triggerTabSwitch(nav) {
+	function triggerTabSwitch() {
 		tds
 			.filter((d, i) => i === 3)
 			.node()
@@ -124,12 +143,6 @@ tape('filter subheader and tab', function (test) {
 			'none',
 			'should show the subheader when the filter tab is clicked'
 		)
-	}
-
-	async function triggerFilterAdd(nav) {
-		const newBtn = nav.Inner.dom.subheader.filter.node().querySelector('.sja_new_filter_btn')
-
-		await addDemographicSexFilter({ filter: nav.getComponents('filter') }, newBtn)
 	}
 
 	function testFilterAdd(nav) {
