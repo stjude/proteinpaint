@@ -63,12 +63,17 @@ def smart_format(value):
 def sort_grin2_data(data):
     p_cols = get_sig_values(data)["p_cols"]
     valid_p_cols = [col for col in p_cols if has_data(data[col])]
-    
+
     if not valid_p_cols:
         raise ValueError("No p-value columns with data found")
-    
+
     min_p_values = data[valid_p_cols].min(axis=1)
-    return data.iloc[min_p_values.argsort()]
+    # Sort ascending (most significant first) with NaN p-values (genes with no lesions of any type)
+    # forced last. NOTE: do not use Series.argsort() here — pandas maps NaN to position -1, so
+    # iloc[-1] reselects the last row and corrupts the ordering whenever any gene has a NaN p-value.
+    return data.assign(__min_p=min_p_values).sort_values(
+        "__min_p", kind="stable", na_position="last"
+    ).drop(columns="__min_p")
 
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""Convert column names to user-friendly labels"""
@@ -171,134 +176,135 @@ def simple_column_filter(sorted_results, num_rows, lesion_type_map):
 	
 	return {"columns": columns, "rows": rows}
 
-try:
-	# 1. Parse input
-	json_input = sys.stdin.read().strip()
-	if not json_input:
-		write_error("No input data provided")
-		sys.exit(1)
-	
-	input_data = json.loads(json_input)
-	lesion_type_map = input_data.get("lesionTypeMap")
-	if not lesion_type_map:
-		write_error("lesionTypeMap not provided")
-		sys.exit(1)
-	
-	# 2. Load gene annotations
-	with sqlite3.connect(input_data["genedb"]) as con:
-		gene_anno = pd.read_sql_query("SELECT name, chr, start, stop FROM gene2coord", con)
-	
-	if gene_anno.empty:
-		write_error("No data in gene2coord table")
-		sys.exit(1)
-	
-	# Remove header row if present and process
-	gene_anno = gene_anno[
-		~((gene_anno["name"] == "name") & (gene_anno["chr"] == "chr"))
-	].assign(
-		start=lambda x: pd.to_numeric(x["start"], errors="coerce").astype("int64"),
-		stop=lambda x: pd.to_numeric(x["stop"], errors="coerce").astype("int64"),
-		chr=lambda x: x["chr"].apply(lambda c: c if c.startswith("chr") else f"chr{c}")
-	).rename(columns={
-		"name": "gene", "chr": "chrom", "start": "loc.start", "stop": "loc.end"
-	})[["gene", "chrom", "loc.start", "loc.end"]]
-	
-	# 3. Create chromosome size table
-	chromosomelist = input_data["chromosomelist"]
-	chrom_size = pd.DataFrame({
-		"chrom": list(chromosomelist.keys()),
-		"size": pd.to_numeric(list(chromosomelist.values())).astype("int64")
-	}).assign(
-		sort_key=lambda x: x["chrom"].map(lambda c: int(c[3:]) if c.startswith("chr") and c[3:].isdigit() 
-		                                   else {"chrX": 23, "chrY": 24}.get(c, 100))
-	).sort_values("sort_key").drop(columns="sort_key")
-	
-	# 4. Parse lesion data
-	lesion_array = json.loads(input_data["lesion"])
-	if not lesion_array:
-		write_error("No lesion data provided")
-		sys.exit(1)
-	
-	lesion_df = pd.DataFrame(
-		lesion_array, 
-		columns=["ID", "chrom", "loc.start", "loc.end", "lsn.type"]
-	).astype({
-		"ID": str, "chrom": str, 
-		"loc.start": "int64", "loc.end": "int64", 
-		"lsn.type": str
-	}).assign(
-		chrom=lambda x: x["chrom"].apply(lambda c: c if c.startswith("chr") else f"chr{c}")
-	)
-	
-	lesion_counts = lesion_df["lsn.type"].value_counts()
-
-	# Lesion types are the keys of lesionTypeMap (e.g. "mutation", "gain", "loss")
-	lesion_types = list(lesion_type_map.keys())
-
-	# 4b. Apply artifact-region exclude mask (literature-backed; see grin2_core).
-	# Drops GENES whose span lies in low-mappability/segdup/blacklist/gap regions
-	# before the statistics run — the correct primitive for a gene-level recurrence
-	# test (masking lesions misses broad passenger deletions that clip a tiny
-	# artifact gene). No-op when disabled or no BEDs are resolved.
-	mask_report = None
-	exclude_beds = input_data.get("excludeBeds") or []
-	exclude_enabled = input_data.get("excludeEnabled", True)
-	exclude_frac_raw = input_data.get("excludeOverlapFrac", 0.5)
+if __name__ == "__main__":
 	try:
-		exclude_frac = float(exclude_frac_raw)
-	except (TypeError, ValueError):
-		exclude_frac = 0.5
-	if not np.isfinite(exclude_frac):
-		exclude_frac = 0.5
-	exclude_frac = min(max(exclude_frac, 0.0), 1.0)
-	if exclude_enabled and exclude_beds:
-		mask = load_exclude_intervals(exclude_beds)
-		genome_size_bp = int(chrom_size["size"].sum())
-		gene_anno, mask_report = apply_gene_mask(gene_anno, mask, exclude_frac, genome_size_bp=genome_size_bp)
-		if gene_anno.empty:
-			write_error("No genes remain after applying the exclude mask")
+		# 1. Parse input
+		json_input = sys.stdin.read().strip()
+		if not json_input:
+			write_error("No input data provided")
 			sys.exit(1)
-
-	# 5. Run GRIN2
-	grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
-	# grin_results = timed_grin_stats(lesion_df, gene_anno, chrom_size)
-	if not isinstance(grin_results, dict):
-		write_error("grin_stats returned invalid results")
-		sys.exit(1)
 	
-	# 6. Sort results and build gene hits payload for Rust
-	sorted_results = sort_grin2_data(grin_results["gene.hits"])
+		input_data = json.loads(json_input)
+		lesion_type_map = input_data.get("lesionTypeMap")
+		if not lesion_type_map:
+			write_error("lesionTypeMap not provided")
+			sys.exit(1)
+	
+		# 2. Load gene annotations
+		with sqlite3.connect(input_data["genedb"]) as con:
+			gene_anno = pd.read_sql_query("SELECT name, chr, start, stop FROM gene2coord", con)
+	
+		if gene_anno.empty:
+			write_error("No data in gene2coord table")
+			sys.exit(1)
+	
+		# Remove header row if present and process
+		gene_anno = gene_anno[
+			~((gene_anno["name"] == "name") & (gene_anno["chr"] == "chr"))
+		].assign(
+			start=lambda x: pd.to_numeric(x["start"], errors="coerce").astype("int64"),
+			stop=lambda x: pd.to_numeric(x["stop"], errors="coerce").astype("int64"),
+			chr=lambda x: x["chr"].apply(lambda c: c if c.startswith("chr") else f"chr{c}")
+		).rename(columns={
+			"name": "gene", "chr": "chrom", "start": "loc.start", "stop": "loc.end"
+		})[["gene", "chrom", "loc.start", "loc.end"]]
+	
+		# 3. Create chromosome size table
+		chromosomelist = input_data["chromosomelist"]
+		chrom_size = pd.DataFrame({
+			"chrom": list(chromosomelist.keys()),
+			"size": pd.to_numeric(list(chromosomelist.values())).astype("int64")
+		}).assign(
+			sort_key=lambda x: x["chrom"].map(lambda c: int(c[3:]) if c.startswith("chr") and c[3:].isdigit() 
+			                                   else {"chrX": 23, "chrY": 24}.get(c, 100))
+		).sort_values("sort_key").drop(columns="sort_key")
+	
+		# 4. Parse lesion data
+		lesion_array = json.loads(input_data["lesion"])
+		if not lesion_array:
+			write_error("No lesion data provided")
+			sys.exit(1)
+	
+		lesion_df = pd.DataFrame(
+			lesion_array, 
+			columns=["ID", "chrom", "loc.start", "loc.end", "lsn.type"]
+		).astype({
+			"ID": str, "chrom": str, 
+			"loc.start": "int64", "loc.end": "int64", 
+			"lsn.type": str
+		}).assign(
+			chrom=lambda x: x["chrom"].apply(lambda c: c if c.startswith("chr") else f"chr{c}")
+		)
+	
+		lesion_counts = lesion_df["lsn.type"].value_counts()
 
-	type_cols = [
-		f'{prefix}.{t}'
-		for t in lesion_types
-		for prefix in ['nsubj', 'q.nsubj']
-		if f'{prefix}.{t}' in sorted_results.columns
-	]
-	gene_hits_cols = ['gene', 'chrom', 'loc.start', 'loc.end'] + type_cols
-	gene_hits_df = sorted_results[gene_hits_cols]
-	# Replace NaN with None so JSON serialization yields nulls (not NaN, which is invalid JSON)
-	gene_hits = gene_hits_df.astype(object).where(pd.notna(gene_hits_df), None).to_dict(orient='records')
+		# Lesion types are the keys of lesionTypeMap (e.g. "mutation", "gain", "loss")
+		lesion_types = list(lesion_type_map.keys())
 
-	# 7. Generate table
-	max_genes = input_data.get("maxGenesToShow", 500)
-	num_rows = min(len(sorted_results), max_genes)
-	table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map)
+		# 4b. Apply artifact-region exclude mask (literature-backed; see grin2_core).
+		# Drops GENES whose span lies in low-mappability/segdup/blacklist/gap regions
+		# before the statistics run — the correct primitive for a gene-level recurrence
+		# test (masking lesions misses broad passenger deletions that clip a tiny
+		# artifact gene). No-op when disabled or no BEDs are resolved.
+		mask_report = None
+		exclude_beds = input_data.get("excludeBeds") or []
+		exclude_enabled = input_data.get("excludeEnabled", True)
+		exclude_frac_raw = input_data.get("excludeOverlapFrac", 0.5)
+		try:
+			exclude_frac = float(exclude_frac_raw)
+		except (TypeError, ValueError):
+			exclude_frac = 0.5
+		if not np.isfinite(exclude_frac):
+			exclude_frac = 0.5
+		exclude_frac = min(max(exclude_frac, 0.0), 1.0)
+		if exclude_enabled and exclude_beds:
+			mask = load_exclude_intervals(exclude_beds)
+			genome_size_bp = int(chrom_size["size"].sum())
+			gene_anno, mask_report = apply_gene_mask(gene_anno, mask, exclude_frac, genome_size_bp=genome_size_bp)
+			if gene_anno.empty:
+				write_error("No genes remain after applying the exclude mask")
+				sys.exit(1)
 
-	# 8. Output response
-	print(json.dumps({
-		"topGeneTable": table_result,
-		"totalGenes": len(sorted_results),
-		"showingTop": num_rows,
-		"lesionCounts": {"byType": lesion_counts.to_dict()},
-		"maskReport": mask_report,
-		"memory": grin_results.get("memory_profile", {}),
-		"geneHits": gene_hits
-	}))
+		# 5. Run GRIN2
+		grin_results = grin_stats(lesion_df, gene_anno, chrom_size)
+		# grin_results = timed_grin_stats(lesion_df, gene_anno, chrom_size)
+		if not isinstance(grin_results, dict):
+			write_error("grin_stats returned invalid results")
+			sys.exit(1)
+	
+		# 6. Sort results and build gene hits payload for Rust
+		sorted_results = sort_grin2_data(grin_results["gene.hits"])
 
-except json.JSONDecodeError as e:
-	write_error(f"Invalid JSON: {str(e)}")
-	sys.exit(1)
-except Exception as e:
-	write_error(f"Unexpected error: {str(e)}")
-	sys.exit(1)
+		type_cols = [
+			f'{prefix}.{t}'
+			for t in lesion_types
+			for prefix in ['nsubj', 'q.nsubj']
+			if f'{prefix}.{t}' in sorted_results.columns
+		]
+		gene_hits_cols = ['gene', 'chrom', 'loc.start', 'loc.end'] + type_cols
+		gene_hits_df = sorted_results[gene_hits_cols]
+		# Replace NaN with None so JSON serialization yields nulls (not NaN, which is invalid JSON)
+		gene_hits = gene_hits_df.astype(object).where(pd.notna(gene_hits_df), None).to_dict(orient='records')
+
+		# 7. Generate table
+		max_genes = input_data.get("maxGenesToShow", 500)
+		num_rows = min(len(sorted_results), max_genes)
+		table_result = simple_column_filter(sorted_results, num_rows, lesion_type_map)
+
+		# 8. Output response
+		print(json.dumps({
+			"topGeneTable": table_result,
+			"totalGenes": len(sorted_results),
+			"showingTop": num_rows,
+			"lesionCounts": {"byType": lesion_counts.to_dict()},
+			"maskReport": mask_report,
+			"memory": grin_results.get("memory_profile", {}),
+			"geneHits": gene_hits
+		}))
+
+	except json.JSONDecodeError as e:
+		write_error(f"Invalid JSON: {str(e)}")
+		sys.exit(1)
+	except Exception as e:
+		write_error(f"Unexpected error: {str(e)}")
+		sys.exit(1)

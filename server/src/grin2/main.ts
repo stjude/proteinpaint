@@ -261,7 +261,7 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		})
 		for (const [type, data] of Object.entries(processing.lesionCounts.byType)) {
 			const { count, samples } = data as { count: number; samples: number }
-			lesionTypeRows.push([typeLabels[type] || type, `${count.toLocaleString()} (${samples} samples)`])
+			lesionTypeRows.push([typeLabels[type] || type, `${count.toLocaleString()} (${samples.toLocaleString()} samples)`])
 		}
 	}
 
