@@ -171,6 +171,7 @@ export class IDCViewer {
 			if (this.dom.errorDiv) {
 				sayerror(this.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
 			}
+			console.error(e)
 		} finally {
 			this.dom.loadingDiv.style('display', 'none')
 		}

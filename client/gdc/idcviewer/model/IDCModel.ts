@@ -73,11 +73,10 @@ export class IDCModel {
 	/** Fetch all cases (up to MAX_CASES_LIMIT) from the GDC API for the given cohort filter. */
 	async fetchAllCasesForCohort(filter0: any): Promise<{ hits: ResponseHit[]; total: number }> {
 		const body = {
-			fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id',
+			fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id,project.program.name',
 			case_filters: filter0,
 			from: 0,
-			size: MAX_CASES_LIMIT,
-			expand: 'samples.portions.slides,project.program'
+			size: MAX_CASES_LIMIT
 		}
 		const re: CasesResponse = await fetch('https://api.gdc.cancer.gov/cases', {
 			method: 'POST',
