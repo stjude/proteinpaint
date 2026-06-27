@@ -148,6 +148,8 @@ export class IDCViewer {
 			})
 
 			const total = allRows.length
+			const pages = Math.ceil(total / args.pageSize) || 1
+			args.currentPage = Math.min(Math.max(args.currentPage, 1), pages)
 			const from = (args.currentPage - 1) * args.pageSize
 			const pagedRows = allRows.slice(from, from + args.pageSize)
 
@@ -155,7 +157,7 @@ export class IDCViewer {
 				count: pagedRows.length,
 				from,
 				page: args.currentPage,
-				pages: Math.ceil(total / args.pageSize) || 1,
+				pages,
 				size: args.pageSize,
 				sort: `${args.sortBy}:${args.sortDirection}`,
 				total
