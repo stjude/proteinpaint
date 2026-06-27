@@ -1,11 +1,17 @@
 /* launch from runpp() call. GDC react wrappers in the GFF repo use this method, to launch apps in gdc portal
 on matching with a flag, imports corresponding plot script, and returns api object to runpp()
 when no flags are matched, returns undefined
+
+note that this launch method has been adopted by non-gdc ds, for launching some plots in non-gdc portals
 */
 export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 	if (arg.geneSearch4GDCmds3) {
 		const _ = await import('./lollipop.js')
 		return await _.init(arg, app.holder0, app.genomes)
+	}
+	if (arg.launchIdc) {
+		const _ = await import('./idcviewer/IDCViewer.ts')
+		return await _.init(arg, app.holder0)
 	}
 	if (arg.launchGdcGb) {
 		const _ = await import('./gb.ts')
@@ -76,6 +82,14 @@ export async function mayLaunchGdcPlotFromUrlparam(urlp, arg) {
 		if (urlp.has('filter0')) p.filter0 = urlp.get('filter0')
 		_.gdcMAFui(p, arg.holder)
 		return true
+	}
+	if (urlp.has('gdcidc')) {
+		const _ = await import('./idcviewer/IDCViewer.ts')
+		const p: any = {
+			filter0: urlp.get('filter0')
+		}
+		console.log('launching gdcidc with filter0', arg)
+		return await _.init(p, arg.holder)
 	}
 	if (urlp.has('gdcgrin2')) {
 		// for local testing, not used in gdc portal
