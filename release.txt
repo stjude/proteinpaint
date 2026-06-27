@@ -1,2 +1,1 @@
-Features:
-- Using ssm batch get in GRIN2 to speed up GDC fetch performance
+

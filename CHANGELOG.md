@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Using ssm batch get in GRIN2 to speed up GDC fetch performance
+
 
 ## 2.193.0
 
