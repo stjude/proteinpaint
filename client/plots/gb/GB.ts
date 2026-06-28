@@ -41,13 +41,11 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 				.text('GENOME BROWSER')
 		}
 		// layout rows from top to bottom
-		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
 		const errDiv = holder.append('div').style('display', 'none').style('margin', '10px')
 		const controlsDiv = holder.append('div').style('margin', '15px 0px 0px 25px')
 		const dom = {
 			tip: new Menu(),
 			holder,
-			loadingDiv,
 			errDiv,
 			tabsDiv: controlsDiv.append('div'),
 			geneSearchDiv: controlsDiv.append('div').style('margin', '20px 0px'),
@@ -74,7 +72,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		this.dom.loadingDiv.style('display', 'block')
+		this.dom.holder.style('opacity', 0.5).style('pointer-events', 'none')
 		this.dom.errDiv.style('display', 'none')
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
@@ -115,7 +113,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
-		this.dom.loadingDiv.style('display', 'none')
+		this.dom.holder.style('opacity', 1).style('pointer-events', 'auto')
 	}
 
 	async getFacetData(state) {
