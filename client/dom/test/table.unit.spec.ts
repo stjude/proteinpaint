@@ -307,6 +307,31 @@ tape('Bar plot rendering', async test => {
 	test.end()
 })
 
+tape('labelVertical: renders column label vertically', test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+
+	renderTable({
+		columns: [{ label: 'Horizontal' }, { label: 'Vertical', labelVertical: true }],
+		rows: [[{ value: 'A' }, { value: 'B' }]],
+		div: holder
+	} as any)
+
+	const headers = holder.selectAll('th').nodes() as HTMLTableCellElement[]
+	const verticalHeader = d3s.select(headers[1])
+	const label = verticalHeader.select('span')
+
+	test.equal(verticalHeader.text(), 'Vertical', 'Should display the vertical column label text')
+	test.equal(verticalHeader.style('vertical-align'), 'bottom', 'Should bottom-align the vertical header')
+	test.equal(label.style('display'), 'inline-block', 'Should make the label transformable')
+	test.equal(label.style('writing-mode'), 'vertical-rl', 'Should set vertical writing mode on the label')
+	test.equal(label.style('transform'), 'rotate(180deg)', 'Should rotate the vertical label 180 degrees')
+	test.equal(label.style('white-space'), 'nowrap', 'Should prevent the vertical label from wrapping')
+
+	if ((test as any)._ok) holder.remove()
+	test.end()
+})
+
 tape('Sort buttons', async test => {
 	test.timeoutAfter(100)
 

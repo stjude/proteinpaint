@@ -23,6 +23,8 @@ export type TableCell = {
 export type TableColumn = {
 	/** the text to show as header of a column */
 	label: string
+	/** show the column label vertically in the header */
+	labelVertical?: true
 	/** column width */
 	width?: string
 	/** method to fill contents to a cell. cell.url/value/html/color will override this setting! doesn't support async */

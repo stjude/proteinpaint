@@ -200,6 +200,7 @@ export class TabsRenderer {
 		for (const assay of assayLst) {
 			columns.push({
 				label: assay,
+				labelVertical: true,
 				fillCell: (td, si) => {
 					// "si" index of sample/rows[]; find tracks belonging to this assay+sample combo
 					const tklst = facet.tracks.filter(i => i.assay == assay && i.sample == sampleLst[si])
