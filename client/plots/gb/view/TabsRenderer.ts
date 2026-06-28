@@ -217,10 +217,11 @@ export class TabsRenderer {
 		// TODO click on row/column header to batch operate
 
 		const facetTwLst = this.state.config.trackLst.facetTwLst || []
-		const columns: any = [{ label: 'Sample' }] // TODO use ds sample type
+		const columns: any = [{ label: 'Sample', headerTestId: 'sjpp-gb-facettable-sample-columnheader' }] // TODO use ds sample type
 		for (const tw of facetTwLst) {
 			columns.push({
 				label: tw.term?.name || tw.term?.id || tw.id,
+				headerTestId: 'sjpp-gb-facettable-tw-columnheader',
 				fillCell: (td, si) => {
 					const sample = sampleLst[si]
 					const annotation = facet.samples?.[sample]?.[tw.$id]
@@ -232,6 +233,7 @@ export class TabsRenderer {
 		for (const assay of assayLst) {
 			columns.push({
 				label: assay,
+				headerTestId: 'sjpp-gb-facettable-assay-columnheader',
 				labelVertical: true,
 				fillCell: (td, si) => {
 					// "si" index of sample/rows[]; find tracks belonging to this assay+sample combo

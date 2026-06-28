@@ -8,6 +8,8 @@ import { getFilter_agedx, getFilter_Hodgkin } from '../../../test/testdata/data'
     protein mode
     genomic mode
     add variants track
+    facet table without facet twlst
+    facet table with facet twlst
     protein mode with global filter (state.termfilter.filter)
     protein mode with local filter (config.filter)
     protein mode with both global and local filter
@@ -126,6 +128,62 @@ tape('add variants track', (test: any) => {
 		if (activeTabAfterCheckbox) {
 			test.equal(activeTabAfterCheckbox.label, 'Variants', 'Variants tab should remain active after checkbox toggle')
 		}
+		if (test._ok) gb.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('facet table without facet twlst', (test: any) => {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: 'TP53' },
+					trackLst: getFacetTrackLst([])
+				}
+			]
+		},
+		genomeBrowser: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(gb) {
+		gb.on('postRender.test', null)
+		const table = await detectOne({ elem: gb.Inner.dom.tabsDiv.node(), selector: 'table' })
+		test.ok(table, 'Should render facet table')
+		test.ok(getTableHeader(table, 'sample-columnheader'), 'Facet table should show sample column')
+		test.equal(getTableHeaders(table, 'assay-columnheader').length, 2, 'Facet table should show two assay columns')
+		test.notOk(getTableHeader(table, 'tw-columnheader'), 'Facet table should not show facet twlst columns')
+		if (test._ok) gb.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('facet table with facet twlst', (test: any) => {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'genomeBrowser',
+					geneSearchResult: { geneSymbol: 'TP53' },
+					trackLst: getFacetTrackLst([{ id: 'diaggrp' }, { id: 'agedx' }])
+				}
+			]
+		},
+		genomeBrowser: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(gb) {
+		gb.on('postRender.test', null)
+		const table = await detectOne({ elem: gb.Inner.dom.tabsDiv.node(), selector: 'table' })
+		test.ok(table, 'Should render facet table')
+		test.ok(getTableHeader(table, 'sample-columnheader'), 'Facet table should show sample column')
+		test.equal(getTableHeaders(table, 'tw-columnheader').length, 2, 'Facet table should show two facet twlst columns')
+		test.equal(getTableHeaders(table, 'assay-columnheader').length, 2, 'Facet table should show two assay columns')
 		if (test._ok) gb.Inner.app.destroy()
 		test.end()
 	}
@@ -302,3 +360,19 @@ const runpp = helpers.getRunPp('mass', {
 	},
 	debug: 1
 })
+
+function getFacetTrackLst(facetTwLst) {
+	return {
+		facets: [{ name: 'Test Facet' }],
+		facetTwLst,
+		activeTracks: ['bw 1', 'bed 1']
+	}
+}
+
+function getTableHeader(table, testId) {
+	return table.querySelector(`thead th[data-testid="sjpp-gb-facettable-${testId}"]`)
+}
+
+function getTableHeaders(table, testId) {
+	return [...table.querySelectorAll(`thead th[data-testid="sjpp-gb-facettable-${testId}"]`)]
+}

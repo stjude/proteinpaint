@@ -214,6 +214,7 @@ export function renderTable({
 	if (showHeader) {
 		for (const [i, c] of columns.entries()) {
 			const th = theadRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
+			if (c.headerTestId) th.attr('data-testid', c.headerTestId)
 			if (c.labelVertical) {
 				th.style('vertical-align', 'bottom')
 				th.append('span')
