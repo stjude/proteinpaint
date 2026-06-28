@@ -577,7 +577,13 @@ type TrackLst = {
 	/** at launch, json file is read and all facet objects are stored in this array */
 	facets?: {
 		name: string
-		tracks: { sample: string }[]
+		tracks: {
+			sample: string
+			name: string
+			assay: string
+			type: string
+			[key: string]: any
+		}[]
 	}[]
 	/** twlst as facet table column for annotating samples */
 	facetTwLst?: object[]

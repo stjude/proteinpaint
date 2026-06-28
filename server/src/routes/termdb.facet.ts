@@ -40,12 +40,14 @@ function init({ genomes }) {
 			const response: TermdbFacetResponse = { tracks }
 			if (q.twLst) {
 				if (!Array.isArray(q.twLst)) throw 'twLst must be an array'
-				const data = await getData(
-					{ terms: q.twLst, filter: q.filter, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
-					ds
-				)
-				if (data.error) throw new Error(data.error)
-				response.samples = getResponseSamples(tracks, q.twLst, data)
+				if (q.twLst.length) {
+					const data = await getData(
+						{ terms: q.twLst, filter: q.filter, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
+						ds
+					)
+					if (data.error) throw new Error(data.error)
+					response.samples = getResponseSamples(tracks, q.twLst, data)
+				}
 			}
 
 			res.send(response)
