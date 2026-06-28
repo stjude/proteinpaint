@@ -72,7 +72,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	}
 
 	async main() {
-		this.dom.holder.style('opacity', 0.5).style('pointer-event', 'none')
+		this.dom.holder.style('opacity', 0.5).style('pointer-events', 'none')
 		this.dom.errDiv.style('display', 'none')
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
@@ -113,7 +113,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
-		this.dom.holder.style('opacity', 1).style('pointer-event', 'auto')
+		this.dom.holder.style('opacity', 1).style('pointer-events', 'auto')
 	}
 
 	async getFacetData(state) {
