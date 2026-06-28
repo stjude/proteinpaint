@@ -10,12 +10,14 @@ export class TabsRenderer {
 	interactions: any
 	tabs: any
 	filterUI: any
-	constructor(state, dom, opts, interactions) {
+	facetData: any[]
+	constructor(state, dom, opts, interactions, facetData: any[] = []) {
 		this.state = state
 		this.dom = dom
 		this.opts = opts
 		this.interactions = interactions
 		this.filterUI = {}
+		this.facetData = facetData
 	}
 
 	async main() {
@@ -56,8 +58,8 @@ export class TabsRenderer {
 			// one tab for each facet table
 			// quick fix to hardcode showing facet table as first tab. allow customization later
 			const activeTracks = this.state.config.trackLst.activeTracks
-			for (const facet of this.state.config.trackLst.facets) {
-				const shown = facet.tracks.some(t => activeTracks.includes(t.name))
+			for (const facet of this.facetData) {
+				const shown = facet.tracks?.some(t => activeTracks.includes(t.name))
 				tabs.push({ label: facet.name || 'Facet Table', active: shown })
 			}
 		}
@@ -111,7 +113,7 @@ export class TabsRenderer {
 
 		if (this.state.config.trackLst?.facets) {
 			// (above) quick fix to hardcode showing facet table as first tab. allow customization later
-			for (const facet of this.state.config.trackLst.facets) {
+			for (const facet of this.facetData) {
 				const div = tabs[tabsIdx++].contentHolder.append('div')
 				this.renderFacetTable(facet, div)
 			}
@@ -178,6 +180,10 @@ export class TabsRenderer {
 		/* facet.tracks[] each is {name/assay/sample}
         layout a table with assay for columns, sample for rows, cells are tracks
         */
+		if (!facet.tracks?.length) {
+			div.append('div').style('opacity', 0.7).style('margin', '8px 0px').text('No tracks match the current filter.')
+			return
+		}
 		const assayset = new Set(),
 			sampleset = new Set()
 		for (const t of facet.tracks) {

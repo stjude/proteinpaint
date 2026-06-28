@@ -5,6 +5,7 @@ import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
+import { sanitizeTrackLstConfig } from './trackLst.ts'
 
 class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	static type = 'genomeBrowser'
@@ -104,8 +105,9 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 
 		try {
 			const model = new Model(state, this.app)
-			const data = await model.preComputeData()
-			const view = new View(state, this.blockInstance, data, this.dom, opts, this.interactions)
+			const [data, facetData] = await Promise.all([model.preComputeData(), this.getFacetData(state)])
+			this.interactions.setFacetTrackNames(getFacetTrackNames(facetData))
+			const view = new View(state, this.blockInstance, data, this.dom, opts, this.interactions, facetData)
 			await view.main()
 			this.blockInstance = view.blockInstance
 		} catch (e: any) {
@@ -114,6 +116,33 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			if (e.stack) console.log(e.stack)
 		}
 		this.dom.loadingDiv.style('display', 'none')
+	}
+
+	async getFacetData(state) {
+		if (!state.config.trackLst?.facets?.length) return []
+
+		const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
+		return await Promise.all(
+			state.config.trackLst.facets.map(async facet => {
+				const body: any = {
+					genome: this.app.vocabApi.vocab.genome,
+					dslabel: this.app.vocabApi.vocab.dslabel,
+					facetname: facet.name
+				}
+				if (state.filter?.lst?.length) body.filter = state.filter
+				const data = await this.app.vocabApi.dofetch3(
+					'termdb/facet',
+					{ headers, body },
+					this.app.vocabApi.opts.fetchOpts
+				)
+				if (data.error) throw data.error
+				return {
+					...facet,
+					tracks: data.tracks || [],
+					samples: data.samples
+				}
+			})
+		)
 	}
 
 	// get options for view instance
@@ -128,6 +157,16 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		}
 		return opts
 	}
+}
+
+function getFacetTrackNames(facets) {
+	const names = new Set<string>()
+	for (const facet of facets || []) {
+		for (const track of facet.tracks || []) {
+			if (track.name) names.add(track.name)
+		}
+	}
+	return names
 }
 
 export const genomeBrowserInit = getCompInit(TdbGenomeBrowser)
@@ -161,6 +200,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 		}),
 		override || {}
 	)
+	sanitizeTrackLstConfig(config)
 	computeBlockModeFlag(config, vocabApi)
 
 	if (config.snvindel) {

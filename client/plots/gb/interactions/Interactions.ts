@@ -1,14 +1,20 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { getNormalRoot } from '#filter'
+import { sanitizeTrackLstConfig } from '../trackLst.ts'
 
 export class Interactions {
 	app: MassAppApi
 	dom: any
 	id: string
+	facetTrackNames = new Set<string>()
 	constructor(app: MassAppApi, dom: any, id: string) {
 		this.app = app
 		this.dom = dom
 		this.id = id
+	}
+
+	setFacetTrackNames(names: Set<string>) {
+		this.facetTrackNames = names
 	}
 
 	// using arrow function to bind "this" to the Interactions class
@@ -53,6 +59,7 @@ export class Interactions {
 		// live plot state
 		const state = this.getState(this.app.getState())
 		const config = structuredClone(state.config)
+		sanitizeTrackLstConfig(config)
 		config.subMds3Tks = []
 		for (const t of blockInstance.tklst) {
 			if (t.type == 'mds3' && t.filterObj) {
@@ -78,17 +85,12 @@ export class Interactions {
 			}
 		}
 		let facetActiveTracksChanged = false
-		if (config.trackLst?.activeTracks && config.trackLst.facets) {
-			// collect names of all facet tracks (across all facet tables)
-			const facetTrackNames = new Set<string>()
-			for (const f of config.trackLst.facets) {
-				for (const t of f.tracks) facetTrackNames.add(t.name)
-			}
+		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
 			// active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks
 			const newLst = config.trackLst.activeTracks.filter(n => blockInstance.tklst.find(i => i.name == n))
 			// if user re-adds a facet track from block ui (e.g. block.tk.menu), add it back to activeTracks
 			for (const t of blockInstance.tklst) {
-				if (t.name && facetTrackNames.has(t.name) && !newLst.includes(t.name)) {
+				if (t.name && this.facetTrackNames.has(t.name) && !newLst.includes(t.name)) {
 					newLst.push(t.name)
 				}
 			}

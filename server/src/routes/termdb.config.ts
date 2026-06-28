@@ -351,7 +351,13 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		q2.ld = structuredClone(q.ld)
 	}
 	if (q.trackLst) {
-		q2.trackLst = q.trackLst
+		q2.trackLst = {
+			activeTracks: q.trackLst.activeTracks,
+			facets:
+				q.trackLst.facets?.map(i => {
+					return { name: i.name }
+				}) || undefined
+		}
 	}
 	if (q.chat) {
 		q2.chat = {}
