@@ -593,6 +593,8 @@ type TrackLst = {
 	in such case, all tracks identified by given name will show/hide altogether
 	*/
 	activeTracks: string[]
+	/** created on launch */
+	facets?: any
 }
 
 /** cnv segments are queried by coordinates, and can be filtered by segment length and/or value
