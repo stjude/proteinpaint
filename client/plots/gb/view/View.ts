@@ -10,17 +10,19 @@ export class View {
 	dom: any
 	opts: any
 	interactions: any
-	constructor(state, blockInstance, data, dom, opts, interactions) {
+	facetData: any[]
+	constructor(state, blockInstance, data, dom, opts, interactions, facetData: any[] = []) {
 		this.state = state
 		this.blockInstance = blockInstance
 		this.data = data
 		this.dom = dom
 		this.opts = opts
 		this.interactions = interactions
+		this.facetData = facetData
 	}
 
 	async main() {
-		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions)
+		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions, this.facetData)
 		await tabs.main()
 		const geneSearch = new GeneSearchRenderer(this.state, this.dom.geneSearchDiv, this.opts, this.interactions)
 		geneSearch.main()
@@ -127,8 +129,8 @@ export class View {
 		if (this.state.config?.trackLst?.activeTracks?.length) {
 			// include active facet tracks
 			for (const n of this.state.config.trackLst.activeTracks) {
-				for (const f of this.state.config.trackLst.facets) {
-					for (const t of f.tracks) {
+				for (const f of this.facetData) {
+					for (const t of f.tracks || []) {
 						if (t.name == n) tklst.push(t)
 					}
 				}

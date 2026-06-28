@@ -53,6 +53,7 @@ export const routeFiles = [
 	import('./routes/termdb.config.ts'),
 	import('./routes/termdb.descrstats.ts'),
 	import('./routes/termdb.dmr.ts'),
+	import('./routes/termdb.facet.ts'),
 	import('./routes/termdb.isoformAvailability.ts'),
 	import('./routes/termdb.geneRanking.ts'),
 	import('./routes/termdb.numericcategories.ts'),
