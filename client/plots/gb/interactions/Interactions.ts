@@ -17,13 +17,17 @@ export class Interactions {
 		this.facetTrackNames = names
 	}
 
-	// using arrow function to bind "this" to the Interactions class
-	// otherwise "this" can refer to the Block class
-	onCoordinateChange = rglst => {
+	onCoordinateChange = (rglst, blockInstance?) => {
+		if (!rglst?.length) return
+		const config: any = {
+			geneSearchResult: { chr: rglst[0].chr, start: rglst[0].start, stop: rglst[0].stop }
+		}
+		const block = getBlockState(blockInstance, rglst)
+		if (block) config.block = block
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: { geneSearchResult: { chr: rglst[0].chr, start: rglst[0].start, stop: rglst[0].stop } }
+			config
 		})
 	}
 
@@ -33,7 +37,8 @@ export class Interactions {
 			id: this.id,
 			config: {
 				geneSearchResult: result,
-				blockIsProteinMode
+				blockIsProteinMode,
+				block: { rglst: [] }
 			}
 		})
 	}
@@ -166,6 +171,33 @@ export class Interactions {
 			config: { variantFilter: { filter } }
 		})
 	}
+}
+
+export function getBlockState(blockInstance, rglst) {
+	const blockRglst = cloneRglst(blockInstance?.rglst || rglst)
+	if (!blockRglst?.length) return null
+	const block: any = { rglst: blockRglst }
+	for (const key of ['startidx', 'stopidx', 'regionspace', 'gmmode']) {
+		const value = blockInstance?.[key]
+		if (value !== undefined) block[key] = value
+	}
+	if (blockInstance?.coord?.reverse !== undefined) block.coordReverse = blockInstance.coord.reverse
+	return block
+}
+
+function cloneRglst(rglst) {
+	if (!Array.isArray(rglst)) return null
+	return rglst.map(r => {
+		const r2: any = {
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop
+		}
+		for (const key of ['bstart', 'bstop', 'width', 'reverse', 'name']) {
+			if (r[key] !== undefined) r2[key] = r[key]
+		}
+		return r2
+	})
 }
 
 export function mayUpdateGroupTestMethodsIdx(state, d) {

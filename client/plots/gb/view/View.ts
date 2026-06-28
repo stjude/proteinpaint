@@ -285,10 +285,9 @@ export class View {
 			filter0: this.state.filter0
 		}
 
-		if (this.data) {
-			// variant data has been precomputed
-			// need to recompute upon coordinate change
-			arg.onCoordinateChange = this.interactions.onCoordinateChange
+		const interactions = this.interactions
+		arg.onCoordinateChange = function (rglst) {
+			interactions.onCoordinateChange(rglst, this)
 		}
 
 		if (this.state.config.blockIsProteinMode) {
@@ -306,10 +305,14 @@ export class View {
 			return
 		}
 		// must be in genomic mode and requires coord
-		if (!this.state.config.geneSearchResult.chr) throw 'blockIsProteinMode=false but chr missing'
-		arg.chr = this.state.config.geneSearchResult.chr
-		arg.start = this.state.config.geneSearchResult.start
-		arg.stop = this.state.config.geneSearchResult.stop
+		if (this.state.config.block?.rglst?.length) {
+			arg.rglst = this.state.config.block.rglst
+		} else {
+			if (!this.state.config.geneSearchResult.chr) throw 'blockIsProteinMode=false but chr missing'
+			arg.chr = this.state.config.geneSearchResult.chr
+			arg.start = this.state.config.geneSearchResult.start
+			arg.stop = this.state.config.geneSearchResult.stop
+		}
 		first_genetrack_tolist(this.opts.genome, arg.tklst)
 
 		const _ = await import('#src/block')
