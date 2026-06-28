@@ -23,6 +23,8 @@ export type TableCell = {
 export type TableColumn = {
 	/** the text to show as header of a column */
 	label: string
+	/** optional data-testid for the column header <th> */
+	headerTestId?: string
 	/** show the column label vertically in the header */
 	labelVertical?: true
 	/** column width */
