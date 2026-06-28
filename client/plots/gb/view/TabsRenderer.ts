@@ -3,6 +3,26 @@ import { filterInit } from '#filter'
 import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
 import { appInit } from '#termdb/app'
 
+function getAnnotationDisplayValue(annotation) {
+	if (annotation === undefined || annotation === null) return
+	if (typeof annotation != 'object') return String(annotation)
+	if (annotation.label !== undefined && annotation.label !== null) return String(annotation.label)
+	if (annotation.value !== undefined && annotation.value !== null) return formatAnnotationValue(annotation.value)
+	if (annotation.key !== undefined && annotation.key !== null) return String(annotation.key)
+	return formatAnnotationValue(annotation)
+}
+
+function formatAnnotationValue(value) {
+	if (value === undefined || value === null) return
+	if (Array.isArray(value))
+		return value
+			.map(formatAnnotationValue)
+			.filter(v => v !== undefined)
+			.join(', ')
+	if (typeof value != 'object') return String(value)
+	return JSON.stringify(value)
+}
+
 export class TabsRenderer {
 	state: any
 	dom: any
@@ -184,8 +204,8 @@ export class TabsRenderer {
 			div.append('div').style('opacity', 0.7).style('margin', '8px 0px').text('No tracks match the current filter.')
 			return
 		}
-		const assayset = new Set(),
-			sampleset = new Set()
+		const assayset = new Set<string>(),
+			sampleset = new Set<string>()
 		for (const t of facet.tracks) {
 			if (t.assay) assayset.add(t.assay)
 			if (t.sample) sampleset.add(t.sample)
@@ -196,7 +216,19 @@ export class TabsRenderer {
 
 		// TODO click on row/column header to batch operate
 
+		const facetTwLst = this.state.config.trackLst.facetTwLst || []
 		const columns: any = [{ label: 'Sample' }] // TODO use ds sample type
+		for (const tw of facetTwLst) {
+			columns.push({
+				label: tw.term?.name || tw.term?.id || tw.id,
+				fillCell: (td, si) => {
+					const sample = sampleLst[si]
+					const annotation = facet.samples?.[sample]?.[tw.$id]
+					const value = getAnnotationDisplayValue(annotation)
+					if (value !== undefined) td.text(value)
+				}
+			})
+		}
 		for (const assay of assayLst) {
 			columns.push({
 				label: assay,
@@ -224,6 +256,9 @@ export class TabsRenderer {
 			// 1st column is sample name
 			// TODO may link sample to sampleview
 			const row: any[] = [{ value: sample }]
+			for (let i = 0; i < facetTwLst.length; i++) {
+				row.push({})
+			}
 			// one blank cell for each assay
 			for (let i = 0; i < assayLst.length; i++) {
 				row.push({})
@@ -239,7 +274,7 @@ export class TabsRenderer {
 
 	clickFacetCell(event, tklst) {
 		this.dom.tip.clear().showunder(event.target)
-		const activeTracks = this.state.config.trackLst.activeTracks
+		const activeTracks = this.getLatestActiveTracks() || this.state.config.trackLst.activeTracks
 		const table = this.dom.tip.d.append('table').style('margin', '5px 5px 5px 2px')
 		for (const tk of tklst) {
 			const tr = table.append('tr')
@@ -251,16 +286,16 @@ export class TabsRenderer {
 				.attr('class', 'sja_menuoption')
 				.text(tk.name)
 				.on('click', () => {
-					this.dom.tip.hide()
-					let newActiveTracks, newRemoveTracks // default undefined to not remove any track
-					if (activeTracks.includes(tk.name)) {
+					const currentActiveTracks = this.getLatestActiveTracks() || activeTracks
+					let newActiveTracks, newRemoveTracks
+					if (currentActiveTracks.includes(tk.name)) {
 						td1.text('')
-						newActiveTracks = structuredClone(activeTracks).filter(n => n != tk.name)
+						newActiveTracks = structuredClone(currentActiveTracks).filter(n => n != tk.name)
 						newRemoveTracks = [tk.name]
 					} else {
 						td1.text('SHOWN')
-						newActiveTracks = structuredClone(activeTracks)
-						newActiveTracks.push(tk.name)
+						newActiveTracks = [...new Set([...currentActiveTracks, tk.name])]
+						newRemoveTracks = []
 					}
 					const config = {
 						trackLst: {
@@ -271,6 +306,11 @@ export class TabsRenderer {
 					this.interactions.launchFacet(config)
 				})
 		}
+	}
+
+	getLatestActiveTracks() {
+		const config = this.interactions.app.getState().plots.find(p => p.id === this.interactions.id)
+		return config?.trackLst?.activeTracks
 	}
 
 	async mayRenderGroups() {

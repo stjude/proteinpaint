@@ -353,6 +353,7 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.trackLst) {
 		q2.trackLst = {
 			activeTracks: q.trackLst.activeTracks,
+			facetTwLst: q.trackLst.facetTwLst,
 			facets:
 				q.trackLst.facets?.map(i => {
 					return { name: i.name }
