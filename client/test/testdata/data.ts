@@ -174,7 +174,7 @@ export function getSsgseaTw(isBin = false) {
 	}
 }
 
-export function getFilter_agedx() {
+export function getFilter_agedx(start = 10) {
 	return {
 		type: 'tvslst',
 		in: true,
@@ -190,7 +190,7 @@ export function getFilter_agedx() {
 							term: { id: 'agedx', type: 'float', name: 'Age of diagnosis' },
 							ranges: [
 								{
-									start: 10,
+									start,
 									startinclusive: false,
 									startunbounded: false,
 									stop: 16,
@@ -221,6 +221,29 @@ export function getFilter_male() {
 						tvs: {
 							term: { id: 'sex' },
 							values: [{ key: '1', label: 'Male' }]
+						},
+						type: 'tvs'
+					}
+				]
+			}
+		]
+	}
+}
+export function getFilter_Hodgkin() {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'filterUiRoot',
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						tvs: {
+							term: { id: 'diaggrp', type: 'categorical', name: 'diaggrp' },
+							values: [{ key: 'Hodgkin lymphoma', name: 'Hodgkin' }]
 						},
 						type: 'tvs'
 					}

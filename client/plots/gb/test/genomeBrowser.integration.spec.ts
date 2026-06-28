@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
-import { detectGt, detectOne } from '../../../test/test.helpers.js'
-import { getFilter_male, getFilter_agedx } from '../../../test/testdata/data'
+import { detectGt, detectOne, sleep } from '../../../test/test.helpers.js'
+import { getFilter_agedx, getFilter_Hodgkin } from '../../../test/testdata/data'
 
 /*******************
  Tests:
@@ -109,6 +109,7 @@ tape('add variants track', (test: any) => {
 		}
 		const variantsCheckbox = tabsDiv.select('input[type="checkbox"]').node()
 		variantsCheckbox.click()
+		await sleep(1000) // to allow mds3 tk to show
 		const blockDiv = await detectOne({ elem: dom.blockHolder.node(), selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'Should render block')
 		const tklst = blockDiv.querySelectorAll('[data-testid="sja_sample_menu_opener"]')
@@ -135,7 +136,7 @@ tape('protein mode with global filter (state.termfilter.filter)', (test: any) =>
 
 	runpp({
 		state: {
-			termfilter: { filter: getFilter_male() },
+			termfilter: { filter: getFilter_Hodgkin() },
 			plots: [
 				{
 					chartType: 'genomeBrowser',
@@ -167,7 +168,7 @@ tape('protein mode with global filter (state.termfilter.filter)', (test: any) =>
 
 tape('protein mode with local filter (config.filter)', (test: any) => {
 	test.timeoutAfter(3000)
-	const LF = getFilter_agedx()
+	const LF = getFilter_Hodgkin()
 	runpp({
 		state: {
 			plots: [
@@ -204,10 +205,10 @@ tape('protein mode with local filter (config.filter)', (test: any) => {
 tape('protein mode with both global and local filter', (test: any) => {
 	test.timeoutAfter(3000)
 
-	const LF = getFilter_agedx()
+	const LF = getFilter_agedx(0)
 	runpp({
 		state: {
-			termfilter: { filter: getFilter_male() },
+			termfilter: { filter: getFilter_Hodgkin() },
 			plots: [
 				{
 					chartType: 'genomeBrowser',
@@ -286,7 +287,7 @@ tape('filter change triggers block recreation', (test: any) => {
 
 		await gb.Inner.app.dispatch({
 			type: 'filter_replace',
-			filter: getFilter_male()
+			filter: getFilter_Hodgkin()
 		})
 	}
 })
