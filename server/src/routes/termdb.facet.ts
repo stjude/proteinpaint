@@ -59,7 +59,7 @@ function init({ genomes }) {
 
 function getResponseSamples(tracks: any[], twLst: any[], data: any) {
 	const trackSampleNames = new Set(tracks.map(track => track.sample).filter(Boolean))
-	const samples: { [sampleName: string]: { [twId: string]: any } } = {}
+	const samples: { [sampleId: string]: { [twId: string]: string | number } } = {}
 
 	for (const [sampleId, sampleData] of Object.entries((data.samples || {}) as { [sampleId: string]: any })) {
 		const sampleName = data.refs?.bySampleId?.[sampleId]?.label || sampleData.sampleName || sampleData.name || sampleId
@@ -67,7 +67,8 @@ function getResponseSamples(tracks: any[], twLst: any[], data: any) {
 
 		samples[sampleName] = {}
 		for (const tw of twLst) {
-			if (sampleData[tw.$id] !== undefined) samples[sampleName][tw.$id] = sampleData[tw.$id]
+			const annotation = sampleData[tw.$id]
+			if (annotation?.key !== undefined) samples[sampleName][tw.$id] = annotation.key
 		}
 	}
 

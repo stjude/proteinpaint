@@ -18,7 +18,7 @@ export type TermdbFacetResponse = {
 	/** Tracks from the requested facet, optionally filtered by sample */
 	tracks: any[]
 	/** Optional per-sample term annotations, keyed by sample name then term wrapper id */
-	samples?: { [sampleName: string]: { [twId: string]: any } }
+	samples?: { [sampleName: string]: { [twId: string]: number | string } }
 }
 
 // TODO: write payload examples to help with automated testing and documentation, for non-prod use only
