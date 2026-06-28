@@ -2,6 +2,7 @@ import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { Menu, sayerror } from '#dom'
 import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
+import { fillTermWrapper } from '#termsetting'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
@@ -125,7 +126,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 				const body: any = {
 					genome: this.app.vocabApi.vocab.genome,
 					dslabel: this.app.vocabApi.vocab.dslabel,
-					facetname: facet.name
+					facetname: facet.name,
+					twLst: state.config.trackLst.facetTwLst
 				}
 				if (state.filter?.lst?.length) body.filter = state.filter
 				const data = await this.app.vocabApi.dofetch3(
@@ -241,6 +243,12 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 	if (config.trackLst) {
 		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'
 		if (!config.trackLst.activeTracks) config.trackLst.activeTracks = []
+		config.trackLst.facetTwLst = config.trackLst.facetTwLst || []
+		if (config.trackLst.facetTwLst.length) {
+			config.trackLst.facetTwLst = await Promise.all(
+				config.trackLst.facetTwLst.map(tw => fillTermWrapper(tw, vocabApi))
+			)
+		}
 	}
 	return config
 }

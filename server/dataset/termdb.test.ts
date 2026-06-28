@@ -484,6 +484,7 @@ export default function (): Mds3 {
 			},
 			trackLst: {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
+				facetTwLst: [{ id: 'diaggrp' }],
 				activeTracks: ['bw 1', 'bed 1']
 			},
 			chat: {}
