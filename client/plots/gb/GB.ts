@@ -3,6 +3,7 @@ import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { Menu, sayerror } from '#dom'
 import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
 import { fillTermWrapper } from '#termsetting'
+import { controlsInit } from '#plots/controls.js'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
@@ -23,6 +24,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	interactions: any
 	blockInstance: any
 	_prevFilterSig?: string
+	configTermKeys = ['facetTw1', 'facetTw2', 'facetTw3']
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -41,22 +43,83 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 				.style('font-size', '0.75em')
 				.text('GENOME BROWSER')
 		}
-		// layout rows from top to bottom
-		const errDiv = holder.append('div').style('display', 'none').style('margin', '10px')
-		const controlsDiv = holder.append('div').style('margin', '15px 0px 0px 25px')
+		const body = holder.append('div').style('display', 'flex').style('align-items', 'flex-start').style('gap', '12px')
+		const controlsDiv = body.append('div').style('flex', '0 0 auto')
+		const mainDiv = body
+			.append('div')
+			.style('flex', '1 1 auto')
+			.style('min-width', 0)
+			.style('margin', '15px 0px 0px 25px')
+		const errDiv = mainDiv.append('div').style('display', 'none').style('margin', '10px')
 		const dom = {
 			tip: new Menu(),
 			holder,
 			errDiv,
-			tabsDiv: controlsDiv.append('div'),
-			geneSearchDiv: controlsDiv.append('div').style('margin', '20px 0px'),
-			blockHolder: holder.append('div')
+			controls: controlsDiv.append('div'),
+			tabsDiv: mainDiv.append('div'),
+			geneSearchDiv: mainDiv.append('div').style('margin', '20px 0px'),
+			blockHolder: mainDiv.append('div')
 		}
 		return dom
 	}
 
 	async init() {
 		this.interactions = new Interactions(this.app, this.dom, this.id)
+		await this.setControls()
+	}
+
+	async setControls() {
+		const state = this.getState(this.app.getState())
+		if (!state.config.trackLst) return
+		this.dom.holder.attr('class', 'pp-termdb-plot-viz').style('display', 'inline-block').style('min-width', '300px')
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controls.style('display', 'inline-block'),
+				title: 'Genome Browser',
+				inputs: [
+					{
+						type: 'term',
+						configKey: 'facetTw1',
+						chartType: 'genomeBrowser',
+						usecase: { target: 'genomeBrowser', detail: 'facetTw1' },
+						title: 'Add column',
+						label: 'Add column',
+						vocabApi: this.app.vocabApi,
+						processConfig: config => {
+							if (!config.facetTw1) {
+								config.facetTw2 = null
+								config.facetTw3 = null
+							}
+						}
+					},
+					{
+						type: 'term',
+						configKey: 'facetTw2',
+						chartType: 'genomeBrowser',
+						usecase: { target: 'genomeBrowser', detail: 'facetTw2' },
+						title: 'Add column',
+						label: 'Add column',
+						vocabApi: this.app.vocabApi,
+						getDisplayStyle: plot => (getGbConfig(plot).facetTw1 ? 'table-row' : 'none'),
+						processConfig: config => {
+							if (!config.facetTw2) config.facetTw3 = null
+						}
+					},
+					{
+						type: 'term',
+						configKey: 'facetTw3',
+						chartType: 'genomeBrowser',
+						usecase: { target: 'genomeBrowser', detail: 'facetTw3' },
+						title: 'Add column',
+						label: 'Add column',
+						vocabApi: this.app.vocabApi,
+						getDisplayStyle: plot => (getGbConfig(plot).facetTw2 ? 'table-row' : 'none')
+					}
+				]
+			})
+		}
 	}
 
 	getState(appState) {
@@ -127,7 +190,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 					genome: this.app.vocabApi.vocab.genome,
 					dslabel: this.app.vocabApi.vocab.dslabel,
 					facetname: facet.name,
-					twLst: state.config.trackLst.facetTwLst
+					twLst: getFacetTwLst(state.config)
 				}
 				if (state.filter?.lst?.length) body.filter = state.filter
 				const data = await this.app.vocabApi.dofetch3(
@@ -243,14 +306,32 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 	if (config.trackLst) {
 		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'
 		if (!config.trackLst.activeTracks) config.trackLst.activeTracks = []
-		config.trackLst.facetTwLst = config.trackLst.facetTwLst || []
-		if (config.trackLst.facetTwLst.length) {
-			config.trackLst.facetTwLst = await Promise.all(
-				config.trackLst.facetTwLst.map(tw => fillTermWrapper(tw, vocabApi))
-			)
+		const facetTwLst = [config.facetTw1, config.facetTw2, config.facetTw3].some(Boolean)
+			? [config.facetTw1, config.facetTw2, config.facetTw3]
+			: config.trackLst.facetTwLst || []
+		for (const [i, tw] of facetTwLst.slice(0, 3).entries()) {
+			if (!tw) continue
+			const key = `facetTw${i + 1}`
+			config[key] = await fillTermWrapper(tw, vocabApi)
 		}
+		delete config.trackLst.facetTwLst
+		config.settings = config.settings || {}
+		config.settings.controls = config.settings.controls || {}
 	}
 	return config
+}
+
+function getGbConfig(plotOrState) {
+	return plotOrState?.config || plotOrState || {}
+}
+
+export function getFacetTwLst(config) {
+	const facetTwLst: any[] = []
+	for (const tw of [config.facetTw1, config.facetTw2, config.facetTw3]) {
+		if (!tw) break
+		facetTwLst.push(tw)
+	}
+	return facetTwLst
 }
 
 export function computeBlockModeFlag(config, vocabApi?) {

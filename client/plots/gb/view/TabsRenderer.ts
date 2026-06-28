@@ -3,26 +3,6 @@ import { filterInit } from '#filter'
 import { mayUpdateGroupTestMethodsIdx } from '../interactions/Interactions.ts'
 import { appInit } from '#termdb/app'
 
-function getAnnotationDisplayValue(annotation) {
-	if (annotation === undefined || annotation === null) return
-	if (typeof annotation != 'object') return String(annotation)
-	if (annotation.label !== undefined && annotation.label !== null) return String(annotation.label)
-	if (annotation.value !== undefined && annotation.value !== null) return formatAnnotationValue(annotation.value)
-	if (annotation.key !== undefined && annotation.key !== null) return String(annotation.key)
-	return formatAnnotationValue(annotation)
-}
-
-function formatAnnotationValue(value) {
-	if (value === undefined || value === null) return
-	if (Array.isArray(value))
-		return value
-			.map(formatAnnotationValue)
-			.filter(v => v !== undefined)
-			.join(', ')
-	if (typeof value != 'object') return String(value)
-	return JSON.stringify(value)
-}
-
 export class TabsRenderer {
 	state: any
 	dom: any
@@ -216,7 +196,11 @@ export class TabsRenderer {
 
 		// TODO click on row/column header to batch operate
 
-		const facetTwLst = this.state.config.trackLst.facetTwLst || []
+		const facetTwLst: any[] = []
+		for (const tw of [this.state.config.facetTw1, this.state.config.facetTw2, this.state.config.facetTw3]) {
+			if (!tw) break
+			facetTwLst.push(tw)
+		}
 		const columns: any = [{ label: 'Sample', headerTestId: 'sjpp-gb-facettable-sample-columnheader' }] // TODO use ds sample type
 		for (const tw of facetTwLst) {
 			columns.push({
@@ -225,8 +209,7 @@ export class TabsRenderer {
 				fillCell: (td, si) => {
 					const sample = sampleLst[si]
 					const annotation = facet.samples?.[sample]?.[tw.$id]
-					const value = getAnnotationDisplayValue(annotation)
-					if (value !== undefined) td.text(value)
+					if (annotation !== undefined) td.text(annotation)
 				}
 			})
 		}

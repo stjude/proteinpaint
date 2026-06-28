@@ -142,7 +142,7 @@ tape('facet table without facet twlst', (test: any) => {
 				{
 					chartType: 'genomeBrowser',
 					geneSearchResult: { geneSymbol: 'TP53' },
-					trackLst: getFacetTrackLst([])
+					trackLst: getFacetTrackLst()
 				}
 			]
 		},
@@ -170,7 +170,9 @@ tape('facet table with facet twlst', (test: any) => {
 				{
 					chartType: 'genomeBrowser',
 					geneSearchResult: { geneSymbol: 'TP53' },
-					trackLst: getFacetTrackLst([{ id: 'diaggrp' }, { id: 'agedx' }])
+					trackLst: getFacetTrackLst(),
+					facetTw1: { id: 'diaggrp' },
+					facetTw2: { id: 'agedx' }
 				}
 			]
 		},
@@ -361,10 +363,9 @@ const runpp = helpers.getRunPp('mass', {
 	debug: 1
 })
 
-function getFacetTrackLst(facetTwLst) {
+function getFacetTrackLst() {
 	return {
 		facets: [{ name: 'Test Facet' }],
-		facetTwLst,
 		activeTracks: ['bw 1', 'bed 1']
 	}
 }
