@@ -23,13 +23,13 @@ export class IDCViewModel {
 				const studyId = r?.StudyInstanceUID ?? 'n/a'
 				if (!studiesMap.has(studyId)) {
 					studiesMap.set(studyId, {
-						StudyInstanceUID: r?.StudyInstanceUID ?? null,
-						collectionId: r?.collection_id ?? null,
+						StudyInstanceUID: r?.StudyInstanceUID ?? 'n/a',
+						collectionId: r?.collection_id ?? 'n/a',
 						series: [],
 						hasWSI: false,
 						hasRadiology: false,
 						StudyDate: r?.StudyDate ?? 'n/a',
-						StudyDescription: r?.StudyDescription ?? null
+						StudyDescription: r?.StudyDescription ?? 'n/a'
 					})
 				}
 				const st = studiesMap.get(studyId)

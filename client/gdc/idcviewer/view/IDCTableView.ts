@@ -347,7 +347,7 @@ export class IDCTableView {
 		pageSizeButton.on('click', () => {
 			const isOpen = optionsPanel.style('display') !== 'none'
 			optionsPanel.style('display', isOpen ? 'none' : 'block')
-			changePageSizeText(isOpen)
+			changePageSizeText(!isOpen)
 		})
 
 		pageSizeSelection.append('span').text('entries')
