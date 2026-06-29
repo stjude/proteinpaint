@@ -260,6 +260,7 @@ async function cacheMappingOnNewRelease(ds, version) {
 	console.log('GDC: Done caching sample IDs. Time:', Math.ceil((new Date() - begin) / 1000), 's')
 	console.log('\t', ds.__gdc.aliquot2submitter.cache.size, 'aliquot IDs to sample submitter id,')
 	console.log('\t', ds.__gdc.caseid2submitter.size, 'case uuid to submitter id,')
+	console.log('\t', ds.__gdc.caseid2project.size, 'case uuid to project_id,')
 	console.log('\t', ds.__gdc.map2caseid.cache.size, 'different ids to case uuid,')
 	console.log('\t', ds.__gdc.casesWithExpData.size, 'cases with gene expression data.')
 	const date = new Date()
@@ -301,6 +302,7 @@ function getCacheRef(ds) {
 			}
 		},
 		caseid2submitter: new Map(), // k: case uuid, v: case submitter id
+		caseid2project: new Map(), // k: case uuid, v: project_id; lets callers tell open- vs controlled-access cases without a query (see gdcOpenProjects)
 		caseIds: new Set(), //
 		casesWithExpData: new Set(),
 		gdcOpenProjects: new Set(), // names of open-access projects
@@ -402,7 +404,9 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 	// pagination results from the response may be less than the previous version's expected number of cases,
 	// in which case the loop to fetch IDs will never reach the total count, therefore trigger the caching to stop
 	if (mayCancelStalePendingCache(ds, ref)) return 0
-	const param = ['fields=submitter_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
+	const param = [
+		'fields=submitter_id,project.project_id,samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id'
+	]
 	if (aliquot_id) {
 		param.push(
 			'filters={"op":"and","content":[{"op":"=","content":{"field":"samples.portions.analytes.aliquots.aliquot_id","value":["' +
@@ -470,6 +474,10 @@ async function fetchIdsFromGdcApi(ds, size, from, ref, aliquot_id) {
 		if (!case_submitter_id) throw 'h.submitter_id missing'
 
 		ref.caseid2submitter.set(case_id, case_submitter_id)
+
+		// project_id per case; used to pre-filter cases to open-access projects before querying (e.g. the
+		// GRIN2 ssm batchGet). project.project_id is requested in the fields above.
+		if (h.project?.project_id) ref.caseid2project.set(case_id, h.project.project_id)
 
 		/*
 		below shows different uuids mapping to same submitter id

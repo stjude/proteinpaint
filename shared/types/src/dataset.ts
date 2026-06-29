@@ -424,6 +424,9 @@ type SingleSampleMutationQuery = {
 		bySample: Map<any, { mlst: any[] }>
 		capReached: boolean
 		droppedSamples: number
+		/** samples whose case was queried but returned no open-access mutations (e.g. controlled-access
+		GDC projects); distinct from droppedSamples, which the lesion cap skipped before fetching */
+		samplesNoOpenSsm: number
 	}>
 	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
 	sample_id_key: string
