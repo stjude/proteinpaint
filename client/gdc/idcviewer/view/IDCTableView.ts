@@ -438,11 +438,7 @@ export class IDCTableView {
 						})
 					})
 				} else if (Number(page) === this.args.currentPage) {
-					pageButton
-						.style('font-weight', 'bold')
-						.style('background-color', '#c7501a')
-						.style('min-width', '20px')
-						.style('min-height', '20px')
+					pageButton.style('font-weight', 'bold').style('background-color', '#c7501a').style('padding', '3px')
 				} else {
 					pageButton.on('click', () => {
 						if (Number(page) === this.args.currentPage) return

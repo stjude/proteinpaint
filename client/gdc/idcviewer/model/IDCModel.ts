@@ -79,8 +79,12 @@ export class IDCModel {
 		sortDirection
 	}: IDCViewerOpts): Promise<CasesResponse['data']> {
 		// Search is case-sensitve, and these asterisks are used to match substrings
-		const normalizedSearchFilter = `*${searchFilter.trim()}*`
-		const operator = '='
+		const normalizedSearchFilter = [
+			`*${searchFilter.trim().toUpperCase()}*`,
+			`*${searchFilter.trim().toLowerCase()}*`,
+			`*${searchFilter.trim()}*`
+		]
+		const operator = 'in'
 		const body = {
 			fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id',
 			case_filters: filter0,
