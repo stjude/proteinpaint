@@ -71,7 +71,8 @@ export class View {
 						this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 					},
 					// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
-					newChartHolder: this.opts.plotDiv
+					newChartHolder: this.opts.plotDiv,
+					massApp: this.opts.app
 				}
 				// any cohort filter for this tk
 				{
@@ -108,7 +109,8 @@ export class View {
 								this.interactions.maySaveTrackUpdatesToState(this.blockInstance)
 							},
 							// for showing disco etc as ad-hoc sandbox, persistently in the mass plotDiv, rather than a menu
-							newChartHolder: this.opts.plotDiv
+							newChartHolder: this.opts.plotDiv,
+							massApp: this.opts.app
 						}
 						if (this.state.filter?.lst?.length) {
 							// join sub filter with global
