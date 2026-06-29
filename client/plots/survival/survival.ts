@@ -32,6 +32,21 @@ Object.assign(t0_t2_defaultQ, {
 		mode: 'discrete',
 		type: 'custom-bin',
 		preferredBins: 'median'
+	},
+	ssGSEA: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	},
+	isoformExpression: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	},
+	dnaMethylation: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
 	}
 })
 
