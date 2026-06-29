@@ -1,1 +1,2 @@
-
+Fixes
+- Re-enable submitting 'dsname' as case insensitive input for dslabel. 

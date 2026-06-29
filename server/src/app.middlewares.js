@@ -145,6 +145,17 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 				return
 			}
 			ds = g.datasets?.[dslabel]
+			if (dsname && !ds) {
+				/** Traditionally, 'dsname' is allowed to be case insensitive.
+				 * (e.g. 'pediatric' == 'Pediatric'). Assign the correct ds key
+				 * when a case-insensitive match is found.*/
+				for (const k in g.datasets) {
+					if (k.toLowerCase() == dslabel.toLowerCase()) {
+						ds = g.datasets[k]
+						break
+					}
+				}
+			}
 			// do not check genome-level termdb, not dataset-level termdb
 			if (!ds && !g.termdbs?.[dslabel]) {
 				const paramName = mds3 ? 'mds3' : dsname ? 'dsname' : 'dslabel'
