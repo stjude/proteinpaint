@@ -149,9 +149,12 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 				/** Traditionally, 'dsname' is allowed to be case insensitive.
 				 * (e.g. 'pediatric' == 'Pediatric'). Assign the correct ds key
 				 * when a case-insensitive match is found.*/
-				for (const k in g.datasets) {
+				for (const k in g.datasets || {}) {
 					if (k.toLowerCase() == dslabel.toLowerCase()) {
 						ds = g.datasets[k]
+						dslabel = k
+						req.query.dslabel = k
+						if (req.query.dsname) req.query.dsname = k
 						break
 					}
 				}
