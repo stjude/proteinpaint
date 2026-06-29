@@ -20,6 +20,9 @@ Tests:
 	survival term as term1, term0 = agedx, custom bins
 	survival term as term1, term2 = geneVariant
 	survival term as term1, term2 = geneExpression
+	survival term as term1, term2 = ssGSEA
+	survival term as term1, term2 = isoformExpression
+	survival term as term1, term2 = dnaMethylation
  */
 
 /*************************
@@ -876,9 +879,7 @@ tape('survival term as term1, term2 = geneExpression', function (test) {
 			plots: [
 				{
 					chartType: 'survival',
-					term: {
-						id: 'efs'
-					},
+					term: { id: 'efs' },
 					term2: { term: { type: 'geneExpression', gene: 'TP53' } }
 				}
 			]
@@ -899,6 +900,110 @@ tape('survival term as term1, term2 = geneExpression', function (test) {
 			10,
 			'should render 10 survival censored symbols'
 		)
+
+		if (test._ok) survival.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('survival term as term1, term2 = ssGSEA', function (test) {
+	test.timeoutAfter(8000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'efs' },
+					term2: { term: { type: 'ssGSEA', id: 'HALLMARK_ADIPOGENESIS' } }
+				}
+			]
+		},
+		survival: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let survivalDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
+		test.equal(survival.Inner.state.config.term2.q.mode, 'discrete', 'term2 ssGSEA should default to discrete mode')
+		test.equal(survival.Inner.state.config.term2.q.type, 'custom-bin', 'term2 ssGSEA should default to custom bins')
+		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
+
+		if (test._ok) survival.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('survival term as term1, term2 = isoformExpression', function (test) {
+	test.timeoutAfter(8000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'efs' },
+					term2: {
+						term: { isoform: 'ENST00000269305', gene: 'TP53', name: 'ENST00000269305 TPM', type: 'isoformExpression' }
+					}
+				}
+			]
+		},
+		survival: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let survivalDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
+		test.equal(survival.Inner.state.config.term2.q.mode, 'discrete', 'term2 should default to discrete mode')
+		test.equal(survival.Inner.state.config.term2.q.type, 'custom-bin', 'term2 should default to custom bins')
+		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
+
+		if (test._ok) survival.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('survival term as term1, term2 = dnaMethylation', function (test) {
+	test.timeoutAfter(8000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'efs' },
+					term2: {
+						term: {
+							chr: 'chr17',
+							start: 7661778,
+							stop: 7687537,
+							type: 'dnaMethylation',
+							unit: 'Average Beta Value',
+							genomicFeatureType: 'region',
+							name: 'chr17:7661778-7687537 Average Beta Value'
+						}
+					}
+				}
+			]
+		},
+		survival: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let survivalDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
+		test.equal(survival.Inner.state.config.term2.q.mode, 'discrete', 'term2 should default to discrete mode')
+		test.equal(survival.Inner.state.config.term2.q.type, 'custom-bin', 'term2 should default to custom bins')
+		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
 
 		if (test._ok) survival.Inner.app.destroy()
 		test.end()
