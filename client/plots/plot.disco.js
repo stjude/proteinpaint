@@ -23,7 +23,16 @@ genomeObj={}
 _overrides={}
 	optional override parameters to pass to disco
 */
-export default async function (termdbConfig, dslabel, sample, holder, genomeObj, _overrides = {}, showError = true) {
+export default async function (
+	termdbConfig,
+	dslabel,
+	sample,
+	holder,
+	genomeObj,
+	_overrides = {},
+	showError = true,
+	launchOptions = {}
+) {
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -80,6 +89,23 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 			}
 		}
 
+		const plotConfig = {
+			chartType: 'Disco',
+			subfolder: 'disco',
+			extension: 'ts',
+			overrides: computeOverrides(_overrides, termdbConfig, genomeObj, sample),
+			args: disco_arg
+		}
+
+		if (launchOptions.app) {
+			await launchOptions.app.dispatch({
+				type: 'plot_create',
+				config: plotConfig
+			})
+			loadingDiv.remove()
+			return true
+		}
+
 		const opts = {
 			holder: holder,
 
@@ -88,18 +114,11 @@ export default async function (termdbConfig, dslabel, sample, holder, genomeObj,
 				dslabel: dslabel,
 				args: disco_arg,
 
-				plots: [
-					{
-						chartType: 'Disco',
-						subfolder: 'disco',
-						extension: 'ts',
-						overrides: computeOverrides(_overrides, termdbConfig, genomeObj, sample)
-					}
-				]
+				plots: [plotConfig]
 			}
 		}
 		const plot = await import('#plots/plot.app.js')
-		const plotAppApi = await plot.appInit(opts)
+		await plot.appInit(opts)
 		loadingDiv.remove()
 		return true
 	} catch (e) {

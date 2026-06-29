@@ -51,10 +51,11 @@ export default class Disco {
 
 	async init() {
 		const state = this.app.getState()
-		const settings = state.plots.find(p => p.id === this.id).settings
+		const config = state.plots.find(p => p.id === this.id)
+		const settings = config.settings
 
 		this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
-		this.viewModel = this.stateViewModelMapper.map(state)
+		this.viewModel = this.stateViewModelMapper.map({ ...state, args: this.getArgs(state, config) })
 
 		const holder = this.opts.holder
 		const controlsHolder = holder.append('div').style('display', 'inline-block').style('vertical-align', 'top') // on the left
@@ -149,7 +150,7 @@ export default class Disco {
 			title: 'Show gene name labels on the outside of the plot'
 		})
 
-		const genomeChr = this.app.opts.state.args.genome.majorchr
+		const genomeChr = this.getArgs().genome.majorchr
 		const chromosomeConfigOption = {
 			label: 'Chromosomes',
 			title: 'Chromosomes shown in the plot',
@@ -229,7 +230,8 @@ export default class Disco {
 
 		if (this.recreateViewModel) {
 			this.stateViewModelMapper = new ViewModelMapper(settings, this.discoInteractions)
-			this.viewModel = this.stateViewModelMapper.map(this.app.getState())
+			const appState = this.app.getState()
+			this.viewModel = this.stateViewModelMapper.map({ ...appState, args: this.getArgs(appState) })
 		}
 		this.recreateViewModel = true
 
@@ -237,8 +239,9 @@ export default class Disco {
 			// TODO calculate viewModel.filteredSnvDataLength always
 			this.svgDiv.selectAll('*').remove() // todo not to need this
 			const appState = this.app.getState()
+			const discoAppState = { ...appState, args: this.getArgs(appState) }
 			this.viewModel.svgDiv = this.svgDiv
-			this.viewModel.appState = appState
+			this.viewModel.appState = discoAppState
 
 			for (const name in this.features) {
 				this.features[name].update({ state: this.state, appState })
@@ -249,7 +252,7 @@ export default class Disco {
 			const discoRenderer = new DiscoRenderer(
 				this.getRingRenderers(this.viewModel.settings, this.viewModel, this.discoInteractions.geneClickListener),
 				legendRenderer,
-				this.app.opts.state.args.genome
+				this.getArgs().genome
 			)
 
 			discoRenderer.render(this.svgDiv, this.viewModel, this.onCnvSourceSelect)
@@ -263,8 +266,9 @@ export default class Disco {
 	getState(appState: any) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) return config
+		const args = this.getArgs(appState, config)
 		// include args.data so updates rerender when mutation list changes
-		return { ...config, mlst: appState.args.data }
+		return { ...config, mlst: args.data }
 	}
 
 	getRingRenderers(
@@ -304,9 +308,14 @@ export default class Disco {
 		return renderersMap
 	}
 
+	private getArgs(state = this.app.getState(), config = state.plots.find((p: any) => p.id === this.id)) {
+		return state.args || config?.args
+	}
+
 	private onCnvSourceSelect = (index: number) => {
 		const state = this.app.getState()
-		const args = state.args
+		const config = state.plots.find((p: any) => p.id === this.id)
+		const args = this.getArgs(state, config)
 		const alt = args.alternativeDataByDt?.[dtcnv]
 		if (!alt) return
 		const altClone = structuredClone(args.alternativeDataByDt)
@@ -315,10 +324,19 @@ export default class Disco {
 		selected.mlst.forEach((d: any) => (d.position = d.pos))
 		const baseData = args.data.filter((d: any) => d.dt != dtcnv && d.dt != dtloh)
 		const newData = baseData.concat(selected.mlst)
-		this.app.dispatch({
-			type: 'app_refresh',
-			state: { args: { ...args, data: newData, alternativeDataByDt: altClone } }
-		})
+		const nextArgs = { ...args, data: newData, alternativeDataByDt: altClone }
+		if (state.args) {
+			this.app.dispatch({
+				type: 'app_refresh',
+				state: { args: nextArgs }
+			})
+		} else {
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: { args: nextArgs }
+			})
+		}
 	}
 
 	toggleVisibility(isOpen: boolean) {
@@ -343,6 +361,7 @@ export async function getPlotConfig(opts: any, app: any) {
 		chartType: 'Disco',
 		subfolder: 'disco',
 		extension: 'ts',
-		settings: discoDefaults(opts.overrides, app)
+		settings: discoDefaults(opts.overrides, app),
+		args: opts.args
 	}
 }

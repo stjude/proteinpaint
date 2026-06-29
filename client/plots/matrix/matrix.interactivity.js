@@ -364,14 +364,15 @@ export function setInteractivity(self) {
 				.attr('data-testid', 'oncoMatrix_termLabel_disco_button')
 				.text('Disco plot')
 				.on('click', async event => {
-					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-					sandbox.header.text(sample.sample_id)
 					;(await import('#plots/plot.disco.js')).default(
 						self.state.termdbConfig,
 						self.state.vocab.dslabel,
 						sample,
-						sandbox.body,
-						self.app.opts.genome
+						self.opts.holder,
+						self.app.opts.genome,
+						{},
+						true,
+						{ app: self.app }
 					)
 					menuDiv.remove()
 					self.dom.clickMenu.d.selectAll('*').remove()
