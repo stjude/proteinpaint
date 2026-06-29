@@ -94,7 +94,7 @@ export class IDCViewer {
 			this.tableView.render(tableData, caseData.pagination)
 			if (newCohort) {
 				const cohortCaseTotal = (await this.model.getCaseFromCurrentCohort(args)).pagination.total
-				this.searchView.render(caseData.pagination, cohortCaseTotal)
+				this.searchView.render(caseData.pagination, cohortCaseTotal, this.loadResult.metadataVersion)
 			}
 		} catch (e: any) {
 			if (this.dom.errorDiv) {
