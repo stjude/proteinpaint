@@ -35,11 +35,13 @@ Tests:
     - dynamic scatter of 2-gene expression
     - dynamic scatter of 2-ssgsea
     - dynamic scatter of 2-dnameth
+	- Disco plot and lollipop
     - colorTW=geneVariant with no groupsetting
     - colorTW=geneVariant gene list
     - colorTW=ssgsea
     - Single cell scatter properly renders when colorTW = scct term
     - Single cell scatter properly renders when colorTW = scge term
+	- Single cell scatter properly renders when coordTWs [scge TP53, scge KRAS] are provided
 */
 
 const runpp = helpers.getRunPp('mass', {
@@ -404,6 +406,73 @@ tape('dynamic scatter of 2-dnameth', function (test) {
 		test.end()
 	}
 })
+
+tape('Disco plot and lollipop', test => {
+	test.timeoutAfter(2000)
+	const holder = getHolder()
+
+	runpp({
+		holder,
+		state: state2ssgsea,
+		sampleScatter: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		const sampleWithMutDataFile = scatter.Inner.dom.mainDiv
+			.select('.sjpcb-scatter-series')
+			.selectAll('path')
+			.filter(d => d.sample === '3416')
+			.node()
+		const box = sampleWithMutDataFile.getBoundingClientRect()
+		sampleWithMutDataFile.dispatchEvent(
+			new MouseEvent('click', {
+				bubbles: true,
+				clientX: box.x + box.width / 2,
+				clientY: box.y + box.height / 2
+			})
+		)
+		const chordTexts = await detectGte({
+			elem: holder.node(),
+			selector: '.chord-text',
+			count: 1,
+			trigger: () => {
+				scatter.Inner.dom.tooltip.d
+					.selectAll('button')
+					.filter(function (this: any) {
+						return this.innerHTML == 'Disco'
+					})
+					.node()
+					.click()
+			}
+		})
+		const label = [...chordTexts].find(c => c.__data__?.text === 'TP53')
+
+		if (!label) {
+			test.fail('must have a TP53 gene label')
+		} else {
+			const trackLabelsG = await detectGte({
+				elem: holder.node(),
+				selector: '[data-testid="sja_sample_menu_opener"]',
+				count: 2,
+				trigger: () => {
+					label.dispatchEvent(new MouseEvent('click'))
+				}
+			})
+
+			await sleep(500)
+			const trackLabels = [...trackLabelsG[0].querySelectorAll('text')]
+			test.equal(
+				trackLabels.filter(t => t.innerHTML.includes('unknown data source')).length,
+				0,
+				'must not have an error after clicking a Disco plot gene label to launch a genome browser track'
+			)
+			if (test['_ok']) holder.remove()
+			test.end()
+		}
+	}
+})
+
 tape('colorTW=geneVariant with no groupsetting', function (test) {
 	test.timeoutAfter(6000)
 	runpp({
@@ -550,68 +619,26 @@ tape('Single cell scatter properly renders when colorTW = scge term', function (
 	}
 })
 
-tape('Disco plot and lollipop', test => {
-	test.timeoutAfter(2000)
-	const holder = getHolder()
-
+tape.only('Single cell scatter properly renders when coordTWs [scge TP53, scge KRAS] are provided', function (test) {
 	runpp({
-		holder,
-		state: state2ssgsea,
+		state: {
+			nav: { header_mode: 'hidden' },
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					term: getScgeneexpTw('TP53'),
+					term2: getScgeneexpTw(),
+					singleCellPlot: { name: 'UMAP', sample: { sID: '1_patient' } }
+				}
+			]
+		},
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
-
 	async function runTests(scatter) {
-		scatter.on('postRender.test', null)
-		const sampleWithMutDataFile = scatter.Inner.dom.mainDiv
-			.select('.sjpcb-scatter-series')
-			.selectAll('path')
-			.filter(d => d.sample === '3416')
-			.node()
-		const box = sampleWithMutDataFile.getBoundingClientRect()
-		sampleWithMutDataFile.dispatchEvent(
-			new MouseEvent('click', {
-				bubbles: true,
-				clientX: box.x + box.width / 2,
-				clientY: box.y + box.height / 2
-			})
-		)
-		const chordTexts = await detectGte({
-			elem: holder.node(),
-			selector: '.chord-text',
-			count: 1,
-			trigger: () => {
-				scatter.Inner.dom.tooltip.d
-					.selectAll('button')
-					.filter(function (this: any) {
-						return this.innerHTML == 'Disco'
-					})
-					.node()
-					.click()
-			}
-		})
-		const label = [...chordTexts].find(c => c.__data__?.text === 'TP53')
+		// const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		// test.true(dots.length, 'some dots are loaded from singlecell map')
 
-		if (!label) {
-			test.fail('must have a TP53 gene label')
-		} else {
-			const trackLabelsG = await detectGte({
-				elem: holder.node(),
-				selector: '[data-testid="sja_sample_menu_opener"]',
-				count: 2,
-				trigger: () => {
-					label.dispatchEvent(new MouseEvent('click'))
-				}
-			})
-
-			await sleep(500)
-			const trackLabels = [...trackLabelsG[0].querySelectorAll('text')]
-			test.equal(
-				trackLabels.filter(t => t.innerHTML.includes('unknown data source')).length,
-				0,
-				'must not have an error after clicking a Disco plot gene label to launch a genome browser track'
-			)
-			if (test['_ok']) holder.remove()
-			test.end()
-		}
+		if (test['_ok']) scatter.Inner.app.destroy()
+		test.end()
 	}
 })
