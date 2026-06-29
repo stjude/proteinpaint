@@ -23,7 +23,7 @@ export class IDCSearchView {
 	setArgs(args: IDCViewerOpts): void {
 		this.args = args
 	}
-	render(pagination: Pagination): void {
+	render(pagination: Pagination, actualCaseTotal: number | undefined = undefined): void {
 		this.holder.selectAll('*').remove()
 		const search = () => {
 			const searchValue = (inputDiv.select('input').node() as HTMLInputElement).value.trim()
@@ -44,12 +44,13 @@ export class IDCSearchView {
 			.style('flex-direction', 'row')
 			.style('gap', '10px')
 		// caseCountDiv
+		actualCaseTotal = actualCaseTotal === undefined ? pagination.total : actualCaseTotal
 		searchDiv
 			.append('div')
 			.attr('class', 'idcviewer-search-case-count')
 			.style('font-size', '18px')
 			.style('font-family', 'Noto Sans, sans-serif')
-			.html(`Total Cases:&nbsp;<b>${pagination.total}</b>`)
+			.html(`Total Cohort Cases:&nbsp;<b>${actualCaseTotal}</b>&nbsp(<b>${pagination.total}</b>&nbsp w/ Studies)`)
 			.style('display', 'flex')
 			.style('align-items', 'center')
 			.style('padding', '5px 10px')

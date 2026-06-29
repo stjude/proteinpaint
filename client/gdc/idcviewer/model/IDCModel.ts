@@ -51,7 +51,7 @@ async function verifyParquetUrlWithSidecar(parquetBuffer: ArrayBuffer, sidecarRe
 
 /** Handles all data fetching for the IDC viewer: parquet loading and GDC API calls. */
 export class IDCModel {
-	/** Load the IDC parquet mapping, falling back through versioned archives if needed. */
+	/** Load the IDC parquet mapping, falling back through versioned archives if "current" is unavailable or invalid. */
 	async loadParquetWithFallback(retries: number): Promise<IDCParquetLoadResult | undefined> {
 		const current = await this.tryLoadValidatedParquet(IDC_PARQUET_CURRENT_URL, IDC_CURRENT_VERSION_LABEL)
 		if (current) return current
@@ -70,60 +70,69 @@ export class IDCModel {
 	}
 
 	/** Fetch cases from the GDC API matching the given filter. */
-	async getCaseFromCurrentCohort({
-		searchFilter = '',
-		pageSize = 20,
-		currentPage = 1,
-		filter0,
-		sortBy,
-		sortDirection
-	}: IDCViewerOpts): Promise<CasesResponse['data']> {
-		// Search is case-sensitve, and these asterisks are used to match substrings
-		const normalizedSearchFilter = [
-			`*${searchFilter.trim().toUpperCase()}*`,
-			`*${searchFilter.trim().toLowerCase()}*`,
-			`*${searchFilter.trim()}*`
-		]
+	async getCaseFromCurrentCohort(
+		{ searchFilter = '', pageSize = 20, currentPage = 1, filter0, sortBy, sortDirection }: IDCViewerOpts,
+		caseIDsForFilter: string[] = []
+	): Promise<CasesResponse['data']> {
+		// Search is case-sensitve, and these asterisks are used to match substrings as wildcards replacement,
+		// Could tighten search by sending every possible case-variant, but seems overkill
+		// or if they actually have regular expression , but it doesnt seem that way
+		const normalizedSearchFilter = searchFilter
+			? [`*${searchFilter.trim().toUpperCase()}*`, `*${searchFilter.trim().toLowerCase()}*`, `*${searchFilter.trim()}*`]
+			: ['*']
 		const operator = 'in'
+		const hasSearchOrCaseFilter = searchFilter.trim() !== '' || caseIDsForFilter.length !== 0
+		const searchFilters = {
+			op: 'or',
+			content: [
+				{ op: operator, content: { field: 'case_id', value: normalizedSearchFilter } },
+				{ op: operator, content: { field: 'submitter_id', value: normalizedSearchFilter } },
+				{ op: operator, content: { field: 'samples.sample_id', value: normalizedSearchFilter } },
+				{ op: operator, content: { field: 'samples.submitter_id', value: normalizedSearchFilter } },
+				{ op: operator, content: { field: 'samples.portions.portion_id', value: normalizedSearchFilter } },
+				{ op: operator, content: { field: 'samples.portions.submitter_id', value: normalizedSearchFilter } },
+				{
+					op: operator,
+					content: { field: 'samples.portions.analytes.analyte_id', value: normalizedSearchFilter }
+				},
+				{
+					op: operator,
+					content: { field: 'samples.portions.analytes.submitter_id', value: normalizedSearchFilter }
+				},
+				{
+					op: operator,
+					content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: normalizedSearchFilter }
+				},
+				{
+					op: operator,
+					content: { field: 'samples.portions.analytes.aliquots.submitter_id', value: normalizedSearchFilter }
+				}
+			]
+		}
+		const filters = hasSearchOrCaseFilter
+			? {
+					op: 'and',
+					content: [
+						...(caseIDsForFilter.length !== 0
+							? [
+									{
+										op: 'in',
+										content: { field: 'case_id', value: caseIDsForFilter }
+									}
+							  ]
+							: []),
+						...(searchFilter.trim() !== '' ? [searchFilters] : [])
+					]
+			  }
+			: undefined
 		const body = {
 			fields: 'case_id,submitter_id,disease_type,primary_site,project.project_id',
 			case_filters: filter0,
 			from: (currentPage - 1) * pageSize,
 			size: pageSize,
-			...(searchFilter.trim()
-				? {
-						filters: {
-							op: 'or',
-							content: [
-								{ op: operator, content: { field: 'case_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'submitter_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'samples.sample_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'samples.submitter_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'samples.portions.portion_id', value: normalizedSearchFilter } },
-								{ op: operator, content: { field: 'samples.portions.submitter_id', value: normalizedSearchFilter } },
-								{
-									op: operator,
-									content: { field: 'samples.portions.analytes.analyte_id', value: normalizedSearchFilter }
-								},
-								{
-									op: operator,
-									content: { field: 'samples.portions.analytes.submitter_id', value: normalizedSearchFilter }
-								},
-								{
-									op: operator,
-									content: { field: 'samples.portions.analytes.aliquots.aliquot_id', value: normalizedSearchFilter }
-								},
-								{
-									op: operator,
-									content: { field: 'samples.portions.analytes.aliquots.submitter_id', value: normalizedSearchFilter }
-								}
-							]
-						}
-				  }
-				: {}),
+			...(filters ? { filters } : {}),
 			expand: 'samples.portions.slides,project.program',
-			sort: `${sortBy}:${sortDirection}`,
-			sortBy: [{ field: sortBy, direction: sortDirection }]
+			sort: `${sortBy}:${sortDirection}`
 		}
 		const re: CasesResponse = await fetch('https://api.gdc.cancer.gov/cases', {
 			method: 'POST',
