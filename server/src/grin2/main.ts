@@ -302,6 +302,27 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		])
 	}
 
+	// Coverage note: samples that contributed no open-access SNV/indel lesions, broken down by reason so the
+	// user can see why. Independent of the lesion cap above — both can apply — so it's its own note.
+	if (processing.ssmSamplesNoOpenAccess || processing.unmatchedSamples) {
+		const reasons: string[] = []
+		if (processing.ssmSamplesControlledAccess)
+			reasons.push(
+				`${processing.ssmSamplesControlledAccess.toLocaleString()} are in controlled-access GDC projects ` +
+					`(their mutation data requires a logged-in GDC session with the appropriate authorization)`
+			)
+		if (processing.ssmSamplesNoMutations)
+			reasons.push(`${processing.ssmSamplesNoMutations.toLocaleString()} are open-access but had no SNV/indel mutation`)
+		if (processing.unmatchedSamples)
+			reasons.push(`${processing.unmatchedSamples.toLocaleString()} could not be matched to a GDC case`)
+		const affected = (processing.ssmSamplesNoOpenAccess ?? 0) + (processing.unmatchedSamples ?? 0)
+		capWarningRows.push([
+			'Note',
+			`${affected.toLocaleString()} of ${processing.totalSamples!.toLocaleString()} samples contributed no SNV/indel lesions: ` +
+				`${reasons.join('; ')}.`
+		])
+	}
+
 	const response: GRIN2Response = {
 		status: 'success',
 		fromCache: !freshCompute,
@@ -322,6 +343,34 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 							'Samples with data',
 							`${(processing.samplesWithData ?? 0).toLocaleString()} / ${processing.processedSamples!.toLocaleString()}`
 						],
+						// breakdown of samples with no open-access SNV/indel (batched GDC path), each shown only when
+						// non-zero: controlled-access (data exists but isn't open) vs genuinely no mutation found.
+						...(processing.ssmSamplesControlledAccess
+							? [
+									[
+										'Samples in controlled-access projects',
+										`${processing.ssmSamplesControlledAccess.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
+									]
+							  ]
+							: []),
+						...(processing.ssmSamplesNoMutations
+							? [
+									[
+										'Open-access samples without mutations',
+										`${processing.ssmSamplesNoMutations.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
+									]
+							  ]
+							: []),
+						// samples that matched no GDC case at all (never queried) — surfaced so the cohort tallies
+						// reconcile (they're in neither "with data" nor the no-open-access buckets above).
+						...(processing.unmatchedSamples
+							? [
+									[
+										'Unmatched samples (no GDC case)',
+										`${processing.unmatchedSamples.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
+									]
+							  ]
+							: []),
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
 						['Failed Samples', processing.failedSamples!.toLocaleString()],
 						// only shown when a cnv-type selection actually dropped some samples' cnv
@@ -678,6 +727,17 @@ async function processSampleData(
 		// from the loop cap (unprocessedSamples) because the loop still processed those samples.
 		ssmCapReached?: boolean
 		ssmSamplesDropped?: number
+		// samples whose case returned no open-access SNV/indel (batched GDC path); a coverage note, not the
+		// cap. distinct from ssmSamplesDropped (cap-skipped) and from failedSamples (per-sample errors).
+		// ssmSamplesNoOpenAccess is the total; the two below break it down for the summary.
+		ssmSamplesNoOpenAccess?: number
+		// of ssmSamplesNoOpenAccess: samples in controlled-access GDC projects (data exists but isn't open).
+		ssmSamplesControlledAccess?: number
+		// of ssmSamplesNoOpenAccess: open-access samples that genuinely returned no SNV/indel mutation.
+		ssmSamplesNoMutations?: number
+		// samples that mapped to no GDC case at all (batched path), so were never queried; counted in neither
+		// samplesWithData nor ssmSamplesNoOpenAccess, hence surfaced separately so the cohort tallies reconcile.
+		unmatchedSamples?: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -725,6 +785,13 @@ async function processSampleData(
 			processing.ssmCapReached = true
 			processing.ssmSamplesDropped = batch.droppedSamples
 		}
+		// Samples whose case had no open-access SNV/indel, surfaced so users don't read a partial cohort as
+		// complete (not an error, just a coverage note). Split into controlled-access vs genuinely-no-mutation,
+		// plus samples that matched no GDC case at all, so all 3,716 reconcile in the summary.
+		processing.ssmSamplesNoOpenAccess = batch.samplesNoOpenSsm
+		processing.ssmSamplesControlledAccess = batch.samplesControlledAccess
+		processing.ssmSamplesNoMutations = batch.samplesNoMutations
+		processing.unmatchedSamples = batch.unresolvedSamples
 	}
 	// When ssm is batched, skip it in the per-sample loop so get() doesn't re-fetch it.
 	const loopSkipDt = useBatchSsm ? new Set<number>(skipDt).add(dtsnvindel) : skipDt
@@ -799,7 +866,10 @@ async function processSampleData(
 				processing.totalLesions! += filteredLesions.length
 
 				const done = processing.processedSamples! + processing.failedSamples!
-				if (done % 200 === 0) mayLog(`[GRIN2] Processed ${done}/${samples.length} samples`)
+				// On the batched path (GDC) ssm is fetched up front, so this per-sample loop races to
+				// completion and this counter is misleading — progress is logged by the batch getter's
+				// per-chunk fetch instead. Native/SQLite datasets do the real work here, so keep the line.
+				if (!useBatchSsm && done % 200 === 0) mayLog(`[GRIN2] Processed ${done}/${samples.length} samples`)
 			} catch (e: any) {
 				processing.failedSamples! += 1
 				mayLog(`[GRIN2] Error processing sample ${sample.name}: ${e.message || e}`)

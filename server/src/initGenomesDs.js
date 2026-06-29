@@ -15,6 +15,7 @@ import { mayMapRefseq2ensembl, flattenCaseByFields, may_add_readdepth, mapGenes2
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types'
 import { mayLog } from './helpers.ts'
+import { mapConcurrent } from './utils/concurrencyLimiter.ts'
 
 const dsHelpers = {
 	mayMapRefseq2ensembl,
@@ -28,6 +29,7 @@ const dsHelpers = {
 	cachedFetch: utils.cachedFetch,
 	filterByItem: mds3_init.filterByItem,
 	mayLog,
+	mapConcurrent,
 	createSelectionID,
 	SelectionPrefixes,
 	FlagStatus
