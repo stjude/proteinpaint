@@ -23,7 +23,11 @@ export class IDCSearchView {
 	setArgs(args: IDCViewerOpts): void {
 		this.args = args
 	}
-	render(pagination: Pagination, actualCaseTotal: number | undefined = undefined): void {
+	render(
+		pagination: Pagination,
+		actualCaseTotal: number | undefined = undefined,
+		dataVersion: string | undefined = undefined
+	): void {
 		this.holder.selectAll('*').remove()
 		const search = () => {
 			const searchValue = (inputDiv.select('input').node() as HTMLInputElement).value.trim()
@@ -34,7 +38,12 @@ export class IDCSearchView {
 			})
 		}
 		// titleDiv
-		this.holder.append('div').attr('class', 'idcviewer-search-title').text('IDC Image Viewer')
+		const titleDiv = this.holder.append('div').attr('class', 'idcviewer-search-title')
+		titleDiv.append('span').text('IDC Viewer ')
+		titleDiv
+			.append('span')
+			.style('font-size', '6px')
+			.text(`Release: ${dataVersion || 'current'}`)
 		const searchDiv = this.holder
 			.append('div')
 			.attr('class', 'idcviewer-search-input-holder')
@@ -43,6 +52,7 @@ export class IDCSearchView {
 			.style('flex-wrap', 'wrap')
 			.style('flex-direction', 'row')
 			.style('gap', '10px')
+
 		// caseCountDiv
 		actualCaseTotal = actualCaseTotal === undefined ? pagination.total : actualCaseTotal
 		searchDiv

@@ -54,7 +54,7 @@ export class IDCModel {
 	/** Load the IDC parquet mapping, falling back through versioned archives if "current" is unavailable or invalid. */
 	async loadParquetWithFallback(retries: number): Promise<IDCParquetLoadResult | undefined> {
 		const current = await this.tryLoadValidatedParquet(IDC_PARQUET_CURRENT_URL, IDC_CURRENT_VERSION_LABEL)
-		if (current) return current
+		if (current !== undefined) return current
 
 		const versioned = await this.fetchVersionedParquetEntries(retries)
 		for (const entry of versioned) {
