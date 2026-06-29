@@ -273,7 +273,10 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	 * *** NOTE: This logic accounts for when a sample id is present in the meta result file but
 	 * a sample file is not available. It's possible this use case is seen in development only.
 	 * If so, this logic can be simplified to only check for sample ids in the cohort. *** */
-	S.getFilteredSingleCellSamples = async (_q: TermdbSingleCellSamplesRequest, includeMeta = false) => {
+	S.getFilteredSingleCellSamples = async (
+		_q: TermdbSingleCellSamplesRequest,
+		includeMeta = false
+	): Promise<Set<string>> => {
 		if (!_q.filter && !_q.filter0) return new Set()
 		const arg = { filter: _q.filter, filter0: _q.filter0 }
 		// assuming single cell data is at sample level, so
@@ -320,15 +323,21 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		if (q.checkPlotAvailability) {
 			return await getAvailablePlots(q.plots, D.plots, ds, sampleId)
 		}
-		// if sample is int, may convert to string
-		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
-		if (ds.queries.singleCell.geneExpression && q.gene) {
+		if (ds.queries.singleCell.geneExpression && (q.genes || q.gene)) {
 			const sample = q.sample || q.singleCellPlot.sample
 			if (!sample) throw new Error('sample is required for gene expression query')
-			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
+			if (q.gene && q.genes) throw new Error('cannot provide both gene and genes parameters')
+			if (!q.genes) q.genes = []
+			if (q.gene) q.genes = [q.gene]
+			for (const gene of q.genes) {
+				if (!gene) throw new Error('gene name is empty')
+				const tmp = await ds.queries.singleCell.geneExpression.get({ sample, gene })
+				geneExpMap = { ...geneExpMap, ...tmp }
+			}
 		}
-
+		// given a sample name, collect every plot data for this sample and return
+		const plots: Plot[] = []
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
