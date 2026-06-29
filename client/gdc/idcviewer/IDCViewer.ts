@@ -89,11 +89,12 @@ export class IDCViewer {
 
 		try {
 			this.dom.loadingDiv.style('display', 'flex')
-			const caseData = await this.model.getCaseFromCurrentCohort(args)
+			const caseData = await this.model.getCaseFromCurrentCohort(args, this.loadResult.case_ids as string[])
 			const tableData = this.viewModel.buildTableData(this.loadResult.idc_data, caseData.hits)
 			this.tableView.render(tableData, caseData.pagination)
 			if (newCohort) {
-				this.searchView.render(caseData.pagination)
+				const cohortCaseTotal = (await this.model.getCaseFromCurrentCohort(args)).pagination.total
+				this.searchView.render(caseData.pagination, cohortCaseTotal)
 			}
 		} catch (e: any) {
 			if (this.dom.errorDiv) {
