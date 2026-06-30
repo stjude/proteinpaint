@@ -53,7 +53,18 @@ export function init({ genomes }) {
 // without a rebuild; falls back to 20 when absent (parity with the previous rust buffer_unordered(20)).
 const defaultConcurrency = 20
 
-type FileError = { url: string; error: string }
+export type FileError = { url: string; error: string }
+
+export type MafMergeResult = {
+	/** number of files successfully decompressed, column-selected, and written */
+	merged: number
+	/** per-file failures (download/decompress/column errors); never aborts the batch */
+	errors: FileError[]
+	/** summed timings across files; download/decompress overlap wall-clock, parse does not (see buildMaf) */
+	totalDownloadMs: number
+	totalDecompressMs: number
+	totalParseMs: number
+}
 
 /*
 q{}
@@ -102,6 +113,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// Timing instrumentation, summed across files, to see where the wall-clock goes. download/decompress
 	// run concurrently so their sums overlap wall-clock; parse has no awaits so it can't overlap itself —
 	// totalParseMs is therefore the real main-thread time spent parsing (i.e. event-loop blocking).
+	// Reassigned from the mergeMafFiles() result below; default to 0 so the finalize log is always valid.
 	let merged = 0
 	let totalDownloadMs = 0
 	let totalDecompressMs = 0 // async gunzip on the libuv threadpool (parallel up to UV_THREADPOOL_SIZE)
@@ -151,37 +163,27 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		// header row first (matches the former rust output: header line then all selected data rows)
 		await writeGz(columns.join('\t') + '\n')
 
-		await mapConcurrent(
-			fileLst2,
+		// the download fan-out + decompress + column-select + per-file error collection lives in
+		// mergeMafFiles() so it can be unit-tested with an injected fetcher (no GDC/network). Here the
+		// fetcher is a real GDC /data download via ky, and the write sink is the serialized gzip writer.
+		const result = await mergeMafFiles({
+			fileIdLst: fileLst2,
+			columns,
 			concurrency,
-			async (fileId: string) => {
-				if (controller.signal.aborted) return
-				const url = joinUrl(dataHost, fileId)
-				try {
-					const dl0 = Date.now()
-					const buf = Buffer.from(
-						await ky
-							.get(url, { headers, timeout: downloadTimeoutMs, retry: { limit: 2 }, signal: controller.signal })
-							.arrayBuffer()
-					)
-					const dl1 = Date.now()
-					const decompressed = await gunzipAsync(buf)
-					const dec1 = Date.now()
-					const rows = selectMafCols(decompressed.toString('utf8'), columns) // throws on missing column / empty file
-					const ps1 = Date.now()
-					totalDownloadMs += dl1 - dl0
-					totalDecompressMs += dec1 - dl1
-					totalParseMs += ps1 - dec1
-					merged++
-					await writeGz(rows)
-				} catch (e: any) {
-					// record per-file failure; the rest of the cohort still merges (settled semantics)
-					if (!controller.signal.aborted) errors.push({ url: fileId, error: e?.message || String(e) })
-				}
-				completed++
-			},
-			{ signal: controller.signal }
-		)
+			signal: controller.signal,
+			fetchGz: (fileId, signal) =>
+				ky
+					.get(joinUrl(dataHost, fileId), { headers, timeout: downloadTimeoutMs, retry: { limit: 2 }, signal })
+					.arrayBuffer()
+					.then(ab => Buffer.from(ab)),
+			write: writeGz,
+			onFileSettled: () => completed++
+		})
+		errors.push(...result.errors)
+		merged = result.merged
+		totalDownloadMs = result.totalDownloadMs
+		totalDecompressMs = result.totalDecompressMs
+		totalParseMs = result.totalParseMs
 
 		// flush any pending serialized writes before closing the gzip stream
 		await writeChain.catch(() => {})
@@ -220,6 +222,62 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		res.end()
 	})
 	gz.end()
+}
+
+/*
+Core of the cohort-MAF build, factored out of buildMaf() so it can be unit-tested without GDC or a
+network: download each file (via the injected `fetchGz`), decompress, select the requested columns, and
+hand the selected rows to the injected `write` sink. Downloads run through mapConcurrent() so at most
+`concurrency` are in flight at once. A per-file failure is recorded in `errors` and never aborts the
+batch (settled semantics); an aborted `signal` stops scheduling new files and suppresses late errors.
+`fetchGz(fileId, signal)` returns the gzipped bytes of one file; `write(rows)` consumes one file's
+selected rows (the caller serializes writes / handles backpressure); `onFileSettled` fires once per
+finished file for live progress reporting.
+*/
+export async function mergeMafFiles(opts: {
+	fileIdLst: string[]
+	columns: string[]
+	concurrency: number
+	signal: AbortSignal
+	fetchGz: (fileId: string, signal: AbortSignal) => Promise<Buffer>
+	write: (rows: string) => Promise<void>
+	onFileSettled?: () => void
+}): Promise<MafMergeResult> {
+	const { fileIdLst, columns, concurrency, signal, fetchGz, write, onFileSettled } = opts
+	const errors: FileError[] = []
+	let merged = 0
+	let totalDownloadMs = 0
+	let totalDecompressMs = 0
+	let totalParseMs = 0
+
+	await mapConcurrent(
+		fileIdLst,
+		concurrency,
+		async (fileId: string) => {
+			if (signal.aborted) return
+			try {
+				const dl0 = Date.now()
+				const buf = await fetchGz(fileId, signal)
+				const dl1 = Date.now()
+				const decompressed = await gunzipAsync(buf)
+				const dec1 = Date.now()
+				const rows = selectMafCols(decompressed.toString('utf8'), columns) // throws on missing column / empty file
+				const ps1 = Date.now()
+				totalDownloadMs += dl1 - dl0
+				totalDecompressMs += dec1 - dl1
+				totalParseMs += ps1 - dec1
+				merged++
+				await write(rows)
+			} catch (e: any) {
+				// record per-file failure; the rest of the cohort still merges (settled semantics)
+				if (!signal.aborted) errors.push({ url: fileId, error: e?.message || String(e) })
+			}
+			onFileSettled?.()
+		},
+		{ signal }
+	)
+
+	return { merged, errors, totalDownloadMs, totalDecompressMs, totalParseMs }
 }
 
 /*
@@ -264,7 +322,7 @@ header line by its Hugo_Symbol column, and resolves each requested column to its
 requested column is absent or the file has no data rows, so the caller records it as a per-file error.
 Returns the selected rows as a single string, each row newline-terminated.
 */
-function selectMafCols(text: string, columns: string[]): string {
+export function selectMafCols(text: string, columns: string[]): string {
 	const lines = text.replace(/\n+$/, '').split('\n')
 	let headerIndices: number[] | null = null
 	const out: string[] = []
