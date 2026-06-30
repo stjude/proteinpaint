@@ -48,12 +48,14 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 			detail: { exclude: numericDictTermCluster?.exclude }
 		},
 		updateActionBySelectedTerms: (action: any, termlst: any[]): void => {
+			if (!termlst?.length) throw 'cannot launch clustering: no terms selected'
 			const twlst = termlst.map(term => ({
 				term: structuredClone(term),
 				q: { mode: NumericModes.continuous }
 			}))
 			action.config.chartType = 'hierCluster'
-			action.config.dataType = twlst[0].term.type
+			// shared numeric type of the homogeneous group; fall back to 'float' if a term lacks a type
+			action.config.dataType = twlst[0].term.type || 'float'
 			if (numericDictTermCluster?.appName) action.config.appName = numericDictTermCluster.appName
 			action.config.termgroups = [
 				{
