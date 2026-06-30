@@ -384,9 +384,6 @@ export class TermdbVocab extends Vocab {
 		if (usecase) body.usecase = usecase
 		if (this.state.treeFilter) body.treeFilter = this.state.treeFilter
 		if (targetType) body.targetType = targetType
-		console.log('body:', body)
-		console.log('usecase:', usecase)
-		console.log('targetType:', targetType)
 		const data = await this.dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		// sort results
@@ -412,6 +409,35 @@ export class TermdbVocab extends Vocab {
 		if (!str) return []
 		const data = await this.findTerm(str, '', null, TermTypeGroups.GENE_EXPRESSION)
 		return (data.lst || []).map(t => t.name)
+	}
+
+	// Look up gene symbols matching a search string for datasets that have gene variant data
+	// (snvindel/cnv/svfusion). Goes through the dataset-aware findTerm route with the
+	// Mutation/CNV/Fusion target (the term-type group that geneVariant belongs to), so the server
+	// only returns gene matches when the dataset actually has gene variant data (empty otherwise).
+	// Returns an array of gene-name strings; the mass omnisearch (client/mass/chat.ts) offers each
+	// as a gene variant result.
+	async findGeneVariant(str) {
+		if (!str) return []
+		const data = await this.findTerm(str, '', null, TermTypeGroups.GENE_VARIANT)
+		return (data.lst || []).map(t => t.name)
+	}
+
+	// Resolve a gene symbol to its default genomic coordinates { chr, start, stop } via the
+	// genelookup route (deep:true returns gene models). Picks the default isoform when present,
+	// else the first model. Returns null if no usable gene model is found. Used by the mass
+	// omnisearch to open a genome browser at a gene's region.
+	async getGeneCoord(gene) {
+		if (!gene) return null
+		const data = await this.dofetch3('genelookup', {
+			body: { genome: this.vocab.genome, input: gene, deep: true }
+		})
+		if (data.error) throw data.error
+		const gmlst = data.gmlst || []
+		if (!gmlst.length) return null
+		const gm = gmlst.find(g => g.isdefault) || gmlst[0]
+		if (!gm?.chr || !Number.isInteger(gm.start) || !Number.isInteger(gm.stop)) return null
+		return { chr: gm.chr, start: gm.start, stop: gm.stop }
 	}
 
 	// from termdb/terminfo
