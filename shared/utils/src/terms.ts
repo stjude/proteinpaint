@@ -289,6 +289,7 @@ const typeMap: { [key: string]: string } = {
 	condition: 'Condition',
 	float: 'Numerical',
 	integer: 'Numerical',
+	date: 'Date',
 	geneExpression: 'Gene Expression',
 	isoformExpression: 'Isoform Expression',
 	ssGSEA: 'Geneset Expression',
