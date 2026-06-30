@@ -14,8 +14,6 @@ export function maySetSandboxHeader(appState) {
 		title = this.config.assayCohortTitle
 			? `Protein Abundance Clustering (${this.config.assayCohortTitle})`
 			: 'Protein Abundance Clustering'
-	} else if (dataType == TermTypes.SSGSEA) {
-		title = `${headerText}ssGSEA Clustering`
 	} else {
 		title = `${headerText}${termType2label(dataType)} Clustering`
 	}
