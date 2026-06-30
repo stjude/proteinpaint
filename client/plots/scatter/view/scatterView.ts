@@ -168,7 +168,7 @@ export class ScatterView {
 			testid: 'showAxes'
 		}
 		const term = this.scatter.config.term ? 'term' : 'colorTW'
-		const specialCase = getSingleCellSpecialCase(this.scatter.config, term)
+		const specialCase = getSingleCellSpecialCase(this.scatter.config, term, true)
 
 		const inputs: any = [
 			{
