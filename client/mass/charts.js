@@ -553,6 +553,7 @@ function setRenderers(self) {
 				tree: { usecase: chart.usecase }
 			},
 			tree: {
+				minTermsToSubmit: chart.minTermsToSubmit,
 				submit_lst: termlst => {
 					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
 					action.config[chart.usecase.detail] = data

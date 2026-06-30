@@ -9,9 +9,10 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 	*/
 	chartsInstance.dom.tip.clear()
 	const menuDiv = holder.append('div')
-	if (chartsInstance.state.termdbConfig.numericDictTermCluster?.plots) {
-		for (const plot of chartsInstance.state.termdbConfig.numericDictTermCluster.plots) {
-			/* plot: 
+	const numericDictTermCluster = chartsInstance.state.termdbConfig.numericDictTermCluster
+	if (numericDictTermCluster?.plots) {
+		for (const plot of numericDictTermCluster.plots) {
+			/* plot:
 			{
 				name=str
 			}
@@ -38,39 +39,25 @@ export function makeChartBtnMenu(holder: any, chartsInstance: any): void {
 	}
 	const chart = {
 		//use the app name defined in dataset file
-		label: chartsInstance.state.termdbConfig.numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
+		label: numericDictTermCluster?.appName || 'Numeric Dictionary Term cluster',
 		chartType: 'numericDictTermCluster',
 		clickTo: chartsInstance.showTree_selectlst,
+		minTermsToSubmit: 3,
 		usecase: {
 			target: 'numericDictTermCluster',
-			detail: { exclude: chartsInstance.state.termdbConfig.numericDictTermCluster?.exclude }
+			detail: { exclude: numericDictTermCluster?.exclude }
 		},
 		updateActionBySelectedTerms: (action: any, termlst: any[]): void => {
 			const twlst = termlst.map(term => ({
 				term: structuredClone(term),
 				q: { mode: NumericModes.continuous }
 			}))
-			if (twlst.length == 1) {
-				// violin
-				action.config.chartType = 'summary'
-				action.config.term = twlst[0]
-				return
-			}
-			if (twlst.length == 2) {
-				// scatter
-				action.config.chartType = 'summary'
-				action.config.term = twlst[0]
-				action.config.term2 = twlst[1]
-				return
-			}
-			// 3 or more terms, launch clustering
 			action.config.chartType = 'hierCluster'
-			action.config.dataType = 'numericDictTerm'
+			action.config.dataType = twlst[0].term.type
+			if (numericDictTermCluster?.appName) action.config.appName = numericDictTermCluster.appName
 			action.config.termgroups = [
 				{
-					name:
-						chartsInstance.state.termdbConfig.numericDictTermCluster?.settings?.termGroupName ||
-						'Numeric Dictionary Term Cluster',
+					name: numericDictTermCluster?.settings?.termGroupName || 'Numeric Dictionary Term Cluster',
 					lst: twlst,
 					type: 'hierCluster'
 				}

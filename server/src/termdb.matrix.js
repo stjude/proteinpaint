@@ -1030,11 +1030,24 @@ export async function mayInitiateNumericDictionaryTermplots(ds) {
 		if (p.file) {
 			const numericDictTermClusterConfig = await read_file(path.join(serverconfig.tpmasterdir, p.file))
 			const parsedConfig = JSON.parse(numericDictTermClusterConfig)
-			p.numericDictTermClusterConfig = p.getConfig?.(parsedConfig) || parsedConfig
+			const config = p.getConfig?.(parsedConfig) || parsedConfig
+			normalizeLegacyHierClusterDataType(config)
+			p.numericDictTermClusterConfig = config
 		} else {
-			throw 'unknown data source of one of numericDictTermClusterConfig.plots[]'
+			throw 'unknown data source of one of numericDictTermCluster.plots[]'
 		}
 	}
+}
+
+/*
+backward-compat: pre-built numericDictTermCluster plot configs (and old saved sessions) were authored
+with the now-removed synthetic dataType 'numericDictTerm'. Rewrite it to the actual
+term type of the clustered terms — e.g. 'float' for Drug Sensitivity.
+*/
+function normalizeLegacyHierClusterDataType(config) {
+	if (!config || config.dataType != 'numericDictTerm') return
+	const lst = config.termgroups?.find(g => g.type == 'hierCluster')?.lst
+	config.dataType = lst?.[0]?.term?.type || 'float'
 }
 
 async function findListOfBins(q, tw, ds) {

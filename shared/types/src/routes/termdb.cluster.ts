@@ -1,11 +1,11 @@
 import type { ErrorResponse } from './errorResponse.ts'
 import type { Filter } from '../filter.ts'
 import type { Term } from '../terms/term.ts'
+import type { BaseTW } from '../terms/tw.ts'
+import type { NumericBaseTerm } from '../terms/numeric.ts'
 import type { GeneExpressionTW } from '../terms/geneExpression.ts'
 import type { IsoformExpressionTW } from '../terms/isoformExpression.ts'
-import type { MetaboliteIntensityTW } from '../terms/metaboliteIntensity.ts'
-import type { ProteomeAbundanceTW, ProteomeDetails } from '../terms/proteomeAbundance.ts'
-import type { NumericTW } from '../terms/numeric.ts'
+import type { ProteomeDetails } from '../terms/proteomeAbundance.ts'
 
 export type Gene = {
 	/** gene symbol, required */
@@ -31,59 +31,35 @@ type TermdbClusterRequestBase = {
 	filter0?: any
 }
 
+// These two named request types are retained only as the param type of the dataset-supplied
+// getters (validateNative / validateNativeIsoform); they are not part of the request union.
 export type TermdbClusterRequestGeneExpression = TermdbClusterRequestBase & {
-	/** Data type */
 	dataType: 'geneExpression'
-	/** List of terms */
 	terms: GeneExpressionTW[]
-	/** perform z-score transformation on values */
-	zScoreTransformation?: string
-}
-
-export type TermdbClusterRequestMetabolite = TermdbClusterRequestBase & {
-	/** Data type */
-	dataType: 'metaboliteIntensity'
-	/** List of terms */
-	terms: MetaboliteIntensityTW[]
-	/** perform z-score transformation on values */
 	zScoreTransformation?: string
 }
 
 export type TermdbClusterRequestIsoformExpression = TermdbClusterRequestBase & {
-	/** Data type */
 	dataType: 'isoformExpression'
-	/** List of terms */
 	terms: IsoformExpressionTW[]
-	/** perform z-score transformation on values */
 	zScoreTransformation?: string
 }
 
-export type TermdbClusterRequestProteomeAbundance = TermdbClusterRequestBase & {
-	/** Data type */
-	dataType: 'proteomeAbundance'
-	/** List of terms */
-	terms: ProteomeAbundanceTW[]
-	/** perform z-score transformation on values */
+/** Clustering is agnostic to the numeric data type: one request carries a homogeneous list
+ *  of numeric term wrappers plus the shared `dataType`. */
+export type TermdbClusterRequest = TermdbClusterRequestBase & {
+	/** numeric data type shared by all clustered terms (e.g. geneExpression, metaboliteIntensity,
+	 *  isoformExpression, ssgsea, proteomeAbundance, or a numeric dictionary-term type ) */
+	dataType: string
+	/** list of numeric term wrappers to cluster; `term` is constrained to NumericBaseTerm
+	 *  (the shared supertype of every numeric term) so any numeric term qualifies without
+	 *  enumerating each TW type, while non-numeric terms are excluded */
+	terms: (BaseTW & { term: NumericBaseTerm; q?: any })[]
+	/** perform z-score transformation on values before clustering */
 	zScoreTransformation?: string
-	/** organism, assay type and cohort for the selected proteome data */
-	proteomeDetails: ProteomeDetails
+	/** organism/assay/cohort context; required only for proteomeAbundance */
+	proteomeDetails?: ProteomeDetails
 }
-
-export type TermdbClusterRequestNumericDictTerm = TermdbClusterRequestBase & {
-	/** Data type */
-	dataType: 'numericDictTerm'
-	/** List of terms */
-	terms: NumericTW[]
-	/** perform z-score transformation on values */
-	zScoreTransformation?: string
-}
-
-export type TermdbClusterRequest =
-	| TermdbClusterRequestGeneExpression
-	| TermdbClusterRequestIsoformExpression
-	| TermdbClusterRequestMetabolite
-	| TermdbClusterRequestNumericDictTerm
-	| TermdbClusterRequestProteomeAbundance
 
 export type Hclust = {
 	merge: { n1: number; n2: number }[]

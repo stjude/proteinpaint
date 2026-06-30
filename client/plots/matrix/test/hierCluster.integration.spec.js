@@ -4,7 +4,7 @@ import { sleep, detectOne, detectGte, detectLst, detectAttr } from '#test/test.h
 import { select } from 'd3-selection'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 /**************
  test sections
 
@@ -274,7 +274,8 @@ tape('dendrogram click', async function (test) {
 	}
 })
 
-tape('numericDictTerm', async function (test) {
+tape('numeric dictionary terms (float)', async function (test) {
+	// dictionary numeric terms cluster as their underlying type ('float'), not a synthetic dataType
 	// leave it here in case it's used later: bins:{ default:{"type": "regular-bin", "startinclusive": true, "bin_size": 0.1, "first_bin": { "stop": 0.1 }, "last_bin": { "start": 0.7 }} }
 	const terms = [
 		{
@@ -285,7 +286,7 @@ tape('numericDictTerm', async function (test) {
 		{ id: 'hrtavg', term: { id: 'hrtavg', name: 'a2', type: 'float' }, q: { mode: 'continuous' } },
 		{ id: 'agedx', term: { id: 'agedx', name: 'a3', type: 'float' }, q: { mode: 'continuous' } }
 	]
-	const { app, hc } = await getHierClusterApp({ terms, dataType: NUMERIC_DICTIONARY_TERM })
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'float' })
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 rows')
 	if (test._ok) app.destroy()
 	test.end()
