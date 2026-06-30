@@ -20,6 +20,8 @@ opts{}
 		click_term2select_tvs()
 		click_term()
 		backToSelectionText:str
+		minTermsToSubmit:int
+			used with submit_lst; submit button stays disabled until this many terms are selected (default 1)
 	search{}
 	vocabApi
 	getCategoriesArguments{}
@@ -237,9 +239,17 @@ class TdbApp extends AppBase implements RxApp {
 	async main() {
 		this.api.vocabApi.main()
 		const n = this.state.selectedTerms.length
+		// minimum number of terms required before submit is enabled (default 1)
+		const min = this.opts.tree?.minTermsToSubmit || 1
 		this.dom.submitBtn
-			.property('disabled', !n)
-			.text(!n ? 'Search or click term(s)' : `Submit ${n} term${n > 1 ? 's' : ''}`)
+			.property('disabled', n < min)
+			.text(
+				!n
+					? 'Search or click term(s)'
+					: n < min
+					? `Select at least ${min} ${min > 1 ? 'terms' : 'term'}`
+					: `Submit ${n} ${n > 1 ? 'terms' : 'term'}`
+			)
 
 		this.dom.holder.selectAll('search, .termbtn, button').attr('tabindex', 0)
 		this.dom.holder.selectAll('.termbtn').on('keyup', event => {

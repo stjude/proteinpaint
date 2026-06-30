@@ -7,7 +7,7 @@ import { extent } from 'd3-array'
 import { scaleLinear } from 'd3-scale'
 import { filterJoin, getNormalRoot } from '#filter'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { TermTypes, TermTypes2Dt, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes2Dt, dictionaryNumericTypes } from '#shared/terms.js'
 import { colorScaleMap } from '#shared/common.js'
 
 export class HierCluster extends Matrix {
@@ -156,7 +156,7 @@ export class HierCluster extends Matrix {
 				? twlst.map(t => t.term.name)
 				: this.settings.hierCluster.sortClusterRows == 'byName'
 				? twlst.map(t => t.term.name).sort()
-				: this.config.dataType === NUMERIC_DICTIONARY_TERM
+				: dictionaryNumericTypes.has(this.config.dataType)
 				? c.row.order.map(row => twlst.find(t => t.$id == row.name || t.term.id == row.name)?.term.name)
 				: c.row.order.map(row => twlst.find(t => t.$id == row.name)?.term.name)
 

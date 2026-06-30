@@ -1,38 +1,25 @@
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes, termType2label } from '#shared/terms.js'
 
 export function maySetSandboxHeader(appState) {
 	// run only once upon init, after state and dataType is given
 	if (!this.dom.header) return // no header
-	switch (this.config.dataType) {
-		case TermTypes.GENE_EXPRESSION:
-			const headerText = this.config?.headerText ? `${this.config.headerText} ` : ''
-			this.dom.header.text(`${headerText}Gene Expression Clustering`)
-			break
-		case TermTypes.METABOLITE_INTENSITY:
-			this.dom.header.text('Metabolite Intensity Clustering')
-			break
-		case TermTypes.SSGSEA:
-			this.dom.header.text('ssGSEA Clustering')
-			break
-		case NUMERIC_DICTIONARY_TERM:
-			this.dom.header.text(
-				this.config.preBuiltPlotTitle
-					? this.config.preBuiltPlotTitle
-					: appState.termdbConfig.numericDictTermCluster?.appName
-					? appState.termdbConfig.numericDictTermCluster.appName + ' Clustering'
-					: 'Numeric Dictionary Term Clustering'
-			)
-			break
-		case TermTypes.PROTEOME_ABUNDANCE:
-			this.dom.header.text(
-				this.config.assayCohortTitle
-					? `Protein Abundance Clustering (${this.config.assayCohortTitle})`
-					: 'Protein Abundance Clustering'
-			)
-			break
-		default:
-			throw `dataType '${this.config.dataType}' not recognized`
+	const dataType = this.config.dataType
+	const headerText = this.config?.headerText ? `${this.config.headerText} ` : ''
+	let title
+	if (this.config.preBuiltPlotTitle) {
+		title = this.config.preBuiltPlotTitle
+	} else if (this.config.appName) {
+		title = `${headerText}${this.config.appName} Clustering`
+	} else if (dataType == TermTypes.PROTEOME_ABUNDANCE) {
+		title = this.config.assayCohortTitle
+			? `Protein Abundance Clustering (${this.config.assayCohortTitle})`
+			: 'Protein Abundance Clustering'
+	} else if (dataType == TermTypes.SSGSEA) {
+		title = `${headerText}ssGSEA Clustering`
+	} else {
+		title = `${headerText}${termType2label(dataType)} Clustering`
 	}
+	this.dom.header.text(title)
 }
 
 export function plotDendrogramHclust(plotOnly) {

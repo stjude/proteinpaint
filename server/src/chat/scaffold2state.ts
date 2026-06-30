@@ -167,7 +167,9 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		if (HierTerms.length < 3) {
 			throw 'Hierarchical clustering plot requires at least three terms, but it is empty in the input.'
 		} else if (HierTerms.length >= 3 && HierTerms[0].isDictionary) {
-			plotState.plot.dataType = 'numericDictTerm'
+			// numeric dictionary terms cluster as their underlying type (e.g., float), not a
+			// synthetic type. Fall back to 'float' when the term type isn't carried on the input
+			plotState.plot.dataType = HierTerms[0].type || 'float'
 		} else if (HierTerms.length >= 3 && HierTerms[0].type === TermTypes.SSGSEA) {
 			plotState.plot.dataType = TermTypes.SSGSEA
 		}
@@ -178,16 +180,17 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		for (const HierTerm of HierTerms) {
 			// Check if the term types for hierarchical clustering are consistent across all terms.
 			if (HierTermCount > 0) {
-				const currentTermType = HierTerm.isDictionary ? 'numericDictTerm' : HierTerm.type
+				const currentTermType = HierTerm.isDictionary ? HierTerm.type || 'float' : HierTerm.type
 				if (checkFirstTermType && currentTermType !== checkFirstTermType) {
 					throw 'Inconsistent term types in HierTerms: ' + checkFirstTermType + ' vs ' + currentTermType
 				}
 			}
 			if (HierTerm.isDictionary) {
+				const dictType = HierTerm.type || 'float'
 				if (HierTermCount === 0) {
-					checkFirstTermType = 'numericDictTerm'
+					checkFirstTermType = dictType
 				}
-				const tm = { id: HierTerm.id, name: HierTerm.id, type: 'float' }
+				const tm = { id: HierTerm.id, name: HierTerm.id, type: dictType }
 				const term = { id: HierTerm.id, term: tm, q: { mode: 'continuous' } }
 				terms.push(term)
 			} else {

@@ -1,7 +1,7 @@
 import { copyMerge } from '#rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
-import { fillTermWrapper, get$id } from '#termsetting'
-import { NumericModes, TermTypes, numericTypes } from '#shared/terms.js'
+import { fillTermWrapper } from '#termsetting'
+import { numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
@@ -37,13 +37,16 @@ export async function getPlotConfig(opts = {}, app) {
 	// should override config so that each hierCluster type could have its own customized settings that are different from the other hierCluster
 	// types in the same dataset. e.g. redomics could do z-score transformation for gene expression cluster and do not do z-score tranformation for
 	// metabolite intensity cluster
-	const hierClusterSubTypeOverrides = app.vocabApi.termdbConfig[`${config.dataType}Cluster`] || {}
+	const numericDictTermClusterOverrides =
+		dictionaryNumericTypes.has(config.dataType) && app.vocabApi.termdbConfig.numericDictTermCluster
+			? app.vocabApi.termdbConfig.numericDictTermCluster
+			: {}
 
 	copyMerge(
 		config.settings.hierCluster,
 		overrides.settings,
 		opts.settings?.hierCluster || {},
-		hierClusterSubTypeOverrides.settings
+		numericDictTermClusterOverrides.settings
 	)
 
 	// okay to validate state here?
@@ -70,16 +73,11 @@ export async function getPlotConfig(opts = {}, app) {
 		for (const i of opts.terms) {
 			const tw = i.term ? i : { term: i }
 			if (!tw.term.type) {
-				if (
-					config.dataType == TermTypes.GENE_EXPRESSION ||
-					config.dataType == TermTypes.METABOLITE_INTENSITY ||
-					config.dataType == TermTypes.PROTEOME_ABUNDANCE ||
-					config.dataType == TermTypes.SSGSEA
-				) {
-					// set missing term type based on data type
+				// homogeneous group: assign the dataType as the term type for any numeric type.
+				if (config.dataType && numericTypes.has(config.dataType)) {
 					tw.term.type = config.dataType
 				} else {
-					throw `term type missing and cannot be assigned by dataType`
+					throw `term type missing and cannot be assigned by dataType '${config.dataType}'`
 				}
 			} else if (!numericTypes.has(tw.term.type)) {
 				// May add other term type in hierCluster
@@ -101,8 +99,6 @@ export async function getPlotConfig(opts = {}, app) {
 
 // checking if a tw type could exist in a hierCluster group type
 function canTermBeInHierGrp(grpType, twType) {
-	if (grpType == 'numericDictTerm') {
-		if (twType == 'float' || twType == 'integer') return true
-	}
+	if (dictionaryNumericTypes.has(grpType) && dictionaryNumericTypes.has(twType)) return true
 	return twType == grpType
 }

@@ -22,12 +22,10 @@ import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData } from '#src/termdb.matrix.js'
 import {
 	GENE_EXPRESSION,
-	METABOLITE_INTENSITY,
-	NUMERIC_DICTIONARY_TERM,
 	termType2label,
-	ISOFORM_EXPRESSION,
-	SSGSEA,
-	PROTEOME_ABUNDANCE
+	PROTEOME_ABUNDANCE,
+	numericTypes,
+	dictionaryNumericTypes
 } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
 
@@ -57,33 +55,23 @@ export function init({ genomes }) {
 			// TODO: generalize to any dataset
 			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (
-				[GENE_EXPRESSION, SSGSEA, ISOFORM_EXPRESSION, METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM].includes(
-					q.dataType
-				)
-			) {
-				if (!ds.queries?.[q.dataType] && q.dataType !== NUMERIC_DICTIONARY_TERM)
-					throw `no ${q.dataType} data on this dataset`
-				if (!q.terms) throw `missing gene list`
-				if (!Array.isArray(q.terms)) throw `gene list is not an array`
-				// TODO: there should be a fix on the client-side to handle this error more gracefully,
-				// instead of emitting the client-side instructions from the server response and forcing a reload
-				if (q.terms.length < 3)
-					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds)) as TermdbClusterResponse
-			} else if (PROTEOME_ABUNDANCE == q.dataType) {
-				const proteomeQuery = ds.queries?.proteome
-				if (!proteomeQuery?.get) throw `no ${PROTEOME_ABUNDANCE} data getter on this dataset`
-				if (!q.terms) throw `missing gene list`
-				if (!Array.isArray(q.terms)) throw `gene list is not an array`
-				// TODO: there should be a fix on the client-side to handle this error more gracefully,
-				// instead of emitting the client-side instructions from the server response and forcing a reload
-				if (q.terms.length < 3)
-					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds)) as TermdbClusterResponse
-			} else {
-				throw 'unknown q.dataType ' + q.dataType
-			}
+			// Gate: must be a numeric data type
+			if (!numericTypes.has(q.dataType)) throw `dataType '${q.dataType}' is not a clusterable numeric type`
+			// the dataset can serve this type if it has a dedicated query getter, OR it's a
+			// numeric dictionary term (float/integer/date) served generically via getData()
+			// in getNumericDictTermAnnotation() — those have no ds.queries getter.
+			const canServeDataType =
+				!!ds.queries?.[q.dataType]?.get ||
+				(q.dataType == PROTEOME_ABUNDANCE && !!ds.queries?.proteome?.get) ||
+				dictionaryNumericTypes.has(q.dataType)
+			if (!canServeDataType) throw `no ${q.dataType} data on this dataset`
+			if (!q.terms) throw `missing term list`
+			if (!Array.isArray(q.terms)) throw `term list is not an array`
+			// TODO: there should be a fix on the client-side to handle this error more gracefully,
+			// instead of emitting the client-side instructions from the server response and forcing a reload
+			if (q.terms.length < 3)
+				throw `A minimum of three items is required for clustering. Please refresh this page to clear this error.`
+			result = (await getResult(q, ds)) as TermdbClusterResponse
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
@@ -107,7 +95,8 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
 
-	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
+	if (dictionaryNumericTypes.has(q.dataType)) {
+		// numeric dictionary terms (float/integer/date) have no dedicated getter; served via getData()
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
 	} else if (q.dataType == PROTEOME_ABUNDANCE) {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get({
@@ -127,7 +116,7 @@ this has two practical applications with gdc:
 	const noValueTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
-			const tw = q.terms.find(t => t.$id == term)
+			const tw: any = q.terms.find(t => t.$id == term)
 			const termName = !tw
 				? term
 				: tw.term.type == 'geneExpression'
@@ -169,6 +158,9 @@ this has two practical applications with gdc:
 	return result
 }
 
+// numeric dictionary terms (float/integer/date) have no dedicated ds.queries getter; fetch their
+// per-sample values via the matrix getData() and reshape into the {term2sample2value, byTermId,
+// bySampleId} shape the clustering code expects.
 async function getNumericDictTermAnnotation(q, ds) {
 	const getDataArgs = {
 		// TODO: figure out when term is not a termwrapper
