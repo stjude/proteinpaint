@@ -42,7 +42,8 @@ export async function resolveDaContext(
 				filter0: (req as any).filter0,
 				terms: [req.tw]
 			},
-			ds
+			ds,
+			true // always map parent annotations to child samples for DA analysis
 		)
 		if (term_results.error) throw new Error(term_results.error)
 	}
@@ -55,7 +56,8 @@ export async function resolveDaContext(
 				filter0: (req as any).filter0,
 				terms: [req.tw2]
 			},
-			ds
+			ds,
+			true // always map parent annotations to child samples for DA analysis
 		)
 		if (term_results2.error) throw new Error(term_results2.error)
 	}
