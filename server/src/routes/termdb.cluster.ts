@@ -94,9 +94,10 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	}
 
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
-
+	/** only use getData() for dictionary term
+	for all other term types, do not use getData(), which can only do per-term query which is slow, and no batch query support
+	*/
 	if (dictionaryNumericTypes.has(q.dataType)) {
-		// numeric dictionary terms (float/integer/date) have no dedicated getter; served via getData()
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
 	} else if (q.dataType == PROTEOME_ABUNDANCE) {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get({
