@@ -61,7 +61,7 @@ export class SampleTableRenderer {
 			/** Convert the column labels into the required sample structure keys.
 			 * Maintains the sample obj used throughout the app whilst allowing for
 			 * dynamic column labels based on the config. */
-			key = key === 'sample' ? 'sID' : key === 'experiment' ? 'eID' : key
+			key = key === 'sample' || key === '' ? 'sID' : key === 'experiment' ? 'eID' : key
 			item[key] = r.value
 		})
 		if (!item.sID) throw new Error('Selected item must have sID property')
