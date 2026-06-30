@@ -48,7 +48,7 @@ tape('selects all columns when all are requested', function (test) {
 	const out = selectMafCols(maf, HEADER)
 	test.equal(
 		out,
-		'TP53\tchr17\t7577120\tMissense_Mutation\nKRAS\tchr12\t25398284\tNonsense_Mutation\n',
+		'TP53\tchr17\t7577120\tMissense_Mutation\nKRAS\tchr12\t25398284\tNonsense_Mutation\n', // pragma: allowlist secret
 		'should pass through every data row with all columns intact'
 	)
 	test.end()
