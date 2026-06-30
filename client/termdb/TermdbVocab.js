@@ -411,6 +411,17 @@ export class TermdbVocab extends Vocab {
 		return (data.lst || []).map(t => t.name)
 	}
 
+	// Look up gene symbols matching a search string for datasets that have DNA methylation data.
+	// Goes through the dataset-aware findTerm route with the DNA Methylation target, so the server
+	// only returns gene matches when the dataset actually has methylation data (empty otherwise).
+	// Returns an array of gene-name strings; the mass omnisearch (client/mass/chat.ts) offers each
+	// as a genome browser of that gene.
+	async findMethylationGene(str) {
+		if (!str) return []
+		const data = await this.findTerm(str, '', null, TermTypeGroups.DNA_METHYLATION)
+		return (data.lst || []).map(t => t.name)
+	}
+
 	// Look up gene symbols matching a search string for datasets that have gene variant data
 	// (snvindel/cnv/svfusion). Goes through the dataset-aware findTerm route with the
 	// Mutation/CNV/Fusion target (the term-type group that geneVariant belongs to), so the server
