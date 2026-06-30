@@ -7,6 +7,7 @@ import type { ChatRequest, ChatResponse } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
+import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
@@ -26,6 +27,7 @@ class MassAiChatBot implements RxComponent {
 	isChat: any
 	hasGeneExp: any
 	hasGeneVariant: any
+	geneVariantTypes: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -42,6 +44,19 @@ class MassAiChatBot implements RxComponent {
 			this.app.getState().termdbConfig?.queries?.svfusion
 		)
 			this.hasGeneVariant = true
+		// When gene variant is supported, expose a separate option per variant data type, but only
+		// for the data types actually defined on the dataset. Each opens a mutated-vs-wildtype
+		// barchart restricted to that data type. svfusion maps to two dts (SV and fusion); the dt
+		// candidates are tried in order so whichever the dataset actually has is used.
+		this.geneVariantTypes = []
+		if (this.hasGeneVariant) {
+			const queries = this.app.getState().termdbConfig?.queries
+			if (queries?.snvindel)
+				this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
+			if (queries?.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
+			if (queries?.svfusion)
+				this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
+		}
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -350,6 +365,34 @@ function setRenderers(self: any) {
 		self.clear({ hide: true })
 	}
 
+	// open a mutated-vs-wildtype barchart for one gene, restricted to a variant data type.
+	// dtCandidates are tried in order (svfusion has two dts) until a matching predefined groupset
+	// is found, since fillTermWrapper throws when the dataset lacks a groupset for a given dt.
+	self.launchGeneVariantPlot = async (gene: string, dtCandidates: number[]) => {
+		let tw: any
+		let lastErr: any
+		for (const dt of dtCandidates) {
+			const candidate: any = {
+				term: {
+					id: gene,
+					name: gene,
+					genes: [{ kind: 'gene', id: gene, gene, name: gene, type: 'geneVariant' }],
+					type: 'geneVariant'
+				},
+				q: { type: 'predefined-groupset', dtLst: [dt] }
+			}
+			try {
+				await fillTermWrapper(candidate, self.app.vocabApi)
+				tw = candidate
+				break
+			} catch (e) {
+				lastErr = e
+			}
+		}
+		if (!tw) throw lastErr
+		await self.launchPlot({ chartType: 'summary', term: tw })
+	}
+
 	self.showTerm = function (term: any) {
 		const tr = select(this)
 
@@ -381,21 +424,13 @@ function setRenderers(self: any) {
 				})
 			}
 			if (term.isGeneVariant) {
-				// open a summary barchart grouping samples into mutated vs wildtype for the gene
-				addBtn('Gene variant', `sjpp-mass-chat-gene-variant-${term.gene}`, async () => {
-					const name = term.gene
-					const tw: any = {
-						term: {
-							id: name,
-							name,
-							genes: [{ kind: 'gene', id: name, gene: name, name, type: 'geneVariant' }],
-							type: 'geneVariant'
-						},
-						q: { type: 'predefined-groupset' }
-					}
-					await fillTermWrapper(tw, self.app.vocabApi)
-					await self.launchPlot({ chartType: 'summary', term: tw })
-				})
+				// one button per variant data type defined on the dataset (snvindel/cnv/svfusion);
+				// each opens a mutated-vs-wildtype barchart restricted to that data type.
+				for (const vt of self.geneVariantTypes) {
+					addBtn(vt.label, `sjpp-mass-chat-gene-${vt.testid}-${term.gene}`, async () => {
+						await self.launchGeneVariantPlot(term.gene, vt.dtCandidates)
+					})
+				}
 			}
 			return
 		}
