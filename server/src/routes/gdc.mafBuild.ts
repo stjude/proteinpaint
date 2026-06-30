@@ -179,7 +179,11 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 			write: writeGz,
 			onFileSettled: () => completed++
 		})
-		errors.push(...result.errors)
+		// mergeMafFiles keys per-file errors by fileId (it's URL-agnostic by design, taking an injected
+		// fetcher). Rebuild the full GDC /data/<uuid> download URL here so the client renders a clickable
+		// link — parity with the former rust path, which returned the full URL. The client still extracts
+		// the uuid as the final path segment, so matching keeps working.
+		errors.push(...result.errors.map(e => ({ ...e, url: joinUrl(dataHost, e.url) })))
 		merged = result.merged
 		totalDownloadMs = result.totalDownloadMs
 		totalDecompressMs = result.totalDecompressMs
@@ -263,11 +267,14 @@ export async function mergeMafFiles(opts: {
 				const dec1 = Date.now()
 				const rows = selectMafCols(decompressed.toString('utf8'), columns) // throws on missing column / empty file
 				const ps1 = Date.now()
+				await write(rows)
+				// only count a file as merged once its rows are actually written, and accumulate the
+				// timings in lockstep with `merged` — so a write() failure (recorded below as a per-file
+				// error) can't both inflate `merged` and skew the total*/merged averages.
 				totalDownloadMs += dl1 - dl0
 				totalDecompressMs += dec1 - dl1
 				totalParseMs += ps1 - dec1
 				merged++
-				await write(rows)
 			} catch (e: any) {
 				// record per-file failure; the rest of the cohort still merges (settled semantics)
 				if (!signal.aborted) errors.push({ url: fileId, error: e?.message || String(e) })
