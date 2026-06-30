@@ -430,7 +430,7 @@ export class TermdbVocab extends Vocab {
 	// as a gene variant result.
 	async findGeneVariant(str) {
 		if (!str) return []
-		const data = await this.findTerm(str, '', null, TermTypeGroups.GENE_VARIANT)
+		const data = await this.findTerm(str, '', null, TermTypeGroups.MUTATION_CNV_FUSION)
 		return (data.lst || []).map(t => t.name)
 	}
 

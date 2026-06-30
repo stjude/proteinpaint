@@ -96,11 +96,8 @@ class MassAiChatBot implements RxComponent {
 			this.hasMethylation ? this.app.vocabApi.findMethylationGene(prompt).catch(() => []) : Promise.resolve([])
 		])
 		if (!Array.isArray(data.lst)) data.lst = []
-		// Append matching genes, skipping any whose name already appears among the dictionary
-		// results to avoid duplicating a dictionary variable. Gene expression entries open a summary
-		// plot; DNA methylation entries open a genome browser of that gene (handled in showTerm).
-		// Expression and methylation entries for the same gene are kept as separate rows since they
-		// trigger different actions.
+		// Append matching genes, skipping any whose name already appears among the dictionary results.
+		// Gene entries render as a single row per gene with action buttons for the supported data types (expression/variant).
 		const dictNames = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
 		// Merge gene hits into one entry per gene, recording which data types (expression/variant/
 		// methylation) are available for it. Each gene then renders as a single row whose buttons are
@@ -478,7 +475,7 @@ function setRenderers(self: any) {
 					.style('border-radius', '5px')
 					.style('cursor', 'pointer')
 					.text(label)
-					.on('click', onClick)
+					.on('click', () => void onClick().catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e))))
 			}
 			if (term.isGeneExpression) {
 				// open a summary plot of the gene's expression
