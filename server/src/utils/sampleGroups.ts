@@ -1,6 +1,8 @@
 import type { DERequest, DiffMethRequest } from '#types'
 import { getData } from '#src/termdb.matrix.js'
 import { get_ds_tdb } from '#src/termdb.js'
+import { get_samples } from '#src/termdb.sql.js'
+import { isParentType } from '#shared/terms.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -66,7 +68,7 @@ export async function resolveDaContext(
  * for that sample — the two early-return guards enforce that without a
  * nested if/else cascade. Used by both DE and DM resolvers; the per-route
  * wrappers add their own validation + alert messages around this. */
-export function buildGroupValues(
+export async function buildGroupValues(
 	values: Array<{ sampleId: number }>,
 	q: { allSampleSet: Set<string> },
 	ds: any,
@@ -74,11 +76,37 @@ export function buildGroupValues(
 	tw2: any,
 	term_results: any,
 	term_results2: any
-): { names: string[]; conf1: (string | number)[]; conf2: (string | number)[] } {
+): Promise<{ names: string[]; conf1: (string | number)[]; conf2: (string | number)[] }> {
 	const names: string[] = []
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
-	for (const s of values) {
+	let sampleLst = values
+	if (ds.cohort.termdb.hasSampleAncestry) {
+		// ds has sample ancestry
+		const term = {
+			type: 'samplelst',
+			values: {
+				'': { key: '', list: values }
+			}
+		}
+		if (isParentType(term, ds)) {
+			// term is parent sample type, so map term annotations onto
+			// child samples because DE/DM data is at sample level
+			// TODO: support different sample types for genomic data to
+			// avoid assuming genomic data is always at sample-level
+			const filter = {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [{ type: 'tvs', tvs: { term } }]
+			}
+			const samples = await get_samples({ filter, mapParent2Children: true }, ds, true)
+			sampleLst = samples.map(s => {
+				return { sampleId: s.id, sample: s.name }
+			})
+		}
+	}
+	for (const s of sampleLst) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
 		if (!n || !q.allSampleSet.has(n)) continue

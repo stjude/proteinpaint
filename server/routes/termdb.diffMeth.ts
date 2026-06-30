@@ -28,7 +28,7 @@ export function init({ genomes }) {
 
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const groups = resolveDmSampleGroups(q, ds, term_results, term_results2)
+				const groups = await resolveDmSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
 				res.send({
@@ -117,7 +117,7 @@ async function runDmFresh(
 	term_results: any,
 	term_results2: any
 ): Promise<DmCacheResult> {
-	const groups = resolveDmSampleGroups(param, ds, term_results, term_results2)
+	const groups = await resolveDmSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
 	const q = ds.queries.dnaMethylation.promoter
@@ -160,12 +160,12 @@ async function runDmFresh(
  * Wraps the shared `buildGroupValues` with DM-specific dataset query
  * lookup and user-facing alert messages (rendered directly in the
  * volcano UI, vs DE's engineer-facing strings). */
-export function resolveDmSampleGroups(
+export async function resolveDmSampleGroups(
 	param: DiffMethRequest,
 	ds: any,
 	term_results: any,
 	term_results2: any
-): SampleGroups {
+): Promise<SampleGroups> {
 	if (param.samplelst?.groups?.length != 2)
 		throw new Error('Exactly 2 sample groups are required for differential methylation analysis.')
 	if (param.samplelst.groups[0].values?.length < 1)
@@ -177,8 +177,24 @@ export function resolveDmSampleGroups(
 	if (!q) throw new Error('This dataset does not have promoter-level methylation data configured.')
 	if (!q.file) throw new Error('Promoter methylation data file is not configured for this dataset.')
 
-	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
-	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
+	const g1 = await buildGroupValues(
+		param.samplelst.groups[0].values,
+		q,
+		ds,
+		param.tw,
+		param.tw2,
+		term_results,
+		term_results2
+	)
+	const g2 = await buildGroupValues(
+		param.samplelst.groups[1].values,
+		q,
+		ds,
+		param.tw,
+		param.tw2,
+		term_results,
+		term_results2
+	)
 
 	const alerts: string[] = []
 	if (g1.names.length < 1) alerts.push('No samples in group 1 have methylation data available.')

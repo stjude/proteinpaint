@@ -47,7 +47,7 @@ export function init({ genomes }) {
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const groups = resolveSampleGroups(q, ds, term_results, term_results2)
+				const groups = await resolveSampleGroups(q, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
 				res.send({
@@ -144,7 +144,7 @@ export async function getDeCacheResult(
  * diagnostic PNGs back inline (base64) in its stdout JSON, so no
  * intermediate files touch disk. */
 async function runDeFresh(param: DERequest, ds: any, term_results: any, term_results2: any): Promise<DeCacheResult> {
-	const groups = resolveSampleGroups(param, ds, term_results, term_results2)
+	const groups = await resolveSampleGroups(param, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
 	const q = ds.queries.rnaseqGeneCount
@@ -221,7 +221,12 @@ async function runDeFresh(param: DERequest, ds: any, term_results: any, term_res
 /** Resolve the two sample groups + any confounder value arrays for DE.
  * Wraps the shared `buildGroupValues` with DE-specific dataset query
  * lookup and engineer-facing alert messages. */
-export function resolveSampleGroups(param: DERequest, ds: any, term_results: any, term_results2: any): SampleGroups {
+export async function resolveSampleGroups(
+	param: DERequest,
+	ds: any,
+	term_results: any,
+	term_results2: any
+): Promise<SampleGroups> {
 	if (param.samplelst?.groups?.length != 2) throw new Error('.samplelst.groups.length!=2')
 	if (param.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
 	if (param.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
@@ -231,8 +236,24 @@ export function resolveSampleGroups(param: DERequest, ds: any, term_results: any
 	if (!q.file) throw new Error('unknown data type for rnaseqGeneCount')
 	if (!q.storage_type) throw new Error('storage_type is not defined')
 
-	const g1 = buildGroupValues(param.samplelst.groups[0].values, q, ds, param.tw, param.tw2, term_results, term_results2)
-	const g2 = buildGroupValues(param.samplelst.groups[1].values, q, ds, param.tw, param.tw2, term_results, term_results2)
+	const g1 = await buildGroupValues(
+		param.samplelst.groups[0].values,
+		q,
+		ds,
+		param.tw,
+		param.tw2,
+		term_results,
+		term_results2
+	)
+	const g2 = await buildGroupValues(
+		param.samplelst.groups[1].values,
+		q,
+		ds,
+		param.tw,
+		param.tw2,
+		term_results,
+		term_results2
+	)
 
 	const alerts: string[] = []
 	if (g1.names.length < 1) alerts.push('sample size of group1 < 1')
