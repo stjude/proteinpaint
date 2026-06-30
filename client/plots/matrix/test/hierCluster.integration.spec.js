@@ -286,8 +286,79 @@ tape('numeric dictionary terms (float)', async function (test) {
 		{ id: 'hrtavg', term: { id: 'hrtavg', name: 'a2', type: 'float' }, q: { mode: 'continuous' } },
 		{ id: 'agedx', term: { id: 'agedx', name: 'a3', type: 'float' }, q: { mode: 'continuous' } }
 	]
-	const { app, hc } = await getHierClusterApp({ terms, dataType: 'float' })
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'float', termGroupName: 'Numeric Dictionary Terms' })
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('isoform expression cluster', async function (test) {
+	test.timeoutAfter(4000)
+	const terms = [
+		{
+			term: { isoform: 'ENST00000370314', name: 'ENST00000370314', type: 'isoformExpression' },
+			q: { mode: 'continuous' }
+		},
+		{
+			term: { isoform: 'ENST00000361510', name: 'ENST00000361510', type: 'isoformExpression' },
+			q: { mode: 'continuous' }
+		},
+		{
+			term: { isoform: 'ENST00000229281', name: 'ENST00000229281', type: 'isoformExpression' },
+			q: { mode: 'continuous' }
+		}
+	]
+	const { app, hc } = await getHierClusterApp({
+		terms,
+		dataType: 'isoformExpression',
+		termGroupName: 'Isoform Expression'
+	})
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 isoform rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('ssGSEA cluster', async function (test) {
+	test.timeoutAfter(4000)
+	const terms = [
+		{ term: { id: 'HALLMARK_ADIPOGENESIS', name: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA' }, q: { mode: 'continuous' } },
+		{
+			term: { id: 'HALLMARK_ALLOGRAFT_REJECTION', name: 'HALLMARK_ALLOGRAFT_REJECTION', type: 'ssGSEA' },
+			q: { mode: 'continuous' }
+		},
+		{
+			term: { id: 'HALLMARK_ANDROGEN_RESPONSE', name: 'HALLMARK_ANDROGEN_RESPONSE', type: 'ssGSEA' },
+			q: { mode: 'continuous' }
+		}
+	]
+	const { app, hc } = await getHierClusterApp({
+		terms,
+		dataType: 'ssGSEA',
+		termGroupName: 'Gene Set Enrichment (ssGSEA)'
+	})
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 ssGSEA rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('dnaMethylation cluster', async function (test) {
+	test.timeoutAfter(4000)
+	const terms = [
+		{
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'gene' },
+			q: { mode: 'continuous' }
+		},
+		{
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664, genomicFeatureType: 'gene' },
+			q: { mode: 'continuous' }
+		},
+		{
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'promoter' },
+			q: { mode: 'continuous' }
+		}
+	]
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'dnaMethylation', termGroupName: 'DNA Methylation' })
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 methylation rows')
 	if (test._ok) app.destroy()
 	test.end()
 })
@@ -312,7 +383,7 @@ async function getHierClusterApp(_opts = {}) {
 					dataType: _opts.dataType || TermTypes.GENE_EXPRESSION,
 					settings: {
 						hierCluster: {
-							termGroupName: 'Gene Expression (CGC genes only)'
+							termGroupName: _opts.termGroupName || 'Gene Expression (CGC genes only)'
 						},
 						matrix: {
 							// the matrix autocomputes the colw based on available screen width,
