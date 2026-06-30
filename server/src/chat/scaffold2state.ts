@@ -1,6 +1,6 @@
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { TermTypes } from '#shared/terms.js'
 import { generate_group_name_from_tvslst } from './utils.ts'
 /*
@@ -179,9 +179,15 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		let HierTermCount = 0
 		for (const HierTerm of HierTerms) {
 			// Check if the term types for hierarchical clustering are consistent across all terms.
+			// Dictionary numeric types (float/integer/date) may be mixed in one
+			// group, other types cannot be mixed.
 			if (HierTermCount > 0) {
 				const currentTermType = HierTerm.isDictionary ? HierTerm.type || 'float' : HierTerm.type
-				if (checkFirstTermType && currentTermType !== checkFirstTermType) {
+				const bothDictNumeric =
+					checkFirstTermType &&
+					dictionaryNumericTypes.has(checkFirstTermType) &&
+					dictionaryNumericTypes.has(currentTermType)
+				if (checkFirstTermType && currentTermType !== checkFirstTermType && !bothDictNumeric) {
 					throw 'Inconsistent term types in HierTerms: ' + checkFirstTermType + ' vs ' + currentTermType
 				}
 			}
