@@ -296,16 +296,13 @@ tape('isoform expression cluster', async function (test) {
 	test.timeoutAfter(4000)
 	const terms = [
 		{
-			term: { isoform: 'ENST00000370314', name: 'ENST00000370314', type: 'isoformExpression' },
-			q: { mode: 'continuous' }
+			term: { isoform: 'ENST00000370314', name: 'ENST00000370314', type: 'isoformExpression' }
 		},
 		{
-			term: { isoform: 'ENST00000361510', name: 'ENST00000361510', type: 'isoformExpression' },
-			q: { mode: 'continuous' }
+			term: { isoform: 'ENST00000361510', name: 'ENST00000361510', type: 'isoformExpression' }
 		},
 		{
-			term: { isoform: 'ENST00000229281', name: 'ENST00000229281', type: 'isoformExpression' },
-			q: { mode: 'continuous' }
+			term: { isoform: 'ENST00000229281', name: 'ENST00000229281', type: 'isoformExpression' }
 		}
 	]
 	const { app, hc } = await getHierClusterApp({
@@ -321,14 +318,12 @@ tape('isoform expression cluster', async function (test) {
 tape('ssGSEA cluster', async function (test) {
 	test.timeoutAfter(4000)
 	const terms = [
-		{ term: { id: 'HALLMARK_ADIPOGENESIS', name: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA' }, q: { mode: 'continuous' } },
+		{ term: { id: 'HALLMARK_ADIPOGENESIS', name: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA' } },
 		{
-			term: { id: 'HALLMARK_ALLOGRAFT_REJECTION', name: 'HALLMARK_ALLOGRAFT_REJECTION', type: 'ssGSEA' },
-			q: { mode: 'continuous' }
+			term: { id: 'HALLMARK_ALLOGRAFT_REJECTION', name: 'HALLMARK_ALLOGRAFT_REJECTION', type: 'ssGSEA' }
 		},
 		{
-			term: { id: 'HALLMARK_ANDROGEN_RESPONSE', name: 'HALLMARK_ANDROGEN_RESPONSE', type: 'ssGSEA' },
-			q: { mode: 'continuous' }
+			term: { id: 'HALLMARK_ANDROGEN_RESPONSE', name: 'HALLMARK_ANDROGEN_RESPONSE', type: 'ssGSEA' }
 		}
 	]
 	const { app, hc } = await getHierClusterApp({
@@ -345,16 +340,13 @@ tape('dnaMethylation cluster', async function (test) {
 	test.timeoutAfter(4000)
 	const terms = [
 		{
-			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'gene' },
-			q: { mode: 'continuous' }
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'gene' }
 		},
 		{
-			term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664, genomicFeatureType: 'gene' },
-			q: { mode: 'continuous' }
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664, genomicFeatureType: 'gene' }
 		},
 		{
-			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'promoter' },
-			q: { mode: 'continuous' }
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'promoter' }
 		}
 	]
 	const { app, hc } = await getHierClusterApp({ terms, dataType: 'dnaMethylation', termGroupName: 'DNA Methylation' })
