@@ -205,6 +205,20 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 				foundTerms.push(t)
 			}
 			terms.push(...foundTerms)
+		} else if (q.targetType == TermTypeGroups.GENE_EXPRESSION) {
+			// Only return gene matches when this dataset actually has gene expression data, so the
+			// client (mass omnisearch) shows genes only for gene-expression datasets. Non-expression
+			// datasets return a valid-but-empty list rather than an error.
+			if (ds.queries?.geneExpression) {
+				try {
+					const result = geneSearch(genome, { input: str, deep: false })
+					for (const gene of result.hits || []) {
+						terms.push({ name: gene, gene, type: 'geneExpression' })
+					}
+				} catch (e) {
+					// invalid gene-name input (e.g. multi-word phrase or special characters) → no gene matches
+				}
+			}
 		}
 		terms = filterTerms(req, ds, terms)
 		const id2ancestors = {}
