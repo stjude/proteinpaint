@@ -355,6 +355,48 @@ tape('dnaMethylation cluster', async function (test) {
 	test.end()
 })
 
+tape('cluster rejects a non-continuous term mode', async function (test) {
+	test.timeoutAfter(4000)
+	// the client does not gate q.mode, so a discrete-mode term reaches the cluster route, which rejects
+	// the whole request; the plot then renders no rows. (an incompatible term TYPE is instead caught
+	// client-side by canTermBeInHierGrp before any request, so it can't be exercised through this path.)
+	const terms = [
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' }, q: { mode: 'discrete' } },
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' }, q: { mode: 'continuous' } },
+		{ term: { gene: 'BCR', name: 'BCR', type: 'geneExpression' }, q: { mode: 'continuous' } }
+	]
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'geneExpression' })
+	test.equal(
+		hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(),
+		0,
+		'should render no rows when a term is not in continuous mode'
+	)
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('cluster rejects incompatible numeric types', async function (test) {
+	test.timeoutAfter(4000)
+	// geneExpression and a float dictionary term are both numeric but cannot be clustered together;
+	// canTermBeInHierGrp throws in getPlotConfig (client-side) before any server request is made
+	const terms = [
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' }, q: { mode: 'continuous' } },
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' }, q: { mode: 'continuous' } },
+		{ term: { id: 'agedx', name: 'agedx', type: 'float' }, q: { mode: 'continuous' } }
+	]
+	let rejected = false
+	try {
+		const { app, hc } = await getHierClusterApp({ terms, dataType: 'geneExpression' })
+		// if it didn't throw, the incompatible mix must have prevented any rows from rendering
+		rejected = hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size() === 0
+		if (app) app.destroy()
+	} catch (e) {
+		rejected = true
+	}
+	test.ok(rejected, 'should reject a cluster mixing geneExpression and float terms')
+	test.end()
+})
+
 /*************************
  reusable helper functions
 **************************/
@@ -412,7 +454,9 @@ async function getHierClusterApp(_opts = {}) {
 
 	const opts = Object.assign(defaults, _opts)
 	const app = await appInit(opts)
-	holder.select('.sja_errorbar').node()?.lastChild?.click()
+	// dismiss the benign initial load error if present; guard the call since some error bars end in a
+	// text node (no .click), e.g. the server error from the non-continuous-mode / no-data cluster tests
+	holder.select('.sja_errorbar').node()?.lastChild?.click?.()
 	const hc = Object.values(app.Inner.components.plots).find(
 		p => p.type == 'hierCluster' || p.chartType == 'hierCluster'
 	).Inner
