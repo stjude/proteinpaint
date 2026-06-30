@@ -8,19 +8,19 @@ import { isMsgToUser } from './scaffoldTypes.ts'
  * Approximate the number of tokens in a prompt and report whether it
  * exceeds the maximum allowed prompt length.
  *
- * A character-based heuristic (~4 characters per token) is used to approximate the number of counts.
+ * A character-based heuristic (~4 characters per token) is used to approximate the token count.
  */
 async function check_prompt_token_length(
 	prompt: string,
 	llm: LlmConfig
 ): Promise<{ limitExceeded: boolean; tokenCount: number; maxTokens: number } | MsgToUser> {
-	if (!llm.model.maxTokens) {
+	const maxTokens = llm.model?.maxTokens
+	if (typeof maxTokens !== 'number' || !Number.isFinite(maxTokens) || maxTokens <= 0) {
 		return {
 			type: 'text',
-			text: 'LLM model configuration is missing maxTokens value in serverconfig.'
+			text: 'LLM model configuration is missing a valid maxTokens value in serverconfig.'
 		} as MsgToUser
 	}
-	const maxTokens = llm.model.maxTokens
 	const tokenCount: number = Math.ceil(prompt.length / 4)
 	return { limitExceeded: tokenCount > maxTokens, tokenCount, maxTokens }
 }

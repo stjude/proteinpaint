@@ -233,7 +233,7 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 					// invalid gene-name input (e.g. multi-word phrase or special characters) → no gene matches
 				}
 			}
-		} else if (q.targetType == TermTypeGroups.GENE_VARIANT) {
+		} else if (q.targetType == TermTypeGroups.MUTATION_CNV_FUSION) {
 			// Only return gene matches when this dataset actually has gene variant data
 			// (snvindel/cnv/svfusion), so the client (mass omnisearch) offers gene variant results
 			// only for such datasets. Datasets without gene variant data return a valid-but-empty list.
