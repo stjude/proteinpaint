@@ -2,7 +2,7 @@ import { Vocab } from './Vocab'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType } from '#shared/terms.js'
+import { isDictionaryType, TermTypeGroups } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
 	// getAbortSignal() will be used to cancel async fetch requests or canvas rendering that may
@@ -403,29 +403,15 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	// Look up gene symbols matching a search string via the genome-level genelookup route.
-	// Returns an array of gene-name strings (sorted by relevance the same way findTerm sorts terms).
+	// Look up gene symbols matching a search string for the active dataset.
+	// Goes through the dataset-aware findTerm route with the Gene Expression target, so the server
+	// only returns gene matches when the dataset actually has gene expression data (it returns an
+	// empty list otherwise). Returns an array of gene-name strings, already sorted by relevance.
 	// Used by the mass omnisearch (client/mass/chat.ts) to offer gene results alongside dictionary terms.
 	async findGene(str) {
 		if (!str) return []
-		const body = {
-			genome: this.vocab.genome,
-			input: str,
-			deep: false // false → response.hits is an array of gene-name strings (deep:true returns gene models instead)
-		}
-		const data = await this.dofetch3('genelookup', { body })
-		if (data.error) throw data.error
-		const hits = Array.isArray(data.hits) ? data.hits : []
-		// sort results the same way as findTerm: exact match, prefix match, then the rest
-		const n = str.toUpperCase()
-		const r = { equals: [], startsWith: [], includes: [] }
-		for (const name of hits) {
-			const up = name.toUpperCase()
-			if (up === n) r.equals.push(name)
-			else if (up.startsWith(n)) r.startsWith.push(name)
-			else r.includes.push(name)
-		}
-		return [...r.equals, ...r.startsWith, ...r.includes]
+		const data = await this.findTerm(str, '', null, TermTypeGroups.GENE_EXPRESSION)
+		return (data.lst || []).map(t => t.name)
 	}
 
 	// from termdb/terminfo
