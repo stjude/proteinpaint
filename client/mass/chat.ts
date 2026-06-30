@@ -8,6 +8,8 @@ import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
+import { getDNAMethUnit } from '#tw/dnaMethylation'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
@@ -27,6 +29,7 @@ class MassAiChatBot implements RxComponent {
 	isChat: any
 	hasGeneExp: any
 	hasGeneVariant: any
+	hasMethylation: any
 	geneVariantTypes: any
 
 	constructor(opts: any) {
@@ -37,6 +40,7 @@ class MassAiChatBot implements RxComponent {
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
 		this.hasGeneExp = this.app.getState().termdbConfig?.queries?.geneExpression // Whether the dataset supports gene expression, gating gene search in omnisearch
+		this.hasMethylation = this.app.getState().termdbConfig?.queries?.dnaMethylation // Whether the dataset supports DNA methylation, gating methylation gene search in omnisearch
 		this.hasGeneVariant = false // Whether the dataset supports gene variant, gating gene search in omnisearch
 		if (
 			this.app.getState().termdbConfig?.queries?.snvindel ||
@@ -82,12 +86,14 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		// Search dictionary variables and (when supported) gene names for gene expression and
-		// DNA methylation in parallel. Each gene search returns only when the dataset supports it.
-		const [data, geneExpressionHits, geneVariantHits] = await Promise.all([
+		// Search dictionary variables and (when supported) gene names for gene expression, gene
+		// variant, and DNA methylation in parallel. Each gene search returns only when the dataset
+		// supports that data type.
+		const [data, geneExpressionHits, geneVariantHits, methylationHits] = await Promise.all([
 			this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType),
 			this.hasGeneExp ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([]),
-			this.hasGeneVariant ? this.app.vocabApi.findGeneVariant(prompt).catch(() => []) : Promise.resolve([])
+			this.hasGeneVariant ? this.app.vocabApi.findGeneVariant(prompt).catch(() => []) : Promise.resolve([]),
+			this.hasMethylation ? this.app.vocabApi.findMethylationGene(prompt).catch(() => []) : Promise.resolve([])
 		])
 		if (!Array.isArray(data.lst)) data.lst = []
 		// Append matching genes, skipping any whose name already appears among the dictionary
@@ -96,11 +102,11 @@ class MassAiChatBot implements RxComponent {
 		// Expression and methylation entries for the same gene are kept as separate rows since they
 		// trigger different actions.
 		const dictNames = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
-		// Merge gene hits into one entry per gene, recording which data types (expression/variant)
-		// are available for it. Each gene then renders as a single row whose buttons are the
-		// available actions ('Gene expression', 'Gene variant'), shown together in the same row.
+		// Merge gene hits into one entry per gene, recording which data types (expression/variant/
+		// methylation) are available for it. Each gene then renders as a single row whose buttons are
+		// the available actions, shown together in the same row.
 		const geneMap = new Map<string, any>()
-		const addGeneAction = (gene: string, action: 'isGeneExpression' | 'isGeneVariant') => {
+		const addGeneAction = (gene: string, action: 'isGeneExpression' | 'isGeneVariant' | 'isMethylation') => {
 			if (dictNames.has(gene.toUpperCase())) return
 			const key = gene.toUpperCase()
 			let entry = geneMap.get(key)
@@ -112,6 +118,7 @@ class MassAiChatBot implements RxComponent {
 		}
 		for (const gene of geneExpressionHits) addGeneAction(gene, 'isGeneExpression')
 		for (const gene of geneVariantHits) addGeneAction(gene, 'isGeneVariant')
+		for (const gene of methylationHits) addGeneAction(gene, 'isMethylation')
 		for (const entry of geneMap.values()) data.lst.push(entry)
 		if (!data.lst || data.lst.length == 0) {
 			// Show the "No match..." message one time at the first miss
@@ -393,12 +400,71 @@ function setRenderers(self: any) {
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
+	// DNA methylation: mirror the summary chart's dnaMethylation term search (see
+	// client/termdb/handlers/dnaMethylation.ts). Open a genome browser at the gene's default
+	// coordinates with a "Submit Region" button; on submit, build a region-based dnaMethylation
+	// term from the region the user navigated to and open a violin plot of its per-sample beta values.
+	self.launchMethylationPlot = async (gene: string) => {
+		const coord = await self.app.vocabApi.getGeneCoord(gene)
+		if (!coord) throw `Could not resolve coordinates for gene "${gene}"`
+		const genomeObj = self.app.opts.genome
+
+		// render the region picker inline in the chat result area, replacing the result list
+		self.dom.tip.clear()
+		self.dom.tip.showunder(self.dom.inputNode)
+		const holder = self.dom.resultDiv.append('div').style('margin', '10px')
+		holder
+			.append('div')
+			.style('opacity', 0.6)
+			.style('margin-bottom', '5px')
+			.text(`${gene}: navigate to the desired region`)
+		const blockDiv = holder.append('div')
+
+		const arg: any = {
+			holder: blockDiv,
+			genome: genomeObj,
+			chr: coord.chr,
+			start: coord.start,
+			stop: coord.stop,
+			tklst: [],
+			nobox: true,
+			width: 500,
+			hidegenelegend: true
+		}
+		first_genetrack_tolist(genomeObj, arg.tklst)
+		const _ = await import('#src/block')
+		const blockInstance = new _.Block(arg)
+
+		holder
+			.append('div')
+			.style('margin', '10px 0px')
+			.append('button')
+			.attr('data-testid', 'sjpp-mass-chat-methylation-submit')
+			.style('border', 'none')
+			.style('border-radius', '20px')
+			.style('padding', '10px 15px')
+			.style('cursor', 'pointer')
+			.text('Submit Region')
+			.on('click', async () => {
+				const { chr, start, stop } = blockInstance.rglst[0]
+				const term = {
+					chr,
+					start,
+					stop,
+					type: 'dnaMethylation',
+					unit: getDNAMethUnit('region', self.app.vocabApi),
+					genomicFeatureType: 'region'
+				}
+				await self.launchPlot({ chartType: 'summary', term: { term } })
+			})
+	}
+
 	self.showTerm = function (term: any) {
 		const tr = select(this)
 
 		if (term.isGene) {
 			// Gene row: gene name as a plain label, with an action button per available data type
-			// ('Gene expression', 'Gene variant') — all buttons shown together in the same row.
+			// ('Gene expression', variant types, 'DNA methylation') — all shown together in the same row.
 			tr.append('td').text(term.name).style('padding', '5px 10px')
 			const btnTd = tr.append('td')
 			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) => {
@@ -431,6 +497,12 @@ function setRenderers(self: any) {
 						await self.launchGeneVariantPlot(term.gene, vt.dtCandidates)
 					})
 				}
+			}
+			if (term.isMethylation) {
+				// open a violin plot of the gene's per-sample DNA methylation beta values
+				addBtn('DNA methylation', `sjpp-mass-chat-gene-methylation-${term.gene}`, async () => {
+					await self.launchMethylationPlot(term.gene)
+				})
 			}
 			return
 		}
