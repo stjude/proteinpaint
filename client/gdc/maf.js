@@ -263,6 +263,9 @@ function makeControls(obj) {
 					rows,
 					columns: [{ label: 'Column Name' }],
 					selectedRows,
+					// keep the header "select all" checkbox in sync with the rows: tick it when every
+					// column is currently selected (e.g. the all-selected default state)
+					selectAll: selectedRows.length === mafColumns.length,
 					dataTestId: 'sjpp-gdcmaf-columnTableUi',
 					noButtonCallback: (i, n) => {
 						mafColumns[i].selected = n.checked
@@ -275,9 +278,9 @@ function makeControls(obj) {
 
 		function updateText() {
 			clickText.text(
-				`${mafColumns.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
-					mafColumns.length
-				} columns selected. Click to change`
+				`${mafColumns
+					.reduce((c, i) => c + (i.selected ? 1 : 0), 0)
+					.toLocaleString()} of ${mafColumns.length.toLocaleString()} columns selected. Click to change`
 			)
 		}
 	}
@@ -301,9 +304,11 @@ async function getFilesAndShowTable(obj) {
 
 		// render
 		if (result.filesTotal > result.files.length) {
-			wait.text(`Showing first ${result.files.length} MAF files out of ${result.filesTotal} total.`)
+			wait.text(
+				`Showing first ${result.files.length.toLocaleString()} MAF files out of ${result.filesTotal.toLocaleString()} total.`
+			)
 		} else {
-			wait.text(`Showing ${result.files.length} MAF files.`)
+			wait.text(`Showing ${result.files.length.toLocaleString()} MAF files.`)
 		}
 
 		const rows = []
