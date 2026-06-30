@@ -1,6 +1,17 @@
 import tape from 'tape'
 import { gzipSync } from 'zlib'
+import { Readable } from 'stream'
 import { selectMafCols, mergeMafFiles } from '../gdc.mafBuild.ts'
+
+// a single-chunk binary Readable of the given gz bytes, standing in for one file's GDC download stream
+function gzStreamFrom(buf: Buffer): Readable {
+	return new Readable({
+		read() {
+			this.push(buf)
+			this.push(null)
+		}
+	})
+}
 
 /*
 selectMafCols() is the column-selection logic ported from the former rust gdcmaf binary. It takes one
@@ -122,10 +133,10 @@ const gzByFile: Record<string, Buffer> = {
 	empty: makeGzMaf(HEADER, []), // header only → selectMafCols throws "Empty MAF file"
 	missingcol: makeGzMaf(['Hugo_Symbol', 'Chromosome'], [['PTEN', 'chr10']]) // lacks a requested column
 }
-// injected fetcher: returns canned bytes, or throws to simulate a failed download for id 'bad'
-const fetchGz = async (fileId: string): Promise<Buffer> => {
+// injected fetcher: returns a gz byte stream for the file, or throws to simulate a failed download ('bad')
+const fetchGzStream = async (fileId: string): Promise<Readable> => {
 	if (fileId === 'bad') throw new Error('simulated download failure')
-	return gzByFile[fileId]
+	return gzStreamFrom(gzByFile[fileId])
 }
 
 tape('\n', function (test) {
@@ -142,7 +153,7 @@ tape('merges good files and isolates per-file failures', async function (test) {
 		columns: OUT_COLS,
 		concurrency: 1,
 		signal: new AbortController().signal,
-		fetchGz,
+		fetchGzStream,
 		write: async rows => {
 			written.push(rows)
 		},
@@ -172,7 +183,7 @@ tape('merges every good file exactly once with concurrency > 1', async function 
 		columns: OUT_COLS,
 		concurrency: 3,
 		signal: new AbortController().signal,
-		fetchGz,
+		fetchGzStream,
 		write: async rows => {
 			written.push(rows)
 		}
@@ -196,7 +207,7 @@ tape('an already-aborted signal processes nothing', async function (test) {
 		columns: OUT_COLS,
 		concurrency: 2,
 		signal: controller.signal,
-		fetchGz,
+		fetchGzStream,
 		write: async rows => {
 			written.push(rows)
 		}
@@ -216,7 +227,7 @@ tape('a write() failure is counted as an error, not a merge', async function (te
 		columns: OUT_COLS,
 		concurrency: 1,
 		signal: new AbortController().signal,
-		fetchGz,
+		fetchGzStream,
 		write: async rows => {
 			if (rows.includes('KRAS')) throw new Error('simulated write failure')
 		}

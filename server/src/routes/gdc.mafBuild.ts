@@ -4,19 +4,21 @@ import { joinUrl } from '#shared/joinUrl.js'
 import type { GdcMafBuildRequest } from '#types'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, fileSize } from '#shared'
 import serverconfig from '#src/serverconfig.js'
 import { mapConcurrent } from '#src/utils/concurrencyLimiter.ts'
-import { createGzip, gunzip } from 'zlib'
+import { createGzip, createGunzip } from 'zlib'
+import { Readable } from 'stream'
 import { once } from 'events'
-import { promisify } from 'util'
 
-// async (libuv threadpool) gunzip so decompressing each downloaded MAF doesn't block the event loop
-const gunzipAsync = promisify(gunzip)
-
-// per-file download timeout (ms); matches the former rust reqwest per-request timeout so a single
+// per-file whole-download timeout (ms); matches the former rust reqwest per-request timeout so a single
 // stalled GDC download can't hold a worker slot indefinitely
 const downloadTimeoutMs = 60000
+
+// flush accumulated selected rows to the gzip sink once a file's pending batch exceeds this, so the
+// per-file working set stays bounded (~one decompressed chunk + one batch) instead of the whole
+// decompressed file and its split/join copies; see streamSelectMafCols
+const writeFlushBytes = 256 * 1024
 
 export const GdcMafPayload: RoutePayload = {
 	init,
@@ -56,13 +58,13 @@ const defaultConcurrency = 20
 export type FileError = { url: string; error: string }
 
 export type MafMergeResult = {
-	/** number of files successfully decompressed, column-selected, and written */
+	/** number of files successfully streamed, column-selected, and written */
 	merged: number
 	/** per-file failures (download/decompress/column errors); never aborts the batch */
 	errors: FileError[]
-	/** summed timings across files; download/decompress overlap wall-clock, parse does not (see buildMaf) */
-	totalDownloadMs: number
-	totalDecompressMs: number
+	/** summed per-file stream time (download+decompress+parse interleaved); overlaps wall-clock under concurrency */
+	totalStreamMs: number
+	/** summed main-thread time in line parsing/column-selection — the only event-loop-blocking work */
 	totalParseMs: number
 }
 
@@ -83,6 +85,19 @@ concurrencyLimiter and a config-driven, per-environment concurrency cap.
 */
 async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
+
+	// Sample process RSS through the build so the finalize log can report the peak working set (helps
+	// catch memory spikes from large cohorts / many concurrent downloads). Caveat: rss is process-wide,
+	// not request-local — if two /gdc/mafBuild builds overlap, one peak can include the other's memory;
+	// the log prints file count + concurrency so overlapping builds stay visible when reading logs.
+	const rss0 = process.memoryUsage().rss
+	let peakRss = rss0
+	const rssTimer = setInterval(() => {
+		const rss = process.memoryUsage().rss
+		if (rss > peakRss) peakRss = rss
+	}, 250)
+	rssTimer.unref() // the sampler must never keep the event loop / process alive on its own
+
 	const { host, headers } = ds.getHostHeaders(q)
 	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)
 
@@ -110,14 +125,14 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const errors: FileError[] = []
 	let completed = 0 // files that finished (merged or errored); lets the disconnect log report how many were still pending
 
-	// Timing instrumentation, summed across files, to see where the wall-clock goes. download/decompress
-	// run concurrently so their sums overlap wall-clock; parse has no awaits so it can't overlap itself —
-	// totalParseMs is therefore the real main-thread time spent parsing (i.e. event-loop blocking).
-	// Reassigned from the mergeMafFiles() result below; default to 0 so the finalize log is always valid.
+	// Timing instrumentation, summed across files. Each file is downloaded + decompressed + column-selected
+	// as a single interleaved stream (see streamSelectMafCols), so totalStreamMs is the summed per-file
+	// wall time (overlaps across concurrent files) and totalParseMs is the summed main-thread time in line
+	// parsing — the only event-loop-blocking work. Reassigned from the mergeMafFiles() result below;
+	// default to 0 so the finalize log is always valid.
 	let merged = 0
-	let totalDownloadMs = 0
-	let totalDecompressMs = 0 // async gunzip on the libuv threadpool (parallel up to UV_THREADPOOL_SIZE)
-	let totalParseMs = 0 // main-thread: buffer->utf8 + selectMafCols column selection
+	let totalStreamMs = 0
+	let totalParseMs = 0 // main-thread: per-chunk utf8 + line split + column selection
 
 	// Single gzip stream for the merged MAF, piped into the multipart body. { end: false } keeps res
 	// open after gz finishes so the trailing "errors" part + closing boundary can still be written.
@@ -128,11 +143,12 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	res.on('close', () => {
 		if (res.writableEnded) return
+		clearInterval(rssTimer)
 		// client went away before we finished: stop downloads and tear down
 		mayLog(
-			`gdcmaf build: client disconnected, aborting downloads (${completed.toLocaleString()}/${fileLst2.length.toLocaleString()} files done). Time elapsed: ${formatElapsedTime(
-				Date.now() - t0
-			)}`
+			`gdcmaf build: client disconnected, aborting downloads (${completed.toLocaleString()}/${fileLst2.length.toLocaleString()} files done)` +
+				` | mem: peak ${fileSize(peakRss)} (Δ ${fileSize(peakRss - rss0)})` +
+				` | Time elapsed: ${formatElapsedTime(Date.now() - t0)}`
 		)
 		controller.abort()
 		try {
@@ -163,19 +179,31 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		// header row first (matches the former rust output: header line then all selected data rows)
 		await writeGz(columns.join('\t') + '\n')
 
-		// the download fan-out + decompress + column-select + per-file error collection lives in
+		// the download fan-out + streaming decompress/column-select + per-file error collection lives in
 		// mergeMafFiles() so it can be unit-tested with an injected fetcher (no GDC/network). Here the
-		// fetcher is a real GDC /data download via ky, and the write sink is the serialized gzip writer.
+		// fetcher streams a real GDC /data download via ky, and the write sink is the serialized gzip writer.
 		const result = await mergeMafFiles({
 			fileIdLst: fileLst2,
 			columns,
 			concurrency,
 			signal: controller.signal,
-			fetchGz: (fileId, signal) =>
-				ky
-					.get(joinUrl(dataHost, fileId), { headers, timeout: downloadTimeoutMs, retry: { limit: 2 }, signal })
-					.arrayBuffer()
-					.then(ab => Buffer.from(ab)),
+			// Stream the gz bytes straight from GDC into the decompress+parse pipeline instead of buffering
+			// the whole file — this is what caps the per-file memory to ~one chunk + one flush batch.
+			// AbortSignal.any combines the client-disconnect controller with a per-file whole-download
+			// timeout (covers response + body streaming), mirroring the former rust per-request timeout;
+			// ky's own timeout is disabled so that single signal is the sole authority. Tradeoff vs the
+			// former .arrayBuffer(): ky's retry no longer covers a mid-stream network drop — that now
+			// surfaces as a per-file error (settled semantics), not a silent retry.
+			fetchGzStream: async (fileId, signal) => {
+				const r = await ky.get(joinUrl(dataHost, fileId), {
+					headers,
+					timeout: false,
+					retry: { limit: 2 },
+					signal: AbortSignal.any([signal, AbortSignal.timeout(downloadTimeoutMs)])
+				})
+				if (!r.body) throw 'no response body from GDC'
+				return Readable.fromWeb(r.body as any)
+			},
 			write: writeGz,
 			onFileSettled: () => completed++
 		})
@@ -185,8 +213,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		// the uuid as the final path segment, so matching keeps working.
 		errors.push(...result.errors.map(e => ({ ...e, url: joinUrl(dataHost, e.url) })))
 		merged = result.merged
-		totalDownloadMs = result.totalDownloadMs
-		totalDecompressMs = result.totalDecompressMs
+		totalStreamMs = result.totalStreamMs
 		totalParseMs = result.totalParseMs
 
 		// flush any pending serialized writes before closing the gzip stream
@@ -202,6 +229,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// "errors" part and the closing multipart boundary, then end the response.
 	gz.on('end', () => {
 		if (res.writableEnded) return
+		clearInterval(rssTimer)
 		res.write(`\r\n--${boundary}`)
 		res.write('\r\nContent-Disposition: form-data; name="errors"')
 		res.write('\r\nContent-Type: application/x-jsonlines')
@@ -209,19 +237,23 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		res.write('\r\n\r\n' + json)
 		res.write(`\r\n--${boundary}--\r\n`)
 		const elapsed = Date.now() - t0
-		const avgDownloadMs = merged ? Math.round(totalDownloadMs / merged) : 0
-		const avgDecompressMs = merged ? Math.round(totalDecompressMs / merged) : 0
-		// totalDownloadMs sums concurrent downloads, so dividing by wall-clock gives the implied
+		const avgStreamMs = merged ? Math.round(totalStreamMs / merged) : 0
+		// totalStreamMs sums concurrent per-file stream times, so dividing by wall-clock gives the implied
 		// parallelism (how many were overlapping on average) rather than a misleading multi-minute sum
-		const downloadParallelism = elapsed ? (totalDownloadMs / elapsed).toFixed(1) : '0'
+		const streamParallelism = elapsed ? (totalStreamMs / elapsed).toFixed(1) : '0'
+		// final RSS sample, in case the last spike landed between 250ms ticks
+		const rssEnd = process.memoryUsage().rss
+		if (rssEnd > peakRss) peakRss = rssEnd
 		mayLog(
 			`gdcmaf build: ${merged.toLocaleString()} merged / ${errors.length.toLocaleString()} failed of ${fileLst2.length.toLocaleString()} files` +
+				` (concurrency ${concurrency})` +
 				` in ${formatElapsedTime(elapsed)}` +
 				` | main-thread parse: ${formatElapsedTime(totalParseMs)}` +
-				` | decompress: avg ${avgDecompressMs}ms/file (UV_THREADPOOL_SIZE=${
-					process.env.UV_THREADPOOL_SIZE || '4 (default)'
-				})` +
-				` | download: avg ${avgDownloadMs}ms/file, ~${downloadParallelism}× parallel`
+				` | stream (download+decompress+parse): avg ${avgStreamMs}ms/file, ~${streamParallelism}× parallel` +
+				` (UV_THREADPOOL_SIZE=${process.env.UV_THREADPOOL_SIZE || '4 (default)'})` +
+				` | mem: start ${fileSize(rss0)}, peak ${fileSize(peakRss)} (Δ ${fileSize(peakRss - rss0)}), end ${fileSize(
+					rssEnd
+				)}`
 		)
 		res.end()
 	})
@@ -230,28 +262,28 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 /*
 Core of the cohort-MAF build, factored out of buildMaf() so it can be unit-tested without GDC or a
-network: download each file (via the injected `fetchGz`), decompress, select the requested columns, and
-hand the selected rows to the injected `write` sink. Downloads run through mapConcurrent() so at most
-`concurrency` are in flight at once. A per-file failure is recorded in `errors` and never aborts the
+network. For each file: open its gzipped byte stream (via the injected `fetchGzStream`) and run it
+through streamSelectMafCols(), which decompresses + column-selects + writes the rows incrementally so
+the per-file working set stays bounded (no whole-file buffering). Files run through mapConcurrent() so at
+most `concurrency` are in flight at once. A per-file failure is recorded in `errors` and never aborts the
 batch (settled semantics); an aborted `signal` stops scheduling new files and suppresses late errors.
-`fetchGz(fileId, signal)` returns the gzipped bytes of one file; `write(rows)` consumes one file's
-selected rows (the caller serializes writes / handles backpressure); `onFileSettled` fires once per
-finished file for live progress reporting.
+`fetchGzStream(fileId, signal)` returns a Readable of one file's gzipped bytes; `write(rows)` consumes a
+batch of selected rows (the caller serializes writes / handles backpressure); `onFileSettled` fires once
+per finished file for live progress reporting.
 */
 export async function mergeMafFiles(opts: {
 	fileIdLst: string[]
 	columns: string[]
 	concurrency: number
 	signal: AbortSignal
-	fetchGz: (fileId: string, signal: AbortSignal) => Promise<Buffer>
+	fetchGzStream: (fileId: string, signal: AbortSignal) => Promise<Readable>
 	write: (rows: string) => Promise<void>
 	onFileSettled?: () => void
 }): Promise<MafMergeResult> {
-	const { fileIdLst, columns, concurrency, signal, fetchGz, write, onFileSettled } = opts
+	const { fileIdLst, columns, concurrency, signal, fetchGzStream, write, onFileSettled } = opts
 	const errors: FileError[] = []
 	let merged = 0
-	let totalDownloadMs = 0
-	let totalDecompressMs = 0
+	let totalStreamMs = 0
 	let totalParseMs = 0
 
 	await mapConcurrent(
@@ -260,20 +292,15 @@ export async function mergeMafFiles(opts: {
 		async (fileId: string) => {
 			if (signal.aborted) return
 			try {
-				const dl0 = Date.now()
-				const buf = await fetchGz(fileId, signal)
-				const dl1 = Date.now()
-				const decompressed = await gunzipAsync(buf)
-				const dec1 = Date.now()
-				const rows = selectMafCols(decompressed.toString('utf8'), columns) // throws on missing column / empty file
-				const ps1 = Date.now()
-				await write(rows)
-				// only count a file as merged once its rows are actually written, and accumulate the
-				// timings in lockstep with `merged` — so a write() failure (recorded below as a per-file
-				// error) can't both inflate `merged` and skew the total*/merged averages.
-				totalDownloadMs += dl1 - dl0
-				totalDecompressMs += dec1 - dl1
-				totalParseMs += ps1 - dec1
+				const t0 = Date.now()
+				const gzStream = await fetchGzStream(fileId, signal)
+				// throws on missing column / empty file / mid-stream download error
+				const { parseMs } = await streamSelectMafCols({ gzStream, columns, write, signal })
+				// only count a file as merged once all its rows are written, and accumulate the timings in
+				// lockstep with `merged` — so a failure (recorded below as a per-file error) can't both
+				// inflate `merged` and skew the total*/merged averages.
+				totalStreamMs += Date.now() - t0
+				totalParseMs += parseMs
 				merged++
 			} catch (e: any) {
 				// record per-file failure; the rest of the cohort still merges (settled semantics)
@@ -284,7 +311,7 @@ export async function mergeMafFiles(opts: {
 		{ signal }
 	)
 
-	return { merged, errors, totalDownloadMs, totalDecompressMs, totalParseMs }
+	return { merged, errors, totalStreamMs, totalParseMs }
 }
 
 /*
@@ -323,33 +350,117 @@ async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 }
 
 /*
-Port of the former rust select_maf_col: from one decompressed MAF file's text, keep only the requested
-columns (in the requested order) for every data row, tab-joined. Skips `#` comment lines, finds the
-header line by its Hugo_Symbol column, and resolves each requested column to its index. Throws if a
-requested column is absent or the file has no data rows, so the caller records it as a per-file error.
-Returns the selected rows as a single string, each row newline-terminated.
+Shared, stateful core of the rust select_maf_col port: feed it MAF lines one at a time and it finds the
+header (by its Hugo_Symbol column), resolves each requested column to its index, and returns the selected
+tab-joined row for each data line (or null for comment/header/pre-header lines). Throws if a requested
+column is absent from the header. Keeping this incremental lets the same logic drive both selectMafCols()
+(whole-string, unit-tested) and streamSelectMafCols() (line-by-line, low memory) with identical behavior.
 */
-export function selectMafCols(text: string, columns: string[]): string {
-	const lines = text.replace(/\n+$/, '').split('\n')
+function createMafRowSelector(columns: string[]) {
 	let headerIndices: number[] | null = null
-	const out: string[] = []
-	for (const line of lines) {
-		if (line.startsWith('#')) continue
-		if (line.includes('Hugo_Symbol')) {
-			const header = line.split('\t')
-			headerIndices = []
-			for (const col of columns) {
-				const idx = header.indexOf(col)
-				if (idx === -1) throw `Column ${col} was not found`
-				headerIndices.push(idx)
+	let dataRowCount = 0
+	return {
+		processLine(line: string): string | null {
+			if (line.startsWith('#')) return null
+			if (line.includes('Hugo_Symbol')) {
+				const header = line.split('\t')
+				headerIndices = []
+				for (const col of columns) {
+					const idx = header.indexOf(col)
+					if (idx === -1) throw `Column ${col} was not found`
+					headerIndices.push(idx)
+				}
+				if (headerIndices.length === 0) throw 'No matching columns found'
+				return null
 			}
-			if (headerIndices.length === 0) throw 'No matching columns found'
-		} else {
-			if (!headerIndices) continue // data before header (shouldn't happen); nothing to select yet
+			if (!headerIndices) return null // data before header (shouldn't happen); nothing to select yet
 			const cells = line.split('\t')
-			out.push(headerIndices.map(i => cells[i] ?? '').join('\t'))
+			dataRowCount++
+			return headerIndices.map(i => cells[i] ?? '').join('\t')
+		},
+		get dataRowCount() {
+			return dataRowCount
 		}
 	}
-	if (out.length === 0) throw 'Empty MAF file'
+}
+
+/*
+Whole-string column selection: from one decompressed MAF file's text, keep only the requested columns
+(in the requested order) for every data row, tab-joined. Throws if a requested column is absent or the
+file has no data rows, so the caller records it as a per-file error. Returns the selected rows as a single
+string, each row newline-terminated. The streaming path (streamSelectMafCols) is what production uses;
+this stays for direct, deterministic unit testing of the column-selection logic.
+*/
+export function selectMafCols(text: string, columns: string[]): string {
+	const selector = createMafRowSelector(columns)
+	const out: string[] = []
+	for (const line of text.replace(/\n+$/, '').split('\n')) {
+		const row = selector.processLine(line)
+		if (row !== null) out.push(row)
+	}
+	if (selector.dataRowCount === 0) throw 'Empty MAF file'
 	return out.join('\n') + '\n'
+}
+
+/*
+Streaming select+merge for one file: consume its gzipped byte stream, decompress incrementally
+(createGunzip on the libuv threadpool), split into lines as decompressed chunks arrive (carrying any
+partial trailing line across chunk boundaries), select the requested columns line-by-line, and flush
+selected rows to `write` in ~writeFlushBytes batches. This caps the per-file working set to roughly one
+decompressed chunk + one batch, instead of holding the whole decompressed file (and its split/join
+copies) at once — the dominant driver of the build's peak RSS. Awaiting each flush propagates gzip
+backpressure up through gunzip to the download, so a slow client throttles the download rather than
+buffering. Throws on a missing column, an empty file (no data rows), or a stream/decompress error,
+matching selectMafCols() so the caller records a per-file error. Returns the rows written and the
+main-thread time spent parsing.
+*/
+export async function streamSelectMafCols(opts: {
+	gzStream: Readable
+	columns: string[]
+	write: (rows: string) => Promise<void>
+	signal: AbortSignal
+}): Promise<{ rowCount: number; parseMs: number }> {
+	const { gzStream, columns, write, signal } = opts
+	const selector = createMafRowSelector(columns)
+	const gunzip = createGunzip()
+	let parseMs = 0
+	let buf = '' // pending selected rows, flushed in batches
+	let leftover = '' // partial trailing line carried across chunk boundaries
+	try {
+		// pipe doesn't forward source errors, so wire gzStream errors into gunzip; that makes the for-await
+		// reject (e.g. on a mid-stream network drop) instead of hanging
+		gzStream.on('error', err => gunzip.destroy(err))
+		gzStream.pipe(gunzip)
+		for await (const chunk of gunzip) {
+			if (signal.aborted) break
+			const t0 = Date.now()
+			const text = leftover + chunk.toString('utf8')
+			const lines = text.split('\n')
+			leftover = lines.pop() ?? '' // last element is the (possibly empty) partial line
+			for (const line of lines) {
+				const row = selector.processLine(line)
+				if (row !== null) buf += row + '\n'
+			}
+			parseMs += Date.now() - t0
+			if (buf.length >= writeFlushBytes) {
+				await write(buf)
+				buf = ''
+			}
+		}
+		// the final line has no trailing newline, so it sits in leftover; process it now
+		if (leftover) {
+			const t0 = Date.now()
+			const row = selector.processLine(leftover)
+			if (row !== null) buf += row + '\n'
+			parseMs += Date.now() - t0
+		}
+		if (buf) await write(buf)
+		if (selector.dataRowCount === 0) throw 'Empty MAF file'
+		return { rowCount: selector.dataRowCount, parseMs }
+	} finally {
+		// tear down on any exit (success / abort / column or stream error) so a half-read download can't
+		// leak a socket or threadpool slot
+		gzStream.destroy()
+		gunzip.destroy()
+	}
 }
