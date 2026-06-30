@@ -1,2 +1,1 @@
-Features:
-- Improved GRIN2 snvindel fetch performance and reporting by pre-filtering to open access only projects. Bounded concurrency with concurrencyLimiter.ts
+
