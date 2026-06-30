@@ -1,0 +1,2 @@
+Features:
+- Ported gdc.mafBuild from Rust to Typescript and bounded it with the concurrencyLimiter fixed sized logic
