@@ -206,3 +206,24 @@ tape('an already-aborted signal processes nothing', async function (test) {
 	test.equal(written.length, 0, 'nothing written')
 	test.end()
 })
+
+tape('a write() failure is counted as an error, not a merge', async function (test) {
+	// `merged` and the timing totals must only advance after write() succeeds, so a failed write can't
+	// both inflate `merged` and skew the total*/merged averages. 'b' downloads + selects fine but its
+	// write throws; it must be recorded as a per-file error and excluded from `merged`.
+	const result = await mergeMafFiles({
+		fileIdLst: ['a', 'b', 'c'],
+		columns: OUT_COLS,
+		concurrency: 1,
+		signal: new AbortController().signal,
+		fetchGz,
+		write: async rows => {
+			if (rows.includes('KRAS')) throw new Error('simulated write failure')
+		}
+	})
+	test.equal(result.merged, 2, 'only the two files whose write succeeded count as merged')
+	const byUrl = Object.fromEntries(result.errors.map(e => [e.url, e.error]))
+	test.equal(result.errors.length, 1, 'the failed-write file is recorded as a single error')
+	test.match(byUrl.b, /simulated write failure/, 'write failure recorded against the right file')
+	test.end()
+})

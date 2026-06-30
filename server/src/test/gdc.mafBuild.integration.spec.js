@@ -1,3 +1,4 @@
+/* eslint-env node, es2021 */
 import tape from 'tape'
 import { gunzipSync } from 'zlib'
 import serverconfig from '../serverconfig.js'
@@ -13,7 +14,15 @@ gzip, header == requested columns, >0 rows, parseable errors part) rather than e
 
 The two file UUIDs below are the canonical open-access MAF files used elsewhere for manual testing
 (see rust/src/gdcmaf.rs and the commented example in routes/gdc.mafBuild.ts).
+
+fetch: bound explicitly from globalThis rather than imported from node-fetch (as the urlencoded
+integration specs do) because this spec parses the multipart/form-data response with res.formData() —
+which node-fetch v2 does not implement. The global fetch (undici, Node 18+) returns the gzfile part as
+a Blob, which is what the browser client also relies on. The binding makes the dependency explicit (no
+undeclared global) and the guard below skips cleanly if a runtime ever lacks it, instead of throwing a
+bare ReferenceError mid-test.
 */
+const fetch = globalThis.fetch
 
 const url = `http://localhost:${serverconfig.port}/gdc/mafBuild`
 const fileIdLst = ['8b31d6d1-56f7-4aa8-b026-c64bafd531e7', '83ea587b-1e92-41b3-a8e3-12df30496724']
@@ -25,6 +34,13 @@ tape('\n', test => {
 })
 
 tape('gdc/mafBuild builds a merged cohort MAF', async test => {
+	if (typeof fetch != 'function') {
+		// no global fetch (Node < 18); this spec needs its spec-compliant multipart formData(), so skip
+		// with a clear message rather than throwing further down
+		test.skip('global fetch unavailable in this runtime (needs Node 18+); skipping integration spec')
+		test.end()
+		return
+	}
 	try {
 		const res = await fetch(url, {
 			method: 'POST',
