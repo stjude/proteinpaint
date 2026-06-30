@@ -262,7 +262,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				filterJoin([g.filter, this.state.termfilter.filter])
 			)
 			const sampleIds = samples.map(s => {
-				return { sampleId: s }
+				return { sampleId: s.id }
 			})
 			samplelstTW.q.groups.push({
 				name: g.name,
