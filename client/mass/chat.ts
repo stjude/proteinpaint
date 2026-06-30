@@ -6,6 +6,7 @@ import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
+import { fillTermWrapper } from '#termsetting'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
@@ -24,6 +25,7 @@ class MassAiChatBot implements RxComponent {
 	noResult: any
 	isChat: any
 	hasGeneExp: any
+	hasGeneVariant: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -33,6 +35,13 @@ class MassAiChatBot implements RxComponent {
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
 		this.hasGeneExp = this.app.getState().termdbConfig?.queries?.geneExpression // Whether the dataset supports gene expression, gating gene search in omnisearch
+		this.hasGeneVariant = false // Whether the dataset supports gene variant, gating gene search in omnisearch
+		if (
+			this.app.getState().termdbConfig?.queries?.snvindel ||
+			this.app.getState().termdbConfig?.queries?.cnv ||
+			this.app.getState().termdbConfig?.queries?.svfusion
+		)
+			this.hasGeneVariant = true
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -58,21 +67,37 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		// Search dictionary variables and (when supported) gene names in parallel.
-		const [data, geneHits] = await Promise.all([
+		// Search dictionary variables and (when supported) gene names for gene expression and
+		// DNA methylation in parallel. Each gene search returns only when the dataset supports it.
+		const [data, geneExpressionHits, geneVariantHits] = await Promise.all([
 			this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType),
-			this.hasGeneExp ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([])
+			this.hasGeneExp ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([]),
+			this.hasGeneVariant ? this.app.vocabApi.findGeneVariant(prompt).catch(() => []) : Promise.resolve([])
 		])
 		if (!Array.isArray(data.lst)) data.lst = []
-		// Append matching genes as geneExpression entries, skipping any whose name already
-		// appears among the dictionary results to avoid duplicate rows.
-		if (geneHits.length) {
-			const seen = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
-			for (const gene of geneHits) {
-				if (seen.has(gene.toUpperCase())) continue
-				data.lst.push({ name: gene, gene, type: 'geneExpression', isGene: true })
+		// Append matching genes, skipping any whose name already appears among the dictionary
+		// results to avoid duplicating a dictionary variable. Gene expression entries open a summary
+		// plot; DNA methylation entries open a genome browser of that gene (handled in showTerm).
+		// Expression and methylation entries for the same gene are kept as separate rows since they
+		// trigger different actions.
+		const dictNames = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
+		// Merge gene hits into one entry per gene, recording which data types (expression/variant)
+		// are available for it. Each gene then renders as a single row whose buttons are the
+		// available actions ('Gene expression', 'Gene variant'), shown together in the same row.
+		const geneMap = new Map<string, any>()
+		const addGeneAction = (gene: string, action: 'isGeneExpression' | 'isGeneVariant') => {
+			if (dictNames.has(gene.toUpperCase())) return
+			const key = gene.toUpperCase()
+			let entry = geneMap.get(key)
+			if (!entry) {
+				entry = { name: gene, gene, isGene: true }
+				geneMap.set(key, entry)
 			}
+			entry[action] = true
 		}
+		for (const gene of geneExpressionHits) addGeneAction(gene, 'isGeneExpression')
+		for (const gene of geneVariantHits) addGeneAction(gene, 'isGeneVariant')
+		for (const entry of geneMap.values()) data.lst.push(entry)
 		if (!data.lst || data.lst.length == 0) {
 			// Show the "No match..." message one time at the first miss
 			if (!this.dom.noMatchShown) {
@@ -315,40 +340,85 @@ function setRenderers(self: any) {
 		}
 	}
 
+	// dispatch a plot and reset the search box/popup
+	self.launchPlot = async (config: any) => {
+		if (self.state?.nav?.activeTab == 0) {
+			await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
+		}
+		self.app.dispatch({ type: 'plot_create', config })
+		self.dom.inputNode.value = '' // clear the search box
+		self.clear({ hide: true })
+	}
+
 	self.showTerm = function (term: any) {
 		const tr = select(this)
-		const button = tr.append('td').text(term.name)
 
+		if (term.isGene) {
+			// Gene row: gene name as a plain label, with an action button per available data type
+			// ('Gene expression', 'Gene variant') — all buttons shown together in the same row.
+			tr.append('td').text(term.name).style('padding', '5px 10px')
+			const btnTd = tr.append('td')
+			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) => {
+				btnTd
+					.append('span')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', testid)
+					.style('display', 'inline-block')
+					.style('margin', '0px 3px')
+					.style('padding', '5px 10px')
+					.style('border-radius', '5px')
+					.style('cursor', 'pointer')
+					.text(label)
+					.on('click', onClick)
+			}
+			if (term.isGeneExpression) {
+				// open a summary plot of the gene's expression
+				addBtn('Gene expression', `sjpp-mass-chat-gene-exp-${term.gene}`, async () => {
+					await self.launchPlot({
+						chartType: 'summary',
+						term: { term: { gene: term.gene, name: term.name, type: 'geneExpression' } }
+					})
+				})
+			}
+			if (term.isGeneVariant) {
+				// open a summary barchart grouping samples into mutated vs wildtype for the gene
+				addBtn('Gene variant', `sjpp-mass-chat-gene-variant-${term.gene}`, async () => {
+					const name = term.gene
+					const tw: any = {
+						term: {
+							id: name,
+							name,
+							genes: [{ kind: 'gene', id: name, gene: name, name, type: 'geneVariant' }],
+							type: 'geneVariant'
+						},
+						q: { type: 'predefined-groupset' }
+					}
+					await fillTermWrapper(tw, self.app.vocabApi)
+					await self.launchPlot({ chartType: 'summary', term: tw })
+				})
+			}
+			return
+		}
+
+		// Dictionary term row
+		const button = tr.append('td').text(term.name)
 		if (term.type) {
 			button
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-term-${term.id ?? term.gene}`)
+				.attr('data-testid', `sjpp-mass-chat-term-${term.id}`)
 				.on('click', async () => {
-					if (self.state?.nav?.activeTab == 0) {
-						await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
-					}
-					// Gene entries build a clean geneExpression term wrapper; dictionary terms are
-					// dispatched as-is (survival for survival terms, otherwise a summary plot).
-					const config = term.isGene
-						? {
-								chartType: 'summary',
-								term: { term: { gene: term.gene, name: term.name, type: 'geneExpression' } }
-						  }
-						: {
-								chartType: term.type == 'survival' ? 'survival' : 'summary',
-								term: { term }
-						  }
-					self.app.dispatch({ type: 'plot_create', config })
-					self.dom.inputNode.value = '' // clear the search box
-					self.clear({ hide: true })
+					await self.launchPlot({
+						chartType: term.type == 'survival' ? 'survival' : 'summary',
+						term: { term }
+					})
 				})
 		} else {
 			button.style('padding', '5px 10px').style('opacity', 0.5)
 		}
 
 		tr.append('td')
-			.text(term.isGene ? 'Gene expression' : (term.__ancestorNames || []).join(' > '))
+			.text((term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
