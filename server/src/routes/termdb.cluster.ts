@@ -71,6 +71,21 @@ export function init({ genomes }) {
 			// instead of emitting the client-side instructions from the server response and forcing a reload
 			if (q.terms.length < 3)
 				throw `A minimum of three items is required for clustering. Please refresh this page to clear this error.`
+			for (const tw of q.terms) {
+				// terms may arrive as a {term,q} wrapper or (legacy) as a bare term object
+				const ttype = (tw?.term || tw)?.type
+				// all terms must be clusterable together: same type as the cluster dataType, or — for
+				// dictionary numerics any mix of those (mirrors the client's
+				// canTermBeInHierGrp so the server doesn't reject what the UI allows)
+				const typeCompatible =
+					ttype == q.dataType || (dictionaryNumericTypes.has(q.dataType) && dictionaryNumericTypes.has(ttype))
+				if (!typeCompatible) throw `term type '${ttype}' is not compatible with the cluster dataType '${q.dataType}'`
+				// clustering operates on continuous values; a non-continuous (e.g. discrete/binned) term
+				// would be aggregated by getData() into bin labels and corrupt the clustering. Only check
+				// when a mode is set — terms may arrive without q.mode and are treated as continuous.
+				if (tw?.q?.mode && tw.q.mode != 'continuous')
+					throw `clustering requires terms in continuous mode, but '${ttype}' term has q.mode='${tw.q.mode}'`
+			}
 			result = (await getResult(q, ds)) as TermdbClusterResponse
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
