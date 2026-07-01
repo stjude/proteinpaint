@@ -69,10 +69,10 @@ tape('filterAndConvertSnvIndel', test => {
 		null,
 		'class not in selected consequences => null'
 	)
-	test.deepEqual(
+	test.equal(
 		filterAndConvertSnvIndel(sample, m, { consequences: [] }),
-		[sample, 'chr17', m.pos, m.pos, 'mutation'],
-		'empty consequences list => include all'
+		null,
+		'empty consequences list => include none (mirrors cnvCategories)'
 	)
 	test.equal(
 		filterAndConvertSnvIndel(sample, { chr: 'chr17', pos: 1.5, class: 'M' }, { consequences: [] }),
@@ -352,7 +352,7 @@ tape('processSampleMlst: routing, breakpoint expansion, cnvType threading', test
 		{ dt: 999, chr: 'chrX', pos: 1 } // unknown dt is ignored
 	]
 	const request = {
-		snvindelOptions: { consequences: [] },
+		snvindelOptions: { consequences: ['M'] }, // include the MISSENSE snv in mlst
 		cnvOptions: copyNumberOpts,
 		fusionOptions: {},
 		svOptions: {}
@@ -375,7 +375,7 @@ tape('processSampleMlst: routing, breakpoint expansion, cnvType threading', test
 	const snvOnly = processSampleMlst(
 		sample,
 		mlst,
-		{ snvindelOptions: { consequences: [] } } as unknown as GRIN2Request,
+		{ snvindelOptions: { consequences: ['M'] } } as unknown as GRIN2Request,
 		'log2ratio'
 	)
 	test.deepEqual([...snvOnly.contributedTypes], [dtsnvindel], 'absent option groups are skipped')

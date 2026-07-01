@@ -57,7 +57,9 @@ export type GRIN2Request = {
 
 	/** Options for filtering SNV/indel content: consequence types and an optional MAF filter. */
 	snvindelOptions?: {
-		/** String array of consequence types to include (pp mclass keys, as emitted by the shared GRIN2 UI). */
+		/** Consequence types to include (pp mclass keys, as emitted by the shared GRIN2 UI). Only mutations
+		 * whose class is listed are included; an empty array includes none (mirrors cnvOptions.cnvCategories).
+		 * Absent (undefined) yields no snvindel lesions (the getter guards on it). */
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
 		hyperMutator?: number // Default: 1000
@@ -88,6 +90,12 @@ export type GRIN2Request = {
 		}
 		/** Maximum segment length to include (0 = no filter) */
 		maxSegLength?: number // Default: 0
+		/** For categorical cnv (ds.queries.cnv.type='category', e.g. GDC), the set of cnv-segment classes
+		 * (pp mclass keys: CNV_amp/CNV_amplification/CNV_loss/CNV_homozygous_deletion) to include, as chosen
+		 * via the UI checkboxes. A segment whose class is not listed is dropped. Omit (undefined) to include
+		 * every class; an empty array includes none. Ignored for numeric cnv types (gain/loss come from
+		 * thresholds, not discrete classes). */
+		cnvCategories?: string[]
 		/** Hypermutator max cut off for CNVs per case */
 		hyperMutator?: number // Default: 500
 		/** For datasets that expose multiple cnv file types (ds.queries.singleSampleMutation.cnvTypes),
