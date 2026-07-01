@@ -1,8 +1,7 @@
 import type { DERequest, DiffMethRequest } from '#types'
-import { getData } from '#src/termdb.matrix.js'
+import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import { get_samples } from '#src/termdb.sql.js'
-import { isParentType } from '#shared/terms.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -85,28 +84,27 @@ export async function buildGroupValues(
 	let sampleLst = values
 	if (ds.cohort.termdb.hasSampleAncestry) {
 		// ds has sample ancestry
+		// data for DE/DM (i.e. genomic data) are assumed to be
+		// at sample-level, so set mapParent2Children=true to be
+		// able to convert patient ids to sample ids
 		const term = {
 			type: 'samplelst',
 			values: {
 				'': { key: '', list: values }
 			}
 		}
-		if (isParentType(term, ds)) {
-			// term is parent sample type, so map term annotations onto
-			// child samples because DE/DM data is at sample level
-			// TODO: support different sample types for genomic data to
-			// avoid assuming genomic data is always at sample-level
-			const filter = {
-				type: 'tvslst',
-				in: true,
-				join: '',
-				lst: [{ type: 'tvs', tvs: { term } }]
-			}
-			const samples = await get_samples({ filter, mapParent2Children: true }, ds, true)
-			sampleLst = samples.map(s => {
-				return { sampleId: s.id, sample: s.name }
-			})
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [{ type: 'tvs', tvs: { term } }]
 		}
+		const arg = { filter }
+		maySetMapParent2Children(arg, ds, true)
+		const samples = await get_samples(arg, ds, true)
+		sampleLst = samples.map(s => {
+			return { sampleId: s.id, sample: s.name }
+		})
 	}
 	for (const s of sampleLst) {
 		if (!Number.isInteger(s.sampleId)) continue

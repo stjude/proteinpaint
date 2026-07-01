@@ -61,7 +61,7 @@ export async function get_samples(q, ds, canDisplay = false) {
 	q.__protected__.ignoreTermIds is modified or if routeTwLst can be supplied at this point
 	*/
 
-	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children) // if q.filter is blank, it returns null
+	const filter = await getFilterCTEs(q.filter, ds, q.mapParent2Children, q.sampleType) // if q.filter is blank, it returns null
 	const sql = filter
 		? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
 		: `SELECT id, name FROM sampleidmap`
