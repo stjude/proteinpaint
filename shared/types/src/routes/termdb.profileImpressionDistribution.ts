@@ -1,0 +1,49 @@
+import type { RoutePayload } from './routeApi.js'
+
+export type ProfileImpressionDistributionRequest = {
+	scTermId: string
+	// Optional: omitted when the module has no POC term (e.g. Patients & Outcomes,
+	// which is SC-only by design). When absent, the server returns pocTotal=0,
+	// pocMedian=null, pocDistribution=[] and the client renders an SC-only thermometer.
+	pocTermId?: string
+	/*
+	Responder-level multivalue impression terms (POCFimpression_mod*) under the same
+	__Impression domain. A module may carry several (e.g. PHO, Nurses, Clinicians).
+	When present these supersede the per-site pocTermId float: pocMedian/pocTotal/
+	pocDistribution are computed per responder instead of per site.
+	*/
+	pocResponderTermIds?: string[]
+	maxScore: number
+	filter?: any
+	filterByUserSites?: boolean
+}
+
+// One thermometer per responder group (POCFimpression_* term) under the domain.
+export type ProfileImpressionResponderDistribution = {
+	termId: string
+	// Display label for the responder group (term name, with a leading "Impression " stripped),
+	// e.g. "PHO & Nurses" / "Clinicians".
+	label: string
+	median: number | null
+	total: number
+	distribution: { rating: number; count: number; pct: number }[]
+}
+
+export type ProfileImpressionDistributionResponse = {
+	scMedian: number | null
+	scTotal: number
+	// One entry per responder group, each rendered as its own thermometer (side by side).
+	// Empty for SC-only modules (e.g. Patients & Outcomes) → a single SC-only thermometer.
+	responders: ProfileImpressionResponderDistribution[]
+	sites: { label: string; value: string }[]
+	n: number
+}
+
+export const ProfileImpressionDistributionPayload: RoutePayload = {
+	request: {
+		typeId: 'ProfileImpressionDistributionRequest'
+	},
+	response: {
+		typeId: 'ProfileImpressionDistributionResponse'
+	}
+}

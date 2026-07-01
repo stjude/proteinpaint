@@ -217,6 +217,187 @@ ORDER BY parent_id;
 
 (The JSON field is `subtype`. The `get_multivalue_tws` function in `server/src/termdb.sql.js` queries `$.plotType` and is dead code; the live multivalue handler is in [`termdb.server.init.ts`](../../../../server/src/termdb.server.init.ts) which JSON-parses `jsondata` so all fields including `subtype` reach the client.)
 
+### Impression Thermometer (profileForms `__Impression` mode)
+**Class:** [profileForms.ts](./profileForms.ts) (mode-switched in `init()`/`main()`) + render module [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)
+**Server route:** [`profile.impressionDistribution.ts`](../../../../server/routes/profile.impressionDistribution.ts) at endpoint `termdb/profileImpressionDistribution`
+**Title:** *`<Module>` Module Impressions* — Status of Module Domains and Subdomains as Rated by Site Coordinator and Point of Care (POC) Staff
+**Description:** A full-detail single thermometer that summarizes the 1–10 rating distribution for one **module** of the PrOFILE survey, comparing the Site Coordinator (SC) and Point-of-Care (POC) Staff viewpoints across all eligible sites.
+
+#### What you see in the chart
+
+Each thermometer combines two perspectives on the same module:
+
+- **Stacked colored fill (1=dark red bottom → 10=dark green top)** — the **POC distribution**: percentage of eligible sites whose POC float rating falls in each integer bin (1..10) after rounding. Heights are percentages of POC respondents. Colors are the universal red→green traffic-light palette `RATING_COLORS` (same in every module — see [Colors](#colors-where-each-piece-is-sourced) below).
+- **Vertical bar in the module color** — the **SC median** rating across eligible sites (single integer 1..10). Color comes from each impression term's `jsondata.color` in the DB.
+- **Grey ball** — the **POC median** rating across eligible sites (1..10).
+- **Bulb in the module color** — same fill as the SC bar; visually anchors the SC value to the bottom of the tube.
+- **Right axis** (1..10) — impression rating scale.
+- **Left axis** (10%..100%) — POC distribution percentage scale (0% omitted, hidden under the bulb).
+- **n indicator (top-right of frame)** — number of eligible sites contributing data after auth/site filtering.
+- **Hover tooltips** on POC distribution bands, SC bar, bulb, and POC median ball — see [Hover tooltips](#hover-tooltips) below.
+
+In **SC-only mode** (Patients & Outcomes — see below), the POC distribution stack, POC median ball, left % axis, and rating swatches in the legend are all hidden; only the SC bar + bulb + right rating axis remain.
+
+#### How it's reached
+
+There is no top-level chart-type button. The thermometer is rendered automatically when the user clicks a term whose ID ends with `__Impression` in the dictionary tree — this dispatches into `profileForms` because the leaf node is a profileForms instance. The standard tabs flow (Yes/No, Likert) is skipped:
+
+```
+profileForms.init()  → detects parentId.endsWith('__Impression')
+                     → resolves SC (integer) + POC (float) child terms via getTermChildren
+                     → captures scChild.color → this.impressionScColor (per-module DB color)
+profileForms.main()  → if isImpressionDomain:
+                         this.data = await this.fetchImpressionDistribution()
+                         renderImpressionThermometer({ dom, id, module, data, texts, colors, tip })
+```
+
+#### Term hierarchy
+
+Each `__Impression` parent in the termdb sits at the **module level** (not the domain level). For 11 of the 12 modules it wraps two scalar children; **Patients & Outcomes** is the only SC-only module:
+
+```
+# Standard module (11 of 12)
+F<Component>__<Module>__Impression                    ← parent (the tree node clicked)
+├── <SC term id>     type=integer                     ← Site Coordinator rating
+└── <POC term id>    type=float                       ← Point-of-Care rating
+
+# SC-only module (Patients & Outcomes only)
+FPatients and Outcomes__Patients and Outcomes__Impression
+└── FX383            type=integer                     ← Site Coordinator rating (no POC term)
+```
+
+#### Per-module data inventory
+
+Snapshot from the live `db.6` for `sjglobal-profile` (run the audit query at the bottom of this section to refresh). Module color comes from `terms.jsondata.color` and is shared by the SC and POC children of the same parent.
+
+| Component | Module | SC term | POC term | Module color (`jsondata.color`) |
+|---|---|---|---|---|
+| Context | National Context | FX372 | FX384 | `#2076BB` blue |
+| Context | Facility and Local Context | FX373 | FX385 | `#1894BC` teal |
+| Context | Finances and Resources | FX374 | FX386 | `#55B5E6` light blue |
+| Workforce | Personnel | FX375 | FX387 | `#40B358` green |
+| Workforce | Service Capacity | FX376 | FX388 | `#63AE51` green |
+| Workforce | Service Integration | FX377 | FX389 | `#C5DAA2` light green |
+| Diagnostics | Diagnostics | FX378 | FX390 | `#EF622A` orange |
+| Therapy | Chemotherapy | FX379 | FX391 | `#EFE52C` yellow |
+| Therapy | Supportive Care | FX380 | FX392 | `#E3C237` mustard |
+| Therapy | Surgery | FX381 | FX393 | `#FCCE09` gold |
+| Therapy | Radiation Therapy | FX382 | FX394 | `#F7D335` yellow |
+| Patients & Outcomes | Patients and Outcomes | FX383 | *(none — SC only)* | `#D32628` red |
+
+The client doesn't hardcode any of these — it pulls `scChild.color` and `pocChild.color` from `getTermChildren()` results at runtime.
+
+#### Data computation (server route)
+
+[`profile.impressionDistribution.ts`](../../../../server/routes/profile.impressionDistribution.ts) receives `{ scTermId, pocTermId?, maxScore, filter, filterByUserSites }` and:
+
+1. Derives the cohort facility term (`FUNIT`/`AUNIT`) from term-ID prefixes via `derivePrefix()` — same pattern as `profile.polar2`.
+2. Builds `terms = [facilityTW, scTW]` and conditionally appends `pocTW` only when `query.pocTermId` is present (SC-only modules omit it).
+3. Calls `getData()` on those terms to pull the site-level matrix rows.
+4. Filters to `eligibleSamples` — when `filterByUserSites=true` and the user is not public, only sites in `clientAuthResult[activeCohort].sites`; otherwise all sites.
+5. Returns:
+   - `scMedian` — `median()` of all SC integer values across eligible sites, rounded
+   - `scTotal` — number of SC integer values that contributed to `scMedian`
+   - `pocMedian` — `median()` of all POC float values across eligible sites, rounded; `null` in SC-only mode
+   - `pocTotal` — count of POC float values; `0` in SC-only mode
+   - `pocDistribution` — `buildDistribution(pocValues, maxScore)` → bins POC values into 1..10 (rounded), returns `{rating, count, pct}` per bin; `[]` in SC-only mode
+   - `n` — number of eligible sites (rows) contributing data
+   - `sites` — full sorted list (`[]` for public users)
+
+Everything is **site-level**: the SC bar represents the median SC rating across sites in the cohort, the colored stack represents % of POC respondents in each rating bin.
+
+#### Colors — where each piece is sourced
+
+The chart uses a **hybrid scheme**: a universal hardcoded ramp for rating levels (so all 12 modules share the same red→green level encoding readers can compare across charts), plus a per-module DB color for SC identity (so each module is visually distinct).
+
+| Visual element | Source | Notes |
+|---|---|---|
+| POC distribution bands | `RATING_COLORS` constant in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts) | Universal red→green palette: `1: #7a0d0d` → `10: #1b5e20`. Same in every module. |
+| Legend rating swatches (1..10) | Same `RATING_COLORS` | Mirrors the in-tube bands. Hidden in SC-only mode. |
+| SC vertical bar | `terms.jsondata.color` for the SC integer term | Captured in `init()` as `this.impressionScColor`, passed via `colors.sc`. |
+| Bulb fill | Same `colors.sc` | Same color as the SC bar so they read as one visual unit. |
+| Bulb outline | `#444` | Hardcoded in renderer; only drawn outside the tube via an arc path so the tube/bulb joint is seamless. |
+| POC median ball fill | `#444` | Hardcoded in renderer. |
+| POC median ball stroke | `#000` | Hardcoded in renderer. |
+| SC swatch in legend | `colors.sc` | Per-module color matching the SC bar. |
+| Tube outline | `#444` | Hardcoded in renderer. |
+| Frame box + grey header band | `#bbb` border + `#f4f4f4` fill | Hardcoded in renderer. |
+| Title text color (orange "<Module> Module Impressions") | `#dd6b20` | Hardcoded in renderer. |
+
+`RATING_COLORS` was kept hardcoded after a round of experimentation — the `db.6` termdb does **not** carry a 1..10 rating gradient anywhere (only a single `color` per term and per-Likert-category colors in `state.termdbConfig.colorMap`), so the universal palette stays in client code while the module-identity color is sourced from the DB.
+
+#### Hover tooltips
+
+Tooltips use the shared `Menu` instance set up at [profilePlot.ts:66](./profilePlot.ts#L66) as `this.tip`. profileForms passes it to the renderer via `tip: this.tip`; the renderer's small `attachTip(selection, text)` helper binds `mouseover`/`mouseout`. If `tip` is omitted (e.g. test harness), tooltips are silently skipped.
+
+| Hover region | Tooltip text |
+|---|---|
+| POC distribution band (each rating 1..10 with non-zero %) | `Rating R — P.P% (count of total staff)` |
+| SC vertical bar | `Site Coordinator median: M (n=N SCs)` |
+| Bulb | Same as SC bar |
+| POC median ball | `POC median: M (n=N staff responses)` |
+| Right axis numbers, legend, frame, title | *no tooltip* |
+
+In SC-only mode the POC band and POC median ball handlers are never attached because the elements aren't created (existing `distTotal > 0` and `pocMedian != null` guards).
+
+#### User-facing strings (config-driven)
+
+All title, subtitle, axis-label, footer, and legend strings are sourced from the dataset config at `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — same convention as `profilePolar2.title`. The renderer reads them as a required `texts: ImpressionTexts` arg with no fallbacks; a missing field is a compile-time error. The `{module}` placeholder in `titleTemplate` is replaced at render time with the module name parsed from the term ID.
+
+#### Architecture (alignment with v2 charts)
+
+The thermometer is **not** a standalone chart-type — it would duplicate the dictionary-tree navigation, since the term node is already reachable inside profileForms. But the rendering itself is large enough (~350 lines) and unrelated to the Yes/No / Likert tab flow that it lives in its own pure render module:
+
+- **`renderImpressionThermometer.ts`** — exports `renderImpressionThermometer({ dom, id, module, data, texts, colors, tip })` and `IMPRESSION_MAX_SCORE`. Pure function, no class, no `this`. Holds the universal `RATING_COLORS` palette as a private constant.
+- **`profileForms.ts`** — owns the `private async fetchImpressionDistribution()` method that calls `dofetch3('termdb/profileImpressionDistribution', { body: { ... } })` inline, exactly matching the `fetchAggregatedScores`/`fetchFormsAggregatedScores` private-method pattern from `polar2`/`barchart2`/`radar2`/`forms2`. Result stored to `this.data`. `pocTermId` is omitted from the body when `this.pocTW` is not set (SC-only modules).
+
+#### Cohort coverage
+
+Currently **Full only**. The `__Impression` synthetic parents and their SC/POC children are present in the Full cohort termdb (12 parents at this snapshot — 3 Context, 3 Workforce, 1 Diagnostics, 4 Therapy, 1 Patients and Outcomes). The Abbreviated cohort does not have these synthetic parents.
+
+#### Auditing the impression terms in the live DB
+
+```bash
+DB=/path/to/files/sjglobal-profile/db.6
+
+# 1. List all 12 module-level __Impression parents
+sqlite3 "$DB" "SELECT id FROM terms WHERE id LIKE '%\\_\\_Impression' ESCAPE '\\' ORDER BY id;"
+
+# 2. Confirm each parent has its expected children (1 integer for SC, optional 1 float for POC)
+sqlite3 "$DB" "SELECT parent_id, type, COUNT(*) FROM terms \
+  WHERE parent_id LIKE '%\\_\\_Impression' ESCAPE '\\' \
+  GROUP BY parent_id, type ORDER BY parent_id;"
+# Patients & Outcomes will show only the integer row — that's the SC-only design.
+
+# 3. Inventory module colors (what's pulled into colors.sc at runtime)
+sqlite3 "$DB" "SELECT parent_id, id, type, json_extract(jsondata,'\$.color') AS color \
+  FROM terms WHERE parent_id LIKE '%\\_\\_Impression' ESCAPE '\\' \
+  ORDER BY parent_id, type;"
+```
+
+#### Patients & Outcomes (SC-only mode)
+
+By design, `FPatients and Outcomes__Patients and Outcomes__Impression` has only an SC integer child (`FX383`). All four layers handle this:
+
+1. **Type** — `pocTermId` is optional in `ProfileImpressionDistributionRequest`.
+2. **Server** — when `pocTermId` is absent, `pocTW` is null, the terms array drops it, and the response has `pocMedian: null / pocTotal: 0 / pocDistribution: []`.
+3. **profileForms client** — `init()` doesn't error on missing POC child (only SC absence is a real bug). `fetchImpressionDistribution()` omits `pocTermId` from the body when `this.pocTW` is unset.
+4. **Renderer** — `hasPoc = data.pocTotal > 0` gates the left axis labels and rotated title, the rating swatches in the legend, and the POC-median legend entry. The existing `if (distTotal > 0)` and `if (pocMedian != null)` guards already skip the distribution stack and median ball.
+
+#### Source of `__Impression` parents
+
+These synthetic parents are **not** generated by [parse.dict.js](../../../../../utils/sjglobal-profile/parse.dict.js), which only builds component/module/domain branches. They are inserted into the `terms` table by a separate step upstream of the DB build. If you need to add or modify an `__Impression` parent, that pipeline is the place to look; this README will be updated as that pathway is documented.
+
+#### Role and cohort coverage
+
+| Role | `filterByUserSites` | Eligible samples | `sites` in response |
+|------|---------------------|-----------------|---------------------|
+| Public | false | All sites | `[]` (never exposed) |
+| Admin | false | All sites | Full sorted list |
+| Site user | false | All sites (global aggregate) | Full sorted list |
+| Site user | true | User's sites only | User's sites only |
+
+
 ## Conclusion
 These plots collectively provide a comprehensive toolkit for users to analyze PrOFILE data from a high-level summary down to individual data points. The PrOFILE dashboard is designed to empower institutions and collaborative groups to explore, benchmark, and improve pediatric oncology care using interactive, data-driven visualizations. With flexible filters, site-based access, and a variety of plot types, users can gain insights from high-level summaries down to individual survey responses.
 
