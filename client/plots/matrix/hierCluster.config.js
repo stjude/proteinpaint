@@ -5,6 +5,10 @@ import { numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
+	if (dictionaryNumericTypes.has(opts.dataType) || opts.dataType == 'numericDictTerm') {
+		const grp = opts.termgroups?.find(g => g.type == 'hierCluster')
+		for (const tw of grp?.lst || []) tw.q = { ...tw.q, mode: 'continuous' }
+	}
 	const config = await getMatrixPlotConfig(opts, app)
 	// opts.genes will be processed as the hierCluster term group.lst
 	delete config.genes
@@ -94,6 +98,10 @@ export async function getPlotConfig(opts = {}, app) {
 			} else if (config.dataType && !canTermBeInHierGrp(config.dataType, tw.term.type)) {
 				throw `cannot have term type ${tw.term.type} in ${config.dataType} term group`
 			}
+			// clustering operates on raw continuous values; dictionary numerics
+			// otherwise default to discrete in fillTermWrapper and get rejected by the server's
+			// continuous-mode guard. Force continuous here.
+			if (dictionaryNumericTypes.has(tw.term.type)) tw.q = { ...tw.q, mode: 'continuous' }
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 
