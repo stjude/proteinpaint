@@ -179,7 +179,12 @@ export class ScatterView {
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete']
+				numericEditMenuVersion: ['continuous', 'discrete'],
+				/** Disabling colorBy when two sc terms persent.
+				 * Dots overlap and colorBy is not meaningful in this case. */
+				getDisplayStyle: () => {
+					return this.scatter.config?.singleCellPlot && this.scatter.config.term2 ? 'none' : ''
+				}
 			},
 
 			{
