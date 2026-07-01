@@ -619,7 +619,7 @@ tape('Single cell scatter properly renders when colorTW = scge term', function (
 	}
 })
 
-tape.only('Single cell scatter properly renders when coordTWs [scge TP53, scge KRAS] are provided', function (test) {
+tape('Single cell scatter properly renders when coordTWs [scge TP53, scge KRAS] are provided', function (test) {
 	runpp({
 		state: {
 			nav: { header_mode: 'hidden' },
@@ -635,8 +635,8 @@ tape.only('Single cell scatter properly renders when coordTWs [scge TP53, scge K
 		sampleScatter: { callbacks: { 'postRender.test': runTests } }
 	})
 	async function runTests(scatter) {
-		// const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
-		// test.true(dots.length, 'some dots are loaded from singlecell map')
+		const dots = scatter.Inner.view.dom.mainDiv.selectAll('.sjpcb-scatter-series > path').nodes()
+		test.true(dots.length, 'some dots are loaded from singlecell map')
 
 		if (test['_ok']) scatter.Inner.app.destroy()
 		test.end()

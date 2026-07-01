@@ -123,7 +123,7 @@ export function init({ genomes }) {
 
 async function getSingleCellScatter(req, res, ds) {
 	const q = req.query as TermdbSingleCellPlotsRequest
-	const { name, sample } = q.singleCellPlot
+	const { name, sample, isMetaResult } = q.singleCellPlot
 	try {
 		const { arg, tw } = getSingleCellDataArgs(q, name, sample)
 
@@ -141,7 +141,7 @@ async function getSingleCellScatter(req, res, ds) {
 			const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
 			coords = tmp[0]
 		}
-		if (q.filter?.lst?.length || q.filter0) {
+		if (isMetaResult && (q.filter?.lst?.length || q.filter0)) {
 			filteredSamples = await ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 		}
 		if (q.colorTW) {
@@ -156,7 +156,6 @@ async function getSingleCellScatter(req, res, ds) {
 			sample,
 			ds
 		)
-
 		const colorMap = {}
 
 		if (tw.term.type == SINGLECELL_CELLTYPE) {
