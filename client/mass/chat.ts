@@ -50,28 +50,13 @@ class MassAiChatBot implements RxComponent {
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
-		this.hasGeneExp = this.app.getState().termdbConfig?.queries?.geneExpression // Whether the dataset supports gene expression, gating gene search in omnisearch
-		this.hasMethylation = this.app.getState().termdbConfig?.queries?.dnaMethylation // Whether the dataset supports DNA methylation, gating methylation gene search in omnisearch
-		this.hasGeneVariant = false // Whether the dataset supports gene variant, gating gene search in omnisearch
-		if (
-			this.app.getState().termdbConfig?.queries?.snvindel ||
-			this.app.getState().termdbConfig?.queries?.cnv ||
-			this.app.getState().termdbConfig?.queries?.svfusion
-		)
-			this.hasGeneVariant = true
-		// When gene variant is supported, expose a separate option per variant data type, but only
-		// for the data types actually defined on the dataset. Each opens a mutated-vs-wildtype
-		// barchart restricted to that data type. svfusion maps to two dts (SV and fusion); the dt
-		// candidates are tried in order so whichever the dataset actually has is used.
+		// Gene data-type availability (gates gene search in the omnisearch) is resolved from the server
+		// in init() via setDataTypes(), which asks the termdb/chat endpoint (getGeneDataTypes) rather
+		// than inspecting termdbConfig.queries on the client. Default to disabled until resolved.
+		this.hasGeneExp = false
+		this.hasMethylation = false
+		this.hasGeneVariant = false
 		this.geneVariantTypes = []
-		if (this.hasGeneVariant) {
-			const queries = this.app.getState().termdbConfig?.queries
-			if (queries?.snvindel)
-				this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
-			if (queries?.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
-			if (queries?.svfusion)
-				this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
-		}
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -87,7 +72,40 @@ class MassAiChatBot implements RxComponent {
 	}
 
 	async init() {
+		await this.setDataTypes()
 		this.initDom()
+	}
+
+	// Resolve which gene data types this dataset supports by asking the server (termdb/chat endpoint,
+	// getGeneDataTypes) for its available data types, instead of inspecting termdbConfig.queries on the
+	// client. Sets the flags that gate gene search in the omnisearch, and builds the per-variant-type
+	// options (label + dt candidates) for each variant data type the dataset defines. On failure, gene
+	// search is left disabled rather than breaking the omnisearch.
+	async setDataTypes() {
+		try {
+			const data: any = await dofetch3('termdb/chat', {
+				body: {
+					genome: this.app.vocabApi.vocab.genome,
+					dslabel: this.app.vocabApi.vocab.dslabel,
+					getDataTypes: true
+				}
+			})
+			if (data.error) throw data.error
+			this.hasGeneExp = Boolean(data.geneExpression)
+			this.hasMethylation = Boolean(data.dnaMethylation)
+			this.hasGeneVariant = Boolean(data.snvindel || data.cnv || data.svfusion)
+			// Each variant data type opens a mutated-vs-wildtype barchart restricted to that data type.
+			// svfusion maps to two dts (SV and fusion); the dt candidates are tried in order so whichever
+			// the dataset actually has is used.
+			this.geneVariantTypes = []
+			if (data.snvindel)
+				this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
+			if (data.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
+			if (data.svfusion)
+				this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
+		} catch (e) {
+			console.error('Could not resolve gene data types for omnisearch:', e)
+		}
 	}
 
 	// Search method, adapted from MassSearch.doSearch
