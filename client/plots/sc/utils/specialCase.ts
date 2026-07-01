@@ -1,6 +1,20 @@
 import { isSingleCellTerm } from '#shared/terms.js'
 
-export function getSingleCellSpecialCase(config, key = 'term') {
+/** Determines if special tree handling is required.
+ * @param config - plot config
+ * @param key - tw key in the config
+ * @param noCohortTerms - specify whether or not to show cohort level terms with single cell terms when
+ * plot is a meta result.
+ * @returns 'default' if not a single cell term, otherwise an object with the following properties:
+ *  - type: 'singleCell'
+ *  - isMeta: boolean indicating if the plot is a meta result
+ *  - config: object containing the sample information from the term
+ */
+export function getSingleCellSpecialCase(
+	config,
+	key = 'term',
+	noCohortTerms = false
+): string | { [index: string]: any } {
 	let specialCase: string | { [index: string]: any } = 'default'
 	const term = config[key]
 	const chartType = config.childType || config.chartType || 'unknown'
@@ -18,8 +32,9 @@ export function getSingleCellSpecialCase(config, key = 'term') {
 			if (!sample.name && !sample.plots) {
 				if (term.term?.plot) sample.plots = [term.term.plot]
 			}
+
 			//Always return true/false here to avoid downstream errors
-			const isMeta: boolean = sample?.isMetaResult || false
+			const isMeta: boolean = noCohortTerms ? false : sample?.isMetaResult || false
 			specialCase = {
 				type: 'singleCell',
 				isMeta,

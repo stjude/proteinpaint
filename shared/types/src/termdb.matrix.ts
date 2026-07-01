@@ -51,7 +51,7 @@ export type ValidGetDataResponse = {
 		May return as an empty object. */
 		bySampleId: Record<string, { label: string }> | object
 	}
-	sampleType?: any
+	sampleType?: { name: string; plural_name: string; parent_id?: string | null }
 }
 
 export type GetDataResponse = ValidGetDataResponse | { error: string }

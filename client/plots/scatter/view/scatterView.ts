@@ -167,7 +167,8 @@ export class ScatterView {
 			title: `Option to show/hide plot axes`,
 			testid: 'showAxes'
 		}
-		const specialCase = getSingleCellSpecialCase(this.scatter.config, 'colorTW')
+		const term = this.scatter.config.term ? 'term' : 'colorTW'
+		const specialCase = getSingleCellSpecialCase(this.scatter.config, term, true)
 
 		const inputs: any = [
 			{
@@ -178,7 +179,12 @@ export class ScatterView {
 				title: 'Categories to color the samples',
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete']
+				numericEditMenuVersion: ['continuous', 'discrete'],
+				/** Disabling colorBy when two sc terms present.
+				 * Dots overlap and colorBy is not meaningful in this case. */
+				getDisplayStyle: () => {
+					return this.scatter.config?.singleCellPlot && this.scatter.config.term2 ? 'none' : ''
+				}
 			},
 
 			{
@@ -335,7 +341,7 @@ export class ScatterView {
 						type: 'term',
 						configKey: 'term',
 						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'numeric' },
+						usecase: { target: 'sampleScatter', detail: 'numeric', specialCase },
 						title: 'X coordinate to plot the samples',
 						label: 'X',
 						vocabApi: this.scatter.app.vocabApi,
@@ -346,7 +352,7 @@ export class ScatterView {
 						type: 'term',
 						configKey: 'term2',
 						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'numeric' },
+						usecase: { target: 'sampleScatter', detail: 'numeric', specialCase },
 						title: 'Y coordinate to plot the samples',
 						label: 'Y',
 						vocabApi: this.scatter.app.vocabApi,

@@ -47,7 +47,7 @@ export class SectionRenderer {
 		}
 
 		for (const subplot of subplots) {
-			const key = this.getKey(subplot)
+			const key = this.getKey(subplot, sc)
 			if (!key) continue
 			if (!this.sections[key]) this.initSection(key, sc)
 			if (!this.sections[key].sandboxes[subplot.id]) {
@@ -97,7 +97,7 @@ export class SectionRenderer {
 
 		// Regroup into new sections, reparenting existing sandbox
 		for (const subplot of subplots) {
-			const key = this.getKey(subplot)
+			const key = this.getKey(subplot, sc)
 			if (!key) continue
 			if (!this.sections[key]) this.initSection(key, sc)
 
@@ -112,30 +112,16 @@ export class SectionRenderer {
 		}
 	}
 
-	getKey(subplot: any): string | undefined {
+	getKey(subplot: any, sc): string | undefined {
 		if (this.groupBy === 'none') return 'none'
 		if (this.groupBy === 'sample') return this.getSampleId(subplot)
-		return this.getPlotName(subplot)
+		return sc.subplotManager.getPlotName(subplot)
 	}
 
 	/** Extract sID from a subplot's config.
 	 * Actual subplots store sample as {sID, eID} at top level or on term.term.sample. */
 	getSampleId(subplot: any): string | undefined {
 		return subplot.sample?.sID || subplot.singleCellPlot?.sample?.sID || subplot.term?.term?.sample?.sID
-	}
-
-	getPlotName(subplot: any): string {
-		let plotName = subplot?.plotName || subplot?.singleCellPlot?.name
-		if (!plotName) {
-			/** Harcoding logic for some transient and parent plots for now. May consider
-			 * adding to the config if this becomes more complex. Must weight against
-			 * adding unnecessary complexity to the config for edge cases though.*/
-			if (subplot.chartType === 'dictionary') plotName = 'Summary'
-			else if (subplot.chartType === 'summary') plotName = 'Summary'
-			else if (subplot.chartType === 'GeneExpInput') plotName = 'Gene expression'
-			else if (subplot?.term?.term?.plot) plotName = subplot.term.term.plot
-		}
-		return plotName
 	}
 
 	initSection(key: string, sc: SCViewer) {

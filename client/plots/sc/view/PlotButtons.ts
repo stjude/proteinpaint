@@ -163,7 +163,14 @@ export class PlotButtons {
 						spawnConfig: {
 							parentId: this.interactions.id,
 							headerText,
-							hidePlotFilter: !isMeta
+							hidePlotFilter: !isMeta,
+							/** Must pass this to summary config in the event a continuous
+							 * overlay is applied, launching the scatter plot. Without it,
+							 * the single cell model is not used. */
+							singleCellPlot: {
+								name: [...this.availablePlots][0],
+								sample
+							}
 						}
 					}
 				}

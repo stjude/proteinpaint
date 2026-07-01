@@ -175,7 +175,7 @@ export class ScatterViewModelBase {
 		if (this.scatter.config.term) {
 			let termName = getTitle(this.scatter.config.term.term.name, 60)
 			if (!this.scatter.config.colorTW && !this.scatter.config.shapeTW && !this.scatter.config.term0)
-				termName = `${termName}, n=${chart.cohortSamples.length}`
+				termName = `${termName}, n=${chart.cohortSamples.length || chart.totalSampleCount}`
 
 			labelsG.selectAll('*').remove()
 			let text = labelsG
