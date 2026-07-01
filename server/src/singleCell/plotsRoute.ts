@@ -208,8 +208,13 @@ async function getSingleCellScatter(req, res, ds) {
 function getSingleCellDataArgs(q, name, sample) {
 	const arg: { [index: string]: any } = { plots: [name], sample, terms: [], filter: q.filter, filter0: q.filter0 }
 	if (q.colorTW) {
-		if (isSingleCellTerm(q.colorTW.term)) arg.terms.push(q.colorTW)
-		else throw new Error('colorTW must be a single cell term for single cell scatter plot')
+		if (isSingleCellTerm(q.colorTW.term)) {
+			arg.terms.push(q.colorTW)
+			if (q.colorTW.term.type === SINGLECELL_GENE_EXPRESSION) {
+				if (!arg.genes) arg.genes = []
+				arg.genes.push(q.colorTW.term.gene)
+			}
+		} else throw new Error('colorTW must be a single cell term for single cell scatter plot')
 	}
 	if (q?.coordTWs?.length) {
 		for (const tw of q.coordTWs) {
