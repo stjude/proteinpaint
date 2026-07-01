@@ -15,7 +15,9 @@ import {
 	optionToDt,
 	formatElapsedTime,
 	mclasscnvgain,
-	mclasscnvloss
+	mclasscnvloss,
+	mclasscnvAmp,
+	mclasscnvHomozygousDel
 } from '#shared'
 
 import { mayFilterByMaf } from '../mds3.init.js'
@@ -48,7 +50,9 @@ import type { CnvType, Grin2CacheResult } from './types.ts'
  *      dataset quantifies cnv values (ds.queries.cnv.type, defaulting to 'log2ratio'):
  *        - 'log2ratio'/'segmean': numeric value, diploid baseline 0 (gain >= gainThreshold, loss <= lossThreshold)
  *        - 'copyNumber': numeric absolute copy number, diploid baseline 2 (e.g. loss <= 1, gain >= 3, neutral = 2)
- *        - 'category': qualitative call carried in the segment's class (CNV_amp/CNV_loss); thresholds ignored
+ *        - 'category': qualitative call carried in the segment's class; thresholds ignored. Gain-like classes
+ *          (CNV_amp/CNV_amplification) => gain, loss-like (CNV_loss/CNV_homozygous_deletion) => loss, and
+ *          cnvOptions.cnvCategories (UI checkboxes) restricts which classes are included.
  *      See filterAndConvertCnv() and the CnvType type in ./types.ts
  *    - Fusion: No filtering applied; each breakpoint (chrA, and chrB when present) becomes a lesion.
  *    - SV: No filtering applied; same breakpoint-to-lesion conversion as fusion.
@@ -373,10 +377,6 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 							: []),
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
 						['Failed Samples', processing.failedSamples!.toLocaleString()],
-						// only shown when a cnv-type selection actually dropped some samples' cnv
-						...(processing.droppedCnvNoType
-							? [['Dropped (CNV type unavailable)', processing.droppedCnvNoType.toLocaleString()]]
-							: []),
 						['Total Lesions', processing.totalLesions!.toLocaleString()],
 						['Processed Lesions', processing.processedLesions!.toLocaleString()]
 					]
@@ -662,7 +662,6 @@ async function processSampleData(
 		totalLesions: number
 		processedLesions: number
 		unprocessedSamples: number
-		droppedCnvNoType: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -674,19 +673,10 @@ async function processSampleData(
 	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
-	// The user may select one of several cnv file types the ds declares (ds.queries.singleSampleMutation.cnvTypes,
-	// e.g. GDC masked-segment vs allele-specific). The selected def's valueType is the authoritative cnv
-	// quantification for this run; pass the def to the getter so it loads only that file type.
-	const cnvTypeDefs = ds.queries?.singleSampleMutation?.cnvTypes as
-		| { id: string; label: string; valueType: CnvType; dataType: string }[]
-		| undefined
-	const selectedCnvDef = request.cnvOptions?.cnvType
-		? cnvTypeDefs?.find(t => t.id === request.cnvOptions!.cnvType)
-		: undefined
-
-	// How this ds quantifies cnv values; drives gain/loss classification. The selected type wins; else the
-	// ds-level default (file-based datasets); else 'log2ratio' (legacy default, diploid baseline 0).
-	const cnvType: CnvType = selectedCnvDef?.valueType ?? ds.queries?.cnv?.type ?? 'log2ratio'
+	// How this ds quantifies cnv values; drives gain/loss classification. The ds-level default is used for
+	// file-based datasets; else 'log2ratio' (legacy default, diploid baseline 0). GDC's batched cnv records
+	// carry their own valueType:'category' per segment, so they classify correctly regardless of this default.
+	const cnvType: CnvType = ds.queries?.cnv?.type ?? 'log2ratio'
 
 	// Track unique samples per lesion type for reporting
 	const samplesPerType = new Map<number, Set<string>>()
@@ -709,9 +699,7 @@ async function processSampleData(
 		failedSamples: 0,
 		totalLesions: 0,
 		processedLesions: 0,
-		unprocessedSamples: 0,
-		// cases that had cnv file(s) but none of the user-selected cnv type (their cnv was dropped, ssm kept)
-		droppedCnvNoType: 0
+		unprocessedSamples: 0
 	} as {
 		totalSamples: number
 		processedSamples: number
@@ -719,7 +707,6 @@ async function processSampleData(
 		totalLesions: number
 		processedLesions: number
 		unprocessedSamples: number
-		droppedCnvNoType: number
 		// unique samples that contributed >=1 lesion to the final result (union across all lesion types).
 		// distinct from processedSamples: many cohort cases have no qualifying mutation, so this is smaller.
 		samplesWithData?: number
@@ -760,24 +747,25 @@ async function processSampleData(
 	// when those options are off; for native ds it filters out unrequested dt before return.
 	const skipDt = new Set<number>(Object.values(optionToDt).filter(dt => !enabledTypes.includes(dt)))
 
-	// If the ds offers a batch SNV/indel getter (GDC) and snvindel is requested, fetch all SNV/indel up
-	// front in batched requests (GDC: one ssm_occurrences POST per chunk of cases) instead of one per
-	// sample. cnv/fusion still come from the per-sample get() below. ssmBySample maps sample name -> {mlst}.
-	const ssmBatchGet = ds.queries.singleSampleMutation.batchGet
-	const useBatchSsm = typeof ssmBatchGet == 'function' && enabledTypes.includes(dtsnvindel)
-	let ssmBySample: Map<string, { mlst: any[] }> | undefined
-	if (useBatchSsm) {
-		const batch = await ssmBatchGet({
+	// If the ds offers a batch mutation getter (GDC) and snvindel and/or cnv is requested, fetch those up
+	// front in batched requests (GDC: ssm_occurrences + segment_cnv_occurrences POSTs per chunk of cases)
+	// instead of one per sample. fusion/sv still come from the per-sample get() below. batchBySample maps
+	// sample name -> {mlst} holding the batched snvindel and categorical cnv records.
+	const batchGet = ds.queries.singleSampleMutation.batchGet
+	const useBatch = typeof batchGet == 'function' && (enabledTypes.includes(dtsnvindel) || enabledTypes.includes(dtcnv))
+	let batchBySample: Map<string, { mlst: any[] }> | undefined
+	if (useBatch) {
+		const batch = await batchGet({
 			samples: samples.map(s => s.name),
-			skipDt,
+			skipDt, // getter fetches only the enabled dts among snvindel/cnv
 			ds, // batch getter reads ds from q.ds (gdc.hg38.ts convention)
 			filter0: request.filter0,
-			// cap the up-front ssm fetch at the run's lesion budget so a huge cohort / entire GDC doesn't
-			// pull millions of ssm before the per-sample loop's cap would ever discard them
+			// cap the up-front fetch at the run's lesion budget so a huge cohort / entire GDC doesn't
+			// pull millions of records before the per-sample loop's cap would ever discard them
 			maxLesions,
 			__abortSignal: signal
 		})
-		ssmBySample = batch.bySample
+		batchBySample = batch.bySample
 		// If the cap truncated the batch fetch, some samples got no SNV/indel data even though the loop
 		// below still "processes" them — so the loop's "ran on N of M" check won't catch it. Record it here
 		// so the summary can warn the user, like the non-batched path does.
@@ -787,14 +775,15 @@ async function processSampleData(
 		}
 		// Samples whose case had no open-access SNV/indel, surfaced so users don't read a partial cohort as
 		// complete (not an error, just a coverage note). Split into controlled-access vs genuinely-no-mutation,
-		// plus samples that matched no GDC case at all, so all 3,716 reconcile in the summary.
+		// plus samples that matched no GDC case at all, so they reconcile in the summary.
 		processing.ssmSamplesNoOpenAccess = batch.samplesNoOpenSsm
 		processing.ssmSamplesControlledAccess = batch.samplesControlledAccess
 		processing.ssmSamplesNoMutations = batch.samplesNoMutations
 		processing.unmatchedSamples = batch.unresolvedSamples
 	}
-	// When ssm is batched, skip it in the per-sample loop so get() doesn't re-fetch it.
-	const loopSkipDt = useBatchSsm ? new Set<number>(skipDt).add(dtsnvindel) : skipDt
+	// When mutations are batched, skip snvindel + cnv in the per-sample loop so get() doesn't re-fetch them
+	// (fusion/sv, if enabled, still flow through get()).
+	const loopSkipDt = useBatch ? new Set<number>(skipDt).add(dtsnvindel).add(dtcnv) : skipDt
 	// If batching ssm leaves no other enabled dt for this case, the per-sample get() has nothing to
 	// fetch — skip the call entirely (avoids one empty round-trip per sample for snvindel-only runs).
 	const needPerSampleGet = enabledTypes.some(dt => !loopSkipDt.has(dt))
@@ -808,30 +797,21 @@ async function processSampleData(
 				// per-sample work (including the GDC network call below) once the request is aborted.
 				if (signal?.aborted) return
 
-				// batched SNV/indel for this sample (fetched up front); [] when not batched / none found
-				const ssmMlst = ssmBySample?.get(sample.name)?.mlst ?? []
+				// batched snvindel + categorical cnv for this sample (fetched up front); [] when not batched / none found
+				const batchMlst = batchBySample?.get(sample.name)?.mlst ?? []
 
 				let getMlst: any[] = []
-				let droppedCnvNoMatch = false
 				if (needPerSampleGet) {
 					const r = await ds.queries.singleSampleMutation.get({
 						sample: sample.name,
 						skipDt: loopSkipDt,
 						// propagate the request abort signal so the GDC getter's xfetch stops issuing network
 						// requests once the client disconnects/cancels (the getter reads q.__abortSignal)
-						__abortSignal: signal,
-						// only set when the user selected a specific cnv type; the getter loads only this type and
-						// flags droppedCnvNoMatch when the case has cnv but not of this type
-						cnvType: selectedCnvDef
-							? { id: selectedCnvDef.id, dataType: selectedCnvDef.dataType, valueType: selectedCnvDef.valueType }
-							: undefined
+						__abortSignal: signal
 					})
 					getMlst = r.mlst || []
-					droppedCnvNoMatch = r.droppedCnvNoMatch
 				}
-				const mlst = ssmMlst.length ? [...ssmMlst, ...getMlst] : getMlst
-
-				if (droppedCnvNoMatch) processing.droppedCnvNoType! += 1
+				const mlst = batchMlst.length ? [...batchMlst, ...getMlst] : getMlst
 
 				const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
 
@@ -866,10 +846,10 @@ async function processSampleData(
 				processing.totalLesions! += filteredLesions.length
 
 				const done = processing.processedSamples! + processing.failedSamples!
-				// On the batched path (GDC) ssm is fetched up front, so this per-sample loop races to
+				// On the batched path (GDC) mutations are fetched up front, so this per-sample loop races to
 				// completion and this counter is misleading — progress is logged by the batch getter's
 				// per-chunk fetch instead. Native/SQLite datasets do the real work here, so keep the line.
-				if (!useBatchSsm && done % 200 === 0) mayLog(`[GRIN2] Processed ${done}/${samples.length} samples`)
+				if (!useBatch && done % 200 === 0) mayLog(`[GRIN2] Processed ${done}/${samples.length} samples`)
 			} catch (e: any) {
 				processing.failedSamples! += 1
 				mayLog(`[GRIN2] Error processing sample ${sample.name}: ${e.message || e}`)
@@ -1089,9 +1069,15 @@ export function filterAndConvertCnv(
 	const effectiveType: CnvType = entry.valueType ?? cnvType
 	let isGain: boolean
 	if (effectiveType == 'category') {
-		// qualitative call carried in the segment's class; no numeric thresholds
-		if (entry.class == mclasscnvgain) isGain = true
-		else if (entry.class == mclasscnvloss) isGain = false
+		// qualitative call carried in the segment's class; no numeric thresholds.
+		// When the request lists cnvCategories (UI checkboxes), drop any segment whose class isn't selected;
+		// an omitted list (undefined) means "all classes", an empty list means "none".
+		if (Array.isArray(options.cnvCategories) && !options.cnvCategories.includes(entry.class)) return null
+		// map the class to a gain/loss lesion. GDC's 5-category data distinguishes a gain from a high-level
+		// amplification and a loss from a homozygous deletion; GRIN2 renders only gain vs loss, so both
+		// gain-like classes => gain and both loss-like classes => loss.
+		if (entry.class == mclasscnvgain || entry.class == mclasscnvAmp) isGain = true
+		else if (entry.class == mclasscnvloss || entry.class == mclasscnvHomozygousDel) isGain = false
 		else return null
 	} else {
 		// numeric value: log2ratio/segmean (baseline 0) or copyNumber (baseline 2).
