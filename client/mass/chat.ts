@@ -1,15 +1,102 @@
 import { getCompInit, type RxComponent } from '#rx'
 import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
-import { keyupEnter } from '#src/client'
+import { keyupEnter, gmlst2loci } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
+import { fillTermWrapper } from '#termsetting'
+import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
+import { DNA_METHYLATION } from '#shared/terms.js'
+import { getDNAMethUnit } from '#tw/dnaMethylation'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
+
+// Resolve a gene symbol to its genomic loci via the genelookup route, reusing the shared
+// gmlst2loci() helper (from #src/client) — the same coordinate-merging logic that the gene
+// searchbox (dom/genesearch.ts) uses internally. Returns an array of merged loci
+// { name, chr, start, stop }; a gene whose isoforms span discontinuous loci yields more than one.
+// Throws if the gene cannot be resolved (so callers can rely on a non-empty array).
+async function gene2loci(genome: string, geneSymbol: string) {
+	const data = await dofetch3('genelookup', { body: { genome, input: geneSymbol, deep: 1 } })
+	if (data.error) throw data.error
+	if (!data.gmlst?.length) throw `cannot retrieve coordinates for gene "${geneSymbol}"`
+	return gmlst2loci(data.gmlst)
+}
+
+/** Build a region-based dnaMethylation term for the given coordinates. */
+function makeMethylationRegionTerm(opts: { chr: string; start: number; stop: number }, vocabApi: any) {
+	const { chr, start, stop } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
+	return {
+		chr,
+		start,
+		stop,
+		type: DNA_METHYLATION,
+		unit: getDNAMethUnit('region', vocabApi),
+		genomicFeatureType: 'region'
+	}
+}
+
+/**
+ * Embed a genome browser of a gene/region into `holder` with a "Submit Region" button. On submit,
+ * builds a region-based dnaMethylation term from the region the user navigated to and passes it to
+ * `callback`. Returns the Block instance. Used by the mass omnisearch to open a methylation region
+ * picker for a gene. (The dnaMethylation search handler keeps its own equivalent inline logic.)
+ */
+async function embedMethylationRegionPicker(opts: {
+	holder: any
+	genomeObj: any
+	vocabApi: any
+	chr: string
+	start: number
+	stop: number
+	callback: (term: any) => void | Promise<void>
+	debug?: boolean
+}) {
+	const { holder, genomeObj, vocabApi, chr, start, stop, callback } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('unable to retrieve gene coordinate')
+
+	holder.selectAll('*').remove()
+	holder.style('display', 'block')
+	holder.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
+
+	const arg: any = {
+		holder,
+		genome: genomeObj, // genome obj
+		chr,
+		start,
+		stop,
+		tklst: [],
+		nobox: true,
+		width: 500,
+		hidegenelegend: true,
+		debugmode: opts.debug
+	}
+	first_genetrack_tolist(genomeObj, arg.tklst)
+	const _ = await import('#src/block')
+	const blockInstance = new _.Block(arg)
+
+	holder
+		.append('div')
+		.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
+		.style('margin', '10px 0px')
+		.append('button')
+		.style('border', 'none')
+		.style('border-radius', '20px')
+		.style('padding', '10px 15px')
+		.text('Submit Region')
+		.on('click', async () => {
+			const { chr, start, stop } = blockInstance.rglst[0]
+			await callback(makeMethylationRegionTerm({ chr, start, stop }, vocabApi))
+		})
+
+	return blockInstance
+}
 
 class MassAiChatBot implements RxComponent {
 	static type = 'chat'
@@ -23,6 +110,10 @@ class MassAiChatBot implements RxComponent {
 	showTerms: any
 	noResult: any
 	isChat: any
+	hasGeneExp: any
+	hasGeneVariant: any
+	hasMethylation: any
+	geneVariantTypes: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -31,6 +122,13 @@ class MassAiChatBot implements RxComponent {
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
+		// Gene data-type availability (gates gene search in the omnisearch) is resolved from the server
+		// in init() via setDataTypes(), which asks the termdb/chat endpoint (getGeneDataTypes) rather
+		// than inspecting termdbConfig.queries on the client. Default to disabled until resolved.
+		this.hasGeneExp = false
+		this.hasMethylation = false
+		this.hasGeneVariant = false
+		this.geneVariantTypes = []
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -46,7 +144,40 @@ class MassAiChatBot implements RxComponent {
 	}
 
 	async init() {
+		await this.setDataTypes()
 		this.initDom()
+	}
+
+	// Resolve which gene data types this dataset supports by asking the server (termdb/chat endpoint,
+	// getGeneDataTypes) for its available data types, instead of inspecting termdbConfig.queries on the
+	// client. Sets the flags that gate gene search in the omnisearch, and builds the per-variant-type
+	// options (label + dt candidates) for each variant data type the dataset defines. On failure, gene
+	// search is left disabled rather than breaking the omnisearch.
+	async setDataTypes() {
+		try {
+			const data: any = await dofetch3('termdb/chat', {
+				body: {
+					genome: this.app.vocabApi.vocab.genome,
+					dslabel: this.app.vocabApi.vocab.dslabel,
+					getDataTypes: true
+				}
+			})
+			if (data.error) throw data.error
+			this.hasGeneExp = Boolean(data.geneExpression)
+			this.hasMethylation = Boolean(data.dnaMethylation)
+			this.hasGeneVariant = Boolean(data.snvindel || data.cnv || data.svfusion)
+			// Each variant data type opens a mutated-vs-wildtype barchart restricted to that data type.
+			// svfusion maps to two dts (SV and fusion); the dt candidates are tried in order so whichever
+			// the dataset actually has is used.
+			this.geneVariantTypes = []
+			if (data.snvindel)
+				this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
+			if (data.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
+			if (data.svfusion)
+				this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
+		} catch (e) {
+			console.error('Could not resolve gene data types for omnisearch:', e)
+		}
 	}
 
 	// Search method, adapted from MassSearch.doSearch
@@ -56,7 +187,38 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		const data = await this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType)
+		// Search dictionary variables and (when the dataset supports any gene data type) gene names in
+		// parallel. Gene matches are genome-level, so a single findGene() lookup serves all gene data
+		// types; which action buttons a gene gets is decided below by the dataset-capability flags.
+		const hasGeneData = this.hasGeneExp || this.hasGeneVariant || this.hasMethylation
+		const [data, geneHits] = await Promise.all([
+			this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType),
+			hasGeneData ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([])
+		])
+		if (!Array.isArray(data.lst)) data.lst = []
+		// Append matching genes, skipping any whose name already appears among the dictionary results.
+		// Gene entries render as a single row per gene with action buttons for the supported data types (expression/variant).
+		const dictNames = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
+		// Merge gene hits into one entry per gene, recording which data types (expression/variant/
+		// methylation) are available for it. Each gene then renders as a single row whose buttons are
+		// the available actions, shown together in the same row.
+		const geneMap = new Map<string, any>()
+		const addGeneAction = (gene: string, action: 'isGeneExpression' | 'isGeneVariant' | 'isMethylation') => {
+			if (dictNames.has(gene.toUpperCase())) return
+			const key = gene.toUpperCase()
+			let entry = geneMap.get(key)
+			if (!entry) {
+				entry = { name: gene, gene, isGene: true }
+				geneMap.set(key, entry)
+			}
+			entry[action] = true
+		}
+		for (const gene of geneHits) {
+			if (this.hasGeneExp) addGeneAction(gene, 'isGeneExpression')
+			if (this.hasGeneVariant) addGeneAction(gene, 'isGeneVariant')
+			if (this.hasMethylation) addGeneAction(gene, 'isMethylation')
+		}
+		for (const entry of geneMap.values()) data.lst.push(entry)
 		if (!data.lst || data.lst.length == 0) {
 			// Show the "No match..." message one time at the first miss
 			if (!this.dom.noMatchShown) {
@@ -299,28 +461,134 @@ function setRenderers(self: any) {
 		}
 	}
 
+	// dispatch a plot and reset the search box/popup
+	self.launchPlot = async (config: any) => {
+		if (self.state?.nav?.activeTab == 0) {
+			await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
+		}
+		self.app.dispatch({ type: 'plot_create', config })
+		self.dom.inputNode.value = '' // clear the search box
+		self.clear({ hide: true })
+	}
+
+	// open a mutated-vs-wildtype barchart for one gene, restricted to a variant data type.
+	// dtCandidates are tried in order (svfusion has two dts) until a matching predefined groupset
+	// is found, since fillTermWrapper throws when the dataset lacks a groupset for a given dt.
+	self.launchGeneVariantPlot = async (gene: string, dtCandidates: number[]) => {
+		let tw: any
+		let lastErr: any
+		for (const dt of dtCandidates) {
+			const candidate: any = {
+				term: {
+					id: gene,
+					name: gene,
+					genes: [{ kind: 'gene', id: gene, gene, name: gene, type: 'geneVariant' }],
+					type: 'geneVariant'
+				},
+				q: { type: 'predefined-groupset', dtLst: [dt] }
+			}
+			try {
+				await fillTermWrapper(candidate, self.app.vocabApi)
+				tw = candidate
+				break
+			} catch (e) {
+				lastErr = e
+			}
+		}
+		if (!tw) throw lastErr
+		await self.launchPlot({ chartType: 'summary', term: tw })
+	}
+
+	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
+	// area with a "Submit Region" button (see embedMethylationRegionPicker above); on submit, open a
+	// violin plot of the region-based dnaMethylation term's per-sample beta values.
+	self.launchMethylationPlot = async (gene: string) => {
+		// resolve the gene to genomic loci with the shared gmlst2loci() logic (the same core that
+		// dom/genesearch.ts's gene search uses), instead of a bespoke coordinate lookup. Merged
+		// isoforms may yield >1 locus for genes spread across discontinuous loci; open the region
+		// picker at the first locus (the user navigates the genome browser from there anyway).
+		const loci = await gene2loci(self.app.vocabApi.vocab.genome, gene)
+		const coord = loci[0]
+
+		// render the region picker inline in the chat result area, replacing the result list
+		self.dom.tip.clear()
+		self.dom.tip.showunder(self.dom.inputNode)
+		const holder = self.dom.resultDiv.append('div').style('margin', '10px')
+		holder.append('div').style('margin-bottom', '5px').text(gene)
+
+		await embedMethylationRegionPicker({
+			holder: holder.append('div'),
+			genomeObj: self.app.opts.genome,
+			vocabApi: self.app.vocabApi,
+			chr: coord.chr,
+			start: coord.start,
+			stop: coord.stop,
+			callback: async (term: any) => {
+				await self.launchPlot({ chartType: 'summary', term: { term } })
+			}
+		})
+	}
+
 	self.showTerm = function (term: any) {
 		const tr = select(this)
-		const button = tr.append('td').text(term.name)
 
+		if (term.isGene) {
+			// Gene row: gene name as a plain label, with an action button per available data type
+			// ('Gene expression', variant types, 'DNA methylation') — all shown together in the same row.
+			tr.append('td').text(term.name).style('padding', '5px 10px')
+			const btnTd = tr.append('td')
+			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) => {
+				btnTd
+					.append('span')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', testid)
+					.style('display', 'inline-block')
+					.style('margin', '0px 3px')
+					.style('padding', '5px 10px')
+					.style('border-radius', '5px')
+					.style('cursor', 'pointer')
+					.text(label)
+					.on('click', () => void onClick().catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e))))
+			}
+			if (term.isGeneExpression) {
+				// open a summary plot of the gene's expression
+				addBtn('Gene expression', `sjpp-mass-chat-gene-exp-${term.gene}`, async () => {
+					await self.launchPlot({
+						chartType: 'summary',
+						term: { term: { gene: term.gene, name: term.name, type: 'geneExpression' } }
+					})
+				})
+			}
+			if (term.isGeneVariant) {
+				// one button per variant data type defined on the dataset (snvindel/cnv/svfusion);
+				// each opens a mutated-vs-wildtype barchart restricted to that data type.
+				for (const vt of self.geneVariantTypes) {
+					addBtn(vt.label, `sjpp-mass-chat-gene-${vt.testid}-${term.gene}`, async () => {
+						await self.launchGeneVariantPlot(term.gene, vt.dtCandidates)
+					})
+				}
+			}
+			if (term.isMethylation) {
+				// open a violin plot of the gene's per-sample DNA methylation beta values
+				addBtn('DNA methylation', `sjpp-mass-chat-gene-methylation-${term.gene}`, async () => {
+					await self.launchMethylationPlot(term.gene)
+				})
+			}
+			return
+		}
+
+		// Dictionary term row
+		const button = tr.append('td').text(term.name)
 		if (term.type) {
 			button
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
 				.attr('data-testid', `sjpp-mass-chat-term-${term.id}`)
 				.on('click', async () => {
-					if (self.state?.nav?.activeTab == 0) {
-						await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
-					}
-					self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: { term }
-						}
+					await self.launchPlot({
+						chartType: term.type == 'survival' ? 'survival' : 'summary',
+						term: { term }
 					})
-					self.dom.inputNode.value = '' // clear the search box
-					self.clear({ hide: true })
 				})
 		} else {
 			button.style('padding', '5px 10px').style('opacity', 0.5)

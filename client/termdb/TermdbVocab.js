@@ -400,6 +400,21 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
+	// Look up gene symbols matching a search string, via the shared genelookup route (getResult() in
+	// server/src/gene.js — the same gene search used across the app). Returns an array of gene-name
+	// strings. Gene matches are genome-level (not data-type specific), so a single lookup serves gene
+	// expression, gene variant, and DNA methylation alike. Dataset-capability gating is applied by the
+	// caller (mass omnisearch, client/mass/chat.ts), which only offers a data type's action button
+	// when the dataset supports that data type.
+	async findGene(str) {
+		if (!str) return []
+		const data = await this.dofetch3('genelookup', {
+			body: { genome: this.vocab.genome, input: str }
+		})
+		if (data.error) throw data.error
+		return data.hits || []
+	}
+
 	// from termdb/terminfo
 	async getTermInfo(id) {
 		if (!id) throw '.getTermInfo: Missing term id' //If missing doesn't throw as expected in later calls

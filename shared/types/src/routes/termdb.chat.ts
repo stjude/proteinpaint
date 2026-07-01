@@ -39,7 +39,7 @@ export type LlmConfig = {
 	api: string
 	apiToken?: string
 	EmbeddingProviderApiToken?: string
-	modelName: string
+	model: ModelConfig
 	embeddingModelName: string
 	/** Whether to load the embedding model locally (via transformers.js) or call a remote API. Defaults to 'api'. */
 	embeddingModelAccess?: 'local' | 'api'
@@ -49,9 +49,23 @@ export type LlmConfig = {
 	verbose?: boolean
 }
 
+export type ModelConfig = {
+	modelName: string
+	maxTokens: number
+}
 export interface GeneDataTypeResult {
 	gene: string
 	dataType: string
+}
+
+/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
+ * (expression / variant sub-types / methylation) to offer. */
+export interface GeneDataTypeAvailability {
+	geneExpression: boolean
+	dnaMethylation: boolean
+	snvindel: boolean
+	cnv: boolean
+	svfusion: boolean
 }
 
 export interface GeneSetDataTypeResult {
