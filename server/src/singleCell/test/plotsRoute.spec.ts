@@ -153,3 +153,55 @@ tape('singleCellPlots: coordTWs + colorTW returns explicit not-implemented error
 	)
 	test.end()
 })
+
+tape('singleCellPlots: gene-expression colorTW populates gene range', async test => {
+	const ds = {
+		queries: {
+			singleCell: {
+				data: {
+					get: async arg => {
+						test.deepEqual(arg.genes, ['TP53'], 'passes colorTW gene to singleCell data query')
+						return {
+							plots: [
+								{
+									expCells: [
+										{ cellId: 'cell1', category: 'Default', x: 1, y: 2, geneExp: 0.1 },
+										{ cellId: 'cell2', category: 'Default', x: 2, y: 3, geneExp: 0.9 }
+									],
+									noExpCells: []
+								}
+							]
+						}
+					}
+				},
+				samples: {
+					getFilteredSingleCellSamples: async () => new Set<string>()
+				}
+			}
+		}
+	}
+
+	const genomes = { hg38: { datasets: { testds: ds } } }
+	const handler = init({ genomes })
+	const { response, res } = makeRes(test)
+
+	const req = {
+		query: {
+			genome: 'hg38',
+			dslabel: 'testds',
+			singleCellPlot: { name: 'plotA', sample: { sID: 'S1' } },
+			canvasSettings: { cutoff: 1000 },
+			colorTW: {
+				term: { type: SINGLECELL_GENE_EXPRESSION, gene: 'TP53', name: 'tp53' },
+				q: {}
+			}
+		}
+	}
+
+	await handler(req as any, res as any)
+
+	test.notOk(response.payload?.error, 'does not return error')
+	test.equal(response.payload?.range?.geMin, 0.1, 'returns finite geMin')
+	test.equal(response.payload?.range?.geMax, 0.9, 'returns finite geMax')
+	test.end()
+})
