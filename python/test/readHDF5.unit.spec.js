@@ -4,13 +4,12 @@
  * Unit tests for the readHDF5 Rust module which extracts gene expression data from HDF5 files.
  *
  * These tests verify:
- * - Single gene queries function correctly
- * - Multiple gene queries function correctly
+ * - Gene queries function correctly
  * - Error handling for non-existent genes
  * - Data structure validation
  * - File access errors are properly reported
  *
- * The tests use an HDF5 test file with simpulated sample gene expression data.
+ * The tests use an HDF5 test file with simulated sample gene expression data.
  *
  * To run the tests use the command: node readHDF5.unit.spec.js
  * To run the entire Rust unit test suite use the command: npm run test:unit from proteinpaint/rust
@@ -24,7 +23,7 @@ import fs from 'fs'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 
 // Load HDF5 test file
-const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5')
+const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5')
 
 // Verify file exists
 if (!fs.existsSync(HDF5_FILE)) {
@@ -49,7 +48,7 @@ tape('Query TP53 Gene', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			gene: 'TP53'
+			genes: 'TP53'
 		}
 
 		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
@@ -90,7 +89,7 @@ tape('Query Non-existent Gene', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			gene: 'NONEXISTENT_GENE'
+			genes: 'NONEXISTENT_GENE'
 		}
 
 		// We expect this to resolve with an error message in JSON format
@@ -130,7 +129,7 @@ tape('Query Multiple Genes', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			genes: ['TP53', 'BRCA1', 'BRCA2', 'NONEXISTENT_GENE']
+			genes: 'TP53,BRCA1,BRCA2,NONEXISTENT_GENE'
 		}
 
 		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
@@ -180,7 +179,7 @@ tape('Counts Dataset Dimensions', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			gene: 'TP53'
+			genes: 'TP53'
 		}
 
 		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
@@ -224,7 +223,7 @@ tape('Invalid HDF5 File', async t => {
 	try {
 		const input_data = {
 			hdf5_file: path.join('nonexistent_file.h5'),
-			gene: 'TP53'
+			genes: 'TP53'
 		}
 
 		await run_rust('readHDF5', JSON.stringify(input_data))
