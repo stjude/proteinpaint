@@ -10,7 +10,6 @@ import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile } from './utils.js'
 import { authApi } from './auth.js'
-import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '#routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
@@ -205,48 +204,6 @@ async function trigger_findterm(q, req, res, termdb, ds, genome) {
 				foundTerms.push(t)
 			}
 			terms.push(...foundTerms)
-		} else if (q.targetType == TermTypeGroups.GENE_EXPRESSION) {
-			// Only return gene matches when this dataset actually has gene expression data, so the
-			// client (mass omnisearch) shows genes only for gene-expression datasets. Non-expression
-			// datasets return a valid-but-empty list rather than an error.
-			if (ds.queries?.geneExpression) {
-				try {
-					const result = geneSearch(genome, { input: str, deep: false })
-					for (const gene of result.hits || []) {
-						terms.push({ name: gene, gene, type: 'geneExpression' })
-					}
-				} catch (e) {
-					// invalid gene-name input (e.g. multi-word phrase or special characters) → no gene matches
-				}
-			}
-		} else if (q.targetType == TermTypeGroups.DNA_METHYLATION) {
-			// Only return gene matches when this dataset actually has DNA methylation data, so the
-			// client (mass omnisearch) offers a genome browser of the gene only for methylation
-			// datasets. Datasets without methylation return a valid-but-empty list rather than an error.
-			if (ds.queries?.dnaMethylation) {
-				try {
-					const result = geneSearch(genome, { input: str, deep: false })
-					for (const gene of result.hits || []) {
-						terms.push({ name: gene, gene, type: 'dnaMethylation' })
-					}
-				} catch (e) {
-					// invalid gene-name input (e.g. multi-word phrase or special characters) → no gene matches
-				}
-			}
-		} else if (q.targetType == TermTypeGroups.MUTATION_CNV_FUSION) {
-			// Only return gene matches when this dataset actually has gene variant data
-			// (snvindel/cnv/svfusion), so the client (mass omnisearch) offers gene variant results
-			// only for such datasets. Datasets without gene variant data return a valid-but-empty list.
-			if (ds.queries?.snvindel || ds.queries?.cnv || ds.queries?.svfusion) {
-				try {
-					const result = geneSearch(genome, { input: str, deep: false })
-					for (const gene of result.hits || []) {
-						terms.push({ name: gene, gene, type: 'geneVariant' })
-					}
-				} catch (e) {
-					// invalid gene-name input (e.g. multi-word phrase or special characters) → no gene matches
-				}
-			}
 		}
 		terms = filterTerms(req, ds, terms)
 		const id2ancestors = {}
