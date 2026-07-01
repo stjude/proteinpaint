@@ -2,7 +2,7 @@ import { Vocab } from './Vocab'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType, TermTypeGroups } from '#shared/terms.js'
+import { isDictionaryType } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
 	// getAbortSignal() will be used to cancel async fetch requests or canvas rendering that may
@@ -400,55 +400,19 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	// Look up gene symbols matching a search string for the active dataset.
-	// Goes through the dataset-aware findTerm route with the Gene Expression target, so the server
-	// only returns gene matches when the dataset actually has gene expression data (it returns an
-	// empty list otherwise). Returns an array of gene-name strings, already sorted by relevance.
-	// Used by the mass omnisearch (client/mass/chat.ts) to offer gene results alongside dictionary terms.
+	// Look up gene symbols matching a search string, via the shared genelookup route (getResult() in
+	// server/src/gene.js — the same gene search used across the app). Returns an array of gene-name
+	// strings. Gene matches are genome-level (not data-type specific), so a single lookup serves gene
+	// expression, gene variant, and DNA methylation alike. Dataset-capability gating is applied by the
+	// caller (mass omnisearch, client/mass/chat.ts), which only offers a data type's action button
+	// when the dataset supports that data type.
 	async findGene(str) {
 		if (!str) return []
-		const data = await this.findTerm(str, '', null, TermTypeGroups.GENE_EXPRESSION)
-		return (data.lst || []).map(t => t.name)
-	}
-
-	// Look up gene symbols matching a search string for datasets that have DNA methylation data.
-	// Goes through the dataset-aware findTerm route with the DNA Methylation target, so the server
-	// only returns gene matches when the dataset actually has methylation data (empty otherwise).
-	// Returns an array of gene-name strings; the mass omnisearch (client/mass/chat.ts) offers each
-	// as a genome browser of that gene.
-	async findMethylationGene(str) {
-		if (!str) return []
-		const data = await this.findTerm(str, '', null, TermTypeGroups.DNA_METHYLATION)
-		return (data.lst || []).map(t => t.name)
-	}
-
-	// Look up gene symbols matching a search string for datasets that have gene variant data
-	// (snvindel/cnv/svfusion). Goes through the dataset-aware findTerm route with the
-	// Mutation/CNV/Fusion target (the term-type group that geneVariant belongs to), so the server
-	// only returns gene matches when the dataset actually has gene variant data (empty otherwise).
-	// Returns an array of gene-name strings; the mass omnisearch (client/mass/chat.ts) offers each
-	// as a gene variant result.
-	async findGeneVariant(str) {
-		if (!str) return []
-		const data = await this.findTerm(str, '', null, TermTypeGroups.MUTATION_CNV_FUSION)
-		return (data.lst || []).map(t => t.name)
-	}
-
-	// Resolve a gene symbol to its default genomic coordinates { chr, start, stop } via the
-	// genelookup route (deep:true returns gene models). Picks the default isoform when present,
-	// else the first model. Returns null if no usable gene model is found. Used by the mass
-	// omnisearch to open a genome browser at a gene's region.
-	async getGeneCoord(gene) {
-		if (!gene) return null
 		const data = await this.dofetch3('genelookup', {
-			body: { genome: this.vocab.genome, input: gene, deep: true }
+			body: { genome: this.vocab.genome, input: str, deep: false }
 		})
 		if (data.error) throw data.error
-		const gmlst = data.gmlst || []
-		if (!gmlst.length) return null
-		const gm = gmlst.find(g => g.isdefault) || gmlst[0]
-		if (!gm?.chr || !Number.isInteger(gm.start) || !Number.isInteger(gm.stop)) return null
-		return { chr: gm.chr, start: gm.start, stop: gm.stop }
+		return data.hits || []
 	}
 
 	// from termdb/terminfo

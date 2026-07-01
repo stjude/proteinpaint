@@ -56,46 +56,21 @@ export class SearchHandler {
 
 	async handleGeneSearch(geneSearch) {
 		if (geneSearch.geneSymbol) {
-			// gene input
-			// embed block of gene locus to allow navigation to region of interest
+			// gene input: embed a genome browser of the gene locus so the user can navigate to a
+			// region of interest, then submit it to build the term.
 			const { chr, start, stop } = geneSearch
 			if (!chr || !Number.isInteger(start) || !Number.isInteger(stop))
 				throw new Error('unable to retrieve gene coordinate')
-
-			this.dom.blockDiv.selectAll('*').remove()
-			this.dom.blockDiv.style('display', 'block')
-			this.dom.blockDiv.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
-
-			const arg: any = {
+			this.blockInstance = await embedMethylationRegionPicker({
 				holder: this.dom.blockDiv,
-				genome: this.opts.genomeObj, // genome obj
+				genomeObj: this.opts.genomeObj,
+				vocabApi: this.app.vocabApi,
 				chr,
 				start,
 				stop,
-				tklst: [],
-				nobox: true,
-				width: 500,
-				hidegenelegend: true,
-				debugmode: this.opts.debug
-			}
-			first_genetrack_tolist(this.opts.genomeObj, arg.tklst)
-			const _ = await import('#src/block')
-			this.blockInstance = new _.Block(arg)
-
-			this.dom.submitBtn = this.dom.blockDiv
-				.append('div')
-				.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
-				.style('margin', '10px 0px')
-				.append('button')
-				.style('border', 'none')
-				.style('border-radius', '20px')
-				.style('padding', '10px 15px')
-				.text('Submit Region')
-				.on('click', async () => {
-					const { chr, start, stop } = this.blockInstance.rglst[0]
-					const term = this.makeTerm({ chr, start, stop })
-					await this.callback(term)
-				})
+				callback: this.callback,
+				debug: this.opts.debug
+			})
 		} else if (geneSearch.chr && Number.isInteger(geneSearch.start) && Number.isInteger(geneSearch.stop)) {
 			// coordinate input
 			// string2pos() expands single positions to a 400bp window for the
@@ -107,26 +82,80 @@ export class SearchHandler {
 				start = geneSearch.actualposition.position
 				stop = start + 1
 			}
-			const term = this.makeTerm({ chr, start, stop })
+			const term = makeMethylationRegionTerm({ chr, start, stop }, this.app.vocabApi)
 			await this.callback(term)
 		} else {
 			throw new Error('invalid gene search input')
 		}
 	}
+}
 
-	makeTerm(opts) {
-		const { chr, start, stop } = opts
-		if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
-		const unit = getDNAMethUnit('region', this.app.vocabApi)
-
-		const term = {
-			chr,
-			start,
-			stop,
-			type: DNA_METHYLATION,
-			unit,
-			genomicFeatureType: 'region'
-		}
-		return term
+/** Build a region-based dnaMethylation term for the given coordinates. */
+export function makeMethylationRegionTerm(opts: { chr: string; start: number; stop: number }, vocabApi: any) {
+	const { chr, start, stop } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
+	return {
+		chr,
+		start,
+		stop,
+		type: DNA_METHYLATION,
+		unit: getDNAMethUnit('region', vocabApi),
+		genomicFeatureType: 'region'
 	}
+}
+
+/**
+ * Embed a genome browser of a gene/region into `holder` with a "Submit Region" button. On submit,
+ * builds a region-based dnaMethylation term from the region the user navigated to and passes it to
+ * `callback`. Returns the Block instance. Shared by the dnaMethylation search handler and the mass
+ * omnisearch (client/mass/chat.ts).
+ */
+export async function embedMethylationRegionPicker(opts: {
+	holder: any
+	genomeObj: any
+	vocabApi: any
+	chr: string
+	start: number
+	stop: number
+	callback: (term: any) => void | Promise<void>
+	debug?: boolean
+}) {
+	const { holder, genomeObj, vocabApi, chr, start, stop, callback } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('unable to retrieve gene coordinate')
+
+	holder.selectAll('*').remove()
+	holder.style('display', 'block')
+	holder.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
+
+	const arg: any = {
+		holder,
+		genome: genomeObj, // genome obj
+		chr,
+		start,
+		stop,
+		tklst: [],
+		nobox: true,
+		width: 500,
+		hidegenelegend: true,
+		debugmode: opts.debug
+	}
+	first_genetrack_tolist(genomeObj, arg.tklst)
+	const _ = await import('#src/block')
+	const blockInstance = new _.Block(arg)
+
+	holder
+		.append('div')
+		.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
+		.style('margin', '10px 0px')
+		.append('button')
+		.style('border', 'none')
+		.style('border-radius', '20px')
+		.style('padding', '10px 15px')
+		.text('Submit Region')
+		.on('click', async () => {
+			const { chr, start, stop } = blockInstance.rglst[0]
+			await callback(makeMethylationRegionTerm({ chr, start, stop }, vocabApi))
+		})
+
+	return blockInstance
 }

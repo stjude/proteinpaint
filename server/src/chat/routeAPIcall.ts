@@ -21,7 +21,7 @@ async function check_prompt_token_length(
 			text: 'LLM model configuration is missing a valid maxTokens value in serverconfig.'
 		} as MsgToUser
 	}
-	const tokenCount: number = Math.ceil(prompt.length / 4)
+	const tokenCount: number = Math.ceil(prompt.length / 4) // Will later work on a more accurate tokenization method, but this is a reasonable approximation for now.
 	return { limitExceeded: tokenCount > maxTokens, tokenCount, maxTokens }
 }
 
