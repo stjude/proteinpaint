@@ -11,7 +11,16 @@ import {
 	normalizeExcludeOptions,
 	resolveExcludeBeds
 } from '../main.ts'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, mclasscnvgain, mclasscnvloss } from '#shared'
+import {
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	dtsv,
+	mclasscnvgain,
+	mclasscnvloss,
+	mclasscnvAmp,
+	mclasscnvHomozygousDel
+} from '#shared'
 import type { GRIN2Request } from '#types'
 
 /* test sections
@@ -135,6 +144,72 @@ tape('filterAndConvertCnv: category (qualitative class, thresholds ignored)', te
 		filterAndConvertCnv(sample, { ...SEG, class: 'SomethingElse' }, categoryOpts, 'category'),
 		null,
 		'category: unrecognized class => null'
+	)
+	test.end()
+})
+
+tape('processSampleMlst: GDC batched categorical cnv records route to gain/loss', test => {
+	// Records shaped exactly as the GDC batchGet (fetchCnvForCases in gdc.hg38.ts) emits: a lean segment
+	// carrying valueType:'category' and the finer 5-category class. Gain/Amplification => gain lesion,
+	// Loss/Homozygous Deletion => loss lesion. GDC's ds cnvType default resolves to log2ratio, so this also
+	// locks that the per-entry valueType wins over that numeric default with no thresholds sent.
+	const gdcMlst = [
+		{ dt: dtcnv, class: mclasscnvgain, valueType: 'category', ...SEG }, // Gain
+		{ dt: dtcnv, class: mclasscnvAmp, valueType: 'category', ...SEG }, // Amplification
+		{ dt: dtcnv, class: mclasscnvloss, valueType: 'category', ...SEG }, // Loss
+		{ dt: dtcnv, class: mclasscnvHomozygousDel, valueType: 'category', ...SEG } // Homozygous Deletion
+	]
+	const gdcRequest = { cnvOptions: { maxSegLength: 0 } } as unknown as GRIN2Request
+	const gdc = processSampleMlst(sample, gdcMlst, gdcRequest, 'log2ratio')
+	test.deepEqual(
+		gdc.sampleLesions.map(l => l[4]),
+		['gain', 'gain', 'loss', 'loss'],
+		'gain/amplification => gain lesion; loss/homozygous deletion => loss lesion (regardless of log2ratio default)'
+	)
+	test.deepEqual([...gdc.contributedTypes], [dtcnv], 'only cnv contributed')
+	test.end()
+})
+
+tape('filterAndConvertCnv: category cnvCategories filter (UI checkboxes)', test => {
+	const catOpts = (cats?: string[]) => ({ maxSegLength: 0, cnvCategories: cats })
+	// class listed in cnvCategories => included
+	test.deepEqual(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'category', class: mclasscnvAmp },
+			catOpts([mclasscnvAmp]),
+			'category'
+		),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'class in cnvCategories => amplification included as gain'
+	)
+	// class not listed => dropped
+	test.equal(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'category', class: mclasscnvloss },
+			catOpts([mclasscnvAmp]),
+			'category'
+		),
+		null,
+		'class not in cnvCategories => null'
+	)
+	// empty list => nothing included
+	test.equal(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'category', class: mclasscnvgain }, catOpts([]), 'category'),
+		null,
+		'empty cnvCategories => null'
+	)
+	// omitted list => all classes included (backward compatible)
+	test.deepEqual(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'category', class: mclasscnvHomozygousDel },
+			catOpts(undefined),
+			'category'
+		),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'loss'],
+		'undefined cnvCategories => homozygous deletion included as loss'
 	)
 	test.end()
 })

@@ -55,7 +55,14 @@ export interface GRIN2RequestData {
 	hardCap?: number
 	binSize?: number
 	snvindelOptions?: { consequences: string[]; mafFilter?: any }
-	cnvOptions?: { lossThreshold?: number; gainThreshold?: number; maxSegLength: number; cnvType?: string }
+	cnvOptions?: {
+		lossThreshold?: number
+		gainThreshold?: number
+		maxSegLength: number
+		cnvType?: string
+		/** categorical cnv (ds.queries.cnv.type='category'): mclass keys of the cnv-segment types to include */
+		cnvCategories?: string[]
+	}
 	fusionOptions?: Record<string, any>
 	svOptions?: Record<string, any>
 	excludeOptions?: { blacklists?: string[]; overlapFrac?: number }

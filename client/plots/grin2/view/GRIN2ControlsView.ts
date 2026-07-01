@@ -1,5 +1,23 @@
 import { table2col, make_one_checkbox, make_radios } from '#dom'
-import { dtsnvindel, mclass, dtcnv, dtfusionrna, dtsv, proteinChangingMutations, dt2lesion } from '#shared/common.js'
+import {
+	dtsnvindel,
+	mclass,
+	dtcnv,
+	dtfusionrna,
+	dtsv,
+	proteinChangingMutations,
+	dt2lesion,
+	mclasscnvgain,
+	mclasscnvAmp,
+	mclasscnvloss,
+	mclasscnvHomozygousDel,
+	mclasscnvloh
+} from '#shared/common.js'
+
+// display order for categorical cnv-class checkboxes: gains first (gain, amplification), then losses
+// (heterozygous deletion, homozygous deletion) so the two deletions sit next to each other. Any class not
+// listed here (dataset-specific) is appended after, in its declared order.
+const CNV_CLASS_ORDER = [mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel, mclasscnvloh]
 import { filterInit } from '#filter'
 import type { GRIN2ControlsCallbacks, DtUsage } from '../GRIN2Types'
 import { CNV_MAX_SEG_LENGTH_FALLBACK, CNV_TYPE_CONFIG, EXCLUDE_OVERLAP_FRAC_FALLBACK } from '../settings/defaults'
@@ -16,6 +34,9 @@ const checkboxContainerMaxHeight = '150px'
 const checkboxContainerBorder = '1px solid #ddd'
 const controlGap = '8px'
 const checkboxMarginBottom = '2px'
+// shared width for the "Consequences" / "Classes" label cells so their checkbox boxes line up vertically
+// (each lives in its own table2col, whose label column would otherwise size to its own label text)
+const checkboxRowLabelWidth = '110px'
 
 /** Builds and owns the GRIN2 config form (citation header + data-type rows + run button).
  *  Reads its own state from the live DOM and exposes it to the controller via getDtUsage/getConfigValues. */
@@ -35,6 +56,8 @@ export class GRIN2ControlsView {
 	private snvindelSelectAllBtn: any = null
 	private snvindelClearAllBtn: any = null
 	private snvindelDefaultBtn: any = null
+	// one checkbox per supported categorical cnv-segment class (populated only for ds.queries.cnv.type='category')
+	private cnvCategoryCheckboxes: Record<string, any> = {}
 
 	private cnv_lossThreshold: any = null
 	private cnv_gainThreshold: any = null
@@ -125,6 +148,10 @@ export class GRIN2ControlsView {
 				requestConfig.cnvOptions.lossThreshold = parseFloat(this.cnv_lossThreshold.property('value'))
 				requestConfig.cnvOptions.gainThreshold = parseFloat(this.cnv_gainThreshold.property('value'))
 			}
+			// categorical cnv: the checked cnv-segment classes to include (e.g. GDC gain/loss/amp/homdel)
+			if (Object.keys(this.cnvCategoryCheckboxes).length) {
+				requestConfig.cnvOptions.cnvCategories = this.getSelectedCnvCategories()
+			}
 		}
 		if (dtUsage[dtfusionrna]?.checked) requestConfig.fusionOptions = {}
 		if (dtUsage[dtsv]?.checked) requestConfig.svOptions = {}
@@ -171,7 +198,7 @@ export class GRIN2ControlsView {
 		// Consequences section header + checkbox grid
 		{
 			const [labelCell, containerCell] = t2.addRow()
-			labelCell.text('Consequences').style('padding-top', '8px')
+			labelCell.text('Consequences').style('padding-top', '8px').style('min-width', checkboxRowLabelWidth)
 			this.createConsequenceCheckboxes(containerCell)
 		}
 
@@ -285,6 +312,19 @@ export class GRIN2ControlsView {
 		holder.selectAll('*').remove()
 		this.cnvType = valueType
 		const cfg = CNV_TYPE_CONFIG[valueType]
+		// reset per-render; only categorical cnv populates category checkboxes (below)
+		this.cnvCategoryCheckboxes = {}
+
+		if (cfg.hideThresholds) {
+			// qualitative call: no numeric thresholds; instead offer one checkbox per supported cnv-segment
+			// class (mirrors the snvindel consequence checkboxes). Rendered in its own table (before the
+			// Max Segment Length table below) so that label doesn't widen the "Classes" column, keeping the
+			// checkbox box aligned with "Consequences" above. Clear stale threshold inputs.
+			this.cnv_lossThreshold = null
+			this.cnv_gainThreshold = null
+			this.createCnvCategoryCheckboxes(holder, savedCnv)
+		}
+
 		const t2 = table2col({ holder })
 
 		if (!cfg.hideThresholds) {
@@ -304,10 +344,6 @@ export class GRIN2ControlsView {
 				cfg.gainMax,
 				cfg.step
 			)
-		} else {
-			// qualitative call: no numeric thresholds; clear any stale inputs so getConfigValues omits them
-			this.cnv_lossThreshold = null
-			this.cnv_gainThreshold = null
 		}
 		this.cnv_maxSegLength = this.addOptionRowToTable(
 			t2,
@@ -472,6 +508,80 @@ export class GRIN2ControlsView {
 			Object.entries(this.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
 				checkbox.property('checked', canonicalDefault.has(classKey))
 			})
+		})
+	}
+
+	private getSelectedCnvCategories(): string[] {
+		const categories: string[] = []
+		Object.entries(this.cnvCategoryCheckboxes).forEach(([classKey, checkbox]) => {
+			if (checkbox.property('checked')) categories.push(classKey)
+		})
+		return categories
+	}
+
+	/** One checkbox per categorical cnv-segment class supported by this dataset, all checked by default —
+	 * the cnv analog of the snvindel consequence checkboxes. The supported classes are the CNV entries the
+	 * dataset declares in termdbConfig.mclass (e.g. GDC: Gain / Heterozygous Deletion / Amplification /
+	 * Homozygous Deletion), identified via the global mclass dt; labels prefer the dataset override. Rendered
+	 * in its own table2col with a fixed label width so the checkbox box aligns with "Consequences" above. */
+	private createCnvCategoryCheckboxes(holder: any, savedCnv: any) {
+		const dsMclass = this.vocabApi.termdbConfig?.mclass || {}
+		const cnvClasses = Object.keys(dsMclass)
+			.filter(key => mclass[key]?.dt === dtcnv)
+			.map(key => ({ key, label: dsMclass[key]?.label || mclass[key]?.label || key, desc: mclass[key]?.desc || '' }))
+			// gains together, deletions together (see CNV_CLASS_ORDER); unlisted classes keep declared order at end
+			.sort((a, b) => {
+				const ia = CNV_CLASS_ORDER.indexOf(a.key)
+				const ib = CNV_CLASS_ORDER.indexOf(b.key)
+				return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib)
+			})
+		this.cnvCategoryCheckboxes = {}
+		if (!cnvClasses.length) return
+
+		// default = all classes on; restore an exact saved selection only after a completed run
+		const saved = savedCnv?.cnvCategories as string[] | undefined
+		const useSaved = this.config.settings.runAnalysis === true && Array.isArray(saved)
+		const initialChecked = useSaved ? new Set<string>(saved!) : new Set<string>(cnvClasses.map(c => c.key))
+
+		// own table so the wide "Max Segment Length" label doesn't push these checkboxes right; fixed label
+		// width matches the snvindel "Consequences" cell so the two checkbox boxes line up vertically
+		const t2 = table2col({ holder })
+		const [labelCell, containerCell] = t2.addRow()
+		labelCell.text('Classes').style('padding-top', '8px').style('min-width', checkboxRowLabelWidth)
+
+		const controlDiv = containerCell
+			.append('div')
+			.style('margin-bottom', '6px')
+			.style('display', 'flex')
+			.style('gap', controlGap)
+		const selectAllBtn = controlDiv.append('button').style('font-size', `${tableFontSize}px`).text('Select All')
+		const clearAllBtn = controlDiv.append('button').style('font-size', `${tableFontSize}px`).text('Clear All')
+
+		const checkboxContainer = containerCell
+			.append('div')
+			.style('max-height', checkboxContainerMaxHeight)
+			.style('overflow-y', 'auto')
+			.style('border', checkboxContainerBorder)
+			.style('margin-bottom', '6px')
+
+		cnvClasses.forEach(c => {
+			const checkboxDiv = checkboxContainer.append('div').style('margin-bottom', checkboxMarginBottom)
+			const checkbox = make_one_checkbox({
+				holder: checkboxDiv,
+				labeltext: c.label,
+				checked: initialChecked.has(c.key),
+				divstyle: { 'font-size': `${tableFontSize}px` },
+				callback: () => {}
+			})
+			if (c.desc) checkboxDiv.select('label').attr('title', c.desc)
+			this.cnvCategoryCheckboxes[c.key] = checkbox
+		})
+
+		selectAllBtn.on('click', () => {
+			Object.values(this.cnvCategoryCheckboxes).forEach(cb => cb.property('checked', true))
+		})
+		clearAllBtn.on('click', () => {
+			Object.values(this.cnvCategoryCheckboxes).forEach(cb => cb.property('checked', false))
 		})
 	}
 }
