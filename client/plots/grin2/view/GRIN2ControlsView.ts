@@ -179,8 +179,21 @@ export class GRIN2ControlsView {
 
 	private updateRunButtonFromCheckboxes() {
 		const dtUsage = this.snvindelCheckbox ? this.getDtUsage() : (this.config.settings.dtUsage as DtUsage)
-		const anyChecked = Object.values(dtUsage).some(info => info.checked)
-		this.runButton?.property('disabled', !anyChecked)
+		// A run needs at least one data type that would actually contribute data. A ticked data type usually
+		// qualifies, except when it has an explicit include-list with nothing selected: snvindel with no
+		// consequence checked, or categorical CNV with no class checked, both match nothing (an empty list =
+		// "include none"), so they can't drive a run on their own.
+		const anyEffective = Object.entries(dtUsage).some(([dt, info]) => {
+			if (!info.checked) return false
+			if (Number(dt) === dtsnvindel && Object.keys(this.consequenceCheckboxes).length > 0) {
+				return this.getSelectedConsequences().length > 0
+			}
+			if (Number(dt) === dtcnv && Object.keys(this.cnvCategoryCheckboxes).length > 0) {
+				return this.getSelectedCnvCategories().length > 0
+			}
+			return true
+		})
+		this.runButton?.property('disabled', !anyEffective)
 	}
 
 	private getSelectedConsequences(): string[] {
@@ -492,7 +505,9 @@ export class GRIN2ControlsView {
 				labeltext: classInfo.label,
 				checked: initialChecked.has(classKey),
 				divstyle: { 'font-size': `${tableFontSize}px` },
-				callback: () => {}
+				// clearing every consequence includes nothing, which can disable the run button (see
+				// updateRunButtonFromCheckboxes), so re-evaluate it on each toggle
+				callback: () => this.updateRunButtonFromCheckboxes()
 			})
 			checkboxDiv.select('label').attr('title', classInfo.desc)
 			this.consequenceCheckboxes[classKey] = checkbox
@@ -500,14 +515,17 @@ export class GRIN2ControlsView {
 
 		this.snvindelSelectAllBtn.on('click', () => {
 			Object.values(this.consequenceCheckboxes).forEach(cb => cb.property('checked', true))
+			this.updateRunButtonFromCheckboxes()
 		})
 		this.snvindelClearAllBtn.on('click', () => {
 			Object.values(this.consequenceCheckboxes).forEach(cb => cb.property('checked', false))
+			this.updateRunButtonFromCheckboxes()
 		})
 		this.snvindelDefaultBtn.on('click', () => {
 			Object.entries(this.consequenceCheckboxes).forEach(([classKey, checkbox]) => {
 				checkbox.property('checked', canonicalDefault.has(classKey))
 			})
+			this.updateRunButtonFromCheckboxes()
 		})
 	}
 
@@ -571,7 +589,9 @@ export class GRIN2ControlsView {
 				labeltext: c.label,
 				checked: initialChecked.has(c.key),
 				divstyle: { 'font-size': `${tableFontSize}px` },
-				callback: () => {}
+				// clearing every class excludes all cnv, which can disable the run button (see
+				// updateRunButtonFromCheckboxes), so re-evaluate it on each toggle
+				callback: () => this.updateRunButtonFromCheckboxes()
 			})
 			if (c.desc) checkboxDiv.select('label').attr('title', c.desc)
 			this.cnvCategoryCheckboxes[c.key] = checkbox
@@ -579,9 +599,11 @@ export class GRIN2ControlsView {
 
 		selectAllBtn.on('click', () => {
 			Object.values(this.cnvCategoryCheckboxes).forEach(cb => cb.property('checked', true))
+			this.updateRunButtonFromCheckboxes()
 		})
 		clearAllBtn.on('click', () => {
 			Object.values(this.cnvCategoryCheckboxes).forEach(cb => cb.property('checked', false))
+			this.updateRunButtonFromCheckboxes()
 		})
 	}
 }

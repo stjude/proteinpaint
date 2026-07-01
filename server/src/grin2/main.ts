@@ -305,6 +305,16 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 				).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
 		])
 	}
+	// The batched CNV fetch has its own cap (independent of ssm's), so warn separately when it truncated.
+	if (processing.cnvCapReached) {
+		capWarningRows.push([
+			'Note',
+			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached while loading CNV segments. ` +
+				`CNV data was not loaded for ${(
+					processing.cnvSamplesDropped ?? 0
+				).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		])
+	}
 
 	// Coverage note: samples that contributed no open-access SNV/indel lesions, broken down by reason so the
 	// user can see why. Independent of the lesion cap above — both can apply — so it's its own note.
@@ -362,6 +372,16 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 									[
 										'Open-access samples without mutations',
 										`${processing.ssmSamplesNoMutations.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
+									]
+							  ]
+							: []),
+						// queried samples that returned no cnv segment (batched GDC cnv path); shown only when cnv
+						// was requested and some samples had none.
+						...(processing.cnvSamplesNoData
+							? [
+									[
+										'Samples without CNV data',
+										`${processing.cnvSamplesNoData.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
 									]
 							  ]
 							: []),
@@ -725,6 +745,12 @@ async function processSampleData(
 		// samples that mapped to no GDC case at all (batched path), so were never queried; counted in neither
 		// samplesWithData nor ssmSamplesNoOpenAccess, hence surfaced separately so the cohort tallies reconcile.
 		unmatchedSamples?: number
+		// cnv analogs of the ssm* fields above (batched GDC cnv fetch). cnvCapReached/cnvSamplesDropped mirror
+		// ssmCapReached/ssmSamplesDropped; cnvSamplesNoData is queried samples that returned no cnv segment
+		// (cnv segment data is open-access, so there is no controlled-access split like ssm has).
+		cnvCapReached?: boolean
+		cnvSamplesDropped?: number
+		cnvSamplesNoData?: number
 		lesionCap?: number
 		lesionCounts?: {
 			total: number
@@ -780,6 +806,14 @@ async function processSampleData(
 		processing.ssmSamplesControlledAccess = batch.samplesControlledAccess
 		processing.ssmSamplesNoMutations = batch.samplesNoMutations
 		processing.unmatchedSamples = batch.unresolvedSamples
+		// cnv coverage from the same batch (0 when cnv wasn't requested). cnvCapReached mirrors ssmCapReached
+		// (the cap skipped some samples' cnv while the loop still "processed" them); cnvSamplesNoData is a
+		// coverage note for queried samples that had no cnv segment.
+		if (batch.cnvCapReached) {
+			processing.cnvCapReached = true
+			processing.cnvSamplesDropped = batch.cnvSamplesDropped
+		}
+		processing.cnvSamplesNoData = batch.cnvSamplesNoData
 	}
 	// When mutations are batched, skip snvindel + cnv in the per-sample loop so get() doesn't re-fetch them
 	// (fusion/sv, if enabled, still flow through get()).
@@ -997,9 +1031,10 @@ export function filterAndConvertSnvIndel(
 		return null
 	}
 
-	// Check consequence filtering. If no consequences selected, include all consequences
-	// If consequences are selected, only include those
-	if (options.consequences.length > 0 && entry.class && !options.consequences.includes(entry.class)) {
+	// Only include mutations whose consequence class is selected. An empty list means no consequence is
+	// selected, so nothing is included — mirrors cnvOptions.cnvCategories, and the UI disables Run when
+	// snvindel is the only enabled data type with no consequence checked.
+	if (!options.consequences.includes(entry.class)) {
 		return null
 	}
 
