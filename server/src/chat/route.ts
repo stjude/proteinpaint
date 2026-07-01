@@ -1,4 +1,12 @@
-import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification, RouteApi, RoutePayload } from '#types'
+import type {
+	ChatRequest,
+	ChatResponse,
+	LlmConfig,
+	QueryClassification,
+	RouteApi,
+	RoutePayload,
+	GeneDataTypeAvailability
+} from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
@@ -155,22 +163,12 @@ export function init({ genomes }) {
 	}
 }
 
-/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
- * (expression / variant sub-types / methylation) to offer. */
-export interface GeneDataTypeAvailability {
-	geneExpression: boolean
-	dnaMethylation: boolean
-	snvindel: boolean
-	cnv: boolean
-	svfusion: boolean
-}
-
 /** Determine which gene data types a dataset supports. Deliberately independent of the AI chat
  * pipeline (run_chat_pipeline): a synchronous, read-only capability probe for the mass omnisearch.
  * Gene expression and DNA methylation are read from getDsAllowedTermTypes() (the shared source of
  * truth); the gene variant sub-types (snvindel/cnv/svfusion) are read directly from ds.queries,
  * since getDsAllowedTermTypes() does not report them. */
-export function getGeneDataTypes(ds): GeneDataTypeAvailability {
+export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
 	const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
 	return {
 		geneExpression: allowedTermTypes.includes(GENE_EXPRESSION),
