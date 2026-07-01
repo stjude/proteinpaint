@@ -58,6 +58,16 @@ export interface GeneDataTypeResult {
 	dataType: string
 }
 
+/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
+ * (expression / variant sub-types / methylation) to offer. */
+export interface GeneDataTypeAvailability {
+	geneExpression: boolean
+	dnaMethylation: boolean
+	snvindel: boolean
+	cnv: boolean
+	svfusion: boolean
+}
+
 export interface GeneSetDataTypeResult {
 	geneSet: string
 	dataType: typeof TermTypes.SSGSEA | typeof TermTypes.GENE_VARIANT | 'ambiguous' | typeof TermTypes.GENE_EXPRESSION
