@@ -95,9 +95,6 @@ path="src/genesetORA.rs"
 name="computeTopTerms"
 path="src/computeTopTerms.rs"
 
-[[bin]]
-name="readHDF5"
-path="src/readHDF5.rs"
 
 [[bin]]
 name="validateHDF5"
