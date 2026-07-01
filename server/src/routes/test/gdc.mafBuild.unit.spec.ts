@@ -45,6 +45,8 @@ tape('\n', function (test) {
 })
 
 tape('selects requested columns in the requested order', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
 	// request a subset, reordered relative to the file's column order
 	const out = selectMafCols(maf, ['Variant_Classification', 'Hugo_Symbol'])
 	test.equal(
@@ -56,6 +58,8 @@ tape('selects requested columns in the requested order', function (test) {
 })
 
 tape('selects all columns when all are requested', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
 	const out = selectMafCols(maf, HEADER)
 	test.equal(
 		out,
@@ -66,6 +70,8 @@ tape('selects all columns when all are requested', function (test) {
 })
 
 tape('throws when a requested column is not in the header', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
 	test.throws(
 		() => selectMafCols(maf, ['Hugo_Symbol', 'No_Such_Column']),
 		/Column No_Such_Column was not found/,
@@ -75,6 +81,8 @@ tape('throws when a requested column is not in the header', function (test) {
 })
 
 tape('throws "Empty MAF file" when there are no data rows', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
 	const headerOnly = ['#meta', HEADER.join('\t')].join('\n')
 	test.throws(() => selectMafCols(headerOnly, ['Hugo_Symbol']), /Empty MAF file/, 'header but no data rows → throws')
 
@@ -84,6 +92,8 @@ tape('throws "Empty MAF file" when there are no data rows', function (test) {
 })
 
 tape('pads a ragged (short) data row with empty fields', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
 	// second data row is missing its trailing Variant_Classification cell
 	const ragged = [
 		HEADER.join('\t'),
@@ -100,9 +110,31 @@ tape('pads a ragged (short) data row with empty fields', function (test) {
 })
 
 tape('trims trailing blank lines so no empty data row leaks through', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
 	const trailing = maf + '\n\n\n'
 	const out = selectMafCols(trailing, ['Hugo_Symbol'])
 	test.equal(out, 'TP53\nKRAS\n', 'trailing newlines should not produce extra empty rows')
+	test.end()
+})
+
+tape('does not treat a data field containing "Hugo_Symbol" as a second header', function (test) {
+	test.timeoutAfter(1000) // fail fast instead of hanging CI
+
+	// only the first exact-Hugo_Symbol line is the header; a later data row whose field merely CONTAINS
+	// the substring must be selected as data, not re-parsed as a header (which would reset column indices
+	// or throw "Column ... was not found")
+	const withSubstring = [
+		HEADER.join('\t'),
+		['TP53', 'chr17', '7577120', 'Missense_Mutation'].join('\t'),
+		['BRCA1', 'chr17', '41197694', 'note_Hugo_Symbol_x'].join('\t')
+	].join('\n')
+	const out = selectMafCols(withSubstring, ['Hugo_Symbol', 'Variant_Classification'])
+	test.equal(
+		out,
+		'TP53\tMissense_Mutation\nBRCA1\tnote_Hugo_Symbol_x\n',
+		'a data row with a "Hugo_Symbol" substring is selected as data, not misread as a header'
+	)
 	test.end()
 })
 
@@ -145,6 +177,8 @@ tape('\n', function (test) {
 })
 
 tape('merges good files and isolates per-file failures', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
 	const written: string[] = []
 	let settled = 0
 	// concurrency 1 → deterministic write order matching fileIdLst, so we can assert exact output
@@ -177,6 +211,8 @@ tape('merges good files and isolates per-file failures', async function (test) {
 })
 
 tape('merges every good file exactly once with concurrency > 1', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
 	const written: string[] = []
 	const result = await mergeMafFiles({
 		fileIdLst: ['a', 'b', 'c'],
@@ -199,6 +235,8 @@ tape('merges every good file exactly once with concurrency > 1', async function 
 })
 
 tape('an already-aborted signal processes nothing', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
 	const controller = new AbortController()
 	controller.abort()
 	const written: string[] = []
@@ -219,6 +257,8 @@ tape('an already-aborted signal processes nothing', async function (test) {
 })
 
 tape('a write() failure is counted as an error, not a merge', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
 	// `merged` and the timing totals must only advance after write() succeeds, so a failed write can't
 	// both inflate `merged` and skew the total*/merged averages. 'b' downloads + selects fine but its
 	// write throws; it must be recorded as a per-file error and excluded from `merged`.
