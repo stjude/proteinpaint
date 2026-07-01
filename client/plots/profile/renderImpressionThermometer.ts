@@ -21,6 +21,10 @@ const RATING_COLORS: Record<number, string> = {
 // the live db, but keeps the renderer from emitting `fill="undefined"` if it ever does).
 const FALLBACK_COLOR = '#888'
 
+// POC-median marker: a neutral grey ball, distinct from the module-colored SC bar/bulb.
+const POC_MEDIAN_FILL = '#9e9e9e'
+const POC_MEDIAN_STROKE = '#616161'
+
 export type ImpressionTexts = {
 	titleTemplate: string
 	subtitle: string[]
@@ -324,8 +328,8 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 				.attr('cx', bulbCx)
 				.attr('cy', ballY)
 				.attr('r', BALL_R)
-				.attr('fill', '#444')
-				.attr('stroke', '#000')
+				.attr('fill', POC_MEDIAN_FILL)
+				.attr('stroke', POC_MEDIAN_STROKE)
 				.attr('stroke-width', 1)
 			attachTip(ball, `POC median: ${pocMedian} (n=${pocTotalForTip} staff responses)`)
 		}
@@ -401,8 +405,8 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 			.attr('cx', markerX + 7)
 			.attr('cy', 22 - 4)
 			.attr('r', BALL_R)
-			.attr('fill', '#444')
-			.attr('stroke', '#000')
+			.attr('fill', POC_MEDIAN_FILL)
+			.attr('stroke', POC_MEDIAN_STROKE)
 			.attr('stroke-width', 1)
 		legendG
 			.append('text')
