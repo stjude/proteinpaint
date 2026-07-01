@@ -1,19 +1,30 @@
 import { getCompInit, type RxComponent } from '#rx'
 import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
-import { keyupEnter } from '#src/client'
+import { keyupEnter, gmlst2loci } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
-import { getDNAMethUnit } from '#tw/dnaMethylation'
-import { first_genetrack_tolist } from '#common/1stGenetk'
+import { embedMethylationRegionPicker } from '../termdb/handlers/dnaMethylation.ts'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
+
+// Resolve a gene symbol to its genomic loci via the genelookup route, reusing the shared
+// gmlst2loci() helper (from #src/client) — the same coordinate-merging logic that the gene
+// searchbox (dom/genesearch.ts) uses internally. Returns an array of merged loci
+// { name, chr, start, stop }; a gene whose isoforms span discontinuous loci yields more than one.
+// Throws if the gene cannot be resolved (so callers can rely on a non-empty array).
+async function gene2loci(genome: string, geneSymbol: string) {
+	const data = await dofetch3('genelookup', { body: { genome, input: geneSymbol, deep: 1 } })
+	if (data.error) throw data.error
+	if (!data.gmlst?.length) throw `cannot retrieve coordinates for gene "${geneSymbol}"`
+	return gmlst2loci(data.gmlst)
+}
 
 class MassAiChatBot implements RxComponent {
 	static type = 'chat'
@@ -86,14 +97,13 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		// Search dictionary variables and (when supported) gene names for gene expression, gene
-		// variant, and DNA methylation in parallel. Each gene search returns only when the dataset
-		// supports that data type.
-		const [data, geneExpressionHits, geneVariantHits, methylationHits] = await Promise.all([
+		// Search dictionary variables and (when the dataset supports any gene data type) gene names in
+		// parallel. Gene matches are genome-level, so a single findGene() lookup serves all gene data
+		// types; which action buttons a gene gets is decided below by the dataset-capability flags.
+		const hasGeneData = this.hasGeneExp || this.hasGeneVariant || this.hasMethylation
+		const [data, geneHits] = await Promise.all([
 			this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType),
-			this.hasGeneExp ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([]),
-			this.hasGeneVariant ? this.app.vocabApi.findGeneVariant(prompt).catch(() => []) : Promise.resolve([]),
-			this.hasMethylation ? this.app.vocabApi.findMethylationGene(prompt).catch(() => []) : Promise.resolve([])
+			hasGeneData ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([])
 		])
 		if (!Array.isArray(data.lst)) data.lst = []
 		// Append matching genes, skipping any whose name already appears among the dictionary results.
@@ -113,9 +123,11 @@ class MassAiChatBot implements RxComponent {
 			}
 			entry[action] = true
 		}
-		for (const gene of geneExpressionHits) addGeneAction(gene, 'isGeneExpression')
-		for (const gene of geneVariantHits) addGeneAction(gene, 'isGeneVariant')
-		for (const gene of methylationHits) addGeneAction(gene, 'isMethylation')
+		for (const gene of geneHits) {
+			if (this.hasGeneExp) addGeneAction(gene, 'isGeneExpression')
+			if (this.hasGeneVariant) addGeneAction(gene, 'isGeneVariant')
+			if (this.hasMethylation) addGeneAction(gene, 'isMethylation')
+		}
 		for (const entry of geneMap.values()) data.lst.push(entry)
 		if (!data.lst || data.lst.length == 0) {
 			// Show the "No match..." message one time at the first miss
@@ -397,63 +409,35 @@ function setRenderers(self: any) {
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
-	// DNA methylation: mirror the summary chart's dnaMethylation term search (see
+	// DNA methylation: reuse the dnaMethylation search handler's region picker (see
 	// client/termdb/handlers/dnaMethylation.ts). Open a genome browser at the gene's default
-	// coordinates with a "Submit Region" button; on submit, build a region-based dnaMethylation
-	// term from the region the user navigated to and open a violin plot of its per-sample beta values.
+	// coordinates inline in the result area with a "Submit Region" button; on submit, open a violin
+	// plot of the region-based dnaMethylation term's per-sample beta values.
 	self.launchMethylationPlot = async (gene: string) => {
-		const coord = await self.app.vocabApi.getGeneCoord(gene)
-		if (!coord) throw `Could not resolve coordinates for gene "${gene}"`
-		const genomeObj = self.app.opts.genome
+		// resolve the gene to genomic loci with the shared gmlst2loci() logic (the same core that
+		// dom/genesearch.ts's gene search uses), instead of a bespoke coordinate lookup. Merged
+		// isoforms may yield >1 locus for genes spread across discontinuous loci; open the region
+		// picker at the first locus (the user navigates the genome browser from there anyway).
+		const loci = await gene2loci(self.app.vocabApi.vocab.genome, gene)
+		const coord = loci[0]
 
 		// render the region picker inline in the chat result area, replacing the result list
 		self.dom.tip.clear()
 		self.dom.tip.showunder(self.dom.inputNode)
 		const holder = self.dom.resultDiv.append('div').style('margin', '10px')
-		holder
-			.append('div')
-			.style('opacity', 0.6)
-			.style('margin-bottom', '5px')
-			.text(`${gene}: navigate to the desired region`)
-		const blockDiv = holder.append('div')
+		holder.append('div').style('margin-bottom', '5px').text(gene)
 
-		const arg: any = {
-			holder: blockDiv,
-			genome: genomeObj,
+		await embedMethylationRegionPicker({
+			holder: holder.append('div'),
+			genomeObj: self.app.opts.genome,
+			vocabApi: self.app.vocabApi,
 			chr: coord.chr,
 			start: coord.start,
 			stop: coord.stop,
-			tklst: [],
-			nobox: true,
-			width: 500,
-			hidegenelegend: true
-		}
-		first_genetrack_tolist(genomeObj, arg.tklst)
-		const _ = await import('#src/block')
-		const blockInstance = new _.Block(arg)
-
-		holder
-			.append('div')
-			.style('margin', '10px 0px')
-			.append('button')
-			.attr('data-testid', 'sjpp-mass-chat-methylation-submit')
-			.style('border', 'none')
-			.style('border-radius', '20px')
-			.style('padding', '10px 15px')
-			.style('cursor', 'pointer')
-			.text('Submit Region')
-			.on('click', async () => {
-				const { chr, start, stop } = blockInstance.rglst[0]
-				const term = {
-					chr,
-					start,
-					stop,
-					type: 'dnaMethylation',
-					unit: getDNAMethUnit('region', self.app.vocabApi),
-					genomicFeatureType: 'region'
-				}
+			callback: async (term: any) => {
 				await self.launchPlot({ chartType: 'summary', term: { term } })
-			})
+			}
+		})
 	}
 
 	self.showTerm = function (term: any) {
