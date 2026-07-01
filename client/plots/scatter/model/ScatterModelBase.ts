@@ -210,7 +210,7 @@ export abstract class ScatterModelBase {
 	initAxes(chart) {
 		const config = this.scatter.config
 		const settings = this.scatter.settings
-		if (!chart.data?.samples || chart.data.samples.length == 0) return
+		if ((!chart.data?.samples || chart.data.samples.length == 0) && !chart.totalSampleCount) return
 		const offsetX = this.axisOffset.x
 		const offsetY = this.axisOffset.y
 		const xMin = chart.ranges.xMin
