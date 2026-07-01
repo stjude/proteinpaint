@@ -86,6 +86,28 @@ concurrencyLimiter and a config-driven, per-environment concurrency cap.
 async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	const t0 = Date.now()
 
+	// Validate/normalize request + config inputs BEFORE any multipart response bytes are written (and
+	// before the GDC size query / RSS timer), so a bad value produces a clean early error — handled by
+	// init()'s catch as a JSON error response — instead of corrupting an already-started multipart stream
+	// or failing deep inside mapConcurrent().
+	const columns = q.columns
+	if (!Array.isArray(columns) || columns.length === 0) throw 'columns must be a non-empty array'
+	if (columns.some(c => typeof c != 'string' || c.length == 0)) throw 'every column must be a non-empty string'
+
+	// serverconfig is operator-supplied JSON, so gdcMafConcurrency may be absent, a string, or otherwise
+	// not a positive integer. Coerce + validate here (a set-but-invalid value falls back to the default,
+	// with a log) rather than letting it propagate into mapConcurrent() and throw mid-response.
+	const rawConcurrency = serverconfig.features.gdcMafConcurrency
+	const concurrencyNum = Number(rawConcurrency)
+	const concurrency = Number.isInteger(concurrencyNum) && concurrencyNum > 0 ? concurrencyNum : defaultConcurrency
+	if (rawConcurrency != null && concurrency !== concurrencyNum) {
+		mayLog(
+			`gdcmaf: invalid serverconfig.features.gdcMafConcurrency=${JSON.stringify(
+				rawConcurrency
+			)}, falling back to ${defaultConcurrency}`
+		)
+	}
+
 	// Sample process RSS through the build so the finalize log can report the peak working set (helps
 	// catch memory spikes from large cohorts / many concurrent downloads). Caveat: rss is process-wide,
 	// not request-local — if two /gdc/mafBuild builds overlap, one peak can include the other's memory;
@@ -107,9 +129,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		)}`
 	)
 
-	const concurrency = serverconfig.features.gdcMafConcurrency || defaultConcurrency
 	const dataHost = joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
-	const columns = q.columns
 
 	// Abort active downloads if the client disconnects (e.g. browser tab refreshed mid-download), so
 	// orphaned GDC requests don't keep running after no one is listening.
@@ -351,10 +371,15 @@ async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 
 /*
 Shared, stateful core of the rust select_maf_col port: feed it MAF lines one at a time and it finds the
-header (by its Hugo_Symbol column), resolves each requested column to its index, and returns the selected
-tab-joined row for each data line (or null for comment/header/pre-header lines). Throws if a requested
-column is absent from the header. Keeping this incremental lets the same logic drive both selectMafCols()
-(whole-string, unit-tested) and streamSelectMafCols() (line-by-line, low memory) with identical behavior.
+header (the first non-comment line with an exact Hugo_Symbol column), resolves each requested column to
+its index, and returns the selected tab-joined row for each data line (or null for comment/header/
+pre-header lines). Throws if a requested column is absent from the header. Keeping this incremental lets
+the same logic drive both selectMafCols() (whole-string, unit-tested) and streamSelectMafCols()
+(line-by-line, low memory) with identical behavior.
+
+Header detection is deliberately (a) an exact tab-split field match, not a substring — so a data value
+containing "Hugo_Symbol" can't be mistaken for the header — and (b) only attempted while headerIndices
+is still null, so a later matching line can't reset the indices and corrupt column selection mid-file.
 */
 function createMafRowSelector(columns: string[]) {
 	let headerIndices: number[] | null = null
@@ -362,18 +387,18 @@ function createMafRowSelector(columns: string[]) {
 	return {
 		processLine(line: string): string | null {
 			if (line.startsWith('#')) return null
-			if (line.includes('Hugo_Symbol')) {
-				const header = line.split('\t')
-				headerIndices = []
-				for (const col of columns) {
-					const idx = header.indexOf(col)
+			if (!headerIndices) {
+				// still looking for the header row; identify it by an exact Hugo_Symbol column
+				const fields = line.split('\t')
+				if (!fields.includes('Hugo_Symbol')) return null // pre-header line (shouldn't happen); skip
+				headerIndices = columns.map(col => {
+					const idx = fields.indexOf(col)
 					if (idx === -1) throw `Column ${col} was not found`
-					headerIndices.push(idx)
-				}
+					return idx
+				})
 				if (headerIndices.length === 0) throw 'No matching columns found'
 				return null
 			}
-			if (!headerIndices) return null // data before header (shouldn't happen); nothing to select yet
 			const cells = line.split('\t')
 			dataRowCount++
 			return headerIndices.map(i => cells[i] ?? '').join('\t')

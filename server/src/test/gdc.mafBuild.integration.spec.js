@@ -34,6 +34,9 @@ tape('\n', test => {
 })
 
 tape('gdc/mafBuild builds a merged cohort MAF', async test => {
+	// bound the real GDC download+build so a hung server/network fails the test instead of hanging CI;
+	// generous headroom for a genuine 2-file download over the wire
+	test.timeoutAfter(60000)
 	if (typeof fetch != 'function') {
 		// no global fetch (Node < 18); this spec needs its spec-compliant multipart formData(), so skip
 		// with a clear message rather than throwing further down
@@ -45,12 +48,25 @@ tape('gdc/mafBuild builds a merged cohort MAF', async test => {
 		const res = await fetch(url, {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ fileIdLst, columns })
+			body: JSON.stringify({ fileIdLst, columns }),
+			// abort the request just under the tape timeout above, so a hung server actually releases the
+			// socket (rather than leaving a dangling handle that keeps the process — and CI — alive)
+			signal: AbortSignal.timeout(55000)
 		})
-		test.ok(
-			res.headers.get('content-type')?.includes('multipart/form-data'),
-			'response content-type is multipart/form-data'
-		)
+
+		// assert a successful multipart response BEFORE parsing it. On a non-2xx (server down / proxy error /
+		// route error) the body is a plain error string, not multipart — surface it as the root cause here
+		// rather than letting res.formData() throw an opaque multipart-parse error further down.
+		const contentType = res.headers.get('content-type') || ''
+		if (!res.ok || !contentType.includes('multipart/form-data')) {
+			const body = await res.text().catch(() => '<unreadable body>')
+			test.fail(
+				`expected 2xx multipart/form-data, got HTTP ${res.status} (${contentType || 'no content-type'}): ${body}`
+			)
+			test.end()
+			return
+		}
+		test.pass('response is 2xx multipart/form-data')
 
 		// parse the multipart response the same way the browser client does (res.formData()): the gzfile
 		// part has a filename so it comes back as a Blob; the errors part has no filename so it's a string
