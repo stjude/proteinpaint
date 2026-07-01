@@ -212,6 +212,7 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	getOpts() {
 		const opts = {
 			genome: this.app.opts.genome,
+			app: this.app,
 			vocabApi: this.app.vocabApi,
 			debug: this.app.opts.debug,
 			plotDiv: this.opts.plotDiv,

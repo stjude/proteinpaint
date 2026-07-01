@@ -31,7 +31,7 @@ feedSample2selectCallback
 .block
 .div
 .tid2value={}
- 	sample filters by e.g. clicking on a sunburst ring, for tk.mds.variant2samples.get
+	  sample filters by e.g. clicking on a sunburst ring, for tk.mds.variant2samples.get
 .singleSampleDiv
 	optional, if just one single sample, can show into this table rather than creating a new one
 */
@@ -237,11 +237,11 @@ async function make_singleSampleTable(s, arg) {
 	}
 
 	/* quick fix for accessing details of a single case
-    if (arg.tk.mds.termdb && arg.tk.mds.termdb.allowCaseDetails) {
-        // has one single case
-        arg.div.append('div').text('Case details')
-    }
-    */
+	if (arg.tk.mds.termdb && arg.tk.mds.termdb.allowCaseDetails) {
+		// has one single case
+		arg.div.append('div').text('Case details')
+	}
+	*/
 }
 
 // get display value for a tw from a sample
@@ -333,8 +333,6 @@ function printSampleName(sample, tk, div, block, thisMutation) {
 }
 
 async function createDiscoInSandbox(tk, block, sample, thisMutation) {
-	// create ad-hoc sandbox; if newChartHolder is present, plot into it
-	const sandbox = newSandboxDiv(tk.newChartHolder || block.holder0)
 	const headerTexts = [sample.sample_id] // for sandbox header
 	if (thisMutation) {
 		// mutation of this sample is provided (tooltip currently shows info about this mutation)
@@ -347,20 +345,23 @@ async function createDiscoInSandbox(tk, block, sample, thisMutation) {
 		}
 		headerTexts.push(' ' + thisMutation.mname)
 	}
-	sandbox.header.text(headerTexts.join(''))
+	const sandbox = tk.massApp ? null : newSandboxDiv(tk.newChartHolder || block.holder0)
+	if (sandbox) sandbox.header.text(headerTexts.join(''))
 	try {
 		;(await import('#plots/plot.disco.js')).default(
 			tk.mds.termdbConfig,
 			tk.mds.label,
 			sample,
-			sandbox.body,
+			sandbox ? sandbox.body : tk.newChartHolder || block.holder0,
 			block.genome,
 			{
 				downloadImgName: headerTexts.join('') + ' Disco' // file name of svg downloaded from disco
-			}
+			},
+			true,
+			tk.massApp ? { app: tk.massApp } : {}
 		)
 	} catch (e) {
-		sandbox.body.append('div').text('Error: ' + (e.message || e))
+		;(sandbox ? sandbox.body : tk.newChartHolder || block.holder0).append('div').text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
 }
