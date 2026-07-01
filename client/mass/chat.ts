@@ -8,7 +8,9 @@ import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
-import { embedMethylationRegionPicker } from '../termdb/handlers/dnaMethylation.ts'
+import { DNA_METHYLATION } from '#shared/terms.js'
+import { getDNAMethUnit } from '#tw/dnaMethylation'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
@@ -24,6 +26,76 @@ async function gene2loci(genome: string, geneSymbol: string) {
 	if (data.error) throw data.error
 	if (!data.gmlst?.length) throw `cannot retrieve coordinates for gene "${geneSymbol}"`
 	return gmlst2loci(data.gmlst)
+}
+
+/** Build a region-based dnaMethylation term for the given coordinates. */
+function makeMethylationRegionTerm(opts: { chr: string; start: number; stop: number }, vocabApi: any) {
+	const { chr, start, stop } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('invalid coordinate')
+	return {
+		chr,
+		start,
+		stop,
+		type: DNA_METHYLATION,
+		unit: getDNAMethUnit('region', vocabApi),
+		genomicFeatureType: 'region'
+	}
+}
+
+/**
+ * Embed a genome browser of a gene/region into `holder` with a "Submit Region" button. On submit,
+ * builds a region-based dnaMethylation term from the region the user navigated to and passes it to
+ * `callback`. Returns the Block instance. Used by the mass omnisearch to open a methylation region
+ * picker for a gene. (The dnaMethylation search handler keeps its own equivalent inline logic.)
+ */
+async function embedMethylationRegionPicker(opts: {
+	holder: any
+	genomeObj: any
+	vocabApi: any
+	chr: string
+	start: number
+	stop: number
+	callback: (term: any) => void | Promise<void>
+	debug?: boolean
+}) {
+	const { holder, genomeObj, vocabApi, chr, start, stop, callback } = opts
+	if (!chr || !Number.isInteger(start) || !Number.isInteger(stop)) throw new Error('unable to retrieve gene coordinate')
+
+	holder.selectAll('*').remove()
+	holder.style('display', 'block')
+	holder.append('div').style('opacity', 0.6).text('Navigate genome browser to desired region')
+
+	const arg: any = {
+		holder,
+		genome: genomeObj, // genome obj
+		chr,
+		start,
+		stop,
+		tklst: [],
+		nobox: true,
+		width: 500,
+		hidegenelegend: true,
+		debugmode: opts.debug
+	}
+	first_genetrack_tolist(genomeObj, arg.tklst)
+	const _ = await import('#src/block')
+	const blockInstance = new _.Block(arg)
+
+	holder
+		.append('div')
+		.attr('data-testid', 'sjpp-dnaMethylation-submitDiv')
+		.style('margin', '10px 0px')
+		.append('button')
+		.style('border', 'none')
+		.style('border-radius', '20px')
+		.style('padding', '10px 15px')
+		.text('Submit Region')
+		.on('click', async () => {
+			const { chr, start, stop } = blockInstance.rglst[0]
+			await callback(makeMethylationRegionTerm({ chr, start, stop }, vocabApi))
+		})
+
+	return blockInstance
 }
 
 class MassAiChatBot implements RxComponent {
@@ -427,10 +499,9 @@ function setRenderers(self: any) {
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
-	// DNA methylation: reuse the dnaMethylation search handler's region picker (see
-	// client/termdb/handlers/dnaMethylation.ts). Open a genome browser at the gene's default
-	// coordinates inline in the result area with a "Submit Region" button; on submit, open a violin
-	// plot of the region-based dnaMethylation term's per-sample beta values.
+	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
+	// area with a "Submit Region" button (see embedMethylationRegionPicker above); on submit, open a
+	// violin plot of the region-based dnaMethylation term's per-sample beta values.
 	self.launchMethylationPlot = async (gene: string) => {
 		// resolve the gene to genomic loci with the shared gmlst2loci() logic (the same core that
 		// dom/genesearch.ts's gene search uses), instead of a bespoke coordinate lookup. Merged
