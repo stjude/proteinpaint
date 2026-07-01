@@ -333,6 +333,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			if (q.gene && q.genes) throw new Error('cannot provide both gene and genes parameters')
 			if (!q.genes) q.genes = []
 			if (q.gene) q.genes = [q.gene]
+			geneExpMap = {}
 			for (const gene of q.genes) {
 				if (!gene) throw new Error('gene name is empty')
 				const tmp = await ds.queries.singleCell.geneExpression.get({ sample, gene })
