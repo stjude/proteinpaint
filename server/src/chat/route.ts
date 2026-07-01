@@ -1,6 +1,7 @@
 import type { ChatRequest, ChatResponse, LlmConfig, QueryClassification, RouteApi, RoutePayload } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
+import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
 import { readJSONFile, parse_geneset_db, getChatRelatedPlotTypes } from './utils.ts'
 import { classifyQuery } from './classify1.ts'
 import { classifyPlotType } from './plot.ts'
@@ -64,12 +65,18 @@ async function doOmnisearch(prompt: string, q, genome: any, ds: any) {
 
 export function init({ genomes }) {
 	return async (req, res) => {
-		const q: ChatRequest = req.query
+		// getDataTypes is a lightweight capability probe used by the mass omnisearch (see
+		// getGeneDataTypes below); it is not part of the AI chat ChatRequest payload, so read it via a local cast.
+		const q: ChatRequest & { getDataTypes?: boolean } = req.query
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
+			// Mass omnisearch capability probe: return the gene data types available for this dataset,
+			// without invoking the AI chat pipeline. Handled before the ds.queries.chat gate because
+			// omnisearch gene search is offered even for datasets that do not support chat.
+			if (q.getDataTypes) return res.send(getGeneDataTypes(ds))
 			// check if ds supports termdb chat
 			if (!ds.queries.chat) {
 				return res.send({
@@ -145,6 +152,32 @@ export function init({ genomes }) {
 			if (e.stack) mayLog(e.stack)
 			res.send({ error: e?.message || e })
 		}
+	}
+}
+
+/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
+ * (expression / variant sub-types / methylation) to offer. */
+export interface GeneDataTypeAvailability {
+	geneExpression: boolean
+	dnaMethylation: boolean
+	snvindel: boolean
+	cnv: boolean
+	svfusion: boolean
+}
+
+/** Determine which gene data types a dataset supports. Deliberately independent of the AI chat
+ * pipeline (run_chat_pipeline): a synchronous, read-only capability probe for the mass omnisearch.
+ * Gene expression and DNA methylation are read from getDsAllowedTermTypes() (the shared source of
+ * truth); the gene variant sub-types (snvindel/cnv/svfusion) are read directly from ds.queries,
+ * since getDsAllowedTermTypes() does not report them. */
+export function getGeneDataTypes(ds): GeneDataTypeAvailability {
+	const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
+	return {
+		geneExpression: allowedTermTypes.includes(GENE_EXPRESSION),
+		dnaMethylation: allowedTermTypes.includes(DNA_METHYLATION),
+		snvindel: Boolean(ds.queries?.snvindel),
+		cnv: Boolean(ds.queries?.cnv),
+		svfusion: Boolean(ds.queries?.svfusion)
 	}
 }
 
