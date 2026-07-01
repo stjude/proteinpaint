@@ -409,7 +409,7 @@ export class TermdbVocab extends Vocab {
 	async findGene(str) {
 		if (!str) return []
 		const data = await this.dofetch3('genelookup', {
-			body: { genome: this.vocab.genome, input: str, deep: false }
+			body: { genome: this.vocab.genome, input: str }
 		})
 		if (data.error) throw data.error
 		return data.hits || []

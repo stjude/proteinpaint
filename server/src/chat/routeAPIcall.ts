@@ -30,9 +30,15 @@ export async function route_to_appropriate_llm_provider(
 	llm: LlmConfig,
 	modelOverride?: string
 ): Promise<string | MsgToUser> {
-	const model = modelOverride ?? llm.model.modelName
 	const tokenLengthResult = await check_prompt_token_length(prompt, llm)
 	if (isMsgToUser(tokenLengthResult)) return tokenLengthResult
+	const model = modelOverride ?? llm.model?.modelName
+	if (!model) {
+		return {
+			type: 'text',
+			text: 'LLM model configuration is missing a valid modelName value in serverconfig.'
+		} as MsgToUser
+	}
 	if (tokenLengthResult.limitExceeded) {
 		return {
 			type: 'text',
