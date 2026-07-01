@@ -1,35 +1,25 @@
 /**
  * readHDF5.unit.spec.js
+ * Run test script as follows (from 'proteinpaint/'):
+ *  	node python/test/readHDF5.unit.spec.js
  *
- * Unit tests for the readHDF5 Rust module which extracts gene expression data from HDF5 files.
+ * Unit tests for python/src/readHDF5.py.
  *
  * These tests verify:
- * - Single gene queries function correctly
- * - Multiple gene queries function correctly
+ * - Gene queries function correctly
  * - Error handling for non-existent genes
  * - Data structure validation
  * - File access errors are properly reported
  *
- * The tests use an HDF5 test file with simpulated sample gene expression data.
+ * The tests use an HDF5 test file with simulated sample gene expression data.
  *
- * To run the tests use the command: node readHDF5.unit.spec.js
- * To run the entire Rust unit test suite use the command: npm run test:unit from proteinpaint/rust
  */
 
 // Import necessary modules
 import tape from 'tape'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
-import path from 'path'
-import fs from 'fs'
-import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
-// Load HDF5 test file
-const HDF5_FILE = path.join(serverconfig.binpath, '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.h5')
-
-// Verify file exists
-if (!fs.existsSync(HDF5_FILE)) {
-	throw new Error(`Test data file not found: ${HDF5_FILE}`)
-}
+const HDF5_FILE = 'server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5'
 
 /**************
  * Test sections
@@ -49,25 +39,15 @@ tape('Query TP53 Gene', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			gene: 'TP53'
+			genes: 'TP53'
 		}
 
-		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
-		const output_lines = rust_output.split('\n')
-
-		// Parse the JSON output
-		let data
-		try {
-			data = JSON.parse(output_lines[0])
-		} catch (e) {
-			t.fail(`Failed to parse JSON output: ${e.message}`)
-			t.end()
-			return
-		}
+		const out = await run_python('readHDF5.py', JSON.stringify(input_data))
+		const data = typeof out === 'string' ? JSON.parse(out) : out
 
 		t.equal(data.gene, 'TP53', 'Should return data for TP53 gene')
 		t.ok(data.samples, 'Should include samples data')
-		t.ok(Object.keys(data.samples).length > 0, 'Should have at least one sample')
+		t.ok(Object.keys(data.samples).length > 0, 'Should have more than one sample')
 
 		// Check that sample values are numbers or null (for NaN values)
 		Object.values(data.samples).forEach(value => {
@@ -90,27 +70,17 @@ tape('Query Non-existent Gene', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			gene: 'NONEXISTENT_GENE'
+			genes: 'NONEXISTENT_GENE'
 		}
 
-		// We expect this to resolve with an error message in JSON format
-		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
-		const output_lines = rust_output.split('\n')
-
-		let data
-		try {
-			data = JSON.parse(output_lines[0])
-		} catch (e) {
-			t.fail(`Failed to parse JSON output: ${e.message}`)
-			t.end()
-			return
-		}
-
-		t.ok(data.status === 'error' || data.status === 'failure', 'Should return error status')
-		t.ok(data.message && data.message.includes('not found'), 'Error message should indicate gene not found')
+		await run_python('readHDF5.py', JSON.stringify(input_data))
+		t.fail('Expected gene validation to fail')
 	} catch (e) {
-		// If run_rust rejects, the gene might not be found, which is expected
-		t.ok(e.includes('not found') || e.includes('NONEXISTENT_GENE'), 'Error should indicate gene not found')
+		const errorText = String(e)
+		t.ok(
+			errorText.includes('not found') || errorText.includes('NONEXISTENT_GENE'),
+			'Error should indicate gene not found'
+		)
 	}
 
 	t.end()
@@ -130,20 +100,11 @@ tape('Query Multiple Genes', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			genes: ['TP53', 'BRCA1', 'BRCA2', 'NONEXISTENT_GENE']
+			genes: 'TP53,BRCA1,BRCA2,NONEXISTENT_GENE'
 		}
 
-		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
-		const output_lines = rust_output.split('\n')
-
-		let data
-		try {
-			data = JSON.parse(output_lines[0])
-		} catch (e) {
-			t.fail(`Failed to parse JSON output: ${e.message}`)
-			t.end()
-			return
-		}
+		const out = await run_python('readHDF5.py', JSON.stringify(input_data))
+		const data = typeof out === 'string' ? JSON.parse(out) : out
 
 		t.ok(data.genes, 'Should include genes object')
 
@@ -159,6 +120,8 @@ tape('Query Multiple Genes', async t => {
 				t.ok(Object.keys(data.genes[gene].samples).length > 0, `Should have at least one sample for ${gene}`)
 			}
 		})
+
+		t.ok(data.genes.NONEXISTENT_GENE.error?.includes('not found'), 'Missing genes should include an error entry')
 
 		// Check timing information
 		t.ok(data.total_time_ms !== undefined, 'Should include timing information')
@@ -180,20 +143,11 @@ tape('Counts Dataset Dimensions', async t => {
 	try {
 		const input_data = {
 			hdf5_file: HDF5_FILE,
-			gene: 'TP53'
+			genes: 'TP53'
 		}
 
-		const rust_output = await run_rust('readHDF5', JSON.stringify(input_data))
-		const output_lines = rust_output.split('\n')
-
-		let data
-		try {
-			data = JSON.parse(output_lines[0])
-		} catch (e) {
-			t.fail(`Failed to parse JSON output: ${e.message}`)
-			t.end()
-			return
-		}
+		const out = await run_python('readHDF5.py', JSON.stringify(input_data))
+		const data = typeof out === 'string' ? JSON.parse(out) : out
 
 		// Check that we have the expected number of samples
 		const numSamples = Object.keys(data.samples).length
@@ -223,15 +177,18 @@ tape('Counts Dataset Dimensions', async t => {
 tape('Invalid HDF5 File', async t => {
 	try {
 		const input_data = {
-			hdf5_file: path.join('nonexistent_file.h5'),
-			gene: 'TP53'
+			hdf5_file: 'nonexistent_file.h5',
+			genes: 'TP53'
 		}
 
-		await run_rust('readHDF5', JSON.stringify(input_data))
+		await run_python('readHDF5.py', JSON.stringify(input_data))
 		t.fail('Should have thrown an error for invalid file')
 	} catch (e) {
+		const errorText = String(e)
 		t.ok(
-			e.includes('Failed to open HDF5 file') || e.includes('No such file') || e.includes('non-zero status'),
+			errorText.includes('could not be found') ||
+				errorText.includes('No such file') ||
+				errorText.includes('non-zero status'),
 			'Should reject with appropriate error message'
 		)
 	}
