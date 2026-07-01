@@ -98,20 +98,25 @@ async function getDistribution(query: any, ds: any) {
 	if (raw.error) throw raw.error
 
 	const sampleList: any[] = Object.values(raw.samples)
-	let sites = sampleList.map(s => {
-		const val = s[facilityTW.$id].value
-		let label = facilityTW.term.values?.[val]?.label || val
-		if (label.length > 50) label = label.slice(0, 47) + '...'
-		return { value: val, label }
-	})
-	if (userSites && query.filterByUserSites) {
-		sites = sites.filter(s => userSites.includes(s.value))
+	// FUNIT (site) is a hidden term, so getData omits it for the public role. The site list is
+	// withheld from public anyway, so only build it when facility values are present.
+	let sites: { value: any; label: string }[] = []
+	if (!isPublic) {
+		for (const s of sampleList) {
+			const cell = s[facilityTW.$id]
+			if (!cell) continue
+			const val = cell.value
+			let label = facilityTW.term.values?.[val]?.label || val
+			if (typeof label === 'string' && label.length > 50) label = label.slice(0, 47) + '...'
+			sites.push({ value: val, label })
+		}
+		if (userSites && query.filterByUserSites) sites = sites.filter(s => userSites.includes(s.value))
+		sites.sort((a, b) => a.label.localeCompare(b.label))
 	}
-	sites.sort((a, b) => a.label.localeCompare(b.label))
 
 	const eligibleSamples =
 		userSites && query.filterByUserSites
-			? sampleList.filter(s => userSites.includes(s[facilityTW.$id].value))
+			? sampleList.filter(s => userSites.includes(s[facilityTW.$id]?.value))
 			: sampleList
 
 	const scValues = collectScalarValues(eligibleSamples, scTW.$id)
