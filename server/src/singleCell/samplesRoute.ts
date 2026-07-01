@@ -28,6 +28,7 @@ import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
 import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -274,15 +275,11 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	 * If so, this logic can be simplified to only check for sample ids in the cohort. *** */
 	S.getFilteredSingleCellSamples = async (_q: TermdbSingleCellSamplesRequest, includeMeta = false) => {
 		if (!_q.filter && !_q.filter0) return new Set()
-		const arg = {
-			filter: _q.filter,
-			filter0: _q.filter0,
-			/** Hardcoded here as there's no use case for passing false.
-			 * If changing the future, note: getData() passes _q.mapParent2Children
-			 * as true by default. mapParent2Children passed from getSingleCellScatter
-			 * is missing.*/
-			mapParent2Children: true
-		}
+		const arg = { filter: _q.filter, filter0: _q.filter0 }
+		// assuming single cell data is at sample level, so
+		// setting mapParent2Children=true here to be able to
+		// map patient-level data onto the single cell data
+		maySetMapParent2Children(arg, ds, true)
 		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(sampleIntIds), ds)) || new Set()
 
 		// Convert cohort sample IDs to sample names

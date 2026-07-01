@@ -272,7 +272,8 @@ async function getSampleData(q, ds) {
 				filter: q.filter,
 				filter0: q.filter0,
 				dataTypeDetails: tw.term.dataTypeDetails,
-				mapParent2Children: q.mapParent2Children
+				mapParent2Children: q.mapParent2Children,
+				sampleType: q.sampleType
 			}
 			const data = await queryHandler.get(args, q.ds) // 2nd ds parameter is needed for ds-supplied getter
 			const values = data.term2sample2value.get(tw.$id)
@@ -397,13 +398,16 @@ async function getSampleData(q, ds) {
 			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
 		}
 	}
-	let sampleType = q.ds.cohort.termdb.sampleTypes[q.sampleType]
+
+	let sampleType
+	if (q.sampleType) sampleType = q.ds.cohort.termdb.sampleTypes[q.sampleType]
 	if (processedSingleCellTerm === true) {
 		// Work around for single cell cases
 		// TODO: may support single cell as another
 		// sample type in ds.cohort.termdb.sampleTypes
 		sampleType = { name: 'cell', plural_name: 'cells' }
 	}
+
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
 }
 /********** Start single cell helpers **********
@@ -710,7 +714,7 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
-	const filter = await getFilterCTEs(q.filter, q.ds, q.mapParent2Children)
+	const filter = await getFilterCTEs(q.filter, q.ds, q.mapParent2Children, q.sampleType)
 	const values = filter ? filter.values.slice() : []
 	const CTEs = await Promise.all(
 		termWrappers.map(async (tw, i) => {
@@ -786,7 +790,7 @@ When querying sample annotations for dictionary terms, the query is split into t
 1. CTEs are generated for each term, and the CTEs are combined into a single SQL query
 2. The SQL query is executed and the results are processed into a map of samples
 
-Mapping parent annotations onto child samples: when a term annotates parent samples and mapParent2Children is true, then annotations will get mapped onto child samples
+Mapping parent annotations onto child samples: when mapParent2Children is true and the term sample type is a parent of the query sample type, then map the annotations of the term onto child samples with sample type matching the query sample type
 */
 export async function getAnnotationRows(q, termWrappers, filter, CTEs, values) {
 	const sql = `WITH

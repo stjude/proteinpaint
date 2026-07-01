@@ -27,34 +27,24 @@ export async function mayLimitSamples(param, _allSamples, ds) {
 	const filter = combinePPfilterAndTid2value(param, ds) // pp filter
 	const filter0 = getFilter0(param, ds)
 
-	if (!filter && !filter0) {
-		// no filters specified, use all samples
-		return
-	}
+	if (!filter && !filter0) return // no filtering, use all samples
+
+	const q = { filter, filter0, mapParent2Children: param.mapParent2Children, sampleType: param.sampleType }
 
 	let filterSamples
 	if (ds.cohort?.db) {
 		// dataset has sqlite db
-		if (!filter) {
-			// no filtering, use all samples
-			return
-		}
-		// get samples that match filter
+		if (!q.filter) return // no pp filtering, use all samples
 		// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
-		const q = { filter, mapParent2Children: param.mapParent2Children }
 		filterSamples = new Set((await get_samples(q, ds)).map(i => i.id))
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
 		// ds-supplied filter method
-		const q = { filter, filter0, mapParent2Children: param.mapParent2Children }
 		filterSamples = await ds.cohort.termdb.filterSamples(q, ds)
 	} else {
 		throw new Error('no method available to get samples')
 	}
 
-	if (!filterSamples) {
-		// no filtering performed, use all samples
-		return
-	}
+	if (!filterSamples) return // no filtering done, use all samples
 
 	// filterSamples is the set of samples in dataset that match filter/filter0
 	// allSamples (from bcf etc) may be a subset of what's in dataset, so must
