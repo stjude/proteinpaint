@@ -5,6 +5,17 @@ import { stream_rust } from '@sjcrh/proteinpaint-rust'
 import type { GdcMafBuildRequest } from '#types'
 import { maxTotalSizeCompressed } from './gdc.maf.ts'
 import { mayLog } from '#src/helpers.ts'
+import serverconfig from '#src/serverconfig.js'
+
+// watchdog kill threshold (ms) for the gdcmaf rust process; a safety backstop against a
+// hung/leaked download. Defaults to 5 minutes; overridable via serverconfig for slower
+// GDC environments (e.g. qa-int) where a legitimate large download may need more time.
+const gdcMafMaxElapsed = serverconfig.features.gdcMafMaxElapsed || 300000 // 5 min
+
+// number of MAF files the gdcmaf rust tool downloads concurrently. Defaults to 20 (matching the
+// gdcGRIN2 downloader); overridable via serverconfig to dial down for stricter GDC environments
+// (e.g. qa-int, which appears to cap simultaneous connections) without a rebuild.
+const gdcMafConcurrency = serverconfig.features.gdcMafConcurrency || 20
 
 export const GdcMafPayload: RoutePayload = {
 	init,
@@ -57,11 +68,26 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	mayLog(`${fileLst2.length} out of ${q.fileIdLst.length} input MAF files accepted by size limit`, Date.now() - t0)
 
+	// getHostHeaders() returns headers tuned for the JSON metadata API calls (ky): they include
+	// `connection: close` plus Content-Type/Accept: application/json. Those must NOT be forwarded
+	// onto the binary /data/<uuid> file downloads done by the rust tool: `connection: close`
+	// defeats keep-alive and forces a brand-new connection per file, and the application/json
+	// content-negotiation is wrong for a gzip download. Against a stricter GDC environment
+	// (e.g. qa-int, behind a proxy/WAF) this can cause all but the first concurrent download to
+	// be rejected. Forward only what a download needs: auth, plus X-Forwarded-* from ds.getHostHeaders()
+	// (passed in from the route handler) so GDC's proxy/WAF sees the actual client.
+	const downloadHeaders: { [key: string]: string } = {}
+	for (const [k, v] of Object.entries(headers)) {
+		const lk = k.toLowerCase()
+		if (lk === 'cookie' || lk === 'x-auth-token' || lk.startsWith('x-forwarded')) downloadHeaders[k] = v as string
+	}
+
 	const arg = {
 		fileIdLst: fileLst2,
 		columns: q.columns,
 		host: joinUrl(host.rest, 'data'), // must use the /data/ endpoint from current host
-		headers
+		headers: downloadHeaders,
+		concurrency: gdcMafConcurrency
 	}
 	// uncomment for manual error testing
 	// const arg = {"host": "https://api.gdc.cancer.gov/data/","columns": ["Hugo_Symbol", "Entrez_Gene_Id", "Center", "NCBI_Build", "Chromosome", "Start_Position"], "fileIdLst": ["8b31d6d1-56f7-4aa8-b026-c64bafd531e7", "83ea587b-1e92-41b3-a8e3-12df30496724"]};
@@ -74,7 +100,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	res.flush() // header text should be sent as a separate chunk from the content that will be streamed next
 
 	try {
-		const streams = stream_rust('gdcmaf', JSON.stringify(arg), emitJson)
+		const streams = stream_rust('gdcmaf', JSON.stringify(arg), emitJson, { maxElapsed: gdcMafMaxElapsed })
 		if (streams) {
 			const { rustStream, endStream } = streams
 			// Important: rustStream.pipe(res, { end: false }) may cause a stalemate

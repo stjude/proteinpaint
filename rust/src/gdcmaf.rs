@@ -30,6 +30,30 @@ struct ErrorEntry {
     error: String,
 }
 
+// Flatten a std::error::Error (e.g. reqwest::Error) and its `source()` chain into
+// a single string, so the real transport-level cause (e.g. "connection closed
+// before message completed", connection reset, HTTP/2 stream error) is visible in
+// the per-file error rather than only the top-level wrapper message.
+fn format_error_chain(e: &dyn std::error::Error) -> String {
+    let mut msg = e.to_string();
+    let mut src = e.source();
+    while let Some(s) = src {
+        msg.push_str(" -> ");
+        msg.push_str(&s.to_string());
+        src = s.source();
+    }
+    msg
+}
+
+// Render the first bytes of a response body for diagnostics: helps tell whether the
+// server returned gzip (magic 1f 8b), plain text, or an HTML/JSON error page.
+fn preview_bytes(content: &[u8]) -> String {
+    let n = content.len().min(64);
+    let hex: Vec<String> = content[..n].iter().map(|b| format!("{:02x}", b)).collect();
+    let ascii = String::from_utf8_lossy(&content[..n]);
+    format!("hex=[{}] ascii=\"{}\"", hex.join(" "), ascii.escape_default())
+}
+
 fn select_maf_col(d: String, columns: &Vec<String>, url: &str) -> Result<(Vec<u8>, i32), (String, String)> {
     let mut maf_str: String = String::new();
     let mut header_indices: Vec<usize> = Vec::new();
@@ -201,52 +225,143 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )) as Box<dyn std::error::Error>);
     };
 
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30)) // 30-second timeout per request
+        .connect_timeout(Duration::from_secs(15))
+        // Allow keep-alive connection reuse. Previously this was pool_max_idle_per_host(0)
+        // to dodge a "connection closed before message completed" race, but disabling reuse
+        // forces a brand-new connection per file, which is far harsher on a server that caps
+        // concurrent connections (e.g. qa-int). Mid-body drops are now handled by retrying the
+        // whole download (see the retry loop below) rather than by refusing to reuse connections.
+        .build()
+        .map_err(|e| {
+            let client_error = ErrorEntry {
+                url: String::new(),
+                error: format!("Client build error: {}", e),
+            };
+            let client_error_js = serde_json::to_string(&client_error)
+                .unwrap_or_else(|_| "{\"url\":\"\",\"error\":\"Failed to serialize client build error\"}".to_string());
+            writeln!(io::stderr(), "{}", client_error_js).expect("Failed to write client build error to stderr");
+            e
+        })?;
+
+    // Number of files downloaded concurrently. Driven by the input JSON "concurrency" field,
+    // which the /gdc/mafBuild handler sets from serverconfig.features.gdcMafConcurrency, so it
+    // can be dialed down per environment (e.g. qa-int, which appears to cap simultaneous
+    // connections) without a rebuild; falls back to 20 when absent.
+    let concurrency = file_id_lst_js
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .filter(|n| *n >= 1)
+        .unwrap_or(20) as usize;
+
     //downloading maf files parallelly and merge them into single maf file
     let download_futures = futures::stream::iter(url.into_iter().map(|url| {
-        let req_headers_clone = req_headers.clone();
+        let client = client.clone();
+        let req_headers = req_headers.clone();
         async move {
-            let client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(60)) // 60-second timeout per request
-                .connect_timeout(Duration::from_secs(15))
-                .default_headers(req_headers_clone.clone())
-                .build()
-                .map_err(|_e| {
-                    let client_error = ErrorEntry {
-                        url: url.clone(),
-                        error: "Client build error".to_string(),
-                    };
-                    let client_error_js = serde_json::to_string(&client_error).unwrap();
-                    writeln!(io::stderr(), "{}", client_error_js).expect("Failed to build reqwest client!");
-                });
-            match client.unwrap().get(&url).send().await {
-                Ok(resp) if resp.status().is_success() => match resp.bytes().await {
-                    Ok(content) => {
-                        let mut decoder = GzDecoder::new(&content[..]);
-                        let mut decompressed_content = Vec::new();
-                        match decoder.read_to_end(&mut decompressed_content) {
-                            Ok(_) => {
-                                let text = String::from_utf8_lossy(&decompressed_content).to_string();
-                                return Ok((url.clone(), text));
-                            }
-                            Err(e) => {
-                                let error_msg = format!("Failed to decompress downloaded MAF file: {}", e);
-                                Err((url.clone(), error_msg))
-                            }
-                        }
+            // Bounded retry for transient transport failures, up to MAX_ATTEMPTS with backoff.
+            // The whole download (send + body read) is inside the loop so a mid-body drop
+            // ("connection closed before message completed") is retried, not just connect/send
+            // failures. Non-2xx responses and decompression failures are NOT transient and break
+            // immediately. The metadata captured before consuming the body feeds the error text.
+            const MAX_ATTEMPTS: u32 = 3;
+            let mut attempt: u32 = 0;
+            loop {
+                attempt += 1;
+
+                let mut request = client.get(&url);
+                for (name, value) in req_headers.iter() {
+                    request = request.header(name.clone(), value.clone());
+                }
+
+                // --- send ---
+                let resp = match request.send().await {
+                    Ok(resp) => resp,
+                    Err(e) if attempt < MAX_ATTEMPTS && (e.is_request() || e.is_timeout() || e.is_connect()) => {
+                        tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
+                        continue;
                     }
                     Err(e) => {
-                        let error_msg = format!("Failed to decompress downloaded MAF file: {}", e);
-                        Err((url.clone(), error_msg))
+                        break Err((url.clone(), format!("Server request failed: {}", format_error_chain(&e))));
                     }
-                },
-                Ok(resp) => {
-                    let error_msg = format!("HTTP error: {}", resp.status());
-                    Err((url.clone(), error_msg))
+                };
+
+                // Capture response metadata before the body is consumed, for diagnostics.
+                let status = resp.status();
+                let version = format!("{:?}", resp.version());
+                let content_type = resp
+                    .headers()
+                    .get(reqwest::header::CONTENT_TYPE)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("")
+                    .to_string();
+                let content_encoding = resp
+                    .headers()
+                    .get(reqwest::header::CONTENT_ENCODING)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("")
+                    .to_string();
+
+                if !status.is_success() {
+                    // non-2xx: a server-side decision, not transient - capture a snippet of the
+                    // error body (often an HTML/JSON page from a proxy/WAF) and stop.
+                    let body_snippet = match resp.text().await {
+                        Ok(t) => t.chars().take(200).collect::<String>().escape_default().to_string(),
+                        Err(_) => String::new(),
+                    };
+                    break Err((
+                        url.clone(),
+                        format!(
+                            "HTTP error {} ({}, content-type '{}', content-encoding '{}'), body: {}",
+                            status, version, content_type, content_encoding, body_snippet
+                        ),
+                    ));
                 }
-                Err(e) => {
-                    let error_msg = format!("Server request failed: {}", e);
-                    Err((url.clone(), error_msg))
-                }
+
+                // --- read body ---
+                let content = match resp.bytes().await {
+                    Ok(content) => content,
+                    Err(_e) if attempt < MAX_ATTEMPTS => {
+                        // transport/read failure AFTER headers (e.g. "connection closed before
+                        // message completed") - typically transient, so retry the whole download
+                        tokio::time::sleep(Duration::from_millis(500 * attempt as u64)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        break Err((
+                            url.clone(),
+                            format!(
+                                "Failed to read response body (HTTP {}, {}, content-type '{}', content-encoding '{}'): {}",
+                                status,
+                                version,
+                                content_type,
+                                content_encoding,
+                                format_error_chain(&e)
+                            ),
+                        ));
+                    }
+                };
+
+                // --- decompress (not transient: do not retry) ---
+                let mut decoder = GzDecoder::new(&content[..]);
+                let mut decompressed_content = Vec::new();
+                break match decoder.read_to_end(&mut decompressed_content) {
+                    Ok(_) => Ok((url.clone(), String::from_utf8_lossy(&decompressed_content).to_string())),
+                    Err(e) => Err((
+                        url.clone(),
+                        format!(
+                            "Failed to decompress MAF file (HTTP {}, {}, content-type '{}', content-encoding '{}', body {} bytes, first bytes {}): {}",
+                            status,
+                            version,
+                            content_type,
+                            content_encoding,
+                            content.len(),
+                            preview_bytes(&content),
+                            e
+                        ),
+                    )),
+                };
             }
         }
     }));
@@ -264,7 +379,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     download_futures
-        .buffer_unordered(20)
+        .buffer_unordered(concurrency)
         .for_each(|result| {
             let encoder = Arc::clone(&encoder); // Clone the Arc for each task
             let maf_col_cp = maf_col.clone();
@@ -315,4 +430,136 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     io::stdout().flush().expect("Failed to flush stdout");
     io::stderr().flush().expect("Failed to flush stderr");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ---- select_maf_col ----
+
+    // Minimal MAF-like content: a comment line, a header line (detected by the
+    // "Hugo_Symbol" substring), then data rows.
+    const MAF: &str = "# version 2.4\n\
+        Hugo_Symbol\tEntrez_Gene_Id\tChromosome\tStart_Position\n\
+        TP53\t7157\tchr17\t7577120\n\
+        KRAS\t3845\tchr12\t25398284\n";
+
+    fn cols(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn select_maf_col_selects_and_orders_requested_columns() {
+        // request a subset, in an order different from the file's column order
+        let (bytes, rows) = select_maf_col(MAF.to_string(), &cols(&["Chromosome", "Hugo_Symbol"]), "u").unwrap();
+        assert_eq!(rows, 2, "two data rows should be emitted");
+        assert_eq!(String::from_utf8(bytes).unwrap(), "chr17\tTP53\nchr12\tKRAS\n");
+    }
+
+    #[test]
+    fn select_maf_col_skips_comment_lines_and_header() {
+        // comment (#) and header lines must not be counted or emitted as data
+        let (bytes, rows) = select_maf_col(MAF.to_string(), &cols(&["Hugo_Symbol"]), "u").unwrap();
+        assert_eq!(rows, 2);
+        assert_eq!(String::from_utf8(bytes).unwrap(), "TP53\nKRAS\n");
+    }
+
+    #[test]
+    fn select_maf_col_errors_on_missing_column() {
+        let err = select_maf_col(MAF.to_string(), &cols(&["No_Such_Column"]), "the-url").unwrap_err();
+        assert_eq!(err.0, "the-url", "error should carry the url");
+        assert!(
+            err.1.contains("No_Such_Column"),
+            "error should name the missing column: {}",
+            err.1
+        );
+    }
+
+    #[test]
+    fn select_maf_col_header_only_yields_no_rows() {
+        let header_only = "Hugo_Symbol\tChromosome\n";
+        let (bytes, rows) = select_maf_col(header_only.to_string(), &cols(&["Hugo_Symbol"]), "u").unwrap();
+        assert_eq!(rows, 0);
+        assert!(bytes.is_empty());
+    }
+
+    // NOTE: a data row with fewer fields than the header currently panics
+    // (maf_cont_lst[*x] index out of bounds); that ragged-row hardening is
+    // deferred to Step 5, where a test for graceful handling should be added.
+
+    // ---- format_error_chain ----
+
+    #[derive(Debug)]
+    struct TestErr {
+        msg: String,
+        src: Option<Box<dyn std::error::Error + 'static>>,
+    }
+    impl std::fmt::Display for TestErr {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.msg)
+        }
+    }
+    impl std::error::Error for TestErr {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            self.src.as_deref()
+        }
+    }
+
+    #[test]
+    fn format_error_chain_single_error() {
+        let e = TestErr {
+            msg: "top".into(),
+            src: None,
+        };
+        assert_eq!(format_error_chain(&e), "top");
+    }
+
+    #[test]
+    fn format_error_chain_walks_source_chain() {
+        let root = TestErr {
+            msg: "root".into(),
+            src: None,
+        };
+        let middle = TestErr {
+            msg: "middle".into(),
+            src: Some(Box::new(root)),
+        };
+        let top = TestErr {
+            msg: "top".into(),
+            src: Some(Box::new(middle)),
+        };
+        assert_eq!(format_error_chain(&top), "top -> middle -> root");
+    }
+
+    // ---- preview_bytes ----
+
+    #[test]
+    fn preview_bytes_shows_gzip_magic() {
+        // gzip magic 1f 8b should be visible so we can tell gzip from plaintext
+        let out = preview_bytes(&[0x1f, 0x8b, 0x08, 0x00]);
+        assert!(out.contains("hex=[1f 8b 08 00]"), "got: {}", out);
+    }
+
+    #[test]
+    fn preview_bytes_renders_plaintext_in_ascii() {
+        let out = preview_bytes(b"Hugo_Symbol");
+        assert!(
+            out.contains("Hugo_Symbol"),
+            "ascii preview should show plaintext: {}",
+            out
+        );
+    }
+
+    #[test]
+    fn preview_bytes_truncates_to_64_bytes() {
+        // 100 'A' (0x41) bytes -> only 64 should be rendered in the hex section
+        let out = preview_bytes(&[0x41u8; 100]);
+        assert_eq!(
+            out.matches("41").count(),
+            64,
+            "should cap the hex preview at 64 bytes: {}",
+            out
+        );
+    }
 }

@@ -542,7 +542,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		if (totalRawDsLst === 1)
 			setImmediate(() => {
 				const msg = ds.init.fatalError === e ? e : ds.init.fatalError + ': ' + e
-				throw new Error(gdlabel + ' ' + msg)
+				throw new Error(gdlabel + ' fatal error: ' + msg)
 			})
 		return
 	}
@@ -572,9 +572,9 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 			if (!ds.init.status) ds.init.status = 'done'
 		} catch (e) {
 			if (ds.init.status != 'recoverableError' && !ds.init.recoverableError && !utils.isRecoverableError(e)) {
-				const msg = `Fatal error on ${gdlabel} retry, stopping retry${
-					ds.init?.fatalError ? ': ' + ds.init?.fatalError : ''
-				} [${e?.error || e}]`
+				const msg = `${gdlabel} fatal error: stopping retry${ds.init?.fatalError ? ': ' + ds.init?.fatalError : ''} [${
+					e?.error || e
+				}]`
 				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
@@ -585,7 +585,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 						path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
 					)
 				}
-				// this will crash the server with an uncaught error, the server will stop responding to HTTP requests
+				// this will crash the server with a fatal error message, the server will not respond to HTTP requests
 				if (totalRawDsLst === 1)
 					setImmediate(() => {
 						throw new Error(msg)

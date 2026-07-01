@@ -312,10 +312,7 @@ export async function validate_termdb(ds) {
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
 	} else if (tdb.dictionary?.gdcapi) {
-		if (!ds.init) ds.init = {}
-		ds.init.step = 'gdcBuildDictionary()'
 		await gdcBuildDictionary(ds)
-		ds.init.step = ''
 	} else if (ds.cohort.db) {
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)

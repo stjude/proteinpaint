@@ -43,6 +43,39 @@ Fixes:
 - aarange=[a,b] to zoom in on block protein mode
 
 
+## 2.191.9
+
+Fixes:
+- send x-forwarded-* headers in the request for GDC MAF data
+
+
+## 2.191.8
+
+Fixes:
+- forward the end user's real User-Agent (x-forwarded-agent, else the request user-agent) onto the GDC cohort MAF file downloads instead of a hardcoded browser User-Agent
+
+
+## 2.191.7
+
+Fixes:
+- fix GDC cohort MAF multi-file download failures against stricter GDC environments (e.g. qa-int): send only auth and a User-Agent on the file downloads, reuse keep-alive connections, retry mid-download connection drops, and make download concurrency configurable via serverconfig.features.gdcMafConcurrency
+- improve GDC MAF per-file download error reporting to surface the real HTTP status and transport-level cause
+- make the gdcmaf process watchdog timeout configurable via serverconfig.features.gdcMafMaxElapsed
+
+
+## 2.191.6
+
+Fixes:
+- fix the GDC MAF rust code to limit HTTP connection reuse and improve error handling
+
+
+## 2.191.5
+
+Fixes:
+- make the fatal error message consistent on initial validation and retries
+- do not show regression chart buttons in the Correlation Plot tool
+
+
 ## 2.191.4
 
 Fixes:
