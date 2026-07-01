@@ -62,7 +62,13 @@ export type MafMergeResult = {
 	merged: number
 	/** per-file failures (download/decompress/column errors); never aborts the batch */
 	errors: FileError[]
-	/** summed per-file stream time (download+decompress+parse interleaved); overlaps wall-clock under concurrency */
+	/** summed per-file fetch time: request start → GDC response ready to stream (connection setup + TLS +
+	 * request + time-to-first-byte). Split out from body streaming so the HTTP-client/connection cost — the
+	 * part that differs between the ky/undici and rust/reqwest setups — is visible on its own. */
+	totalFetchMs: number
+	/** summed per-file body-streaming time: network body transfer + threadpool decompress + main-thread
+	 * parse + gzip backpressure, interleaved. Overlaps wall-clock under concurrency. Body transfer and
+	 * decompress are pipelined and cannot be separated in wall time; totalParseMs is the main-thread slice. */
 	totalStreamMs: number
 	/** summed main-thread time in line parsing/column-selection — the only event-loop-blocking work */
 	totalParseMs: number
@@ -131,6 +137,20 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	const dataHost = joinUrl(host.rest, 'data') // must use the /data/ endpoint from current host
 
+	// getHostHeaders() returns headers tuned for the JSON metadata API (ky): they include
+	// `connection: close` plus Content-Type/Accept: application/json. Forwarding `connection: close`
+	// onto the downloads makes the server tear down the socket after each response, so every file pays a
+	// fresh TLS handshake (the dominant per-file fetch/TTFB cost) and Node fetch's default keep-alive
+	// connection reuse is defeated; the application/json negotiation is also wrong for a gzip download.
+	// Forward only what a download needs — auth + any forwarded client headers — so the underlying
+	// connections can be reused across files.
+	const downloadHeaders: { [k: string]: string } = {}
+	for (const [k, v] of Object.entries(headers)) {
+		const lk = k.toLowerCase()
+		if (lk === 'connection' || lk === 'content-type' || lk === 'accept') continue
+		downloadHeaders[k] = v as string
+	}
+
 	// Abort active downloads if the client disconnects (e.g. browser tab refreshed mid-download), so
 	// orphaned GDC requests don't keep running after no one is listening.
 	const controller = new AbortController()
@@ -151,6 +171,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// parsing — the only event-loop-blocking work. Reassigned from the mergeMafFiles() result below;
 	// default to 0 so the finalize log is always valid.
 	let merged = 0
+	let totalFetchMs = 0 // per-file connect + TLS + request + time-to-first-byte (HTTP-client/connection cost)
 	let totalStreamMs = 0
 	let totalParseMs = 0 // main-thread: per-chunk utf8 + line split + column selection
 
@@ -215,8 +236,10 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 			// former .arrayBuffer(): ky's retry no longer covers a mid-stream network drop — that now
 			// surfaces as a per-file error (settled semantics), not a silent retry.
 			fetchGzStream: async (fileId, signal) => {
+				// ky handles retry (limit:2, with backoff + Retry-After) and redirect-following. downloadHeaders
+				// omits `connection: close`, so Node fetch keep-alives and reuses connections across files.
 				const r = await ky.get(joinUrl(dataHost, fileId), {
-					headers,
+					headers: downloadHeaders,
 					timeout: false,
 					retry: { limit: 2 },
 					signal: AbortSignal.any([signal, AbortSignal.timeout(downloadTimeoutMs)])
@@ -233,6 +256,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		// the uuid as the final path segment, so matching keeps working.
 		errors.push(...result.errors.map(e => ({ ...e, url: joinUrl(dataHost, e.url) })))
 		merged = result.merged
+		totalFetchMs = result.totalFetchMs
 		totalStreamMs = result.totalStreamMs
 		totalParseMs = result.totalParseMs
 
@@ -257,9 +281,11 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		res.write('\r\n\r\n' + json)
 		res.write(`\r\n--${boundary}--\r\n`)
 		const elapsed = Date.now() - t0
+		const avgFetchMs = merged ? Math.round(totalFetchMs / merged) : 0
 		const avgStreamMs = merged ? Math.round(totalStreamMs / merged) : 0
 		// totalStreamMs sums concurrent per-file stream times, so dividing by wall-clock gives the implied
 		// parallelism (how many were overlapping on average) rather than a misleading multi-minute sum
+		const fetchParallelism = elapsed ? (totalFetchMs / elapsed).toFixed(1) : '0'
 		const streamParallelism = elapsed ? (totalStreamMs / elapsed).toFixed(1) : '0'
 		// final RSS sample, in case the last spike landed between 250ms ticks
 		const rssEnd = process.memoryUsage().rss
@@ -269,7 +295,8 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 				` (concurrency ${concurrency})` +
 				` in ${formatElapsedTime(elapsed)}` +
 				` | main-thread parse: ${formatElapsedTime(totalParseMs)}` +
-				` | stream (download+decompress+parse): avg ${avgStreamMs}ms/file, ~${streamParallelism}× parallel` +
+				` | fetch (connect+TTFB): avg ${avgFetchMs}ms/file, ~${fetchParallelism}× parallel` +
+				` | stream (body download+decompress+parse): avg ${avgStreamMs}ms/file, ~${streamParallelism}× parallel` +
 				` (UV_THREADPOOL_SIZE=${process.env.UV_THREADPOOL_SIZE || '4 (default)'})` +
 				` | mem: start ${fileSize(rss0)}, peak ${fileSize(peakRss)} (Δ ${fileSize(peakRss - rss0)}), end ${fileSize(
 					rssEnd
@@ -303,6 +330,7 @@ export async function mergeMafFiles(opts: {
 	const { fileIdLst, columns, concurrency, signal, fetchGzStream, write, onFileSettled } = opts
 	const errors: FileError[] = []
 	let merged = 0
+	let totalFetchMs = 0
 	let totalStreamMs = 0
 	let totalParseMs = 0
 
@@ -312,14 +340,21 @@ export async function mergeMafFiles(opts: {
 		async (fileId: string) => {
 			if (signal.aborted) return
 			try {
-				const t0 = Date.now()
+				// fetch phase: request start → GDC response ready to stream (connect + TLS + request + TTFB).
+				// Measured on its own so the HTTP-client/connection cost is separable from body streaming.
+				const fetchStart = Date.now()
 				const gzStream = await fetchGzStream(fileId, signal)
+				const fetchMs = Date.now() - fetchStart
+				// stream phase: body transfer + threadpool decompress + main-thread parse (interleaved).
 				// throws on missing column / empty file / mid-stream download error
+				const streamStart = Date.now()
 				const { parseMs } = await streamSelectMafCols({ gzStream, columns, write, signal })
+				const streamMs = Date.now() - streamStart
 				// only count a file as merged once all its rows are written, and accumulate the timings in
 				// lockstep with `merged` — so a failure (recorded below as a per-file error) can't both
 				// inflate `merged` and skew the total*/merged averages.
-				totalStreamMs += Date.now() - t0
+				totalFetchMs += fetchMs
+				totalStreamMs += streamMs
 				totalParseMs += parseMs
 				merged++
 			} catch (e: any) {
@@ -331,7 +366,7 @@ export async function mergeMafFiles(opts: {
 		{ signal }
 	)
 
-	return { merged, errors, totalStreamMs, totalParseMs }
+	return { merged, errors, totalFetchMs, totalStreamMs, totalParseMs }
 }
 
 /*
