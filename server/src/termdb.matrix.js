@@ -10,7 +10,7 @@ import {
 	isSingleCellTerm,
 	getBin,
 	getSampleType,
-	isParentType,
+	DEFAULT_SAMPLE_TYPE,
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
 	GENE_VARIANT,
@@ -626,6 +626,8 @@ export function maySetMapParent2Children(q, ds, mapParent2Children) {
 	if (typeof mapParent2Children === 'boolean') {
 		// flag supplied by caller
 		q.mapParent2Children = mapParent2Children
+		// set query sample type to default
+		q.sampleType = DEFAULT_SAMPLE_TYPE
 		return
 	}
 	// ds has sample ancestry and mapParent2Children is undefined
