@@ -37,14 +37,16 @@ export async function makeCanvas(
 	if (Number.isFinite(range.geMin) && Number.isFinite(range.geMax)) {
 		colorGenerator = scaleLinear().domain([range.geMin, range.geMax]).range([settings.startColor, settings.stopColor])
 	}
+	const getCategoryColor = (sample: FormattedCell2Sample) => colorMap[sample.category]?.color || refColor
 	const color = (sample: FormattedCell2Sample) => {
+		if (q?.coordTWs?.length > 0) return getCategoryColor(sample)
 		if (termType == SINGLECELL_GENE_EXPRESSION) {
-			if (!Number.isFinite(sample.geneExp)) return settings.startColor //settings.noExpColor
-			else if (sample.geneExp! > range.geMax!) return settings.stopColor //settings.expColor
-			else if (sample.geneExp) return colorGenerator(sample.geneExp)
-			else return settings.startColor //settings.noExpColor
+			if (!Number.isFinite(sample.geneExp)) return settings.startColor
+			if (sample.geneExp! > range.geMax!) return settings.stopColor
+			if (!colorGenerator) return settings.startColor
+			return colorGenerator(sample.geneExp)
 		}
-		return colorMap[sample.category] ? colorMap[sample.category].color : refColor
+		return getCategoryColor(sample)
 	}
 	const x = (sample: FormattedCell2Sample) => {
 		const tmp = getCoordinate(sample.x, settings.minXScale, settings.maxXScale)
