@@ -535,24 +535,30 @@ function mayValidateSampleTypes(tdb) {
 		// TODO: validate sample types for all datasets
 		return
 	}
-	// dataset has sample ancestry, therefore must have
-	// two sample types: parent and child
-	// TODO: later will support other sample type hierarchies
-	const sampleTypeConfig = tdb.sampleTypes
-	if (!sampleTypeConfig) throw 'sample type config missing'
-	if (Object.keys(sampleTypeConfig).length != 2) throw 'sample type config must have 2 sample types'
-	let parentSampleType, childSampleType
-	for (const [k, v] of Object.entries(sampleTypeConfig)) {
+	// dataset has sample ancestry, therefore should have multiple sample types
+	const config = tdb.sampleTypes
+	if (!config) throw 'sample type config missing'
+	if (Object.keys(config).length < 2) throw 'multiple sample types must be defined'
+	let rootSampleType
+	const childSampleTypes = []
+	for (const [k, v] of Object.entries(config)) {
 		if (!isNumeric(k)) throw 'sample type is non-numeric'
+		if (!v.name || !v.plural_name) throw 'sample type name(s) missing'
 		const sampleType = Number(k)
-		if (Number.isInteger(v.parent_id)) {
-			childSampleType = sampleType
+		if (v.parent_id === null) {
+			// root sample type
+			if (rootSampleType) throw 'multiple root sample types not allowed'
+			rootSampleType = sampleType
+		} else if (Number.isInteger(v.parent_id)) {
+			// child sample type
+			if (!config[v.parent_id]) throw 'parent id is not a sample type'
+			childSampleTypes.push(sampleType)
 		} else {
-			parentSampleType = sampleType
+			throw 'invalid parent id'
 		}
 	}
-	if (!Number.isInteger(parentSampleType)) throw 'invalid parent sample type'
-	if (!Number.isInteger(childSampleType)) throw 'invalid child sample type'
+	if (!rootSampleType) throw 'root sample type is missing'
+	if (!childSampleTypes.length) throw 'child sample types are missing'
 }
 
 async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
@@ -3659,7 +3665,8 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 			sessionid: q.sessionid,
 			__abortSignal: q.__abortSignal,
-			mapParent2Children: q.mapParent2Children
+			mapParent2Children: q.mapParent2Children,
+			sampleType: q.sampleType
 		},
 		ds.mayGetGeneVariantDataParam || {}
 	)
@@ -3689,6 +3696,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
 		sessionid: q.sessionid
 	}
 	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
@@ -3722,6 +3730,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
 		sessionid: q.sessionid,
 		...(tw?.q?.type === 'values' && {
 			cnvMaxLength: tw?.q?.cnvMaxLength,
@@ -3754,6 +3763,7 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0,
 		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
 		sessionid: q.sessionid,
 		__abortSignal: q.__abortSignal
 	}

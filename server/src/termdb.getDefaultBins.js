@@ -53,6 +53,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				filter0: q.filter0,
 				terms: [tw],
 				mapParent2Children: q.mapParent2Children,
+				sampleType: q.sampleType,
 				__abortSignal: q.__abortSignal,
 				dataTypeDetails: tw.term.dataTypeDetails
 			}
