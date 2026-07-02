@@ -1,4 +1,4 @@
-import type { LlmConfig } from '#types'
+import type { LlmConfig, ModelConfig } from '#types'
 import { ezFetch } from '#shared'
 import { mayLog } from '#src/helpers.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
@@ -28,11 +28,11 @@ async function check_prompt_token_length(
 export async function route_to_appropriate_llm_provider(
 	prompt: string,
 	llm: LlmConfig,
-	modelOverride?: string
+	modelOverride?: ModelConfig
 ): Promise<string | MsgToUser> {
 	const tokenLengthResult = await check_prompt_token_length(prompt, llm)
 	if (isMsgToUser(tokenLengthResult)) return tokenLengthResult
-	const model = modelOverride ?? llm.model?.modelName
+	const model = modelOverride?.modelName ?? llm.model?.modelName
 	if (!model) {
 		return {
 			type: 'text',
