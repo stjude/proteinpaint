@@ -425,7 +425,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 			.style('font-weight', 'bold')
 			.style('font-size', '13px')
 			.style('margin-bottom', '6px')
-			.text('log₂FC')
+			.text(useAdjusted && refAssay ? 'log₂FC (PTM-adjusted)' : 'log₂FC')
 		const cW = 22
 		const cH = 130
 		const cSvg = colorBlock
