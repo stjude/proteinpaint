@@ -141,7 +141,7 @@ function init({ genomes }) {
 				if (!assayConfig) continue // assay not present for this organism — leave column empty
 				const isPTM = !!assayConfig.PTMType
 				if (isPTM) ptmAssays.push(assayName)
-				const adjustable = !!proteinReferenceAssay && isPTM
+				const adjustable = !!proteinReferenceAssay && isPTM && assayName !== proteinReferenceAssay
 
 				for (const cohortName of bhConfig.cohorts) {
 					const cohortConfig = assayConfig.cohorts?.[cohortName]
