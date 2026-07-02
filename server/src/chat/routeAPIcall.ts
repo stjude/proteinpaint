@@ -12,9 +12,10 @@ import { isMsgToUser } from './scaffoldTypes.ts'
  */
 async function check_prompt_token_length(
 	prompt: string,
-	llm: LlmConfig
+	llm: LlmConfig,
+	maxTokensOverride?: number
 ): Promise<{ limitExceeded: boolean; tokenCount: number; maxTokens: number } | MsgToUser> {
-	const maxTokens = llm.model?.maxTokens
+	const maxTokens = maxTokensOverride ?? llm.model?.maxTokens
 	if (typeof maxTokens !== 'number' || !Number.isFinite(maxTokens) || maxTokens <= 0) {
 		return {
 			type: 'text',
