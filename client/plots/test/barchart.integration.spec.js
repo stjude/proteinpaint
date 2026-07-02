@@ -19,6 +19,8 @@ test sections
 
 term1=categorical
 term1=categorical (no values)
+term1=categorical (patient-level)
+term1=categorical (relapse-level)
 term1=termCollection categorical
 term1=categorical, term2=defaultbins
 term0=defaultbins, term1=categorical
@@ -95,6 +97,7 @@ tape('term1=categorical', function (test) {
 		barchart.on('postRender.test', null)
 		testBarCount(barchart)
 		testAxisDimension(barchart)
+		testAxisTitle(barchart)
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -113,6 +116,11 @@ tape('term1=categorical', function (test) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+	}
+
+	function testAxisTitle(barchart) {
+		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
+		test.equal(chartTitle.text(), '# of samples (n=60)', 'sample type of barchart should be samples')
 	}
 })
 
@@ -168,6 +176,110 @@ tape('term1=categorical (no values)', function (test) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+	}
+})
+
+tape('term1=categorical (patient-level)', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'genetic_race'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		testBarCount(barchart)
+		testAxisDimension(barchart)
+		testAxisTitle(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	let barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
+		const minBars = 2
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
+		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+	}
+
+	function testAxisDimension(barchart) {
+		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
+		const seriesG = barDiv.select('.bars-series').node()
+		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+	}
+
+	function testAxisTitle(barchart) {
+		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
+		test.equal(chartTitle.text(), '# of patients (n=62)', 'sample type of barchart should be patients')
+	}
+})
+
+tape('term1=categorical (relapse-level)', function (test) {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'relapse_site'
+					}
+				}
+			]
+		},
+		barchart: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		testBarCount(barchart)
+		testAxisDimension(barchart)
+		testAxisTitle(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+
+	let barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
+		const minBars = 2
+		const numBars = barDiv.selectAll('.bars-cell-grp').size()
+		const numOverlays = barDiv.selectAll('.bars-cell').size()
+		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
+		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
+	}
+
+	function testAxisDimension(barchart) {
+		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
+		const seriesG = barDiv.select('.bars-series').node()
+		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
+	}
+
+	function testAxisTitle(barchart) {
+		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
+		test.equal(chartTitle.text(), '# of relapse samples (n=10)', 'sample type of barchart should be relapse samples')
 	}
 })
 
@@ -429,8 +541,7 @@ tape('term1=categorical (relapse-level), term2=categorical (patient-level)', fun
 		barDiv = barchart.Inner.dom.barDiv
 		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' })
 		testBarCount()
-		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
-		test.equal(chartTitle.text(), '# of relapse samples (n=10)', 'barchart title should be # of relapse samples')
+		testAxisTitle()
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -442,6 +553,11 @@ tape('term1=categorical (relapse-level), term2=categorical (patient-level)', fun
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.true(numBars > minBars, `should have more than ${minBars} bars`)
 		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
+	}
+
+	function testAxisTitle() {
+		const chartTitle = barDiv.select('[data-testid="sjpp-massbarchart-horizontal-charttitle"]')
+		test.equal(chartTitle.text(), '# of relapse samples (n=10)', 'sample type of barchart should be relapse samples')
 	}
 })
 

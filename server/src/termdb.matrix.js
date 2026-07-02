@@ -399,13 +399,27 @@ async function getSampleData(q, ds) {
 		}
 	}
 
+	// determine the sample type
 	let sampleType
-	if (q.sampleType) sampleType = q.ds.cohort.termdb.sampleTypes[q.sampleType]
-	if (processedSingleCellTerm === true) {
-		// Work around for single cell cases
+	if (q.sampleType) {
+		// query sample type defined
+		sampleType = q.ds.cohort.termdb.sampleTypes[q.sampleType]
+	} else if (processedSingleCellTerm === true) {
+		// work around for single cell cases
 		// TODO: may support single cell as another
 		// sample type in ds.cohort.termdb.sampleTypes
 		sampleType = { name: 'cell', plural_name: 'cells' }
+	} else {
+		// determine sample type based on the returned samples
+		const sids = Object.keys(samples)
+		if (sids.length) {
+			const firstComparableId = samples[sids[0]]?.sampleId
+			const sid = Number(firstComparableId ?? sids[0]) || firstComparableId || sids[0]
+			const stid = q.ds.sampleId2Type?.get?.(sid)
+			if (stid !== undefined && q.ds.cohort?.termdb?.sampleTypes) {
+				sampleType = q.ds.cohort.termdb.sampleTypes[stid]
+			}
+		}
 	}
 
 	return { samples, refs: { byTermId, bySampleId }, sampleType }
