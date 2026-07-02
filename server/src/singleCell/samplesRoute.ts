@@ -450,7 +450,6 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 		if (!query_gene) {
 			throw new Error('Gene parameter is undefined')
 		}
-
 		const read_hdf5_input_type = { query: [query_gene], hdf5_file: h5file }
 
 		const time1 = Date.now()
