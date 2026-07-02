@@ -53,9 +53,9 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 						chartsInstance,
 						holder
 					})
-				} catch (e) {
+				} catch (e: any) {
 					loadingDiv.style('display', 'none')
-					errDiv.style('display', 'block').text(e)
+					errDiv.style('display', 'block').text(`Error: ` + (e.message || e.error || String(e)))
 				}
 			}
 		})
