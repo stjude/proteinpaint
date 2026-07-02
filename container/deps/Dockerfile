@@ -92,7 +92,6 @@ COPY ./python/requirements.txt ./python/requirements.txt
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
     pip install -r ./python/requirements.txt && \
-    pip install --no-binary=pyBigWig --force-reinstall pyBigWig==0.3.25 && \
     ## clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds
