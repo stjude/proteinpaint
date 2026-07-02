@@ -279,7 +279,8 @@ const routesWithResOnCloseListener = new Set(['/gdc/mafBuild', '/sse'])
 // once crashed a container. The node port of /gdc/mafBuild spawns no process, so the equivalent
 // backstop is aborting the download fan-out. Value is config-driven (parity with
 // serverconfig.features.gdcMafConcurrency), defaulting to 5 min.
-const gdcMafMaxElapsed = Number(serverconfig.features?.gdcMafMaxElapsed) || 300000
+const gdcMafMaxElapsedRaw = Number(serverconfig.features?.gdcMafMaxElapsed)
+const gdcMafMaxElapsed = Number.isFinite(gdcMafMaxElapsedRaw) ? gdcMafMaxElapsedRaw : 300000
 const routesWithTimeout = new Map([['/gdc/mafBuild', gdcMafMaxElapsed]])
 
 function maySetAbortCtrlAndTrackers(req, res, ds) {
