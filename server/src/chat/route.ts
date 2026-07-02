@@ -17,6 +17,8 @@ import { classifyNotPlot } from './classify2.ts'
 import { inferScaffold } from './scaffold.ts'
 import serverconfig from '#src/serverconfig.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
+import { copy_term } from '#src/termdb.js'
+import { filterTerms } from '#src/termdb.server.init.ts'
 import { phrase2entity } from './phrase2entity.ts'
 import { inferTermObjFromEntity } from './entity2termObj.ts'
 import { resolveToTwTvs } from './entity2twTvs.ts'
@@ -73,18 +75,23 @@ async function doOmnisearch(prompt: string, q, genome: any, ds: any) {
 
 export function init({ genomes }) {
 	return async (req, res) => {
-		// getDataTypes is a lightweight capability probe used by the mass omnisearch (see
-		// getGeneDataTypes below); it is not part of the AI chat ChatRequest payload, so read it via a local cast.
-		const q: ChatRequest & { getDataTypes?: boolean } = req.query
+		// omnisearch/cohortStr/usecase/treeFilter drive the mass omnisearch (see runOmnisearch); they are
+		// not part of the AI chat ChatRequest payload, so read them via a local cast.
+		const q: ChatRequest & {
+			omnisearch?: boolean
+			cohortStr?: string
+			usecase?: any
+			treeFilter?: any
+		} = req.query
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
-			// Mass omnisearch capability probe: return the gene data types available for this dataset,
-			// without invoking the AI chat pipeline. Handled before the ds.queries.chat gate because
-			// omnisearch gene search is offered even for datasets that do not support chat.
-			if (q.getDataTypes) return res.send(getGeneDataTypes(ds))
+			// Mass omnisearch: search dictionary variables and genes in a single request. Handled before
+			// the ds.queries.chat gate because omnisearch is offered even for datasets that do not support
+			// chat, and is deliberately independent of the AI chat pipeline (run_chat_pipeline).
+			if (q.omnisearch) return res.send(await runOmnisearch(q, req, ds, genome))
 			// check if ds supports termdb chat
 			if (!ds.queries.chat) {
 				return res.send({
@@ -176,6 +183,68 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
 		snvindel: Boolean(ds.queries?.snvindel),
 		cnv: Boolean(ds.queries?.cnv),
 		svfusion: Boolean(ds.queries?.svfusion)
+	}
+}
+
+/** Result of the mass omnisearch: matched dictionary terms, matched gene names, and the dataset's
+ * gene data types (so the client can offer the appropriate per-gene action buttons). */
+export interface OmnisearchResult {
+	lst: any[]
+	genes: string[]
+	dataTypes: GeneDataTypeAvailability
+}
+
+/** Handle a single mass omnisearch request: search dictionary variables and genes together, without
+ * invoking the AI chat pipeline. Dictionary search reuses the dataset's term-search query (the same
+ * path as the termdb findterm route); gene search uses searchGeneNames() below. */
+async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<OmnisearchResult> {
+	const prompt = typeof q.prompt == 'string' ? q.prompt.trim() : ''
+
+	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
+	let terms: any[] = []
+	if (prompt) {
+		const str = prompt.toUpperCase()
+		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
+		terms = filterTerms(req, ds, found.map(copy_term))
+		for (const term of terms) {
+			term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
+			term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
+		}
+	}
+
+	// Genes — only search when the dataset has a gene data type to act on
+	const dataTypes = getGeneDataTypes(ds)
+	const hasGeneData =
+		dataTypes.geneExpression || dataTypes.dnaMethylation || dataTypes.snvindel || dataTypes.cnv || dataTypes.svfusion
+	const genes = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+
+	return { lst: terms, genes, dataTypes }
+}
+
+/** Match a search string to gene symbols via the genome's gene db. Copied from the shallow branch of
+ * getResult() in server/src/gene.js so the omnisearch can resolve genes within this route instead of
+ * the client making a separate genelookup request. Tries direct name, then alias, then isoform.
+ * Returns gene-name strings, or [] for no match / invalid input (never throws). */
+function searchGeneNames(genome: any, input: string): string[] {
+	try {
+		if (genome.genomicNameRegexp.test(input)) return [] // invalid character in gene name → no gene match
+		const upper = input.toUpperCase()
+		const byName = genome.genedb.getnameslike.all(upper + '%')
+		if (byName.length) {
+			byName.sort()
+			return byName.map((i: any) => i.name)
+		}
+		// no direct name match, try alias
+		if (genome.genedb.getNameByAlias) {
+			const byAlias = genome.genedb.getNameByAlias.all(upper)
+			if (byAlias.length) return byAlias.map((i: any) => i.name)
+		}
+		// no hit by alias; see if input is an isoform that maps to a symbol
+		const byIsoform = genome.genedb.getnamebynameorisoform.get(input, input)
+		if (byIsoform) return [byIsoform.name]
+		return []
+	} catch {
+		return []
 	}
 }
 

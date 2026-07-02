@@ -110,9 +110,6 @@ class MassAiChatBot implements RxComponent {
 	showTerms: any
 	noResult: any
 	isChat: any
-	hasGeneExp: any
-	hasGeneVariant: any
-	hasMethylation: any
 	geneVariantTypes: any
 
 	constructor(opts: any) {
@@ -122,12 +119,8 @@ class MassAiChatBot implements RxComponent {
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
-		// Gene data-type availability (gates gene search in the omnisearch) is resolved from the server
-		// in init() via setDataTypes(), which asks the termdb/chat endpoint (getGeneDataTypes) rather
-		// than inspecting termdbConfig.queries on the client. Default to disabled until resolved.
-		this.hasGeneExp = false
-		this.hasMethylation = false
-		this.hasGeneVariant = false
+		// Per-variant-type button options (label + dt candidates); populated per search from the
+		// dataset's gene data types returned by the omnisearch request (see doSearch). Default to empty.
 		this.geneVariantTypes = []
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
@@ -144,40 +137,10 @@ class MassAiChatBot implements RxComponent {
 	}
 
 	async init() {
-		await this.setDataTypes()
+		// Note: no server-side request here — the omnisearch resolves dictionary terms, genes, and the
+		// dataset's gene data types together in a single request per search (see doSearch), so nothing is
+		// fetched eagerly at component init.
 		this.initDom()
-	}
-
-	// Resolve which gene data types this dataset supports by asking the server (termdb/chat endpoint,
-	// getGeneDataTypes) for its available data types, instead of inspecting termdbConfig.queries on the
-	// client. Sets the flags that gate gene search in the omnisearch, and builds the per-variant-type
-	// options (label + dt candidates) for each variant data type the dataset defines. On failure, gene
-	// search is left disabled rather than breaking the omnisearch.
-	async setDataTypes() {
-		try {
-			const data: any = await dofetch3('termdb/chat', {
-				body: {
-					genome: this.app.vocabApi.vocab.genome,
-					dslabel: this.app.vocabApi.vocab.dslabel,
-					getDataTypes: true
-				}
-			})
-			if (data.error) throw data.error
-			this.hasGeneExp = Boolean(data.geneExpression)
-			this.hasMethylation = Boolean(data.dnaMethylation)
-			this.hasGeneVariant = Boolean(data.snvindel || data.cnv || data.svfusion)
-			// Each variant data type opens a mutated-vs-wildtype barchart restricted to that data type.
-			// svfusion maps to two dts (SV and fusion); the dt candidates are tried in order so whichever
-			// the dataset actually has is used.
-			this.geneVariantTypes = []
-			if (data.snvindel)
-				this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
-			if (data.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
-			if (data.svfusion)
-				this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
-		} catch (e) {
-			console.error('Could not resolve gene data types for omnisearch:', e)
-		}
 	}
 
 	// Search method, adapted from MassSearch.doSearch
@@ -187,21 +150,38 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		// Search dictionary variables and (when the dataset supports any gene data type) gene names in
-		// parallel. Gene matches are genome-level, so a single findGene() lookup serves all gene data
-		// types; which action buttons a gene gets is decided below by the dataset-capability flags.
-		const hasGeneData = this.hasGeneExp || this.hasGeneVariant || this.hasMethylation
-		const [data, geneHits] = await Promise.all([
-			this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType),
-			hasGeneData ? this.app.vocabApi.findGene(prompt).catch(() => []) : Promise.resolve([])
-		])
-		if (!Array.isArray(data.lst)) data.lst = []
-		// Append matching genes, skipping any whose name already appears among the dictionary results.
-		// Gene entries render as a single row per gene with action buttons for the supported data types (expression/variant).
-		const dictNames = new Set(data.lst.map((t: any) => t.name?.toUpperCase()))
-		// Merge gene hits into one entry per gene, recording which data types (expression/variant/
-		// methylation) are available for it. Each gene then renders as a single row whose buttons are
-		// the available actions, shown together in the same row.
+		// Single server request that searches dictionary variables and genes together, and reports the
+		// dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene lookup, so the
+		// client no longer calls the separate genelookup route.
+		const data: any = await dofetch3('termdb/chat', {
+			body: {
+				genome: this.app.vocabApi.vocab.genome,
+				dslabel: this.app.vocabApi.vocab.dslabel,
+				omnisearch: true,
+				prompt,
+				cohortStr,
+				usecase: this.opts.usecase
+			}
+		})
+		if (data.error) throw data.error
+		const lst: any[] = Array.isArray(data.lst) ? data.lst : []
+		const genes: string[] = Array.isArray(data.genes) ? data.genes : []
+		const dataTypes = data.dataTypes || {}
+
+		// Build per-variant-type button options from the dataset's data types, for showTerm to render.
+		// svfusion maps to two dts (SV and fusion); the dt candidates are tried in order so whichever
+		// the dataset actually has is used.
+		this.geneVariantTypes = []
+		if (dataTypes.snvindel)
+			this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
+		if (dataTypes.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
+		if (dataTypes.svfusion)
+			this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
+
+		// Merge gene hits into one entry per gene, skipping any whose name already appears among the
+		// dictionary results. Each gene renders as a single row whose buttons are the available actions
+		// (expression / variant / methylation), decided by the dataset's data types.
+		const dictNames = new Set(lst.map((t: any) => t.name?.toUpperCase()))
 		const geneMap = new Map<string, any>()
 		const addGeneAction = (gene: string, action: 'isGeneExpression' | 'isGeneVariant' | 'isMethylation') => {
 			if (dictNames.has(gene.toUpperCase())) return
@@ -213,13 +193,13 @@ class MassAiChatBot implements RxComponent {
 			}
 			entry[action] = true
 		}
-		for (const gene of geneHits) {
-			if (this.hasGeneExp) addGeneAction(gene, 'isGeneExpression')
-			if (this.hasGeneVariant) addGeneAction(gene, 'isGeneVariant')
-			if (this.hasMethylation) addGeneAction(gene, 'isMethylation')
+		for (const gene of genes) {
+			if (dataTypes.geneExpression) addGeneAction(gene, 'isGeneExpression')
+			if (dataTypes.snvindel || dataTypes.cnv || dataTypes.svfusion) addGeneAction(gene, 'isGeneVariant')
+			if (dataTypes.dnaMethylation) addGeneAction(gene, 'isMethylation')
 		}
-		for (const entry of geneMap.values()) data.lst.push(entry)
-		if (!data.lst || data.lst.length == 0) {
+		for (const entry of geneMap.values()) lst.push(entry)
+		if (!lst.length) {
 			// Show the "No match..." message one time at the first miss
 			if (!this.dom.noMatchShown) {
 				this.dom.noMatchShown = true
@@ -227,7 +207,7 @@ class MassAiChatBot implements RxComponent {
 			}
 		} else {
 			this.dom.noMatchShown = false
-			this.showTerms(data)
+			this.showTerms({ lst })
 		}
 	}
 
