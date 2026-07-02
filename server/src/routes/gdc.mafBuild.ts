@@ -497,8 +497,10 @@ decompressed chunk + one batch, instead of holding the whole decompressed file (
 copies) at once — the dominant driver of the build's peak RSS. Awaiting each flush propagates gzip
 backpressure up through gunzip to the download, so a slow client throttles the download rather than
 buffering. Throws on a missing column, an empty file (no data rows), or a stream/decompress error,
-matching selectMafCols() so the caller records a per-file error. Returns the rows written and the
-main-thread time spent parsing.
+matching selectMafCols() so the caller records a per-file error. Also throws if `signal` aborts
+mid-stream, so an abandoned file is neither partially written past the abort nor counted as merged
+(mergeMafFiles suppresses the abort throw). Returns the rows written and the main-thread time spent
+parsing.
 */
 export async function streamSelectMafCols(opts: {
 	gzStream: Readable
@@ -518,7 +520,11 @@ export async function streamSelectMafCols(opts: {
 		gzStream.on('error', err => gunzip.destroy(err))
 		gzStream.pipe(gunzip)
 		for await (const chunk of gunzip) {
-			if (signal.aborted) break
+			// An aborted signal (client disconnect or the elapsed-time timeout) must STOP this file, not
+			// quietly finish it. Throwing — rather than `break` — skips the leftover/final flush below and
+			// the success return, handing control to mergeMafFiles' catch which, seeing signal.aborted,
+			// drops the file: no partial rows written past the abort, and it is not counted as merged.
+			if (signal.aborted) throw new Error('aborted mid-stream')
 			const t0 = Date.now()
 			const text = leftover + chunk.toString('utf8')
 			const lines = text.split('\n')
