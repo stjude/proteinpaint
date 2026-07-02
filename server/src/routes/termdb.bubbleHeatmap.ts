@@ -98,7 +98,7 @@ function init({ genomes }) {
 
 			// Reference assay used as the total-protein baseline for protein-abundance
 			// adjustment. Only advertise it if it actually exists for this organism.
-			const refAssayName = bhConfig.proteinReferenceAssay
+			const refAssayName = proteomeConfig.proteinReferenceAssay
 			const refAssayConfig = refAssayName ? organismConfig.assays?.[refAssayName] : undefined
 			const proteinReferenceAssay = refAssayConfig ? refAssayName! : null
 
@@ -141,7 +141,7 @@ function init({ genomes }) {
 				if (!assayConfig) continue // assay not present for this organism — leave column empty
 				const isPTM = !!assayConfig.PTMType
 				if (isPTM) ptmAssays.push(assayName)
-				const adjustable = !!proteinReferenceAssay && assayName !== proteinReferenceAssay
+				const adjustable = !!proteinReferenceAssay && isPTM
 
 				for (const cohortName of bhConfig.cohorts) {
 					const cohortConfig = assayConfig.cohorts?.[cohortName]

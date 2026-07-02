@@ -1945,6 +1945,8 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 		//and avoids the complexity of mapping between different isoforms. TODO:support isoform-specific mapping.
 		if (!gm) continue
 		const logValue = getLog2Ratio(ptm.foldChange)
+		const wholeProteomeLog2 = getLog2Ratio(ptm.proteinFoldChange)
+		const normalizedLog2 = logValue != null && wholeProteomeLog2 != null ? logValue - wholeProteomeLog2 : null
 		const pValue = Number(ptm.pValue)
 		const testedN = Number(ptm.testedN)
 		const controlN = Number(ptm.controlN)
@@ -1965,6 +1967,8 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 			class: ptmClass,
 			dt: 1,
 			logValue,
+			wholeProteomeLog2,
+			normalizedLog2,
 			pValue,
 			testedN: Number.isFinite(testedN) ? testedN : null,
 			controlN: Number.isFinite(controlN) ? controlN : null,
@@ -2015,6 +2019,14 @@ async function renderPTMLollipop(holder: any, ptmCohorts: any, self: ProteinView
 						{ k: 'Sample set', v: m.cohortName ?? 'NA' },
 						{ k: 'PTM', v: m.PTMStr ?? 'NA' },
 						{ k: 'Log2 fold change', v: Number.isFinite(m.logValue) ? roundValue(m.logValue, 3) : 'NA' },
+						{
+							k: 'Whole proteome Log2 FC',
+							v: Number.isFinite(m.wholeProteomeLog2) ? roundValue(m.wholeProteomeLog2, 3) : 'NA'
+						},
+						{
+							k: 'Normalized Log2 FC',
+							v: Number.isFinite(m.normalizedLog2) ? roundValue(m.normalizedLog2, 3) : 'NA'
+						},
 						{ k: 'P value', v: Number.isFinite(p) && p > 0 ? p.toExponential(2) : 'NA' },
 						{ k: 'Case samples', v: Number.isFinite(m.testedN) ? m.testedN : 'NA' },
 						{ k: 'Control samples', v: Number.isFinite(m.controlN) ? m.controlN : 'NA' },
