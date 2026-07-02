@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { gzipSync } from 'zlib'
 import { Readable } from 'stream'
-import { selectMafCols, mergeMafFiles } from '../gdc.mafBuild.ts'
+import { selectMafCols, mergeMafFiles, streamSelectMafCols } from '../gdc.mafBuild.ts'
 
 // a single-chunk binary Readable of the given gz bytes, standing in for one file's GDC download stream
 function gzStreamFrom(buf: Buffer): Readable {
@@ -318,5 +318,46 @@ tape('a write() failure is counted as an error, not a merge', async function (te
 	const byUrl = Object.fromEntries(result.errors.map(e => [e.url, e.error]))
 	test.equal(result.errors.length, 1, 'the failed-write file is recorded as a single error')
 	test.match(byUrl.b, /simulated write failure/, 'write failure recorded against the right file')
+	test.end()
+})
+
+tape('\n', function (test) {
+	test.comment('-***- #routes/gdc.mafBuild streamSelectMafCols -***-')
+	test.end()
+})
+
+tape('an abort mid-stream throws instead of finishing the file (no partial write, not merged)', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
+	// Reproduces the abort-mid-stream bug: streamSelectMafCols used to `break` on signal.aborted and then
+	// flush the leftover/buffered rows and return success — writing partial output past the abort and
+	// letting mergeMafFiles count the abandoned file as merged. The file below is large enough that the
+	// selected output exceeds writeFlushBytes, so an in-loop write() fires while the stream is still
+	// running; aborting from inside that first write() models the timeout landing mid-stream. The
+	// function must reject (so mergeMafFiles drops it) and perform no further write() after the abort.
+	const rows = Array.from({ length: 20000 }, (_, i) => ['G' + i, 'chr1', String(i), 'Missense_Mutation'])
+	const gz = makeGzMaf(HEADER, rows)
+	const controller = new AbortController()
+	let writeCalls = 0
+	let wroteAfterAbort = false
+	let threw = false
+	try {
+		await streamSelectMafCols({
+			gzStream: gzStreamFrom(gz),
+			columns: OUT_COLS,
+			signal: controller.signal,
+			write: async () => {
+				if (controller.signal.aborted) wroteAfterAbort = true
+				writeCalls++
+				controller.abort() // abort during the first batch flush → the next loop iteration must bail
+			}
+		})
+	} catch (e: any) {
+		threw = true
+		test.match(String(e?.message || e), /abort/i, 'rejects with an abort error, not a success return')
+	}
+	test.ok(threw, 'aborting mid-stream rejects rather than returning success')
+	test.ok(writeCalls >= 1, 'at least one batch was flushed before the abort (the file was genuinely mid-stream)')
+	test.notOk(wroteAfterAbort, 'no leftover/final flush runs after the signal is aborted')
 	test.end()
 })
