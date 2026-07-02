@@ -288,7 +288,7 @@ function maySetAbortCtrlAndTrackers(req, res, ds) {
 	if (!ds) return
 	if (routesWithResOnCloseListener.has(req.path)) {
 		const timeoutMs = routesWithTimeout.get(req.path)
-		if (timeoutMs) {
+		if (typeof timeoutMs === 'number' && timeoutMs > 0) {
 			// These routes manage their own client-disconnect abort (their res.on('close') handler), so we
 			// do NOT add the standard disconnect abort here — only the elapsed-time backstop. The handler
 			// must attach to q.__abortSignal for this to take effect (see buildMaf in gdc.mafBuild.ts).
