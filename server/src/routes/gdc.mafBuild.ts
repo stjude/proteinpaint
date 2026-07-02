@@ -155,6 +155,13 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	// orphaned GDC requests don't keep running after no one is listening.
 	const controller = new AbortController()
 
+	// Elapsed-time backstop: app.middlewares.js sets q.__abortSignal for /gdc/mafBuild and aborts it if
+	// the build runs longer than serverconfig.features.gdcMafMaxElapsed (default 5 min). This ports the
+	// former rust `gdcmaf` watchdog that killed a hung/leaked build to protect container memory. Fold it
+	// in with the client-disconnect controller so either one stops the download fan-out.
+	const timeoutSignal = (q as any).__abortSignal as AbortSignal | undefined
+	const buildSignal = timeoutSignal ? AbortSignal.any([controller.signal, timeoutSignal]) : controller.signal
+
 	const boundary = '------------------------GDC-MAF-BUILD'
 	res.setHeader('Content-Type', `multipart/form-data; boundary=${boundary}`)
 	res.write(`--${boundary}`)
@@ -164,6 +171,25 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	const errors: FileError[] = []
 	let completed = 0 // files that finished (merged or errored); lets the disconnect log report how many were still pending
+
+	// On the elapsed-time timeout, record a build-level (non-file, url:'') error so the client shows a
+	// clear failure and skips the incomplete download, instead of a silently truncated MAF. The finalize
+	// path (gz.end() → gz.on('end')) writes it into the "errors" part.
+	// The timeout can fire BEFORE we reach this line (e.g. during the size query above, which is not
+	// itself abortable), and an AbortSignal emits 'abort' only once — so a listener attached after the
+	// signal already aborted would never run. Handle the already-aborted case explicitly.
+	const recordTimeoutError = () => {
+		if (res.writableEnded) return
+		// url:'' marks a build-level failure; guard against duplicating the generic catch-block error below
+		if (!errors.some(e => !e.url)) {
+			errors.push({
+				url: '',
+				error: 'MAF build stopped: it exceeded the server time limit. Please try again or select fewer files.'
+			})
+		}
+	}
+	if (timeoutSignal?.aborted) recordTimeoutError()
+	else timeoutSignal?.addEventListener('abort', recordTimeoutError, { once: true })
 
 	// Timing instrumentation, summed across files. Each file is downloaded + decompressed + column-selected
 	// as a single interleaved stream (see streamSelectMafCols), so totalStreamMs is the summed per-file
@@ -211,7 +237,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	let writeChain: Promise<void> = Promise.resolve()
 	function writeGz(str: string): Promise<void> {
 		writeChain = writeChain.then(async () => {
-			if (!gz.write(str)) await once(gz, 'drain', { signal: controller.signal })
+			if (!gz.write(str)) await once(gz, 'drain', { signal: buildSignal })
 		})
 		return writeChain
 	}
@@ -227,7 +253,7 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 			fileIdLst: fileLst2,
 			columns,
 			concurrency,
-			signal: controller.signal,
+			signal: buildSignal,
 			// Stream the gz bytes straight from GDC into the decompress+parse pipeline instead of buffering
 			// the whole file — this is what caps the per-file memory to ~one chunk + one flush batch.
 			// AbortSignal.any combines the client-disconnect controller with a per-file whole-download

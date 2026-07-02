@@ -147,6 +147,7 @@ test sections:
 - merges good files and isolates per-file failures (download error / empty file / missing column) without aborting the batch
 - runs with concurrency > 1 and still merges every good file exactly once
 - an already-aborted signal processes nothing
+- a signal aborted mid-build (the 5-min timeout backstop) stops in-flight work without recording abort-noise errors
 */
 
 // build a gzipped MAF "download" for one file; the injected fetcher returns these
@@ -253,6 +254,47 @@ tape('an already-aborted signal processes nothing', async function (test) {
 	test.equal(result.merged, 0, 'no files merged when aborted up front')
 	test.equal(result.errors.length, 0, 'no errors recorded under abort (late errors suppressed)')
 	test.equal(written.length, 0, 'nothing written')
+	test.end()
+})
+
+tape('a signal aborted mid-build stops in-flight work without recording abort-noise errors', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
+	// Models the 5-min timeout backstop firing while a build is running (app.middlewares.js aborts
+	// q.__abortSignal, which buildMaf folds into the signal passed here). The abort lands mid-flight:
+	// the file that already finished must still count as merged, but the in-flight and not-yet-started
+	// files must record NO per-file errors — so the response's "errors" part carries only buildMaf's
+	// single "expired process" message, not a flood of abort noise. Distinct from the already-aborted
+	// case above, which bails before any work starts.
+	const controller = new AbortController()
+	const written: string[] = []
+	const fetchGzStream = async (fileId: string, signal: AbortSignal): Promise<Readable> => {
+		if (fileId === 'a') return gzStreamFrom(gzByFile.a)
+		// 'slow*' are still fetching when the abort lands: reject only on abort, mirroring how the real
+		// ky download (via AbortSignal.any) rejects when the timeout fires. Their rejection must be
+		// suppressed because signal.aborted is true.
+		return new Promise<Readable>((_, reject) => {
+			signal.addEventListener('abort', () => reject(new Error('The operation was aborted')), { once: true })
+		})
+	}
+	const result = await mergeMafFiles({
+		fileIdLst: ['a', 'slow1', 'slow2'],
+		columns: OUT_COLS,
+		concurrency: 2, // 'a' and 'slow1' start together; 'slow2' waits for a free slot
+		signal: controller.signal,
+		fetchGzStream,
+		// abort right after the first file settles, so 'slow1' is in-flight and 'slow2' never starts
+		onFileSettled: () => {
+			if (!controller.signal.aborted) controller.abort()
+		},
+		write: async rows => {
+			written.push(rows)
+		}
+	})
+
+	test.equal(result.merged, 1, "only the file that completed before the timeout merged ('a')")
+	test.equal(result.errors.length, 0, 'in-flight and not-yet-started files under abort record no per-file errors')
+	test.ok(written.join('').includes('TP53'), "the completed file's rows were written before the abort")
 	test.end()
 })
 

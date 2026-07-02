@@ -15,6 +15,7 @@ import crypto from 'crypto'
 import { ReqResCache } from '@sjcrh/augen'
 import { abortCtrlBy } from './xfetch.js'
 import { mayLog } from './helpers.ts'
+import { formatElapsedTime } from '#shared'
 
 const basepath = serverconfig.basepath || ''
 
@@ -271,11 +272,37 @@ function mayWrapResponseSend(cachedir, req, res) {
 
 const routesWithResOnCloseListener = new Set(['/gdc/mafBuild', '/sse'])
 
+// Routes that get a wall-clock elapsed-time abort backstop: if the request runs longer than the
+// given ms, abort its q.__abortSignal so any handler wired to that signal stops its in-flight work.
+// This ports the former rust `gdcmaf` watchdog (trackByPid/killExpiredProcesses in rust/index.js),
+// which SIGTERM-killed a build running >5 min to prevent the leaked/hung process memory usage that
+// once crashed a container. The node port of /gdc/mafBuild spawns no process, so the equivalent
+// backstop is aborting the download fan-out. Value is config-driven (parity with
+// serverconfig.features.gdcMafConcurrency), defaulting to 5 min.
+const gdcMafMaxElapsed = Number(serverconfig.features?.gdcMafMaxElapsed) || 300000
+const routesWithTimeout = new Map([['/gdc/mafBuild', gdcMafMaxElapsed]])
+
 function maySetAbortCtrlAndTrackers(req, res, ds) {
 	// assume that cancellations of server computations or external API requests
 	// would only be needed when a dataset is specified in the request payload
 	if (!ds) return
 	if (routesWithResOnCloseListener.has(req.path)) {
+		const timeoutMs = routesWithTimeout.get(req.path)
+		if (timeoutMs) {
+			// These routes manage their own client-disconnect abort (their res.on('close') handler), so we
+			// do NOT add the standard disconnect abort here — only the elapsed-time backstop. The handler
+			// must attach to q.__abortSignal for this to take effect (see buildMaf in gdc.mafBuild.ts).
+			const abortCtrl = new AbortController()
+			req.query.__abortSignal = abortCtrl.signal
+			const timer = setTimeout(() => {
+				mayLog(`(!) ${req.path} exceeded ${formatElapsedTime(timeoutMs)}, aborting`)
+				abortCtrl.abort()
+			}, timeoutMs)
+			timer.unref() // the backstop timer must never keep the process alive on its own
+			// clear on either a normal finish or a client-triggered close so it can't fire post-response
+			res.once('finish', () => clearTimeout(timer))
+			res.once('close', () => clearTimeout(timer))
+		}
 		// optional trackReqHeaders() should handle a req.query without __abortSignal and filter0 properties
 		if (ds.trackReqHeaders) ds.trackReqHeaders(req, res)
 		return

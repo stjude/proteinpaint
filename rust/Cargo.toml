@@ -76,10 +76,6 @@ name="cluster"
 path="src/cluster.rs"
 
 [[bin]]
-name="gdcmaf"
-path="src/gdcmaf.rs"
-
-[[bin]]
 name="wilcoxon"
 path="src/wilcoxon.rs"
 
