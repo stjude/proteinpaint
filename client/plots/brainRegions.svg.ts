@@ -11,6 +11,9 @@ export type BrainAssets = {
 
 type RegionRender = {
 	code: string
+	// Text drawn on the shape: the region code, unless the config label is a merged
+	// code like "FG/FC" (contains a slash), which reads better on the map.
+	displayLabel: string
 	fillColor: string
 	d: string
 	dimmed: boolean
@@ -332,6 +335,9 @@ export function renderBrainSvg(opts: RenderBrainSvgOpts): SVGSVGElement {
 		const dimmed = isRegionDimmed?.(code) === true
 		const fillColor = dimmed ? DIMMED_FILL : fillByRegion(code)
 		const tooltipText = tooltipByRegion(code, label)
+		// A merged label like "FG/FC" (contains a slash) is drawn on the shape; all
+		// other regions keep their short code (full names go only in the tooltip).
+		const displayLabel = label && label.includes('/') ? label : code
 
 		const outerG = overlayGroup.append('g').style('cursor', 'pointer')
 		const innerG = outerG.append('g')
@@ -374,6 +380,7 @@ export function renderBrainSvg(opts: RenderBrainSvgOpts): SVGSVGElement {
 
 		rendered.push({
 			code,
+			displayLabel,
 			fillColor,
 			d: geom.d,
 			dimmed,
@@ -410,7 +417,7 @@ export function renderBrainSvg(opts: RenderBrainSvgOpts): SVGSVGElement {
 	// full label rect; callout with leader line when not (AM, SN).
 	const fontSize = 46
 	for (const r of rendered) {
-		const labelW = r.code.length * fontSize * 0.62
+		const labelW = r.displayLabel.length * fontSize * 0.62
 		const labelH = fontSize
 		const labelHalfDiag = Math.hypot(labelW / 2, labelH / 2)
 
@@ -460,7 +467,7 @@ export function renderBrainSvg(opts: RenderBrainSvgOpts): SVGSVGElement {
 			.attr('paint-order', 'stroke')
 			.attr('stroke', '#fff')
 			.attr('stroke-width', 6)
-			.text(r.code)
+			.text(r.displayLabel)
 	}
 
 	return svg.node() as SVGSVGElement
