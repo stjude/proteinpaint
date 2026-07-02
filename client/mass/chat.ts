@@ -147,8 +147,8 @@ class MassAiChatBot implements RxComponent {
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
 		// Single server request that searches dictionary variables and genes together, and reports the
-		// dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene lookup, so the
-		// client no longer calls the separate genelookup route.
+		// dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene lookup for the
+		// search results, so the client does not need an extra genelookup request during omnisearch.
 		const data: any = await dofetch3('termdb/chat', {
 			body: {
 				genome: this.app.vocabApi.vocab.genome,
@@ -156,7 +156,8 @@ class MassAiChatBot implements RxComponent {
 				omnisearch: true,
 				prompt,
 				cohortStr,
-				usecase: this.opts.usecase
+				usecase: this.opts.usecase,
+				treeFilter: this.app.vocabApi.state?.treeFilter
 			}
 		})
 		if (data.error) throw data.error
