@@ -186,12 +186,17 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
 	}
 }
 
-/** Result of the mass omnisearch: matched dictionary terms, matched gene names, and the dataset's
- * gene data types (so the client can offer the appropriate per-gene action buttons). */
+/** One matched gene together with the data types available for that specific gene. */
+export interface GeneMatch {
+	gene: string
+	dataTypes: GeneDataTypeAvailability
+}
+
+/** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
+ * available gene data types so the client can offer the appropriate per-gene action buttons. */
 export interface OmnisearchResult {
 	lst: any[]
-	genes: string[]
-	dataTypes: GeneDataTypeAvailability
+	genes: GeneMatch[]
 }
 
 /** Handle a single mass omnisearch request: search dictionary variables and genes together, without
@@ -212,13 +217,41 @@ async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<Om
 		}
 	}
 
-	// Genes — only search when the dataset has a gene data type to act on
-	const dataTypes = getGeneDataTypes(ds)
+	// Genes — only search when the dataset has at least one gene data type to act on. The dataset-level
+	// availability is the basis for the per-gene data types resolved below.
+	const datasetDataTypes = getGeneDataTypes(ds)
 	const hasGeneData =
-		dataTypes.geneExpression || dataTypes.dnaMethylation || dataTypes.snvindel || dataTypes.cnv || dataTypes.svfusion
-	const genes = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+		datasetDataTypes.geneExpression ||
+		datasetDataTypes.dnaMethylation ||
+		datasetDataTypes.snvindel ||
+		datasetDataTypes.cnv ||
+		datasetDataTypes.svfusion
+	const geneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not).
+	const genes: GeneMatch[] = geneNames.map(gene => ({
+		gene,
+		dataTypes: getGeneDataTypesForGene(ds, gene, datasetDataTypes)
+	}))
 
-	return { lst: terms, genes, dataTypes }
+	// Will later add support for other NonDict terms such as genesets etc.
+	return { lst: terms, genes }
+}
+
+/** Determine the gene data types available for a SPECIFIC gene in a dataset. This is the harness for
+ * per-gene data-type filtering: e.g. one gene may have SNV/indel data while another does not.
+ *
+ * NOTE: the per-gene determination strategy is not yet implemented — every gene currently reports the
+ * dataset-level availability (datasetDataTypes) as a placeholder. Add the per-gene filtering criteria
+ * inside this function (e.g. consult assay availability such as gene panels or query results for `gene` and set each data
+ * type to false when that gene lacks it). A fresh object is returned per gene so callers can safely
+ * mutate/narrow it. */
+function getGeneDataTypesForGene(
+	_ds: any,
+	_gene: string,
+	datasetDataTypes: GeneDataTypeAvailability
+): GeneDataTypeAvailability {
+	// TODO: replace this dataset-level fallback with per-gene filtering using `ds` and `gene`.
+	return { ...datasetDataTypes }
 }
 
 /** Match a search string to gene symbols via the genome's gene db. Copied from the shallow branch of
