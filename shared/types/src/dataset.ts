@@ -794,6 +794,11 @@ type ProteomeAssayConfig = {
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
+	/** assay used as the total-protein baseline for protein-abundance adjustment of the
+	 *  PTM assays. Must be a configured assay for the organism (typically the whole-proteome
+	 *  assay). Used by both the bubble heatmap and the Protein View PTM lollipop. When
+	 *  omitted, no adjustment/normalization is offered. */
+	proteinReferenceAssay?: string
 	/** Brain-region visualization config: powers the Brain Regional Proteome chart
 	 *  and the Protein View sample-distribution panel */
 	brainRegions?: {
@@ -830,11 +835,6 @@ export type ProteomeAbundanceQuery = {
 		assays: string[]
 		/** Column order, left-to-right */
 		cohorts: string[]
-		/** assay used as the total-protein baseline for protein-abundance adjustment of
-		 *  the other (non-reference) assays — both PTM and insoluble. Must be a configured
-		 *  assay for the organism (typically the whole-proteome assay, and usually also in
-		 *  `assays` so its own row shows). When omitted, no adjustment is offered. */
-		proteinReferenceAssay?: string
 	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
