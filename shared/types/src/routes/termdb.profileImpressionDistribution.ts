@@ -1,5 +1,3 @@
-import type { RoutePayload } from './routeApi.js'
-
 export type ProfileImpressionDistributionRequest = {
 	scTermId: string
 	// Optional: omitted when the module has no POC term (e.g. Patients & Outcomes,
@@ -39,7 +37,7 @@ export type ProfileImpressionDistributionResponse = {
 	n: number
 }
 
-export const ProfileImpressionDistributionPayload: RoutePayload = {
+export const ProfileImpressionDistributionPayload = {
 	request: {
 		typeId: 'ProfileImpressionDistributionRequest'
 	},
