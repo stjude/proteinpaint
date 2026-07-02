@@ -12,8 +12,7 @@ GDC headers, the actual file downloads, and the multipart/form-data response fra
 Note: depends on GDC open-access files that are subject to change; assertions are structural (valid
 gzip, header == requested columns, >0 rows, parseable errors part) rather than exact content.
 
-The two file UUIDs below are the canonical open-access MAF files used elsewhere for manual testing
-(see rust/src/gdcmaf.rs and the commented example in routes/gdc.mafBuild.ts).
+The two file UUIDs below are the canonical open-access MAF files used elsewhere for manual testing.
 
 fetch: bound explicitly from globalThis rather than imported from node-fetch (as the urlencoded
 integration specs do) because this spec parses the multipart/form-data response with res.formData() —
