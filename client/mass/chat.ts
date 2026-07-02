@@ -110,7 +110,6 @@ class MassAiChatBot implements RxComponent {
 	showTerms: any
 	noResult: any
 	isChat: any
-	geneVariantTypes: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -119,9 +118,6 @@ class MassAiChatBot implements RxComponent {
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
-		// Per-variant-type button options (label + dt candidates); populated per search from the
-		// dataset's gene data types returned by the omnisearch request (see doSearch). Default to empty.
-		this.geneVariantTypes = []
 		setRenderers(this) // needed so that this.showTerms, noResult, clear work
 	}
 
@@ -165,38 +161,36 @@ class MassAiChatBot implements RxComponent {
 		})
 		if (data.error) throw data.error
 		const lst: any[] = Array.isArray(data.lst) ? data.lst : []
-		const genes: string[] = Array.isArray(data.genes) ? data.genes : []
-		const dataTypes = data.dataTypes || {}
+		// Each gene match carries its own available data types (a gene may have e.g. SNV/indel while
+		// another does not), so action buttons are decided per gene rather than dataset-wide.
+		const genes: { gene: string; dataTypes: any }[] = Array.isArray(data.genes) ? data.genes : []
 
-		// Build per-variant-type button options from the dataset's data types, for showTerm to render.
-		// svfusion maps to two dts (SV and fusion); the dt candidates are tried in order so whichever
-		// the dataset actually has is used.
-		this.geneVariantTypes = []
-		if (dataTypes.snvindel)
-			this.geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
-		if (dataTypes.cnv) this.geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
-		if (dataTypes.svfusion)
-			this.geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
-
-		// Merge gene hits into one entry per gene, skipping any whose name already appears among the
-		// dictionary results. Each gene renders as a single row whose buttons are the available actions
-		// (expression / variant / methylation), decided by the dataset's data types.
+		// Build one entry per gene, skipping any whose name already appears among the dictionary results.
+		// Each gene renders as a single row whose buttons are the actions available for that gene, and
+		// its own per-variant-type options (SNV/indel, CNV, SV/fusion) are attached for showTerm to use.
 		const dictNames = new Set(lst.map((t: any) => t.name?.toUpperCase()))
 		const geneMap = new Map<string, any>()
-		const addGeneAction = (gene: string, action: 'isGeneExpression' | 'isGeneVariant' | 'isMethylation') => {
-			if (dictNames.has(gene.toUpperCase())) return
-			const key = gene.toUpperCase()
-			let entry = geneMap.get(key)
-			if (!entry) {
-				entry = { name: gene, gene, isGene: true }
-				geneMap.set(key, entry)
+		for (const g of genes) {
+			const gene = g?.gene
+			if (!gene || dictNames.has(gene.toUpperCase())) continue
+			const dt = g.dataTypes || {}
+			// per-gene variant sub-type buttons; svfusion maps to two dts (SV and fusion), tried in order
+			const geneVariantTypes: any[] = []
+			if (dt.snvindel) geneVariantTypes.push({ label: 'SNV/indel', testid: 'snvindel', dtCandidates: [dtsnvindel] })
+			if (dt.cnv) geneVariantTypes.push({ label: 'CNV', testid: 'cnv', dtCandidates: [dtcnv] })
+			if (dt.svfusion)
+				geneVariantTypes.push({ label: 'SV/fusion', testid: 'svfusion', dtCandidates: [dtsv, dtfusionrna] })
+			const entry: any = { name: gene, gene, isGene: true }
+			if (dt.geneExpression) entry.isGeneExpression = true
+			if (geneVariantTypes.length) {
+				entry.isGeneVariant = true
+				entry.geneVariantTypes = geneVariantTypes
 			}
-			entry[action] = true
-		}
-		for (const gene of genes) {
-			if (dataTypes.geneExpression) addGeneAction(gene, 'isGeneExpression')
-			if (dataTypes.snvindel || dataTypes.cnv || dataTypes.svfusion) addGeneAction(gene, 'isGeneVariant')
-			if (dataTypes.dnaMethylation) addGeneAction(gene, 'isMethylation')
+			if (dt.dnaMethylation) entry.isMethylation = true
+			// only list a gene if it has at least one available data type / action
+			if (entry.isGeneExpression || entry.isGeneVariant || entry.isMethylation) {
+				geneMap.set(gene.toUpperCase(), entry)
+			}
 		}
 		for (const entry of geneMap.values()) lst.push(entry)
 		if (!lst.length) {
@@ -540,9 +534,9 @@ function setRenderers(self: any) {
 				})
 			}
 			if (term.isGeneVariant) {
-				// one button per variant data type defined on the dataset (snvindel/cnv/svfusion);
+				// one button per variant data type available for THIS gene (snvindel/cnv/svfusion);
 				// each opens a mutated-vs-wildtype barchart restricted to that data type.
-				for (const vt of self.geneVariantTypes) {
+				for (const vt of term.geneVariantTypes || []) {
 					addBtn(vt.label, `sjpp-mass-chat-gene-${vt.testid}-${term.gene}`, async () => {
 						await self.launchGeneVariantPlot(term.gene, vt.dtCandidates)
 					})
