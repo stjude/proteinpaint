@@ -758,6 +758,7 @@ async function validate_query_snvindel(ds, genome) {
 			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'bcffile')
 			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile
 			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'maffile')
+			q.byrange.maffile = q.byrange.bcfMafFile.maffile
 			q.byrange._tk = { file: q.byrange.bcffile, maffile: q.byrange.maffile }
 			q.byrange.get = await snvindelByRangeGetter_bcfMaf(ds, genome)
 			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
@@ -1866,8 +1867,15 @@ export async function setFile(q, dtn, fk = 'file') {
 	const f = q[fk]
 	if (typeof f != 'string') throw `${dtn}.${fk} not string`
 	if (!f) throw `${dtn}.${fk} empty string`
-	// in case the same ds js file is included twice on this pp, the file will already become absolute path
-	q[fk] = f.startsWith(serverconfig.tpmasterdir) ? f : path.join(serverconfig.tpmasterdir, f)
+	if (f.startsWith(serverconfig.tpmasterdir)) {
+		// when the same ds js file is included twice on this pp, the file will already become absolute path
+		if ((utils.illegalpath(f.replace(serverconfig.tpmasterdir + '/', '')), false, false))
+			throw `${dtn}.${fk} illegal file path`
+		q[fk] = f
+	} else {
+		if ((utils.illegalpath(f), false, false)) throw `${dtn}.${fk} illegal file path`
+		q[fk] = path.join(serverconfig.tpmasterdir, f)
+	}
 	await utils.file_is_readable(q[fk])
 	console.log('setFile:', dtn, q[fk])
 }
