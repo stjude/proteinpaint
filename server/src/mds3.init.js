@@ -61,7 +61,6 @@ import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
-import { scaleOrdinal } from 'd3-scale'
 
 /*
 init
@@ -78,7 +77,6 @@ validate_query_snvindel
 	gdc.validate_query_snvindel_byisoform
 	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
-		validateSampleHeader2
 		mayLimitSamples
 			param2filter
 		mayDropMbyInfoFilter
@@ -87,15 +85,12 @@ validate_query_snvindel
 	snvindelByRangeGetter_bcfMaf
 		mayLimitSamples
 		mayDropMbyInfoFilter
-	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
-		validateSampleHeader2
 	svfusionByNameGetter_file
 validate_query_geneCnv
 validate_query_cnv
 	addCnvGetter
-		validateSampleHeader2
 validate_query_itd
 validate_query_probe2cnv
 validate_query_ld
@@ -753,7 +748,6 @@ async function validate_query_snvindel(ds, genome) {
 				// vcf header parsing returns blank array when file has no sample
 				delete q.byrange._tk.samples
 			}
-			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else if (q.byrange.bcfMafFile) {
 			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'bcffile')
 			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile
@@ -761,7 +755,6 @@ async function validate_query_snvindel(ds, genome) {
 			q.byrange.maffile = q.byrange.bcfMafFile.maffile
 			q.byrange._tk = { file: q.byrange.bcffile, maffile: q.byrange.maffile }
 			q.byrange.get = await snvindelByRangeGetter_bcfMaf(ds, genome)
-			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else if (q.byrange.chr2bcffile) {
 			q.byrange._tk = { chr2files: {} } // to hold small tk obj from each chr
 			for (const chr in q.byrange.chr2bcffile) {
@@ -775,7 +768,6 @@ async function validate_query_snvindel(ds, genome) {
 				// vcf header parsing returns blank array when file has no sample
 				delete q.byrange._tk.samples
 			}
-			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -904,27 +896,10 @@ export function mayValidateBcfMafFilter(q) {
 	q.mafFilter._depthTermsAdded = true
 }
 
-// this function assumes file header uses integer sample id. TODO when all files are migrated to using string sample name, delete this function
-function mayValidateSampleHeader(ds, samples, where) {
-	if (!samples) return
-	// samples[] elements: {name:str}
-	let useint
-	if (ds?.cohort?.db) {
-		// using sqlite3 db
-		// as samples are kept as integer ids in termdb, cast name into integers
-		for (const s of samples) {
-			const id = Number(s.name)
-			if (!Number.isInteger(id)) throw 'non-integer sample id from ' + where
-			s.name = id
-		}
-		useint = ', all integer IDs'
-	}
-	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label + useint)
-}
-// for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array; it replaces mayValidateSampleHeader()
+// for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array
 // samples[] elements: {name:str}
 // returns new array with same length as samples[], {name:int}
-function validateSampleHeader2(ds, samples, where) {
+function validateSampleHeader(ds, samples, where) {
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
 	if (ds.cohort?.termdb?.q?.sampleName2id) {
@@ -1004,6 +979,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 	.
 	*/
 	await utils.init_one_vcfMaf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	q._tk.samples = validateSampleHeader(ds, q._tk.samples, 'snvindel.byrange.bcfMafFile')
 	// q._tk{} is initiated
 	if (q._tk.format) {
 		for (const id in q._tk.format) {
@@ -1273,7 +1249,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	if (q._tk?.samples.length) {
 		// has samples
 		if (!q._tk.format) throw 'bcf file has samples but no FORMAT'
-		q._tk.samples = validateSampleHeader2(ds, q._tk.samples, 'snvindel.byrange') // snvindel is using string sample name
+		q._tk.samples = validateSampleHeader(ds, q._tk.samples, 'snvindel.byrange')
 	} else {
 		if (q._tk.format) throw 'bcf file has FORMAT but no samples'
 	}
@@ -1673,12 +1649,10 @@ async function validate_query_svfusion(ds, genome) {
 	if (q.byrange) {
 		await setFile(q.byrange, 'svfusion.byrange')
 		q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
-		mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 	}
 	if (q.byname) {
 		await setFile(q.byname, 'svfusion.byname')
 		q.byname.get = await svfusionByNameGetter_file(ds, genome)
-		//mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 	}
 }
 
@@ -1709,8 +1683,7 @@ async function validate_query_cnv(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'cnv') // cnv is using string sample names
-		mayValidateSampleHeader(ds, q.samples, 'cnv')
+		q.samples = validateSampleHeader(ds, q.samples, 'cnv')
 	}
 
 	/*
@@ -1806,7 +1779,7 @@ async function validate_query_cnv(ds, genome) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
 						if (j.sample === undefined) {
 							// skip unmapped samples here as there are already
-							// handled during validation (see validateSampleHeader2())
+							// handled during validation (see validateSampleHeader)
 							return
 						}
 						if (limitSamples) {
@@ -1860,7 +1833,7 @@ async function validate_query_cnv(ds, genome) {
 
 /*
 q: requires file key of this obj is valid string
-dname: data type name
+dtn: data type name
 fk: file key
 */
 export async function setFile(q, dtn, fk = 'file') {
@@ -1894,7 +1867,7 @@ async function validate_query_itd(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'itd')
+		q.samples = validateSampleHeader(ds, q.samples, 'itd')
 	}
 	q.get = async param => {
 		if (param.hiddenmclass?.has(dtitd) || param.hiddenmclass?.has(mclassitd)) {
@@ -1931,7 +1904,7 @@ async function validate_query_itd(ds, genome) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
 						if (j.sample === undefined) {
 							// skip unmapped samples here as there are already
-							// handled during validation (see validateSampleHeader2())
+							// handled during validation (see validateSampleHeader)
 							return
 						}
 						if (limitSamples) {
@@ -2646,7 +2619,7 @@ async function svfusionByRangeGetter_file(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'svfusion.byrange') // svfusion is using string sample names
+		q.samples = validateSampleHeader(ds, q.samples, 'svfusion.byrange')
 	}
 
 	// same parameter as snvindel.byrange.get()
