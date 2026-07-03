@@ -32,6 +32,38 @@ export type PlotResponse = {
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
 
+export interface GeneDataTypeResult {
+	gene: string
+	dataType: string
+}
+
+/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
+ * (expression / variant sub-types / methylation) to offer. */
+export interface GeneDataTypeAvailability {
+	geneExpression: boolean
+	dnaMethylation: boolean
+	snvindel: boolean
+	cnv: boolean
+	svfusion: boolean
+}
+
+/** One matched gene together with the data types available for that specific gene. */
+export interface GeneMatch {
+	gene: string
+	dataTypes: GeneDataTypeAvailability
+	/** Default genomic coordinate for the gene, used to seed a genome browser track (e.g. the DNA
+	 * methylation region picker) so the client needs no separate genelookup request. Null when the
+	 * gene is not resolved to a coordinate (only resolved for genes that need a genome browser). */
+	coord: { chr: string; start: number; stop: number } | null
+}
+
+/** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
+ * available gene data types so the client can offer the appropriate per-gene action buttons. */
+export interface OmnisearchResult {
+	lst: any[]
+	genes: GeneMatch[]
+}
+
 export type LlmConfig = {
 	provider: 'SJ' | 'ollama' | 'huggingface' | 'azure'
 	EmbeddingProvider: 'SJ' | 'ollama' | 'huggingface'
@@ -52,20 +84,6 @@ export type LlmConfig = {
 export type ModelConfig = {
 	modelName: string
 	maxTokens: number
-}
-export interface GeneDataTypeResult {
-	gene: string
-	dataType: string
-}
-
-/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
- * (expression / variant sub-types / methylation) to offer. */
-export interface GeneDataTypeAvailability {
-	geneExpression: boolean
-	dnaMethylation: boolean
-	snvindel: boolean
-	cnv: boolean
-	svfusion: boolean
 }
 
 export interface GeneSetDataTypeResult {

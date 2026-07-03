@@ -1,7 +1,7 @@
 import { getCompInit, type RxComponent } from '#rx'
 import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
-import { keyupEnter, gmlst2loci } from '#src/client'
+import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
@@ -15,18 +15,6 @@ import { first_genetrack_tolist } from '#common/1stGenetk'
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
-
-// Resolve a gene symbol to its genomic loci via the genelookup route, reusing the shared
-// gmlst2loci() helper (from #src/client) — the same coordinate-merging logic that the gene
-// searchbox (dom/genesearch.ts) uses internally. Returns an array of merged loci
-// { name, chr, start, stop }; a gene whose isoforms span discontinuous loci yields more than one.
-// Throws if the gene cannot be resolved (so callers can rely on a non-empty array).
-async function gene2loci(genome: string, geneSymbol: string) {
-	const data = await dofetch3('genelookup', { body: { genome, input: geneSymbol, deep: 1 } })
-	if (data.error) throw data.error
-	if (!data.gmlst?.length) throw `cannot retrieve coordinates for gene "${geneSymbol}"`
-	return gmlst2loci(data.gmlst)
-}
 
 /** Build a region-based dnaMethylation term for the given coordinates. */
 function makeMethylationRegionTerm(opts: { chr: string; start: number; stop: number }, vocabApi: any) {
@@ -164,7 +152,7 @@ class MassAiChatBot implements RxComponent {
 		const lst: any[] = Array.isArray(data.lst) ? data.lst : []
 		// Each gene match carries its own available data types (a gene may have e.g. SNV/indel while
 		// another does not), so action buttons are decided per gene rather than dataset-wide.
-		const genes: { gene: string; dataTypes: any }[] = Array.isArray(data.genes) ? data.genes : []
+		const genes: { gene: string; dataTypes: any; coord?: any }[] = Array.isArray(data.genes) ? data.genes : []
 
 		// Build one entry per gene, skipping any whose name already appears among the dictionary results.
 		// Each gene renders as a single row whose buttons are the actions available for that gene, and
@@ -187,7 +175,11 @@ class MassAiChatBot implements RxComponent {
 				entry.isGeneVariant = true
 				entry.geneVariantTypes = geneVariantTypes
 			}
-			if (dt.dnaMethylation) entry.isMethylation = true
+			if (dt.dnaMethylation) {
+				entry.isMethylation = true
+				// server-resolved default coordinate, used to seed the genome browser region picker
+				entry.coord = g.coord
+			}
 			// only list a gene if it has at least one available data type / action
 			if (entry.isGeneExpression || entry.isGeneVariant || entry.isMethylation) {
 				geneMap.set(gene.toUpperCase(), entry)
@@ -477,13 +469,10 @@ function setRenderers(self: any) {
 	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
 	// area with a "Submit Region" button (see embedMethylationRegionPicker above); on submit, open a
 	// violin plot of the region-based dnaMethylation term's per-sample beta values.
-	self.launchMethylationPlot = async (gene: string) => {
-		// resolve the gene to genomic loci with the shared gmlst2loci() logic (the same core that
-		// dom/genesearch.ts's gene search uses), instead of a bespoke coordinate lookup. Merged
-		// isoforms may yield >1 locus for genes spread across discontinuous loci; open the region
-		// picker at the first locus (the user navigates the genome browser from there anyway).
-		const loci = await gene2loci(self.app.vocabApi.vocab.genome, gene)
-		const coord = loci[0]
+	self.launchMethylationPlot = async (gene: string, coord: { chr: string; start: number; stop: number }) => {
+		// coord is the gene's default genomic coordinate, resolved server-side by the omnisearch
+		// (GeneMatch.coord) and used to seed the genome browser track — no genelookup request here.
+		if (!coord) throw `Could not resolve coordinates for gene "${gene}"`
 
 		// render the region picker inline in the chat result area, replacing the result list
 		self.dom.tip.clear()
@@ -546,7 +535,7 @@ function setRenderers(self: any) {
 			if (term.isMethylation) {
 				// open a violin plot of the gene's per-sample DNA methylation beta values
 				addBtn('DNA methylation', `sjpp-mass-chat-gene-methylation-${term.gene}`, async () => {
-					await self.launchMethylationPlot(term.gene)
+					await self.launchMethylationPlot(term.gene, term.coord)
 				})
 			}
 			return
