@@ -91,6 +91,7 @@ validate_query_snvindel
 validate_query_svfusion
 	svfusionByRangeGetter_file
 		validateSampleHeader2
+	svfusionByNameGetter_file
 validate_query_geneCnv
 validate_query_cnv
 	addCnvGetter
@@ -745,9 +746,7 @@ async function validate_query_snvindel(ds, genome) {
 			gdc.validate_query_snvindel_byrange(ds)
 			// q.byrange.get() added
 		} else if (q.byrange.bcffile) {
-			q.byrange.bcffile = q.byrange.bcffile.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.bcffile
-				: path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
+			await setFile(q.byrange, 'snvindel.byrange', 'bcffile')
 			q.byrange._tk = { file: q.byrange.bcffile }
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
 			if (!q.byrange._tk?.samples.length) {
@@ -756,12 +755,9 @@ async function validate_query_snvindel(ds, genome) {
 			}
 			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else if (q.byrange.bcfMafFile) {
-			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.bcfMafFile.bcffile
-				: path.join(serverconfig.tpmasterdir, q.byrange.bcfMafFile.bcffile)
-			q.byrange.maffile = q.byrange.bcfMafFile.maffile.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.bcfMafFile.maffile
-				: path.join(serverconfig.tpmasterdir, q.byrange.bcfMafFile.maffile)
+			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'bcffile')
+			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile
+			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'maffile')
 			q.byrange._tk = { file: q.byrange.bcffile, maffile: q.byrange.maffile }
 			q.byrange.get = await snvindelByRangeGetter_bcfMaf(ds, genome)
 			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
@@ -1674,26 +1670,14 @@ async function validate_query_svfusion(ds, genome) {
 	if (!q) return
 	if (!q.byrange && !q.byname) throw 'both byrange and byname missing from queries.svfusion'
 	if (q.byrange) {
-		if (q.byrange.file) {
-			q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.file
-				: path.join(serverconfig.tpmasterdir, q.byrange.file)
-			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
-			mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
-		} else {
-			throw 'unknown query method for svfusion.byrange'
-		}
+		await setFile(q.byrange, 'svfusion.byrange')
+		q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
+		mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 	}
 	if (q.byname) {
-		if (q.byname.file) {
-			q.byname.file = q.byname.file.startsWith(serverconfig.tpmasterdir)
-				? q.byname.file
-				: path.join(serverconfig.tpmasterdir, q.byname.file)
-			q.byname.get = await svfusionByNameGetter_file(ds, genome)
-			//mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
-		} else {
-			throw 'unknown query method for svfusion.byname'
-		}
+		await setFile(q.byname, 'svfusion.byname')
+		q.byname.get = await svfusionByNameGetter_file(ds, genome)
+		//mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 	}
 }
 
@@ -1702,7 +1686,7 @@ async function validate_query_cnv(ds, genome) {
 	const q = ds.queries.cnv
 	if (!q) return
 	if (q.type !== undefined) {
-		const allowed = ['log2ratio', 'segmean', 'category', 'copyNumber']
+		const allowed = ['log2ratio', 'segmean', 'category', 'copyNumber'] // FIXME export it from #shared
 		if (!allowed.includes(q.type)) throw `cnv.type must be one of ${allowed.join('/')}`
 	}
 	if (!q.densityViewCutoff) q.densityViewCutoff = 1000
@@ -1712,18 +1696,186 @@ async function validate_query_cnv(ds, genome) {
 	if (q.densityViewCutoff >= q.maxReturnCutoff) throw 'cnv.densityViewCutoff > cnv.maxReturnCutoff' // not allowed by rendering code; must be in density mode when reaching max cutoff
 
 	if (typeof q.get == 'function') return // ds-supplied
-	// add built in getter
-	if (!q.file) throw 'cnv.file missing'
-	// incase the same ds js file is included twice on this pp, the file will already become absolute path
-	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
-	q.get = await addCnvGetter(ds, genome)
-	mayValidateSampleHeader(ds, q.samples, 'cnv')
+	// add getter
+	await setFile(q, 'cnv')
+	await utils.validate_tabixfile(q.file)
+	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+		q.samples = validateSampleHeader2(ds, q.samples, 'cnv') // cnv is using string sample names
+		mayValidateSampleHeader(ds, q.samples, 'cnv')
+	}
+
+	/*
+	getter param:
+	.rglst=[ { chr, start, stop} ]
+	.tid2value, same as in bcf
+	cnvMaxLength: int
+	cnvGainCutoff: float
+	cnvLossCutoff: float
+
+	getter returns:
+	list of cnv events,
+	events are partially grouped
+	represented as { dt, chr, start,stop,value,samples:[],mattr:{} }
+	*/
+	q.get = async param => {
+		if (param.hiddenmclass?.has(dtcnv)) {
+			// cnv is skipped
+			return { cnvs: [] }
+		}
+		utils.validateRglst(param, genome)
+		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
+		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
+		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
+
+		const formatFilter = getFormatFilter(param)
+
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return { cnvs: [] }
+		}
+
+		const cnvs = [] // list of cnv events to be returned
+		let cnvMsg // optional server generated message (e.g. exceeding limit) to be shown on client alongside cnvs
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: (line, ps) => {
+					if (cnvs.length > ds.queries.cnv.maxReturnCutoff) {
+						/* exceeds max allowed limit. do not accept new data anymore
+						do this before parsing new cnv and inserting to array
+						*/
+						ps.kill()
+						cnvMsg = 'Maximum CNV segment limit reached. Some CNV data may be omitted.'
+						return
+						// lacks a way to message downstream
+					}
+
+					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
+
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('cnv json err')
+						return
+					}
+					if (j.dt != dtcnv) {
+						//console.log('cnv invalid dt')
+						return
+					}
+
+					j.chr = r.chr
+					j.start = start
+					j.stop = stop
+
+					/*
+
+					TODO need queries.cnv.type=cat/lr/cn
+
+						if value=number is present, it's a quantitative call, j.class will be computed dynamically
+							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
+						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss
+						*/
+					if (Number.isFinite(j.value)) {
+						// quantitative
+						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
+						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
+						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+					} else {
+						// should be qualitative, valid class is required
+						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
+					}
+
+					if (param.hiddenmclass?.has(j.class)) return
+
+					if (j.sample) {
+						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (j.sample === undefined) {
+							// skip unmapped samples here as there are already
+							// handled during validation (see validateSampleHeader2())
+							return
+						}
+						if (limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
+					}
+
+					if (j.sample) {
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
+
+						const sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (formatFilter) {
+								// will do the same filtering as snvindel
+								for (const formatKey in formatFilter) {
+									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+									if (formatFilter[formatKey].has(formatValue)) {
+										// sample is dropped by format filter
+										return
+									}
+								}
+							}
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
+						}
+
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
+
+						delete j.sample
+						j.samples = [sampleObj]
+						j.occurrence = 1 // each cnv seg is hardcoded to only have 1 sample
+					} else {
+						// cnv without sample
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value].join(ssmIdFieldsSeparator)
+					}
+					cnvs.push(j)
+				}
+			})
+		}
+		return { cnvs, cnvMsg }
+	}
 }
+
+/*
+q: requires file key of this obj is valid string
+dname: data type name
+fk: file key
+*/
+export async function setFile(q, dtn, fk = 'file') {
+	const f = q[fk]
+	if (typeof f != 'string') throw `${dtn}.${fk} not string`
+	if (!f) throw `${dtn}.${fk} empty string`
+	// in case the same ds js file is included twice on this pp, the file will already become absolute path
+	q[fk] = f.startsWith(serverconfig.tpmasterdir) ? f : path.join(serverconfig.tpmasterdir, f)
+	await utils.file_is_readable(q[fk])
+	console.log('setFile:', dtn, q[fk])
+}
+
 async function validate_query_itd(ds, genome) {
 	const q = ds.queries.itd
 	if (!q) return
-	if (!q.file) throw 'itd.file missing'
-	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
+	await setFile(q, 'itd')
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 	{
@@ -1808,10 +1960,10 @@ async function validate_query_ld(ds, genome) {
 	if (!Array.isArray(q.tracks) || !q.tracks.length) throw 'ld.tracks[] not nonempty array'
 	for (const k of q.tracks) {
 		if (!k.name) throw 'name missing from one of ld.tracks[]'
-		if (!k.file) throw '.file missing from one of ld.tracks[]'
-		const f = path.join(serverconfig.tpmasterdir, k.file)
-		await utils.validate_tabixfile(f)
-		k.nochr = await utils.tabix_is_nochr(f, null, genome)
+		await setFile(k, 'ld.tracks[]')
+		await utils.validate_tabixfile(k.file)
+		k.nochr = await utils.tabix_is_nochr(k.file, null, genome)
+		k.file = k.file.replace(serverconfig.tpmasterdir + '/', '') // remove this when a proper ld route is added
 		k.type = 'ld' // assign hardcoded type and pass to client to use in block
 	}
 	if (!q.overlay) throw 'ld.overlay{} missing'
@@ -1823,10 +1975,8 @@ async function validate_query_ssGSEA(ds, genome) {
 	if (!q) return
 	try {
 		if (!genome.termdbs) throw 'missing genome-level geneset db'
-		if (!q.file) throw '.file missing'
-		q.file = path.join(serverconfig.tpmasterdir, q.file)
+		await setFile(q, 'ssGSEA')
 		q.samples = [] // array of sample ids
-		await utils.file_is_readable(q.file) // Validate that the HDF5 file exists
 
 		const tmp = await run_rust('readH5', JSON.stringify({ validate: true, hdf5_file: q.file }))
 
@@ -2037,7 +2187,7 @@ export async function validate_query_metaboliteIntensity(ds, genome) {
 }
 
 async function validateMetaboliteIntensityNative(q, ds, genome) {
-	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
+	await setFile(q, 'metaboliteIntensity')
 	if (!q.samples) q.samples = []
 	await utils.validate_txtfile(q.file)
 	q.samples = []
@@ -2133,6 +2283,7 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 	}
 }
 
+////////////////////////////
 // no longer used
 async function validate_query_probe2cnv(ds, genome) {
 	const q = ds.queries.probe2cnv
@@ -2398,10 +2549,8 @@ async function validate_query_trackLst(ds, genome) {
 	if (!q) return
 	q.facets = [] // one or more facet tables
 	try {
-		if (!q.jsonFile) throw 'jsonFile missing'
-		const f = path.join(serverconfig.tpmasterdir, q.jsonFile)
-		await utils.file_is_readable(f)
-		const json = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
+		await setFile(q, 'trackLst', 'jsonFile')
+		const json = JSON.parse(fs.readFileSync(q.jsonFile, { encoding: 'utf8' }))
 		if (Array.isArray(json)) {
 			for (const i of json) {
 				if (i.isfacet) {
@@ -2470,7 +2619,7 @@ events are partially grouped
 represented as { dt, chr, pos, strand, pairlstIdx, mname, samples:[] }
 object attributes (except samples) are differentiators, enough to identify events on a gene
 */
-export async function svfusionByRangeGetter_file(ds, genome) {
+async function svfusionByRangeGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byrange
 	if (q.file) {
 		await utils.validate_tabixfile(q.file)
@@ -2671,7 +2820,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 }
 
 // this getter processes svfusion file with data that are lacking breakpoint positions, and will return events without coordinates
-export async function svfusionByNameGetter_file(ds, genome) {
+async function svfusionByNameGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byname
 	return async param => {
 		if (param.hiddenmclass?.has(dtsv) && param.hiddenmclass.has(dtfusionrna)) {
@@ -2838,175 +2987,6 @@ export async function svfusionByNameGetter_file(ds, genome) {
 			}
 		})
 		return [...key2variants.values()]
-	}
-}
-
-/*
-getter input:
-.rglst=[ { chr, start, stop} ]
-.tid2value, same as in bcf
-
-getter returns:
-list of cnv events,
-events are partially grouped
-represented as { dt, chr, start,stop,value,samples:[],mattr:{} }
-*/
-async function addCnvGetter(ds, genome) {
-	const q = ds.queries.cnv
-	if (q.file) {
-		await utils.validate_tabixfile(q.file)
-	} else if (q.url) {
-		q.dir = await utils.cache_index(q.url, q.indexURL)
-	} else {
-		throw 'file and url both missing on cnv{}'
-	}
-	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
-
-	{
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split(' ')
-		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
-		q.samples = l.slice(1).map(i => {
-			return { name: i }
-		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'cnv') // cnv is using string sample names
-	}
-
-	/* extra parameters from snvindel.get():
-	cnvMaxLength: int
-	cnvGainCutoff: float
-	cnvLossCutoff: float
-	*/
-	return async param => {
-		if (param.hiddenmclass?.has(dtcnv)) {
-			// cnv is skipped
-			return { cnvs: [] }
-		}
-		utils.validateRglst(param, genome)
-		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
-		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
-		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
-
-		const formatFilter = getFormatFilter(param)
-
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, return blank array for no data
-			return { cnvs: [] }
-		}
-
-		const cnvs = [] // list of cnv events to be returned
-		let cnvMsg // optional server generated message (e.g. exceeding limit) to be shown on client alongside cnvs
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
-				callback: (line, ps) => {
-					if (cnvs.length > ds.queries.cnv.maxReturnCutoff) {
-						/* exceeds max allowed limit. do not accept new data anymore
-						do this before parsing new cnv and inserting to array
-						*/
-						ps.kill()
-						cnvMsg = 'Maximum CNV segment limit reached. Some CNV data may be omitted.'
-						return
-						// lacks a way to message downstream
-					}
-
-					const l = line.split('\t')
-					const start = Number(l[1]) // must always be numbers
-					const stop = Number(l[2])
-					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
-
-					let j
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						//console.log('cnv json err')
-						return
-					}
-					if (j.dt != dtcnv) {
-						//console.log('cnv invalid dt')
-						return
-					}
-
-					j.chr = r.chr
-					j.start = start
-					j.stop = stop
-
-					/*
-
-					TODO need queries.cnv.type=cat/lr/cn
-
-						if value=number is present, it's a quantitative call, j.class will be computed dynamically
-							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
-						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss 
-						*/
-					if (Number.isFinite(j.value)) {
-						// quantitative
-						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
-						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
-						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
-					} else {
-						// should be qualitative, valid class is required
-						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
-					}
-
-					if (param.hiddenmclass?.has(j.class)) return
-
-					if (j.sample) {
-						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
-						if (j.sample === undefined) {
-							// skip unmapped samples here as there are already
-							// handled during validation (see validateSampleHeader2())
-							return
-						}
-						if (limitSamples) {
-							// to filter sample
-							if (!limitSamples.has(j.sample)) return
-						}
-					}
-
-					if (j.sample) {
-						// has sample, prepare the sample obj
-						// if the sample is skipped by format, then the event will be skipped
-
-						// for ds with sampleidmap, j.sample value should be integer
-						// XXX not guarding against file uses non-integer sample values in such case
-
-						const sampleObj = { sample_id: j.sample }
-						if (j.mattr) {
-							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
-							if (formatFilter) {
-								// will do the same filtering as snvindel
-								for (const formatKey in formatFilter) {
-									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
-									if (formatFilter[formatKey].has(formatValue)) {
-										// sample is dropped by format filter
-										return
-									}
-								}
-							}
-							if (param.addFormatValues) {
-								// only attach format values when required
-								sampleObj.formatK2v = j.mattr
-							}
-						}
-
-						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
-
-						delete j.sample
-						j.samples = [sampleObj]
-						j.occurrence = 1 // each cnv seg is hardcoded to only have 1 sample
-					} else {
-						// cnv without sample
-						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value].join(ssmIdFieldsSeparator)
-					}
-					cnvs.push(j)
-				}
-			})
-		}
-		return { cnvs, cnvMsg }
 	}
 }
 

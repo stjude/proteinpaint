@@ -1,5 +1,9 @@
 import test from 'tape'
-import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter } from '../mds3.init.js'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter, setFile } from '../mds3.init.js'
+import serverconfig from '../serverconfig.js'
 
 /*
 Tests:
@@ -26,11 +30,65 @@ Tests:
 	mayFilterByMaf: mafFilter with child ids
 	mayFilterByMaf: basic mafFilter, min allelic depth
 	mayFilterByMaf: mafFilter with child ids, min allelic depth
+	setFile: validates and resolves files
 */
 
 test('\n', t => {
 	t.pass('-***- mds3.init unit tests -***-')
 	t.end()
+})
+
+test('setFile: validates and resolves files', async t => {
+	const originalTpMasterDir = serverconfig.tpmasterdir
+	const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pp-setfile-'))
+	serverconfig.tpmasterdir = tmpdir
+
+	try {
+		await fs.promises.mkdir(path.join(tmpdir, 'nested'))
+		await fs.promises.writeFile(path.join(tmpdir, 'relative.txt'), '')
+		await fs.promises.writeFile(path.join(tmpdir, 'nested', 'custom.txt'), '')
+		await fs.promises.writeFile(path.join(tmpdir, 'absolute.txt'), '')
+
+		{
+			const q = { file: 'relative.txt' }
+			await setFile(q, 'testType')
+			t.equal(q.file, path.join(tmpdir, 'relative.txt'), 'resolves relative file against tpmasterdir')
+		}
+		{
+			const file = path.join(tmpdir, 'absolute.txt')
+			const q = { file }
+			await setFile(q, 'testType')
+			t.equal(q.file, file, 'keeps absolute file path under tpmasterdir')
+		}
+		{
+			const q = { jsonFile: 'nested/custom.txt' }
+			await setFile(q, 'testType', 'jsonFile')
+			t.equal(q.jsonFile, path.join(tmpdir, 'nested', 'custom.txt'), 'supports custom file key')
+		}
+
+		for (const [q, expected] of [
+			[{ file: 1 }, 'testType.file not string'],
+			[{ file: '' }, 'testType.file empty string']
+		]) {
+			try {
+				await setFile(q, 'testType')
+				t.fail('setFile should reject invalid file value')
+			} catch (e) {
+				t.equal(e, expected, `throws "${expected}"`)
+			}
+		}
+
+		try {
+			await setFile({ file: 'missing.txt' }, 'testType')
+			t.fail('setFile should reject unreadable file')
+		} catch (e) {
+			t.ok(String(e).includes('No such file or directory'), 'throws for unreadable file')
+		}
+	} finally {
+		serverconfig.tpmasterdir = originalTpMasterDir
+		await fs.promises.rm(tmpdir, { recursive: true, force: true })
+		t.end()
+	}
 })
 
 test('filterByItem: mutated sample matches filter', t => {
