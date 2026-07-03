@@ -5,7 +5,9 @@ import type {
 	QueryClassification,
 	RouteApi,
 	RoutePayload,
-	GeneDataTypeAvailability
+	GeneMatch,
+	GeneDataTypeAvailability,
+	OmnisearchResult
 } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
@@ -156,19 +158,6 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
 	}
 }
 
-/** One matched gene together with the data types available for that specific gene. */
-export interface GeneMatch {
-	gene: string
-	dataTypes: GeneDataTypeAvailability
-}
-
-/** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
- * available gene data types so the client can offer the appropriate per-gene action buttons. */
-export interface OmnisearchResult {
-	lst: any[]
-	genes: GeneMatch[]
-}
-
 /** Handle a single mass omnisearch request: search dictionary variables and genes together, without
  * invoking the AI chat pipeline. Dictionary search reuses the dataset's term-search query (the same
  * path as the termdb findterm route); gene search uses searchGeneNames() below. */
@@ -197,11 +186,14 @@ async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<Om
 		datasetDataTypes.cnv ||
 		datasetDataTypes.svfusion
 	const geneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
-	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not).
-	const genes: GeneMatch[] = geneNames.map(gene => ({
-		gene,
-		dataTypes: getGeneDataTypesForGene(ds, gene, datasetDataTypes)
-	}))
+	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not), and
+	// resolve a default genomic coordinate for genes that need a genome browser (DNA methylation) so the
+	// client can seed the browser track without a separate genelookup request.
+	const genes: GeneMatch[] = geneNames.map(gene => {
+		const dataTypes = getGeneDataTypesForGene(ds, gene, datasetDataTypes)
+		const coord = dataTypes.dnaMethylation ? getGeneCoord(genome, gene) : null
+		return { gene, dataTypes, coord }
+	})
 
 	// Will later add support for other NonDict terms such as genesets etc.
 	return { lst: terms, genes }
@@ -249,6 +241,53 @@ function searchGeneNames(genome: any, input: string): string[] {
 	} catch {
 		return []
 	}
+}
+
+/** Resolve a gene symbol to its default genomic coordinate { chr, start, stop } from the genome's gene
+ * db. Copied from the deep branch of getResult() in server/src/gene.js (including its stop-- gene-model
+ * adjustment), then merges the gene's isoform models into loci with gmlst2loci() and returns the first
+ * locus — mirroring the client's previous behavior (gene2loci → loci[0]) so a gene whose isoforms span
+ * discontinuous loci opens the genome browser at the same region as before. Lets the omnisearch seed a
+ * genome browser track without a separate genelookup request. `gene` is already a resolved symbol (from
+ * searchGeneNames). Returns null if it cannot be resolved. */
+function getGeneCoord(genome: any, gene: string): { chr: string; start: number; stop: number } | null {
+	try {
+		const rows = genome.genedb.getjsonbyname.all(gene)
+		if (!rows?.length) return null
+		// build the gmlst as getResult()'s deep branch does (parse each gene model, adjust stop)
+		const gmlst = rows.map((r: any) => {
+			const m = JSON.parse(r.genemodel)
+			m.stop-- // match getResult()'s stop-- (gene models are stored with a not-included stop)
+			return m
+		})
+		const locus = gmlst2loci(gmlst)[0]
+		if (!locus?.chr || !Number.isInteger(locus.start) || !Number.isInteger(locus.stop)) return null
+		return { chr: locus.chr, start: locus.start, stop: locus.stop }
+	} catch {
+		return null
+	}
+}
+
+/** Merge a gene's isoform models into non-overlapping loci. Copied verbatim from gmlst2loci() in
+ * client/src/client.js (which is client-only and cannot be imported server-side) so the omnisearch's
+ * coordinate resolution matches the client's previous behavior: isoforms overlapping on the same chr
+ * are merged, and isoforms on discontinuous loci yield more than one entry (first locus is used). */
+function gmlst2loci(gmlst: any[]): { name: string; chr: string; start: number; stop: number }[] {
+	const locs: { name: string; chr: string; start: number; stop: number }[] = []
+	for (const f of gmlst) {
+		let nooverlap = true
+		for (const r of locs) {
+			if (f.chr == r.chr && Math.max(f.start, r.start) < Math.min(f.stop, r.stop)) {
+				r.start = Math.min(r.start, f.start)
+				r.stop = Math.max(r.stop, f.stop)
+				nooverlap = false
+			}
+		}
+		if (nooverlap) {
+			locs.push({ name: f.isoform, chr: f.chr, start: f.start, stop: f.stop })
+		}
+	}
+	return locs
 }
 
 export async function run_chat_pipeline(
