@@ -724,7 +724,7 @@ type CnvSegmentQuery = {
 }
 /** ITDs */
 type ITDQuery = {
-	/** file is bgzipped with columns:
+	/** file is bgzipped with a header line and columns:
 	1. chr
 	2. start, 0-based
 	3. stop
@@ -732,17 +732,18 @@ type ITDQuery = {
 	*/
 	file: string
 }
-
-/*
-no longer used!!
-file content is a probe-by-sample matrix, values are signals
-for a given region, the median signal from probes in the region is used to make a gain/loss call for each sample
-this is alternative to CnvSegmentQuery
-
-type Probe2Cnv = {
+/** splice junction */
+type JunctionQuery = {
+	/** file is bgzipped with a header line and columns
+	1. chr
+	2. start, 0-based
+	3. stop
+	4. strand
+	5. info {}
+	6- samples. when present, the fields are read count, and optional event percentage joined by ;
+	*/
 	file: string
 }
-*/
 
 type RnaseqGeneCount = {
 	/** Name of the HDF5 file */
@@ -1168,6 +1169,7 @@ type Mds3Queries = {
 	svfusion?: SvFusion
 	cnv?: CnvSegmentQuery
 	itd?: ITDQuery
+	junction?: JunctionQuery
 	/** gene-level cnv, only available on gdc; query by gene symbol, ds must define getter
 	 */
 	geneCnv?: {
