@@ -92,7 +92,6 @@ validate_query_geneCnv
 validate_query_cnv
 	addCnvGetter
 validate_query_itd
-validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
 validate_query_metaboliteIntensity
@@ -111,7 +110,6 @@ mayAdd_mayGetGeneVariantData
 	getCnvByTw
 		mayMapGeneName2isoform
 		mayMapGeneName2coord
-	getProbe2cnvByTw
 	mayAddDataAvailability
 		addDataAvailability
 
@@ -168,6 +166,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_geneCnv(ds, genome)
 			await validate_query_cnv(ds, genome)
 			await validate_query_itd(ds, genome)
+			await validate_query_junction(ds, genome)
 			await validate_query_ld(ds, genome)
 			await validate_query_geneExpression(ds, genome)
 			await validateQueryIsoformExpression(ds, genome)
@@ -189,7 +188,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_singleSampleMutation(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
-			//await validate_query_probe2cnv(ds, genome)
 			await validate_query_singleCell(ds, genome)
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
@@ -1778,7 +1776,7 @@ async function validate_query_cnv(ds, genome) {
 					if (j.sample) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
 						if (j.sample === undefined) {
-							// skip unmapped samples here as there are already
+							// skip unmapped samples here as they are already
 							// handled during validation (see validateSampleHeader)
 							return
 						}
@@ -1882,8 +1880,7 @@ async function validate_query_itd(ds, genome) {
 		const itds = [] // list of itd events to be returned
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
+				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 				callback: (line, ps) => {
 					const l = line.split('\t')
 					const start = Number(l[1]) // must always be numbers
@@ -1903,7 +1900,7 @@ async function validate_query_itd(ds, genome) {
 					if (j.sample) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
 						if (j.sample === undefined) {
-							// skip unmapped samples here as there are already
+							// skip unmapped samples here as they are already
 							// handled during validation (see validateSampleHeader)
 							return
 						}
@@ -1912,10 +1909,6 @@ async function validate_query_itd(ds, genome) {
 							if (!limitSamples.has(j.sample)) return
 						}
 						// has sample, prepare the sample obj
-						// if the sample is skipped by format, then the event will be skipped
-
-						// for ds with sampleidmap, j.sample value should be integer
-						// XXX not guarding against file uses non-integer sample values in such case
 
 						const sampleObj = { sample_id: j.sample }
 						j.ssm_id = [r.chr, j.start, j.stop, j.class, '', j.sample].join(ssmIdFieldsSeparator)
@@ -1933,6 +1926,93 @@ async function validate_query_itd(ds, genome) {
 		}
 		return { itds }
 	}
+}
+async function validate_query_junction(ds, genome) {
+	const q = ds.queries.junction
+	if (!q) return
+	await setFile(q, 'junction')
+	await utils.validate_tabixfile(q.file)
+	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split('\t')
+		if (l[0] != '#chr') throw 'header line not starting with #chr: ' + q.file
+		q.samples = l.slice(5).map(i => {
+			return { name: i }
+		})
+		q.samples = validateSampleHeader(ds, q.samples, 'junction')
+	}
+
+	q.get = async param => {
+		if (param.rglst) return await getJunctions(param)
+		if (param.junction) return await getOneJunctionDetail(param)
+		throw new Error('unknown method')
+	}
+	/*
+	get list of junctions with occurrence in a range
+	{
+		rglst[]
+		filter
+		minReadCount
+	}
+	*/
+	async function getJunctions(param) {
+		utils.validateRglst(param, genome)
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return { junctions: [] }
+		}
+		const junctions = [] // list of junctions to be returned
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				callback: (line, ps) => {
+					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					const strand = l[3]
+					let j
+					try {
+						j = JSON.parse(l[4])
+					} catch (e) {
+						return
+					}
+					j.start = start
+					j.stop = stop
+					const readcounts = [] // array of read counts of samples carrying this junction
+					for (let i = 5; i < l.length; i++) {
+						const str = l[i]
+						if (!str) continue // blank
+						if (limitSamples) {
+							// will filter
+							if (!limitSamples.has(q.samples[i - 5]?.name)) continue // filtered out
+						}
+						// str is "n;%;%"
+						const vlst = str.split(';').map(Number)
+						const rc = vlst[0] // first field is read count
+						if (!Number.isInteger(rc)) continue
+						if (param.minReadCount && rc < param.minReadCount) continue
+						readcounts.push(rc)
+					}
+					if (readcounts.length == 0) return
+					j.sampleCount = readcounts.length
+					j.medianReadCount = computePercentile(readcounts, 50, false)
+					junctions.push(j)
+					// todo terminate when exceeds limit
+				}
+			})
+		}
+		return { junctions }
+	}
+	/*
+	get sample details of one junction
+	{
+		junction{}
+	}
+	*/
+	async function getOneJunctionDetail(param) {}
 }
 
 async function validate_query_ld(ds, genome) {
@@ -2261,96 +2341,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		if (term2sample2value.size == 0)
 			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
-	}
-}
-
-////////////////////////////
-// no longer used
-async function validate_query_probe2cnv(ds, genome) {
-	const q = ds.queries.probe2cnv
-	if (!q) return
-	if (q.file) {
-		q.file = path.join(serverconfig.tpmasterdir, q.file)
-		await utils.validate_tabixfile(q.file)
-	} else if (q.url) {
-		q.dir = await utils.cache_index(q.url, q.indexURL)
-	} else {
-		throw 'file and url both missing on probe2cnv'
-	}
-	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
-
-	{
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		// file is matrix, rows are probes, cols are samples
-		// #chr pos sample1 sample2 ...
-		const l = lines[0].split('\t')
-		if (l.length < 3) throw 'probe2cnv header line less than 3 fields'
-		// register sample columns in q.samples[]
-		q.samples = l.slice(2).map(n => {
-			return { name: ds.cohort.termdb.q.sampleName2id(n) }
-		})
-	}
-
-	/* same parameter as snvindel.byrange.get()
-	.rglst[] - retrieve probes from regions
-	.filterObj - for samples passing this filter, compute a cnv call for each, using average/median probe values of the sample
-	filter0 is not used as this will not work for gdc
-	format attributes are not used since this file does not supply format values for events (unlike cnv segment file in bed-json)
-	*/
-	q.get = async param => {
-		utils.validateRglst(param, genome)
-		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
-		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
-
-		// same length as q.samples[]; element is [] to collect probe values from this sample(column); if the sample is filtered out, element is null and won't collect value
-		const sampleCollectValues = []
-		{
-			const limitSamples = await mayLimitSamples(param, q.samples, ds) // optional set of sample integer ids
-			if (limitSamples) {
-				if (limitSamples.size == 0) return []
-				for (const [i, s] of q.samples.entries()) {
-					if (limitSamples.has(s.name)) sampleCollectValues.push([])
-					else sampleCollectValues.push(null)
-				}
-			} else {
-				for (const i of q.samples) sampleCollectValues.push([])
-			}
-		}
-
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
-				callback: line => {
-					const l = line.split('\t')
-					for (const [i, s] of sampleCollectValues.entries()) {
-						if (!s) continue // element is null and this sample is filtered out
-						const v = Number(l[i + 2])
-						if (Number.isFinite(v)) s.push(v)
-					}
-				}
-			})
-		}
-		// sampleCollectValues[] is populated; based on cutoffs, generate CNV calls for each eligible sample
-		const cnvs = []
-		for (const [i, s] of sampleCollectValues.entries()) {
-			if (!s) continue
-			// compute median probe value of each sample
-			const median = computePercentile(s, 50)
-			const cnvEvent = {
-				dt: dtcnv,
-				value: median,
-				samples: [{ sample_id: q.samples[i].name }]
-			}
-			if (median > 0 && median > (param.cnvGainCutoff || 0.1)) {
-				cnvEvent.class = mclasscnvgain
-			} else if (median < 0 && median < (param.cnvLossCutoff || -0.1)) {
-				cnvEvent.class = mclasscnvloss
-			}
-			if (cnvEvent.class) cnvs.push(cnvEvent)
-		}
-		return cnvs
 	}
 }
 
@@ -3705,20 +3695,6 @@ async function getCnvByTw(ds, tw, genome, q) {
 	const re = await ds.queries.cnv.get(arg)
 	if (!Array.isArray(re?.cnvs)) throw 're.cnvs not array'
 	return re.cnvs
-}
-async function getProbe2cnvByTw(ds, tw, genome, q) {
-	/* tw.term.type is "geneVariant"
-	tw.q{} carries optional cutoffs (max length and min value)
-	*/
-	const arg = {
-		filter0: q.filter0, // hidden filter
-		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		cnvGainCutoff: tw?.q?.cnvGainCutoff,
-		cnvLossCutoff: tw?.q?.cnvLossCutoff
-	}
-	await mayMapGeneName2coord(tw.term, genome)
-	arg.rglst = [tw.term]
-	return await ds.queries.probe2cnv.get(arg)
 }
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
