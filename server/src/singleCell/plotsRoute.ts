@@ -264,7 +264,11 @@ function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSampl
 	if (coords?.length && !colorData.plots?.length) {
 		const category = 'Default'
 		for (const cell of coords) {
-			if (filteredSamples.size > 0 && !filteredSamples.has(cell.sample)) continue
+			/** This shouldn't be necessary. The single cell scatter shouldn't be 
+			 * available if samples IDs themselves cannot be displayed. */
+			const sid = cell.sample ?? cell.sampleId
+ 			if (!sid) continue
+ 			if (filteredSamples.size > 0 && !filteredSamples.has(sid)) continue
 
 			if (cell.x < xMin) xMin = cell.x
 			if (cell.x > xMax) xMax = cell.x
@@ -274,7 +278,7 @@ function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSampl
 			if (Number.isFinite(cell.geneExp!) && cell.geneExp! > geMax) geMax = cell.geneExp!
 
 			const formattedCell = {
-				sampleId: cell.sample,
+				sampleId: sid,
 				x: cell.x,
 				y: cell.y,
 				z: 0,
