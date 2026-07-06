@@ -535,7 +535,7 @@ WRONG:
 Parse the following genomic region phrase into the JSON object according to the rules and schema defined above:
 Phrase: "${phrase}"
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	if (isMsgToUser(response)) return response
 	mayLog(`--> Genomic coordinates parse: ${response}`)
@@ -603,7 +603,7 @@ Output: { "survivalTerm": null }
 Classify the following user query:
 Query: "${user_prompt}"
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	if (isMsgToUser(response)) return response
 	mayLog(`--> Survival term classifier: ${response}`)

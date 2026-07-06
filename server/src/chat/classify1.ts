@@ -23,7 +23,7 @@ Respond with ONLY one word: plot or notplot or binaryQuery
 Query: "${user_prompt}"
 Category:`
 
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	if (isMsgToUser(response)) return response
 	const category = response.trim().toLowerCase()
 	mayLog(`--> classifyQuery: "${category}"`)

@@ -113,7 +113,7 @@ RIGHT:
 Parse the following user query into the JSON scaffold according to the rules and schema defined above:
 Query: "${user_prompt}"
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Survival scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsed: any
@@ -231,7 +231,7 @@ RIGHT:
 Parse the following user query into the JSON scaffold according to the rules and schema defined above:
 Query: "${user_prompt}"
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Genome browser scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsed: any
@@ -496,7 +496,7 @@ Parse the following query into the summary plot scaffold:
 Query: ${user_prompt}
 `
 	// let response = summaryScaffold
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> DE scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsed: any
@@ -652,7 +652,7 @@ Do NOT create separate fields for binning. Instead, KEEP the binning information
 Parse the following query into the summary plot scaffold:
 Query: ${user_prompt}
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Summary scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsed: any
@@ -728,7 +728,7 @@ A: {
 Parse the following query into the hierarchical clustering scaffold:
 Query: ${user_prompt}
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Hierarchical scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	{
@@ -1003,7 +1003,7 @@ Output:
 Parse the following query into the prebuilt scatter scaffold:
 Query: ${user_prompt}
 `*/
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Prebuilt scatter scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsed: any
@@ -1093,7 +1093,7 @@ A: { "variableType": "ambiguous" }
 Classify the following query:
 Query: ${user_prompt}
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Hierarchical variable-type classifier: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsedClassifier: any
@@ -1217,7 +1217,7 @@ A: {
 Parse the following query into the hierarchical clustering scaffold:
 Query: ${user_prompt}
 `
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	mayLog(`--> Hierarchical dictionary scaffold: ${response}`)
 	if (isMsgToUser(response)) return response
 	let parsedObj: any

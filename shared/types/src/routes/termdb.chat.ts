@@ -76,7 +76,7 @@ export type LlmConfig = {
 	/** Whether to load the embedding model locally (via transformers.js) or call a remote API. Defaults to 'api'. */
 	embeddingModelAccess?: 'local' | 'api'
 	/** Smaller model to use for LLM classification fallback. Defaults to `model` if not set. */
-	classifierModelName?: ModelConfig
+	classifierModelConfig?: ModelConfig
 	/** Log verbose debug output (e.g. raw embedding arrays) to the terminal. Defaults to false. */
 	verbose?: boolean
 }
