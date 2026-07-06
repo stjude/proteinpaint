@@ -56,9 +56,10 @@ export function setInteractivity(self) {
 				})
 			}
 		})
+		const { samples } = self.config.controlLabels
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
-				label: `List samples`,
+				label: `List ${samples}`,
 				testid: 'sjpp-violinLabOpt-list',
 				callback: async () => {
 					/** self.data.max * 2 appears to be a workaround for a
@@ -100,9 +101,10 @@ export function setInteractivity(self) {
 				callback: getAddFilterCallback(self, plot, start, end)
 			})
 
+		const { samples } = self.config.controlLabels
 		if (self.state.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
-				label: `List samples`,
+				label: `List ${samples}`,
 				testid: 'sjpp-violinBrushOpt-list',
 				callback: async () => self.callListSamples(event.sourceEvent, plot, start, end)
 			})

@@ -6,6 +6,7 @@ import { getSamplelstFilter } from '../../mass/groups.js'
 import { TermTypes, isNumericTerm, roundValueAuto, isStrictNumeric } from '#shared'
 import { filterJoin } from '#filter'
 import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
+import { defaultUiLabels } from '#plots/PlotBase.ts'
 
 /** Temp type scoped for this file.
  * Properties required in the plot arg. */
@@ -147,6 +148,7 @@ export class ListSamples {
 	}
 
 	createTvsValues(tvsEntry: any, tw: any, key: string): any {
+		const { Sample } = this.app.vocabApi?.termdbConfig?.uiLabels || defaultUiLabels
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
 			tw.term.type !== TermTypes.GENE_VARIANT
@@ -157,7 +159,7 @@ export class ListSamples {
 			if (!group) throw new Error(`Group not found in groupset for ${tw.term.name}: ${key}`)
 			tvsEntry.tvs.values = group.values
 		} else if (tw.term.type === TermTypes.SAMPLELST) {
-			if (!tw.term.values?.[key]) throw new Error(`Sample list not found for ${tw.term.name}: ${key}`)
+			if (!tw.term.values?.[key]) throw new Error(`${Sample} list not found for ${tw.term.name}: ${key}`)
 			const ids = (tw.term.values[key].list || []).map(s => s.sampleId)
 			// Returns filter obj with lst array of 1 tvs
 			const tmpTvsLst = getSamplelstFilter(ids)
@@ -233,6 +235,7 @@ export class ListSamples {
 	}
 
 	async getData(): Promise<AnnotatedSampleData> {
+		const { sample } = this.app.vocabApi.termdbConfig.uiLabels
 		try {
 			const opts = {
 				terms: this.terms,
@@ -241,12 +244,12 @@ export class ListSamples {
 				isSummary: true
 			}
 			const data = await this.app.vocabApi.getAnnotatedSampleData(opts)
-			if (!data) throw new Error('No sample data returned')
+			if (!data) throw new Error(`No ${sample} data returned`)
 			return data
 		} catch (e: any) {
 			if (e instanceof Error) throw e
 			else {
-				throw new Error(`Error fetching sample data: ${e.message || e}`)
+				throw new Error(`Error fetching ${sample} data: ${e.message || e}`)
 			}
 		}
 	}
@@ -305,9 +308,9 @@ export class ListSamples {
 			rows.push(row)
 			samples.push(s)
 		}
-
+		const { Sample } = this.app.vocabApi.termdbConfig.uiLabels
 		//Formatting columns
-		const columns: TableColumn[] = [{ label: 'Sample' }]
+		const columns: TableColumn[] = [{ label: Sample }]
 		this.addColValue(this.t1, columns)
 		if (this.t2) this.addColValue(this.t2, columns)
 		if (this.t0) this.addColValue(this.t0, columns)
