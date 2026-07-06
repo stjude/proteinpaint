@@ -324,18 +324,10 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			return await getAvailablePlots(q.plots, D.plots, ds, sampleId)
 		}
 		let geneExpMap
-		if (ds.queries.singleCell.geneExpression && (q.genes || q.gene)) {
+		if (ds.queries.singleCell.geneExpression && q.gene) {
 			const sample = q.sample || q.singleCellPlot.sample
 			if (!sample) throw new Error('sample is required for gene expression query')
-			if (q.gene && q.genes) throw new Error('cannot provide both gene and genes parameters')
-			if (!q.genes) q.genes = []
-			if (q.gene) q.genes = [q.gene]
-			geneExpMap = {}
-			for (const gene of q.genes) {
-				if (!gene) throw new Error('gene name is empty')
-				const tmp = await ds.queries.singleCell.geneExpression.get({ sample, gene })
-				geneExpMap = { ...geneExpMap, ...tmp }
-			}
+			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 		}
 		// given a sample name, collect every plot data for this sample and return
 		const plots: Plot[] = []
@@ -375,7 +367,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				if (!cellId) throw new Error('cell id missing')
 				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
 				const cell: Cell = { cellId, x, y, category }
-				if (geneExpMap) {
+				if (Object.keys(geneExpMap || {}).length > 0) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]
 						expCells.push(cell)
@@ -503,7 +495,7 @@ function gdc_validateGeneExpression(G: SingleCellGeneExpressionGdc, ds: any, gen
 			}
 			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
 			if (!hdf5id) throw new Error('cannot map eID to hdf5 id')
-
+		
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
 			if (!gencodeId) throw new Error('cannot map gene symbol to GENCODE')

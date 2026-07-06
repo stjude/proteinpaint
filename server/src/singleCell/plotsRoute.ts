@@ -85,17 +85,17 @@ function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest 
 		},
 		colorTW: input.colorTW
 			? (() => {
-					if (!isSingleCellTerm(input.colorTW.term))
-						throw new Error('colorTW must be a single cell term for single cell scatter plot')
-					return input.colorTW as TermWrapper
-			  })()
+				if (!isSingleCellTerm(input.colorTW.term))
+					throw new Error('colorTW must be a single cell term for single cell scatter plot')
+				return input.colorTW as TermWrapper
+			})()
 			: undefined,
 		coordTWs: input?.coordTWs?.length
 			? (() => {
-					if (!isSingleCellTerm(input.coordTWs[0].term))
-						throw new Error('coordTWs must be an array of single cell terms for single cell scatter plot')
-					return input.coordTWs as TermWrapper[]
-			  })()
+				if (!isSingleCellTerm(input.coordTWs[0].term))
+					throw new Error('coordTWs must be an array of single cell terms for single cell scatter plot')
+				return input.coordTWs as TermWrapper[]
+			})()
 			: undefined
 	}
 }
@@ -131,7 +131,7 @@ async function getSingleCellScatter(req, res, ds) {
 	const { name, sample, isMetaResult } = q.singleCellPlot
 
 	try {
-		const { arg, tw } = getSingleCellDataArgs(q, name, sample)
+		const { arg, tw, genes } = getSingleCellDataArgs(q, name, sample)
 
 		let coords: ScatterSample[] = [],
 			colorData: { plots: Plot[] } = { plots: [] },
@@ -148,7 +148,11 @@ async function getSingleCellScatter(req, res, ds) {
 			filteredSamples = await ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 		}
 		if (q.colorTW) {
-			colorData = await ds.queries.singleCell.data.get(arg)
+			for (const gene of genes) {
+				const tmpArg = { ...arg, gene}
+				const tmpData = await ds.queries.singleCell.data.get(tmpArg)
+				colorData = Object.assign(colorData, tmpData)
+			}
 		}
 
 		const { samples, categoryCounts, xMin, xMax, yMin, yMax, geMin, geMax, totalCellCount } = processSamples(
@@ -208,13 +212,21 @@ async function getSingleCellScatter(req, res, ds) {
 }
 
 function getSingleCellDataArgs(q, name, sample) {
-	const arg: { [index: string]: any } = { plots: [name], sample, terms: [], filter: q.filter, filter0: q.filter0 }
+	const arg: { [index: string]: any } = {
+		plots: [name], 
+		sample, 
+		terms: [], 
+		filter: q.filter, 
+		filter0: q.filter0, 
+		__protected__: q.__protected__,
+		__abortSignal: q.__abortSignal
+	}
+	const genes: string[] = []
 	if (q.colorTW) {
 		if (isSingleCellTerm(q.colorTW.term)) {
 			arg.terms.push(q.colorTW)
 			if (q.colorTW.term.type === SINGLECELL_GENE_EXPRESSION) {
-				if (!arg.genes) arg.genes = []
-				arg.genes.push(q.colorTW.term.gene)
+				genes.push(q.colorTW.term.gene)
 			}
 		} else throw new Error('colorTW must be a single cell term for single cell scatter plot')
 	}
@@ -222,8 +234,7 @@ function getSingleCellDataArgs(q, name, sample) {
 		for (const tw of q.coordTWs) {
 			arg.terms.push(tw)
 			if (tw.term.type === SINGLECELL_GENE_EXPRESSION) {
-				if (!arg.genes) arg.genes = []
-				arg.genes.push(tw.term.gene)
+				genes.push(tw.term.gene)
 			}
 			// else throw new Error('unsupported single cell term type for coordTWs: ' + tw.term.type)
 		}
@@ -233,7 +244,7 @@ function getSingleCellDataArgs(q, name, sample) {
 	const tw: any = arg.terms[0]
 	if (tw.term.type == SINGLECELL_CELLTYPE) arg.colorBy = tw.term.name
 
-	return { arg, tw }
+	return { arg, tw, genes }
 }
 
 function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSamples: Set<string>, tw, sample, ds) {
