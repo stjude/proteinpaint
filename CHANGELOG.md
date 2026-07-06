@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.195.0
 
 Features:
 - Improved GRIN2 snvindel fetch performance and reporting by pre-filtering to open access only projects. Bounded concurrency with concurrencyLimiter.ts
