@@ -15,8 +15,7 @@ Tests for the pure transformation helpers in termdb.profileScores.
  - pickSampleAndSite()
 
 The async getScoresData() orchestrator is not unit-tested here because it
-delegates to getData() — exercise it via the e2e Templates flow once
-forms2 e2e coverage lands.
+delegates to getData() — exercise it via the e2e Templates flow.
 */
 
 /**************

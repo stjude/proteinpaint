@@ -63,9 +63,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'profileForms':
 			return await import('./profile/profileForms.ts')
 
-		case 'profileForms2':
-			return await import('./profile/forms2.ts')
-
 		case 'profilePlot':
 			return await import('./profile/profilePlot.ts')
 
