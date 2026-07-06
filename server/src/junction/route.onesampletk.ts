@@ -107,7 +107,7 @@ async function get_rnapeg(q: TermdbJunctionOneSampleTkRequest, file: string) {
 }
 
 function get_lines_rnapeg(args: { file: string; chr: string; start: number; stop: number }) {
-	return new Promise<TermdbJunctionOneSampleTkItem[]>((resolve, reject) => {
+	return new Promise<TermdbJunctionOneSampleTkItem[]>((resolve, _reject) => {
 		const rl = readline.createInterface({ input: fs.createReadStream(args.file, { encoding: 'utf8' }) })
 		const lines: TermdbJunctionOneSampleTkItem[] = []
 		let first = true // skip header
@@ -129,13 +129,15 @@ function get_lines_rnapeg(args: { file: string; chr: string; start: number; stop
 			10	qc_clean_reads	1
 			*/
 			const l = line.split('\t')
-			const [chr, startstr, strand1, chr2, stopstr, strand2] = l[0].split(/[:,]/)
+			const t = l[0].split(/[:,]/)
+			const chr = t[0]
+
 			if (chr != args.chr) {
 				// not in same chr
 				return
 			}
-			const start1 = Number.parseInt(startstr)
-			const stop1 = Number.parseInt(stopstr)
+			const start1 = Number.parseInt(t[1])
+			const stop1 = Number.parseInt(t[4])
 			if (Number.isNaN(start1) || Number.isNaN(stop1)) return
 			const start = start1 - 1,
 				stop = stop1 - 1
