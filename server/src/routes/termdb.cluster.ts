@@ -1,7 +1,6 @@
 import type { RouteApi, RoutePayload } from '#types'
 import path from 'path'
 import { run_R } from '@sjcrh/proteinpaint-r'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequestIsoformExpression,
@@ -28,6 +27,7 @@ import {
 	dictionaryNumericTypes
 } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 const payload: RoutePayload = {
 	init,
@@ -320,20 +320,18 @@ export async function validate_query_geneExpression(ds: any, genome: any) {
  * Query values for a specific item(gene, gene set) or set of items from a new format HDF5 file
  * @param {string} hdf5_file - Path to the HDF5 file
  * @param {string[]} query - Array of item names (genes or gene sets) to query
- * @param {string} read_mode - Mode for reading HDF5 file (e.g. 'bulk')
  * @returns {Promise<Object>} Promise resolving to the queried data
  */
-async function queryHDF5(hdf5_file, query, read_mode) {
+async function queryHDF5(hdf5_file, query) {
 	// Create the input params as a JSON object
 	const input: any = {
 		hdf5_file: hdf5_file,
 		query: query
 	}
-	if (read_mode) input.read_mode = read_mode
 
 	try {
 		// Call the Rust script with input parameters
-		const result = await run_rust('readH5', JSON.stringify(input))
+		const result = await run_python('readHDF5.py', JSON.stringify(input))
 
 		// Check if the result exists and contains sample data
 		if (!result || result.length === 0) {
@@ -362,7 +360,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 	try {
 		// Validate that the HDF5 file exists
 		await utils.file_is_readable(q.file)
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true }))
+		const tmp = await run_python('readHDF5.py', JSON.stringify({ hdf5_file: q.file, validate: true }))
 
 		const vr = JSON.parse(tmp)
 
@@ -431,9 +429,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const time1 = Date.now()
 
 		// Query expression values for all genes at once
-		const readMode = param.dslabel == 'MMRF' ? 'bulk' : null // testing whether reading matrix in bulk will speed up analysis for MMRF
-		const geneData = JSON.parse(await queryHDF5(q.file, geneNames, readMode))
-
+		const geneData = JSON.parse(await queryHDF5(q.file, geneNames))
 		console.log('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
 
 		const genesData = geneData.query_output || {}
@@ -495,7 +491,10 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 	try {
 		await utils.file_is_readable(q.file)
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true, include_items: true }))
+		const tmp = await run_python(
+			'readHDF5.py',
+			JSON.stringify({ hdf5_file: q.file, validate: true, include_items: true })
+		)
 
 		const vr = JSON.parse(tmp)
 
@@ -568,7 +567,7 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 		const time1 = Date.now()
 
-		const isoformData = JSON.parse(await queryHDF5(q.file, isoformIds, null))
+		const isoformData = JSON.parse(await queryHDF5(q.file, isoformIds))
 
 		console.log('Time taken to run isoform query:', formatElapsedTime(Date.now() - time1))
 

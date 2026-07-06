@@ -93,16 +93,8 @@ path="src/computeTopTerms.rs"
 
 
 [[bin]]
-name="validateHDF5"
-path="src/validateHDF5.rs"
-
-[[bin]]
 name="cerno"
 path="src/cerno.rs"
-
-[[bin]]
-name="readH5"
-path="src/readH5.rs"
 
 [[bin]]
 name="dmrcate"
