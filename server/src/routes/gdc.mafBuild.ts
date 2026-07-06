@@ -133,26 +133,34 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	// Abort wiring — created BEFORE the GDC size query so a stalled metadata request is covered by the
 	// same watchdog as the download phase (the former rust `gdcmaf` watchdog killed a hung process in ANY
-	// phase). `controller` fires on client disconnect (its res.on('close') listener is wired below);
-	// `timeoutSignal` (q.__abortSignal) is the elapsed-time backstop set by app.middlewares.js. buildSignal
-	// aborts if either fires, and is passed to both the size query and the download fan-out.
+	// phase). `controller` fires on client disconnect; `timeoutSignal` (q.__abortSignal) is the elapsed-time
+	// backstop set by app.middlewares.js. buildSignal aborts if either fires, and is passed to both the size
+	// query and the download fan-out.
 	const controller = new AbortController()
 	const timeoutSignal = (q as any).__abortSignal as AbortSignal | undefined
 	const buildSignal = timeoutSignal ? AbortSignal.any([controller.signal, timeoutSignal]) : controller.signal
+
+	// The full res.on('close') handler below is only wired after the multipart headers, so it can't cover a
+	// client disconnect DURING the pre-stream size query. Add a minimal early listener so a disconnect in
+	// that window still aborts buildSignal and cancels the in-flight metadata request. (On normal completion
+	// res.writableEnded is already true when 'close' fires, so this no-ops.)
+	res.once('close', () => {
+		if (!res.writableEnded) controller.abort()
+	})
 
 	const { host, headers } = ds.getHostHeaders(q)
 	let fileLst2: string[]
 	try {
 		fileLst2 = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers, buildSignal)
 	} catch (e) {
-		// No multipart bytes have been written yet, and no res.on('close')/gz.on('end') is wired to stop
-		// the RSS sampler — clear it here so an aborted/failed metadata query can't leak the interval.
+		// No multipart bytes have been written yet, and the RSS sampler's stop hooks (res.on('close')/
+		// gz.on('end')) aren't wired yet — clear it here so an aborted/failed metadata query can't leak it.
 		clearInterval(rssTimer)
-		// If the watchdog (or a client disconnect) aborted the metadata query before streaming began, throw
-		// a clear message; init()'s catch sends it as JSON, which the client surfaces.
-		if (buildSignal.aborted) {
-			throw timeoutSignal?.aborted ? timeoutErrorMsg : 'MAF build canceled: the client disconnected'
-		}
+		// Client disconnected mid-query (its close handler aborted `controller`): res is already closing, so
+		// just stop — nothing to send, and throwing would bubble to init() and res.send() on a closed response.
+		if (controller.signal.aborted) return
+		// Elapsed-time watchdog fired before streaming began: surface a clear JSON error via init()'s catch.
+		if (timeoutSignal?.aborted) throw timeoutErrorMsg
 		throw e // a real GDC metadata error (HTTP error, malformed response, no files)
 	}
 
@@ -437,7 +445,7 @@ export async function getFileLstUnderSizeLimit(
 	signal: AbortSignal,
 	queryMeta: FilesMetaQuery = queryFilesMeta
 ) {
-	if (lst.length == 0) throw 'fileIdLst[] not array or blank'
+	if (!Array.isArray(lst) || lst.length == 0) throw 'fileIdLst[] must be a non-empty array'
 	const body = {
 		filters: {
 			op: 'in',

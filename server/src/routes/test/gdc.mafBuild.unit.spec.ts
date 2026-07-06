@@ -424,3 +424,27 @@ tape('getFileLstUnderSizeLimit caps the returned files at the total-size limit',
 	test.deepEqual(out, ['a', 'b'], 'stops accepting files once the cumulative compressed size reaches the cap')
 	test.end()
 })
+
+tape('getFileLstUnderSizeLimit rejects a non-array fileIdLst', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
+	// The guard must validate array-ness, not just truthy .length — a stray string has a .length and would
+	// otherwise slip through and build a malformed GDC filter. The injected query should never be reached.
+	let queried = false
+	const query = async () => {
+		queried = true
+		return [] as any[]
+	}
+	for (const bad of ['f1f2f3', 123, null, undefined, {}] as any[]) {
+		let threw = false
+		try {
+			await getFileLstUnderSizeLimit(bad, {}, {}, new AbortController().signal, query)
+		} catch (e: any) {
+			threw = true
+			test.match(String(e?.message || e), /must be a non-empty array/, `rejects ${JSON.stringify(bad)}`)
+		}
+		test.ok(threw, `throws for non-array input ${JSON.stringify(bad)}`)
+	}
+	test.notOk(queried, 'no GDC query is issued for invalid input')
+	test.end()
+})
