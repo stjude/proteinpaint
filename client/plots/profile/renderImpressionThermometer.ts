@@ -25,6 +25,10 @@ const FALLBACK_COLOR = '#888'
 const POC_MEDIAN_FILL = '#9e9e9e'
 const POC_MEDIAN_STROKE = '#616161'
 
+// Hover-highlight descriptor (attribute map toggled on enter/leave by profileForms.onMouseOver).
+// The SC bar/bulb get a dark outline on hover.
+const SC_HOVER = { on: { stroke: '#222', 'stroke-width': '1.5' }, off: { stroke: 'none' } }
+
 export type ImpressionTexts = {
 	titleTemplate: string
 	subtitle: string[]
@@ -55,10 +59,6 @@ export type ImpressionRenderArgs = {
 	// The POC distribution and rating-swatch legend use a fixed universal red→green palette
 	// (RATING_COLORS) to encode rating level — same across every module.
 	colors: { sc: string }
-	// Shared Menu instance from profilePlot. Used to render hover tooltips on the SC bar,
-	// bulb, POC distribution bands, and POC median ball. Optional — if absent, tooltips
-	// are skipped silently.
-	tip?: { clear: () => any; hide: () => void; show: (x: number, y: number, ...rest: any[]) => void }
 }
 
 // Geometry shared by every thermometer column. Each column keeps the full single-chart
@@ -91,11 +91,12 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 	const n: number = data.n ?? 0
 
 	const responders: ResponderColumn[] = Array.isArray(data.responders) ? data.responders : []
-	// SC-only modules (e.g. Patients & Outcomes) carry no responder groups → render a single
-	// POC-less column labeled with the generic frame subtitle.
+	// Each column's subtitle names both perspectives on the thermometer: the shared SC bar and this
+	// responder group (frameSubtitle template, {group} = responder label). SC-only modules (e.g.
+	// Patients & Outcomes) carry no responder group → a single POC-less column labeled just "Site Coordinator".
 	const columns: { col: ResponderColumn | null; label: string; hasPoc: boolean }[] = responders.length
-		? responders.map(r => ({ col: r, label: r.label, hasPoc: true }))
-		: [{ col: null, label: a.texts.frameSubtitle, hasPoc: false }]
+		? responders.map(r => ({ col: r, label: a.texts.frameSubtitle.replace('{group}', r.label), hasPoc: true }))
+		: [{ col: null, label: a.texts.legend.sc, hasPoc: false }]
 
 	// Render directly into the svg with absolute coords; reset mainG transform to identity so
 	// transforms set up for the Likert/YN paths don't apply.
@@ -109,20 +110,13 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 	const root = a.dom.mainG
 	const rowCenterX = (FIRST_FRAME_X + lastFrameRight) / 2
 
-	// Wires mouseenter/mouseleave on a d3 selection to show `text` in the shared profilePlot
-	// tip. No-op if the tip wasn't passed (defensive — keeps the renderer usable in tests).
-	const tip = a.tip
-	const attachTip = (sel: any, text: string) => {
-		if (!tip) return
-		sel
-			.style('cursor', 'pointer')
-			.attr('pointer-events', 'all')
-			.on('mouseenter', (event: MouseEvent) => {
-				const menu = tip.clear()
-				menu.d.text(text)
-				menu.show(event.clientX, event.clientY, true, true)
-			})
-			.on('mouseleave', () => tip.hide())
+	// Bind the tooltip text (and optional hover-highlight descriptor) as the element's datum. The
+	// shared profilePlot mousemove→onMouseOver delegation (see profileForms.onMouseOver) reads
+	// `__data__` to show the tip and apply/reset the highlight — same pattern as polar2/radar2,
+	// rather than per-element mouseenter handlers here. `hover` = { on, off, growR?, baseR? }:
+	// `on`/`off` are attribute maps toggled on enter/leave; growR/baseR animate a circle's radius.
+	const attachTip = (sel: any, text: string, hover?: any) => {
+		sel.datum({ tip: text, ...(hover || {}) }).style('cursor', 'pointer')
 	}
 
 	// Title block (once, centered over the whole row)
@@ -255,7 +249,6 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 			const stackG = root.append('g').attr('clip-path', `url(#${clipId})`)
 			const distByRating: Record<number, { count: number; pct: number }> = {}
 			for (const d of dist) distByRating[d.rating] = { count: d.count || 0, pct: d.pct || 0 }
-			const pocTotal: number = column.col?.total || 0
 			let cum = 0
 			for (let r = 1; r <= maxScore; r++) {
 				const bin = distByRating[r]
@@ -263,14 +256,14 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 				if (pct <= 0) continue
 				const yStart = tubeBottom - (cum / 100) * TUBE_H
 				const yEnd = tubeBottom - ((cum + pct) / 100) * TUBE_H
-				const rect = stackG
+				// Bands are display-only — tooltips are limited to the SC + POC medians.
+				stackG
 					.append('rect')
 					.attr('x', tubeX)
 					.attr('y', yEnd)
 					.attr('width', TUBE_W)
 					.attr('height', yStart - yEnd)
 					.attr('fill', RATING_COLORS[r])
-				attachTip(rect, `Rating ${r} — ${pct.toFixed(1)}% (${bin.count} of ${pocTotal} staff)`)
 				cum += pct
 			}
 		}
@@ -307,12 +300,12 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 				.attr('width', SC_BAR_W)
 				.attr('height', barH)
 				.attr('fill', scColor)
-			attachTip(scBar, `Site Coordinator median: ${scMedian} (n=${scTotal} SCs)`)
+			attachTip(scBar, `Site Coordinator median: ${scMedian} (n=${scTotal} SCs)`, SC_HOVER)
 		}
 
 		// Bulb fill + outline arc
 		const bulb = root.append('circle').attr('cx', bulbCx).attr('cy', bulbCy).attr('r', BULB_R).attr('fill', scColor)
-		if (scMedian != null) attachTip(bulb, `Site Coordinator median: ${scMedian} (n=${scTotal} SCs)`)
+		if (scMedian != null) attachTip(bulb, `Site Coordinator median: ${scMedian} (n=${scTotal} SCs)`, SC_HOVER)
 		const halfW = TUBE_W / 2
 		const intersectY = bulbCy - Math.sqrt(BULB_R * BULB_R - halfW * halfW)
 		const bulbOutline = `M ${tubeX + TUBE_W} ${intersectY}` + ` A ${BULB_R} ${BULB_R} 0 1 1 ${tubeX} ${intersectY}`
@@ -331,7 +324,12 @@ export function renderImpressionThermometer(a: ImpressionRenderArgs) {
 				.attr('fill', POC_MEDIAN_FILL)
 				.attr('stroke', POC_MEDIAN_STROKE)
 				.attr('stroke-width', 1)
-			attachTip(ball, `POC median: ${pocMedian} (n=${pocTotalForTip} staff responses)`)
+			attachTip(ball, `POC median: ${pocMedian} (n=${pocTotalForTip} staff responses)`, {
+				on: { stroke: '#222', 'stroke-width': '2' },
+				off: { stroke: POC_MEDIAN_STROKE, 'stroke-width': '1' },
+				growR: BALL_R + 4,
+				baseR: BALL_R
+			})
 		}
 
 		// n indicator (top-right of this frame)

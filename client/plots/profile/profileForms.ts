@@ -3,6 +3,7 @@ import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { select } from 'd3'
 import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
 import { dofetch3 } from '#common/dofetch'
@@ -191,8 +192,7 @@ export class profileForms extends profilePlot {
 					module: this.module,
 					data: this.data,
 					texts: this.config.impression,
-					colors: { sc: this.impressionScColor || '#888' },
-					tip: this.tip
+					colors: { sc: this.impressionScColor || '#888' }
 				})
 				this.filterG.selectAll('*').remove()
 				this.addFilterLegend()
@@ -425,6 +425,24 @@ export class profileForms extends profilePlot {
 	}
 
 	onMouseOver(event) {
+		// Impression thermometer: elements carry their tooltip text + hover-highlight descriptor as
+		// __data__ (bound by renderImpressionThermometer's attachTip). Same delegation pattern as
+		// polar2/radar2 — show the tip, apply the outline, and animate the POC ball's radius.
+		if (this.isImpressionDomain) {
+			const target = event.target
+			const d = target.__data__
+			if (d?.tip) {
+				const menu = this.tip.clear()
+				menu.d.text(d.tip)
+				menu.show(event.clientX, event.clientY, true, true)
+				if (d.on) for (const k in d.on) target.setAttribute(k, d.on[k]) // idempotent on repeated mousemove
+				if (d.growR && !d._grown) {
+					d._grown = true
+					select(target).interrupt().transition().duration(150).attr('r', d.growR)
+				}
+			} else this.onMouseOut(event)
+			return
+		}
 		if (event.target.tagName == 'rect') {
 			const path = event.target
 			const d = path.__data__
@@ -442,6 +460,21 @@ export class profileForms extends profilePlot {
 			row.append('span').text(`${d.key}: ${percent}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
+	}
+
+	onMouseOut(event) {
+		// Reset the impression thermometer's hover highlight for the element being left; the base
+		// only hides the tip. Targeted via event.target (mouseout bubbles from the element).
+		if (this.isImpressionDomain) {
+			const target = event?.target
+			const d = target?.__data__
+			if (d?.off) for (const k in d.off) target.setAttribute(k, d.off[k])
+			if (d?._grown) {
+				d._grown = false
+				select(target).interrupt().transition().duration(150).attr('r', d.baseR)
+			}
+		}
+		this.tip.hide()
 	}
 
 	getColor(key: string) {
