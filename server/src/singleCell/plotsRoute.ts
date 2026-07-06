@@ -138,7 +138,7 @@ async function getSingleCellScatter(req, res, ds) {
 			filteredSamples: Set<string> = new Set()
 
 		const data = await getData(arg, ds)
-		if (!data) throw new Error('No data returned for single cell scatter plot')
+		if (!data || 'error' in data) throw new Error((data as any)?.error || 'No data returned for single cell scatter plot')
 
 		if (q.coordTWs && q.coordTWs.length > 0) {
 			const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
@@ -148,11 +148,14 @@ async function getSingleCellScatter(req, res, ds) {
 			filteredSamples = await ds.queries.singleCell.samples.getFilteredSingleCellSamples(q)
 		}
 		if (q.colorTW) {
-			for (const gene of genes) {
-				const tmpArg = { ...arg, gene}
-				const tmpData = await ds.queries.singleCell.data.get(tmpArg)
-				colorData = Object.assign(colorData, tmpData)
+			if (genes.length > 0) {
+				for (const gene of genes) {
+					const tmpArg = { ...arg, gene }
+					const tmpData = await ds.queries.singleCell.data.get(tmpArg)
+					colorData = Object.assign(colorData, tmpData)
+				}
 			}
+			else colorData = await ds.queries.singleCell.data.get(arg)
 		}
 
 		const { samples, categoryCounts, xMin, xMax, yMin, yMax, geMin, geMax, totalCellCount } = processSamples(
@@ -213,11 +216,11 @@ async function getSingleCellScatter(req, res, ds) {
 
 function getSingleCellDataArgs(q, name, sample) {
 	const arg: { [index: string]: any } = {
-		plots: [name], 
-		sample, 
-		terms: [], 
-		filter: q.filter, 
-		filter0: q.filter0, 
+		plots: [name],
+		sample,
+		terms: [],
+		filter: q.filter,
+		filter0: q.filter0,
 		__protected__: q.__protected__,
 		__abortSignal: q.__abortSignal
 	}
