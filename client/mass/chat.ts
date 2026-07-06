@@ -3,7 +3,7 @@ import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import type { ChatRequest, ChatResponse } from '#types'
+import type { ChatRequest, ChatResponse, OmnisearchResult } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
@@ -137,7 +137,7 @@ class MassAiChatBot implements RxComponent {
 		// Single server request that searches dictionary variables and genes together, and reports the
 		// dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene lookup for the
 		// search results, so the client does not need an extra genelookup request during omnisearch.
-		const data: any = await dofetch3('termdb/chat', {
+		const data: OmnisearchResult = await dofetch3('termdb/chat', {
 			body: {
 				genome: this.app.vocabApi.vocab.genome,
 				dslabel: this.app.vocabApi.vocab.dslabel,
@@ -149,7 +149,7 @@ class MassAiChatBot implements RxComponent {
 			}
 		})
 		if (data.error) throw data.error
-		const lst: any[] = Array.isArray(data.lst) ? data.lst : []
+		const lst: any[] = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
 		// Each gene match carries its own available data types (a gene may have e.g. SNV/indel while
 		// another does not), so action buttons are decided per gene rather than dataset-wide.
 		const genes: { gene: string; dataTypes: any; coord?: any }[] = Array.isArray(data.genes) ? data.genes : []

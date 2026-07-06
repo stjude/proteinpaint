@@ -60,8 +60,9 @@ export interface GeneMatch {
 /** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
  * available gene data types so the client can offer the appropriate per-gene action buttons. */
 export interface OmnisearchResult {
-	lst: any[]
+	dictionaryTerms: any[]
 	genes: GeneMatch[]
+	error?: any
 }
 
 export type LlmConfig = {
