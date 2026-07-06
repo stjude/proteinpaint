@@ -235,7 +235,7 @@ export class ListSamples {
 	}
 
 	async getData(): Promise<AnnotatedSampleData> {
-		const { sample } = this.app.vocabApi.termdbConfig.uiLabels
+		const { sample } = this.app.vocabApi?.termdbConfig?.uiLabels || defaultUiLabels
 		try {
 			const opts = {
 				terms: this.terms,
@@ -308,7 +308,7 @@ export class ListSamples {
 			rows.push(row)
 			samples.push(s)
 		}
-		const { Sample } = this.app.vocabApi.termdbConfig.uiLabels
+		const { Sample } = this.app.vocabApi?.termdbConfig?.uiLabels || defaultUiLabels
 		//Formatting columns
 		const columns: TableColumn[] = [{ label: Sample }]
 		this.addColValue(this.t1, columns)
