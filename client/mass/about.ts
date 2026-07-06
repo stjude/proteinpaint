@@ -4,6 +4,7 @@ import type { Elem, Div, H2 } from '../types/d3'
 import type { SelectCohortEntry } from '#types'
 import { renderTable, type TableRow } from '#dom'
 import { select } from 'd3-selection'
+import { renderGeomap } from '#plots/geomap/render.ts'
 
 /* 
 "about" tab will display following contents inside this.subheader:
@@ -23,6 +24,8 @@ type AboutObj = {
 	html: string
 	activeItems?: { items: any }
 	disclaimer?: any
+	/** when true, render the world map from termdbConfig.geomap directly on the landing tab */
+	showGeomap?: boolean
 }
 
 type MassAboutOpts = {
@@ -114,6 +117,7 @@ export class MassAbout {
 		/** If selectCohort available, options in the about html will not show */
 		this.initCohort(appState)
 		this.initCustomHtml()
+		this.initGeomap(appState)
 		this.initActiveItems()
 		this.initDisclaimer()
 		//Always show the release version and server launch date at the bottom
@@ -329,6 +333,15 @@ export class MassAbout {
 			.attr('data-testid', 'sjpp-custom-about-content')
 			.style('padding', '10px')
 			.html(this.aboutOverrides.html)
+	}
+
+	// render the world map (from termdbConfig.geomap) directly on the landing tab when the dataset opts in
+	initGeomap = appState => {
+		if (!this.aboutOverrides?.showGeomap) return
+		const geomap = appState.termdbConfig?.geomap
+		if (!geomap?.sites?.length) return
+		const holder = this.subheader.append('div').attr('data-testid', 'sjpp-about-geomap').style('padding', '10px')
+		renderGeomap(holder, geomap)
 	}
 
 	initActiveItems = () => {
