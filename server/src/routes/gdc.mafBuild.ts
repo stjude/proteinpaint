@@ -15,6 +15,11 @@ import { once } from 'events'
 // stalled GDC download can't hold a worker slot indefinitely
 const downloadTimeoutMs = 60000
 
+// user-facing message when the elapsed-time watchdog (app.middlewares.js) stops a build; surfaced by the
+// client, either via the multipart "errors" part (timeout mid-stream) or a JSON error (timeout before
+// streaming, e.g. during the GDC size query)
+const timeoutErrorMsg = 'MAF build stopped: it exceeded the server time limit. Please try again or select fewer files.'
+
 // flush accumulated selected rows to the gzip sink once a file's pending batch exceeds this, so the
 // per-file working set stays bounded (~one decompressed chunk + one batch) instead of the whole
 // decompressed file and its split/join copies; see streamSelectMafCols
@@ -126,8 +131,30 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 	}, 250)
 	rssTimer.unref() // the sampler must never keep the event loop / process alive on its own
 
+	// Abort wiring — created BEFORE the GDC size query so a stalled metadata request is covered by the
+	// same watchdog as the download phase (the former rust `gdcmaf` watchdog killed a hung process in ANY
+	// phase). `controller` fires on client disconnect (its res.on('close') listener is wired below);
+	// `timeoutSignal` (q.__abortSignal) is the elapsed-time backstop set by app.middlewares.js. buildSignal
+	// aborts if either fires, and is passed to both the size query and the download fan-out.
+	const controller = new AbortController()
+	const timeoutSignal = (q as any).__abortSignal as AbortSignal | undefined
+	const buildSignal = timeoutSignal ? AbortSignal.any([controller.signal, timeoutSignal]) : controller.signal
+
 	const { host, headers } = ds.getHostHeaders(q)
-	const fileLst2: string[] = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers)
+	let fileLst2: string[]
+	try {
+		fileLst2 = await getFileLstUnderSizeLimit(q.fileIdLst, host, headers, buildSignal)
+	} catch (e) {
+		// No multipart bytes have been written yet, and no res.on('close')/gz.on('end') is wired to stop
+		// the RSS sampler — clear it here so an aborted/failed metadata query can't leak the interval.
+		clearInterval(rssTimer)
+		// If the watchdog (or a client disconnect) aborted the metadata query before streaming began, throw
+		// a clear message; init()'s catch sends it as JSON, which the client surfaces.
+		if (buildSignal.aborted) {
+			throw timeoutSignal?.aborted ? timeoutErrorMsg : 'MAF build canceled: the client disconnected'
+		}
+		throw e // a real GDC metadata error (HTTP error, malformed response, no files)
+	}
 
 	mayLog(
 		`${fileLst2.length.toLocaleString()} out of ${q.fileIdLst.length.toLocaleString()} input MAF files accepted by size limit. Time elapsed: ${formatElapsedTime(
@@ -151,17 +178,6 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 		downloadHeaders[k] = v as string
 	}
 
-	// Abort active downloads if the client disconnects (e.g. browser tab refreshed mid-download), so
-	// orphaned GDC requests don't keep running after no one is listening.
-	const controller = new AbortController()
-
-	// Elapsed-time backstop: app.middlewares.js sets q.__abortSignal for /gdc/mafBuild and aborts it if
-	// the build runs longer than serverconfig.features.gdcMafMaxElapsed (default 5 min). This ports the
-	// former rust `gdcmaf` watchdog that killed a hung/leaked build to protect container memory. Fold it
-	// in with the client-disconnect controller so either one stops the download fan-out.
-	const timeoutSignal = (q as any).__abortSignal as AbortSignal | undefined
-	const buildSignal = timeoutSignal ? AbortSignal.any([controller.signal, timeoutSignal]) : controller.signal
-
 	const boundary = '------------------------GDC-MAF-BUILD'
 	res.setHeader('Content-Type', `multipart/form-data; boundary=${boundary}`)
 	res.write(`--${boundary}`)
@@ -174,18 +190,15 @@ async function buildMaf(q: GdcMafBuildRequest, res, ds) {
 
 	// On the elapsed-time timeout, record a build-level (non-file, url:'') error so the client shows a
 	// clear failure and skips the incomplete download, instead of a silently truncated MAF. The finalize
-	// path (gz.end() → gz.on('end')) writes it into the "errors" part.
-	// The timeout can fire BEFORE we reach this line (e.g. during the size query above, which is not
-	// itself abortable), and an AbortSignal emits 'abort' only once — so a listener attached after the
-	// signal already aborted would never run. Handle the already-aborted case explicitly.
+	// path (gz.end() → gz.on('end')) writes it into the "errors" part. (A timeout during the earlier size
+	// query is handled there, before any multipart bytes, via a JSON error.)
+	// The timeout can fire BEFORE we reach this line, and an AbortSignal emits 'abort' only once — so a
+	// listener attached after the signal already aborted would never run. Handle the already-aborted case.
 	const recordTimeoutError = () => {
 		if (res.writableEnded) return
 		// url:'' marks a build-level failure; guard against duplicating the generic catch-block error below
 		if (!errors.some(e => !e.url)) {
-			errors.push({
-				url: '',
-				error: 'MAF build stopped: it exceeded the server time limit. Please try again or select fewer files.'
-			})
+			errors.push({ url: '', error: timeoutErrorMsg })
 		}
 	}
 	if (timeoutSignal?.aborted) recordTimeoutError()
@@ -396,12 +409,34 @@ export async function mergeMafFiles(opts: {
 }
 
 /*
+The GDC /files metadata query, split out so getFileLstUnderSizeLimit can be unit-tested with an injected
+stub (no GDC/network) — same rationale as mergeMafFiles' injected fetchGzStream. Returns the raw hits[].
+Forwards the abort signal so the elapsed-time watchdog (or a client disconnect) can cancel a stalled
+request; ky's own timeout stays disabled so buildSignal is the sole authority.
+*/
+export type FilesMetaQuery = (host: any, headers: any, body: any, signal: AbortSignal) => Promise<any[]>
+
+const queryFilesMeta: FilesMetaQuery = async (host, headers, body, signal) => {
+	const response = await ky.post(joinUrl(host.rest, 'files'), { headers, timeout: false, json: body, signal })
+	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
+	const re: any = await response.json() // type any to avoid tsc err
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	return re.data.hits
+}
+
+/*
 query api get size of each input maf file, and only process those files with total size under a set limit,
 excess files are not processed in order not to crash server
 must not rely on file size sent by client, as that can be spoofed and never to be trusted
 it's inexpensive to query api for this
 */
-async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
+export async function getFileLstUnderSizeLimit(
+	lst: string[],
+	host: any,
+	headers: any,
+	signal: AbortSignal,
+	queryMeta: FilesMetaQuery = queryFilesMeta
+) {
 	if (lst.length == 0) throw 'fileIdLst[] not array or blank'
 	const body = {
 		filters: {
@@ -412,14 +447,10 @@ async function getFileLstUnderSizeLimit(lst: string[], host, headers) {
 		fields: 'file_size'
 	}
 
-	const response = await ky.post(joinUrl(host.rest, 'files'), { headers, timeout: false, json: body })
-	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
-	const re: any = await response.json() // type any to avoid tsc err
-
-	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	const hits = await queryMeta(host, headers, body, signal)
 	const out: string[] = []
 	let cumsize = 0
-	for (const h of re.data.hits) {
+	for (const h of hits) {
 		if (cumsize >= maxTotalSizeCompressed) break // maxed out
 		if (!h.id) throw '.id missing'
 		if (!Number.isInteger(h.file_size)) throw '.file_size not integer'
