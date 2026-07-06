@@ -1,8 +1,8 @@
 import path from 'path'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { get_header_txt } from '#src/utils.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 /** Dataset-startup validation for the rnaseqGeneCount query (used by the
  * DE route at request time). Resolves the file path against tpmasterdir,
@@ -31,7 +31,7 @@ export async function validate_query_rnaseqGeneCount(ds) {
 				validate: true
 			}
 			const time1 = new Date().valueOf()
-			const result = await run_rust('readH5', JSON.stringify(get_samples_from_hdf5))
+			const result = await run_python('readHDF5.py', JSON.stringify(get_samples_from_hdf5))
 			const time2 = new Date().valueOf()
 			mayLog('Time taken to query gene expression:', time2 - time1, 'ms')
 			const vr = JSON.parse(result)

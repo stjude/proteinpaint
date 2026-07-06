@@ -21,7 +21,6 @@ import ky from 'ky'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { mayLog } from '#src/helpers.ts'
 import { joinUrl } from '#shared/joinUrl.js'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
@@ -29,6 +28,7 @@ import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 export const payload: RoutePayload = {
 	init,
@@ -453,10 +453,10 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 		const read_hdf5_input_type = { query: [query_gene], hdf5_file: h5file }
 
 		const time1 = Date.now()
-		const rust_output = await run_rust('readH5', JSON.stringify(read_hdf5_input_type))
+		const python_output = await run_python('readHDF5.py', JSON.stringify(read_hdf5_input_type))
 		mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
-
-		const result = JSON.parse(rust_output)
+		console.log('Python output:', python_output)
+		const result = JSON.parse(python_output)
 		const out = result.query_output[query_gene]?.samples
 		if (!out) throw new Error(`No expression data for ${query_gene}`)
 
