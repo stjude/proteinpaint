@@ -2187,6 +2187,8 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		items: ActiveItem[]
 		// can add holderStyle to customize
 	}
+	/** when true, render the world map from termdbConfig.geomap directly on the landing (about) tab */
+	showGeomap?: boolean
 	/** disclaimer text. can expand with rendering customizations */
 	disclaimer?: {
 		text?: string
