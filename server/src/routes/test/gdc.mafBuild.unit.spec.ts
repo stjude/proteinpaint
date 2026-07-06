@@ -1,7 +1,8 @@
 import tape from 'tape'
 import { gzipSync } from 'zlib'
 import { Readable } from 'stream'
-import { selectMafCols, mergeMafFiles, streamSelectMafCols } from '../gdc.mafBuild.ts'
+import { selectMafCols, mergeMafFiles, streamSelectMafCols, getFileLstUnderSizeLimit } from '../gdc.mafBuild.ts'
+import { maxTotalSizeCompressed } from '../gdc.maf.ts'
 
 // a single-chunk binary Readable of the given gz bytes, standing in for one file's GDC download stream
 function gzStreamFrom(buf: Buffer): Readable {
@@ -359,5 +360,67 @@ tape('an abort mid-stream throws instead of finishing the file (no partial write
 	test.ok(threw, 'aborting mid-stream rejects rather than returning success')
 	test.ok(writeCalls >= 1, 'at least one batch was flushed before the abort (the file was genuinely mid-stream)')
 	test.notOk(wroteAfterAbort, 'no leftover/final flush runs after the signal is aborted')
+	test.end()
+})
+
+tape('\n', function (test) {
+	test.comment('-***- #routes/gdc.mafBuild getFileLstUnderSizeLimit -***-')
+	test.end()
+})
+
+tape('the elapsed-time watchdog can abort a stalled GDC size query', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
+	// The pre-stream metadata query must be covered by the same watchdog as the download phase — a stalled
+	// GDC /files request should be cancellable, not hang buildMaf() indefinitely before streaming starts.
+	// The injected query stands in for that stalled request: it never resolves on its own, only rejecting
+	// when the forwarded signal aborts. Asserts (a) the build signal reaches the metadata request, and
+	// (b) aborting it (as the middleware timer does) rejects the query instead of hanging.
+	const controller = new AbortController()
+	let forwardedSignal: AbortSignal | undefined
+	const stalledQuery = (_host: any, _headers: any, _body: any, signal: AbortSignal): Promise<any[]> => {
+		forwardedSignal = signal
+		return new Promise((_resolve, reject) => {
+			signal.addEventListener('abort', () => reject(new Error('The operation was aborted')), { once: true })
+		})
+	}
+
+	const pending = getFileLstUnderSizeLimit(
+		['f1', 'f2'],
+		{ rest: 'https://gdc.example/' },
+		{},
+		controller.signal,
+		stalledQuery
+	)
+	controller.abort() // the middleware watchdog fires while the query is still in flight
+
+	let threw = false
+	try {
+		await pending
+	} catch (e: any) {
+		threw = true
+		test.match(String(e?.message || e), /abort/i, 'a stalled size query rejects once the signal aborts')
+	}
+	test.ok(threw, 'aborting the signal cancels the pending metadata query rather than hanging')
+	test.equal(forwardedSignal, controller.signal, 'the build signal is forwarded to the GDC metadata request')
+	test.end()
+})
+
+tape('getFileLstUnderSizeLimit caps the returned files at the total-size limit', async function (test) {
+	test.timeoutAfter(5000) // fail fast instead of hanging CI
+
+	// Accumulates file_size in input order and stops once the running total reaches the cap, so the total
+	// downloaded stays bounded regardless of how many files the client selected. Use a per-file size just
+	// over half the cap: the first two fit (second pushes the running total to/over the cap), the third is
+	// dropped. Injected query → no GDC/network.
+	const half = Math.ceil(maxTotalSizeCompressed / 2) + 1
+	const hits = [
+		{ id: 'a', file_size: half },
+		{ id: 'b', file_size: half },
+		{ id: 'c', file_size: half }
+	]
+	const query = async () => hits
+	const out = await getFileLstUnderSizeLimit(['a', 'b', 'c'], {}, {}, new AbortController().signal, query)
+	test.deepEqual(out, ['a', 'b'], 'stops accepting files once the cumulative compressed size reaches the cap')
 	test.end()
 })
