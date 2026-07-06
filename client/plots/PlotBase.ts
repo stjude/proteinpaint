@@ -45,7 +45,7 @@ export class PlotBase {
 		this.id = opts?.id
 		this.app = opts?.app
 		this.parentId = opts?.parentId
-		// plot dhild class should use config.controlLabels, app.termdbConfig.uilLabels or this default
+		// plot child class should use config.controlLabels, app.vocabApi.termdbConfig.uiLabels, or this default
 		this.uiLabels = defaultUiLabels
 		// Below creates a vocabApi instance that is unique to the plot instance,
 		// so that there'd be a plot-level request cancellation using plotApi.getAbortSignal()
