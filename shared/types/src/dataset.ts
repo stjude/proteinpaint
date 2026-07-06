@@ -1739,6 +1739,9 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
+	/** Locations for the reusable `geomap` chart type (world map with pins).
+	 * Forwarded to the client termdbConfig and consumed by client/plots/geomap. */
+	geomap?: GeomapConfig
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -1973,6 +1976,28 @@ type PlotConfigByCohort = {
 		/** key is plot type as in mass/charts.js */
 		[key: string]: object
 	}
+}
+
+/** A single location pin for the `geomap` chart. */
+export type GeomapSite = {
+	/** display name shown in the pin tooltip */
+	name: string
+	/** stable identifier used to match against highlightIds; defaults to name when absent */
+	id?: string
+	country?: string
+	iso?: string
+	/** latitude in decimal degrees, -90..90 */
+	lat: number
+	/** longitude in decimal degrees, -180..180 */
+	lon: number
+}
+
+/** Config for the reusable `geomap` chart type (dataset-agnostic). */
+export type GeomapConfig = {
+	/** all locations to pin on the map */
+	sites: GeomapSite[]
+	/** ids (or names) of the subset of sites to visually emphasize, e.g. the user's own sites */
+	highlightIds?: string[]
 }
 
 /** modified version of termwrapper*/
