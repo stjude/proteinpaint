@@ -6,6 +6,7 @@ import { IDCViewModel } from './viewModel/IDCViewModel'
 import { IDCTableView } from './view/IDCTableView'
 import { IDCViewerDefaults } from './settings/defaults'
 import { IDCSearchView } from './view/IDCSearchView'
+import { applyStyles, idcViewerStyles } from './styling'
 
 export async function init(
 	{ filter0 },
@@ -34,24 +35,11 @@ export class IDCViewer {
 	constructor(holder: Selection<HTMLDivElement, unknown, any, any>) {
 		this.dom = {
 			holder: holder,
-			loadingDiv: holder
-				.append('div')
-				.attr('class', 'idcviewer-loading-holder')
-				.style('display', 'none')
-				.style('background-color', 'rgba(255, 255, 255, 0.8)')
-				.style('position', 'absolute')
-				.style('top', '0')
-				.style('left', '0')
-				.style('width', '100%')
-				.style('height', '100%'),
-			searchDiv: holder
-				.append('div')
-				.attr('class', 'idcviewer-search-holder')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('justify-content', 'space-between')
-				.style('flex-wrap', 'wrap')
-				.style('flex-direction', 'row'),
+			loadingDiv: applyStyles(
+				holder.append('div').attr('class', 'idcviewer-loading-holder'),
+				idcViewerStyles.loadingDiv
+			),
+			searchDiv: applyStyles(holder.append('div').attr('class', 'idcviewer-search-holder'), idcViewerStyles.searchDiv),
 			tableDiv: holder.append('div').attr('class', 'idcviewer-table-holder'),
 			errorDiv: holder.append('div').attr('class', 'idcviewer-error-holder')
 		}

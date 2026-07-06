@@ -1,15 +1,10 @@
 import { type BaseType, type Selection } from 'd3-selection'
+import { applyStyles, sharedStyles } from './styling'
 
 export function makeTransparentButton(
 	button: Selection<HTMLButtonElement, unknown, any, any>
 ): Selection<HTMLButtonElement, unknown, any, any> {
-	return button
-		.style('cursor', 'pointer')
-		.style('background', 'transparent')
-		.style('border', 'none')
-		.style('padding', '0')
-		.style('margin', '0')
-		.style('appearance', 'none')
+	return applyStyles(button, sharedStyles.transparentButton)
 }
 
 export function addSvg<GElement extends BaseType, Datum, PElement extends BaseType, PDatum>(
@@ -32,5 +27,5 @@ export function addSvg<GElement extends BaseType, Datum, PElement extends BaseTy
 export function makeCenteredFlex<GElement extends BaseType, Datum, PElement extends BaseType, PDatum>(
 	selection: Selection<GElement, Datum, PElement, PDatum>
 ): Selection<GElement, Datum, PElement, PDatum> {
-	return selection.style('display', 'flex').style('align-items', 'center').style('justify-content', 'center')
+	return applyStyles(selection, sharedStyles.centeredFlex)
 }
