@@ -148,7 +148,7 @@ export class ListSamples {
 	}
 
 	createTvsValues(tvsEntry: any, tw: any, key: string): any {
-		const { Sample } = this.app.vocabApi?.termdbConfig?.uiLabels || defaultUiLabels
+		const { Sample } = Object.assign({}, defaultUiLabels, this.app.vocabApi?.termdbConfig?.uiLabels || {})
 		if (
 			(tw?.q?.type == 'custom-groupset' || tw?.q?.type == 'predefined-groupset') &&
 			tw.term.type !== TermTypes.GENE_VARIANT
@@ -235,7 +235,7 @@ export class ListSamples {
 	}
 
 	async getData(): Promise<AnnotatedSampleData> {
-		const { sample } = this.app.vocabApi?.termdbConfig?.uiLabels || defaultUiLabels
+		const { sample } = Object.assign({}, defaultUiLabels, this.app.vocabApi?.termdbConfig?.uiLabels || {})
 		try {
 			const opts = {
 				terms: this.terms,
@@ -308,7 +308,7 @@ export class ListSamples {
 			rows.push(row)
 			samples.push(s)
 		}
-		const { Sample } = this.app.vocabApi?.termdbConfig?.uiLabels || defaultUiLabels
+		const { Sample } = Object.assign({}, defaultUiLabels, this.app.vocabApi?.termdbConfig?.uiLabels || {})
 		//Formatting columns
 		const columns: TableColumn[] = [{ label: Sample }]
 		this.addColValue(this.t1, columns)
