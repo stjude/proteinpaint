@@ -27,14 +27,12 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
-	if (prompt) {
-		const str = prompt.toUpperCase()
-		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
-		terms = filterTerms(req, ds, found.map(copy_term))
-		for (const term of terms) {
-			term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
-			term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
-		}
+	const str = prompt.toUpperCase()
+	const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
+	terms = filterTerms(req, ds, found.map(copy_term))
+	for (const term of terms) {
+		term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
+		term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
 	}
 
 	// Genes — only search when the dataset has at least one gene data type to act on. The dataset-level
@@ -58,7 +56,7 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	})
 
 	// Will later add support for other NonDict terms such as genesets etc.
-	return { lst: terms, genes }
+	return { dictionaryTerms: terms, genes: genes }
 }
 
 /** Determine the gene data types available for a SPECIFIC gene in a dataset. This is the harness for
