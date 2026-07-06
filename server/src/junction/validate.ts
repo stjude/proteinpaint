@@ -150,7 +150,7 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 				const l = line.split('\t')
 				const start = Number(l[1]) // must always be numbers
 				const stop = Number(l[2])
-				if (start != j.start || stop != j.stop || l[4] != j.strand) return
+				if (start != j.start || stop != j.stop || l[3] != j.strand) return
 				// found this junction. collect read count for sample-level summary
 				for (let i = 5; i < l.length; i++) {
 					const str = l[i]
