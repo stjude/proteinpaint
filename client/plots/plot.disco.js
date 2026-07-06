@@ -33,6 +33,7 @@ export default async function (
 	showError = true,
 	launchOptions = {}
 ) {
+	const plotlaunchOptions = _overrides.launchOptions || {}
 	const loadingDiv = holder.append('div').style('margin', '20px').text('Loading...')
 
 	try {
@@ -53,7 +54,7 @@ export default async function (
 		if (data.error) throw data.error
 		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
 
-		if (data.dt2total?.length) {
+		if (!launchOptions.app && data.dt2total?.length) {
 			// array element: {dt:int, total:int}
 			// may pass this to disco argument to display it in legend
 			for (const o of data.dt2total) {
@@ -108,6 +109,7 @@ export default async function (
 
 		const opts = {
 			holder: holder,
+			app: plotlaunchOptions.app,
 
 			state: {
 				genome: genomeObj.name,
@@ -129,8 +131,11 @@ export default async function (
 }
 
 function computeOverrides(o, termdbConfig, genomeObj, sample) {
-	// parameter is duplicated into a new object; this script computes new attributes and add to the new obj
-	const overrides = structuredClone(o)
+	// parameter is duplicated into a new object; this script computes new attributes and add to the new obj.
+	// Do not include launchOptions in this clone: launchOptions.app may hold a live MASS app object
+	// with functions/DOM references that cannot be structured-cloned, and it belongs on PlotApp opts, not plot overrides.
+	const { launchOptions, ...cloneableOverrides } = o
+	const overrides = structuredClone(cloneableOverrides)
 	if (!overrides.Disco) overrides.Disco = {}
 
 	if (genomeObj.geneset) {
