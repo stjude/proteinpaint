@@ -39,6 +39,12 @@ export async function route_to_appropriate_llm_provider(
 			text: 'LLM model configuration is missing a valid modelName value in serverconfig.'
 		} as MsgToUser
 	}
+	if (!modelCfg.maxTokens) {
+		return {
+			type: 'text',
+			text: 'The model is missing a maxTokens value in serverconfig.'
+		} as MsgToUser
+	}
 	const tokenLengthResult = await check_prompt_token_length(prompt, llm, modelCfg?.maxTokens)
 	if (isMsgToUser(tokenLengthResult)) return tokenLengthResult
 	if (tokenLengthResult.limitExceeded) {
