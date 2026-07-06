@@ -1,4 +1,4 @@
-import type { LlmConfig } from '@sjcrh/proteinpaint-types'
+import type { LlmConfig } from '#types'
 import type { Value, DictTerm, GeneSetTerm } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
@@ -387,7 +387,7 @@ Output:
 
 Analyze this phrase and return the appropriate JSON object: "${phrase}"
 `
-	const raw = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const raw = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	if (isMsgToUser(raw)) return raw
 
@@ -708,7 +708,7 @@ Phrase: "${termObj.phrase}"
 
 JSON response:`
 
-		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+		const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 		if (isMsgToUser(response)) return response
 		let parsed: { term: string; value: string }
@@ -778,7 +778,7 @@ Phrase: "${termObj.phrase}"
 
 JSON response:`
 
-		const termResponse = await route_to_appropriate_llm_provider(termPrompt, llm, llm.classifierModelName)
+		const termResponse = await route_to_appropriate_llm_provider(termPrompt, llm, llm.classifierModelConfig)
 		// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 		if (isMsgToUser(termResponse)) return termResponse
 		let parsed: { term: string }
@@ -822,7 +822,7 @@ Phrase: "${termObj.phrase}"
 
 JSON response:`
 
-	const cutoffResponse = await route_to_appropriate_llm_provider(cutoffPrompt, llm, llm.classifierModelName)
+	const cutoffResponse = await route_to_appropriate_llm_provider(cutoffPrompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	if (isMsgToUser(cutoffResponse)) return cutoffResponse
 	let start: string | undefined

@@ -46,7 +46,8 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		datasetDataTypes.snvindel ||
 		datasetDataTypes.cnv ||
 		datasetDataTypes.svfusion
-	const geneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+	const MAX_GENE_MATCHES = 50
+	const geneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt).slice(0, MAX_GENE_MATCHES) : []
 	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not), and
 	// resolve a default genomic coordinate for genes that need a genome browser (DNA methylation) so the
 	// client can seed the browser track without a separate genelookup request.

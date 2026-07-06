@@ -1108,7 +1108,7 @@ Parse the following query:
 Query: ${phrase}
 `
 */
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	mayLog('filter response:', response)
 	if (isMsgToUser(response)) return response

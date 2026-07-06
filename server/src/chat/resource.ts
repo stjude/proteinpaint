@@ -45,7 +45,7 @@ export async function extractResourceResponse(
 	const response: string | MsgToUser = await route_to_appropriate_llm_provider(
 		system_prompt,
 		llm,
-		llm.classifierModelName
+		llm.classifierModelConfig
 	)
 	if (isMsgToUser(response)) return response
 	const idx = parseInt(response.trim())

@@ -123,7 +123,7 @@ User prompt: "${user_prompt}"
 Ambiguous terms (both gene and group name): [${ambiguousTerms}]
 Response:`
 
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	if (isMsgToUser(response)) return response
 
@@ -218,7 +218,7 @@ User prompt: "${user_prompt}"
 Genes: [${geneList}]
 Response:`
 
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	// The LLM provider call failed and returned a user-facing message; propagate it for UI display.
 	if (isMsgToUser(response)) return response
 
