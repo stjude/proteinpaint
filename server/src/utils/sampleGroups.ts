@@ -1,7 +1,7 @@
 import type { DERequest, DiffMethRequest } from '#types'
 import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { get_ds_tdb } from '#src/termdb.js'
-import { get_samples } from '#src/termdb.sql.js'
+import { mayLimitSamples } from '#src/mds3.filter.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -85,8 +85,7 @@ export async function buildGroupValues(
 	if (ds.cohort.termdb.hasSampleAncestry) {
 		// ds has sample ancestry
 		// data for DE/DM (i.e. genomic data) are assumed to be
-		// at sample-level, so set mapParent2Children=true to be
-		// able to convert patient ids to sample ids
+		// at sample-level, so map sample ids to sample-level
 		const term = {
 			type: 'samplelst',
 			values: {
@@ -101,9 +100,13 @@ export async function buildGroupValues(
 		}
 		const arg = { filter }
 		maySetMapParent2Children(arg, ds, true)
-		const samples = await get_samples(arg, ds, true)
-		sampleLst = samples.map(s => {
-			return { sampleId: s.id, sample: s.name }
+		const allSamples = [...q.allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
+		// filtering samples by samplelst term
+		// if samples are at parent-level, then will get mapped to sample-level
+		// otherwise, samples will be used as is
+		const samples = (await mayLimitSamples(arg, allSamples, ds)) || new Set()
+		sampleLst = [...samples].map(s => {
+			return { sampleId: s }
 		})
 	}
 	for (const s of sampleLst) {
