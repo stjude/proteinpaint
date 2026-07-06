@@ -1,54 +1,78 @@
 import fs from 'fs'
-import * as utils from './utils.js'
 import readline from 'readline'
-import serverconfig from './serverconfig.js'
+import type {
+	RouteApi,
+	RoutePayload,
+	TermdbJunctionOneSampleTkRequest,
+	TermdbJunctionOneSampleTkResponse,
+	TermdbJunctionOneSampleTkItem
+} from '#types'
+import * as utils from '#src/utils.js'
+import serverconfig from '#src/serverconfig.js'
 
-export default function (genomes) {
+const get_lines_bigfile: any = utils.get_lines_bigfile
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'TermdbJunctionOneSampleTkRequest' /*, checkers: TODO write validator */ },
+	response: { typeId: 'TermdbJunctionOneSampleTkResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/junction/onesampletk',
+	methods: {
+		get: payload
+	}
+}
+
+export function init({ genomes }) {
 	return async (req, res) => {
 		try {
-			await do_query(req, res, genomes)
-		} catch (e) {
+			const q: TermdbJunctionOneSampleTkRequest = req.query
+			const lst = await do_query(q, genomes)
+			res.send({ lst } satisfies TermdbJunctionOneSampleTkResponse)
+		} catch (e: any) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 		}
 	}
 }
 
-async function do_query(req, res, genomes) {
-	const gn = genomes[req.query.genome]
+async function do_query(q: TermdbJunctionOneSampleTkRequest, genomes): Promise<TermdbJunctionOneSampleTkItem[]> {
+	const gn = genomes[q.genome]
 	if (!gn) throw 'invalid genome'
-	utils.validateRglst(req.query, gn)
+	utils.validateRglst(q, gn)
 
-	const [e, file, isurl] = utils.fileurl(req)
+	const [e, file, isurl] = utils.fileurl({ query: q })
 	if (e) throw e
-	if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000) throw 'Zoom in below 1 Mb to show junctions'
+	if (q.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000) throw 'Zoom in below 1 Mb to show junctions'
 
-	let lst // list of junctions
-	if (req.query.isrnapeg) {
+	let lst: TermdbJunctionOneSampleTkItem[] // list of junctions
+	if (q.isrnapeg) {
 		if (!serverconfig.features.junctionrnapeg) throw 'rnapeg not supported on this server'
 		if (isurl) throw 'rnapeg file from url is not supported'
-		lst = await get_rnapeg(req.query, file)
+		lst = await get_rnapeg(q, file)
 	} else {
 		// a tabix file
-		const dir = isurl ? await utils.cache_index(file, req.query.indexURL) : null
-		lst = await get_tabix(req.query, file, dir)
+		const dir = isurl ? await utils.cache_index(file, q.indexURL) : null
+		lst = await get_tabix(q, file, dir)
 	}
-	res.send({ lst })
+	return lst
 }
 
-async function get_tabix(q, file, dir) {
-	const items = []
+async function get_tabix(q: TermdbJunctionOneSampleTkRequest, file: string, dir: string | null) {
+	const items: TermdbJunctionOneSampleTkItem[] = []
 	for (const r of q.rglst) {
-		await utils.get_lines_bigfile({
+		await get_lines_bigfile({
 			args: [file, r.chr + ':' + r.start + '-' + r.stop],
 			dir,
-			callback: line => {
+			callback: (line: string) => {
 				const l = line.split('\t')
 				const start = Number.parseInt(l[1]),
 					stop = Number.parseInt(l[2])
 				if ((start >= r.start && start <= r.stop) || (stop >= r.start && stop <= r.stop)) {
 					// only use those with either start/stop in region
-					const j = {
+					const j: TermdbJunctionOneSampleTkItem = {
 						chr: r.chr,
 						start,
 						stop,
@@ -66,15 +90,15 @@ async function get_tabix(q, file, dir) {
 	return items
 }
 
-async function get_rnapeg(q, file) {
+async function get_rnapeg(q: TermdbJunctionOneSampleTkRequest, file: string) {
 	try {
 		await fs.promises.stat(file)
-	} catch (e) {
+	} catch (e: any) {
 		if (e.code == 'EACCES') throw 'permission denied for rnapeg file'
 		if (e.code == 'ENOENT') throw 'rnapeg file not found'
 		throw 'cannot access rnapeg file (' + e.code + ')'
 	}
-	const items = []
+	const items: TermdbJunctionOneSampleTkItem[] = []
 	for (const r of q.rglst) {
 		const lines = await get_lines_rnapeg({ file, chr: r.chr, start: r.start, stop: r.stop })
 		for (const i of lines) items.push(i)
@@ -82,10 +106,10 @@ async function get_rnapeg(q, file) {
 	return items
 }
 
-function get_lines_rnapeg(args) {
-	return new Promise((resolve, reject) => {
+function get_lines_rnapeg(args: { file: string; chr: string; start: number; stop: number }) {
+	return new Promise<TermdbJunctionOneSampleTkItem[]>((resolve, reject) => {
 		const rl = readline.createInterface({ input: fs.createReadStream(args.file, { encoding: 'utf8' }) })
-		const lines = []
+		const lines: TermdbJunctionOneSampleTkItem[] = []
 		let first = true // skip header
 		rl.on('line', line => {
 			if (first) {

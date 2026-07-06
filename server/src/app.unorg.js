@@ -54,7 +54,6 @@ import { gdc_bam_request } from './bam.gdc.js'
 import * as mds3Gdc from './mds3.gdc.js'
 import aicheck_request_closure from './aicheck.js'
 import bampile_request_closure from './bampile.js'
-import junction_request_closure from './junction.js'
 import bedj_request_closure from './bedj.js'
 import { request_closure as blat_request_closure } from './blat.js'
 import { mds3_request_closure } from './mds3.load.js'
@@ -117,7 +116,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/study', handle_study)
 	app.post(basepath + '/textfile', handle_textfile)
 	app.post(basepath + '/urltextfile', handle_urltextfile)
-	app.get(basepath + '/junction', junction_request_closure(genomes)) // legacy, including rnapeg
 	app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
 	app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
 	app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
