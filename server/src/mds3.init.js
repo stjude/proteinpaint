@@ -29,7 +29,8 @@ import {
 	mclasscnvloss,
 	mclassitd,
 	dtTerms,
-	getColors
+	getColors,
+	invalidcoord
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
@@ -1938,6 +1939,7 @@ async function validate_query_junction(ds, genome) {
 		if (!lines[0]) throw 'header line missing from ' + q.file
 		const l = lines[0].split('\t')
 		if (l[0] != '#chr') throw 'header line not starting with #chr: ' + q.file
+		if (l.length <= 5) throw 'junction header line must have more than 5 columns: ' + q.file
 		q.samples = l.slice(5).map(i => {
 			return { name: i }
 		})
@@ -1945,6 +1947,8 @@ async function validate_query_junction(ds, genome) {
 	}
 
 	q.get = async param => {
+		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
+			throw new Error('minReadCount must be a non-negative integer')
 		if (param.rglst) return await getJunctions(param)
 		if (param.junction) return await getOneJunctionDetail(param)
 		throw new Error('unknown method')
@@ -1972,15 +1976,16 @@ async function validate_query_junction(ds, genome) {
 					const l = line.split('\t')
 					const start = Number(l[1]) // must always be numbers
 					const stop = Number(l[2])
-					const strand = l[3]
 					let j
 					try {
 						j = JSON.parse(l[4])
 					} catch (e) {
 						return
 					}
+					j.chr = l[0]
 					j.start = start
 					j.stop = stop
+					j.strand = l[3]
 					const readcounts = [] // array of read counts of samples carrying this junction
 					for (let i = 5; i < l.length; i++) {
 						const str = l[i]
@@ -1993,6 +1998,7 @@ async function validate_query_junction(ds, genome) {
 						const vlst = str.split(';').map(Number)
 						const rc = vlst[0] // first field is read count
 						if (!Number.isInteger(rc)) continue
+						if (rc <= 0) continue
 						if (param.minReadCount && rc < param.minReadCount) continue
 						readcounts.push(rc)
 					}
@@ -2010,9 +2016,44 @@ async function validate_query_junction(ds, genome) {
 	get sample details of one junction
 	{
 		junction{}
+		filter
+		minReadCount
 	}
 	*/
-	async function getOneJunctionDetail(param) {}
+	async function getOneJunctionDetail(param) {
+		const j = param.junction
+		if (invalidcoord(genome, j.chr, j.start, j.stop)) throw new Error('invalid coord in .junction{}')
+		const s2r = new Map() // k: sample id, v: read count of query junction
+		await utils.get_lines_bigfile({
+			args: [q.file, (q.nochr ? j.chr.replace('chr', '') : j.chr) + ':' + j.start + '-' + j.stop],
+			callback: (line, ps) => {
+				const l = line.split('\t')
+				const start = Number(l[1]) // must always be numbers
+				const stop = Number(l[2])
+				if (start != j.start || stop != j.stop || l[4] != j.strand) return
+				// found this junction. collect read count for sample-level summary
+				for (let i = 5; i < l.length; i++) {
+					const str = l[i]
+					if (!str) continue // blank
+					const sname = q.samples[i - 5]?.name
+					if (sname == undefined) throw new Error('sample undefined')
+					if (limitSamples) {
+						// will filter
+						if (!limitSamples.has(sname)) continue // filtered out
+					}
+					// str is "n;%;%"
+					const vlst = str.split(';').map(Number)
+					const rc = vlst[0] // first field is read count
+					if (!Number.isInteger(rc)) continue
+					if (rc <= 0) continue
+					if (param.minReadCount && rc < param.minReadCount) continue
+					s2r.set(sname, vlst)
+				}
+			}
+		})
+		// todo summarize and return
+		return {}
+	}
 }
 
 async function validate_query_ld(ds, genome) {
