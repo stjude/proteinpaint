@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 Features:
 - Improved GRIN2 snvindel fetch performance and reporting by pre-filtering to open access only projects. Bounded concurrency with concurrencyLimiter.ts
 - Ported gdc.mafBuild from Rust to TypeScript and bounded it with the concurrencyLimiter fixed-size logic
+- CohortMAF: Removed old Rust code and ported the rust watchdog timer to typescript
 
 
 ## 2.194.0
