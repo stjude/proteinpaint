@@ -78,7 +78,6 @@ export const routeFiles = [
 	import('./routes/profile.barchart2.ts'),
 	import('./routes/profile.radar2.ts'),
 	import('./routes/profile.radarFacility2.ts'),
-	import('./routes/profile.forms2.ts'),
 	import('../routes/profile.impressionDistribution.ts'),
 	import('./singleCell/dataRoute.ts'),
 	import('./singleCell/DEgenesRoute.ts'),
