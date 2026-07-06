@@ -13,7 +13,6 @@ import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
 import { compute_mclass } from './vcf.mclass.js'
-import computePercentile from '#shared/compute.percentile.js'
 import serverconfig from './serverconfig.js'
 import {
 	dtsnvindel,
@@ -29,8 +28,7 @@ import {
 	mclasscnvloss,
 	mclassitd,
 	dtTerms,
-	getColors,
-	invalidcoord
+	getColors
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
 import { server_init_db_queries } from './termdb.server.init.ts'
@@ -62,6 +60,7 @@ import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
+import { validate_query_junction } from './junction/validate.ts'
 
 /*
 init
@@ -898,7 +897,7 @@ export function mayValidateBcfMafFilter(q) {
 // for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array
 // samples[] elements: {name:str}
 // returns new array with same length as samples[], {name:int}
-function validateSampleHeader(ds, samples, where) {
+export function validateSampleHeader(ds, samples, where) {
 	const sampleIds = []
 	// ds?.cohort?.termdb.q.sampleName2id must be present
 	if (ds.cohort?.termdb?.q?.sampleName2id) {
@@ -1928,134 +1927,6 @@ async function validate_query_itd(ds, genome) {
 		return { itds }
 	}
 }
-async function validate_query_junction(ds, genome) {
-	const q = ds.queries.junction
-	if (!q) return
-	await setFile(q, 'junction')
-	await utils.validate_tabixfile(q.file)
-	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
-	{
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split('\t')
-		if (l[0] != '#chr') throw 'header line not starting with #chr: ' + q.file
-		if (l.length <= 5) throw 'junction header line must have more than 5 columns: ' + q.file
-		q.samples = l.slice(5).map(i => {
-			return { name: i }
-		})
-		q.samples = validateSampleHeader(ds, q.samples, 'junction')
-	}
-
-	q.get = async param => {
-		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
-			throw new Error('minReadCount must be a non-negative integer')
-		if (param.rglst) return await getJunctions(param)
-		if (param.junction) return await getOneJunctionDetail(param)
-		throw new Error('unknown method')
-	}
-	/*
-	get list of junctions with occurrence in a range
-	{
-		rglst[]
-		filter
-		minReadCount
-	}
-	*/
-	async function getJunctions(param) {
-		utils.validateRglst(param, genome)
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, return blank array for no data
-			return { junctions: [] }
-		}
-		const junctions = [] // list of junctions to be returned
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				callback: (line, ps) => {
-					const l = line.split('\t')
-					const start = Number(l[1]) // must always be numbers
-					const stop = Number(l[2])
-					let j
-					try {
-						j = JSON.parse(l[4])
-					} catch (e) {
-						return
-					}
-					j.chr = l[0]
-					j.start = start
-					j.stop = stop
-					j.strand = l[3]
-					const readcounts = [] // array of read counts of samples carrying this junction
-					for (let i = 5; i < l.length; i++) {
-						const str = l[i]
-						if (!str) continue // blank
-						if (limitSamples) {
-							// will filter
-							if (!limitSamples.has(q.samples[i - 5]?.name)) continue // filtered out
-						}
-						// str is "n;%;%"
-						const vlst = str.split(';').map(Number)
-						const rc = vlst[0] // first field is read count
-						if (!Number.isInteger(rc)) continue
-						if (rc <= 0) continue
-						if (param.minReadCount && rc < param.minReadCount) continue
-						readcounts.push(rc)
-					}
-					if (readcounts.length == 0) return
-					j.sampleCount = readcounts.length
-					j.medianReadCount = computePercentile(readcounts, 50, false)
-					junctions.push(j)
-					// todo terminate when exceeds limit
-				}
-			})
-		}
-		return { junctions }
-	}
-	/*
-	get sample details of one junction
-	{
-		junction{}
-		filter
-		minReadCount
-	}
-	*/
-	async function getOneJunctionDetail(param) {
-		const j = param.junction
-		if (invalidcoord(genome, j.chr, j.start, j.stop)) throw new Error('invalid coord in .junction{}')
-		const s2r = new Map() // k: sample id, v: read count of query junction
-		await utils.get_lines_bigfile({
-			args: [q.file, (q.nochr ? j.chr.replace('chr', '') : j.chr) + ':' + j.start + '-' + j.stop],
-			callback: (line, ps) => {
-				const l = line.split('\t')
-				const start = Number(l[1]) // must always be numbers
-				const stop = Number(l[2])
-				if (start != j.start || stop != j.stop || l[4] != j.strand) return
-				// found this junction. collect read count for sample-level summary
-				for (let i = 5; i < l.length; i++) {
-					const str = l[i]
-					if (!str) continue // blank
-					const sname = q.samples[i - 5]?.name
-					if (sname == undefined) throw new Error('sample undefined')
-					if (limitSamples) {
-						// will filter
-						if (!limitSamples.has(sname)) continue // filtered out
-					}
-					// str is "n;%;%"
-					const vlst = str.split(';').map(Number)
-					const rc = vlst[0] // first field is read count
-					if (!Number.isInteger(rc)) continue
-					if (rc <= 0) continue
-					if (param.minReadCount && rc < param.minReadCount) continue
-					s2r.set(sname, vlst)
-				}
-			}
-		})
-		// todo summarize and return
-		return {}
-	}
-}
-
 async function validate_query_ld(ds, genome) {
 	const q = ds.queries.ld
 	if (!q) return

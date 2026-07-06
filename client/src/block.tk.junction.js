@@ -264,7 +264,7 @@ export function junctionload(tk, block) {
 					if (t.rnapegfile) {
 						par.isrnapeg = 1
 					}
-					dofetch3('junction', { body: par }).then(data => {
+					dofetch3('termdb/junction/onesampletk', { body: par }).then(data => {
 						donenum++
 						if (tk.tracks.length > 1) {
 							block.tkprogress(tk, donenum / tk.tracks.length)
