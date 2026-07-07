@@ -29,7 +29,7 @@ export function init({ genomes }) {
 			const result = await ds.queries.junction.get(q)
 			res.send(result satisfies TermdbJunctionsResponse)
 		} catch (e: any) {
-			res.send({ error: e.message || e })
+			res.send({ status: e.status || 400, error: e.message || String(e) } satisfies TermdbJunctionsResponse)
 			if (e.stack) console.log(e.stack)
 		}
 	}
