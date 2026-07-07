@@ -7,7 +7,7 @@ import type { ChatRequest, ChatResponse, OmnisearchResult } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
-import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtsv, dtfusionrna, string2pos } from '#shared/common.js'
 import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
@@ -98,6 +98,7 @@ class MassAiChatBot implements RxComponent {
 	showTerms: any
 	noResult: any
 	isChat: any
+	showCoordResult: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -118,6 +119,14 @@ class MassAiChatBot implements RxComponent {
 			search: appState.search,
 			nav: appState.nav
 		}
+	}
+
+	/** True when the dataset has any genomic-alteration data type (snvindel/cnv/svfusion), i.e. a genome
+	 * browser can be shown for it. Mirrors the server's getGeneDataTypes().genomeBrowser gating, read
+	 * here from termdbConfig.queries so a typed coordinate can be handled on the client without a request. */
+	datasetHasGenomeBrowser(): boolean {
+		const q = this.app.getState().termdbConfig?.queries
+		return Boolean(q && (q.snvindel || q.cnv || q.svfusion))
 	}
 
 	async init() {
@@ -253,6 +262,19 @@ class MassAiChatBot implements RxComponent {
 					this.clear({ hide: true })
 					return
 				}
+				// A genomic coordinate range (e.g. "chr7:100000-200000") opens the genome browser's genomic
+				// view, but only when the dataset has snvindel/cnv/svfusion. Checked before the length gate
+				// below since a coordinate string can exceed MAX_PROMPT_LENGTH_FOR_OMNISEARCH.
+				const coord = this.datasetHasGenomeBrowser() ? parseGenomicCoord(prompt, this.app.opts.genome) : null
+				if (coord) {
+					try {
+						this.showCoordResult(coord)
+					} catch (e: any) {
+						if (e.stack) console.log(e.stack)
+						sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
+					}
+					return
+				}
 				if (MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH) {
 					//console.log(
 					//	`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
@@ -386,6 +408,39 @@ return the created bubble and allow to be modified
 
 export const chatInit = getCompInit(MassAiChatBot)
 
+// Parse a genomic coordinate RANGE typed into the omnisearch box (e.g. "chr7:100000-200000") into
+// { chr, start, stop }, or null if the input is not such a range. Requires the chr:start-stop form (a
+// bare chr name or single position is intentionally ignored so partial typing doesn't prematurely
+// trigger the genome browser). Final validation (chromosome exists, positions in range) is delegated
+// to string2pos(), which returns null on invalid input.
+function parseGenomicCoord(str: string, genome: any): { chr: string; start: number; stop: number } | null {
+	if (!genome) return null
+	// Cheap SHAPE pre-filter: bail out unless the text looks like a "chr:start-stop" range, so we only
+	// call string2pos() (and only trigger the genome browser) for range-like input. This checks form
+	// only — chromosome existence and position validity are left to string2pos() below.
+	// Regex breakdown: ^ \s*        optional leading spaces
+	//                  \w+         chromosome token (letters/digits/_), e.g. "chr7", "7", "chrX"
+	//                  \s* : \s*   a colon separator, optional spaces around it
+	//                  [\d,]+      start position, digits with optional thousands commas, e.g. "100,000"
+	//                  \s* - \s*   a dash separator, optional spaces around it
+	//                  [\d,]+      stop position
+	//                  \s* $       optional trailing spaces, end of string
+	// Matches (→ passes to string2pos): "chr7:100000-200000", "chr7: 100000-200000",
+	//                                    "chr7:100,000-200,000", "chrX:5000-6000"
+	// Rejected here (→ returns null, falls through to normal search): "chr7" (bare chr),
+	//                "chr7:1000" (single position, no dash), "BRCA1" (gene name), "" (empty)
+	// Note: shape-valid but semantically bad input like "chr7:200000-100000" (start>stop) or
+	//       "chr99:1-2" (no such chromosome) passes this test but is rejected later by string2pos().
+	if (!/^\s*\w+\s*:\s*[\d,]+\s*-\s*[\d,]+\s*$/.test(str)) return null
+	try {
+		const pos = string2pos(str, genome, false)
+		if (!pos) return null
+		return { chr: pos.chr, start: pos.start, stop: pos.stop }
+	} catch {
+		return null
+	}
+}
+
 // Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
 function escapeHtml(s: string): string {
 	return s
@@ -473,41 +528,105 @@ function setRenderers(self: any) {
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
-	// open the genome browser plot for a gene. The browser's mds3 track renders whichever genomic-
-	// alteration data types the dataset has for the gene (SNV/indel, CNV, SV/fusion), so a single launch
-	// covers all three. The plot opens in its own window: when the dataset allows both views, that window
-	// shows "Protein view"/"Genomic view" buttons for the gene (rendered by the genome browser's
-	// GeneSearchRenderer via the gbModeChooserGene config) and transforms in place into the chosen view.
-	// When the dataset restricts the mode (gbRestrictMode), launch directly into the one allowed view.
-	self.launchGenomeBrowser = async (gene: string, coord?: { chr: string; start: number; stop: number }) => {
-		const gbRestrictMode = self.app.getState().termdbConfig?.queries?.gbRestrictMode
-		if (gbRestrictMode == 'protein') {
+	// Open the genome browser as a separate mass chart (chartType 'genomeBrowser') with full plot state,
+	// via launchPlot -> plot_create. The plot's mds3 track renders the dataset's SNV/indel, CNV and
+	// SV/fusion data (whichever it has).
+	// - 'protein': gene/protein view, seeded by gene symbol (blockIsProteinMode=true)
+	// - 'genomic': genomic view over a region (chr/start/stop) from opts.coord (blockIsProteinMode=false)
+	//   — used both for a gene's locus and for a coordinate typed into the omnisearch box
+	// blockIsProteinMode is set explicitly so each view opens as named regardless of the dataset's
+	// default gbRestrictMode. launchPlot() dispatches plot_create and closes the search popup.
+	self.launchGenomeBrowserView = async (
+		mode: 'protein' | 'genomic',
+		opts: { gene?: string; coord?: { chr: string; start: number; stop: number } }
+	) => {
+		if (mode == 'protein') {
+			if (!opts.gene) throw 'gene symbol required for protein view'
 			await self.launchPlot({
 				chartType: 'genomeBrowser',
-				geneSearchResult: { geneSymbol: gene },
+				geneSearchResult: { geneSymbol: opts.gene },
 				blockIsProteinMode: true
 			})
 			return
 		}
-		if (gbRestrictMode == 'genomic') {
-			if (!coord) throw `Could not resolve coordinates for gene "${gene}"`
-			await self.launchPlot({
-				chartType: 'genomeBrowser',
-				geneSearchResult: { chr: coord.chr, start: coord.start, stop: coord.stop },
-				blockIsProteinMode: false
-			})
+		if (!opts.coord) throw 'coordinate required for genomic view'
+		await self.launchPlot({
+			chartType: 'genomeBrowser',
+			geneSearchResult: { chr: opts.coord.chr, start: opts.coord.start, stop: opts.coord.stop },
+			blockIsProteinMode: false
+		})
+	}
+
+	// "Genome Browser": open a chooser popup offering protein vs genomic view of the gene; picking a view
+	// opens the genome browser as a separate mass chart with plot state (see launchGenomeBrowserView).
+	// The two buttons and the protein/genomic decision mirror the genome browser's
+	// GeneSearchRenderer.renderGeneSearch (which shows the same "Protein view of <gene>" / "Genomic view
+	// of <gene>" buttons on an interactive gene search); here they live in the omnisearch popup since the
+	// omnisearch already resolved the gene. A mode-restricted dataset (gbRestrictMode) skips the chooser
+	// and opens its one allowed view directly.
+	self.launchGenomeBrowser = async (gene: string, coord?: { chr: string; start: number; stop: number }) => {
+		const gbRestrictMode = self.app.getState().termdbConfig?.queries?.gbRestrictMode
+		if (gbRestrictMode == 'protein') {
+			await self.launchGenomeBrowserView('protein', { gene })
 			return
 		}
-		// both views allowed: open the plot showing the protein/genomic view chooser for this gene.
-		// gbModeChooserGene carries the gene symbol (protein view) and, when resolved, its coordinate
-		// (genomic view); the user picks a view inside the plot window.
-		const gbModeChooserGene: any = { geneSymbol: gene }
-		if (coord) {
-			gbModeChooserGene.chr = coord.chr
-			gbModeChooserGene.start = coord.start
-			gbModeChooserGene.stop = coord.stop
+		if (gbRestrictMode == 'genomic') {
+			await self.launchGenomeBrowserView('genomic', { coord })
+			return
 		}
-		await self.launchPlot({ chartType: 'genomeBrowser', gbModeChooserGene })
+
+		// both views allowed: show the two view buttons; clicking opens the browser chart in that view
+		self.dom.tip.clear()
+		self.dom.tip.showunder(self.dom.inputNode)
+		const holder = self.dom.resultDiv.append('div').style('margin', '10px')
+		holder.append('div').style('margin-bottom', '5px').text(gene)
+		const btndiv = holder.append('div')
+		const addViewBtn = (label: string, testid: string, mode: 'protein' | 'genomic') => {
+			btndiv
+				.append('button')
+				.attr('data-testid', testid)
+				.style('margin-right', '10px')
+				.text(label)
+				.on(
+					'click',
+					() =>
+						void self
+							.launchGenomeBrowserView(mode, { gene, coord })
+							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+				)
+		}
+		addViewBtn(`Protein view of ${gene}`, `sjpp-mass-chat-gb-protein-${gene}`, 'protein')
+		// genomic view needs a coordinate; omit the button if the gene could not be resolved to one
+		if (coord) addViewBtn(`Genomic view of ${gene}`, `sjpp-mass-chat-gb-genomic-${gene}`, 'genomic')
+	}
+
+	// A genomic coordinate typed into the omnisearch box (e.g. "chr7:100000-200000") opens the genomic
+	// view of the genome browser at that region — but only when the dataset has genomic-alteration data
+	// (snvindel/cnv/svfusion). Show a single result row whose "Genome Browser" button opens the browser
+	// as a separate mass chart with plot state. (No protein view here: a bare region is not tied to one gene.)
+	self.showCoordResult = (coord: { chr: string; start: number; stop: number }) => {
+		self.dom.noMatchShown = false
+		self.clear() // clear + show the popup under the input
+		const label = `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`
+		const tr = self.dom.resultDiv.append('table').append('tr')
+		tr.append('td').text(label).style('padding', '5px 10px')
+		tr.append('td')
+			.append('span')
+			.attr('class', 'sja_menuoption')
+			.attr('data-testid', 'sjpp-mass-chat-coord-genomebrowser')
+			.style('display', 'inline-block')
+			.style('margin', '0px 3px')
+			.style('padding', '5px 10px')
+			.style('border-radius', '5px')
+			.style('cursor', 'pointer')
+			.text('Genome Browser')
+			.on(
+				'click',
+				() =>
+					void self
+						.launchGenomeBrowserView('genomic', { coord })
+						.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+			)
 	}
 
 	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
@@ -577,10 +696,9 @@ function setRenderers(self: any) {
 				}
 			}
 			if (term.isGenomeBrowser) {
-				// open the genome browser in its own plot window; its mds3 track shows the gene's SNV/indel,
-				// CNV and SV/fusion data (whichever the dataset has). When the dataset allows both views, that
-				// window opens with "Protein view"/"Genomic view" buttons for the gene and transforms in
-				// place into the chosen view (see launchGenomeBrowser).
+				// open a chooser window offering "Protein view"/"Genomic view" of the gene; picking a view
+				// opens the genome browser as a separate mass chart with plot state, whose mds3 track shows
+				// the gene's SNV/indel, CNV and SV/fusion data (whichever the dataset has). See launchGenomeBrowser.
 				addBtn('Genome Browser', `sjpp-mass-chat-gene-genomebrowser-${term.gene}`, async () => {
 					await self.launchGenomeBrowser(term.gene, term.coord)
 				})
