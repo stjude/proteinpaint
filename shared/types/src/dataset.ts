@@ -949,6 +949,14 @@ export type SingleCellSamples = {
 	/** extra label to show along with sample, must be a term id as in sampleColumns[] and allow to retrieve value from sample object */
 	extraSampleTabLabel?: string
 	getFilteredSingleCellSamples?: (q: TermdbSingleCellSamplesRequest, includeMeta: boolean) => any
+	/** server-only cache for single-cell sample and meta-result mappings */
+	sampleMappingCache?: {
+		sampleIntIds: Set<any>
+		sampleIntId2Name: Map<any, string>
+		sampleName2IntId: Map<string, any>
+		metaIdMap: Map<string, Map<string, string>>
+		metaResultNames: Set<string>
+	}
 }
 
 type SingleCellDataBase = {
@@ -1030,6 +1038,9 @@ export type SingleCellPlot = {
 	 * server requests. If not provided, the file name or the plot name with the
 	 * spaces replaced with '_' is used. */
 	sampleId?: string
+	/** DELETE FLAG LATER. 
+	 * Quick fix for meta analysis plots with data issues. */
+	doNotCache: boolean
 }
 export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'
