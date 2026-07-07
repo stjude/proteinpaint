@@ -6,8 +6,8 @@
  * Unit tests for python/src/readHDF5.py.
  *
  * These tests verify:
- * - Gene queries function correctly
- * - Error handling for non-existent genes
+ * - Queries function correctly
+ * - Error handling for non-existent items
  * - Data structure validation
  * - File access errors are properly reported
  *
@@ -114,7 +114,7 @@ tape('Query Multiple Genes w/ list', async t => {
 			}
 		})
 
-		t.ok(data.missing_genes.includes('NONEXISTENT_GENE'), 'Missing genes should include an error entry')
+		t.ok(data.missing_items.includes('NONEXISTENT_GENE'), 'Missing genes should include an error entry')
 
 		// Check timing information
 		t.ok(data.timings.total_time_ms !== undefined, 'Should include timing information')
