@@ -1951,7 +1951,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		await setFile(q, 'ssGSEA')
 		q.samples = [] // array of sample ids
 
-		const tmp = await run_rust('readH5', JSON.stringify({ validate: true, hdf5_file: q.file }))
+		const tmp = await run_python('readHDF5.py', JSON.stringify({ validate: true, hdf5_file: q.file }))
 
 		const vr = JSON.parse(tmp)
 		if (vr.status !== 'success') throw vr.message
@@ -1995,7 +1995,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		}
 
 		const time1 = Date.now()
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
+		const tmp = await run_python('readHDF5.py', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 

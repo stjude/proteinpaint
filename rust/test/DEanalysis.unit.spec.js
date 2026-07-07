@@ -12,6 +12,7 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
 const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail
@@ -99,7 +100,7 @@ tape('rust DE sample search test from raw gene counts HDF5 file', async function
 		hdf5_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5',
 		validate: true
 	}
-	const Rustout = await run_rust('readH5', JSON.stringify(inJson))
+	const Rustout = await run_python('readHDF5.py', JSON.stringify(inJson))
 	const RustoutJson = JSON.parse(Rustout)
 
 	const expJson = fs.readFileSync(
