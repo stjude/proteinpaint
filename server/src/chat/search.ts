@@ -10,12 +10,17 @@ import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
  * since getDsAllowedTermTypes() does not report them. */
 export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
 	const allowedTermTypes = getDsAllowedTermTypes(ds) as string[]
+	const snvindel = Boolean(ds.queries?.snvindel)
+	const cnv = Boolean(ds.queries?.cnv)
+	const svfusion = Boolean(ds.queries?.svfusion)
 	return {
 		geneExpression: allowedTermTypes.includes(GENE_EXPRESSION),
 		dnaMethylation: allowedTermTypes.includes(DNA_METHYLATION),
-		snvindel: Boolean(ds.queries?.snvindel),
-		cnv: Boolean(ds.queries?.cnv),
-		svfusion: Boolean(ds.queries?.svfusion)
+		snvindel,
+		cnv,
+		svfusion,
+		// genome browser is offered whenever any genomic-alteration data type is available
+		genomeBrowser: snvindel || cnv || svfusion
 	}
 }
 
@@ -73,7 +78,10 @@ function getGeneDataTypesForEachGene(
 	datasetDataTypes: GeneDataTypeAvailability
 ): GeneDataTypeAvailability {
 	// TODO: replace this dataset-level fallback with per-gene filtering using `ds` and `gene`. This could happen in case of gene panels, or if the dataset has only a subset of genes with SNV/indel data, etc.
-	return { ...datasetDataTypes }
+	const dt = { ...datasetDataTypes }
+	// keep genomeBrowser consistent with the (possibly narrowed) genomic-alteration flags for this gene
+	dt.genomeBrowser = dt.snvindel || dt.cnv || dt.svfusion
+	return dt
 }
 
 /** Match a search string to gene symbols via the genome's gene db. Copied from the shallow branch of

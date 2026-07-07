@@ -38,13 +38,16 @@ export interface GeneDataTypeResult {
 }
 
 /** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
- * (expression / variant sub-types / methylation) to offer. */
+ * (expression / variant sub-types / methylation / genome browser) to offer. */
 export interface GeneDataTypeAvailability {
 	geneExpression: boolean
 	dnaMethylation: boolean
 	snvindel: boolean
 	cnv: boolean
 	svfusion: boolean
+	/** True when any genomic-alteration data type (snvindel/cnv/svfusion) is available, meaning a
+	 * genome browser can be seeded for the gene. Derived from the three flags above. */
+	genomeBrowser: boolean
 }
 
 /** One matched gene together with the data types available for that specific gene. */

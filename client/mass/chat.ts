@@ -175,13 +175,16 @@ class MassAiChatBot implements RxComponent {
 				entry.isGeneVariant = true
 				entry.geneVariantTypes = geneVariantTypes
 			}
+			// genome browser is offered whenever any genomic-alteration data type (snvindel/cnv/svfusion)
+			// is available for this gene; the browser's mds3 track renders all available types together
+			if (dt.genomeBrowser) entry.isGenomeBrowser = true
 			if (dt.dnaMethylation) {
 				entry.isMethylation = true
 				// server-resolved default coordinate, used to seed the genome browser region picker
 				entry.coord = g.coord
 			}
 			// only list a gene if it has at least one available data type / action
-			if (entry.isGeneExpression || entry.isGeneVariant || entry.isMethylation) {
+			if (entry.isGeneExpression || entry.isGeneVariant || entry.isGenomeBrowser || entry.isMethylation) {
 				geneMap.set(gene.toUpperCase(), entry)
 			}
 		}
@@ -466,6 +469,13 @@ function setRenderers(self: any) {
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
+	// open the genome browser plot seeded to the gene (protein/gene view). The browser's mds3 track
+	// renders whichever genomic-alteration data types the dataset has for the gene (SNV/indel, CNV,
+	// SV/fusion), so a single launch covers all three.
+	self.launchGenomeBrowser = async (gene: string) => {
+		await self.launchPlot({ chartType: 'genomeBrowser', geneSearchResult: { geneSymbol: gene } })
+	}
+
 	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
 	// area with a "Submit Region" button (see embedMethylationRegionPicker above); on submit, open a
 	// violin plot of the region-based dnaMethylation term's per-sample beta values.
@@ -531,6 +541,13 @@ function setRenderers(self: any) {
 						await self.launchGeneVariantPlot(term.gene, vt.dtCandidates)
 					})
 				}
+			}
+			if (term.isGenomeBrowser) {
+				// open the genome browser seeded to the gene; its mds3 track shows the gene's SNV/indel,
+				// CNV and SV/fusion data (whichever are available for the dataset)
+				addBtn('Genome Browser', `sjpp-mass-chat-gene-genomebrowser-${term.gene}`, async () => {
+					await self.launchGenomeBrowser(term.gene)
+				})
 			}
 			if (term.isMethylation) {
 				// open a violin plot of the gene's per-sample DNA methylation beta values
