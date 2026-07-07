@@ -227,7 +227,8 @@ class gsea extends PlotBase {
 						dslabel: this.app.vocabApi.vocab.dslabel,
 						sample: config.sample,
 						termId: config.termId,
-						categoryName: config.categoryName
+						categoryName: config.categoryName,
+						signal: this.api?.getAbortSignal()
 					}
 					const response = await dofetch3('termdb/singlecellDEgenes', { body })
 					if (response.error) throw response.error
@@ -253,7 +254,7 @@ class gsea extends PlotBase {
 				} else {
 					const volcanoSettings =
 						config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
-					const model = new VolcanoModel(this.app, config.termType)
+					const model = new VolcanoModel(this, config.termType)
 					const response = await model.getData(config, volcanoSettings)
 					if (!response?.data?.cacheId || response.error) {
 						throw response.error || 'No DE cacheId returned from volcano model'
