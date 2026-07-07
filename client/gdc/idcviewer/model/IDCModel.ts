@@ -77,11 +77,24 @@ export class IDCModel {
 		// Search is case-sensitve, and these asterisks are used to match substrings as wildcards replacement,
 		// Could tighten search by sending every possible case-variant, but seems overkill
 		// or if they actually have regular expression , but it doesnt seem that way
-		const normalizedSearchFilter = searchFilter
-			? [`*${searchFilter.trim().toUpperCase()}*`, `*${searchFilter.trim().toLowerCase()}*`, `*${searchFilter.trim()}*`]
-			: ['*']
+
+		// I'm allowing to search multiple queries with comma separated filter
+		let normalizedSearchFilter: string[] = []
+
+		searchFilter
+			.split(',')
+			.map(s => s.trim())
+			.filter(s => s.length > 0)
+			.map(s => {
+				normalizedSearchFilter = normalizedSearchFilter.concat([
+					`*${s.toUpperCase()}*`,
+					`*${s.toLowerCase()}*`,
+					`*${s}*`
+				])
+			})
 		const operator = 'in'
-		const hasSearchOrCaseFilter = searchFilter.trim() !== '' || caseIDsForFilter.length !== 0
+
+		const hasSearchOrCaseFilter = searchFilter !== '' || caseIDsForFilter.length !== 0
 		const searchFilters = {
 			op: 'or',
 			content: [

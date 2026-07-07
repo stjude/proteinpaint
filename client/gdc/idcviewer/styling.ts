@@ -44,7 +44,7 @@ export const sharedStyleFns = {
 export const idcViewerStyles = {
 	loadingDiv: {
 		display: 'none',
-		'background-color': 'rgba(255, 255, 255, 0.8)',
+		'background-color': sharedColors.fullWhiteBgColor,
 		position: 'absolute',
 		top: '0',
 		left: '0',
@@ -79,6 +79,7 @@ export const idcSearchStyles = {
 		padding: '5px 10px'
 	},
 	inputDiv: {
+		position: 'relative',
 		display: 'flex',
 		'align-items': 'center',
 		'justify-content': 'center',
@@ -97,6 +98,26 @@ export const idcSearchStyles = {
 		border: 'none',
 		'background-color': 'transparent',
 		outline: 'none'
+	},
+	searchTooltip: {
+		position: 'absolute',
+		top: 'calc(100% + 1px)',
+		width: '100%',
+		'box-sizing': 'border-box',
+		left: '50% ',
+		transform: 'translateX(-50%)',
+		'justify-content': 'center',
+		'align-items': 'center',
+		padding: '2px 5px',
+		'border-radius': '1px',
+		border: `1px solid ${sharedColors.borderColor}`,
+		'background-color': sharedColors.fullWhiteBgColor,
+		color: '#000000',
+		'font-size': '15px',
+		'line-height': '1.2',
+		'white-space': 'nowrap',
+		'z-index': '10',
+		display: 'none'
 	}
 } satisfies Record<string, StyleDict>
 
