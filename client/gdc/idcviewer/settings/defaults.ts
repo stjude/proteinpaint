@@ -22,7 +22,7 @@ export const IDCViewerDefaults: IDCViewerOpts = {
 	pageSizeOptions,
 	sortBy: 'submitter_id',
 	sortDirection: 'asc',
-	pageSize: pageSizeOptions[0],
+	pageSize: pageSizeOptions[1],
 	retries: 10,
 	currentPage: 1
 }

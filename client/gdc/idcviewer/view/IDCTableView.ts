@@ -231,9 +231,10 @@ export class IDCTableView {
 						this.holder.select(`#${detailsRowID}`).remove()
 					}
 				})
-
+				const pathologyText = row.wsiCount > 0 ? `${row.wsiCount} Histopathology` : ''
+				const radiologyText = row.radiologyCount > 0 ? `${row.radiologyCount} Radiology` : ''
 				studyCellButton.text(
-					`${row.studiesCount} IDC study (${row.wsiCount} Histopathology + ${row.radiologyCount} Radiology)`
+					`${row.studiesCount} IDC study (${[pathologyText, radiologyText].filter(Boolean).join(' + ')})`
 				)
 			})
 		}
