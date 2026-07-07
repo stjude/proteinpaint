@@ -177,7 +177,7 @@ export class ScatterView {
 				configKey: 'colorTW',
 				chartType,
 				usecase: { target: 'sampleScatter', detail: 'colorTW', specialCase },
-				title: 'Categories to color the ${labels.sample} symbol',
+				title: `Categories to color the ${labels.sample} symbol`,
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
 				numericEditMenuVersion: ['continuous', 'discrete'],
@@ -314,7 +314,9 @@ export class ScatterView {
 		} else if (!this.scatter.config.singleCellPlot) {
 			inputs.push(
 				{
-					label: `${labels.Sample} size`, // changed from 'Sample size', but how is this different from `${itemLabel} size`/`Symbol size`?
+					// below was changed from 'Sample size'
+					// TODO: clarify how this is different from `${itemLabel} size`/`Symbol size`?
+					label: `${labels.Sample} size`,
 					type: 'number',
 					chartType,
 					settingsKey: 'threeSize',
