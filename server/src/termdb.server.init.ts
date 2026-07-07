@@ -2,7 +2,7 @@ import { connect_db } from './utils.js'
 import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
-import type { isSupportedChartCallbacks } from '#types'
+import type { isSupportedChartCallbacks, GeomapSite } from '#types'
 //import { interpolateSqlValues } from './termdb.sql.js'
 
 /*
@@ -242,6 +242,16 @@ export function server_init_db_queries(ds) {
 			}
 			return undefined
 		}
+	}
+
+	/*
+	Build geomap pins from the DB when a dataset names a categorical site term whose per-category
+	values carry lat/lon (the same values{} slot that already holds label/color). Mirrors the
+	_role2terms pattern above: term-gated and generic — the dataset names its term, no term id here.
+	Values without numeric lat/lon are skipped, so coordinate-less placeholders produce no pin.
+	*/
+	if (ds.cohort.termdb.geomap?.siteTermId) {
+		ds.cohort.termdb.geomap.sites = buildGeomapSites(q.termjsonByOneid(ds.cohort.termdb.geomap.siteTermId))
 	}
 
 	{
@@ -600,6 +610,22 @@ export function server_init_db_queries(ds) {
 export function filterTerms(req, ds, terms) {
 	if (!ds.cohort.termdb.isTermVisible || !terms?.length) return terms
 	return terms.filter(term => ds.cohort.termdb.isTermVisible(req.query.__protected__, term))
+}
+
+/*
+	Turn a categorical term's values{} map into geomap pins. A value becomes a pin only when it carries
+	numeric lat & lon (the same per-category slot that holds label/color); coordinate-less values are
+	skipped. Kept generic and exported so it can be unit-tested without a DB.
+*/
+type GeomapSiteValue = { label?: string; lat?: number; lon?: number; country?: string; iso?: string }
+export function buildGeomapSites(term: { values?: Record<string, GeomapSiteValue> } | undefined): GeomapSite[] {
+	const sites: GeomapSite[] = []
+	for (const [key, v] of Object.entries(term?.values || {})) {
+		if (typeof v?.lat != 'number' || !Number.isFinite(v.lat)) continue
+		if (typeof v?.lon != 'number' || !Number.isFinite(v.lon)) continue
+		sites.push({ id: key, name: v.label || key, lat: v.lat, lon: v.lon, country: v.country, iso: v.iso })
+	}
+	return sites
 }
 
 /*
