@@ -77,11 +77,12 @@ export class ScatterLasso {
 		if (samples.length == 0) return
 		this.view.dom.tip.show(event.clientX, event.clientY)
 
+		const labels = this.scatter.config.controlLabels
 		const menuDiv = this.view.dom.tip.d.append('div')
 		menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(`List ${samples.length} samples`)
+			.text(`List ${samples.length} ${labels.samples}`)
 			.on('click', event => {
 				this.view.dom.tip.hide()
 				this.showTable(
@@ -180,7 +181,8 @@ export class ScatterLasso {
 		const rows: TableRow[] = []
 		const columns: TableColumn[] = []
 		const first = group.items[0]
-		if ('sample' in first) columns.push(formatCell('Sample', 'label'))
+		const labels = this.scatter.config.controlLabels
+		if ('sample' in first) columns.push(formatCell(labels.Sample, 'label'))
 		if (this.scatter.config.term) columns.push(formatCell(this.scatter.config.term.term.name, 'label'))
 		if (this.scatter.config.term2) columns.push(formatCell(this.scatter.config.term2.term.name, 'label'))
 		if (this.scatter.config.colorTW) columns.push(formatCell(this.scatter.config.colorTW.term.name, 'label'))
