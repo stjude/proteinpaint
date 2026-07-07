@@ -77,7 +77,7 @@ def validate_hdf5_file(hdf5_filename: str, include_items: bool = False) -> dict[
 				except Exception:
 					result["message"] = "Error reading matrix slice or datatype is not numeric"
 
-			return result
+	return result
 
 def detect_hdf5_format(hdf5_filename: str) -> str:
 	with h5py.File(hdf5_filename, "r") as f:
