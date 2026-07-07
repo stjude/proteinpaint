@@ -1040,7 +1040,7 @@ export type SingleCellPlot = {
 	sampleId?: string
 	/** DELETE FLAG LATER. 
 	 * Quick fix for meta analysis plots with data issues. */
-	doNotCache: boolean
+	doNotCache?: boolean
 }
 export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'

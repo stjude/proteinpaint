@@ -6,11 +6,13 @@ import { getNormalRoot } from '#filter/filter.utils'
 
 /** Fetches data for sc app */
 export class SCModel {
+	sc: SCViewer
 	app: AppApi
 	id?: string
 	state: SCFormattedState
 
 	constructor(sc: SCViewer) {
+		this.sc = sc
 		this.app = sc.app
 		this.id = sc.id
 		this.state = sc.app.getState()
@@ -80,7 +82,8 @@ export class SCModel {
 			sample: {
 				eID: config.settings.sc.item.eID,
 				sID: config.settings.sc.item.sID
-			}
+			},
+			signal: this.sc.api?.getAbortSignal()
 		}
 	}
 

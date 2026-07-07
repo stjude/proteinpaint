@@ -29,6 +29,7 @@ export type DERequest = {
 	 * PNG dimensions, and dot styling. The server always renders the volcano PNG
 	 * and returns it plus the threshold-passing rows as the interactive `data`. */
 	volcanoRender: VolcanoRenderRequest
+	signal?: any
 }
 
 /** Thresholds used to classify a data point as "significant" on the volcano plot.
@@ -70,6 +71,7 @@ export type VolcanoRenderRequest = {
 	 * the browser uses the extra resolution for sharpness. Defaults to 1.0
 	 * server-side. */
 	devicePixelRatio?: number
+	signal?: any
 }
 
 /** Everything the client needs to draw one volcano: the pre-rendered PNG of

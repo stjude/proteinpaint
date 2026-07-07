@@ -3,15 +3,18 @@ import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
 import { getGroupColors, toHex } from '../colors'
+import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
+	volcano: Volcano
 	app: MassAppApi
 	config!: any
 	settings!: any
 	termType: string
 
-	constructor(app: MassAppApi, termType: string) {
-		this.app = app
+	constructor(volcano: Volcano, termType: string) {
+		this.volcano = volcano
+		this.app = volcano.app
 		this.termType = termType
 	}
 
@@ -84,7 +87,8 @@ export class VolcanoModel {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup,
-			volcanoRender: this.getVolcanoRender()
+			volcanoRender: this.getVolcanoRender(),
+			signal: this.volcano.api?.getAbortSignal()
 		} as Partial<DiffMethRequest>
 
 		this.addConfounderTw(body)
@@ -126,7 +130,8 @@ export class VolcanoModel {
 			// at fetch time — bigger headroom = more tolerable post-render
 			// zoom before pixelation appears). The server clamp keeps the
 			// bitmap memory bounded.
-			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2
+			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2,
+			signal: this.volcano.api?.getAbortSignal()
 		}
 	}
 
@@ -147,7 +152,8 @@ export class VolcanoModel {
 			sample: this.config.sample,
 			termId: this.config.termId,
 			categoryName: this.config.categoryName,
-			volcanoRender: this.getVolcanoRender()
+			volcanoRender: this.getVolcanoRender(),
+			signal: this.volcano.api?.getAbortSignal()
 		}
 		return body
 	}
@@ -160,7 +166,8 @@ export class VolcanoModel {
 			organism,
 			assay,
 			cohort,
-			volcanoRender: this.getVolcanoRender()
+			volcanoRender: this.getVolcanoRender(),
+			signal: this.volcano.api?.getAbortSignal()
 		}
 	}
 
