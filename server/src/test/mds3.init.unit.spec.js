@@ -1664,10 +1664,10 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	qBad.mafFilter.terms[0].id = 'no_such_field'
 	t.throws(() => mayValidateBcfMafFilter(qBad), /unknown FORMAT key/, 'throws on unknown FORMAT key')
 
-	// no byrange format throws when mafFilter present
+	// no FORMAT anywhere (neither byrange._tk.format nor q.format) throws when mafFilter present
 	const qNoFormat = makeQ()
 	delete qNoFormat.byrange._tk.format
-	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /byrange._tk.format is missing/, 'throws when format missing')
+	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /no FORMAT/, 'throws when format missing')
 
 	// a dataset-configured depth term with a valid mafFormatKey passes validation
 	const qDepth = makeQ()

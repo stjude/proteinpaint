@@ -4,28 +4,13 @@ import path from 'path'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
-import os from 'os'
 import { get_samples } from '../termdb.sql.js'
-import {
-	dtsnvindel,
-	dtcnv,
-	dtfusionrna,
-	dtsv,
-	dt2lesion,
-	optionToDt,
-	formatElapsedTime,
-	mclasscnvgain,
-	mclasscnvloss,
-	mclasscnvAmp,
-	mclasscnvHomozygousDel
-} from '#shared'
-
-import { mayFilterByMaf } from '../mds3.init.js'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
-import { promisify } from 'node:util'
-import { exec as execCallback } from 'node:child_process'
-import type { CnvType, Grin2CacheResult } from './types.ts'
+import { getMaxLesions } from './memory.ts'
+import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
+import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
 
 /**
  * General GRIN2 analysis route
@@ -72,13 +57,6 @@ import type { CnvType, Grin2CacheResult } from './types.ts'
  *   runGrin2Fresh → helpers
  */
 
-// Constants
-const MAX_LESIONS = serverconfig.features.grin2maxLesions || 250000 // Maximum total number of lesions to process to avoid overwhelming the production server
-const GRIN2_MEMORY_BUDGET_MB = 950
-const MEMORY_BASE_MB = 260
-const MEMORY_PER_1K_LESIONS = 2.4
-const MIN_LESIONS = 50000
-
 export function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		// __abortSignal is set by maySetAbortCtrl() middleware in app.middlewares.js
@@ -117,94 +95,6 @@ export function init({ genomes }) {
 			res.status(e.status || 500).send(errorResponse)
 		}
 	}
-}
-
-// =============================================================================
-// MEMORY MANAGEMENT
-// =============================================================================
-
-const exec = promisify(execCallback)
-
-async function getAvailableMemoryMB(): Promise<number> {
-	try {
-		if (process.platform === 'darwin') {
-			// macOS: use vm_stat
-			const { stdout } = await exec('vm_stat')
-			const output = stdout.toString()
-
-			// Parse page size from vm_stat header: "page size of 4096 bytes for Apple silicon, 16384 bytes for Intel macs"
-			const headerLine = output.split('\n')[0] || ''
-			const pageSizeMatch = headerLine.match(/page size of\s+(\d+)\s+bytes/i)
-			const pageSize = pageSizeMatch ? parseInt(pageSizeMatch[1], 10) : 16384
-			const freeMatch = output.match(/Pages free:\s+(\d+)/)
-			const inactiveMatch = output.match(/Pages inactive:\s+(\d+)/)
-			const freePages = freeMatch ? parseInt(freeMatch[1], 10) : 0
-			const inactivePages = inactiveMatch ? parseInt(inactiveMatch[1], 10) : 0
-
-			// Available ≈ free + inactive
-			return ((freePages + inactivePages) * pageSize) / (1024 * 1024)
-		} else {
-			// Linux: use free command
-			const { stdout } = await exec('free -m')
-			const output = stdout.toString()
-			const lines = output.split('\n')
-			const memLine = lines.find(l => l.startsWith('Mem:'))
-			if (memLine) {
-				const parts = memLine.split(/\s+/)
-				return parseInt(parts[6]) // "available" column
-			}
-		}
-	} catch (e) {
-		mayLog(`[GRIN2] Memory check failed, using fallback: ${e}`)
-	}
-
-	// Fallback: os.freemem (less accurate but always works)
-	return os.freemem() / (1024 * 1024)
-}
-
-async function getMaxLesions(): Promise<number> {
-	const availableMemoryMB = await getAvailableMemoryMB()
-	mayLog(`[GRIN2] Available system memory: ${availableMemoryMB.toFixed(0)} MB`)
-
-	// If server is under heavy load, reduce lesion cap. Our calculation assumes each 1,000 lesions use ~2.4MB of memory plus a base overhead (i.e. a linear relationship).
-	if (availableMemoryMB < GRIN2_MEMORY_BUDGET_MB * 2) {
-		const reducedBudget = availableMemoryMB * 0.4
-		mayLog(`[GRIN2] Reducing lesion cap due to memory constraints. New budget: ${reducedBudget.toFixed(2)} MB`)
-		const calculated = Math.floor((reducedBudget - MEMORY_BASE_MB) / MEMORY_PER_1K_LESIONS) * 1000
-		mayLog(`[GRIN2] Calculated lesion cap based on memory: ${calculated.toLocaleString()}`)
-		return Math.max(MIN_LESIONS, Math.min(MAX_LESIONS, calculated))
-	}
-
-	return MAX_LESIONS
-}
-
-// Building the lesion map to send to python
-export function buildLesionTypeMap(availableOptions: string[]): Record<string, string> {
-	const lesionTypeMap: Record<string, string> = {}
-
-	for (const option of availableOptions) {
-		const dt = optionToDt[option]
-		if (!dt || !dt2lesion[dt]) continue
-
-		dt2lesion[dt].lesionTypes.forEach(lt => {
-			lesionTypeMap[lt.lesionType] = lt.name
-		})
-	}
-
-	return lesionTypeMap
-}
-
-// Function to get CNV lesion type based on gain or loss in a more robust way
-export function getCnvLesionType(isGain: boolean): string {
-	const cnvConfig = dt2lesion[dtcnv]
-	const targetName = isGain ? 'Gain' : 'Loss'
-
-	const lesionType = cnvConfig.lesionTypes.find(lt => lt.name === targetName)
-	if (!lesionType) {
-		throw new Error(`CNV lesion type '${targetName}' not found`)
-	}
-
-	return lesionType.lesionType
 }
 
 async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSignal): Promise<GRIN2Response> {
@@ -254,6 +144,14 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 
 	const totalTime = cohortTime + processingTime + grin2AnalysisTime + manhattanPlotTime
 
+	// compact stat-row helpers: fracOfTotal formats "N / totalSamples"; optRow yields one row only when
+	// count > 0 (spread into the summary); note appends a cap/coverage "Note" row.
+	const total = processing.totalSamples!
+	const fracOfTotal = (n?: number) => `${(n ?? 0).toLocaleString()} / ${total.toLocaleString()}`
+	const optRow = (count: number | undefined, label: string): string[][] => (count ? [[label, fracOfTotal(count)]] : [])
+	const capWarningRows: string[][] = []
+	const note = (msg: string) => capWarningRows.push(['Note', msg])
+
 	// Build lesion type display rows
 	const lesionTypeRows: string[][] = []
 	if (processing.lesionCounts?.byType) {
@@ -286,34 +184,27 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 	}
 
 	// Build cap warning if applicable
-	const capWarningRows: string[][] = []
+	const cap = processing.lesionCap?.toLocaleString()
 	const expectedToProcess = processing.totalSamples! - processing.failedSamples!
 	if (processing.processedSamples! < expectedToProcess) {
-		capWarningRows.push([
-			'Note',
-			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached before all samples could be processed. ` +
+		note(
+			`Lesion cap of ${cap} was reached before all samples could be processed. ` +
 				`Analysis ran on ${processing.processedSamples!.toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
-		])
+		)
 	} else if (processing.ssmCapReached) {
 		// The batched SNV/indel fetch hit the cap and skipped some samples' mutations, but the per-sample
 		// loop still processed every sample — so the check above won't catch it. Warn the same way.
-		capWarningRows.push([
-			'Note',
-			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached while loading mutations. ` +
-				`SNV/indel data was not loaded for ${(
-					processing.ssmSamplesDropped ?? 0
-				).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
-		])
+		note(
+			`Lesion cap of ${cap} was reached while loading mutations. SNV/indel data was not loaded for ` +
+				`${(processing.ssmSamplesDropped ?? 0).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		)
 	}
 	// The batched CNV fetch has its own cap (independent of ssm's), so warn separately when it truncated.
 	if (processing.cnvCapReached) {
-		capWarningRows.push([
-			'Note',
-			`Lesion cap of ${processing.lesionCap?.toLocaleString()} was reached while loading CNV segments. ` +
-				`CNV data was not loaded for ${(
-					processing.cnvSamplesDropped ?? 0
-				).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
-		])
+		note(
+			`Lesion cap of ${cap} was reached while loading CNV segments. CNV data was not loaded for ` +
+				`${(processing.cnvSamplesDropped ?? 0).toLocaleString()} of ${expectedToProcess.toLocaleString()} samples.`
+		)
 	}
 
 	// Coverage note: samples that contributed no open-access SNV/indel lesions, broken down by reason so the
@@ -330,11 +221,26 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 		if (processing.unmatchedSamples)
 			reasons.push(`${processing.unmatchedSamples.toLocaleString()} could not be matched to a GDC case`)
 		const affected = (processing.ssmSamplesNoOpenAccess ?? 0) + (processing.unmatchedSamples ?? 0)
-		capWarningRows.push([
-			'Note',
-			`${affected.toLocaleString()} of ${processing.totalSamples!.toLocaleString()} samples contributed no SNV/indel lesions: ` +
-				`${reasons.join('; ')}.`
-		])
+		note(
+			`${affected.toLocaleString()} of ${total.toLocaleString()} samples contributed no SNV/indel lesions: ${reasons.join(
+				'; '
+			)}.`
+		)
+	}
+
+	// Coverage note: samples dropped from a data type by the hypermutator cutoff (too many raw records for
+	// that dt). Per-dt, so a sample can appear under both counts; each is shown with its cutoff.
+	if (processing.ssmSamplesHypermutated || processing.cnvSamplesHypermutated) {
+		const parts: string[] = []
+		if (processing.ssmSamplesHypermutated)
+			parts.push(
+				`${processing.ssmSamplesHypermutated.toLocaleString()} exceeded the SNV/indel cutoff (${request.snvindelOptions?.hyperMutator?.toLocaleString()})`
+			)
+		if (processing.cnvSamplesHypermutated)
+			parts.push(
+				`${processing.cnvSamplesHypermutated.toLocaleString()} exceeded the CNV cutoff (${request.cnvOptions?.hyperMutator?.toLocaleString()})`
+			)
+		note(`Hypermutated samples excluded from a data type: ${parts.join('; ')}.`)
 	}
 
 	const response: GRIN2Response = {
@@ -357,44 +263,13 @@ async function runGrin2(g: any, ds: any, request: GRIN2Request, signal?: AbortSi
 							'Samples with data',
 							`${(processing.samplesWithData ?? 0).toLocaleString()} / ${processing.processedSamples!.toLocaleString()}`
 						],
-						// breakdown of samples with no open-access SNV/indel (batched GDC path), each shown only when
-						// non-zero: controlled-access (data exists but isn't open) vs genuinely no mutation found.
-						...(processing.ssmSamplesControlledAccess
-							? [
-									[
-										'Samples in controlled-access projects',
-										`${processing.ssmSamplesControlledAccess.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
-									]
-							  ]
-							: []),
-						...(processing.ssmSamplesNoMutations
-							? [
-									[
-										'Open-access samples without mutations',
-										`${processing.ssmSamplesNoMutations.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
-									]
-							  ]
-							: []),
-						// queried samples that returned no cnv segment (batched GDC cnv path); shown only when cnv
-						// was requested and some samples had none.
-						...(processing.cnvSamplesNoData
-							? [
-									[
-										'Samples without CNV data',
-										`${processing.cnvSamplesNoData.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
-									]
-							  ]
-							: []),
-						// samples that matched no GDC case at all (never queried) — surfaced so the cohort tallies
-						// reconcile (they're in neither "with data" nor the no-open-access buckets above).
-						...(processing.unmatchedSamples
-							? [
-									[
-										'Unmatched samples (no GDC case)',
-										`${processing.unmatchedSamples.toLocaleString()} / ${processing.totalSamples!.toLocaleString()}`
-									]
-							  ]
-							: []),
+						// coverage rows, each shown only when non-zero (batched GDC path): controlled-access (data
+						// exists but isn't open) vs genuinely no mutation; queried samples with no cnv segment; and
+						// samples that matched no GDC case at all — surfaced so the cohort tallies reconcile.
+						...optRow(processing.ssmSamplesControlledAccess, 'Samples in controlled-access projects'),
+						...optRow(processing.ssmSamplesNoMutations, 'Open-access samples without mutations'),
+						...optRow(processing.cnvSamplesNoData, 'Samples without CNV data'),
+						...optRow(processing.unmatchedSamples, 'Unmatched samples (no GDC case)'),
 						['Unprocessed Samples', (processing.unprocessedSamples ?? 0).toLocaleString()],
 						['Failed Samples', processing.failedSamples!.toLocaleString()],
 						['Total Lesions', processing.totalLesions!.toLocaleString()],
@@ -603,9 +478,9 @@ async function runGrin2Fresh(
 	const processingTime = Date.now() - processStart
 	mayLog(`[GRIN2] Data processing took ${formatElapsedTime(processingTime)}`)
 	mayLog(
-		`[GRIN2] Processing summary: ${processing?.processedSamples ?? 0}/${
+		`[GRIN2] Processing summary: ${(processing?.processedSamples ?? 0).toLocaleString()}/${(
 			processing?.totalSamples ?? 0
-		} samples processed successfully`
+		).toLocaleString()} samples processed successfully`
 	)
 
 	if (processing?.failedSamples !== undefined && processing.failedSamples > 0) {
@@ -673,23 +548,8 @@ async function processSampleData(
 	ds: any,
 	request: GRIN2Request,
 	signal?: AbortSignal
-): Promise<{
-	lesions: any[]
-	processing: {
-		totalSamples: number
-		processedSamples: number
-		failedSamples: number
-		totalLesions: number
-		processedLesions: number
-		unprocessedSamples: number
-		lesionCap?: number
-		lesionCounts?: {
-			total: number
-			byType: Record<string, { count: number; samples: number }>
-		}
-	}
-}> {
-	const lesions: any[] = []
+): Promise<{ lesions: Lesion[]; processing: Grin2Processing }> {
+	const lesions: Lesion[] = []
 	const maxLesions = await getMaxLesions()
 	mayLog(`[GRIN2] Max lesions for this run: ${maxLesions.toLocaleString()}`)
 
@@ -713,49 +573,13 @@ async function processSampleData(
 		samplesPerType.set(type, new Set<string>())
 	}
 
-	const processing = {
+	const processing: Grin2Processing = {
 		totalSamples: samples.length,
 		processedSamples: 0,
 		failedSamples: 0,
 		totalLesions: 0,
 		processedLesions: 0,
 		unprocessedSamples: 0
-	} as {
-		totalSamples: number
-		processedSamples: number
-		failedSamples: number
-		totalLesions: number
-		processedLesions: number
-		unprocessedSamples: number
-		// unique samples that contributed >=1 lesion to the final result (union across all lesion types).
-		// distinct from processedSamples: many cohort cases have no qualifying mutation, so this is smaller.
-		samplesWithData?: number
-		// set when the batched SNV/indel fetch (GDC) hit maxLesions and skipped some samples' ssm. distinct
-		// from the loop cap (unprocessedSamples) because the loop still processed those samples.
-		ssmCapReached?: boolean
-		ssmSamplesDropped?: number
-		// samples whose case returned no open-access SNV/indel (batched GDC path); a coverage note, not the
-		// cap. distinct from ssmSamplesDropped (cap-skipped) and from failedSamples (per-sample errors).
-		// ssmSamplesNoOpenAccess is the total; the two below break it down for the summary.
-		ssmSamplesNoOpenAccess?: number
-		// of ssmSamplesNoOpenAccess: samples in controlled-access GDC projects (data exists but isn't open).
-		ssmSamplesControlledAccess?: number
-		// of ssmSamplesNoOpenAccess: open-access samples that genuinely returned no SNV/indel mutation.
-		ssmSamplesNoMutations?: number
-		// samples that mapped to no GDC case at all (batched path), so were never queried; counted in neither
-		// samplesWithData nor ssmSamplesNoOpenAccess, hence surfaced separately so the cohort tallies reconcile.
-		unmatchedSamples?: number
-		// cnv analogs of the ssm* fields above (batched GDC cnv fetch). cnvCapReached/cnvSamplesDropped mirror
-		// ssmCapReached/ssmSamplesDropped; cnvSamplesNoData is queried samples that returned no cnv segment
-		// (cnv segment data is open-access, so there is no controlled-access split like ssm has).
-		cnvCapReached?: boolean
-		cnvSamplesDropped?: number
-		cnvSamplesNoData?: number
-		lesionCap?: number
-		lesionCounts?: {
-			total: number
-			byType: Record<string, { count: number; samples: number }>
-		}
 	}
 
 	// Fetch and convert per-sample mutation data with bounded concurrency. For sqlite datasets each
@@ -847,7 +671,19 @@ async function processSampleData(
 				}
 				const mlst = batchMlst.length ? [...batchMlst, ...getMlst] : getMlst
 
-				const { sampleLesions, contributedTypes } = processSampleMlst(sample.name, mlst, request, cnvType)
+				const { sampleLesions, contributedTypes, hyperMutatedDt } = processSampleMlst(
+					sample.name,
+					mlst,
+					request,
+					cnvType
+				)
+
+				// Tally per-dt hypermutator exclusions (a sample can be hypermutated for snvindel, cnv, both,
+				// or neither). Synchronous like the counters below, so concurrent workers can't interleave.
+				for (const dt of hyperMutatedDt) {
+					if (dt === dtsnvindel) processing.ssmSamplesHypermutated = (processing.ssmSamplesHypermutated ?? 0) + 1
+					else if (dt === dtcnv) processing.cnvSamplesHypermutated = (processing.cnvSamplesHypermutated ?? 0) + 1
+				}
 
 				// Filter out chrM lesions
 				const filteredLesions = ds.queries.singleSampleMutation.discoPlot?.skipChrM
@@ -937,268 +773,4 @@ async function processSampleData(
 	processing.samplesWithData = samplesWithData.size
 
 	return { lesions, processing }
-}
-
-/** Process the MLST data for each sample - no per-type caps, just filter and convert */
-export function processSampleMlst(
-	sampleName: string,
-	mlst: any[],
-	request: GRIN2Request,
-	cnvType: CnvType
-): { sampleLesions: any[]; contributedTypes: Set<number> } {
-	const sampleLesions: any[] = []
-	const contributedTypes = new Set<number>()
-
-	for (const m of mlst) {
-		switch (m.dt) {
-			case dtsnvindel: {
-				if (!request.snvindelOptions) break
-
-				const les = filterAndConvertSnvIndel(sampleName, m, request.snvindelOptions)
-				if (les) {
-					sampleLesions.push(les)
-					contributedTypes.add(dtsnvindel)
-				}
-				break
-			}
-
-			case dtcnv: {
-				if (!request.cnvOptions) break
-
-				const les = filterAndConvertCnv(sampleName, m, request.cnvOptions, cnvType)
-				if (les) {
-					sampleLesions.push(les)
-					contributedTypes.add(dtcnv)
-				}
-				break
-			}
-
-			case dtfusionrna: {
-				if (!request.fusionOptions) break
-
-				const les = filterAndConvertFusion(sampleName, m, request.fusionOptions)
-				if (les) {
-					// Add all lesions (breakpoints) to the list
-					if (Array.isArray(les[0])) {
-						// Multiple lesions (two breakpoints)
-						for (const lesion of les as string[][]) {
-							sampleLesions.push(lesion)
-						}
-					} else {
-						// Single lesion
-						sampleLesions.push(les)
-					}
-					contributedTypes.add(dtfusionrna)
-				}
-				break
-			}
-
-			case dtsv: {
-				if (!request.svOptions) break
-
-				const les = filterAndConvertSV(sampleName, m, request.svOptions)
-				if (les) {
-					// Add all lesions (breakpoints) to the list
-					if (Array.isArray(les[0])) {
-						// Multiple lesions (two breakpoints)
-						for (const lesion of les as string[][]) {
-							sampleLesions.push(lesion)
-						}
-					} else {
-						// Single lesion
-						sampleLesions.push(les)
-					}
-					contributedTypes.add(dtsv)
-				}
-				break
-			}
-
-			default:
-				break
-		}
-	}
-
-	return { sampleLesions, contributedTypes }
-}
-
-export function filterAndConvertSnvIndel(
-	sampleName: string,
-	entry: any,
-	options: GRIN2Request['snvindelOptions']
-): string[] | null {
-	// Check if options and consequences exist for typescript
-	if (!options?.consequences) {
-		return null
-	}
-
-	// Only include mutations whose consequence class is selected. An empty list means no consequence is
-	// selected, so nothing is included — mirrors cnvOptions.cnvCategories, and the UI disables Run when
-	// snvindel is the only enabled data type with no consequence checked.
-	if (!options.consequences.includes(entry.class)) {
-		return null
-	}
-
-	if (!Number.isInteger(entry.pos)) {
-		return null
-	}
-
-	if (options.mafFilter?.lst?.length) {
-		// has non-empty maf filter. apply maf filtering
-		if (!Array.isArray(entry.vafs)) return null // lacks vaf and skip entry
-		// TEMP fix! delete this and use !mayFilterByMaf(options.mafFilter, entry) when helper accepts .vafs[]
-		const copy = { dt: dtsnvindel }
-		for (const v of entry.vafs) {
-			copy[v.id] = v.refCount + ',' + v.altCount
-		}
-		try {
-			if (!mayFilterByMaf(options.mafFilter, copy)) return null
-		} catch (e: unknown) {
-			mayLog('mayFilterByMaf() crashed on a snvindel ' + (e instanceof Error ? e.message : String(e)))
-			return null
-		}
-	}
-
-	const start = entry.pos
-	const end = entry.pos
-
-	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
-
-	return [sampleName, entry.chr, start, end, dt2lesion[dtsnvindel].lesionTypes[0].lesionType]
-}
-
-/** Pick the gain/loss thresholds for a cnv segment's resolved value type. A per-type entry in
- * cnvOptions.byType (mixed cohort) wins over the flat lossThreshold/gainThreshold (single-type
- * cohort). Returns null when neither supplies a complete pair. 'category' never reaches here. */
-function resolveCnvThresholds(
-	options: NonNullable<GRIN2Request['cnvOptions']>,
-	effectiveType: CnvType
-): { lossThreshold: number; gainThreshold: number } | null {
-	const byType = options.byType?.[effectiveType as 'log2ratio' | 'segmean' | 'copyNumber']
-	const lossThreshold = byType?.lossThreshold ?? options.lossThreshold
-	const gainThreshold = byType?.gainThreshold ?? options.gainThreshold
-	if (lossThreshold === undefined || gainThreshold === undefined) return null
-	return { lossThreshold, gainThreshold }
-}
-
-export function filterAndConvertCnv(
-	sampleName: string,
-	entry: any,
-	options: GRIN2Request['cnvOptions'],
-	cnvType: CnvType
-): string[] | null {
-	if (!options) return null
-
-	if (!Number.isInteger(entry.start)) return null
-	if (!Number.isInteger(entry.stop)) return null
-
-	// Filter max segment length (applies to every cnv type). Default 0 = no filter, matching the
-	// request contract; an omitted maxSegLength must not silently drop all segments.
-	const maxSegLength = options.maxSegLength ?? 0
-	if (maxSegLength > 0 && entry.stop - entry.start > maxSegLength) {
-		return null
-	}
-
-	// Classify the segment as gain or loss according to how this cnv value is quantified.
-	// A per-entry valueType (stamped at the data source, e.g. GDC loadCnvFile) wins over the
-	// dataset-level default, so a single cohort may mix segmean and copyNumber segments.
-	const effectiveType: CnvType = entry.valueType ?? cnvType
-	let isGain: boolean
-	if (effectiveType == 'category') {
-		// qualitative call carried in the segment's class; no numeric thresholds.
-		// When the request lists cnvCategories (UI checkboxes), drop any segment whose class isn't selected;
-		// an omitted list (undefined) means "all classes", an empty list means "none".
-		if (Array.isArray(options.cnvCategories) && !options.cnvCategories.includes(entry.class)) return null
-		// map the class to a gain/loss lesion. GDC's 5-category data distinguishes a gain from a high-level
-		// amplification and a loss from a homozygous deletion; GRIN2 renders only gain vs loss, so both
-		// gain-like classes => gain and both loss-like classes => loss.
-		if (entry.class == mclasscnvgain || entry.class == mclasscnvAmp) isGain = true
-		else if (entry.class == mclasscnvloss || entry.class == mclasscnvHomozygousDel) isGain = false
-		else return null
-	} else {
-		// numeric value: log2ratio/segmean (baseline 0) or copyNumber (baseline 2).
-		// The comparison is identical across these; only the threshold values differ,
-		// e.g. copyNumber uses positive cutoffs straddling baseline 2 (loss<=1, gain>=3).
-		// In a mixed cohort, cnvOptions.byType[effectiveType] supplies the right cutoffs for this
-		// segment; otherwise fall back to the flat lossThreshold/gainThreshold (single-type cohort).
-		const thresholds = resolveCnvThresholds(options, effectiveType)
-		if (!thresholds) return null
-		if (!Number.isFinite(entry.value)) return null
-		if (entry.value >= thresholds.gainThreshold) isGain = true
-		else if (entry.value <= thresholds.lossThreshold) isGain = false
-		else return null // between thresholds = neutral
-	}
-
-	const lesionType = getCnvLesionType(isGain)
-
-	// TODO: implement hypermutator threshold filter (maybe calculate number of mutations per sample?)
-
-	const start = entry.start
-	const end = entry.stop
-
-	return [sampleName, entry.chr, start, end, lesionType]
-}
-
-export function filterAndConvertFusion(
-	sampleName: string,
-	entry: any,
-	_options: GRIN2Request['fusionOptions']
-): string[] | string[][] | null {
-	// Validate required fields and check for undefined for typescript
-	if (!entry.chrA || entry.posA === undefined) {
-		return null
-	}
-
-	// First breakpoint on chrA
-	const startA = entry.posA
-	const endA = entry.posA
-
-	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, dt2lesion[dtfusionrna].lesionTypes[0].lesionType]
-
-	// Check if there's a second breakpoint on chrB
-	if (entry.chrB && entry.posB !== undefined) {
-		// Inter-chromosomal fusion or same chromosome with two breakpoints
-		const startB = entry.posB
-		const endB = entry.posB
-
-		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, dt2lesion[dtfusionrna].lesionTypes[0].lesionType]
-
-		// Return both breakpoints as separate lesions
-		// This will correctly identify genes affected at both fusion partners
-		return [lesionA, lesionB]
-	}
-
-	// Only chrA breakpoint available
-	return lesionA
-}
-
-export function filterAndConvertSV(
-	sampleName: string,
-	entry: any,
-	_options: GRIN2Request['svOptions']
-): string[] | string[][] | null {
-	// Validate required fields for for typescript
-	if (!entry.chrA || entry.posA === undefined) {
-		return null
-	}
-
-	// First breakpoint on chrA
-	const startA = entry.posA
-	const endA = entry.posA
-
-	const lesionA: string[] = [sampleName, entry.chrA, startA, endA, dt2lesion[dtsv].lesionTypes[0].lesionType]
-
-	// Check if there's a second breakpoint on chrB
-	if (entry.chrB && entry.posB !== undefined) {
-		// Inter-chromosomal SV or same chromosome with two breakpoints
-		const startB = entry.posB
-		const endB = entry.posB
-
-		const lesionB: string[] = [sampleName, entry.chrB, startB, endB, dt2lesion[dtsv].lesionTypes[0].lesionType]
-
-		// Return both breakpoints as separate lesions
-		return [lesionA, lesionB]
-	}
-
-	// Only chrA breakpoint available
-	return lesionA
 }

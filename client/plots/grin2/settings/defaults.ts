@@ -3,6 +3,11 @@ export const CNV_LOSS_THRESHOLD_FALLBACK = -0.4
 export const CNV_GAIN_THRESHOLD_FALLBACK = 0.4
 export const CNV_MAX_SEG_LENGTH_FALLBACK = 2_000_000
 
+/** Hypermutator cutoffs: a sample with more than this many raw records for a data type is excluded from
+ * that data type (0 disables). Defaults mirror the GDC GRIN2 prototype. */
+export const SNVINDEL_HYPERMUTATOR_FALLBACK = 8000
+export const CNV_HYPERMUTATOR_FALLBACK = 500
+
 /** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. Mirrors CnvSegmentQuery in #types. */
 export type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
 
