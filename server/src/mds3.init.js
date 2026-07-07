@@ -838,8 +838,10 @@ q = ds.queries.snvindel
 */
 export function mayValidateBcfMafFilter(q) {
 	if (!q.mafFilter) return // no maf filter on this ds
-	const format = q.byrange?._tk?.format
-	if (!format) throw 'snvindel.mafFilter is set but byrange._tk.format is missing'
+	// bcf datasets carry FORMAT under byrange._tk.format; API-backed datasets (e.g. GDC) declare it at the
+	// query level as q.format. Either supplies the same FORMAT shape, so depth-term auto-population works for both.
+	const format = q.byrange?._tk?.format || q.format
+	if (!format) throw 'snvindel.mafFilter is set but no FORMAT (byrange._tk.format or q.format) is available'
 	if (q.mafFilter._depthTermsAdded) return // already processed (init may run more than once)
 
 	// validate that every term references real FORMAT keys, branching by mode.

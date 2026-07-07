@@ -20,7 +20,13 @@ import {
 const CNV_CLASS_ORDER = [mclasscnvgain, mclasscnvAmp, mclasscnvloss, mclasscnvHomozygousDel, mclasscnvloh]
 import { filterInit } from '#filter'
 import type { GRIN2ControlsCallbacks, DtUsage } from '../GRIN2Types'
-import { CNV_MAX_SEG_LENGTH_FALLBACK, CNV_TYPE_CONFIG, EXCLUDE_OVERLAP_FRAC_FALLBACK } from '../settings/defaults'
+import {
+	CNV_MAX_SEG_LENGTH_FALLBACK,
+	CNV_TYPE_CONFIG,
+	EXCLUDE_OVERLAP_FRAC_FALLBACK,
+	SNVINDEL_HYPERMUTATOR_FALLBACK,
+	CNV_HYPERMUTATOR_FALLBACK
+} from '../settings/defaults'
 import type { CnvType } from '../settings/defaults'
 
 // Styling constants used only by the controls view
@@ -62,6 +68,8 @@ export class GRIN2ControlsView {
 	private cnv_lossThreshold: any = null
 	private cnv_gainThreshold: any = null
 	private cnv_maxSegLength: any = null
+	private cnv_hyperMutator: any = null
+	private snvindel_hyperMutator: any = null
 	/** how this ds quantifies cnv values; from the selected cnv type or ds.queries.cnv.type, default 'log2ratio' */
 	private cnvType: CnvType = 'log2ratio'
 	/** id of the user-selected cnv file type, when the ds exposes singleSampleMutation.cnvTypes (else null) */
@@ -133,6 +141,9 @@ export class GRIN2ControlsView {
 			requestConfig.snvindelOptions = {
 				consequences: this.getSelectedConsequences()
 			}
+			if (this.snvindel_hyperMutator) {
+				requestConfig.snvindelOptions.hyperMutator = parseFloat(this.snvindel_hyperMutator.property('value'))
+			}
 			if (this.snvindelMafFilter) {
 				requestConfig.snvindelOptions.mafFilter = this.snvindelMafFilter
 			}
@@ -140,6 +151,9 @@ export class GRIN2ControlsView {
 		if (dtUsage[dtcnv]?.checked) {
 			requestConfig.cnvOptions = {
 				maxSegLength: parseFloat(this.cnv_maxSegLength.property('value'))
+			}
+			if (this.cnv_hyperMutator) {
+				requestConfig.cnvOptions.hyperMutator = parseFloat(this.cnv_hyperMutator.property('value'))
 			}
 			// id of the selected cnv file type (datasets exposing singleSampleMutation.cnvTypes, e.g. GDC)
 			if (this.cnvSelectedTypeId) requestConfig.cnvOptions.cnvType = this.cnvSelectedTypeId
@@ -233,6 +247,16 @@ export class GRIN2ControlsView {
 				}
 			}).main(this.snvindelMafFilter)
 		}
+
+		// Hypermutator cutoff: samples with more SNV/indel records than this are excluded from snvindel (0 disables)
+		this.snvindel_hyperMutator = this.addOptionRowToTable(
+			t2,
+			'Hypermutator Cutoff',
+			this.config.settings?.snvindelOptions?.hyperMutator ?? SNVINDEL_HYPERMUTATOR_FALLBACK,
+			0,
+			undefined,
+			1
+		).attr('title', 'Exclude a sample from SNV/indel when it has more than this many records. 0 disables.')
 
 		const isChecked = this.config.settings.dtUsage[dtsnvindel].checked
 		t2.table.style('display', isChecked ? '' : 'none')
@@ -366,6 +390,15 @@ export class GRIN2ControlsView {
 			1e9,
 			1000
 		)
+		// Hypermutator cutoff: samples with more cnv segments than this are excluded from cnv (0 disables)
+		this.cnv_hyperMutator = this.addOptionRowToTable(
+			t2,
+			'Hypermutator Cutoff',
+			savedCnv?.hyperMutator ?? CNV_HYPERMUTATOR_FALLBACK,
+			0,
+			undefined,
+			1
+		).attr('title', 'Exclude a sample from CNV when it has more than this many segments. 0 disables.')
 	}
 
 	private addFusionRow(table: any) {

@@ -62,7 +62,7 @@ export type GRIN2Request = {
 		 * Absent (undefined) yields no snvindel lesions (the getter guards on it). */
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
-		hyperMutator?: number // Default: 1000
+		hyperMutator?: number // Default: 8000
 		/** MAF filter object (tvslst) to filter mutations by allele frequency / read depth, sourced from
 		 * queries.snvindel.mafFilter (bcf-backed datasets that expose per-sample allelic depth). */
 		mafFilter?: Filter
