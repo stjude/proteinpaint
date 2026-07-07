@@ -14,6 +14,15 @@ export class GeneSearchRenderer {
 
 	main() {
 		this.renderGeneSearch()
+		// A preset gene (e.g. from the mass omnisearch "Genome Browser" launch) opens this plot window
+		// already showing the protein/genomic view buttons for that gene, without the user re-searching.
+		// Picking a view transforms the window into the browser via interactions.onGeneSearch (the same
+		// path as the interactive gene search below). Only reached when the ds allows both modes; a
+		// mode-restricted ds is launched directly into its one allowed view by the caller.
+		const preset = this.state.config.gbModeChooserGene
+		if (preset?.geneSymbol && !this.state.config.geneSearchResult) {
+			this.renderModeButtons(preset)
+		}
 	}
 
 	renderGeneSearch() {
@@ -29,24 +38,7 @@ export class GeneSearchRenderer {
 				// found a hit {chr,start,stop,geneSymbol}
 				if (result.geneSymbol && !gbRestrictMode) {
 					// user found a gene and no restricted mode from ds, ask user if to use either protein/genomic mode
-
-					// on repeated gene search, detect if btndiv is present, and remove, avoiding showing duplicate buttons
-					this.holder.select('.sjpp_gbmodebtndiv').remove()
-					// create new div and buttons
-					const btndiv = this.holder.append('div').attr('class', 'sjpp_gbmodebtndiv').style('margin-top', '10px')
-					btndiv
-						.append('button')
-						.style('margin-right', '10px')
-						.text('Protein view of ' + result.geneSymbol)
-						.on('click', async () => {
-							await this.interactions.onGeneSearch(result, true)
-						})
-					btndiv
-						.append('button')
-						.text('Genomic view of ' + result.geneSymbol)
-						.on('click', async () => {
-							await this.interactions.onGeneSearch(result, false)
-						})
+					this.renderModeButtons(result)
 					return
 				}
 				// only one possibility of gb mode and it can be auto determined
@@ -71,5 +63,33 @@ export class GeneSearchRenderer {
 		}
 
 		const result = addGeneSearchbox(arg)
+	}
+
+	/** Render the two view-choice buttons for a resolved gene hit {geneSymbol, chr, start, stop}.
+	 * Clicking transforms the plot window into that view via interactions.onGeneSearch. Shared by the
+	 * interactive gene search and the preset (omnisearch) launch. */
+	renderModeButtons(result) {
+		// on repeated gene search, detect if btndiv is present, and remove, avoiding showing duplicate buttons
+		this.holder.select('.sjpp_gbmodebtndiv').remove()
+		// create new div and buttons
+		const btndiv = this.holder.append('div').attr('class', 'sjpp_gbmodebtndiv').style('margin-top', '10px')
+		btndiv
+			.append('button')
+			.attr('data-testid', 'sjpp-gb-protein-view-btn')
+			.style('margin-right', '10px')
+			.text('Protein view of ' + result.geneSymbol)
+			.on('click', async () => {
+				await this.interactions.onGeneSearch(result, true)
+			})
+		// genomic view needs a coordinate; omit the button if the preset gene could not be resolved to one
+		if (result.chr) {
+			btndiv
+				.append('button')
+				.attr('data-testid', 'sjpp-gb-genomic-view-btn')
+				.text('Genomic view of ' + result.geneSymbol)
+				.on('click', async () => {
+					await this.interactions.onGeneSearch(result, false)
+				})
+		}
 	}
 }

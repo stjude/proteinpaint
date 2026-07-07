@@ -473,19 +473,23 @@ function setRenderers(self: any) {
 		await self.launchPlot({ chartType: 'summary', term: tw })
 	}
 
-	// open the genome browser plot seeded to the gene. The browser's mds3 track renders whichever
-	// genomic-alteration data types the dataset has for the gene (SNV/indel, CNV, SV/fusion), so a
-	// single launch covers all three. Two views are supported:
-	// - 'protein': gene/protein view, seeded by gene symbol (blockIsProteinMode=true)
-	// - 'genomic': genomic view over the gene's locus, seeded by chr/start/stop (blockIsProteinMode=false)
-	// blockIsProteinMode is set explicitly so each button opens its named view regardless of the
-	// dataset's default gbRestrictMode.
-	self.launchGenomeBrowser = async (
-		gene: string,
-		mode: 'protein' | 'genomic' = 'protein',
-		coord?: { chr: string; start: number; stop: number }
-	) => {
-		if (mode == 'genomic') {
+	// open the genome browser plot for a gene. The browser's mds3 track renders whichever genomic-
+	// alteration data types the dataset has for the gene (SNV/indel, CNV, SV/fusion), so a single launch
+	// covers all three. The plot opens in its own window: when the dataset allows both views, that window
+	// shows "Protein view"/"Genomic view" buttons for the gene (rendered by the genome browser's
+	// GeneSearchRenderer via the gbModeChooserGene config) and transforms in place into the chosen view.
+	// When the dataset restricts the mode (gbRestrictMode), launch directly into the one allowed view.
+	self.launchGenomeBrowser = async (gene: string, coord?: { chr: string; start: number; stop: number }) => {
+		const gbRestrictMode = self.app.getState().termdbConfig?.queries?.gbRestrictMode
+		if (gbRestrictMode == 'protein') {
+			await self.launchPlot({
+				chartType: 'genomeBrowser',
+				geneSearchResult: { geneSymbol: gene },
+				blockIsProteinMode: true
+			})
+			return
+		}
+		if (gbRestrictMode == 'genomic') {
 			if (!coord) throw `Could not resolve coordinates for gene "${gene}"`
 			await self.launchPlot({
 				chartType: 'genomeBrowser',
@@ -494,11 +498,16 @@ function setRenderers(self: any) {
 			})
 			return
 		}
-		await self.launchPlot({
-			chartType: 'genomeBrowser',
-			geneSearchResult: { geneSymbol: gene },
-			blockIsProteinMode: true
-		})
+		// both views allowed: open the plot showing the protein/genomic view chooser for this gene.
+		// gbModeChooserGene carries the gene symbol (protein view) and, when resolved, its coordinate
+		// (genomic view); the user picks a view inside the plot window.
+		const gbModeChooserGene: any = { geneSymbol: gene }
+		if (coord) {
+			gbModeChooserGene.chr = coord.chr
+			gbModeChooserGene.start = coord.start
+			gbModeChooserGene.stop = coord.stop
+		}
+		await self.launchPlot({ chartType: 'genomeBrowser', gbModeChooserGene })
 	}
 
 	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
@@ -536,9 +545,8 @@ function setRenderers(self: any) {
 			// ('Gene expression', variant types, 'DNA methylation') — all shown together in the same row.
 			tr.append('td').text(term.name).style('padding', '5px 10px')
 			const btnTd = tr.append('td')
-			// create a styled action button in `parent`; on click runs onClick and surfaces any error
-			const makeBtn = (parent: any, label: string, testid: string, onClick: () => Promise<void>) => {
-				return parent
+			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) => {
+				btnTd
 					.append('span')
 					.attr('class', 'sja_menuoption')
 					.attr('data-testid', testid)
@@ -550,8 +558,6 @@ function setRenderers(self: any) {
 					.text(label)
 					.on('click', () => void onClick().catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e))))
 			}
-			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) =>
-				makeBtn(btnTd, label, testid, onClick)
 			if (term.isGeneExpression) {
 				// open a summary plot of the gene's expression
 				addBtn('Gene expression', `sjpp-mass-chat-gene-exp-${term.gene}`, async () => {
@@ -571,30 +577,12 @@ function setRenderers(self: any) {
 				}
 			}
 			if (term.isGenomeBrowser) {
-				// "Genome Browser" is a toggle: clicking it reveals two view options. Both open the genome
-				// browser whose mds3 track shows the gene's SNV/indel, CNV and SV/fusion data (whichever the
-				// dataset has). "Genomic view" opens the gene's locus in genomic mode; "Protein view" opens
-				// the gene/protein view.
-				const gbWrap = btnTd.append('span').style('display', 'inline-block')
-				const gbToggle = gbWrap
-					.append('span')
-					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mass-chat-gene-genomebrowser-${term.gene}`)
-					.style('display', 'inline-block')
-					.style('margin', '0px 3px')
-					.style('padding', '5px 10px')
-					.style('border-radius', '5px')
-					.style('cursor', 'pointer')
-					.text('Genome Browser')
-				const gbViews = gbWrap.append('span').style('display', 'none')
-				makeBtn(gbViews, 'Genomic view', `sjpp-mass-chat-gene-genomebrowser-genomic-${term.gene}`, async () => {
-					await self.launchGenomeBrowser(term.gene, 'genomic', term.coord)
-				})
-				makeBtn(gbViews, 'Protein view', `sjpp-mass-chat-gene-genomebrowser-protein-${term.gene}`, async () => {
-					await self.launchGenomeBrowser(term.gene, 'protein')
-				})
-				gbToggle.on('click', () => {
-					gbViews.style('display', gbViews.style('display') == 'none' ? 'inline-block' : 'none')
+				// open the genome browser in its own plot window; its mds3 track shows the gene's SNV/indel,
+				// CNV and SV/fusion data (whichever the dataset has). When the dataset allows both views, that
+				// window opens with "Protein view"/"Genomic view" buttons for the gene and transforms in
+				// place into the chosen view (see launchGenomeBrowser).
+				addBtn('Genome Browser', `sjpp-mass-chat-gene-genomebrowser-${term.gene}`, async () => {
+					await self.launchGenomeBrowser(term.gene, term.coord)
 				})
 			}
 			if (term.isMethylation) {
