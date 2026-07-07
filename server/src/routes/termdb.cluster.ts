@@ -330,7 +330,7 @@ async function queryHDF5(hdf5_file, query) {
 	}
 
 	try {
-		// Call the Rust script with input parameters
+		// Call the python script with input parameters
 		const result = await run_python('readHDF5.py', JSON.stringify(input))
 
 		// Check if the result exists and contains sample data

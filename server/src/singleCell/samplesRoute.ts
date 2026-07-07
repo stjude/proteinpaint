@@ -455,7 +455,6 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 		const time1 = Date.now()
 		const python_output = await run_python('readHDF5.py', JSON.stringify(read_hdf5_input_type))
 		mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
-		console.log('Python output:', python_output)
 		const result = JSON.parse(python_output)
 		const out = result.query_output[query_gene]?.samples
 		if (!out) throw new Error(`No expression data for ${query_gene}`)

@@ -43,50 +43,41 @@ def _decode_string_array(arr: np.ndarray) -> list[str]:
 def validate_hdf5_file(hdf5_filename: str, include_items: bool = False) -> dict[str, Any]:
 	
 	file_format = detect_hdf5_format(hdf5_filename)
+	result={
+		"status": "failure",
+		"message": (
+			"Missing or invalid required datasets: "
+			f"matrix='{MATRIX_NAME}', row_dataset='{ROW_NAME}', col_dataset='{COL_NAME}'"
+		),
+		"file_path": hdf5_filename,
+		"format": "unknown",
+		"matrix_dimensions": {"num_rows": 'unknown', "num_columns": 'unknown'}
+	}
+	if file_format == "supported":
+		result["format"] = "matrix"
+		with h5py.File(hdf5_filename, "r") as f:
+			dataset = f[MATRIX_NAME]
+			sample_count=int(f[COL_NAME].shape[0])
+			gene_count=int(f[ROW_NAME].shape[0])
+			matrix_shape = dataset.shape
+			col_data = [s.replace("\\", "") for s in _decode_string_array(f[COL_NAME][...])]
+			if len(matrix_shape) == 2 and matrix_shape[0] == gene_count and matrix_shape[1] == sample_count:
+				try:
+					_ = dataset[0:1, 0:1]
+					matrix_valid = dataset.dtype.kind in {"f", "i", "u"}
+					result['status']= "success" if matrix_valid else "failure"
+					result['message'] = "HDF5 matrix file loaded successfully" if matrix_valid else "Invalid matrix structure"
+					result["matrix_dimensions"] = {
+										"num_rows": matrix_shape[0],
+										"num_columns": matrix_shape[1]
+										}
+					result[COL_NAME] = col_data
+					if include_items:
+						result["items"] = _decode_string_array(f[ROW_NAME][...])
+				except Exception:
+					result["message"] = "Error reading matrix slice or datatype is not numeric"
 
-	if file_format != "supported":
-		return {
-			"status": "failure",
-			"message": (
-				"Missing or invalid required datasets: "
-				f"matrix='{MATRIX_NAME}', row_dataset='{ROW_NAME}', col_dataset='{COL_NAME}'"
-			),
-			"file_path": hdf5_filename,
-			"format": "unknown",
-			"matrix_dimensions": {"num_rows": 'unknown', "num_columns": 'unknown'}
-		}
-	
-	with h5py.File(hdf5_filename, "r") as f:
-		dataset = f[MATRIX_NAME]
-		sample_count=int(f[COL_NAME].shape[0])
-		gene_count=int(f[ROW_NAME].shape[0])
-		matrix_shape = dataset.shape
-		col_data = [s.replace("\\", "") for s in _decode_string_array(f[COL_NAME][...])]
-		matrix_valid = False
-		if len(matrix_shape) == 2 and matrix_shape[0] == gene_count and matrix_shape[1] == sample_count:
-			# Rust version validates by attempting to read a 1x1 slice.
-			try:
-				_ = dataset[0:1, 0:1]
-				matrix_valid = dataset.dtype.kind in {"f", "i", "u"}
-			except Exception:
-				matrix_valid = False
-
-			result: dict[str, Any] = {
-			"status": "success" if matrix_valid else "failure",
-			"message": "HDF5 matrix file loaded successfully" if matrix_valid else "Invalid matrix structure",
-			"file_path": hdf5_filename,
-			"format": "matrix",
-			"matrix_dimensions": {
-				"num_rows": matrix_shape[0],
-				"num_columns": matrix_shape[1]
-			},
-			COL_NAME: col_data
-		}
-
-		if include_items:
-			result["items"] = _decode_string_array(f[ROW_NAME][...])
-
-		return result
+			return result
 
 def detect_hdf5_format(hdf5_filename: str) -> str:
 	with h5py.File(hdf5_filename, "r") as f:
@@ -108,7 +99,9 @@ def query_genes(hdf5_filename: str, gene_names: list[str]) -> dict[str, Any]:
 		samples = [s.replace("\\", "") for s in _decode_string_array(f[COL_NAME][...])]
 		counts = f[MATRIX_NAME]
 		counts_f8 = counts.astype("f8")
+		t0 = time.perf_counter()
 		gene_to_index: dict[str, int] = {gene: idx for idx, gene in enumerate(genes)}
+		timings["build_hashmap_ms"] = int((time.perf_counter() - t0)*1000)
 		genes_left=[]
 		missing=[]
 		for gene in gene_names:
@@ -117,8 +110,6 @@ def query_genes(hdf5_filename: str, gene_names: list[str]) -> dict[str, Any]:
 				continue
 			genes_left.append(gene)
 
-		t0 = time.perf_counter()
-		timings["build_hashmap_ms"] = int((time.perf_counter() - t0)*1000)
 		rows_per_chunk = max(1, batch_element_size // len(samples))
 		genes_map: dict[str, Any] = {}
 		
@@ -193,7 +184,7 @@ def main() -> int:
 		input_text = sys.stdin.read().strip()
 		if not input_text:
 			_json_out({"status": "error", "message": "No stdin input provided"})
-			return 1
+			return 0
 
 		input_data = _parse_input(input_text)
 		hdf5_filename = input_data["hdf5_file"]
@@ -212,11 +203,11 @@ def main() -> int:
 		_json_out(
 			validation_results
 		)
-		return 1
+		return 0
 
 	except Exception as e:
 		_json_out({"status": "error", "message": str(e)})
-		return 1
+		return 0
 
 
 if __name__ == "__main__":
