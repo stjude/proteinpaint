@@ -699,7 +699,8 @@ export const tkt = {
 	mds3: 'mds3', //
 	bedgraphdot: 'bedgraphdot',
 	bam: 'bam',
-	ld: 'ld'
+	ld: 'ld',
+	j2: 'j2' // mds3 cohort junction
 }
 
 export function validtkt(what) {

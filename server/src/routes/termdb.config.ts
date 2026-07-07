@@ -426,6 +426,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	if (q.images) {
 		q2.images = {} //nothing to pass to the client for now, but the key must be present
 	}
+	if (q.junction) {
+		q2.junction = {}
+	}
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset. allows plot to determine if term type specific feature is applicable for a ds

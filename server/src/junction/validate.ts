@@ -98,6 +98,9 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 					} catch (_) {
 						return
 					}
+					computeType(j)
+					if (!j.type) throw new Error('no type')
+					// skip type by param
 					j.chr = l[0]
 					j.start = start
 					j.stop = stop
@@ -171,4 +174,8 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 		// todo summarize and return
 		return {}
 	}
+}
+function computeType(j) {
+	// todo
+	j.type = 'canonical'
 }
