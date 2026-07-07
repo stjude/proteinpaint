@@ -459,10 +459,21 @@ function getSampleId4Cell(ds, tw, cell, filteredSamples) {
 	/** Note: Do not use .eID. Only for GDC in separate pathway */
 	const metaResultId = tw.term.sample.sID
 	const metaIdMap = ds.queries?.singleCell?.data?.metaIdMap?.get?.(metaResultId)
-	const sampleName = metaIdMap?.get?.(cell.cellId) || cell.sampleId
+	const sampleMappingCache = ds.queries?.singleCell?.samples?.sampleMappingCache
+	let sampleName = metaIdMap?.get?.(cell.cellId)
+	if (!sampleName && cell.sampleId != undefined) {
+		sampleName = sampleMappingCache?.sampleIntId2Name?.get?.(cell.sampleId)
+		if (!sampleName) {
+			const numericSampleId = Number(cell.sampleId)
+			if (Number.isFinite(numericSampleId)) {
+				sampleName = sampleMappingCache?.sampleIntId2Name?.get?.(numericSampleId)
+			}
+		}
+		if (!sampleName && typeof cell.sampleId == 'string') sampleName = cell.sampleId
+	}
 	if (!sampleName) return
 	if (filteredSamples.size > 0 && !filteredSamples.has(sampleName)) return
-	const sampleId = ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
+	const sampleId = sampleMappingCache?.sampleName2IntId?.get?.(sampleName) ?? ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
 	if (sampleId == undefined) {
 		throw new Error(`single cell meta result cannot map sample name = ${sampleName} to sample id`)
 	}
