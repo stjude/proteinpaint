@@ -13,7 +13,10 @@ import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
 const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
-const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
+// Max prompt length for omnisearch to trigger. Sized to accommodate typed genomic coordinate ranges
+// (handled in doSearch), e.g. "chr7:100000-200000" (18 chars) or larger loci like
+// "chr16:100000000-200000000" (25 chars); gene/dictionary names are well within this.
+const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 35
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
 
 /** Build a region-based dnaMethylation term for the given coordinates. */
@@ -98,7 +101,6 @@ class MassAiChatBot implements RxComponent {
 	showTerms: any
 	noResult: any
 	isChat: any
-	showCoordResult: any
 
 	constructor(opts: any) {
 		this.type = MassAiChatBot.type
@@ -143,7 +145,13 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		// Single server request that searches dictionary variables and genes together, and reports the
+		// Genomic coordinate typed as the prompt (e.g. "chr7:100000-200000" or "7:100000-200000") is
+		// treated as another searchable data type, alongside dictionary terms and genes: when the dataset
+		// has genomic-alteration data (snvindel/cnv/svfusion) and the prompt is a valid coordinate range,
+		// a coordinate result is added below whose "Genome Browser" button opens the genomic view. Parsed
+		// client-side (no server round trip); a coordinate never matches a gene/dictionary term.
+		const coord = this.datasetHasGenomeBrowser() ? parseGenomicCoord(prompt, this.app.opts.genome) : null
+		// Single server request that searches genomic coordinates, dictionary variables and genes together, and reports the
 		// dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene lookup for the
 		// search results, so the client does not need an extra genelookup request during omnisearch.
 		const data: OmnisearchResult = await dofetch3('termdb/chat', {
@@ -202,6 +210,14 @@ class MassAiChatBot implements RxComponent {
 			}
 		}
 		for (const entry of geneMap.values()) lst.push(entry)
+		// Add the genomic coordinate as its own result entry (like a gene entry), rendered by showTerm
+		if (coord) {
+			lst.push({
+				isCoord: true,
+				name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`,
+				coord
+			})
+		}
 		if (!lst.length) {
 			// Show the "No match..." message one time at the first miss
 			if (!this.dom.noMatchShown) {
@@ -260,19 +276,6 @@ class MassAiChatBot implements RxComponent {
 				if (!prompt) {
 					this.dom.noMatchShown = false
 					this.clear({ hide: true })
-					return
-				}
-				// A genomic coordinate range (e.g. "chr7:100000-200000") opens the genome browser's genomic
-				// view, but only when the dataset has snvindel/cnv/svfusion. Checked before the length gate
-				// below since a coordinate string can exceed MAX_PROMPT_LENGTH_FOR_OMNISEARCH.
-				const coord = this.datasetHasGenomeBrowser() ? parseGenomicCoord(prompt, this.app.opts.genome) : null
-				if (coord) {
-					try {
-						this.showCoordResult(coord)
-					} catch (e: any) {
-						if (e.stack) console.log(e.stack)
-						sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
-					}
 					return
 				}
 				if (MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH) {
@@ -612,35 +615,6 @@ function setRenderers(self: any) {
 		if (coord) addViewBtn(`Genomic view of ${gene}`, `sjpp-mass-chat-gb-genomic-${gene}`, 'genomic')
 	}
 
-	// A genomic coordinate typed into the omnisearch box (e.g. "chr7:100000-200000") opens the genomic
-	// view of the genome browser at that region — but only when the dataset has genomic-alteration data
-	// (snvindel/cnv/svfusion). Show a single result row whose "Genome Browser" button opens the browser
-	// as a separate mass chart with plot state. (No protein view here: a bare region is not tied to one gene.)
-	self.showCoordResult = (coord: { chr: string; start: number; stop: number }) => {
-		self.dom.noMatchShown = false
-		self.clear() // clear + show the popup under the input
-		const label = `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`
-		const tr = self.dom.resultDiv.append('table').append('tr')
-		tr.append('td').text(label).style('padding', '5px 10px')
-		tr.append('td')
-			.append('span')
-			.attr('class', 'sja_menuoption')
-			.attr('data-testid', 'sjpp-mass-chat-coord-genomebrowser')
-			.style('display', 'inline-block')
-			.style('margin', '0px 3px')
-			.style('padding', '5px 10px')
-			.style('border-radius', '5px')
-			.style('cursor', 'pointer')
-			.text('Genome Browser')
-			.on(
-				'click',
-				() =>
-					void self
-						.launchGenomeBrowserView('genomic', { coord })
-						.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
-			)
-	}
-
 	// DNA methylation: open a genome browser at the gene's default coordinates inline in the result
 	// area with a "Submit Region" button (see embedMethylationRegionPicker above); on submit, open a
 	// violin plot of the region-based dnaMethylation term's per-sample beta values.
@@ -670,6 +644,30 @@ function setRenderers(self: any) {
 
 	self.showTerm = function (term: any) {
 		const tr = select(this)
+
+		if (term.isCoord) {
+			// Genomic coordinate row: region label + a "Genome Browser" button opening the genomic view as
+			// a separate mass chart with plot state. No protein view — a bare region is not tied to one gene.
+			tr.append('td').text(term.name).style('padding', '5px 10px')
+			tr.append('td')
+				.append('span')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', 'sjpp-mass-chat-coord-genomebrowser')
+				.style('display', 'inline-block')
+				.style('margin', '0px 3px')
+				.style('padding', '5px 10px')
+				.style('border-radius', '5px')
+				.style('cursor', 'pointer')
+				.text('Genome Browser')
+				.on(
+					'click',
+					() =>
+						void self
+							.launchGenomeBrowserView('genomic', { coord: term.coord })
+							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+				)
+			return
+		}
 
 		if (term.isGene) {
 			// Gene row: gene name as a plain label, with an action button per available data type
