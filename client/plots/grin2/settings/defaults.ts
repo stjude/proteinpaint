@@ -4,9 +4,13 @@ export const CNV_GAIN_THRESHOLD_FALLBACK = 0.4
 export const CNV_MAX_SEG_LENGTH_FALLBACK = 2_000_000
 
 /** Hypermutator cutoffs: a sample with more than this many raw records for a data type is excluded from
- * that data type (0 disables). Defaults mirror the GDC GRIN2 prototype. */
+ * that data type (0 disables). SNV/indel counts mutation burden (source-agnostic), so 8000 is a safe
+ * default. CNV counts *segments*, which varies hugely by data source: sparse for GDC's categorical cnv
+ * (~30/case) but hundreds-to-thousands for dense native segmentation — where a fixed 500 silently drops
+ * whole-sample CNV (esp. aneuploid, gain-heavy samples). So CNV defaults OFF (opt-in); set it per-run when
+ * the source warrants it. */
 export const SNVINDEL_HYPERMUTATOR_FALLBACK = 8000
-export const CNV_HYPERMUTATOR_FALLBACK = 500
+export const CNV_HYPERMUTATOR_FALLBACK = 0
 
 /** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. Mirrors CnvSegmentQuery in #types. */
 export type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'

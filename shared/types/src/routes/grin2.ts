@@ -96,8 +96,10 @@ export type GRIN2Request = {
 		 * every class; an empty array includes none. Ignored for numeric cnv types (gain/loss come from
 		 * thresholds, not discrete classes). */
 		cnvCategories?: string[]
-		/** Hypermutator max cut off for CNVs per case */
-		hyperMutator?: number // Default: 500
+		/** Hypermutator max cut off: exclude a sample's CNV when it has more than this many segments (0 =
+		 * disabled). Off by default — segment counts vary too much across data sources for a safe fixed value
+		 * (see CNV_HYPERMUTATOR_FALLBACK). Set per-run when the source warrants it. */
+		hyperMutator?: number // Default: 0 (off)
 		/** For datasets that expose multiple cnv file types (ds.queries.singleSampleMutation.cnvTypes),
 		 * the id of the user-selected type. The server resolves this id to a source-specific data_type
 		 * and a valueType, loads only the matching file, and classifies segments with that type's
