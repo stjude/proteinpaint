@@ -3,10 +3,10 @@ import { buildGeomapSites } from '../termdb.server.init.ts'
 
 /*
 Tests:
-	buildGeomapSites() - keeps only values with numeric lat & lon, maps key/label -> id/name
-	buildGeomapSites() - skips non-numeric / non-finite coordinates
-	buildGeomapSites() - carries country/iso, falls back name to key when label absent
-	buildGeomapSites() - empty/undefined term yields empty list
+	buildGeomapSites() - maps geoLocation rows to pins (id from site_code, name, lat/lon)
+	buildGeomapSites() - skips rows without numeric finite coordinates
+	buildGeomapSites() - id falls back to name when site_code is empty; row with neither id nor coords dropped
+	buildGeomapSites() - empty/undefined input yields empty list
 */
 
 tape('\n', t => {
@@ -14,52 +14,53 @@ tape('\n', t => {
 	t.end()
 })
 
-tape('buildGeomapSites() maps coord-bearing values to pins', t => {
-	const term = {
-		values: {
-			'IN-MAA-AA': { label: 'Chennai', lat: 13.08, lon: 80.27, country: 'India', iso: 'IND' },
-			'IN-IXC-AA': { label: 'Chandigarh', lat: 30.73, lon: 76.78 }
-		}
-	}
-	const sites = buildGeomapSites(term)
-	t.equal(sites.length, 2, 'both valid values become sites')
-	const chennai = sites.find(s => s.id === 'IN-MAA-AA')
+tape('buildGeomapSites() maps geoLocation rows to pins', t => {
+	const rows = [
+		{ name: 'SPMC', latitude: 7.0986, longitude: 125.6198, site_code: 'PH-DVO-AA' },
+		{ name: 'UNOP', latitude: 14.6082, longitude: -90.5451, site_code: 'GT-GUA-AA' }
+	]
+	const sites = buildGeomapSites(rows)
+	t.equal(sites.length, 2, 'both valid rows become sites')
 	t.deepEqual(
-		chennai,
-		{ id: 'IN-MAA-AA', name: 'Chennai', lat: 13.08, lon: 80.27, country: 'India', iso: 'IND' },
-		'id/name/lat/lon/country/iso mapped from the value'
+		sites[0],
+		{ id: 'PH-DVO-AA', name: 'SPMC', lat: 7.0986, lon: 125.6198 },
+		'id from site_code; name/lat/lon mapped'
 	)
 	t.end()
 })
 
-tape('buildGeomapSites() skips values without numeric finite coordinates', t => {
-	const term = {
-		values: {
-			good: { label: 'Good', lat: 1, lon: 2 },
-			noCoords: { label: 'Placeholder' },
-			nanLat: { label: 'NaN', lat: NaN, lon: 2 },
-			stringLon: { label: 'Str', lat: 1, lon: '2' as unknown as number },
-			infinite: { label: 'Inf', lat: Infinity, lon: 2 }
-		}
-	}
-	const sites = buildGeomapSites(term)
+tape('buildGeomapSites() skips rows without numeric finite coordinates', t => {
+	const rows = [
+		{ name: 'good', latitude: 1, longitude: 2, site_code: 'G' },
+		{ name: 'noCoords', site_code: 'N' },
+		{ name: 'nanLat', latitude: NaN, longitude: 2, site_code: 'X' },
+		{ name: 'strLon', latitude: 1, longitude: '2' as unknown as number, site_code: 'Y' },
+		{ name: 'inf', latitude: Infinity, longitude: 2, site_code: 'Z' }
+	]
 	t.deepEqual(
-		sites.map(s => s.id),
-		['good'],
-		'only the value with numeric finite lat/lon is kept'
+		buildGeomapSites(rows).map(s => s.id),
+		['G'],
+		'only the row with numeric finite lat/lon is kept'
 	)
 	t.end()
 })
 
-tape('buildGeomapSites() falls back name to the key when label is absent', t => {
-	const sites = buildGeomapSites({ values: { ABC: { lat: 0, lon: 0 } } })
-	t.equal(sites[0].name, 'ABC', 'name defaults to the value key')
+tape('buildGeomapSites() id falls back to name; unusable rows dropped', t => {
+	const rows = [
+		{ name: 'NoCode', latitude: 5, longitude: 6 },
+		{ latitude: 5, longitude: 6 } // no site_code and no name -> dropped
+	]
+	const sites = buildGeomapSites(rows)
+	t.deepEqual(
+		sites,
+		[{ id: 'NoCode', name: 'NoCode', lat: 5, lon: 6 }],
+		'id/name fall back to name; the id-less row is dropped'
+	)
 	t.end()
 })
 
-tape('buildGeomapSites() returns empty list for empty/undefined term', t => {
-	t.deepEqual(buildGeomapSites(undefined), [], 'undefined term -> []')
-	t.deepEqual(buildGeomapSites({}), [], 'term without values -> []')
-	t.deepEqual(buildGeomapSites({ values: {} }), [], 'empty values -> []')
+tape('buildGeomapSites() returns empty list for empty/undefined input', t => {
+	t.deepEqual(buildGeomapSites(undefined as unknown as []), [], 'undefined -> []')
+	t.deepEqual(buildGeomapSites([]), [], 'empty array -> []')
 	t.end()
 })
