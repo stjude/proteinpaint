@@ -196,10 +196,24 @@ A: {
   "viewMode": "protein"
 }
 
+--- Explicit protein view (restriction phrasing) ---
+Q: "restrict the FRVT85 genome browser to the protein view"
+A: {
+  "genePhrase": "FRVT85",
+  "viewMode": "protein"
+}
+
 --- Explicit genomic view ---
 Q: "show the genomic view of YGT5"
 A: {
   "genePhrase": "YGT5",
+  "viewMode": "genomic"
+}
+
+--- Explicit genomic view (restriction phrasing) ---
+Q: "restrict the FRVT85 genome browser to the genomic view"
+A: {
+  "genePhrase": "FRVT85",
   "viewMode": "genomic"
 }
 
