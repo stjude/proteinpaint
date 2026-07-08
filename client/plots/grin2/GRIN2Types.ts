@@ -54,7 +54,7 @@ export interface GRIN2RequestData {
 	maxCappedPoints?: number
 	hardCap?: number
 	binSize?: number
-	snvindelOptions?: { consequences: string[]; mafFilter?: any }
+	snvindelOptions?: { consequences: string[]; mafFilter?: any; hyperMutator?: number }
 	cnvOptions?: {
 		lossThreshold?: number
 		gainThreshold?: number
@@ -62,6 +62,8 @@ export interface GRIN2RequestData {
 		cnvType?: string
 		/** categorical cnv (ds.queries.cnv.type='category'): mclass keys of the cnv-segment types to include */
 		cnvCategories?: string[]
+		/** samples with more raw cnv segments than this are excluded from cnv (0 disables) */
+		hyperMutator?: number
 	}
 	fusionOptions?: Record<string, any>
 	svOptions?: Record<string, any>
