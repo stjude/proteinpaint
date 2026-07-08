@@ -46,14 +46,18 @@ export class IDCSearchView {
 		)
 		const inputDiv = applyStyles(searchDiv.append('div'), idcSearchStyles.inputDiv)
 		addSvg(inputDiv, magnifyingGlassPath)
+
 		const searchTooltip = applyStyles(inputDiv.append('div'), idcSearchStyles.searchTooltip)
 			.attr('class', 'idcviewer-search-tooltip')
+			.attr('id', 'idcviewer-search-tooltip')
 			.attr('role', 'tooltip')
 			.text('Press Enter to Search.')
+
 		// SearchInput
 		applyStyles(inputDiv.append('input').attr('type', 'search'), idcSearchStyles.searchInput)
 			.attr('placeholder', 'e.g. C3L,TCGA,01BR001')
 			.attr('aria-label', 'IDC case search')
+			.attr('aria-describedby', 'idcviewer-search-tooltip')
 			.property('value', this.args.searchFilter || '')
 			.attr('class', 'idcviewer-search-input')
 			.on('focus', () => {
