@@ -26,7 +26,7 @@ export function init({ genomes }) {
 			const ds = gn.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.junction) throw 'junction query not supported'
-			const result = await ds.queries.junction.get(q)
+			const result = await ds.queries.junction.listJunctions(q)
 			res.send(result satisfies TermdbJunctionsResponse)
 		} catch (e: any) {
 			res.send({ status: e.status || 400, error: e.message || String(e) } satisfies TermdbJunctionsResponse)

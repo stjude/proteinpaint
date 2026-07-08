@@ -27,6 +27,298 @@ const type2color = new Map([
 	['a3ss', 'red']
 ])
 
+export function renderTk(data, tk, block) {
+	if (data) {
+		// server returned fresh data
+		if (data.junctions?.length == 0) return
+		if (!Number.isFinite(data.maxReadCount)) throw new Error('data.maxReadCount is not number')
+		rawdata2track(data.junctions, tk, block)
+		// tk.data[] set
+	} else {
+		// this is called from config menu. server data is already parsed at tk.data[]
+	}
+
+	const viewpxwidth = block.width + block.subpanels.reduce((i, j) => i + j.leftpad + j.width, 0)
+
+	setColor(tk)
+
+	tk.sections.jug.g.selectAll('*').remove()
+
+	// do not clear leftaxis, leave it to transition
+
+	// all graphs go in here
+	const mg = tk.sections.jug.g
+
+	tk.data.sort((a, b) => {
+		return a._x - b._x
+	})
+
+	/* disc radius, determined by sample count for each junction
+	will show >1 sample count in disc
+	TODO may show piechart for sample stratification
+	so need to slightly increase disc radius to fit these
+*/
+	const maxsamplecount = tk.data.reduce((max, j) => Math.max(max, j.sampleCount), 0)
+	{
+		const radius = 5
+		let mrd = 0 // max radius
+		const w = Math.pow(radius, 2) * Math.PI // unit area
+		if (maxsamplecount <= 10) {
+			mrd = w * maxsamplecount * 0.9
+		} else if (maxsamplecount <= 100) {
+			mrd = w * 10
+		} else if (maxsamplecount <= 1000) {
+			mrd = w * 14
+		} else {
+			mrd = w * 20
+		}
+		const sf_discradius = scaleLinear()
+			.domain([
+				1,
+				maxsamplecount * 0.5 + 0.1,
+				maxsamplecount * 0.6 + 0.1,
+				maxsamplecount * 0.7 + 0.1,
+				maxsamplecount * 0.8 + 0.1,
+				maxsamplecount
+			])
+			.range([w, w + (mrd - w) * 0.8, w + (mrd - w) * 0.85, w + (mrd - w) * 0.9, w + (mrd - w) * 0.95, mrd])
+		let maxradius = 0
+		for (const j of tk.data) {
+			j.radius = Math.sqrt(sf_discradius(j.sampleCount) / Math.PI)
+			if (j.sampleCount > 1) {
+				// more than 1 sample, to show #sample in disc, so to adjust disc radius
+				mg.append('text')
+					.attr('font-family', client.font)
+					.attr('font-size', Math.max(minfontsize, j.radius))
+					.text(j.sampleCount)
+					.each(function () {
+						const b = this.getBBox()
+						const newrad = Math.sqrt(Math.pow(b.width, 2) + Math.pow(b.height, 2)) / 2
+						j.radius = Math.max(j.radius, newrad)
+					})
+					.remove()
+			}
+			j.rimwidth = j.rimcount ? Math.max(2, j.radius / 6) : 0
+			j.radius2 = j.radius + j.rimwidth + (j.rimwidth > 0 ? 1 : 0)
+			maxradius = Math.max(maxradius, j.radius2)
+		}
+		tk.maxradius = maxradius
+	}
+
+	// y position, by median read count for each junction
+	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
+
+	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
+		.domain([tk.readcountCutoff || 1, data.maxReadCount])
+		.range([tk.sections.jug.axisheight, 0])
+
+	// fill axis-y for those junction without previous axisy
+	for (const j of tk.data) {
+		if (j.axisy == undefined) {
+			j.axisy = tk.sections.jug.axisheight - tk.sections.jug.yscale(j.medianReadCount)
+		}
+	}
+
+	// set y position, also pad height for lower discs
+	// all vertical heights set
+	tk.sections.jug.height = tk.sections.jug.axisheight + tk.sections.jug.neckheight + tk.sections.jug.legheight
+
+	// svg
+	mg.attr('transform', `translate(0,${tk.sections.jug.height})`)
+
+	{
+		// top line
+		const topy = -tk.sections.jug.legheight - tk.sections.jug.neckheight - tk.sections.jug.axisheight
+		mg.append('line')
+			.attr('x1', 0)
+			.attr('y1', topy)
+			.attr('y2', topy)
+			.attr('x2', viewpxwidth)
+			.attr('stroke', '#858585')
+			.attr('stroke-opacity', 0.2)
+			.attr('shape-rendering', 'crispEdges')
+		// bottom line
+		mg.append('line')
+			.attr('x1', 0)
+			.attr('y1', topy + tk.sections.jug.axisheight)
+			.attr('y2', topy + tk.sections.jug.axisheight)
+			.attr('x2', viewpxwidth)
+			.attr('stroke', '#858585')
+			.attr('stroke-opacity', 0.2)
+			.attr('shape-rendering', 'crispEdges')
+		let v = 10
+		while (v <= data.maxReadCount) {
+			// order of magnitude line
+			mg.append('line')
+				.attr('x1', 0)
+				.attr('y1', topy + tk.sections.jug.yscale(v))
+				.attr('y2', topy + tk.sections.jug.yscale(v))
+				.attr('x2', viewpxwidth)
+				.attr('stroke', '#858585')
+				.attr('stroke-opacity', 0.2)
+				.attr('stroke-dasharray', '4,4')
+				.attr('shape-rendering', 'crispEdges')
+			v *= 10
+		}
+	}
+
+	const jug = mg
+		.selectAll()
+		.data(tk.data)
+		.enter()
+		.append('g')
+		.attr('transform', d => set_jug(d))
+		.each(function (j) {
+			j.jugg = this
+		})
+
+	// leg 1
+	// leg y1/y2 are constant
+	jug
+		.append('line')
+		.attr('stroke', d => d.color)
+		.attr('x1', d => set_leg_x1(d))
+		.attr('y2', -tk.sections.jug.legheight)
+		.attr('stroke-opacity', lineopacity)
+		.attr('class', 'sja_jug_leg1')
+		.each(function (d) {
+			d.leg1 = this
+		})
+
+	// leg 2
+	jug
+		.append('line')
+		.attr('stroke', d => d.color)
+		.attr('x2', d => set_leg_x2(d))
+		.attr('y1', -tk.sections.jug.legheight)
+		.attr('stroke-opacity', lineopacity)
+		.attr('class', 'sja_jug_leg2')
+		.each(function (d) {
+			d.leg2 = this
+		})
+
+	// jug2
+	const jug2 = jug
+		.append('g')
+		.attr('class', 'sja_jug_jug2')
+		.attr('transform', d => set_jug2(d, tk))
+
+	// stem - jug2
+	// stem may transit to reflect change in yscale / read count
+	jug2
+		.append('line')
+		.attr('stroke', d => d.color)
+		.attr('class', 'sja_jug_stem')
+		.attr('stroke-dasharray', '2,2')
+		.attr('shape-rendering', 'crispEdges')
+		.attr('y1', d => d.radius)
+		.attr('y2', d => {
+			// use previous value
+			return tk.sections.jug.neckheight + d.axisy
+		})
+		.attr('stroke-opacity', lineopacity)
+		.each(function (d) {
+			d.stem = this
+		})
+
+	// disc
+	jug2
+		.append('circle')
+		.each(function (d) {
+			d.disc = this
+		})
+		.attr('r', d => d.radius)
+		.attr('fill', d => d.color)
+		.attr('stroke', 'white')
+		.attr('fill-opacity', discopacity)
+
+	// text in disc
+	jug2
+		.filter(d => d.sampleCount > 1)
+		.append('text')
+		.text(d => d.sampleCount)
+		.attr('font-size', d => Math.max(minfontsize, d.radius))
+		.attr('class', 'sja_jug_discnum')
+		.attr('fill', 'white')
+		.attr('font-family', client.font)
+		.attr('text-anchor', 'middle')
+		.attr('dominant-baseline', 'central')
+
+	/*
+	arcs, not in use
+
+var arcfunc=d3.svg.arc()
+	.innerRadius(function(d){return d.radius+1})
+	.outerRadius(function(d){return d.radius+1+d.rimwidth})
+	.startAngle(0)
+	.endAngle(function(d){return Math.PI*2*d.rimcount/d.data.length})
+jug2.filter(function(d){return d.rimwidth>0})
+	.append('path')
+	.attr('d',arcfunc)
+	.attr('fill',function(d){return d.color})
+	.attr('fill-opacity',function(d){return set_rim(d)})
+	.attr('class','sja_jug_rim')
+*/
+
+	// kick
+	jug2
+		.append('circle')
+		.attr('r', d => d.radius)
+		.attr('stroke', d => d.color)
+		//.attr('class','sja_aa_disckick')
+		.attr('fill', 'white')
+		.attr('fill-opacity', 0)
+		.attr('stroke-opacity', 0)
+		.on('mouseover', (event, d) => {
+			// stop default trigger for block.cursorhlbar
+			event.stopPropagation()
+			d3select(d.disc).attr('fill-opacity', 0.8)
+			d3select(d.stem).attr('stroke-opacity', 1)
+			d3select(d.leg1).attr('stroke-opacity', 1)
+			d3select(d.leg2).attr('stroke-opacity', 1)
+
+			mouseoverSpanBackground(d, tk, block, viewpxwidth)
+			mouseoverBoxplot(d, tk)
+
+			const p = event.target.getBoundingClientRect()
+			tk.tktip.clear().show(p.left + p.width, p.top - 50)
+			showOneJunction(d, tk, tk.tktip.d, block)
+		})
+		.on('mouseout', (event, d) => {
+			tk.tktip.hide()
+			tk.pica.g.selectAll('*').remove()
+			block.cursorhlbar.attr('fill', block.cursorhlbarFillColor) // restore
+			d3select(d.disc).attr('fill-opacity', discopacity)
+			d3select(d.stem).attr('stroke-opacity', lineopacity)
+			d3select(d.leg1).attr('stroke-opacity', lineopacity)
+			d3select(d.leg2).attr('stroke-opacity', lineopacity)
+		})
+		.on('mousedown', event => {
+			event.stopPropagation()
+		})
+		.on('mousemove', event => {
+			event.stopPropagation()
+		})
+		.on('click', (event, j) => {
+			tk.tktip.hide()
+			console.log('todo here')
+		})
+
+	doForceLayout(tk, block, viewpxwidth).then(() => {
+		// done layout
+		set_all(tk)
+		client.axisstyle({
+			axis: tk.sections.jug.axis.transition().call(
+				axisRight()
+					.scale(tk.sections.jug.yscale)
+					.ticks(Math.floor(tk.sections.jug.axisheight / 20), '.0f')
+			),
+			color: 'black',
+			showline: true
+		})
+	})
+}
+
 function rawdata2track(raw, tk, block) {
 	/*
 	run only once, to parse new junctions to tk.data
@@ -153,295 +445,6 @@ function infoFilter_inuse(tk) {
 	return a.lst[a.useFilterIndex]
 }
 
-export function renderTk(data, tk, block) {
-	/*
-tk.data has been made, all junctions in view range, over all samples, passing any filters (applied in server)
-
-decide color for junctions
-*/
-	rawdata2track(data.junctions, tk, block) // tk.data set
-
-	const viewpxwidth = block.width + block.subpanels.reduce((i, j) => i + j.leftpad + j.width, 0)
-
-	setColor(tk)
-
-	tk.sections.jug.g.selectAll('*').remove()
-
-	// do not clear leftaxis, leave it to transition
-
-	// all graphs go in here
-	const mg = tk.sections.jug.g
-
-	tk.data.sort((a, b) => {
-		return a._x - b._x
-	})
-
-	/* disc radius, determined by sample count for each junction
-	will show >1 sample count in disc
-	TODO may show piechart for sample stratification
-	so need to slightly increase disc radius to fit these
-*/
-	const maxsamplecount = tk.data.reduce((max, j) => Math.max(max, j.sampleCount), 0)
-	{
-		const radius = 5
-		let mrd = 0 // max radius
-		const w = Math.pow(radius, 2) * Math.PI // unit area
-		if (maxsamplecount <= 10) {
-			mrd = w * maxsamplecount * 0.9
-		} else if (maxsamplecount <= 100) {
-			mrd = w * 10
-		} else if (maxsamplecount <= 1000) {
-			mrd = w * 14
-		} else {
-			mrd = w * 20
-		}
-		const sf_discradius = scaleLinear()
-			.domain([
-				1,
-				maxsamplecount * 0.5 + 0.1,
-				maxsamplecount * 0.6 + 0.1,
-				maxsamplecount * 0.7 + 0.1,
-				maxsamplecount * 0.8 + 0.1,
-				maxsamplecount
-			])
-			.range([w, w + (mrd - w) * 0.8, w + (mrd - w) * 0.85, w + (mrd - w) * 0.9, w + (mrd - w) * 0.95, mrd])
-		let maxradius = 0
-		for (const j of tk.data) {
-			j.radius = Math.sqrt(sf_discradius(j.sampleCount) / Math.PI)
-			if (j.sampleCount > 1) {
-				// more than 1 sample, to show #sample in disc, so to adjust disc radius
-				mg.append('text')
-					.attr('font-family', client.font)
-					.attr('font-size', Math.max(minfontsize, j.radius))
-					.text(j.sampleCount)
-					.each(function () {
-						const b = this.getBBox()
-						const newrad = Math.sqrt(Math.pow(b.width, 2) + Math.pow(b.height, 2)) / 2
-						j.radius = Math.max(j.radius, newrad)
-					})
-					.remove()
-			}
-			j.rimwidth = j.rimcount ? Math.max(2, j.radius / 6) : 0
-			j.radius2 = j.radius + j.rimwidth + (j.rimwidth > 0 ? 1 : 0)
-			maxradius = Math.max(maxradius, j.radius2)
-		}
-		tk.maxradius = maxradius
-	}
-
-	// y position, by median read count for each junction
-	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
-
-	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
-		.domain([tk.readcountCutoff || 1, tk.maxReadCount])
-		.range([tk.axisheight, 0])
-
-	// fill axis-y for those junction without previous axisy
-	for (const j of tk.data) {
-		if (j.axisy == undefined) {
-			j.axisy = tk.axisheight - tk.sections.jug.yscale(j.medianReadCount)
-		}
-	}
-
-	// set y position, also pad height for lower discs
-	// all vertical heights set
-	tk.sections.jug.height = tk.axisheight + tk.neckheight + tk.legheight
-
-	// svg
-	mg.attr('transform', `translate(0,${tk.sections.jug.height})`)
-
-	{
-		// top line
-		const topy = -tk.legheight - tk.neckheight - tk.axisheight
-		mg.append('line')
-			.attr('x1', 0)
-			.attr('y1', topy)
-			.attr('y2', topy)
-			.attr('x2', viewpxwidth)
-			.attr('stroke', '#858585')
-			.attr('stroke-opacity', 0.2)
-			.attr('shape-rendering', 'crispEdges')
-		// bottom line
-		mg.append('line')
-			.attr('x1', 0)
-			.attr('y1', topy + tk.axisheight)
-			.attr('y2', topy + tk.axisheight)
-			.attr('x2', viewpxwidth)
-			.attr('stroke', '#858585')
-			.attr('stroke-opacity', 0.2)
-			.attr('shape-rendering', 'crispEdges')
-		let v = 10
-		while (v <= tk.maxReadCount) {
-			// order of magnitude line
-			mg.append('line')
-				.attr('x1', 0)
-				.attr('y1', topy + tk.sections.jug.yscale(v))
-				.attr('y2', topy + tk.sections.jug.yscale(v))
-				.attr('x2', viewpxwidth)
-				.attr('stroke', '#858585')
-				.attr('stroke-opacity', 0.2)
-				.attr('stroke-dasharray', '4,4')
-				.attr('shape-rendering', 'crispEdges')
-			v *= 10
-		}
-	}
-
-	const jug = mg
-		.selectAll()
-		.data(tk.data)
-		.enter()
-		.append('g')
-		.attr('transform', d => set_jug(d))
-		.each(function (j) {
-			j.jugg = this
-		})
-
-	// leg 1
-	// leg y1/y2 are constant
-	jug
-		.append('line')
-		.attr('stroke', d => d.color)
-		.attr('x1', d => set_leg_x1(d))
-		.attr('y2', -tk.legheight)
-		.attr('stroke-opacity', lineopacity)
-		.attr('class', 'sja_jug_leg1')
-		.each(function (d) {
-			d.leg1 = this
-		})
-
-	// leg 2
-	jug
-		.append('line')
-		.attr('stroke', d => d.color)
-		.attr('x2', d => set_leg_x2(d))
-		.attr('y1', -tk.legheight)
-		.attr('stroke-opacity', lineopacity)
-		.attr('class', 'sja_jug_leg2')
-		.each(function (d) {
-			d.leg2 = this
-		})
-
-	// jug2
-	const jug2 = jug
-		.append('g')
-		.attr('class', 'sja_jug_jug2')
-		.attr('transform', d => set_jug2(d, tk))
-
-	// stem - jug2
-	// stem may transit to reflect change in yscale / read count
-	jug2
-		.append('line')
-		.attr('stroke', d => d.color)
-		.attr('class', 'sja_jug_stem')
-		.attr('stroke-dasharray', '2,2')
-		.attr('shape-rendering', 'crispEdges')
-		.attr('y1', d => d.radius)
-		.attr('y2', d => {
-			// use previous value
-			return tk.neckheight + d.axisy
-		})
-		.attr('stroke-opacity', lineopacity)
-		.each(function (d) {
-			d.stem = this
-		})
-
-	// disc
-	jug2
-		.append('circle')
-		.each(function (d) {
-			d.disc = this
-		})
-		.attr('r', d => d.radius)
-		.attr('fill', d => d.color)
-		.attr('stroke', 'white')
-		.attr('fill-opacity', discopacity)
-
-	// text in disc
-	jug2
-		.filter(d => d.sampleCount > 1)
-		.append('text')
-		.text(d => d.sampleCount)
-		.attr('font-size', d => Math.max(minfontsize, d.radius))
-		.attr('class', 'sja_jug_discnum')
-		.attr('fill', 'white')
-		.attr('font-family', client.font)
-		.attr('text-anchor', 'middle')
-		.attr('dominant-baseline', 'central')
-
-	/*
-	arcs, not in use
-
-var arcfunc=d3.svg.arc()
-	.innerRadius(function(d){return d.radius+1})
-	.outerRadius(function(d){return d.radius+1+d.rimwidth})
-	.startAngle(0)
-	.endAngle(function(d){return Math.PI*2*d.rimcount/d.data.length})
-jug2.filter(function(d){return d.rimwidth>0})
-	.append('path')
-	.attr('d',arcfunc)
-	.attr('fill',function(d){return d.color})
-	.attr('fill-opacity',function(d){return set_rim(d)})
-	.attr('class','sja_jug_rim')
-*/
-
-	// kick
-	jug2
-		.append('circle')
-		.attr('r', d => d.radius)
-		.attr('stroke', d => d.color)
-		//.attr('class','sja_aa_disckick')
-		.attr('fill', 'white')
-		.attr('fill-opacity', 0)
-		.attr('stroke-opacity', 0)
-		.on('mouseover', (event, d) => {
-			// stop default trigger for block.cursorhlbar
-			event.stopPropagation()
-			d3select(d.disc).attr('fill-opacity', 0.8)
-			d3select(d.stem).attr('stroke-opacity', 1)
-			d3select(d.leg1).attr('stroke-opacity', 1)
-			d3select(d.leg2).attr('stroke-opacity', 1)
-
-			mouseoverSpanBackground(d, tk, block, viewpxwidth)
-			mouseoverBoxplot(d, tk)
-
-			const p = event.target.getBoundingClientRect()
-			tk.tktip.clear().show(p.left + p.width, p.top - 50)
-			showOneJunction(d, tk, tk.tktip.d, block)
-		})
-		.on('mouseout', (event, d) => {
-			tk.tktip.hide()
-			tk.pica.g.selectAll('*').remove()
-			block.cursorhlbar.attr('fill', block.cursorhlbarFillColor) // restore
-			d3select(d.disc).attr('fill-opacity', discopacity)
-			d3select(d.stem).attr('stroke-opacity', lineopacity)
-			d3select(d.leg1).attr('stroke-opacity', lineopacity)
-			d3select(d.leg2).attr('stroke-opacity', lineopacity)
-		})
-		.on('mousedown', event => {
-			event.stopPropagation()
-		})
-		.on('mousemove', event => {
-			event.stopPropagation()
-		})
-		.on('click', (event, j) => {
-			tk.tktip.hide()
-			console.log('todo here')
-		})
-
-	doForceLayout(tk, block, viewpxwidth).then(() => {
-		// done layout
-		set_all(tk)
-		client.axisstyle({
-			axis: tk.sections.jug.axis.transition().call(
-				axisRight()
-					.scale(tk.sections.jug.yscale)
-					.ticks(Math.floor(tk.axisheight / 20), '.0f')
-			),
-			color: 'black',
-			showline: true
-		})
-	})
-}
-
 function setColor(tk) {
 	for (const j of tk.data) {
 		// remove prior color, as color may be reassigned by switching infoFilter and then calling renderTk()
@@ -461,28 +464,28 @@ function set_leg_x2(d) {
 	return d.x1 - d.x
 }
 function set_stem_y2(d, tk) {
-	return tk.neckheight + tk.axisheight - tk.sections.jug.yscale(d.medianReadCount)
+	return tk.sections.jug.neckheight + tk.sections.jug.axisheight - tk.sections.jug.yscale(d.medianReadCount)
 }
 function set_jug2(d, tk) {
-	return 'translate(0,-' + (tk.legheight + tk.neckheight + d.axisy) + ')'
+	return 'translate(0,-' + (tk.sections.jug.legheight + tk.sections.jug.neckheight + d.axisy) + ')'
 }
 
 function set_all(tk) {
 	// must update axisy to current value
-	tk.data.forEach(j => (j.axisy = tk.axisheight - tk.sections.jug.yscale(j.medianReadCount)))
+	tk.data.forEach(j => (j.axisy = tk.sections.jug.axisheight - tk.sections.jug.yscale(j.medianReadCount)))
 
 	const dur = 500
 	tk.jug
 		.selectAll('.sja_jug_leg1')
 		.transition()
 		.duration(dur)
-		.attr('y2', -tk.legheight)
+		.attr('y2', -tk.sections.jug.legheight)
 		.attr('x1', d => set_leg_x1(d))
 	tk.jug
 		.selectAll('.sja_jug_leg2')
 		.transition()
 		.duration(dur)
-		.attr('y1', -tk.legheight)
+		.attr('y1', -tk.sections.jug.legheight)
 		.attr('x2', d => set_leg_x2(d))
 	tk.jug
 		.selectAll('.sja_jug_jug2')
@@ -502,7 +505,7 @@ function set_all(tk) {
 		.selectAll('.sja_jug_stem')
 		.transition()
 		.duration(dur)
-		.attr('y2', d => tk.neckheight + d.axisy)
+		.attr('y2', d => tk.sections.jug.neckheight + d.axisy)
 }
 
 function doForceLayout(tk, block, viewpxwidth) {
@@ -524,7 +527,7 @@ function doForceLayout(tk, block, viewpxwidth) {
 			junction: j,
 			tox: tox,
 			x: tox,
-			y: tk.axisheight - tk.sections.jug.yscale(j.medianReadCount)
+			y: tk.sections.jug.axisheight - tk.sections.jug.yscale(j.medianReadCount)
 		})
 		sumdiscwidth += j.radius2 * 2
 	})
@@ -542,7 +545,7 @@ function doForceLayout(tk, block, viewpxwidth) {
 				'y',
 				d3force
 					.forceY(d => {
-						return tk.axisheight - tk.sections.jug.yscale(d.junction.medianReadCount)
+						return tk.sections.jug.axisheight - tk.sections.jug.yscale(d.junction.medianReadCount)
 					})
 					.strength(1)
 			)
