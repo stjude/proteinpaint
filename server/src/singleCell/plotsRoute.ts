@@ -128,7 +128,8 @@ async function getSingleCellScatter(req, res, ds) {
 		throw new Error('Using coordTWs with colorTW is not implemented for single cell scatter plot')
 	}
 
-	const { name, sample, isMetaResult } = q.singleCellPlot
+	const { name, sample } = q.singleCellPlot
+	const isMetaResult = sample?.['isMetaResult']
 
 	try {
 		const { arg, tw, genes } = getSingleCellDataArgs(q, name, sample)
