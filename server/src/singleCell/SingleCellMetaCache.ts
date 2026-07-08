@@ -56,10 +56,9 @@ export class SingleCellMetaCache {
     const y = new Float32Array(n)
 
     const byCellId = new Map<string, number>()
-    const sampleBuckets = new Map<string, number[]>()
 
     for (let i = 1; i < lines.length; i++) {
-      const row = lines[i].split('\t')
+      const row = lines[i].split('\t').map(s => s.trim())
       const rowIdx = i - 1
 
       const cellId = row[cellIdIdx]
@@ -70,10 +69,13 @@ export class SingleCellMetaCache {
       x[rowIdx] = Number(row[xIdx])
       y[rowIdx] = Number(row[yIdx])
 
-      byCellId.set(cellId, rowIdx)
+      if (!cellId) throw new Error(`meta result row missing cell id at row index ${rowIdx + 1}`)
+      if (!sampleName) throw new Error(`meta result row missing sample id at row index ${rowIdx + 1}`)
+      if (!Number.isFinite(x[rowIdx]) || !Number.isFinite(y[rowIdx])) {
+        throw new Error(`meta result row has non-numeric x/y at row index ${rowIdx + 1}`)
+      }
 
-      if (!sampleBuckets.has(sampleName)) sampleBuckets.set(sampleName, [])
-      sampleBuckets.get(sampleName)!.push(rowIdx)
+      byCellId.set(cellId, rowIdx)
     }
 
     return {
