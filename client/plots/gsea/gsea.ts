@@ -101,6 +101,8 @@ export class GSEA extends PlotBase implements RxComponent {
 
 		if (!isValidGseaParams(config.gsea_params)) {
 			this.gsea_params = await this.model.getGseaParams(config.gsea_params, state, config)
+		} else {
+			this.gsea_params = config.gsea_params
 		}
 
 		await setControls(this.dom.controlsDiv, this)
@@ -121,9 +123,10 @@ export class GSEA extends PlotBase implements RxComponent {
 				geneCount + ' genes <span style="font-size:.8em;opacity:.7">GENE SET ENRICHMENT ANALYSIS</span>'
 			)
 		}
-		this.imageUrl = null // Reset the image URL
+		if (this.imageUrl) URL.revokeObjectURL(this.imageUrl)
+		this.imageUrl = null
 
-		this.viewModel.processData()
+		await this.viewModel.processData()
 		this.view.update()
 		// render_gsea(this)
 	}

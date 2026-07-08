@@ -5,6 +5,7 @@ import type { AppApi } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { VolcanoModel } from '#plots/volcano/model/VolcanoModel.ts'
 import { getDefaultVolcanoSettings } from '#plots/volcano/settings/defaults.ts'
+import type { GenesetEnrichmentRequest } from '#types'
 
 export class GSEAModel {
 	gsea: GSEA
@@ -103,5 +104,19 @@ export class GSEAModel {
 		const volcanoSettings = config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
 		const model = new VolcanoModel(this.app, config.termType)
 		return await model.getData(config, volcanoSettings)
+	}
+
+	async runEnrichment(body: GenesetEnrichmentRequest): Promise<any> {
+		this.toggleLoading(true)
+		try {
+			return await dofetch3('genesetEnrichment', { body, signal: this.signal })
+		} finally {
+			this.toggleLoading(false)
+		}
+	}
+
+	toggleLoading(isLoading: boolean): void {
+		this.gsea.dom.actionsDiv.style('display', isLoading ? 'none' : 'block')
+		this.gsea.dom.loadingDiv.style('display', isLoading ? 'block' : 'none')
 	}
 }
