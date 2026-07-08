@@ -368,8 +368,11 @@ return the created bubble and allow to be modified
 	}
 
 	// Render click boxes for an incomplete plot state. `fieldKey` is the field of `plot` whose
-	// value holds `possible_options`. Clicking a box completes the plot state by replacing that
-	// field with the chosen option's id and dispatches plot_create.
+	// value holds `possible_options`. Clicking a box completes the plot state and dispatches plot_create.
+	// Each option completes the plot in one of two ways:
+	//  - opt.config: a config patch merged into the plot (the incomplete field is dropped). Used when the
+	//    choice sets other fields, e.g. the genome browser view sets blockIsProteinMode: true|false.
+	//  - otherwise: the incomplete field is set to { id: opt.id }, e.g. survival term selection -> term:{id}.
 	showPossibleOptions(bubble: any, plot: any, fieldKey: string, msg?: string) {
 		const options = plot[fieldKey].possible_options || []
 		bubble.text(`${msg ? msg + '. ' : ''}Multiple options are available. Please select one:`)
@@ -386,9 +389,16 @@ return the created bubble and allow to be modified
 				.style('cursor', 'pointer')
 				.text(opt.name)
 				.on('click', () => {
-					// Complete the plot state with the chosen option's id and dispatch the plot.
+					// Complete the plot state and dispatch the plot. An option may carry a `config` patch
+					// (merged into the plot, dropping the incomplete field — e.g. the genome browser view sets
+					// blockIsProteinMode); otherwise complete the incomplete field with the chosen option's id.
 					const config = JSON.parse(JSON.stringify(plot))
-					config[fieldKey] = { id: opt.id }
+					if (opt.config) {
+						delete config[fieldKey]
+						Object.assign(config, opt.config)
+					} else {
+						config[fieldKey] = { id: opt.id }
+					}
 					this.app.dispatch({
 						type: 'plot_create',
 						config
