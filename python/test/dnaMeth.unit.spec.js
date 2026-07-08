@@ -11,27 +11,6 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 
 const termdb_test_file = 'server/test/tp/files/hg38/TermdbTest/dnaMeth.h5'
 
-tape('Test #0: Validate HDF5', async t => {
-	const input = {
-		h: termdb_test_file,
-		validate: 'True'
-	}
-	try {
-		const out = await run_python('query_beta_values.py', JSON.stringify(input))
-		// If Python prints JSON, parse it
-		const result = typeof out === 'string' ? JSON.parse(out) : out
-
-		t.ok(Array.isArray(result), 'Output should be a list')
-		t.equal(result.length, 100, 'Output list should have length 100')
-	} catch (err) {
-		const errorText = String(err)
-		t.fail(`Validation should pass but failed with error: ${errorText}`)
-	}
-
-	console.log('='.repeat(70) + '\n')
-	t.end()
-})
-
 /***************************
 // Genomic Range Query tests
 ***************************/

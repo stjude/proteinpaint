@@ -21,8 +21,7 @@
 
             Stdin:
                 When using stdin, a json input is expected. For e.g.:
-                    1) echo '{h:"dnaMeth.h5", s:"a,b,c", q:"cg123,cg5343"}' | python query_beta_values.py
-                    2) echo '{h:"dnaMeth.h5", validate:True}' | python query_beta_values.py
+                    echo '{h:"dnaMeth.h5", s:"a,b,c", q:"cg123,cg5343"}' | python query_beta_values.py
                 
             Command Line Inputs:
                 1. --h : path to the HDF5 file of DNA methylation values
@@ -34,7 +33,6 @@
                 For e.g.:
                     1) python --h dnaMeth.h5 --s 1,3,2 --q cg123,cg5343
                     2) python --h dnaMeth.h5 --s 1,3,2 --q chr17:3434-5837403
-                    3) python --h dnaMeth.h5 --validate 
 
     Output: Returns a 2-D matrix of dimension n_query_sites X n_query_samples where the input query sample order is preserved.
           : For genomic range query, n_query_sites will depend on the input query genomic range and if any values are present
@@ -48,93 +46,6 @@ import numpy as np
 import os, re
 import argparse
 import json, sys
-
-def validate_dnameth_hdf5(input_hdf5_file):
-    """
-    Validate a DNA methylation HDF5 file with the expected structure:
-
-        /beta/values             Dataset {n_sites, n_samples}
-        /meta                    Group
-        /meta/probe              Group
-        /meta/probe/probeID      Dataset {n_sites}
-        /meta/probe/row_idx      Dataset {n_sites}
-        /meta/samples            Group
-        /meta/samples/col_idx    Dataset {n_samples}
-        /meta/samples/names      Dataset {n_samples}
-        /meta/start              Dataset {n_sites}
-
-    Returns:
-        List[str]: sample names from /meta/samples/names
-    """
-    #print("Validating the HDF structure...", flush=True)
-    with h5py.File(input_hdf5_file, "r") as h5:
-        required_datasets = [
-            "/beta/values",
-            "/meta/probe/probeID",
-            "/meta/probe/row_idx",
-            "/meta/samples/col_idx",
-            "/meta/samples/names",
-            "/meta/start",
-        ]
-
-        # Check existence 
-        for path in required_datasets:
-            if path not in h5:
-                raise KeyError(f"Missing required dataset: '{path}'")
-
-        # Load core datasets 
-        beta = h5["/beta/values"]
-        probe_ids = h5["/meta/probe/probeID"]
-        row_idx = h5["/meta/probe/row_idx"]
-        col_idx = h5["/meta/samples/col_idx"]
-        sample_names_ds = h5["/meta/samples/names"].asstr()[:]
-        starts = h5["/meta/start"]
-
-        # Validate beta matrix 
-        if beta.ndim != 2:
-            raise ValueError(
-                f"/beta/values must be 2 dimensional but has the shape: {beta.shape}"
-            )
-
-        n_sites, n_samples = beta.shape
-        if n_sites == 0 or n_samples == 0:
-            raise ValueError("Matrix dimensions must be > 0")
-
-        # Validate row-aligned datasets 
-        if probe_ids.shape[0] != n_sites:
-            raise ValueError(
-                f"probeID length ({probe_ids.shape[0]}) "
-                f"!= number of sites ({n_sites})"
-            )
-        if row_idx.shape[0] != n_sites:
-            raise ValueError(
-                f"row_idx length ({row_idx.shape[0]}) "
-                f"!= number of sites ({n_sites})"
-            )
-        if starts.shape[0] != n_sites:
-            raise ValueError(
-                f"start length ({starts.shape[0]}) "
-                f"!= number of sites ({n_sites})"
-            )
-
-        # Validate column-aligned datasets 
-        if col_idx.shape[0] != n_samples:
-            raise ValueError(
-                f"col_idx length ({col_idx.shape[0]}) "
-                f"!= number of samples ({n_samples})"
-            )
-        if sample_names_ds.shape[0] != n_samples:
-            raise ValueError(
-                f"sample names length ({sample_names_ds.shape[0]}) "
-                f"!= number of samples ({n_samples})"
-            )
-
-        # Sanity check: unique samples 
-        sample_names = [str(s) for s in sample_names_ds]
-        if len(set(sample_names)) != len(sample_names):
-            raise ValueError("Duplicate sample names detected")
-        return sample_names
-
 
 class Query:
     def __init__(self, input_hdf5_file):
@@ -464,25 +375,20 @@ def parse_stdin():
         inp.get("s"),
         inp.get("q"),
         inp.get("v", False),
-        inp.get("validate", False),
     )
 
 
 def parse_cli_args():
     parser = argparse.ArgumentParser(
                 description=(
-                "Query DNA methylation beta values from an HDF5 file OR validate the HDF5 file structure.\n\n"
-                "Modes:\n"
-                "  1) Query mode: provide --h, --s, and --q\n"
-                "  2) Validate mode: provide --h and --validate\n"),
+                "Query DNA methylation beta values from an HDF5 file.\n\n"
+                "Provide --h, --s, and --q.\n"),
                 epilog=(
                 "Examples:\n"
                 "  Query genomic range:\n"
                 "    python script.py --h data.h5 --s Sample1 --q chr1:100000-200000\n\n"
                 "  Query CpG IDs:\n"
-                "    python script.py --h data.h5 --s Sample1,Sample2 --q cg00000029,cg00000108\n\n"
-                "  Validate HDF5 structure:\n"
-                "    python script.py --h data.h5 --validate"
+                "    python script.py --h data.h5 --s Sample1,Sample2 --q cg00000029,cg00000108"
             ),
                 formatter_class=argparse.ArgumentDefaultsHelpFormatter
             )
@@ -490,13 +396,8 @@ def parse_cli_args():
     parser.add_argument("--s", metavar="SAMPLES", help="query sample(s)")
     parser.add_argument("--q", metavar="QUERY", help="genomic query range or CpG IDs")
     parser.add_argument("--v", action="store_true", help="enable verbose details output")
-    parser.add_argument(
-        "--validate",
-        action="store_true",
-        help="Validate HDF5 file structure instead of running a query",
-    )
     args = parser.parse_args()
-    return args.h, args.s, args.q, args.v, args.validate
+    return args.h, args.s, args.q, args.v
 
 def get_inputs():
     """Unified input handler (stdin JSON OR CLI)."""
@@ -505,32 +406,25 @@ def get_inputs():
         return stdin_args
     return parse_cli_args()
 
-def validate_inputs(hdf_file, query_samples, query_string, validate):
-    """Validate that the required inputs are present for the selected mode."""
+def require_query_inputs(hdf_file, query_samples, query_string):
+    """Validate that the required query inputs are present."""
     if not hdf_file :
         print("Error: --h (HDF5 file) is required.", file=sys.stderr)
         sys.exit(1)
     if not os.path.exists(hdf_file):
         print(f"Error: {hdf_file}: HDF5 file not found!", file=sys.stderr)
         sys.exit(1)
-    if not validate:
-        if not query_samples and not query_string:
-            print("Error: --s (samples)  and --q (query string) is required for query mode.", file=sys.stderr)
-            sys.exit(1)
-        if not query_samples:
-            print("Error: --s (samples) is required for query mode.", file=sys.stderr)
-            sys.exit(1)
-        if not query_string:
-            print("Error: --q (query string) is required for query mode.", file=sys.stderr)
-            sys.exit(1)
+    if not query_samples and not query_string:
+        print("Error: --s (samples)  and --q (query string) is required for query mode.", file=sys.stderr)
+        sys.exit(1)
+    if not query_samples:
+        print("Error: --s (samples) is required for query mode.", file=sys.stderr)
+        sys.exit(1)
+    if not query_string:
+        print("Error: --q (query string) is required for query mode.", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    hdf_file, query_samples, query_string, verbose, validate = get_inputs()
-    validate_inputs(hdf_file, query_samples, query_string, validate)
-
-    if validate:
-        samples = validate_dnameth_hdf5(hdf_file)
-        print(json.dumps(samples))
-    else:
-        main(hdf_file, query_samples, query_string, verbose)
-
+    hdf_file, query_samples, query_string, verbose = get_inputs()
+    require_query_inputs(hdf_file, query_samples, query_string)
+    main(hdf_file, query_samples, query_string, verbose)

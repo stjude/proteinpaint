@@ -11,19 +11,6 @@ import numpy as np
 # This script queries data from an HDF5 file and returns the results in JSON format. The script reads a list of items from standard input, retrieves their corresponding rows as a dict, and outputs the results along with timing information.
 # Various JSON parameters:
 #	query?: Enter the item name(s) separated by comma
-#	validate?: Boolean to retrieve sample names for a file
-#		include_items?: Boolean to include the list of items in the output when validating
-#		Between query and validate, only one should be set to true. If both are set, validate will override.
-#		echo '{"validate":true,"hdf5_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5"}' | python python/src/readHDF5.py
-#		output: {
-# 		"samples":["sample1","sample2","sample3"],
-# 		"status": bool,
-#		"message": "HDF5 matrix file loaded successfully"
-#		"file_path": hdf5_filename,
-#		"format": "matrix",
-#                 "matrix_dimensions": {
-#                     "num_rows": integer | 'unknown',
-#                     "num_columns": integer | 'unknown'}
 #	hdf5_file: Path to input file (HDF5 format)
 #
 # echo '{"query":["DDX11L1","MIR1302-2HG","MIR1302-2","FAM138A","OR4F5","AL627309.1","AL627309.3","AL627309.2","AL627309.5","AL627309.4"],"hdf5_file":"server/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5"}' | python python/src/readHDF5.py
@@ -40,7 +27,7 @@ def _json_out(obj: dict[str, Any]) -> None:
 def _decode_string_array(arr: np.ndarray) -> list[str]:
 	return [v.decode("utf-8", errors="ignore") if isinstance(v, (bytes, np.bytes_)) else str(v) for v in arr]
 
-def validate_hdf5_file(hdf5_filename: str, include_items: bool = False) -> dict[str, Any]:
+def check_hdf5_file(hdf5_filename: str) -> dict[str, Any]:
 	
 	file_format = detect_hdf5_format(hdf5_filename)
 	result={
@@ -72,8 +59,6 @@ def validate_hdf5_file(hdf5_filename: str, include_items: bool = False) -> dict[
 										"num_columns": matrix_shape[1]
 										}
 					result[COL_NAME] = col_data
-					if include_items:
-						result["items"] = _decode_string_array(f[ROW_NAME][...])
 				except Exception:
 					result["message"] = "Error reading matrix slice or datatype is not numeric"
 
@@ -162,19 +147,10 @@ def _parse_input(stdin_text: str) -> dict[str, Any]:
 		raise FileNotFoundError(f"{hdf5_filename} could not be found")
 	if not h5py.is_hdf5(hdf5_filename):
 		raise ValueError(f"{hdf5_filename} is not a valid hdf5")
-	validate = payload.get("validate", False)
-	if validate:
-		return {
-			"hdf5_file": hdf5_filename,
-			"validate": True,
-			"include_items": bool(payload.get("include_items", False))
-		}
 	items = _parse_item_names(payload.get("query"))
 	return {
 		"hdf5_file": hdf5_filename,
-		"items": items,
-		"validate": payload.get("validate", False),
-		"include_items": bool(payload.get("include_items", False))
+		"items": items
 	}
 
 
@@ -188,16 +164,10 @@ def main() -> int:
 		input_data = _parse_input(input_text)
 		hdf5_filename = input_data["hdf5_file"]
 		items = input_data.get("items",None)
-		validate = input_data.get("validate", False)
-		include_items = input_data.get("include_items", False)
-		validation_results = validate_hdf5_file(hdf5_filename,include_items=include_items)
+		validation_results = check_hdf5_file(hdf5_filename)
 		if validation_results["status"] == "success":
-			if validate:
-				_json_out(validation_results)
-				return 0
-			else:
-				_json_out(query_hdf5(hdf5_filename, items))
-				return 0
+			_json_out(query_hdf5(hdf5_filename, items))
+			return 0
 
 		_json_out(
 			validation_results

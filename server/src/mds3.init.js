@@ -12,6 +12,7 @@ import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
+import { getH5samples } from './utils/h5samples.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig from './serverconfig.js'
 import {
@@ -47,7 +48,6 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
-import { validate_query_rnaseqGeneCount } from '#src/validateRnaseqGeneCount.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import {
 	validate_query_getWSIAnnotations,
@@ -1951,17 +1951,14 @@ async function validate_query_ssGSEA(ds, genome) {
 		await setFile(q, 'ssGSEA')
 		q.samples = [] // array of sample ids
 
-		const tmp = await run_python('readHDF5.py', JSON.stringify({ validate: true, hdf5_file: q.file }))
-
-		const vr = JSON.parse(tmp)
-		if (vr.status !== 'success') throw vr.message
-		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.samples.length)
+		console.log(`${ds.label}: ssGSEA HDF5 file validated. Samples:`, samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
 	}
@@ -2031,8 +2028,8 @@ async function validate_query_dnaMethylation(ds, genome) {
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file)
-		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
-		if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.file
+		const samples = await getH5samples(q.file, '/meta/samples/names')
+		if (!Array.isArray(samples)) throw new Error('samples not array')
 		if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
@@ -2044,12 +2041,11 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
 			await utils.file_is_readable(q.promoter.file)
-			const vr = JSON.parse(await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.promoter.file })))
-			if (vr.status !== 'success') throw vr.message
-			if (!Array.isArray(vr.sampleNames)) throw 'validateHDF5 did not return sampleNames array: ' + q.promoter.file
-			if (!vr.sampleNames.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
-			q.promoter.allSampleSet = new Set(vr.sampleNames)
-			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, vr.sampleNames.length)
+			const samples = await getH5samples(q.promoter.file, '/meta/samples/names')
+			if (!Array.isArray(samples)) throw new Error('samples not array')
+			if (!samples?.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
+			q.promoter.allSampleSet = new Set(samples)
+			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
 		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
@@ -3765,5 +3761,44 @@ function mayInitTermid2totalsize2(tdb, ds) {
 			return await gdc.get_termlst2size(twLst, q, combination, ds)
 		}
 		return await call_barchart_data(twLst, q, combination, ds, onlyChildren)
+	}
+}
+
+/** Dataset-startup validation for the rnaseqGeneCount query (used by the
+ * DE route at request time). Resolves the file path against tpmasterdir,
+ * reads the header (or HDF5 sample list) to populate `q.allSampleSet`,
+ * and warns about any header sample names the termdb doesn't recognize.
+ * Called from mds3.init at server boot, not per request. */
+async function validate_query_rnaseqGeneCount(ds) {
+	const q = ds.queries.rnaseqGeneCount
+	if (!q) return
+	await setFile(q, 'rnaseqGeneCount')
+	/*
+    first line of matrix must be sample header, samples start from 5th column for text based files
+    read the first line to get all samples, and save at q.allSampleSet
+    so that samples from analysis request will be screened against q.allSampleSet
+    also require that there's no duplicate samples in header line, so rust/r won't break
+    */
+	{
+		let samples = []
+		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
+			samples = (await get_header_txt(q.file, null)).split('\t').slice(4)
+		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
+			const s = await getH5samples(q.file)
+			if (!Array.isArray(samples)) throw new Error('HDF5 file has no samples, please check file.')
+			samples = s
+		} else throw new Error('unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type)
+
+		q.allSampleSet = new Set(samples)
+		//if(q.allSampleSet.size < samples.length) throw new Error('rnaseqGeneCount.file header contains duplicate samples')
+		const unknownSamples = []
+		for (const n of q.allSampleSet) {
+			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
+		}
+		//if (unknownSamples.length)
+		//	throw new Error(`${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
+		//		q.allSampleSet.size
+		//	} sample names are unknown: ${unknownSamples.join(',')}`)
+		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 	}
 }
