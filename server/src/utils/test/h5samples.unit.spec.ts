@@ -2,7 +2,7 @@ import path from 'path'
 import tape from 'tape'
 import { getH5samples } from '#src/utils/h5samples.ts'
 
-const TESTDATA_DIR = path.join(process.cwd(), 'server/test/tp/files/hg38/TermdbTest')
+const TESTDATA_DIR = path.join(process.cwd(), 'test/tp/files/hg38/TermdbTest')
 
 tape('\n', t => {
 	t.comment('-***- src/utils/h5samples -***-')
