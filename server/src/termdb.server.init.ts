@@ -245,13 +245,14 @@ export function server_init_db_queries(ds) {
 	}
 
 	/*
-	Build geomap pins from the DB when a dataset names a categorical site term whose per-category
-	values carry lat/lon (the same values{} slot that already holds label/color). Mirrors the
-	_role2terms pattern above: term-gated and generic — the dataset names its term, no term id here.
-	Values without numeric lat/lon are skipped, so coordinate-less placeholders produce no pin.
+	Build geomap pins from the geoLocation table when a dataset opts into the map (ds.cohort.termdb.geomap)
+	and the table is present. Mirrors the _role2terms pattern above: table-gated and generic — the dataset
+	populates geoLocation however it likes (careReg loads it from an xlsx in its build). Each row's site_code
+	links a pin back to the dataset's site term for per-user highlighting.
 	*/
-	if (ds.cohort.termdb.geomap?.siteTermId) {
-		ds.cohort.termdb.geomap.sites = buildGeomapSites(q.termjsonByOneid(ds.cohort.termdb.geomap.siteTermId))
+	if (ds.cohort.termdb.geomap && tables.has('geoLocation')) {
+		const rows = cn.prepare('SELECT name, latitude, longitude, site_code FROM geoLocation').all()
+		ds.cohort.termdb.geomap.sites = buildGeomapSites(rows)
 	}
 
 	{
@@ -613,17 +614,19 @@ export function filterTerms(req, ds, terms) {
 }
 
 /*
-	Turn a categorical term's values{} map into geomap pins. A value becomes a pin only when it carries
-	numeric lat & lon (the same per-category slot that holds label/color); coordinate-less values are
-	skipped. Kept generic and exported so it can be unit-tested without a DB.
+	Turn geoLocation table rows into geomap pins. A row becomes a pin only when it carries numeric lat & lon.
+	`id` is the site_code (links a pin to the site term for per-user highlighting), falling back to name.
+	Kept generic and exported so it can be unit-tested without a DB.
 */
-type GeomapSiteValue = { label?: string; lat?: number; lon?: number; country?: string; iso?: string }
-export function buildGeomapSites(term: { values?: Record<string, GeomapSiteValue> } | undefined): GeomapSite[] {
+type GeoLocationRow = { name?: string; latitude?: number; longitude?: number; site_code?: string }
+export function buildGeomapSites(rows: GeoLocationRow[]): GeomapSite[] {
 	const sites: GeomapSite[] = []
-	for (const [key, v] of Object.entries(term?.values || {})) {
-		if (typeof v?.lat != 'number' || !Number.isFinite(v.lat)) continue
-		if (typeof v?.lon != 'number' || !Number.isFinite(v.lon)) continue
-		sites.push({ id: key, name: v.label || key, lat: v.lat, lon: v.lon, country: v.country, iso: v.iso })
+	for (const r of rows || []) {
+		if (typeof r?.latitude != 'number' || !Number.isFinite(r.latitude)) continue
+		if (typeof r?.longitude != 'number' || !Number.isFinite(r.longitude)) continue
+		const id = r.site_code || r.name
+		if (!id) continue
+		sites.push({ id, name: r.name || r.site_code || id, lat: r.latitude, lon: r.longitude })
 	}
 	return sites
 }

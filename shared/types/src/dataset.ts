@@ -1970,13 +1970,9 @@ export type GeomapSite = {
 
 /** Config for the reusable `geomap` chart type (dataset-agnostic). */
 export type GeomapConfig = {
-	/** all locations to pin on the map. May be supplied directly, or built at server init from
-	 * siteTermId (see below), in which case it is absent in the dataset config and filled in later. */
+	/** all locations to pin on the map. May be supplied directly, or built at server init from the
+	 * `geoLocation` table (see server_init_db_queries), in which case it is absent in the dataset config. */
 	sites?: GeomapSite[]
-	/** id of a categorical term whose per-category values carry lat/lon; when set, the server builds
-	 * `sites` at init from that term's values (see server_init_db_queries). Keeps coordinates in the DB
-	 * rather than a hardcoded list. */
-	siteTermId?: string
 	/** ids (or names) of the subset of sites to visually emphasize, e.g. the user's own sites */
 	highlightIds?: string[]
 }
