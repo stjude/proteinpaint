@@ -163,7 +163,9 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		if (plot.isMetaResult) {
 			/** Quick fix to skip plots with data issues. */
 			if (plot.doNotCache) {
-				console.log(`Skipping meta analysis result ${plot.name} due to data issues. Please remove the doNotCache flag when the issue is resolved.`)
+				console.log(
+					`Skipping meta analysis result ${plot.name} due to data issues. Please remove the doNotCache flag when the issue is resolved.`
+				)
 				continue
 			}
 			/** Meta analysis results may not be separated into folders like the sample files
@@ -179,8 +181,12 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 				/** Files should exist for each meta analysis result. */
 				await file_is_readable(tsvfile)
 				samples.set(sampleName, { sample: sampleName, isMetaResult: true })
+				const t0 = Date.now()
 				const text = await read_file(tsvfile)
+				const t1 = Date.now()
+				mayLog(ds.label, 'sc meta read file time:', t1 - t0)
 				metaCache.addMetaResult(sampleName, text, plot.coordsColumns, ds.cohort.termdb.q.sampleName2id)
+				mayLog(ds.label, 'sc meta caching time:', Date.now() - t0)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
 			}
@@ -290,7 +296,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		nameSet.add(plot.name)
 		if (!plot.folder) throw new Error('plot.folder missing')
 	}
-	
+
 	// caches files contents between requests so each file is only loaded once
 	const file2Lines = {} // key: file path, value: string[]
 
@@ -345,7 +351,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				if (!cellId) throw new Error('cell id missing')
 				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
 				const cell: Cell = { cellId, x, y, category }
-			
+
 				if (checkGeneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]
@@ -471,7 +477,7 @@ function gdc_validateGeneExpression(G: SingleCellGeneExpressionGdc, ds: any, gen
 			}
 			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
 			if (!hdf5id) throw new Error('cannot map eID to hdf5 id')
-		
+
 			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
 			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
 			if (!gencodeId) throw new Error('cannot map gene symbol to GENCODE')
