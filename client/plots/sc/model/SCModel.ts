@@ -26,7 +26,7 @@ export class SCModel {
 			filter: getNormalRoot(state.termfilter.filter),
 			filter0: state.termfilter.filter0
 		}
-		return await dofetch3('termdb/singlecellSamples', { body })
+		return await dofetch3('termdb/singlecellSamples', { body, signal: this.sc.api?.getAbortSignal() })
 	}
 
 	//Fetches optional name for ds defined columns
@@ -54,10 +54,10 @@ export class SCModel {
 	/********** Single Cell DATA for rendering plots ********
 	 * This is for the plot buttons. Returns an array plots with found files or
 	 * available data. */
-	async getSampleData() {
+	async getSampleData() { 
 		const body = this.getDataRequestOpts()
 		if (!body) return
-		return await dofetch3('termdb/singlecellData', { body })
+		return await dofetch3('termdb/singlecellData', { body, signal: this.sc.api?.getAbortSignal() })
 	}
 
 	/** May provide active plots to the request and return plot data when
@@ -82,8 +82,7 @@ export class SCModel {
 			sample: {
 				eID: config.settings.sc.item.eID,
 				sID: config.settings.sc.item.sID
-			},
-			signal: this.sc.api?.getAbortSignal()
+			}
 		}
 	}
 
@@ -94,7 +93,7 @@ export class SCModel {
 
 		let res
 		try {
-			res = await dofetch3('termdb/singlecellData', { body })
+			res = await dofetch3('termdb/singlecellData', { body, signal: this.sc.api?.getAbortSignal() })
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e}`)
 		}
