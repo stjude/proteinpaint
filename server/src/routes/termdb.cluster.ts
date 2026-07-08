@@ -14,6 +14,7 @@ import type {
 } from '#types'
 import type { ReqQueryAddons } from '../../routes/types.ts'
 import * as utils from '#src/utils.js'
+import { getH5samples } from '../utils/h5samples.ts'
 import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
@@ -360,13 +361,10 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 	try {
 		// Validate that the HDF5 file exists
 		await utils.file_is_readable(q.file)
-		const tmp = await run_python('readHDF5.py', JSON.stringify({ hdf5_file: q.file, validate: true }))
-
-		const vr = JSON.parse(tmp)
-
-		if (vr.status !== 'success') throw vr.message
-		if (!vr.samples?.length) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw new Error('samples not array')
+		if (!samples.length) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si === undefined) {
 				// samples in hdf5 file must be in sync with db
@@ -374,7 +372,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			}
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: geneExpression HDF5 file validated. Format: ${vr.format}, Samples:`, q.samples.length)
+		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`
 	}
@@ -491,16 +489,10 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 	try {
 		await utils.file_is_readable(q.file)
-		const tmp = await run_python(
-			'readHDF5.py',
-			JSON.stringify({ hdf5_file: q.file, validate: true, include_items: true })
-		)
-
-		const vr = JSON.parse(tmp)
-
-		if (vr.status !== 'success') throw vr.message
-		if (!vr.samples?.length) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw new Error('samples not array')
+		if (!samples.length) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) {
 				if (ds.cohort.db) {
@@ -512,9 +504,10 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			q.samples.push(si)
 		}
 		// store available isoform IDs so the client can filter the list
-		q.availableItems = vr.items || []
+		q.availableItems = await getH5samples(q.file, 'item')
+		if (!Array.isArray(q.availableItems)) throw new Error('availableItems not array')
 		console.log(
-			`${ds.label}: isoformExpression HDF5 file validated. Format: ${vr.format}, Samples:`,
+			`${ds.label}: isoformExpression HDF5 file validated. Samples:`,
 			q.samples.length,
 			'Items:',
 			q.availableItems!.length

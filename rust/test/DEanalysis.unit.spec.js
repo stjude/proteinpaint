@@ -12,7 +12,6 @@ import fs from 'fs'
 import path from 'path'
 import serverconfig from '@sjcrh/proteinpaint-server/src/serverconfig.js'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
-import { run_python } from '@sjcrh/proteinpaint-python'
 
 const p_value_cutoff = 0.0001 // If the difference between the actual and expected p-value is greater than this, the test will fail
 const fold_change_cutoff = 0.001 // If the difference between the actual and expected p-value is greater than this, the test will fail
@@ -90,32 +89,6 @@ tape('rust DE wilcoxon unit test', async function (test) {
 	test.ok(
 		gene3_out.fold_change - gene3_exp_out.fold_change < fold_change_cutoff,
 		`For ${gene3_name}, original fold change=${gene3_out.fold_change}, expected fold change=${gene3_exp_out.fold_change}`
-	)
-	test.end()
-})
-
-// This tests the rust gene counts HDF5 query
-tape('rust DE sample search test from raw gene counts HDF5 file', async function (test) {
-	const inJson = {
-		hdf5_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5',
-		validate: true
-	}
-	const Rustout = await run_python('readHDF5.py', JSON.stringify(inJson))
-	const RustoutJson = JSON.parse(Rustout)
-
-	const expJson = fs.readFileSync(
-		path.join(serverconfig.binpath + '/test/tp/files/hg38/TermdbTest', 'TermdbTest_DE_samples_exp_output.json'),
-		{
-			encoding: 'utf8'
-		}
-	)
-
-	const expectedArray = expJson.trim().split(',')
-
-	test.deepEqual(
-		RustoutJson.samples,
-		expectedArray,
-		'Test rust DE sample search from raw gene counts HDF5 should match expected output'
 	)
 	test.end()
 })
