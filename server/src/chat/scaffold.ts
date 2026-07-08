@@ -148,6 +148,7 @@ Return ONLY a valid JSON object with this structure — no extra fields, no surr
 {
   "genePhrase": "<phrase>",   // OPTIONAL - the word containing the gene name
   "genomeBrowserPhrase": "<phrase>",   // OPTIONAL - the phrase describing the genomic region (chromosome + start + stop coordinates)
+  "viewMode": "protein" | "genomic",   // OPTIONAL - only when the user explicitly asks for a protein/lollipop view or a genomic view of a gene
   "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
 }
 
@@ -156,7 +157,8 @@ Return ONLY a valid JSON object with this structure — no extra fields, no surr
 2. genomeBrowserPhrase (if present) should contain ONLY the region description — do not include the cohort filter, surrounding verbs ("show", "open"), or plot-type words ("genome browser", "browser view") unless they are inseparable from the region phrase.
 3. genePhrase is OPTIONAL. If the user's query contains a recognizable gene name, extract the phrase containing the gene name along with information such as (mutation/variant/expression/methylation) into the genePhrase field. This is for downstream use in highlighting the gene in the genome browser, but it should be separate from the genomeBrowserPhrase which focuses on the region description.
 4. filter is ONLY set when the user restricts the view to a specific subpopulation or cohort. Do NOT paraphrase or invent a filter. If the user does not mention a cohort restriction, omit filter entirely.
-5. If the user does not provide a region (no chromosome and/or no coordinates), return:
+5. viewMode is OPTIONAL and applies ONLY to a gene query (genePhrase). Set "protein" when the user explicitly asks for a protein view or lollipop view (e.g. "protein view of TP53", "TP53 lollipop"). Set "genomic" when the user explicitly asks for a genomic view (e.g. "genomic view of TP53", "TP53 in genomic mode"). If the user does not state which view, OMIT viewMode entirely — do NOT guess a default.
+6. If the user does not provide a region (no chromosome and/or no coordinates) AND no gene, return:
 { "type": "text","text": "No genomic region found" }
 
 ## EXAMPLES
@@ -183,7 +185,28 @@ A: {
 Q: "show lollipop plot of FRVT85 mutations for men"
 A: {
   "genePhrase": "FRVT85 mutations",
+  "viewMode": "protein",
   "filter": "men"
+}
+
+--- Explicit protein view ---
+Q: "protein view of YGT5 in the genome browser"
+A: {
+  "genePhrase": "YGT5",
+  "viewMode": "protein"
+}
+
+--- Explicit genomic view ---
+Q: "show the genomic view of YGT5"
+A: {
+  "genePhrase": "YGT5",
+  "viewMode": "genomic"
+}
+
+--- Gene without a stated view (viewMode omitted) ---
+Q: "show YGT5 in the genome browser"
+A: {
+  "genePhrase": "YGT5"
 }
 
 --- Unit suffix preserved ---

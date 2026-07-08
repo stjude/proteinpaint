@@ -41,6 +41,11 @@ export type GenomeBrowserScaffold = {
 	plotType: 'genomeBrowser'
 	genomeBrowserPhrase?: string
 	genePhrase?: string
+	/** For a gene query, the view the user explicitly asked for: 'protein' (protein/lollipop view) or
+	 * 'genomic' (genomic coordinate view). Omitted when the prompt does not state a mode — the pipeline
+	 * then returns an incomplete plot state so the user can pick a view. Ignored for a coordinate query
+	 * (genomeBrowserPhrase), which is inherently genomic. */
+	viewMode?: 'protein' | 'genomic'
 	filter?: string
 }
 

@@ -7,6 +7,7 @@ import {
 	parse_survival_terms_from_db
 } from './utils.ts'
 import { generateFilterTerm } from './filter.ts'
+import { getGeneCoord } from './search.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type {
 	Scaffold,
@@ -351,8 +352,46 @@ export async function phrase2entity(
 							`The gene phrase "${scaffoldResult.genePhrase}" is of type ${tw1.termType} which is not supported for genome browser plot.`
 						)
 					} else if ('termType' in tw1 && tw1.termType === TermTypes.GENE_VARIANT) {
-						pp_plot_json.geneSearchResult = {
-							geneSymbol: scaffoldResultGene[0]
+						// A gene can be shown in two views: 'protein' (protein/lollipop view, seeded by gene
+						// symbol) or 'genomic' (genomic view over the gene's locus, seeded by chr/start/stop).
+						// blockIsProteinMode selects between them. Resolve the gene's locus so the genomic view
+						// is available; it may be null for a gene that can't be mapped to a coordinate.
+						const geneSymbol = scaffoldResultGene[0]
+						const coord = getGeneCoord(genome, geneSymbol)
+						const viewMode = scaffoldResult.viewMode
+						if (viewMode === 'genomic') {
+							// user explicitly asked for the genomic view; requires resolved coordinates
+							if (!coord) {
+								return { type: 'text', text: `Could not resolve genomic coordinates for gene "${geneSymbol}".` }
+							}
+							pp_plot_json.geneSearchResult = { chr: coord.chr, start: coord.start, stop: coord.stop }
+							pp_plot_json.blockIsProteinMode = false
+						} else if (viewMode === 'protein') {
+							// user explicitly asked for the protein view
+							pp_plot_json.geneSearchResult = { geneSymbol }
+							pp_plot_json.blockIsProteinMode = true
+						} else if (!coord) {
+							// mode not stated and genomic view is unavailable (no coordinates) -> protein view
+							pp_plot_json.geneSearchResult = { geneSymbol }
+							pp_plot_json.blockIsProteinMode = true
+						} else {
+							// mode not stated: return an INCOMPLETE plot state. geneSearchResult carries both the
+							// gene symbol (for protein view) and the resolved locus (for genomic view); the client
+							// shows "Protein view"/"Genomic view" click buttons (findPossibleOptionsField picks up
+							// the blockIsProteinMode.possible_options), and the chosen option's config patch sets
+							// blockIsProteinMode to complete the plot. (Same incomplete-plot-state UX as survival.)
+							pp_plot_json.geneSearchResult = {
+								geneSymbol,
+								chr: coord.chr,
+								start: coord.start,
+								stop: coord.stop
+							}
+							pp_plot_json.blockIsProteinMode = {
+								possible_options: [
+									{ id: 'protein', name: 'Protein view', config: { blockIsProteinMode: true } },
+									{ id: 'genomic', name: 'Genomic view', config: { blockIsProteinMode: false } }
+								]
+							}
 						}
 					} else if ('termType' in tw1) {
 						throw new Error(

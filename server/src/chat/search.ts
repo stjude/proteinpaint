@@ -123,7 +123,7 @@ function searchGeneNames(genome: any, input: string): string[] {
  * discontinuous loci opens the genome browser at the same region as before. Lets the omnisearch seed a
  * genome browser track without a separate genelookup request. `gene` is already a resolved symbol (from
  * searchGeneNames). Returns null if it cannot be resolved. */
-function getGeneCoord(genome: any, gene: string): { chr: string; start: number; stop: number } | null {
+export function getGeneCoord(genome: any, gene: string): { chr: string; start: number; stop: number } | null {
 	try {
 		const rows = genome.genedb.getjsonbyname.all(gene)
 		if (!rows?.length) return null
