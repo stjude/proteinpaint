@@ -47,7 +47,7 @@ export async function loadTk(tk, block) {
 		renderTk(data, tk, block)
 
 		// must render tk first, then left labels
-		await make_leftlabels(data, tk, block)
+		//await make_leftlabels(data, tk, block)
 
 		// done tk rendering, adjust height
 		tk._finish(data)

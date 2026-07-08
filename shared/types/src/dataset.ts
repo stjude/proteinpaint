@@ -731,6 +731,7 @@ type ITDQuery = {
 	4. { "sample": "3332"}
 	*/
 	file: string
+	get?: (param: any) => void
 }
 /** splice junction */
 type JunctionQuery = {
@@ -743,6 +744,10 @@ type JunctionQuery = {
 	6- samples. when present, the fields are read count, and optional event percentage joined by ;
 	*/
 	file: string
+	/** list all junctions, occurrence and median read count from a region */
+	listJunctions?: (param: any) => void
+	/** get sample details for one junction */
+	getOneJunction?: (param: any) => void
 }
 
 type RnaseqGeneCount = {

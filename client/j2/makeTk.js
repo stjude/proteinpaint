@@ -2,6 +2,7 @@ import { Menu } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk } from './tk'
+import { renderTk } from './render'
 import {
 	mclass,
 	dtsnvindel,
@@ -23,13 +24,6 @@ import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track by adding in essential attributes to tk object
-	tk.axisheight = tk.axisheight || 200
-	if (!Number.isFinite(tk.axisheight) || tk.axisheight < 0) throw new Error('invalid tk.axisheight')
-	tk.legheight = tk.legheight || 50
-	if (!Number.isFinite(tk.legheight) || tk.legheight < 0) throw new Error('invalid tk.legheight')
-	tk.neckheight = tk.neckheight || 50
-	if (!Number.isFinite(tk.neckheight) || tk.neckheight < 0) throw new Error('invalid tk.neckheight')
-	tk.maxReadCount = 1000
 
 	// make color gradients
 	{
@@ -72,12 +66,15 @@ export async function makeTk(tk, block) {
 		tk.sections = {
 			// sections from top to bottom.
 			jug: {
-				height: 0,
+				height: 0, // total height of the jug section
 				g: g.append('g'),
 				axis: g.append('g')
 			}
 		}
 	}
+	setH(tk, 'axisheight', 200)
+	setH(tk, 'legheight', 50)
+	setH(tk, 'neckheight', 50)
 
 	tk._finish = loadTk_finish_closure(tk, block)
 
@@ -106,6 +103,18 @@ export async function makeTk(tk, block) {
 	initLegend(tk, block)
 }
 
+function setH(tk, prop, v) {
+	// custom value is defined at tk.prop. it's moved to tk.sections.jug.prop
+	const customv = tk[prop]
+	if (customv != undefined) {
+		if (!Number.isFinite(customv) || customv <= 0) throw new Error('invalid tk.' + prop)
+		tk.sections.jug[prop] = customv
+		delete tk[prop]
+		return
+	}
+	tk.sections.jug[prop] = v // no custom value. use default
+}
+
 function loadTk_finish_closure(tk, block) {
 	// call this when tk finish rendering
 	return data => {
@@ -131,6 +140,9 @@ function loadTk_finish_closure(tk, block) {
 						.attr('text-anchor', 'middle')
 						.attr('dominant-baseline', 'center')
 					tk.sections.jug.height = 40
+				}
+				if (data.alert) {
+					console.log('TODO print this alert in tk', data.alert)
 				}
 			}
 		}
@@ -247,7 +259,7 @@ function configPanel(tk, block) {
 			.on('click', () => {
 				tk.axisheight += 30
 				tk.legheight = tk.axisheight / 4
-				renderTk(tk, block)
+				renderTk(null, tk, block)
 				block.block_setheight()
 			})
 		row
@@ -258,7 +270,7 @@ function configPanel(tk, block) {
 				if (tk.axisheight <= 90) return
 				tk.axisheight -= 30
 				tk.legheight = tk.axisheight / 4
-				renderTk(tk, block)
+				renderTk(null, tk, block)
 				block.block_setheight()
 			})
 	}
@@ -274,7 +286,7 @@ function configPanel(tk, block) {
 			.attr('id', id)
 			.on('change', () => {
 				tk.yscaleUseLog = !tk.yscaleUseLog
-				renderTk(tk, block)
+				renderTk(null, tk, block)
 			})
 		if (tk.yscaleUseLog) {
 			input.property('checked', 1)

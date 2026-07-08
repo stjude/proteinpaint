@@ -3,47 +3,19 @@ import { invalidcoord } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
+import type { TermdbJunctionsRequest, TermdbOneJunctionRequest } from '#types'
 
-type Sample = {
-	name: string | number
-}
-
-type JunctionQuery = {
-	file: string
-	nochr?: boolean
-	samples: Sample[]
-	get?: (param: QueryParam) => Promise<{ junctions: Junction[] } | Record<string, never>>
-}
-
-type Dataset = {
-	queries?: {
-		junction?: JunctionQuery
-	}
-}
-
-type Genome = object
-
-type Range = {
+type Junction = {
 	chr: string
 	start: number
 	stop: number
-}
-
-type Junction = Range & {
 	strand: string
 	sampleCount?: number
 	medianReadCount?: number
 	[key: string]: any
 }
 
-type QueryParam = {
-	rglst?: Range[]
-	junction?: Junction
-	minReadCount?: number
-	[key: string]: any
-}
-
-export async function validate_query_junction(ds: Dataset, genome: Genome) {
+export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
 	if (!tmp) return
 	const q = tmp
@@ -62,22 +34,9 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 		q.samples = validateSampleHeader(ds, q.samples, 'junction')
 	}
 
-	q.get = async (param: QueryParam) => {
+	q.listJunctions = async (param: TermdbJunctionsRequest) => {
 		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
 			throw new Error('minReadCount must be a non-negative integer')
-		if (param.rglst) return await getJunctions(param)
-		if (param.junction) return await getOneJunctionDetail(param)
-		throw new Error('unknown method')
-	}
-	/*
-	get list of junctions with occurrence in a range
-	{
-		rglst[]
-		filter
-		minReadCount
-	}
-	*/
-	async function getJunctions(param: QueryParam) {
 		utils.validateRglst(param, genome)
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
@@ -85,13 +44,15 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 			return { junctions: [] }
 		}
 		const junctions: Junction[] = [] // list of junctions to be returned
+		let maxReadCount = 0
 		for (const r of param.rglst || []) {
 			await utils.get_lines_bigfile({
 				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 				callback: (line: string) => {
 					const l = line.split('\t')
-					const start = Number(l[1]) // must always be numbers
+					const start = Number(l[1])
 					const stop = Number(l[2])
+					if (start < r.start && stop > r.stop) return // completely spans r
 					let j: Junction
 					try {
 						j = JSON.parse(l[4])
@@ -119,6 +80,7 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 						if (rc <= 0) continue
 						if (param.minReadCount && rc < param.minReadCount) continue
 						readcounts.push(rc)
+						maxReadCount = Math.max(maxReadCount, rc)
 					}
 					if (readcounts.length == 0) return
 					j.sampleCount = readcounts.length
@@ -128,7 +90,7 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 				}
 			})
 		}
-		return { junctions }
+		return { junctions, maxReadCount }
 	}
 	/*
 	get sample details of one junction
@@ -138,7 +100,9 @@ export async function validate_query_junction(ds: Dataset, genome: Genome) {
 		minReadCount
 	}
 	*/
-	async function getOneJunctionDetail(param: QueryParam) {
+	q.getOneJunction = async (param: TermdbOneJunctionRequest) => {
+		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
+			throw new Error('minReadCount must be a non-negative integer')
 		const j = param.junction
 		if (!j) throw new Error('junction missing')
 		if (invalidcoord(genome, j.chr, j.start, j.stop)) throw new Error('invalid coord in .junction{}')
