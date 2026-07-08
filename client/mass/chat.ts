@@ -123,12 +123,12 @@ class MassAiChatBot implements RxComponent {
 		}
 	}
 
-	/** True when the dataset has any genomic-alteration data type (snvindel/cnv/svfusion), i.e. a genome
-	 * browser can be shown for it. Mirrors the server's getGeneDataTypes().genomeBrowser gating, read
-	 * here from termdbConfig.queries so a typed coordinate can be handled on the client without a request. */
+	/** True when the dataset supports opening the genome browser in genomic view (needed for typed coordinates). */
 	datasetHasGenomeBrowser(): boolean {
 		const q = this.app.getState().termdbConfig?.queries
-		return Boolean(q && (q.snvindel || q.cnv || q.svfusion))
+		if (!q || !(q.snvindel || q.cnv || q.svfusion)) return false
+		// protein-restricted datasets do not allow coordinate-based (genomic) view
+		return q.gbRestrictMode !== 'protein'
 	}
 
 	async init() {
@@ -586,7 +586,14 @@ function setRenderers(self: any) {
 			return
 		}
 		if (gbRestrictMode == 'genomic') {
-			await self.launchGenomeBrowserView('genomic', { coord })
+			let c = coord
+			if (!c) {
+				const def = self.app.getState().termdbConfig?.queries?.defaultCoord
+				const pos = def ? string2pos(def, self.app.opts.genome, true) : null
+				if (pos) c = { chr: pos.chr, start: pos.start, stop: pos.stop }
+			}
+			if (!c) throw new Error(`Unable to resolve coordinates for "${gene}" and no defaultCoord is configured`)
+			await self.launchGenomeBrowserView('genomic', { coord: c })
 			return
 		}
 

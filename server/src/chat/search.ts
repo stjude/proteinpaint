@@ -59,10 +59,12 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		const dataTypes = getGeneDataTypesForEachGene(ds, gene, datasetDataTypes)
 		// resolve a default genomic coordinate for genes that can seed a genome browser: the DNA
 		// methylation region picker and the genome browser's genomic view both need chr/start/stop
-		const coord = dataTypes.dnaMethylation || dataTypes.genomeBrowser ? getGeneCoord(genome, gene) : null
+		const coord =
+			(dataTypes.dnaMethylation || dataTypes.genomeBrowser) && ds.queries?.gbRestrictMode !== 'protein' // Restrict genome browser to protein view only (no genomic view) when gbRestrictMode is set to 'protein'
+				? getGeneCoord(genome, gene)
+				: null
 		return { gene, dataTypes, coord }
 	})
-
 	// Will later add support for other NonDict terms such as genesets etc.
 	return { dictionaryTerms: terms, genes: genes }
 }
