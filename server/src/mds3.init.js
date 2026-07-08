@@ -3764,29 +3764,16 @@ function mayInitTermid2totalsize2(tdb, ds) {
 	}
 }
 
-/** Dataset-startup validation for the rnaseqGeneCount query (used by the
- * DE route at request time). Resolves the file path against tpmasterdir,
- * reads the header (or HDF5 sample list) to populate `q.allSampleSet`,
- * and warns about any header sample names the termdb doesn't recognize.
- * Called from mds3.init at server boot, not per request. */
 async function validate_query_rnaseqGeneCount(ds) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	await setFile(q, 'rnaseqGeneCount')
-	/*
-    first line of matrix must be sample header, samples start from 5th column for text based files
-    read the first line to get all samples, and save at q.allSampleSet
-    so that samples from analysis request will be screened against q.allSampleSet
-    also require that there's no duplicate samples in header line, so rust/r won't break
-    */
 	{
 		let samples = []
 		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
-			samples = (await get_header_txt(q.file, null)).split('\t').slice(4)
+			samples = (await utils.get_header_txt(q.file, null)).split('\t').slice(4)
 		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
-			const s = await getH5samples(q.file)
-			if (!Array.isArray(samples)) throw new Error('HDF5 file has no samples, please check file.')
-			samples = s
+			samples = await getH5samples(q.file)
 		} else throw new Error('unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type)
 
 		q.allSampleSet = new Set(samples)
