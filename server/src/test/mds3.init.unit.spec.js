@@ -1721,6 +1721,24 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	t.throws(() => mayValidateBcfMafFilter(qBadMode), /unknown mafFilterMode/, 'unknown mafFilterMode throws')
 })
 
+test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t => {
+	t.plan(2)
+	// GDC has byrange.gdcapi (no _tk.format); its FORMAT is on q.format. The `|| q.format` fallback in
+	// mayValidateBcfMafFilter is the whole reason GDC MAF works — guard it so a cleanup can't silently
+	// break GDC (validation would then throw /no FORMAT/ and take down the GDC snvindel query).
+	const q = {
+		byrange: { gdcapi: true },
+		format: { TumorAC: { ID: 'TumorAC', Number: 'R', Type: 'Integer', Description: 'tumor allele counts' } },
+		mafFilter: {
+			opts: { joinWith: ['and', 'or'] },
+			filter: { type: 'tvslst', join: '', in: true, lst: [] },
+			terms: [{ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' }]
+		}
+	}
+	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'GDC-shaped q (format on q.format) passes validation')
+	t.equal(q.mafFilter.terms.length, 3, 'auto-populated totalDepth + altDepth terms from q.format')
+})
+
 const mafFilter = {
 	type: 'tvslst',
 	join: '',
