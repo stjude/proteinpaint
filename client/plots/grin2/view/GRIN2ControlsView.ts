@@ -142,7 +142,10 @@ export class GRIN2ControlsView {
 				consequences: this.getSelectedConsequences()
 			}
 			if (this.snvindel_hyperMutator) {
-				requestConfig.snvindelOptions.hyperMutator = parseFloat(this.snvindel_hyperMutator.property('value'))
+				// a cleared input yields NaN; fall back to the default so we never send NaN (which would silently
+				// disable the cutoff server-side and leak "NaN" into summary strings)
+				const v = parseFloat(this.snvindel_hyperMutator.property('value'))
+				requestConfig.snvindelOptions.hyperMutator = Number.isFinite(v) ? v : SNVINDEL_HYPERMUTATOR_FALLBACK
 			}
 			if (this.snvindelMafFilter) {
 				requestConfig.snvindelOptions.mafFilter = this.snvindelMafFilter
@@ -153,7 +156,9 @@ export class GRIN2ControlsView {
 				maxSegLength: parseFloat(this.cnv_maxSegLength.property('value'))
 			}
 			if (this.cnv_hyperMutator) {
-				requestConfig.cnvOptions.hyperMutator = parseFloat(this.cnv_hyperMutator.property('value'))
+				// cleared input => NaN; fall back to the default (see snvindel hyperMutator above)
+				const v = parseFloat(this.cnv_hyperMutator.property('value'))
+				requestConfig.cnvOptions.hyperMutator = Number.isFinite(v) ? v : CNV_HYPERMUTATOR_FALLBACK
 			}
 			// id of the selected cnv file type (datasets exposing singleSampleMutation.cnvTypes, e.g. GDC)
 			if (this.cnvSelectedTypeId) requestConfig.cnvOptions.cnvType = this.cnvSelectedTypeId

@@ -40,10 +40,13 @@ async function getAvailableMemoryMB(): Promise<number> {
 			const { stdout } = await exec('free -m')
 			const output = stdout.toString()
 			const lines = output.split('\n')
-			const memLine = lines.find(l => l.startsWith('Mem:'))
+			const memLine = lines.find(l => l.trim().startsWith('Mem:'))
 			if (memLine) {
-				const parts = memLine.split(/\s+/)
-				return parseInt(parts[6]) // "available" column
+				const parts = memLine.trim().split(/\s+/)
+				const available = parseInt(parts[6], 10) // "available" column
+				// if free's output format shifts (or the column is absent), fall through to os.freemem below
+				// rather than returning NaN, which would poison the cap math and logs
+				if (Number.isFinite(available)) return available
 			}
 		}
 	} catch (e) {
