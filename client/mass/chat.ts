@@ -447,7 +447,7 @@ function parseGenomicCoord(str: string, genome: any): { chr: string; start: numb
 		: [chrToken, 'chr' + chrToken]
 	for (const chr of chrCandidates) {
 		try {
-			const pos = string2pos(`${chr}:${start}-${stop}`, genome, false)
+			const pos = string2pos(`${chr}:${start}-${stop}`, genome, true)
 			if (pos) return { chr: pos.chr, start: pos.start, stop: pos.stop }
 		} catch {
 			// try the next chromosome-name candidate
@@ -556,7 +556,7 @@ function setRenderers(self: any) {
 		opts: { gene?: string; coord?: { chr: string; start: number; stop: number } }
 	) => {
 		if (mode == 'protein') {
-			if (!opts.gene) throw 'gene symbol required for protein view'
+			if (!opts.gene) throw new Error('gene symbol required for protein view')
 			await self.launchPlot({
 				chartType: 'genomeBrowser',
 				geneSearchResult: { geneSymbol: opts.gene },
@@ -564,7 +564,7 @@ function setRenderers(self: any) {
 			})
 			return
 		}
-		if (!opts.coord) throw 'coordinate required for genomic view'
+		if (!opts.coord) throw new Error('coordinate required for genomic view')
 		await self.launchPlot({
 			chartType: 'genomeBrowser',
 			geneSearchResult: { chr: opts.coord.chr, start: opts.coord.start, stop: opts.coord.stop },
