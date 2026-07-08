@@ -354,24 +354,48 @@ export async function phrase2entity(
 					} else if ('termType' in tw1 && tw1.termType === TermTypes.GENE_VARIANT) {
 						// A gene can be shown in two views: 'protein' (protein/lollipop view, seeded by gene
 						// symbol) or 'genomic' (genomic view over the gene's locus, seeded by chr/start/stop).
-						// blockIsProteinMode selects between them. Resolve the gene's locus so the genomic view
-						// is available; it may be null for a gene that can't be mapped to a coordinate.
+						// blockIsProteinMode selects between them.
 						const geneSymbol = scaffoldResultGene[0]
-						const coord = getGeneCoord(genome, geneSymbol)
-						const viewMode = scaffoldResult.viewMode
-						if (viewMode === 'genomic') {
-							// user explicitly asked for the genomic view; requires resolved coordinates
+						// Reconcile the requested view with any dataset restriction (ds.queries.gbRestrictMode,
+						// see search.ts). A restricted dataset forces a single view — no view chooser — and a
+						// conflicting explicit request returns a message. When unrestricted, honor the explicit
+						// viewMode, or leave it undefined to offer the two-button chooser.
+						let mode: 'protein' | 'genomic' | undefined = scaffoldResult.viewMode
+						const gbRestrictMode = ds.queries?.gbRestrictMode
+						if (gbRestrictMode === 'protein') {
+							if (mode === 'genomic') {
+								return {
+									type: 'text',
+									text: `This dataset only supports the protein view of gene "${geneSymbol}" in the genome browser.`
+								}
+							}
+							mode = 'protein'
+						} else if (gbRestrictMode === 'genomic') {
+							if (mode === 'protein') {
+								return {
+									type: 'text',
+									text: `This dataset only supports the genomic view of gene "${geneSymbol}" in the genome browser.`
+								}
+							}
+							mode = 'genomic'
+						}
+						// Resolve the gene's locus for the genomic view (needed for 'genomic' and the chooser);
+						// not needed for a pure protein view. May be null for a gene without a mappable coordinate.
+						const coord = mode === 'protein' ? null : getGeneCoord(genome, geneSymbol)
+						if (mode === 'genomic') {
+							// genomic view (explicitly requested, or forced by gbRestrictMode); requires coordinates
 							if (!coord) {
 								return { type: 'text', text: `Could not resolve genomic coordinates for gene "${geneSymbol}".` }
 							}
 							pp_plot_json.geneSearchResult = { chr: coord.chr, start: coord.start, stop: coord.stop }
 							pp_plot_json.blockIsProteinMode = false
-						} else if (viewMode === 'protein') {
-							// user explicitly asked for the protein view
+						} else if (mode === 'protein') {
+							// protein view (explicitly requested, or forced by gbRestrictMode)
 							pp_plot_json.geneSearchResult = { geneSymbol }
 							pp_plot_json.blockIsProteinMode = true
 						} else if (!coord) {
 							// mode not stated and genomic view is unavailable (no coordinates) -> protein view
+							// directly, with no two-button view chooser
 							pp_plot_json.geneSearchResult = { geneSymbol }
 							pp_plot_json.blockIsProteinMode = true
 						} else {
