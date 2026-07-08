@@ -290,7 +290,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		nameSet.add(plot.name)
 		if (!plot.folder) throw new Error('plot.folder missing')
 	}
-
+	
 	// caches files contents between requests so each file is only loaded once
 	const file2Lines = {} // key: file path, value: string[]
 
@@ -306,6 +306,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			if (!sample) throw new Error('sample is required for gene expression query')
 			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 		}
+		const checkGeneExpMap = geneExpMap && Object.keys(geneExpMap).length > 0
 		// given a sample name, collect every plot data for this sample and return
 		const plots: Plot[] = []
 		for (const plot of D.plots) {
@@ -344,7 +345,8 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				if (!cellId) throw new Error('cell id missing')
 				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
 				const cell: Cell = { cellId, x, y, category }
-				if (Object.keys(geneExpMap || {}).length > 0) {
+			
+				if (checkGeneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]
 						expCells.push(cell)
@@ -367,7 +369,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			// no data available for this sample
 			return { nodata: true }
 		}
-
 		return { plots }
 	}
 }
