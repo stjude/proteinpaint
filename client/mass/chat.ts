@@ -596,14 +596,10 @@ function setRenderers(self: any) {
 			return
 		}
 		if (gbRestrictMode == 'genomic') {
-			let c = coord
-			if (!c) {
-				const def = self.app.getState().termdbConfig?.queries?.defaultCoord
-				const pos = def ? string2pos(def, self.app.opts.genome, true) : null
-				if (pos) c = { chr: pos.chr, start: pos.start, stop: pos.stop }
-			}
-			if (!c) throw new Error(`Unable to resolve coordinates for "${gene}" and no defaultCoord is configured`)
-			await self.launchGenomeBrowserView('genomic', { coord: c })
+			// genomic view requires the gene's locus (server-resolved in search.ts). Error out rather than
+			// falling back to a dataset default region, which would open a locus unrelated to the gene.
+			if (!coord) throw new Error(`Unable to resolve genomic coordinates for gene "${gene}".`)
+			await self.launchGenomeBrowserView('genomic', { coord })
 			return
 		}
 
