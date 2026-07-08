@@ -7,6 +7,17 @@ All notable changes to this project will be documented in this file.
 Features:
 - Single cell scatter plot now accepts two single cell gene expression terms for plotting. The option to add a color term is disabled if an overlay term is present.
 - New client unit and integration tests for the single cell scatter were added. New server unit tests for the plot route were also added.
+- GRIN2 - MAF filter (tumor VAF / total-depth / alt-depth) support for GDC, matching non-GDC datasets
+- GRIN2 - hypermutator per-sample cutoff for SNV/indel and CNV, excluding a sample from a data type when its raw record count exceeds the cutoff
+- GRIN2 - CNV classification unified across log2ratio, segmean, copyNumber, and categorical quantification, with per-type thresholds for mixed cohorts
+- GRIN2 - CNV-segment controls: multi cnv-type selection, categorical class checkboxes, and clearer reporting; clearing all consequences/classes now sends "none" of that data type
+- GRIN2 - refactored the general route (main.ts split into lesions.ts and memory.ts; typed processing summary)
+
+Fixes:
+- GRIN2 - CNV hypermutator cutoff now defaults to off; the previous default silently dropped whole-sample CNV on dense native segmentation data
+- GRIN2 - MAF validation resolves the FORMAT definition from q.format so the filter runs on GDC (whose FORMAT is not under byrange._tk)
+- GRIN2 - client hypermutator inputs guard against a cleared field (NaN), falling back to the configured default instead of disabling the cutoff server-side
+- GRIN2 - Linux available-memory parsing tolerates free -m format shifts, falling back to os.freemem instead of producing NaN in the lesion-cap math
 
 
 ## 2.195.0
