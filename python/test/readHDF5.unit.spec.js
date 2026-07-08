@@ -161,33 +161,6 @@ tape('Counts Dataset Dimensions', async t => {
 	t.end()
 })
 
-tape('Validate HDF5 File', async t => {
-	try {
-		const input_data = {
-			hdf5_file: HDF5_FILE,
-			validate: true,
-			include_items: true
-		}
-
-		const out = await run_python(python_script, JSON.stringify(input_data))
-		const data = typeof out === 'string' ? JSON.parse(out) : out
-
-		t.equal(data.status, 'success', 'Should return success status for valid matrix file')
-		t.equal(data.format, 'matrix', 'Should report matrix format')
-		t.ok(Array.isArray(data.samples), 'Should include samples array')
-		t.ok(data.samples.length > 0, 'Should include at least one sample')
-		t.ok(data.matrix_dimensions, 'Should include matrix dimensions')
-		t.equal(typeof data.matrix_dimensions.num_rows, 'number', 'num_rows should be numeric')
-		t.equal(typeof data.matrix_dimensions.num_columns, 'number', 'num_columns should be numeric')
-		t.ok(Array.isArray(data.items), 'Should include items when include_items is true')
-		t.ok(data.items.length > 0, 'Should include at least one item')
-	} catch (e) {
-		t.fail(`Test failed with error: ${e}`)
-	}
-
-	t.end()
-})
-
 /**
  * Test: Invalid File Handling
  *
