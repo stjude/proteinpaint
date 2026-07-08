@@ -227,10 +227,9 @@ class gsea extends PlotBase {
 						dslabel: this.app.vocabApi.vocab.dslabel,
 						sample: config.sample,
 						termId: config.termId,
-						categoryName: config.categoryName,
-						signal: this.api?.getAbortSignal()
+						categoryName: config.categoryName
 					}
-					const response = await dofetch3('termdb/singlecellDEgenes', { body })
+					const response = await dofetch3('termdb/singlecellDEgenes', { body, signal: this.api?.getAbortSignal() })
 					if (response.error) throw response.error
 					if (!Array.isArray(response.data) || response.data.length === 0) throw 'No DE genes returned for this cluster'
 					const genes = []

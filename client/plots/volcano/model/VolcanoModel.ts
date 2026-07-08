@@ -25,7 +25,7 @@ export class VolcanoModel {
 
 		if (this.termType === GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			const response = await dofetch3('termdb/DE', { body })
+			const response = await dofetch3('termdb/DE', { body, signal: this.volcano.api?.getAbortSignal() })
 			// Surface the DE request so downstream plots (GSEA) can snapshot
 			// it and later ask the server to recompute the DA cache if the
 			// file is missing on a peer node or after TTL eviction.
@@ -34,7 +34,7 @@ export class VolcanoModel {
 		}
 		if (this.termType === DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
-			const response = await dofetch3('termdb/diffMeth', { body })
+			const response = await dofetch3('termdb/diffMeth', { body, signal: this.volcano.api?.getAbortSignal() })
 			// Surface the DM request the same way the GE branch above does so
 			// the GSEA tab can snapshot it and the server can recompute the DM
 			// cache if the file is missing on a peer node or after TTL.
@@ -43,11 +43,11 @@ export class VolcanoModel {
 		}
 		if (this.termType === SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
-			return await dofetch3('termdb/singlecellDEgenes', { body })
+			return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.volcano.api?.getAbortSignal() })
 		}
 		if (this.termType === PROTEOME_DAP) {
 			const body = this.getDapRequestBody()
-			return await dofetch3('termdb/dapVolcano', { body })
+			return await dofetch3('termdb/dapVolcano', { body, signal: this.volcano.api?.getAbortSignal() })
 		}
 		throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
 	}
@@ -87,8 +87,7 @@ export class VolcanoModel {
 			filter: state.termfilter.filter,
 			filter0: state.termfilter.filter0,
 			min_samples_per_group: this.settings.minSamplesPerGroup,
-			volcanoRender: this.getVolcanoRender(),
-			signal: this.volcano.api?.getAbortSignal()
+			volcanoRender: this.getVolcanoRender()
 		} as Partial<DiffMethRequest>
 
 		this.addConfounderTw(body)
@@ -130,9 +129,7 @@ export class VolcanoModel {
 			// at fetch time — bigger headroom = more tolerable post-render
 			// zoom before pixelation appears). The server clamp keeps the
 			// bitmap memory bounded.
-			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2,
-			signal: this.volcano.api?.getAbortSignal()
-		}
+			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2		}
 	}
 
 	//This is a workaround until the server can accept an arr of confounder tws
@@ -152,9 +149,7 @@ export class VolcanoModel {
 			sample: this.config.sample,
 			termId: this.config.termId,
 			categoryName: this.config.categoryName,
-			volcanoRender: this.getVolcanoRender(),
-			signal: this.volcano.api?.getAbortSignal()
-		}
+			volcanoRender: this.getVolcanoRender()		}
 		return body
 	}
 
@@ -166,8 +161,7 @@ export class VolcanoModel {
 			organism,
 			assay,
 			cohort,
-			volcanoRender: this.getVolcanoRender(),
-			signal: this.volcano.api?.getAbortSignal()
+			volcanoRender: this.getVolcanoRender()
 		}
 	}
 
