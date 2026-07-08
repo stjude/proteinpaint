@@ -408,37 +408,49 @@ return the created bubble and allow to be modified
 
 export const chatInit = getCompInit(MassAiChatBot)
 
-// Parse a genomic coordinate RANGE typed into the omnisearch box (e.g. "chr7:100000-200000") into
-// { chr, start, stop }, or null if the input is not such a range. Requires the chr:start-stop form (a
-// bare chr name or single position is intentionally ignored so partial typing doesn't prematurely
-// trigger the genome browser). Final validation (chromosome exists, positions in range) is delegated
-// to string2pos(), which returns null on invalid input.
+// Parse a genomic coordinate RANGE typed into the omnisearch box (e.g. "chr7:100000-200000", or with
+// the "chr" prefix omitted, "7:100000-200000") into { chr, start, stop }, or null if the input is not
+// such a range. Requires the chr:start-stop form (a bare chr name or single position is intentionally
+// ignored so partial typing doesn't prematurely trigger the genome browser). Final validation
+// (chromosome exists, positions in range) is delegated to string2pos(), which returns null on invalid input.
 function parseGenomicCoord(str: string, genome: any): { chr: string; start: number; stop: number } | null {
 	if (!genome) return null
-	// Cheap SHAPE pre-filter: bail out unless the text looks like a "chr:start-stop" range, so we only
-	// call string2pos() (and only trigger the genome browser) for range-like input. This checks form
-	// only — chromosome existence and position validity are left to string2pos() below.
+	// Cheap SHAPE pre-filter + capture: bail out unless the text looks like a "chr:start-stop" range, so
+	// we only call string2pos() (and only trigger the genome browser) for range-like input. This checks
+	// form only — chromosome existence and position validity are left to string2pos() below. The three
+	// capture groups are the chromosome token, start, and stop.
 	// Regex breakdown: ^ \s*        optional leading spaces
-	//                  \w+         chromosome token (letters/digits/_), e.g. "chr7", "7", "chrX"
+	//                  (\w+)       chromosome token (letters/digits/_), e.g. "chr7", "7", "chrX", "X"
 	//                  \s* : \s*   a colon separator, optional spaces around it
-	//                  [\d,]+      start position, digits with optional thousands commas, e.g. "100,000"
+	//                  ([\d,]+)    start position, digits with optional thousands commas, e.g. "100,000"
 	//                  \s* - \s*   a dash separator, optional spaces around it
-	//                  [\d,]+      stop position
+	//                  ([\d,]+)    stop position
 	//                  \s* $       optional trailing spaces, end of string
 	// Matches (→ passes to string2pos): "chr7:100000-200000", "chr7: 100000-200000",
-	//                                    "chr7:100,000-200,000", "chrX:5000-6000"
+	//                                    "chr7:100,000-200,000", "chrX:5000-6000", "7:100000-200000"
 	// Rejected here (→ returns null, falls through to normal search): "chr7" (bare chr),
 	//                "chr7:1000" (single position, no dash), "BRCA1" (gene name), "" (empty)
 	// Note: shape-valid but semantically bad input like "chr7:200000-100000" (start>stop) or
 	//       "chr99:1-2" (no such chromosome) passes this test but is rejected later by string2pos().
-	if (!/^\s*\w+\s*:\s*[\d,]+\s*-\s*[\d,]+\s*$/.test(str)) return null
-	try {
-		const pos = string2pos(str, genome, false)
-		if (!pos) return null
-		return { chr: pos.chr, start: pos.start, stop: pos.stop }
-	} catch {
-		return null
+	const m = /^\s*(\w+)\s*:\s*([\d,]+)\s*-\s*([\d,]+)\s*$/.exec(str)
+	if (!m) return null
+	const [, chrToken, start, stop] = m
+	// The genome's chrlookup is keyed by its canonical chromosome names (e.g. "chr7"). Accept input with
+	// the "chr" prefix omitted (e.g. "7:100000-200000") by also trying the toggled form: add "chr" when
+	// missing, or strip it when present. Whichever the genome actually knows resolves via string2pos();
+	// the other candidate simply returns null. e.g. "7" -> try "7" then "chr7"; "chr7" -> try "chr7" then "7".
+	const chrCandidates = /^chr/i.test(chrToken)
+		? [chrToken, chrToken.replace(/^chr/i, '')]
+		: [chrToken, 'chr' + chrToken]
+	for (const chr of chrCandidates) {
+		try {
+			const pos = string2pos(`${chr}:${start}-${stop}`, genome, false)
+			if (pos) return { chr: pos.chr, start: pos.start, stop: pos.stop }
+		} catch {
+			// try the next chromosome-name candidate
+		}
 	}
+	return null
 }
 
 // Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
