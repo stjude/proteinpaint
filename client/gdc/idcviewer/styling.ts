@@ -96,6 +96,7 @@ export const idcSearchStyles = {
 		'min-width': '200px',
 		height: '100%',
 		border: 'none',
+		cursor: 'text',
 		'background-color': 'transparent',
 		outline: 'none'
 	},
@@ -104,7 +105,7 @@ export const idcSearchStyles = {
 		top: 'calc(100% + 1px)',
 		width: '100%',
 		'box-sizing': 'border-box',
-		left: '50% ',
+		left: '50%',
 		transform: 'translateX(-50%)',
 		'justify-content': 'center',
 		'align-items': 'center',
@@ -145,7 +146,7 @@ export const idcTableStyles = {
 	},
 	headerLabelDiv: {
 		display: 'flex',
-		'align-items': 'left',
+		'justify-content': 'flex-start',
 		gap: '5px'
 	},
 	activeSortIcon: {

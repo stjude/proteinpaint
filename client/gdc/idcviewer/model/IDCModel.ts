@@ -94,7 +94,7 @@ export class IDCModel {
 			})
 		const operator = 'in'
 
-		const hasSearchOrCaseFilter = searchFilter !== '' || caseIDsForFilter.length !== 0
+		const hasSearchOrCaseFilter = normalizedSearchFilter.length > 0 || caseIDsForFilter.length > 0
 		const searchFilters = {
 			op: 'or',
 			content: [
@@ -126,7 +126,7 @@ export class IDCModel {
 			? {
 					op: 'and',
 					content: [
-						...(caseIDsForFilter.length !== 0
+						...(caseIDsForFilter.length > 0
 							? [
 									{
 										op: 'in',
@@ -134,7 +134,7 @@ export class IDCModel {
 									}
 							  ]
 							: []),
-						...(searchFilter.trim() !== '' ? [searchFilters] : [])
+						...(normalizedSearchFilter.length > 0 ? [searchFilters] : [])
 					]
 			  }
 			: undefined
