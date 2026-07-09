@@ -5,7 +5,7 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { renderManhattan } from '../renderManhattan.ts'
 import { mayLog } from '../helpers.ts'
 import { get_samples } from '../termdb.sql.js'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion, optionToDt, formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '../utils/cacheOrRecompute.ts'
 import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
 import { getMaxLesions } from './memory.ts'
@@ -330,6 +330,7 @@ export function grin2KeyInputs(req: GRIN2Request) {
 		cnvOptions: req.cnvOptions ?? null,
 		fusionOptions: req.fusionOptions ?? null,
 		svOptions: req.svOptions ?? null,
+		itdOptions: req.itdOptions ?? null,
 		excludeOptions: normalizeExcludeOptions(req.excludeOptions),
 		maxGenesToShow: req.maxGenesToShow ?? null
 	}
@@ -568,6 +569,7 @@ async function processSampleData(
 	if (request.cnvOptions) enabledTypes.push(dtcnv)
 	if (request.fusionOptions) enabledTypes.push(dtfusionrna)
 	if (request.svOptions) enabledTypes.push(dtsv)
+	if (request.itdOptions) enabledTypes.push(dtitd)
 
 	for (const type of enabledTypes) {
 		samplesPerType.set(type, new Set<string>())

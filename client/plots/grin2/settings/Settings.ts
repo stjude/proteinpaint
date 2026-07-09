@@ -24,4 +24,7 @@ export interface GRIN2Settings {
 
 	/** Persisted SV options (currently no user-configurable fields). */
 	svOptions?: Record<string, any>
+
+	/** Persisted ITD options (currently no user-configurable fields). */
+	itdOptions?: Record<string, any>
 }

@@ -67,6 +67,7 @@ export interface GRIN2RequestData {
 	}
 	fusionOptions?: Record<string, any>
 	svOptions?: Record<string, any>
+	itdOptions?: Record<string, any>
 	excludeOptions?: { blacklists?: string[]; overlapFrac?: number }
 }
 

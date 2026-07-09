@@ -112,6 +112,9 @@ export type GRIN2Request = {
 
 	/** Presence enables SVs in the analysis; no per-sv filtering options yet */
 	svOptions?: Record<string, never>
+
+	/** Presence enables ITDs in the analysis; no per-itd filtering options yet */
+	itdOptions?: Record<string, never>
 	/** Artifact-region exclude mask applied before the GRIN2 statistics run: genes whose span lies
 	 * >= overlapFrac inside the selected blacklist regions are dropped. Blacklist sources are
 	 * declared per genome (Genome.blacklists) and selected here by name; their BED files are
