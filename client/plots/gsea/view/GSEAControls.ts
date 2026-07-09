@@ -1,4 +1,4 @@
-import type { GSEA } from '../gsea'
+import type { GSEA } from '../GSEA'
 import { controlsInit } from '#plots/controls.js'
 
 export async function setControls(controlsDiv, gsea: GSEA) {

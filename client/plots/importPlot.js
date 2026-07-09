@@ -42,7 +42,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import('./grin2/grin2')
 
 		case 'gsea':
-			return await import(`./gsea/gsea.ts`)
+			return await import(`./gsea/GSEA.ts`)
 
 		case 'imagePlot':
 			return await import('./imagePlot.ts')
