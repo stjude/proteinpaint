@@ -364,7 +364,7 @@ tape('geneVariant term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			240,
+			242,
 			`should render the expected number of cell rects`
 		)
 		if (test._ok) matrix.Inner.app.destroy()
@@ -420,7 +420,7 @@ tape('geneVariant terms and dictionary terms', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			900,
+			902,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -479,7 +479,7 @@ tape('geneVariant terms with divide by dictionary term', function (test) {
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			720,
+			722,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -543,7 +543,7 @@ tape('geneVariant terms and dictionary terms divide by dictionary term', functio
 		)
 		test.equal(
 			matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect').size(),
-			900,
+			902,
 			`should render the expected number of cell rects`
 		)
 		test.equal(
@@ -1419,7 +1419,7 @@ tape('avoid race condition - cohort change', function (test) {
 			const rects = matrix.Inner.dom.seriesesG.selectAll('.sjpp-mass-series-g rect')
 			test.equal(
 				rects.size(),
-				1200,
+				1202,
 				'should have the expected total number of matrix cell rects, inlcuding WT and not tested'
 			)
 			const hits = rects.filter(d => d.key === 'BCR' && d.value.class != 'WT' && d.value.class != 'Blank')
@@ -1895,7 +1895,7 @@ tape(
 			const rects = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 236,
+				count: 237,
 				trigger: () => {
 					options[0].dispatchEvent(
 						new MouseEvent('click', {
@@ -1941,7 +1941,7 @@ tape(
 			const rects2 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 240,
+				count: 242,
 				trigger: () => {
 					options2[0].dispatchEvent(
 						new MouseEvent('click', {
@@ -1983,7 +1983,7 @@ tape(
 			const rects3 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 239,
+				count: 241,
 				trigger: () => {
 					options3[1].dispatchEvent(
 						new MouseEvent('click', {
@@ -2018,7 +2018,7 @@ tape(
 			const rects4 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 240,
+				count: 242,
 				trigger: () => {
 					options4[0].dispatchEvent(
 						new MouseEvent('click', {
@@ -2103,7 +2103,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 		const rects = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 181,
+			count: 183,
 			trigger: () => {
 				options[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -2148,7 +2148,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 		const rects2 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 183,
+			count: 185,
 			trigger: () => {
 				options2[1].dispatchEvent(
 					new MouseEvent('click', {
@@ -2189,7 +2189,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 		const rects3 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 180,
+			count: 182,
 			trigger: () => {
 				options3[2].dispatchEvent(
 					new MouseEvent('click', {
@@ -2230,7 +2230,7 @@ tape('apply legend group filters to a geneVariant term in geneVariant term only 
 		const rects4 = await detectLst({
 			elem: matrix.Inner.dom.seriesesG.node(),
 			selector: '.sjpp-mass-series-g rect',
-			count: 240,
+			count: 242,
 			trigger: () => {
 				options4[0].dispatchEvent(
 					new MouseEvent('click', {
@@ -2317,7 +2317,7 @@ tape(
 			const rects = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 721,
+				count: 723,
 				trigger: () => {
 					options[0].dispatchEvent(
 						new MouseEvent('click', {
@@ -2362,7 +2362,7 @@ tape(
 			const rects2 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 724,
+				count: 726,
 				trigger: () => {
 					options2[1].dispatchEvent(
 						new MouseEvent('click', {
@@ -2397,7 +2397,7 @@ tape(
 			const rects3 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 711,
+				count: 712,
 				trigger: () => {
 					options3[0].dispatchEvent(
 						new MouseEvent('click', {
@@ -2438,7 +2438,7 @@ tape(
 			const rects4 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 724,
+				count: 726,
 				trigger: () => {
 					options4[0].dispatchEvent(
 						new MouseEvent('click', {
@@ -2473,7 +2473,7 @@ tape(
 			const rects5 = await detectLst({
 				elem: matrix.Inner.dom.seriesesG.node(),
 				selector: '.sjpp-mass-series-g rect',
-				count: 900,
+				count: 902,
 				trigger: () => {
 					options5[3].dispatchEvent(
 						new MouseEvent('click', {
