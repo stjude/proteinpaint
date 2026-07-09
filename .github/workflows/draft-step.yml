@@ -12,9 +12,6 @@ on:
   # keep this event trigger to allow team members to run this CI using a password
   workflow_dispatch:
     inputs:
-      build_secret:
-        type: string
-        description: Build secret
 
   # can try different event triggers here
   # pull_request_target:
@@ -22,33 +19,15 @@ on:
     #   - closed
 
 jobs:
-  check-user-permissions:
-    # keep this job as-is to allow team members to run this CI using a password
-    runs-on: ubuntu-22.04
-    steps:
-      - id: set-build-secret
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "::set-output name=BUILD_SECRET::${{ github.event.inputs.build_secret }}"
-          else
-            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
-          fi
-      - name: Check user permission
-        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
-        with:
-          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
   example-debug:
     # keep the requirement for the previous step
-    needs: check-user-permissions
     # this should match the debian version that's used in the deps image
     runs-on: ubuntu-22.04
     # expect this job to finish quickly, not meant to test intensive job steps from a real workflow 
     timeout-minutes: 2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 10
 
@@ -63,7 +42,7 @@ jobs:
         run: |
           # set the branch name before checking out tag
           BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          echo "::set-output name=branch::$BRANCH"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
           git pull # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
           
