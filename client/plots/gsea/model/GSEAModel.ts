@@ -10,13 +10,11 @@ import type { GenesetEnrichmentRequest } from '#types'
 export class GSEAModel {
 	gsea: GSEA
 	app: AppApi
-	signal: any
 	termType!: string
 
 	constructor(gsea: GSEA) {
 		this.gsea = gsea
 		this.app = gsea.app
-		this.signal = gsea.app?.getAbortSignal()
 	}
 
 	async getGseaParams(_params: any, state: any, config: any): Promise<GseaParams> {
@@ -78,7 +76,7 @@ export class GSEAModel {
 			termId: config.termId,
 			categoryName: config.categoryName
 		}
-		return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.signal })
+		return await dofetch3('termdb/singlecellDEgenes', { body })
 	}
 
 	async getOtherTermTypesParams(params: any, config): Promise<void> {
@@ -109,7 +107,7 @@ export class GSEAModel {
 	async runEnrichment(body: GenesetEnrichmentRequest): Promise<any> {
 		this.toggleLoading(true)
 		try {
-			return await dofetch3('genesetEnrichment', { body, signal: this.signal })
+			return await dofetch3('genesetEnrichment', { body })
 		} finally {
 			this.toggleLoading(false)
 		}
