@@ -148,7 +148,7 @@ Return ONLY a valid JSON object with this structure — no extra fields, no surr
 {
   "genePhrase": "<phrase>",   // OPTIONAL - the word containing the gene name
   "genomeBrowserPhrase": "<phrase>",   // OPTIONAL - the phrase describing the genomic region (chromosome + start + stop coordinates)
-  "viewMode": "protein" | "genomic",   // OPTIONAL - only when the user explicitly asks for a protein/lollipop view or a genomic view of a gene
+  "viewMode": "<protein|genomic>",   // OPTIONAL - only when the user explicitly asks for a protein/lollipop view or a genomic view of a gene
   "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
 }
 
