@@ -41,6 +41,7 @@ tape('\n', function (test) {
 })
 
 tape('lesion types discovered from geneHits columns (itd)', async test => {
+	test.timeoutAfter(5000)
 	// An itd-only run: FLT3 (q=0, the signal) + noise at q=1. 'itd' is not one of the legacy
 	// gain/loss/mutation/fusion/sv types, so this fails if the renderer uses a hardcoded whitelist.
 	const geneHits = [
@@ -56,6 +57,7 @@ tape('lesion types discovered from geneHits columns (itd)', async test => {
 })
 
 tape('zero-q top hit renders on-canvas (not clipped above top)', async test => {
+	test.timeoutAfter(5000)
 	// FLT3 q=0 with the next-best non-zero q well below the y-cap: the zero-q row must still land
 	// inside [0, canvasHeight]. Regression for zero-q rows being parked above yMax.
 	const geneHits = [
@@ -73,6 +75,7 @@ tape('zero-q top hit renders on-canvas (not clipped above top)', async test => {
 })
 
 tape('established multi-type run still produces points', async test => {
+	test.timeoutAfter(5000)
 	const geneHits = [
 		{
 			gene: 'TP53',
@@ -91,6 +94,7 @@ tape('established multi-type run still produces points', async test => {
 })
 
 tape('empty geneHits: no points, no crash', async test => {
+	test.timeoutAfter(5000)
 	const r = await renderManhattan(makeReq({ geneHits: [] }))
 	test.equal(r.plot_data.points.length, 0, 'no interactive points')
 	test.ok(r.png.length > 0, 'still returns a (blank) PNG')
