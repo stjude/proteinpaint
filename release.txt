@@ -1,1 +1,2 @@
-
+Features
+- GSEA plot refactored into the MVVM pattern for improved maintainability and scalability.
