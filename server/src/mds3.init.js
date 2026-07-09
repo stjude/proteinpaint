@@ -2980,6 +2980,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					: await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
 				mlst.push(...cnvMlst)
 			}
+			if (ds.queries.itd && dts.includes(dtitd)) {
+				const itdMlst = await getItdByTerm(ds, gene, genome, q)
+				mlst.push(...itdMlst)
+			}
 
 			//////////////////////////////////////
 			// MUST NOT QUIT when mlst.length==0!
@@ -3140,6 +3144,9 @@ function getDtsToQuery(tw, ds) {
 		}
 		if (ds.queries.geneCnv || ds.queries.cnv) {
 			dts.add(dtcnv)
+		}
+		if (ds.queries.itd) {
+			dts.add(dtitd)
 		}
 	}
 	return [...dts]
@@ -3621,6 +3628,22 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 		return await ds.queries.geneCnv.bygene.get(arg)
 	}
 	throw 'unknown queries.geneCnv method'
+}
+async function getItdByTerm(ds, term, genome, q) {
+	if (!ds.queries.itd) throw 'queries.itd not defined'
+	const arg = {
+		addFormatValues: true,
+		filter0: q.filter0, // hidden filter
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
+		sessionid: q.sessionid
+	}
+	await mayMapGeneName2coord(term, genome)
+	// tw.term.chr/start/stop are set
+	arg.rglst = [term]
+	const result = await ds.queries.itd.get(arg)
+	return result.itds
 }
 
 function mayValidateViewModes(ds) {

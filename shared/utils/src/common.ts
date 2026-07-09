@@ -1373,6 +1373,16 @@ const dtTerms_temp = [
 		type: 'dtsv',
 		dt: dtsv,
 		values: {}
+	},
+	{
+		id: 'itd',
+		query: 'itd',
+		name: dt2label[dtitd],
+		parent_id: null,
+		isleaf: true,
+		type: 'dtitd',
+		dt: dtitd,
+		values: {}
 	}
 ]
 // add origin annotations to dt terms
