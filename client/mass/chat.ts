@@ -7,7 +7,7 @@ import type { ChatRequest, ChatResponse, OmnisearchResult } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
-import { dtsnvindel, dtcnv, dtsv, dtfusionrna, string2pos } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
@@ -123,14 +123,6 @@ class MassAiChatBot implements RxComponent {
 		}
 	}
 
-	/** True when the dataset supports opening the genome browser in genomic view (needed for typed coordinates). */
-	datasetHasGenomeBrowser(): boolean {
-		const q = this.app.getState().termdbConfig?.queries
-		if (!q || !(q.snvindel || q.cnv || q.svfusion)) return false
-		// protein-restricted datasets do not allow coordinate-based (genomic) view
-		return q.gbRestrictMode !== 'protein'
-	}
-
 	async init() {
 		// Note: no server-side request here — the omnisearch resolves dictionary terms, genes, and the
 		// dataset's gene data types together in a single request per search (see doSearch), so nothing is
@@ -145,15 +137,10 @@ class MassAiChatBot implements RxComponent {
 			return
 		}
 		const cohortStr = this.getState(this.app.getState()).cohortStr
-		// Genomic coordinate typed as the prompt (e.g. "chr7:100000-200000" or "7:100000-200000") is
-		// treated as another searchable data type, alongside dictionary terms and genes: when the dataset
-		// has genomic-alteration data (snvindel/cnv/svfusion) and the prompt is a valid coordinate range,
-		// a coordinate result is added below whose "Genome Browser" button opens the genomic view. Parsed
-		// client-side (no server round trip); a coordinate never matches a gene/dictionary term.
-		const coord = this.datasetHasGenomeBrowser() ? parseGenomicCoord(prompt, this.app.opts.genome) : null
-		// Single server request that searches genomic coordinates, dictionary variables and genes together, and reports the
-		// dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene lookup for the
-		// search results, so the client does not need an extra genelookup request during omnisearch.
+		// Single server request that searches genomic coordinates, dictionary variables and genes together,
+		// and reports the dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene
+		// lookup AND resolves a typed genomic coordinate (via string2pos), so the client needs no extra
+		// genelookup request and no genome object during omnisearch.
 		const data: OmnisearchResult = await dofetch3('termdb/chat', {
 			body: {
 				genome: this.app.vocabApi.vocab.genome,
@@ -166,6 +153,11 @@ class MassAiChatBot implements RxComponent {
 			}
 		})
 		if (data.error) throw data.error
+		// Genomic coordinate typed as the prompt (e.g. "chr7:100000-200000" or "7:100000-200000") is
+		// treated as another searchable data type alongside dictionary terms and genes: the server returns
+		// a parsed coordinate when the prompt is a valid range and the dataset supports the genomic view.
+		// A coordinate result is added below whose "Genome Browser" button opens the genomic view.
+		const coord = data.coord || null
 		const lst: any[] = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
 		// Each gene match carries its own available data types (a gene may have e.g. SNV/indel while
 		// another does not), so action buttons are decided per gene rather than dataset-wide.
@@ -420,51 +412,6 @@ return the created bubble and allow to be modified
 }
 
 export const chatInit = getCompInit(MassAiChatBot)
-
-// Parse a genomic coordinate RANGE typed into the omnisearch box (e.g. "chr7:100000-200000", or with
-// the "chr" prefix omitted, "7:100000-200000") into { chr, start, stop }, or null if the input is not
-// such a range. Requires the chr:start-stop form (a bare chr name or single position is intentionally
-// ignored so partial typing doesn't prematurely trigger the genome browser). Final validation
-// (chromosome exists, positions in range) is delegated to string2pos(), which returns null on invalid input.
-function parseGenomicCoord(str: string, genome: any): { chr: string; start: number; stop: number } | null {
-	if (!genome) return null
-	// Cheap SHAPE pre-filter + capture: bail out unless the text looks like a "chr:start-stop" range, so
-	// we only call string2pos() (and only trigger the genome browser) for range-like input. This checks
-	// form only — chromosome existence and position validity are left to string2pos() below. The three
-	// capture groups are the chromosome token, start, and stop.
-	// Regex breakdown: ^ \s*        optional leading spaces
-	//                  (\w+)       chromosome token (letters/digits/_), e.g. "chr7", "7", "chrX", "X"
-	//                  \s* : \s*   a colon separator, optional spaces around it
-	//                  ([\d,]+)    start position, digits with optional thousands commas, e.g. "100,000"
-	//                  \s* - \s*   a dash separator, optional spaces around it
-	//                  ([\d,]+)    stop position
-	//                  \s* $       optional trailing spaces, end of string
-	// Matches (→ passes to string2pos): "chr7:100000-200000", "chr7: 100000-200000",
-	//                                    "chr7:100,000-200,000", "chrX:5000-6000", "7:100000-200000"
-	// Rejected here (→ returns null, falls through to normal search): "chr7" (bare chr),
-	//                "chr7:1000" (single position, no dash), "BRCA1" (gene name), "" (empty)
-	// Note: shape-valid but semantically bad input like "chr7:200000-100000" (start>stop) or
-	//       "chr99:1-2" (no such chromosome) passes this test but is rejected later by string2pos().
-	const m = /^\s*(\w+)\s*:\s*([\d,]+)\s*-\s*([\d,]+)\s*$/.exec(str)
-	if (!m) return null
-	const [, chrToken, start, stop] = m
-	// The genome's chrlookup is keyed by its canonical chromosome names (e.g. "chr7"). Accept input with
-	// the "chr" prefix omitted (e.g. "7:100000-200000") by also trying the toggled form: add "chr" when
-	// missing, or strip it when present. Whichever the genome actually knows resolves via string2pos();
-	// the other candidate simply returns null. e.g. "7" -> try "7" then "chr7"; "chr7" -> try "chr7" then "7".
-	const chrCandidates = /^chr/i.test(chrToken)
-		? [chrToken, chrToken.replace(/^chr/i, '')]
-		: [chrToken, 'chr' + chrToken]
-	for (const chr of chrCandidates) {
-		try {
-			const pos = string2pos(`${chr}:${start}-${stop}`, genome, true)
-			if (pos) return { chr: pos.chr, start: pos.start, stop: pos.stop }
-		} catch {
-			// try the next chromosome-name candidate
-		}
-	}
-	return null
-}
 
 // Prevents HTML/script injection in the chat UI (XSS) by entering markup in the prompt (Proposed fix by copilot)
 function escapeHtml(s: string): string {
