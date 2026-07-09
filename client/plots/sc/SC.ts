@@ -136,6 +136,7 @@ export class SCViewer extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
 			else if (e.stack) console.log(e.stack)
+			super.toggleLoadingDiv('none')
 			super.printError(e.message || e)
 			return
 		}
