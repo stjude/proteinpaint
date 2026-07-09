@@ -15,8 +15,6 @@ export type DERequest = {
 	min_total_count: number
 	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
 	cpm_cutoff: number
-	/** Storage_type for storing data. Will deprecate text files */
-	storage_type: 'text' | 'HDF5'
 	/** Method of DE used wilcoxon/edgeR */
 	method?: string
 	/** Term for confounding variable1 (if present) */
@@ -144,8 +142,6 @@ export type ExpressionInput = {
 	data_type: 'do_DE'
 	/** File containing raw gene counts for DE analysis */
 	input_file: string
-	/** Type of storage file: HDF5 or text. Text will be deprecated in the future */
-	storage_type: 'HDF5' | 'text'
 	/** Confounding variable1 for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. */
 	conf1?: any[]
 	/** Type of the confounding variable1 (continuous/discrete) */

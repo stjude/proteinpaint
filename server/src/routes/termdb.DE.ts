@@ -155,7 +155,6 @@ async function runDeFresh(param: DERequest, ds: any, term_results: any, term_res
 		data_type: 'do_DE',
 		input_file: q.file,
 		cachedir: serverconfig.cachedir,
-		storage_type: q.storage_type,
 		DE_method: param.method,
 		mds_cutoff: 10000,
 		min_count: param.min_count,
@@ -234,7 +233,6 @@ export async function resolveSampleGroups(
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) throw new Error('rnaseqGeneCount query missing on ds')
 	if (!q.file) throw new Error('unknown data type for rnaseqGeneCount')
-	if (!q.storage_type) throw new Error('storage_type is not defined')
 
 	const g1 = await buildGroupValues(
 		param.samplelst.groups[0].values,

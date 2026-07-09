@@ -746,11 +746,8 @@ type JunctionQuery = {
 }
 
 type RnaseqGeneCount = {
-	/** Name of the HDF5 file */
+	/** HDF5 file */
 	file: string
-	samplesFile?: string
-	/** Storage_type for storing data (HDF5) */
-	storage_type: 'HDF5'
 }
 
 /** the metabolite query */
@@ -1038,7 +1035,7 @@ export type SingleCellPlot = {
 	 * server requests. If not provided, the file name or the plot name with the
 	 * spaces replaced with '_' is used. */
 	sampleId?: string
-	/** DELETE FLAG LATER. 
+	/** DELETE FLAG LATER.
 	 * Quick fix for meta analysis plots with data issues. */
 	doNotCache?: boolean
 }
