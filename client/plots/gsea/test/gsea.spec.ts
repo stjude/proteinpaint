@@ -12,7 +12,7 @@ Tests:
 ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/gsea/gsea -***-')
+	test.comment('-***- plots/gsea/GSEA -***-')
 	test.end()
 })
 

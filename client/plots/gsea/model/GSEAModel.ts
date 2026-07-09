@@ -1,4 +1,4 @@
-import type { GSEA } from '../gsea'
+import type { GSEA } from '../GSEA'
 import { type GseaParams, isProteomeDAPGseaParams, isScctGseaParams, isOtherTermTypesGseaParams } from './GseaParams'
 import { PROTEOME_DAP, SINGLECELL_CELLTYPE } from '#types'
 import type { AppApi } from '#rx'

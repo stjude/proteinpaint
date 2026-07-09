@@ -1,4 +1,4 @@
-import type { GSEA } from '../gsea'
+import type { GSEA } from '../GSEA'
 import * as d3axis from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { renderTable, table2col, axisstyle, sayerror } from '#dom'

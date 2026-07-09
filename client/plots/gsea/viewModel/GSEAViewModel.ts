@@ -1,4 +1,4 @@
-import type { GSEA } from '../gsea'
+import type { GSEA } from '../GSEA'
 import { roundValueAuto } from '#shared/roundValue.js'
 
 type PathwayOpt = { label: string; value: string; selected?: boolean }
