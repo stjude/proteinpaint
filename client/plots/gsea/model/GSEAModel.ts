@@ -102,7 +102,7 @@ export class GSEAModel {
 
 	async getCachedResponse(config): Promise<any> {
 		const volcanoSettings = config.settings?.volcano || getDefaultVolcanoSettings({}, { termType: 'geneExpression' })
-		const model = new VolcanoModel(this.app, config.termType)
+		const model = new VolcanoModel(this, config.termType)
 		return await model.getData(config, volcanoSettings)
 	}
 

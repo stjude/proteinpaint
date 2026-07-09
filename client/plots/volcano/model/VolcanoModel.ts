@@ -3,18 +3,21 @@ import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
 import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { getGroupColors, toHex } from '../colors'
-import type { Volcano } from '../Volcano'
+// import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
-	volcano: Volcano
+	plot: any
 	app: MassAppApi
 	config!: any
 	settings!: any
 	termType: string
 
-	constructor(volcano: Volcano, termType: string) {
-		this.volcano = volcano
-		this.app = volcano.app
+	/** TODO: This model is used in both the volcano and gsea. 
+	 * In the future, create base model in DA and use specific
+	 * classes for the volcano and gsea. */
+	constructor(plot: any, termType: string) {
+		this.plot = plot
+		this.app = plot.app
 		this.termType = termType
 	}
 
@@ -25,7 +28,7 @@ export class VolcanoModel {
 
 		if (this.termType === tt.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			const response = await dofetch3('termdb/DE', { body, signal: this.volcano.api?.getAbortSignal() })
+			const response = await dofetch3('termdb/DE', { body, signal: this.plot.api?.getAbortSignal() })
 			// Surface the DE request so downstream plots (GSEA) can snapshot
 			// it and later ask the server to recompute the DA cache if the
 			// file is missing on a peer node or after TTL eviction.
@@ -34,7 +37,7 @@ export class VolcanoModel {
 		}
 		if (this.termType === tt.DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
-			const response = await dofetch3('termdb/diffMeth', { body, signal: this.volcano.api?.getAbortSignal() })
+			const response = await dofetch3('termdb/diffMeth', { body, signal: this.plot.api?.getAbortSignal() })
 			// Surface the DM request the same way the GE branch above does so
 			// the GSEA tab can snapshot it and the server can recompute the DM
 			// cache if the file is missing on a peer node or after TTL.
@@ -43,11 +46,11 @@ export class VolcanoModel {
 		}
 		if (this.termType === tt.SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
-			return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.volcano.api?.getAbortSignal() })
+			return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.plot.api?.getAbortSignal() })
 		}
 		if (this.termType === tt.PROTEOME_DAP) {
 			const body = this.getDapRequestBody()
-			return await dofetch3('termdb/dapVolcano', { body, signal: this.volcano.api?.getAbortSignal() })
+			return await dofetch3('termdb/dapVolcano', { body, signal: this.plot.api?.getAbortSignal() })
 		}
 		if (this.termType === tt.SINGLECELL_GENE_EXPRESSION) {
 			//TODO
