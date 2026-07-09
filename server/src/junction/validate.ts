@@ -38,6 +38,12 @@ export async function validate_query_junction(ds: any, genome: any) {
 		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
 			throw new Error('minReadCount must be a non-negative integer')
 		utils.validateRglst(param, genome)
+		let hiddenTypes
+		if (param.hiddenTypes) {
+			if (typeof param.hiddenTypes != 'string') throw new Error('param.hiddenTypes not string')
+			hiddenTypes = new Set(param.hiddenTypes.trim().split(','))
+			if (!hiddenTypes.size) throw new Error('param.hiddenTypes invalid')
+		}
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
@@ -53,19 +59,23 @@ export async function validate_query_junction(ds: any, genome: any) {
 					const start = Number(l[1])
 					const stop = Number(l[2])
 					if (start < r.start && stop > r.stop) return // completely spans r
-					let j: Junction
+					let info
 					try {
-						j = JSON.parse(l[4])
+						info = JSON.parse(l[4])
 					} catch (_) {
+						console.log(`invalid json for a junction: ${r.chr}:${start}-${stop}`)
 						return
 					}
-					computeType(j)
-					if (!j.type) throw new Error('no type')
-					// skip type by param
-					j.chr = l[0]
-					j.start = start
-					j.stop = stop
-					j.strand = l[3]
+					const types = computeTypes(info, hiddenTypes)
+					if (!types.length) return // no visible types. this junction is filtered out by hiddenTypes
+					const j: Junction = {
+						chr: l[0],
+						start,
+						stop,
+						info,
+						types,
+						strand: l[3]
+					}
 					const readcounts: number[] = [] // array of read counts of samples carrying this junction
 					for (let i = 5; i < l.length; i++) {
 						const str = l[i]
@@ -84,7 +94,11 @@ export async function validate_query_junction(ds: any, genome: any) {
 					}
 					if (readcounts.length == 0) return
 					j.sampleCount = readcounts.length
-					j.medianReadCount = computePercentile(readcounts, 50, false)
+					if (readcounts.length == 1) {
+						j.medianReadCount = readcounts[0]
+					} else {
+						j.medianReadCount = computePercentile(readcounts, 50, false)
+					}
 					junctions.push(j)
 					// todo terminate when exceeds limit
 				}
@@ -139,7 +153,28 @@ export async function validate_query_junction(ds: any, genome: any) {
 		return {}
 	}
 }
-function computeType(j) {
-	// todo
-	j.type = 'canonical'
+export function computeTypes(j: any, hs: Set<string>): string[] {
+	const types: string[] = []
+	if (j.canonical) {
+		if (!hs?.has('canonical')) types.push('canonical')
+	}
+	if (j.events) {
+		const s = new Set<string>()
+		for (const e of j.events) {
+			if (typeof e.attrValue == 'string') {
+				if (!hs?.has(e.attrValue)) s.add(e.attrValue)
+			} else {
+				throw new Error('event.attrValue missing')
+			}
+		}
+		types.push(...s)
+	} else {
+		// no events
+		if (!j.canonical) {
+			// and not canonical
+			if (!hs?.has('na')) types.push('na')
+		}
+	}
+	delete j.canonical // at the end, this property is no longer needed
+	return types
 }

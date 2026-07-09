@@ -2,7 +2,7 @@ import type { FileORURL } from '../fileOrUrl.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { Filter } from '../filter.ts'
 
-//////////////////// list junctions
+//////////////////// list junctions from rglst
 export type TermdbJunctionsRequest = {
 	genome: string
 	dslabel: string
@@ -10,6 +10,8 @@ export type TermdbJunctionsRequest = {
 	filter?: Filter
 	filter0?: any
 	minReadCount?: number
+	/** comma-joined types to filter out junctions */
+	hiddenTypes?: string
 }
 export type TermdbJunctionsDataResponse = {
 	junctions: {
