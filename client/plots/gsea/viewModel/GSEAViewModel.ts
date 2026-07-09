@@ -98,7 +98,7 @@ export class GSEAViewModel {
 	}
 
 	getPathwayOpts(settings) {
-		//Do not mutation the initial array
+		//Do not mutate the initial array
 		const pathwayOpts = structuredClone(this.initPathwayOpts)
 		if (this.gsea.testEnabled && settings.gsea_method == 'blitzgsea') {
 			pathwayOpts.push(

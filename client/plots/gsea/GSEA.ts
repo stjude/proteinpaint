@@ -136,6 +136,18 @@ export const gseaInit = getCompInit(GSEA)
 // this alias will allow abstracted dynamic imports
 export const componentInit = gseaInit
 
+/************* 
+ * TODO: 
+ * The config object contains the same data over and over. 
+ * ex. samplelst:{groups} is the same thing as tw.q.groups. 
+ * ex. gsea_params contain duplicate information in settings.gsea 
+ * and in the state. 
+ * ex. the plot state is added to the config unnecessarily.
+ * 
+ * This poorly constructed object increases the complexity of the code 
+ * and makes it harder to maintain.
+ * Need to reduce the overall redundancy and simplify the structure.
+ ************/
 export async function getPlotConfig(opts, app) {
 	// if (!opts.gsea_params) throw 'No gsea_params provided [gsea getPlotConfig()]'
 	if (!opts.termType) throw new Error('No termType provided [gsea getPlotConfig()]')
@@ -147,7 +159,7 @@ export async function getPlotConfig(opts, app) {
 			//idea for fixing nav button
 			//samplelst: { groups: app.opts.state.groups}
 			settings: {
-				gsea: getDefaultGseaSettings(opts.overrides)
+				gsea: getDefaultGseaSettings(opts.overrides, opts)
 			}
 		}
 
