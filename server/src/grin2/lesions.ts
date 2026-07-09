@@ -8,6 +8,7 @@ import {
 	dtcnv,
 	dtfusionrna,
 	dtsv,
+	dtitd,
 	dt2lesion,
 	optionToDt,
 	mclasscnvgain,
@@ -125,6 +126,17 @@ export function processSampleMlst(
 				if (les.length) {
 					sampleLesions.push(...les)
 					contributedTypes.add(dtsv)
+				}
+				break
+			}
+
+			case dtitd: {
+				if (!request.itdOptions) break
+
+				const les = itdToLesion(sampleName, m)
+				if (les) {
+					sampleLesions.push(les)
+					contributedTypes.add(dtitd)
 				}
 				break
 			}
@@ -262,4 +274,12 @@ export function breakpointsToLesions(sampleName: string, entry: any, dt: number)
 		lesions.push([sampleName, entry.chrB, entry.posB, entry.posB, lesionType])
 	}
 	return lesions
+}
+
+/** Convert an ITD entry to a single region lesion. ITD is an in-frame internal tandem duplication
+ * spanning chr:start-stop (same shape the itd query emits, mds3.init.js validate_query_itd), so it
+ * maps like a cnv segment — no filtering options. Returns null when the region is malformed. */
+export function itdToLesion(sampleName: string, entry: any): Lesion | null {
+	if (!Number.isInteger(entry.start) || !Number.isInteger(entry.stop)) return null
+	return [sampleName, entry.chr, entry.start, entry.stop, dt2lesion[dtitd].lesionTypes[0].lesionType]
 }

@@ -1,7 +1,7 @@
 import { Canvas } from 'skia-canvas'
 import { scaleLinear } from 'd3-scale'
 import { mayLog } from './helpers.ts'
-import { formatElapsedTime } from '#shared'
+import { formatElapsedTime, dt2lesion } from '#shared'
 import { createConcurrencyLimiter } from './utils/concurrencyLimiter.ts'
 
 /**
@@ -50,19 +50,25 @@ function finiteAtLeast(value: number, min: number, name: string): number {
 	return value
 }
 
-// Default GRIN2 mutation-type colors. Mirrors the Rust defaults; can be
-// overridden by `lesionTypeColors` on the request.
-const DEFAULT_COLORS: Record<string, string> = {
-	gain: '#FF4444',
-	loss: '#4444FF',
-	mutation: '#44AA44',
-	fusion: '#FFA500',
-	sv: '#9932CC'
-}
+// Default lesion-type colors, derived from the shared dt2lesion source of truth so every
+// GRIN2 data type (mutation/loss/gain/fusion/sv/itd, and any future dt) is covered without a
+// parallel hardcoded list here. Overridable per-request via `lesionTypeColors`.
+const DEFAULT_COLORS: Record<string, string> = Object.fromEntries(
+	Object.values(dt2lesion).flatMap((d: any) => d.lesionTypes.map((lt: any) => [lt.lesionType, lt.color]))
+)
 const DEFAULT_FALLBACK_COLOR = '#888888'
 
-const MUTATION_TYPES = ['gain', 'loss', 'mutation', 'fusion', 'sv'] as const
-type MutationType = (typeof MUTATION_TYPES)[number]
+// The lesion types to plot are discovered from the geneHits columns (`q.nsubj.<type>`), so
+// whatever data types the run produced get rendered — no whitelist to keep in sync with dt2lesion.
+function collectLesionTypes(geneHits: Array<Record<string, any>>): string[] {
+	const types = new Set<string>()
+	for (const row of geneHits) {
+		for (const key in row) {
+			if (key.startsWith('q.nsubj.')) types.add(key.slice('q.nsubj.'.length))
+		}
+	}
+	return [...types].sort()
+}
 
 export type ManhattanPoint = {
 	x: number
@@ -284,6 +290,8 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 	const zeroQIndices: number[] = []
 	const sigIndices: number[] = []
 
+	const lesionTypes = collectLesionTypes(req.geneHits)
+
 	for (const row of req.geneHits) {
 		const chrom = row.chrom
 		if (typeof chrom !== 'string' || !chrom) continue
@@ -296,7 +304,7 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 		const gene = typeof row.gene === 'string' ? row.gene : ''
 		const xPos = ci.start + geneStart
 
-		for (const mtype of MUTATION_TYPES) {
+		for (const mtype of lesionTypes) {
 			const qRaw = row[`q.nsubj.${mtype}`]
 			if (typeof qRaw !== 'number' || !Number.isFinite(qRaw) || qRaw < 0) continue
 			const idx = pts.length
@@ -309,7 +317,7 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 			}
 			const nsubjRaw = row[`nsubj.${mtype}`]
 			const nsubj = typeof nsubjRaw === 'number' && Number.isFinite(nsubjRaw) ? Math.trunc(nsubjRaw) : null
-			const color = colors[mtype as MutationType] ?? DEFAULT_FALLBACK_COLOR
+			const color = colors[mtype] ?? DEFAULT_FALLBACK_COLOR
 
 			pts.push({
 				x: xPos,
@@ -356,10 +364,13 @@ async function renderManhattan_actual(req: ManhattanRenderRequest): Promise<Manh
 					pts[i].y = yCap
 				}
 			}
-			yMax = yCap + 0.35 + yPadding
-		} else {
-			yMax = maxY + 0.35 + yPadding
 		}
+		// yMax must clear the highest plotted value. That is yCap whenever anything reached it —
+		// a clamped point (maxY > yCap) OR a zero-q row parked there — otherwise the natural max.
+		// Without the zero-q branch, a run whose only top signal is q=0 (e.g. FLT3 in an ITD run)
+		// places those dots at yCap but sizes yMax from the lower non-zero max, clipping them off the top.
+		const effectiveMax = maxY > yCap || zeroQIndices.length > 0 ? yCap : maxY
+		yMax = effectiveMax + 0.35 + yPadding
 	} else {
 		yMax = 1.0 + yPadding
 	}

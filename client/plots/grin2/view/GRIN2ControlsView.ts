@@ -5,6 +5,7 @@ import {
 	dtcnv,
 	dtfusionrna,
 	dtsv,
+	dtitd,
 	proteinChangingMutations,
 	dt2lesion,
 	mclasscnvgain,
@@ -57,6 +58,7 @@ export class GRIN2ControlsView {
 	private cnvCheckbox: any = null
 	private fusionCheckbox: any = null
 	private svCheckbox: any = null
+	private itdCheckbox: any = null
 	private runButton: any = null
 	private consequenceCheckboxes: Record<string, any> = {}
 	private snvindelSelectAllBtn: any = null
@@ -112,6 +114,7 @@ export class GRIN2ControlsView {
 		if (queries.cnv || queries.singleSampleMutation?.cnvTypes?.length) this.addCnvRow(table)
 		if (queries.svfusion?.dtLst?.includes(dtfusionrna)) this.addFusionRow(table)
 		if (queries.svfusion?.dtLst?.includes(dtsv)) this.addSvRow(table)
+		if (queries.itd) this.addItdRow(table)
 
 		// Artifact-region exclude mask (applies to all lesion types).
 		this.addExcludeRow(table)
@@ -132,6 +135,7 @@ export class GRIN2ControlsView {
 		if (dtUsage[dtcnv]) dtUsage[dtcnv].checked = this.cnvCheckbox.property('checked')
 		if (dtUsage[dtfusionrna]) dtUsage[dtfusionrna].checked = this.fusionCheckbox.property('checked')
 		if (dtUsage[dtsv]) dtUsage[dtsv].checked = this.svCheckbox.property('checked')
+		if (dtUsage[dtitd]) dtUsage[dtitd].checked = this.itdCheckbox.property('checked')
 		return dtUsage
 	}
 
@@ -174,6 +178,7 @@ export class GRIN2ControlsView {
 		}
 		if (dtUsage[dtfusionrna]?.checked) requestConfig.fusionOptions = {}
 		if (dtUsage[dtsv]?.checked) requestConfig.svOptions = {}
+		if (dtUsage[dtitd]?.checked) requestConfig.itdOptions = {}
 		// excludeOptions.blacklists = names of the checked genome-declared sources.
 		// Only emitted when the genome declares blacklists (otherwise the mask is unavailable).
 		if (Object.keys(this.excludeCheckboxes).length > 0) {
@@ -435,6 +440,24 @@ export class GRIN2ControlsView {
 			labeltext: dt2lesion[dtsv].uilabel,
 			checked: isChecked,
 			testid: 'sjpp-grin2-checkbox-sv',
+			callback: (checked: boolean) => {
+				t2.table.style('display', checked ? '' : 'none')
+				this.updateRunButtonFromCheckboxes()
+			}
+		})
+	}
+
+	private addItdRow(table: any) {
+		const [left, right] = table.addRow()
+		const t2 = table2col({ holder: right })
+		const isChecked = this.config.settings.dtUsage[dtitd].checked
+		t2.table.style('display', isChecked ? '' : 'none')
+
+		this.itdCheckbox = make_one_checkbox({
+			holder: left,
+			labeltext: dt2lesion[dtitd].uilabel,
+			checked: isChecked,
+			testid: 'sjpp-grin2-checkbox-itd',
 			callback: (checked: boolean) => {
 				t2.table.style('display', checked ? '' : 'none')
 				this.updateRunButtonFromCheckboxes()

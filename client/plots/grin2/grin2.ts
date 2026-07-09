@@ -8,7 +8,7 @@ import { GRIN2ControlsView } from './view/GRIN2ControlsView'
 import { getDefaultGRIN2Settings } from './settings/defaults'
 import { getCombinedTermFilter, getNormalRoot } from '#filter'
 import { sayerror } from '#dom'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit } from '#plots/controls.js'
 
@@ -164,6 +164,9 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 		if (queries.svfusion.dtLst.includes(dtsv)) {
 			dtUsage[dtsv] = { checked: false, label: dt2lesion[dtsv].uilabel }
 		}
+	}
+	if (queries?.itd) {
+		dtUsage[dtitd] = { checked: false, label: dt2lesion[dtitd].uilabel }
 	}
 
 	// snvindelOptions / cnvOptions / fusionOptions / svOptions are intentionally not seeded here.

@@ -3,6 +3,7 @@ import {
 	filterAndConvertSnvIndel,
 	filterAndConvertCnv,
 	breakpointsToLesions,
+	itdToLesion,
 	processSampleMlst,
 	buildLesionTypeMap,
 	getCnvLesionType
@@ -13,6 +14,7 @@ import {
 	dtcnv,
 	dtfusionrna,
 	dtsv,
+	dtitd,
 	mclasscnvgain,
 	mclasscnvloss,
 	mclasscnvAmp,
@@ -29,7 +31,9 @@ filterAndConvertCnv: category (qualitative class, thresholds ignored)
 filterAndConvertCnv: maxSegLength + shared guards
 breakpointsToLesions: fusion
 breakpointsToLesions: sv
+itdToLesion
 processSampleMlst: routing, breakpoint expansion, cnvType threading
+processSampleMlst: itd routing + gating
 buildLesionTypeMap
 getCnvLesionType
 grin2KeyInputs + normalizeExcludeOptions
@@ -337,6 +341,32 @@ tape('breakpointsToLesions: sv', test => {
 		'two breakpoints => two sv lesions'
 	)
 	test.deepEqual(breakpointsToLesions(sample, { posA: 1 }, dtsv), [], 'missing chrA => []')
+	test.end()
+})
+
+tape('itdToLesion', test => {
+	// itd is a region event (chr:start-stop) => one lesion, like a cnv segment
+	test.deepEqual(
+		itdToLesion(sample, { chr: 'chr13', start: 28033900, stop: 28034100 }),
+		[sample, 'chr13', 28033900, 28034100, 'itd'],
+		'region => one itd lesion'
+	)
+	test.equal(itdToLesion(sample, { chr: 'chr13', start: 1.5, stop: 100 }), null, 'non-integer start => null')
+	test.equal(itdToLesion(sample, { chr: 'chr13', start: 100 }), null, 'missing stop => null')
+	test.end()
+})
+
+tape('processSampleMlst: itd routing + gating', test => {
+	const mlst = [{ dt: dtitd, chr: 'chr13', start: 28033900, stop: 28034100 }]
+
+	// itdOptions present => the itd entry becomes one lesion
+	const on = processSampleMlst(sample, mlst, { itdOptions: {} } as unknown as GRIN2Request, 'log2ratio')
+	test.deepEqual(on.sampleLesions, [[sample, 'chr13', 28033900, 28034100, 'itd']], 'itdOptions set => one itd lesion')
+	test.deepEqual([...on.contributedTypes], [dtitd], 'contributedTypes includes dtitd')
+
+	// itdOptions absent => the itd entry is skipped
+	const off = processSampleMlst(sample, mlst, {} as unknown as GRIN2Request, 'log2ratio')
+	test.equal(off.sampleLesions.length, 0, 'itdOptions absent => no lesions')
 	test.end()
 })
 

@@ -111,6 +111,10 @@ export const dt2lesion = {
 	[dtfusionrna]: {
 		uilabel: 'Fusion (RNA Fusion)',
 		lesionTypes: [{ name: 'Fusion', lesionType: 'fusion', color: '#FFA500' }]
+	},
+	[dtitd]: {
+		uilabel: 'ITD (Internal Tandem Duplication)',
+		lesionTypes: [{ name: 'ITD', lesionType: 'itd', color: '#ff70ff' }]
 	}
 }
 
@@ -119,7 +123,8 @@ export const optionToDt = {
 	snvindelOptions: dtsnvindel,
 	cnvOptions: dtcnv,
 	fusionOptions: dtfusionrna,
-	svOptions: dtsv
+	svOptions: dtsv,
+	itdOptions: dtitd
 }
 
 export const mclass = {
