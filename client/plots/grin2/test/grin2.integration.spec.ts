@@ -10,6 +10,8 @@ grin2 default
 fusion only
 cnv only
 snvindel only
+itd only
+all data types checked
 all data types unchecked
 
 ***************/
@@ -185,6 +187,82 @@ tape('grin2 snvindel-only', function (test) {
 	}
 })
 
+tape('grin2 itd-only', function (test) {
+	test.timeoutAfter(10000)
+
+	runpp({
+		state: {
+			plots: [{ chartType: 'grin2' }]
+		},
+		grin2: {
+			callbacks: {
+				'postRender.test': runITDTest
+			}
+		}
+	})
+
+	async function runITDTest(g) {
+		if (alreadyRun(g)) return
+
+		const { snvInput, cnvInput, fusionInput, svInput, itdInput } = getGRIN2Checkboxes(g)
+
+		// Toggle checkboxes to itd only
+		snvInput.checked = false
+		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		cnvInput.checked = false
+		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		fusionInput.checked = false
+		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+		svInput.checked = false
+		svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		itdInput.checked = true
+		itdInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+		// Run analysis
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
+
+		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('grin2 all-data-types-checked', function (test) {
+	test.timeoutAfter(20000)
+
+	runpp({
+		state: {
+			plots: [{ chartType: 'grin2' }]
+		},
+		grin2: {
+			callbacks: {
+				'postRender.test': runAllCheckedTest
+			}
+		}
+	})
+
+	async function runAllCheckedTest(g) {
+		if (alreadyRun(g)) return
+
+		const { snvInput, cnvInput, fusionInput, svInput, itdInput } = getGRIN2Checkboxes(g)
+
+		// Check every available data type, including itd
+		for (const input of [snvInput, cnvInput, fusionInput, svInput, itdInput]) {
+			input.checked = true
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		}
+
+		// Run analysis
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
+
+		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('grin2 all-data-types-unchecked disables run button', function (test) {
 	test.timeoutAfter(10000)
 
@@ -202,17 +280,13 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 	async function runDtUncheckedTest(g) {
 		if (alreadyRun(g)) return
 
-		const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
+		const { snvInput, cnvInput, fusionInput, svInput, itdInput } = getGRIN2Checkboxes(g)
 
 		// Uncheck all data types
-		snvInput.checked = false
-		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
-		cnvInput.checked = false
-		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
-		fusionInput.checked = false
-		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
-		svInput.checked = false
-		svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		for (const input of [snvInput, cnvInput, fusionInput, svInput, itdInput]) {
+			input.checked = false
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		}
 
 		// Check Run button is disabled
 		test.equal(getRunButton(g).disabled, true, 'Run button is disabled when no data types are selected')
@@ -286,7 +360,8 @@ function getGRIN2Checkboxes(g: any) {
 		snvInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-snvindel"]') as HTMLInputElement,
 		cnvInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-cnv"]') as HTMLInputElement,
 		fusionInput: root.querySelector('[data-testid="grin2-checkbox-fusion"]') as HTMLInputElement,
-		svInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-sv"]') as HTMLInputElement
+		svInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-sv"]') as HTMLInputElement,
+		itdInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-itd"]') as HTMLInputElement
 	}
 }
 
