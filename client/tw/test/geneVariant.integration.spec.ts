@@ -65,6 +65,18 @@ function testSvGroupset(groupset, test) {
 	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
 }
 
+function testItdGroupset(groupset, test) {
+	test.equal(groupset.groups.length, 2, 'groupset should have 2 groups')
+	const mutGrp = groupset.groups[0]
+	const mutTvs = mutGrp.filter.lst[0].tvs
+	const wtGrp = groupset.groups[1]
+	const wtTvs = wtGrp.filter.lst[0].tvs
+	test.deepEqual(mutTvs.values, [{ key: 'ITD', label: 'ITD', value: 'ITD' }], 'mutant tvs should have mutant values')
+	test.equal(mutTvs.genotype, 'variant', 'mutant tvs should have .genotype=variant')
+	test.equal(wtTvs.genotype, 'wt', 'wildtype tvs should have .genotype=wt')
+	test.deepEqual(wtTvs.values, [], 'wildtype tvs should have empty values')
+}
+
 /**************
  test sections
 ***************/
@@ -158,9 +170,9 @@ tape('fill(): q.type=predefined-groupset', async test => {
 	if (fullTw.q.type != 'predefined-groupset') throw 'q.type must be predefined-groupset'
 	test.equal(fullTw.type, 'GvPredefinedGsTW', 'should fill in tw.type')
 	test.equal(fullTw.q.predefined_groupset_idx, 0, 'should fill q.predefined_groupset_idx to be 0')
-	test.equal(fullTw.term.childTerms.length, 5, 'should create 5 child dt terms')
+	test.equal(fullTw.term.childTerms.length, 6, 'should create 6 child dt terms')
 	if (!fullTw.term.groupsetting.lst) throw 'term.groupsetting.lst is missing'
-	test.equal(fullTw.term.groupsetting.lst.length, 5, 'should get 5 predefined groupsets')
+	test.equal(fullTw.term.groupsetting.lst.length, 6, 'should get 6 predefined groupsets')
 	for (const groupset of fullTw.term.groupsetting.lst) {
 		if (groupset.dt == 1) {
 			testSnvIndelGroupset(groupset, test)
@@ -170,6 +182,8 @@ tape('fill(): q.type=predefined-groupset', async test => {
 			testCnvGroupset(groupset, test)
 		} else if (groupset.dt == 5) {
 			testSvGroupset(groupset, test)
+		} else if (groupset.dt == 6) {
+			testItdGroupset(groupset, test)
 		} else {
 			test.fail('unexpected groupset')
 		}
