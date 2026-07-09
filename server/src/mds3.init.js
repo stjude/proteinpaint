@@ -2872,7 +2872,7 @@ async function svfusionByNameGetter_file(ds, genome) {
 }
 
 function mayAdd_mayGetGeneVariantData(ds, genome) {
-	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv) {
+	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv && !ds.queries.itd) {
 		// no eligible data types
 		return
 	}
