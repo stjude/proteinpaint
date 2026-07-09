@@ -65,6 +65,10 @@ export interface GeneMatch {
 export interface OmnisearchResult {
 	dictionaryTerms: any[]
 	genes: GeneMatch[]
+	/** Parsed genomic coordinate when the prompt is a valid "chr:start-stop" range AND the dataset
+	 * supports the genome browser genomic view (has snvindel/cnv/svfusion and gbRestrictMode !== 'protein').
+	 * Null/absent otherwise. Resolved server-side (via string2pos) so the client needs no genome object. */
+	coord?: { chr: string; start: number; stop: number } | null
 	error?: any
 }
 

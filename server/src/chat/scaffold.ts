@@ -150,7 +150,8 @@ Return ONLY a valid JSON object with this structure — no extra fields, no surr
   "genomeBrowserPhrase": "<phrase>",   // OPTIONAL - the phrase describing the genomic region (chromosome + start + stop coordinates)
   "viewMode": "<protein|genomic>",   // OPTIONAL - only when the user explicitly asks for a protein/lollipop view or a genomic view of a gene
   "filter": "<phrase>"                 // OPTIONAL - a cohort restriction phrase that narrows the sample set shown in the browser
-}
+} or if a genomic region or gene cannot be extracted, return:
+{ "type": "text","text": "No genomic region found" }
 
 ## EXTRACTION RULES
 1. genomeBrowserPhrase is OPTIONAL. Extract the phrase that describes the genomic region (chromosome + start + stop). Preserve the user's exact wording — do not normalize "chromosome 1" to "chr1", do not strip commas, do not convert "5kb" to 5000. Preserve the EXACT wording from the user's query (including the original chromosome formatting, commas, unit suffixes such as "kb"/"Mb", and the start-stop separator).
