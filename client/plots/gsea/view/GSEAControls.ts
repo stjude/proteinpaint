@@ -89,7 +89,7 @@ export async function setControls(controlsDiv, gsea: GSEA) {
 			max: 5000,
 			getDisplayStyle: plot => {
 				const settings = plot.settings.gsea
-				return settings.fdr_or_top == 'fdr' ? '' : 'none'
+				return settings.fdr_or_top == 'top' ? '' : 'none'
 			}
 		}
 	]
