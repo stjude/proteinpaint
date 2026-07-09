@@ -1,1 +1,2 @@
-
+Fixes:
+- ensure that zero is not duplicated in the getInterpolatedDomainRange() color scale helper
