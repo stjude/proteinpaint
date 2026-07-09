@@ -27,7 +27,6 @@ tape('rust DE wilcoxon unit test', async function (test) {
 		cachedir: serverconfig.cachedir,
 		min_count: 10,
 		min_total_count: 15,
-		storage_type: 'HDF5',
 		DE_method: 'wilcoxon',
 		mds_cutoff: 10000
 	}

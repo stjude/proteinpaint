@@ -3770,24 +3770,12 @@ async function validate_query_rnaseqGeneCount(ds) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
 	await setFile(q, 'rnaseqGeneCount')
-	{
-		let samples = []
-		if (ds.queries.rnaseqGeneCount.storage_type == 'text') {
-			samples = (await utils.get_header_txt(q.file, null)).split('\t').slice(4)
-		} else if (ds.queries.rnaseqGeneCount.storage_type == 'HDF5') {
-			samples = await getH5samples(q.file)
-		} else throw new Error('unknown storage type:' + ds.queries.rnaseqGeneCount.storage_type)
+	const samples = await getH5samples(q.file)
 
-		q.allSampleSet = new Set(samples)
-		//if(q.allSampleSet.size < samples.length) throw new Error('rnaseqGeneCount.file header contains duplicate samples')
-		const unknownSamples = []
-		for (const n of q.allSampleSet) {
-			if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
-		}
-		//if (unknownSamples.length)
-		//	throw new Error(`${ds.label} rnaseqGeneCount: ${unknownSamples.length} out of ${
-		//		q.allSampleSet.size
-		//	} sample names are unknown: ${unknownSamples.join(',')}`)
-		console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
+	q.allSampleSet = new Set(samples)
+	const unknownSamples = []
+	for (const n of q.allSampleSet) {
+		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
 	}
+	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 }

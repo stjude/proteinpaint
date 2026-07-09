@@ -1,4 +1,4 @@
-# Test syntax: cat ~/sjpp/test.txt | time Rscript edge.R
+# Test syntax: cat ~/sjpp/test.txt | time Rscript edge_newh5.R
 
 # Memory probe: returns peak MB used since the last call (gc reset = TRUE
 # captures the high-water mark, then resets the counter). gc(full=TRUE) forces
@@ -28,10 +28,7 @@ pkg_load_time <- system.time({
   suppressWarnings({
     library(jsonlite)
     library(rhdf5)
-    library(stringr)
-    library(readr)
     suppressPackageStartupMessages(library(edgeR))
-    suppressPackageStartupMessages(library(dplyr))
   })
 })
 pkg_load_mem <- mem_probe()
@@ -51,7 +48,6 @@ read_json_time <- system.time({
   input <- fromJSON(json)
   cases <- unlist(strsplit(input$case, ","))
   controls <- unlist(strsplit(input$control, ","))
-  combined <- c("geneSymbol", cases, controls)
   cpm_cutoff <- input$cpm_cutoff
 })
 read_json_mem <- mem_probe()
@@ -59,58 +55,36 @@ read_json_mem <- mem_probe()
 
 # Read counts data
 read_counts_time <- system.time({
-  if (input$storage_type == "HDF5") {
-    geneNames <- h5read(input$input_file, "item")
-    samples <- h5read(input$input_file, "samples")
+  geneNames <- h5read(input$input_file, "item")
+  samples <- h5read(input$input_file, "samples")
 
-    # Find indices of case and control samples in the HDF5 file
-    case_indices <- match(cases, samples)
-    control_indices <- match(controls, samples)
+  # Find indices of case and control samples in the HDF5 file
+  case_indices <- match(cases, samples)
+  control_indices <- match(controls, samples)
 
-    # Check for missing samples
-    #if (any(is.na(case_indices))) {
-    #  missing_cases <- cases[is.na(case_indices)]
-    #  stop(paste(missing_cases, "not found"))
-    #}
-    #if (any(is.na(control_indices))) {
-    #  missing_controls <- controls[is.na(control_indices)]
-    #  stop(paste(missing_controls, "not found"))
-    #}
+  # Check for missing samples
+  #if (any(is.na(case_indices))) {
+  #  missing_cases <- cases[is.na(case_indices)]
+  #  stop(paste(missing_cases, "not found"))
+  #}
+  #if (any(is.na(control_indices))) {
+  #  missing_controls <- controls[is.na(control_indices)]
+  #  stop(paste(missing_controls, "not found"))
+  #}
 
-    # Removing missing samples from cases
-    keep_cases <- !is.na(case_indices)
-    cases <- cases[keep_cases]
-    case_indices <- case_indices[keep_cases]
+  # Removing missing samples from cases
+  keep_cases <- !is.na(case_indices)
+  cases <- cases[keep_cases]
+  case_indices <- case_indices[keep_cases]
 
-    # Removing missing samples from controls
-    keep_controls <- !is.na(control_indices)
-    controls <- controls[keep_controls]
-    control_indices <- control_indices[keep_controls]
+  # Removing missing samples from controls
+  keep_controls <- !is.na(control_indices)
+  controls <- controls[keep_controls]
+  control_indices <- control_indices[keep_controls]
 
-
-    samples_indices <- c(case_indices, control_indices)
-    read_counts <- as.data.frame(t(h5read(input$input_file, "matrix", index = list(samples_indices, 1:length(geneNames)))))
-    colnames(read_counts) <- c(cases, controls)
-  } else if (input$storage_type == "text") {
-    suppressWarnings({
-      suppressMessages({
-        # Peek at the header of the input file (first line only)
-        available_cols <- colnames(read_tsv(input$input_file, n_max = 0))
-
-        # Keep only existing samples
-        cases <- intersect(cases, available_cols)
-        controls <- intersect(controls,available_cols)
-
-        # Final combine column set
-        combined <- c("geneSymbol", cases, controls)
-        read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
-      })
-    })
-    geneNames <- unlist(read_counts[1])
-    read_counts <- select(read_counts, -geneSymbol)
-  } else {
-    stop("Unknown storage type")
-  }
+  samples_indices <- c(case_indices, control_indices)
+  read_counts <- as.data.frame(t(h5read(input$input_file, "matrix", index = list(samples_indices, 1:length(geneNames)))))
+  colnames(read_counts) <- c(cases, controls)
 })
 read_counts_mem <- mem_probe()
 #cat("Time to read counts data: ", as.difftime(read_counts_time, units = "secs")[3], " seconds\n")
