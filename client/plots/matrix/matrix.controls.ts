@@ -19,7 +19,6 @@ export class MatrixControls {
 	zoomApi: any
 	svgScrollApi: any
 	dragToggleApi: any
-	keyEventTarget: any
 	btns: any
 	activeTab: 'basic' | 'advanced' = 'basic'
 	sorterUi!: any
@@ -59,7 +58,6 @@ export class MatrixControls {
 		setSvgScroll(this, state)
 
 		this.keyboardNavHandler = async (event: any) => {
-			if (event.target.tagName == 'BUTTON') this.keyEventTarget = event.target
 			if (event.key == 'Escape') {
 				this.parent.app.tip.hide()
 			} else if (event.key == 'Enter' || event.key == 'ArrowDown') {
@@ -74,7 +72,7 @@ export class MatrixControls {
 					}
 				}
 			} else if ((event.key == 'Tab' && event.shiftKey) || event.key == 'Backspace' || event.key == 'ArrowUp') {
-				this.keyEventTarget.focus()
+				if (event.target.tagName == 'BUTTON') event.target.focus()
 				return false
 			} //else if (event.keyShift && el)
 		}
