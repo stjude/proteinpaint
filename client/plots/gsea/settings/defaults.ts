@@ -5,7 +5,7 @@ export function getDefaultGseaSettings(overrides = {}, opts: any= {}): GseaSetti
 		fdr_cutoff: 0.05,
 		num_permutations: 1000,
 		top_genesets: 40,
-		pathway: opts?.gsea_params.pathway ?? undefined,
+		pathway: opts?.gsea_params?.pathway ?? undefined,
 		geneset_name: null,
 		min_gene_set_size_cutoff: 0,
 		max_gene_set_size_cutoff: 20000,
