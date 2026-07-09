@@ -3,6 +3,7 @@ import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import exonskipalt_getdefault from '../src/spliceevent.exonskip.getdefault.js'
+import { axisstyle } from '#dom'
 
 /*
  */
@@ -21,10 +22,11 @@ const hardcode_infoValue_canonical = 'canonical'
 
 // todo export from common.js
 const type2color = new Map([
-	['canonical', 'blue'],
-	['exonskip', 'red'],
-	['a5ss', 'red'],
-	['a3ss', 'red']
+	['canonical', '#488bcf'],
+	['exonskip', '#b55165'],
+	['a5ss', '#5eb5bf'],
+	['a3ss', '#bf9858'],
+	['na', 'gray']
 ])
 
 export function renderTk(data, tk, block) {
@@ -88,7 +90,7 @@ export function renderTk(data, tk, block) {
 			if (j.sampleCount > 1) {
 				// more than 1 sample, to show #sample in disc, so to adjust disc radius
 				mg.append('text')
-					.attr('font-family', client.font)
+					.attr('font-family', 'Arial')
 					.attr('font-size', Math.max(minfontsize, j.radius))
 					.text(j.sampleCount)
 					.each(function () {
@@ -107,6 +109,7 @@ export function renderTk(data, tk, block) {
 
 	// y position, by median read count for each junction
 	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
+	console.log(maxmedian)
 
 	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
 		.domain([tk.readcountCutoff || 1, data.maxReadCount])
@@ -240,7 +243,7 @@ export function renderTk(data, tk, block) {
 		.attr('font-size', d => Math.max(minfontsize, d.radius))
 		.attr('class', 'sja_jug_discnum')
 		.attr('fill', 'white')
-		.attr('font-family', client.font)
+		.attr('font-family', 'Arial')
 		.attr('text-anchor', 'middle')
 		.attr('dominant-baseline', 'central')
 
@@ -307,7 +310,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 	doForceLayout(tk, block, viewpxwidth).then(() => {
 		// done layout
 		set_all(tk)
-		client.axisstyle({
+		axisstyle({
 			axis: tk.sections.jug.axis.transition().call(
 				axisRight()
 					.scale(tk.sections.jug.yscale)
@@ -449,7 +452,7 @@ function setColor(tk) {
 	for (const j of tk.data) {
 		// remove prior color, as color may be reassigned by switching infoFilter and then calling renderTk()
 		delete j.color
-		j.color = type2color.get(j.type)
+		j.color = type2color.get(j.types[0])
 		if (j.color == undefined) throw new Error('unknown j.type')
 	}
 }
@@ -893,6 +896,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 		if (!text) return
 		setTimeout(() => {
 			if (text.node().getBoundingClientRect().top == 0) return
+			/*
 			fetchReadcount4junctionAbyjunctionBsamples(
 				tk,
 				block,
@@ -900,6 +904,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 				new Map([[e.junctionA.start + '.' + e.junctionA.stop, text]]),
 				[[e.junctionA.start, e.junctionA.stop]]
 			)
+			*/
 		}, 1000)
 	})
 }
@@ -983,50 +988,11 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 					return
 				}
 			}
+			/*
 			fetchReadcount4junctionAbyjunctionBsamples(tk, block, j, junction2readcounttext, junctionlst)
+			*/
 		}, 1000)
 	})
-}
-
-async function fetchReadcount4junctionAbyjunctionBsamples(tk, block, jB, junction2readcounttext, jAlst) {
-	/*
-	query server to get median read count for display for these junctions
-	over the same group of sample
-
-	jB: junction B
-	jAlst: [ [start,stop] ]
-	junction2readcounttext: svg text for printing median read count for each A junction
-	*/
-	const par = {
-		genome: block.genome.name,
-		dslabel: tk.mds.label,
-		querykey: tk.querykey,
-		readcountByjBsamples: true,
-		junctionB: { chr: jB.chr, start: jB.start, stop: jB.stop },
-		junctionAposlst: jAlst
-	}
-	addLoadParameter(par, tk)
-	try {
-		const data = await client.dofetch2('mdsjunction', {
-			method: 'POST',
-			body: JSON.stringify(par)
-		})
-		if (data.error) throw data.error
-		if (!data.lst) throw '.lst[] missing'
-		for (const j of data.lst) {
-			/*
-			.start
-			.stop
-			.v
-			*/
-			const key = j.start + '.' + j.stop
-			if (junction2readcounttext.has(key)) {
-				junction2readcounttext.get(key).text(j.v)
-			}
-		}
-	} catch (e) {
-		console.error(e.message || e)
-	}
 }
 
 function listAllEvents(lst, holder, j, tk, block) {

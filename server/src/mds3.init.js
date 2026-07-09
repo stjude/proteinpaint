@@ -901,18 +901,19 @@ export function mayValidateBcfMafFilter(q) {
 // returns new array with same length as samples[], {name:int}
 export function validateSampleHeader(ds, samples, where) {
 	const sampleIds = []
-	// ds?.cohort?.termdb.q.sampleName2id must be present
 	if (ds.cohort?.termdb?.q?.sampleName2id) {
 		// has id mapper and is official ds
+		const unknown = []
 		for (const s of samples) {
 			const id = ds.cohort.termdb.q.sampleName2id(s.name)
 			if (id === undefined) {
-				// samples in file must be present in id mapper
-				throw `unknown sample ${s.name} from ${where} file`
+				unknown.push(s.name)
+			} else {
+				s.name = id
+				sampleIds.push(s)
 			}
-			s.name = id
-			sampleIds.push(s)
 		}
+		if (unknown.length) throw `${unknown.length} unknown samples from ${where} file: ${unknown.join(',')}`
 		console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
 	} else {
 		// no mapper, should be custom ds from custom bcf file
