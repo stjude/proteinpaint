@@ -21,6 +21,8 @@ Active tests:
 	- diffMeth.R: confounder support
 	- diffMeth.R: error on too few samples
 	- diffMeth.R: error on invalid sample name
+	- edge_newh5.R limma
+	- edge_newh5.R edgeR
 
 *********************************************/
 
@@ -563,6 +565,103 @@ tape('diffMeth.R: error on invalid sample name', async function (test) {
 			String(e).includes('NONEXISTENT') && String(e).includes('not found'),
 			'error should mention the missing sample name'
 		)
+	}
+	test.end()
+})
+
+const edgeNewH5BaseInput = {
+	case: '2702,2800,2828,2982,3052,3234,3290,3346,3360,3388,3402,3444,3472',
+	control:
+		'2646,2674,2688,2744,2758,2786,2814,2842,2856,2884,2912,2926,2954,2968,2996,3010,3038,3080,3094,3122,3164,3220,3248,3416,3430,3458',
+	data_type: 'do_DE',
+	input_file: serverconfig.binpath + '/test/tp/files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5',
+	cachedir: serverconfig.cachedir,
+	min_count: 10,
+	min_total_count: 15,
+	mds_cutoff: 0,
+	cpm_cutoff: 0
+}
+
+function assertEdgeNewH5Gene(test, out, expected) {
+	const row = out.gene_data.find(gene => gene.gene_name === expected.gene_name)
+	test.ok(row, `${expected.gene_name} should be present`)
+	if (!row) return
+	test.ok(
+		Math.abs(row.original_p_value - expected.original_p_value) < p_value_cutoff,
+		`For ${expected.gene_name}, original pvalue=${row.original_p_value}, expected pvalue=${expected.original_p_value}`
+	)
+	test.ok(
+		Math.abs(row.adjusted_p_value - expected.adjusted_p_value) < p_value_cutoff,
+		`For ${expected.gene_name}, adjusted pvalue=${row.adjusted_p_value}, expected pvalue=${expected.adjusted_p_value}`
+	)
+	test.ok(
+		Math.abs(row.fold_change - expected.fold_change) < fold_change_cutoff,
+		`For ${expected.gene_name}, fold change=${row.fold_change}, expected fold change=${expected.fold_change}`
+	)
+}
+
+tape('edge_newh5.R limma', async function (test) {
+	test.timeoutAfter(10000)
+	const Rout = await run_R('edge_newh5.R', JSON.stringify({ ...edgeNewH5BaseInput, DE_method: 'limma' }))
+	const out = JSON.parse(Rout)
+
+	test.equal(out.gene_data.length, 84, 'returns expected number of filtered genes')
+	test.equal(out.num_cases[0], 13, 'returns expected number of case samples')
+	test.equal(out.num_controls[0], 26, 'returns expected number of control samples')
+	for (const expected of [
+		{
+			gene_name: 'TAS1R3',
+			fold_change: -1.32976246393249,
+			original_p_value: 0.0619319044557204,
+			adjusted_p_value: 0.901882289080864
+		},
+		{
+			gene_name: 'PANK4',
+			fold_change: -0.747423792601299,
+			original_p_value: 0.0491750104553456,
+			adjusted_p_value: 0.901882289080864
+		},
+		{
+			gene_name: 'NOC2L',
+			fold_change: 0.739051423660665,
+			original_p_value: 0.0898983436995343,
+			adjusted_p_value: 0.901882289080864
+		}
+	]) {
+		assertEdgeNewH5Gene(test, out, expected)
+	}
+	test.end()
+})
+
+tape('edge_newh5.R edgeR', async function (test) {
+	test.timeoutAfter(10000)
+	const Rout = await run_R('edge_newh5.R', JSON.stringify({ ...edgeNewH5BaseInput, DE_method: 'edgeR' }))
+	const out = JSON.parse(Rout)
+
+	test.equal(out.gene_data.length, 84, 'returns expected number of filtered genes')
+	test.equal(out.num_cases[0], 13, 'returns expected number of case samples')
+	test.equal(out.num_controls[0], 26, 'returns expected number of control samples')
+	for (const expected of [
+		{
+			gene_name: 'TAS1R3',
+			fold_change: -0.458727928963392,
+			original_p_value: 0.4307242766187,
+			adjusted_p_value: 0.813884542208412
+		},
+		{
+			gene_name: 'PANK4',
+			fold_change: -0.956615047806498,
+			original_p_value: 0.0163836352725149,
+			adjusted_p_value: 0.125111396626477
+		},
+		{
+			gene_name: 'NOC2L',
+			fold_change: 1.79134690552045,
+			original_p_value: 0.0000395703579485343,
+			adjusted_p_value: 0.000830977516919221
+		}
+	]) {
+		assertEdgeNewH5Gene(test, out, expected)
 	}
 	test.end()
 })
