@@ -25,16 +25,17 @@ export function getInterpolatedDomainRange({
 }: GetInterpolatedArg) {
 	/** If the range includes both negative and positive values, dividing
 	 * the steps equally between the neg and pos values ensures the
-	 * return domain does not exceed the intended length (i.e. total num steps)*/
+	 * returned domain does not exceed the intended length (i.e. total num steps)*/
 	const denominator = negInterpolator && posInterpolator ? totalNumSteps / 2 : totalNumSteps
 	const stepSize = (absMax - absMin) / denominator
 	const neg: InterpolatedDomainRange = { values: new Set(), colors: [] }
 	const pos: InterpolatedDomainRange = { values: new Set(), colors: [] }
 	let n = -absMax
 	for (let p = 0; p < absMax; p += stepSize) {
-		if (p == 0) continue //In all instances, 0 is added to the final domain.
+		if (p == 0) continue // 0 will be added to the final domain as a unique value.
 		if (negInterpolator) {
 			n += stepSize
+			if (n == 0) continue // 0 will be added to the final domain as a unique value.
 			const vn = n // / absMax
 			neg.values.add(vn)
 			neg.colors.push(negInterpolator(-vn / absMax))
