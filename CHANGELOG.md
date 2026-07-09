@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.196.0
 
 Features:
 - Single cell scatter plot now accepts two single cell gene expression terms for plotting. The option to add a color term is disabled if an overlay term is present.
