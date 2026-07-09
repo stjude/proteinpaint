@@ -115,14 +115,15 @@ jobs:
         run: |
           npm test --workspace="augen"
 
+      - name: Install HDF5
+        if: contains(env.WS_TO_TEST, 'server') || contains(env.WS_TO_TEST, 'rust')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hdf5-tools libhdf5-dev
+
       - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server')
         run: npm run test:unit --workspace="server"
-
-      - name: Install HDF5
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libhdf5-dev  
 
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
