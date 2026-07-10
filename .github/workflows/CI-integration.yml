@@ -4,42 +4,21 @@ on:
   schedule:
     - cron: '0 6 * * *'
   workflow_dispatch:
-    inputs:
-      build_secret:
-        type: string
-        description: Build secret
   workflow_call: {}
 
 jobs:
-  check-user-permissions:
-    runs-on: ubuntu-22.04
-    steps:
-      - id: set-build-secret
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "BUILD_SECRET=${{ github.event.inputs.build_secret }}" >> $GITHUB_OUTPUT
-          else
-            echo "BUILD_SECRET=${{ secrets.BUILD_SECRET }}" >> $GITHUB_OUTPUT
-          fi
-      - name: Check user permission
-        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
-        with:
-          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
-
+  
   build:
-    needs: check-user-permissions
     runs-on: ubuntu-22.04
     timeout-minutes: 20
     outputs:
       updated_rust: ${{ steps.check-rust-changes.outputs.updated_rust }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           cache: 'npm'
           node-version: '24'
@@ -86,7 +65,7 @@ jobs:
     if: needs.build.outputs.updated_rust == 'true'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 10
 
@@ -107,7 +86,7 @@ jobs:
     if: needs.build.outputs.updated_rust == 'false'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 10
           
