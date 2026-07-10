@@ -1,6 +1,5 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
-// import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { getMockGSEAConfig } from './mockData.js'
 
 /*
@@ -31,7 +30,7 @@ tape('\n', function (test) {
 })
 
 tape('Default gene expression GSEA', function (test) {
-	test.timeoutAfter(100000)
+	test.timeoutAfter(10000)
 
 	const config = getMockGSEAConfig()
 	const plots = [config]
@@ -45,7 +44,7 @@ tape('Default gene expression GSEA', function (test) {
 		}
 	})
 
-	function runTests(gsea: any) {
+	async function runTests(gsea: any) {
 		gsea.on('postRender.test', null)
 		const dom = gsea.Inner.dom
 		const foundPrompt = dom.actionsDiv.select('span[data-testid="sjpp-gsea-pathway"]')
@@ -55,6 +54,10 @@ tape('Default gene expression GSEA', function (test) {
 		const options = foundSelect.selectAll('option').nodes()
 		test.true(options.length > 0, 'Rendered pathway select dropdown should have options')
 		test.equals(options[0].textContent, 'H: hallmark gene sets', 'First option should be H: hallmark gene sets')
+		
+		//Quick fix
+		// wait for results table to render
+		await helpers.sleep(500) 
 		const foundTable = dom.tableDiv.select('table')
 		test.equals(foundTable.size(), 1, 'Should render results table')
 		const foundTableRows = foundTable.selectAll('tbody tr').nodes()
