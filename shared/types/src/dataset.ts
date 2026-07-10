@@ -1035,9 +1035,6 @@ export type SingleCellPlot = {
 	 * server requests. If not provided, the file name or the plot name with the
 	 * spaces replaced with '_' is used. */
 	sampleId?: string
-	/** DELETE FLAG LATER.
-	 * Quick fix for meta analysis plots with data issues. */
-	doNotCache?: boolean
 }
 export type SingleCellDataNative = SingleCellDataBase & {
 	src: 'native'
