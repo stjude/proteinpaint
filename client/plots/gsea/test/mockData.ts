@@ -33,7 +33,8 @@ export function getMockGSEAConfig(opts = {}) {
                     }
                 }
             }
-        }
+        },
+        settings: { gsea: getMockGseaSettings() }
     }
     return Object.assign({}, defaultConfig, opts)
 }
