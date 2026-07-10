@@ -791,7 +791,6 @@ function setRenderers(self) {
 		const serieses = seriesesG
 			.selectAll('.sjpp-survival-series')
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
-
 		serieses.exit().remove()
 		serieses.each(function (this: HTMLElement, series, i) {
 			renderSeries(select(this), chart, series, i, s)
@@ -800,6 +799,9 @@ function setRenderers(self) {
 			.enter()
 			.append('g')
 			.attr('class', 'sjpp-survival-series')
+			.attr('data-testid', function (series) {
+				return `sjpp-survival-${series.seriesLabel}`
+			})
 			.each(function (this: HTMLElement, series, i) {
 				renderSeries(select(this), chart, series, i, s)
 			})
@@ -893,6 +895,7 @@ function setRenderers(self) {
 		// todo: allow update of exiting path instead of replacing
 		g.selectAll('path').remove()
 		g.append('path')
+			.attr('data-testid', `sjpp-survival-ci-${series.seriesLabel}`)
 			.attr(
 				'd',
 				area()
@@ -975,6 +978,7 @@ function setRenderers(self) {
 		const color = self.term2toColor[data[0].seriesId].adjusted
 		if (seriesName == 'survival') {
 			g.append('path')
+				.attr('data-testid', `sjpp-survival-curve-${data[0].seriesLabel}`)
 				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
 				.style('stroke', color)
