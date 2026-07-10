@@ -6,10 +6,13 @@ All notable changes to this project will be documented in this file.
 
 Features:
 - GSEA plot refactored into the MVVM pattern for improved maintainability and scalability.
+- GRIN2 - ITD (internal tandem duplication) support: a new ITD data-type checkbox, per-sample lesion conversion, and Manhattan/table rendering. Enabled automatically for any dataset that declares an itd query; unchecked by default like fusion/SV.
 
 Fixes:
 - ensure that zero is not duplicated in the getInterpolatedDomainRange() color scale helper
 - correctly handle key events in max sample input in matrix controls
+- GRIN2 - Manhattan plot rendered no dots for lesion types outside the built-in gain/loss/mutation/fusion/sv set (e.g. ITD): lesion types are now discovered from the result columns and colors derive from the shared dt2lesion map, so any current or future data type renders.
+- GRIN2 - Manhattan plot clipped the most-significant (q=0) genes above the plot area; the y-axis maximum now accounts for the zero-q placement so top hits stay visible.
 
 
 ## 2.196.0
