@@ -408,8 +408,10 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 	}
 
 	const cnvClasses = [mclasscnvAmp, mclasscnvHomozygousDel, mclasscnvgain, mclasscnvloss, mclasscnvloh]
-	const proteinChangingClasses = s.proteinChangingMutations.filter(mcls => !s.truncatingMutations.includes(mcls))
-	const sortedClasses = ['Fuserna', ...s.truncatingMutations, ...cnvClasses, ...proteinChangingClasses]
+	const proteinChangingClasses = (s.proteinChangingMutations || []).filter(
+		mcls => !s.truncatingMutations.includes(mcls)
+	)
+	const sortedClasses = ['Fuserna', ...(s.truncatingMutations || []), ...cnvClasses, ...proteinChangingClasses]
 
 	// Similar to Oncoprint sorting
 	sortOptions.a = s.sortOptions?.a
@@ -647,8 +649,8 @@ export function reshapeSortPriority(sortOption, labels) {
 
 	for (const tb of geneVariantsEntry.tiebreakers) {
 		//if (tb.by != 'class') continue
-		// Object.apply() ignores the target object when used directly as another argument, need to use a copy;
-		// the pattern Object.assign(tb, defaults, origClone) will only fill-in default key-values that are not already in the orig tb object
+		// Using `Object.assign(tb, defaults, tb)` would copy `tb` back over the defaults (including undefined values); clone first.
+		// The pattern `Object.assign(tb, defaults, origClone)` fills in defaults while preserving any existing keys from the original tiebreaker.
 		const origClone = structuredClone(tb)
 		if (tb.filter?.values?.find(v => v.dt == dtfusionrna)) {
 			const defaults = {
