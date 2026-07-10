@@ -599,7 +599,6 @@ tape('survival term as term1, term2 = agedx, regular bins', function (test) {
 		// whereas a modified copy will not equal the original state
 		const config = structuredClone(survival.Inner.state.config)
 		const expectedCount = 8
-		Locator.init(survival.Inner.dom.chartsDiv.node()).shows('.sjpp-survival-series').get(expectedCount) // wait for first surv series to render
 		const survCurves = await detectGte({
 			elem: survival.Inner.dom.chartsDiv.node(),
 			selector: '.sjpp-survival-series',
