@@ -627,6 +627,7 @@ function setRenderers(self) {
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-survival-chart')
+			.attr('data-testid', 'sjpp-survival-plotDiv')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			.style('width', 'fit-content')
 			.style('display', 'inline-block')
