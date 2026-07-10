@@ -1523,3 +1523,37 @@ export function string2pos(s, genome, donotextend) {
 	}
 	return null
 }
+
+/////////////// splice junction event types
+export const JT_na = 'na'
+export const JT_canonical = 'canonical'
+export const JT_exonskip = 'exonskip'
+export const JT_exonaltuse = 'exonaltuse'
+export const JT_a5ss = 'a5ss'
+export const JT_a3ss = 'a3ss'
+export const JTypes = {
+	[JT_canonical]: {
+		color: '#307ecf',
+		name: 'Canonical'
+	},
+	[JT_exonskip]: {
+		color: '#ba455c',
+		name: 'ExonSkip'
+	},
+	[JT_a5ss]: {
+		color: '#5eb5bf',
+		name: "Alt 5'SS"
+	},
+	[JT_a3ss]: {
+		color: '#bf9858',
+		name: "Alt 3'SS"
+	},
+	[JT_exonaltuse]: {
+		color: '#c26dc0',
+		name: 'Alternative exon'
+	},
+	[JT_na]: {
+		color: 'gray',
+		name: 'Unannotated'
+	}
+}

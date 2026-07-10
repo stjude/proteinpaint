@@ -24,6 +24,7 @@ import { rehydrateFilter } from '../filter/rehydrateFilter.js'
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track by adding in essential attributes to tk object
+	tk.yscaleUseLog = true
 
 	// make color gradients
 	{
