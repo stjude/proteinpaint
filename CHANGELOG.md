@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 Features:
 - GSEA plot refactored into the MVVM pattern for improved maintainability and scalability.
 
+Fixes:
+- ensure that zero is not duplicated in the getInterpolatedDomainRange() color scale helper
+- correctly handle key events in max sample input in matrix controls
+
 
 ## 2.196.0
 
