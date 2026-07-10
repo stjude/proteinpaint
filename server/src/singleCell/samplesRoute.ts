@@ -161,10 +161,10 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	const metaCache = new SingleCellMetaCache()
 	for (const plot of D.plots) {
 		if (plot.isMetaResult) {
-			/** Quick fix to skip plots with data issues. */
-			if (plot.doNotCache) {
+			const hasSample = plot?.colorColumns?.find(c => c.name === 'Sample')
+			if (!hasSample) {
 				console.log(
-					`Skipping meta analysis result ${plot.name} due to data issues. Please remove the doNotCache flag when the issue is resolved.`
+					`Skipping meta analysis result ${plot.name} due to no Sample color column. Please add a color column entry for the sample column.`
 				)
 				continue
 			}
