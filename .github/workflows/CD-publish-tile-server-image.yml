@@ -2,38 +2,17 @@ name: Publish Tile Server Image
 
 on:
   workflow_dispatch:
-    inputs:
-      build_secret:
-        type: string
-        description: Build secret
 
 jobs:
-  check-user-permissions:
-    runs-on: ubuntu-22.04
-    steps:
-      - id: set-build-secret
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "::set-output name=BUILD_SECRET::${{ github.event.inputs.build_secret }}"
-          else
-            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
-          fi
-      - name: Check user permission
-        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
-        with:
-          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
   build:
-    needs: check-user-permissions
-    if: github.event.pull_request.draft == false
+    environment: release
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Login to Github
         uses: docker/login-action@v3.4.0
