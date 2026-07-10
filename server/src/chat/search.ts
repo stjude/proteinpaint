@@ -88,28 +88,8 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
  * the toggled form. (Moved from the client so string2pos runs server-side.) */
 function parseGenomicCoord(str: string, genome: any): { chr: string; start: number; stop: number } | null {
 	if (!genome) return null
-	// Shape-filter + capture: match "chr:start-stop" with optional spaces and thousands-commas in the
-	// numbers. Groups: (1) chromosome token e.g. "chr7"/"7"/"chrX", (2) start digits, (3) stop digits.
-	// Returns the match array, or null if the input isn't a chr:start-stop range.
-	const m = /^\s*(\w+)\s*:\s*([\d,]+)\s*-\s*([\d,]+)\s*$/.exec(str)
-	// no match -> not a coordinate range (e.g. a bare chr, a gene name, partial typing) -> bail out
-	if (!m) return null
-	// pull the three capture groups out of the match (index 0 is the whole match, so skip it)
-	const [, chrToken, start, stop] = m
-	// The genome's chrlookup uses canonical names (e.g. "chr7"), but the user may omit/include the "chr"
-	// prefix. Build both spellings to try: if the token starts with "chr", try it and the de-prefixed form;
-	// otherwise try it and the "chr"-prefixed form. Whichever the genome knows resolves via string2pos().
-	const chrCandidates = /^chr/i.test(chrToken)
-		? [chrToken, chrToken.replace(/^chr/i, '')] // "chr7" -> try "chr7", then "7"
-		: [chrToken, 'chr' + chrToken] // "7" -> try "7", then "chr7"
-	for (const chr of chrCandidates) {
-		try {
-			const coord = string2pos(`${chr}:${start}-${stop}`, genome, true)
-			if (coord) return { chr: coord.chr, start: coord.start, stop: coord.stop }
-		} catch {
-			// try the next chromosome-name candidate
-		}
-	}
+	const coord = string2pos(str, genome, true)
+	if (coord) return { chr: coord.chr, start: coord.start, stop: coord.stop }
 	return null
 }
 
