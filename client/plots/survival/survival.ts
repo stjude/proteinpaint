@@ -800,7 +800,7 @@ function setRenderers(self) {
 			.append('g')
 			.attr('class', 'sjpp-survival-series')
 			.attr('data-testid', function (series) {
-				return `sjpp-survival-${series.seriesLabel}`
+				return `sjpp-survival-series-${series.seriesLabel}`
 			})
 			.each(function (this: HTMLElement, series, i) {
 				renderSeries(select(this), chart, series, i, s)
