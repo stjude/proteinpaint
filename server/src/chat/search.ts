@@ -68,46 +68,32 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	})
 
 	// Genomic coordinate typed as the prompt (e.g. "chr7:100000-200000") — resolved here (not on the
-	// client) so string2pos and the genome object stay server-side. Only offered when the dataset has a
+	// client) so string2pos and the genome object stay server-side. Only resolved when the client sent
+	// candidate spellings (q.coordCandidates), i.e. its coordinate regex passed, AND the dataset has a
 	// genome browser genomic view (snvindel/cnv/svfusion and gbRestrictMode !== 'protein').
 	const coord =
 		datasetDataTypes.genomeBrowser && ds.queries?.gbRestrictMode !== 'protein'
-			? parseGenomicCoord(prompt, genome)
+			? resolveCoordFromCandidates(q.coordCandidates, genome)
 			: null
 
 	// Will later add support for other NonDict terms such as genesets etc.
 	return { dictionaryTerms: terms, genes: genes, coord }
 }
 
-/** Parse a genomic coordinate RANGE (e.g. "chr7:100000-200000", or with the "chr" prefix omitted,
- * "7:100000-200000") into { chr, start, stop }, or null if the input is not such a range. Requires the
- * chr:start-stop form (a bare chr name or single position is ignored so partial typing doesn't trigger
- * the genome browser). A cheap regex shape-filter runs first; chromosome existence and position validity
- * are delegated to string2pos(), which returns null on invalid input. The genome's chrlookup is keyed by
- * its canonical chromosome names (e.g. "chr7"); accept input with the "chr" prefix omitted by also trying
- * the toggled form. (Moved from the client so string2pos runs server-side.) */
-function parseGenomicCoord(str: string, genome: any): { chr: string; start: number; stop: number } | null {
-	if (!genome) return null
-	// Shape-filter + capture: match "chr:start-stop" with optional spaces and thousands-commas in the
-	// numbers. Groups: (1) chromosome token e.g. "chr7"/"7"/"chrX", (2) start digits, (3) stop digits.
-	// Returns the match array, or null if the input isn't a chr:start-stop range.
-	const m = /^\s*(\w+)\s*:\s*([\d,]+)\s*-\s*([\d,]+)\s*$/.exec(str)
-	// no match -> not a coordinate range (e.g. a bare chr, a gene name, partial typing) -> bail out
-	if (!m) return null
-	// pull the three capture groups out of the match (index 0 is the whole match, so skip it)
-	const [, chrToken, start, stop] = m
-	// The genome's chrlookup uses canonical names (e.g. "chr7"), but the user may omit/include the "chr"
-	// prefix. Build both spellings to try: if the token starts with "chr", try it and the de-prefixed form;
-	// otherwise try it and the "chr"-prefixed form. Whichever the genome knows resolves via string2pos().
-	const chrCandidates = /^chr/i.test(chrToken)
-		? [chrToken, chrToken.replace(/^chr/i, '')] // "chr7" -> try "chr7", then "7"
-		: [chrToken, 'chr' + chrToken] // "7" -> try "7", then "chr7"
-	for (const chr of chrCandidates) {
+/** Resolve a typed genomic coordinate to { chr, start, stop } from the client-provided candidate spellings
+ * (e.g. ["7:100000-200000", "chr7:100000-200000"]). The client (mass/search.ts) runs the shape regex and
+ * the "chr" prefix toggling and only sends candidates when its regex passed; here we just run string2pos
+ * against the genome, which validates the chromosome name and position range (returns null on invalid
+ * input). Returns the first candidate that resolves, or null (including when no candidates were sent). */
+function resolveCoordFromCandidates(candidates: any, genome: any): { chr: string; start: number; stop: number } | null {
+	if (!genome || !Array.isArray(candidates)) return null
+	for (const c of candidates) {
+		if (typeof c != 'string') continue
 		try {
-			const coord = string2pos(`${chr}:${start}-${stop}`, genome, true)
+			const coord = string2pos(c, genome, true)
 			if (coord) return { chr: coord.chr, start: coord.start, stop: coord.stop }
 		} catch {
-			// try the next chromosome-name candidate
+			// try the next candidate spelling
 		}
 	}
 	return null

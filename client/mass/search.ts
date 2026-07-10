@@ -13,11 +13,9 @@ import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
-const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
-// Max prompt length for omnisearch to trigger. Sized to accommodate typed genomic coordinate ranges
-// (handled in doSearch), e.g. "chr7:100000-200000" (18 chars) or larger loci like
-// "chr16:100000000-200000000" (25 chars); gene/dictionary names are well within this.
-const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 35
+// Coordinate search is allowed regardless of prompt length, but other prompts are gated by these bounds.
+const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3
+const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 20
 
 /** Build a region-based dnaMethylation term for the given coordinates. */
 function makeMethylationRegionTerm(opts: { chr: string; start: number; stop: number }, vocabApi: any) {
@@ -89,9 +87,27 @@ async function embedMethylationRegionPicker(opts: {
 	return blockInstance
 }
 
-/** keyup handler for the omnisearch input: run the omnisearch (doSearch) as the user types, but only for
- * a single-word prompt within the length bounds; otherwise clear the results popup. Wired in chat.ts's
- * initDom. `self` is the MassAiChatBot instance. */
+/** Genomic coordinate shape-filter + "chr" prefix toggling (moved from server chat/search.ts). Matches a
+ * typed "chr:start-stop" range (e.g. "chr7:100000-200000" or, with the prefix omitted, "7:100000-200000")
+ * and returns the candidate coordinate strings to try server-side — both the typed spelling and the
+ * "chr"-toggled one, since only the server's genome object knows which chromosome name it uses. Returns
+ * null when the prompt is not a coordinate range (a bare chr, a gene name, or partial typing), so no
+ * coordinate is sent to the server. Chromosome existence and position validity are left to the server's
+ * string2pos(); this is only a cheap shape/spelling step. */
+function parseCoordCandidates(prompt: string): string[] | null {
+	const m = /^\s*(\w+)\s*:\s*([\d,]+)\s*-\s*([\d,]+)\s*$/.exec(prompt)
+	if (!m) return null
+	const [, chrToken, start, stop] = m
+	const chrCandidates = /^chr/i.test(chrToken)
+		? [chrToken, chrToken.replace(/^chr/i, '')] // "chr7" -> try "chr7", then "7"
+		: [chrToken, 'chr' + chrToken] // "7" -> try "7", then "chr7"
+	return chrCandidates.map(chr => `${chr}:${start}-${stop}`)
+}
+
+/** keyup handler for the omnisearch input: run the omnisearch (doSearch) as the user types. A typed
+ * genomic coordinate range triggers a search regardless of prompt length (no length cutoff — coordinate
+ * strings can be long); any other prompt is gated by the length bounds. Otherwise clear the results popup.
+ * Wired in chat.ts's initDom. `self` is the MassAiChatBot instance. */
 export async function handleOmnisearchKeyup(self: any, event: KeyboardEvent) {
 	if (keyupEnter(event)) return
 	const prompt = (event.target as HTMLInputElement).value.trim()
@@ -100,13 +116,15 @@ export async function handleOmnisearchKeyup(self: any, event: KeyboardEvent) {
 		self.clear({ hide: true })
 		return
 	}
+	// A coordinate (regex passes) is searched regardless of length; only a coordinate triggers the
+	// server's coordinate resolution (its candidates are passed to doSearch). Other prompts stay gated.
+	const coordCandidates = parseCoordCandidates(prompt)
 	if (
-		MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length &&
-		prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH &&
-		prompt.split(' ').length == 1
+		coordCandidates ||
+		(MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH)
 	) {
 		try {
-			await doSearch(self, prompt) // Search as user types
+			await doSearch(self, prompt, coordCandidates) // Search as user types
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
@@ -117,17 +135,19 @@ export async function handleOmnisearchKeyup(self: any, event: KeyboardEvent) {
 	}
 }
 
-// Search method, adapted from MassSearch.doSearch
-export async function doSearch(self: any, prompt: string) {
+// Search method, adapted from MassSearch.doSearch. `coordCandidates` (when the prompt matched the
+// coordinate regex on the client) are the "chr:start-stop" spellings the server resolves via string2pos;
+// pass null/undefined for a normal gene/dictionary search.
+export async function doSearch(self: any, prompt: string, coordCandidates?: string[] | null) {
 	if (!prompt) {
 		self.clear({ hide: true })
 		return
 	}
 	const cohortStr = self.getState(self.app.getState()).cohortStr
-	// Single server request that searches genomic coordinates, dictionary variables and genes together,
-	// and reports the dataset's gene data types. The server (termdb/chat, runOmnisearch) does the gene
-	// lookup AND resolves a typed genomic coordinate (via string2pos), so the client needs no extra
-	// genelookup request and no genome object during omnisearch.
+	// Single server request that searches dictionary variables and genes, and — only when the client's
+	// coordinate regex passed (coordCandidates present) — resolves the typed genomic coordinate via
+	// string2pos server-side (the genome object stays on the server). The client runs the regex + "chr"
+	// toggling and needs no extra genelookup request.
 	const data: OmnisearchResult = await dofetch3('termdb/chat', {
 		body: {
 			genome: self.app.vocabApi.vocab.genome,
@@ -136,7 +156,8 @@ export async function doSearch(self: any, prompt: string) {
 			prompt,
 			cohortStr,
 			usecase: self.opts.usecase,
-			treeFilter: self.app.vocabApi.state?.treeFilter
+			treeFilter: self.app.vocabApi.state?.treeFilter,
+			coordCandidates: coordCandidates || undefined
 		}
 	})
 	if (data.error) throw data.error
@@ -356,7 +377,7 @@ export function setSearchRenderers(self: any) {
 	self.launchMethylationPlot = async (gene: string, coord: { chr: string; start: number; stop: number }) => {
 		// coord is the gene's default genomic coordinate, resolved server-side by the omnisearch
 		// (GeneMatch.coord) and used to seed the genome browser track — no genelookup request here.
-		if (!coord) throw `Could not resolve coordinates for gene "${gene}"`
+		if (!coord) throw new Error(`Could not resolve coordinates for gene "${gene}"`)
 
 		// render the region picker inline in the chat result area, replacing the result list
 		self.dom.tip.clear()
