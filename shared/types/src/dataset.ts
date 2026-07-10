@@ -1067,7 +1067,8 @@ export type SingleCellQuery = {
 	/** supplies per-sample images. will create a new tab on the ui. one image per sample */
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
-	terms?: object[]
+	terms?: object[],
+	pseudobulk?: SingleCellPseudobulk
 }
 
 export type SingleCellMetaResult = {
@@ -1094,6 +1095,29 @@ export type SCImages = {
 	fileName: string
 	/**Used to name the image tab in the single cell plot */
 	label: string
+}
+
+export type SingleCellPseudobulk = {
+	/** type can be 'geneExpression', 'dnaMeth', etc. that aligns to an assay */
+	[assayType: string]: {
+		/** termId corresponds to a term ID in the assay */
+		[termId: string]: {
+			folder: string,
+			/** '*[Ext] denote the file extension for the corresponding data file
+			 * The actual file path is [folder]/[termId.value[i]]/[*Ext]*/
+
+			/** Values are average of per-cell log1p values, used for term */
+			meanExt: string
+			/** values are sum of umi count when present */
+			totalExt: string
+			/** Percentage of cells with the term (e.g. gene) expressed */
+			percentExt: string
+			values: {
+				/** Values should match the values created for the term. */
+				[index: string]: { label?: string /*color??*/}
+			}
+		}
+	}
 }
 
 /** genome browser LD track */
