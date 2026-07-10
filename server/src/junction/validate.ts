@@ -1,5 +1,5 @@
 import computePercentile from '#shared/compute.percentile.js'
-import { invalidcoord } from '#shared/common.js'
+import { invalidcoord, JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
@@ -66,6 +66,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 						console.log(`invalid json for a junction: ${r.chr}:${start}-${stop}`)
 						return
 					}
+					console.log(info)
 					const types = computeTypes(info, hiddenTypes)
 					if (!types.length) return // no visible types. this junction is filtered out by hiddenTypes
 					const j: Junction = {
@@ -153,26 +154,47 @@ export async function validate_query_junction(ds: any, genome: any) {
 		return {}
 	}
 }
-export function computeTypes(j: any, hs: Set<string>): string[] {
+/*
+j: junction annotation
+possible annotations:
+- undefined. intergenic and no overlap with any isoform
+- {..} object lacking events. 
+- {canonical:true} 
+- {canonical:true, events:[]} alternative exon usage
+- {.., events:[]} 
+
+hide: set of types to hide
+*/
+export function computeTypes(j: undefined | object, hide: Set<string>): string[] {
 	const types: string[] = []
+	if (!j) {
+		// lacks annotation
+		if (!hide?.has(JT_na)) types.push(JT_na)
+		return types
+	}
+	// j is valid object
 	if (j.canonical) {
-		if (!hs?.has('canonical')) types.push('canonical')
+		if (!hide?.has(JT_canonical)) types.push(JT_canonical)
 	}
 	if (j.events) {
-		const s = new Set<string>()
+		const events: any[] = [] // when filtering using "hide", generate new array to prevent sending excess data
 		for (const e of j.events) {
-			if (typeof e.attrValue == 'string') {
-				if (!hs?.has(e.attrValue)) s.add(e.attrValue)
-			} else {
-				throw new Error('event.attrValue missing')
-			}
+			// todo migrate attrValue to e.type
+			if (typeof e.attrValue != 'string') throw new Error('event.attrValue missing')
+			if (hide?.has(e.attrValue)) continue
+			events.push(e)
 		}
-		types.push(...s)
+		if (events.length) {
+			j.events = events
+			types.push(...new Set(events.map(i => i.attrValue)))
+		} else {
+			delete j.events
+		}
 	} else {
 		// no events
 		if (!j.canonical) {
-			// and not canonical
-			if (!hs?.has('na')) types.push('na')
+			// and not canonical. it is na
+			if (!hide?.has(JT_na)) types.push(JT_na)
 		}
 	}
 	delete j.canonical // at the end, this property is no longer needed

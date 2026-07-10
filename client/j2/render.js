@@ -4,6 +4,7 @@ import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import exonskipalt_getdefault from '../src/spliceevent.exonskip.getdefault.js'
 import { axisstyle } from '#dom'
+import { bplen, IN_frame, JTypes } from '#shared/common.js'
 
 /*
  */
@@ -11,7 +12,6 @@ import { axisstyle } from '#dom'
 const minfontsize = 12
 const lineopacity = 0.5
 const discopacity = 0.5
-const invalidCategoryColor = '#8EA399' // when a junction has no valid value for a infoFilter
 const cohortLegendDotColor = '#858585' // '#EBBD5B' // also for sample percentage bar foreground color
 const notAnnotatedLabel = 'Unannotated'
 const junctionNoSpliceeventLabel = 'None'
@@ -19,15 +19,6 @@ const labyspace = 5
 
 const hardcode_infoKey_type = 'type' // currently the only infoFilter key
 const hardcode_infoValue_canonical = 'canonical'
-
-// todo export from common.js
-const type2color = new Map([
-	['canonical', '#488bcf'],
-	['exonskip', '#b55165'],
-	['a5ss', '#5eb5bf'],
-	['a3ss', '#bf9858'],
-	['na', 'gray']
-])
 
 export function renderTk(data, tk, block) {
 	if (data) {
@@ -109,7 +100,6 @@ export function renderTk(data, tk, block) {
 
 	// y position, by median read count for each junction
 	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
-	console.log(maxmedian)
 
 	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
 		.domain([tk.readcountCutoff || 1, data.maxReadCount])
@@ -170,6 +160,7 @@ export function renderTk(data, tk, block) {
 		.data(tk.data)
 		.enter()
 		.append('g')
+		.attr('class', 'sja_jug')
 		.attr('transform', d => set_jug(d))
 		.each(function (j) {
 			j.jugg = this
@@ -439,20 +430,11 @@ function j2block(j, block, viewpxwidth) {
 	return false
 }
 
-function infoFilter_inuse(tk) {
-	// which one of the infoFilter[] is being used, for subtrack, will use parent's
-	const a = (tk.parentTk || tk).infoFilter
-	if (a.useFilterIndex == undefined) {
-		a.useFilterIndex = 0
-	}
-	return a.lst[a.useFilterIndex]
-}
-
 function setColor(tk) {
 	for (const j of tk.data) {
 		// remove prior color, as color may be reassigned by switching infoFilter and then calling renderTk()
 		delete j.color
-		j.color = type2color.get(j.types[0])
+		j.color = JTypes[j.types[0]]?.color
 		if (j.color == undefined) throw new Error('unknown j.type')
 	}
 }
@@ -475,40 +457,42 @@ function set_jug2(d, tk) {
 
 function set_all(tk) {
 	// must update axisy to current value
-	tk.data.forEach(j => (j.axisy = tk.sections.jug.axisheight - tk.sections.jug.yscale(j.medianReadCount)))
+	const mg = tk.sections.jug
+	tk.data.forEach(j => (j.axisy = mg.axisheight - mg.yscale(j.medianReadCount)))
 
 	const dur = 500
-	tk.jug
+	mg.g
 		.selectAll('.sja_jug_leg1')
 		.transition()
 		.duration(dur)
-		.attr('y2', -tk.sections.jug.legheight)
+		.attr('y2', -mg.legheight)
 		.attr('x1', d => set_leg_x1(d))
-	tk.jug
+	mg.g
 		.selectAll('.sja_jug_leg2')
 		.transition()
 		.duration(dur)
-		.attr('y1', -tk.sections.jug.legheight)
+		.attr('y1', -mg.legheight)
 		.attr('x2', d => set_leg_x2(d))
-	tk.jug
+	mg.g
 		.selectAll('.sja_jug_jug2')
 		.transition()
 		.duration(dur)
 		.attr('transform', d => set_jug2(d, tk))
 	/*
-	tk.jug.selectAll('.sja_jug_rim')
+	mg.g.selectAll('.sja_jug_rim')
 		.transition().duration(dur)
 		.attr('fill-opacity',(d)=> set_rim(d))
 		*/
-	tk.jug
+	mg.g
+		.selectAll('.sja_jug')
 		.transition()
 		.duration(dur)
 		.attr('transform', d => set_jug(d))
-	tk.jug
+	mg.g
 		.selectAll('.sja_jug_stem')
 		.transition()
 		.duration(dur)
-		.attr('y2', d => tk.sections.jug.neckheight + d.axisy)
+		.attr('y2', d => mg.neckheight + d.axisy)
 }
 
 function doForceLayout(tk, block, viewpxwidth) {
@@ -671,33 +655,22 @@ thus the query
 
 function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	// head
-	const row1 = holder.append('div').style('margin-bottom', '5px').style('white-space', 'nowrap')
 	{
-		const info = infoFilter_inuse(tk)
-		const valueobj = j.info[info.key]
-		if (valueobj) {
-			// uniq set of values
-			const values = new Set()
-			valueobj.lst.forEach(i => values.add(i.attrValue))
-			for (const value of values) {
-				const anno = info.categories[value]
-				row1
-					.append('span')
-					.attr('class', 'sja_mcdot')
-					.style('padding', '1px 5px')
-					.style('background-color', anno ? anno.color : invalidCategoryColor)
-					.style('margin-right', '5px')
-					.text(anno ? anno.label : value)
-			}
+		const row = holder.append('div').style('margin-bottom', '5px').style('white-space', 'nowrap')
+		for (const s of j.types) {
+			row
+				.append('span')
+				.attr('class', 'sja_mcdot')
+				.style('padding', '1px 5px')
+				.style('background-color', JTypes[s]?.color || 'black')
+				.style('margin-right', '5px')
+				.text(JTypes[s]?.name || '?')
 		}
-	}
-
-	{
-		const d = row1.append('div').style('display', 'inline-block').style('margin-right', '10px')
+		const d = row.append('div').style('display', 'inline-block').style('margin-right', '10px')
 		if (!j.sv || j.chr == j.sv.mate.chr) {
 			// same chr
 			d.html(
-				common.bplen(Math.abs(j.start - (j.sv ? j.sv.mate.start : j.stop))) +
+				bplen(Math.abs(j.start - (j.sv ? j.sv.mate.start : j.stop))) +
 					' <span style="font-size:.8em;">' +
 					j.chr +
 					':' +
@@ -1037,7 +1010,7 @@ function eventlabel(e) {
 			' ' +
 			e.isoform +
 			' ' +
-			(e.frame == undefined ? '' : e.frame == common.IN_frame ? 'IN frame' : 'OUT of frame')
+			(e.frame == undefined ? '' : e.frame == IN_frame ? 'IN frame' : 'OUT of frame')
 		)
 	}
 	return (
@@ -1047,7 +1020,7 @@ function eventlabel(e) {
 		' ' +
 		e.isoform +
 		' ' +
-		(e.frame == undefined ? '' : e.frame == common.IN_frame ? 'IN frame' : 'OUT of frame')
+		(e.frame == undefined ? '' : e.frame == IN_frame ? 'IN frame' : 'OUT of frame')
 	)
 }
 
