@@ -2,8 +2,6 @@ name: Publish Dependencies Image
 
 on:
   workflow_dispatch:
-    inputs:
-
   push:
     branches:
       - deps-image

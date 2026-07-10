@@ -2,7 +2,6 @@ name: "Publish rust binaries"
 
 on:
   workflow_dispatch:
-    inputs:
     
 jobs:
 

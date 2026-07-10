@@ -2,7 +2,6 @@ name: Publish Tile Server Image
 
 on:
   workflow_dispatch:
-    inputs:
 
 jobs:
 

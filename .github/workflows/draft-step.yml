@@ -11,7 +11,6 @@ name: "Draft CI steps"
 on:
   # keep this event trigger to allow team members to run this CI using a password
   workflow_dispatch:
-    inputs:
 
   # can try different event triggers here
   # pull_request_target:

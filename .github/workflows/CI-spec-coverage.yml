@@ -16,7 +16,6 @@ on:
   #     - closed
 
   workflow_dispatch:
-    inputs:
 
   workflow_call: {}
 
