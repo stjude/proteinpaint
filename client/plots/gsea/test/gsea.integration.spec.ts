@@ -66,13 +66,14 @@ tape('Default blitzgsea gene expression GSEA', function (test) {
 		const foundTable = dom.tableDiv.select('table')
 		test.equals(foundTable.size(), 1, 'Should render results table')
 		const foundTableRows = foundTable.selectAll('tbody tr').nodes()
-		test.true(!foundTableRows.length, 'Results table should have rows')
+		test.true(!foundTableRows.length, 'Results table should have no rows')
 		const foundTableHeaders = foundTable.selectAll('thead th').nodes()
 		test.true(foundTableHeaders.length > 0, 'Results table should have headers')
 		const blitzgseaTableHeaders = ['Gene Set', '', 'Gene Set Size', 'P value', 'FDR', 'Leading Edge']
 		for (const [i, header] of blitzgseaTableHeaders.entries()) {
-			if (header === '') continue
-			test.true(foundTableHeaders[i].textContent.startsWith(header), `Table header ${i + 1} should be "${header}"`)
+			if (!header) continue
+ 			const th = foundTableHeaders[i]
+ 			test.true(!!th && th.textContent.startsWith(header), `Table header ${i + 1} should be "${header}"`)
 		}
 
 		if (test['_ok']) gsea.Inner.app.destroy()
