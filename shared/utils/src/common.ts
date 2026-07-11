@@ -1533,27 +1533,27 @@ export const JT_a5ss = 'a5ss'
 export const JT_a3ss = 'a3ss'
 export const JTypes = {
 	[JT_canonical]: {
-		color: '#307ecf',
+		color: '#0C72A8',
 		name: 'Canonical'
 	},
 	[JT_exonskip]: {
-		color: '#ba455c',
+		color: '#D14747',
 		name: 'ExonSkip'
 	},
 	[JT_a5ss]: {
-		color: '#5eb5bf',
+		color: '#476CD1',
 		name: "Alt 5'SS"
 	},
 	[JT_a3ss]: {
-		color: '#bf9858',
+		color: '#47B582',
 		name: "Alt 3'SS"
 	},
 	[JT_exonaltuse]: {
-		color: '#c26dc0',
+		color: '#E69525',
 		name: 'Alternative exon'
 	},
 	[JT_na]: {
-		color: 'gray',
+		color: '#787854',
 		name: 'Unannotated'
 	}
 }
