@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           token: ${{ secrets.PAT }}
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v6
         with:
           cache: 'npm'
           node-version: '24'
