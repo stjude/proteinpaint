@@ -31,6 +31,8 @@ export function renderTk(data, tk, block) {
 		// this is called from config menu. server data is already parsed at tk.data[]
 	}
 
+	tk.leftlabels.doms.jug.text(`${tk.data.length} junction${tk.data.length > 1 ? 's' : ''}`)
+
 	const viewpxwidth = block.width + block.subpanels.reduce((i, j) => i + j.leftpad + j.width, 0)
 
 	setColor(tk)

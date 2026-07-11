@@ -3,21 +3,10 @@ import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk } from './tk'
 import { renderTk } from './render'
-import {
-	mclass,
-	dtsnvindel,
-	dtsv,
-	dtfusionrna,
-	dtcnv,
-	dtitd,
-	mclassfusionrna,
-	mclasssv,
-	CNVClasses,
-	getColors
-} from '#shared/common.js'
 import { getFilterName } from '../mds3/filterName'
 import { fillTermWrapper } from '#termsetting'
-import { rehydrateFilter } from '../filter/rehydrateFilter.js'
+import { rehydrateFilter } from '../filter/rehydrateFilter'
+import { makelabel } from '../mds3/leftlabel'
 
 /*
  */
@@ -53,7 +42,8 @@ export async function makeTk(tk, block) {
 	}
 
 	tk.leftlabels = {
-		g: tk.gleft.append('g'), // all labels are rendered here, except track label
+		// all labels are rendered here, except track label
+		g: tk.gleft.append('g').attr('transform', 'translate(0,17)'),
 		doms: {},
 		// keys: label name, value: label dom
 		// to avoid having to delete all labels upon tk rendering
@@ -61,6 +51,7 @@ export async function makeTk(tk, block) {
 		xoff: 0,
 		maxwidth: 0 // set default 0 in case track runs into err, can still render tk
 	}
+	tk.leftlabels.doms.jug = makelabel(tk, block, 0)
 
 	{
 		const g = tk.glider.append('g')
