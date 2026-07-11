@@ -60,121 +60,121 @@ jobs:
           scope: '@sjcrh'
       - run: npm ci
 
-  #     - name: Run version bump
-  #       id: version_bump
-  #       run: |
-  #         exclude="";
+      - name: Run version bump
+        id: version_bump
+        run: |
+          exclude="";
 
-  #         if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
-  #           exclude="-x=container";
-  #         fi
+          if [ "${{ github.event.inputs.include }}" = "npm packages only" ]; then
+            exclude="-x=container";
+          fi
 
-  #         # NOTE: inputs.release_type may be ignored based on unreleased entries in CHANGELOG
-  #         . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
+          # NOTE: inputs.release_type may be ignored based on unreleased entries in CHANGELOG
+          . ./build/ci-version-update.sh ${{ github.event.inputs.release_type }} -w $exclude
           
-  #         echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
           
-  #         if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
-  #          echo "draft=true" >> $GITHUB_OUTPUT
-  #          echo "prerelease=true" >> $GITHUB_OUTPUT
-  #         else
-  #           echo "draft=false" >> $GITHUB_OUTPUT
-  #           echo "prerelease=false" >> $GITHUB_OUTPUT
-  #         fi
+          if [[ "$BRANCH" != "master" && "$BRANCH" != "release"* && "$BRANCH" != "prerelease"* ]]; then
+           echo "draft=true" >> $GITHUB_OUTPUT
+           echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "draft=false" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
           
-  #         echo "tag_name=$TAG" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG" >> $GITHUB_OUTPUT
           
-  #         ./build/ci-npm-publish.sh "$UPDATED"
+          ./build/ci-npm-publish.sh "$UPDATED"
           
-  #         if [[ "$UPDATED" == *"rust"* ]]; then
-  #           echo "updated_rust=true" >> $GITHUB_OUTPUT
-  #         else
-  #           echo "updated_rust=false" >> $GITHUB_OUTPUT
-  #         fi
+          if [[ "$UPDATED" == *"rust"* ]]; then
+            echo "updated_rust=true" >> $GITHUB_OUTPUT
+          else
+            echo "updated_rust=false" >> $GITHUB_OUTPUT
+          fi
           
-  #         CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
-  #         echo "latest_release_changes=$CHANGES" >> $GITHUB_OUTPUT
+          CHANGES="[CHANGELOG.md](https://github.com/stjude/proteinpaint/blob/master/CHANGELOG.md)"
+          echo "latest_release_changes=$CHANGES" >> $GITHUB_OUTPUT
 
-  #         # detect if a tagged github release already exists
-  #         if [[ "$(curl -s -o /dev/null -w '%{http_code}' https://github.com/stjude/proteinpaint/releases/tag/$TAG)" == "2"* ]]; then
-  #           echo "HAS_GH_RELEASE=true" >> $GITHUB_ENV
-  #         fi
+          # detect if a tagged github release already exists
+          if [[ "$(curl -s -o /dev/null -w '%{http_code}' https://github.com/stjude/proteinpaint/releases/tag/$TAG)" == "2"* ]]; then
+            echo "HAS_GH_RELEASE=true" >> $GITHUB_ENV
+          fi
 
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Create Release
-  #       # if: env.HAS_GH_RELEASE != 'true'
-  #       id: create_release
-  #       env:
-  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         TAG_NAME: ${{ steps.version_bump.outputs.tag_name }}
-  #         RELEASE_BODY: ${{ steps.version_bump.outputs.latest_release_changes }}
-  #         IS_DRAFT: ${{ steps.version_bump.outputs.draft }}
-  #         IS_PRERELEASE: ${{ steps.version_bump.outputs.prerelease }}
-  #       shell: bash
-  #       run: |
-  #         FLAGS=()
-  #         if [ "$IS_DRAFT" = "true" ]; then FLAGS+=(--draft); fi
-  #         if [ "$IS_PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
-  #         gh release create "$TAG_NAME" \
-  #           --title "$TAG_NAME" \
-  #           --notes "$RELEASE_BODY" \
-  #           "${FLAGS[@]}"
+      - name: Create Release
+        # if: env.HAS_GH_RELEASE != 'true'
+        id: create_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.version_bump.outputs.tag_name }}
+          RELEASE_BODY: ${{ steps.version_bump.outputs.latest_release_changes }}
+          IS_DRAFT: ${{ steps.version_bump.outputs.draft }}
+          IS_PRERELEASE: ${{ steps.version_bump.outputs.prerelease }}
+        shell: bash
+        run: |
+          FLAGS=()
+          if [ "$IS_DRAFT" = "true" ]; then FLAGS+=(--draft); fi
+          if [ "$IS_PRERELEASE" = "true" ]; then FLAGS+=(--prerelease); fi
+          gh release create "$TAG_NAME" \
+            --title "$TAG_NAME" \
+            --notes "$RELEASE_BODY" \
+            "${FLAGS[@]}"
 
-  # rust-build:
-  #   if: needs.publish-npm.outputs.updated_rust == 'true'
-  #   needs: publish-npm
-  #   uses: ./.github/workflows/CD-rust-build.yml
+  rust-build:
+    if: needs.publish-npm.outputs.updated_rust == 'true'
+    needs: publish-npm
+    uses: ./.github/workflows/CD-rust-build.yml
 
-  # upload-rust-assets:
-  #   needs: rust-build
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - name: Upload rust assets
-  #       uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
-  #       with:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  upload-rust-assets:
+    needs: rust-build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Upload rust assets
+        uses: stjude/proteinpaint/.github/actions/upload-rust-assets@master
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
        
-  # publish-docker-no-new-rust-module:
-  #   if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
-  #   needs: publish-npm
-  #   runs-on: ubuntu-22.04
-  #   permissions:
-  #     contents: write
-  #     packages: write
-  #   steps:
-  #     - name: Publish docker image
-  #       uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
-  #       with:
-  #         PAT: ${{ secrets.PAT }}
-  #         TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         GITHUB_ACTOR: ${{ github.actor }}
+  publish-docker-no-new-rust-module:
+    if: needs.publish-npm.outputs.updated_rust == 'false' && github.event.inputs.include == 'npm packages + Docker image'
+    needs: publish-npm
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Publish docker image
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
+        with:
+          PAT: ${{ secrets.PAT }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
 
-  # publish-docker-with-rust-changes:
-  #   if: needs.publish-npm.outputs.updated_rust == 'true' && github.event.inputs.include == 'npm packages + Docker image'
-  #   needs: upload-rust-assets
-  #   runs-on: ubuntu-22.04
-  #   permissions:
-  #     contents: write
-  #     packages: write
-  #   steps:
-  #     - uses: actions/checkout@v7
-  #       with:
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+  publish-docker-with-rust-changes:
+    if: needs.publish-npm.outputs.updated_rust == 'true' && github.event.inputs.include == 'npm packages + Docker image'
+    needs: upload-rust-assets
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  #     # Download the Rust binaries built by the rust-build workflow
-  #     - name: Download Rust Binaries
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: rust-binaries
-  #         path: rust-binaries
+      # Download the Rust binaries built by the rust-build workflow
+      - name: Download Rust Binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-binaries
+          path: rust-binaries
 
 
-  #     # Publish Docker image with the Rust binaries included
-  #     - name: Publish docker image with Rust binaries
-  #       uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
-  #       with:
-  #         PAT: ${{ secrets.PAT }}
-  #         TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         GITHUB_ACTOR: ${{ github.actor }}
+      # Publish Docker image with the Rust binaries included
+      - name: Publish docker image with Rust binaries
+        uses: stjude/proteinpaint/.github/actions/publish-ppfull-ppserver-image@master
+        with:
+          PAT: ${{ secrets.PAT }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
