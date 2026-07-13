@@ -23,7 +23,11 @@ const hardcode_infoValue_canonical = 'canonical'
 export function renderTk(data, tk, block) {
 	if (data) {
 		// server returned fresh data
-		if (data.junctions?.length == 0) return
+		if (data.junctions?.length == 0) {
+			tk.data = []
+			tk.leftlabels?.doms?.jug?.text('0 junctions')
+			return
+		}
 		if (!Number.isFinite(data.maxReadCount)) throw new Error('data.maxReadCount is not number')
 		rawdata2track(data.junctions, tk, block)
 		// tk.data[] set
