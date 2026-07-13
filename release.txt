@@ -1,1 +1,2 @@
-
+Fixes:
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
