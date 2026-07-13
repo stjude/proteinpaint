@@ -2,15 +2,15 @@ import tape from 'tape'
 import { fetchOmnisearch } from '../search.ts'
 
 /* Tests
-	- gene search returns gene matches with their available data types
-	- typed coordinate (with candidates) resolves to chr/start/stop
-	- typed coordinate WITHOUT candidates is not resolved (server gates coord resolution on the client regex)
-	- dictionary term search returns matching terms
+        - gene search returns gene matches with their available data types
+        - typed coordinate (with candidates) resolves to chr/start/stop
+        - typed coordinate WITHOUT candidates is not resolved (server gates coord resolution on the client regex)
+        - dictionary term search returns matching terms
 
-	fetchOmnisearch() is the server-call half of the mass omnisearch (see client/mass/search.ts, where it
-	is separated from the rendering). These tests hit the termdb/chat omnisearch route directly against the
-	TermdbTest / hg38-test dataset (no app/DOM). TermdbTest has snvindel/cnv/svfusion (so genomeBrowser is
-	available and coordinates resolve) and uses selectCohort, so dictionary search needs a valid cohortStr.
+        fetchOmnisearch() is the server-call half of the mass omnisearch (see client/mass/search.ts, where it
+        is separated from the rendering). These tests hit the termdb/chat omnisearch route directly against the
+        TermdbTest / hg38-test dataset (no app/DOM). TermdbTest has snvindel/cnv/svfusion (so genomeBrowser is
+        available and coordinates resolve) and uses selectCohort, so dictionary search needs a valid cohortStr.
 */
 
 /*************************
@@ -44,6 +44,37 @@ tape('gene search returns gene matches with data types', async function (test) {
 		'TP53 should have the genomeBrowser data type (TermdbTest has snvindel/cnv/svfusion)'
 	)
 	test.notOk(data.coord, 'no coordinate should be resolved for a gene prompt (no coordCandidates sent)')
+	test.end()
+})
+
+tape('gene search returns methylation', async function (test) {
+	test.timeoutAfter(10000)
+	const data = await fetchOmnisearch({ genome, dslabel, prompt: 'TP53' })
+	test.ok(Array.isArray(data.genes), 'genes should be an array')
+	const tp53 = data.genes.find(g => g.gene == 'TP53')
+	test.ok(tp53, 'genes should include TP53')
+	test.equal(tp53?.dataTypes?.dnaMethylation, true, 'TP53 should have the dnaMethylation data type')
+	test.notOk(data.coord, 'no coordinate should be resolved for a gene prompt (no coordCandidates sent)')
+	test.end()
+})
+
+tape('TP53 offers SNV/indel, CNV and SV/fusion data types', async function (test) {
+	test.timeoutAfter(10000)
+	// These are the three genomic-alteration data types the omnisearch surfaces as per-gene action buttons
+	// (SNV/indel, CNV, SV/fusion) and that together enable the "Genome Browser" option. TermdbTest defines
+	// all three queries, so TP53 should report each as available.
+	const variantTypes = [
+		{ key: 'snvindel', label: 'SNV/indel' },
+		{ key: 'cnv', label: 'CNV' },
+		{ key: 'svfusion', label: 'SV/fusion' }
+	]
+	const data = await fetchOmnisearch({ genome, dslabel, prompt: 'TP53' })
+	console.log('data returned from fetchOmnisearch (SNV/indel, CNV and SV/fusion data types):', JSON.stringify(data))
+	const tp53 = data.genes.find(g => g.gene == 'TP53')
+	test.ok(tp53, 'genes should include TP53')
+	for (const { key, label } of variantTypes) {
+		test.equal((tp53?.dataTypes as any)?.[key], true, `TP53 should offer ${label}`)
+	}
 	test.end()
 })
 

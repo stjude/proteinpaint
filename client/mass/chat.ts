@@ -75,6 +75,7 @@ class MassAiChatBot implements RxComponent {
 		const inputSel = this.dom.div
 			.append('input')
 			.attr('type', 'search')
+			.attr('data-testid', 'sjpp-mass-omnisearch-input')
 			.style('margin', '15px')
 			.style('padding', '17px')
 			.style('border-radius', '34px')
