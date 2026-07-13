@@ -158,7 +158,7 @@ export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION])
+const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, PSEUDOBULK])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
@@ -302,6 +302,7 @@ const typeMap: { [key: string]: string } = {
 	metaboliteIntensity: 'Metabolite Intensity',
 	proteomeAbundance: 'Proteome Abundance',
 	proteomeDAP: 'Proteome DAP',
+	pseudobulk: 'Pseudobulk',
 	multivalue: 'Multi Value',
 	singleCellGeneExpression: 'Single Cell, Gene Expression',
 	singleCellCellType: 'Single Cell, Cell Type',
