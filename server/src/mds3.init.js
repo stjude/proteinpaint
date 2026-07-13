@@ -7,7 +7,6 @@ import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc.js'
-import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
@@ -305,8 +304,6 @@ export async function validate_termdb(ds) {
 		// ds-supplied builder method
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
-	} else if (tdb.dictionary?.gdcapi) {
-		await gdcBuildDictionary(ds)
 	} else if (ds.cohort.db) {
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)

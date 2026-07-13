@@ -27,6 +27,7 @@ const dsHelpers = {
 	ezFetch,
 	xfetch: utils.xfetch,
 	cachedFetch: utils.cachedFetch,
+	isRecoverableError: utils.isRecoverableError,
 	filterByItem: mds3_init.filterByItem,
 	mayLog,
 	mapConcurrent,
