@@ -305,7 +305,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 		/* dataset has svfusion but no snvindel query;
 		set up config.svfusion so generateTracks() creates the mds3 lollipop tk to show fusion/sv events.
 		(without this, the GB plot only generates the mds3 tk from config.snvindel) */
-		config.svfusion = structuredClone(vocabApi.termdbConfig.queries.svfusion)
+		config.svfusion = Object.assign(structuredClone(vocabApi.termdbConfig.queries.svfusion), config.svfusion || {})
 		if (typeof config.svfusion.shown != 'boolean') {
 			// create missing tracker property with default value to determine if to show/hide svfusion mds3 tk
 			if (config.trackLst) {
