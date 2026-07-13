@@ -301,6 +301,22 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 				config.snvindel.shown = true
 			}
 		}
+	} else if (vocabApi.termdbConfig.queries.svfusion) {
+		/* dataset has svfusion but no snvindel query;
+		set up config.svfusion so generateTracks() creates the mds3 lollipop tk to show fusion/sv events.
+		(without this, the GB plot only generates the mds3 tk from config.snvindel) */
+		config.svfusion = structuredClone(vocabApi.termdbConfig.queries.svfusion)
+		if (typeof config.svfusion.shown != 'boolean') {
+			// create missing tracker property with default value to determine if to show/hide svfusion mds3 tk
+			if (config.trackLst) {
+				// also has track lst/facet
+				// hardcoded! hide svfusion by default! definitely change it later!
+				config.svfusion.shown = false
+			} else {
+				// no tklst/facet
+				config.svfusion.shown = true
+			}
+		}
 	}
 
 	if (config.trackLst) {
