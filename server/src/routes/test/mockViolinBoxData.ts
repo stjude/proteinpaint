@@ -1,4 +1,4 @@
-import { termjson } from '../../test/testdata/termjson.js'
+import { termjson } from '../../../test/testdata/termjson.js'
 
 /*
  * Shared mock data for violinBox route tests.

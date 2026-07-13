@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson.js'
+import { termjson } from '../../../test/testdata/termjson.js'
 import {
 	parseValues,
 	numericBins,
