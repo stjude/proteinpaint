@@ -135,32 +135,41 @@ export async function handleOmnisearchKeyup(self: any, event: KeyboardEvent) {
 	}
 }
 
-// Search method, adapted from MassSearch.doSearch. `coordCandidates` (when the prompt matched the
-// coordinate regex on the client) are the "chr:start-stop" spellings the server resolves via string2pos;
-// pass null/undefined for a normal gene/dictionary search.
-export async function doSearch(self: any, prompt: string, coordCandidates?: string[] | null) {
-	if (!prompt) {
-		self.clear({ hide: true })
-		return
-	}
-	const cohortStr = self.getState(self.app.getState()).cohortStr
-	// Single server request that searches dictionary variables and genes, and — only when the client's
-	// coordinate regex passed (coordCandidates present) — resolves the typed genomic coordinate via
-	// string2pos server-side (the genome object stays on the server). The client runs the regex + "chr"
-	// toggling and needs no extra genelookup request.
+/** Server call for the mass omnisearch: POST the prompt (and, when the client's coordinate regex passed,
+ * the "chr:start-stop" candidate spellings) to termdb/chat and return the OmnisearchResult. The server does
+ * the gene/dictionary lookup and resolves the typed coordinate via string2pos (the genome object stays
+ * server-side). Separated from the rendering (renderOmnisearchResults) and takes plain params (no DOM /
+ * component instance) so it can be integration-tested against a running server on its own. */
+export async function fetchOmnisearch(opts: {
+	genome: string
+	dslabel: string
+	prompt: string
+	cohortStr?: string
+	usecase?: any
+	treeFilter?: any
+	coordCandidates?: string[] | null
+}): Promise<OmnisearchResult> {
 	const data: OmnisearchResult = await dofetch3('termdb/chat', {
 		body: {
-			genome: self.app.vocabApi.vocab.genome,
-			dslabel: self.app.vocabApi.vocab.dslabel,
+			genome: opts.genome,
+			dslabel: opts.dslabel,
 			omnisearch: true,
-			prompt,
-			cohortStr,
-			usecase: self.opts.usecase,
-			treeFilter: self.app.vocabApi.state?.treeFilter,
-			coordCandidates: coordCandidates || undefined
+			prompt: opts.prompt,
+			cohortStr: opts.cohortStr,
+			usecase: opts.usecase,
+			treeFilter: opts.treeFilter,
+			coordCandidates: opts.coordCandidates || undefined
 		}
 	})
 	if (data.error) throw data.error
+	return data
+}
+
+/** Build the result rows from an OmnisearchResult and render them into the results popup (or show the
+ * "No match" message): one row per dictionary term, per gene (with the action buttons available for that
+ * gene), and the typed genomic coordinate. Separated from the server call (fetchOmnisearch) so each can be
+ * tested on its own. */
+function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// Genomic coordinate typed as the prompt (e.g. "chr7:100000-200000" or "7:100000-200000") is
 	// treated as another searchable data type alongside dictionary terms and genes: the server returns
 	// a parsed coordinate when the prompt is a valid range and the dataset supports the genomic view.
@@ -228,6 +237,27 @@ export async function doSearch(self: any, prompt: string, coordCandidates?: stri
 		self.dom.noMatchShown = false
 		self.showTerms({ lst })
 	}
+}
+
+// Search method, adapted from MassSearch.doSearch. Thin orchestration: fetch results from the server
+// (fetchOmnisearch), then render them (renderOmnisearchResults). `coordCandidates` (when the prompt matched
+// the coordinate regex on the client) are the "chr:start-stop" spellings the server resolves via
+// string2pos; pass null/undefined for a normal gene/dictionary search.
+export async function doSearch(self: any, prompt: string, coordCandidates?: string[] | null) {
+	if (!prompt) {
+		self.clear({ hide: true })
+		return
+	}
+	const data = await fetchOmnisearch({
+		genome: self.app.vocabApi.vocab.genome,
+		dslabel: self.app.vocabApi.vocab.dslabel,
+		prompt,
+		cohortStr: self.getState(self.app.getState()).cohortStr,
+		usecase: self.opts.usecase,
+		treeFilter: self.app.vocabApi.state?.treeFilter,
+		coordCandidates
+	})
+	renderOmnisearchResults(self, data)
 }
 
 // Minimal renderers ported from MassSearch. Assigns the omnisearch renderers (noResult, showTerms,
