@@ -251,7 +251,7 @@ export function server_init_db_queries(ds) {
 	links a pin back to the dataset's site term for per-user highlighting.
 	*/
 	if (ds.cohort.termdb.geomap && tables.has('geoLocation')) {
-		const rows = cn.prepare('SELECT name, latitude, longitude, site_code FROM geoLocation').all()
+		const rows = cn.prepare('SELECT id, name, latitude, longitude FROM geoLocation').all()
 		ds.cohort.termdb.geomap.sites = buildGeomapSites(rows)
 	}
 
@@ -615,18 +615,18 @@ export function filterTerms(req, ds, terms) {
 
 /*
 	Turn geoLocation table rows into geomap pins. A row becomes a pin only when it carries numeric lat & lon.
-	`id` is the site_code (links a pin to the site term for per-user highlighting), falling back to name.
+	`id` is the marker's link/highlight key (a site code, country code, etc. per dataset), falling back to name.
 	Kept generic and exported so it can be unit-tested without a DB.
 */
-type GeoLocationRow = { name?: string; latitude?: number; longitude?: number; site_code?: string }
+type GeoLocationRow = { id?: string; name?: string; latitude?: number; longitude?: number }
 export function buildGeomapSites(rows: GeoLocationRow[]): GeomapSite[] {
 	const sites: GeomapSite[] = []
 	for (const r of rows || []) {
 		if (typeof r?.latitude != 'number' || !Number.isFinite(r.latitude)) continue
 		if (typeof r?.longitude != 'number' || !Number.isFinite(r.longitude)) continue
-		const id = r.site_code || r.name
+		const id = r.id || r.name
 		if (!id) continue
-		sites.push({ id, name: r.name || r.site_code || id, lat: r.latitude, lon: r.longitude })
+		sites.push({ id, name: r.name || r.id || id, lat: r.latitude, lon: r.longitude })
 	}
 	return sites
 }
