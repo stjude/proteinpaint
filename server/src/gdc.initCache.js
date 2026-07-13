@@ -1,6 +1,5 @@
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
-import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { cachedFetch, isRecoverableError } from './utils.js'
 import { deepEqual, joinUrl, isUsableTerm, clearMemFetchDataCache } from '#shared/index.js'
 
@@ -91,7 +90,7 @@ async function mayRefreshCache(ds) {
 		// and `gdcBuildDictionary(ds)` would have been called once in mds3.init.js within validate_termdb(),
 		// so no need to repeat `gdcBuildDictionary(ds)` on the first call;
 		// rebuild the dictionary only after the initial cache and subsequent calls to mayRefreshCache()
-		if (ds.__gdc?.doneCaching) await gdcBuildDictionary(ds)
+		if (ds.__gdc?.doneCaching) await ds.cohort.termdb.dictionary.build(ds)
 		await cacheMappingOnNewRelease(ds, version)
 	} catch (e) {
 		// uncomment to test cancellation of retries and also requires
