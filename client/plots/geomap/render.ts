@@ -1,10 +1,20 @@
-import type { Div } from '../../types/d3.d'
+import type { Div, SvgG } from '../../types/d3.d'
 import type { GeomapConfig, GeomapSite } from '#types'
 import type { Feature } from 'geojson'
-import type { GeoPermissibleObjects } from 'd3-geo'
+import type { GeoPermissibleObjects, GeoPath } from 'd3-geo'
 import { geoPath, geoGraticule10, zoom, zoomIdentity } from 'd3'
 import { Menu } from '#dom'
-import { world, WIDTH, HEIGHT, getSiteKey, getHighlightSet, getValidSites, createProjection } from './helpers'
+import {
+	world,
+	WIDTH,
+	HEIGHT,
+	getSiteKey,
+	getHighlightSet,
+	getValidSites,
+	getSiteCount,
+	createProjection,
+	countriesWithSites
+} from './helpers'
 
 const LAND_FILL = '#e8e8e8'
 const LAND_STROKE = '#bcbcbc'
@@ -58,6 +68,9 @@ export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new
 		.attr('stroke', LAND_STROKE)
 		.attr('stroke-width', 0.4)
 
+	// label the countries that contain sites, at each country's centroid
+	if (geomap?.showCountryLabels) renderCountryLabels(mapG, path, sites)
+
 	// pins: render the non-highlighted first so emphasized pins draw on top
 	const pinG = mapG.append('g')
 	const ordered = [...sites].sort((a, b) => Number(highlight.has(getSiteKey(a))) - Number(highlight.has(getSiteKey(b))))
@@ -65,6 +78,7 @@ export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new
 		const xy = projection([site.lon, site.lat])
 		if (!xy) continue
 		const isHi = highlight.has(getSiteKey(site))
+		const count = getSiteCount(geomap, site)
 		pinG
 			.append('circle')
 			.attr('cx', xy[0])
@@ -75,7 +89,7 @@ export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new
 			.attr('stroke-width', isHi ? 1.2 : 0.6)
 			.attr('fill-opacity', 0.85)
 			.style('cursor', 'default')
-			.on('mouseover', (event: MouseEvent) => showTip(tip, event, site, isHi))
+			.on('mouseover', (event: MouseEvent) => showTip(tip, event, site, isHi, count))
 			.on('mouseout', () => tip.hide())
 	}
 
@@ -112,13 +126,38 @@ export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new
 	renderLegend(holder, highlight.size > 0)
 }
 
-function showTip(tip: Menu, event: MouseEvent, site: GeomapSite, isHi: boolean): void {
+function showTip(tip: Menu, event: MouseEvent, site: GeomapSite, isHi: boolean, count?: number): void {
 	tip.clear().show(event.clientX, event.clientY)
 	const d = tip.d.append('div')
 	d.append('div').style('font-weight', 'bold').text(site.name)
 	const sub = [site.country, site.iso].filter(Boolean).join(', ')
 	if (sub) d.append('div').style('font-size', '12px').style('color', '#555').text(sub)
 	if (isHi) d.append('div').style('font-size', '12px').style('color', PIN_HIGHLIGHT_FILL).text('Your site')
+	if (count != null)
+		d.append('div')
+			.style('font-size', '12px')
+			.text(`${count.toLocaleString()} patient${count === 1 ? '' : 's'}`)
+}
+
+function renderCountryLabels(mapG: SvgG, path: GeoPath, sites: GeomapSite[]): void {
+	const g = mapG.append('g').style('pointer-events', 'none')
+	for (const feature of countriesWithSites(sites)) {
+		const [x, y] = path.centroid(feature as unknown as GeoPermissibleObjects)
+		if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+		const name = (feature.properties as { name?: string } | null)?.name
+		if (!name) continue
+		g.append('text')
+			.attr('x', x)
+			.attr('y', y)
+			.attr('text-anchor', 'middle')
+			.attr('dominant-baseline', 'middle')
+			.style('font-size', '9px')
+			.style('fill', '#333')
+			.style('stroke', '#fff')
+			.style('stroke-width', '2.5px')
+			.style('paint-order', 'stroke')
+			.text(name)
+	}
 }
 
 function renderZoomControls(wrapper: Div, onIn: () => void, onOut: () => void, onReset: () => void): void {

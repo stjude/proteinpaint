@@ -1999,6 +1999,10 @@ export type GeomapConfig = {
 	sites?: GeomapSite[]
 	/** ids (or names) of the subset of sites to visually emphasize, e.g. the user's own sites */
 	highlightIds?: string[]
+	/** label the countries that contain at least one pin, at each country's centroid */
+	showCountryLabels?: boolean
+	/** per-site value to show on the pin (label + tooltip), keyed by site id — e.g. patient count */
+	counts?: { [id: string]: number }
 }
 
 /** modified version of termwrapper*/
