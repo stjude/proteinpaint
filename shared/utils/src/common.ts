@@ -28,6 +28,7 @@ export class TermTypeGroups {
 	static MUTATION_CNV_FUSION = 'Mutation/CNV/Fusion'
 	static MUTATION_SIGNATURE = 'Mutation Signature'
 	static PROTEIN_EXPRESSION = 'Protein Expression'
+	static PSEUDOBULK = 'Pseudobulk'
 	static SINGLECELL_CELLTYPE = 'Single-cell Cell Type'
 	static SINGLECELL_GENE_EXPRESSION = 'Single-cell Gene Expression'
 	static SNP = 'SNP Genotype'
