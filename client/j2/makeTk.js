@@ -23,6 +23,12 @@ export async function makeTk(tk, block) {
 	if (tk.hiddenTypes) {
 		if (!(tk.hiddenTypes instanceof Set)) throw new Error('tk.hiddenTypes not set')
 	}
+	if (tk.readcountCutoff) {
+		if (!Number.isInteger(tk.readcountCutoff) || tk.readcountCutoff < 0)
+			throw new Error('tk.readcountCutoff is not positive integer')
+	} else {
+		tk.readcountCutoff = 0
+	}
 
 	// make color gradients
 	{
@@ -214,7 +220,7 @@ function configPanel(tk, block) {
 			.style('width', '50px')
 			.on('keyup', event => {
 				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
-				let v = event.target.value
+				let v = Number(event.target.value)
 				if (!v || v < 0) {
 					// set to zero to cancel
 					v = 0
@@ -254,6 +260,7 @@ function configPanel(tk, block) {
 
 	// height
 	{
+		const k = tk.sections.jug
 		const row = holder.append('div').style('margin-bottom', '15px')
 		row.append('span').text('Track height')
 		row
@@ -261,8 +268,8 @@ function configPanel(tk, block) {
 			.html('&nbsp;&nbsp;+&nbsp;&nbsp;')
 			.style('margin-left', '10px')
 			.on('click', () => {
-				tk.axisheight += 30
-				tk.legheight = tk.axisheight / 4
+				k.axisheight += 30
+				k.legheight = k.axisheight / 4
 				renderTk(null, tk, block)
 				block.block_setheight()
 			})
@@ -271,9 +278,9 @@ function configPanel(tk, block) {
 			.html('&nbsp;&nbsp;-&nbsp;&nbsp;')
 			.style('margin-left', '5px')
 			.on('click', () => {
-				if (tk.axisheight <= 90) return
-				tk.axisheight -= 30
-				tk.legheight = tk.axisheight / 4
+				if (k.axisheight <= 90) return
+				k.axisheight -= 30
+				k.legheight = k.axisheight / 4
 				renderTk(null, tk, block)
 				block.block_setheight()
 			})

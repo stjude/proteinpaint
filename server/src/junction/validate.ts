@@ -37,7 +37,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
-			return { junctions: [] }
+			return { junctions: [], maxReadCount: 0 }
 		}
 		const junctions: Junction[] = [] // list of junctions to be returned
 		let maxReadCount = 0

@@ -81,7 +81,7 @@ function update_type(tk) {
 					{
 						label: 'Show only',
 						callback: () => {
-							for (const t2 of type2count) {
+							for (const t2 of type2count.keys()) {
 								tk.legend.type.hiddenvalues.add(t2)
 							}
 							tk.legend.type.hiddenvalues.delete(t)
