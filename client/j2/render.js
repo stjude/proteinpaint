@@ -297,6 +297,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 		})
 		.on('click', (event, j) => {
 			tk.tktip.hide()
+			console.log(j)
 			console.log('todo here')
 		})
 
@@ -602,11 +603,11 @@ function mouseoverBoxplot(j, tk) {
 	// mouse over disc show boxplot for read count
 	if (!j.readcountBoxplot) return
 	const color = 'black'
-	const p5 = tk.sections.jug.yscale(j.readcountBoxplot.percentile[0])
-	const p25 = tk.sections.jug.yscale(j.readcountBoxplot.percentile[1])
-	const p50 = tk.sections.jug.yscale(j.readcountBoxplot.percentile[2])
-	const p75 = tk.sections.jug.yscale(j.readcountBoxplot.percentile[3])
-	const p95 = tk.sections.jug.yscale(j.readcountBoxplot.percentile[4])
+	const p5 = tk.sections.jug.yscale(j.readcountBoxplot[0])
+	const p25 = tk.sections.jug.yscale(j.readcountBoxplot[1])
+	const p50 = tk.sections.jug.yscale(j.readcountBoxplot[2])
+	const p75 = tk.sections.jug.yscale(j.readcountBoxplot[3])
+	const p95 = tk.sections.jug.yscale(j.readcountBoxplot[4])
 	const w = 10
 	tk.pica.g.selectAll('*').remove()
 	tk.pica.g.attr('transform', 'translate(' + j.x + ',' + p50 + ')')

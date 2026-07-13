@@ -3,17 +3,7 @@ import { invalidcoord, JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
-import type { TermdbJunctionsRequest, TermdbOneJunctionRequest } from '#types'
-
-type Junction = {
-	chr: string
-	start: number
-	stop: number
-	strand: string
-	sampleCount?: number
-	medianReadCount?: number
-	[key: string]: any
-}
+import type { Junction, TermdbJunctionsRequest, TermdbOneJunctionRequest } from '#types'
 
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
@@ -66,7 +56,6 @@ export async function validate_query_junction(ds: any, genome: any) {
 						console.log(`invalid json for a junction: ${r.chr}:${start}-${stop}`)
 						return
 					}
-					console.log(info)
 					const types = computeTypes(info, hiddenTypes)
 					if (!types.length) return // no visible types. this junction is filtered out by hiddenTypes
 					const j: Junction = {
@@ -98,7 +87,18 @@ export async function validate_query_junction(ds: any, genome: any) {
 					if (readcounts.length == 1) {
 						j.medianReadCount = readcounts[0]
 					} else {
-						j.medianReadCount = computePercentile(readcounts, 50, false)
+						readcounts.sort((i, j) => i - j)
+						const o = utils.boxplot_getvalue(
+							readcounts.map(i => {
+								return { value: i }
+							})
+						)
+						if (o.p50) {
+							j.medianReadCount = o.p50
+							j.readcountBoxplot = [o.p05, o.p25, o.p50, o.p75, o.p95]
+						} else {
+							j.medianReadCount = computePercentile(readcounts, 50, false)
+						}
 					}
 					junctions.push(j)
 					// todo terminate when exceeds limit
@@ -165,7 +165,7 @@ possible annotations:
 
 hide: set of types to hide
 */
-export function computeTypes(j: undefined | object, hide: Set<string>): string[] {
+export function computeTypes(j: any, hide: Set<string>): string[] {
 	const types: string[] = []
 	if (!j) {
 		// lacks annotation
