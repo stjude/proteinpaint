@@ -9,6 +9,9 @@ export const ISOFORM_EXPRESSION = 'isoformExpression'
 export const INTEGER = 'integer'
 export const METABOLITE_INTENSITY = 'metaboliteIntensity'
 export const MULTIVALUE = 'multivalue'
+export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
+export const PROTEOME_DAP = 'proteomeDAP'
+export const PSEUDOBULK = 'pseudobulk'
 export const SAMPLELST = 'samplelst'
 export const SINGLECELL_CELLTYPE = 'singleCellCellType'
 export const SINGLECELL_GENE_EXPRESSION = 'singleCellGeneExpression'
@@ -18,8 +21,6 @@ export const SNP_LOCUS = 'snplocus'
 export const SSGSEA = 'ssGSEA'
 export const SURVIVAL = 'survival'
 export const TERM_COLLECTION = 'termCollection'
-export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
-export const PROTEOME_DAP = 'proteomeDAP'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
@@ -40,6 +41,7 @@ export const TermTypes: { [key: string]: string } = {
 	SAMPLELST,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
+	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
