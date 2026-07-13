@@ -96,7 +96,7 @@ export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor =
 			.attr('stroke', color)
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.attr('cx', scale(d.value))
+			.attr('cx', scale(v))
 			.attr('cy', rowheight / 2)
 			.attr('r', bp?.radius || rowheight / 3)
 		/*
