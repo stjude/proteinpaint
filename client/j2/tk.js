@@ -72,11 +72,7 @@ function getParameter(tk, block) {
 
 	rangequery_rglst(tk, block, par)
 
-	{
-		const lst = []
-		if (tk.legend?.type?.hiddenvalues?.size) for (const c of tk.legend.type.hiddenvalues) lst.push(c)
-		if (lst.length) par.hiddenTypes = lst
-	}
+	if (tk.legend?.type?.hiddenvalues?.size) par.hiddenTypes = [...tk.legend.type.hiddenvalues].join(',')
 
 	return [par, headers]
 }

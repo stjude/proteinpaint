@@ -13,7 +13,16 @@ import { makelabel } from '../mds3/leftlabel'
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track by adding in essential attributes to tk object
-	tk.yscaleUseLog = true
+
+	// validate default values
+	if ('yscaleUseLog' in tk) {
+		if (typeof tk.yscaleUseLog != 'boolean') throw new Error('tk.yscaleUseLog not boolean')
+	} else {
+		tk.yscaleUseLog = true
+	}
+	if (tk.hiddenTypes) {
+		if (!(tk.hiddenTypes instanceof Set)) throw new Error('tk.hiddenTypes not set')
+	}
 
 	// make color gradients
 	{
@@ -112,7 +121,7 @@ function loadTk_finish_closure(tk, block) {
 	return data => {
 		// update legend name in case filter has changed
 		// tk.legend{} is missing if tk is not initiated (wrong ds name)
-		tk.legend?.headTd.text(tk.name + (tk.filter ? ' - ' + getFilterName(tk.filter) : ''))
+		tk.legend?.headTd.text(tk.dslabel + (tk.filter ? ' - ' + getFilterName(tk.filter) : ''))
 
 		if (data) {
 			// centralized place on indicating if tk has error or simply no data
@@ -124,6 +133,9 @@ function loadTk_finish_closure(tk, block) {
 			} else {
 				// no error. detect if has data or not
 				if (data.junctions?.length == 0) {
+					tk.sections.jug.g.selectAll('*').remove()
+					tk.sections.jug.axis.selectAll('*').remove()
+					tk.sections.jug.g.transition().attr('transform', 'translate(0,0)')
 					tk.sections.jug.g
 						.append('text')
 						.text('No splice junctions')
