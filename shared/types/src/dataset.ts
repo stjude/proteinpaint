@@ -1067,7 +1067,7 @@ export type SingleCellQuery = {
 	/** supplies per-sample images. will create a new tab on the ui. one image per sample */
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
-	terms?: object[],
+	terms?: object[]
 	pseudobulk?: SingleCellPseudobulk
 }
 
@@ -1102,8 +1102,8 @@ export type SingleCellPseudobulk = {
 	[assayType: string]: {
 		/** termId corresponds to a term ID in the assay */
 		[termId: string]: {
-			folder: string,
-			/** '*[Ext] denote the file extension for the corresponding data file
+			folder: string
+			/** '[*]Ext denotes the file extension for the corresponding data file
 			 * The actual file path is [folder]/[termId.value[i]]/[*Ext]*/
 
 			/** Values are average of per-cell log1p values, used for term */
