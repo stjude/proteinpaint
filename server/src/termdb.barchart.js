@@ -5,6 +5,7 @@ import { format } from 'd3-format'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
+import { boxplot_getvalue } from '#shared/boxplot.js'
 
 const binLabelFormatter = format('.3r')
 
@@ -529,11 +530,7 @@ function getPj(q, data, tdb, ds) {
 				const values = context.self.values
 				if (!values || !values.length) return
 				values.sort((i, j) => i - j)
-				const stat = utils.boxplot_getvalue(
-					values.map(v => {
-						return { value: +v }
-					})
-				)
+				const stat = boxplot_getvalue(values)
 				stat.mean = context.self.sum / values.length
 				let s = 0
 				for (const v of values) {

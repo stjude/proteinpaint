@@ -1,4 +1,5 @@
 import computePercentile from '#shared/compute.percentile.js'
+import { boxplot_getvalue } from '#shared/boxplot.js'
 import { invalidcoord, JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
@@ -88,14 +89,10 @@ export async function validate_query_junction(ds: any, genome: any) {
 						j.medianReadCount = readcounts[0]
 					} else {
 						readcounts.sort((i, j) => i - j)
-						const o = utils.boxplot_getvalue(
-							readcounts.map(i => {
-								return { value: i }
-							})
-						)
-						if (o.p50) {
+						const o = boxplot_getvalue(readcounts)
+						if (o.p50 !== undefined) {
 							j.medianReadCount = o.p50
-							j.readcountBoxplot = [o.p05, o.p25, o.p50, o.p75, o.p95]
+							j.readcountBoxplot = [o.p05!, o.p25!, o.p50, o.p75!, o.p95!]
 						} else {
 							j.medianReadCount = computePercentile(readcounts, 50, false)
 						}
