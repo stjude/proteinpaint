@@ -13,6 +13,9 @@ Fixes:
 - correctly handle key events in max sample input in matrix controls
 - GRIN2 - Manhattan plot rendered no dots for lesion types outside the built-in gain/loss/mutation/fusion/sv set (e.g. ITD): lesion types are now discovered from the result columns and colors derive from the shared dt2lesion map, so any current or future data type renders.
 - GRIN2 - Manhattan plot clipped the most-significant (q=0) genes above the plot area; the y-axis maximum now accounts for the zero-q placement so top hits stay visible.
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
+- Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
+- Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
 
 
 ## 2.196.0
