@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Fixes:
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
+- Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
+- Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
+
 
 ## 2.197.0
 
