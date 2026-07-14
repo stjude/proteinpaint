@@ -1114,7 +1114,12 @@ export function mayAddInfoField(tk) {
 	for (const m of tk.custom_variants) {
 		if (!m.info || typeof m.info != 'object') continue
 		for (const k in m.info) {
+			if (k == 'CSQ') continue // sjlife snplocus items contain this and don't want to show legend entry!
+
 			const v = m.info[k]
+
+			if (v == null || v == undefined) continue // skip such values
+
 			if (Number.isFinite(v)) {
 				// value is number
 				if (ckeys.has(k)) throw new Error(`info field ${k} cannot have both categorical and numerical values`)
