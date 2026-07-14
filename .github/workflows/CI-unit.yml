@@ -78,7 +78,7 @@ jobs:
 
       - name: Setup Python
         if: contains(env.WS_TO_TEST, 'python')
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -127,7 +127,7 @@ jobs:
 
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
