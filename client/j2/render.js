@@ -4,7 +4,9 @@ import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import exonskipalt_getdefault from '../src/spliceevent.exonskip.getdefault.js'
 import { axisstyle } from '#dom'
-import { bplen, IN_frame, JTypes } from '#shared/common.js'
+import { bplen, IN_frame, JTypes, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
+import { getParameter } from './tk'
+import { dofetch3 } from '#common/dofetch'
 
 /*
  */
@@ -19,6 +21,8 @@ const labyspace = 5
 
 const hardcode_infoKey_type = 'type' // currently the only infoFilter key
 const hardcode_infoValue_canonical = 'canonical'
+
+/////////////  __render begins
 
 export function renderTk(data, tk, block) {
 	if (data) {
@@ -651,7 +655,7 @@ function mouseoverBoxplot(j, tk) {
 	}
 }
 
-/////////////  __maketk ENDS
+/////////////  __render ENDS
 
 /************* __eventdiagram
 
@@ -724,14 +728,11 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	const events_exonskipalt = []
 	const events_a53ss = []
 
-	if (j.info && j.info[hardcode_infoKey_type]) {
-		// from values of info.type.lst, tell if the junction is canonical, or has any splice events
-		for (const e of j.info[hardcode_infoKey_type].lst) {
-			if (e.isskipexon || e.isaltexon) {
-				events_exonskipalt.push(e)
-			} else if (e.a5ss || e.a3ss) {
-				events_a53ss.push(e)
-			}
+	for (const e of j.info?.events || []) {
+		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
+			events_exonskipalt.push(e)
+		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
+			events_a53ss.push(e)
 		}
 	}
 
@@ -854,9 +855,10 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 		junctionB: {
 			start: j.start,
 			stop: j.stop,
+			strand: j.strand,
 			v: j.medianReadCount
 		},
-		a5ss: e.a5ss,
+		a5ss: e.a5ss, // TODO replace with e.type
 		a3ss: e.a3ss,
 		altinintron: e.altinintron,
 		altinexon: e.altinexon,
@@ -866,7 +868,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 		sitedist: e.sitedist
 	}
 	if (e.junctionA) {
-		e2.junctionA = { start: e.junctionA.start, stop: e.junctionA.stop, v: '...' }
+		e2.junctionA = { start: e.junctionA.start, stop: e.junctionA.stop, strand: e.junctionA.strand, v: '...' }
 	}
 	import('../src/spliceevent.a53ss.diagram').then(p => {
 		const text = p.default({
@@ -876,15 +878,14 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 		if (!text) return
 		setTimeout(() => {
 			if (text.node().getBoundingClientRect().top == 0) return
-			/*
+			const strandA = e.junctionA.strand || '+' // FIXME TODO e.junctionA.strand will be filled!
 			fetchReadcount4junctionAbyjunctionBsamples(
 				tk,
 				block,
 				j,
-				new Map([[e.junctionA.start + '.' + e.junctionA.stop, text]]),
-				[[e.junctionA.start, e.junctionA.stop]]
+				new Map([[e.junctionA.start + '.' + e.junctionA.stop + '.' + strandA, text]]),
+				[[e.junctionA.start, e.junctionA.stop, strandA]]
 			)
-			*/
 		}, 1000)
 	})
 }
@@ -904,8 +905,8 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 			data: [{ v: j.medianReadCount }]
 		},
 		skippedexon: e.skippedexon,
-		isskipexon: e.isskipexon,
-		isaltexon: e.isaltexon,
+		isskipexon: e.isskipexon, // TODO replace with e.type
+		isaltexon: e.isaltexon, // TODO replace with e.type
 		frame: e.frame,
 		junctionAlst: [],
 		color: '#99004d'
@@ -913,46 +914,23 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 	if (e.junctionAlst) {
 		for (const jA of e.junctionAlst) {
 			if (jA) {
+				jA.strand = '+' // TODO FIXME remove when strand is added
 				jA.data = [{ v: '...' }]
 				e2.junctionAlst.push(jA)
 				continue
-				/*
-				// find if jA exists in view range
-				const inviewrange = tk.data.filter(j=> j.start==jA.start && j.stop==jA.stop)[0]
-				if(inviewrange) {
-					e2.junctionAlst.push({
-						data:[ { v:inviewrange.sampleCount, tkid:1 } ]
-						})
-					continue
-				}
-				*/
 			}
 			e2.junctionAlst.push(null)
 		}
 	}
 	if (e.up1junction) {
+		e.up1junction.strand = '+' // TODO FIXME
 		e.up1junction.data = [{ v: '...' }]
 		e2.up1junction = e.up1junction
-		/*
-		const inviewrange = tk.data.filter(j=> j.start==e.up1junction.start && j.stop==e.up1junction.stop)[0]
-		if(inviewrange) {
-			e2.up1junction={
-				data:[ { v:inviewrange.sampleCount, tkid:1 } ]
-				}
-		}
-		*/
 	}
 	if (e.down1junction) {
+		e.down1junction.strand = '+' // TODO FIXME
 		e.down1junction.data = [{ v: '...' }]
 		e2.down1junction = e.down1junction
-		/*
-		const inviewrange = tk.data.filter(j=> j.start==e.down1junction.start && j.stop==e.down1junction.stop)[0]
-		if(inviewrange) {
-			e2.down1junction={
-				data:[ { v:inviewrange.sampleCount, tkid:1 } ]
-				}
-		}
-		*/
 	}
 
 	import('../src/spliceevent.exonskip.diagram').then(p => {
@@ -968,9 +946,7 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 					return
 				}
 			}
-			/*
 			fetchReadcount4junctionAbyjunctionBsamples(tk, block, j, junction2readcounttext, junctionlst)
-			*/
 		}, 1000)
 	})
 }
@@ -999,6 +975,7 @@ function showEventdetail(e, holder, j, tk, block) {
 	const td1 = tr.append('td')
 	const p = td1.append('p')
 	if (e.isskipexon || e.isaltexon) {
+		// TODO replace e.isskipexon with e.type
 		p.html(eventlabel(e))
 		showEventdiagram_skipalt_fetchreadcount(j, e, tk, td1, block)
 	} else {
@@ -1010,6 +987,7 @@ function showEventdetail(e, holder, j, tk, block) {
 
 function eventlabel(e) {
 	if (e.isskipexon || e.isaltexon) {
+		// TODO replace with e.type
 		return (
 			(e.isskipexon ? 'Exon skip' : 'Exon alt') +
 			' ' +
@@ -1021,7 +999,7 @@ function eventlabel(e) {
 		)
 	}
 	return (
-		(e.a5ss ? 'A5SS' : 'A3SS') +
+		(e.a5ss ? 'A5SS' : 'A3SS') + // TODO replace with e.type
 		' ' +
 		e.gene +
 		' ' +
@@ -1029,6 +1007,40 @@ function eventlabel(e) {
 		' ' +
 		(e.frame == undefined ? '' : e.frame == IN_frame ? 'IN frame' : 'OUT of frame')
 	)
+}
+
+/*
+query server to get median read count for display for these junctions
+over the same group of sample
+
+jB: junction B
+jAlst: [ [start,stop] ]
+junction2readcounttext: svg text for printing median read count for each A junction
+*/
+async function fetchReadcount4junctionAbyjunctionBsamples(tk, block, jB, junction2readcounttext, jAlst) {
+	const [body, headers] = getParameter(tk, block)
+	delete body.rglst
+	delete body.hiddenTypes
+	body.junctionB = { chr: jB.chr, start: jB.start, stop: jB.stop, strand: jB.strand }
+	body.junctionAposlst = jAlst
+	try {
+		const data = await dofetch3('termdb/junctions/AbyB', { body, headers })
+		if (data.error) throw new Error(data.error)
+		if (!Array.isArray(data.lst)) throw new Error('.lst[] missing')
+		for (const j of data.lst) {
+			/*
+			.start
+			.stop
+			.v
+			*/
+			const key = j.start + '.' + j.stop + '.' + j.strand
+			if (junction2readcounttext.has(key)) {
+				junction2readcounttext.get(key).text(j.v)
+			}
+		}
+	} catch (e) {
+		console.error(e.message || e)
+	}
 }
 
 /////////////// __eventdiagram ENDS

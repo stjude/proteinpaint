@@ -12,7 +12,9 @@ export type Junction = {
 	sampleCount?: number
 	medianReadCount?: number
 	readcountBoxplot?: number[]
+	sn2rc?: any
 }
+
 //////////////////// list junctions from rglst
 export type TermdbJunctionsRequest = {
 	genome: string
@@ -20,7 +22,7 @@ export type TermdbJunctionsRequest = {
 	rglst: any
 	filter?: Filter
 	filter0?: any
-	minReadCount?: number
+	readcountCutoff?: number
 	/** comma-joined types to filter out junctions */
 	hiddenTypes?: string
 }
@@ -32,6 +34,36 @@ export type TermdbJunctionsDataResponse = {
 }
 export type TermdbJunctionsResponse = TermdbJunctionsDataResponse | ErrorResponse
 
+//////////////////// get median read counts for jA, over samples in jB
+export type TermdbJunctionsAbyBRequest = {
+	genome: string
+	dslabel: string
+	rglst: any
+	filter?: Filter
+	filter0?: any
+	readcountCutoff?: number
+	/** "jB", the junction that shows an event */
+	junctionB: {
+		chr: string
+		start: number
+		stop: number
+		strand: string
+	}
+	/** each element is one "jA", the canonical junction that accompanies jB */
+	junctionAposlst: [number, number, string][]
+}
+export type TermdbJunctionsAbyBDataResponse = {
+	/** each item is one jA. */
+	lst: {
+		start: number
+		stop: number
+		strand: string
+		/** median read count value for samples of this jA that are also in jB */
+		v: number
+	}[]
+}
+export type TermdbJunctionsAbyBResponse = TermdbJunctionsAbyBDataResponse | ErrorResponse
+
 //////////////////// get details of one junction
 export type TermdbOneJunctionRequest = {
 	genome: string
@@ -39,7 +71,7 @@ export type TermdbOneJunctionRequest = {
 	junction: Junction
 	filter?: Filter
 	filter0?: any
-	minReadCount?: number
+	readcountCutoff?: number
 }
 export type TermdbOneJunctionDataResponse = {
 	some: any // todo
