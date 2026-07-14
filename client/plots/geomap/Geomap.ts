@@ -26,7 +26,7 @@ class Geomap extends PlotBase implements RxComponent {
 			holder,
 			header: opts.header,
 			controls: opts.controls,
-			tip: new Menu({ padding: '4px 8px' })
+			tip: new Menu({ padding: '9px 11px' })
 		}
 		if (this.dom.header) this.dom.header.html('Site Map')
 	}

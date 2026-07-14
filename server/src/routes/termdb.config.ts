@@ -117,7 +117,6 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	pruneable attributes the same way. (See pruneTermdbConfig JSDoc in dataset.ts.)
 	*/
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = structuredClone(tdb.plotConfigByCohort)
-	// deep-cloned so the pruneTermdbConfig hook can inject auth-derived highlightIds without leaking into the cached tdb
 	if (tdb.geomap) c.geomap = structuredClone(tdb.geomap)
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
