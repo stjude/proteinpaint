@@ -204,7 +204,7 @@ jobs:
         if:  ${{ env.TEST_FAILED == 'true' }}
         uses: slackapi/slack-github-action@v3
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }} # webhook URL is now an input (was the SLACK_WEBHOOK_URL env var)
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }} # webhook URL is now an input (was the SLACK_WEBHOOK_URL env var). Workflows can read secrets directly. So secrets.SLACK_WEBHOOK_URL is used here instead of passing it as an input to the action.
           webhook-type: webhook-trigger # our URL is a Slack Workflow Builder trigger (accepts custom keys)
           payload: |
             {
