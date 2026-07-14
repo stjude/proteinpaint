@@ -10,6 +10,7 @@ import { MassAbout } from '../about'
     .initCustomHtml()
 	.initActiveItems()
 	.initDisclaimer()
+	.initGeomap()
 
 TODO:
     - initCohort
@@ -237,5 +238,50 @@ tape('.initDisclaimer()', test => {
 	test.true(itemNode, 'Should render a node as disclaimer')
 
 	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('.initGeomap()', async test => {
+	test.timeoutAfter(2000)
+
+	const geomap = { sites: [{ id: 'A', name: 'Alpha', lat: 10, lon: 20 }] }
+	const sel = 'sjpp-about-geomap'
+
+	// enabled + sites present -> renders the map holder
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides: { showGeomap: true } })
+		await mockAbout.initGeomap({ termdbConfig: { geomap } })
+		test.true(
+			mockAbout.subheader.select(`[data-testid="${sel}"]`).node(),
+			'Should render the geomap holder when showGeomap is true and sites are present'
+		)
+		if (test['_ok']) holder.remove()
+	}
+
+	// disabled (showGeomap not set) -> no holder
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides: {} })
+		await mockAbout.initGeomap({ termdbConfig: { geomap } })
+		test.notOk(
+			mockAbout.subheader.select(`[data-testid="${sel}"]`).node(),
+			'Should not render the geomap holder when showGeomap is disabled'
+		)
+		if (test['_ok']) holder.remove()
+	}
+
+	// enabled but no sites -> no holder
+	{
+		const holder = getHolder() as any
+		const mockAbout = getAbout({ holder, aboutOverrides: { showGeomap: true } })
+		await mockAbout.initGeomap({ termdbConfig: { geomap: { sites: [] } } })
+		test.notOk(
+			mockAbout.subheader.select(`[data-testid="${sel}"]`).node(),
+			'Should not render the geomap holder when there are no sites'
+		)
+		if (test['_ok']) holder.remove()
+	}
+
 	test.end()
 })
