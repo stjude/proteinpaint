@@ -30,8 +30,13 @@ runs:
         tar -czvf "$RENAMED" -C rust-binaries .
         echo "renamed_rust_binaries=$RENAMED" >> "$GITHUB_OUTPUT"
 
-    - uses: AButler/upload-release-assets@v3.0
-      with:
-        files: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}"
-        repo-token: ${{ inputs.GITHUB_TOKEN }}
-        release-tag: ${{ steps.rename_rust_binaries.outputs.pp_tag }}
+    - name: Upload rust assets
+      shell: bash  # required for composite `run:` steps
+      env:
+        GH_TOKEN: ${{ inputs.GITHUB_TOKEN }} # gh auth
+        PP_TAG: ${{ steps.rename_rust_binaries.outputs.pp_tag }} # release tag to upload to
+        RENAMED: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}" # tarball to attach
+      run: |
+        # Attach the rust-binaries tarball to the EXISTING release for this tag.
+        # --clobber overwrites an asset of the same name, so the step is safe to re-run.
+        gh release upload $PP_TAG $RENAMED --clobber
