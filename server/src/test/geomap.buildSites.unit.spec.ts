@@ -60,7 +60,8 @@ tape('buildGeomapSites() id falls back to name; unusable rows dropped', t => {
 })
 
 tape('buildGeomapSites() returns empty list for empty/undefined input', t => {
-	t.deepEqual(buildGeomapSites(undefined as unknown as []), [], 'undefined -> []')
+	t.deepEqual(buildGeomapSites(undefined), [], 'undefined -> []')
+	t.deepEqual(buildGeomapSites(), [], 'no argument -> []')
 	t.deepEqual(buildGeomapSites([]), [], 'empty array -> []')
 	t.end()
 })

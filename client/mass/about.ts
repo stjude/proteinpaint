@@ -4,7 +4,6 @@ import type { Elem, Div, H2 } from '../types/d3'
 import type { SelectCohortEntry } from '#types'
 import { renderTable, type TableRow } from '#dom'
 import { select } from 'd3-selection'
-import { renderGeomap } from '#plots/geomap/render.ts'
 
 /* 
 "about" tab will display following contents inside this.subheader:
@@ -335,12 +334,15 @@ export class MassAbout {
 			.html(this.aboutOverrides.html)
 	}
 
-	// render the world map (from termdbConfig.geomap) directly on the landing tab when the dataset opts in
-	initGeomap = appState => {
+	// render the world map (from termdbConfig.geomap) directly on the landing tab when the dataset opts in.
+	// the renderer (and its ~170KB world.json basemap) is dynamically imported so it never loads for
+	// datasets that don't enable the map.
+	initGeomap = async appState => {
 		if (!this.aboutOverrides?.showGeomap) return
 		const geomap = appState.termdbConfig?.geomap
 		if (!geomap?.sites?.length) return
 		const holder = this.subheader.append('div').attr('data-testid', 'sjpp-about-geomap').style('padding', '10px')
+		const { renderGeomap } = await import('#plots/geomap/render.ts')
 		renderGeomap(holder, geomap)
 	}
 

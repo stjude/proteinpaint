@@ -619,7 +619,7 @@ export function filterTerms(req, ds, terms) {
 	Kept generic and exported so it can be unit-tested without a DB.
 */
 type GeoLocationRow = { id?: string; name?: string; latitude?: number; longitude?: number }
-export function buildGeomapSites(rows: GeoLocationRow[]): GeomapSite[] {
+export function buildGeomapSites(rows?: GeoLocationRow[]): GeomapSite[] {
 	const sites: GeomapSite[] = []
 	for (const r of rows || []) {
 		if (typeof r?.latitude != 'number' || !Number.isFinite(r.latitude)) continue
