@@ -58,14 +58,15 @@ export async function loadTk(tk, block) {
 	}
 }
 
-function getParameter(tk, block) {
+export function getParameter(tk, block) {
 	// to get data for current view range
 
 	const par = {
 		genome: block.genome.name,
 		dslabel: tk.dslabel,
 		filter0: tk.filter0,
-		filter: tk.filter
+		filter: tk.filter,
+		readcountCutoff: tk.readcountCutoff
 	}
 
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }

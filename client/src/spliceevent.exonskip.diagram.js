@@ -214,8 +214,11 @@ if(evt.junctionB.data) {
 				.attr('font-family', client.font)
 				.attr('text-anchor', 'middle')
 				.attr('dominant-baseline', 'hanging')
-			canonicaljunctionreadcounttext.set(evt.up1junction.start + '.' + evt.up1junction.stop, text)
-			canonicaljlst.push([evt.up1junction.start, evt.up1junction.stop])
+			canonicaljunctionreadcounttext.set(
+				evt.up1junction.start + '.' + evt.up1junction.stop + '.' + evt.up1junction.strand,
+				text
+			)
+			canonicaljlst.push([evt.up1junction.start, evt.up1junction.stop, evt.up1junction.strand])
 		}
 	}
 
@@ -341,8 +344,8 @@ if(evt.junctionB.data) {
 				.attr('font-family', client.font)
 				.attr('text-anchor', 'middle')
 				.attr('dominant-baseline', 'hanging')
-			canonicaljunctionreadcounttext.set(thisjunction.start + '.' + thisjunction.stop, text)
-			canonicaljlst.push([thisjunction.start, thisjunction.stop])
+			canonicaljunctionreadcounttext.set(thisjunction.start + '.' + thisjunction.stop + '.' + thisjunction.strand, text)
+			canonicaljlst.push([thisjunction.start, thisjunction.stop, thisjunction.strand])
 		}
 		xoff += exonwidth + intronwidth
 	}
@@ -506,8 +509,11 @@ if(evt.junctionB.data) {
 				.attr('font-family', client.font)
 				.attr('text-anchor', 'middle')
 				.attr('dominant-baseline', 'hanging')
-			canonicaljunctionreadcounttext.set(evt.down1junction.start + '.' + evt.down1junction.stop, text)
-			canonicaljlst.push([evt.down1junction.start, evt.down1junction.stop])
+			canonicaljunctionreadcounttext.set(
+				evt.down1junction.start + '.' + evt.down1junction.stop + '.' + evt.down1junction.strand,
+				text
+			)
+			canonicaljlst.push([evt.down1junction.start, evt.down1junction.stop, evt.down1junction.strand])
 		}
 	}
 

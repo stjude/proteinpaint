@@ -23,11 +23,15 @@ export async function validate_query_junction(ds: any, genome: any) {
 			return { name: i }
 		})
 		q.samples = validateSampleHeader(ds, q.samples, 'junction')
+		console.log(q.samples)
 	}
 
-	q.listJunctions = async (param: TermdbJunctionsRequest) => {
-		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
-			throw new Error('minReadCount must be a non-negative integer')
+	q.listJunctions = async (
+		param: TermdbJunctionsRequest,
+		keepLst: { start: number; stop: number; strand: string }[]
+	) => {
+		if (param.readcountCutoff !== undefined && (!Number.isInteger(param.readcountCutoff) || param.readcountCutoff < 0))
+			throw new Error('readcountCutoff must be a non-negative integer')
 		utils.validateRglst(param, genome)
 		let hiddenTypes
 		if (param.hiddenTypes) {
@@ -40,6 +44,22 @@ export async function validate_query_junction(ds: any, genome: any) {
 			// got 0 sample after filtering, return blank array for no data
 			return { junctions: [], maxReadCount: 0 }
 		}
+
+		function getSampleReadcount(str, i) {
+			// if both sample and readcount are valid and pass filter, return [readcount, samplename]
+			if (!str) return // blank string
+			const sname = q.samples[i - 5]?.name
+			if (sname == undefined) throw new Error('sample undefined')
+			if (limitSamples && !limitSamples.has(sname)) return // filtered out
+			// str is "n;%;%"
+			const vlst = str.split(';').map(Number)
+			const rc = vlst[0] // first field is read count
+			if (!Number.isInteger(rc)) return
+			if (rc <= 0) return
+			if (param.readcountCutoff && rc < param.readcountCutoff) return
+			return [rc, sname]
+		}
+
 		const junctions: Junction[] = [] // list of junctions to be returned
 		let maxReadCount = 0
 		for (const r of param.rglst || []) {
@@ -49,7 +69,30 @@ export async function validate_query_junction(ds: any, genome: any) {
 					const l = line.split('\t')
 					const start = Number(l[1])
 					const stop = Number(l[2])
+					const strand = l[3]
 					if (start < r.start && stop > r.stop) return // completely spans r
+
+					if (keepLst) {
+						// detour
+						if (!keepLst.find(i => i.start == start && i.stop == stop && i.strand == strand)) return // not in list, skip
+						const j: Junction = {
+							chr: '.',
+							types: ['n'], // just to comply with type
+							start,
+							stop,
+							strand,
+							sn2rc: new Map() // k: sample id, v: read count
+						}
+						for (let i = 5; i < l.length; i++) {
+							const r = getSampleReadcount(l[i], i)
+							if (r) {
+								j.sn2rc.set(r[1], r[0])
+							}
+						}
+						junctions.push(j)
+						return
+					}
+
 					let info
 					try {
 						info = JSON.parse(l[4])
@@ -65,23 +108,14 @@ export async function validate_query_junction(ds: any, genome: any) {
 						stop,
 						info,
 						types,
-						strand: l[3]
+						strand
 					}
 					const readcounts: number[] = [] // array of read counts of samples carrying this junction
 					for (let i = 5; i < l.length; i++) {
-						const str = l[i]
-						if (!str) continue // blank
-						const sname = q.samples[i - 5]?.name
-						if (sname == undefined) throw new Error('sample undefined')
-						if (limitSamples && !limitSamples.has(sname)) continue // filtered out
-						// str is "n;%;%"
-						const vlst = str.split(';').map(Number)
-						const rc = vlst[0] // first field is read count
-						if (!Number.isInteger(rc)) continue
-						if (rc <= 0) continue
-						if (param.minReadCount && rc < param.minReadCount) continue
-						readcounts.push(rc)
-						maxReadCount = Math.max(maxReadCount, rc)
+						const r = getSampleReadcount(l[i], i)
+						if (!r) continue
+						readcounts.push(r[0])
+						maxReadCount = Math.max(maxReadCount, r[0])
 					}
 					if (readcounts.length == 0) return
 					j.sampleCount = readcounts.length
@@ -94,7 +128,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 							j.medianReadCount = o.p50
 							j.readcountBoxplot = [o.p05!, o.p25!, o.p50, o.p75!, o.p95!]
 						} else {
-							j.medianReadCount = computePercentile(readcounts, 50, false)
+							j.medianReadCount = computePercentile(readcounts, 50, true)
 						}
 					}
 					junctions.push(j)
@@ -109,12 +143,12 @@ export async function validate_query_junction(ds: any, genome: any) {
 	{
 		junction{}
 		filter
-		minReadCount
+		readcountCutoff
 	}
 	*/
 	q.getOneJunction = async (param: TermdbOneJunctionRequest) => {
-		if (param.minReadCount !== undefined && (!Number.isInteger(param.minReadCount) || param.minReadCount < 0))
-			throw new Error('minReadCount must be a non-negative integer')
+		if (param.readcountCutoff !== undefined && (!Number.isInteger(param.readcountCutoff) || param.readcountCutoff < 0))
+			throw new Error('readcountCutoff must be a non-negative integer')
 		const j = param.junction
 		if (!j) throw new Error('junction missing')
 		if (invalidcoord(genome, j.chr, j.start, j.stop)) throw new Error('invalid coord in .junction{}')
@@ -142,7 +176,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 					const rc = vlst[0] // first field is read count
 					if (!Number.isInteger(rc)) continue
 					if (rc <= 0) continue
-					if (param.minReadCount && rc < param.minReadCount) continue
+					if (param.readcountCutoff && rc < param.readcountCutoff) continue
 					s2r.set(sname, vlst)
 				}
 			}

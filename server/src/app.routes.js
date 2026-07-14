@@ -11,6 +11,7 @@ export const routeFiles = [
 	import('./aiProjectAdmin/aiProjectTrainModel.ts'),
 	import('./chat/route.ts'),
 	import('./grin2/route.ts'),
+	import('./junction/route.AbyB.ts'),
 	import('./junction/route.junctions.ts'),
 	import('./junction/route.onesampletk.ts'),
 	import('./routes/brainImaging.ts'),
