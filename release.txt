@@ -1,2 +1,2 @@
 Fixes:
-- Declare the GDC case/sample-type hierarchy on the termdb (sampleTypes, per-term term2SampleType, getFilter0SampleTypes) to match the API-based dataset abstraction; inert (hasSampleAncestry=false) so behavior is unchanged
+- Align GDC case/sample-type mapping with the termdb dictionary hierarchy (map case ids to ROOT_SAMPLE_TYPE and stop overriding termdb.sampleTypes during init). No behavior change while hasSampleAncestry=false.
