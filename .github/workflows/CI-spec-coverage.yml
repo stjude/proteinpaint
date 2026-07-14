@@ -89,7 +89,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Prepare serverconfig.json and cachedir
         run: |
