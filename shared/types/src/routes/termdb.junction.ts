@@ -38,7 +38,6 @@ export type TermdbJunctionsResponse = TermdbJunctionsDataResponse | ErrorRespons
 export type TermdbJunctionsAbyBRequest = {
 	genome: string
 	dslabel: string
-	rglst: any
 	filter?: Filter
 	filter0?: any
 	readcountCutoff?: number

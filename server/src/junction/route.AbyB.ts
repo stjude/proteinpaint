@@ -2,7 +2,7 @@ import type { RouteApi, RoutePayload, TermdbJunctionsAbyBRequest, TermdbJunction
 import computePercentile from '#shared/compute.percentile.js'
 
 /*
-get junction A mean read count for the same set of samples with junction B
+get junction A median read count for the same set of samples with junction B
 */
 
 const payload: RoutePayload = {
