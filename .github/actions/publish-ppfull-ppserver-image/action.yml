@@ -76,7 +76,7 @@ runs:
         path: server
 
     - name: Run deploy action
-      uses: peter-evans/repository-dispatch@v2
+      uses: peter-evans/repository-dispatch@v4
       if: ${{ !startsWith(github.ref_name, 'release') && !startsWith(github.ref_name, 'prerelease') }}
       with:
         token: ${{ inputs.PAT }}
