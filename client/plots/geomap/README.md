@@ -22,9 +22,9 @@ else with coordinates.
 1. **Enable it.** In the dataset config set `cohort.termdb.geomap = {}` and, to show it on the landing tab,
    `cohort.massNav.tabs.about.showGeomap = true`. (`geomap` present + the `geoLocation` table existing is what
    the server gates on.)
-2. **Provide the pins.** Supply a **coordinate xlsx** and, in the dataset's build, run the shared converter
-   `utils/termdb/xlsx_to_geolocation.py <coords.xlsx> geolocation.tsv [--sheet NAME]` to produce a
-   `geolocation.tsv`, then pass it to buildTermdb as `geoLocation=geolocation.tsv`. The generic `geoLocation`
+2. **Provide the pins.** Supply a **coordinate xlsx** and, in the dataset's build, run a converter that emits
+   `geolocation.tsv` (for a working example see `utils/sjglobal-carereg/xlsx_to_geolocation.py <coords.xlsx>
+   geolocation.tsv [--sheet NAME]`), then pass it to buildTermdb as `geoLocation=geolocation.tsv`. The generic `geoLocation`
    table (defined in `utils/termdb/create.sql`) is loaded from it; at server init `buildGeomapSites`
    (`server/src/termdb.server.init.ts`) reads it into `termdb.geomap.sites`. `id` is the marker's
    link/highlight key (a site code for careReg, a country/ISO code for a country map, etc.).
