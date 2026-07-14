@@ -1,1 +1,2 @@
-
+Fixes:
+- Move dataset launch-time case-sample caching into a uniform ds.preInit.cacheSamples() hook: mds3 init now dispatches caching generically (dropping the ds.label=='GDC' hardcode in mds3.init.nonblocking.js), so each API-based dataset owns its own caching (GDC's gdc.initCache relocated to the ppgdc dataset)
