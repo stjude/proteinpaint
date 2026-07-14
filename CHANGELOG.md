@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.197.0
 
 Features:
 - GSEA plot refactored into the MVVM pattern for improved maintainability and scalability.
