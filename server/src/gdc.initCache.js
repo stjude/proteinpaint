@@ -1,7 +1,7 @@
 import ky from 'ky'
 import serverconfig from './serverconfig.js'
 import { cachedFetch, isRecoverableError } from './utils.js'
-import { deepEqual, joinUrl, isUsableTerm, clearMemFetchDataCache } from '#shared/index.js'
+import { deepEqual, joinUrl, isUsableTerm, clearMemFetchDataCache, ROOT_SAMPLE_TYPE } from '#shared/index.js'
 
 // wait time for next check on stale case-id cache, 5min. feature flag allows testing with short internal
 const cacheCheckWait = serverconfig.features.gdcCacheCheckWait || 5 * 60 * 1000
@@ -671,10 +671,11 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 }
 
 async function setSampleTypes(ds, ref) {
-	const sampleType = 3 // cases will have sampleType=3
-	ds.cohort.termdb.sampleTypes = { [sampleType]: { name: 'case', plural_name: 'cases', parent_id: null } }
+	// ds.cohort.termdb.sampleTypes is declared by the dictionary builder
+	// (ppgdc gdc.buildDictionary.ts), which runs earlier in init; here we only map
+	// each case id to the case (root) sample type
 	for (const caseid of ref.caseid2submitter.keys()) {
-		ds.sampleId2Type.set(caseid, sampleType)
+		ds.sampleId2Type.set(caseid, ROOT_SAMPLE_TYPE)
 	}
 }
 
