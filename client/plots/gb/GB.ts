@@ -301,6 +301,12 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 				config.snvindel.shown = true
 			}
 		}
+	} else if (vocabApi.termdbConfig.queries.svfusion) {
+		/* dataset has svfusion but no snvindel query;
+		set up config.svfusion so generateTracks() creates the mds3 lollipop tk to show fusion/sv events.
+		(without this, the GB plot only generates the mds3 tk from config.snvindel) */
+		config.svfusion = Object.assign(structuredClone(vocabApi.termdbConfig.queries.svfusion), config.svfusion || {})
+		if (typeof config.svfusion.shown != 'boolean') config.svfusion.shown = true
 	}
 
 	if (config.trackLst) {

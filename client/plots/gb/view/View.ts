@@ -40,8 +40,8 @@ export class View {
 
 		const tklst: any = [] // list of tracks to be shown in block
 
-		if (this.state.config.snvindel?.shown) {
-			// show snvindel-based mds3 tk
+		if (this.state.config.snvindel?.shown || this.state.config.svfusion?.shown) {
+			// show mds3 tk driven by snvindel and/or svfusion (svfusion-only datasets rely on config.svfusion, set in GB.ts)
 			if (this.data) {
 				// variant data has been precomputed
 				// TODO move computing logic to official mds3 tk and avoid tricky workaround using custom tk
@@ -78,7 +78,7 @@ export class View {
 					const lst: any = []
 					// register both global filter and local filter to pass to mds3 data queries
 					if (this.state.filter?.lst?.length) lst.push(this.state.filter)
-					if (this.state.config.snvindel.filter) lst.push(this.state.config.snvindel.filter)
+					if (this.state.config.snvindel?.filter) lst.push(this.state.config.snvindel.filter)
 					if (lst.length == 1) {
 						tk.filterObj = structuredClone(lst[0])
 					} else if (lst.length > 1) {
