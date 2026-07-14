@@ -1739,8 +1739,6 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
-	/** Locations for the reusable `geomap` chart type (world map with pins).
-	 * Forwarded to the client termdbConfig and consumed by client/plots/geomap. */
 	geomap?: GeomapConfig
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch

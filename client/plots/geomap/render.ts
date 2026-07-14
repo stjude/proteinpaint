@@ -28,7 +28,7 @@ Render a d3-geo world map with a pin per site into `holder`. Standalone (no rx/p
 shared by both the geomap mass plot and the mass "about" landing tab. Reads only sites[] + highlightIds[]
 from the config, keeping it dataset-agnostic.
 */
-export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new Menu({ padding: '4px 8px' })): void {
+export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new Menu({ padding: '9px 11px' })): void {
 	holder.selectAll('*').remove()
 	const sites = getValidSites(geomap)
 	const highlight = getHighlightSet(geomap)
@@ -128,15 +128,39 @@ export function renderGeomap(holder: Div, geomap?: GeomapConfig, tip: Menu = new
 
 function showTip(tip: Menu, event: MouseEvent, site: GeomapSite, isHi: boolean, count?: number): void {
 	tip.clear().show(event.clientX, event.clientY)
-	const d = tip.d.append('div')
-	d.append('div').style('font-weight', 'bold').text(site.name)
+	const card = tip.d.append('div').style('line-height', '1.4').style('color', '#2a2a2a')
+
+	// name + a subtle "Your site" pill for the user's own sites (no bold)
+	const nameRow = card.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '8px')
+	nameRow
+		.append('span')
+		.style('font-size', '13px')
+		.style('font-weight', '500')
+		.style('color', '#1a1a1a')
+		.text(site.name)
+	if (isHi)
+		nameRow
+			.append('span')
+			.style('font-size', '9.5px')
+			.style('font-weight', '500')
+			.style('letter-spacing', '0.02em')
+			.style('color', PIN_HIGHLIGHT_FILL)
+			.style('background', 'rgba(221, 107, 32, 0.12)')
+			.style('padding', '1px 7px')
+			.style('border-radius', '9px')
+			.style('white-space', 'nowrap')
+			.text('Your site')
+
+	// location line (country / iso), muted
 	const sub = [site.country, site.iso].filter(Boolean).join(', ')
-	if (sub) d.append('div').style('font-size', '12px').style('color', '#555').text(sub)
-	if (isHi) d.append('div').style('font-size', '12px').style('color', PIN_HIGHLIGHT_FILL).text('Your site')
-	if (count != null)
-		d.append('div')
-			.style('font-size', '12px')
-			.text(`${count.toLocaleString()} patient${count === 1 ? '' : 's'}`)
+	if (sub) card.append('div').style('font-size', '11px').style('color', '#8a8a8a').style('margin-top', '2px').text(sub)
+
+	// patient count (own sites only) — number tinted, rest muted, no bold
+	if (count != null) {
+		const line = card.append('div').style('font-size', '11.5px').style('color', '#6b7280').style('margin-top', '6px')
+		line.append('span').style('color', PIN_FILL).text(count.toLocaleString())
+		line.append('span').text(` patient${count === 1 ? '' : 's'}`)
+	}
 }
 
 function renderCountryLabels(mapG: SvgG, path: GeoPath, sites: GeomapSite[]): void {
