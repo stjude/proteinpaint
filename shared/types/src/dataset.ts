@@ -2273,7 +2273,13 @@ export type PreInit = {
 		HTTP connection timeout errors or status 5xx are considered recoverable,
 		status 4xx are not considered recoverable (client-related request errors)
 	*/
-	getStatus: () => Promise<PreInitStatus>
+	getStatus?: () => Promise<PreInitStatus>
+	/**
+	 * launch-time case-sample id caching, owned by the dataset (populates ds.__gdc / ds.__mmrf
+	 * + ds.sampleId2Type). Runs blocking (mds3.init.js, after dictionary.build) unless the
+	 * dataset opts into the nonblocking phase via ds.init.hasNonblockingSteps (gdc).
+	 */
+	cacheSamples?: (ds: any) => Promise<void>
 	/**
 	 * dev only, used to test preInit handling by simulating different
 	 * responses in a known sequence of steps that may edit the preInit
