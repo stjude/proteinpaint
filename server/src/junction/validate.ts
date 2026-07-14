@@ -23,12 +23,11 @@ export async function validate_query_junction(ds: any, genome: any) {
 			return { name: i }
 		})
 		q.samples = validateSampleHeader(ds, q.samples, 'junction')
-		console.log(q.samples)
 	}
 
 	q.listJunctions = async (
 		param: TermdbJunctionsRequest,
-		keepLst: { start: number; stop: number; strand: string }[]
+		keepLst?: { start: number; stop: number; strand: string }[]
 	) => {
 		if (param.readcountCutoff !== undefined && (!Number.isInteger(param.readcountCutoff) || param.readcountCutoff < 0))
 			throw new Error('readcountCutoff must be a non-negative integer')
@@ -72,7 +71,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 					const strand = l[3]
 					if (start < r.start && stop > r.stop) return // completely spans r
 
-					if (keepLst) {
+					if (keepLst?.length) {
 						// detour
 						if (!keepLst.find(i => i.start == start && i.stop == stop && i.strand == strand)) return // not in list, skip
 						const j: Junction = {
