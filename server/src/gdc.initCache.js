@@ -671,9 +671,9 @@ async function getAnalysisTsv2loom4scrna(ds, ref) {
 }
 
 async function setSampleTypes(ds, ref) {
-	// ds.cohort.termdb.sampleTypes is declared by the dictionary builder
-	// (ppgdc gdc.buildDictionary.ts), which runs earlier in init; here we only map
-	// each case id to the case (root) sample type
+	// ds.cohort.termdb.sampleTypes is initialized in mds3.init.js and populated by the
+	// dataset's termdb dictionary builder earlier in init; here we only map each case id
+	// to the root (case) sample type
 	for (const caseid of ref.caseid2submitter.keys()) {
 		ds.sampleId2Type.set(caseid, ROOT_SAMPLE_TYPE)
 	}
