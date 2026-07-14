@@ -59,21 +59,15 @@ runs:
 
         echo "docker_version=$TAG-$HASH" >> "$GITHUB_OUTPUT"
 
-    - name: get pp version
-      id: pp-version
-      uses: martinbeentjes/npm-get-version-action@main
-
-    - name: get front version
-      id: front-version
-      uses: martinbeentjes/npm-get-version-action@main
-      with:
-        path: front
-
-    - name: get server version
-      id: server-version
-      uses: martinbeentjes/npm-get-version-action@main
-      with:
-        path: server
+    # Reads versions inline with node (repo's existing idiom), replacing the
+    # third-party martinbeentjes/npm-get-version-action@main (mutable @main branch pin).
+    - name: Get package versions
+      id: versions
+      shell: bash
+      run: |
+        echo "pp_version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        echo "front_version=$(node -p "require('./front/package.json').version")" >> "$GITHUB_OUTPUT"
+        echo "server_version=$(node -p "require('./server/package.json').version")" >> "$GITHUB_OUTPUT" 
 
     - name: Run deploy action
       uses: peter-evans/repository-dispatch@v4
@@ -82,4 +76,4 @@ runs:
         token: ${{ inputs.PAT }}
         repository: stjude/sj-pp
         event-type: version-update
-        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'
+        client-payload: '{"pp_version": "${{ steps.versions.outputs.pp_version }}", "front_version": "${{ steps.versions.outputs.front_version }}", "server_version": "${{ steps.versions.outputs.server_version }}", "docker_version": "${{ steps.docker-publish.outputs.docker_version }}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'
