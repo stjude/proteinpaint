@@ -202,16 +202,16 @@ jobs:
 
       - name: Post test results on Slack
         if:  ${{ env.TEST_FAILED == 'true' }}
-        uses: slackapi/slack-github-action@v1.23.0
+        uses: slackapi/slack-github-action@v3
         with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }} # webhook URL is now an input (was the SLACK_WEBHOOK_URL env var)
+          webhook-type: webhook-trigger # our URL is a Slack Workflow Builder trigger (accepts custom keys)
           payload: |
             {
               "status": "Failed unit and/or integration test(s) - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
               "commit": "${{ env.SHORT_SHA }}",
               "date-time": "${{ steps.current-time.outputs.formattedTime }}"
             }
-        env:
-          SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
 
       - name: Detect failure
         run: |
