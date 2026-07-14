@@ -165,7 +165,7 @@ jobs:
 
       # Download the Rust binaries built by the rust-build workflow
       - name: Download Rust Binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: rust-binaries
           path: rust-binaries
