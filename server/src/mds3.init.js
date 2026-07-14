@@ -140,7 +140,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		}
 	}
 
-	if (ds.preInit) {
+	if (ds.preInit?.getStatus) {
 		const response = await ds.preInit.getStatus(ds).catch(e => {
 			if (e.status == 'recoverableError' && serverconfig.features.mustExitPendingValidation) {
 				if (!ds.init) ds.init = {}
@@ -314,6 +314,12 @@ export async function validate_termdb(ds) {
 		throw 'unknown method to initiate dictionary'
 	}
 	// ds.cohort.termdb.q={} ready
+
+	// blocking launch-time case-sample caching, for datasets whose preInit.cacheSamples must
+	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the
+	// convertSampleId validation below and by runtime queries). Datasets that opt into the
+	// nonblocking phase (hasNonblockingSteps, e.g. gdc) run cacheSamples there instead.
+	if (ds.preInit?.cacheSamples && !ds.init?.hasNonblockingSteps) await ds.preInit.cacheSamples(ds)
 
 	mayInitTermid2totalsize2(tdb, ds)
 
