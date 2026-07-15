@@ -21,14 +21,15 @@ const chromosomes = {
 
 const reference = new Reference(settings, chromosomesOrder, chromosomes)
 
-test('Gene labels expose a test ID and show overlapping CNVs on hover', t => {
+test('Gene labels expose a test ID and show overlapping CNVs and ITDs on hover', t => {
 	const holder = select(document.body).append('svg')
 	const label = LabelFactory.createLabel(0, 0, 10, 15, 0, 'Gene1', '#000', 'MISSENSE', 'chr1', 50, false, 2)
 	label.cnvTooltip = [
-		{ value: 2, color: '#f00', chr: 'chr1', start: 40, stop: 60 },
-		{ value: -1, color: '#00f', chr: 'chr1', start: 45, stop: 55 }
+		{ dt: 4, value: 2, color: '#f00', chr: 'chr1', start: 40, stop: 60 },
+		{ dt: 4, value: -1, color: '#00f', chr: 'chr1', start: 45, stop: 55 },
+		{ dt: 6, value: 0, color: '#ff70ff', chr: 'chr1', start: 48, stop: 52 }
 	]
-	t.equal(LabelFactory.createMovedLabel(label, 0.01).cnvTooltip?.length, 2, 'Moved labels retain overlapping CNVs')
+	t.equal(LabelFactory.createMovedLabel(label, 0.01).cnvTooltip?.length, 3, 'Moved labels retain overlapping events')
 	new LabelsRenderer(0, 12, () => {}).render(holder, [label])
 
 	const geneLabel = holder.select('text.chord-text').node() as SVGTextElement
@@ -39,6 +40,43 @@ test('Gene labels expose a test ID and show overlapping CNVs on hover', t => {
 	const tooltip = menus[menus.length - 1]
 	t.ok(tooltip.textContent?.includes('chr1:40-60'), 'Tooltip shows the first overlapping CNV')
 	t.ok(tooltip.textContent?.includes('chr1:45-55'), 'Tooltip shows the second overlapping CNV')
+	t.ok(tooltip.textContent?.includes('ITD'), 'Tooltip identifies the overlapping ITD')
+	t.ok(tooltip.textContent?.includes('chr1:48-52'), 'Tooltip shows the overlapping ITD interval')
+
+	holder.remove()
+	tooltip.remove()
+	t.end()
+})
+
+test('Gene label hover uses gene coordinates to find interval overlaps missed by the mutation position', async t => {
+	const holder = select(document.body).append('svg')
+	const label = LabelFactory.createLabel(0, 0, 10, 15, 0, 'Gene1', '#000', 'MISSENSE', 'chr1', 10, false, 2)
+	const itd = { dt: 6, value: 0, color: '#ff70ff', chr: 'chr1', start: 40, stop: 60 }
+	const loh = { dt: 10, value: 0.4, color: '#00aaaa', chr: 'chr1', start: 65, stop: 90 }
+	let lookupCount = 0
+	const lookup = async (gene: string, genome: string) => {
+		lookupCount++
+		t.equal(gene, 'Gene1', 'Looks up the hovered gene')
+		t.equal(genome, 'hg38', 'Uses the plot genome')
+		return { gmlst: [{ name: 'Gene1', chr: 'chr1', start: 30, stop: 70 }] }
+	}
+	new LabelsRenderer(0, 12, () => {}, 'hg38', [itd, loh], lookup).render(holder, [label])
+
+	const geneLabel = holder.select('text.chord-text').node() as SVGTextElement
+	geneLabel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 10, clientY: 10 }))
+	await new Promise(resolve => setTimeout(resolve, 0))
+
+	const menus = document.querySelectorAll('.sja_menu_div')
+	const tooltip = menus[menus.length - 1]
+	t.ok(tooltip.textContent?.includes('ITD'), 'Tooltip shows the ITD overlapping the gene coordinates')
+	t.ok(tooltip.textContent?.includes('chr1:40-60'), 'Tooltip shows the overlapping ITD interval')
+	t.ok(tooltip.textContent?.includes('LOH'), 'Tooltip shows the LOH overlapping the gene coordinates')
+	t.ok(tooltip.textContent?.includes('chr1:65-90'), 'Tooltip shows the overlapping LOH interval')
+
+	geneLabel.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }))
+	geneLabel.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 10, clientY: 10 }))
+	await new Promise(resolve => setTimeout(resolve, 0))
+	t.equal(lookupCount, 1, 'Gene coordinates are cached across hovers')
 
 	holder.remove()
 	tooltip.remove()
@@ -167,7 +205,7 @@ test('When there is a fusion event with two genes LabelsMapper.map() should retu
 	t.end()
 })
 
-test('Overlapping CNV segments are added to the gene label tooltip', t => {
+test('Overlapping CNV and ITD segments are added to the gene label tooltip', t => {
 	const rawData = [
 		{
 			dt: 1,
@@ -217,7 +255,7 @@ test('Overlapping CNV segments are added to the gene label tooltip', t => {
 			class: 'ITD',
 			chr: 'chr2',
 			start: 140,
-			stop: 160
+			stop: 150
 		}
 	]
 	const dataHolder = new DataMapper(settings, reference, sampleName, []).map(rawData)
@@ -229,9 +267,14 @@ test('Overlapping CNV segments are added to the gene label tooltip', t => {
 	t.equal(labels.length, 2, 'Should create two labels')
 
 	if (labels[1].cnvTooltip) {
-		t.equal(labels[1].cnvTooltip.length, 2, 'Every overlapping CNV is included')
+		t.equal(labels[1].cnvTooltip.length, 3, 'Every overlapping CNV and ITD is included')
 		t.deepEqual(
-			labels[1].cnvTooltip.map(cnv => cnv.value),
+			labels[1].cnvTooltip.map(event => event.dt).sort(),
+			[4, 4, 6],
+			'Tooltip retains the type of each overlapping interval'
+		)
+		t.deepEqual(
+			labels[1].cnvTooltip.filter(event => event.dt == 4).map(event => event.value),
 			[2, -1],
 			'CNV tooltip retains each overlapping segment value'
 		)

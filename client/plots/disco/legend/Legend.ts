@@ -1,7 +1,7 @@
 import type SnvLegendElement from '#plots/disco/snv/SnvLegendElement.ts'
 import type CnvLegend from '#plots/disco/cnv/CnvLegend.ts'
 import type LohLegend from '#plots/disco/loh/LohLegend.ts'
-import type { CnvType } from '#plots/disco/cnv/CnvType.ts'
+import { CnvType } from '#plots/disco/cnv/CnvType.ts'
 import type { DiscoInteractions } from '../interactions/DiscoInteractions'
 
 export type MutationWaterfallLegend = {
@@ -22,6 +22,7 @@ export default class Legend {
 	cnvClassMap: Map<CnvType, CnvLegend>
 	cnvPercentile: number
 	cnvCutoffMode: string
+	cnvCount: number
 
 	lohTitle: string
 	lohLegend?: LohLegend
@@ -49,7 +50,8 @@ export default class Legend {
 		discoInteractions: DiscoInteractions,
 		lohLegend?: LohLegend,
 		mutationWaterfallLegend?: MutationWaterfallLegend,
-		fusionLegendCounts: FusionLegendCounts = { interchromosomal: 0, intrachromosomal: 0 }
+		fusionLegendCounts: FusionLegendCounts = { interchromosomal: 0, intrachromosomal: 0 },
+		cnvCount = 0
 	) {
 		this.snvTitle = snvTitle
 		this.cnvTitle = cnvTitle
@@ -57,6 +59,7 @@ export default class Legend {
 		this.fusionTitle = fusionTitle
 		this.cnvPercentile = cnvPercentile
 		this.cnvCutoffMode = cnvCutoffmode
+		this.cnvCount = cnvCount
 		this.snvClassMap = snvClassMap
 		this.cnvClassMap = cnvClassMap
 		this.cnvRenderingType = cnvRenderingType
@@ -68,9 +71,11 @@ export default class Legend {
 	}
 
 	legendCount(): number {
+		const hasItd = this.cnvClassMap.has(CnvType.ITD)
 		return (
 			(this.snvClassMap.size > 0 ? 1 : 0) +
-			(this.cnvClassMap.size > 0 ? 1 : 0) +
+			(this.cnvCount > 0 ? 1 : 0) +
+			(hasItd ? 1 : 0) +
 			(this.lohLegend ? 1 : 0) +
 			(this.fusionLegend ? 1 : 0) +
 			(this.mutationWaterfallLegend ? 1 : 0)

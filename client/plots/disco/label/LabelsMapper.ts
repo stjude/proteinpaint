@@ -9,7 +9,7 @@ import FusionColorProvider from '#plots/disco/fusion/FusionColorProvider.ts'
 import type FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
-import { dtsnvindel, dtfusionrna, dtcnv } from '#shared/common.js'
+import { dtsnvindel, dtfusionrna, dtcnv, dtitd, mclass, mclassitd } from '#shared/common.js'
 
 export default class LabelsMapper {
 	private settings: Settings
@@ -95,10 +95,19 @@ export default class LabelsMapper {
 		const labelsArray = Array.from(this.labelMap.values())
 		labelsArray.forEach((label: Label) => {
 			cnvData.forEach((cnv: Data) => {
-				if (cnv.dt == dtcnv && label.chr == cnv.chr && label.stop >= cnv.start && cnv.stop >= label.start) {
+				if (
+					(cnv.dt == dtcnv || cnv.dt == dtitd) &&
+					label.chr == cnv.chr &&
+					label.stop >= cnv.start &&
+					cnv.stop >= label.start
+				) {
 					const mutation: CnvTooltip = {
+						dt: cnv.dt,
 						value: cnv.value,
-						color: CnvColorProvider.getColor(cnv.value, this.settings, this.cnvMaxPercentileAbs),
+						color:
+							cnv.dt == dtitd
+								? mclass[mclassitd].color
+								: CnvColorProvider.getColor(cnv.value, this.settings, this.cnvMaxPercentileAbs),
 						chr: cnv.chr,
 						start: cnv.start,
 						stop: cnv.stop
