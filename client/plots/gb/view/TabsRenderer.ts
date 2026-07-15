@@ -69,7 +69,7 @@ export class TabsRenderer {
 			// has snvindel. some logic to decide if show tab for it
 			if (this.state.config.snvindel.details) {
 				// has details for data precomputing, must show tab in order to generate contents
-				tabs.push({ label: 'Variant Values', active: shown })
+				tabs.push({ label: 'Mutation', active: shown })
 
 				if (this.state.config.variantFilter) {
 					// for now, this filter only works with snvindel.details
@@ -77,13 +77,16 @@ export class TabsRenderer {
 				}
 			} else {
 				// no computing detail.
-				if (this.state.config.trackLst) {
-					// also there is trackLst. in order *not to show trackLst tab alone*, also show snvindel tab and allow to toggle mds3 tk on/off
-					tabs.push({ label: 'Variants', active: shown })
+				if (this.state.config.trackLst || this.state.config.junction) {
+					// When other track types are available, show a mutation tab to toggle the mds3 track.
+					tabs.push({ label: 'Mutation', active: shown })
 				} else {
 					// do not add tab, to avoid showing a lone snvindel tab
 				}
 			}
+		}
+		if (this.state.config.junction) {
+			tabs.push({ label: 'Splice junction', active: this.state.config.junction.shown })
 		}
 		if (this.state.config.ld) {
 			const shown = this.state.config.ld.tracks.some(t => t.shown)
@@ -135,17 +138,26 @@ export class TabsRenderer {
 					this.mayRenderVariantFilter()
 				}
 			} else {
-				if (this.state.config.trackLst) {
+				if (this.state.config.trackLst || this.state.config.junction) {
 					// snvindel show/hide toggling
 					const div = tabs[tabsIdx++].contentHolder.append('div')
 					make_one_checkbox({
-						labeltext: 'Show variant track',
+						labeltext: 'Show mutation track',
 						checked: this.state.config.snvindel.shown,
 						holder: div,
 						callback: this.interactions.launchVariantTrack
 					})
 				}
 			}
+		}
+		if (this.state.config.junction) {
+			const div = tabs[tabsIdx++].contentHolder.append('div')
+			make_one_checkbox({
+				labeltext: 'Show splice junction track',
+				checked: this.state.config.junction.shown,
+				holder: div,
+				callback: this.interactions.launchJunctionTrack
+			})
 		}
 		if (this.state.config.ld) {
 			/* tricky: duplicate ld.tracks[] and scope it here, to pass to dispatch
