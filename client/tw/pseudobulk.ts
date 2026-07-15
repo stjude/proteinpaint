@@ -17,7 +17,7 @@ export class PseudobulkBase {
     static validate(term: RawPseudobulkTerm) {
         if (!term || typeof term !== 'object') throw new Error('term is not an object')
         if (term.type != termType) throw new Error(`incorrect term.type='${term?.type}', expecting '${termType}'`)
-        if (!term.assay || !PseudobulkAssay.includes(term.assay) ) throw new Error('term.assay is missing or not a string')
+        if (!term.assay || !PseudobulkAssay.includes(term.assay) ) throw new Error('term.assay is missing or invalid')
         if (!term.memberId || typeof term.memberId !== 'string') throw new Error('term.memberId is missing or not a string')
     }
 
