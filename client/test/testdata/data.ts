@@ -163,13 +163,13 @@ export function getSsgseaTw(isBin = false) {
 		term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
 		q: isBin
 			? {
-					type: 'regular-bin',
-					startinclusive: true,
-					bin_size: 0.2,
-					first_bin: { stop: -0.4 },
-					last_bin: { start: 0.8 },
-					mode: 'discrete'
-			  }
+				type: 'regular-bin',
+				startinclusive: true,
+				bin_size: 0.2,
+				first_bin: { stop: -0.4 },
+				last_bin: { start: 0.8 },
+				mode: 'discrete'
+			}
 			: { mode: 'continuous' }
 	}
 }
@@ -688,6 +688,40 @@ export function getScctTw() {
 			groupsetting: {
 				disabled: false
 			}
+		}
+	}
+}
+/** TODO: Pseudobulk data is not enabled in TermdbTest!!
+ * Do not use until data is available. Capturing structure for 
+ * clarity during development. */
+export function getPseudobulkTW(nameId = 'Blast') {
+	return {
+		term: {
+			type: tt.PSEUDOBULK,
+			assay: 'geneExpression',
+			memberId: 'CellType',
+			name: nameId,
+			id: nameId
+		}
+	}
+}
+export function getPseudobulkTermCollection(termIds = ['Blast', 'Monocyte', 'T_NK']) {
+	const termlst = termIds.map((id) => getPseudobulkTW(id).term)
+
+	return {
+		type: 'TermCollectionTWCont',
+		term: {
+			type: tt.TERM_COLLECTION,
+			memberType: 'numeric',
+			id: 'test',
+			name: 'Test pseudobulk term collection',
+			termIds: termIds,
+			termlst
+		},
+		q: {
+			mode: 'continuous',
+			type: 'values',
+			lst: []
 		}
 	}
 }

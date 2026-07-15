@@ -1105,7 +1105,7 @@ export type SingleCellPseudobulk = {
 	/** type can be 'geneExpression', 'dnaMeth', etc. that aligns to an assay */
 	[assayType: string]: {
 		/** termId should match a scct termId, if it exists. If not, this is a 
-		 * placeholder. This term will be like a term collection. */
+		 * placeholder. This term will be in a term collection with memberId == termId */
 		[termId: string]: {
 			folder: string
 			/** '[*]Ext denotes the file extension for the corresponding data file
