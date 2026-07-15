@@ -59,7 +59,7 @@ import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
-import { validate_query_junction } from './junction/validate.ts'
+import { validate_query_junction } from './j2/validate.ts'
 
 /*
 init

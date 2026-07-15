@@ -70,12 +70,15 @@ export function init({ genomes }) {
 					if (!jB.sn2rc.has(sn)) continue
 					counts.push(rc)
 				}
-				if (counts.length == 0) throw new Error('jA shares no sample with jB')
+				let v=0
+				if (counts.length) {
+					v = counts.length == 1 ? counts[0] : computePercentile(counts, 50, false)
+				}
 				lst.push({
 					start: j[0],
 					stop: j[1],
 					strand: j[2],
-					v: counts.length == 1 ? counts[0] : computePercentile(counts, 50, false)
+					v
 				})
 			}
 
