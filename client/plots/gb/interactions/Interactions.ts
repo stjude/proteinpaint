@@ -148,6 +148,14 @@ export class Interactions {
 		})
 	}
 
+	launchJunctionTrack = shown => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { junction: { shown } }
+		})
+	}
+
 	launchGroupsFilter = groups => {
 		this.app.dispatch({
 			type: 'plot_edit',

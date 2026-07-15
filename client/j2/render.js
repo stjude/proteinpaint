@@ -3,7 +3,7 @@ import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import exonskipalt_getdefault from '../src/spliceevent.exonskip.getdefault.js'
-import { axisstyle } from '#dom'
+import { axisstyle, table2col } from '#dom'
 import { bplen, IN_frame, JTypes, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
@@ -308,7 +308,6 @@ jug2.filter(function(d){return d.rimwidth>0})
 			const p = event.target.getBoundingClientRect()
 			tk.itemtip.clear().show(p.left + p.width, p.top - 50)
 			showOneJunction(d, tk, tk.itemtip.d.append('div'), block, true)
-			//getSampleBy1junction(d, tk, tk.itemtip.d.append('div'), block)
 		})
 
 	doForceLayout(tk, block, viewpxwidth).then(() => {
@@ -667,22 +666,14 @@ thus the query
 */
 
 function showOneJunction(j, tk, holder, block, ifeventdetails) {
-	// head
+	const table = table2col({ holder, margin: '0px' })
 	{
-		const row = holder.append('div').style('margin-bottom', '5px').style('white-space', 'nowrap')
-		for (const s of j.types) {
-			row
-				.append('span')
-				.attr('class', 'sja_mcdot')
-				.style('padding', '1px 5px')
-				.style('background-color', JTypes[s]?.color || 'black')
-				.style('margin-right', '5px')
-				.text(JTypes[s]?.name || '?')
-		}
-		const d = row.append('div').style('display', 'inline-block').style('margin-right', '10px')
+		const [t1, t2] = table.addRow()
+		t1.text('Junction')
+		const div = t2.append('div')
 		if (!j.sv || j.chr == j.sv.mate.chr) {
 			// same chr
-			d.html(
+			div.html(
 				bplen(Math.abs(j.start - (j.sv ? j.sv.mate.start : j.stop))) +
 					' <span style="font-size:.8em;">' +
 					j.chr +
@@ -694,7 +685,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 			)
 		} else {
 			// inter-chr sv
-			d.html(
+			div.html(
 				'<span style="font-size:.8em;">' +
 					j.chr +
 					':' +
@@ -706,73 +697,50 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 					'</span>'
 			)
 		}
+		// print all types in 2nd row
+		const d2 = t2.append('div')
+		for (const t of j.types) {
+			d2.append('span')
+				.attr('class', 'sja_mcdot')
+				.style('padding', '1px 5px')
+				.style('background-color', JTypes[t]?.color || 'black')
+				.style('margin-right', '5px')
+				.text(JTypes[t]?.name || '?')
+		}
 	}
-
-	// samples
-	const row2 = holder.append('div').style('white-space', 'nowrap')
+	const [t1, t2] = table.addRow()
 	if (j.sampleCount == 1) {
-		row2
-			.append('div')
-			.html(j.medianReadCount + ' <span style="font-size:.8em;color:#858585">read count, single sample</span>')
-	} else {
-		row2
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin-right', '10px')
-			.html(j.medianReadCount + ' <span style="font-size:.8em;color:#858585">median read count</span>')
-		row2
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin-right', '10px')
-			.html(j.sampleCount + ' <span style="font-size:.8em;color:#858585">samples</span>')
-	}
-
-	const events_exonskipalt = []
-	const events_a53ss = []
-
-	for (const e of j.info?.events || []) {
-		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
-			// TODO replace with e.type
-			events_exonskipalt.push(e)
-		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
-			events_a53ss.push(e)
-		}
-	}
-
-	const div = holder.append('div')
-
-	if (events_exonskipalt.length + events_a53ss.length > 0) {
-		// has splice events, show event diagram
-
+		t1.text('Sample')
+		const sndiv = t2.append('div')
+		sndiv.html('1 <span style="font-size:.7em">single sample</span>')
 		if (ifeventdetails) {
-			/*
-			true when clicking on a junction
-			false when mouse-over a junction
-			*/
-			if (events_exonskipalt.length) {
-				listAllEvents(events_exonskipalt, div, j, tk, block)
-			}
-			if (events_a53ss.length) {
-				listAllEvents(events_a53ss, div, j, tk, block)
-			}
-			return
+			// query to get sample name and print
 		}
-
-		if (events_exonskipalt.length) {
-			// skip/alt events, show one
-			const showidx = exonskipalt_getdefault(events_exonskipalt)
-			const e = events_exonskipalt[showidx]
-			showEventdiagram_skipalt_fetchreadcount(j, e, tk, div, block)
-		}
-
-		if (events_a53ss.length) {
-			// a5ss a3ss show one
-			const e = events_a53ss[0]
-			showEventdiagram_a53ss(j, e, tk, div, block)
-		}
+		t2.append('div').html(j.medianReadCount + ' <span style="font-size:.7em">read count</span>')
 	} else {
-		// no annotated events, no matter canonical or not, show free diagram
-		showJunctionDiagram(j, tk, div)
+		t1.text('Samples')
+		t2.append('div').html(`${j.sampleCount} <span style="font-size:.7em">samples</span>
+			<br>${j.medianReadCount} <span style="font-size:.7em">median read count</span>`)
+		if (ifeventdetails) {
+			// if app is available, show btn to generate junction term
+		}
+	}
+
+	const type2elst = new Map() // k: event.type, v: list of events of that type
+	for (const e of j.info?.events || []) {
+		if (!type2elst.has(e.attrValue)) type2elst.set(e.attrValue, []) // TODO
+		type2elst.get(e.attrValue).push(e)
+	}
+
+	for (const [type, elst] of type2elst) {
+		listAllEvents(elst, table, j, tk, block)
+	}
+
+	if (type2elst.size == 0) {
+		// no events. it's either canonical or not annotated, show free diagram
+		const [t1, t2] = table.addRow()
+		t1.text('Diagram')
+		showJunctionDiagram(j, tk, t2)
 	}
 }
 
@@ -898,6 +866,7 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 	*/
 	const e2 = {
 		gm: {
+			// confirm if can delete
 			name: e.gene,
 			isoform: e.isoform
 		},
@@ -952,16 +921,16 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 	})
 }
 
-function listAllEvents(lst, holder, j, tk, block) {
+function listAllEvents(lst, table, j, tk, block) {
 	if (lst.length == 1) {
+		const [t1, t2] = table.addRow()
 		const e = lst[0]
-		holder.append('div').text(e.gene + ' ' + e.attrValue + ' ' + e.isoform)
-		const div = holder.append('div')
+		t1.text(e.gene + ' ' + e.isoform)
 		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
 			// TODO replace with e.type
-			showEventdiagram_skipalt_fetchreadcount(j, e, tk, div, block, true)
+			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block, true)
 		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
-			showEventdiagram_a53ss(j, e, tk, div, block, true)
+			showEventdiagram_a53ss(j, e, tk, t2, block, true)
 		}
 		return
 	}
@@ -979,13 +948,13 @@ function listAllEvents(lst, holder, j, tk, block) {
 	}
 	for (const [key, isolst] of map) {
 		const eo = JSON.parse(key)
-		holder.append('div').text(eo.gene + ' ' + eo.attrValue + ' ' + isolst.join(','))
-		const div = holder.append('div')
+		const [t1, t2] = table.addRow()
+		t1.text(eo.gene + ' ' + isolst.join(' '))
 		if (eo.attrValue == JT_exonskip || eo.attrValue == JT_exonaltuse) {
 			// TODO replace with e.type
-			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, div, block, true)
+			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block)
 		} else if (eo.attrValue == JT_a5ss || eo.attrValue == JT_a3ss) {
-			showEventdiagram_a53ss(j, eo, tk, div, block, true)
+			showEventdiagram_a53ss(j, eo, tk, t2, block)
 		}
 	}
 }

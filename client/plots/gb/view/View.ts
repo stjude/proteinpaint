@@ -136,6 +136,17 @@ export class View {
 				}
 			}
 		}
+		if (this.state.config.junction?.shown) {
+			const tk: any = {
+				type: 'j2',
+				dslabel: this.state.vocab.dslabel,
+				vocabApi: this.opts.vocabApi,
+				termdbConfig: this.opts.vocabApi?.termdbConfig,
+				filter0: this.state.filter0
+			}
+			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
+			tklst.push(tk)
+		}
 		if (this.state.config.ld?.tracks) {
 			for (const t of this.state.config.ld.tracks) {
 				if (t.shown) tklst.push(t)
@@ -226,8 +237,8 @@ export class View {
 			for (const tk of tklst) {
 				let tki // index of this tk in block
 				if (tk.dslabel) {
-					// tk has dslabel and must be identified by it
-					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel)
+					// Official tracks from the same dataset can have different types (e.g. mds3 and j2).
+					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel && i.type == tk.type)
 				} else if (tk.name) {
 					// identify tk by name
 					tki = this.blockInstance.tklst.findIndex(i => i.name == tk.name)
@@ -252,6 +263,10 @@ export class View {
 					const i = this.blockInstance.tklst.findIndex(i => i.name == t.name)
 					if (!t.shown && i != -1) this.blockInstance.tk_remove(i)
 				}
+			}
+			if (this.state.config.junction && !this.state.config.junction.shown) {
+				const i = this.blockInstance.tklst.findIndex(t => t.type == 'j2')
+				if (i != -1) this.blockInstance.tk_remove(i)
 			}
 			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them
 			if (this.state.config.snvindel && !this.state.config.snvindel.shown) {

@@ -84,8 +84,8 @@ export async function makeTk(tk, block) {
 
 	tk._finish = loadTk_finish_closure(tk, block)
 
-	tk.itemtip = new Menu() // show contents on clicking an item
 	tk.hovertip = new Menu() // show contents here on hovering an item and avoid reusing itemtip
+	tk.itemtip = new Menu() // show contents on clicking an item
 	tk.menutip = new Menu({ padding: '' }) // to show menu options without margin
 
 	tk.load = _load(tk, block) // shorthand
