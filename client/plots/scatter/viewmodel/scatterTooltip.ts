@@ -1,6 +1,6 @@
 import { mclass } from '#shared/common.js'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { getDateStrFromNumber } from '#shared/terms.js'
+import { getDateStrFromNumber, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 import { rgb } from 'd3-color'
 import type { Scatter } from '../scatter'
 import { table2col, shapesArray } from '#dom'
@@ -78,8 +78,8 @@ export class ScatterTooltip {
 			if (this.scatter.config.colorTW) {
 				if (this.scatter.config.colorTW.term.type == 'categorical') {
 					if (s1.category.includes(mclass.WT.label) || s1.category.includes(mclass.Blank.label)) return 1
-				} // numeric
-				else {
+				} else {
+					// numeric
 					if (s1.category < s2.category) return -1
 					else if (s1.category > s2.category) return 1
 				}
@@ -212,8 +212,8 @@ export class ScatterTooltip {
 					tw == this.scatter.config.colorTW
 						? this.scatter.model.getColor(sample, chart)
 						: this.scatter.config.colorTW
-						? 'gray'
-						: this.scatter.settings.defaultColor
+							? 'gray'
+							: this.scatter.settings.defaultColor
 				const index =
 					tw == this.scatter.config.colorTW
 						? chart.shapeLegend.get('Ref').shape % shapesArray.length
@@ -328,6 +328,11 @@ export class ScatterTooltip {
 			}
 		}
 		if (tw?.term.type == 'date') value = getDateStrFromNumber(value)
+		/** Not all scge terms will have a geneExp value, such as when the scge term
+		 * is a coordTW. When no geneExp value, value = d[category] is the correct value. */
+		else if (tw?.term.type == SINGLECELL_GENE_EXPRESSION && Number.isFinite(d.geneExp)) {
+			value = roundValueAuto(d.geneExp)
+		}
 		else if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
 		return value
 	}

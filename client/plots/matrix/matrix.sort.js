@@ -407,6 +407,12 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 		}
 	}
 
+	const cnvClasses = [mclasscnvAmp, mclasscnvHomozygousDel, mclasscnvgain, mclasscnvloss, mclasscnvloh]
+	const proteinChangingClasses = (s.proteinChangingMutations || []).filter(
+		mcls => !s.truncatingMutations.includes(mcls)
+	)
+	const sortedClasses = ['Fuserna', ...(s.truncatingMutations || []), ...cnvClasses, ...proteinChangingClasses]
+
 	// Similar to Oncoprint sorting
 	sortOptions.a = s.sortOptions?.a
 		? reshapeSortPriority(s.sortOptions.a, l)
@@ -481,7 +487,7 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 								by: 'class',
 								isOrdered: true,
 								disabled: true, // visible, can be enabled
-								order: [mclasscnvAmp, mclasscnvHomozygousDel, mclasscnvgain, mclasscnvloss, mclasscnvloh]
+								order: cnvClasses
 							},
 							{
 								disabled: false,
@@ -498,8 +504,24 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 								isOrdered: false,
 								// by default, do not include truncating mutations here since they may
 								// already be used in the tiebreaker with truncating mutations
-								order: s.proteinChangingMutations.filter(mcls => !s.truncatingMutations.includes(mcls)),
+								order: proteinChangingClasses,
 								notUsed: s.truncatingMutations
+							},
+							{
+								disabled: false,
+								mayToggle: true,
+								label: `${l.Samples} with other classification > without`,
+								filter: {
+									values: [
+										{
+											dt: dtsnvindel
+										}
+									]
+								},
+								by: 'class',
+								isOrdered: false,
+								order: s.mutationClasses.filter(cls => !sortedClasses.includes(cls) && cls != 'Blank'),
+								notUsed: []
 							}
 						]
 					},
@@ -522,7 +544,6 @@ export function getSortOptions(termdbConfig, controlLabels = {}, matrixSettings)
 		value: 'name',
 		order: Object.values(sortOptions).length
 	}
-
 	return sortOptions
 }
 
@@ -628,6 +649,9 @@ export function reshapeSortPriority(sortOption, labels) {
 
 	for (const tb of geneVariantsEntry.tiebreakers) {
 		//if (tb.by != 'class') continue
+		// Using `Object.assign(tb, defaults, tb)` would copy `tb` back over the defaults (including undefined values); clone first.
+		// The pattern `Object.assign(tb, defaults, origClone)` fills in defaults while preserving any existing keys from the original tiebreaker.
+		const origClone = structuredClone(tb)
 		if (tb.filter?.values?.find(v => v.dt == dtfusionrna)) {
 			const defaults = {
 				label: `${l.Samples} with Fusion RNASeq > without`,
@@ -635,7 +659,7 @@ export function reshapeSortPriority(sortOption, labels) {
 				disabled: false,
 				mayToggle: true
 			}
-			Object.assign(tb, defaults, tb)
+			Object.assign(tb, defaults, origClone)
 		} else if (tb.filter?.values?.find(v => v.dt == dtsnvindel)) {
 			const label =
 				tb.order.includes(mclasscnvgain) || tb.order.includes(mclasscnvloss)
@@ -647,7 +671,7 @@ export function reshapeSortPriority(sortOption, labels) {
 				disabled: false,
 				mayToggle: true
 			}
-			Object.assign(tb, defaults, tb)
+			Object.assign(tb, defaults, origClone)
 		} else if (tb.order.length == 2 && tb.order.includes(mclasscnvgain) && tb.order.includes(mclasscnvloss)) {
 			const defaults = {
 				label: `${l.Samples} with CNV only > without`,
@@ -657,7 +681,7 @@ export function reshapeSortPriority(sortOption, labels) {
 				disabled: false,
 				mayToggle: true
 			}
-			Object.assign(tb, defaults, tb)
+			Object.assign(tb, defaults, origClone)
 		}
 	}
 

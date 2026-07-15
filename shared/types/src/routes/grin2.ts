@@ -57,10 +57,12 @@ export type GRIN2Request = {
 
 	/** Options for filtering SNV/indel content: consequence types and an optional MAF filter. */
 	snvindelOptions?: {
-		/** String array of consequence types to include (pp mclass keys, as emitted by the shared GRIN2 UI). */
+		/** Consequence types to include (pp mclass keys, as emitted by the shared GRIN2 UI). Only mutations
+		 * whose class is listed are included; an empty array includes none (mirrors cnvOptions.cnvCategories).
+		 * Absent (undefined) yields no snvindel lesions (the getter guards on it). */
 		consequences?: string[]
 		/** Maximum mutation count cutoff for highly mutated scenarios */
-		hyperMutator?: number // Default: 1000
+		hyperMutator?: number // Default: 8000
 		/** MAF filter object (tvslst) to filter mutations by allele frequency / read depth, sourced from
 		 * queries.snvindel.mafFilter (bcf-backed datasets that expose per-sample allelic depth). */
 		mafFilter?: Filter
@@ -88,8 +90,16 @@ export type GRIN2Request = {
 		}
 		/** Maximum segment length to include (0 = no filter) */
 		maxSegLength?: number // Default: 0
-		/** Hypermutator max cut off for CNVs per case */
-		hyperMutator?: number // Default: 500
+		/** For categorical cnv (ds.queries.cnv.type='category', e.g. GDC), the set of cnv-segment classes
+		 * (pp mclass keys: CNV_amp/CNV_amplification/CNV_loss/CNV_homozygous_deletion) to include, as chosen
+		 * via the UI checkboxes. A segment whose class is not listed is dropped. Omit (undefined) to include
+		 * every class; an empty array includes none. Ignored for numeric cnv types (gain/loss come from
+		 * thresholds, not discrete classes). */
+		cnvCategories?: string[]
+		/** Hypermutator max cut off: exclude a sample's CNV when it has more than this many segments (0 =
+		 * disabled). Off by default — segment counts vary too much across data sources for a safe fixed value
+		 * (see CNV_HYPERMUTATOR_FALLBACK). Set per-run when the source warrants it. */
+		hyperMutator?: number // Default: 0 (off)
 		/** For datasets that expose multiple cnv file types (ds.queries.singleSampleMutation.cnvTypes),
 		 * the id of the user-selected type. The server resolves this id to a source-specific data_type
 		 * and a valueType, loads only the matching file, and classifies segments with that type's
@@ -102,6 +112,9 @@ export type GRIN2Request = {
 
 	/** Presence enables SVs in the analysis; no per-sv filtering options yet */
 	svOptions?: Record<string, never>
+
+	/** Presence enables ITDs in the analysis; no per-itd filtering options yet */
+	itdOptions?: Record<string, never>
 	/** Artifact-region exclude mask applied before the GRIN2 statistics run: genes whose span lies
 	 * >= overlapFrac inside the selected blacklist regions are dropped. Blacklist sources are
 	 * declared per genome (Genome.blacklists) and selected here by name; their BED files are

@@ -258,6 +258,7 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 		// clone for modifying
 		structuredClone({
 			snvindel: vocabApi.termdbConfig.queries.snvindel,
+			junction: vocabApi.termdbConfig.queries.junction,
 			trackLst: vocabApi.termdbConfig.queries.trackLst,
 			ld: vocabApi.termdbConfig.queries.ld
 		}),
@@ -301,7 +302,15 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 				config.snvindel.shown = true
 			}
 		}
+	} else if (vocabApi.termdbConfig.queries.svfusion) {
+		/* dataset has svfusion but no snvindel query;
+		set up config.svfusion so generateTracks() creates the mds3 lollipop tk to show fusion/sv events.
+		(without this, the GB plot only generates the mds3 tk from config.snvindel) */
+		config.svfusion = Object.assign(structuredClone(vocabApi.termdbConfig.queries.svfusion), config.svfusion || {})
+		if (typeof config.svfusion.shown != 'boolean') config.svfusion.shown = true
 	}
+
+	if (config.junction && typeof config.junction.shown != 'boolean') config.junction.shown = true
 
 	if (config.trackLst) {
 		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'

@@ -4,12 +4,8 @@ import type { IDCViewer } from '../IDCViewer'
 import { makeTransparentButton, addSvg, makeCenteredFlex } from '../utils'
 import { sayerror } from '#dom/sayerror'
 import { IDCViewerDefaults } from '../settings/defaults'
+import { applyStyles, idcTableStyleFns, idcTableStyles, sharedStyleFns, sharedColors } from '../styling'
 
-const borderColor = '#4c4c4c'
-const mainHeaderBgColor = '#f5f5f5'
-const mainHeaderHoverBgColor = '#e6e6e6'
-const detailsHeaderBgColor = '#e0e0e0'
-const fullWhiteBgColor = '#ffffff'
 // only make this an odd number greater than 1
 const numPagesToShow = 7
 // https://primer.style/octicons/icon/
@@ -40,6 +36,12 @@ const alphabetDescendingPath = [
 	'M10.082 12.629 9.664 14H8.598l1.789-5.332h1.234L13.402 14h-1.12l-.419-1.371zm1.57-.785L11 9.688h-.047l-.652 2.156z',
 	'M4.5 2.5a.5.5 0 0 0-1 0v9.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L4.5 12.293z'
 ]
+const closedCircleChevron = [
+	'M48 256c0 114.9 93.1 208 208 208s208-93.1 208-208S370.9 48 256 48 48 141.1 48 256zm289.1-43.4c7.5-7.5 19.8-7.5 27.3 0 3.8 3.8 5.6 8.7 5.6 13.6s-1.9 9.9-5.7 13.7l-94.3 94c-7.6 6.9-19.3 6.7-26.6-.6l-95.7-95.4c-7.5-7.5-7.6-19.7 0-27.3 7.5-7.5 19.7-7.6 27.3 0l81.1 81.9 81-79.9z'
+]
+const openCircleChevron = [
+	'M256 464c114.9 0 208-93.1 208-208S370.9 48 256 48 48 141.1 48 256s93.1 208 208 208zm0-244.5l-81.1 81.9c-7.5 7.5-19.8 7.5-27.3 0s-7.5-19.8 0-27.3l95.7-95.4c7.3-7.3 19.1-7.5 26.6-.6l94.3 94c3.8 3.8 5.7 8.7 5.7 13.7 0 4.9-1.9 9.9-5.6 13.6-7.5 7.5-19.7 7.6-27.3 0l-81-79.9z'
+]
 export class IDCTableView {
 	private holder: Selection<HTMLDivElement, unknown, any, any>
 	private viewer: IDCViewer
@@ -68,14 +70,9 @@ export class IDCTableView {
 		}
 		let table: Selection<HTMLTableElement, unknown, any, any> = this.holder.select('#idc-table')
 		if (table.empty()) {
-			table = this.holder
-				.style('font-family', 'Noto Sans, sans-serif')
-				.append('table')
-				.attr('id', 'idc-table')
-				.style('width', '100%')
-				.style('border-collapse', 'collapse')
-				.style('font-size', '14px')
-				.style('border', `1px solid ${borderColor}`)
+			applyStyles(this.holder, idcTableStyles.holder)
+			table = applyStyles(this.holder.append('table').attr('id', 'idc-table'), idcTableStyles.table)
+			applyStyles(table, idcTableStyleFns.tableBorder(sharedColors.borderColor))
 		}
 		const headers = {
 			'GDC Case ID': 'submitter_id',
@@ -93,34 +90,25 @@ export class IDCTableView {
 		]
 
 		const thead = table.append('thead')
-		const headerRow = thead
-			.append('tr')
-			.style('background-color', mainHeaderBgColor)
-			.style('border-bottom', `2px solid ${borderColor}`)
-			.style('height', '3rem')
+		const headerRow = applyStyles(thead.append('tr'), idcTableStyles.headerRow)
+		applyStyles(headerRow, idcTableStyleFns.headerRowBorder(sharedColors.borderColor))
 		const sortDirection = this.args.sortDirection === 'asc' ? 'ascending' : 'descending'
 		Object.entries(headers).forEach(([header, sortKey]) => {
 			const chosenKey = this.args.sortBy === sortKey
-			const th = headerRow
-				.append('th')
-				.style('text-align', 'left')
-				.style('align-items', 'center')
-				.style('background-color', mainHeaderBgColor)
-				.attr('aria-sort', chosenKey ? sortDirection : 'none')
-				.style('font-family', 'Montserrat, sans-serif')
-				.style('font-weight', '600')
-				.style('padding', '10px')
-				.style('gap', '5px')
-				.style('cursor', sortKey === undefined ? 'default' : 'pointer')
-			const headerDiv = th.append('div').style('display', 'flex').style('align-items', 'left').style('gap', '5px')
+			const th = applyStyles(
+				headerRow.append('th').attr('aria-sort', chosenKey ? sortDirection : 'none'),
+				idcTableStyles.headCell
+			)
+			applyStyles(th, idcTableStyleFns.headCellCursor(sortKey !== undefined))
+			const headerDiv = applyStyles(th.append('div'), idcTableStyles.headerLabelDiv)
 			headerDiv.append('span').text(header)
 			if (sortKey === undefined) return
 
 			th.on('mouseenter', function () {
-				;(this as HTMLTableCellElement).style.backgroundColor = mainHeaderHoverBgColor
+				;(this as HTMLTableCellElement).style.backgroundColor = sharedColors.mainHeaderHoverBgColor
 			})
 				.on('mouseleave', function () {
-					;(this as HTMLTableCellElement).style.backgroundColor = mainHeaderBgColor
+					;(this as HTMLTableCellElement).style.backgroundColor = sharedColors.mainHeaderBgColor
 				})
 				.on('click', () => {
 					switch (th.attr('aria-sort')) {
@@ -150,7 +138,7 @@ export class IDCTableView {
 						: alphabetDescendingPath
 					: alphabetAscendingPath
 			)
-			if (chosenKey) th.select('svg').style('color', '#c7501a')
+			if (chosenKey) applyStyles(th.select('svg'), idcTableStyles.activeSortIcon)
 		})
 
 		const tbody = table.append('tbody')
@@ -159,96 +147,95 @@ export class IDCTableView {
 			tbody.selectAll('*').remove()
 			dataToRender.forEach((row, rowIdx) => {
 				const caseRowPadding = '10px'
-				const bgColor = rowIdx % 2 === 0 ? fullWhiteBgColor : '#f9f9f9'
-				const tr = tbody
-					.append('tr')
-					.style('background-color', bgColor)
-					.style('border-bottom', `1px solid ${borderColor}`)
-				tr.append('td').style('padding', caseRowPadding).text(row.caseId).attr('data-testid', `case-id-${row.caseId}`)
-				tr.append('td').style('padding', caseRowPadding).text(row.programName)
-				tr.append('td').style('padding', caseRowPadding).text(row.project)
+				const bgColor = rowIdx % 2 === 0 ? sharedColors.fullWhiteBgColor : '#f9f9f9'
+				const tr = applyStyles(tbody.append('tr'), idcTableStyleFns.bodyRowBg(bgColor))
+				applyStyles(tr, idcTableStyleFns.rowBottomBorder(sharedColors.borderColor))
+				applyStyles(tr.append('td'), idcTableStyleFns.paddingCell(caseRowPadding))
+					.text(row.caseId)
+					.attr('data-testid', `case-id-${row.caseId}`)
+				applyStyles(tr.append('td'), idcTableStyleFns.paddingCell(caseRowPadding)).text(row.programName)
+				applyStyles(tr.append('td'), idcTableStyleFns.paddingCell(caseRowPadding)).text(row.project)
+				const studyCellDiv = applyStyles(tr.append('td'), idcTableStyleFns.paddingCell(caseRowPadding)).append('div')
+				applyStyles(studyCellDiv, idcTableStyles.studyCellDiv)
+				addSvg(studyCellDiv, closedCircleChevron)
+				const studyCellButton = applyStyles(
+					makeTransparentButton(studyCellDiv.append('button')),
+					idcTableStyleFns.cellColor('#4272a5')
+				)
+				applyStyles(studyCellButton, idcTableStyles.studyCellButton)
+				studyCellDiv.select('svg').attr('viewBox', '0 0 512 512')
+				studyCellDiv.on('click', () => {
+					const expanded = studyCellButton.attr('aria-expanded') === 'true'
+					studyCellButton.attr('aria-expanded', String(!expanded))
+					studyCellDiv.select('path').attr('d', !expanded ? openCircleChevron : closedCircleChevron)
+					const detailsRowID = 'study-details' + row.caseId.replace(/\./g, '')
+					if (!expanded) {
+						const detailsRow = tbody
+							.insert('tr', function (this: HTMLTableSectionElement) {
+								const index = Array.from(this.children).indexOf(tr.node()!)
+								return this.children[index + 1] || null
+							})
+							.attr('id', detailsRowID)
 
-				const studyCellButton = makeTransparentButton(tr.append('td').style('padding', caseRowPadding).append('button'))
-					.style('color', '#4272a5')
-					.on('click', () => {
-						const expanded = studyCellButton.attr('aria-expanded') === 'true'
-						studyCellButton.attr('aria-expanded', String(!expanded))
-						//
-						const detailsRowID = 'study-details' + row.caseId.replace(/\./g, '')
-						if (!expanded) {
-							const detailsRow = tbody
-								.insert('tr', function (this: HTMLTableSectionElement) {
-									const index = Array.from(this.children).indexOf(tr.node()!)
-									return this.children[index + 1] || null
-								})
-								.attr('id', detailsRowID)
+						const detailsTable = detailsRow.append('td').attr('colspan', '4').append('div').append('table')
+						applyStyles(detailsTable, idcTableStyles.detailsTable)
 
-							const detailsTable = detailsRow
+						const detailsHeaderRow = applyStyles(
+							detailsTable.append('thead').append('tr'),
+							idcTableStyles.detailsHeaderRow
+						)
+						applyStyles(detailsHeaderRow, idcTableStyleFns.rowBottomBorder(sharedColors.borderColor))
+
+						expandableHeaders.forEach(header => {
+							applyStyles(detailsHeaderRow.append('th'), idcTableStyles.detailsHeaderCell).text(header)
+						})
+
+						const detailsTbody = detailsTable.append('tbody')
+						const studyRowPadding = '8px'
+
+						row.studiesList.forEach(study => {
+							const studyRow = applyStyles(
+								detailsTbody.append('tr'),
+								idcTableStyleFns.rowBottomBorder(sharedColors.borderColor)
+							)
+							studyRow
 								.append('td')
-								.attr('colspan', '4')
-								.append('div')
-								.append('table')
-								.style('width', '100%')
-								.style('border-collapse', 'collapse')
-
-							const detailsHeaderRow = detailsTable
-								.append('thead')
-								.append('tr')
-								.style('background-color', detailsHeaderBgColor)
-								.style('border-bottom', `1px solid ${borderColor}`)
-
-							expandableHeaders.forEach(header => {
-								detailsHeaderRow
-									.append('th')
-									.style('padding', '8px')
-									.style('text-align', 'left')
-									.style('font-weight', '500')
-									.text(header)
-							})
-
-							const detailsTbody = detailsTable.append('tbody')
-							const studyRowPadding = '8px'
-
-							row.studiesList.forEach(study => {
-								const studyRow = detailsTbody.append('tr').style('border-bottom', `1px solid ${borderColor}`)
-								studyRow
-									.append('td')
-									.style('padding', studyRowPadding)
-									.text(study.StudyInstanceUID || 'N/A')
-								studyRow
-									.append('td')
-									.style('padding', studyRowPadding)
-									.text(study.collectionId || 'N/A')
-								studyRow
-									.append('td')
-									.style('padding', studyRowPadding)
-									.text(study.StudyDate || 'N/A')
-								studyRow
-									.append('td')
-									.style('padding', studyRowPadding)
-									.text(study.StudyDescription || 'N/A')
-								this.addCellLinkToRow(
-									studyRow,
-									`https://viewer.imaging.datacommons.cancer.gov/slim/studies/${study.StudyInstanceUID}`,
-									'Open Study',
-									study.hasWSI
-								)
-								this.addCellLinkToRow(
-									studyRow,
-									`https://viewer.imaging.datacommons.cancer.gov/v3/viewer/?StudyInstanceUIDs=${study.StudyInstanceUID}`,
-									'Open Study',
-									study.hasRadiology
-								)
-							})
-						} else {
-							this.holder.select(`#${detailsRowID}`).remove()
-						}
-					})
-
-				studyCellButton
-					.append('div')
-					.append('span')
-					.text(`${row.studiesCount} IDC study (${row.wsiCount} Histopathology + ${row.radiologyCount} Radiology)`)
+								.call(sel => applyStyles(sel, idcTableStyleFns.paddingCell(studyRowPadding)))
+								.text(study.StudyInstanceUID || 'N/A')
+							studyRow
+								.append('td')
+								.call(sel => applyStyles(sel, idcTableStyleFns.paddingCell(studyRowPadding)))
+								.text(study.collectionId || 'N/A')
+							studyRow
+								.append('td')
+								.call(sel => applyStyles(sel, idcTableStyleFns.paddingCell(studyRowPadding)))
+								.text(study.StudyDate || 'N/A')
+							studyRow
+								.append('td')
+								.call(sel => applyStyles(sel, idcTableStyleFns.paddingCell(studyRowPadding)))
+								.text(study.StudyDescription || 'N/A')
+							this.addCellLinkToRow(
+								studyRow,
+								`https://viewer.imaging.datacommons.cancer.gov/slim/studies/${study.StudyInstanceUID}`,
+								'Open Study',
+								study.hasWSI
+							)
+							this.addCellLinkToRow(
+								studyRow,
+								`https://viewer.imaging.datacommons.cancer.gov/v3/viewer/?StudyInstanceUIDs=${study.StudyInstanceUID}`,
+								'Open Study',
+								study.hasRadiology
+							)
+						})
+					} else {
+						this.holder.select(`#${detailsRowID}`).remove()
+					}
+				})
+				const pathologyText = row.wsiCount > 0 ? `${row.wsiCount} Histopathology` : ''
+				const radiologyText = row.radiologyCount > 0 ? `${row.radiologyCount} Radiology` : ''
+				studyCellButton.text(
+					`${row.studiesCount} IDC study (${[pathologyText, radiologyText].filter(Boolean).join(' + ')})`
+				)
 			})
 		}
 
@@ -259,80 +246,50 @@ export class IDCTableView {
 	private renderPagination(pagination: Pagination, dataLength: number): void {
 		const selectedPageSize = this.args.pageSize || this.args.pageSizeOptions[0]
 
-		const paginationDiv = this.holder
-			.append('div')
-			.attr('class', 'idcviewer-pagination')
-			.style('display', 'flex')
-			.style('justify-content', 'space-between')
-			.style('align-items', 'center')
-			.style('flex-wrap', 'wrap')
-			.style('border', `1px solid ${borderColor}`)
-			.style('padding', '0.5rem')
+		const paginationDiv = applyStyles(
+			this.holder.append('div').attr('class', 'idcviewer-pagination'),
+			idcTableStyles.paginationWrapper
+		)
+		applyStyles(paginationDiv, idcTableStyleFns.paginationBorder(sharedColors.borderColor))
 
-		const pageSizeSelection = paginationDiv
-			.append('div')
-			.style('display', 'flex')
-			.style('align-items', 'center')
-			.style('gap', '0.5rem')
+		const pageSizeSelection = applyStyles(paginationDiv.append('div'), idcTableStyles.pageSizeSelection)
 
 		pageSizeSelection.append('span').text('Show')
 
-		const pageSizeDropdown = pageSizeSelection.append('div').style('position', 'relative')
-		const pageSizeButton = pageSizeDropdown
-			.append('button')
-			.attr('type', 'button')
-			.style('min-width', '55px')
-			.style('gap', '0.5rem')
-			.style('padding', '0.3rem 0.45rem')
-			.style('border-radius', '4px')
-			.style('border', `1px solid ${borderColor}`)
-			.style('background-color', fullWhiteBgColor)
-			.style('cursor', 'pointer')
+		const pageSizeDropdown = applyStyles(pageSizeSelection.append('div'), idcTableStyles.pageSizeDropdown)
+		const pageSizeButton = applyStyles(
+			pageSizeDropdown.append('button').attr('type', 'button'),
+			idcTableStyles.pageSizeButton
+		)
+		applyStyles(pageSizeButton, idcTableStyleFns.pageSizeButtonBorder(sharedColors.borderColor))
 		makeCenteredFlex(pageSizeButton)
-		const pageSizeChevron = pageSizeButton.append('span').style('font-size', '15px')
+		const pageSizeChevron = applyStyles(pageSizeButton.append('span'), idcTableStyles.pageSizeChevron)
 		const changePageSizeText = (isOpen: boolean) => {
 			pageSizeChevron.text((!isOpen ? '▾ ' : '▴ ') + this.args.pageSize)
 		}
 		changePageSizeText(false)
-		const optionsPanel = pageSizeDropdown
-			.append('div')
-			.style('display', 'none')
-			.style('position', 'absolute')
-			.style('top', 'calc(100% + 4px)')
-			.style('left', '0')
-			.style('min-width', '100%')
-			.style('border', `1px solid ${borderColor}`)
-			.style('border-radius', '4px')
-			.style('background-color', fullWhiteBgColor)
-			.style('box-shadow', '0 4px 12px rgba(0,0,0,0.12)')
-			.style('z-index', '1')
+		const optionsPanel = applyStyles(pageSizeDropdown.append('div'), idcTableStyles.pageSizeOptionsPanel)
+		applyStyles(optionsPanel, idcTableStyleFns.optionsPanelBorder(sharedColors.borderColor))
 
 		const renderOptions = () => {
 			optionsPanel.selectAll('*').remove()
 			this.args.pageSizeOptions.forEach(option => {
-				const btn = optionsPanel
-					.append('button')
-					.attr('type', 'button')
-					.style('width', '100%')
-					.style('padding', '0.35rem 0.5rem')
-					.style('display', 'flex')
-					.style('justify-content', 'space-between')
-					.style('align-items', 'center')
-					.style('border', 'none')
-					.style('background-color', fullWhiteBgColor)
-					.style('cursor', 'pointer')
+				const btn = applyStyles(
+					optionsPanel.append('button').attr('type', 'button'),
+					idcTableStyles.pageSizeOptionButton
+				)
 
 				btn.append('span').text(String(option))
 				btn
 					.append('span')
 					.text(option === selectedPageSize ? '✓' : '')
-					.style('color', '#2a6f2a')
+					.call(sel => applyStyles(sel, idcTableStyles.selectedOptionCheck))
 				btn
 					.on('mouseenter', function () {
 						;(this as HTMLButtonElement).style.backgroundColor = '#f5f5f5'
 					})
 					.on('mouseleave', function () {
-						;(this as HTMLButtonElement).style.backgroundColor = fullWhiteBgColor
+						;(this as HTMLButtonElement).style.backgroundColor = sharedColors.fullWhiteBgColor
 					})
 					.on('click', () => {
 						this.viewer.main({ ...this.args, pageSize: option }).catch(e => {
@@ -346,22 +303,21 @@ export class IDCTableView {
 
 		pageSizeButton.on('click', () => {
 			const isOpen = optionsPanel.style('display') !== 'none'
-			optionsPanel.style('display', isOpen ? 'none' : 'block')
+			applyStyles(optionsPanel, sharedStyleFns.display(isOpen ? 'none' : 'block'))
 			changePageSizeText(!isOpen)
 		})
 
 		pageSizeSelection.append('span').text('entries')
 
-		paginationDiv
-			.append('div')
-			.style('font-size', '18px')
-			.attr('data-testid', 'pagination-summary')
-			.html(
-				`Showing <b>${pagination.from + 1}</b> - <b>${Math.min(
-					pagination.from + dataLength,
-					pagination.total
-				)}</b> of <b>${pagination.total}</b> entries`
-			)
+		applyStyles(
+			paginationDiv.append('div').attr('data-testid', 'pagination-summary'),
+			idcTableStyles.paginationSummary
+		).html(
+			`Showing <b>${pagination.from + 1}</b> - <b>${Math.min(
+				pagination.from + dataLength,
+				pagination.total
+			)}</b> of <b>${pagination.total}</b> entries`
+		)
 		const renderPageControls = () => {
 			// Source - https://stackoverflow.com/a/36963945
 			// Posted by Aditya Singh, modified by community. See post 'Timeline' for change history
@@ -369,13 +325,7 @@ export class IDCTableView {
 			// const range = (start, end) => Array.from({ length: end - start }, (_, k) => k + start)
 			const pagePlaceHolder = '...'
 			const totalPages = Math.ceil(pagination.total / selectedPageSize)
-			const pageControlsDiv = paginationDiv
-				.append('div')
-				.style('display', 'flex')
-				.style('gap', '0.5rem')
-				.style('flex-wrap', 'wrap')
-				.style('align-items', 'center')
-				.style('justify-content', 'center')
+			const pageControlsDiv = applyStyles(paginationDiv.append('div'), idcTableStyles.pageControlsDiv)
 			const buttonsToDisable: Selection<HTMLButtonElement, unknown, any, any>[] = []
 			const beginningButton = makeTransparentButton(pageControlsDiv.append('button')).attr('class', 'beginning-button')
 			makeCenteredFlex(
@@ -438,7 +388,7 @@ export class IDCTableView {
 						})
 					})
 				} else if (Number(page) === this.args.currentPage) {
-					pageButton.style('font-weight', 'bold').style('background-color', '#c7501a').style('padding', '3px')
+					applyStyles(pageButton, idcTableStyles.activePageButton)
 				} else {
 					pageButton.on('click', () => {
 						if (Number(page) === this.args.currentPage) return
@@ -473,7 +423,7 @@ export class IDCTableView {
 				buttonsToDisable.push(singlePageTurnForward, endButton)
 			}
 			buttonsToDisable.forEach(button => {
-				button.style('cursor', 'not-allowed')
+				applyStyles(button, idcTableStyles.disabledPaginationButton)
 				button.attr('disabled', true)
 			})
 		}
@@ -486,12 +436,9 @@ export class IDCTableView {
 		text: string,
 		hasStudy: boolean
 	): void {
-		const cell = row
-			.append('td')
-			.style('padding', '8px')
+		const cell = applyStyles(row.append('td'), idcTableStyleFns.paddingCell('8px'))
 			.append('span')
-			.style('display', 'flex')
-			.style('align-items', 'center')
+			.call(sel => applyStyles(sel, idcTableStyles.cellLinkContainer))
 		if (hasStudy) {
 			makeCenteredFlex(addSvg(cell, externalLinkPath))
 			cell
@@ -500,10 +447,9 @@ export class IDCTableView {
 				.attr('href', url)
 				.attr('rel', 'noopener noreferrer')
 				.attr('target', '_blank')
-				.style('color', 'black')
-				.style('font-size', '16px')
+				.call(sel => applyStyles(sel, idcTableStyles.studyLink))
 		} else {
-			cell.append('span').text('\u2717').style('color', 'red').style('font-size', '16px')
+			applyStyles(cell.append('span').text('-'), idcTableStyles.missingStudyMark)
 		}
 	}
 }

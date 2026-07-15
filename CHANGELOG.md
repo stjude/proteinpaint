@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+Features:
+- Implemented new 'pseudobulk' termType.
+
+Fixes:
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
+- Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
+- Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
+- Move dataset launch-time case-sample caching into a uniform ds.preInit.cacheSamples() hook: mds3 init now dispatches caching generically (dropping the ds.label=='GDC' hardcode in mds3.init.nonblocking.js), so each API-based dataset owns its own caching (GDC's gdc.initCache relocated to the ppgdc dataset)
+
+
+## 2.197.0
+
+Features:
+- GSEA plot refactored into the MVVM pattern for improved maintainability and scalability.
+- GRIN2 - ITD (internal tandem duplication) support: a new ITD data-type checkbox, per-sample lesion conversion, and Manhattan/table rendering. Enabled automatically for any dataset that declares an itd query; unchecked by default like fusion/SV.
+
+Fixes:
+- ensure that zero is not duplicated in the getInterpolatedDomainRange() color scale helper
+- correctly handle key events in max sample input in matrix controls
+- GRIN2 - Manhattan plot rendered no dots for lesion types outside the built-in gain/loss/mutation/fusion/sv set (e.g. ITD): lesion types are now discovered from the result columns and colors derive from the shared dt2lesion map, so any current or future data type renders.
+- GRIN2 - Manhattan plot clipped the most-significant (q=0) genes above the plot area; the y-axis maximum now accounts for the zero-q placement so top hits stay visible.
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
+- Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
+- Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
+
+
+## 2.196.0
+
+Features:
+- Single cell scatter plot now accepts two single cell gene expression terms for plotting. The option to add a color term is disabled if an overlay term is present.
+- New client unit and integration tests for the single cell scatter were added. New server unit tests for the plot route were also added.
+- GRIN2 - MAF filter (tumor VAF / total-depth / alt-depth) support for GDC, matching non-GDC datasets
+- GRIN2 - hypermutator per-sample cutoff for SNV/indel and CNV, excluding a sample from a data type when its raw record count exceeds the cutoff
+- GRIN2 - CNV classification unified across log2ratio, segmean, copyNumber, and categorical quantification, with per-type thresholds for mixed cohorts
+- GRIN2 - CNV-segment controls: multi cnv-type selection, categorical class checkboxes, and clearer reporting; clearing all consequences/classes now sends "none" of that data type
+- GRIN2 - refactored the general route (main.ts split into lesions.ts and memory.ts; typed processing summary)
+
+Fixes:
+- GRIN2 - CNV hypermutator cutoff now defaults to off; the previous default silently dropped whole-sample CNV on dense native segmentation data
+- GRIN2 - MAF validation resolves the FORMAT definition from q.format so the filter runs on GDC (whose FORMAT is not under byrange._tk)
+- GRIN2 - client hypermutator inputs guard against a cleared field (NaN), falling back to the configured default instead of disabling the cutoff server-side
+- GRIN2 - Linux available-memory parsing tolerates free -m format shifts, falling back to os.freemem instead of producing NaN in the lesion-cap math
+
+
 ## 2.195.0
 
 Features:

@@ -4,7 +4,7 @@ import { fillTermWrapper } from '#termsetting'
 import type { MassState } from '#mass/types/mass'
 import { rebaseGroupFilter } from '#mass/groups'
 import { getCurrentCohortChartTypes } from '#mass/charts'
-import { PlotBase } from '#plots/PlotBase.js'
+import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { controlsInit } from '../controls'
 import { select2Terms, DownloadMenu } from '#dom'
 import type { Settings } from './settings/Settings.ts'
@@ -229,9 +229,8 @@ export class Scatter extends PlotBase implements RxComponent {
 export async function getPlotConfig(opts, app) {
 	const plot: any = {
 		groups: [],
-		// scatter controls should not use defaultUiLabels as they
-		// follow a different labeling schema
-		controlLabels: Object.assign({}, /* defaultUiLabels,*/ app.vocabApi.termdbConfig.uiLabels || {}),
+		// scatter controls may use defaultUiLabels or ignore the defaults for custom labels with a different key-value schema
+		controlLabels: Object.assign({}, defaultUiLabels, app.vocabApi.termdbConfig.uiLabels || {}),
 		settings: {
 			controls: {
 				isOpen: false // control panel is hidden by default

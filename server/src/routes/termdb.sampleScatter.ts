@@ -475,12 +475,12 @@ function order(map: any, tw: TermWrapper, refs: any) {
 	return entries
 }
 
-async function getSampleCoordinatesByTerms(
+export async function getSampleCoordinatesByTerms(
 	req: any,
 	q: TermdbSampleScatterRequest,
 	ds: any,
 	data: ValidGetDataResponse
-) {
+): Promise<[ScatterSample[], ValidGetDataResponse]> {
 	if (!q.coordTWs || q.coordTWs.length == 0) return [[], data]
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	const samples: any = []

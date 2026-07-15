@@ -511,13 +511,13 @@ export type GeneArgumentEntry = {
 	 * required if type is string. Otherwise, optional
 	 */
 	value?:
-		| string
-		| boolean
-		| number
-		| {
-				type: string
-				value: string[] | null
-		  }
+	| string
+	| boolean
+	| number
+	| {
+		type: string
+		value: string[] | null
+	}
 	options?: {
 		/** Type of dom element to render underneath the radio
 		 * 'text': creates a text area input
@@ -731,6 +731,7 @@ type ITDQuery = {
 	4. { "sample": "3332"}
 	*/
 	file: string
+	get?: (param: any) => void
 }
 /** splice junction */
 type JunctionQuery = {
@@ -743,14 +744,19 @@ type JunctionQuery = {
 	6- samples. when present, the fields are read count, and optional event percentage joined by ;
 	*/
 	file: string
+	/** list all junctions, occurrence and median read count from a region */
+	listJunctions?: (param: any) => void
+	/** get sample details for one junction */
+	getOneJunction?: (param: any) => void
+	/** comma-joined junction types to be hidden by default */
+	hiddentypes?: string
+	/** default min read count to filter samples */
+	readcountCutoff?: number
 }
 
 type RnaseqGeneCount = {
-	/** Name of the HDF5 file */
+	/** HDF5 file */
 	file: string
-	samplesFile?: string
-	/** Storage_type for storing data (HDF5) */
-	storage_type: 'HDF5'
 }
 
 /** the metabolite query */
@@ -949,6 +955,14 @@ export type SingleCellSamples = {
 	/** extra label to show along with sample, must be a term id as in sampleColumns[] and allow to retrieve value from sample object */
 	extraSampleTabLabel?: string
 	getFilteredSingleCellSamples?: (q: TermdbSingleCellSamplesRequest, includeMeta: boolean) => any
+	/** server-only cache for single-cell sample and meta-result mappings */
+	sampleMappingCache?: {
+		sampleIntIds: Set<any>
+		sampleIntId2Name: Map<any, string>
+		sampleName2IntId: Map<string, any>
+		metaIdMap: Map<string, Map<string, string>>
+		metaResultNames: Set<string>
+	}
 }
 
 type SingleCellDataBase = {
@@ -1058,6 +1072,7 @@ export type SingleCellQuery = {
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
 	terms?: object[]
+	pseudobulk?: SingleCellPseudobulk
 }
 
 export type SingleCellMetaResult = {
@@ -1084,6 +1099,40 @@ export type SCImages = {
 	fileName: string
 	/**Used to name the image tab in the single cell plot */
 	label: string
+}
+
+export type SingleCellPseudobulk = {
+	/** type can be 'geneExpression', 'dnaMeth', etc. that aligns to an assay */
+	[assayType: string]: {
+		/** termId should match a scct termId, if it exists. If not, this is a 
+		 * placeholder. This term will be in a term collection with memberId == termId */
+		[termId: string]: {
+			folder: string
+			/** '[*]Ext denotes the file extension for the corresponding data file
+			 * The actual file path is [folder]/[termId.value[i]]/[*Ext]*/
+
+			/** Values are average of per-cell log1p values, used for term */
+			meanExt: string
+			/** values are sum of umi count when present */
+			totalExt: string
+			/** Percentage of cells with the term (e.g. gene) expressed */
+			percentExt: string
+			/** Categories should match the values created for the scct termId above,
+			 * if exists. Each one in this instance becomes a numeric term. 
+			 * 
+			 * The numeric terms (categories) are member terms of the resulting 
+			 * term collection created by the user. */
+			categories: {
+				/** Index matches the file name(s) */
+				[index: string]: {
+					/** Label should be the human-readable name for this category */
+					label?: string,
+					/** Color should be the predefined color for rendering */
+					color?: string
+				 }
+			}
+		}
+	}
 }
 
 /** genome browser LD track */
@@ -1429,7 +1478,7 @@ type BoxPlots = {
 }
 
 type UiLabels = {
-	[propName: string]: string | { label: string; [otherAttr: string]: string }
+	[propName: string]: string | { label: string;[otherAttr: string]: string }
 }
 
 type TieBreakerFilterValuesEntry = {
@@ -1705,6 +1754,7 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
+	geomap?: GeomapConfig
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -1850,7 +1900,7 @@ keep this setting here for reason of:
 	implementations destructure clientAuthResult (and e.g. activeCohort) from it. Accepts the
 	term object (not just an id) so the hook can generalize to non-dictionary terms in the
 	future, which may key visibility off properties other than id. */
-	isTermVisible?: (__protected__: any, term: { id?: string; [key: string]: any }) => boolean
+	isTermVisible?: (__protected__: any, term: { id?: string;[key: string]: any }) => boolean
 	/** Optional dataset hook to prune the per-request /termdb/config response.
 	 * Typical use is hiding plots/sections/etc. based on the requester's role.
 	 *
@@ -1939,6 +1989,33 @@ type PlotConfigByCohort = {
 		/** key is plot type as in mass/charts.js */
 		[key: string]: object
 	}
+}
+
+/** A single location pin for the `geomap` chart. */
+export type GeomapSite = {
+	/** display name shown in the pin tooltip */
+	name: string
+	/** stable identifier used to match against highlightIds; defaults to name when absent */
+	id?: string
+	country?: string
+	iso?: string
+	/** latitude in decimal degrees, -90..90 */
+	lat: number
+	/** longitude in decimal degrees, -180..180 */
+	lon: number
+}
+
+/** Config for the reusable `geomap` chart type (dataset-agnostic). */
+export type GeomapConfig = {
+	/** all locations to pin on the map. May be supplied directly, or built at server init from the
+	 * `geoLocation` table (see server_init_db_queries), in which case it is absent in the dataset config. */
+	sites?: GeomapSite[]
+	/** ids (or names) of the subset of sites to visually emphasize, e.g. the user's own sites */
+	highlightIds?: string[]
+	/** label the countries that contain at least one pin, at each country's centroid */
+	showCountryLabels?: boolean
+	/** per-site value to show on the pin (label + tooltip), keyed by site id — e.g. patient count */
+	counts?: { [id: string]: number }
 }
 
 /** modified version of termwrapper*/
@@ -2128,6 +2205,8 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		items: ActiveItem[]
 		// can add holderStyle to customize
 	}
+	/** when true, render the world map from termdbConfig.geomap directly on the landing (about) tab */
+	showGeomap?: boolean
 	/** disclaimer text. can expand with rendering customizations */
 	disclaimer?: {
 		text?: string
@@ -2205,7 +2284,13 @@ export type PreInit = {
 		HTTP connection timeout errors or status 5xx are considered recoverable,
 		status 4xx are not considered recoverable (client-related request errors)
 	*/
-	getStatus: () => Promise<PreInitStatus>
+	getStatus?: (ds?: any) => Promise<PreInitStatus>
+	/**
+	 * launch-time case-sample id caching, owned by the dataset (populates ds.__gdc / ds.__mmrf
+	 * + ds.sampleId2Type). Runs blocking (mds3.init.js, after dictionary.build) unless the
+	 * dataset opts into the nonblocking phase via ds.init.hasNonblockingSteps (gdc).
+	 */
+	cacheSamples?: (ds: any) => Promise<void>
 	/**
 	 * dev only, used to test preInit handling by simulating different
 	 * responses in a known sequence of steps that may edit the preInit

@@ -90,11 +90,13 @@ export function drawBoxplot({ bp, g, color, scale, rowheight, labpad, labColor =
 	}
 	// outliers
 	for (const d of bp.out) {
+		const v = Number.isFinite(d) ? d : Number.isFinite(d.value) ? d.value : undefined // todo go with out=number[]
+		if (v == undefined) continue
 		g.append('circle')
 			.attr('stroke', color)
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.attr('cx', scale(d.value))
+			.attr('cx', scale(v))
 			.attr('cy', rowheight / 2)
 			.attr('r', bp?.radius || rowheight / 3)
 		/*

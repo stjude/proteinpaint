@@ -38,11 +38,14 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'genomeBrowser':
 			return await import('./gb/GB.ts')
 
+		case 'geomap':
+			return await import('./geomap/Geomap.ts')
+
 		case 'grin2':
 			return await import('./grin2/grin2')
 
 		case 'gsea':
-			return await import(`./gsea.js`)
+			return await import(`./gsea/GSEA.ts`)
 
 		case 'imagePlot':
 			return await import('./imagePlot.ts')

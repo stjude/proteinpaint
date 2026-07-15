@@ -117,6 +117,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	pruneable attributes the same way. (See pruneTermdbConfig JSDoc in dataset.ts.)
 	*/
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = structuredClone(tdb.plotConfigByCohort)
+	if (tdb.geomap) c.geomap = structuredClone(tdb.geomap)
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
@@ -425,6 +426,9 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 	}
 	if (q.images) {
 		q2.images = {} //nothing to pass to the client for now, but the key must be present
+	}
+	if (q.junction) {
+		q2.junction = {}
 	}
 }
 

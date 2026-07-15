@@ -446,7 +446,6 @@ export default function (): Mds3 {
 			},
 			topVariablyExpressedGenes: {},
 			rnaseqGeneCount: {
-				storage_type: 'HDF5',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5'
 			},
 			singleCell: {

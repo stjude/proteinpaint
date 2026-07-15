@@ -167,6 +167,18 @@ function getGeneVariantTerm() {
 			},
 			name_noOrigin: 'SV',
 			parentTerm
+		},
+		{
+			id: 'itd',
+			query: 'itd',
+			name: 'ITD',
+			parent_id: null,
+			isleaf: true,
+			type: 'dtitd',
+			dt: 6,
+			values: { ITD: { key: 'ITD', label: 'ITD' } },
+			name_noOrigin: 'ITD',
+			parentTerm
 		}
 	]
 	const term = Object.assign({}, parentTerm, { childTerms })

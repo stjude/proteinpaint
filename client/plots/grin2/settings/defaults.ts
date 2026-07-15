@@ -1,7 +1,18 @@
+import { dt2lesion } from '#shared/common.js'
+
 /** CNV form fallbacks used when the dataset config does not supply ds-specific cutoffs. */
 export const CNV_LOSS_THRESHOLD_FALLBACK = -0.4
 export const CNV_GAIN_THRESHOLD_FALLBACK = 0.4
 export const CNV_MAX_SEG_LENGTH_FALLBACK = 2_000_000
+
+/** Hypermutator cutoffs: a sample with more than this many raw records for a data type is excluded from
+ * that data type (0 disables). SNV/indel counts mutation burden (source-agnostic), so 8000 is a safe
+ * default. CNV counts *segments*, which varies hugely by data source: sparse for GDC's categorical cnv
+ * (~30/case) but hundreds-to-thousands for dense native segmentation — where a fixed 500 silently drops
+ * whole-sample CNV (esp. aneuploid, gain-heavy samples). So CNV defaults OFF (opt-in); set it per-run when
+ * the source warrants it. */
+export const SNVINDEL_HYPERMUTATOR_FALLBACK = 8000
+export const CNV_HYPERMUTATOR_FALLBACK = 0
 
 /** How a dataset quantifies cnv values; declared at ds.queries.cnv.type. Mirrors CnvSegmentQuery in #types. */
 export type CnvType = 'log2ratio' | 'segmean' | 'category' | 'copyNumber'
@@ -122,14 +133,12 @@ export function getDefaultGRIN2Settings(opts: any) {
 			// Q-value threshold for significance indicators in the table, tooltips, and for determining which dots become interactive
 			qValueThreshold: 0.05,
 
-			// Colors for lesion types (currently used for table significance indicators. Long term will also be used for the rust code colors)
-			lesionTypeColors: {
-				mutation: '#44AA44', // green
-				loss: '#4444FF', // blue
-				gain: '#FF4444', // red
-				fusion: '#FFA500', // orange
-				sv: '#9932CC' // purple
-			},
+			// Colors for lesion types, derived from the shared dt2lesion source of truth so every data
+			// type (incl. itd and any future dt) is covered without a parallel hardcoded list. Used for
+			// table significance indicators and passed to the Manhattan renderer as dot colors.
+			lesionTypeColors: Object.fromEntries(
+				Object.values(dt2lesion).flatMap((d: any) => d.lesionTypes.map((lt: any) => [lt.lesionType, lt.color]))
+			),
 
 			// Threshold for the rust code when determining if we need to raise the cap value from the default
 			maxCappedPoints: 5,

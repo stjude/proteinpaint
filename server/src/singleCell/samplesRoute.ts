@@ -21,7 +21,6 @@ import ky from 'ky'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { mayLog } from '#src/helpers.ts'
 import { joinUrl } from '#shared/joinUrl.js'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
@@ -29,6 +28,8 @@ import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 export const payload: RoutePayload = {
 	init,
@@ -155,24 +156,18 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
 	const samples = new Map()
-	/** Create lookups for getFilteredSingleCellSamples. Created on server
-	 * init for performance.
-	 *
-	 * Captures ids and names that may exist only in a meta result file but
-	 * there is no corresponding tsv file. Do not include in samples map which
-	 * returns samples with available files. */
-	const sampleIntIds = new Set()
-	const sampleIntId2Name = new Map() // maps numeric cohort ID to sample name
-	const sampleName2IntId = new Map() // maps sample name to numeric cohort ID
+	/** Shared lookups for filtered sample IDs, sample-name resolution, and
+	 * meta-result cellId->sample mappings used by other routes. */
+	const metaCache = new SingleCellMetaCache()
 	for (const plot of D.plots) {
 		if (plot.isMetaResult) {
-			/** Meta analysis files are read on init to create a sample name 2 cell id
-			 * 2 sample id map. The map is a lookup for data getters to retrieve the
-			 * sampleId to match with cohort level terms. Attaching the map to
-			 * ds.queries.singleCell.data allows getters (e.g. getData() in termdb.matrix)
-			 * access to when needed.
-			 * Becomes <plotName(i.e metaResultID), <cellId, sampleId >> */
-			if (!D.metaIdMap) D.metaIdMap = new Map()
+			const hasSample = plot?.colorColumns?.find(c => c.name === 'Sample')
+			if (!hasSample) {
+				console.log(
+					`Skipping meta analysis result ${plot.name} due to no Sample color column. Please add a color column entry for the sample column.`
+				)
+				continue
+			}
 			/** Meta analysis results may not be separated into folders like the sample files
 			 * for other plots. Check the file exists with the appropriate "sample name". This
 			 * method ensure the file can be queried as intended later.
@@ -186,23 +181,12 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 				/** Files should exist for each meta analysis result. */
 				await file_is_readable(tsvfile)
 				samples.set(sampleName, { sample: sampleName, isMetaResult: true })
+				const t0 = Date.now()
 				const text = await read_file(tsvfile)
-				const lines = text.trim().split('\n')
-				const cellIdMap = new Map()
-				for (let i = 1; i < lines.length; i++) {
-					const [cellId, sampleId] = lines[i].split('\t').map(s => s.trim())
-					if (!cellId) throw new Error(`meta result row missing, index = ${i}, cell id: ${cellId}`)
-					if (!sampleId) throw new Error(`meta result row missing sample id, index = ${i}, sample id: ${sampleId}`)
-					cellIdMap.set(cellId, sampleId)
-					// Treat sampleId from file as a sample name and look up the cohort sample ID
-					const sampleIntId = ds.cohort.termdb.q.sampleName2id(sampleId)
-					if (sampleIntId !== undefined) {
-						sampleIntIds.add(sampleIntId)
-						sampleIntId2Name.set(sampleIntId, sampleId)
-						sampleName2IntId.set(sampleId, sampleIntId)
-					}
-				}
-				D.metaIdMap.set(sampleName, cellIdMap)
+				const t1 = Date.now()
+				mayLog(ds.label, 'sc meta read file time:', t1 - t0)
+				metaCache.addMetaResult(sampleName, text, plot.coordsColumns, ds.cohort.termdb.q.sampleName2id)
+				mayLog(ds.label, 'sc meta caching time:', Date.now() - t0)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
 			}
@@ -221,15 +205,14 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			if (sid == undefined) throw new Error(`singlecell.sample: unknown sample name ${sampleName}`)
 			// is valid sample, add to holder
 			samples.set(sid, { sample: sampleName })
-			/** Add to lookups for filtering. This is a fallback if no meta results */
-			sampleIntIds.add(sid)
-			sampleIntId2Name.set(sid, sampleName)
-			sampleName2IntId.set(sampleName, sid)
+			metaCache.registerCohortSample(sampleName, sid)
 		}
 
 		if (!plot.colorColumns || plot.colorColumns.length == 0) continue
 	}
 	if (samples.size == 0) throw new Error('no scrna samples found')
+	S.sampleMappingCache = metaCache
+	if (metaCache.metaIdMap.size) D.metaIdMap = metaCache.metaIdMap
 
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
@@ -252,9 +235,10 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		const re: any = { samples: _samples }
 		if (_q.filter?.lst?.length || _q.filter0) {
 			const tmp = await S.getFilteredSingleCellSamples!(_q, true)
-			re.samples = Array.from(tmp).map(s => {
+			re.samples = Array.from(tmp as Set<string>).map(s => {
 				if (samples.has(s)) return samples.get(s)
-				else if (samples.has(sampleName2IntId.get(s))) return samples.get(sampleName2IntId.get(s))
+				const sampleIntId = metaCache.sampleName2IntId.get(s)
+				if (samples.has(sampleIntId)) return samples.get(sampleIntId)
 				else return { sample: s }
 			})
 		}
@@ -273,24 +257,26 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	 * *** NOTE: This logic accounts for when a sample id is present in the meta result file but
 	 * a sample file is not available. It's possible this use case is seen in development only.
 	 * If so, this logic can be simplified to only check for sample ids in the cohort. *** */
-	S.getFilteredSingleCellSamples = async (_q: TermdbSingleCellSamplesRequest, includeMeta = false) => {
+	S.getFilteredSingleCellSamples = async (
+		_q: TermdbSingleCellSamplesRequest,
+		includeMeta = false
+	): Promise<Set<string>> => {
 		if (!_q.filter && !_q.filter0) return new Set()
 		const arg = { filter: _q.filter, filter0: _q.filter0 }
 		// assuming single cell data is at sample level, so
 		// setting mapParent2Children=true here to be able to
 		// map patient-level data onto the single cell data
 		maySetMapParent2Children(arg, ds, true)
-		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(sampleIntIds), ds)) || new Set()
+		const filteredSampleIds = (await mayLimitSamples(arg, Array.from(metaCache.sampleIntIds), ds)) || new Set()
 
 		// Convert cohort sample IDs to sample names
 		const result = new Set<string>()
 		for (const sid of filteredSampleIds) {
-			const sampleName = sampleIntId2Name.get(sid)
+			const sampleName = metaCache.sampleIntId2Name.get(sid)
 			if (sampleName) result.add(sampleName)
 		}
-		// Add meta result names if requested
 		if (includeMeta) {
-			for (const metaResultName of D.metaIdMap?.keys() || []) {
+			for (const metaResultName of metaCache.metaResultNames) {
 				result.add(metaResultName)
 			}
 		}
@@ -320,15 +306,15 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		if (q.checkPlotAvailability) {
 			return await getAvailablePlots(q.plots, D.plots, ds, sampleId)
 		}
-		// if sample is int, may convert to string
-		const plots: Plot[] = [] // given a sample name, collect every plot data for this sample and return
 		let geneExpMap
 		if (ds.queries.singleCell.geneExpression && q.gene) {
 			const sample = q.sample || q.singleCellPlot.sample
 			if (!sample) throw new Error('sample is required for gene expression query')
 			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
 		}
-
+		const checkGeneExpMap = geneExpMap && Object.keys(geneExpMap).length > 0
+		// given a sample name, collect every plot data for this sample and return
+		const plots: Plot[] = []
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
@@ -365,7 +351,8 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 				if (!cellId) throw new Error('cell id missing')
 				if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('x/y not number')
 				const cell: Cell = { cellId, x, y, category }
-				if (geneExpMap) {
+
+				if (checkGeneExpMap) {
 					if (geneExpMap[cellId] !== undefined) {
 						cell.geneExp = geneExpMap[cellId]
 						expCells.push(cell)
@@ -388,7 +375,6 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 			// no data available for this sample
 			return { nodata: true }
 		}
-
 		return { plots }
 	}
 }
@@ -448,14 +434,12 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 		if (!query_gene) {
 			throw new Error('Gene parameter is undefined')
 		}
-
 		const read_hdf5_input_type = { query: [query_gene], hdf5_file: h5file }
 
 		const time1 = Date.now()
-		const rust_output = await run_rust('readH5', JSON.stringify(read_hdf5_input_type))
+		const python_output = await run_python('readHDF5.py', JSON.stringify(read_hdf5_input_type))
 		mayLog('Time taken to query HDF5 file:', Date.now() - time1, 'ms')
-
-		const result = JSON.parse(rust_output)
+		const result = JSON.parse(python_output)
 		const out = result.query_output[query_gene]?.samples
 		if (!out) throw new Error(`No expression data for ${query_gene}`)
 

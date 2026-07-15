@@ -1280,7 +1280,7 @@ export class TermdbVocab extends Vocab {
 		if (!arg.dslabel) arg.dslabel = this.state.vocab.dslabel
 		arg.filter = getNormalRoot(arg.filter || this.state.termfilter.filter)
 		if (!arg.filter0) arg.filter0 = this.state.termfilter.filter0
-		return await this.dofetch3('termdb/getTopMutatedGenes', { method: 'GET', body: arg })
+		return await this.dofetch3('termdb/topMutatedGenes', { method: 'GET', body: arg })
 	}
 
 	async getTopVariablyExpressedGenes(arg) {

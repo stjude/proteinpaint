@@ -375,6 +375,12 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'animatedBubbleChart' }
 		},
 		{
+			label: 'Site Map',
+			chartType: 'geomap',
+			clickTo: self.plotCreate,
+			config: { chartType: 'geomap' }
+		},
+		{
 			label: 'Bubble Heatmap',
 			chartType: 'bubbleHeatmap',
 			clickTo: self.loadChartSpecificMenu

@@ -5,6 +5,7 @@ import * as d3color from 'd3-color'
 import * as d3interpolate from 'd3-interpolate'
 import * as utils from './utils.js'
 import { schemeCategory10 } from 'd3-scale-chromatic'
+import { boxplot_getvalue } from '#shared/boxplot.js'
 
 const schemeCategory20 = [
 	'#1f77b4',
@@ -411,7 +412,7 @@ async function get_geneboxplot(q, gn, res) {
 	for (const [category, values] of category2values) {
 		values.sort((i, j) => i.value - j.value)
 
-		const b = utils.boxplot_getvalue(values)
+		const b = boxplot_getvalue(values)
 		delete b.out // remove outliers
 		const co = categorical_color_function(category)
 

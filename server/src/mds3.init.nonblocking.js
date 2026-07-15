@@ -1,6 +1,3 @@
-import serverconfig from './serverconfig.js'
-import { gdcInitCache } from './gdc.initCache.js'
-
 /*
 ********************   Comment   *****************
 This script only runs once, when PP server/container launches.
@@ -20,20 +17,11 @@ export async function mds3InitNonblocking(ds) {
 	if (!ds.init) ds.init = {}
 	ds.init.status = 'nonblocking'
 
-	// The nonblocking functions below should be called after all ds queries are validated in mds3.init.js init().
-	// Otherwise, it's much harder to coordinate failures from either query validation or caching
-	// it they are running at the same time.
-	//
-	// These dataset-specific init steps are not coded in the dataset js files because
-	// the nonblocking code uses helper functions that is not exposed by
-	// the `@sjcrh/proteinpaint-server` package. For example, gdc.initCache.js imports
-	// cachedFetch() and isRecoverableError() helpers from server/utils.js
-	//
-	// TODO: either
-	// - expose these helper functions from the server package
-	// - supply helpers as arguments to this function, so they can be passed to the non-blocking function below
-	//
-	const initNonblocking = ds.label == 'GDC' ? gdcInitCache : undefined
+	// The dataset owns its launch-time caching via ds.preInit.cacheSamples, which injects any
+	// server-internal helpers it needs (see gdc.hg38.ts). It runs here — after all query
+	// validation — for datasets that opt into the nonblocking phase (hasNonblockingSteps, e.g.
+	// gdc); blocking datasets (e.g. mmrf) run cacheSamples earlier, in mds3.init.js.
+	const initNonblocking = ds.preInit?.cacheSamples
 	if (!initNonblocking) return
 
 	return initNonblocking(ds)

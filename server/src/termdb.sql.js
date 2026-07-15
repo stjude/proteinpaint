@@ -6,7 +6,7 @@ import * as conditionSql from './termdb.sql.condition.js'
 import { sampleLstSql } from './termdb.sql.samplelst.js'
 import { multivalueCTE } from './termdb.sql.multivalue.js'
 import { termCollectionCategorical, termCollectionNumeric } from './termdb.sql.termCollection.js'
-import { boxplot_getvalue } from './utils.js'
+import { boxplot_getvalue } from '#shared/boxplot.js'
 import { DEFAULT_SAMPLE_TYPE, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { authApi } from '#src/auth.js'
 /*

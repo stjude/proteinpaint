@@ -7,10 +7,10 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
 
     - name: Download Rust Binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: rust-binaries
         path: rust-binaries
@@ -22,16 +22,21 @@ runs:
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
         git pull origin $BRANCH 
         PP_TAG="v$(node -p "require('./package.json').version")"
-        echo "::set-output name=pp_tag::$PP_TAG"; 
+        echo "pp_tag=$PP_TAG" >> "$GITHUB_OUTPUT"
         git fetch --tags --quiet origin $PP_TAG # always use tagged commit for build 
         
         PP_RUST_TAG="$(node -p "require('./rust/package.json').version")";
         RENAMED="rust-binaries-$PP_RUST_TAG-linux-x64.tar.gz"
         tar -czvf "$RENAMED" -C rust-binaries .
-        echo "::set-output name=renamed_rust_binaries::$RENAMED";
+        echo "renamed_rust_binaries=$RENAMED" >> "$GITHUB_OUTPUT"
 
-    - uses: AButler/upload-release-assets@v3.0
-      with:
-        files: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}"
-        repo-token: ${{ inputs.GITHUB_TOKEN }}
-        release-tag: ${{ steps.rename_rust_binaries.outputs.pp_tag }}
+    - name: Upload rust assets
+      shell: bash  # required for composite `run:` steps
+      env:
+        GH_TOKEN: ${{ inputs.GITHUB_TOKEN }} # gh auth
+        PP_TAG: ${{ steps.rename_rust_binaries.outputs.pp_tag }} # release tag to upload to
+        RENAMED: "${{ steps.rename_rust_binaries.outputs.renamed_rust_binaries }}" # tarball to attach
+      run: |
+        # Attach the rust-binaries tarball to the EXISTING release for this tag.
+        # --clobber overwrites an asset of the same name, so the step is safe to re-run.
+        gh release upload $PP_TAG $RENAMED --clobber

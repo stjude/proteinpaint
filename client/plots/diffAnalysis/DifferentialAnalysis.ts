@@ -4,12 +4,14 @@ import { getCompInit, copyMerge, type RxComponent } from '#rx'
 import { PlotBase } from '../PlotBase'
 import { importPlot } from '../importPlot.js'
 import { Menu } from '#dom'
-import { GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, PROTEOME_DAP } from '#types'
 import { termType2label } from '#shared/terms.js'
 import type { DiffAnalysisDom, /*DiffAnalysisOpts,*/ DiffAnalysisPlotConfig } from './DiffAnalysisTypes'
 import { DiffAnalysisView } from './view/DiffAnalysisView'
 import { getDefaultVolcanoSettings, validateVolcanoSettings } from '../volcano/settings/defaults.ts'
-import { getDefaultGseaSettings } from '#plots/gsea.js'
+import { getDefaultGseaSettings } from '#plots/gsea/settings/defaults.ts'
+import { DATermTypes, enabledTermTypes } from './enabledTermTypes'
+
+const { SINGLECELL_CELLTYPE } = DATermTypes
 
 class DifferentialAnalysis extends PlotBase implements RxComponent {
 	static type = 'differentialAnalysis'
@@ -134,12 +136,9 @@ class DifferentialAnalysis extends PlotBase implements RxComponent {
 export const DiffAnalysisInit = getCompInit(DifferentialAnalysis)
 export const componentInit = DiffAnalysisInit
 
-//Use this as a sanity check.
-const enabledTermTypes = [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION, PROTEOME_DAP]
-
 export function getPlotConfig(opts: any) {
 	if (!opts.termType) throw new Error('.termType is required')
-	if (!enabledTermTypes.includes(opts.termType))
+	if (!enabledTermTypes.has(opts.termType))
 		throw new Error(`termType = '${opts.termType}' not supported by Differential Analysis`)
 
 	const config = {
@@ -163,9 +162,9 @@ export function getPlotConfig(opts: any) {
 			sample: opts.sample || { sID: '', eID: '' }
 		})
 	}
-
+	
 	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides, opts)
-	config.settings.gsea = getDefaultGseaSettings(opts.overrides)
+	config.settings.gsea = getDefaultGseaSettings(opts.overrides, opts)
 
 	validateVolcanoSettings(config, opts)
 

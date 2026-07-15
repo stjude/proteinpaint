@@ -55,7 +55,7 @@ function init({ genomes }) {
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw new Error('invalid dataset name')
 			if (!ds.queries?.singleCell?.DEgenes || !ds.queries.singleCell.DEgenes.get)
-				throw new Error('DE genes not supported on this dataset.')
+				throw new Error('Single cell DE genes not supported on this dataset.')
 			result = await ds.queries.singleCell.DEgenes.get(q)
 			// data can be either a plain gene array (non-volcano callers) or a
 			// VolcanoData object (volcano callers). Both count as empty only if

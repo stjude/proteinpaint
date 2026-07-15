@@ -7,11 +7,11 @@ import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
 import * as gdc from './mds3.gdc.js'
-import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
+import { getH5samples } from './utils/h5samples.ts'
 import { compute_mclass } from './vcf.mclass.js'
 import serverconfig from './serverconfig.js'
 import {
@@ -47,7 +47,6 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
-import { validate_query_rnaseqGeneCount } from '#src/validateRnaseqGeneCount.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import {
 	validate_query_getWSIAnnotations,
@@ -60,7 +59,7 @@ import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
-import { validate_query_junction } from './junction/validate.ts'
+import { validate_query_junction } from './j2/validate.ts'
 
 /*
 init
@@ -141,7 +140,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		}
 	}
 
-	if (ds.preInit) {
+	if (ds.preInit?.getStatus) {
 		const response = await ds.preInit.getStatus(ds).catch(e => {
 			if (e.status == 'recoverableError' && serverconfig.features.mustExitPendingValidation) {
 				if (!ds.init) ds.init = {}
@@ -211,8 +210,11 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 	} catch (e) {
 		if (!ds.init) ds.init = {}
-		if (ds.init.step != 'gdcBuildDictionary()' || !ds.init.recoverableError) {
-			delete ds.init.recoverableError
+		// An init step sets ds.init.recoverableError when it hits a genuinely recoverable
+		// (network) error and wants initGenomesDs to retry; keep it in that case. Any other
+		// failure is fatal. This is dataset-agnostic: any dataset whose termdb.dictionary.build()
+		// hook (or other API-backed step) flags a recoverable error opts into retry the same way.
+		if (!ds.init.recoverableError) {
 			ds.init.fatalError = e.error || e
 			ds.init.status = 'fatalError'
 		}
@@ -305,8 +307,6 @@ export async function validate_termdb(ds) {
 		// ds-supplied builder method
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
-	} else if (tdb.dictionary?.gdcapi) {
-		await gdcBuildDictionary(ds)
 	} else if (ds.cohort.db) {
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)
@@ -314,6 +314,17 @@ export async function validate_termdb(ds) {
 		throw 'unknown method to initiate dictionary'
 	}
 	// ds.cohort.termdb.q={} ready
+
+	// blocking launch-time case-sample caching, for datasets whose preInit.cacheSamples must
+	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the
+	// convertSampleId validation below and by runtime queries). Datasets that opt into the
+	// nonblocking phase (hasNonblockingSteps, e.g. gdc) run cacheSamples there instead.
+	if (ds.preInit?.cacheSamples && !ds.init?.hasNonblockingSteps) {
+		// ensure ds.init exists so a cacheSamples impl can report errors via ds.init.* (as the
+		// nonblocking path guarantees, mds3.init.nonblocking.js)
+		if (!ds.init) ds.init = {}
+		await ds.preInit.cacheSamples(ds)
+	}
 
 	mayInitTermid2totalsize2(tdb, ds)
 
@@ -838,8 +849,10 @@ q = ds.queries.snvindel
 */
 export function mayValidateBcfMafFilter(q) {
 	if (!q.mafFilter) return // no maf filter on this ds
-	const format = q.byrange?._tk?.format
-	if (!format) throw 'snvindel.mafFilter is set but byrange._tk.format is missing'
+	// bcf datasets carry FORMAT under byrange._tk.format; API-backed datasets (e.g. GDC) declare it at the
+	// query level as q.format. Either supplies the same FORMAT shape, so depth-term auto-population works for both.
+	const format = q.byrange?._tk?.format || q.format
+	if (!format) throw 'snvindel.mafFilter is set but no FORMAT (byrange._tk.format or q.format) is available'
 	if (q.mafFilter._depthTermsAdded) return // already processed (init may run more than once)
 
 	// validate that every term references real FORMAT keys, branching by mode.
@@ -899,18 +912,19 @@ export function mayValidateBcfMafFilter(q) {
 // returns new array with same length as samples[], {name:int}
 export function validateSampleHeader(ds, samples, where) {
 	const sampleIds = []
-	// ds?.cohort?.termdb.q.sampleName2id must be present
 	if (ds.cohort?.termdb?.q?.sampleName2id) {
 		// has id mapper and is official ds
+		const unknown = []
 		for (const s of samples) {
 			const id = ds.cohort.termdb.q.sampleName2id(s.name)
 			if (id === undefined) {
-				// samples in file must be present in id mapper
-				throw `unknown sample ${s.name} from ${where} file`
+				unknown.push(s.name)
+			} else {
+				s.name = id
+				sampleIds.push(s)
 			}
-			s.name = id
-			sampleIds.push(s)
 		}
+		if (unknown.length) throw `${unknown.length} unknown samples from ${where} file: ${unknown.join(',')}`
 		console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
 	} else {
 		// no mapper, should be custom ds from custom bcf file
@@ -1951,17 +1965,14 @@ async function validate_query_ssGSEA(ds, genome) {
 		await setFile(q, 'ssGSEA')
 		q.samples = [] // array of sample ids
 
-		const tmp = await run_rust('readH5', JSON.stringify({ validate: true, hdf5_file: q.file }))
-
-		const vr = JSON.parse(tmp)
-		if (vr.status !== 'success') throw vr.message
-		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.samples.length)
+		console.log(`${ds.label}: ssGSEA HDF5 file validated. Samples:`, samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
 	}
@@ -1995,7 +2006,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		}
 
 		const time1 = Date.now()
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
+		const tmp = await run_python('readHDF5.py', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
@@ -2031,8 +2042,8 @@ async function validate_query_dnaMethylation(ds, genome) {
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file)
-		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
-		if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.file
+		const samples = await getH5samples(q.file, '/meta/samples/names')
+		if (!Array.isArray(samples)) throw new Error('samples not array')
 		if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
@@ -2044,12 +2055,11 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
 			await utils.file_is_readable(q.promoter.file)
-			const vr = JSON.parse(await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.promoter.file })))
-			if (vr.status !== 'success') throw vr.message
-			if (!Array.isArray(vr.sampleNames)) throw 'validateHDF5 did not return sampleNames array: ' + q.promoter.file
-			if (!vr.sampleNames.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
-			q.promoter.allSampleSet = new Set(vr.sampleNames)
-			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, vr.sampleNames.length)
+			const samples = await getH5samples(q.promoter.file, '/meta/samples/names')
+			if (!Array.isArray(samples)) throw new Error('samples not array')
+			if (!samples?.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
+			q.promoter.allSampleSet = new Set(samples)
+			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
 		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
@@ -2874,7 +2884,7 @@ async function svfusionByNameGetter_file(ds, genome) {
 }
 
 function mayAdd_mayGetGeneVariantData(ds, genome) {
-	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv) {
+	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv && !ds.queries.itd) {
 		// no eligible data types
 		return
 	}
@@ -2981,6 +2991,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					? await getGenecnvByTerm(ds, gene, genome, q)
 					: await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
 				mlst.push(...cnvMlst)
+			}
+			if (ds.queries.itd && dts.includes(dtitd)) {
+				const itdMlst = await getItdByTerm(ds, gene, genome, q)
+				mlst.push(...itdMlst)
 			}
 
 			//////////////////////////////////////
@@ -3142,6 +3156,9 @@ function getDtsToQuery(tw, ds) {
 		}
 		if (ds.queries.geneCnv || ds.queries.cnv) {
 			dts.add(dtcnv)
+		}
+		if (ds.queries.itd) {
+			dts.add(dtitd)
 		}
 	}
 	return [...dts]
@@ -3624,6 +3641,22 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 	}
 	throw 'unknown queries.geneCnv method'
 }
+async function getItdByTerm(ds, term, genome, q) {
+	if (!ds.queries.itd) throw 'queries.itd not defined'
+	const arg = {
+		addFormatValues: true,
+		filter0: q.filter0, // hidden filter
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
+		sessionid: q.sessionid
+	}
+	await mayMapGeneName2coord(term, genome)
+	// tw.term.chr/start/stop are set
+	arg.rglst = [term]
+	const result = await ds.queries.itd.get(arg)
+	return result.itds
+}
 
 function mayValidateViewModes(ds) {
 	if (!ds.viewModes) return
@@ -3766,4 +3799,18 @@ function mayInitTermid2totalsize2(tdb, ds) {
 		}
 		return await call_barchart_data(twLst, q, combination, ds, onlyChildren)
 	}
+}
+
+async function validate_query_rnaseqGeneCount(ds) {
+	const q = ds.queries.rnaseqGeneCount
+	if (!q) return
+	await setFile(q, 'rnaseqGeneCount')
+	const samples = await getH5samples(q.file)
+
+	q.allSampleSet = new Set(samples)
+	const unknownSamples = []
+	for (const n of q.allSampleSet) {
+		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
+	}
+	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 }

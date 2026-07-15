@@ -2,7 +2,7 @@ import { connect_db } from './utils.js'
 import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
-import type { isSupportedChartCallbacks } from '#types'
+import type { isSupportedChartCallbacks, GeomapSite } from '#types'
 //import { interpolateSqlValues } from './termdb.sql.js'
 
 /*
@@ -242,6 +242,17 @@ export function server_init_db_queries(ds) {
 			}
 			return undefined
 		}
+	}
+
+	/*
+	Build geomap pins from the geoLocation table when a dataset opts into the map (ds.cohort.termdb.geomap)
+	and the table is present. Mirrors the _role2terms pattern above: table-gated and generic — the dataset
+	populates geoLocation however it likes (careReg loads it from an xlsx in its build). Each row's site_code
+	links a pin back to the dataset's site term for per-user highlighting.
+	*/
+	if (ds.cohort.termdb.geomap && tables.has('geoLocation')) {
+		const rows = cn.prepare('SELECT id, name, latitude, longitude FROM geoLocation').all()
+		ds.cohort.termdb.geomap.sites = buildGeomapSites(rows)
 	}
 
 	{
@@ -600,6 +611,24 @@ export function server_init_db_queries(ds) {
 export function filterTerms(req, ds, terms) {
 	if (!ds.cohort.termdb.isTermVisible || !terms?.length) return terms
 	return terms.filter(term => ds.cohort.termdb.isTermVisible(req.query.__protected__, term))
+}
+
+/*
+	Turn geoLocation table rows into geomap pins. A row becomes a pin only when it carries numeric lat & lon.
+	`id` is the marker's link/highlight key (a site code, country code, etc. per dataset), falling back to name.
+	Kept generic and exported so it can be unit-tested without a DB.
+*/
+type GeoLocationRow = { id?: string; name?: string; latitude?: number; longitude?: number }
+export function buildGeomapSites(rows?: GeoLocationRow[]): GeomapSite[] {
+	const sites: GeomapSite[] = []
+	for (const r of rows || []) {
+		if (typeof r?.latitude != 'number' || !Number.isFinite(r.latitude)) continue
+		if (typeof r?.longitude != 'number' || !Number.isFinite(r.longitude)) continue
+		const id = r.id || r.name
+		if (!id) continue
+		sites.push({ id, name: r.name || r.id || id, lat: r.latitude, lon: r.longitude })
+	}
+	return sites
 }
 
 /*

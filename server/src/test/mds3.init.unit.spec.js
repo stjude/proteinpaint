@@ -1664,10 +1664,10 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	qBad.mafFilter.terms[0].id = 'no_such_field'
 	t.throws(() => mayValidateBcfMafFilter(qBad), /unknown FORMAT key/, 'throws on unknown FORMAT key')
 
-	// no byrange format throws when mafFilter present
+	// no FORMAT anywhere (neither byrange._tk.format nor q.format) throws when mafFilter present
 	const qNoFormat = makeQ()
 	delete qNoFormat.byrange._tk.format
-	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /byrange._tk.format is missing/, 'throws when format missing')
+	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /no FORMAT/, 'throws when format missing')
 
 	// a dataset-configured depth term with a valid mafFormatKey passes validation
 	const qDepth = makeQ()
@@ -1719,6 +1719,24 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	const qBadMode = makeQ()
 	qBadMode.mafFilter.terms[0].mafFilterMode = 'bogus'
 	t.throws(() => mayValidateBcfMafFilter(qBadMode), /unknown mafFilterMode/, 'unknown mafFilterMode throws')
+})
+
+test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t => {
+	t.plan(2)
+	// GDC has byrange.gdcapi (no _tk.format); its FORMAT is on q.format. The `|| q.format` fallback in
+	// mayValidateBcfMafFilter is the whole reason GDC MAF works — guard it so a cleanup can't silently
+	// break GDC (validation would then throw /no FORMAT/ and take down the GDC snvindel query).
+	const q = {
+		byrange: { gdcapi: true },
+		format: { TumorAC: { ID: 'TumorAC', Number: 'R', Type: 'Integer', Description: 'tumor allele counts' } },
+		mafFilter: {
+			opts: { joinWith: ['and', 'or'] },
+			filter: { type: 'tvslst', join: '', in: true, lst: [] },
+			terms: [{ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' }]
+		}
+	}
+	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'GDC-shaped q (format on q.format) passes validation')
+	t.equal(q.mafFilter.terms.length, 3, 'auto-populated totalDepth + altDepth terms from q.format')
 })
 
 const mafFilter = {

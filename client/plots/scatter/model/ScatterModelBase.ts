@@ -210,6 +210,8 @@ export abstract class ScatterModelBase {
 	initAxes(chart) {
 		const config = this.scatter.config
 		const settings = this.scatter.settings
+		// To enable showing axes for large single cell plots in the future, use this line.
+		// if ((!chart.data?.samples || chart.data.samples.length == 0) && !chart.totalSampleCount) return
 		if (!chart.data?.samples || chart.data.samples.length == 0) return
 		const offsetX = this.axisOffset.x
 		const offsetY = this.axisOffset.y

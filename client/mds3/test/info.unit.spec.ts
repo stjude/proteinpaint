@@ -12,6 +12,8 @@ mayAddInfoField()
 	- categorical then numeric on same key: throws
 	- numeric then categorical on same key: throws
 	- non-string non-number value (e.g. object): throws
+	- CSQ field is skipped
+	- null and undefined values are skipped
 	- variant with non-object info is skipped
 	- multiple variants contribute to the same categorical field
 */
@@ -147,6 +149,33 @@ tape('mayAddInfoField() - boolean info value: throws', test => {
 		/value for info field flag neither string nor number/,
 		'throws when info value is boolean (not string or finite number)'
 	)
+	test.end()
+})
+
+tape('mayAddInfoField() - CSQ field is skipped', test => {
+	const tk: any = {
+		custom_variants: [{ dt: 1, info: { CSQ: { nested: true }, consequence: 'missense' } }],
+		mds: {}
+	}
+	mayAddInfoField(tk)
+	test.false(tk.mds.bcf.info['CSQ'], 'CSQ is not added as an info field')
+	test.true(tk.mds.bcf.info['consequence'], 'valid neighboring info field is still collected')
+	test.end()
+})
+
+tape('mayAddInfoField() - null and undefined values are skipped', test => {
+	const tk: any = {
+		custom_variants: [
+			{ dt: 1, info: { nullValue: null, score: 0.9 } },
+			{ dt: 1, info: { undefinedValue: undefined, consequence: 'missense' } }
+		],
+		mds: {}
+	}
+	mayAddInfoField(tk)
+	test.false(tk.mds.bcf.info['nullValue'], 'field with null value is not added')
+	test.false(tk.mds.bcf.info['undefinedValue'], 'field with undefined value is not added')
+	test.equal(tk.mds.bcf.info['score'].Type, 'Float', 'valid numeric info field is still collected')
+	test.equal(tk.mds.bcf.info['consequence'].Type, 'String', 'valid categorical info field is still collected')
 	test.end()
 })
 

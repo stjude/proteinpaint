@@ -106,6 +106,7 @@ export class TwRouter {
 			case 'date':
 			case 'ssGSEA':
 			case tt.SINGLECELL_GENE_EXPRESSION:
+			case tt.PSEUDOBULK:
 			case 'dnaMethylation':
 				return await NumericBase.fill(tw, opts)
 

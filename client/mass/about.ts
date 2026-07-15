@@ -23,6 +23,8 @@ type AboutObj = {
 	html: string
 	activeItems?: { items: any }
 	disclaimer?: any
+	/** when true, render the world map from termdbConfig.geomap directly on the landing tab */
+	showGeomap?: boolean
 }
 
 type MassAboutOpts = {
@@ -114,6 +116,7 @@ export class MassAbout {
 		/** If selectCohort available, options in the about html will not show */
 		this.initCohort(appState)
 		this.initCustomHtml()
+		this.initGeomap(appState)
 		this.initActiveItems()
 		this.initDisclaimer()
 		//Always show the release version and server launch date at the bottom
@@ -329,6 +332,18 @@ export class MassAbout {
 			.attr('data-testid', 'sjpp-custom-about-content')
 			.style('padding', '10px')
 			.html(this.aboutOverrides.html)
+	}
+
+	// render the world map (from termdbConfig.geomap) directly on the landing tab when the dataset opts in.
+	// the renderer (and its ~170KB world.json basemap) is dynamically imported so it never loads for
+	// datasets that don't enable the map.
+	initGeomap = async appState => {
+		if (!this.aboutOverrides?.showGeomap) return
+		const geomap = appState.termdbConfig?.geomap
+		if (!geomap?.sites?.length) return
+		const holder = this.subheader.append('div').attr('data-testid', 'sjpp-about-geomap').style('padding', '10px')
+		const { renderGeomap } = await import('#plots/geomap/render.ts')
+		renderGeomap(holder, geomap)
 	}
 
 	initActiveItems = () => {

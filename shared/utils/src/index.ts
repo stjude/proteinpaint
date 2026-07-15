@@ -1,5 +1,6 @@
 // IMPORTANT: import .js extension, even though the actual code files are .ts
 // please list in alphanumeric order for readability
+export * from './boxplot.js'
 export * from './bulk.js'
 export * from './clustering.js'
 export * from './common.js'

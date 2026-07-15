@@ -110,14 +110,14 @@ export class SCViewer extends PlotBase implements RxComponent {
 		const state = structuredClone(this.state) as SCFormattedState
 		const config = state.config
 
-		this.interactions.toggleLoading(true)
+		super.toggleLoadingDiv()
 
 		let data: any
 		try {
 			const allSampleData = await this.model.getAllSampleData(state)
 			if (!allSampleData || allSampleData.error) {
-				this.interactions.toggleLoading(false)
-				this.app.printError(allSampleData?.error || 'No samples found for this dataset')
+				super.toggleLoadingDiv('none')
+				super.printError(allSampleData?.error || 'No samples found for this dataset')
 				return
 			}
 			this.items = allSampleData.samples
@@ -127,8 +127,8 @@ export class SCViewer extends PlotBase implements RxComponent {
 			if (config.settings?.sc?.item) {
 				const sampleData = await this.model.getSampleData()
 				if (!sampleData || sampleData.error) {
-					this.interactions.toggleLoading(false)
-					this.app.printError(sampleData?.error || 'No data found for this sample')
+					super.toggleLoadingDiv('none')
+					super.printError(sampleData?.error || 'No data found for this sample')
 					return
 				}
 				data = sampleData
@@ -136,12 +136,13 @@ export class SCViewer extends PlotBase implements RxComponent {
 		} catch (e: any) {
 			if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
 			else if (e.stack) console.log(e.stack)
-			this.app.printError(e.message || e)
+			super.toggleLoadingDiv('none')
+			super.printError(e.message || e)
 			return
 		}
 		const activeSubplots = this.subplotManager.map(state.subplots)
 		await this.view.update(config.settings, data, activeSubplots, this.viewModel.tableData, this.subplotManager)
-		this.interactions.toggleLoading(false)
+		super.toggleLoadingDiv('none')
 	}
 }
 

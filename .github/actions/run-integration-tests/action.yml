@@ -13,7 +13,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
         cache: 'npm'
         node-version: '24'
@@ -52,14 +52,14 @@ runs:
         echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable" >> $GITHUB_ENV
 
     - name: Login to Github
-      uses: docker/login-action@v3.4.0
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ inputs.TOKEN }}
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Docker Image
       uses: docker/build-push-action@v7
@@ -117,16 +117,16 @@ runs:
 
     - name: Post build results on Slack
       if: always()
-      uses: slackapi/slack-github-action@v1.23.0
+      uses: slackapi/slack-github-action@v3
       with:
+        webhook: ${{ inputs.SLACK_WEBHOOK_URL }} #webhook URL is now an input (was the SLACK_WEBHOOK_URL env var) Composite actions can't access secrets — must receive it as an input
+        webhook-type: webhook-trigger #our URL is a Slack Workflow Builder trigger (accepts custom keys)
         payload: |
           {
             "status": "${{ env.INTEGRATION_TEST_PASSED == 'true' && 'success' || 'failure' }} - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
             "commit": "${{ env.SHORT_SHA }}",
             "date-time": "${{ steps.current-time.outputs.formattedTime }}"
           }
-      env:
-        SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
 
     - name: Fail job if integration test failed
       if: env.INTEGRATION_TEST_PASSED != 'true'

@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { termjson } from '#test/testdata/termjson.ts'
 import * as helpers from '#test/front.helpers.js'
-import { detectOne, detectGte, Locator, sleep } from '#test/test.helpers.js'
+import { detectGte, Locator, sleep } from '#test/test.helpers.js'
 
 /*
 Tests:
@@ -599,7 +599,6 @@ tape('survival term as term1, term2 = agedx, regular bins', function (test) {
 		// whereas a modified copy will not equal the original state
 		const config = structuredClone(survival.Inner.state.config)
 		const expectedCount = 8
-
 		const survCurves = await detectGte({
 			elem: survival.Inner.dom.chartsDiv.node(),
 			selector: '.sjpp-survival-series',

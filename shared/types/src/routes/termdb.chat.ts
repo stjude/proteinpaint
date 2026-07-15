@@ -32,6 +32,46 @@ export type PlotResponse = {
 	/** Specifies what action to take e.g. Summary plot or no action. Will add more chart types later */
 }
 
+export interface GeneDataTypeResult {
+	gene: string
+	dataType: string
+}
+
+/** Gene data types a dataset supports, for the mass omnisearch to decide which gene-search actions
+ * (expression / variant sub-types / methylation / genome browser) to offer. */
+export interface GeneDataTypeAvailability {
+	geneExpression: boolean
+	dnaMethylation: boolean
+	snvindel: boolean
+	cnv: boolean
+	svfusion: boolean
+	/** True when any genomic-alteration data type (snvindel/cnv/svfusion) is available, meaning a
+	 * genome browser can be seeded for the gene. Derived from the three flags above. */
+	genomeBrowser: boolean
+}
+
+/** One matched gene together with the data types available for that specific gene. */
+export interface GeneMatch {
+	gene: string
+	dataTypes: GeneDataTypeAvailability
+	/** Default genomic coordinate for the gene, used to seed a genome browser track (e.g. the DNA
+	 * methylation region picker) so the client needs no separate genelookup request. Null when the
+	 * gene is not resolved to a coordinate (only resolved for genes that need a genome browser). */
+	coord: { chr: string; start: number; stop: number } | null
+}
+
+/** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
+ * available gene data types so the client can offer the appropriate per-gene action buttons. */
+export interface OmnisearchResult {
+	dictionaryTerms: any[]
+	genes: GeneMatch[]
+	/** Parsed genomic coordinate when the prompt is a valid "chr:start-stop" range AND the dataset
+	 * supports the genome browser genomic view (has snvindel/cnv/svfusion and gbRestrictMode !== 'protein').
+	 * Null/absent otherwise. Resolved server-side (via string2pos) so the client needs no genome object. */
+	coord?: { chr: string; start: number; stop: number } | null
+	error?: any
+}
+
 export type LlmConfig = {
 	provider: 'SJ' | 'ollama' | 'huggingface' | 'azure'
 	EmbeddingProvider: 'SJ' | 'ollama' | 'huggingface'
@@ -39,19 +79,19 @@ export type LlmConfig = {
 	api: string
 	apiToken?: string
 	EmbeddingProviderApiToken?: string
-	modelName: string
+	model: ModelConfig
 	embeddingModelName: string
 	/** Whether to load the embedding model locally (via transformers.js) or call a remote API. Defaults to 'api'. */
 	embeddingModelAccess?: 'local' | 'api'
-	/** Smaller model to use for LLM classification fallback. Defaults to modelName if not set. */
-	classifierModelName?: string
+	/** Smaller model to use for LLM classification fallback. Defaults to `model` if not set. */
+	classifierModelConfig?: ModelConfig
 	/** Log verbose debug output (e.g. raw embedding arrays) to the terminal. Defaults to false. */
 	verbose?: boolean
 }
 
-export interface GeneDataTypeResult {
-	gene: string
-	dataType: string
+export type ModelConfig = {
+	modelName: string
+	maxTokens: number
 }
 
 export interface GeneSetDataTypeResult {

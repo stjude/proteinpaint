@@ -16,43 +16,22 @@ on:
   #     - closed
 
   workflow_dispatch:
-    inputs:
-      build_secret:
-        type: string
-        description: Build secret
 
   workflow_call: {}
 
 jobs:
-  check-user-permissions:
-    runs-on: ubuntu-22.04
-    steps:
-      - id: set-build-secret
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "::set-output name=BUILD_SECRET::${{ github.event.inputs.build_secret }}"
-          else
-            echo "::set-output name=BUILD_SECRET::${{ secrets.BUILD_SECRET }}"
-          fi
-      - name: Check user permission
-        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
-        with:
-          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_BUILD_SECRET: ${{ steps.set-build-secret.outputs.BUILD_SECRET }}
 
   test:
     if: github.event.pull_request.merged || github.event_name == 'workflow_dispatch' || github.event_name == 'push'
-    needs: check-user-permissions
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
           token: ${{ secrets.PAT }}
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v6
         with:
           cache: 'npm'
           node-version: '24'
@@ -110,7 +89,7 @@ jobs:
 
       - name: Set up Docker Buildx
         if: contains(env.HAS_INTEGRATION_TESTS, 'true')
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Prepare serverconfig.json and cachedir
         run: |
@@ -223,16 +202,16 @@ jobs:
 
       - name: Post test results on Slack
         if:  ${{ env.TEST_FAILED == 'true' }}
-        uses: slackapi/slack-github-action@v1.23.0
+        uses: slackapi/slack-github-action@v3
         with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }} # webhook URL is now an input (was the SLACK_WEBHOOK_URL env var). Workflows can read secrets directly. So secrets.SLACK_WEBHOOK_URL is used here instead of passing it as an input to the action.
+          webhook-type: webhook-trigger # our URL is a Slack Workflow Builder trigger (accepts custom keys)
           payload: |
             {
               "status": "Failed unit and/or integration test(s) - https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
               "commit": "${{ env.SHORT_SHA }}",
               "date-time": "${{ steps.current-time.outputs.formattedTime }}"
             }
-        env:
-          SLACK_WEBHOOK_URL: ${{ inputs.SLACK_WEBHOOK_URL }}
 
       - name: Detect failure
         run: |

@@ -1,20 +1,17 @@
 import type { AppApi } from '#rx'
 import type { SCModel } from '../model/SCModel.ts'
 import type { SCViewer } from '../SC.ts'
-import type { SCDom } from '../SCTypes'
 import type { SCViewModel } from '../viewModel/SCViewModel.ts'
 
 /** Handles the interactivity from the view */
 export class SCInteractions {
 	app: AppApi
-	dom: SCDom
 	id: string
 	model: SCModel
 	viewModel: SCViewModel
 
 	constructor(sc: SCViewer) {
 		this.app = sc.app
-		this.dom = sc.dom
 		this.id = sc.id
 		this.model = sc.model
 		this.viewModel = sc.viewModel
@@ -34,7 +31,7 @@ export class SCInteractions {
 		})
 	}
 
-	/** Updates the item in the plot settings */
+	/** Updates the selected item in the plot settings */
 	async updateItem(item) {
 		item.isMetaResult = this.viewModel.metaResultIds.has(item.sID)
 		await this.app.dispatch({
@@ -46,22 +43,5 @@ export class SCInteractions {
 
 	async getDropDownOptions(plot): Promise<string[] | undefined> {
 		return this.model.getCategories(plot)
-	}
-
-	toggleLoading(on: boolean) {
-		if (on) {
-			this.dom.loading.selectAll('*').remove()
-			this.dom.loading
-				.style('display', 'block')
-				.append('div')
-				.style('position', 'relative')
-				.style('top', '50%')
-				.append('span')
-				.attr('class', 'sjpp-spinner')
-			this.dom.loading.style('display', '')
-		} else {
-			this.dom.loading.selectAll('.sjpp-spinner').remove()
-			this.dom.loading.style('display', 'none')
-		}
 	}
 }

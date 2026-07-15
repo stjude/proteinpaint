@@ -14,7 +14,7 @@ import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
 
-class Volcano extends PlotBase implements RxComponent {
+export class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
 	type: string
 	components: { controls: any }
@@ -101,7 +101,7 @@ class Volcano extends PlotBase implements RxComponent {
 
 	async init() {
 		this.interactions = new VolcanoInteractions(this.app, this.id, this.dom)
-		this.model = new VolcanoModel(this.app, this.termType)
+		this.model = new VolcanoModel(this, this.termType)
 		this.view = new VolcanoPlotView(this.dom, this.interactions, this.termType)
 		await this.setControls()
 	}

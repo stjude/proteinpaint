@@ -6,6 +6,7 @@ import { IDCViewModel } from './viewModel/IDCViewModel'
 import { IDCTableView } from './view/IDCTableView'
 import { IDCViewerDefaults } from './settings/defaults'
 import { IDCSearchView } from './view/IDCSearchView'
+import { applyStyles, idcViewerStyles } from './styling'
 
 export async function init(
 	{ filter0 },
@@ -34,26 +35,21 @@ export class IDCViewer {
 	constructor(holder: Selection<HTMLDivElement, unknown, any, any>) {
 		this.dom = {
 			holder: holder,
-			loadingDiv: holder
-				.append('div')
-				.attr('class', 'idcviewer-loading-holder')
-				.style('display', 'none')
-				.style('background-color', 'rgba(255, 255, 255, 0.8)')
-				.style('position', 'absolute')
-				.style('top', '0')
-				.style('left', '0')
-				.style('width', '100%')
-				.style('height', '100%'),
-			searchDiv: holder
-				.append('div')
-				.attr('class', 'idcviewer-search-holder')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('justify-content', 'space-between')
-				.style('flex-wrap', 'wrap')
-				.style('flex-direction', 'row'),
+			errorDiv: holder.append('div').attr('class', 'idcviewer-error-holder'),
+			loadingDiv: applyStyles(
+				holder.append('div').attr('class', 'idcviewer-loading-holder'),
+				idcViewerStyles.loadingDiv
+			),
+			searchDiv: applyStyles(holder.append('div').attr('class', 'idcviewer-search-holder'), idcViewerStyles.searchDiv),
 			tableDiv: holder.append('div').attr('class', 'idcviewer-table-holder'),
-			errorDiv: holder.append('div').attr('class', 'idcviewer-error-holder')
+			versionDiv: holder
+				.append('div')
+				.attr('class', 'idcviewer-version-holder')
+				.style('font-size', '12px')
+				.style('display', 'flex')
+				.style('padding', '2px 5px')
+				.style('justify-content', 'right')
+				.style('align-items', 'center')
 		}
 	}
 
@@ -94,8 +90,13 @@ export class IDCViewer {
 			this.tableView.render(tableData, caseData.pagination)
 			if (newCohort) {
 				const cohortCaseTotal = (await this.model.getCaseFromCurrentCohort(args)).pagination.total
-				this.searchView.render(caseData.pagination, cohortCaseTotal, this.loadResult.metadataVersion)
+				this.searchView.render(caseData.pagination, cohortCaseTotal)
 			}
+			this.dom.versionDiv.text(
+				`IDC URL version: ${this.loadResult.urlVersion || 'N/A'} - IDC metadata file version: ${
+					this.loadResult.metadataVersion || 'N/A'
+				}`
+			)
 		} catch (e: any) {
 			if (this.dom.errorDiv) {
 				sayerror(this.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)

@@ -10,7 +10,8 @@ import type {
 	DateTerm,
 	SsGSEATerm,
 	DnaMethylationTerm,
-	SingleCellGeneExpressionTerm
+	SingleCellGeneExpressionTerm,
+	PseudobulkTerm
 } from '../index.ts'
 
 export type RawRegularBin = Partial<RegularNumericBinConfig> & { preferredBins?: string }
@@ -70,6 +71,7 @@ export type NumericTerm =
 	| SsGSEATerm
 	| DnaMethylationTerm
 	| SingleCellGeneExpressionTerm
+	| PseudobulkTerm
 
 export type StartUnboundedBin = {
 	// where possible, assign a concrete value (true) when it is known in advance,

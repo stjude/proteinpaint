@@ -114,12 +114,18 @@ export class SubplotManager {
 	}
 
 	getPlotName(subplot: any): string {
-		let plotName = subplot?.plotName || subplot?.singleCellPlot?.name
+		/** Hardcoding logic for some transient and parent plots for now. May consider
+		 * adding to the config if this becomes more complex. Must weight against
+		 * adding unnecessary complexity to the config for edge cases though.*/
+		const nameOverrides = new Map([
+			['GeneExpInput', 'Gene expression'],
+			['imagePlot', subplot?.imgDir?.label || 'Image'],
+			['dictionary', 'Summary'],
+			['summary', 'Summary']
+		])
+		let plotName = subplot?.plotName || nameOverrides.get(subplot?.chartType) || subplot?.singleCellPlot?.name
 		if (!plotName) {
-			if (subplot.chartType === 'dictionary') plotName = 'Summary'
-			else if (subplot.chartType === 'summary') plotName = 'Summary'
-			else if (subplot.chartType === 'GeneExpInput') plotName = 'Gene expression'
-			else if (subplot?.term?.term?.plot) plotName = subplot.term.term.plot
+			if (subplot?.term?.term?.plot) plotName = subplot.term.term.plot
 			else plotName = subplot.chartType || 'Plot'
 		}
 		return plotName

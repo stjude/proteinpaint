@@ -4,11 +4,10 @@ import { Menu } from '#dom'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
-import { sayerror } from '../dom/sayerror.ts'
-import { select } from 'd3-selection'
+// Mass omnisearch (search-as-you-type) lives in ./search.ts; this file owns the AI-chat path and the
+// shared DOM scaffold (the input + result popup + chat bubbles).
+import { setSearchRenderers, handleOmnisearchKeyup } from './search.ts'
 
-const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3 // Set a minimum prompt length for omnisearch to trigger
-const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 15 // Set a maximum prompt length for omnisearch to trigger
 const MIN_PROMPT_LENGTH_FOR_CHAT = 5 // Set a minimum prompt length for chat submission
 
 class MassAiChatBot implements RxComponent {
@@ -31,7 +30,7 @@ class MassAiChatBot implements RxComponent {
 		this.opts.usecase = this.opts.usecase || { target: 'dictionary', detail: 'term' }
 		this.opts.targetType = this.opts.targetType ? this.opts.targetType : 'Dictionary Variables'
 		this.isChat = this.app.getState().termdbConfig?.queries?.chat // Storing if chat is supported by the dataset for easy access in other methods
-		setRenderers(this) // needed so that this.showTerms, noResult, clear work
+		setSearchRenderers(this) // sets omnisearch renderers (showTerms, noResult, clear, showTerm, launchers) on this
 	}
 
 	getState(appState: any) {
@@ -46,27 +45,10 @@ class MassAiChatBot implements RxComponent {
 	}
 
 	async init() {
+		// Note: no server-side request here — the omnisearch resolves dictionary terms, genes, and the
+		// dataset's gene data types together in a single request per search (see doSearch in search.ts), so
+		// nothing is fetched eagerly at component init.
 		this.initDom()
-	}
-
-	// Search method, adapted from MassSearch.doSearch
-	async doSearch(prompt: string) {
-		if (!prompt) {
-			this.clear({ hide: true })
-			return
-		}
-		const cohortStr = this.getState(this.app.getState()).cohortStr
-		const data = await this.app.vocabApi.findTerm(prompt, cohortStr, this.opts.usecase, this.opts.targetType)
-		if (!data.lst || data.lst.length == 0) {
-			// Show the "No match..." message one time at the first miss
-			if (!this.dom.noMatchShown) {
-				this.dom.noMatchShown = true
-				this.noResult()
-			}
-		} else {
-			this.dom.noMatchShown = false
-			this.showTerms(data)
-		}
 	}
 
 	initDom() {
@@ -109,30 +91,8 @@ class MassAiChatBot implements RxComponent {
 			.attr('tabindex', -1)
 
 		inputSel
-			.on('keyup.search', async (event: KeyboardEvent) => {
-				if (keyupEnter(event)) return
-				const prompt = (event.target as HTMLInputElement).value.trim()
-				if (!prompt) {
-					this.dom.noMatchShown = false
-					this.clear({ hide: true })
-					return
-				}
-				if (MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH) {
-					//console.log(
-					//	`User prompt: "${prompt}", cohortStr: "${cohortStr}", usecase: "${this.opts.usecase}", targetType: "${this.opts.targetType}"`
-					//)
-					try {
-						await this.doSearch(prompt) // Search as user types
-					} catch (e: any) {
-						if (e.stack) console.log(e.stack)
-						sayerror(this.dom.resultDiv, 'Error: ' + (e.message || e))
-					}
-				} else {
-					this.dom.noMatchShown = false
-					this.clear({ hide: true })
-					return
-				}
-			})
+			// omnisearch (search-as-you-type) — handler lives in ./search.ts
+			.on('keyup.search', (event: KeyboardEvent) => handleOmnisearchKeyup(this, event))
 			.on('keyup.submit', async (event: any) => {
 				if (!keyupEnter(event)) return
 				if (!this.isChat) {
@@ -207,8 +167,11 @@ return the created bubble and allow to be modified
 	}
 
 	// Render click boxes for an incomplete plot state. `fieldKey` is the field of `plot` whose
-	// value holds `possible_options`. Clicking a box completes the plot state by replacing that
-	// field with the chosen option's id and dispatches plot_create.
+	// value holds `possible_options`. Clicking a box completes the plot state and dispatches plot_create.
+	// Each option completes the plot in one of two ways:
+	//  - opt.config: a config patch merged into the plot (the incomplete field is dropped). Used when the
+	//    choice sets other fields, e.g. the genome browser view sets blockIsProteinMode: true|false.
+	//  - otherwise: the incomplete field is set to { id: opt.id }, e.g. survival term selection -> term:{id}.
 	showPossibleOptions(bubble: any, plot: any, fieldKey: string, msg?: string) {
 		const options = plot[fieldKey].possible_options || []
 		bubble.text(`${msg ? msg + '. ' : ''}Multiple options are available. Please select one:`)
@@ -225,9 +188,16 @@ return the created bubble and allow to be modified
 				.style('cursor', 'pointer')
 				.text(opt.name)
 				.on('click', () => {
-					// Complete the plot state with the chosen option's id and dispatch the plot.
+					// Complete the plot state and dispatch the plot. An option may carry a `config` patch
+					// (merged into the plot, dropping the incomplete field — e.g. the genome browser view sets
+					// blockIsProteinMode); otherwise complete the incomplete field with the chosen option's id.
 					const config = JSON.parse(JSON.stringify(plot))
-					config[fieldKey] = { id: opt.id }
+					if (opt.config) {
+						delete config[fieldKey]
+						Object.assign(config, opt.config)
+					} else {
+						config[fieldKey] = { id: opt.id }
+					}
 					this.app.dispatch({
 						type: 'plot_create',
 						config
@@ -270,71 +240,4 @@ function findPossibleOptionsField(plot: any): string | null {
 		if (val && typeof val === 'object' && Array.isArray(val.possible_options)) return key
 	}
 	return null
-}
-
-// Minimal renderers ported from MassSearch
-function setRenderers(self: any) {
-	let text = 'No match'
-	if (self.isChat) {
-		text = 'No match. Using the chatbot...'
-	}
-	self.noResult = () => {
-		self.clear()
-		self.dom.resultDiv.append('div').text(text).style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
-
-		// Hide the popup after 2 seconds
-		setTimeout(() => {
-			self.clear({ hide: true })
-		}, 1500)
-	}
-
-	self.showTerms = (data: any) => {
-		if (self.opts.disable_terms)
-			data.lst.forEach((t: any) => {
-				if (t.disabled) self.opts.disable_terms.push(t)
-			})
-		self.clear({ hide: !data.lst.length })
-		if (data.lst.length) {
-			self.dom.resultDiv.append('table').selectAll().data(data.lst).enter().append('tr').each(self.showTerm)
-		}
-	}
-
-	self.showTerm = function (term: any) {
-		const tr = select(this)
-		const button = tr.append('td').text(term.name)
-
-		if (term.type) {
-			button
-				.style('cursor', 'pointer')
-				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-term-${term.id}`)
-				.on('click', async () => {
-					if (self.state?.nav?.activeTab == 0) {
-						await self.app.dispatch({ type: 'tab_set', activeTab: 1 })
-					}
-					self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: { term }
-						}
-					})
-					self.dom.inputNode.value = '' // clear the search box
-					self.clear({ hide: true })
-				})
-		} else {
-			button.style('padding', '5px 10px').style('opacity', 0.5)
-		}
-
-		tr.append('td')
-			.text((term.__ancestorNames || []).join(' > '))
-			.style('opacity', 0.5)
-			.style('font-size', '.7em')
-	}
-
-	self.clear = (opts: any = {}) => {
-		self.dom.tip.clear()
-		if (opts.hide) self.dom.tip.hide()
-		else self.dom.tip.showunder(self.dom.inputNode)
-	}
 }

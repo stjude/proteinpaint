@@ -1,6 +1,7 @@
-import type { BoxPlotDom, LegendItemEntry, BoxPlotConfig } from '../BoxPlotTypes'
+import type { BoxPlotDom, LegendItemEntry } from '../BoxPlotTypes'
 import type { MassAppApi } from '#mass/types/mass'
 import type { RenderedPlot } from '../view/RenderedPlot'
+import type { TdbBoxplot } from '../BoxPlot.ts'
 import { ListSamples } from '#dom/summary/ListSamples'
 import { filterJoin, getFilterItemByTag } from '#filter'
 
@@ -8,12 +9,14 @@ export class BoxPlotInteractions {
 	app: MassAppApi
 	dom: BoxPlotDom
 	id: string
+	boxplot: TdbBoxplot
 	getResData: () => any
 
-	constructor(app: MassAppApi, dom: BoxPlotDom, id: string, getResData: () => any) {
-		this.app = app
-		this.dom = dom
-		this.id = id
+	constructor(boxplot: TdbBoxplot, getResData: () => any) {
+		this.app = boxplot.app
+		this.boxplot = boxplot
+		this.dom = boxplot.dom
+		this.id = boxplot.id
 		this.getResData = getResData
 	}
 
@@ -114,7 +117,7 @@ export class BoxPlotInteractions {
 	}
 
 	getPlotConfig() {
-		return this.app.getState().plots.find((p: BoxPlotConfig) => p.id === this.id)
+		return this.boxplot.state.config
 	}
 
 	clearDom() {
