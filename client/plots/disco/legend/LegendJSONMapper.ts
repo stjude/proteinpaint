@@ -19,12 +19,16 @@ export default class LegendJSONMapper {
 			this.mapSnv(legend, legendJSON, order++)
 		}
 
-		if (legend.cnvRenderingType == CnvRenderingType.heatmap) {
+		if (legend.cnvCount > 0 && legend.cnvRenderingType == CnvRenderingType.heatmap) {
 			this.mapCnvHeatmap(legend, legendJSON, order++)
-		} else if (legend.cnvRenderingType == CnvRenderingType.bar) {
+		} else if (legend.cnvCount > 0 && legend.cnvRenderingType == CnvRenderingType.bar) {
 			if (legend.cnvClassMap) {
 				this.mapCnvBar(legend, legendJSON, order++)
 			}
+		}
+
+		if (legend.cnvClassMap.has(CnvType.ITD)) {
+			this.mapItd(legend, legendJSON, order++)
 		}
 
 		if (legend.lohLegend) {
@@ -69,7 +73,6 @@ export default class LegendJSONMapper {
 		const gain = legend.cnvClassMap.get(CnvType.Gain)
 		const loss = legend.cnvClassMap.get(CnvType.Loss)
 		const cap = legend.cnvClassMap.get(CnvType.Cap)
-		const itd = legend.cnvClassMap.get(CnvType.ITD)
 
 		if (gain && loss && cap) {
 			let cnvOrder = 0
@@ -103,16 +106,6 @@ export default class LegendJSONMapper {
 				// ,
 				// onClickCallback: this.onClickCallback
 			})
-			if (itd) {
-				cnvItems.push({
-					termid: legend.cnvTitle,
-					key: CnvType.ITD,
-					text: `ITD (${itd.value})`,
-					color: itd.color,
-					order: cnvOrder++
-				})
-			}
-
 			legendJSON.push({
 				name: legend.cnvTitle,
 				id: 'sjpp-disco-cnv-legend',
@@ -127,7 +120,6 @@ export default class LegendJSONMapper {
 		const gain = legend.cnvClassMap.get(CnvType.Gain)
 		const loss = legend.cnvClassMap.get(CnvType.Loss)
 		const cap = legend.cnvClassMap.get(CnvType.Cap)
-		const itd = legend.cnvClassMap.get(CnvType.ITD)
 
 		if (gain && loss && cap) {
 			let cnvOrder = 0
@@ -190,15 +182,6 @@ export default class LegendJSONMapper {
 					)
 				}
 			}
-			if (itd) {
-				cnvItems.push({
-					termid: legend.cnvTitle,
-					key: CnvType.ITD,
-					text: `ITD (${itd.value})`,
-					color: itd.color,
-					order: cnvOrder++
-				})
-			}
 			legendJSON.push({
 				name: legend.cnvTitle,
 				order: order,
@@ -208,30 +191,39 @@ export default class LegendJSONMapper {
 		}
 	}
 
+	private mapItd(legend: Legend, legendJSON: Array<any>, order: number) {
+		const itd = legend.cnvClassMap.get(CnvType.ITD)
+		if (!itd) return
+		legendJSON.push({
+			name: 'ITD',
+			order,
+			items: [
+				{
+					termid: 'ITD',
+					key: CnvType.ITD,
+					text: `ITD (${itd.value})`,
+					color: itd.color,
+					order: 0
+				}
+			]
+		})
+	}
+
 	private mapLoh(legend: Legend, legendJSON: Array<any>, order: number) {
 		if (!legend.lohLegend) return
-		const lohItems: Array<any> = []
-
-		lohItems.push({
-			termid: legend.lohTitle,
-			key: 'min',
-			text: 'min',
-			color: legend.lohLegend.colorStartValue,
-			order: 0
-		})
-
-		lohItems.push({
-			termid: legend.lohTitle,
-			key: 'max',
-			text: 'max',
-			color: legend.lohLegend.colorEndValue,
-			order: 1
-		})
 
 		legendJSON.push({
 			name: legend.lohTitle,
 			order: order,
-			items: lohItems
+			items: [
+				{
+					termid: legend.lohTitle,
+					key: 'count',
+					text: `LOH (${legend.lohLegend.count})`,
+					skipIcon: true,
+					order: 0
+				}
+			]
 		})
 	}
 

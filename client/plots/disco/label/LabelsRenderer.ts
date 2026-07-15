@@ -8,20 +8,42 @@ import type FusionTooltip from '#plots/disco/fusion/FusionTooltip.ts'
 import { table2col } from '#dom/table2col'
 import type CnvTooltip from '#plots/disco/cnv/CnvTooltip.ts'
 import { appendVafBars, hasAnyValidVafEntry } from '#plots/disco/snv/vafTooltip.ts'
+import { dtitd, dtloh } from '#shared/common.js'
+import { dofetch3 } from '#common/dofetch'
+
+type GeneCoordinates = {
+	chr: string
+	start: number
+	stop: number
+}
+
+type GeneLookup = (gene: string, genome: string) => Promise<any>
 
 export default class LabelsRenderer implements IRenderer {
 	private animationDuration: number
 	private fontSize: number
 	private geneClickListener: (gene: string, mnames: Array<string>) => void
+	private genomeName?: string
+	private intervalEvents: Array<CnvTooltip>
+	private geneLookup: GeneLookup
+	private geneCoordinatesCache = new Map<string, Promise<GeneCoordinates | undefined>>()
+	private hoverRequestId = 0
 
 	constructor(
 		animationDuration: number,
 		fontSize: number,
-		geneClickListener: (gene: string, mnames: Array<string>) => void
+		geneClickListener: (gene: string, mnames: Array<string>) => void,
+		genomeName?: string,
+		intervalEvents: Array<CnvTooltip> = [],
+		geneLookup: GeneLookup = async (gene, genome) =>
+			await dofetch3('genelookup', { body: { deep: 1, input: gene, genome } })
 	) {
 		this.animationDuration = animationDuration
 		this.fontSize = fontSize
 		this.geneClickListener = geneClickListener
+		this.genomeName = genomeName
+		this.intervalEvents = intervalEvents
+		this.geneLookup = geneLookup
 	}
 
 	render(holder: any, elements: Array<Label>, collisions?: Array<Label>) {
@@ -59,12 +81,24 @@ export default class LabelsRenderer implements IRenderer {
 							)
 						}
 					})
-					.on('mouseover', (mouseEvent: MouseEvent) => {
-						const table = table2col({ holder: menu.d })
-						this.createTooltip(table, label)
+					.on('mouseover', async (mouseEvent: MouseEvent) => {
+						const requestId = ++this.hoverRequestId
+						this.renderTooltip(menu, label)
 						menu.show(mouseEvent.x, mouseEvent.y)
+
+						const coordinates = await this.getGeneCoordinates(label)
+						if (requestId != this.hoverRequestId || !coordinates) return
+
+						const overlappingEvents = this.intervalEvents.filter(
+							event =>
+								this.sameChromosome(event.chr, coordinates.chr) &&
+								coordinates.stop >= event.start &&
+								event.stop >= coordinates.start
+						)
+						this.renderTooltip(menu, label, overlappingEvents)
 					})
 					.on('mouseout', () => {
+						this.hoverRequestId++
 						menu.clear()
 						menu.hide()
 					})
@@ -98,7 +132,50 @@ export default class LabelsRenderer implements IRenderer {
 		})
 	}
 
-	createTooltip(table: any, label: Label) {
+	private renderTooltip(menu: any, label: Label, intervalEvents = label.cnvTooltip) {
+		menu.clear()
+		const table = table2col({ holder: menu.d })
+		this.createTooltip(table, label, intervalEvents)
+	}
+
+	private async getGeneCoordinates(label: Label): Promise<GeneCoordinates | undefined> {
+		if (!this.genomeName || !this.intervalEvents.length) return
+
+		const cacheKey = `${this.genomeName}:${label.text}:${label.chr}`
+		let lookup = this.geneCoordinatesCache.get(cacheKey)
+		if (!lookup) {
+			lookup = this.lookupGeneCoordinates(label)
+			this.geneCoordinatesCache.set(cacheKey, lookup)
+		}
+		return await lookup
+	}
+
+	private async lookupGeneCoordinates(label: Label): Promise<GeneCoordinates | undefined> {
+		try {
+			const response = await this.geneLookup(label.text, this.genomeName!)
+			if (response?.error || !Array.isArray(response?.gmlst)) return
+
+			const models = response.gmlst.filter(
+				model =>
+					this.sameChromosome(model.chr, label.chr) && Number.isFinite(model.start) && Number.isFinite(model.stop)
+			)
+			if (!models.length) return
+
+			return {
+				chr: models[0].chr,
+				start: Math.min(...models.map(model => model.start)),
+				stop: Math.max(...models.map(model => model.stop))
+			}
+		} catch {
+			return
+		}
+	}
+
+	private sameChromosome(a: string, b: string) {
+		return a?.replace(/^chr/i, '').toLowerCase() == b?.replace(/^chr/i, '').toLowerCase()
+	}
+
+	createTooltip(table: any, label: Label, intervalEvents = label.cnvTooltip) {
 		if (label.mutationsTooltip) {
 			const [td1, td2] = table.addRow()
 			td1.text('Gene')
@@ -148,16 +225,14 @@ export default class LabelsRenderer implements IRenderer {
 			})
 		}
 
-		if (label.cnvTooltip) {
-			label.cnvTooltip.forEach((cnv: CnvTooltip) => {
+		if (intervalEvents) {
+			intervalEvents.forEach((cnv: CnvTooltip) => {
 				const [td1, td2] = table.addRow()
-				td1.text('CNV')
+				td1.text(cnv.dt == dtitd ? 'ITD' : cnv.dt == dtloh ? 'LOH' : 'CNV')
 				td2.append('span').style('margin-left', '5px').style('background-color', cnv.color).html('&nbsp;&nbsp;')
 
+				if (cnv.dt != dtitd && cnv.dt != dtloh) td2.append('span').style('margin-left', '7.5px').text(cnv.value)
 				td2
-					.append('span')
-					.style('margin-left', '7.5px')
-					.text(cnv.value)
 					.append('span')
 					.style('margin-left', '7.5px')
 					.style('font-size', '0.8em')

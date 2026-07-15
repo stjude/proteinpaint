@@ -16,7 +16,7 @@ import Labels from '#plots/disco/label/Labels.ts'
 import NonExonicSnvArcsMapper from '#plots/disco/snv/NonExonicSnvArcsMapper.ts'
 import LohArcMapper from '#plots/disco/loh/LohArcMapper.ts'
 import Rings from '#plots/disco/ring/Rings.ts'
-import { dtsnvindel } from '#shared/common.js'
+import { dtcnv, dtsnvindel } from '#shared/common.js'
 import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
 import MutationWaterfallMapper from '#plots/disco/waterfall/MutationWaterfallMapper.ts'
 import type MutationWaterfallPoint from '#plots/disco/waterfall/MutationWaterfallPoint.ts'
@@ -167,8 +167,8 @@ export default class ViewModelProvider {
 
 		let lohLegend: LohLegend | undefined
 
-		if (this.settings.legend.lohLegendEnabled && dataHolder.lohMinValue && dataHolder.lohMaxValue) {
-			lohLegend = new LohLegend(dataHolder.lohMinValue, dataHolder.lohMaxValue)
+		if (this.settings.legend.lohLegendEnabled && dataHolder.lohData.length) {
+			lohLegend = new LohLegend(dataHolder.lohData.length)
 		}
 
 		const fusionLegendCounts = fusions.reduce(
@@ -203,7 +203,8 @@ export default class ViewModelProvider {
 						onColorChange: this.discoInteractions.onMutationWaterfallColorChange
 				  }
 				: undefined,
-			fusionLegendCounts
+			fusionLegendCounts,
+			dataHolder.cnvData.filter(event => event.dt == dtcnv).length
 		)
 
 		const rings = new Rings(
