@@ -511,13 +511,13 @@ export type GeneArgumentEntry = {
 	 * required if type is string. Otherwise, optional
 	 */
 	value?:
-	| string
-	| boolean
-	| number
-	| {
-		type: string
-		value: string[] | null
-	}
+		| string
+		| boolean
+		| number
+		| {
+				type: string
+				value: string[] | null
+		  }
 	options?: {
 		/** Type of dom element to render underneath the radio
 		 * 'text': creates a text area input
@@ -1104,7 +1104,7 @@ export type SCImages = {
 export type SingleCellPseudobulk = {
 	/** type can be 'geneExpression', 'dnaMeth', etc. that aligns to an assay */
 	[assayType: string]: {
-		/** termId should match a scct termId, if it exists. If not, this is a 
+		/** termId should match a scct termId, if it exists. If not, this is a
 		 * placeholder. This term will be in a term collection with memberId == termId */
 		[termId: string]: {
 			folder: string
@@ -1118,18 +1118,22 @@ export type SingleCellPseudobulk = {
 			/** Percentage of cells with the term (e.g. gene) expressed */
 			percentExt: string
 			/** Categories should match the values created for the scct termId above,
-			 * if exists. Each one in this instance becomes a numeric term. 
-			 * 
-			 * The numeric terms (categories) are member terms of the resulting 
+			 * if exists. Each one in this instance becomes a numeric term.
+			 *
+			 * The numeric terms (categories) are member terms of the resulting
 			 * term collection created by the user. */
-			categories: {
+			categories?: {
 				/** Index matches the file name(s) */
 				[index: string]: {
 					/** Label should be the human-readable name for this category */
-					label?: string,
+					label?: string
 					/** Color should be the predefined color for rendering */
 					color?: string
-				 }
+				}
+			}
+			values: {
+				/** should match term.values entries */
+				[key: string]: { label?: string; color?: string }
 			}
 		}
 	}
@@ -1478,7 +1482,7 @@ type BoxPlots = {
 }
 
 type UiLabels = {
-	[propName: string]: string | { label: string;[otherAttr: string]: string }
+	[propName: string]: string | { label: string; [otherAttr: string]: string }
 }
 
 type TieBreakerFilterValuesEntry = {
@@ -1900,7 +1904,7 @@ keep this setting here for reason of:
 	implementations destructure clientAuthResult (and e.g. activeCohort) from it. Accepts the
 	term object (not just an id) so the hook can generalize to non-dictionary terms in the
 	future, which may key visibility off properties other than id. */
-	isTermVisible?: (__protected__: any, term: { id?: string;[key: string]: any }) => boolean
+	isTermVisible?: (__protected__: any, term: { id?: string; [key: string]: any }) => boolean
 	/** Optional dataset hook to prune the per-request /termdb/config response.
 	 * Typical use is hiding plots/sections/etc. based on the requester's role.
 	 *
