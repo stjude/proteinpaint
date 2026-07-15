@@ -1,2 +1,1 @@
-Features
-- Implemented new 'pseudobulk' termType.
+

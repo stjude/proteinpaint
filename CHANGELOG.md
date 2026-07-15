@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Implemented new 'pseudobulk' termType.
+
 Fixes:
 - Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
 - Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
