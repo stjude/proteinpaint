@@ -319,7 +319,12 @@ export async function validate_termdb(ds) {
 	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the
 	// convertSampleId validation below and by runtime queries). Datasets that opt into the
 	// nonblocking phase (hasNonblockingSteps, e.g. gdc) run cacheSamples there instead.
-	if (ds.preInit?.cacheSamples && !ds.init?.hasNonblockingSteps) await ds.preInit.cacheSamples(ds)
+	if (ds.preInit?.cacheSamples && !ds.init?.hasNonblockingSteps) {
+		// ensure ds.init exists so a cacheSamples impl can report errors via ds.init.* (as the
+		// nonblocking path guarantees, mds3.init.nonblocking.js)
+		if (!ds.init) ds.init = {}
+		await ds.preInit.cacheSamples(ds)
+	}
 
 	mayInitTermid2totalsize2(tdb, ds)
 
