@@ -2,7 +2,7 @@ import test from 'tape'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
 import Reference from '#plots/disco/chromosome/Reference.ts'
 import discoDefaults from '#plots/disco/defaults.ts'
-import { dtsv, dtsnvindel } from '#shared/common.js'
+import { dtsv, dtsnvindel, dtcnv, dtitd } from '#shared/common.js'
 
 /*
 Test:
@@ -131,5 +131,28 @@ test('DataMapper.map() filters rendered SNVs by minimum DNA/RNA mutation fractio
 	t.equal(res.filteredSnvData.length, 1, 'Only SNVs meeting the fraction threshold are rendered')
 	t.equal(res.filteredSnvData[0].gene, 'HIGH', 'SNV with mutation fraction above threshold remains')
 	t.equal(res.hasMutationFractionData, true, 'Data holder reports available mutation fraction data')
+	t.end()
+})
+
+test('DataMapper.map() places ITD intervals in the CNV ring without changing the CNV scale', t => {
+	const mapper = new DataMapper(settings, reference, 'SampleA', [])
+	const res = mapper.map([
+		{ dt: dtcnv, chr: 'chr1', start: 100, stop: 200, value: 2 },
+		{ dt: dtitd, class: 'ITD', chr: 'chr1', start: 300, stop: 400 }
+	])
+
+	t.equal(res.cnvData.length, 2, 'CNV ring data includes both CNV and ITD intervals')
+	t.equal(res.cnvData[1].dt, dtitd, 'ITD retains its data type in the CNV ring')
+	t.equal(res.cnvGainMaxValue, 2, 'ITD does not alter the maximum CNV value')
+	t.equal(res.invalidDataInfo!.entries.length, 0, 'Valid ITD is accepted')
+	t.end()
+})
+
+test('DataMapper.map() rejects ITD intervals outside chromosome bounds', t => {
+	const mapper = new DataMapper(settings, reference, 'SampleA', [])
+	const res = mapper.map([{ dt: dtitd, class: 'ITD', chr: 'chr1', start: 999999, stop: 1000001 }])
+
+	t.equal(res.cnvData.length, 0, 'Invalid ITD is not added to the CNV ring')
+	t.equal(res.invalidDataInfo!.entries[0].dataType, 'ITD', 'Invalid entry is identified as ITD')
 	t.end()
 })

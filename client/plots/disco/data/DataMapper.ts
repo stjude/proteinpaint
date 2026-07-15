@@ -4,7 +4,7 @@ import DataObjectMapper from './DataObjectMapper.ts'
 import type Settings from '#plots/disco/Settings.ts'
 import { ViewModelMapper } from '#plots/disco/viewmodel/ViewModelMapper.ts'
 import type { DataHolder } from '#plots/disco/data/DataHolder.ts'
-import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh } from '#shared/common.js'
+import { dtsnvindel, dtfusionrna, dtsv, dtcnv, dtloh, dtitd } from '#shared/common.js'
 import { PercentileMapper } from '#plots/disco/data/PercentileMapper.ts'
 import type { MutationWaterfallDatum } from '#plots/disco/waterfall/MutationWaterfallDatum.ts'
 import { getMaxMutationFraction } from '#plots/disco/snv/vafTooltip.ts'
@@ -71,7 +71,7 @@ export default class DataMapper {
 	private snvFilter = (data: Data) => data.dt == dtsnvindel
 	private fusionFilter = (data: Data) => data.dt == dtfusionrna || data.dt == dtsv
 
-	private cnvFilter = (data: Data) => data.dt == dtcnv
+	private cnvFilter = (data: Data) => data.dt == dtcnv || data.dt == dtitd
 	private lohFilter = (data: Data) => data.dt == dtloh
 
 	private compareData = (a, b) => {
@@ -187,25 +187,26 @@ export default class DataMapper {
 					if (indexB == -1 && !this.excludedChromosomes.includes(dObject.chrB)) missing.push(dObject.chrB)
 					if (missing.length) this.invalidEntries.push({ dataType: 'Fusion', reason: 'Unknown chr in fusion' })
 				}
-			} else if ([dtcnv, dtloh].includes(Number(dObject.dt))) {
+			} else if ([dtcnv, dtloh, dtitd].includes(Number(dObject.dt))) {
 				const idx = this.reference.chromosomesOrder.indexOf(dObject.chr)
+				const dataType = dObject.dt == dtcnv ? 'CNV' : dObject.dt == dtloh ? 'LOH' : 'ITD'
 				if (dObject.chr && idx != -1) {
 					const chrSize = this.reference.chromosomes[idx].size
 					const start = dObject.start
 					const stop = dObject.stop
-					// validate CNV/LOH segment boundaries are numeric and fall within chromosome range
+					// validate CNV/LOH/ITD boundaries are numeric and fall within chromosome range
 					if (Number.isFinite(start) && Number.isFinite(stop) && start >= 0 && stop <= chrSize && start <= stop) {
 						this.addData(dObject, dataArray)
 					} else {
 						this.invalidEntries.push({
-							dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH',
+							dataType,
 							reason: `Position ${start}-${stop} outside of ${dObject.chr}`
 						})
 					}
 				} else {
 					if (!this.excludedChromosomes.includes(dObject.chr)) {
 						this.invalidEntries.push({
-							dataType: dObject.dt == dtcnv ? 'CNV' : 'LOH',
+							dataType,
 							reason: `Unknown chr ${dObject.chr}`
 						})
 					}
@@ -263,17 +264,17 @@ export default class DataMapper {
 				)
 			)
 
-			const percentilePair = new PercentileMapper().map(
-				this.cnvData.map(data => data.value),
-				this.settings.Disco.cnvPercentile
-			)
-			this.percentilePositive = DataMapper.capMaxValue(percentilePair.positive, this.gainCapped, this.lossCapped)
-			this.percentileNegative = DataMapper.capMaxValue(percentilePair.negative, this.gainCapped, this.lossCapped)
+			const cnvValues = this.cnvData.filter(data => data.dt == dtcnv).map(data => data.value)
+			if (cnvValues.length) {
+				const percentilePair = new PercentileMapper().map(cnvValues, this.settings.Disco.cnvPercentile)
+				this.percentilePositive = DataMapper.capMaxValue(percentilePair.positive, this.gainCapped, this.lossCapped)
+				this.percentileNegative = DataMapper.capMaxValue(percentilePair.negative, this.gainCapped, this.lossCapped)
 
-			this.cnvMaxPercentileAbs = Math.min(
-				this.settings.Disco.cnvCapping,
-				Math.max(this.percentilePositive, Math.abs(this.percentileNegative))
-			)
+				this.cnvMaxPercentileAbs = Math.min(
+					this.settings.Disco.cnvCapping,
+					Math.max(this.percentilePositive, Math.abs(this.percentileNegative))
+				)
+			}
 		}
 
 		sortedData.forEach(data => {
@@ -424,12 +425,15 @@ export default class DataMapper {
 				return
 			}
 
-			if (this.cnvGainMaxValue == undefined || this.cnvGainMaxValue < data.value) {
-				this.cnvGainMaxValue = data.value
-			}
+			// ITDs share the CNV interval ring, but must not affect the CNV color scale.
+			if (data.dt == dtcnv) {
+				if (this.cnvGainMaxValue == undefined || this.cnvGainMaxValue < data.value) {
+					this.cnvGainMaxValue = data.value
+				}
 
-			if (this.cnvLossMaxValue == undefined || this.cnvLossMaxValue > data.value) {
-				this.cnvLossMaxValue = data.value
+				if (this.cnvLossMaxValue == undefined || this.cnvLossMaxValue > data.value) {
+					this.cnvLossMaxValue = data.value
+				}
 			}
 			this.cnvData.push(data)
 		}

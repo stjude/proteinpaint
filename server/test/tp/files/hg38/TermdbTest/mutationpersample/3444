@@ -34,6 +34,7 @@
  {
   "chr": "chr17",
   "dt": 6,
+  "class":"ITD",
   "start": 7675100,
   "stop": 7675200
  }
