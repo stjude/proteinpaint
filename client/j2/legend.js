@@ -34,9 +34,10 @@ function create_type(tk, block) {
 	if (!tk.legend.type) tk.legend.type = {}
 	if (!tk.legend.type.hiddenvalues) tk.legend.type.hiddenvalues = new Set()
 
-	if (tk.hiddenTypes) {
+	if (tk.hiddentypes) {
 		// some types to be hidden by default according to ds
-		for (const c of tk.hiddenTypes) tk.legend.type.hiddenvalues.add(c)
+		for (const c of tk.hiddentypes.split(',')) tk.legend.type.hiddenvalues.add(c)
+		delete tk.hiddentypes
 	}
 
 	tk.legend.type.row = tk.legend.table.append('tr')

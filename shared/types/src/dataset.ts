@@ -748,6 +748,10 @@ type JunctionQuery = {
 	listJunctions?: (param: any) => void
 	/** get sample details for one junction */
 	getOneJunction?: (param: any) => void
+	/** comma-joined junction types to be hidden by default */
+	hiddentypes?: string
+	/** default min read count to filter samples */
+	readcountCutoff?: number
 }
 
 type RnaseqGeneCount = {
@@ -1114,7 +1118,7 @@ export type SingleCellPseudobulk = {
 			percentExt: string
 			values: {
 				/** Values should match the values created for the term. */
-				[index: string]: { label?: string /*color??*/}
+				[index: string]: { label?: string /*color??*/ }
 			}
 		}
 	}

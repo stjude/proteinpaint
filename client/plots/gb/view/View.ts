@@ -142,7 +142,9 @@ export class View {
 				dslabel: this.state.vocab.dslabel,
 				vocabApi: this.opts.vocabApi,
 				termdbConfig: this.opts.vocabApi?.termdbConfig,
-				filter0: this.state.filter0
+				filter0: this.state.filter0,
+				hiddentypes: this.state.config.junction.hiddentypes,
+				readcountCutoff: this.state.config.junction.readcountCutoff
 			}
 			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
 			tklst.push(tk)
@@ -265,7 +267,7 @@ export class View {
 				}
 			}
 			if (this.state.config.junction && !this.state.config.junction.shown) {
-				const i = this.blockInstance.tklst.findIndex(t => t.type == 'j2')
+				const i = this.blockInstance.tklst.findIndex(t => t.type == 'j2' && t.dslabel == this.state.vocab.dslabel)
 				if (i != -1) this.blockInstance.tk_remove(i)
 			}
 			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them
