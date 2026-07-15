@@ -4,7 +4,7 @@ import DataMapper from '#plots/disco/data/DataMapper.ts'
 import type Settings from '#plots/disco/Settings.ts'
 import ViewModelProvider from './ViewModelProvider.ts'
 import type { DiscoInteractions } from '../interactions/DiscoInteractions.ts'
-import { dtsnvindel, dtcnv, dtloh } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtloh, dtitd } from '#shared/common.js'
 
 export class ViewModelMapper {
 	static snvClassLayer = {
@@ -53,7 +53,7 @@ export class ViewModelMapper {
 	static computeDynamicRadius(data: Array<any>): number {
 		let ringCount = 0
 		if (data.some(d => d.dt == dtsnvindel)) ringCount++
-		if (data.some(d => d.dt == dtcnv)) ringCount++
+		if (data.some(d => d.dt == dtcnv || d.dt == dtitd)) ringCount++
 		if (data.some(d => d.dt == dtloh)) ringCount++
 
 		if (ringCount <= 1) return 200

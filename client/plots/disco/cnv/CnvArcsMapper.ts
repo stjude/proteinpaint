@@ -7,6 +7,7 @@ import type Settings from '#plots/disco/Settings.ts'
 import CnvColorProvider from '#plots/disco/cnv/CnvColorProvider.ts'
 import { CnvRenderingType } from '#plots/disco/cnv/CnvRenderingType.ts'
 import DataMapper from '#plots/disco/data/DataMapper.ts'
+import { dtitd, mclass, mclassitd } from '#shared/common.js'
 
 export default class CnvArcsMapper {
 	cnvClassMap: Map<CnvType, CnvLegend> = new Map()
@@ -88,6 +89,7 @@ export default class CnvArcsMapper {
 
 	map(arcData: Array<Data>): Array<CnvArc> {
 		const arcs: Array<CnvArc> = []
+		let itdCount = 0
 
 		arcData.forEach(data => {
 			let startAngle = this.calculateStartAngle(data)
@@ -98,21 +100,23 @@ export default class CnvArcsMapper {
 			if (endAngle - startAngle < this.onePxArcAngle) {
 				const restAngle = this.onePxArcAngle - (endAngle - startAngle)
 				startAngle = startAngle - restAngle / 2
-				endAngle = startAngle + restAngle / 2
+				endAngle = endAngle + restAngle / 2
 			}
 
-			const innerRadius = this.calculateInnerRadius(data)
-
-			const outerRadius = this.calculateOuterRadius(data)
-
-			const color = this.getColor(data.value)
+			const isItd = data.dt == dtitd
+			if (isItd) itdCount++
+			const color = isItd ? mclass[mclassitd].color : this.getColor(data.value)
+			const innerRadius = isItd ? this.cnvInnerRadius : this.calculateInnerRadius(data)
+			const outerRadius = isItd ? this.cnvInnerRadius + this.cnvWidth : this.calculateOuterRadius(data)
 
 			const arc: CnvArc = {
 				startAngle: startAngle,
 				endAngle: endAngle,
-				innerRadius: innerRadius,
-				outerRadius: outerRadius,
+				innerRadius,
+				outerRadius,
 				color: color,
+				dt: data.dt,
+				dataClass: data.mClass,
 				text: data.gene,
 				chr: data.chr,
 				start: data.start,
@@ -121,10 +125,12 @@ export default class CnvArcsMapper {
 				unit: this.cnvUnit,
 				sampleName: [this.sampleName]
 			}
-			
 
 			arcs.push(arc)
 		})
+		if (itdCount) {
+			this.cnvClassMap.set(CnvType.ITD, new CnvLegend('ITD', CnvType.ITD, mclass[mclassitd].color, itdCount))
+		}
 
 		return arcs
 	}

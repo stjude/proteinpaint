@@ -69,6 +69,7 @@ export default class LegendJSONMapper {
 		const gain = legend.cnvClassMap.get(CnvType.Gain)
 		const loss = legend.cnvClassMap.get(CnvType.Loss)
 		const cap = legend.cnvClassMap.get(CnvType.Cap)
+		const itd = legend.cnvClassMap.get(CnvType.ITD)
 
 		if (gain && loss && cap) {
 			let cnvOrder = 0
@@ -102,6 +103,15 @@ export default class LegendJSONMapper {
 				// ,
 				// onClickCallback: this.onClickCallback
 			})
+			if (itd) {
+				cnvItems.push({
+					termid: legend.cnvTitle,
+					key: CnvType.ITD,
+					text: `ITD (${itd.value})`,
+					color: itd.color,
+					order: cnvOrder++
+				})
+			}
 
 			legendJSON.push({
 				name: legend.cnvTitle,
@@ -117,6 +127,7 @@ export default class LegendJSONMapper {
 		const gain = legend.cnvClassMap.get(CnvType.Gain)
 		const loss = legend.cnvClassMap.get(CnvType.Loss)
 		const cap = legend.cnvClassMap.get(CnvType.Cap)
+		const itd = legend.cnvClassMap.get(CnvType.ITD)
 
 		if (gain && loss && cap) {
 			let cnvOrder = 0
@@ -178,6 +189,15 @@ export default class LegendJSONMapper {
 						)
 					)
 				}
+			}
+			if (itd) {
+				cnvItems.push({
+					termid: legend.cnvTitle,
+					key: CnvType.ITD,
+					text: `ITD (${itd.value})`,
+					color: itd.color,
+					order: cnvOrder++
+				})
 			}
 			legendJSON.push({
 				name: legend.cnvTitle,

@@ -43,6 +43,7 @@ export default class LabelsRenderer implements IRenderer {
 				const g = select(nodes[i])
 				g.append('text')
 					.attr('class', 'chord-text')
+					.attr('data-testid', 'sjpp-disco-genelabel')
 					.attr('dy', '.35em')
 					.attr('transform', label.transform)
 					.style('text-anchor', label.textAnchor)

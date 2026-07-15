@@ -2,7 +2,7 @@ import * as d3 from 'd3'
 import type IRenderer from '#plots/disco/IRenderer.ts'
 import type CnvArc from './CnvArc.ts'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
-import { dtcnv } from '#shared/common.js'
+import { dtcnv, dtitd } from '#shared/common.js'
 import { table2col } from '#dom/table2col'
 
 export default class CnvBarRenderer implements IRenderer {
@@ -44,17 +44,22 @@ export default class CnvBarRenderer implements IRenderer {
 
 				// Prepare the CNV data for tooltip display
 				const cnv: any = structuredClone(arc)
-				cnv.dt = dtcnv
+				cnv.dt = arc.dt
 				cnv.samples = [{ sample_id: arc.sampleName }]
 				cnv.gene = cnv.text
 
 				// Create a two-column table in the tooltip
 				const table = table2col({ holder: menu.d })
 				// Add: Copy number change row
-				{
+				if (arc.dt == dtcnv) {
 					const [c1, c2] = table.addRow()
 					c1.text('CNV')
 					c2.html(`<span style="background:${cnv.color}">&nbsp;&nbsp;</span> ${cnv.value}`)
+				}
+				if (arc.dt == dtitd) {
+					const [c1, c2] = table.addRow()
+					c1.text('ITD')
+					c2.html(`<span style="background:${cnv.color}">&nbsp;&nbsp;</span>`)
 				}
 				// Add: Position row
 				{
@@ -63,7 +68,7 @@ export default class CnvBarRenderer implements IRenderer {
 					c2.text(cnv.chr + ':' + cnv.start + '-' + cnv.stop)
 				}
 				// Add: Unit value row
-				{
+				if (arc.dt == dtcnv) {
 					const [c1, c2] = table.addRow()
 					c1.text('Unit')
 					c2.text(cnv.value)
