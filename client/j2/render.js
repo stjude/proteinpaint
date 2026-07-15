@@ -285,11 +285,11 @@ jug2.filter(function(d){return d.rimwidth>0})
 			mouseoverBoxplot(d, tk)
 
 			const p = event.target.getBoundingClientRect()
-			tk.tktip.clear().show(p.left + p.width, p.top - 50)
-			showOneJunction(d, tk, tk.tktip.d, block)
+			tk.hovertip.clear().show(p.left + p.width, p.top - 50)
+			showOneJunction(d, tk, tk.hovertip.d, block)
 		})
 		.on('mouseout', (event, d) => {
-			tk.tktip.hide()
+			tk.hovertip.hide()
 			tk.pica.g.selectAll('*').remove()
 			block.cursorhlbar.attr('fill', block.cursorhlbarFillColor) // restore
 			d3select(d.disc).attr('fill-opacity', discopacity)
@@ -303,10 +303,12 @@ jug2.filter(function(d){return d.rimwidth>0})
 		.on('mousemove', event => {
 			event.stopPropagation()
 		})
-		.on('click', (event, j) => {
-			tk.tktip.hide()
-			console.log(j)
-			console.log('todo here')
+		.on('click', (event, d) => {
+			tk.hovertip.hide()
+			const p = event.target.getBoundingClientRect()
+			tk.itemtip.clear().show(p.left + p.width, p.top - 50)
+			showOneJunction(d, tk, tk.itemtip.d.append('div'), block, true)
+			//getSampleBy1junction(d, tk, tk.itemtip.d.append('div'), block)
 		})
 
 	doForceLayout(tk, block, viewpxwidth).then(() => {
@@ -730,6 +732,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 
 	for (const e of j.info?.events || []) {
 		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
+			// TODO replace with e.type
 			events_exonskipalt.push(e)
 		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
 			events_a53ss.push(e)
@@ -780,23 +783,20 @@ function showJunctionDiagram(j, tk, holder) {
 	if start/stop are on same gene, render using one function
 	if no different genes, show with another  function
 	*/
-	if (!j.ongene) {
+	if (typeof j.info != 'object' || Object.keys(j.info).length == 0) {
+		// either missing j.info, or is empty object
 		return
 	}
 
 	const leftgenes = new Map()
-	if (j.ongene.exonleft) j.ongene.exonleft.forEach(i => leftgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
-	if (j.ongene.exonleftin)
-		j.ongene.exonleftin.forEach(i => leftgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
-	if (j.ongene.intronleft)
-		j.ongene.intronleft.forEach(i => leftgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
+	if (j.info.exonleft) j.info.exonleft.forEach(i => leftgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
+	if (j.info.exonleftin) j.info.exonleftin.forEach(i => leftgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
+	if (j.info.intronleft) j.info.intronleft.forEach(i => leftgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
 
 	const rightgenes = new Map()
-	if (j.ongene.exonright) j.ongene.exonright.forEach(i => rightgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
-	if (j.ongene.exonrightin)
-		j.ongene.exonrightin.forEach(i => rightgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
-	if (j.ongene.intronright)
-		j.ongene.intronright.forEach(i => rightgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
+	if (j.info.exonright) j.info.exonright.forEach(i => rightgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
+	if (j.info.exonrightin) j.info.exonrightin.forEach(i => rightgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
+	if (j.info.intronright) j.info.intronright.forEach(i => rightgenes.set(i.isoform, { gene: i.gene, strand: i.strand }))
 
 	let isoform // the one with both start/stop in it
 	let strand
@@ -833,7 +833,7 @@ function showJunctionDiagram(j, tk, holder) {
 			p.samegene({
 				isoform: isoform,
 				reverse: strand == '-',
-				ongene: j.ongene,
+				ongene: j.info,
 				holder: holder
 			})
 		})
@@ -843,13 +843,13 @@ function showJunctionDiagram(j, tk, holder) {
 	// here start/stop are on different genes
 	import('../src/spliceevent.noeventdiagram').then(p => {
 		p.differentgenes({
-			ongene: j.ongene,
+			ongene: j.info,
 			holder: holder
 		})
 	})
 }
 
-function showEventdiagram_a53ss(j, e, tk, holder, block) {
+function showEventdiagram_a53ss(j, e, tk, holder, block, donotloadcount) {
 	// a5ss, a3ss
 	const e2 = {
 		junctionB: {
@@ -876,6 +876,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 			holder: holder
 		})
 		if (!text) return
+		if (donotloadcount) return
 		setTimeout(() => {
 			if (text.node().getBoundingClientRect().top == 0) return
 			const strandA = e.junctionA.strand || '+' // FIXME TODO e.junctionA.strand will be filled!
@@ -890,11 +891,10 @@ function showEventdiagram_a53ss(j, e, tk, holder, block) {
 	})
 }
 
-function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
+function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotloadcount = false) {
 	/*
 	j is the junctionB of this event
 	event is as from j.info.spliceEvent, either skip or alt
-
 	*/
 	const e2 = {
 		gm: {
@@ -939,6 +939,7 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 			holder: holder,
 			nophrase: true
 		})
+		if (donotloadcount) return
 		setTimeout(() => {
 			// if the diagram already disappears, don't make query
 			for (const [k, text] of junction2readcounttext) {
@@ -953,60 +954,40 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block) {
 
 function listAllEvents(lst, holder, j, tk, block) {
 	if (lst.length == 1) {
-		showEventdetail(lst[0], holder, j, tk, block)
+		const e = lst[0]
+		holder.append('div').text(e.gene + ' ' + e.attrValue + ' ' + e.isoform)
+		const div = holder.append('div')
+		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
+			// TODO replace with e.type
+			showEventdiagram_skipalt_fetchreadcount(j, e, tk, div, block, true)
+		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
+			showEventdiagram_a53ss(j, e, tk, div, block, true)
+		}
 		return
 	}
-	// one button for a evt
-	const div = holder.append('div').style('display', 'inline-block').style('font-size', '.8em')
+
+	// multiple events
+	// for events on different isoform that may be showing identical events, group them
+	const map = new Map() // k: stringified event less isoform, v: isoform
 	for (const e of lst) {
-		div
-			.append('div')
-			.html(eventlabel(e))
-			.attr('class', 'sja_menuoption')
-			.on('click', event => {
-				tk.tktip.clear().show(event.clientX + 20, event.clientY - 40)
-				showEventdetail(e, tk.tktip.d, j, tk, block)
-			})
+		const f = structuredClone(e)
+		const v = e.isoform
+		delete f.isoform
+		const key = JSON.stringify(f)
+		if (map.has(key)) map.get(key).push(e.isoform)
+		else map.set(key, [e.isoform])
 	}
-}
-
-function showEventdetail(e, holder, j, tk, block) {
-	const tr = holder.append('table').append('tr')
-	const td1 = tr.append('td')
-	const p = td1.append('p')
-	if (e.isskipexon || e.isaltexon) {
-		// TODO replace e.isskipexon with e.type
-		p.html(eventlabel(e))
-		showEventdiagram_skipalt_fetchreadcount(j, e, tk, td1, block)
-	} else {
-		p.html(eventlabel(e))
-		showEventdiagram_a53ss(j, e, tk, td1, block)
+	for (const [key, isolst] of map) {
+		const eo = JSON.parse(key)
+		holder.append('div').text(eo.gene + ' ' + eo.attrValue + ' ' + isolst.join(','))
+		const div = holder.append('div')
+		if (eo.attrValue == JT_exonskip || eo.attrValue == JT_exonaltuse) {
+			// TODO replace with e.type
+			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, div, block, true)
+		} else if (eo.attrValue == JT_a5ss || eo.attrValue == JT_a3ss) {
+			showEventdiagram_a53ss(j, eo, tk, div, block, true)
+		}
 	}
-	const td2 = tr.append('td')
-}
-
-function eventlabel(e) {
-	if (e.isskipexon || e.isaltexon) {
-		// TODO replace with e.type
-		return (
-			(e.isskipexon ? 'Exon skip' : 'Exon alt') +
-			' ' +
-			e.gene +
-			' ' +
-			e.isoform +
-			' ' +
-			(e.frame == undefined ? '' : e.frame == IN_frame ? 'IN frame' : 'OUT of frame')
-		)
-	}
-	return (
-		(e.a5ss ? 'A5SS' : 'A3SS') + // TODO replace with e.type
-		' ' +
-		e.gene +
-		' ' +
-		e.isoform +
-		' ' +
-		(e.frame == undefined ? '' : e.frame == IN_frame ? 'IN frame' : 'OUT of frame')
-	)
 }
 
 /*

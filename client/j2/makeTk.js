@@ -1,5 +1,4 @@
 import { Menu } from '#dom'
-import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk } from './tk'
 import { renderTk } from './render'
