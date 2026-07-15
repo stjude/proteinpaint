@@ -36,8 +36,8 @@ tape('gene search returns gene matches with data types', async function (test) {
 	const data = await fetchOmnisearch({ genome, dslabel, prompt: 'TP53' })
 
 	test.ok(Array.isArray(data.genes), 'genes should be an array')
-	const tp53 = data.genes.find(g => g.gene == 'TP53')
-	test.ok(tp53, 'genes should include TP53')
+	const genes = Array.isArray(data.genes) ? data.genes : []
+	const tp53 = genes.find(g => g.gene == 'TP53')
 	test.equal(
 		tp53?.dataTypes?.genomeBrowser,
 		true,
@@ -115,8 +115,9 @@ tape('dictionary term search returns matching terms', async function (test) {
 	})
 
 	test.ok(Array.isArray(data.dictionaryTerms), 'dictionaryTerms should be an array')
+	const terms = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
 	test.ok(
-		data.dictionaryTerms.some((t: any) => /sex/i.test(t?.name || '')),
+		terms.some((t: any) => /sex/i.test(t?.name || '')),
 		'dictionaryTerms should include a term whose name matches "sex" (e.g. "Sex")'
 	)
 	test.end()
