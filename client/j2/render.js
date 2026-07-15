@@ -2,7 +2,6 @@ import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
 import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
-import exonskipalt_getdefault from '../src/spliceevent.exonskip.getdefault.js'
 import { axisstyle, table2col } from '#dom'
 import { bplen, IN_frame, JTypes, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
 import { getParameter } from './tk'
@@ -928,9 +927,9 @@ function listAllEvents(lst, table, j, tk, block) {
 		t1.text(e.gene + ' ' + e.isoform)
 		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
 			// TODO replace with e.type
-			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block, true)
+			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block)
 		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
-			showEventdiagram_a53ss(j, e, tk, t2, block, true)
+			showEventdiagram_a53ss(j, e, tk, t2, block)
 		}
 		return
 	}

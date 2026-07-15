@@ -19,8 +19,9 @@ export async function makeTk(tk, block) {
 	} else {
 		tk.yscaleUseLog = true
 	}
-	if (tk.hiddenTypes) {
-		if (!(tk.hiddenTypes instanceof Set)) throw new Error('tk.hiddenTypes not set')
+	if (tk.hiddentypes) {
+		// comma joined type strings to be hidden by default. the property will be assessed by legend and removed
+		if (typeof tk.hiddentypes != 'string') throw new Error('tk.hiddentypes not string')
 	}
 	if (tk.readcountCutoff) {
 		if (!Number.isInteger(tk.readcountCutoff) || tk.readcountCutoff < 0)
