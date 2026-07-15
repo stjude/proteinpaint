@@ -69,7 +69,6 @@ tape('TP53 offers SNV/indel, CNV and SV/fusion data types', async function (test
 		{ key: 'svfusion', label: 'SV/fusion' }
 	]
 	const data = await fetchOmnisearch({ genome, dslabel, prompt: 'TP53' })
-	console.log('data returned from fetchOmnisearch (SNV/indel, CNV and SV/fusion data types):', JSON.stringify(data))
 	const tp53 = data.genes.find(g => g.gene == 'TP53')
 	test.ok(tp53, 'genes should include TP53')
 	for (const { key, label } of variantTypes) {
