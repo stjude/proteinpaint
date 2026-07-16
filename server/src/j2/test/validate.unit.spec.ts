@@ -9,12 +9,12 @@ tape('\n', test => {
 tape('computeTypes: canonical and event types', test => {
 	const junction = {
 		canonical: true,
-		events: [{ attrValue: 'exon_skip' }, { attrValue: 'alt_donor' }, { attrValue: 'exon_skip' }]
+		events: [{ type: 'exon_skip' }, { type: 'alt_donor' }, { type: 'exon_skip' }]
 	}
 
 	const types = computeTypes(junction, new Set())
 
-	test.deepEqual(types, ['canonical', 'exon_skip', 'alt_donor'], 'returns canonical and unique event attrValues')
+	test.deepEqual(types, ['canonical', 'exon_skip', 'alt_donor'], 'returns canonical and unique event types')
 	test.equal(junction.canonical, undefined, 'removes canonical from the junction info object')
 	test.end()
 })
@@ -22,7 +22,7 @@ tape('computeTypes: canonical and event types', test => {
 tape('computeTypes: hidden types are excluded', test => {
 	const junction = {
 		canonical: true,
-		events: [{ attrValue: 'exon_skip' }, { attrValue: 'alt_acceptor' }]
+		events: [{ type: 'exon_skip' }, { type: 'alt_acceptor' }]
 	}
 
 	const types = computeTypes(junction, new Set(['canonical', 'alt_acceptor']))
@@ -46,15 +46,11 @@ tape('computeTypes: no events and non-canonical junction', test => {
 	test.end()
 })
 
-tape('computeTypes: event attrValue must be a string', test => {
+tape('computeTypes: event type must be a string', test => {
 	const junction = {
-		events: [{ attrValue: 'exon_skip' }, {}]
+		events: [{ type: 'exon_skip' }, {}]
 	}
 
-	test.throws(
-		() => computeTypes(junction, new Set()),
-		/event\.attrValue missing/,
-		'throws when an event attrValue is missing'
-	)
+	test.throws(() => computeTypes(junction, new Set()), /event\.type missing/, 'throws when an event type is missing')
 	test.end()
 })
