@@ -888,7 +888,6 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 	if (e.junctionAlst) {
 		for (const jA of e.junctionAlst) {
 			if (jA) {
-				//jA.strand = '+' // TODO FIXME remove when strand is added
 				jA.data = [{ v: '...' }]
 				e2.junctionAlst.push(jA)
 				continue
