@@ -2,10 +2,10 @@ import { PSEUDOBULK } from '#shared/terms.js'
 import { plotColor } from '#shared/common.js'
 
 export function validatePseudobulk(pseudobulk: any, ds: any) {
-    if (typeof pseudobulk != 'object') throw new Error('singleCell.pseudobulk not object')
+    if (typeof pseudobulk != 'object') throw new Error('singleCell.pseudobulk is not object')
     for (const assayKey of Object.keys(pseudobulk)) {
         const assay = pseudobulk[assayKey]
-        if (typeof assay != 'object') throw new Error('singleCell.pseudobulk[i] not object')
+        if (typeof assay != 'object') throw new Error(`singleCell.pseudobulk.${assayKey} is not object`)
         if (!ds.queries.singleCell.terms) ds.queries.singleCell.terms = []
         for (const termId of Object.keys(assay)) {
             const term = assay[termId]
