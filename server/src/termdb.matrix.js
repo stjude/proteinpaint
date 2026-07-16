@@ -473,7 +473,8 @@ function getSampleId4Cell(ds, tw, cell, filteredSamples) {
 	}
 	if (!sampleName) return
 	if (filteredSamples.size > 0 && !filteredSamples.has(sampleName)) return
-	const sampleId = sampleMappingCache?.sampleName2IntId?.get?.(sampleName) ?? ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
+	const sampleId =
+		sampleMappingCache?.sampleName2IntId?.get?.(sampleName) ?? ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
 	if (sampleId == undefined) {
 		throw new Error(`single cell meta result cannot map sample name = ${sampleName} to sample id`)
 	}
@@ -701,15 +702,14 @@ termWrappers[]
 
 output:
 
-{
+[
 	samples: {}
 		key: stringified integer id
 		val: {}
 			sample: int id
-			<term id>: { key: str, value: str }
-	refs:{}
-		{ byTermId: {} }
-}
+			<tw.$id>: { key: str, value: str }
+	byTermId: {}
+]
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (!termWrappers.length) return [{}, {}]
@@ -720,12 +720,6 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (q.ds.cohort.termdb.dictionary?.get) {
 		// ds-supplied getter to retrieve dictionary term data
 		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers)
-	}
-	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
-	 */
-	if (q.ds?.variant2samples?.get) {
-		// ds is not using sqlite db but has v2s method
-		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
 	if (q.ds.cohort.termdb.q?.getAdHocTermValues) {
 		//ds is not using sqlite db but has getAdHocTermValues method
@@ -939,90 +933,6 @@ async function mayQueryMutatedSamples(q) {
 		}
 	}
 	return sampleSet
-}
-
-/*
-using mds3 dataset, that's without server-side sqlite db and will not execute any sql query
-so far it's only gdc
-later can be other api-based datasets
-*/
-async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
-	const q2 = Object.assign(
-		{
-			filter0: q.filter0, // must pass on gdc filter0 if present
-			filterObj: q.filter, // must rename key as "filterObj" but not "filter" to go with what mds3 backend is using
-			genome: q.genome,
-			get: 'samples',
-			twLst: termWrappers,
-			isHierCluster: q.isHierCluster, // !! gdc specific parameter !!
-			__abortSignal: q.__abortSignal
-		},
-		q.ds.mayGetGeneVariantDataParam || {}
-	)
-	if (q.rglst) {
-		// !! gdc specific parameter !! present for block tk in genomic mode
-		q2.rglst = q.rglst
-	}
-	if (q.currentGeneNames) {
-		q2.geneTwLst = []
-		for (const n of q.currentGeneNames) {
-			q2.geneTwLst.push({ term: { id: n, gene: n, name: n, type: 'geneVariant' } })
-		}
-	} else {
-		/* do not throw here
-		gene list is not required for loading dict term for gdc gene exp clustering
-		but it's required for gdc oncomatrix and will break FIXME
-		*/
-	}
-
-	const data = await q.ds.variant2samples.get(q2, q.ds)
-	/* data={samples[], byTermId{}}
-	data.samples[] is converted to samples{}
-	data.byTermId{} is returned without change
-	*/
-
-	const samples = {} // data.samples[] converts into this
-
-	for (const s of data.samples) {
-		const s2 = {
-			sample: s.sample_id
-		}
-		for (const tw of termWrappers) {
-			const id = tw.term.id || tw.term.name
-			const $id = tw.$id || id
-			if (!tw.$id) tw.$id = $id
-			const v = s[id]
-
-			////////////////////////////
-			// somehow value can be undefined! must skip them
-			////////////////////////////
-
-			if (Array.isArray(v) && v[0] != undefined && v[0] != null) {
-				////////////////////////////
-				// "v" can be array
-				// e.g. "age of diagnosis"
-				////////////////////////////
-				s2[$id] = {
-					key: v[0],
-					value: v[0]
-				}
-			} else if (v != undefined && v != null) {
-				if (typeof v == 'object') {
-					// v is {key,value}, should be for survival term
-					// now also for discrete numeric term to support {key: bin, value: value}
-					s2[$id] = v
-				} else {
-					// v is number/string, should be for non-survival term
-					s2[$id] = {
-						key: v,
-						value: v
-					}
-				}
-			}
-		}
-		samples[s.sample_id] = s2
-	}
-	return [samples, data.byTermId || {}]
 }
 
 /*
