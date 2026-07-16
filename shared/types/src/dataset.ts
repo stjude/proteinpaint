@@ -164,14 +164,20 @@ type AiApi = {
 }
 
 /** configuration for api-based dictionary
-NOTE: currently used by mmrf, but may also be used
-by other api-based datasets (e.g. gdc) */
+NOTE: used by mmrf and gdc, may also be used
+by other api-based datasets */
 type DictApi = {
 	// builds dictionary and sets standard
 	// helpers at ds.cohort.termdb.q{}
 	build?: (ds: any) => void
-	// gets dictionary term data
-	get?: (q: any, twLst: any, onlyChildren?: boolean, useCache?: boolean) => void
+	/** gets dictionary term data; returns [samples{}, byTermId{}]
+	see getSampleData_dictionaryTerms() of server/src/termdb.matrix.js
+
+	sample hierarchy is signaled on q (q.mapParent2Children, with
+	ds.cohort.termdb.sampleTypes and .term2SampleType), not by an arg here.
+	do not add an onlyChildren arg: that one belongs to barchart_data() of
+	server/src/termdb.barchart.js, and passing it here would land on useCache */
+	get?: (q: any, twLst: any[], useCache?: boolean) => Promise<[any, any]>
 }
 
 type SnvIndelFormat = {
