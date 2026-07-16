@@ -30,6 +30,7 @@ import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { validatePseudobulk } from './validatePseudobulk.ts'
 
 export const payload: RoutePayload = {
 	init,
@@ -111,6 +112,10 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 		throw new Error('unknown singleCell.data.src')
 	}
 	colorColumn2terms(ds.queries.singleCell.data.plots, ds) // convert colorBy columns defined in ds file to term objects for use in vocabApi methods later
+
+	if (ds.queries.singleCell?.pseudobulk) {
+		validatePseudobulk(ds.queries.singleCell.pseudobulk, ds)
+	}
 
 	if (q.geneExpression) {
 		if (typeof q.geneExpression != 'object') throw new Error('singleCell.geneExpression not object')
