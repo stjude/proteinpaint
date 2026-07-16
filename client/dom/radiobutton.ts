@@ -27,7 +27,7 @@ type RadioButtonOpts = {
 	labelDisplay?: string
 }
 
-type OptionEntry = {
+export type OptionEntry = {
 	/** only set for only *one* option */
 	checked?: boolean | number
 	/** Text shown in the span to the right of the radio button */
