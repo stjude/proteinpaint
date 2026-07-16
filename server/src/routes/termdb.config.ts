@@ -11,7 +11,9 @@ import {
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
 	DNA_METHYLATION,
-	SSGSEA
+	SSGSEA,
+	PSEUDOBULK,
+	TERM_COLLECTION
 } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
@@ -459,8 +461,9 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
+		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}
-	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
+	if (ds.cohort.termdb.termCollections?.length) typeSet.add(TERM_COLLECTION)
 	return [...typeSet]
 }
 
