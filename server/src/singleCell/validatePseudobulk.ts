@@ -73,6 +73,8 @@ export function validatePseudobulk(ds: any) {
             const meanH5file = path.join(serverconfig.tpmasterdir, member.folder, term.name, member.meanH5)
             await file_is_readable(meanH5file)
 
+            data[term.id] = {}
+
             for (const gene of term.genes) {
                 const hdf5InputType = { query: [gene], hdf5_file: meanH5file }
                 const time1 = Date.now()
@@ -83,7 +85,7 @@ export function validatePseudobulk(ds: any) {
                 const out = result.query_output[gene]?.samples
 		        if (!out) throw new Error(`No expression data for ${gene}`)
                 
-                data[gene] = out
+                data[term.id][gene] = out
             }
 
         }
