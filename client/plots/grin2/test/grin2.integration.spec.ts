@@ -290,6 +290,7 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 
 		// Check Run button is disabled
 		test.equal(getRunButton(g).disabled, true, 'Run button is disabled when no data types are selected')
+		test.equal(getInputToggle(g).button.style.display, 'none', 'input toggle is hidden before results are displayed')
 
 		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
@@ -316,10 +317,10 @@ function getControlsRoot(g: any): HTMLElement {
 }
 
 /**
- * Returns the GRIN2 run button DOM element.
+ * Returns the GRIN2 run button from the shared input action row.
  */
 function getRunButton(g: any): HTMLButtonElement {
-	return getControlsRoot(g).querySelector('[data-testid="sjpp-grin2-run-button"]') as HTMLButtonElement
+	return g.Inner.dom.controlsToggle.node().querySelector('[data-testid="sjpp-grin2-run-button"]') as HTMLButtonElement
 }
 
 /**
@@ -346,6 +347,26 @@ async function validateGRIN2(g: any, test: any) {
 	})
 	test.ok(table, 'GRIN2 results table is rendered')
 
+	const inputToggle = getInputToggle(g)
+	test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'true', 'input panel collapses after results are displayed')
+	test.equal(g.Inner.dom.inputPanel.style('grid-template-rows'), '0fr', 'input panel slides up')
+	test.notEqual(inputToggle.button.style.display, 'none', 'input toggle is shown with results')
+	test.equal(inputToggle.button.textContent, 'Show input options', 'collapsed input panel can be reopened')
+
+	inputToggle.button.dispatchEvent(new Event('click', { bubbles: true }))
+	test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'false', 'input panel reopens from the result view')
+	test.equal(g.Inner.dom.inputPanel.style('grid-template-rows'), '1fr', 'input panel slides down')
+	test.equal(inputToggle.button.textContent, 'Hide input options', 'expanded input panel can be collapsed again')
+	test.equal(
+		inputToggle.button.parentElement,
+		getRunButton(g).parentElement,
+		'input toggle and Run button share an action row'
+	)
+	test.equal(inputToggle.style.display, 'flex', 'input actions are laid out on the same row')
+
+	inputToggle.button.dispatchEvent(new Event('click', { bubbles: true }))
+	test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'true', 'input panel collapses from the toggle')
+
 	if (test['_ok']) g.Inner.app.destroy()
 }
 
@@ -362,6 +383,14 @@ function getGRIN2Checkboxes(g: any) {
 		fusionInput: root.querySelector('[data-testid="grin2-checkbox-fusion"]') as HTMLInputElement,
 		svInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-sv"]') as HTMLInputElement,
 		itdInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-itd"]') as HTMLInputElement
+	}
+}
+
+function getInputToggle(g: any): { button: HTMLButtonElement; style: CSSStyleDeclaration } {
+	const holder = g.Inner.dom.controlsToggle.node() as HTMLElement
+	return {
+		button: holder.querySelector('[data-testid="sjpp-grin2-input-toggle"]') as HTMLButtonElement,
+		style: holder.style
 	}
 }
 

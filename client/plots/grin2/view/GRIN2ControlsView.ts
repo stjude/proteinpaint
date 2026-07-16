@@ -50,6 +50,7 @@ const checkboxRowLabelWidth = '110px'
 export class GRIN2ControlsView {
 	private headerHolder: any
 	private controlsHolder: any
+	private actionsHolder: any
 	private config: any
 	private vocabApi: any
 	private callbacks: GRIN2ControlsCallbacks
@@ -91,6 +92,7 @@ export class GRIN2ControlsView {
 		config: any
 		vocabApi: any
 		genome: any
+		actionsHolder: any
 		callbacks: GRIN2ControlsCallbacks
 	}) {
 		this.headerHolder = opts.headerHolder
@@ -98,6 +100,7 @@ export class GRIN2ControlsView {
 		this.config = opts.config
 		this.vocabApi = opts.vocabApi
 		this.genome = opts.genome
+		this.actionsHolder = opts.actionsHolder
 		this.callbacks = opts.callbacks
 	}
 
@@ -119,10 +122,9 @@ export class GRIN2ControlsView {
 		// Artifact-region exclude mask (applies to all lesion types).
 		this.addExcludeRow(table)
 
-		this.runButton = this.controlsHolder
+		this.runButton = this.actionsHolder
 			.append('button')
 			.attr('data-testid', 'sjpp-grin2-run-button')
-			.style('margin-left', '100px')
 			.text('Run GRIN2')
 			.on('click', () => this.callbacks.onRun())
 

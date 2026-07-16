@@ -11,6 +11,7 @@ import { mapConcurrent } from '../utils/concurrencyLimiter.ts'
 import { getMaxLesions } from './memory.ts'
 import { processSampleMlst, buildLesionTypeMap } from './lesions.ts'
 import type { CnvType, Grin2CacheResult, Grin2Processing, Lesion } from './types.ts'
+import { maySetMapParent2Children } from '../termdb.matrix.js'
 
 /**
  * General GRIN2 analysis route
@@ -431,6 +432,12 @@ async function runGrin2Fresh(
 	processingTime: number
 	grin2AnalysisTime: number
 }> {
+	// QUICKFIX
+	// assuming genomic data in mds3 tk is at sample-level, so setting
+	// mapParent2Children=true to allow parent-level term data to be mapped
+	// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
+	maySetMapParent2Children(request, ds, true)
+
 	const startTime = Date.now()
 
 	// Acquire the cohort's samples, then convert their per-sample mutation data to lesions. Per-sample mlst
