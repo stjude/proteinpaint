@@ -12,6 +12,7 @@ export function validatePseudobulk(pseudobulk: any, ds: any) {
             Object.entries(term.categories ?? {}).forEach(([key, c]: [string, any]) => {
                 ds.queries.singleCell.terms.push({
                     name: c.label || key,
+                    id: c.label || key,
                     type: PSEUDOBULK,
                     assay: assayKey,
                     memberId: termId,

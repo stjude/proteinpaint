@@ -159,7 +159,7 @@ export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, PSEUDOBULK])
+const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, /*PSEUDOBULK*/])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
