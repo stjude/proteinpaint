@@ -110,6 +110,11 @@ export function renderTk(data, tk, block) {
 	// y position, by median read count for each junction
 	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
 
+	/*
+	essential to use data.maxReadCount as yscale max
+	this may leave some white space above the disks (median positioned)
+	but will allow the hover boxplot to fully show
+	*/
 	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
 		.domain([tk.readcountCutoff || 1, data.maxReadCount])
 		.range([tk.sections.jug.axisheight, 0])
@@ -717,10 +722,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	if (j.sampleCount == 1) {
 		t1.text('Sample')
 		const sndiv = t2.append('div')
-		sndiv.html('1 <span style="font-size:.7em">single sample</span>')
-		if (ifeventdetails) {
-			// query to get sample name and print
-		}
+		sndiv.text(j.sampleName || 'single sample')
 		t2.append('div').html(j.medianReadCount + ' <span style="font-size:.7em">read count</span>')
 	} else {
 		t1.text('Samples')

@@ -12,7 +12,16 @@ export type Junction = {
 	sampleCount?: number
 	medianReadCount?: number
 	readcountBoxplot?: number[]
-	sn2rc?: any
+	/** 
+	/AbyB route calls q.listJunctions(, keepLst) to only return given junctions
+	along with sn2rc for downstream processing
+	*/
+	sn2rc?: Map<string, number>
+	/**
+	in /junctions route response, if a junction is singleton, its sample name will be attached for showing in j2 tk
+	this avoids making another request to get the sample name
+	*/
+	sampleName?: string
 }
 
 //////////////////// list junctions from rglst
@@ -64,6 +73,7 @@ export type TermdbJunctionsAbyBDataResponse = {
 export type TermdbJunctionsAbyBResponse = TermdbJunctionsAbyBDataResponse | ErrorResponse
 
 //////////////////// get details of one junction
+/*
 export type TermdbOneJunctionRequest = {
 	genome: string
 	dslabel: string
@@ -76,6 +86,7 @@ export type TermdbOneJunctionDataResponse = {
 	some: any // todo
 }
 export type TermdbOneJunctionResponse = TermdbOneJunctionDataResponse | ErrorResponse
+*/
 
 //////////////////// single sample junction tk
 export type TermdbJunctionOneSampleTkRequest = FileORURL & {

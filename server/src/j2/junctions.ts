@@ -13,7 +13,8 @@ const payload: RoutePayload = {
 export const api: RouteApi = {
 	endpoint: 'termdb/junctions',
 	methods: {
-		get: payload
+		get: payload,
+		post: payload
 	}
 }
 
