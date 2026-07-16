@@ -16,12 +16,12 @@ export type Junction = {
 	/AbyB route calls q.listJunctions(, keepLst) to only return given junctions
 	along with sn2rc for downstream processing
 	*/
-	sn2rc?: Map<string, number>
+	sn2rc?: Map<string | number, number>
 	/**
 	in /junctions route response, if a junction is singleton, its sample name will be attached for showing in j2 tk
 	this avoids making another request to get the sample name
 	*/
-	sampleName?: string
+	sampleName?: string | number
 }
 
 //////////////////// list junctions from rglst

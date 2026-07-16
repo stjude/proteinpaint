@@ -92,7 +92,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 							start,
 							stop,
 							strand,
-							sn2rc: new Map<string, number>() // k: sample id, v: read count
+							sn2rc: new Map<string | number, number>() // k: sample id, v: read count
 						}
 						for (let i = 5; i < l.length; i++) {
 							const r = getSampleReadcount(l[i], i)
@@ -135,10 +135,12 @@ export async function validate_query_junction(ds: any, genome: any) {
 					j.sampleCount = readcounts.length
 					if (readcounts.length == 1) {
 						j.medianReadCount = readcounts[0]
-						// singleton. attache sample name
+						// singleton. attach sample name
 						// todo may check permission
-						const sampleId = q.samples[lastRCcolumn - 5].name
-						j.sampleName = ds.cohort?.termdb?.q?.id2sampleName?.(sampleId) || sampleId + '' //
+						if (Number.isInteger(lastRCcolumn)) {
+							const sampleId = q.samples[lastRCcolumn - 5].name
+							j.sampleName = ds.cohort?.termdb?.q?.id2sampleName?.(sampleId) || sampleId
+						}
 					} else {
 						readcounts.sort((i, j) => i - j)
 						const o = boxplot_getvalue(readcounts)
