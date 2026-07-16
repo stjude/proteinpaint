@@ -1135,10 +1135,6 @@ export type SingleCellPseudobulk = {
 					color?: string
 				}
 			}
-			values: {
-				/** should match term.values entries */
-				[key: string]: { label?: string; color?: string }
-			}
 		}
 	}
 }
