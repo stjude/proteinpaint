@@ -1,8 +1,10 @@
 import type { ErrorResponse } from './errorResponse.ts'
-import { type PseudobulkTerm, PseudobulkAssay } from '../terms/pseudobulk.ts'
+import type { PseudobulkTerm, PseudobulkAssay } from '../terms/pseudobulk.ts'
+
+type TermLstEntry = PseudobulkTerm & { genes: string[] }
 
 export type GetPseudobulkDataArg = {
-    termlst: PseudobulkTerm[]
+    termlst: TermLstEntry[]
     assay: typeof PseudobulkAssay[number]
     /** memberId is also termId in the dataset */
     memberId: string
@@ -13,7 +15,7 @@ export type TermdbPseudobulkRequest = {
     genome: string
     /** Dataset label */
     dslabel: string
-    termlst: PseudobulkTerm[]
+    termlst: TermLstEntry[]
 }
 
 export type HasPseudobulkDataResponse = {

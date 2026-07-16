@@ -1,7 +1,7 @@
 import type { AppApi } from '#rx'
 import { TermTypeGroups } from '#shared/terms.js'
 import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, sayerror, GeneSetEditUI } from '#dom'
-import { ClientGenome } from 'types/clientGenome'
+import type { ClientGenome } from 'types/clientGenome'
 
 /** Human readable labels */
 const labelMap = {

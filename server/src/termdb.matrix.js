@@ -19,7 +19,8 @@ import {
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	SSGSEA,
-	PROTEOME_ABUNDANCE
+	PROTEOME_ABUNDANCE,
+	PSEUDOBULK
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -366,6 +367,14 @@ async function getSampleData(q, ds) {
 				}
 				samples[sampleId][tw.$id] = { value, key: value }
 			}
+		} else if (tw.term.type == PSEUDOBULK) {
+			if (!q.ds.queries?.singleCell?.pseudobulk) throw new Error('not supported by dataset: singleCell.pseudobulk')
+			const data = await q.ds.queries.singleCell.pseudobulk.get({
+				termlst: tw.term.termlst,
+				assay: tw.term.termlst[0].assay,
+				memberId: tw.term.termlst[0].memberId
+			})
+			console.log(377, 'pseudobulk', data)
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
