@@ -219,6 +219,12 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 		}
 	}
 	for (const entry of geneMap.values()) lst.push(entry)
+	// Matched samples. The server only sends these when the dataset allows displaying sample ids
+	// (authApi.canDisplaySampleIds), so no permission check is repeated here — an empty/absent list
+	// means either no match or a dataset that does not permit it.
+	for (const s of Array.isArray(data.samples) ? data.samples : []) {
+		if (s?.name) lst.push({ isSample: true, name: s.name, sampleId: s.id })
+	}
 	// Add the genomic coordinate as its own result entry (like a gene entry), rendered by showTerm
 	if (coord) {
 		lst.push({
@@ -450,6 +456,34 @@ export function setSearchRenderers(self: any) {
 					() =>
 						void self
 							.launchGenomeBrowserView('genomic', { coord: term.coord })
+							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+				)
+			return
+		}
+
+		if (term.isSample) {
+			// Sample row: sample name + a "Sample View" button opening the sample as a separate mass chart.
+			// Passes config.sample (singular), the same single-sample shape the scatter click handler
+			// dispatches (scatterInteractivity.ts), which sampleView resolves to its related samples.
+			tr.append('td').text(term.name).style('padding', '5px 10px')
+			tr.append('td')
+				.append('span')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-mass-chat-sample-view-${term.sampleId}`)
+				.style('display', 'inline-block')
+				.style('margin', '0px 3px')
+				.style('padding', '5px 10px')
+				.style('border-radius', '5px')
+				.style('cursor', 'pointer')
+				.text('Sample View')
+				.on(
+					'click',
+					() =>
+						void self
+							.launchPlot({
+								chartType: 'sampleView',
+								sample: { sampleId: term.sampleId, sampleName: term.name }
+							})
 							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 				)
 			return

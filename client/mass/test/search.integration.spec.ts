@@ -6,6 +6,7 @@ import { fetchOmnisearch } from '../search.ts'
         - typed coordinate (with candidates) resolves to chr/start/stop
         - typed coordinate WITHOUT candidates is not resolved (server gates coord resolution on the client regex)
         - dictionary term search returns matching terms
+        - sample search returns matching samples (dataset allows displaying sample ids)
 
         fetchOmnisearch() is the server-call half of the mass omnisearch (see client/mass/search.ts, where it
         is separated from the rendering). These tests hit the termdb/chat omnisearch route directly against the
@@ -22,6 +23,8 @@ const dslabel = 'TermdbTest'
 // TP53 locus on hg38 (= hg38-test defaultcoord); used for the gene and coordinate cases
 const TP53_COORD = { chr: 'chr17', start: 7666657, stop: 7688274 }
 const coordPrompt = `${TP53_COORD.chr}:${TP53_COORD.start}-${TP53_COORD.stop}`
+// a sample name present in TermdbTest (same sample the plots/sampleView tests use)
+const SAMPLE_NAME = '2646'
 
 /**************
  test sections
@@ -119,5 +122,18 @@ tape('dictionary term search returns matching terms', async function (test) {
 		terms.some((t: any) => /sex/i.test(t?.name || '')),
 		'dictionaryTerms should include a term whose name matches "sex" (e.g. "Sex")'
 	)
+	test.end()
+})
+
+tape('sample search returns matching samples', async function (test) {
+	test.timeoutAfter(10000)
+	// TermdbTest allows displaying sample ids, so the matched sample is returned with its id; a dataset
+	// that disallows it (authApi.canDisplaySampleIds) returns [] here instead.
+	const data = await fetchOmnisearch({ genome, dslabel, prompt: SAMPLE_NAME })
+
+	test.ok(Array.isArray(data.samples), 'samples should be an array')
+	const match = (data.samples || []).find(s => s.name == SAMPLE_NAME)
+	test.ok(match, `samples should include the sample named "${SAMPLE_NAME}"`)
+	test.ok(match?.id != null, 'the matched sample should carry its sample id')
 	test.end()
 })

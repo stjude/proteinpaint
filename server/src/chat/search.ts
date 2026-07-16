@@ -1,6 +1,6 @@
-import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult } from '#types'
+import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, SampleMatch } from '#types'
 import { filterTerms } from '#src/termdb.server.init.ts'
-import { copy_term } from '#src/termdb.js'
+import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
 import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
 import { string2pos } from '#shared/common.js'
@@ -76,9 +76,33 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 			? resolveCoordFromCandidates(q.coordCandidates, genome)
 			: null
 
+	// Samples — returns [] when the dataset does not allow displaying sample ids
+	const samples = prompt ? await searchSamples(q, req, ds, prompt) : []
+
 	// Will later add support for other NonDict terms such as genesets etc.
-	return { dictionaryTerms: terms, genes: genes, coord }
+	return { dictionaryTerms: terms, genes: genes, coord, samples }
 }
+
+/** Match the prompt against sample names. get_AllSamplesByName() is the single source of truth for both
+ * the name->id map and the "can this dataset display sample ids" check: it sends {} when
+ * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
+ * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
+async function searchSamples(q: any, req: any, ds: any, prompt: string): Promise<SampleMatch[]> {
+	let sampleName2Id: any = {}
+	await get_AllSamplesByName(q, req, { send: (data: any) => (sampleName2Id = data) }, ds)
+	if (!sampleName2Id || sampleName2Id.error) return []
+
+	const str = prompt.toLowerCase()
+	const matches: SampleMatch[] = []
+	// ponytail: O(all samples) substring scan per keystroke; index the names if a large ds gets slow
+	for (const [name, v] of Object.entries(sampleName2Id as { [k: string]: any })) {
+		if (!name?.toLowerCase().includes(str)) continue
+		matches.push({ id: v.id, name })
+		if (matches.length >= MAX_SAMPLE_MATCHES) break
+	}
+	return matches
+}
+const MAX_SAMPLE_MATCHES = 50
 
 /** Resolve a typed genomic coordinate to { chr, start, stop } from the client-provided candidate spellings
  * (e.g. ["7:100000-200000", "chr7:100000-200000"]). The client (mass/search.ts) runs the shape regex and
