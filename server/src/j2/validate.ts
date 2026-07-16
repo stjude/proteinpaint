@@ -209,14 +209,13 @@ export function computeTypes(j: any, hide: Set<string>): string[] {
 	if (j.events) {
 		const events: any[] = [] // when filtering using "hide", generate new array to prevent sending excess data
 		for (const e of j.events) {
-			// todo migrate attrValue to e.type
-			if (typeof e.attrValue != 'string') throw new Error('event.attrValue missing')
-			if (hide?.has(e.attrValue)) continue
+			if (typeof e.type != 'string') throw new Error('event.type missing')
+			if (hide?.has(e.type)) continue
 			events.push(e)
 		}
 		if (events.length) {
 			j.events = events
-			types.push(...new Set(events.map(i => i.attrValue)))
+			types.push(...new Set(events.map(i => i.type)))
 		} else {
 			delete j.events
 		}
