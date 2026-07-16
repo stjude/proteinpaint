@@ -23,6 +23,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private controlsToggleButton: any = null
 	private hasResults = false
 	private inputPanelCollapsed = false
+	private cohortFilterSignature: string | null = null
 
 	constructor(opts: any, api) {
 		super(opts, api)
@@ -100,6 +101,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
+		const cohortFilterSignature = this.getCohortFilterSignature()
+		if (this.cohortFilterSignature === null) {
+			this.cohortFilterSignature = cohortFilterSignature
+		} else if (this.cohortFilterSignature !== cohortFilterSignature) {
+			this.cohortFilterSignature = cohortFilterSignature
+			this.clearResultsAndShowInputs()
+		}
+
 		if (!this.controlsView) {
 			this.controlsView = new GRIN2ControlsView({
 				headerHolder: this.dom.headerText,
@@ -117,15 +126,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async handleRun() {
 		if (!this.controlsView) return
+		const runFilterSignature = this.cohortFilterSignature
 		// The previous result is removed before a new request starts, so its input toggle must disappear too.
 		// Keeping the panel open also makes errors recoverable without another click.
-		this.hasResults = false
-		this.inputPanelCollapsed = false
-		this.updateInputPanel()
+		this.clearResultsAndShowInputs()
 		this.controlsView.setBusy(true)
 		try {
 			const dtUsage = this.controlsView.getDtUsage()
-			this.resultsView.clear()
 
 			const configValues = this.controlsView.getConfigValues(dtUsage)
 			const manhattan = this.state.config.settings.manhattan
@@ -147,6 +154,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			const response = await this.model.fetchGrin2Data(requestData, this.api!.getAbortSignal())
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
+			// A filter update invalidates this response even if the request could not be aborted in time.
+			if (runFilterSignature !== this.cohortFilterSignature) return
 
 			const vm = new GRIN2ViewModel(response, manhattan, dtUsage)
 			this.resultsView.render(vm.viewData)
@@ -175,6 +184,20 @@ class GRIN2 extends PlotBase implements RxComponent {
 		} finally {
 			this.controlsView?.setBusy(false)
 		}
+	}
+
+	private getCohortFilterSignature() {
+		return JSON.stringify({
+			filter: this.state.termfilter?.filter ?? null,
+			filter0: this.state.termfilter?.filter0 ?? null
+		})
+	}
+
+	private clearResultsAndShowInputs() {
+		this.resultsView.clear()
+		this.hasResults = false
+		this.inputPanelCollapsed = false
+		this.updateInputPanel()
 	}
 
 	private updateInputPanel() {

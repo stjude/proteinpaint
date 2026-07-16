@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { getRunPp } from '../../../test/front.helpers.js'
 import { detectOne } from '../../../test/test.helpers.js'
+import { getFilter_Hodgkin } from '../../../test/testdata/data'
 
 /**************
  test sections
@@ -296,6 +297,61 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 		test.end()
 	}
 })
+
+testFilterInvalidation('grin2 clears results when the global filter changes', async g => {
+	await g.Inner.app.dispatch({
+		type: 'filter_replace',
+		filter: getFilter_Hodgkin()
+	})
+})
+
+testFilterInvalidation('grin2 clears results when its local filter changes', async g => {
+	await g.Inner.app.dispatch({
+		type: 'plot_edit',
+		id: g.Inner.id,
+		config: { filter: getFilter_Hodgkin() }
+	})
+})
+
+function testFilterInvalidation(name: string, changeFilter: (g: any) => Promise<void>) {
+	tape(name, function (test) {
+		test.timeoutAfter(10000)
+		let analysisStarted = false
+		let filterChanged = false
+
+		runpp({
+			state: { plots: [{ chartType: 'grin2' }] },
+			grin2: { callbacks: { 'postRender.test': runTest } }
+		})
+
+		async function runTest(g: any) {
+			if (!alreadyRun(g)) {
+				if (!analysisStarted) {
+					analysisStarted = true
+					getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
+				}
+				return
+			}
+
+			if (!filterChanged) {
+				filterChanged = true
+				test.ok(
+					g.Inner.dom.div.node().querySelector('[data-testid="sjpp-grin2-top-genes-table"]'),
+					'results are displayed before the filter changes'
+				)
+				await changeFilter(g)
+				return
+			}
+
+			test.equal(g.Inner.dom.div.node().children.length, 0, 'stale results are removed after the filter changes')
+			test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'false', 'input panel is shown after the filter changes')
+			test.equal(getInputToggle(g).button.style.display, 'none', 'result-only input toggle is hidden')
+			test.notEqual(getRunButton(g).style.display, 'none', 'Run button is shown')
+			g.Inner.app.destroy()
+			test.end()
+		}
+	})
+}
 
 /*************************
  reusable helper functions
