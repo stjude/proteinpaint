@@ -12,6 +12,7 @@ Fixes:
 - Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
 - Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
 - Move dataset launch-time case-sample caching into a uniform ds.preInit.cacheSamples() hook: mds3 init now dispatches caching generically (dropping the ds.label=='GDC' hardcode in mds3.init.nonblocking.js), so each API-based dataset owns its own caching (GDC's gdc.initCache relocated to the ppgdc dataset)
+- Route GDC dictionary term data through the ds.cohort.termdb.dictionary.get() hook, removing the GDC-specific getSampleData_dictionaryTerms_v2s path (and its variant2samples fallback) from shared server code
 
 
 ## 2.197.0
