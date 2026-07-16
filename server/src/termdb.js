@@ -315,7 +315,7 @@ async function get_AllSamples(q, req, res, ds) {
 	res.send(result)
 }
 
-async function get_AllSamplesByName(q, req, res, ds) {
+export async function get_AllSamplesByName(q, req, res, ds) {
 	// return {}, k: sample name, v: id
 	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
 
