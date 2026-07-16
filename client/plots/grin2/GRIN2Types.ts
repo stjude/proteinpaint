@@ -3,9 +3,13 @@ import type { GRIN2Settings } from './settings/Settings'
 
 export interface GRIN2Dom {
 	massControls: Elem
+	/** Animated holder for the citation and config form. */
+	inputPanel: any
 	headerText: Elem
 	/** Holder for the GRIN2 config form (owned by GRIN2ControlsView). */
 	controls: any
+	/** Shared row for the result-gated input toggle and Run button. */
+	controlsToggle: any
 	/** Holder for the analysis results (owned by GRIN2ResultsView). */
 	div: any
 	header?: any
