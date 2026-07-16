@@ -60,11 +60,21 @@ export interface GeneMatch {
 	coord: { chr: string; start: number; stop: number } | null
 }
 
+/** One matched sample. Only sent when the dataset allows displaying sample ids
+ * (authApi.canDisplaySampleIds); a dataset that does not permit it yields no samples at all, so the
+ * client needs no permission check of its own. */
+export interface SampleMatch {
+	id: number | string
+	name: string
+}
+
 /** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
  * available gene data types so the client can offer the appropriate per-gene action buttons. */
 export interface OmnisearchResult {
 	dictionaryTerms: any[]
 	genes: GeneMatch[]
+	/** Matched samples. Always [] for a dataset that does not allow displaying sample ids. */
+	samples: SampleMatch[]
 	/** Parsed genomic coordinate when the prompt is a valid "chr:start-stop" range AND the dataset
 	 * supports the genome browser genomic view (has snvindel/cnv/svfusion and gbRestrictMode !== 'protein').
 	 * Null/absent otherwise. Resolved server-side (via string2pos) so the client needs no genome object. */
