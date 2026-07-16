@@ -1,1 +1,2 @@
-
+Fixes:
+- Route GDC dictionary term data through the ds.cohort.termdb.dictionary.get() hook, removing the GDC-specific getSampleData_dictionaryTerms_v2s path (and its variant2samples fallback) from shared server code
