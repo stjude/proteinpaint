@@ -1,6 +1,7 @@
 import type { AppApi } from '#rx'
 import { TermTypeGroups } from '#shared/terms.js'
-import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, sayerror } from '#dom'
+import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, sayerror, GeneSetEditUI } from '#dom'
+import { ClientGenome } from 'types/clientGenome'
 
 /** Human readable labels */
 const labelMap = {
@@ -10,18 +11,22 @@ const labelMap = {
 
 export class SearchHandler {
     callback!: (f?: any) => void
-    app?: AppApi
+    app!: AppApi
+    genome!: ClientGenome
     map?: Map<string, Map<string, any[]>>
     selectedTerms: Set<string>
+    selectedGenes: Set<string>
 
     constructor() {
         this.selectedTerms = new Set()
+        this.selectedGenes = new Set()
     }
 
     async init(opts) {
         const pseudobulkTerms = this.validateOpts(opts)
         this.callback = opts.callback
         this.app = opts.app
+        this.genome = opts.genomeObj
         const holder = opts.holder.append('div').style('padding', '10px 0px')
 
         this.map = this.buildRenderingDataMap(pseudobulkTerms)
@@ -32,6 +37,7 @@ export class SearchHandler {
         if (!opts) throw new Error('opts is required')
         if (!opts.app) throw new Error('opts.app is required')
         if (!opts.holder) throw new Error('opts.holder is required')
+        if (opts.genomeObj == null || typeof opts.genomeObj !== 'object') throw new Error('genomeObj is required')
         if (!opts.callback) throw new Error('opts.callback is required')
         const pseudobulkTerms = opts.app.vocabApi.termdbConfig?.termType2terms?.[TermTypeGroups.PSEUDOBULK]
         if (!pseudobulkTerms) {
@@ -116,8 +122,9 @@ export class SearchHandler {
     renderTermdByMemberId(holder, memberIdMap) {
         holder.selectAll('*').remove()
         this.renderBackButton(holder)
-        this.renderPseudobulkTerms(holder, memberIdMap)
-        this.renderSumbitButton(holder)
+        const pseudoTermsWrapper = holder.append('div').attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
+        this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap)
+        this.renderSubmitBtn(holder, pseudoTermsWrapper)
     }
 
     renderBackButton(holder) {
@@ -196,8 +203,8 @@ export class SearchHandler {
             .text(text)
     }
 
-    renderSumbitButton(holder) {
-        holder.append('button')
+    renderSubmitBtn(holder, wrapper) {
+        wrapper.append('button')
             .text('Submit')
             .style('margin', '10px 0px')
             .style('padding', '5px 10px')
@@ -209,15 +216,33 @@ export class SearchHandler {
                     sayerror(holder, 'Please select at least two categories.')
                     return
                 }
+                wrapper.selectAll('*').remove()
+                this.renderGeneSelection(holder)
+            })
+    }
+
+    renderGeneSelection(holder) {
+        new GeneSetEditUI({
+            holder: holder.append('div'),
+            genome: this.genome,
+            mode: 'geneExpression',
+            vocabApi: this.app.vocabApi,
+            callback: (arg) => {
+                if (!arg.geneList || arg.geneList.length < 2) {
+                    sayerror(holder, 'Please select at least two genes.')
+                    return
+                }
+                const termlst = Array.from(this.selectedTerms).map(term => Object.assign({}, term, {genes: arg.geneList.map(g => g.gene)}))
                 this.callback({
                     type: 'termCollection',
                     isCustom: true,
                     memberType: 'numeric',
-                    termlst: Array.from(this.selectedTerms),
+                    termlst,
                     name: 'Pseudobulk Selection',
                     propsByTermId: {},
                     isleaf: true
                 })
-            })
+            }
+        })
     }
 }
