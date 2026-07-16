@@ -1,6 +1,7 @@
 import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, SampleMatch } from '#types'
 import { filterTerms } from '#src/termdb.server.init.ts'
 import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
+import { authApi } from '#src/auth.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
 import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
 import { string2pos } from '#shared/common.js'
@@ -88,6 +89,11 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
  * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
  * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
 async function searchSamples(q: any, req: any, ds: any, prompt: string): Promise<SampleMatch[]> {
+	// authApi is only assigned once app.ts calls getAuthApi(); when it is not set (e.g. a unit test calling
+	// runOmnisearch directly, no server app), skip sample search rather than let get_AllSamplesByName crash
+	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
+	if (!authApi) return []
+
 	let sampleName2Id: any = {}
 	await get_AllSamplesByName(q, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return []

@@ -147,6 +147,10 @@ class SampleView {
 			const hasSampleAncestry = appState.termdbConfig.hasSampleAncestry
 			const sampleName = searchSampleInput(this.dom.sampleDiv, this.samplesData, hasSampleAncestry, callback)
 			this.sample = config.sample || { sampleId: this.samplesData[sampleName].id, sampleName }
+			// When the plot is opened for an already-chosen sample (config.sample, e.g. from the omnisearch
+			// or a scatter point click), show that name in the search box. Its data is rendered either way,
+			// but an empty box reads as "type a sample name to see details".
+			if (config.sample?.sampleName) sampleDiv.select('input').property('value', config.sample.sampleName)
 
 			this.dom.downloadbt = sampleDiv
 				.insert('button')
