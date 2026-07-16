@@ -1,4 +1,4 @@
-import type { RoutePayload, RouteApi, TermdbPseudobulkRequest} from '#types'
+import type { RoutePayload, RouteApi, TermdbPseudobulkRequest, TermdbPseudobulkResponse} from '#types'
 import { validGenomeDs } from '#routes/common.ts'
 
 export const payload: RoutePayload = {
@@ -21,6 +21,7 @@ export const api: RouteApi = {
 function validPseudobulkRequest(input): TermdbPseudobulkRequest {
     return {
         ...validGenomeDs(input),
+        termlst: input.termlst
     }
 }
 
@@ -33,6 +34,10 @@ function init({ genomes }) {
             if (!g) throw new Error('Invalid genome name')
             const ds = g.datasets[q.dslabel]
             if (!ds) throw new Error('Invalid dataset name')
+            if (!ds.queries.singleCell?.pseudobulk || ds.queries.singleCell.pseudobulk.get) {
+                throw new Error('Dataset does not support single cell pseudobulk data.')
+            }
+            result = await ds.queries.singleCell.pseudobulk.get(q)
         } catch (e: any) {
             if (e.stack) console.log(e.stack)
             result = {
@@ -40,6 +45,6 @@ function init({ genomes }) {
                 error: e.message || e
             }
         }
-        res.send(result)
+        res.send(result  satisfies TermdbPseudobulkResponse)
     }
 }

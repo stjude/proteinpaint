@@ -114,7 +114,8 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 	colorColumn2terms(ds.queries.singleCell.data.plots, ds) // convert colorBy columns defined in ds file to term objects for use in vocabApi methods later
 
 	if (ds.queries.singleCell?.pseudobulk) {
-		validatePseudobulk(ds.queries.singleCell.pseudobulk, ds)
+		//** NOTE This will not work for the gdc */
+		validatePseudobulk(ds)
 	}
 
 	if (q.geneExpression) {
