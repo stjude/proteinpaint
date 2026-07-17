@@ -8,11 +8,20 @@ import { IDCViewerDefaults } from './settings/defaults'
 import { IDCSearchView } from './view/IDCSearchView'
 import { applyStyles, idcViewerStyles } from './styling'
 
+type IDCViewerInitArg = {
+	/** GDC cohort filter */
+	filter0: any
+	/** a constant that's declared in portal-proto/.env.* files, with the following expected values:
+	 * - "https://api.gdc.cancer.gov" in dev, works with 'http(s)://localhost' URLs, but has CORS error when used in portal.gdc.cancer.gov URLs
+	 * - "https://portal.gdc.cancer.gov/auth/api/v0" or relative path "/auth/api/v0" in prod, works with with portal.gdc.cancer.gov URLs */
+	GDC_API: string
+}
+
 export async function init(
-	{ filter0 },
+	{ filter0, GDC_API }: IDCViewerInitArg,
 	holder: Selection<HTMLDivElement, unknown, any, any>
 ): Promise<{ update: (arg: { filter0: any }) => Promise<void> }> {
-	const viewer = new IDCViewer(holder)
+	const viewer = new IDCViewer(holder, GDC_API)
 	viewer.main({ ...IDCViewerDefaults, filter0: filter0 }, true).catch(e => {
 		sayerror(viewer.dom.errorDiv, `Error running IDCViewer: ${e.message || e}`)
 	})
@@ -25,14 +34,15 @@ export async function init(
 }
 
 export class IDCViewer {
-	private model = new IDCModel()
+	private model: IDCModel
 	private viewModel = new IDCViewModel()
 	private tableView: IDCTableView | undefined
 	private searchView: IDCSearchView | undefined
 	private loadResult: IDCParquetLoadResult | undefined
 	public dom: { [name: string]: any } = {}
 
-	constructor(holder: Selection<HTMLDivElement, unknown, any, any>) {
+	constructor(holder: Selection<HTMLDivElement, unknown, any, any>, GDC_API: undefined | string) {
+		this.model = new IDCModel(GDC_API || 'https://api.gdc.cancer.gov')
 		this.dom = {
 			holder: holder,
 			errorDiv: holder.append('div').attr('class', 'idcviewer-error-holder'),
