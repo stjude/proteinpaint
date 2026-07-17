@@ -31,11 +31,13 @@ import { expandCustomTermCollection, reconstituteCustomTermCollection } from './
 /* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
 each dataset implements ds.cohort.termdb.q.id2sampleRefs() (native/gdc/mmrf); it owns any id
 coercion since id spaces differ (integer for native/mmrf, case-uuid string for gdc).
-the id2sampleName branch is a thin fallback for datasets not yet exposing id2sampleRefs. */
+the id2sampleName branch is a thin fallback for datasets not yet exposing id2sampleRefs; it must
+not assume an integer id space, so it tries the raw id first (string ids, e.g. uuids) and only then
+the Number()-coerced id (integer-id datasets whose samples{} key is a stringified integer). */
 export function id2sampleRef(id, ds) {
 	const q = ds?.cohort?.termdb?.q
 	if (q?.id2sampleRefs) return q.id2sampleRefs(id)
-	if (q?.id2sampleName) return { label: q.id2sampleName(Number(id)) }
+	if (q?.id2sampleName) return { label: q.id2sampleName(id) ?? q.id2sampleName(Number(id)) }
 	return undefined
 }
 
