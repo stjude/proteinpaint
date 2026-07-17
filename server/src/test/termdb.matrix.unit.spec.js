@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { divideTerms } from '../termdb.matrix.js'
+import { divideTerms, id2sampleRef } from '../termdb.matrix.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -14,6 +14,24 @@ divideTerms: shorthand dict terms (no type, just id) are also gated by isTermVis
 divideTerms: q.__protected__ is forwarded to the isTermVisible hook
 divideTerms: termCollection visibility decided by member terms (term.termlst)
 */
+
+tape('id2sampleRef(): prefers id2sampleRefs, falls back to id2sampleName, coerces id', test => {
+	// dataset exposing id2sampleRefs -> its object is returned as-is (raw id passed through)
+	const dsRefs = { cohort: { termdb: { q: { id2sampleRefs: id => ({ label: 'R' + id, extra: 1 }) } } } }
+	test.deepEqual(id2sampleRef('abc', dsRefs), { label: 'Rabc', extra: 1 }, 'id2sampleRefs wins and gets the raw id')
+
+	// dataset with only id2sampleName -> wrapped in { label }, id coerced to Number
+	const seen = []
+	const dsName = { cohort: { termdb: { q: { id2sampleName: id => (seen.push(id), 'name' + id) } } } }
+	test.deepEqual(id2sampleRef('7', dsName), { label: 'name7' }, 'id2sampleName fallback wrapped in { label }')
+	test.equal(seen[0], 7, 'string id is coerced to Number for id2sampleName')
+
+	// neither method -> undefined (caller skips assignment)
+	test.equal(id2sampleRef('x', { cohort: { termdb: { q: {} } } }), undefined, 'no method -> undefined')
+	test.equal(id2sampleRef('x', {}), undefined, 'missing termdb.q -> undefined, no throw')
+
+	test.end()
+})
 
 tape('\n', function (test) {
 	test.comment('-***- modules/termdb.matrix specs -***-')

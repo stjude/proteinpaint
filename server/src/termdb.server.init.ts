@@ -137,6 +137,9 @@ export function server_init_db_queries(ds) {
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		// centralized sample->display resolution (see termdb.matrix.js id2sampleRef()); wraps id2sampleName.
+		// coerce id here so callers can pass the raw samples{} key (string) or an integer id
+		q.id2sampleRefs = id => ({ label: i2s.get(Number(id)) })
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {
