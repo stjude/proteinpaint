@@ -3,7 +3,7 @@ name: Unit tests (Docker)
 on:
   push:
     branches:
-      - feat/docker-unit-tests   # TEMPORARY: remove before merging
+      - ci/DockerImageforUnitTests   # TEMPORARY: remove before merging
   workflow_dispatch:
   workflow_call: {}
 
