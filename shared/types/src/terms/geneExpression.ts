@@ -7,29 +7,11 @@ GeneExpressionTermWrapper
 GeneExpressionTermSettingInstance
 */
 
-type Gene = {
-	kind?: 'gene'
-	gene: string
-	// chr,start,stop should exist together as a separate type called
-	// 'Coord', but hard to code as atomic `& Coord` because it may
-	// need to be filled in
-	chr?: string
-	start?: number
-	stop?: number
-}
-
-type Coord = {
-	kind?: 'coord'
-	gene?: string
-	chr: string
-	start: number
-	stop: number
-}
-
 export type GeneExpressionTerm = NumericBaseTerm & {
 	type: 'geneExpression'
+	gene: string
 	bins?: PresetNumericBins
-} & (Gene | Coord)
+}
 
 export type GeneExpressionTW = NumTW & { term: GeneExpressionTerm }
 
