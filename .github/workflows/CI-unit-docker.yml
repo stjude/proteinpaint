@@ -1,0 +1,22 @@
+name: Unit tests (Docker)
+
+on:
+  push:
+    branches:
+      - feat/docker-unit-tests   # TEMPORARY: remove before merging
+  workflow_dispatch:
+  workflow_call: {}
+
+jobs:
+  unit-docker:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 10
+
+      - name: Run unit tests
+        uses: ./.github/actions/run-unit-tests
+        with:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
