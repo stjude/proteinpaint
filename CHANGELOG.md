@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Features:
+- Untangle the GDC querySamples_gdcapi() server path: split the getData/dictionary-term and variant2samples sample-query entry points so getData calls queryDictTermData_gdcapi instead of the mutation-oriented querySamples_gdcapi, drop a shared-request mutation, and extract a unit-tested ssm-occurrence field builder
+- Centralize sample-id-to-display resolution on ds.cohort.termdb.q.id2sampleRefs() with a uniform native/GDC implementation, removing the GDC-specific __gdc coupling from termdb.matrix.js and termdb.cluster.ts
+
 
 ## 2.198.0
 
