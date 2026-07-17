@@ -18,6 +18,7 @@ or run the whole unit suite (as CI does):
 *********************************************/
 import tape from 'tape'
 import { runOmnisearch } from '../chat/search.ts'
+import { getAuthApi, authApi } from '../auth.js'
 
 // minimal request; filterTerms() only reads req.query.__protected__, and our hardcoded ds has no isTermVisible()
 const req: any = { query: {} }
@@ -130,6 +131,55 @@ tape('gene data type — genome browser: TP53 reports genomeBrowser', async t =>
 	const tp53 = data.genes.find(g => g.gene == gene)
 	t.ok(tp53, 'genes should include TP53')
 	t.equal(tp53?.dataTypes?.genomeBrowser, true, 'TP53 dataTypes.genomeBrowser should be true')
+	t.end()
+})
+
+/* Sample search — runOmnisearch matches the prompt against sample names and returns the matches ONLY when
+   the dataset allows displaying sample ids (authApi.canDisplaySampleIds). At server startup app.ts assigns
+   the shared authApi live-binding; unit tests run without that, so ensureOpenAuth() assigns the default
+   open-access AuthApi once. Under open access canDisplaySampleIds keys off ds.cohort.termdb.displaySampleIds,
+   which is exactly the allowed-vs-not-allowed toggle these two tests exercise. */
+
+// assign the shared open-access authApi once (idempotent — the live-binding is process-global)
+async function ensureOpenAuth() {
+	if (authApi) return
+	// minimal express-app stand-in; getAuthApi only stores it in a WeakMap for open access
+	const app: any = { doNotFreezeAuthApi: true, get() {}, post() {}, all() {}, use() {} }
+	await getAuthApi(app, {}, {}, true)
+}
+
+// a TermdbTest-like ds carrying two sample names, with sample-id display allowed or not. Reuses no-op
+// dictionary/gene stubs so runOmnisearch's dictionary + gene search find nothing and only samples matter.
+function makeSampleDs(displaySampleIds: boolean): any {
+	return {
+		cohort: {
+			termdb: {
+				termtypeByCohort: [],
+				displaySampleIds,
+				q: { findTermByName: async () => [], getAncestorIDs: () => [], getAncestorNames: () => [] }
+			}
+		},
+		queries: {},
+		// get_AllSamplesByName's no-filter branch reads this Map (name -> id)
+		sampleName2Id: new Map([
+			['2646', 41],
+			['3416', 96]
+		])
+	}
+}
+
+tape('sample search: returns the matching sample when the dataset allows displaying sample ids', async t => {
+	await ensureOpenAuth()
+	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true), genome)
+	t.ok(Array.isArray(data.samples), 'samples should be an array')
+	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'should return the matching sample with its id')
+	t.end()
+})
+
+tape('sample search: returns no samples when the dataset does not allow displaying sample ids', async t => {
+	await ensureOpenAuth()
+	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(false), genome)
+	t.deepEqual(data.samples, [], 'should return no samples even though "2646" matches a sample name')
 	t.end()
 })
 
