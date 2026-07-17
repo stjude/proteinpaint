@@ -177,6 +177,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				}
 			})
 		} catch (error) {
+			// Component updates abort the previous request; this is expected during filter changes.
+			if (this.app.isAbortError(error)) return
 			// dom.div may be undefined if the sandbox was deleted mid-request — don't crash in that case
 			if (this.dom.div) {
 				sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
