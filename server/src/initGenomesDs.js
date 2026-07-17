@@ -16,7 +16,7 @@ import {
 	flattenCaseByFields,
 	may_add_readdepth,
 	mapGenes2isoforms,
-	querySamples_gdcapi
+	queryDictTermData_gdcapi
 } from './mds3.gdc.js'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types'
@@ -28,7 +28,7 @@ const dsHelpers = {
 	flattenCaseByFields,
 	may_add_readdepth,
 	mapGenes2isoforms,
-	querySamples_gdcapi,
+	queryDictTermData_gdcapi,
 	isUsableTerm,
 	joinUrl,
 	ezFetch,

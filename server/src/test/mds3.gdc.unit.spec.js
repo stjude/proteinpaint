@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { flattenCaseByFields, parseGdcCnvFile } from '../mds3.gdc.js'
+import { flattenCaseByFields, parseGdcCnvFile, buildSsmOccurrenceFields } from '../mds3.gdc.js'
 import { dtcnv, dtloh } from '#shared/common.js'
 
 tape('\n', function (test) {
@@ -52,6 +52,48 @@ tape('flattenCaseByFields(): multiple diagnoses entries', test => {
 	const sample = {}
 	flattenCaseByFields(sample, hit, tw)
 	test.deepEqual(sample, { 'case.diagnoses.age_at_diagnosis': 20 }, 'should flatten nested case data')
+	test.end()
+})
+
+tape('buildSsmOccurrenceFields(): base fields + branch add-ons', test => {
+	const dictTwLst = [{ term: { id: 'case.disease_type' } }]
+
+	// base: dict term id + the two always-added identity fields, no add-ons
+	test.deepEqual(
+		buildSsmOccurrenceFields(dictTwLst, {}),
+		['case.disease_type', 'case.observation.sample.tumor_sample_uuid', 'case.case_id'],
+		'base returns dict term id + always-added case identity fields'
+	)
+
+	// age/primary_diagnosis pulls in diagnosis_is_primary_disease
+	test.ok(
+		buildSsmOccurrenceFields([{ term: { id: 'case.diagnoses.age_at_diagnosis' } }], {}).includes(
+			'case.diagnoses.diagnosis_is_primary_disease'
+		),
+		'age_at_diagnosis adds diagnosis_is_primary_disease'
+	)
+
+	// q.get=='samples' alone does NOT add ssm/read-depth fields; needs ssm_id_lst or isoform too
+	test.notOk(
+		buildSsmOccurrenceFields(dictTwLst, { get: 'samples' }).includes('ssm.ssm_id'),
+		"get=='samples' without ssm_id_lst/isoform does not add ssm.ssm_id"
+	)
+	test.ok(
+		buildSsmOccurrenceFields(dictTwLst, { get: 'samples', isoform: 'ENST1' }).includes(
+			'case.observation.read_depth.t_depth'
+		),
+		"get=='samples' + isoform adds read depth fields"
+	)
+
+	// hiddenmclass adds consequence fields; rglst adds position fields
+	const withMclass = buildSsmOccurrenceFields(dictTwLst, { hiddenmclass: new Set(['M']) })
+	test.ok(withMclass.includes('ssm.consequence.transcript.consequence_type'), 'hiddenmclass adds consequence fields')
+	test.ok(buildSsmOccurrenceFields(dictTwLst, { rglst: [{}] }).includes('ssm.chromosome'), 'rglst adds ssm.chromosome')
+
+	// duplicate dict term ids are deduped (Set-based)
+	const dupes = buildSsmOccurrenceFields([{ term: { id: 'case.case_id' } }], {})
+	test.equal(dupes.filter(f => f == 'case.case_id').length, 1, 'duplicate fields are deduped')
+
 	test.end()
 })
 
