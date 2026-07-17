@@ -1,4 +1,4 @@
-import { PSEUDOBULK } from '#shared/terms.js'
+import { PSEUDOBULK, termType2label } from '#shared/terms.js'
 import { plotColor } from '#shared/common.js'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -21,6 +21,12 @@ export async function validatePseudobulk(ds: any) {
 
 	if (typeof pseudobulk != 'object') throw new Error('singleCell.pseudobulk is not object')
 	for (const assayKey of Object.keys(pseudobulk)) {
+		try {
+			termType2label(assayKey)
+		} catch (_) {
+			throw 'unknown pseudobulk[assay]: ' + assayKey
+		}
+
 		if (typeof pseudobulk[assayKey] != 'object') throw new Error(`singleCell.pseudobulk.${assayKey} is not object`)
 
 		/**

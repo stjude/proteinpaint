@@ -1,14 +1,10 @@
 import type { AppApi } from '#rx'
-import { TermTypeGroups } from '#shared/terms.js'
-import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, sayerror, GeneSetEditUI } from '#dom'
+import { TermTypeGroups, termType2label } from '#shared/terms.js'
+import { Tabs, type TabsInputEntry, make_radios, type OptionEntry, Menu, addGeneSearchbox } from '#dom'
 import type { ClientGenome } from 'types/clientGenome'
 import type { PseudobulkTerm } from '#types'
 
 /** Human readable labels */
-const labelMap = {
-	geneExpression: 'Gene Expression',
-	cellType: 'Cell Type'
-}
 
 type PseudobulkSelection = Omit<PseudobulkTerm, 'category' | 'gene'> & {
 	id: string
@@ -63,14 +59,15 @@ export class SearchHandler {
 		return map
 	}
 
-	/** If more than one assay, render tabs for each assay. If only one,
-	 * renders the radio selection for the memberIds. If only one memberId,
-	 * renders the cell types directly as radio buttons. */
+	/** If more than one assay, render tabs for each assay. Member IDs within
+	 * an assay are rendered as tabs when there is more than one. */
 	renderPseudobulkSearch(holder) {
 		if (!this.map || this.map.size < 1) throw new Error('map is not initialized')
 		if (this.map.size === 1) {
-			const label = labelMap[this.map.keys().next().value!] || this.map.keys().next().value
-			this.renderMemberIdsByAssay(holder, this.map, label)
+			// only one assay
+			const label = termType2label(this.map.keys().next().value!)
+			holder.append('div').text('Single-cell pseudobulk ' + label)
+			this.renderMemberIdsByAssay(holder.append('div'), this.map)
 			return
 		}
 		const tabs = this.buildTabsOpts(this.map)
@@ -80,72 +77,56 @@ export class SearchHandler {
 	buildTabsOpts(map) {
 		const tabs: TabsInputEntry[] = []
 		for (const [key, valuesMap] of map.entries()) {
-			const label = labelMap[key] || key
+			const label = termType2label(key)
 			tabs.push({
 				label,
 				active: false,
 				callback: (_, tab) => {
-					this.renderMemberIdsByAssay(tab.contentHolder, new Map([[key, valuesMap]]), label)
+					this.renderMemberIdsByAssay(tab.contentHolder, new Map([[key, valuesMap]]))
 				}
 			})
 		}
 		return tabs
 	}
 
-	renderMemberIdsByAssay(holder, map, assayLabel) {
+	renderMemberIdsByAssay(holder, map) {
 		const memberIdMap = map.values().next().value
-		if (memberIdMap.size === 1) {
-			this.renderTermdByMemberId(holder, memberIdMap)
-			return
-		}
-		const options: OptionEntry[] = Array.from(memberIdMap.keys()).map(memberId => ({
-			label: memberId,
-			value: memberId,
-			checked: false,
-			testid: `sjpp-pseudobulk-${assayLabel}-${memberId}`
-		})) as any
-
-		holder.append('div').style('padding', '5px').style('opacity', 0.7).text(`${assayLabel} selection:`)
-
-		make_radios({
-			holder,
-			inputName: `sjpp-pseudobulk-radios-${assayLabel}`,
-			options,
-			styles: { display: 'block', padding: '3px 5px' },
-			callback: value => {
-				const terms = memberIdMap.get(value)
-				this.renderTermdByMemberId(holder, new Map([[value, terms]]))
-			}
-		})
+		holder.selectAll('*').remove()
+		this.renderTermdByMemberId(holder, memberIdMap)
 	}
 
 	renderTermdByMemberId(holder, memberIdMap) {
-		holder.selectAll('*').remove()
-		const pseudoTermsWrapper = holder.append('div').attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
-		this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap, holder)
+		const layout = holder.append('div').style('display', 'flex').style('align-items', 'flex-start').style('gap', '30px')
+		const pseudoTermsWrapper = layout.append('div').attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
+		const geneSearchWrapper = layout.append('div').attr('data-testid', 'sjpp-pseudobulk-gene-search-wrapper')
+		this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap, geneSearchWrapper)
 	}
 
-	renderBackButton(holder, callback) {
-		holder
-			.append('button')
-			.html('&#171; Back')
-			.style('margin', '5px 0px')
-			.style('border', 'none')
-			.style('background', 'none')
-			.on('click', () => {
-				holder.selectAll('*').remove()
-				callback()
-			})
+	renderPseudobulkTerms(holder, memberIdMap, geneSearchHolder) {
+		if (memberIdMap.size === 1) {
+			const [memberId, terms] = memberIdMap.entries().next().value
+			this.renderCategoryRadios(holder, memberId, terms, geneSearchHolder)
+			return
+		}
+
+		const memberEntries = Array.from(memberIdMap.entries()) as [string, any[]][]
+		const tabs: TabsInputEntry[] = memberEntries.map(([memberId, terms]) => ({
+			label: memberId,
+			active: false,
+			testid: `sjpp-pseudobulk-member-${memberId}`,
+			callback: (_, tab) => {
+				this.selectedTerm = undefined
+				geneSearchHolder.selectAll('*').remove()
+				tab.contentHolder.selectAll('*').remove()
+				this.renderCategoryRadios(tab.contentHolder, memberId, terms, geneSearchHolder)
+			}
+		}))
+		new Tabs({ holder, tabs }).main()
 	}
 
-	renderPseudobulkTerms(holder, memberIdMap, searchHolder) {
-		const terms = memberIdMap.values().next().value
+	renderCategoryRadios(holder, memberId, terms, geneSearchHolder) {
 		if (!terms || terms.length < 1) throw new Error('No terms found for memberId')
-		holder
-			.append('div')
-			.style('padding', '5px')
-			.style('opacity', 0.7)
-			.text(`Select one from ${memberIdMap.keys().next().value}:`)
+		holder.append('div').style('opacity', 0.7).text(`Select from ${memberId}:`)
 
 		const options: OptionEntry[] = terms.map(term => ({
 			label: term.name,
@@ -155,62 +136,37 @@ export class SearchHandler {
 		}))
 		make_radios({
 			holder,
-			inputName: 'sjpp-pseudobulk-category-radios',
+			inputName: `sjpp-pseudobulk-category-radios-${memberId}`,
 			options,
 			styles: { display: 'block', padding: '3px 5px' },
 			callback: value => {
 				const term = terms.find(term => term.id == value)
 				if (!term) throw new Error(`No pseudobulk term found for category ${value}`)
 				this.selectedTerm = term
-				this.renderGeneSelection(searchHolder, memberIdMap)
+				this.renderGeneSelection(geneSearchHolder)
 			}
 		})
 	}
 
-	renderGeneSelection(holder, memberIdMap) {
+	renderGeneSelection(holder) {
 		holder.selectAll('*').remove()
-		this.renderBackButton(holder, () => {
-			this.selectedTerm = undefined
-			this.renderTermdByMemberId(holder, memberIdMap)
-		})
-		new GeneSetEditUI({
-			holder: holder.append('div'),
+		const geneSearch = addGeneSearchbox({
+			tip: new Menu({ padding: '0px' }),
 			genome: this.genome,
-			mode: 'geneExpression',
-			vocabApi: this.app.vocabApi,
-			callback: arg => {
-				if (!arg.geneList || arg.geneList.length < 1) {
-					sayerror(holder, 'Please select at least one gene.')
-					return
-				}
+			row: holder,
+			searchOnly: 'gene',
+			callback: () => {
+				if (!geneSearch.geneSymbol) throw new Error('No gene selected')
 				if (!this.selectedTerm) throw new Error('No pseudobulk cell type selected')
-				const termlst = createPseudobulkTerms(this.selectedTerm, arg.geneList)
-				if (termlst.length === 1) {
-					this.callback(termlst[0])
-					return
-				}
-				this.callback({
-					type: 'termCollection',
-					isCustom: true,
-					memberType: 'numeric',
-					termlst,
-					name: 'Pseudobulk Selection',
-					propsByTermId: {},
-					isleaf: true
-				})
+				this.callback(createPseudobulkTerm(this.selectedTerm, geneSearch.geneSymbol))
 			}
 		})
 	}
 }
 
-/** Create one pseudobulk term for each gene in the selected cell type. */
-export function createPseudobulkTerms(
-	selectedTerm: PseudobulkSelection,
-	geneList: { gene: string }[]
-): PseudobulkTerm[] {
-	return geneList.map(({ gene }) => {
-		const category = selectedTerm.category || selectedTerm.id
-		const name = `${selectedTerm.assay} ${category} ${gene}`
-		return { ...selectedTerm, id: name, category, gene, name }
-	})
+/** Create a pseudobulk term for the selected cell type and gene. */
+export function createPseudobulkTerm(selectedTerm: PseudobulkSelection, gene: string): PseudobulkTerm {
+	const category = selectedTerm.category || selectedTerm.id
+	const name = `${selectedTerm.assay} ${category} ${gene}`
+	return { ...selectedTerm, id: name, category, gene, name }
 }
