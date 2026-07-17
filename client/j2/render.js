@@ -709,6 +709,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 			.style('background-color', '#555')
 			.style('margin-right', '5px')
 			.text(j.strand)
+		if (j.info?.site) d2.append('span').style('margin-right', '5px').style('font-size', '.7em').text(j.info.site)
 		for (const t of j.types) {
 			d2.append('span')
 				.attr('class', 'sja_mcdot')
@@ -929,7 +930,7 @@ function listAllEvents(lst, table, j, tk, block) {
 	if (lst.length == 1) {
 		const [t1, t2] = table.addRow()
 		const e = lst[0]
-		t1.text(e.gene + ' ' + e.isoform)
+		t1.html(e.gene + '<br><span style="font-size:.8em">' + e.isoform + '</span>')
 		if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
 			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block)
 		} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
@@ -952,7 +953,7 @@ function listAllEvents(lst, table, j, tk, block) {
 	for (const [key, isolst] of map) {
 		const eo = JSON.parse(key)
 		const [t1, t2] = table.addRow()
-		t1.text(eo.gene + ' ' + isolst.join(' '))
+		t1.html(`${eo.gene}<br><span style="font-size:.${isolst.length > 6 ? '7' : '8'}em">${isolst.join('<br>')}`)
 		if (eo.type == JT_exonskip || eo.type == JT_exonaltuse) {
 			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block)
 		} else if (eo.type == JT_a5ss || eo.type == JT_a3ss) {
