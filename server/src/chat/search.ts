@@ -95,7 +95,8 @@ async function searchSamples(q: any, req: any, ds: any, prompt: string): Promise
 	if (!authApi) return []
 
 	let sampleName2Id: any = {}
-	await get_AllSamplesByName(q, req, { send: (data: any) => (sampleName2Id = data) }, ds)
+	const q2: any = q?.filter ? { filter: q.filter } : {}
+	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return []
 
 	const str = prompt.toLowerCase()
