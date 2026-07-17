@@ -77,12 +77,16 @@ export async function validatePseudobulk(ds: any) {
 					member.categories[category].samples.push(si)
 				}
 				console.log(
-					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} HDF5 file validated. Samples:`,
+					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} mean HDF5 samples:`,
 					member.categories[category].samples.length
 				)
+
+				// TODO validate total and percentage files
 			}
 		}
 	}
+
+	// getter only supports mean. TODO total and percentage!
 
 	pseudobulk.get = async (param: any) => {
 		if (!Array.isArray(param.terms)) throw new Error('.terms[] not array')

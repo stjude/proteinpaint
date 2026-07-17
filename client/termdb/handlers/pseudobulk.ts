@@ -20,13 +20,9 @@ export class SearchHandler {
 	app!: AppApi
 	genome!: ClientGenome
 	map?: Map<string, Map<string, any[]>>
-	selectedTerms: Set<PseudobulkSelection>
-	selectedGenes: Set<string>
+	selectedTerm?: PseudobulkSelection
 
-	constructor() {
-		this.selectedTerms = new Set()
-		this.selectedGenes = new Set()
-	}
+	constructor() {}
 
 	async init(opts) {
 		const pseudobulkTerms = this.validateOpts(opts)
@@ -69,8 +65,7 @@ export class SearchHandler {
 
 	/** If more than one assay, render tabs for each assay. If only one,
 	 * renders the radio selection for the memberIds. If only one memberId,
-	 * renders the categories terms directly. Categories appear as checkboxes.
-	 * One or more checkboxes can be selected and submitted. */
+	 * renders the cell types directly as radio buttons. */
 	renderPseudobulkSearch(holder) {
 		if (!this.map || this.map.size < 1) throw new Error('map is not initialized')
 		if (this.map.size === 1) {
@@ -126,13 +121,11 @@ export class SearchHandler {
 
 	renderTermdByMemberId(holder, memberIdMap) {
 		holder.selectAll('*').remove()
-		this.renderBackButton(holder)
 		const pseudoTermsWrapper = holder.append('div').attr('data-testid', 'sjpp-pseudobulk-terms-wrapper')
-		this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap)
-		this.renderSubmitBtn(holder, pseudoTermsWrapper)
+		this.renderPseudobulkTerms(pseudoTermsWrapper, memberIdMap, holder)
 	}
 
-	renderBackButton(holder) {
+	renderBackButton(holder, callback) {
 		holder
 			.append('button')
 			.html('&#171; Back')
@@ -141,101 +134,45 @@ export class SearchHandler {
 			.style('background', 'none')
 			.on('click', () => {
 				holder.selectAll('*').remove()
-				this.renderPseudobulkSearch(holder)
+				callback()
 			})
 	}
 
-	renderPseudobulkTerms(holder, memberIdMap) {
+	renderPseudobulkTerms(holder, memberIdMap, searchHolder) {
 		const terms = memberIdMap.values().next().value
 		if (!terms || terms.length < 1) throw new Error('No terms found for memberId')
 		holder
 			.append('div')
 			.style('padding', '5px')
 			.style('opacity', 0.7)
-			.text(`Select one or more from ${memberIdMap.keys().next().value}:`)
+			.text(`Select one from ${memberIdMap.keys().next().value}:`)
 
-		const wrapper = holder.append('div')
-		this.renderSelectAllBtn(wrapper, terms, this.selectedTerms)
-
-		const selectedTerms = this.selectedTerms
-		for (const term of terms) {
-			const checkboxWrapper = wrapper.append('div').style('padding', '3px 0px')
-			const input = this.appendCheckbox(checkboxWrapper, term.name)
-			input.on('change', function (this: HTMLInputElement) {
-				if (this.checked) {
-					selectedTerms.add(term)
-				} else {
-					selectedTerms.delete(term)
-				}
-			})
-			this.appendLabel(checkboxWrapper, term.name, term.name)
-		}
-	}
-
-	renderSelectAllBtn(wrapper, terms, selectedTerms) {
-		const checkboxWrapper = wrapper.append('div').style('padding', '3px 0px')
-		const input = this.appendCheckbox(checkboxWrapper, 'selectAll')
-		input.on('change', function (this: HTMLInputElement) {
-			const inputs = wrapper.selectAll('input[type="checkbox"]').nodes() as HTMLInputElement[]
-			if (this.checked) {
-				inputs.forEach(input => {
-					input.checked = true
-				})
-				selectedTerms.clear()
-				for (const term of terms) {
-					selectedTerms.add(term)
-				}
-			} else {
-				inputs.forEach(input => {
-					input.checked = false
-				})
-				selectedTerms.clear()
+		const options: OptionEntry[] = terms.map(term => ({
+			label: term.name,
+			value: term.id,
+			checked: false,
+			testid: `sjpp-pseudobulk-category-${term.id}`
+		}))
+		make_radios({
+			holder,
+			inputName: 'sjpp-pseudobulk-category-radios',
+			options,
+			styles: { display: 'block', padding: '3px 5px' },
+			callback: value => {
+				const term = terms.find(term => term.id == value)
+				if (!term) throw new Error(`No pseudobulk term found for category ${value}`)
+				this.selectedTerm = term
+				this.renderGeneSelection(searchHolder, memberIdMap)
 			}
 		})
-		this.appendLabel(checkboxWrapper, 'Select All', 'selectAll')
 	}
 
-	appendCheckbox(wrapper, value) {
-		const input = wrapper
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('id', `sjpp-pseudobulk-checkbox-${value}`)
-			.attr('data-testid', `sjpp-pseudobulk-checkbox-${value}`)
-			.attr('value', value)
-			.property('checked', false)
-			.style('margin', '3px 5px')
-		return input
-	}
-
-	appendLabel(wrapper, text, attrSuffix) {
-		wrapper
-			.append('label')
-			.attr('for', `sjpp-pseudobulk-checkbox-${attrSuffix}`)
-			.attr('data-testid', `sjpp-pseudobulk-label-${attrSuffix}`)
-			.style('margin-right', '10px')
-			.text(text)
-	}
-
-	renderSubmitBtn(holder, wrapper) {
-		wrapper
-			.append('button')
-			.text('Submit')
-			.style('margin', '10px 0px')
-			.style('padding', '5px 10px')
-			.style('border', '1px solid #ccc')
-			.style('background', '#f9f9f9')
-			.style('cursor', 'pointer')
-			.on('click', () => {
-				if (this.selectedTerms.size < 1) {
-					sayerror(holder, 'Please select at least one category.')
-					return
-				}
-				wrapper.selectAll('*').remove()
-				this.renderGeneSelection(holder)
-			})
-	}
-
-	renderGeneSelection(holder) {
+	renderGeneSelection(holder, memberIdMap) {
+		holder.selectAll('*').remove()
+		this.renderBackButton(holder, () => {
+			this.selectedTerm = undefined
+			this.renderTermdByMemberId(holder, memberIdMap)
+		})
 		new GeneSetEditUI({
 			holder: holder.append('div'),
 			genome: this.genome,
@@ -246,7 +183,8 @@ export class SearchHandler {
 					sayerror(holder, 'Please select at least one gene.')
 					return
 				}
-				const termlst = createPseudobulkTerms(this.selectedTerms, arg.geneList)
+				if (!this.selectedTerm) throw new Error('No pseudobulk cell type selected')
+				const termlst = createPseudobulkTerms(this.selectedTerm, arg.geneList)
 				if (termlst.length === 1) {
 					this.callback(termlst[0])
 					return
@@ -265,15 +203,14 @@ export class SearchHandler {
 	}
 }
 
-/** Create one pseudobulk term for every selected category/gene combination. */
+/** Create one pseudobulk term for each gene in the selected cell type. */
 export function createPseudobulkTerms(
-	selectedTerms: Iterable<PseudobulkSelection>,
+	selectedTerm: PseudobulkSelection,
 	geneList: { gene: string }[]
 ): PseudobulkTerm[] {
-	return Array.from(selectedTerms).flatMap(term =>
-		geneList.map(({ gene }) => {
-			const category = term.category || term.id
-			return { ...term, category, gene, name: `${term.assay} ${category} ${gene}` }
-		})
-	)
+	return geneList.map(({ gene }) => {
+		const category = selectedTerm.category || selectedTerm.id
+		const name = `${selectedTerm.assay} ${category} ${gene}`
+		return { ...selectedTerm, id: name, category, gene, name }
+	})
 }
