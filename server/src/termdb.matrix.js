@@ -1,6 +1,6 @@
 import path from 'path'
 import { string2pos } from '#shared/common.js'
-import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql.js'
+import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { read_file, trackXfetch } from './utils.js'
@@ -27,6 +27,17 @@ import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
 import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
+
+/* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
+each dataset implements ds.cohort.termdb.q.id2sampleRefs() (native/gdc/mmrf); it owns any id
+coercion since id spaces differ (integer for native/mmrf, case-uuid string for gdc).
+the id2sampleName branch is a thin fallback for datasets not yet exposing id2sampleRefs. */
+export function id2sampleRef(id, ds) {
+	const q = ds?.cohort?.termdb?.q
+	if (q?.id2sampleRefs) return q.id2sampleRefs(id)
+	if (q?.id2sampleName) return { label: q.id2sampleName(Number(id)) }
+	return undefined
+}
 
 /*
 for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
@@ -386,26 +397,11 @@ async function getSampleData(q, ds) {
 		}
 	}
 
-	/* for samples collected into samples{}, register them in refs.bySampleId{} with display name
-	- for native dataset, samples{} key is integer id, record string name in bySampleId for display
-	- for gdc dataset, samples{} key is case uuid, record case submitter id in bySampleId for display
-
-	note:
-	- this gets rid of awkward properties e.g. "__sampleName", used to attach alternative sample name in mds3 mutation data points, and centralize such logic here
-	- it leaks (minimum amount of) gdc-specific setting in general code 
-	- future data sources need to be handled here
-	- subject to change!
-	*/
+	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
 	const bySampleId = {}
 	for (const sid in samples) {
-		const sampleId = samples[sid]?.sampleId
-		if (q.ds.cohort?.termdb?.q?.id2sampleRefs) {
-			bySampleId[sid] = q.ds.cohort.termdb.q.id2sampleRefs(Number(sampleId ?? sid))
-		} else if (q.ds.cohort?.termdb?.q?.id2sampleName) {
-			bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sampleId ?? sid)) }
-		} else if (q.ds.__gdc?.caseid2submitter) {
-			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
-		}
+		const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
+		if (ref) bySampleId[sid] = ref
 	}
 
 	// determine the sample type
