@@ -1449,12 +1449,11 @@ returns:
 }
 */
 
-export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
-	// step 1: separate survival vs non-survival terms
-	// survival terms requires different querying method. separate it from other dictionary terms
-
-	const survivalTwLst = [], // survival terms
-		dictTwLst = [] // non-survival dict terms
+/* split twLst into survival terms (queried separately) and non-survival dict terms.
+dict terms are re-wrapped with the full term json (termjsonByOneid); unknown terms are dropped. */
+function splitSurvivalDictTerms(twLst, ds) {
+	const survivalTwLst = [],
+		dictTwLst = []
 	for (const tw of twLst) {
 		if (tw.term.type == 'survival') {
 			survivalTwLst.push(tw)
@@ -1463,32 +1462,48 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			if (t) dictTwLst.push({ $id: tw.$id, term: t, q: tw.q })
 		}
 	}
+	return { survivalTwLst, dictTwLst }
+}
+
+/* query samples harboring mutations (variant2samples: lollipop/mds3-tk sample tables, sunburst,
+summary, and the cnv tool). always scoped by a genomic filter (ssm/isoform/rglst/gene) or hardcodeCnvOnly.
+returns {byTermId, samples}; both survival and dict term data are combined into samples[]. */
+export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
+	const { survivalTwLst, dictTwLst } = splitSurvivalDictTerms(twLst, ds)
 
 	let byTermId = {},
-		samples = [] // returned data structures. both survival and other dict term data will be combined for return
-
-	// step 2: querying dict term data
+		samples = []
 
 	if (dictTwLst.length) {
-		if (q.hardcodeCnvOnly) {
-			// user interactions from cnv tool will have this flag in request;
-			// this allows accessing sample details for cases with cnv
-			;[byTermId, samples] = await querySamplesWithCnv(q, dictTwLst, ds)
-		} else if (q.isHierCluster) {
-			// running gene exp clustering, must only restrict to cases with exp data,
-			// but not by mutated cases anymore, thus geneTwLst should not be used (and not supplied)
-			;[byTermId, samples] = await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
-		} else {
-			// not in gene exp clustering mode
-			;[byTermId, samples] = await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
-		}
+		// cnv tool sets hardcodeCnvOnly to access sample details for cases with cnv; else the mutated-case query
+		;[byTermId, samples] = q.hardcodeCnvOnly
+			? await querySamplesWithCnv(q, dictTwLst, ds)
+			: await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
 	}
 
-	// step 3: querying survival data
+	if (survivalTwLst.length) await querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst)
 
-	if (survivalTwLst.length) {
-		await querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst)
+	return { byTermId, samples }
+}
+
+/* query dictionary-term values for the getData/termdb path (the dataset's dictionary.get hook:
+matrix, summary charts, gene-exp clustering). identifies samples by case uuid (q.gdcUseCaseuuid).
+returns {byTermId, samples}, same shape as querySamples_gdcapi. */
+export async function queryDictTermData_gdcapi(q, twLst, ds, geneTwLst) {
+	const { survivalTwLst, dictTwLst } = splitSurvivalDictTerms(twLst, ds)
+
+	let byTermId = {},
+		samples = []
+
+	if (dictTwLst.length) {
+		// gene-exp clustering restricts to cases with exp data (no gene/mutation filter); else the
+		// standard dict-term query (/cases, or /ssm_occurrences when restricting to mutated cases for oncomatrix)
+		;[byTermId, samples] = q.isHierCluster
+			? await querySamplesTwlstForGeneexpclustering(q, dictTwLst, ds)
+			: await querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst)
 	}
+
+	if (survivalTwLst.length) await querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst)
 
 	return { byTermId, samples }
 }
@@ -1549,11 +1564,10 @@ async function querySamplesSurvival(q, survivalTwLst, ds, samples, geneTwLst) {
 		filter.content.push(q.filter0)
 	}
 
-	if (geneTwLst) q.isoforms = mapGenes2isoforms(geneTwLst, ds.genomeObj)
+	// isoforms kept as a local and spread onto a shallow copy so the shared q is never mutated
+	const isoforms = geneTwLst ? mapGenes2isoforms(geneTwLst, ds.genomeObj) : undefined
 
-	addSsmIsoformRegion4filter(filter.content, q, 'survival')
-
-	delete q.isoforms
+	addSsmIsoformRegion4filter(filter.content, isoforms ? { ...q, isoforms } : q, 'survival')
 
 	if (q.set_id) {
 		if (typeof q.set_id != 'string') throw '.set_id value not string'
@@ -1663,59 +1677,46 @@ export function mapGenes2isoforms(geneTwLst, genome) {
 async function querySamplesTwlstNotForGeneexpclustering(q, dictTwLst, ds, geneTwLst) {
 	// not for gene exp clustering
 
-	if (geneTwLst) {
-		// temporarily create q.isoforms[] to filter for cases with ssm on these genes; will be deleted after query completes
-		q.isoforms = mapGenes2isoforms(geneTwLst, ds.genomeObj)
-	}
+	// isoforms[] filters for cases with ssm on these genes. kept as a local (not set on q)
+	// so the shared request object is never mutated; passed explicitly to the genomic-filter query
+	const isoforms = geneTwLst ? mapGenes2isoforms(geneTwLst, ds.genomeObj) : undefined
 
-	if (q.isoforms || q.isoform || q.ssm_id_lst || q.rglst) {
+	if (isoforms || q.isoform || q.ssm_id_lst || q.rglst) {
 		// using genomic filters
-		return await querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst)
+		return await querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst, isoforms)
 	}
 	// no genomic filter
 	return await querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(q, dictTwLst, ds)
 }
 
-// using genomic filter; assuming it's filtering for mutated cases, query ssm_occurrences endpoint
-async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst) {
-	const fieldset = new Set(dictTwLst.map(tw => tw.term.id)) // set of fields to request from ssm_occurrences api. tolerate insertion of duplicating fields
+/* build the fields[] list requested from the ssm_occurrences api for the genomic-filter query.
+pure: no i/o, no mutation. duplicate fields are tolerated (Set-based). */
+export function buildSsmOccurrenceFields(dictTwLst, q) {
+	const fieldset = new Set(dictTwLst.map(tw => tw.term.id))
 
 	if (fieldset.has('case.diagnoses.age_at_diagnosis') || fieldset.has('case.diagnoses.primary_diagnosis')) {
 		fieldset.add('case.diagnoses.diagnosis_is_primary_disease')
 	}
 
-	/* this function can identify sample either by case uuid, or sample submitter id
-	for simplicity, always request these two different values
-	*/
+	// this function can identify sample either by case uuid, or sample submitter id;
+	// for simplicity, always request these two different values
 	fieldset.add('case.observation.sample.tumor_sample_uuid')
 	fieldset.add('case.case_id')
 
-	if (q.get == 'samples') {
-		// getting list of samples (e.g. for table display)
-		// need following fields for table display, add to fields[] if missing:
-
-		if (q.ssm_id_lst || q.isoform) {
-			// querying using list of ssm or single isoform
-			// must be from mds3 tk; in such case should return following info
-
-			// need ssm id to associate with ssm (when displaying in sample table?)
-			fieldset.add('ssm.ssm_id')
-
-			// need read depth info
-			// TODO should only add when getting list of samples with mutation for a gene
-			// TODO not when adding a dict term in matrix?
-			fieldset.add('case.observation.read_depth.t_alt_count')
-			fieldset.add('case.observation.read_depth.t_depth')
-			fieldset.add('case.observation.read_depth.n_depth')
-		}
+	if (q.get == 'samples' && (q.ssm_id_lst || q.isoform)) {
+		// mds3-tk sample table only. these three flags are set exclusively by the variant2samples request
+		// (client/mds3/makeTk.js) and never by the getData/matrix path, so the matrix never over-fetches
+		// these mutation fields even though it shares this builder (locked by mds3.gdc.unit.spec.js).
+		// add ssm id (to link sample<->variant) and read depth (TumorAC/NormalDepth format columns).
+		fieldset.add('ssm.ssm_id')
+		fieldset.add('case.observation.read_depth.t_alt_count')
+		fieldset.add('case.observation.read_depth.t_depth')
+		fieldset.add('case.observation.read_depth.n_depth')
 	}
 
 	if (q.hiddenmclass) {
-		/* to drop mutations by pp class
-		add new fields so api returns consequence for the querying isoform for each mutation
-		then filter by class
-		this has been coded up this way but is inefficient, better method would be for gdc api filter to include transcript and consequence limit
-		*/
+		/* to drop mutations by pp class: request consequence for the querying isoform so it can be filtered by class.
+		inefficient; better would be for the gdc api filter to include transcript and consequence limit */
 		fieldset.add('ssm.consequence.transcript.consequence_type')
 		fieldset.add('ssm.consequence.transcript.transcript_id')
 		fieldset.add('ssm.consequence.transcript.is_canonical')
@@ -1726,12 +1727,19 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 		fieldset.add('ssm.start_position')
 	}
 
-	const param = { size: isoform2ssm_query2_getcase.size, fields: [...fieldset].join(',') }
+	return [...fieldset]
+}
+
+// using genomic filter; assuming it's filtering for mutated cases, query ssm_occurrences endpoint
+// isoforms[] (optional) is computed by the caller and passed explicitly rather than set on q
+async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dictTwLst, ds, geneTwLst, isoforms) {
+	const param = { size: isoform2ssm_query2_getcase.size, fields: buildSsmOccurrenceFields(dictTwLst, q).join(',') }
 
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
 
-	Object.assign(param, isoform2ssm_query2_getcase.filters(q, ds))
+	// spread isoforms onto a shallow copy so the shared q is never mutated
+	Object.assign(param, isoform2ssm_query2_getcase.filters(isoforms ? { ...q, isoforms } : q, ds))
 
 	const { host, headers } = ds.getHostHeaders(q) // will be reused below
 
@@ -1742,8 +1750,6 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 		body: param,
 		signal: q.__abortSignal
 	})
-
-	delete q.isoforms
 
 	if (!Array.isArray(re?.data?.hits)) throw 'variant2samples re.data.hits is not array for query'
 
@@ -1792,13 +1798,13 @@ async function querySamplesTwlstNotForGeneexpclustering_withGenomicFilter(q, dic
 			url link will be just by sample_id and no need to generate separate property for it
 			*/
 			sample.sample_id = s.case.case_id
-			if (!sample.sample_id) throw 'querySamples_gdcapi: case.case_id missing'
+			if (!sample.sample_id) throw 'gdc ssm_occurrences query: case.case_id missing'
 		} else {
 			/* identify sample as sample submitter id
 			sample url link is complex and must be specifically generated
 			*/
 			const aliquot_id = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
-			if (!aliquot_id) throw 'querySamples_gdcapi: aliquot_id missing'
+			if (!aliquot_id) throw 'gdc ssm_occurrences query: aliquot_id missing'
 			sample.sample_id = await ds.__gdc.aliquot2submitter.get(aliquot_id)
 			// append aliquot_id to case url so when opening the page, the sample is auto highlighted from the tree
 			// per uat feedback by bill 1/6/2023
