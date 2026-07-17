@@ -51,6 +51,12 @@ async function verifyParquetUrlWithSidecar(parquetBuffer: ArrayBuffer, sidecarRe
 
 /** Handles all data fetching for the IDC viewer: parquet loading and GDC API calls. */
 export class IDCModel {
+	#GDC_API: string
+
+	constructor(GDC_API: string) {
+		this.#GDC_API = GDC_API
+	}
+
 	/** Load the IDC parquet mapping, falling back through versioned archives if "current" is unavailable or invalid. */
 	async loadParquetWithFallback(retries: number): Promise<IDCParquetLoadResult | undefined> {
 		const current = await this.tryLoadValidatedParquet(IDC_PARQUET_CURRENT_URL, IDC_CURRENT_VERSION_LABEL)
@@ -147,7 +153,7 @@ export class IDCModel {
 			expand: 'samples.portions.slides,project.program',
 			sort: `${sortBy}:${sortDirection}`
 		}
-		const re: CasesResponse = await fetch('https://api.gdc.cancer.gov/cases', {
+		const re: CasesResponse = await fetch(`${this.#GDC_API}/cases`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json', connection: 'close' },
 			body: JSON.stringify(body)

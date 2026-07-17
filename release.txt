@@ -1,1 +1,2 @@
-
+Fixes:
+- accept a GDC_API argument for IDCViewer to avoid CORS error in prod when requesting /cases data
