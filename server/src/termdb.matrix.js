@@ -256,9 +256,17 @@ async function getSampleData(q, ds) {
 			tw.term.type == METABOLITE_INTENSITY ||
 			tw.term.type == SSGSEA ||
 			tw.term.type == DNA_METHYLATION ||
+			tw.term.type == PSEUDOBULK ||
 			tw.term.type == PROTEOME_ABUNDANCE
 		) {
-			const queryHandler = tw.term.type == PROTEOME_ABUNDANCE ? q.ds.queries?.proteome : q.ds.queries?.[tw.term.type]
+			let queryHandler
+			if (tw.term.type == PROTEOME_ABUNDANCE) {
+				queryHandler = q.ds.queries?.proteome
+			} else if (tw.term.type == PSEUDOBULK) {
+				queryHandler = q.ds.queries?.singleCell?.pseudobulk
+			} else {
+				queryHandler = q.ds.queries?.[tw.term.type]
+			}
 			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
@@ -367,14 +375,6 @@ async function getSampleData(q, ds) {
 				}
 				samples[sampleId][tw.$id] = { value, key: value }
 			}
-		} else if (tw.term.type == PSEUDOBULK) {
-			if (!q.ds.queries?.singleCell?.pseudobulk) throw new Error('not supported by dataset: singleCell.pseudobulk')
-			const data = await q.ds.queries.singleCell.pseudobulk.get({
-				termlst: tw.term.termlst,
-				assay: tw.term.termlst[0].assay,
-				memberId: tw.term.termlst[0].memberId
-			})
-			console.log(377, 'pseudobulk', data)
 		} else {
 			throw 'unknown type of non-dictionary term'
 		}
