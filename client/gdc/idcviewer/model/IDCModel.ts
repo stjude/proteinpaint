@@ -53,8 +53,8 @@ async function verifyParquetUrlWithSidecar(parquetBuffer: ArrayBuffer, sidecarRe
 export class IDCModel {
 	#GDC_API: string
 
-	constructor(GDC_API: string) {
-		this.#GDC_API = GDC_API
+	constructor(GDC_API?: string) {
+		this.#GDC_API = (GDC_API || 'https://api.gdc.cancer.gov').replace(/\/+$/, '')
 	}
 
 	/** Load the IDC parquet mapping, falling back through versioned archives if "current" is unavailable or invalid. */

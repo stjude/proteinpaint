@@ -14,7 +14,7 @@ type IDCViewerInitArg = {
 	/** a constant that's declared in portal-proto/.env.* files, with the following expected values:
 	 * - "https://api.gdc.cancer.gov" in dev, works with 'http(s)://localhost' URLs, but has CORS error when used in portal.gdc.cancer.gov URLs
 	 * - "https://portal.gdc.cancer.gov/auth/api/v0" or relative path "/auth/api/v0" in prod, works with with portal.gdc.cancer.gov URLs */
-	GDC_API: string
+	GDC_API?: string
 }
 
 export async function init(
@@ -41,8 +41,8 @@ export class IDCViewer {
 	private loadResult: IDCParquetLoadResult | undefined
 	public dom: { [name: string]: any } = {}
 
-	constructor(holder: Selection<HTMLDivElement, unknown, any, any>, GDC_API: undefined | string) {
-		this.model = new IDCModel(GDC_API || 'https://api.gdc.cancer.gov')
+	constructor(holder: Selection<HTMLDivElement, unknown, any, any>, GDC_API?: string) {
+		this.model = new IDCModel(GDC_API)
 		this.dom = {
 			holder: holder,
 			errorDiv: holder.append('div').attr('class', 'idcviewer-error-holder'),
