@@ -390,12 +390,14 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				bySampleId[sid] = id2sampleRef(sid, ds)
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		} else {
 			// Use all samples with exp data
 			for (const sid of samples) {
-				bySampleId[sid] = id2sampleRef(sid, ds)
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		}
 
@@ -519,11 +521,13 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				bySampleId[sid] = id2sampleRef(sid, ds)
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		} else {
 			for (const sid of samples) {
-				bySampleId[sid] = id2sampleRef(sid, ds)
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		}
 

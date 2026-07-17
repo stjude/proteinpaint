@@ -137,8 +137,10 @@ export function server_init_db_queries(ds) {
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
-		// centralized sample->display resolution (see termdb.matrix.js id2sampleRef()); wraps id2sampleName.
-		// coerce id here so callers can pass the raw samples{} key (string) or an integer id
+		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
+		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
+		// map key and never NaNs a real id; non-integer id spaces (e.g. gdc case uuids) never reach here —
+		// they use their own id2sampleRefs (gdc.buildDictionary.ts) with no coercion.
 		q.id2sampleRefs = id => ({ label: i2s.get(Number(id)) })
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()

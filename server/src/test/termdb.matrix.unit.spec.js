@@ -15,16 +15,24 @@ divideTerms: q.__protected__ is forwarded to the isTermVisible hook
 divideTerms: termCollection visibility decided by member terms (term.termlst)
 */
 
-tape('id2sampleRef(): prefers id2sampleRefs, falls back to id2sampleName, coerces id', test => {
+tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
 	// dataset exposing id2sampleRefs -> its object is returned as-is (raw id passed through)
 	const dsRefs = { cohort: { termdb: { q: { id2sampleRefs: id => ({ label: 'R' + id, extra: 1 }) } } } }
 	test.deepEqual(id2sampleRef('abc', dsRefs), { label: 'Rabc', extra: 1 }, 'id2sampleRefs wins and gets the raw id')
 
-	// dataset with only id2sampleName -> wrapped in { label }, id coerced to Number
-	const seen = []
-	const dsName = { cohort: { termdb: { q: { id2sampleName: id => (seen.push(id), 'name' + id) } } } }
-	test.deepEqual(id2sampleRef('7', dsName), { label: 'name7' }, 'id2sampleName fallback wrapped in { label }')
-	test.equal(seen[0], 7, 'string id is coerced to Number for id2sampleName')
+	// integer-keyed id2sampleName (native-like): a stringified samples{} key resolves via the Number() fallthrough
+	const ints = new Map([[7, 'seven']])
+	const dsInt = { cohort: { termdb: { q: { id2sampleName: id => ints.get(id) } } } }
+	test.deepEqual(
+		id2sampleRef('7', dsInt),
+		{ label: 'seven' },
+		'integer-keyed id2sampleName resolves stringified key via Number()'
+	)
+
+	// string-keyed id2sampleName (uuid): raw lookup works, never coerced to NaN (regression guard for the review)
+	const strs = new Map([['case-uuid', 'CASE-1']])
+	const dsStr = { cohort: { termdb: { q: { id2sampleName: id => strs.get(id) } } } }
+	test.deepEqual(id2sampleRef('case-uuid', dsStr), { label: 'CASE-1' }, 'non-numeric string id resolves raw, not NaN')
 
 	// neither method -> undefined (caller skips assignment)
 	test.equal(id2sampleRef('x', { cohort: { termdb: { q: {} } } }), undefined, 'no method -> undefined')
