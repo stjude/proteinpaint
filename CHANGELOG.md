@@ -13,6 +13,7 @@ Fixes:
 - Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
 - Move dataset launch-time case-sample caching into a uniform ds.preInit.cacheSamples() hook: mds3 init now dispatches caching generically (dropping the ds.label=='GDC' hardcode in mds3.init.nonblocking.js), so each API-based dataset owns its own caching (GDC's gdc.initCache relocated to the ppgdc dataset)
 - Route GDC dictionary term data through the ds.cohort.termdb.dictionary.get() hook, removing the GDC-specific getSampleData_dictionaryTerms_v2s path (and its variant2samples fallback) from shared server code
+- accept a GDC_API argument for IDCViewer to avoid CORS error in prod when requesting /cases data
 
 
 ## 2.197.0
