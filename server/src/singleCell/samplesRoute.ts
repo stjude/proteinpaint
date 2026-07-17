@@ -115,7 +115,7 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 
 	if (ds.queries.singleCell?.pseudobulk) {
 		//** NOTE This will not work for the gdc */
-		validatePseudobulk(ds)
+		await validatePseudobulk(ds)
 	}
 
 	if (q.geneExpression) {

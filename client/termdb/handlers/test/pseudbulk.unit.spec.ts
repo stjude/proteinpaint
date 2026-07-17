@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { SearchHandler } from '../pseudobulk.ts'
+import { createPseudobulkTerms, SearchHandler } from '../pseudobulk.ts'
 
 /**************
  test sections
@@ -45,3 +45,49 @@ tape('buildRenderingDataMap() returns an empty map for empty input', function (t
 	test.end()
 })
 
+tape('createPseudobulkTerms() creates one term per category/gene combination', function (test) {
+	const selectedTerms = [
+		{ id: 'blast', name: 'Blast', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+		{ id: 'monocyte', name: 'Monocyte', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
+	]
+
+	const terms = createPseudobulkTerms(selectedTerms as any[], [{ gene: 'TP53' }, { gene: 'KRAS' }])
+
+	test.equal(terms.length, 4, 'creates the category/gene cross product')
+	test.deepEqual(
+		terms.map(term => term.gene),
+		['TP53', 'KRAS', 'TP53', 'KRAS'],
+		'sets one gene string on each term'
+	)
+	test.deepEqual(
+		terms.map(term => term.category),
+		['blast', 'blast', 'monocyte', 'monocyte'],
+		'sets category from the selected value'
+	)
+	test.deepEqual(
+		terms.map(term => term.name),
+		[
+			'geneExpression blast TP53',
+			'geneExpression blast KRAS',
+			'geneExpression monocyte TP53',
+			'geneExpression monocyte KRAS'
+		],
+		'names each term from its assay, category, and gene'
+	)
+	test.notOk('genes' in terms[0], 'does not add the obsolete genes array')
+	test.end()
+})
+
+tape('createPseudobulkTerms() creates one term for one category and one gene', function (test) {
+	const selectedTerms = [
+		{ id: 'blast', name: 'Blast', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
+	]
+
+	const terms = createPseudobulkTerms(selectedTerms as any[], [{ gene: 'TP53' }])
+
+	test.equal(terms.length, 1, 'creates one term')
+	test.equal(terms[0].category, 'blast', 'sets term.category')
+	test.equal(terms[0].gene, 'TP53', 'sets term.gene')
+	test.equal(terms[0].name, 'geneExpression blast TP53', 'sets term.name')
+	test.end()
+})
