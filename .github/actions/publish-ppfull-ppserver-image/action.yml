@@ -69,11 +69,34 @@ runs:
         echo "front_version=$(node -p "require('./front/package.json').version")" >> "$GITHUB_OUTPUT"
         echo "server_version=$(node -p "require('./server/package.json').version")" >> "$GITHUB_OUTPUT" 
 
-    - name: Run deploy action
-      uses: peter-evans/repository-dispatch@v4
+    # Trigger the downstream deploy in stjude/sj-pp via a repository_dispatch event.
+    # Replaces peter-evans/repository-dispatch@v4: its bundled @octokit/request@8.4.1
+    # tags string bodies with duplex:"half", which Node 24's undici rejects as
+    # "Request body length does not match content-length header".
+    - name: Trigger deploy in sj-pp
+      # Only fire on non-release branches (release/prerelease deploys are handled elsewhere).
       if: ${{ !startsWith(github.ref_name, 'release') && !startsWith(github.ref_name, 'prerelease') }}
+      uses: actions/github-script@v9
       with:
-        token: ${{ inputs.PAT }}
-        repository: stjude/sj-pp
-        event-type: version-update
-        client-payload: '{"pp_version": "${{ steps.versions.outputs.pp_version }}", "front_version": "${{ steps.versions.outputs.front_version }}", "server_version": "${{ steps.versions.outputs.server_version }}", "docker_version": "${{ steps.docker-publish.outputs.docker_version }}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'
+        # PAT (not the default GITHUB_TOKEN) — we dispatch to a DIFFERENT repo,
+        # and GITHUB_TOKEN has no cross-repo permissions.
+        github-token: ${{ inputs.PAT }}
+        script: |
+          // octokit needs owner and repo as SEPARATE fields — it won't accept a
+          // combined "stjude/sj-pp" string, so both lines must stay.
+          await github.rest.repos.createDispatchEvent({
+            owner: 'stjude',
+            repo: 'sj-pp',
+            event_type: 'version-update',
+            // client_payload must be an OBJECT (not a JSON string); octokit serializes it
+            // and computes Content-Length from its own output, so no mismatch can occur.
+            // toJSON() safely quotes/escapes each interpolated value.
+            client_payload: {
+              pp_version: ${{ toJSON(steps.versions.outputs.pp_version) }},
+              front_version: ${{ toJSON(steps.versions.outputs.front_version) }},
+              server_version: ${{ toJSON(steps.versions.outputs.server_version) }},
+              docker_version: ${{ toJSON(steps.docker-publish.outputs.docker_version) }},
+              branch: ${{ toJSON(steps.docker-publish.outputs.branch) }}
+            }
+          })
+
