@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.198.0
 
 Features:
 - Implemented new 'pseudobulk' termType.
