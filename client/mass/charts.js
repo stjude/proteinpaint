@@ -318,9 +318,9 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Single Cell Plot',
 			clickTo: self.prepPlot,
-			chartType: 'singleCellPlot',
+			chartType: 'sc',
 			config: {
-				chartType: 'singleCellPlot'
+				chartType: 'sc'
 			}
 		},
 		{

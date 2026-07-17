@@ -633,7 +633,7 @@ export function buildGeomapSites(rows?: GeoLocationRow[]): GeomapSite[] {
 
 /*
 	This section defines common chart types, such as 'summary charts', which are generally applicable to any dataset (ds).
-	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or singleCell charts.
+	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or sc.
 
 	Each chart type has a callback function equivalent to isSupported() that executes on context parameters 
 	to determine if the chart type should be displayed (returns true) or not (returns false).
@@ -710,7 +710,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (ds.queries?.snvindel || ds.queries?.svfusion || ds.queries?.cnv || ds.queries?.trackLst) return true
 		return false
 	},
-	singleCellPlot: ({ ds }) => ds.queries?.singleCell,
+	sc: ({ ds }) => ds.queries?.singleCell,
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
 	chat: ({ ds }) => ds.queries?.chat,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
