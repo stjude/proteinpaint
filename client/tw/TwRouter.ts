@@ -22,6 +22,7 @@ export const routedTermTypes = new Set([
 	tt.SNP,
 	tt.SINGLECELL_GENE_EXPRESSION,
 	tt.SINGLECELL_CELLTYPE,
+	tt.PSEUDOBULK,
 	tt.TERM_COLLECTION,
 	tt.DNA_METHYLATION
 ])

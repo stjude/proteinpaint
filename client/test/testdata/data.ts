@@ -715,8 +715,9 @@ export function getPseudobulkTermCollection(termIds = ['Blast', 'Monocyte', 'T_N
 			memberType: 'numeric',
 			id: 'test',
 			name: 'Test pseudobulk term collection',
-			termIds: termIds,
-			termlst
+			termIds,
+			termlst,
+			isCustom: true,
 		},
 		q: {
 			mode: 'continuous',

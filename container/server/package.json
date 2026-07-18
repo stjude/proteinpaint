@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"name": "@sjcrh/ppserver",
-	"version": "2.197.0",
+	"version": "2.198.0",
 	"bin": "app-server.js",
 	"scripts": {
 		"release": ""
@@ -12,8 +12,8 @@
 	},
 	"//": "@sjcrh/proteinpaint-shared below provides shared/utils code that are expected in production runtime by dataset files",
 	"dependencies": {
-		"@sjcrh/proteinpaint-server": "2.197.0",
-		"@sjcrh/proteinpaint-shared": "2.197.0"
+		"@sjcrh/proteinpaint-server": "2.198.0",
+		"@sjcrh/proteinpaint-shared": "2.198.0"
 	},
 	"files": [
 		"app-server.js"

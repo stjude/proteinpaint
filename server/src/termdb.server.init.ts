@@ -137,6 +137,11 @@ export function server_init_db_queries(ds) {
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
+		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
+		// map key and never NaNs a real id; non-integer id spaces (e.g. gdc case uuids) never reach here —
+		// they use their own id2sampleRefs (gdc.buildDictionary.ts) with no coercion.
+		q.id2sampleRefs = id => ({ label: i2s.get(Number(id)) })
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {
@@ -633,7 +638,7 @@ export function buildGeomapSites(rows?: GeoLocationRow[]): GeomapSite[] {
 
 /*
 	This section defines common chart types, such as 'summary charts', which are generally applicable to any dataset (ds).
-	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or singleCell charts.
+	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or sc.
 
 	Each chart type has a callback function equivalent to isSupported() that executes on context parameters 
 	to determine if the chart type should be displayed (returns true) or not (returns false).
@@ -710,7 +715,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (ds.queries?.snvindel || ds.queries?.svfusion || ds.queries?.cnv || ds.queries?.trackLst) return true
 		return false
 	},
-	singleCellPlot: ({ ds }) => ds.queries?.singleCell,
+	sc: ({ ds }) => ds.queries?.singleCell,
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
 	chat: ({ ds }) => ds.queries?.chat,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,

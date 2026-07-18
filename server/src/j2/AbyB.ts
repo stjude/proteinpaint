@@ -14,7 +14,8 @@ const payload: RoutePayload = {
 export const api: RouteApi = {
 	endpoint: 'termdb/junctions/AbyB',
 	methods: {
-		get: payload
+		get: payload,
+		post: payload
 	}
 }
 
@@ -70,7 +71,7 @@ export function init({ genomes }) {
 					if (!jB.sn2rc.has(sn)) continue
 					counts.push(rc)
 				}
-				let v=0
+				let v = 0
 				if (counts.length) {
 					v = counts.length == 1 ? counts[0] : computePercentile(counts, 50, false)
 				}

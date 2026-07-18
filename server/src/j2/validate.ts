@@ -1,10 +1,11 @@
 import computePercentile from '#shared/compute.percentile.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { invalidcoord, JT_na, JT_canonical } from '#shared/common.js'
+import { JT_na, JT_canonical } from '#shared/common.js'
 import * as utils from '../utils.js'
 import { mayLimitSamples } from '../mds3.filter.js'
 import { setFile, validateSampleHeader } from '../mds3.init.js'
-import type { Junction, TermdbJunctionsRequest, TermdbOneJunctionRequest } from '#types'
+import type { Junction, TermdbJunctionsRequest } from '#types'
+import { maySetMapParent2Children } from '../termdb.matrix.js'
 
 export async function validate_query_junction(ds: any, genome: any) {
 	const tmp = ds.queries?.junction // fixme: tmp-to-q avoids tsc err
@@ -25,6 +26,10 @@ export async function validate_query_junction(ds: any, genome: any) {
 		q.samples = validateSampleHeader(ds, q.samples, 'junction')
 	}
 
+	/*
+	keepLst:
+		if provided, only return data on specified junctions
+	*/
 	q.listJunctions = async (
 		param: TermdbJunctionsRequest,
 		keepLst?: { start: number; stop: number; strand: string }[]
@@ -38,6 +43,13 @@ export async function validate_query_junction(ds: any, genome: any) {
 			hiddenTypes = new Set(param.hiddenTypes.trim().split(','))
 			if (!hiddenTypes.size) throw new Error('param.hiddenTypes invalid')
 		}
+
+		// QUICKFIX
+		// assuming genomic data in mds3 tk is at sample-level, so setting
+		// mapParent2Children=true to allow parent-level term data to be mapped
+		// onto tk data (e.g. parent-level terms in variant2sample query or in tk filter)
+		maySetMapParent2Children(param, ds, true)
+
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			// got 0 sample after filtering, return blank array for no data
@@ -72,7 +84,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 					if (start < r.start && stop > r.stop) return // completely spans r
 
 					if (keepLst?.length) {
-						// detour
+						//////////// detour //////////////
 						if (!keepLst.find(i => i.start == start && i.stop == stop && i.strand == strand)) return // not in list, skip
 						const j: Junction = {
 							chr: '.',
@@ -80,12 +92,12 @@ export async function validate_query_junction(ds: any, genome: any) {
 							start,
 							stop,
 							strand,
-							sn2rc: new Map() // k: sample id, v: read count
+							sn2rc: new Map<string | number, number>() // k: sample id, v: read count
 						}
 						for (let i = 5; i < l.length; i++) {
 							const r = getSampleReadcount(l[i], i)
 							if (r) {
-								j.sn2rc.set(r[1], r[0])
+								j.sn2rc!.set(r[1], r[0])
 							}
 						}
 						junctions.push(j)
@@ -110,16 +122,25 @@ export async function validate_query_junction(ds: any, genome: any) {
 						strand
 					}
 					const readcounts: number[] = [] // array of read counts of samples carrying this junction
+
+					let lastRCcolumn // remembers i for last sample with valid read count. helps to get singleton sample name
 					for (let i = 5; i < l.length; i++) {
 						const r = getSampleReadcount(l[i], i)
 						if (!r) continue
 						readcounts.push(r[0])
 						maxReadCount = Math.max(maxReadCount, r[0])
+						lastRCcolumn = i
 					}
 					if (readcounts.length == 0) return
 					j.sampleCount = readcounts.length
 					if (readcounts.length == 1) {
 						j.medianReadCount = readcounts[0]
+						// singleton. attach sample name
+						// todo may check permission
+						if (Number.isInteger(lastRCcolumn)) {
+							const sampleId = q.samples[lastRCcolumn - 5].name
+							j.sampleName = ds.cohort?.termdb?.q?.id2sampleName?.(sampleId) || sampleId
+						}
 					} else {
 						readcounts.sort((i, j) => i - j)
 						const o = boxplot_getvalue(readcounts)
@@ -144,13 +165,15 @@ export async function validate_query_junction(ds: any, genome: any) {
 		filter
 		readcountCutoff
 	}
-	*/
 	q.getOneJunction = async (param: TermdbOneJunctionRequest) => {
 		if (param.readcountCutoff !== undefined && (!Number.isInteger(param.readcountCutoff) || param.readcountCutoff < 0))
 			throw new Error('readcountCutoff must be a non-negative integer')
 		const j = param.junction
 		if (!j) throw new Error('junction missing')
 		if (invalidcoord(genome, j.chr, j.start, j.stop)) throw new Error('invalid coord in .junction{}')
+
+
+
 		const limitSamples = await mayLimitSamples(param, q.samples, ds)
 		if (limitSamples?.size == 0) {
 			return {} // todo
@@ -183,7 +206,9 @@ export async function validate_query_junction(ds: any, genome: any) {
 		// todo summarize and return
 		return {}
 	}
+	*/
 }
+
 /*
 j: junction annotation
 possible annotations:
@@ -203,20 +228,20 @@ export function computeTypes(j: any, hide: Set<string>): string[] {
 		return types
 	}
 	// j is valid object
+	// TODO may introduce additional canonical types to annotate junctions using non-canonical-GT sites e.g. GA
 	if (j.canonical) {
 		if (!hide?.has(JT_canonical)) types.push(JT_canonical)
 	}
 	if (j.events) {
 		const events: any[] = [] // when filtering using "hide", generate new array to prevent sending excess data
 		for (const e of j.events) {
-			// todo migrate attrValue to e.type
-			if (typeof e.attrValue != 'string') throw new Error('event.attrValue missing')
-			if (hide?.has(e.attrValue)) continue
+			if (typeof e.type != 'string') throw new Error('event.type missing')
+			if (hide?.has(e.type)) continue
 			events.push(e)
 		}
 		if (events.length) {
 			j.events = events
-			types.push(...new Set(events.map(i => i.attrValue)))
+			types.push(...new Set(events.map(i => i.type)))
 		} else {
 			delete j.events
 		}

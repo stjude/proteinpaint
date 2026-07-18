@@ -159,7 +159,7 @@ export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, PSEUDOBULK])
+const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION /*PSEUDOBULK*/])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
@@ -313,7 +313,9 @@ const typeMap: { [key: string]: string } = {
 }
 
 export function termType2label(type: string) {
-	return typeMap[type] || 'Unknown term type'
+	const s = typeMap[type]
+	if (s) return s
+	throw new Error('termType2label(): unknown value')
 }
 
 export function getDateFromNumber(value: number) {

@@ -3,7 +3,7 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import {
-	TermTypeGroups,
+	typeGroup,
 	SINGLECELL_CELLTYPE,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
@@ -11,7 +11,9 @@ import {
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
 	DNA_METHYLATION,
-	SSGSEA
+	SSGSEA,
+	PSEUDOBULK,
+	TERM_COLLECTION
 } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
@@ -421,7 +423,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			/** This vocab needs to be accessible to other plots, filter, etc.
 			 * Add directly to the termdbConfig obj for broader use. */
 			if (!c.termType2terms) c.termType2terms = {}
-			c.termType2terms[TermTypeGroups.SINGLECELL_CELLTYPE] = q.singleCell.terms
+			q.singleCell.terms.forEach((t: any) => {
+				if (!t.type) throw `singleCell term missing termType: ${JSON.stringify(t)}`
+				/** Use term type group is used, not term type. */
+				const ttGroup = typeGroup[t.type]
+				if (!ttGroup) throw `single cell term has no specified term type group: ${JSON.stringify(t)}`
+				if (!c.termType2terms[ttGroup]) c.termType2terms[ttGroup] = []
+				c.termType2terms[ttGroup].push(t)
+			})
 		}
 	}
 	if (q.images) {
@@ -452,8 +461,9 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
+		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}
-	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
+	if (ds.cohort.termdb.termCollections?.length) typeSet.add(TERM_COLLECTION)
 	return [...typeSet]
 }
 

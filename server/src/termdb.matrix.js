@@ -1,6 +1,6 @@
 import path from 'path'
 import { string2pos } from '#shared/common.js'
-import { get_samples, get_term_cte, interpolateSqlValues, get_active_groupset } from './termdb.sql.js'
+import { get_samples, get_term_cte, get_active_groupset } from './termdb.sql.js'
 import { getFilterCTEs } from './termdb.filter.js'
 import serverconfig from './serverconfig.js'
 import { read_file, trackXfetch } from './utils.js'
@@ -19,13 +19,27 @@ import {
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	SSGSEA,
-	PROTEOME_ABUNDANCE
+	PROTEOME_ABUNDANCE,
+	PSEUDOBULK
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
 import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
+
+/* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
+each dataset implements ds.cohort.termdb.q.id2sampleRefs() (native/gdc/mmrf); it owns any id
+coercion since id spaces differ (integer for native/mmrf, case-uuid string for gdc).
+the id2sampleName branch is a thin fallback for datasets not yet exposing id2sampleRefs; it must
+not assume an integer id space, so it tries the raw id first (string ids, e.g. uuids) and only then
+the Number()-coerced id (integer-id datasets whose samples{} key is a stringified integer). */
+export function id2sampleRef(id, ds) {
+	const q = ds?.cohort?.termdb?.q
+	if (q?.id2sampleRefs) return q.id2sampleRefs(id)
+	if (q?.id2sampleName) return { label: q.id2sampleName(id) ?? q.id2sampleName(Number(id)) }
+	return undefined
+}
 
 /*
 for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
@@ -255,9 +269,17 @@ async function getSampleData(q, ds) {
 			tw.term.type == METABOLITE_INTENSITY ||
 			tw.term.type == SSGSEA ||
 			tw.term.type == DNA_METHYLATION ||
+			tw.term.type == PSEUDOBULK ||
 			tw.term.type == PROTEOME_ABUNDANCE
 		) {
-			const queryHandler = tw.term.type == PROTEOME_ABUNDANCE ? q.ds.queries?.proteome : q.ds.queries?.[tw.term.type]
+			let queryHandler
+			if (tw.term.type == PROTEOME_ABUNDANCE) {
+				queryHandler = q.ds.queries?.proteome
+			} else if (tw.term.type == PSEUDOBULK) {
+				queryHandler = q.ds.queries?.singleCell?.pseudobulk
+			} else {
+				queryHandler = q.ds.queries?.[tw.term.type]
+			}
 			if (!queryHandler) throw 'not supported by dataset: ' + tw.term.type
 			let lstOfBins // of this tw. only set when q.mode is discrete
 			if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
@@ -377,26 +399,11 @@ async function getSampleData(q, ds) {
 		}
 	}
 
-	/* for samples collected into samples{}, register them in refs.bySampleId{} with display name
-	- for native dataset, samples{} key is integer id, record string name in bySampleId for display
-	- for gdc dataset, samples{} key is case uuid, record case submitter id in bySampleId for display
-
-	note:
-	- this gets rid of awkward properties e.g. "__sampleName", used to attach alternative sample name in mds3 mutation data points, and centralize such logic here
-	- it leaks (minimum amount of) gdc-specific setting in general code 
-	- future data sources need to be handled here
-	- subject to change!
-	*/
+	// resolve each id -> display refs via the dataset's id2sampleRefs() (see id2sampleRef())
 	const bySampleId = {}
 	for (const sid in samples) {
-		const sampleId = samples[sid]?.sampleId
-		if (q.ds.cohort?.termdb?.q?.id2sampleRefs) {
-			bySampleId[sid] = q.ds.cohort.termdb.q.id2sampleRefs(Number(sampleId ?? sid))
-		} else if (q.ds.cohort?.termdb?.q?.id2sampleName) {
-			bySampleId[sid] = { label: q.ds.cohort.termdb.q.id2sampleName(Number(sampleId ?? sid)) }
-		} else if (q.ds.__gdc?.caseid2submitter) {
-			bySampleId[sid] = { label: q.ds.__gdc.caseid2submitter.get(sid) }
-		}
+		const ref = id2sampleRef(samples[sid]?.sampleId ?? sid, q.ds)
+		if (ref) bySampleId[sid] = ref
 	}
 
 	// determine the sample type
@@ -473,7 +480,8 @@ function getSampleId4Cell(ds, tw, cell, filteredSamples) {
 	}
 	if (!sampleName) return
 	if (filteredSamples.size > 0 && !filteredSamples.has(sampleName)) return
-	const sampleId = sampleMappingCache?.sampleName2IntId?.get?.(sampleName) ?? ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
+	const sampleId =
+		sampleMappingCache?.sampleName2IntId?.get?.(sampleName) ?? ds.cohort?.termdb?.q?.sampleName2id?.(sampleName)
 	if (sampleId == undefined) {
 		throw new Error(`single cell meta result cannot map sample name = ${sampleName} to sample id`)
 	}
@@ -701,15 +709,14 @@ termWrappers[]
 
 output:
 
-{
+[
 	samples: {}
 		key: stringified integer id
 		val: {}
 			sample: int id
-			<term id>: { key: str, value: str }
-	refs:{}
-		{ byTermId: {} }
-}
+			<tw.$id>: { key: str, value: str }
+	byTermId: {}
+]
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (!termWrappers.length) return [{}, {}]
@@ -720,12 +727,6 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (q.ds.cohort.termdb.dictionary?.get) {
 		// ds-supplied getter to retrieve dictionary term data
 		return await q.ds.cohort.termdb.dictionary.get(q, termWrappers)
-	}
-	/* gdc ds has no cohort.db. thus call v2s.get() to return sample annotations for its dictionary terms
-	 */
-	if (q.ds?.variant2samples?.get) {
-		// ds is not using sqlite db but has v2s method
-		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
 	if (q.ds.cohort.termdb.q?.getAdHocTermValues) {
 		//ds is not using sqlite db but has getAdHocTermValues method
@@ -939,90 +940,6 @@ async function mayQueryMutatedSamples(q) {
 		}
 	}
 	return sampleSet
-}
-
-/*
-using mds3 dataset, that's without server-side sqlite db and will not execute any sql query
-so far it's only gdc
-later can be other api-based datasets
-*/
-async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
-	const q2 = Object.assign(
-		{
-			filter0: q.filter0, // must pass on gdc filter0 if present
-			filterObj: q.filter, // must rename key as "filterObj" but not "filter" to go with what mds3 backend is using
-			genome: q.genome,
-			get: 'samples',
-			twLst: termWrappers,
-			isHierCluster: q.isHierCluster, // !! gdc specific parameter !!
-			__abortSignal: q.__abortSignal
-		},
-		q.ds.mayGetGeneVariantDataParam || {}
-	)
-	if (q.rglst) {
-		// !! gdc specific parameter !! present for block tk in genomic mode
-		q2.rglst = q.rglst
-	}
-	if (q.currentGeneNames) {
-		q2.geneTwLst = []
-		for (const n of q.currentGeneNames) {
-			q2.geneTwLst.push({ term: { id: n, gene: n, name: n, type: 'geneVariant' } })
-		}
-	} else {
-		/* do not throw here
-		gene list is not required for loading dict term for gdc gene exp clustering
-		but it's required for gdc oncomatrix and will break FIXME
-		*/
-	}
-
-	const data = await q.ds.variant2samples.get(q2, q.ds)
-	/* data={samples[], byTermId{}}
-	data.samples[] is converted to samples{}
-	data.byTermId{} is returned without change
-	*/
-
-	const samples = {} // data.samples[] converts into this
-
-	for (const s of data.samples) {
-		const s2 = {
-			sample: s.sample_id
-		}
-		for (const tw of termWrappers) {
-			const id = tw.term.id || tw.term.name
-			const $id = tw.$id || id
-			if (!tw.$id) tw.$id = $id
-			const v = s[id]
-
-			////////////////////////////
-			// somehow value can be undefined! must skip them
-			////////////////////////////
-
-			if (Array.isArray(v) && v[0] != undefined && v[0] != null) {
-				////////////////////////////
-				// "v" can be array
-				// e.g. "age of diagnosis"
-				////////////////////////////
-				s2[$id] = {
-					key: v[0],
-					value: v[0]
-				}
-			} else if (v != undefined && v != null) {
-				if (typeof v == 'object') {
-					// v is {key,value}, should be for survival term
-					// now also for discrete numeric term to support {key: bin, value: value}
-					s2[$id] = v
-				} else {
-					// v is number/string, should be for non-survival term
-					s2[$id] = {
-						key: v,
-						value: v
-					}
-				}
-			}
-		}
-		samples[s.sample_id] = s2
-	}
-	return [samples, data.byTermId || {}]
 }
 
 /*

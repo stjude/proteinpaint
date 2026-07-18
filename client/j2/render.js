@@ -110,6 +110,11 @@ export function renderTk(data, tk, block) {
 	// y position, by median read count for each junction
 	const maxmedian = tk.data.reduce((c, j) => Math.max(c, j.medianReadCount), 0)
 
+	/*
+	essential to use data.maxReadCount as yscale max
+	this may leave some white space above the disks (median positioned)
+	but will allow the hover boxplot to fully show
+	*/
 	tk.sections.jug.yscale = (tk.yscaleUseLog ? scaleLog() : scaleLinear())
 		.domain([tk.readcountCutoff || 1, data.maxReadCount])
 		.range([tk.sections.jug.axisheight, 0])
@@ -698,6 +703,12 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 		}
 		// print all types in 2nd row
 		const d2 = t2.append('div')
+		d2.append('span') // strand
+			.attr('class', 'sja_mcdot')
+			.style('padding', '1px 5px')
+			.style('background-color', '#555')
+			.style('margin-right', '5px')
+			.text(j.strand)
 		for (const t of j.types) {
 			d2.append('span')
 				.attr('class', 'sja_mcdot')
@@ -711,10 +722,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	if (j.sampleCount == 1) {
 		t1.text('Sample')
 		const sndiv = t2.append('div')
-		sndiv.html('1 <span style="font-size:.7em">single sample</span>')
-		if (ifeventdetails) {
-			// query to get sample name and print
-		}
+		sndiv.text(j.sampleName || 'single sample')
 		t2.append('div').html(j.medianReadCount + ' <span style="font-size:.7em">read count</span>')
 	} else {
 		t1.text('Samples')
@@ -727,8 +735,8 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 
 	const type2elst = new Map() // k: event.type, v: list of events of that type
 	for (const e of j.info?.events || []) {
-		if (!type2elst.has(e.attrValue)) type2elst.set(e.attrValue, []) // TODO
-		type2elst.get(e.attrValue).push(e)
+		if (!type2elst.has(e.type)) type2elst.set(e.type, [])
+		type2elst.get(e.type).push(e)
 	}
 
 	for (const [type, elst] of type2elst) {
@@ -825,8 +833,8 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, donotloadcount) {
 			strand: j.strand,
 			v: j.medianReadCount
 		},
-		a5ss: e.a5ss, // TODO replace with e.type
-		a3ss: e.a3ss,
+		a5ss: e.type == JT_a5ss,
+		a3ss: e.type == JT_a3ss,
 		altinintron: e.altinintron,
 		altinexon: e.altinexon,
 		frame: e.frame,
@@ -846,7 +854,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, donotloadcount) {
 		if (donotloadcount) return
 		setTimeout(() => {
 			if (text.node().getBoundingClientRect().top == 0) return
-			const strandA = e.junctionA.strand || '+' // FIXME TODO e.junctionA.strand will be filled!
+			const strandA = e.junctionA.strand
 			fetchReadcount4junctionAbyjunctionBsamples(
 				tk,
 				block,
@@ -873,8 +881,8 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 			data: [{ v: j.medianReadCount }]
 		},
 		skippedexon: e.skippedexon,
-		isskipexon: e.isskipexon, // TODO replace with e.type
-		isaltexon: e.isaltexon, // TODO replace with e.type
+		isskipexon: e.type == JT_exonskip,
+		isaltexon: e.type == JT_exonaltuse,
 		frame: e.frame,
 		junctionAlst: [],
 		color: '#99004d'
@@ -882,7 +890,6 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 	if (e.junctionAlst) {
 		for (const jA of e.junctionAlst) {
 			if (jA) {
-				jA.strand = '+' // TODO FIXME remove when strand is added
 				jA.data = [{ v: '...' }]
 				e2.junctionAlst.push(jA)
 				continue
@@ -891,12 +898,10 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 		}
 	}
 	if (e.up1junction) {
-		e.up1junction.strand = '+' // TODO FIXME
 		e.up1junction.data = [{ v: '...' }]
 		e2.up1junction = e.up1junction
 	}
 	if (e.down1junction) {
-		e.down1junction.strand = '+' // TODO FIXME
 		e.down1junction.data = [{ v: '...' }]
 		e2.down1junction = e.down1junction
 	}
@@ -925,10 +930,9 @@ function listAllEvents(lst, table, j, tk, block) {
 		const [t1, t2] = table.addRow()
 		const e = lst[0]
 		t1.text(e.gene + ' ' + e.isoform)
-		if (e.attrValue == JT_exonskip || e.attrValue == JT_exonaltuse) {
-			// TODO replace with e.type
+		if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
 			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block)
-		} else if (e.attrValue == JT_a5ss || e.attrValue == JT_a3ss) {
+		} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
 			showEventdiagram_a53ss(j, e, tk, t2, block)
 		}
 		return
@@ -949,10 +953,9 @@ function listAllEvents(lst, table, j, tk, block) {
 		const eo = JSON.parse(key)
 		const [t1, t2] = table.addRow()
 		t1.text(eo.gene + ' ' + isolst.join(' '))
-		if (eo.attrValue == JT_exonskip || eo.attrValue == JT_exonaltuse) {
-			// TODO replace with e.type
+		if (eo.type == JT_exonskip || eo.type == JT_exonaltuse) {
 			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block)
-		} else if (eo.attrValue == JT_a5ss || eo.attrValue == JT_a3ss) {
+		} else if (eo.type == JT_a5ss || eo.type == JT_a3ss) {
 			showEventdiagram_a53ss(j, eo, tk, t2, block)
 		}
 	}

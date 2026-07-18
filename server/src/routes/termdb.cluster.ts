@@ -19,7 +19,7 @@ import serverconfig from '#src/serverconfig.js'
 import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData, id2sampleRef } from '#src/termdb.matrix.js'
 import {
 	GENE_EXPRESSION,
 	termType2label,
@@ -390,20 +390,14 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		} else {
 			// Use all samples with exp data
 			for (const sid of samples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		}
 
@@ -527,19 +521,13 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		} else {
 			for (const sid of samples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		}
 

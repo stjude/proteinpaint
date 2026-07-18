@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { divideTerms } from '../termdb.matrix.js'
+import { divideTerms, id2sampleRef } from '../termdb.matrix.js'
 import { init } from './load.testds.js'
 import { server_init_db_queries } from '../termdb.server.init.ts'
 
@@ -14,6 +14,32 @@ divideTerms: shorthand dict terms (no type, just id) are also gated by isTermVis
 divideTerms: q.__protected__ is forwarded to the isTermVisible hook
 divideTerms: termCollection visibility decided by member terms (term.termlst)
 */
+
+tape('id2sampleRef(): prefers id2sampleRefs, else id2sampleName raw-then-Number, no NaN on string ids', test => {
+	// dataset exposing id2sampleRefs -> its object is returned as-is (raw id passed through)
+	const dsRefs = { cohort: { termdb: { q: { id2sampleRefs: id => ({ label: 'R' + id, extra: 1 }) } } } }
+	test.deepEqual(id2sampleRef('abc', dsRefs), { label: 'Rabc', extra: 1 }, 'id2sampleRefs wins and gets the raw id')
+
+	// integer-keyed id2sampleName (native-like): a stringified samples{} key resolves via the Number() fallthrough
+	const ints = new Map([[7, 'seven']])
+	const dsInt = { cohort: { termdb: { q: { id2sampleName: id => ints.get(id) } } } }
+	test.deepEqual(
+		id2sampleRef('7', dsInt),
+		{ label: 'seven' },
+		'integer-keyed id2sampleName resolves stringified key via Number()'
+	)
+
+	// string-keyed id2sampleName (uuid): raw lookup works, never coerced to NaN (regression guard for the review)
+	const strs = new Map([['case-uuid', 'CASE-1']])
+	const dsStr = { cohort: { termdb: { q: { id2sampleName: id => strs.get(id) } } } }
+	test.deepEqual(id2sampleRef('case-uuid', dsStr), { label: 'CASE-1' }, 'non-numeric string id resolves raw, not NaN')
+
+	// neither method -> undefined (caller skips assignment)
+	test.equal(id2sampleRef('x', { cohort: { termdb: { q: {} } } }), undefined, 'no method -> undefined')
+	test.equal(id2sampleRef('x', {}), undefined, 'missing termdb.q -> undefined, no throw')
+
+	test.end()
+})
 
 tape('\n', function (test) {
 	test.comment('-***- modules/termdb.matrix specs -***-')

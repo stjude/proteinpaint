@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 Features:
+- Untangle the GDC querySamples_gdcapi() server path: split the getData/dictionary-term and variant2samples sample-query entry points so getData calls queryDictTermData_gdcapi instead of the mutation-oriented querySamples_gdcapi, drop a shared-request mutation, and extract a unit-tested ssm-occurrence field builder
+- Centralize sample-id-to-display resolution on ds.cohort.termdb.q.id2sampleRefs() with a uniform native/GDC implementation, removing the GDC-specific __gdc coupling from termdb.matrix.js and termdb.cluster.ts
+
+
+## 2.198.0
+
+Features:
 - Implemented new 'pseudobulk' termType.
 
 Fixes:
@@ -12,6 +19,8 @@ Fixes:
 - Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
 - Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
 - Move dataset launch-time case-sample caching into a uniform ds.preInit.cacheSamples() hook: mds3 init now dispatches caching generically (dropping the ds.label=='GDC' hardcode in mds3.init.nonblocking.js), so each API-based dataset owns its own caching (GDC's gdc.initCache relocated to the ppgdc dataset)
+- Route GDC dictionary term data through the ds.cohort.termdb.dictionary.get() hook, removing the GDC-specific getSampleData_dictionaryTerms_v2s path (and its variant2samples fallback) from shared server code
+- accept a GDC_API argument for IDCViewer to avoid CORS error in prod when requesting /cases data
 
 
 ## 2.197.0
