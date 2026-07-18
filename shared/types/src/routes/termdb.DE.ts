@@ -27,6 +27,13 @@ export type DERequest = {
 	 * PNG dimensions, and dot styling. The server always renders the volcano PNG
 	 * and returns it plus the threshold-passing rows as the interactive `data`. */
 	volcanoRender: VolcanoRenderRequest
+	/** if present, loads data from pseudobulk. otherwise loads from rnaseqGeneCount
+	 */
+	pseudobulk?: {
+		assay: string
+		memberId: string
+		category: string
+	}
 	signal?: any
 }
 

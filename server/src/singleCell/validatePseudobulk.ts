@@ -40,18 +40,20 @@ export async function validatePseudobulk(ds: any) {
 			const member = pseudobulk[assayKey][memberId]
 			if (typeof member.folder != 'string') throw 'member.folder not string'
 			if (typeof member.meanExt != 'string') throw 'member.meanExt not string'
+			if (typeof member.totalExt != 'string') throw 'member.totalExt not string'
 			if (typeof member.categories != 'object') throw 'member.categories{} not object'
 			if (!Object.keys(member.categories).length) throw 'no keys in member.categories{}'
 
 			for (const category in member.categories) {
+				const co = member.categories[category] // category object
 				// push a term
 				ds.queries.singleCell.terms.push({
-					name: member.categories[category].label || category,
+					name: co.label || category,
 					id: category,
 					type: PSEUDOBULK,
 					assay: assayKey,
 					memberId: memberId,
-					color: member.categories[category].color || plotColor,
+					color: co.color || plotColor,
 					isleaf: true,
 					bins: {
 						default: {
@@ -67,33 +69,48 @@ export async function validatePseudobulk(ds: any) {
 					}
 				})
 
-				member.categories[category].samples = [] as any[]
-				const meanfile = path.join(serverconfig.tpmasterdir, member.folder, category + member.meanExt)
-				member.categories[category].meanfile = meanfile
-				await file_is_readable(meanfile)
-				const samples = await getH5samples(meanfile)
-				if (!Array.isArray(samples)) throw new Error('samples not array')
-				if (!samples.length) throw 'HDF5 file has no samples, please check file.'
+				// validate "mean value" h5 file
+				co.meanSamples = [] as any[]
+				const meanFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.meanExt)
+				co.meanFile = meanFile
+				await file_is_readable(meanFile)
+				const samples = await getH5samples(meanFile)
+				if (!Array.isArray(samples)) throw new Error('meanFile samples not array')
+				if (!samples.length) throw 'meanFile HDF5 file has no samples, please check file.'
 				for (const sn of samples) {
 					const si = ds.cohort.termdb.q.sampleName2id(sn)
 					if (si === undefined) {
 						// samples in hdf5 file must be in sync with db
-						throw `unknown sample ${sn} from HDF5 ${meanfile}`
+						throw `unknown sample ${sn} from HDF5 ${meanFile}`
 					}
-					member.categories[category].samples.push(si)
+					co.meanSamples.push(si)
 				}
 				console.log(
-					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} mean HDF5 samples:`,
-					member.categories[category].samples.length
+					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} MEAN HDF5 samples:`,
+					co.meanSamples.length
 				)
 
-				// TODO validate total and percentage files
+				// validate "total value" h5 file
+				const totalFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.totalExt)
+				co.totalFile = totalFile
+				await file_is_readable(totalFile)
+				{
+					const samples = await getH5samples(totalFile)
+					if (!Array.isArray(samples)) throw new Error('totalFile samples not array')
+					if (!samples.length) throw 'totalFile HDF5 file has no samples, please check file.'
+					co.totalSampleset = new Set(samples)
+				}
+				console.log(
+					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} TOTAL HDF5 samples:`,
+					co.totalSampleset.size
+				)
+
+				// TODO percentage
 			}
 		}
 	}
 
-	// getter only supports mean. TODO total and percentage!
-
+	// this getter is only for mean value and used by getData to make gene variable
 	pseudobulk.get = async (param: any) => {
 		if (!Array.isArray(param.terms)) throw new Error('.terms[] not array')
 		// all terms needs to be by the same HDF5 file! TODO validate and reject otherwise
@@ -102,7 +119,7 @@ export async function validatePseudobulk(ds: any) {
 		const thisCategory = pseudobulk[_t.assay]?.[_t.memberId]?.categories?.[_t.category]
 		if (!thisCategory) throw 'pseudobulk[_t.assay]?.[_t.memberId]?.categories?.[_t.category] missing'
 
-		const limitSamples = await mayLimitSamples(param, thisCategory.samples, ds)
+		const limitSamples = await mayLimitSamples(param, thisCategory.meanSamples, ds)
 		if (limitSamples?.size == 0) {
 			// Got 0 sample after filtering, must still return expected structure with no data
 			return { term2sample2value: new Map(), byTermId: {}, bySampleId: {} }
@@ -110,7 +127,7 @@ export async function validatePseudobulk(ds: any) {
 
 		// Set up sample IDs and labels
 		const bySampleId = {}
-		const samples = thisCategory.samples || []
+		const samples = thisCategory.meanSamples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
 				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
@@ -148,7 +165,7 @@ export async function validatePseudobulk(ds: any) {
 		}
 
 		const result = JSON.parse(
-			await run_python('readHDF5.py', JSON.stringify({ hdf5_file: thisCategory.meanfile, query: geneNames }))
+			await run_python('readHDF5.py', JSON.stringify({ hdf5_file: thisCategory.meanFile, query: geneNames }))
 		)
 
 		const genesData = result.query_output || {}
