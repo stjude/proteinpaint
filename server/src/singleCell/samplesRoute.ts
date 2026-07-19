@@ -103,7 +103,9 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 	}
 
 	// validate required q.data{}
-	if (q.data.src == 'gdcapi') {
+	if (typeof q.data.get == 'function') {
+		// ds supplied getter
+	} else if (q.data.src == 'gdcapi') {
 		gdc_validate_query_singleCell_data(ds, genome) // todo change to ds-supplied q.data.get()
 	} else if (q.data.src == 'native') {
 		validateDataNative(q.data as SingleCellDataNative, ds)
@@ -120,7 +122,9 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 
 	if (q.geneExpression) {
 		if (typeof q.geneExpression != 'object') throw new Error('singleCell.geneExpression not object')
-		if (q.geneExpression.src == 'native') {
+		if (typeof q.geneExpression.get == 'function') {
+			// ds supplied getter
+		} else if (q.geneExpression.src == 'native') {
 			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
 		} else if (q.geneExpression.src == 'gdcapi') {
 			gdc_validateGeneExpression(q.geneExpression as SingleCellGeneExpressionGdc, ds, genome)

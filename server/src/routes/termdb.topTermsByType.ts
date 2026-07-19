@@ -43,6 +43,7 @@ export function validate_query_getTopTermsByType(ds: any, genome: any) {
 		if (ds.queries[type]) {
 			const q = ds.queries[type]
 			if (!q) return
+			if (typeof q.get == 'function') continue // ds supplied getter
 			if (q.src == 'gdcapi') gdcValidateQuery(ds, genome, type)
 			else if (q.src == 'native') nativeValidateQuery(ds, type)
 			else throw 'unknown topVariablyExpressedGenes.src'

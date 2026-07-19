@@ -7,9 +7,8 @@ import { renderVolcano } from './renderVolcano.ts'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { guessSsmid } from '#shared/mds3tk.js'
 import { filter2GDCfilter } from './mds3.gdc.filter.js'
-import { write_tmpfile, xfetch, sleep } from './utils.js'
+import { xfetch } from './utils.js'
 import { mayLog } from './helpers.ts'
-import serverconfig from './serverconfig.js'
 
 const maxCase4geneExpCluster = 1000 // max number of cases that will be used for gene exp clustering; okay just to hardcode in code and not to define in ds
 const maxCase4geneExp = 5000 // gdc gene exp api may not work for more than 5k cases https://gdc-ctds.atlassian.net/browse/SV-2695
@@ -20,7 +19,6 @@ const ascns = 'Allele-specific Copy Number Segment'
 GDC API
 
 ****************** EXPORTED
-validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
 	snvindel_byisoform
@@ -28,7 +26,6 @@ validate_query_snvindel_byisoform
 gdcValidate_query_singleSampleMutation
 	getSingleSampleMutations
 		getCnvFusion4oneCase
-validate_query_geneCnv // not in use! replaced by Cnv2
 validate_query_geneCnv2
 	filter2GDCfilter
 gdc_validate_query_geneExpression
@@ -101,10 +98,6 @@ export async function validate_ssm2canonicalisoform(api, getHostHeaders) {
 		const canonical = re.data.consequence.find(i => i.transcript.is_canonical)
 		return canonical ? canonical.transcript.transcript_id : re.data.consequence[0].transcript.transcript_id
 	}
-}
-
-export function validate_variant2sample(a) {
-	if (typeof a.filters != 'function') throw '.variant2samples.gdcapi.filters() not a function'
 }
 
 export function validate_query_snvindel_byrange(ds) {
@@ -625,139 +618,6 @@ function snvindel_addclass(m, consequence) {
 }
 
 ////////////////////////// CNV /////////////////////////////
-
-/* using the "cnvs" endpoint
-!!! not in use !!!
-due to the trouble of getting samples filtered
-and inability to work with filters below:
-{"field":"cases.primary_site","value":["pancreas"]}
-{"field":"cases.case_id","value":["39710434-3a67-40eb-8ff3-0995df3e155c","b8a1732f-c1cb-4a02-af4f-61b63d3d52df","7d198ee2-d80a-4759-804f-a7ef85971843","2270d09e-a8be-4b7d-9520-a4bb1cd053c0","56c07b06-c6d3-4c03-9e57-7be636e7cc5c","e46b6434-ee88-4630-9fc3-441afc431745"]}
-*/
-export function validate_query_geneCnv(ds) {
-	const defaultFields = [
-		'cnv_id',
-		'cnv_change',
-		'gene_level_cn',
-		'occurrence.case.submitter_id',
-		'consequence.gene.symbol'
-	]
-
-	/*
-	opts{}
-		.gene=str
-	*/
-	ds.queries.geneCnv.bygene.get = async opts => {
-		const { host, headers } = ds.getHostHeaders(opts)
-		const re = await xfetch(joinUrl(host.rest, 'cnvs'), {
-			method: 'POST',
-			timeout: false,
-			headers,
-			body: {
-				size: 100000,
-				fields: getFields(opts),
-				filters: getFilter(opts)
-			},
-			signal: opts.__abortSignal
-		})
-
-		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
-		const cnvevents = [] // collect list of cnv events to return
-
-		for (const hit of re.data.hits) {
-			if (!hit.gene_level_cn) throw 'hit.gene_level_cn is not true'
-			if (!hit.cnv_id) throw 'hit.cnv_id missing'
-			// each hit is one gain/loss event, and is reshaped into m{ samples[] }
-			const m = {
-				ssm_id: hit.cnv_id, // keep using ssm_id
-				dt: common.dtcnv,
-				samples: []
-			}
-			if (hit.cnv_change == 'Gain') m.class = common.mclasscnvgain
-			else if (hit.cnv_change == 'Loss') m.class = common.mclasscnvloss
-			else {
-				// NOTE!!
-				console.log('cnv_change not Gain/Loss')
-				m.class = hit.cnv_change
-			}
-			if (!Array.isArray(hit.occurrence)) throw 'hit.occurrence[] not array'
-			for (const h of hit.occurrence) {
-				if (!h.case) throw 'hit.occurrence[].case{} missing'
-				if (!h.case.submitter_id) throw 'hit.occurrence[].case.submitter_id missing'
-				const sample = {
-					sample_id: h.case.submitter_id
-				}
-
-				if (opts.twLst) {
-					for (const tw of opts.twLst) {
-						flattenCaseByFields(sample, h.case, tw)
-					}
-				}
-
-				m.samples.push(sample)
-			}
-			cnvevents.push(m)
-		}
-		return cnvevents
-	}
-
-	function getFields(p) {
-		/* p={}
-		.twLst=[]
-		*/
-		const lst = defaultFields.slice()
-		if (p.twLst) {
-			for (const t of p.twLst) {
-				let id = t.term.id
-				if (id.startsWith('case.')) id = 'occurrence.' + id
-				lst.push(id)
-			}
-		}
-		return lst.join(',')
-	}
-
-	function getFilter(p) {
-		/* p={}
-		.gene=str
-			needed for lollipop view, to limit data on one gene
-			gene-level cnv query doesn't work for single sample query, as the amount of data is too big, should be segments
-		.case_id=str
-			optional
-			to get 
-		.filter0, read-only gdc filter
-		.filterObj, pp filter
-		*/
-
-		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string' // gene is required for now
-
-		const filters = { op: 'and', content: [] }
-
-		if (p.gene) {
-			filters.content.push({ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene.split(',') } })
-		}
-
-		/* single sample query doesn't work
-		if (p.case_id) {
-			filters.content.push({ op: 'in', content: { field: 'occurrence.case.case_id', value: [p.case_id] } })
-		}
-		*/
-
-		if (p.filter0) {
-			filters.content.push(cnvsGetFilter0(p.filter0))
-		}
-		if (p.filterObj) {
-			const g = filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj)
-			if (g) filters.content.push(g)
-		}
-		return filters
-	}
-}
-/*
-f0 = {"op":"and","content":[{"op":"in","content":{"field":"cases.case_id","value":
-*/
-function cnvsGetFilter0(f0) {
-	const fstr = typeof f0 == 'string' ? f0 : JSON.stringify(f0)
-	return JSON.parse(fstr.replace('"cases.case_id"', '"occurrence.case.case_id"'))
-}
 
 /*
 get a text file with genome-wide cnv segment data from one case, and read the file content
