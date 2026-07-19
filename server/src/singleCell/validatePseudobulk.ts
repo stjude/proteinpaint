@@ -98,6 +98,10 @@ export async function validatePseudobulk(ds: any) {
 					const samples = await getH5samples(totalFile)
 					if (!Array.isArray(samples)) throw new Error('totalFile samples not array')
 					if (!samples.length) throw 'totalFile HDF5 file has no samples, please check file.'
+					for (const sn of samples) {
+						const si = ds.cohort.termdb.q.sampleName2id(sn)
+						if (si === undefined) throw `unknown sample ${sn} from HDF5 ${totalFile}`
+					}
 					co.totalSampleset = new Set(samples)
 				}
 				console.log(

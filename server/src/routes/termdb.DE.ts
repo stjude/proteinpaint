@@ -47,7 +47,7 @@ export function init({ genomes }) {
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const { allSampleSet } = resolveDE(req, ds)
+				const { allSampleSet } = resolveDE(q, ds)
 				const groups = await resolveSampleGroups(q, allSampleSet, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
@@ -148,10 +148,12 @@ function resolveDE(req, ds) {
 				req.pseudobulk.category
 			]
 		if (!co) throw 'pseudobulk category obj not found for DE'
+		if (!co.totalFile) throw 'pseudobulk category obj totalFile not found'
 		return { countsFile: co.totalFile, allSampleSet: co.totalSampleset }
 	}
 	const c = ds.queries?.rnaseqGeneCount
 	if (!c) throw 'no rnaseqGeneCount for DE'
+	if (!c.file) throw 'rnaseqGeneCount.file missing'
 	return { countsFile: c.file, allSampleSet: c.allSampleSet }
 }
 
