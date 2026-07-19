@@ -797,7 +797,9 @@ async function validate_query_snvindel(ds, genome) {
 	if (q.m2csq) {
 		if (!q.m2csq.by) throw '.by missing from queries.snvindel.m2csq'
 		if (q.m2csq.by != 'ssm_id') throw 'unknown value of queries.snvindel.m2csq.by'
-		if (q.m2csq.gdcapi) {
+		if (typeof q.m2csq.get == 'function') {
+			// ds supplied getter
+		} else if (q.m2csq.gdcapi) {
 			gdc.validate_m2csq(ds)
 			// added q.m2csq.get()
 		} else {
@@ -936,6 +938,7 @@ export function validateSampleHeader(ds, samples, where) {
 function validate_ssm2canonicalisoform(ds) {
 	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
+	if (typeof ds.ssm2canonicalisoform.get == 'function') return // ds supplied getter
 	if (ds.ssm2canonicalisoform.gdcapi) {
 		gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform, ds.getHostHeaders) // add get()
 		return

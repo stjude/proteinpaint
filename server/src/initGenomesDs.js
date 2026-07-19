@@ -22,6 +22,10 @@ import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types'
 import { mayLog } from './helpers.ts'
 import { mapConcurrent } from './utils/concurrencyLimiter.ts'
+// server-internal utilities that GDC query code depends on; injected so that code can move to
+// the ppgdc dataset repo, which cannot import from the server package
+import { renderVolcano } from './renderVolcano.ts'
+import { combineSamplesById } from './mds3.variant2samples.js'
 
 const dsHelpers = {
 	mayMapRefseq2ensembl,
@@ -38,6 +42,8 @@ const dsHelpers = {
 	filterByItem: mds3_init.filterByItem,
 	mayLog,
 	mapConcurrent,
+	renderVolcano,
+	combineSamplesById,
 	createSelectionID,
 	SelectionPrefixes,
 	FlagStatus

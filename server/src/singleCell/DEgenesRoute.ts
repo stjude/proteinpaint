@@ -81,6 +81,7 @@ function init({ genomes }) {
 }
 
 export async function validate_query_singleCell_DEgenes(ds: any) {
+	if (typeof ds.queries.singleCell.DEgenes.get == 'function') return // ds supplied getter
 	if (ds.queries.singleCell.DEgenes.src == 'gdcapi') {
 		gdc_validate_query_singleCell_DEgenes(ds)
 	}
