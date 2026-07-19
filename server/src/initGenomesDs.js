@@ -10,14 +10,6 @@ import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
-// will pass below as argument to mds3_init()
-import {
-	mayMapRefseq2ensembl,
-	flattenCaseByFields,
-	may_add_readdepth,
-	mapGenes2isoforms,
-	queryDictTermData_gdcapi
-} from './mds3.gdc.js'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types'
 import { mayLog } from './helpers.ts'
@@ -28,11 +20,6 @@ import { renderVolcano } from './renderVolcano.ts'
 import { combineSamplesById } from './mds3.variant2samples.js'
 
 const dsHelpers = {
-	mayMapRefseq2ensembl,
-	flattenCaseByFields,
-	may_add_readdepth,
-	mapGenes2isoforms,
-	queryDictTermData_gdcapi,
 	isUsableTerm,
 	joinUrl,
 	ezFetch,

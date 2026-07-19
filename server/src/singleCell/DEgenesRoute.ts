@@ -1,5 +1,4 @@
 import type { RoutePayload, TermdbSingleCellDEgenesRequest, TermdbSingleCellDEgenesResponse, RouteApi } from '#types'
-import { gdc_validate_query_singleCell_DEgenes } from '#src/mds3.gdc.js'
 import { validGenomeDs, validString } from '#routes/common.ts'
 
 export const payload: RoutePayload = {
@@ -81,13 +80,7 @@ function init({ genomes }) {
 }
 
 export async function validate_query_singleCell_DEgenes(ds: any) {
-	if (typeof ds.queries.singleCell.DEgenes.get == 'function') return // ds supplied getter
-	if (ds.queries.singleCell.DEgenes.src == 'gdcapi') {
-		gdc_validate_query_singleCell_DEgenes(ds)
-	}
-	//TODO: Implement query valiation for non gdc ds
-	else {
-		throw new Error('unknown singleCell.DEgenes.src')
-	}
-	// DEgenes.get() added
+	//TODO: Implement query validation for non-ds-supplied DEgenes
+	if (typeof ds.queries.singleCell.DEgenes.get != 'function')
+		throw new Error('singleCell.DEgenes.get() is not supplied by the ds')
 }

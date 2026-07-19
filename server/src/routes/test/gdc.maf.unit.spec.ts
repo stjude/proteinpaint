@@ -20,7 +20,13 @@ test sections:
 */
 
 // a minimal ds stub: only getHostHeaders is exercised by listMafFiles
-const ds = { getHostHeaders: () => ({ host: { rest: 'https://gdc.example/' }, headers: {} }) }
+/* getGdcSampletypes is supplied by the GDC dataset (ppgdc gdc/queries.js, attached in initQueries),
+so it is stubbed here rather than imported: the server package cannot import from the ppgdc repo.
+these fixtures all use samples:[], for which the real helper likewise returns [] */
+const ds = {
+	getHostHeaders: () => ({ host: { rest: 'https://gdc.example/' }, headers: {} }),
+	getGdcSampletypes: () => []
+}
 
 tape('\n', function (test) {
 	test.comment('-***- #routes/gdc.maf listMafFiles -***-')

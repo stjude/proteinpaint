@@ -48,7 +48,7 @@ function init({ genomes }) {
 			if (!ds.queries?.singleCell) throw new Error('no single cell data on this dataset')
 			if (!ds.queries.singleCell.data?.get) throw new Error('dataset has no single cell data get() function')
 			/** data.get() not defined in ds file, defined in
-			 * server/src/mds3.gdc.js for gdc. For native ds,
+			 * ppgdc gdc/queries.js for gdc. For native ds,
 			 * validateDataNative() in samplesRoute.ts */
 			result = await ds.queries.singleCell.data.get(q)
 		} catch (e: any) {

@@ -3,7 +3,6 @@ import type { GdcMafRequest, GdcMafResponse, GdcMafFile } from '#types'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
-import { getGdcSampletypes } from '#src/mds3.gdc.js'
 
 const payload: RoutePayload = {
 	init,
@@ -172,7 +171,7 @@ export async function listMafFiles(q: GdcMafRequest, ds: any, queryFiles: MafFil
 			file_size: h.file_size,
 			case_submitter_id: c.submitter_id,
 			case_uuid: c.case_id,
-			sample_types: getGdcSampletypes(c)
+			sample_types: ds.getGdcSampletypes(c)
 		} satisfies GdcMafFile)
 	}
 
