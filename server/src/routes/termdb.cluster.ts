@@ -16,7 +16,6 @@ import type { ReqQueryAddons } from '../../routes/types.ts'
 import * as utils from '#src/utils.js'
 import { getH5samples } from '../utils/h5samples.ts'
 import serverconfig from '#src/serverconfig.js'
-import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData, id2sampleRef } from '#src/termdb.matrix.js'
@@ -103,7 +102,7 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
 	if (q.dataType == GENE_EXPRESSION) {
-		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
+		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in ppgdc gdc/queries.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
 		_q = JSON.parse(JSON.stringify(q))
 		_q.forClusteringAnalysis = true
 		_q.__abortSignal = q.__abortSignal
@@ -205,7 +204,7 @@ async function getNumericDictTermAnnotation(q, ds) {
 	return { term2sample2value, byTermId: data.refs.byTermId, bySampleId: data.refs.bySampleId }
 }
 
-// default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
+// default numCases should be matched to maxCase4geneExpCluster in ppgdc gdc/queries.js
 async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet: Set<string> = new Set()
@@ -298,18 +297,13 @@ function getZscore(l: number[]) {
 	return l.map(v => (v - mean) / sd)
 }
 
-export async function validate_query_geneExpression(ds: any, genome: any) {
+export async function validate_query_geneExpression(ds: any, _genome: any) {
 	const q: GeneExpressionQuery = ds.queries.geneExpression
 	if (!q) return
 	q.geneExpression2bins = {} //this dict is used to store the default bin config for each gene searched, so it doesn't have to be recalculated each time
 
 	if (typeof q.get == 'function') return // ds supplied getter
 
-	if (q.src == 'gdcapi') {
-		gdc_validate_query_geneExpression(ds as GeneExpressionQuery, genome)
-		// q.get() added
-		return
-	}
 	if (q.src == 'native') {
 		await validateNative(q as GeneExpressionQuery, ds)
 		return

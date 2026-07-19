@@ -24,7 +24,6 @@ import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
-import { gdc_validate_query_singleCell_data } from '#src/mds3.gdc.js'
 import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { maySetMapParent2Children } from '#src/termdb.matrix.js'
@@ -105,8 +104,6 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 	// validate required q.data{}
 	if (typeof q.data.get == 'function') {
 		// ds supplied getter
-	} else if (q.data.src == 'gdcapi') {
-		gdc_validate_query_singleCell_data(ds, genome) // todo change to ds-supplied q.data.get()
 	} else if (q.data.src == 'native') {
 		validateDataNative(q.data as SingleCellDataNative, ds)
 		// added q.data.get()

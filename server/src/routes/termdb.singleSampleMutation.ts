@@ -6,7 +6,6 @@ import type {
 	RouteApi,
 	RoutePayload
 } from '#types'
-import { gdcValidate_query_singleSampleMutation } from '#src/mds3.gdc.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -44,13 +43,11 @@ function init({ genomes }) {
 }
 
 /////////////////// ds query validator
-export async function validate_query_singleSampleMutation(ds: any, genome: any) {
+export async function validate_query_singleSampleMutation(ds: any, _genome: any) {
 	const _q = ds.queries.singleSampleMutation
 	if (!_q) return
 	if (typeof _q.get == 'function') {
 		// ds supplied
-	} else if (_q.src == 'gdcapi') {
-		gdcValidate_query_singleSampleMutation(ds, genome)
 	} else if (_q.src == 'native') {
 		/* using a folder to store text files for individual samples
 		file names are string sample name
