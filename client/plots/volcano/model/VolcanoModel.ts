@@ -12,7 +12,7 @@ export class VolcanoModel {
 	settings!: any
 	termType: string
 
-	/** TODO: This model is used in both the volcano and gsea. 
+	/** TODO: This model is used in both the volcano and gsea.
 	 * In the future, create base model in DA and use specific
 	 * classes for the volcano and gsea. */
 	constructor(plot: any, termType: string) {
@@ -75,6 +75,8 @@ export class VolcanoModel {
 			cpm_cutoff: this.settings.cpmCutoff,
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
+		const pseudobulk = this.config.tw?.pseudobulk
+		if (pseudobulk) body.pseudobulk = pseudobulk
 
 		this.addConfounderTw(body)
 
@@ -135,7 +137,8 @@ export class VolcanoModel {
 			// at fetch time — bigger headroom = more tolerable post-render
 			// zoom before pixelation appears). The server clamp keeps the
 			// bitmap memory bounded.
-			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2		}
+			devicePixelRatio: (typeof window !== 'undefined' ? window.devicePixelRatio : 1) * 2
+		}
 	}
 
 	//This is a workaround until the server can accept an arr of confounder tws
@@ -155,7 +158,8 @@ export class VolcanoModel {
 			sample: this.config.sample,
 			termId: this.config.termId,
 			categoryName: this.config.categoryName,
-			volcanoRender: this.getVolcanoRender()		}
+			volcanoRender: this.getVolcanoRender()
+		}
 		return body
 	}
 

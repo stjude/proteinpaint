@@ -93,6 +93,7 @@ function deKeyInputs(req: DERequest) {
 		min_total_count: req.min_total_count,
 		cpm_cutoff: req.cpm_cutoff,
 		method: req.method ?? null,
+		pseudobulk: req.pseudobulk ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
 		filter: (req as any).filter ?? null,
@@ -144,7 +145,7 @@ function resolveDE(req, ds) {
 	if (req.pseudobulk) {
 		const co =
 			ds.queries?.singleCell?.pseudobulk?.[req.pseudobulk.assay]?.[req.pseudobulk.memberId]?.categories?.[
-				req.query.category
+				req.pseudobulk.category
 			]
 		if (!co) throw 'pseudobulk category obj not found for DE'
 		return { countsFile: co.totalFile, allSampleSet: co.totalSampleset }
@@ -170,13 +171,11 @@ async function runDeFresh(
 	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
 
-	const q = ds.queries.rnaseqGeneCount
-
 	const expression_input = {
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
 		data_type: 'do_DE',
-		input_file: q.file,
+		input_file: countsFile,
 		cachedir: serverconfig.cachedir,
 		DE_method: param.method,
 		mds_cutoff: 10000,
