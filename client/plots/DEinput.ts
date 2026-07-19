@@ -10,9 +10,10 @@ import {
 } from '#filter/filter'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
-import { renderTable } from '#dom'
+import { make_radios, renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderPreAnalysisData } from '#mass/groups'
+import { TermTypeGroups, termType2label } from '#shared/terms.js'
 
 const colorScale = getColors(5)
 
@@ -33,6 +34,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	config: any
 	groups: any[]
 	filterPrompt: any
+	expressionSource?: 'bulk' | 'pseudobulk'
+	pseudobulk?: { assay: string; memberId: string; category: string }
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -45,6 +48,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	getDom() {
 		const header = this.opts?.header?.html('Differential Gene Expression') || undefined
 		const holder = this.opts.holder.append('div').style('margin', '10px')
+		const expressionSource = holder.append('div').style('margin-bottom', '15px')
 		const table = holder.append('div')
 		const btns = holder.append('div').style('margin-top', '5px')
 		const addGroup = btns.append('div').style('display', 'inline-block')
@@ -59,7 +63,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			.style('display', 'none')
 			.style('margin-top', '20px')
 			.style('margin-left', '5px')
-		const dom = { header, table, addGroup, submit, loading, preAnalysis }
+		const dom = { header, expressionSource, table, addGroup, submit, loading, preAnalysis }
 		return dom
 	}
 
@@ -76,13 +80,123 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 	}
 
-	async init() {}
+	async init() {
+		await this.renderExpressionSourceUI()
+	}
 
 	// TODO: handle errors
 	async main() {
 		this.dom.preAnalysis.selectAll('*').remove()
+		if (!this.expressionSource || (this.expressionSource === 'pseudobulk' && !this.pseudobulk)) {
+			this.dom.table.style('display', 'none')
+			this.dom.addGroup.style('display', 'none')
+			this.dom.submit.style('display', 'none')
+			return
+		}
+		this.dom.addGroup.style('display', 'inline-block')
 		this.makeGroupsUI()
 		this.mayRenderSubmit()
+	}
+
+	async renderExpressionSourceUI() {
+		const config = this.app.vocabApi.termdbConfig
+		const hasBulk = !!config.queries?.rnaseqGeneCount
+		const terms = config.termType2terms?.[TermTypeGroups.PSEUDOBULK] || []
+		const hasPseudobulk = terms.length > 0
+		if (!hasBulk && !hasPseudobulk)
+			throw new Error('No gene expression count data configured for differential analysis')
+
+		if (hasBulk && !hasPseudobulk) {
+			this.expressionSource = 'bulk'
+			return
+		}
+
+		if (!hasBulk) {
+			this.expressionSource = 'pseudobulk'
+			this.renderPseudobulkSelection(this.dom.expressionSource, terms)
+			return
+		}
+
+		const tabs = [
+			{
+				label: 'Bulk RNA-seq',
+				active: true,
+				callback: async () => {
+					this.expressionSource = 'bulk'
+					await this.main()
+				}
+			},
+			{
+				label: 'Single-cell pseudobulk',
+				callback: async (_event, tab) => {
+					this.expressionSource = 'pseudobulk'
+					tab.contentHolder.selectAll('*').remove()
+					this.renderPseudobulkSelection(tab.contentHolder, terms)
+					await this.main()
+				}
+			}
+		]
+		await new Tabs({ holder: this.dom.expressionSource, tabs }).main()
+	}
+
+	renderPseudobulkSelection(holder, terms) {
+		const assayMap = new Map<string, Map<string, any[]>>()
+		for (const term of terms) {
+			if (!assayMap.has(term.assay)) assayMap.set(term.assay, new Map())
+			const memberMap = assayMap.get(term.assay)!
+			if (!memberMap.has(term.memberId)) memberMap.set(term.memberId, [])
+			memberMap.get(term.memberId)!.push(term)
+		}
+
+		const renderAssay = (assayHolder, assay, memberMap) => {
+			assayHolder.selectAll('*').remove()
+			const renderMember = (memberHolder, memberId, memberTerms) => {
+				memberHolder.selectAll('*').remove()
+				memberHolder.append('div').style('opacity', 0.7).text(`Select from ${memberId}:`)
+				make_radios({
+					holder: memberHolder,
+					inputName: `sjpp-de-pseudobulk-${this.id}-${assay}-${memberId}`,
+					options: memberTerms.map(term => ({
+						label: term.name,
+						value: term.id,
+						checked:
+							this.pseudobulk?.assay === assay &&
+							this.pseudobulk?.memberId === memberId &&
+							this.pseudobulk?.category === (term.category || term.id),
+						testid: `sjpp-de-pseudobulk-category-${term.id}`
+					})),
+					styles: { display: 'block', padding: '3px 5px' },
+					callback: async value => {
+						const term = memberTerms.find(term => term.id == value)
+						this.pseudobulk = { assay, memberId, category: term.category || term.id }
+						await this.main()
+					}
+				})
+			}
+
+			if (memberMap.size === 1) {
+				const [memberId, memberTerms] = memberMap.entries().next().value
+				renderMember(assayHolder, memberId, memberTerms)
+			} else {
+				const memberTabs = Array.from(memberMap, ([memberId, memberTerms]) => ({
+					label: memberId,
+					callback: (_event, tab) => renderMember(tab.contentHolder, memberId, memberTerms)
+				}))
+				new Tabs({ holder: assayHolder, tabs: memberTabs }).main()
+			}
+		}
+
+		if (assayMap.size === 1) {
+			const [assay, memberMap] = Array.from(assayMap)[0]
+			holder.append('div').text('Single-cell pseudobulk ' + termType2label(assay))
+			renderAssay(holder.append('div'), assay, memberMap)
+		} else {
+			const assayTabs = Array.from(assayMap, ([assay, memberMap]) => ({
+				label: termType2label(assay),
+				callback: (_event, tab) => renderAssay(tab.contentHolder, assay, memberMap)
+			}))
+			new Tabs({ holder, tabs: assayTabs, linePosition: 'right', tabsPosition: 'vertical' }).main()
+		}
 	}
 
 	async makeGroupsUI() {
@@ -106,7 +220,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 		// TODO: need to also consider filter0
 		// filterPrompt.main() always empties the filterUiRoot data
-		const filter = structuredClone(this.state.termfilter.filter)
+		const filter = structuredClone(this.state?.termfilter?.filter)
 		this.filterPrompt.main(excludeFilterByTag(filter, 'cohortFilter')) // provide mass filter to limit the term tree
 
 		if (!this.groups.length) {
@@ -257,6 +371,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				values: {}
 			}
 		}
+		if (this.expressionSource === 'pseudobulk') samplelstTW.pseudobulk = this.pseudobulk
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleList(
 				filterJoin([g.filter, this.state.termfilter.filter])
@@ -278,7 +393,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 
 		// get actual numbers of samples with rnaseq count
-		const body = {
+		const body: any = {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			samplelst: { groups: samplelstTW.q.groups },
@@ -286,6 +401,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			filter0: this.state.termfilter.filter0,
 			preAnalysis: true
 		}
+		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk
 		const preAnalysisData = await dofetch3('termdb/DE', { body })
 
 		this.dom.loading.style('display', 'none')
