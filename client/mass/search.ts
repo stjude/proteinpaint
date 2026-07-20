@@ -182,7 +182,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// a parsed coordinate when the prompt is a valid range and the dataset supports the genomic view.
 	// A coordinate result is added below whose "Genome Browser" button opens the genomic view.
 	const coord = data.coord || null
-	const lst: any[] = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
+	const dictItems: any[] = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
 	// Each gene match carries its own available data types (a gene may have e.g. SNV/indel while
 	// another does not), so action buttons are decided per gene rather than dataset-wide.
 	const genes: { gene: string; dataTypes: any; coord?: any }[] = Array.isArray(data.genes) ? data.genes : []
@@ -190,7 +190,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// Build one entry per gene, skipping any whose name already appears among the dictionary results.
 	// Each gene renders as a single row whose buttons are the actions available for that gene, and
 	// its own per-variant-type options (SNV/indel, CNV, SV/fusion) are attached for showTerm to use.
-	const dictNames = new Set(lst.map((t: any) => t.name?.toUpperCase()))
+	const dictNames = new Set(dictItems.map((t: any) => t.name?.toUpperCase()))
 	const geneMap = new Map<string, any>()
 	for (const g of genes) {
 		const gene = g?.gene
@@ -225,20 +225,31 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 			geneMap.set(gene.toUpperCase(), entry)
 		}
 	}
-	for (const entry of geneMap.values()) lst.push(entry)
+	const geneItems = [...geneMap.values()]
 	// Matched samples. The server only sends these when the dataset allows displaying sample ids
 	// (authApi.canDisplaySampleIds), so no permission check is repeated here — an empty/absent list
 	// means either no match or a dataset that does not permit it.
-	for (const s of Array.isArray(data.samples) ? data.samples : []) {
-		if (s?.name) lst.push({ isSample: true, name: s.name, sampleId: s.id })
-	}
-	// Add the genomic coordinate as its own result entry (like a gene entry), rendered by showTerm
-	if (coord) {
-		lst.push({
-			isCoord: true,
-			name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`,
-			coord
-		})
+	const sampleItems = (Array.isArray(data.samples) ? data.samples : [])
+		.filter((s: any) => s?.name)
+		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id }))
+	// The genomic coordinate is its own result entry (like a gene entry), rendered by showTerm
+	const coordItems = coord
+		? [{ isCoord: true, name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`, coord }]
+		: []
+
+	// Group the results under headings so each result type is labeled (e.g. "Dictionary" above the matched
+	// dictionary variables, then "Genes" above the matched genes). A heading row is inserted only for a
+	// non-empty group; showTerm renders {isHeading:true} rows as the group label.
+	const lst: any[] = []
+	for (const group of [
+		{ heading: 'Dictionary', items: dictItems },
+		{ heading: 'Genes', items: geneItems },
+		{ heading: 'Samples', items: sampleItems },
+		{ heading: 'Genomic region', items: coordItems }
+	]) {
+		if (!group.items.length) continue
+		lst.push({ isHeading: true, name: group.heading })
+		for (const item of group.items) lst.push(item)
 	}
 	if (!lst.length) {
 		// Show the "No match..." message one time at the first miss
@@ -284,13 +295,18 @@ export function setSearchRenderers(self: any) {
 		self.clear()
 		self.dom.resultDiv.append('div').text(text).style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
 
-		// Hide the popup after 2 seconds
-		setTimeout(() => {
+		// Hide the popup after a delay. Track the timer so (a) successive no-match keystrokes don't stack
+		// timers and (b) showTerms can cancel it — otherwise a stale hide from an earlier no-match keystroke
+		// (e.g. a short gene-only prompt that matched nothing) fires later and wipes freshly-rendered results.
+		clearTimeout(self.noResultTimer)
+		self.noResultTimer = setTimeout(() => {
 			self.clear({ hide: true })
 		}, 1500)
 	}
 
 	self.showTerms = (data: any) => {
+		// cancel any pending no-match hide so a stale timer can't wipe these results
+		clearTimeout(self.noResultTimer)
 		if (self.opts.disable_terms)
 			data.lst.forEach((t: any) => {
 				if (t.disabled) self.opts.disable_terms.push(t)
@@ -443,6 +459,20 @@ export function setSearchRenderers(self: any) {
 
 	self.showTerm = function (this: any, term: any) {
 		const tr = select(this)
+
+		if (term.isHeading) {
+			// group label row spanning both columns (name + action-button columns); not selectable
+			tr.append('td')
+				.attr('colspan', 2)
+				.attr('data-testid', `sjpp-mass-chat-heading-${term.name.toLowerCase().replace(/\s+/g, '-')}`)
+				.text(term.name)
+				.style('padding', '6px 10px 2px')
+				.style('font-weight', 'bold')
+				.style('font-size', '0.85em')
+				.style('text-transform', 'uppercase')
+				.style('opacity', 0.5)
+			return
+		}
 
 		if (term.isCoord) {
 			// Genomic coordinate row: region label + a "Genome Browser" button opening the genomic view as
