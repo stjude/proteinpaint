@@ -13,8 +13,12 @@ import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
-// Coordinate search is allowed regardless of prompt length, but other prompts are gated by these bounds.
-const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3
+// Minimum prompt length per search family. Gene search runs from a single character; dictionary and
+// sample search require 3 (they match more loosely and, for samples, scan every sample name). Coordinate
+// search has no length gate (its regex decides). The dict/sample cutoff is sent to the server, which skips
+// those searches for short prompts so a 1–2 char keystroke never scans all samples on a large dataset.
+const MIN_PROMPT_LENGTH_FOR_GENE_SEARCH = 1
+const MIN_PROMPT_LENGTH_FOR_OTHER_SEARCH = 3
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 20
 
 /** Build a region-based dnaMethylation term for the given coordinates. */
@@ -121,7 +125,7 @@ export async function handleOmnisearchKeyup(self: any, event: KeyboardEvent) {
 	const coordCandidates = parseCoordCandidates(prompt)
 	if (
 		coordCandidates ||
-		(MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH)
+		(MIN_PROMPT_LENGTH_FOR_GENE_SEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH)
 	) {
 		try {
 			await doSearch(self, prompt, coordCandidates) // Search as user types
@@ -158,7 +162,10 @@ export async function fetchOmnisearch(opts: {
 			cohortStr: opts.cohortStr,
 			usecase: opts.usecase,
 			treeFilter: opts.treeFilter,
-			coordCandidates: opts.coordCandidates || undefined
+			coordCandidates: opts.coordCandidates || undefined,
+			// gene search runs from 1 char; dictionary + sample search only once the prompt reaches the
+			// longer cutoff, so the server skips them (and their all-samples scan) for short prompts
+			includeDictAndSampleSearch: opts.prompt.trim().length >= MIN_PROMPT_LENGTH_FOR_OTHER_SEARCH
 		}
 	})
 	if (data.error) throw data.error
