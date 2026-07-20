@@ -237,19 +237,59 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 		? [{ isCoord: true, name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`, coord }]
 		: []
 
+	// Per-type total match counts (server capped each type; totals report the full counts). A group's
+	// results were truncated when its total exceeds the number the server returned for that type, in which
+	// case a note is shown at the bottom of the group.
+	const totals = data.totals || ({} as any)
 	// Group the results under headings so each result type is labeled (e.g. "Dictionary" above the matched
 	// dictionary variables, then "Genes" above the matched genes). A heading row is inserted only for a
-	// non-empty group; showTerm renders {isHeading:true} rows as the group label.
+	// non-empty group; showTerm renders {isHeading:true} rows as the group label, {isNote:true} as the note.
 	const lst: any[] = []
 	for (const group of [
-		{ heading: 'Dictionary', items: dictItems },
-		{ heading: 'Genes', items: geneItems },
-		{ heading: 'Samples', items: sampleItems },
-		{ heading: 'Genomic region', items: coordItems }
+		{
+			key: 'dictionary',
+			heading: 'Dictionary',
+			noun: 'dictionary variable',
+			items: dictItems,
+			returned: dictItems.length,
+			total: totals.dictionaryTerms
+		},
+		{
+			key: 'genes',
+			heading: 'Genes',
+			noun: 'gene',
+			items: geneItems,
+			returned: Array.isArray(data.genes) ? data.genes.length : 0,
+			total: totals.genes
+		},
+		{
+			key: 'samples',
+			heading: 'Samples',
+			noun: 'sample',
+			items: sampleItems,
+			returned: sampleItems.length,
+			total: totals.samples
+		},
+		{
+			key: 'coord',
+			heading: 'Genomic region',
+			noun: '',
+			items: coordItems,
+			returned: coordItems.length,
+			total: undefined
+		}
 	]) {
 		if (!group.items.length) continue
 		lst.push({ isHeading: true, name: group.heading })
 		for (const item of group.items) lst.push(item)
+		// truncation note: shown only when the server capped this type (total > what it returned)
+		if (typeof group.total == 'number' && group.total > group.returned) {
+			lst.push({
+				isNote: true,
+				testid: `sjpp-mass-chat-note-${group.key}`,
+				name: `Displaying ${group.items.length} out of a total of ${group.total} ${group.noun} matches`
+			})
+		}
 	}
 	if (!lst.length) {
 		// Show the "No match..." message one time at the first miss
@@ -471,6 +511,19 @@ export function setSearchRenderers(self: any) {
 				.style('font-size', '0.85em')
 				.style('text-transform', 'uppercase')
 				.style('opacity', 0.5)
+			return
+		}
+
+		if (term.isNote) {
+			// "Displaying N out of M ... matches" note at the bottom of a truncated group; not selectable
+			tr.append('td')
+				.attr('colspan', 2)
+				.attr('data-testid', term.testid || 'sjpp-mass-chat-note')
+				.text(term.name)
+				.style('padding', '2px 10px 6px')
+				.style('font-size', '0.8em')
+				.style('font-style', 'italic')
+				.style('opacity', 0.6)
 			return
 		}
 

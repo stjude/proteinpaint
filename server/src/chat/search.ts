@@ -39,10 +39,13 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
+	let dictionaryTotal = 0
 	if (includeDictAndSampleSearch) {
 		const str = prompt.toUpperCase()
 		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
-		terms = filterTerms(req, ds, found.map(copy_term))
+		const allTerms = filterTerms(req, ds, found.map(copy_term))
+		dictionaryTotal = allTerms.length
+		terms = allTerms.slice(0, MAX_DICT_MATCHES) // cap displayed terms; dictionaryTotal reports the full count
 		for (const term of terms) {
 			term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
 			term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
@@ -58,8 +61,9 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		datasetDataTypes.snvindel ||
 		datasetDataTypes.cnv ||
 		datasetDataTypes.svfusion
-	const MAX_GENE_MATCHES = 50
-	const geneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt).slice(0, MAX_GENE_MATCHES) : []
+	const allGeneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+	const genesTotal = allGeneNames.length
+	const geneNames = allGeneNames.slice(0, MAX_GENE_MATCHES) // cap displayed genes; genesTotal reports the full count
 	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not), and
 	// resolve a default genomic coordinate for genes that can seed a genome browser (DNA methylation
 	// region picker or the genome browser genomic view) so the client can seed the browser without a
@@ -85,39 +89,53 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 			: null
 
 	// Samples — returns [] when the dataset does not allow displaying sample ids, or when the client gated
-	// out sample search for a short (gene-only) prompt
-	const samples = includeDictAndSampleSearch && prompt ? await searchSamples(q, req, ds, prompt) : []
+	// out sample search for a short (gene-only) prompt. sampleTotal is the full match count (before the cap).
+	const { matches: samples, total: sampleTotal } =
+		includeDictAndSampleSearch && prompt ? await searchSamples(q, req, ds, prompt) : { matches: [], total: 0 }
+
+	// Per-type total match counts (before each type's display cap) so the client can show a
+	// "Displaying N out of M" note when a type's results were truncated.
+	const totals = { dictionaryTerms: dictionaryTotal, genes: genesTotal, samples: sampleTotal }
 
 	// Will later add support for other NonDict terms such as genesets etc.
-	return { dictionaryTerms: terms, genes: genes, coord, samples }
+	return { dictionaryTerms: terms, genes: genes, coord, samples, totals }
 }
 
 /** Match the prompt against sample names. get_AllSamplesByName() is the single source of truth for both
  * the name->id map and the "can this dataset display sample ids" check: it sends {} when
  * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
  * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
-async function searchSamples(q: any, req: any, ds: any, prompt: string): Promise<SampleMatch[]> {
+async function searchSamples(
+	q: any,
+	req: any,
+	ds: any,
+	prompt: string
+): Promise<{ matches: SampleMatch[]; total: number }> {
 	// authApi is only assigned once app.ts calls getAuthApi(); when it is not set (e.g. a unit test calling
 	// runOmnisearch directly, no server app), skip sample search rather than let get_AllSamplesByName crash
 	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
-	if (!authApi) return []
+	if (!authApi) return { matches: [], total: 0 }
 
 	let sampleName2Id: any = {}
 	const q2: any = q?.filter ? { filter: q.filter } : {}
 	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
-	if (!sampleName2Id || sampleName2Id.error) return []
+	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
 
 	const str = prompt.toLowerCase()
 	const matches: SampleMatch[] = []
-	// ponytail: O(all samples) substring scan per keystroke; index the names if a large ds gets slow
+	let total = 0
+	// ponytail: O(all samples) substring scan per keystroke; count every match for `total` (no early break)
+	// but only collect up to the cap. Index the names if counting all matches gets slow on a large ds.
 	for (const [name, v] of Object.entries(sampleName2Id as { [k: string]: any })) {
 		if (!name?.toLowerCase().includes(str)) continue
-		matches.push({ id: v.id, name })
-		if (matches.length >= MAX_SAMPLE_MATCHES) break
+		total++
+		if (matches.length < MAX_SAMPLE_MATCHES) matches.push({ id: v.id, name })
 	}
-	return matches
+	return { matches, total }
 }
 const MAX_SAMPLE_MATCHES = 10
+const MAX_GENE_MATCHES = 50
+const MAX_DICT_MATCHES = 10
 
 /** Resolve a typed genomic coordinate to { chr, start, stop } from the client-provided candidate spellings
  * (e.g. ["7:100000-200000", "chr7:100000-200000"]). The client (mass/search.ts) runs the shape regex and
