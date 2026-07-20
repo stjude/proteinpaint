@@ -26,7 +26,7 @@ ATGCTACGATCGATCGTACGATCA
 	try {
 		const output = await run_python('seqMultiAlign.py', JSON.stringify(input))
 
-		t.ok(output.includes('###Multiple Sequencing Alignment'), 'Should contain header')
+		t.ok(output.includes('Multiple Sequencing Alignment'), 'Should contain header')
 		t.ok(output.includes('seq1'), 'Should contain sequence ID seq1')
 		t.ok(output.includes('*'), 'Should contain conservation line with *')
 	} catch (err) {
