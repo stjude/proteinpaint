@@ -89,7 +89,7 @@ tape(`initialization, empty credentials`, async test => {
 	test.deepEqual(
 		Object.keys(authApi).sort(),
 		[
-			'###canDisplaySampleIds',
+			'canDisplaySampleIds',
 			'credEmbedders',
 			'getDsAuth',
 			'getHealth',
