@@ -7,7 +7,8 @@ import { select } from 'd3'
 import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
 import { dofetch3 } from '#common/dofetch'
-import { renderImpressionThermometer, IMPRESSION_MAX_SCORE } from './renderImpressionThermometer.js'
+import { renderImpressionThermometer, IMPRESSION_MAX_SCORE, POC_FILL } from './renderImpressionThermometer.js'
+import { renderResponseDistribution } from './renderResponseDistribution.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
 const LIKERT_TAB = 'Likert Scale'
@@ -88,12 +89,14 @@ export class profileForms extends profilePlot {
 			if (scChild) {
 				this.scTW = { id: scChild.id, q: { mode: 'continuous' } }
 				await fillTermWrapper(this.scTW, this.app.vocabApi)
-				this.impressionScColor = scChild.color
+				// Per-module color: every term under a module (SC/POC/responder) carries the same
+				// module color in the DB. Read it off the filled tw, same as polar2/radar2/barchart2.
+				this.impressionScColor = this.scTW.term.color
 			}
 			if (pocChild) {
 				this.pocTW = { id: pocChild.id, q: { mode: 'continuous' } }
 				await fillTermWrapper(this.pocTW, this.app.vocabApi)
-				this.impressionPocColor = pocChild.color
+				this.impressionPocColor = this.pocTW.term.color
 			}
 		} else {
 			this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: parentId })
@@ -158,6 +161,12 @@ export class profileForms extends profilePlot {
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
 
+		// Impression-domain charts (thermometer + response distribution) render into their own
+		// per-group svgs inside this div, not the Likert/YesNo svg scaffolding above. Kept inside
+		// rightDiv so the mousemove/mouseout tooltip delegation (profilePlot) covers them.
+		const impressionDiv = rightDiv.append('div')
+		if (this.isImpressionDomain) svg.style('display', 'none')
+
 		this.dom = copyMerge(this.dom, {
 			svg,
 			headerDiv,
@@ -165,7 +174,8 @@ export class profileForms extends profilePlot {
 			gridG,
 			legendG: this.legendG,
 			xAxisG,
-			domainDiv
+			domainDiv,
+			impressionDiv
 		})
 	}
 
@@ -186,16 +196,7 @@ export class profileForms extends profilePlot {
 				await this.setControls()
 				this.data = await this.fetchImpressionDistribution()
 				if (this.data && 'error' in this.data) throw this.data.error
-				renderImpressionThermometer({
-					dom: this.dom,
-					id: this.id,
-					module: this.module,
-					data: this.data,
-					texts: this.config.impression,
-					colors: { sc: this.impressionScColor || '#888' }
-				})
-				this.filterG.selectAll('*').remove()
-				this.addFilterLegend()
+				this.renderImpression()
 				return
 			}
 
@@ -247,6 +248,150 @@ export class profileForms extends profilePlot {
 		if (this.pocTW) body.pocTermId = this.pocTW.term.id
 		if (this.pocResponderTermIds.length) body.pocResponderTermIds = this.pocResponderTermIds
 		return dofetch3('termdb/profileImpressionDistribution', { body })
+	}
+
+	/*
+	Impression-domain view: for each POC responder group render a thermometer (shared SC median +
+	that group's POC median, with performance zones) beside a response-distribution combo chart
+	(SC line on the left axis, grey POC columns on the right axis). Groups stack vertically. A
+	module with no POC responders (e.g. Patients & Outcomes) renders a single SC-only thermometer.
+	*/
+	private renderImpression() {
+		const holder = this.dom.impressionDiv
+		holder.selectAll('*').remove()
+		const texts = this.config.impression
+		const zones = texts.zones
+		const scColor = this.impressionScColor || '#888'
+		const data = this.data
+
+		// Bind tooltip text + optional hover descriptor as the element's datum. The shared
+		// profilePlot mousemove→onMouseOver delegation reads __data__ (same pattern as polar2/radar2).
+		const attachTip = (sel: any, text: string, hover?: any) => {
+			sel.datum({ tip: text, ...(hover || {}) }).style('cursor', 'pointer')
+		}
+
+		// Centered header: module title + subtitle lines.
+		const header = holder.append('div').style('text-align', 'center')
+		header
+			.append('div')
+			.style('font-size', '1.4rem')
+			.style('font-weight', 'bold')
+			.style('color', '#dd6b20')
+			.style('padding', '8px 0')
+			.text(texts.titleTemplate.replace('{module}', this.module))
+		for (const line of texts.subtitle) header.append('div').style('font-size', '0.9rem').text(line)
+
+		const responders: any[] = Array.isArray(data.responders) ? data.responders : []
+		const groups = responders.length
+			? responders.map(r => ({
+					label: texts.frameSubtitle.replace('{group}', r.label),
+					poc: { median: r.median, total: r.total },
+					pocDistribution: r.distribution
+			  }))
+			: [{ label: texts.legend.sc, poc: null, pocDistribution: [] }]
+
+		groups.forEach((g, i) => {
+			// One bordered card per responder group: a shared header (the group label) aligned over
+			// the two charts (thermometer + response distribution), which sit side by side inside it.
+			const card = holder
+				.append('div')
+				.style('border', '1px solid #ddd')
+				.style('border-radius', '8px')
+				.style('padding', '12px 16px')
+				.style('margin', '12px auto')
+				.style('width', 'fit-content')
+				.style('max-width', '100%')
+				.style('background', '#fff')
+			// Card header: group label on the left, the profile filter legend (applied filters + n)
+			// on the right so each box carries its own filter context.
+			const cardHeader = card
+				.append('div')
+				.style('display', 'flex')
+				.style('align-items', 'center')
+				.style('justify-content', 'space-between')
+				.style('gap', '16px')
+				.style('padding-bottom', '8px')
+				.style('margin-bottom', '8px')
+				.style('border-bottom', '1px solid #eee')
+			cardHeader.append('div').style('font-weight', 'bold').style('font-size', '1rem').text(g.label)
+			// Render the shared filter legend into this card's header via the base addFilterLegend(),
+			// which draws into this.filterG; reset filtersCount so items stack from the top each time.
+			const filterSvg = cardHeader.append('svg')
+			this.filtersCount = 0
+			this.filterG = filterSvg.append('g')
+			this.addFilterLegend()
+			// Normalize: addFilterLegend draws partly above y=0, which the svg would clip. Shift the
+			// group so its content starts at (pad, pad), then size the svg to fit it exactly. The
+			// header's align-items:center then vertically centers this against the group label.
+			const fbb = filterSvg.node().getBBox()
+			const pad = 3
+			this.filterG.attr('transform', `translate(${-fbb.x + pad}, ${-fbb.y + pad})`)
+			filterSvg.attr('width', Math.ceil(fbb.width + 2 * pad)).attr('height', Math.ceil(fbb.height + 2 * pad))
+			const body = card
+				.append('div')
+				.style('display', 'flex')
+				.style('flex-wrap', 'wrap')
+				.style('align-items', 'flex-start')
+				.style('justify-content', 'center')
+				.style('gap', '16px')
+			renderImpressionThermometer({
+				holder: body.append('div'),
+				id: `${this.id}-g${i}`,
+				sc: { median: data.scMedian, total: data.scTotal },
+				poc: g.poc,
+				ratingAxisLabel: texts.ratingAxisLabel,
+				zones,
+				colors: { sc: scColor },
+				attachTip
+			})
+			if (g.poc) {
+				renderResponseDistribution({
+					holder: body.append('div'),
+					id: `${this.id}-dist-g${i}`,
+					maxScore: IMPRESSION_MAX_SCORE,
+					scDistribution: data.scDistribution || [],
+					pocDistribution: g.pocDistribution,
+					texts: texts.distribution,
+					zones,
+					colors: { sc: scColor },
+					attachTip
+				})
+			}
+		})
+
+		this.renderImpressionLegend(
+			holder,
+			scColor,
+			zones,
+			texts,
+			groups.some(g => g.poc)
+		)
+	}
+
+	private renderImpressionLegend(holder: any, scColor: string, zones: any[], texts: any, hasPoc: boolean) {
+		const legend = holder
+			.append('div')
+			.style('display', 'flex')
+			.style('flex-wrap', 'wrap')
+			.style('justify-content', 'center')
+			.style('gap', '18px')
+			.style('align-items', 'center')
+			.style('padding', '10px 0')
+			.style('font-size', '0.85rem')
+		const addItem = (color: string, label: string, round = false) => {
+			const it = legend.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '6px')
+			it.append('div')
+				.style('width', '16px')
+				.style('height', round ? '14px' : '16px')
+				.style('border-radius', round ? '50%' : '2px')
+				.style('background', color)
+			it.append('span').text(label)
+		}
+		// SC (module color: thermometer left fill + distribution line), POC (grey: thermometer
+		// right fill + distribution columns), then the performance-zone bands.
+		addItem(scColor, texts.legend.sc)
+		if (hasPoc) addItem(POC_FILL, texts.distribution.legend.poc)
+		for (const z of zones) addItem(z.color, z.label)
 	}
 
 	renderLikert() {

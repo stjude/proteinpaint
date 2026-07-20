@@ -163,27 +163,32 @@ Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically 
 **Description:** This type of chart known as Templates for the users, allows for the visualization of the amount of response per type of response for each individual questions from the PrOFILE survey, which are not aggregated into scores. This is useful for detailed analysis of specific data points.  
 **Plot Types:** - Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses. - Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
 
-### Impression Thermometer (profileForms `__Impression` mode)
+### Impression view (profileForms `__Impression` mode)
 
-**Class:** [profileForms.ts](./profileForms.ts) (mode-switched in `init()`/`main()`) + render module [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)
+**Class:** [profileForms.ts](./profileForms.ts) (mode-switched in `init()`/`main()`) + render modules [renderImpressionThermometer.ts](./renderImpressionThermometer.ts) and [renderResponseDistribution.ts](./renderResponseDistribution.ts)
 **Server route:** [`profile.impressionDistribution.ts`](../../../../server/routes/profile.impressionDistribution.ts) at endpoint `termdb/profileImpressionDistribution`
 **Title:** _`<Module>` Module Impressions_ — Status of Module Domains and Subdomains as Rated by Site Coordinator and Point of Care (POC) Staff
-**Description:** A full-detail single thermometer that summarizes the 1–10 rating distribution for one **module** of the PrOFILE survey, comparing the Site Coordinator (SC) and Point-of-Care (POC) Staff viewpoints across all eligible sites.
+**Description:** For one **module** of the PrOFILE survey, the impression view renders **one chart pair per POC responder group**: a median thermometer beside a response-distribution combo chart, comparing the Site Coordinator (SC) and Point-of-Care (POC) Staff 1–10 ratings across eligible sites. Groups stack vertically; a module with no POC responders (Patients & Outcomes) shows a single SC-only thermometer.
 
-#### What you see in the chart
+#### What you see — thermometer (chart 1)
 
-Each thermometer combines two perspectives on the same module:
+A classic split thermometer — one tube + bulb, divided down the middle, each half a mercury fill rising to that staff type's median:
 
-- **Stacked colored fill (1=dark red bottom → 10=dark green top)** — the **POC distribution**: percentage of eligible sites whose POC float rating falls in each integer bin (1..10) after rounding. Heights are percentages of POC respondents. Colors are the universal red→green traffic-light palette `RATING_COLORS` (same in every module — see [Colors](#colors-where-each-piece-is-sourced) below).
-- **Vertical bar in the module color** — the **SC median** rating across eligible sites (single integer 1..10). Color comes from each impression term's `jsondata.color` in the DB.
-- **Grey ball** — the **POC median** rating across eligible sites (1..10).
-- **Bulb in the module color** — same fill as the SC bar; visually anchors the SC value to the bottom of the tube.
-- **Right axis** (1..10) — impression rating scale.
-- **Left axis** (10%..100%) — POC distribution percentage scale (0% omitted, hidden under the bulb).
-- **n indicator (top-right of frame)** — number of eligible sites contributing data after auth/site filtering.
-- **Hover tooltips** on POC distribution bands, SC bar, bulb, and POC median ball — see [Hover tooltips](#hover-tooltips) below.
+- **Left half filled in the module color** — the **SC median** across eligible sites.
+- **Right half filled grey** (`POC_FILL`) — this responder group's **POC median**.
+- The **bulb** is split the same way (left module color / right grey); the unfilled portion above each median is a light tint of the module color.
+- **Left axis** (1..10) — the single `impression.ratingAxisLabel` rating scale, with inward ticks.
+- **Performance-zone labels** (Weak 1–5, Intermediate 6–7, Strong 8–10) rotated on the right at each band's midpoint, with dashed boundary lines at the zone edges. Bins are config-driven from `impression.zones` (same bins as the distribution chart).
+- **n indicator** — eligible sites after auth/site filtering. SC-only modules fill only the left half.
 
-In **SC-only mode** (Patients & Outcomes — see below), the POC distribution stack, POC median ball, left % axis, and rating swatches in the legend are all hidden; only the SC bar + bulb + right rating axis remain.
+#### What you see — response distribution (chart 2)
+
+A frequency-of-responses combo chart, x = impression rating 1..10:
+
+- **Grey columns** on the **right** y-axis — the responder group's POC staff response count per rating.
+- **Line in the module color** on the **left** y-axis — the SC site-count per rating (shared across groups). Single-site SC (`scTotal === 1`) is drawn as a lone point instead of a line.
+- **Three performance zones** as background bands, identical bins to the thermometer.
+- The two y-axes are independent because POC counts far exceed SC counts.
 
 #### How it's reached
 
@@ -191,11 +196,12 @@ There is no top-level chart-type button. The thermometer is rendered automatical
 
 ```
 profileForms.init()  → detects parentId.endsWith('__Impression')
-                     → resolves SC (integer) + POC (float) child terms via getTermChildren
+                     → resolves SC (integer), optional POC (float), and POC responder
+                       (multivalue POCFimpression_*) child terms via getTermChildren
                      → captures scChild.color → this.impressionScColor (per-module DB color)
 profileForms.main()  → if isImpressionDomain:
                          this.data = await this.fetchImpressionDistribution()
-                         renderImpressionThermometer({ dom, id, module, data, texts, colors, tip })
+                         this.renderImpression()   // per responder group: thermometer + distribution
 ```
 
 #### Term hierarchy
@@ -205,13 +211,17 @@ Each `__Impression` parent in the termdb sits at the **module level** (not the d
 ```
 # Standard module (11 of 12)
 F<Component>__<Module>__Impression                    ← parent (the tree node clicked)
-├── <SC term id>     type=integer                     ← Site Coordinator rating
-└── <POC term id>    type=float                       ← Point-of-Care rating
+├── <SC term id>       type=integer                   ← Site Coordinator rating (shared SC series)
+├── <POC term id>      type=float                     ← per-site POC rating (fallback only)
+└── POCFimpression_*   type=multivalue (1+)           ← POC responder group(s); each rating→count
+                                                        map drives one chart pair
 
 # SC-only module (Patients & Outcomes only)
 FPatients and Outcomes__Patients and Outcomes__Impression
-└── FX383            type=integer                     ← Site Coordinator rating (no POC term)
+└── FX383              type=integer                   ← Site Coordinator rating (no POC responders)
 ```
+
+Each **multivalue** responder child (`POCFimpression_*`) is rendered as its own thermometer + distribution pair; a module with several (e.g. Service Capacity) yields several pairs. The **float** POC child is only a fallback for a module that has a per-site POC rating but no responder terms (none today). The **integer** SC child is shared across every pair.
 
 #### Per-module data inventory
 
@@ -245,58 +255,49 @@ The client doesn't hardcode any of these — it pulls `scChild.color` and `pocCh
 5. Returns:
    - `scMedian` — `median()` of all SC integer values across eligible sites, rounded
    - `scTotal` — number of SC integer values that contributed to `scMedian`
-   - `pocMedian` — `median()` of all POC float values across eligible sites, rounded; `null` in SC-only mode
-   - `pocTotal` — count of POC float values; `0` in SC-only mode
-   - `pocDistribution` — `buildDistribution(pocValues, maxScore)` → bins POC values into 1..10 (rounded), returns `{rating, count, pct}` per bin; `[]` in SC-only mode
+   - `scDistribution` — `buildDistribution(scValues, maxScore)` → SC site counts binned per rating 1..10, `{rating, count, pct}`. Drives the SC line; shared across every responder group's chart pair.
+   - `responders[]` — one entry per multivalue responder term: `{ termId, label, median, total, distribution }`, where `distribution` is `buildDistribution` over that group's expanded rating→count maps. Each entry drives one chart pair's POC columns + POC median ball. `[]` in SC-only mode.
    - `n` — number of eligible sites (rows) contributing data
    - `sites` — full sorted list (`[]` for public users)
 
-Everything is **site-level**: the SC bar represents the median SC rating across sites in the cohort, the colored stack represents % of POC respondents in each rating bin.
+Both series are **site-level**: the SC line/median is the distribution/median of per-site SC ratings; each responder's POC columns/median expand that group's per-site rating→count maps.
 
 #### Colors — where each piece is sourced
 
-The chart uses a **hybrid scheme**: a universal hardcoded ramp for rating levels (so all 12 modules share the same red→green level encoding readers can compare across charts), plus a per-module DB color for SC identity (so each module is visually distinct).
+Per-module identity comes from the DB color (SC line/bar/bulb); POC greys and zone bands are fixed display constants (zones are config-driven so the bins live in one place).
 
-| Visual element                                          | Source                                                                                         | Notes                                                                                                  |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| POC distribution bands                                  | `RATING_COLORS` constant in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts) | Universal red→green palette: `1: #7a0d0d` → `10: #1b5e20`. Same in every module.                       |
-| Legend rating swatches (1..10)                          | Same `RATING_COLORS`                                                                           | Mirrors the in-tube bands. Hidden in SC-only mode.                                                     |
-| SC vertical bar                                         | `terms.jsondata.color` for the SC integer term                                                 | Captured in `init()` as `this.impressionScColor`, passed via `colors.sc`.                              |
-| Bulb fill                                               | Same `colors.sc`                                                                               | Same color as the SC bar so they read as one visual unit.                                              |
-| Bulb outline                                            | `#444`                                                                                         | Hardcoded in renderer; only drawn outside the tube via an arc path so the tube/bulb joint is seamless. |
-| POC median ball fill                                    | `#444`                                                                                         | Hardcoded in renderer.                                                                                 |
-| POC median ball stroke                                  | `#000`                                                                                         | Hardcoded in renderer.                                                                                 |
-| SC swatch in legend                                     | `colors.sc`                                                                                    | Per-module color matching the SC bar.                                                                  |
-| Tube outline                                            | `#444`                                                                                         | Hardcoded in renderer.                                                                                 |
-| Frame box + grey header band                            | `#bbb` border + `#f4f4f4` fill                                                                 | Hardcoded in renderer.                                                                                 |
-| Title text color (orange "<Module> Module Impressions") | `#dd6b20`                                                                                      | Hardcoded in renderer.                                                                                 |
-
-`RATING_COLORS` was kept hardcoded after a round of experimentation — the `db.6` termdb does **not** carry a 1..10 rating gradient anywhere (only a single `color` per term and per-Likert-category colors in `state.termdbConfig.colorMap`), so the universal palette stays in client code while the module-identity color is sourced from the DB.
+| Visual element                                          | Source                                                                                         | Notes                                                                     |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Performance zone bands (Weak/Interm/Strong)             | `impression.zones[].color` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) | Config-driven; shared by both charts. Same bins everywhere.               |
+| SC left fill (thermometer) / SC line (distribution)     | `terms.jsondata.color` for the SC integer term                                                 | Captured in `init()` as `this.impressionScColor` from the filled tw, passed via `colors.sc`. The empty tube is the same color at 0.15 opacity. |
+| POC right fill (thermometer) / legend swatch            | `POC_FILL` (`#9e9e9e`) in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)   | Grey, exported for the shared legend swatch.                             |
+| POC columns (distribution)                              | `POC_COLUMN_FILL` (`#bdbdbd`) in [renderResponseDistribution.ts](./renderResponseDistribution.ts) | Grey, internal to that renderer.                                       |
+| Tube / bulb outline, ticks                              | `#444` / `#333`                                                                                | Hardcoded display constants in the thermometer renderer.                  |
+| Title text color                                        | `#dd6b20`                                                                                       | Hardcoded orange in `renderImpression()`.                                 |
 
 #### Hover tooltips
 
-Tooltips use the shared `Menu` instance set up at [profilePlot.ts:66](./profilePlot.ts#L66) as `this.tip`. profileForms passes it to the renderer via `tip: this.tip`; the renderer's small `attachTip(selection, text)` helper binds `mouseover`/`mouseout`. If `tip` is omitted (e.g. test harness), tooltips are silently skipped.
+Both renderers bind tooltip text (and an optional hover-highlight descriptor) as each element's `__data__` via the `attachTip` helper passed in from `profileForms.renderImpression()`. The shared `profilePlot` mousemove/mouseout delegation on `rightDiv` reads `__data__` and shows/hides `this.tip` (same pattern as polar2/radar2) — so any element in the per-group svgs gets tooltips without per-element listeners.
 
-| Hover region                                              | Tooltip text                             |
-| --------------------------------------------------------- | ---------------------------------------- |
-| POC distribution band (each rating 1..10 with non-zero %) | `Rating R — P.P% (count of total staff)` |
-| SC vertical bar                                           | `Site Coordinator median: M (n=N SCs)`   |
-| Bulb                                                      | Same as SC bar                           |
-| POC median ball                                           | `POC median: M (n=N staff responses)`    |
-| Right axis numbers, legend, frame, title                  | _no tooltip_                             |
+| Hover region                        | Tooltip text                                    |
+| ----------------------------------- | ----------------------------------------------- |
+| Thermometer SC (left) fill          | `Site Coordinator median: M (n=N SCs)`          |
+| Thermometer POC (right) fill        | `POC median: M (n=N staff responses)`           |
+| Distribution POC column             | `POC rating R: C response(s)`                    |
+| Distribution SC point               | `SC rating R: C response(s)`                     |
+| Axes, zones, legend, title          | _no tooltip_                                     |
 
-In SC-only mode the POC band and POC median ball handlers are never attached because the elements aren't created (existing `distTotal > 0` and `pocMedian != null` guards).
+#### User-facing strings & bins (config-driven)
 
-#### User-facing strings (config-driven)
-
-All title, subtitle, axis-label, footer, and legend strings are sourced from the dataset config at `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) — same convention as `profilePolar2.title`. The renderer reads them as a required `texts: ImpressionTexts` arg with no fallbacks; a missing field is a compile-time error. The `{module}` placeholder in `titleTemplate` is replaced at render time with the module name parsed from the term ID.
+All title/subtitle/axis-label/legend strings **and the performance-zone bins** are sourced from `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts): `titleTemplate`, `subtitle[]`, `frameSubtitle` (`{group}` = responder label), `rightAxisLabel`, `zones[]` (`{label,min,max,color}`), `distribution.{leftAxisLabel,rightAxisLabel,xAxisLabel,legend.poc}`, and `legend.{sc,median}`. The `{module}` placeholder is replaced at render time. Zones are the single source of truth for the Weak/Intermediate/Strong bins, shared by both charts.
 
 #### Architecture (alignment with v2 charts)
 
-The thermometer is **not** a standalone chart-type — it would duplicate the dictionary-tree navigation, since the term node is already reachable inside profileForms. But the rendering itself is large enough (~350 lines) and unrelated to the Yes/No / Likert tab flow that it lives in its own pure render module:
+The impression view is **not** a standalone chart-type — the term node is already reachable inside profileForms. The two chart renderers are pure functions in their own modules, each appending its own `<svg>` into a holder div inside `rightDiv` (so the tooltip delegation covers them):
 
-- **`renderImpressionThermometer.ts`** — exports `renderImpressionThermometer({ dom, id, module, data, texts, colors, tip })` and `IMPRESSION_MAX_SCORE`. Pure function, no class, no `this`. Holds the universal `RATING_COLORS` palette as a private constant.
-- **`profileForms.ts`** — owns the `private async fetchImpressionDistribution()` method that calls `dofetch3('termdb/profileImpressionDistribution', { body: { ... } })` inline, exactly matching the `fetchAggregatedScores`/`fetchFormsAggregatedScores` private-method pattern from `polar2`/`barchart2`/`radar2`. Result stored to `this.data`. `pocTermId` is omitted from the body when `this.pocTW` is not set (SC-only modules).
+- **`renderImpressionThermometer.ts`** — exports `renderImpressionThermometer({ holder, id, sc, poc, n, ratingAxisLabel, zones, colors, attachTip })`, `IMPRESSION_MAX_SCORE`, and `POC_FILL`. One split thermometer per call; the SC and POC medians are two adjacent thick bars rising from the center of the bulb, each capped at its median.
+- **`renderResponseDistribution.ts`** — exports `renderResponseDistribution({ holder, id, maxScore, scDistribution, pocDistribution, texts, zones, colors, attachTip })` and `POC_COLUMN_FILL`. One combo chart per call.
+- **`profileForms.ts`** — `renderImpression()` draws a centered header (module title + subtitle) and, per responder group, a **bordered card** whose header is the group label and whose body holds the thermometer + distribution side by side; `renderImpressionLegend()` draws the shared centered legend. `fetchImpressionDistribution()` POSTs to `termdb/profileImpressionDistribution`, omitting `pocTermId` for SC-only modules and sending `pocResponderTermIds` when present.
 
 #### Cohort coverage
 
@@ -326,10 +327,10 @@ sqlite3 "$DB" "SELECT parent_id, id, type, json_extract(jsondata,'\$.color') AS 
 
 By design, `FPatients and Outcomes__Patients and Outcomes__Impression` has only an SC integer child (`FX383`). All four layers handle this:
 
-1. **Type** — `pocTermId` is optional in `ProfileImpressionDistributionRequest`.
-2. **Server** — when `pocTermId` is absent, `pocTW` is null, the terms array drops it, and the response has `pocMedian: null / pocTotal: 0 / pocDistribution: []`.
-3. **profileForms client** — `init()` doesn't error on missing POC child (only SC absence is a real bug). `fetchImpressionDistribution()` omits `pocTermId` from the body when `this.pocTW` is unset.
-4. **Renderer** — `hasPoc = data.pocTotal > 0` gates the left axis labels and rotated title, the rating swatches in the legend, and the POC-median legend entry. The existing `if (distTotal > 0)` and `if (pocMedian != null)` guards already skip the distribution stack and median ball.
+1. **Type** — `pocTermId` and `pocResponderTermIds` are optional in `ProfileImpressionDistributionRequest`.
+2. **Server** — with no POC float and no responder terms, `responders` is `[]` (SC-only); the response still carries `scMedian / scTotal / scDistribution`.
+3. **profileForms client** — `init()` doesn't error on missing POC children (only SC absence is a real bug). `fetchImpressionDistribution()` omits `pocTermId`/`pocResponderTermIds` when unset.
+4. **Render** — `renderImpression()` sees `responders.length === 0`, so it renders a single SC-only thermometer (POC median ball skipped via the `poc == null` guard) and **no** distribution chart; the legend omits the POC entries.
 
 #### Source of `__Impression` parents
 

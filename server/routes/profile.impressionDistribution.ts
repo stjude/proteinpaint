@@ -11,8 +11,8 @@ F<Component>__<Module>__Impression). Both are scalar (integer/float).
 
 Returns:
   - scMedian: median SC rating across eligible sites (rounded to nearest int)
-  - pocMedian: median POC rating across eligible sites
-  - pocDistribution: per-rating count + pct (rating values rounded to int 1..maxScore)
+  - scDistribution: SC site counts binned per rating (1..maxScore) — the SC line series
+  - responders[]: per responder group { median, total, distribution } — the POC column series
   - sites + n: same convention as profile.polar2
 
 Mirrors the auth/site-eligibility pattern from profile.polar2.ts.
@@ -152,6 +152,9 @@ async function getDistribution(query: any, ds: any) {
 	return {
 		scMedian: median(scValues),
 		scTotal: scValues.length,
+		// Shared SC frequency distribution (site counts binned per rating), used for the SC line
+		// on the response-distribution chart. Same across every responder group's chart pair.
+		scDistribution: buildDistribution(scValues, maxScore),
 		responders,
 		sites: isPublic ? [] : sites,
 		n: eligibleSamples.length
