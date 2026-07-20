@@ -30,6 +30,12 @@ export type ProfileImpressionResponderDistribution = {
 export type ProfileImpressionDistributionResponse = {
 	scMedian: number | null
 	scTotal: number
+	/*
+	Site-Coordinator frequency distribution: one count per integer rating 1..maxScore, built
+	from the per-site SC values. Shared across every responder group (the SC series is the same
+	in each chart pair), and drives the SC line on the response-distribution chart.
+	*/
+	scDistribution: { rating: number; count: number; pct: number }[]
 	// One entry per responder group, each rendered as its own thermometer (side by side).
 	// Empty for SC-only modules (e.g. Patients & Outcomes) → a single SC-only thermometer.
 	responders: ProfileImpressionResponderDistribution[]

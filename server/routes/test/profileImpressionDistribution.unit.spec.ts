@@ -109,6 +109,29 @@ tape('buildDistribution() counts and pct sum over responders', function (test) {
 	test.end()
 })
 
+tape('scDistribution: SC site values bin per rating, counts sum to scTotal', function (test) {
+	// One SC value per site; buildDistribution(scValues) drives the SC line on the combo chart.
+	// Mirrors the reference mock-up SC counts [1,5,4,5,6,7,11,8,1,1] over ratings 1..10 (49 sites).
+	const scValues: number[] = []
+	const expected = [1, 5, 4, 5, 6, 7, 11, 8, 1, 1]
+	expected.forEach((count, i) => {
+		for (let k = 0; k < count; k++) scValues.push(i + 1)
+	})
+	const dist = buildDistribution(scValues, 10)
+	test.equal(dist.length, 10, 'one entry per rating 1..maxScore')
+	test.deepEqual(
+		dist.map(d => d.count),
+		expected,
+		'per-rating SC counts match the site-value distribution'
+	)
+	test.equal(
+		dist.reduce((s, d) => s + d.count, 0),
+		scValues.length,
+		'SC counts sum to scTotal (49)'
+	)
+	test.end()
+})
+
 tape('SC-only outcome: empty values → null median + all-zero distribution', function (test) {
 	const dist = buildDistribution([], 10)
 	test.equal(median([]), null, 'median of no values is null')
