@@ -47,7 +47,8 @@ export function init({ genomes }) {
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const groups = await resolveSampleGroups(q, ds, term_results, term_results2)
+				const { allSampleSet } = resolveDE(q, ds)
+				const groups = await resolveSampleGroups(q, allSampleSet, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
 				res.send({
@@ -92,6 +93,7 @@ function deKeyInputs(req: DERequest) {
 		min_total_count: req.min_total_count,
 		cpm_cutoff: req.cpm_cutoff,
 		method: req.method ?? null,
+		pseudobulk: req.pseudobulk ?? null,
 		tw: req.tw ?? null,
 		tw2: req.tw2 ?? null,
 		filter: (req as any).filter ?? null,
@@ -132,10 +134,27 @@ export async function getDeCacheResult(
 		cacheSubdir: 'de',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			return runDeFresh(req, ds, term_results, term_results2)
+			const { countsFile, allSampleSet } = resolveDE(req, ds)
+			return runDeFresh(req, countsFile, allSampleSet, ds, term_results, term_results2)
 		}
 	})
 	return { result, cacheId }
+}
+
+function resolveDE(req, ds) {
+	if (req.pseudobulk) {
+		const co =
+			ds.queries?.singleCell?.pseudobulk?.[req.pseudobulk.assay]?.[req.pseudobulk.memberId]?.categories?.[
+				req.pseudobulk.category
+			]
+		if (!co) throw 'pseudobulk category obj not found for DE'
+		if (!co.totalFile) throw 'pseudobulk category obj totalFile not found'
+		return { countsFile: co.totalFile, allSampleSet: co.totalSampleset }
+	}
+	const c = ds.queries?.rnaseqGeneCount
+	if (!c) throw 'no rnaseqGeneCount for DE'
+	if (!c.file) throw 'rnaseqGeneCount.file missing'
+	return { countsFile: c.file, allSampleSet: c.allSampleSet }
 }
 
 /** Run DE fresh and return the cache result; `cacheOrRecompute` persists
@@ -143,17 +162,22 @@ export async function getDeCacheResult(
  * to match the pipeline that actually ran. For edgeR/limma, R hands the
  * diagnostic PNGs back inline (base64) in its stdout JSON, so no
  * intermediate files touch disk. */
-async function runDeFresh(param: DERequest, ds: any, term_results: any, term_results2: any): Promise<DeCacheResult> {
-	const groups = await resolveSampleGroups(param, ds, term_results, term_results2)
+async function runDeFresh(
+	param: DERequest,
+	countsFile: string,
+	allSampleSet: Set<string>,
+	ds: any,
+	term_results: any,
+	term_results2: any
+): Promise<DeCacheResult> {
+	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
-
-	const q = ds.queries.rnaseqGeneCount
 
 	const expression_input = {
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
 		data_type: 'do_DE',
-		input_file: q.file,
+		input_file: countsFile,
 		cachedir: serverconfig.cachedir,
 		DE_method: param.method,
 		mds_cutoff: 10000,
@@ -222,6 +246,7 @@ async function runDeFresh(param: DERequest, ds: any, term_results: any, term_res
  * lookup and engineer-facing alert messages. */
 export async function resolveSampleGroups(
 	param: DERequest,
+	allSampleSet: Set<string>,
 	ds: any,
 	term_results: any,
 	term_results2: any
@@ -230,13 +255,9 @@ export async function resolveSampleGroups(
 	if (param.samplelst.groups[0].values?.length < 1) throw new Error('samplelst.groups[0].values.length<1')
 	if (param.samplelst.groups[1].values?.length < 1) throw new Error('samplelst.groups[1].values.length<1')
 
-	const q = ds.queries.rnaseqGeneCount
-	if (!q) throw new Error('rnaseqGeneCount query missing on ds')
-	if (!q.file) throw new Error('unknown data type for rnaseqGeneCount')
-
 	const g1 = await buildGroupValues(
 		param.samplelst.groups[0].values,
-		q,
+		allSampleSet,
 		ds,
 		param.tw,
 		param.tw2,
@@ -245,7 +266,7 @@ export async function resolveSampleGroups(
 	)
 	const g2 = await buildGroupValues(
 		param.samplelst.groups[1].values,
-		q,
+		allSampleSet,
 		ds,
 		param.tw,
 		param.tw2,

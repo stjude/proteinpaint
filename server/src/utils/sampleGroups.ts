@@ -1,6 +1,5 @@
 import type { DERequest, DiffMethRequest } from '#types'
 import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
-import { get_ds_tdb } from '#src/termdb.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
@@ -31,7 +30,8 @@ export async function resolveDaContext(
 ): Promise<{ ds: any; term_results: any; term_results2: any }> {
 	const genome = genomes[req.genome]
 	if (!genome) throw new Error('invalid genome')
-	const [ds] = get_ds_tdb(genome, req as any)
+	const ds = genome.datasets?.[req.dslabel]
+	if (!ds) throw new Error('invalid dslabel')
 
 	let term_results: any = []
 	if (req.tw) {
@@ -71,7 +71,7 @@ export async function resolveDaContext(
  * wrappers add their own validation + alert messages around this. */
 export async function buildGroupValues(
 	values: Array<{ sampleId: number }>,
-	q: { allSampleSet: Set<string> },
+	allSampleSet: Set<string>,
 	ds: any,
 	tw: any,
 	tw2: any,
@@ -100,7 +100,7 @@ export async function buildGroupValues(
 		}
 		const arg = { filter }
 		maySetMapParent2Children(arg, ds, true)
-		const allSamples = [...q.allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
+		const allSamples = [...allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
 		// filtering samples by samplelst term
 		// if samples are at parent-level, then will get mapped to sample-level
 		// otherwise, samples will be used as is
@@ -112,7 +112,7 @@ export async function buildGroupValues(
 	for (const s of sampleLst) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
-		if (!n || !q.allSampleSet.has(n)) continue
+		if (!n || !allSampleSet.has(n)) continue
 		// If a confounder is configured but missing for this sample, skip it.
 		if (tw && !term_results.samples?.[s.sampleId]) continue
 		if (tw2 && !term_results2.samples?.[s.sampleId]) continue
