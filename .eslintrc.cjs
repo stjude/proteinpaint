@@ -23,6 +23,8 @@ module.exports = {
 				argsIgnorePattern: '^_'
 			}
 		],
-		'@typescript-eslint/consistent-type-imports': errOrWarn
+		'@typescript-eslint/consistent-type-imports': errOrWarn,
+		// added to eslint:recommended in eslint 9; error locally to prompt cleanup, warn in remote CI to not block
+		'no-unused-private-class-members': errOrWarn
 	}
 }
