@@ -31,15 +31,22 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
  * path as the termdb findterm route); gene search uses searchGeneNames() below. */
 export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<OmnisearchResult> {
 	const prompt = typeof q.prompt == 'string' ? q.prompt.trim() : ''
+	// The client gates dictionary + sample search to a longer minimum prompt length than gene search
+	// (client/mass/search.ts) and sends this flag; skip those searches when it is explicitly false so a
+	// short (gene-only) prompt never runs the dictionary lookup or the all-samples scan. Defaults to true
+	// for direct callers (unit tests) that don't set it.
+	const includeDictAndSampleSearch = q.includeDictAndSampleSearch !== false
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
-	const str = prompt.toUpperCase()
-	const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
-	terms = filterTerms(req, ds, found.map(copy_term))
-	for (const term of terms) {
-		term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
-		term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
+	if (includeDictAndSampleSearch) {
+		const str = prompt.toUpperCase()
+		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
+		terms = filterTerms(req, ds, found.map(copy_term))
+		for (const term of terms) {
+			term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
+			term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
+		}
 	}
 
 	// Genes — only search when the dataset has at least one gene data type to act on. The dataset-level
@@ -77,8 +84,9 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 			? resolveCoordFromCandidates(q.coordCandidates, genome)
 			: null
 
-	// Samples — returns [] when the dataset does not allow displaying sample ids
-	const samples = prompt ? await searchSamples(q, req, ds, prompt) : []
+	// Samples — returns [] when the dataset does not allow displaying sample ids, or when the client gated
+	// out sample search for a short (gene-only) prompt
+	const samples = includeDictAndSampleSearch && prompt ? await searchSamples(q, req, ds, prompt) : []
 
 	// Will later add support for other NonDict terms such as genesets etc.
 	return { dictionaryTerms: terms, genes: genes, coord, samples }
@@ -109,7 +117,7 @@ async function searchSamples(q: any, req: any, ds: any, prompt: string): Promise
 	}
 	return matches
 }
-const MAX_SAMPLE_MATCHES = 50
+const MAX_SAMPLE_MATCHES = 10
 
 /** Resolve a typed genomic coordinate to { chr, start, stop } from the client-provided candidate spellings
  * (e.g. ["7:100000-200000", "chr7:100000-200000"]). The client (mass/search.ts) runs the shape regex and
