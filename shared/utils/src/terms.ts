@@ -16,6 +16,7 @@ import {
 	DNA_METHYLATION,
 	CATEGORICAL,
 	INTEGER,
+	JUNCTION,
 	FLOAT,
 	SNP,
 	SNP_LIST,
@@ -43,6 +44,7 @@ export {
 	DNA_METHYLATION,
 	CATEGORICAL,
 	INTEGER,
+	JUNCTION,
 	FLOAT,
 	SNP,
 	SNP_LIST,
@@ -110,6 +112,7 @@ export const typeGroup = {
 	[SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
 	[ISOFORM_EXPRESSION]: TermTypeGroups.ISOFORM_EXPRESSION,
+	[JUNCTION]: TermTypeGroups.SPLICE_JUNCTION,
 	[SSGSEA]: TermTypeGroups.SSGSEA,
 	[DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
@@ -126,6 +129,7 @@ const nonDictTypes = new Set([
 	SNP_LOCUS,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
+	JUNCTION,
 	SSGSEA,
 	DNA_METHYLATION,
 	GENE_VARIANT,
@@ -145,6 +149,7 @@ export const numericTypes = new Set([
 	FLOAT,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
+	JUNCTION,
 	SSGSEA,
 	DNA_METHYLATION,
 	METABOLITE_INTENSITY,
@@ -200,6 +205,8 @@ export function equals(t1: any, t2: any) {
 			return t1.gene == t2.gene
 		case ISOFORM_EXPRESSION:
 			return t1.isoform == t2.isoform
+		case JUNCTION:
+			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop && t1.strand == t2.strand
 		case SSGSEA:
 			return t1.id == t2.id
 		case DNA_METHYLATION:

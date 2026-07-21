@@ -13,6 +13,7 @@ import {
 	DNA_METHYLATION,
 	SSGSEA,
 	PSEUDOBULK,
+	JUNCTION,
 	TERM_COLLECTION
 } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
@@ -458,6 +459,7 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.proteome) typeSet.add(PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
+	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)

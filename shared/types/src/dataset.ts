@@ -751,7 +751,9 @@ type JunctionQuery = {
 	*/
 	file: string
 	/** list all junctions, occurrence and median read count from a region */
-	listJunctions?: (param: any, keepLst?: any) => void
+	listJunctions?: (param: any, keepLst?: any) => Promise<any>
+	/** retrieve sample-level read counts for junction numeric terms */
+	get?: (param: any) => Promise<any>
 	/** comma-joined junction types to be hidden by default */
 	hiddentypes?: string
 	/** default min read count to filter samples */

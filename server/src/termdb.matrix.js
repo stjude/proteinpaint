@@ -20,7 +20,8 @@ import {
 	SINGLECELL_GENE_EXPRESSION,
 	SSGSEA,
 	PROTEOME_ABUNDANCE,
-	PSEUDOBULK
+	PSEUDOBULK,
+	JUNCTION
 } from '#shared/terms.js'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
@@ -269,6 +270,7 @@ async function getSampleData(q, ds) {
 			tw.term.type == METABOLITE_INTENSITY ||
 			tw.term.type == SSGSEA ||
 			tw.term.type == DNA_METHYLATION ||
+			tw.term.type == JUNCTION ||
 			tw.term.type == PSEUDOBULK ||
 			tw.term.type == PROTEOME_ABUNDANCE
 		) {
@@ -277,6 +279,8 @@ async function getSampleData(q, ds) {
 				queryHandler = q.ds.queries?.proteome
 			} else if (tw.term.type == PSEUDOBULK) {
 				queryHandler = q.ds.queries?.singleCell?.pseudobulk
+			} else if (tw.term.type == JUNCTION) {
+				queryHandler = q.ds.queries?.junction
 			} else {
 				queryHandler = q.ds.queries?.[tw.term.type]
 			}

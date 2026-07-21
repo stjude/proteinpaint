@@ -27,6 +27,7 @@ export async function validate_query_junction(ds: any, genome: any) {
 	}
 
 	/*
+	called by routes used for j2 tk
 	keepLst:
 		if provided, only return data on specified junctions
 	*/
@@ -159,6 +160,11 @@ export async function validate_query_junction(ds: any, genome: any) {
 		return { junctions, maxReadCount }
 	}
 	/*
+	called by getData() and return sample level numeric values in required format
+	*/
+	q.get = async (param: { terms?: any[]; [key: string]: any }) => getJunctionData(param, q.listJunctions)
+
+	/*
 	get sample details of one junction
 	{
 		junction{}
@@ -207,6 +213,35 @@ export async function validate_query_junction(ds: any, genome: any) {
 		return {}
 	}
 	*/
+}
+
+export async function getJunctionData(
+	param: { terms?: any[]; [key: string]: any },
+	listJunctions: (param: any, keepList: { start: number; stop: number; strand: string }[]) => Promise<any>
+) {
+	if (!Array.isArray(param?.terms) || !param.terms.length) throw new Error('junction.get(): terms[] is required')
+	const term2sample2value = new Map<string, Record<string, number>>()
+	for (const tw of param.terms) {
+		if (!tw?.$id) throw new Error('junction.get(): term wrapper $id is required')
+		const term = tw.term
+		if (!term || term.type != 'junction') throw new Error('junction.get(): invalid junction term')
+		if (!term.chr || !Number.isInteger(term.start) || !Number.isInteger(term.stop) || !term.strand) {
+			throw new Error('junction.get(): junction term must include chr, integer start/stop, and strand')
+		}
+		const query = {
+			...param,
+			rglst: [{ chr: term.chr, start: term.start, stop: term.stop }],
+			readcountCutoff: tw.q?.readcountCutoff ?? param.readcountCutoff
+		}
+		delete query.terms
+		const keepList = [{ start: term.start, stop: term.stop, strand: term.strand }]
+		const result = await listJunctions(query, keepList)
+		const junction = result.junctions.find(
+			(j: Junction) => j.start == term.start && j.stop == term.stop && j.strand == term.strand
+		)
+		term2sample2value.set(tw.$id, junction ? Object.fromEntries(junction.sn2rc || []) : {})
+	}
+	return { term2sample2value }
 }
 
 /*

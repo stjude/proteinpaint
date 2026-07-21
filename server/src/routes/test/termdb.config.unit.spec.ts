@@ -8,7 +8,8 @@ import {
 	SSGSEA,
 	DNA_METHYLATION,
 	SINGLECELL_CELLTYPE,
-	SINGLECELL_GENE_EXPRESSION
+	SINGLECELL_GENE_EXPRESSION,
+	JUNCTION
 } from '#shared/terms.js'
 
 /**
@@ -62,6 +63,15 @@ tape('getDsAllowedTermTypes() - with allowedTermTypes', function (test) {
 		['categorical', 'survival', 'condition'].sort(),
 		'Should merge termtypeByCohort and allowedTermTypes'
 	)
+	test.end()
+})
+
+tape('getDsAllowedTermTypes() - with junction query', function (test) {
+	const ds: any = {
+		cohort: { termdb: { termtypeByCohort: [] } },
+		queries: { junction: {} }
+	}
+	test.deepEqual(getDsAllowedTermTypes(ds), [JUNCTION], 'adds the junction numeric term type')
 	test.end()
 })
 
