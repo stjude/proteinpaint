@@ -101,17 +101,136 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	return { dictionaryTerms: terms, genes: genes, coord, samples, totals }
 }
 
-/** Sample search is only offered when the dataset lets the user act on sample-level data — i.e. it
- * supports the "Data download" or "Sample View" chart for this request. getSupportedChartTypes(req) already
- * evaluates those with role/embedder context (e.g. profile admin gets them, profile public does not), so
- * this gates sample search the same way charts are gated. Returns false when the ds exposes no such API. */
-function dsAllowsSampleSearch(ds: any, req: any): boolean {
-	const supported = ds?.cohort?.termdb?.q?.getSupportedChartTypes?.(req)
-	if (!supported) return false
-	for (const chartTypes of Object.values(supported) as string[][]) {
-		if (chartTypes.includes('dataDownload') || chartTypes.includes('sampleView')) return true
+/** Decide whether sample search may run for this request and, when the dataset restricts sample-level
+ * access by role, the filter that limits results to the samples this user is authorized to see.
+ * Returns { allowed, restrictFilter? } (restrictFilter is applied by searchSamples via get_samples).
+ *
+ * The sign-in gate (userCanAccessDsData) must pass first. Then:
+ *   - Role-restricted datasets — those that define `ds.cohort.termdb.getAdditionalFilter` (e.g. profile):
+ *       admin                                  -> allowed, no restriction (all samples)
+ *       a role with an authorization filter    -> allowed, restricted to those samples (e.g. profile user's
+ *         (non-empty authorized Sites)            authorized Sites, which for profile are 1:1 with samples)
+ *       a role authorized for nothing          -> denied (e.g. profile public)
+ *   - Other datasets — gated by the `displaySampleIds` policy (SJLife/TermdbTest -> true; a ds forbidding
+ *     sample IDs -> false).
+ *
+ * Deliberately NOT used:
+ *   - authApi.canDisplaySampleIds(): it only checks displaySampleIds is *defined* plus isUserLoggedIn, and
+ *     that login check is a no-op on the /termdb/chat path, so it returns true regardless of role.
+ *   - the "Data download"/"Sample View" supported-chart check: those charts are shown even when sign-in is
+ *     required, and profile offers "Sample View" to non-admin users. */
+function resolveSampleAccess(ds: any, req: any): { allowed: boolean; restrictFilter?: any } {
+	if (!userCanAccessDsData(req)) return { allowed: false }
+
+	let clientAuthResult: any = {}
+	try {
+		clientAuthResult = (authApi as any)?.getNonsensitiveInfo?.(req)?.clientAuthResult || {}
+	} catch {
+		clientAuthResult = {}
 	}
-	return false
+
+	const getAdditionalFilter = ds?.cohort?.termdb?.getAdditionalFilter
+	if (typeof getAdditionalFilter == 'function') {
+		// Role-restricted dataset. The dataset — NOT a hardcoded role name — decides each role's scope via
+		// getAdditionalFilter(clientAuthResult, cohort):
+		//   - a filter with values  -> restricted to those samples (e.g. profile user's authorized Sites)
+		//   - no filter (undefined) -> no site restriction for this role, i.e. the "unrestricted" role,
+		//                              whatever it is named (admin, superuser, …)
+		//   - an empty-value filter -> authorized for nothing (e.g. profile public)
+		const restrictFilter = computeUnionAuthFilter(getAdditionalFilter, clientAuthResult)
+		if (restrictFilter) return { allowed: true, restrictFilter } // restricted role (e.g. profile user)
+
+		// No value-bearing filter: either an unrestricted role or a role authorized for nothing.
+		// "Unrestricted" = the dataset returned no filter for at least one of this request's cohorts.
+		const unrestricted = Object.keys(clientAuthResult).some(cohort => {
+			try {
+				return getAdditionalFilter({ clientAuthResult, activeCohort: cohort }) == undefined
+			} catch {
+				return false
+			}
+		})
+		// An unrestricted role sees ALL samples, but only if the dataset's displaySampleIds policy also
+		// permits this role to see sample IDs. (getAdditionalFilter returns "no filter" for BOTH e.g. the
+		// admin role AND carereg's public role — displaySampleIds is what separates them: admin sees IDs,
+		// carereg public does not.) An empty-value filter (profile public) falls through to deny.
+		if (unrestricted && evalDisplaySampleIds(ds, clientAuthResult)) return { allowed: true }
+		return { allowed: false }
+	}
+
+	// non-restricted dataset (no getAdditionalFilter, e.g. SJLife/TermdbTest/ProtectedTest): the
+	// displaySampleIds policy alone decides. That policy is a per-dataset function of the role — it never
+	// hardcodes a role name here.
+	return { allowed: evalDisplaySampleIds(ds, clientAuthResult) }
+}
+
+/** Evaluate the dataset's displaySampleIds policy (a boolean or a function of the request's auth payload)
+ * for this request. Fail closed (false) when it is undefined or throws. */
+function evalDisplaySampleIds(ds: any, clientAuthResult: any): boolean {
+	const displaySampleIds = ds?.cohort?.termdb?.displaySampleIds
+	if (!displaySampleIds) return false
+	try {
+		return typeof displaySampleIds == 'function' ? !!displaySampleIds(clientAuthResult) : !!displaySampleIds
+	} catch {
+		return false
+	}
+}
+
+/** For a role-restricted dataset, build the filter limiting results to the samples this request is
+ * authorized for, by unioning the dataset's per-cohort getAdditionalFilter output (each cohort's authorized
+ * Sites). An admin cohort yields no filter and an unauthorized role yields empty values; both are dropped.
+ * Returns undefined when the request is authorized for nothing. Computing per cohort (rather than a single
+ * activeCohort) is what makes this work in the /termdb/chat context, where activeCohort is not resolved. */
+export function computeUnionAuthFilter(getAdditionalFilter: (arg: any) => any, clientAuthResult: any): any {
+	const perCohort = Object.keys(clientAuthResult)
+		.map(cohort => {
+			try {
+				return getAdditionalFilter({ clientAuthResult, activeCohort: cohort })
+			} catch {
+				return undefined
+			}
+		})
+		// keep only filters that actually authorize something (a tvs with non-empty values)
+		.filter((f: any) => f?.lst?.some((entry: any) => entry?.tvs?.values?.length))
+	if (!perCohort.length) return undefined
+	if (perCohort.length == 1) return perCohort[0]
+	return { type: 'tvslst', in: true, join: 'or', lst: perCohort }
+}
+
+/** True when the request may access the dataset's (sample-level) data without an unmet sign-in. Mirrors
+ * the "Data download requires sign-in" state so sample search is gated the same way that chart is:
+ *   - open dataset (no required credential)                                  -> allow
+ *   - sign-in required, no/expired session (e.g. a role with no valid demo   -> deny
+ *     token, like SJLife role=public)
+ *   - sign-in required, valid session but NEITHER a real authorization       -> deny
+ *     payload NOR an authorized demo referer (e.g. a demo session carried
+ *     into bare massnative — in-session, but that context is not authorized
+ *     to use it)
+ *   - sign-in required, valid session AND (a real authorization payload OR   -> allow
+ *     the request comes from an authorized demo-token referer): a real login
+ *     / profile admin, or a demo login such as SJLife role=user from
+ *     /demo-login.html
+ * `auth` defaults to the shared authApi; it is injectable so unit tests can exercise the sign-in branches. */
+export function userCanAccessDsData(req: any, auth: any = authApi): boolean {
+	const dslabel = req?.query?.dslabel
+	// getRequiredCredForDsEmbedder returns the credential(s) the ds requires for this embedder, or undefined
+	// for an open dataset (AuthApiOpen also returns undefined). No credential required -> freely accessible.
+	const reqCred = auth?.getRequiredCredForDsEmbedder?.(dslabel, req?.query?.embedder)
+	if (!reqCred?.length) return true
+	// sign-in required: need a valid session for this ds's data route (getDsAuth reports insession per
+	// ds/route for the current request's token/cookie). A role with no valid token (e.g. SJLife public) is
+	// not in-session -> deny.
+	const dsAuth = auth?.getDsAuth?.(req) || []
+	const entry = dsAuth.find((a: any) => (a.dslabel == dslabel || a.dslabel == '*') && a.route == 'termdb')
+	if (entry?.insession !== true) return false
+	// in-session; allow only with real authorization or from an authorized demo referer:
+	//  - real authorization payload (non-empty clientAuthResult), e.g. a production login or profile admin
+	//  - the request is from a referer the ds's demoToken authorizes (getDsAuth sets demoTokenRoles when the
+	//    referer matches, e.g. /demo-login.html or the ds portal). A demo session dragged into an
+	//    unauthorized context (bare massnative) has neither and is denied.
+	const clientAuthResult = auth?.getNonsensitiveInfo?.(req)?.clientAuthResult
+	const hasRealAuth = !!clientAuthResult && Object.keys(clientAuthResult).length > 0
+	const fromAuthorizedDemoReferer = Array.isArray(entry?.demoTokenRoles) && entry.demoTokenRoles.length > 0
+	return hasRealAuth || fromAuthorizedDemoReferer
 }
 
 /** Match the prompt against sample names. get_AllSamplesByName() is the single source of truth for both
@@ -124,16 +243,17 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
 	if (!authApi) return { matches: [], total: 0 }
 
-	// only offer sample search when the ds supports a sample-level chart (Data download / Sample View)
-	if (!dsAllowsSampleSearch(ds, req)) return { matches: [], total: 0 }
+	// Gate + per-role restriction. `restrictFilter` is set only for a role-restricted dataset's non-admin
+	// user (e.g. profile user), limiting the sample set to their authorized Sites; admin and non-restricted
+	// datasets get no filter (all samples). We do NOT forward the middleware-injected q.filter — it resolves
+	// the active cohort's role incorrectly on the /termdb/chat path and would exclude everyone; the filter
+	// computed here (union across cohorts) is the correct restriction.
+	const access = resolveSampleAccess(ds, req)
+	if (!access.allowed) return { matches: [], total: 0 }
 
-	// Sample search is a name lookup over every sample the dataset permits displaying — access is already
-	// gated above (canDisplaySampleIds + the Data download / Sample View chart check). Deliberately do NOT
-	// forward q.filter: the auth middleware injects a term-level auth filter (e.g. profile's Site filter)
-	// that, in this request context, resolves the active cohort's role as non-admin and excludes every
-	// sample even for admins. Searching the unfiltered name map matches the getAllSamples route behavior.
 	let sampleName2Id: any = {}
-	await get_AllSamplesByName({}, req, { send: (data: any) => (sampleName2Id = data) }, ds)
+	const q2: any = access.restrictFilter ? { filter: access.restrictFilter } : {}
+	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
 
 	const str = prompt.toLowerCase()

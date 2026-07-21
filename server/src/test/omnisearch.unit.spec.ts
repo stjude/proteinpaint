@@ -17,7 +17,7 @@ or run the whole unit suite (as CI does):
   cd proteinpaint/server && npm run test:unit
 *********************************************/
 import tape from 'tape'
-import { runOmnisearch } from '../chat/search.ts'
+import { runOmnisearch, userCanAccessDsData, computeUnionAuthFilter } from '../chat/search.ts'
 import { getAuthApi, authApi } from '../auth.js'
 
 // minimal request; filterTerms() only reads req.query.__protected__, and our hardcoded ds has no isTermVisible()
@@ -148,22 +148,17 @@ async function ensureOpenAuth() {
 	await getAuthApi(app, {}, {}, true)
 }
 
-// a TermdbTest-like ds carrying two sample names, with sample-id display allowed or not. Reuses no-op
-// dictionary/gene stubs so runOmnisearch's dictionary + gene search find nothing and only samples matter.
-// sampleChartTypes lets the test control the "Data download / Sample View" gate: sample search only runs
-// when getSupportedChartTypes() reports one of those chart types (mirrors dsAllowsSampleSearch in search.ts).
-function makeSampleDs(displaySampleIds: boolean, sampleChartTypes: string[] = ['sampleView']): any {
+// a TermdbTest-like ds carrying two sample names. displaySampleIds is the dataset's per-role sample-ID
+// visibility policy (boolean, or a function of the request's clientAuthResult) — the same value the
+// /termdb/config route computes; dsAllowsSampleSearch gates on it. Reuses no-op dictionary/gene stubs so
+// runOmnisearch's dictionary + gene search find nothing and only samples matter.
+function makeSampleDs(displaySampleIds: boolean | ((clientAuthResult: any) => boolean)): any {
 	return {
 		cohort: {
 			termdb: {
 				termtypeByCohort: [],
 				displaySampleIds,
-				q: {
-					findTermByName: async () => [],
-					getAncestorIDs: () => [],
-					getAncestorNames: () => [],
-					getSupportedChartTypes: () => ({ '': sampleChartTypes })
-				}
+				q: { findTermByName: async () => [], getAncestorIDs: () => [], getAncestorNames: () => [] }
 			}
 		},
 		queries: {},
@@ -190,18 +185,146 @@ tape('sample search: returns no samples when the dataset does not allow displayi
 	t.end()
 })
 
-tape('sample search: returns samples when the ds supports the "Data download" chart', async t => {
+tape('sample search: returns samples when displaySampleIds is a function that permits this request', async t => {
+	// the role policy is evaluated (function form); returning true enables sample search
 	await ensureOpenAuth()
-	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true, ['dataDownload']), genome)
-	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'dataDownload support should enable sample search')
+	const data = await runOmnisearch(
+		{ prompt: '2646' },
+		req,
+		makeSampleDs(() => true),
+		genome
+	)
+	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'displaySampleIds()==true should enable sample search')
 	t.end()
 })
 
-tape('sample search: returns no samples when the ds supports neither "Data download" nor "Sample View"', async t => {
-	// e.g. profile public: displaySampleIds may pass, but without a sample-level chart sample search is off
+tape('sample search: returns no samples when displaySampleIds forbids this role (e.g. profile non-admin)', async t => {
+	// a role-gated policy that this request does not satisfy (no admin role in the auth payload) -> denied,
+	// even though the sample name matches. This is the profile user/public case.
 	await ensureOpenAuth()
-	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true, ['summary', 'matrix']), genome)
-	t.deepEqual(data.samples, [], 'no dataDownload/sampleView chart should disable sample search')
+	const data = await runOmnisearch(
+		{ prompt: '2646' },
+		req,
+		makeSampleDs(car => car?.role === 'admin'),
+		genome
+	)
+	t.deepEqual(data.samples, [], 'displaySampleIds()==false for the role should disable sample search')
+	t.end()
+})
+
+/* Sign-in gate — userCanAccessDsData() decides whether sample search may run based on whether the dataset
+   requires a sign-in the user has not satisfied. "Data download" is shown even for sign-in-protected
+   datasets, so a supported chart alone is not enough. A mock auth object stands in for the shared authApi
+   (injected via the function's second argument) to exercise each branch. */
+
+// mock authApi: reqCred = getRequiredCredForDsEmbedder; dsAuth = getDsAuth; clientAuthResult = the
+// authorization payload getNonsensitiveInfo reports (empty {} = a bare demo/preview session).
+function makeAuth({ reqCred, dsAuth, clientAuthResult }: { reqCred?: any[]; dsAuth?: any[]; clientAuthResult?: any }) {
+	return {
+		getRequiredCredForDsEmbedder: () => reqCred,
+		getDsAuth: () => dsAuth || [],
+		getNonsensitiveInfo: () => ({ clientAuthResult: clientAuthResult || {} })
+	}
+}
+const reqFor = (dslabel: string): any => ({ query: { dslabel, embedder: 'localhost' } })
+
+tape('sign-in gate: open dataset (no required credential) allows sample data access', t => {
+	// AuthApiOpen / an unprotected ds -> getRequiredCredForDsEmbedder returns undefined
+	t.equal(userCanAccessDsData(reqFor('OpenDs'), makeAuth({ reqCred: undefined })), true, 'no credential -> allowed')
+	t.end()
+})
+
+tape('sign-in gate: sign-in required and user has a valid session with real authorization allows access', t => {
+	const auth = makeAuth({
+		reqCred: [{ route: 'termdb', type: 'jwt' }],
+		dsAuth: [{ dslabel: 'ProtDs', route: 'termdb', type: 'jwt', insession: true }],
+		clientAuthResult: { role: 'admin' } // real authorization payload
+	})
+	t.equal(userCanAccessDsData(reqFor('ProtDs'), auth), true, 'valid session + real auth -> allowed')
+	t.end()
+})
+
+tape('sign-in gate: in-session but no real auth and not from a demo referer denies access', t => {
+	// e.g. a SJLife demo session dragged into bare massnative: in-session, empty clientAuthResult, and the
+	// request's referer is not one the ds demoToken authorizes (no demoTokenRoles on the auth entry)
+	const auth = makeAuth({
+		reqCred: [{ route: 'termdb', type: 'jwt' }],
+		dsAuth: [{ dslabel: 'ProtDs', route: 'termdb', type: 'jwt', insession: true }],
+		clientAuthResult: {} // empty -> no real access
+	})
+	t.equal(userCanAccessDsData(reqFor('ProtDs'), auth), false, 'in-session, no real auth, no demo referer -> denied')
+	t.end()
+})
+
+tape('sign-in gate: in-session from an authorized demo referer allows access', t => {
+	// e.g. SJLife role=user via /demo-login.html: valid demo session, empty clientAuthResult, but the request
+	// comes from a referer the demoToken authorizes (getDsAuth sets demoTokenRoles on the entry)
+	const auth = makeAuth({
+		reqCred: [{ route: 'termdb', type: 'jwt' }],
+		dsAuth: [{ dslabel: 'ProtDs', route: 'termdb', type: 'jwt', insession: true, demoTokenRoles: ['user'] }],
+		clientAuthResult: {}
+	})
+	t.equal(userCanAccessDsData(reqFor('ProtDs'), auth), true, 'in-session from authorized demo referer -> allowed')
+	t.end()
+})
+
+tape('sign-in gate: sign-in required and user is NOT in-session denies access', t => {
+	const auth = makeAuth({
+		reqCred: [{ route: 'termdb', type: 'jwt' }],
+		dsAuth: [{ dslabel: 'ProtDs', route: 'termdb', type: 'jwt', insession: false }]
+	})
+	t.equal(
+		userCanAccessDsData(reqFor('ProtDs'), auth),
+		false,
+		'no valid session -> denied (Data download requires sign-in)'
+	)
+	t.end()
+})
+
+tape('sign-in gate: sign-in required but no matching auth entry denies access (fail closed)', t => {
+	const auth = makeAuth({ reqCred: [{ route: 'termdb', type: 'jwt' }], dsAuth: [] })
+	t.equal(userCanAccessDsData(reqFor('ProtDs'), auth), false, 'missing session entry -> denied')
+	t.end()
+})
+
+/* Per-role sample restriction — for a dataset that restricts sample access by role (defines
+   getAdditionalFilter, e.g. profile), computeUnionAuthFilter unions the per-cohort authorized-Sites filters
+   so a non-admin user's sample search is limited to their authorized samples. Mirrors profile's
+   getAdditionalFilter: admin -> no filter; user -> Sites filter; public -> empty (matches nothing). */
+
+// mock of profile.getAdditionalFilter: builds an AUNIT/FUNIT Site filter from clientAuthResult[cohort].sites
+function profileGetAdditionalFilter({ clientAuthResult, activeCohort }: any) {
+	const car = clientAuthResult[activeCohort]
+	const role = car?.role
+	if (role == 'admin') return undefined // admin: unrestricted
+	const values = role == 'user' ? car.sites.map((key: string) => ({ key })) : [] // else (public): empty
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'or',
+		lst: [
+			{ type: 'tvs', tvs: { term: { id: 'AUNIT' }, values } },
+			{ type: 'tvs', tvs: { term: { id: 'FUNIT' }, values } }
+		]
+	}
+}
+
+tape('sample restriction: user gets a union filter of their per-cohort authorized Sites', t => {
+	const clientAuthResult = {
+		full: { role: 'user', sites: ['PRO_00009'] },
+		abbrev: { role: 'user', sites: ['AF007', 'AF008', 'AF009'] }
+	}
+	const filter = computeUnionAuthFilter(profileGetAdditionalFilter, clientAuthResult)
+	t.ok(filter, 'a restriction filter is produced for a user with authorized sites')
+	t.equal(filter.join, 'or', 'the two cohort filters are OR-ed')
+	t.equal(filter.lst.length, 2, 'one sub-filter per cohort (full + abbrev)')
+	t.end()
+})
+
+tape('sample restriction: public (no authorized sites) yields no filter -> denied', t => {
+	const clientAuthResult = { full: { role: 'public' }, abbrev: { role: 'public' } }
+	const filter = computeUnionAuthFilter(profileGetAdditionalFilter, clientAuthResult)
+	t.equal(filter, undefined, 'empty-value cohort filters are dropped -> undefined (authorized for nothing)')
 	t.end()
 })
 
