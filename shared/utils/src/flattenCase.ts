@@ -83,8 +83,6 @@ args:
 	start with caseObj as "current" root
 	default is 1 as fields[0]='case', and caseObj is already the "case", so start from i=1
 	if caseObj data is returned by /cases/, use 0
-
-todo unit test
 */
 export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	if (Array.isArray(caseObj.diagnoses)) {
@@ -119,6 +117,15 @@ export function flattenCaseByFields(sample, caseObj, tw, startIdx = 1) {
 	4/1/2026: for diagnoses terms, the decision tree from https://gdc-ctds.atlassian.net/browse/SV-2770
 						is implemented using diagnosisFilter() and diagnosisIsPrimaryDisease()
 	*/
+
+	// query() collects array-valued paths into a Set to dedup (e.g. a drug from multiple treatments).
+	// downstream mds3 code and JSON serialization don't handle Set/array values (a Set serializes to
+	// {}), so reduce to a single deterministic value. diagnoses arrays are collapsed to one entry
+	// above, so this only affects other array-valued paths. (This conversion was dropped by the
+	// SV-2770 diagnoses rework and is restored here.)
+	if (sample[tw.term.id] instanceof Set) {
+		sample[tw.term.id] = [...sample[tw.term.id]].filter(v => v !== null).sort(basicSort)[0]
+	}
 
 	if (tw.term.id in sample) {
 		// a valid value is set, if tw.q defines binning or groupsetting, convert the value
@@ -225,6 +232,12 @@ function diagnosisSort(a, b) {
 	// submitter_id's are guaranteed to be different between 2 entries,
 	// with the suffix being DIAG, relapse, etc
 	return a.submitter_id < b.submitter_id ? -1 : 1
+}
+
+// deterministic comparator for reducing a multi-valued Set to a single value; works for the
+// string and numeric values GDC term fields carry
+function basicSort(a: any, b: any) {
+	return a < b ? -1 : a > b ? 1 : 0
 }
 
 function mayApplyGroupsetting(v, tw) {

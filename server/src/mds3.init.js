@@ -3652,6 +3652,12 @@ async function mayValidateAssayAvailability(ds) {
 
 	// has this setting. at server launch it should query assay availability status for all samples and cache it
 
+	// useFilter0 datasets resolve filter+filter0 to a sample set via a ds-supplied getSampleSet()
+	// (called in filterSamples4assayAvailability). fail fast at init if a dataset sets the flag but
+	// not the getter, rather than a request-time TypeError
+	if (ds.assayAvailability.useFilter0 && typeof ds.assayAvailability.getSampleSet != 'function')
+		throw 'ds.assayAvailability.useFilter0 is set but assayAvailability.getSampleSet() is not supplied by the dataset'
+
 	if (ds.assayAvailability.get) {
 		// ds-supplied getter
 		await ds.assayAvailability.get(ds)
