@@ -312,6 +312,10 @@ export async function doSearch(self: any, prompt: string, coordCandidates?: stri
 		self.clear({ hide: true })
 		return
 	}
+	// search-as-you-type fires one doSearch per keystroke ("PAX5" -> P, PA, PAX, PAX5), and the fetches
+	// are not ordered — a stale shorter-prompt response can arrive after the latest one and overwrite the
+	// rendered rows. Tag each search and render only if it is still the most recent when the response lands.
+	const seq = (self.omnisearchSeq = (self.omnisearchSeq || 0) + 1)
 	const data = await fetchOmnisearch({
 		genome: self.app.vocabApi.vocab.genome,
 		dslabel: self.app.vocabApi.vocab.dslabel,
@@ -321,6 +325,7 @@ export async function doSearch(self: any, prompt: string, coordCandidates?: stri
 		treeFilter: self.app.vocabApi.state?.treeFilter,
 		coordCandidates
 	})
+	if (seq !== self.omnisearchSeq) return // a newer keystroke superseded this search; drop the stale result
 	renderOmnisearchResults(self, data)
 }
 
