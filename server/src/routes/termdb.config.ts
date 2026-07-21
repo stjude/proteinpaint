@@ -297,6 +297,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				description: br.description
 			}
 		}
+		if (q.proteome.studyCatalog) {
+			// self-contained table config; pass through as-is for the client studyCatalog plot
+			q2.proteome.studyCatalog = JSON.parse(JSON.stringify(q.proteome.studyCatalog))
+		}
+		if (q.proteome.cellTypeBubbleHeatmap) {
+			// presence-only: lets the studyCatalog gate its "Cell-type Bubble Heatmap" button
+			q2.proteome.cellTypeBubbleHeatmap = JSON.parse(JSON.stringify(q.proteome.cellTypeBubbleHeatmap))
+		}
 		if (q.proteome.organisms) {
 			q2.proteome.organisms = {}
 			for (const organism in q.proteome.organisms) {
@@ -312,6 +320,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 					q2.proteome.organisms[organism].assays = {}
 					for (const assay in orgSrc.assays) {
 						q2.proteome.organisms[organism].assays[assay] = {}
+						if (orgSrc.assays[assay].proteomeLabel) {
+							// per-assay proteome label; the studyCatalog derives the Proteome column from it
+							q2.proteome.organisms[organism].assays[assay].proteomeLabel = orgSrc.assays[assay].proteomeLabel
+						}
 						if (orgSrc.assays[assay].cohorts) {
 							q2.proteome.organisms[organism].assays[assay].cohorts = {}
 							for (const cohort in orgSrc.assays[assay].cohorts) {
@@ -329,6 +341,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 								}
 								if (src.DAPfile) {
 									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].DAPfile = true
+								}
+								if (src.catalog) {
+									// per-cohort display fields for the studyCatalog table row
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].catalog = JSON.parse(
+										JSON.stringify(src.catalog)
+									)
 								}
 							}
 						}

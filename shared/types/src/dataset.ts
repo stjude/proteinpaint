@@ -786,15 +786,17 @@ type ProteomeFilter = {
 }
 
 type ProteomeCohortConfig = {
-	prior: { d0: number; s0sq: number }
+	prior?: { d0: number; s0sq: number }
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
 	DAPfile?: string
+	catalog?: { [columnKey: string]: string }
 }
 
 type ProteomeAssayConfig = {
 	columnIdx: number
 	columnValue: string | number
+	proteomeLabel?: string
 	cohorts: {
 		[cohortName: string]: ProteomeCohortConfig
 	}
@@ -848,6 +850,23 @@ export type ProteomeAbundanceQuery = {
 		assays: string[]
 		/** Column order, left-to-right */
 		cohorts: string[]
+	}
+	cellTypeBubbleHeatmap?: {
+		organism: string
+		/** the single assay whose cohorts supply the grid, e.g. 'Bulk Whole Proteome' */
+		assay: string
+		/** cell-type groups, in column-group order, e.g. ['AS','MG1','MG2','MG3','OPC'] */
+		cellTypes: string[]
+		/** genotypes within each cell-type group, in sub-column order, e.g. ['APPKI','FAD'] */
+		genotypes: string[]
+		/** timepoints, in row order, e.g. ['4m','8m','16m'] */
+		timepoints: string[]
+	}
+	studyCatalog?: {
+		/** table columns, in display order; `key` is the derived/override field name */
+		columns: { key: string; label: string }[]
+		/** column keys exposed as left-rail filters */
+		facets: string[]
 	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
