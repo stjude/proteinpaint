@@ -315,12 +315,17 @@ export async function validate_query_proteome(ds) {
 			if (assay.cohorts) {
 				for (const cohortName in assay.cohorts) {
 					const cohort = assay.cohorts[cohortName]
-					if (!cohort.controlFilter)
-						throw `Missing controlFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
-					if (!cohort.caseFilter)
-						throw `Missing caseFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
-					if (!cohort.prior?.d0 || !cohort.prior?.s0sq)
-						throw `Missing prior.d0 and prior.s0sq in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+					// cohorts serving a precomputed DAPfile (log2FC + p-value already computed) don't
+					// need prior/controlFilter/caseFilter; those are only used to compute DAP on the fly
+					// and to pull per-sample data from the db (boxplots, case/control counts).
+					if (!cohort.DAPfile) {
+						if (!cohort.controlFilter)
+							throw `Missing controlFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+						if (!cohort.caseFilter)
+							throw `Missing caseFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+						if (!cohort.prior?.d0 || !cohort.prior?.s0sq)
+							throw `Missing prior.d0 and prior.s0sq in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
+					}
 				}
 			} else {
 				throw `Invalid assay structure for "${assayName}". Must have .cohorts`
