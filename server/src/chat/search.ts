@@ -91,7 +91,7 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	// Samples — returns [] when the dataset does not allow displaying sample ids, or when the client gated
 	// out sample search for a short (gene-only) prompt. sampleTotal is the full match count (before the cap).
 	const { matches: samples, total: sampleTotal } =
-		includeDictAndSampleSearch && prompt ? await searchSamples(q, req, ds, prompt) : { matches: [], total: 0 }
+		includeDictAndSampleSearch && prompt ? await searchSamples(req, ds, prompt) : { matches: [], total: 0 }
 
 	// Per-type total match counts (before each type's display cap) so the client can show a
 	// "Displaying N out of M" note when a type's results were truncated.
@@ -101,24 +101,39 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 	return { dictionaryTerms: terms, genes: genes, coord, samples, totals }
 }
 
+/** Sample search is only offered when the dataset lets the user act on sample-level data — i.e. it
+ * supports the "Data download" or "Sample View" chart for this request. getSupportedChartTypes(req) already
+ * evaluates those with role/embedder context (e.g. profile admin gets them, profile public does not), so
+ * this gates sample search the same way charts are gated. Returns false when the ds exposes no such API. */
+function dsAllowsSampleSearch(ds: any, req: any): boolean {
+	const supported = ds?.cohort?.termdb?.q?.getSupportedChartTypes?.(req)
+	if (!supported) return false
+	for (const chartTypes of Object.values(supported) as string[][]) {
+		if (chartTypes.includes('dataDownload') || chartTypes.includes('sampleView')) return true
+	}
+	return false
+}
+
 /** Match the prompt against sample names. get_AllSamplesByName() is the single source of truth for both
  * the name->id map and the "can this dataset display sample ids" check: it sends {} when
  * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
  * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
-async function searchSamples(
-	q: any,
-	req: any,
-	ds: any,
-	prompt: string
-): Promise<{ matches: SampleMatch[]; total: number }> {
+async function searchSamples(req: any, ds: any, prompt: string): Promise<{ matches: SampleMatch[]; total: number }> {
 	// authApi is only assigned once app.ts calls getAuthApi(); when it is not set (e.g. a unit test calling
 	// runOmnisearch directly, no server app), skip sample search rather than let get_AllSamplesByName crash
 	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
 	if (!authApi) return { matches: [], total: 0 }
 
+	// only offer sample search when the ds supports a sample-level chart (Data download / Sample View)
+	if (!dsAllowsSampleSearch(ds, req)) return { matches: [], total: 0 }
+
+	// Sample search is a name lookup over every sample the dataset permits displaying — access is already
+	// gated above (canDisplaySampleIds + the Data download / Sample View chart check). Deliberately do NOT
+	// forward q.filter: the auth middleware injects a term-level auth filter (e.g. profile's Site filter)
+	// that, in this request context, resolves the active cohort's role as non-admin and excludes every
+	// sample even for admins. Searching the unfiltered name map matches the getAllSamples route behavior.
 	let sampleName2Id: any = {}
-	const q2: any = q?.filter ? { filter: q.filter } : {}
-	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
+	await get_AllSamplesByName({}, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
 
 	const str = prompt.toLowerCase()

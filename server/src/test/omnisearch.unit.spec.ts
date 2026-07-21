@@ -150,13 +150,20 @@ async function ensureOpenAuth() {
 
 // a TermdbTest-like ds carrying two sample names, with sample-id display allowed or not. Reuses no-op
 // dictionary/gene stubs so runOmnisearch's dictionary + gene search find nothing and only samples matter.
-function makeSampleDs(displaySampleIds: boolean): any {
+// sampleChartTypes lets the test control the "Data download / Sample View" gate: sample search only runs
+// when getSupportedChartTypes() reports one of those chart types (mirrors dsAllowsSampleSearch in search.ts).
+function makeSampleDs(displaySampleIds: boolean, sampleChartTypes: string[] = ['sampleView']): any {
 	return {
 		cohort: {
 			termdb: {
 				termtypeByCohort: [],
 				displaySampleIds,
-				q: { findTermByName: async () => [], getAncestorIDs: () => [], getAncestorNames: () => [] }
+				q: {
+					findTermByName: async () => [],
+					getAncestorIDs: () => [],
+					getAncestorNames: () => [],
+					getSupportedChartTypes: () => ({ '': sampleChartTypes })
+				}
 			}
 		},
 		queries: {},
@@ -180,6 +187,21 @@ tape('sample search: returns no samples when the dataset does not allow displayi
 	await ensureOpenAuth()
 	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(false), genome)
 	t.deepEqual(data.samples, [], 'should return no samples even though "2646" matches a sample name')
+	t.end()
+})
+
+tape('sample search: returns samples when the ds supports the "Data download" chart', async t => {
+	await ensureOpenAuth()
+	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true, ['dataDownload']), genome)
+	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'dataDownload support should enable sample search')
+	t.end()
+})
+
+tape('sample search: returns no samples when the ds supports neither "Data download" nor "Sample View"', async t => {
+	// e.g. profile public: displaySampleIds may pass, but without a sample-level chart sample search is off
+	await ensureOpenAuth()
+	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true, ['summary', 'matrix']), genome)
+	t.deepEqual(data.samples, [], 'no dataDownload/sampleView chart should disable sample search')
 	t.end()
 })
 
