@@ -896,13 +896,10 @@ export type ProteomeAbundanceQuery = {
 }
 
 /** the geneExpression query
-three possibilities
-{ src: 'native', file }
-{ src: 'gdcapi' } // dynamically add get()
-{ src: 'gdcapi', get } // ds supplied get
+{ file:string }
+{ get } // ds supplied get
 */
 export type GeneExpressionQuery = {
-	src: 'native' | 'gdcapi' // when gdc getter can become supplied, will remove src
 	/** either ds-supplied or dynamically added getter */
 	get?: (param: any, ds: any) => void
 	/** bgzip-compressed, tabix-index file.

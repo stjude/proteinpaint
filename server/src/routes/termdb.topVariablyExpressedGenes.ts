@@ -60,7 +60,7 @@ export function validate_query_TopVariablyExpressedGenes(ds: any) {
 function nativeValidateQuery(ds: any) {
 	const gE = ds.queries.geneExpression // a separate query required to supply data for computing top genes
 	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
-	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'
+	if (!gE.file) throw 'native topVariablyExpressedGenes requires geneExpression.file'
 
 	addTopVEarg(ds.queries.topVariablyExpressedGenes)
 
