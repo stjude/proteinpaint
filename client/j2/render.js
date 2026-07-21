@@ -6,6 +6,7 @@ import { axisstyle, table2col } from '#dom'
 import { bplen, IN_frame, JTypes, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
+import { TermTypes } from '#shared/terms.js'
 
 /*
  */
@@ -769,7 +770,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 export function makeJunctionTerm(j) {
 	const position = `${j.chr}:${j.start + 1}-${j.stop + 1}`
 	return {
-		type: 'junction',
+		type: TermTypes.JUNCTION,
 		id: `${j.chr}:${j.start}-${j.stop}:${j.strand}`,
 		name: `${position} (${j.strand})`,
 		chr: j.chr,
