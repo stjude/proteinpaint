@@ -4,9 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- the GDC dataset now supplies its own query getters; a deployed GDC image (ppgdc) must be updated together with this server release
+
 Features:
 - Untangle the GDC querySamples_gdcapi() server path: split the getData/dictionary-term and variant2samples sample-query entry points so getData calls queryDictTermData_gdcapi instead of the mutation-oriented querySamples_gdcapi, drop a shared-request mutation, and extract a unit-tested ssm-occurrence field builder
 - Centralize sample-id-to-display resolution on ds.cohort.termdb.q.id2sampleRefs() with a uniform native/GDC implementation, removing the GDC-specific __gdc coupling from termdb.matrix.js and termdb.cluster.ts
+- Move GDC-specific server code out of the server package and into the GDC dataset (ppgdc), wiring each GDC query through a dataset-supplied getter — the same hook pattern the MMRF dataset uses — instead of hardcoded gdcapi branches
+- Add a shared flattenCase helper as the single flattenCaseByFields definition used by both the GDC and MMRF datasets, replacing three divergent copies
+
+Fixes:
+- select a deterministic diagnosis entry for GDC CNV views (matching the matrix and summary plots) and reduce multi-valued case fields to a single value so they no longer serialize to an empty object for the client
+- fix the GDC term total-size query treating integer/float terms as categorical, which built the wrong aggregation query for numeric terms
+- de-duplicate the GDC pp-filter to GDC-filter converter, correcting OR-joined root filters, multi-range numeric filters, and terms carrying both values and ranges
+- remove unused private class members in numeric tw handlers
 
 
 ## 2.198.0

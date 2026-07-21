@@ -1,12 +1,1 @@
-General:
-- the GDC dataset now supplies its own query getters; a deployed GDC image (ppgdc) must be updated together with this server release
 
-Features:
-- Move GDC-specific server code out of the server package and into the GDC dataset (ppgdc), wiring each GDC query through a dataset-supplied getter — the same hook pattern the MMRF dataset uses — instead of hardcoded gdcapi branches
-- Add a shared flattenCase helper as the single flattenCaseByFields definition used by both the GDC and MMRF datasets, replacing three divergent copies
-
-Fixes:
-- select a deterministic diagnosis entry for GDC CNV views (matching the matrix and summary plots) and reduce multi-valued case fields to a single value so they no longer serialize to an empty object for the client
-- fix the GDC term total-size query treating integer/float terms as categorical, which built the wrong aggregation query for numeric terms
-- de-duplicate the GDC pp-filter to GDC-filter converter, correcting OR-joined root filters, multi-range numeric filters, and terms carrying both values and ranges
-- remove unused private class members in numeric tw handlers
