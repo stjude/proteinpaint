@@ -304,11 +304,7 @@ export async function validate_query_geneExpression(ds: any, _genome: any) {
 
 	if (typeof q.get == 'function') return // ds supplied getter
 
-	if (q.src == 'native') {
-		await validateNative(q as GeneExpressionQuery, ds)
-		return
-	}
-	throw 'unknown queries.geneExpression.src'
+	await validateNative(q as GeneExpressionQuery, ds)
 }
 
 /**
@@ -349,6 +345,7 @@ async function queryHDF5(hdf5_file, query) {
  * @param ds - Dataset information
  */
 async function validateNative(q: GeneExpressionQuery, ds: any) {
+	if (!q.file) throw new Error('q.file missing')
 	q.file = path.join(serverconfig.tpmasterdir, q.file!) // q.file must exist
 	q.samples = []
 
