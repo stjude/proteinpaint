@@ -120,6 +120,12 @@ export async function listMafFiles(q: GdcMafRequest, ds: any, queryFiles: MafFil
 	// forwards q.__abortSignal so a client disconnect cancels the GDC request (see queryMafFiles)
 	const { hits, total } = await queryFiles(host, headers, body, (q as any).__abortSignal)
 
+	// getGdcSampletypes is supplied by the GDC dataset (ppgdc gdc/queries.js, attached in initQueries),
+	// not by this server package. guard so a server running against an older ppgdc that predates the
+	// hook fails with a clear cause rather than a cryptic "is not a function" inside the loop below.
+	if (typeof ds.getGdcSampletypes != 'function')
+		throw 'ds.getGdcSampletypes() is not supplied by the dataset; the deployed ppgdc may be older than this server requires'
+
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files: GdcMafFile[] = []
