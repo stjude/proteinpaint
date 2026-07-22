@@ -172,14 +172,52 @@ Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically 
 
 #### What you see — thermometer (chart 1)
 
-A classic split thermometer — one tube + bulb, divided down the middle, each half a mercury fill rising to that staff type's median:
+A single glass vessel — rounded top cap, straight tube, a neck that flares into a weightier bulb — holding two liquid columns, each rising to that staff type's median:
 
-- **Left half filled in the module color** — the **SC median** across eligible sites.
-- **Right half filled grey** (`POC_FILL`) — this responder group's **POC median**.
-- The **bulb** is split the same way (left module color / right grey); the unfilled portion above each median is a light tint of the module color.
-- **Left axis** (1..10) — the single `impression.ratingAxisLabel` rating scale, with inward ticks.
-- **Performance-zone labels** (Weak 1–5, Intermediate 6–7, Strong 8–10) rotated on the right at each band's midpoint, with dashed boundary lines at the zone edges. Bins are config-driven from `impression.zones` (same bins as the distribution chart).
-- **n indicator** — eligible sites after auth/site filtering. SC-only modules fill only the left half.
+- **Left column in the module color** — the **SC median** across eligible sites.
+- **Right column in grey** (`POC_FILL`) — this responder group's **POC median**.
+- The **bulb is the reservoir and always reads full**, split the same way (left module color / right grey).
+- **Each series is a single closed `<path>`** (`liquidPath()`): half the bulb circle with the bar rising straight out of it — `M` centre → dome → down the bar's outer wall to `BAR_JOIN_Y` → arc around that half of the circle → back up the centre divider. **No joining shape between bar and bulb, and no taper.** The bar meets the circle at exactly the height where the circle is `BAR_W` wide, so the two are tangent and there is no step to hide.
+
+  Traversal order matters: the bar's centre edge and the half-disc's flat edge are collinear, so tracing dome → bar wall → arc → centre keeps the outline a simple closed shape. Going down the centre first and arcing back would pinch the path where the two meet.
+
+  Two earlier attempts failed and are worth not repeating. Drawing the bulb half as its own element left the **entire reservoir unhoverable** — only the bar carried the tooltip datum, so hovering the bulb hit a shape with no `tip` and the delegation's `else` branch dismissed the tooltip. Replacing it with a reservoir *rectangle* butted onto the bar fixed the hover but left a **hard right-angle shoulder at the neck**, the liquid jumping from `BAR_W` to `BULB_R` wide in one step. A cubic taper to smooth that over only made it look like a funnel. The bulb is a circle; the liquid should just be half of it.
+
+  One path is also what makes the body behave as one on hover: anywhere on it, bar or bulb, is the same target, shows the same tooltip and animates together.
+
+- **`NECK_R` is deliberately small (6).** The fillet welding tube to bulb was originally 14, sized for a liquid that filled the flare. Now that the reservoir is the circle itself, a wide fillet flares the *glass* out past the *liquid* and leaves a crescent of empty tube at each shoulder — 14px wide at `NECK_R = 14`, under 5px at 6.
+- The **empty state** is one background band per performance zone, filling the whole vessel — the same `impression.zones` colors at the same `0.3` opacity **and the same discrete-band form** the distribution chart uses, so the two charts in a card read as one system. Each band spans its own ratings (`yOf(z.max)` down to `yOf(z.min - 1)`), so adjacent bands meet exactly at the tick between them; the lowest band continues past rating 0 through the bulb, putting the low end of the scale at the reservoir.
+
+  These were originally rendered as a blended vertical gradient, which did not work: a module's zone shades are three tints of a single hue (National Context: `#2FA9F4` → `#1E77BB` → `#15557C`), and at 0.3 opacity over white they land within a few RGB steps of each other. Smoothing the boundaries away left one flat wash with no readable zones. **Keep the bands discrete** — the hard edges are what make the zones legible at all.
+- **Left axis** (1..10) — the single `impression.ratingAxisLabel` rating scale, drawn with `axisLeft` + the shared `axisstyle` helper, ticks pointing inward. The vessel outline serves as the axis line.
+- **Performance zones** (Weak 1–5, Intermediate 6–7, Strong 8–10) are drawn as background bands but **not labelled here** — they are named once per card in the shared legend. Bins are config-driven from `impression.zones` (same bins as the distribution chart).
+- SC-only modules render the left column only, and the card legend drops the POC entry.
+
+##### Each piece of text appears exactly once
+
+The view used to repeat itself: the breadcrumb restated the module name the title already gave; the zone names rendered in *both* charts of every card, at two sizes and two greys; the SC/POC legend was drawn by both charts; and the filter block repeated in every card with identical content. The rule now:
+
+| Text | Drawn once by |
+|---|---|
+| Module name | the page title (`titleTemplate`); the `domainDiv` breadcrumb is hidden in impression mode |
+| Applied filters + n | `renderImpression()`, above the cards — not per card |
+| Series names (SC / POC) | the shared card legend |
+| Zone names | the shared card legend, as swatches at the bands' own 0.3 opacity |
+
+Text sizes step down with the hierarchy: page title `1.1rem` → card header (group label) `1rem` → chart title `0.9rem`. The two chart titles come from `impression.chartTitles.{thermometer,distribution}` and are drawn as html above each chart's svg, in its own column of the card's flex row.
+
+Neither chart renders a legend or a zone label. `renderImpressionLegend()` is the single place both are named.
+
+##### Glass treatment
+
+Depth is built from layered low-opacity white/black gradients clipped to the vessel path: a narrow cylindrical gloss plus a faint vertical sheen on the columns, spherical shading on the bulb, and an inner shadow along the silhouette's edges. **No SVG filters are used** (`feGaussianBlur`/`feDropShadow`): no first-party proteinpaint client code uses them, and filters degrade in the svg→png download path. Clipping a plain horizontal gradient to the vessel is what turns it into an inner shadow — it darkens the edges of the actual silhouette and follows the neck curve for free.
+
+Two constraints learned from review, both worth preserving:
+
+- **Column shading stops at the neck** (`TUBE_BOTTOM`), never continuing to `BULB_BOTTOM`. Carried into the bulb, each column's cylindrical highlight is traced across the reservoir, so it reads as two cylinders passing through a sphere instead of one body of liquid.
+- **No white surface decoration on the liquid.** Meniscus caps at each column top and a specular band down the tube wall were both tried and removed — at a 12px column width they read as stray white artifacts drawn over the fill rather than as glass. The gloss is kept to a narrow band for the same reason: a wide white ramp desaturates the series color instead of implying curvature.
+
+The tube and bulb are **one path**, not two shapes. Each side is welded by a fillet arc externally tangent to both the tube wall and the bulb, which puts both joins at G1 continuity — there is no seam to hide. This requires `BULB_R > TUBE_W / 2`; below that the tangent solve has no real root and every derived coordinate goes `NaN`, which would render as an empty svg with nothing thrown, so the module throws at load if the invariant is broken.
 
 #### What you see — response distribution (chart 2)
 
@@ -268,12 +306,13 @@ Per-module identity comes from the DB color (SC line/bar/bulb); POC greys and zo
 
 | Visual element                                          | Source                                                                                         | Notes                                                                     |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Performance zone bands (Weak/Interm/Strong)             | `impression.zones[].color` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts) | Config-driven; shared by both charts. Same bins everywhere.               |
-| SC left fill (thermometer) / SC line (distribution)     | `terms.jsondata.color` for the SC integer term                                                 | Captured in `init()` as `this.impressionScColor` from the filled tw, passed via `colors.sc`. The empty tube is the same color at 0.15 opacity. |
-| POC right fill (thermometer) / legend swatch            | `POC_FILL` (`#9e9e9e`) in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)   | Grey, exported for the shared legend swatch.                             |
+| Performance zone bands (Weak/Interm/Strong)             | Per-module `colorMap` gradient — `impression.zones[].shade` names the key (Weak=`SOMETIMES` … Strong=`ALMOST ALWAYS`), resolved in `renderImpression()` | Not hardcoded; module-tinted, DB-config-sourced. Bins shared by both charts. |
+| SC left column (thermometer) / SC line (distribution)   | `terms.jsondata.color` for the SC integer term                                                 | Captured in `init()` as `this.impressionScColor` from the filled tw, passed via `colors.sc`. The empty vessel carries the zone gradient, not a tint of this color. |
+| POC right column (thermometer) / legend swatch          | `POC_FILL` (`#9e9e9e`) in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)   | Grey, exported so the shared legend swatches the same grey the fill uses. |
 | POC columns (distribution)                              | `POC_COLUMN_FILL` (`#bdbdbd`) in [renderResponseDistribution.ts](./renderResponseDistribution.ts) | Grey, internal to that renderer.                                       |
-| Tube / bulb outline, ticks                              | `#444` / `#333`                                                                                | Hardcoded display constants in the thermometer renderer.                  |
-| Title text color                                        | `#dd6b20`                                                                                       | Hardcoded orange in `renderImpression()`.                                 |
+| Vessel outline (single path), ticks                     | `#444` / `#333`                                                                                | Hardcoded display constants in the thermometer renderer.                  |
+| Glass depth (column gloss, bulb shading, inner shadow)  | White/black gradient overlays at low opacity                                                   | Color-agnostic by construction, so they compose over any module color.   |
+| Title text color                                        | _none_                                                                                          | Bold, default color — matching polar2/radar2/barchart2. It was `#dd6b20` orange at `1.4rem`, the only custom text color in the profile dir. |
 
 #### Hover tooltips
 
@@ -281,23 +320,26 @@ Both renderers bind tooltip text (and an optional hover-highlight descriptor) as
 
 | Hover region                        | Tooltip text                                    |
 | ----------------------------------- | ----------------------------------------------- |
-| Thermometer SC (left) fill          | `Site Coordinator median: M (n=N SCs)`          |
-| Thermometer POC (right) fill        | `POC median: M (n=N staff responses)`           |
+| Thermometer SC liquid (column + left half of the bulb)   | `Site Coordinator median: M (n=N SCs)`  |
+| Thermometer POC liquid (column + right half of the bulb) | `POC median: M (n=N staff responses)`   |
 | Distribution POC column             | `POC rating R: C response(s)`                    |
 | Distribution SC point               | `SC rating R: C response(s)`                     |
 | Axes, zones, legend, title          | _no tooltip_                                     |
 
 #### User-facing strings & bins (config-driven)
 
-All title/subtitle/axis-label/legend strings **and the performance-zone bins** are sourced from `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts): `titleTemplate`, `subtitle[]`, `frameSubtitle` (`{group}` = responder label), `rightAxisLabel`, `zones[]` (`{label,min,max,color}`), `distribution.{leftAxisLabel,rightAxisLabel,xAxisLabel,legend.poc}`, and `legend.{sc,median}`. The `{module}` placeholder is replaced at render time. Zones are the single source of truth for the Weak/Intermediate/Strong bins, shared by both charts.
+All title/subtitle/axis-label/legend strings **and the performance-zone bins** are sourced from `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts): `titleTemplate`, `subtitle[]`, `frameSubtitle` (`{group}` = responder label), `chartTitles.{thermometer,distribution}`, `ratingAxisLabel`, `zones[]` (`{label,min,max,shade}` — the band color is resolved per-module from `colorMap[module][shade]`, not stored on the zone), `distribution.{leftAxisLabel,rightAxisLabel,xAxisLabel}`, and `legend.{sc,poc}`. The `{module}` placeholder is replaced at render time. Zones are the single source of truth for the Weak/Intermediate/Strong bins, shared by both charts.
+
+Both series names sit together under `legend`. `poc` used to be nested at `distribution.legend.poc` while `sc` sat at the top level, so `renderImpression()` had to reassemble the pair; with one shared legend there is no reason for the split.
 
 #### Architecture (alignment with v2 charts)
 
 The impression view is **not** a standalone chart-type — the term node is already reachable inside profileForms. The two chart renderers are pure functions in their own modules, each appending its own `<svg>` into a holder div inside `rightDiv` (so the tooltip delegation covers them):
 
-- **`renderImpressionThermometer.ts`** — exports `renderImpressionThermometer({ holder, id, sc, poc, n, ratingAxisLabel, zones, colors, attachTip })`, `IMPRESSION_MAX_SCORE`, and `POC_FILL`. One split thermometer per call; the SC and POC medians are two adjacent thick bars rising from the center of the bulb, each capped at its median.
+- **`renderImpressionThermometer.ts`** — exports `renderImpressionThermometer({ holder, id, sc, poc, ratingAxisLabel, zones, colors, attachTip })`, `IMPRESSION_MAX_SCORE`, `POC_FILL`, and the types `ImpressionZone`, `ImpressionPoc`, `ImpressionHover`, `AttachTip`, `ImpressionThermometerArgs`. One vessel per call, holding two liquid columns that run continuously from their medians down into a full split reservoir. All `defs` ids are prefixed with the passed `id`, since several thermometers render on one page (one per responder group).
+- **`renderImpressionLegend.ts`** — exports `renderImpressionLegend({ holder, series, zones })` and the type `ImpressionSeriesSymbol` (`'line' | 'square'`). One row of swatches per card, each mirroring the mark that carries it in the response-distribution chart: a **line with a vertex dot** for the SC line series, a **square** for the POC columns, and squares for the zones at the bands' own `0.3` opacity. The thermometer's fills are the same two colors, so the same entries serve both charts. Zones are sorted low to high on a copy, since the caller's array is shared with both chart renderers.
 - **`renderResponseDistribution.ts`** — exports `renderResponseDistribution({ holder, id, maxScore, scDistribution, pocDistribution, texts, zones, colors, attachTip })` and `POC_COLUMN_FILL`. One combo chart per call.
-- **`profileForms.ts`** — `renderImpression()` draws a centered header (module title + subtitle) and, per responder group, a **bordered card** whose header is the group label and whose body holds the thermometer + distribution side by side; `renderImpressionLegend()` draws the shared centered legend. `fetchImpressionDistribution()` POSTs to `termdb/profileImpressionDistribution`, omitting `pocTermId` for SC-only modules and sending `pocResponderTermIds` when present.
+- **`profileForms.ts`** — `renderImpression()` draws a centered header (module title + subtitle) followed by the filter legend (applied filters + n) **once**, then a **bordered card** per responder group: the card header holds the group label, the body holds the thermometer + distribution side by side, and one shared legend sits under both. `fetchImpressionDistribution()` POSTs to `termdb/profileImpressionDistribution`, omitting `pocTermId` for SC-only modules and sending `pocResponderTermIds` when present.
 
 #### Cohort coverage
 
@@ -330,7 +372,7 @@ By design, `FPatients and Outcomes__Patients and Outcomes__Impression` has only 
 1. **Type** — `pocTermId` and `pocResponderTermIds` are optional in `ProfileImpressionDistributionRequest`.
 2. **Server** — with no POC float and no responder terms, `responders` is `[]` (SC-only); the response still carries `scMedian / scTotal / scDistribution`.
 3. **profileForms client** — `init()` doesn't error on missing POC children (only SC absence is a real bug). `fetchImpressionDistribution()` omits `pocTermId`/`pocResponderTermIds` when unset.
-4. **Render** — `renderImpression()` sees `responders.length === 0`, so it renders a single SC-only thermometer (POC median ball skipped via the `poc == null` guard) and **no** distribution chart; the legend omits the POC entries.
+4. **Render** — `renderImpression()` sees `responders.length === 0`, so it renders a single SC-only thermometer (POC fill skipped via the `poc == null` guard) and **no** distribution chart; the card legend drops the POC entry but still names the zones.
 
 #### Source of `__Impression` parents
 

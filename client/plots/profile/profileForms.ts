@@ -4,11 +4,13 @@ import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { select } from 'd3'
+import type { Selection } from 'd3-selection'
 import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
 import { dofetch3 } from '#common/dofetch'
 import { renderImpressionThermometer, IMPRESSION_MAX_SCORE, POC_FILL } from './renderImpressionThermometer.js'
 import { renderResponseDistribution } from './renderResponseDistribution.js'
+import { renderImpressionLegend } from './renderImpressionLegend.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
 const LIKERT_TAB = 'Likert Scale'
@@ -186,7 +188,11 @@ export class profileForms extends profilePlot {
 			const parents = this.config.tw.term.id.split('__')
 			this.module = parents[1]
 			const domain = parents.slice(1).join(' / ')
-			this.dom.domainDiv.text(domain)
+			/*
+			The impression view's own title already names the module, so this breadcrumb would repeat
+			it directly above. Set display in both directions — the same instance switches modes.
+			*/
+			this.dom.domainDiv.style('display', this.isImpressionDomain ? 'none' : '').text(domain)
 			this.dom.mainG.selectAll('*').remove()
 			this.dom.gridG.selectAll('*').remove()
 			this.dom.xAxisG.selectAll('*').remove()
@@ -260,9 +266,19 @@ export class profileForms extends profilePlot {
 		const holder = this.dom.impressionDiv
 		holder.selectAll('*').remove()
 		const texts = this.config.impression
-		const zones = texts.zones
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
+
+		// Resolve each performance-zone color from this module's colorMap gradient (config gives the
+		// shade key, not a literal color): Weak=SOMETIMES (lightest) … Strong=ALMOST ALWAYS (darkest).
+		// Falls back to the base module color if a shade is absent for the module.
+		const moduleShades = this.state.termdbConfig?.colorMap?.[this.module] || {}
+		const zones = texts.zones.map((z: any) => ({
+			label: z.label,
+			min: z.min,
+			max: z.max,
+			color: moduleShades[z.shade] || scColor
+		}))
 
 		// Bind tooltip text + optional hover descriptor as the element's datum. The shared
 		// profilePlot mousemove→onMouseOver delegation reads __data__ (same pattern as polar2/radar2).
@@ -270,13 +286,16 @@ export class profileForms extends profilePlot {
 			sel.datum({ tip: text, ...(hover || {}) }).style('cursor', 'pointer')
 		}
 
-		// Centered header: module title + subtitle lines.
+		/*
+		Centered header: module title + subtitle lines. Bold and default-colored, matching the title
+		treatment in polar2/radar2/barchart2; centering is the one deviation, since this heads a page
+		of cards rather than labelling a single plot.
+		*/
 		const header = holder.append('div').style('text-align', 'center')
 		header
 			.append('div')
-			.style('font-size', '1.4rem')
+			.style('font-size', '1.1rem')
 			.style('font-weight', 'bold')
-			.style('color', '#dd6b20')
 			.style('padding', '8px 0')
 			.text(texts.titleTemplate.replace('{module}', this.module))
 		for (const line of texts.subtitle) header.append('div').style('font-size', '0.9rem').text(line)
@@ -293,8 +312,11 @@ export class profileForms extends profilePlot {
 		groups.forEach((g, i) => {
 			// One bordered card per responder group: a shared header (the group label) aligned over
 			// the two charts (thermometer + response distribution), which sit side by side inside it.
+			// Tagged so getChartImages() can collect each card's svgs for download and name them.
 			const card = holder
 				.append('div')
+				.attr('class', 'sjpp-impression-card')
+				.attr('data-group-label', g.label)
 				.style('border', '1px solid #ddd')
 				.style('border-radius', '8px')
 				.style('padding', '12px 16px')
@@ -302,27 +324,27 @@ export class profileForms extends profilePlot {
 				.style('width', 'fit-content')
 				.style('max-width', '100%')
 				.style('background', '#fff')
-			// Card header: group label on the left, the profile filter legend (applied filters + n)
-			// on the right so each box carries its own filter context.
+			/*
+			Card header: the group label on the left, the applied-filters + n block on the right,
+			vertically centered against the label. addFilterLegend() draws into this.filterG and partly
+			above y=0, so the group is shifted to start at (pad, pad) and the svg sized to fit it; the
+			row's align-items:center then centers it against the label. filtersCount is reset per card
+			so items stack from the top each time.
+			*/
 			const cardHeader = card
 				.append('div')
 				.style('display', 'flex')
 				.style('align-items', 'center')
 				.style('justify-content', 'space-between')
-				.style('gap', '16px')
+				.style('gap', '24px')
 				.style('padding-bottom', '8px')
 				.style('margin-bottom', '8px')
 				.style('border-bottom', '1px solid #eee')
 			cardHeader.append('div').style('font-weight', 'bold').style('font-size', '1rem').text(g.label)
-			// Render the shared filter legend into this card's header via the base addFilterLegend(),
-			// which draws into this.filterG; reset filtersCount so items stack from the top each time.
 			const filterSvg = cardHeader.append('svg')
 			this.filtersCount = 0
 			this.filterG = filterSvg.append('g')
 			this.addFilterLegend()
-			// Normalize: addFilterLegend draws partly above y=0, which the svg would clip. Shift the
-			// group so its content starts at (pad, pad), then size the svg to fit it exactly. The
-			// header's align-items:center then vertically centers this against the group label.
 			const fbb = filterSvg.node().getBBox()
 			const pad = 3
 			this.filterG.attr('transform', `translate(${-fbb.x + pad}, ${-fbb.y + pad})`)
@@ -334,8 +356,24 @@ export class profileForms extends profilePlot {
 				.style('align-items', 'flex-start')
 				.style('justify-content', 'center')
 				.style('gap', '16px')
+			/*
+			Each chart is titled in its own column of the flex row, one step down from the card header
+			(1rem) in the page title -> card header -> chart title hierarchy. Titles are html above the
+			svg, matching how the rest of this view's text is drawn.
+			*/
+			const titledChart = (title: string) => {
+				const column = body.append('div')
+				column
+					.append('div')
+					.style('text-align', 'center')
+					.style('font-weight', 'bold')
+					.style('font-size', '0.9rem')
+					.style('padding-bottom', '4px')
+					.text(title)
+				return column.append('div')
+			}
 			renderImpressionThermometer({
-				holder: body.append('div'),
+				holder: titledChart(texts.chartTitles.thermometer),
 				id: `${this.id}-g${i}`,
 				sc: { median: data.scMedian, total: data.scTotal },
 				poc: g.poc,
@@ -346,7 +384,7 @@ export class profileForms extends profilePlot {
 			})
 			if (g.poc) {
 				renderResponseDistribution({
-					holder: body.append('div'),
+					holder: titledChart(texts.chartTitles.distribution),
 					id: `${this.id}-dist-g${i}`,
 					maxScore: IMPRESSION_MAX_SCORE,
 					scDistribution: data.scDistribution || [],
@@ -357,41 +395,38 @@ export class profileForms extends profilePlot {
 					attachTip
 				})
 			}
+			// One legend for the card, under both charts — the single place the series and the
+			// performance zones are named.
+			renderImpressionLegend({
+				holder: card.append('div'),
+				series: [
+					{ color: scColor, label: texts.legend.sc, symbol: 'line' as const },
+					...(g.poc ? [{ color: POC_FILL, label: texts.legend.poc, symbol: 'square' as const }] : [])
+				],
+				zones
+			})
 		})
-
-		this.renderImpressionLegend(
-			holder,
-			scColor,
-			zones,
-			texts,
-			groups.some(g => g.poc)
-		)
 	}
 
-	private renderImpressionLegend(holder: any, scColor: string, zones: any[], texts: any, hasPoc: boolean) {
-		const legend = holder
-			.append('div')
-			.style('display', 'flex')
-			.style('flex-wrap', 'wrap')
-			.style('justify-content', 'center')
-			.style('gap', '18px')
-			.style('align-items', 'center')
-			.style('padding', '10px 0')
-			.style('font-size', '0.85rem')
-		const addItem = (color: string, label: string, round = false) => {
-			const it = legend.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '6px')
-			it.append('div')
-				.style('width', '16px')
-				.style('height', round ? '14px' : '16px')
-				.style('border-radius', round ? '50%' : '2px')
-				.style('background', color)
-			it.append('span').text(label)
-		}
-		// SC (module color: thermometer left fill + distribution line), POC (grey: thermometer
-		// right fill + distribution columns), then the performance-zone bands.
-		addItem(scColor, texts.legend.sc)
-		if (hasPoc) addItem(POC_FILL, texts.distribution.legend.poc)
-		for (const z of zones) addItem(z.color, z.label)
+	/*
+	The impression view renders each card's charts as separate <svg> elements under impressionDiv and
+	hides the main this.dom.svg, so the base getChartImages() — which only collects this.dom.svg —
+	would hand the download menu one empty, hidden svg (nothing downloads). Collect the card svgs
+	instead, keyed by the group label so a multi-card module downloads sensibly. The Likert/YesNo
+	path still draws into this.dom.svg, so it keeps the base behavior.
+	*/
+	getChartImages() {
+		if (!this.isImpressionDomain) return super.getChartImages()
+		const note = '© 2025 St. Jude Children’s Research Hospital'
+		const charts: { name: string; svg: Selection<SVGSVGElement, unknown, null, undefined> }[] = []
+		this.dom.impressionDiv.selectAll('.sjpp-impression-card').each(function (this: HTMLElement) {
+			const card = select(this)
+			const label = card.attr('data-group-label') || ''
+			card.selectAll<SVGSVGElement, unknown>('svg').each(function (this: SVGSVGElement) {
+				charts.push({ name: `${label} ${note}`.trim(), svg: select(this) })
+			})
+		})
+		return charts
 	}
 
 	renderLikert() {
