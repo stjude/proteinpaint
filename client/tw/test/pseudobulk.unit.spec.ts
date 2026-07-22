@@ -2,6 +2,7 @@ import tape from 'tape'
 import { PseudobulkBase } from '../pseudobulk.ts'
 import { PSEUDOBULK } from '#shared/terms.js'
 import { routedTermTypes, TwRouter } from '../TwRouter.ts'
+import type { NumTWRegularBin } from '#types'
 
 /*************************
  reusable helper functions
@@ -173,9 +174,10 @@ tape('TwRouter should fetch regular bins for a discrete pseudobulk term with dum
 
 	test.ok(setTermBinsCalled, 'fetches data-dependent bins')
 	test.equal(tw.type, 'NumTWRegularBin', 'routes the term to regular bins')
-	test.equal(tw.q.mode, 'discrete', 'preserves discrete mode')
-	test.equal(tw.q.type, 'regular-bin', 'uses the fetched regular-bin configuration')
-	test.equal((tw.q as any).bin_size, 1, 'fills the fetched bin size')
+	const regularBinTw = tw as NumTWRegularBin
+	test.equal(regularBinTw.q.mode, 'discrete', 'preserves discrete mode')
+	test.equal(regularBinTw.q.type, 'regular-bin', 'uses the fetched regular-bin configuration')
+	test.equal(regularBinTw.q.bin_size, 1, 'fills the fetched bin size')
 	test.end()
 })
 
