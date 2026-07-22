@@ -28,6 +28,7 @@ export const graphableTypes = new Set([
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.PROTEOME_ABUNDANCE,
 	TermTypes.PSEUDOBULK,
+	TermTypes.JUNCTION,
 	SINGLECELL_GENE_EXPRESSION,
 	SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
