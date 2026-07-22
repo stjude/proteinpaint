@@ -997,7 +997,7 @@ otherJs[]:
 grouplabel:
 	human readable label of the event
 */
-async function mayGroupSelect(tk, block, mainJ, otherJs, eventlabel, holder) {
+function mayGroupSelect(tk, block, mainJ, otherJs, eventlabel, holder) {
 	if (!tk.massApp) return
 
 	// assuming otherJs are all canonical junctions!
@@ -1028,7 +1028,8 @@ function listAllEvents(lst, table, j, tk, block, isClickMenu) {
 	if (lst.length == 1) {
 		const [t1, t2] = table.addRow()
 		const e = lst[0]
-		t1.html(`${e.gene}<br><span style="font-size:.8em">${e.isoform}</span>`)
+		t1.append('div').text(e.gene)
+		t1.append('div').text(e.isoform).style('font-size', '.8em')
 		if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
 			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block, isClickMenu)
 		} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
@@ -1054,9 +1055,14 @@ function listAllEvents(lst, table, j, tk, block, isClickMenu) {
 		eo.isoform = isolst[0] // hack! add back so it can get printed as eventlabel in mayGroupSelect()
 
 		const [t1, t2] = table.addRow()
-		t1.html(`${eo.gene}<br>
-		<span style="font-size:${isolst.length >= 5 ? 0.7 : 0.8}em">
-		${isolst.join('<br>')}</span>`)
+		t1.append('div').text(eo.gene)
+		{
+			const s = isolst.length >= 5 ? 0.7 : 0.8
+			for (const i of isolst)
+				t1.append('div')
+					.text(i)
+					.style('font-size', s + 'em')
+		}
 		if (eo.type == JT_exonskip || eo.type == JT_exonaltuse) {
 			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block, isClickMenu)
 		} else if (eo.type == JT_a5ss || eo.type == JT_a3ss) {
