@@ -3,8 +3,9 @@ import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { select } from 'd3'
+import { select } from 'd3-selection'
 import type { Selection } from 'd3-selection'
+import 'd3-transition'
 import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
 import { dofetch3 } from '#common/dofetch'
@@ -220,6 +221,21 @@ export class profileForms extends profilePlot {
 			this.addFilterLegend()
 		} finally {
 			this.dom.loadingDiv.style('display', 'none')
+		}
+	}
+
+	async setControls(additionalInputs: any[] = []) {
+		if (!this.isImpressionDomain) return super.setControls(additionalInputs)
+		// In impression-domain mode scoreTerms/scScoreTerms are not initialized, so the
+		// base setControls() profileForms branch (getProfileFormScores) must not fire.
+		// Temporarily shadow this.type so the base treats this call like a non-forms type,
+		// which still builds filteredTermValues, this.filter, and the controls UI.
+		const savedType = (this as any).type
+		;(this as any).type = '__impressionDomain'
+		try {
+			await super.setControls(additionalInputs)
+		} finally {
+			;(this as any).type = savedType
 		}
 	}
 

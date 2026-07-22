@@ -161,7 +161,10 @@ Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically 
 
 **Class:** [profileForms.js](../profileForms.js)  
 **Description:** This type of chart known as Templates for the users, allows for the visualization of the amount of response per type of response for each individual questions from the PrOFILE survey, which are not aggregated into scores. This is useful for detailed analysis of specific data points.  
-**Plot Types:** - Yes/No Barchart: For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses. - Likert Scale: For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
+**Plot Types:**
+
+- **Yes/No Barchart:** For questions with "Yes", "No", or "Do Not Know" as possible answers, this chart shows the distribution of responses.
+- **Likert Scale:** For questions based on a Likert scale (e.g., 'Almost Never' to 'Almost Always'), this chart displays the frequency of each response, often colored by module to maintain consistency with other plots.
 
 ### Impression view (profileForms `__Impression` mode)
 

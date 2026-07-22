@@ -1,5 +1,4 @@
 import type { RouteApi } from '#types'
-import { ProfileImpressionDistributionPayload } from '../../shared/types/src/routes/termdb.profileImpressionDistribution'
 import { getData } from '../src/termdb.matrix.js'
 
 /*
@@ -22,12 +21,14 @@ export const api: RouteApi = {
 	endpoint: 'termdb/profileImpressionDistribution',
 	methods: {
 		get: {
-			...ProfileImpressionDistributionPayload,
-			init
+			init,
+			request: { typeId: 'ProfileImpressionDistributionRequest' },
+			response: { typeId: 'ProfileImpressionDistributionResponse' }
 		},
 		post: {
-			...ProfileImpressionDistributionPayload,
-			init
+			init,
+			request: { typeId: 'ProfileImpressionDistributionRequest' },
+			response: { typeId: 'ProfileImpressionDistributionResponse' }
 		}
 	}
 }

@@ -1,14 +1,15 @@
 export type ProfileImpressionDistributionRequest = {
 	scTermId: string
 	// Optional: omitted when the module has no POC term (e.g. Patients & Outcomes,
-	// which is SC-only by design). When absent, the server returns pocTotal=0,
-	// pocMedian=null, pocDistribution=[] and the client renders an SC-only thermometer.
+	// which is SC-only by design). When absent, the server returns responders: []
+	// and the client renders a single SC-only thermometer.
 	pocTermId?: string
 	/*
 	Responder-level multivalue impression terms (POCFimpression_mod*) under the same
 	__Impression domain. A module may carry several (e.g. PHO, Nurses, Clinicians).
-	When present these supersede the per-site pocTermId float: pocMedian/pocTotal/
-	pocDistribution are computed per responder instead of per site.
+	When present, the server builds one responders[] entry per term (median/total/distribution
+	per responder group) instead of a single per-site aggregate. When absent and pocTermId is
+	provided, the server falls back to a single per-site POC entry in responders[].
 	*/
 	pocResponderTermIds?: string[]
 	maxScore: number
@@ -41,13 +42,4 @@ export type ProfileImpressionDistributionResponse = {
 	responders: ProfileImpressionResponderDistribution[]
 	sites: { label: string; value: string }[]
 	n: number
-}
-
-export const ProfileImpressionDistributionPayload = {
-	request: {
-		typeId: 'ProfileImpressionDistributionRequest'
-	},
-	response: {
-		typeId: 'ProfileImpressionDistributionResponse'
-	}
 }

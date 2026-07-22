@@ -135,11 +135,17 @@ tape('zone bands match the distribution chart contract and tile the vessel', fun
 
 	/*
 	The lowest band carries on past rating 0 into the bulb, so the reservoir reads as the low end.
-	Compare against the liquid's own depth — the first L command, which runs down the centre
-	divider to the bottom of the bulb.
+	Compare against the liquid's own depth — the endpoint of the bulb arc, which is the deepest
+	point the fill traces. The liquid path emits coordinates rounded to 3 decimals, so round the
+	band edge the same way before comparing.
 	*/
-	const firstL = /L ([\d.]+) ([\d.]+)/.exec(holder.select('path.sc-fill').attr('d'))
-	test.equal(sorted[sorted.length - 1].bottom, Number(firstL?.[2]), 'the lowest band reaches the bottom of the bulb')
+	const liquidArcs = arcs(holder.select('path.sc-fill').attr('d'))
+	const bulbEnd = liquidArcs[liquidArcs.length - 1][6]
+	test.equal(
+		Math.round(sorted[sorted.length - 1].bottom * 1000) / 1000,
+		bulbEnd,
+		'the lowest band reaches the bottom of the bulb'
+	)
 
 	holder.remove()
 	test.end()
@@ -317,10 +323,17 @@ tape('the whole of each median column is hoverable', function (test) {
 	const all = Array.from(svgNode.querySelectorAll('path, rect, circle, ellipse'))
 	const lastFillIdx = Math.max(...fillNodes.map(n => all.indexOf(n as Element)))
 
-	// Anything painted after the last column, anywhere over the vessel, must be click-through.
+	/*
+	Anything painted after the last column, anywhere over the vessel, must be click-through.
+	An element with neither fill nor stroke paints nothing, so under the default
+	pointer-events: visiblePainted it cannot intercept — the suppressed axis domain path
+	(axisstyle showline:false) is such an element, and is not a blocker.
+	*/
 	const blockers = all.slice(lastFillIdx + 1).filter(el => {
 		if (el.closest('[pointer-events="none"]')) return false
-		return !(el.getAttribute('pointer-events') === 'none')
+		if (el.getAttribute('pointer-events') === 'none') return false
+		const none = (v: string | null) => !v || v === 'none'
+		return !(none(el.getAttribute('fill')) && none(el.getAttribute('stroke')))
 	})
 	test.deepEqual(
 		blockers.map(el => el.getAttribute('class') || el.tagName),
