@@ -596,12 +596,12 @@ export function setSupportedChartTypes(ds) {
 		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
 		this is used by getSupportedChartTypes()
 		scope commonCharts inside this function; also compute it once on server startup and no need to repeat it in getSupportedChartTypes()
+
+		a curated dataset (e.g. gdc/mmrf) can set supportedChartsFromOverrideOnly=true to opt out of the
+		shared defaults entirely, so its isSupportedChartOverride{} is the complete allowlist of chart types
 	*/
-	const commonCharts = Object.assign(
-		{},
-		defaultCommonCharts,
-		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
-	)
+	const base = ds.supportedChartsFromOverrideOnly ? {} : defaultCommonCharts
+	const commonCharts = Object.assign({}, base, (ds.isSupportedChartOverride as isSupportedChartCallbacks) || {})
 
 	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
 
