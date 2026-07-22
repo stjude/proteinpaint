@@ -2,6 +2,7 @@ import tape from 'tape'
 import { PseudobulkBase } from '../pseudobulk.ts'
 import { PSEUDOBULK } from '#shared/terms.js'
 import { routedTermTypes, TwRouter } from '../TwRouter.ts'
+import type { NumTWRegularBin } from '#types'
 
 /*************************
  reusable helper functions
@@ -139,6 +140,44 @@ tape('TwRouter should formulate a pseudobulk term as a numeric tw', async test =
 
 	test.equal(tw.type, 'NumTWCustomBin', 'sets the numeric custom-bin tw.type')
 	test.equal(tw.term.type, PSEUDOBULK, 'preserves the pseudobulk term type')
+	test.end()
+})
+
+tape('TwRouter should fetch regular bins for a discrete pseudobulk term with dummy custom bins', async test => {
+	let setTermBinsCalled = false
+	const tw = await TwRouter.fill(
+		{
+			term: getValidRawTerm({
+				name: 'geneExpression Blast TP53',
+				bins: {
+					default: { type: 'custom-bin', lst: [], isDummyPreset: true },
+					less: { type: 'custom-bin', lst: [], isDummyPreset: true }
+				}
+			}),
+			q: { mode: 'discrete' }
+		} as any,
+		{
+			vocabApi: {
+				setTermBins: async rawTw => {
+					setTermBinsCalled = true
+					rawTw.term.bins = {
+						default: {
+							type: 'regular-bin',
+							bin_size: 1,
+							first_bin: { startunbounded: true, stop: 1 }
+						}
+					}
+				}
+			}
+		} as any
+	)
+
+	test.ok(setTermBinsCalled, 'fetches data-dependent bins')
+	test.equal(tw.type, 'NumTWRegularBin', 'routes the term to regular bins')
+	const regularBinTw = tw as NumTWRegularBin
+	test.equal(regularBinTw.q.mode, 'discrete', 'preserves discrete mode')
+	test.equal(regularBinTw.q.type, 'regular-bin', 'uses the fetched regular-bin configuration')
+	test.equal(regularBinTw.q.bin_size, 1, 'fills the fetched bin size')
 	test.end()
 })
 

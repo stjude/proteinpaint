@@ -3,10 +3,11 @@ import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import { axisstyle, table2col } from '#dom'
-import { bplen, IN_frame, JTypes, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
+import { bplen, IN_frame, JTypes, JT_canonical, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#shared/terms.js'
+import { publishJunction } from '#termdb/handlers/junction.broker'
 
 /*
  */
@@ -670,7 +671,7 @@ to illustrate canonical junctionAlst, the same set of samples from junctionB sho
 thus the query
 */
 
-function showOneJunction(j, tk, holder, block, ifeventdetails) {
+function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 	const table = table2col({ holder, margin: '0px' })
 	{
 		const [t1, t2] = table.addRow()
@@ -710,6 +711,12 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 			.style('background-color', '#555')
 			.style('margin-right', '5px')
 			.text(j.strand)
+		if (j.info.site) {
+			d2.append('span') // strand
+				.style('font-size', '.7em')
+				.style('margin-right', '5px')
+				.text(j.info.site)
+		}
 		for (const t of j.types) {
 			d2.append('span')
 				.attr('class', 'sja_mcdot')
@@ -731,7 +738,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 			<br>${j.medianReadCount} <span style="font-size:.7em">median read count</span>`)
 	}
 
-	if (ifeventdetails && tk.massApp) {
+	if (isClickMenu && tk.massApp) {
 		const [, buttonCell] = table.addRow()
 		buttonCell
 			.append('button')
@@ -747,6 +754,14 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 					}
 				})
 			})
+		buttonCell
+			.append('button')
+			.attr('data-testid', 'sjpp-junction-select')
+			.text('Select')
+			.on('click', event => {
+				publishJunction(`${block.genome.name}:${tk.dslabel}`, [makeJunctionTerm(j)], event.target, msgDiv)
+			})
+		const msgDiv = buttonCell.append('div').style('font-size', '.7em')
 	}
 
 	const type2elst = new Map() // k: event.type, v: list of events of that type
@@ -756,7 +771,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 	}
 
 	for (const [type, elst] of type2elst) {
-		listAllEvents(elst, table, j, tk, block)
+		listAllEvents(elst, table, j, tk, block, isClickMenu)
 	}
 
 	if (type2elst.size == 0) {
@@ -854,7 +869,7 @@ function showJunctionDiagram(j, tk, holder) {
 	})
 }
 
-function showEventdiagram_a53ss(j, e, tk, holder, block, donotloadcount) {
+function showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu) {
 	// a5ss, a3ss
 	const e2 = {
 		junctionB: {
@@ -872,16 +887,20 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, donotloadcount) {
 		strand: e.strand,
 		sitedist: e.sitedist
 	}
+	const otherJs = []
 	if (e.junctionA) {
 		e2.junctionA = { start: e.junctionA.start, stop: e.junctionA.stop, strand: e.junctionA.strand, v: '...' }
+		otherJs.push(structuredClone(e.junctionA))
 	}
+
+	if (isClickMenu) mayGroupSelect(tk, block, j, otherJs, `${e.gene} ${e.isoform} E${e.exon5idx} ${e.type}`, holder)
+
 	import('../src/spliceevent.a53ss.diagram').then(p => {
 		const text = p.default({
 			event: e2,
 			holder: holder
 		})
 		if (!text) return
-		if (donotloadcount) return
 		setTimeout(() => {
 			if (text.node().getBoundingClientRect().top == 0) return
 			const strandA = e.junctionA.strand
@@ -896,7 +915,7 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, donotloadcount) {
 	})
 }
 
-function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotloadcount = false) {
+function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, isClickMenu) {
 	/*
 	j is the junctionB of this event
 	event is as from j.info.spliceEvent, either skip or alt
@@ -917,9 +936,13 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 		junctionAlst: [],
 		color: '#99004d'
 	}
+
+	const otherJs = []
+
 	if (e.junctionAlst) {
 		for (const jA of e.junctionAlst) {
 			if (jA) {
+				otherJs.push(structuredClone(jA))
 				jA.data = [{ v: '...' }]
 				e2.junctionAlst.push(jA)
 				continue
@@ -928,13 +951,25 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 		}
 	}
 	if (e.up1junction) {
+		otherJs.push(structuredClone(e.up1junction))
 		e.up1junction.data = [{ v: '...' }]
 		e2.up1junction = e.up1junction
 	}
 	if (e.down1junction) {
+		otherJs.push(structuredClone(e.down1junction))
 		e.down1junction.data = [{ v: '...' }]
 		e2.down1junction = e.down1junction
 	}
+
+	if (isClickMenu)
+		mayGroupSelect(
+			tk,
+			block,
+			j,
+			otherJs,
+			`${e.gene} ${e.isoform} ${e.skippedexon.map(i => 'E' + i).join('')} ${e.type}`,
+			holder
+		)
 
 	import('../src/spliceevent.exonskip.diagram').then(p => {
 		const [junction2readcounttext, junctionlst] = p.default({
@@ -942,7 +977,6 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 			holder: holder,
 			nophrase: true
 		})
-		if (donotloadcount) return
 		setTimeout(() => {
 			// if the diagram already disappears, don't make query
 			for (const [k, text] of junction2readcounttext) {
@@ -955,15 +989,51 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, donotl
 	})
 }
 
-function listAllEvents(lst, table, j, tk, block) {
+/*
+mainJ:
+	the one with event and already has j.info
+otherJs[]:
+	array of auxiliary junctions from the mainJ event and lacks .chr, .info
+grouplabel:
+	human readable label of the event
+*/
+function mayGroupSelect(tk, block, mainJ, otherJs, eventlabel, holder) {
+	if (!tk.massApp) return
+
+	// assuming otherJs are all canonical junctions!
+	for (const j of otherJs) {
+		j.chr = mainJ.chr
+		j.info = {
+			type: JT_canonical
+		}
+	}
+
+	holder
+		.append('button')
+		.attr('data-testid', 'sjpp-junction-select')
+		.text(`Select ${otherJs.length + 1} junctions`)
+		.on('click', event => {
+			publishJunction(
+				`${block.genome.name}:${tk.dslabel}`,
+				[makeJunctionTerm(mainJ), ...otherJs.map(makeJunctionTerm)],
+				event.target,
+				msgDiv,
+				eventlabel
+			)
+		})
+	const msgDiv = holder.append('div').style('font-size', '.7em')
+}
+
+function listAllEvents(lst, table, j, tk, block, isClickMenu) {
 	if (lst.length == 1) {
 		const [t1, t2] = table.addRow()
 		const e = lst[0]
-		t1.text(e.gene + ' ' + e.isoform)
+		t1.append('div').text(e.gene)
+		t1.append('div').text(e.isoform).style('font-size', '.8em')
 		if (e.type == JT_exonskip || e.type == JT_exonaltuse) {
-			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block)
+			showEventdiagram_skipalt_fetchreadcount(j, e, tk, t2, block, isClickMenu)
 		} else if (e.type == JT_a5ss || e.type == JT_a3ss) {
-			showEventdiagram_a53ss(j, e, tk, t2, block)
+			showEventdiagram_a53ss(j, e, tk, t2, block, isClickMenu)
 		}
 		return
 	}
@@ -981,12 +1051,22 @@ function listAllEvents(lst, table, j, tk, block) {
 	}
 	for (const [key, isolst] of map) {
 		const eo = JSON.parse(key)
+
+		eo.isoform = isolst[0] // hack! add back so it can get printed as eventlabel in mayGroupSelect()
+
 		const [t1, t2] = table.addRow()
-		t1.text(eo.gene + ' ' + isolst.join(' '))
+		t1.append('div').text(eo.gene)
+		{
+			const s = isolst.length >= 5 ? 0.7 : 0.8
+			for (const i of isolst)
+				t1.append('div')
+					.text(i)
+					.style('font-size', s + 'em')
+		}
 		if (eo.type == JT_exonskip || eo.type == JT_exonaltuse) {
-			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block)
+			showEventdiagram_skipalt_fetchreadcount(j, eo, tk, t2, block, isClickMenu)
 		} else if (eo.type == JT_a5ss || eo.type == JT_a3ss) {
-			showEventdiagram_a53ss(j, eo, tk, t2, block)
+			showEventdiagram_a53ss(j, eo, tk, t2, block, isClickMenu)
 		}
 	}
 }

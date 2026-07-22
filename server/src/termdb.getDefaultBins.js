@@ -1,4 +1,4 @@
-import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#shared/terms.js'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
 
@@ -39,7 +39,12 @@ export async function trigger_getDefaultBins(q, ds, res) {
 				lst.push(value)
 			}
 		} else {
-			const queryHandler = tw.term.type == PROTEOME_ABUNDANCE ? ds.queries?.proteome : ds.queries?.[tw.term.type]
+			const queryHandler =
+				tw.term.type == PROTEOME_ABUNDANCE
+					? ds.queries?.proteome
+					: tw.term.type == PSEUDOBULK
+					? ds.queries?.singleCell?.pseudobulk
+					: ds.queries?.[tw.term.type]
 			if (!queryHandler) throw `term type ${tw.term.type} not supported by this dataset`
 			// this cache ignores filter, can lead to misleading result caused by different filter usage; also assumes that filter is infinite and impossible to cache
 			//binsCache = ds.queries[tw.term.type][`${tw.term.type}2bins`]
