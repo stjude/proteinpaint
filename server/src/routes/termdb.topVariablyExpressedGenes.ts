@@ -10,6 +10,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
+import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -36,6 +37,10 @@ function init({ genomes }) {
 			if (!ds) throw 'invalid dslabel'
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
 			q.ds = ds // helps ds getter
+
+			// map parent term annotations to child samples, since assuming
+			// gene expression data is at sample-level
+			maySetMapParent2Children(q, ds, true)
 
 			const t = Date.now()
 			result = {
@@ -98,7 +103,11 @@ function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
 
 async function resolveNativeSamples(q: TermdbTopVariablyExpressedGenesRequest, gE: any, ds: any): Promise<string[]> {
 	const samples: string[] = []
-	const limitSamples = await mayLimitSamples({ filter: q.filter, filter0: q.filter0 }, gE.samples, ds)
+	const limitSamples = await mayLimitSamples(
+		{ filter: q.filter, filter0: q.filter0, mapParent2Children: q.mapParent2Children, sampleType: q.sampleType },
+		gE.samples,
+		ds
+	)
 	const sourceIds = limitSamples ?? gE.samples
 	for (const sid of sourceIds) {
 		const n: string = ds.cohort.termdb.q.id2sampleName(sid)
