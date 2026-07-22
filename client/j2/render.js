@@ -742,7 +742,7 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 				await tk.massApp.dispatch({
 					type: 'plot_create',
 					config: {
-						chartType: 'violin',
+						chartType: 'summary',
 						term: { term: makeJunctionTerm(j), q: { mode: 'continuous' } }
 					}
 				})
