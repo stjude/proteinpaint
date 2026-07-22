@@ -81,6 +81,8 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, 
 			f = await get_ssGSEA(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.DNA_METHYLATION) {
 			f = await get_dnaMethylation(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.JUNCTION) {
+			f = await get_junction(item.tvs, CTEname_i, ds)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'categorical') {
@@ -519,6 +521,12 @@ async function get_dnaMethylation(tvs, CTEname, ds) {
 	const q = ds.queries?.dnaMethylation
 	if (!q) throw 'dnaMethylation not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
+}
+async function get_junction(tvs, CTEname, ds) {
+	const q = ds.queries?.junction
+	if (!q?.get) throw 'junction not supported'
+	const data = await q.get({ terms: [{ $id, term: tvs.term, q: tvs.q }] })
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 
