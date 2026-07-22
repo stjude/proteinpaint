@@ -6,12 +6,15 @@ All notable changes to this project will be documented in this file.
 
 General:
 - the GDC dataset now supplies its own query getters; a deployed GDC image (ppgdc) must be updated together with this server release
+- the GDC and MMRF datasets (ppgdc, ppmmrf) now declare their chart lists via isSupportedChartOverride{} and rely on this centralized step; their deployed images must be updated together with this server release
 
 Features:
 - Untangle the GDC querySamples_gdcapi() server path: split the getData/dictionary-term and variant2samples sample-query entry points so getData calls queryDictTermData_gdcapi instead of the mutation-oriented querySamples_gdcapi, drop a shared-request mutation, and extract a unit-tested ssm-occurrence field builder
 - Centralize sample-id-to-display resolution on ds.cohort.termdb.q.id2sampleRefs() with a uniform native/GDC implementation, removing the GDC-specific __gdc coupling from termdb.matrix.js and termdb.cluster.ts
 - Move GDC-specific server code out of the server package and into the GDC dataset (ppgdc), wiring each GDC query through a dataset-supplied getter — the same hook pattern the MMRF dataset uses — instead of hardcoded gdcapi branches
 - Add a shared flattenCase helper as the single flattenCaseByFields definition used by both the GDC and MMRF datasets, replacing three divergent copies
+- Centralize supported chart-type setup into a dataset-agnostic setSupportedChartTypes() step, extracted out of server_init_db_queries() and run from mds3.init.js validate_termdb() so every dataset — including non-sqlite ones (GDC, MMRF) — flows through the shared ds.isSupportedChartOverride{} mechanism
+- Add allowlist mode via the new Mds3 supportedChartsFromOverrideOnly flag: curated datasets opt out of the shared defaultCommonCharts and declare their complete chart list through isSupportedChartOverride{}
 
 Fixes:
 - select a deterministic diagnosis entry for GDC CNV views (matching the matrix and summary plots) and reduce multi-valued case fields to a single value so they no longer serialize to an empty object for the client

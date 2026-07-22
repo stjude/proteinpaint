@@ -1,6 +1,1 @@
-Features:
-- Centralize supported chart-type setup into a dataset-agnostic setSupportedChartTypes() step, extracted out of server_init_db_queries() and run from mds3.init.js validate_termdb() so every dataset — including non-sqlite ones (GDC, MMRF) — flows through the shared ds.isSupportedChartOverride{} mechanism
-- Add allowlist mode via the new Mds3 supportedChartsFromOverrideOnly flag: curated datasets opt out of the shared defaultCommonCharts and declare their complete chart list through isSupportedChartOverride{}
 
-General:
-- the GDC and MMRF datasets (ppgdc, ppmmrf) now declare their chart lists via isSupportedChartOverride{} and rely on this centralized step; their deployed images must be updated together with this server release
