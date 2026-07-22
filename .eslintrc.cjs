@@ -14,7 +14,7 @@ module.exports = {
 	extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
 	env: {
 		browser: process.env.LINT_ENV == 'browser',
-		node: !proces.env.LINT_ENV || process.env.LINT_ENV == 'node',
+		node: !process.env.LINT_ENV || process.env.LINT_ENV == 'node',
 		'shared-node-browser': process.env.LINT_ENV == 'shared'
 	},
 	rules: {
