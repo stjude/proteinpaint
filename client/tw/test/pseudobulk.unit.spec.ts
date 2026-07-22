@@ -142,6 +142,43 @@ tape('TwRouter should formulate a pseudobulk term as a numeric tw', async test =
 	test.end()
 })
 
+tape('TwRouter should fetch regular bins for a discrete pseudobulk term with dummy custom bins', async test => {
+	let setTermBinsCalled = false
+	const tw = await TwRouter.fill(
+		{
+			term: getValidRawTerm({
+				name: 'geneExpression Blast TP53',
+				bins: {
+					default: { type: 'custom-bin', lst: [], isDummyPreset: true },
+					less: { type: 'custom-bin', lst: [], isDummyPreset: true }
+				}
+			}),
+			q: { mode: 'discrete' }
+		} as any,
+		{
+			vocabApi: {
+				setTermBins: async rawTw => {
+					setTermBinsCalled = true
+					rawTw.term.bins = {
+						default: {
+							type: 'regular-bin',
+							bin_size: 1,
+							first_bin: { startunbounded: true, stop: 1 }
+						}
+					}
+				}
+			}
+		} as any
+	)
+
+	test.ok(setTermBinsCalled, 'fetches data-dependent bins')
+	test.equal(tw.type, 'NumTWRegularBin', 'routes the term to regular bins')
+	test.equal(tw.q.mode, 'discrete', 'preserves discrete mode')
+	test.equal(tw.q.type, 'regular-bin', 'uses the fetched regular-bin configuration')
+	test.equal((tw.q as any).bin_size, 1, 'fills the fetched bin size')
+	test.end()
+})
+
 tape('constructor should throw on invalid terms', test => {
 	test.throws(
 		() => new PseudobulkBase(getValidRawTerm({ assay: 'badAssay' }) as any),

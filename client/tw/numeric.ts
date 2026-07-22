@@ -140,7 +140,7 @@ export class NumericBase extends TwBase {
 					if (Array.isArray((tw as RawNumTWCustomBin).q.lst)) tw.q.type = 'custom-bin'
 				}
 				if (!tw.q.type) {
-					if (tw.term.bins) mayFillQWithPresetBins(tw)
+					if (tw.term.bins && !tw.term.bins.default?.isDummyPreset) mayFillQWithPresetBins(tw)
 					else tw.q.type = 'regular-bin'
 				}
 				break
