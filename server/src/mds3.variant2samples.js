@@ -1,5 +1,4 @@
 import { stratinput } from '#shared/tree.js'
-import { querySamples_gdcapi } from './mds3.gdc.js'
 import { get_densityplot } from './mds3.densityPlot.js'
 import * as utils from './utils.js'
 import { dtsnvindel, dtcnv, dtitd, dtfusionrna, dtsv, mclassitd } from '#shared/common.js'
@@ -11,7 +10,7 @@ import { ssmIdFieldsSeparator, guessSsmid } from '#shared/mds3tk.js'
 validate_variant2samples()
 variant2samples_getresult()
 	queryMutatedSamples
-		querySamples_gdcapi
+		ds.variant2samples.querySamples()  // ds-supplied, e.g. gdc
 		queryServerFileBySsmid
 			combineSamplesById
 		queryServerFileByRglst
@@ -80,8 +79,8 @@ export async function validate_variant2samples(ds) {
 	}
 
 	// create getter
-	if (vs.gdcapi) {
-		// only a boolean flag
+	if (typeof vs.querySamples == 'function') {
+		// ds supplies its own sample query, no server-side file needed
 	} else {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
@@ -238,8 +237,10 @@ async function queryMutatedSamples(q, ds) {
     */
 	const twLst = q.twLst ? q.twLst.slice() : []
 
-	if (ds.variant2samples.gdcapi) {
-		return await querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
+	if (typeof ds.variant2samples.querySamples == 'function') {
+		// ds supplied sample query (e.g. gdc). note this is not variant2samples.get, which is the
+		// outer entry point assigned below in validate_variant2samples() and which calls into here
+		return await ds.variant2samples.querySamples(q, twLst, q.geneTwLst)
 	}
 
 	/*

@@ -386,9 +386,20 @@ function getChartTypeList(self, state) {
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
+			label: 'Cell-type Bubble Heatmap',
+			chartType: 'cellTypeBubbleHeatmap',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
 			label: 'Brain Regional Proteome',
 			chartType: 'brainRegions',
 			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Sample Sets',
+			chartType: 'studyCatalog',
+			clickTo: self.plotCreate,
+			config: { chartType: 'studyCatalog' }
 		},
 		{
 			label: state.termdbConfig.queries?.geneRanking?.appName || 'Gene Ranking',

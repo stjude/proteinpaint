@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { computeTypes } from '../validate.js'
+import { computeTypes, getJunctionData } from '../validate.js'
 
 tape('\n', test => {
 	test.comment('-***- junction/validate specs -***-')
@@ -52,5 +52,26 @@ tape('computeTypes: event type must be a string', test => {
 	}
 
 	test.throws(() => computeTypes(junction, new Set()), /event\.type missing/, 'throws when an event type is missing')
+	test.end()
+})
+
+tape('getJunctionData: reformats sn2rc for termdb.matrix', async test => {
+	const tw = {
+		$id: 'junction-1',
+		term: { type: 'junction', chr: 'chr1', start: 100, stop: 200, strand: '+' },
+		q: { readcountCutoff: 3 }
+	}
+	const result = await getJunctionData(
+		{ terms: [tw], filter: { type: 'tvslst', lst: [] } },
+		async (query, keepList) => {
+			test.deepEqual(query.rglst, [{ chr: 'chr1', start: 100, stop: 200 }], 'queries the junction region')
+			test.equal(query.readcountCutoff, 3, 'passes the term read-count cutoff')
+			test.deepEqual(keepList, [{ start: 100, stop: 200, strand: '+' }], 'limits results to the selected junction')
+			return {
+				junctions: [{ start: 100, stop: 200, strand: '+', sn2rc: new Map([['sample-1', 12]]) }]
+			}
+		}
+	)
+	test.deepEqual(result.term2sample2value.get('junction-1'), { 'sample-1': 12 }, 'returns sample-to-count values')
 	test.end()
 })

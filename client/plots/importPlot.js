@@ -90,8 +90,17 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'bubbleHeatmap':
 			return await import('./bubbleHeatmap.ts')
 
+		case 'cellTypeBubbleHeatmap':
+			return await import('./cellTypeBubbleHeatmap.ts')
+
 		case 'brainRegions':
 			return await import('./brainRegions.ts')
+
+		case 'studyCatalog':
+			return await import('./studyCatalog.ts')
+
+		case 'proteomeCohortCompare':
+			return await import('./proteomeCohortCompare.ts')
 
 		case 'geneRanking':
 			return await import(`./geneRanking.ts`)

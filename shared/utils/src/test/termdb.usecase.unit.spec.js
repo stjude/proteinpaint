@@ -126,6 +126,13 @@ tape('survival overlay', test => {
 	test.end()
 })
 
+tape('pseudobulk is graphable in default and filter use cases', test => {
+	const term = { type: 'pseudobulk', isleaf: true }
+	test.deepEqual(isUsableTerm(term, {}), new Set(['plot']), 'allows pseudobulk in the default use case')
+	test.deepEqual(isUsableTerm(term, { target: 'filter' }), new Set(['plot']), 'allows pseudobulk in filters')
+	test.end()
+})
+
 tape('evenCount term', test => {
 	const usecase = { target: 'evenCount', detail: 'term' }
 	multiDeepEqual(test, usecase, {

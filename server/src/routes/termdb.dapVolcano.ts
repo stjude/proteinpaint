@@ -57,20 +57,22 @@ function init({ genomes }) {
 			const content = await fs.readFile(filePath, 'utf8')
 			const lines = content.trim().split('\n')
 
+			// DAP file columns: acc, identifier, gene, log2FC, FDR (the p-value column is already an FDR)
 			const rustRows: (DapEntry & { adjusted_p_value: number })[] = []
 			for (let i = 1; i < lines.length; i++) {
 				const parts = lines[i].split('\t')
-				if (parts.length < 4) continue
-				const fc = Number(parts[2])
+				if (parts.length < 5) continue
+				const fc = Number(parts[3])
 				if (!Number.isFinite(fc)) continue
-				const pValue = Number(parts[3])
-				if (!Number.isFinite(pValue)) continue
+				const fdr = Number(parts[4])
+				if (!Number.isFinite(fdr)) continue
+				// the file only carries the FDR; use it for both p-value fields (the volcano defaults to adjusted)
 				rustRows.push({
-					gene_name: parts[0],
-					gene: parts[1],
+					gene_name: parts[1],
+					gene: parts[2],
 					fold_change: fc,
-					original_p_value: pValue,
-					adjusted_p_value: pValue
+					original_p_value: fdr,
+					adjusted_p_value: fdr
 				})
 			}
 

@@ -6,7 +6,6 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
-import * as gdc from './mds3.gdc.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
@@ -73,8 +72,6 @@ validate_termdb
 		barchart_data
 	validate_cumburden
 validate_query_snvindel
-	gdc.validate_query_snvindel_byisoform
-	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
 			param2filter
@@ -354,14 +351,7 @@ export async function validate_termdb(ds) {
 	}
 
 	if (tdb.convertSampleId) {
-		if (typeof tdb.convertSampleId.get === 'function') {
-			// ds-supplied getter
-		} else if (tdb.convertSampleId.gdcapi) {
-			gdc.convertSampleId_addGetter(tdb, ds)
-			// convertSampleId.get() added
-		} else {
-			throw 'unknown implementation of tdb.convertSampleId'
-		}
+		if (typeof tdb.convertSampleId.get !== 'function') throw 'unknown implementation of tdb.convertSampleId'
 	}
 	if (tdb.termCollections) {
 		if (!Array.isArray(tdb.termCollections)) throw 'termdb.termCollections not array'
@@ -746,9 +736,6 @@ async function validate_query_snvindel(ds, genome) {
 	if (q.byrange) {
 		if (typeof q.byrange.get == 'function') {
 			// ds supplied getter
-		} else if (q.byrange.gdcapi) {
-			gdc.validate_query_snvindel_byrange(ds)
-			// q.byrange.get() added
 		} else if (q.byrange.bcffile) {
 			await setFile(q.byrange, 'snvindel.byrange', 'bcffile')
 			q.byrange._tk = { file: q.byrange.bcffile }
@@ -784,25 +771,13 @@ async function validate_query_snvindel(ds, genome) {
 	}
 
 	if (q.byisoform) {
-		if (typeof q.byisoform.get == 'function') {
-			// ds supplied getter
-		} else if (q.byisoform.gdcapi) {
-			gdc.validate_query_snvindel_byisoform(ds)
-			// q.byisoform.get() added
-		} else {
-			throw 'unknown query method for queries.snvindel.byisoform'
-		}
+		if (typeof q.byisoform.get != 'function') throw 'unknown query method for queries.snvindel.byisoform'
 	}
 
 	if (q.m2csq) {
 		if (!q.m2csq.by) throw '.by missing from queries.snvindel.m2csq'
 		if (q.m2csq.by != 'ssm_id') throw 'unknown value of queries.snvindel.m2csq.by'
-		if (q.m2csq.gdcapi) {
-			gdc.validate_m2csq(ds)
-			// added q.m2csq.get()
-		} else {
-			throw 'unknown query method for queries.snvindel.m2csq'
-		}
+		if (typeof q.m2csq.get != 'function') throw 'unknown query method for queries.snvindel.m2csq'
 	}
 
 	if (q.populations) {
@@ -934,13 +909,8 @@ export function validateSampleHeader(ds, samples, where) {
 }
 
 function validate_ssm2canonicalisoform(ds) {
-	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
-	if (ds.ssm2canonicalisoform.gdcapi) {
-		gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform, ds.getHostHeaders) // add get()
-		return
-	}
-	throw 'ssm2canonicalisoform.gdcapi is false'
+	if (typeof ds.ssm2canonicalisoform.get != 'function') throw 'ssm2canonicalisoform.get() is not supplied by the ds'
 }
 
 /* if genome allows converting refseq/ensembl
@@ -3096,7 +3066,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			// may filter samples here by geneVariant data
 			// necessary for gdc, which uses a different filter
 			// structure during data query that is not compatible with
-			// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+			// geneVariant data filtering (see filter2GDCfilter() in ppgdc gdc/filter.js)
 			//const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
 			//if (!pass) continue
 			if (groupset) {
@@ -3197,8 +3167,8 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 async function filterSamples4assayAvailability(q, ds) {
 	if (ds.assayAvailability?.useFilter0) {
 		/////////////////////////////
-		// if true, instructs this ds will use both filter and filter0 to get it
-		// TODO solution below uses a hardcoded gdc function and is not generalized
+		// if true, this ds uses both filter and filter0, and resolves them itself via a
+		// ds-supplied assayAvailability.getSampleSet()
 		let filterObj
 		if (q.filter) {
 			// remove geneVariant/dt terms from filter as this data will
@@ -3208,7 +3178,7 @@ async function filterSamples4assayAvailability(q, ds) {
 				? q.filter.lst.filter(item => {
 						if (item.type == 'tvslst') {
 							// item is tvslst so can pass because geneVariant tvs is not
-							// allowed in nested tvslst for gdc (see filter2GDCfilter() in mds3.gdc.filter.js)
+							// allowed in nested tvslst for gdc (see filter2GDCfilter() in ppgdc gdc/filter.js)
 							return true
 						}
 						if (!dtTermTypes.has(item.tvs?.term.type)) {
@@ -3225,16 +3195,11 @@ async function filterSamples4assayAvailability(q, ds) {
 			TRICKY!! cannot use if(!q.filter){} to decide if no pp filter.
 			client passes blank pp filter with empty array of fitler.lst[]!
 			*/
-			const [byTermId, samples] = await gdc.querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(
-				{ filterObj, filter0: q.filter0, __abortSignal: q.__abortSignal },
-				[],
-				ds
-			)
-			const sampleSet = new Set()
-			for (const s of samples) {
-				sampleSet.add(s.sample_id)
-			}
-			return sampleSet
+			return await ds.assayAvailability.getSampleSet({
+				filterObj,
+				filter0: q.filter0,
+				__abortSignal: q.__abortSignal
+			})
 		}
 		// no filter. do not query and return null to use all samples
 		return null
@@ -3687,6 +3652,12 @@ async function mayValidateAssayAvailability(ds) {
 
 	// has this setting. at server launch it should query assay availability status for all samples and cache it
 
+	// useFilter0 datasets resolve filter+filter0 to a sample set via a ds-supplied getSampleSet()
+	// (called in filterSamples4assayAvailability). fail fast at init if a dataset sets the flag but
+	// not the getter, rather than a request-time TypeError
+	if (ds.assayAvailability.useFilter0 && typeof ds.assayAvailability.getSampleSet != 'function')
+		throw 'ds.assayAvailability.useFilter0 is set but assayAvailability.getSampleSet() is not supplied by the dataset'
+
 	if (ds.assayAvailability.get) {
 		// ds-supplied getter
 		await ds.assayAvailability.get(ds)
@@ -3773,13 +3744,7 @@ function validateDemoJwtInputs(ds) {
 
 function mayInitTermid2totalsize2(tdb, ds) {
 	if (!tdb.termid2totalsize2) return
-	if (typeof tdb.termid2totalsize2.get == 'function') return
-	if (tdb.termid2totalsize2.gdcapi) {
-		// validate gdcapi
-	} else {
-		// query through termdb methods
-		// since termdb.dictionary is a required attribute
-	}
+	if (typeof tdb.termid2totalsize2.get == 'function') return // ds supplied getter
 
 	/* add getter
 		input:
@@ -3794,9 +3759,6 @@ function mayInitTermid2totalsize2(tdb, ds) {
 		*/
 	tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
 		const onlyChildren = true // only get sample-level data for mds3 track
-		if (tdb.termid2totalsize2.gdcapi) {
-			return await gdc.get_termlst2size(twLst, q, combination, ds)
-		}
 		return await call_barchart_data(twLst, q, combination, ds, onlyChildren)
 	}
 }

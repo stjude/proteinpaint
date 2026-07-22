@@ -6,6 +6,7 @@ import { axisstyle, table2col } from '#dom'
 import { bplen, IN_frame, JTypes, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
+import { TermTypes } from '#shared/terms.js'
 
 /*
  */
@@ -728,9 +729,24 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 		t1.text('Samples')
 		t2.append('div').html(`${j.sampleCount} <span style="font-size:.7em">samples</span>
 			<br>${j.medianReadCount} <span style="font-size:.7em">median read count</span>`)
-		if (ifeventdetails) {
-			// if app is available, show btn to generate junction term
-		}
+	}
+
+	if (ifeventdetails && tk.massApp) {
+		const [, buttonCell] = table.addRow()
+		buttonCell
+			.append('button')
+			.attr('data-testid', 'sjpp-junction-details')
+			.text('Details')
+			.on('click', async () => {
+				tk.itemtip.hide()
+				await tk.massApp.dispatch({
+					type: 'plot_create',
+					config: {
+						chartType: 'summary',
+						term: { term: makeJunctionTerm(j), q: { mode: 'continuous' } }
+					}
+				})
+			})
 	}
 
 	const type2elst = new Map() // k: event.type, v: list of events of that type
@@ -748,6 +764,20 @@ function showOneJunction(j, tk, holder, block, ifeventdetails) {
 		const [t1, t2] = table.addRow()
 		t1.text('Diagram')
 		showJunctionDiagram(j, tk, t2)
+	}
+}
+
+export function makeJunctionTerm(j) {
+	const position = `${j.chr}:${j.start + 1}-${j.stop + 1}`
+	return {
+		type: TermTypes.JUNCTION,
+		id: `${j.chr}:${j.start}-${j.stop}:${j.strand}`,
+		name: `${position} (${j.strand})`,
+		chr: j.chr,
+		start: j.start,
+		stop: j.stop,
+		strand: j.strand,
+		info: j.info || {}
 	}
 }
 

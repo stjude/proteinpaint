@@ -1,6 +1,8 @@
 import tape from 'tape'
 import { computeBlockModeFlag } from '../GB.ts'
 import { getBlockState } from '../interactions/Interactions.ts'
+import { View } from '../view/View.ts'
+import { makeJunctionTerm } from '../../../j2/render.js'
 
 /* 
 Tests:
@@ -108,5 +110,35 @@ tape('getBlockState()', test => {
 	)
 
 	test.equal(getBlockState(null, []), null, 'returns null without rglst')
+	test.end()
+})
+
+tape('junction details support', async test => {
+	const app = { dispatch() {} }
+	const view = new View(
+		{ config: { junction: { shown: true } }, vocab: { dslabel: 'test-dataset' } },
+		null,
+		null,
+		{},
+		{ app, vocabApi: { termdbConfig: { queries: { junction: {} } } } },
+		{},
+		[]
+	)
+	const tracks = await view.generateTracks()
+	test.equal(tracks[0].massApp, app, 'marks a junction track with its genome-browser app')
+	test.deepEqual(
+		makeJunctionTerm({ chr: 'chr1', start: 99, stop: 200, strand: '+', info: { canonical: true } }),
+		{
+			type: 'junction',
+			id: 'chr1:99-200:+',
+			name: 'chr1:100-201 (+)',
+			chr: 'chr1',
+			start: 99,
+			stop: 200,
+			strand: '+',
+			info: { canonical: true }
+		},
+		'creates a numeric junction term from track data'
+	)
 	test.end()
 })

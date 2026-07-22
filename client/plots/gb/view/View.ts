@@ -139,6 +139,8 @@ export class View {
 		if (this.state.config.junction?.shown) {
 			const tk: any = {
 				type: 'j2',
+				// Explicitly identifies this shared track as being hosted by the mass genome-browser plot.
+				massApp: this.opts.app,
 				dslabel: this.state.vocab.dslabel,
 				vocabApi: this.opts.vocabApi,
 				termdbConfig: this.opts.vocabApi?.termdbConfig,

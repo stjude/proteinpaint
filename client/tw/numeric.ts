@@ -43,6 +43,7 @@ export class NumericBase extends TwBase {
 		'date',
 		'geneExpression',
 		'isoformExpression',
+		tt.JUNCTION,
 		'metaboliteIntensity',
 		'proteomeAbundance',
 		'ssGSEA',
@@ -74,6 +75,10 @@ export class NumericBase extends TwBase {
 
 			case 'isoformExpression':
 				IsoformExpBase.fill(tw.term, opts)
+				if (!tw.q.mode) tw.q.mode = 'continuous'
+				break
+
+			case tt.JUNCTION:
 				if (!tw.q.mode) tw.q.mode = 'continuous'
 				break
 
@@ -213,7 +218,6 @@ export class NumRegularBin extends NumericBase {
 	// type, isAtomic, $id are set in ancestor base classes
 	q: RegularNumericBinConfig
 	#tw: NumTWRegularBin
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWRegularBin, opts: TwOpts = {}) {
@@ -221,7 +225,6 @@ export class NumRegularBin extends NumericBase {
 		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -271,7 +274,6 @@ export class NumCustomBins extends NumericBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: CustomNumericBinConfig
 	#tw: NumTWCustomBin
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWCustomBin, opts: TwOpts = {}) {
@@ -279,7 +281,6 @@ export class NumCustomBins extends NumericBase {
 		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -336,7 +337,6 @@ export class NumCont extends NumericBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: ContinuousNumericQ
 	#tw: NumTWCont
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWCont, opts: TwOpts = {}) {
@@ -344,7 +344,6 @@ export class NumCont extends NumericBase {
 		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -371,16 +370,12 @@ export class NumCont extends NumericBase {
 export class NumSpline extends NumericBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: SplineNumericQ
-	#tw: NumTWSpline
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: NumTWSpline, opts: TwOpts = {}) {
 		super(tw, opts)
 		//this.term = tw.term // already set by base constructor
 		this.q = tw.q
-		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getStatus() {

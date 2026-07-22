@@ -7,6 +7,7 @@ export const GENE_VARIANT = 'geneVariant'
 export const GENE_EXPRESSION = 'geneExpression'
 export const ISOFORM_EXPRESSION = 'isoformExpression'
 export const INTEGER = 'integer'
+export const JUNCTION = 'junction'
 export const METABOLITE_INTENSITY = 'metaboliteIntensity'
 export const MULTIVALUE = 'multivalue'
 export const PROTEOME_ABUNDANCE = 'proteomeAbundance'
@@ -32,6 +33,7 @@ export const TermTypes: { [key: string]: string } = {
 	DNA_METHYLATION,
 	CATEGORICAL,
 	INTEGER,
+	JUNCTION,
 	FLOAT,
 	SNP,
 	SNP_LIST,

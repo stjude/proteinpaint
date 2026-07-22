@@ -20,7 +20,13 @@ test sections:
 */
 
 // a minimal ds stub: only getHostHeaders is exercised by listMafFiles
-const ds = { getHostHeaders: () => ({ host: { rest: 'https://gdc.example/' }, headers: {} }) }
+/* getGdcSampletypes is supplied by the GDC dataset (ppgdc gdc/queries.js, attached in initQueries),
+so it is stubbed here rather than imported: the server package cannot import from the ppgdc repo.
+these fixtures all use samples:[], for which the real helper likewise returns [] */
+const ds = {
+	getHostHeaders: () => ({ host: { rest: 'https://gdc.example/' }, headers: {} }),
+	getGdcSampletypes: () => []
+}
 
 tape('\n', function (test) {
 	test.comment('-***- #routes/gdc.maf listMafFiles -***-')
@@ -88,6 +94,32 @@ tape('flattens hits into file rows and sorts by descending file size', async fun
 		'files are sorted by descending file_size'
 	)
 	test.equal(res.files[0].case_submitter_id, 'C2', 'cases[0].submitter_id is flattened into the row')
+	test.end()
+})
+
+tape('throws a clear error when the ds does not supply getGdcSampletypes', async function (test) {
+	test.timeoutAfter(5000)
+
+	// simulate a server running against an older ppgdc that predates the getGdcSampletypes hook:
+	// the flatten step must fail with a diagnostic that names the cause, not a bare "is not a function"
+	const dsNoHelper: any = { getHostHeaders: () => ({ host: { rest: 'https://gdc.example/' }, headers: {} }) }
+	const hits = [
+		{
+			id: 'f1',
+			file_size: 1,
+			cases: [{ submitter_id: 'C1', case_id: 'u1', project: { project_id: 'P1' }, samples: [] }]
+		}
+	]
+	const query = async () => ({ hits, total: 1 })
+
+	let msg = ''
+	try {
+		await listMafFiles({ experimentalStrategy: 'WXS' } as any, dsNoHelper, query)
+	} catch (e: any) {
+		msg = String(e)
+	}
+	test.ok(/getGdcSampletypes/.test(msg), 'error message names getGdcSampletypes')
+	test.notOk(/is not a function/.test(msg), 'not the cryptic default TypeError')
 	test.end()
 })
 
