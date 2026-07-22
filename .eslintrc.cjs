@@ -12,6 +12,11 @@ module.exports = {
 	parser: '@typescript-eslint/parser',
 	plugins: ['@typescript-eslint'],
 	extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'],
+	env: {
+		browser: process.env.LINT_ENV == 'browser',
+		node: !proces.env.LINT_ENV || process.env.LINT_ENV == 'node',
+		'shared-node-browser': process.env.LINT_ENV == 'shared'
+	},
 	rules: {
 		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/no-non-null-assertion': 'off',
