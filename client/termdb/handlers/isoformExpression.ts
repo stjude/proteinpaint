@@ -3,6 +3,7 @@ import type { GeneModel, IsoformTerm, IsoformCollectionTerm } from '#dom/types/i
 import type { Div } from '../../types/d3'
 import { dofetch3 } from '#common/dofetch'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
+import { getColors } from '#shared/common.js'
 
 export class SearchHandler {
 	callback!: (term: IsoformTerm | IsoformCollectionTerm) => void
@@ -104,13 +105,14 @@ export class SearchHandler {
 			type: ISOFORM_EXPRESSION as 'isoformExpression',
 			isoform: gm.isoform
 		}))
+		const colorScale = getColors(termlst.length)
 		this.callback({
 			type: 'termCollection',
 			isCustom: true,
 			memberType: 'numeric',
 			name: `${gene} Isoforms (${unit})`,
 			termlst,
-			propsByTermId: {},
+			propsByTermId: Object.fromEntries(termlst.map(term => [term.id, { color: colorScale(term.id) }])),
 			isleaf: true
 		})
 	}
