@@ -40,9 +40,9 @@ export function publishJunction(
 	for (const listener of listenersByDataset.get(key) || []) listener(selected)
 
 	buttonDom.remove()
-	msgDiv.html(
+	msgDiv.text(
 		eventlabel
-			? `${junctions.length} junctions can now be found through variable selection under label <b>${eventlabel}</b>.`
+			? `${junctions.length} junctions can now be found through variable selection under ${eventlabel}.`
 			: 'This junction can now be found through variable selection.'
 	)
 }
