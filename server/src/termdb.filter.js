@@ -83,6 +83,8 @@ export async function getFilterCTEs(filter, ds, mapParent2Children, sampleType, 
 			f = await get_dnaMethylation(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == TermTypes.JUNCTION) {
 			f = await get_junction(item.tvs, CTEname_i, ds)
+		} else if (item.tvs.term.type == TermTypes.PSEUDOBULK) {
+			f = await get_pseudobulk(item.tvs, CTEname_i, ds)
 		} else if (dtTermTypes.has(item.tvs.term.type)) {
 			f = await get_dtTerm(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'categorical') {
@@ -527,6 +529,12 @@ async function get_junction(tvs, CTEname, ds) {
 	const q = ds.queries?.junction
 	if (!q?.get) throw 'junction not supported'
 	const data = await q.get({ terms: [{ $id, term: tvs.term, q: tvs.q }] })
+	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
+}
+async function get_pseudobulk(tvs, CTEname, ds) {
+	const q = ds.queries?.singleCell?.pseudobulk
+	if (!q?.get) throw 'pseudobulk not supported'
+	const data = await q.get({ terms: [{ $id, term: tvs.term, q: tvs.q }] }, ds)
 	return numericSampleData2tvs(tvs, CTEname, data.term2sample2value.get($id))
 }
 

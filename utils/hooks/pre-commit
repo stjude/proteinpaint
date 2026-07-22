@@ -2,6 +2,11 @@
 
 set -e
 
+# This hook uses eslintrc-only CLI options such as --env. An eslint.config.js
+# in the parent repository would otherwise enable flat config, where those
+# options are unavailable.
+export ESLINT_USE_FLAT_CONFIG=false
+
 STAGEDFILES=$(git diff --cached --name-only | sed 's| |\\ |g')
 
 # doing per GDC requirements
