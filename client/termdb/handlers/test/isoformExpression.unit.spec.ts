@@ -89,7 +89,13 @@ tape('selectCollection() should create a custom termCollection from multiple iso
 	test.equal(selected?.memberType, 'numeric', 'Should set memberType to numeric')
 	test.equal(selected?.name, 'KRAS Isoforms (TPM)', 'Should include gene and unit in name')
 	test.equal(selected?.isleaf, true, 'Should set isleaf')
-	test.deepEqual(selected?.propsByTermId, {}, 'Should have empty propsByTermId')
+	test.ok(selected?.propsByTermId.ENST00000256078.color, 'Should assign the first isoform a color')
+	test.ok(selected?.propsByTermId.ENST00000311936.color, 'Should assign the second isoform a color')
+	test.notEqual(
+		selected?.propsByTermId.ENST00000256078.color,
+		selected?.propsByTermId.ENST00000311936.color,
+		'Should assign distinct member colors'
+	)
 
 	// termlst shape
 	test.equal(selected?.termlst?.length, 2, 'Should have 2 member terms')
