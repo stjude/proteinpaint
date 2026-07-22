@@ -196,7 +196,7 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'profileForms' },
 			// Shown instead of the term tree when the active cohort has no plotConfigByCohort
 			// entry for this chart type (e.g. Abbreviated PrOFILE has no template config).
-			unavailableMessage: 'No templates are currently available for this cohort.'
+			plotConfigByCohort_unavailableMessage: 'No templates are currently available for this cohort.'
 		},
 		////////////////////// PROFILE PLOTS END //////////////////////
 		//       rest are general plots applicable to all ds
@@ -496,10 +496,10 @@ function setRenderers(self) {
 		example: summary
 	*/
 	self.showTree_select1term = async chart => {
-		// Config-driven empty state: if the button declares an unavailableMessage and the active
+		// Config-driven empty state: if the button declares a plotConfigByCohort_unavailableMessage and the active
 		// cohort has no plotConfigByCohort entry for this chart type, show that message instead of
 		// opening a term tree with no usable templates.
-		if (chart.unavailableMessage) {
+		if (chart.plotConfigByCohort_unavailableMessage) {
 			const cohortStr = getActiveCohortStr(self.state)
 			const hasCohortConfig = self.state.termdbConfig?.plotConfigByCohort?.[cohortStr]?.[chart.chartType]
 			if (!hasCohortConfig) {
@@ -508,7 +508,7 @@ function setRenderers(self) {
 					.style('padding', '15px')
 					.style('color', '#777')
 					.style('font-style', 'italic')
-					.text(chart.unavailableMessage)
+					.text(chart.plotConfigByCohort_unavailableMessage)
 				return
 			}
 		}
