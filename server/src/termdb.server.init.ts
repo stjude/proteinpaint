@@ -510,43 +510,6 @@ export function server_init_db_queries(ds) {
 		}
 	}
 
-	/* 
-		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
-		this is used by getSupportedChartTypes()
-		scope commonCharts inside the init function; also compute it once on server startup and no need to repeat it in getSupportedChartTypes()
-	*/
-	const commonCharts = Object.assign(
-		{},
-		defaultCommonCharts,
-		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
-	)
-
-	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
-
-	/*
-	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
-	for showing as chart buttons in mass ui
-	*/
-	q.getSupportedChartTypes = req => {
-		// based on request, derive forbiddenRoutes and clientAuthResult that ds can use to tailor chart support
-		const info = authApi.getNonsensitiveInfo(req)
-		// must do the check so as not to fail tsc compiler check (auth.js is not ts)
-		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
-		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
-
-		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
-			supportedChartTypes[cohort] = []
-
-			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
-				if (isSupported({ ds, cohortTermTypes, cohort, ...authInfo })) {
-					// this chart type is supported based on context
-					supportedChartTypes[cohort].push(chartType)
-				}
-			}
-		}
-		return supportedChartTypes
-	}
-
 	q.getSingleSampleData = async function (q, ds) {
 		const { sampleId, term_ids } = q
 		if (!sampleId) throw new Error('sampleId is missing for q.getSingleSampleData() request.')
@@ -602,12 +565,68 @@ export function server_init_db_queries(ds) {
 	}
 
 	q.getProfileFacilities = function () {
-		const query = `select name from sampleidmap join 
+		const query = `select name from sampleidmap join
 		anno_categorical on sampleidmap.id = anno_categorical.sample
 		where term_id = 'sampleType' and value = 'Facility'`
 		const sql = cn.prepare(query)
 		const rows = sql.all()
 		return rows
+	}
+}
+
+/*
+	Centralized (dataset-agnostic) setup of q.getSupportedChartTypes, run once per dataset as a later
+	init step (mds3.init.js validate_termdb) regardless of how the dataset built its q{} — so every ds,
+	including non-sqlite ones (gdc/mmrf), can customize chart support via ds.isSupportedChartOverride{}.
+
+	Extracted out of server_init_db_queries() so it no longer depends on sqlite db setup.
+
+	Guards keep this a no-op for datasets that don't need it:
+	- a ds that supplies its own getSupportedChartTypes (gdc/mmrf/etc.) is left untouched
+	- a ds with no way to compute term types (no preset termtypeByCohort and no db connection) is skipped,
+	  same as before (only sqlite datasets got a getSupportedChartTypes previously)
+*/
+export function setSupportedChartTypes(ds) {
+	const tdb = ds.cohort?.termdb
+	if (!tdb?.q) return // no query object to attach to
+	if (tdb.q.getSupportedChartTypes) return // ds supplied its own; don't clobber
+	if (!tdb.termtypeByCohort && !ds.cohort.db?.connection) return // can't compute term types; leave unset
+
+	/*
+		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
+		this is used by getSupportedChartTypes()
+		scope commonCharts inside this function; also compute it once on server startup and no need to repeat it in getSupportedChartTypes()
+	*/
+	const commonCharts = Object.assign(
+		{},
+		defaultCommonCharts,
+		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
+	)
+
+	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
+
+	/*
+	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
+	for showing as chart buttons in mass ui
+	*/
+	tdb.q.getSupportedChartTypes = req => {
+		// based on request, derive forbiddenRoutes and clientAuthResult that ds can use to tailor chart support
+		const info = authApi.getNonsensitiveInfo(req)
+		// must do the check so as not to fail tsc compiler check (auth.js is not ts)
+		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
+		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
+
+		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
+			supportedChartTypes[cohort] = []
+
+			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
+				if (isSupported({ ds, cohortTermTypes, cohort, ...authInfo })) {
+					// this chart type is supported based on context
+					supportedChartTypes[cohort].push(chartType)
+				}
+			}
+		}
+		return supportedChartTypes
 	}
 }
 

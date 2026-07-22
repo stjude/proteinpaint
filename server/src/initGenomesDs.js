@@ -5,7 +5,7 @@ import * as utils from './utils.js'
 import { checkDependenciesAndVersions } from './checkDependenciesAndVersions.js'
 import { initLegacyDataset } from './initLegacyDataset.js'
 import serverconfig from './serverconfig.js'
-import { server_init_db_queries, listDbTables } from './termdb.server.init.ts'
+import { server_init_db_queries, setSupportedChartTypes, listDbTables } from './termdb.server.init.ts'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
@@ -315,6 +315,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				if (g.termdbs[key].cohort?.termdb?.isGeneSetTermdb != true)
 					throw 'genome-level geneset db lacks flag of cohort.termdb.isGeneSetTermdb=true' // this flag is part of termdbconfig and used by tree app
 				server_init_db_queries(g.termdbs[key])
+				setSupportedChartTypes(g.termdbs[key]) // preserve prior behavior (has db.connection, no override → default)
 				if (!Array.isArray(g.termdbs[key].analysisGenesetGroups)) throw '.analysisGenesetGroups[] not array'
 				if (g.termdbs[key].analysisGenesetGroups.length == 0) throw '.analysisGenesetGroups[] blank'
 				for (const a of g.termdbs[key].analysisGenesetGroups) {
