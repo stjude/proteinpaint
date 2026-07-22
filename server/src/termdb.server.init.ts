@@ -127,21 +127,46 @@ export function server_init_db_queries(ds) {
 	}
 	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
-			s2i = new Map()
+			s2i = new Map(),
+			i2type = new Map(),
+			i2ancestors = new Map(),
+			i2refs = new Map()
+
+		if (ds.cohort.termdb.hasSampleAncestry) {
+			const rows = cn.prepare('SELECT * FROM sample_ancestry').all()
+			for (const { sample_id, ancestor_id, distance } of rows) {
+				const id = sample_id
+				if (!i2ancestors.has(id)) i2ancestors.set(id, [])
+				const ancestor = {
+					ancestor_id,
+					distance: distance
+				}
+				i2ancestors.get(id).push(ancestor)
+			}
+		}
+
 		const rows = cn.prepare('SELECT * FROM sampleidmap').all()
 		let totalCount = 0
-		for (const { id, name } of rows) {
+		for (const { id, name, sample_type, ancestor_id, distance } of rows) {
 			i2s.set(id, name)
 			s2i.set(name, id)
+			i2type.set(id, sample_type)
+
+			const refs: any = { label: name, sample: id, sampleType: sample_type }
+			const ancestors = i2ancestors.get(id)
+			if (ancestors) refs.ancestors = ancestors
+			Object.freeze(refs)
+			i2refs.set(id, refs)
 			totalCount++ //for dbs without cohorts or types
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		q.id2sampleType = id => i2type.get(id)
 		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
 		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
 		// map key and never NaNs a real id; non-integer id spaces (e.g. gdc case uuids) never reach here —
 		// they use their own id2sampleRefs (gdc.buildDictionary.ts) with no coercion.
-		q.id2sampleRefs = id => ({ label: i2s.get(Number(id)) })
+		q.id2sampleRefs = id => structuredClone(i2refs.get(id))
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {

@@ -101,6 +101,7 @@ export default function (): Mds3 {
 			termdb: {
 				allowedTermTypes: ['geneVariant'],
 				displaySampleIds: () => true, // allow to display sample-level data
+				hasSampleAncestry: true,
 
 				timeUnit: 'years',
 
@@ -111,7 +112,6 @@ export default function (): Mds3 {
 				// would cause regression analysis to fail in R)
 
 				cohortStartTimeMsg: '5 years post cancer diagnosis',
-
 				selectCohort: {
 					// wrap term.id into a term json object so as to use it in tvs;
 					// the term is not required to exist in termdb
