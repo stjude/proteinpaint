@@ -36,6 +36,7 @@ export type ResponseDistributionArgs = {
 	// This responder group's POC distribution (staff counts per rating) — the column series.
 	pocDistribution: RatingBin[]
 	texts: ResponseDistributionTexts
+	// Drives the background bands only — the zones are named in the shared legend, not in here.
 	zones: ImpressionZone[]
 	// Module color for the SC line/points (same source as the thermometer's SC color).
 	colors: { sc: string }
@@ -64,37 +65,42 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 	const maxPocCount = Math.max(1, ...ratings.map(r => pocByRating[r]?.count || 0))
 
 	const svgW = MARGIN.left + PLOT_W + MARGIN.right
-	const svgH = MARGIN.top + PLOT_H + MARGIN.bottom
+	const svgH = MARGIN.top + PLOT_H + MARGIN.bottom // the legend is the card's, not this chart's
 	const svg = a.holder.append('svg').attr('width', svgW).attr('height', svgH)
 	const plot = svg.append('g').attr('transform', `translate(${MARGIN.left}, ${MARGIN.top})`)
 
+	// ~15% headroom above the tallest value on each axis so the line/columns don't touch the top edge.
+	const HEADROOM = 1.15
 	const x = scaleBand().domain(ratings.map(String)).range([0, PLOT_W]).padding(0.2)
-	const yLeft = scaleLinear().domain([0, maxScCount]).range([PLOT_H, 0]).nice()
-	const yRight = scaleLinear().domain([0, maxPocCount]).range([PLOT_H, 0]).nice()
+	const yLeft = scaleLinear()
+		.domain([0, maxScCount * HEADROOM])
+		.range([PLOT_H, 0])
+		.nice()
+	const yRight = scaleLinear()
+		.domain([0, maxPocCount * HEADROOM])
+		.range([PLOT_H, 0])
+		.nice()
 
-	// Zone background bands: a zone spanning ratings [min..max] covers those columns' full band
-	// span. Drawn first so columns and the line sit on top.
+	// Zone background bands. Each rating occupies a step-wide cell (band + padding); a zone spans
+	// from the left edge of its first cell to the right edge of its last, so adjacent zones meet at
+	// the midpoint between ratings — no white gap — and together fill the full plot width.
+	const bw = x.bandwidth()
+	const step = x.step()
 	for (const z of a.zones) {
-		const xStart = x(String(z.min))
-		const xEndBand = x(String(z.max))
-		if (xStart == null || xEndBand == null) continue
+		const cMin = x(String(z.min))
+		const cMax = x(String(z.max))
+		if (cMin == null || cMax == null) continue
+		const zStart = Math.max(0, cMin + bw / 2 - step / 2)
+		const zEnd = Math.min(PLOT_W, cMax + bw / 2 + step / 2)
 		plot
 			.append('rect')
 			.attr('class', 'impression-zone')
-			.attr('x', xStart)
+			.attr('x', zStart)
 			.attr('y', 0)
-			.attr('width', xEndBand + x.bandwidth() - xStart)
+			.attr('width', zEnd - zStart)
 			.attr('height', PLOT_H)
 			.attr('fill', z.color)
-			.attr('opacity', 0.5)
-		plot
-			.append('text')
-			.attr('x', xStart + (xEndBand + x.bandwidth() - xStart) / 2)
-			.attr('y', 12)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', '0.72rem')
-			.attr('fill', '#666')
-			.text(z.label)
+			.attr('opacity', 0.3)
 	}
 
 	// POC grey columns on the RIGHT axis
@@ -199,4 +205,10 @@ export function renderResponseDistribution(a: ResponseDistributionArgs) {
 		.attr('font-weight', 'bold')
 		.attr('fill', AXIS_COLOR)
 		.text(a.texts.rightAxisLabel)
+
+	/*
+	No legend and no zone labels here: both are drawn once per card by profileForms, under this
+	chart and the thermometer together. Rendering them per chart put the same swatches and the same
+	three zone names on screen twice, side by side.
+	*/
 }
