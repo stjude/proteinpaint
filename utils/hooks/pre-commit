@@ -29,9 +29,9 @@ if [[ "$FILES" != "" ]]; then
 
 	# lint against team preferences
 	echo "Linting ..."
-	echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs LINT_ENV=shared npx eslint
-	echo "$FILES" | grep "client\/" | grep "\.ts" | xargs LINT_ENV=browser npx eslint
-	echo "$FILES" | grep "front\/" | grep "\.ts" | xargs LINT_ENV=browser npx eslint
+	echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs env LINT_ENV=shared npx eslint
+	echo "$FILES" | grep "client\/" | grep "\.ts" | xargs env LINT_ENV=browser npx eslint
+	echo "$FILES" | grep "front\/" | grep "\.ts" | xargs env LINT_ENV=browser npx eslint
 	echo "$FILES" | grep "rust\/" | grep "\.ts" | xargs npx eslint
 	echo "$FILES" | grep "server\/" | grep "\.ts" | xargs npx eslint
 	echo "$FILES" | grep "/R\/" | grep "\.ts" | xargs npx eslint
