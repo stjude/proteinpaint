@@ -1,7 +1,6 @@
 import { getCompInit, type RxComponent } from '#rx'
 import type { MassAppApi } from './types/mass'
 import { Menu } from '#dom'
-import { select } from 'd3-selection'
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
 import type { ChatRequest, ChatResponse } from '#types'
@@ -72,12 +71,6 @@ class MassAiChatBot implements RxComponent {
 				.style('overflow', 'auto')
 				.style('scroll-behavior', 'smooth')
 		}
-
-		// Keep the omnisearch results popup open when the user clicks outside it. The Menu default hides on
-		// any outside mousedown (see menu.js), which made the results vanish on an incidental click; the
-		// omnisearch popup is instead dismissed explicitly — when the input is cleared, a result is
-		// selected, or a new search renders. Remove only this tip's body-level outside-click hide listener.
-		select(document.body).on('mousedown.menu' + this.dom.tip.typename, null)
 
 		const inputSel = this.dom.div
 			.append('input')
@@ -220,8 +213,7 @@ return the created bubble and allow to be modified
 		// If the subheader is hidden, it means the chat component is not visible, so we skip focusing the input to avoid accidental typing into the search/chat bar. The user can click on the chat again to focus when they want to use it.
 		if (this.opts.subheader.style('display') == 'none') {
 			this.dom.inputNode.blur()
-			// hide the omnisearch results popup when leaving the tab; it no longer auto-hides on outside
-			// click (see initDom), so dismiss it here to avoid it lingering over another tab's content
+			// dismiss the omnisearch results popup when leaving the tab so it doesn't linger over another tab's content
 			this.dom.tip.hide()
 			return
 		}
