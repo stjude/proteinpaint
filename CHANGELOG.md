@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.199.0
 
 General:
 - the GDC dataset now supplies its own query getters; a deployed GDC image (ppgdc) must be updated together with this server release
