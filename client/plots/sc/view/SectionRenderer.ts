@@ -38,12 +38,10 @@ export class SectionRenderer {
 		}
 		const activeSubplots = new Set(subplots.map(s => s.id))
 
-		/** Repeat the destory from the close button, as mass/app.ts
-		 * cannot remove components from within a parent plot */
-		for (const plotId of Object.keys(sc.components.plots)) {
-			if (!activeSubplots.has(plotId)) {
-				this.removeSandbox(plotId, sc)
-			}
+		/** Reconcile stale sandbox wrappers using section state.
+		 * Subplot lifecycle is managed by SubplotManager. */
+		for (const plotId of Array.from(this.plotId2Key.keys())) {
+			if (!activeSubplots.has(plotId)) this.removeSandbox(plotId)
 		}
 
 		for (const subplot of subplots) {
@@ -84,16 +82,6 @@ export class SectionRenderer {
 		this.holder.selectAll('*').remove()
 		this.sections = {}
 		this.plotId2Key = new Map()
-
-		const activeSubplots = new Set(subplots.map(s => s.id))
-
-		// Remove components that are no longer active
-		for (const plotId of Object.keys(sc.components.plots)) {
-			if (!activeSubplots.has(plotId)) {
-				sc.subplotManager.removeSubplot(plotId)
-				detached.delete(plotId)
-			}
-		}
 
 		// Regroup into new sections, reparenting existing sandbox
 		for (const subplot of subplots) {
@@ -202,10 +190,7 @@ export class SectionRenderer {
 			.attr('data-testid', `sjpp-sc-sandbox-${subplot.id}`) as any as Elem
 
 		const sandboxDiv = await sc.subplotManager.initSubplotSandbox(sandboxHolder, subplot, {
-			sectionKey: key,
-			onClose: () => {
-				this.removeSandbox(subplot.id, sc)
-			}
+			sectionKey: key
 		})
 		this.sections[key].sandboxes[subplot.id] = sandboxDiv
 	}
@@ -213,7 +198,7 @@ export class SectionRenderer {
 	removeSection(key: string, sc: SCViewer) {
 		const subactions: { type: string; id: string; parentId: string }[] = []
 		for (const plotId of Object.keys(this.sections[key].sandboxes || {})) {
-			this.removeSandbox(plotId, sc, key)
+			this.removeSandbox(plotId, key)
 			/** Need to remove plots from the state to prevent main from re-rendering
 			 * and memory leak from orphaned components after the section is deleted. */
 			subactions.push({
@@ -232,11 +217,13 @@ export class SectionRenderer {
 		delete this.sections[key]
 	}
 
-	removeSandbox(plotId: string, sc: SCViewer, _key?: string) {
+	removeSandbox(plotId: string, _key?: string) {
 		const key = _key || this.plotId2Key.get(plotId)
 		if (!key) return
-		this.sections[key].sandboxes[plotId].remove()
-		delete this.sections[key].sandboxes[plotId]
+		const section = this.sections[key]
+		const sandbox = section?.sandboxes?.[plotId]
+		if (sandbox) sandbox.remove()
+		if (section?.sandboxes?.[plotId]) delete section.sandboxes[plotId]
 		//Remove the reference to the plotId in plot2Sample map to avoid memory leak
 		this.plotId2Key.delete(plotId)
 	}
