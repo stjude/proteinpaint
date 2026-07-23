@@ -100,8 +100,11 @@ class DynamicSubplot implements RxComponent {
 	}
 
 	destroy() {
-		this.dom.holder.app_div.selectAll('*').remove()
-		this.dom.holder.app_div.remove()
+		const appDiv = this.dom?.holder?.app_div
+		if (appDiv) {
+			appDiv.selectAll('*').remove()
+			appDiv.remove()
+		}
 		for (const key in this.dom) {
 			delete this.dom[key]
 		}
