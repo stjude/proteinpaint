@@ -2336,7 +2336,7 @@ export type PreInit = {
 /** see details in termdb.server.init.ts
  */
 export type isSupportedChartCallbacks = {
-	[chartType: string]: (f: any) => boolean | undefined
+	[chartType: string]: boolean | ((f: any) => boolean | undefined)
 }
 
 export type Mds3 = BaseMds & {
@@ -2378,12 +2378,12 @@ export type Mds3 = BaseMds & {
 	dsinfo?: KeyVal[]
 	queries?: Mds3Queries
 	cohort?: Cohort
+	/** this will be used instead of relying on the pp server's default common charts  */
+	commonCharts?: isSupportedChartCallbacks
+	/** this is usually provided when commonCharts is not specified and
+	 * the pp server provides a set of default charts that is mostly based on
+	 * a dataset's available data, assay, and/or auth credentials */
 	isSupportedChartOverride?: isSupportedChartCallbacks
-	/** when true, isSupportedChartOverride is the COMPLETE allowlist of supported chart types:
-	the shared defaultCommonCharts are NOT inherited, only the chart types declared in
-	isSupportedChartOverride are considered. for curated datasets (e.g. gdc, mmrf) whose chart
-	list does not derive from the common defaults. see setSupportedChartTypes() in termdb.server.init.ts */
-	supportedChartsFromOverrideOnly?: boolean
 	// TODO FIXME nest termdb under cohort
 	termdb?: Termdb
 	/** if ds uses filter0, ds must supply this method
