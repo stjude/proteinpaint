@@ -116,6 +116,7 @@ async function resolveNativeSamples(q: TermdbTopVariablyExpressedGenesRequest, g
 		if (!n) throw 'sample id cannot convert to string name'
 		samples.push(n)
 	}
+	mayLog('topVE', samples.length, 'samples')
 	return samples
 }
 
