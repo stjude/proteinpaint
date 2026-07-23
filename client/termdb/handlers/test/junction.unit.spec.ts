@@ -99,6 +99,13 @@ tape('event junctions render as one pill that selects and deletes the term colle
 	test.equal(selected?.name, 'Event A', 'uses the event label as the collection name')
 	test.deepEqual(selected?.termIds, ['junction-1', 'junction-2'], 'includes all event junction IDs')
 	test.notOk(selected?.termlst[0].eventlabel, 'does not retain broker metadata on member terms')
+	test.ok(selected?.propsByTermId['junction-1'].color, 'assigns the first junction a color')
+	test.ok(selected?.propsByTermId['junction-2'].color, 'assigns the second junction a color')
+	test.notEqual(
+		selected?.propsByTermId['junction-1'].color,
+		selected?.propsByTermId['junction-2'].color,
+		'assigns distinct member colors'
+	)
 	;(holder.select('[data-testid="sjpp-junction-delete"]').node() as HTMLButtonElement).click()
 	test.equal(holder.selectAll('.ts_pill').size(), 0, 'removes the complete event choice')
 

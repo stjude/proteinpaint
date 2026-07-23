@@ -1,5 +1,6 @@
 import { deleteJunction, deleteJunctionEvent, subscribeJunctions } from './junction.broker'
 import type { PublishedJunction } from './junction.broker'
+import { getColors } from '#shared/common.js'
 
 export class SearchHandler {
 	unsubscribe?: () => void
@@ -103,6 +104,7 @@ function makeTermCollection(eventlabel: string, eventTerms: PublishedJunction[])
 		delete junction.eventlabel
 		return junction
 	})
+	const colorScale = getColors(termlst.length)
 	return {
 		type: 'termCollection',
 		isCustom: true,
@@ -110,7 +112,7 @@ function makeTermCollection(eventlabel: string, eventTerms: PublishedJunction[])
 		name: eventlabel,
 		termIds: termlst.map(term => term.id),
 		termlst,
-		propsByTermId: {},
+		propsByTermId: Object.fromEntries(termlst.map(term => [term.id, { color: colorScale(term.id) }])),
 		isleaf: true
 	}
 }

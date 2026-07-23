@@ -1,6 +1,7 @@
-import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult } from '#types'
+import type { GeneMatch, GeneDataTypeAvailability, OmnisearchResult, SampleMatch } from '#types'
 import { filterTerms } from '#src/termdb.server.init.ts'
-import { copy_term } from '#src/termdb.js'
+import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
+import { authApi } from '#src/auth.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
 import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
 import { string2pos } from '#shared/common.js'
@@ -30,15 +31,25 @@ export function getGeneDataTypes(ds: any): GeneDataTypeAvailability {
  * path as the termdb findterm route); gene search uses searchGeneNames() below. */
 export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Promise<OmnisearchResult> {
 	const prompt = typeof q.prompt == 'string' ? q.prompt.trim() : ''
+	// The client gates dictionary + sample search to a longer minimum prompt length than gene search
+	// (client/mass/search.ts) and sends this flag; skip those searches when it is explicitly false so a
+	// short (gene-only) prompt never runs the dictionary lookup or the all-samples scan. Defaults to true
+	// for direct callers (unit tests) that don't set it.
+	const includeDictAndSampleSearch = q.includeDictAndSampleSearch !== false
 
 	// Dictionary variables — mirror trigger_findterm()'s DICTIONARY_VARIABLES path in server/src/termdb.js
 	let terms: any[] = []
-	const str = prompt.toUpperCase()
-	const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
-	terms = filterTerms(req, ds, found.map(copy_term))
-	for (const term of terms) {
-		term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
-		term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
+	let dictionaryTotal = 0
+	if (includeDictAndSampleSearch) {
+		const str = prompt.toUpperCase()
+		const found = (await ds.cohort.termdb.q.findTermByName(str, q.cohortStr || '', q.usecase, q.treeFilter)) || []
+		const allTerms = filterTerms(req, ds, found.map(copy_term))
+		dictionaryTotal = allTerms.length
+		terms = allTerms.slice(0, MAX_DICT_MATCHES) // cap displayed terms; dictionaryTotal reports the full count
+		for (const term of terms) {
+			term.__ancestors = ds.cohort.termdb.q.getAncestorIDs(term.id)
+			term.__ancestorNames = ds.cohort.termdb.q.getAncestorNames(term.id)
+		}
 	}
 
 	// Genes — only search when the dataset has at least one gene data type to act on. The dataset-level
@@ -50,8 +61,9 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 		datasetDataTypes.snvindel ||
 		datasetDataTypes.cnv ||
 		datasetDataTypes.svfusion
-	const MAX_GENE_MATCHES = 50
-	const geneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt).slice(0, MAX_GENE_MATCHES) : []
+	const allGeneNames = prompt && hasGeneData ? searchGeneNames(genome, prompt) : []
+	const genesTotal = allGeneNames.length
+	const geneNames = allGeneNames.slice(0, MAX_GENE_MATCHES) // cap displayed genes; genesTotal reports the full count
 	// Resolve data types per gene (one gene may have e.g. SNV/indel data while another does not), and
 	// resolve a default genomic coordinate for genes that can seed a genome browser (DNA methylation
 	// region picker or the genome browser genomic view) so the client can seed the browser without a
@@ -76,9 +88,189 @@ export async function runOmnisearch(q: any, req: any, ds: any, genome: any): Pro
 			? resolveCoordFromCandidates(q.coordCandidates, genome)
 			: null
 
+	// Samples — returns [] when the dataset does not allow displaying sample ids, or when the client gated
+	// out sample search for a short (gene-only) prompt. sampleTotal is the full match count (before the cap).
+	const { matches: samples, total: sampleTotal } =
+		includeDictAndSampleSearch && prompt ? await searchSamples(req, ds, prompt) : { matches: [], total: 0 }
+
+	// Per-type total match counts (before each type's display cap) so the client can show a
+	// "Displaying N out of M" note when a type's results were truncated.
+	const totals = { dictionaryTerms: dictionaryTotal, genes: genesTotal, samples: sampleTotal }
+
 	// Will later add support for other NonDict terms such as genesets etc.
-	return { dictionaryTerms: terms, genes: genes, coord }
+	return { dictionaryTerms: terms, genes: genes, coord, samples, totals }
 }
+
+/** Decide whether sample search may run for this request and, when the dataset restricts sample-level
+ * access by role, the filter that limits results to the samples this user is authorized to see.
+ * Returns { allowed, restrictFilter? } (restrictFilter is applied by searchSamples via get_samples).
+ *
+ * The sign-in gate (userCanAccessDsData) must pass first. Then:
+ *   - Role-restricted datasets — those that define `ds.cohort.termdb.getAdditionalFilter` (e.g. profile):
+ *       admin                                  -> allowed, no restriction (all samples)
+ *       a role with an authorization filter    -> allowed, restricted to those samples (e.g. profile user's
+ *         (non-empty authorized Sites)            authorized Sites, which for profile are 1:1 with samples)
+ *       a role authorized for nothing          -> denied (e.g. profile public)
+ *   - Other datasets — gated by the `displaySampleIds` policy (SJLife/TermdbTest -> true; a ds forbidding
+ *     sample IDs -> false).
+ *
+ * Deliberately NOT used:
+ *   - authApi.canDisplaySampleIds(): it only checks displaySampleIds is *defined* plus isUserLoggedIn, and
+ *     that login check is a no-op on the /termdb/chat path, so it returns true regardless of role.
+ *   - the "Data download"/"Sample View" supported-chart check: those charts are shown even when sign-in is
+ *     required, and profile offers "Sample View" to non-admin users. */
+function resolveSampleAccess(ds: any, req: any): { allowed: boolean; restrictFilter?: any } {
+	if (!userCanAccessDsData(req)) return { allowed: false }
+
+	let clientAuthResult: any = {}
+	try {
+		clientAuthResult = (authApi as any)?.getNonsensitiveInfo?.(req)?.clientAuthResult || {}
+	} catch {
+		clientAuthResult = {}
+	}
+
+	const getAdditionalFilter = ds?.cohort?.termdb?.getAdditionalFilter
+	if (typeof getAdditionalFilter == 'function') {
+		// Role-restricted dataset. The dataset — NOT a hardcoded role name — decides each role's scope via
+		// getAdditionalFilter(clientAuthResult, cohort):
+		//   - a filter with values  -> restricted to those samples (e.g. profile user's authorized Sites)
+		//   - no filter (undefined) -> no site restriction for this role, i.e. the "unrestricted" role,
+		//                              whatever it is named (admin, superuser, …)
+		//   - an empty-value filter -> authorized for nothing (e.g. profile public)
+		const restrictFilter = computeUnionAuthFilter(getAdditionalFilter, clientAuthResult)
+		if (restrictFilter) return { allowed: true, restrictFilter } // restricted role (e.g. profile user)
+
+		// No value-bearing filter: either an unrestricted role or a role authorized for nothing.
+		// "Unrestricted" = the dataset returned no filter for at least one of this request's cohorts.
+		const unrestricted = Object.keys(clientAuthResult).some(cohort => {
+			try {
+				return getAdditionalFilter({ clientAuthResult, activeCohort: cohort }) == undefined
+			} catch {
+				return false
+			}
+		})
+		// An unrestricted role sees ALL samples, but only if the dataset's displaySampleIds policy also
+		// permits this role to see sample IDs. (getAdditionalFilter returns "no filter" for BOTH e.g. the
+		// admin role AND carereg's public role — displaySampleIds is what separates them: admin sees IDs,
+		// carereg public does not.) An empty-value filter (profile public) falls through to deny.
+		if (unrestricted && evalDisplaySampleIds(ds, clientAuthResult)) return { allowed: true }
+		return { allowed: false }
+	}
+
+	// non-restricted dataset (no getAdditionalFilter, e.g. SJLife/TermdbTest/ProtectedTest): the
+	// displaySampleIds policy alone decides. That policy is a per-dataset function of the role — it never
+	// hardcodes a role name here.
+	return { allowed: evalDisplaySampleIds(ds, clientAuthResult) }
+}
+
+/** Evaluate the dataset's displaySampleIds policy (a boolean or a function of the request's auth payload)
+ * for this request. Fail closed (false) when it is undefined or throws. */
+function evalDisplaySampleIds(ds: any, clientAuthResult: any): boolean {
+	const displaySampleIds = ds?.cohort?.termdb?.displaySampleIds
+	if (!displaySampleIds) return false
+	try {
+		return typeof displaySampleIds == 'function' ? !!displaySampleIds(clientAuthResult) : !!displaySampleIds
+	} catch {
+		return false
+	}
+}
+
+/** For a role-restricted dataset, build the filter limiting results to the samples this request is
+ * authorized for, by unioning the dataset's per-cohort getAdditionalFilter output (each cohort's authorized
+ * Sites). An admin cohort yields no filter and an unauthorized role yields empty values; both are dropped.
+ * Returns undefined when the request is authorized for nothing. Computing per cohort (rather than a single
+ * activeCohort) is what makes this work in the /termdb/chat context, where activeCohort is not resolved. */
+export function computeUnionAuthFilter(getAdditionalFilter: (arg: any) => any, clientAuthResult: any): any {
+	const perCohort = Object.keys(clientAuthResult)
+		.map(cohort => {
+			try {
+				return getAdditionalFilter({ clientAuthResult, activeCohort: cohort })
+			} catch {
+				return undefined
+			}
+		})
+		// keep only filters that actually authorize something (a tvs with non-empty values)
+		.filter((f: any) => f?.lst?.some((entry: any) => entry?.tvs?.values?.length))
+	if (!perCohort.length) return undefined
+	if (perCohort.length == 1) return perCohort[0]
+	return { type: 'tvslst', in: true, join: 'or', lst: perCohort }
+}
+
+/** True when the request may access the dataset's (sample-level) data without an unmet sign-in. Mirrors
+ * the "Data download requires sign-in" state so sample search is gated the same way that chart is:
+ *   - open dataset (no required credential)                                  -> allow
+ *   - sign-in required, no/expired session (e.g. a role with no valid demo   -> deny
+ *     token, like SJLife role=public)
+ *   - sign-in required, valid session but NEITHER a real authorization       -> deny
+ *     payload NOR an authorized demo referer (e.g. a demo session carried
+ *     into bare massnative — in-session, but that context is not authorized
+ *     to use it)
+ *   - sign-in required, valid session AND (a real authorization payload OR   -> allow
+ *     the request comes from an authorized demo-token referer): a real login
+ *     / profile admin, or a demo login such as SJLife role=user from
+ *     /demo-login.html
+ * `auth` defaults to the shared authApi; it is injectable so unit tests can exercise the sign-in branches. */
+export function userCanAccessDsData(req: any, auth: any = authApi): boolean {
+	const dslabel = req?.query?.dslabel
+	// getRequiredCredForDsEmbedder returns the credential(s) the ds requires for this embedder, or undefined
+	// for an open dataset (AuthApiOpen also returns undefined). No credential required -> freely accessible.
+	const reqCred = auth?.getRequiredCredForDsEmbedder?.(dslabel, req?.query?.embedder)
+	if (!reqCred?.length) return true
+	// sign-in required: need a valid session for this ds's data route (getDsAuth reports insession per
+	// ds/route for the current request's token/cookie). A role with no valid token (e.g. SJLife public) is
+	// not in-session -> deny.
+	const dsAuth = auth?.getDsAuth?.(req) || []
+	const entry = dsAuth.find((a: any) => (a.dslabel == dslabel || a.dslabel == '*') && a.route == 'termdb')
+	if (entry?.insession !== true) return false
+	// in-session; allow only with real authorization or from an authorized demo referer:
+	//  - real authorization payload (non-empty clientAuthResult), e.g. a production login or profile admin
+	//  - the request is from a referer the ds's demoToken authorizes (getDsAuth sets demoTokenRoles when the
+	//    referer matches, e.g. /demo-login.html or the ds portal). A demo session dragged into an
+	//    unauthorized context (bare massnative) has neither and is denied.
+	const clientAuthResult = auth?.getNonsensitiveInfo?.(req)?.clientAuthResult
+	const hasRealAuth = !!clientAuthResult && Object.keys(clientAuthResult).length > 0
+	const fromAuthorizedDemoReferer = Array.isArray(entry?.demoTokenRoles) && entry.demoTokenRoles.length > 0
+	return hasRealAuth || fromAuthorizedDemoReferer
+}
+
+/** Match the prompt against sample names. get_AllSamplesByName() is the single source of truth for both
+ * the name->id map and the "can this dataset display sample ids" check: it sends {} when
+ * authApi.canDisplaySampleIds() is false, so a disallowed dataset yields no samples here. It is a
+ * response-sending route handler, hence the capturing res stub. Returns [] on error / no match. */
+async function searchSamples(req: any, ds: any, prompt: string): Promise<{ matches: SampleMatch[]; total: number }> {
+	// authApi is only assigned once app.ts calls getAuthApi(); when it is not set (e.g. a unit test calling
+	// runOmnisearch directly, no server app), skip sample search rather than let get_AllSamplesByName crash
+	// on authApi.canDisplaySampleIds. Fail closed: no auth layer -> no sample ids.
+	if (!authApi) return { matches: [], total: 0 }
+
+	// Gate + per-role restriction. `restrictFilter` is set only for a role-restricted dataset's non-admin
+	// user (e.g. profile user), limiting the sample set to their authorized Sites; admin and non-restricted
+	// datasets get no filter (all samples). We do NOT forward the middleware-injected q.filter — it resolves
+	// the active cohort's role incorrectly on the /termdb/chat path and would exclude everyone; the filter
+	// computed here (union across cohorts) is the correct restriction.
+	const access = resolveSampleAccess(ds, req)
+	if (!access.allowed) return { matches: [], total: 0 }
+
+	let sampleName2Id: any = {}
+	const q2: any = access.restrictFilter ? { filter: access.restrictFilter } : {}
+	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
+	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
+
+	const str = prompt.toLowerCase()
+	const matches: SampleMatch[] = []
+	let total = 0
+	// ponytail: O(all samples) substring scan per keystroke; count every match for `total` (no early break)
+	// but only collect up to the cap. Index the names if counting all matches gets slow on a large ds.
+	for (const [name, v] of Object.entries(sampleName2Id as { [k: string]: any })) {
+		if (!name?.toLowerCase().includes(str)) continue
+		total++
+		if (matches.length < MAX_SAMPLE_MATCHES) matches.push({ id: v.id, name })
+	}
+	return { matches, total }
+}
+const MAX_SAMPLE_MATCHES = 10
+const MAX_GENE_MATCHES = 50
+const MAX_DICT_MATCHES = 10
 
 /** Resolve a typed genomic coordinate to { chr, start, stop } from the client-provided candidate spellings
  * (e.g. ["7:100000-200000", "chr7:100000-200000"]). The client (mass/search.ts) runs the shape regex and

@@ -13,8 +13,12 @@ import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 
-// Coordinate search is allowed regardless of prompt length, but other prompts are gated by these bounds.
-const MIN_PROMPT_LENGTH_FOR_OMNISEARCH = 3
+// Minimum prompt length per search family. Gene search runs from a single character; dictionary and
+// sample search require 3 (they match more loosely and, for samples, scan every sample name). Coordinate
+// search has no length gate (its regex decides). The dict/sample cutoff is sent to the server, which skips
+// those searches for short prompts so a 1–2 char keystroke never scans all samples on a large dataset.
+const MIN_PROMPT_LENGTH_FOR_GENE_SEARCH = 1
+const MIN_PROMPT_LENGTH_FOR_OTHER_SEARCH = 3
 const MAX_PROMPT_LENGTH_FOR_OMNISEARCH = 20
 
 /** Build a region-based dnaMethylation term for the given coordinates. */
@@ -121,7 +125,7 @@ export async function handleOmnisearchKeyup(self: any, event: KeyboardEvent) {
 	const coordCandidates = parseCoordCandidates(prompt)
 	if (
 		coordCandidates ||
-		(MIN_PROMPT_LENGTH_FOR_OMNISEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH)
+		(MIN_PROMPT_LENGTH_FOR_GENE_SEARCH <= prompt.length && prompt.length <= MAX_PROMPT_LENGTH_FOR_OMNISEARCH)
 	) {
 		try {
 			await doSearch(self, prompt, coordCandidates) // Search as user types
@@ -158,7 +162,10 @@ export async function fetchOmnisearch(opts: {
 			cohortStr: opts.cohortStr,
 			usecase: opts.usecase,
 			treeFilter: opts.treeFilter,
-			coordCandidates: opts.coordCandidates || undefined
+			coordCandidates: opts.coordCandidates || undefined,
+			// gene search runs from 1 char; dictionary + sample search only once the prompt reaches the
+			// longer cutoff, so the server skips them (and their all-samples scan) for short prompts
+			includeDictAndSampleSearch: opts.prompt.trim().length >= MIN_PROMPT_LENGTH_FOR_OTHER_SEARCH
 		}
 	})
 	if (data.error) throw data.error
@@ -175,7 +182,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// a parsed coordinate when the prompt is a valid range and the dataset supports the genomic view.
 	// A coordinate result is added below whose "Genome Browser" button opens the genomic view.
 	const coord = data.coord || null
-	const lst: any[] = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
+	const dictItems: any[] = Array.isArray(data.dictionaryTerms) ? data.dictionaryTerms : []
 	// Each gene match carries its own available data types (a gene may have e.g. SNV/indel while
 	// another does not), so action buttons are decided per gene rather than dataset-wide.
 	const genes: { gene: string; dataTypes: any; coord?: any }[] = Array.isArray(data.genes) ? data.genes : []
@@ -183,7 +190,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// Build one entry per gene, skipping any whose name already appears among the dictionary results.
 	// Each gene renders as a single row whose buttons are the actions available for that gene, and
 	// its own per-variant-type options (SNV/indel, CNV, SV/fusion) are attached for showTerm to use.
-	const dictNames = new Set(lst.map((t: any) => t.name?.toUpperCase()))
+	const dictNames = new Set(dictItems.map((t: any) => t.name?.toUpperCase()))
 	const geneMap = new Map<string, any>()
 	for (const g of genes) {
 		const gene = g?.gene
@@ -218,14 +225,71 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 			geneMap.set(gene.toUpperCase(), entry)
 		}
 	}
-	for (const entry of geneMap.values()) lst.push(entry)
-	// Add the genomic coordinate as its own result entry (like a gene entry), rendered by showTerm
-	if (coord) {
-		lst.push({
-			isCoord: true,
-			name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`,
-			coord
-		})
+	const geneItems = [...geneMap.values()]
+	// Matched samples. The server only sends these when the dataset allows displaying sample ids
+	// (authApi.canDisplaySampleIds), so no permission check is repeated here — an empty/absent list
+	// means either no match or a dataset that does not permit it.
+	const sampleItems = (Array.isArray(data.samples) ? data.samples : [])
+		.filter((s: any) => s?.name)
+		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id }))
+	// The genomic coordinate is its own result entry (like a gene entry), rendered by showTerm
+	const coordItems = coord
+		? [{ isCoord: true, name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`, coord }]
+		: []
+
+	// Per-type total match counts (server capped each type; totals report the full counts). A group's
+	// results were truncated when its total exceeds the number the server returned for that type, in which
+	// case a note is shown at the bottom of the group.
+	const totals = data.totals || ({} as any)
+	// Group the results under headings so each result type is labeled (e.g. "Dictionary" above the matched
+	// dictionary variables, then "Genes" above the matched genes). A heading row is inserted only for a
+	// non-empty group; showTerm renders {isHeading:true} rows as the group label, {isNote:true} as the note.
+	const lst: any[] = []
+	for (const group of [
+		{
+			key: 'dictionary',
+			heading: 'Dictionary',
+			noun: 'dictionary variable',
+			items: dictItems,
+			returned: dictItems.length,
+			total: totals.dictionaryTerms
+		},
+		{
+			key: 'genes',
+			heading: 'Genes',
+			noun: 'gene',
+			items: geneItems,
+			returned: Array.isArray(data.genes) ? data.genes.length : 0,
+			total: totals.genes
+		},
+		{
+			key: 'samples',
+			heading: 'Samples',
+			noun: 'sample',
+			items: sampleItems,
+			returned: sampleItems.length,
+			total: totals.samples
+		},
+		{
+			key: 'coord',
+			heading: 'Genomic region',
+			noun: '',
+			items: coordItems,
+			returned: coordItems.length,
+			total: undefined
+		}
+	]) {
+		if (!group.items.length) continue
+		lst.push({ isHeading: true, name: group.heading })
+		for (const item of group.items) lst.push(item)
+		// truncation note: shown only when the server capped this type (total > what it returned)
+		if (typeof group.total == 'number' && group.total > group.returned) {
+			lst.push({
+				isNote: true,
+				testid: `sjpp-mass-chat-note-${group.key}`,
+				name: `Displaying ${group.items.length} out of a total of ${group.total} ${group.noun} matches`
+			})
+		}
 	}
 	if (!lst.length) {
 		// Show the "No match..." message one time at the first miss
@@ -248,6 +312,10 @@ export async function doSearch(self: any, prompt: string, coordCandidates?: stri
 		self.clear({ hide: true })
 		return
 	}
+	// search-as-you-type fires one doSearch per keystroke ("PAX5" -> P, PA, PAX, PAX5), and the fetches
+	// are not ordered — a stale shorter-prompt response can arrive after the latest one and overwrite the
+	// rendered rows. Tag each search and render only if it is still the most recent when the response lands.
+	const seq = (self.omnisearchSeq = (self.omnisearchSeq || 0) + 1)
 	const data = await fetchOmnisearch({
 		genome: self.app.vocabApi.vocab.genome,
 		dslabel: self.app.vocabApi.vocab.dslabel,
@@ -257,6 +325,7 @@ export async function doSearch(self: any, prompt: string, coordCandidates?: stri
 		treeFilter: self.app.vocabApi.state?.treeFilter,
 		coordCandidates
 	})
+	if (seq !== self.omnisearchSeq) return // a newer keystroke superseded this search; drop the stale result
 	renderOmnisearchResults(self, data)
 }
 
@@ -271,13 +340,18 @@ export function setSearchRenderers(self: any) {
 		self.clear()
 		self.dom.resultDiv.append('div').text(text).style('padding', '3px 3px 3px 0px').style('opacity', 0.5)
 
-		// Hide the popup after 2 seconds
-		setTimeout(() => {
+		// Hide the popup after a delay. Track the timer so (a) successive no-match keystrokes don't stack
+		// timers and (b) showTerms can cancel it — otherwise a stale hide from an earlier no-match keystroke
+		// (e.g. a short gene-only prompt that matched nothing) fires later and wipes freshly-rendered results.
+		clearTimeout(self.noResultTimer)
+		self.noResultTimer = setTimeout(() => {
 			self.clear({ hide: true })
 		}, 1500)
 	}
 
 	self.showTerms = (data: any) => {
+		// cancel any pending no-match hide so a stale timer can't wipe these results
+		clearTimeout(self.noResultTimer)
 		if (self.opts.disable_terms)
 			data.lst.forEach((t: any) => {
 				if (t.disabled) self.opts.disable_terms.push(t)
@@ -431,6 +505,33 @@ export function setSearchRenderers(self: any) {
 	self.showTerm = function (this: any, term: any) {
 		const tr = select(this)
 
+		if (term.isHeading) {
+			// group label row spanning both columns (name + action-button columns); not selectable
+			tr.append('td')
+				.attr('colspan', 2)
+				.attr('data-testid', `sjpp-mass-chat-heading-${term.name.toLowerCase().replace(/\s+/g, '-')}`)
+				.text(term.name)
+				.style('padding', '6px 10px 2px')
+				.style('font-weight', 'bold')
+				.style('font-size', '0.85em')
+				.style('text-transform', 'uppercase')
+				.style('opacity', 0.5)
+			return
+		}
+
+		if (term.isNote) {
+			// "Displaying N out of M ... matches" note at the bottom of a truncated group; not selectable
+			tr.append('td')
+				.attr('colspan', 2)
+				.attr('data-testid', term.testid || 'sjpp-mass-chat-note')
+				.text(term.name)
+				.style('padding', '2px 10px 6px')
+				.style('font-size', '0.8em')
+				.style('font-style', 'italic')
+				.style('opacity', 0.6)
+			return
+		}
+
 		if (term.isCoord) {
 			// Genomic coordinate row: region label + a "Genome Browser" button opening the genomic view as
 			// a separate mass chart with plot state. No protein view — a bare region is not tied to one gene.
@@ -450,6 +551,34 @@ export function setSearchRenderers(self: any) {
 					() =>
 						void self
 							.launchGenomeBrowserView('genomic', { coord: term.coord })
+							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+				)
+			return
+		}
+
+		if (term.isSample) {
+			// Sample row: sample name + a "Sample View" button opening the sample as a separate mass chart.
+			// Passes config.sample (singular), the same single-sample shape the scatter click handler
+			// dispatches (scatterInteractivity.ts), which sampleView resolves to its related samples.
+			tr.append('td').text(term.name).style('padding', '5px 10px')
+			tr.append('td')
+				.append('span')
+				.attr('class', 'sja_menuoption')
+				.attr('data-testid', `sjpp-mass-chat-sample-view-${term.sampleId}`)
+				.style('display', 'inline-block')
+				.style('margin', '0px 3px')
+				.style('padding', '5px 10px')
+				.style('border-radius', '5px')
+				.style('cursor', 'pointer')
+				.text('Sample View')
+				.on(
+					'click',
+					() =>
+						void self
+							.launchPlot({
+								chartType: 'sampleView',
+								sample: { sampleId: term.sampleId, sampleName: term.name }
+							})
 							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 				)
 			return

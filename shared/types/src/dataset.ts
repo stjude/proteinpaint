@@ -2379,6 +2379,11 @@ export type Mds3 = BaseMds & {
 	queries?: Mds3Queries
 	cohort?: Cohort
 	isSupportedChartOverride?: isSupportedChartCallbacks
+	/** when true, isSupportedChartOverride is the COMPLETE allowlist of supported chart types:
+	the shared defaultCommonCharts are NOT inherited, only the chart types declared in
+	isSupportedChartOverride are considered. for curated datasets (e.g. gdc, mmrf) whose chart
+	list does not derive from the common defaults. see setSupportedChartTypes() in termdb.server.init.ts */
+	supportedChartsFromOverrideOnly?: boolean
 	// TODO FIXME nest termdb under cohort
 	termdb?: Termdb
 	/** if ds uses filter0, ds must supply this method
