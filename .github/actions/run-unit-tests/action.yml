@@ -1,0 +1,43 @@
+name: 'Run Unit Tests'
+description: 'Runs server/python unit tests in a container'
+
+inputs:
+  TOKEN:
+    description: 'GitHub Token - to pull the ppserver base image from GHCR'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Login to Github # authenticate to GHCR so the base image can be pulled
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ inputs.TOKEN }}
+
+    - name: Set up Docker Buildx # default driver → supports type=gha caching
+      uses: docker/setup-buildx-action@v4
+     
+    - name: Build unit-test image # FROM ghcr.io/stjude/ppserver:latest is pulled automatically
+      uses: docker/build-push-action@v7
+      env:
+        DOCKER_BUILD_SUMMARY: false
+        DOCKER_BUILD_RECORD_UPLOAD: false
+        BUILDX_METADATA_PROVENANCE: disabled
+      with:
+        context: . #build context is the repo root, so our COPY . . grabs the whole monorepo.
+        file: ./.github/Dockerfile
+        tags: ppunit:latest #a distinct name so we don't overwrite the base. This is the step that actually runs your Dockerfile (COPY . ., the in-image npm ci, pip install, mkdir server/cache) and records the CMD.
+        platforms: linux/amd64
+        outputs: type=docker
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: false
+        sbom: false
+
+    - name: Run unit tests
+      shell: bash
+      run: docker run --rm ppunit:latest
+
+

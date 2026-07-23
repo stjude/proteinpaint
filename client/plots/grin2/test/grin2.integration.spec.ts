@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { getRunPp } from '../../../test/front.helpers.js'
 import { detectOne } from '../../../test/test.helpers.js'
+import { getFilter_Hodgkin } from '../../../test/testdata/data'
 
 /**************
  test sections
@@ -10,6 +11,8 @@ grin2 default
 fusion only
 cnv only
 snvindel only
+itd only
+all data types checked
 all data types unchecked
 
 ***************/
@@ -185,6 +188,82 @@ tape('grin2 snvindel-only', function (test) {
 	}
 })
 
+tape('grin2 itd-only', function (test) {
+	test.timeoutAfter(10000)
+
+	runpp({
+		state: {
+			plots: [{ chartType: 'grin2' }]
+		},
+		grin2: {
+			callbacks: {
+				'postRender.test': runITDTest
+			}
+		}
+	})
+
+	async function runITDTest(g) {
+		if (alreadyRun(g)) return
+
+		const { snvInput, cnvInput, fusionInput, svInput, itdInput } = getGRIN2Checkboxes(g)
+
+		// Toggle checkboxes to itd only
+		snvInput.checked = false
+		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		cnvInput.checked = false
+		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
+		fusionInput.checked = false
+		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
+		svInput.checked = false
+		svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		itdInput.checked = true
+		itdInput.dispatchEvent(new Event('input', { bubbles: true }))
+
+		// Run analysis
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
+
+		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('grin2 all-data-types-checked', function (test) {
+	test.timeoutAfter(20000)
+
+	runpp({
+		state: {
+			plots: [{ chartType: 'grin2' }]
+		},
+		grin2: {
+			callbacks: {
+				'postRender.test': runAllCheckedTest
+			}
+		}
+	})
+
+	async function runAllCheckedTest(g) {
+		if (alreadyRun(g)) return
+
+		const { snvInput, cnvInput, fusionInput, svInput, itdInput } = getGRIN2Checkboxes(g)
+
+		// Check every available data type, including itd
+		for (const input of [snvInput, cnvInput, fusionInput, svInput, itdInput]) {
+			input.checked = true
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		}
+
+		// Run analysis
+		getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
+
+		await validateGRIN2(g, test)
+
+		if (test['_ok']) g.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('grin2 all-data-types-unchecked disables run button', function (test) {
 	test.timeoutAfter(10000)
 
@@ -202,25 +281,77 @@ tape('grin2 all-data-types-unchecked disables run button', function (test) {
 	async function runDtUncheckedTest(g) {
 		if (alreadyRun(g)) return
 
-		const { snvInput, cnvInput, fusionInput, svInput } = getGRIN2Checkboxes(g)
+		const { snvInput, cnvInput, fusionInput, svInput, itdInput } = getGRIN2Checkboxes(g)
 
 		// Uncheck all data types
-		snvInput.checked = false
-		snvInput.dispatchEvent(new Event('input', { bubbles: true }))
-		cnvInput.checked = false
-		cnvInput.dispatchEvent(new Event('input', { bubbles: true }))
-		fusionInput.checked = false
-		fusionInput.dispatchEvent(new Event('input', { bubbles: true }))
-		svInput.checked = false
-		svInput.dispatchEvent(new Event('input', { bubbles: true }))
+		for (const input of [snvInput, cnvInput, fusionInput, svInput, itdInput]) {
+			input.checked = false
+			input.dispatchEvent(new Event('input', { bubbles: true }))
+		}
 
 		// Check Run button is disabled
 		test.equal(getRunButton(g).disabled, true, 'Run button is disabled when no data types are selected')
+		test.equal(getInputToggle(g).button.style.display, 'none', 'input toggle is hidden before results are displayed')
 
 		if (test['_ok']) g.Inner.app.destroy()
 		test.end()
 	}
 })
+
+testFilterInvalidation('grin2 clears results when the global filter changes', async g => {
+	await g.Inner.app.dispatch({
+		type: 'filter_replace',
+		filter: getFilter_Hodgkin()
+	})
+})
+
+testFilterInvalidation('grin2 clears results when its local filter changes', async g => {
+	await g.Inner.app.dispatch({
+		type: 'plot_edit',
+		id: g.Inner.id,
+		config: { filter: getFilter_Hodgkin() }
+	})
+})
+
+function testFilterInvalidation(name: string, changeFilter: (g: any) => Promise<void>) {
+	tape(name, function (test) {
+		test.timeoutAfter(10000)
+		let analysisStarted = false
+		let filterChanged = false
+
+		runpp({
+			state: { plots: [{ chartType: 'grin2' }] },
+			grin2: { callbacks: { 'postRender.test': runTest } }
+		})
+
+		async function runTest(g: any) {
+			if (!alreadyRun(g)) {
+				if (!analysisStarted) {
+					analysisStarted = true
+					getRunButton(g).dispatchEvent(new Event('click', { bubbles: true }))
+				}
+				return
+			}
+
+			if (!filterChanged) {
+				filterChanged = true
+				test.ok(
+					g.Inner.dom.div.node().querySelector('[data-testid="sjpp-grin2-top-genes-table"]'),
+					'results are displayed before the filter changes'
+				)
+				await changeFilter(g)
+				return
+			}
+
+			test.equal(g.Inner.dom.div.node().children.length, 0, 'stale results are removed after the filter changes')
+			test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'false', 'input panel is shown after the filter changes')
+			test.equal(getInputToggle(g).button.style.display, 'none', 'result-only input toggle is hidden')
+			test.notEqual(getRunButton(g).style.display, 'none', 'Run button is shown')
+			g.Inner.app.destroy()
+			test.end()
+		}
+	})
+}
 
 /*************************
  reusable helper functions
@@ -242,10 +373,10 @@ function getControlsRoot(g: any): HTMLElement {
 }
 
 /**
- * Returns the GRIN2 run button DOM element.
+ * Returns the GRIN2 run button from the shared input action row.
  */
 function getRunButton(g: any): HTMLButtonElement {
-	return getControlsRoot(g).querySelector('[data-testid="sjpp-grin2-run-button"]') as HTMLButtonElement
+	return g.Inner.dom.controlsToggle.node().querySelector('[data-testid="sjpp-grin2-run-button"]') as HTMLButtonElement
 }
 
 /**
@@ -272,6 +403,26 @@ async function validateGRIN2(g: any, test: any) {
 	})
 	test.ok(table, 'GRIN2 results table is rendered')
 
+	const inputToggle = getInputToggle(g)
+	test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'true', 'input panel collapses after results are displayed')
+	test.equal(g.Inner.dom.inputPanel.style('grid-template-rows'), '0fr', 'input panel slides up')
+	test.notEqual(inputToggle.button.style.display, 'none', 'input toggle is shown with results')
+	test.equal(inputToggle.button.textContent, 'Show input options', 'collapsed input panel can be reopened')
+
+	inputToggle.button.dispatchEvent(new Event('click', { bubbles: true }))
+	test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'false', 'input panel reopens from the result view')
+	test.equal(g.Inner.dom.inputPanel.style('grid-template-rows'), '1fr', 'input panel slides down')
+	test.equal(inputToggle.button.textContent, 'Hide input options', 'expanded input panel can be collapsed again')
+	test.equal(
+		inputToggle.button.parentElement,
+		getRunButton(g).parentElement,
+		'input toggle and Run button share an action row'
+	)
+	test.equal(inputToggle.style.display, 'flex', 'input actions are laid out on the same row')
+
+	inputToggle.button.dispatchEvent(new Event('click', { bubbles: true }))
+	test.equal(g.Inner.dom.inputPanel.attr('aria-hidden'), 'true', 'input panel collapses from the toggle')
+
 	if (test['_ok']) g.Inner.app.destroy()
 }
 
@@ -286,7 +437,16 @@ function getGRIN2Checkboxes(g: any) {
 		snvInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-snvindel"]') as HTMLInputElement,
 		cnvInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-cnv"]') as HTMLInputElement,
 		fusionInput: root.querySelector('[data-testid="grin2-checkbox-fusion"]') as HTMLInputElement,
-		svInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-sv"]') as HTMLInputElement
+		svInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-sv"]') as HTMLInputElement,
+		itdInput: root.querySelector('[data-testid="sjpp-grin2-checkbox-itd"]') as HTMLInputElement
+	}
+}
+
+function getInputToggle(g: any): { button: HTMLButtonElement; style: CSSStyleDeclaration } {
+	const holder = g.Inner.dom.controlsToggle.node() as HTMLElement
+	return {
+		button: holder.querySelector('[data-testid="sjpp-grin2-input-toggle"]') as HTMLButtonElement,
+		style: holder.style
 	}
 }
 

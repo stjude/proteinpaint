@@ -6,14 +6,12 @@ import { run_python } from '@sjcrh/proteinpaint-python'
 import { spawnSync } from 'child_process'
 import { scaleLinear } from 'd3-scale'
 import { createCanvas } from 'canvas'
-import * as gdc from './mds3.gdc.js'
-import { gdcBuildDictionary } from './gdc.buildDictionary.js'
 import { validate_variant2samples } from './mds3.variant2samples.js'
 import { ssmIdFieldsSeparator } from '#shared/mds3tk.js'
 import * as utils from './utils.js'
 import { mayLog } from './helpers.ts'
+import { getH5samples } from './utils/h5samples.ts'
 import { compute_mclass } from './vcf.mclass.js'
-import computePercentile from '#shared/compute.percentile.js'
 import serverconfig from './serverconfig.js'
 import {
 	dtsnvindel,
@@ -32,7 +30,7 @@ import {
 	getColors
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
-import { server_init_db_queries } from './termdb.server.init.ts'
+import { server_init_db_queries, setSupportedChartTypes } from './termdb.server.init.ts'
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from '#routes/termdb.sampleScatter.ts'
 import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
@@ -48,7 +46,6 @@ import { getResult } from '#src/gene.js'
 import { validate_query_getTopTermsByType } from '#routes/termdb.topTermsByType.ts'
 import { validate_query_getTopMutatedGenes } from '#routes/termdb.topMutatedGenes.ts'
 import { validate_query_getSampleImages } from '#routes/termdb.sampleImages.ts'
-import { validate_query_rnaseqGeneCount } from '#src/validateRnaseqGeneCount.ts'
 import { validate_query_getSampleWSImages } from '#routes/samplewsimages.ts'
 import {
 	validate_query_getWSIAnnotations,
@@ -61,7 +58,7 @@ import { isNumeric } from '#shared/helpers.js'
 import { makeAdHocDicTermdbQueries } from './adHocDictionary/buildAdHocDictionary.ts'
 import { validate_query_saveWSIAnnotation } from './routes/saveWSIAnnotation.ts'
 import { validate_query_deleteWSIAnnotation } from './routes/deleteWSITileSelection.ts'
-import { scaleOrdinal } from 'd3-scale'
+import { validate_query_junction } from './j2/validate.ts'
 
 /*
 init
@@ -75,10 +72,7 @@ validate_termdb
 		barchart_data
 	validate_cumburden
 validate_query_snvindel
-	gdc.validate_query_snvindel_byisoform
-	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
-		validateSampleHeader2
 		mayLimitSamples
 			param2filter
 		mayDropMbyInfoFilter
@@ -87,16 +81,13 @@ validate_query_snvindel
 	snvindelByRangeGetter_bcfMaf
 		mayLimitSamples
 		mayDropMbyInfoFilter
-	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
-		validateSampleHeader2
+	svfusionByNameGetter_file
 validate_query_geneCnv
 validate_query_cnv
 	addCnvGetter
-		validateSampleHeader2
 validate_query_itd
-validate_query_probe2cnv
 validate_query_ld
 validate_query_geneExpression
 validate_query_metaboliteIntensity
@@ -115,7 +106,6 @@ mayAdd_mayGetGeneVariantData
 	getCnvByTw
 		mayMapGeneName2isoform
 		mayMapGeneName2coord
-	getProbe2cnvByTw
 	mayAddDataAvailability
 		addDataAvailability
 
@@ -147,7 +137,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 		}
 	}
 
-	if (ds.preInit) {
+	if (ds.preInit?.getStatus) {
 		const response = await ds.preInit.getStatus(ds).catch(e => {
 			if (e.status == 'recoverableError' && serverconfig.features.mustExitPendingValidation) {
 				if (!ds.init) ds.init = {}
@@ -172,6 +162,7 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_geneCnv(ds, genome)
 			await validate_query_cnv(ds, genome)
 			await validate_query_itd(ds, genome)
+			await validate_query_junction(ds, genome)
 			await validate_query_ld(ds, genome)
 			await validate_query_geneExpression(ds, genome)
 			await validateQueryIsoformExpression(ds, genome)
@@ -193,7 +184,6 @@ export async function init(ds, genome, totalDsLst = 0) {
 			await validate_query_singleSampleMutation(ds, genome)
 			await validate_query_singleSampleGenomeQuantification(ds, genome)
 			await validate_query_singleSampleGbtk(ds, genome)
-			//await validate_query_probe2cnv(ds, genome)
 			await validate_query_singleCell(ds, genome)
 			await validate_query_TopVariablyExpressedGenes(ds)
 			await validate_query_trackLst(ds, genome)
@@ -217,8 +207,11 @@ export async function init(ds, genome, totalDsLst = 0) {
 		if (ds.cohort?.db?.refresh) throw `!!! ds.cohort.db.refresh has been deprecated !!!`
 	} catch (e) {
 		if (!ds.init) ds.init = {}
-		if (ds.init.step != 'gdcBuildDictionary()' || !ds.init.recoverableError) {
-			delete ds.init.recoverableError
+		// An init step sets ds.init.recoverableError when it hits a genuinely recoverable
+		// (network) error and wants initGenomesDs to retry; keep it in that case. Any other
+		// failure is fatal. This is dataset-agnostic: any dataset whose termdb.dictionary.build()
+		// hook (or other API-backed step) flags a recoverable error opts into retry the same way.
+		if (!ds.init.recoverableError) {
 			ds.init.fatalError = e.error || e
 			ds.init.status = 'fatalError'
 		}
@@ -311,11 +304,6 @@ export async function validate_termdb(ds) {
 		// ds-supplied builder method
 		if (typeof tdb.dictionary.build != 'function') throw 'termdb.dictionary.build() is not a function'
 		await tdb.dictionary.build(ds)
-	} else if (tdb.dictionary?.gdcapi) {
-		if (!ds.init) ds.init = {}
-		ds.init.step = 'gdcBuildDictionary()'
-		await gdcBuildDictionary(ds)
-		ds.init.step = ''
 	} else if (ds.cohort.db) {
 		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 		server_init_db_queries(ds)
@@ -323,6 +311,18 @@ export async function validate_termdb(ds) {
 		throw 'unknown method to initiate dictionary'
 	}
 	// ds.cohort.termdb.q={} ready
+	setSupportedChartTypes(ds) // centralized: runs for every dataset regardless of the init path above
+
+	// blocking launch-time case-sample caching, for datasets whose preInit.cacheSamples must
+	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the
+	// convertSampleId validation below and by runtime queries). Datasets that opt into the
+	// nonblocking phase (hasNonblockingSteps, e.g. gdc) run cacheSamples there instead.
+	if (ds.preInit?.cacheSamples && !ds.init?.hasNonblockingSteps) {
+		// ensure ds.init exists so a cacheSamples impl can report errors via ds.init.* (as the
+		// nonblocking path guarantees, mds3.init.nonblocking.js)
+		if (!ds.init) ds.init = {}
+		await ds.preInit.cacheSamples(ds)
+	}
 
 	mayInitTermid2totalsize2(tdb, ds)
 
@@ -352,14 +352,7 @@ export async function validate_termdb(ds) {
 	}
 
 	if (tdb.convertSampleId) {
-		if (typeof tdb.convertSampleId.get === 'function') {
-			// ds-supplied getter
-		} else if (tdb.convertSampleId.gdcapi) {
-			gdc.convertSampleId_addGetter(tdb, ds)
-			// convertSampleId.get() added
-		} else {
-			throw 'unknown implementation of tdb.convertSampleId'
-		}
+		if (typeof tdb.convertSampleId.get !== 'function') throw 'unknown implementation of tdb.convertSampleId'
 	}
 	if (tdb.termCollections) {
 		if (!Array.isArray(tdb.termCollections)) throw 'termdb.termCollections not array'
@@ -538,24 +531,30 @@ function mayValidateSampleTypes(tdb) {
 		// TODO: validate sample types for all datasets
 		return
 	}
-	// dataset has sample ancestry, therefore must have
-	// two sample types: parent and child
-	// TODO: later will support other sample type hierarchies
-	const sampleTypeConfig = tdb.sampleTypes
-	if (!sampleTypeConfig) throw 'sample type config missing'
-	if (Object.keys(sampleTypeConfig).length != 2) throw 'sample type config must have 2 sample types'
-	let parentSampleType, childSampleType
-	for (const [k, v] of Object.entries(sampleTypeConfig)) {
+	// dataset has sample ancestry, therefore should have multiple sample types
+	const config = tdb.sampleTypes
+	if (!config) throw 'sample type config missing'
+	if (Object.keys(config).length < 2) throw 'multiple sample types must be defined'
+	let rootSampleType
+	const childSampleTypes = []
+	for (const [k, v] of Object.entries(config)) {
 		if (!isNumeric(k)) throw 'sample type is non-numeric'
+		if (!v.name || !v.plural_name) throw 'sample type name(s) missing'
 		const sampleType = Number(k)
-		if (Number.isInteger(v.parent_id)) {
-			childSampleType = sampleType
+		if (v.parent_id === null) {
+			// root sample type
+			if (rootSampleType) throw 'multiple root sample types not allowed'
+			rootSampleType = sampleType
+		} else if (Number.isInteger(v.parent_id)) {
+			// child sample type
+			if (!config[v.parent_id]) throw 'parent id is not a sample type'
+			childSampleTypes.push(sampleType)
 		} else {
-			parentSampleType = sampleType
+			throw 'invalid parent id'
 		}
 	}
-	if (!Number.isInteger(parentSampleType)) throw 'invalid parent sample type'
-	if (!Number.isInteger(childSampleType)) throw 'invalid child sample type'
+	if (!rootSampleType) throw 'root sample type is missing'
+	if (!childSampleTypes.length) throw 'child sample types are missing'
 }
 
 async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
@@ -738,30 +737,21 @@ async function validate_query_snvindel(ds, genome) {
 	if (q.byrange) {
 		if (typeof q.byrange.get == 'function') {
 			// ds supplied getter
-		} else if (q.byrange.gdcapi) {
-			gdc.validate_query_snvindel_byrange(ds)
-			// q.byrange.get() added
 		} else if (q.byrange.bcffile) {
-			q.byrange.bcffile = q.byrange.bcffile.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.bcffile
-				: path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
+			await setFile(q.byrange, 'snvindel.byrange', 'bcffile')
 			q.byrange._tk = { file: q.byrange.bcffile }
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
 			if (!q.byrange._tk?.samples.length) {
 				// vcf header parsing returns blank array when file has no sample
 				delete q.byrange._tk.samples
 			}
-			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else if (q.byrange.bcfMafFile) {
-			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.bcfMafFile.bcffile
-				: path.join(serverconfig.tpmasterdir, q.byrange.bcfMafFile.bcffile)
-			q.byrange.maffile = q.byrange.bcfMafFile.maffile.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.bcfMafFile.maffile
-				: path.join(serverconfig.tpmasterdir, q.byrange.bcfMafFile.maffile)
+			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'bcffile')
+			q.byrange.bcffile = q.byrange.bcfMafFile.bcffile
+			await setFile(q.byrange.bcfMafFile, 'snvindel.byrange.bcfMafFile', 'maffile')
+			q.byrange.maffile = q.byrange.bcfMafFile.maffile
 			q.byrange._tk = { file: q.byrange.bcffile, maffile: q.byrange.maffile }
 			q.byrange.get = await snvindelByRangeGetter_bcfMaf(ds, genome)
-			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else if (q.byrange.chr2bcffile) {
 			q.byrange._tk = { chr2files: {} } // to hold small tk obj from each chr
 			for (const chr in q.byrange.chr2bcffile) {
@@ -775,7 +765,6 @@ async function validate_query_snvindel(ds, genome) {
 				// vcf header parsing returns blank array when file has no sample
 				delete q.byrange._tk.samples
 			}
-			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -783,25 +772,13 @@ async function validate_query_snvindel(ds, genome) {
 	}
 
 	if (q.byisoform) {
-		if (typeof q.byisoform.get == 'function') {
-			// ds supplied getter
-		} else if (q.byisoform.gdcapi) {
-			gdc.validate_query_snvindel_byisoform(ds)
-			// q.byisoform.get() added
-		} else {
-			throw 'unknown query method for queries.snvindel.byisoform'
-		}
+		if (typeof q.byisoform.get != 'function') throw 'unknown query method for queries.snvindel.byisoform'
 	}
 
 	if (q.m2csq) {
 		if (!q.m2csq.by) throw '.by missing from queries.snvindel.m2csq'
 		if (q.m2csq.by != 'ssm_id') throw 'unknown value of queries.snvindel.m2csq.by'
-		if (q.m2csq.gdcapi) {
-			gdc.validate_m2csq(ds)
-			// added q.m2csq.get()
-		} else {
-			throw 'unknown query method for queries.snvindel.m2csq'
-		}
+		if (typeof q.m2csq.get != 'function') throw 'unknown query method for queries.snvindel.m2csq'
 	}
 
 	if (q.populations) {
@@ -848,8 +825,10 @@ q = ds.queries.snvindel
 */
 export function mayValidateBcfMafFilter(q) {
 	if (!q.mafFilter) return // no maf filter on this ds
-	const format = q.byrange?._tk?.format
-	if (!format) throw 'snvindel.mafFilter is set but byrange._tk.format is missing'
+	// bcf datasets carry FORMAT under byrange._tk.format; API-backed datasets (e.g. GDC) declare it at the
+	// query level as q.format. Either supplies the same FORMAT shape, so depth-term auto-population works for both.
+	const format = q.byrange?._tk?.format || q.format
+	if (!format) throw 'snvindel.mafFilter is set but no FORMAT (byrange._tk.format or q.format) is available'
 	if (q.mafFilter._depthTermsAdded) return // already processed (init may run more than once)
 
 	// validate that every term references real FORMAT keys, branching by mode.
@@ -904,40 +883,24 @@ export function mayValidateBcfMafFilter(q) {
 	q.mafFilter._depthTermsAdded = true
 }
 
-// this function assumes file header uses integer sample id. TODO when all files are migrated to using string sample name, delete this function
-function mayValidateSampleHeader(ds, samples, where) {
-	if (!samples) return
-	// samples[] elements: {name:str}
-	let useint
-	if (ds?.cohort?.db) {
-		// using sqlite3 db
-		// as samples are kept as integer ids in termdb, cast name into integers
-		for (const s of samples) {
-			const id = Number(s.name)
-			if (!Number.isInteger(id)) throw 'non-integer sample id from ' + where
-			s.name = id
-		}
-		useint = ', all integer IDs'
-	}
-	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label + useint)
-}
-// for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array; it replaces mayValidateSampleHeader()
+// for data files using string sample name in header line, call this function to map each sample name to integer id and return the id array
 // samples[] elements: {name:str}
 // returns new array with same length as samples[], {name:int}
-function validateSampleHeader2(ds, samples, where) {
+export function validateSampleHeader(ds, samples, where) {
 	const sampleIds = []
-	// ds?.cohort?.termdb.q.sampleName2id must be present
 	if (ds.cohort?.termdb?.q?.sampleName2id) {
 		// has id mapper and is official ds
+		const unknown = []
 		for (const s of samples) {
 			const id = ds.cohort.termdb.q.sampleName2id(s.name)
 			if (id === undefined) {
-				// samples in file must be present in id mapper
-				throw `unknown sample ${s.name} from ${where} file`
+				unknown.push(s.name)
+			} else {
+				s.name = id
+				sampleIds.push(s)
 			}
-			s.name = id
-			sampleIds.push(s)
 		}
+		if (unknown.length) throw `${unknown.length} unknown samples from ${where} file: ${unknown.join(',')}`
 		console.log(samples.length, 'samples from ' + where + ' of ' + ds.label)
 	} else {
 		// no mapper, should be custom ds from custom bcf file
@@ -947,13 +910,8 @@ function validateSampleHeader2(ds, samples, where) {
 }
 
 function validate_ssm2canonicalisoform(ds) {
-	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
-	if (ds.ssm2canonicalisoform.gdcapi) {
-		gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform, ds.getHostHeaders) // add get()
-		return
-	}
-	throw 'ssm2canonicalisoform.gdcapi is false'
+	if (typeof ds.ssm2canonicalisoform.get != 'function') throw 'ssm2canonicalisoform.get() is not supplied by the ds'
 }
 
 /* if genome allows converting refseq/ensembl
@@ -1004,6 +962,7 @@ export async function snvindelByRangeGetter_bcfMaf(ds, genome) {
 	.
 	*/
 	await utils.init_one_vcfMaf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	q._tk.samples = validateSampleHeader(ds, q._tk.samples, 'snvindel.byrange.bcfMafFile')
 	// q._tk{} is initiated
 	if (q._tk.format) {
 		for (const id in q._tk.format) {
@@ -1273,7 +1232,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	if (q._tk?.samples.length) {
 		// has samples
 		if (!q._tk.format) throw 'bcf file has samples but no FORMAT'
-		q._tk.samples = validateSampleHeader2(ds, q._tk.samples, 'snvindel.byrange') // snvindel is using string sample name
+		q._tk.samples = validateSampleHeader(ds, q._tk.samples, 'snvindel.byrange')
 	} else {
 		if (q._tk.format) throw 'bcf file has FORMAT but no samples'
 	}
@@ -1671,26 +1630,12 @@ async function validate_query_svfusion(ds, genome) {
 	if (!q) return
 	if (!q.byrange && !q.byname) throw 'both byrange and byname missing from queries.svfusion'
 	if (q.byrange) {
-		if (q.byrange.file) {
-			q.byrange.file = q.byrange.file.startsWith(serverconfig.tpmasterdir)
-				? q.byrange.file
-				: path.join(serverconfig.tpmasterdir, q.byrange.file)
-			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
-			mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
-		} else {
-			throw 'unknown query method for svfusion.byrange'
-		}
+		await setFile(q.byrange, 'svfusion.byrange')
+		q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
 	}
 	if (q.byname) {
-		if (q.byname.file) {
-			q.byname.file = q.byname.file.startsWith(serverconfig.tpmasterdir)
-				? q.byname.file
-				: path.join(serverconfig.tpmasterdir, q.byname.file)
-			q.byname.get = await svfusionByNameGetter_file(ds, genome)
-			//mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
-		} else {
-			throw 'unknown query method for svfusion.byname'
-		}
+		await setFile(q.byname, 'svfusion.byname')
+		q.byname.get = await svfusionByNameGetter_file(ds, genome)
 	}
 }
 
@@ -1699,7 +1644,7 @@ async function validate_query_cnv(ds, genome) {
 	const q = ds.queries.cnv
 	if (!q) return
 	if (q.type !== undefined) {
-		const allowed = ['log2ratio', 'segmean', 'category', 'copyNumber']
+		const allowed = ['log2ratio', 'segmean', 'category', 'copyNumber'] // FIXME export it from #shared
 		if (!allowed.includes(q.type)) throw `cnv.type must be one of ${allowed.join('/')}`
 	}
 	if (!q.densityViewCutoff) q.densityViewCutoff = 1000
@@ -1709,18 +1654,8 @@ async function validate_query_cnv(ds, genome) {
 	if (q.densityViewCutoff >= q.maxReturnCutoff) throw 'cnv.densityViewCutoff > cnv.maxReturnCutoff' // not allowed by rendering code; must be in density mode when reaching max cutoff
 
 	if (typeof q.get == 'function') return // ds-supplied
-	// add built in getter
-	if (!q.file) throw 'cnv.file missing'
-	// incase the same ds js file is included twice on this pp, the file will already become absolute path
-	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
-	q.get = await addCnvGetter(ds, genome)
-	mayValidateSampleHeader(ds, q.samples, 'cnv')
-}
-async function validate_query_itd(ds, genome) {
-	const q = ds.queries.itd
-	if (!q) return
-	if (!q.file) throw 'itd.file missing'
-	q.file = q.file.startsWith(serverconfig.tpmasterdir) ? q.file : path.join(serverconfig.tpmasterdir, q.file)
+	// add getter
+	await setFile(q, 'cnv')
 	await utils.validate_tabixfile(q.file)
 	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
 	{
@@ -1731,7 +1666,191 @@ async function validate_query_itd(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'itd')
+		q.samples = validateSampleHeader(ds, q.samples, 'cnv')
+	}
+
+	/*
+	getter param:
+	.rglst=[ { chr, start, stop} ]
+	.tid2value, same as in bcf
+	cnvMaxLength: int
+	cnvGainCutoff: float
+	cnvLossCutoff: float
+
+	getter returns:
+	list of cnv events,
+	events are partially grouped
+	represented as { dt, chr, start,stop,value,samples:[],mattr:{} }
+	*/
+	q.get = async param => {
+		if (param.hiddenmclass?.has(dtcnv)) {
+			// cnv is skipped
+			return { cnvs: [] }
+		}
+		utils.validateRglst(param, genome)
+		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
+		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
+		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
+
+		const formatFilter = getFormatFilter(param)
+
+		const limitSamples = await mayLimitSamples(param, q.samples, ds)
+		if (limitSamples?.size == 0) {
+			// got 0 sample after filtering, return blank array for no data
+			return { cnvs: [] }
+		}
+
+		const cnvs = [] // list of cnv events to be returned
+		let cnvMsg // optional server generated message (e.g. exceeding limit) to be shown on client alongside cnvs
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: (line, ps) => {
+					if (cnvs.length > ds.queries.cnv.maxReturnCutoff) {
+						/* exceeds max allowed limit. do not accept new data anymore
+						do this before parsing new cnv and inserting to array
+						*/
+						ps.kill()
+						cnvMsg = 'Maximum CNV segment limit reached. Some CNV data may be omitted.'
+						return
+						// lacks a way to message downstream
+					}
+
+					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
+
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('cnv json err')
+						return
+					}
+					if (j.dt != dtcnv) {
+						//console.log('cnv invalid dt')
+						return
+					}
+
+					j.chr = r.chr
+					j.start = start
+					j.stop = stop
+
+					/*
+
+					TODO need queries.cnv.type=cat/lr/cn
+
+						if value=number is present, it's a quantitative call, j.class will be computed dynamically
+							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
+						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss
+						*/
+					if (Number.isFinite(j.value)) {
+						// quantitative
+						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
+						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
+						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+					} else {
+						// should be qualitative, valid class is required
+						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
+					}
+
+					if (param.hiddenmclass?.has(j.class)) return
+
+					if (j.sample) {
+						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
+						if (j.sample === undefined) {
+							// skip unmapped samples here as they are already
+							// handled during validation (see validateSampleHeader)
+							return
+						}
+						if (limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
+					}
+
+					if (j.sample) {
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
+
+						const sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (formatFilter) {
+								// will do the same filtering as snvindel
+								for (const formatKey in formatFilter) {
+									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+									if (formatFilter[formatKey].has(formatValue)) {
+										// sample is dropped by format filter
+										return
+									}
+								}
+							}
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
+						}
+
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
+
+						delete j.sample
+						j.samples = [sampleObj]
+						j.occurrence = 1 // each cnv seg is hardcoded to only have 1 sample
+					} else {
+						// cnv without sample
+						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value].join(ssmIdFieldsSeparator)
+					}
+					cnvs.push(j)
+				}
+			})
+		}
+		return { cnvs, cnvMsg }
+	}
+}
+
+/*
+q: requires file key of this obj is valid string
+dtn: data type name
+fk: file key
+*/
+export async function setFile(q, dtn, fk = 'file') {
+	const f = q[fk]
+	if (typeof f != 'string') throw `${dtn}.${fk} not string`
+	if (!f) throw `${dtn}.${fk} empty string`
+	if (f.startsWith(serverconfig.tpmasterdir)) {
+		// when the same ds js file is included twice on this pp, the file will already become absolute path
+		if ((utils.illegalpath(f.replace(serverconfig.tpmasterdir + '/', '')), false, false))
+			throw `${dtn}.${fk} illegal file path`
+		q[fk] = f
+	} else {
+		if ((utils.illegalpath(f), false, false)) throw `${dtn}.${fk} illegal file path`
+		q[fk] = path.join(serverconfig.tpmasterdir, f)
+	}
+	await utils.file_is_readable(q[fk])
+	console.log('setFile:', dtn, q[fk])
+}
+
+async function validate_query_itd(ds, genome) {
+	const q = ds.queries.itd
+	if (!q) return
+	await setFile(q, 'itd')
+	await utils.validate_tabixfile(q.file)
+	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+		q.samples = validateSampleHeader(ds, q.samples, 'itd')
 	}
 	q.get = async param => {
 		if (param.hiddenmclass?.has(dtitd) || param.hiddenmclass?.has(mclassitd)) {
@@ -1746,8 +1865,7 @@ async function validate_query_itd(ds, genome) {
 		const itds = [] // list of itd events to be returned
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
+				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 				callback: (line, ps) => {
 					const l = line.split('\t')
 					const start = Number(l[1]) // must always be numbers
@@ -1767,8 +1885,8 @@ async function validate_query_itd(ds, genome) {
 					if (j.sample) {
 						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
 						if (j.sample === undefined) {
-							// skip unmapped samples here as there are already
-							// handled during validation (see validateSampleHeader2())
+							// skip unmapped samples here as they are already
+							// handled during validation (see validateSampleHeader)
 							return
 						}
 						if (limitSamples) {
@@ -1776,10 +1894,6 @@ async function validate_query_itd(ds, genome) {
 							if (!limitSamples.has(j.sample)) return
 						}
 						// has sample, prepare the sample obj
-						// if the sample is skipped by format, then the event will be skipped
-
-						// for ds with sampleidmap, j.sample value should be integer
-						// XXX not guarding against file uses non-integer sample values in such case
 
 						const sampleObj = { sample_id: j.sample }
 						j.ssm_id = [r.chr, j.start, j.stop, j.class, '', j.sample].join(ssmIdFieldsSeparator)
@@ -1798,17 +1912,16 @@ async function validate_query_itd(ds, genome) {
 		return { itds }
 	}
 }
-
 async function validate_query_ld(ds, genome) {
 	const q = ds.queries.ld
 	if (!q) return
 	if (!Array.isArray(q.tracks) || !q.tracks.length) throw 'ld.tracks[] not nonempty array'
 	for (const k of q.tracks) {
 		if (!k.name) throw 'name missing from one of ld.tracks[]'
-		if (!k.file) throw '.file missing from one of ld.tracks[]'
-		const f = path.join(serverconfig.tpmasterdir, k.file)
-		await utils.validate_tabixfile(f)
-		k.nochr = await utils.tabix_is_nochr(f, null, genome)
+		await setFile(k, 'ld.tracks[]')
+		await utils.validate_tabixfile(k.file)
+		k.nochr = await utils.tabix_is_nochr(k.file, null, genome)
+		k.file = k.file.replace(serverconfig.tpmasterdir + '/', '') // remove this when a proper ld route is added
 		k.type = 'ld' // assign hardcoded type and pass to client to use in block
 	}
 	if (!q.overlay) throw 'ld.overlay{} missing'
@@ -1820,22 +1933,17 @@ async function validate_query_ssGSEA(ds, genome) {
 	if (!q) return
 	try {
 		if (!genome.termdbs) throw 'missing genome-level geneset db'
-		if (!q.file) throw '.file missing'
-		q.file = path.join(serverconfig.tpmasterdir, q.file)
+		await setFile(q, 'ssGSEA')
 		q.samples = [] // array of sample ids
-		await utils.file_is_readable(q.file) // Validate that the HDF5 file exists
 
-		const tmp = await run_rust('readH5', JSON.stringify({ validate: true, hdf5_file: q.file }))
-
-		const vr = JSON.parse(tmp)
-		if (vr.status !== 'success') throw vr.message
-		if (!Array.isArray(vr.samples)) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) throw `unknown sample ${sn} from HDF5 ${q.file}`
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: ssGSEA HDF5 file validated. Format: ${vr.format}, Samples:`, vr.samples.length)
+		console.log(`${ds.label}: ssGSEA HDF5 file validated. Samples:`, samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate ssGSEA HDF5 file: ${error}`
 	}
@@ -1869,7 +1977,7 @@ async function validate_query_ssGSEA(ds, genome) {
 		}
 
 		const time1 = Date.now()
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
+		const tmp = await run_python('readHDF5.py', JSON.stringify({ hdf5_file: q.file, query: genesetNames }))
 		const results = JSON.parse(tmp)
 		mayLog('ssGSEA h5 file', Date.now() - time1)
 
@@ -1905,8 +2013,8 @@ async function validate_query_dnaMethylation(ds, genome) {
 		q.file = path.join(serverconfig.tpmasterdir, q.file)
 		q.samples = [] // array of sample ids
 		await utils.file_is_readable(q.file)
-		const samples = JSON.parse(await run_python('query_beta_values.py', JSON.stringify({ validate: true, h: q.file })))
-		if (!Array.isArray(samples)) throw 'query_beta_values.py did not return samples array: ' + q.file
+		const samples = await getH5samples(q.file, '/meta/samples/names')
+		if (!Array.isArray(samples)) throw new Error('samples not array')
 		if (!samples.length) throw 'No samples from hdf5 file: ' + q.file
 		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
@@ -1918,12 +2026,11 @@ async function validate_query_dnaMethylation(ds, genome) {
 			if (!q.promoter.file) throw '.promoter.file missing'
 			q.promoter.file = path.join(serverconfig.tpmasterdir, q.promoter.file)
 			await utils.file_is_readable(q.promoter.file)
-			const vr = JSON.parse(await run_rust('validateHDF5', JSON.stringify({ hdf5_file: q.promoter.file })))
-			if (vr.status !== 'success') throw vr.message
-			if (!Array.isArray(vr.sampleNames)) throw 'validateHDF5 did not return sampleNames array: ' + q.promoter.file
-			if (!vr.sampleNames.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
-			q.promoter.allSampleSet = new Set(vr.sampleNames)
-			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, vr.sampleNames.length)
+			const samples = await getH5samples(q.promoter.file, '/meta/samples/names')
+			if (!Array.isArray(samples)) throw new Error('samples not array')
+			if (!samples?.length) throw 'No samples from promoter hdf5 file: ' + q.promoter.file
+			q.promoter.allSampleSet = new Set(samples)
+			console.log(`${ds.label}: dnaMethylation promoter HDF5 file validated. Samples:`, samples.length)
 		}
 	} catch (error) {
 		throw `${ds.label}: Failed to validate dnaMethylation HDF5 file: ${error}`
@@ -2034,7 +2141,7 @@ export async function validate_query_metaboliteIntensity(ds, genome) {
 }
 
 async function validateMetaboliteIntensityNative(q, ds, genome) {
-	if (!q.file.startsWith(serverconfig.tpmasterdir)) q.file = path.join(serverconfig.tpmasterdir, q.file)
+	await setFile(q, 'metaboliteIntensity')
 	if (!q.samples) q.samples = []
 	await utils.validate_txtfile(q.file)
 	q.samples = []
@@ -2127,95 +2234,6 @@ async function validateMetaboliteIntensityNative(q, ds, genome) {
 		if (term2sample2value.size == 0)
 			throw 'no data available for the input ' + param.terms?.map(tw => tw.term.name).join(', ')
 		return { term2sample2value, byTermId, bySampleId }
-	}
-}
-
-// no longer used
-async function validate_query_probe2cnv(ds, genome) {
-	const q = ds.queries.probe2cnv
-	if (!q) return
-	if (q.file) {
-		q.file = path.join(serverconfig.tpmasterdir, q.file)
-		await utils.validate_tabixfile(q.file)
-	} else if (q.url) {
-		q.dir = await utils.cache_index(q.url, q.indexURL)
-	} else {
-		throw 'file and url both missing on probe2cnv'
-	}
-	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
-
-	{
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		// file is matrix, rows are probes, cols are samples
-		// #chr pos sample1 sample2 ...
-		const l = lines[0].split('\t')
-		if (l.length < 3) throw 'probe2cnv header line less than 3 fields'
-		// register sample columns in q.samples[]
-		q.samples = l.slice(2).map(n => {
-			return { name: ds.cohort.termdb.q.sampleName2id(n) }
-		})
-	}
-
-	/* same parameter as snvindel.byrange.get()
-	.rglst[] - retrieve probes from regions
-	.filterObj - for samples passing this filter, compute a cnv call for each, using average/median probe values of the sample
-	filter0 is not used as this will not work for gdc
-	format attributes are not used since this file does not supply format values for events (unlike cnv segment file in bed-json)
-	*/
-	q.get = async param => {
-		utils.validateRglst(param, genome)
-		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
-		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
-
-		// same length as q.samples[]; element is [] to collect probe values from this sample(column); if the sample is filtered out, element is null and won't collect value
-		const sampleCollectValues = []
-		{
-			const limitSamples = await mayLimitSamples(param, q.samples, ds) // optional set of sample integer ids
-			if (limitSamples) {
-				if (limitSamples.size == 0) return []
-				for (const [i, s] of q.samples.entries()) {
-					if (limitSamples.has(s.name)) sampleCollectValues.push([])
-					else sampleCollectValues.push(null)
-				}
-			} else {
-				for (const i of q.samples) sampleCollectValues.push([])
-			}
-		}
-
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
-				callback: line => {
-					const l = line.split('\t')
-					for (const [i, s] of sampleCollectValues.entries()) {
-						if (!s) continue // element is null and this sample is filtered out
-						const v = Number(l[i + 2])
-						if (Number.isFinite(v)) s.push(v)
-					}
-				}
-			})
-		}
-		// sampleCollectValues[] is populated; based on cutoffs, generate CNV calls for each eligible sample
-		const cnvs = []
-		for (const [i, s] of sampleCollectValues.entries()) {
-			if (!s) continue
-			// compute median probe value of each sample
-			const median = computePercentile(s, 50)
-			const cnvEvent = {
-				dt: dtcnv,
-				value: median,
-				samples: [{ sample_id: q.samples[i].name }]
-			}
-			if (median > 0 && median > (param.cnvGainCutoff || 0.1)) {
-				cnvEvent.class = mclasscnvgain
-			} else if (median < 0 && median < (param.cnvLossCutoff || -0.1)) {
-				cnvEvent.class = mclasscnvloss
-			}
-			if (cnvEvent.class) cnvs.push(cnvEvent)
-		}
-		return cnvs
 	}
 }
 
@@ -2395,10 +2413,8 @@ async function validate_query_trackLst(ds, genome) {
 	if (!q) return
 	q.facets = [] // one or more facet tables
 	try {
-		if (!q.jsonFile) throw 'jsonFile missing'
-		const f = path.join(serverconfig.tpmasterdir, q.jsonFile)
-		await utils.file_is_readable(f)
-		const json = JSON.parse(fs.readFileSync(f, { encoding: 'utf8' }))
+		await setFile(q, 'trackLst', 'jsonFile')
+		const json = JSON.parse(fs.readFileSync(q.jsonFile, { encoding: 'utf8' }))
 		if (Array.isArray(json)) {
 			for (const i of json) {
 				if (i.isfacet) {
@@ -2467,7 +2483,7 @@ events are partially grouped
 represented as { dt, chr, pos, strand, pairlstIdx, mname, samples:[] }
 object attributes (except samples) are differentiators, enough to identify events on a gene
 */
-export async function svfusionByRangeGetter_file(ds, genome) {
+async function svfusionByRangeGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byrange
 	if (q.file) {
 		await utils.validate_tabixfile(q.file)
@@ -2486,7 +2502,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		q.samples = l.slice(1).map(i => {
 			return { name: i }
 		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'svfusion.byrange') // svfusion is using string sample names
+		q.samples = validateSampleHeader(ds, q.samples, 'svfusion.byrange')
 	}
 
 	// same parameter as snvindel.byrange.get()
@@ -2668,7 +2684,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 }
 
 // this getter processes svfusion file with data that are lacking breakpoint positions, and will return events without coordinates
-export async function svfusionByNameGetter_file(ds, genome) {
+async function svfusionByNameGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byname
 	return async param => {
 		if (param.hiddenmclass?.has(dtsv) && param.hiddenmclass.has(dtfusionrna)) {
@@ -2838,177 +2854,8 @@ export async function svfusionByNameGetter_file(ds, genome) {
 	}
 }
 
-/*
-getter input:
-.rglst=[ { chr, start, stop} ]
-.tid2value, same as in bcf
-
-getter returns:
-list of cnv events,
-events are partially grouped
-represented as { dt, chr, start,stop,value,samples:[],mattr:{} }
-*/
-async function addCnvGetter(ds, genome) {
-	const q = ds.queries.cnv
-	if (q.file) {
-		await utils.validate_tabixfile(q.file)
-	} else if (q.url) {
-		q.dir = await utils.cache_index(q.url, q.indexURL)
-	} else {
-		throw 'file and url both missing on cnv{}'
-	}
-	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
-
-	{
-		const lines = await utils.get_header_tabix(q.file)
-		if (!lines[0]) throw 'header line missing from ' + q.file
-		const l = lines[0].split(' ')
-		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
-		q.samples = l.slice(1).map(i => {
-			return { name: i }
-		})
-		q.samples = validateSampleHeader2(ds, q.samples, 'cnv') // cnv is using string sample names
-	}
-
-	/* extra parameters from snvindel.get():
-	cnvMaxLength: int
-	cnvGainCutoff: float
-	cnvLossCutoff: float
-	*/
-	return async param => {
-		if (param.hiddenmclass?.has(dtcnv)) {
-			// cnv is skipped
-			return { cnvs: [] }
-		}
-		utils.validateRglst(param, genome)
-		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
-		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
-		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
-
-		const formatFilter = getFormatFilter(param)
-
-		const limitSamples = await mayLimitSamples(param, q.samples, ds)
-		if (limitSamples?.size == 0) {
-			// got 0 sample after filtering, return blank array for no data
-			return { cnvs: [] }
-		}
-
-		const cnvs = [] // list of cnv events to be returned
-		let cnvMsg // optional server generated message (e.g. exceeding limit) to be shown on client alongside cnvs
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
-				callback: (line, ps) => {
-					if (cnvs.length > ds.queries.cnv.maxReturnCutoff) {
-						/* exceeds max allowed limit. do not accept new data anymore
-						do this before parsing new cnv and inserting to array
-						*/
-						ps.kill()
-						cnvMsg = 'Maximum CNV segment limit reached. Some CNV data may be omitted.'
-						return
-						// lacks a way to message downstream
-					}
-
-					const l = line.split('\t')
-					const start = Number(l[1]) // must always be numbers
-					const stop = Number(l[2])
-					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
-
-					let j
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						//console.log('cnv json err')
-						return
-					}
-					if (j.dt != dtcnv) {
-						//console.log('cnv invalid dt')
-						return
-					}
-
-					j.chr = r.chr
-					j.start = start
-					j.stop = stop
-
-					/*
-
-					TODO need queries.cnv.type=cat/lr/cn
-
-						if value=number is present, it's a quantitative call, j.class will be computed dynamically
-							TODO distinguish segmean vs integer copy number; what class to assign when value is copy number?
-						if value is missing, it should be a qualitative call, with j.class=mclasscnvgain/mclasscnvloss 
-						*/
-					if (Number.isFinite(j.value)) {
-						// quantitative
-						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
-						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
-						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
-					} else {
-						// should be qualitative, valid class is required
-						if (j.class != mclasscnvgain && j.class != mclasscnvloss) return // no valid class
-					}
-
-					if (param.hiddenmclass?.has(j.class)) return
-
-					if (j.sample) {
-						j.sample = ds.cohort.termdb.q.sampleName2id(j.sample)
-						if (j.sample === undefined) {
-							// skip unmapped samples here as there are already
-							// handled during validation (see validateSampleHeader2())
-							return
-						}
-						if (limitSamples) {
-							// to filter sample
-							if (!limitSamples.has(j.sample)) return
-						}
-					}
-
-					if (j.sample) {
-						// has sample, prepare the sample obj
-						// if the sample is skipped by format, then the event will be skipped
-
-						// for ds with sampleidmap, j.sample value should be integer
-						// XXX not guarding against file uses non-integer sample values in such case
-
-						const sampleObj = { sample_id: j.sample }
-						if (j.mattr) {
-							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
-							if (formatFilter) {
-								// will do the same filtering as snvindel
-								for (const formatKey in formatFilter) {
-									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
-									if (formatFilter[formatKey].has(formatValue)) {
-										// sample is dropped by format filter
-										return
-									}
-								}
-							}
-							if (param.addFormatValues) {
-								// only attach format values when required
-								sampleObj.formatK2v = j.mattr
-							}
-						}
-
-						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value, j.sample].join(ssmIdFieldsSeparator)
-
-						delete j.sample
-						j.samples = [sampleObj]
-						j.occurrence = 1 // each cnv seg is hardcoded to only have 1 sample
-					} else {
-						// cnv without sample
-						j.ssm_id = [r.chr, j.start, j.stop, j.class, j.value].join(ssmIdFieldsSeparator)
-					}
-					cnvs.push(j)
-				}
-			})
-		}
-		return { cnvs, cnvMsg }
-	}
-}
-
 function mayAdd_mayGetGeneVariantData(ds, genome) {
-	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv) {
+	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv && !ds.queries.cnv && !ds.queries.itd) {
 		// no eligible data types
 		return
 	}
@@ -3116,6 +2963,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					: await getCnvByTw(ds, { term: gene, q: tw.q }, genome, q)
 				mlst.push(...cnvMlst)
 			}
+			if (ds.queries.itd && dts.includes(dtitd)) {
+				const itdMlst = await getItdByTerm(ds, gene, genome, q)
+				mlst.push(...itdMlst)
+			}
 
 			//////////////////////////////////////
 			// MUST NOT QUIT when mlst.length==0!
@@ -3216,7 +3067,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			// may filter samples here by geneVariant data
 			// necessary for gdc, which uses a different filter
 			// structure during data query that is not compatible with
-			// geneVariant data filtering (see filter2GDCfilter() in server/src/mds3.gdc.filter.js)
+			// geneVariant data filtering (see filter2GDCfilter() in ppgdc gdc/filter.js)
 			//const pass = mayFilterByGeneVariant(geneVariantFilter, mlst, ds)
 			//if (!pass) continue
 			if (groupset) {
@@ -3277,6 +3128,9 @@ function getDtsToQuery(tw, ds) {
 		if (ds.queries.geneCnv || ds.queries.cnv) {
 			dts.add(dtcnv)
 		}
+		if (ds.queries.itd) {
+			dts.add(dtitd)
+		}
 	}
 	return [...dts]
 }
@@ -3314,8 +3168,8 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 async function filterSamples4assayAvailability(q, ds) {
 	if (ds.assayAvailability?.useFilter0) {
 		/////////////////////////////
-		// if true, instructs this ds will use both filter and filter0 to get it
-		// TODO solution below uses a hardcoded gdc function and is not generalized
+		// if true, this ds uses both filter and filter0, and resolves them itself via a
+		// ds-supplied assayAvailability.getSampleSet()
 		let filterObj
 		if (q.filter) {
 			// remove geneVariant/dt terms from filter as this data will
@@ -3325,7 +3179,7 @@ async function filterSamples4assayAvailability(q, ds) {
 				? q.filter.lst.filter(item => {
 						if (item.type == 'tvslst') {
 							// item is tvslst so can pass because geneVariant tvs is not
-							// allowed in nested tvslst for gdc (see filter2GDCfilter() in mds3.gdc.filter.js)
+							// allowed in nested tvslst for gdc (see filter2GDCfilter() in ppgdc gdc/filter.js)
 							return true
 						}
 						if (!dtTermTypes.has(item.tvs?.term.type)) {
@@ -3342,16 +3196,11 @@ async function filterSamples4assayAvailability(q, ds) {
 			TRICKY!! cannot use if(!q.filter){} to decide if no pp filter.
 			client passes blank pp filter with empty array of fitler.lst[]!
 			*/
-			const [byTermId, samples] = await gdc.querySamplesTwlstNotForGeneexpclustering_noGenomicFilter(
-				{ filterObj, filter0: q.filter0, __abortSignal: q.__abortSignal },
-				[],
-				ds
-			)
-			const sampleSet = new Set()
-			for (const s of samples) {
-				sampleSet.add(s.sample_id)
-			}
-			return sampleSet
+			return await ds.assayAvailability.getSampleSet({
+				filterObj,
+				filter0: q.filter0,
+				__abortSignal: q.__abortSignal
+			})
 		}
 		// no filter. do not query and return null to use all samples
 		return null
@@ -3662,7 +3511,8 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 			filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 			sessionid: q.sessionid,
 			__abortSignal: q.__abortSignal,
-			mapParent2Children: q.mapParent2Children
+			mapParent2Children: q.mapParent2Children,
+			sampleType: q.sampleType
 		},
 		ds.mayGetGeneVariantDataParam || {}
 	)
@@ -3692,6 +3542,7 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
 		sessionid: q.sessionid
 	}
 	if (ds.queries.svfusion.byrange && ds.queries.svfusion.byname) {
@@ -3725,6 +3576,7 @@ async function getCnvByTw(ds, tw, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
 		sessionid: q.sessionid,
 		...(tw?.q?.type === 'values' && {
 			cnvMaxLength: tw?.q?.cnvMaxLength,
@@ -3739,24 +3591,11 @@ async function getCnvByTw(ds, tw, genome, q) {
 	if (!Array.isArray(re?.cnvs)) throw 're.cnvs not array'
 	return re.cnvs
 }
-async function getProbe2cnvByTw(ds, tw, genome, q) {
-	/* tw.term.type is "geneVariant"
-	tw.q{} carries optional cutoffs (max length and min value)
-	*/
-	const arg = {
-		filter0: q.filter0, // hidden filter
-		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
-		cnvGainCutoff: tw?.q?.cnvGainCutoff,
-		cnvLossCutoff: tw?.q?.cnvLossCutoff
-	}
-	await mayMapGeneName2coord(tw.term, genome)
-	arg.rglst = [tw.term]
-	return await ds.queries.probe2cnv.get(arg)
-}
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
 		filter0: q.filter0,
 		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
 		sessionid: q.sessionid,
 		__abortSignal: q.__abortSignal
 	}
@@ -3767,6 +3606,22 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 		return await ds.queries.geneCnv.bygene.get(arg)
 	}
 	throw 'unknown queries.geneCnv method'
+}
+async function getItdByTerm(ds, term, genome, q) {
+	if (!ds.queries.itd) throw 'queries.itd not defined'
+	const arg = {
+		addFormatValues: true,
+		filter0: q.filter0, // hidden filter
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType,
+		sessionid: q.sessionid
+	}
+	await mayMapGeneName2coord(term, genome)
+	// tw.term.chr/start/stop are set
+	arg.rglst = [term]
+	const result = await ds.queries.itd.get(arg)
+	return result.itds
 }
 
 function mayValidateViewModes(ds) {
@@ -3797,6 +3652,12 @@ async function mayValidateAssayAvailability(ds) {
 	if (!ds.assayAvailability) return
 
 	// has this setting. at server launch it should query assay availability status for all samples and cache it
+
+	// useFilter0 datasets resolve filter+filter0 to a sample set via a ds-supplied getSampleSet()
+	// (called in filterSamples4assayAvailability). fail fast at init if a dataset sets the flag but
+	// not the getter, rather than a request-time TypeError
+	if (ds.assayAvailability.useFilter0 && typeof ds.assayAvailability.getSampleSet != 'function')
+		throw 'ds.assayAvailability.useFilter0 is set but assayAvailability.getSampleSet() is not supplied by the dataset'
 
 	if (ds.assayAvailability.get) {
 		// ds-supplied getter
@@ -3884,13 +3745,7 @@ function validateDemoJwtInputs(ds) {
 
 function mayInitTermid2totalsize2(tdb, ds) {
 	if (!tdb.termid2totalsize2) return
-	if (typeof tdb.termid2totalsize2.get == 'function') return
-	if (tdb.termid2totalsize2.gdcapi) {
-		// validate gdcapi
-	} else {
-		// query through termdb methods
-		// since termdb.dictionary is a required attribute
-	}
+	if (typeof tdb.termid2totalsize2.get == 'function') return // ds supplied getter
 
 	/* add getter
 		input:
@@ -3905,9 +3760,20 @@ function mayInitTermid2totalsize2(tdb, ds) {
 		*/
 	tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
 		const onlyChildren = true // only get sample-level data for mds3 track
-		if (tdb.termid2totalsize2.gdcapi) {
-			return await gdc.get_termlst2size(twLst, q, combination, ds)
-		}
 		return await call_barchart_data(twLst, q, combination, ds, onlyChildren)
 	}
+}
+
+async function validate_query_rnaseqGeneCount(ds) {
+	const q = ds.queries.rnaseqGeneCount
+	if (!q) return
+	await setFile(q, 'rnaseqGeneCount')
+	const samples = await getH5samples(q.file)
+
+	q.allSampleSet = new Set(samples)
+	const unknownSamples = []
+	for (const n of q.allSampleSet) {
+		if (!ds.cohort.termdb.q.sampleName2id(n)) unknownSamples.push(n)
+	}
+	console.log(q.allSampleSet.size, `rnaseqGeneCount samples from ${ds.label}`)
 }

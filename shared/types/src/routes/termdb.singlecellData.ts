@@ -41,6 +41,7 @@ export type TermdbSingleCellDataRequest = {
 	checkPlotAvailability?: boolean
 	/** Gene name to retrieve expression data for all cells of the given sample, and to overlay on maps */
 	gene?: string
+	genes?: string[]
 	/** in each plot, what Column name to color by 
 	key: plot.name, value: column name
 	if missing, use default setting of the plot

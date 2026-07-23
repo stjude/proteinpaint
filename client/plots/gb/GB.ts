@@ -1,10 +1,13 @@
 import { PlotBase } from '../PlotBase.ts'
 import { getCompInit, type ComponentApi, type RxComponent } from '#rx'
 import { Menu, sayerror } from '#dom'
-import { getNormalRoot } from '#filter'
+import { getCombinedTermFilter, getNormalRoot, filterJoin } from '#filter'
+import { fillTermWrapper } from '#termsetting'
+import { controlsInit } from '#plots/controls.js'
 import { Model } from './model/Model.ts'
 import { View } from './view/View.ts'
 import { Interactions, mayUpdateGroupTestMethodsIdx } from './interactions/Interactions.ts'
+import { sanitizeTrackLstConfig } from './trackLst.ts'
 
 class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	static type = 'genomeBrowser'
@@ -20,6 +23,8 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 	} = {}
 	interactions: any
 	blockInstance: any
+	_prevFilterSig?: string
+	configTermKeys = ['facetTw1', 'facetTw2', 'facetTw3']
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -38,47 +43,133 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 				.style('font-size', '0.75em')
 				.text('GENOME BROWSER')
 		}
-		// layout rows from top to bottom
-		const loadingDiv = holder.append('div').style('display', 'none').style('margin-left', '25px').text('Loading...')
-		const errDiv = holder.append('div').style('display', 'none').style('margin', '10px')
-		const controlsDiv = holder.append('div').style('margin', '15px 0px 0px 25px')
+		const body = holder.append('div').style('display', 'flex').style('align-items', 'flex-start').style('gap', '12px')
+		const controlsDiv = body.append('div').style('flex', '0 0 auto')
+		const mainDiv = body
+			.append('div')
+			.style('flex', '1 1 auto')
+			.style('min-width', 0)
+			.style('margin', '15px 0px 0px 25px')
+		const errDiv = mainDiv.append('div').style('display', 'none').style('margin', '10px')
 		const dom = {
 			tip: new Menu(),
 			holder,
-			loadingDiv,
 			errDiv,
-			tabsDiv: controlsDiv.append('div'),
-			geneSearchDiv: controlsDiv.append('div').style('margin', '20px 0px'),
-			blockHolder: holder.append('div')
+			controls: controlsDiv.append('div'),
+			tabsDiv: mainDiv.append('div'),
+			geneSearchDiv: mainDiv.append('div').style('margin', '20px 0px'),
+			blockHolder: mainDiv.append('div')
 		}
 		return dom
 	}
 
 	async init() {
 		this.interactions = new Interactions(this.app, this.dom, this.id)
+		await this.setControls()
+	}
+
+	async setControls() {
+		const state = this.getState(this.app.getState())
+		if (!state.config.trackLst) return
+		this.dom.holder.attr('class', 'pp-termdb-plot-viz').style('display', 'inline-block').style('min-width', '300px')
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controls.style('display', 'inline-block'),
+				title: 'Genome Browser',
+				inputs: [
+					{
+						type: 'term',
+						configKey: 'facetTw1',
+						chartType: 'genomeBrowser',
+						usecase: { target: 'genomeBrowser', detail: 'facetTw1' },
+						title: 'Add column',
+						label: 'Add column',
+						vocabApi: this.app.vocabApi,
+						processConfig: config => {
+							if (!config.facetTw1) {
+								config.facetTw2 = null
+								config.facetTw3 = null
+							}
+						}
+					},
+					{
+						type: 'term',
+						configKey: 'facetTw2',
+						chartType: 'genomeBrowser',
+						usecase: { target: 'genomeBrowser', detail: 'facetTw2' },
+						title: 'Add column',
+						label: 'Add column',
+						vocabApi: this.app.vocabApi,
+						getDisplayStyle: plot => (getGbConfig(plot).facetTw1 ? 'table-row' : 'none'),
+						processConfig: config => {
+							if (!config.facetTw2) config.facetTw3 = null
+						}
+					},
+					{
+						type: 'term',
+						configKey: 'facetTw3',
+						chartType: 'genomeBrowser',
+						usecase: { target: 'genomeBrowser', detail: 'facetTw3' },
+						title: 'Add column',
+						label: 'Add column',
+						vocabApi: this.app.vocabApi,
+						getDisplayStyle: plot => (getGbConfig(plot).facetTw2 ? 'table-row' : 'none')
+					}
+				]
+			})
+		}
 	}
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		const parentConfig = appState.plots.find(p => p.id === this.parentId)
+		const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
 		return {
 			config,
-			filter: getNormalRoot(appState.termfilter.filter),
-			filter0: appState.termfilter.filter0,
+			filter: getNormalRoot(termfilter.filter),
+			filter0: termfilter.filter0,
 			vocab: appState.vocab
 		}
 	}
 
 	async main() {
-		this.dom.loadingDiv.style('display', 'block')
+		this.dom.holder.style('opacity', 0.5).style('pointer-events', 'none')
 		this.dom.errDiv.style('display', 'none')
 		const state = this.getState(this.app.getState())
 		if (state.config.chartType != this.type) return
 		const opts = this.getOpts()
+
+		// ---- force UI/track refresh when effective filters changed ----
+		// include:
+		// - global/local combined filter (state.filter)
+		// - filter0 mass filter
+		// - snvindel local filter (used by mds3 filterObj merge in View.generateTracks)
+		const mergedTkFilter =
+			state.filter && state.config.snvindel?.filter
+				? filterJoin([state.filter, state.config.snvindel.filter])
+				: state.filter || state.config.snvindel?.filter || null
+
+		const filterSig = JSON.stringify({
+			filter: mergedTkFilter || null,
+			filter0: state.filter0 || null
+		})
+
+		if (this._prevFilterSig && this._prevFilterSig !== filterSig && this.blockInstance) {
+			// clear stale block so View.main() launches a fresh block+tracks from latest filters
+			// this guarantees mds3 main/sub tracks re-materialize with updated filterObj/filter0
+			this.dom.blockHolder.selectAll('*').remove()
+			this.blockInstance = null
+		}
+		this._prevFilterSig = filterSig
+
 		try {
 			const model = new Model(state, this.app)
-			const data = await model.preComputeData()
-			const view = new View(state, this.blockInstance, data, this.dom, opts, this.interactions)
+			const [data, facetData] = await Promise.all([model.preComputeData(), this.getFacetData(state)])
+			this.interactions.setFacetTrackNames(getFacetTrackNames(facetData))
+			const view = new View(state, this.blockInstance, data, this.dom, opts, this.interactions, facetData)
 			await view.main()
 			this.blockInstance = view.blockInstance
 		} catch (e: any) {
@@ -86,12 +177,41 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 			sayerror(this.dom.errDiv, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
-		this.dom.loadingDiv.style('display', 'none')
+		this.dom.holder.style('opacity', 1).style('pointer-events', 'auto')
+	}
+
+	async getFacetData(state) {
+		if (!state.config.trackLst?.facets?.length) return []
+
+		const headers = await this.app.vocabApi.mayGetAuthHeaders('termdb')
+		return await Promise.all(
+			state.config.trackLst.facets.map(async facet => {
+				const body: any = {
+					genome: this.app.vocabApi.vocab.genome,
+					dslabel: this.app.vocabApi.vocab.dslabel,
+					facetname: facet.name,
+					twLst: getFacetTwLst(state.config)
+				}
+				if (state.filter?.lst?.length) body.filter = state.filter
+				const data = await this.app.vocabApi.dofetch3(
+					'termdb/facet',
+					{ headers, body },
+					this.app.vocabApi.opts.fetchOpts
+				)
+				if (data.error) throw data.error
+				return {
+					...facet,
+					tracks: data.tracks || [],
+					samples: data.samples
+				}
+			})
+		)
 	}
 
 	// get options for view instance
 	getOpts() {
 		const opts = {
+			app: this.app,
 			genome: this.app.opts.genome,
 			vocabApi: this.app.vocabApi,
 			debug: this.app.opts.debug,
@@ -101,6 +221,16 @@ class TdbGenomeBrowser extends PlotBase implements RxComponent {
 		}
 		return opts
 	}
+}
+
+function getFacetTrackNames(facets) {
+	const names = new Set<string>()
+	for (const facet of facets || []) {
+		for (const track of facet.tracks || []) {
+			if (track.name) names.add(track.name)
+		}
+	}
+	return names
 }
 
 export const genomeBrowserInit = getCompInit(TdbGenomeBrowser)
@@ -129,11 +259,13 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 		// clone for modifying
 		structuredClone({
 			snvindel: vocabApi.termdbConfig.queries.snvindel,
+			junction: vocabApi.termdbConfig.queries.junction,
 			trackLst: vocabApi.termdbConfig.queries.trackLst,
 			ld: vocabApi.termdbConfig.queries.ld
 		}),
 		override || {}
 	)
+	sanitizeTrackLstConfig(config)
 	computeBlockModeFlag(config, vocabApi)
 
 	if (config.snvindel) {
@@ -171,13 +303,45 @@ async function getDefaultConfig(vocabApi, override, activeCohort) {
 				config.snvindel.shown = true
 			}
 		}
+	} else if (vocabApi.termdbConfig.queries.svfusion) {
+		/* dataset has svfusion but no snvindel query;
+		set up config.svfusion so generateTracks() creates the mds3 lollipop tk to show fusion/sv events.
+		(without this, the GB plot only generates the mds3 tk from config.snvindel) */
+		config.svfusion = Object.assign(structuredClone(vocabApi.termdbConfig.queries.svfusion), config.svfusion || {})
+		if (typeof config.svfusion.shown != 'boolean') config.svfusion.shown = true
 	}
+
+	if (config.junction && typeof config.junction.shown != 'boolean') config.junction.shown = true
 
 	if (config.trackLst) {
 		if (!config.trackLst.facets) throw 'trackLst.facets[] missing'
 		if (!config.trackLst.activeTracks) config.trackLst.activeTracks = []
+		const facetTwLst = [config.facetTw1, config.facetTw2, config.facetTw3].some(Boolean)
+			? [config.facetTw1, config.facetTw2, config.facetTw3]
+			: config.trackLst.facetTwLst || []
+		for (const [i, tw] of facetTwLst.slice(0, 3).entries()) {
+			if (!tw) continue
+			const key = `facetTw${i + 1}`
+			config[key] = await fillTermWrapper(tw, vocabApi)
+		}
+		delete config.trackLst.facetTwLst
+		config.settings = config.settings || {}
+		config.settings.controls = config.settings.controls || {}
 	}
 	return config
+}
+
+function getGbConfig(plotOrState) {
+	return plotOrState?.config || plotOrState || {}
+}
+
+export function getFacetTwLst(config) {
+	const facetTwLst: any[] = []
+	for (const tw of [config.facetTw1, config.facetTw2, config.facetTw3]) {
+		if (!tw) break
+		facetTwLst.push(tw)
+	}
+	return facetTwLst
 }
 
 export function computeBlockModeFlag(config, vocabApi?) {

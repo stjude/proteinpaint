@@ -2,6 +2,10 @@
 
 set -e
 
+# This hook uses the eslintrc-only --env option. Do not inherit flat config
+# from an eslint.config.js in a parent directory.
+export ESLINT_USE_FLAT_CONFIG=false
+
 FILES=$(git diff-tree --no-commit-id --name-only --diff-filter=ACM -r origin/master..HEAD)
 echo "number of files to be checked=$(echo "$FILES" | wc -w)"
 # doing this per GDC requirements
@@ -9,9 +13,10 @@ pre-commit run --files $FILES
 # run linter on ts files
 echo "linting ..."
 # echo "$FILES" | grep "\.ts" | xargs npx eslint
-echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs npx eslint --env shared-node-browser
-echo "$FILES" | grep "client\/" | grep "\.ts" | xargs npx eslint --env browser
-echo "$FILES" | grep "front\/" | grep "\.ts" | xargs npx eslint --env browser
-echo "$FILES" | grep "rust\/" | grep "\.ts" | xargs npx eslint --env node
-echo "$FILES" | grep "server\/" | grep "\.ts" | xargs npx eslint --env node
+echo "$FILES" | grep "shared\/" | grep "\.ts" | xargs env LINT_ENV=shared npx eslint
+echo "$FILES" | grep "client\/" | grep "\.ts" | xargs env LINT_ENV=browser npx eslint
+echo "$FILES" | grep "front\/" | grep "\.ts" | xargs env LINT_ENV=browser npx eslint
+echo "$FILES" | grep "rust\/" | grep "\.ts" | xargs npx eslint
+echo "$FILES" | grep "server\/" | grep "\.ts" | xargs npx eslint
+echo "$FILES" | grep "/R\/" | grep "\.ts" | xargs npx eslint
 exit 0

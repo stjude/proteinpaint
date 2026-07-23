@@ -174,7 +174,7 @@ export function getSsgseaTw(isBin = false) {
 	}
 }
 
-export function getFilter_agedx() {
+export function getFilter_agedx(start = 10) {
 	return {
 		type: 'tvslst',
 		in: true,
@@ -187,10 +187,10 @@ export function getFilter_agedx() {
 				lst: [
 					{
 						tvs: {
-							term: { id: 'agedx' },
+							term: { id: 'agedx', type: 'float', name: 'Age of diagnosis' },
 							ranges: [
 								{
-									start: 10,
+									start,
 									startinclusive: false,
 									startunbounded: false,
 									stop: 16,
@@ -198,6 +198,52 @@ export function getFilter_agedx() {
 									stopunbounded: false
 								}
 							]
+						},
+						type: 'tvs'
+					}
+				]
+			}
+		]
+	}
+}
+export function getFilter_male() {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'filterUiRoot',
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						tvs: {
+							term: { id: 'sex' },
+							values: [{ key: '1', label: 'Male' }]
+						},
+						type: 'tvs'
+					}
+				]
+			}
+		]
+	}
+}
+export function getFilter_Hodgkin() {
+	return {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: [
+			{
+				tag: 'filterUiRoot',
+				type: 'tvslst',
+				join: '',
+				lst: [
+					{
+						tvs: {
+							term: { id: 'diaggrp', type: 'categorical', name: 'diaggrp' },
+							values: [{ key: 'Hodgkin lymphoma', name: 'Hodgkin' }]
 						},
 						type: 'tvs'
 					}
@@ -642,6 +688,41 @@ export function getScctTw() {
 			groupsetting: {
 				disabled: false
 			}
+		}
+	}
+}
+/** TODO: Pseudobulk data is not enabled in TermdbTest!!
+ * Do not use until data is available. Capturing structure for
+ * clarity during development. */
+export function getPseudobulkTW(nameId = 'Blast') {
+	return {
+		term: {
+			type: tt.PSEUDOBULK,
+			assay: 'geneExpression',
+			memberId: 'CellType',
+			name: nameId,
+			id: nameId
+		}
+	}
+}
+export function getPseudobulkTermCollection(termIds = ['Blast', 'Monocyte', 'T_NK']) {
+	const termlst = termIds.map(id => getPseudobulkTW(id).term)
+
+	return {
+		type: 'TermCollectionTWCont',
+		term: {
+			type: tt.TERM_COLLECTION,
+			memberType: 'numeric',
+			id: 'test',
+			name: 'Test pseudobulk term collection',
+			termIds,
+			termlst,
+			isCustom: true
+		},
+		q: {
+			mode: 'continuous',
+			type: 'values',
+			lst: []
 		}
 	}
 }

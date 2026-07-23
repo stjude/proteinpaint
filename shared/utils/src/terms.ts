@@ -16,6 +16,7 @@ import {
 	DNA_METHYLATION,
 	CATEGORICAL,
 	INTEGER,
+	JUNCTION,
 	FLOAT,
 	SNP,
 	SNP_LIST,
@@ -25,6 +26,7 @@ import {
 	SAMPLELST,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
+	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
@@ -42,6 +44,7 @@ export {
 	DNA_METHYLATION,
 	CATEGORICAL,
 	INTEGER,
+	JUNCTION,
 	FLOAT,
 	SNP,
 	SNP_LIST,
@@ -51,6 +54,7 @@ export {
 	SAMPLELST,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
+	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
@@ -84,8 +88,6 @@ for (const dtTermType of dtTermTypes) {
 	TermTypes[dtTermType.toUpperCase()] = dtTermType
 }
 
-export const NUMERIC_DICTIONARY_TERM = 'numericDictTerm'
-
 export const TermTypes2Dt = {
 	[GENE_EXPRESSION]: dtgeneexpression,
 	[SSGSEA]: dtssgsea,
@@ -110,10 +112,12 @@ export const typeGroup = {
 	[SNP_LOCUS]: TermTypeGroups.SNP_LOCUS,
 	[GENE_EXPRESSION]: TermTypeGroups.GENE_EXPRESSION,
 	[ISOFORM_EXPRESSION]: TermTypeGroups.ISOFORM_EXPRESSION,
+	[JUNCTION]: TermTypeGroups.SPLICE_JUNCTION,
 	[SSGSEA]: TermTypeGroups.SSGSEA,
 	[DNA_METHYLATION]: TermTypeGroups.DNA_METHYLATION,
 	[METABOLITE_INTENSITY]: TermTypeGroups.METABOLITE_INTENSITY,
 	[PROTEOME_ABUNDANCE]: TermTypeGroups.PROTEOME_ABUNDANCE,
+	[PSEUDOBULK]: TermTypeGroups.PSEUDOBULK,
 	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
 	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
@@ -125,11 +129,13 @@ const nonDictTypes = new Set([
 	SNP_LOCUS,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
+	JUNCTION,
 	SSGSEA,
 	DNA_METHYLATION,
 	GENE_VARIANT,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
+	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION
 ])
@@ -143,12 +149,14 @@ export const numericTypes = new Set([
 	FLOAT,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
+	JUNCTION,
 	SSGSEA,
 	DNA_METHYLATION,
 	METABOLITE_INTENSITY,
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
-	DATE
+	DATE,
+	PSEUDOBULK
 ])
 
 // dictionary numeric term types, exists in db tables, exclude non-dictionary term types
@@ -156,7 +164,7 @@ export const dictionaryNumericTypes = new Set([INTEGER, FLOAT, DATE])
 
 const categoricalTypes = new Set([CATEGORICAL, SNP])
 
-const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION])
+const singleCellTerms = new Set([SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION /*PSEUDOBULK*/])
 
 export function isSingleCellTerm(term: any) {
 	if (!term) return false
@@ -197,6 +205,8 @@ export function equals(t1: any, t2: any) {
 			return t1.gene == t2.gene
 		case ISOFORM_EXPRESSION:
 			return t1.isoform == t2.isoform
+		case JUNCTION:
+			return t1.chr == t2.chr && t1.start == t2.start && t1.stop == t2.stop && t1.strand == t2.strand
 		case SSGSEA:
 			return t1.id == t2.id
 		case DNA_METHYLATION:
@@ -291,6 +301,7 @@ const typeMap: { [key: string]: string } = {
 	condition: 'Condition',
 	float: 'Numerical',
 	integer: 'Numerical',
+	date: 'Date',
 	geneExpression: 'Gene Expression',
 	isoformExpression: 'Isoform Expression',
 	ssGSEA: 'Geneset Expression',
@@ -305,12 +316,13 @@ const typeMap: { [key: string]: string } = {
 	snplocus: 'SNP Locus',
 	snp: 'SNP',
 	snplst: 'SNP List',
-	numericDictTerm: 'Numeric Dictionary Term',
 	termCollection: 'Term Collection'
 }
 
 export function termType2label(type: string) {
-	return typeMap[type] || 'Unknown term type'
+	const s = typeMap[type]
+	if (s) return s
+	throw new Error('termType2label(): unknown value')
 }
 
 export function getDateFromNumber(value: number) {

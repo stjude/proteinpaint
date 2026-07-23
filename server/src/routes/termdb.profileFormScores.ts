@@ -91,14 +91,14 @@ function getPercentsDict(getDictFunc, samples): { [key: string]: number } {
 	return percentageDict
 }
 
-function getSCPercentsDict(tw, samples): { [key: string]: number } {
+export function getSCPercentsDict(tw, samples): { [key: string]: number } {
 	if (!tw) throw 'tw not defined'
 	//not specified when called
 	//if defined in the settings a site is provided and the user can decide what to see, otherwise it is admin view and if the site was set sampleData is not null
 	const percentageDict = {}
 	for (const sample of samples) {
-		const twData = sample[tw.$id]
-		const key = twData?.value
+		const key = sample[tw.$id]?.value
+		if (key == null) continue // skip missing values to avoid an "undefined" bucket
 		if (!percentageDict[key]) percentageDict[key] = 0
 		percentageDict[key] += 1
 	}

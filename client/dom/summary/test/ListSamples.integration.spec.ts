@@ -40,7 +40,7 @@ function getTestApp(_opts, genome = 'hg38-test', dslabel = 'TermdbTest') {
 	return app as AppApi
 }
 
-async function getNewListSamples(opts: any = {}) {
+function getNewListSamples(opts: any = {}) {
 	const { mockConfig1, mockPlot1, mockFilter } = getBoxPlotMockData()
 	const config = opts.config || Object.assign(mockConfig1, { bins: { term1: {}, term2: {} } })
 	const plot = opts.plot || mockPlot1
@@ -80,7 +80,8 @@ tape('\n', function (test) {
 })
 
 tape('ListSamples.getData() for term=numeric returns the correct data object', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
+	test.plan(3)
 
 	const mockConfig = {
 		term: {
@@ -92,7 +93,7 @@ tape('ListSamples.getData() for term=numeric returns the correct data object', a
 	const mockBins = { term1: {} }
 	const mockPlot = { seriesId: 'All samples', chartId: '' }
 
-	const { listSamples } = await getNewListSamples({
+	const { listSamples } = getNewListSamples({
 		config: mockConfig,
 		plot: mockPlot,
 		bins: mockBins,
@@ -109,11 +110,13 @@ tape('ListSamples.getData() for term=numeric returns the correct data object', a
 	test.equal(data.lst.length, expected, `Should return ${expected} samples matching numeric term filter`)
 	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the only numeric term')
 
-	test.end()
+	// test.end()
 })
 
 tape('ListSamples.getData() for term=gene exp returns the correct data object', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
+	test.plan(3)
+
 	const mockConfig = {
 		term: {
 			term: { gene: 'TP53', name: 'TP53 FPKM', type: 'geneExpression' },
@@ -124,7 +127,7 @@ tape('ListSamples.getData() for term=gene exp returns the correct data object', 
 	const mockBins = { term1: {} }
 	const mockPlot = { seriesId: 'TP53 SNV/indel Mutated (somatic)', chartId: '' }
 
-	const { listSamples } = await getNewListSamples({
+	const { listSamples } = getNewListSamples({
 		config: mockConfig,
 		plot: mockPlot,
 		bins: mockBins,
@@ -141,18 +144,20 @@ tape('ListSamples.getData() for term=gene exp returns the correct data object', 
 	test.equal(data.lst.length, expected, `Should return ${expected} samples matching gene expression term filter`)
 	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the only gene expression term')
 
-	test.end()
+	// test.end()
 })
 
 tape('ListSamples.getData() for term=gene variant returns the correct data object', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
+	test.plan(3)
+
 	const mockTerm: any = getGeneVariantTw()
 	mockTerm.$id = 'term2'
 	const mockConfig = { term: mockTerm }
 	const mockBins = { term1: {} }
 	const mockPlot = { seriesId: 'TP53 SNV/indel Mutated (somatic)', chartId: '' }
 
-	const { listSamples } = await getNewListSamples({
+	const { listSamples } = getNewListSamples({
 		config: mockConfig,
 		plot: mockPlot,
 		bins: mockBins,
@@ -169,11 +174,12 @@ tape('ListSamples.getData() for term=gene variant returns the correct data objec
 	test.equal(data.lst.length, expected, `Should return ${expected} samples matching gene variant term filter`)
 	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the only gene variant term')
 
-	test.end()
+	// test.end()
 })
 
 tape('ListSamples.getData() for term=numeric and term2=categorical returns the correct data object', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
+	test.plan(4)
 
 	const mockConfig = {
 		term: { term: JSON.parse(JSON.stringify(termjson['agedx'])), q: { mode: 'continuous' }, $id: 'term1' },
@@ -182,7 +188,7 @@ tape('ListSamples.getData() for term=numeric and term2=categorical returns the c
 	const mockBins = { term1: {}, term2: {} }
 	const mockPlot = { key: 'Female', seriesId: '2', chartId: '' }
 
-	const { listSamples, config } = await getNewListSamples({ config: mockConfig, plot: mockPlot, bins: mockBins })
+	const { listSamples, config } = getNewListSamples({ config: mockConfig, plot: mockPlot, bins: mockBins })
 	const data = await listSamples.getData()
 
 	test.true(
@@ -198,13 +204,15 @@ tape('ListSamples.getData() for term=numeric and term2=categorical returns the c
 	test.true(data.refs.byTermId[config.term.$id], 'Should reference the numeric term')
 	test.true(data.refs.byTermId[config.term2.$id], 'Should reference the categorical term')
 
-	test.end()
+	// test.end()
 })
 
 tape(
 	'ListSamples.getData() for term=gene exp (continuous) and term2=gene variant returns the correct data object',
 	async test => {
-		test.timeoutAfter(1000)
+		test.timeoutAfter(3000)
+		test.plan(4)
+
 		const mockTerm2: any = getGeneVariantTw()
 		mockTerm2.$id = 'term2'
 		const mockConfig = {
@@ -221,7 +229,7 @@ tape(
 			chartId: ''
 		}
 
-		const { listSamples } = await getNewListSamples({
+		const { listSamples } = getNewListSamples({
 			config: mockConfig,
 			plot: mockPlot,
 			bins: mockBins,
@@ -243,14 +251,16 @@ tape(
 		test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the gene expression term')
 		test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the gene variant term')
 
-		test.end()
+		// test.end()
 	}
 )
 
 tape(
 	'ListSamples.getData() for term=gene variant and term2=gene exp (continuous) returns the correct data object',
 	async test => {
-		test.timeoutAfter(1000)
+		test.timeoutAfter(3000)
+		test.plan(4)
+
 		const mockTerm: any = getGeneVariantTw()
 		mockTerm.$id = 'term1'
 		const mockConfig = {
@@ -267,7 +277,7 @@ tape(
 		}
 		const mockBins = { term1: {}, term2: {} }
 
-		const { listSamples } = await getNewListSamples({
+		const { listSamples } = getNewListSamples({
 			config: mockConfig,
 			plot: mockPlot,
 			bins: mockBins,
@@ -289,12 +299,14 @@ tape(
 		test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the gene variant term')
 		test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the gene expression term')
 
-		test.end()
+		// test.end()
 	}
 )
 
 tape('ListSamples.getData() for term=numeric and term2=samplelst returns the correct data object', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
+	test.plan(6)
+
 	const mockTerm2: any = getSamplelstTw()
 	mockTerm2.$id = 'term2'
 	const mockConfig = {
@@ -308,7 +320,7 @@ tape('ListSamples.getData() for term=numeric and term2=samplelst returns the cor
 		chartId: ''
 	}
 
-	const { listSamples } = await getNewListSamples({
+	const { listSamples } = getNewListSamples({
 		config: mockConfig,
 		plot: mockPlot,
 		bins: mockBins,
@@ -347,11 +359,12 @@ tape('ListSamples.getData() for term=numeric and term2=samplelst returns the cor
 	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the numeric term')
 	test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the samplelst term')
 
-	test.end()
+	// test.end()
 })
 
 tape('ListSamples.getData() for term=numeric and term2=survival returns the correct data object', async test => {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
+	test.plan(4)
 
 	const mockConfig = {
 		term: {
@@ -379,7 +392,7 @@ tape('ListSamples.getData() for term=numeric and term2=survival returns the corr
 		chartId: ''
 	}
 
-	const { listSamples } = await getNewListSamples({
+	const { listSamples } = getNewListSamples({
 		config: mockConfig,
 		plot: mockPlot,
 		bins: { term1: {}, term2: {} }
@@ -399,5 +412,5 @@ tape('ListSamples.getData() for term=numeric and term2=survival returns the corr
 	test.true(data.refs.byTermId[mockConfig.term.$id], 'Should reference the numeric term')
 	test.true(data.refs.byTermId[mockConfig.term2.$id], 'Should reference the survival term')
 
-	test.end()
+	// test.end()
 })

@@ -1,6 +1,6 @@
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import { TermTypes } from '#shared/terms.js'
 import { generate_group_name_from_tvslst } from './utils.ts'
 /*
@@ -167,7 +167,9 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		if (HierTerms.length < 3) {
 			throw 'Hierarchical clustering plot requires at least three terms, but it is empty in the input.'
 		} else if (HierTerms.length >= 3 && HierTerms[0].isDictionary) {
-			plotState.plot.dataType = 'numericDictTerm'
+			// numeric dictionary terms cluster as their underlying type (e.g., float), not a
+			// synthetic type. Fall back to 'float' when the term type isn't carried on the input
+			plotState.plot.dataType = HierTerms[0].type || 'float'
 		} else if (HierTerms.length >= 3 && HierTerms[0].type === TermTypes.SSGSEA) {
 			plotState.plot.dataType = TermTypes.SSGSEA
 		}
@@ -177,17 +179,24 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		let HierTermCount = 0
 		for (const HierTerm of HierTerms) {
 			// Check if the term types for hierarchical clustering are consistent across all terms.
+			// Dictionary numeric types (float/integer/date) may be mixed in one
+			// group, other types cannot be mixed.
 			if (HierTermCount > 0) {
-				const currentTermType = HierTerm.isDictionary ? 'numericDictTerm' : HierTerm.type
-				if (checkFirstTermType && currentTermType !== checkFirstTermType) {
+				const currentTermType = HierTerm.isDictionary ? HierTerm.type || 'float' : HierTerm.type
+				const bothDictNumeric =
+					checkFirstTermType &&
+					dictionaryNumericTypes.has(checkFirstTermType) &&
+					dictionaryNumericTypes.has(currentTermType)
+				if (checkFirstTermType && currentTermType !== checkFirstTermType && !bothDictNumeric) {
 					throw 'Inconsistent term types in HierTerms: ' + checkFirstTermType + ' vs ' + currentTermType
 				}
 			}
 			if (HierTerm.isDictionary) {
+				const dictType = HierTerm.type || 'float'
 				if (HierTermCount === 0) {
-					checkFirstTermType = 'numericDictTerm'
+					checkFirstTermType = dictType
 				}
-				const tm = { id: HierTerm.id, name: HierTerm.id, type: 'float' }
+				const tm = { id: HierTerm.id, name: HierTerm.id, type: dictType }
 				const term = { id: HierTerm.id, term: tm, q: { mode: 'continuous' } }
 				terms.push(term)
 			} else {

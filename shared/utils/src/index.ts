@@ -1,5 +1,6 @@
 // IMPORTANT: import .js extension, even though the actual code files are .ts
 // please list in alphanumeric order for readability
+export * from './boxplot.js'
 export * from './bulk.js'
 export * from './clustering.js'
 export * from './common.js'
@@ -7,6 +8,7 @@ export * from './compute.percentile.js'
 export * from './fetch-helpers.js'
 export * from './fileSize.js'
 export * from './filter.js'
+export * from './flattenCase.js'
 export * from './hash.js'
 export * from './helpers.js'
 export * from './joinUrl.js'

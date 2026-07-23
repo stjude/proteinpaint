@@ -2,16 +2,24 @@ import tape from 'tape'
 import {
 	filterAndConvertSnvIndel,
 	filterAndConvertCnv,
-	filterAndConvertFusion,
-	filterAndConvertSV,
+	breakpointsToLesions,
+	itdToLesion,
 	processSampleMlst,
 	buildLesionTypeMap,
-	getCnvLesionType,
-	grin2KeyInputs,
-	normalizeExcludeOptions,
-	resolveExcludeBeds
-} from '../main.ts'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, mclasscnvgain, mclasscnvloss } from '#shared'
+	getCnvLesionType
+} from '../lesions.ts'
+import { grin2KeyInputs, normalizeExcludeOptions, resolveExcludeBeds } from '../main.ts'
+import {
+	dtsnvindel,
+	dtcnv,
+	dtfusionrna,
+	dtsv,
+	dtitd,
+	mclasscnvgain,
+	mclasscnvloss,
+	mclasscnvAmp,
+	mclasscnvHomozygousDel
+} from '#shared'
 import type { GRIN2Request } from '#types'
 
 /* test sections
@@ -21,9 +29,11 @@ filterAndConvertCnv: log2ratio / segmean (baseline 0)
 filterAndConvertCnv: copyNumber (baseline 2, absolute thresholds)
 filterAndConvertCnv: category (qualitative class, thresholds ignored)
 filterAndConvertCnv: maxSegLength + shared guards
-filterAndConvertFusion
-filterAndConvertSV
+breakpointsToLesions: fusion
+breakpointsToLesions: sv
+itdToLesion
 processSampleMlst: routing, breakpoint expansion, cnvType threading
+processSampleMlst: itd routing + gating
 buildLesionTypeMap
 getCnvLesionType
 grin2KeyInputs + normalizeExcludeOptions
@@ -60,10 +70,10 @@ tape('filterAndConvertSnvIndel', test => {
 		null,
 		'class not in selected consequences => null'
 	)
-	test.deepEqual(
+	test.equal(
 		filterAndConvertSnvIndel(sample, m, { consequences: [] }),
-		[sample, 'chr17', m.pos, m.pos, 'mutation'],
-		'empty consequences list => include all'
+		null,
+		'empty consequences list => include none (mirrors cnvCategories)'
 	)
 	test.equal(
 		filterAndConvertSnvIndel(sample, { chr: 'chr17', pos: 1.5, class: 'M' }, { consequences: [] }),
@@ -135,6 +145,72 @@ tape('filterAndConvertCnv: category (qualitative class, thresholds ignored)', te
 		filterAndConvertCnv(sample, { ...SEG, class: 'SomethingElse' }, categoryOpts, 'category'),
 		null,
 		'category: unrecognized class => null'
+	)
+	test.end()
+})
+
+tape('processSampleMlst: GDC batched categorical cnv records route to gain/loss', test => {
+	// Records shaped exactly as the GDC batchGet (fetchCnvForCases in gdc.hg38.ts) emits: a lean segment
+	// carrying valueType:'category' and the finer 5-category class. Gain/Amplification => gain lesion,
+	// Loss/Homozygous Deletion => loss lesion. GDC's ds cnvType default resolves to log2ratio, so this also
+	// locks that the per-entry valueType wins over that numeric default with no thresholds sent.
+	const gdcMlst = [
+		{ dt: dtcnv, class: mclasscnvgain, valueType: 'category', ...SEG }, // Gain
+		{ dt: dtcnv, class: mclasscnvAmp, valueType: 'category', ...SEG }, // Amplification
+		{ dt: dtcnv, class: mclasscnvloss, valueType: 'category', ...SEG }, // Loss
+		{ dt: dtcnv, class: mclasscnvHomozygousDel, valueType: 'category', ...SEG } // Homozygous Deletion
+	]
+	const gdcRequest = { cnvOptions: { maxSegLength: 0 } } as unknown as GRIN2Request
+	const gdc = processSampleMlst(sample, gdcMlst, gdcRequest, 'log2ratio')
+	test.deepEqual(
+		gdc.sampleLesions.map(l => l[4]),
+		['gain', 'gain', 'loss', 'loss'],
+		'gain/amplification => gain lesion; loss/homozygous deletion => loss lesion (regardless of log2ratio default)'
+	)
+	test.deepEqual([...gdc.contributedTypes], [dtcnv], 'only cnv contributed')
+	test.end()
+})
+
+tape('filterAndConvertCnv: category cnvCategories filter (UI checkboxes)', test => {
+	const catOpts = (cats?: string[]) => ({ maxSegLength: 0, cnvCategories: cats })
+	// class listed in cnvCategories => included
+	test.deepEqual(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'category', class: mclasscnvAmp },
+			catOpts([mclasscnvAmp]),
+			'category'
+		),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'gain'],
+		'class in cnvCategories => amplification included as gain'
+	)
+	// class not listed => dropped
+	test.equal(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'category', class: mclasscnvloss },
+			catOpts([mclasscnvAmp]),
+			'category'
+		),
+		null,
+		'class not in cnvCategories => null'
+	)
+	// empty list => nothing included
+	test.equal(
+		filterAndConvertCnv(sample, { ...SEG, valueType: 'category', class: mclasscnvgain }, catOpts([]), 'category'),
+		null,
+		'empty cnvCategories => null'
+	)
+	// omitted list => all classes included (backward compatible)
+	test.deepEqual(
+		filterAndConvertCnv(
+			sample,
+			{ ...SEG, valueType: 'category', class: mclasscnvHomozygousDel },
+			catOpts(undefined),
+			'category'
+		),
+		[sample, SEG.chr, SEG.start, SEG.stop, 'loss'],
+		'undefined cnvCategories => homozygous deletion included as loss'
 	)
 	test.end()
 })
@@ -229,42 +305,68 @@ tape('filterAndConvertCnv: maxSegLength + shared guards', test => {
 	test.end()
 })
 
-tape('filterAndConvertFusion', test => {
-	// single breakpoint (only chrA)
+tape('breakpointsToLesions: fusion', test => {
+	// single breakpoint (only chrA) => one lesion
 	test.deepEqual(
-		filterAndConvertFusion(sample, { chrA: 'chr12', posA: 25225245 }, {}),
-		[sample, 'chr12', 25225245, 25225245, 'fusion'],
+		breakpointsToLesions(sample, { chrA: 'chr12', posA: 25225245 }, dtfusionrna),
+		[[sample, 'chr12', 25225245, 25225245, 'fusion']],
 		'single breakpoint => one fusion lesion'
 	)
 	// two breakpoints (chrA + chrB) => two lesions
 	test.deepEqual(
-		filterAndConvertFusion(sample, { chrA: 'chr12', posA: 25225245, chrB: 'chr14', posB: 104779948 }, {}),
+		breakpointsToLesions(sample, { chrA: 'chr12', posA: 25225245, chrB: 'chr14', posB: 104779948 }, dtfusionrna),
 		[
 			[sample, 'chr12', 25225245, 25225245, 'fusion'],
 			[sample, 'chr14', 104779948, 104779948, 'fusion']
 		],
 		'two breakpoints => two fusion lesions'
 	)
-	test.equal(filterAndConvertFusion(sample, { posA: 1 }, {}), null, 'missing chrA => null')
-	test.equal(filterAndConvertFusion(sample, { chrA: 'chr1' }, {}), null, 'missing posA => null')
+	test.deepEqual(breakpointsToLesions(sample, { posA: 1 }, dtfusionrna), [], 'missing chrA => []')
+	test.deepEqual(breakpointsToLesions(sample, { chrA: 'chr1' }, dtfusionrna), [], 'missing posA => []')
 	test.end()
 })
 
-tape('filterAndConvertSV', test => {
+tape('breakpointsToLesions: sv', test => {
 	test.deepEqual(
-		filterAndConvertSV(sample, { chrA: 'chr9', posA: 100 }, {}),
-		[sample, 'chr9', 100, 100, 'sv'],
+		breakpointsToLesions(sample, { chrA: 'chr9', posA: 100 }, dtsv),
+		[[sample, 'chr9', 100, 100, 'sv']],
 		'single breakpoint => one sv lesion'
 	)
 	test.deepEqual(
-		filterAndConvertSV(sample, { chrA: 'chr9', posA: 100, chrB: 'chr22', posB: 200 }, {}),
+		breakpointsToLesions(sample, { chrA: 'chr9', posA: 100, chrB: 'chr22', posB: 200 }, dtsv),
 		[
 			[sample, 'chr9', 100, 100, 'sv'],
 			[sample, 'chr22', 200, 200, 'sv']
 		],
 		'two breakpoints => two sv lesions'
 	)
-	test.equal(filterAndConvertSV(sample, { posA: 1 }, {}), null, 'missing chrA => null')
+	test.deepEqual(breakpointsToLesions(sample, { posA: 1 }, dtsv), [], 'missing chrA => []')
+	test.end()
+})
+
+tape('itdToLesion', test => {
+	// itd is a region event (chr:start-stop) => one lesion, like a cnv segment
+	test.deepEqual(
+		itdToLesion(sample, { chr: 'chr13', start: 28033900, stop: 28034100 }),
+		[sample, 'chr13', 28033900, 28034100, 'itd'],
+		'region => one itd lesion'
+	)
+	test.equal(itdToLesion(sample, { chr: 'chr13', start: 1.5, stop: 100 }), null, 'non-integer start => null')
+	test.equal(itdToLesion(sample, { chr: 'chr13', start: 100 }), null, 'missing stop => null')
+	test.end()
+})
+
+tape('processSampleMlst: itd routing + gating', test => {
+	const mlst = [{ dt: dtitd, chr: 'chr13', start: 28033900, stop: 28034100 }]
+
+	// itdOptions present => the itd entry becomes one lesion
+	const on = processSampleMlst(sample, mlst, { itdOptions: {} } as unknown as GRIN2Request, 'log2ratio')
+	test.deepEqual(on.sampleLesions, [[sample, 'chr13', 28033900, 28034100, 'itd']], 'itdOptions set => one itd lesion')
+	test.deepEqual([...on.contributedTypes], [dtitd], 'contributedTypes includes dtitd')
+
+	// itdOptions absent => the itd entry is skipped
+	const off = processSampleMlst(sample, mlst, {} as unknown as GRIN2Request, 'log2ratio')
+	test.equal(off.sampleLesions.length, 0, 'itdOptions absent => no lesions')
 	test.end()
 })
 
@@ -277,7 +379,7 @@ tape('processSampleMlst: routing, breakpoint expansion, cnvType threading', test
 		{ dt: 999, chr: 'chrX', pos: 1 } // unknown dt is ignored
 	]
 	const request = {
-		snvindelOptions: { consequences: [] },
+		snvindelOptions: { consequences: ['M'] }, // include the MISSENSE snv in mlst
 		cnvOptions: copyNumberOpts,
 		fusionOptions: {},
 		svOptions: {}
@@ -300,7 +402,7 @@ tape('processSampleMlst: routing, breakpoint expansion, cnvType threading', test
 	const snvOnly = processSampleMlst(
 		sample,
 		mlst,
-		{ snvindelOptions: { consequences: [] } } as unknown as GRIN2Request,
+		{ snvindelOptions: { consequences: ['M'] } } as unknown as GRIN2Request,
 		'log2ratio'
 	)
 	test.deepEqual([...snvOnly.contributedTypes], [dtsnvindel], 'absent option groups are skipped')
@@ -327,6 +429,53 @@ tape('processSampleMlst: routing, breakpoint expansion, cnvType threading', test
 		['gain', 'gain'],
 		'mixed segmean+copyNumber segments both classify as gain under their own byType cutoffs'
 	)
+	test.end()
+})
+
+tape('processSampleMlst: hypermutator cutoff', test => {
+	// 3 snvindel + 1 cnv; snvindel cutoff 2 => snvindel dropped as hypermutated, cnv still kept
+	const mlst = [
+		{ dt: dtsnvindel, chr: 'chr1', pos: 10, class: 'M' },
+		{ dt: dtsnvindel, chr: 'chr1', pos: 20, class: 'M' },
+		{ dt: dtsnvindel, chr: 'chr1', pos: 30, class: 'M' },
+		{ dt: dtcnv, chr: 'chr1', start: 100, stop: 200, value: 4 }
+	]
+	const req = {
+		snvindelOptions: { consequences: ['M'], hyperMutator: 2 },
+		cnvOptions: { lossThreshold: 1, gainThreshold: 3, maxSegLength: 0 }
+	} as unknown as GRIN2Request
+
+	const over = processSampleMlst(sample, mlst, req, 'copyNumber')
+	test.deepEqual(over.hyperMutatedDt, [dtsnvindel], 'snvindel over cutoff => reported hypermutated')
+	test.deepEqual(
+		over.sampleLesions.map(l => l[4]),
+		['gain'],
+		'snvindel dropped, cnv gain kept'
+	)
+	test.notOk(over.contributedTypes.has(dtsnvindel), 'hypermutated dt not in contributedTypes')
+
+	// at the cutoff (3 <= 3) => not hypermutated, all kept
+	const atLimit = processSampleMlst(
+		sample,
+		mlst,
+		{ ...req, snvindelOptions: { consequences: ['M'], hyperMutator: 3 } } as unknown as GRIN2Request,
+		'copyNumber'
+	)
+	test.deepEqual(atLimit.hyperMutatedDt, [], 'count == cutoff is not over the cutoff')
+	test.equal(atLimit.sampleLesions.length, 4, '3 snvindel + 1 cnv all kept')
+
+	// cutoff 0 / absent => disabled even with many records
+	const disabled = processSampleMlst(
+		sample,
+		mlst,
+		{
+			snvindelOptions: { consequences: ['M'] },
+			cnvOptions: { lossThreshold: 1, gainThreshold: 3 }
+		} as unknown as GRIN2Request,
+		'copyNumber'
+	)
+	test.deepEqual(disabled.hyperMutatedDt, [], 'absent cutoff disables the check')
+	test.equal(disabled.sampleLesions.length, 4, 'nothing dropped when cutoff is absent')
 	test.end()
 })
 

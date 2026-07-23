@@ -1,6 +1,7 @@
 import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 import type { ColorLegendEntry, ShapeLegendEntry } from './termdb.sampleScatter.ts'
+import type { TermWrapper } from '../terms/tw.ts'
 
 export type TermdbSingleCellPlotsRequest = {
 	/** Genome id */
@@ -49,7 +50,9 @@ export type TermdbSingleCellPlotsRequest = {
 		devicePixelRatio?: number
 	}
 	/** Term wrapper for coloring the single cell plot */
-	colorTW?: any
+	colorTW?: TermWrapper
+	/** Term wrappers for gene expression */
+	coordTWs?: TermWrapper[]
 }
 
 export type TermdbSingleCellPlotsResponse = ErrorResponse | ValidSingleCellPlotsResponse

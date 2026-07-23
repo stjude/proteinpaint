@@ -5,29 +5,32 @@ import * as utils from './utils.js'
 import { checkDependenciesAndVersions } from './checkDependenciesAndVersions.js'
 import { initLegacyDataset } from './initLegacyDataset.js'
 import serverconfig from './serverconfig.js'
-import { server_init_db_queries, listDbTables } from './termdb.server.init.ts'
+import { server_init_db_queries, setSupportedChartTypes, listDbTables } from './termdb.server.init.ts'
 import { mds_init } from './mds.init.js'
 import * as mds3_init from './mds3.init.js'
 import { parse_textfilewithheader } from './parse_textfilewithheader.js'
 import { clinsig } from '../dataset/clinvar.ts'
-// will pass below as argument to mds3_init()
-import { mayMapRefseq2ensembl, flattenCaseByFields, may_add_readdepth, mapGenes2isoforms } from './mds3.gdc.js'
 import { isUsableTerm, joinUrl, ezFetch } from '@sjcrh/proteinpaint-shared'
 import { SelectionPrefixes, createSelectionID, FlagStatus } from '#types'
 import { mayLog } from './helpers.ts'
+import { mapConcurrent } from './utils/concurrencyLimiter.ts'
+// server-internal utilities that GDC query code depends on; injected so that code can move to
+// the ppgdc dataset repo, which cannot import from the server package
+import { renderVolcano } from './renderVolcano.ts'
+import { combineSamplesById } from './mds3.variant2samples.js'
 
 const dsHelpers = {
-	mayMapRefseq2ensembl,
-	flattenCaseByFields,
-	may_add_readdepth,
-	mapGenes2isoforms,
 	isUsableTerm,
 	joinUrl,
 	ezFetch,
 	xfetch: utils.xfetch,
 	cachedFetch: utils.cachedFetch,
+	isRecoverableError: utils.isRecoverableError,
 	filterByItem: mds3_init.filterByItem,
 	mayLog,
+	mapConcurrent,
+	renderVolcano,
+	combineSamplesById,
 	createSelectionID,
 	SelectionPrefixes,
 	FlagStatus
@@ -312,6 +315,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				if (g.termdbs[key].cohort?.termdb?.isGeneSetTermdb != true)
 					throw 'genome-level geneset db lacks flag of cohort.termdb.isGeneSetTermdb=true' // this flag is part of termdbconfig and used by tree app
 				server_init_db_queries(g.termdbs[key])
+				setSupportedChartTypes(g.termdbs[key]) // preserve prior behavior (has db.connection, no override → default)
 				if (!Array.isArray(g.termdbs[key].analysisGenesetGroups)) throw '.analysisGenesetGroups[] not array'
 				if (g.termdbs[key].analysisGenesetGroups.length == 0) throw '.analysisGenesetGroups[] blank'
 				for (const a of g.termdbs[key].analysisGenesetGroups) {
@@ -540,7 +544,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 		if (totalRawDsLst === 1)
 			setImmediate(() => {
 				const msg = ds.init.fatalError === e ? e : ds.init.fatalError + ': ' + e
-				throw new Error(gdlabel + ' ' + msg)
+				throw new Error(gdlabel + ' fatal error: ' + msg)
 			})
 		return
 	}
@@ -570,9 +574,9 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 			if (!ds.init.status) ds.init.status = 'done'
 		} catch (e) {
 			if (ds.init.status != 'recoverableError' && !ds.init.recoverableError && !utils.isRecoverableError(e)) {
-				const msg = `Fatal error on ${gdlabel} retry, stopping retry${
-					ds.init?.fatalError ? ': ' + ds.init?.fatalError : ''
-				} [${e?.error || e}]`
+				const msg = `${gdlabel} fatal error: stopping retry${ds.init?.fatalError ? ': ' + ds.init?.fatalError : ''} [${
+					e?.error || e
+				}]`
 				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
@@ -583,7 +587,7 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 						path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
 					)
 				}
-				// this will crash the server with an uncaught error, the server will stop responding to HTTP requests
+				// this will crash the server with a fatal error message, the server will not respond to HTTP requests
 				if (totalRawDsLst === 1)
 					setImmediate(() => {
 						throw new Error(msg)

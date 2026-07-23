@@ -18,7 +18,11 @@ export class GRIN2ViewModel {
 	private buildTopGenes(response: GRIN2Response, manhattanSettings: any, dtUsage: DtUsage): GRIN2ViewData['topGenes'] {
 		if (!response.topGeneTable || !response.stats?.lst) return null
 
-		const headerText = `Top Genes (showing ${response.stats.lst[0].rows[1][1]} of ${response.stats.lst[0].rows[0][1]})`
+		// "showing N of M": N = genes actually in the table, M = total genes GRIN tested. Look up the
+		// total-genes cell by label rather than positional index (rows[0]) so reordering the Summary
+		// rows can't silently turn this into a wrong/sample count.
+		const totalGenes = response.stats.lst[0].rows.find((r: any) => r[0] === 'Total Genes')?.[1] ?? '?'
+		const headerText = `Top Genes (showing ${response.topGeneTable.rows.length.toLocaleString()} of ${totalGenes})`
 
 		const qValueEntries = this.buildQValueEntries(response.topGeneTable.columns, dtUsage)
 		const lesionTypeCircleCache = this.buildCircleCache(manhattanSettings.lesionTypeColors)

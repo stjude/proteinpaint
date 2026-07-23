@@ -63,12 +63,17 @@ def smart_format(value):
 def sort_grin2_data(data):
     p_cols = get_sig_values(data)["p_cols"]
     valid_p_cols = [col for col in p_cols if has_data(data[col])]
-    
+
     if not valid_p_cols:
         raise ValueError("No p-value columns with data found")
-    
+
     min_p_values = data[valid_p_cols].min(axis=1)
-    return data.iloc[min_p_values.argsort()]
+    # Sort ascending (most significant first) with NaN p-values (genes with no lesions of any type)
+    # forced last. NOTE: do not use Series.argsort() here — pandas maps NaN to position -1, so
+    # iloc[-1] reselects the last row and corrupts the ordering whenever any gene has a NaN p-value.
+    return data.assign(__min_p=min_p_values).sort_values(
+        "__min_p", kind="stable", na_position="last"
+    ).drop(columns="__min_p")
 
 def get_user_friendly_label(col_name, lesion_type_map):
 	"""Convert column names to user-friendly labels"""

@@ -15,14 +15,6 @@ import { isUsableTerm } from '../termdb.usecase.js'
 - summaryInput term
 - summaryInput term2
 - summaryInput term0
-- profileForms2 - leaf term returns empty
-- profileForms2 - missing domains config returns empty
-- profileForms2 - depth-3 match returns 'plot'
-- profileForms2 - depth-3 wrong subtype returns empty
-- profileForms2 - depth-3 not in domains returns empty
-- profileForms2 - depth-1/2 matching descendant returns 'branch'
-- profileForms2 - depth-1/2 no matching descendant returns empty
-- profileForms2 - depth-1/2 descendant with wrong subtype returns empty
 */
 
 /**************
@@ -134,6 +126,13 @@ tape('survival overlay', test => {
 	test.end()
 })
 
+tape('pseudobulk is graphable in default and filter use cases', test => {
+	const term = { type: 'pseudobulk', isleaf: true }
+	test.deepEqual(isUsableTerm(term, {}), new Set(['plot']), 'allows pseudobulk in the default use case')
+	test.deepEqual(isUsableTerm(term, { target: 'filter' }), new Set(['plot']), 'allows pseudobulk in filters')
+	test.end()
+})
+
 tape('evenCount term', test => {
 	const usecase = { target: 'evenCount', detail: 'term' }
 	multiDeepEqual(test, usecase, {
@@ -223,107 +222,6 @@ tape('summaryInput term0', test => {
 		]
 	})
 
-	test.end()
-})
-
-/*************************************
- profileForms2 picker tree-filter tests
-**************************************/
-
-// Shared termdbConfig fixture for the profileForms2 cases below: one cohort 'full'
-// with two template-bearing domains, each declaring its supported plot types.
-const profileForms2TermdbConfig = {
-	plotConfigByCohort: {
-		full: {
-			profileForms2: {
-				domains: [
-					{ id: 'A__B__YN_Domain', plotTypes: ['Yes/No Barchart'] },
-					{ id: 'A__B__Likert_Domain', plotTypes: ['Likert Scale'] }
-				]
-			}
-		}
-	}
-}
-
-tape('profileForms2 - leaf term returns empty', test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Likert Scale' }
-	const uses = isUsableTerm({ id: 'A__B__Likert_Domain', isleaf: true }, usecase, profileForms2TermdbConfig)
-	test.deepEqual(uses, new Set(), 'leaf term should yield empty uses regardless of domains config')
-	test.end()
-})
-
-tape('profileForms2 - missing domains config returns empty', test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Likert Scale' }
-	test.deepEqual(
-		isUsableTerm({ id: 'A__B__Likert_Domain' }, usecase, undefined),
-		new Set(),
-		'missing termdbConfig should yield empty uses'
-	)
-	test.deepEqual(
-		isUsableTerm({ id: 'A__B__Likert_Domain' }, usecase, { plotConfigByCohort: {} }),
-		new Set(),
-		'missing cohort entry should yield empty uses'
-	)
-	test.deepEqual(
-		isUsableTerm({ id: 'A__B__Likert_Domain' }, usecase, { plotConfigByCohort: { full: {} } }),
-		new Set(),
-		'missing profileForms2 entry should yield empty uses'
-	)
-	test.end()
-})
-
-tape("profileForms2 - depth-3 match returns 'plot'", test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Likert Scale' }
-	const uses = isUsableTerm({ id: 'A__B__Likert_Domain' }, usecase, profileForms2TermdbConfig)
-	test.deepEqual(uses, new Set(['plot']), "depth-3 id in domains with matching subtype should yield {'plot'}")
-	test.end()
-})
-
-tape('profileForms2 - depth-3 wrong subtype returns empty', test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Yes/No Barchart' }
-	const uses = isUsableTerm({ id: 'A__B__Likert_Domain' }, usecase, profileForms2TermdbConfig)
-	test.deepEqual(uses, new Set(), 'depth-3 id in domains but plotTypes lacks active subtype should yield empty uses')
-	test.end()
-})
-
-tape('profileForms2 - depth-3 not in domains returns empty', test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Likert Scale' }
-	const uses = isUsableTerm({ id: 'A__B__UnknownDomain' }, usecase, profileForms2TermdbConfig)
-	test.deepEqual(uses, new Set(), 'depth-3 id not present in domains should yield empty uses')
-	test.end()
-})
-
-tape("profileForms2 - depth-1/2 matching descendant returns 'branch'", test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Likert Scale' }
-	test.deepEqual(
-		isUsableTerm({ id: 'A' }, usecase, profileForms2TermdbConfig),
-		new Set(['branch']),
-		"depth-1 ancestor of a matching domain should yield {'branch'}"
-	)
-	test.deepEqual(
-		isUsableTerm({ id: 'A__B' }, usecase, profileForms2TermdbConfig),
-		new Set(['branch']),
-		"depth-2 ancestor of a matching domain should yield {'branch'}"
-	)
-	test.end()
-})
-
-tape('profileForms2 - depth-1/2 no matching descendant returns empty', test => {
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Likert Scale' }
-	const uses = isUsableTerm({ id: 'Z' }, usecase, profileForms2TermdbConfig)
-	test.deepEqual(uses, new Set(), 'depth-1 with no descendant matching the prefix should yield empty uses')
-	test.end()
-})
-
-tape('profileForms2 - depth-1/2 descendant with wrong subtype returns empty', test => {
-	// Both domains are descendants of 'A' (prefix 'A__'), but neither has 'Survival' as a plot type.
-	const usecase = { target: 'profileForms2', cohort: 'full', subtype: 'Survival' }
-	const uses = isUsableTerm({ id: 'A' }, usecase, profileForms2TermdbConfig)
-	test.deepEqual(
-		uses,
-		new Set(),
-		'depth-1 with descendants present but none offering active subtype should yield empty uses'
-	)
 	test.end()
 })
 

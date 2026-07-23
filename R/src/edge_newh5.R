@@ -1,4 +1,4 @@
-# Test syntax: cat ~/sjpp/test.txt | time Rscript edge.R
+# Test syntax: cat ~/sjpp/test.txt | time Rscript edge_newh5.R
 
 # Memory probe: returns peak MB used since the last call (gc reset = TRUE
 # captures the high-water mark, then resets the counter). gc(full=TRUE) forces
@@ -28,10 +28,7 @@ pkg_load_time <- system.time({
   suppressWarnings({
     library(jsonlite)
     library(rhdf5)
-    library(stringr)
-    library(readr)
     suppressPackageStartupMessages(library(edgeR))
-    suppressPackageStartupMessages(library(dplyr))
   })
 })
 pkg_load_mem <- mem_probe()
@@ -43,15 +40,74 @@ filter_using_cpm <- function(y, gene_cpm_cutoff, sample_cpm_cutoff, count_cpm_cu
   y <- y[selr, selc]
 }
 
+fail <- function(message) stop(paste0("Invalid differential-expression input: ", message), call. = FALSE)
+
+require_string <- function(x, name) {
+  if (is.null(x) || length(x) != 1 || is.na(x) || !nzchar(x)) fail(paste0("'", name, "' must be a non-empty string"))
+  x
+}
+
+require_nonnegative_number <- function(x, name) {
+  if (is.null(x) || length(x) != 1 || !is.numeric(x) || !is.finite(x) || x < 0) {
+    fail(paste0("'", name, "' must be one finite non-negative number"))
+  }
+  x
+}
+
+format_examples <- function(x, limit = 8) paste(head(unique(x), limit), collapse = ", ")
+
+read_h5_dataset <- function(file, dataset, index = NULL) {
+  tryCatch(
+    {
+      if (is.null(index)) h5read(file, dataset) else h5read(file, dataset, index = index)
+    },
+    error = function(e) fail(paste0("cannot read HDF5 dataset '", dataset, "' from ", file, ": ", conditionMessage(e)))
+  )
+}
+
+render_plot_b64 <- function(plotter) {
+  tmp <- tempfile(fileext = ".png")
+  device_open <- FALSE
+  on.exit({
+    if (device_open) invisible(capture.output(try(dev.off(), silent = TRUE)))
+    if (file.exists(tmp)) unlink(tmp)
+  }, add = TRUE)
+  png(filename = tmp, width = 1000, height = 1000, res = 200)
+  device_open <- TRUE
+  par(oma = c(0, 0, 0, 0))
+  plotter()
+  invisible(capture.output(dev.off()))
+  device_open <- FALSE
+  if (!file.exists(tmp) || file.info(tmp)$size <= 0) fail("diagnostic plot generation produced an empty PNG")
+  base64_enc(readBin(tmp, "raw", n = file.info(tmp)$size))
+}
+
 # Read JSON input from stdin
 read_json_time <- system.time({
   con <- file("stdin", "r")
   json <- readLines(con, warn=FALSE)
   close(con)
-  input <- fromJSON(json)
-  cases <- unlist(strsplit(input$case, ","))
-  controls <- unlist(strsplit(input$control, ","))
-  combined <- c("geneSymbol", cases, controls)
+  if (!length(json) || !nzchar(paste(json, collapse = ""))) fail("request JSON is empty")
+  input <- tryCatch(fromJSON(paste(json, collapse = "\n")), error = function(e) fail(paste0("request is not valid JSON: ", conditionMessage(e))))
+  input$input_file <- require_string(input$input_file, "input_file")
+  input$case <- require_string(input$case, "case")
+  input$control <- require_string(input$control, "control")
+  input$DE_method <- require_string(input$DE_method, "DE_method")
+  if (!input$DE_method %in% c("edgeR", "limma")) fail("'DE_method' must be 'edgeR' or 'limma'")
+  input$min_count <- require_nonnegative_number(input$min_count, "min_count")
+  input$min_total_count <- require_nonnegative_number(input$min_total_count, "min_total_count")
+  input$cpm_cutoff <- require_nonnegative_number(input$cpm_cutoff, "cpm_cutoff")
+  input$mds_cutoff <- require_nonnegative_number(input$mds_cutoff, "mds_cutoff")
+  if (!file.exists(input$input_file)) fail(paste0("count file does not exist: ", input$input_file))
+
+  cases <- unlist(strsplit(input$case, ",", fixed = TRUE), use.names = FALSE)
+  controls <- unlist(strsplit(input$control, ",", fixed = TRUE), use.names = FALSE)
+  if (!length(cases) || any(!nzchar(cases))) fail("case sample list is empty or contains an empty name")
+  if (!length(controls) || any(!nzchar(controls))) fail("control sample list is empty or contains an empty name")
+  if (anyDuplicated(cases)) fail(paste0("duplicate case samples: ", format_examples(cases[duplicated(cases)])))
+  if (anyDuplicated(controls)) fail(paste0("duplicate control samples: ", format_examples(controls[duplicated(controls)])))
+  overlap <- intersect(cases, controls)
+  if (length(overlap)) fail(paste0("samples occur in both case and control groups: ", format_examples(overlap)))
   cpm_cutoff <- input$cpm_cutoff
 })
 read_json_mem <- mem_probe()
@@ -59,64 +115,51 @@ read_json_mem <- mem_probe()
 
 # Read counts data
 read_counts_time <- system.time({
-  if (input$storage_type == "HDF5") {
-    geneNames <- h5read(input$input_file, "item")
-    samples <- h5read(input$input_file, "samples")
+  geneNames <- as.character(read_h5_dataset(input$input_file, "item"))
+  samples <- as.character(read_h5_dataset(input$input_file, "samples"))
+  if (!length(geneNames)) fail("HDF5 dataset 'item' contains no genes")
+  if (!length(samples)) fail("HDF5 dataset 'samples' contains no samples")
+  if (anyNA(geneNames) || any(!nzchar(geneNames))) fail("HDF5 gene identifiers contain missing or empty values")
+  if (anyNA(samples) || any(!nzchar(samples))) fail("HDF5 sample identifiers contain missing or empty values")
+  if (anyDuplicated(geneNames)) fail(paste0("HDF5 gene identifiers are duplicated: ", format_examples(geneNames[duplicated(geneNames)])))
+  if (anyDuplicated(samples)) fail(paste0("HDF5 sample identifiers are duplicated: ", format_examples(samples[duplicated(samples)])))
 
-    # Find indices of case and control samples in the HDF5 file
-    case_indices <- match(cases, samples)
-    control_indices <- match(controls, samples)
+  # Find indices of case and control samples in the HDF5 file
+  case_indices <- match(cases, samples)
+  control_indices <- match(controls, samples)
 
-    # Check for missing samples
-    #if (any(is.na(case_indices))) {
-    #  missing_cases <- cases[is.na(case_indices)]
-    #  stop(paste(missing_cases, "not found"))
-    #}
-    #if (any(is.na(control_indices))) {
-    #  missing_controls <- controls[is.na(control_indices)]
-    #  stop(paste(missing_controls, "not found"))
-    #}
+  missing_cases <- cases[is.na(case_indices)]
+  missing_controls <- controls[is.na(control_indices)]
+  if (length(missing_cases)) fail(paste0(length(missing_cases), " case sample(s) are absent from HDF5 'samples': ", format_examples(missing_cases)))
+  if (length(missing_controls)) fail(paste0(length(missing_controls), " control sample(s) are absent from HDF5 'samples': ", format_examples(missing_controls)))
 
-    # Removing missing samples from cases
-    keep_cases <- !is.na(case_indices)
-    cases <- cases[keep_cases]
-    case_indices <- case_indices[keep_cases]
-
-    # Removing missing samples from controls
-    keep_controls <- !is.na(control_indices)
-    controls <- controls[keep_controls]
-    control_indices <- control_indices[keep_controls]
-
-
-    samples_indices <- c(case_indices, control_indices)
-    read_counts <- as.data.frame(t(h5read(input$input_file, "matrix", index = list(samples_indices, 1:length(geneNames)))))
-    colnames(read_counts) <- c(cases, controls)
-  } else if (input$storage_type == "text") {
-    suppressWarnings({
-      suppressMessages({
-        # Peek at the header of the input file (first line only)
-        available_cols <- colnames(read_tsv(input$input_file, n_max = 0))
-
-        # Keep only existing samples
-        cases <- intersect(cases, available_cols)
-        controls <- intersect(controls,available_cols)
-
-        # Final combine column set
-        combined <- c("geneSymbol", cases, controls)
-        read_counts <- read_tsv(input$input_file, col_names = TRUE, col_select = combined)
-      })
-    })
-    geneNames <- unlist(read_counts[1])
-    read_counts <- select(read_counts, -geneSymbol)
-  } else {
-    stop("Unknown storage type")
+  samples_indices <- c(case_indices, control_indices)
+  raw_counts <- read_h5_dataset(input$input_file, "matrix", list(samples_indices, seq_along(geneNames)))
+  if (!is.numeric(raw_counts)) fail("HDF5 dataset 'matrix' must be numeric raw counts")
+  if (length(raw_counts) != length(samples_indices) * length(geneNames)) {
+    fail(sprintf("HDF5 matrix dimensions do not match %d selected samples and %d genes", length(samples_indices), length(geneNames)))
   }
+  raw_counts <- matrix(raw_counts, nrow = length(samples_indices), ncol = length(geneNames))
+  read_counts <- as.data.frame(t(raw_counts))
+  colnames(read_counts) <- c(cases, controls)
+
+  missing_count <- sum(is.na(read_counts))
+  if (missing_count) {
+    affected <- colnames(read_counts)[colSums(is.na(read_counts)) > 0]
+    fail(paste0("count matrix contains ", missing_count, " NA/NaN value(s) across ", length(affected), " sample(s); first affected samples: ", format_examples(affected), ". Raw count matrices must use 0 for observed zero counts"))
+  }
+  count_matrix <- as.matrix(read_counts)
+  if (any(!is.finite(count_matrix))) fail("count matrix contains infinite values")
+  if (any(count_matrix < 0)) fail("count matrix contains negative values")
+  library_sizes <- colSums(count_matrix)
+  zero_library <- names(library_sizes)[library_sizes <= 0]
+  if (length(zero_library)) fail(paste0("samples have zero total count and must be excluded: ", format_examples(zero_library)))
 })
 read_counts_mem <- mem_probe()
 #cat("Time to read counts data: ", as.difftime(read_counts_time, units = "secs")[3], " seconds\n")
 
 # Create conditions vector
-conditions <- c(rep("Diseased", length(cases)), rep("Control", length(controls)))
+conditions <- factor(c(rep("Diseased", length(cases)), rep("Control", length(controls))), levels = c("Control", "Diseased"))
 
 # Create DGEList object
 dge_list_time <- system.time({
@@ -134,6 +177,9 @@ filter_mem <- mem_probe()
 
 normalization_time <- system.time({
   y <- y[keep, keep.lib.sizes = FALSE]
+  if (nrow(y) == 0) {
+    fail(sprintf("no genes passed filterByExpr (min_count=%s, min_total_count=%s)", input$min_count, input$min_total_count))
+  }
   y <- normLibSizes(y) # Using TMM method for normalization
 })
 normalization_mem <- mem_probe()
@@ -165,10 +211,10 @@ y <- y[keep_genes,]
 #cat("Filter using cpm time: ", as.difftime(filter_using_cpm_time, units = "secs")[3], " seconds\n")
 
 if (dim(y)[1]==0) { # Its possible after filtering there might not be any genes left in the matrix, in such a case the R code must exit gracefully with an error.
-  stop("Number of genes after filtering = 0, cannot proceed any further") 
+  fail(sprintf("no genes passed the CPM cutoff (cpm_cutoff=%s, required_samples=%d)", cpm_cutoff, sample_cpm_cutoff))
 }  
 if (dim(y)[2]==0) { # Its possible after filtering there might not be any samples left in the matrix, in such a case the R code must exit gracefully with an error.
-  stop("Number of samples after filtering = 0, cannot proceed any further") 
+  fail("no samples remain after filtering")
 }
 
 # Saving MDS plot image
@@ -179,29 +225,35 @@ if (dim(read_counts)[1] * dim(read_counts)[2] < as.numeric(input$mds_cutoff)) { 
     # artifact. tempfile() lives just long enough for plotMDS to write
     # bytes we read back and unlink. capture.output(try(dev.off()))
     # swallows the "null device 1" auto-print that would corrupt JSON.
-    mds_tmp <- tempfile(fileext = ".png")
-    png(filename = mds_tmp, width = 1000, height = 1000, res = 200)
-    par(oma = c(0, 0, 0, 0)) # Creating a margin
     mds_conditions <- c(rep("T", length(cases)), rep("C", length(controls))) # Case samples are labelled "T" and control samples are labelled "C". Single-letter labelling added because otherwise labels get overwritten on each other.
-    plotMDS(y, labels = mds_conditions) # Plot the edgeR MDS plot
-    invisible(capture.output(try(dev.off(), silent = TRUE)))
-    mds_image_b64 <- base64_enc(readBin(mds_tmp, "raw", n = file.info(mds_tmp)$size))
-    unlink(mds_tmp)
+    mds_image_b64 <- render_plot_b64(function() plotMDS(y, labels = mds_conditions))
   })
   mds_plot_mem <- mem_probe()
   #cat("mds plot time: ", as.difftime(mds_plot_time, units = "secs")[3], " seconds\n")
 }
 
 # Differential expression analysis
+validate_confounder <- function(values, mode, name) {
+  if (length(values) != ncol(y)) fail(sprintf("%s has %d values but the count matrix has %d samples", name, length(values), ncol(y)))
+  if (is.null(mode) || length(mode) != 1 || !mode %in% c("continuous", "discrete")) {
+    fail(paste0(name, "_mode must be 'continuous' or 'discrete'"))
+  }
+  if (anyNA(values)) fail(paste0(name, " contains missing values"))
+  if (mode == "continuous") {
+    converted <- suppressWarnings(as.numeric(values))
+    if (any(!is.finite(converted))) fail(paste0(name, " contains non-numeric or non-finite values"))
+    if (length(unique(converted)) < 2) fail(paste0(name, " has only one value"))
+    return(converted)
+  }
+  converted <- as.factor(values)
+  if (nlevels(converted) < 2) fail(paste0(name, " has only one category"))
+  converted
+}
+
 if (length(input$conf1) == 0) { # No adjustment of confounding factors
   design <- model.matrix(~conditions) # Based on the protocol defined in section 1.4 of edgeR manual https://bioconductor.org/packages/release/bioc/vignettes/edgeR/inst/doc/edgeRUsersGuide.pdf
 } else { # Adjusting for confounding factors
-  # Check the type of confounding variable
-  if (input$conf1_mode == "continuous") { # If this is float, the input conf1 vector should be converted into a numeric vector
-    conf1 <- as.numeric(input$conf1)
-  } else { # When input$conf1_mode == "discrete" keep the vector as string.
-    conf1 <- as.factor(input$conf1)
-  }
+  conf1 <- validate_confounder(input$conf1, input$conf1_mode, "conf1")
 
   if (length(input$conf2) == 0) { # No adjustment of confounding factor 2
     y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1)
@@ -211,12 +263,7 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
     model_gen_mem <- mem_probe()
     #cat("Time for making design matrix: ", as.difftime(model_gen_time, units = "secs")[3], " seconds\n")
   } else {
-    # Check the type of confounding variable 2
-    if (input$conf2_mode == "continuous") { # If this is float, the input conf2 vector should be converted into a numeric vector
-      conf2 <- as.numeric(input$conf2)
-    } else { # When input$conf2_mode == "discrete" keep the vector as string.
-      conf2 <- as.factor(input$conf2)
-    }
+    conf2 <- validate_confounder(input$conf2, input$conf2_mode, "conf2")
     y$samples <- data.frame(y$samples, conditions = conditions, conf1 = conf1, conf2 = conf2)
     model_gen_time <- system.time({
       design <- model.matrix(~ conditions + conf1 + conf2, data = y$samples)
@@ -227,6 +274,14 @@ if (length(input$conf1) == 0) { # No adjustment of confounding factors
   }
 }
 
+if (qr(design)$rank < ncol(design)) {
+  fail(paste0("design matrix is not full rank; condition and confounders are collinear. Columns: ", paste(colnames(design), collapse = ", ")))
+}
+if (nrow(design) <= ncol(design)) {
+  fail(sprintf("design matrix has no residual degrees of freedom (%d samples, %d coefficients)", nrow(design), ncol(design)))
+}
+if (!"conditionsDiseased" %in% colnames(design)) fail("design matrix does not contain the case-versus-control coefficient")
+
 DE_method <- input$DE_method
 if (DE_method == "edgeR") {
 
@@ -236,19 +291,15 @@ if (DE_method == "edgeR") {
   bcv <- sqrt(common_disp)
 
   fit_time <- system.time({
-    suppressWarnings({
-      suppressMessages({
-        fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
-      })
+    suppressMessages({
+      fit <- glmQLFit(y,design) # The glmQLFit() replaces glmFit() which implements the quasi-likelihood function. This is better able to account for overdispersion as it employs a more lenient approach where variance is not a fixed function of the mean.
     })
   })
   fit_mem <- mem_probe()
   #cat("QL fit time: ", as.difftime(fit_time, units = "secs")[3], " seconds\n")
   test_time <- system.time({
-    suppressWarnings({
-      suppressMessages({
-        et <- glmQLFTest(fit, coef = "conditionsDiseased")
-      })
+    suppressMessages({
+      et <- glmQLFTest(fit, coef = "conditionsDiseased")
     })
   })
   test_mem <- mem_probe()
@@ -258,13 +309,7 @@ if (DE_method == "edgeR") {
   ql_plot_time <- system.time({
     # PNG goes straight into the JSON output as base64 — see the MDS
     # block above for the rationale on tempfile + capture.output.
-    ql_tmp <- tempfile(fileext = ".png")
-    png(filename = ql_tmp, width = 1000, height = 1000, res = 200)
-    par(oma = c(0, 0, 0, 0)) # Creating a margin
-    plotQLDisp(fit) # Plot the edgeR fit
-    invisible(capture.output(try(dev.off(), silent = TRUE)))
-    ql_image_b64 <- base64_enc(readBin(ql_tmp, "raw", n = file.info(ql_tmp)$size))
-    unlink(ql_tmp)
+    ql_image_b64 <- render_plot_b64(function() plotQLDisp(fit))
   })
   ql_plot_mem <- mem_probe()
   #cat("ql plot time: ", as.difftime(ql_plot_time, units = "secs")[3], " seconds\n")
@@ -276,22 +321,12 @@ if (DE_method == "edgeR") {
 } else if (DE_method == "limma") {
   # Do voom transformation and fit linear model
   voom_transformation_lmfit_time <- system.time({
-    suppressWarnings({
-      suppressMessages({
-        # PNG is captured by the voomLmFit(..., plot = TRUE) call below
-        # and streamed back as base64 in the JSON output — see the MDS
-        # block above for rationale.
-        ql_tmp <- tempfile(fileext = ".png")
-        png(filename = ql_tmp, width = 1000, height = 1000, res = 200)
-        par(oma = c(0, 0, 0, 0)) # Creating a margin
-        suppressWarnings({
-          suppressMessages({
-            fit <- voomLmFit(y, design, plot = TRUE) # This is base don the recommendation of the edgeR limma/voom authors https://support.bioconductor.org/p/9161585/
-          })
-        })
-        invisible(capture.output(try(dev.off(), silent = TRUE)))
-        ql_image_b64 <- base64_enc(readBin(ql_tmp, "raw", n = file.info(ql_tmp)$size))
-        unlink(ql_tmp)
+    suppressMessages({
+      # PNG is captured by the voomLmFit(..., plot = TRUE) call below
+      # and streamed back as base64 in the JSON output — see the MDS
+      # block above for rationale.
+      ql_image_b64 <- render_plot_b64(function() {
+        fit <<- voomLmFit(y, design, plot = TRUE) # This is based on the recommendation of the edgeR limma/voom authors https://support.bioconductor.org/p/9161585/
       })
     })
   })
@@ -310,10 +345,8 @@ if (DE_method == "edgeR") {
 
   # Empirical Bayes smoothing
   empirical_smoothing_time <- system.time({
-    suppressWarnings({
-      suppressMessages({
-        tmp <- eBayes(fit)
-      })
+    suppressMessages({
+      tmp <- eBayes(fit)
     })
   })
   empirical_smoothing_mem <- mem_probe()
@@ -321,14 +354,12 @@ if (DE_method == "edgeR") {
 
   # Time for selecting top genes
   top_genes_selection_time <- system.time({
-    suppressWarnings({
-      suppressMessages({
-        top_table <- topTable(tmp, coef = "conditionsDiseased", number = Inf, adjust.method = "fdr") # The coeff needs to be specified in topTable() because it needs to know for which contrast the logFC needs to be calculated https://www.biostars.org/p/160465/
-        logfc <- top_table$logFC
-        pvalues <- top_table$P.Value
-        geneNames <- unlist(top_table$genes)
-        adjust_p_values <- top_table$adj.P.Val
-      })
+    suppressMessages({
+      top_table <- topTable(tmp, coef = "conditionsDiseased", number = Inf, adjust.method = "fdr") # The coeff needs to be specified in topTable() because it needs to know for which contrast the logFC needs to be calculated https://www.biostars.org/p/160465/
+      logfc <- top_table$logFC
+      pvalues <- top_table$P.Value
+      geneNames <- unlist(top_table$genes)
+      adjust_p_values <- top_table$adj.P.Val
     })
   })
   top_genes_selection_mem <- mem_probe()
@@ -338,6 +369,12 @@ if (DE_method == "edgeR") {
 }
 
 final_data_generation_time <- system.time({
+  if (!length(geneNames)) fail("analysis returned no genes")
+  if (!(length(geneNames) == length(logfc) && length(logfc) == length(pvalues) && length(pvalues) == length(adjust_p_values))) {
+    fail("analysis returned result columns with inconsistent lengths")
+  }
+  if (any(!is.finite(logfc))) fail("analysis returned non-finite fold changes")
+  if (any(!is.finite(pvalues)) || any(!is.finite(adjust_p_values))) fail("analysis returned non-finite p-values")
   output <- data.frame(geneNames, logfc, pvalues, adjust_p_values)
   names(output)[1] <- "gene_name"
   names(output)[2] <- "fold_change"
@@ -408,4 +445,4 @@ if (exists("top_genes_selection_mem")) memory_mb$top_genes_selection <- mem(top_
 final_output$memory_mb <- memory_mb
 
 # Output results
-toJSON(final_output, digits = NA, na = "string") # Setting digits = NA makes toJSON() use the max precision. na='string' causes any "not a number" to be reported as string. This from ?toJSON() documentation
+cat(toJSON(final_output, digits = NA, na = "null")) # Explicit cat avoids relying on Rscript auto-printing and keeps stdout valid JSON.

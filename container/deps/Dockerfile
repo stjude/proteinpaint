@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install --allow-downgrades -y \
 	libcurl4-openssl-dev \
 	libgsl0-dev \
 	libhdf5-dev \
+	hdf5-tools \
 	liblzma-dev \
     libdatrie1=0.2.14-1+b1 \
 	libncurses5-dev \
@@ -92,7 +93,6 @@ COPY ./python/requirements.txt ./python/requirements.txt
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip && \
     pip install -r ./python/requirements.txt && \
-    pip install --no-binary=pyBigWig --force-reinstall pyBigWig==0.3.25 && \
     ## clean up
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/downloaded_packages/ /tmp/*.rds

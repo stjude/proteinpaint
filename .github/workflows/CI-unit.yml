@@ -27,11 +27,11 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 10
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           cache: 'npm'
           node-version: '24'
@@ -78,7 +78,7 @@ jobs:
 
       - name: Setup Python
         if: contains(env.WS_TO_TEST, 'python')
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -115,18 +115,19 @@ jobs:
         run: |
           npm test --workspace="augen"
 
+      - name: Install HDF5
+        if: contains(env.WS_TO_TEST, 'server') || contains(env.WS_TO_TEST, 'rust')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hdf5-tools libhdf5-dev
+
       - name: 🔎 Server unit tests
         if: contains(env.WS_TO_TEST, 'server')
         run: npm run test:unit --workspace="server"
 
-      - name: Install HDF5
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libhdf5-dev  
-
       - name: ⚡ Cache
         if: contains(env.WS_TO_TEST, 'rust')
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry

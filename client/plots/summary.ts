@@ -425,8 +425,9 @@ export const summaryInit = getCompInit(SummaryPlot)
 export const componentInit = summaryInit
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.term) throw 'summary getPlotConfig: opts.term{} missing'
 	try {
+		await app.opts?.getPlotConfig_mutateSummary?.(opts)
+		if (!opts.term) throw new Error('summary getPlotConfig: opts.term{} missing')
 		opts.term = await fillTermWrapper(
 			opts.term,
 			app.vocabApi,
@@ -453,7 +454,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.scaleDotTW) opts.scaleDotTW = await fillTermWrapper(opts.scaleDotTW, app.vocabApi)
 	} catch (e: any) {
 		if (e.stack) console.log(e.stack)
-		throw `${e} [summary getPlotConfig()]`
+		throw new Error(`${e} [summary getPlotConfig()]`)
 	}
 
 	const config = {

@@ -5,6 +5,7 @@ import type { NumTW, NumericQ, RawNumTW } from './numeric.ts'
 import type { GvTW, GvQ, RawGvTW } from './geneVariant.ts'
 import type { QualTW, QualQ, RawQualTW } from './qualitative.ts'
 import type { TermCollectionTW, TermCollectionQ, RawTermCollectionTW } from './termCollection.ts'
+import type { JunctionTW, RawJunctionTW } from './junction.ts'
 
 export type BaseTW = {
 	id?: string
@@ -22,7 +23,7 @@ export type BaseTW = {
 	values?: { [key: string]: any }
 }
 
-export type TermWrapper = NumTW | GvTW | ConditionTW | SnpsTW | QualTW | TermCollectionTW
+export type TermWrapper = NumTW | JunctionTW | GvTW | ConditionTW | SnpsTW | QualTW | TermCollectionTW
 
 export type Q = NumericQ | GvQ | ConditionQ | SnpsQ | SampleLstQ | QualQ | TermCollectionQ // | other q
 
@@ -37,7 +38,7 @@ export type RawDictTW = BaseTW & {
 	q?: any
 }
 
-export type RawTW = RawDictTW | RawQualTW | RawNumTW | RawGvTW | RawConditionTW | RawTermCollectionTW
+export type RawTW = RawDictTW | RawQualTW | RawNumTW | RawJunctionTW | RawGvTW | RawConditionTW | RawTermCollectionTW
 //{ id: string } | RawCatTW
 //
 // BELOW TYPE IS NOT TESTED, only being used to compare tsc type checking behavior

@@ -6,28 +6,12 @@ IsoformExpressionTerm
 IsoformExpressionTermWrapper
 */
 
-type Isoform = {
-	kind?: 'isoform'
-	isoform: string
-	gene?: string
-	chr?: string
-	start?: number
-	stop?: number
-}
-
-type Coord = {
-	kind?: 'coord'
-	isoform?: string
-	gene?: string
-	chr: string
-	start: number
-	stop: number
-}
-
 export type IsoformExpressionTerm = NumericBaseTerm & {
 	type: 'isoformExpression'
+	isoform: string
+	gene: string
 	bins?: PresetNumericBins
-} & (Isoform | Coord)
+}
 
 export type IsoformExpressionTW = NumTW & { term: IsoformExpressionTerm }
 

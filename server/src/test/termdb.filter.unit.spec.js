@@ -150,6 +150,81 @@ tape('nested filter', async function (test) {
 	test.end()
 })
 
+tape('junction numeric filter', async function (test) {
+	let requestedTerm
+	tdb.ds.queries.junction = {
+		get: async param => {
+			requestedTerm = param.terms[0]
+			return { term2sample2value: new Map([['xx', { 1: 5, 2: 15, 3: 25 }]]) }
+		}
+	}
+	const term = { type: 'junction', chr: 'chr1', start: 100, stop: 200, strand: '+' }
+	const filter = await getFilterCTEs(
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term,
+						q: { readcountCutoff: 3 },
+						ranges: [{ start: 10, startinclusive: true, stop: 20, stopinclusive: false }]
+					}
+				}
+			]
+		},
+		tdb.ds
+	)
+
+	test.deepEqual(filter.values, ['2'], 'selects samples whose junction read count is in range')
+	test.deepEqual(requestedTerm, { $id: 'xx', term, q: { readcountCutoff: 3 } }, 'passes the junction term and query')
+	test.equal(filter.filters.split('?').length - 1, filter.values.length, 'CTE placeholders match values')
+	test.end()
+})
+
+tape('pseudobulk numeric filter', async function (test) {
+	let requestedTerms
+	let requestedDs
+	tdb.ds.queries.singleCell = {
+		pseudobulk: {
+			get: async (param, ds) => {
+				requestedTerms = param.terms
+				requestedDs = ds
+				return { term2sample2value: new Map([['xx', { 1: 0.5, 2: 1.5, 3: 2.5 }]]) }
+			}
+		}
+	}
+	const term = {
+		type: 'pseudobulk',
+		assay: 'geneExpression',
+		memberId: 'immune',
+		category: 'T cells',
+		gene: 'TP53'
+	}
+	const filter = await getFilterCTEs(
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: { term, ranges: [{ start: 1, startinclusive: true, stop: 2, stopinclusive: false }] }
+				}
+			]
+		},
+		tdb.ds
+	)
+
+	test.deepEqual(filter.values, ['2'], 'selects samples whose pseudobulk value is in range')
+	test.deepEqual(requestedTerms, [{ $id: 'xx', term, q: undefined }], 'passes the pseudobulk term')
+	test.equal(requestedDs, tdb.ds, 'passes the dataset to the pseudobulk getter')
+	test.equal(filter.filters.split('?').length - 1, filter.values.length, 'CTE placeholders match values')
+	test.end()
+})
+
 tape('custom termCollection percentage filter', async function (test) {
 	const filter = await getFilterCTEs(
 		{

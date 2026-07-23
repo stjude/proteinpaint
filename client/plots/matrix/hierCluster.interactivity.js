@@ -1,7 +1,7 @@
 import { renderTable } from '#dom'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { select } from 'd3-selection'
-import { METABOLITE_INTENSITY, PROTEOME_ABUNDANCE, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { termType2label } from '#shared/terms.js'
 
 // Given a clusterId, return all its children clusterIds
 export function getAllChildrenClusterIds(clickedClusterId, left) {
@@ -85,15 +85,7 @@ export function addSelectedSamplesOptions(clickedSampleNames, event) {
 }
 
 export function addSelectedRowsOptions(clickedRowNames, event) {
-	// TODO to support other hierCluster types
-	const rowType =
-		this.config.dataType == 'geneExpression'
-			? 'genes'
-			: this.config.dataType == 'metaboliteIntensity'
-			? 'metabolites'
-			: this.config.dataType == 'proteomeAbundance'
-			? 'proteins'
-			: 'items'
+	const rowType = this.config.settings.matrix.controlLabels.terms
 
 	const optionArr = [
 		{
@@ -326,34 +318,15 @@ export function getClusterFromLeftDendrogram(event) {
 export function setClusteringBtn(holder, callback) {
 	const cl = this.config.settings.matrix.controlLabels
 	const dataType = this.config.dataType
-	const clusterRowLabel =
-		dataType == 'geneExpression'
-			? 'Genes'
-			: dataType == 'metaboliteIntensity'
-			? 'Metabolites'
-			: dataType == 'proteomeAbundance'
-			? 'Proteins'
-			: dataType == 'numericDictTerm'
-			? 'Variables'
-			: 'Rows'
-	const cluteringButtonLabel =
-		dataType == 'geneExpression'
-			? 'Gene Expression Clustering'
-			: dataType == 'metaboliteIntensity'
-			? 'Metabolite Intensity Clustering'
-			: dataType == 'proteomeAbundance'
-			? 'Protein Abundance Clustering'
-			: 'Clustering'
+	const clusterRowLabel = cl.Terms
+	const cluteringButtonLabel = `${termType2label(dataType)} Clustering`
 	holder
 		.append('button')
 		//.property('disabled', d => d.disabled)
 		.datum({
 			label: cluteringButtonLabel,
 			getCount: () => this.hcTermGroup?.lst.length || 0,
-			showCount:
-				dataType == METABOLITE_INTENSITY || dataType == PROTEOME_ABUNDANCE || dataType == NUMERIC_DICTIONARY_TERM
-					? 'append'
-					: 'hide',
+			showCount: 'hide',
 			rows: [
 				{
 					label: `Cluster ${cl.Samples}`,
@@ -546,13 +519,8 @@ function updateClusteringControls(self, app, parent, table) {
 		colorSchemeControl.style('display', 'none')
 	}
 
-	// Only add set edit option for METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM and PROTEOME_ABUNDANCE
-	if (
-		parent.chartType == 'hierCluster' &&
-		(parent.config.dataType == METABOLITE_INTENSITY ||
-			parent.config.dataType == PROTEOME_ABUNDANCE ||
-			parent.config.dataType == NUMERIC_DICTIONARY_TERM)
-	) {
+	// Add set edit option for all term types except geneExpression
+	if (parent.chartType == 'hierCluster' && parent.config.dataType !== 'geneExpression') {
 		const geneInputTr = table.insert('tr', () => table.select('tr').node())
 		geneInputTr.append('td').attr('class', 'sja-termdb-config-row-label').html('Hierarchical Clustering Term Set')
 

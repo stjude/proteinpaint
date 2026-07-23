@@ -3,7 +3,6 @@ import type { GdcMafRequest, GdcMafResponse, GdcMafFile } from '#types'
 import ky from 'ky'
 import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
-import { getGdcSampletypes } from '#src/mds3.gdc.js'
 
 const payload: RoutePayload = {
 	init,
@@ -53,6 +52,28 @@ export function init({ genomes }) {
 }
 
 /*
+The GDC /files query, split out so listMafFiles can be unit-tested with an injected stub (no GDC/network)
+— same pattern as gdc.mafBuild.ts. Returns the raw hits[] + total. Forwards the abort signal so a client
+disconnect (app.middlewares.js sets q.__abortSignal for this route) can cancel a stalled request; ky's own
+timeout stays off so the signal is the sole authority.
+*/
+export type MafFilesQuery = (
+	host: any,
+	headers: any,
+	body: any,
+	signal: AbortSignal | undefined
+) => Promise<{ hits: any[]; total: number }>
+
+const queryMafFiles: MafFilesQuery = async (host, headers, body, signal) => {
+	const response = await ky.post(joinUrl(host.rest, 'files'), { headers, timeout: false, json: body, signal })
+	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
+	const re: any = await response.json() // type any to avoid tsc err
+	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	return { hits: re.data.hits, total: re.data.pagination.total }
+}
+
+/*
 req.query {
 	filter0 // optional gdc GFF cohort filter, invisible and read only
 	experimentalStrategy: WXS/Targeted Sequencing
@@ -64,7 +85,7 @@ ds {
 	}
 }
 */
-async function listMafFiles(q: GdcMafRequest, ds: any) {
+export async function listMafFiles(q: GdcMafRequest, ds: any, queryFiles: MafFilesQuery = queryMafFiles) {
 	const filters = {
 		op: 'and',
 		content: [
@@ -96,18 +117,20 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 	}
 	if (case_filters.content.length) body.case_filters = case_filters
 
-	const response = await ky.post(joinUrl(host.rest, 'files'), { headers, timeout: false, json: body })
-	if (!response.ok) throw `HTTP Error: ${response.status} ${response.statusText}`
-	const re: any = await response.json() // type any to avoid tsc err
+	// forwards q.__abortSignal so a client disconnect cancels the GDC request (see queryMafFiles)
+	const { hits, total } = await queryFiles(host, headers, body, (q as any).__abortSignal)
 
-	if (!Number.isInteger(re.data?.pagination?.total)) throw 're.data.pagination.total is not int'
-	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	// getGdcSampletypes is supplied by the GDC dataset (ppgdc gdc/queries.js, attached in initQueries),
+	// not by this server package. guard so a server running against an older ppgdc that predates the
+	// hook fails with a clear cause rather than a cryptic "is not a function" inside the loop below.
+	if (typeof ds.getGdcSampletypes != 'function')
+		throw 'ds.getGdcSampletypes() is not supplied by the dataset; the deployed ppgdc may be older than this server requires'
 
 	// flatten api return to table row objects
 	// it is possible to set a max size limit to limit the number of files passed to client
 	const files: GdcMafFile[] = []
 
-	for (const h of re.data.hits) {
+	for (const h of hits) {
 		/*
 		{
 		  "id": "39768777-fec5-4a79-9515-65712c002b19",
@@ -154,7 +177,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 			file_size: h.file_size,
 			case_submitter_id: c.submitter_id,
 			case_uuid: c.case_id,
-			sample_types: getGdcSampletypes(c)
+			sample_types: ds.getGdcSampletypes(c)
 		} satisfies GdcMafFile)
 	}
 
@@ -163,7 +186,7 @@ async function listMafFiles(q: GdcMafRequest, ds: any) {
 
 	const result = {
 		files,
-		filesTotal: re.data.pagination.total,
+		filesTotal: total,
 		maxTotalSizeCompressed
 	} satisfies GdcMafResponse
 

@@ -8,7 +8,7 @@ import { GRIN2ControlsView } from './view/GRIN2ControlsView'
 import { getDefaultGRIN2Settings } from './settings/defaults'
 import { getCombinedTermFilter, getNormalRoot } from '#filter'
 import { sayerror } from '#dom'
-import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dt2lesion } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtfusionrna, dtsv, dtitd, dt2lesion } from '#shared/common.js'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit } from '#plots/controls.js'
 
@@ -20,16 +20,36 @@ class GRIN2 extends PlotBase implements RxComponent {
 	private model!: GRIN2Model
 	private resultsView!: GRIN2ResultsView
 	private controlsView: GRIN2ControlsView | null = null
+	private controlsToggleButton: any = null
+	private hasResults = false
+	private inputPanelCollapsed = false
+	private cohortFilterSignature: string | null = null
 
 	constructor(opts: any, api) {
 		super(opts, api)
 		this.opts = opts
 		this.components = { controls: {} as ComponentApi }
 		opts.holder.classed('sjpp-grin2-main', true)
+		const massControls = opts.holder.append('div').style('display', 'inline-block')
+		const inputPanel = opts.holder
+			.append('div')
+			.attr('data-testid', 'sjpp-grin2-input-panel')
+			.style('display', 'grid')
+			.style('grid-template-rows', '1fr')
+			.style('opacity', '1')
+			.style('transition', 'grid-template-rows 250ms ease, opacity 200ms ease')
+		const inputPanelContent = inputPanel.append('div').style('min-height', '0').style('overflow', 'hidden')
 		this.dom = {
-			massControls: opts.holder.append('div').style('display', 'inline-block'),
-			headerText: opts.holder.append('div').style('display', 'inline-block'),
-			controls: opts.holder.append('div'),
+			massControls,
+			inputPanel,
+			headerText: inputPanelContent.append('div').style('display', 'inline-block'),
+			controls: inputPanelContent.append('div'),
+			controlsToggle: opts.holder
+				.append('div')
+				.style('display', 'flex')
+				.style('align-items', 'center')
+				.style('gap', '8px')
+				.style('margin', '10px 20px 10px 100px'),
 			div: opts.holder.append('div').style('margin', '20px')
 		}
 		if (opts.header) this.dom.header = opts.header.text('GRIN2')
@@ -48,6 +68,17 @@ class GRIN2 extends PlotBase implements RxComponent {
 	async init() {
 		this.model = new GRIN2Model(this.app.vocabApi)
 		this.resultsView = new GRIN2ResultsView(this.dom.div, this.app)
+		this.controlsToggleButton = this.dom.controlsToggle
+			.append('button')
+			.attr('type', 'button')
+			.attr('data-testid', 'sjpp-grin2-input-toggle')
+			.style('display', 'none')
+			.on('click', () => {
+				if (!this.hasResults) return
+				this.inputPanelCollapsed = !this.inputPanelCollapsed
+				this.updateInputPanel()
+			})
+		this.updateInputPanel()
 		this.components.controls = await controlsInit({
 			app: this.app,
 			id: this.id,
@@ -70,6 +101,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 		const config = structuredClone(this.state.config)
 		if (config.childType != this.type && config.chartType != this.type) return
 
+		const cohortFilterSignature = this.getCohortFilterSignature()
+		if (this.cohortFilterSignature === null) {
+			this.cohortFilterSignature = cohortFilterSignature
+		} else if (this.cohortFilterSignature !== cohortFilterSignature) {
+			this.cohortFilterSignature = cohortFilterSignature
+			this.clearResultsAndShowInputs()
+		}
+
 		if (!this.controlsView) {
 			this.controlsView = new GRIN2ControlsView({
 				headerHolder: this.dom.headerText,
@@ -77,6 +116,7 @@ class GRIN2 extends PlotBase implements RxComponent {
 				config: this.state.config,
 				vocabApi: this.app.vocabApi,
 				genome: this.app.opts.genome,
+				actionsHolder: this.dom.controlsToggle,
 				callbacks: { onRun: () => this.handleRun() }
 			})
 			this.controlsView.build()
@@ -86,10 +126,13 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 	private async handleRun() {
 		if (!this.controlsView) return
+		const runFilterSignature = this.cohortFilterSignature
+		// The previous result is removed before a new request starts, so its input toggle must disappear too.
+		// Keeping the panel open also makes errors recoverable without another click.
+		this.clearResultsAndShowInputs()
 		this.controlsView.setBusy(true)
 		try {
 			const dtUsage = this.controlsView.getDtUsage()
-			this.resultsView.clear()
 
 			const configValues = this.controlsView.getConfigValues(dtUsage)
 			const manhattan = this.state.config.settings.manhattan
@@ -111,9 +154,14 @@ class GRIN2 extends PlotBase implements RxComponent {
 
 			const response = await this.model.fetchGrin2Data(requestData, this.api!.getAbortSignal())
 			if (response.status === 'error') throw `GRIN2 analysis failed: ${response.error}`
+			// A filter update invalidates this response even if the request could not be aborted in time.
+			if (runFilterSignature !== this.cohortFilterSignature) return
 
 			const vm = new GRIN2ViewModel(response, manhattan, dtUsage)
 			this.resultsView.render(vm.viewData)
+			this.hasResults = true
+			this.inputPanelCollapsed = true
+			this.updateInputPanel()
 
 			this.app.dispatch({
 				type: 'plot_edit',
@@ -129,6 +177,8 @@ class GRIN2 extends PlotBase implements RxComponent {
 				}
 			})
 		} catch (error) {
+			// Component updates abort the previous request; this is expected during filter changes.
+			if (this.app.isAbortError(error)) return
 			// dom.div may be undefined if the sandbox was deleted mid-request — don't crash in that case
 			if (this.dom.div) {
 				sayerror(this.dom.div, `Error running GRIN2: ${error instanceof Error ? error.message : error}`)
@@ -136,6 +186,36 @@ class GRIN2 extends PlotBase implements RxComponent {
 		} finally {
 			this.controlsView?.setBusy(false)
 		}
+	}
+
+	private getCohortFilterSignature() {
+		return JSON.stringify({
+			filter: this.state.termfilter?.filter ?? null,
+			filter0: this.state.termfilter?.filter0 ?? null
+		})
+	}
+
+	private clearResultsAndShowInputs() {
+		this.resultsView.clear()
+		this.hasResults = false
+		this.inputPanelCollapsed = false
+		this.updateInputPanel()
+	}
+
+	private updateInputPanel() {
+		this.dom.inputPanel
+			.attr('aria-hidden', String(this.inputPanelCollapsed))
+			.property('inert', this.inputPanelCollapsed)
+			.style('grid-template-rows', this.inputPanelCollapsed ? '0fr' : '1fr')
+			.style('opacity', this.inputPanelCollapsed ? '0' : '1')
+			.style('pointer-events', this.inputPanelCollapsed ? 'none' : 'auto')
+		this.controlsToggleButton?.style('display', this.hasResults ? null : 'none')
+		this.dom.controlsToggle
+			.select('[data-testid="sjpp-grin2-run-button"]')
+			.style('display', this.inputPanelCollapsed ? 'none' : null)
+		this.controlsToggleButton
+			?.attr('aria-expanded', String(!this.inputPanelCollapsed))
+			.text(this.inputPanelCollapsed ? 'Show input options' : 'Hide input options')
 	}
 }
 
@@ -164,6 +244,9 @@ export async function getPlotConfig(opts: GRIN2Opts, app: MassAppApi) {
 		if (queries.svfusion.dtLst.includes(dtsv)) {
 			dtUsage[dtsv] = { checked: false, label: dt2lesion[dtsv].uilabel }
 		}
+	}
+	if (queries?.itd) {
+		dtUsage[dtitd] = { checked: false, label: dt2lesion[dtitd].uilabel }
 	}
 
 	// snvindelOptions / cnvOptions / fusionOptions / svOptions are intentionally not seeded here.

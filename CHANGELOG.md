@@ -4,6 +4,89 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- the GDC dataset now supplies its own query getters; a deployed GDC image (ppgdc) must be updated together with this server release
+- the GDC and MMRF datasets (ppgdc, ppmmrf) now declare their chart lists via isSupportedChartOverride{} and rely on this centralized step; their deployed images must be updated together with this server release
+
+Features:
+- Untangle the GDC querySamples_gdcapi() server path: split the getData/dictionary-term and variant2samples sample-query entry points so getData calls queryDictTermData_gdcapi instead of the mutation-oriented querySamples_gdcapi, drop a shared-request mutation, and extract a unit-tested ssm-occurrence field builder
+- Centralize sample-id-to-display resolution on ds.cohort.termdb.q.id2sampleRefs() with a uniform native/GDC implementation, removing the GDC-specific __gdc coupling from termdb.matrix.js and termdb.cluster.ts
+- Move GDC-specific server code out of the server package and into the GDC dataset (ppgdc), wiring each GDC query through a dataset-supplied getter — the same hook pattern the MMRF dataset uses — instead of hardcoded gdcapi branches
+- Add a shared flattenCase helper as the single flattenCaseByFields definition used by both the GDC and MMRF datasets, replacing three divergent copies
+- Centralize supported chart-type setup into a dataset-agnostic setSupportedChartTypes() step, extracted out of server_init_db_queries() and run from mds3.init.js validate_termdb() so every dataset — including non-sqlite ones (GDC, MMRF) — flows through the shared ds.isSupportedChartOverride{} mechanism
+- Add allowlist mode via the new Mds3 supportedChartsFromOverrideOnly flag: curated datasets opt out of the shared defaultCommonCharts and declare their complete chart list through isSupportedChartOverride{}
+
+Fixes:
+- select a deterministic diagnosis entry for GDC CNV views (matching the matrix and summary plots) and reduce multi-valued case fields to a single value so they no longer serialize to an empty object for the client
+- fix the GDC term total-size query treating integer/float terms as categorical, which built the wrong aggregation query for numeric terms
+- de-duplicate the GDC pp-filter to GDC-filter converter, correcting OR-joined root filters, multi-range numeric filters, and terms carrying both values and ranges
+- remove unused private class members in numeric tw handlers
+
+
+## 2.198.0
+
+Features:
+- Implemented new 'pseudobulk' termType.
+
+Fixes:
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
+- Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
+- Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
+- Move dataset launch-time case-sample caching into a uniform ds.preInit.cacheSamples() hook: mds3 init now dispatches caching generically (dropping the ds.label=='GDC' hardcode in mds3.init.nonblocking.js), so each API-based dataset owns its own caching (GDC's gdc.initCache relocated to the ppgdc dataset)
+- Route GDC dictionary term data through the ds.cohort.termdb.dictionary.get() hook, removing the GDC-specific getSampleData_dictionaryTerms_v2s path (and its variant2samples fallback) from shared server code
+- accept a GDC_API argument for IDCViewer to avoid CORS error in prod when requesting /cases data
+
+
+## 2.197.0
+
+Features:
+- GSEA plot refactored into the MVVM pattern for improved maintainability and scalability.
+- GRIN2 - ITD (internal tandem duplication) support: a new ITD data-type checkbox, per-sample lesion conversion, and Manhattan/table rendering. Enabled automatically for any dataset that declares an itd query; unchecked by default like fusion/SV.
+
+Fixes:
+- ensure that zero is not duplicated in the getInterpolatedDomainRange() color scale helper
+- correctly handle key events in max sample input in matrix controls
+- GRIN2 - Manhattan plot rendered no dots for lesion types outside the built-in gain/loss/mutation/fusion/sv set (e.g. ITD): lesion types are now discovered from the result columns and colors derive from the shared dt2lesion map, so any current or future data type renders.
+- GRIN2 - Manhattan plot clipped the most-significant (q=0) genes above the plot area; the y-axis maximum now accounts for the zero-q placement so top hits stay visible.
+- Reorg GDC termdb dictionary init to use the ds.termdb.dictionary.build() hook, moving the builder from server/src into the ppgdc dataset
+- Unify dataset init recoverable-error handling: retry now keys off ds.init.recoverableError alone, removing the GDC-specific ds.init.step === 'gdcBuildDictionary()' special-case from shared server code
+- Keep dataset .ts sources alongside generated .js (dedupjs.sh) and drop the dedup step from the cjs script, so split dataset modules survive SJ-host deploys (Node 24 runs .ts directly)
+
+
+## 2.196.0
+
+Features:
+- Single cell scatter plot now accepts two single cell gene expression terms for plotting. The option to add a color term is disabled if an overlay term is present.
+- New client unit and integration tests for the single cell scatter were added. New server unit tests for the plot route were also added.
+- GRIN2 - MAF filter (tumor VAF / total-depth / alt-depth) support for GDC, matching non-GDC datasets
+- GRIN2 - hypermutator per-sample cutoff for SNV/indel and CNV, excluding a sample from a data type when its raw record count exceeds the cutoff
+- GRIN2 - CNV classification unified across log2ratio, segmean, copyNumber, and categorical quantification, with per-type thresholds for mixed cohorts
+- GRIN2 - CNV-segment controls: multi cnv-type selection, categorical class checkboxes, and clearer reporting; clearing all consequences/classes now sends "none" of that data type
+- GRIN2 - refactored the general route (main.ts split into lesions.ts and memory.ts; typed processing summary)
+
+Fixes:
+- GRIN2 - CNV hypermutator cutoff now defaults to off; the previous default silently dropped whole-sample CNV on dense native segmentation data
+- GRIN2 - MAF validation resolves the FORMAT definition from q.format so the filter runs on GDC (whose FORMAT is not under byrange._tk)
+- GRIN2 - client hypermutator inputs guard against a cleared field (NaN), falling back to the configured default instead of disabling the cutoff server-side
+- GRIN2 - Linux available-memory parsing tolerates free -m format shifts, falling back to os.freemem instead of producing NaN in the lesion-cap math
+
+
+## 2.195.0
+
+Features:
+- Improved GRIN2 snvindel fetch performance and reporting by pre-filtering to open access only projects. Bounded concurrency with concurrencyLimiter.ts
+- Ported gdc.mafBuild from Rust to TypeScript and bounded it with the concurrencyLimiter fixed-size logic
+- CohortMAF: Removed old Rust code and ported the rust watchdog timer to typescript
+
+
+## 2.194.0
+
+Features:
+- Using ssm batch get in GRIN2 to speed up GDC fetch performance
+
+
+## 2.193.0
+
 Features:
 - The single cell routes were reorganized into server/src/singleCell (see server/src/singleCell/README). Each route includes the new validation method, checker, to match ongoing efforts to improve route stability and maintainability.
 - Filtering cohort level terms in the SC app (i.e. parent header) is applied to all meta result subplots. This ensures the data in the plot matches the samples found in the sample table.
@@ -29,6 +112,39 @@ Features:
 
 Fixes:
 - aarange=[a,b] to zoom in on block protein mode
+
+
+## 2.191.9
+
+Fixes:
+- send x-forwarded-* headers in the request for GDC MAF data
+
+
+## 2.191.8
+
+Fixes:
+- forward the end user's real User-Agent (x-forwarded-agent, else the request user-agent) onto the GDC cohort MAF file downloads instead of a hardcoded browser User-Agent
+
+
+## 2.191.7
+
+Fixes:
+- fix GDC cohort MAF multi-file download failures against stricter GDC environments (e.g. qa-int): send only auth and a User-Agent on the file downloads, reuse keep-alive connections, retry mid-download connection drops, and make download concurrency configurable via serverconfig.features.gdcMafConcurrency
+- improve GDC MAF per-file download error reporting to surface the real HTTP status and transport-level cause
+- make the gdcmaf process watchdog timeout configurable via serverconfig.features.gdcMafMaxElapsed
+
+
+## 2.191.6
+
+Fixes:
+- fix the GDC MAF rust code to limit HTTP connection reuse and improve error handling
+
+
+## 2.191.5
+
+Fixes:
+- make the fatal error message consistent on initial validation and retries
+- do not show regression chart buttons in the Correlation Plot tool
 
 
 ## 2.191.4

@@ -263,6 +263,9 @@ function makeControls(obj) {
 					rows,
 					columns: [{ label: 'Column Name' }],
 					selectedRows,
+					// keep the header "select all" checkbox in sync with the rows: tick it when every
+					// column is currently selected (e.g. the all-selected default state)
+					selectAll: selectedRows.length === mafColumns.length,
 					dataTestId: 'sjpp-gdcmaf-columnTableUi',
 					noButtonCallback: (i, n) => {
 						mafColumns[i].selected = n.checked
@@ -275,9 +278,9 @@ function makeControls(obj) {
 
 		function updateText() {
 			clickText.text(
-				`${mafColumns.reduce((c, i) => c + (i.selected ? 1 : 0), 0)} of ${
-					mafColumns.length
-				} columns selected. Click to change`
+				`${mafColumns
+					.reduce((c, i) => c + (i.selected ? 1 : 0), 0)
+					.toLocaleString()} of ${mafColumns.length.toLocaleString()} columns selected. Click to change`
 			)
 		}
 	}
@@ -301,9 +304,11 @@ async function getFilesAndShowTable(obj) {
 
 		// render
 		if (result.filesTotal > result.files.length) {
-			wait.text(`Showing first ${result.files.length} MAF files out of ${result.filesTotal} total.`)
+			wait.text(
+				`Showing first ${result.files.length.toLocaleString()} MAF files out of ${result.filesTotal.toLocaleString()} total.`
+			)
 		} else {
-			wait.text(`Showing ${result.files.length} MAF files.`)
+			wait.text(`Showing ${result.files.length.toLocaleString()} MAF files.`)
 		}
 
 		const rows = []
@@ -405,6 +410,13 @@ async function getFilesAndShowTable(obj) {
 			data = await dofetch3('gdc/mafBuild', { body: { fileIdLst, columns: outColumns } })
 			if (!Object.keys(data).length) throw 'server returned blank multipart'
 
+			// A JSON (non-multipart) response means buildMaf failed before it could start streaming the
+			// file — e.g. no files under the size limit, or a GDC metadata-query error. Surface the
+			// server's actual message instead of falling through to the misleading 'missing gzfile'.
+			// (A successful multipart response is keyed by part name — gzfile/errors — and has no
+			// top-level .error/.status, so this only catches the JSON error shape.)
+			if (data.status == 'error' || data.error) throw data.error || data.message || 'server error building MAF'
+
 			if (data.errors?.body) {
 				// expect gdc/mafBuild errors to be an array
 				const errors = data.errors.body || []
@@ -413,6 +425,10 @@ async function getFilesAndShowTable(obj) {
 					if (fileErrors.length) displayRunStatusErrors(fileErrors)
 					const nonFileErrors = errors.filter(d => !d.url)
 					for (const e of nonFileErrors) sayerror(obj.errDiv, e.error || e.message)
+					// A non-file (build-level) error — e.g. the server-side timeout backstop — means the
+					// cohort MAF is incomplete/invalid. Surface the error and do NOT download the partial
+					// file. (Per-file errors alone are non-fatal: the partial cohort still downloads below.)
+					if (nonFileErrors.length) return
 				}
 			}
 

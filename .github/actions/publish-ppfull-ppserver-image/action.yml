@@ -13,12 +13,12 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 10
 
     - name: Login to Github
-      uses: docker/login-action@v3.4.0
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: ${{ inputs.GITHUB_ACTOR }}
@@ -32,7 +32,7 @@ runs:
 
         # set the branch name before checking out tag
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        echo "::set-output name=branch::$BRANCH"
+        echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
 
         git pull origin $BRANCH # in case this action is not able to access a pushed tagged commit/branch tip from a previous step within the CI environment
         
@@ -57,29 +57,46 @@ runs:
           docker push "ghcr.io/stjude/ppfull:latest";
         fi
 
-        echo "::set-output name=docker_version::$TAG-$HASH";
+        echo "docker_version=$TAG-$HASH" >> "$GITHUB_OUTPUT"
 
-    - name: get pp version
-      id: pp-version
-      uses: martinbeentjes/npm-get-version-action@main
+    # Reads versions inline with node (repo's existing idiom), replacing the
+    # third-party martinbeentjes/npm-get-version-action@main (mutable @main branch pin).
+    - name: Get package versions
+      id: versions
+      shell: bash
+      run: |
+        echo "pp_version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+        echo "front_version=$(node -p "require('./front/package.json').version")" >> "$GITHUB_OUTPUT"
+        echo "server_version=$(node -p "require('./server/package.json').version")" >> "$GITHUB_OUTPUT" 
 
-    - name: get front version
-      id: front-version
-      uses: martinbeentjes/npm-get-version-action@main
-      with:
-        path: front
-
-    - name: get server version
-      id: server-version
-      uses: martinbeentjes/npm-get-version-action@main
-      with:
-        path: server
-
-    - name: Run deploy action
-      uses: peter-evans/repository-dispatch@v2
+    # Trigger the downstream deploy in stjude/sj-pp via a repository_dispatch event.
+    # Replaces peter-evans/repository-dispatch@v4: its bundled @octokit/request@8.4.1
+    # tags string bodies with duplex:"half", which Node 24's undici rejects as
+    # "Request body length does not match content-length header".
+    - name: Trigger deploy in sj-pp
+      # Only fire on non-release branches (release/prerelease deploys are handled elsewhere).
       if: ${{ !startsWith(github.ref_name, 'release') && !startsWith(github.ref_name, 'prerelease') }}
+      uses: actions/github-script@v9
       with:
-        token: ${{ inputs.PAT }}
-        repository: stjude/sj-pp
-        event-type: version-update
-        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}", "docker_version": "${{ steps.docker-publish.outputs.docker_version}}", "branch": "${{ steps.docker-publish.outputs.branch }}"}'
+        # PAT (not the default GITHUB_TOKEN) — we dispatch to a DIFFERENT repo,
+        # and GITHUB_TOKEN has no cross-repo permissions.
+        github-token: ${{ inputs.PAT }}
+        script: |
+          // octokit needs owner and repo as SEPARATE fields — it won't accept a
+          // combined "stjude/sj-pp" string, so both lines must stay.
+          await github.rest.repos.createDispatchEvent({
+            owner: 'stjude',
+            repo: 'sj-pp',
+            event_type: 'version-update',
+            // client_payload must be an OBJECT (not a JSON string); octokit serializes it
+            // and computes Content-Length from its own output, so no mismatch can occur.
+            // toJSON() safely quotes/escapes each interpolated value.
+            client_payload: {
+              pp_version: ${{ toJSON(steps.versions.outputs.pp_version) }},
+              front_version: ${{ toJSON(steps.versions.outputs.front_version) }},
+              server_version: ${{ toJSON(steps.versions.outputs.server_version) }},
+              docker_version: ${{ toJSON(steps.docker-publish.outputs.docker_version) }},
+              branch: ${{ toJSON(steps.docker-publish.outputs.branch) }}
+            }
+          })
+

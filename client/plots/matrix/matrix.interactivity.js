@@ -3,7 +3,7 @@ import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes, isNumericTerm, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
 import {
 	mclass,
 	dt2label,
@@ -1338,7 +1338,7 @@ function setTermActions(self) {
 		const usecase = { target: 'matrix', detail: 'termgroups' }
 		if (self.chartType == 'hierCluster') {
 			if (
-				self.config.dataType == NUMERIC_DICTIONARY_TERM &&
+				dictionaryNumericTypes.has(self.config.dataType) &&
 				(!self.activeLabel || self.activeLabel.grp.type == 'hierCluster')
 			) {
 				usecase.target = 'numericDictTermCluster'
@@ -1399,7 +1399,7 @@ function setTermActions(self) {
 		const t = self.activeLabel
 		const termgroups = self.termGroups
 
-		const isNumericDictTermCBut = self.config.dataType == NUMERIC_DICTIONARY_TERM && !t
+		const isNumericDictTermCBut = dictionaryNumericTypes.has(self.config.dataType) && !t
 		const isMetaboliteIntensityCBut = self.config.dataType == TermTypes.METABOLITE_INTENSITY && !t
 		const isProteomeAbundanceCBut = self.config.dataType == TermTypes.PROTEOME_ABUNDANCE && !t
 		if (isNumericDictTermCBut || isMetaboliteIntensityCBut || isProteomeAbundanceCBut || t.grp.type == 'hierCluster') {

@@ -51,10 +51,8 @@ import bedgraphdot_request_closure from './bedgraphdot.js'
 import bam_request_closure from './bam.js'
 import { mdsjunction_request_closure } from './mds.junction.js'
 import { gdc_bam_request } from './bam.gdc.js'
-import * as mds3Gdc from './mds3.gdc.js'
 import aicheck_request_closure from './aicheck.js'
 import bampile_request_closure from './bampile.js'
-import junction_request_closure from './junction.js'
 import bedj_request_closure from './bedj.js'
 import { request_closure as blat_request_closure } from './blat.js'
 import { mds3_request_closure } from './mds3.load.js'
@@ -117,7 +115,6 @@ export function setRoutes(app, _genomes, serverconfig) {
 	app.post(basepath + '/study', handle_study)
 	app.post(basepath + '/textfile', handle_textfile)
 	app.post(basepath + '/urltextfile', handle_urltextfile)
-	app.get(basepath + '/junction', junction_request_closure(genomes)) // legacy, including rnapeg
 	app.post(basepath + '/mdsjunction', mdsjunction_request_closure(genomes))
 	app.post(basepath + '/mdssvcnv', handle_mdssvcnv)
 	app.post(basepath + '/mdsgenecount', handle_mdsgenecount)
@@ -3810,37 +3807,6 @@ async function handle_mdsgenevalueonesample(req, res) {
 		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
-}
-
-export function boxplot_getvalue(lst) {
-	/* ascending order
-    each element: {value}
-    */
-	const l = lst.length
-	if (l < 5) {
-		// less than 5 items, won't make boxplot
-		return { out: lst }
-	}
-	const p50 = lst[Math.floor(l / 2)].value
-	const p25 = lst[Math.floor(l / 4)].value
-	const p75 = lst[Math.floor((l * 3) / 4)].value
-	const p05 = lst[Math.floor(l * 0.05)].value
-	const p95 = lst[Math.floor(l * 0.95)].value
-	const p01 = lst[Math.floor(l * 0.01)].value
-	const iqr = p75 - p25
-
-	let w1, w2
-	if (iqr == 0) {
-		w1 = 0
-		w2 = 0
-	} else {
-		const i = lst.findIndex(i => i.value > p25 - iqr * 1.5)
-		w1 = lst[i == -1 ? 0 : i].value
-		const j = lst.findIndex(i => i.value > p75 + iqr * 1.5)
-		w2 = lst[j == -1 ? l - 1 : j - 1].value
-	}
-	const out = lst.filter(i => i.value < p25 - iqr * 1.5 || i.value > p75 + iqr * 1.5)
-	return { w1, w2, p05, p25, p50, p75, p95, iqr, out }
 }
 
 function mds_tkquery_parse_permanentHierarchy(query, ds) {

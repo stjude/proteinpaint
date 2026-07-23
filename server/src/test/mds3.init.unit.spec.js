@@ -1,5 +1,9 @@
 import test from 'tape'
-import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter } from '../mds3.init.js'
+import fs from 'fs'
+import os from 'os'
+import path from 'path'
+import { filterByItem, filterByTvsLst, mayFilterByMaf, mayValidateBcfMafFilter, setFile } from '../mds3.init.js'
+import serverconfig from '../serverconfig.js'
 
 /*
 Tests:
@@ -26,11 +30,65 @@ Tests:
 	mayFilterByMaf: mafFilter with child ids
 	mayFilterByMaf: basic mafFilter, min allelic depth
 	mayFilterByMaf: mafFilter with child ids, min allelic depth
+	setFile: validates and resolves files
 */
 
 test('\n', t => {
 	t.pass('-***- mds3.init unit tests -***-')
 	t.end()
+})
+
+test('setFile: validates and resolves files', async t => {
+	const originalTpMasterDir = serverconfig.tpmasterdir
+	const tmpdir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'pp-setfile-'))
+	serverconfig.tpmasterdir = tmpdir
+
+	try {
+		await fs.promises.mkdir(path.join(tmpdir, 'nested'))
+		await fs.promises.writeFile(path.join(tmpdir, 'relative.txt'), '')
+		await fs.promises.writeFile(path.join(tmpdir, 'nested', 'custom.txt'), '')
+		await fs.promises.writeFile(path.join(tmpdir, 'absolute.txt'), '')
+
+		{
+			const q = { file: 'relative.txt' }
+			await setFile(q, 'testType')
+			t.equal(q.file, path.join(tmpdir, 'relative.txt'), 'resolves relative file against tpmasterdir')
+		}
+		{
+			const file = path.join(tmpdir, 'absolute.txt')
+			const q = { file }
+			await setFile(q, 'testType')
+			t.equal(q.file, file, 'keeps absolute file path under tpmasterdir')
+		}
+		{
+			const q = { jsonFile: 'nested/custom.txt' }
+			await setFile(q, 'testType', 'jsonFile')
+			t.equal(q.jsonFile, path.join(tmpdir, 'nested', 'custom.txt'), 'supports custom file key')
+		}
+
+		for (const [q, expected] of [
+			[{ file: 1 }, 'testType.file not string'],
+			[{ file: '' }, 'testType.file empty string']
+		]) {
+			try {
+				await setFile(q, 'testType')
+				t.fail('setFile should reject invalid file value')
+			} catch (e) {
+				t.equal(e, expected, `throws "${expected}"`)
+			}
+		}
+
+		try {
+			await setFile({ file: 'missing.txt' }, 'testType')
+			t.fail('setFile should reject unreadable file')
+		} catch (e) {
+			t.ok(String(e).includes('No such file or directory'), 'throws for unreadable file')
+		}
+	} finally {
+		serverconfig.tpmasterdir = originalTpMasterDir
+		await fs.promises.rm(tmpdir, { recursive: true, force: true })
+		t.end()
+	}
 })
 
 test('filterByItem: mutated sample matches filter', t => {
@@ -1606,10 +1664,10 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	qBad.mafFilter.terms[0].id = 'no_such_field'
 	t.throws(() => mayValidateBcfMafFilter(qBad), /unknown FORMAT key/, 'throws on unknown FORMAT key')
 
-	// no byrange format throws when mafFilter present
+	// no FORMAT anywhere (neither byrange._tk.format nor q.format) throws when mafFilter present
 	const qNoFormat = makeQ()
 	delete qNoFormat.byrange._tk.format
-	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /byrange._tk.format is missing/, 'throws when format missing')
+	t.throws(() => mayValidateBcfMafFilter(qNoFormat), /no FORMAT/, 'throws when format missing')
 
 	// a dataset-configured depth term with a valid mafFormatKey passes validation
 	const qDepth = makeQ()
@@ -1661,6 +1719,24 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 	const qBadMode = makeQ()
 	qBadMode.mafFilter.terms[0].mafFilterMode = 'bogus'
 	t.throws(() => mayValidateBcfMafFilter(qBadMode), /unknown mafFilterMode/, 'unknown mafFilterMode throws')
+})
+
+test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t => {
+	t.plan(2)
+	// GDC has byrange.gdcapi (no _tk.format); its FORMAT is on q.format. The `|| q.format` fallback in
+	// mayValidateBcfMafFilter is the whole reason GDC MAF works — guard it so a cleanup can't silently
+	// break GDC (validation would then throw /no FORMAT/ and take down the GDC snvindel query).
+	const q = {
+		byrange: { gdcapi: true },
+		format: { TumorAC: { ID: 'TumorAC', Number: 'R', Type: 'Integer', Description: 'tumor allele counts' } },
+		mafFilter: {
+			opts: { joinWith: ['and', 'or'] },
+			filter: { type: 'tvslst', join: '', in: true, lst: [] },
+			terms: [{ id: 'TumorAC', name: 'Tumor MAF', parent_id: null, isleaf: true, type: 'float' }]
+		}
+	}
+	t.doesNotThrow(() => mayValidateBcfMafFilter(q), 'GDC-shaped q (format on q.format) passes validation')
+	t.equal(q.mafFilter.terms.length, 3, 'auto-populated totalDepth + altDepth terms from q.format')
 })
 
 const mafFilter = {

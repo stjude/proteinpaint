@@ -8,6 +8,7 @@ import tape from 'tape'
  Tests:
     - No .samples[]
     - Multiple samples
+    - Single .sample{}
  */
 
 /*************************
@@ -133,6 +134,47 @@ tape('Multiple samples', function (test) {
 
 		const discoPlots = sv.dom.plotsDiv.selectAll('[data-testid="sjpp-disco-svgDiv"]').nodes()
 		test.equal(discoPlots.length, 1, 'Should render disco plot for sample id 3416 but not 2646.')
+
+		if (test['_ok']) sv.app.destroy()
+		test.end()
+	}
+})
+
+tape('Single .sample{}', function (test) {
+	test.timeoutAfter(5000)
+
+	// A single pre-chosen sample, as dispatched by the mass omnisearch's "Sample View" button and by a
+	// scatter point click. Its data renders without any typing; the search box shows the sample name so
+	// it does not read as "type a sample name to see details".
+	const sample = { sampleId: 41, sampleName: '2646' }
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'sampleView',
+					sample
+				}
+			]
+		},
+		sampleView: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(sampleView) {
+		const sv = sampleView.Inner
+
+		const input = sv.dom.sampleDiv.select('input').node()
+		test.equal(input?.value, sample.sampleName, `Should prefill the search box with ${sample.sampleName}.`)
+
+		const findSample = sv.dom.plotsDiv
+			.selectAll('th')
+			.nodes()
+			.some(n => n.textContent === sample.sampleName)
+		test.ok(findSample, `Should render ${sample.sampleName} data without typing in the search box.`)
 
 		if (test['_ok']) sv.app.destroy()
 		test.end()

@@ -2,7 +2,7 @@ import { connect_db } from './utils.js'
 import { authApi } from './auth.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { DEFAULT_SAMPLE_TYPE, numericTypes } from '#shared/terms.js'
-import type { isSupportedChartCallbacks } from '#types'
+import type { isSupportedChartCallbacks, GeomapSite } from '#types'
 //import { interpolateSqlValues } from './termdb.sql.js'
 
 /*
@@ -137,6 +137,11 @@ export function server_init_db_queries(ds) {
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+		// centralized id->display resolution (see termdb.matrix.js id2sampleRef()), wrapping id2sampleName.
+		// native sample ids are integer PKs (sampleidmap.id), so Number() only normalizes a stringified
+		// map key and never NaNs a real id; non-integer id spaces (e.g. gdc case uuids) never reach here —
+		// they use their own id2sampleRefs (gdc.buildDictionary.ts) with no coercion.
+		q.id2sampleRefs = id => ({ label: i2s.get(Number(id)) })
 		if (tables.has('cohort_sample_types')) {
 			const rows = cn.prepare('SELECT * from cohort_sample_types').all()
 			q.getCohortSampleCount = cohortKey => {
@@ -242,6 +247,17 @@ export function server_init_db_queries(ds) {
 			}
 			return undefined
 		}
+	}
+
+	/*
+	Build geomap pins from the geoLocation table when a dataset opts into the map (ds.cohort.termdb.geomap)
+	and the table is present. Mirrors the _role2terms pattern above: table-gated and generic — the dataset
+	populates geoLocation however it likes (careReg loads it from an xlsx in its build). Each row's site_code
+	links a pin back to the dataset's site term for per-user highlighting.
+	*/
+	if (ds.cohort.termdb.geomap && tables.has('geoLocation')) {
+		const rows = cn.prepare('SELECT id, name, latitude, longitude FROM geoLocation').all()
+		ds.cohort.termdb.geomap.sites = buildGeomapSites(rows)
 	}
 
 	{
@@ -494,43 +510,6 @@ export function server_init_db_queries(ds) {
 		}
 	}
 
-	/* 
-		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
-		this is used by getSupportedChartTypes()
-		scope commonCharts inside the init function; also compute it once on server startup and no need to repeat it in getSupportedChartTypes()
-	*/
-	const commonCharts = Object.assign(
-		{},
-		defaultCommonCharts,
-		(ds.isSupportedChartOverride as isSupportedChartCallbacks) || {}
-	)
-
-	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
-
-	/*
-	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
-	for showing as chart buttons in mass ui
-	*/
-	q.getSupportedChartTypes = req => {
-		// based on request, derive forbiddenRoutes and clientAuthResult that ds can use to tailor chart support
-		const info = authApi.getNonsensitiveInfo(req)
-		// must do the check so as not to fail tsc compiler check (auth.js is not ts)
-		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
-		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
-
-		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
-			supportedChartTypes[cohort] = []
-
-			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
-				if (isSupported({ ds, cohortTermTypes, cohort, ...authInfo })) {
-					// this chart type is supported based on context
-					supportedChartTypes[cohort].push(chartType)
-				}
-			}
-		}
-		return supportedChartTypes
-	}
-
 	q.getSingleSampleData = async function (q, ds) {
 		const { sampleId, term_ids } = q
 		if (!sampleId) throw new Error('sampleId is missing for q.getSingleSampleData() request.')
@@ -586,12 +565,68 @@ export function server_init_db_queries(ds) {
 	}
 
 	q.getProfileFacilities = function () {
-		const query = `select name from sampleidmap join 
+		const query = `select name from sampleidmap join
 		anno_categorical on sampleidmap.id = anno_categorical.sample
 		where term_id = 'sampleType' and value = 'Facility'`
 		const sql = cn.prepare(query)
 		const rows = sql.all()
 		return rows
+	}
+}
+
+/*
+	Centralized (dataset-agnostic) setup of q.getSupportedChartTypes, run once per dataset as a later
+	init step (mds3.init.js validate_termdb) regardless of how the dataset built its q{} — so every ds,
+	including non-sqlite ones (gdc/mmrf), can customize chart support via ds.isSupportedChartOverride{}.
+
+	Extracted out of server_init_db_queries() so it no longer depends on sqlite db setup.
+
+	Guards keep this a no-op for datasets that don't need it:
+	- a ds that supplies its own getSupportedChartTypes (gdc/mmrf/etc.) is left untouched
+	- a ds with no way to compute term types (no preset termtypeByCohort and no db connection) is skipped,
+	  same as before (only sqlite datasets got a getSupportedChartTypes previously)
+*/
+export function setSupportedChartTypes(ds) {
+	const tdb = ds.cohort?.termdb
+	if (!tdb?.q) return // no query object to attach to
+	if (tdb.q.getSupportedChartTypes) return // ds supplied its own; don't clobber
+	if (!tdb.termtypeByCohort && !ds.cohort.db?.connection) return // can't compute term types; leave unset
+
+	/*
+		generates commonCharts with optional overrides to ensure that ds-specific overrides are not shared across different datasets
+		this is used by getSupportedChartTypes()
+		scope commonCharts inside this function; also compute it once on server startup and no need to repeat it in getSupportedChartTypes()
+
+		a curated dataset (e.g. gdc/mmrf) can set supportedChartsFromOverrideOnly=true to opt out of the
+		shared defaults entirely, so its isSupportedChartOverride{} is the complete allowlist of chart types
+	*/
+	const base = ds.supportedChartsFromOverrideOnly ? {} : defaultCommonCharts
+	const commonCharts = Object.assign({}, base, (ds.isSupportedChartOverride as isSupportedChartCallbacks) || {})
+
+	mayComputeTermtypeByCohort(ds) // ds.cohort.termdb.termtypeByCohort[] is set. needed by getSupportedChartTypes()
+
+	/*
+	compute and return list of chart types based on term types from each subcohort, and non-dictionary query data
+	for showing as chart buttons in mass ui
+	*/
+	tdb.q.getSupportedChartTypes = req => {
+		// based on request, derive forbiddenRoutes and clientAuthResult that ds can use to tailor chart support
+		const info = authApi.getNonsensitiveInfo(req)
+		// must do the check so as not to fail tsc compiler check (auth.js is not ts)
+		const authInfo = typeof info == 'object' ? info : { forbiddenRoutes: [] }
+		const supportedChartTypes = {} // key: subcohort string, value: list of chart types allowed for this cohort
+
+		for (const [cohort, cohortTermTypes] of Object.entries(ds.cohort.termdb.termtypeByCohort.nested)) {
+			supportedChartTypes[cohort] = []
+
+			for (const [chartType, isSupported] of Object.entries(commonCharts)) {
+				if (isSupported({ ds, cohortTermTypes, cohort, ...authInfo })) {
+					// this chart type is supported based on context
+					supportedChartTypes[cohort].push(chartType)
+				}
+			}
+		}
+		return supportedChartTypes
 	}
 }
 
@@ -603,8 +638,26 @@ export function filterTerms(req, ds, terms) {
 }
 
 /*
+	Turn geoLocation table rows into geomap pins. A row becomes a pin only when it carries numeric lat & lon.
+	`id` is the marker's link/highlight key (a site code, country code, etc. per dataset), falling back to name.
+	Kept generic and exported so it can be unit-tested without a DB.
+*/
+type GeoLocationRow = { id?: string; name?: string; latitude?: number; longitude?: number }
+export function buildGeomapSites(rows?: GeoLocationRow[]): GeomapSite[] {
+	const sites: GeomapSite[] = []
+	for (const r of rows || []) {
+		if (typeof r?.latitude != 'number' || !Number.isFinite(r.latitude)) continue
+		if (typeof r?.longitude != 'number' || !Number.isFinite(r.longitude)) continue
+		const id = r.id || r.name
+		if (!id) continue
+		sites.push({ id, name: r.name || r.id || id, lat: r.latitude, lon: r.longitude })
+	}
+	return sites
+}
+
+/*
 	This section defines common chart types, such as 'summary charts', which are generally applicable to any dataset (ds).
-	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or singleCell charts.
+	These chart types can be computed based on term types or the availability of ds.queries{}, for example, survival or sc.
 
 	Each chart type has a callback function equivalent to isSupported() that executes on context parameters 
 	to determine if the chart type should be displayed (returns true) or not (returns false).
@@ -681,7 +734,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 		if (ds.queries?.snvindel || ds.queries?.svfusion || ds.queries?.cnv || ds.queries?.trackLst) return true
 		return false
 	},
-	singleCellPlot: ({ ds }) => ds.queries?.singleCell,
+	sc: ({ ds }) => ds.queries?.singleCell,
 	correlationVolcano: ({ ds }) => ds.cohort.correlationVolcano,
 	chat: ({ ds }) => ds.queries?.chat,
 	geneExpression: ({ ds }) => ds.queries?.geneExpression,
@@ -694,6 +747,9 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	animatedBubbleChart: ({ ds }) => ds.queries?.geneRanking,
 	brainRegions: ({ ds }) => ds.queries?.proteome?.brainRegions,
 	bubbleHeatmap: ({ ds }) => ds.queries?.proteome?.bubbleHeatmap,
+	cellTypeBubbleHeatmap: ({ ds }) => ds.queries?.proteome?.cellTypeBubbleHeatmap,
+	studyCatalog: ({ ds }) => ds.queries?.proteome?.studyCatalog,
+	proteomeCohortCompare: ({ ds }) => ds.queries?.proteome?.studyCatalog,
 	DA: ({ ds }) => ds.queries?.rnaseqGeneCount,
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case

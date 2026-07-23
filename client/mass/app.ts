@@ -63,6 +63,16 @@ class MassApp extends AppBase implements RxApp {
 			plotDiv: opts.holder.append('div')
 		}
 
+		if (opts.getPlotConfig_mutateSummary) {
+			/* 
+			a simple fix to perform a targeted mutation for summary config in summary.ts getPlotConfig()
+			this is from runpp({mass:{getPlotConfig_mutateSummary}})
+			not doing this via termdbConfig flag is because it's hard to support "if" logic (if no term2, supply this term2)
+			*/
+			if (typeof opts.getPlotConfig_mutateSummary != 'function')
+				throw new Error('opts.getPlotConfig_mutateSummary is not function')
+		}
+
 		// track plots by ID, and assign
 		this.plotIdToSandboxId = {}
 	}

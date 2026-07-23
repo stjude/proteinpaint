@@ -106,22 +106,22 @@ function makeDs(idToName: Record<number, string>) {
 	}
 }
 
-tape('buildGroupValues happy path: includes samples whose id is integer and name is in allSampleSet', t => {
+tape('buildGroupValues happy path: includes samples whose id is integer and name is in allSampleSet', async t => {
 	const ds = makeDs({ 1: 'sampleA', 2: 'sampleB' })
-	const q = { allSampleSet: new Set(['sampleA', 'sampleB']) }
-	const out = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, null, null, [], [])
+	const allSampleSet = new Set<string>(['sampleA', 'sampleB'])
+	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [])
 	t.deepEqual(out.names, ['sampleA', 'sampleB'], 'both samples included')
 	t.deepEqual(out.conf1, [], 'no tw → empty conf1')
 	t.deepEqual(out.conf2, [], 'no tw2 → empty conf2')
 	t.end()
 })
 
-tape('buildGroupValues skips non-integer sampleId', t => {
+tape('buildGroupValues skips non-integer sampleId', async t => {
 	const ds = makeDs({ 1: 'sampleA' })
-	const q = { allSampleSet: new Set(['sampleA']) }
-	const out = buildGroupValues(
+	const allSampleSet = new Set<string>(['sampleA'])
+	const out = await buildGroupValues(
 		[{ sampleId: 1 }, { sampleId: 1.5 as any }, { sampleId: 'x' as any }],
-		q,
+		allSampleSet,
 		ds,
 		null,
 		null,
@@ -132,47 +132,47 @@ tape('buildGroupValues skips non-integer sampleId', t => {
 	t.end()
 })
 
-tape('buildGroupValues skips when id2sampleName returns falsy', t => {
+tape('buildGroupValues skips when id2sampleName returns falsy', async t => {
 	const ds = makeDs({ 1: 'sampleA' }) // sampleId 2 maps to undefined
-	const q = { allSampleSet: new Set(['sampleA']) }
-	const out = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, null, null, [], [])
+	const allSampleSet = new Set<string>(['sampleA'])
+	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [])
 	t.deepEqual(out.names, ['sampleA'], 'sample with no name resolution was skipped')
 	t.end()
 })
 
-tape('buildGroupValues skips when name is not in allSampleSet', t => {
+tape('buildGroupValues skips when name is not in allSampleSet', async t => {
 	const ds = makeDs({ 1: 'sampleA', 2: 'sampleB' })
-	const q = { allSampleSet: new Set(['sampleA']) } // sampleB missing
-	const out = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, null, null, [], [])
+	const allSampleSet = new Set<string>(['sampleA']) // sampleB missing
+	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, null, [], [])
 	t.deepEqual(out.names, ['sampleA'], 'sample not in allSampleSet was skipped')
 	t.end()
 })
 
-tape('buildGroupValues skips when tw is configured but term_results has no row for that sample', t => {
+tape('buildGroupValues skips when tw is configured but term_results has no row for that sample', async t => {
 	const ds = makeDs({ 1: 'sampleA', 2: 'sampleB' })
-	const q = { allSampleSet: new Set(['sampleA', 'sampleB']) }
+	const allSampleSet = new Set<string>(['sampleA', 'sampleB'])
 	const tw = { $id: 'tw1', q: { mode: 'discrete' } }
 	const term_results = { samples: { 1: { tw1: { key: 'M', value: 'M' } } } } // sample 2 missing
-	const out = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, tw, null, term_results, [])
+	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, tw, null, term_results, [])
 	t.deepEqual(out.names, ['sampleA'], 'sample missing tw data was skipped')
 	t.deepEqual(out.conf1, ['M'], 'conf1 picked up the discrete key for the kept sample')
 	t.end()
 })
 
-tape('buildGroupValues skips when tw2 is configured but term_results2 has no row for that sample', t => {
+tape('buildGroupValues skips when tw2 is configured but term_results2 has no row for that sample', async t => {
 	const ds = makeDs({ 1: 'sampleA', 2: 'sampleB' })
-	const q = { allSampleSet: new Set(['sampleA', 'sampleB']) }
+	const allSampleSet = new Set<string>(['sampleA', 'sampleB'])
 	const tw2 = { $id: 'tw2', q: { mode: 'discrete' } }
 	const term_results2 = { samples: { 1: { tw2: { key: 'X', value: 'X' } } } } // sample 2 missing
-	const out = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, null, tw2, [], term_results2)
+	const out = await buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], allSampleSet, ds, null, tw2, [], term_results2)
 	t.deepEqual(out.names, ['sampleA'], 'sample missing tw2 data was skipped')
 	t.deepEqual(out.conf2, ['X'], 'conf2 picked up the discrete key for the kept sample')
 	t.end()
 })
 
-tape('buildGroupValues reads .value for continuous mode and .key otherwise', t => {
+tape('buildGroupValues reads .value for continuous mode and .key otherwise', async t => {
 	const ds = makeDs({ 1: 'sampleA', 2: 'sampleB' })
-	const q = { allSampleSet: new Set(['sampleA', 'sampleB']) }
+	const allSampleSet = new Set<string>(['sampleA', 'sampleB'])
 
 	// Continuous: conf1 collects v.value
 	const twCont = { $id: 'twC', q: { mode: 'continuous' } }
@@ -182,7 +182,15 @@ tape('buildGroupValues reads .value for continuous mode and .key otherwise', t =
 			2: { twC: { key: 'unused', value: 2.5 } }
 		}
 	}
-	const outCont = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, twCont, null, term_results_cont, [])
+	const outCont = await buildGroupValues(
+		[{ sampleId: 1 }, { sampleId: 2 }],
+		allSampleSet,
+		ds,
+		twCont,
+		null,
+		term_results_cont,
+		[]
+	)
 	t.deepEqual(outCont.conf1, [1.5, 2.5], 'continuous mode used v.value')
 
 	// Discrete: conf1 collects v.key
@@ -193,17 +201,25 @@ tape('buildGroupValues reads .value for continuous mode and .key otherwise', t =
 			2: { twD: { key: 'F', value: 'unused' } }
 		}
 	}
-	const outDisc = buildGroupValues([{ sampleId: 1 }, { sampleId: 2 }], q, ds, twDisc, null, term_results_disc, [])
+	const outDisc = await buildGroupValues(
+		[{ sampleId: 1 }, { sampleId: 2 }],
+		allSampleSet,
+		ds,
+		twDisc,
+		null,
+		term_results_disc,
+		[]
+	)
 	t.deepEqual(outDisc.conf1, ['M', 'F'], 'non-continuous mode used v.key')
 	t.end()
 })
 
-tape('buildGroupValues populates conf2 from tw2 with the same continuous/discrete split', t => {
+tape('buildGroupValues populates conf2 from tw2 with the same continuous/discrete split', async t => {
 	const ds = makeDs({ 1: 'sampleA' })
-	const q = { allSampleSet: new Set(['sampleA']) }
+	const allSampleSet = new Set<string>(['sampleA'])
 	const tw2Cont = { $id: 'twC2', q: { mode: 'continuous' } }
 	const term_results2 = { samples: { 1: { twC2: { key: 'unused', value: 9.9 } } } }
-	const out = buildGroupValues([{ sampleId: 1 }], q, ds, null, tw2Cont, [], term_results2)
+	const out = await buildGroupValues([{ sampleId: 1 }], allSampleSet, ds, null, tw2Cont, [], term_results2)
 	t.deepEqual(out.conf2, [9.9], 'conf2 continuous reads v.value')
 	t.end()
 })

@@ -281,7 +281,12 @@ export default class Disco {
 		const labelsRenderer = new LabelsRenderer(
 			settings.label.animationDuration,
 			settings.label.fontSize,
-			geneClickListener
+			geneClickListener,
+			this.app.opts.state.args.genome.name,
+			[
+				...(viewModel.rings.cnvArcRing?.elements || []),
+				...(viewModel.rings.lohArcRing?.elements || []).map(event => ({ ...event, dt: dtloh }))
+			]
 		)
 		const nonExonicSnvRenderer = new NonExonicSnvRenderer(geneClickListener)
 		const snvRenderer = new SnvRenderer(settings.rings.snvRingWidth, geneClickListener)

@@ -15,8 +15,6 @@ export type DERequest = {
 	min_total_count: number
 	/** Minimum normalized expression threshold to retain only genes with sufficient expression */
 	cpm_cutoff: number
-	/** Storage_type for storing data. Will deprecate text files */
-	storage_type: 'text' | 'HDF5'
 	/** Method of DE used wilcoxon/edgeR */
 	method?: string
 	/** Term for confounding variable1 (if present) */
@@ -29,6 +27,14 @@ export type DERequest = {
 	 * PNG dimensions, and dot styling. The server always renders the volcano PNG
 	 * and returns it plus the threshold-passing rows as the interactive `data`. */
 	volcanoRender: VolcanoRenderRequest
+	/** if present, loads data from pseudobulk. otherwise loads from rnaseqGeneCount
+	 */
+	pseudobulk?: {
+		assay: string
+		memberId: string
+		category: string
+	}
+	signal?: any
 }
 
 /** Thresholds used to classify a data point as "significant" on the volcano plot.
@@ -70,6 +76,7 @@ export type VolcanoRenderRequest = {
 	 * the browser uses the extra resolution for sharpness. Defaults to 1.0
 	 * server-side. */
 	devicePixelRatio?: number
+	signal?: any
 }
 
 /** Everything the client needs to draw one volcano: the pre-rendered PNG of
@@ -142,8 +149,6 @@ export type ExpressionInput = {
 	data_type: 'do_DE'
 	/** File containing raw gene counts for DE analysis */
 	input_file: string
-	/** Type of storage file: HDF5 or text. Text will be deprecated in the future */
-	storage_type: 'HDF5' | 'text'
 	/** Confounding variable1 for DE analysis. Maybe array of string (Gender: Male/female) or number (Age). For now supporting 1 confounding variable. */
 	conf1?: any[]
 	/** Type of the confounding variable1 (continuous/discrete) */

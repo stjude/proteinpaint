@@ -213,7 +213,20 @@ export function renderTable({
 
 	if (showHeader) {
 		for (const [i, c] of columns.entries()) {
-			const th = theadRow.append('th').text(c.label).attr('class', 'sjpp_table_item sjpp_table_header')
+			const th = theadRow.append('th').attr('class', 'sjpp_table_item sjpp_table_header')
+			if (c.headerTestId) th.attr('data-testid', c.headerTestId)
+			if (c.labelVertical) {
+				th.style('vertical-align', 'bottom')
+				th.append('span')
+					.text(c.label)
+					.style('display', 'inline-block')
+					.style('writing-mode', 'vertical-rl')
+					.style('text-orientation', 'mixed')
+					.style('transform', 'rotate(180deg)')
+					.style('white-space', 'nowrap')
+			} else {
+				th.text(c.label)
+			}
 			if (c.width) th.style('width', c.width)
 			if (c.tooltip) th.attr('title', c.tooltip)
 			if (header?.allowSort) {

@@ -1,17 +1,23 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { dofetch3 } from '#common/dofetch'
 import type { DERequest, DiffMethRequest, TermdbSingleCellDEgenesRequest, VolcanoRenderRequest } from '#types'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
+import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { getGroupColors, toHex } from '../colors'
+// import type { Volcano } from '../Volcano'
 
 export class VolcanoModel {
+	plot: any
 	app: MassAppApi
 	config!: any
 	settings!: any
 	termType: string
 
-	constructor(app: MassAppApi, termType: string) {
-		this.app = app
+	/** TODO: This model is used in both the volcano and gsea.
+	 * In the future, create base model in DA and use specific
+	 * classes for the volcano and gsea. */
+	constructor(plot: any, termType: string) {
+		this.plot = plot
+		this.app = plot.app
 		this.termType = termType
 	}
 
@@ -20,31 +26,34 @@ export class VolcanoModel {
 		this.config = config
 		this.settings = settings
 
-		if (this.termType === GENE_EXPRESSION) {
+		if (this.termType === tt.GENE_EXPRESSION) {
 			const body = await this.getGERequestBody()
-			const response = await dofetch3('termdb/DE', { body })
+			const response = await dofetch3('termdb/DE', { body, signal: this.plot.api?.getAbortSignal() })
 			// Surface the DE request so downstream plots (GSEA) can snapshot
 			// it and later ask the server to recompute the DA cache if the
 			// file is missing on a peer node or after TTL eviction.
 			if (response && !response.error) response.daRequest = body
 			return response
 		}
-		if (this.termType === DNA_METHYLATION) {
+		if (this.termType === tt.DNA_METHYLATION) {
 			const body = await this.getDMRequestBody()
-			const response = await dofetch3('termdb/diffMeth', { body })
+			const response = await dofetch3('termdb/diffMeth', { body, signal: this.plot.api?.getAbortSignal() })
 			// Surface the DM request the same way the GE branch above does so
 			// the GSEA tab can snapshot it and the server can recompute the DM
 			// cache if the file is missing on a peer node or after TTL.
 			if (response && !response.error) response.daRequest = body
 			return response
 		}
-		if (this.termType === SINGLECELL_CELLTYPE) {
+		if (this.termType === tt.SINGLECELL_CELLTYPE) {
 			const body = await this.getSCCTRequestBody()
-			return await dofetch3('termdb/singlecellDEgenes', { body })
+			return await dofetch3('termdb/singlecellDEgenes', { body, signal: this.plot.api?.getAbortSignal() })
 		}
-		if (this.termType === PROTEOME_DAP) {
+		if (this.termType === tt.PROTEOME_DAP) {
 			const body = this.getDapRequestBody()
-			return await dofetch3('termdb/dapVolcano', { body })
+			return await dofetch3('termdb/dapVolcano', { body, signal: this.plot.api?.getAbortSignal() })
+		}
+		if (this.termType === tt.SINGLECELL_GENE_EXPRESSION) {
+			//TODO
 		}
 		throw new Error(`Volcano plot does not support route for termType='${this.termType}'`)
 	}
@@ -66,6 +75,8 @@ export class VolcanoModel {
 			cpm_cutoff: this.settings.cpmCutoff,
 			volcanoRender: this.getVolcanoRender()
 		} as Partial<DERequest> //remove Partial when storage_type is removed from DERequest
+		const pseudobulk = this.config.tw?.pseudobulk
+		if (pseudobulk) body.pseudobulk = pseudobulk
 
 		this.addConfounderTw(body)
 

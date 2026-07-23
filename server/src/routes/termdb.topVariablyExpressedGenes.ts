@@ -10,6 +10,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { cacheOrRecompute } from '#src/utils/cacheOrRecompute.ts'
 import type { TopVeCacheResult } from '../../routes/types.ts'
+import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -37,6 +38,10 @@ function init({ genomes }) {
 			if (!ds.queries?.topVariablyExpressedGenes) throw 'not supported on dataset'
 			q.ds = ds // helps ds getter
 
+			// map parent term annotations to child samples, since assuming
+			// gene expression data is at sample-level
+			maySetMapParent2Children(q, ds, true)
+
 			const t = Date.now()
 			result = {
 				genes: await ds.queries.topVariablyExpressedGenes.getGenes(q)
@@ -60,7 +65,7 @@ export function validate_query_TopVariablyExpressedGenes(ds: any) {
 function nativeValidateQuery(ds: any) {
 	const gE = ds.queries.geneExpression // a separate query required to supply data for computing top genes
 	if (!gE) throw 'topVariablyExpressedGenes query given but geneExpression missing'
-	if (gE.src != 'native') throw 'topVariablyExpressedGenes is native but geneExpression.src is not native'
+	if (!gE.file) throw 'native topVariablyExpressedGenes requires geneExpression.file'
 
 	addTopVEarg(ds.queries.topVariablyExpressedGenes)
 
@@ -92,19 +97,26 @@ function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
 			typeof q.filter_extreme_values === 'number' ? Boolean(q.filter_extreme_values) : !!q.filter_extreme_values,
 		rank_type: q.rank_type?.type ?? 'var',
 		filter: (q as any).filter ?? null,
-		filter0: (q as any).filter0 ?? null
+		filter0: (q as any).filter0 ?? null,
+		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType
 	}
 }
 
 async function resolveNativeSamples(q: TermdbTopVariablyExpressedGenesRequest, gE: any, ds: any): Promise<string[]> {
 	const samples: string[] = []
-	const limitSamples = await mayLimitSamples({ filter: q.filter, filter0: q.filter0 }, gE.samples, ds)
+	const limitSamples = await mayLimitSamples(
+		{ filter: q.filter, filter0: q.filter0, mapParent2Children: q.mapParent2Children, sampleType: q.sampleType },
+		gE.samples,
+		ds
+	)
 	const sourceIds = limitSamples ?? gE.samples
 	for (const sid of sourceIds) {
 		const n: string = ds.cohort.termdb.q.id2sampleName(sid)
 		if (!n) throw 'sample id cannot convert to string name'
 		samples.push(n)
 	}
+	mayLog('topVE', samples.length, 'samples')
 	return samples
 }
 

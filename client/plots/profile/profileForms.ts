@@ -3,12 +3,25 @@ import { getProfilePlotConfig, profilePlot, getDefaultProfilePlotSettings } from
 import { fillTermWrapper, fillTwLst } from '#termsetting'
 import { axisBottom, axisTop } from 'd3-axis'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { select } from 'd3-selection'
+import type { Selection } from 'd3-selection'
+import 'd3-transition'
 import { Tabs } from '../../dom/toggleButtons.js'
 import { roundValueAuto } from '#shared'
+import { dofetch3 } from '#common/dofetch'
+import { renderImpressionThermometer, IMPRESSION_MAX_SCORE, POC_FILL } from './renderImpressionThermometer.js'
+import { renderResponseDistribution } from './renderResponseDistribution.js'
+import { renderImpressionLegend } from './renderImpressionLegend.js'
 
 const YES_NO_TAB = 'Yes/No Barchart'
-const IMPRESSIONS_TAB = 'Impressions'
 const LIKERT_TAB = 'Likert Scale'
+
+// Used to detect when the user clicked an "Impression" domain term in the tree
+// (parent term ID ends with '__Impression'). Such domains don't have multivalue
+// children — they wrap a SC integer term and a POC float term — so the standard
+// tabs flow is skipped and a dedicated thermometer is rendered instead.
+const IMPRESSION_SUFFIX = '__Impression'
+
 export class profileForms extends profilePlot {
 	static type = 'profileForms' as const
 	id: any
@@ -29,6 +42,19 @@ export class profileForms extends profilePlot {
 	//for each plot tab, a dict of sc term wrappers
 	id2SCTW: { [key: string]: { [key: string]: any } }
 
+	// Impression-domain mode (set in init() when config.tw.term.id ends with '__Impression')
+	isImpressionDomain!: boolean
+	scTW: any
+	pocTW: any
+	// Responder-level multivalue impression term ids under this __Impression domain
+	// (POCFimpression_mod*). When present, the route builds the POC distribution per
+	// responder from these instead of the per-site pocTW float.
+	pocResponderTermIds: string[] = []
+	// Per-module color sourced from the DB: terms.jsondata.color on the SC and POC children.
+	// Within a module SC and POC share the same color in the DB; we capture both for safety.
+	impressionScColor?: string
+	impressionPocColor?: string
+
 	constructor(opts) {
 		super(opts, 'profileForms')
 		this.opts = opts
@@ -38,39 +64,76 @@ export class profileForms extends profilePlot {
 	async init(appState) {
 		super.init(appState)
 		const config = structuredClone(appState.plots.find(p => p.id === this.id))
-		this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: config.tw.term.id })
+		const parentId: string = config.tw?.term?.id || ''
+		this.isImpressionDomain = parentId.endsWith(IMPRESSION_SUFFIX)
 		const settings = config.settings.profileForms
 		this.tabs = []
-		for (const plot of config.options) {
-			const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
-			if (!tws.length) continue //no terms for this plot
-			const tab: any = {
-				label: plot.name,
-				callback: () => {
-					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
-				},
-				active: false
+		this.twLst = []
+		if (this.isImpressionDomain) {
+			// Children of an "__Impression" domain are scalar (integer SC + float POC),
+			// not multivalue. Resolve them via getTermChildren — but note the server
+			// joins on subcohort_terms with a cohort string, so we MUST pass the active
+			// cohort or no children come back. Mirrors the lookup tree.js does
+			// (state.cohortValuelst = termdbConfig.selectCohort.values[activeCohort].keys).
+			const cohortValuelst = appState.termdbConfig?.selectCohort
+				? appState.termdbConfig.selectCohort.values[appState.activeCohort]?.keys
+				: null
+			const childData = await this.app.vocabApi.getTermChildren({ id: parentId }, cohortValuelst)
+			const children: any[] = childData?.lst || []
+			const scChild = children.find(t => t.type === 'integer') || children[0]
+			// pocChild may be absent — Patients & Outcomes is SC-only by design.
+			const pocChild = children.find(t => t.type === 'float')
+			// Responder-level impression terms (one or more per domain). Selected by type
+			// rather than id pattern, so the upstream POCFmpression_mod8 typo is tolerated.
+			this.pocResponderTermIds = children.filter(t => t.type === 'multivalue').map(t => t.id)
+			if (!scChild) {
+				console.error('profileForms impression-domain SC child not found:', { parentId, cohortValuelst, childData })
 			}
-			if (plot.name == config.activeTab) tab.active = true
-			if (plot.hasSC) {
-				this.id2SCTW[plot.name] = {}
-				for (const tw of this.twLst) {
-					if (tw.term.subtype != plot.subtype) continue
-					const scTermId = tw.term.id.replace(/^POC/, '')
-					const scTW: any = { id: scTermId }
-					await fillTermWrapper(scTW, this.app.vocabApi)
-					this.id2SCTW[plot.name][scTermId] = scTW
+			if (scChild) {
+				this.scTW = { id: scChild.id, q: { mode: 'continuous' } }
+				await fillTermWrapper(this.scTW, this.app.vocabApi)
+				// Per-module color: every term under a module (SC/POC/responder) carries the same
+				// module color in the DB. Read it off the filled tw, same as polar2/radar2/barchart2.
+				this.impressionScColor = this.scTW.term.color
+			}
+			if (pocChild) {
+				this.pocTW = { id: pocChild.id, q: { mode: 'continuous' } }
+				await fillTermWrapper(this.pocTW, this.app.vocabApi)
+				this.impressionPocColor = this.pocTW.term.color
+			}
+		} else {
+			this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: parentId })
+			for (const plot of config.options) {
+				const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
+				if (!tws.length) continue //no terms for this plot
+				const tab: any = {
+					label: plot.name,
+					callback: () => {
+						this.app.dispatch({ type: 'plot_edit', id: this.id, config: { activeTab: plot.name } })
+					},
+					active: false
 				}
-				this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
+				if (plot.name == config.activeTab) tab.active = true
+				if (plot.hasSC) {
+					this.id2SCTW[plot.name] = {}
+					for (const tw of this.twLst) {
+						if (tw.term.subtype != plot.subtype) continue
+						const scTermId = tw.term.id.replace(/^POC/, '')
+						const scTW: any = { id: scTermId }
+						await fillTermWrapper(scTW, this.app.vocabApi)
+						this.id2SCTW[plot.name][scTermId] = scTW
+					}
+					this.twLst.push(...Object.values(this.id2SCTW[plot.name]))
+				}
+				this.tabs.push(tab)
 			}
-			this.tabs.push(tab)
 		}
 		const rightDiv = this.dom.rightDiv
 		const topDiv = rightDiv.append('div')
 		const domainDiv = topDiv.append('div').style('padding-bottom', '10px').style('font-weight', 'bold')
 
 		const headerDiv = rightDiv.append('div').style('padding-bottom', '10px')
-		if (this.tabs.length > 1)
+		if (!this.isImpressionDomain && this.tabs.length > 1)
 			await new Tabs({
 				holder: topDiv,
 				tabsPosition: 'horizontal',
@@ -101,6 +164,12 @@ export class profileForms extends profilePlot {
 
 		const xAxisG = svg.append('g').attr('transform', `translate(${shift}, ${shiftTop / 2})`)
 
+		// Impression-domain charts (thermometer + response distribution) render into their own
+		// per-group svgs inside this div, not the Likert/YesNo svg scaffolding above. Kept inside
+		// rightDiv so the mousemove/mouseout tooltip delegation (profilePlot) covers them.
+		const impressionDiv = rightDiv.append('div')
+		if (this.isImpressionDomain) svg.style('display', 'none')
+
 		this.dom = copyMerge(this.dom, {
 			svg,
 			headerDiv,
@@ -108,7 +177,8 @@ export class profileForms extends profilePlot {
 			gridG,
 			legendG: this.legendG,
 			xAxisG,
-			domainDiv
+			domainDiv,
+			impressionDiv
 		})
 	}
 
@@ -116,6 +186,27 @@ export class profileForms extends profilePlot {
 		this.dom.loadingDiv.style('display', '')
 		try {
 			await super.main()
+			const parents = this.config.tw.term.id.split('__')
+			this.module = parents[1]
+			const domain = parents.slice(1).join(' / ')
+			/*
+			The impression view's own title already names the module, so this breadcrumb would repeat
+			it directly above. Set display in both directions — the same instance switches modes.
+			*/
+			this.dom.domainDiv.style('display', this.isImpressionDomain ? 'none' : '').text(domain)
+			this.dom.mainG.selectAll('*').remove()
+			this.dom.gridG.selectAll('*').remove()
+			this.dom.xAxisG.selectAll('*').remove()
+			this.dom.legendG.selectAll('*').remove()
+
+			if (this.isImpressionDomain) {
+				await this.setControls()
+				this.data = await this.fetchImpressionDistribution()
+				if (this.data && 'error' in this.data) throw this.data.error
+				this.renderImpression()
+				return
+			}
+
 			if (this.tabs.length == 0) return // no plots to show
 			const activeTab = this.state.config.activeTab || this.tabs[0].label
 			this.activePlot = this.state.config.options.find(p => p.name == activeTab)
@@ -123,15 +214,7 @@ export class profileForms extends profilePlot {
 			if (this.activePlot.hasSC) {
 				this.scScoreTerms = Object.values(this.id2SCTW[this.activePlot.name])
 			}
-			const parents = this.config.tw.term.id.split('__')
-			this.module = parents[1]
-			const domain = parents.slice(1).join(' / ')
-			this.dom.domainDiv.text(domain)
 			this.categories = new Set()
-			this.dom.mainG.selectAll('*').remove()
-			this.dom.gridG.selectAll('*').remove()
-			this.dom.xAxisG.selectAll('*').remove()
-			this.dom.legendG.selectAll('*').remove()
 			await this.setControls()
 			this.renderPlot()
 			this.filterG.selectAll('*').remove()
@@ -141,14 +224,26 @@ export class profileForms extends profilePlot {
 		}
 	}
 
+	async setControls(additionalInputs: any[] = []) {
+		if (!this.isImpressionDomain) return super.setControls(additionalInputs)
+		// In impression-domain mode scoreTerms/scScoreTerms are not initialized, so the
+		// base setControls() profileForms branch (getProfileFormScores) must not fire.
+		// Temporarily shadow this.type so the base treats this call like a non-forms type,
+		// which still builds filteredTermValues, this.filter, and the controls UI.
+		const savedType = (this as any).type
+		;(this as any).type = '__impressionDomain'
+		try {
+			await super.setControls(additionalInputs)
+		} finally {
+			;(this as any).type = savedType
+		}
+	}
+
 	renderPlot() {
 		try {
 			this.dom.headerDiv.style('display', 'none')
 
 			switch (this.activePlot.name) {
-				case IMPRESSIONS_TAB:
-					this.renderImpressions()
-					break
 				case LIKERT_TAB:
 					this.renderLikert()
 					break
@@ -161,7 +256,194 @@ export class profileForms extends profilePlot {
 		}
 	}
 
-	renderImpressions() {}
+	private async fetchImpressionDistribution() {
+		if (!this.scTW) return { error: 'missing SC term for impression domain' }
+		// pocTermId is omitted when this.pocTW is undefined (SC-only modules e.g. Patients & Outcomes).
+		const body: any = {
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			scTermId: this.scTW.term.id,
+			maxScore: IMPRESSION_MAX_SCORE,
+			filter: this.filter,
+			filterByUserSites: this.settings?.filterByUserSites
+		}
+		if (this.pocTW) body.pocTermId = this.pocTW.term.id
+		if (this.pocResponderTermIds.length) body.pocResponderTermIds = this.pocResponderTermIds
+		return dofetch3('termdb/profileImpressionDistribution', { body })
+	}
+
+	/*
+	Impression-domain view: for each POC responder group render a thermometer (shared SC median +
+	that group's POC median, with performance zones) beside a response-distribution combo chart
+	(SC line on the left axis, grey POC columns on the right axis). Groups stack vertically. A
+	module with no POC responders (e.g. Patients & Outcomes) renders a single SC-only thermometer.
+	*/
+	private renderImpression() {
+		const holder = this.dom.impressionDiv
+		holder.selectAll('*').remove()
+		const texts = this.config.impression
+		const scColor = this.impressionScColor || '#888'
+		const data = this.data
+
+		// Resolve each performance-zone color from this module's colorMap gradient (config gives the
+		// shade key, not a literal color): Weak=SOMETIMES (lightest) … Strong=ALMOST ALWAYS (darkest).
+		// Falls back to the base module color if a shade is absent for the module.
+		const moduleShades = this.state.termdbConfig?.colorMap?.[this.module] || {}
+		const zones = texts.zones.map((z: any) => ({
+			label: z.label,
+			min: z.min,
+			max: z.max,
+			color: moduleShades[z.shade] || scColor
+		}))
+
+		// Bind tooltip text + optional hover descriptor as the element's datum. The shared
+		// profilePlot mousemove→onMouseOver delegation reads __data__ (same pattern as polar2/radar2).
+		const attachTip = (sel: any, text: string, hover?: any) => {
+			sel.datum({ tip: text, ...(hover || {}) }).style('cursor', 'pointer')
+		}
+
+		/*
+		Centered header: module title + subtitle lines. Bold and default-colored, matching the title
+		treatment in polar2/radar2/barchart2; centering is the one deviation, since this heads a page
+		of cards rather than labelling a single plot.
+		*/
+		const header = holder.append('div').style('text-align', 'center')
+		header
+			.append('div')
+			.style('font-size', '1.1rem')
+			.style('font-weight', 'bold')
+			.style('padding', '8px 0')
+			.text(texts.titleTemplate.replace('{module}', this.module))
+		for (const line of texts.subtitle) header.append('div').style('font-size', '0.9rem').text(line)
+
+		const responders: any[] = Array.isArray(data.responders) ? data.responders : []
+		const groups = responders.length
+			? responders.map(r => ({
+					label: texts.frameSubtitle.replace('{group}', r.label),
+					poc: { median: r.median, total: r.total },
+					pocDistribution: r.distribution
+			  }))
+			: [{ label: texts.legend.sc, poc: null, pocDistribution: [] }]
+
+		groups.forEach((g, i) => {
+			// One bordered card per responder group: a shared header (the group label) aligned over
+			// the two charts (thermometer + response distribution), which sit side by side inside it.
+			// Tagged so getChartImages() can collect each card's svgs for download and name them.
+			const card = holder
+				.append('div')
+				.attr('class', 'sjpp-impression-card')
+				.attr('data-group-label', g.label)
+				.style('border', '1px solid #ddd')
+				.style('border-radius', '8px')
+				.style('padding', '12px 16px')
+				.style('margin', '12px auto')
+				.style('width', 'fit-content')
+				.style('max-width', '100%')
+				.style('background', '#fff')
+			/*
+			Card header: the group label on the left, the applied-filters + n block on the right,
+			vertically centered against the label. addFilterLegend() draws into this.filterG and partly
+			above y=0, so the group is shifted to start at (pad, pad) and the svg sized to fit it; the
+			row's align-items:center then centers it against the label. filtersCount is reset per card
+			so items stack from the top each time.
+			*/
+			const cardHeader = card
+				.append('div')
+				.style('display', 'flex')
+				.style('align-items', 'center')
+				.style('justify-content', 'space-between')
+				.style('gap', '24px')
+				.style('padding-bottom', '8px')
+				.style('margin-bottom', '8px')
+				.style('border-bottom', '1px solid #eee')
+			cardHeader.append('div').style('font-weight', 'bold').style('font-size', '1rem').text(g.label)
+			const filterSvg = cardHeader.append('svg')
+			this.filtersCount = 0
+			this.filterG = filterSvg.append('g')
+			this.addFilterLegend()
+			const fbb = filterSvg.node().getBBox()
+			const pad = 3
+			this.filterG.attr('transform', `translate(${-fbb.x + pad}, ${-fbb.y + pad})`)
+			filterSvg.attr('width', Math.ceil(fbb.width + 2 * pad)).attr('height', Math.ceil(fbb.height + 2 * pad))
+			const body = card
+				.append('div')
+				.style('display', 'flex')
+				.style('flex-wrap', 'wrap')
+				.style('align-items', 'flex-start')
+				.style('justify-content', 'center')
+				.style('gap', '16px')
+			/*
+			Each chart is titled in its own column of the flex row, one step down from the card header
+			(1rem) in the page title -> card header -> chart title hierarchy. Titles are html above the
+			svg, matching how the rest of this view's text is drawn.
+			*/
+			const titledChart = (title: string) => {
+				const column = body.append('div')
+				column
+					.append('div')
+					.style('text-align', 'center')
+					.style('font-weight', 'bold')
+					.style('font-size', '0.9rem')
+					.style('padding-bottom', '4px')
+					.text(title)
+				return column.append('div')
+			}
+			renderImpressionThermometer({
+				holder: titledChart(texts.chartTitles.thermometer),
+				id: `${this.id}-g${i}`,
+				sc: { median: data.scMedian, total: data.scTotal },
+				poc: g.poc,
+				ratingAxisLabel: texts.ratingAxisLabel,
+				zones,
+				colors: { sc: scColor },
+				attachTip
+			})
+			if (g.poc) {
+				renderResponseDistribution({
+					holder: titledChart(texts.chartTitles.distribution),
+					id: `${this.id}-dist-g${i}`,
+					maxScore: IMPRESSION_MAX_SCORE,
+					scDistribution: data.scDistribution || [],
+					pocDistribution: g.pocDistribution,
+					texts: texts.distribution,
+					zones,
+					colors: { sc: scColor },
+					attachTip
+				})
+			}
+			// One legend for the card, under both charts — the single place the series and the
+			// performance zones are named.
+			renderImpressionLegend({
+				holder: card.append('div'),
+				series: [
+					{ color: scColor, label: texts.legend.sc, symbol: 'line' as const },
+					...(g.poc ? [{ color: POC_FILL, label: texts.legend.poc, symbol: 'square' as const }] : [])
+				],
+				zones
+			})
+		})
+	}
+
+	/*
+	The impression view renders each card's charts as separate <svg> elements under impressionDiv and
+	hides the main this.dom.svg, so the base getChartImages() — which only collects this.dom.svg —
+	would hand the download menu one empty, hidden svg (nothing downloads). Collect the card svgs
+	instead, keyed by the group label so a multi-card module downloads sensibly. The Likert/YesNo
+	path still draws into this.dom.svg, so it keeps the base behavior.
+	*/
+	getChartImages() {
+		if (!this.isImpressionDomain) return super.getChartImages()
+		const note = '© 2025 St. Jude Children’s Research Hospital'
+		const charts: { name: string; svg: Selection<SVGSVGElement, unknown, null, undefined> }[] = []
+		this.dom.impressionDiv.selectAll('.sjpp-impression-card').each(function (this: HTMLElement) {
+			const card = select(this)
+			const label = card.attr('data-group-label') || ''
+			card.selectAll<SVGSVGElement, unknown>('svg').each(function (this: SVGSVGElement) {
+				charts.push({ name: `${label} ${note}`.trim(), svg: select(this) })
+			})
+		})
+		return charts
+	}
 
 	renderLikert() {
 		this.dom.headerDiv.style('display', 'block')
@@ -339,6 +621,24 @@ export class profileForms extends profilePlot {
 	}
 
 	onMouseOver(event) {
+		// Impression thermometer: elements carry their tooltip text + hover-highlight descriptor as
+		// __data__ (bound by renderImpressionThermometer's attachTip). Same delegation pattern as
+		// polar2/radar2 — show the tip, apply the outline, and animate the POC ball's radius.
+		if (this.isImpressionDomain) {
+			const target = event.target
+			const d = target.__data__
+			if (d?.tip) {
+				const menu = this.tip.clear()
+				menu.d.text(d.tip)
+				menu.show(event.clientX, event.clientY, true, true)
+				if (d.on) for (const k in d.on) target.setAttribute(k, d.on[k]) // idempotent on repeated mousemove
+				if (d.growR && !d._grown) {
+					d._grown = true
+					select(target).interrupt().transition().duration(150).attr('r', d.growR)
+				}
+			} else this.onMouseOut(event)
+			return
+		}
 		if (event.target.tagName == 'rect') {
 			const path = event.target
 			const d = path.__data__
@@ -356,6 +656,21 @@ export class profileForms extends profilePlot {
 			row.append('span').text(`${d.key}: ${percent}%`)
 			menu.show(event.clientX, event.clientY, true, true)
 		} else this.onMouseOut(event)
+	}
+
+	onMouseOut(event) {
+		// Reset the impression thermometer's hover highlight for the element being left; the base
+		// only hides the tip. Targeted via event.target (mouseout bubbles from the element).
+		if (this.isImpressionDomain) {
+			const target = event?.target
+			const d = target?.__data__
+			if (d?.off) for (const k in d.off) target.setAttribute(k, d.off[k])
+			if (d?._grown) {
+				d._grown = false
+				select(target).interrupt().transition().duration(150).attr('r', d.baseR)
+			}
+		}
+		this.tip.hide()
 	}
 
 	getColor(key: string) {

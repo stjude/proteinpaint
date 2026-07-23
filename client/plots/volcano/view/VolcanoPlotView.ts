@@ -3,7 +3,7 @@ import { axisBottom, axisLeft, rgb, select, selectAll } from 'd3'
 import type { DataPointEntry, VolcanoDom, VolcanoPlotDimensions, VolcanoViewData } from '../VolcanoTypes'
 import type { VolcanoPlotDom } from './VolcanoPlotDom'
 import type { VolcanoInteractions } from '../interactions/VolcanoInteractions'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE, PROTEOME_DAP } from '#types'
+import { DATermTypes as tt } from '../../diffAnalysis/enabledTermTypes'
 import { roundValueAuto } from '#shared/roundValue.js'
 import type { ValidatedVolcanoSettings } from '../settings/Settings'
 
@@ -89,44 +89,48 @@ export class VolcanoPlotView {
 		//Images may have a large margin. Hide the overflow.
 		this.dom.actionsTip.d.style('overflow', 'hidden')
 		this.volcanoDom.actions.style('margin-left', '20px').style('padding', '5px')
-		this.addActionButton('Confounding factors', [GENE_EXPRESSION, DNA_METHYLATION], () =>
+		this.addActionButton('Confounding factors', [tt.GENE_EXPRESSION, tt.DNA_METHYLATION], () =>
 			this.interactions.confoundersMenu()
 		)
-		this.addActionButton('Highlight genes', [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], () =>
+		this.addActionButton('Highlight genes', [tt.GENE_EXPRESSION, tt.SINGLECELL_CELLTYPE, tt.DNA_METHYLATION], () =>
 			this.interactions.launchGeneSetEdit()
 		)
 		this.addActionButton(
 			'Statistics',
-			[GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION],
+			[tt.GENE_EXPRESSION, tt.SINGLECELL_CELLTYPE, tt.DNA_METHYLATION],
 			() => {
 				this.renderStatsMenu()
 			},
 			{ whenOpen: 'Hide statistics' }
 		)
 		const sigLabel =
-			this.termType == DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
+			this.termType == tt.DNA_METHYLATION ? 'Number of significant promoters' : 'Number of significant genes'
 		const numSigGenes = this.viewData.statsData.find(d => d.label == sigLabel)?.value
 		if (numSigGenes) {
-			const sigText = this.termType == DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
+			const sigText = this.termType == tt.DNA_METHYLATION ? `${numSigGenes} DM promoters:` : `${numSigGenes} DE genes:`
 			this.volcanoDom.actions.append('span').text(sigText).style('margin-left', '10px').style('font-weight', 'bold')
 
 			const pValueTableButtonText = this.settings.showPValueTable ? 'Hide p-value table' : 'Show p-value table'
-			this.addActionButton(pValueTableButtonText, [GENE_EXPRESSION, SINGLECELL_CELLTYPE, DNA_METHYLATION], async () => {
-				/** TODO: This is very slow to render. Need to optimize rendering
-				 * and server response to increase performance.*/
-				const showTable = !this.settings.showPValueTable
-				await this.interactions.app.dispatch({
-					type: 'plot_edit',
-					id: this.interactions.id,
-					config: { settings: { volcano: { showPValueTable: showTable } } }
-				})
-			})
+			this.addActionButton(
+				pValueTableButtonText,
+				[tt.GENE_EXPRESSION, tt.SINGLECELL_CELLTYPE, tt.DNA_METHYLATION],
+				async () => {
+					/** TODO: This is very slow to render. Need to optimize rendering
+					 * and server response to increase performance.*/
+					const showTable = !this.settings.showPValueTable
+					await this.interactions.app.dispatch({
+						type: 'plot_edit',
+						id: this.interactions.id,
+						config: { settings: { volcano: { showPValueTable: showTable } } }
+					})
+				}
+			)
 		}
 		if (numSigGenes && numSigGenes >= 3) {
 			// Launch hierCluster for DEGs between the two groups
 			this.addActionButton(
 				`Hierarchical clustering of ${numSigGenes > 100 ? 'top 100' : numSigGenes} DE genes`,
-				[GENE_EXPRESSION],
+				[tt.GENE_EXPRESSION],
 				async () => {
 					await this.interactions.launchDEGClustering()
 				}
@@ -376,7 +380,7 @@ export class VolcanoPlotView {
 				//Highlight the data point when hovering over the table row
 				//Previously highlighted data points are not affected
 				const circles = this.volcanoDom.plot.selectAll('circle').nodes()
-				const dataKey = this.termType === DNA_METHYLATION ? 'promoter_id' : 'gene_name'
+				const dataKey = this.termType === tt.DNA_METHYLATION ? 'promoter_id' : 'gene_name'
 				const circle = circles.find((d: any) => d.__data__[dataKey] == row[0].value) as any
 				if (!circle || circle.__data__.highlighted) return
 
@@ -478,8 +482,8 @@ export class VolcanoPlotView {
 	}
 
 	private buildMultiHitTable(dots: DataPointEntry[]): { columns: any[]; rows: any[] } {
-		const isDM = this.termType === DNA_METHYLATION
-		const isDAP = this.termType === PROTEOME_DAP
+		const isDM = this.termType === tt.DNA_METHYLATION
+		const isDAP = this.termType === tt.PROTEOME_DAP
 		const pValueType = this.settings.pValueType
 		const pLabel = `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
 		const pField = `${pValueType}_p_value` as 'original_p_value' | 'adjusted_p_value'
@@ -521,15 +525,15 @@ export class VolcanoPlotView {
 		const all = [
 			{
 				label: 'Violin plot',
-				isVisible: () => termType === DNA_METHYLATION || termType === GENE_EXPRESSION,
+				isVisible: () => termType === tt.DNA_METHYLATION || termType === tt.GENE_EXPRESSION,
 				onClick: async () => {
-					if (termType === DNA_METHYLATION) interactions.launchDNAMethViolin(d as any)
-					if (termType === GENE_EXPRESSION) interactions.launchViolinGeneExp(d.gene_name)
+					if (termType === tt.DNA_METHYLATION) interactions.launchDNAMethViolin(d as any)
+					if (termType === tt.GENE_EXPRESSION) interactions.launchViolinGeneExp(d.gene_name)
 				}
 			},
 			{
 				label: 'DMR analysis',
-				isVisible: () => termType === DNA_METHYLATION,
+				isVisible: () => termType === tt.DNA_METHYLATION,
 				onClick: async () => {
 					const dm = d as DataPointEntry & {
 						chr: string
@@ -548,7 +552,7 @@ export class VolcanoPlotView {
 			},
 			{
 				label: 'Box plot',
-				isVisible: () => termType === GENE_EXPRESSION,
+				isVisible: () => termType === tt.GENE_EXPRESSION,
 				onClick: async () => {
 					interactions.launchBoxPlot(d.gene_name)
 				}
@@ -560,10 +564,10 @@ export class VolcanoPlotView {
 	/** Populates a `table2col` instance with the standard volcano hover rows
 	 * (gene/promoter, fold-change, original + adjusted p-values). */
 	private addTooltipRows(d: DataPointEntry, table: any) {
-		if (this.termType === DNA_METHYLATION) {
+		if (this.termType === tt.DNA_METHYLATION) {
 			if ('promoter_id' in d) addTooltipRow(table, 'Promoter', (d as any).promoter_id)
 			if (d.gene_name) addTooltipRow(table, 'Gene(s)', d.gene_name)
-		} else if (this.termType === PROTEOME_DAP) {
+		} else if (this.termType === tt.PROTEOME_DAP) {
 			addTooltipRow(table, 'Identifier', d.gene_name)
 			if ('gene' in d) addTooltipRow(table, 'Gene', (d as any).gene)
 		} else {

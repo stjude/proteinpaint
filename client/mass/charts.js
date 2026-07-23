@@ -193,14 +193,10 @@ function getChartTypeList(self, state) {
 			chartType: 'profileForms',
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'profileForms', detail: 'tw' },
-			config: { chartType: 'profileForms' }
-		},
-		{
-			label: 'Templates 2',
-			chartType: 'profileForms2',
-			clickTo: self.loadChartSpecificMenu,
-			usecase: { target: 'profileForms2', detail: 'tw' },
-			config: { chartType: 'profileForms2' }
+			config: { chartType: 'profileForms' },
+			// Shown instead of the term tree when the active cohort has no plotConfigByCohort
+			// entry for this chart type (e.g. Abbreviated PrOFILE has no template config).
+			plotConfigByCohort_unavailableMessage: 'No templates are currently available for this cohort.'
 		},
 		{
 			// Picker only — its menu renders a Module → Domain → chart-type matrix/list and creates the chosen plot.
@@ -324,9 +320,9 @@ function getChartTypeList(self, state) {
 		{
 			label: 'Single Cell Plot',
 			clickTo: self.prepPlot,
-			chartType: 'singleCellPlot',
+			chartType: 'sc',
 			config: {
-				chartType: 'singleCellPlot'
+				chartType: 'sc'
 			}
 		},
 		{
@@ -385,14 +381,31 @@ function getChartTypeList(self, state) {
 			config: { chartType: 'animatedBubbleChart' }
 		},
 		{
+			label: 'Site Map',
+			chartType: 'geomap',
+			clickTo: self.plotCreate,
+			config: { chartType: 'geomap' }
+		},
+		{
 			label: 'Bubble Heatmap',
 			chartType: 'bubbleHeatmap',
+			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Cell-type Bubble Heatmap',
+			chartType: 'cellTypeBubbleHeatmap',
 			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Brain Regional Proteome',
 			chartType: 'brainRegions',
 			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Sample Sets',
+			chartType: 'studyCatalog',
+			clickTo: self.plotCreate,
+			config: { chartType: 'studyCatalog' }
 		},
 		{
 			label: state.termdbConfig.queries?.geneRanking?.appName || 'Gene Ranking',
@@ -489,6 +502,22 @@ function setRenderers(self) {
 		example: summary
 	*/
 	self.showTree_select1term = async chart => {
+		// Config-driven empty state: if the button declares a plotConfigByCohort_unavailableMessage and the active
+		// cohort has no plotConfigByCohort entry for this chart type, show that message instead of
+		// opening a term tree with no usable templates.
+		if (chart.plotConfigByCohort_unavailableMessage) {
+			const cohortStr = getActiveCohortStr(self.state)
+			const hasCohortConfig = self.state.termdbConfig?.plotConfigByCohort?.[cohortStr]?.[chart.chartType]
+			if (!hasCohortConfig) {
+				self.dom.tip.d
+					.append('div')
+					.style('padding', '15px')
+					.style('color', '#777')
+					.style('font-style', 'italic')
+					.text(chart.plotConfigByCohort_unavailableMessage)
+				return
+			}
+		}
 		if (chart.usecase.label) {
 			self.dom.tip.d
 				.append('div')
@@ -559,6 +588,7 @@ function setRenderers(self) {
 				tree: { usecase: chart.usecase }
 			},
 			tree: {
+				minTermsToSubmit: chart.minTermsToSubmit,
 				submit_lst: termlst => {
 					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
 					action.config[chart.usecase.detail] = data

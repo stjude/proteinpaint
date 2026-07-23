@@ -3,9 +3,13 @@ import type { GRIN2Settings } from './settings/Settings'
 
 export interface GRIN2Dom {
 	massControls: Elem
+	/** Animated holder for the citation and config form. */
+	inputPanel: any
 	headerText: Elem
 	/** Holder for the GRIN2 config form (owned by GRIN2ControlsView). */
 	controls: any
+	/** Shared row for the result-gated input toggle and Run button. */
+	controlsToggle: any
 	/** Holder for the analysis results (owned by GRIN2ResultsView). */
 	div: any
 	header?: any
@@ -54,10 +58,20 @@ export interface GRIN2RequestData {
 	maxCappedPoints?: number
 	hardCap?: number
 	binSize?: number
-	snvindelOptions?: { consequences: string[]; mafFilter?: any }
-	cnvOptions?: { lossThreshold?: number; gainThreshold?: number; maxSegLength: number; cnvType?: string }
+	snvindelOptions?: { consequences: string[]; mafFilter?: any; hyperMutator?: number }
+	cnvOptions?: {
+		lossThreshold?: number
+		gainThreshold?: number
+		maxSegLength: number
+		cnvType?: string
+		/** categorical cnv (ds.queries.cnv.type='category'): mclass keys of the cnv-segment types to include */
+		cnvCategories?: string[]
+		/** samples with more raw cnv segments than this are excluded from cnv (0 disables) */
+		hyperMutator?: number
+	}
 	fusionOptions?: Record<string, any>
 	svOptions?: Record<string, any>
+	itdOptions?: Record<string, any>
 	excludeOptions?: { blacklists?: string[]; overlapFrac?: number }
 }
 

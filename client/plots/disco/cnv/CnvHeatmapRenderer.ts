@@ -3,7 +3,7 @@ import * as d3 from 'd3'
 import MenuProvider from '#plots/disco/menu/MenuProvider.ts'
 import { table2col } from '#dom/table2col'
 import { scaleLinear } from 'd3-scale'
-import { dtcnv } from '#shared/common.js'
+import { dtcnv, dtitd } from '#shared/common.js'
 
 export class CnvHeatmapRenderer {
 	private positivePercentile: number
@@ -33,7 +33,7 @@ export class CnvHeatmapRenderer {
 			// Generate the arc shape for each CNV
 			.attr('d', (d: CnvArc) => arcGenerator(d))
 			// Fill using interpolated color based on CNV value and percentile range
-			.attr('fill', (d: CnvArc) => this.getColor(d.color, d.value))
+			.attr('fill', (d: CnvArc) => this.getColor(d.color, d.value, d.dt))
 
 			// Hover event: show highlight stroke and tooltip
 			.on('mouseenter', (mouseEvent: MouseEvent, arc: CnvArc) => {
@@ -49,21 +49,27 @@ export class CnvHeatmapRenderer {
 				// Prepare data for tooltip
 				const table = table2col({ holder: menu.d })
 				const cnv: any = structuredClone(arc)
-				cnv.dt = dtcnv
+				cnv.dt = arc.dt
 				cnv.samples = [{ sample_id: arc.sampleName }]
 				cnv.gene = cnv.text
 
 				// Row 1: Copy number change + colored square
-				{
+				if (arc.dt == dtcnv) {
 					const [c1, c2] = table.addRow()
 					c1.text('CNV')
 					//Match the color shown in the tooltip to the heatmap
 					c2.html(
 						`<span style="background:${this.getColor(
 							cnv.color,
-							cnv.value
+							cnv.value,
+							cnv.dt
 						)}; border:solid lightgrey 0.1px;">&nbsp;&nbsp;</span> ${cnv.value}`
 					)
+				}
+				if (arc.dt == dtitd) {
+					const [c1, c2] = table.addRow()
+					c1.text('ITD')
+					c2.html(`<span style="background:${cnv.color}; border:solid lightgrey 0.1px;">&nbsp;&nbsp;</span>`)
 				}
 				// Row 2: Position
 				{
@@ -85,7 +91,8 @@ export class CnvHeatmapRenderer {
 	}
 
 	// Computes fill color using linear scale between -P80, 0, and +P80
-	getColor(color: string, value: number) {
+	getColor(color: string, value: number, dt = dtcnv) {
+		if (dt == dtitd) return color
 		//For cnv values, use a zero-centered symmetric scale rather than the absolute values
 		const maxValue = Math.max(this.positivePercentile, Math.abs(this.negativePercentile))
 		return scaleLinear(

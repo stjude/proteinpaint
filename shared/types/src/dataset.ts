@@ -164,14 +164,20 @@ type AiApi = {
 }
 
 /** configuration for api-based dictionary
-NOTE: currently used by mmrf, but may also be used
-by other api-based datasets (e.g. gdc) */
+NOTE: used by mmrf and gdc, may also be used
+by other api-based datasets */
 type DictApi = {
 	// builds dictionary and sets standard
 	// helpers at ds.cohort.termdb.q{}
 	build?: (ds: any) => void
-	// gets dictionary term data
-	get?: (q: any, twLst: any, onlyChildren?: boolean, useCache?: boolean) => void
+	/** gets dictionary term data; returns [samples{}, byTermId{}]
+	see getSampleData_dictionaryTerms() of server/src/termdb.matrix.js
+
+	sample hierarchy is signaled on q (q.mapParent2Children, with
+	ds.cohort.termdb.sampleTypes and .term2SampleType), not by an arg here.
+	do not add an onlyChildren arg: that one belongs to barchart_data() of
+	server/src/termdb.barchart.js, and passing it here would land on useCache */
+	get?: (q: any, twLst: any[], useCache?: boolean) => Promise<[any, any]>
 }
 
 type SnvIndelFormat = {
@@ -416,6 +422,18 @@ type SingleSampleMutationQuery = {
 	returns same json array as native. see example below
 	*/
 	get?: (f: any) => void
+	/** optional ds-supplied batch getter (GDC v1: SNV/indel only). takes {samples[], skipDt, maxLesions, ...}
+	so callers (e.g. GRIN2) can fetch many samples in one network round-trip instead of one get() per sample.
+	cnv/fusion stay on the per-sample get() path. Returns the per-sample mutation map plus cap info so the
+	caller can warn when maxLesions truncated the fetch (capReached / droppedSamples). */
+	batchGet?: (q: any) => Promise<{
+		bySample: Map<any, { mlst: any[] }>
+		capReached: boolean
+		droppedSamples: number
+		/** samples whose case was queried but returned no open-access mutations (e.g. controlled-access
+		GDC projects); distinct from droppedSamples, which the lesion cap skipped before fetching */
+		samplesNoOpenSsm: number
+	}>
 	/** which property of client mutation object to retrieve sample identifier for querying single sample data with */
 	sample_id_key: string
 	/** disco plot will be launched when singleSampleMutation is enabled. supply customization options here */
@@ -565,6 +583,19 @@ type TrackLst = {
 
 	*/
 	jsonFile: string
+	/** at launch, json file is read and all facet objects are stored in this array */
+	facets?: {
+		name: string
+		tracks: {
+			sample: string
+			name: string
+			assay: string
+			type: string
+			[key: string]: any
+		}[]
+	}[]
+	/** twlst as facet table column for annotating samples */
+	facetTwLst?: object[]
 
 	/*
 	alternative format that's easier to maintain than a giant json file
@@ -699,32 +730,39 @@ type CnvSegmentQuery = {
 }
 /** ITDs */
 type ITDQuery = {
-	/** file is bgzipped with columns:
+	/** file is bgzipped with a header line and columns:
 	1. chr
 	2. start, 0-based
 	3. stop
 	4. { "sample": "3332"}
 	*/
 	file: string
+	get?: (param: any) => void
 }
-
-/*
-no longer used!!
-file content is a probe-by-sample matrix, values are signals
-for a given region, the median signal from probes in the region is used to make a gain/loss call for each sample
-this is alternative to CnvSegmentQuery
-
-type Probe2Cnv = {
+/** splice junction */
+type JunctionQuery = {
+	/** file is bgzipped with a header line and columns
+	1. chr
+	2. start, 0-based
+	3. stop
+	4. strand
+	5. info {}
+	6- samples. when present, the fields are read count, and optional event percentage joined by ;
+	*/
 	file: string
+	/** list all junctions, occurrence and median read count from a region */
+	listJunctions?: (param: any, keepLst?: any) => Promise<any>
+	/** retrieve sample-level read counts for junction numeric terms */
+	get?: (param: any) => Promise<any>
+	/** comma-joined junction types to be hidden by default */
+	hiddentypes?: string
+	/** default min read count to filter samples */
+	readcountCutoff?: number
 }
-*/
 
 type RnaseqGeneCount = {
-	/** Name of the HDF5 file */
+	/** HDF5 file */
 	file: string
-	samplesFile?: string
-	/** Storage_type for storing data (HDF5) */
-	storage_type: 'HDF5'
 }
 
 /** the metabolite query */
@@ -748,15 +786,17 @@ type ProteomeFilter = {
 }
 
 type ProteomeCohortConfig = {
-	prior: { d0: number; s0sq: number }
+	prior?: { d0: number; s0sq: number }
 	controlFilter: ProteomeFilter[]
 	caseFilter: ProteomeFilter[]
 	DAPfile?: string
+	catalog?: { [columnKey: string]: string }
 }
 
 type ProteomeAssayConfig = {
 	columnIdx: number
 	columnValue: string | number
+	proteomeLabel?: string
 	cohorts: {
 		[cohortName: string]: ProteomeCohortConfig
 	}
@@ -769,6 +809,11 @@ type ProteomeAssayConfig = {
 export type ProteomeAbundanceQuery = {
 	/** database file path */
 	dbfile?: string
+	/** assay used as the total-protein baseline for protein-abundance adjustment of the
+	 *  PTM assays. Must be a configured assay for the organism (typically the whole-proteome
+	 *  assay). Used by both the bubble heatmap and the Protein View PTM lollipop. When
+	 *  omitted, no adjustment/normalization is offered. */
+	proteinReferenceAssay?: string
 	/** Brain-region visualization config: powers the Brain Regional Proteome chart
 	 *  and the Protein View sample-distribution panel */
 	brainRegions?: {
@@ -805,11 +850,23 @@ export type ProteomeAbundanceQuery = {
 		assays: string[]
 		/** Column order, left-to-right */
 		cohorts: string[]
-		/** assay used as the total-protein baseline for protein-abundance adjustment of
-		 *  the other (non-reference) assays — both PTM and insoluble. Must be a configured
-		 *  assay for the organism (typically the whole-proteome assay, and usually also in
-		 *  `assays` so its own row shows). When omitted, no adjustment is offered. */
-		proteinReferenceAssay?: string
+	}
+	cellTypeBubbleHeatmap?: {
+		organism: string
+		/** the single assay whose cohorts supply the grid, e.g. 'Bulk Whole Proteome' */
+		assay: string
+		/** cell-type groups, in column-group order, e.g. ['AS','MG1','MG2','MG3','OPC'] */
+		cellTypes: string[]
+		/** genotypes within each cell-type group, in sub-column order, e.g. ['APPKI','FAD'] */
+		genotypes: string[]
+		/** timepoints, in row order, e.g. ['4m','8m','16m'] */
+		timepoints: string[]
+	}
+	studyCatalog?: {
+		/** table columns, in display order; `key` is the derived/override field name */
+		columns: { key: string; label: string }[]
+		/** column keys exposed as left-rail filters */
+		facets: string[]
 	}
 	/** organism-keyed structure (new format) */
 	organisms?: {
@@ -839,13 +896,10 @@ export type ProteomeAbundanceQuery = {
 }
 
 /** the geneExpression query
-three possibilities
-{ src: 'native', file }
-{ src: 'gdcapi' } // dynamically add get()
-{ src: 'gdcapi', get } // ds supplied get
+{ file:string }
+{ get } // ds supplied get
 */
 export type GeneExpressionQuery = {
-	src: 'native' | 'gdcapi' // when gdc getter can become supplied, will remove src
 	/** either ds-supplied or dynamically added getter */
 	get?: (param: any, ds: any) => void
 	/** bgzip-compressed, tabix-index file.
@@ -923,6 +977,14 @@ export type SingleCellSamples = {
 	/** extra label to show along with sample, must be a term id as in sampleColumns[] and allow to retrieve value from sample object */
 	extraSampleTabLabel?: string
 	getFilteredSingleCellSamples?: (q: TermdbSingleCellSamplesRequest, includeMeta: boolean) => any
+	/** server-only cache for single-cell sample and meta-result mappings */
+	sampleMappingCache?: {
+		sampleIntIds: Set<any>
+		sampleIntId2Name: Map<any, string>
+		sampleName2IntId: Map<string, any>
+		metaIdMap: Map<string, Map<string, string>>
+		metaResultNames: Set<string>
+	}
 }
 
 type SingleCellDataBase = {
@@ -1032,6 +1094,7 @@ export type SingleCellQuery = {
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
 	terms?: object[]
+	pseudobulk?: SingleCellPseudobulk
 }
 
 export type SingleCellMetaResult = {
@@ -1058,6 +1121,40 @@ export type SCImages = {
 	fileName: string
 	/**Used to name the image tab in the single cell plot */
 	label: string
+}
+
+export type SingleCellPseudobulk = {
+	/** type can be 'geneExpression', 'dnaMeth', etc. that aligns to an assay */
+	[assayType: string]: {
+		/** termId should match a scct termId, if it exists. If not, this is a
+		 * placeholder. This term will be in a term collection with memberId == termId */
+		[termId: string]: {
+			folder: string
+			/** '[*]Ext denotes the file extension for the corresponding data file
+			 * The actual file path is [folder]/[termId.value[i]]/[*Ext]*/
+
+			/** Values are average of per-cell log1p values, used for term */
+			meanExt: string
+			/** values are sum of umi count when present */
+			totalExt: string
+			/** Percentage of cells with the term (e.g. gene) expressed */
+			percentExt: string
+			/** Categories should match the values created for the scct termId above,
+			 * if exists. Each one in this instance becomes a numeric term.
+			 *
+			 * The numeric terms (categories) are member terms of the resulting
+			 * term collection created by the user. */
+			categories?: {
+				/** Index matches the file name(s) */
+				[index: string]: {
+					/** Label should be the human-readable name for this category */
+					label?: string
+					/** Color should be the predefined color for rendering */
+					color?: string
+				}
+			}
+		}
+	}
 }
 
 /** genome browser LD track */
@@ -1143,6 +1240,7 @@ type Mds3Queries = {
 	svfusion?: SvFusion
 	cnv?: CnvSegmentQuery
 	itd?: ITDQuery
+	junction?: JunctionQuery
 	/** gene-level cnv, only available on gdc; query by gene symbol, ds must define getter
 	 */
 	geneCnv?: {
@@ -1678,6 +1776,7 @@ keep this setting here for reason of:
 	regression?: Regression
 	logscaleBase2?: boolean
 	plotConfigByCohort?: PlotConfigByCohort
+	geomap?: GeomapConfig
 	/** Functionality */
 	dataDownloadCatch?: DataDownloadCatch
 	helpPages?: URLEntry[]
@@ -1914,6 +2013,33 @@ type PlotConfigByCohort = {
 	}
 }
 
+/** A single location pin for the `geomap` chart. */
+export type GeomapSite = {
+	/** display name shown in the pin tooltip */
+	name: string
+	/** stable identifier used to match against highlightIds; defaults to name when absent */
+	id?: string
+	country?: string
+	iso?: string
+	/** latitude in decimal degrees, -90..90 */
+	lat: number
+	/** longitude in decimal degrees, -180..180 */
+	lon: number
+}
+
+/** Config for the reusable `geomap` chart type (dataset-agnostic). */
+export type GeomapConfig = {
+	/** all locations to pin on the map. May be supplied directly, or built at server init from the
+	 * `geoLocation` table (see server_init_db_queries), in which case it is absent in the dataset config. */
+	sites?: GeomapSite[]
+	/** ids (or names) of the subset of sites to visually emphasize, e.g. the user's own sites */
+	highlightIds?: string[]
+	/** label the countries that contain at least one pin, at each country's centroid */
+	showCountryLabels?: boolean
+	/** per-site value to show on the pin (label + tooltip), keyed by site id — e.g. patient count */
+	counts?: { [id: string]: number }
+}
+
 /** modified version of termwrapper*/
 type Tw = {
 	/** short hand for using either id (dict term) or term{} */
@@ -2101,6 +2227,8 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		items: ActiveItem[]
 		// can add holderStyle to customize
 	}
+	/** when true, render the world map from termdbConfig.geomap directly on the landing (about) tab */
+	showGeomap?: boolean
 	/** disclaimer text. can expand with rendering customizations */
 	disclaimer?: {
 		text?: string
@@ -2178,7 +2306,13 @@ export type PreInit = {
 		HTTP connection timeout errors or status 5xx are considered recoverable,
 		status 4xx are not considered recoverable (client-related request errors)
 	*/
-	getStatus: () => Promise<PreInitStatus>
+	getStatus?: (ds?: any) => Promise<PreInitStatus>
+	/**
+	 * launch-time case-sample id caching, owned by the dataset (populates ds.__gdc / ds.__mmrf
+	 * + ds.sampleId2Type). Runs blocking (mds3.init.js, after dictionary.build) unless the
+	 * dataset opts into the nonblocking phase via ds.init.hasNonblockingSteps (gdc).
+	 */
+	cacheSamples?: (ds: any) => Promise<void>
 	/**
 	 * dev only, used to test preInit handling by simulating different
 	 * responses in a known sequence of steps that may edit the preInit
@@ -2245,6 +2379,11 @@ export type Mds3 = BaseMds & {
 	queries?: Mds3Queries
 	cohort?: Cohort
 	isSupportedChartOverride?: isSupportedChartCallbacks
+	/** when true, isSupportedChartOverride is the COMPLETE allowlist of supported chart types:
+	the shared defaultCommonCharts are NOT inherited, only the chart types declared in
+	isSupportedChartOverride are considered. for curated datasets (e.g. gdc, mmrf) whose chart
+	list does not derive from the common defaults. see setSupportedChartTypes() in termdb.server.init.ts */
+	supportedChartsFromOverrideOnly?: boolean
 	// TODO FIXME nest termdb under cohort
 	termdb?: Termdb
 	/** if ds uses filter0, ds must supply this method

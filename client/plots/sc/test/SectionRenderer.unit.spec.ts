@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { SectionRenderer } from '../view/SectionRenderer.ts'
+import { SubplotManager } from '../subplots/SubplotManager'
 
 /**
  * Tests
@@ -8,12 +9,6 @@ import { SectionRenderer } from '../view/SectionRenderer.ts'
  *   - getSampleId() should return sID from subplot.singleCellPlot.sample
  *   - getSampleId() should return sID from subplot.term.term.sample
  *   - getSampleId() should return undefined when no sID is found
- *   - getPlotName() should return plotName from subplot
- *   - getPlotName() should return name from subplot.singleCellPlot
- *   - getPlotName() should return plot from subplot.term.term
- *   - getPlotName() should return 'Summary' for dictionary chartType
- *   - getPlotName() should return 'Summary' for summary chartType
- *   - getPlotName() should return 'Gene expression' for GeneExpInput chartType
  *   - getKey() should return 'none' when groupBy is 'none'
  *   - getKey() should return sampleId when groupBy is 'sample'
  *   - getKey() should return plotName when groupBy is 'plot'
@@ -71,6 +66,13 @@ function getMockSCViewer(overrides: any = {}) {
 	} as any
 }
 
+function scWithSubplotManager(opts: any = {}) {
+	const sc = getMockSCViewer(opts)
+	const sm = new SubplotManager(sc)
+	sc.subplotManager = sm
+	return sc
+}
+
 /* ---- constructor ---- */
 
 tape('constructor should set sections, holder, plotId2Key, and groupBy', test => {
@@ -112,48 +114,6 @@ tape('getSampleId() should return undefined when no sID is found', test => {
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
 	test.equal(sr.getSampleId({}), undefined, 'Should return undefined for empty subplot')
 	test.equal(sr.getSampleId({ sample: {} }), undefined, 'Should return undefined when sample has no sID')
-	test.end()
-})
-
-/* ---- getPlotName ---- */
-
-tape('getPlotName() should return plotName from subplot', test => {
-	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(sr.getPlotName({ plotName: 'UMAP' }), 'UMAP', 'Should return subplot.plotName')
-	test.end()
-})
-
-tape('getPlotName() should return name from subplot.singleCellPlot', test => {
-	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(sr.getPlotName({ singleCellPlot: { name: 'tSNE' } }), 'tSNE', 'Should return singleCellPlot.name')
-	test.end()
-})
-
-tape('getPlotName() should return plot from subplot.term.term', test => {
-	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(sr.getPlotName({ term: { term: { plot: 'Violin' } } }), 'Violin', 'Should return term.term.plot')
-	test.end()
-})
-
-tape("getPlotName() should return 'Summary' for dictionary chartType", test => {
-	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(sr.getPlotName({ chartType: 'dictionary' }), 'Summary', 'Should return Summary for dictionary')
-	test.end()
-})
-
-tape("getPlotName() should return 'Summary' for summary chartType", test => {
-	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(sr.getPlotName({ chartType: 'summary' }), 'Summary', 'Should return Summary for summary')
-	test.end()
-})
-
-tape("getPlotName() should return 'Gene expression' for GeneExpInput chartType", test => {
-	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(
-		sr.getPlotName({ chartType: 'GeneExpInput' }),
-		'Gene expression',
-		'Should return Gene expression for GeneExpInput'
-	)
 	test.end()
 })
 
@@ -277,36 +237,44 @@ tape('removeSandbox() should return early when key is not found', test => {
 /* ---- getKey ---- */
 
 tape("getKey() should return 'none' when groupBy is 'none'", test => {
+	const sc = scWithSubplotManager()
 	const sr = new SectionRenderer(getMockDiv(), 'none')
-	test.equal(sr.getKey({ sample: { sID: 'S1' } }), 'none', "Should always return 'none' regardless of subplot")
-	test.equal(sr.getKey({}), 'none', "Should return 'none' even for empty subplot")
+	test.equal(sr.getKey({ sample: { sID: 'S1' } }, sc), 'none', "Should always return 'none' regardless of subplot")
+	test.equal(sr.getKey({}, sc), 'none', "Should return 'none' even for empty subplot")
 	test.end()
 })
 
 tape("getKey() should return sampleId when groupBy is 'sample'", test => {
+	const sc = scWithSubplotManager()
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
-	test.equal(sr.getKey({ sample: { sID: 'S1' } }), 'S1', 'Should return sID from subplot.sample')
+	test.equal(sr.getKey({ sample: { sID: 'S1' } }, sc), 'S1', 'Should return sID from subplot.sample')
 	test.equal(
-		sr.getKey({ singleCellPlot: { sample: { sID: 'S2' } } }),
+		sr.getKey({ singleCellPlot: { sample: { sID: 'S2' } } }, sc),
 		'S2',
 		'Should return sID from singleCellPlot.sample'
 	)
-	test.equal(sr.getKey({ term: { term: { sample: { sID: 'S3' } } } }), 'S3', 'Should return sID from term.term.sample')
+	test.equal(
+		sr.getKey({ term: { term: { sample: { sID: 'S3' } } } }, sc),
+		'S3',
+		'Should return sID from term.term.sample'
+	)
 	test.end()
 })
 
 tape("getKey() should return plotName when groupBy is 'plot'", test => {
+	const sc = scWithSubplotManager()
 	const sr = new SectionRenderer(getMockDiv(), 'plot')
-	test.equal(sr.getKey({ plotName: 'UMAP' }), 'UMAP', 'Should return plotName')
-	test.equal(sr.getKey({ singleCellPlot: { name: 'tSNE' } }), 'tSNE', 'Should return singleCellPlot.name')
-	test.equal(sr.getKey({ chartType: 'dictionary' }), 'Summary', 'Should return Summary for dictionary chartType')
+	test.equal(sr.getKey({ plotName: 'UMAP' }, sc), 'UMAP', 'Should return plotName')
+	test.equal(sr.getKey({ singleCellPlot: { name: 'tSNE' } }, sc), 'tSNE', 'Should return singleCellPlot.name')
+	test.equal(sr.getKey({ chartType: 'dictionary' }, sc), 'Summary', 'Should return Summary for dictionary chartType')
 	test.end()
 })
 
 tape('getKey() should return undefined when no value can be determined', test => {
+	const sc = scWithSubplotManager()
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
-	test.equal(sr.getKey({}), undefined, 'Should return undefined when sample has no sID')
-	test.equal(sr.getKey({ sample: {} }), undefined, 'Should return undefined when sID is missing')
+	test.equal(sr.getKey({}, sc), undefined, 'Should return undefined when sample has no sID')
+	test.equal(sr.getKey({ sample: {} }, sc), undefined, 'Should return undefined when sID is missing')
 	test.end()
 })
 
@@ -397,12 +365,11 @@ tape('removeSection() should not dispatch when section has no sandboxes', test =
 
 tape('update() should regroup and return early when groupBy changes', async test => {
 	const sr = new SectionRenderer(getMockDiv(), 'sample')
+	const sc = scWithSubplotManager()
 	let regroupCalled = false
 	;(sr as any).regroupSections = (_sc: any, _subplots: any[]) => {
 		regroupCalled = true
 	}
-
-	const sc = getMockSCViewer()
 	await sr.update(sc, [{ id: 'plot1', plotName: 'UMAP' }], 'plot')
 
 	test.equal(sr.groupBy, 'plot', 'Should update groupBy')
@@ -416,15 +383,10 @@ tape('update() should remove inactive plots and init missing sandboxes', async t
 	const initialized: string[] = []
 	const sectionKeyUpdates: { plotId: string; key: string }[] = []
 
-	const sc = getMockSCViewer({
-		plots: { activePlot: {}, stalePlot: {} },
-		subplotManager: {
-			setSectionKey: (plotId: string, key: string) => {
-				sectionKeyUpdates.push({ plotId, key })
-			}
-		}
-	})
-
+	const sc = scWithSubplotManager({ plots: { activePlot: {}, stalePlot: {} } })
+	sc.subplotManager.setSectionKey = (plotId: string, key: string) => {
+		sectionKeyUpdates.push({ plotId, key })
+	}
 	;(sr as any).removeSandbox = (plotId: string) => removed.push(plotId)
 	sr.getKey = () => 'S1'
 	sr.initSection = (key: string) => {
@@ -439,7 +401,6 @@ tape('update() should remove inactive plots and init missing sandboxes', async t
 		sr.sections[key].sandboxes[subplot.id] = { remove: () => {} } as any
 		initialized.push(subplot.id)
 	}
-
 	await sr.update(sc, [{ id: 'activePlot', sample: { sID: 'S1' } }], 'sample')
 
 	test.deepEqual(removed, ['stalePlot'], 'Should remove stale component sandboxes')
@@ -455,13 +416,9 @@ tape('regroupSections() should reparent active sandbox and remove inactive subpl
 	const removedSubplots: string[] = []
 	const prependedNodes: any[] = []
 
-	const sc = getMockSCViewer({
-		plots: { plot1: {}, stalePlot: {} },
-		subplotManager: {
-			setSectionKey: (plotId: string, key: string) => setSectionKeyCalls.push({ plotId, key }),
-			removeSubplot: (plotId: string) => removedSubplots.push(plotId)
-		}
-	})
+	const sc = scWithSubplotManager({ plots: { plot1: {}, stalePlot: {} } })
+	sc.subplotManager.setSectionKey = (plotId: string, key: string) => setSectionKeyCalls.push({ plotId, key })
+	sc.subplotManager.removeSubplot = (plotId: string) => removedSubplots.push(plotId)
 
 	const existingNode = { id: 'existingNode' }
 	let detached = 0

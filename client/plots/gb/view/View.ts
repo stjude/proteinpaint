@@ -10,17 +10,19 @@ export class View {
 	dom: any
 	opts: any
 	interactions: any
-	constructor(state, blockInstance, data, dom, opts, interactions) {
+	facetData: any[]
+	constructor(state, blockInstance, data, dom, opts, interactions, facetData: any[] = []) {
 		this.state = state
 		this.blockInstance = blockInstance
 		this.data = data
 		this.dom = dom
 		this.opts = opts
 		this.interactions = interactions
+		this.facetData = facetData
 	}
 
 	async main() {
-		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions)
+		const tabs = new TabsRenderer(this.state, this.dom, this.opts, this.interactions, this.facetData)
 		await tabs.main()
 		const geneSearch = new GeneSearchRenderer(this.state, this.dom.geneSearchDiv, this.opts, this.interactions)
 		geneSearch.main()
@@ -38,8 +40,8 @@ export class View {
 
 		const tklst: any = [] // list of tracks to be shown in block
 
-		if (this.state.config.snvindel?.shown) {
-			// show snvindel-based mds3 tk
+		if (this.state.config.snvindel?.shown || this.state.config.svfusion?.shown) {
+			// show mds3 tk driven by snvindel and/or svfusion (svfusion-only datasets rely on config.svfusion, set in GB.ts)
 			if (this.data) {
 				// variant data has been precomputed
 				// TODO move computing logic to official mds3 tk and avoid tricky workaround using custom tk
@@ -76,7 +78,7 @@ export class View {
 					const lst: any = []
 					// register both global filter and local filter to pass to mds3 data queries
 					if (this.state.filter?.lst?.length) lst.push(this.state.filter)
-					if (this.state.config.snvindel.filter) lst.push(this.state.config.snvindel.filter)
+					if (this.state.config.snvindel?.filter) lst.push(this.state.config.snvindel.filter)
 					if (lst.length == 1) {
 						tk.filterObj = structuredClone(lst[0])
 					} else if (lst.length > 1) {
@@ -127,12 +129,27 @@ export class View {
 		if (this.state.config?.trackLst?.activeTracks?.length) {
 			// include active facet tracks
 			for (const n of this.state.config.trackLst.activeTracks) {
-				for (const f of this.state.config.trackLst.facets) {
-					for (const t of f.tracks) {
+				for (const f of this.facetData) {
+					for (const t of f.tracks || []) {
 						if (t.name == n) tklst.push(t)
 					}
 				}
 			}
+		}
+		if (this.state.config.junction?.shown) {
+			const tk: any = {
+				type: 'j2',
+				// Explicitly identifies this shared track as being hosted by the mass genome-browser plot.
+				massApp: this.opts.app,
+				dslabel: this.state.vocab.dslabel,
+				vocabApi: this.opts.vocabApi,
+				termdbConfig: this.opts.vocabApi?.termdbConfig,
+				filter0: this.state.filter0,
+				hiddentypes: this.state.config.junction.hiddentypes,
+				readcountCutoff: this.state.config.junction.readcountCutoff
+			}
+			if (this.state.filter?.lst?.length) tk.filter = structuredClone(this.state.filter)
+			tklst.push(tk)
 		}
 		if (this.state.config.ld?.tracks) {
 			for (const t of this.state.config.ld.tracks) {
@@ -224,8 +241,8 @@ export class View {
 			for (const tk of tklst) {
 				let tki // index of this tk in block
 				if (tk.dslabel) {
-					// tk has dslabel and must be identified by it
-					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel)
+					// Official tracks from the same dataset can have different types (e.g. mds3 and j2).
+					tki = this.blockInstance.tklst.findIndex(i => i.dslabel == tk.dslabel && i.type == tk.type)
 				} else if (tk.name) {
 					// identify tk by name
 					tki = this.blockInstance.tklst.findIndex(i => i.name == tk.name)
@@ -250,6 +267,10 @@ export class View {
 					const i = this.blockInstance.tklst.findIndex(i => i.name == t.name)
 					if (!t.shown && i != -1) this.blockInstance.tk_remove(i)
 				}
+			}
+			if (this.state.config.junction && !this.state.config.junction.shown) {
+				const i = this.blockInstance.tklst.findIndex(t => t.type == 'j2' && t.dslabel == this.state.vocab.dslabel)
+				if (i != -1) this.blockInstance.tk_remove(i)
 			}
 			// tricky! if snvindel.shown is false, means user has toggled it off. thus find all mds3 tk and remove them
 			if (this.state.config.snvindel && !this.state.config.snvindel.shown) {
@@ -283,10 +304,9 @@ export class View {
 			filter0: this.state.filter0
 		}
 
-		if (this.data) {
-			// variant data has been precomputed
-			// need to recompute upon coordinate change
-			arg.onCoordinateChange = this.interactions.onCoordinateChange
+		const interactions = this.interactions
+		arg.onCoordinateChange = function (rglst) {
+			interactions.onCoordinateChange(rglst, this)
 		}
 
 		if (this.state.config.blockIsProteinMode) {
@@ -304,10 +324,14 @@ export class View {
 			return
 		}
 		// must be in genomic mode and requires coord
-		if (!this.state.config.geneSearchResult.chr) throw 'blockIsProteinMode=false but chr missing'
-		arg.chr = this.state.config.geneSearchResult.chr
-		arg.start = this.state.config.geneSearchResult.start
-		arg.stop = this.state.config.geneSearchResult.stop
+		if (this.state.config.block?.rglst?.length) {
+			arg.rglst = this.state.config.block.rglst
+		} else {
+			if (!this.state.config.geneSearchResult.chr) throw 'blockIsProteinMode=false but chr missing'
+			arg.chr = this.state.config.geneSearchResult.chr
+			arg.start = this.state.config.geneSearchResult.start
+			arg.stop = this.state.config.geneSearchResult.stop
+		}
 		first_genetrack_tolist(this.opts.genome, arg.tklst)
 
 		const _ = await import('#src/block')

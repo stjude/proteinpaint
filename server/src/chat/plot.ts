@@ -38,7 +38,7 @@ Query: "${user_prompt}"
 Classification:`
 
 	//Training examples: "${training_data}"
-	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelName)
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
 	if (isMsgToUser(response)) return response
 	const plotType = response.trim() as PlotType
 	mayLog(`--> classifyPlotType: ${plotType}`)

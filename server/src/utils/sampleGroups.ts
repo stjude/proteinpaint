@@ -1,6 +1,6 @@
 import type { DERequest, DiffMethRequest } from '#types'
-import { getData } from '#src/termdb.matrix.js'
-import { get_ds_tdb } from '#src/termdb.js'
+import { getData, maySetMapParent2Children } from '#src/termdb.matrix.js'
+import { mayLimitSamples } from '#src/mds3.filter.js'
 
 /** Two-group sample resolution result. The conf{1,2}_group{1,2} arrays
  * carry the confounder values for samples that survived the per-confounder
@@ -30,7 +30,8 @@ export async function resolveDaContext(
 ): Promise<{ ds: any; term_results: any; term_results2: any }> {
 	const genome = genomes[req.genome]
 	if (!genome) throw new Error('invalid genome')
-	const [ds] = get_ds_tdb(genome, req as any)
+	const ds = genome.datasets?.[req.dslabel]
+	if (!ds) throw new Error('invalid dslabel')
 
 	let term_results: any = []
 	if (req.tw) {
@@ -40,7 +41,8 @@ export async function resolveDaContext(
 				filter0: (req as any).filter0,
 				terms: [req.tw]
 			},
-			ds
+			ds,
+			true // always map parent annotations to child samples for DA analysis
 		)
 		if (term_results.error) throw new Error(term_results.error)
 	}
@@ -53,7 +55,8 @@ export async function resolveDaContext(
 				filter0: (req as any).filter0,
 				terms: [req.tw2]
 			},
-			ds
+			ds,
+			true // always map parent annotations to child samples for DA analysis
 		)
 		if (term_results2.error) throw new Error(term_results2.error)
 	}
@@ -66,22 +69,50 @@ export async function resolveDaContext(
  * for that sample — the two early-return guards enforce that without a
  * nested if/else cascade. Used by both DE and DM resolvers; the per-route
  * wrappers add their own validation + alert messages around this. */
-export function buildGroupValues(
+export async function buildGroupValues(
 	values: Array<{ sampleId: number }>,
-	q: { allSampleSet: Set<string> },
+	allSampleSet: Set<string>,
 	ds: any,
 	tw: any,
 	tw2: any,
 	term_results: any,
 	term_results2: any
-): { names: string[]; conf1: (string | number)[]; conf2: (string | number)[] } {
+): Promise<{ names: string[]; conf1: (string | number)[]; conf2: (string | number)[] }> {
 	const names: string[] = []
 	const conf1: (string | number)[] = []
 	const conf2: (string | number)[] = []
-	for (const s of values) {
+	let sampleLst = values
+	if (ds.cohort.termdb.hasSampleAncestry) {
+		// ds has sample ancestry
+		// data for DE/DM (i.e. genomic data) are assumed to be
+		// at sample-level, so map sample ids to sample-level
+		const term = {
+			type: 'samplelst',
+			values: {
+				'': { key: '', list: values }
+			}
+		}
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [{ type: 'tvs', tvs: { term } }]
+		}
+		const arg = { filter }
+		maySetMapParent2Children(arg, ds, true)
+		const allSamples = [...allSampleSet].map(sname => ds.cohort.termdb.q.sampleName2id(sname))
+		// filtering samples by samplelst term
+		// if samples are at parent-level, then will get mapped to sample-level
+		// otherwise, samples will be used as is
+		const samples = (await mayLimitSamples(arg, allSamples, ds)) || new Set()
+		sampleLst = [...samples].map(s => {
+			return { sampleId: s }
+		})
+	}
+	for (const s of sampleLst) {
 		if (!Number.isInteger(s.sampleId)) continue
 		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
-		if (!n || !q.allSampleSet.has(n)) continue
+		if (!n || !allSampleSet.has(n)) continue
 		// If a confounder is configured but missing for this sample, skip it.
 		if (tw && !term_results.samples?.[s.sampleId]) continue
 		if (tw2 && !term_results2.samples?.[s.sampleId]) continue

@@ -295,7 +295,7 @@ async function colorAndShapeSamples(
 					value.color = tvalue.color
 				} else if (isNumericTerm(q.colorTW.term)) {
 					// TODO: supporting q.colorTW.term.id since term.id is still
-					// used as key of byTermId{} for gdc (see mayApplyBinning() in server/src/mds3.gdc.js)
+					// used as key of byTermId{} for gdc (see mayApplyBinning() in ppgdc gdc/queries.js)
 					// should only use tw.$id instead of tw.term.id
 					const term = data.refs.byTermId[q.colorTW.$id] || data.refs.byTermId[q.colorTW.term.id]
 					const bins = term.bins
@@ -475,12 +475,12 @@ function order(map: any, tw: TermWrapper, refs: any) {
 	return entries
 }
 
-async function getSampleCoordinatesByTerms(
+export async function getSampleCoordinatesByTerms(
 	req: any,
 	q: TermdbSampleScatterRequest,
 	ds: any,
 	data: ValidGetDataResponse
-) {
+): Promise<[ScatterSample[], ValidGetDataResponse]> {
 	if (!q.coordTWs || q.coordTWs.length == 0) return [[], data]
 	const canDisplay = authApi.canDisplaySampleIds(req, ds)
 	const samples: any = []

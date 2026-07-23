@@ -1130,7 +1130,7 @@ function createLegendTipMenu(opts, tk, elem) {
 }
 
 // print an entry for a category as a legend item
-function printCategory({ holder, key, color, count, label, click }) {
+export function printCategory({ holder, key, color, count, label, click, testid }) {
 	const div = holder.append('div').attr('class', 'sja_clb').style('display', 'inline-block').on('click', click)
 	div
 		.append('div')
@@ -1143,7 +1143,7 @@ function printCategory({ holder, key, color, count, label, click }) {
 		.style('display', 'inline-block')
 		.style('color', color)
 		.style('padding-left', '5px')
-		.attr('data-testid', 'sjpp-mds3tk-legenditemlabel')
+		.attr('data-testid', testid || 'sjpp-mds3tk-legenditemlabel')
 		.attr('__key__', key) // for testing
 		.text(label)
 }

@@ -126,9 +126,7 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 
 	async init() {
 		this.dom.div.style('display', 'inline-block').style('margin-left', '20px')
-		this.interactions = new BoxPlotInteractions(this.app, this.dom, this.id, () => {
-			return this.data
-		})
+		this.interactions = new BoxPlotInteractions(this, () => this.data)
 		await this.setControls()
 	}
 

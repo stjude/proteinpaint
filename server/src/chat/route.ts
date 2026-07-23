@@ -15,6 +15,7 @@ import { answerDataQueries } from './dataQueries.ts'
 import type { Scaffold, Phrase2EntityResult, SummaryScaffold, MsgToUser } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
 import { resolveToPlotState } from './scaffold2state.ts'
+import { runOmnisearch } from './search.ts'
 import path from 'path'
 import fs from 'fs'
 
@@ -32,44 +33,25 @@ export const api: RouteApi = {
 	}
 }
 
-/*
-async function doOmnisearch(prompt: string, q, genome: any, ds: any) {
-        const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
-
-        // to allow search to work, must unescape special char, e.g. %20 to space
-        // const str = decodeURIComponent(q.findterm).toUpperCase()
-
-        let terms: any = []
-
-        let termdb:any
-        if (ds) {
-                // matches with dataset
-                if (ds?.cohort?.termdb) termdb = ds.cohort.termdb
-                else throw '.cohort.termdb not found on this dataset'
-        }
-        try {
-                console.log(`Running omnisearch for prompt: "${prompt}" on dataset: "${ds.label}"...`)
-                console.log(`q.cohortStr: "${q.cohortStr}", q.usecase: "${q.usecase}", q.treeFilter: ${JSON.stringify(q.treeFilter)}`)
-                const _terms = await termdb.q.findTermByName(prompt, q.cohortStr)
-                console.log(`Omnisearch found ${_terms.length} terms matching the prompt "${prompt}" in dataset "${ds.label}".`)
-                // console.log('Sample of matched terms:', _terms.slice(0, 5))
-                terms.push(..._terms.map(copy_term))
-        } catch (e) {
-                // if (e.stack) console.log(e.stack)
-                throw e 
-        }
-        return terms
-}
-*/
-
 export function init({ genomes }) {
 	return async (req, res) => {
-		const q: ChatRequest = req.query
+		// omnisearch/cohortStr/usecase/treeFilter drive the mass omnisearch (see runOmnisearch); they are
+		// not part of the AI chat ChatRequest payload, so read them via a local cast.
+		const q: ChatRequest & {
+			omnisearch?: boolean
+			cohortStr?: string
+			usecase?: any
+			treeFilter?: any
+		} = req.query
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
 			const ds = genome.datasets?.[q.dslabel]
 			if (!ds) throw 'invalid dslabel'
+			// Mass omnisearch: search dictionary variables and genes in a single request. Handled before
+			// the ds.queries.chat gate because omnisearch is offered even for datasets that do not support
+			// chat, and is deliberately independent of the AI chat pipeline (run_chat_pipeline).
+			if (q.omnisearch) return res.send(await runOmnisearch(q, req, ds, genome))
 			// check if ds supports termdb chat
 			if (!ds.queries.chat) {
 				return res.send({

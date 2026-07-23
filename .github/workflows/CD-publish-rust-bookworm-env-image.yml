@@ -2,38 +2,24 @@ name: Publish Rust Env Image
 
 on:
   workflow_dispatch:
-    inputs:
-      build_secret:
-        type: string
-        description: Build secret
 
   push:
     branches:
       - publish-rust-env-image
 
 jobs:
-  check-user-permissions:
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Check user permission
-        uses: stjude/proteinpaint/.github/actions/check-user-permissions@master
-        with:
-          BUILD_SECRET: ${{ secrets.BUILD_SECRET }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INPUT_BUILD_SECRET: ${{ github.event.inputs.build_secret }}
 
   build:
-    needs: check-user-permissions
-    if: github.event.pull_request.draft == false
+    environment: release
     runs-on: ubuntu-22.04
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Login to Github
-        uses: docker/login-action@v3.4.0
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

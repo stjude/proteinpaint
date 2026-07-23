@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { mayAdjustConfig } from '../summary.ts'
+import { getPlotConfig, mayAdjustConfig } from '../summary.ts'
 
 /*
 Tests:
@@ -19,9 +19,9 @@ Tests:
 // Create minimal term wrapper for testing
 function createTermWrapper(type: string, mode?: string) {
 	const tw: any = {
-		term: { 
-			type, 
-			id: 'test-term', 
+		term: {
+			type,
+			id: 'test-term',
 			name: 'Test Term',
 			values: {}
 		}
@@ -41,9 +41,9 @@ function createTermCollectionWrapper(memberType: 'categorical' | 'numeric') {
 			name: 'Test Collection',
 			memberType,
 			termlst: [
-				{ 
-					id: 'member1', 
-					name: 'Member 1', 
+				{
+					id: 'member1',
+					name: 'Member 1',
 					type: memberType == 'numeric' ? 'float' : 'categorical',
 					values: {}
 				}
@@ -81,7 +81,7 @@ tape('mayAdjustConfig() - categorical termCollection should set childType to bar
 	const opts = {}
 	const term = createTermCollectionWrapper('categorical')
 	const config = createConfig(term)
-	
+
 	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'barchart', 'Should set childType to barchart for categorical termCollection')
@@ -124,11 +124,7 @@ tape('mayAdjustConfig() - numeric termCollection with barchart childType should 
 
 	mayAdjustConfig(config, opts)
 
-	test.equal(
-		config.childType,
-		'violin',
-		'Should overwrite barchart to violin for numeric termCollection (wrong type)'
-	)
+	test.equal(config.childType, 'violin', 'Should overwrite barchart to violin for numeric termCollection (wrong type)')
 })
 
 tape('mayAdjustConfig() - numeric termCollection with violin childType should preserve violin', test => {
@@ -194,4 +190,29 @@ tape('mayAdjustConfig() - discrete terms should default to barchart', test => {
 	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'barchart', 'Should default to barchart for discrete terms')
+})
+
+tape('getPlotConfig() applies opts.getPlotConfig_mutateSummary before validating and filling terms', async test => {
+	test.plan(3)
+	let callbackCalls = 0
+	const app: any = {
+		opts: {
+			getPlotConfig_mutateSummary: async opts => {
+				callbackCalls++
+				await Promise.resolve()
+				opts.term = createTermWrapper('categorical', 'discrete')
+			}
+		},
+		vocabApi: {
+			termdbConfig: { uiLabels: {} },
+			getTwMinCopy: tw => tw
+		},
+		getState: () => ({ termdbConfig: {} })
+	}
+
+	const config = await getPlotConfig({}, app)
+
+	test.equal(callbackCalls, 1, 'calls the Mass summary-config mutator once')
+	test.equal(config.term.term.id, 'test-term', 'uses the primary term supplied asynchronously by the mutator')
+	test.equal(config.childType, 'barchart', 'returns a valid summary config after applying the mutation')
 })

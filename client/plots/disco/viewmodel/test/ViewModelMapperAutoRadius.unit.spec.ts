@@ -1,7 +1,7 @@
 import test from 'tape'
 import { ViewModelMapper } from '../ViewModelMapper'
 import discoDefaults from '../../defaults'
-import { dtsnvindel, dtcnv, dtloh } from '#shared/common.js'
+import { dtsnvindel, dtcnv, dtloh, dtitd } from '#shared/common.js'
 
 /*
 Tests:
@@ -26,6 +26,11 @@ test('computeDynamicRadius returns 200 for SNV-only data (1 ring type)', t => {
 test('computeDynamicRadius returns 200 for CNV-only data (1 ring type)', t => {
 	const data = [{ dt: dtcnv }]
 	t.equal(ViewModelMapper.computeDynamicRadius(data), 200)
+	t.end()
+})
+
+test('computeDynamicRadius counts ITD as a CNV-ring type', t => {
+	t.equal(ViewModelMapper.computeDynamicRadius([{ dt: dtsnvindel }, { dt: dtitd }]), 250)
 	t.end()
 })
 

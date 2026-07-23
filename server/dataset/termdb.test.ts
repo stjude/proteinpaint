@@ -425,7 +425,6 @@ export default function (): Mds3 {
 				}
 			},
 			geneExpression: {
-				src: 'native',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.fpkm.matrix.new.h5',
 				unit: 'FPKM'
 			},
@@ -446,7 +445,6 @@ export default function (): Mds3 {
 			},
 			topVariablyExpressedGenes: {},
 			rnaseqGeneCount: {
-				storage_type: 'HDF5',
 				file: 'files/hg38/TermdbTest/rnaseq/TermdbTest.geneCounts.new.h5'
 			},
 			singleCell: {
@@ -484,6 +482,7 @@ export default function (): Mds3 {
 			},
 			trackLst: {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
+				facetTwLst: [{ id: 'diaggrp' }, { id: 'agedx' }],
 				activeTracks: ['bw 1', 'bed 1']
 			},
 			chat: {}

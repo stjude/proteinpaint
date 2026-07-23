@@ -1,5 +1,8 @@
 import tape from 'tape'
 import { computeBlockModeFlag } from '../GB.ts'
+import { getBlockState } from '../interactions/Interactions.ts'
+import { View } from '../view/View.ts'
+import { makeJunctionTerm } from '../../../j2/render.js'
 
 /* 
 Tests:
@@ -59,5 +62,83 @@ tape('computeBlockModeFlag()', test => {
 		'throws on unknown gbRestrictMode'
 	)
 
+	test.end()
+})
+
+tape('getBlockState()', test => {
+	const blockInstance: any = {
+		rglst: [
+			{
+				chr: 'chr1',
+				bstart: 0,
+				bstop: 1000,
+				start: 10,
+				stop: 100,
+				width: 250,
+				reverse: true,
+				unused: 'skip'
+			},
+			{ chr: 'chr2', start: 20, stop: 200 }
+		],
+		startidx: 0,
+		stopidx: 1,
+		regionspace: 10,
+		gmmode: 'genomic',
+		coord: { reverse: false }
+	}
+	const state = getBlockState(blockInstance, [{ chr: 'chr3', start: 30, stop: 300 }])
+	test.deepEqual(
+		state,
+		{
+			rglst: [
+				{ chr: 'chr1', start: 10, stop: 100, bstart: 0, bstop: 1000, width: 250, reverse: true },
+				{ chr: 'chr2', start: 20, stop: 200 }
+			],
+			startidx: 0,
+			stopidx: 1,
+			regionspace: 10,
+			gmmode: 'genomic',
+			coordReverse: false
+		},
+		'copies serializable block range state'
+	)
+
+	test.deepEqual(
+		getBlockState(null, [{ chr: 'chr3', start: 30, stop: 300 }]),
+		{ rglst: [{ chr: 'chr3', start: 30, stop: 300 }] },
+		'falls back to callback rglst'
+	)
+
+	test.equal(getBlockState(null, []), null, 'returns null without rglst')
+	test.end()
+})
+
+tape('junction details support', async test => {
+	const app = { dispatch() {} }
+	const view = new View(
+		{ config: { junction: { shown: true } }, vocab: { dslabel: 'test-dataset' } },
+		null,
+		null,
+		{},
+		{ app, vocabApi: { termdbConfig: { queries: { junction: {} } } } },
+		{},
+		[]
+	)
+	const tracks = await view.generateTracks()
+	test.equal(tracks[0].massApp, app, 'marks a junction track with its genome-browser app')
+	test.deepEqual(
+		makeJunctionTerm({ chr: 'chr1', start: 99, stop: 200, strand: '+', info: { canonical: true } }),
+		{
+			type: 'junction',
+			id: 'chr1:99-200:+',
+			name: 'chr1:100-201 (+)',
+			chr: 'chr1',
+			start: 99,
+			stop: 200,
+			strand: '+',
+			info: { canonical: true }
+		},
+		'creates a numeric junction term from track data'
+	)
 	test.end()
 })

@@ -3,7 +3,7 @@ import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
 import {
-	TermTypeGroups,
+	typeGroup,
 	SINGLECELL_CELLTYPE,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
@@ -11,7 +11,10 @@ import {
 	PROTEOME_ABUNDANCE,
 	SINGLECELL_GENE_EXPRESSION,
 	DNA_METHYLATION,
-	SSGSEA
+	SSGSEA,
+	PSEUDOBULK,
+	JUNCTION,
+	TERM_COLLECTION
 } from '#shared/terms.js'
 import type { Mds3WithCohort } from '#types'
 
@@ -117,6 +120,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	pruneable attributes the same way. (See pruneTermdbConfig JSDoc in dataset.ts.)
 	*/
 	if (tdb.plotConfigByCohort) c.plotConfigByCohort = structuredClone(tdb.plotConfigByCohort)
+	if (tdb.geomap) c.geomap = structuredClone(tdb.geomap)
 	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
@@ -293,6 +297,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 				description: br.description
 			}
 		}
+		if (q.proteome.studyCatalog) {
+			// self-contained table config; pass through as-is for the client studyCatalog plot
+			q2.proteome.studyCatalog = JSON.parse(JSON.stringify(q.proteome.studyCatalog))
+		}
+		if (q.proteome.cellTypeBubbleHeatmap) {
+			// presence-only: lets the studyCatalog gate its "Cell-type Bubble Heatmap" button
+			q2.proteome.cellTypeBubbleHeatmap = JSON.parse(JSON.stringify(q.proteome.cellTypeBubbleHeatmap))
+		}
 		if (q.proteome.organisms) {
 			q2.proteome.organisms = {}
 			for (const organism in q.proteome.organisms) {
@@ -308,6 +320,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 					q2.proteome.organisms[organism].assays = {}
 					for (const assay in orgSrc.assays) {
 						q2.proteome.organisms[organism].assays[assay] = {}
+						if (orgSrc.assays[assay].proteomeLabel) {
+							// per-assay proteome label; the studyCatalog derives the Proteome column from it
+							q2.proteome.organisms[organism].assays[assay].proteomeLabel = orgSrc.assays[assay].proteomeLabel
+						}
 						if (orgSrc.assays[assay].cohorts) {
 							q2.proteome.organisms[organism].assays[assay].cohorts = {}
 							for (const cohort in orgSrc.assays[assay].cohorts) {
@@ -325,6 +341,12 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 								}
 								if (src.DAPfile) {
 									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].DAPfile = true
+								}
+								if (src.catalog) {
+									// per-cohort display fields for the studyCatalog table row
+									q2.proteome.organisms[organism].assays[assay].cohorts[cohort].catalog = JSON.parse(
+										JSON.stringify(src.catalog)
+									)
 								}
 							}
 						}
@@ -351,7 +373,14 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		q2.ld = structuredClone(q.ld)
 	}
 	if (q.trackLst) {
-		q2.trackLst = q.trackLst
+		q2.trackLst = {
+			activeTracks: q.trackLst.activeTracks,
+			facetTwLst: q.trackLst.facetTwLst,
+			facets:
+				q.trackLst.facets?.map(i => {
+					return { name: i.name }
+				}) || undefined
+		}
 	}
 	if (q.chat) {
 		q2.chat = {}
@@ -413,11 +442,21 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			/** This vocab needs to be accessible to other plots, filter, etc.
 			 * Add directly to the termdbConfig obj for broader use. */
 			if (!c.termType2terms) c.termType2terms = {}
-			c.termType2terms[TermTypeGroups.SINGLECELL_CELLTYPE] = q.singleCell.terms
+			q.singleCell.terms.forEach((t: any) => {
+				if (!t.type) throw `singleCell term missing termType: ${JSON.stringify(t)}`
+				/** Use term type group is used, not term type. */
+				const ttGroup = typeGroup[t.type]
+				if (!ttGroup) throw `single cell term has no specified term type group: ${JSON.stringify(t)}`
+				if (!c.termType2terms[ttGroup]) c.termType2terms[ttGroup] = []
+				c.termType2terms[ttGroup].push(t)
+			})
 		}
 	}
 	if (q.images) {
 		q2.images = {} //nothing to pass to the client for now, but the key must be present
+	}
+	if (q.junction) {
+		q2.junction = {}
 	}
 }
 
@@ -438,11 +477,13 @@ export function getDsAllowedTermTypes(ds) {
 	if (ds.queries?.proteome) typeSet.add(PROTEOME_ABUNDANCE)
 	if (ds.queries?.ssGSEA) typeSet.add(SSGSEA)
 	if (ds.queries?.dnaMethylation) typeSet.add(DNA_METHYLATION)
+	if (ds.queries?.junction) typeSet.add(JUNCTION)
 	if (ds.queries?.singleCell) {
 		typeSet.add(SINGLECELL_CELLTYPE)
 		if (ds.queries.singleCell?.geneExpression) typeSet.add(SINGLECELL_GENE_EXPRESSION)
+		if (ds.queries.singleCell?.pseudobulk) typeSet.add(PSEUDOBULK)
 	}
-	if (ds.cohort.termdb.termCollections?.length) typeSet.add('termCollection')
+	if (ds.cohort.termdb.termCollections?.length) typeSet.add(TERM_COLLECTION)
 	return [...typeSet]
 }
 

@@ -2,6 +2,17 @@ import { get_ds_tdb } from '#src/termdb.js'
 import * as utils from '#src/utils.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 
+// sp|P10636-8|TAU_HUMAN → P10636 ; falls back to the raw acc when it doesn't parse.
+// Kept in sync with termdb.bubbleHeatmap.ts so PTM sites and whole-proteome rows
+// collapse to the same base UniProt accession for matching.
+function baseUniProtAcc(acc: string): string {
+	if (!acc) return ''
+	const parts = acc.split('|')
+	const id = parts.length >= 2 ? parts[1] : acc
+	const dash = id.indexOf('-')
+	return dash > 0 ? id.slice(0, dash) : id
+}
+
 export function init({ genomes }) {
 	return async (req, res) => {
 		const q: any = req.query
@@ -81,6 +92,35 @@ export function init({ genomes }) {
 					}
 				}
 			}
+			// Protein-abundance normalization: attach the reference assay's
+			// fold change to each non-reference entry, matched by organism + cohort + base
+			// UniProt accession. The client turns this into "FC from whole proteome" and a
+			// normalized log2FC (site log2FC − whole-proteome log2FC).
+			const refAssay = ds.queries.proteome.proteinReferenceAssay
+			if (refAssay) {
+				// key: organism|cohort|baseAcc → the reference fold change to
+				// subtract. Among the rows for one protein we keep the most-significant (lowest
+				// raw p) one that has a usable fold change
+				const refFcByKey = new Map<string, { fc: number; p: number }>()
+				for (const e of cohorts) {
+					if (e.assayName !== refAssay || !Number.isFinite(e.foldChange)) continue
+					const baseAcc = baseUniProtAcc(e.proteinAccession)
+					if (!baseAcc) continue
+					const key = `${e.organism}|${e.cohortName}|${baseAcc}`
+					const p = Number.isFinite(e.pValue) ? e.pValue : Infinity
+					const cur = refFcByKey.get(key)
+					if (!cur || p < cur.p) refFcByKey.set(key, { fc: e.foldChange, p })
+				}
+				// Only PTM entries are protein-abundance normalized.
+				for (const e of cohorts) {
+					if (!e.PTMType) continue
+					const baseAcc = baseUniProtAcc(e.proteinAccession)
+					if (!baseAcc) continue
+					const ref = refFcByKey.get(`${e.organism}|${e.cohortName}|${baseAcc}`)
+					if (ref) e.proteinFoldChange = ref.fc
+				}
+			}
+
 			res.send({ protein: term.name, cohorts, sampleRegions: brConfig ? sampleRegions : undefined })
 		} catch (e: any) {
 			if (e?.stack) console.log(e.stack)
@@ -275,11 +315,15 @@ export async function validate_query_proteome(ds) {
 			if (assay.cohorts) {
 				for (const cohortName in assay.cohorts) {
 					const cohort = assay.cohorts[cohortName]
+					// control/case filters are needed for per-sample queries and sample counts (e.g. dapVolcano),
+					// even when a cohort serves a precomputed DAPfile.
 					if (!cohort.controlFilter)
 						throw `Missing controlFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
 					if (!cohort.caseFilter)
 						throw `Missing caseFilter in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
-					if (!cohort.prior?.d0 || !cohort.prior?.s0sq)
+					// cohorts serving a precomputed DAPfile (log2FC + p-value already computed) don't
+					// need prior; prior is only used to compute DAP on the fly
+					if (!cohort.DAPfile && (!cohort.prior?.d0 || !cohort.prior?.s0sq))
 						throw `Missing prior.d0 and prior.s0sq in queries.proteome.organisms.${organismName}.assays.${assayName}.cohorts.${cohortName}`
 				}
 			} else {

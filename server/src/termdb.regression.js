@@ -4,7 +4,7 @@ import { imageSize } from 'image-size'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from './serverconfig.js'
-import { boxplot_getvalue } from './utils.js'
+import { boxplot_getvalue } from '#shared/boxplot.js'
 import { runCumincR } from './termdb.cuminc.js'
 import { isDictionaryType } from '#shared/terms.js'
 import { getData } from './termdb.matrix.js'
@@ -813,21 +813,9 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 		}
 		const { minv, maxv } = snpid2scale.get(snpid)
 
-		const box1 = boxplot_getvalue(
-			hasEffAlleleValues
-				.sort((a, b) => a - b)
-				.map(i => {
-					return { value: i }
-				})
-		)
+		const box1 = boxplot_getvalue(hasEffAlleleValues.sort((a, b) => a - b))
 		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${hasEffAlleleValues.length}`
-		const box2 = boxplot_getvalue(
-			noEffAlleleValues
-				.sort((a, b) => a - b)
-				.map(i => {
-					return { value: i }
-				})
-		)
+		const box2 = boxplot_getvalue(noEffAlleleValues.sort((a, b) => a - b))
 		box2.label = `No ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${noEffAlleleValues.length}`
 
 		// make a result object for this snp

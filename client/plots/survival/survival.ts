@@ -32,6 +32,21 @@ Object.assign(t0_t2_defaultQ, {
 		mode: 'discrete',
 		type: 'custom-bin',
 		preferredBins: 'median'
+	},
+	ssGSEA: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	},
+	isoformExpression: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
+	},
+	dnaMethylation: {
+		mode: 'discrete',
+		type: 'custom-bin',
+		preferredBins: 'median'
 	}
 })
 
@@ -612,6 +627,7 @@ function setRenderers(self) {
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-survival-chart')
+			.attr('data-testid', 'sjpp-survival-plotDiv')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			.style('width', 'fit-content')
 			.style('display', 'inline-block')
@@ -772,19 +788,21 @@ function setRenderers(self) {
 		/* eslint-enable */
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left + 10 //adding 10 avoids clipping of the svg when downloading
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
-
+		const setSeriesDataID = series => {
+			return `sjpp-survival-series-${series.seriesLabel ?? series.seriesId ?? 'unknown'}`
+		}
 		const serieses = seriesesG
 			.selectAll('.sjpp-survival-series')
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
-
 		serieses.exit().remove()
-		serieses.each(function (this: HTMLElement, series, i) {
+		serieses.attr('data-testid', setSeriesDataID).each(function (this: HTMLElement, series, i) {
 			renderSeries(select(this), chart, series, i, s)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpp-survival-series')
+			.attr('data-testid', setSeriesDataID)
 			.each(function (this: HTMLElement, series, i) {
 				renderSeries(select(this), chart, series, i, s)
 			})
@@ -878,6 +896,7 @@ function setRenderers(self) {
 		// todo: allow update of exiting path instead of replacing
 		g.selectAll('path').remove()
 		g.append('path')
+			.attr('data-testid', `sjpp-survival-ci-${series.seriesLabel ?? series.seriesId ?? 'unknown'}`)
 			.attr(
 				'd',
 				area()
@@ -960,6 +979,7 @@ function setRenderers(self) {
 		const color = self.term2toColor[data[0].seriesId].adjusted
 		if (seriesName == 'survival') {
 			g.append('path')
+				.attr('data-testid', `sjpp-survival-curve-${data[0].seriesLabel ?? data[0].seriesId ?? 'unknown'}`)
 				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
 				.style('stroke', color)

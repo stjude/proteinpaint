@@ -1,23 +1,33 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { getNormalRoot } from '#filter'
+import { sanitizeTrackLstConfig } from '../trackLst.ts'
 
 export class Interactions {
 	app: MassAppApi
 	dom: any
 	id: string
+	facetTrackNames = new Set<string>()
 	constructor(app: MassAppApi, dom: any, id: string) {
 		this.app = app
 		this.dom = dom
 		this.id = id
 	}
 
-	// using arrow function to bind "this" to the Interactions class
-	// otherwise "this" can refer to the Block class
-	onCoordinateChange = rglst => {
+	setFacetTrackNames(names: Set<string>) {
+		this.facetTrackNames = names
+	}
+
+	onCoordinateChange = (rglst, blockInstance?) => {
+		if (!rglst?.length) return
+		const config: any = {
+			geneSearchResult: { chr: rglst[0].chr, start: rglst[0].start, stop: rglst[0].stop }
+		}
+		const block = getBlockState(blockInstance, rglst)
+		if (block) config.block = block
 		this.app.dispatch({
 			type: 'plot_edit',
 			id: this.id,
-			config: { geneSearchResult: { chr: rglst[0].chr, start: rglst[0].start, stop: rglst[0].stop } }
+			config
 		})
 	}
 
@@ -27,7 +37,8 @@ export class Interactions {
 			id: this.id,
 			config: {
 				geneSearchResult: result,
-				blockIsProteinMode
+				blockIsProteinMode,
+				block: { rglst: [] }
 			}
 		})
 	}
@@ -53,6 +64,7 @@ export class Interactions {
 		// live plot state
 		const state = this.getState(this.app.getState())
 		const config = structuredClone(state.config)
+		sanitizeTrackLstConfig(config)
 		config.subMds3Tks = []
 		for (const t of blockInstance.tklst) {
 			if (t.type == 'mds3' && t.filterObj) {
@@ -78,17 +90,12 @@ export class Interactions {
 			}
 		}
 		let facetActiveTracksChanged = false
-		if (config.trackLst?.activeTracks && config.trackLst.facets) {
-			// collect names of all facet tracks (across all facet tables)
-			const facetTrackNames = new Set<string>()
-			for (const f of config.trackLst.facets) {
-				for (const t of f.tracks) facetTrackNames.add(t.name)
-			}
+		if (config.trackLst?.activeTracks && this.facetTrackNames.size) {
 			// active facet tracks are inuse; if user deletes such tracks from block ui, remove from activeTracks
 			const newLst = config.trackLst.activeTracks.filter(n => blockInstance.tklst.find(i => i.name == n))
 			// if user re-adds a facet track from block ui (e.g. block.tk.menu), add it back to activeTracks
 			for (const t of blockInstance.tklst) {
-				if (t.name && facetTrackNames.has(t.name) && !newLst.includes(t.name)) {
+				if (t.name && this.facetTrackNames.has(t.name) && !newLst.includes(t.name)) {
 					newLst.push(t.name)
 				}
 			}
@@ -141,6 +148,14 @@ export class Interactions {
 		})
 	}
 
+	launchJunctionTrack = shown => {
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config: { junction: { shown } }
+		})
+	}
+
 	launchGroupsFilter = groups => {
 		this.app.dispatch({
 			type: 'plot_edit',
@@ -164,6 +179,33 @@ export class Interactions {
 			config: { variantFilter: { filter } }
 		})
 	}
+}
+
+export function getBlockState(blockInstance, rglst) {
+	const blockRglst = cloneRglst(blockInstance?.rglst || rglst)
+	if (!blockRglst?.length) return null
+	const block: any = { rglst: blockRglst }
+	for (const key of ['startidx', 'stopidx', 'regionspace', 'gmmode']) {
+		const value = blockInstance?.[key]
+		if (value !== undefined) block[key] = value
+	}
+	if (blockInstance?.coord?.reverse !== undefined) block.coordReverse = blockInstance.coord.reverse
+	return block
+}
+
+function cloneRglst(rglst) {
+	if (!Array.isArray(rglst)) return null
+	return rglst.map(r => {
+		const r2: any = {
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop
+		}
+		for (const key of ['bstart', 'bstop', 'width', 'reverse', 'name']) {
+			if (r[key] !== undefined) r2[key] = r[key]
+		}
+		return r2
+	})
 }
 
 export function mayUpdateGroupTestMethodsIdx(state, d) {

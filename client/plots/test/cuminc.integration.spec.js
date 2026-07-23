@@ -332,7 +332,8 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 	}
 })
 
-tape('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test => {
+//No assertions written for this test
+tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test => {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {

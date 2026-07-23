@@ -1,5 +1,5 @@
 {
-  "version": "2.192.0",
+  "version": "2.196.0",
   "name": "@sjcrh/proteinpaint-python",
   "description": "Python-based utilities for proteinpaint",
   "main": "index.js",
@@ -25,7 +25,8 @@
   },
   "homepage": "https://github.com/stjude/proteinpaint#readme",
   "scripts": {
-    "test": "bash -c 'cd ../; shopt -s nullglob; for f in python/test/*.spec.js python/test/*.spec.ts; do node \"$f\"; done'"
+    "test": "bash -c 'cd ../; shopt -s nullglob; code=0; for f in python/test/*.spec.js python/test/*.spec.ts; do node \"$f\" || code=1; done; exit $code'"
+
   },
   "keywords": []
 }

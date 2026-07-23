@@ -638,8 +638,9 @@ export async function get_tklst(urlp, genomeobj) {
 
 	for (const t of tklst) {
 		// uncertain reason why all tk are labeled as custom
-		// the mds3 tk has "dslabel" and should be official, do not label as custom, so in block.tk.menu won't show the delete button
-		if (t.type == 'mds3' && t.dslabel) continue
+		// the mds3 and j2 tk with "dslabel" are official
+		// do not label as custom, so in block.tk.menu won't show the delete button
+		if ((t.type == 'mds3' || t.type == 'j2') && t.dslabel) continue
 		t.iscustom = true
 	}
 
@@ -688,6 +689,22 @@ export async function mayGetTkobj(key, value, urlp, genomeobj) {
 			if (urlp.has('filter0')) tk.filter0 = urlp.get('filter0')
 			if (urlp.has('cnvonly')) tk.hardcodeCnvOnly = true // for testing cnv-only mode via url param; in actual use this flag should be set in runpp()
 			if (urlp.has('snvindelonly')) tk.snvIndelOnly = true // for testing snvindel-only mode
+			tks.push(tk)
+		}
+		return tks
+	}
+	if (key == 'j2') {
+		// mds3 junction; value is comma-joined dslabels
+		const lst = value.split(',')
+		const tks = []
+		for (const n of lst) {
+			const tk = {
+				type: client.tkt.j2,
+				dslabel: n
+			}
+			if (urlp.has('token')) tk.token = urlp.get('token') // temporary
+			if (urlp.has('filter')) tk.filter = urlp.get('filter')
+			if (urlp.has('filter0')) tk.filter0 = urlp.get('filter0')
 			tks.push(tk)
 		}
 		return tks

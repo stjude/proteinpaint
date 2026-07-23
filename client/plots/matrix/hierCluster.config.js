@@ -1,13 +1,26 @@
 import { copyMerge } from '#rx'
 import { getPlotConfig as getMatrixPlotConfig } from './matrix.config'
-import { fillTermWrapper, get$id } from '#termsetting'
-import { NumericModes, TermTypes, numericTypes } from '#shared/terms.js'
+import { fillTermWrapper } from '#termsetting'
+import { numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
 
 export async function getPlotConfig(opts = {}, app) {
 	opts.chartType = 'hierCluster'
+	if (dictionaryNumericTypes.has(opts.dataType) || opts.dataType == 'numericDictTerm') {
+		const grp = opts.termgroups?.find(g => g.type == 'hierCluster')
+		for (const tw of grp?.lst || []) tw.q = { ...tw.q, mode: 'continuous' }
+	}
 	const config = await getMatrixPlotConfig(opts, app)
 	// opts.genes will be processed as the hierCluster term group.lst
 	delete config.genes
+
+	// legacy: recovered saved sessions may still carry the removed synthetic dataType 'numericDictTerm'.
+	// rewrite it to the real term type of the clustered terms, falling back to 'float', so
+	// the numericTypes/dictionaryNumericTypes checks below accept it. (Pre-built plot configs are
+	// normalized server-side in termdb.matrix.js:normalizeLegacyHierClusterDataType.)
+	if (config.dataType == 'numericDictTerm') {
+		const lst = config.termgroups?.find(g => g.type == 'hierCluster')?.lst
+		config.dataType = lst?.[0]?.term?.type || 'float'
+	}
 
 	config.settings.hierCluster = {
 		/* type of data used for clustering
@@ -37,13 +50,16 @@ export async function getPlotConfig(opts = {}, app) {
 	// should override config so that each hierCluster type could have its own customized settings that are different from the other hierCluster
 	// types in the same dataset. e.g. redomics could do z-score transformation for gene expression cluster and do not do z-score tranformation for
 	// metabolite intensity cluster
-	const hierClusterSubTypeOverrides = app.vocabApi.termdbConfig[`${config.dataType}Cluster`] || {}
+	const numericDictTermClusterOverrides =
+		dictionaryNumericTypes.has(config.dataType) && app.vocabApi.termdbConfig.numericDictTermCluster
+			? app.vocabApi.termdbConfig.numericDictTermCluster
+			: {}
 
 	copyMerge(
 		config.settings.hierCluster,
 		overrides.settings,
 		opts.settings?.hierCluster || {},
-		hierClusterSubTypeOverrides.settings
+		numericDictTermClusterOverrides.settings
 	)
 
 	// okay to validate state here?
@@ -70,16 +86,11 @@ export async function getPlotConfig(opts = {}, app) {
 		for (const i of opts.terms) {
 			const tw = i.term ? i : { term: i }
 			if (!tw.term.type) {
-				if (
-					config.dataType == TermTypes.GENE_EXPRESSION ||
-					config.dataType == TermTypes.METABOLITE_INTENSITY ||
-					config.dataType == TermTypes.PROTEOME_ABUNDANCE ||
-					config.dataType == TermTypes.SSGSEA
-				) {
-					// set missing term type based on data type
+				// homogeneous group: assign the dataType as the term type for any numeric type.
+				if (config.dataType && numericTypes.has(config.dataType)) {
 					tw.term.type = config.dataType
 				} else {
-					throw `term type missing and cannot be assigned by dataType`
+					throw `term type missing and cannot be assigned by dataType '${config.dataType}'`
 				}
 			} else if (!numericTypes.has(tw.term.type)) {
 				// May add other term type in hierCluster
@@ -87,6 +98,10 @@ export async function getPlotConfig(opts = {}, app) {
 			} else if (config.dataType && !canTermBeInHierGrp(config.dataType, tw.term.type)) {
 				throw `cannot have term type ${tw.term.type} in ${config.dataType} term group`
 			}
+			// clustering operates on raw continuous values; dictionary numerics
+			// otherwise default to discrete in fillTermWrapper and get rejected by the server's
+			// continuous-mode guard. Force continuous here.
+			if (dictionaryNumericTypes.has(tw.term.type)) tw.q = { ...tw.q, mode: 'continuous' }
 			promises.push(fillTermWrapper(tw, app.vocabApi))
 		}
 
@@ -101,8 +116,6 @@ export async function getPlotConfig(opts = {}, app) {
 
 // checking if a tw type could exist in a hierCluster group type
 function canTermBeInHierGrp(grpType, twType) {
-	if (grpType == 'numericDictTerm') {
-		if (twType == 'float' || twType == 'integer') return true
-	}
+	if (dictionaryNumericTypes.has(grpType) && dictionaryNumericTypes.has(twType)) return true
 	return twType == grpType
 }

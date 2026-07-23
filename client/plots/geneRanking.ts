@@ -655,25 +655,29 @@ class GeneRanking extends PlotBase {
 			.attr('fill', 'none')
 			.attr('stroke', '#999')
 			.attr('stroke-width', 0.5)
-		// tick labels
+		// tick labels: show actual ranks (1 = top/best) rather than the scaled [0,1]
+		// value. The gradient is min-max-scaled per column, so the largest rank count
+		// across columns is used as the shared bottom-of-legend value.
+		const maxRank = totals.reduce((m, t) => (Number.isFinite(t) && t > m ? t : m), 0)
+		const midRank = Math.round((1 + maxRank) / 2)
 		legendG
 			.append('text')
 			.attr('x', legendGradW + 6)
 			.attr('y', 4)
 			.attr('font-size', '11px')
-			.text('0 (top)')
+			.text('1 (top)')
 		legendG
 			.append('text')
 			.attr('x', legendGradW + 6)
 			.attr('y', legendGradH / 2 + 4)
 			.attr('font-size', '11px')
-			.text('0.5')
+			.text(String(midRank))
 		legendG
 			.append('text')
 			.attr('x', legendGradW + 6)
 			.attr('y', legendGradH)
 			.attr('font-size', '11px')
-			.text('1 (bottom)')
+			.text(`${maxRank} (bottom)`)
 
 		// missing-value swatch below the gradient
 		const missingG = svg.append('g').attr('transform', `translate(${legendX},${legendY + legendGradH + 18})`)

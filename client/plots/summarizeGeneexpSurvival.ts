@@ -35,6 +35,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			.style('margin', '5px')
 			.style('font-size', '.7em')
 			.text('LOADING ...')
+		const errDiv = td2.append('div').style('display', 'none').attr('class', 'sja_errorbar')
 		const result = addGeneSearchbox({
 			row: searchDiv,
 			tip,
@@ -42,15 +43,20 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 			testid: 'sjpp-summarizeGeneexpSurvival-genesearch',
 			genome: chartsInstance.app.opts.genome!,
 			callback: async () => {
-				loadingDiv.style('display', 'block')
-				const expTw: any = { term: { gene: result.geneSymbol, type: 'geneExpression' } }
-				await fillTermWrapper(expTw, chartsInstance.app.vocabApi, t0_t2_defaultQ)
-				launchPlot({
-					tw1: dictTw,
-					tw2: expTw,
-					chartsInstance,
-					holder
-				})
+				try {
+					loadingDiv.style('display', 'block')
+					const expTw: any = { term: { gene: result.geneSymbol, type: 'geneExpression' } }
+					await fillTermWrapper(expTw, chartsInstance.app.vocabApi, t0_t2_defaultQ)
+					launchPlot({
+						tw1: dictTw,
+						tw2: expTw,
+						chartsInstance,
+						holder
+					})
+				} catch (e: any) {
+					loadingDiv.style('display', 'none')
+					errDiv.style('display', 'block').text(`Error: ` + (e.message || e.error || String(e)))
+				}
 			}
 		})
 	}

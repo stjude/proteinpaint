@@ -392,7 +392,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 		if (s.adjustedAvailable) {
 			t.append('div').text(`protein log₂FC: ${s.proteinLog2FC.toFixed(3)}`)
 			t.append('div').text(`adjusted log₂FC: ${s.adjustedLog2FC.toFixed(3)}`)
-		} else if (refAssay && assay !== refAssay) {
+		} else if (refAssay && isPTM) {
 			t.append('div').style('color', '#999').text('adjusted: n/a (protein not measured)')
 		}
 		t.append('div').text(`p-value: ${this.fmtP(s.p_value)}`)
@@ -425,7 +425,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 			.style('font-weight', 'bold')
 			.style('font-size', '13px')
 			.style('margin-bottom', '6px')
-			.text(useAdjusted && refAssay ? 'log₂FC (protein-adjusted)' : 'log₂FC')
+			.text(useAdjusted && refAssay ? 'log₂FC (PTM-adjusted)' : 'log₂FC')
 		const cW = 22
 		const cH = 130
 		const cSvg = colorBlock
@@ -521,7 +521,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 				.style('font-weight', 'bold')
 				.attr(
 					'title',
-					`When checked, the PTM and insoluble assays have the ${refAssay} log₂FC subtracted; ${refAssay} itself is shown unchanged.`
+					`When checked, the PTM assays have the ${refAssay} log₂FC subtracted; other assays are shown unchanged.`
 				)
 			const adjCb = adjLabel
 				.append('input')
@@ -531,10 +531,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 					this.useAdjusted = adjCb.property('checked')
 					this.renderGrid()
 				})
-			adjLabel
-				.append('span')
-				.style('font-weight', 'normal')
-				.text('Adjust insoluble and PTM for total protein abundance')
+			adjLabel.append('span').style('font-weight', 'normal').text('Adjust PTM for total protein abundance')
 		}
 
 		const notes = legend
@@ -562,7 +559,10 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 				'A slot stays empty where the site is not significant in that cohort, the assay was not performed, or the protein was not detected.'
 			)
 		if (refAssay) {
-			notes.append('div').style('margin-top', '4px').text(`Adjusted log₂FC = this assay's log₂FC − ${refAssay} log₂FC.`)
+			notes
+				.append('div')
+				.style('margin-top', '4px')
+				.text(`Adjusted log₂FC = a PTM site's log₂FC − ${refAssay} log₂FC (PTM assays only).`)
 		}
 	}
 }

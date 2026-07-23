@@ -33,10 +33,10 @@ export type SingleCellDEEntry = DataEntry & {
 	gene_name: string
 }
 
-export type HasDataResponse = {
+export type HasDataDEGenesResponse = {
 	/** The volcano payload — per-gene interactive dots + PNG + extents + totals.
 	 * See VolcanoData for details. */
 	data: VolcanoData<SingleCellDEEntry>
 }
 
-export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataResponse
+export type TermdbSingleCellDEgenesResponse = ErrorResponse | HasDataDEGenesResponse

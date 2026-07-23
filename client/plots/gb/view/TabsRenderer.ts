@@ -10,12 +10,14 @@ export class TabsRenderer {
 	interactions: any
 	tabs: any
 	filterUI: any
-	constructor(state, dom, opts, interactions) {
+	facetData: any[]
+	constructor(state, dom, opts, interactions, facetData: any[] = []) {
 		this.state = state
 		this.dom = dom
 		this.opts = opts
 		this.interactions = interactions
 		this.filterUI = {}
+		this.facetData = facetData
 	}
 
 	async main() {
@@ -56,8 +58,8 @@ export class TabsRenderer {
 			// one tab for each facet table
 			// quick fix to hardcode showing facet table as first tab. allow customization later
 			const activeTracks = this.state.config.trackLst.activeTracks
-			for (const facet of this.state.config.trackLst.facets) {
-				const shown = facet.tracks.some(t => activeTracks.includes(t.name))
+			for (const facet of this.facetData) {
+				const shown = facet.tracks?.some(t => activeTracks.includes(t.name))
 				tabs.push({ label: facet.name || 'Facet Table', active: shown })
 			}
 		}
@@ -67,7 +69,7 @@ export class TabsRenderer {
 			// has snvindel. some logic to decide if show tab for it
 			if (this.state.config.snvindel.details) {
 				// has details for data precomputing, must show tab in order to generate contents
-				tabs.push({ label: 'Variant Values', active: shown })
+				tabs.push({ label: 'Mutation', active: shown })
 
 				if (this.state.config.variantFilter) {
 					// for now, this filter only works with snvindel.details
@@ -75,13 +77,16 @@ export class TabsRenderer {
 				}
 			} else {
 				// no computing detail.
-				if (this.state.config.trackLst) {
-					// also there is trackLst. in order *not to show trackLst tab alone*, also show snvindel tab and allow to toggle mds3 tk on/off
-					tabs.push({ label: 'Variants', active: shown })
+				if (this.state.config.trackLst || this.state.config.junction) {
+					// When other track types are available, show a mutation tab to toggle the mds3 track.
+					tabs.push({ label: 'Mutation', active: shown })
 				} else {
 					// do not add tab, to avoid showing a lone snvindel tab
 				}
 			}
+		}
+		if (this.state.config.junction) {
+			tabs.push({ label: 'Splice junction', active: this.state.config.junction.shown })
 		}
 		if (this.state.config.ld) {
 			const shown = this.state.config.ld.tracks.some(t => t.shown)
@@ -111,7 +116,7 @@ export class TabsRenderer {
 
 		if (this.state.config.trackLst?.facets) {
 			// (above) quick fix to hardcode showing facet table as first tab. allow customization later
-			for (const facet of this.state.config.trackLst.facets) {
+			for (const facet of this.facetData) {
 				const div = tabs[tabsIdx++].contentHolder.append('div')
 				this.renderFacetTable(facet, div)
 			}
@@ -133,17 +138,26 @@ export class TabsRenderer {
 					this.mayRenderVariantFilter()
 				}
 			} else {
-				if (this.state.config.trackLst) {
+				if (this.state.config.trackLst || this.state.config.junction) {
 					// snvindel show/hide toggling
 					const div = tabs[tabsIdx++].contentHolder.append('div')
 					make_one_checkbox({
-						labeltext: 'Show variant track',
+						labeltext: 'Show mutation track',
 						checked: this.state.config.snvindel.shown,
 						holder: div,
 						callback: this.interactions.launchVariantTrack
 					})
 				}
 			}
+		}
+		if (this.state.config.junction) {
+			const div = tabs[tabsIdx++].contentHolder.append('div')
+			make_one_checkbox({
+				labeltext: 'Show splice junction track',
+				checked: this.state.config.junction.shown,
+				holder: div,
+				callback: this.interactions.launchJunctionTrack
+			})
 		}
 		if (this.state.config.ld) {
 			/* tricky: duplicate ld.tracks[] and scope it here, to pass to dispatch
@@ -178,8 +192,12 @@ export class TabsRenderer {
 		/* facet.tracks[] each is {name/assay/sample}
         layout a table with assay for columns, sample for rows, cells are tracks
         */
-		const assayset = new Set(),
-			sampleset = new Set()
+		if (!facet.tracks?.length) {
+			div.append('div').style('opacity', 0.7).style('margin', '8px 0px').text('No tracks match the current filter.')
+			return
+		}
+		const assayset = new Set<string>(),
+			sampleset = new Set<string>()
 		for (const t of facet.tracks) {
 			if (t.assay) assayset.add(t.assay)
 			if (t.sample) sampleset.add(t.sample)
@@ -190,10 +208,28 @@ export class TabsRenderer {
 
 		// TODO click on row/column header to batch operate
 
-		const columns: any = [{ label: 'Sample' }] // TODO use ds sample type
+		const facetTwLst: any[] = []
+		for (const tw of [this.state.config.facetTw1, this.state.config.facetTw2, this.state.config.facetTw3]) {
+			if (!tw) break
+			facetTwLst.push(tw)
+		}
+		const columns: any = [{ label: 'Sample', headerTestId: 'sjpp-gb-facettable-sample-columnheader' }] // TODO use ds sample type
+		for (const tw of facetTwLst) {
+			columns.push({
+				label: tw.term?.name || tw.term?.id || tw.id,
+				headerTestId: 'sjpp-gb-facettable-tw-columnheader',
+				fillCell: (td, si) => {
+					const sample = sampleLst[si]
+					const annotation = facet.samples?.[sample]?.[tw.$id]
+					if (annotation !== undefined) td.text(annotation)
+				}
+			})
+		}
 		for (const assay of assayLst) {
 			columns.push({
 				label: assay,
+				headerTestId: 'sjpp-gb-facettable-assay-columnheader',
+				labelVertical: true,
 				fillCell: (td, si) => {
 					// "si" index of sample/rows[]; find tracks belonging to this assay+sample combo
 					const tklst = facet.tracks.filter(i => i.assay == assay && i.sample == sampleLst[si])
@@ -217,6 +253,9 @@ export class TabsRenderer {
 			// 1st column is sample name
 			// TODO may link sample to sampleview
 			const row: any[] = [{ value: sample }]
+			for (let i = 0; i < facetTwLst.length; i++) {
+				row.push({})
+			}
 			// one blank cell for each assay
 			for (let i = 0; i < assayLst.length; i++) {
 				row.push({})
@@ -232,7 +271,7 @@ export class TabsRenderer {
 
 	clickFacetCell(event, tklst) {
 		this.dom.tip.clear().showunder(event.target)
-		const activeTracks = this.state.config.trackLst.activeTracks
+		const activeTracks = this.getLatestActiveTracks() || this.state.config.trackLst.activeTracks
 		const table = this.dom.tip.d.append('table').style('margin', '5px 5px 5px 2px')
 		for (const tk of tklst) {
 			const tr = table.append('tr')
@@ -244,16 +283,16 @@ export class TabsRenderer {
 				.attr('class', 'sja_menuoption')
 				.text(tk.name)
 				.on('click', () => {
-					this.dom.tip.hide()
-					let newActiveTracks, newRemoveTracks // default undefined to not remove any track
-					if (activeTracks.includes(tk.name)) {
+					const currentActiveTracks = this.getLatestActiveTracks() || activeTracks
+					let newActiveTracks, newRemoveTracks
+					if (currentActiveTracks.includes(tk.name)) {
 						td1.text('')
-						newActiveTracks = structuredClone(activeTracks).filter(n => n != tk.name)
+						newActiveTracks = structuredClone(currentActiveTracks).filter(n => n != tk.name)
 						newRemoveTracks = [tk.name]
 					} else {
 						td1.text('SHOWN')
-						newActiveTracks = structuredClone(activeTracks)
-						newActiveTracks.push(tk.name)
+						newActiveTracks = [...new Set([...currentActiveTracks, tk.name])]
+						newRemoveTracks = []
 					}
 					const config = {
 						trackLst: {
@@ -264,6 +303,11 @@ export class TabsRenderer {
 					this.interactions.launchFacet(config)
 				})
 		}
+	}
+
+	getLatestActiveTracks() {
+		const config = this.interactions.app.getState().plots.find(p => p.id === this.interactions.id)
+		return config?.trackLst?.activeTracks
 	}
 
 	async mayRenderGroups() {

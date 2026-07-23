@@ -66,13 +66,16 @@ export class ScatterView {
 	}
 
 	getControlInputs() {
+		const labels = this.scatter.config.controlLabels
 		const hasRef = this.scatter.model.charts?.[0]?.data?.samples?.find(s => !('sampleId' in s)) || false
+		const chartType = 'sampleScatter'
+		const itemLabel = this.scatter.settings.itemLabel
 		const scaleDotOption = {
 			type: 'term',
 			configKey: 'scaleDotTW',
-			chartType: 'sampleScatter',
+			chartType,
 			usecase: { target: 'sampleScatter', detail: 'numeric' },
-			title: 'Scale sample by term value',
+			title: `Scale symbol size by term value`,
 			label: 'Scale by',
 			vocabApi: this.scatter.app.vocabApi,
 			numericEditMenuVersion: ['continuous'],
@@ -86,7 +89,7 @@ export class ScatterView {
 		const shapeOption = {
 			type: 'term',
 			configKey: 'shapeTW',
-			chartType: 'sampleScatter',
+			chartType,
 			usecase: { target: 'sampleScatter', detail: 'shapeTW' },
 			title: 'Categories to assign a shape',
 			label: 'Shape',
@@ -108,13 +111,11 @@ export class ScatterView {
 			}
 		}
 		const shapeSizeOption = {
-			label: `${this.scatter.settings.itemLabel} size`,
+			label: `${itemLabel} size`,
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType,
 			settingsKey: 'size',
-			title: `${
-				this.scatter.settings.itemLabel
-			} size, represents the factor used to scale the ${this.scatter.settings.itemLabel.toLowerCase()}`,
+			title: `${itemLabel} size, represents the factor used to scale the ${itemLabel.toLowerCase()}`,
 			min: 0,
 			step: 0.1
 		}
@@ -122,9 +123,9 @@ export class ScatterView {
 		const minShapeSizeOption = {
 			label: 'Min size',
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType,
 			settingsKey: 'minShapeSize',
-			title: 'Minimum sample size',
+			title: 'Minimum symbol size',
 			min: minShapeSize,
 			max: maxShapeSize,
 			step
@@ -132,9 +133,9 @@ export class ScatterView {
 		const maxShapeSizeOption = {
 			label: 'Max size',
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType,
 			settingsKey: 'maxShapeSize',
-			title: 'Maximum sample size',
+			title: 'Maximum symbol size',
 			min: minShapeSize,
 			max: maxShapeSize,
 			step
@@ -142,7 +143,7 @@ export class ScatterView {
 		const orientation = {
 			label: 'Scale order',
 			type: 'radio',
-			chartType: 'sampleScatter',
+			chartType,
 			settingsKey: 'scaleDotOrder',
 			options: [
 				{ label: 'Ascending', value: 'Ascending' },
@@ -152,9 +153,9 @@ export class ScatterView {
 		const refSizeOption = {
 			label: 'Reference size',
 			type: 'number',
-			chartType: 'sampleScatter',
+			chartType,
 			settingsKey: 'refSize',
-			title: 'It represents the area of the reference symbol in square pixels',
+			title: 'Set the area of the reference symbol in square pixels.',
 			min: 0,
 			step: 0.1
 		}
@@ -162,31 +163,37 @@ export class ScatterView {
 			boxLabel: '',
 			label: 'Show axes',
 			type: 'checkbox',
-			chartType: 'sampleScatter',
+			chartType,
 			settingsKey: 'showAxes',
 			title: `Option to show/hide plot axes`,
 			testid: 'showAxes'
 		}
-		const specialCase = getSingleCellSpecialCase(this.scatter.config, 'colorTW')
+		const term = this.scatter.config.term ? 'term' : 'colorTW'
+		const specialCase = getSingleCellSpecialCase(this.scatter.config, term, true)
 
 		const inputs: any = [
 			{
 				type: 'term',
 				configKey: 'colorTW',
-				chartType: 'sampleScatter',
+				chartType,
 				usecase: { target: 'sampleScatter', detail: 'colorTW', specialCase },
-				title: 'Categories to color the samples',
+				title: `Categories to color the ${labels.sample} symbol`,
 				label: 'Color',
 				vocabApi: this.scatter.app.vocabApi,
-				numericEditMenuVersion: ['continuous', 'discrete']
+				numericEditMenuVersion: ['continuous', 'discrete'],
+				/** Disabling colorBy when two sc terms present.
+				 * Dots overlap and colorBy is not meaningful in this case. */
+				getDisplayStyle: () => {
+					return this.scatter.config?.singleCellPlot && this.scatter.config.term2 ? 'none' : ''
+				}
 			},
 
 			{
 				label: 'Opacity',
 				type: 'number',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'opacity',
-				title: 'It represents the opacity of the elements',
+				title: 'Set the opacity of the elements',
 				min: 0,
 				max: 1,
 				step: 0.1
@@ -194,20 +201,20 @@ export class ScatterView {
 			{
 				label: 'Chart width',
 				type: 'number',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'svgw'
 			},
 			{
 				label: 'Chart height',
 				type: 'number',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'svgh'
 			},
 			{
 				label: 'Show contour map',
 				boxLabel: '',
 				type: 'checkbox',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'showContour',
 				title:
 					"Shows the density of point clouds. If 'Color' is used in continous mode, it uses it to weight the points when calculating the density contours. If 'Z/Divide by' is added in continous mode, it used it instead.",
@@ -220,7 +227,7 @@ export class ScatterView {
 				label: 'Save zoom transform',
 				boxLabel: '',
 				type: 'checkbox',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'saveZoomTransform',
 				title: `Option to save the zoom transformation in the state. Needed if you want to save a session with the actual zoom and pan applied`,
 				processInput: value => this.saveZoomTransform(value),
@@ -236,13 +243,13 @@ export class ScatterView {
 					label: 'Color contours',
 					boxLabel: '',
 					type: 'checkbox',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'colorContours'
 				},
 				{
 					label: 'Contour bandwidth',
 					type: 'number',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'contourBandwidth',
 					title: 'Reduce to increase resolution.',
 					min: 5,
@@ -252,7 +259,7 @@ export class ScatterView {
 				{
 					label: 'Contour thresholds',
 					type: 'number',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'contourThresholds',
 					title: 'Increase to enhance contour detail.',
 					min: 5,
@@ -278,7 +285,7 @@ export class ScatterView {
 			const sampleCategory = {
 				label: 'Sample type',
 				type: 'dropdown',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'sampleCategory',
 				options
 			}
@@ -290,7 +297,7 @@ export class ScatterView {
 			inputs.unshift({
 				type: 'term',
 				configKey: 'term0',
-				chartType: 'sampleScatter',
+				chartType,
 				usecase: { target: 'sampleScatter', detail: 'term0' },
 				title: 'Term to to divide by categories or to use as Z coordinate',
 				label: 'Z / Divide by',
@@ -307,11 +314,13 @@ export class ScatterView {
 		} else if (!this.scatter.config.singleCellPlot) {
 			inputs.push(
 				{
-					label: 'Sample size',
+					// below was changed from 'Sample size'
+					// TODO: clarify how this is different from `${itemLabel} size`/`Symbol size`?
+					label: `${labels.Sample} size`,
 					type: 'number',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'threeSize',
-					title: 'Sample size',
+					title: `${labels.Sample} size`,
 					min: 0,
 					max: 1,
 					step: 0.001
@@ -319,7 +328,7 @@ export class ScatterView {
 				{
 					label: 'Field of Vision',
 					type: 'number',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'threeFOV',
 					title: 'Field of Vision',
 					min: 50,
@@ -334,9 +343,9 @@ export class ScatterView {
 					{
 						type: 'term',
 						configKey: 'term',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'numeric' },
-						title: 'X coordinate to plot the samples',
+						chartType,
+						usecase: { target: 'sampleScatter', detail: 'numeric', specialCase },
+						title: `X coordinate to plot the ${labels.samples}`,
 						label: 'X',
 						vocabApi: this.scatter.app.vocabApi,
 						menuOptions: '!remove',
@@ -345,9 +354,9 @@ export class ScatterView {
 					{
 						type: 'term',
 						configKey: 'term2',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'numeric' },
-						title: 'Y coordinate to plot the samples',
+						chartType,
+						usecase: { target: 'sampleScatter', detail: 'numeric', specialCase },
+						title: `Y coordinate to plot the ${labels.samples}`,
 						label: 'Y',
 						vocabApi: this.scatter.app.vocabApi,
 						menuOptions: '!remove',
@@ -371,7 +380,7 @@ export class ScatterView {
 				inputs.push({
 					label: 'Show regression',
 					type: 'dropdown',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'regression',
 					options: [
 						{ label: 'None', value: 'None' },
@@ -384,14 +393,14 @@ export class ScatterView {
 				inputs.push({
 					label: 'Chart depth',
 					type: 'number',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'svgd'
 				})
 				inputs.push({
 					label: 'Field of vision',
 					title: 'Camera field of view, in degrees',
 					type: 'number',
-					chartType: 'sampleScatter',
+					chartType,
 					settingsKey: 'fov'
 				})
 			}
@@ -401,7 +410,7 @@ export class ScatterView {
 			inputs.push({
 				label: 'Default color',
 				type: 'color',
-				chartType: 'sampleScatter',
+				chartType,
 				settingsKey: 'defaultColor'
 			})
 		} else if (!this.scatter.model.is2DLarge) {

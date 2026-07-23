@@ -38,11 +38,14 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'genomeBrowser':
 			return await import('./gb/GB.ts')
 
+		case 'geomap':
+			return await import('./geomap/Geomap.ts')
+
 		case 'grin2':
 			return await import('./grin2/grin2')
 
 		case 'gsea':
-			return await import(`./gsea.js`)
+			return await import(`./gsea/GSEA.ts`)
 
 		case 'imagePlot':
 			return await import('./imagePlot.ts')
@@ -59,9 +62,6 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'profileForms':
 			return await import('./profile/profileForms.ts')
-
-		case 'profileForms2':
-			return await import('./profile/forms2.ts')
 
 		case 'profileForms3':
 			return await import('./profile/forms3.ts')
@@ -93,8 +93,17 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'bubbleHeatmap':
 			return await import('./bubbleHeatmap.ts')
 
+		case 'cellTypeBubbleHeatmap':
+			return await import('./cellTypeBubbleHeatmap.ts')
+
 		case 'brainRegions':
 			return await import('./brainRegions.ts')
+
+		case 'studyCatalog':
+			return await import('./studyCatalog.ts')
+
+		case 'proteomeCohortCompare':
+			return await import('./proteomeCohortCompare.ts')
 
 		case 'geneRanking':
 			return await import(`./geneRanking.ts`)

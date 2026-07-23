@@ -1,7 +1,6 @@
 import type { RouteApi, RoutePayload } from '#types'
 import path from 'path'
 import { run_R } from '@sjcrh/proteinpaint-r'
-import { run_rust } from '@sjcrh/proteinpaint-rust'
 import type {
 	TermdbClusterRequestGeneExpression,
 	TermdbClusterRequestIsoformExpression,
@@ -15,21 +14,20 @@ import type {
 } from '#types'
 import type { ReqQueryAddons } from '../../routes/types.ts'
 import * as utils from '#src/utils.js'
+import { getH5samples } from '../utils/h5samples.ts'
 import serverconfig from '#src/serverconfig.js'
-import { gdc_validate_query_geneExpression } from '#src/mds3.gdc.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
-import { getData } from '#src/termdb.matrix.js'
+import { getData, id2sampleRef, maySetMapParent2Children } from '#src/termdb.matrix.js'
 import {
 	GENE_EXPRESSION,
-	METABOLITE_INTENSITY,
-	NUMERIC_DICTIONARY_TERM,
 	termType2label,
-	ISOFORM_EXPRESSION,
-	SSGSEA,
-	PROTEOME_ABUNDANCE
+	PROTEOME_ABUNDANCE,
+	numericTypes,
+	dictionaryNumericTypes
 } from '#shared/terms.js'
 import { formatElapsedTime } from '#shared/time.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
 
 const payload: RoutePayload = {
 	init,
@@ -57,33 +55,39 @@ export function init({ genomes }) {
 			// TODO: generalize to any dataset
 			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
 				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
-			if (
-				[GENE_EXPRESSION, SSGSEA, ISOFORM_EXPRESSION, METABOLITE_INTENSITY, NUMERIC_DICTIONARY_TERM].includes(
-					q.dataType
-				)
-			) {
-				if (!ds.queries?.[q.dataType] && q.dataType !== NUMERIC_DICTIONARY_TERM)
-					throw `no ${q.dataType} data on this dataset`
-				if (!q.terms) throw `missing gene list`
-				if (!Array.isArray(q.terms)) throw `gene list is not an array`
-				// TODO: there should be a fix on the client-side to handle this error more gracefully,
-				// instead of emitting the client-side instructions from the server response and forcing a reload
-				if (q.terms.length < 3)
-					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds)) as TermdbClusterResponse
-			} else if (PROTEOME_ABUNDANCE == q.dataType) {
-				const proteomeQuery = ds.queries?.proteome
-				if (!proteomeQuery?.get) throw `no ${PROTEOME_ABUNDANCE} data getter on this dataset`
-				if (!q.terms) throw `missing gene list`
-				if (!Array.isArray(q.terms)) throw `gene list is not an array`
-				// TODO: there should be a fix on the client-side to handle this error more gracefully,
-				// instead of emitting the client-side instructions from the server response and forcing a reload
-				if (q.terms.length < 3)
-					throw `A minimum of three genes is required for clustering. Please refresh this page to clear this error.`
-				result = (await getResult(q, ds)) as TermdbClusterResponse
-			} else {
-				throw 'unknown q.dataType ' + q.dataType
+			// Gate: must be a numeric data type
+			if (!numericTypes.has(q.dataType)) throw `dataType '${q.dataType}' is not a clusterable numeric type`
+			// the dataset can serve this type if it has a dedicated query getter, OR it's a
+			// numeric dictionary term (float/integer/date) served generically via getData()
+			// in getNumericDictTermAnnotation() — those have no ds.queries getter.
+			const canServeDataType =
+				!!ds.queries?.[q.dataType]?.get ||
+				(q.dataType == PROTEOME_ABUNDANCE && !!ds.queries?.proteome?.get) ||
+				dictionaryNumericTypes.has(q.dataType)
+			if (!canServeDataType) throw `no ${q.dataType} data on this dataset`
+			if (!q.terms) throw `missing term list`
+			if (!Array.isArray(q.terms)) throw `term list is not an array`
+			// TODO: there should be a fix on the client-side to handle this error more gracefully,
+			// instead of emitting the client-side instructions from the server response and forcing a reload
+			if (q.terms.length < 3)
+				throw `A minimum of three items is required for clustering. Please refresh this page to clear this error.`
+			for (const tw of q.terms) {
+				// terms may arrive as a {term,q} wrapper or (legacy) as a bare term object
+				const ttype = (tw?.term || tw)?.type
+				// all terms must be clusterable together: same type as the cluster dataType, or — for
+				// dictionary numerics any mix of those (mirrors the client's
+				// canTermBeInHierGrp so the server doesn't reject what the UI allows)
+				const typeCompatible =
+					ttype == q.dataType || (dictionaryNumericTypes.has(q.dataType) && dictionaryNumericTypes.has(ttype))
+				if (!typeCompatible) throw `term type '${ttype}' is not compatible with the cluster dataType '${q.dataType}'`
+				// clustering operates on continuous values; a non-continuous (e.g. discrete/binned) term
+				// would be aggregated by getData() into bin labels and corrupt the clustering. Only check
+				// when a mode is set — terms may arrive without q.mode and are treated as continuous.
+				if (tw?.q?.mode && tw.q.mode != 'continuous')
+					throw `clustering requires terms in continuous mode, but '${ttype}' term has q.mode='${tw.q.mode}'`
 			}
+			maySetMapParent2Children(q, ds)
+			result = (await getResult(q, ds)) as TermdbClusterResponse
 		} catch (e: any) {
 			if (e.stack) console.log(e.stack)
 			result = {
@@ -99,15 +103,17 @@ async function getResult(q: TermdbClusterRequest & ReqQueryAddons, ds: any) {
 	let _q: any = q // may assign adhoc flag, use "any" to avoid tsc err and no need to include the flag in the type doc
 
 	if (q.dataType == GENE_EXPRESSION) {
-		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in mds3.gdc.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
+		// gdc gene exp clustering analysis is restricted to max 1000 cases, this is done at ds.queries.geneExpression.get() in ppgdc gdc/queries.js. the same getter also serves non-clustering requests and that should not limit cases. add this flag to be able to conditionally limit cases in get()
 		_q = JSON.parse(JSON.stringify(q))
 		_q.forClusteringAnalysis = true
 		_q.__abortSignal = q.__abortSignal
 	}
 
 	let term2sample2value, byTermId, bySampleId, skippedSexChrGenes
-
-	if (q.dataType == NUMERIC_DICTIONARY_TERM) {
+	/** only use getData() for dictionary term
+	for all other term types, do not use getData(), which can only do per-term query which is slow, and no batch query support
+	*/
+	if (dictionaryNumericTypes.has(q.dataType)) {
 		;({ term2sample2value, byTermId, bySampleId } = await getNumericDictTermAnnotation(q, ds))
 	} else if (q.dataType == PROTEOME_ABUNDANCE) {
 		;({ term2sample2value, byTermId, bySampleId, skippedSexChrGenes } = await ds.queries.proteome.get({
@@ -127,7 +133,7 @@ this has two practical applications with gdc:
 	const noValueTerms: string[] = []
 	for (const [term, obj] of term2sample2value) {
 		if (Object.keys(obj).length === 0) {
-			const tw = q.terms.find(t => t.$id == term)
+			const tw: any = q.terms.find(t => t.$id == term)
 			const termName = !tw
 				? term
 				: tw.term.type == 'geneExpression'
@@ -169,6 +175,9 @@ this has two practical applications with gdc:
 	return result
 }
 
+// numeric dictionary terms (float/integer/date) have no dedicated ds.queries getter; fetch their
+// per-sample values via the matrix getData() and reshape into the {term2sample2value, byTermId,
+// bySampleId} shape the clustering code expects.
 async function getNumericDictTermAnnotation(q, ds) {
 	const getDataArgs = {
 		// TODO: figure out when term is not a termwrapper
@@ -196,7 +205,7 @@ async function getNumericDictTermAnnotation(q, ds) {
 	return { term2sample2value, byTermId: data.refs.byTermId, bySampleId: data.refs.bySampleId }
 }
 
-// default numCases should be matched to maxCase4geneExpCluster in mds3.gdc.js
+// default numCases should be matched to maxCase4geneExpCluster in ppgdc gdc/queries.js
 async function doClustering(data: any, q: TermdbClusterRequest, numCases = 1000) {
 	// get set of unique sample names, to generate col_names dimension
 	const sampleSet: Set<string> = new Set()
@@ -289,43 +298,32 @@ function getZscore(l: number[]) {
 	return l.map(v => (v - mean) / sd)
 }
 
-export async function validate_query_geneExpression(ds: any, genome: any) {
+export async function validate_query_geneExpression(ds: any, _genome: any) {
 	const q: GeneExpressionQuery = ds.queries.geneExpression
 	if (!q) return
 	q.geneExpression2bins = {} //this dict is used to store the default bin config for each gene searched, so it doesn't have to be recalculated each time
 
 	if (typeof q.get == 'function') return // ds supplied getter
 
-	if (q.src == 'gdcapi') {
-		gdc_validate_query_geneExpression(ds as GeneExpressionQuery, genome)
-		// q.get() added
-		return
-	}
-	if (q.src == 'native') {
-		await validateNative(q as GeneExpressionQuery, ds)
-		return
-	}
-	throw 'unknown queries.geneExpression.src'
+	await validateNative(q as GeneExpressionQuery, ds)
 }
 
 /**
  * Query values for a specific item(gene, gene set) or set of items from a new format HDF5 file
  * @param {string} hdf5_file - Path to the HDF5 file
  * @param {string[]} query - Array of item names (genes or gene sets) to query
- * @param {string} read_mode - Mode for reading HDF5 file (e.g. 'bulk')
  * @returns {Promise<Object>} Promise resolving to the queried data
  */
-async function queryHDF5(hdf5_file, query, read_mode) {
+async function queryHDF5(hdf5_file, query) {
 	// Create the input params as a JSON object
 	const input: any = {
 		hdf5_file: hdf5_file,
 		query: query
 	}
-	if (read_mode) input.read_mode = read_mode
 
 	try {
-		// Call the Rust script with input parameters
-		const result = await run_rust('readH5', JSON.stringify(input))
+		// Call the python script with input parameters
+		const result = await run_python('readHDF5.py', JSON.stringify(input))
 
 		// Check if the result exists and contains sample data
 		if (!result || result.length === 0) {
@@ -348,19 +346,17 @@ async function queryHDF5(hdf5_file, query, read_mode) {
  * @param ds - Dataset information
  */
 async function validateNative(q: GeneExpressionQuery, ds: any) {
+	if (!q.file) throw new Error('q.file missing')
 	q.file = path.join(serverconfig.tpmasterdir, q.file!) // q.file must exist
 	q.samples = []
 
 	try {
 		// Validate that the HDF5 file exists
 		await utils.file_is_readable(q.file)
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true }))
-
-		const vr = JSON.parse(tmp)
-
-		if (vr.status !== 'success') throw vr.message
-		if (!vr.samples?.length) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw new Error('samples not array')
+		if (!samples.length) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si === undefined) {
 				// samples in hdf5 file must be in sync with db
@@ -368,7 +364,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 			}
 			q.samples.push(si)
 		}
-		console.log(`${ds.label}: geneExpression HDF5 file validated. Format: ${vr.format}, Samples:`, q.samples.length)
+		console.log(`${ds.label}: geneExpression HDF5 file validated. Samples:`, q.samples.length)
 	} catch (error) {
 		throw `${ds.label}: Failed to validate geneExpression HDF5 file: ${error}`
 	}
@@ -386,20 +382,14 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		} else {
 			// Use all samples with exp data
 			for (const sid of samples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		}
 
@@ -423,9 +413,7 @@ async function validateNative(q: GeneExpressionQuery, ds: any) {
 		const time1 = Date.now()
 
 		// Query expression values for all genes at once
-		const readMode = param.dslabel == 'MMRF' ? 'bulk' : null // testing whether reading matrix in bulk will speed up analysis for MMRF
-		const geneData = JSON.parse(await queryHDF5(q.file, geneNames, readMode))
-
+		const geneData = JSON.parse(await queryHDF5(q.file, geneNames))
 		console.log('Time taken to run gene query:', formatElapsedTime(Date.now() - time1))
 
 		const genesData = geneData.query_output || {}
@@ -487,13 +475,10 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 	try {
 		await utils.file_is_readable(q.file)
-		const tmp = await run_rust('readH5', JSON.stringify({ hdf5_file: q.file, validate: true, include_items: true }))
-
-		const vr = JSON.parse(tmp)
-
-		if (vr.status !== 'success') throw vr.message
-		if (!vr.samples?.length) throw 'HDF5 file has no samples, please check file.'
-		for (const sn of vr.samples) {
+		const samples = await getH5samples(q.file)
+		if (!Array.isArray(samples)) throw new Error('samples not array')
+		if (!samples.length) throw 'HDF5 file has no samples, please check file.'
+		for (const sn of samples) {
 			const si = ds.cohort.termdb.q.sampleName2id(sn)
 			if (si == undefined) {
 				if (ds.cohort.db) {
@@ -505,9 +490,10 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 			q.samples.push(si)
 		}
 		// store available isoform IDs so the client can filter the list
-		q.availableItems = vr.items || []
+		q.availableItems = await getH5samples(q.file, 'item')
+		if (!Array.isArray(q.availableItems)) throw new Error('availableItems not array')
 		console.log(
-			`${ds.label}: isoformExpression HDF5 file validated. Format: ${vr.format}, Samples:`,
+			`${ds.label}: isoformExpression HDF5 file validated. Samples:`,
 			q.samples.length,
 			'Items:',
 			q.availableItems!.length
@@ -527,19 +513,13 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 		const samples = q.samples || []
 		if (limitSamples) {
 			for (const sid of limitSamples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		} else {
 			for (const sid of samples) {
-				if (ds.cohort?.termdb?.q?.id2sampleRefs) {
-					bySampleId[sid] = ds.cohort.termdb.q.id2sampleRefs(sid)
-				} else {
-					bySampleId[sid] = { label: ds.cohort.termdb.q.id2sampleName(sid) }
-				}
+				const ref = id2sampleRef(sid, ds)
+				if (ref) bySampleId[sid] = ref
 			}
 		}
 
@@ -560,7 +540,7 @@ async function validateNativeIsoform(q: IsoformExpressionQuery, ds: any) {
 
 		const time1 = Date.now()
 
-		const isoformData = JSON.parse(await queryHDF5(q.file, isoformIds, null))
+		const isoformData = JSON.parse(await queryHDF5(q.file, isoformIds))
 
 		console.log('Time taken to run isoform query:', formatElapsedTime(Date.now() - time1))
 

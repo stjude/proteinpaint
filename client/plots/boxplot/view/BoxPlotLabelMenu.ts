@@ -28,9 +28,10 @@ export class BoxPlotLabelMenu {
 			callback: () => interactions.hidePlot(plot)
 		})
 
+		const { samples } = interactions.getPlotConfig().controlLabels
 		if (app.getState().nav.header_mode === 'with_tabs')
 			options.push({
-				text: `List samples`,
+				text: `List ${samples}`,
 				isVisible: (state: MassState) => state.termdbConfig.displaySampleIds && app.vocabApi.hasVerifiedToken(),
 				callback: async (event: MouseEvent) => {
 					if (isVertical) tip.clear().show(event.clientX, event.clientY)

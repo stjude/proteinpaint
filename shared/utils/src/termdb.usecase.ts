@@ -27,6 +27,8 @@ export const graphableTypes = new Set([
 	TermTypes.DNA_METHYLATION,
 	TermTypes.METABOLITE_INTENSITY,
 	TermTypes.PROTEOME_ABUNDANCE,
+	TermTypes.PSEUDOBULK,
+	TermTypes.JUNCTION,
 	SINGLECELL_GENE_EXPRESSION,
 	SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
@@ -178,26 +180,6 @@ export function isUsableTerm(term, _usecase, termdbConfig?: any, ds?: any) {
 				} else if (ancestors < 3) uses.add('branch')
 			}
 			return uses
-
-		case 'profileForms2': {
-			// Picker (forms2.ts makeChartBtnMenu) sets usecase.cohort + usecase.subtype.
-			// Reads the per-cohort domains list directly from the dataset config at
-			// plotConfigByCohort[cohort].profileForms2.domains — each entry is { id, plotTypes }.
-			if (term.isleaf) return uses
-			const allowed = termdbConfig?.plotConfigByCohort?.[usecase.cohort]?.profileForms2?.domains
-			if (!allowed) return uses
-			const ancestors = term.id.split('__').length
-			const subtype = usecase.subtype
-			if (ancestors == 3) {
-				if (allowed.find(d => d.id === term.id)?.plotTypes?.includes(subtype)) uses.add('plot')
-			} else if (ancestors < 3) {
-				const prefix = term.id + '__'
-				if (allowed.some(d => d.id.startsWith(prefix) && d.plotTypes.includes(subtype))) {
-					uses.add('branch')
-				}
-			}
-			return uses
-		}
 
 		// case 'boxplot':
 		// 	if (term.type == 'float' || term.type == 'integer') uses.add('plot')

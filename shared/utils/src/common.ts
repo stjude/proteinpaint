@@ -28,6 +28,7 @@ export class TermTypeGroups {
 	static MUTATION_CNV_FUSION = 'Mutation/CNV/Fusion'
 	static MUTATION_SIGNATURE = 'Mutation Signature'
 	static PROTEIN_EXPRESSION = 'Protein Expression'
+	static PSEUDOBULK = 'Pseudobulk'
 	static SINGLECELL_CELLTYPE = 'Single-cell Cell Type'
 	static SINGLECELL_GENE_EXPRESSION = 'Single-cell Gene Expression'
 	static SNP = 'SNP Genotype'
@@ -111,6 +112,10 @@ export const dt2lesion = {
 	[dtfusionrna]: {
 		uilabel: 'Fusion (RNA Fusion)',
 		lesionTypes: [{ name: 'Fusion', lesionType: 'fusion', color: '#FFA500' }]
+	},
+	[dtitd]: {
+		uilabel: 'ITD (Internal Tandem Duplication)',
+		lesionTypes: [{ name: 'ITD', lesionType: 'itd', color: '#ff70ff' }]
 	}
 }
 
@@ -119,7 +124,8 @@ export const optionToDt = {
 	snvindelOptions: dtsnvindel,
 	cnvOptions: dtcnv,
 	fusionOptions: dtfusionrna,
-	svOptions: dtsv
+	svOptions: dtsv,
+	itdOptions: dtitd
 }
 
 export const mclass = {
@@ -694,7 +700,8 @@ export const tkt = {
 	mds3: 'mds3', //
 	bedgraphdot: 'bedgraphdot',
 	bam: 'bam',
-	ld: 'ld'
+	ld: 'ld',
+	j2: 'j2' // mds3 cohort junction
 }
 
 export function validtkt(what) {
@@ -1373,6 +1380,16 @@ const dtTerms_temp = [
 		type: 'dtsv',
 		dt: dtsv,
 		values: {}
+	},
+	{
+		id: 'itd',
+		query: 'itd',
+		name: dt2label[dtitd],
+		parent_id: null,
+		isleaf: true,
+		type: 'dtitd',
+		dt: dtitd,
+		values: {}
 	}
 ]
 // add origin annotations to dt terms
@@ -1506,4 +1523,38 @@ export function string2pos(s, genome, donotextend) {
 		}
 	}
 	return null
+}
+
+/////////////// splice junction event types
+export const JT_na = 'na'
+export const JT_canonical = 'canonical'
+export const JT_exonskip = 'exonskip'
+export const JT_exonaltuse = 'exonaltuse'
+export const JT_a5ss = 'a5ss'
+export const JT_a3ss = 'a3ss'
+export const JTypes = {
+	[JT_canonical]: {
+		color: '#0C72A8',
+		name: 'Canonical'
+	},
+	[JT_exonskip]: {
+		color: '#D14747',
+		name: 'ExonSkip'
+	},
+	[JT_a5ss]: {
+		color: '#476CD1',
+		name: "Alt 5'SS"
+	},
+	[JT_a3ss]: {
+		color: '#47B582',
+		name: "Alt 3'SS"
+	},
+	[JT_exonaltuse]: {
+		color: '#E69525',
+		name: 'Alternative exon'
+	},
+	[JT_na]: {
+		color: '#787854',
+		name: 'Unannotated'
+	}
 }

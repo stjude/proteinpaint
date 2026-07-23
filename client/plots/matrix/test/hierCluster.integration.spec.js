@@ -4,7 +4,7 @@ import { sleep, detectOne, detectGte, detectLst, detectAttr } from '#test/test.h
 import { select } from 'd3-selection'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
-import { TermTypes, NUMERIC_DICTIONARY_TERM } from '#shared/terms.js'
+import { TermTypes } from '#shared/terms.js'
 /**************
  test sections
 
@@ -274,7 +274,8 @@ tape('dendrogram click', async function (test) {
 	}
 })
 
-tape('numericDictTerm', async function (test) {
+tape('numeric dictionary terms (float)', async function (test) {
+	// dictionary numeric terms cluster as their underlying type ('float'), not a synthetic dataType
 	// leave it here in case it's used later: bins:{ default:{"type": "regular-bin", "startinclusive": true, "bin_size": 0.1, "first_bin": { "stop": 0.1 }, "last_bin": { "start": 0.7 }} }
 	const terms = [
 		{
@@ -285,9 +286,114 @@ tape('numericDictTerm', async function (test) {
 		{ id: 'hrtavg', term: { id: 'hrtavg', name: 'a2', type: 'float' }, q: { mode: 'continuous' } },
 		{ id: 'agedx', term: { id: 'agedx', name: 'a3', type: 'float' }, q: { mode: 'continuous' } }
 	]
-	const { app, hc } = await getHierClusterApp({ terms, dataType: NUMERIC_DICTIONARY_TERM })
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'float', termGroupName: 'Numeric Dictionary Terms' })
 	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 rows')
 	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('isoform expression cluster', async function (test) {
+	test.timeoutAfter(4000)
+	const terms = [
+		{
+			term: { isoform: 'ENST00000370314', name: 'ENST00000370314', type: 'isoformExpression' }
+		},
+		{
+			term: { isoform: 'ENST00000361510', name: 'ENST00000361510', type: 'isoformExpression' }
+		},
+		{
+			term: { isoform: 'ENST00000229281', name: 'ENST00000229281', type: 'isoformExpression' }
+		}
+	]
+	const { app, hc } = await getHierClusterApp({
+		terms,
+		dataType: 'isoformExpression',
+		termGroupName: 'Isoform Expression'
+	})
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 isoform rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('ssGSEA cluster', async function (test) {
+	test.timeoutAfter(4000)
+	const terms = [
+		{ term: { id: 'HALLMARK_ADIPOGENESIS', name: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA' } },
+		{
+			term: { id: 'HALLMARK_ALLOGRAFT_REJECTION', name: 'HALLMARK_ALLOGRAFT_REJECTION', type: 'ssGSEA' }
+		},
+		{
+			term: { id: 'HALLMARK_ANDROGEN_RESPONSE', name: 'HALLMARK_ANDROGEN_RESPONSE', type: 'ssGSEA' }
+		}
+	]
+	const { app, hc } = await getHierClusterApp({
+		terms,
+		dataType: 'ssGSEA',
+		termGroupName: 'Gene Set Enrichment (ssGSEA)'
+	})
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 ssGSEA rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('dnaMethylation cluster', async function (test) {
+	test.timeoutAfter(4000)
+	const terms = [
+		{
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'gene' }
+		},
+		{
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7663195, stop: 7671664, genomicFeatureType: 'gene' }
+		},
+		{
+			term: { type: 'dnaMethylation', chr: 'chr17', start: 7673484, stop: 7681953, genomicFeatureType: 'promoter' }
+		}
+	]
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'dnaMethylation', termGroupName: 'DNA Methylation' })
+	test.equal(hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(), 3, 'should render 3 methylation rows')
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('cluster rejects a non-continuous term mode', async function (test) {
+	test.timeoutAfter(4000)
+	// the client does not gate q.mode, so a discrete-mode term reaches the cluster route, which rejects
+	// the whole request; the plot then renders no rows. (an incompatible term TYPE is instead caught
+	// client-side by canTermBeInHierGrp before any request, so it can't be exercised through this path.)
+	const terms = [
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' }, q: { mode: 'discrete' } },
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' }, q: { mode: 'continuous' } },
+		{ term: { gene: 'BCR', name: 'BCR', type: 'geneExpression' }, q: { mode: 'continuous' } }
+	]
+	const { app, hc } = await getHierClusterApp({ terms, dataType: 'geneExpression' })
+	test.equal(
+		hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size(),
+		0,
+		'should render no rows when a term is not in continuous mode'
+	)
+	if (test._ok) app.destroy()
+	test.end()
+})
+
+tape('cluster rejects incompatible numeric types', async function (test) {
+	test.timeoutAfter(4000)
+	// geneExpression and a float dictionary term are both numeric but cannot be clustered together;
+	// canTermBeInHierGrp throws in getPlotConfig (client-side) before any server request is made
+	const terms = [
+		{ term: { gene: 'AKT1', name: 'AKT1', type: 'geneExpression' }, q: { mode: 'continuous' } },
+		{ term: { gene: 'TP53', name: 'TP53', type: 'geneExpression' }, q: { mode: 'continuous' } },
+		{ term: { id: 'agedx', name: 'agedx', type: 'float' }, q: { mode: 'continuous' } }
+	]
+	let rejected = false
+	try {
+		const { app, hc } = await getHierClusterApp({ terms, dataType: 'geneExpression' })
+		// if it didn't throw, the incompatible mix must have prevented any rows from rendering
+		rejected = hc.dom.termLabelG.selectAll('.sjpp-matrix-label').size() === 0
+		if (app) app.destroy()
+	} catch (e) {
+		rejected = true
+	}
+	test.ok(rejected, 'should reject a cluster mixing geneExpression and float terms')
 	test.end()
 })
 
@@ -311,7 +417,7 @@ async function getHierClusterApp(_opts = {}) {
 					dataType: _opts.dataType || TermTypes.GENE_EXPRESSION,
 					settings: {
 						hierCluster: {
-							termGroupName: 'Gene Expression (CGC genes only)'
+							termGroupName: _opts.termGroupName || 'Gene Expression (CGC genes only)'
 						},
 						matrix: {
 							// the matrix autocomputes the colw based on available screen width,
@@ -348,7 +454,9 @@ async function getHierClusterApp(_opts = {}) {
 
 	const opts = Object.assign(defaults, _opts)
 	const app = await appInit(opts)
-	holder.select('.sja_errorbar').node()?.lastChild?.click()
+	// dismiss the benign initial load error if present; guard the call since some error bars end in a
+	// text node (no .click), e.g. the server error from the non-continuous-mode / no-data cluster tests
+	holder.select('.sja_errorbar').node()?.lastChild?.click?.()
 	const hc = Object.values(app.Inner.components.plots).find(
 		p => p.type == 'hierCluster' || p.chartType == 'hierCluster'
 	).Inner

@@ -146,7 +146,8 @@ export default class LabelFactory {
 			stop: element.stop,
 			chr: element.chr,
 			mutationsTooltip: element.mutationsTooltip,
-			fusionTooltip: element.fusionTooltip
+			fusionTooltip: element.fusionTooltip,
+			cnvTooltip: element.cnvTooltip
 		}
 
 		return label

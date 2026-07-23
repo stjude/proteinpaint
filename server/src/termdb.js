@@ -10,7 +10,6 @@ import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
 import { get_mds3variantData } from './mds3.variant.js'
 import { get_lines_bigfile } from './utils.js'
 import { authApi } from './auth.js'
-import { getResult as geneSearch } from './gene.js'
 import { searchSNP } from '#routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
@@ -316,7 +315,7 @@ async function get_AllSamples(q, req, res, ds) {
 	res.send(result)
 }
 
-async function get_AllSamplesByName(q, req, res, ds) {
+export async function get_AllSamplesByName(q, req, res, ds) {
 	// return {}, k: sample name, v: id
 	if (!authApi.canDisplaySampleIds(req, ds)) return res.send({})
 

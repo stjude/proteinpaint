@@ -49,8 +49,11 @@ export class SCViewModel {
 		const hasExperiments = items.some(i => i.experiments)
 		let sampleColIdx = -1
 
-		// first column is sample and is hardcoded
-		const columns: TableColumn[] = [{ label: plotConfig.settings.sc.columns.sample, sortable: true }]
+		/** First column may either be a list of samples or mix of samples, meta, and/or pseudobulk.
+		 * Only use 'Sample' or config setting if everything is a sample. */
+		let firstColLabel = plotConfig.settings.sc.columns.sample
+		if (items[0]?.isMetaResult) firstColLabel = ''
+		const columns: TableColumn[] = [{ label: firstColLabel, sortable: true }]
 		if (hasExperiments) {
 			columns.push({ label: 'Sample', sortable: true }) //add after the case column
 			sampleColIdx = 1

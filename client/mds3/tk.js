@@ -64,10 +64,10 @@ export async function loadTk(tk, block) {
 		// done tk rendering, adjust height
 		tk._finish(data)
 	} catch (e) {
+		if (e.stack) console.log(e.stack)
 		if (tk.clear) tk.clear() // if the error is thrown upon initiating the track, clear() function may not have been added
 		if (tk.subtk2height) tk.subtk2height.skewer = 50 // allow for enough tk.height_main to show err msg
 		if (tk._finish) tk._finish({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
 		return
 	}
 }
