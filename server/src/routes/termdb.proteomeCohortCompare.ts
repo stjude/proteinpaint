@@ -15,7 +15,9 @@ collapse to one row per gene by keeping the most-significant row (lowest p), the
 
 Cohorts are aligned on the shared gene axis (intersection). Same-species matches by the gene
 symbol as-is; cross-species (opt-in) matches by upper-cased symbol (human APP ↔ mouse App).
-Returns the aligned z matrix plus pairwise Pearson (on z) and Spearman (on ranks) correlations.
+Returns the aligned z matrix plus pairwise Pearson (on z) and Spearman (on ranks) correlations,
+and a clustered heatmap, a shared-vs-specific DAP overlap (UpSet), and an
+age/progression trajectory (per-series k-means clusters of protein trajectories).
 */
 
 export const api: RouteApi = {
@@ -199,6 +201,280 @@ async function buildHeatmap(
 	}
 }
 
+type OverlapCombo = { cohorts: number[]; genes: string[] }
+
+/** Shared-vs-specific DAP set overlaps (UpSet), computed per direction.
+ *  A gene is a DAP in cohort c when |z| ≥ zThresh AND FDR ≤ fdrThresh, split by sign.
+ *  Genes are grouped by exactly which cohorts they are a DAP in (the union of DAPs, not the
+ *  shared axis), so single-cohort combinations are the cohort-specific proteins. */
+function buildOverlap(maps: Map<string, GeneStat>[], zThresh: number, fdrThresh: number) {
+	const buildDir = (up: boolean): OverlapCombo[] => {
+		// geneKey -> ascending list of cohort indices where it is a DAP in this direction
+		const membership = new Map<string, number[]>()
+		for (let c = 0; c < maps.length; c++) {
+			for (const [gene, s] of maps[c]) {
+				if (Math.abs(s.z) < zThresh || s.p > fdrThresh) continue
+				if (up ? s.z <= 0 : s.z >= 0) continue
+				let arr = membership.get(gene)
+				if (!arr) membership.set(gene, (arr = []))
+				arr.push(c) // c ascends, so arr stays sorted
+			}
+		}
+		// group genes by their exact membership combination
+		const combos = new Map<string, string[]>()
+		for (const [gene, arr] of membership) {
+			const key = arr.join(',')
+			let g = combos.get(key)
+			if (!g) combos.set(key, (g = []))
+			g.push(gene)
+		}
+		return [...combos.entries()]
+			.map(([key, genes]) => ({ cohorts: key.split(',').map(Number), genes: genes.sort() }))
+			.sort((a, b) => b.genes.length - a.genes.length)
+	}
+	return { up: buildDir(true), down: buildDir(false) }
+}
+
+type TrajectoryConfig = { series: string; value: number; label: string }
+
+/** deterministic PRNG (mulberry32) so identical requests cluster identically */
+function mulberry32(seed: number) {
+	let a = seed >>> 0
+	return () => {
+		a = (a + 0x6d2b79f5) | 0
+		let t = Math.imul(a ^ (a >>> 15), 1 | a)
+		t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+		return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+	}
+}
+
+function dist2(a: number[], b: number[]): number {
+	let s = 0
+	for (let i = 0; i < a.length; i++) {
+		const d = a[i] - b[i]
+		s += d * d
+	}
+	return s
+}
+
+/** standardize a trajectory (mean 0, SD 1) so clustering keys on SHAPE, not amplitude/offset */
+function standardizeVec(v: number[]): number[] {
+	const mu = v.reduce((a, b) => a + b, 0) / v.length
+	const sd = Math.sqrt(v.reduce((a, b) => a + (b - mu) ** 2, 0) / v.length)
+	if (sd < 1e-9) return v.map(() => 0)
+	return v.map(x => (x - mu) / sd)
+}
+
+/** module eigengene = first principal component (over timepoints) of the cluster's standardized
+ *  trajectories — the representative trend line (as in WGCNA). `rows` are the members' standardized
+ *  trajectories (each length T). Returns a length-T vector, signed to match the average trend and
+ *  standardized for display on the same relative-abundance scale as the member lines. */
+function computeEigengene(rows: number[][]): number[] {
+	const T = rows[0].length
+	// gram matrix over timepoints: G[i][j] = Σ_protein shape[i]·shape[j]  (T×T)
+	const G = Array.from({ length: T }, () => new Array(T).fill(0))
+	for (const r of rows) for (let i = 0; i < T; i++) for (let j = 0; j < T; j++) G[i][j] += r[i] * r[j]
+	// each row is mean-centered, so the uniform vector is G's null direction — initialize power
+	// iteration from the average trajectory (in the row space) instead, falling back to a ramp
+	const mean = new Array(T).fill(0)
+	for (const r of rows) for (let i = 0; i < T; i++) mean[i] += r[i] / rows.length
+	let e = mean.slice()
+	let en = Math.sqrt(e.reduce((a, b) => a + b * b, 0))
+	if (en < 1e-9) {
+		e = Array.from({ length: T }, (_, i) => i - (T - 1) / 2)
+		en = Math.sqrt(e.reduce((a, b) => a + b * b, 0))
+	}
+	e = e.map(v => v / en)
+	for (let it = 0; it < 100; it++) {
+		const y = new Array(T).fill(0)
+		for (let i = 0; i < T; i++) {
+			let s = 0
+			for (let j = 0; j < T; j++) s += G[i][j] * e[j]
+			y[i] = s
+		}
+		const norm = Math.sqrt(y.reduce((a, b) => a + b * b, 0))
+		if (norm < 1e-12) break
+		const ny = y.map(v => v / norm)
+		let diff = 0
+		for (let i = 0; i < T; i++) diff += Math.abs(ny[i] - e[i])
+		e = ny
+		if (diff < 1e-9) break
+	}
+	// sign so the eigengene points the same way as the members' average trajectory
+	let dot = 0
+	for (let i = 0; i < T; i++) dot += e[i] * mean[i]
+	if (dot < 0) e = e.map(v => -v)
+	return standardizeVec(e)
+}
+
+/** k-means (k-means++ init, Lloyd iterations), seeded for reproducibility */
+function kmeans(data: number[][], K: number): number[] {
+	const n = data.length
+	const dim = data[0].length
+	const rng = mulberry32(42)
+	const centroids: number[][] = [data[Math.floor(rng() * n)].slice()]
+	const d2 = new Array(n).fill(Infinity)
+	while (centroids.length < K) {
+		let sum = 0
+		const last = centroids[centroids.length - 1]
+		for (let i = 0; i < n; i++) {
+			const dd = dist2(data[i], last)
+			if (dd < d2[i]) d2[i] = dd
+			sum += d2[i]
+		}
+		let r = rng() * sum,
+			pick = n - 1
+		for (let i = 0; i < n; i++) {
+			r -= d2[i]
+			if (r <= 0) {
+				pick = i
+				break
+			}
+		}
+		centroids.push(data[pick].slice())
+	}
+	const assign = new Array(n).fill(0)
+	for (let iter = 0; iter < 40; iter++) {
+		let changed = false
+		for (let i = 0; i < n; i++) {
+			let best = 0,
+				bd = Infinity
+			for (let c = 0; c < K; c++) {
+				const dd = dist2(data[i], centroids[c])
+				if (dd < bd) {
+					bd = dd
+					best = c
+				}
+			}
+			if (assign[i] !== best) {
+				assign[i] = best
+				changed = true
+			}
+		}
+		const sums = Array.from({ length: K }, () => new Array(dim).fill(0))
+		const counts = new Array(K).fill(0)
+		for (let i = 0; i < n; i++) {
+			counts[assign[i]]++
+			const s = sums[assign[i]]
+			for (let d = 0; d < dim; d++) s[d] += data[i][d]
+		}
+		for (let c = 0; c < K; c++) {
+			if (!counts[c]) continue // leave an empty cluster's centroid in place
+			for (let d = 0; d < dim; d++) centroids[c][d] = sums[c][d] / counts[c]
+		}
+		if (!changed && iter > 0) break
+	}
+	return assign
+}
+
+/** human-readable series name from the shared catalog identity of its cohorts */
+function seriesLabel(cat: Record<string, string> | null, fallback: string): string {
+	if (!cat) return fallback
+	const parts = [cat.model, cat.cellType, cat.brainRegion].filter(Boolean)
+	return parts.length ? parts.join(' · ') : fallback
+}
+
+/** Age/progression trajectory. Groups the selected cohorts into ordered series (≥3 distinct
+ *  timepoints; replicate cohorts sharing an age are averaged), then within each series clusters the
+ *  variable proteins (DAP in ≥1 cohort, measured in all; flat proteins dropped) by trajectory SHAPE
+ *  (k-means). Returns per-series clusters: the module eigengene trend line, member gene lists, and a
+ *  capped sample of individual trajectories for the overlay. */
+function buildTrajectory(
+	cohorts: CohortRef[],
+	trajOf: (TrajectoryConfig | null)[],
+	catalogOf: (Record<string, string> | null)[],
+	maps: Map<string, GeneStat>[],
+	zThresh: number,
+	fdrThresh: number,
+	nClusters: number
+) {
+	// group cohort indices by series id
+	const bySeries = new Map<string, number[]>()
+	trajOf.forEach((t, i) => {
+		if (!t) return
+		let arr = bySeries.get(t.series)
+		if (!arr) bySeries.set(t.series, (arr = []))
+		arr.push(i)
+	})
+
+	const LINE_CAP = 150 // max individual trajectories returned per cluster (for the overlay)
+	const out: any[] = []
+	for (const [series, idxs] of bySeries) {
+		// distinct ordered timepoints; any replicate cohorts sharing an age are averaged
+		const byValue = new Map<number, number[]>()
+		for (const i of idxs) {
+			const v = trajOf[i]!.value
+			const arr = byValue.get(v)
+			if (arr) arr.push(i)
+			else byValue.set(v, [i])
+		}
+		const values = [...byValue.keys()].sort((a, b) => a - b)
+		if (values.length < 3) continue // a trajectory needs ≥3 distinct timepoints
+		const points = values.map(v => ({ value: v, label: trajOf[byValue.get(v)![0]]!.label }))
+		const seriesMaps = idxs.map(i => maps[i])
+		const label = seriesLabel(catalogOf[idxs[0]], cohorts[idxs[0]].cohort)
+
+		// proteins measured in EVERY cohort of the series
+		let genes = [...seriesMaps[0].keys()]
+		for (let k = 1; k < seriesMaps.length; k++) {
+			const m = seriesMaps[k]
+			genes = genes.filter(g => m.has(g))
+		}
+		// keep only variable proteins: a DAP in ≥1 cohort
+		genes = genes.filter(g =>
+			seriesMaps.some(m => {
+				const s = m.get(g)!
+				return Math.abs(s.z) >= zThresh && s.p <= fdrThresh
+			})
+		)
+		genes.sort()
+
+		// z per distinct timepoint (average of any replicate cohorts at that age)
+		const zAt = (g: string, v: number) => {
+			const is = byValue.get(v)!
+			let s = 0
+			for (const i of is) s += maps[i].get(g)!.z
+			return s / is.length
+		}
+		// standardized trajectory (shape = "relative abundance") per gene; drop proteins that are flat
+		// across timepoints (no temporal shape to cluster or plot, and they'd distort the eigengene)
+		const keptGenes: string[] = []
+		const shape: number[][] = []
+		for (const g of genes) {
+			const sh = standardizeVec(values.map(v => zAt(g, v)))
+			if (sh.every(x => x === 0)) continue
+			keptGenes.push(g)
+			shape.push(sh)
+		}
+
+		const k = Math.min(nClusters, keptGenes.length)
+		if (k < 1) {
+			out.push({ series, label, points, clusters: [], geneCount: 0 })
+			continue
+		}
+		const assign = kmeans(shape, k)
+
+		const clusters: any[] = []
+		for (let c = 0; c < k; c++) {
+			const memberIdx: number[] = []
+			for (let i = 0; i < keptGenes.length; i++) if (assign[i] === c) memberIdx.push(i)
+			if (!memberIdx.length) continue
+			const memberShapes = memberIdx.map(i => shape[i])
+			clusters.push({
+				size: memberIdx.length,
+				genes: memberIdx.map(i => keptGenes[i]),
+				// standardized member trajectories (a capped sample for the faint individual lines)
+				lines: memberShapes.slice(0, LINE_CAP),
+				// module eigengene: PC1 of the members' standardized trajectories — the thick trend line
+				eigengene: computeEigengene(memberShapes)
+			})
+		}
+		clusters.sort((a, b) => b.size - a.size)
+		out.push({ series, label, points, clusters, geneCount: keptGenes.length })
+	}
+	return out
+}
+
 function init({ genomes }) {
 	return async (req: any, res: any): Promise<void> => {
 		try {
@@ -224,12 +500,17 @@ function init({ genomes }) {
 				}
 			}
 
-			// load + standardize each cohort
+			// load + standardize each cohort; capture each cohort's trajectory config (authoritative
+			// age/progression ordering from the dataset) alongside for the trajectory view
 			const maps: (Map<string, GeneStat> | null)[] = []
+			const trajOf: (TrajectoryConfig | null)[] = []
+			const catalogOf: (Record<string, string> | null)[] = []
 			for (const c of cohorts) {
 				const cc = organisms[c.organism]?.assays?.[c.assay]?.cohorts?.[c.cohort]
 				if (!cc?.DAPfile) throw `no DAPfile for ${c.organism}/${c.assay}/${c.cohort}`
 				maps.push(await loadCohortZ(path.join(serverconfig.tpmasterdir, cc.DAPfile), crossSpecies))
+				trajOf.push(cc.trajectory || null)
+				catalogOf.push(cc.catalog || null)
 			}
 			maps.forEach((m, i) => {
 				if (!m) throw `could not read DAP for ${cohorts[i].cohort}`
@@ -261,20 +542,44 @@ function init({ genomes }) {
 				}
 			}
 
+			// DAP cutoffs, shared by the heatmap and overlap views.
+			// finite-check (not `||`) so a user-supplied 0 (e.g. |z| ≥ 0) isn't swallowed by the default
+			const num = (v: any, def: number) => (Number.isFinite(Number(v)) ? Number(v) : def)
+			const zThresh = num(q.zThresh, 2)
+			const fdrThresh = num(q.fdrThresh, 0.05)
+
 			// optional protein × cohort clustered heatmap (rows = DAP-union, both axes clustered)
 			let heatmap: any = undefined
 			if (q.heatmap === true || q.heatmap === 'true') {
-				// finite-check (not `||`) so a user-supplied 0 (e.g. |z| ≥ 0) isn't swallowed by the default
-				const num = (v: any, def: number) => (Number.isFinite(Number(v)) ? Number(v) : def)
-				const zThresh = num(q.zThresh, 2)
-				const fdrThresh = num(q.fdrThresh, 0.05)
 				const maxRows = num(q.maxRows, 30)
 				const cohortLabels = cohorts.map(c => c.label || c.cohort)
 				heatmap = await buildHeatmap(cohortLabels, shared, z, fc, p, zThresh, fdrThresh, maxRows)
 			}
 
+			// optional shared-vs-specific DAP overlap (UpSet), split by direction
+			let overlap: any = undefined
+			if (q.overlap === true || q.overlap === 'true') {
+				overlap = buildOverlap(maps as Map<string, GeneStat>[], zThresh, fdrThresh)
+			}
+
+			// optional age/progression trajectory: cluster proteins by shape (k-means) per series
+			let trajectory: any = undefined
+			if (q.trajectory === true || q.trajectory === 'true') {
+				const nClusters = Math.max(1, num(q.nClusters, 3)) // guard against a direct call with 0/negative
+				trajectory = buildTrajectory(
+					cohorts,
+					trajOf,
+					catalogOf,
+					maps as Map<string, GeneStat>[],
+					zThresh,
+					fdrThresh,
+					nClusters
+				)
+			}
+
 			res.send({
-				cohorts: cohorts.map((c, i) => ({ ...c, geneCount: maps[i]!.size })),
+				// attach each cohort's trajectory config so the client can offer the trajectory view
+				cohorts: cohorts.map((c, i) => ({ ...c, geneCount: maps[i]!.size, trajectory: trajOf[i] })),
 				crossSpecies,
 				genes: shared,
 				sharedGeneCount: shared.length,
@@ -283,7 +588,9 @@ function init({ genomes }) {
 				p,
 				pearson: pearsonM,
 				spearman: spearmanM,
-				heatmap
+				heatmap,
+				overlap,
+				trajectory
 			})
 		} catch (e: any) {
 			const status = typeof e?.status === 'number' ? e.status : 400

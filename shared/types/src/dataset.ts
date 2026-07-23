@@ -791,6 +791,9 @@ type ProteomeCohortConfig = {
 	caseFilter: ProteomeFilter[]
 	DAPfile?: string
 	catalog?: { [columnKey: string]: string }
+	/** age/progression trajectory membership. Cohorts sharing `series` form one ordered series;
+	 *  `value` is the numeric x-axis position (e.g. months) giving true spacing; `label` is the tick text. */
+	trajectory?: { series: string; value: number; label: string }
 }
 
 type ProteomeAssayConfig = {
