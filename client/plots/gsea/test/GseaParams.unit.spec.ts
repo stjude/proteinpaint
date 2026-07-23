@@ -1,5 +1,10 @@
 import tape from 'tape'
-import { isValidGseaParams, isProteomeDAPGseaParams, isScctGseaParams, isOtherTermTypesGseaParams } from '../model/GseaParams'
+import {
+	isValidGseaParams,
+	isProteomeDAPGseaParams,
+	isScctGseaParams,
+	isOtherTermTypesGseaParams
+} from '../model/GseaParams'
 
 /*
 Tests:
@@ -52,7 +57,6 @@ Tests:
 	- isValidGseaParams: undefined value
 	- isValidGseaParams: non-object value
  */
-
 
 /**************
  test sections
@@ -379,7 +383,7 @@ tape('isOtherTermTypesGseaParams: daRequest can be any type', function (test) {
 		dslabel: 'dataset-label'
 	}
 	test.ok(isOtherTermTypesGseaParams(validWithNull), 'should return true when daRequest is null')
-	
+
 	const validWithString = {
 		genome: 'hg38',
 		cacheId: 'cache-123',
@@ -464,5 +468,3 @@ tape('isValidGseaParams: non-object value', function (test) {
 	test.notOk(isValidGseaParams([]), 'should return false for array')
 	test.end()
 })
-
-

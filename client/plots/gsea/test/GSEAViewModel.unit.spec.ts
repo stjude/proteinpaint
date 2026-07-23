@@ -24,7 +24,6 @@ Tests:
 	- processData should populate cerno table/stats/selection/plot data
  */
 
-
 /**************
  test sections
 ***************/
@@ -58,7 +57,11 @@ tape('getPathwayOpts should append blitz options in test mode and mark selected 
 	const pathwayOpts = viewModel.getPathwayOpts(settings)
 	const selectedOpt = pathwayOpts.find((opt: any) => opt.value == 'H: hallmark gene sets')
 
-	test.equal(pathwayOpts[0].value, 'H: hallmark gene sets', 'The placeholder option should be removed when pathway is set')
+	test.equal(
+		pathwayOpts[0].value,
+		'H: hallmark gene sets',
+		'The placeholder option should be removed when pathway is set'
+	)
 	test.equal(selectedOpt?.selected, true, 'The selected pathway should be marked')
 	test.ok(
 		pathwayOpts.some((opt: any) => opt.value == 'REACTOME--blitzgsea'),
@@ -166,13 +169,13 @@ tape('getTableData should filter by FDR for cerno mode', function (test) {
 tape('getSelectedRows should resolve the selected gene set index', function (test) {
 	const mockGsea = getMockGSEA({ stateGenesetName: 'SET_B' })
 	const viewModel = new GSEAViewModel(mockGsea as any)
-	const rowItems = [
-		{ genesetName: 'SET_A' },
-		{ genesetName: 'SET_B' },
-		{ genesetName: 'SET_C' }
-	]
+	const rowItems = [{ genesetName: 'SET_A' }, { genesetName: 'SET_B' }, { genesetName: 'SET_C' }]
 
-	test.deepEqual(viewModel.getSelectedRows(rowItems as any[]), [1], 'Should resolve the index of the selected gene set based on stateGenesetName')
+	test.deepEqual(
+		viewModel.getSelectedRows(rowItems as any[]),
+		[1],
+		'Should resolve the index of the selected gene set based on stateGenesetName'
+	)
 	test.end()
 })
 
@@ -186,7 +189,11 @@ tape('getCernoPlotData should return descending ranked genes and parsed leading 
 			test.equal(plotData.genesetName, 'SET_A', 'Geneset name should match the input')
 			test.deepEqual(plotData.leadingEdgeGenes, ['G1', 'G2'], 'Leading edge genes should be parsed from the output map')
 			test.equal(plotData.rankedGenes[0].gene, 'G3', 'Largest fold-change should be first')
-			test.equal(plotData.rankedGenes[plotData.rankedGenes.length - 1].gene, 'G2', 'Smallest fold-change should be last')
+			test.equal(
+				plotData.rankedGenes[plotData.rankedGenes.length - 1].gene,
+				'G2',
+				'Smallest fold-change should be last'
+			)
 			test.end()
 		})
 		.catch(e => {
@@ -272,12 +279,24 @@ tape('processData should populate cerno table/stats/selection/plot data', functi
 
 	viewModel
 		.processData()
-		.then(() => { 
+		.then(() => {
 			test.equal(viewModel.viewData.statsData[0].value, 3, 'Stats should report all analyzed gene sets')
-			test.equal(viewModel.viewData.tableData.rows.length, 2, 'Table should include rows under the configured FDR cutoff')
+			test.equal(
+				viewModel.viewData.tableData.rows.length,
+				2,
+				'Table should include rows under the configured FDR cutoff'
+			)
 			test.deepEqual(viewModel.viewData.selectedRows, [0], 'Selected row should match selected geneset')
-			test.equal(viewModel.viewData.cernoPlotData.genesetName, 'SET_A', 'Selected geneset should match configured geneset')
-			test.equal(viewModel.viewData.showHighlightButton, true, 'Highlight button should be shown when leading edge genes are present')
+			test.equal(
+				viewModel.viewData.cernoPlotData.genesetName,
+				'SET_A',
+				'Selected geneset should match configured geneset'
+			)
+			test.equal(
+				viewModel.viewData.showHighlightButton,
+				true,
+				'Highlight button should be shown when leading edge genes are present'
+			)
 			test.end()
 		})
 		.catch(e => {
@@ -285,4 +304,3 @@ tape('processData should populate cerno table/stats/selection/plot data', functi
 			test.end()
 		})
 })
-

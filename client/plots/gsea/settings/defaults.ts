@@ -1,6 +1,6 @@
 import type { GseaSettings } from './Settings'
 
-export function getDefaultGseaSettings(overrides = {}, opts: any= {}): GseaSettings {
+export function getDefaultGseaSettings(overrides = {}, opts: any = {}): GseaSettings {
 	const defaults: GseaSettings = {
 		fdr_cutoff: 0.05,
 		num_permutations: 1000,

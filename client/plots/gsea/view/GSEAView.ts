@@ -99,7 +99,11 @@ export class GSEAView {
 	}
 
 	renderImage(detailImage) {
-		this.dom.holder.append('img').attr('width', detailImage.width).attr('height', detailImage.height).attr('src', detailImage.src)
+		this.dom.holder
+			.append('img')
+			.attr('width', detailImage.width)
+			.attr('height', detailImage.height)
+			.attr('src', detailImage.src)
 	}
 
 	renderHighlightButton() {
@@ -167,8 +171,12 @@ export class GSEAView {
 		const yAxis = svg.append('g')
 		const xAxis = svg.append('g')
 
-		const xScale = scaleLinear().domain([0, cernoPlotData.rankedGenes.length]).range([xPad, svgWidth - rightPad])
-		const yScale = scaleLinear().domain([100, 0]).range([topPad, svgHeight - yPad])
+		const xScale = scaleLinear()
+			.domain([0, cernoPlotData.rankedGenes.length])
+			.range([xPad, svgWidth - rightPad])
+		const yScale = scaleLinear()
+			.domain([100, 0])
+			.range([topPad, svgHeight - yPad])
 
 		yAxis.attr('transform', `translate(${xPad},0)`)
 		xAxis.attr('transform', `translate(0,${svgHeight - yPad})`)

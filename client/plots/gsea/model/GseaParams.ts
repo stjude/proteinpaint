@@ -35,15 +35,15 @@ export function isValidGseaParams(value: any): value is GseaParams {
 export function isProteomeDAPGseaParams(value: unknown): value is ProteomeDAPGseaParams {
 	if (!value || typeof value !== 'object') return false
 	const p = value as Record<string, unknown>
- 	const d: any = p.dapParams as DapParams
- 	return (
- 		typeof p.genome === 'string' &&
- 		typeof p.dslabel === 'string' &&
- 		d &&
- 		typeof d.organism === 'string' &&
- 		typeof d.assay === 'string' &&
- 		typeof d.cohort === 'string'
- 	)
+	const d: any = p.dapParams as DapParams
+	return (
+		typeof p.genome === 'string' &&
+		typeof p.dslabel === 'string' &&
+		d &&
+		typeof d.organism === 'string' &&
+		typeof d.assay === 'string' &&
+		typeof d.cohort === 'string'
+	)
 }
 
 export function isScctGseaParams(value: unknown): value is ScctGseaParams {

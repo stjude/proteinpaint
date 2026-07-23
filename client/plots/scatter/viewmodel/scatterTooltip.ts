@@ -212,8 +212,8 @@ export class ScatterTooltip {
 					tw == this.scatter.config.colorTW
 						? this.scatter.model.getColor(sample, chart)
 						: this.scatter.config.colorTW
-							? 'gray'
-							: this.scatter.settings.defaultColor
+						? 'gray'
+						: this.scatter.settings.defaultColor
 				const index =
 					tw == this.scatter.config.colorTW
 						? chart.shapeLegend.get('Ref').shape % shapesArray.length
@@ -329,11 +329,12 @@ export class ScatterTooltip {
 		}
 		if (tw?.term.type == 'date') value = getDateStrFromNumber(value)
 		/** Not all scge terms will have a geneExp value, such as when the scge term
-		 * is a coordTW. When no geneExp value, value = d[category] is the correct value. */
-		else if (tw?.term.type == SINGLECELL_GENE_EXPRESSION && Number.isFinite(d.geneExp)) {
+		 * is a coordTW. When no geneExp value, value = d[category] is the correct value. */ else if (
+			tw?.term.type == SINGLECELL_GENE_EXPRESSION &&
+			Number.isFinite(d.geneExp)
+		) {
 			value = roundValueAuto(d.geneExp)
-		}
-		else if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
+		} else if (typeof value == 'number' && value % 1 != 0) value = roundValueAuto(value)
 		return value
 	}
 }

@@ -162,7 +162,7 @@ export function getPlotConfig(opts: any) {
 			sample: opts.sample || { sID: '', eID: '' }
 		})
 	}
-	
+
 	config.settings.volcano = getDefaultVolcanoSettings(opts.overrides, opts)
 	config.settings.gsea = getDefaultGseaSettings(opts.overrides, opts)
 

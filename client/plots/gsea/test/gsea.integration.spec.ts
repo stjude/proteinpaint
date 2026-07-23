@@ -53,16 +53,19 @@ tape('Default blitzgsea gene expression GSEA', function (test) {
 		gsea.on('postRender.test', null)
 		const dom = gsea.Inner.dom
 		const foundPrompt = dom.actionsDiv.select('span[data-testid="sjpp-gsea-pathway"]')
-		test.true(foundPrompt.size() === 1 && foundPrompt.text() === 'Select a gene set group:', 'Should render pathway prompt')
+		test.true(
+			foundPrompt.size() === 1 && foundPrompt.text() === 'Select a gene set group:',
+			'Should render pathway prompt'
+		)
 		const foundSelect = dom.actionsDiv.select('select')
 		test.equals(foundSelect.size(), 1, 'Should render pathway select dropdown')
 		const options = foundSelect.selectAll('option').nodes()
 		test.true(options.length > 0, 'Rendered pathway select dropdown should have options')
 		test.equals(options[0].textContent, 'H: hallmark gene sets', 'First option should be H: hallmark gene sets')
-		
+
 		//Quick fix
 		// wait for results table to render
-		await helpers.sleep(500) 
+		await helpers.sleep(500)
 		const foundTable = dom.tableDiv.select('table')
 		test.equals(foundTable.size(), 1, 'Should render results table')
 		const foundTableRows = foundTable.selectAll('tbody tr').nodes()
@@ -72,8 +75,8 @@ tape('Default blitzgsea gene expression GSEA', function (test) {
 		const blitzgseaTableHeaders = ['Gene Set', '', 'Gene Set Size', 'P value', 'FDR', 'Leading Edge']
 		for (const [i, header] of blitzgseaTableHeaders.entries()) {
 			if (!header) continue
- 			const th = foundTableHeaders[i]
- 			test.true(!!th && th.textContent.startsWith(header), `Table header ${i + 1} should be "${header}"`)
+			const th = foundTableHeaders[i]
+			test.true(!!th && th.textContent.startsWith(header), `Table header ${i + 1} should be "${header}"`)
 		}
 
 		if (test['_ok']) gsea.Inner.app.destroy()

@@ -54,7 +54,7 @@ export class SCModel {
 	/********** Single Cell DATA for rendering plots ********
 	 * This is for the plot buttons. Returns an array plots with found files or
 	 * available data. */
-	async getSampleData() { 
+	async getSampleData() {
 		const body = this.getDataRequestOpts()
 		if (!body) return
 		return await dofetch3('termdb/singlecellData', { body, signal: this.sc.api?.getAbortSignal() })

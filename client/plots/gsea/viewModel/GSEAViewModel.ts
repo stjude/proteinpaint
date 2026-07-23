@@ -197,7 +197,12 @@ export class GSEAViewModel {
 		const pvalue = item.result.pvalue != null ? roundValueAuto(item.result.pvalue) : item.result.pvalue
 		const fdr = item.result.fdr != null ? roundValueAuto(item.result.fdr) : item.result.fdr
 		const leadingEdge = item.result.leading_edge
-		const genes = leadingEdge ? leadingEdge.split(',').map(gene => gene.trim()).filter(Boolean) : []
+		const genes = leadingEdge
+			? leadingEdge
+					.split(',')
+					.map(gene => gene.trim())
+					.filter(Boolean)
+			: []
 
 		if (method == 'blitzgsea') {
 			const nes = item.result.nes != null ? roundValueAuto(item.result.nes) : item.result.nes
@@ -285,7 +290,10 @@ export class GSEAViewModel {
 		return {
 			auc: selected.auc,
 			genesetName,
-			leadingEdgeGenes: selected.leading_edge.split(',').map(gene => gene.trim()).filter(Boolean),
+			leadingEdgeGenes: selected.leading_edge
+				.split(',')
+				.map(gene => gene.trim())
+				.filter(Boolean),
 			rankedGenes
 		}
 	}
@@ -313,9 +321,9 @@ export class GSEAViewModel {
 			method: 'cerno',
 			...(this.gsea.gsea_params.cacheId
 				? {
-					cacheId: this.gsea.gsea_params.cacheId,
-					daRequest: this.gsea.gsea_params.daRequest
-				}
+						cacheId: this.gsea.gsea_params.cacheId,
+						daRequest: this.gsea.gsea_params.daRequest
+				  }
 				: { dapParams: this.gsea.gsea_params.dapParams })
 		})
 		if (response?.error) throw Object.assign(new Error(response.error), { code: response.code })

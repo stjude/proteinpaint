@@ -387,7 +387,6 @@ tape('update() should remove inactive plots and init missing sandboxes', async t
 	sc.subplotManager.setSectionKey = (plotId: string, key: string) => {
 		sectionKeyUpdates.push({ plotId, key })
 	}
-
 	;(sr as any).removeSandbox = (plotId: string) => removed.push(plotId)
 	sr.getKey = () => 'S1'
 	sr.initSection = (key: string) => {
