@@ -1181,8 +1181,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				.text(`${labels[i]} (${totals[i].toLocaleString()})`)
 		}
 
-		shown.forEach(combo => {
-			const j = shown.indexOf(combo)
+		shown.forEach((combo, j) => {
 			const x = leftW + j * colW + colW / 2
 			const cnt = combo.genes.length
 			const barH = yBar(cnt)
