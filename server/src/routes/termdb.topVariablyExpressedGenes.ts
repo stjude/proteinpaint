@@ -97,7 +97,9 @@ function topVeKeyInputs(q: TermdbTopVariablyExpressedGenesRequest) {
 			typeof q.filter_extreme_values === 'number' ? Boolean(q.filter_extreme_values) : !!q.filter_extreme_values,
 		rank_type: q.rank_type?.type ?? 'var',
 		filter: (q as any).filter ?? null,
-		filter0: (q as any).filter0 ?? null
+		filter0: (q as any).filter0 ?? null,
+		mapParent2Children: q.mapParent2Children,
+		sampleType: q.sampleType
 	}
 }
 
