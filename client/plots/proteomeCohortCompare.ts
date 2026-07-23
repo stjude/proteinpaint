@@ -798,12 +798,17 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 			}
 			if (genes.length > LIMIT)
 				list
-					.append('a')
+					.append('button')
+					.attr('type', 'button')
 					.style('cursor', 'pointer')
 					.style('color', '#333') // same color as the gene names, not a link color
 					.style('text-decoration', 'underline')
 					.style('display', 'inline-block')
 					.style('margin-top', '3px')
+					.style('background', 'none')
+					.style('border', 'none')
+					.style('padding', '0')
+					.style('font', 'inherit')
 					.text(expanded ? 'less' : `more (${(genes.length - LIMIT).toLocaleString()})`)
 					.on('click', () => render(!expanded))
 		}
