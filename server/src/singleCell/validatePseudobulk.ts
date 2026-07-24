@@ -6,6 +6,7 @@ import { file_is_readable } from '#src/utils.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { getH5samples } from '../utils/h5samples.ts'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { validString } from '#src/routes/common.js'
 
 /**
  * 1. Validate the structure of the pseudobulk object in the dataset.
@@ -38,10 +39,10 @@ export async function validatePseudobulk(ds: any) {
 		for (const memberId of Object.keys(pseudobulk[assayKey])) {
 			// a member corresponds to a cell type (or lineage) with categories
 			const member = pseudobulk[assayKey][memberId]
-			if (typeof member.folder != 'string') throw 'member.folder not string'
-			if (typeof member.meanExt != 'string') throw 'member.meanExt not string'
-			if (member.totalExt && typeof member.totalExt != 'string') throw 'member.totalExt not string'
-			if (member.percentExt && typeof member.percentExt != 'string') throw 'member.percentExt not string'
+			validString(member.folder, 'member.folder must be a non-empty string')
+			validString(member.meanExt, 'member.meanExt must be a non-empty string')
+			if (member.totalExt !== undefined) validString(member.totalExt, 'member.totalExt must be a non-empty string')
+			if (member.percentExt !== undefined) validString(member.percentExt, 'member.percentExt must be a non-empty string')
 			if (typeof member.categories != 'object') throw 'member.categories{} not object'
 			if (!Object.keys(member.categories).length) throw 'no keys in member.categories{}'
 
@@ -93,7 +94,7 @@ export async function validatePseudobulk(ds: any) {
 
 				/** NOTE: Validing total and percent file as optional for now. 
 				 * Will decided later if either is required. */
-				if (member.totalExt) {
+				if (member.totalExt !== undefined) {
 					// validate "total value" h5 file
 					const totalFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.totalExt)
 					co.totalFile = totalFile
@@ -113,7 +114,7 @@ export async function validatePseudobulk(ds: any) {
 						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} TOTAL HDF5 samples:`,
 						co.totalSampleset.size)
 				}
-				if (member.percentExt) {
+				if (member.percentExt !== undefined) {
 					// validate "percent value" h5 file
 					const percentFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.percentExt)
 					co.percentFile = percentFile
