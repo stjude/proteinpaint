@@ -191,6 +191,7 @@ function getSelectedTermIds(terms, trs) {
 }
 
 function getTermNameColumn(self, terms) {
+	if (!terms?.[0]) throw new Error('terms[0] missing')
 	return {
 		label: termItemType(terms[0]),
 		fillCell(td, index) {
