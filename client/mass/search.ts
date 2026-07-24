@@ -231,7 +231,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// means either no match or a dataset that does not permit it.
 	const sampleItems = (Array.isArray(data.samples) ? data.samples : [])
 		.filter((s: any) => s?.name)
-		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id }))
+		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id, singleCell: s.singleCell }))
 	// The genomic coordinate is its own result entry (like a gene entry), rendered by showTerm
 	const coordItems = coord
 		? [{ isCoord: true, name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`, coord }]
@@ -557,7 +557,8 @@ export function setSearchRenderers(self: any) {
 		}
 
 		if (term.isSample) {
-			// Sample row: sample name + a "Sample View" button opening the sample as a separate mass chart.
+			// Sample row: sample name + available actions. The single-cell action is shown only when the
+			// server confirmed that this particular sample has single-cell data.
 			// Passes config.sample (singular), the same single-sample shape the scatter click handler
 			// dispatches (scatterInteractivity.ts), which sampleView resolves to its related samples.
 			tr.append('td').text(term.name).style('padding', '5px 10px')
@@ -581,6 +582,28 @@ export function setSearchRenderers(self: any) {
 							})
 							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 				)
+			if (term.singleCell) {
+				tr.select('td:nth-child(2)')
+					.append('span')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', `sjpp-mass-chat-single-cell-${term.sampleId}`)
+					.style('display', 'inline-block')
+					.style('margin', '0px 3px')
+					.style('padding', '5px 10px')
+					.style('border-radius', '5px')
+					.style('cursor', 'pointer')
+					.text('Single cell')
+					.on(
+						'click',
+						() =>
+							void self
+								.launchPlot({
+									chartType: 'sc',
+									settings: { sc: { item: term.singleCell } }
+								})
+								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+					)
+			}
 			return
 		}
 

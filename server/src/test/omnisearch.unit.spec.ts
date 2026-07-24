@@ -170,11 +170,29 @@ function makeSampleDs(displaySampleIds: boolean | ((clientAuthResult: any) => bo
 	}
 }
 
+function addSingleCellSamples(ds: any, samples: any[]) {
+	ds.queries.singleCell = { samples: { get: async () => ({ samples }) } }
+	return ds
+}
+
 tape('sample search: returns the matching sample when the dataset allows displaying sample ids', async t => {
 	await ensureOpenAuth()
-	const data = await runOmnisearch({ prompt: '2646' }, req, makeSampleDs(true), genome)
+	const ds = addSingleCellSamples(makeSampleDs(true), [{ sample: '2646', experiments: [{ experimentID: 'exp-1' }] }])
+	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
 	t.ok(Array.isArray(data.samples), 'samples should be an array')
-	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'should return the matching sample with its id')
+	t.deepEqual(
+		data.samples,
+		[{ id: 41, name: '2646', singleCell: { sID: '2646', eID: 'exp-1' } }],
+		'should include single-cell data when available'
+	)
+	t.end()
+})
+
+tape('sample search: omits single-cell action for samples without single-cell data', async t => {
+	await ensureOpenAuth()
+	const ds = addSingleCellSamples(makeSampleDs(true), [{ sample: '3416' }])
+	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
+	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'should not include single-cell data for another sample')
 	t.end()
 })
 
