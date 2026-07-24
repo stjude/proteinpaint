@@ -7,4 +7,8 @@ export type AggregateMatrixSettings = {
     gradientMethod: string
     /** Aggregation method to determine the dot sizes. */
     sizeMethod: string
+    /** Min size of the dots in pixels */
+    minDotSize: number
+     /** Max size of the dots in pixels */
+    maxDotSize: number
 }
