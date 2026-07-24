@@ -3166,46 +3166,6 @@ function mayAddDataAvailability(sample2mlst, dtKey, ds, gene, sampleFilter) {
 }
 
 async function filterSamples4assayAvailability(q, ds) {
-	if (ds.assayAvailability?.useFilter0) {
-		/////////////////////////////
-		// if true, this ds uses both filter and filter0, and resolves them itself via a
-		// ds-supplied assayAvailability.getSampleSet()
-		let filterObj
-		if (q.filter) {
-			// remove geneVariant/dt terms from filter as this data will
-			// be filtered during post-processing (see mayFilterByGeneVariant())
-			filterObj = structuredClone(q.filter)
-			filterObj.lst = ds.mayGetGeneVariantDataParam?.postProcessDtFilter
-				? q.filter.lst.filter(item => {
-						if (item.type == 'tvslst') {
-							// item is tvslst so can pass because geneVariant tvs is not
-							// allowed in nested tvslst for gdc (see filter2GDCfilter() in ppgdc gdc/filter.js)
-							return true
-						}
-						if (!dtTermTypes.has(item.tvs?.term.type)) {
-							// tvs is not geneVariant so can pass
-							return true
-						}
-				  })
-				: q.filter.lst
-		}
-		if (q.filter0 || filterObj?.lst.length) {
-			/* only do this query when there is either filter0, or non-empty pp filter
-			gdc getter supports either filter or filter0 or both
-
-			TRICKY!! cannot use if(!q.filter){} to decide if no pp filter.
-			client passes blank pp filter with empty array of fitler.lst[]!
-			*/
-			return await ds.assayAvailability.getSampleSet({
-				filterObj,
-				filter0: q.filter0,
-				__abortSignal: q.__abortSignal
-			})
-		}
-		// no filter. do not query and return null to use all samples
-		return null
-	}
-	// not gdc
 	if (ds.cohort?.db) {
 		// sql-based dataset
 		if (q.filter && q.filter.lst.length) {
@@ -3652,12 +3612,6 @@ async function mayValidateAssayAvailability(ds) {
 	if (!ds.assayAvailability) return
 
 	// has this setting. at server launch it should query assay availability status for all samples and cache it
-
-	// useFilter0 datasets resolve filter+filter0 to a sample set via a ds-supplied getSampleSet()
-	// (called in filterSamples4assayAvailability). fail fast at init if a dataset sets the flag but
-	// not the getter, rather than a request-time TypeError
-	if (ds.assayAvailability.useFilter0 && typeof ds.assayAvailability.getSampleSet != 'function')
-		throw 'ds.assayAvailability.useFilter0 is set but assayAvailability.getSampleSet() is not supplied by the dataset'
 
 	if (ds.assayAvailability.get) {
 		// ds-supplied getter
