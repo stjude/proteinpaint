@@ -205,6 +205,35 @@ tape('use_bins_less', async test => {
 	test.end()
 })
 
+tape('termCollection edit menu shows available member colors', async test => {
+	const opts = await getOpts({
+		tsData: {
+			term: {
+				type: 'termCollection',
+				isCustom: true,
+				memberType: 'numeric',
+				name: 'Custom collection',
+				termlst: [
+					{ id: 'member-1', name: 'Member 1', type: 'isoformExpression', isoform: 'member-1' },
+					{ id: 'member-2', name: 'Member 2', type: 'isoformExpression', isoform: 'member-2' }
+				],
+				propsByTermId: { 'member-1': { color: '#123456' } }
+			},
+			q: { mode: 'continuous', type: 'values', lst: [] }
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	await opts.pillMenuClick('Edit')
+	const swatches = opts.pill.Inner.dom.tip.d.selectAll('[data-testid="sjpp-term-collection-member-color"]').nodes()
+	test.equal(swatches.length, 1, 'shows a square only for the member with a color')
+	test.ok(swatches[0].style.backgroundColor, 'applies the member color to the square')
+	test.ok(opts.pill.Inner.dom.tip.d.text().includes('Member 1'), 'shows the member name after its color square')
+
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
 tape('Categorical term', async test => {
 	const opts = await getOpts({
 		tsData: {

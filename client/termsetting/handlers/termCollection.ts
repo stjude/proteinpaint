@@ -4,7 +4,6 @@ import { renderTable } from '#dom'
 import type { CollectionBase } from '#tw'
 import type { CategoryKey, TermCollectionQCont } from '#types'
 import type { TermSetting } from '../TermSetting.ts'
-import { mayHydrateDictTwLst } from '#termsetting'
 
 // self is the termsetting instance
 export class TermCollectionHandler extends HandlerBase implements Handler {
@@ -25,18 +24,7 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 	async showEditMenu(div: any) {
 		const self = this.termsetting
 		div.selectAll('*').remove()
-		const termIds = self.vocabApi.termdbConfig.termCollections?.find(c => c.name === self.term.name)?.termIds || []
-		const terms: any[] = []
-		const toBeHydrated: any[] = []
-		for (const id of termIds) {
-			const term = self.term.termlst.find(t => t.id === id)
-			if (term) terms.push(term)
-			else toBeHydrated.push({ id })
-		}
-		if (toBeHydrated.length) {
-			await mayHydrateDictTwLst(toBeHydrated, self.vocabApi)
-			terms.push(...toBeHydrated.map(tw => tw.term))
-		}
+		const terms = self.term.termlst
 		const groupDiv = div.append('div')
 		const noButtonCallback = (i: number, node: any) => {
 			terms[i].checked = node.checked
@@ -70,13 +58,13 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 	const rows: any = []
 	for (const term of terms) {
 		const checked = self.q.numerators?.find(tid => tid === term.id) ? 'checked' : ''
-		rows.push([{ value: term.name }, { html: `<input type='checkbox' ${checked} />` }])
+		rows.push([{}, { html: `<input type='checkbox' ${checked} />` }])
 	}
 	const selectedRows: number[] = terms
 		.map((term, index) => (self.term.termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'VARIABLES' }, { label: 'Use for sorting' }]
+	const columns: any = [getTermNameColumn(self, terms), { label: 'Use for sorting' }]
 
 	renderTable({
 		rows,
@@ -111,14 +99,14 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 
 function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) {
 	const rows: any = []
-	for (const term of terms) {
-		rows.push([{ value: term.name }])
+	for (let i = 0; i < terms.length; i++) {
+		rows.push([{}])
 	}
 	const selectedRows: number[] = terms
 		.map((term, index) => (self.term.termlst.find(t => t.id === term.id) ? index : -1))
 		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'VARIABLES' }]
+	const columns: any = [getTermNameColumn(self, terms)]
 
 	renderTable({
 		rows,
@@ -172,6 +160,26 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		})
 
 		self.api.runCallback()
+	}
+}
+
+function getTermNameColumn(self, terms) {
+	return {
+		label: 'VARIABLES',
+		fillCell(td, index) {
+			const term = terms[index]
+			const color = self.term.propsByTermId?.[term.id]?.color || term.color
+			if (color) {
+				td.append('span')
+					.attr('data-testid', 'sjpp-term-collection-member-color')
+					.style('display', 'inline-block')
+					.style('width', '10px')
+					.style('height', '10px')
+					.style('margin-right', '5px')
+					.style('background-color', color)
+			}
+			td.append('span').text(term.name)
+		}
 	}
 }
 
