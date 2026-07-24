@@ -12,6 +12,7 @@ import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
 import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
+import { getSampleFilter } from './groups.js'
 
 // Minimum prompt length per search family. Gene search runs from a single character; dictionary and
 // sample search require 3 (they match more loosely and, for samples, scan every sample name). Coordinate
@@ -231,7 +232,7 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// means either no match or a dataset that does not permit it.
 	const sampleItems = (Array.isArray(data.samples) ? data.samples : [])
 		.filter((s: any) => s?.name)
-		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id, singleCell: s.singleCell }))
+		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id, singleCell: s.singleCell, assays: s.assays }))
 	// The genomic coordinate is its own result entry (like a gene entry), rendered by showTerm
 	const coordItems = coord
 		? [{ isCoord: true, name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`, coord }]
@@ -602,6 +603,29 @@ export function setSearchRenderers(self: any) {
 								.launchPlot({
 									chartType: 'sc',
 									settings: { sc: { item: term.singleCell } }
+								})
+								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
+					)
+			}
+			if (term.assays?.length) {
+				tr.select('td:nth-child(2)')
+					.append('span')
+					.attr('class', 'sja_menuoption')
+					.attr('data-testid', `sjpp-mass-chat-assays-${term.sampleId}`)
+					.style('display', 'inline-block')
+					.style('margin', '0px 3px')
+					.style('padding', '5px 10px')
+					.style('border-radius', '5px')
+					.style('cursor', 'pointer')
+					.text('Facet Table')
+					.on(
+						'click',
+						() =>
+							void self
+								.launchPlot({
+									chartType: 'genomeBrowser',
+									hidePlotFilter: true,
+									filter: getSampleFilter(term.sampleId)
 								})
 								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 					)

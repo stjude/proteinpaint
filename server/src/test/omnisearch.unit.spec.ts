@@ -175,6 +175,11 @@ function addSingleCellSamples(ds: any, samples: any[]) {
 	return ds
 }
 
+function addTrackFacets(ds: any, facets: any[]) {
+	ds.queries.trackLst = { facets }
+	return ds
+}
+
 tape('sample search: returns the matching sample when the dataset allows displaying sample ids', async t => {
 	await ensureOpenAuth()
 	const ds = addSingleCellSamples(makeSampleDs(true), [{ sample: '2646', experiments: [{ experimentID: 'exp-1' }] }])
@@ -193,6 +198,23 @@ tape('sample search: omits single-cell action for samples without single-cell da
 	const ds = addSingleCellSamples(makeSampleDs(true), [{ sample: '3416' }])
 	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
 	t.deepEqual(data.samples, [{ id: 41, name: '2646' }], 'should not include single-cell data for another sample')
+	t.end()
+})
+
+tape('sample search: returns assays from track-list facets for the matched sample', async t => {
+	await ensureOpenAuth()
+	const ds = addTrackFacets(makeSampleDs(true), [
+		{
+			name: 'Test Facet',
+			tracks: [
+				{ sample: '2646', assay: 'RNA' },
+				{ sample: '2646', assay: 'DNA' },
+				{ sample: '3416', assay: 'Other' }
+			]
+		}
+	])
+	const data = await runOmnisearch({ prompt: '2646' }, req, ds, genome)
+	t.deepEqual(data.samples, [{ id: 41, name: '2646', assays: [{ facet: 'Test Facet', names: ['RNA', 'DNA'] }] }])
 	t.end()
 })
 
