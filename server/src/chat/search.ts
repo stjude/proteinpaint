@@ -267,14 +267,34 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 		total++
 		if (matches.length < MAX_SAMPLE_MATCHES) {
 			const scSample = singleCellSamples.get(name.toLowerCase())
+			const assays = getSampleAssays(ds, name, v.id)
 			matches.push({
 				id: v.id,
 				name,
-				...(scSample ? { singleCell: scSample } : {})
+				...(scSample ? { singleCell: scSample } : {}),
+				...(assays.length ? { assays } : {})
 			})
 		}
 	}
 	return { matches, total }
+}
+
+/** Return assay names from the parsed track-list facet configuration. `validate_query_trackLst()`
+ * loads trackLst.jsonFile into ds.queries.trackLst.facets during startup and removes jsonFile, so the
+ * parsed facets are the runtime source of truth. */
+function getSampleAssays(ds: any, sampleName: string, sampleId: any): { facet: string; names: string[] }[] {
+	const facets = ds?.queries?.trackLst?.facets
+	if (!Array.isArray(facets)) return []
+	const names = new Set([String(sampleName), String(sampleId)])
+	return facets
+		.map((facet: any) => {
+			const assays = new Set<string>()
+			for (const track of facet?.tracks || []) {
+				if (track?.sample != null && names.has(String(track.sample)) && track.assay) assays.add(String(track.assay))
+			}
+			return { facet: String(facet?.name || ''), names: [...assays] }
+		})
+		.filter((facet: { facet: string; names: string[] }) => facet.facet && facet.names.length)
 }
 
 /** Return the sample identifiers needed to open the single-cell viewer. The single-cell sample getter
