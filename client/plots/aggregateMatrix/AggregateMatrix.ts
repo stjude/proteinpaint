@@ -1,28 +1,68 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.ts'
+import { AggMatrixModel } from './model/AggMatrixModel'
+import { getCombinedTermFilter } from '#filter'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
  * by size and color gradient.*/
-class AggregateMatrix extends PlotBase implements RxComponent {
+export class AggregateMatrix extends PlotBase implements RxComponent {
     static type = 'aggregateMatrix'
 
-	type: string
-	components: { controls: any }
+    type: string
+    components: { controls: any }
+    model!: AggMatrixModel
 
-   
+
     constructor(opts: any, api: ComponentApi) {
         super(opts, api)
         this.type = AggregateMatrix.type
         this.components = { controls: {} }
+
+        //opts.header is the sandbox header
+		if (opts.header) opts.header.html(`AGGREGATE MATRIX`).style('font-size', '0.9em')
     }
 
-    async init(){
-        console.log('TODO: AggregateMatrix.init()')
+    getState(appState: any) {
+        const config = appState.plots.find((p: any) => p.id === this.id)
+        if (!config) {
+            throw new Error(
+                `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+            )
+        }
+        const parentConfig = appState.plots.find(p => p.id === this.parentId)
+        const termfilter = getCombinedTermFilter(appState, config.filter || parentConfig?.filter)
+        return {
+            termfilter,
+            config
+        }
     }
 
-    main() {
-        console.log('TODO: AggregateMatrix.main()')
+    async init() {
+        this.model = new AggMatrixModel(this)
+    }
+
+    async main() {
+         if (!this.model) throw new Error(`Model not initialized`)
+
+        super.toggleLoadingDiv()
+
+        try {
+            const data = await this.model.getData()
+            // if (!data || data.error) {
+            //     super.toggleLoadingDiv('none')
+            //     super.printError(data?.error || 'No data returned from server')
+            //     return
+            // }
+            console.log(data)
+        } catch (e: any) {
+            if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
+			else if (e.stack) console.log(e.stack)
+			super.toggleLoadingDiv('none')
+			super.printError(e.message || e)
+			return
+        }
+        super.toggleLoadingDiv('none') 
     }
 }
 
