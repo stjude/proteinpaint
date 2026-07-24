@@ -37,7 +37,6 @@ function init({ genomes }) {
 export function validate_query_getSampleImages(ds: any) {
 	const q = ds.queries.images
 	if (!q) return
-	//if (q.src == 'gdcapi') gdcValidateQuery(ds, genome, q.sampleId)
 	//reading images locally is the only option supported so far
 	nativeValidateQuery(ds)
 }

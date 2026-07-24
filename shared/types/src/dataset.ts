@@ -952,7 +952,10 @@ export type SingleCellGeneExpressionNative = {
 }
 
 export type SingleCellGeneExpressionGdc = {
-	src: 'gdcapi'
+	/** GDC objects no longer carry this: ppgdc's initQueries() supplies .get directly, so the
+	 * server never dispatches on src for GDC. kept optional because the native validators still read
+	 * .src across the Native|Gdc union. */
+	src?: 'gdcapi'
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
 	/** created in single cell samples route on init */
@@ -1005,12 +1008,18 @@ type SingleCellDataBase = {
 }
 
 export type SingleCellDataGdc = SingleCellDataBase & {
-	src: 'gdcapi'
+	/** GDC objects no longer carry this: ppgdc's initQueries() supplies .get directly, so the
+	 * server never dispatches on src for GDC. kept optional because the native validators still read
+	 * .src across the Native|Gdc union. */
+	src?: 'gdcapi'
 	plots: GDCSingleCellPlot[]
 }
 
 export type SingleCellDEgeneGdc = {
-	src: 'gdcapi'
+	/** GDC objects no longer carry this: ppgdc's initQueries() supplies .get directly, so the
+	 * server never dispatches on src for GDC. kept optional because the native validators still read
+	 * .src across the Native|Gdc union. */
+	src?: 'gdcapi'
 	/** termId = Column name.
 this must be the colorColumn from one of the plots. In the client app, as soon as the plot data loads and maps renders, client finds the cell groups based on this columnName value, and shows a drop down of these groups on UI. user selects a group, and passes it as request body to backend to get DE genes for this group
 */
