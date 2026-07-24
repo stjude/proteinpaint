@@ -66,6 +66,8 @@ export interface GeneMatch {
 export interface SampleMatch {
 	id: number | string
 	name: string
+	/** Sample selection for the single-cell viewer, when this sample has single-cell data. */
+	singleCell?: { sID: string; eID?: string }
 }
 
 /** Result of the mass omnisearch: matched dictionary terms and matched genes, each carrying its own
