@@ -18,12 +18,12 @@ The core validator is in `samplesRoute.ts`:
 - `validate_query_singleCell(ds, genome)`
 	- Verifies `singleCell.samples` and `singleCell.data` objects exist.
 	- If `samples.get` is missing, calls `validateSamples()` to inject it.
-	- For `data.src`:
-		- `gdcapi`: delegates to GDC validator (`gdc_validate_query_singleCell_data`) to provide `data.get`.
+	- For `data`:
+		- a ds-supplied `data.get` is used as-is (GDC supplies it from ppgdc's `initQueries()`).
 		- `native`: calls `validateDataNative()` to inject `data.get`.
-	- For `geneExpression.src`:
+	- For `geneExpression`:
+		- a ds-supplied `geneExpression.get` is used as-is (GDC supplies it from ppgdc's `initQueries()`).
 		- `native`: `validateGeneExpressionNative()` injects `geneExpression.get`.
-		- `gdcapi`: `gdc_validateGeneExpression()` injects `geneExpression.get`.
 	- For DE genes:
 		- `validate_query_singleCell_DEgenes(ds)` ensures `DEgenes.get` exists (currently GDC-backed).
 	- Builds reusable single-cell term metadata with `colorColumn2terms()`.
@@ -129,7 +129,7 @@ Purpose:
 How validation creates its getter:
 
 - `validate_query_singleCell(ds, genome)` calls `validate_query_singleCell_DEgenes(ds)`.
-- In `DEgenesRoute.ts`, that validator currently supports `src == 'gdcapi'` and delegates to GDC validator (`gdc_validate_query_singleCell_DEgenes`) to define `DEgenes.get`.
+- In `DEgenesRoute.ts`, that validator requires the ds to have already supplied `DEgenes.get` (GDC supplies it from ppgdc's `initQueries()`) and throws otherwise.
 - Non-GDC source currently throws (`unknown singleCell.DEgenes.src`).
 
 ## End-to-end request lifecycle

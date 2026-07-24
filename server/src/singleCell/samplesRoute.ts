@@ -2,7 +2,6 @@ import type {
 	SCImages,
 	SingleCellQuery,
 	SingleCellDataNative,
-	SingleCellGeneExpressionGdc,
 	SingleCellGeneExpressionNative,
 	SingleCellPlot,
 	SingleCellSample,
@@ -17,10 +16,8 @@ import type {
 } from '#types'
 import fs from 'fs'
 import path from 'path'
-import ky from 'ky'
 import { read_file, file_is_readable } from '#src/utils.js'
 import { mayLog } from '#src/helpers.ts'
-import { joinUrl } from '#shared/joinUrl.js'
 import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
 import { validate_query_singleCell_DEgenes } from './DEgenesRoute.ts'
@@ -84,7 +81,9 @@ export function init({ genomes }) {
 
 /////////////////// ds query validator
 //runs during mds3.init()
-export async function validate_query_singleCell(ds: any, genome: any): Promise<void> {
+// _genome is unused since the GDC geneExpression getter moved to ppgdc, but mds3.init.js calls every
+// validator uniformly as (ds, genome) -- keep the arity, per the same precedent in termdb.cluster.ts
+export async function validate_query_singleCell(ds: any, _genome: any): Promise<void> {
 	const q: SingleCellQuery = ds.queries.singleCell
 	if (!q) return
 
@@ -123,8 +122,6 @@ export async function validate_query_singleCell(ds: any, genome: any): Promise<v
 			// ds supplied getter
 		} else if (q.geneExpression.src == 'native') {
 			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
-		} else if (q.geneExpression.src == 'gdcapi') {
-			gdc_validateGeneExpression(q.geneExpression as SingleCellGeneExpressionGdc, ds, genome)
 		} else {
 			throw new Error('unknown singleCell.geneExpression.src')
 		}
@@ -451,70 +448,6 @@ function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
 		if (!out) throw new Error(`No expression data for ${query_gene}`)
 
 		return out
-	}
-}
-
-/** Adds ds.queries.singleCell.geneExpression.get() on init() if geneExpression.src is 'gdcapi'.
- * @param G ds.queries.singleCell.geneExpression
- * @param ds entire ds config
- * @param genome entire genome config
- * */
-function gdc_validateGeneExpression(G: SingleCellGeneExpressionGdc, ds: any, genome: any): void {
-	G.sample2gene2expressionBins = {} // cache for binning gene expression values
-	// client actually queries /termdb/singlecellData route for gene exp data
-	G.get = async (q: TermdbSingleCellDataRequest) => {
-		// q {sample: {eID: str, sID: str}, gene:str}
-
-		/* GDC scrna gene expression API expects:
-			{
-				file_id: hdf5id
-				gene_ids: Ensembl gene ID
-			}
-
-			API accepts either hdf5 file_id or case uuid
-			however, when case uuid provided has multiple files, will throw error: 
-				"case *** has more than one associated gene expression file"
-			so should always use hdf5id 
-		*/
-		try {
-			const fileid = q.sample.eID
-			if (ds.__gdc.scrnaAnalysis2hdf5.size == 0) {
-				// blank map. must be that gdc data caching is disabled; no need to detect if it's being cached because this particular query is very fast
-				throw new Error('GDC scRNA file mapping is not cached')
-			}
-			const hdf5id = ds.__gdc.scrnaAnalysis2hdf5.get(fileid)
-			if (!hdf5id) throw new Error('cannot map eID to hdf5 id')
-
-			const aliasLst = genome.genedb.getAliasByName.all(q.gene)
-			const gencodeId = aliasLst.find(a => a?.alias.toUpperCase().startsWith('ENSG'))?.alias
-			if (!gencodeId) throw new Error('cannot map gene symbol to GENCODE')
-			const body = {
-				gene_ids: [gencodeId],
-				file_id: hdf5id
-			}
-
-			const { host, headers } = ds.getHostHeaders(q)
-
-			const t = Date.now()
-			const response = await ky.post(joinUrl(host.rest, 'scrna_seq/gene_expression'), {
-				timeout: false,
-				headers,
-				json: body
-			})
-			if (!response.ok) throw new Error(`HTTP Error: ${response.status} ${response.statusText}`)
-			const out = await response.json()
-			mayLog('gdc scrna gene exp', q.gene, Date.now() - t)
-
-			const result = (out as { data: { cells: any[] }[] }).data[0].cells
-			const data = {}
-			for (const r of result) {
-				data[r.cell_id] = r.value
-			}
-			return data
-		} catch (e: any) {
-			if (e.stack) console.log(e.stack)
-			return { error: 'GDC scRNAseq gene expression request failed with error: ' + (e.message || e) }
-		}
 	}
 }
 

@@ -37,15 +37,16 @@ function init({ genomes }) {
 	}
 }
 
-export function validate_query_getTopTermsByType(ds: any, genome: any) {
+// _genome is unused since the inert gdcapi branch was removed, but mds3.init.js calls every
+// validator uniformly as (ds, genome) -- keep the arity
+export function validate_query_getTopTermsByType(ds: any, _genome: any) {
 	const types = [TermTypes.METABOLITE_INTENSITY] //maybe later on other types are supported
 	for (const type of types) {
 		if (ds.queries[type]) {
 			const q = ds.queries[type]
 			if (!q) return
 			if (typeof q.get == 'function') continue // ds supplied getter
-			if (q.src == 'gdcapi') gdcValidateQuery(ds, genome, type)
-			else if (q.src == 'native') nativeValidateQuery(ds, type)
+			if (q.src == 'native') nativeValidateQuery(ds, type)
 			else throw 'unknown topVariablyExpressedGenes.src'
 		}
 	}
@@ -104,10 +105,4 @@ async function computeTopTerms(file, samples, type) {
 	}
 	const varMetabolite = output_json.map(i => ({ name: i.metabolite, type }))
 	return varMetabolite
-}
-
-function gdcValidateQuery(ds: any, genome: any, type: string) {
-	ds.queries[type].getTopTerms = async () => {
-		return []
-	}
 }
