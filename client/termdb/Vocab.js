@@ -305,6 +305,12 @@ export class Vocab {
 			name
 		})
 	}
+	async deleteCustomTermById(id) {
+		await this.app.dispatch({
+			type: 'delete_customTerm',
+			id
+		})
+	}
 
 	async getCustomTerms() {
 		if (!Array.isArray(this.state.customTerms)) return [] // only mass state has this, here this instance is missing it. do not crash

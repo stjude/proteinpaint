@@ -64,3 +64,30 @@ tape('app_refresh()', async test => {
 	test.equal(store.state.activeCohort, 1, `should run subactions and set the activeCohort to ${activeCohort}`)
 	test.end()
 })
+
+tape('custom term actions upsert and delete by stable id', async test => {
+	const store = await getStore()
+	const first = { id: 'junction:j1', name: 'Junction 1', tw: { term: { id: 'j1' } } }
+	const updated = { ...first, name: 'Updated junction 1' }
+
+	store.actions.add_customTerm.call(store, { type: 'add_customTerm', obj: first })
+	store.actions.add_customTerm.call(store, { type: 'add_customTerm', obj: updated })
+	test.equal(store.state.customTerms.length, 1, 'does not duplicate a custom term with the same id')
+	test.equal(store.state.customTerms[0].name, 'Updated junction 1', 'replaces the matching custom term')
+
+	store.actions.delete_customTerm.call(store, { type: 'delete_customTerm', id: first.id })
+	test.equal(store.state.customTerms.length, 0, 'deletes a custom term by id')
+	test.end()
+})
+
+tape('custom term deletion retains name-based compatibility', async test => {
+	const store = await getStore()
+	store.actions.add_customTerm.call(store, {
+		type: 'add_customTerm',
+		obj: { name: 'Legacy custom term', tw: { term: { id: 'legacy' } } }
+	})
+
+	store.actions.delete_customTerm.call(store, { type: 'delete_customTerm', name: 'Legacy custom term' })
+	test.equal(store.state.customTerms.length, 0, 'deletes a legacy custom term by name')
+	test.end()
+})

@@ -199,6 +199,8 @@ export class TermTypeSearch {
 	handlerByType: {
 		[termType: string]: any
 	}
+	activeHandler?: { type: string; holder: any; details: any }
+	refreshActiveHandler = false
 	click_term: (term: Term) => void
 	submit_lst?: (terms: Array<Term>) => void
 	useCasesExcluded: {
@@ -279,10 +281,13 @@ export class TermTypeSearch {
 	reactsTo(action) {
 		if (action.type.startsWith('submenu_')) return true //may change tree visibility
 		if (action.type == 'set_term_type_group') return true
-		if (action.type == 'app_refresh') return true
+		if (action.type == 'app_refresh') {
+			if (this.activeHandler?.type === TermTypes.JUNCTION) this.refreshActiveHandler = true
+			return true
+		}
 	}
 
-	main() {
+	async main() {
 		this.dom.holder.style('display', this.state.isVisible ? 'inline-block' : 'none')
 		this.dom.topbar.style('display', this.state.isVisible ? 'inline-block' : 'none')
 		if (this.submit_lst) {
@@ -291,6 +296,10 @@ export class TermTypeSearch {
 		} else this.dom.selectedTermsDiv.style('display', 'none')
 		this.renderTermsSelected()
 		if (this.dom.clearbt) this.dom.clearbt.property('disabled', this.state.selectedTerms.length == 0)
+		if (this.refreshActiveHandler) {
+			this.refreshActiveHandler = false
+			await this.initActiveHandler()
+		}
 	}
 
 	renderTermsSelected() {
@@ -359,7 +368,8 @@ export class TermTypeSearch {
 			usecase: appState.tree.usecase,
 			isVisible: !appState.submenu.term,
 			selectedTerms: appState.selectedTerms,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			customTerms: appState.customTerms
 		}
 	}
 
@@ -401,19 +411,26 @@ export class TermTypeSearch {
 		const holder = tab.contentHolder
 		holder.selectAll('*').remove()
 		if (tab.termTypeGroup != DICTIONARY_VARIABLES && tab.termTypeGroup != METABOLITE_INTENSITY) {
-			//When called in init before main(), this.state is not set.
-			//Get the state from the app to pass it to the handlers.
-			const { usecase } = this.state?.usecase ? this.state : this.getState(this.app.getState())
-			const handler = this.handlerByType[type]
-			await handler.init({
-				holder,
-				app: this.app,
-				genomeObj: this.genomeObj,
-				callback: term => this.selectTerm(term),
-				details,
-				usecase
-			})
+			this.activeHandler = { type, holder, details }
+			await this.initActiveHandler()
 		}
+	}
+
+	async initActiveHandler() {
+		if (!this.activeHandler) return
+		const { type, holder, details } = this.activeHandler
+		holder.selectAll('*').remove()
+		// When called in init before main(), this.state is not set.
+		// Get the state from the app to pass it to the handlers.
+		const { usecase } = this.state?.usecase ? this.state : this.getState(this.app.getState())
+		await this.handlerByType[type].init({
+			holder,
+			app: this.app,
+			genomeObj: this.genomeObj,
+			callback: term => this.selectTerm(term),
+			details,
+			usecase
+		})
 	}
 	//This callback will be called by the handlers when a term is selected
 	selectTerm(term) {
