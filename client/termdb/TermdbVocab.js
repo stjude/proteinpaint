@@ -1477,7 +1477,13 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			...opts
 		}
-		//TODO: Add getTwMinCopy to all tws that apply
+		const formatTw = tw => {
+			if (isSingleCellTerm(tw.term.type)) return tw
+			else return this.getTwMinCopy(tw)
+		}
+		body.entries = opts.entries.map(section => section.map(formatTw))
+		body.categories = opts.categories.map(member => member.map(formatTw))
+
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const signal = opts.signal || this.getAbortSignal()
 		return await this.dofetch3('termdb/aggregateMatrix', { headers, body, signal })

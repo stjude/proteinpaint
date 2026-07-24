@@ -1,7 +1,8 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.ts'
-import { AggMatrixModel } from './model/AggMatrixModel'
 import { getCombinedTermFilter } from '#filter'
+import { AggMatrixModel } from './model/AggMatrixModel'
+import { getDefaultAggregateMatrixSettings } from './settings/defaults.ts'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -56,7 +57,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
             // }
             console.log(data)
         } catch (e: any) {
-            if (e instanceof Error) console.error(`${e.message || e} [SC main()]`)
+            if (e instanceof Error) console.error(`${e.message || e} [AggregateMatrix main()]`)
 			else if (e.stack) console.log(e.stack)
 			super.toggleLoadingDiv('none')
 			super.printError(e.message || e)
@@ -71,8 +72,17 @@ export const componentInit = aggMatrixInit
 
 export function getPlotConfig(opts: any) {
     const config = {
-        hidePlotFilter: true
+        hidePlotFilter: true,
+        settings: getDefaultAggregateMatrixSettings()
     }
 
+    validatePlotConfig(config)
+
     return copyMerge(config, opts)
+}
+
+export function validatePlotConfig(config: any) {
+    if (!config || typeof config !== 'object') throw new Error(`Invalid config provided for AggregateMatrix plot`)
+    if (!config.entries || !Object.keys(config.entries).length) throw new Error(`No entries provided for AggregateMatrix plot`)
+    if (!config.categories || !Object.keys(config.categories).length) throw new Error(`No categories provided for AggregateMatrix plot`)
 }
