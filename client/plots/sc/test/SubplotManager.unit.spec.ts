@@ -5,7 +5,7 @@ import { SubplotManager } from '../subplots/SubplotManager'
  * Tests
  *	- constructor should initialize manager state from sc components
  *	- map() should remove stale plots and keep existing sandbox state for active plots
- *	- initSubplot() should derive sample and plot metadata from subplot shape
+ *	- updateSubplotRecord() should derive sample and plot metadata from subplot shape
  *	- removeSubplot() should destroy the component and delete the record
  *	- setSandbox() and setSectionKey() should update existing records only
  *	- getActiveSubplotsFlat() should preserve insertion order
@@ -117,7 +117,7 @@ tape('map() should remove stale plots and keep existing sandbox state for active
 	test.end()
 })
 
-tape('initSubplot() should derive sample and plot metadata from subplot shape', test => {
+tape('updateSubplotRecord() should derive sample and plot metadata from subplot shape', test => {
 	const sc = getMockSCViewer({ metaResultIds: new Set(['meta-1']) })
 	const manager = new SubplotManager(sc)
 	manager.records.set('plot1', {
