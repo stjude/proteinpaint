@@ -255,6 +255,7 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	const q2: any = access.restrictFilter ? { filter: access.restrictFilter } : {}
 	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
+	const singleCellSamples = await getSingleCellSamples(ds, q2)
 
 	const str = prompt.toLowerCase()
 	const matches: SampleMatch[] = []
@@ -264,9 +265,47 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	for (const [name, v] of Object.entries(sampleName2Id as { [k: string]: any })) {
 		if (!name?.toLowerCase().includes(str)) continue
 		total++
-		if (matches.length < MAX_SAMPLE_MATCHES) matches.push({ id: v.id, name })
+		if (matches.length < MAX_SAMPLE_MATCHES) {
+			const scSample = singleCellSamples.get(name.toLowerCase())
+			matches.push({
+				id: v.id,
+				name,
+				...(scSample ? { singleCell: scSample } : {})
+			})
+		}
 	}
 	return { matches, total }
+}
+
+/** Return the sample identifiers needed to open the single-cell viewer. The single-cell sample getter
+ * is the source of truth because some cohort samples do not have single-cell data. */
+async function getSingleCellSamples(ds: any, q: any): Promise<Map<string, { sID: string; eID?: string }>> {
+	const get = ds?.queries?.singleCell?.samples?.get
+	if (typeof get != 'function') return new Map()
+	try {
+		const result = await get(q)
+		const samples = Array.isArray(result?.samples) ? result.samples : []
+		const sampleMap = new Map<string, { sID: string; eID?: string }>()
+		for (const sample of samples) {
+			if (sample?.sample == null) continue
+			const defaultSelection = {
+				sID: String(sample.sample),
+				...(sample.experiments?.[0]?.experimentID ? { eID: sample.experiments[0].experimentID } : {})
+			}
+			sampleMap.set(String(sample.sample).toLowerCase(), defaultSelection)
+			for (const experiment of sample.experiments || []) {
+				if (experiment?.sampleName == null) continue
+				sampleMap.set(String(experiment.sampleName).toLowerCase(), {
+					sID: String(experiment.sampleName),
+					...(experiment.experimentID ? { eID: experiment.experimentID } : {})
+				})
+			}
+		}
+		return sampleMap
+	} catch {
+		// Single-cell availability is optional; a failed capability check must not hide sample search.
+		return new Map()
+	}
 }
 const MAX_SAMPLE_MATCHES = 10
 const MAX_GENE_MATCHES = 50
