@@ -44,7 +44,21 @@ tape('Default aggregate matrix', async function (test) {
 		state: {
 			plots: [
 				{
-					chartType: 'aggregateMatrix'
+					chartType: 'aggregateMatrix',
+					entries: {
+						genes: [
+							{ name: 'TP53', id: 'TP53', type: 'pseudobulk' },
+							{ name: 'KRAS', id: 'KRAS', type: 'pseudobulk' }
+						]
+					},
+					categories: {
+						'Cell type': [
+							{ name: 'B cell', id: 'B cell', type: 'pseudobulk' },
+							{ name: 'T cell', id: 'T cell', type: 'pseudobulk' }
+						]
+					},
+					gradientMethod: 'mean',
+					sizeMethod: 'percent'
 				}
 			]
 		},
