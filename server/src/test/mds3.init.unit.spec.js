@@ -1723,11 +1723,11 @@ test('mayValidateBcfMafFilter: validate and auto-populate depth terms', t => {
 
 test('mayValidateBcfMafFilter: GDC-shaped q resolves FORMAT from q.format', t => {
 	t.plan(2)
-	// GDC has byrange.gdcapi (no _tk.format); its FORMAT is on q.format. The `|| q.format` fallback in
+	// GDC has a byrange with no _tk.format; its FORMAT is on q.format. The `|| q.format` fallback in
 	// mayValidateBcfMafFilter is the whole reason GDC MAF works — guard it so a cleanup can't silently
 	// break GDC (validation would then throw /no FORMAT/ and take down the GDC snvindel query).
 	const q = {
-		byrange: { gdcapi: true },
+		byrange: {},
 		format: { TumorAC: { ID: 'TumorAC', Number: 'R', Type: 'Integer', Description: 'tumor allele counts' } },
 		mafFilter: {
 			opts: { joinWith: ['and', 'or'] },
