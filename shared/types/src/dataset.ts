@@ -1139,9 +1139,9 @@ export type SingleCellPseudobulk = {
 			/** Values are average of per-cell log1p values, used for term */
 			meanExt: string
 			/** values are sum of umi count when present */
-			totalExt: string
+			totalExt?: string
 			/** Percentage of cells with the term (e.g. gene) expressed */
-			percentExt: string
+			percentExt?: string
 			/** Categories should match the values created for the scct termId above,
 			 * if exists. Each one in this instance becomes a numeric term.
 			 *
