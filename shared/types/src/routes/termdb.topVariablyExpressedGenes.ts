@@ -33,6 +33,10 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	filter0?: any //GdcFilter0
 	/** helps ds getter */
 	ds?: any
+	/** whether to map parent annotations onto child samples */
+	mapParent2Children?: boolean
+	/** query sample type */
+	sampleType?: number
 }
 
 type ValidResponse = {

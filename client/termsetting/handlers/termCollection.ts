@@ -3,8 +3,8 @@ import type { Handler } from '../index.ts'
 import { renderTable } from '#dom'
 import type { CollectionBase } from '#tw'
 import type { CategoryKey, TermCollectionQCont } from '#types'
+import { termItemType } from '#shared/terms.js'
 import type { TermSetting } from '../TermSetting.ts'
-import { mayHydrateDictTwLst } from '#termsetting'
 
 // self is the termsetting instance
 export class TermCollectionHandler extends HandlerBase implements Handler {
@@ -25,27 +25,12 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 	async showEditMenu(div: any) {
 		const self = this.termsetting
 		div.selectAll('*').remove()
-		const termIds = self.vocabApi.termdbConfig.termCollections?.find(c => c.name === self.term.name)?.termIds || []
-		const terms: any[] = []
-		const toBeHydrated: any[] = []
-		for (const id of termIds) {
-			const term = self.term.termlst.find(t => t.id === id)
-			if (term) terms.push(term)
-			else toBeHydrated.push({ id })
-		}
-		if (toBeHydrated.length) {
-			await mayHydrateDictTwLst(toBeHydrated, self.vocabApi)
-			terms.push(...toBeHydrated.map(tw => tw.term))
-		}
+		const terms = self.term.termlst
 		const groupDiv = div.append('div')
-		const noButtonCallback = (i: number, node: any) => {
-			terms[i].checked = node.checked
-			// TODO disable "Apply" btn when no terms are selected
-		}
 		const callback =
 			this.tw.term.memberType == 'numeric'
-				? addNumericTable(self, groupDiv, terms, noButtonCallback)
-				: addCategoricalTable(self, groupDiv, terms, noButtonCallback)
+				? addNumericTable(self, groupDiv, terms)
+				: addCategoricalTable(self, groupDiv, terms)
 
 		div
 			.append('div')
@@ -66,17 +51,37 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 	// getPillName(d: PillData) {}
 }
 
-function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
+function addNumericTable(self, div: any, terms: any) {
+	const selectedRows = getSelectedRows(self, terms)
 	const rows: any = []
-	for (const term of terms) {
-		const checked = self.q.numerators?.find(tid => tid === term.id) ? 'checked' : ''
-		rows.push([{ value: term.name }, { html: `<input type='checkbox' ${checked} />` }])
+	for (const [index, term] of terms.entries()) {
+		const selected = selectedRows.includes(index)
+		const checked = selected && self.q.numerators?.includes(term.id) ? 'checked' : ''
+		const disabled = selected ? '' : 'disabled'
+		rows.push([
+			{},
+			{
+				html: `<input type='checkbox' data-testid='sjpp-term-collection-sort-member' ${checked} ${disabled} />`
+			}
+		])
 	}
-	const selectedRows: number[] = terms
-		.map((term, index) => (self.term.termlst.find(t => t.id === term.id) ? index : -1))
-		.filter(index => index !== -1)
 
-	const columns: any = [{ label: 'VARIABLES' }, { label: 'Use for sorting' }]
+	const columns: any = [getTermNameColumn(self, terms), { label: 'Use for sorting' }]
+	const noButtonCallback = () => {
+		// Check-all reports both the member and custom sorting inputs. Resync every
+		// row so this does not depend on the callback's interleaved input indexes.
+		for (const tr of div.select('table').select('tbody').node().querySelectorAll('tr')) {
+			const memberCheckbox = tr.querySelector(
+				'input[type="checkbox"]:not([data-testid="sjpp-term-collection-sort-member"])'
+			) as HTMLInputElement | null
+			const sortingCheckbox = tr.querySelector(
+				'[data-testid="sjpp-term-collection-sort-member"]'
+			) as HTMLInputElement | null
+			if (!memberCheckbox || !sortingCheckbox) continue
+			sortingCheckbox.disabled = !memberCheckbox.checked
+			if (!memberCheckbox.checked) sortingCheckbox.checked = false
+		}
+	}
 
 	renderTable({
 		rows,
@@ -96,11 +101,11 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 		const q: TermCollectionQCont = self.q
 		const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
 
-		self.term.termlst = terms.filter((_, i) => trs[i].querySelectorAll('td')[1].querySelector('input')?.checked)
+		q.lst = getSelectedTermIds(terms, trs)
 
 		q.numerators = terms
 			.filter((term, i) => {
-				const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
+				const checked = trs[i].querySelector('[data-testid="sjpp-term-collection-sort-member"]')?.checked
 				return checked === true
 			})
 			.map(t => t.id)
@@ -109,16 +114,14 @@ function addNumericTable(self, div: any, terms: any, noButtonCallback: any) {
 	}
 }
 
-function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) {
+function addCategoricalTable(self, div: any, terms: any) {
 	const rows: any = []
-	for (const term of terms) {
-		rows.push([{ value: term.name }])
+	for (let i = 0; i < terms.length; i++) {
+		rows.push([{}])
 	}
-	const selectedRows: number[] = terms
-		.map((term, index) => (self.term.termlst.find(t => t.id === term.id) ? index : -1))
-		.filter(index => index !== -1)
+	const selectedRows = getSelectedRows(self, terms)
 
-	const columns: any = [{ label: 'VARIABLES' }]
+	const columns: any = [getTermNameColumn(self, terms)]
 
 	renderTable({
 		rows,
@@ -126,7 +129,9 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		div: div.append('div').style('margin-top', '10px'),
 		maxWidth: '30vw',
 		maxHeight: '40vh',
-		noButtonCallback,
+		noButtonCallback: () => {
+			// TODO disable "Apply" btn when no terms are selected
+		},
 		striped: false,
 		showHeader: true, //false,
 		selectedRows,
@@ -159,11 +164,7 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		//const q = self.q as TermCollectionQValues
 		const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
 
-		// this should be in self.q ???
-		self.term.termlst = terms.filter((term, i) => {
-			const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
-			return checked === true
-		})
+		self.q.lst = getSelectedTermIds(terms, trs)
 
 		const catTrs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
 		self.q.categoryKeys = ckSource.map((ck: CategoryKey, i: number) => {
@@ -172,6 +173,41 @@ function addCategoricalTable(self, div: any, terms: any, noButtonCallback: any) 
 		})
 
 		self.api.runCallback()
+	}
+}
+
+function getSelectedRows(self, terms) {
+	const selectedIds =
+		self.q.lst?.length > 0
+			? new Set(self.q.lst)
+			: new Set(self.term.termIds?.length > 0 ? self.term.termIds : terms.map(term => term.id))
+	return terms.map((term, index) => (selectedIds.has(term.id) ? index : -1)).filter(index => index !== -1)
+}
+
+function getSelectedTermIds(terms, trs) {
+	return terms
+		.filter((_, i) => trs[i].querySelectorAll('td')[1].querySelector('input')?.checked === true)
+		.map(term => term.id)
+}
+
+function getTermNameColumn(self, terms) {
+	if (!terms?.[0]) throw new Error('terms[0] missing')
+	return {
+		label: termItemType(terms[0]),
+		fillCell(td, index) {
+			const term = terms[index]
+			const color = self.term.propsByTermId?.[term.id]?.color || term.color
+			if (color) {
+				td.append('span')
+					.attr('data-testid', 'sjpp-term-collection-member-color')
+					.style('display', 'inline-block')
+					.style('width', '10px')
+					.style('height', '10px')
+					.style('margin-right', '5px')
+					.style('background-color', color)
+			}
+			td.append('span').text(term.name)
+		}
 	}
 }
 

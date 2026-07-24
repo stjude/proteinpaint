@@ -60,9 +60,13 @@ export class CollectionCont extends TwBase {
 
 	transformData(d: any) {
 		const termsValue: { [termId: string]: number } = d.value
+		// q.lst is the current selection from the termCollection edit menu. An empty
+		// list is retained as the legacy "all members" default.
+		const selectedTermIds = this.q.lst?.length ? new Set(this.q.lst) : null
 		// Collect all non-zero values after applying value transformation (if any)
 		const allValues: { [label: string]: number } = {}
 		for (const [label, value] of Object.entries(termsValue)) {
+			if (selectedTermIds && !selectedTermIds.has(label)) continue
 			let transformedV: number = value
 			if (this.term.valueTransform) {
 				const offset = (this.term.valueTransform as any).offset

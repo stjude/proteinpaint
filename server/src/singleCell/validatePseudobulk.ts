@@ -6,6 +6,7 @@ import { file_is_readable } from '#src/utils.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { getH5samples } from '../utils/h5samples.ts'
 import { mayLimitSamples } from '#src/mds3.filter.js'
+import { validString } from '#src/routes/common.js'
 
 /**
  * 1. Validate the structure of the pseudobulk object in the dataset.
@@ -38,9 +39,10 @@ export async function validatePseudobulk(ds: any) {
 		for (const memberId of Object.keys(pseudobulk[assayKey])) {
 			// a member corresponds to a cell type (or lineage) with categories
 			const member = pseudobulk[assayKey][memberId]
-			if (typeof member.folder != 'string') throw 'member.folder not string'
-			if (typeof member.meanExt != 'string') throw 'member.meanExt not string'
-			if (typeof member.totalExt != 'string') throw 'member.totalExt not string'
+			validString(member.folder, 'member.folder must be a non-empty string')
+			validString(member.meanExt, 'member.meanExt must be a non-empty string')
+			if (member.totalExt !== undefined) validString(member.totalExt, 'member.totalExt must be a non-empty string')
+			if (member.percentExt !== undefined) validString(member.percentExt, 'member.percentExt must be a non-empty string')
 			if (typeof member.categories != 'object') throw 'member.categories{} not object'
 			if (!Object.keys(member.categories).length) throw 'no keys in member.categories{}'
 
@@ -90,26 +92,48 @@ export async function validatePseudobulk(ds: any) {
 					co.meanSamples.length
 				)
 
-				// validate "total value" h5 file
-				const totalFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.totalExt)
-				co.totalFile = totalFile
-				await file_is_readable(totalFile)
-				{
-					const samples = await getH5samples(totalFile)
-					if (!Array.isArray(samples)) throw new Error('totalFile samples not array')
-					if (!samples.length) throw 'totalFile HDF5 file has no samples, please check file.'
-					for (const sn of samples) {
-						const si = ds.cohort.termdb.q.sampleName2id(sn)
-						if (si === undefined) throw `unknown sample ${sn} from HDF5 ${totalFile}`
+				/** NOTE: Validing total and percent file as optional for now. 
+				 * Will decided later if either is required. */
+				if (member.totalExt !== undefined) {
+					// validate "total value" h5 file
+					const totalFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.totalExt)
+					co.totalFile = totalFile
+					await file_is_readable(totalFile)
+					{
+						const samples = await getH5samples(totalFile)
+						if (!Array.isArray(samples)) throw new Error('totalFile samples not array')
+						if (!samples.length) throw 'totalFile HDF5 file has no samples, please check file.'
+						for (const sn of samples) {
+							const si = ds.cohort.termdb.q.sampleName2id(sn)
+							if (si === undefined) throw `unknown sample ${sn} from HDF5 ${totalFile}`
+						}
+						/** Used in the termdb/DE route */
+						co.totalSampleset = new Set(samples)
 					}
-					co.totalSampleset = new Set(samples)
+					console.log(
+						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} TOTAL HDF5 samples:`,
+						co.totalSampleset.size)
 				}
-				console.log(
-					`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} TOTAL HDF5 samples:`,
-					co.totalSampleset.size
-				)
-
-				// TODO percentage
+				if (member.percentExt !== undefined) {
+					// validate "percent value" h5 file
+					const percentFile = path.join(serverconfig.tpmasterdir, member.folder, category + member.percentExt)
+					co.percentFile = percentFile
+					await file_is_readable(percentFile)
+					{
+						const samples = await getH5samples(percentFile)
+						if (!Array.isArray(samples)) throw new Error('percentFile samples not array')
+						if (!samples.length) throw 'percentFile HDF5 file has no samples, please check file.'
+						for (const sn of samples) {
+							const si = ds.cohort.termdb.q.sampleName2id(sn)
+							if (si === undefined) throw `unknown sample ${sn} from HDF5 ${percentFile}`
+						}
+						/** Not used anywhere yet. Will be used in new, planned aggregate matrix plot. */
+						co.percentSampleset = new Set(samples)
+					}
+					console.log(
+						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} PERCENT HDF5 samples:`,
+						co.percentSampleset.size)
+				}
 			}
 		}
 	}

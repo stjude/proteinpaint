@@ -27,7 +27,7 @@ Once added as a component, the plot updates every time `app.dispatch` is called.
 - Which subplots are currently active and which sample each belongs to.
 
 The manager provides:
-- `map()` — reconciles a new array of subplot configs against the existing active subplots. Removes records for subplots no longer in the array, initializes new records via `initSubplot()`, and returns the flattened list of active subplot records.
+- `map()` — reconciles a new array of subplot configs against the existing active subplots. Removes stale subplot components/records that are no longer present, refreshes active records via `updateSubplotRecord()`, and returns the flattened list of active subplot records.
 - `initSubplotSandbox()` — creates the actual DOM sandbox and initializes the plot component via `dynamicSubplotInit()`. Stores the component in `sc.components.plots[plotId]` and maintains the sandboxDiv reference in the record.
 - `setSectionKey()` and `setSandbox()` — update metadata as the SectionRenderer reorganizes plots into sections.
 - `getSampleSandboxes()` — indexes active subplots by sample for quick lookup of all plots belonging to a sample.
@@ -40,14 +40,13 @@ The manager provides:
 The `update()` method first checks whether `groupBy` has changed. If so, it delegates to `regroupSections()`, which:
 1. Detaches existing sandboxes from their parent section containers (without destroying the plot components).
 2. Clears all section wrappers and resets the maps.
-3. Removes any subplot components that are no longer active by calling `subplotManager.removeSubplot()`.
-4. Recreates section containers with new keys and reparents the detached sandboxes into them.
+3. Recreates section containers with new keys and reparents the detached sandboxes into them.
 
 Otherwise, `update()` reconciles the current state with the new subplots via three passes:
-1. **Remove stale subplots** — builds an active set from the current subplots array and calls `removeSandbox()` for any component in `sc.components.plots` that is no longer active.
+1. **Remove stale tracked sandboxes** — builds an active set from the current subplots array and calls `removeSandbox()` for any stale plot id tracked in `plotId2Key`.
 2. **Initialize new subplots** — for each subplot, derives the section key via `getKey()`, creates its section (via `initSection()`) if one does not exist, then creates a sandbox (via `initSandbox()`) if one does not exist. `initSandbox()` calls `subplotManager.initSubplotSandbox()` to create the DOM and initialize the plot component, then stores the reference in the section's sandboxes map.
 3. **Remove empty sections** — deletes any section whose sandboxes map is empty.
 
 Users can remove subplots and sections directly:
-- **Sandbox close button** — calls `removeSandbox()`, which removes the DOM element and deletes it from the section's sandboxes map, then dispatches `plot_delete` to update state. `SectionRenderer` later removes the corresponding component from the SubplotManager and deletes the section if it becomes empty.
-- **Section close button** — calls `removeSection()`, which removes every sandbox in the section by calling `removeSandbox()` for each, batches the corresponding `plot_delete` actions into a single `app_refresh` dispatch, and removes the section wrapper from the DOM.
+- **Sandbox close button** — is handled by `SubplotManager.initSubplotSandbox()`. It destroys the subplot component and sandbox DOM first via `removeSubplot()`, then dispatches `plot_delete` so state catches up to the already-removed sandbox.
+- **Section close button** — calls `removeSection()`, which removes every sandbox wrapper in that section via `removeSandbox()`, batches the corresponding `plot_delete` actions into a single `app_refresh` dispatch, and removes the section wrapper from the DOM.

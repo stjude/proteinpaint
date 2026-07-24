@@ -138,6 +138,51 @@ tape('transformData with positive values only', async test => {
 	test.end()
 })
 
+tape('transformData renders only members selected in q.lst', async test => {
+	const tw = new CollectionCont(
+		{
+			type: 'TermCollectionTWCont',
+			term: {
+				type: 'termCollection',
+				memberType: 'numeric',
+				id: 'test',
+				name: 'Test Collection',
+				termlst: [],
+				propsByTermId: {
+					sig1: { color: 'red' },
+					sig2: { color: 'blue' },
+					sig3: { color: 'green' }
+				}
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: ['sig1', 'sig3']
+			}
+		},
+		{ vocabApi }
+	)
+
+	const data: any = {
+		value: {
+			sig1: 30,
+			sig2: 70,
+			sig3: 20
+		}
+	}
+
+	tw.transformData(data)
+
+	test.deepEqual(
+		data.values.map(value => value.label),
+		['sig1', 'sig3'],
+		'skips an unselected member when creating matrix cell segments'
+	)
+	test.equal(data.values[0].value, 60, 'calculates percentages from selected members only')
+	test.equal(data.values[1].value, 40, 'selected member percentages fill the complete stack')
+	test.end()
+})
+
 tape('transformData with negative values only', async test => {
 	const tw = new CollectionCont(
 		{
