@@ -86,20 +86,20 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/* from termdb/plot
-    Input:
-    opts{}
-        .term={}
-            .id=str
-            .term={}
-            .q={}
-        .term2={}
-            id/term/q
-        .term0={}
-            id/term/q
-        .filter={}
-    Output:
-        a structure from the termdb/barsql route
-    */
+	Input:
+	opts{}
+		.term={}
+			.id=str
+			.term={}
+			.q={}
+		.term2={}
+			id/term/q
+		.term0={}
+			id/term/q
+		.filter={}
+	Output:
+		a structure from the termdb/barsql route
+	*/
 	async getNestedChartSeriesData(opts, signal = undefined) {
 		const [route, body] = this.getTdbDataUrl(opts)
 		const headers = await this.mayGetAuthHeaders('termdb')
@@ -160,26 +160,26 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/*
-        Create URL parameters for charts that use the 
-        `/termdb*` server route, which expects the  
-        term0, term, term2 variable naming convention
+		Create URL parameters for charts that use the 
+		`/termdb*` server route, which expects the  
+		term0, term, term2 variable naming convention
 
-        Arguments:
-        opts
-        - chart configuration object with termwrappers of
-            term (required), term0 (optional) and term2 (optional)
-    	
-        .term 
-            required, {term, q}
-        .term2
-            optional overlay term, {term, q}
-        .term0
-            optional divide-by term, {term, q}
-        .filter
-            optional filter object 
-        .filter0
-            optional gdc filter
-    */
+		Arguments:
+		opts
+		- chart configuration object with termwrappers of
+			term (required), term0 (optional) and term2 (optional)
+		
+		.term 
+			required, {term, q}
+		.term2
+			optional overlay term, {term, q}
+		.term0
+			optional divide-by term, {term, q}
+		.filter
+			optional filter object 
+		.filter0
+			optional gdc filter
+	*/
 	getTdbDataUrl(opts) {
 		const body = {
 			genome: this.vocab.genome,
@@ -232,34 +232,34 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/*
-        May override certain term-related configuration (like bins),
-        from the server response data to the corresponding term's 
-        current state.
+		May override certain term-related configuration (like bins),
+		from the server response data to the corresponding term's 
+		current state.
 
-        Arguments
-        config
-        - chart configuration object with termwrappers of
-            term (required), term0 (optional) and term2 (optional)
+		Arguments
+		config
+		- chart configuration object with termwrappers of
+			term (required), term0 (optional) and term2 (optional)
 
-        - data
-            server response data in the format of 
-            {
-                charts: [{
-                    chartId: '...',
-                    serieses: [{
-                        seriesId: '...',
-                        data: [{
-                            dataId: '...',
-                            total: *samplecount*
-                        }, ...],
-                        total: *samplecount*
-                    }, ...],
-                    total: *samplecount*
-                }, ...],
+		- data
+			server response data in the format of 
+			{
+				charts: [{
+					chartId: '...',
+					serieses: [{
+						seriesId: '...',
+						data: [{
+							dataId: '...',
+							total: *samplecount*
+						}, ...],
+						total: *samplecount*
+					}, ...],
+					total: *samplecount*
+				}, ...],
 
-                refs: {...}
-            }
-    */
+				refs: {...}
+			}
+	*/
 	syncTermData(config, data, prevConfig = {}) {
 		if (!data || !data.refs) return
 		// must maintain the order of term* string values in the looped array,
@@ -294,12 +294,12 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/* 
-        Generate regression analysis results
-        config{}
-        .regressionType: 'linear' | 'logistic'
-        .outcome {id, term, q, refGrp}
-        .independent[ {id, term, q, refGrp}, ... ]
-    */
+		Generate regression analysis results
+		config{}
+		.regressionType: 'linear' | 'logistic'
+		.outcome {id, term, q, refGrp}
+		.independent[ {id, term, q, refGrp}, ... ]
+	*/
 	async getRegressionData(opts) {
 		if (!isDictionaryType(opts.outcome.term.type)) throw 'outcome must be dictionary term'
 		const outcome = this.getTwMinCopy(opts.outcome)
@@ -417,8 +417,7 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/** opts: 
-	 	filterJSON: JSON || string, required
-		filter0: filter0 object
+		  filterJSON: JSON || string, required
 		returns sample list in array of [{id, name}....]
 	 */
 	async getFilteredSampleList(filterJSON, filter0) {
@@ -436,7 +435,7 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 	/** opts: 
-	 	filterJSON: JSON || string, required
+		  filterJSON: JSON || string, required
 		returns sample count per type
 	 */
 	async getGrin2Data(body, signal) {
@@ -678,9 +677,9 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/* when arg.text is true, arg should only be {text} from a snplst term;
-    else, it should be the q{} of snplocus term: {chr,start,stop,variant_filter}
-    to generate snp-sample gt matrix cache file and return file name
-    */
+	else, it should be the q{} of snplocus term: {chr,start,stop,variant_filter}
+	to generate snp-sample gt matrix cache file and return file name
+	*/
 	async validateSnps(arg) {
 		const lst = ['validateSnps=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
 		if (arg.text) {
@@ -702,51 +701,51 @@ export class TermdbVocab extends Vocab {
 	}
 
 	/*
-    The server data sample annotations and refs are both indexed 
-    by term id, but will be remapped to be annotated instead with 
-    tw.$id. This will prevent conflicts when the same term.id is used
-    multiple times in the terms[] argument, such as for the matrix plot.
+	The server data sample annotations and refs are both indexed 
+	by term id, but will be remapped to be annotated instead with 
+	tw.$id. This will prevent conflicts when the same term.id is used
+	multiple times in the terms[] argument, such as for the matrix plot.
 
-    Arguments:
+	Arguments:
 
-    opts{}
-    .filter        a filter object
-    .filter0       read-only json object, only used for gdc dataset to store the cohort filter obj built by CohortBuilder
-    .terms[{}]     an array of termWrapper objects
-        tw.$id       id to disambugate when multiple terms
-                     with the same ID are in terms[], such as in matrix plot
-    .termsPerRequest optional, a number greater than 1;
-	                 when provided, a request includes the number of terms specified, improving the response times
-    Returns 
-    {
-        lst: [{
-            sample, 
-            term1: {key, value}, 
-            term2: {key, values}, 
-            ...
-        }],
-        refs: {
-            byTermId: {termIdorName1: {term, q}},
-            bySampleId: {...}
-        }
-    }
+	opts{}
+	.filter        a filter object
+	.filter0       read-only json object, only used for gdc dataset to store the cohort filter obj built by CohortBuilder
+	.terms[{}]     an array of termWrapper objects
+		tw.$id       id to disambugate when multiple terms
+					 with the same ID are in terms[], such as in matrix plot
+	.termsPerRequest optional, a number greater than 1;
+					 when provided, a request includes the number of terms specified, improving the response times
+	Returns 
+	{
+		lst: [{
+			sample, 
+			term1: {key, value}, 
+			term2: {key, values}, 
+			...
+		}],
+		refs: {
+			byTermId: {termIdorName1: {term, q}},
+			bySampleId: {...}
+		}
+	}
 	
 	
-    Expected server-data response
-    {}
-    .samples{}
-        [sample]{}
-            sample: the sample ID
-            [$id]: {} // $id is tw id, not term id
+	Expected server-data response
+	{}
+	.samples{}
+		[sample]{}
+			sample: the sample ID
+			[$id]: {} // $id is tw id, not term id
 				key, value, // only used for dict term
 				values:[]
 					// used for non-dict term e.g. gene mutation
 					{sample, ...mutation properties...}
 	
-    .refs{}
-        .byTermId{}
-            [$id]: {bins, etc}   metadata for processed terms, useful
-                                                    for specifying value order, colors, etc.
+	.refs{}
+		.byTermId{}
+			[$id]: {bins, etc}   metadata for processed terms, useful
+													for specifying value order, colors, etc.
 		.bySampleId{}
 			[sample]: {
 				label:str, // required, the display name of this sample
@@ -754,13 +753,13 @@ export class TermdbVocab extends Vocab {
 			}
 			available sample name(s) mapped to each sample, for display only
 
-    !!! NOTE !!!
-    May fill in following attributes on term object if missing or met conditions:
-    (the modifications are on term object and not tracked in state)
+	!!! NOTE !!!
+	May fill in following attributes on term object if missing or met conditions:
+	(the modifications are on term object and not tracked in state)
 
-    tw.term.category2samplecount = {}
-    tw.term.values={}
-    */
+	tw.term.category2samplecount = {}
+	tw.term.values={}
+	*/
 	async getAnnotatedSampleData(opts, _refs = {}) {
 		// may check against required auth credentials for the server route
 		const headers = await this.mayGetAuthHeaders('termdb')
@@ -777,9 +776,9 @@ export class TermdbVocab extends Vocab {
 		const samplesToShow = new Set()
 
 		/************** tricky
-        need list of gene names of current geneVariant terms from opts.terms[]
+		need list of gene names of current geneVariant terms from opts.terms[]
 		assumption is that if this array is not empty,
-        request for a dictionary term also from opts.terms[] will only retrieve samples mutated on this gene list, rather than whole cohort
+		request for a dictionary term also from opts.terms[] will only retrieve samples mutated on this gene list, rather than whole cohort
 		if currentGeneNames[] is empty, then dict term data return will not be restricted
 		(even when this is needed, this is a poor fix as flat list of gene names does not allow restricting mclass or use genomic region)
 
@@ -787,14 +786,14 @@ export class TermdbVocab extends Vocab {
 		do not supply gene list if opts.isHierCluster is set!!! (doing hierarchical clustering)
 		in such case, samples requested for dictionary term are based on those with data for hierCluster,
 		but not by mutation status of gene list
-        */
+		*/
 		const currentGeneNames =
 			opts.isHierCluster || opts.isSummary
 				? null
 				: opts.terms
-						.filter(tw => tw.term.type === 'geneVariant')
-						.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
-						.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
+					.filter(tw => tw.term.type === 'geneVariant')
+					.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
+					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice().sort((a, b) => (a.term.name < b.term.name ? -1 : 1)) // make copy of array as it will be truncated to empty. do not modify original
 		const maxNumTerms = this.opts.app.vocabApi.termdbConfig?.maxAnnoTermsPerClientRequest || opts.terms.length
 		let numResponses = 0
@@ -1470,25 +1469,38 @@ export class TermdbVocab extends Vocab {
 
 		return await this.dofetch3('aiProjectAdmin', { body })
 	}
+
+	async getAggregateMatrixData(opts) {
+		const headers = await this.mayGetAuthHeaders('termdb')
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			...opts
+		}
+		//TODO: Add getTwMinCopy to all tws that apply
+		if (body.filter) body.filter = getNormalRoot(body.filter)
+		const signal = opts.signal || this.getAbortSignal()
+		return await this.dofetch3('termdb/aggregateMatrix', { headers, body, signal })
+	}
 }
 
 /*
 Input:
-    tw {
-        $id
-        term { type }
-    }
-    lst[]
-        each element is annotation object for a sample
-        sample: samplename
-        [$termid] : {}
-            .key
-                category key for this category?
-            .value
-                category label for this category?
-            .filteredValues[]
+	tw {
+		$id
+		term { type }
+	}
+	lst[]
+		each element is annotation object for a sample
+		sample: samplename
+		[$termid] : {}
+			.key
+				category key for this category?
+			.value
+				category label for this category?
+			.filteredValues[]
 Output:
-    none
+	none
 
 if a term is eligible, modify term object as below:
 - create tw.term.category2samplecount = {categoryKey: count}
