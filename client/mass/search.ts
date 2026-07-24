@@ -584,13 +584,15 @@ export function setSearchRenderers(self: any) {
 				)
 			if (term.singleCell) {
 				tr.select('td:nth-child(2)')
-					.append('span')
+					.append('button')
+					.attr('type', 'button')
 					.attr('class', 'sja_menuoption')
 					.attr('data-testid', `sjpp-mass-chat-single-cell-${term.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
 					.style('padding', '5px 10px')
 					.style('border-radius', '5px')
+					.style('border', '0')
 					.style('cursor', 'pointer')
 					.text('Single cell')
 					.on(
