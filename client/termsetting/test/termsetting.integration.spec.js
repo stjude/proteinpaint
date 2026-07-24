@@ -229,6 +229,79 @@ tape('termCollection edit menu shows available member colors', async test => {
 	test.equal(swatches.length, 1, 'shows a square only for the member with a color')
 	test.ok(swatches[0].style.backgroundColor, 'applies the member color to the square')
 	test.ok(opts.pill.Inner.dom.tip.d.text().includes('Member 1'), 'shows the member name after its color square')
+	test.ok(
+		opts.pill.Inner.dom.tip.d
+			.selectAll('.sjpp_table_header')
+			.nodes()
+			.some(node => node.textContent === 'Isoform'),
+		'shows the collection member type in the table header'
+	)
+
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
+tape('termCollection edit menu retains unchecked members', async test => {
+	const opts = await getOpts({
+		tsData: {
+			term: {
+				type: 'termCollection',
+				isCustom: true,
+				memberType: 'numeric',
+				name: 'Custom collection',
+				termlst: [
+					{ id: 'member-1', name: 'Member 1', type: 'isoformExpression', isoform: 'member-1' },
+					{ id: 'member-2', name: 'Member 2', type: 'isoformExpression', isoform: 'member-2' }
+				]
+			},
+			q: {
+				mode: 'continuous',
+				type: 'values',
+				lst: ['member-1', 'member-2'],
+				numerators: ['member-1', 'member-2']
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	await opts.pillMenuClick('Edit')
+	const tip = opts.pill.Inner.dom.tip.d
+	const memberCheckboxes = [...tip.node().querySelectorAll('tbody tr')].map(row => row.querySelector('td input'))
+	memberCheckboxes[1].click()
+	const excludedSortingCheckbox = tip.node().querySelectorAll('[data-testid="sjpp-term-collection-sort-member"]')[1]
+	test.equal(excludedSortingCheckbox.disabled, true, 'disables sorting when a member is excluded')
+	test.equal(excludedSortingCheckbox.checked, false, 'clears sorting when a member is excluded')
+	tip.select('.sjpp_apply_btn').node().click()
+
+	await opts.pillMenuClick('Edit')
+	test.deepEqual(opts.pill.Inner.tw.q.lst, ['member-1'], 'removes the unchecked member only from q.lst')
+	test.deepEqual(opts.pill.Inner.tw.q.numerators, ['member-1'], 'removes the excluded member from sorting')
+	test.equal(opts.pill.Inner.tw.term.termlst.length, 2, 'keeps every available member in term.termlst')
+	const reopenedRows = tip.select('tbody').selectAll('tr').nodes()
+	test.equal(reopenedRows.length, 2, 'shows all available members after reopening the edit menu')
+	const reopenedCheckboxes = reopenedRows.map(row => row.querySelector('td input'))
+	test.equal(reopenedCheckboxes[0].checked, true, 'keeps the selected member checked')
+	test.equal(reopenedCheckboxes[1].checked, false, 'shows the excluded member unchecked so it can be re-added')
+	test.equal(
+		tip.node().querySelectorAll('[data-testid="sjpp-term-collection-sort-member"]')[1].disabled,
+		true,
+		'keeps sorting disabled for the excluded member after reopening'
+	)
+	const checkAll = tip.node().querySelector('[data-testid="sjpp-table-checkall"]')
+	checkAll.click()
+	test.ok(
+		[...tip.node().querySelectorAll('[data-testid="sjpp-term-collection-sort-member"]')].every(
+			input => !input.disabled
+		),
+		'enables sorting controls when check-all includes every member'
+	)
+	await new Promise(resolve => setTimeout(resolve, 0))
+	checkAll.click()
+	await new Promise(resolve => setTimeout(resolve, 0))
+	test.ok(
+		[...tip.node().querySelectorAll('[data-testid="sjpp-term-collection-sort-member"]')].every(input => input.disabled),
+		'disables sorting controls without error when check-all excludes every member'
+	)
 
 	if (test._ok) opts.pill.destroy()
 	test.end()

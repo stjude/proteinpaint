@@ -304,6 +304,7 @@ const typeMap: { [key: string]: string } = {
 	date: 'Date',
 	geneExpression: 'Gene Expression',
 	isoformExpression: 'Isoform Expression',
+	[JUNCTION]: 'Splice junction',
 	ssGSEA: 'Geneset Expression',
 	dnaMethylation: 'DNA Methylation',
 	geneVariant: 'Gene Variant',
@@ -317,6 +318,27 @@ const typeMap: { [key: string]: string } = {
 	snp: 'SNP',
 	snplst: 'SNP List',
 	termCollection: 'Term Collection'
+}
+
+// with a term obj, returns human readable item type name for a term.
+// using a term obj rather than just term type gives more control (e.g. gene vs coord for genevariant term)
+export function termItemType(t: Term): string {
+	switch (t.type) {
+		case JUNCTION:
+			return 'Splice junction'
+		case GENE_EXPRESSION:
+		case SINGLECELL_GENE_EXPRESSION:
+			return 'Gene'
+		case ISOFORM_EXPRESSION:
+			return 'Isoform'
+		case SSGSEA:
+			return 'Gene set'
+		case METABOLITE_INTENSITY:
+			return 'Metabolite'
+		// keep adding here
+		default:
+			return 'Variable'
+	}
 }
 
 export function termType2label(type: string) {
