@@ -2,7 +2,7 @@ import { Vocab } from './Vocab'
 import { getNormalRoot } from '#filter'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { throwMsgWithFilePathAndFnName } from '../dom/sayerror'
-import { isDictionaryType } from '#shared/terms.js'
+import { isDictionaryType, isSingleCellTerm } from '#shared/terms.js'
 
 export class TermdbVocab extends Vocab {
 	// getAbortSignal() will be used to cancel async fetch requests or canvas rendering that may
@@ -1470,23 +1470,31 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('aiProjectAdmin', { body })
 	}
 
-	async getAggregateMatrixData(opts) {
-		const headers = await this.mayGetAuthHeaders('termdb')
+	async getAggregateMatrixData(opts){
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
-			...opts
+			entries: opts.entries,
+			categories: opts.categories,
+			gradientMethod: opts.gradientMethod,
+			sizeMethod: opts.sizeMethod,
+			filter: getNormalRoot(opts.filter),
+			filter0: opts.filter0
 		}
-		const formatTw = tw => {
-			if (isSingleCellTerm(tw.term.type)) return tw
-			else return this.getTwMinCopy(tw)
+		const formatTw = term => {
+			if (isSingleCellTerm(term)) return term
+			else return this.getTwMinCopy({term: term, q: {}})
 		}
-		body.entries = opts.entries.map(section => section.map(formatTw))
-		body.categories = opts.categories.map(member => member.map(formatTw))
+		Object.keys(body.entries).forEach(section => {
+			body.entries[section] = body.entries[section].map(term => formatTw(term))
+		})
+		Object.keys(body.categories).forEach(member => {
+			body.categories[member] = body.categories[member].map(term => formatTw(term))
+		})
 
 		if (body.filter) body.filter = getNormalRoot(body.filter)
 		const signal = opts.signal || this.getAbortSignal()
-		return await this.dofetch3('termdb/aggregateMatrix', { headers, body, signal })
+		return await this.dofetch3('termdb/aggregateMatrix', { body, signal })
 	}
 }
 

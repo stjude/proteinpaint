@@ -57,8 +57,10 @@ tape('Default aggregate matrix', async function (test) {
 							{ name: 'T cell', id: 'T cell', type: 'pseudobulk' }
 						]
 					},
-					gradientMethod: 'mean',
-					sizeMethod: 'percent'
+					settings: {
+						gradientMethod: 'mean',
+						sizeMethod: 'percent'
+					}
 				}
 			]
 		},

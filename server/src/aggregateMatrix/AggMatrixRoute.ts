@@ -12,7 +12,7 @@ export const payload: RoutePayload = {
 
 
 export const api: RouteApi = {
-    endpoint: 'termdb/singlecellDEgenes',
+    endpoint: 'termdb/aggregateMatrix',
     methods: {
         get: payload,
         post: payload
@@ -37,6 +37,9 @@ function init({ genomes }) {
             const ds = g.datasets[q.dslabel]
             if (!ds) throw new Error('invalid dataset name')
             
+            /** Needs to calculate the overall color
+             * Needs to calculate the dot size from a min and max size */
+            result = 'ok'
         } catch (e: any) {
             if (e.stack) console.log(e.stack)
             result = {

@@ -12,6 +12,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 
     type: string
     components: { controls: any }
+    dom: { [name: string]: any }
     model!: AggMatrixModel
 
 
@@ -19,6 +20,15 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         super(opts, api)
         this.type = AggregateMatrix.type
         this.components = { controls: {} }
+
+        const dom = super.getStandardDomLayout(opts.holder)
+        this.dom = {
+            holder: opts.holder,
+            controls: dom.controls.attr('data-testid', 'sjpp-ag-matrix-controls'),
+            errorDiv: dom.errdiv.attr('data-testid', 'sjpp-ag-matrix-error'),
+            loadingDiv: dom.loadingDiv.attr('data-testid', 'sjpp-ag-matrix-loading'),
+            mainDiv: dom.mainDiv.attr('data-testid', 'sjpp-ag-matrix-main')
+        }
 
         //opts.header is the sandbox header
 		if (opts.header) opts.header.html(`AGGREGATE MATRIX`).style('font-size', '0.9em')
@@ -71,12 +81,12 @@ export const aggMatrixInit = getCompInit(AggregateMatrix)
 export const componentInit = aggMatrixInit
 
 export function getPlotConfig(opts: any) {
+    validatePlotConfig(opts)
+
     const config = {
         hidePlotFilter: true,
         settings: getDefaultAggregateMatrixSettings()
     }
-
-    validatePlotConfig(config)
 
     return copyMerge(config, opts)
 }

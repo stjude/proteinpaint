@@ -5,6 +5,8 @@ export function getDefaultAggregateMatrixSettings(): AggregateMatrixSettings {
         startColor: '#eb5f0e',
         stopColor: '#072b94',
         gradientMethod: 'mean',
-        sizeMethod: 'mean'
+        sizeMethod: 'mean',
+        minDotSize: 5,
+        maxDotSize: 15
     }
 }
