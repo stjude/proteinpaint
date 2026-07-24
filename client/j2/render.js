@@ -7,7 +7,7 @@ import { bplen, IN_frame, JTypes, JT_canonical, JT_exonskip, JT_exonaltuse, JT_a
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
 import { TermTypes } from '#shared/terms.js'
-import { publishJunction } from '#termdb/handlers/junction.broker'
+import { makeJunctionCustomTerm } from '#termdb/handlers/junction.customTerm'
 
 /*
  */
@@ -758,8 +758,8 @@ function showOneJunction(j, tk, holder, block, isClickMenu = false) {
 			.append('button')
 			.attr('data-testid', 'sjpp-junction-select')
 			.text('Select')
-			.on('click', event => {
-				publishJunction(`${block.genome.name}:${tk.dslabel}`, [makeJunctionTerm(j)], event.target, msgDiv)
+			.on('click', async event => {
+				await addJunctionCustomTerm(tk, [makeJunctionTerm(j)], event.currentTarget, msgDiv)
 			})
 		const msgDiv = buttonCell.append('div').style('font-size', '.7em')
 	}
@@ -1012,16 +1012,29 @@ function mayGroupSelect(tk, block, mainJ, otherJs, eventlabel, holder) {
 		.append('button')
 		.attr('data-testid', 'sjpp-junction-select')
 		.text(`Select ${otherJs.length + 1} junctions`)
-		.on('click', event => {
-			publishJunction(
-				`${block.genome.name}:${tk.dslabel}`,
+		.on('click', async event => {
+			await addJunctionCustomTerm(
+				tk,
 				[makeJunctionTerm(mainJ), ...otherJs.map(makeJunctionTerm)],
-				event.target,
+				event.currentTarget,
 				msgDiv,
 				eventlabel
 			)
 		})
 	const msgDiv = holder.append('div').style('font-size', '.7em')
+}
+
+async function addJunctionCustomTerm(tk, junctions, button, msgDiv, eventlabel) {
+	await tk.massApp.dispatch({
+		type: 'add_customTerm',
+		obj: makeJunctionCustomTerm(junctions, eventlabel)
+	})
+	button.remove()
+	msgDiv.text(
+		eventlabel
+			? `${junctions.length} junctions can now be found through variable selection under ${eventlabel}.`
+			: 'This junction can now be found through variable selection.'
+	)
 }
 
 function listAllEvents(lst, table, j, tk, block, isClickMenu) {

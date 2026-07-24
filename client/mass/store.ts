@@ -518,11 +518,13 @@ MassStore.prototype.actions = {
 	},
 
 	add_customTerm(this: MassStore, action) {
-		this.state.customTerms.push(action.obj)
+		const i = action.obj.id ? this.state.customTerms.findIndex(term => term.id === action.obj.id) : -1
+		if (i === -1) this.state.customTerms.push(action.obj)
+		else this.state.customTerms[i] = action.obj
 	},
 
-	delete_customTerm(this: MassStore, { name }) {
-		const i = this.state.customTerms.findIndex(i => i.name == name)
+	delete_customTerm(this: MassStore, { id, name }) {
+		const i = this.state.customTerms.findIndex(term => (id ? term.id === id : term.name == name))
 		if (i != -1) this.state.customTerms.splice(i, 1)
 	},
 
