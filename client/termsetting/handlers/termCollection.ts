@@ -2,7 +2,7 @@ import { HandlerBase } from '../HandlerBase.ts'
 import type { Handler } from '../index.ts'
 import { renderTable } from '#dom'
 import type { CollectionBase } from '#tw'
-import type { CategoryKey, TermCollectionQCont } from '#types'
+import type { CategoryKey, TermCollectionQCont, TermCollectionQFraction } from '#types'
 import { termItemType } from '#shared/terms.js'
 import type { TermSetting } from '../TermSetting.ts'
 
@@ -29,18 +29,66 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 		const groupDiv = div.append('div')
 		const callback =
 			this.tw.term.memberType == 'numeric'
-				? addNumericTable(self, groupDiv, terms)
+				? self.tw.type === 'TermCollectionTWFraction'
+					? addFractionTable(self, groupDiv, terms)
+					: addNumericTable(self, groupDiv, terms)
 				: addCategoricalTable(self, groupDiv, terms)
 
-		div
-			.append('div')
-			.append('div')
-			.style('float', 'right')
-			.style('padding', '6px 20px')
+		const buttons = div.append('div').append('div').style('float', 'right').style('padding', '6px 20px')
+		if (self.data?.isStagedFractionSelection) {
+			buttons
+				.append('button')
+				.attr('class', 'sja_filter_tag_btn')
+				.style('margin-right', '8px')
+				.text('Cancel')
+				.on('click', self.data.cancelStagedSelection)
+		}
+		buttons.append('button').attr('class', 'sjpp_apply_btn sja_filter_tag_btn').text('Apply').on('click', callback)
+	}
+
+	async showBinsEditMenu(div: any) {
+		const self = this.termsetting
+		div.selectAll('*').remove()
+		const { NumericHandler } = await import('./NumericHandler.ts')
+		const { NumDiscreteEditor } = await import('./NumDiscreteEditor.ts')
+		const numericHandler = new NumericHandler({ termsetting: self })
+		// A fraction has a fixed numeric domain, so the bin editor does not need
+		// to request a cohort density plot (which may also be unavailable for a
+		// newly staged custom collection).
+		const densityData = { min: 0, max: 1 }
+		numericHandler.density_data = densityData
+		numericHandler.density.density_data = densityData
+		numericHandler.density.no_density_data = true
+		numericHandler.density.showViolin = async div => {
+			div.selectAll('*').remove()
+			div.append('div').style('padding', '5px').style('opacity', 0.65).text('Fraction range: 0 to 1')
+			return densityData
+		}
+		numericHandler.density.setBinLines = async () => {}
+		const editor = new NumDiscreteEditor({ termsetting: self }, numericHandler as any)
+		await editor.showEditMenu(div.append('div'))
+		const buttons = div.append('div').style('padding', '6px 20px')
+		buttons
 			.append('button')
 			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+			.attr('data-testid', 'sjpp-term-collection-bins-apply')
 			.text('Apply')
-			.on('click', callback)
+			.on('click', () => {
+				const editedQ: any = editor.getEditedQ()
+				self.q = {
+					...editedQ,
+					denominators: (self.q as any).denominators,
+					numerators: (self.q as any).numerators
+				}
+				self.dom.tip.hide()
+				self.api.runCallback()
+			})
+		buttons
+			.append('button')
+			.attr('class', 'sja_filter_tag_btn')
+			.style('margin-left', '8px')
+			.text('Reset')
+			.on('click', () => editor.undoEdits())
 	}
 
 	getPillStatus() {
@@ -49,6 +97,65 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 
 	// inherited from HanlderBase
 	// getPillName(d: PillData) {}
+}
+
+function addFractionTable(self, div: any, terms: any) {
+	const selectedRows = getSelectedRows(self, terms)
+	const rows = terms.map(term => [
+		{},
+		{
+			html: `<input type='checkbox' data-testid='sjpp-term-collection-numerator' ${
+				self.q.numerators?.includes(term.id) ? 'checked' : ''
+			} ${self.q.denominators?.includes(term.id) ? '' : 'disabled'} />`
+		}
+	])
+	const syncNumerators = () => {
+		for (const tr of div.select('table').select('tbody').node().querySelectorAll('tr')) {
+			const denominator = tr.querySelector(
+				'input[type="checkbox"]:not([data-testid="sjpp-term-collection-numerator"])'
+			) as HTMLInputElement | null
+			const numerator = tr.querySelector('[data-testid="sjpp-term-collection-numerator"]') as HTMLInputElement | null
+			if (!denominator || !numerator) continue
+			numerator.disabled = !denominator.checked
+			if (!denominator.checked) numerator.checked = false
+		}
+	}
+	renderTable({
+		rows,
+		columns: [getTermNameColumn(self, terms), { label: 'Numerator' }],
+		div,
+		maxWidth: '30vw',
+		maxHeight: '40vh',
+		noButtonCallback: syncNumerators,
+		striped: false,
+		showHeader: true,
+		selectedRows,
+		columnButtons: undefined,
+		buttons: undefined
+	})
+	div
+		.select('table')
+		.select('thead')
+		.select('[data-testid="sjpp-table-checkall"]')
+		.node()
+		?.parentElement?.append(' Denominator')
+
+	return () => {
+		const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
+		const lst = getSelectedTermIds(terms, trs)
+		const numerators = terms
+			.filter((_, i) => {
+				const input = trs[i].querySelector('[data-testid="sjpp-term-collection-numerator"]') as HTMLInputElement | null
+				return input?.checked === true
+			})
+			.map(term => term.id)
+		if (!lst.length) return window.alert('Select at least one denominator.')
+		if (!numerators.length) return window.alert('Select at least one numerator.')
+		const q = self.q as TermCollectionQFraction
+		q.denominators = lst
+		q.numerators = numerators
+		self.api.runCallback()
+	}
 }
 
 function addNumericTable(self, div: any, terms: any) {
@@ -177,6 +284,10 @@ function addCategoricalTable(self, div: any, terms: any) {
 }
 
 function getSelectedRows(self, terms) {
+	if (self.tw.type === 'TermCollectionTWFraction') {
+		const selectedIds = new Set(self.q.denominators || [])
+		return terms.map((term, index) => (selectedIds.has(term.id) ? index : -1)).filter(index => index !== -1)
+	}
 	const selectedIds =
 		self.q.lst?.length > 0
 			? new Set(self.q.lst)

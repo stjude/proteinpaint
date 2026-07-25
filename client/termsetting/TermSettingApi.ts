@@ -146,6 +146,13 @@ export class TermSettingApi {
 						return
 					}
 
+					if (this.shouldStageFractionSelection(tw)) {
+						await this.stageFractionSelection(tw, self.data)
+						self.dom.loadingdiv.style('display', 'none')
+						this.toggleOptionalLoadingMasks('none')
+						return
+					}
+
 					self.opts.callback!(tw)
 					self.dom.loadingdiv.style('display', 'none')
 					self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
@@ -154,6 +161,47 @@ export class TermSettingApi {
 				}
 			}
 		})
+	}
+
+	private shouldStageFractionSelection(tw: any) {
+		const usecase = this.#termsetting.usecase
+		return (
+			tw?.type === 'TermCollectionTWFraction' &&
+			usecase?.target === 'barchart' &&
+			(usecase.detail === 'term2' || usecase.detail === 'term0')
+		)
+	}
+
+	private async stageFractionSelection(tw: any, previousData: any) {
+		const self = this.#termsetting
+		const q = structuredClone(tw.q)
+		// CollectionFraction must be valid while it is filled. For a newly selected
+		// collection that defaulted every member into both sets, clear the arbitrary
+		// numerator choice and require the user to make an explicit selection.
+		if (
+			q.numerators?.length === q.denominators?.length &&
+			q.numerators?.every((id: string) => q.denominators.includes(id))
+		) {
+			q.numerators = []
+		}
+		self.tw = tw
+		self.term = tw.term
+		self.q = q
+		self.$id = tw.$id
+		self.data = {
+			term: tw.term,
+			q,
+			tw,
+			isStagedFractionSelection: true,
+			cancelStagedSelection: async () => {
+				await this.main(previousData || {})
+			}
+		}
+		await self.setHandler(self.term.type, tw)
+		self.dom.tip.clear()
+		const holder = self.dom.holder?.node()
+		if (holder) self.dom.tip.showunder(holder)
+		await self.handler.showEditMenu(self.dom.tip.d.append('div'))
 	}
 
 	// TODO: move this method to TermSetting class
@@ -184,11 +232,13 @@ export class TermSettingApi {
 			}
 		}
 
+		const isFractionCollection = self.tw?.type === 'TermCollectionTWFraction'
 		if (
 			self.q &&
 			!self.term.groupsetting?.disabled &&
 			self.term.type != 'survival' &&
-			minimatch('edit', self.opts.menuOptions)
+			minimatch('edit', self.opts.menuOptions) &&
+			!isFractionCollection
 		) {
 			// hide edit option for survival term because its showEditMenu() is disabled
 			options.push({
@@ -199,6 +249,25 @@ export class TermSettingApi {
 					} else {
 						await self.handler.showEditMenu(div.append('div'))
 					}
+				}
+			} as opt)
+		}
+		if (
+			isFractionCollection &&
+			self.q &&
+			!self.term.groupsetting?.disabled &&
+			minimatch('edit', self.opts.menuOptions)
+		) {
+			options.push({
+				label: 'Edit numerator/denominator',
+				callback: async div => {
+					await self.handler.showEditMenu(div.append('div'))
+				}
+			} as opt)
+			options.push({
+				label: 'Edit bins',
+				callback: async div => {
+					await (self.handler as any).showBinsEditMenu(div.append('div'))
 				}
 			} as opt)
 		}

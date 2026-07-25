@@ -307,6 +307,81 @@ tape('termCollection edit menu retains unchecked members', async test => {
 	test.end()
 })
 
+tape('fraction termCollection edit menu selects denominators and numerators', async test => {
+	const opts = await getOpts({
+		tsData: {
+			term: {
+				type: 'termCollection',
+				isCustom: true,
+				memberType: 'numeric',
+				name: 'Fraction collection',
+				termlst: [
+					{ id: 'member-1', name: 'Member 1', type: 'isoformExpression', isoform: 'member-1' },
+					{ id: 'member-2', name: 'Member 2', type: 'isoformExpression', isoform: 'member-2' }
+				]
+			},
+			q: {
+				mode: 'discrete',
+				type: 'custom-bin',
+				denominators: ['member-1', 'member-2'],
+				numerators: ['member-1'],
+				lst: [
+					{ startunbounded: true, stop: 0.5 },
+					{ start: 0.5, stopunbounded: true, startinclusive: true }
+				]
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	opts.holder.node().querySelector('.ts_pill').click()
+	await sleep(100)
+	const menuLabels = [...opts.pill.Inner.dom.tip.d.node().querySelectorAll('.sja_menuoption')].map(
+		option => option.textContent
+	)
+	test.deepEqual(
+		menuLabels,
+		['Edit numerator/denominator', 'Edit bins'],
+		'shows separate fraction member and bin editors'
+	)
+	;[...opts.pill.Inner.dom.tip.d.node().querySelectorAll('.sja_menuoption')]
+		.find(option => option.textContent === 'Edit numerator/denominator')
+		.click()
+	await sleep(100)
+	const tip = opts.pill.Inner.dom.tip.d
+	test.ok(tip.text().includes('Denominator'), 'labels the member-selection column as Denominator')
+	test.ok(tip.text().includes('Numerator'), 'labels the numerator column')
+	const rows = tip.select('tbody').selectAll('tr').nodes()
+	const denominators = rows.map(row =>
+		row.querySelector('input[type="checkbox"]:not([data-testid="sjpp-term-collection-numerator"])')
+	)
+	const numerators = rows.map(row => row.querySelector('[data-testid="sjpp-term-collection-numerator"]'))
+	test.equal(numerators[0].checked, true, 'shows the configured numerator')
+	test.equal(numerators[1].checked, false, 'leaves a denominator-only member unchecked as numerator')
+	denominators[0].click()
+	test.equal(numerators[0].disabled, true, 'disables numerator when its denominator is unchecked')
+	test.equal(numerators[0].checked, false, 'clears numerator when its denominator is unchecked')
+	numerators[1].click()
+	tip.select('.sjpp_apply_btn').node().click()
+	await sleep(100)
+	test.deepEqual(opts.tsData.q.denominators, ['member-2'], 'commits selected denominators')
+	test.deepEqual(opts.tsData.q.numerators, ['member-2'], 'commits selected numerators')
+	opts.holder.node().querySelector('.ts_pill').click()
+	await sleep(100)
+	;[...opts.pill.Inner.dom.tip.d.node().querySelectorAll('.sja_menuoption')]
+		.find(option => option.textContent === 'Edit bins')
+		.click()
+	await sleep(500)
+	test.ok(
+		opts.pill.Inner.dom.tip.d.text().includes('Same bin size') &&
+			opts.pill.Inner.dom.tip.d.text().includes('Varying bin sizes'),
+		'renders the regular/custom NumDiscreteEditor toggle'
+	)
+
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
 tape('Categorical term', async test => {
 	const opts = await getOpts({
 		tsData: {

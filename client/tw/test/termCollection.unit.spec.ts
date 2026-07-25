@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { vocabInit } from '#termdb/vocabulary'
-import { CollectionCont } from '../termCollection'
+import { CollectionBase, CollectionCont, CollectionFraction } from '../termCollection'
 
 /**************************************************************
  * TEST SUITE: tw/termCollection.unit
@@ -1013,5 +1013,57 @@ tape('CollectionBase.fill() - throws for unexpected tw.type', async test => {
 		/unexpected collection tw.type/,
 		'should throw for unexpected tw.type'
 	)
+	test.end()
+})
+
+tape('CollectionBase.fill() - routes fraction q to CollectionFraction', test => {
+	const tw: any = {
+		type: 'TermCollectionTWFraction',
+		term: { type: 'termCollection', name: 'Test Numeric Collection', memberType: 'numeric' },
+		q: { mode: 'continuous', denominators: ['t1', 't2'], numerators: ['t1'] }
+	}
+	CollectionBase.fill(tw, { vocabApi: mockNumericVocabApi as any })
+	test.equal(tw.type, 'TermCollectionTWFraction', 'uses the scalar fraction wrapper')
+	test.deepEqual(tw.q.numerators, ['t1'], 'preserves the numerator selection')
+	test.end()
+})
+
+tape('CollectionFraction.fill() - validates numerator and denominator members', test => {
+	const tw: any = {
+		type: 'TermCollectionTWFraction',
+		term: { type: 'termCollection', name: 'Test Numeric Collection', memberType: 'numeric' },
+		q: { mode: 'continuous', denominators: ['t1'], numerators: ['t2'] }
+	}
+	test.throws(
+		() => CollectionFraction.fill(tw, { vocabApi: mockNumericVocabApi as any }),
+		/not included in q.denominators/,
+		'rejects a numerator outside the denominator set'
+	)
+	test.end()
+})
+
+tape('CollectionBase.fill() - barchart default converts member values to a discrete fraction', test => {
+	const tw: any = {
+		type: 'TermCollectionTWCont',
+		term: { type: 'termCollection', name: 'Test Numeric Collection', memberType: 'numeric' },
+		q: { mode: 'continuous', type: 'values', lst: [], numerators: [] }
+	}
+	CollectionBase.fill(tw, {
+		vocabApi: mockNumericVocabApi as any,
+		defaultQ: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stop: 0.5 },
+				{ start: 0.5, stopunbounded: true, startinclusive: true }
+			],
+			denominators: [],
+			numerators: []
+		}
+	})
+	test.equal(tw.type, 'TermCollectionTWFraction', 'reroutes an already-filled collection wrapper')
+	test.equal(tw.q.mode, 'discrete', 'uses discrete mode for the barchart overlay')
+	test.deepEqual(tw.q.denominators, ['t1', 't2'], 'defaults the denominator to all members')
+	test.deepEqual(tw.q.numerators, ['t1', 't2'], 'defaults the numerator to all members')
 	test.end()
 })

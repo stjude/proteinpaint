@@ -6,7 +6,7 @@ import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normal
 import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTw } from '#shared/terms.js'
 import { negateTermLabel } from './barchart'
 import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '../mass/groups.js'
 
@@ -597,7 +597,7 @@ function getTvs(termIndex, value, self, geneVariant) {
 		const group = groupset.groups.find(group => group.name == value)
 		if (!group) throw 'group not found'
 		tvs.tvs.values = group.values
-	} else if (isNumericTerm(term.term)) {
+	} else if (isNumericTw(term)) {
 		const bins = self.bins[termIndex]
 		if (!bins?.length) return null
 		tvs.tvs.ranges = [bins.find(bin => bin.label == value)]
@@ -629,10 +629,19 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 		if (!self.bins[i].length) continue
 		// reuse already computed bins so that the assigned bin labels
 		// from '/termdb/barchart' response will be consistent with '/termdb?for=matrix'
-		tw.q = {
-			mode: 'discrete',
-			type: 'custom-bin',
-			lst: self.bins[i]
+		if (tw.type === 'TermCollectionTWFraction') {
+			tw.q = {
+				...tw.q,
+				mode: 'discrete',
+				type: 'custom-bin',
+				lst: self.bins[i]
+			}
+		} else {
+			tw.q = {
+				mode: 'discrete',
+				type: 'custom-bin',
+				lst: self.bins[i]
+			}
 		}
 	}
 
@@ -647,9 +656,9 @@ export async function listSamples(arg, seriesId, dataId, chartId) {
 
 	// fill table rows with sample data
 	const rows = []
-	const termIsNumeric = isNumericTerm(self.config.term.term)
-	const term2isNumeric = self.config.term2 ? isNumericTerm(self.config.term2.term) : false
-	const term0isNumeric = self.config.term0 ? isNumericTerm(self.config.term0.term) : false
+	const termIsNumeric = isNumericTw(self.config.term)
+	const term2isNumeric = self.config.term2 ? isNumericTw(self.config.term2) : false
+	const term0isNumeric = self.config.term0 ? isNumericTw(self.config.term0) : false
 	const termIsGv = self.config.term.term.type == 'geneVariant'
 	const term2isGv = self.config.term2?.term.type == 'geneVariant'
 	const term0isGv = self.config.term0?.term.type == 'geneVariant'

@@ -1,4 +1,5 @@
 import type { BaseTerm, BaseTW, MinBaseQ } from '../index.ts'
+import type { ContinuousNumericQ, RegularNumericBinConfig, CustomNumericBinConfig } from './numeric.ts'
 
 /*
 For term type 'termCollection'
@@ -96,6 +97,14 @@ export type TermCollectionQCont = MinBaseQ & {
 	numerators?: string[]
 }
 
+/** Q shape for fraction termCollection wrappers. this resolves the collection to a fractional number for each sample, so the tw functions like a numeric term */
+export type TermCollectionQFraction = MinBaseQ & {
+	/** term ids for denominators */
+	denominators: string[]
+	/** term ids for numerators */
+	numerators: string[]
+} & (ContinuousNumericQ | RegularNumericBinConfig | CustomNumericBinConfig)
+
 /** Q shape for categorical (qualitative) termCollection wrappers */
 export type TermCollectionQQual = MinBaseQ & {
 	mode: 'discrete'
@@ -106,12 +115,18 @@ export type TermCollectionQQual = MinBaseQ & {
 }
 
 // TODO: may add different q types below
-export type TermCollectionQ = TermCollectionQCont | TermCollectionQQual
+export type TermCollectionQ = TermCollectionQCont | TermCollectionQQual | TermCollectionQFraction
 
 export type TermCollectionTWCont = BaseTW & {
 	type: 'TermCollectionTWCont'
 	term: NumericTermCollection
 	q: TermCollectionQCont
+}
+
+export type TermCollectionTWFraction = BaseTW & {
+	type: 'TermCollectionTWFraction'
+	term: NumericTermCollection
+	q: TermCollectionQFraction
 }
 
 export type TermCollectionTWQual = BaseTW & {
@@ -121,12 +136,18 @@ export type TermCollectionTWQual = BaseTW & {
 }
 
 // TODO: may add different termCollection TW types here
-export type TermCollectionTW = TermCollectionTWCont | TermCollectionTWQual
+export type TermCollectionTW = TermCollectionTWCont | TermCollectionTWFraction | TermCollectionTWQual
 
 export type RawTermCollectionTWCont = BaseTW & {
 	type?: 'TermCollectionTWCont'
 	term: RawNumericTermCollection
 	q?: TermCollectionQCont
+}
+
+export type RawTermCollectionTWFraction = BaseTW & {
+	type?: 'TermCollectionTWFraction'
+	term: RawNumericTermCollection
+	q: TermCollectionQFraction
 }
 
 export type RawTermCollectionTWQual = BaseTW & {
@@ -136,4 +157,4 @@ export type RawTermCollectionTWQual = BaseTW & {
 }
 
 // TODO: may add different termCollection TW types here
-export type RawTermCollectionTW = RawTermCollectionTWCont | RawTermCollectionTWQual
+export type RawTermCollectionTW = RawTermCollectionTWCont | RawTermCollectionTWFraction | RawTermCollectionTWQual

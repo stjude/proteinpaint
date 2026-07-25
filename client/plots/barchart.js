@@ -9,7 +9,7 @@ import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls
 // import { to_svg } from '../src/client'
 import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTw } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
@@ -229,7 +229,7 @@ export class Barchart extends PlotBase {
 							: 'none'
 				}
 			]
-			if (isNumericTerm(this.config.term.term))
+			if (isNumericTw(this.config.term))
 				inputs.push({
 					label: 'Show stats',
 					type: 'checkbox',
@@ -443,7 +443,7 @@ export class Barchart extends PlotBase {
 		if (this.config.term0) terms.push(this.config.term0)
 
 		for (const t of terms) {
-			if (isNumericTerm(t.term)) {
+			if (isNumericTw(t)) {
 				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter, null, this.api.getAbortSignal())
 				if (data.error) throw data.error
 				t.q.descrStats = data

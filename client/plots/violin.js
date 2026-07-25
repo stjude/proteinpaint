@@ -6,7 +6,7 @@ import { htmlLegend, Menu } from '#dom'
 import { fillTermWrapper } from '#termsetting'
 import { setInteractivity } from './violin.interactivity'
 import { plotColor } from '#shared/common.js'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTw } from '#shared/terms.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
@@ -407,14 +407,18 @@ class ViolinPlot extends PlotBase {
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
-		} else if (term.term?.type === 'termCollection' && term.term?.memberType === 'numeric') {
+		} else if (
+			term.term?.type === 'termCollection' &&
+			term.term?.memberType === 'numeric' &&
+			term.q?.type !== 'fraction'
+		) {
 			// numeric termCollection: server-side expandNumericTermCollection creates a
 			// synthetic overlay from member terms, so don't send term2/term0
 			arg.tw = term
-		} else if (isNumericTerm(term.term) && term.q.mode === 'continuous') {
+		} else if (isNumericTw(term) && term.q.mode === 'continuous') {
 			arg.tw = term
 			if (term2) arg.overlayTw = term2
-		} else if (isNumericTerm(term2?.term) && term2.q.mode === 'continuous') {
+		} else if (isNumericTw(term2) && term2.q.mode === 'continuous') {
 			arg.tw = term2
 			arg.overlayTw = term
 		} else {
