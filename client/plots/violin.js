@@ -410,7 +410,7 @@ class ViolinPlot extends PlotBase {
 		} else if (
 			term.term?.type === 'termCollection' &&
 			term.term?.memberType === 'numeric' &&
-			term.q?.type !== 'fraction'
+			term.type !== 'TermCollectionTWFraction'
 		) {
 			// numeric termCollection: server-side expandNumericTermCollection creates a
 			// synthetic overlay from member terms, so don't send term2/term0

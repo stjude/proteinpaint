@@ -11,6 +11,7 @@ sample data back into the JSON-grouped shape that downstream code expects.
 
 import { getBin } from '#shared/terms.js'
 import { compute_bins, get_bin_label } from '#shared/termdb.bins.js'
+import { validateTermCollectionFraction } from '#shared/termCollection.js'
 
 type MemberMapping = { expandedId: string; memberId: string }
 type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMapping[] }
@@ -135,20 +136,7 @@ export function resolveTermCollectionFractions(
 
 function validateFractionTw(tw: any) {
 	if (!tw.$id) throw new Error('fraction termCollection is missing $id')
-	if (!Array.isArray(tw.q.denominators) || !tw.q.denominators.length)
-		throw new Error('fraction termCollection requires nonempty q.denominators[]')
-	if (!Array.isArray(tw.q.numerators) || !tw.q.numerators.length)
-		throw new Error('fraction termCollection requires nonempty q.numerators[]')
-	const memberIds = new Set((tw.term.termlst || []).map((term: any) => term.id || term.name))
-	for (const id of tw.q.denominators) {
-		if (!memberIds.has(id)) throw new Error(`fraction denominator '${id}' is not a collection member`)
-	}
-	for (const id of tw.q.numerators) {
-		if (!tw.q.denominators.includes(id))
-			throw new Error(`fraction numerator '${id}' is not included in q.denominators[]`)
-	}
-	if (tw.q.mode === 'discrete' && tw.q.type !== 'regular-bin' && tw.q.type !== 'custom-bin')
-		throw new Error('discrete fraction termCollection requires regular-bin or custom-bin q.type')
+	validateTermCollectionFraction(tw.q, tw.term)
 }
 
 function computeFractionBins(q: any, values: number[]) {
