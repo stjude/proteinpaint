@@ -27,7 +27,11 @@ import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'
 import { authApi } from '#src/auth.js'
-import { expandCustomTermCollection, reconstituteCustomTermCollection } from './termdb.termCollection.ts'
+import {
+	expandCustomTermCollection,
+	reconstituteCustomTermCollection,
+	resolveTermCollectionFractions
+} from './termdb.termCollection.ts'
 
 /* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
 each dataset implements ds.cohort.termdb.q.id2sampleRefs() (native/gdc/mmrf); it owns any id
@@ -77,7 +81,8 @@ export async function getData(q, ds, mapParent2Children) {
 		// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option
 		authApi.mayAdjustFilter(q, ds, q.terms)
 
-		const { expandedTerms, tcMappings } = expandCustomTermCollection(q.terms)
+		const originalTerms = q.terms
+		const { expandedTerms, tcMappings } = expandCustomTermCollection(originalTerms)
 		q.terms = expandedTerms
 
 		// set flag for mapping from parent to children
@@ -85,6 +90,7 @@ export async function getData(q, ds, mapParent2Children) {
 
 		const data = await getSampleData(q, ds)
 		reconstituteCustomTermCollection(data, tcMappings)
+		resolveTermCollectionFractions(data, originalTerms)
 
 		checkAccessToSampleData(data, ds, q)
 

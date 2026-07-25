@@ -74,7 +74,8 @@ export function init({ genomes }) {
 
 			// For numeric termCollection, expand JSON-grouped data into per-member-term
 			// entries with a synthetic overlay so the existing pipeline handles it natively
-			if (q.tw.term.type === 'termCollection') expandNumericTermCollection(q, data as ValidGetDataResponse)
+			if (q.tw.term.type === 'termCollection' && (q.tw as any).type !== 'TermCollectionTWFraction')
+				expandNumericTermCollection(q, data as ValidGetDataResponse)
 
 			if (q.plotType === 'violin') {
 				result = await getViolin(q, data as ValidGetDataResponse, ds)

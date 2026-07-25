@@ -72,7 +72,7 @@ export class NumericDensity {
 		const d = await self.vocabApi.getViolinBox(
 			{
 				plotType: 'violin',
-				tw: { term: self.term, q: self.q },
+				tw: { type: self.tw.type, term: self.term, q: self.q },
 				svgw: this.plot_size.width,
 				radius: this.plot_size.radius,
 				filter: self.filter

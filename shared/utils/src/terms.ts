@@ -174,6 +174,17 @@ export function isNumericTerm(term: Term) {
 	if (!term) return false
 	return numericTypes.has(term.type)
 }
+
+/** True when a term wrapper resolves to one numeric value per sample.
+ * A termCollection in values mode is intentionally excluded because it retains
+ * one value per member term rather than resolving to a scalar. */
+export function isNumericTw(tw: any) {
+	if (!tw?.term) return false
+	return (
+		isNumericTerm(tw.term) ||
+		(tw.term.type === TERM_COLLECTION && tw.term.memberType === 'numeric' && tw.type === 'TermCollectionTWFraction')
+	)
+}
 export function isCategoricalTerm(term: Term) {
 	if (!term) return false
 	return categoricalTypes.has(term.type)

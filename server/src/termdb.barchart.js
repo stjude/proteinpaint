@@ -6,6 +6,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
+import { getTermWrapperMap } from './termdb.barchart.utils.ts'
 
 const binLabelFormatter = format('.3r')
 
@@ -101,15 +102,7 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 
 	const startTime = +new Date()
 	q.results = {}
-	const map = new Map()
-	for (let i = 0; i <= 2; i++) {
-		let term = null
-		if (q[`term${i}_id`]) {
-			const id = q[`term${i}_id`]
-			term = { id, q: q[`term${i}_q`], term: { id }, $id: q[`term${i}_$id`] }
-		} else if (q[`term${i}`]) term = { term: q[`term${i}`], q: q[`term${i}_q`], $id: q[`term${i}_$id`] }
-		if (term) map.set(i, term)
-	}
+	const map = getTermWrapperMap(q)
 	const terms = [...map.values()]
 	const data = await getData(
 		{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },

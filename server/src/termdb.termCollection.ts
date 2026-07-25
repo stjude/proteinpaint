@@ -9,6 +9,9 @@ After getData(): reconstituteCustomTermCollection() regroups the per-member
 sample data back into the JSON-grouped shape that downstream code expects.
 */
 
+import { getBin } from '#shared/terms.js'
+import { compute_bins, get_bin_label } from '#shared/termdb.bins.js'
+
 type MemberMapping = { expandedId: string; memberId: string }
 type TcMapping = { originalTcId: string; originalTw: any; memberMap: MemberMapping[] }
 
@@ -58,4 +61,99 @@ export function reconstituteCustomTermCollection(
 			}
 		}
 	}
+}
+
+/** Resolve fraction-mode numeric collections to one scalar value per sample.
+ *
+ * q.denominators is the denominator set and q.numerators is a subset of it.
+ * Member values absent from a sample contribute zero. A sample with a zero
+ * denominator has no value for the collection.
+ */
+export function resolveTermCollectionFractions(
+	data: { samples?: Record<string, any>; refs?: { byTermId?: Record<string, any> } },
+	terms: any[]
+): void {
+	if (!data.samples) return
+	for (const tw of terms) {
+		if (
+			tw.term?.type !== 'termCollection' ||
+			tw.term.memberType !== 'numeric' ||
+			tw.type !== 'TermCollectionTWFraction'
+		)
+			continue
+		validateFractionTw(tw)
+		const valuesBySample = new Map<any, number>()
+		for (const sampleData of Object.values(data.samples)) {
+			const memberValues = sampleData[tw.$id]?.value
+			if (!memberValues || typeof memberValues !== 'object') continue
+			let denominator = 0
+			let numerator = 0
+			for (const id of tw.q.denominators) {
+				const value = Number(memberValues[id])
+				if (Number.isFinite(value)) denominator += value
+			}
+			for (const id of tw.q.numerators) {
+				const value = Number(memberValues[id])
+				if (Number.isFinite(value)) numerator += value
+			}
+			if (Number.isFinite(denominator) && denominator !== 0) {
+				const value = numerator / denominator
+				if (Number.isFinite(value)) valuesBySample.set(sampleData, value)
+			}
+		}
+		const bins =
+			tw.q.mode !== 'discrete'
+				? undefined
+				: tw.q.type === 'custom-bin'
+				? tw.q.lst
+				: computeFractionBins(tw.q, [...valuesBySample.values()])
+		if (bins) {
+			data.refs ||= {}
+			data.refs.byTermId ||= {}
+			data.refs.byTermId[tw.$id] ||= {}
+			data.refs.byTermId[tw.$id].bins = bins
+		}
+		for (const sampleData of Object.values(data.samples)) {
+			const value = valuesBySample.get(sampleData)
+			if (value === undefined) {
+				delete sampleData[tw.$id]
+				continue
+			}
+			let key: number | string = value
+			if (bins) {
+				const index = getBin(bins, value)
+				if (index === -1) {
+					delete sampleData[tw.$id]
+					continue
+				}
+				key = get_bin_label(bins[index], tw.q)
+			}
+			sampleData[tw.$id] = { key, value }
+		}
+	}
+}
+
+function validateFractionTw(tw: any) {
+	if (!tw.$id) throw new Error('fraction termCollection is missing $id')
+	if (!Array.isArray(tw.q.denominators) || !tw.q.denominators.length)
+		throw new Error('fraction termCollection requires nonempty q.denominators[]')
+	if (!Array.isArray(tw.q.numerators) || !tw.q.numerators.length)
+		throw new Error('fraction termCollection requires nonempty q.numerators[]')
+	const memberIds = new Set((tw.term.termlst || []).map((term: any) => term.id || term.name))
+	for (const id of tw.q.denominators) {
+		if (!memberIds.has(id)) throw new Error(`fraction denominator '${id}' is not a collection member`)
+	}
+	for (const id of tw.q.numerators) {
+		if (!tw.q.denominators.includes(id))
+			throw new Error(`fraction numerator '${id}' is not included in q.denominators[]`)
+	}
+	if (tw.q.mode === 'discrete' && tw.q.type !== 'regular-bin' && tw.q.type !== 'custom-bin')
+		throw new Error('discrete fraction termCollection requires regular-bin or custom-bin q.type')
+}
+
+function computeFractionBins(q: any, values: number[]) {
+	if (!values.length) return []
+	const min = Math.min(...values)
+	const max = Math.max(...values)
+	return compute_bins(q, () => ({ min, max }), undefined)
 }

@@ -54,6 +54,25 @@ function createTermCollectionWrapper(memberType: 'categorical' | 'numeric') {
 	}
 }
 
+function createFractionWrapper(mode: 'continuous' | 'discrete' = 'continuous') {
+	const tw: any = createTermCollectionWrapper('numeric')
+	tw.type = 'TermCollectionTWFraction'
+	tw.q =
+		mode === 'continuous'
+			? { mode, denominators: ['member1'], numerators: ['member1'] }
+			: {
+					mode,
+					type: 'custom-bin',
+					lst: [
+						{ startunbounded: true, stop: 0.5 },
+						{ start: 0.5, stopunbounded: true, startinclusive: true }
+					],
+					denominators: ['member1'],
+					numerators: ['member1']
+			  }
+	return tw
+}
+
 // Create a minimal config object for testing
 function createConfig(term, term2?, childType?) {
 	return {
@@ -190,6 +209,20 @@ tape('mayAdjustConfig() - discrete terms should default to barchart', test => {
 	mayAdjustConfig(config, opts)
 
 	test.equal(config.childType, 'barchart', 'Should default to barchart for discrete terms')
+})
+
+tape('mayAdjustConfig() - continuous fraction collection behaves as one numeric term', test => {
+	const config = createConfig(createFractionWrapper(), undefined, 'barchart')
+	mayAdjustConfig(config, {})
+	test.equal(config.childType, 'violin', 'routes a single continuous fraction to a scalar violin')
+	test.end()
+})
+
+tape('mayAdjustConfig() - two continuous fraction/numeric terms use scatter', test => {
+	const config = createConfig(createFractionWrapper(), createTermWrapper('float', 'continuous'))
+	mayAdjustConfig(config, {})
+	test.equal(config.childType, 'sampleScatter', 'routes two scalar continuous terms to scatter')
+	test.end()
 })
 
 tape('getPlotConfig() applies opts.getPlotConfig_mutateSummary before validating and filling terms', async test => {

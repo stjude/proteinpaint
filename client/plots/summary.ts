@@ -7,8 +7,8 @@ import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultBoxplotSettings } from './boxplot/defaults'
 import { getDefaultScatterSettings } from './scatter/settings/defaults'
-import { isNumericTerm } from '#shared/terms.js'
-import { term0_term2_defaultQ } from './controls'
+import { isNumericTw } from '#shared/terms.js'
+import { getDefaultFractionBins, term0_term2_defaultQ } from './controls'
 import { importPlot } from './importPlot.js'
 import { filterRxCompInit } from '#filter'
 
@@ -105,11 +105,11 @@ class SummaryPlot extends PlotBase implements RxComponent {
 					const config: any = { id: this.id, childType: 'barchart' }
 					const { term, term2 } = this.config || {}
 					if (term) {
-						const mode = isNumericTerm(term?.term) ? 'discrete' : term?.q.mode || 'discrete'
+						const mode = isNumericTw(term) ? 'discrete' : term?.q.mode || 'discrete'
 						config.term = await this.getWrappedTermCopy(term, mode)
 					}
 					if (term2) {
-						const mode = isNumericTerm(term2.term) ? 'discrete' : term2.q.mode || 'discrete'
+						const mode = isNumericTw(term2) ? 'discrete' : term2.q.mode || 'discrete'
 						config.term2 = await this.getWrappedTermCopy(term2, mode)
 					}
 					return config
@@ -121,13 +121,13 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				childType: 'violin',
 				label: 'Violin',
 				disabled: () => false,
-				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
+				isVisible: () => isNumericTw(this.config?.term) || isNumericTw(this.config?.term2),
 				getConfig: async () => {
 					const term = this.config?.term
 					const term2 = this.config.term2
 
 					let _term, _term2
-					this.violinContTerm = isNumericTerm(term?.term) ? 'term' : 'term2'
+					this.violinContTerm = isNumericTw(term) ? 'term' : 'term2'
 
 					//If the first term was continuous or is coming as continuous
 					if ((this.violinContTerm && this.violinContTerm === 'term') || term.q?.mode == 'continuous') {
@@ -166,14 +166,14 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				childType: 'boxplot',
 				label: 'Boxplot',
 				disabled: () => false,
-				isVisible: () => isNumericTerm(this.config?.term?.term) || isNumericTerm(this.config?.term2?.term),
+				isVisible: () => isNumericTw(this.config?.term) || isNumericTw(this.config?.term2),
 				getConfig: async () => {
 					const _term = this.config?.term
 					const _term2 = this.config.term2
 
 					let termMode = 'continuous',
 						term2Mode = 'discrete'
-					this.boxContTerm = isNumericTerm(_term?.term) ? 'term' : 'term2'
+					this.boxContTerm = isNumericTw(_term) ? 'term' : 'term2'
 
 					//If the first term was continuous or is coming as continuous
 					if ((this.boxContTerm && this.boxContTerm === 'term') || _term.q?.mode == 'continuous') {
@@ -214,7 +214,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 				label: 'Scatter',
 				disabled: () => false,
 				isVisible: () => {
-					return isNumericTerm(this.config?.term.term) && isNumericTerm(this.config?.term2?.term)
+					return isNumericTw(this.config?.term) && isNumericTw(this.config?.term2)
 				},
 				getConfig: async () => {
 					const _term = await this.getWrappedTermCopy(this.config?.term, 'continuous')
@@ -394,6 +394,23 @@ class SummaryPlot extends PlotBase implements RxComponent {
 		const tw = structuredClone(term)
 		// TODO: this is not type safe, assumes any q{} can be set to any mode
 		tw.q.mode = mode // {mode, isAtomic: true}
+		if (tw.type === 'TermCollectionTWFraction') {
+			if (mode === 'discrete' && tw.q.type !== 'regular-bin' && tw.q.type !== 'custom-bin') {
+				tw.q = {
+					mode: 'discrete',
+					type: 'custom-bin',
+					lst: getDefaultFractionBins(),
+					denominators: tw.q.denominators,
+					numerators: tw.q.numerators
+				}
+			} else if (mode === 'continuous') {
+				tw.q = {
+					mode: 'continuous',
+					denominators: tw.q.denominators,
+					numerators: tw.q.numerators
+				}
+			}
+		}
 		// If tw.q is empty/undefined, the default q
 		// will be assigned by fillTw by term type
 		await fillTermWrapper(tw, this.app.vocabApi)
@@ -532,7 +549,7 @@ export function mayAdjustConfig(config, opts, edits: { childType?: string } = {}
 		// TODO: may need more logic later if more than one summary childType,
 		// besides scatter, can support 2 continuous terms
 		config.childType = 'sampleScatter'
-	} else if (config.term?.term?.type == 'termCollection') {
+	} else if (config.term?.term?.type == 'termCollection' && config.term?.type !== 'TermCollectionTWFraction') {
 		if (config.term.term.memberType == 'categorical') {
 			config.childType = 'barchart' // ok to overwrite as it can only be barchart
 		} else if (config.term.term.memberType == 'numeric') {

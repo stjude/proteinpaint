@@ -189,12 +189,15 @@ export class TermdbVocab extends Vocab {
 		if (opts.chartType == 'cuminc') body.getcuminc = 1
 		if (opts.chartType == 'survival') body.getsurvival = 1
 
+		// TODO FIXME dissect tw into term1_id, term1_q will lose tw.type and causes painful problems! replace such with straight tw!
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
 			const tw = this.getTwMinCopy(opts[_key])
 			if (!tw) continue
 			const key = _key == 'term' ? 'term1' : _key
 			body[key + '_$id'] = tw.$id
+			const wrapperType = opts[_key].type || tw.type
+			if (wrapperType === 'TermCollectionTWFraction') body[key + '_type'] = wrapperType
 			// will need to generalize to also consider type=geneExpression
 			if ('id' in tw.term && (!tw.term?.type || isDictionaryType(tw.term.type))) {
 				body[key + '_id'] = tw.term.id
