@@ -4,16 +4,20 @@ import type { Div } from '../../types/d3'
 import { dofetch3 } from '#common/dofetch'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 import { getColors } from '#shared/common.js'
+import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
+import type { RawTermCollectionTWFraction } from '#types'
 
 export class SearchHandler {
-	callback!: (term: IsoformTerm | IsoformCollectionTerm) => void
+	callback!: (term: IsoformTerm | IsoformCollectionTerm | RawTermCollectionTWFraction) => void
 	app: any
-	dom!: { errDiv: Div; isoformDiv?: Div }
+	dom!: { errDiv: Div; isoformDiv?: Div; fractionDiv?: Div }
 	currentGene: string | null = null
+	termCollectionSelectionMode?: 'fraction'
 
 	init(opts) {
 		this.callback = opts.callback
 		this.app = opts.app
+		this.termCollectionSelectionMode = opts.termCollectionSelectionMode
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
 		this.dom = {
 			errDiv: holder.append('div').style('margin', '5px 0px').style('display', 'none')
@@ -106,7 +110,7 @@ export class SearchHandler {
 			isoform: gm.isoform
 		}))
 		const colorScale = getColors(termlst.length)
-		this.callback({
+		const term: IsoformCollectionTerm = {
 			type: 'termCollection',
 			isCustom: true,
 			memberType: 'numeric',
@@ -114,7 +118,19 @@ export class SearchHandler {
 			termlst,
 			propsByTermId: Object.fromEntries(termlst.map(term => [term.id, { color: colorScale(term.id) }])),
 			isleaf: true
-		})
+		}
+		if (this.termCollectionSelectionMode === 'fraction') {
+			if (!this.dom?.isoformDiv) throw new Error('isoform result holder is missing')
+			this.dom.fractionDiv?.remove()
+			this.dom.fractionDiv = this.dom.isoformDiv.append('div').style('margin-top', '10px')
+			renderFractionSelection({
+				holder: this.dom.fractionDiv,
+				termlst,
+				callback: selection => this.callback(makeFractionTermWrapper(term, selection))
+			})
+			return
+		}
+		this.callback(term)
 	}
 }
 

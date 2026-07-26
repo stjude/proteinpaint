@@ -203,6 +203,7 @@ export class TermTypeSearch {
 	refreshActiveHandler = false
 	click_term: (term: Term) => void
 	submit_lst?: (terms: Array<Term>) => void
+	termCollectionSelectionMode?: 'fraction'
 	useCasesExcluded: {
 		[useCaseTarget: string]: string[]
 	}
@@ -212,6 +213,7 @@ export class TermTypeSearch {
 		this.genomeObj = opts.genome
 		this.click_term = opts.click_term
 		this.submit_lst = opts.submit_lst
+		this.termCollectionSelectionMode = opts.termCollectionSelectionMode
 		const selectedTermsDiv = opts.topbar
 			.append('div')
 			.style('width', '99%')
@@ -429,7 +431,8 @@ export class TermTypeSearch {
 			genomeObj: this.genomeObj,
 			callback: term => this.selectTerm(term),
 			details,
-			usecase
+			usecase,
+			termCollectionSelectionMode: this.termCollectionSelectionMode
 		})
 	}
 	//This callback will be called by the handlers when a term is selected
@@ -482,6 +485,7 @@ export type SearchHandlerOpts = {
 	callback: (arg0: { gene: string; name: string; type: string }) => void
 	details: any
 	usecase: { target: string; detail: string; [index: string]: any }
+	termCollectionSelectionMode?: 'fraction'
 }
 
 export function getAllowedTabs(state, self) {

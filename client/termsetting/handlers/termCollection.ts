@@ -35,9 +35,6 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 				: addCategoricalTable(self, groupDiv, terms)
 
 		const buttons = div.append('div').style('padding', '6px 20px')
-		if (self.data?.isStagedFractionSelection) {
-			buttons.append('button').style('margin-right', '8px').text('Cancel').on('click', self.data.cancelStagedSelection)
-		}
 		buttons
 			.append('button')
 			.attr('data-testid', 'sjpp-term-collection-members-apply')
