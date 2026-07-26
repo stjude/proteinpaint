@@ -1,4 +1,5 @@
 import { renderTable } from '#dom'
+import { TermTypes } from '#shared/terms.js'
 import type { RawTermCollectionTWFraction } from '#types'
 
 export type TermCollectionSelectionMode = 'fraction'
@@ -83,6 +84,46 @@ export function renderFractionSelection(opts: {
 				return window.alert('Every numerator must also be selected as a denominator.')
 			callback({ numerators, denominators })
 		})
+}
+
+/**
+ * Show the fraction chooser in place of a list of selectable terms, when both the use case
+ * (selectionMode) and the clicked term require reducing a collection to a scalar fraction.
+ * Returns true when the chooser is shown, in which case the caller must not fire its own
+ * selection callback: the callback here is called instead, once the user submits a selection.
+ */
+export function mayRenderFractionSelection(opts: {
+	term: any
+	selectionMode?: TermCollectionSelectionMode
+	/** hidden, not destroyed, while the chooser is shown, so that the user may back out of it */
+	listDiv: any
+	/** holds the chooser, must be a sibling of listDiv */
+	fractionDiv: any
+	callback: (tw: RawTermCollectionTWFraction) => void
+}): boolean {
+	const { term, listDiv, fractionDiv, callback } = opts
+	if (opts.selectionMode !== 'fraction') return false
+	if (term?.type !== TermTypes.TERM_COLLECTION || term.memberType !== 'numeric') return false
+	if (!term.termlst?.length) return false
+
+	fractionDiv.selectAll('*').remove()
+	listDiv.style('display', 'none')
+	fractionDiv.style('display', '')
+	fractionDiv
+		.append('div')
+		.append('button')
+		.attr('data-testid', 'sjpp-term-collection-fraction-back')
+		.text('« Back')
+		.on('click', () => {
+			fractionDiv.style('display', 'none').selectAll('*').remove()
+			listDiv.style('display', '')
+		})
+	renderFractionSelection({
+		holder: fractionDiv,
+		termlst: term.termlst,
+		callback: selection => callback(makeFractionTermWrapper(term, selection))
+	})
+	return true
 }
 
 export function makeFractionTermWrapper(
