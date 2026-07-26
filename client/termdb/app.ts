@@ -9,6 +9,7 @@ import { searchInit } from './search'
 import { select } from 'd3-selection'
 import { Menu, sayerror } from '#dom'
 import { dofetch3 } from '#common/dofetch'
+import { mayRenderFractionSelection } from './handlers/termCollectionFractionSelection.ts'
 
 /*
 opts{}
@@ -117,6 +118,11 @@ class TdbApp extends AppBase implements RxApp {
 						term._geneset = geneset
 					}
 
+					// a numeric term collection, such as an adhoc splice junction event listed under
+					// "Custom Variables", must be reduced to a scalar fraction for certain use cases;
+					// prompt for the numerator/denominator before calling back with a fraction tw
+					if (this.mayShowFractionSelection(term, o.tree)) return
+
 					// call the click callback
 					o.tree.click_term(term)
 				}
@@ -155,9 +161,12 @@ class TdbApp extends AppBase implements RxApp {
 		const topbar = opts.holder.append('div')
 		const termTypeSearchDiv = topbar.append('div').style('display', 'inline-block')
 		const treeDiv = topbar.append('div').style('display', 'inline-block').style('vertical-align', 'top')
+		// shown in place of the tree, when a selected term requires additional configuration
+		const fractionDiv = opts.holder.append('div').style('display', 'none')
 
 		return {
 			topbar,
+			fractionDiv,
 			holder: opts.holder,
 			termTypeSearchDiv,
 			searchDiv: treeDiv.append('div'),
@@ -169,6 +178,25 @@ class TdbApp extends AppBase implements RxApp {
 			errdiv: opts.holder.append('div'),
 			tip: new Menu({ padding: '5px' })
 		}
+	}
+
+	/* Render the numerator/denominator chooser for a numeric term collection that was clicked
+	in the tree or dictionary search, matching what the term search handlers do for the same
+	collection types. Returns true when the chooser is shown, in which case the click callback
+	is deferred until the user submits a selection.
+
+	term: the clicked term
+	treeOpts: opts.tree{}, supplies termCollectionSelectionMode and the click_term() callback
+	*/
+	mayShowFractionSelection(term, treeOpts) {
+		return mayRenderFractionSelection({
+			term,
+			selectionMode: treeOpts.termCollectionSelectionMode,
+			// the tree is hidden, not destroyed, so that the user may back out and select another term
+			listDiv: this.dom.topbar,
+			fractionDiv: this.dom.fractionDiv,
+			callback: tw => treeOpts.click_term(tw)
+		})
 	}
 
 	async preApiFreeze(api) {

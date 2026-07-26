@@ -7,6 +7,13 @@ import { getColors } from '#shared/common.js'
 import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
 import type { RawTermCollectionTWFraction } from '#types'
 
+/*
+note:
+	the ui allows both single and multi selection
+	even when termCollectionSelectionMode=fraction, the numerator/denominator check columns are not shown up front
+	this is to avoid complicating single term selection
+*/
+
 export class SearchHandler {
 	callback!: (term: IsoformTerm | IsoformCollectionTerm | RawTermCollectionTWFraction) => void
 	app: any

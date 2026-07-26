@@ -1,5 +1,5 @@
 import { junctionCustomTermSource, type JunctionCustomTerm } from './junction.customTerm.ts'
-import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
+import { mayRenderFractionSelection } from './termCollectionFractionSelection.ts'
 
 export class SearchHandler {
 	async init(opts) {
@@ -19,16 +19,17 @@ export function getJunctionCustomTerms(customTerms: any): JunctionCustomTerm[] {
 function render(opts, entries: JunctionCustomTerm[]) {
 	const holder = opts.holder
 	holder.selectAll('*').remove()
+	const div = holder.append('div').style('padding', '10px 0px')
 
 	if (!entries.length) {
-		holder.append('div').text('Junctions selected from genome browser will be shown here.')
+		div.append('div').text('Junctions selected from genome browser will be shown here.')
 		return
 	}
 
 	// the fraction chooser is rendered in a sibling div, so that the list may be
 	// restored without reloading, when the user backs out of the chooser
-	const listDiv = holder.append('div')
-	const fractionDiv = holder.append('div')
+	const listDiv = div.append('div')
+	const fractionDiv = div.append('div')
 
 	for (const entry of entries) {
 		if (entry.eventlabel) renderJunctionEvent(listDiv, fractionDiv, entry, opts)
@@ -80,26 +81,14 @@ function renderJunctionEvent(holder, fractionDiv, entry: JunctionCustomTerm, opt
 }
 
 function selectJunctionEvent(listDiv, fractionDiv, entry: JunctionCustomTerm, opts) {
-	if (opts.termCollectionSelectionMode !== 'fraction') {
-		opts.callback(entry.tw.term)
-		return
-	}
-	fractionDiv.selectAll('*').remove()
-	listDiv.style('display', 'none')
-	fractionDiv
-		.append('div')
-		.append('button')
-		.attr('data-testid', 'sjpp-junction-fraction-back')
-		.text('« Back')
-		.on('click', () => {
-			fractionDiv.selectAll('*').remove()
-			listDiv.style('display', '')
-		})
-	renderFractionSelection({
-		holder: fractionDiv,
-		termlst: entry.tw.term.termlst,
-		callback: selection => opts.callback(makeFractionTermWrapper(entry.tw.term, selection))
+	const isStaged = mayRenderFractionSelection({
+		term: entry.tw.term,
+		selectionMode: opts.termCollectionSelectionMode,
+		listDiv,
+		fractionDiv,
+		callback: tw => opts.callback(tw)
 	})
+	if (!isStaged) opts.callback(entry.tw.term)
 }
 
 function addDeleteButton(holder, entry: JunctionCustomTerm, opts) {
