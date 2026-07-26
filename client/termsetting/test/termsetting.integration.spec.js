@@ -271,7 +271,7 @@ tape('termCollection edit menu retains unchecked members', async test => {
 	const excludedSortingCheckbox = tip.node().querySelectorAll('[data-testid="sjpp-term-collection-sort-member"]')[1]
 	test.equal(excludedSortingCheckbox.disabled, true, 'disables sorting when a member is excluded')
 	test.equal(excludedSortingCheckbox.checked, false, 'clears sorting when a member is excluded')
-	tip.select('.sjpp_apply_btn').node().click()
+	tip.select('[data-testid="sjpp-term-collection-members-apply"]').node().click()
 
 	await opts.pillMenuClick('Edit')
 	test.deepEqual(opts.pill.Inner.tw.q.lst, ['member-1'], 'removes the unchecked member only from q.lst')
@@ -362,7 +362,7 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 	test.equal(numerators[0].disabled, true, 'disables numerator when its denominator is unchecked')
 	test.equal(numerators[0].checked, false, 'clears numerator when its denominator is unchecked')
 	numerators[1].click()
-	tip.select('.sjpp_apply_btn').node().click()
+	tip.select('[data-testid="sjpp-term-collection-members-apply"]').node().click()
 	await sleep(100)
 	test.deepEqual(opts.tsData.q.denominators, ['member-2'], 'commits selected denominators')
 	test.deepEqual(opts.tsData.q.numerators, ['member-2'], 'commits selected numerators')
