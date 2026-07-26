@@ -34,16 +34,15 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 					: addNumericTable(self, groupDiv, terms)
 				: addCategoricalTable(self, groupDiv, terms)
 
-		const buttons = div.append('div').append('div').style('float', 'right').style('padding', '6px 20px')
+		const buttons = div.append('div').style('padding', '6px 20px')
 		if (self.data?.isStagedFractionSelection) {
-			buttons
-				.append('button')
-				.attr('class', 'sja_filter_tag_btn')
-				.style('margin-right', '8px')
-				.text('Cancel')
-				.on('click', self.data.cancelStagedSelection)
+			buttons.append('button').style('margin-right', '8px').text('Cancel').on('click', self.data.cancelStagedSelection)
 		}
-		buttons.append('button').attr('class', 'sjpp_apply_btn sja_filter_tag_btn').text('Apply').on('click', callback)
+		buttons
+			.append('button')
+			.attr('data-testid', 'sjpp-term-collection-members-apply')
+			.text('Apply')
+			.on('click', callback)
 	}
 
 	async showBinsEditMenu(div: any) {
@@ -61,16 +60,15 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 		numericHandler.density.no_density_data = true
 		numericHandler.density.showViolin = async div => {
 			div.selectAll('*').remove()
-			div.append('div').style('padding', '5px').style('opacity', 0.65).text('Fraction range: 0 to 1')
+			div.append('div').style('padding', '10px 5px').text('Fraction range is 0 to 1.')
 			return densityData
 		}
 		numericHandler.density.setBinLines = async () => {}
 		const editor = new NumDiscreteEditor({ termsetting: self }, numericHandler as any)
 		await editor.showEditMenu(div.append('div'))
-		const buttons = div.append('div').style('padding', '6px 20px')
+		const buttons = div.append('div').style('margin', '0px 0px 10px 12px')
 		buttons
 			.append('button')
-			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 			.attr('data-testid', 'sjpp-term-collection-bins-apply')
 			.text('Apply')
 			.on('click', () => {
@@ -85,7 +83,6 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 			})
 		buttons
 			.append('button')
-			.attr('class', 'sja_filter_tag_btn')
 			.style('margin-left', '8px')
 			.text('Reset')
 			.on('click', () => editor.undoEdits())
@@ -94,9 +91,6 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 	getPillStatus() {
 		return this.tw.getStatus(this.termsetting.usecase)
 	}
-
-	// inherited from HanlderBase
-	// getPillName(d: PillData) {}
 }
 
 function addFractionTable(self, div: any, terms: any) {
@@ -124,7 +118,6 @@ function addFractionTable(self, div: any, terms: any) {
 		rows,
 		columns: [getTermNameColumn(self, terms), { label: 'Numerator' }],
 		div,
-		maxWidth: '30vw',
 		maxHeight: '40vh',
 		noButtonCallback: syncNumerators,
 		striped: false,
@@ -194,7 +187,6 @@ function addNumericTable(self, div: any, terms: any) {
 		rows,
 		columns,
 		div,
-		maxWidth: '30vw',
 		maxHeight: '40vh',
 		noButtonCallback,
 		striped: false,
