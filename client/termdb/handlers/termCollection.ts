@@ -1,5 +1,6 @@
 import { renderTable } from '#dom'
 import type { CategoryKey } from '#types'
+import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
 
 export class SearchHandler {
 	callback: any
@@ -11,9 +12,20 @@ export class SearchHandler {
 		this.app = opts.app
 
 		opts.holder.style('display', '')
-		const tableDiv = opts.holder.append('div')
 
 		const termlst = opts.details.termlst ?? []
+		const memberType = opts.details.memberType || opts.details.type
+		if (opts.termCollectionSelectionMode === 'fraction' && memberType === 'numeric') {
+			const term = makeTerm(opts.details, termlst, opts.usecase)
+			renderFractionSelection({
+				holder: opts.holder,
+				termlst,
+				callback: selection => opts.callback(makeFractionTermWrapper(term, selection))
+			})
+			return
+		}
+
+		const tableDiv = opts.holder.append('div')
 		renderTable({
 			columns: [{ label: 'VARIABLES' }],
 			rows: termlst.map(t => {
@@ -73,14 +85,6 @@ export class SearchHandler {
 					alert('Please select at least one term')
 					return
 				}
-				const propsByTermId = {}
-				if (opts.details.propsByTermId) {
-					// extract properties (like color, etc) for the selected terms
-					for (const t of selectedTermlst) {
-						if (opts.details.propsByTermId[t.id]) propsByTermId[t.id] = opts.details.propsByTermId[t.id]
-					}
-				}
-
 				let categoryKeys
 				if (categoryTable) {
 					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
@@ -91,17 +95,31 @@ export class SearchHandler {
 				}
 
 				opts.callback({
-					type: 'termCollection',
-					termIds: selectedTermlst.map(i => i.id),
-					termlst: selectedTermlst,
-					name: opts.details.name,
-					valueTransform: opts.details.valueTransformByPlots?.[opts.usecase.target],
-					// memberType = ds.cohort.termdb.termCollections[].type for client code
-					memberType: opts.details.memberType || opts.details.type,
-					categoryKeys,
-					isleaf: true,
-					propsByTermId
+					// makeTerm() extracts propsByTermId (color, etc) for the selected terms
+					...makeTerm(opts.details, selectedTermlst, opts.usecase),
+					categoryKeys
 				})
 			})
+	}
+}
+
+function makeTerm(details: any, termlst: any[], usecase: any) {
+	const propsByTermId = {}
+	if (details.propsByTermId) {
+		for (const term of termlst) {
+			if (details.propsByTermId[term.id]) propsByTermId[term.id] = details.propsByTermId[term.id]
+		}
+	}
+	return {
+		type: 'termCollection',
+		termIds: termlst.map(term => term.id),
+		termlst,
+		name: details.name,
+		valueTransform: details.valueTransformByPlots?.[usecase?.target],
+		// memberType = ds.cohort.termdb.termCollections[].type for client code
+		memberType: details.memberType || details.type,
+		categoryKeys: details.categoryKeys,
+		isleaf: true,
+		propsByTermId
 	}
 }

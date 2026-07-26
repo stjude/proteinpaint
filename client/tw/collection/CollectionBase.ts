@@ -46,7 +46,15 @@ export class CollectionBase extends TwBase {
 		// Term controls may require a different representation for the selected
 		// collection. In particular, barchart term2/term0 must resolve a numeric
 		// collection to a scalar fraction instead of retaining member values.
-		if (opts.defaultQ) tw.q = { ...(tw.q || {}), ...structuredClone(opts.defaultQ) } as any
+		if (opts.defaultQ) {
+			const defaultQ = structuredClone(opts.defaultQ) as any
+			// a plot's defaultQ carries empty numerator/denominator placeholders, which must not
+			// overwrite an explicit member selection, such as from the fraction chooser in term search
+			const q = (tw.q || {}) as any
+			if (!defaultQ.denominators?.length && q.denominators?.length) delete defaultQ.denominators
+			if (!defaultQ.numerators?.length && q.numerators?.length) delete defaultQ.numerators
+			tw.q = { ...q, ...defaultQ } as any
+		}
 		if (tw.type === 'TermCollectionTWFraction' || Array.isArray((tw.q as any)?.denominators))
 			tw.type = 'TermCollectionTWFraction'
 

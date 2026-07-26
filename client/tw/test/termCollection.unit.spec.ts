@@ -1067,3 +1067,29 @@ tape('CollectionBase.fill() - barchart default converts member values to a discr
 	test.deepEqual(tw.q.numerators, ['t1', 't2'], 'defaults the numerator to all members')
 	test.end()
 })
+
+tape('CollectionBase.fill() - barchart default preserves an explicit fraction selection', test => {
+	// a fraction tw from the term search chooser, filled with the barchart term2/term0 defaultQ
+	const tw: any = {
+		type: 'TermCollectionTWFraction',
+		term: { type: 'termCollection', name: 'Test Numeric Collection', memberType: 'numeric' },
+		q: { mode: 'continuous', denominators: ['t1', 't2'], numerators: ['t1'] }
+	}
+	CollectionBase.fill(tw, {
+		vocabApi: mockNumericVocabApi as any,
+		defaultQ: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stop: 0.5 },
+				{ start: 0.5, stopunbounded: true, startinclusive: true }
+			],
+			denominators: [],
+			numerators: []
+		}
+	})
+	test.equal(tw.q.mode, 'discrete', 'still uses discrete mode for the barchart overlay')
+	test.deepEqual(tw.q.denominators, ['t1', 't2'], 'keeps the selected denominators')
+	test.deepEqual(tw.q.numerators, ['t1'], 'keeps the selected numerators')
+	test.end()
+})

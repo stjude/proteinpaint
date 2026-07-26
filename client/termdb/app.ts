@@ -217,6 +217,7 @@ class TdbApp extends AppBase implements RxApp {
 				genome: this.opts.vocabApi?.app?.opts?.genome,
 				click_term: this.opts.tree?.click_term,
 				submit_lst: this.opts.tree?.submit_lst,
+				termCollectionSelectionMode: this.opts.tree?.termCollectionSelectionMode,
 				submitDiv: this.dom.submitDiv
 			}),
 			tree: treeInit({

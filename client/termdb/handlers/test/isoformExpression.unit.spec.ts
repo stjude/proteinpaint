@@ -2,6 +2,7 @@ import tape from 'tape'
 import { SearchHandler, filterIsoforms } from '../isoformExpression.ts'
 import type { GeneModel } from '#dom/types/isoformSelect'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
+import * as d3s from 'd3-selection'
 
 /** Helper to create a minimal GeneModel for testing */
 function mockGm(isoform: string): GeneModel {
@@ -126,6 +127,35 @@ tape('selectCollection() should use default unit when not configured', test => {
 	handler.selectCollection([mockGm('ENST00000256078'), mockGm('ENST00000311936')], 'KRAS')
 	test.equal(selected?.name, 'KRAS Isoforms (TPM)', 'Should use default unit TPM')
 
+	test.end()
+})
+
+tape('selectCollection() renders fraction choices when requested', test => {
+	const handler = new SearchHandler()
+	const holder = d3s.select('body').append('div')
+	let selected: any
+	handler.callback = term => {
+		selected = term
+	}
+	handler.app = {
+		vocabApi: { termdbConfig: { queries: { isoformExpression: { unit: 'TPM' } } } }
+	} as any
+	handler.termCollectionSelectionMode = 'fraction'
+	handler.dom = { errDiv: holder.append('div'), isoformDiv: holder.append('div') } as any
+
+	handler.selectCollection([mockGm('ENST00000256078'), mockGm('ENST00000311936')], 'KRAS')
+	test.ok(holder.text().includes('Denominator'), 'renders denominator choices')
+	;(holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement).click()
+	test.equal(selected?.type, 'TermCollectionTWFraction', 'returns a fraction wrapper')
+	test.deepEqual(
+		selected?.q.denominators,
+		['ENST00000256078', 'ENST00000311936'],
+		'defaults every isoform as a denominator'
+	)
+	test.deepEqual(selected?.q.numerators, ['ENST00000256078'], 'defaults only the first isoform as numerator')
+	test.equal(selected?.term.termlst.length, 2, 'retains every isoform on the collection term')
+
+	holder.remove()
 	test.end()
 })
 

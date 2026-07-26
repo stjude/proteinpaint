@@ -1,4 +1,5 @@
 import { junctionCustomTermSource, type JunctionCustomTerm } from './junction.customTerm.ts'
+import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
 
 export class SearchHandler {
 	async init(opts) {
@@ -24,12 +25,17 @@ function render(opts, entries: JunctionCustomTerm[]) {
 		return
 	}
 
+	// the fraction chooser is rendered in a sibling div, so that the list may be
+	// restored without reloading, when the user backs out of the chooser
+	const listDiv = holder.append('div')
+	const fractionDiv = holder.append('div')
+
 	for (const entry of entries) {
-		if (entry.eventlabel) renderJunctionEvent(holder, entry, opts)
-		else renderJunction(holder, entry, opts)
+		if (entry.eventlabel) renderJunctionEvent(listDiv, fractionDiv, entry, opts)
+		else renderJunction(listDiv, entry, opts)
 	}
 
-	holder
+	listDiv
 		.append('div')
 		.style('font-size', '.7em')
 		.style('margin-top', '10px')
@@ -50,7 +56,7 @@ function renderJunction(holder, entry: JunctionCustomTerm, opts) {
 	addDeleteButton(choice, entry, opts)
 }
 
-function renderJunctionEvent(holder, entry: JunctionCustomTerm, opts) {
+function renderJunctionEvent(holder, fractionDiv, entry: JunctionCustomTerm, opts) {
 	const eventHolder = holder.append('div')
 	const pillRow = eventHolder.append('div')
 	pillRow
@@ -60,7 +66,7 @@ function renderJunctionEvent(holder, entry: JunctionCustomTerm, opts) {
 		.style('border-radius', '6px')
 		.style('margin', '1px 0')
 		.text(entry.eventlabel!)
-		.on('click', () => opts.callback(entry.tw.term))
+		.on('click', () => selectJunctionEvent(holder, fractionDiv, entry, opts))
 	addDeleteButton(pillRow, entry, opts)
 	eventHolder
 		.append('div')
@@ -71,6 +77,29 @@ function renderJunctionEvent(holder, entry: JunctionCustomTerm, opts) {
 		.enter()
 		.append('div')
 		.text(term => term.id)
+}
+
+function selectJunctionEvent(listDiv, fractionDiv, entry: JunctionCustomTerm, opts) {
+	if (opts.termCollectionSelectionMode !== 'fraction') {
+		opts.callback(entry.tw.term)
+		return
+	}
+	fractionDiv.selectAll('*').remove()
+	listDiv.style('display', 'none')
+	fractionDiv
+		.append('div')
+		.append('button')
+		.attr('data-testid', 'sjpp-junction-fraction-back')
+		.text('« Back')
+		.on('click', () => {
+			fractionDiv.selectAll('*').remove()
+			listDiv.style('display', '')
+		})
+	renderFractionSelection({
+		holder: fractionDiv,
+		termlst: entry.tw.term.termlst,
+		callback: selection => opts.callback(makeFractionTermWrapper(entry.tw.term, selection))
+	})
 }
 
 function addDeleteButton(holder, entry: JunctionCustomTerm, opts) {

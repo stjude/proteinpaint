@@ -114,6 +114,10 @@ export class TermSettingApi {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
+				termCollectionSelectionMode:
+					self.usecase.target === 'barchart' && (self.usecase.detail === 'term2' || self.usecase.detail === 'term0')
+						? 'fraction'
+						: undefined,
 				click_term: async t => {
 					self.dom.nopilldiv.style('display', 'none')
 					self.dom.pilldiv.style('display', 'none')
@@ -146,13 +150,6 @@ export class TermSettingApi {
 						return
 					}
 
-					if (this.shouldStageFractionSelection(tw)) {
-						await this.stageFractionSelection(tw, self.data)
-						self.dom.loadingdiv.style('display', 'none')
-						this.toggleOptionalLoadingMasks('none')
-						return
-					}
-
 					self.opts.callback!(tw)
 					self.dom.loadingdiv.style('display', 'none')
 					self.dom.nopilldiv.style('display', !self.term ? 'inline-block' : 'none')
@@ -161,47 +158,6 @@ export class TermSettingApi {
 				}
 			}
 		})
-	}
-
-	private shouldStageFractionSelection(tw: any) {
-		const usecase = this.#termsetting.usecase
-		return (
-			tw?.type === 'TermCollectionTWFraction' &&
-			usecase?.target === 'barchart' &&
-			(usecase.detail === 'term2' || usecase.detail === 'term0')
-		)
-	}
-
-	private async stageFractionSelection(tw: any, previousData: any) {
-		const self = this.#termsetting
-		const q = structuredClone(tw.q)
-		// CollectionFraction must be valid while it is filled. For a newly selected
-		// collection that defaulted every member into both sets, clear the arbitrary
-		// numerator choice and require the user to make an explicit selection.
-		if (
-			q.numerators?.length === q.denominators?.length &&
-			q.numerators?.every((id: string) => q.denominators.includes(id))
-		) {
-			q.numerators = []
-		}
-		self.tw = tw
-		self.term = tw.term
-		self.q = q
-		self.$id = tw.$id
-		self.data = {
-			term: tw.term,
-			q,
-			tw,
-			isStagedFractionSelection: true,
-			cancelStagedSelection: async () => {
-				await this.main(previousData || {})
-			}
-		}
-		await self.setHandler(self.term.type, tw)
-		self.dom.tip.clear()
-		const holder = self.dom.holder?.node()
-		if (holder) self.dom.tip.showunder(holder)
-		await self.handler.showEditMenu(self.dom.tip.d.append('div'))
 	}
 
 	// TODO: move this method to TermSetting class

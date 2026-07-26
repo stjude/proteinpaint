@@ -205,3 +205,98 @@ tape('init() should show alert when no terms are selected', async test => {
 	if (test['_ok']) holder.remove()
 	test.end()
 })
+
+tape('fraction selection returns a raw fraction wrapper and retains every member', async test => {
+	const handler = new SearchHandler()
+	const holder = getHolder()
+	const details = getTermCollectionDetails({
+		type: 'numeric',
+		memberType: 'numeric',
+		categoryKeys: undefined
+	})
+	let callbackResult: any
+
+	await handler.init({
+		holder,
+		callback: result => {
+			callbackResult = result
+		},
+		app: {},
+		details,
+		usecase: { target: 'barchart', detail: 'term2' },
+		termCollectionSelectionMode: 'fraction'
+	})
+
+	test.ok(holder.text().includes('Denominator'), 'renders the denominator selector')
+	test.ok(holder.text().includes('Numerator'), 'renders the numerator selector')
+	const rows = holder.selectAll('tbody tr').nodes() as HTMLElement[]
+	const numerator = rows[1].querySelector('[data-testid="sjpp-term-collection-numerator"]') as HTMLInputElement
+	numerator.checked = true
+	;(holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement).click()
+
+	test.equal(callbackResult?.type, 'TermCollectionTWFraction', 'returns a fraction wrapper')
+	test.deepEqual(callbackResult?.q.denominators, ['gene1', 'gene2', 'gene3'], 'defaults all members as denominators')
+	test.deepEqual(callbackResult?.q.numerators, ['gene1', 'gene2'], 'returns the selected numerators')
+	test.equal(callbackResult?.term.termlst.length, 3, 'keeps the complete source member list')
+	test.deepEqual(callbackResult?.term.termIds, ['gene1', 'gene2', 'gene3'], 'keeps every source member ID')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('fraction selection keeps numerators in sync with the denominator check-all', async test => {
+	const handler = new SearchHandler()
+	const holder = getHolder()
+	const details = getTermCollectionDetails({
+		type: 'numeric',
+		memberType: 'numeric',
+		categoryKeys: undefined
+	})
+	let callbackResult: any
+
+	await handler.init({
+		holder,
+		callback: result => {
+			callbackResult = result
+		},
+		app: {},
+		details,
+		usecase: { target: 'barchart', detail: 'term2' },
+		termCollectionSelectionMode: 'fraction'
+	})
+
+	const getNumerators = () =>
+		holder.selectAll('[data-testid="sjpp-term-collection-numerator"]').nodes() as HTMLInputElement[]
+	const checkall = holder.select('[data-testid="sjpp-table-checkall"]').node() as HTMLInputElement
+	// make_one_checkbox() disables its input until the async callback settles
+	const clickCheckAll = async () => {
+		checkall.click()
+		await new Promise(resolve => setTimeout(resolve, 0))
+	}
+	// the table check-all toggles every input under tbody, including the numerator checkboxes
+	await clickCheckAll() // uncheck all denominators
+	test.ok(
+		getNumerators().every(n => !n.checked && n.disabled),
+		'clearing all denominators clears and disables the numerators'
+	)
+	await clickCheckAll() // check all denominators
+	test.ok(
+		getNumerators().every(n => !n.checked),
+		'restoring all denominators does not silently select every numerator'
+	)
+	test.ok(
+		getNumerators().every(n => !n.disabled),
+		'restoring all denominators makes the numerators selectable again'
+	)
+
+	const alerts: any[] = []
+	const alert0 = window.alert
+	window.alert = msg => alerts.push(msg)
+	;(holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement).click()
+	window.alert = alert0
+	test.equal(callbackResult, undefined, 'does not submit a fraction without a numerator')
+	test.equal(alerts.length, 1, 'alerts the user to select a numerator')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
