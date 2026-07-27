@@ -4,10 +4,13 @@ import type { BaseType } from 'd3-selection'
 import { renderImpressionLegend } from '../renderImpressionLegend.js'
 
 /*
-Tests for the shared impression card legend — the single place the series and the performance
-zones are named, drawn under the thermometer and the response-distribution chart together.
+Tests for the per-chart impression legend. Each chart draws its own with the mark that carries its
+series: the distribution chart uses a line+dot (SC) and a square (POC); the thermometer uses a
+circle for each fill. Both legends also name the three performance zones.
 
-  • both series → a line+dot for SC, a square for POC, one square per zone, in one row
+  • two rows: the series (SC / POC) on the first, the zones on the second, each centered
+  • distribution series → a line+dot for SC, a square for POC, one square per zone
+  • thermometer series → a filled circle for each series (SC + POC)
   • zone swatches carry the same 0.3 opacity the charts paint their background bands at
   • SC-only module (one series) → the POC entry is absent but the zones remain
   • zones are listed low to high regardless of the order the caller passes them in
@@ -72,6 +75,34 @@ tape('both series: a line+dot for SC, a square for POC, a square per zone', func
 	test.equal(pocItem.selectAll('rect').size(), 1, 'the POC swatch is a square')
 	test.equal(pocItem.selectAll('line').size(), 0, 'the POC swatch is not a line')
 	test.equal(pocItem.select('rect').attr('fill'), POC_GREY, 'the POC square uses the POC grey')
+
+	holder.remove()
+	test.end()
+})
+
+tape('circle symbol: each thermometer swatch is a filled circle', function (test) {
+	const holder = select('body').append('div')
+	renderImpressionLegend({
+		holder,
+		series: [
+			{ color: SC_COLOR, label: 'Site Coordinator', symbol: 'circle' as const },
+			{ color: POC_GREY, label: 'POC Staff', symbol: 'circle' as const }
+		],
+		zones: ZONES
+	})
+
+	test.equal(holder.selectAll('g.impression-legend-item').size(), 2, 'one entry per series')
+	holder.selectAll('g.impression-legend-item').each(function (this: BaseType) {
+		const it = select(this)
+		test.equal(it.selectAll('circle').size(), 1, 'the swatch is a single filled circle')
+		test.equal(it.selectAll('line').size(), 0, 'not a line')
+		test.equal(it.selectAll('rect').size(), 0, 'not a square')
+	})
+	test.equal(
+		holder.select('g.impression-legend-item').select('circle').attr('fill'),
+		SC_COLOR,
+		'SC circle uses the module color'
+	)
 
 	holder.remove()
 	test.end()
