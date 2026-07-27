@@ -294,7 +294,7 @@ tape.skip('getTdbDataUrl()', async test => {
 		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
 	}
 	result = termdbVocabApi.getTdbDataUrl(opts)
-	test.ok(result.includes(`getsurvival=1`), message)
+	test.ok(result.includes(`termdb/survival`), message)
 
 	opts = {
 		chartType: 'barchart'
