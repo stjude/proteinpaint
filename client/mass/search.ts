@@ -232,7 +232,13 @@ function renderOmnisearchResults(self: any, data: OmnisearchResult) {
 	// means either no match or a dataset that does not permit it.
 	const sampleItems = (Array.isArray(data.samples) ? data.samples : [])
 		.filter((s: any) => s?.name)
-		.map((s: any) => ({ isSample: true, name: s.name, sampleId: s.id, singleCell: s.singleCell, assays: s.assays }))
+		.map((s: any) => ({
+			isSample: true,
+			name: s.name,
+			sampleId: s.id,
+			singleCell: s.singleCell,
+			facetTracks: s.assays
+		}))
 	// The genomic coordinate is its own result entry (like a gene entry), rendered by showTerm
 	const coordItems = coord
 		? [{ isCoord: true, name: `${coord.chr}:${coord.start.toLocaleString()}-${coord.stop.toLocaleString()}`, coord }]
@@ -503,15 +509,15 @@ export function setSearchRenderers(self: any) {
 		})
 	}
 
-	self.showTerm = function (this: any, term: any) {
+	self.showTerm = function (this: any, item: any) {
 		const tr = select(this)
 
-		if (term.isHeading) {
+		if (item.isHeading) {
 			// group label row spanning both columns (name + action-button columns); not selectable
 			tr.append('td')
 				.attr('colspan', 2)
-				.attr('data-testid', `sjpp-mass-chat-heading-${term.name.toLowerCase().replace(/\s+/g, '-')}`)
-				.text(term.name)
+				.attr('data-testid', `sjpp-mass-chat-heading-${item.name.toLowerCase().replace(/\s+/g, '-')}`)
+				.text(item.name)
 				.style('padding', '6px 10px 2px')
 				.style('font-weight', 'bold')
 				.style('font-size', '0.85em')
@@ -520,12 +526,12 @@ export function setSearchRenderers(self: any) {
 			return
 		}
 
-		if (term.isNote) {
+		if (item.isNote) {
 			// "Displaying N out of M ... matches" note at the bottom of a truncated group; not selectable
 			tr.append('td')
 				.attr('colspan', 2)
-				.attr('data-testid', term.testid || 'sjpp-mass-chat-note')
-				.text(term.name)
+				.attr('data-testid', item.testid || 'sjpp-mass-chat-note')
+				.text(item.name)
 				.style('padding', '2px 10px 6px')
 				.style('font-size', '0.8em')
 				.style('font-style', 'italic')
@@ -533,10 +539,10 @@ export function setSearchRenderers(self: any) {
 			return
 		}
 
-		if (term.isCoord) {
+		if (item.isCoord) {
 			// Genomic coordinate row: region label + a "Genome Browser" button opening the genomic view as
 			// a separate mass chart with plot state. No protein view — a bare region is not tied to one gene.
-			tr.append('td').text(term.name).style('padding', '5px 10px')
+			tr.append('td').text(item.name).style('padding', '5px 10px')
 			tr.append('td')
 				.append('span')
 				.attr('class', 'sja_menuoption')
@@ -551,22 +557,22 @@ export function setSearchRenderers(self: any) {
 					'click',
 					() =>
 						void self
-							.launchGenomeBrowserView('genomic', { coord: term.coord })
+							.launchGenomeBrowserView('genomic', { coord: item.coord })
 							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 				)
 			return
 		}
 
-		if (term.isSample) {
+		if (item.isSample) {
 			// Sample row: sample name + available actions. The single-cell action is shown only when the
 			// server confirmed that this particular sample has single-cell data.
 			// Passes config.sample (singular), the same single-sample shape the scatter click handler
 			// dispatches (scatterInteractivity.ts), which sampleView resolves to its related samples.
-			tr.append('td').text(term.name).style('padding', '5px 10px')
+			tr.append('td').text(item.name).style('padding', '5px 10px')
 			tr.append('td')
 				.append('span')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-sample-view-${term.sampleId}`)
+				.attr('data-testid', `sjpp-mass-chat-sample-view-${item.sampleId}`)
 				.style('display', 'inline-block')
 				.style('margin', '0px 3px')
 				.style('padding', '5px 10px')
@@ -579,16 +585,16 @@ export function setSearchRenderers(self: any) {
 						void self
 							.launchPlot({
 								chartType: 'sampleView',
-								sample: { sampleId: term.sampleId, sampleName: term.name }
+								sample: { sampleId: item.sampleId, sampleName: item.name }
 							})
 							.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 				)
-			if (term.singleCell) {
+			if (item.singleCell) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mass-chat-single-cell-${term.sampleId}`)
+					.attr('data-testid', `sjpp-mass-chat-single-cell-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
 					.style('padding', '5px 10px')
@@ -602,17 +608,17 @@ export function setSearchRenderers(self: any) {
 							void self
 								.launchPlot({
 									chartType: 'sc',
-									settings: { sc: { item: term.singleCell } }
+									settings: { sc: { item: item.singleCell } }
 								})
 								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 					)
 			}
-			if (term.assays?.length) {
+			if (item.facetTracks?.length) {
 				tr.select('td:nth-child(2)')
 					.append('button')
 					.attr('type', 'button')
 					.attr('class', 'sja_menuoption')
-					.attr('data-testid', `sjpp-mass-chat-assays-${term.sampleId}`)
+					.attr('data-testid', `sjpp-mass-chat-assays-${item.sampleId}`)
 					.style('display', 'inline-block')
 					.style('margin', '0px 3px')
 					.style('padding', '5px 10px')
@@ -626,7 +632,7 @@ export function setSearchRenderers(self: any) {
 								.launchPlot({
 									chartType: 'genomeBrowser',
 									hidePlotFilter: true,
-									filter: getSampleFilter(term.sampleId)
+									filter: getSampleFilter(item.sampleId)
 								})
 								.catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e)))
 					)
@@ -634,10 +640,10 @@ export function setSearchRenderers(self: any) {
 			return
 		}
 
-		if (term.isGene) {
+		if (item.isGene) {
 			// Gene row: gene name as a plain label, with an action button per available data type
 			// ('Gene expression', variant types, 'DNA methylation') — all shown together in the same row.
-			tr.append('td').text(term.name).style('padding', '5px 10px')
+			tr.append('td').text(item.name).style('padding', '5px 10px')
 			const btnTd = tr.append('td')
 			const addBtn = (label: string, testid: string, onClick: () => Promise<void>) => {
 				btnTd
@@ -652,52 +658,52 @@ export function setSearchRenderers(self: any) {
 					.text(label)
 					.on('click', () => void onClick().catch(e => sayerror(self.dom.resultDiv, 'Error: ' + (e?.message || e))))
 			}
-			if (term.isGeneExpression) {
+			if (item.isGeneExpression) {
 				// open a summary plot of the gene's expression
-				addBtn('Gene expression', `sjpp-mass-chat-gene-exp-${term.gene}`, async () => {
+				addBtn('Gene expression', `sjpp-mass-chat-gene-exp-${item.gene}`, async () => {
 					await self.launchPlot({
 						chartType: 'summary',
-						term: { term: { gene: term.gene, name: term.name, type: 'geneExpression' } }
+						term: { term: { gene: item.gene, name: item.name, type: 'geneExpression' } }
 					})
 				})
 			}
-			if (term.isGeneVariant) {
+			if (item.isGeneVariant) {
 				// one button per variant data type available for THIS gene (snvindel/cnv/svfusion);
 				// each opens a mutated-vs-wildtype barchart restricted to that data type.
-				for (const vt of term.geneVariantTypes || []) {
-					addBtn(vt.label, `sjpp-mass-chat-gene-${vt.testid}-${term.gene}`, async () => {
-						await self.launchGeneVariantPlot(term.gene, vt.dtCandidates)
+				for (const vt of item.geneVariantTypes || []) {
+					addBtn(vt.label, `sjpp-mass-chat-gene-${vt.testid}-${item.gene}`, async () => {
+						await self.launchGeneVariantPlot(item.gene, vt.dtCandidates)
 					})
 				}
 			}
-			if (term.isGenomeBrowser) {
+			if (item.isGenomeBrowser) {
 				// open a chooser window offering "Protein view"/"Genomic view" of the gene; picking a view
 				// opens the genome browser as a separate mass chart with plot state, whose mds3 track shows
 				// the gene's SNV/indel, CNV and SV/fusion data (whichever the dataset has). See launchGenomeBrowser.
-				addBtn('Genome Browser', `sjpp-mass-chat-gene-genomebrowser-${term.gene}`, async () => {
-					await self.launchGenomeBrowser(term.gene, term.coord)
+				addBtn('Genome Browser', `sjpp-mass-chat-gene-genomebrowser-${item.gene}`, async () => {
+					await self.launchGenomeBrowser(item.gene, item.coord)
 				})
 			}
-			if (term.isMethylation) {
+			if (item.isMethylation) {
 				// open a violin plot of the gene's per-sample DNA methylation beta values
-				addBtn('DNA methylation', `sjpp-mass-chat-gene-methylation-${term.gene}`, async () => {
-					await self.launchMethylationPlot(term.gene, term.coord)
+				addBtn('DNA methylation', `sjpp-mass-chat-gene-methylation-${item.gene}`, async () => {
+					await self.launchMethylationPlot(item.gene, item.coord)
 				})
 			}
 			return
 		}
 
 		// Dictionary term row
-		const button = tr.append('td').text(term.name)
-		if (term.type) {
+		const button = tr.append('td').text(item.name)
+		if (item.type) {
 			button
 				.style('cursor', 'pointer')
 				.attr('class', 'sja_menuoption')
-				.attr('data-testid', `sjpp-mass-chat-term-${term.id}`)
+				.attr('data-testid', `sjpp-mass-chat-term-${item.id}`)
 				.on('click', async () => {
 					await self.launchPlot({
-						chartType: term.type == 'survival' ? 'survival' : 'summary',
-						term: { term }
+						chartType: item.type == 'survival' ? 'survival' : 'summary',
+						term: { term: item }
 					})
 				})
 		} else {
@@ -705,7 +711,7 @@ export function setSearchRenderers(self: any) {
 		}
 
 		tr.append('td')
-			.text((term.__ancestorNames || []).join(' > '))
+			.text((item.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
