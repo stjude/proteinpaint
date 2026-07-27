@@ -7,9 +7,9 @@ import { addFilterTable, handler } from '../tvs.termCollection.ts'
 **************************/
 
 const members = [
-	{ id: 'ENST01', name: 'ENST01' },
-	{ id: 'ENST02', name: 'ENST02' },
-	{ id: 'ENST03', name: 'ENST03' }
+	{ id: 'ENST01', name: 'ENST01', type: 'isoformExpression' },
+	{ id: 'ENST02', name: 'ENST02', type: 'isoformExpression' },
+	{ id: 'ENST03', name: 'ENST03', type: 'isoformExpression' }
 ]
 
 function getOpts(term: any) {

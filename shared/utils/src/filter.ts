@@ -1,4 +1,5 @@
 import type { Filter, Tvs } from '#types'
+import { validateTermCollectionTerm, validateFractionMembers, type CollectionTermLike } from './termCollection.js'
 
 /**
  * Sample annotation structure
@@ -291,12 +292,6 @@ export function getWrappedTvslst(lst: Filter['lst'] = [], join: string = '', $id
 	return filter
 }
 
-/**
- * Validates numerator and denominator term collections
- * @param lst1 Numerator list of term ids
- * @param lst2 Denominator list of term ids
- * @throws Error if validation fails
- */
 export function getTvsDenominators(term: any): string[] {
 	/* Denominator term ids of a termCollection tvs, which reduces the collection to a
 	percentage. term.denominators[] is explicit, matching q.denominators[] of a fraction
@@ -306,16 +301,15 @@ export function getTvsDenominators(term: any): string[] {
 	return (term?.termlst || []).map(t => t.id)
 }
 
-export function validateTermCollectionTvs(lst1: any[], lst2: any[]): void {
-	// lst1/lst2: numerator and denominator. both are lists of term ids
-	if (!Array.isArray(lst1)) throw new Error('numerator not array')
-	if (!Array.isArray(lst2)) throw new Error('denominator not array')
-	if (lst1.length == 0) throw new Error('numerator empty')
-	if (lst2.length == 0) throw new Error('denominator empty')
-	if (lst1.length > lst2.length) throw new Error('numerator longer than denominator')
-	for (const s of lst1) {
-		if (typeof s != 'string') throw new Error('one of numerator not string')
-		if (!s) throw new Error('empty string in numerator')
-		if (!lst2.includes(s)) throw new Error('one of numerator not in denominator')
-	}
+/**
+ * Validates the term obj of a termCollection tvs, and its fraction member selection
+ * @param term tvs.term of a termCollection. term.numerators[] is optional: a tvs may brush
+ * on a single member instead of the numerator/denominator fraction. When present, it is
+ * validated against the denominators from getTvsDenominators()
+ * @throws Error if validation fails
+ */
+export function validateTermCollectionTvs(term: CollectionTermLike): void {
+	const memberIds = validateTermCollectionTerm(term)
+	if (!term.numerators) return // not filtering on a fraction, nothing more to validate
+	validateFractionMembers(term.numerators, getTvsDenominators(term), memberIds)
 }
