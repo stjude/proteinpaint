@@ -2,7 +2,6 @@ import path from 'path'
 import * as termdbsql from './termdb.sql.js'
 import * as phewas from './termdb.phewas.js'
 import { get_incidence } from './termdb.cuminc.js'
-import { get_survival } from './termdb.survival.js'
 import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
@@ -253,11 +252,6 @@ rightnow only few conditional terms have grade info
 
 async function trigger_getincidence(q, res, ds) {
 	const data = await get_incidence(q, ds)
-	res.send(data)
-}
-
-async function trigger_getsurvival(q, res, ds) {
-	const data = await get_survival(q, ds)
 	res.send(data)
 }
 

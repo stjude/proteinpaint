@@ -187,7 +187,6 @@ export class TermdbVocab extends Vocab {
 			embedder: window.location.hostname
 		}
 		if (opts.chartType == 'cuminc') body.getcuminc = 1
-		if (opts.chartType == 'survival') body.getsurvival = 1
 
 		// TODO FIXME dissect tw into term1_id, term1_q will lose tw.type and causes painful problems! replace such with straight tw!
 		for (const _key of ['term0', 'term', 'term2']) {
@@ -236,6 +235,7 @@ export class TermdbVocab extends Vocab {
 		if (opts.get) body.get = opts.get
 		// end of mds3 parameters
 
+		if (opts.chartType == 'survival') return ['termdb/survival', body]
 		return [opts.chartType ? 'termdb' : 'termdb/barsql', body]
 	}
 
