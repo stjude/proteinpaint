@@ -103,7 +103,7 @@ export async function addFilterTable(opts): Promise<() => boolean> {
 
 	return () => {
 		try {
-			validateTermCollectionTvs(term.numerators, term.denominators)
+			validateTermCollectionTvs(term)
 			return true
 		} catch (e: any) {
 			window.alert(e.message)

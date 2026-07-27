@@ -881,100 +881,167 @@ tape('getWrappedTvslst() - with parameters', t => {
 	t.end()
 })
 
+const collectionTerm = (overrides: any = {}) => ({
+	type: 'termCollection',
+	name: 'Test collection',
+	termlst: [
+		{ id: 'term1', name: 'term1', type: 'isoformExpression' },
+		{ id: 'term2', name: 'term2', type: 'isoformExpression' },
+		{ id: 'term3', name: 'term3', type: 'isoformExpression' }
+	],
+	denominators: ['term1', 'term2', 'term3'],
+	numerators: ['term1', 'term2'],
+	...overrides
+})
+
 tape('validateTermCollectionTvs() - valid', t => {
-	const numerator = ['term1', 'term2']
-	const denominator = ['term1', 'term2', 'term3']
+	t.doesNotThrow(() => {
+		validateTermCollectionTvs(collectionTerm())
+	}, 'should not throw for a valid fraction selection')
 
 	t.doesNotThrow(() => {
-		validateTermCollectionTvs(numerator, denominator)
-	}, 'should not throw for valid term collections')
+		// a tvs brushed on a single member has no numerator, only the term to validate
+		validateTermCollectionTvs(collectionTerm({ numerators: undefined, denominators: undefined }))
+	}, 'should not throw when numerators are absent')
+
+	t.doesNotThrow(() => {
+		// shape of a filter saved before term.denominators[] existed: the pruned termlst[] implies it
+		validateTermCollectionTvs({
+			termlst: [{ id: 'term1', name: 'term1', type: 'float' }],
+			numerators: ['term1']
+		})
+	}, 'should not throw when the denominator is implied by termlst[]')
 	t.end()
 })
 
-tape('validateTermCollectionTvs() - numerator not array', t => {
+tape('validateTermCollectionTvs() - invalid term', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs('not-array' as any, ['term1'])
+			validateTermCollectionTvs(collectionTerm({ termlst: [] }))
 		},
-		/numerator not array/,
-		'should throw when numerator is not array'
+		/nonempty term.termlst/,
+		'should throw when termlst is empty'
+	)
+
+	t.throws(
+		() => {
+			validateTermCollectionTvs(collectionTerm({ termlst: [{ name: 'term1', type: 'float' }] }))
+		},
+		/member term id not non-empty string/,
+		'should throw when a member term has no id'
+	)
+
+	t.throws(
+		() => {
+			validateTermCollectionTvs(collectionTerm({ termlst: [{ id: 'term1', name: 'term1' }] }))
+		},
+		/member term type not non-empty string/,
+		'should throw when a member term has no type'
+	)
+
+	t.throws(
+		() => {
+			validateTermCollectionTvs(
+				collectionTerm({
+					termlst: [
+						{ id: 'term1', name: 'term1', type: 'float' },
+						{ id: 'term2', name: 'term2', type: 'categorical' }
+					]
+				})
+			)
+		},
+		/not allowed to mix multiple term types/,
+		'should throw when member terms mix term types'
+	)
+
+	t.throws(
+		() => {
+			validateTermCollectionTvs(
+				collectionTerm({
+					termlst: [
+						{ id: 'term1', name: 'term1', type: 'float' },
+						{ id: 'term1', name: 'term1', type: 'integer' }
+					]
+				})
+			)
+		},
+		/duplicate member term id/,
+		'should throw for a duplicate member term id'
 	)
 	t.end()
 })
 
-tape('validateTermCollectionTvs() - denominator not array', t => {
+tape('validateTermCollectionTvs() - invalid fraction selection', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs(['term1'], 'not-array' as any)
+			validateTermCollectionTvs(collectionTerm({ numerators: 'not-array' }))
 		},
-		/denominator not array/,
-		'should throw when denominator is not array'
+		/nonempty numerators/,
+		'should throw when numerators is not an array'
 	)
-	t.end()
-})
 
-tape('validateTermCollectionTvs() - numerator empty', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs([], ['term1'])
+			validateTermCollectionTvs(collectionTerm({ numerators: [] }))
 		},
-		/numerator empty/,
-		'should throw when numerator is empty'
+		/nonempty numerators/,
+		'should throw when numerators is empty'
 	)
-	t.end()
-})
 
-tape('validateTermCollectionTvs() - denominator empty', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs(['term1'], [])
+			validateTermCollectionTvs(collectionTerm({ denominators: [], termlst: [] }))
 		},
-		/denominator empty/,
-		'should throw when denominator is empty'
+		/nonempty term.termlst/,
+		'should throw when the collection has no member to imply the denominator'
 	)
-	t.end()
-})
 
-tape('validateTermCollectionTvs() - numerator longer than denominator', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs(['term1', 'term2', 'term3'], ['term1', 'term2'])
+			validateTermCollectionTvs(collectionTerm({ numerators: [123] }))
 		},
-		/numerator longer than denominator/,
-		'should throw when numerator is longer than denominator'
+		/numerator id not non-empty string/,
+		'should throw when numerators contains a non-string'
 	)
-	t.end()
-})
 
-tape('validateTermCollectionTvs() - non-string in numerator', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs([123 as any], ['term1'])
+			validateTermCollectionTvs(collectionTerm({ numerators: [''] }))
 		},
-		/one of numerator not string/,
-		'should throw when numerator contains non-string'
+		/numerator id not non-empty string/,
+		'should throw when numerators contains an empty string'
 	)
-	t.end()
-})
 
-tape('validateTermCollectionTvs() - empty string in numerator', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs([''], ['term1'])
+			validateTermCollectionTvs(collectionTerm({ numerators: ['term1', 'term1'] }))
 		},
-		/empty string in numerator/,
-		'should throw when numerator contains empty string'
+		/numerators\[\] contains duplicates/,
+		'should throw for a duplicate numerator'
 	)
-	t.end()
-})
 
-tape('validateTermCollectionTvs() - numerator not in denominator', t => {
 	t.throws(
 		() => {
-			validateTermCollectionTvs(['term1', 'term4'], ['term1', 'term2', 'term3'])
+			validateTermCollectionTvs(collectionTerm({ denominators: ['term1', 'term1'] }))
 		},
-		/one of numerator not in denominator/,
-		'should throw when numerator term is not in denominator'
+		/denominators\[\] contains duplicates/,
+		'should throw for a duplicate denominator'
+	)
+
+	t.throws(
+		() => {
+			validateTermCollectionTvs(collectionTerm({ denominators: ['term1', 'term4'] }))
+		},
+		/denominator 'term4' is not a collection member/,
+		'should throw when a denominator is not a collection member'
+	)
+
+	t.throws(
+		() => {
+			validateTermCollectionTvs(collectionTerm({ denominators: ['term1'], numerators: ['term1', 'term2'] }))
+		},
+		/numerator 'term2' is not included in denominators/,
+		'should throw when a numerator is not a denominator'
 	)
 	t.end()
 })

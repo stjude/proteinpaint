@@ -1036,7 +1036,7 @@ tape('CollectionFraction.fill() - validates numerator and denominator members', 
 	}
 	test.throws(
 		() => CollectionFraction.fill(tw, { vocabApi: mockNumericVocabApi as any }),
-		/not included in q.denominators/,
+		/not included in denominators/,
 		'rejects a numerator outside the denominator set'
 	)
 	test.end()

@@ -324,7 +324,7 @@ async function get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Ch
 	const numerators = tvs.term.numerators || []
 	const denominators = getTvsDenominators(tvs.term)
 	if (!termlst.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
-	if (numerators.length) validateTermCollectionTvs(numerators, denominators)
+	validateTermCollectionTvs(tvs.term)
 
 	// Fetch values for all member terms via query handlers directly.
 	// Group members by data type so each handler is called once with all its
@@ -408,7 +408,8 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 		return await get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Children)
 	}
 	const denominators = getTvsDenominators(tvs.term)
-	if (tvs.term.numerators) validateTermCollectionTvs(tvs.term.numerators, denominators)
+	// only validate a fraction tvs: a tvs brushed on a single member may not carry term.termlst[]
+	if (tvs.term.numerators) validateTermCollectionTvs(tvs.term)
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData({ terms: [tw] }, ds)
 	const samplenames = []
