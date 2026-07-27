@@ -343,7 +343,7 @@ tape('termCollection tvs', async test => {
 		const handler = pill.Inner.handler
 		test.equal(handler.type, 'termCollection', 'should use the numeric handler for a termCollection')
 		testHandlerMethodsExists(test, handler)
-		test.equal(handler.term_name_gen({ term }), 'Percentage(agedx)', 'should generate the expected pill name')
+		test.equal(handler.term_name_gen({ term }), 'Fraction(agedx)', 'should generate the expected pill name')
 		// TODO: other handler methods may require different tests by term type
 		// and may not be abstracted into a separate function, so put here
 		// ...

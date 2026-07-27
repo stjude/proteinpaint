@@ -1,5 +1,5 @@
 import { TermTypes, getBin, dictionaryNumericTypes, isParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
-import { validateTermCollectionTvs } from '#shared/filter.js'
+import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
 import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
 
@@ -308,26 +308,23 @@ async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
 	return numericSampleData2tvs(tvs, CTEname, values)
 }
 
-/** Percentage filter for custom (non-dictionary) termCollections, e.g. isoform
- *  expression collections created dynamically.
+/** Fraction filter for custom (non-dictionary) termCollections, e.g. isoform
+ *  expression collections created dynamically. The fraction is on a 0 to 1 scale,
+ *  same as the value of a TermCollectionTWFraction tw.
  *
  *  Cannot use getData() here because it requires req.query.__protected__ (auth
  *  context set by Express middleware), which is not available inside the filter
  *  evaluation path. Instead, call the underlying query handlers (e.g.
  *  isoformExpression HDF5 handler) directly for each member term, then compute
- *  the numerator/denominator percentage client-side and filter samples. */
-async function get_termCollection_custom_percentage(tvs, CTEname, ds, mapParent2Children) {
+ *  the numerator/denominator fraction client-side and filter samples. */
+async function get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Children) {
 	const range = tvs.ranges?.[0]
 	if (!range) return emptyFilterResult(CTEname, mapParent2Children, ds)
 	const termlst = tvs.term.termlst || []
 	const numerators = tvs.term.numerators || []
+	const denominators = getTvsDenominators(tvs.term)
 	if (!termlst.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
-	if (numerators.length) {
-		validateTermCollectionTvs(
-			numerators,
-			termlst.map(i => i.id)
-		)
-	}
+	if (numerators.length) validateTermCollectionTvs(numerators, denominators)
 
 	// Fetch values for all member terms via query handlers directly.
 	// Group members by data type so each handler is called once with all its
@@ -366,17 +363,18 @@ async function get_termCollection_custom_percentage(tvs, CTEname, ds, mapParent2
 		}
 	}
 
-	// Calculate percentage and filter samples
+	// Calculate the fraction and filter samples
 	const samplenames = []
 	for (const [sid, memberVals] of Object.entries(sampleValues)) {
 		let numeratorSum = 0
 		let totalSum = 0
 		for (const [mid, val] of Object.entries(memberVals)) {
+			if (!denominators.includes(mid)) continue
 			totalSum += val
 			if (numerators.includes(mid)) numeratorSum += val
 		}
-		const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
-		if (isInRange(percentage, range, tvs.isnot)) samplenames.push(sid)
+		const fraction = totalSum == 0 ? 0 : numeratorSum / totalSum
+		if (isInRange(fraction, range, tvs.isnot)) samplenames.push(sid)
 	}
 
 	if (!samplenames.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
@@ -402,14 +400,10 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 		// Custom collections bypass the getData() path below because getData()
 		// requires __protected__ auth context that is unavailable during filter
 		// CTE evaluation. Use direct query handler calls instead.
-		return await get_termCollection_custom_percentage(tvs, CTEname, ds, mapParent2Children)
+		return await get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Children)
 	}
-	if (tvs.term.numerators) {
-		validateTermCollectionTvs(
-			tvs.term.numerators,
-			tvs.term.termlst?.map(i => i.id)
-		)
-	}
+	const denominators = getTvsDenominators(tvs.term)
+	if (tvs.term.numerators) validateTermCollectionTvs(tvs.term.numerators, denominators)
 	const tw = { $id, term: tvs.term, q: {} }
 	const data = await getData({ terms: [tw] }, ds)
 	const samplenames = []
@@ -433,16 +427,18 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 			const range = tvs.ranges[0]
 			if (isInRange(val, range, tvs.isnot)) samplenames.push(key)
 		} else if (tvs.term.numerators) {
-			// No specific member brushed — filter by numerator/denominator ratio
+			// No specific member brushed — filter by the numerator/denominator fraction,
+			// on a 0 to 1 scale, same as the value of a TermCollectionTWFraction tw
 			let numeratorSum = 0
 			let totalSum = 0
 			for (const [key, value] of Object.entries(sampleValues)) {
+				if (!denominators.includes(key)) continue
 				totalSum += value
 				if (tvs.term.numerators.includes(key)) numeratorSum += value
 			}
-			const percentage = totalSum == 0 ? 0 : (numeratorSum / totalSum) * 100
+			const fraction = totalSum == 0 ? 0 : numeratorSum / totalSum
 			const range = tvs.ranges[0]
-			if (isInRange(percentage, range, tvs.isnot)) samplenames.push(key)
+			if (isInRange(fraction, range, tvs.isnot)) samplenames.push(key)
 		}
 	}
 

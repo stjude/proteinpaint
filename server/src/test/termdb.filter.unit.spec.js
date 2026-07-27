@@ -225,7 +225,7 @@ tape('pseudobulk numeric filter', async function (test) {
 	test.end()
 })
 
-tape('custom termCollection percentage filter', async function (test) {
+tape('custom termCollection fraction filter', async function (test) {
 	const filter = await getFilterCTEs(
 		{
 			type: 'tvslst',
@@ -271,8 +271,56 @@ tape('custom termCollection percentage filter', async function (test) {
 		'should return an object with the four expected keys'
 	)
 	test.equal(filter.CTEname, 'f', 'should return the default CTE name')
-	test.ok(filter.values.length > 0, 'should return matching samples (percentage > 0)')
+	test.ok(filter.values.length > 0, 'should return matching samples (fraction > 0)')
 	test.equal(filter.CTEs.length, 2, 'should return two CTE clauses')
+	test.end()
+})
+
+tape('custom termCollection fraction filter uses term.denominators[]', async function (test) {
+	// every member gets the same mocked value, so the fraction is
+	// numerators.length / denominators.length, regardless of term.termlst[]
+	const isoforms = ['ENST00000256078', 'ENST00000311936', 'ENST00000397440']
+	const term = {
+		type: 'termCollection',
+		isCustom: true,
+		memberType: 'numeric',
+		name: 'Test Isoforms (TPM)',
+		termlst: isoforms.map(isoform => ({ id: isoform, name: isoform, type: 'isoformExpression', isoform })),
+		numerators: [isoforms[0]],
+		propsByTermId: {}
+	}
+	const getFilter = async denominators =>
+		await getFilterCTEs(
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: denominators ? { ...term, denominators } : term,
+							// matches a 0.5 fraction, but not 0.33
+							ranges: [{ start: 0.4, stop: 0.6, startinclusive: true, stopinclusive: true }]
+						}
+					}
+				]
+			},
+			tdb.ds
+		)
+
+	const twoDenominators = await getFilter(isoforms.slice(0, 2))
+	test.ok(twoDenominators.values.length > 0, 'a 1 of 2 denominator selection is a 0.5 fraction, in range')
+
+	const allDenominators = await getFilter(isoforms)
+	test.equal(allDenominators.values.length, 0, 'a 1 of 3 denominator selection is a 0.33 fraction, out of range')
+
+	const impliedDenominators = await getFilter(undefined)
+	test.equal(
+		impliedDenominators.values.length,
+		0,
+		'without term.denominators[], every member of term.termlst[] is a denominator'
+	)
 	test.end()
 })
 
@@ -301,7 +349,8 @@ tape('custom termCollection filter validates numerators', async function (test) 
 										isoform: 'ENST00000256078'
 									}
 								],
-								// numerator not in termlst
+								denominators: ['ENST00000256078'],
+								// numerator not in denominators
 								numerators: ['ENST00000311936'],
 								propsByTermId: {}
 							},
