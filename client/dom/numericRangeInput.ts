@@ -65,10 +65,24 @@ export class NumericRangeInput {
 
 		//So ts doesn't complain
 		if (!range) return
-		const start = range.start != undefined ? `${range.start} <=` : ''
-		const stop = range.stop != undefined ? `<= ${range.stop}` : ''
+		const [start, stop] = formatRangeBounds(range)
 		this.input.node()!.value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
 	}
+}
+
+/** Format the start and stop of a range as displayed to the user, e.g. ['10 <', '<= 20'].
+ *
+ * A bound is exclusive unless the range marks it inclusive, matching how a range is
+ * evaluated elsewhere, e.g. isInRange() on the server and the tvs pill label. The displayed
+ * expression must round-trip through parseRange(), since the input text is the only source
+ * of the applied range: rendering an exclusive bound as inclusive would silently widen a
+ * saved range on apply.
+ */
+export function formatRangeBounds(range: any): [string, string] {
+	const start =
+		range.startunbounded || range.start == undefined ? '' : `${range.start} ${range.startinclusive ? '<=' : '<'}`
+	const stop = range.stopunbounded || range.stop == undefined ? '' : `${range.stopinclusive ? '<=' : '<'} ${range.stop}`
+	return [start, stop]
 }
 
 export function parseRange(str: string) {
