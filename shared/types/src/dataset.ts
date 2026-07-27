@@ -89,8 +89,6 @@ type bcfMafFile = {
 }
 
 type SnvindelByIsoform = {
-	/** if true, served from gdc. no other parameters */
-	gdcapi?: true
 	/** getter function to retrieve data. dynamically added or ds-supplied
 	first argument is required and allow for 2 additional ones
 	*/
@@ -102,8 +100,6 @@ type SnvindelByIsoform = {
 }
 
 type SnvindelByRange = {
-	/** if true, served from gdc. no other parameters */
-	gdcapi?: true
 	//local ds can have following different setup
 	/** one single bcf file */
 	bcffile?: string
@@ -143,11 +139,6 @@ type SkewerRim = {
 	rim2value?: string
 	/** 'somatic' or 'germline', generally somatic */
 	noRimValue: string
-}
-
-type GdcApi = {
-	/** Represents the configuration for accessing the GDC API. */
-	gdcapi?: boolean
 }
 
 type AiApi = {
@@ -384,7 +375,6 @@ this definition can appear either in queries.snvindel{} or termdb{}
 so that it can work for a termdb-less ds, e.g. clinvar, where termdbConfig cannot be made */
 	ssmUrl?: UrlTemplateSsm
 	m2csq?: {
-		gdcapi?: boolean
 		by: string
 	}
 	allowSNPs?: boolean
@@ -457,11 +447,8 @@ type SingleSampleMutationQuery = {
 		/** source-specific selector the getter matches files against (GDC files-API data_type) */
 		dataType: string
 	}[]
-	/** rest of properties are required for native ds without ds-supplied getter
-	TODO migrate gdc to get() and delete .src=native
-	*/
-	src?: 'native' | 'gdcapi' | string
-	/** only required for src=native
+	/** only required for a ds without a ds-supplied get(); enforced at runtime in
+	validate_query_singleSampleMutation()
 	folder contains a set of files, one file per sample, file named by sample name
 	each file contains a stringified json array of mutation/cnv/sv entries (aka mlst). see example
 	https://github.com/stjude/proteinpaint/blob/master/server/test/tp/files/hg38/TermdbTest/mutationpersample/3318
@@ -938,30 +925,17 @@ export type IsoformExpressionQuery = {
 	availableItems?: string[]
 }
 
-export type SingleCellGeneExpressionNative = {
-	src: 'native'
+export type SingleCellGeneExpression = {
 	/** path to HDF5 files. for now only HDF5 is supported.
-	each is a gene-by-cell matrix for a sample, with ".h5" suffix. missing files are detected and handled */
-	folder: string
-	/** dynamically added getter */
+	each is a gene-by-cell matrix for a sample, with ".h5" suffix. missing files are detected and handled.
+	REQUIRED unless the ds supplies get(); enforced at runtime in validateGeneExpressionNative() */
+	folder?: string
+	/** ds-supplied, or added on init() by validateGeneExpressionNative() */
 	get?: (q: any) => any
-	/** cached gene exp bins */
+	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */
 	unit?: string
-}
-
-export type SingleCellGeneExpressionGdc = {
-	/** GDC objects no longer carry this: ppgdc's initQueries() supplies .get directly, so the
-	 * server never dispatches on src for GDC. kept optional because the native validators still read
-	 * .src across the Native|Gdc union. */
-	src?: 'gdcapi'
-	/** gene expression unit (e.g. 'FPKM') */
-	unit?: string
-	/** created in single cell samples route on init */
-	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
-	/** created in single cell samples route on init */
-	get?: (param: any, ds: any) => void
 }
 
 export type SingleCellSamples = {
@@ -993,46 +967,13 @@ export type SingleCellSamples = {
 	}
 }
 
-type SingleCellDataBase = {
-	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
-	sameLegend?: boolean
-	/** name of ref cells? */
-	refName?: string
-	/** dynamically added getter */
-	get?: (q: any) => any
-	/** width and height of the plots */
-	settings?: { [key: string]: any }
-	/** In development
-	 * Replacing colorColumns in gdc plot objs.*/
-	twLst?: object[]
-}
-
-export type SingleCellDataGdc = SingleCellDataBase & {
-	/** GDC objects no longer carry this: ppgdc's initQueries() supplies .get directly, so the
-	 * server never dispatches on src for GDC. kept optional because the native validators still read
-	 * .src across the Native|Gdc union. */
-	src?: 'gdcapi'
-	plots: GDCSingleCellPlot[]
-}
-
-export type SingleCellDEgeneGdc = {
-	/** GDC objects no longer carry this: ppgdc's initQueries() supplies .get directly, so the
-	 * server never dispatches on src for GDC. kept optional because the native validators still read
-	 * .src across the Native|Gdc union. */
-	src?: 'gdcapi'
+export type SingleCellDEgenes = {
 	/** termId = Column name.
 this must be the colorColumn from one of the plots. In the client app, as soon as the plot data loads and maps renders, client finds the cell groups based on this columnName value, and shows a drop down of these groups on UI. user selects a group, and passes it as request body to backend to get DE genes for this group
 */
 	termId: string
-}
-
-type GDCSingleCellPlot = {
-	name: string
-	colorColumns: ColorColumn[]
-	coordsColumns: { x: number; y: number }
-	/** if true the plot is shown by default. otherwise hidden
-	 * Will not be needed when the singleCellPlot is deprecated.*/
-	selected?: boolean
+	/** must be ds-supplied; DEgenesRoute.ts throws if missing */
+	get?: (q: any) => any
 }
 
 type ColorColumn = {
@@ -1057,8 +998,10 @@ export type SingleCellPlot = {
 	- 1st column is cell barcode
 	- x/y coordinate column number is defined in coordsColumns{x,y} below
 	- additional columns for cell annotations, corresponds to colorColumns
+
+	REQUIRED unless the ds supplies data.get(); enforced at runtime in validateDataNative()
 	*/
-	folder: string
+	folder?: string
 	/** 0-based column number for x/y coordinate for this plot */
 	coordsColumns: { x: number; y: number }
 	/** optional suffix to locate the file for a sample, via ${folder}/${sampleName}${fileSuffix}
@@ -1079,8 +1022,18 @@ export type SingleCellPlot = {
 	 * spaces replaced with '_' is used. */
 	sampleId?: string
 }
-export type SingleCellDataNative = SingleCellDataBase & {
-	src: 'native'
+export type SingleCellData = {
+	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
+	sameLegend?: boolean
+	/** name of ref cells? */
+	refName?: string
+	/** ds-supplied, or added on init() by validateDataNative() */
+	get?: (q: any) => any
+	/** width and height of the plots */
+	settings?: { [key: string]: any }
+	/** In development
+	 * Replacing colorColumns in plot objs.*/
+	twLst?: object[]
 	/** available tsne type of plots for each sample */
 	plots: SingleCellPlot[]
 	/** created on init for meta analysis plots
@@ -1096,12 +1049,12 @@ export type SingleCellQuery = {
 	samples: SingleCellSamples
 	/** defines tsne/umap type of clustering maps for each sample
 	 */
-	data: SingleCellDataGdc | SingleCellDataNative
+	data: SingleCellData
 	metaResults?: SingleCellMetaResult[]
 	/** defines available gene-level expression values for each cell of each sample */
-	geneExpression?: SingleCellGeneExpressionGdc | SingleCellGeneExpressionNative
+	geneExpression?: SingleCellGeneExpression
 	/** Precomputed top differentialy expressed genes for a cell cluster, against rest of cells */
-	DEgenes?: SingleCellDEgeneGdc
+	DEgenes?: SingleCellDEgenes
 	/** supplies per-sample images. will create a new tab on the ui. one image per sample */
 	images?: SCImages
 	/** Created on mds.init() from colorMap and alias within each plot. */
@@ -1617,6 +1570,12 @@ type Matrix = {
 	filter?: any
 	/** matrix criteria for a CNV alteration */
 	cnvCutoffs?: any
+	/** if true, samples left with no cell values at all are dropped after a gene legend filter is
+	applied. for a ds whose sample set is defined by the gene query rather than by the cohort */
+	removeEmptySamples?: boolean
+	/** if true, sortTermsBy='sampleCount' puts dictionary terms above non-dictionary terms.
+	must stay opt-in: enabling it for all ds would alter published figures */
+	sortDictTermsFirst?: boolean
 }
 
 // specific hierCluster type settings, should be named as "dataType + Cluster"
@@ -1854,16 +1813,13 @@ keep this setting here for reason of:
 	termid2totalsize2?: {
 		// ds-supplied getter. if missing, should be using native termdb
 		get?: (twLst: any, q: any, combination: any, ds: any) => void
-		// gdc flag for outdated design
-		gdcapi?: true
 	}
-	/** Do not use a union here. */
-	/** TODO: should use a union to distinguish between type defs */
-	dictionary?: GdcApi & AiApi & DictApi
+	dictionary?: AiApi & DictApi
 	allowCaseDetails?: AllowCaseDetails
 	/** Searches the genedb alias list to return the genecode ID */
 	getGeneAlias?: (q: any, tw: any) => { gencodeId: any }
-	convertSampleId?: GdcApi
+	/** ds-supplied getter, maps case uuids to submitter ids */
+	convertSampleId?: { get?: (inputs: string[]) => any }
 	hierCluster?: any
 
 	/** ds customization of rules in TermTypeSelect on what term type to exclude for a usecase.
@@ -1927,6 +1883,15 @@ keep this setting here for reason of:
 	maxConcurrentQueries?: number
 	/** (client-side) maximum number of terms that should be submitted in one fetch request in TermdbVocab.getAnnotatedSampleData() */
 	maxAnnoTermsPerClientRequest?: number
+	/** (client-side) if true, a dictionary-term sample query that accompanies gene terms also sends
+	currentGeneNames, to limit results to mutated cases. for a ds whose sample set is defined by the
+	gene query rather than by the cohort */
+	limitDictTermSamplesToMutated?: boolean
+	/** (client-side) if true, plots omit the Documentation button. for a ds with no applicable user guide */
+	hidePlotDocumentation?: boolean
+	/** (client-side) if true, the genome browser recreates its block on track change rather than
+	updating tracks in the existing block instance */
+	gbRecreateBlock?: boolean
 	/** option to disable mayAddDataAvailability() based on request path and query parameters */
 	disableAssayAvailability?: (path: string, query: { [key: string]: any }) => boolean
 	/* terms are shown in the dictionary based on term and user role.
@@ -2071,7 +2036,7 @@ type Tw = {
 	pmidOrDoi?: true
 }
 
-type Variant2Samples = GdcApi & {
+type Variant2Samples = {
 	variantkey: string
 	twLst?: Tw[]
 	sunburst_twLst?: Tw[]
@@ -2373,6 +2338,9 @@ export type Mds3 = BaseMds & {
 		retryMax?: number
 		/** option to trigger mds3InitNonblocking() on this dataset */
 		hasNonblockingSteps?: boolean
+		/** returns a message while the ds is still caching at launch, or undefined once it is ready.
+		lets the server gate requests on readiness without knowing which ds it is */
+		notReadyMessage?: () => string | undefined
 		/** server-computed cumulative count of the attempted init retries */
 		currentRetry?: number
 		/**
@@ -2404,7 +2372,8 @@ export type Mds3 = BaseMds & {
 	*/
 	validate_filter0?: (f: any) => void
 	getFilter0SampleTypes?: (filter: any, ds: any) => void
-	ssm2canonicalisoform?: GdcApi
+	/** ds-supplied getter, maps a ssm id to a canonical ENST name */
+	ssm2canonicalisoform?: { get?: (q: any) => any }
 	/** mds3 tk displays presence and occurrence of genomic alterations, but not including samples harboring each alteration
 	when clicking on an alteration (as well as other tasks) it will need to identify actual alteration-harboring samples
 	this setting enables this action
@@ -2450,6 +2419,8 @@ export type Mds3 = BaseMds & {
 			email?: string
 		}
 	}
+	/** gdc-specific caches, populated by preInit.cacheSamples() */
+	__gdc?: any
 	/** mmrf-specific helpers */
 	__mmrf?: any
 	// !!! TODO: improve these type definitions below !!!

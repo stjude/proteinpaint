@@ -396,7 +396,6 @@ export default function (): Mds3 {
 				file: 'files/hg38/TermdbTest/TermdbTest_ITD.gz'
 			},
 			singleSampleMutation: {
-				src: 'native',
 				sample_id_key: 'sample_id',
 				folder: 'files/hg38/TermdbTest/mutationpersample/'
 			},
@@ -454,7 +453,6 @@ export default function (): Mds3 {
 				},
 				data: {
 					sameLegend: true,
-					src: 'native',
 					plots: [
 						{
 							name: 'UMAP',
@@ -472,7 +470,6 @@ export default function (): Mds3 {
 					]
 				},
 				geneExpression: {
-					src: 'native',
 					folder: 'files/hg38/TermdbTest/scrna/geneExpHdf5'
 				}
 			},

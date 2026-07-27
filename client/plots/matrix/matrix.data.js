@@ -191,7 +191,11 @@ export function applyLegendValueFilter() {
 			}
 		}
 	}
-	if (self.chartType !== 'hierCluster' && geneVariant$ids.length && self.app.vocabApi.vocab?.dslabel == 'GDC')
+	if (
+		self.chartType !== 'hierCluster' &&
+		geneVariant$ids.length &&
+		self.app.vocabApi.termdbConfig?.matrix?.removeEmptySamples
+	)
 		remove_empty_sample(data, geneVariant$ids)
 	self.data = data
 }

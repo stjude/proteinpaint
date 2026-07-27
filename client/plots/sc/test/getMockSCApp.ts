@@ -13,6 +13,8 @@ export function getMockSCApp(overrides: any = {}) {
 }
 
 export function getMockSCState(overrides: any = {}) {
+	// merged, not replaced, so a test can add e.g. urlTemplates without having to restate queries{}
+	const { termdbConfig, ...rest } = overrides
 	return {
 		vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' },
 		termfilter: { filter0: null },
@@ -23,7 +25,8 @@ export function getMockSCState(overrides: any = {}) {
 						plots: [{ name: 'umap' }, { name: 'tsne' }]
 					}
 				}
-			}
+			},
+			...termdbConfig
 		},
 		plots: [
 			{
@@ -35,7 +38,7 @@ export function getMockSCState(overrides: any = {}) {
 				}
 			}
 		],
-		...overrides
+		...rest
 	}
 }
 

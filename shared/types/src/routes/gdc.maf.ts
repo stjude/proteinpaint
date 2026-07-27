@@ -1,5 +1,3 @@
-//import GdcFilter0 from './filter.gdc'
-
 // an object representing gdc maf file, to be shown on client table
 
 export type GdcMafFile = {

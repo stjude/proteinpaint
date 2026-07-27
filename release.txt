@@ -1,6 +1,13 @@
 General:
 - the GDC dataset (ppgdc) must be deployed together with this server release: the server no longer wires any GDC query behind a .gdcapi or src='gdcapi' flag, so every GDC query getter — including single-cell gene expression — is now supplied entirely by the ppgdc dataset, and an older ppgdc image would come up missing them
+- this release also moves GDC's remaining client-side behaviors and its launch-time caching gate onto dataset-declared flags (termdb.limitDictTermSamplesToMutated / .hidePlotDocumentation / .gbRecreateBlock, matrix.removeEmptySamples / .sortDictTermsFirst, init.notReadyMessage). These are declared in ppgdc's gdc.hg38.ts and ppmmrf's mmrf.hg38.ts, so an older ppgdc/ppmmrf image on this server would silently lose those behaviors — most importantly the "server has not finished caching the case IDs" gate
 
 Features:
 - Relocate the last GDC-specific query logic remaining in the server — the single-cell gene-expression getter (gdc_validateGeneExpression) — into the ppgdc dataset, and drop all remaining .gdcapi / src='gdcapi' flag dispatch from the server, so GDC is now a pure hook-based dataset like MMRF with no GDC branch left in server/src outside comments
 - Retire the redundant GDC useFilter0 assay-availability path: sample scoping now falls through to the same generic ds.cohort.termdb.filterSamples hook the MMRF dataset uses, removing a GDC-specific branch and a duplicate filter conversion from shared server code
+- Delete the bespoke GDC types from shared/types: SingleCellDataGdc, SingleCellGeneExpressionGdc, SingleCellDEgeneGdc, GDCSingleCellPlot and the GdcApi flag mixin are gone, merged into plain SingleCellData / SingleCellGeneExpression / SingleCellDEgenes. The src:'native'|'gdcapi' discriminant is removed from singleCell.data, singleCell.geneExpression and singleSampleMutation — every one of these now dispatches purely on whether the dataset supplied a get(), and the folder/plots requirements the union used to encode are enforced at init with clear errors instead
+- Replace the last dslabel=='GDC' branches on the client with dataset-declared termdbConfig flags, following the existing maxAnnoTermsPerClientRequest precedent, so no plot special-cases a dataset by name
+
+Fixes:
+- Single-cell app: restore the experiment-ID link in the sample table to the generic termdbConfig.urlTemplates.scrnaExperimentId template used by the legacy single-cell plot, instead of a hardcoded portal.gdc.cancer.gov URL behind a dslabel check
+- Seed singleCell.geneExpression.sample2gene2expressionBins for datasets that supply their own getter; termdb.getDefaultBins reads it unconditionally and only the built-in getter used to create it

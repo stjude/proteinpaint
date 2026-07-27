@@ -15,15 +15,20 @@ The startup hook runs from `server/src/mds3.init.js` during dataset validation.
 
 The core validator is in `samplesRoute.ts`:
 
+Every sub-query follows the same rule: a ds either supplies its own `get()`, or the built-in
+file-based getter is injected here. There is no per-source branching.
+
 - `validate_query_singleCell(ds, genome)`
 	- Verifies `singleCell.samples` and `singleCell.data` objects exist.
 	- If `samples.get` is missing, calls `validateSamples()` to inject it.
 	- For `data`:
 		- a ds-supplied `data.get` is used as-is (GDC supplies it from ppgdc's `initQueries()`).
-		- `native`: calls `validateDataNative()` to inject `data.get`.
+		- otherwise `validateDataPlots()` checks `plots[]`/`plot.folder`, then `validateDataNative()`
+		  injects `data.get`.
 	- For `geneExpression`:
+		- seeds `sample2gene2expressionBins` for every ds, since `termdb.getDefaultBins.js` reads it.
 		- a ds-supplied `geneExpression.get` is used as-is (GDC supplies it from ppgdc's `initQueries()`).
-		- `native`: `validateGeneExpressionNative()` injects `geneExpression.get`.
+		- otherwise `validateGeneExpressionNative()` injects `geneExpression.get`.
 	- For DE genes:
 		- `validate_query_singleCell_DEgenes(ds)` ensures `DEgenes.get` exists (currently GDC-backed).
 	- Builds reusable single-cell term metadata with `colorColumn2terms()`.
@@ -72,8 +77,8 @@ Purpose:
 
 How validation creates its getter:
 
-- Native datasets: `validateDataNative(D, ds)` injects `D.get = async (q) => {...}`.
-- GDC datasets: `gdc_validate_query_singleCell_data()` in GDC module provides `data.get`.
+- Datasets without their own getter: `validateDataNative(D, ds)` injects `D.get = async (q) => {...}`.
+- GDC: `gdc_validate_query_singleCell_data()` in ppgdc's `singleCell.ts` supplies `data.get`.
 
 Native `data.get` flow:
 
@@ -130,7 +135,7 @@ How validation creates its getter:
 
 - `validate_query_singleCell(ds, genome)` calls `validate_query_singleCell_DEgenes(ds)`.
 - In `DEgenesRoute.ts`, that validator requires the ds to have already supplied `DEgenes.get` (GDC supplies it from ppgdc's `initQueries()`) and throws otherwise.
-- Non-GDC source currently throws (`unknown singleCell.DEgenes.src`).
+- There is no built-in DE-genes getter yet, so a ds that does not supply one throws.
 
 ## End-to-end request lifecycle
 
@@ -153,8 +158,8 @@ How validation creates its getter:
 	- Adds: `data.get` for native files.
 	- Includes plot availability logic and TSV parsing.
 
-- `validateGeneExpressionNative()` / `gdc_validateGeneExpression()`
-	- Adds: `geneExpression.get`.
+- `validateGeneExpressionNative()`
+	- Adds: `geneExpression.get` for a ds that does not supply one. Requires `geneExpression.folder`.
 	- Used by `data.get` when `q.gene` is provided.
 
 - `validate_query_singleCell_DEgenes()`
@@ -168,14 +173,15 @@ How validation creates its getter:
 
 - Invalid genome or dataset label.
 - Dataset has no `queries.singleCell` block.
-- Expected getter missing (usually means validation did not run or source config is invalid).
-- Source-specific validation failures (`unknown singleCell.*.src`).
+- Expected getter missing (usually means validation did not run or the ds config is invalid).
+- Missing `singleCell.data.plots[]`, `plot.folder`, or `geneExpression.folder` on a ds that supplies
+  no getter of its own.
 - Per-sample data files missing for requested plot/sample combination.
 
 ## Practical dependency map
 
 - `singlecellSamples` -> `samples.get` (injected by `validateSamples` unless dataset-supplied)
-- `singlecellData` -> `data.get` (injected by `validateDataNative` or GDC validator)
+- `singlecellData` -> `data.get` (ds-supplied, else injected by `validateDataNative`)
 - `singleCellPlots` -> `data.get` -> optional `geneExpression.get`
 - `singlecellDEgenes` -> `DEgenes.get` (injected by DE validator)
 

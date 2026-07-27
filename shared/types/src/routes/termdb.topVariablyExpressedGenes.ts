@@ -1,4 +1,3 @@
-//import GdcFilter0 from './filter.gdc'
 import type { Filter } from '../filter.ts'
 import type { ErrorResponse } from './errorResponse.ts'
 
@@ -30,7 +29,7 @@ export type TermdbTopVariablyExpressedGenesRequest = {
 	}
 	filter?: Filter
 	/** JSON, optional GDC cohort filter to restrict cases */
-	filter0?: any //GdcFilter0
+	filter0?: any
 	/** helps ds getter */
 	ds?: any
 	/** whether to map parent annotations onto child samples */

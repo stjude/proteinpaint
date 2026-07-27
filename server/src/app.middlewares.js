@@ -152,9 +152,10 @@ export function setAppMiddlewares(app, genomes, doneLoading, routes) {
 				res.send({ error: `invalid ${paramName}` })
 				return
 			}
-			// TODO: use generalized ds properties (like ds.init and .cachingMessage) for the check below
-			if (dslabel == 'GDC' && !ds.__gdc?.doneCaching) {
-				res.send({ error: 'The server has not finished caching the case IDs: try again in about 2 minutes.' })
+			// a ds that caches at launch reports its own not-ready state; no dslabel check needed
+			const notReady = ds?.init?.notReadyMessage?.()
+			if (notReady) {
+				res.send({ error: notReady })
 				return
 			}
 		}

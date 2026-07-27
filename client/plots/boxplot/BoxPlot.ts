@@ -86,9 +86,8 @@ export class TdbBoxplot extends PlotBase implements RxComponent {
 			this.interactions!.help()
 		})
 
-		if (state.vocab.dslabel.toLowerCase() == 'gdc') {
-			//Remove for now. May add gdc specific user guide
-			//in interactions.help later.
+		if (state.termdbConfig?.hidePlotDocumentation) {
+			// ds has no applicable user guide. may add a ds-specific one in interactions.help later
 			this.dom.controls.select('div[aria-label="Documentation"]').remove()
 		}
 	}

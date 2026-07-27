@@ -140,6 +140,9 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (ds.cohort.boxplots) c.boxplots = ds.cohort.boxplots
 	if (tdb.maxGeneVariantGeneSetSize) c.maxGeneVariantGeneSetSize = tdb.maxGeneVariantGeneSetSize
 	if (tdb.maxAnnoTermsPerClientRequest) c.maxAnnoTermsPerClientRequest = tdb.maxAnnoTermsPerClientRequest
+	if (tdb.limitDictTermSamplesToMutated) c.limitDictTermSamplesToMutated = tdb.limitDictTermSamplesToMutated
+	if (tdb.hidePlotDocumentation) c.hidePlotDocumentation = tdb.hidePlotDocumentation
+	if (tdb.gbRecreateBlock) c.gbRecreateBlock = tdb.gbRecreateBlock
 	addRestrictAncestries(c, tdb)
 	addMatrixplots(c, ds)
 	addNonDictionaryQueries(c, ds, genome)
