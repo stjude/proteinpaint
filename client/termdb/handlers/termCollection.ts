@@ -1,6 +1,6 @@
 import { renderTable } from '#dom'
 import type { CategoryKey } from '#types'
-import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
+import { pickCollectionFraction } from './termCollectionFractionSelection.ts'
 
 export class SearchHandler {
 	callback: any
@@ -16,11 +16,10 @@ export class SearchHandler {
 		const termlst = opts.details.termlst ?? []
 		const memberType = opts.details.memberType || opts.details.type
 		if (opts.termCollectionSelectionMode === 'fraction' && memberType === 'numeric') {
-			const term = makeTerm(opts.details, termlst, opts.usecase)
-			renderFractionSelection({
+			pickCollectionFraction({
 				holder: opts.holder,
-				termlst,
-				callback: selection => opts.callback(makeFractionTermWrapper(term, selection))
+				term: makeTerm(opts.details, termlst, opts.usecase),
+				callback: tw => opts.callback(tw)
 			})
 			return
 		}

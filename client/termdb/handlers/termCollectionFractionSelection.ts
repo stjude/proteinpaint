@@ -1,88 +1,164 @@
 import { renderTable } from '#dom'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes, termItemType } from '#shared/terms.js'
 import type { RawTermCollectionTWFraction } from '#types'
 
 export type TermCollectionSelectionMode = 'fraction'
 
-type RowInputs = { denominator: HTMLInputElement | null; numerator: HTMLInputElement | null }
+const numeratorTestId = 'sjpp-term-collection-numerator'
+const denominatorTestId = 'sjpp-term-collection-denominator'
 
-/** Collect the denominator (renderTable's own checkbox) and numerator input of each rendered row */
+/** The numerator and denominator member ids of a term collection fraction, updated in place
+ *  by renderFractionSelection(). Either q{} of a fraction tw, or a termCollection tvs term;
+ *  the latter also carries the member list as termlst[]. */
+export type FractionSelection = {
+	termlst?: any[]
+	numerators?: string[]
+	denominators?: string[]
+}
+
+type RowInputs = { numerator: HTMLInputElement | null; denominator: HTMLInputElement | null }
+
+/** Collect the numerator and denominator input of each rendered row, in termlst[] order */
 function getRowInputs(tableDiv: any): RowInputs[] {
 	const trs = tableDiv.select('tbody').node()?.querySelectorAll('tr') || []
 	return [...trs].map((tr: HTMLElement) => ({
-		denominator: tr.querySelector('input[type="checkbox"]:not([data-testid="sjpp-term-collection-numerator"])'),
-		numerator: tr.querySelector('[data-testid="sjpp-term-collection-numerator"]')
+		numerator: tr.querySelector(`[data-testid="${numeratorTestId}"]`),
+		denominator: tr.querySelector(`[data-testid="${denominatorTestId}"]`)
 	}))
 }
 
+/** Selection to start a newly picked collection with: every member in the denominator and
+ *  only the first in the numerator, so that the fraction is not a constant 1. */
+export function getDefaultFractionSelection(termlst: any[]): FractionSelection {
+	if (!termlst?.length) throw new Error('Cannot configure a fraction from an empty term collection')
+	return { numerators: [termlst[0].id], denominators: termlst.map(term => term.id) }
+}
+
+/** The reason a selection cannot be applied, or undefined when it can be */
+export function getFractionSelectionError(selection: FractionSelection): string | undefined {
+	if (!selection.denominators?.length) return 'Select at least one denominator.'
+	if (!selection.numerators?.length) return 'Select at least one numerator.'
+	if (selection.numerators.some(id => !selection.denominators!.includes(id)))
+		return 'Every numerator must also be selected as a denominator.'
+	return undefined
+}
+
 /**
- * Render the initial numerator/denominator chooser for a numeric collection.
- * All members remain on the term; the two returned ID lists only configure q.
+ * Render the numerator/denominator chooser of a numeric term collection: one row per member,
+ * with a checkbox for each of the two roles. A member may only be a numerator when it is also
+ * a denominator, so deselecting a denominator clears and disables the row's numerator.
+ *
+ * opts.selection is updated in place on every change, so the caller only reads it when its
+ * own apply button is clicked. All members are always listed: the selection is expressed by
+ * the two id lists, never by pruning the member list.
  */
 export function renderFractionSelection(opts: {
 	holder: any
-	termlst: any[]
-	callback: (selection: { numerators: string[]; denominators: string[] }) => void
-	buttonLabel?: string
+	/** updated in place: q{} of a fraction tw, or a termCollection tvs term */
+	selection: FractionSelection
+	/** members to list, defaults to selection.termlst[] */
+	termlst?: any[]
+	/** member colors, e.g. term.propsByTermId */
+	propsByTermId?: { [termId: string]: { color?: string } }
+	/** called after every change, e.g. to update an apply button */
+	onChange?: () => void
 }) {
-	const { holder, termlst, callback } = opts
+	const { selection } = opts
+	const termlst = opts.termlst || selection.termlst || []
 	if (!termlst.length) throw new Error('Cannot configure a fraction from an empty term collection')
 
-	const tableDiv = holder.append('div').attr('data-testid', 'sjpp-term-collection-fraction-selection')
-	// the numerator selection is tracked here instead of being read back from the DOM only:
-	// renderTable's check-all toggles every <input> under tbody, including these checkboxes
-	const numeratorIds = new Set<string>([termlst[0].id])
-	const rows = termlst.map((term, index) => [
-		{ value: term.name || term.id },
+	const tableDiv = opts.holder.append('div').attr('data-testid', 'sjpp-term-collection-fraction-selection')
+	const isNumerator = (term: any) => selection.numerators?.includes(term.id) === true
+	const isDenominator = (term: any) => selection.denominators?.includes(term.id) === true
+	const rows = termlst.map(term => [
+		{},
 		{
-			html: `<input type="checkbox" data-testid="sjpp-term-collection-numerator" ${index === 0 ? 'checked' : ''}/>`
-		}
+			html: `<input type="checkbox" data-testid="${numeratorTestId}" ${isNumerator(term) ? 'checked' : ''} ${
+				isDenominator(term) ? '' : 'disabled'
+			}/>`
+		},
+		{ html: `<input type="checkbox" data-testid="${denominatorTestId}" ${isDenominator(term) ? 'checked' : ''}/>` }
 	])
-	// a member may only be a numerator if it is also a denominator
-	const syncNumerators = () => {
-		for (const [i, { denominator, numerator }] of getRowInputs(tableDiv).entries()) {
-			if (!denominator || !numerator) continue
-			if (!denominator.checked) numeratorIds.delete(termlst[i].id)
-			numerator.disabled = !denominator.checked
-			numerator.checked = numeratorIds.has(termlst[i].id)
-		}
-	}
 
 	renderTable({
-		columns: [{ label: 'VARIABLES' }, { label: 'Numerator' }],
+		columns: [
+			{
+				label: termItemType(termlst[0]),
+				fillCell: (td: any, index: number) => fillTermNameCell(td, termlst[index], opts.propsByTermId)
+			},
+			{ label: 'Numerator' },
+			{ label: 'Denominator' }
+		],
 		rows,
 		div: tableDiv,
 		maxWidth: '40vw',
 		maxHeight: '40vh',
-		noButtonCallback: syncNumerators,
 		striped: false,
 		showHeader: true,
-		selectAll: true,
 		columnButtons: undefined,
 		buttons: undefined
 	})
-	tableDiv.select('thead').select('[data-testid="sjpp-table-checkall"]').node()?.parentElement?.append(' Denominator')
-	for (const [i, { numerator }] of getRowInputs(tableDiv).entries()) {
-		numerator?.addEventListener('change', () => {
-			if (numerator.checked) numeratorIds.add(termlst[i].id)
-			else numeratorIds.delete(termlst[i].id)
-		})
-	}
 
-	holder
+	const inputs = getRowInputs(tableDiv)
+	const updateSelection = () => {
+		selection.denominators = termlst.filter((_, i) => inputs[i]?.denominator?.checked === true).map(term => term.id)
+		selection.numerators = termlst.filter((_, i) => inputs[i]?.numerator?.checked === true).map(term => term.id)
+		opts.onChange?.()
+	}
+	for (const { numerator, denominator } of inputs) {
+		if (!numerator || !denominator) continue
+		denominator.addEventListener('change', () => {
+			// a member may only be a numerator when it is also a denominator
+			numerator.disabled = !denominator.checked
+			if (!denominator.checked) numerator.checked = false
+			updateSelection()
+		})
+		numerator.addEventListener('change', updateSelection)
+	}
+}
+
+function fillTermNameCell(td: any, term: any, propsByTermId?: { [termId: string]: { color?: string } }) {
+	const color = propsByTermId?.[term.id]?.color || term.color
+	if (color) {
+		td.append('span')
+			.attr('data-testid', 'sjpp-term-collection-member-color')
+			.style('display', 'inline-block')
+			.style('width', '10px')
+			.style('height', '10px')
+			.style('margin-right', '5px')
+			.style('background-color', color)
+	}
+	td.append('span').text(term.name || term.id)
+}
+
+/** Render the chooser for a newly picked collection, with a button to submit it as a
+ *  fraction tw. Used where a collection is selected, e.g. term search and the term tree. */
+export function pickCollectionFraction(opts: {
+	holder: any
+	term: any
+	buttonLabel?: string
+	callback: (tw: RawTermCollectionTWFraction) => void
+}) {
+	const { term } = opts
+	const selection = getDefaultFractionSelection(term.termlst)
+	renderFractionSelection({
+		holder: opts.holder,
+		termlst: term.termlst,
+		selection,
+		propsByTermId: term.propsByTermId
+	})
+
+	opts.holder
 		.append('div')
+		.style('padding', '6px 20px')
 		.append('button')
+		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 		.attr('data-testid', 'sjpp-term-collection-fraction-select')
 		.text(opts.buttonLabel || 'Select')
 		.on('click', () => {
-			const inputs = getRowInputs(tableDiv)
-			const denominators = termlst.filter((_, i) => inputs[i]?.denominator?.checked === true).map(term => term.id)
-			const numerators = termlst.filter((_, i) => inputs[i]?.numerator?.checked === true).map(term => term.id)
-			if (!denominators.length) return window.alert('Select at least one denominator.')
-			if (!numerators.length) return window.alert('Select at least one numerator.')
-			if (numerators.some(id => !denominators.includes(id)))
-				return window.alert('Every numerator must also be selected as a denominator.')
-			callback({ numerators, denominators })
+			const error = getFractionSelectionError(selection)
+			if (error) return window.alert(error)
+			opts.callback(makeFractionTermWrapper(term, selection))
 		})
 }
 
@@ -118,25 +194,18 @@ export function mayRenderFractionSelection(opts: {
 			fractionDiv.style('display', 'none').selectAll('*').remove()
 			listDiv.style('display', '')
 		})
-	renderFractionSelection({
-		holder: fractionDiv,
-		termlst: term.termlst,
-		callback: selection => callback(makeFractionTermWrapper(term, selection))
-	})
+	pickCollectionFraction({ holder: fractionDiv, term, callback })
 	return true
 }
 
-export function makeFractionTermWrapper(
-	term: any,
-	selection: { numerators: string[]; denominators: string[] }
-): RawTermCollectionTWFraction {
+export function makeFractionTermWrapper(term: any, selection: FractionSelection): RawTermCollectionTWFraction {
 	return {
 		type: 'TermCollectionTWFraction' as const,
 		term,
 		q: {
 			mode: 'continuous',
-			numerators: selection.numerators,
-			denominators: selection.denominators
+			numerators: selection.numerators!,
+			denominators: selection.denominators!
 		}
 	}
 }

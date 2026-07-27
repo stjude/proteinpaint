@@ -352,9 +352,7 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 	test.ok(tip.text().includes('Denominator'), 'labels the member-selection column as Denominator')
 	test.ok(tip.text().includes('Numerator'), 'labels the numerator column')
 	const rows = tip.select('tbody').selectAll('tr').nodes()
-	const denominators = rows.map(row =>
-		row.querySelector('input[type="checkbox"]:not([data-testid="sjpp-term-collection-numerator"])')
-	)
+	const denominators = rows.map(row => row.querySelector('[data-testid="sjpp-term-collection-denominator"]'))
 	const numerators = rows.map(row => row.querySelector('[data-testid="sjpp-term-collection-numerator"]'))
 	test.equal(numerators[0].checked, true, 'shows the configured numerator')
 	test.equal(numerators[1].checked, false, 'leaves a denominator-only member unchecked as numerator')

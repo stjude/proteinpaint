@@ -5,6 +5,11 @@ import type { CollectionBase } from '#tw'
 import type { CategoryKey, TermCollectionQCont, TermCollectionQFraction } from '#types'
 import { termItemType } from '#shared/terms.js'
 import type { TermSetting } from '../TermSetting.ts'
+import {
+	getFractionSelectionError,
+	renderFractionSelection,
+	type FractionSelection
+} from '../../termdb/handlers/termCollectionFractionSelection.ts'
 
 // self is the termsetting instance
 export class TermCollectionHandler extends HandlerBase implements Handler {
@@ -91,59 +96,24 @@ export class TermCollectionHandler extends HandlerBase implements Handler {
 }
 
 function addFractionTable(self, div: any, terms: any) {
-	const selectedRows = getSelectedRows(self, terms)
-	const rows = terms.map(term => [
-		{},
-		{
-			html: `<input type='checkbox' data-testid='sjpp-term-collection-numerator' ${
-				self.q.numerators?.includes(term.id) ? 'checked' : ''
-			} ${self.q.denominators?.includes(term.id) ? '' : 'disabled'} />`
-		}
-	])
-	const syncNumerators = () => {
-		for (const tr of div.select('table').select('tbody').node().querySelectorAll('tr')) {
-			const denominator = tr.querySelector(
-				'input[type="checkbox"]:not([data-testid="sjpp-term-collection-numerator"])'
-			) as HTMLInputElement | null
-			const numerator = tr.querySelector('[data-testid="sjpp-term-collection-numerator"]') as HTMLInputElement | null
-			if (!denominator || !numerator) continue
-			numerator.disabled = !denominator.checked
-			if (!denominator.checked) numerator.checked = false
-		}
+	// the chooser updates this copy of q{}, so that a cancelled edit does not alter self.q
+	const selection: FractionSelection = {
+		numerators: (self.q as TermCollectionQFraction).numerators?.slice() || [],
+		denominators: (self.q as TermCollectionQFraction).denominators?.slice() || []
 	}
-	renderTable({
-		rows,
-		columns: [getTermNameColumn(self, terms), { label: 'Numerator' }],
-		div,
-		maxHeight: '40vh',
-		noButtonCallback: syncNumerators,
-		striped: false,
-		showHeader: true,
-		selectedRows,
-		columnButtons: undefined,
-		buttons: undefined
+	renderFractionSelection({
+		holder: div,
+		termlst: terms,
+		selection,
+		propsByTermId: self.term.propsByTermId
 	})
-	div
-		.select('table')
-		.select('thead')
-		.select('[data-testid="sjpp-table-checkall"]')
-		.node()
-		?.parentElement?.append(' Denominator')
 
 	return () => {
-		const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
-		const lst = getSelectedTermIds(terms, trs)
-		const numerators = terms
-			.filter((_, i) => {
-				const input = trs[i].querySelector('[data-testid="sjpp-term-collection-numerator"]') as HTMLInputElement | null
-				return input?.checked === true
-			})
-			.map(term => term.id)
-		if (!lst.length) return window.alert('Select at least one denominator.')
-		if (!numerators.length) return window.alert('Select at least one numerator.')
+		const error = getFractionSelectionError(selection)
+		if (error) return window.alert(error)
 		const q = self.q as TermCollectionQFraction
-		q.denominators = lst
-		q.numerators = numerators
+		q.denominators = selection.denominators!
+		q.numerators = selection.numerators!
 		self.api.runCallback()
 	}
 }
@@ -273,10 +243,6 @@ function addCategoricalTable(self, div: any, terms: any) {
 }
 
 function getSelectedRows(self, terms) {
-	if (self.tw.type === 'TermCollectionTWFraction') {
-		const selectedIds = new Set(self.q.denominators || [])
-		return terms.map((term, index) => (selectedIds.has(term.id) ? index : -1)).filter(index => index !== -1)
-	}
 	const selectedIds =
 		self.q.lst?.length > 0
 			? new Set(self.q.lst)

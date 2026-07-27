@@ -1,10 +1,8 @@
-import { renderTable, NumericRangeInput } from '#dom'
+import { NumericRangeInput } from '#dom'
 import { format_val_text } from './tvs.numeric.js'
 import type { TermCollectionTvs } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
-
-const numeratorTestId = 'sjpp-tvs-collection-numerator'
-const denominatorTestId = 'sjpp-tvs-collection-denominator'
+import { renderFractionSelection } from '../termdb/handlers/termCollectionFractionSelection.ts'
 
 export const handler = {
 	type: 'termCollection',
@@ -39,16 +37,11 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 	if (details.type !== 'numeric') throw new Error('filter only supports numeric term collection')
 	// Render UI after details lookup succeeds so no orphaned input is left on error
 	const rangeInput = renderRangeInput(div, tvs, applyRange)
-	const getTableData = await addFilterTable({ holder: div, tvs, details, vocabApi: self.opts.vocabApi })
+	// the chooser updates tvs.term.numerators[]/denominators[] in place, on a cloned tvs
+	const validateSelection = await addFilterTable({ holder: div, tvs, details, vocabApi: self.opts.vocabApi })
 
 	async function applyRange(tvs) {
-		const tvsProps = getTableData()
-		if (!tvsProps) return
-		// the complete member list stays on the term; the numerator and denominator are
-		// explicit id lists, consistent with q of a fraction termCollection tw
-		tvs.term.termlst = tvsProps.termlst
-		tvs.term.numerators = tvsProps.numerators
-		tvs.term.denominators = tvsProps.denominators
+		if (!validateSelection()) return
 		self.dom.tip.hide()
 		self.opts.callback({ term: tvs.term, ranges: [rangeInput.getRange()] })
 	}
@@ -84,55 +77,35 @@ function renderRangeInput(div, tvs, applyRange) {
 	return rangeInput
 }
 
-// opts.details = a termCollections entry in dataset.cohort.termdb (a term obj)
-export async function addFilterTable(opts): Promise<any> {
-	const denominators = getTvsDenominators(opts.tvs.term)
-	const numerators = opts.tvs.term.numerators?.length ? opts.tvs.term.numerators : denominators
+/* Render the numerator/denominator chooser of the filtered collection. The tvs term is the
+selection object: its numerators[] and denominators[] are updated in place as checkboxes
+change, so the term is ready to apply as is.
 
-	const rows: any = []
-	for (const term of opts.details.termlst) {
-		const numeratorChecked = numerators.includes(term.id) ? 'checked' : ''
-		const denominatorChecked = denominators.includes(term.id) ? 'checked' : ''
-		rows.push([
-			{ value: term.name },
-			{ html: `<input type='checkbox' data-testid='${numeratorTestId}' ${numeratorChecked} />` },
-			{ html: `<input type='checkbox' data-testid='${denominatorTestId}' ${denominatorChecked} />` }
-		])
-	}
-	const selectedRows: number[] = opts.details.termlst
-		.map((term, index) => (denominators.includes(term.id) ? index : -1))
-		.filter(index => index !== -1)
+opts.details = a termCollections entry in dataset.cohort.termdb (a term obj)
+Returns a function that validates the current selection, alerting the user when it cannot
+be applied. */
+export async function addFilterTable(opts): Promise<() => boolean> {
+	const term = opts.tvs.term
+	// resolve the denominator before replacing termlst[]: a filter saved before
+	// term.denominators[] existed implied it from a pruned termlst[]
+	term.denominators = getTvsDenominators(term)
+	if (!term.numerators?.length) term.numerators = term.denominators.slice()
+	// every member of the collection is kept on the term, only the id lists select the ones in use
+	term.termlst = opts.details.termlst
 
-	const columns: any = [{ label: 'Variables' }, { label: 'Use in numerator' }, { label: 'Use in denominator' }]
-
-	const tableDiv = opts.holder.append('div')
-
-	// cannot use table button callback as it cannot manage two sets of custom checkboxes
-	renderTable({
-		rows,
-		columns,
-		div: tableDiv,
-		maxWidth: '30vw',
-		maxHeight: '40vh',
-		striped: false,
-		showHeader: true,
-		selectedRows,
-		columnButtons: undefined,
-		buttons: undefined
+	renderFractionSelection({
+		holder: opts.holder,
+		selection: term,
+		propsByTermId: term.propsByTermId
 	})
 
 	return () => {
-		const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-		const isChecked = (i: number, testid: string) =>
-			(trs[i]?.querySelector(`[data-testid="${testid}"]`) as HTMLInputElement | null)?.checked === true
-		const numerators = opts.details.termlst.filter((term, i) => isChecked(i, numeratorTestId)).map(t => t.id)
-		const denominators = opts.details.termlst.filter((term, i) => isChecked(i, denominatorTestId)).map(t => t.id)
 		try {
-			validateTermCollectionTvs(numerators, denominators)
-			// every member is kept on the term, only the id lists select the ones in use
-			return { numerators, denominators, termlst: opts.details.termlst }
+			validateTermCollectionTvs(term.numerators, term.denominators)
+			return true
 		} catch (e: any) {
 			window.alert(e.message)
+			return false
 		}
 	}
 }
