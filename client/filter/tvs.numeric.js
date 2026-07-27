@@ -233,64 +233,52 @@ function addRangeTableNoDensity(self, tvs) {
 	num_div.selectAll('*').remove()
 
 	const brush = {}
-	const table = num_div.append('table').style('padding-left', '5px')
-	const rangeTr = table.append('tr')
-	const rangeLabelTd = rangeTr.append('td')
-	brush.equation_td = rangeTr.append('td')
-	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, () => {}, { width: '125px' })
+	const holder = num_div.append('div').style('padding-left', '5px')
+	const rangeRow = holder
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('column-gap', '5px')
+	const rangeLabel = rangeRow.append('span')
+	brush.equation_div = rangeRow.append('div')
+	brush.rangeInput = new NumericRangeInput(brush.equation_div, range, () => {}, { width: '125px' })
 
 	// for maf filter tvs, the term's mode determines which metric is filtered
 	const mafFilterMode = self.opts.isMafFilter ? tvs.term.mafFilterMode || 'maf' : null
 	if (mafFilterMode == 'maf') {
 		// maf filter tvs
 		// render maf range input and min allelic depth input
-		rangeLabelTd.text('MAF Range (0-1)')
-		const depthTr = table.append('tr')
-		depthTr.append('td').text('Minimum Total Depth')
-		brush.depthInput = depthTr
-			.append('td')
+		rangeLabel.text('MAF Range (0-1)')
+		const depthRow = holder
+			.append('div')
+			.style('display', 'flex')
+			.style('align-items', 'center')
+			.style('column-gap', '5px')
+			.style('margin-top', '5px')
+		depthRow.append('span').text('Minimum Total Depth')
+		brush.depthInput = depthRow
 			.append('input')
 			.attr('type', 'number')
 			.attr('min', 1)
 			.attr('step', 1)
 			.style('width', '125px')
 			.property('value', tvs.minAllelicDepth)
-		const applyTr = table.append('tr')
-		brush.apply_btn = applyTr
-			.append('td')
-			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-			.style('border-radius', '13px')
-			.style('margin-top', '10px')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('apply')
-			.on('click', clickApply)
+		brush.apply_btn = addApplyButton(holder.append('div').style('margin-top', '10px'))
 	} else if (mafFilterMode == 'totalDepth' || mafFilterMode == 'altDepth') {
 		// allelic depth filter tvs; render an integer range input
-		rangeLabelTd.text(mafFilterMode == 'totalDepth' ? 'Total Depth' : 'Alt Allele Depth')
-		brush.apply_btn = rangeTr
-			.append('td')
-			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-			.style('border-radius', '13px')
-			.style('margin', '5px')
-			.style('margin-left', '10px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('apply')
-			.on('click', clickApply)
+		rangeLabel.text(mafFilterMode == 'totalDepth' ? 'Total Depth' : 'Alt Allele Depth')
+		brush.apply_btn = addApplyButton(rangeRow)
 	} else {
 		// tvs is not part of maf filter
 		// render range input
-		rangeLabelTd.text('Range')
-		brush.apply_btn = rangeTr
-			.append('td')
+		rangeLabel.text('Range')
+		brush.apply_btn = addApplyButton(rangeRow)
+	}
+
+	function addApplyButton(holder) {
+		return holder
+			.append('button')
 			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-			.style('border-radius', '13px')
-			.style('margin', '5px')
-			.style('margin-left', '10px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.text('apply')
 			.on('click', clickApply)
@@ -345,8 +333,6 @@ function enterRange(self, tr, brush, i) {
 
 	range_tr
 		.append('td')
-		.append('td')
-		.style('display', 'inline-block')
 		.style('margin-left', '10px')
 		.style('padding', '3px 10px')
 		.style('font-size', '.9em')
@@ -412,14 +398,9 @@ function enterRange(self, tr, brush, i) {
 
 		//'Apply' button
 		brush.apply_btn = buttons_td
-			.append('td')
+			.append('button')
 			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-			.style('border-radius', '13px')
-			.style('margin', '5px')
 			.style('margin-left', '10px')
-			// .style('padding', '5px 12px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.text('apply')
 			.on('click', async () => {
@@ -440,15 +421,10 @@ function enterRange(self, tr, brush, i) {
 
 		//'Delete' button
 		buttons_td
-			.append('td')
+			.append('button')
 			.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
-			.style('border-radius', '13px')
 			.style('display', self.num_obj.ranges.length > 1 ? 'inline-block' : 'none')
-			.style('margin', '5px')
 			.style('margin-left', '10px')
-			// .style('padding', '5px 12px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.text('Delete')
 			.on('click', async () => {
