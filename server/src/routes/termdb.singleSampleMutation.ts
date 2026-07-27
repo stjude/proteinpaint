@@ -46,9 +46,11 @@ function init({ genomes }) {
 export async function validate_query_singleSampleMutation(ds: any, _genome: any) {
 	const _q = ds.queries.singleSampleMutation
 	if (!_q) return
-	if (typeof _q.get == 'function') {
-		// ds supplied
-	} else if (_q.src == 'native') {
+	// a ds either supplies get(), or gets the built-in folder-based getter added here
+	if (typeof _q.get != 'function') {
+		// folder is optional on the type, since a ds supplying get() has no use for it. without a
+		// getter it is required, so enforce here
+		if (!_q.folder) throw 'singleSampleMutation.folder missing'
 		/* using a folder to store text files for individual samples
 		file names are string sample name
 		throws on any error
@@ -91,7 +93,5 @@ export async function validate_query_singleSampleMutation(ds: any, _genome: any)
 			// object wraps around mlst[] so it's possible to add other attr e.g. total number of mutations that exceeds viewing limit
 			return { mlst }
 		}
-	} else {
-		throw 'unknown singleSampleMutation.src'
 	}
 }

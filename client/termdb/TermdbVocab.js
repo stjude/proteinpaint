@@ -803,7 +803,7 @@ export class TermdbVocab extends Vocab {
 						.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
 						.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice().sort((a, b) => (a.term.name < b.term.name ? -1 : 1)) // make copy of array as it will be truncated to empty. do not modify original
-		const maxNumTerms = this.opts.app.vocabApi.termdbConfig?.maxAnnoTermsPerClientRequest || opts.terms.length // this.vocab.dslabel === 'GDC' ? opts.terms.length : 1 // revert back to 1 to revert to previous behavior
+		const maxNumTerms = this.opts.app.vocabApi.termdbConfig?.maxAnnoTermsPerClientRequest || opts.terms.length
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 
@@ -833,7 +833,7 @@ export class TermdbVocab extends Vocab {
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 			if (opts.isHierCluster) init.body.isHierCluster = true // special arg from matrix, just pass along
 			if (
-				this.vocab.dslabel == 'GDC' &&
+				this.opts.app.vocabApi.termdbConfig?.limitDictTermSamplesToMutated &&
 				copies.find(tw => tw.term.id && (!tw.term?.type || isDictionaryType(tw.term.type))) &&
 				currentGeneNames?.length
 			) {

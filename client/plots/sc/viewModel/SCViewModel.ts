@@ -88,9 +88,10 @@ export class SCViewModel {
 						row.push({ value: item[col.termid] })
 					}
 
-					// hardcode to always add in experiment id column
-					if (this.state.vocab.dslabel == 'GDC')
-						row.push({ value: exp.experimentID, url: `https://portal.gdc.cancer.gov/files/${exp.experimentID}` })
+					// hardcode to always add in experiment id column. link out only if the ds declares a
+					// url template for it (as singleCellPlot.js does)
+					const urlTemp = this.state.termdbConfig?.urlTemplates?.scrnaExperimentId
+					if (urlTemp) row.push({ value: exp.experimentID, url: `${urlTemp.base}${exp.experimentID}` })
 					else row.push({ value: exp.experimentID })
 					rows.push(row)
 				}

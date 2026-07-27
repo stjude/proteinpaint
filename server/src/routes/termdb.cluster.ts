@@ -52,9 +52,9 @@ export function init({ genomes }) {
 			if (!g) throw 'invalid genome name'
 			const ds = g.datasets[q.dslabel]
 			if (!ds) throw 'invalid dataset name'
-			// TODO: generalize to any dataset
-			if (ds.label === 'GDC' && !ds.__gdc?.doneCaching)
-				throw 'The server has not finished caching the case IDs: try again in about 2 minutes.'
+			// a ds that caches at launch reports its own not-ready state; no dslabel check needed
+			const notReady = ds.init?.notReadyMessage?.()
+			if (notReady) throw notReady
 			// Gate: must be a numeric data type
 			if (!numericTypes.has(q.dataType)) throw `dataType '${q.dataType}' is not a clusterable numeric type`
 			// the dataset can serve this type if it has a dedicated query getter, OR it's a

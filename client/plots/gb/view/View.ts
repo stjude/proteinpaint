@@ -233,7 +233,7 @@ export class View {
 
 	/* tricky logic */
 	async launchBlockWithTracks(tklst) {
-		if (!['GDC', 'MMRF'].includes(this.state?.vocab?.dslabel) && this.blockInstance) {
+		if (!this.opts.vocabApi?.termdbConfig?.gbRecreateBlock && this.blockInstance) {
 			/* block instance is present
             this should be updating tracks in this block, by adding new ones listed in tklst[],
             and deleting old ones via a tricky method

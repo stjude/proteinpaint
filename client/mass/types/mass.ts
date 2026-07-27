@@ -37,6 +37,8 @@ export type MassState = {
 			text: string
 		}
 		matrixplots?: any[]
+		/** if true, plots omit the Documentation button. for a ds with no applicable user guide */
+		hidePlotDocumentation?: boolean
 	}
 	reuse?: {
 		customTermQ?: {

@@ -1,8 +1,8 @@
 import type {
 	SCImages,
 	SingleCellQuery,
-	SingleCellDataNative,
-	SingleCellGeneExpressionNative,
+	SingleCellData,
+	SingleCellGeneExpression,
 	SingleCellPlot,
 	SingleCellSample,
 	TermdbSingleCellSamplesRequest,
@@ -93,6 +93,12 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 	if (typeof q.samples != 'object') throw new Error('singleCell.samples{} not object')
 	if (typeof q.data != 'object') throw new Error('singleCell.data{} not object')
 
+	// a ds either supplies data.get(), or gets the built-in file-based getter added by
+	// validateDataNative() below. the built-in path needs plots[] with folders, and validateSamples()
+	// reads those same folders, so check the shape up front rather than inside either one
+	const hasDsDataGetter = typeof q.data.get == 'function'
+	if (!hasDsDataGetter) validateDataPlots(q.data)
+
 	if (typeof q.samples.get == 'function') {
 		// ds-supplied
 	} else {
@@ -100,15 +106,7 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 		// added q.samples.get()
 	}
 
-	// validate required q.data{}
-	if (typeof q.data.get == 'function') {
-		// ds supplied getter
-	} else if (q.data.src == 'native') {
-		validateDataNative(q.data as SingleCellDataNative, ds)
-		// added q.data.get()
-	} else {
-		throw new Error('unknown singleCell.data.src')
-	}
+	if (!hasDsDataGetter) validateDataNative(q.data, ds) // added q.data.get()
 	colorColumn2terms(ds.queries.singleCell.data.plots, ds) // convert colorBy columns defined in ds file to term objects for use in vocabApi methods later
 
 	if (ds.queries.singleCell?.pseudobulk) {
@@ -118,13 +116,10 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 
 	if (q.geneExpression) {
 		if (typeof q.geneExpression != 'object') throw new Error('singleCell.geneExpression not object')
-		if (typeof q.geneExpression.get == 'function') {
-			// ds supplied getter
-		} else if (q.geneExpression.src == 'native') {
-			validateGeneExpressionNative(q.geneExpression as SingleCellGeneExpressionNative)
-		} else {
-			throw new Error('unknown singleCell.geneExpression.src')
-		}
+		// bins cache. termdb.getDefaultBins.js indexes it unconditionally, so seed it here rather than
+		// in the native validator only -- ds-supplied getters (gdc) need it too
+		if (!q.geneExpression.sample2gene2expressionBins) q.geneExpression.sample2gene2expressionBins = {}
+		if (typeof q.geneExpression.get != 'function') validateGeneExpressionNative(q.geneExpression)
 	}
 	if (q.DEgenes) {
 		if (typeof q.DEgenes != 'object') throw new Error('singleCell.DEgenes not object')
@@ -155,7 +150,7 @@ function validateImages(images: SCImages): void {
 async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	// folder of every plot contains text files, one file per sample and named by sample names. each folder may contain variable number of samples. look into all folders to get union of samples as list of samples with sc data and return in this getter
 	const S: SingleCellQuery['samples'] = q.samples,
-		D = q.data as SingleCellDataNative
+		D = q.data as SingleCellData
 
 	// k: sample integer id
 	// v: { sample: string name, tid1:v1, ...} term ids are from S.sampleColumns[]. list of sample objects are returned in getter
@@ -180,7 +175,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			 * getters are the same. The results or the sID used for querying will not appear
 			 * in the db. */
 			const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
-			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleName + (plot.fileSuffix || ''))
+			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder!, sampleName + (plot.fileSuffix || ''))
 			try {
 				/** Files should exist for each meta analysis result. */
 				await file_is_readable(tsvfile)
@@ -196,7 +191,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 			}
 			continue
 		}
-		for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder))) {
+		for (const fn of await fs.promises.readdir(path.join(serverconfig.tpmasterdir, plot.folder!))) {
 			// fn: string file name.
 			let sampleName = fn
 			if (plot.fileSuffix) {
@@ -288,19 +283,25 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	}
 }
 
-/** Adds ds.queries.singleCell.data.get() on init().
- * Runs from termdb.singleCellData route when q.data.src is 'native'.
+/** plots[] and plot.folder are optional on the type, since a ds supplying data.get() needs neither.
+ * Without a getter both are required, by validateSamples() and by the built-in getter alike.
  * @param D ds.queries.singleCell.data{}
- * @param ds Entire dataset configuration from the ds file
  */
-function validateDataNative(D: SingleCellDataNative, ds: any): void {
+function validateDataPlots(D: SingleCellData): void {
+	if (!Array.isArray(D.plots)) throw new Error('singleCell.data.plots[] missing')
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw new Error('duplicate plot.name')
 		nameSet.add(plot.name)
 		if (!plot.folder) throw new Error('plot.folder missing')
 	}
+}
 
+/** Adds ds.queries.singleCell.data.get() on init(), for a ds that does not supply its own getter.
+ * @param D ds.queries.singleCell.data{}
+ * @param ds Entire dataset configuration from the ds file
+ */
+function validateDataNative(D: SingleCellData, ds: any): void {
 	// caches files contents between requests so each file is only loaded once
 	const file2Lines = {} // key: file path, value: string[]
 
@@ -322,7 +323,7 @@ function validateDataNative(D: SingleCellDataNative, ds: any): void {
 		for (const plot of D.plots) {
 			if (!q.plots.includes(plot.name)) continue
 			//some plots share the same file, just read different columns
-			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
+			const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder!, sampleId + (plot.fileSuffix || ''))
 			if (!file2Lines[tsvfile]) {
 				await file_is_readable(tsvfile)
 				const text = await read_file(tsvfile)
@@ -400,7 +401,7 @@ async function getAvailablePlots(
 			const sampleName = plot?.sampleId || plot.name.replace(/\s/g, '_')
 			if (sampleName != sampleId) continue
 		}
-		const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder, sampleId + (plot.fileSuffix || ''))
+		const tsvfile = path.join(serverconfig.tpmasterdir, plot.folder!, sampleId + (plot.fileSuffix || ''))
 		try {
 			await file_is_readable(tsvfile)
 			// file exists for this sample
@@ -422,16 +423,18 @@ async function getAvailablePlots(
 	return { plots }
 }
 
-/** Adds ds.queries.singleCell.geneExpression.get() on init() if geneExpression.src is 'native'.
+/** Adds ds.queries.singleCell.geneExpression.get() on init(), for a ds that does not supply its own getter.
  * @param G ds.queries.singleCell.geneExpression
  */
-function validateGeneExpressionNative(G: SingleCellGeneExpressionNative): void {
-	G.sample2gene2expressionBins = {} // cache for binning gene expression values
+function validateGeneExpressionNative(G: SingleCellGeneExpression): void {
+	// folder is optional on the type, since a ds supplying get() has no use for it. without a
+	// getter it is required, so enforce here
+	if (!G.folder) throw new Error('singleCell.geneExpression.folder missing')
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
 	G.get = async (q: TermdbSingleCellDataRequest) => {
 		// q {sample:str, gene:str}
-		const h5file = path.join(serverconfig.tpmasterdir, G.folder, (q.sample?.eID || q.sample?.sID) + '.h5')
+		const h5file = path.join(serverconfig.tpmasterdir, G.folder!, (q.sample?.eID || q.sample?.sID) + '.h5')
 		await file_is_readable(h5file)
 
 		const query_gene = q.gene

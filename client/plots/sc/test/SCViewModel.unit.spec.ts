@@ -11,8 +11,8 @@ import { getMockSCApp, getMockSCConfig } from './getMockSCApp.ts'
  *   - getTabelData() should add sampleColumns when provided
  *   - getTabelData() should handle samples without experiments
  *   - getTabelData() should expand experiments into separate rows
- *   - getTabelData() should add GDC URL for experiment column when dslabel is GDC
- *   - getTabelData() should not add GDC URL for non-GDC datasets
+ *   - getTabelData() should link the experiment column when the ds declares a url template
+ *   - getTabelData() should not add a URL when the ds declares no url template
  *   - getTabelData() should include sampleColumns with experiments
  */
 
@@ -149,8 +149,10 @@ tape('getTabelData() should expand experiments into separate rows', test => {
 	test.end()
 })
 
-tape('getTabelData() should add GDC URL for experiment column when dslabel is GDC', test => {
-	const app = getMockSCApp({ vocab: { genome: 'hg38', dslabel: 'GDC' } })
+tape('getTabelData() should link the experiment column when the ds declares a url template', test => {
+	const app = getMockSCApp({
+		termdbConfig: { urlTemplates: { scrnaExperimentId: { base: 'https://portal.gdc.cancer.gov/files/' } } }
+	})
 	const config = getMockSCConfig()
 	const items = [
 		{
@@ -164,12 +166,12 @@ tape('getTabelData() should add GDC URL for experiment column when dslabel is GD
 
 	const row0 = vm.tableData.rows[0] as any[]
 	const expCell = row0[row0.length - 1]
-	test.equal(expCell.url, 'https://portal.gdc.cancer.gov/files/FILE_UUID', 'Should include GDC file URL')
+	test.equal(expCell.url, 'https://portal.gdc.cancer.gov/files/FILE_UUID', 'Should include the templated file URL')
 	test.end()
 })
 
-tape('getTabelData() should not add GDC URL for non-GDC datasets', test => {
-	const app = getMockSCApp({ vocab: { genome: 'hg38-test', dslabel: 'TermdbTest' } })
+tape('getTabelData() should not add a URL when the ds declares no url template', test => {
+	const app = getMockSCApp()
 	const config = getMockSCConfig()
 	const items = [
 		{
@@ -184,7 +186,7 @@ tape('getTabelData() should not add GDC URL for non-GDC datasets', test => {
 	const row0 = vm.tableData.rows[0] as any[]
 	const expCell = row0[row0.length - 1]
 	test.equal(expCell.value, 'EXP1', 'Should have experiment ID value')
-	test.equal(expCell.url, undefined, 'Should not have URL for non-GDC dataset')
+	test.equal(expCell.url, undefined, 'Should not have URL without a url template')
 	test.end()
 })
 

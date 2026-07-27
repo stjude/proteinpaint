@@ -376,12 +376,12 @@ export function getTermSorter(self, s, grp) {
 	}
 
 	return (a, b) => {
-		// !!! QUICK FIX: put dictionary terms above non-dictionary terms
-		// make sure to not affect the publised PNET matrix figure
-		if (self.app.vocabApi.vocab?.dslabel === 'GDC') {
+		// opt-in: put dictionary terms above non-dictionary terms. must stay off by default so the
+		// published PNET matrix figure is unaffected
+		if (self.app.vocabApi.termdbConfig?.matrix?.sortDictTermsFirst) {
 			if (a.tw?.term?.id && !b.tw?.term?.id) return -1
 			if (!a.tw?.term?.id && b.tw?.term?.id) return 1
-		} // !!! end quick fix
+		}
 
 		if (b.counts.samples !== a.counts.samples) return b.counts.samples - a.counts.samples
 		if (b.counts.hits !== a.counts.hits) return b.counts.hits - a.counts.hits

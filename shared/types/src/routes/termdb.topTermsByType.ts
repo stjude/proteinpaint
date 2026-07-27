@@ -1,4 +1,3 @@
-//import GdcFilter0 from './filter.gdc'
 import type { Term } from '../terms/term.ts'
 import type { Filter } from '../filter.ts'
 
@@ -12,7 +11,7 @@ export type TermdbTopTermsByTypeRequest = {
 	/** pp filter */
 	filter?: Filter
 	/** JSON, optional GDC cohort filter to restrict cases */
-	filter0?: any //GdcFilter0
+	filter0?: any
 }
 
 export type TermdbTopTermsByTypeResponse = {
