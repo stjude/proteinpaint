@@ -284,8 +284,8 @@ function emptyFilterResult(CTEname, mapParent2Children, ds) {
 	return { CTEs: [`${CTEname} AS (${query})`], values: [], CTEname }
 }
 
-/** Custom termCollection filter: call query handlers directly for each member term,
- *  then filter samples by value range on the selected member. */
+/** FIXME deadcode. revive for categorical collection tvs
+ */
 async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
 	const memberKey = tvs.values?.[0]?.key
 	const range = tvs.ranges?.[0]
@@ -300,8 +300,7 @@ async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
 	const queryHandler = ds.queries?.[dataType]
 	if (!queryHandler) throw `not supported by dataset: ${dataType}`
 
-	// pass the member term through as is, see get_termCollection_custom_fraction()
-	const tw = { $id, term: { ...mt, type: dataType } }
+	const tw = { $id, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
 	const data = await queryHandler.get({ terms: [tw] }, ds)
 	const values = data.term2sample2value?.get($id)
 	if (!values) return emptyFilterResult(CTEname, mapParent2Children, ds)
@@ -334,15 +333,16 @@ async function get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Ch
 	const sampleValues = {}
 	const byDataType = new Map()
 	for (const mt of termlst) {
-		const dataType = mt.dataType || mt.type || 'isoformExpression'
-		if (!ds.queries?.[dataType]) continue
+		// a member's term type is the ds.queries[] key of its handler, e.g. isoformExpression or junction
+		const dataType = mt.type
+		if (!ds.queries?.[dataType]) {
+			throw new Error('unknown dataType')
+		}
 		if (!byDataType.has(dataType)) byDataType.set(dataType, [])
 		const memberId = mt.id || mt.name
 		byDataType.get(dataType).push({
 			memberId,
-			// pass the member term through as is: rebuilding it from a fixed set of properties
-			// drops what a handler requires, e.g. chr/start/stop/strand of a junction member
-			tw: { $id: memberId, term: { ...mt, type: dataType } }
+			tw: { $id: memberId, term: mt }
 		})
 	}
 	for (const [dataType, members] of byDataType) {
@@ -400,6 +400,8 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 	}
 	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
 	if (tvs.term.isCustom) {
+		// TODO shaky flag to rely on!!
+
 		// Custom collections bypass the getData() path below because getData()
 		// requires __protected__ auth context that is unavailable during filter
 		// CTE evaluation. Use direct query handler calls instead.
