@@ -170,8 +170,8 @@ Both Full (`FUNIT`) and Abbreviated (`AUNIT`) cohorts are handled automatically 
 
 **Class:** [profileForms.ts](./profileForms.ts) (mode-switched in `init()`/`main()`) + render modules [renderImpressionThermometer.ts](./renderImpressionThermometer.ts) and [renderResponseDistribution.ts](./renderResponseDistribution.ts)
 **Server route:** [`profile.impressionDistribution.ts`](../../../../server/routes/profile.impressionDistribution.ts) at endpoint `termdb/profileImpressionDistribution`
-**Title:** _`<Module>` Module Impressions_ — Status of Module Domains and Subdomains as Rated by Site Coordinator and Point of Care (POC) Staff
-**Description:** For one **module** of the PrOFILE survey, the impression view renders **one chart pair per POC responder group**: a median thermometer beside a response-distribution combo chart, comparing the Site Coordinator (SC) and Point-of-Care (POC) Staff 1–10 ratings across eligible sites. Groups stack vertically; a module with no POC responders (Patients & Outcomes) shows a single SC-only thermometer.
+**Title (per block):** _`<Module>` Module_ / _Comparison of Site Coordinator and `<group>` (Point of Care Staff) Impression Ratings_ / _No filter applied (n=N)_
+**Description:** For one **module** of the PrOFILE survey, the impression view renders **one self-contained block per POC responder group**: a title (module, the SC-vs-group comparison line, the applied-filters + n line) above a single bordered box holding a median thermometer beside a response-distribution combo chart, comparing the Site Coordinator (SC) and Point-of-Care (POC) Staff 1–10 ratings across eligible sites. Blocks stack vertically; a module with no POC responders (Patients & Outcomes) shows an SC-only thermometer and no comparison line.
 
 #### What you see — thermometer (chart 1)
 
@@ -193,23 +193,16 @@ A single glass vessel — rounded top cap, straight tube, a neck that flares int
 
   These were originally rendered as a blended vertical gradient, which did not work: a module's zone shades are three tints of a single hue (National Context: `#2FA9F4` → `#1E77BB` → `#15557C`), and at 0.3 opacity over white they land within a few RGB steps of each other. Smoothing the boundaries away left one flat wash with no readable zones. **Keep the bands discrete** — the hard edges are what make the zones legible at all.
 - **Left axis** (1..10) — the single `impression.ratingAxisLabel` rating scale, drawn with `axisLeft` + the shared `axisstyle` helper, ticks pointing inward. The vessel outline serves as the axis line.
-- **Performance zones** (Weak 1–5, Intermediate 6–7, Strong 8–10) are drawn as background bands but **not labelled here** — they are named once per card in the shared legend. Bins are config-driven from `impression.zones` (same bins as the distribution chart).
-- SC-only modules render the left column only, and the card legend drops the POC entry.
+- **Performance zones** (Weak 1–5, Intermediate 6–7, Strong 8–10) are drawn as background bands but **not labelled on the tube** — they are named in the thermometer's own legend below it. Bins are config-driven from `impression.zones` (same bins as the distribution chart).
+- SC-only modules render the left column only, and the thermometer's legend drops the POC entry.
 
-##### Each piece of text appears exactly once
+##### Block layout
 
-The view used to repeat itself: the breadcrumb restated the module name the title already gave; the zone names rendered in *both* charts of every card, at two sizes and two greys; the SC/POC legend was drawn by both charts; and the filter block repeated in every card with identical content. The rule now:
+Each responder group is a self-contained block: a centered title (module `titleTemplate`, then the `comparisonTitle` SC-vs-group line for POC groups, then the applied-filters + n line from `addFilterLegend()`), followed by a single **bordered box** holding the two charts side by side with a **vertical divider** between them (a `border-right` on the thermometer panel). The `domainDiv` breadcrumb is hidden in impression mode. `getChartImages()` tags each block `.sjpp-impression-card` with `data-group-label` for download naming.
 
-| Text | Drawn once by |
-|---|---|
-| Module name | the page title (`titleTemplate`); the `domainDiv` breadcrumb is hidden in impression mode |
-| Applied filters + n | `renderImpression()`, above the cards — not per card |
-| Series names (SC / POC) | the shared card legend |
-| Zone names | the shared card legend, as swatches at the bands' own 0.3 opacity |
+Text sizes step down with the hierarchy: module title `1.25rem` → comparison line `1.05rem` → chart title (`Median` / `Distribution`) `1rem`. The chart titles come from `impression.chartTitles.{thermometer,distribution}` and are html above each chart's svg inside its panel.
 
-Text sizes step down with the hierarchy: page title `1.1rem` → card header (group label) `1rem` → chart title `0.9rem`. The two chart titles come from `impression.chartTitles.{thermometer,distribution}` and are drawn as html above each chart's svg, in its own column of the card's flex row.
-
-Neither chart renders a legend or a zone label. `renderImpressionLegend()` is the single place both are named.
+Each chart carries its **own legend** below it, drawn by `renderImpressionLegend()` in **two centered rows** — the series row first (circle swatches for the thermometer mirroring its fills; a line+dot (SC) and a square (POC) for the distribution chart), then the zones row (Weak / Intermediate / Strong). SC-only thermometers drop the POC series entry.
 
 ##### Glass treatment
 
@@ -297,7 +290,7 @@ The client doesn't hardcode any of these — it pulls `scChild.color` and `pocCh
    - `scMedian` — `median()` of all SC integer values across eligible sites, rounded
    - `scTotal` — number of SC integer values that contributed to `scMedian`
    - `scDistribution` — `buildDistribution(scValues, maxScore)` → SC site counts binned per rating 1..10, `{rating, count, pct}`. Drives the SC line; shared across every responder group's chart pair.
-   - `responders[]` — one entry per multivalue responder term: `{ termId, label, median, total, distribution }`, where `distribution` is `buildDistribution` over that group's expanded rating→count maps. Each entry drives one chart pair's POC columns + POC median ball. `[]` in SC-only mode.
+   - `responders[]` — one entry per multivalue responder term: `{ termId, label, median, total, distribution }`, where `distribution` is `buildDistribution` over that group's expanded rating→count maps. Each entry drives one chart pair's POC columns + the thermometer's POC fill. `[]` in SC-only mode.
    - `n` — number of eligible sites (rows) contributing data
    - `sites` — full sorted list (`[]` for public users)
 
@@ -311,7 +304,7 @@ Per-module identity comes from the DB color (SC line/bar/bulb); POC greys and zo
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Performance zone bands (Weak/Interm/Strong)             | Per-module `colorMap` gradient — `impression.zones[].shade` names the key (Weak=`SOMETIMES` … Strong=`ALMOST ALWAYS`), resolved in `renderImpression()` | Not hardcoded; module-tinted, DB-config-sourced. Bins shared by both charts. |
 | SC left column (thermometer) / SC line (distribution)   | `terms.jsondata.color` for the SC integer term                                                 | Captured in `init()` as `this.impressionScColor` from the filled tw, passed via `colors.sc`. The empty vessel carries the zone gradient, not a tint of this color. |
-| POC right column (thermometer) / legend swatch          | `POC_FILL` (`#9e9e9e`) in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)   | Grey, exported so the shared legend swatches the same grey the fill uses. |
+| POC right column (thermometer) / legend swatch          | `POC_FILL` (`#9e9e9e`) in [renderImpressionThermometer.ts](./renderImpressionThermometer.ts)   | Grey, exported so the legends swatch the same grey the fill uses. |
 | POC columns (distribution)                              | `POC_COLUMN_FILL` (`#bdbdbd`) in [renderResponseDistribution.ts](./renderResponseDistribution.ts) | Grey, internal to that renderer.                                       |
 | Vessel outline (single path), ticks                     | `#444` / `#333`                                                                                | Hardcoded display constants in the thermometer renderer.                  |
 | Glass depth (column gloss, bulb shading, inner shadow)  | White/black gradient overlays at low opacity                                                   | Color-agnostic by construction, so they compose over any module color.   |
@@ -331,18 +324,18 @@ Both renderers bind tooltip text (and an optional hover-highlight descriptor) as
 
 #### User-facing strings & bins (config-driven)
 
-All title/subtitle/axis-label/legend strings **and the performance-zone bins** are sourced from `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts): `titleTemplate`, `subtitle[]`, `frameSubtitle` (`{group}` = responder label), `chartTitles.{thermometer,distribution}`, `ratingAxisLabel`, `zones[]` (`{label,min,max,shade}` — the band color is resolved per-module from `colorMap[module][shade]`, not stored on the zone), `distribution.{leftAxisLabel,rightAxisLabel,xAxisLabel}`, and `legend.{sc,poc}`. The `{module}` placeholder is replaced at render time. Zones are the single source of truth for the Weak/Intermediate/Strong bins, shared by both charts.
+All title/axis-label/legend strings **and the performance-zone bins** are sourced from `fullCohortPlots.profileForms.impression` in [`sjglobal.profile.ts`](../../../../dataset/sjglobal.profile.ts): `titleTemplate` (`{module} Module`), `comparisonTitle` (`{group}` = responder label; carries the "(Point of Care Staff)" clarifier), `chartTitles.{thermometer,distribution}` (`Median` / `Distribution`), `ratingAxisLabel`, `zones[]` (`{label,min,max,shade}` — the band color is resolved per-module from `colorMap[module][shade]`, not stored on the zone), `distribution.{leftAxisLabel,rightAxisLabel,xAxisLabel}`, and `legend.{sc,poc}`. The `{module}`/`{group}` placeholders are replaced at render time (the institution count `n` comes from the data via `addFilterLegend`). Zones are the single source of truth for the Weak/Intermediate/Strong bins, shared by both charts.
 
-Both series names sit together under `legend`. `poc` used to be nested at `distribution.legend.poc` while `sc` sat at the top level, so `renderImpression()` had to reassemble the pair; with one shared legend there is no reason for the split.
+Both series names sit together under `legend` (`sc` / `poc`), so each chart's legend reads the pair from one place. `poc` was once nested at `distribution.legend.poc` while `sc` sat at the top level, forcing `renderImpression()` to reassemble the pair — there is no reason for the split.
 
 #### Architecture (alignment with v2 charts)
 
 The impression view is **not** a standalone chart-type — the term node is already reachable inside profileForms. The two chart renderers are pure functions in their own modules, each appending its own `<svg>` into a holder div inside `rightDiv` (so the tooltip delegation covers them):
 
 - **`renderImpressionThermometer.ts`** — exports `renderImpressionThermometer({ holder, id, sc, poc, ratingAxisLabel, zones, colors, attachTip })`, `IMPRESSION_MAX_SCORE`, `POC_FILL`, and the types `ImpressionZone`, `ImpressionPoc`, `ImpressionHover`, `AttachTip`, `ImpressionThermometerArgs`. One vessel per call, holding two liquid columns that run continuously from their medians down into a full split reservoir. All `defs` ids are prefixed with the passed `id`, since several thermometers render on one page (one per responder group).
-- **`renderImpressionLegend.ts`** — exports `renderImpressionLegend({ holder, series, zones })` and the type `ImpressionSeriesSymbol` (`'line' | 'square'`). One row of swatches per card, each mirroring the mark that carries it in the response-distribution chart: a **line with a vertex dot** for the SC line series, a **square** for the POC columns, and squares for the zones at the bands' own `0.3` opacity. The thermometer's fills are the same two colors, so the same entries serve both charts. Zones are sorted low to high on a copy, since the caller's array is shared with both chart renderers.
+- **`renderImpressionLegend.ts`** — exports `renderImpressionLegend({ holder, series, zones })` and the type `ImpressionSeriesSymbol` (`'line' | 'square' | 'circle'`). Two centered rows, drawn once per chart panel: the **series row** swatches each series as the mark that carries it in that chart — a **line with a vertex dot** (SC) and a **square** (POC) for the distribution chart, a **circle** for each fill in the thermometer — and the **zones row** shows squares for the zones at the bands' own `0.3` opacity. Zones are sorted low to high on a copy, since the caller's array is shared with both chart renderers.
 - **`renderResponseDistribution.ts`** — exports `renderResponseDistribution({ holder, id, maxScore, scDistribution, pocDistribution, texts, zones, colors, attachTip })` and `POC_COLUMN_FILL`. One combo chart per call.
-- **`profileForms.ts`** — `renderImpression()` draws a centered header (module title + subtitle) followed by the filter legend (applied filters + n) **once**, then a **bordered card** per responder group: the card header holds the group label, the body holds the thermometer + distribution side by side, and one shared legend sits under both. `fetchImpressionDistribution()` POSTs to `termdb/profileImpressionDistribution`, omitting `pocTermId` for SC-only modules and sending `pocResponderTermIds` when present.
+- **`profileForms.ts`** — `renderImpression()` draws **one block per responder group**: a centered title (module `titleTemplate`, the `comparisonTitle` SC-vs-group line for POC groups, and the applied-filters + n line via `addFilterLegend()`), then a single **bordered box** whose body holds the thermometer and distribution panels side by side with a vertical divider between them; each panel has its own title and its own two-row legend below it. `fetchImpressionDistribution()` POSTs to `termdb/profileImpressionDistribution`, omitting `pocTermId` for SC-only modules and sending `pocResponderTermIds` when present.
 
 #### Cohort coverage
 
@@ -375,7 +368,7 @@ By design, `FPatients and Outcomes__Patients and Outcomes__Impression` has only 
 1. **Type** — `pocTermId` and `pocResponderTermIds` are optional in `ProfileImpressionDistributionRequest`.
 2. **Server** — with no POC float and no responder terms, `responders` is `[]` (SC-only); the response still carries `scMedian / scTotal / scDistribution`.
 3. **profileForms client** — `init()` doesn't error on missing POC children (only SC absence is a real bug). `fetchImpressionDistribution()` omits `pocTermId`/`pocResponderTermIds` when unset.
-4. **Render** — `renderImpression()` sees `responders.length === 0`, so it renders a single SC-only thermometer (POC fill skipped via the `poc == null` guard) and **no** distribution chart; the card legend drops the POC entry but still names the zones.
+4. **Render** — `renderImpression()` sees `responders.length === 0`, so it renders a single SC-only thermometer panel (POC fill skipped via the `poc == null` guard) and **no** distribution panel; the thermometer's legend drops the POC entry but still names the zones.
 
 #### Source of `__Impression` parents
 
