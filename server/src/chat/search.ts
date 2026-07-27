@@ -255,7 +255,9 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	const q2: any = access.restrictFilter ? { filter: access.restrictFilter } : {}
 	await get_AllSamplesByName(q2, req, { send: (data: any) => (sampleName2Id = data) }, ds)
 	if (!sampleName2Id || sampleName2Id.error) return { matches: [], total: 0 }
-	const singleCellSamples = await getSingleCellSamples(ds, q2)
+	const singleCellSamples = await getSingleCellSamples(ds, {
+		filter: access.restrictFilter
+	})
 
 	const str = prompt.toLowerCase()
 	const matches: SampleMatch[] = []
