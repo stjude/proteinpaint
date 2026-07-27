@@ -58,8 +58,6 @@ function renderRangeInput(div, tvs, applyRange) {
 	range.min = 0
 	range.max = 1
 	const rangeInput = new NumericRangeInput(num_div, range, () => applyRange(tvs))
-	// NumericRangeInput.setRange() renders every bound as inclusive, spell out the exclusive default
-	if (!savedRange) rangeInput.getInput().property('value', 'x>0.1')
 
 	num_div
 		.append('button')

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { parseRange, NumericRangeInput } from '../numericRangeInput'
+import { parseRange, formatRangeBounds, NumericRangeInput } from '../numericRangeInput'
 
 function getHolder() {
 	return d3s.select('body').append('div').style('padding', '5px').style('margin', '5px')
@@ -422,6 +422,93 @@ tape('parseRange function', function (test) {
 	test.end()
 })
 
+/**
+ * Test Suite: formatRangeBounds()
+ *
+ * Renders a range as the expression shown to the user, and is the counterpart of
+ * parseRange(): the input text is the only source of an applied range, so whatever is
+ * displayed must parse back to the same bounds.
+ *
+ * Shared by NumericRangeInput.setRange() and the density plot brush
+ * (filter/tvs.density.js setStartStopDisplays()).
+ */
+tape('formatRangeBounds function', function (test) {
+	test.timeoutAfter(100)
+
+	const cases: { label: string; range: any; expected: [string, string] }[] = [
+		{
+			label: 'both bounds inclusive',
+			range: { start: 10, startinclusive: true, stop: 20, stopinclusive: true },
+			expected: ['10 <=', '<= 20']
+		},
+		{
+			label: 'both bounds exclusive',
+			range: { start: 10, startinclusive: false, stop: 20, stopinclusive: false },
+			expected: ['10 <', '< 20']
+		},
+		{
+			label: 'mixed bounds',
+			range: { start: 10, startinclusive: true, stop: 20, stopinclusive: false },
+			expected: ['10 <=', '< 20']
+		},
+		{
+			// isInRange() on the server and the tvs pill label both read a missing flag as
+			// exclusive, so a range saved without the flags must not display as inclusive
+			label: 'missing inclusivity flags are exclusive',
+			range: { start: 1000, stop: 2000 },
+			expected: ['1000 <', '< 2000']
+		},
+		{
+			label: 'unbounded start with a defined start value, as left by a brush drag',
+			range: { start: 0, startunbounded: true, stop: 20, stopinclusive: true },
+			expected: ['', '<= 20']
+		},
+		{
+			label: 'unbounded stop',
+			range: { start: 0.1, startinclusive: false, stopunbounded: true },
+			expected: ['0.1 <', '']
+		},
+		{ label: 'fully unbounded', range: { startunbounded: true, stopunbounded: true }, expected: ['', ''] },
+		{ label: 'no bounds at all', range: {}, expected: ['', ''] },
+		{ label: 'zero is a bound, not a missing value', range: { start: 0, stop: 0.6 }, expected: ['0 <', '< 0.6'] },
+		{
+			label: 'negative bounds',
+			range: { start: -5, startinclusive: true, stop: -1, stopinclusive: true },
+			expected: ['-5 <=', '<= -1']
+		}
+	]
+
+	for (const { label, range, expected } of cases) {
+		test.deepEqual(formatRangeBounds(range), expected, `Should format ${label}`)
+	}
+
+	// round trip: whatever is displayed must apply as the same range
+	for (const { label, range } of cases) {
+		if (range.start == undefined && range.stop == undefined) continue
+		if (range.startunbounded && range.stopunbounded) continue
+		const [start, stop] = formatRangeBounds(range)
+		const reparsed: any = parseRange(`${start} x ${stop}`)
+		const expectedBounds = {
+			start: range.startunbounded ? undefined : range.start,
+			startinclusive: range.startunbounded || range.start == undefined ? undefined : !!range.startinclusive,
+			stop: range.stopunbounded ? undefined : range.stop,
+			stopinclusive: range.stopunbounded || range.stop == undefined ? undefined : !!range.stopinclusive
+		}
+		test.deepEqual(
+			{
+				start: reparsed.start,
+				startinclusive: reparsed.startinclusive,
+				stop: reparsed.stop,
+				stopinclusive: reparsed.stopinclusive
+			},
+			expectedBounds,
+			`Should parse back to the same bounds: ${label}`
+		)
+	}
+
+	test.end()
+})
+
 tape('NumericRangeInput', function (test) {
 	test.timeoutAfter(100)
 	const holder = getHolder()
@@ -442,7 +529,15 @@ tape('NumericRangeInput', function (test) {
 	const input = new NumericRangeInput(holder.append('div') as any, mockRange, callback)
 
 	test.deepEqual(input.getRange(), mockRange, 'Should set range to input')
-	test.equal(input.input.node()!.value, `0 <= x <= 0.6`, 'Should return correct string to display in the input box')
+	test.equal(input.input.node()!.value, `0 <= x < 0.6`, 'Should return correct string to display in the input box')
+
+	// the displayed expression is the only source of the applied range, so it must parse
+	// back to the same bounds, otherwise clicking apply would alter a saved range
+	const reparsed = input.parseRange()
+	test.equal(reparsed.startinclusive, mockRange.startinclusive, 'Should preserve an inclusive start through apply')
+	test.equal(reparsed.stopinclusive, mockRange.stopinclusive, 'Should preserve an exclusive stop through apply')
+	test.equal(reparsed.start, mockRange.start, 'Should preserve the start value through apply')
+	test.equal(reparsed.stop, mockRange.stop, 'Should preserve the stop value through apply')
 
 	if (test['_ok']) holder.remove()
 	test.end()

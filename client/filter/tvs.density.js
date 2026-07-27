@@ -1,6 +1,7 @@
 import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
 import { roundValueAuto } from '#shared/roundValue.js'
+import { formatRangeBounds } from '#dom/numericRangeInput'
 
 /*
 ********************** EXPORTED
@@ -154,10 +155,12 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
  */
 
 export function setStartStopDisplays(range, inputRange) {
-	const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
-	const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
-
-	return [start, stop]
+	// the brushed range supplies the values, the input's range supplies the inclusivity
+	return formatRangeBounds({
+		...range,
+		startinclusive: inputRange.startinclusive,
+		stopinclusive: inputRange.stopinclusive
+	})
 }
 
 function convertRangeValue(xscale, sidx) {

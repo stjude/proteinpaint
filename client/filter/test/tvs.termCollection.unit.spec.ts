@@ -153,7 +153,12 @@ tape('fillMenu() defaults a new filter to x>0.1 on the first member', async test
 
 	await handler.fillMenu(self, holder, tvs as any)
 
-	test.equal(holder.select('input[name="rangeInput"]').property('value'), 'x>0.1', 'fills the range input with x>0.1')
+	// the exclusive default renders in the canonical "start < x" form used by every range input
+	test.equal(
+		holder.select('input[name="rangeInput"]').property('value').trim(),
+		'0.1 < x',
+		'fills the range input with an exclusive 0.1 start'
+	)
 	test.deepEqual(
 		getNumerators(holder).map(i => i.checked),
 		[true, false, false],
