@@ -1382,7 +1382,8 @@ tape('tvs: termCollection', async test => {
 					type: 'tvs',
 					tvs: {
 						term,
-						ranges: [{ start: 30, startinclusive: false, startunbounded: false, stopunbounded: true }]
+						// the collection fraction is on a 0 to 1 scale
+						ranges: [{ start: 0.3, startinclusive: false, startunbounded: false, stopunbounded: true }]
 					}
 				}
 			]

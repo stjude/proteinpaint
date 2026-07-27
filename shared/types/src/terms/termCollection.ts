@@ -33,9 +33,13 @@ export type NumericTermCollection = BaseTermCollection & {
 	 * Allows client code using the term to know the collection kind without looking up config.
 	 */
 	memberType: 'numeric'
-	/** the sum of numerator values will be divided by the sum of values for all terms,
-	 *  to be used for sorting matrix sample columns */
+	/** the sum of numerator values will be divided by the sum of denominator values,
+	 *  to be used for sorting matrix sample columns, or as the value of a filter tvs */
 	numerators?: string[]
+	/** term ids the numerator sum is divided by, a filter tvs uses this to reduce the
+	 *  collection to a percentage. mirrors q.denominators[] of a fraction tw;
+	 *  when unset, every member of term.termlst[] is a denominator */
+	denominators?: string[]
 	/** optional transformation. app specific
 	 */
 	valueTransform?: { offset?: number }

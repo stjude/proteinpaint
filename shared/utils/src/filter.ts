@@ -297,6 +297,15 @@ export function getWrappedTvslst(lst: Filter['lst'] = [], join: string = '', $id
  * @param lst2 Denominator list of term ids
  * @throws Error if validation fails
  */
+export function getTvsDenominators(term: any): string[] {
+	/* Denominator term ids of a termCollection tvs, which reduces the collection to a
+	percentage. term.denominators[] is explicit, matching q.denominators[] of a fraction
+	termCollection tw. Filters saved before term.denominators[] existed implied the
+	denominator from term.termlst[], which was pruned to the selected members. */
+	if (Array.isArray(term?.denominators) && term.denominators.length) return term.denominators
+	return (term?.termlst || []).map(t => t.id)
+}
+
 export function validateTermCollectionTvs(lst1: any[], lst2: any[]): void {
 	// lst1/lst2: numerator and denominator. both are lists of term ids
 	if (!Array.isArray(lst1)) throw new Error('numerator not array')

@@ -1,7 +1,10 @@
 import { renderTable, NumericRangeInput } from '#dom'
 import { format_val_text } from './tvs.numeric.js'
 import type { TermCollectionTvs } from '#types'
-import { validateTermCollectionTvs } from '#shared/filter.js'
+import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
+
+const numeratorTestId = 'sjpp-tvs-collection-numerator'
+const denominatorTestId = 'sjpp-tvs-collection-denominator'
 
 export const handler = {
 	type: 'termCollection',
@@ -41,8 +44,11 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 	async function applyRange(tvs) {
 		const tvsProps = getTableData()
 		if (!tvsProps) return
+		// the complete member list stays on the term; the numerator and denominator are
+		// explicit id lists, consistent with q of a fraction termCollection tw
 		tvs.term.termlst = tvsProps.termlst
-		tvs.term.numerators = tvsProps.numerators // tvs.term.termlst.filter(term => term.checked).map(t => t.id)
+		tvs.term.numerators = tvsProps.numerators
+		tvs.term.denominators = tvsProps.denominators
 		self.dom.tip.hide()
 		self.opts.callback({ term: tvs.term, ranges: [rangeInput.getRange()] })
 	}
@@ -55,11 +61,12 @@ function renderRangeInput(div, tvs, applyRange) {
 	num_div.selectAll('*').remove()
 	const table = num_div.append('table')
 	const tr = table.append('tr')
-	tr.append('td').text('Percentage 0 to 100')
+	// the fraction is on a 0 to 1 scale, same as the value of a fraction termCollection tw
+	tr.append('td').text('Fraction 0 to 1')
 	const equation_td = tr.append('td')
 
 	range.min = 0
-	range.max = 100
+	range.max = 1
 	const rangeInput = new NumericRangeInput(equation_td, range, () => applyRange(tvs))
 
 	tr.append('td')
@@ -79,23 +86,21 @@ function renderRangeInput(div, tvs, applyRange) {
 
 // opts.details = a termCollections entry in dataset.cohort.termdb (a term obj)
 export async function addFilterTable(opts): Promise<any> {
-	if (!opts.tvs.term.numerators) opts.tvs.term.numerators = opts.tvs.term.termlst.map(t => t.id)
-
-	const termlst = opts.tvs.term.termlst || []
-	const numerators = opts.tvs.term.numerators || []
+	const denominators = getTvsDenominators(opts.tvs.term)
+	const numerators = opts.tvs.term.numerators?.length ? opts.tvs.term.numerators : denominators
 
 	const rows: any = []
 	for (const term of opts.details.termlst) {
-		const numeratorChecked = numerators?.find(tid => tid === term.id) ? 'checked' : ''
-		const denominatorChecked = opts.tvs.term.termlst.find(t => t.id === term.id) ? 'checked' : ''
+		const numeratorChecked = numerators.includes(term.id) ? 'checked' : ''
+		const denominatorChecked = denominators.includes(term.id) ? 'checked' : ''
 		rows.push([
 			{ value: term.name },
-			{ html: `<input type='checkbox' ${numeratorChecked} />` },
-			{ html: `<input type='checkbox' ${denominatorChecked} />` }
+			{ html: `<input type='checkbox' data-testid='${numeratorTestId}' ${numeratorChecked} />` },
+			{ html: `<input type='checkbox' data-testid='${denominatorTestId}' ${denominatorChecked} />` }
 		])
 	}
 	const selectedRows: number[] = opts.details.termlst
-		.map((term, index) => (termlst.find(t => t.id === term.id) ? index : -1))
+		.map((term, index) => (denominators.includes(term.id) ? index : -1))
 		.filter(index => index !== -1)
 
 	const columns: any = [{ label: 'Variables' }, { label: 'Use in numerator' }, { label: 'Use in denominator' }]
@@ -118,22 +123,14 @@ export async function addFilterTable(opts): Promise<any> {
 
 	return () => {
 		const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-		const numerators = opts.details.termlst
-			.filter((term, i) => {
-				const checked = trs[i].querySelectorAll('td')[2].querySelector('input')?.checked
-				return checked === true
-			})
-			.map(t => t.id)
-		const termlst = opts.details.termlst.filter((term, i) => {
-			const checked = trs[i].querySelectorAll('td')[3].querySelector('input')?.checked
-			return checked === true
-		})
+		const isChecked = (i: number, testid: string) =>
+			(trs[i]?.querySelector(`[data-testid="${testid}"]`) as HTMLInputElement | null)?.checked === true
+		const numerators = opts.details.termlst.filter((term, i) => isChecked(i, numeratorTestId)).map(t => t.id)
+		const denominators = opts.details.termlst.filter((term, i) => isChecked(i, denominatorTestId)).map(t => t.id)
 		try {
-			validateTermCollectionTvs(
-				numerators,
-				termlst.map(i => i.id)
-			)
-			return { numerators, termlst }
+			validateTermCollectionTvs(numerators, denominators)
+			// every member is kept on the term, only the id lists select the ones in use
+			return { numerators, denominators, termlst: opts.details.termlst }
 		} catch (e: any) {
 			window.alert(e.message)
 		}
@@ -145,7 +142,7 @@ function getSelectRemovePos(j) {
 }
 
 function term_name_gen(d) {
-	return `Percentage(${d.term.numerators.join('+')})`
+	return `Fraction(${d.term.numerators.join('+')})`
 }
 
 function get_pill_label(tvs) {
