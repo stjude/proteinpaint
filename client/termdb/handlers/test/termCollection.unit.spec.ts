@@ -231,7 +231,7 @@ tape('fraction selection returns a raw fraction wrapper and retains every member
 	test.ok(holder.text().includes('Numerator'), 'renders the numerator selector')
 	const rows = holder.selectAll('tbody tr').nodes() as HTMLElement[]
 	const numerator = rows[1].querySelector('[data-testid="sjpp-term-collection-numerator"]') as HTMLInputElement
-	numerator.checked = true
+	numerator.click()
 	;(holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement).click()
 
 	test.equal(callbackResult?.type, 'TermCollectionTWFraction', 'returns a fraction wrapper')
@@ -244,7 +244,7 @@ tape('fraction selection returns a raw fraction wrapper and retains every member
 	test.end()
 })
 
-tape('fraction selection keeps numerators in sync with the denominator check-all', async test => {
+tape('fraction selection clears and disables the numerator of a deselected denominator', async test => {
 	const handler = new SearchHandler()
 	const holder = getHolder()
 	const details = getTermCollectionDetails({
@@ -267,27 +267,13 @@ tape('fraction selection keeps numerators in sync with the denominator check-all
 
 	const getNumerators = () =>
 		holder.selectAll('[data-testid="sjpp-term-collection-numerator"]').nodes() as HTMLInputElement[]
-	const checkall = holder.select('[data-testid="sjpp-table-checkall"]').node() as HTMLInputElement
-	// make_one_checkbox() disables its input until the async callback settles
-	const clickCheckAll = async () => {
-		checkall.click()
-		await new Promise(resolve => setTimeout(resolve, 0))
-	}
-	// the table check-all toggles every input under tbody, including the numerator checkboxes
-	await clickCheckAll() // uncheck all denominators
-	test.ok(
-		getNumerators().every(n => !n.checked && n.disabled),
-		'clearing all denominators clears and disables the numerators'
-	)
-	await clickCheckAll() // check all denominators
-	test.ok(
-		getNumerators().every(n => !n.checked),
-		'restoring all denominators does not silently select every numerator'
-	)
-	test.ok(
-		getNumerators().every(n => !n.disabled),
-		'restoring all denominators makes the numerators selectable again'
-	)
+	const getDenominators = () =>
+		holder.selectAll('[data-testid="sjpp-term-collection-denominator"]').nodes() as HTMLInputElement[]
+
+	// gene1 is the default numerator, deselecting it as a denominator leaves no numerator
+	getDenominators()[0].click()
+	test.equal(getNumerators()[0].checked, false, 'clears the numerator of a deselected denominator')
+	test.equal(getNumerators()[0].disabled, true, 'disables the numerator of a deselected denominator')
 
 	const alerts: any[] = []
 	const alert0 = window.alert
@@ -296,6 +282,18 @@ tape('fraction selection keeps numerators in sync with the denominator check-all
 	window.alert = alert0
 	test.equal(callbackResult, undefined, 'does not submit a fraction without a numerator')
 	test.equal(alerts.length, 1, 'alerts the user to select a numerator')
+
+	getDenominators()[0].click() // restore the denominator
+	test.equal(getNumerators()[0].disabled, false, 'enables the numerator when its denominator is restored')
+	test.equal(getNumerators()[0].checked, false, 'does not silently restore the numerator')
+	getNumerators()[1].click()
+	;(holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement).click()
+	test.deepEqual(callbackResult?.q.numerators, ['gene2'], 'submits the edited numerator selection')
+	test.deepEqual(
+		callbackResult?.q.denominators,
+		['gene1', 'gene2', 'gene3'],
+		'submits the restored denominator selection'
+	)
 
 	if (test['_ok']) holder.remove()
 	test.end()

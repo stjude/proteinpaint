@@ -4,7 +4,7 @@ import type { Div } from '../../types/d3'
 import { dofetch3 } from '#common/dofetch'
 import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 import { getColors } from '#shared/common.js'
-import { makeFractionTermWrapper, renderFractionSelection } from './termCollectionFractionSelection.ts'
+import { pickCollectionFraction } from './termCollectionFractionSelection.ts'
 import type { RawTermCollectionTWFraction } from '#types'
 
 /*
@@ -130,10 +130,10 @@ export class SearchHandler {
 			if (!this.dom?.isoformDiv) throw new Error('isoform result holder is missing')
 			this.dom.fractionDiv?.remove()
 			this.dom.fractionDiv = this.dom.isoformDiv.append('div').style('margin-top', '10px')
-			renderFractionSelection({
+			pickCollectionFraction({
 				holder: this.dom.fractionDiv,
-				termlst,
-				callback: selection => this.callback(makeFractionTermWrapper(term, selection))
+				term,
+				callback: tw => this.callback(tw)
 			})
 			return
 		}
