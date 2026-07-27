@@ -49,6 +49,7 @@ export function getFilterName(f) {
 			case 'metaboliteIntensity':
 			case 'junction':
 			case 'proteomeAbundance':
+			case 'termCollection':
 				// tvs is numeric, show numeric range
 				return getNumericRangeLabel(tvs)
 			case 'samplelst':
@@ -61,7 +62,7 @@ export function getFilterName(f) {
 						return (tvs.term.parentTerm?.name || '?') + ' ' + dtt.name
 					}
 				}
-				throw 'unknown tvs term type'
+				throw new Error('unknown tvs term type')
 		}
 	}
 	// more than 1 tvs, not able to generate a short name
