@@ -48,30 +48,29 @@ async function fillMenu(self, div, tvs: TermCollectionTvs) {
 }
 
 function renderRangeInput(div, tvs, applyRange) {
-	const termrange = tvs.term.range || {}
-	const range = tvs.ranges && tvs.ranges[0] ? tvs.ranges[0] : termrange
-	const num_div = div.append('div')
-	num_div.selectAll('*').remove()
-	const table = num_div.append('table')
-	const tr = table.append('tr')
+	const savedRange = tvs.ranges?.[0] || tvs.term.range
+	// a new filter starts at a nonzero fraction, instead of an unset range
+	const range = savedRange || { start: 0.1, startinclusive: false, stopunbounded: true }
+	const num_div = div.append('div').style('display', 'flex').style('align-items', 'center').style('column-gap', '5px')
 	// the fraction is on a 0 to 1 scale, same as the value of a fraction termCollection tw
-	tr.append('td').text('Fraction 0 to 1')
-	const equation_td = tr.append('td')
+	num_div.append('span').text('Fraction 0 to 1')
 
 	range.min = 0
 	range.max = 1
-	const rangeInput = new NumericRangeInput(equation_td, range, () => applyRange(tvs))
+	const rangeInput = new NumericRangeInput(num_div, range, () => applyRange(tvs))
+	// NumericRangeInput.setRange() renders every bound as inclusive, spell out the exclusive default
+	if (!savedRange) rangeInput.getInput().property('value', 'x>0.1')
 
-	tr.append('td')
+	num_div
+		.append('button')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('border-radius', '13px')
-		.style('margin', '5px')
-		.style('margin-left', '10px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
 		.text('APPLY')
-		.on('click', async () => {
-			rangeInput.parseRange()
+		.on('click', () => {
+			try {
+				rangeInput.parseRange()
+			} catch (e: any) {
+				window.alert(e)
+			}
 		})
 
 	return rangeInput
@@ -89,7 +88,8 @@ export async function addFilterTable(opts): Promise<() => boolean> {
 	// resolve the denominator before replacing termlst[]: a filter saved before
 	// term.denominators[] existed implied it from a pruned termlst[]
 	term.denominators = getTvsDenominators(term)
-	if (!term.numerators?.length) term.numerators = term.denominators.slice()
+	// only the first member by default: every member as numerator makes the fraction a constant 1
+	if (!term.numerators?.length) term.numerators = term.denominators.slice(0, 1)
 	// every member of the collection is kept on the term, only the id lists select the ones in use
 	term.termlst = opts.details.termlst
 

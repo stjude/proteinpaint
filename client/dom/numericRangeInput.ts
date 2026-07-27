@@ -16,7 +16,7 @@ export class NumericRangeInput {
 			.append('input')
 			.attr('name', 'rangeInput')
 			.attr('aria-label', 'Leave blank for the allowed minimum value')
-			.style('width', opts?.width || '250px')
+			.style('width', opts?.width || '180px')
 			.style('margin', '3px 5px')
 			//.style('font-size', '20px')
 			.on('change', () => {

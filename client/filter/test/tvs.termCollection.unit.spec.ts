@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { addFilterTable } from '../tvs.termCollection.ts'
+import { addFilterTable, handler } from '../tvs.termCollection.ts'
 
 /*************************
  reusable helper functions
@@ -123,14 +123,56 @@ tape('addFilterTable() implies the denominator from termlst[] when term.denomina
 	test.end()
 })
 
-tape('addFilterTable() defaults every member to numerator and denominator for a new filter', async test => {
+tape('addFilterTable() defaults to all denominators and the first member as numerator', async test => {
 	const opts = getOpts({ type: 'termCollection', memberType: 'numeric', name: 'Test collection', termlst: members })
 	await addFilterTable(opts)
 
 	test.deepEqual(opts.tvs.term.denominators, ['ENST01', 'ENST02', 'ENST03'], 'defaults all members as denominators')
-	test.deepEqual(opts.tvs.term.numerators, ['ENST01', 'ENST02', 'ENST03'], 'defaults all members as numerators')
+	test.deepEqual(opts.tvs.term.numerators, ['ENST01'], 'defaults only the first member as numerator')
+	test.deepEqual(
+		getNumerators(opts.holder).map(i => i.checked),
+		[true, false, false],
+		'checks only the first numerator checkbox'
+	)
 
 	if (test['_ok']) opts.holder.remove()
+	test.end()
+})
+
+tape('fillMenu() defaults a new filter to x>0.1 on the first member', async test => {
+	const holder = d3s.select('body').append('div')
+	let applied: any
+	const self = {
+		opts: { vocabApi: { termdbConfig: {} }, callback: (tvs: any) => (applied = tvs) },
+		dom: { tip: { hide: () => {} } }
+	}
+	const tvs = {
+		term: { type: 'termCollection', isCustom: true, memberType: 'numeric', name: 'Test collection', termlst: members },
+		ranges: []
+	}
+
+	await handler.fillMenu(self, holder, tvs as any)
+
+	test.equal(holder.select('input[name="rangeInput"]').property('value'), 'x>0.1', 'fills the range input with x>0.1')
+	test.deepEqual(
+		getNumerators(holder).map(i => i.checked),
+		[true, false, false],
+		'checks only the first member as numerator'
+	)
+	test.deepEqual(
+		getDenominators(holder).map(i => i.checked),
+		[true, true, true],
+		'checks every member as denominator'
+	)
+	test.equal(holder.selectAll('button.sjpp_apply_btn').size(), 1, 'renders the APPLY control as a <button>')
+	test.equal(holder.selectAll('table').size(), 1, 'lays out the range input without a table, only the member table')
+	;(holder.select('button.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	test.equal(applied?.ranges[0].start, 0.1, 'applies a range starting at 0.1')
+	test.equal(applied?.ranges[0].startinclusive, false, 'applies an exclusive start')
+	test.equal(applied?.ranges[0].stopunbounded, true, 'applies an unbounded stop')
+	test.deepEqual(applied?.term.numerators, ['ENST01'], 'applies the first member as numerator')
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })
 
