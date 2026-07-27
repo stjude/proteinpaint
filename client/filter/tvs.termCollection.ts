@@ -57,7 +57,10 @@ function renderRangeInput(div, tvs, applyRange) {
 
 	range.min = 0
 	range.max = 1
-	const rangeInput = new NumericRangeInput(num_div, range, () => applyRange(tvs))
+	// the input fires 'change' when it loses focus with an edited value, e.g. on clicking a
+	// checkbox in the member table below. So it may only parse the entry: applying the filter
+	// closes the menu, and must be left to the APPLY button.
+	const rangeInput = new NumericRangeInput(num_div, range, () => {})
 
 	num_div
 		.append('button')
@@ -67,8 +70,9 @@ function renderRangeInput(div, tvs, applyRange) {
 			try {
 				rangeInput.parseRange()
 			} catch (e: any) {
-				window.alert(e)
+				return window.alert(e)
 			}
+			applyRange(tvs)
 		})
 
 	return rangeInput
