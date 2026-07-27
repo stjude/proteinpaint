@@ -300,7 +300,8 @@ async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
 	const queryHandler = ds.queries?.[dataType]
 	if (!queryHandler) throw `not supported by dataset: ${dataType}`
 
-	const tw = { $id, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
+	// pass the member term through as is, see get_termCollection_custom_fraction()
+	const tw = { $id, term: { ...mt, type: dataType } }
 	const data = await queryHandler.get({ terms: [tw] }, ds)
 	const values = data.term2sample2value?.get($id)
 	if (!values) return emptyFilterResult(CTEname, mapParent2Children, ds)
@@ -339,7 +340,9 @@ async function get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Ch
 		const memberId = mt.id || mt.name
 		byDataType.get(dataType).push({
 			memberId,
-			tw: { $id: memberId, term: { type: dataType, isoform: mt.isoform, gene: mt.gene, name: mt.name } }
+			// pass the member term through as is: rebuilding it from a fixed set of properties
+			// drops what a handler requires, e.g. chr/start/stop/strand of a junction member
+			tw: { $id: memberId, term: { ...mt, type: dataType } }
 		})
 	}
 	for (const [dataType, members] of byDataType) {

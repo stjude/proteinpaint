@@ -276,6 +276,67 @@ tape('custom termCollection fraction filter', async function (test) {
 	test.end()
 })
 
+tape('custom termCollection fraction filter passes junction members intact', async function (test) {
+	// a splice junction event collection: the members are junction terms, whose handler
+	// requires chr/start/stop/strand on the term
+	const junctions = [
+		{ id: 'junction-1', name: 'junction-1', type: 'junction', chr: 'chr1', start: 100, stop: 200, strand: '+' },
+		{ id: 'junction-2', name: 'junction-2', type: 'junction', chr: 'chr1', start: 100, stop: 500, strand: '+' }
+	]
+	let requestedTerms
+	tdb.ds.queries.junction = {
+		get: async param => {
+			requestedTerms = param.terms
+			// validate the same way the real junction handler does
+			for (const tw of param.terms) {
+				const t = tw.term
+				if (!t.chr || !Number.isInteger(t.start) || !Number.isInteger(t.stop) || !t.strand) {
+					throw new Error('junction.get(): junction term must include chr, integer start/stop, and strand')
+				}
+			}
+			// junction-1 reads are 1/4 of the event total for sample 1, 1/2 for sample 2
+			const values = tw => (tw.term.stop == 200 ? { 1: 5, 2: 10 } : { 1: 15, 2: 10 })
+			return { term2sample2value: new Map(param.terms.map(tw => [tw.$id, values(tw)])) }
+		}
+	}
+
+	const filter = await getFilterCTEs(
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							type: 'termCollection',
+							isCustom: true,
+							memberType: 'numeric',
+							name: 'Splice junction event',
+							termlst: junctions,
+							denominators: ['junction-1', 'junction-2'],
+							numerators: ['junction-1'],
+							propsByTermId: {}
+						},
+						// sample 1 is at 0.25, sample 2 at 0.5
+						ranges: [{ start: 0.4, stop: 0.6, startinclusive: true, stopinclusive: true }]
+					}
+				}
+			]
+		},
+		tdb.ds
+	)
+
+	test.deepEqual(
+		requestedTerms?.map(tw => tw.term),
+		junctions,
+		'passes each junction member term to the handler unchanged'
+	)
+	test.deepEqual(filter.values, ['2'], 'selects only the sample whose junction fraction is in range')
+	test.end()
+})
+
 tape('custom termCollection fraction filter uses term.denominators[]', async function (test) {
 	// every member gets the same mocked value, so the fraction is
 	// numerators.length / denominators.length, regardless of term.termlst[]
