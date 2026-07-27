@@ -308,16 +308,17 @@ async function getSingleCellSamples(ds: any, q: any): Promise<Map<string, { sID:
 		const sampleMap = new Map<string, { sID: string; eID?: string }>()
 		for (const sample of samples) {
 			if (sample?.sample == null) continue
+			const experiments = Array.isArray(sample.experiments) ? sample.experiments : []
 			const defaultSelection = {
 				sID: String(sample.sample),
-				...(sample.experiments?.[0]?.experimentID ? { eID: sample.experiments[0].experimentID } : {})
+				...(experiments[0]?.experimentID ? { eID: String(experiments[0].experimentID) } : {})
 			}
 			sampleMap.set(String(sample.sample).toLowerCase(), defaultSelection)
-			for (const experiment of sample.experiments || []) {
+			for (const experiment of experiments) {
 				if (experiment?.sampleName == null) continue
 				sampleMap.set(String(experiment.sampleName).toLowerCase(), {
 					sID: String(experiment.sampleName),
-					...(experiment.experimentID ? { eID: experiment.experimentID } : {})
+					...(experiment.experimentID ? { eID: String(experiment.experimentID) } : {})
 				})
 			}
 		}
