@@ -52,8 +52,6 @@ export function handle_request_closure(genomes) {
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) q.for = 'cuminc'
 			if (q.for == 'cuminc') return await trigger_getincidence(q, res, ds)
-			if (q.getsurvival) q.for = 'survival'
-			if (q.for == 'survival') return await trigger_getsurvival(q, res, ds)
 			if (q.getregression) q.for = 'regression'
 			if (q.for == 'regression') return res.send(await get_regression(q, ds))
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
