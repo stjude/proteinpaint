@@ -609,7 +609,8 @@ export function setSearchRenderers(self: any) {
 			}
 			if (term.assays?.length) {
 				tr.select('td:nth-child(2)')
-					.append('span')
+					.append('button')
+					.attr('type', 'button')
 					.attr('class', 'sja_menuoption')
 					.attr('data-testid', `sjpp-mass-chat-assays-${term.sampleId}`)
 					.style('display', 'inline-block')
