@@ -299,7 +299,6 @@ async function getSampleData(q, ds) {
 			const args = {
 				genome: q.ds.genomename,
 				dslabel: q.ds.label,
-				dataType: tw.term.type,
 				terms: [tw],
 				filter: q.filter,
 				filter0: q.filter0,

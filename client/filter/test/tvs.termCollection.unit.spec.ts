@@ -181,6 +181,41 @@ tape('fillMenu() defaults a new filter to x>0.1 on the first member', async test
 	test.end()
 })
 
+tape('fillMenu() only applies the filter from the APPLY button', async test => {
+	const holder = d3s.select('body').append('div')
+	let applied: any
+	let hidden = false
+	const self = {
+		opts: { vocabApi: { termdbConfig: {} }, callback: (tvs: any) => (applied = tvs) },
+		dom: { tip: { hide: () => (hidden = true) } }
+	}
+	const tvs = {
+		term: { type: 'termCollection', isCustom: true, memberType: 'numeric', name: 'Test collection', termlst: members },
+		ranges: []
+	}
+
+	await handler.fillMenu(self, holder, tvs as any)
+
+	// an edited range input fires 'change' when it loses focus, e.g. on clicking a checkbox
+	// in the member table, which must not apply the filter and close the menu
+	const input = holder.select('input[name="rangeInput"]').node() as HTMLInputElement
+	input.value = '0.2 < x'
+	input.dispatchEvent(new Event('change'))
+	test.equal(applied, undefined, 'editing the range does not apply the filter')
+	test.equal(hidden, false, 'editing the range does not close the menu')
+
+	getNumerators(holder)[1].click()
+	test.equal(applied, undefined, 'selecting a numerator does not apply the filter')
+	test.equal(hidden, false, 'selecting a numerator does not close the menu')
+	;(holder.select('button.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	test.equal(applied?.ranges[0].start, 0.2, 'APPLY applies the edited range')
+	test.deepEqual(applied?.term.numerators, ['ENST01', 'ENST02'], 'APPLY applies the edited numerators')
+	test.equal(hidden, true, 'APPLY closes the menu')
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('addFilterTable() rejects an empty numerator selection', async test => {
 	const opts = getOpts({
 		type: 'termCollection',
