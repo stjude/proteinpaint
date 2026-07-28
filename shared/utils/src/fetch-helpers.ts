@@ -195,9 +195,32 @@ const cacheLifetime = 1000 * 60 * 5
 	opts{client}
 
   client: use this http client instead of native fetch
-    - since fetch-helpers is shared between server and frontend workspaces, 
-      cannot directly import non-native modules at the beginning of this code file 
-    - for server side usage, client may be `xfetch()`, `ky` or other libraries 
+    - since fetch-helpers is shared between server and frontend workspaces,
+      cannot directly import non-native modules at the beginning of this code file
+    - for server side usage, client may be `xfetch()`, `ky` or other libraries
+
+	!! CAUTION: memFetch is not interchangeable with xfetch/ky !!
+
+	The default for a new request is xfetch/ky. But where memFetch is already in use, it is load-bearing
+	and must not be swapped back to a plain client "for consistency" -- it does two things a plain client
+	does not:
+	  1. caches the response in this process's RAM, keyed on url + body + headers
+	  2. caches the in-flight *promise*, so concurrent identical calls share one round trip
+
+	Swapping it out compiles, passes unit tests, and returns correct data. It only shows up as
+	everything getting slower -- typically as e2e tests that start timing out and look like flake.
+	This has already happened once: an external API call that ran once per cohort became one per
+	query, and the "fix" nearly applied was raising the test timeout.
+
+	Use memFetch when a request is keyed on something coarse (a cohort, a dataset version) rather
+	than on the specific thing being asked about (a gene, a sample), AND is issued repeatedly across
+	a session. Keep the payload small enough to sit in RAM.
+
+	Two rules for any memFetch call site:
+	  - do NOT pass an abort signal. The response is shared, so an abort from one caller or browser
+	    tab would poison it for every other reader of the same cache entry.
+	  - make sure something invalidates the cache when the upstream data changes
+	    (see clearMemFetchDataCache(), called on a new GDC data version).
 */
 export async function memFetch(url, init: Record<string, any>, opts: Record<string, any> = {}) {
 	if (typeof init.body === 'object') init.body = JSON.stringify(init.body)
