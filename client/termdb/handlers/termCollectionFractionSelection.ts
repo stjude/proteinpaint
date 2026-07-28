@@ -36,7 +36,8 @@ export function getDefaultFractionSelection(termlst: any[]): FractionSelection {
 
 /** The reason a selection cannot be applied, or undefined when it can be */
 export function getFractionSelectionError(selection: FractionSelection): string | undefined {
-	if (!selection.denominators?.length) return 'Select at least one denominator.'
+	// a lone denominator makes the fraction a constant 1, as the numerator can only be that same member
+	if (!selection.denominators || selection.denominators.length < 2) return 'Select at least two denominators.'
 	if (!selection.numerators?.length) return 'Select at least one numerator.'
 	if (selection.numerators.some(id => !selection.denominators!.includes(id)))
 		return 'Every numerator must also be selected as a denominator.'
@@ -51,6 +52,10 @@ export function getFractionSelectionError(selection: FractionSelection): string 
  * opts.selection is updated in place on every change, so the caller only reads it when its
  * own apply button is clicked. All members are always listed: the selection is expressed by
  * the two id lists, never by pruning the member list.
+ *
+ * Supply opts.selectCallback to also render the Select button, which is then enabled only
+ * while the selection can be applied; a caller with its own apply button must instead
+ * validate with getFractionSelectionError().
  */
 export function renderFractionSelection(opts: {
 	holder: any
@@ -60,6 +65,10 @@ export function renderFractionSelection(opts: {
 	termlst?: any[]
 	/** member colors, e.g. term.propsByTermId */
 	propsByTermId?: { [termId: string]: { color?: string } }
+	/** when given, renders the Select button and calls this with the current selection on click */
+	selectCallback?: (selection: FractionSelection) => void
+	/** label of the Select button, only used with selectCallback */
+	buttonLabel?: string
 	/** called after every change, e.g. to update an apply button */
 	onChange?: () => void
 }) {
@@ -99,10 +108,29 @@ export function renderFractionSelection(opts: {
 		buttons: undefined
 	})
 
+	const selectBtn = opts.selectCallback
+		? opts.holder
+				.append('div')
+				.style('padding', '6px 20px')
+				.append('button')
+				.attr('data-testid', 'sjpp-term-collection-fraction-select')
+				.text(opts.buttonLabel || 'Select')
+				.on('click', () => opts.selectCallback!(selection))
+		: undefined
+
+	/** Only an applicable selection may be submitted, so the button reports why it is not */
+	const updateSelectBtn = () => {
+		if (!selectBtn) return
+		const error = getFractionSelectionError(selection)
+		// a vanilla button is greyed out by the browser when disabled, no styling needed here
+		selectBtn.property('disabled', Boolean(error)).attr('title', error || null)
+	}
+
 	const inputs = getRowInputs(tableDiv)
 	const updateSelection = () => {
 		selection.denominators = termlst.filter((_, i) => inputs[i]?.denominator?.checked === true).map(term => term.id)
 		selection.numerators = termlst.filter((_, i) => inputs[i]?.numerator?.checked === true).map(term => term.id)
+		updateSelectBtn()
 		opts.onChange?.()
 	}
 	for (const { numerator, denominator } of inputs) {
@@ -115,6 +143,7 @@ export function renderFractionSelection(opts: {
 		})
 		numerator.addEventListener('change', updateSelection)
 	}
+	updateSelectBtn()
 }
 
 function fillTermNameCell(td: any, term: any, propsByTermId?: { [termId: string]: { color?: string } }) {
@@ -145,21 +174,11 @@ export function pickCollectionFraction(opts: {
 		holder: opts.holder,
 		termlst: term.termlst,
 		selection,
-		propsByTermId: term.propsByTermId
+		propsByTermId: term.propsByTermId,
+		buttonLabel: opts.buttonLabel,
+		// the button is only enabled for an applicable selection, no need to validate here
+		selectCallback: () => opts.callback(makeFractionTermWrapper(term, selection))
 	})
-
-	opts.holder
-		.append('div')
-		.style('padding', '6px 20px')
-		.append('button')
-		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-		.attr('data-testid', 'sjpp-term-collection-fraction-select')
-		.text(opts.buttonLabel || 'Select')
-		.on('click', () => {
-			const error = getFractionSelectionError(selection)
-			if (error) return window.alert(error)
-			opts.callback(makeFractionTermWrapper(term, selection))
-		})
 }
 
 /**
