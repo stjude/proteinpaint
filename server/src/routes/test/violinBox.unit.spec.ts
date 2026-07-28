@@ -864,6 +864,46 @@ tape('expandNumericTermCollection: preserves termlst order in refs keyOrder', fu
 	test.end()
 })
 
+tape('expandNumericTermCollection: only expands the members selected in q.lst', function (test) {
+	// unchecking a member in the termsetting edit menu writes the remaining ids to q.lst,
+	// while the sql query still returns every member of the collection for a sample
+	const q = getMockTermCollectionQ()
+	q.tw.q.lst = ['drugA', 'drugC']
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	test.deepEqual(
+		Object.keys(data.samples).sort(),
+		['s1__drugA', 's1__drugC', 's2__drugA', 's2__drugC'],
+		'Should only create virtual samples for the selected members'
+	)
+	test.deepEqual(Object.keys(q.overlayTw.term.values), ['Drug A', 'Drug C'], 'Should only overlay the selected members')
+	test.deepEqual(
+		data.refs.byTermId['__tcOverlay'].keyOrder,
+		['Drug A', 'Drug C'],
+		'Should only order the selected members'
+	)
+	test.end()
+})
+
+tape('expandNumericTermCollection: an empty q.lst keeps every member', function (test) {
+	// q.lst defaults to [] on a filled tw, which means no selection was made
+	const q = getMockTermCollectionQ()
+	q.tw.q.lst = []
+	const data = getMockTermCollectionData()
+
+	expandNumericTermCollection(q, data)
+
+	test.equal(Object.keys(data.samples).length, 6, 'Should create a virtual sample for every member')
+	test.deepEqual(
+		data.refs.byTermId['__tcOverlay'].keyOrder,
+		['Drug A', 'Drug B', 'Drug C'],
+		'Should order every member'
+	)
+	test.end()
+})
+
 tape('expandNumericTermCollection: skips non-finite member values', function (test) {
 	const q = getMockTermCollectionQ()
 	const data = {
