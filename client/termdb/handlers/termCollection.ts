@@ -33,7 +33,8 @@ export class SearchHandler {
 			div: tableDiv,
 			maxWidth: '30vw',
 			maxHeight: '40vh',
-			noButtonCallback: () => {}, // FIXME to supply a real callback
+			// the button is disabled while the selection cannot be submitted
+			noButtonCallback: () => updateSelectBtn(),
 			striped: false,
 			showHeader: true, //false,
 			selectAll: true,
@@ -57,7 +58,7 @@ export class SearchHandler {
 				div: categoryTable,
 				maxWidth: '30vw',
 				maxHeight: '40vh',
-				noButtonCallback: () => {}, // FIXME to supply a real callback
+				noButtonCallback: () => updateSelectBtn(),
 				striped: false,
 				showHeader: true, //false,
 				selectAll: true,
@@ -66,39 +67,49 @@ export class SearchHandler {
 			})
 		}
 
-		// FIXME backward code!!!!
-		opts.holder
+		/** true for each checked row of a rendered table, in row order */
+		function getRowChecks(div: any): boolean[] {
+			const trs = div.select('table').select('tbody').node().querySelectorAll('tr')
+			return [...trs].map((tr: any) => tr.querySelectorAll('td')[1]?.querySelector('input')?.checked === true)
+		}
+		function getSelectedTermlst() {
+			const checked = getRowChecks(tableDiv)
+			return termlst.filter((term, i) => checked[i])
+		}
+		function getCategoryKeys(): CategoryKey[] | undefined {
+			if (!categoryTable) return undefined
+			const checked = getRowChecks(categoryTable)
+			return ckSource.map((ck: CategoryKey, i: number) => ({ key: ck.key, shown: checked[i] }))
+		}
+		/** The reason the current selection cannot be submitted, or undefined when it can be */
+		function getSelectionError(): string | undefined {
+			// a lone member is not a collection, e.g. nothing to sum for a fraction or stack in a bar
+			if (getSelectedTermlst().length < 2) return 'Select at least two variables.'
+			if (getCategoryKeys()?.every(ck => !ck.shown)) return 'Select at least one category.'
+			return undefined
+		}
+		function updateSelectBtn() {
+			if (!selectBtn) return
+			const error = getSelectionError()
+			// a vanilla button is greyed out by the browser when disabled, no styling needed here
+			selectBtn.property('disabled', Boolean(error)).attr('title', error || null)
+		}
+
+		const selectBtn = opts.holder
 			.append('div')
 			.style('float', 'right')
 			.style('padding', '6px 20px')
 			.append('button')
-			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+			.attr('data-testid', 'sjpp-term-collection-select')
 			.text('Select')
 			.on('click', () => {
-				const trs = tableDiv.select('table').select('tbody').node().querySelectorAll('tr')
-				const selectedTermlst = termlst.filter((term, i) => {
-					const checked = trs[i]?.querySelectorAll('td')[1]?.querySelector('input')?.checked
-					return checked === true
-				})
-				if (selectedTermlst.length === 0) {
-					alert('Please select at least one term')
-					return
-				}
-				let categoryKeys
-				if (categoryTable) {
-					const trs = categoryTable.select('table').select('tbody').node().querySelectorAll('tr')
-					categoryKeys = ckSource.map((ck: CategoryKey, i: number) => {
-						const checked = trs[i].querySelectorAll('td')[1].querySelector('input')?.checked
-						return { key: ck.key, shown: !!checked }
-					})
-				}
-
 				opts.callback({
 					// makeTerm() extracts propsByTermId (color, etc) for the selected terms
-					...makeTerm(opts.details, selectedTermlst, opts.usecase),
-					categoryKeys
+					...makeTerm(opts.details, getSelectedTermlst(), opts.usecase),
+					categoryKeys: getCategoryKeys()
 				})
 			})
+		updateSelectBtn()
 	}
 }
 

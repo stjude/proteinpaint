@@ -124,7 +124,7 @@ tape('init() should call callback with selected terms, categoryKeys, and propert
 	;(categoryCheckboxes[1] as any).checked = false
 
 	// Click Select button
-	const selectBtn = holder.select('button.sjpp_apply_btn').node() as any
+	const selectBtn = holder.select('[data-testid="sjpp-term-collection-select"]').node() as any
 	selectBtn.click()
 
 	test.equal(callbackResult?.type, 'termCollection', 'Should set type to termCollection')
@@ -171,37 +171,60 @@ tape('init() should not render category table when details.categoryKeys is missi
 	test.end()
 })
 
-tape('init() should show alert when no terms are selected', async test => {
+tape('init() disables the Select button for an invalid collection', async test => {
 	const handler = new SearchHandler()
 	const holder = getHolder()
 	const details = getTermCollectionDetails()
-	let alertCalled = false
-	const originalAlert = window.alert
-	window.alert = () => {
-		alertCalled = true
-	}
+	let callbackResult: any
 
 	await handler.init({
 		holder,
-		callback: () => test.fail('Callback should not be called when no terms selected'),
+		callback: result => {
+			callbackResult = result
+		},
 		app: {},
 		details
 	})
 
-	// Uncheck all term checkboxes
-	const termsTable = holder.selectAll('table').nodes()[0] as HTMLElement
-	const checkboxes = termsTable.querySelectorAll('tbody input[type="checkbox"]')
-	for (const cb of checkboxes) {
-		;(cb as any).checked = false
-	}
+	const selectBtn = holder.select('[data-testid="sjpp-term-collection-select"]').node() as HTMLButtonElement
+	const getChecks = (tableIdx: number) =>
+		[
+			...(holder.selectAll('table').nodes()[tableIdx] as HTMLElement).querySelectorAll('tbody input[type="checkbox"]')
+		] as HTMLInputElement[]
+	const terms = () => getChecks(0)
+	const categories = () => getChecks(1)
 
-	// Click Select button
-	const selectBtn = holder.select('button.sjpp_apply_btn').node() as any
+	test.equal(selectBtn.disabled, false, 'enables the button for the default selection')
+
+	terms()[0].click() // deselect TP53, leaving two variables
+	test.equal(selectBtn.disabled, false, 'stays enabled with two selected variables')
+	terms()[1].click() // deselect KRAS, leaving a lone variable
+	test.equal(selectBtn.disabled, true, 'disables the button with a single selected variable')
+	test.ok(`${selectBtn.title}`.includes('two variables'), `titles the button with the reason: ${selectBtn.title}`)
 	selectBtn.click()
+	test.equal(callbackResult, undefined, 'a disabled button does not submit the selection')
 
-	test.ok(alertCalled, 'Should show alert when no terms are selected')
+	terms()[1].click() // restore KRAS
+	test.equal(selectBtn.disabled, false, 're-enables the button with two selected variables')
+	categories()[0].click()
+	test.equal(selectBtn.disabled, false, 'stays enabled with one selected category')
+	categories()[1].click()
+	test.equal(selectBtn.disabled, true, 'disables the button without a selected category')
+	test.ok(`${selectBtn.title}`.includes('category'), `titles the button with the reason: ${selectBtn.title}`)
 
-	window.alert = originalAlert
+	categories()[1].click() // restore the category
+	test.equal(selectBtn.disabled, false, 're-enables the button for a valid collection')
+	selectBtn.click()
+	test.deepEqual(callbackResult?.termIds, ['gene2', 'gene3'], 'submits the selected variables')
+	test.deepEqual(
+		callbackResult?.categoryKeys,
+		[
+			{ key: 'tissue', shown: false },
+			{ key: 'expression', shown: true }
+		],
+		'submits the selected categories'
+	)
+
 	if (test['_ok']) holder.remove()
 	test.end()
 })
