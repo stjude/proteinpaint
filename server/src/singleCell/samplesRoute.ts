@@ -27,6 +27,7 @@ import { maySetMapParent2Children } from '#src/termdb.matrix.js'
 import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { validatePseudobulk } from './validatePseudobulk.ts'
+import type { ReqQueryAddons } from '#routes/types.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -93,18 +94,19 @@ export async function validate_query_singleCell(ds: any, _genome: any): Promise<
 	if (typeof q.samples != 'object') throw new Error('singleCell.samples{} not object')
 	if (typeof q.data != 'object') throw new Error('singleCell.data{} not object')
 
-	// a ds either supplies data.get(), or gets the built-in file-based getter added by
-	// validateDataNative() below. the built-in path needs plots[] with folders, and validateSamples()
-	// reads those same folders, so check the shape up front rather than inside either one
+	/* A ds either supplies a getter, or gets the built-in file-based one added below. That choice
+	drives what data{} has to declare, and the two requirements differ:
+	- plots[] is needed by every ds, since colorColumn2terms() below reads it unconditionally
+	- plot.folder is needed only by the built-in file-based paths: validateSamples() (runs when there
+	  is no samples.get) and validateDataNative() (runs when there is no data.get). A ds supplying
+	  both getters serves from an api and has no folders (gdc)
+	Check both up front so a misconfigured ds fails at init with a clear message, rather than later
+	inside path.join() or colorColumn2terms(). */
+	const hasDsSamplesGetter = typeof q.samples.get == 'function'
 	const hasDsDataGetter = typeof q.data.get == 'function'
-	if (!hasDsDataGetter) validateDataPlots(q.data)
+	validateDataPlots(q.data, !hasDsSamplesGetter || !hasDsDataGetter)
 
-	if (typeof q.samples.get == 'function') {
-		// ds-supplied
-	} else {
-		await validateSamples(q, ds)
-		// added q.samples.get()
-	}
+	if (!hasDsSamplesGetter) await validateSamples(q, ds) // added q.samples.get()
 
 	if (!hasDsDataGetter) validateDataNative(q.data, ds) // added q.data.get()
 	colorColumn2terms(ds.queries.singleCell.data.plots, ds) // convert colorBy columns defined in ds file to term objects for use in vocabApi methods later
@@ -283,17 +285,18 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	}
 }
 
-/** plots[] and plot.folder are optional on the type, since a ds supplying data.get() needs neither.
- * Without a getter both are required, by validateSamples() and by the built-in getter alike.
+/** plots[] and plot.folder are optional on the type, since a ds supplying both getters needs no
+ * folders. Enforce here what the ds actually has to declare, given which getters it supplied.
  * @param D ds.queries.singleCell.data{}
+ * @param needFolders true when a built-in file-based path will run and read plot.folder
  */
-function validateDataPlots(D: SingleCellData): void {
+function validateDataPlots(D: SingleCellData, needFolders: boolean): void {
 	if (!Array.isArray(D.plots)) throw new Error('singleCell.data.plots[] missing')
 	const nameSet = new Set() // guard against duplicating plot names
 	for (const plot of D.plots) {
 		if (nameSet.has(plot.name)) throw new Error('duplicate plot.name')
 		nameSet.add(plot.name)
-		if (!plot.folder) throw new Error('plot.folder missing')
+		if (needFolders && !plot.folder) throw new Error('plot.folder missing')
 	}
 }
 
@@ -305,7 +308,7 @@ function validateDataNative(D: SingleCellData, ds: any): void {
 	// caches files contents between requests so each file is only loaded once
 	const file2Lines = {} // key: file path, value: string[]
 
-	D.get = async (q: TermdbSingleCellDataRequest) => {
+	D.get = async (q: TermdbSingleCellDataRequest & ReqQueryAddons) => {
 		const sampleId = q.sample?.eID || q.sample?.sID
 		/** Only return plots with available data files. */
 		if (q.checkPlotAvailability) {
@@ -315,7 +318,11 @@ function validateDataNative(D: SingleCellData, ds: any): void {
 		if (ds.queries.singleCell.geneExpression && q.gene) {
 			const sample = q.sample || q.singleCellPlot.sample
 			if (!sample) throw new Error('sample is required for gene expression query')
-			geneExpMap = await ds.queries.singleCell.geneExpression.get({ sample, gene: q.gene })
+			geneExpMap = await ds.queries.singleCell.geneExpression.get({
+				sample,
+				gene: q.gene,
+				__abortSignal: q.__abortSignal
+			})
 		}
 		const checkGeneExpMap = geneExpMap && Object.keys(geneExpMap).length > 0
 		// given a sample name, collect every plot data for this sample and return
@@ -432,7 +439,7 @@ function validateGeneExpressionNative(G: SingleCellGeneExpression): void {
 	if (!G.folder) throw new Error('singleCell.geneExpression.folder missing')
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
-	G.get = async (q: TermdbSingleCellDataRequest) => {
+	G.get = async (q: TermdbSingleCellDataRequest & ReqQueryAddons) => {
 		// q {sample:str, gene:str}
 		const h5file = path.join(serverconfig.tpmasterdir, G.folder!, (q.sample?.eID || q.sample?.sID) + '.h5')
 		await file_is_readable(h5file)

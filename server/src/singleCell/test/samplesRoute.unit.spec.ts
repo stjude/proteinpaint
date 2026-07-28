@@ -5,8 +5,8 @@ import { validate_query_singleCell } from '../samplesRoute.ts'
  * Tests
  *  - a ds supplying its own getters is validated without plot folders (the GDC shape)
  *  - sample2gene2expressionBins is seeded even for a ds-supplied geneExpression getter
- *  - missing plots[] is rejected when no data.get is supplied
- *  - missing plot.folder is rejected when no data.get is supplied
+ *  - missing plots[] is rejected for every ds, including one supplying every getter
+ *  - missing plot.folder is rejected whenever a built-in file-based path will read it
  *  - missing geneExpression.folder is rejected when no geneExpression.get is supplied
  */
 
@@ -62,11 +62,28 @@ tape('validate_query_singleCell: rejects an incomplete ds that supplies no gette
 		'should reject missing plots[]'
 	)
 
+	// plots[] is required even when the ds supplies every getter, because colorColumn2terms() reads it
+	await rejects(
+		test,
+		makeDs({ samples: { get: async () => ({}) }, data: { get: async () => ({}) } }),
+		'singleCell.data.plots[] missing',
+		'should reject missing plots[] even with a ds-supplied data.get'
+	)
+
 	await rejects(
 		test,
 		makeDs({ samples: { get: async () => ({}) }, data: { plots: apiPlots } }),
 		'plot.folder missing',
-		'should reject a plot without a folder'
+		'should reject a plot without a folder when data.get is missing'
+	)
+
+	// validateSamples() reads plot.folder too, so a ds-supplied data.get does not excuse it when
+	// samples.get is absent
+	await rejects(
+		test,
+		makeDs({ samples: {}, data: { get: async () => ({}), plots: apiPlots } }),
+		'plot.folder missing',
+		'should reject a plot without a folder when samples.get is missing, even with data.get'
 	)
 
 	await rejects(
