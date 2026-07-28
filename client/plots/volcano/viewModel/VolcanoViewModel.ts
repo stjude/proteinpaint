@@ -62,8 +62,14 @@ export class VolcanoViewModel {
 		this.pValueTable = {
 			columns: [
 				{ label: 'log₂(fold-change)', barplot, sortable: true },
-				{ label: 'Original p-value', sortable: true },
-				{ label: 'Adjusted p-value', sortable: true }
+				// DAP files carry a single FDR (adjusted p-value); other term types report
+				// both a raw and an adjusted p-value.
+				...(config.termType == tt.PROTEOME_DAP
+					? [{ label: 'FDR', sortable: true }]
+					: [
+							{ label: 'Original p-value', sortable: true },
+							{ label: 'Adjusted p-value', sortable: true }
+					  ])
 			],
 			/** Arr set in setPointData() if settings.showPValueTable is true to
 			 * prevent unnecessary data processing when the table is not shown */
@@ -174,7 +180,7 @@ export class VolcanoViewModel {
 				y: plotH + this.topPad + this.offset * 2
 			},
 			yAxisLabel: {
-				text: `-log10(${this.settings.pValueType} P value)`,
+				text: this.termType == tt.PROTEOME_DAP ? '-log10(FDR)' : `-log10(${this.settings.pValueType} P value)`,
 				x: this.horizPad / 3,
 				y: this.topPad + plotH / 2
 			},
@@ -278,11 +284,16 @@ export class VolcanoViewModel {
 			this.getGenesColor(d, d.significant, controlColor, caseColor)
 			if (d.significant) {
 				this.numSignificant++
-				const row = [
-					{ value: roundValueAuto(d.fold_change) },
-					{ value: roundValueAuto(d.original_p_value) },
-					{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
-				]
+				// DAP carries a single FDR (in original_p_value); keep the row cells in
+				// lock-step with the column set built in the constructor.
+				const row =
+					this.termType == tt.PROTEOME_DAP
+						? [{ value: roundValueAuto(d.fold_change) }, { value: roundValueAuto(d.original_p_value) }]
+						: [
+								{ value: roundValueAuto(d.fold_change) },
+								{ value: roundValueAuto(d.original_p_value) },
+								{ value: d.adjusted_p_value != undefined ? roundValueAuto(d.adjusted_p_value) : '' }
+						  ]
 				if (this.termType == tt.DNA_METHYLATION) {
 					row.splice(0, 0, { value: d.promoter_id || '' }, { value: d.gene_name || '' })
 				} else if (this.termType == tt.PROTEOME_DAP) {

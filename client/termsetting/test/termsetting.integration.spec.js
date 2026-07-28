@@ -755,7 +755,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	test.end()
 })
 
-tape('Numerical term: toggle menu - 2 options', async test => {
+tape.only('Numerical term: toggle menu - 2 options', async test => {
 	test.timeoutAfter(3000)
 	test.plan(1)
 

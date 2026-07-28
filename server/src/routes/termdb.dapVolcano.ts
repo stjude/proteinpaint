@@ -57,8 +57,10 @@ function init({ genomes }) {
 			const content = await fs.readFile(filePath, 'utf8')
 			const lines = content.trim().split('\n')
 
-			// DAP file columns: acc, identifier, gene, log2FC, FDR (the p-value column is already an FDR)
-			const rustRows: (DapEntry & { adjusted_p_value: number })[] = []
+			// DAP file columns: acc, identifier, gene, log2FC, FDR. The volcano shows this
+			// single FDR as its significance value, carried in
+			// original_p_value — the only p-value field the DAP volcano reads and thresholds on.
+			const rustRows: DapEntry[] = []
 			for (let i = 1; i < lines.length; i++) {
 				const parts = lines[i].split('\t')
 				if (parts.length < 5) continue
@@ -66,18 +68,15 @@ function init({ genomes }) {
 				if (!Number.isFinite(fc)) continue
 				const fdr = Number(parts[4])
 				if (!Number.isFinite(fdr)) continue
-				// the file only carries the FDR; use it for both p-value fields (the volcano defaults to adjusted)
 				rustRows.push({
 					gene_name: parts[1],
 					gene: parts[2],
 					fold_change: fc,
-					original_p_value: fdr,
-					adjusted_p_value: fdr
+					original_p_value: fdr
 				})
 			}
 
 			const rendered = await renderVolcano(rustRows, q.volcanoRender)
-			for (const d of rendered.dots) delete (d as any).adjusted_p_value
 			res.send({
 				data: rendered as any,
 				sample_size1: controlCount,

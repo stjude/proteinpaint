@@ -16,9 +16,9 @@ const SITE_DOT_SP = 13 // center-to-center spacing when packing site dots
 const CELL_PAD = 8
 const MIN_DOT_R = 8 // protein-level (non-PTM) big dot, min radius
 const MAX_DOT_R = 20 // protein-level (non-PTM) big dot, max radius
-// cap on −log10(p) used for dot size, so one ultra-significant (or p=0) dot can't
-// dwarf the rest; p ≤ 10^−CAP all render at the max size
-const NEG_LOG_P_CAP = 10
+// cap on −log10(FDR) used for dot size, so one ultra-significant (or FDR=0) dot can't
+// dwarf the rest; FDR ≤ 10^−CAP all render at the max size
+const NEG_LOG_FDR_CAP = 10
 
 class BubbleHeatmap extends PlotBase implements RxComponent {
 	static type = 'bubbleHeatmap'
@@ -120,7 +120,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 		const selectedIsoform = this.currentIsoform
 		const useAdjusted = this.useAdjusted
 		const refAssay: string | null = data.proteinReferenceAssay
-		const threshold: number = data.pValueThreshold
+		const threshold: number = data.fdrThreshold
 
 		this.gridHolder.selectAll('*').remove()
 		const container = this.gridHolder
@@ -143,8 +143,8 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 
 		// value the dot's color encodes: adjusted when requested & available, else raw
 		const valueOf = (s: any): number => this.valueFor(s, useAdjusted)
-		// significance as −log10(p), capped (guards p<=0 and keeps the size range sane).
-		const negLogP = (p: number): number => (p > 0 ? Math.min(-Math.log10(p), NEG_LOG_P_CAP) : NEG_LOG_P_CAP)
+		// significance as −log10(FDR), capped (guards FDR<=0 and keeps the size range sane).
+		const negLogFdr = (fdr: number): number => (fdr > 0 ? Math.min(-Math.log10(fdr), NEG_LOG_FDR_CAP) : NEG_LOG_FDR_CAP)
 
 		// PTM assays show one small dot per site; build an ordered list of distinct site
 		// ids (stable across cohort columns) so a site keeps the same slot in every column.
@@ -155,9 +155,9 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 		const slotIndex = new Map<string, number>() // `${assay}|${id}` → slot
 		const assaySlotCount = new Map<string, number>()
 		let maxAbs = 0
-		// −log10(p) at the significance cutoff (~1.30 for p<0.05): the smallest sized
+		// −log10(FDR) at the significance cutoff (~1.30 for FDR<0.05): the smallest sized
 		// protein dot. maxNegLog grows to the most-significant protein dot shown.
-		const thresholdNegLog = negLogP(threshold)
+		const thresholdNegLog = negLogFdr(threshold)
 		let maxNegLog = thresholdNegLog
 		for (const assay of assays) {
 			const ptm = isPTMassay(assay)
@@ -182,12 +182,12 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 						if (s.significant) significantSomewhere.add(s.id)
 					}
 				} else {
-					// non-PTM draws only the single best row (cell.sites[0]); size = -log10(p)
+					// non-PTM draws only the single best row (cell.sites[0]); size = -log10(FDR)
 					const s = cell.sites[0]
 					if (!s) continue
 					const v = Math.abs(valueOf(s))
 					if (v > maxAbs) maxAbs = v
-					const nl = negLogP(s.p_value)
+					const nl = negLogFdr(s.fdr)
 					if (nl > maxNegLog) maxNegLog = nl
 				}
 			}
@@ -212,8 +212,8 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 			.domain([-maxAbs, 0, maxAbs])
 			.range(['#2166ac', '#f7f7f7', '#b2182b'])
 			.clamp(true)
-		// non-PTM big-dot size encodes significance as −log10(p): bigger = more
-		// significant. domain runs from the p<threshold cutoff to the most-significant
+		// non-PTM big-dot size encodes significance as −log10(FDR): bigger = more
+		// significant. domain runs from the FDR<threshold cutoff to the most-significant
 		// protein dot; non-significant dots clamp to the smallest size. color carries
 		// log2FC, so size and color encode two independent variables.
 		const sizeScale = scaleSqrt().domain([thresholdNegLog, maxNegLog]).range([MIN_DOT_R, MAX_DOT_R]).clamp(true)
@@ -327,12 +327,12 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 				}
 
 				if (!ptm) {
-					// single big dot (protein level): color = log2FC, size = −log10(p) so
+					// single big dot (protein level): color = log2FC, size = −log10(FDR) so
 					// the dot shows effect and significance as two independent channels.
 					const s = cell.sites[0]
 					const cx = x0 + CELL_W / 2
 					const cy = y0 + height / 2
-					addDot(s, cx, cy, sizeScale(negLogP(s.p_value)))
+					addDot(s, cx, cy, sizeScale(negLogFdr(s.fdr)))
 					continue
 				}
 
@@ -357,7 +357,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 		this.renderLegend(container, colorScale, maxAbs, threshold, useAdjusted, refAssay, maxNegLog)
 	}
 
-	private fmtP(v: number): string {
+	private fmtFdr(v: number): string {
 		return v >= 0.0001 ? v.toFixed(4) : v.toExponential(2)
 	}
 
@@ -395,7 +395,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 		} else if (refAssay && isPTM) {
 			t.append('div').style('color', '#999').text('adjusted: n/a (protein not measured)')
 		}
-		t.append('div').text(`p-value: ${this.fmtP(s.p_value)}`)
+		t.append('div').text(`FDR: ${this.fmtFdr(s.fdr)}`)
 		const shown = this.showsAdjusted(s, useAdjusted) ? 'adjusted' : 'raw'
 		t.append('div').style('color', '#666').style('margin-top', '4px').text(`Color = ${shown} log₂FC.`)
 	}
@@ -478,15 +478,15 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 				.text(tick.toFixed(2))
 		}
 
-		// size key — protein-level (non-PTM) big dot, sized by significance (−log10 p)
+		// size key — protein-level (non-PTM) big dot, sized by significance (−log10 FDR)
 		const sizeBlock = legend.append('div')
 		sizeBlock
 			.append('div')
 			.style('font-weight', 'bold')
 			.style('font-size', '13px')
 			.style('margin-bottom', '6px')
-			.text('Non-PTM dot size: significance (−log₁₀ p)')
-		// small circle = the p<threshold cutoff, large circle = the most-significant
+			.text('Non-PTM dot size: significance (−log₁₀ FDR)')
+		// small circle = the FDR<threshold cutoff, large circle = the most-significant
 		// protein shown.
 		const sSvg = sizeBlock.append('svg')
 		const sG = sSvg.append('g')
@@ -497,7 +497,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 			minRadius: MIN_DOT_R,
 			maxRadius: MAX_DOT_R,
 			// capped to match the size scale's domain min (thresholdNegLog in renderGrid)
-			minLabel: Number(Math.min(-Math.log10(threshold), NEG_LOG_P_CAP).toFixed(1)),
+			minLabel: Number(Math.min(-Math.log10(threshold), NEG_LOG_FDR_CAP).toFixed(1)),
 			maxLabel: Number(maxNegLog.toFixed(1))
 		})
 		// fit the SVG to the rendered legend (plus a small margin) so it doesn't reserve
@@ -544,7 +544,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 		notes
 			.append('div')
 			.text(
-				`Color = log₂FC. Dot size = significance, −log₁₀ p (non-PTM rows); the smallest size marks the p < ${threshold} cutoff. Non-significant dots are faded.`
+				`Color = log₂FC. Dot size = significance, −log₁₀ FDR (non-PTM rows); the smallest size marks the FDR < ${threshold} cutoff. Non-significant dots are faded.`
 			)
 		notes
 			.append('div')

@@ -2,6 +2,7 @@ import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
 import { getSampleNum } from './settings/defaults'
 import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { PROTEOME_DAP } from '#types'
 
 /** Handles settings the controls in the menu based on the app
  * termType.
@@ -32,11 +33,16 @@ export class VolcanoControlInputs {
 		//Populated with the default controls for the volcano plot
 		this.inputs = [
 			{
-				label: 'P value significance (-log₁₀)',
+				// DAP volcanoes threshold a single FDR (adjusted p-value); other term types
+				// threshold a p-value.
+				label: this.config.termType == PROTEOME_DAP ? 'FDR significance (-log₁₀)' : 'P value significance (-log₁₀)',
 				type: 'number',
 				chartType: 'volcano',
 				settingsKey: 'pValue',
-				title: 'The p-value threshold to determine statistical significance',
+				title:
+					this.config.termType == PROTEOME_DAP
+						? 'The FDR threshold to determine statistical significance'
+						: 'The p-value threshold to determine statistical significance',
 				min: 0,
 				// 5e-324 is the smallest positive number greater than 0 representable
 				// in IEEE 64-bit floating point (i.e. javascripts native Number.MIN_VALUE)
@@ -50,6 +56,8 @@ export class VolcanoControlInputs {
 				chartType: 'volcano',
 				settingsKey: 'pValueType',
 				title: 'Toggle between original and adjusted pvalues for volcano plot',
+				// DAP files carry only a single FDR, so there is nothing to toggle between.
+				getDisplayStyle: () => (this.config.termType == PROTEOME_DAP ? 'none' : ''),
 				options: [
 					{ label: 'Adjusted', value: 'adjusted' },
 					{ label: 'Original', value: 'original' }

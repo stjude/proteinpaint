@@ -3,6 +3,7 @@ import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
+import { PROTEOME_DAP } from '#types'
 import { getGEunit } from '#tw/geneExpression'
 
 export class VolcanoInteractions {
@@ -75,7 +76,8 @@ export class VolcanoInteractions {
 				}
 			},
 			{
-				text: 'Download p value table',
+				// DAP volcanoes report a single FDR rather than a p-value.
+				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p value table',
 				callback: () => {
 					downloadTable(this.pValueTableData.rows, this.pValueTableData.columns)
 				}
