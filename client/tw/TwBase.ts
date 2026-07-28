@@ -82,7 +82,7 @@ export class TwBase {
 
 	getMinCopy(override: any = {}) {
 		const tw = this.#tw
-		const copy: any = { term: {}, q: structuredClone(override.q || tw.q) }
+		const copy: any = { type: tw.type, term: {}, q: structuredClone(override.q || tw.q) }
 		if (tw.$id) copy.$id = tw.$id
 		if (tw.term) {
 			if (isDictionaryType(tw.term.type)) {

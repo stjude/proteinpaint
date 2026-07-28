@@ -1083,7 +1083,7 @@ export class TermdbVocab extends Vocab {
 			for: 'getDefaultBins',
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
-			tw: opts.tw.getMinCopy?.({ q: {} }) || this.getTwMinCopy({ term: opts.tw.term, q: {} }),
+			tw: opts.tw.getMinCopy?.({ q: {} }) || this.getTwMinCopy({ type: opts.tw.type, term: opts.tw.term, q: {} }),
 			embedder: window.location.hostname
 		}
 		// this.state.termfilter is updated when there's a dispatch,

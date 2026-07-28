@@ -86,7 +86,9 @@ export class SearchHandler {
 			holder: div,
 			allgm: enstModels,
 			multiSelect: true,
-			submitLabel: 'Create Collection',
+			// a single checked isoform yields an individual term, 2+ yield a collection
+			getSubmitLabel: (selectedCount: number) =>
+				selectedCount === 1 ? 'Select One Isoform' : `Create Collection (${selectedCount})`,
 			onMultiSelect: (selected: GeneModel[]) => {
 				if (selected.length === 1) {
 					// Single isoform: create individual isoformExpression term

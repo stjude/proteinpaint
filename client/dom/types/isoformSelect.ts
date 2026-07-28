@@ -68,5 +68,6 @@ export type IsoformSelectOpts =
 			multiSelect: true
 			onMultiSelect: (selected: GeneModel[]) => void
 			selectedIsoforms?: Set<string>
-			submitLabel?: string
+			/** returns the submit button text for the current number of checked isoforms */
+			getSubmitLabel?: (selectedCount: number) => string
 	  })

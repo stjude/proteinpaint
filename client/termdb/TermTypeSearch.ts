@@ -488,6 +488,27 @@ export type SearchHandlerOpts = {
 	termCollectionSelectionMode?: 'fraction'
 }
 
+/*
+Selecting a numeric term collection as a fraction reduces it to one numeric value per sample
+(see handlers/termCollectionFractionSelection.ts), which makes such a collection usable as a
+variable, unlike a collection that stays multi-valued. Only a caller that can consume the
+resulting fraction tw turns this mode on, e.g. termsetting for barchart term2/term0, so the
+mode itself is the permission to show these collections for a usecase that excludes collections.
+
+selectionMode = opts.tree.termCollectionSelectionMode of the termdb app
+*/
+function allowsCollectionFraction(selectionMode, vocabApi): boolean {
+	if (selectionMode != 'fraction') return false
+	return vocabApi?.termdbConfig?.termCollections?.some(c => c.type == 'numeric') === true
+}
+
+/** true when collections are shown for this usecase only as reducible-to-scalar fractions,
+ * in which case only numeric collections may be offered */
+function isFractionOnlyUseCase(target, self): boolean {
+	if (!target || !allowsCollectionFraction(self.termCollectionSelectionMode, self.app?.vocabApi)) return false
+	return self.useCasesExcluded[target]?.includes(TERM_COLLECTION) === true
+}
+
 export function getAllowedTabs(state, self) {
 	const tabs: Tab[] = []
 	const allowedTermTypes = state.allowedTermTypes || self.types
@@ -502,9 +523,14 @@ export function getAllowedTabs(state, self) {
 		if (type == TermTypes.TERM_COLLECTION) {
 			const collections = self.app.vocabApi?.termdbConfig?.termCollections
 			if (!collections) throw new Error('termdbConfig.termCollections missing')
+			/* when the usecase excludes collections, this group is only allowed because a numeric
+			collection reduces to a scalar fraction; a categorical collection has no such scalar
+			form and must stay hidden there */
+			const fractionOnly = isFractionOnlyUseCase(state.tree.usecase?.target, self)
 			// special: one tab for each collection, if permitted by usecase
 			for (const c of collections) {
 				if (c.type != 'categorical' && c.type != 'numeric') throw new Error('tc.type not categorical/numeric')
+				if (fractionOnly && c.type != 'numeric') continue
 				switch (state.tree.usecase?.target) {
 					case 'dictionary':
 					case 'filter':
@@ -579,6 +605,17 @@ export function getAllowedTermTypesForUseCase(state, app) {
 		} else {
 			// not singlecell! in cohort mode, disallow sc terms
 			if (isSingleCellTerm({ type })) continue
+		}
+
+		if (
+			type == TermTypes.TERM_COLLECTION &&
+			allowsCollectionFraction(app.opts?.tree?.termCollectionSelectionMode, app.vocabApi)
+		) {
+			/* a numeric collection is selected as a scalar fraction here, thus it is allowed
+			regardless of the usecase filters below, which reject a multi-valued collection;
+			getAllowedTabs() then only creates tabs for the numeric collections */
+			allowedTermTypes.push(type)
+			continue
 		}
 
 		if (target && dsUseCasesExcluded[target]?.includes(termTypeGroup)) continue

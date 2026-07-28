@@ -38,7 +38,7 @@ export class CollectionCont extends TwBase {
 	}
 
 	getMinCopy() {
-		const copy: any = { term: {}, q: structuredClone(this.q) }
+		const copy: any = { type: this.type, term: {}, q: structuredClone(this.q) }
 		if (this.$id) copy.$id = this.$id
 		copy.term.type = this.term.type
 		copy.term.name = this.term.name
