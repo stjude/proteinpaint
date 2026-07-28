@@ -107,9 +107,21 @@ class ProfilePolar2 extends profilePlot {
 		this.drawLegend()
 	}
 
+	/*
+	Two layouts. Normally the legend column sits to the right of the polar inside the svg and
+	the score table sits to its right again. In comparison mode two charts share the row, so
+	the legend column and the table stack under the polar and the svg narrows to suit. The
+	filter legend grows a row per active filter, hence the derived height.
+	*/
 	private createSvg() {
-		const width = this.isComparison ? 800 : 1000,
-			height = 600
+		const isComparison = this.isComparison
+		const x = 280,
+			y = 330
+		// The polar occupies y up to 580 (cy 330 + r 250), so the stacked blocks start below that.
+		const legendY = 620,
+			filterY = legendY + 90
+		const width = isComparison ? 600 : 1000
+		const height = isComparison ? filterY + this.getFilterLegendRowCount() * 22 + 20 : 600
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -120,9 +132,9 @@ class ProfilePolar2 extends profilePlot {
 		this.dom.tableDiv = this.dom.plotDiv
 			.append('div')
 			.attr('data-testid', 'sjpp-profilePolar2-data-table')
-			.style('display', 'inline-block')
+			.style('display', isComparison ? 'block' : 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin', '45px 20px') as any
+			.style('margin', isComparison ? '0 20px 20px' : '45px 20px') as any
 
 		this.dom.svg
 			.append('text')
@@ -130,14 +142,14 @@ class ProfilePolar2 extends profilePlot {
 			.attr('font-weight', 'bold')
 			.text(this.config.title)
 
-		const x = 280,
-			y = 330
 		this.polarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profilePolar2-legend')
-			.attr('transform', `translate(${x + 280}, ${y - 200})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 280},${y})`)
+			.attr('transform', isComparison ? `translate(20, ${legendY})` : `translate(${x + 280}, ${y - 200})`)
+		this.filterG = this.dom.svg
+			.append('g')
+			.attr('transform', isComparison ? `translate(20, ${filterY})` : `translate(${x + 280},${y})`)
 	}
 
 	private drawGrid() {
@@ -222,29 +234,26 @@ class ProfilePolar2 extends profilePlot {
 	private drawTable(rows: TableCell[][]) {
 		const columns = [{ label: 'Color' }, { label: 'Module' }, { label: 'Score', align: 'center' }]
 		this.dom.tableDiv.selectAll('*').remove()
-		if (!this.isComparison)
-			renderTable({
-				rows,
-				columns,
-				div: this.dom.tableDiv,
-				showLines: true,
-				resize: true,
-				maxHeight: '50vh'
-			})
+		renderTable({
+			rows,
+			columns,
+			div: this.dom.tableDiv,
+			showLines: true,
+			resize: true,
+			maxHeight: '50vh'
+		})
 	}
 
 	private drawLegend() {
-		if (!this.isComparison) {
-			this.legendG
-				.append('text')
-				.attr('text-anchor', 'left')
-				.style('font-weight', 'bold')
-				.text('Overall Score')
-				.attr('transform', `translate(0, -5)`)
-			this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
-			this.addLegendItem('B', '50-75% of possible scorable items', 2)
-			this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
-		}
+		this.legendG
+			.append('text')
+			.attr('text-anchor', 'left')
+			.style('font-weight', 'bold')
+			.text('Overall Score')
+			.attr('transform', `translate(0, -5)`)
+		this.addLegendItem('A', 'More than 75% of possible scorable items', 1)
+		this.addLegendItem('B', '50-75% of possible scorable items', 2)
+		this.addLegendItem('C', 'Less than 50% of possible scorable items', 3)
 		this.addFilterLegend()
 	}
 }

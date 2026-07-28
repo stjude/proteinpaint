@@ -101,9 +101,21 @@ class ProfileRadarFacility2 extends profilePlot {
 		this.drawTableAndLegend(rows, hasFacilityData)
 	}
 
+	/*
+	Two layouts. Normally the legend column sits to the right of the radar inside the svg and
+	the score table sits to its right again. In comparison mode two charts share the row, so
+	the legend and filter blocks stack under the radar and the table moves below the svg. The
+	filter legend grows a row per active filter, hence the derived height.
+	*/
 	private createSvgAndGrid(hasFacilityData: boolean) {
-		const width = this.isComparison ? 1000 : 1100
-		const height = 630
+		const isComparison = this.isComparison
+		const x = 300
+		const y = 330
+		// The radar plus its module labels run to about y 575, and the legend items to +75.
+		const legendY = 600,
+			filterY = 700
+		const width = isComparison ? 660 : 1100
+		const height = isComparison ? filterY + this.getFilterLegendRowCount() * 22 + 20 : 630
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -112,9 +124,9 @@ class ProfileRadarFacility2 extends profilePlot {
 			.attr('height', height)
 		const rightDiv = this.dom.plotDiv
 			.append('div')
-			.style('display', 'inline-block')
+			.style('display', isComparison ? 'block' : 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '80px')
+			.style('margin-top', isComparison ? '0' : '80px')
 			.style('margin-right', '20px')
 		this.dom.tableDiv = rightDiv.append('div').attr('data-testid', 'sjpp-profileRadarFacility2-data-table')
 
@@ -123,8 +135,6 @@ class ProfileRadarFacility2 extends profilePlot {
 			.attr('transform', `translate(90, 30)`)
 			.attr('font-weight', 'bold')
 			.text(this.config.title)
-		const x = 300
-		const y = 330
 		const radarG = this.dom.svg.append('g').attr('transform', `translate(${x},${y})`)
 		this.radarG = radarG
 
@@ -132,8 +142,10 @@ class ProfileRadarFacility2 extends profilePlot {
 			.append('g')
 			.attr('data-testid', 'sjpp-profileRadarFacility2-legend')
 			.attr('font-size', '0.9em')
-			.attr('transform', `translate(${x + 320},${y - 150})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 320},${y - 50})`)
+			.attr('transform', isComparison ? `translate(20, ${legendY})` : `translate(${x + 320},${y - 150})`)
+		this.filterG = this.dom.svg
+			.append('g')
+			.attr('transform', isComparison ? `translate(20, ${filterY})` : `translate(${x + 320},${y - 50})`)
 
 		for (let i = 0; i <= 10; i++) this.drawPolygon(i * 10)
 
@@ -254,18 +266,16 @@ class ProfileRadarFacility2 extends profilePlot {
 			{ label: 'Global' },
 			{ label: 'Difference*' }
 		]
-		if (!this.isComparison) {
-			renderTable({
-				rows,
-				columns,
-				div: this.dom.tableDiv,
-				showLines: true,
-				resize: true
-			})
-			this.addDifferenceNote(
-				`* Difference between site and aggregated scores. If bigger than 20 and positive shown in blue, if negative shown in red.`
-			)
-		}
+		renderTable({
+			rows,
+			columns,
+			div: this.dom.tableDiv,
+			showLines: true,
+			resize: true
+		})
+		this.addDifferenceNote(
+			`* Difference between site and aggregated scores. If bigger than 20 and positive shown in blue, if negative shown in red.`
+		)
 		this.addFilterLegend()
 
 		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
