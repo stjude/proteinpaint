@@ -28,6 +28,11 @@ the direct functional testing of the component, without the use of runpp()
  reusable helper functions
 **************************/
 
+/* The APPLY button of a numeric range row is a vanilla <button>, unlike the value table
+APPLY rendered by renderTable(), which is still styled with the .sjpp_apply_btn class.
+The DELETE sibling in the same cell is excluded. */
+const rangeApplySelector = 'table button:not(.sjpp_delete_btn)'
+
 function getOpts(_opts = {}) {
 	const holder = d3s
 		.select('body')
@@ -390,9 +395,15 @@ tape('tvs: Numeric', async test => {
 	{
 		pill.click()
 		editOpt.click()
-		const applyBtn = await detectLst({ target: tipnode, selector: '.sjpp_apply_btn', count: 2 })
+		// the range apply is a vanilla <button>, the value table apply is rendered by renderTable();
+		// the value table renders after the range table, so detect it to know both are rendered
+		const valueApplyBtn = await detectLst({ target: tipnode, selector: '.sjpp_apply_btn', count: 1 })
 
-		test.equal(applyBtn.length, 2, 'Should have 2 button to apply value change')
+		test.equal(
+			valueApplyBtn.length + tipd.selectAll(rangeApplySelector).size(),
+			2,
+			'Should have 2 button to apply value change'
+		)
 		test.equal(tipd.selectAll('.sjpp_delete_btn').size(), 1, 'Should have 1 button to remove the range')
 		test.equal(
 			tipnode.querySelector('input[name="rangeInput"]').value.trim(),
@@ -407,7 +418,7 @@ tape('tvs: Numeric', async test => {
 		d3s.select(tipnode.querySelector('.range_brush')).call(brush.move, [15.9511, 30.9465])
 
 		// -- test available buttons --
-		test.equal(tipd.selectAll('table .sjpp_apply_btn').size(), 1, 'Should have button to apply value change')
+		test.equal(tipd.selectAll(rangeApplySelector).size(), 1, 'Should have button to apply value change')
 		//test.equal(tipd.selectAll('table .reset_btn').size(), 1, 'Should have button to reset the range')
 
 		// --- test range change and adding unannotated category ---
@@ -416,7 +427,7 @@ tape('tvs: Numeric', async test => {
 				target: filternode,
 				selector: '.value_btn',
 				trigger() {
-					tipnode.querySelector('table .sjpp_apply_btn').click()
+					tipnode.querySelector(rangeApplySelector).click()
 				}
 			})
 
@@ -450,13 +461,13 @@ tape('tvs: Numeric', async test => {
 					)
 				},
 				trigger() {
-					tipnode.querySelectorAll('.sjpp_apply_btn')[1].click()
+					tipnode.querySelector('.sjpp_apply_btn').click()
 				}
 			})
 
 			// for subsequent tests, hide the uncomputable bin again
 			tipnode.querySelector("input[name^='sjpp-input']").click()
-			tipnode.querySelector('.sjpp_apply_btn').click()
+			tipnode.querySelector(rangeApplySelector).click()
 			await whenHidden(tipnode.parentNode)
 		}
 	}
@@ -532,7 +543,7 @@ tape('tvs: Numeric', async test => {
 			target: filternode,
 			selector: '.value_btn',
 			trigger() {
-				tr.querySelector('.sjpp_apply_btn').click()
+				tr.querySelector('button:not(.sjpp_delete_btn)').click()
 			}
 		})
 		test.true(valueBtn[0].innerText.includes(`> 0`), 'should show a greater than pill value')
@@ -551,7 +562,7 @@ tape('tvs: Numeric', async test => {
 			target: filternode,
 			selector: '.value_btn',
 			trigger() {
-				tr1.querySelector('.sjpp_apply_btn').click()
+				tr1.querySelector('button:not(.sjpp_delete_btn)').click()
 			}
 		})
 
@@ -1418,7 +1429,7 @@ tape('tvs: termCollection', async test => {
 			return arr
 		}, [])
 		test.equal(inputs.length, tc.termIds.length * 2, 'Should have 2 checkboxes for each term')
-		const applyBtn = tipd.node().querySelector('.sjpp_apply_btn')
+		const applyBtn = tipd.node().querySelector('button')
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 	} catch (e) {
 		test.fail('test error: ' + e)

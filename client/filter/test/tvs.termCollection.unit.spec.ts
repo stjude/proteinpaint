@@ -169,9 +169,9 @@ tape('fillMenu() defaults a new filter to x>0.1 on the first member', async test
 		[true, true, true],
 		'checks every member as denominator'
 	)
-	test.equal(holder.selectAll('button.sjpp_apply_btn').size(), 1, 'renders the APPLY control as a <button>')
+	test.equal(holder.selectAll('button').size(), 1, 'renders the APPLY control as the only <button>')
 	test.equal(holder.selectAll('table').size(), 1, 'lays out the range input without a table, only the member table')
-	;(holder.select('button.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	;(holder.select('button').node() as HTMLButtonElement).click()
 	test.equal(applied?.ranges[0].start, 0.1, 'applies a range starting at 0.1')
 	test.equal(applied?.ranges[0].startinclusive, false, 'applies an exclusive start')
 	test.equal(applied?.ranges[0].stopunbounded, true, 'applies an unbounded stop')
@@ -207,7 +207,7 @@ tape('fillMenu() only applies the filter from the APPLY button', async test => {
 	getNumerators(holder)[1].click()
 	test.equal(applied, undefined, 'selecting a numerator does not apply the filter')
 	test.equal(hidden, false, 'selecting a numerator does not close the menu')
-	;(holder.select('button.sjpp_apply_btn').node() as HTMLButtonElement).click()
+	;(holder.select('button').node() as HTMLButtonElement).click()
 	test.equal(applied?.ranges[0].start, 0.2, 'APPLY applies the edited range')
 	test.deepEqual(applied?.term.numerators, ['ENST01', 'ENST02'], 'APPLY applies the edited numerators')
 	test.equal(hidden, true, 'APPLY closes the menu')

@@ -64,7 +64,6 @@ function renderRangeInput(div, tvs, applyRange) {
 
 	num_div
 		.append('button')
-		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 		.text('APPLY')
 		.on('click', () => {
 			try {

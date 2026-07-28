@@ -276,12 +276,7 @@ function addRangeTableNoDensity(self, tvs) {
 	}
 
 	function addApplyButton(holder) {
-		return holder
-			.append('button')
-			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-			.style('text-transform', 'uppercase')
-			.text('apply')
-			.on('click', clickApply)
+		return holder.append('button').text('APPLY').on('click', clickApply)
 	}
 
 	function clickApply() {
@@ -399,10 +394,8 @@ function enterRange(self, tr, brush, i) {
 		//'Apply' button
 		brush.apply_btn = buttons_td
 			.append('button')
-			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 			.style('margin-left', '10px')
-			.style('text-transform', 'uppercase')
-			.text('apply')
+			.text('APPLY')
 			.on('click', async () => {
 				self.dom.tip.hide()
 				const new_range = brush.rangeInput.parseRange()
