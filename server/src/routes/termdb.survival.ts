@@ -21,21 +21,8 @@ export async function get_survival(q: any, ds: any) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
-		const twLst: Array<{ term: any; q: any }> = []
-		for (const i of [0, 1, 2]) {
-			const termnum = 'term' + i
-			const termnum_id = termnum + '_id'
-			if (typeof q[termnum_id] == 'string') {
-				q[termnum_id] = decodeURIComponent(q[termnum_id])
-				q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
-			} else if (typeof q[termnum] == 'string') {
-				q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
-			}
-
-			const termnum_q = termnum + '_q'
-
-			if (q[termnum]) twLst.push({ term: q[termnum], q: q[termnum_q] })
-		}
+		const twByIndex = getTwByIndex(q)
+		const twLst = [...twByIndex.values()]
 
 		if (q.term2) {
 			if (q.term2.type == 'survival' && q.term1.type == 'survival') {
@@ -52,9 +39,12 @@ export async function get_survival(q: any, ds: any) {
 		}
 
 		const survTermIndex = getSurvTermIndex(q) // 1 or 2
-		const st = q[`term${survTermIndex}`]
-		const ot = q[`term${survTermIndex == 1 ? 2 : 1}`]
-		const dt = q.term0
+		// st, ot and dt are term wrappers, not terms
+		const st = twByIndex.get(survTermIndex)
+		const ot = twByIndex.get(survTermIndex == 1 ? 2 : 1)
+		const dt = twByIndex.get(0)
+		mayValidateStratificationTw(ot)
+		mayValidateStratificationTw(dt)
 
 		if (dt || ot) {
 			const restrict = ds.cohort.termdb.restrictSurvivalStratification?.(q.__protected__)
@@ -77,10 +67,11 @@ export async function get_survival(q: any, ds: any) {
 		if (data.error) throw data.error
 		const results = getSampleArray(data, st)
 
+		const stKey = getTwKey(st)
 		const byChartSeries: Record<string, Array<{ time: number; status: number; series: string }>> = {}
 		const keys = { chart: new Set<string>(), series: new Set<string>() }
 		for (const d of results) {
-			const s = d[st.id]
+			const s = d[stKey]
 			const time = s.value
 			if (time < 0) continue
 			const status = s.key
@@ -149,8 +140,8 @@ export async function get_survival(q: any, ds: any) {
 			}
 		}
 		final_data.case.sort((a, b) => a[2] - b[2])
-		const orderedLabels = getOrderedLabels(q.term2, bins ? bins.map(bin => (bin.name ? bin.name : bin.label)) : [])
-		const orderedLabelsTerm0 = getOrderedLabels(q.term0)
+		const orderedLabels = getOrderedLabels(ot?.term, bins.length ? bins : getFractionBins(ot, data))
+		const orderedLabelsTerm0 = getOrderedLabels(dt?.term, getFractionBins(dt, data))
 		final_data.refs.orderedKeys = {
 			chart: [...keys.chart].sort(
 				!orderedLabelsTerm0 ? undefined : (a, b) => orderedLabelsTerm0.indexOf(a) - orderedLabelsTerm0.indexOf(b)
@@ -184,6 +175,58 @@ function init({ genomes }: any) {
 	}
 }
 
+/** Reconstruct the term wrappers encoded by the term0/term1/term2 request parameters.
+ *  q.term0, q.term1 and q.term2 are filled in as a side effect, since get_survival()
+ *  validates the request by term type. */
+export function getTwByIndex(q: any) {
+	const twByIndex = new Map<number, any>()
+	for (const i of [0, 1, 2]) {
+		const termnum = 'term' + i
+		const termnum_id = termnum + '_id'
+		if (typeof q[termnum_id] == 'string') {
+			q[termnum_id] = decodeURIComponent(q[termnum_id])
+			q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
+		} else if (typeof q[termnum] == 'string') {
+			q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
+		}
+		if (!q[termnum]) continue
+
+		const tw: any = { term: q[termnum], q: q[termnum + '_q'] }
+		const twType = q[termnum + '_type'] || inferTwType(tw)
+		if (twType) tw.type = twType
+		// getData() keys a termCollection's sample data by $id, since a custom collection
+		// has no term.id; other term types are still keyed by term.id or term.name
+		if (tw.term.type == 'termCollection') tw.$id = q[termnum + '_$id'] || tw.term.id || tw.term.name
+		twByIndex.set(i, tw)
+	}
+	return twByIndex
+}
+
+/** the tw type may be missing when a request is not assembled by the client tw router */
+function inferTwType(tw: any) {
+	if (tw.term?.type == 'termCollection' && Array.isArray(tw.q?.denominators)) return 'TermCollectionTWFraction'
+	return undefined
+}
+
+/** the key under which getData() returns a tw's sample data */
+function getTwKey(tw: any) {
+	return tw.$id || tw.term.id || tw.term.name
+}
+
+/** a fraction termCollection has no term.values to order its keys by: its keys are the
+ *  labels of the bins that getData() computed for it */
+function getFractionBins(tw: any, data: any) {
+	if (tw?.type != 'TermCollectionTWFraction') return []
+	return data.refs.byTermId?.[getTwKey(tw)]?.bins || []
+}
+
+/** a fraction resolves to one number per sample, it must be binned to be usable
+ *  as an overlay or divide-by term */
+function mayValidateStratificationTw(tw: any) {
+	if (tw?.type == 'TermCollectionTWFraction' && tw.q?.mode != 'discrete')
+		throw `${tw.term.name} fraction must use discrete bins to serve as an overlay or divide-by term`
+}
+
 function getSurvTermIndex(q: any) {
 	if (q.term1) {
 		if (q.term1.type == 'survival') return 1
@@ -194,24 +237,28 @@ function getSurvTermIndex(q: any) {
 }
 
 function getSampleArray(data: any, st: any) {
-	const lst = Object.values(data.samples as Record<string, any>).filter((i: any) => i[st.id])
-	return lst.sort((a: any, b: any) => (a[st.id].value < b[st.id].value ? -1 : 1))
+	const key = getTwKey(st)
+	const lst = Object.values(data.samples as Record<string, any>).filter((i: any) => i[key])
+	return lst.sort((a: any, b: any) => (a[key].value < b[key].value ? -1 : 1))
 }
 
-function getTermData(d: any, t: any) {
+export function getTermData(d: any, tw: any) {
+	const t = tw.term
+	const key = getTwKey(tw)
 	let data
 	if (Object.prototype.hasOwnProperty.call(t, 'id')) {
-		if (!Object.prototype.hasOwnProperty.call(d, t.id)) return
-		data = d[t.id].key
-	} else if (t.type == 'samplelst') {
-		if (!Object.prototype.hasOwnProperty.call(d, t.name)) return
-		data = d[t.name].key
+		if (!Object.prototype.hasOwnProperty.call(d, key)) return
+		data = d[key].key
+	} else if (t.type == 'samplelst' || t.type == 'termCollection') {
+		// a custom termCollection has no term.id, a sample may have no value for it
+		if (!Object.prototype.hasOwnProperty.call(d, key)) return
+		data = d[key].key
 	} else {
 		const n = t.name
 		if (t.type == TermTypes.GENE_EXPRESSION) {
-			data = d[t.name]?.key || 'Missing data'
-		} else if (d[t.name]) {
-			data = d[t.name].key
+			data = d[key]?.key || 'Missing data'
+		} else if (d[key]) {
+			data = d[key].key
 		} else {
 			throw `cannot get key for term='${n}'`
 		}

@@ -3,7 +3,6 @@ import { TermSetting } from './TermSetting.ts'
 import type { Term, TermWrapper, Filter } from '#types'
 import { call_fillTW, get$id, fillTermWrapper } from './utils.ts'
 import { minimatch } from 'minimatch'
-// import { isNumericTerm } from '#shared/terms.js'
 import { copyMerge, deepEqual, sleep } from '#rx'
 import { select } from 'd3-selection'
 import { TwRouter, QualitativeBase, NumericBase, routedTermTypes } from '#tw'
@@ -19,7 +18,7 @@ const testClickTermDelay = 0 // 5000
 /** usecase targets whose term2/term0 pill can consume a numeric term collection reduced to a
  * scalar fraction; these are the summary childTypes, which swap as the overlay mode changes
  */
-const fractionOverlayTargets = new Set(['barchart', 'violin', 'boxplot'])
+const fractionOverlayTargets = new Set(['barchart', 'violin', 'boxplot', 'survival'])
 
 export class TermSettingApi {
 	#termsetting: TermSetting
