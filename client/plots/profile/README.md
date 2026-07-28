@@ -58,6 +58,21 @@ Data visibility is strictly controlled based on the user's role and access to si
 
 This role-based filtering is managed by the `getAdditionalFilter` function in the dataset configuration, which dynamically handles the data queries based on the user's `clientAuthResult`. Certain charts, like the `profileRadarFacility2` chart, are hidden entirely for public users.
 
+### Comparison Mode
+
+The "Open another plot for comparison" (`+`) icon in the controls panel opens a **second copy of the same chart** beside the first, so two filter sets can be read side by side. The two plots form a parent/child pair:
+
+- The handler in `profilePlot.setControls()` dispatches `plot_create` with a `structuredClone` of the current config plus `config.parentId = this.id`. The icon turns orange; clicking it again dispatches `plot_delete` for the child.
+- Only the parent gets the icon (`if (!config.parentId)`), so a comparison plot cannot spawn its own.
+- `getState()` collects the children via `appState.plots.filter(p => p.parentId === this.id)`, and the **parent renders the child itself** in `main()` — `mass/app.ts` skips top-level rendering of any plot with a `parentId`. The same approach is used in the report plot.
+- `this.isComparison` is true on **both** panels — on the parent because `state.plots` is non-empty, on the child because `config.parentId` is set.
+
+Each panel renders its full chart — its own score table, difference note, legend, and its own `addFilterLegend()` line showing that panel's filters and `n`. Nothing is dropped in comparison mode.
+
+To fit two panels in a row, `profilePolar2`, `profileRadar2` and `profileRadarFacility2` switch to a **stacked layout** when `isComparison` is true: the legend and filter groups move from the right of the plot to underneath it inside the svg, the cohort note follows (radar), and the html score table becomes a block below the svg instead of an inline-block beside it. The svg narrows accordingly (polar 1000 → 600, radar 1050 → 660, radar-facility 1100 → 660) and grows taller.
+
+Because the filter legend draws one row per active filter, the stacked height cannot be a constant. Each chart derives it from `profilePlot.getFilterLegendRowCount()`, which counts the title row plus one row per filter that `addFilterLegendItem()` will actually draw — both share the `hasFilterValue()` predicate so the count and the render cannot drift apart.
+
 Here is a breakdown of the main plot types:
 
 ### Polar Chart (profilePolar2)
