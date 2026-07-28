@@ -34,7 +34,8 @@ Multi-select (multiSelect: true):
 ******* optional
 .usegm             currently active gene model, highlighted (single-select only)
 .selectedIsoforms  Set of pre-checked isoform IDs (multi-select only)
-.submitLabel       text for the submit button (multi-select only, default "Submit")
+.getSubmitLabel    (selectedCount) => text for the submit button, called on every
+                   selection change (multi-select only, default "Submit (n)")
 .maxHeight         max height in px before scrolling (default 200)
 .scrollThreshold   number of isoforms before enabling scroll (default 10)
 */
@@ -273,7 +274,6 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	if (multiSelect) {
 		submitBtn = holder
 			.append('button')
-			.text(opts.submitLabel || 'Submit')
 			.style('margin-top', '8px')
 			.style('cursor', 'pointer')
 			.on('click', () => {
@@ -284,7 +284,8 @@ export function isoformSelect(opts: IsoformSelectOpts) {
 	}
 
 	function updateSubmitBtn() {
-		const label = multiSelect ? opts.submitLabel || 'Submit' : 'Submit'
-		submitBtn.property('disabled', checkedSet.size === 0).text(`${label} (${checkedSet.size})`)
+		const count = checkedSet.size
+		const label = multiSelect && opts.getSubmitLabel ? opts.getSubmitLabel(count) : `Submit (${count})`
+		submitBtn.property('disabled', count === 0).text(label)
 	}
 }

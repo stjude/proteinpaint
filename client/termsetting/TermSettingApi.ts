@@ -16,6 +16,11 @@ export const termsettingInit = opts => {
 
 const testClickTermDelay = 0 // 5000
 
+/** usecase targets whose term2/term0 pill can consume a numeric term collection reduced to a
+ * scalar fraction; these are the summary childTypes, which swap as the overlay mode changes
+ */
+const fractionOverlayTargets = new Set(['barchart', 'violin', 'boxplot'])
+
 export class TermSettingApi {
 	#termsetting: TermSetting
 	Inner?: TermSetting
@@ -114,8 +119,12 @@ export class TermSettingApi {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
+				/* all summary childTypes, not just barchart: selecting a continuous overlay switches
+				childType (see plots/summary.ts mayAdjustConfig), so the same pill is later opened
+				with the violin/boxplot usecase and must still offer collections as fractions */
 				termCollectionSelectionMode:
-					self.usecase.target === 'barchart' && (self.usecase.detail === 'term2' || self.usecase.detail === 'term0')
+					fractionOverlayTargets.has(self.usecase.target) &&
+					(self.usecase.detail === 'term2' || self.usecase.detail === 'term0')
 						? 'fraction'
 						: undefined,
 				click_term: async t => {

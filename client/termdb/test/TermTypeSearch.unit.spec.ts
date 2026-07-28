@@ -14,6 +14,8 @@ Tests:
 	getAllowedTabs() - GENE_VARIANT custom label generation
 	getAllowedTabs() - should throw for invalid term type without group
 	getAllowedTabs() - numeric termCollection should show up in dictionary usecase
+	getAllowedTabs() - numeric termCollection should show up for a usecase excluding collections, in fraction mode
+	getAllowedTabs() - termCollection should stay hidden for a usecase excluding collections, without fraction mode
 */
 
 /*************************
@@ -37,6 +39,7 @@ type MockSelfArg = {
 	allowedTermTypes: string[]
 	queries?: any
 	termCollections?: any[]
+	termCollectionSelectionMode?: 'fraction'
 }
 
 // Create minimal mock for 'self' parameter needed by getAllowedTabs()
@@ -44,6 +47,8 @@ function getMockSelf(opts: MockSelfArg) {
 	return {
 		types: opts.allowedTermTypes,
 		app: {
+			// mimics the termdb app opts, where the selection mode is supplied by the caller
+			opts: { tree: { termCollectionSelectionMode: opts.termCollectionSelectionMode } },
 			vocabApi: {
 				termdbConfig: {
 					allowedTermTypes: opts.allowedTermTypes,
@@ -52,6 +57,7 @@ function getMockSelf(opts: MockSelfArg) {
 				}
 			}
 		},
+		termCollectionSelectionMode: opts.termCollectionSelectionMode,
 		useCasesExcluded,
 		setTermTypeGroup: () => {} // Mock callback function
 	}
@@ -471,3 +477,66 @@ tape('getAllowedTabs() - numeric termCollection should show up in dictionary use
 
 	test.end()
 })
+
+tape(
+	'getAllowedTabs() - numeric termCollection should show up for a usecase excluding collections, in fraction mode',
+	test => {
+		// barchart excludes TERM_COLLECTION, but a numeric collection is selectable as a scalar fraction
+		const { self, state } = mockSelfAndState(
+			{
+				allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.TERM_COLLECTION],
+				queries: {},
+				termCollections: [
+					{ name: 'Gene Expression Signature', type: 'numeric' },
+					{ name: 'Assay Availability', type: 'categorical' }
+				],
+				termCollectionSelectionMode: 'fraction'
+			},
+			{ tree: { usecase: { target: 'barchart', detail: 'term2' } } }
+		)
+
+		test.ok(
+			state.allowedTermTypes.includes(TermTypes.TERM_COLLECTION),
+			'Should allow TERM_COLLECTION for barchart when the selection mode is fraction'
+		)
+
+		const tabs = getAllowedTabs(state, self)
+
+		test.equal(tabs.length, 2, 'Should create tabs for DICTIONARY_VARIABLES and numeric termCollection')
+		test.ok(
+			tabs.some(t => t.label == 'Gene Expression Signature'),
+			'Should create a tab for the numeric termCollection'
+		)
+		test.notOk(
+			tabs.some(t => t.label == 'Assay Availability'),
+			'Should exclude the categorical termCollection, which has no scalar form'
+		)
+
+		test.end()
+	}
+)
+
+tape(
+	'getAllowedTabs() - termCollection should stay hidden for a usecase excluding collections, without fraction mode',
+	test => {
+		const { self, state } = mockSelfAndState(
+			{
+				allowedTermTypes: [TermTypes.CATEGORICAL, TermTypes.TERM_COLLECTION],
+				queries: {},
+				termCollections: [{ name: 'Gene Expression Signature', type: 'numeric' }]
+			},
+			{ tree: { usecase: { target: 'barchart', detail: 'term2' } } }
+		)
+
+		test.notOk(
+			state.allowedTermTypes.includes(TermTypes.TERM_COLLECTION),
+			'Should not allow TERM_COLLECTION for barchart without a selection mode'
+		)
+
+		const tabs = getAllowedTabs(state, self)
+
+		test.equal(tabs.length, 1, 'Should only create the DICTIONARY_VARIABLES tab')
+
+		test.end()
+	}
+)

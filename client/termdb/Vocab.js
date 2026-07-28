@@ -222,7 +222,7 @@ export class Vocab {
 	// for better GET caching by the browser
 	getTwMinCopy(tw) {
 		if (!tw) return
-		const copy = { term: {}, q: tw.q }
+		const copy = { type: tw.type, term: {}, q: tw.q }
 		delete copy.q.isAtomic
 		if (tw.$id) copy.$id = tw.$id
 		if (tw.term) {
