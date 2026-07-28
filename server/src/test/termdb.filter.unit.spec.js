@@ -276,6 +276,66 @@ tape('custom termCollection fraction filter', async function (test) {
 	test.end()
 })
 
+tape('termCollection fraction filter routes by member term type, not term.isCustom', async function (test) {
+	// same collection as above without the isCustom flag: the member term type decides that
+	// the values come from a ds.queries[] handler, since such terms are not in the sqlite db
+	let requestedTerms
+	const isoformExpression = tdb.ds.queries.isoformExpression
+	tdb.ds.queries.isoformExpression = {
+		get: async (param, ds) => {
+			requestedTerms = param.terms
+			return await isoformExpression.get(param, ds)
+		}
+	}
+
+	const filter = await getFilterCTEs(
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: {
+							type: 'termCollection',
+							memberType: 'numeric',
+							name: 'Test Isoforms (TPM)',
+							termlst: [
+								{
+									id: 'ENST00000256078',
+									name: 'ENST00000256078',
+									type: 'isoformExpression',
+									isoform: 'ENST00000256078'
+								},
+								{
+									id: 'ENST00000311936',
+									name: 'ENST00000311936',
+									type: 'isoformExpression',
+									isoform: 'ENST00000311936'
+								}
+							],
+							numerators: ['ENST00000256078'],
+							propsByTermId: {}
+						},
+						ranges: [{ start: 0, startinclusive: false, stopunbounded: true }]
+					}
+				}
+			]
+		},
+		tdb.ds
+	)
+
+	tdb.ds.queries.isoformExpression = isoformExpression
+	test.deepEqual(
+		requestedTerms?.map(tw => tw.term.isoform),
+		['ENST00000256078', 'ENST00000311936'],
+		'queries both member terms with the isoformExpression handler'
+	)
+	test.ok(filter.values.length > 0, 'should return matching samples (fraction > 0)')
+	test.end()
+})
+
 tape('custom termCollection fraction filter passes junction members intact', async function (test) {
 	// a splice junction event collection: the members are junction terms, whose handler
 	// requires chr/start/stop/strand on the term
