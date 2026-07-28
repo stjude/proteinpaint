@@ -8,7 +8,7 @@ import {
 	getCategoricalTermcollectionTw,
 	getScctTw,
 	getAgeCollectionFractionTw,
-	getIsoformExpColletionFractionTw
+	getIsoformExpCollectionFractionTw
 } from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne, Locator } from '../../test/test.helpers.js'
@@ -702,7 +702,7 @@ tape('term1=categorical, term2=isoform collection fraction', function (test) {
 				{
 					chartType: 'barchart',
 					term: { id: 'diaggrp' },
-					term2: getIsoformExpColletionFractionTw()
+					term2: getIsoformExpCollectionFractionTw()
 				}
 			]
 		},

@@ -814,7 +814,7 @@ export function getAgeCollectionFractionTw() {
 		}
 	}
 }
-export function getIsoformExpColletionFractionTw() {
+export function getIsoformExpCollectionFractionTw() {
 	return {
 		type: 'TermCollectionTWFraction',
 		term: {

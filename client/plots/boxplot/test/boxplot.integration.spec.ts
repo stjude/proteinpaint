@@ -6,7 +6,7 @@ import {
 	getScctTw,
 	getScgeneexpTw,
 	getAgeCollectionFractionTw,
-	getIsoformExpColletionFractionTw
+	getIsoformExpCollectionFractionTw
 } from '../../../test/testdata/data.ts'
 
 /*
@@ -230,7 +230,7 @@ tape('Box plot with overlay isoform collection fraction', test => {
 					chartType: 'summary',
 					childType: 'boxplot',
 					term: { id: 'agedx', q: { mode: 'continuous' } },
-					term2: getIsoformExpColletionFractionTw()
+					term2: getIsoformExpCollectionFractionTw()
 				}
 			]
 		},
