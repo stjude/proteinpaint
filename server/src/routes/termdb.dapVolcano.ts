@@ -57,10 +57,10 @@ function init({ genomes }) {
 			const content = await fs.readFile(filePath, 'utf8')
 			const lines = content.trim().split('\n')
 
-			// DAP file columns: acc, identifier, gene, log2FC, FDR. The volcano shows this
-			// single FDR as its significance value, carried in
-			// original_p_value — the only p-value field the DAP volcano reads and thresholds on.
-			const rustRows: DapEntry[] = []
+			// DAP file columns: acc, identifier, gene, log2FC, FDR.
+			// The file carries a single significance value (FDR). Store it in both
+			// original_p_value and adjusted_p_value so the generic volcano renderer can
+			// threshold on either pValueType without special-casing this route.
 			for (let i = 1; i < lines.length; i++) {
 				const parts = lines[i].split('\t')
 				if (parts.length < 5) continue
