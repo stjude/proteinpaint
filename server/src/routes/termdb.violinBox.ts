@@ -103,7 +103,11 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 		throw new Error('overlayTw is not supported with numeric termCollection; member terms are used as the overlay')
 	if (q.divideTw) throw new Error('divideTw is not supported with numeric termCollection')
 
-	const termlst: any[] = term.termlst || []
+	// q.lst is the member selection from the termCollection edit menu, which is not applied
+	// by the sql query: every member of the collection is returned for a sample. A missing
+	// or empty list is the legacy "every member" default, same as CollectionCont.transformData()
+	const selectedIds: Set<string> | null = (q.tw.q as any).lst?.length ? new Set((q.tw.q as any).lst) : null
+	const termlst: any[] = (term.termlst || []).filter((t: any) => !selectedIds || selectedIds.has(t.id))
 	//mayLog('termlst', termlst)
 	mayLog(
 		`Expanding numeric termCollection with ${termlst.length} member terms and ${
@@ -130,6 +134,7 @@ export function expandNumericTermCollection(q: ViolinBoxRequest & ReqQueryAddons
 		if (!memberValues || typeof memberValues !== 'object') continue
 
 		for (const [memberId, memberVal] of Object.entries(memberValues as Record<string, number>)) {
+			if (selectedIds && !selectedIds.has(memberId)) continue // deselected member, no violin for it
 			if (typeof memberVal !== 'number' || !Number.isFinite(memberVal)) continue
 			const memberName = memberNameById[memberId] || memberId
 
