@@ -471,6 +471,9 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 		}
 	}
 
+	// no matching sample, e.g. none has a computable value: an empty IN () is invalid sql
+	if (!samplenames.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
+
 	let query = `SELECT id as sample
 				FROM sampleidmap
 				WHERE id IN (${samplenames.map(i => '?').join(', ')})`
