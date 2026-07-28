@@ -269,8 +269,8 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 		const [ca, cb] = this.cohorts
 		const zx: number[] = data.z[0]
 		const zy: number[] = data.z[1]
-		const px: number[] = data.p[0] // the DAP file p-value is already an FDR
-		const py: number[] = data.p[1]
+		const px: number[] = data.fdr[0] // per-cohort FDR for the shared genes
+		const py: number[] = data.fdr[1]
 		const genes: string[] = data.genes
 		const rho: number = data.spearman[0][1]
 		const r: number = data.pearson[0][1]
@@ -440,13 +440,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				})
 		}
 		numInput('|z| ≥', this.zThresh, 0.5, 'Minimum |log2FC-z| (standardized fold change)', v => (this.zThresh = v))
-		numInput(
-			'FDR ≤',
-			this.fdrThresh,
-			0.01,
-			'Maximum FDR (the DAP file p-value is already an FDR)',
-			v => (this.fdrThresh = v)
-		)
+		numInput('FDR ≤', this.fdrThresh, 0.01, 'Maximum FDR', v => (this.fdrThresh = v))
 
 		// legend
 		const legend = panel.append('div')
@@ -596,13 +590,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				})
 		}
 		numInput('|z| ≥', this.zThresh, 0.5, 'DAP fold-change cutoff', v => (this.zThresh = v))
-		numInput(
-			'FDR ≤',
-			this.fdrThresh,
-			0.01,
-			'DAP significance cutoff (the DAP p-value is already an FDR)',
-			v => (this.fdrThresh = v)
-		)
+		numInput('FDR ≤', this.fdrThresh, 0.01, 'DAP significance cutoff (FDR)', v => (this.fdrThresh = v))
 		numInput(
 			'max rows',
 			this.maxRows,
@@ -1086,13 +1074,7 @@ class ProteomeCohortCompare extends PlotBase implements RxComponent {
 				})
 		}
 		numInput('|z| ≥', this.zThresh, 0.5, 'DAP fold-change cutoff', v => (this.zThresh = v))
-		numInput(
-			'FDR ≤',
-			this.fdrThresh,
-			0.01,
-			'DAP significance cutoff (the DAP p-value is already an FDR)',
-			v => (this.fdrThresh = v)
-		)
+		numInput('FDR ≤', this.fdrThresh, 0.01, 'DAP significance cutoff (FDR)', v => (this.fdrThresh = v))
 
 		const diagrams = left.append('div')
 

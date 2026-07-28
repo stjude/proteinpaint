@@ -19,10 +19,10 @@ export const api: RouteApi = {
 	}
 }
 
-// raw p-value threshold below which a site is significant.
+// FDR threshold below which a site is significant.
 const SIGNIFICANCE_THRESHOLD = 0.05
 
-/** one parsed DAPfile row (the file is: acc \t identifier \t gene \t log2FC \t p-value) */
+/** one parsed DAPfile row (the file is: acc \t identifier \t gene \t log2FC \t FDR) */
 type DapRow = {
 	acc: string
 	/** base UniProt accession (isoform suffix stripped), e.g. P10636 from sp|P10636-8|TAU_HUMAN */
@@ -31,8 +31,8 @@ type DapRow = {
 	gene: string
 	/** log2 fold change */
 	fc: number
-	/** raw p-value */
-	p: number
+	/** FDR (adjusted p-value) */
+	fdr: number
 }
 
 /** sp|P10636-8|TAU_HUMAN → P10636 ; falls back to the raw acc when it doesn't parse */
@@ -68,9 +68,9 @@ async function readGeneRows(filePath: string, geneLower: string): Promise<DapRow
 		if (!acc) continue
 		const fc = Number(parts[3])
 		if (!Number.isFinite(fc)) continue
-		const p = Number(parts[4])
-		if (!Number.isFinite(p)) continue
-		rows.push({ acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, p })
+		const fdr = Number(parts[4])
+		if (!Number.isFinite(fdr)) continue
+		rows.push({ acc, baseAcc: baseUniProtAcc(acc), identifier: parts[1] || acc, gene, fc, fdr })
 	}
 	return rows
 }
@@ -104,7 +104,7 @@ function init({ genomes }) {
 
 			// Lazily-built per-cohort map: base UniProt acc → reference-assay protein log2FC,
 			// for the queried gene only. When a base acc has more than one row we take the
-			// most-significant (lowest raw p), matching how the reference assay's own dot is
+			// most-significant (lowest FDR), matching how the reference assay's own dot is
 			// displayed, so the subtracted baseline equals the value shown.
 			const proteinRefByCohort = new Map<string, Map<string, number>>()
 			const getProteinRef = async (cohortName: string): Promise<Map<string, number>> => {
@@ -118,7 +118,7 @@ function init({ genomes }) {
 						const bestByBase = new Map<string, DapRow>()
 						for (const r of rows) {
 							const cur = bestByBase.get(r.baseAcc)
-							if (!cur || r.p < cur.p) bestByBase.set(r.baseAcc, r)
+							if (!cur || r.fdr < cur.fdr) bestByBase.set(r.baseAcc, r)
 						}
 						for (const [baseAcc, best] of bestByBase) map.set(baseAcc, best.fc)
 					}
@@ -135,7 +135,7 @@ function init({ genomes }) {
 			// `significant` flag; the client decides what to draw.
 			//  - PTM assays (PTMType set): one site per modification site → many small dots
 			//  - non-PTM assays (whole/insoluble proteome): collapse each acc to its single
-			//    most-significant (lowest-p) row → one big dot
+			//    most-significant (lowest-FDR) row → one big dot
 			for (const assayName of bhConfig.assays) {
 				const assayConfig = organismConfig.assays?.[assayName]
 				if (!assayConfig) continue // assay not present for this organism — leave column empty
@@ -169,7 +169,7 @@ function init({ genomes }) {
 							chosen = rows
 						} else {
 							let best = rows[0]
-							for (const r of rows) if (r.p < best.p) best = r
+							for (const r of rows) if (r.fdr < best.fdr) best = r
 							chosen = [best]
 						}
 
@@ -177,8 +177,8 @@ function init({ genomes }) {
 							const site: BubbleSite = {
 								id: r.identifier,
 								log2FC: r.fc,
-								p_value: r.p,
-								significant: r.p < SIGNIFICANCE_THRESHOLD,
+								fdr: r.fdr,
+								significant: r.fdr < SIGNIFICANCE_THRESHOLD,
 								adjustedAvailable: false
 							}
 							if (proteinRef) {
@@ -204,7 +204,7 @@ function init({ genomes }) {
 				ptmAssays,
 				assays: bhConfig.assays,
 				cohorts: bhConfig.cohorts,
-				pValueThreshold: SIGNIFICANCE_THRESHOLD,
+				fdrThreshold: SIGNIFICANCE_THRESHOLD,
 				proteinReferenceAssay
 			})
 		} catch (e: any) {

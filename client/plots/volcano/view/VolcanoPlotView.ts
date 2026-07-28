@@ -229,7 +229,12 @@ export class VolcanoPlotView {
 			'transform',
 			`translate(${plotDim.yAxisLabel.x}, ${plotDim.yAxisLabel.y}) rotate(-90)`
 		)
-		this.setSvgSubscriptLabel(this.volcanoDom.yAxisLabel, '-log', '10', `(${this.settings.pValueType} p-value)`)
+		this.setSvgSubscriptLabel(
+			this.volcanoDom.yAxisLabel,
+			'-log',
+			'10',
+			this.termType === tt.PROTEOME_DAP ? '(FDR)' : `(${this.settings.pValueType} p-value)`
+		)
 
 		this.volcanoDom.xAxisLabel.attr('transform', `translate(${plotDim.xAxisLabel.x}, ${plotDim.xAxisLabel.y})`)
 		this.setSvgSubscriptLabel(this.volcanoDom.xAxisLabel, 'log', '2', '(fold-change)')
@@ -485,8 +490,10 @@ export class VolcanoPlotView {
 		const isDM = this.termType === tt.DNA_METHYLATION
 		const isDAP = this.termType === tt.PROTEOME_DAP
 		const pValueType = this.settings.pValueType
-		const pLabel = `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
-		const pField = `${pValueType}_p_value` as 'original_p_value' | 'adjusted_p_value'
+		// DAP files carry a single FDR (stored in original_p_value); label it as such
+		// rather than "Original/Adjusted p-value".
+		const pLabel = isDAP ? 'FDR' : `${pValueType.charAt(0).toUpperCase()}${pValueType.slice(1)} p-value`
+		const pField = (isDAP ? 'original_p_value' : `${pValueType}_p_value`) as 'original_p_value' | 'adjusted_p_value'
 		const columns = isDM
 			? [
 					{ label: 'Promoter' },
@@ -574,8 +581,13 @@ export class VolcanoPlotView {
 			addTooltipRow(table, 'Gene name', d.gene_name)
 		}
 		addTooltipRow(table, 'log<sub>2</sub>(fold-change)', roundValueAuto(d.fold_change))
-		addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
-		if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+		if (this.termType === tt.PROTEOME_DAP) {
+			// DAP carries a single FDR (adjusted p-value), stored in original_p_value.
+			addTooltipRow(table, 'FDR', roundValueAuto(d.original_p_value))
+		} else {
+			addTooltipRow(table, 'Original p-value', roundValueAuto(d.original_p_value))
+			if (d.adjusted_p_value != undefined) addTooltipRow(table, 'Adjusted p-value', roundValueAuto(d.adjusted_p_value))
+		}
 	}
 }
 

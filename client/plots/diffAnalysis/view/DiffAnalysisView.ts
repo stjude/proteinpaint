@@ -1,6 +1,7 @@
 import type { MassAppApi } from '#mass/types/mass'
 import { Tabs, type RenderedTab } from '#dom'
 import type { DiffAnalysisDom, DiffAnalysisPlotConfig } from '../DiffAnalysisTypes'
+import { PROTEOME_DAP } from '#types'
 
 export class DiffAnalysisView {
 	app: MassAppApi
@@ -45,7 +46,7 @@ function setRenderers(self) {
 				active: self.config.childType === 'gsea',
 				id: 'gsea',
 				label: 'Gene Set Enrichment Analysis',
-				isVisible: () => true,
+				isVisible: () => self.config.termType !== PROTEOME_DAP,
 				// isVisible: () => self.config.termType === TermTypes.GENE_EXPRESSION,
 				getPlotConfig: () => {
 					return {

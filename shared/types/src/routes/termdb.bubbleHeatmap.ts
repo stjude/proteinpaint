@@ -14,9 +14,9 @@ export type BubbleSite = {
 	id: string
 	/** raw per-site log2 fold change from the DAPfile */
 	log2FC: number
-	/** raw per-site p-value from the DAPfile */
-	p_value: number
-	/** true when p_value < the response's pValueThreshold; non-significant sites
+	/** per-site FDR (adjusted p-value) from the DAPfile */
+	fdr: number
+	/** true when fdr < the response's fdrThreshold; non-significant sites
 	 *  are still returned (the client draws non-significant protein-level dots faded
 	 *  and hides non-significant PTM sites) */
 	significant: boolean
@@ -57,11 +57,11 @@ export type BubbleHeatmapResponse =
 			assays: string[]
 			/** Column order */
 			cohorts: string[]
-			/** raw p-value threshold below which a site is significant. Sites with
-			 *  p ≥ threshold are still returned with `significant: false`; the client
+			/** FDR threshold below which a site is significant. Sites with
+			 *  fdr ≥ threshold are still returned with `significant: false`; the client
 			 *  draws non-significant protein-level dots faded and omits non-significant
 			 *  PTM sites. */
-			pValueThreshold: number
+			fdrThreshold: number
 			/** assay used as the total-protein baseline for protein-abundance
 			 *  adjustment, or null when adjustment is not configured for this dataset */
 			proteinReferenceAssay: string | null

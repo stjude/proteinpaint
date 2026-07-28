@@ -9,7 +9,7 @@ import { run_R } from '@sjcrh/proteinpaint-r'
 Cross-cohort proteome comparison via standardized fold change (log2FC-z).
 
 For each selected cohort we read its DAPfile (acc \t identifier \t gene \t log2FC \t FDR),
-collapse to one row per gene by keeping the most-significant row (lowest p), then standardize:
+collapse to one row per gene by keeping the most-significant row (lowest FDR), then standardize:
 
 	z = (log2FC − μ) / σ        (definition (a): μ, σ = mean & SD of the cohort's log2FC)
 
@@ -29,7 +29,7 @@ export const api: RouteApi = {
 }
 
 type CohortRef = { organism: string; assay: string; cohort: string; label?: string }
-type GeneStat = { fc: number; p: number; z: number }
+type GeneStat = { fc: number; fdr: number; z: number }
 
 /** collapse a cohort's DAP to one most-significant row per gene, then z-standardize the log2FC.
  *  geneKeyed by the raw gene symbol, or upper-cased when crossSpecies. Returns null if unreadable. */
@@ -41,7 +41,7 @@ async function loadCohortZ(filePath: string, crossSpecies: boolean): Promise<Map
 		return null
 	}
 	// one most-significant row per gene key
-	const best = new Map<string, { fc: number; p: number }>()
+	const best = new Map<string, { fc: number; fdr: number }>()
 	const lines = content.trim().split('\n')
 	for (let i = 1; i < lines.length; i++) {
 		const parts = lines[i].split('\t')
@@ -50,11 +50,11 @@ async function loadCohortZ(filePath: string, crossSpecies: boolean): Promise<Map
 		if (!geneRaw) continue
 		const fc = Number(parts[3])
 		if (!Number.isFinite(fc)) continue
-		const p = Number(parts[4])
-		if (!Number.isFinite(p)) continue
+		const fdr = Number(parts[4])
+		if (!Number.isFinite(fdr)) continue
 		const key = crossSpecies ? geneRaw.toUpperCase() : geneRaw
 		const cur = best.get(key)
-		if (!cur || p < cur.p) best.set(key, { fc, p })
+		if (!cur || fdr < cur.fdr) best.set(key, { fc, fdr })
 	}
 	if (best.size === 0) return null
 
@@ -66,9 +66,9 @@ async function loadCohortZ(filePath: string, crossSpecies: boolean): Promise<Map
 	for (const v of best.values()) ss += (v.fc - mean) ** 2
 	const sd = Math.sqrt(ss / best.size)
 
-	//the DAP file's p-value column is already an FDR (adjusted p) — used directly as significance
+	//the DAP file's FDR column is used directly as significance
 	const out = new Map<string, GeneStat>()
-	for (const [g, v] of best) out.set(g, { fc: v.fc, p: v.p, z: sd > 0 ? (v.fc - mean) / sd : 0 })
+	for (const [g, v] of best) out.set(g, { fc: v.fc, fdr: v.fdr, z: sd > 0 ? (v.fc - mean) / sd : 0 })
 	return out
 }
 
@@ -130,14 +130,14 @@ async function buildHeatmap(
 	genes: string[],
 	z: number[][],
 	fc: number[][],
-	p: number[][],
+	fdr: number[][],
 	zThresh: number,
 	fdrThresh: number,
 	maxRows: number
 ) {
 	const nCoh = z.length
 	// DAP-union candidate rows (over the shared genes)
-	const isDap = (c: number, i: number) => Math.abs(z[c][i]) >= zThresh && p[c][i] <= fdrThresh
+	const isDap = (c: number, i: number) => Math.abs(z[c][i]) >= zThresh && fdr[c][i] <= fdrThresh
 	const cand: number[] = []
 	for (let i = 0; i < genes.length; i++) {
 		for (let c = 0; c < nCoh; c++)
@@ -186,7 +186,7 @@ async function buildHeatmap(
 
 	const reorder = (mat: number[][]) => rowOrderIdx.map(r => colOrderIdx.map(c => mat[r][c]))
 	const fcRows = rows.map(i => fc.map(v => v[i]))
-	const fdrRows = rows.map(i => p.map(v => v[i]))
+	const fdrRows = rows.map(i => fdr.map(v => v[i]))
 
 	return {
 		rowNames: rowOrderIdx.map(r => rowNames[r]),
@@ -213,7 +213,7 @@ function buildOverlap(maps: Map<string, GeneStat>[], zThresh: number, fdrThresh:
 		const membership = new Map<string, number[]>()
 		for (let c = 0; c < maps.length; c++) {
 			for (const [gene, s] of maps[c]) {
-				if (Math.abs(s.z) < zThresh || s.p > fdrThresh) continue
+				if (Math.abs(s.z) < zThresh || s.fdr > fdrThresh) continue
 				if (up ? s.z <= 0 : s.z >= 0) continue
 				let arr = membership.get(gene)
 				if (!arr) membership.set(gene, (arr = []))
@@ -424,7 +424,7 @@ function buildTrajectory(
 		genes = genes.filter(g =>
 			seriesMaps.some(m => {
 				const s = m.get(g)!
-				return Math.abs(s.z) >= zThresh && s.p <= fdrThresh
+				return Math.abs(s.z) >= zThresh && s.fdr <= fdrThresh
 			})
 		)
 		genes.sort()
@@ -527,7 +527,7 @@ function init({ genomes }) {
 			// aligned matrices (cohort × gene)
 			const z: number[][] = maps.map(m => shared.map(g => m!.get(g)!.z))
 			const fc: number[][] = maps.map(m => shared.map(g => m!.get(g)!.fc))
-			const p: number[][] = maps.map(m => shared.map(g => m!.get(g)!.p))
+			const fdr: number[][] = maps.map(m => shared.map(g => m!.get(g)!.fdr))
 
 			// pairwise correlations
 			const zr = z.map(ranks)
@@ -553,7 +553,7 @@ function init({ genomes }) {
 			if (q.heatmap === true || q.heatmap === 'true') {
 				const maxRows = num(q.maxRows, 30)
 				const cohortLabels = cohorts.map(c => c.label || c.cohort)
-				heatmap = await buildHeatmap(cohortLabels, shared, z, fc, p, zThresh, fdrThresh, maxRows)
+				heatmap = await buildHeatmap(cohortLabels, shared, z, fc, fdr, zThresh, fdrThresh, maxRows)
 			}
 
 			// optional shared-vs-specific DAP overlap (UpSet), split by direction
@@ -585,7 +585,7 @@ function init({ genomes }) {
 				sharedGeneCount: shared.length,
 				z,
 				fc,
-				p,
+				fdr,
 				pearson: pearsonM,
 				spearman: spearmanM,
 				heatmap,
