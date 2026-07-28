@@ -46,8 +46,7 @@ export function validate_query_getTopTermsByType(ds: any, _genome: any) {
 			const q = ds.queries[type]
 			if (!q) return
 			if (typeof q.get == 'function') continue // ds supplied getter
-			if (q.src == 'native') nativeValidateQuery(ds, type)
-			else throw 'unknown topVariablyExpressedGenes.src'
+			nativeValidateQuery(ds, type)
 		}
 	}
 }

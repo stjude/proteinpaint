@@ -223,6 +223,11 @@ export async function init(ds, genome, totalDsLst = 0) {
 	// validation or remaining steps that may include setInterval that runs at the
 	// same time as mayRetryInit() in initGenomesDs.js (avoids race condition)
 	if (ds.init?.hasNonblockingSteps) {
+		// such a ds is servable before its caching finishes, so it must be able to tell the server
+		// it is not ready yet (app.middlewares.js and termdb.cluster.ts gate on this). fail loudly
+		// at launch rather than silently serving incomplete data for the duration of the caching
+		if (typeof ds.init.notReadyMessage != 'function')
+			throw 'ds.init.hasNonblockingSteps is true but ds.init.notReadyMessage() is not defined'
 		// if only one dataset is being loaded by the server,
 		// then await to allow server to crash on fatal error
 		if (totalDsLst == 1) await mds3InitNonblocking(ds)
@@ -2132,12 +2137,7 @@ export async function validate_query_metaboliteIntensity(ds, genome) {
 	const q = ds.queries.metaboliteIntensity
 	if (!q) return
 	q.metaboliteIntensity2bins = {}
-
-	if (q.src == 'native') {
-		await validateMetaboliteIntensityNative(q, ds, genome)
-		return
-	}
-	throw 'unknown queries.metaboliteIntensity.src'
+	await validateMetaboliteIntensityNative(q, ds, genome)
 }
 
 async function validateMetaboliteIntensityNative(q, ds, genome) {
