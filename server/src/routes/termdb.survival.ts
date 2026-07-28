@@ -67,7 +67,7 @@ export async function get_survival(q: any, ds: any) {
 		if (data.error) throw data.error
 		const results = getSampleArray(data, st)
 
-		const stKey = getTwKey(st)
+		const stKey = st.$id
 		const byChartSeries: Record<string, Array<{ time: number; status: number; series: string }>> = {}
 		const keys = { chart: new Set<string>(), series: new Set<string>() }
 		for (const d of results) {
@@ -194,9 +194,12 @@ export function getTwByIndex(q: any) {
 		const tw: any = { term: q[termnum], q: q[termnum + '_q'] }
 		const twType = q[termnum + '_type'] || inferTwType(tw)
 		if (twType) tw.type = twType
-		// getData() keys a termCollection's sample data by $id, since a custom collection
-		// has no term.id; other term types are still keyed by term.id or term.name
-		if (tw.term.type == 'termCollection') tw.$id = q[termnum + '_$id'] || tw.term.id || tw.term.name
+		/* getData() keys each sample's data by tw.$id, backfilling it from term.id/name when
+		absent; assign it here instead, so the key is a property of the tw this route built and
+		not a side effect of getData(). Only a custom termCollection uses the client's $id,
+		since it has no term.id; other term types stay keyed by term.id or term.name, which
+		the client and the refs lookups below still assume. */
+		tw.$id = (tw.term.type == 'termCollection' && q[termnum + '_$id']) || tw.term.id || tw.term.name
 		twByIndex.set(i, tw)
 	}
 	return twByIndex
@@ -208,16 +211,11 @@ function inferTwType(tw: any) {
 	return undefined
 }
 
-/** the key under which getData() returns a tw's sample data */
-function getTwKey(tw: any) {
-	return tw.$id || tw.term.id || tw.term.name
-}
-
 /** a fraction termCollection has no term.values to order its keys by: its keys are the
  *  labels of the bins that getData() computed for it */
 function getFractionBins(tw: any, data: any) {
 	if (tw?.type != 'TermCollectionTWFraction') return []
-	return data.refs.byTermId?.[getTwKey(tw)]?.bins || []
+	return data.refs.byTermId?.[tw.$id]?.bins || []
 }
 
 /** a fraction resolves to one number per sample, it must be binned to be usable
@@ -237,33 +235,21 @@ function getSurvTermIndex(q: any) {
 }
 
 function getSampleArray(data: any, st: any) {
-	const key = getTwKey(st)
+	const key = st.$id
 	const lst = Object.values(data.samples as Record<string, any>).filter((i: any) => i[key])
 	return lst.sort((a: any, b: any) => (a[key].value < b[key].value ? -1 : 1))
 }
 
+/** getData() keys every sample's annotation by tw.$id, so one lookup covers all term
+ *  types. Returns undefined when a sample has no value for the term, which the caller
+ *  skips. */
 export function getTermData(d: any, tw: any) {
-	const t = tw.term
-	const key = getTwKey(tw)
-	let data
-	if (Object.prototype.hasOwnProperty.call(t, 'id')) {
-		if (!Object.prototype.hasOwnProperty.call(d, key)) return
-		data = d[key].key
-	} else if (t.type == 'samplelst' || t.type == 'termCollection') {
-		// a custom termCollection has no term.id, a sample may have no value for it
-		if (!Object.prototype.hasOwnProperty.call(d, key)) return
-		data = d[key].key
-	} else {
-		const n = t.name
-		if (t.type == TermTypes.GENE_EXPRESSION) {
-			data = d[key]?.key || 'Missing data'
-		} else if (d[key]) {
-			data = d[key].key
-		} else {
-			throw `cannot get key for term='${n}'`
-		}
+	const v = d[tw.$id]
+	if (tw.term.type == TermTypes.GENE_EXPRESSION) {
+		// a sample may have survival data but no expression value: keep it as its own series
+		return v?.key || 'Missing data'
 	}
-	return data
+	return v?.key
 }
 
 function getOrderedLabels(term: any, bins: any[] = []) {

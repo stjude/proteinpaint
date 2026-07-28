@@ -93,11 +93,19 @@ tape('getTwByIndex: falls back to the term name when a termCollection has no $id
 	test.end()
 })
 
-tape('getTwByIndex: does not assign $id or type to a dictionary term', function (test) {
-	const q: any = { ds: mockDs, term1_id: survivalTerm.id, term2_id: 'sex', term2_q: { type: 'values' } }
+tape('getTwByIndex: keys a dictionary term by term.id, ignoring the posted $id', function (test) {
+	// the client posts its own tw.$id for every term, but only a custom termCollection may use it:
+	// the refs returned to the client are still keyed by term.id for a dictionary term
+	const q: any = {
+		ds: mockDs,
+		term1_id: survivalTerm.id,
+		term2_id: 'sex',
+		term2_q: { type: 'values' },
+		term2_$id: 'TwBase_2_67890'
+	}
 	const twByIndex = getTwByIndex(q)
 	test.equal(twByIndex.get(1).term, survivalTerm, 'Should look up term1 by id')
-	test.equal(twByIndex.get(2).$id, undefined, 'Should leave a dictionary term keyed by term.id')
+	test.equal(twByIndex.get(2).$id, 'sex', 'Should keep a dictionary term keyed by term.id')
 	test.equal(twByIndex.get(2).type, undefined, 'Should not set a tw type')
 	test.equal(twByIndex.get(0), undefined, 'Should not create a tw for a missing term0')
 	test.end()
@@ -134,7 +142,8 @@ tape('getTermData: returns undefined for a sample without fraction data', functi
 })
 
 tape('getTermData: reads a dictionary term value by term.id', function (test) {
-	const tw = { term: { id: 'sex', type: 'categorical' }, q: {} }
+	// getTwByIndex() assigns $id = term.id for a dictionary term
+	const tw = { $id: 'sex', term: { id: 'sex', type: 'categorical' }, q: {} }
 	test.equal(getTermData({ sex: { key: 'Male', value: 'M' } }, tw), 'Male', 'Should return the key')
 	test.equal(getTermData({}, tw), undefined, 'Should skip a sample without a value')
 	test.end()
