@@ -132,29 +132,41 @@ export function server_init_db_queries(ds) {
 			i2ancestors = new Map(),
 			i2refs = new Map()
 
+		const fakeAncestors = {
+			// !!! TODO: remove this test code !!!
+			41: 1,
+			42: 2,
+			43: 3,
+			47: 1,
+			48: 2
+		}
+
 		if (ds.cohort.termdb.hasSampleAncestry) {
 			const rows = cn.prepare('SELECT * FROM sample_ancestry').all()
 			for (const { sample_id, ancestor_id, distance } of rows) {
+				if (fakeAncestors[sample_id]) console.log('-------00------', sample_id, ancestor_id, fakeAncestors[sample_id])
 				const id = sample_id
 				if (!i2ancestors.has(id)) i2ancestors.set(id, [])
 				const ancestor = {
-					ancestor_id,
+					ancestor_id: ancestor_id - (fakeAncestors[sample_id] || 0), // !!! TODO: remove this adjustment for testing !!!
 					distance: distance
 				}
+				if (fakeAncestors[sample_id]) console.log('---', sample_id, ancestor)
 				i2ancestors.get(id).push(ancestor)
 			}
 		}
 
 		const rows = cn.prepare('SELECT * FROM sampleidmap').all()
 		let totalCount = 0
-		for (const { id, name, sample_type, ancestor_id, distance } of rows) {
+		for (const { id, name, sample_type } of rows) {
 			i2s.set(id, name)
 			s2i.set(name, id)
 			i2type.set(id, sample_type)
 
 			const refs: any = { label: name, sample: id, sampleType: sample_type }
 			const ancestors = i2ancestors.get(id)
-			if (ancestors) refs.ancestors = ancestors
+			// sort by lowest distance first, so that samples may be sorted by ancestry "tree"
+			if (ancestors) refs.ancestors = ancestors.sort(sortByAncestorDistance)
 			Object.freeze(refs)
 			i2refs.set(id, refs)
 			totalCount++ //for dbs without cohorts or types
@@ -597,6 +609,10 @@ export function server_init_db_queries(ds) {
 		const rows = sql.all()
 		return rows
 	}
+}
+
+function sortByAncestorDistance(a, b) {
+	return a.distance - b.distance
 }
 
 /*
