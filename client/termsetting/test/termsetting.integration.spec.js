@@ -317,13 +317,14 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 				name: 'Fraction collection',
 				termlst: [
 					{ id: 'member-1', name: 'Member 1', type: 'isoformExpression', isoform: 'member-1' },
-					{ id: 'member-2', name: 'Member 2', type: 'isoformExpression', isoform: 'member-2' }
+					{ id: 'member-2', name: 'Member 2', type: 'isoformExpression', isoform: 'member-2' },
+					{ id: 'member-3', name: 'Member 3', type: 'isoformExpression', isoform: 'member-3' }
 				]
 			},
 			q: {
 				mode: 'discrete',
 				type: 'custom-bin',
-				denominators: ['member-1', 'member-2'],
+				denominators: ['member-1', 'member-2', 'member-3'],
 				numerators: ['member-1'],
 				lst: [
 					{ startunbounded: true, stop: 0.5 },
@@ -362,7 +363,7 @@ tape('fraction termCollection edit menu selects denominators and numerators', as
 	numerators[1].click()
 	tip.select('[data-testid="sjpp-term-collection-members-apply"]').node().click()
 	await sleep(100)
-	test.deepEqual(opts.tsData.q.denominators, ['member-2'], 'commits selected denominators')
+	test.deepEqual(opts.tsData.q.denominators, ['member-2', 'member-3'], 'commits selected denominators')
 	test.deepEqual(opts.tsData.q.numerators, ['member-2'], 'commits selected numerators')
 	opts.holder.node().querySelector('.ts_pill').click()
 	await sleep(100)

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { mayRenderFractionSelection } from '../termCollectionFractionSelection.ts'
+import { mayRenderFractionSelection, renderFractionSelection } from '../termCollectionFractionSelection.ts'
 
 /*************************
  reusable helper functions
@@ -105,5 +105,76 @@ tape('mayRenderFractionSelection() skips terms that do not require a fraction', 
 		test.notEqual(listDiv.style('display'), 'none', `keeps the term list visible for ${c.label}`)
 		if (test['_ok']) holder.remove()
 	}
+	test.end()
+})
+
+tape('renderFractionSelection() only renders the Select button with a selectCallback', test => {
+	const holder = d3s.select('body').append('div')
+	const term = getCollectionTerm()
+
+	renderFractionSelection({
+		holder,
+		termlst: term.termlst,
+		selection: { numerators: ['junction-1'], denominators: ['junction-1', 'junction-2'] }
+	})
+	test.equal(
+		holder.selectAll('[data-testid="sjpp-term-collection-fraction-select"]').size(),
+		0,
+		'renders no button for a caller with its own apply button'
+	)
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
+tape('renderFractionSelection() disables the Select button for an inapplicable selection', test => {
+	const holder = d3s.select('body').append('div')
+	const term = getCollectionTerm({
+		termlst: [
+			{ id: 'junction-1', name: 'junction-1' },
+			{ id: 'junction-2', name: 'junction-2' },
+			{ id: 'junction-3', name: 'junction-3' }
+		]
+	})
+	const selected: any[] = []
+	const selection = { numerators: ['junction-1'], denominators: term.termlst.map(t => t.id) }
+	renderFractionSelection({
+		holder,
+		termlst: term.termlst,
+		selection,
+		selectCallback: s => selected.push(structuredClone(s))
+	})
+
+	const selectBtn = holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement
+	const numerators = holder.selectAll('[data-testid="sjpp-term-collection-numerator"]').nodes() as HTMLInputElement[]
+	const denominators = holder
+		.selectAll('[data-testid="sjpp-term-collection-denominator"]')
+		.nodes() as HTMLInputElement[]
+
+	test.equal(selectBtn.disabled, false, 'enables the button for the starting selection')
+
+	numerators[0].click() // uncheck the only numerator
+	test.equal(selectBtn.disabled, true, 'disables the button without a numerator')
+	test.ok(`${selectBtn.title}`.includes('numerator'), `titles the button with the reason: ${selectBtn.title}`)
+	selectBtn.click()
+	test.equal(selected.length, 0, 'a disabled button does not submit the selection')
+
+	numerators[0].click() // restore the numerator
+	denominators[1].click()
+	test.equal(selectBtn.disabled, false, 'stays enabled with two denominators')
+	denominators[2].click() // a lone denominator makes the fraction a constant 1
+	test.equal(selectBtn.disabled, true, 'disables the button with a single denominator')
+	test.ok(`${selectBtn.title}`.includes('denominator'), `titles the button with the reason: ${selectBtn.title}`)
+
+	denominators[1].click() // restore a second denominator
+	test.equal(selectBtn.disabled, false, 're-enables the button for an applicable selection')
+	selectBtn.click()
+	test.deepEqual(
+		selected,
+		[{ numerators: ['junction-1'], denominators: ['junction-1', 'junction-2'] }],
+		'submits the current selection'
+	)
+
+	if (test['_ok']) holder.remove()
 	test.end()
 })

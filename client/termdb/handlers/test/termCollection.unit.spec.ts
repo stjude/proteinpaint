@@ -275,13 +275,10 @@ tape('fraction selection clears and disables the numerator of a deselected denom
 	test.equal(getNumerators()[0].checked, false, 'clears the numerator of a deselected denominator')
 	test.equal(getNumerators()[0].disabled, true, 'disables the numerator of a deselected denominator')
 
-	const alerts: any[] = []
-	const alert0 = window.alert
-	window.alert = msg => alerts.push(msg)
-	;(holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement).click()
-	window.alert = alert0
+	const selectBtn = holder.select('[data-testid="sjpp-term-collection-fraction-select"]').node() as HTMLButtonElement
+	test.equal(selectBtn.disabled, true, 'disables the Select button without a numerator')
+	selectBtn.click()
 	test.equal(callbackResult, undefined, 'does not submit a fraction without a numerator')
-	test.equal(alerts.length, 1, 'alerts the user to select a numerator')
 
 	getDenominators()[0].click() // restore the denominator
 	test.equal(getNumerators()[0].disabled, false, 'enables the numerator when its denominator is restored')
