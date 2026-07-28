@@ -339,7 +339,8 @@ async function getSampleData(q, ds) {
 			}
 			const geneExpMap = await q.ds.queries.singleCell.geneExpression.get({
 				sample: tw.term.sample,
-				gene: tw.term.gene
+				gene: tw.term.gene,
+				__abortSignal: q.__abortSignal
 			})
 			let filteredSamples = new Set()
 			if ((q.filter?.lst?.length || q.filter0) && tw.term.sample?.isMetaResult) {
