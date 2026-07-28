@@ -60,7 +60,9 @@ function init({ genomes }) {
 			// DAP file columns: acc, identifier, gene, log2FC, FDR.
 			// The file carries a single significance value (FDR). Store it in both
 			// original_p_value and adjusted_p_value so the generic volcano renderer can
-			// threshold on either pValueType without special-casing this route.
+			// threshold on either pValueType without special-casing this route
+			// (renderVolcano defaults to pValueType 'adjusted' when none is requested).
+			const rustRows: DapEntry[] = []
 			for (let i = 1; i < lines.length; i++) {
 				const parts = lines[i].split('\t')
 				if (parts.length < 5) continue
@@ -72,7 +74,8 @@ function init({ genomes }) {
 					gene_name: parts[1],
 					gene: parts[2],
 					fold_change: fc,
-					original_p_value: fdr
+					original_p_value: fdr,
+					adjusted_p_value: fdr
 				})
 			}
 
