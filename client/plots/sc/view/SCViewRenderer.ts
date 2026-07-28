@@ -7,7 +7,6 @@ import type { SCViewer } from '../SC.ts'
 import type { SubplotManager } from '../subplots/SubplotManager.ts'
 import { GroupByOptions, type SCSettings, type Settings } from '../settings/Settings'
 import { make_radios } from '#dom'
-// import type { SingleCellDataGdc, SingleCellDataNative } from '#types'
 
 /** Manages the initial rendering of the sample table and the dynamic
  * rendering of the plot buttons and sections based on the selected sample and plots.

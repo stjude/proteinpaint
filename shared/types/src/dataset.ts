@@ -753,18 +753,22 @@ type RnaseqGeneCount = {
 }
 
 /** the metabolite query */
-export type MetaboliteIntensityQueryNative = {
-	src: 'native' | string
+export type MetaboliteIntensityQuery = {
+	/** metabolite-by-sample matrix file */
 	file: string
+	/** sample integer ids, populated on init from the file header */
 	samples?: number[]
 	/** _metabolites,used to dynamically built cache of metabolite names to speed up search */
 	_metabolites?: string[]
+	/** dynamically added on init */
 	get?: (param: any) => void
+	/** dynamically added on init */
 	find?: (param: string[]) => void
+	/** dynamically added on init */
+	getTopTerms?: (param: any) => any
+	/** bins cache, created on init */
 	metaboliteIntensity2bins?: { [index: string]: any }
 }
-
-export type MetaboliteIntensityQuery = MetaboliteIntensityQueryNative
 
 /** the proteomics query */
 type ProteomeFilter = {
@@ -1249,10 +1253,7 @@ type Mds3Queries = {
 	topMutatedGenes?: TopMutatedGenes
 	/** get top variably expressed genes */
 	topVariablyExpressedGenes?: TopVariablyExpressedGenesQuery
-	metaboliteIntensity?: {
-		src: 'native'
-		file: string
-	}
+	metaboliteIntensity?: MetaboliteIntensityQuery
 	proteome?: ProteomeAbundanceQuery
 	geneRanking?: {
 		/** key: human-readable label shown in chart-button menu (e.g. "AD multiomics");
