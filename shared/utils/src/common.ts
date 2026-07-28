@@ -38,6 +38,7 @@ export class TermTypeGroups {
 	static SSGSEA = 'Geneset Expression'
 	static TERM_COLLECTION = 'Term Collection'
 	static VARIANT_GENOTYPE = 'Variant Genotype'
+	static COHORT = 'Cohort'
 }
 // freeze so that mutating any of the static properties above will throw at runtime
 Object.freeze(TermTypeGroups)
