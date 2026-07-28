@@ -12,6 +12,7 @@ export function getTermOrder(data) {
 		numClusterTerms = 0
 
 	this.mclassSorter = getMclassSorter(this)
+	this.samplesByAncestorId = new Map()
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
 		const lst = [] // will derive a mutable copy of grp.lst
 		for (const [index, tw] of grp.lst.entries()) {
@@ -49,9 +50,19 @@ export function getTermOrder(data) {
 						}
 					}
 				}
+
+				const id = sd._ref_?.ancestors?.[0]?.ancestor_id
+				if (id) {
+					if (!this.samplesByAncestorId.has(id)) this.samplesByAncestorId.set(id, new Set())
+					this.samplesByAncestorId.get(id).add(sd)
+				}
 			}
 			if (grp.type != 'hierCluster' || counts.samples) lst.push({ tw, counts, index })
 			if (grp.type == 'hierCluster') numClusterTerms++
+		}
+
+		for (const [ancestor_id, samples] of this.samplesByAncestorId.entries()) {
+			if (samples.size < 2) this.samplesByAncestorId.delete(ancestor_id)
 		}
 
 		// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -170,11 +181,24 @@ export function getSampleGroups(data) {
 	const hitsPerSample = (t, c) => t + (typeof c == 'object' && c.countedValues?.length ? 1 : 0)
 	const countHits = (total, d) => total + (Object.values(d).reduce(hitsPerSample, 0) ? 1 : 0)
 	// this second sorter will be applied within each group of samples
-	const grpLstSampleSorter = getSampleSorter(this, s, data.lst)
+	const grpLstSampleSorter = getSampleSorter(this, s, data.lst) //console.log(172, s)
 	for (const grp of sampleGrpsArr) {
 		grp.lst = grp.lst.filter(dataFilter)
 		grp.totalCountedValues = grp.lst.reduce(countHits, 0)
 		grp.lst.sort(grpLstSampleSorter)
+		if (this.config.chartType != 'matrix' || !s.sortBySampleAncestry) continue
+		grp.relatedSamples = {}
+		let currentRelated = [grp.lst[0]],
+			lastAncestorId
+		for (const s of grp.lst) {
+			const id = s._ref_?.ancestors?.[0]?.ancestor_id
+			if (id === lastAncestorId) currentRelated.push(s)
+			else {
+				if (currentRelated.length > 1) grp.relatedSamples[lastAncestorId] = currentRelated
+				currentRelated = [s]
+			}
+			lastAncestorId = id
+		}
 	}
 	const sampleGrpSorter = getSampleGroupSorter(this)
 	return sampleGrpsArr.sort(sampleGrpSorter)

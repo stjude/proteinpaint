@@ -37,6 +37,7 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
 	const sorterTerms = []
+	if (self.config.chartType == 'matrix' && s.sortBySampleAncestry) sorterTerms.push(getSortSamplesByAncestry(self))
 
 	const sortPriority = activeOption.sortPriority
 	if (sortPriority) {
@@ -142,6 +143,32 @@ function sortSamplesByName(a, b) {
 		return a.row.sample < b.row.sample ? -1 : a.row.sample > b.row.sample ? 1 : 0
 	}
 	return a.sample < b.sample ? -1 : a.sample > b.sample ? 1 : 0
+}
+
+function getSortSamplesByAncestry(self) {
+	return (a, b) => {
+		const aid = a._ref_.ancestors?.[0]?.ancestor_id
+		const bid = b._ref_.ancestors?.[0]?.ancestor_id
+		if (!aid && !bid) return 0
+		if (!aid) return 1
+		if (!bid) return -1
+		const alen = self.samplesByAncestorId.get(aid)?.size
+		const blen = self.samplesByAncestorId.get(bid)?.size
+		if (!alen && !blen) return 0
+		if (!alen) return 1
+		if (!blen) return -1
+
+		const aa = a._ref_.ancestors || []
+		const bb = b._ref_.ancestors || []
+
+		if (aa.length > bb.length) return -1
+		if (aa.length < bb.length) return 1
+		for (const [i, a] of Object.entries(aa)) {
+			if (a.ancestor_id < bb[i].ancestor_id) return -1
+			if (a.ancestor_id > bb[i].ancestor_id) return 1
+		}
+		return 0
+	}
 }
 
 function getSortSamplesByHits(st, self, rows, s) {
