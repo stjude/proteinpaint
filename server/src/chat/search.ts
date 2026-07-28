@@ -258,6 +258,7 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	const singleCellSamples = await getSingleCellSamples(ds, {
 		filter: access.restrictFilter
 	})
+	const sampleAssayIndex = getSampleAssayIndex(ds)
 
 	const str = prompt.toLowerCase()
 	const matches: SampleMatch[] = []
@@ -269,7 +270,7 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 		total++
 		if (matches.length < MAX_SAMPLE_MATCHES) {
 			const scSample = singleCellSamples.get(name.toLowerCase())
-			const assays = getSampleAssays(ds, name, v.id)
+			const assays = sampleAssayIndex.get(String(name)) || []
 			matches.push({
 				id: v.id,
 				name,
@@ -281,22 +282,61 @@ async function searchSamples(req: any, ds: any, prompt: string): Promise<{ match
 	return { matches, total }
 }
 
-/** Return assay names from the parsed track-list facet configuration. `validate_query_trackLst()`
+/** Index assay names by sample from the parsed track-list facet configuration. `validate_query_trackLst()`
  * loads trackLst.jsonFile into ds.queries.trackLst.facets during startup and removes jsonFile, so the
- * parsed facets are the runtime source of truth. */
-function getSampleAssays(ds: any, sampleName: string, sampleId: any): { facet: string; names: string[] }[] {
+ * parsed facets are the runtime source of truth. Build this once per search rather than rescanning every
+ * track for each matched sample. */
+function getSampleAssayIndex(ds: any): Map<string, { facet: string; names: string[] }[]> {
+	// `facets` is the in-memory facet configuration (typically loaded from trackLst.jsonFile at startup, or injected directly in tests).
 	const facets = ds?.queries?.trackLst?.facets
-	if (!Array.isArray(facets)) return []
-	const names = new Set([String(sampleName), String(sampleId)])
-	return facets
-		.map((facet: any) => {
-			const assays = new Set<string>()
-			for (const track of facet?.tracks || []) {
-				if (track?.sample != null && names.has(String(track.sample)) && track.assay) assays.add(String(track.assay))
+	// Datasets without track facets have no assay metadata to index.
+	if (!Array.isArray(facets)) return new Map()
+	// Temporary index: sample name -> facet name -> unique assay names.
+	// Example: "3416" -> Map("Test Facet" -> Set("Assay1")).
+	const index = new Map<string, Map<string, Set<string>>>()
+	// Visit each configured track facet once.
+	for (const facet of facets) {
+		// The outer result groups assays by this facet name.
+		const facetName = String(facet?.name || '')
+		// Ignore malformed or unnamed facets because they cannot be displayed.
+		if (!facetName) continue
+		// Each track describes one assay/sample track in this facet.
+		for (const track of facet?.tracks || []) {
+			// A track without both fields cannot contribute to a sample assay column.
+			if (track?.sample == null || !track.assay) continue
+			// Track-facet sample values are sample names, not numeric cohort IDs.
+			const sampleName = String(track.sample)
+			// Get the facet map for this sample, if one has already been created.
+			let facetIndex = index.get(sampleName)
+			if (!facetIndex) {
+				// This sample is seen for the first time: create its facet-name map.
+				facetIndex = new Map()
+				// Store sampleName -> facetName -> assay names in the temporary index.
+				index.set(sampleName, facetIndex)
 			}
-			return { facet: String(facet?.name || ''), names: [...assays] }
-		})
-		.filter((facet: { facet: string; names: string[] }) => facet.facet && facet.names.length)
+			// Get the assay set for this sample/facet pair, if it already exists.
+			let assays = facetIndex.get(facetName)
+			if (!assays) {
+				// Use a Set so multiple tracks from one assay appear only once in the response.
+				assays = new Set()
+				// Store facetName -> unique assay names for this sample.
+				facetIndex.set(facetName, assays)
+			}
+			// Add this track's assay to the sample/facet set.
+			assays.add(String(track.assay))
+		}
+	}
+	// Convert the temporary nested Map/Set index to the API shape:
+	// sampleName -> [{ facet: facetName, names: [assayName, ...] }].
+	return new Map(
+		// Convert each sample's facet map into an array of response objects.
+		[...index.entries()].map(([sampleName, facetIndex]) => [
+			// Keep the original sample name as the lookup key.
+			sampleName,
+			// Convert each facet's Set of assays into a serializable string array.
+			[...facetIndex.entries()].map(([facet, names]) => ({ facet, names: [...names] }))
+		])
+	)
 }
 
 /** Return the sample identifiers needed to open the single-cell viewer. The single-cell sample getter
