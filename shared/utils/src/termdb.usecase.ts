@@ -32,7 +32,8 @@ export const graphableTypes = new Set([
 	SINGLECELL_GENE_EXPRESSION,
 	SINGLECELL_CELLTYPE,
 	TermTypes.SNP,
-	TermTypes.TERM_COLLECTION
+	TermTypes.TERM_COLLECTION,
+	TermTypes.COHORT
 ])
 
 /*

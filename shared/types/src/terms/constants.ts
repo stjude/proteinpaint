@@ -22,6 +22,7 @@ export const SNP_LOCUS = 'snplocus'
 export const SSGSEA = 'ssGSEA'
 export const SURVIVAL = 'survival'
 export const TERM_COLLECTION = 'termCollection'
+export const COHORT = 'cohort'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
@@ -48,5 +49,6 @@ export const TermTypes: { [key: string]: string } = {
 	SINGLECELL_GENE_EXPRESSION,
 	MULTIVALUE,
 	DATE,
-	TERM_COLLECTION
+	TERM_COLLECTION,
+	COHORT
 }

@@ -32,6 +32,7 @@ import {
 	MULTIVALUE,
 	DATE,
 	TERM_COLLECTION,
+	COHORT,
 	TermTypes
 } from '#types'
 
@@ -120,7 +121,8 @@ export const typeGroup = {
 	[PSEUDOBULK]: TermTypeGroups.PSEUDOBULK,
 	[TERM_COLLECTION]: TermTypeGroups.TERM_COLLECTION,
 	[SINGLECELL_CELLTYPE]: TermTypeGroups.SINGLECELL_CELLTYPE,
-	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION
+	[SINGLECELL_GENE_EXPRESSION]: TermTypeGroups.SINGLECELL_GENE_EXPRESSION,
+	[COHORT]: TermTypeGroups.COHORT
 }
 
 const nonDictTypes = new Set([
@@ -137,7 +139,8 @@ const nonDictTypes = new Set([
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
 	SINGLECELL_CELLTYPE,
-	SINGLECELL_GENE_EXPRESSION
+	SINGLECELL_GENE_EXPRESSION,
+	COHORT
 ])
 
 for (const dtTermType of dtTermTypes) {
