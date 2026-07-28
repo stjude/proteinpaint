@@ -2,6 +2,7 @@ import tape from 'tape'
 import { termjson } from '#test/testdata/termjson.ts'
 import * as helpers from '#test/front.helpers.js'
 import { detectGte, Locator, sleep } from '#test/test.helpers.js'
+import { getAgeCollectionFractionTw } from '#test/testdata/data.ts'
 
 /*
 Tests:
@@ -23,6 +24,7 @@ Tests:
 	survival term as term1, term2 = ssGSEA
 	survival term as term1, term2 = isoformExpression
 	survival term as term1, term2 = dnaMethylation
+	survival term as term1, term2 = termCollection fraction
  */
 
 /*************************
@@ -1003,6 +1005,49 @@ tape('survival term as term1, term2 = dnaMethylation', function (test) {
 		test.equal(survival.Inner.state.config.term2.q.mode, 'discrete', 'term2 should default to discrete mode')
 		test.equal(survival.Inner.state.config.term2.q.type, 'custom-bin', 'term2 should default to custom bins')
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 2, 'should render 2 surv series g')
+
+		if (test._ok) survival.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('survival term as term1, term2 = termCollection fraction', function (test) {
+	test.timeoutAfter(8000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'survival',
+					term: { id: 'efs' },
+					term2: getAgeCollectionFractionTw()
+				}
+			]
+		},
+		survival: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	let survivalDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
+		test.equal(
+			survival.Inner.state.config.term2.type,
+			'TermCollectionTWFraction',
+			'term2 should be a fraction termCollection tw'
+		)
+		test.equal(
+			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(),
+			2,
+			'should render 1 surv series g per fraction bin'
+		)
+		test.deepEqual(
+			survival.Inner.refs.orderedKeys.series,
+			['<0.8', '>0.8'],
+			'should order the series by the fraction bins'
+		)
 
 		if (test._ok) survival.Inner.app.destroy()
 		test.end()
