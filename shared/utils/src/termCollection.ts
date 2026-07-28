@@ -53,6 +53,34 @@ export function validateFractionMembers(numerators: string[], denominators: stri
 	}
 }
 
+/** tw.type of a termCollection that resolves to one numeric value per sample, the fraction
+of the numerator members over the denominator ones */
+export const FRACTION_TW_TYPE = 'TermCollectionTWFraction'
+
+/** True when a tw is a fraction termCollection */
+export function isFractionTw(tw: any): boolean {
+	return tw?.type === FRACTION_TW_TYPE && tw?.term?.type === 'termCollection'
+}
+
+/** Build the tvs.term for filtering on a fraction termCollection, e.g. from a clicked bar
+or a brushed violin. The member selection of a tw lives in q{}, but a tvs is standalone:
+the server filter and the filter ui both read numerators[]/denominators[] from tvs.term.
+Returns a copy, so that editing the filter later does not mutate the plot term.
+@param tw a filled fraction termCollection tw
+@throws Error if the tw or its member selection is invalid */
+export function getFractionTvsTerm(tw: any): CollectionTermLike {
+	if (!isFractionTw(tw)) throw new Error('not a fraction termCollection tw')
+	const term = structuredClone(tw.term)
+	// a min copy tw may carry termIds[] instead of the full termlst[]
+	const memberIds = term.termlst?.length ? validateTermCollectionTerm(term) : new Set<string>(term.termIds || [])
+	const denominators = tw.q?.denominators?.length ? [...tw.q.denominators] : [...memberIds]
+	const numerators = tw.q?.numerators?.length ? [...tw.q.numerators] : [...denominators]
+	validateFractionMembers(numerators, denominators, memberIds)
+	term.numerators = numerators
+	term.denominators = denominators
+	return term
+}
+
 /** Validate the member selection and binning discriminator for a fraction term collection. */
 export function validateTermCollectionFraction(q: TermCollectionQFraction, term: CollectionTermLike): void {
 	const memberIds = validateTermCollectionTerm(term)

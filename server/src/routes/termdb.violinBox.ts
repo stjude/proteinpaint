@@ -19,7 +19,7 @@ import { getData } from '../termdb.matrix.js'
 import { createCanvas } from 'canvas'
 import { getOrderedLabels } from '../termdb.barchart.js'
 import { getDescrStats, getStdDev, getMean } from '#routes/termdb.descrstats.ts'
-import { isNumericTerm } from '#shared/terms.js'
+import { isNumericTerm, isNumericTw } from '#shared/terms.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { mayLog } from '#src/helpers.ts'
@@ -775,7 +775,11 @@ export function parseValues(
 /** Return bins for filtering and list sample label menu options */
 export function numericBins(tw: TermWrapper, data: ValidGetDataResponse) {
 	const bins = {}
-	if (!isNumericTerm(tw?.term)) return bins
+	// isNumericTw(), not isNumericTerm(): a fraction termCollection resolves to one numeric
+	// value per sample and is binned like any other numeric overlay, so its bins must be
+	// returned too. Without them, a client listing the samples of an overlay plot has no bin
+	// to filter by and falls back to the range of the continuous term, which matches nothing.
+	if (!isNumericTw(tw)) return bins
 	for (const bin of data.refs.byTermId[tw.$id!]?.bins || []) {
 		bins[bin.label] = bin
 	}

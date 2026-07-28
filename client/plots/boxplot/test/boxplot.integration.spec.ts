@@ -1,7 +1,13 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
 import { detectGte } from '../../../test/test.helpers.js'
-import { getGeneVariantTw, getScctTw, getScgeneexpTw } from '../../../test/testdata/data.ts'
+import {
+	getGeneVariantTw,
+	getScctTw,
+	getScgeneexpTw,
+	getAgeCollectionFractionTw,
+	getIsoformExpColletionFractionTw
+} from '../../../test/testdata/data.ts'
 
 /*
 Tests:
@@ -9,6 +15,8 @@ Tests:
 	Box plot with overlay term = sex
 	Box plot with continuous overlay term = agedx
 	Box plot with overlay term = geneVariant
+	Box plot with overlay age collection fraction
+	Box plot with overlay isoform collection fraction
 	Box plot: term1=geneExp term2=geneVariant
 	Box plot with divide term = sex
 	Box plot with overlay term = aaclassic_5 and divide term = sex
@@ -174,11 +182,59 @@ tape('Box plot with overlay term = geneVariant', test => {
 				}
 			]
 		},
-		boxplot: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
+		boxplot: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		test.equal(dom.charts.selectAll('.sjpp-boxplot-plot').size(), 2, `Should render 2 boxplots`)
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('Box plot with overlay age collection fraction', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: getAgeCollectionFractionTw()
+				}
+			]
+		},
+		boxplot: { callbacks: { 'postRender.test': runTests } }
+	})
+
+	async function runTests(boxplot) {
+		boxplot.on('postRender.test', null)
+		const dom = boxplot.Inner.dom
+		test.equal(dom.charts.selectAll('.sjpp-boxplot-plot').size(), 2, `Should render 2 boxplots`)
+
+		if (test['_ok']) boxplot.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('Box plot with overlay isoform collection fraction', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'boxplot',
+					term: { id: 'agedx', q: { mode: 'continuous' } },
+					term2: getIsoformExpColletionFractionTw()
+				}
+			]
+		},
+		boxplot: { callbacks: { 'postRender.test': runTests } }
 	})
 
 	async function runTests(boxplot) {
