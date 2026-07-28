@@ -193,18 +193,29 @@ export function getSampleGroups(data) {
 		grp.lst = grp.lst.filter(dataFilter)
 		grp.totalCountedValues = grp.lst.reduce(countHits, 0)
 		grp.lst.sort(grpLstSampleSorter)
+
 		if (this.config.chartType != 'matrix' || !s.sortBySampleAncestry) continue
 		grp.relatedSamples = {}
-		let currentRelated = [grp.lst[0]],
-			lastAncestorId
+		// at this point, samples have already been sorted by grpLstSampleSorter (mutation, CNV, values, etc),
+		// only now pull ancestor-related samples to be grouped with the left-most related sample
+		const reorderedByAncestor = new Set()
+		const lstCopy = new Set(grp.lst)
+		let currentRelated = [grp.lst[0]]
 		for (const s of grp.lst) {
+			if (reorderedByAncestor.has(s)) continue
+			reorderedByAncestor.add(s)
+			lstCopy.delete(s)
+			currentRelated = [s]
 			const id = s._ref_?.ancestors?.[0]?.ancestor_id
-			if (id === lastAncestorId) currentRelated.push(s)
-			else {
-				if (currentRelated.length > 1) grp.relatedSamples[lastAncestorId] = currentRelated
-				currentRelated = [s]
+			for (const c of lstCopy) {
+				if (c._ref_?.ancestors?.[0]?.ancestor_id === id) {
+					reorderedByAncestor.add(c)
+					lstCopy.delete(c)
+					currentRelated.push(c)
+				}
 			}
-			lastAncestorId = id
+			if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
+			grp.lst = [...reorderedByAncestor]
 		}
 	}
 	const sampleGrpSorter = getSampleGroupSorter(this)
@@ -222,6 +233,7 @@ export function getSampleOrder(data) {
 		if (grp.isExcluded) numHiddenGrps++
 		let processedLst = grp.lst
 		for (const [index, row] of processedLst.entries()) {
+			// track ancestors with #descendants > 1 to render rects around related samples
 			sampleOrder.push({
 				grp,
 				grpIndex: grpIndex - numHiddenGrps, // : this.sampleGroups.length,

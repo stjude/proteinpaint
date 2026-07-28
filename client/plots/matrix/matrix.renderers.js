@@ -183,6 +183,8 @@ export function setRenderers(self) {
 	}
 
 	self.renderLabels = function (s, l, d, duration) {
+		const relatedSamplesByAncestorId = {}
+
 		for (const direction of ['top', 'btm', 'left', 'right']) {
 			const side = l[direction]
 			side.box
@@ -195,6 +197,25 @@ export function setRenderers(self) {
 			labels.exit().remove()
 			labels.each(renderLabel)
 			labels.enter().append('g').attr('class', 'sjpp-matrix-label').each(renderLabel)
+
+			const relatedSamples = Object.values(relatedSamplesByAncestorId)
+			const cls = '.sjpp-matrix-label-related-sample-rect'
+			side.box.selectAll(cls).remove()
+
+			if (s.sortBySampleAncestry && side.prefix == 'sample' && relatedSamples.length) {
+				const a = side.box.selectAll(cls).data(relatedSamples)
+
+				a.enter()
+					.append('rect')
+					.attr('class', cls.slice(1))
+					.attr('transform', a => a.transform)
+					.attr('x', -d.colw + 5)
+					.attr('y', -2)
+					.attr('width', a => d.colw * a.samples.length - 3)
+					.attr('height', 0.5)
+					.attr('stroke', '#000')
+					.attr('stroke-width', 0.5) //rgba(255, 100, 100, 0.1)`); console.log(208, side.box.select(cls).node())
+			}
 
 			function renderLabel(lab) {
 				const g = select(this)
@@ -285,6 +306,16 @@ export function setRenderers(self) {
 						.call(side.attr.axisFxn(lab.scales.full.domain(lab.scales.tickValues)).tickValues(lab.scales.tickValues))
 				} else if (hasAxis) {
 					g.select('.sjpp-matrix-cell-axis').remove()
+				}
+
+				const id = side.prefix === 'sample' && lab.row?._ref_?.ancestors?.[0]?.ancestor_id
+				if (id && lab.grp.relatedSamples?.[id] && !relatedSamplesByAncestorId[id]) {
+					relatedSamplesByAncestorId[id] = {
+						ancestor_id: id,
+						row: lab.row,
+						transform: side.attr.labelGTransform(lab),
+						samples: lab.grp.relatedSamples[id]
+					}
 				}
 			}
 
