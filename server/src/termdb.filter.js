@@ -338,8 +338,9 @@ function isNonDictMemberType(term) {
  *  isoformExpression HDF5 handler) directly for each member term, then compute
  *  the numerator/denominator fraction client-side and filter samples. */
 async function get_termCollection_nonDict_fraction(tvs, CTEname, ds, mapParent2Children) {
+	// an empty ranges[] applies no range constraint, same as get_numerical(): the sample only
+	// needs a value, e.g. when listing the samples of an unbrushed violin plot
 	const range = tvs.ranges?.[0]
-	if (!range) return emptyFilterResult(CTEname, mapParent2Children, ds)
 	// only the fraction is supported here, so numerators[] is required, unlike a dictionary
 	// collection tvs that may instead brush on a single member
 	if (!tvs.term.numerators) throw new Error('termCollection tvs is missing term.numerators[]')
@@ -399,7 +400,7 @@ async function get_termCollection_nonDict_fraction(tvs, CTEname, ds, mapParent2C
 			if (numerators.includes(mid)) numeratorSum += val
 		}
 		const fraction = totalSum == 0 ? 0 : numeratorSum / totalSum
-		if (isInRange(fraction, range, tvs.isnot)) samplenames.push(sid)
+		if (!range || isInRange(fraction, range, tvs.isnot)) samplenames.push(sid)
 	}
 
 	if (!samplenames.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
@@ -450,8 +451,9 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 			const memberId = mt?.id || brushedLabel
 			const val = sampleValues[memberId]
 			if (val == null || typeof val !== 'number') continue
-			const range = tvs.ranges[0]
-			if (isInRange(val, range, tvs.isnot)) samplenames.push(key)
+			// an empty ranges[] applies no range constraint, same as get_numerical()
+			const range = tvs.ranges?.[0]
+			if (!range || isInRange(val, range, tvs.isnot)) samplenames.push(key)
 		} else if (tvs.term.numerators) {
 			// No specific member brushed — filter by the numerator/denominator fraction,
 			// on a 0 to 1 scale, same as the value of a TermCollectionTWFraction tw
@@ -463,8 +465,9 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 				if (tvs.term.numerators.includes(key)) numeratorSum += value
 			}
 			const fraction = totalSum == 0 ? 0 : numeratorSum / totalSum
-			const range = tvs.ranges[0]
-			if (isInRange(fraction, range, tvs.isnot)) samplenames.push(key)
+			// an empty ranges[] applies no range constraint, same as get_numerical()
+			const range = tvs.ranges?.[0]
+			if (!range || isInRange(fraction, range, tvs.isnot)) samplenames.push(key)
 		}
 	}
 

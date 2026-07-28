@@ -18,6 +18,8 @@ Tests:
 	- createTvsRanges() returns empty array for continuous term without bins
 	- createTvsRanges() handles bins
 	- createTvsRanges() handles uncomputable values
+	- getTvsLstEntry() creates a fraction termCollection tvs from the clicked bin
+	- getTvsLstEntry() uses the overlay bin of a fraction termCollection, not the brushed range
 	- isContinuousOrBinned() returns correct boolean values per term type
 	- isContinuousOrBinned() returns false when mode is not in term query
 	- mayFilterGVSample() returns false for non-gene variant terms
@@ -359,6 +361,99 @@ tape('createTvsRanges() handles uncomputable values', test => {
 
 	test.equal(mockTvs.ranges.length, 1, 'Should create range for uncomputable value')
 	test.equal(mockTvs.ranges[0].label, 'UncompLabel', 'Should set correct label')
+
+	test.end()
+})
+
+tape('getTvsLstEntry() creates a fraction termCollection tvs from the clicked bin', test => {
+	test.timeoutAfter(100)
+
+	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
+	const mockApp = {} as AppApi
+	const fractionTw: any = {
+		type: 'TermCollectionTWFraction',
+		$id: 'fraction_tw',
+		term: {
+			type: 'termCollection',
+			name: 'Test collection',
+			memberType: 'numeric',
+			termlst: [
+				{ id: 'isoform1', name: 'isoform1', type: 'isoformExpression' },
+				{ id: 'isoform2', name: 'isoform2', type: 'isoformExpression' }
+			]
+		},
+		q: { mode: 'discrete', type: 'custom-bin', numerators: ['isoform1'], denominators: ['isoform1', 'isoform2'] }
+	}
+	const bin = { start: 0.25, stop: 0.5, startinclusive: true, label: '0.25 to <0.5' }
+
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: { filter: 'test' },
+		term: fractionTw,
+		term2: mockConfig1.term2 as any,
+		plot: { ...mockPlot1, seriesId: bin.label } as any,
+		bins: { term1: { [bin.label]: bin } } as any
+	})
+
+	const entry: any = listSamples.tvslst.lst[0]
+	test.deepEqual(entry.tvs.ranges, [bin], 'Should filter by the bin range of the clicked bar')
+	test.equal(entry.tvs.values, undefined, 'Should not set values[], which filters on a single member term')
+	test.deepEqual(entry.tvs.term.numerators, ['isoform1'], 'Should carry q.numerators[] onto the tvs term')
+	test.deepEqual(
+		entry.tvs.term.denominators,
+		['isoform1', 'isoform2'],
+		'Should carry q.denominators[] onto the tvs term'
+	)
+
+	test.end()
+})
+
+tape('getTvsLstEntry() uses the overlay bin of a fraction termCollection, not the brushed range', test => {
+	test.timeoutAfter(100)
+
+	/** A violin/box plot of a continuous term overlaid by a binned fraction termCollection:
+	 * brushing supplies a range on the continuous term1 only. The fraction term2 must still
+	 * filter by the bin of the plot being listed; reusing the term1 range would compare an
+	 * age in years against a 0 to 1 fraction and match no samples. */
+	const { mockConfig1, mockPlot1 } = getBoxPlotMockData()
+	const mockApp = {} as AppApi
+	const fractionTw: any = {
+		type: 'TermCollectionTWFraction',
+		$id: 'fraction_tw',
+		term: {
+			type: 'termCollection',
+			name: 'Test collection',
+			memberType: 'numeric',
+			termlst: [
+				{ id: 'isoform1', name: 'isoform1', type: 'isoformExpression' },
+				{ id: 'isoform2', name: 'isoform2', type: 'isoformExpression' }
+			]
+		},
+		q: { mode: 'discrete', type: 'custom-bin', numerators: ['isoform1'], denominators: ['isoform1', 'isoform2'] }
+	}
+	const bin = { startunbounded: true, stop: 0.8, label: '<0.8' }
+
+	const listSamples = new ListSamples({
+		app: mockApp,
+		termfilter: { filter: 'test' },
+		term: mockConfig1.term as any,
+		term2: fractionTw,
+		plot: { ...mockPlot1, seriesId: bin.label } as any,
+		// bins.term2 is only returned by the server when it recognizes the fraction wrapper as numeric
+		bins: { term1: {}, term2: { [bin.label]: bin } } as any,
+		start: 1,
+		end: 15
+	})
+
+	const term1Entry: any = listSamples.tvslst.lst[0]
+	test.deepEqual(
+		term1Entry.tvs.ranges,
+		[{ start: 1, stop: 15, startinclusive: true, stopinclusive: true, startunbounded: false, stopunbounded: false }],
+		'Should filter the continuous term by the brushed range'
+	)
+
+	const fractionEntry: any = listSamples.tvslst.lst[1]
+	test.deepEqual(fractionEntry.tvs.ranges, [bin], 'Should filter the fraction term by its overlay bin')
 
 	test.end()
 })

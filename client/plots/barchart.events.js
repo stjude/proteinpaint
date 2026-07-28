@@ -7,6 +7,7 @@ import { rgb } from 'd3-color'
 import { create } from 'd3-selection'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { isNumericTw } from '#shared/terms.js'
+import { isFractionTw, getFractionTvsTerm } from '#shared/termCollection.js'
 import { negateTermLabel } from './barchart'
 import { getSamplelstFilter, getSamplelstTW, getFilter, addNewGroup } from '../mass/groups.js'
 
@@ -583,6 +584,21 @@ function getTvs(termIndex, value, self, geneVariant) {
 		// geneVariant filtering will be handled by mayFilterByGeneVariant()
 		geneVariant[`t${termIndex}value`] = value
 		return
+	}
+	if (isFractionTw(term)) {
+		/* A fraction termCollection resolves to one numeric value per sample, so a bar is a
+		bin of that fraction: filter by the bin range only. values[] is left out, the server
+		reads it as a brush on a single member term. The numerator/denominator selection
+		lives in q{} of the tw, but must be carried on the term of the standalone tvs. */
+		const bin = self.bins[termIndex]?.find(bin => bin.label == value)
+		if (!bin) return null
+		return {
+			type: 'tvs',
+			tvs: {
+				term: getFractionTvsTerm(term),
+				ranges: [bin]
+			}
+		}
 	}
 	let tvs = {
 		type: 'tvs',

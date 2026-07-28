@@ -6,7 +6,9 @@ import {
 	getGeneVariantTw,
 	getGenesetMutTw,
 	getCategoricalTermcollectionTw,
-	getScctTw
+	getScctTw,
+	getAgeCollectionFractionTw,
+	getIsoformExpColletionFractionTw
 } from '../../test/testdata/data.ts'
 import * as helpers from '../../test/front.helpers.js'
 import { sleep, detectLst, detectGte, detectOne, Locator } from '../../test/test.helpers.js'
@@ -31,8 +33,10 @@ term1=geneVariant with groups
 term1=geneVariant, term2=geneVariant using region but not gene
 term1=geneVariant geneset with groups
 term1=categorical, term2=geneVariant
+term1=categorical, term2=age collection fraction
+term1=categorical, term2=isoform collection fraction
 term1=categorical (patient-level), term2=geneVariant
-term1=geneExp, term2=geneVariant SKIPPED
+term1=geneExp, term2=geneVariant
 term1=geneVariant, term2=geneExp
 term1=geneExp
 term1=numeric term2=geneExp with default bins
@@ -51,10 +55,11 @@ single barchart, categorical filter (patient-level)
 single barchart (relapse-level), categorical filter (patient-level)
 single geneExp barchart, categorical filter (patient-level)
 single barchart (patient-level), compound filter (patient-level + sample-level)
-genevariant barchart, compound filter SKIPPED
+genevariant barchart, compound filter
 single barchart, TP53 mutation dtTerm filter
 
 click non-group bar to add filter
+click custom subcondition group bar to add filter SKIPPED NO LONGER SUPPORTED
 click custom categorical group bar to add filter
 numeric exclude range
 numeric filter - only special value
@@ -661,7 +666,52 @@ tape('term1=categorical, term2=geneVariant', function (test) {
 	function testNumCharts(barchart) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		test.true(numCharts == 1, 'Should have 1 chart from categorical + gene variant term')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1=categorical, term2=age collection fraction', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					term2: getAgeCollectionFractionTw()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': testNumCharts } }
+	})
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from categorical + age collection fraction')
+		if (test._ok) barchart.Inner.app.destroy()
+		test.end()
+	}
+})
+tape('term1=categorical, term2=isoform collection fraction', function (test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					term2: getIsoformExpColletionFractionTw()
+				}
+			]
+		},
+		barchart: { callbacks: { 'postRender.test': testNumCharts } }
+	})
+	function testNumCharts(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
+		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
+		test.true(numCharts == 1, 'Should have 1 chart from categorical + isoform collection fraction')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -706,7 +756,7 @@ tape('term1=categorical (patient-level), term2=geneVariant', function (test) {
 	}
 })
 
-tape('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
+tape('term1=geneExp, term2=geneVariant', function (test) {
 	test.timeoutAfter(10000)
 	runpp({
 		state: {
@@ -729,7 +779,7 @@ tape('term1=geneExp, term2=geneVariant SKIPPED', function (test) {
 	function testNumCharts(barchart) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
-		test.true(numCharts == 1, 'Should have 1 chart from gene variant term')
+		test.true(numCharts == 1, 'Should have 1 chart from geneExp + gene variant')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -1539,8 +1589,7 @@ tape('single barchart (patient-level), compound filter (patient-level + sample-l
 	}
 })
 
-// skipped until non-dictionary terms can be filtered by patient-level terms
-tape.skip('genevariant barchart, compound filter', function (test) {
+tape('genevariant barchart, compound filter', function (test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -1900,7 +1949,7 @@ tape('click custom categorical group bar to add filter', function (test) {
 })
 
 /* bar_by_children handling has been inactivated
-tape.skip('click custom subcondition group bar to add filter', function(test) {
+tape('click custom subcondition group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { filter: [] }
@@ -2108,199 +2157,6 @@ tape('numeric exclude range', function (test) {
 		test.end()
 	}
 })
-
-// tape.skip('numeric filter - only special value', function (test) {
-// 	test.timeoutAfter(5000)
-
-// 	runpp({
-// 		state: {
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: { id: 'aaclassic_5' }
-// 				}
-// 			],
-// 			termfilter: {
-// 				filter: {
-// 					type: 'tvslst',
-// 					in: 1,
-// 					join: '',
-// 					lst: [
-// 						{
-// 							type: 'tvs',
-// 							tvs: {
-// 								term: termjson['aaclassic_5'],
-// 								ranges: [{ value: -8888, label: 'test' }]
-// 							}
-// 						}
-// 					]
-// 				}
-// 			}
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runNumericValueTests
-// 			}
-// 		}
-// 	})
-
-// 	function runNumericValueTests(barchart) {
-// 		helpers
-// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-// 			//.run(testNoBar, { wait: 300 })
-// 			//.use(triggerHiddenLegendClick, { wait: 300 })
-// 			.run(testHasBar, { wait: 300 })
-// 			.done(test)
-// 	}
-
-// 	function testNoBar(barchart) {
-// 		const barDiv = barchart.Inner.dom.barDiv
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(numBars, 0, 'should have 0 bar')
-// 	}
-
-// 	function triggerHiddenLegendClick(barchart) {
-// 		barchart.Inner.dom.legendDiv.node().querySelector('.legend-row').click()
-// 	}
-
-// 	function testHasBar(barchart) {
-// 		const barDiv = barchart.Inner.dom.barDiv
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(
-// 			numBars,
-// 			1,
-// 			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank barchart'
-// 		)
-// 	}
-// })
-
-// tape.skip('custom vocab: categorical terms with numeric filter', test => {
-// 	test.timeoutAfter(3000)
-
-// 	const custom_runpp = helpers.getRunPp('termdb', {
-// 		debug: 1,
-// 		state: {
-// 			nav: {
-// 				header_mode: 'search_only'
-// 			},
-// 			vocab: vocabData.getExample()
-// 		}
-// 	})
-
-// 	custom_runpp({
-// 		state: {
-// 			termfilter: {
-// 				filter: {
-// 					type: 'tvslst',
-// 					join: '',
-// 					lst: [
-// 						{
-// 							type: 'tvs',
-// 							tvs: {
-// 								term: vocabData.terms.find(t => t.id == 'd'),
-// 								ranges: [{ start: 0.1, startinclusive: false, stopunbounded: true }]
-// 							}
-// 						}
-// 					]
-// 				}
-// 			},
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: {
-// 						term: vocabData.terms.find(t => t.id == 'c')
-// 					}
-// 				}
-// 			]
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	function runTests(barchart) {
-// 		barchart.on('postRender.test', null)
-// 		testBarCount(barchart)
-// 		if (test._ok) barchart.Inner.app.destroy()
-// 		test.end()
-// 	}
-
-// 	let barDiv
-// 	function testBarCount(barchart) {
-// 		barDiv = barchart.Inner.dom.barDiv
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-// 		test.equal(numBars, 2, 'should have 2 bars')
-// 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
-// 	}
-// })
-
-// tape.skip('custom vocab: numeric terms with categorical filter', test => {
-// 	test.timeoutAfter(3000)
-// 	const vocab = vocabData.getExample()
-// 	const custom_runpp = helpers.getRunPp('termdb', {
-// 		debug: 1,
-// 		state: {
-// 			nav: {
-// 				header_mode: 'search_only'
-// 			},
-// 			vocab
-// 		}
-// 	})
-
-// 	const dterm = vocab.terms.find(t => t.id == 'd')
-// 	custom_runpp({
-// 		state: {
-// 			termfilter: {
-// 				filter: {
-// 					type: 'tvslst',
-// 					join: '',
-// 					lst: [
-// 						{
-// 							type: 'tvs',
-// 							tvs: {
-// 								term: vocab.terms.find(t => t.id == 'c'),
-// 								values: [{ key: 1 }]
-// 							}
-// 						}
-// 					]
-// 				}
-// 			},
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: {
-// 						term: dterm,
-// 						q: dterm.bins.default
-// 					}
-// 				}
-// 			]
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	function runTests(barchart) {
-// 		barchart.on('postRender.test', null)
-// 		testBarCount(barchart)
-// 		if (test._ok) barchart.Inner.app.destroy()
-// 		test.end()
-// 	}
-
-// 	let barDiv
-// 	function testBarCount(barchart) {
-// 		barDiv = barchart.Inner.dom.barDiv
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-// 		test.equal(numBars, 5, 'should have 5 bars')
-// 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
-// 	}
-// })
 
 tape('max number of bins: exceeded', test => {
 	test.timeoutAfter(3000)
@@ -2534,275 +2390,6 @@ tape('no visible series data, no overlay', function (test) {
 		test.end()
 	}
 })
-
-// tape.skip('all hidden + with overlay, legend click', function (test) {
-// 	test.timeoutAfter(9000)
-
-// 	runpp({
-// 		state: {
-// 			nav: {
-// 				header_mode: 'search_only'
-// 			},
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: {
-// 						id: 'cisplateq_5'
-// 					},
-// 					term2: {
-// 						id: 'sex'
-// 					}
-// 				}
-// 			]
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	function runTests(barchart) {
-// 		barchart.on('postRender.test', null)
-
-// 		helpers
-// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-// 			.run(testBarCount)
-// 			.run(triggerBarClick)
-// 			.use(triggerMenuClick, { wait: 1100 })
-// 			.to(testRemovedOverlayByMenu, { wait: 100 })
-// 			.use(triggerUnhideOverlay, { wait: 1100 })
-// 			.to(testUnhiddenOverlay, { wait: 100 })
-// 			.use(triggerOverlayHideByLegendClick, { wait: 1000 })
-// 			.to(testhiddenOverlayByLegendClick, { wait: 100 })
-// 			.done(test)
-// 	}
-
-// 	let barDiv
-// 	function testBarCount(barchart) {
-// 		barDiv = barchart.Inner.dom.barDiv
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(
-// 			numBars,
-// 			1,
-// 			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
-// 		)
-// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-// 		test.equal(
-// 			numOverlays,
-// 			2,
-// 			'should have 2 visible overlays on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
-// 		)
-// 		test.equal(
-// 			barchart.Inner.dom.banner.style('display'),
-// 			'none',
-// 			'should hide the banner when at least one chart is visible'
-// 		)
-// 	}
-
-// 	let clickedData
-// 	function triggerBarClick(barchart) {
-// 		const elem = barDiv.node().querySelector('.bars-cell').querySelector('rect')
-// 		elem.dispatchEvent(new Event('click', { bubbles: true }))
-// 	}
-
-// 	function triggerMenuClick(barchart) {
-// 		barchart.Inner.app.tip.d
-// 			.selectAll('.sja_menuoption')
-// 			.filter(d => d.label.includes('Hide "Female"'))
-// 			.node()
-// 			.dispatchEvent(new Event('click', { bubbles: true }))
-// 	}
-
-// 	function testRemovedOverlayByMenu(barchart) {
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
-// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-// 		test.equal(numOverlays, 1, 'should have 1 visible overlay left after hiding an overlay')
-// 	}
-
-// 	function triggerUnhideOverlay(barchart) {
-// 		barchart.Inner.dom.legendDiv
-// 			.selectAll('.legend-row')
-// 			.filter(d => d.dataId == '2')
-// 			.node()
-// 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
-// 	}
-
-// 	function testUnhiddenOverlay(barchart) {
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
-// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-// 		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
-// 	}
-
-// 	function triggerOverlayHideByLegendClick(barchart) {
-// 		barchart.Inner.dom.legendDiv
-// 			.select('.legend-row')
-// 			.node()
-// 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
-// 	}
-
-// 	function testhiddenOverlayByLegendClick(barchart) {
-// 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-// 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
-// 		const numOverlays = barDiv.selectAll('.bars-cell').size()
-// 		test.equal(numOverlays, 1, 'should have 1 visible overlays after hiding an overlay by legend click')
-// 	}
-// })
-
-// tape.skip('unhidden chart and legend', test => {
-// 	test.timeoutAfter(8000)
-
-// 	runpp({
-// 		state: {
-// 			nav: {
-// 				header_mode: 'search_only'
-// 			},
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: {
-// 						term: termjson['aaclassic_5'],
-// 						q: {
-// 							type: 'regular-bin',
-// 							bin_size: 10000,
-// 							stopinclusive: true,
-// 							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-// 							numDecimals: 1,
-// 							last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-// 							startinclusive: false
-// 						}
-// 					}
-// 				}
-// 			]
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	async function runTests(barchart) {
-// 		helpers
-// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
-// 			.run(testVisibleChart)
-// 			.run(triggerHideChart, 300)
-// 			.run(testHiddenChart, 300)
-// 			.run(triggerShowChart, 300)
-// 			.run(testReshownChart, 300)
-// 			.done(test)
-// 	}
-
-// 	function testVisibleChart(barchart) {
-// 		test.notEqual(
-// 			barchart.Inner.dom.holder.node().style.display,
-// 			'none',
-// 			'should start with both visible and not overlapping'
-// 		)
-// 	}
-
-// 	function triggerHideChart(barchart) {
-// 		barchart.Inner.app.dispatch({
-// 			type: 'plot_hide',
-// 			id: 'aaclassic_5'
-// 		})
-// 	}
-
-// 	function testHiddenChart(barchart) {
-// 		test.equal(barchart.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
-// 	}
-
-// 	function triggerShowChart(barchart) {
-// 		// issue to fix: clicking the view button will cause the stat table
-// 		// to overlap from the bottom of the chart
-// 		barchart.Inner.dom.holder.node().parentNode.querySelector('.termview').click()
-
-// 		// same result when using dispatch
-// 		/*barchart.Inner.app.dispatch({
-// 			type: 'plot_show',
-// 			id: 'aaclassic_5'
-// 		})*/
-// 	}
-
-// 	function testReshownChart(barchart) {
-// 		test.true(
-// 			+barchart.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
-// 			'should not have a small barchart svg when reshowing a barchart, not overlap with legend'
-// 		)
-// 	}
-// })
-
-// tape.skip('customized bins', test => {
-// 	test.timeoutAfter(3000)
-
-// 	runpp({
-// 		state: {
-// 			nav: {
-// 				header_mode: 'search_only'
-// 			},
-// 			plots: [
-// 				{
-// 					chartType: 'barchart',
-// 					term: {
-// 						term: termjson['aaclassic_5']
-// 					}
-// 				}
-// 			]
-// 		},
-// 		barchart: {
-// 			callbacks: {
-// 				'postRender.test': runTests
-// 			}
-// 		}
-// 	})
-
-// 	async function runTests(barchart) {
-// 		helpers
-// 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
-// 			.run(triggerCustomBins, 400)
-// 			.run(triggerSearch, 300)
-// 			// .run(testReversion, 1000)
-// 			.done(test)
-// 	}
-
-// 	const q1 = {
-// 		type: 'regular-bin',
-// 		bin_size: 10000,
-// 		stopinclusive: true,
-// 		first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-// 		numDecimals: 1,
-// 		last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-// 		startinclusive: false
-// 	}
-
-// 	function triggerCustomBins(barchart) {
-// 		barchart.Inner.app.dispatch({
-// 			type: 'plot_edit',
-// 			id: 'aaclassic_5',
-// 			config: {
-// 				term: {
-// 					id: 'aaclassic_5',
-// 					term: barchart.Inner.config.term.term,
-// 					q: q1
-// 				}
-// 			}
-// 		})
-// 	}
-
-// 	async function triggerSearch(barchart) {
-// 		const dom = barchart.Inner.app.getComponents('nav.search').Inner.dom
-// 		dom.input.property('value', 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)')
-// 		dom.input.on('input')()
-// 		await sleep(500)
-// 		dom.holder.select('.sja_menuoption').node().dispatchEvent(new Event('click'))
-// 	}
-
-// 	function testReversion(barchart) {
-// 		test.deepEqual(barchart.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
-// 	}
-// })
 
 // to make or update following config, on the browser build/modify the tw or filter, apply to chart, at Session > Share > Open link, open the session file and locate the record and copy it here:
 // for geneVariant tw, search for string "geneVariant"

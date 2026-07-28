@@ -163,13 +163,13 @@ export function getSsgseaTw(isBin = false) {
 		term: { id: 'HALLMARK_ADIPOGENESIS', type: 'ssGSEA', name: 'HALLMARK_ADIPOGENESIS' },
 		q: isBin
 			? {
-				type: 'regular-bin',
-				startinclusive: true,
-				bin_size: 0.2,
-				first_bin: { stop: -0.4 },
-				last_bin: { start: 0.8 },
-				mode: 'discrete'
-			}
+					type: 'regular-bin',
+					startinclusive: true,
+					bin_size: 0.2,
+					first_bin: { stop: -0.4 },
+					last_bin: { start: 0.8 },
+					mode: 'discrete'
+			  }
 			: { mode: 'continuous' }
 	}
 }
@@ -692,7 +692,7 @@ export function getScctTw() {
 	}
 }
 /** TODO: Pseudobulk data is not enabled in TermdbTest!!
- * Do not use until data is available. Capturing structure for 
+ * Do not use until data is available. Capturing structure for
  * clarity during development. */
 export function getPseudobulkTW(nameId = 'Blast') {
 	return {
@@ -706,7 +706,7 @@ export function getPseudobulkTW(nameId = 'Blast') {
 	}
 }
 export function getPseudobulkTermCollection(termIds = ['Blast', 'Monocyte', 'T_NK']) {
-	const termlst = termIds.map((id) => getPseudobulkTW(id).term)
+	const termlst = termIds.map(id => getPseudobulkTW(id).term)
 
 	return {
 		type: 'TermCollectionTWCont',
@@ -717,7 +717,7 @@ export function getPseudobulkTermCollection(termIds = ['Blast', 'Monocyte', 'T_N
 			name: 'Test pseudobulk term collection',
 			termIds,
 			termlst,
-			isCustom: true,
+			isCustom: true
 		},
 		q: {
 			mode: 'continuous',
@@ -790,5 +790,52 @@ export function getCategoricalTermcollectionTw() {
 	return {
 		type: 'TermCollectionTWQual',
 		term: { type: 'termCollection', name: 'Assay Availability' }
+	}
+}
+
+export function getAgeCollectionFractionTw() {
+	return {
+		type: 'TermCollectionTWFraction',
+		term: {
+			type: 'termCollection',
+			termIds: ['agedx', 'a_death', 'a_ndi', 'agelastvisit'],
+			name: 'Fake Collection 1', // NOTE this name must match with the termCollection entry in termdbtest
+			memberType: 'numeric'
+		},
+		q: {
+			mode: 'discrete',
+			numerators: ['a_death'],
+			denominators: ['agedx', 'a_death'],
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stop: 0.8, label: '<0.8' },
+				{ stopunbounded: true, start: 0.8, label: '>0.8' }
+			]
+		}
+	}
+}
+export function getIsoformExpColletionFractionTw() {
+	return {
+		type: 'TermCollectionTWFraction',
+		term: {
+			type: 'termCollection',
+			isCustom: true,
+			memberType: 'numeric',
+			name: 'KRAS Isoforms (TPM)',
+			termlst: [
+				{ id: 'ENST00000256078', name: 'ENST00000256078', type: 'isoformExpression', isoform: 'ENST00000256078' },
+				{ id: 'ENST00000311936', name: 'ENST00000311936', type: 'isoformExpression', isoform: 'ENST00000311936' }
+			]
+		},
+		q: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stop: 0.1, startinclusive: false, stopinclusive: true, label: 'low0.1' },
+				{ start: 0.1, startinclusive: false, stopinclusive: false, stopunbounded: true, label: 'high0.1' }
+			],
+			denominators: ['ENST00000256078', 'ENST00000311936'],
+			numerators: ['ENST00000256078']
+		}
 	}
 }

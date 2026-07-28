@@ -153,6 +153,34 @@ tape('numericBins: returns empty object for non-numeric term', function (test) {
 	test.end()
 })
 
+tape('numericBins: returns bins for a fraction termCollection', function (test) {
+	const tw = {
+		type: 'TermCollectionTWFraction',
+		term: { type: 'termCollection', memberType: 'numeric', name: 'Fake Collection 1' },
+		$id: 'tw1'
+	} as any
+	const bins = [
+		{ label: '<0.8', startunbounded: true, stop: 0.8 },
+		{ label: '>0.8', start: 0.8, stopunbounded: true }
+	]
+	const data = { refs: { bySampleId: {}, byTermId: { tw1: { bins } } }, samples: {} } as any
+	const result = numericBins(tw, data)
+	test.deepEqual(result, { '<0.8': bins[0], '>0.8': bins[1] }, 'Should key the fraction bins by label')
+	test.end()
+})
+
+tape('numericBins: returns empty object for a values-mode termCollection', function (test) {
+	const tw = {
+		type: 'TermCollectionTWCont',
+		term: { type: 'termCollection', memberType: 'numeric', name: 'Fake Collection 1' },
+		$id: 'tw1'
+	} as any
+	const data = { refs: { bySampleId: {}, byTermId: { tw1: { bins: [{ label: 'a' }] } } }, samples: {} } as any
+	const result = numericBins(tw, data)
+	test.deepEqual(result, {}, 'Should not bin a collection that keeps one value per member term')
+	test.end()
+})
+
 tape('numericBins: returns empty object when no bins in refs', function (test) {
 	const tw = { term: { type: 'float', id: 'agedx' }, $id: 'tw1' } as any
 	const data = { refs: { bySampleId: {}, byTermId: { tw1: {} } }, samples: {} } as any

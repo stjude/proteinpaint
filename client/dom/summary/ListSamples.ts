@@ -3,7 +3,7 @@ import type { TermWrapper, NumericBin } from '#types'
 import type { AnnotatedSampleData, AnnotatedSampleEntry } from '../../types/termdb'
 import type { TableColumn, TableRow } from '#dom'
 import { getSamplelstFilter } from '../../mass/groups.js'
-import { TermTypes, isNumericTerm, roundValueAuto, isStrictNumeric } from '#shared'
+import { TermTypes, isNumericTerm, roundValueAuto, isStrictNumeric, isFractionTw, getFractionTvsTerm } from '#shared'
 import { filterJoin } from '#filter'
 import { addGvRowVals, addGvCols } from '#plots/barchart.events.js'
 import { defaultUiLabels } from '#plots/PlotBase.ts'
@@ -129,6 +129,17 @@ export class ListSamples {
 		}
 		const key: any = termNum == 0 ? this.plot.chartId : this.plot.seriesId
 		if (!key && key !== 0) return
+
+		if (isFractionTw(tw)) {
+			/** A fraction termCollection resolves to one numeric value per sample, so it
+			 * filters by the range of the clicked bin (or the brushed range), never by a
+			 * member key: tvs.values[] is read by the server as a brush on a single member
+			 * term. The numerator/denominator selection lives in q{} of the tw, but must be
+			 * carried on the term of the standalone tvs. */
+			const tvs = this.createTvsRanges({ term: getFractionTvsTerm(tw) }, termNum, key)
+			this.tvslst.lst.push({ type: 'tvs', tvs })
+			return
+		}
 
 		let tvsEntry = {
 			type: 'tvs',
@@ -343,7 +354,9 @@ export class ListSamples {
 
 		const sample = s[tw.$id!]
 		let formattedVal
-		if (isNumericTerm(tw.term)) {
+		if (isNumericTerm(tw.term) || isFractionTw(tw)) {
+			// a fraction termCollection is one numeric value per sample, unlike a values-mode
+			// collection that keeps one value per member term, handled below
 			formattedVal = roundValueAuto(sample.value)
 		} else if (tw.term.type === TermTypes.SURVIVAL) {
 			/** Use key for term value, not value (value == time elapsed) */
