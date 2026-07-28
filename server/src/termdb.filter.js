@@ -1,4 +1,12 @@
-import { TermTypes, getBin, dictionaryNumericTypes, isParentType, getSampleType, dtTermTypes } from '#shared/terms.js'
+import {
+	TermTypes,
+	getBin,
+	dictionaryNumericTypes,
+	isParentType,
+	getSampleType,
+	dtTermTypes,
+	isNonDictionaryType
+} from '#shared/terms.js'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
 import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'
@@ -308,7 +316,19 @@ async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
 	return numericSampleData2tvs(tvs, CTEname, values)
 }
 
-/** Fraction filter for custom (non-dictionary) termCollections, e.g. isoform
+/** True when the member terms of a termCollection are non-dictionary terms, e.g.
+ *  isoformExpression. Decided by the member term type, the same way getData() routes
+ *  a term to a query handler instead of the sqlite db; the client-supplied isCustom
+ *  flag is not consulted, it only tells if the collection is termdbConfig-supplied.
+ *  All members share one term type, as required by validateTermCollectionTerm().
+ *  A term without termlst[] is assumed to be a dictionary collection: only the
+ *  termdbConfig-supplied ones are addressable by termIds[] alone. */
+function isNonDictMemberType(term) {
+	const memberType = term.termlst?.[0]?.type
+	return memberType ? isNonDictionaryType(memberType) : false
+}
+
+/** Fraction filter for termCollections of non-dictionary member terms, e.g. isoform
  *  expression collections created dynamically. The fraction is on a 0 to 1 scale,
  *  same as the value of a TermCollectionTWFraction tw.
  *
@@ -317,14 +337,16 @@ async function get_termCollection_custom(tvs, CTEname, ds, mapParent2Children) {
  *  evaluation path. Instead, call the underlying query handlers (e.g.
  *  isoformExpression HDF5 handler) directly for each member term, then compute
  *  the numerator/denominator fraction client-side and filter samples. */
-async function get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Children) {
+async function get_termCollection_nonDict_fraction(tvs, CTEname, ds, mapParent2Children) {
 	const range = tvs.ranges?.[0]
 	if (!range) return emptyFilterResult(CTEname, mapParent2Children, ds)
-	const termlst = tvs.term.termlst || []
-	const numerators = tvs.term.numerators || []
-	const denominators = getTvsDenominators(tvs.term)
-	if (!termlst.length) return emptyFilterResult(CTEname, mapParent2Children, ds)
+	// only the fraction is supported here, so numerators[] is required, unlike a dictionary
+	// collection tvs that may instead brush on a single member
+	if (!tvs.term.numerators) throw new Error('termCollection tvs is missing term.numerators[]')
 	validateTermCollectionTvs(tvs.term)
+	const termlst = tvs.term.termlst // nonempty, as required to route here
+	const numerators = tvs.term.numerators
+	const denominators = getTvsDenominators(tvs.term)
 
 	// Fetch values for all member terms via query handlers directly.
 	// Group members by data type so each handler is called once with all its
@@ -399,13 +421,11 @@ async function get_termCollection(tvs, CTEname, ds, mapParent2Children) {
 		throw new Error('termcollection memberType=categorical not supported yet')
 	}
 	if (tvs.term.memberType !== 'numeric') throw new Error('termcollection memberType not categorical/numeric')
-	if (tvs.term.isCustom) {
-		// TODO shaky flag to rely on!!
-
-		// Custom collections bypass the getData() path below because getData()
-		// requires __protected__ auth context that is unavailable during filter
-		// CTE evaluation. Use direct query handler calls instead.
-		return await get_termCollection_custom_fraction(tvs, CTEname, ds, mapParent2Children)
+	if (isNonDictMemberType(tvs.term)) {
+		// Members are non-dictionary terms, which are not in the sqlite db: their values come
+		// from a ds.queries[] handler. Also bypasses the getData() path below because getData()
+		// requires __protected__ auth context that is unavailable during filter CTE evaluation.
+		return await get_termCollection_nonDict_fraction(tvs, CTEname, ds, mapParent2Children)
 	}
 	const denominators = getTvsDenominators(tvs.term)
 	// only validate a fraction tvs: a tvs brushed on a single member may not carry term.termlst[]
