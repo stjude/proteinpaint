@@ -8,22 +8,16 @@ only reason this is more than a lookup. A wrapper type other than TermCollection
 does not survive that split, so it must be inferred back.
 */
 
-type Opts = {
-	/** key a dictionary term's sample data by term.id, ignoring the $id posted by the
-	 *  client; a custom termCollection is still keyed by the posted $id, having no term.id */
-	keyDictTermsByTermId?: boolean
-}
-
-export function getTwByIndex(q: any, opts: Opts = {}) {
+export function getTwByIndex(q: any) {
 	const twByIndex = new Map<number, any>()
 	for (const i of [0, 1, 2]) {
-		const tw = getTw(q, 'term' + i, opts)
+		const tw = getTw(q, 'term' + i)
 		if (tw) twByIndex.set(i, tw)
 	}
 	return twByIndex
 }
 
-function getTw(q: any, termnum: string, opts: Opts) {
+function getTw(q: any, termnum: string) {
 	// a whole wrapper has tw.term, while the split form posts a bare term under this key
 	const posted = mayParseJson(q[termnum])
 	const tw = posted?.term ? posted : getSplitTw(q, posted, termnum)
@@ -35,7 +29,11 @@ function getTw(q: any, termnum: string, opts: Opts) {
 	if (!tw.term) return
 	const twType = tw.type || inferTwType(tw)
 	if (twType) tw.type = twType
-	tw.$id = getTwId(tw, opts)
+	/* getData() keys each sample's data by tw.$id, backfilling it from term.id/name when
+	absent; assign it here instead, so the key is a property of the tw that the route built
+	and not a side effect of getData(). The $id posted by the client wins, and is the only key
+	available for a custom termCollection, which has no term.id. */
+	tw.$id = tw.$id || tw.term.id || tw.term.name
 	return tw
 }
 
@@ -51,19 +49,6 @@ function getSplitTw(q: any, postedTerm: any, termnum: string) {
 		$id: q[termnum + '_$id'],
 		type: q[termnum + '_type']
 	}
-}
-
-/* getData() keys each sample's data by tw.$id, backfilling it from term.id/name when absent;
-assign it here instead, so the key is a property of the tw that the route built and not a
-side effect of getData().
-
-The $id posted by the client wins by default, and is the only key available for a custom
-termCollection, which has no term.id. A route may opt out for dictionary terms: a
-dataset-supplied getter may key both its sample data and its refs by term.id (see the
-survival getter of the mmrf dataset), and the client may read refs.byTermId by term.id. */
-function getTwId(tw: any, opts: Opts) {
-	if (opts.keyDictTermsByTermId && tw.term.type != 'termCollection') return tw.term.id || tw.term.name
-	return tw.$id || tw.term.id || tw.term.name
 }
 
 /** a request parameter is decoded by the urljson middleware, unless it was manually encoded */
