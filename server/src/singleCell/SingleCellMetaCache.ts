@@ -1,3 +1,5 @@
+import type { CoordColumns } from '#types'
+
 type CellCache = {
   cellIds: string[]
   sampleIds: string[]
@@ -6,8 +8,6 @@ type CellCache = {
 
   byCellId: Map<string, number>
 }
-
-type CoordsColumns = { x: number; y: number }
 
 export class SingleCellMetaCache {
   sampleIntIds = new Set<any>()
@@ -26,20 +26,21 @@ export class SingleCellMetaCache {
   addMetaResult(
     metaResultName: string,
     text: string,
-    coordsColumns: CoordsColumns,
-    sampleName2id: (sampleName: string) => any
+    coordsColumns: CoordColumns,
+    sampleName2id: (sampleName: string) => any,
+    cellIdxCols: {cellIdx: number, sampleIdx: number}
   ): void {
-    const cellCache = this.initCellCacheFromText(text, coordsColumns)
+    const cellCache = this.initCellCacheFromText(text, coordsColumns, cellIdxCols)
     this.mapMetaResult(metaResultName, cellCache, sampleName2id)
   }
 
-  private initCellCacheFromText(text: string, coordsColumns: CoordsColumns): CellCache {
+  private initCellCacheFromText(text: string, coordsColumns: CoordColumns, cellIdxCols: {cellIdx: number, sampleIdx: number}): CellCache {
     const lines = text.trim().split('\n')
     if (!lines[0]) throw new Error('meta result file is empty')
     const headerColumnCount = lines[0].split('\t').length
 
-    const cellIdIdx = 0 //May need to be defined in the ds file or force in file structure.
-    const sampleIdIdx = 1 //May need to be defined in the ds file or force in file structure.
+    const cellIdIdx = cellIdxCols.cellIdx ?? 0
+    const sampleIdIdx = cellIdxCols.sampleIdx ?? 1
     const xIdx = coordsColumns.x
     const yIdx = coordsColumns.y
 

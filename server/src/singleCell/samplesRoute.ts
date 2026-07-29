@@ -186,7 +186,8 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 				const text = await read_file(tsvfile)
 				const t1 = Date.now()
 				mayLog(ds.label, 'sc meta read file time:', t1 - t0)
-				metaCache.addMetaResult(sampleName, text, plot.coordsColumns, ds.cohort.termdb.q.sampleName2id)
+				const cellIdxCols = { cellIdx: plot.cellIdx || 0, sampleIdx: hasSample?.index || 1 }
+				metaCache.addMetaResult(sampleName, text, plot.coordsColumns, ds.cohort.termdb.q.sampleName2id, cellIdxCols)
 				mayLog(ds.label, 'sc meta caching time:', Date.now() - t0)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
@@ -221,7 +222,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 		for (const { termid } of S.sampleColumns) {
 			// get term obj to verify termid
 			const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-			if (!term) throw new Error('unknown termid from singlecell.samples.sampleColumns[]')
+			if (!term) throw new Error(`unknown termid=${termid} from singlecell.samples.sampleColumns[]`)
 			const s2v = await ds.cohort.termdb.q.getAllValues4term(termid) // map. k: sampleid, v: term value
 			for (const [sid, v] of s2v.entries()) {
 				if (!samples.has(sid)) continue // ignore sample without sc data

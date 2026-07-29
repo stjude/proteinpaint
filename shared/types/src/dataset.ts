@@ -1006,14 +1006,16 @@ export type SingleCellPlot = {
 	REQUIRED unless the ds supplies data.get(); enforced at runtime in validateDataNative()
 	*/
 	folder?: string
-	/** 0-based column number for x/y coordinate for this plot */
-	coordsColumns: { x: number; y: number }
+	coordsColumns: CoordColumns
 	/** optional suffix to locate the file for a sample, via ${folder}/${sampleName}${fileSuffix}
 	assumes that file name always start with sample name.
 	if not introduce filePrefix
 	*/
 	fileSuffix?: string
-	/** list of columns in tabular text file that define cell categories and can be used to color the cells in the plot. must have categorical values
+	/** list of columns in tabular text file that define cell categories and can be used to 
+	 * color the cells in the plot. must have categorical values.
+	 * 
+	 * If .isMetaResult is true, array must include a sample column. 
 	 */
 	colorColumns: ColorColumn[]
 	/** if true the plot is shown by default. otherwise hidden.
@@ -1025,7 +1027,17 @@ export type SingleCellPlot = {
 	 * server requests. If not provided, the file name or the plot name with the
 	 * spaces replaced with '_' is used. */
 	sampleId?: string
+	/** Col index for the cell id. Default 0. */
+	cellIdx?: number
 }
+
+export type CoordColumns = {
+	/** 0-based column number for x coordinate */
+	x: number
+	/** 0-based column number for y coordinate */
+	y: number
+}
+
 export type SingleCellData = {
 	/** when a sample has multiple tsne plots, this flag allows allows all plots to share one cell type legend */
 	sameLegend?: boolean
