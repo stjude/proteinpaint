@@ -8,11 +8,9 @@ export class SearchHandler {
 		this.callback = opts.callback
 		this.app = opts.app
 		const holder = opts.holder.append('div').style('padding', '10px 0px')
-		// determine whether embedder allows retrieval of cohorts
-		const allow2getCohorts = this.app.vocabApi.app?.opts?.opts?.allow2getCohorts
-		if (!allow2getCohorts) return
 		// get all user-built cohorts from embedder
-		const cohorts = allow2getCohorts.callback()
+		const cohorts = this.app.vocabApi.app?.opts?.opts?.cohorts0
+		if (!cohorts?.length) return
 		// convert cohorts to terms
 		const terms = cohorts.map(cohort => {
 			const term = {
