@@ -38,6 +38,15 @@ if (mode == 'dev') {
 
 		for (const cwd in cwds) {
 			const files = fs.globSync('*.ts', { cwd })
+			// An entry may also be a folder holding an index.ts (gdc, whose entry sits alongside the modules
+			// it imports). Must be collected, or `tsx watch` drops that entry -- and everything it imports --
+			// from the restart graph, and edits to it silently stop reloading the dev server.
+			// A glob wildcard cannot reach it: these folders are symlinks into sibling repos (dataset/gdc ->
+			// ../ppgdc/active/dataset/gdc), and fs.globSync will not descend into a symlinked dir, since its
+			// dirent reports isDirectory() false. existsSync does follow the symlink.
+			for (const name of fs.readdirSync(cwd)) {
+				if (fs.existsSync(path.join(cwd, name, 'index.ts'))) files.push(`${name}/index.ts`)
+			}
 			for (const f of files) {
 				const abspath = `${cwd}/${f}`
 				const dotpath = cwds[cwd]

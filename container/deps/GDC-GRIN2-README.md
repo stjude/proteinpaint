@@ -24,8 +24,11 @@ npm run cjs
 Copy the generated dataset file to the proteinpaint container:
 
 ```bash
-cp dataset/cjs/gdc.hg38.js proteinpaint/container/dataset/
+cp -r dataset/cjs/gdc proteinpaint/container/dataset/
 ```
+
+The whole folder is copied, not just `gdc/index.js`: esbuild runs without `--bundle`, so the compiled
+entry still does `require('./queries.ts')` etc. and needs its sibling modules alongside it.
 
 ### 3. Prepare Dependencies Directory
 
