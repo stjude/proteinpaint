@@ -573,9 +573,10 @@ async function call_barchart_data(twLst, q, combination, ds, onlyChildren) {
 	for (const tw of twLst) {
 		if (!tw.term) continue
 		if (tw.term.type == 'categorical') {
+			// barchart_data() keys the sample data by tw.$id, so the caller must supply one;
+			// only the category names of the result are read below, so term.id serves as the key
 			const _q = {
-				term1_id: tw.term.id,
-				term1_q: { type: 'values' },
+				term1: { $id: tw.$id || tw.term.id, term: tw.term, q: { type: 'values' } },
 				filter
 			}
 

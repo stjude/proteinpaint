@@ -186,31 +186,16 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		// the survival and cuminc routes reassemble a whole term wrapper; the other routes that
-		// this method serves still dissect a tw into term<i>_id, term<i>_q and term<i>_type,
-		// which loses tw.type and forces each route to guess it back
-		// TODO FIXME migrate barsql to the whole tw, then drop the dissected form
-		const postWholeTw = opts.chartType == 'survival' || opts.chartType == 'cuminc'
+		/* Each term wrapper is posted whole. It used to be dissected into term<i>_id,
+		term<i>_q, term<i>_$id and term<i>_type, which lost tw.type and forced every route to
+		guess it back; the routes still accept that form for a client older than they are. */
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
 			const tw = this.getTwMinCopy(opts[_key])
 			if (!tw) continue
-			const key = _key == 'term' ? 'term1' : _key
 			if (!tw.q) throw 'plot.' + _key + '.q{} missing: ' + tw.term.id
-			if (postWholeTw) {
-				body[key] = tw
-				continue
-			}
-			body[key + '_$id'] = tw.$id
-			const wrapperType = opts[_key].type || tw.type
-			if (wrapperType === 'TermCollectionTWFraction') body[key + '_type'] = wrapperType
-			// will need to generalize to also consider type=geneExpression
-			if ('id' in tw.term && (!tw.term?.type || isDictionaryType(tw.term.type))) {
-				body[key + '_id'] = tw.term.id
-			} else {
-				body[key] = tw.term
-			}
-			body[key + '_q'] = tw.q //q_to_param(tw.q) ????
+			if (!tw.$id) throw new Error('plot.' + _key + '.$id missing: ' + tw.term.id)
+			body[_key == 'term' ? 'term1' : _key] = tw
 		}
 
 		if (opts.filter) {

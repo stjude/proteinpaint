@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { resolveTermCollectionFractions } from '../termdb.termCollection.ts'
-import { getTermWrapperMap } from '../termdb.barchart.utils.ts'
+import { getTwByIndex } from '../termdb.twFromRequest.ts'
 
 function fractionTw(mode: 'continuous' | 'discrete' = 'continuous') {
 	return {
@@ -84,7 +84,7 @@ tape('resolveTermCollectionFractions() computes regular bins from fraction value
 	test.end()
 })
 
-tape('barsql reconstructs a fraction collection wrapper with its wrapper type', test => {
+tape('a request reconstructs a fraction collection wrapper with its wrapper type', test => {
 	const q: any = {
 		term2: { type: 'termCollection', memberType: 'numeric', name: 'Isoforms' },
 		term2_type: 'TermCollectionTWFraction',
@@ -100,7 +100,7 @@ tape('barsql reconstructs a fraction collection wrapper with its wrapper type', 
 			numerators: ['a']
 		}
 	}
-	const tw = getTermWrapperMap(q).get(2)
+	const tw = getTwByIndex(q).get(2)
 	test.equal(tw.type, 'TermCollectionTWFraction', 'preserves the type required by fraction resolution')
 	test.equal(tw.$id, 'collection', 'preserves the data key used by getData and barchart')
 	test.equal(tw.q.type, 'custom-bin', 'preserves the standard numeric bin configuration')

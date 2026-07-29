@@ -6,7 +6,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { getData } from './termdb.matrix.js'
 import { mclass, dt2label, dtTerms } from '#shared/common.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { getTermWrapperMap } from './termdb.barchart.utils.ts'
+import { getTwByIndex } from './termdb.twFromRequest.ts'
 
 const binLabelFormatter = format('.3r')
 
@@ -21,20 +21,6 @@ barchart_data
 export function handle_request_closure(genomes) {
 	return async (req, res) => {
 		const q = req.query
-		for (const i of [0, 1, 2]) {
-			const termnum = 'term' + i
-			const termnum_id = termnum + '_id'
-			const termnum_type = termnum + '_type'
-			if (typeof q[termnum_id] == 'string') {
-				q[termnum_id] = decodeURIComponent(q[termnum_id])
-			} else if (typeof q[termnum] == 'string') {
-				q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
-			}
-			const termnum_q = termnum + '_q'
-			if (typeof q[termnum_q] == 'string') {
-				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
-			}
-		}
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
@@ -44,8 +30,8 @@ export function handle_request_closure(genomes) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
 			const results = await barchart_data(q, ds, tdb)
-			if (q.term2_q) {
-				//term2 is present
+			if (q.term2 || q.term2_id) {
+				//term2 is present, either as a whole term wrapper or in the superseded split form
 				//compute pvalues using Fisher's exact/Chi-squared test
 				await computePvalues(results.data, ds, q.hiddenValues)
 			}
@@ -102,7 +88,7 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 
 	const startTime = +new Date()
 	q.results = {}
-	const map = getTermWrapperMap(q)
+	const map = getTwByIndex(q)
 	const terms = [...map.values()]
 	const data = await getData(
 		{ filter: q.filter, filter0: q.filter0, terms, __protected__: q.__protected__, __abortSignal: q.__abortSignal },
@@ -220,7 +206,7 @@ export async function barchart_data(q, ds, tdb, onlyChildren) {
 	q.results.lst = [...samplesMap.values()].filter(value => value !== null)
 	q.results.bins = bins
 	const sqlDone = +new Date()
-	const pj = getPj(q, q.results.lst, tdb, ds)
+	const pj = getPj(q, q.results.lst, ds, map)
 	if (pj.tree.results) {
 		pj.tree.results.times = {
 			sql: sqlDone - startTime,
@@ -238,17 +224,15 @@ function processGeneVariantSamples(map, bins, categories, data, samplesMap, ds, 
 	bins.push([])
 	categories.push([])
 	let customSampleID = 1
+	// a tw is keyed by its $id, the same key that getData() indexed the sample data by
 	const tw1 = map.get(1)
-	const term1 = tw1?.term || null
-	const id1 = tw1?.$id ? tw1.$id : term1?.id && term1?.type != 'geneVariant' ? term1.id : term1?.name
+	const id1 = tw1?.$id
 	if (id1 && data.refs.byTermId[id1]?.bins) bins.push(data.refs.byTermId[id1]?.bins)
 	else bins.push([])
 	if (id1 && data.refs.byTermId[id1]?.categories) categories.push(data.refs.byTermId[id1]?.categories)
 	else categories.push([])
 
-	const tw2 = map.get(2)
-	const term2 = tw2?.term || null
-	const id2 = tw2?.$id ? tw2.$id : term2?.id && term1?.type != 'geneVariant' ? term2.id : term2?.name
+	const id2 = map.get(2)?.$id
 	if (id2 && data.refs.byTermId[id2]?.bins) bins.push(data.refs.byTermId[id2]?.bins)
 	else bins.push([])
 	if (id2 && data.refs.byTermId[id2]?.categories) categories.push(data.refs.byTermId[id2]?.categories)
@@ -437,15 +421,16 @@ const template = JSON.stringify({
 	}
 })
 
-function getPj(q, data, tdb, ds) {
+function getPj(q, data, ds, twByIndex) {
 	/*
   q: objectified URL query string
   inReq: request-specific closured functions and variables
   data: rows of annotation data
+  twByIndex: the term wrappers of this request, by term number
 */
 	const joinAliases = ['chart', 'series', 'data']
 	const terms = [0, 1, 2].map(i => {
-		const d = getTermDetails(q, tdb, i)
+		const d = getTermDetails(twByIndex, i)
 		d.q.index = i
 		const bins = q.results.bins[i]
 
@@ -634,13 +619,12 @@ export function getOrderedLabels(term, bins, events, q) {
 	return bins?.map(bin => (bin.name ? bin.name : bin.label))
 }
 
-function getTermDetails(q, tdb, index) {
-	const termnum_id = 'term' + index + '_id'
-	const termid = q[termnum_id]
-	let term = {}
-	if (q[termid]) term = tdb.q.termjsonByOneid(termid)
-	else if (termid) term = tdb.q.termjsonByOneid(termid)
-	else if (q[`term${index}`]) term = q[`term${index}`]
+/* the partjson template is position-indexed, so this returns an entry for every term
+number, present or not. The term and q come from the wrapper that this request was
+reassembled into, rather than being read off the request a second time. */
+function getTermDetails(twByIndex, index) {
+	const tw = twByIndex.get(index)
+	const term = tw?.term || {}
 
 	const termIsNumeric = term.type == 'integer' || term.type == 'float'
 	const unannotatedValues = term.values
@@ -650,8 +634,7 @@ function getTermDetails(q, tdb, index) {
 		: []
 	// isComputableVal is needed for boxplot
 	const isComputableVal = val => termIsNumeric && !unannotatedValues.includes(val)
-	const termq = q['term' + index + '_q'] ? q['term' + index + '_q'] : {}
-	return { term, isComputableVal, q: termq }
+	return { term, isComputableVal, q: tw?.q || {} }
 }
 
 function get_AF(samples, chr, pos, genotype2sample, ds) {

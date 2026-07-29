@@ -29,11 +29,11 @@ function getTw(q: any, termnum: string) {
 	if (!tw.term) return
 	const twType = tw.type || inferTwType(tw)
 	if (twType) tw.type = twType
-	/* getData() keys each sample's data by tw.$id, backfilling it from term.id/name when
-	absent; assign it here instead, so the key is a property of the tw that the route built
-	and not a side effect of getData(). The $id posted by the client wins, and is the only key
-	available for a custom termCollection, which has no term.id. */
-	tw.$id = tw.$id || tw.term.id || tw.term.name
+	/* $id is the key that getData() indexes each sample's data by, and that the client reads
+	the returned refs by. It is not derived from term.id or term.name here: every tw that the
+	client assembles carries one, a custom termCollection has no term.id to fall back on, and
+	deriving a second key would silently produce data that the caller cannot find. */
+	if (!tw.$id) throw `${termnum} is missing $id`
 	return tw
 }
 
