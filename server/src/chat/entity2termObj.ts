@@ -7,6 +7,7 @@ import type {
 	DEPhrase2EntityResult,
 	HierPhrase2EntityResult,
 	SurvivalPhrase2EntityResult,
+	CoxPhrase2EntityResult,
 	MatrixPhrase2EntityResult,
 	PrebuiltScatterPhrase2EntityResult,
 	MsgToUser
@@ -287,6 +288,34 @@ export async function inferTermObjFromEntity(
 			}
 			mayLog('Final survival filter values:', filterValues)
 			twObjects['filter'] = filterValues
+		}
+		return twObjects
+	} else if (plotType === 'cox') {
+		const coxEntity = entity as CoxPhrase2EntityResult
+		const outcome: Value = {
+			term: { id: coxEntity.outcome, name: coxEntity.outcome, type: 'survival' },
+			phrase: coxEntity.outcome,
+			type: 'dictionary'
+		}
+		const independent: Value[] = []
+		for (const independentEntity of coxEntity.independent) {
+			const termObj = await getTermObj('independent', independentEntity, llm, dbPath, genes_list, genome)
+			if (isMsgToUser(termObj)) return termObj
+			if (!termObj) throw `Failed to get term object for Cox predictor "${independentEntity.phrase}".`
+			independent.push(termObj)
+		}
+		twObjects.outcome = outcome
+		twObjects.independent = independent
+		if (coxEntity.filter) {
+			const filterValues: Value[] = []
+			for (const filterTerm of coxEntity.filter) {
+				const termObj = await getTermObj('filter', filterTerm, llm, dbPath, genes_list, genome)
+				if (isMsgToUser(termObj)) return termObj
+				if (!termObj) continue
+				if (filterTerm.logicalOperator) termObj.logicalOperator = filterTerm.logicalOperator
+				filterValues.push(termObj)
+			}
+			twObjects.filter = filterValues
 		}
 		return twObjects
 	} else if (plotType === 'hiercluster') {

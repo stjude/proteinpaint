@@ -56,6 +56,13 @@ export type SurvivalScaffold = {
 	filter?: string
 }
 
+export type CoxScaffold = {
+	plotType: 'cox'
+	outcome: string
+	independent: string[]
+	filter?: string
+}
+
 export type HierarchicalScaffold = {
 	plotType: 'hiercluster'
 	hierarchicalPhrases: string[]
@@ -87,6 +94,7 @@ export type Scaffold =
 	| PrebuiltScatterScaffold
 	| GenomeBrowserScaffold
 	| SurvivalScaffold
+	| CoxScaffold
 
 // Helper functions to determine scaffold type
 export function isSummaryScaffold(s: Scaffold): s is SummaryScaffold {
@@ -149,6 +157,13 @@ export type SurvivalPhrase2EntityResult = {
 	filter?: Entity[]
 }
 
+export type CoxPhrase2EntityResult = {
+	/** Exact survival-term id resolved by find_survival_terms(). */
+	outcome: string
+	independent: Entity[]
+	filter?: Entity[]
+}
+
 export type MatrixPhrase2EntityResult = {
 	twLst: Entity[]
 	divideBy?: Entity
@@ -170,6 +185,7 @@ export type Phrase2EntityResult =
 	| MatrixPhrase2EntityResult
 	| PrebuiltScatterPhrase2EntityResult
 	| SurvivalPhrase2EntityResult
+	| CoxPhrase2EntityResult
 
 // JSON schema types for the filter tree returned by evaluateFilterTerm()
 export type FilterLeafNode = { leaf: string }

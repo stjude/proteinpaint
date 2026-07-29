@@ -421,14 +421,23 @@ Analyze this phrase and return the appropriate JSON object: "${phrase}"
 	return parsed
 }
 
-async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any) {
+async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any, regressionType?: string) {
 	// Main objective is to support bin configs
 	if (twValue.type === 'dictionary') {
 		const twValueTerm = twValue.term as DictTerm
+		if (twValueTerm.type === 'survival' || twValueTerm.type === 'condition') {
+			// Cox outcomes are time-to-event/condition terms. Do not send them through the numeric
+			// bin-config parser; the regression client expects the cox mode explicitly.
+			return { id: twValueTerm.id, type: twValueTerm.type, q: { mode: 'cox' }, isDictionary: true }
+		}
 		// If it's a dictionary term and it is categorical, it doesn't support bins?
 		// Check if this assumption is true with Robin/Colleen/Xin
 		if (twValueTerm.type === 'categorical') {
 			return { id: twValueTerm.id, type: 'categorical', q: { mode: 'discrete' }, isDictionary: true }
+		} else if (regressionType === 'cox' && (twValueTerm.type === 'integer' || twValueTerm.type === 'float')) {
+			// Cox predictors use continuous numeric covariates; do not ask the generic term resolver to
+			// invent bins for them.
+			return { id: twValueTerm.id, type: twValueTerm.type, q: { mode: 'continuous' }, isDictionary: true }
 		} else {
 			// For numeric terms, check if the phrase contains any binning language (e.g. "binned into 5 groups", "divided into quartiles", etc.)
 			const binConfig = await parseBinConfig(twValue.phrase, llm)
@@ -572,6 +581,26 @@ export async function resolveToTwTvs(
 			const termWrapper = await resolveToTvs(filterValues, dbPath, llm)
 			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
 			twTvsObjects['filter'] = termWrapper
+		}
+	} else if (plotType === 'cox') {
+		const outcome = entity.outcome as Value | undefined
+		const independent = entity.independent as Value[] | undefined
+		if (!outcome) throw new Error('Invalid outcome entity for Cox regression')
+		if (!independent?.length) throw new Error('Cox regression requires at least one independent variable')
+		const outcomeWrapper = await resolveToTw(outcome, llm, genome, 'cox')
+		if (isMsgToUser(outcomeWrapper)) return outcomeWrapper
+		twTvsObjects.outcome = outcomeWrapper
+		twTvsObjects.independent = []
+		for (const value of independent) {
+			const wrapper = await resolveToTw(value, llm, genome, 'cox')
+			if (isMsgToUser(wrapper)) return wrapper
+			if (!wrapper) throw new Error(`Failed to resolve Cox predictor "${value.phrase}"`)
+			twTvsObjects.independent.push(wrapper)
+		}
+		if (entity.filter) {
+			const termWrapper = await resolveToTvs(entity.filter as Value[], dbPath, llm)
+			if (termWrapper && 'type' in termWrapper && termWrapper.type === 'text') return termWrapper as MsgToUser
+			twTvsObjects.filter = termWrapper
 		}
 	} else if (plotType === 'matrix') {
 		for (const [key, value] of Object.entries(entity)) {

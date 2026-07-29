@@ -295,6 +295,15 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 		if (input.filter) {
 			plotState.plot.filter = input.filter
 		}
+	} else if (plotType === 'cox') {
+		if (!input.outcome) throw new Error('Cox regression requires an outcome.')
+		if (!Array.isArray(input.independent) || !input.independent.length)
+			throw new Error('Cox regression requires at least one independent variable.')
+		plotState.plot.chartType = 'regression'
+		plotState.plot.regressionType = 'cox'
+		plotState.plot.outcome = input.outcome
+		plotState.plot.independent = input.independent
+		if (input.filter) plotState.plot.filter = input.filter
 	} else {
 		throw new Error('Plot type: ' + plotType + ' not supported for now')
 	}

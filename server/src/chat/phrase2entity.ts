@@ -22,6 +22,8 @@ import type {
 	PrebuiltScatterPhrase2EntityResult,
 	HierPhrase2EntityResult,
 	SurvivalPhrase2EntityResult,
+	CoxScaffold,
+	CoxPhrase2EntityResult,
 	MsgToUser,
 	MatrixScaffold,
 	PrebuiltScatterScaffold,
@@ -206,6 +208,31 @@ export async function phrase2entity(
 		}
 
 		return survival_term
+	} else if (plotType === 'cox') {
+		const scaffoldResult = scaffold as CoxScaffold
+		const resolvedOutcome = await find_survival_terms(scaffoldResult.outcome, llm, dbPath)
+		if (resolvedOutcome === null) return { type: 'text', text: 'No survival terms available in this dataset.' }
+		if (isMsgToUser(resolvedOutcome)) return resolvedOutcome
+		if (typeof resolvedOutcome !== 'string')
+			return { type: 'text', text: 'Cox regression requires one unambiguous survival outcome.' }
+		const independentEntities: Entity[] = []
+		for (const phrase of scaffoldResult.independent) {
+			const entity = await phrase2entitytw(phrase, llm, genes_list, dataset_json, ds, genome)
+			if ('type' in entity && entity.type === 'text') return entity
+			independentEntities.push(entity as Entity)
+		}
+		const coxTerm: CoxPhrase2EntityResult = {
+			outcome: resolvedOutcome,
+			independent: independentEntities
+		}
+		if (scaffoldResult.filter) {
+			const filterTree = await evaluateFilterTerm(scaffoldResult.filter, llm)
+			if (isMsgToUser(filterTree)) return filterTree
+			const filterEntities = await parseFilterTree(filterTree, llm, genes_list, dataset_json, ds, genome)
+			if (isMsgToUser(filterEntities)) return filterEntities
+			coxTerm.filter = filterEntities as Entity[]
+		}
+		return coxTerm
 	} else if (plotType === 'matrix') {
 		const scaffoldResult = scaffold as MatrixScaffold
 		assert(scaffoldResult.twLst.length > 0) // 'At least one term is required for matrix plot'
