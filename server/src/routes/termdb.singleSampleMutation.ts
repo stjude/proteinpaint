@@ -1,5 +1,6 @@
 import path from 'path'
 import { read_file, file_is_readable, fileurl, illegalpath } from '#src/utils.js'
+import { validGenomeDs } from '#routes/common.ts'
 import type {
 	TermdbSingleSampleMutationRequest,
 	TermdbSingleSampleMutationResponse,
@@ -9,8 +10,25 @@ import type {
 
 export const payload: RoutePayload = {
 	init,
-	request: { typeId: 'TermdbSingleSampleMutationRequest' /*, checkers: TODO write validator */ },
+	request: {
+		typeId: 'TermdbSingleSampleMutationRequest',
+		checker: validTermdbSingleSampleMutationRequest
+	},
 	response: { typeId: 'TermdbSingleSampleMutationResponse' }
+}
+
+/* q.skipDt and (for gdc) q.cnvType are server-internal, set only by callers that invoke the getter
+directly (GRIN2); they never arrive over http, and the middleware merges this return onto req.query
+rather than replacing it, so not listing them here does not drop them. */
+function validTermdbSingleSampleMutationRequest(input): TermdbSingleSampleMutationRequest {
+	// sample is typed string|number -- termdbtest and possibly other ds use integer sample names.
+	// normalize to string, which is what every getter and path.join() actually needs. rejects a
+	// missing sample and the array express yields for a repeated ?sample=
+	const vt = typeof input.sample
+	if (vt != 'string' && vt != 'number') throw 'sample must be a string or number'
+	const sample = String(input.sample)
+	if (!sample) throw 'sample is blank'
+	return { ...validGenomeDs(input), sample }
 }
 
 export const api: RouteApi = {
@@ -56,19 +74,10 @@ export async function validate_query_singleSampleMutation(ds: any, _genome: any)
 		throws on any error
 		*/
 		_q.get = async (q: TermdbSingleSampleMutationRequest) => {
-			let sample: string
-			{
-				const vt = typeof q.sample // to only compute value type once
-				if (vt == 'string') {
-					if (q.sample == '') throw 'sample is blank string'
-					sample = q.sample as string // accepted
-				} else if (vt == 'number') {
-					// termdbtest and possibly other ds may use integer as sample name, which is not allowed by path.join(), thus need to call toString()
-					sample = q.sample.toString()
-				} else {
-					throw 'sample value is not string or number'
-				}
-			}
+			// the route checker already normalizes sample to a non-empty string, but GRIN2 calls this
+			// getter directly and bypasses it, so normalize here too
+			const sample = typeof q.sample == 'number' ? String(q.sample) : q.sample
+			if (typeof sample != 'string' || !sample) throw 'sample must be a non-empty string or number'
 
 			// *pre* screening of file name. in case sample name has "../" to traverse back on dir structure, this will be allowed by path.join() resulting in unauthorized access, thus must be screened outside of fileurl()
 			if (illegalpath(sample)) throw 'invalid sample name'

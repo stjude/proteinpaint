@@ -8,6 +8,7 @@ import { validate_query_singleCell } from '../samplesRoute.ts'
  *  - missing plots[] is rejected for every ds, including one supplying every getter
  *  - missing plot.folder is rejected whenever a built-in file-based path will read it
  *  - missing geneExpression.folder is rejected when no geneExpression.get is supplied
+ *  - the built-in file-based getters reject a sample id that would traverse out of tpmasterdir
  */
 
 /** plots[] as GDC declares them: color/coords columns, but no folder, since data comes from an API */
@@ -96,6 +97,39 @@ tape('validate_query_singleCell: rejects an incomplete ds that supplies no gette
 		'singleCell.geneExpression.folder missing',
 		'should reject geneExpression without a folder'
 	)
+
+	test.end()
+})
+
+tape('built-in getters screen the sample id for path traversal', async test => {
+	// no data.get / geneExpression.get, so the built-in file-based getters are installed
+	const ds = makeDs({
+		samples: { get: async () => ({}) },
+		data: { plots: [{ ...apiPlots[0], folder: 'files/sc' }] },
+		geneExpression: { folder: 'files/sc/geneExp' }
+	})
+	await validate_query_singleCell(ds, {})
+	const { data, geneExpression } = ds.queries.singleCell
+
+	// checkPlotAvailability is the worst case: it reports back which files are readable, so an
+	// unscreened id is a file-existence oracle for any path outside tpmasterdir
+	const escaping = { sID: '../../../../etc/passwd' }
+	for (const [label, fn] of [
+		['data.get', () => data.get({ sample: escaping, plots: ['UMAP'], checkPlotAvailability: true })],
+		['geneExpression.get', () => geneExpression.get({}, escaping, 'TP53')]
+	] as [string, () => Promise<any>][]) {
+		try {
+			await fn()
+			test.fail(`${label} did not reject a traversing sample id`)
+		} catch (e: any) {
+			test.equal(e.message || e, 'invalid sample id', `${label} should reject a traversing sample id`)
+		}
+	}
+
+	// a native sample name (derived from a file name in plot.folder) must still pass the screen;
+	// its missing data file is reported as an unavailable plot, not as an invalid id
+	const re = await data.get({ sample: { sID: 'SJALL040053_D1' }, plots: ['UMAP'], checkPlotAvailability: true })
+	test.deepEqual(re, { plots: [] }, 'should accept a legitimate sample name')
 
 	test.end()
 })
