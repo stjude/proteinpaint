@@ -35,6 +35,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	filterPrompt: any
 	expressionSource?: 'bulk' | 'pseudobulk'
 	pseudobulk?: { assay: string; memberId: string; category: string }
+	hasCohort0?: boolean
 
 	constructor(opts, api) {
 		super(opts, api)
@@ -94,6 +95,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 		this.dom.addGroup.style('display', 'inline-block')
 		this.makeGroupsUI()
+		this.hasCohort0 = this.groups.find(g => g.filter.lst.find(item => item.tvs?.term.type == 'cohort'))
 		this.mayRenderSubmit()
 	}
 
@@ -329,7 +331,9 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	}
 
 	mayRenderSubmit() {
-		if (!this.groups.length) {
+		if (!this.groups.length || (this.groups.length == 1 && this.hasCohort0)) {
+			// currently unable to negate filter0, so enforcing two-group
+			// comparison when cohort0 is used
 			this.dom.submit.style('display', 'none')
 			return
 		}
@@ -371,8 +375,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 		if (this.expressionSource === 'pseudobulk') samplelstTW.pseudobulk = this.pseudobulk
 		// ignore filter0 when cohort0 is used
-		const hasCohort0 = groups.find(g => g.filter.lst.find(item => item.tvs?.term.type == 'cohort'))
-		const filter0 = hasCohort0 ? null : this.state.termfilter.filter0
+		const filter0 = this.hasCohort0 ? null : this.state.termfilter.filter0
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleList(
 				filterJoin([g.filter, this.state.termfilter.filter]),
@@ -389,8 +392,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			samplelstTW.term.values[g.name] = {
 				color: g.color,
 				key: g.name,
-				label: g.name,
-				list: sampleIds
+				label: g.name
 			}
 		}
 
