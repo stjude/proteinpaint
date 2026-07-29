@@ -934,8 +934,12 @@ export type SingleCellGeneExpression = {
 	each is a gene-by-cell matrix for a sample, with ".h5" suffix. missing files are detected and handled.
 	REQUIRED unless the ds supplies get(); enforced at runtime in validateGeneExpressionNative() */
 	folder?: string
-	/** ds-supplied, or added on init() by validateGeneExpressionNative() */
-	get?: (q: any) => any
+	/** ds-supplied, or added on init() by validateGeneExpressionNative().
+	q is the caller's own request object, forwarded (not reconstructed) so the getter can read auth
+	and abort off it -- the gdc getter passes q to ds.getHostHeaders() and would otherwise build
+	unauthenticated headers. sample and gene are explicit since callers query by a term's sample/gene,
+	which is not the request's. */
+	get?: (q: any, sample: any, gene: string) => any
 	/** cached gene exp bins, seeded on init() in validate_query_singleCell() */
 	sample2gene2expressionBins?: { [sample: string]: { [gene: string]: any } }
 	/** gene expression unit (e.g. 'FPKM') */

@@ -16,7 +16,7 @@ import type {
 } from '#types'
 import fs from 'fs'
 import path from 'path'
-import { read_file, file_is_readable } from '#src/utils.js'
+import { read_file, file_is_readable, illegalpath } from '#src/utils.js'
 import { mayLog } from '#src/helpers.ts'
 import serverconfig from '#src/serverconfig.js'
 import { validGenomeDs } from '#routes/common.ts'
@@ -301,6 +301,19 @@ function validateDataPlots(D: SingleCellData, needFolders: boolean): void {
 	}
 }
 
+/** The sample id from the request becomes a path segment under tpmasterdir. path.join() honors "../",
+ * so an unscreened id escapes tpmasterdir -- worst on the checkPlotAvailability path, whose
+ * file_is_readable() then reports back whether an arbitrary path exists. Screen it the same way the
+ * sibling route does (termdb.singleSampleMutation.ts). Native sample names come from file names in
+ * plot.folder, so illegalpath()'s whitespace/quote rules never reject a legitimate one.
+ * @param sample req.query.sample {sID, eID}
+ */
+function validSampleId(sample: any): string {
+	const id = sample?.eID || sample?.sID
+	if (typeof id != 'string' || !id || illegalpath(id)) throw new Error('invalid sample id')
+	return id
+}
+
 /** Adds ds.queries.singleCell.data.get() on init(), for a ds that does not supply its own getter.
  * @param D ds.queries.singleCell.data{}
  * @param ds Entire dataset configuration from the ds file
@@ -310,7 +323,7 @@ function validateDataNative(D: SingleCellData, ds: any): void {
 	const file2Lines = {} // key: file path, value: string[]
 
 	D.get = async (q: TermdbSingleCellDataRequest & ReqQueryAddons) => {
-		const sampleId = q.sample?.eID || q.sample?.sID
+		const sampleId = validSampleId(q.sample)
 		/** Only return plots with available data files. */
 		if (q.checkPlotAvailability) {
 			return await getAvailablePlots(q.plots, D.plots, ds, sampleId)
@@ -319,11 +332,7 @@ function validateDataNative(D: SingleCellData, ds: any): void {
 		if (ds.queries.singleCell.geneExpression && q.gene) {
 			const sample = q.sample || q.singleCellPlot.sample
 			if (!sample) throw new Error('sample is required for gene expression query')
-			geneExpMap = await ds.queries.singleCell.geneExpression.get({
-				sample,
-				gene: q.gene,
-				__abortSignal: q.__abortSignal
-			})
+			geneExpMap = await ds.queries.singleCell.geneExpression.get(q, sample, q.gene)
 		}
 		const checkGeneExpMap = geneExpMap && Object.keys(geneExpMap).length > 0
 		// given a sample name, collect every plot data for this sample and return
@@ -440,12 +449,13 @@ function validateGeneExpressionNative(G: SingleCellGeneExpression): void {
 	if (!G.folder) throw new Error('singleCell.geneExpression.folder missing')
 	// per-sample rds files are not validated up front, and simply used as-is on the fly
 
-	G.get = async (q: TermdbSingleCellDataRequest & ReqQueryAddons) => {
-		// q {sample:str, gene:str}
-		const h5file = path.join(serverconfig.tpmasterdir, G.folder!, (q.sample?.eID || q.sample?.sID) + '.h5')
+	G.get = async (_q: TermdbSingleCellDataRequest & ReqQueryAddons, sample: any, gene: string) => {
+		// _q is the caller's request, forwarded only so a ds-supplied getter can read auth/abort off it;
+		// sample and gene are explicit because callers query by a term's sample/gene, not the request's
+		const h5file = path.join(serverconfig.tpmasterdir, G.folder!, validSampleId(sample) + '.h5')
 		await file_is_readable(h5file)
 
-		const query_gene = q.gene
+		const query_gene = gene
 		if (!query_gene) {
 			throw new Error('Gene parameter is undefined')
 		}

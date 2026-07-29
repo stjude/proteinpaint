@@ -27,12 +27,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample]
 			if (!binsCache) binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample] = {}
 			else if (binsCache[tw.$id]) return res.send(binsCache[tw.$id])
-			const args = {
-				sample: tw.term.sample,
-				gene: tw.term.gene,
-				__abortSignal: q.__abortSignal
-			}
-			const data = await ds.queries.singleCell.geneExpression.get(args)
+			const data = await ds.queries.singleCell.geneExpression.get(q, tw.term.sample, tw.term.gene)
 			for (const cell in data) {
 				const value = data[cell]
 				if (value < min) min = value
