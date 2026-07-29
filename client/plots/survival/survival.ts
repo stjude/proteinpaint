@@ -538,11 +538,14 @@ class TdbSurvival extends PlotBase implements RxComponent {
 			legendItems.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
 		}
 
-		if (!this.legendOrder.length) {
-			this.legendOrder = legendItems.map(item => item.seriesId)
-		} else {
-			legendItems.sort((a, b) => this.legendOrder.indexOf(a.seriesId) - this.legendOrder.indexOf(b.seriesId))
+		// the user-defined legend order is persisted in the plot config settings so that
+		// reordering survives session save/recover and re-triggers this component's update
+		const savedOrder = this.settings.legendOrder
+		if (savedOrder?.length) {
+			legendItems.sort((a, b) => savedOrder.indexOf(a.seriesId) - savedOrder.indexOf(b.seriesId))
 		}
+		// keep this.legendOrder in sync with the rendered order for the legend context menu
+		this.legendOrder = legendItems.map(item => item.seriesId)
 
 		if ((config.term.term.type == 'survival' || config.term2) && legendItems.length) {
 			const termNum = config.term.term.type == 'survival' && config.term2 ? 'term2' : 'term'
@@ -701,6 +704,13 @@ function setRenderers(self) {
 
 	function setVisibleSerieses(chart, s) {
 		chart.visibleSerieses = chart.serieses?.filter(series => !s.hidden.includes(series.seriesId)) || []
+		// order the serieses by the user-defined legend order so the hover tooltip
+		// list categories in the same order shown in the legend
+		if (self.legendOrder?.length) {
+			chart.visibleSerieses.sort(
+				(a: any, b: any) => self.legendOrder.indexOf(a.seriesId) - self.legendOrder.indexOf(b.seriesId)
+			)
+		}
 		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
 			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
 			0
@@ -1300,17 +1310,21 @@ function setInteractivity(self) {
 	}
 
 	self.adjustLegendOrder = (d, increment) => {
-		const oldIndex = self.legendOrder.indexOf(d.seriesId)
+		const order = [...self.legendOrder]
+		const oldIndex = order.indexOf(d.seriesId)
 		if (oldIndex == -1) return
 		let newIndex = oldIndex + increment
 		// clamp to array bounds
-		newIndex = Math.max(0, Math.min(self.legendOrder.length - 1, newIndex))
+		newIndex = Math.max(0, Math.min(order.length - 1, newIndex))
 		// remove item
-		self.legendOrder.splice(oldIndex, 1)
+		order.splice(oldIndex, 1)
 		// insert at new index
-		self.legendOrder.splice(newIndex, 0, d.seriesId)
+		order.splice(newIndex, 0, d.seriesId)
+		// persist the new order in the plot config so getState() changes and main() re-renders
 		self.app.dispatch({
-			type: 'app_refresh'
+			type: 'plot_edit',
+			id: self.id,
+			config: { settings: { survival: { legendOrder: order } } }
 		})
 		self.app.tip.hide()
 	}
@@ -1415,6 +1429,7 @@ export async function getPlotConfig(opts, app) {
 				xAxisOffset: 5,
 				yAxisOffset: -5,
 				hiddenPvalues: [],
+				legendOrder: [], // user-defined legend series order; set via the legend "Move up/down" menu
 				defaultColor: '#2077b4'
 			}
 		}
