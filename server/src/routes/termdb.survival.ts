@@ -22,9 +22,7 @@ export async function get_survival(q: any, ds: any) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
-		/* the survival term's data may come from a dataset-supplied getter that keys it by
-		term.id rather than by the $id that the client posts (see the mmrf dataset) */
-		const twByIndex = getTwByIndex(q, { keyDictTermsByTermId: true })
+		const twByIndex = getTwByIndex(q)
 		const twLst = [...twByIndex.values()]
 
 		const tw1 = twByIndex.get(1)

@@ -107,34 +107,21 @@ tape('getTwByIndex: skips a tw whose term id is unknown', function (test) {
  $id, the key of the sample data
 ***********************************/
 
-tape('getTwByIndex: keys a dictionary term by term.id when the route opts in', function (test) {
-	// a dataset-supplied getter may key its data and refs by term.id, so a route serving
-	// such a dataset cannot use the $id that the client posts
-	const q: any = { ds: mockDs, term2: { $id: 'TwBase_2_67890', term: { id: 'sex', type: 'categorical' }, q: {} } }
-	test.equal(getTwByIndex(q).get(2).$id, 'TwBase_2_67890', 'Should use the posted $id by default')
-	test.equal(
-		getTwByIndex(q, { keyDictTermsByTermId: true }).get(2).$id,
-		'sex',
-		'Should use term.id when keyDictTermsByTermId is set'
-	)
-	test.end()
-})
-
-tape('getTwByIndex: keys a custom termCollection by the posted $id under either rule', function (test) {
+tape('getTwByIndex: keys the sample data by the posted $id', function (test) {
+	// every route and every dataset-supplied getter keys sample data and refs by tw.$id
+	const dict: any = { ds: mockDs, term2: { $id: 'TwBase_2_67890', term: { id: 'sex', type: 'categorical' }, q: {} } }
+	test.equal(getTwByIndex(dict).get(2).$id, 'TwBase_2_67890', 'Should use the posted $id of a dictionary term')
 	// a custom collection has no term.id, so the posted $id is its only stable key
-	const q: any = { ds: mockDs, term2: { $id: 'TwBase_2_frac', term: fractionTerm, q: getFractionQ() } }
-	test.equal(getTwByIndex(q).get(2).$id, 'TwBase_2_frac', 'Should use the posted $id by default')
-	test.equal(
-		getTwByIndex(q, { keyDictTermsByTermId: true }).get(2).$id,
-		'TwBase_2_frac',
-		'Should still use the posted $id when keyDictTermsByTermId is set'
-	)
+	const frac: any = { ds: mockDs, term2: { $id: 'TwBase_2_frac', term: fractionTerm, q: getFractionQ() } }
+	test.equal(getTwByIndex(frac).get(2).$id, 'TwBase_2_frac', 'Should use the posted $id of a custom termCollection')
 	test.end()
 })
 
-tape('getTwByIndex: falls back to the term name when a termCollection has no $id', function (test) {
-	const q: any = { ds: mockDs, term2: fractionTerm, term2_q: getFractionQ() }
-	test.equal(getTwByIndex(q).get(2).$id, fractionTerm.name, 'Should key a custom collection by its name')
+tape('getTwByIndex: falls back to term.id or term.name when a request omits the $id', function (test) {
+	const dict: any = { ds: mockDs, term2_id: 'sex', term2_q: { type: 'values' } }
+	test.equal(getTwByIndex(dict).get(2).$id, 'sex', 'Should key a dictionary term by term.id')
+	const frac: any = { ds: mockDs, term2: fractionTerm, term2_q: getFractionQ() }
+	test.equal(getTwByIndex(frac).get(2).$id, fractionTerm.name, 'Should key a custom collection by its name')
 	test.end()
 })
 
@@ -210,13 +197,11 @@ tape('getTwBins: reads the same key that the sample data is keyed by', function 
 		ds: mockDs,
 		term2: { $id: 'TwBase_2_1', type: 'NumTWRegularBin', term: { id: 'agedx', name: 'Age', type: 'float' }, q: {} }
 	}
-	for (const opts of [{}, { keyDictTermsByTermId: true }]) {
-		const tw = getTwByIndex(q, opts).get(2)
-		const bins = [{ label: '<10' }, { label: '≥10' }]
-		const sampleData = { [tw.$id]: { key: '<10', value: 5 } }
-		const data = { refs: { byTermId: { [tw.$id]: { bins } } } }
-		test.equal(getTwBins(tw, data), bins, `Should find the bins under the same key as the sample data`)
-		test.ok(sampleData[tw.$id], `Should read the sample data under $id='${tw.$id}'`)
-	}
+	const tw = getTwByIndex(q).get(2)
+	const bins = [{ label: '<10' }, { label: '≥10' }]
+	const sampleData = { [tw.$id]: { key: '<10', value: 5 } }
+	const data = { refs: { byTermId: { [tw.$id]: { bins } } } }
+	test.equal(getTwBins(tw, data), bins, 'Should find the bins under the same key as the sample data')
+	test.ok(sampleData[tw.$id], `Should read the sample data under $id='${tw.$id}'`)
 	test.end()
 })
