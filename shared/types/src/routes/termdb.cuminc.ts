@@ -22,7 +22,7 @@ export type TermdbCumincRequest = {
 
 	filter?: Filter
 	filter0?: any
-	minSampleSize?: number | string
+	minSampleSize: number | string
 }
 
 export type TermdbCumincResponse =
