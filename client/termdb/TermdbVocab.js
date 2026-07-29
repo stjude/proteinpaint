@@ -186,7 +186,6 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		if (opts.chartType == 'cuminc') body.getcuminc = 1
 
 		// the survival route reassembles a whole term wrapper; the other routes that this
 		// method serves still dissect a tw into term<i>_id, term<i>_q and term<i>_type, which
