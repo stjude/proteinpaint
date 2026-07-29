@@ -31,7 +31,9 @@ export class SearchHandler {
 		appInit({
 			holder,
 			vocabApi,
-			state: {},
+			state: {
+				nav: { header_mode: 'hide_search' }
+			},
 			tree: {
 				click_term: term => {
 					this.callback(term)
