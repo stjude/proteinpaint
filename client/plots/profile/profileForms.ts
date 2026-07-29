@@ -282,6 +282,9 @@ export class profileForms extends profilePlot {
 		const holder = this.dom.impressionDiv
 		holder.selectAll('*').remove()
 		const texts = this.config.impression
+		// The whole view is driven off this config block (zones, titles, legend, axis labels), so a
+		// dataset missing it fails here with a named cause rather than downstream on a member access.
+		if (!texts) throw `Missing impression config for the plot ${this.type} in this dataset`
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 

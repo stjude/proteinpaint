@@ -14,6 +14,7 @@ const DOT_R = 4 // the vertex marker on the SC line swatch
 const LABEL_GAP = 6
 const ITEM_GAP = 20
 const ROW_H = 22
+const PAD_X = 2 // horizontal inset so the outermost swatch strokes stay inside the svg
 const FONT_SIZE = '0.8rem'
 
 /*
@@ -125,9 +126,13 @@ export function renderImpressionLegend(a: ImpressionLegendArgs) {
 	}
 	const zonesW = Math.max(0, zx - ITEM_GAP)
 
-	// Center each row within the wider of the two, and size the svg to two rows.
+	/*
+	Center each row within the wider of the two, and size the svg to two rows. Rows are inset by
+	PAD_X because swatch strokes are centered on the path: the leftmost circle/rect of the wider
+	row sits at x=0 and its stroke would otherwise render half outside the viewport.
+	*/
 	const totalW = Math.max(seriesW, zonesW)
-	seriesG.attr('transform', `translate(${(totalW - seriesW) / 2}, 0)`)
-	zonesG.attr('transform', `translate(${(totalW - zonesW) / 2}, 0)`)
-	svg.attr('width', Math.ceil(totalW) + 2).attr('height', 2 * ROW_H)
+	seriesG.attr('transform', `translate(${PAD_X + (totalW - seriesW) / 2}, 0)`)
+	zonesG.attr('transform', `translate(${PAD_X + (totalW - zonesW) / 2}, 0)`)
+	svg.attr('width', Math.ceil(totalW) + 2 * PAD_X).attr('height', 2 * ROW_H)
 }
