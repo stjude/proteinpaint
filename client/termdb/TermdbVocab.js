@@ -186,13 +186,11 @@ export class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			embedder: window.location.hostname
 		}
-		if (opts.chartType == 'cuminc') body.getcuminc = 1
-
-		// the survival route reassembles a whole term wrapper; the other routes that this
-		// method serves still dissect a tw into term<i>_id, term<i>_q and term<i>_type, which
-		// loses tw.type and forces each route to guess it back
-		// TODO FIXME migrate barsql and cuminc to the whole tw, then drop the dissected form
-		const postWholeTw = opts.chartType == 'survival'
+		// the survival and cuminc routes reassemble a whole term wrapper; the other routes that
+		// this method serves still dissect a tw into term<i>_id, term<i>_q and term<i>_type,
+		// which loses tw.type and forces each route to guess it back
+		// TODO FIXME migrate barsql to the whole tw, then drop the dissected form
+		const postWholeTw = opts.chartType == 'survival' || opts.chartType == 'cuminc'
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
 			const tw = this.getTwMinCopy(opts[_key])

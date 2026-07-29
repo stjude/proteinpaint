@@ -1,4 +1,5 @@
 import { getData } from '#src/termdb.matrix.js'
+import { getTwByIndex, getTwBins } from '#src/termdb.twFromRequest.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import type { RouteApi, RoutePayload } from '#types'
 
@@ -16,40 +17,24 @@ export const api: RouteApi = {
 	}
 }
 
-async function get_cuminc(q: any, ds: any) {
+export async function get_cuminc(q: any, ds: any) {
 	if (!ds.cohort?.termdb) throw new Error('ds.cohort.termdb missing')
 	const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
 	const minSampleSize = Number(q.minSampleSize)
 	if (minTimeSinceDx && !Number.isFinite(minTimeSinceDx)) throw 'invalid minTimeSinceDx'
 	if (!Number.isFinite(minSampleSize)) throw 'invalid minSampleSize'
 	q.ds = ds
-	const twLst: any[] = []
-	for (const i of [0, 1, 2]) {
-		const termnum = 'term' + i
-		const termnum_id = termnum + '_id'
-		if (typeof q[termnum_id] == 'string') {
-			q[termnum_id] = decodeURIComponent(q[termnum_id])
-			q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
-		} else if (typeof q[termnum] == 'string') {
-			q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
-		}
+	const twByIndex = getTwByIndex(q)
+	const twLst = [...twByIndex.values()]
 
-		const termnum_q = termnum + '_q'
-		const termnum_$id = termnum + '_$id'
-
-		if (q[termnum] && !(termnum_$id in q)) {
-			// $id of edited term is undefined and will not get
-			// passed to backend
-			// as a quick fix, fill $id with term id or name
-			q[termnum_$id] = q[termnum].id || q[termnum].name
-		}
-
-		if (q[termnum]) twLst.push({ $id: q[termnum_$id], term: q[termnum], q: q[termnum_q] })
-	}
-
-	if (q.term1.type != 'condition') throw 'term1 must be condition term'
-	if (q.term2?.type == 'condition') throw 'overlay term cannot be condition term'
-	if (q.term0?.type == 'condition') throw 'divideBy term cannot be condition term'
+	// tw0 divides the samples into charts, tw1 supplies the time and event, tw2 the series
+	const tw0 = twByIndex.get(0)
+	const tw1 = twByIndex.get(1)
+	const tw2 = twByIndex.get(2)
+	if (!tw1) throw 'term1 is missing'
+	if (tw1.term.type != 'condition') throw 'term1 must be condition term'
+	if (tw2?.term.type == 'condition') throw 'overlay term cannot be condition term'
+	if (tw0?.term.type == 'condition') throw 'divideBy term cannot be condition term'
 
 	const data = await getData(
 		{ terms: twLst, filter: q.filter, filter0: q.filter0, __protected__: q.__protected__ },
@@ -64,16 +49,15 @@ async function get_cuminc(q: any, ds: any) {
 	// parse data
 	const byChartSeries: { [chartId: string]: { time: number; event: number; series: string }[] } = {}
 	for (const d of Object.values(data.samples) as any[]) {
-		if (twLst.map(tw => tw.$id).some(id => !Object.keys(d).includes(id))) continue // skip samples without data for all terms
-		const chartId = q.term0 ? d[q.term0_$id].key : ''
-		const time = d[q.term1_$id].value
-		const event = d[q.term1_$id].key
-		const series = q.term2 ? d[q.term2_$id].key : ''
+		if (twLst.some(tw => !(tw.$id in d))) continue // skip samples without data for all terms
+		const chartId = tw0 ? d[tw0.$id].key : ''
+		const time = d[tw1.$id].value
+		const event = d[tw1.$id].key
+		const series = tw2 ? d[tw2.$id].key : ''
 		if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
 		byChartSeries[chartId].push({ time, event, series })
 	}
-	const bins = data.refs.byTermId[q.term2_$id]?.bins || []
-	results.refs = { bins }
+	results.refs = { bins: getTwBins(tw2, data) }
 
 	// prepare R input
 	const Rinput: any = { data: {}, startTime: minTimeSinceDx }
