@@ -90,9 +90,9 @@ tape('getTwByIndex: keeps a whole fraction termCollection tw intact', function (
 
 tape('getTwByIndex: fills in a whole tw that carries only a term id', function (test) {
 	const ds = getMockDs()
-	const tw = getTwByIndex({ ds, term2: { term: { id: 'sex' }, q: {} } }).get(2)
+	const tw = getTwByIndex({ ds, term2: { $id: 'TwBase_2_1', term: { id: 'sex' }, q: {} } }).get(2)
 	test.equal(tw.term.type, 'categorical', 'Should fill in the term from the termdb')
-	test.equal(tw.$id, 'sex', 'Should key the filled-in term by term.id')
+	test.equal(tw.$id, 'TwBase_2_1', 'Should keep the posted $id of the filled-in term')
 	test.end()
 })
 
@@ -117,11 +117,13 @@ tape('getTwByIndex: keys the sample data by the posted $id', function (test) {
 	test.end()
 })
 
-tape('getTwByIndex: falls back to term.id or term.name when a request omits the $id', function (test) {
+tape('getTwByIndex: rejects a term posted without a $id', function (test) {
+	/* $id is not derived from term.id or term.name: a caller that omits it gets data under a
+	key it did not ask for, and a custom termCollection has no term.id to derive one from */
 	const dict: any = { ds: mockDs, term2_id: 'sex', term2_q: { type: 'values' } }
-	test.equal(getTwByIndex(dict).get(2).$id, 'sex', 'Should key a dictionary term by term.id')
+	test.throws(() => getTwByIndex(dict), /term2 is missing \$id/, 'Should reject a dictionary term with no $id')
 	const frac: any = { ds: mockDs, term2: fractionTerm, term2_q: getFractionQ() }
-	test.equal(getTwByIndex(frac).get(2).$id, fractionTerm.name, 'Should key a custom collection by its name')
+	test.throws(() => getTwByIndex(frac), /term2 is missing \$id/, 'Should reject a custom collection with no $id')
 	test.end()
 })
 
@@ -153,7 +155,14 @@ tape('getTwByIndex: infers the fraction tw type from q.denominators', function (
 })
 
 tape('getTwByIndex: resolves a term posted as term<i>_id', function (test) {
-	const q: any = { ds: mockDs, term1_id: survivalTerm.id, term2_id: 'sex', term2_q: { type: 'values' } }
+	const q: any = {
+		ds: mockDs,
+		term1_id: survivalTerm.id,
+		term1_$id: 'TwBase_1_1',
+		term2_id: 'sex',
+		term2_q: { type: 'values' },
+		term2_$id: 'TwBase_2_1'
+	}
 	const twByIndex = getTwByIndex(q)
 	test.equal(twByIndex.get(1).term, survivalTerm, 'Should look up term1 by id')
 	test.deepEqual(twByIndex.get(2).q, { type: 'values' }, 'Should carry over term2_q')
@@ -163,13 +172,18 @@ tape('getTwByIndex: resolves a term posted as term<i>_id', function (test) {
 })
 
 tape('getTwByIndex: takes term2_id over a bare term posted in term2', function (test) {
-	const q: any = { ds: mockDs, term2_id: 'sex', term2: fractionTerm }
+	const q: any = { ds: mockDs, term2_id: 'sex', term2: fractionTerm, term2_$id: 'TwBase_2_1' }
 	test.equal(getTwByIndex(q).get(2).term.id, 'sex', 'Should resolve the id first, as before')
 	test.end()
 })
 
 tape('getTwByIndex: parses a JSON-encoded term', function (test) {
-	const q: any = { ds: mockDs, term2: encodeURIComponent(JSON.stringify(fractionTerm)), term2_q: getFractionQ() }
+	const q: any = {
+		ds: mockDs,
+		term2: encodeURIComponent(JSON.stringify(fractionTerm)),
+		term2_q: getFractionQ(),
+		term2_$id: 'TwBase_2_1'
+	}
 	const tw = getTwByIndex(q).get(2)
 	test.equal(tw.term.name, fractionTerm.name, 'Should parse the term string')
 	test.equal(tw.type, 'TermCollectionTWFraction', 'Should infer the fraction tw type from the parsed term')

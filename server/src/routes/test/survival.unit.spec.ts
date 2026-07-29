@@ -104,6 +104,7 @@ tape('get_survival: rejects a continuous fraction overlay', async function (test
 	const q: any = {
 		ds: mockDs,
 		term1_id: survivalTerm.id,
+		term1_$id: 'tw1',
 		term2: {
 			$id: 'tw2',
 			type: 'TermCollectionTWFraction',
@@ -123,6 +124,7 @@ tape('get_survival: rejects a continuous fraction overlay posted in the split fo
 	const q: any = {
 		ds: mockDs,
 		term1_id: survivalTerm.id,
+		term1_$id: 'tw1',
 		term2: fractionTerm,
 		term2_q: { ...getFractionQ(), mode: 'continuous' },
 		term2_$id: 'tw2',
@@ -134,13 +136,19 @@ tape('get_survival: rejects a continuous fraction overlay posted in the split fo
 })
 
 tape('get_survival: rejects a request without term1', async function (test) {
-	const result = await get_survival({ ds: mockDs, term2_id: 'sex' }, mockDs)
+	const result = await get_survival({ ds: mockDs, term2_id: 'sex', term2_$id: 'tw2' }, mockDs)
 	test.equal(result.error, 'term1 is missing', 'Should report the missing term rather than fail on it')
 	test.end()
 })
 
 tape('get_survival: rejects a non-survival term1 without term2', async function (test) {
-	const result = await get_survival({ ds: mockDs, term1_id: 'sex' }, mockDs)
+	const result = await get_survival({ ds: mockDs, term1_id: 'sex', term1_$id: 'tw1' }, mockDs)
 	test.equal(result.error, 'non-survival term', 'Should require a survival term')
+	test.end()
+})
+
+tape('get_survival: rejects a term posted without a $id', async function (test) {
+	const result = await get_survival({ ds: mockDs, term1_id: survivalTerm.id }, mockDs)
+	test.equal(result.error, 'term1 is missing $id', 'Should not serve a request whose data key is unknown')
 	test.end()
 })

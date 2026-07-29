@@ -334,6 +334,7 @@ tape('term1=termCollection categorical', function (test) {
 	}
 })
 
+// get rid of it. flaky
 tape('term1=categorical, term2=defaultbins', function (test) {
 	test.timeoutAfter(5000)
 	test.plan(4)
@@ -421,6 +422,7 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 					id: 'diaggrp',
 					config: {
 						term2: {
+							$id: 'dollaridmustbeintw!!',
 							id: 'aaclassic_5',
 							term: termjson['aaclassic_5'],
 							q: termjson['aaclassic_5'].bins.default
@@ -431,10 +433,9 @@ tape('term1=categorical, term2=defaultbins', function (test) {
 		})
 	}
 
-	const legendDataId = 'not exposed'
+	const legendDataId = 'Exposed but dose unknown'
 
 	async function clickLegendToHideOverlay(barchart) {
-		//await sleep(40)
 		const legendDiv = barchart.Inner.dom.legendDiv
 		const item = legendDiv
 			.selectAll('.sjpp-htmlLegend')

@@ -447,9 +447,8 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		// process refs
 		if (data.refs.byTermId) {
 			const byTermId = data.refs.byTermId
-			// the server keys refs by tw.$id, falling back to term.id when a request omits it
-			const tw = this.state.config.term
-			const msg = byTermId[tw.$id || tw.term.id]?.survMsg
+			// the server keys refs by tw.$id
+			const msg = byTermId[this.state.config.term.$id]?.survMsg
 			if (msg) {
 				// message to be displayed in survival plot
 				// will be rendered in .pp-survival-chartLegends of each chart
