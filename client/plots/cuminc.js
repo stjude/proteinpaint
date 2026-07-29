@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
 import { fillTermWrapper } from '#termsetting'
 import { select } from 'd3-selection'
+import { sayerror } from '#dom'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
@@ -85,6 +86,7 @@ export class Cuminc extends PlotBase {
 		this.settings = this.config.settings.cuminc
 		this.settings.xTitleLabel = 'Years since entry into the cohort' // TODO: do not harcode time unit (see survival.js)
 		this.settings.atRiskVisible = false
+
 		this.processResults(results)
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
@@ -206,6 +208,7 @@ class MassCumInc {
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
+			errorDiv: holder.append('div'),
 			loadingDiv: holder
 				.append('div')
 				.style('position', 'absolute')
@@ -412,7 +415,7 @@ class MassCumInc {
 	async main() {
 		try {
 			this.config = structuredClone(this.state.config)
-
+			this.dom.errorDiv.html('')
 			if (this.dom.header)
 				this.dom.header.html(
 					this.state.config.term.term.name +
@@ -469,6 +472,10 @@ class MassCumInc {
 	}
 
 	processResults(results) {
+		if (Object.keys(results.data).length === 0) {
+			sayerror(this.dom.errorDiv, 'No data available')
+			return
+		}
 		const s = this.settings
 		const c = this.config
 		const estimates = {}
