@@ -38,6 +38,7 @@ export function getSorterUi(opts) {
 			self.activeOption = structuredClone(s.sortOptions[s.sortSamplesBy])
 
 			sectionData = [
+				// TODO: add an advanced menu section here for sortBySampleAncestry = 'first'
 				{
 					label: `For each selected row, sort ${l.samples} by matching data`,
 					notDraggable: true,

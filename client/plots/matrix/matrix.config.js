@@ -64,7 +64,7 @@ export async function getPlotConfig(opts = {}, app) {
 				sampleNameFilter: '',
 				sortSamplesBy: 'a',
 				sortPriority: undefined, // will be filled-in
-				sortBySampleAncestry: app.vocabApi.termdbConfig.hasSampleAncestry,
+				sortBySampleAncestry: app.vocabApi.termdbConfig.hasSampleAncestry ? 'last' : false, // indicates sorting priority by sample ancestry
 				// sortByMutation: 'consequence', computed
 				// sortByCNV: true, computed
 				//sortOptions: getSortOptions(app.vocabApi.termdbConfig, controlLabels),

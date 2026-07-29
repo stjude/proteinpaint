@@ -37,7 +37,8 @@ export function getSampleSorter(self, settings, rows, opts = {}) {
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
 	const sorterTerms = []
-	//if (self.config.chartType == 'matrix' && s.sortBySampleAncestry) sorterTerms.push(getSortSamplesByAncestry(self))
+	if (self.config.chartType == 'matrix' && s.sortBySampleAncestry === 'first')
+		sorterTerms.push(getSortSamplesByAncestry(self))
 
 	const sortPriority = activeOption.sortPriority
 	if (sortPriority) {

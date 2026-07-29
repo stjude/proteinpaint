@@ -168,34 +168,33 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 
 			const basicDiv = input.dom.inputTd.append('div').style('display', controls.activeTab == 'basic' ? '' : 'none')
 
-			if (self.parent.config.chartType == 'matrix' && s.sortBySampleAncestry) {
+			if (self.parent.config.chartType == 'matrix' && parent.app.vocabApi.termdbConfig.hasSampleAncestry) {
 				const ancestryDiv = basicDiv
 					.append('div')
+					.attr('title', 'sort by ancestry')
 					.style('display', m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden ? 'block' : 'none')
 
 				ancestryDiv.append('span').html('Ancestry')
-				// holder, labeltext, callback, checked, divstyle
-				const ancestryCheckbox = make_one_checkbox({
+
+				make_radios({
+					// holder, options, callback, styles
 					holder: ancestryDiv.append('span'),
-					divstyle: { display: 'inline-block' },
-					checked: m.sortBySampleAncestry,
-					labeltext: 'sort by ancestry',
-					callback: () => {
-						const sortBySampleAncestry = ancestryCheckbox.property('checked')
-						// const sortOptions = parent.config.settings.matrix.sortOptions
-
-						// const activeOption = sortOptions.a
-						// const cnvTb = activeOption.sortPriority[0].tiebreakers[2]
-						// cnvTb.disabled = !sortByCNV
-						// cnvTb.isOrdered = sortByCNV
-
+					options: [
+						{ label: 'sort first', value: 'first', checked: m.sortBySampleAncestry === 'first' },
+						{ label: 'sort last', value: 'last', checked: m.sortBySampleAncestry === 'last' },
+						{ label: 'disable', value: false, checked: m.sortBySampleAncestry === false }
+					],
+					styles: {
+						display: 'inline-block'
+					},
+					callback: (selectedValue: 'first' | 'last' | false) => {
 						parent.app.dispatch({
 							type: 'plot_edit',
 							id: parent.id,
 							config: {
 								settings: {
 									matrix: {
-										sortBySampleAncestry
+										sortBySampleAncestry: selectedValue
 										//sortByCNV, // needed to show the correct status for checkbox, but actual sorting behavior
 										//sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
 									}
