@@ -282,6 +282,9 @@ export class profileForms extends profilePlot {
 		const holder = this.dom.impressionDiv
 		holder.selectAll('*').remove()
 		const texts = this.config.impression
+		// The whole view is driven off this config block (zones, titles, legend, axis labels), so a
+		// dataset missing it fails here with a named cause rather than downstream on a member access.
+		if (!texts) throw `Missing impression config for the plot ${this.type} in this dataset`
 		const scColor = this.impressionScColor || '#888'
 		const data = this.data
 
@@ -302,94 +305,102 @@ export class profileForms extends profilePlot {
 			sel.datum({ tip: text, ...(hover || {}) }).style('cursor', 'pointer')
 		}
 
-		/*
-		Centered header: module title + subtitle lines. Bold and default-colored, matching the title
-		treatment in polar2/radar2/barchart2; centering is the one deviation, since this heads a page
-		of cards rather than labelling a single plot.
-		*/
-		const header = holder.append('div').style('text-align', 'center')
-		header
-			.append('div')
-			.style('font-size', '1.1rem')
-			.style('font-weight', 'bold')
-			.style('padding', '8px 0')
-			.text(texts.titleTemplate.replace('{module}', this.module))
-		for (const line of texts.subtitle) header.append('div').style('font-size', '0.9rem').text(line)
-
 		const responders: any[] = Array.isArray(data.responders) ? data.responders : []
 		const groups = responders.length
 			? responders.map(r => ({
-					label: texts.frameSubtitle.replace('{group}', r.label),
+					groupLabel: r.label,
 					poc: { median: r.median, total: r.total },
 					pocDistribution: r.distribution
 			  }))
-			: [{ label: texts.legend.sc, poc: null, pocDistribution: [] }]
+			: [{ groupLabel: null, poc: null, pocDistribution: [] }]
 
 		groups.forEach((g, i) => {
-			// One bordered card per responder group: a shared header (the group label) aligned over
-			// the two charts (thermometer + response distribution), which sit side by side inside it.
-			// Tagged so getChartImages() can collect each card's svgs for download and name them.
-			const card = holder
+			/*
+			One self-contained block per responder group: the module title, the Site-Coordinator-vs-group
+			comparison line, and the applied-filters + n line, above a single bordered box holding the two
+			charts. Tagged so getChartImages() can collect this block's svgs for download and name them.
+			*/
+			const block = holder
 				.append('div')
 				.attr('class', 'sjpp-impression-card')
-				.attr('data-group-label', g.label)
-				.style('border', '1px solid #ddd')
-				.style('border-radius', '8px')
-				.style('padding', '12px 16px')
-				.style('margin', '12px auto')
+				.attr('data-group-label', g.groupLabel || texts.legend.sc)
 				.style('width', 'fit-content')
 				.style('max-width', '100%')
-				.style('background', '#fff')
-			/*
-			Card header: the group label on the left, the applied-filters + n block on the right,
-			vertically centered against the label. addFilterLegend() draws into this.filterG and partly
-			above y=0, so the group is shifted to start at (pad, pad) and the svg sized to fit it; the
-			row's align-items:center then centers it against the label. filtersCount is reset per card
-			so items stack from the top each time.
-			*/
-			const cardHeader = card
+				.style('margin', '18px auto')
+
+			// Centered title block: module title, the SC-vs-group comparison (POC groups only), and the
+			// applied-filters + n line. addFilterLegend() draws into this.filterG partly above y=0, so the
+			// group is shifted to start at (pad, pad) and the svg sized to fit it.
+			const header = block.append('div').style('text-align', 'center')
+			header
 				.append('div')
-				.style('display', 'flex')
-				.style('align-items', 'center')
-				.style('justify-content', 'space-between')
-				.style('gap', '24px')
-				.style('padding-bottom', '8px')
-				.style('margin-bottom', '8px')
-				.style('border-bottom', '1px solid #eee')
-			cardHeader.append('div').style('font-weight', 'bold').style('font-size', '1rem').text(g.label)
-			const filterSvg = cardHeader.append('svg')
+				.style('font-size', '1.25rem')
+				.style('font-weight', 'bold')
+				.style('padding', '4px 0')
+				.text(texts.titleTemplate.replace('{module}', this.module))
+			if (g.poc)
+				header
+					.append('div')
+					.style('font-size', '1.05rem')
+					.style('font-weight', 'bold')
+					.text(texts.comparisonTitle.replace('{group}', g.groupLabel))
+			const filterSvg = header.append('div').style('padding', '2px 0').append('svg')
 			this.filtersCount = 0
 			this.filterG = filterSvg.append('g')
 			this.addFilterLegend()
-			const fbb = filterSvg.node().getBBox()
-			const pad = 3
-			this.filterG.attr('transform', `translate(${-fbb.x + pad}, ${-fbb.y + pad})`)
-			filterSvg.attr('width', Math.ceil(fbb.width + 2 * pad)).attr('height', Math.ceil(fbb.height + 2 * pad))
-			const body = card
+			const ffb = filterSvg.node().getBBox()
+			const fpad = 3
+			this.filterG.attr('transform', `translate(${-ffb.x + fpad}, ${-ffb.y + fpad})`)
+			filterSvg.attr('width', Math.ceil(ffb.width + 2 * fpad)).attr('height', Math.ceil(ffb.height + 2 * fpad))
+
+			// The bordered box: the two chart panels side by side with a vertical divider between them.
+			const box = block
+				.append('div')
+				.style('border', '1px solid #bbb')
+				.style('border-radius', '8px')
+				.style('background', '#fff')
+				.style('margin-top', '6px')
+			// align-items:stretch makes both panels the tallest panel's height, so the legends (pinned to
+			// the bottom of each) line up on the same row.
+			const body = box
 				.append('div')
 				.style('display', 'flex')
 				.style('flex-wrap', 'wrap')
-				.style('align-items', 'flex-start')
+				.style('align-items', 'stretch')
 				.style('justify-content', 'center')
-				.style('gap', '16px')
-			/*
-			Each chart is titled in its own column of the flex row, one step down from the card header
-			(1rem) in the page title -> card header -> chart title hierarchy. Titles are html above the
-			svg, matching how the rest of this view's text is drawn.
-			*/
-			const titledChart = (title: string) => {
-				const column = body.append('div')
-				column
+
+			// A panel holds a title, the chart svg (vertically centered in the stretched height), and the
+			// chart's own two-row legend at the bottom. `divider` draws the vertical line to the next
+			// panel as a right border on this one.
+			const chartPanel = (title: string, divider: boolean) => {
+				const panel = body
+					.append('div')
+					.style('padding', '12px 18px')
+					.style('display', 'flex')
+					.style('flex-direction', 'column')
+					.style('align-items', 'center')
+				if (divider) panel.style('border-right', '1px solid #ddd')
+				panel
 					.append('div')
 					.style('text-align', 'center')
 					.style('font-weight', 'bold')
-					.style('font-size', '0.9rem')
+					.style('font-size', '1rem')
 					.style('padding-bottom', '4px')
 					.text(title)
-				return column.append('div')
+				// Grow to fill the panel height and center the chart in it; the caller appends the legend
+				// after this, so it settles at the bottom — level with the other panel's legend.
+				const chartWrap = panel
+					.append('div')
+					.style('flex', '1 1 auto')
+					.style('display', 'flex')
+					.style('align-items', 'center')
+				return { panel, chartHolder: chartWrap.append('div') }
 			}
+
+			// Thermometer panel (left); a divider follows it only when a distribution panel does.
+			const thermo = chartPanel(texts.chartTitles.thermometer, !!g.poc)
 			renderImpressionThermometer({
-				holder: titledChart(texts.chartTitles.thermometer),
+				holder: thermo.chartHolder,
 				id: `${this.id}-g${i}`,
 				sc: { median: data.scMedian, total: data.scTotal },
 				poc: g.poc,
@@ -398,9 +409,19 @@ export class profileForms extends profilePlot {
 				colors: { sc: scColor },
 				attachTip
 			})
+			renderImpressionLegend({
+				holder: thermo.panel.append('div'),
+				series: [
+					{ color: scColor, label: texts.legend.sc, symbol: 'circle' as const },
+					...(g.poc ? [{ color: POC_FILL, label: texts.legend.poc, symbol: 'circle' as const }] : [])
+				],
+				zones
+			})
+
 			if (g.poc) {
+				const dist = chartPanel(texts.chartTitles.distribution, false)
 				renderResponseDistribution({
-					holder: titledChart(texts.chartTitles.distribution),
+					holder: dist.chartHolder,
 					id: `${this.id}-dist-g${i}`,
 					maxScore: IMPRESSION_MAX_SCORE,
 					scDistribution: data.scDistribution || [],
@@ -410,17 +431,15 @@ export class profileForms extends profilePlot {
 					colors: { sc: scColor },
 					attachTip
 				})
+				renderImpressionLegend({
+					holder: dist.panel.append('div'),
+					series: [
+						{ color: scColor, label: texts.legend.sc, symbol: 'line' as const },
+						{ color: POC_FILL, label: texts.legend.poc, symbol: 'square' as const }
+					],
+					zones
+				})
 			}
-			// One legend for the card, under both charts — the single place the series and the
-			// performance zones are named.
-			renderImpressionLegend({
-				holder: card.append('div'),
-				series: [
-					{ color: scColor, label: texts.legend.sc, symbol: 'line' as const },
-					...(g.poc ? [{ color: POC_FILL, label: texts.legend.poc, symbol: 'square' as const }] : [])
-				],
-				zones
-			})
 		})
 	}
 

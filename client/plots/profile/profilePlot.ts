@@ -175,7 +175,6 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 						})
 						return
 					}
-					this.legendG.selectAll('*').remove()
 					const config = structuredClone(this.config)
 					config.parentId = this.id
 					this.app.dispatch({
@@ -521,6 +520,18 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 		this.app.dispatch({ type: 'plot_edit', id: this.id, config: this.config })
 	}
 
+	hasFilterValue(value) {
+		return !!value && value.length !== 0
+	}
+
+	/*
+	Rows addFilterLegend() will draw: the title plus one row per active filter. Charts that
+	stack the filter legend under the plot read this before drawing, to size the svg height.
+	*/
+	getFilterLegendRowCount() {
+		return 1 + this.config.filterTWs.filter(tw => this.hasFilterValue(this.settings[tw.term.id])).length
+	}
+
 	addFilterLegend() {
 		const hasFilters = this.config.filterTWs.some(tw => this.settings[tw.term.id])
 		const title = hasFilters ? 'Filters' : 'No filter applied'
@@ -535,7 +546,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 	}
 
 	addFilterLegendItem(filter, value) {
-		if (!value || value?.length === 0) return
+		if (!this.hasFilterValue(value)) return
 		this.filtersCount++
 		const isArray = Array.isArray(value)
 		let text = isArray ? value.join(', ') : value

@@ -104,10 +104,26 @@ class ProfileRadar2 extends profilePlot {
 		this.drawTableAndLegend(rows)
 	}
 
+	/*
+	Two layouts. Normally the legend column sits to the right of the radar inside the svg and
+	the score table sits to its right again. In comparison mode two charts share the row, so
+	the legend, cohort note and filter blocks stack under the radar and the table moves below
+	the svg. The filter legend grows a row per active filter, hence the derived height.
+	*/
 	private createSvgAndGrid() {
 		const config = this.config
-		const width = this.isComparison ? 1000 : 1050
-		const height = 650
+		const isComparison = this.isComparison
+		const x = 300
+		const y = 310
+		/*
+		Stacked block origins. The radar plus its module labels run to about y 555, and
+		addEndUserImpressionNote()/addPOCNote() draw their lines 115-165px below noteG.
+		*/
+		const legendY = 580,
+			noteY = 545,
+			filterY = 740
+		const width = isComparison ? 660 : 1050
+		const height = isComparison ? filterY + this.getFilterLegendRowCount() * 22 + 20 : 650
 		this.dom.svg = this.dom.plotDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -116,14 +132,12 @@ class ProfileRadar2 extends profilePlot {
 			.attr('height', height)
 		const rightDiv = this.dom.plotDiv
 			.append('div')
-			.style('display', 'inline-block')
+			.style('display', isComparison ? 'block' : 'inline-block')
 			.style('vertical-align', 'top')
-			.style('margin-top', '140px')
+			.style('margin-top', isComparison ? '0' : '140px')
 			.style('margin-right', '20px')
 		this.dom.tableDiv = rightDiv.append('div').attr('data-testid', 'sjpp-profileRadar2-data-table')
 
-		const x = 300
-		const y = 310
 		this.dom.svg
 			.append('text')
 			.attr('transform', `translate(60, 40)`)
@@ -136,9 +150,11 @@ class ProfileRadar2 extends profilePlot {
 		this.legendG = this.dom.svg
 			.append('g')
 			.attr('data-testid', 'sjpp-profileRadar2-legend')
-			.attr('transform', `translate(${x + 340},${y - 120})`)
-		this.filterG = this.dom.svg.append('g').attr('transform', `translate(${x + 340},${y - 20})`)
-		this.noteG = this.dom.svg.append('g').attr('transform', `translate(20, ${y + 150})`)
+			.attr('transform', isComparison ? `translate(20, ${legendY})` : `translate(${x + 340},${y - 120})`)
+		this.filterG = this.dom.svg
+			.append('g')
+			.attr('transform', isComparison ? `translate(20, ${filterY})` : `translate(${x + 340},${y - 20})`)
+		this.noteG = this.dom.svg.append('g').attr('transform', `translate(20, ${isComparison ? noteY : y + 150})`)
 
 		for (let i = 0; i <= 10; i++) this.drawPolygon(i * 10)
 
@@ -250,27 +266,25 @@ class ProfileRadar2 extends profilePlot {
 			{ label: 'Difference*' }
 		]
 
-		if (!this.isComparison) {
-			renderTable({
-				rows,
-				columns,
-				div: this.dom.tableDiv,
-				showLines: true,
-				resize: true,
-				maxHeight: '60vh'
-			})
-			this.addDifferenceNote(
-				`* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20 and positive shown in blue, if negative shown in red.`
-			)
+		renderTable({
+			rows,
+			columns,
+			div: this.dom.tableDiv,
+			showLines: true,
+			resize: true,
+			maxHeight: '60vh'
+		})
+		this.addDifferenceNote(
+			`* Difference between ${config.term1.abbrev} and ${config.term2.abbrev}. If bigger than 20 and positive shown in blue, if negative shown in red.`
+		)
 
-			this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
-			let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
-			this.addRadarLegendItem(`${config.term1.name} ${abbrev}`, 'blue', 0, 'none')
-			abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
-			this.addRadarLegendItem(`${config.term2.name} ${abbrev}`, 'gray', 1, '5, 5')
-			if (this.state.activeCohort == ABBREV_COHORT) this.addEndUserImpressionNote(this.noteG)
-			else this.addPOCNote(this.noteG)
-		}
+		this.legendG.append('text').attr('text-anchor', 'left').style('font-weight', 'bold').text('Legend')
+		let abbrev = config.term1.abbrev ? `(${config.term1.abbrev})` : ''
+		this.addRadarLegendItem(`${config.term1.name} ${abbrev}`, 'blue', 0, 'none')
+		abbrev = config.term2.abbrev ? `(${config.term2.abbrev})` : ''
+		this.addRadarLegendItem(`${config.term2.name} ${abbrev}`, 'gray', 1, '5, 5')
+		if (this.state.activeCohort == ABBREV_COHORT) this.addEndUserImpressionNote(this.noteG)
+		else this.addPOCNote(this.noteG)
 		this.addFilterLegend()
 	}
 
