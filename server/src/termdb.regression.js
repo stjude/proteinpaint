@@ -5,7 +5,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from './serverconfig.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { runCumincR } from './termdb.cuminc.js'
+import { runCumincR } from './routes/termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
 import { getData } from './termdb.matrix.js'
 
