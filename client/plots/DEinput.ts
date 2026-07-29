@@ -95,7 +95,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		}
 		this.dom.addGroup.style('display', 'inline-block')
 		this.makeGroupsUI()
-		this.hasCohort0 = this.groups.find(g => g.filter.lst.find(item => item.tvs?.term.type == 'cohort'))
+		this.hasCohort0 = this.groups.some(g => g.filter.lst.some(item => item.tvs?.term.type == 'cohort'))
 		this.mayRenderSubmit()
 	}
 
