@@ -24,21 +24,24 @@ export async function get_survival(q: any, ds: any) {
 		const twByIndex = getTwByIndex(q)
 		const twLst = [...twByIndex.values()]
 
-		if (q.term2) {
-			if (q.term2.type == 'survival' && q.term1.type == 'survival') {
+		const tw1 = twByIndex.get(1)
+		const tw2 = twByIndex.get(2)
+		if (!tw1) throw `term1 is missing`
+		if (tw2) {
+			if (tw2.term.type == 'survival' && tw1.term.type == 'survival') {
 				throw `term and overlay are both survival terms - only one could be a survival term`
 			}
-			if (q.term2.type != 'survival' && q.term1.type != 'survival') {
+			if (tw2.term.type != 'survival' && tw1.term.type != 'survival') {
 				throw `no survival terms, either the main term OR the overlay term must be a survival term`
 			}
-		} else if (q.term1.type != 'survival') {
+		} else if (tw1.term.type != 'survival') {
 			throw `non-survival term`
 		}
-		if (q.term0 && q.term0.type == 'survival') {
+		if (twByIndex.get(0)?.term.type == 'survival') {
 			throw `term0 must not be a survival term`
 		}
 
-		const survTermIndex = getSurvTermIndex(q) // 1 or 2
+		const survTermIndex = getSurvTermIndex(tw1, tw2) // 1 or 2
 		// st, ot and dt are term wrappers, not terms
 		const st = twByIndex.get(survTermIndex)
 		const ot = twByIndex.get(survTermIndex == 1 ? 2 : 1)
@@ -100,12 +103,16 @@ export async function get_survival(q: any, ds: any) {
 			byChartSeries[chart].push({ time, status, series })
 		}
 
-		const bins = (q.term2_id && data.refs.q?.[q.term2.id]?.bins) || data.refs?.[q.term2?.id]?.bins || []
 		const final_data: any = {
 			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk'],
 			case: [],
 			refs: {
-				bins,
+				/* the survival plot reads refs.bins as a flat list of the overlay term's bins
+				(renderPvalues, sortSerieses) while the shared syncTermData() reads it as a list
+				indexed by term number, so sending computed bins here would corrupt the plot config.
+				This has always been empty in practice: the lookup that filled it read data.refs.q,
+				which getData() does not return. Key order is supplied by orderedKeys below. */
+				bins: [],
 				byTermId: data.refs.byTermId
 			}
 		}
@@ -140,8 +147,8 @@ export async function get_survival(q: any, ds: any) {
 			}
 		}
 		final_data.case.sort((a, b) => a[2] - b[2])
-		const orderedLabels = getOrderedLabels(ot?.term, bins.length ? bins : getFractionBins(ot, data))
-		const orderedLabelsTerm0 = getOrderedLabels(dt?.term, getFractionBins(dt, data))
+		const orderedLabels = getOrderedLabels(ot?.term, getTwBins(ot, data))
+		const orderedLabelsTerm0 = getOrderedLabels(dt?.term, getTwBins(dt, data))
 		final_data.refs.orderedKeys = {
 			chart: [...keys.chart].sort(
 				!orderedLabelsTerm0 ? undefined : (a, b) => orderedLabelsTerm0.indexOf(a) - orderedLabelsTerm0.indexOf(b)
@@ -175,34 +182,59 @@ function init({ genomes }: any) {
 	}
 }
 
-/** Reconstruct the term wrappers encoded by the term0/term1/term2 request parameters.
- *  q.term0, q.term1 and q.term2 are filled in as a side effect, since get_survival()
- *  validates the request by term type. */
+/** Reconstruct the term wrappers posted as term0, term1 and term2. */
 export function getTwByIndex(q: any) {
 	const twByIndex = new Map<number, any>()
 	for (const i of [0, 1, 2]) {
-		const termnum = 'term' + i
-		const termnum_id = termnum + '_id'
-		if (typeof q[termnum_id] == 'string') {
-			q[termnum_id] = decodeURIComponent(q[termnum_id])
-			q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
-		} else if (typeof q[termnum] == 'string') {
-			q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
-		}
-		if (!q[termnum]) continue
-
-		const tw: any = { term: q[termnum], q: q[termnum + '_q'] }
-		const twType = q[termnum + '_type'] || inferTwType(tw)
-		if (twType) tw.type = twType
-		/* getData() keys each sample's data by tw.$id, backfilling it from term.id/name when
-		absent; assign it here instead, so the key is a property of the tw this route built and
-		not a side effect of getData(). Only a custom termCollection uses the client's $id,
-		since it has no term.id; other term types stay keyed by term.id or term.name, which
-		the client and the refs lookups below still assume. */
-		tw.$id = (tw.term.type == 'termCollection' && q[termnum + '_$id']) || tw.term.id || tw.term.name
-		twByIndex.set(i, tw)
+		const tw = getTw(q, 'term' + i)
+		if (tw) twByIndex.set(i, tw)
 	}
 	return twByIndex
+}
+
+/* The client posts a term wrapper whole. A request that predates that, or one written by
+hand, splits a wrapper into term<i>_id, term<i>_q, term<i>_$id and term<i>_type, with a
+non-dictionary term posted as a bare term in term<i>; that form is still served, and is the
+only reason this is more than a lookup. */
+function getTw(q: any, termnum: string) {
+	// a whole wrapper has tw.term, while the split form posts a bare term under this key
+	const posted = mayParseJson(q[termnum])
+	const tw = posted?.term ? posted : getSplitTw(q, posted, termnum)
+	if (!tw) return
+	// the term type is validated before getData() is called, so a term supplied as an id
+	// alone must be filled in here rather than by getData()
+	if (!tw.term?.type && tw.term?.id) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+	// an unknown term id has always been served as if the term were absent
+	if (!tw.term) return
+	const twType = tw.type || inferTwType(tw)
+	if (twType) tw.type = twType
+	/* getData() keys each sample's data by tw.$id, backfilling it from term.id/name when
+	absent; assign it here instead, so the key is a property of the tw this route built and
+	not a side effect of getData(). Only a custom termCollection uses the client's $id, since
+	it has no term.id: a dataset-supplied getter may key both its sample data and its refs by
+	term.id (see the survival getter of the mmrf dataset), and the client reads refs.byTermId
+	by term.id in turn. */
+	tw.$id = (tw.term.type == 'termCollection' && tw.$id) || tw.term.id || tw.term.name
+	return tw
+}
+
+/** term<i>_id, term<i>_q, term<i>_$id and term<i>_type, with a bare term in term<i> */
+function getSplitTw(q: any, postedTerm: any, termnum: string) {
+	const id = q[termnum + '_id']
+	// term<i>_id takes precedence over a bare term, as when this route resolved the id first
+	const term = typeof id == 'string' ? { id: decodeURIComponent(id) } : postedTerm
+	if (!term) return
+	return {
+		term,
+		q: mayParseJson(q[termnum + '_q']),
+		$id: q[termnum + '_$id'],
+		type: q[termnum + '_type']
+	}
+}
+
+/** a request parameter is decoded by the urljson middleware, unless it was manually encoded */
+function mayParseJson(v: any) {
+	return typeof v == 'string' ? JSON.parse(decodeURIComponent(v)) : v
 }
 
 /** the tw type may be missing when a request is not assembled by the client tw router */
@@ -211,11 +243,12 @@ function inferTwType(tw: any) {
 	return undefined
 }
 
-/** a fraction termCollection has no term.values to order its keys by: its keys are the
- *  labels of the bins that getData() computed for it */
-function getFractionBins(tw: any, data: any) {
-	if (tw?.type != 'TermCollectionTWFraction') return []
-	return data.refs.byTermId?.[tw.$id]?.bins || []
+/** the bins that getData() computed for a tw, under the same key as its sample data.
+ *  A numeric, gene expression or fraction term has no term.values to order its keys by:
+ *  its keys are the labels of these bins. */
+export function getTwBins(tw: any, data: any) {
+	if (!tw) return []
+	return data.refs?.byTermId?.[tw.$id]?.bins || []
 }
 
 /** a fraction resolves to one number per sample, it must be binned to be usable
@@ -225,12 +258,10 @@ function mayValidateStratificationTw(tw: any) {
 		throw `${tw.term.name} fraction must use discrete bins to serve as an overlay or divide-by term`
 }
 
-function getSurvTermIndex(q: any) {
-	if (q.term1) {
-		if (q.term1.type == 'survival') return 1
-	}
-	if (!q.term2) throw 'term1.type is not survival and term2 is missing'
-	if (q.term2.type != 'survival') throw 'both term1 and term2 are not survival type'
+function getSurvTermIndex(tw1: any, tw2: any) {
+	if (tw1.term.type == 'survival') return 1
+	if (!tw2) throw 'term1.type is not survival and term2 is missing'
+	if (tw2.term.type != 'survival') throw 'both term1 and term2 are not survival type'
 	return 2
 }
 
@@ -252,19 +283,22 @@ export function getTermData(d: any, tw: any) {
 	return v?.key
 }
 
+/** the order of the series or chart keys supplied by a stratification term: the labels of
+ *  the bins that getData() computed for it, else its value keys */
 function getOrderedLabels(term: any, bins: any[] = []) {
-	if (term) {
-		if (term.type == 'condition' && term.values) {
-			return Object.keys(term.values)
-				.map(Number)
-				.sort((a, b) => a - b)
-				.map(i => term.values[i].label)
-		}
-		if (term.values) {
-			return Object.keys(term.values).sort((a, b) =>
-				'order' in term.values[a] && 'order' in term.values[b] ? term.values[a].order - term.values[b].order : 0
-			)
-		}
+	if (term?.type == 'condition' && term.values) {
+		return Object.keys(term.values)
+			.map(Number)
+			.sort((a, b) => a - b)
+			.map(i => term.values[i].label)
 	}
-	return bins.map(bin => (bin.name ? bin.name : bin.label))
+	/* a binned term supplies bin labels as keys, so its bins must be read before term.values,
+	which for such a term is either empty or holds only uncomputable values */
+	if (bins.length) return bins.map(bin => (bin.name ? bin.name : bin.label))
+	if (term?.values) {
+		return Object.keys(term.values).sort((a, b) =>
+			'order' in term.values[a] && 'order' in term.values[b] ? term.values[a].order - term.values[b].order : 0
+		)
+	}
+	return []
 }

@@ -188,12 +188,21 @@ export class TermdbVocab extends Vocab {
 		}
 		if (opts.chartType == 'cuminc') body.getcuminc = 1
 
-		// TODO FIXME dissect tw into term1_id, term1_q will lose tw.type and causes painful problems! replace such with straight tw!
+		// the survival route reassembles a whole term wrapper; the other routes that this
+		// method serves still dissect a tw into term<i>_id, term<i>_q and term<i>_type, which
+		// loses tw.type and forces each route to guess it back
+		// TODO FIXME migrate barsql and cuminc to the whole tw, then drop the dissected form
+		const postWholeTw = opts.chartType == 'survival'
 		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
 			const tw = this.getTwMinCopy(opts[_key])
 			if (!tw) continue
 			const key = _key == 'term' ? 'term1' : _key
+			if (!tw.q) throw 'plot.' + _key + '.q{} missing: ' + tw.term.id
+			if (postWholeTw) {
+				body[key] = tw
+				continue
+			}
 			body[key + '_$id'] = tw.$id
 			const wrapperType = opts[_key].type || tw.type
 			if (wrapperType === 'TermCollectionTWFraction') body[key + '_type'] = wrapperType
@@ -203,7 +212,6 @@ export class TermdbVocab extends Vocab {
 			} else {
 				body[key] = tw.term
 			}
-			if (!tw.q) throw 'plot.' + _key + '.q{} missing: ' + tw.term.id
 			body[key + '_q'] = tw.q //q_to_param(tw.q) ????
 		}
 
