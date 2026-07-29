@@ -17,7 +17,6 @@ import { TermTypeGroups, termType2label } from '#shared/terms.js'
 
 const colorScale = getColors(5)
 
-// TODO: need to also consider filter0 whenever pp filter is considered
 class DEinputPlot extends PlotBase implements RxComponent {
 	static type = 'DEinput'
 
@@ -218,7 +217,6 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			})
 		}
 
-		// TODO: need to also consider filter0
 		// filterPrompt.main() always empties the filterUiRoot data
 		const filter = structuredClone(this.state?.termfilter?.filter)
 		this.filterPrompt.main(excludeFilterByTag(filter, 'cohortFilter')) // provide mass filter to limit the term tree
@@ -372,9 +370,13 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			}
 		}
 		if (this.expressionSource === 'pseudobulk') samplelstTW.pseudobulk = this.pseudobulk
+		// ignore filter0 when cohort0 is used
+		const hasCohort0 = groups.find(g => g.filter.lst.find(item => item.tvs?.term.type == 'cohort'))
+		const filter0 = hasCohort0 ? null : this.state.termfilter.filter0
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleList(
-				filterJoin([g.filter, this.state.termfilter.filter])
+				filterJoin([g.filter, this.state.termfilter.filter]),
+				filter0
 			)
 			const sampleIds = samples.map(s => {
 				return { sampleId: s.id }
@@ -398,7 +400,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			samplelst: { groups: samplelstTW.q.groups },
 			filter: this.state.termfilter.filter,
-			filter0: this.state.termfilter.filter0,
+			filter0,
 			preAnalysis: true
 		}
 		if (this.expressionSource === 'pseudobulk') body.pseudobulk = this.pseudobulk

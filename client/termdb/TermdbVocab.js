@@ -419,14 +419,16 @@ export class TermdbVocab extends Vocab {
 
 	/** opts: 
 	 	filterJSON: JSON || string, required
+		filter0: filter0 object
 		returns sample list in array of [{id, name}....]
 	 */
-	async getFilteredSampleList(filterJSON) {
+	async getFilteredSampleList(filterJSON, filter0) {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			getsamplelist: 1,
-			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON)
+			filter: typeof filterJSON == 'string' ? filterJSON : getNormalRoot(filterJSON),
+			filter0
 		}
 		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
