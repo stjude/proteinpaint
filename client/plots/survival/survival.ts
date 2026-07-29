@@ -716,8 +716,12 @@ function setRenderers(self) {
 		// order the serieses by the user-defined legend order so the hover tooltip
 		// list categories in the same order shown in the legend
 		if (self.legendOrder?.length) {
+			const currentIndex = new Map(chart.visibleSerieses.map((d, i) => [d.seriesId, i]))
+			const orderIndex = new Map(self.legendOrder.map((id, i) => [id, i]))
 			chart.visibleSerieses.sort(
-				(a: any, b: any) => self.legendOrder.indexOf(a.seriesId) - self.legendOrder.indexOf(b.seriesId)
+				(a: any, b: any) =>
+					(orderIndex.get(a.seriesId) ?? self.legendOrder.length + (currentIndex.get(a.seriesId) ?? 0)) -
+					(orderIndex.get(b.seriesId) ?? self.legendOrder.length + (currentIndex.get(b.seriesId) ?? 0))
 			)
 		}
 		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
