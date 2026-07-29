@@ -22,6 +22,7 @@ export class SearchHandler {
 		}
 		const usecaseConfig = opts.usecase?.specialCase?.config
 		const plots = usecaseConfig?.sample?.plots
+		const isMeta = usecaseConfig?.sample?.isMetaResult
 
 		/** Use either the usecase.config.sample.plots:[] or usecase.config.name (i.e.
 		 * plot name) to filter the terms OR display all. If displaying all terms,
@@ -32,8 +33,10 @@ export class SearchHandler {
 			? scctTerms.filter(t => t.plot === usecaseConfig.name)
 			: scctTerms
 
+		const getLabel = t => ((isMeta || plots.length == 1) ? t.name : `${t.name} (${t.plot})`)
+
 		const filteredTerms: Set<any> = new Set(
-			plots || !usecaseConfig?.name ? filtered.map(t => ({ ...t, label: `${t.name} (${t.plot})` })) : filtered
+			plots || !usecaseConfig?.name ? filtered.map(t => ({ ...t, label: getLabel(t)})) : filtered
 		)
 
 		for (const t of Array.from(filteredTerms)) {
