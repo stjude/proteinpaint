@@ -466,6 +466,7 @@ class MassCumInc {
 	processResults(results) {
 		if (Object.keys(results.data).length === 0) {
 			sayerror(this.dom.errorDiv, 'No data available')
+			return
 		}
 		const s = this.settings
 		const c = this.config
