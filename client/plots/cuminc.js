@@ -722,6 +722,7 @@ function setRenderers(self) {
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
+			.attr('data-testid', 'sjpp-cuminc-plotDiv')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
@@ -735,6 +736,7 @@ function setRenderers(self) {
 		div
 			.append('div')
 			.attr('class', 'sjpcb-cuminc-title')
+			.attr('data-testid', 'sjpp-cuminc-plotTitle')
 			.style('text-align', 'center')
 			.style('width', `${s.svgw + 50}px`)
 			.style('height', s.chartTitleDivHt + 'px')
@@ -748,6 +750,7 @@ function setRenderers(self) {
 		div
 			.append('div')
 			.attr('class', 'pp-cuminc-chart-noData')
+			.attr('data-testid', 'sjpp-cuminc-noData')
 			.style('display', 'none')
 			.style('width', `${s.svgw + 50}px`)
 			.style('margin', '40px 5px')
@@ -931,12 +934,14 @@ function setRenderers(self) {
 
 		serieses.exit().remove()
 		serieses.each(function (series, i) {
+			select(this).attr('data-testid', `sjpp-cuminc-series-${series.seriesId || ''}`)
 			renderSeries(select(this), series, s)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpcb-cuminc-series')
+			.attr('data-testid', d => `sjpp-cuminc-series-${d.seriesId || ''}`)
 			.each(function (series, i) {
 				renderSeries(select(this), series, s)
 			})
@@ -1017,13 +1022,13 @@ function setRenderers(self) {
 			const clipId = `${self.id}-${self.chartIncrement++}`
 			clipRect = svg.append('defs').append('clipPath').attr('id', clipId).append('rect')
 			clipG = svg.append('g').attr('class', 'sjpcb-cuminc-clipG')
-			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG').attr('data-testid', 'sja-cuminc-main-g')
+			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG').attr('data-testid', 'sjpp-cuminc-main-g')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG').attr('clip-path', `url(#${clipId})`)
 			axisG = mainG.append('g').attr('class', 'sjpcb-cuminc-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-y-axis')
-			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
-			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
+			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title').attr('data-testid', 'sjpp-cuminc-x-title')
+			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title').attr('data-testid', 'sjpp-cuminc-y-title')
 			atRiskG = mainG.append('g').attr('class', 'sjpp-cuminc-atrisk')
 
 			line = mainG
@@ -1059,6 +1064,7 @@ function setRenderers(self) {
 
 		// cumulative incidence line
 		g.append('path')
+			.attr('data-testid', `sjpp-cuminc-curve-${series.seriesId || ''}`)
 			.attr('d', self.lineFxn(series.data.map(d => ({ scaledX: d.scaledX, scaledY: d.scaledY[0] }))))
 			.style('fill', 'none')
 			.style('stroke', self.term2toColor[series.seriesId].adjusted)
@@ -1069,6 +1075,7 @@ function setRenderers(self) {
 
 		// confidence intervals
 		g.append('path')
+			.attr('data-testid', `sjpp-cuminc-ci-${series.seriesId || ''}`)
 			.attr(
 				'd',
 				area()
@@ -1112,6 +1119,7 @@ function setRenderers(self) {
 					')'
 			)
 			.append('text')
+			.attr('data-testid', 'sjpp-cuminc-x-title-text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(s.xTitleLabel)
@@ -1128,6 +1136,7 @@ function setRenderers(self) {
 					')rotate(-90)'
 			)
 			.append('text')
+			.attr('data-testid', 'sjpp-cuminc-y-title-text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(yTitleLabel)
@@ -1374,6 +1383,7 @@ function getPj(self) {
 			},
 			seriesLabel(row, context) {
 				const t2 = self.config?.term2
+				console.log('term2 in seriesLabel', t2)
 				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
 				if (t2?.q?.type == 'predefined-groupset' || t2?.q?.type == 'custom-groupset') return seriesId

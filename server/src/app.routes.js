@@ -54,6 +54,7 @@ export const routeFiles = [
 	import('./routes/termdb.cluster.ts'),
 	import('./routes/termdb.cohort.summary.ts'),
 	import('./routes/termdb.cohorts.ts'),
+	import('./routes/termdb.cuminc.ts'),
 	import('./routes/termdb.config.ts'),
 	import('./routes/termdb.descrstats.ts'),
 	import('./routes/termdb.dmr.ts'),
