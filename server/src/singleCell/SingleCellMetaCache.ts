@@ -28,19 +28,19 @@ export class SingleCellMetaCache {
     text: string,
     coordsColumns: CoordColumns,
     sampleName2id: (sampleName: string) => any,
-    cellIdxCols: {cellIdx: number, sampleIdx: number}
+    cellIdxCols?: {cellIdx: number, sampleIdx: number}
   ): void {
     const cellCache = this.initCellCacheFromText(text, coordsColumns, cellIdxCols)
     this.mapMetaResult(metaResultName, cellCache, sampleName2id)
   }
 
-  private initCellCacheFromText(text: string, coordsColumns: CoordColumns, cellIdxCols: {cellIdx: number, sampleIdx: number}): CellCache {
+  private initCellCacheFromText(text: string, coordsColumns: CoordColumns, cellIdxCols?: {cellIdx: number, sampleIdx: number}): CellCache {
     const lines = text.trim().split('\n')
     if (!lines[0]) throw new Error('meta result file is empty')
     const headerColumnCount = lines[0].split('\t').length
 
-    const cellIdIdx = cellIdxCols.cellIdx ?? 0
-    const sampleIdIdx = cellIdxCols.sampleIdx ?? 1
+    const cellIdIdx = cellIdxCols?.cellIdx ?? 0
+    const sampleIdIdx = cellIdxCols?.sampleIdx ?? 1
     const xIdx = coordsColumns.x
     const yIdx = coordsColumns.y
 
