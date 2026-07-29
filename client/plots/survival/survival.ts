@@ -542,7 +542,16 @@ class TdbSurvival extends PlotBase implements RxComponent {
 		// reordering survives session save/recover and re-triggers this component's update
 		const savedOrder = this.settings.legendOrder
 		if (savedOrder?.length) {
-			legendItems.sort((a, b) => savedOrder.indexOf(a.seriesId) - savedOrder.indexOf(b.seriesId))
+			const currentIndex = new Map(legendItems.map((d, i) => [d.seriesId, i]))
+			const savedIndex = new Map(savedOrder.map((id, i) => [id, i]))
+			legendItems.sort((a, b) => {
+				const ai = savedIndex.get(a.seriesId)
+				const bi = savedIndex.get(b.seriesId)
+				return (
+					(ai ?? savedOrder.length + (currentIndex.get(a.seriesId) ?? 0)) -
+					(bi ?? savedOrder.length + (currentIndex.get(b.seriesId) ?? 0))
+				)
+			})
 		}
 		// keep this.legendOrder in sync with the rendered order for the legend context menu
 		this.legendOrder = legendItems.map(item => item.seriesId)
