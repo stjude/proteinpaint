@@ -44,6 +44,10 @@ export function getChatRelatedPlotTypes(supportedPlotTypes: string[] | undefined
 		plotTypes.push('prebuiltscatter')
 	}
 
+	// Cox regression is a child of the regression chart type. The dataset's supported chart list
+	// already evaluates whether a survival/condition outcome is available.
+	if (plotTypes.includes('cox')) plotTypes.push('cox')
+
 	// For genomeBrowser
 	if (plotTypes.includes('genomeBrowser')) {
 		plotTypes.push('genomeBrowser')

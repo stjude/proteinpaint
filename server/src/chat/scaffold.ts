@@ -13,6 +13,7 @@ import type {
 	GenomeBrowserScaffold,
 	MatrixScaffold,
 	SurvivalScaffold,
+	CoxScaffold,
 	PrebuiltScatterScaffold,
 	MsgToUser
 } from './scaffoldTypes.ts'
@@ -133,6 +134,47 @@ Query: "${user_prompt}"
 	const scaffold = parsed as SurvivalScaffold
 	scaffold.plotType = 'survival'
 	return scaffold
+}
+
+async function getScaffold_Cox(user_prompt: string, llm: LlmConfig): Promise<CoxScaffold | MsgToUser> {
+	const prompt = `You are a ProteinPaint Cox regression assistant. Extract the time-to-event outcome, one or more independent predictor variables, and an optional cohort filter from the user's query.
+
+Return ONLY valid JSON with this structure:
+{
+  "outcome": "<survival or time-to-event outcome phrase>",
+  "independent": ["<predictor phrase>", "<predictor phrase>"],
+  "filter": "<optional cohort restriction>"
+}
+
+Rules:
+1. outcome is required and must describe a survival/time-to-event outcome available in the dataset.
+2. independent is required and must contain at least one predictor. Preserve the user's wording.
+3. filter is optional and only describes a cohort restriction, not a predictor or outcome.
+4. Use Cox for hazard ratios, Cox proportional hazards, or multivariable survival modeling, not ordinary Kaplan-Meier requests.
+5. If outcome is missing, return {"type":"text","text":"No Cox regression outcome could be extracted from the prompt."}.
+6. If no independent variable is present, return {"type":"text","text":"No independent variables could be extracted from the prompt for Cox regression."}.
+
+Examples:
+Q: "Run a Cox regression of overall survival by age and sex"
+A: {"outcome":"overall survival","independent":["age","sex"]}
+Q: "Estimate hazard ratios for progression-free survival adjusted for treatment and subtype"
+A: {"outcome":"progression-free survival","independent":["treatment","subtype"]}
+
+Query: "${user_prompt}"`
+	const response = await route_to_appropriate_llm_provider(prompt, llm, llm.classifierModelConfig)
+	if (isMsgToUser(response)) return response
+	let parsed: any
+	try {
+		parsed = JSON.parse(response)
+	} catch {
+		return { type: 'text', text: `Could not parse a Cox regression configuration from the response: ${response}` }
+	}
+	if (parsed.type === 'text') return parsed as MsgToUser
+	if (!parsed.outcome) return { type: 'text', text: 'No Cox regression outcome could be extracted from the prompt.' }
+	if (!Array.isArray(parsed.independent) || parsed.independent.length === 0)
+		return { type: 'text', text: 'No independent variables could be extracted from the prompt for Cox regression.' }
+	parsed.plotType = 'cox'
+	return parsed as CoxScaffold
 }
 
 async function getScaffold_genomeBrowser(
@@ -1319,6 +1361,8 @@ export async function inferScaffold(
 			return await getScaffold_genomeBrowser(user_prompt, llm)
 		case 'survival':
 			return await getScaffold_Survival(user_prompt, llm)
+		case 'cox':
+			return await getScaffold_Cox(user_prompt, llm)
 		case 'hiercluster':
 			return await getScaffold_hierarchical(
 				user_prompt,
