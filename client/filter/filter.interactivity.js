@@ -21,6 +21,12 @@ export function setInteractivity(self) {
 				.filter(d => d.action == 'edit')
 				.style('display', 'none')
 
+		if (item.tvs?.term.type == 'cohort')
+			self.dom.table
+				.selectAll('tr')
+				.filter(d => d.action == 'edit' || d.action == 'negate')
+				.style('display', 'none')
+
 		self.dom.controlsTip.showunder(this)
 	}
 
