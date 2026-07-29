@@ -186,7 +186,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 				const text = await read_file(tsvfile)
 				const t1 = Date.now()
 				mayLog(ds.label, 'sc meta read file time:', t1 - t0)
-				const cellIdxCols = { cellIdx: plot.cellIdx || 0, sampleIdx: hasSample?.index || 1 }
+				const cellIdxCols = { cellIdx: plot.cellIdx ?? 0, sampleIdx: hasSample?.index ?? 1 }
 				metaCache.addMetaResult(sampleName, text, plot.coordsColumns, ds.cohort.termdb.q.sampleName2id, cellIdxCols)
 				mayLog(ds.label, 'sc meta caching time:', Date.now() - t0)
 			} catch (e: any) {

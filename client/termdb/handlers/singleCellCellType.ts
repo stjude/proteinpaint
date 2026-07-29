@@ -33,7 +33,7 @@ export class SearchHandler {
 			? scctTerms.filter(t => t.plot === usecaseConfig.name)
 			: scctTerms
 
-		const getLabel = t => ((isMeta || plots.length == 1) ? t.name : `${t.name} (${t.plot})`)
+		const getLabel = t => ((isMeta || plots?.length == 1) ? t.name : `${t.name} (${t.plot})`)
 
 		const filteredTerms: Set<any> = new Set(
 			plots || !usecaseConfig?.name ? filtered.map(t => ({ ...t, label: getLabel(t)})) : filtered
