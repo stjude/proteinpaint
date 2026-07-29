@@ -22,7 +22,7 @@ input parameter:
 
 export function renderPvalues({
 	title,
-	titleTestid,
+	titleTestid = undefined,
 	holder,
 	plot,
 	tests,
