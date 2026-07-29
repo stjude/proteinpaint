@@ -1,5 +1,6 @@
 import { appInit } from '../app'
 import { vocabInit } from '../vocabulary'
+import { TermTypes } from '#shared/terms.js'
 
 export class SearchHandler {
 	callback: any
@@ -16,7 +17,7 @@ export class SearchHandler {
 			const term = {
 				id: cohort.id,
 				name: cohort.name,
-				type: 'cohort',
+				type: TermTypes.COHORT,
 				filter0: cohort.filter,
 				isleaf: true,
 				parent_id: null
