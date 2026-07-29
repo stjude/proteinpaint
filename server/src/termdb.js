@@ -1,7 +1,6 @@
 import path from 'path'
 import * as termdbsql from './termdb.sql.js'
 import * as phewas from './termdb.phewas.js'
-import { get_incidence } from './termdb.cuminc.js'
 import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
@@ -50,8 +49,6 @@ export function handle_request_closure(genomes) {
 			if (q.getsamplelist) return res.send(await getSampleList(req, q, ds))
 
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
-			if (q.getcuminc) q.for = 'cuminc'
-			if (q.for == 'cuminc') return await trigger_getincidence(q, res, ds)
 			if (q.getregression) q.for = 'regression'
 			if (q.for == 'regression') return res.send(await get_regression(q, ds))
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
@@ -246,11 +243,6 @@ rightnow only few conditional terms have grade info
 */
 	if (!q.tid) throw 'no term id'
 	res.send({ terminfo: tdb.q.getTermInfo(q.tid) })
-}
-
-async function trigger_getincidence(q, res, ds) {
-	const data = await get_incidence(q, ds)
-	res.send(data)
 }
 
 function trigger_genesetByTermId(q, res, tdb) {

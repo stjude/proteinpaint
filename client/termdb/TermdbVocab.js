@@ -244,6 +244,7 @@ export class TermdbVocab extends Vocab {
 		// end of mds3 parameters
 
 		if (opts.chartType == 'survival') return ['termdb/survival', body]
+		if (opts.chartType == 'cuminc') return ['termdb/cuminc', body]
 		return [opts.chartType ? 'termdb' : 'termdb/barsql', body]
 	}
 
