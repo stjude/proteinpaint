@@ -286,7 +286,7 @@ tape.skip('getTdbDataUrl()', async test => {
 		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
 	}
 	result = termdbVocabApi.getTdbDataUrl(opts)
-	test.ok(result.includes(`getcuminc=1`), message)
+	test.ok(result.includes(`termdb/cuminc`), message)
 
 	message = 'Should return survival plot parameter'
 	opts = {

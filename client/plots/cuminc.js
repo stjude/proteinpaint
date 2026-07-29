@@ -1383,7 +1383,6 @@ function getPj(self) {
 			},
 			seriesLabel(row, context) {
 				const t2 = self.config?.term2
-				console.log('term2 in seriesLabel', t2)
 				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
 				if (t2?.q?.type == 'predefined-groupset' || t2?.q?.type == 'custom-groupset') return seriesId
