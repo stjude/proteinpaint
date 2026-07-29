@@ -208,7 +208,7 @@ class MassCumInc {
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			errorDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			errorDiv: holder.append('div'),
 			loadingDiv: holder
 				.append('div')
 				.style('position', 'absolute')
@@ -474,6 +474,7 @@ class MassCumInc {
 	processResults(results) {
 		if (Object.keys(results.data).length === 0) {
 			sayerror(this.dom.errorDiv, 'No data available')
+			return
 		}
 		const s = this.settings
 		const c = this.config
