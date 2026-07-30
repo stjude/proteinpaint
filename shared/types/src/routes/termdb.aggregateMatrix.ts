@@ -1,21 +1,11 @@
 import type { ErrorResponse } from './errorResponse.ts'
-
-export type SectionEntry = {
-    /** WIP: Terms under each section */
-    id: string
-}[]
-
-
-export type MemberEntry = {
-    //These are terms - either from the termdb or in termtype2terms[TermTypeGroup]. 
-    id: string
-}[]
+import type { TermWrapper } from '../terms/tw.ts'
 
 export type TermdbAggregateMatrixRequest = {
     genome: string
     dslabel: string
-    entries: { [section: string]: SectionEntry }
-    categories: { [member: string]: MemberEntry }
+    entries: { [section: string]: TermWrapper[] }
+    categories: { [member: string]: TermWrapper[] }
     /** Aggregation method to determine the color gradient. */
     gradientMethod: string
     /** Aggregation method to determine the dot sizes. */

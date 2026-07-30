@@ -1,5 +1,6 @@
 import type { RoutePayload, TermdbAggregateMatrixRequest, TermdbAggregateMatrixResponse, RouteApi } from '#types'
 import { validGenomeDs } from '#routes/common.ts'
+import { getAggMatrixData } from './getAggMatrixData.ts'
 
 export const payload: RoutePayload = {
     init,
@@ -36,6 +37,8 @@ function init({ genomes }) {
             if (!g) throw new Error('invalid genome name')
             const ds = g.datasets[q.dslabel]
             if (!ds) throw new Error('invalid dataset name')
+
+            getAggMatrixData(q, ds) 
             
             /** Needs to calculate the overall color
              * Needs to calculate the dot size from a min and max size */
