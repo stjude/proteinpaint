@@ -166,7 +166,6 @@ export class QualValues extends QualitativeBase {
 		//this.term = tw.term // already set in base class
 		this.q = tw.q
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -253,7 +252,6 @@ export class QualPredefinedGS extends QualitativeBase {
 		Object.defineProperty(this, 'groupset', {
 			value: this.#tw.term.groupsetting[this.#tw.q.predefined_groupset_idx]
 		})
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -311,7 +309,6 @@ export class QualCustomGS extends QualitativeBase {
 		this.q = tw.q
 		Object.defineProperty(this, 'groupset', { value: this.q.customset })
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {
