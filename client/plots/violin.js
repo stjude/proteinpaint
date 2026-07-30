@@ -1,5 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
+import { controlsInit, renderTerm1Label } from './controls'
+import { getT0T2defaultQ } from './summaryQ.ts'
 import setViolinRenderer from './violin.renderer'
 //import htmlLegend from '../dom/html.legend'
 import { htmlLegend, Menu } from '#dom'
@@ -126,7 +127,7 @@ class ViolinPlot extends PlotBase {
 				label: controlLabels.term2.label,
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: this.opts.numericEditMenuVersion,
-				defaultQ4fillTW: term0_term2_defaultQ,
+				defaultQ4fillTW: getT0T2defaultQ(),
 				getDisplayStyle: plot => (plot.config?.term?.term?.type === 'termCollection' ? 'none' : '')
 			},
 			{
@@ -141,7 +142,7 @@ class ViolinPlot extends PlotBase {
 				// it will create a separate violin-overlay group per unique float or integer value
 				// and there will nonsensical tens/hundreds of these charts based on the cohort size
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ,
+				defaultQ4fillTW: getT0T2defaultQ(),
 				getDisplayStyle: plot => (plot.config?.term?.term?.type === 'termCollection' ? 'none' : '')
 			},
 			{

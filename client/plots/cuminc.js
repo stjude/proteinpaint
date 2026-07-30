@@ -1,5 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
+import { controlsInit, renderTerm1Label } from './controls'
+import { getT0T2defaultQ } from './summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
 import { select } from 'd3-selection'
 import { sayerror } from '#dom'
@@ -17,15 +18,6 @@ import { renderPvalues } from '#dom/renderPvalueTable'
 import { Menu } from '#dom/menu'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
-
-const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
-Object.assign(t0_t2_defaultQ, {
-	numeric: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		preferredBins: 'median'
-	}
-})
 
 /*
 class Cuminc
@@ -306,7 +298,7 @@ class MassCumInc {
 							label: controlLabels.term2.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: t0_t2_defaultQ
+							defaultQ4fillTW: getT0T2defaultQ(true)
 						},
 						{
 							type: 'term',
@@ -317,7 +309,7 @@ class MassCumInc {
 							label: controlLabels.term0.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: t0_t2_defaultQ
+							defaultQ4fillTW: getT0T2defaultQ(true)
 						},
 						{
 							label: 'Minimum sample size of series',
@@ -1308,12 +1300,12 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(opts.term, app.vocabApi, {
 			condition: { mode: 'cuminc' }
 		})
-		// supply t0_t2_defaultQ if opts.term0/2.bins/q is undefined
-		// so that t0_t2_defaultQ does not override bins or q from user
+		// supply the default q if opts.term0/2.bins/q is undefined
+		// so that the default q does not override bins or q from user
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : t0_t2_defaultQ)
+			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? null : getT0T2defaultQ(true))
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : t0_t2_defaultQ)
+			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? null : getT0T2defaultQ(true))
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}

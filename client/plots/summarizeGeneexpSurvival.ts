@@ -1,7 +1,7 @@
 import { addGeneSearchbox, Menu, table2col } from '#dom'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
 import { launchPlot } from './summarizeMutationDiagnosis'
-import { t0_t2_defaultQ } from './survival/survival'
+import { getT0T2defaultQ } from './summaryQ.ts'
 
 /*
 duplicates code from summarizeMutationDiagnosis, with minute changes
@@ -46,7 +46,7 @@ export async function makeChartBtnMenu(holder, chartsInstance) {
 				try {
 					loadingDiv.style('display', 'block')
 					const expTw: any = { term: { gene: result.geneSymbol, type: 'geneExpression' } }
-					await fillTermWrapper(expTw, chartsInstance.app.vocabApi, t0_t2_defaultQ)
+					await fillTermWrapper(expTw, chartsInstance.app.vocabApi, getT0T2defaultQ(true))
 					launchPlot({
 						tw1: dictTw,
 						tw2: expTw,

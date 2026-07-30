@@ -1,5 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
-import { controlsInit, term0_term2_defaultQ } from './controls'
+import { controlsInit } from './controls'
+import { getT0T2defaultQ } from './summaryQ.ts'
 import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '../dom/table.ts'
 import svgLegend from '#dom/svg.legend'
@@ -186,7 +187,7 @@ class BrainImaging {
 				usecase: { target: 'brainImaging', detail: 'term0' },
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
+				defaultQ4fillTW: getT0T2defaultQ()
 			},
 			{
 				label: 'Color by',
@@ -197,7 +198,7 @@ class BrainImaging {
 				usecase: { target: 'brainImaging', detail: 'term2' },
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
+				defaultQ4fillTW: getT0T2defaultQ()
 			}
 		]
 		return mandatoryConfigInputOptions

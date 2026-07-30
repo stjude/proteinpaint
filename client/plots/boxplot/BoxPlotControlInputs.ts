@@ -1,4 +1,5 @@
-import { term0_term2_defaultQ, renderTerm1Label } from '../controls'
+import { renderTerm1Label } from '../controls'
+import { getT0T2defaultQ } from '../summaryQ.ts'
 import { isNumTermCollection } from '#shared/terms.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
@@ -30,7 +31,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			label: controlLabels.term2.label,
 			vocabApi: app.vocabApi,
 			numericEditMenuVersion: opts.numericEditMenuVersion || ['continuous', 'discrete'],
-			defaultQ4fillTW: term0_term2_defaultQ,
+			defaultQ4fillTW: getT0T2defaultQ(),
 			// Hide term2 control when numeric termCollection is detected
 			// and take into account state changes.
 			getDisplayStyle: plot => (isNumTermCollection(plot.config.term?.term) ? 'none' : '')
@@ -47,7 +48,7 @@ export function setBoxPlotControlInputs(state: any, app: any, opts: any, getChar
 			// it will create a separate violin-overlay group per unique float or integer value
 			// and there will nonsensical tens/hundreds of these charts based on the cohort size
 			numericEditMenuVersion: opts.numericEditMenuVersion || ['discrete'],
-			defaultQ4fillTW: term0_term2_defaultQ,
+			defaultQ4fillTW: getT0T2defaultQ(),
 			// Hide term0 control when numeric termCollection is detected
 			// and take into account state changes.
 			getDisplayStyle: plot => (isNumTermCollection(plot.config.term?.term) ? 'none' : '')

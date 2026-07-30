@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { fillTermWrapper } from '#termsetting'
-import { controlsInit, term0_term2_defaultQ } from './controls'
+import { controlsInit } from './controls'
+import { getT0T2defaultQ } from './summaryQ.ts'
 import { select2Terms } from '#dom/select2Terms'
 import { isNumericTerm } from '#shared/terms.js'
 import { addNewGroup, getFilter, getSamplelstTW } from '../mass/groups'
@@ -534,7 +535,7 @@ class Facet extends PlotBase {
 				label: 'Columns',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
+				defaultQ4fillTW: getT0T2defaultQ()
 			},
 			{
 				type: 'term',
@@ -545,7 +546,7 @@ class Facet extends PlotBase {
 				label: 'Rows',
 				vocabApi: this.app.vocabApi,
 				numericEditMenuVersion: ['discrete'],
-				defaultQ4fillTW: term0_term2_defaultQ
+				defaultQ4fillTW: getT0T2defaultQ()
 			},
 			{
 				boxLabel: '',
@@ -615,15 +616,15 @@ export async function getPlotConfig(opts, app) {
 		}
 	}
 	if (!opts.columnTw) throw '.columnTw{} missing'
-	// supply term0_term2_defaultQ if opts.term0/2.bins/q is undefined
-	// so that term0_term2_defaultQ does not override bins or q from user
+	// supply the default q if opts.term0/2.bins/q is undefined
+	// so that the default q does not override bins or q from user
 	await fillTermWrapper(
 		opts.columnTw,
 		app.vocabApi,
-		opts.columnTw.bins || opts.columnTw.q ? undefined : term0_term2_defaultQ
+		opts.columnTw.bins || opts.columnTw.q ? undefined : getT0T2defaultQ()
 	)
 	if (!opts.rowTw) throw '.rowTw{} missing'
-	await fillTermWrapper(opts.rowTw, app.vocabApi, opts.rowTw.bins || opts.rowTw.q ? undefined : term0_term2_defaultQ)
+	await fillTermWrapper(opts.rowTw, app.vocabApi, opts.rowTw.bins || opts.rowTw.q ? undefined : getT0T2defaultQ())
 	const result = copyMerge(config, opts)
 	return result
 }

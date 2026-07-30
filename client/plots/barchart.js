@@ -5,7 +5,8 @@ import { rendererSettings, plotLength } from './bars.settings'
 import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
-import { controlsInit, term0_term2_defaultQ, renderTerm1Label } from './controls'
+import { controlsInit, renderTerm1Label } from './controls'
+import { getT0T2defaultQ } from './summaryQ.ts'
 // import { to_svg } from '../src/client'
 import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
@@ -123,7 +124,7 @@ export class Barchart extends PlotBase {
 					label: controlLabels.term2.label,
 					vocabApi: this.app.vocabApi,
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
-					defaultQ4fillTW: term0_term2_defaultQ,
+					defaultQ4fillTW: getT0T2defaultQ(),
 					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
 					processConfig: config => {
 						//config.settings not usually passed for logic check below
@@ -154,7 +155,7 @@ export class Barchart extends PlotBase {
 					// it will create a separate violin-overlay group per unique float or integer value
 					// and there will nonsensical tens/hundreds of these charts based on the cohort size
 					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
-					defaultQ4fillTW: term0_term2_defaultQ,
+					defaultQ4fillTW: getT0T2defaultQ(),
 					getDisplayStyle: () => (this.isCategoricalTermCollection() ? 'none' : ''),
 					getBodyParams: () => {
 						const tw = this.config['term0']
