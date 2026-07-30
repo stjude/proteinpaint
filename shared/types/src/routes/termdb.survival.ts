@@ -72,24 +72,24 @@ export type SurvivalTest = {
 	pvalue: string
 }
 
+export type SurvivalResponse = {
+	keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk']
+	case: SurvivalCaseRow[]
+	refs: {
+		bins?: any[]
+		byTermId?: any
+		orderedKeys?: {
+			chart: string[]
+			series: string[]
+		}
+	}
+	tests?: {
+		[chartId: string]: SurvivalTest[]
+	}
+}
+
 export type TermdbSurvivalResponse =
-	| {
-			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk']
-			case: SurvivalCaseRow[]
-			refs: {
-				bins?: any[]
-				byTermId?: any
-				orderedKeys?: {
-					chart: string[]
-					series: string[]
-				}
-			}
-			tests?: {
-				[chartId: string]: SurvivalTest[]
-			}
-	  }
+	| SurvivalResponse
 	| {
 			error: string
 	  }
-
-// TODO: write payload examples to help with automated testing and documentation, for non-prod use only
