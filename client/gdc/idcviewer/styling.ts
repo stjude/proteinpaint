@@ -43,13 +43,12 @@ export const sharedStyleFns = {
 
 export const idcViewerStyles = {
 	loadingDiv: {
-		display: 'none',
+		display: 'block',
 		'background-color': sharedColors.fullWhiteBgColor,
 		position: 'absolute',
-		top: '0',
-		left: '0',
 		width: '100%',
-		height: '100%'
+		height: '100%',
+		opacity: '0.5'
 	},
 	searchDiv: {
 		display: 'flex',
@@ -234,7 +233,8 @@ export const idcTableStyles = {
 	},
 	cellLinkContainer: {
 		display: 'flex',
-		'align-items': 'center'
+		'align-items': 'center',
+		'justify-content': 'flex-start'
 	},
 	studyLink: {
 		color: 'black',
