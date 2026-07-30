@@ -210,8 +210,10 @@ export async function phrase2entity(
 		return survival_term
 	} else if (plotType === 'cox') {
 		const scaffoldResult = scaffold as CoxScaffold
-		const resolvedOutcome = await find_survival_terms(scaffoldResult.outcome, llm, dbPath)
-		if (resolvedOutcome === null) return { type: 'text', text: 'No survival terms available in this dataset.' }
+		const resolvedOutcome = await find_survival_terms(scaffoldResult.outcome, llm, dbPath, true)
+		if (resolvedOutcome === null) {
+			return { type: 'text', text: 'No survival terms available in this dataset.' }
+		}
 		if (isMsgToUser(resolvedOutcome)) return resolvedOutcome
 		if (typeof resolvedOutcome !== 'string')
 			return { type: 'text', text: 'Cox regression requires one unambiguous survival outcome.' }
@@ -650,7 +652,8 @@ Phrase: "${phrase}"
 async function find_survival_terms(
 	user_prompt: string,
 	llm: LlmConfig,
-	dbPath: string
+	dbPath: string,
+	strict = false
 ): Promise<string | DbRows[] | null | MsgToUser> {
 	const { db_rows } = await parse_survival_terms_from_db(dbPath)
 	if (db_rows.length === 0) return null
@@ -708,12 +711,22 @@ Query: "${user_prompt}"
 		}
 	}
 	const picked = parsed.survivalTerm
-	if (!picked || picked === 'null') return db_rows
+	if (!picked || picked === 'null') {
+		if (strict) {
+			const phrase = user_prompt.charAt(0).toUpperCase() + user_prompt.slice(1)
+			return { type: 'text', text: `${phrase} is not a survival term and cannot be used as an outcome variable.` }
+		}
+		return db_rows
+	}
 	const match = db_rows.find(r => r.name === picked)
 	if (!match) {
 		mayLog(
 			`Survival term classifier returned "${picked}" which is not in db_rows; returning full list for user disambiguation.`
 		)
+		if (strict) {
+			const phrase = user_prompt.charAt(0).toUpperCase() + user_prompt.slice(1)
+			return { type: 'text', text: `${phrase} is not a survival term and cannot be used as an outcome variable.` }
+		}
 		return db_rows
 	}
 	return match.name

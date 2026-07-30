@@ -141,18 +141,18 @@ async function getScaffold_Cox(user_prompt: string, llm: LlmConfig): Promise<Cox
 
 Return ONLY valid JSON with this structure:
 {
-  "outcome": "<survival or time-to-event outcome phrase>",
+  "outcome": "<outcome phrase>",
   "independent": ["<predictor phrase>", "<predictor phrase>"],
   "filter": "<optional cohort restriction>"
 }
 
 Rules:
-1. outcome is required and must describe a survival/time-to-event outcome available in the dataset.
+1. outcome is required. Extract the phrase the user intends as the outcome variable without deciding whether it is a survival term.
 2. independent is required and must contain at least one predictor. Preserve the user's wording.
 3. filter is optional and only describes a cohort restriction, not a predictor or outcome.
 4. Use Cox for hazard ratios, Cox proportional hazards, or multivariable survival modeling, not ordinary Kaplan-Meier requests.
-5. If outcome is missing, return {"type":"text","text":"No Cox regression outcome could be extracted from the prompt."}.
-6. If no independent variable is present, return {"type":"text","text":"No independent variables could be extracted from the prompt for Cox regression."}.
+5. If no outcome phrase is present, return an empty string for the outcome field.
+6. If no independent variable is present, return an empty array for the independent field.
 
 Examples:
 Q: "Run a Cox regression of overall survival by age and sex"
@@ -169,7 +169,7 @@ Query: "${user_prompt}"`
 	} catch {
 		return { type: 'text', text: `Could not parse a Cox regression configuration from the response: ${response}` }
 	}
-	if (parsed.type === 'text') return parsed as MsgToUser
+	if (parsed.type === 'text') parsed = {}
 	if (!parsed.outcome) return { type: 'text', text: 'No Cox regression outcome could be extracted from the prompt.' }
 	if (!Array.isArray(parsed.independent) || parsed.independent.length === 0)
 		return { type: 'text', text: 'No independent variables could be extracted from the prompt for Cox regression.' }
