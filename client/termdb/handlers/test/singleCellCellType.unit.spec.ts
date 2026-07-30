@@ -1,7 +1,8 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../singleCellCellType.ts'
-import { TermTypeGroups, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { TermTypeGroups } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE } from '#types'
 
 /*************************
  reusable helper functions

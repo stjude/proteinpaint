@@ -4,7 +4,7 @@ import { sleep, detectOne, detectGte, detectLst, detectAttr } from '#test/test.h
 import { select } from 'd3-selection'
 import { appInit } from '#plots/plot.app.js'
 import { fillTermWrapper } from '#termsetting'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 /**************
  test sections
 

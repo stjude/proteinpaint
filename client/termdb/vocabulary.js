@@ -2,7 +2,7 @@ import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { TermdbVocab } from './TermdbVocab'
 import { FrontendVocab } from './FrontendVocab'
 import { isNumeric } from '#shared/helpers.js'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#types'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/

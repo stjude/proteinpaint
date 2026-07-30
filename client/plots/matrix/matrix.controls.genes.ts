@@ -1,7 +1,7 @@
 import { initByInput } from '#plots/controls.config.js'
 import { fillTermWrapper, get$id } from '#termsetting'
 import { Menu, GeneSetEditUI, GeneSetEditUIwithTabs } from '#dom'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { getGEunit } from '#tw/geneExpression'
 import type { MatrixControls } from './matrix.controls'
 

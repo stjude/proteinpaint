@@ -10,7 +10,9 @@ import {
 	isSingleCellTerm,
 	getBin,
 	getSampleType,
-	DEFAULT_SAMPLE_TYPE,
+	DEFAULT_SAMPLE_TYPE
+} from '#shared/terms.js'
+import {
 	DNA_METHYLATION,
 	GENE_EXPRESSION,
 	GENE_VARIANT,
@@ -22,7 +24,7 @@ import {
 	PROTEOME_ABUNDANCE,
 	PSEUDOBULK,
 	JUNCTION
-} from '#shared/terms.js'
+} from '#types'
 import { get_bin_label, compute_bins } from '#shared/termdb.bins.js'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import { getCategories } from './routes/termdb.categories.ts'

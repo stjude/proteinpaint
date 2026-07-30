@@ -4,12 +4,11 @@
 // which owns the DOM (self.dom), app api (self.app), and options (self.opts).
 import { keyupEnter } from '#src/client'
 import { dofetch3 } from '#common/dofetch'
-import type { OmnisearchResult } from '#types'
+import { type OmnisearchResult, DNA_METHYLATION } from '#types'
 import { sayerror } from '../dom/sayerror.ts'
 import { select } from 'd3-selection'
 import { fillTermWrapper } from '#termsetting'
 import { dtsnvindel, dtcnv, dtsv, dtfusionrna } from '#shared/common.js'
-import { DNA_METHYLATION } from '#shared/terms.js'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { getSampleFilter } from './groups.js'

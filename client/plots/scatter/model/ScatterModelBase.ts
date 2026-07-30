@@ -4,10 +4,10 @@ import { scaleLinear as d3Linear, scaleTime } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { regressionPoly } from 'd3-regression'
 import type { Scatter } from '../scatter'
-import { getDateFromNumber, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { getDateFromNumber } from '#shared/terms.js'
 import type { ColorLegendItem, ScatterChart, ScatterDataResult, ScatterRanges, ShapeLegendItem } from '../scatterTypes'
 import { maxSvgSamplesCutoff, noExpColor, expColor } from '../settings/defaults'
-import type { SingleCellPlotDataResult } from '#types'
+import { type SingleCellPlotDataResult, SINGLECELL_GENE_EXPRESSION } from '#types'
 import { xAxisOffSet, yAxisOffSet, getCoordinate, calculatePadding } from '#shared'
 
 //icons have size 16x16

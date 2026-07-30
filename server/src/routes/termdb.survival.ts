@@ -1,7 +1,7 @@
 import { getData } from '#src/termdb.matrix.js'
 import { getTwByIndex, getTwBins } from '#src/termdb.twFromRequest.ts'
 import { run_R } from '@sjcrh/proteinpaint-r'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import type { RouteApi, RoutePayload } from '#types'
 
 const payload: RoutePayload = {

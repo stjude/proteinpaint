@@ -1,6 +1,6 @@
 import { convertUnits } from '#shared/helpers.js'
 import { dtsnvindel, dtcnv, dtfusionrna, dtgeneexpression, dtsv, dtmetaboliteintensity } from '#shared/common.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { colorScaleMap } from '#shared/common.js'
 import { CNVkey2order } from './matrix.legend'
 /*

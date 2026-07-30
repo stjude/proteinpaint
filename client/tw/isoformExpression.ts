@@ -1,6 +1,5 @@
 import { type TwOpts } from './TwBase.ts'
-import type { RawIsoformExpTerm } from '#types'
-import { ISOFORM_EXPRESSION } from '#shared/terms.js'
+import { type RawIsoformExpTerm, ISOFORM_EXPRESSION } from '#types'
 
 export class IsoformExpBase {
 	isoform: string

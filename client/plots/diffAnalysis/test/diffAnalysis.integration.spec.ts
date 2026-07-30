@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../../test/front.helpers.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 /*
 Tests:

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { SingleCellCellTypeBase } from '../singleCellCellType.ts'
-import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE } from '#types'
 
 /*************************
  reusable helper functions

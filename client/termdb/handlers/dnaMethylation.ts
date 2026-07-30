@@ -1,5 +1,5 @@
 import { Menu, addGeneSearchbox, sayerror } from '#dom'
-import { DNA_METHYLATION } from '#shared/terms.js'
+import { DNA_METHYLATION } from '#types'
 import { getDNAMethUnit } from '#tw/dnaMethylation'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { DnaMethylationBase, getDNAMethUnit, getDNAMethTermName } from '../dnaMethylation.ts'
-import { DNA_METHYLATION } from '#shared/terms.js'
+import { DNA_METHYLATION } from '#types'
 
 /*************************
  reusable helper functions

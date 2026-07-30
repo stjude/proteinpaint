@@ -1,10 +1,5 @@
-import {
-	TermTypes,
-	isNumericTerm,
-	SINGLECELL_CELLTYPE,
-	SINGLECELL_GENE_EXPRESSION,
-	ISOFORM_EXPRESSION
-} from './terms.js'
+import { isNumericTerm } from './terms.js'
+import { TermTypes, SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION, ISOFORM_EXPRESSION } from '#types'
 
 export const graphableTypes = new Set([
 	'categorical',

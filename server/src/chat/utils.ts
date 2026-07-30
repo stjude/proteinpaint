@@ -1,5 +1,5 @@
 import type { LlmConfig, DbRows, DbValue, GeneDataTypeResult, GeneSetDataTypeResult } from '#types'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser, Entity, FilterTreeNode, FilterLeafNode, FilterTreeResult } from './scaffoldTypes.ts'

@@ -24,7 +24,7 @@ import { TwBase } from './TwBase.ts'
 import { copyMerge } from '#rx'
 import { set_hiddenvalues, type UseCase } from '#termsetting'
 import { throwMsgWithFilePathAndFnName } from '#dom/sayerror'
-import * as tt from '#shared/terms.js'
+import * as tt from '#types'
 
 export type QualInstance = QualValues | QualPredefinedGS | QualCustomGS
 export type QualTypes = typeof QualValues | typeof QualPredefinedGS | typeof QualCustomGS
@@ -159,7 +159,6 @@ export class QualValues extends QualitativeBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: ValuesQ
 	#tw: QualTWValues
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: QualTWValues, opts: TwOpts = {}) {
@@ -244,7 +243,6 @@ export class QualPredefinedGS extends QualitativeBase {
 	// but can still be accessed by addon methods, unlike #private props
 	groupset!: BaseGroupSet
 	#tw: QualTWPredefinedGS
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: QualTWPredefinedGS, opts: TwOpts = {}) {
@@ -305,7 +303,6 @@ export class QualCustomGS extends QualitativeBase {
 	q: CustomGroupSettingQ
 	groupset!: BaseGroupSet
 	#tw: QualTWCustomGS
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: QualTWCustomGS, opts: TwOpts = {}) {

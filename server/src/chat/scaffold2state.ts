@@ -1,7 +1,7 @@
 import { mayLog } from '#src/helpers.ts'
 import { get_samples } from '#src/termdb.sql.js'
 import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { generate_group_name_from_tvslst } from './utils.ts'
 /*
  * Input: a Tw object from upstream phase (entity2twTvs)

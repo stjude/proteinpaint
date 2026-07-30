@@ -2,8 +2,7 @@ import type { MassAppApi } from '#mass/types/mass'
 import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
-import { DNA_METHYLATION, GENE_EXPRESSION } from '#shared/terms.js'
-import { PROTEOME_DAP } from '#types'
+import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION } from '#types'
 import { getGEunit } from '#tw/geneExpression'
 
 export class VolcanoInteractions {

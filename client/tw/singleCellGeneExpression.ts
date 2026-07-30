@@ -1,6 +1,5 @@
-import type { RawSingleCellGeneExpTerm, SingleCellGeneExpressionTerm } from '#types'
+import { type RawSingleCellGeneExpTerm, type SingleCellGeneExpressionTerm, SINGLECELL_GENE_EXPRESSION } from '#types'
 import type { TwOpts } from './TwBase.ts'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
 
 const termType = SINGLECELL_GENE_EXPRESSION
 

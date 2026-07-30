@@ -1,6 +1,6 @@
 import { Menu, addGeneSearchbox } from '#dom'
 import type { AppApi } from '#rx'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#types'
 import { getSCGEunit } from '#tw/singleCellGeneExpression'
 import type { SearchHandlerOpts } from '../TermTypeSearch.js'
 

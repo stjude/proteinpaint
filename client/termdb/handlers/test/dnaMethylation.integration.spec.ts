@@ -4,7 +4,7 @@ import { SearchHandler } from '../dnaMethylation.ts'
 import { hg38 } from '../../../test/testdata/genomes'
 import { sleep } from '../../../test/test.helpers.js'
 import { vocabInit } from '../../vocabulary'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 /*
 Tests:

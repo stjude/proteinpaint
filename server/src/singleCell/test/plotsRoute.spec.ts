@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#types'
 import { init } from '../plotsRoute.ts'
 
 /**

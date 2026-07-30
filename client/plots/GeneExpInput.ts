@@ -1,6 +1,7 @@
 import { PlotBase } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, SSGSEA, typeGroup } from '#shared/terms.js'
+import { typeGroup } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION, SSGSEA } from '#types'
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
 import { addGeneSearchbox, GeneSetEditUI, Menu, sayerror, Tabs } from '#dom'

@@ -2,8 +2,8 @@ import type { RouteApi, RoutePayload } from '#types'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
+import { typeGroup } from '#shared/terms.js'
 import {
-	typeGroup,
 	SINGLECELL_CELLTYPE,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
@@ -15,7 +15,7 @@ import {
 	PSEUDOBULK,
 	JUNCTION,
 	TERM_COLLECTION
-} from '#shared/terms.js'
+} from '#types'
 import type { Mds3WithCohort } from '#types'
 
 const payload: RoutePayload = {

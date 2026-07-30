@@ -6,7 +6,7 @@ import { axisstyle, table2col } from '#dom'
 import { bplen, IN_frame, JTypes, JT_canonical, JT_exonskip, JT_exonaltuse, JT_a5ss, JT_a3ss } from '#shared/common.js'
 import { getParameter } from './tk'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { makeJunctionCustomTerm } from '#termdb/handlers/junction.customTerm'
 
 /*

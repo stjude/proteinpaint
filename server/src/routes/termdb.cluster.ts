@@ -19,13 +19,8 @@ import serverconfig from '#src/serverconfig.js'
 import { mayLimitSamples } from '#src/mds3.filter.js'
 import { clusterMethodLst, distanceMethodLst } from '#shared/clustering.js'
 import { getData, id2sampleRef, maySetMapParent2Children } from '#src/termdb.matrix.js'
-import {
-	GENE_EXPRESSION,
-	termType2label,
-	PROTEOME_ABUNDANCE,
-	numericTypes,
-	dictionaryNumericTypes
-} from '#shared/terms.js'
+import { termType2label, numericTypes, dictionaryNumericTypes } from '#shared/terms.js'
+import { GENE_EXPRESSION, PROTEOME_ABUNDANCE } from '#types'
 import { formatElapsedTime } from '#shared/time.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
 

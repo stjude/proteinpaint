@@ -5,7 +5,7 @@ import { Menu, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { scaleSqrt, arc as d3arc, select, packSiblings, packEnclose } from 'd3'
 import { forceSimulation, forceCollide, forceX, forceY } from 'd3-force'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { getColors } from '#shared/common.js'
 
 const defaultConfig = { chartType: 'animatedBubbleChart' }

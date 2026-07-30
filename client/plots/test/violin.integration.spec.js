@@ -13,7 +13,7 @@ import { fillTermWrapper } from '#termsetting'
 import { getFilterItemByTag, filterJoin } from '#filter'
 import { sleep, detectOne, detectGte, detectLst, whenVisible } from '../../test/test.helpers.js'
 import { testViolinByCount } from './helpers.spec'
-import { SINGLECELL_CELLTYPE } from '@sjcrh/proteinpaint-shared'
+import { SINGLECELL_CELLTYPE } from '#types'
 
 /**************
  test sections

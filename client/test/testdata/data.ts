@@ -1,4 +1,4 @@
-import * as tt from '#shared/terms.js'
+import * as tt from '#types'
 /* 
 exports a set of functions, each returns a TermdbTest-based term/tw/tvs that is complex and lengthy
 that are used in unit/integration tests so to simplify test and avoid code duplication

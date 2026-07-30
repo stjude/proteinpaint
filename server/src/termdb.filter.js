@@ -1,5 +1,4 @@
 import {
-	TermTypes,
 	getBin,
 	dictionaryNumericTypes,
 	isParentType,
@@ -7,6 +6,7 @@ import {
 	dtTermTypes,
 	isNonDictionaryType
 } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { validateTermCollectionTvs, getTvsDenominators } from '#shared/filter.js'
 import { getSnpData, getData } from './termdb.matrix.js'
 import { filterByItem } from './mds3.init.js'

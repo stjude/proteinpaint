@@ -1,5 +1,10 @@
-import type { RawSingleCellCellTypeTerm, SingleCellCellTypeTerm, TermGroupSetting, TermValues } from '#types'
-import { SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import {
+	type RawSingleCellCellTypeTerm,
+	type SingleCellCellTypeTerm,
+	type TermGroupSetting,
+	type TermValues,
+	SINGLECELL_CELLTYPE
+} from '#types'
 
 const termType = SINGLECELL_CELLTYPE
 

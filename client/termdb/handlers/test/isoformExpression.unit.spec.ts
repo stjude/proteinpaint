@@ -1,7 +1,7 @@
 import tape from 'tape'
 import { SearchHandler, filterIsoforms } from '../isoformExpression.ts'
 import type { GeneModel } from '#dom/types/isoformSelect'
-import { ISOFORM_EXPRESSION } from '#shared/terms.js'
+import { ISOFORM_EXPRESSION } from '#types'
 import * as d3s from 'd3-selection'
 
 /** Helper to create a minimal GeneModel for testing */

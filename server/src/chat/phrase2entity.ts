@@ -29,7 +29,7 @@ import type {
 } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import assert from 'assert'
 
 async function parseFilterTree(

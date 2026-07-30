@@ -11,6 +11,7 @@ exported functions
 import { rgb } from 'd3-color'
 import * as d3scale from 'd3-scale'
 import * as d3 from 'd3'
+import { DTCNV, DTFUSION, DTITD, DTSNVINDEL, DTSV } from '#types'
 
 // moved from `#shared/terms` to here, so that this can be passed as
 // part of 'common' argument to exported dataset js function, at server runtime
@@ -1348,7 +1349,7 @@ const dtTerms_temp = [
 		name: dt2label[dtsnvindel],
 		parent_id: null,
 		isleaf: true,
-		type: 'dtsnvindel',
+		type: DTSNVINDEL,
 		dt: dtsnvindel,
 		values: {}
 	},
@@ -1358,7 +1359,7 @@ const dtTerms_temp = [
 		name: dt2label[dtcnv],
 		parent_id: null,
 		isleaf: true,
-		type: 'dtcnv',
+		type: DTCNV,
 		dt: dtcnv,
 		values: {}
 	},
@@ -1368,7 +1369,7 @@ const dtTerms_temp = [
 		name: dt2label[dtfusionrna],
 		parent_id: null,
 		isleaf: true,
-		type: 'dtfusion',
+		type: DTFUSION,
 		dt: dtfusionrna,
 		values: {}
 	},
@@ -1378,7 +1379,7 @@ const dtTerms_temp = [
 		name: dt2label[dtsv],
 		parent_id: null,
 		isleaf: true,
-		type: 'dtsv',
+		type: DTSV,
 		dt: dtsv,
 		values: {}
 	},
@@ -1388,7 +1389,7 @@ const dtTerms_temp = [
 		name: dt2label[dtitd],
 		parent_id: null,
 		isleaf: true,
-		type: 'dtitd',
+		type: DTITD,
 		dt: dtitd,
 		values: {}
 	}

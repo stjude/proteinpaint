@@ -1,6 +1,5 @@
-import type { RawDnaMethylationTerm, VocabApi } from '#types'
+import { type RawDnaMethylationTerm, type VocabApi, DNA_METHYLATION } from '#types'
 import { type TwOpts } from './TwBase.ts'
-import { DNA_METHYLATION } from '#shared/terms.js'
 
 const termType = DNA_METHYLATION
 

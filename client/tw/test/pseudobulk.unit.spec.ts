@@ -1,8 +1,7 @@
 import tape from 'tape'
 import { PseudobulkBase } from '../pseudobulk.ts'
-import { PSEUDOBULK } from '#shared/terms.js'
 import { routedTermTypes, TwRouter } from '../TwRouter.ts'
-import type { NumTWRegularBin } from '#types'
+import { type NumTWRegularBin, PSEUDOBULK } from '#types'
 
 /*************************
  reusable helper functions
