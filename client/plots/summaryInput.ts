@@ -1,7 +1,7 @@
 import { PlotBase, defaultUiLabels } from './PlotBase.ts'
 import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
-import { controlsInit, term0_term2_defaultQ } from './controls'
-import { t0_t2_defaultQ as term0_term2_defaultQ_surv } from './survival/survival.ts'
+import { controlsInit } from './controls'
+import { getT0T2defaultQ } from './summaryQ.ts'
 import { fillTermWrapper } from '#termsetting'
 
 // transient. on submission, it is replaced by a new one
@@ -92,7 +92,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				},
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
-				defaultQ4fillTW: term0_term2_defaultQ,
+				defaultQ4fillTW: getT0T2defaultQ(),
 				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'none' : 'table-row')
 			},
 			{
@@ -103,7 +103,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				},
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
-				defaultQ4fillTW: term0_term2_defaultQ,
+				defaultQ4fillTW: getT0T2defaultQ(),
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'none' : 'table-row')
 			},
@@ -115,7 +115,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				},
 				usecase: { target: 'summaryInput', detail: 'term2' },
 				label: controlLabels.term2.label,
-				defaultQ4fillTW: term0_term2_defaultQ_surv,
+				defaultQ4fillTW: getT0T2defaultQ(true),
 				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'table-row' : 'none')
 			},
 			{
@@ -126,7 +126,7 @@ class SummaryInputPlot extends PlotBase implements RxComponent {
 				},
 				usecase: { target: 'summaryInput', detail: 'term0' },
 				label: controlLabels.term0.label,
-				defaultQ4fillTW: term0_term2_defaultQ_surv + '_surv',
+				defaultQ4fillTW: getT0T2defaultQ(true),
 				numericEditMenuVersion: this.opts.numericEditMenuVersion || ['discrete'],
 				getDisplayStyle: plot => (plot.config.term?.term.type == 'survival' ? 'table-row' : 'none')
 			}
@@ -214,22 +214,14 @@ export async function getPlotConfig(opts, app) {
 			const defaultQ: any = opts.term.bins || opts.term.q ? undefined : { geneVariant: { type: 'predefined-groupset' } }
 			await fillTermWrapper(opts.term, app.vocabApi, defaultQ)
 		}
+		// term1 being a survival term means a survival plot will be launched, thus binary bins for term0/term2
+		const asBinary = opts.term?.term.type == 'survival'
 		if (opts.term2) {
-			const defaultQ =
-				opts.term2.bins || opts.term2.q
-					? undefined
-					: opts.term.term.type == 'survival'
-					? term0_term2_defaultQ_surv
-					: term0_term2_defaultQ
+			const defaultQ = opts.term2.bins || opts.term2.q ? undefined : getT0T2defaultQ(asBinary)
 			await fillTermWrapper(opts.term2, app.vocabApi, defaultQ)
 		}
 		if (opts.term0) {
-			const defaultQ =
-				opts.term0.bins || opts.term0.q
-					? undefined
-					: opts.term.term.type == 'survival'
-					? term0_term2_defaultQ_surv
-					: term0_term2_defaultQ
+			const defaultQ = opts.term0.bins || opts.term0.q ? undefined : getT0T2defaultQ(asBinary)
 			await fillTermWrapper(opts.term0, app.vocabApi, defaultQ)
 		}
 	} catch (e: any) {

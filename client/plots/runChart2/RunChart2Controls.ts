@@ -1,4 +1,4 @@
-import { term0_term2_defaultQ } from '../controls'
+import { getT0T2defaultQ } from '../summaryQ.ts'
 import type { AppApi } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 
@@ -108,7 +108,7 @@ function getBaseInputs(app: AppApi) {
 			label: 'Y',
 			vocabApi: app.vocabApi,
 			menuOptions: '{replace,remove}',
-			defaultQ4fillTW: term0_term2_defaultQ,
+			defaultQ4fillTW: getT0T2defaultQ(),
 			numericEditMenuVersion: ['continuous']
 		},
 		{

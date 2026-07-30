@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.ts'
-import { controlsInit, term0_term2_defaultQ } from '#plots/controls.js'
+import { controlsInit } from '#plots/controls.js'
+import { getT0T2defaultQ } from '#plots/summaryQ.ts'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
@@ -20,35 +21,6 @@ import { downloadChart } from '#common/svg.download'
 import { getCombinedTermFilter } from '#filter'
 import { DownloadMenu } from '#dom/downloadMenu'
 import { isNumericTerm } from '#shared/terms.js'
-
-export const t0_t2_defaultQ = structuredClone(term0_term2_defaultQ)
-Object.assign(t0_t2_defaultQ, {
-	numeric: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		preferredBins: 'median'
-	},
-	geneExpression: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		preferredBins: 'median'
-	},
-	ssGSEA: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		preferredBins: 'median'
-	},
-	isoformExpression: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		preferredBins: 'median'
-	},
-	dnaMethylation: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		preferredBins: 'median'
-	}
-})
 
 class TdbSurvival extends PlotBase implements RxComponent {
 	static type = 'survival'
@@ -192,7 +164,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							label: controlLabels.term2.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: t0_t2_defaultQ,
+							defaultQ4fillTW: getT0T2defaultQ(true),
 							disabledMessage: stratDisabledMsg
 						},
 						{
@@ -204,7 +176,7 @@ class TdbSurvival extends PlotBase implements RxComponent {
 							label: controlLabels.term0.label,
 							vocabApi: this.app.vocabApi,
 							numericEditMenuVersion: ['discrete'],
-							defaultQ4fillTW: t0_t2_defaultQ,
+							defaultQ4fillTW: getT0T2defaultQ(true),
 							disabledMessage: stratDisabledMsg
 						},
 						{
@@ -1398,12 +1370,20 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'survival getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
-		// supply t0_t2_defaultQ if opts.term0/2.bins/q is undefined
-		// so that t0_t2_defaultQ does not override bins or q from user
+		// supply the default q if opts.term0/2.bins/q is undefined
+		// so that the default q does not override bins or q from user
 		if (opts.term2)
-			await fillTermWrapper(opts.term2, app.vocabApi, opts.term2.bins || opts.term2.q ? undefined : t0_t2_defaultQ)
+			await fillTermWrapper(
+				opts.term2,
+				app.vocabApi,
+				opts.term2.bins || opts.term2.q ? undefined : getT0T2defaultQ(true)
+			)
 		if (opts.term0)
-			await fillTermWrapper(opts.term0, app.vocabApi, opts.term0.bins || opts.term0.q ? undefined : t0_t2_defaultQ)
+			await fillTermWrapper(
+				opts.term0,
+				app.vocabApi,
+				opts.term0.bins || opts.term0.q ? undefined : getT0T2defaultQ(true)
+			)
 	} catch (e) {
 		throw `${e} [survival getPlotConfig()]`
 	}

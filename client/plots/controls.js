@@ -14,30 +14,6 @@ constructor options:
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 let i = 0 // track controls "instances" for assigning unambiguous unique input names
-// defaultQ for term0/term2
-export const term0_term2_defaultQ = {
-	[TermTypes.GENE_VARIANT]: { type: 'predefined-groupset' },
-	[TermTypes.GENE_EXPRESSION]: { mode: 'discrete' },
-	[TermTypes.METABOLITE_INTENSITY]: { mode: 'discrete' },
-	[TermTypes.PROTEOME_ABUNDANCE]: { mode: 'discrete' },
-	[TermTypes.DNA_METHYLATION]: { mode: 'discrete' },
-	[TermTypes.TERM_COLLECTION]: {
-		mode: 'discrete',
-		type: 'custom-bin',
-		lst: getDefaultFractionBins(),
-		denominators: [],
-		numerators: []
-	}
-}
-
-export function getDefaultFractionBins() {
-	return [
-		{ startunbounded: true, stop: 0.25, label: '<25%' },
-		{ start: 0.25, stop: 0.5, startinclusive: true, label: '25% to <50%' },
-		{ start: 0.5, stop: 0.75, startinclusive: true, label: '50% to <75%' },
-		{ start: 0.75, stopunbounded: true, startinclusive: true, label: '≥75%' }
-	]
-}
 
 class TdbPlotControls {
 	static type = 'plotControls'
