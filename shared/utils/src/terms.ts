@@ -32,8 +32,7 @@ import {
 	MULTIVALUE,
 	DATE,
 	TERM_COLLECTION,
-	COHORT,
-	TermTypes
+	COHORT
 } from '#types'
 
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
