@@ -436,11 +436,12 @@ export class IDCTableView {
 		text: string,
 		hasStudy: boolean
 	): void {
-		const cell = applyStyles(row.append('td'), idcTableStyleFns.paddingCell('8px'))
-			.append('span')
-			.call(sel => applyStyles(sel, idcTableStyles.cellLinkContainer))
+		const cell = applyStyles(
+			applyStyles(row.append('td'), idcTableStyleFns.paddingCell('8px')).append('span'),
+			idcTableStyles.cellLinkContainer
+		)
 		if (hasStudy) {
-			makeCenteredFlex(addSvg(cell, externalLinkPath))
+			addSvg(cell, externalLinkPath)
 			cell
 				.append('a')
 				.text(text)
