@@ -51,21 +51,23 @@ export type TermdbCumincRequest = {
 	minSampleSize: number | string
 }
 
+export type CumincResponse = {
+	data: {
+		[chartId: string]: any
+	}
+	refs?: {
+		bins?: any[]
+	}
+	noEvents?: {
+		[chartId: string]: string[]
+	}
+	lowSampleSize?: {
+		[chartId: string]: string[]
+	}
+}
+
 export type TermdbCumincResponse =
-	| {
-			data: {
-				[chartId: string]: any
-			}
-			refs?: {
-				bins?: any[]
-			}
-			noEvents?: {
-				[chartId: string]: string[]
-			}
-			lowSampleSize?: {
-				[chartId: string]: string[]
-			}
-	  }
+	| CumincResponse
 	| {
 			error: string
 	  }
