@@ -5,7 +5,7 @@ import * as helpers from '../../../test/front.helpers.js'
 DO NOT ENABLE THIS FILE ON CI. ITS FOR PROTOTYPING ONLY
 
 Tests:
-    - Default aggregate matrix
+	- Default aggregate matrix
  */
 
 /*************************
@@ -13,19 +13,19 @@ Tests:
 **************************/
 
 const runpp = helpers.getRunPp('mass', {
-    state: {
-        nav: {
-            header_mode: 'hidden'
-        },
-        vocab: {
-            //Eventually need to add data to TermdbTest
-            //and switch dataset and genome
-            //as well as make e2e tests for aggregate matrix
-            dslabel: 'MMRF',
-            genome: 'hg38'
-        }
-    },
-    debug: 1
+	state: {
+		nav: {
+			header_mode: 'hidden'
+		},
+		vocab: {
+			//Eventually need to add data to TermdbTest
+			//and switch dataset and genome
+			//as well as make e2e tests for aggregate matrix
+			dslabel: 'MMRF',
+			genome: 'hg38'
+		}
+	},
+	debug: 1
 })
 
 /**************
@@ -33,28 +33,32 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function (test) {
-    test.comment('-***- plots/aggregateMatrix -***-')
-    test.end()
+	test.comment('-***- plots/aggregateMatrix -***-')
+	test.end()
 })
 
 tape('Default aggregate matrix', async function (test) {
-    test.timeoutAfter(10000)
+	test.timeoutAfter(10000)
 
-    runpp({
+	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'aggregateMatrix',
 					entries: {
 						genes: [
-							{ name: 'TP53', id: 'TP53', type: 'pseudobulk' },
-							{ name: 'KRAS', id: 'KRAS', type: 'pseudobulk' }
+							{ name: 'TP53', id: 'TP53', type: 'geneExpression' },
+							{ name: 'KRAS', id: 'KRAS', type: 'geneExpression' },
+							{ name: 'EGFR', id: 'EGFR', type: 'geneExpression' },
+							{ name: 'XBP1', id: 'XBP1', type: 'geneExpression' },
+							{ name: 'CD138', id: 'CD138', type: 'geneExpression' },
+							{ name: 'MZB1', id: 'MZB1', type: 'geneExpression' },
 						]
 					},
 					categories: {
 						'Cell type': [
-							{ name: 'B cell', id: 'B cell', type: 'pseudobulk' },
-							{ name: 'T cell', id: 'T cell', type: 'pseudobulk' }
+							{ name: 'B', id: 'B', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'CD4', id: 'CD4', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
 						]
 					},
 					settings: {
