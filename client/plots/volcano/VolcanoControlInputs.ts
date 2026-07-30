@@ -1,8 +1,7 @@
 import type { ControlInputEntry } from '#mass/types/mass'
 import type { VolcanoPlotConfig } from './VolcanoTypes'
 import { getSampleNum } from './settings/defaults'
-import { DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
-import { PROTEOME_DAP } from '#types'
+import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
 
 /** Handles settings the controls in the menu based on the app
  * termType.

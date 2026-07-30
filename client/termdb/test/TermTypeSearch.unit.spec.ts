@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { getAllowedTermTypesForUseCase, getAllowedTabs, useCasesExcluded } from '../TermTypeSearch'
-import { TermTypeGroups, TermTypes } from '#shared/terms.js'
+import { TermTypeGroups } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 /*
 Tests:

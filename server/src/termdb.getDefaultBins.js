@@ -1,4 +1,4 @@
-import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
 

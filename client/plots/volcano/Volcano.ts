@@ -12,7 +12,7 @@ import { VolcanoInteractions } from './interactions/VolcanoInteractions'
 import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
-import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
 
 export class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'

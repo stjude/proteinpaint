@@ -1,5 +1,5 @@
 import type { LlmConfig } from '#types'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import type {
 	SummaryPhrase2EntityResult,
 	Phrase2EntityResult,

@@ -1,5 +1,4 @@
-import { type PseudobulkTerm, type RawPseudobulkTerm, PseudobulkAssay } from '#types'
-import { PSEUDOBULK } from '#shared/terms.js'
+import { type PseudobulkTerm, type RawPseudobulkTerm, PseudobulkAssay, PSEUDOBULK } from '#types'
 
 const termType = PSEUDOBULK
 

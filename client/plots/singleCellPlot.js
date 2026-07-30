@@ -7,7 +7,7 @@ import { downloadSingleSVG } from '#common/svg.download'
 import { select } from 'd3-selection'
 import { rgb, create, extent } from 'd3'
 import { roundValueAuto } from '#shared/roundValue.js'
-import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_CELLTYPE, SINGLECELL_GENE_EXPRESSION } from '#types'
 import {
 	ColorScale,
 	icons as icon_functions,

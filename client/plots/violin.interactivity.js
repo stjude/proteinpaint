@@ -1,6 +1,6 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { DownloadMenu, niceNumLabels, ListSamples, renderTable } from '#dom'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#types'
 
 export function setInteractivity(self) {
 	self.getChartImages = function () {

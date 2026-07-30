@@ -3,7 +3,7 @@ import { mayLog } from '#src/helpers.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 // List of keywords/phrases that may indicate a gene set is being referenced in the user prompt. This is useful when no geneset keywords are found but the user intends to use a geneset. This helps to generate a helpful error message stating no relevant genesets were found in the prompt.
 export const GENE_SET_KEYWORDS = [

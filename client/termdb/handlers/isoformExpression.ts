@@ -2,10 +2,9 @@ import { Menu, addGeneSearchbox, sayerror, isoformSelect } from '#dom'
 import type { GeneModel, IsoformTerm, IsoformCollectionTerm } from '#dom/types/isoformSelect'
 import type { Div } from '../../types/d3'
 import { dofetch3 } from '#common/dofetch'
-import { ISOFORM_EXPRESSION } from '#shared/terms.js'
 import { getColors } from '#shared/common.js'
 import { pickCollectionFraction } from './termCollectionFractionSelection.ts'
-import type { RawTermCollectionTWFraction } from '#types'
+import { type RawTermCollectionTWFraction, ISOFORM_EXPRESSION } from '#types'
 
 /*
 note:

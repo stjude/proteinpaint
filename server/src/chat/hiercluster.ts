@@ -2,7 +2,7 @@ import type { LlmConfig, GeneDataTypeResult, TermdbTopVariablyExpressedGenesRequ
 import { getGenesForGeneset, extractGenesetsFromPromptNew, getGenesetNames } from './utils.ts'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 //import { mayLog } from '#src/helpers.ts'
 
 // ---------------------------------------------------------------------------

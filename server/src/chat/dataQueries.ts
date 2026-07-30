@@ -3,7 +3,7 @@ import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
 import { mayLog } from '#src/helpers.ts'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 const TermTypeDefinitions: Record<string, string> = {
 	[TermTypes.SURVIVAL]:

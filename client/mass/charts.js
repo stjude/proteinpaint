@@ -1,7 +1,8 @@
 import { getCompInit } from '#rx'
 import { Menu, getAncestorWithComputedStyle } from '#dom'
 import { getNormalRoot } from '#filter/filter'
-import { NumericModes, TermTypes } from '#shared/terms.js'
+import { NumericModes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { importPlot } from '#plots/importPlot.js'
 
 class MassCharts {

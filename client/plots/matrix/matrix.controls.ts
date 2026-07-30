@@ -1,6 +1,6 @@
 import { initByInput } from '#plots/controls.config.js'
 import { select } from 'd3-selection'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { setSamplesBtn } from './matrix.controls.samples'
 import { setGenesBtn } from './matrix.controls.genes'
 import { setVariablesBtn } from './matrix.controls.variables'

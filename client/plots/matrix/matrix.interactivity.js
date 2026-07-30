@@ -3,7 +3,8 @@ import { format as d3format } from 'd3-format'
 import { fillTermWrapper, termsettingInit } from '#termsetting'
 import { icons, newSandboxDiv, Menu, renderTable, table2col, renderCnvConfig } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { TermTypes, isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
+import { isNumericTerm, dictionaryNumericTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import {
 	mclass,
 	dt2label,

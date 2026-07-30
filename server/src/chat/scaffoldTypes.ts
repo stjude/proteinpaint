@@ -1,4 +1,4 @@
-import type { TermTypes } from '#shared/terms.js'
+import type { TermTypes } from '#types'
 import type { DbRows } from '#types'
 
 export type MsgToUser = {

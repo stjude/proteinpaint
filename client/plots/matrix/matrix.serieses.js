@@ -1,5 +1,5 @@
 import { setCellProps, getEmptyCell, maySetEmptyCell, setGeneVariantCellProps } from './matrix.cells'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { TermTypeGroups } from '#shared/common.js'
 
 export function getSerieses(data) {

@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { SingleCellGeneExpressionBase, getSCGEunit } from '../singleCellGeneExpression.ts'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#types'
 
 /*************************
  reusable helper functions

@@ -10,7 +10,7 @@ import {
 	SINGLECELL_CELLTYPE,
 	SINGLECELL_GENE_EXPRESSION,
 	JUNCTION
-} from '#shared/terms.js'
+} from '#types'
 
 /**
  * Tests for getDsAllowedTermTypes()

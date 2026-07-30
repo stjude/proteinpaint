@@ -1,6 +1,6 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#types'
 
 /**
  * Tests

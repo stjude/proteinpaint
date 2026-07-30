@@ -1,7 +1,7 @@
 import type { ClientGenome } from '../types/clientGenome'
 import type { AppApi } from 'rx/src/AppApi'
 import { addGeneSearchbox, FlyoutMenu, type FlyoutMenuOption, GeneSetEditUI, Menu, sayerror } from '#dom'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#types'
 import { getGEunit } from '../tw/geneExpression'
 import { getSCGEunit } from '../tw/singleCellGeneExpression'
 

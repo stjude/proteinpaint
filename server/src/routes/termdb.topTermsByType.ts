@@ -1,7 +1,7 @@
 import type { TermdbTopTermsByTypeRequest, TermdbTopTermsByTypeResponse, RouteApi, RoutePayload } from '#types'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { get_samples } from '#src/termdb.sql.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 export const payload: RoutePayload = {
 	init,

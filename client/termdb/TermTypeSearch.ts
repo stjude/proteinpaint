@@ -1,7 +1,7 @@
 import { Tabs } from '#dom'
 import { type AppApi, getCompInit } from '../rx'
-import { TermTypeGroups, TermTypes, typeGroup, numericTypes, isSingleCellTerm } from '#shared/terms.js'
-import type { Term } from '#types'
+import { TermTypeGroups, typeGroup, numericTypes, isSingleCellTerm } from '#shared/terms.js'
+import { TermTypes, type Term } from '#types'
 import type { ClientGenome } from '../types/clientGenome'
 import { select } from 'd3-selection'
 

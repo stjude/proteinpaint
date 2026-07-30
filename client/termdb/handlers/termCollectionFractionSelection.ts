@@ -1,6 +1,6 @@
 import { renderTable } from '#dom'
-import { TermTypes, termItemType } from '#shared/terms.js'
-import type { RawTermCollectionTWFraction } from '#types'
+import { termItemType } from '#shared/terms.js'
+import { type RawTermCollectionTWFraction, TermTypes } from '#types'
 
 export type TermCollectionSelectionMode = 'fraction'
 

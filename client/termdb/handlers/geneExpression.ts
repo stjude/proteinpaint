@@ -1,5 +1,5 @@
 import { Menu, addGeneSearchbox } from '#dom'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { getGEunit } from '#tw/geneExpression'
 
 export class SearchHandler {

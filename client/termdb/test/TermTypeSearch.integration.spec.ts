@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
-import { TermTypeGroups, TermTypes } from '#shared/terms.js'
+import { TermTypeGroups } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import { appInit } from '../app.ts'
 import { vocabInit } from '../vocabulary'
 import { sleep } from '../../test/test.helpers.js'

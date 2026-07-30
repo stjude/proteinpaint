@@ -3,7 +3,7 @@ import { filterTerms } from '#src/termdb.server.init.ts'
 import { copy_term, get_AllSamplesByName } from '#src/termdb.js'
 import { authApi } from '#src/auth.js'
 import { getDsAllowedTermTypes } from '../routes/termdb.config.ts'
-import { GENE_EXPRESSION, DNA_METHYLATION } from '#shared/terms.js'
+import { GENE_EXPRESSION, DNA_METHYLATION } from '#types'
 import { string2pos } from '#shared/common.js'
 /** Determine which gene data types a dataset supports. Deliberately independent of the AI chat
  * pipeline (run_chat_pipeline): a synchronous, read-only capability probe for the mass omnisearch.

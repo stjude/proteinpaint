@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { SearchHandler } from '../singleCellGeneExpression.ts'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#types'
 
 /*************************
  reusable helper functions

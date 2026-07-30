@@ -16,7 +16,8 @@ import { TermdbSingleCellPlotsExample, type TermWrapper } from '#types'
 import { validGenomeDs, validString, validNumber } from '#routes/common.ts'
 import { getColors, plotColor } from '#shared'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
-import { isSingleCellTerm, SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#shared/terms.js'
+import { isSingleCellTerm } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
 import { makeCanvas } from './canvasRendering.ts'
 import { getData } from '../termdb.matrix.js'
 import { getSampleCoordinatesByTerms } from '../routes/termdb.sampleScatter.js'
@@ -85,17 +86,17 @@ function validTermdbSingleCellPlotsRequest(input): TermdbSingleCellPlotsRequest 
 		},
 		colorTW: input.colorTW
 			? (() => {
-				if (!isSingleCellTerm(input.colorTW.term))
-					throw new Error('colorTW must be a single cell term for single cell scatter plot')
-				return input.colorTW as TermWrapper
-			})()
+					if (!isSingleCellTerm(input.colorTW.term))
+						throw new Error('colorTW must be a single cell term for single cell scatter plot')
+					return input.colorTW as TermWrapper
+			  })()
 			: undefined,
 		coordTWs: input?.coordTWs?.length
 			? (() => {
-				if (!isSingleCellTerm(input.coordTWs[0].term))
-					throw new Error('coordTWs must be an array of single cell terms for single cell scatter plot')
-				return input.coordTWs as TermWrapper[]
-			})()
+					if (!isSingleCellTerm(input.coordTWs[0].term))
+						throw new Error('coordTWs must be an array of single cell terms for single cell scatter plot')
+					return input.coordTWs as TermWrapper[]
+			  })()
 			: undefined
 	}
 }
@@ -139,7 +140,8 @@ async function getSingleCellScatter(req, res, ds) {
 			filteredSamples: Set<string> = new Set()
 
 		const data = await getData(arg, ds)
-		if (!data || 'error' in data) throw new Error((data as any)?.error || 'No data returned for single cell scatter plot')
+		if (!data || 'error' in data)
+			throw new Error((data as any)?.error || 'No data returned for single cell scatter plot')
 
 		if (q.coordTWs && q.coordTWs.length > 0) {
 			const tmp = await getSampleCoordinatesByTerms(req, q, ds, data as ValidGetDataResponse)
@@ -155,8 +157,7 @@ async function getSingleCellScatter(req, res, ds) {
 					const tmpData = await ds.queries.singleCell.data.get(tmpArg)
 					colorData = Object.assign(colorData, tmpData)
 				}
-			}
-			else colorData = await ds.queries.singleCell.data.get(arg)
+			} else colorData = await ds.queries.singleCell.data.get(arg)
 		}
 
 		const { samples, categoryCounts, xMin, xMax, yMin, yMax, geMin, geMax, totalCellCount } = processSamples(
@@ -265,11 +266,11 @@ function processSamples(coords: any, colorData: { plots: Plot[] }, filteredSampl
 	if (coords?.length && !colorData.plots?.length) {
 		const category = 'Default'
 		for (const cell of coords) {
-			/** This shouldn't be necessary. The single cell scatter shouldn't be 
+			/** This shouldn't be necessary. The single cell scatter shouldn't be
 			 * available if samples IDs themselves cannot be displayed. */
 			const sid = cell.sample ?? cell.sampleId
- 			if (!sid) continue
- 			if (filteredSamples.size > 0 && !filteredSamples.has(sid)) continue
+			if (!sid) continue
+			if (filteredSamples.size > 0 && !filteredSamples.has(sid)) continue
 
 			if (cell.x < xMin) xMin = cell.x
 			if (cell.x > xMax) xMax = cell.x

@@ -3,7 +3,7 @@ import { mayLog } from '#src/helpers.ts'
 import { formatElapsedTime } from '#shared'
 import { route_to_appropriate_llm_provider } from './routeAPIcall.ts'
 import { extract_hiercluster_terms_from_query } from './hiercluster.ts'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 import type {
 	Scaffold,
 	SummaryScaffold,

@@ -1,5 +1,5 @@
 import { appInit } from '../app.js'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 export class SearchHandler {
 	callback: any

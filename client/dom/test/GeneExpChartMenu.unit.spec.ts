@@ -2,7 +2,7 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { GeneExpChartMenu } from '../GeneExpChartMenu'
 import { Menu } from '../menu'
-import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { GENE_EXPRESSION, SINGLECELL_GENE_EXPRESSION } from '#types'
 
 /*
 	Tests:

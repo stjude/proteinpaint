@@ -2,6 +2,13 @@ export const CATEGORICAL = 'categorical'
 export const CONDITION = 'condition'
 export const DATE = 'date'
 export const DNA_METHYLATION = 'dnaMethylation'
+// dt term types, used for filtering variants of a geneVariant term;
+// the matching dt term entries are declared in `#shared/common.js` dtTerms[]
+export const DTCNV = 'dtcnv'
+export const DTFUSION = 'dtfusion'
+export const DTITD = 'dtitd'
+export const DTSNVINDEL = 'dtsnvindel'
+export const DTSV = 'dtsv'
 export const FLOAT = 'float'
 export const GENE_VARIANT = 'geneVariant'
 export const GENE_EXPRESSION = 'geneExpression'
@@ -26,7 +33,9 @@ export const COHORT = 'cohort'
 
 //Term types should be used gradually using these constants instead of hardcoding the values,
 // eg: type == CATEGORICAL instead of type == 'categorical'
-export const TermTypes: { [key: string]: string } = {
+// NOTE: keep this list complete at declaration, do not add entries to it at runtime,
+// so that consumers see the same keys regardless of module load order
+export const TermTypes = {
 	GENE_VARIANT,
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
@@ -50,5 +59,10 @@ export const TermTypes: { [key: string]: string } = {
 	MULTIVALUE,
 	DATE,
 	TERM_COLLECTION,
-	COHORT
+	COHORT,
+	DTCNV,
+	DTFUSION,
+	DTITD,
+	DTSNVINDEL,
+	DTSV
 }

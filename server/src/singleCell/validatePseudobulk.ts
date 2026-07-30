@@ -1,4 +1,5 @@
-import { PSEUDOBULK, termType2label } from '#shared/terms.js'
+import { termType2label } from '#shared/terms.js'
+import { PSEUDOBULK } from '#types'
 import { plotColor } from '#shared/common.js'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
@@ -42,7 +43,8 @@ export async function validatePseudobulk(ds: any) {
 			validString(member.folder, 'member.folder must be a non-empty string')
 			validString(member.meanExt, 'member.meanExt must be a non-empty string')
 			if (member.totalExt !== undefined) validString(member.totalExt, 'member.totalExt must be a non-empty string')
-			if (member.percentExt !== undefined) validString(member.percentExt, 'member.percentExt must be a non-empty string')
+			if (member.percentExt !== undefined)
+				validString(member.percentExt, 'member.percentExt must be a non-empty string')
 			if (typeof member.categories != 'object') throw 'member.categories{} not object'
 			if (!Object.keys(member.categories).length) throw 'no keys in member.categories{}'
 
@@ -92,7 +94,7 @@ export async function validatePseudobulk(ds: any) {
 					co.meanSamples.length
 				)
 
-				/** NOTE: Validing total and percent file as optional for now. 
+				/** NOTE: Validing total and percent file as optional for now.
 				 * Will decided later if either is required. */
 				if (member.totalExt !== undefined) {
 					// validate "total value" h5 file
@@ -112,7 +114,8 @@ export async function validatePseudobulk(ds: any) {
 					}
 					console.log(
 						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} TOTAL HDF5 samples:`,
-						co.totalSampleset.size)
+						co.totalSampleset.size
+					)
 				}
 				if (member.percentExt !== undefined) {
 					// validate "percent value" h5 file
@@ -132,7 +135,8 @@ export async function validatePseudobulk(ds: any) {
 					}
 					console.log(
 						`${ds.label} pseudobulk ${assayKey} ${memberId} ${category} PERCENT HDF5 samples:`,
-						co.percentSampleset.size)
+						co.percentSampleset.size
+					)
 				}
 			}
 		}

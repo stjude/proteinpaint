@@ -8,10 +8,10 @@ import type {
 	Handler
 } from './types'
 import type { TermSettingApi } from './TermSettingApi.ts'
-import type { Term, Filter, Q, TermWrapper } from '#types'
+import { type Term, type Filter, type Q, type TermWrapper, TermTypes } from '#types'
 import { TwBase /*CatValues, CatPredefinedGS, CatCustomGS*/ } from '#tw'
 import { Menu } from '#dom'
-import { TermTypes, isDictionaryType } from '#shared/terms.js'
+import { isDictionaryType } from '#shared/terms.js'
 import { minimatch } from 'minimatch'
 import { HandlerBase } from './HandlerBase.ts'
 import { TermSettingView } from './TermSettingView.ts'

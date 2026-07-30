@@ -5,7 +5,7 @@ import { scaleLinear } from 'd3-scale'
 import { rgb } from 'd3-color'
 //Note: use .js extension for imports on server side to avoid tsc error about "Cannot find module"
 import { refColor } from '#routes/termdb.sampleScatter.js'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#types'
 
 export async function makeCanvas(
 	q /*:TermdbSingleCellPlotsRequest*/,

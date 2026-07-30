@@ -1,6 +1,6 @@
 import tape from 'tape'
 import { SearchHandler } from '../geneExpression.ts'
-import { TermTypes } from '#shared/terms.js'
+import { TermTypes } from '#types'
 
 /**************
  test sections

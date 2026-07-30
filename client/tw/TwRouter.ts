@@ -6,7 +6,7 @@ import { QualValues, QualPredefinedGS, QualCustomGS } from './qualitative.ts'
 import { GvBase, GvValues, GvPredefinedGS, GvCustomGS } from './geneVariant.ts'
 import { NumericBase, NumRegularBin, NumCustomBins, NumCont, NumSpline } from './numeric.ts'
 import { CollectionBase, CollectionCont, CollectionFraction, CollectionQual } from './termCollection'
-import * as tt from '#shared/terms.js'
+import * as tt from '#types'
 
 export const routedTermTypes = new Set([
 	tt.CATEGORICAL,

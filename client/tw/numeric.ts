@@ -31,7 +31,7 @@ import { SsGSEABase } from './ssGSEA.ts'
 import { DnaMethylationBase } from './dnaMethylation.ts'
 import { SingleCellGeneExpressionBase } from './singleCellGeneExpression.ts'
 import { PseudobulkBase } from './pseudobulk.ts'
-import * as tt from '#shared/terms.js'
+import * as tt from '#types'
 
 export class NumericBase extends TwBase {
 	// type is set by TwBase constructor

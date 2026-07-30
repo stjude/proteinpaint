@@ -36,34 +36,6 @@ import {
 	TermTypes
 } from '#types'
 
-// legacy support - comsumers should import directly from #types (aka @sjcrh/proteinpaint-types)
-export {
-	GENE_VARIANT,
-	GENE_EXPRESSION,
-	ISOFORM_EXPRESSION,
-	SSGSEA,
-	DNA_METHYLATION,
-	CATEGORICAL,
-	INTEGER,
-	JUNCTION,
-	FLOAT,
-	SNP,
-	SNP_LIST,
-	SNP_LOCUS,
-	CONDITION,
-	SURVIVAL,
-	SAMPLELST,
-	METABOLITE_INTENSITY,
-	PROTEOME_ABUNDANCE,
-	PSEUDOBULK,
-	SINGLECELL_CELLTYPE,
-	SINGLECELL_GENE_EXPRESSION,
-	MULTIVALUE,
-	DATE,
-	TERM_COLLECTION,
-	TermTypes
-} from '#types'
-
 // moved TermTypeGroups to `server/src/common.js`, so now has to re-export
 export { TermTypeGroups } from './common.js'
 
@@ -84,10 +56,8 @@ export const NumericModes = {
 	discrete: 'discrete'
 }
 
+// the dt term types are also declared in TermTypes, see the assertion in terms.unit.spec.ts
 export const dtTermTypes: Set<string> = new Set(dtTerms.map((t: any) => t.type))
-for (const dtTermType of dtTermTypes) {
-	TermTypes[dtTermType.toUpperCase()] = dtTermType
-}
 
 export const TermTypes2Dt = {
 	[GENE_EXPRESSION]: dtgeneexpression,
@@ -144,7 +114,7 @@ const nonDictTypes = new Set([
 ])
 
 for (const dtTermType of dtTermTypes) {
-	nonDictTypes.add(TermTypes[dtTermType.toUpperCase()])
+	nonDictTypes.add(dtTermType)
 }
 
 export const numericTypes = new Set([

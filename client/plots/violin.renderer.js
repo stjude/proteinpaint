@@ -5,7 +5,7 @@ import { brushX, brushY } from 'd3-brush'
 import { renderTable, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
-import { SINGLECELL_GENE_EXPRESSION } from '#shared/terms.js'
+import { SINGLECELL_GENE_EXPRESSION } from '#types'
 
 const minSampleSize = 5 // a group below cutoff will not render a violin plot
 
