@@ -464,20 +464,20 @@ class MassCumInc {
 	}
 
 	processResults(results) {
-		if (Object.keys(results.data).length === 0) {
-			sayerror(this.dom.errorDiv, 'No data available')
-			return
-		}
 		const s = this.settings
 		const c = this.config
 		const estimates = {}
 		const tests = {}
-		const lowSampleSize = results.lowSampleSize
-		const noEvents = results.noEvents
 		this.currData = []
-		this.uniqueSeriesIds = new Set()
 		this.tests = {}
 		this.noData = []
+
+		if (Object.keys(results.data).length === 0) {
+			sayerror(this.dom.errorDiv, 'No data available')
+		}
+		this.uniqueSeriesIds = new Set()
+		const lowSampleSize = results.lowSampleSize
+		const noEvents = results.noEvents
 		this.refs = results.refs
 
 		// filter the data
@@ -501,7 +501,7 @@ class MassCumInc {
 				this.noData.push(chartId)
 			}
 			// filter the tests
-			if (chart.tests) {
+			if (chart.tests && Object.keys(estimates).length > 0) {
 				// discard tests that have series that are either
 				// discarded or hidden
 				tests[chartId] = chart.tests.filter(
@@ -570,6 +570,7 @@ class MassCumInc {
 		for (const chartId in noEvents) {
 			this.noEvents[chartId] = noEvents[chartId].map(seriesId => c.term2?.term.values?.[seriesId]?.label || seriesId)
 		}
+		console.log('stuff', estimates)
 	}
 
 	sortSerieses(charts) {
