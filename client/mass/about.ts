@@ -2,7 +2,8 @@ import { getId } from './nav'
 import { type AppApi, getCompInit } from '#rx'
 import type { Elem, Div, H2 } from '../types/d3'
 import type { SelectCohortEntry } from '#types'
-import { renderTable, type TableRow } from '#dom'
+import { renderTable, type TableRow, Menu } from '#dom'
+import { importPlot } from '#plots/importPlot.js'
 import { select } from 'd3-selection'
 
 /* 
@@ -21,7 +22,7 @@ const cohortTableActiveColor = 'yellow'
 // this type is fully defined in MassNav def in dataset.ts but not in a form that can extract "about" config to share. thus need to repeat here to avoid tsc err
 type AboutObj = {
 	html: string
-	activeItems?: { items: any }
+	activeItems?: { layout?: 'buttons' | 'cards'; items: any }
 	disclaimer?: any
 	/** when true, render the world map from termdbConfig.geomap directly on the landing tab */
 	showGeomap?: boolean
@@ -67,6 +68,8 @@ export class MassAbout {
 	type: string
 	opts: MassAboutOpts
 	state: any
+	/** reused menu for openChartMenu() so repeated card clicks don't accumulate menu divs in the DOM */
+	chartMenu?: Menu
 
 	constructor(opts: MassAboutOpts) {
 		this.opts = opts
@@ -348,6 +351,10 @@ export class MassAbout {
 
 	initActiveItems = () => {
 		if (!this.aboutOverrides?.activeItems) return
+		if (this.aboutOverrides.activeItems.layout == 'cards') {
+			this.initActiveItemCards()
+			return
+		}
 
 		// todo: customize general holder by activeItems.holderStyle{}
 		const div = this.subheader
@@ -357,31 +364,91 @@ export class MassAbout {
 
 		for (const item of this.aboutOverrides.activeItems.items) {
 			// todo: by item.type, item.divStyle{}
-			div
+			const btn = div
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin', '5px')
 				.attr('class', 'sja_menuoption')
 				.attr('data-testid', 'sjpp-custom-active-item-btn')
 				.html(item.title)
-				.on('click', async () => {
-					/* First, set the active tab to toggle to the plots tab and wait for the tab to be set,
-					otherwise the plotDiv is hidden when rendering and
-					may cause issues. A known issue is that getMaxLabelWidth getBBox on a hidden div returns width=0
-					this affects the legend rendering in plots like the scatter resulting in overlapping texts
-					*/
-					await this.app.dispatch({
-						type: 'tab_set',
-						activeTab: 1
-					})
-					// after switching tab so plot div is shown, dispatch to create the plot
-					this.app.dispatch({
-						type: 'plot_create',
-						id: getId(),
-						config: structuredClone(item.plot)
-					})
-				})
+			btn.on('click', () => this.launchActiveItem(item, btn.node()))
 		}
+	}
+
+	// render activeItems as large square tiles (homepage style) that lift on hover
+	initActiveItemCards = () => {
+		const items = this.aboutOverrides!.activeItems!.items
+		const holder = this.subheader
+			.append('div')
+			.attr('data-testid', 'sjpp-custom-about-activeItems')
+			.style('display', 'flex')
+			.style('flex-wrap', 'wrap')
+			.style('justify-content', 'center')
+			.style('gap', '24px')
+			.style('padding', '20px 20px 30px 20px')
+
+		for (const item of items) {
+			const card = holder
+				.append('div')
+				.attr('class', 'sjpp-about-card')
+				.attr('data-testid', 'sjpp-custom-active-item-card')
+			if (item.icon) card.append('div').attr('class', 'sjpp-about-card-icon').html(item.icon)
+			card.append('div').attr('class', 'sjpp-about-card-title').html(item.title)
+			// always render the subtitle div (even when empty) so its reserved height keeps every card the same size
+			card
+				.append('div')
+				.attr('class', 'sjpp-about-card-subtitle')
+				.text(item.subtitle || '')
+			card.on('click', () => this.launchActiveItem(item, card.node()))
+		}
+	}
+
+	// launch behavior shared by button and card layouts
+	launchActiveItem = async (item, anchorEl) => {
+		// some charts (e.g. proteinView) require user input before a plot can be created;
+		// open their chart-specific menu instead of directly creating a plot
+		if (item.openChartMenu) {
+			await this.openChartMenu(item.openChartMenu, anchorEl)
+			return
+		}
+		if (!item.plot) {
+			console.error('about activeItem has neither .plot nor .openChartMenu', item)
+			return
+		}
+		/* First, set the active tab to toggle to the plots tab and wait for the tab to be set,
+		otherwise the plotDiv is hidden when rendering and may cause issues. */
+		await this.app.dispatch({
+			type: 'tab_set',
+			activeTab: 1
+		})
+		// after switching tab so plot div is shown, dispatch to create the plot
+		this.app.dispatch({
+			type: 'plot_create',
+			id: getId(),
+			config: structuredClone(item.plot)
+		})
+	}
+
+	// open a chart-specific launch menu (e.g. gene search for proteinView) anchored to the tile.
+	// the chart module is dynamically imported so its code only loads when the tile is clicked.
+	openChartMenu = async (chartType, anchorEl) => {
+		// reuse a single menu instance; Menu.hide() only hides (doesn't remove) the div
+		const menu = this.chartMenu || (this.chartMenu = new Menu({ padding: '0px' }))
+		menu.clear()
+		// wrap dispatch so that creating a plot from the menu also switches to the plots tab
+		const shimApp = {
+			opts: this.app.opts,
+			dispatch: async action => {
+				if (action.type == 'plot_create') await this.app.dispatch({ type: 'tab_set', activeTab: 1 })
+				return this.app.dispatch(action)
+			}
+		}
+		const chartsInstanceShim = { app: shimApp, dom: { tip: menu } }
+		const _ = await importPlot(chartType)
+		if (typeof _.makeChartBtnMenu != 'function')
+			throw `about activeItem openChartMenu: chart '${chartType}' has no makeChartBtnMenu`
+		_.makeChartBtnMenu(menu.d.append('div'), chartsInstanceShim, chartType)
+		menu.showunder(anchorEl)
 	}
 
 	initDisclaimer = () => {

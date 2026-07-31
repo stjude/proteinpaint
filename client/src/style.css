@@ -959,6 +959,61 @@ by normalize.css are covered here
     border-radius: 5px 0px 0px 5px;
 }
 
+/* "about" tab activeItems rendered as large square tiles (cards layout) */
+.sjpp-about-card {
+    width: 200px;
+    min-height: 200px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+    padding: 22px 16px;
+    cursor: pointer;
+    border-radius: 14px;
+    background: var(--sjpp-about-card-bg, #ffffff);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sjpp-about-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+}
+
+.sjpp-about-card-icon {
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sjpp-about-card-icon img,
+.sjpp-about-card-icon svg {
+    max-height: 84px;
+    max-width: 120px;
+}
+
+.sjpp-about-card-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    line-height: 1.2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 2.4em;
+}
+
+.sjpp-about-card-subtitle {
+    font-size: 0.85em;
+    opacity: 0.7;
+    line-height: 1.3;
+    min-height: 2.6em;
+}
 .sjpp-app-drawer-card-ribbon{
     grid-area: image;
     overflow: hidden;

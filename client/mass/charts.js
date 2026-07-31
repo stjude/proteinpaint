@@ -360,7 +360,7 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
-			label: 'Protein Selection',
+			label: 'Protein View',
 			chartType: 'proteinView',
 			clickTo: self.loadChartSpecificMenu
 		},
