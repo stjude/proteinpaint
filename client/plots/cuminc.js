@@ -570,7 +570,6 @@ class MassCumInc {
 		for (const chartId in noEvents) {
 			this.noEvents[chartId] = noEvents[chartId].map(seriesId => c.term2?.term.values?.[seriesId]?.label || seriesId)
 		}
-		console.log('stuff', estimates)
 	}
 
 	sortSerieses(charts) {
