@@ -984,6 +984,11 @@ by normalize.css are covered here
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
 }
 
+.sjpp-about-card:focus-visible {
+    outline: 3px solid var(--sjpp-focus-outline, #1a73e8);
+    outline-offset: 3px;
+}
+
 .sjpp-about-card-icon {
     height: 84px;
     display: flex;
