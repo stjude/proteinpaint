@@ -1,52 +1,107 @@
-import { type TermdbAggregateMatrixRequest, PSEUDOBULK, GENE_EXPRESSION } from '#types'
+import type { TermdbAggregateMatrixRequest, HasValidAggMatrixResponse, AggMatrixDot, AxisSection, AxisMember } from '#types'
+import { PSEUDOBULK, GENE_EXPRESSION } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
+import { scaleLinear } from 'd3-scale'
 
+type ColData = {
+    member: string
+    category: string
+    colorTmp: Record<string, number | null>
+    sizeTmp: Record<string, number | null>
+}
 
-export function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any) {
-    const entries = q.entries
-    const queries = new Set()
-    const result = {
-        colorScale: {}
+export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any): Promise<HasValidAggMatrixResponse> {
+    const queries = new Set<string>()
+    const rowSections: AxisSection[] = []
+    let termCount = 0, rowLongest = ''
+
+    for (const section in q.entries) {
+        const terms = q.entries[section].map(tw => {
+            const label = tw.term.name || tw.term.id
+            if (tw.term.type == GENE_EXPRESSION) queries.add(label.trim())
+            if (label.length > rowLongest.length) rowLongest = label
+            termCount++
+            return { id: tw.term.id, label }
+        })
+        rowSections.push({ id: section, terms })
     }
 
-    for (const section in entries) {
-        const tws = entries[section]
-        if (tws[0].term.type == GENE_EXPRESSION) {
-            tws.forEach((tw) => { queries.add((tw.term.name || tw.term.id).trim()) })
+    const columns: ColData[] = []
+    const colMembers: AxisMember[] = []
+    let colorMin = Infinity, colorMax = -Infinity
+    let sizeMin = Infinity, sizeMax = -Infinity
+    let categoryCount = 0, colLongest = ''
+
+    for (const member in q.categories) {
+        const categories = q.categories[member].map(tw => {
+            const label = tw.term.name || tw.term.id
+            if (label.length > colLongest.length) colLongest = label
+            categoryCount++
+            return { id: tw.term.id, label }
+        })
+        colMembers.push({ id: member, categories })
+
+        for (const tw of q.categories[member]) {
+            const { colorTmp, sizeTmp, colorMin: cMin, colorMax: cMax, sizeMin: sMin, sizeMax: sMax }
+                = await processMemberTerm(tw.term, q, ds, queries)
+            if (cMin < colorMin) colorMin = cMin
+            if (cMax > colorMax) colorMax = cMax
+            if (sMin < sizeMin) sizeMin = sMin
+            if (sMax > sizeMax) sizeMax = sMax
+            columns.push({ member, category: tw.term.id, colorTmp, sizeTmp })
         }
     }
-    for (const member in q.categories) {
-        const tws = q.categories[member]
-        tws.forEach(async (tw) => {
-            await processMemberTerm(tw.term, q, ds, queries, result)
-        })
+
+    // One inner array per entry term (row), each containing one dot per column
+    const data: AggMatrixDot[][] = []
+    const sizeScale = scaleLinear()
+        .domain([sizeMin, sizeMax])
+        .range([q.minDotSize, q.maxDotSize])
+
+    for (const { terms } of rowSections) {
+        for (const { id: term } of terms) {
+            const row: AggMatrixDot[] = columns.map(col => {
+                const sizeValue = col.sizeTmp[term] ?? 0
+                console.log(sizeValue, sizeScale(sizeValue))
+                return {
+                    entryTerm: term,
+                    category: col.category,
+                    colorValue: col.colorTmp[term] ?? 0,
+                    sizeValue,
+                    dotSize: sizeScale(sizeValue)
+                }
+            })
+            data.push(row)
+        }
+    }
+
+    return {
+        colorScale: { min: colorMin, max: colorMax },
+        data,
+        axesLayout: {
+            rows: { sections: rowSections, termCount, longestLabel: rowLongest },
+            columns: { members: colMembers, categoryCount, longestLabel: colLongest }
+        }
     }
 }
 
-async function processMemberTerm(term, q, ds, queries, result) {
+async function processMemberTerm(term, q: TermdbAggregateMatrixRequest, ds: any, queries: Set<string>) {
     if (term.type === PSEUDOBULK) {
         const pseudobulk = ds.queries.singleCell.pseudobulk
         const member = pseudobulk[term.assay][term.memberId]
         if (!member) throw new Error(`Member: ${term.memberId} not found for term: ${term.id} in pseudobulk assay: ${term.assay}`)
 
-        //Get gradient values
-        {
-            const gradientFile = member.categories[term.id][`${q.gradientMethod}File`]
-            const gradientData = await getHDF5Data(Array.from(queries), gradientFile)
-            const { tmp, min, max } = processHDF5Data(gradientData)
-            result.colorScale = { min, max }
-            console.log('Processed gradient data:', tmp)
-        }
+        const gradientFile = member.categories[term.id][`${q.gradientMethod}File`]
+        const gradientData = await getHDF5Data(Array.from(queries), gradientFile)
+        const { tmp: colorTmp, min: colorMin, max: colorMax } = processHDF5Data(gradientData)
 
-        //Get size values
-        {
-            const sizeFile = member.categories[term.id][`${q.sizeMethod}File`]
-            const sizeData = await getHDF5Data(Array.from(queries), sizeFile)
-            const { tmp, min, max } = processHDF5Data(sizeData)
-            console.log('Processed size data:', { tmp, min, max })
-        }
-    } else throw new Error(`Term type: ${term.type} not supported in aggregate matrix route. `)
+        const sizeFile = member.categories[term.id][`${q.sizeMethod}File`]
+        const sizeData = await getHDF5Data(Array.from(queries), sizeFile)
+        const { tmp: sizeTmp, min: sizeMin, max: sizeMax } = processHDF5Data(sizeData)
+
+        return { colorTmp, sizeTmp, colorMin, colorMax, sizeMin, sizeMax }
+    } else throw new Error(`Term type: ${term.type} not supported in aggregate matrix route.`)
 }
 
 /** 

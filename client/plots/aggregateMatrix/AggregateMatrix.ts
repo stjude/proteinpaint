@@ -60,11 +60,11 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 
         try {
             const data = await this.model.getData()
-            // if (!data || data.error) {
-            //     super.toggleLoadingDiv('none')
-            //     super.printError(data?.error || 'No data returned from server')
-            //     return
-            // }
+            if (!data || data.error) {
+                super.toggleLoadingDiv('none')
+                super.printError(data?.error || 'No data returned from server')
+                return
+            }
             console.log(data)
         } catch (e: any) {
             if (e instanceof Error) console.error(`${e.message || e} [AggregateMatrix main()]`)

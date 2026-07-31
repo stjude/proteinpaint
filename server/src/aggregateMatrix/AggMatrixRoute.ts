@@ -38,11 +38,9 @@ function init({ genomes }) {
             const ds = g.datasets[q.dslabel]
             if (!ds) throw new Error('invalid dataset name')
 
-            getAggMatrixData(q, ds) 
-            
-            /** Needs to calculate the overall color
-             * Needs to calculate the dot size from a min and max size */
-            result = 'ok'
+            result = await getAggMatrixData(q, ds) 
+            if (!result) throw new Error('no result returned from getAggMatrixData')
+            if (!result.data || !result.axesLayout) throw new Error('invalid result returned from getAggMatrixData')
         } catch (e: any) {
             if (e.stack) console.log(e.stack)
             result = {

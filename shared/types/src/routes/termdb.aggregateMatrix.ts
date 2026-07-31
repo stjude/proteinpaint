@@ -19,34 +19,58 @@ export type TermdbAggregateMatrixRequest = {
 } 
 
 export type AggMatrixDot = {
-    /** Category identifier */
+    /** Category term identifier (the value/level within a member) */
     category: string
-    /** Member identifier within the category */
-    member: string
     /** Raw aggregate value mapped to color gradient */
     colorValue: number
     /** Raw aggregate value for size (returned for tooltip display) */
     sizeValue: number
     /** Computed dot size in pixels */
     dotSize: number
+    /** Entry term identifier (the value/level within a section) */
+    entryTerm: string
 }
 
-export type AggMatrixResponseRow = {
-    /** Section identifier from entries config (entries -> section -> term) */
-    section: string
-    /** Term identifier within the section */
-    term: string
-    /** Dots for this row, ordered by category -> member on the x-axis */
-    dots: AggMatrixDot[]
+export type AxisTermEntry = { id: string, label: string }
+
+export type AxisSection = {
+    id: string
+    /** Entry terms within this section, ordered as rows */
+    terms: AxisTermEntry[]
+}
+
+export type AxisMember = {
+    id: string
+    /** Category terms within this member, ordered as columns */
+    categories: AxisTermEntry[]
+}
+
+export type AxesLayout = {
+    /** Y-axis layout: sections -> entry terms */
+    rows: {
+        sections: AxisSection[]
+        /** Total row count across all sections */
+        termCount: number
+        /** The longest entry term label, for axis sizing */
+        longestLabel: string
+    }
+    /** X-axis layout: members -> category terms */
+    columns: {
+        members: AxisMember[]
+        /** Total column count across all members */
+        categoryCount: number
+        /** The longest category term label, for axis sizing */
+        longestLabel: string
+    }
 }
 
 export type HasValidAggMatrixResponse = {
-    /** Min and max values for the color gradient */
+    /** Min and max raw values for the color gradient */
     colorScale: { min: number, max: number }
-    /** Rows ordered by section -> term on the y-axis */
-    data: AggMatrixResponseRow[]
-    /** x-axis member -> category order */
-    xAxisOrder: { member: string, categories: string[] }[]
+    /** Array of rows, each row is an array of dots ordered left to right by column */
+    data: AggMatrixDot[][]
+    /** Axes structure for generating x/y axis labels */
+    axesLayout: AxesLayout
 }
 
 export type TermdbAggregateMatrixResponse = HasValidAggMatrixResponse | ErrorResponse
