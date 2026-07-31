@@ -979,9 +979,15 @@ by normalize.css are covered here
     transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-.sjpp-about-card:hover {
+.sjpp-about-card:hover,
+.sjpp-about-card:focus-visible {
     transform: translateY(-8px) scale(1.03);
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+}
+
+.sjpp-about-card:focus-visible {
+    outline: 2px solid #2b6f9f;
+    outline-offset: 2px;
 }
 
 .sjpp-about-card:focus-visible {
