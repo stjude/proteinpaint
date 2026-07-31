@@ -10,7 +10,6 @@ import type {
 	AiProjectSelectedWSImagesResponse,
 	SampleWSImagesResponse,
 	WSImage,
-	WSImagesRequest,
 	WSImagesResponse
 } from '#types'
 import { FeaturePrefixes, createFeatureID, FlagStatus } from '#types'
@@ -136,15 +135,17 @@ export class ViewModelProvider {
 		for (const i of indicesToLoad) {
 			const wsimage = wsimages[i].filename
 			const authToken = btoa(getSavedToken(dslabel) || '')
-			const body: WSImagesRequest = {
-				genome: genome,
-				dslabel: dslabel,
-				sampleId: sampleId,
-				wsimage: wsimages[i].filename,
-				aiProjectId: aiProjectID
+
+			// query params match the wsitiles route (server/src/routes/wsitiles.ts)
+			let queryParams = `wsimage=${wsimage}&dslabel=${dslabel}&genome=${genome}`
+			if (sampleId) {
+				queryParams += `&sample_id=${sampleId}`
+			} else if (aiProjectID) {
+				queryParams += `&ai_project_id=${aiProjectID}`
 			}
 
-			const data: WSImagesResponse = await dofetch3('wsimages', { body })
+			// metadata now comes from the openslide-backed route (no tile server / redis session)
+			const data: WSImagesResponse = await dofetch3(`wsitiles/meta?${queryParams}`)
 
 			if (data.status === 'error') {
 				throw new Error(`${data.error}`)
@@ -155,14 +156,9 @@ export class ViewModelProvider {
 
 			const mpp = data.mpp // microns per pixel
 
-			let queryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}`
-			if (sampleId) {
-				queryParams += `&sample_id=${sampleId}`
-			} else if (aiProjectID) {
-				queryParams += `&ai_project_id=${aiProjectID}`
-			}
-
-			const zoomifyUrl = `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${queryParams}`
+			// {z}/{x}/{y} hit wsitiles/tile; the unused {TileGroup} token is only there
+			// because OpenLayers' Zoomify requires a {TileGroup}/{tileIndex} placeholder.
+			const zoomifyUrl = `${host}/wsitiles/tile/{z}/{x}/{y}?${queryParams}&_={TileGroup}`
 
 			const source = new Zoomify({
 				url: zoomifyUrl,
@@ -173,7 +169,7 @@ export class ViewModelProvider {
 
 			source.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
 
-			const previewUrl = `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${queryParams}`
+			const previewUrl = `${host}/wsitiles/tile/0/0/0?${queryParams}&_=TileGroup0`
 			const authenticatedPreviewUrl = await this.createAuthenticatedPreviewUrl(previewUrl, authToken)
 
 			const options = {

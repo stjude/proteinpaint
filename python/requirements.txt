@@ -10,7 +10,10 @@ matplotlib==3.10.3
 nibabel==5.3.2
 numba==0.66.0
 numpy>=1.22
+openslide-bin==4.0.1.2
+openslide-python==1.4.6
 pandas==2.2.3
+pillow==12.3.0
 psutil==7.2.1
 pyBigWig==0.3.25 --no-binary=pyBigWig
 pydantic==2.12.3
