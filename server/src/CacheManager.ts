@@ -110,6 +110,14 @@ const defaultOpts = {
 			...subdirOptsDefaults,
 			maxAge: day * 60,
 			skipMs: halfDay
+		},
+		// WSI tiles rendered on demand from .svs by wsitiles route. Flat .jpg
+		// files (the sweep is non-recursive), evicted by mtime like any other subdir.
+		wsitiles: {
+			...subdirOptsDefaults,
+			maxAge: day * 30,
+			skipMs: halfDay,
+			fileExtensions: new Set(['.jpg'])
 		}
 		// bam: {
 		//  ...subdirOptsDefaults,
