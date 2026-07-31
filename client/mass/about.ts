@@ -371,7 +371,7 @@ export class MassAbout {
 				.attr('class', 'sja_menuoption')
 				.attr('data-testid', 'sjpp-custom-active-item-btn')
 				.html(item.title)
-			btn.on('click', () => this.launchActiveItem(item, btn.node()))
+			this.makeActivatable(btn, () => this.launchActiveItem(item, btn.node()))
 		}
 	}
 
@@ -399,8 +399,22 @@ export class MassAbout {
 				.append('div')
 				.attr('class', 'sjpp-about-card-subtitle')
 				.text(item.subtitle || '')
-			card.on('click', () => this.launchActiveItem(item, card.node()))
+			this.makeActivatable(card, () => this.launchActiveItem(item, card.node()))
 		}
+	}
+
+	// make a non-native clickable element (a styled <div>) operable like a button:
+	makeActivatable = (sel, onActivate) => {
+		sel
+			.attr('role', 'button')
+			.attr('tabindex', 0)
+			.on('click', () => onActivate())
+			.on('keydown', (event: KeyboardEvent) => {
+				if (event.key == 'Enter' || event.key == ' ') {
+					event.preventDefault()
+					onActivate()
+				}
+			})
 	}
 
 	// launch behavior shared by button and card layouts
