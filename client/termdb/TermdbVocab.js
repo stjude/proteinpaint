@@ -1478,6 +1478,8 @@ export class TermdbVocab extends Vocab {
 			categories: opts.categories,
 			gradientMethod: opts.gradientMethod,
 			sizeMethod: opts.sizeMethod,
+			minDotSize: opts.minDotSize,
+			maxDotSize: opts.maxDotSize,
 			filter: getNormalRoot(opts.filter),
 			filter0: opts.filter0
 		}
