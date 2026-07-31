@@ -712,7 +712,7 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 					ke.preventDefault()
 				}
 				// Launch a proteinView chart for the clicked gene — same dispatch shape used
-				// by the "Protein Selection" chart-button menu after a gene is typed in.
+				// by the "Protein View" chart-button menu after a gene is typed in.
 				tip.hide()
 				this.app.dispatch({
 					type: 'plot_create',

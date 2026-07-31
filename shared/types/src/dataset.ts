@@ -1012,10 +1012,10 @@ export type SingleCellPlot = {
 	if not introduce filePrefix
 	*/
 	fileSuffix?: string
-	/** list of columns in tabular text file that define cell categories and can be used to 
+	/** list of columns in tabular text file that define cell categories and can be used to
 	 * color the cells in the plot. must have categorical values.
-	 * 
-	 * If .isMetaResult is true, array must include a sample column. 
+	 *
+	 * If .isMetaResult is true, array must include a sample column.
 	 */
 	colorColumns: ColorColumn[]
 	/** if true the plot is shown by default. otherwise hidden.
@@ -2206,8 +2206,12 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 		/** link to data release page */
 		link: string
 	}
-	/** "active" items, shown as clickable buttons in about tab. click an item to launch a plot */
+	/** "active" items shown in the about tab. clicking an item either launches a plot
+	 * or opens a chart-specific menu (item.openChartMenu) */
 	activeItems?: {
+		/** how to render the items. 'buttons' (default) = compact inline buttons.
+		 * 'cards' = large square tiles that lift on hover */
+		layout?: 'buttons' | 'cards'
 		items: ActiveItem[]
 		// can add holderStyle to customize
 	}
@@ -2222,8 +2226,16 @@ type MassNavAboutTabEntry = MassNavTabEntry & {
 type ActiveItem = {
 	/** string or html to show inside the button for the item, potentially allow to include <image> as logo */
 	title: string
-	/** plot object describing the plot to be launched */
-	plot: object
+	/** optional secondary text shown under the title (cards layout) */
+	subtitle?: string
+	/** optional html (e.g. <img>, <svg>, emoji) shown as the tile icon (cards layout) */
+	icon?: string
+	/** plot object describing the plot to be launched via plot_create.
+	 * Required unless openChartMenu is set. */
+	plot?: object
+	/** instead of directly launching a plot, open a chart-specific menu (e.g. a gene
+	 * search) for chart types that require user input before a plot can be created.*/
+	openChartMenu?: string
 }
 
 type Title = {
