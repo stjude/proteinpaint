@@ -1,1 +1,2 @@
-
+Fixes:
+- reorder error handling and improve data processing in MassCumInc class
