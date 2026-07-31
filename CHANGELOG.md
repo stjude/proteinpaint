@@ -17,6 +17,7 @@ Features:
 Fixes:
 - Single-cell app: restore the experiment-ID link in the sample table to the generic termdbConfig.urlTemplates.scrnaExperimentId template used by the legacy single-cell plot, instead of a hardcoded portal.gdc.cancer.gov URL behind a dslabel check
 - Seed singleCell.geneExpression.sample2gene2expressionBins for datasets that supply their own getter; termdb.getDefaultBins reads it unconditionally and only the built-in getter used to create it
+- reorder error handling and improve data processing in MassCumInc class
 
 
 ## 2.199.0
