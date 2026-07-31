@@ -80,14 +80,6 @@ export class IDCTableView {
 			Project: 'project.project_id',
 			'IDC Studies (Click to expand)': undefined
 		}
-		const expandableHeaders = [
-			'IDC Study Instance UID',
-			'Collection',
-			'Study Date',
-			'Study Description',
-			'IDC Histopathology Viewer',
-			'IDC Radiology Viewer'
-		]
 
 		const thead = table.append('thead')
 		const headerRow = applyStyles(thead.append('tr'), idcTableStyles.headerRow)
@@ -185,9 +177,28 @@ export class IDCTableView {
 							idcTableStyles.detailsHeaderRow
 						)
 						applyStyles(detailsHeaderRow, idcTableStyleFns.rowBottomBorder(sharedColors.borderColor))
-
-						expandableHeaders.forEach(header => {
-							applyStyles(detailsHeaderRow.append('th'), idcTableStyles.detailsHeaderCell).text(header)
+						const expandableHeaders = [
+							'IDC Study Instance UID',
+							'Collection',
+							'Study Date',
+							'Study Description',
+							'IDC Histopathology Viewer',
+							'IDC Radiology Viewer'
+						]
+						// This allows the first header "IDC Study Instance UID" to take up as much space as possibly to lower the chance that columns
+						// will be misaligned when the UID is longer than usual
+						expandableHeaders.forEach((header, idx) => {
+							const headerCell = applyStyles(detailsHeaderRow.append('th'), idcTableStyles.detailsHeaderCell)
+							applyStyles(
+								headerCell,
+								idx === 0
+									? { width: '40%' }
+									: {
+											'white-space': 'nowrap',
+											width: '1%'
+									  }
+							)
+							headerCell.text(header)
 						})
 
 						const detailsTbody = detailsTable.append('tbody')

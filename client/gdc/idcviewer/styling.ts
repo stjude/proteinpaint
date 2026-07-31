@@ -43,9 +43,11 @@ export const sharedStyleFns = {
 
 export const idcViewerStyles = {
 	loadingDiv: {
-		display: 'block',
+		display: 'none',
 		'background-color': sharedColors.fullWhiteBgColor,
-		position: 'absolute',
+		position: 'fixed',
+		top: '0px',
+		left: '0px',
 		width: '100%',
 		height: '100%',
 		opacity: '0.5'
@@ -180,7 +182,7 @@ export const idcTableStyles = {
 	pageSizeOptionsPanel: {
 		display: 'none',
 		position: 'absolute',
-		top: 'calc(100% + 4px)',
+		bottom: 'calc(100% + 4px)',
 		left: '0',
 		'min-width': '100%',
 		'border-radius': '4px',
