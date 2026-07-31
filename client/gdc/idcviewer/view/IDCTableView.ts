@@ -185,7 +185,7 @@ export class IDCTableView {
 							'IDC Histopathology Viewer',
 							'IDC Radiology Viewer'
 						]
-						// This allows the first header "IDC Study Instance UID" to take up as much space as possibly to lower the chance that columns
+						// This allows the first header "IDC Study Instance UID" to take up plenty of space to lower the chance that columns
 						// will be misaligned when the UID is longer than usual
 						expandableHeaders.forEach((header, idx) => {
 							const headerCell = applyStyles(detailsHeaderRow.append('th'), idcTableStyles.detailsHeaderCell)

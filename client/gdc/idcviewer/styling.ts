@@ -46,6 +46,7 @@ export const idcViewerStyles = {
 		display: 'none',
 		'background-color': sharedColors.fullWhiteBgColor,
 		position: 'fixed',
+		'z-index': '1000',
 		top: '0px',
 		left: '0px',
 		width: '100%',
