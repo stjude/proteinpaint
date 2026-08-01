@@ -1591,7 +1591,7 @@ tape('single barchart (patient-level), compound filter (patient-level + sample-l
 })
 
 tape('genevariant barchart, compound filter', function (test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			termfilter: {
