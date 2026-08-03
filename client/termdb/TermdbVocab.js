@@ -1474,8 +1474,8 @@ export class TermdbVocab extends Vocab {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
-			entries: opts.entries,
-			categories: opts.categories,
+			rows: opts.rows,
+			columns: opts.columns,
 			gradientMethod: opts.gradientMethod,
 			sizeMethod: opts.sizeMethod,
 			minDotSize: opts.minDotSize,
@@ -1487,11 +1487,11 @@ export class TermdbVocab extends Vocab {
 			if (isSingleCellTerm(term)) return term
 			else return this.getTwMinCopy({term: term, q: {}})
 		}
-		Object.keys(body.entries).forEach(section => {
-			body.entries[section] = body.entries[section].map(term => formatTw(term))
+		Object.keys(body.rows).forEach(section => {
+			body.rows[section] = body.rows[section].map(term => formatTw(term))
 		})
-		Object.keys(body.categories).forEach(member => {
-			body.categories[member] = body.categories[member].map(term => formatTw(term))
+		Object.keys(body.columns).forEach(member => {
+			body.columns[member] = body.columns[member].map(term => formatTw(term))
 		})
 
 		if (body.filter) body.filter = getNormalRoot(body.filter)

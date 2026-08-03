@@ -1,12 +1,12 @@
-import type { TermdbAggregateMatrixRequest, HasValidAggMatrixResponse, AggMatrixDot, AxisSection, AxisMember } from '#types'
+import type { TermdbAggregateMatrixRequest, HasValidAggMatrixResponse, AggMatrixDot, AxisSection } from '#types'
 import { PSEUDOBULK, GENE_EXPRESSION } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { scaleLinear } from 'd3-scale'
 
 type ColData = {
-    member: string
-    category: string
+    column: string
+    termId: string
     colorTmp: Record<string, number | null>
     sizeTmp: Record<string, number | null>
 }
@@ -14,42 +14,42 @@ type ColData = {
 export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any): Promise<HasValidAggMatrixResponse> {
     const queries = new Set<string>()
     const rowSections: AxisSection[] = []
-    let termCount = 0, rowLongest = ''
+    let rowCount = 0, rowLongest = ''
 
-    for (const section in q.entries) {
-        const terms = q.entries[section].map(tw => {
+    for (const section in q.rows) {
+        const terms = q.rows[section].map(tw => {
             const label = tw.term.name || tw.term.id
             if (tw.term.type == GENE_EXPRESSION) queries.add(label.trim())
             if (label.length > rowLongest.length) rowLongest = label
-            termCount++
+            rowCount++
             return { id: tw.term.id, label }
         })
         rowSections.push({ id: section, terms })
     }
 
     const columns: ColData[] = []
-    const colMembers: AxisMember[] = []
+    const colMembers: AxisSection[] = []
     let colorMin = Infinity, colorMax = -Infinity
     let sizeMin = Infinity, sizeMax = -Infinity
-    let categoryCount = 0, colLongest = ''
+    let colCount = 0, colLongest = ''
 
-    for (const member in q.categories) {
-        const categories = q.categories[member].map(tw => {
+    for (const col in q.columns) {
+        const tmpColTerms = q.columns[col].map(tw => {
             const label = tw.term.name || tw.term.id
             if (label.length > colLongest.length) colLongest = label
-            categoryCount++
+            colCount++
             return { id: tw.term.id, label }
         })
-        colMembers.push({ id: member, categories })
+        colMembers.push({ id: col, terms: tmpColTerms })
 
-        for (const tw of q.categories[member]) {
+        for (const tw of q.columns[col]) {
             const { colorTmp, sizeTmp, colorMin: cMin, colorMax: cMax, sizeMin: sMin, sizeMax: sMax }
                 = await processMemberTerm(tw.term, q, ds, queries)
             if (cMin < colorMin) colorMin = cMin
             if (cMax > colorMax) colorMax = cMax
             if (sMin < sizeMin) sizeMin = sMin
             if (sMax > sizeMax) sizeMax = sMax
-            columns.push({ member, category: tw.term.id, colorTmp, sizeTmp })
+            columns.push({ column: col, termId: tw.term.id, colorTmp, sizeTmp })
         }
     }
 
@@ -63,10 +63,9 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
         for (const { id: term } of terms) {
             const row: AggMatrixDot[] = columns.map(col => {
                 const sizeValue = col.sizeTmp[term] ?? 0
-                console.log(sizeValue, sizeScale(sizeValue))
                 return {
-                    entryTerm: term,
-                    category: col.category,
+                    row: term,
+                    column: col.termId,
                     colorValue: col.colorTmp[term] ?? 0,
                     sizeValue,
                     dotSize: sizeScale(sizeValue)
@@ -80,8 +79,8 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
         colorScale: { min: colorMin, max: colorMax },
         data,
         axesLayout: {
-            rows: { sections: rowSections, termCount, longestLabel: rowLongest },
-            columns: { members: colMembers, categoryCount, longestLabel: colLongest }
+            rows: { sections: rowSections, rowCount, longestLabel: rowLongest },
+            columns: { sections: colMembers, colCount, longestLabel: colLongest }
         }
     }
 }

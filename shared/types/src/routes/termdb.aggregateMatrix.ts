@@ -4,8 +4,8 @@ import type { TermWrapper } from '../terms/tw.ts'
 export type TermdbAggregateMatrixRequest = {
     genome: string
     dslabel: string
-    entries: { [section: string]: TermWrapper[] }
-    categories: { [member: string]: TermWrapper[] }
+    rows: { [section: string]: TermWrapper[] }
+    columns: { [member: string]: TermWrapper[] }
     /** Aggregation method to determine the color gradient. */
     gradientMethod: string
     /** Aggregation method to determine the dot sizes. */
@@ -20,7 +20,7 @@ export type TermdbAggregateMatrixRequest = {
 
 export type AggMatrixDot = {
     /** Category term identifier (the value/level within a member) */
-    category: string
+    column: string
     /** Raw aggregate value mapped to color gradient */
     colorValue: number
     /** Raw aggregate value for size (returned for tooltip display) */
@@ -28,7 +28,7 @@ export type AggMatrixDot = {
     /** Computed dot size in pixels */
     dotSize: number
     /** Entry term identifier (the value/level within a section) */
-    entryTerm: string
+    row: string
 }
 
 export type AxisTermEntry = { id: string, label: string }
@@ -39,27 +39,21 @@ export type AxisSection = {
     terms: AxisTermEntry[]
 }
 
-export type AxisMember = {
-    id: string
-    /** Category terms within this member, ordered as columns */
-    categories: AxisTermEntry[]
-}
-
 export type AxesLayout = {
-    /** Y-axis layout: sections -> entry terms */
+    /** Y-axis layout: sections -> row terms */
     rows: {
         sections: AxisSection[]
         /** Total row count across all sections */
-        termCount: number
-        /** The longest entry term label, for axis sizing */
+        rowCount: number
+        /** The longest row label, for axis sizing */
         longestLabel: string
     }
-    /** X-axis layout: members -> category terms */
+    /** X-axis layout: sections -> col terms */
     columns: {
-        members: AxisMember[]
+        sections: AxisSection[]
         /** Total column count across all members */
-        categoryCount: number
-        /** The longest category term label, for axis sizing */
+        colCount: number
+        /** The longest col label, for axis sizing */
         longestLabel: string
     }
 }

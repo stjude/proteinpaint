@@ -3,6 +3,8 @@ import { PlotBase } from '#plots/PlotBase.ts'
 import { getCombinedTermFilter } from '#filter'
 import { AggMatrixModel } from './model/AggMatrixModel'
 import { getDefaultAggregateMatrixSettings } from './settings/defaults.ts'
+import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
+import { AggMatrixView } from './view/AggMatrixView.ts'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -14,6 +16,8 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
     components: { controls: any }
     dom: { [name: string]: any }
     model!: AggMatrixModel
+    viewModel!: AggMatrixViewModel
+    view!: AggMatrixView
 
 
     constructor(opts: any, api: ComponentApi) {
@@ -51,6 +55,8 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 
     async init() {
         this.model = new AggMatrixModel(this)
+        this.viewModel = new AggMatrixViewModel(this)
+        this.view = new AggMatrixView(this)
     }
 
     async main() {
@@ -93,6 +99,6 @@ export function getPlotConfig(opts: any) {
 
 export function validatePlotConfig(config: any) {
     if (!config || typeof config !== 'object') throw new Error(`Invalid config provided for AggregateMatrix plot`)
-    if (!config.entries || !Object.keys(config.entries).length) throw new Error(`No entries provided for AggregateMatrix plot`)
-    if (!config.categories || !Object.keys(config.categories).length) throw new Error(`No categories provided for AggregateMatrix plot`)
+    if (!config.rows || !Object.keys(config.rows).length) throw new Error(`No rows provided for AggregateMatrix plot`)
+    if (!config.columns || !Object.keys(config.columns).length) throw new Error(`No columns provided for AggregateMatrix plot`)
 }

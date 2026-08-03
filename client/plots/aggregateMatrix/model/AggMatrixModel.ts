@@ -17,8 +17,8 @@ export class AggMatrixModel {
         validatePlotConfig(config)
 
         const body = {
-            entries: config.entries,
-            categories: config.categories,
+            rows: config.rows,
+            columns: config.columns,
             gradientMethod: config.settings.gradientMethod,
             sizeMethod: config.settings.sizeMethod,
             minDotSize: config.settings.minDotSize,
