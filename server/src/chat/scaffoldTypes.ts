@@ -158,8 +158,8 @@ export type SurvivalPhrase2EntityResult = {
 }
 
 export type CoxPhrase2EntityResult = {
-	/** Exact survival-term id resolved by find_survival_terms(). */
-	outcome: string
+	/** Exact survival-term id, or available choices when the outcome is ambiguous. */
+	outcome: string | DbRows[]
 	independent: Entity[]
 	filter?: Entity[]
 }

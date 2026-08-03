@@ -1,4 +1,4 @@
-import type { LlmConfig } from '#types'
+import type { LlmConfig, DbRows } from '#types'
 import type { Value, DictTerm, GeneSetTerm } from './entity2termObj.ts'
 import type { MsgToUser } from './scaffoldTypes.ts'
 import { isMsgToUser } from './scaffoldTypes.ts'
@@ -493,7 +493,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any, regressi
 }
 
 export async function resolveToTwTvs(
-	entity: Record<string, Value | Value[] | string | undefined>,
+	entity: Record<string, Value | Value[] | string | DbRows[] | undefined>,
 	plotType: string,
 	llm: LlmConfig,
 	dbPath: string,
@@ -583,13 +583,16 @@ export async function resolveToTwTvs(
 			twTvsObjects['filter'] = termWrapper
 		}
 	} else if (plotType === 'cox') {
-		const outcome = entity.outcome as Value | undefined
+		const outcome = Array.isArray(entity.outcome) ? undefined : (entity.outcome as Value | undefined)
 		const independent = entity.independent as Value[] | undefined
-		if (!outcome) throw new Error('Invalid outcome entity for Cox regression')
 		if (!independent?.length) throw new Error('Cox regression requires at least one independent variable')
-		const outcomeWrapper = await resolveToTw(outcome, llm, genome, 'cox')
-		if (isMsgToUser(outcomeWrapper)) return outcomeWrapper
-		twTvsObjects.outcome = outcomeWrapper
+		if (outcome) {
+			const outcomeWrapper = await resolveToTw(outcome, llm, genome, 'cox')
+			if (isMsgToUser(outcomeWrapper)) return outcomeWrapper
+			twTvsObjects.outcome = outcomeWrapper
+		} else {
+			twTvsObjects.outcome = entity.outcome
+		}
 		twTvsObjects.independent = []
 		for (const value of independent) {
 			const wrapper = await resolveToTw(value, llm, genome, 'cox')

@@ -190,8 +190,8 @@ export async function inferTermObjFromEntity(
 	dbPath: string,
 	genes_list: string[], // redundant (must be fixed)
 	genome: any
-): Promise<Record<string, Value | Value[] | string> | MsgToUser> {
-	const twObjects: Record<string, Value | Value[] | string> = {}
+): Promise<Record<string, Value | Value[] | string | DbRows[]> | MsgToUser> {
+	const twObjects: Record<string, Value | Value[] | string | DbRows[]> = {}
 	if (plotType === 'summary') {
 		const summaryEntity = entity as SummaryPhrase2EntityResult
 		for (const [key, value] of Object.entries(summaryEntity)) {
@@ -292,11 +292,6 @@ export async function inferTermObjFromEntity(
 		return twObjects
 	} else if (plotType === 'cox') {
 		const coxEntity = entity as CoxPhrase2EntityResult
-		const outcome: Value = {
-			term: { id: coxEntity.outcome, name: coxEntity.outcome, type: 'survival' },
-			phrase: coxEntity.outcome,
-			type: 'dictionary'
-		}
 		const independent: Value[] = []
 		for (const independentEntity of coxEntity.independent) {
 			const termObj = await getTermObj('independent', independentEntity, llm, dbPath, genes_list, genome)
@@ -304,7 +299,15 @@ export async function inferTermObjFromEntity(
 			if (!termObj) throw `Failed to get term object for Cox predictor "${independentEntity.phrase}".`
 			independent.push(termObj)
 		}
-		twObjects.outcome = outcome
+		if (Array.isArray(coxEntity.outcome)) {
+			twObjects.outcome = coxEntity.outcome as DbRows[]
+		} else {
+			twObjects.outcome = {
+				term: { id: coxEntity.outcome, name: coxEntity.outcome, type: 'survival' },
+				phrase: coxEntity.outcome,
+				type: 'dictionary'
+			}
+		}
 		twObjects.independent = independent
 		if (coxEntity.filter) {
 			const filterValues: Value[] = []
