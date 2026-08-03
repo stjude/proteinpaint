@@ -296,6 +296,18 @@ export async function resolveToPlotState(input: any, plotType: string, ds: any, 
 			plotState.plot.filter = input.filter
 		}
 	} else if (plotType === 'cox') {
+		if (Array.isArray(input.outcome)) {
+			// The outcome was not unambiguous. Return an incomplete plot state so
+			// the client can present the available survival terms for selection.
+			plotState.plot.chartType = 'regression'
+			plotState.plot.regressionType = 'cox'
+			plotState.plot.outcome = {
+				possible_options: input.outcome.map((r: any) => ({ id: r.name, name: r.description }))
+			}
+			if (input.independent?.length) plotState.plot.independent = input.independent
+			if (input.filter) plotState.plot.filter = input.filter
+			return plotState
+		}
 		if (!input.outcome) throw new Error('Cox regression requires an outcome.')
 		if (!Array.isArray(input.independent) || !input.independent.length)
 			throw new Error('Cox regression requires at least one independent variable.')
