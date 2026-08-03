@@ -56,7 +56,6 @@ export class ScatterViewModelBase {
 
 	renderChart(chart, div, removePrevious = true) {
 		const s = this.scatter.settings
-		console.log(chart, div)
 		div
 			.style('opacity', 0)
 			.style('display', 'inline-block')
