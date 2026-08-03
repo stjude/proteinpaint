@@ -2,8 +2,8 @@ import type { AggregateMatrixSettings } from './Settings.ts'
 
 export function getDefaultAggregateMatrixSettings(): AggregateMatrixSettings {
     return {
-        startColor: '#eb5f0e',
-        stopColor: '#072b94',
+        startColor: '#f78745',
+        stopColor: '#2076BB',
         gradientMethod: 'mean',
         sizeMethod: 'mean',
         minDotSize: 5,

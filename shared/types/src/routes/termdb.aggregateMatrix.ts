@@ -12,11 +12,11 @@ export type TermdbAggregateMatrixRequest = {
     sizeMethod: string
     /** Min size of the dots in pixels */
     minDotSize: number
-     /** Max size of the dots in pixels */
+    /** Max size of the dots in pixels */
     maxDotSize: number
     filter?: any
     filter0?: any
-} 
+}
 
 export type AggMatrixDot = {
     /** Category term identifier (the value/level within a member) */
@@ -39,26 +39,30 @@ export type AxisSection = {
     terms: AxisTermEntry[]
 }
 
-export type AxesLayout = {
-    /** Y-axis layout: sections -> row terms */
-    rows: {
-        sections: AxisSection[]
-        /** Total row count across all sections */
-        rowCount: number
-        /** The longest row label, for axis sizing */
-        longestLabel: string
-    }
-    /** X-axis layout: sections -> col terms */
-    columns: {
-        sections: AxisSection[]
-        /** Total column count across all members */
-        colCount: number
-        /** The longest col label, for axis sizing */
-        longestLabel: string
-    }
+export type AxisLayoutRows = {
+    sections: AxisSection[]
+    /** Total row count across all sections */
+    rowCount: number
+    /** The longest row label, for axis sizing */
+    longestLabel: string
 }
 
-export type HasValidAggMatrixResponse = {
+export type AxisLayoutColumns = {
+    sections: AxisSection[]
+    /** Total column count across all members */
+    colCount: number
+    /** The longest col label, for axis sizing */
+    longestLabel: string
+}
+
+export type AxesLayout = {
+    /** Y-axis layout: sections -> row terms */
+    rows: AxisLayoutRows
+    /** X-axis layout: sections -> col terms */
+    columns: AxisLayoutColumns
+}
+
+export type ValidAggMatrixResponse = {
     /** Min and max raw values for the color gradient */
     colorScale: { min: number, max: number }
     /** Array of rows, each row is an array of dots ordered left to right by column */
@@ -67,4 +71,4 @@ export type HasValidAggMatrixResponse = {
     axesLayout: AxesLayout
 }
 
-export type TermdbAggregateMatrixResponse = HasValidAggMatrixResponse | ErrorResponse
+export type TermdbAggregateMatrixResponse = ValidAggMatrixResponse | ErrorResponse
