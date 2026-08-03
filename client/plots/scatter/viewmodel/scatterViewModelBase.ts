@@ -56,7 +56,11 @@ export class ScatterViewModelBase {
 
 	renderChart(chart, div, removePrevious = true) {
 		const s = this.scatter.settings
-		div.style('opacity', 0).style('display', 'inline-block')
+		console.log(chart, div)
+		div
+			.style('opacity', 0)
+			.style('display', 'inline-block')
+			.attr('data-testid', `sjpp-scatter-chart-div-${chart?.id ?? 'Default'}`)
 		div.on('mouseover', event => {
 			if (!this.scatterTooltip.onClick) this.scatterTooltip.showTooltip(event, chart)
 		})
