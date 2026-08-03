@@ -77,7 +77,7 @@ function renderJunctionEvent(holder, fractionDiv, entry: JunctionCustomTerm, opt
 		.data(entry.tw.term.termlst, term => term.id)
 		.enter()
 		.append('div')
-		.text(term => term.id)
+		.text(term => term.name)
 }
 
 function selectJunctionEvent(listDiv, fractionDiv, entry: JunctionCustomTerm, opts) {

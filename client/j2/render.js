@@ -787,7 +787,7 @@ export function makeJunctionTerm(j) {
 	return {
 		type: TermTypes.JUNCTION,
 		id: `${j.chr}:${j.start}-${j.stop}:${j.strand}`,
-		name: `${position} (${j.strand})`,
+		name: j.name || `${position} (${j.strand})`,
 		chr: j.chr,
 		start: j.start,
 		stop: j.stop,
@@ -890,10 +890,14 @@ function showEventdiagram_a53ss(j, e, tk, holder, block, isClickMenu) {
 	const otherJs = []
 	if (e.junctionA) {
 		e2.junctionA = { start: e.junctionA.start, stop: e.junctionA.stop, strand: e.junctionA.strand, v: '...' }
-		otherJs.push(structuredClone(e.junctionA))
+		const aj = structuredClone(e.junctionA)
+		aj.name = `E${e.exon5idx + 1}-E${e.exon5idx + 1 + 1}`
+		otherJs.push(aj)
 	}
 
-	if (isClickMenu) mayGroupSelect(tk, block, j, otherJs, `${e.gene} ${e.isoform} E${e.exon5idx} ${e.type}`, holder)
+	if (isClickMenu) {
+		mayGroupSelect(tk, block, j, otherJs, `${e.gene} ${e.isoform} E${e.exon5idx + 1} ${e.type}`, holder)
+	}
 
 	import('../src/spliceevent.a53ss.diagram').then(p => {
 		const text = p.default({
@@ -939,37 +943,69 @@ function showEventdiagram_skipalt_fetchreadcount(j, e, tk, holder, block, isClic
 
 	const otherJs = []
 
+	/* e.skippedexon[] is an array of one or more 0-based exon index, in 5'->3' order of the isoform
+	convert to 1-based exon number of the first and last skipped exon, for naming junctions by the pair of
+	exons they join, e.g. exon 3 skipping gives "E2-E4" for junction B, and "E2-E3"/"E3-E4" for junction A
+	*/
+	const firstSkipped = Math.min(...e.skippedexon) + 1
+	const lastSkipped = Math.max(...e.skippedexon) + 1
+
 	if (e.junctionAlst) {
-		for (const jA of e.junctionAlst) {
+		/* the canonical junctions skipped by junction B, ordered 5'->3' and with missing ones kept as null,
+		thus array index tells which pair of exons a junction joins:
+		idx0 joins E(firstSkipped-1) and E(firstSkipped), and the last one joins E(lastSkipped) and E(lastSkipped+1)
+		*/
+		for (const [i, jA] of e.junctionAlst.entries()) {
 			if (jA) {
-				otherJs.push(structuredClone(jA))
+				const aj = structuredClone(jA)
+				aj.name = `E${firstSkipped - 1 + i}-E${firstSkipped + i}`
+				otherJs.push(aj)
 				jA.data = [{ v: '...' }]
 				e2.junctionAlst.push(jA)
 				continue
 			}
+			// this canonical junction is missing from data; must keep the slot as the diagram indexes
+			// junctionAlst[] by exon position and draws a dashed junction for a null
 			e2.junctionAlst.push(null)
 		}
 	}
 	if (e.up1junction) {
-		otherJs.push(structuredClone(e.up1junction))
-		e.up1junction.data = [{ v: '...' }]
+		// junction upstream of the first skipped exon
+		const uj = structuredClone(e.up1junction)
+		uj.name = `E${firstSkipped - 2}-E${firstSkipped - 1}`
+		otherJs.push(uj)
+		e.up1junction.data = [{ v: '...' }] // needed for read count fetching in diagram
 		e2.up1junction = e.up1junction
 	}
 	if (e.down1junction) {
-		otherJs.push(structuredClone(e.down1junction))
+		// junction downstream of the last skipped exon
+		const dj = structuredClone(e.down1junction)
+		dj.name = `E${lastSkipped + 1}-E${lastSkipped + 2}`
+		otherJs.push(dj)
 		e.down1junction.data = [{ v: '...' }]
 		e2.down1junction = e.down1junction
 	}
 
-	if (isClickMenu)
+	if (isClickMenu) {
+		const jc = structuredClone({
+			// duplicate j.info{} just in case
+			chr: j.chr,
+			start: j.start,
+			stop: j.stop,
+			strand: j.strand,
+			info: j.info
+		})
+		// junction B joins the exons flanking the skipped ones
+		jc.name = `E${firstSkipped - 1}-E${lastSkipped + 1}`
 		mayGroupSelect(
 			tk,
 			block,
-			j,
+			jc,
 			otherJs,
-			`${e.gene} ${e.isoform} ${e.skippedexon.map(i => 'E' + i).join('')} ${e.type}`,
+			`${e.gene} ${e.isoform} ${e.skippedexon.map(i => 'E' + (i + 1)).join(',')} ${e.type}`,
 			holder
 		)
+	}
 
 	import('../src/spliceevent.exonskip.diagram').then(p => {
 		const [junction2readcounttext, junctionlst] = p.default({
