@@ -5,6 +5,7 @@ import { AggMatrixModel } from './model/AggMatrixModel'
 import { getDefaultAggregateMatrixSettings } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
+import { setControls } from './view/setControls.ts'
 
 /**** Plot in development ***
  * The aggregate matrix displays two aggregate values for two terms in a matrix format
@@ -57,6 +58,8 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         this.model = new AggMatrixModel(this)
         this.viewModel = new AggMatrixViewModel(this)
         this.view = new AggMatrixView(this)
+
+        await setControls(this.dom.controls, this)
     }
 
     async main() {
@@ -71,7 +74,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
                 super.printError(data?.error || 'No data returned from server')
                 return
             }
-            console.log(data)
+            this.viewModel.processData(data)
         } catch (e: any) {
             if (e instanceof Error) console.error(`${e.message || e} [AggregateMatrix main()]`)
 			else if (e.stack) console.log(e.stack)
@@ -91,7 +94,9 @@ export function getPlotConfig(opts: any) {
 
     const config = {
         hidePlotFilter: true,
-        settings: getDefaultAggregateMatrixSettings()
+        settings: {
+            aggregateMatrix: getDefaultAggregateMatrixSettings()
+        }
     }
 
     return copyMerge(config, opts)

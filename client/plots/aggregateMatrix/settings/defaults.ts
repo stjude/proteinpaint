@@ -7,6 +7,6 @@ export function getDefaultAggregateMatrixSettings(): AggregateMatrixSettings {
         gradientMethod: 'mean',
         sizeMethod: 'mean',
         minDotSize: 5,
-        maxDotSize: 15
+        maxDotSize: 20
     }
 }
