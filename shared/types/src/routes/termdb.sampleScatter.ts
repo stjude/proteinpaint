@@ -42,6 +42,7 @@ type ScatterResult = {
 	[index: string]: {
 		colorLegend: ColorLegendEntry[]
 		shapeLegend: ShapeLegendEntry[]
+		colorMap: ColorMap
 		samples?: ScatterSample[]
 		src?: string
 	}
