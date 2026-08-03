@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.200.0
 
 General:
 - the GDC dataset (ppgdc) must be deployed together with this server release: the server no longer wires any GDC query behind a .gdcapi or src='gdcapi' flag, so every GDC query getter — including single-cell gene expression — is now supplied entirely by the ppgdc dataset, and an older ppgdc image would come up missing them
