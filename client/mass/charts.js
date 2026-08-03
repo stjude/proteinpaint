@@ -200,7 +200,8 @@ function getChartTypeList(self, state) {
 			plotConfigByCohort_unavailableMessage: 'No templates are currently available for this cohort.'
 		},
 		{
-			// Picker only — its menu renders a Module → Domain → chart-type matrix/list and creates the chosen plot.
+			// Menu only — renders the data-driven Template Mapping view (Module → Domain → templates)
+			// from termdbConfig.plotConfigByCohort[cohort].template3. See plots/profile/form3.ts.
 			label: 'Templates 3',
 			chartType: 'profileForms3',
 			clickTo: self.loadChartSpecificMenu
