@@ -425,7 +425,7 @@ async function resolveToTw(twValue: Value, llm: LlmConfig, genome: any, regressi
 	// Main objective is to support bin configs
 	if (twValue.type === 'dictionary') {
 		const twValueTerm = twValue.term as DictTerm
-		if (twValueTerm.type === 'survival' || twValueTerm.type === 'condition') {
+		if (regressionType === 'cox' && (twValueTerm.type === 'survival' || twValueTerm.type === 'condition')) {
 			// Cox outcomes are time-to-event/condition terms. Do not send them through the numeric
 			// bin-config parser; the regression client expects the cox mode explicitly.
 			return { id: twValueTerm.id, type: twValueTerm.type, q: { mode: 'cox' }, isDictionary: true }
