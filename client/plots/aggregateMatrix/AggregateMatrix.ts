@@ -32,7 +32,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
             controls: dom.controls.attr('data-testid', 'sjpp-ag-matrix-controls'),
             errorDiv: dom.errdiv.attr('data-testid', 'sjpp-ag-matrix-error'),
             loadingDiv: dom.loadingDiv.attr('data-testid', 'sjpp-ag-matrix-loading'),
-            mainDiv: dom.mainDiv.attr('data-testid', 'sjpp-ag-matrix-main')
+            mainDiv: dom.charts.attr('data-testid', 'sjpp-ag-matrix-main').style('padding', '10px')
         }
 
         //opts.header is the sandbox header
@@ -63,7 +63,9 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
     }
 
     async main() {
-         if (!this.model) throw new Error(`Model not initialized`)
+        if (!this.model) throw new Error(`Model not initialized`)
+        if (!this.viewModel) throw new Error(`ViewModel not initialized`)
+        if (!this.view) throw new Error(`View not initialized`)
 
         super.toggleLoadingDiv()
 
@@ -82,6 +84,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 			super.printError(e.message || e)
 			return
         }
+        this.view.render(this.viewModel.viewData)
         super.toggleLoadingDiv('none') 
     }
 }
