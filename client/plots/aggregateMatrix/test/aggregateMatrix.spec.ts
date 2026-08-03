@@ -63,8 +63,10 @@ tape('Simple aggregate matrix', async function (test) {
 						]
 					},
 					settings: {
-						gradientMethod: 'mean',
-						sizeMethod: 'percent'
+						aggregateMatrix: {
+							gradientMethod: 'mean',
+							sizeMethod: 'percent'
+						}
 					}
 				}
 			]
@@ -114,8 +116,10 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 						]
 					},
 					settings: {
-						gradientMethod: 'mean',
-						sizeMethod: 'percent'
+						aggregateMatrix: {
+							gradientMethod: 'mean',
+							sizeMethod: 'percent'
+						}
 					}
 				}
 			]

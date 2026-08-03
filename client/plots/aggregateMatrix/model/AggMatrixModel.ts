@@ -16,13 +16,15 @@ export class AggMatrixModel {
         
         validatePlotConfig(config)
 
+        const settings = config.settings.aggregateMatrix || {}
+
         const body = {
             rows: config.rows,
             columns: config.columns,
-            gradientMethod: config.settings.gradientMethod,
-            sizeMethod: config.settings.sizeMethod,
-            minDotSize: config.settings.minDotSize,
-            maxDotSize: config.settings.maxDotSize,
+            gradientMethod: settings.gradientMethod,
+            sizeMethod: settings.sizeMethod,
+            minDotSize: settings.minDotSize,
+            maxDotSize: settings.maxDotSize,
             filter: state.termfilter.filter,
             filter0: state.termfilter.filter0,
             signal: this.ag.api?.getAbortSignal()
