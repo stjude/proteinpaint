@@ -58,8 +58,6 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
         this.model = new AggMatrixModel(this)
         this.viewModel = new AggMatrixViewModel(this)
         this.view = new AggMatrixView(this)
-
-        await setControls(this.dom.controls, this)
     }
 
     async main() {
@@ -76,6 +74,8 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
                 super.printError(data?.error || 'No data returned from server')
                 return
             }
+            this.dom.controls.selectAll('*').remove()
+            await setControls(this.dom.controls, this)
             this.viewModel.processData(data)
         } catch (e: any) {
             if (e instanceof Error) console.error(`${e.message || e} [AggregateMatrix main()]`)

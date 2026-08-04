@@ -32,5 +32,7 @@ export type LegendCircleReferenceOpts = {
 	isAscending?: boolean
 	/** If provided, displays a title above the
 	 * the circle reference. */
-	title?: string
+	title?: string,
+	x?: number
+	y?: number
 }

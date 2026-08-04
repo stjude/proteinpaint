@@ -1,5 +1,5 @@
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
-import { getMaxLabelWidth } from '#dom'
+import { getMaxLabelWidth, capitalizeFirstLetter } from '#dom'
 import { scaleLinear } from 'd3-scale'
 import type { AggMatrixDot, AxisLayoutColumns, AxisLayoutRows, ValidAggMatrixResponse } from '#types'
 import type { AggregateMatrixSettings } from '../settings/Settings.ts'
@@ -136,7 +136,11 @@ export class AggMatrixViewModel {
             rowSectionLines: [],
             colSectionLines: [],
             dotPositions: [],
-            colorScale: () => ''
+            colorScale: {
+                scale: () => '',
+                absMin: 0,
+                absMax: 0
+            }
         }
     }
 
@@ -229,7 +233,11 @@ export class AggMatrixViewModel {
         const scale = scaleLinear()
             .domain([colorScaleData.min, colorScaleData.max])
             .range([(settings.startColor as any), (settings.stopColor as any)])
-        this.viewData.colorScale = scale
+        this.viewData.colorScale = {
+            scale, 
+            absMin: colorScaleData.min,
+            absMax: colorScaleData.max
+        }
     }
 
     getDotPositions(data: AggMatrixDot[][], cellSize: number, settings: AggregateMatrixSettings) {
@@ -245,7 +253,7 @@ export class AggMatrixViewModel {
                     x: this.lastX + (cellSize / 2),
                     y: this.lastY + (cellSize / 2),
                     size: dot.dotSize,
-                    color: this.viewData.colorScale(dot.colorValue),
+                    color: this.viewData.colorScale.scale(dot.colorValue),
                     row: dot.row,
                     column: dot.column,
                     tipData: [
@@ -276,8 +284,4 @@ export class AggMatrixViewModel {
             this.lastY = startY + (i + 1) * cellSize
         }
     }
-}
-
-function capitalizeFirstLetter(str: string) {
-    return str.charAt(0).toUpperCase() + str.slice(1)
 }

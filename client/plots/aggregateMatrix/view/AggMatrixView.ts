@@ -1,13 +1,17 @@
 import { Menu, table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
+import { LegendRender } from './LegendRender.ts'
 
 export class AggMatrixView {
     ag: AggregateMatrix
+    legendRender: LegendRender
     dom!: any
+
 
     constructor(ag: AggregateMatrix) {
         this.ag = ag
+        this.legendRender = new LegendRender(ag)
     }
 
     render(viewData: AggMatrixViewData) {
@@ -23,6 +27,7 @@ export class AggMatrixView {
             viewData.rowSectionLines
         )
         this.renderDots(viewData.dotPositions)
+        this.legendRender.render(viewData, this.dom.legendDiv)
     }
 
     initDom(plotDim: AggMatrixViewData['plotDim']) {
@@ -44,6 +49,10 @@ export class AggMatrixView {
         
         const legendDiv = mainDiv.append('div')
             .attr('class', 'sjpp-ag-matrix-legend')
+            .attr('data-testid', 'sjpp-ag-matrix-legend')
+            .style('vertical-align', 'top')
+            .style('display', 'inline-block')
+            .style('padding', `${this.ag.viewModel.topPad}px ${this.ag.viewModel.hoziPad}px`)
 
         this.dom = {
             svg,

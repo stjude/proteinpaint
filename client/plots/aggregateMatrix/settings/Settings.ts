@@ -11,4 +11,10 @@ export type AggregateMatrixSettings = {
     minDotSize: number
      /** Max size of the dots in pixels */
     maxDotSize: number
+    /** Min value for the dot size input range
+     * Used in controls and the legend to determine the min dot size. */
+    dotInputMin: number
+    /** Max value for the dot size input range.
+     * Used in controls and the legend to determine the min dot size. */
+    dotInputMax: number
 }
