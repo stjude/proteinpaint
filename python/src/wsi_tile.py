@@ -14,8 +14,7 @@ Tiles are Zoomify-compatible: geometry is copied from OpenLayers'
 ol/source/Zoomify.js 'default' tier math, so the client's tile requests and this
 script's crop geometry never disagree.
 
-Deps: openslide-python, pillow.  Nothing is ever written to stderr — run_python()
-rejects on any stderr output.
+Deps: openslide-python, pillow. Avoid writing non-fatal warnings to stderr (run_python() rejects on any stderr output).
 
 Dev usage (bypasses stdin):  python wsi_tile.py --test
 """
