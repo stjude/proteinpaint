@@ -193,7 +193,7 @@ function setRenderers(self) {
 				return
 			}
 
-			self.dom.table_div.style('display', 'block').attr('data-testid', 'sjpp_regression_barchart')
+			self.dom.table_div.style('display', 'block').attr('data-testid', 'sjpp-regression-barchart')
 			const l = self.input.orderedLabels
 			const sortFxn =
 				l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
