@@ -8,14 +8,6 @@ type AxisSectionLabel = AxisTermLabel & {
     rotate: boolean
 }
 
-type RowSectionGuide = {
-    y: number
-}
-
-type ColSectionGuide = {
-    x: number
-}
-
 type RowSectionLine = {
     x: number
     y1: number
@@ -66,8 +58,6 @@ export type AggMatrixViewData = {
     colLabels: AxisTermLabel[]
     rowSectionLabels: AxisSectionLabel[]
     colSectionLabels: AxisSectionLabel[]
-    rowSectionGuides: RowSectionGuide[]
-    colSectionGuides: ColSectionGuide[]
     rowSectionLines: RowSectionLine[]
     colSectionLines: ColSectionLine[]
     dotPositions: AggMatrixDotPosition[]

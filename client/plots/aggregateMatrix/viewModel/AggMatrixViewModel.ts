@@ -131,8 +131,6 @@ export class AggMatrixViewModel {
             colLabels: [],
             rowSectionLabels: [],
             colSectionLabels: [],
-            rowSectionGuides: [],
-            colSectionGuides: [],
             rowSectionLines: [],
             colSectionLines: [],
             dotPositions: [],
@@ -163,8 +161,6 @@ export class AggMatrixViewModel {
         this.viewData.colLabels = []
         this.viewData.rowSectionLabels = []
         this.viewData.colSectionLabels = []
-        this.viewData.rowSectionGuides = []
-        this.viewData.colSectionGuides = []
         this.viewData.rowSectionLines = []
         this.viewData.colSectionLines = []
 
@@ -193,9 +189,6 @@ export class AggMatrixViewModel {
                 y1: sectionStartY + cellSize / 2,
                 y2: sectionEndY - cellSize / 2
             })
-            if (rowSectionIndex < rowData.sections.length - 1) {
-                this.viewData.rowSectionGuides.push({ y: this.lastY })
-            }
         }
 
         for (const [colSectionIndex, section] of colData.sections.entries()) {
@@ -223,9 +216,6 @@ export class AggMatrixViewModel {
                 x1: sectionStartX + colSectionLineInset,
                 x2: this.lastX - colSectionLineInset
             })
-            if (colSectionIndex < colData.sections.length - 1) {
-                this.viewData.colSectionGuides.push({ x: this.lastX })
-            }
         }
     }
 
@@ -253,7 +243,7 @@ export class AggMatrixViewModel {
                     x: this.lastX + (cellSize / 2),
                     y: this.lastY + (cellSize / 2),
                     size: dot.dotSize,
-                    color: this.viewData.colorScale.scale(dot.colorValue),
+                    color: this.viewData.colorScale.scale(dot?.colorValue) ?? 'white',
                     row: dot.row,
                     rowSection: dot.rowSection,
                     column: dot.column,
@@ -270,12 +260,12 @@ export class AggMatrixViewModel {
                         {
                             // Show the color value
                             label: capitalizeFirstLetter(settings.gradientMethod),
-                            value: roundValueAuto(dot.colorValue)
+                            value: roundValueAuto(dot.colorValue) ?? 'N/A'
                         },
                         {
                             // Show the size value
                             label: capitalizeFirstLetter(settings.sizeMethod),
-                            value: roundValueAuto(dot.sizeValue)
+                            value: roundValueAuto(dot.sizeValue) ?? 'N/A'
                         }
                     ]
                 } satisfies AggMatrixDotPosition
