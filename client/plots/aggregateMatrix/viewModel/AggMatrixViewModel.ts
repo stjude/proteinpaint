@@ -4,80 +4,7 @@ import { scaleLinear } from 'd3-scale'
 import type { AggMatrixDot, AxisLayoutColumns, AxisLayoutRows, ValidAggMatrixResponse } from '#types'
 import type { AggregateMatrixSettings } from '../settings/Settings.ts'
 import { roundValueAuto } from '#shared/roundValue.js'
-
-type AxisTermLabel = {
-    x: number
-    y: number
-    label: string
-}
-
-type AxisSectionLabel = AxisTermLabel & {
-    rotate: boolean
-}
-
-type RowSectionGuide = {
-    y: number
-}
-
-type ColSectionGuide = {
-    x: number
-}
-
-type RowSectionLine = {
-    x: number
-    y1: number
-    y2: number
-}
-
-type ColSectionLine = {
-    y: number
-    x1: number
-    x2: number
-}
-
-type DotTipEntry = {
-    label: string
-    value: string | number
-}
-
-export type AggMatrixDotPosition = {
-    x: number
-    y: number
-    size: number
-    color: string | number
-    row: string
-    column: string
-    tipData: DotTipEntry[]
-}
-
-type PlotDimensions = {
-    svg: {
-        width: number
-        height: number
-    }
-    rowLabels: {
-        x: number
-        y: number
-    }
-    colLabels: {
-        x: number
-        y: number
-    }
-}
-
-export type AggMatrixViewData = {
-    plotDim: PlotDimensions
-    rowLabels: AxisTermLabel[]
-    colLabels: AxisTermLabel[]
-    rowSectionLabels: AxisSectionLabel[]
-    colSectionLabels: AxisSectionLabel[]
-    rowSectionGuides: RowSectionGuide[]
-    colSectionGuides: ColSectionGuide[]
-    rowSectionLines: RowSectionLine[]
-    colSectionLines: ColSectionLine[]
-    dotPositions: AggMatrixDotPosition[]
-    colorScale: (value: number) => string | number
-}
+import type { AggMatrixViewData, AggMatrixDotPosition } from './ViewModelDataTypes.ts'
 
 export class AggMatrixViewModel {
     ag: AggregateMatrix
@@ -181,10 +108,6 @@ export class AggMatrixViewModel {
                 width: this.hoziPad + this.maxRowLabelLgth + this.totalColWdth + this.hoziPad,
                 height: this.topPad + this.totalRowHght + this.maxColLabelLgth + this.bottomPad
             },
-            // title: {
-            //     x: this.hoziPad + this.maxRowLabelLgth + this.totalColWdth / 2,
-            //     y: this.topPad
-            // },
             rowLabels: {
                 x: this.hoziPad + this.maxRowLabelLgth,
                 y: this.topPad + this.offset
