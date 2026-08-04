@@ -1,6 +1,6 @@
 import { Menu, table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
-import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/AggMatrixViewModel.ts'
+import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
 
 export class AggMatrixView {
     ag: AggregateMatrix
@@ -33,12 +33,6 @@ export class AggMatrixView {
             .attr('width', plotDim.svg.width)
             .attr('height', plotDim.svg.height)
             .attr('data-testid', 'sjpp-ag-matrix-svg')
-
-        // const title = svg.append('text')
-        //     .attr('class', 'sjpp-ag-matrix-title')
-        //     .attr('text-anchor', 'middle')
-        //     .attr('transform', `translate(${plotDim.title.x}, ${plotDim.title.y})`)
-        //     .text('Aggregate Matrix TODO: CHANGE ME')
         
         const rowLabels = svg.append('g')
             .attr('class', 'sjpp-ag-matrix-row-labels')
@@ -47,12 +41,15 @@ export class AggMatrixView {
         const colLabels = svg.append('g')
             .attr('class', 'sjpp-ag-matrix-col-labels')
             .attr('transform', `translate(${plotDim.colLabels.x}, ${plotDim.colLabels.y})`)
+        
+        const legendDiv = mainDiv.append('div')
+            .attr('class', 'sjpp-ag-matrix-legend')
 
         this.dom = {
             svg,
-            // title,
             rowLabels,
             colLabels,
+            legendDiv,
             tip: new Menu({ padding: '' })
         }
     }
