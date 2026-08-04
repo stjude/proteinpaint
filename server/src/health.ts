@@ -49,7 +49,7 @@ function setGenomeDbInfo(genomes, health) {
 		}
 		if (typeof genome.datasets == 'object') {
 			for (const [label, ds] of Object.entries(genome.datasets as any[])) {
-				const init = structuredClone(ds.init)
+				const init = JSON.parse(JSON.stringify(ds.init))
 				init.ignoredErrors = ds._ignoredErrors || []
 				health.dsInitStatus.push({
 					genome: gn,
