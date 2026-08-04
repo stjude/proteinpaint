@@ -20,6 +20,17 @@ import { Polygon } from 'ol/geom'
 import { Fill, Stroke, Style } from 'ol/style'
 import type Settings from '#plots/wsiviewer/Settings.ts'
 import type { LoadFunction } from 'ol/Tile'
+import TileState from 'ol/TileState.js'
+
+/** True when serverconfig.features.tiatoolbox is set, i.e. the deployment still
+ runs the tileserver + redis sidecar rather than the openslide-backed wsitiles route. */
+export function isTiatoolboxEnabled(): boolean {
+	try {
+		return JSON.parse(sessionStorage.getItem('optionalFeatures') || '{}')?.tiatoolbox === true
+	} catch {
+		return false
+	}
+}
 
 export class ViewModelProvider {
 	constructor() {}
@@ -88,6 +99,16 @@ export class ViewModelProvider {
 		})
 	}
 
+	// Blob URLs handed to the thumbnail <img> tags. getWSImageLayers() rebuilds every
+	// layer on each main() pass, so without this the previous pass's previews were
+	// never revoked and a full-slide JPEG leaked per thumbnail per interaction.
+	private previewObjectUrls: string[] = []
+
+	private revokePreviewObjectUrls(): void {
+		for (const url of this.previewObjectUrls) URL.revokeObjectURL(url)
+		this.previewObjectUrls = []
+	}
+
 	private async createAuthenticatedPreviewUrl(url: string, token: string): Promise<string> {
 		const response = await fetch(url, {
 			headers: { Authorization: `Bearer ${token}` }
@@ -98,7 +119,9 @@ export class ViewModelProvider {
 		}
 
 		const blob = await response.blob()
-		return URL.createObjectURL(blob)
+		const objectUrl = URL.createObjectURL(blob)
+		this.previewObjectUrls.push(objectUrl)
+		return objectUrl
 	}
 
 	private async getWSImageLayers(
@@ -131,165 +154,191 @@ export class ViewModelProvider {
 
 		const host = (sessionStorage.getItem('hostURL') || (window as any).testHost || '').replace(/\/+$/, '')
 
-		// Load layers for the determined indices
-		for (const i of indicesToLoad) {
-			const wsimage = wsimages[i].filename
-			const authToken = btoa(getSavedToken(dslabel) || '')
+		const authToken = btoa(getSavedToken(dslabel) || '')
 
-			// query params match the wsitiles route (server/src/routes/wsitiles.ts)
-			let queryParams = `wsimage=${wsimage}&dslabel=${dslabel}&genome=${genome}`
-			if (sampleId) {
-				queryParams += `&sample_id=${sampleId}`
-			} else if (aiProjectID) {
-				queryParams += `&ai_project_id=${aiProjectID}`
-			}
+		// wsitiles (openslide, no sidecar) is the default. Set
+		// serverconfig.features.tiatoolbox=true to fall back to the tileserver +
+		// redis implementation; the server ships features to the client via the
+		// genomes route, cached in sessionStorage by client/src/app.js.
+		const useTiatoolbox = isTiatoolboxEnabled()
 
-			// metadata now comes from the openslide-backed route (no tile server / redis session)
-			const data: WSImagesResponse = await dofetch3(`wsitiles/meta?${queryParams}`)
+		// the previews built below replace the previous pass's, so release those first
+		this.revokePreviewObjectUrls()
 
-			if (data.status === 'error') {
-				throw new Error(`${data.error}`)
-			}
+		// Load layers for the determined indices. Parallel, not serial: each image costs
+		// a metadata fetch plus a preview fetch, and the preview is the z=0 tile - the
+		// slowest single tile on a slide. Awaiting those per image made the thumbnails
+		// appear one at a time.
+		await Promise.all(
+			Array.from(indicesToLoad).map(async i => {
+				const wsimage = wsimages[i].filename
 
-			const imgWidth = data.slide_dimensions[0]
-			const imgHeight = data.slide_dimensions[1]
+				// the two backends disagree on the image param name: wsitiles expects
+				// `wsimage`, the tiatoolbox tileserver expects `wsi_image`
+				let commonParams = `dslabel=${dslabel}&genome=${genome}`
+				if (sampleId) {
+					commonParams += `&sample_id=${sampleId}`
+				} else if (aiProjectID) {
+					commonParams += `&ai_project_id=${aiProjectID}`
+				}
+				const queryParams = `wsimage=${wsimage}&${commonParams}`
+				const tiaQueryParams = `wsi_image=${wsimage}&${commonParams}`
 
-			const mpp = data.mpp // microns per pixel
+				// wsimages returns a tileserver session id, wsitiles/meta does not need one
+				const data: WSImagesResponse = useTiatoolbox
+					? await dofetch3('wsimages', {
+							body: { genome, dslabel, sampleId, wsimage, aiProjectId: aiProjectID }
+					  })
+					: await dofetch3(`wsitiles/meta?${queryParams}`)
 
-			// {z}/{x}/{y} hit wsitiles/tile; the unused {TileGroup} token is only there
-			// because OpenLayers' Zoomify requires a {TileGroup}/{tileIndex} placeholder.
-			const zoomifyUrl = `${host}/wsitiles/tile/{z}/{x}/{y}?${queryParams}&_={TileGroup}`
+				if (data.status === 'error') {
+					throw new Error(`${data.error}`)
+				}
 
-			const source = new Zoomify({
-				url: zoomifyUrl,
-				size: [imgWidth, imgHeight],
-				crossOrigin: 'anonymous',
-				zDirection: -1
-			})
+				const imgWidth = data.slide_dimensions[0]
+				const imgHeight = data.slide_dimensions[1]
 
-			source.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
+				const mpp = data.mpp // microns per pixel
 
-			const previewUrl = `${host}/wsitiles/tile/0/0/0?${queryParams}&_=TileGroup0`
-			const authenticatedPreviewUrl = await this.createAuthenticatedPreviewUrl(previewUrl, authToken)
+				// on wsitiles the unused {TileGroup} token is only there because
+				// OpenLayers' Zoomify requires a {TileGroup}/{tileIndex} placeholder
+				const zoomifyUrl = useTiatoolbox
+					? `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${tiaQueryParams}`
+					: `${host}/wsitiles/tile/{z}/{x}/{y}?${queryParams}&_={TileGroup}`
 
-			const options = {
-				preview: authenticatedPreviewUrl,
-				metadata: wsimages[i].metadata,
-				source: source,
-				baseLayer: true,
-				title: 'Slide',
-				name: wsimage.replace(/(\.\w{3,4})$/i, '') //remove file extension
-			}
-			const layer = new TileLayer(options)
+				const source = new Zoomify({
+					url: zoomifyUrl,
+					size: [imgWidth, imgHeight],
+					crossOrigin: 'anonymous',
+					zDirection: -1
+				})
 
-			const wsiImageLayers: WSImageLayers = {
-				wsimage: layer,
-				mpp: mpp
-			}
+				source.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
 
-			if (data.overlays) {
-				for (const overlay of data.overlays) {
-					let predictionQueryParams = `wsi_image=${wsimage}&dslabel=${dslabel}&genome=${genome}`
-					if (sampleId) {
-						predictionQueryParams += `&sample_id=${sampleId}`
-					} else if (aiProjectID) {
-						predictionQueryParams += `&ai_project_id=${aiProjectID}`
+				const previewUrl = useTiatoolbox
+					? `${host}/tileserver/layer/slide/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${tiaQueryParams}`
+					: `${host}/wsitiles/tile/0/0/0?${queryParams}&_=TileGroup0`
+				const authenticatedPreviewUrl = await this.createAuthenticatedPreviewUrl(previewUrl, authToken)
+
+				const options = {
+					preview: authenticatedPreviewUrl,
+					metadata: wsimages[i].metadata,
+					source: source,
+					baseLayer: true,
+					title: 'Slide',
+					name: wsimage.replace(/(\.\w{3,4})$/i, '') //remove file extension
+				}
+				const layer = new TileLayer(options)
+
+				const wsiImageLayers: WSImageLayers = {
+					wsimage: layer,
+					mpp: mpp
+				}
+
+				// prediction/uncertainty overlays are only produced by the tileserver;
+				// wsitiles/meta returns no overlays, so this is inert in the default mode
+				if (data.overlays) {
+					for (const overlay of data.overlays) {
+						const predictionQueryParams = tiaQueryParams
+
+						const zoomifyOverlayLatUrl = `${host}/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
+
+						const sourceOverlay = new Zoomify({
+							url: zoomifyOverlayLatUrl,
+							size: [imgWidth, imgHeight],
+							crossOrigin: 'anonymous',
+							zDirection: -1 // Ensure we get a tile with the screen resolution or higher
+						})
+
+						sourceOverlay.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
+
+						const previewOverlayUrl = `${host}/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`
+						const authenticatedOverlayPreviewUrl = await this.createAuthenticatedPreviewUrl(
+							previewOverlayUrl,
+							authToken
+						)
+
+						const optionsOverlay = {
+							preview: authenticatedOverlayPreviewUrl,
+							metadata: wsimages[i].metadata,
+							source: sourceOverlay,
+							title: overlay.predictionOverlayType,
+							visible: false
+						}
+
+						if (wsiImageLayers.overlays) {
+							wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
+						} else {
+							wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
+						}
 					}
+				}
 
-					const zoomifyOverlayLatUrl = `${host}/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/{TileGroup}/{z}-{x}-{y}@1x.jpg?${predictionQueryParams}`
+				const annotations = wsimages[i].annotations ?? []
+				const predictions = wsimages[i].predictions ?? []
+				const sourceAnnotations = new VectorSource()
+				const tileSize = wsimages[i].tileSize ?? 512
+				for (const annotation of annotations) {
+					// flip Y as in your original code
+					const topLeft: [number, number] = [annotation.zoomCoordinates[0], -annotation.zoomCoordinates[1]]
 
-					const sourceOverlay = new Zoomify({
-						url: zoomifyOverlayLatUrl,
-						size: [imgWidth, imgHeight],
-						crossOrigin: 'anonymous',
-						zDirection: -1 // Ensure we get a tile with the screen resolution or higher
-					})
-
-					sourceOverlay.setTileLoadFunction(this.createAuthenticatedTileLoader(authToken))
-
-					const previewOverlayUrl = `${host}/tileserver/layer/${overlay.layerNumber}/${data.wsiSessionId}/zoomify/TileGroup0/0-0-0@1x.jpg?${predictionQueryParams}`
-					const authenticatedOverlayPreviewUrl = await this.createAuthenticatedPreviewUrl(previewOverlayUrl, authToken)
-
-					const optionsOverlay = {
-						preview: authenticatedOverlayPreviewUrl,
-						metadata: wsimages[i].metadata,
-						source: sourceOverlay,
-						title: overlay.predictionOverlayType,
-						visible: false
-					}
-
-					if (wsiImageLayers.overlays) {
-						wsiImageLayers.overlays.push(new TileLayer(optionsOverlay))
+					const color = this.getClassColor(wsimages[i], annotation.class)
+					const featureId = createFeatureID(FeaturePrefixes.Square, annotation.zoomCoordinates)
+					let squareFeature: Feature<Geometry>
+					if (annotation.flag !== FlagStatus.Skipped) {
+						squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
 					} else {
-						wsiImageLayers.overlays = [new TileLayer(optionsOverlay)]
+						squareFeature = createDimSquareFeature(annotation.zoomCoordinates, topLeft, tileSize, color)
+					}
+					sourceAnnotations.addFeature(squareFeature)
+
+					const borderFeature = this.createBorderFeature(
+						topLeft,
+						tileSize,
+						15,
+						annotatedPatchBorderColor,
+						createFeatureID(FeaturePrefixes.Border, annotation.zoomCoordinates)
+					)
+					sourceAnnotations.addFeature(borderFeature)
+
+					if (annotation.flag === FlagStatus.Flagged) {
+						const starFeature = createStarFeature(tileSize, topLeft, annotation.zoomCoordinates, 'yellow', color)
+						sourceAnnotations.addFeature(starFeature)
 					}
 				}
-			}
 
-			const annotations = wsimages[i].annotations ?? []
-			const predictions = wsimages[i].predictions ?? []
-			const sourceAnnotations = new VectorSource()
-			const tileSize = wsimages[i].tileSize ?? 512
-			for (const annotation of annotations) {
-				// flip Y as in your original code
-				const topLeft: [number, number] = [annotation.zoomCoordinates[0], -annotation.zoomCoordinates[1]]
+				for (const pred of predictions) {
+					// flip Y as in your original code
+					const topLeft: [number, number] = [pred.zoomCoordinates[0], -pred.zoomCoordinates[1]]
 
-				const color = this.getClassColor(wsimages[i], annotation.class)
-				const featureId = createFeatureID(FeaturePrefixes.Square, annotation.zoomCoordinates)
-				let squareFeature: Feature<Geometry>
-				if (annotation.flag !== FlagStatus.Skipped) {
-					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
+					const color = this.getClassColor(wsimages[i], pred.class) ?? 'black'
+					const featureId = createFeatureID(FeaturePrefixes.Square, pred.zoomCoordinates)
+					let squareFeature: Feature<Geometry> | null = null
+					if (pred.flag == FlagStatus.Flagged) {
+						squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
+						const starFeature = createStarFeature(tileSize, topLeft, pred.zoomCoordinates, 'yellow', color)
+						sourceAnnotations.addFeature(starFeature)
+					} else if (pred.flag === FlagStatus.Skipped) {
+						squareFeature = createDimSquareFeature(pred.zoomCoordinates, topLeft, tileSize, color)
+					}
+					if (squareFeature !== null) {
+						sourceAnnotations.addFeature(squareFeature)
+					}
+				}
+
+				const vectorLayer = new VectorLayer({
+					source: sourceAnnotations,
+					properties: { title: 'Annotations' }
+				})
+
+				if (wsiImageLayers.overlays) {
+					wsiImageLayers.overlays.push(vectorLayer)
 				} else {
-					squareFeature = createDimSquareFeature(annotation.zoomCoordinates, topLeft, tileSize, color)
+					wsiImageLayers.overlays = [vectorLayer]
 				}
-				sourceAnnotations.addFeature(squareFeature)
-
-				const borderFeature = this.createBorderFeature(
-					topLeft,
-					tileSize,
-					15,
-					annotatedPatchBorderColor,
-					createFeatureID(FeaturePrefixes.Border, annotation.zoomCoordinates)
-				)
-				sourceAnnotations.addFeature(borderFeature)
-
-				if (annotation.flag === FlagStatus.Flagged) {
-					const starFeature = createStarFeature(tileSize, topLeft, annotation.zoomCoordinates, 'yellow', color)
-					sourceAnnotations.addFeature(starFeature)
-				}
-			}
-
-			for (const pred of predictions) {
-				// flip Y as in your original code
-				const topLeft: [number, number] = [pred.zoomCoordinates[0], -pred.zoomCoordinates[1]]
-
-				const color = this.getClassColor(wsimages[i], pred.class) ?? 'black'
-				const featureId = createFeatureID(FeaturePrefixes.Square, pred.zoomCoordinates)
-				let squareFeature: Feature<Geometry> | null = null
-				if (pred.flag == FlagStatus.Flagged) {
-					squareFeature = this.createSquareFeature(topLeft, tileSize, color, featureId)
-					const starFeature = createStarFeature(tileSize, topLeft, pred.zoomCoordinates, 'yellow', color)
-					sourceAnnotations.addFeature(starFeature)
-				} else if (pred.flag === FlagStatus.Skipped) {
-					squareFeature = createDimSquareFeature(pred.zoomCoordinates, topLeft, tileSize, color)
-				}
-				if (squareFeature !== null) {
-					sourceAnnotations.addFeature(squareFeature)
-				}
-			}
-
-			const vectorLayer = new VectorLayer({
-				source: sourceAnnotations,
-				properties: { title: 'Annotations' }
+				layers[i] = wsiImageLayers
 			})
-
-			if (wsiImageLayers.overlays) {
-				wsiImageLayers.overlays.push(vectorLayer)
-			} else {
-				wsiImageLayers.overlays = [vectorLayer]
-			}
-			layers[i] = wsiImageLayers
-		}
+		)
 		return layers
 	}
 
@@ -406,11 +455,22 @@ export class ViewModelProvider {
 			fetch(src, {
 				headers: { Authorization: `Bearer ${token}` }
 			})
-				.then(r => r.blob())
+				.then(r => {
+					// an error response body would otherwise be blob'd and set as img.src
+					if (!r.ok) throw new Error(`tile request failed: ${r.status} ${r.statusText}`)
+					return r.blob()
+				})
 				.then(blob => {
 					const url = URL.createObjectURL(blob)
-					img.onload = () => URL.revokeObjectURL(url)
+					// revoke on either outcome: a blob that fails to decode leaks otherwise
+					img.onload = img.onerror = () => URL.revokeObjectURL(url)
 					img.src = url
+				})
+				.catch(e => {
+					// OpenLayers leaves the tile in LOADING forever unless it is told the
+					// load failed - no retry, no placeholder, and an unhandled rejection.
+					console.error(`WSI tile load failed: ${src}`, e)
+					tile.setState(TileState.ERROR)
 				})
 		}
 	}
