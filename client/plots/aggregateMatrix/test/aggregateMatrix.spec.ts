@@ -101,7 +101,7 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 							{ name: 'KRAS', id: 'KRAS', type: 'geneExpression' },
 							{ name: 'EGFR', id: 'EGFR', type: 'geneExpression' }
 						],
-						genes2Test: [
+						'Really long section row label for testing': [
 							{ name: 'XBP1', id: 'XBP1', type: 'geneExpression' },
 							{ name: 'CD138', id: 'CD138', type: 'geneExpression' },
 							{ name: 'MZB1', id: 'MZB1', type: 'geneExpression' }
@@ -109,10 +109,19 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 					},
 					columns: {
 						'Cell type': [
-							{ name: 'B', id: 'B', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
+							{ name: 'B', id: 'B', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'CD8', id: 'CD8', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'E', id: 'E', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'LQ', id: 'LQ', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
 						],
-						'Cell type2': [
+						'Really long column section label for testing': [
 							{ name: 'CD4', id: 'CD4', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
+						],
+						test: [
+							{ name: 'M', id: 'M', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'Nk', id: 'Nk', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'Other', id: 'Other', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
+							{ name: 'P', id: 'P', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
 						]
 					},
 					settings: {
