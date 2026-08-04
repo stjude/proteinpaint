@@ -255,7 +255,9 @@ export class AggMatrixViewModel {
                     size: dot.dotSize,
                     color: this.viewData.colorScale.scale(dot.colorValue),
                     row: dot.row,
+                    rowSection: dot.rowSection,
                     column: dot.column,
+                    colSection: dot.colSection,
                     tipData: [
                         {
                             label: dot.rowSection,

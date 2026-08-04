@@ -39,7 +39,9 @@ export type AggMatrixDotPosition = {
     size: number
     color: string | number
     row: string
+    rowSection: string
     column: string
+    colSection: string
     tipData: DotTipEntry[]
 }
 
