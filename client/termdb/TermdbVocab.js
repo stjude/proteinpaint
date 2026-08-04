@@ -319,7 +319,6 @@ export class TermdbVocab extends Vocab {
 		}
 
 		const body = {
-			getregression: 1,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			filter0: opts.filter0,
@@ -355,7 +354,7 @@ export class TermdbVocab extends Vocab {
 		}
 		const filterData = getNormalRoot(opts.filter)
 		if (filterData.lst.length) body.filter = filterData
-		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
+		const data = await this.dofetch3('termdb/regression', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}

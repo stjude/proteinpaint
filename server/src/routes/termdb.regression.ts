@@ -1,13 +1,156 @@
+import type { RouteApi, RoutePayload } from '#types'
+import { get_ds_tdb } from '#src/termdb.js'
 import path from 'path'
 import fs from 'fs'
 import { imageSize } from 'image-size'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
-import serverconfig from './serverconfig.js'
+import serverconfig from '../serverconfig.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
-import { runCumincR } from './routes/termdb.cuminc.ts'
+import { runCumincR } from './termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
-import { getData } from './termdb.matrix.js'
+import { getData } from '../termdb.matrix.js'
+
+type TermWrapperLike = {
+	id?: string
+	$id?: string
+	type?: string
+	term?: any
+	q: Record<string, any>
+	refGrp?: string
+	nonRefGrp?: string
+	interactions?: string[]
+	[k: string]: any
+}
+
+export type TermdbRegressionRequest = {
+	genome?: string
+	dslabel?: string
+	regressionType: 'linear' | 'logistic' | 'cox'
+	includeUnivariate?: boolean
+	filter0?: any
+	filter?: any
+	outcome: TermWrapperLike
+	independent: TermWrapperLike[]
+	[k: string]: any
+}
+
+export type TermdbRegressionResultEntry = {
+	id?: string
+	AFstr?: string
+	data: {
+		sampleSize?: number
+		eventCnt?: number
+		headerRow?: any
+		residuals?: any
+		coefficients?: any
+		coefficients_uni?: any
+		coefficients_multi?: any
+		type3?: any
+		totalSnpEffect?: any
+		tests?: any
+		other?: any
+		splinePlots?: any[]
+		warnings?: string[]
+		fisher?: any
+		wilcoxon?: any
+		cuminc?: any
+	}
+}
+
+export type RegressionResponse = {
+	resultLst: TermdbRegressionResultEntry[]
+}
+
+export type TermdbRegressionResponse = RegressionResponse | { error: string }
+
+type RegressionQuery = TermdbRegressionRequest & {
+	outcome: TermWrapperLike & { $id: string; term: any }
+	independent: TermWrapperLike[]
+}
+
+type SampleDataEntry = {
+	sample: string | number
+	id2value: Map<string, any>
+}
+
+type ROutcome = {
+	id: string
+	name: string
+	rtype: 'numeric'
+	categories?: {
+		ref?: string
+		nonref?: string
+	}
+	timeToEvent?: {
+		timeId: string
+		eventId: string
+		timeScale: string
+		agestartId?: string
+		ageendId?: string
+	}
+}
+
+type RIndependentVariable = {
+	id: string
+	name: string
+	type: string
+	rtype: 'numeric' | 'factor'
+	$id?: string
+	refGrp?: string
+	interactions?: string[]
+	spline?: {
+		knots: number[]
+		plot?: boolean
+	}
+}
+
+type RInputEntry = {
+	__sample: string | number
+	[k: string]: any
+}
+
+type RInput = {
+	regressionType: TermdbRegressionRequest['regressionType']
+	cachedir: string
+	data: RInputEntry[]
+	outcome: ROutcome
+	independent: RIndependentVariable[]
+	includeUnivariate?: boolean
+}
+
+const payload: RoutePayload = {
+	init,
+	request: { typeId: 'TermdbRegressionRequest' },
+	response: { typeId: 'TermdbRegressionResponse' }
+}
+
+export const api: RouteApi = {
+	endpoint: 'termdb/regression',
+	methods: {
+		get: payload,
+		post: payload
+	}
+}
+
+function init({ genomes }: any) {
+	return async (req: any, res: any) => {
+		try {
+			const q = req.query
+			const genome = genomes[q.genome]
+			if (!genome) throw 'invalid genome'
+			const [ds] = get_ds_tdb(genome, q)
+			res.send(await get_regression(q, ds))
+		} catch (e: any) {
+			if (e?.stack) console.log(e.stack)
+			else console.log(e)
+			res.send({ error: e.message || e })
+		}
+	}
+}
+
+
+
 
 /*
 
@@ -84,12 +227,13 @@ const minimumSample = 1
 let stime, etime
 const benchmark = { NodeJS: {}, 'regression.R': {} }
 
-export async function get_regression(q, ds) {
+export async function get_regression(q: TermdbRegressionRequest, ds: any): Promise<TermdbRegressionResponse> {
 	try {
-		parse_q(q, ds)
+		const query = q as RegressionQuery
+		parse_q(query, ds)
 
 		stime = new Date().getTime()
-		const sampledata = await getSampleData(q, ds)
+		const sampledata = await getSampleData(query, ds)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -98,14 +242,14 @@ export async function get_regression(q, ds) {
 
 		stime = new Date().getTime()
 		// build the input for R script
-		const Rinput = makeRinput(q, sampledata)
+		const Rinput = makeRinput(query, sampledata)
 		etime = new Date().getTime()
 		benchmark['NodeJS']['makeRinput'] = (etime - stime) / 1000 + ' sec'
 
 		validateRinput(Rinput)
-		const [id2originalId, originalId2id] = replaceTermId(Rinput)
+		const [id2originalId] = replaceTermId(Rinput)
 
-		const result = { resultLst: [] }
+		const result: RegressionResponse = { resultLst: [] }
 
 		/*
 		when snplocus is used:
@@ -117,14 +261,14 @@ export async function get_regression(q, ds) {
 			snplocusPostprocess will not run
 		*/
 		await Promise.all([
-			runRegression(Rinput, id2originalId, q, result),
-			snplocusPostprocess(q, sampledata, Rinput, result)
+			runRegression(Rinput, id2originalId, query, result),
+			snplocusPostprocess(query, sampledata, Rinput, result)
 		])
 
 		//console.log('benchmark:', benchmark)
 
 		return result
-	} catch (e) {
+	} catch (e: any) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
@@ -259,9 +403,9 @@ Rinput {
 - PCs from q.restrictAncestry.pcs are added as elements into independent[] array
 - further details of JSON structure described in server/utils/regression.R
 */
-function makeRinput(q, sampledata) {
+function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 	// outcome variable
-	const outcome = {
+	const outcome: ROutcome = {
 		id: q.outcome.$id,
 		name: q.outcome.term.name,
 		rtype: 'numeric' // always numeric because (1) linear regression: values are continuous, (2) logistic regression: values get converted to 0/1, (3) cox regression: time-to-event is continuous and event is 0/1
@@ -287,7 +431,7 @@ function makeRinput(q, sampledata) {
 	}
 
 	// independent variables
-	const independent = []
+	const independent: RIndependentVariable[] = []
 	for (const tw of q.independent) {
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			makeRvariable_snps(tw, independent, q)
@@ -299,7 +443,7 @@ function makeRinput(q, sampledata) {
 	// prepare per-sample data values
 	// for each sample, determine if it has value for all variables
 	// if so, then sample can be included for analysis
-	const data = []
+	const data: RInputEntry[] = []
 	for (const tmp of sampledata) {
 		const { sample, id2value } = tmp
 		let skipsample = false
@@ -314,6 +458,10 @@ function makeRinput(q, sampledata) {
 				continue
 			}
 			if (tw.type == 'snplst') {
+				if (!tw.$id) {
+					skipsample = true
+					break
+				}
 				const snp2value = id2value.get(tw.$id)
 				const snps = [...tw.highAFsnps.keys()]
 				if (!snp2value || !snps.every(snp => Object.keys(snp2value).includes(snp))) {
@@ -321,6 +469,10 @@ function makeRinput(q, sampledata) {
 					break
 				}
 			} else {
+				if (!tw.$id) {
+					skipsample = true
+					break
+				}
 				const independent = id2value.get(tw.$id)
 				if (!independent) {
 					skipsample = true
@@ -332,7 +484,7 @@ function makeRinput(q, sampledata) {
 
 		// this sample has values for all variables and is eligible for regression analysis
 		// fill entry with data of sample for each variable
-		const entry = { __sample: sample } // sample id will be used in snplocusPostprocess()
+		const entry: RInputEntry = { __sample: sample } // sample id will be used in snplocusPostprocess()
 		// outcome variable
 		if (q.regressionType == 'linear') {
 			// linear regression, therefore continuous outcome
@@ -346,24 +498,26 @@ function makeRinput(q, sampledata) {
 			entry[outcome.id] = out.key === q.outcome.refGrp ? 0 : 1
 		}
 		if (q.regressionType == 'cox') {
+			const t2e = outcome.timeToEvent
+			if (!t2e) throw 'timeToEvent missing for cox regression'
 			// cox regression, therefore time-to-event outcome
 			// use both key (event status) and value (time)
-			entry[outcome.timeToEvent.eventId] = out.key
+			entry[t2e.eventId] = out.key
 			if (q.outcome.term.type == 'condition') {
 				const { age_start, age_end } = out.value
-				entry[outcome.timeToEvent.timeId] = age_end - age_start
+				entry[t2e.timeId] = age_end - age_start
 				if (q.outcome.q.timeScale == 'age') {
-					entry[outcome.timeToEvent.agestartId] = age_start
-					entry[outcome.timeToEvent.ageendId] = age_end
+					if (t2e.agestartId) entry[t2e.agestartId] = age_start
+					if (t2e.ageendId) entry[t2e.ageendId] = age_end
 				}
 			} else {
-				entry[outcome.timeToEvent.timeId] = out.value
+				entry[t2e.timeId] = out.value
 			}
 		}
 
 		// independent variable
 		for (const t of independent) {
-			const v = id2value.get(t.id) || id2value.get(t.$id)
+			const v = id2value.get(t.id) || (t.$id ? id2value.get(t.$id) : undefined)
 			if (!v) {
 				// sample has no value for this variable
 				// this variable is either a snplocus snp or an ancestry PC
@@ -382,7 +536,7 @@ function makeRinput(q, sampledata) {
 		data.push(entry)
 	}
 
-	const Rinput = {
+	const Rinput: RInput = {
 		regressionType: q.regressionType,
 		cachedir: serverconfig.cachedir, // for creating spline plot file
 		data,
@@ -394,19 +548,22 @@ function makeRinput(q, sampledata) {
 	return Rinput
 }
 
-function makeRvariable_dictionaryTerm(tw, independent, q) {
+function makeRvariable_dictionaryTerm(tw: TermWrapperLike, independent: RIndependentVariable[], q: RegressionQuery) {
 	// tw is a dictionary term
-	const thisTerm = {
-		id: tw.$id,
+	const thisTerm: RIndependentVariable = {
+		id: tw.$id || tw.id || '',
 		name: tw.term.name,
 		type: tw.q.mode == 'spline' ? 'spline' : 'other',
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
 	}
+	if (!thisTerm.id) throw 'independent term id missing'
 	// map tw.interactions into thisTerm.interactions
-	if (tw.interactions.length) {
+	const interactions = tw.interactions || []
+	if (interactions.length) {
 		thisTerm.interactions = []
-		for (const id of tw.interactions) {
+		for (const id of interactions) {
 			const tw2 = q.independent.find(i => i.$id == id)
+			if (!tw2) continue
 			if (tw2.type == 'snplst') {
 				// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 				for (const s of tw2.highAFsnps.keys()) thisTerm.interactions.push(s)
@@ -433,15 +590,16 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 	independent.push(thisTerm)
 }
 
-function makeRvariable_snps(tw, independent, q) {
+function makeRvariable_snps(tw: TermWrapperLike, independent: RIndependentVariable[], _: RegressionQuery) {
 	// tw is either snplst or snplocus
 	// create one independent variable for each snp
 	for (const snpid of tw.highAFsnps.keys()) {
-		const thisSnp = {
+		const thisSnp: RIndependentVariable = {
 			$id: tw.$id, // need this to retrieve data from getData() output
 			id: snpid, // need this to discriminate between snps
 			name: snpid,
-			type: tw.type,
+			type: tw.type || 'snplst',
+			rtype: 'numeric',
 			interactions: structuredClone(tw.interactions)
 		}
 		if (tw.q.geneticModel == 3) {
@@ -468,7 +626,7 @@ function makeRvariable_snps(tw, independent, q) {
 	}
 }
 
-function validateRinput(Rinput) {
+function validateRinput(Rinput: RInput) {
 	const regressionType = Rinput.regressionType
 	const outcome = Rinput.outcome
 
@@ -480,9 +638,11 @@ function validateRinput(Rinput) {
 	let nvariables = Rinput.independent.length
 	// add in number outcome variables
 	if (regressionType == 'cox') {
-		if (outcome.timeToEvent.timeScale == 'time') {
+		const t2e = outcome.timeToEvent
+		if (!t2e) throw 'outcome.timeToEvent missing for cox regression'
+		if (t2e.timeScale == 'time') {
 			nvariables = nvariables + 2
-		} else if (outcome.timeToEvent.timeScale == 'age') {
+		} else if (t2e.timeScale == 'age') {
 			nvariables = nvariables + 4
 		} else {
 			throw 'unknown cox regression time scale'
@@ -497,11 +657,13 @@ function validateRinput(Rinput) {
 
 	// validate outcome variable
 	if (regressionType == 'logistic') {
-		const vals = new Set(Rinput.data.map(entry => entry[outcome.id]))
+		const vals = new Set<any>(Rinput.data.map(entry => entry[outcome.id]))
 		if ([...vals].find(v => ![0, 1].includes(v))) throw 'non-0/1 outcome values found'
 	}
 	if (regressionType == 'cox') {
-		const vals = new Set(Rinput.data.map(entry => entry[outcome.timeToEvent.eventId]))
+		const t2e = outcome.timeToEvent
+		if (!t2e) throw 'outcome.timeToEvent missing for cox regression'
+		const vals = new Set<any>(Rinput.data.map(entry => entry[t2e.eventId]))
 		if ([...vals].find(v => ![0, 1].includes(v))) throw 'non-0/1 outcome event values found'
 	}
 
@@ -523,7 +685,12 @@ function validateRinput(Rinput) {
 	}
 }
 
-async function runRegression(Rinput, id2originalId, q, result) {
+async function runRegression(
+	Rinput: RInput,
+	id2originalId: Record<string, string>,
+	q: RegressionQuery,
+	result: RegressionResponse
+) {
 	// run regression analysis in R
 	stime = new Date().getTime()
 	const Routput = JSON.parse(await run_R('regression.R', JSON.stringify(Rinput)))
@@ -532,13 +699,60 @@ async function runRegression(Rinput, id2originalId, q, result) {
 	benchmark['NodeJS']['runRegression'] = (etime - stime) / 1000 + ' sec'
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
+async function parseRoutput(
+	Rinput: RInput,
+	Routput: any,
+	id2originalId: Record<string, string>,
+	q: RegressionQuery,
+	result: RegressionResponse
+) {
 	const outdata = Routput.data
 	benchmark['regression.R'] = Routput.benchmark
+	const parseCoefficients = (in_coef: any, hasIntercept: boolean) => {
+		if (in_coef.rows.length < (hasIntercept ? 2 : 1)) throw 'too few rows in coefficients table'
+		const out_coef: any = {
+			header: in_coef.header,
+			terms: {}, // individual independent terms, not interaction
+			interactions: [], // interactions
+			label: 'Coefficients'
+		}
+		if (hasIntercept) out_coef.intercept = in_coef.rows.shift()
+		for (const row of in_coef.rows) {
+			if (row[0].indexOf(':') != -1) {
+				// is an interaction
+				const [id1, id2] = row.shift().split(':')
+				const [cat1, cat2] = row.shift().split(':')
+				const termid1 = id2originalId[id1]
+				const termid2 = id2originalId[id2]
+				// row is now only data fields
+				const interactions: any[] = out_coef.interactions
+				if (!interactions.some(x => x.term1 == termid1 && x.term2 == termid2))
+					interactions.push({ term1: termid1, term2: termid2, categories: [] })
+				const interaction: any = interactions.find(x => x.term1 == termid1 && x.term2 == termid2)
+				interaction.categories.push({ category1: cat1, category2: cat2, lst: row })
+			} else {
+				// not interaction, individual variable
+				const id = row.shift()
+				const category = row.shift()
+				// row is now only data fields
+				const termid = id2originalId[id]
+				if (!out_coef.terms[termid]) out_coef.terms[termid] = {}
+				if (category) {
+					// has category
+					if (!out_coef.terms[termid].categories) out_coef.terms[termid].categories = {}
+					out_coef.terms[termid].categories[category] = row
+				} else {
+					// no category
+					out_coef.terms[termid].fields = row
+				}
+			}
+		}
+		return out_coef
+	}
 
 	for (const analysis of outdata) {
 		// convert "analysis" to "analysisResult", then push latter to resultLst
-		const analysisResult = {
+		const analysisResult: TermdbRegressionResultEntry = {
 			data: {
 				sampleSize: analysis.data.sampleSize,
 				eventCnt: analysis.data.eventCnt
@@ -584,47 +798,6 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		} else {
 			throw 'coefficients table not found'
 		}
-		function parseCoefficients(in_coef, hasIntercept) {
-			if (in_coef.rows.length < (hasIntercept ? 2 : 1)) throw 'too few rows in coefficients table'
-			const out_coef = {
-				header: in_coef.header,
-				terms: {}, // individual independent terms, not interaction
-				interactions: [], // interactions
-				label: 'Coefficients'
-			}
-			if (hasIntercept) out_coef.intercept = in_coef.rows.shift()
-			for (const row of in_coef.rows) {
-				if (row[0].indexOf(':') != -1) {
-					// is an interaction
-					const [id1, id2] = row.shift().split(':')
-					const [cat1, cat2] = row.shift().split(':')
-					const termid1 = id2originalId[id1]
-					const termid2 = id2originalId[id2]
-					// row is now only data fields
-					const interactions = out_coef.interactions
-					if (!interactions.some(x => x.term1 == termid1 && x.term2 == termid2))
-						interactions.push({ term1: termid1, term2: termid2, categories: [] })
-					const interaction = interactions.find(x => x.term1 == termid1 && x.term2 == termid2)
-					interaction.categories.push({ category1: cat1, category2: cat2, lst: row })
-				} else {
-					// not interaction, individual variable
-					const id = row.shift()
-					const category = row.shift()
-					// row is now only data fields
-					const termid = id2originalId[id]
-					if (!out_coef.terms[termid]) out_coef.terms[termid] = {}
-					if (category) {
-						// has category
-						if (!out_coef.terms[termid].categories) out_coef.terms[termid].categories = {}
-						out_coef.terms[termid].categories[category] = row
-					} else {
-						// no category
-						out_coef.terms[termid].fields = row
-					}
-				}
-			}
-			return out_coef
-		}
 
 		// type III statistics
 		if (data.type3) {
@@ -637,7 +810,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			for (const row of data.type3.rows) {
 				if (row[0].indexOf(':') != -1) {
 					// is an interaction
-					const interaction = {}
+					const interaction: any = {}
 					const [id1, id2] = row.shift().split(':')
 					// row is now only data fields
 					interaction.term1 = id2originalId[id1]
@@ -666,7 +839,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			const snp = variables.splice(snpInd, 1)[0]
 			analysisResult.data.totalSnpEffect.snp = id2originalId[snp]
 			// extract the snp interactions
-			const interactions = []
+			const interactions: any[] = []
 			for (const variable of variables) {
 				if (!variable.includes(':')) throw 'expected interaction'
 				const [id1, id2] = variable.split(':')
@@ -700,7 +873,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 					size: `${width}x${height}`
 				}
 				const type = path.basename(file, '.png').split('_')[1]
-				if (type == 'univariate' || type == 'multivariate') obj.type = type
+				if (type == 'univariate' || type == 'multivariate') (obj as any).type = type
 				analysisResult.data.splinePlots.push(obj)
 				fs.unlink(file, err => {
 					if (err) throw err
@@ -736,7 +909,12 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 	}
 }
 
-async function snplocusPostprocess(q, sampledata, Rinput, result) {
+async function snplocusPostprocess(
+	q: RegressionQuery,
+	sampledata: SampleDataEntry[],
+	Rinput: RInput,
+	result: RegressionResponse
+) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
 	stime = new Date().getTime()
@@ -758,15 +936,20 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	benchmark['NodeJS']['snplocusPostprocess'] = (etime - stime) / 1000 + ' sec'
 }
 
-async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
+async function lowAFsnps_wilcoxon(
+	tw: TermWrapperLike,
+	sampledata: SampleDataEntry[],
+	Rinput: RInput,
+	result: RegressionResponse
+) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
-	const wilcoxInput = []
-	const snpid2scale = new Map() // k: snpid, v: {minv,maxv} for making scale in boxplot
+	const wilcoxInput: any[] = []
+	const snpid2scale = new Map<any, any>() // k: snpid, v: {minv,maxv} for making scale in boxplot
 	for (const [snpid, snpO] of tw.lowAFsnps) {
-		let minv = null,
-			maxv = null
-		const hasEffAlleleValues = [],
-			noEffAlleleValues = []
+		let minv: number | null = null,
+			maxv: number | null = null
+		const hasEffAlleleValues: any[] = [],
+			noEffAlleleValues: any[] = []
 		for (const { sample } of sampledata) {
 			const d = Rinput.data.find(d => d.__sample == sample)
 			if (!d) continue
@@ -781,8 +964,8 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 			if (minv == null) {
 				minv = maxv = outcomeValue
 			} else {
-				minv = Math.min(minv, outcomeValue)
-				maxv = Math.max(maxv, outcomeValue)
+				minv = Math.min(minv as number, outcomeValue)
+				maxv = Math.max(maxv as number, outcomeValue)
 			}
 
 			const [a, b] = gt.split('/')
@@ -813,9 +996,9 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 		}
 		const { minv, maxv } = snpid2scale.get(snpid)
 
-		const box1 = boxplot_getvalue(hasEffAlleleValues.sort((a, b) => a - b))
+		const box1: any = boxplot_getvalue(hasEffAlleleValues.sort((a, b) => a - b))
 		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${hasEffAlleleValues.length}`
-		const box2 = boxplot_getvalue(noEffAlleleValues.sort((a, b) => a - b))
+		const box2: any = boxplot_getvalue(noEffAlleleValues.sort((a, b) => a - b))
 		box2.label = `No ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${noEffAlleleValues.length}`
 
 		// make a result object for this snp
@@ -839,11 +1022,16 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	}
 }
 
-async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
+async function lowAFsnps_fisher(
+	tw: TermWrapperLike,
+	sampledata: SampleDataEntry[],
+	Rinput: RInput,
+	result: RegressionResponse
+) {
 	// for logistic, perform fisher's exact test for low-AF snps
-	const input = [] //input for run_rust()
+	const input: any[] = [] //input for run_rust()
 	let index = 0
-	const index2snpid = new Map()
+	const index2snpid = new Map<any, any>()
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
 		// count 4 numbers for this snp across all samples
@@ -918,13 +1106,18 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 }
 
-async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
+async function lowAFsnps_cuminc(
+	tw: TermWrapperLike,
+	sampledata: SampleDataEntry[],
+	Rinput: RInput,
+	result: RegressionResponse
+) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
-	const cumincRinput = { data: {} } // input for cuminc analysis
-	const snpsToSkip = new Set() // skip these snps
+	const cumincRinput: any = { data: {} } // input for cuminc analysis
+	const snpsToSkip = new Set<any>() // skip these snps
 	// because at least one allele is not found in any sample
 	for (const [snpid, snpO] of tw.lowAFsnps) {
-		const snpData = []
+		const snpData: any[] = []
 		for (const { sample } of sampledata) {
 			const d = Rinput.data.find(d => d.__sample == sample)
 			if (!d) continue
@@ -932,7 +1125,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
 
 			// data point of this sample, to add to snpData[]
-			const sampleData = {
+			const sampleData: any = {
 				time: d.outcome_time,
 				event: d.outcome_event
 			}
@@ -950,7 +1143,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 
 			snpData.push(sampleData)
 		}
-		const serieses = new Set(snpData.map(sample => sample.series))
+		const serieses = new Set<any>(snpData.map(sample => sample.series))
 		if (serieses.size < 2) {
 			// at least one allele of snp is not found in any sample
 			// cannot perform cuminc test on snp
@@ -964,15 +1157,15 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	const ci_data = await runCumincR(cumincRinput)
 
 	// parse cumulative incidence results
-	let cuminc
-	for (const [snpid, snpO] of tw.lowAFsnps) {
+	let cuminc: any
+	for (const [snpid] of tw.lowAFsnps) {
 		if (snpsToSkip.has(snpid)) {
 			// cuminc test was not performed on this snp
 			const msg =
 				'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
 			cuminc = { pvalue: 'NA', msg }
 		} else {
-			if (!ci_data[snpid].tests?.length == 1) throw 'must have a single test'
+			if (ci_data[snpid].tests?.length != 1) throw 'must have a single test'
 			const pvalue = Number(ci_data[snpid].tests[0].pvalue)
 			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
 			cuminc = {
@@ -995,10 +1188,10 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	}
 }
 
-function addResult4monomorphic(tw, result) {
+function addResult4monomorphic(tw: TermWrapperLike, result: RegressionResponse) {
 	for (const snpid of tw.monomorphicLst) {
 		const gt2count = tw.snpgt2count.get(snpid)
-		const lst = []
+		const lst: any[] = []
 		for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
 		const analysisResult = {
 			id: snpid,
@@ -1008,13 +1201,13 @@ function addResult4monomorphic(tw, result) {
 	}
 }
 
-function getLine4OneSnp(snpid, tw) {
+function getLine4OneSnp(snpid: string, tw: TermWrapperLike) {
 	// get summary line for one snp to show in result
 	const gt2count = tw.snpgt2count.get(snpid)
 	if (!gt2count) return { k: 'Error', v: 'Variant not found' }
-	const gtcounts = []
+	const gtcounts: any[] = []
 	for (const [gt, c] of gt2count) gtcounts.push(gt + '=' + c)
-	const snp = { snpid, gtcounts }
+	const snp: any = { snpid, gtcounts }
 	if (tw.monomorphicLst.includes(snpid)) {
 		snp.monomorphic = true
 	} else {
@@ -1046,19 +1239,19 @@ Returns an array with elemenents:
 			]
 		},
 */
-async function getSampleData(q, ds) {
+async function getSampleData(q: RegressionQuery, ds: any): Promise<SampleDataEntry[]> {
 	const q2 = Object.assign({}, q)
 	q2.terms = [q.outcome, ...q.independent]
 	const result = await getData(q2, ds)
 
 	const filteredSamples = mayProcessSampleByCoxOutcome(q, ds, result.samples) // array of objects, same shape as result.samples{} values
-	const samples = [] // collect reshaped sample objs and return
+	const samples: any[] = [] // collect reshaped sample objs and return
 
 	for (const sample of filteredSamples) {
 		// reshape sample{} into obj{}
-		const obj = {
+		const obj: SampleDataEntry = {
 			sample: sample.sample,
-			id2value: new Map()
+			id2value: new Map<string, any>()
 		}
 
 		for (const tw of q2.terms) {
@@ -1072,7 +1265,7 @@ async function getSampleData(q, ds) {
 	return samples
 }
 
-function mayAddAncestryPCs(tw, obj, ds) {
+function mayAddAncestryPCs(tw: TermWrapperLike, obj: SampleDataEntry, _: any) {
 	if (!tw.q.restrictAncestry) return
 	// add sample pc values from tw.q.restrictAncestry.pcs to samples
 	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
@@ -1082,17 +1275,17 @@ function mayAddAncestryPCs(tw, obj, ds) {
 	}
 }
 
-function mayProcessSampleByCoxOutcome(q, ds, getDataSamples) {
+function mayProcessSampleByCoxOutcome(q: RegressionQuery, ds: any, getDataSamples: Record<string, any>) {
 	if (q.regressionType != 'cox' || q.outcome.term.type != 'condition') {
 		// will not filter
-		const lst = []
+		const lst: any[] = []
 		for (const k in getDataSamples) lst.push(getDataSamples[k])
 		return lst
 	}
 
 	if (!ds.cohort.termdb.ageEndOffset) throw 'ageEndOffset missing'
 
-	const psamples = [] // processed samples
+	const psamples: any[] = [] // processed samples
 	for (const sid in getDataSamples) {
 		const sample = getDataSamples[sid] // object may be modified
 
@@ -1118,12 +1311,12 @@ function mayProcessSampleByCoxOutcome(q, ds, getDataSamples) {
 	return psamples
 }
 
-function replaceTermId(Rinput) {
+function replaceTermId(Rinput: RInput): [Record<string, string>, Record<string, string>] {
 	// replace term IDs with custom IDs (to avoid spaces/commas in R)
 
 	// make conversion table between IDs
-	const id2originalId = {} // k: new id, v: original term id
-	const originalId2id = {} // k: original term id, v: new id
+	const id2originalId: Record<string, string> = {} // k: new id, v: original term id
+	const originalId2id: Record<string, string> = {} // k: original term id, v: new id
 	// outcome variable
 	id2originalId['outcome'] = Rinput.outcome.id
 	originalId2id[Rinput.outcome.id] = 'outcome'
@@ -1135,10 +1328,14 @@ function replaceTermId(Rinput) {
 		id2originalId['outcome_event'] = t2e.eventId
 		originalId2id[t2e.eventId] = 'outcome_event'
 		if (t2e.timeScale == 'age') {
-			id2originalId['outcome_agestart'] = t2e.agestartId
-			id2originalId['outcome_ageend'] = t2e.ageendId
-			originalId2id[t2e.agestartId] = 'outcome_agestart'
-			originalId2id[t2e.ageendId] = 'outcome_ageend'
+			if (t2e.agestartId) {
+				id2originalId['outcome_agestart'] = t2e.agestartId
+				originalId2id[t2e.agestartId] = 'outcome_agestart'
+			}
+			if (t2e.ageendId) {
+				id2originalId['outcome_ageend'] = t2e.ageendId
+				originalId2id[t2e.ageendId] = 'outcome_ageend'
+			}
 		}
 	}
 	// independent variables
@@ -1158,8 +1355,8 @@ function replaceTermId(Rinput) {
 		t2e.timeId = originalId2id[t2e.timeId]
 		t2e.eventId = originalId2id[t2e.eventId]
 		if (t2e.timeScale == 'age') {
-			t2e.agestartId = originalId2id[t2e.agestartId]
-			t2e.ageendId = originalId2id[t2e.ageendId]
+			if (t2e.agestartId) t2e.agestartId = originalId2id[t2e.agestartId]
+			if (t2e.ageendId) t2e.ageendId = originalId2id[t2e.ageendId]
 		}
 	}
 	// independent variables

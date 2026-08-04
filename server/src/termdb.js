@@ -1,7 +1,6 @@
 import path from 'path'
 import * as termdbsql from './termdb.sql.js'
 import * as phewas from './termdb.phewas.js'
-import { get_regression } from './termdb.regression.js'
 import { validate as snpValidate } from './termdb.snp.js'
 import { isUsableTerm } from '#shared/termdb.usecase.js'
 import { trigger_getLowessCurve } from '#routes/termdb.sampleScatter.ts'
@@ -49,8 +48,6 @@ export function handle_request_closure(genomes) {
 			if (q.getsamplelist) return res.send(await getSampleList(req, q, ds))
 
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
-			if (q.getregression) q.for = 'regression'
-			if (q.for == 'regression') return res.send(await get_regression(q, ds))
 			if (q.validateSnps) return res.send(await snpValidate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return res.send(ds?.queries?.snvindel?.variant_filter || {})
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
