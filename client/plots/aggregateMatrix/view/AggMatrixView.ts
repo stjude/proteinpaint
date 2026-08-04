@@ -22,8 +22,6 @@ export class AggMatrixView {
             viewData.rowLabels,
             viewData.colSectionLabels,
             viewData.rowSectionLabels,
-            viewData.colSectionGuides,
-            viewData.rowSectionGuides,
             viewData.colSectionLines,
             viewData.rowSectionLines
         )
@@ -69,8 +67,6 @@ export class AggMatrixView {
         rowLabels: AggMatrixViewData['rowLabels'],
         colSectionLabels: AggMatrixViewData['colSectionLabels'],
         rowSectionLabels: AggMatrixViewData['rowSectionLabels'],
-        colSectionGuides: AggMatrixViewData['colSectionGuides'],
-        rowSectionGuides: AggMatrixViewData['rowSectionGuides'],
         colSectionLines: AggMatrixViewData['colSectionLines'],
         rowSectionLines: AggMatrixViewData['rowSectionLines']
     ) {
@@ -117,20 +113,6 @@ export class AggMatrixView {
             .attr('y1', d => d.y1)
             .attr('y2', d => d.y2)
 
-        rowLabelsGroup.selectAll('.sjpp-ag-matrix-row-section-guide')
-            .data(rowSectionGuides)
-            .enter()
-            .append('line')
-            .attr('class', 'sjpp-ag-matrix-section-guide sjpp-ag-matrix-row-section-guide')
-            .attr('stroke', '#9ca3af')
-            .attr('stroke-width', 1)
-            .attr('stroke-linecap', 'round')
-            .attr('opacity', 0.7)
-            .attr('x1', -6)
-            .attr('x2', 0)
-            .attr('y1', d => d.y)
-            .attr('y2', d => d.y)
-
         colLabelsGroup.selectAll('text')
             .data(colLabels)
             .enter()
@@ -172,20 +154,6 @@ export class AggMatrixView {
             .attr('x2', d => d.x2)
             .attr('y1', d => d.y)
             .attr('y2', d => d.y)
-
-        colLabelsGroup.selectAll('.sjpp-ag-matrix-col-section-guide')
-            .data(colSectionGuides)
-            .enter()
-            .append('line')
-            .attr('class', 'sjpp-ag-matrix-section-guide sjpp-ag-matrix-col-section-guide')
-            .attr('stroke', '#9ca3af')
-            .attr('stroke-width', 1)
-            .attr('stroke-linecap', 'round')
-            .attr('opacity', 0.7)
-            .attr('x1', d => d.x)
-            .attr('x2', d => d.x)
-            .attr('y1', 0)
-            .attr('y2', 6)
     }
 
     renderDots(dotPositions: AggMatrixDotPosition[]) {
