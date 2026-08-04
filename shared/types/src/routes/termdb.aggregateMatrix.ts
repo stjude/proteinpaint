@@ -19,16 +19,20 @@ export type TermdbAggregateMatrixRequest = {
 }
 
 export type AggMatrixDot = {
+    /** Entry term identifier (the value/level within a section) */
+    row: string
+    /** Section identifier for the row */
+    rowSection: string
     /** Category term identifier (the value/level within a member) */
     column: string
+    /** Section identifier for the column */
+    colSection: string
     /** Raw aggregate value mapped to color gradient */
     colorValue: number
     /** Raw aggregate value for size (returned for tooltip display) */
     sizeValue: number
     /** Computed dot size in pixels */
     dotSize: number
-    /** Entry term identifier (the value/level within a section) */
-    row: string
 }
 
 export type AxisTermEntry = { id: string, label: string }

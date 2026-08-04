@@ -258,20 +258,20 @@ export class AggMatrixViewModel {
                     column: dot.column,
                     tipData: [
                         {
-                            label: 'Row',
+                            label: dot.rowSection,
                             value: dot.row
                         },
                         {
-                            label: 'Column',
+                            label: dot.colSection,
                             value: dot.column
                         },
                         {
-                            // Color value
+                            // Show the color value
                             label: capitalizeFirstLetter(settings.gradientMethod),
                             value: roundValueAuto(dot.colorValue)
                         },
                         {
-                            // Size value
+                            // Show the size value
                             label: capitalizeFirstLetter(settings.sizeMethod),
                             value: roundValueAuto(dot.sizeValue)
                         }

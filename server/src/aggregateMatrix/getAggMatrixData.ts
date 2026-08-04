@@ -1,4 +1,4 @@
-import type { TermdbAggregateMatrixRequest, HasValidAggMatrixResponse, AggMatrixDot, AxisSection } from '#types'
+import type { TermdbAggregateMatrixRequest, ValidAggMatrixResponse, AggMatrixDot, AxisSection } from '#types'
 import { PSEUDOBULK, GENE_EXPRESSION } from '#types'
 import { mayLog } from '#src/helpers.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
@@ -11,7 +11,7 @@ type ColData = {
     sizeTmp: Record<string, number | null>
 }
 
-export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any): Promise<HasValidAggMatrixResponse> {
+export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any): Promise<ValidAggMatrixResponse> {
     const queries = new Set<string>()
     const rowSections: AxisSection[] = []
     let rowCount = 0, rowLongest = ''
@@ -59,12 +59,14 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
         .domain([sizeMin, sizeMax])
         .range([q.minDotSize, q.maxDotSize])
 
-    for (const { terms } of rowSections) {
+    for (const { terms, id: sectionId } of rowSections) {
         for (const { id: term } of terms) {
             const row: AggMatrixDot[] = columns.map(col => {
                 const sizeValue = col.sizeTmp[term] ?? 0
                 return {
+                    rowSection: sectionId,
                     row: term,
+                    colSection: col.column,
                     column: col.termId,
                     colorValue: col.colorTmp[term] ?? 0,
                     sizeValue,
