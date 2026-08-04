@@ -69,5 +69,9 @@ export type AggMatrixViewData = {
     rowSectionLines: RowSectionLine[]
     colSectionLines: ColSectionLine[]
     dotPositions: AggMatrixDotPosition[]
-    colorScale: (value: number) => string | number
+    colorScale: {
+        scale: (value: number) => string | number
+        absMin: number
+        absMax: number
+    }
 }

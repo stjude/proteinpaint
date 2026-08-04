@@ -30,8 +30,9 @@ export class LegendCircleReference {
 	readonly shift = 20
 	readonly width = 70
 	readonly tip = new Menu({ padding: '5px' })
-	readonly x = 40
-	readonly y = 40
+	readonly x: number
+	readonly y: number
+
 	constructor(opts: LegendCircleReferenceOpts) {
 		this.validateOpts(opts)
 		this.g = opts.g
@@ -42,6 +43,8 @@ export class LegendCircleReference {
 		this.maxRadius = opts.maxRadius
 		this.minLabel = opts.minLabel ?? opts.minRadius
 		this.minRadius = opts.minRadius
+		this.x = opts.x ?? 40
+		this.y = opts.y ?? 40
 
 		if (opts.menu) this.menu = opts.menu
 		if (opts.title) this.title = opts.title
