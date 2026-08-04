@@ -1,3 +1,4 @@
+import { Menu, table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 
 export class AggMatrixView {
@@ -41,7 +42,8 @@ export class AggMatrixView {
             svg,
             // title, 
             rowLabels, 
-            colLabels
+            colLabels,
+            tip: new Menu({ padding: '' })
         }
     }
 
@@ -76,6 +78,22 @@ export class AggMatrixView {
                 .attr('cy', dot.y)
                 .attr('r', dot.size)
                 .attr('fill', dot.color)
+                .on('mouseover', (event: MouseEvent) => {
+                    this.dom.tip.clear().show(event.clientX, event.clientY)
+                   const table = table2col({holder: this.dom.tip.d})
+                    for (const v of dot.tipData) {
+                        addTableRow(table, v.label, v.value)
+                    }
+                })
+                .on('mouseout', () => {
+                    this.dom.tip.clear().hide()
+                })
         }
     }
+}
+
+function addTableRow(table: any, label: string, value: any) {
+    const [td1, td2] = table.addRow()
+    td1.text(label)
+    td2.text(value)
 }

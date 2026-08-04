@@ -3,6 +3,7 @@ import { getMaxLabelWidth} from '#dom'
 import { scaleLinear } from 'd3-scale'
 import type { AggMatrixDot, AxisLayoutColumns, AxisLayoutRows, ValidAggMatrixResponse } from '#types'
 import type { AggregateMatrixSettings } from '../settings/Settings.ts'
+import { roundValueAuto } from '#shared/roundValue.js'
 
 export class AggMatrixViewModel {
     ag: AggregateMatrix
@@ -38,7 +39,7 @@ export class AggMatrixViewModel {
         this.getPlotDimensions()
         this.getAxisLabelPositions(rowData, colData, cellSize)
         this.setColorScale(settings, data.colorScale)
-        this.getDotPositions(data.data, cellSize)
+        this.getDotPositions(data.data, cellSize, settings)
     }
 
     getPlotDimensions() {
@@ -99,7 +100,7 @@ export class AggMatrixViewModel {
         this.viewData.colorScale = scale
     }
 
-    getDotPositions(data: AggMatrixDot[][], cellSize: number){
+    getDotPositions(data: AggMatrixDot[][], cellSize: number, settings: AggregateMatrixSettings) {
         const startX = this.hoziPad + this.maxRowLabelLgth
         const startY = this.topPad
 
@@ -113,10 +114,26 @@ export class AggMatrixViewModel {
                 y: lastY + (cellSize / 2),
                 size: dot.dotSize,
                 color: this.viewData.colorScale(dot.colorValue),
-                colorValue: dot.colorValue,
-                sizeValue: dot.sizeValue,
-                column: dot.column,
-                row: dot.row
+                tipData: [
+                    {
+                        label: 'Row',
+                        value: dot.row
+                    },
+                    {
+                        label: 'Column',
+                        value: dot.column
+                    },
+                    {
+                        //Color value
+                        label: capitalizeFirstLetter(settings.gradientMethod),
+                        value: roundValueAuto(dot.colorValue)
+                    },
+                    { 
+                        //Size value
+                        label: capitalizeFirstLetter(settings.sizeMethod),
+                        value: roundValueAuto(dot.sizeValue)
+                    },
+                ]
               }
               if (!this.viewData.dotPositions) this.viewData.dotPositions = []
               this.viewData.dotPositions.push(dotPos)
@@ -126,4 +143,8 @@ export class AggMatrixViewModel {
             lastY = startY + (i + 1) * cellSize
           }
     }
+}
+
+function capitalizeFirstLetter(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
