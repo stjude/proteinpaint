@@ -2,6 +2,7 @@ import { Menu, table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
 import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/ViewModelDataTypes.ts'
 import { LegendRender } from './LegendRender.ts'
+import { PSEUDOBULK } from '#types' 
 
 export class AggMatrixView {
     ag: AggregateMatrix
@@ -205,6 +206,29 @@ export class AggMatrixView {
                 })
                 .on('mouseout', () => {
                     this.dom.tip.clear().hide()
+                })
+                .on('click', () => {
+                    const config = this.ag.state.config
+                    const colTerm = config.columns[dot.colSection].find(term => term.id === dot.column)
+                    const tmp = structuredClone(colTerm)
+                    if (tmp.type !== PSEUDOBULK) return
+
+                    //TODO: Move this to interactions
+                    const idName = `geneExpression ${dot.row} ${dot.column}`
+                    tmp.gene = dot.row
+                    tmp.category = dot.column
+                    tmp.id = idName
+                    tmp.name = idName
+                    this.ag.app.dispatch({
+                        type: 'plot_create',
+                        config: {
+                            chartType: 'summary',
+                            term: {
+                                term: tmp,
+                                q: { mode: 'continuous'}
+                            }
+                        }
+                    })
                 })
         }
     }
