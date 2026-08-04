@@ -100,6 +100,14 @@ tape('defaults', function (test) {
 							skipMs: 43200000,
 							absPath: `${m.cachedir}/daAnalysis`,
 							skipUntil: 0
+						},
+						wsitiles: {
+							maxAge: 2592000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							fileExtensions: new Set(['.jpg']),
+							absPath: `${m.cachedir}/wsitiles`,
+							skipUntil: 0
 						}
 					},
 					`should set default subdir properties`
@@ -118,7 +126,8 @@ tape('defaults', function (test) {
 							de: { deletedCount: 0, totalCount: 0 },
 							dm: { deletedCount: 0, totalCount: 0 },
 							topve: { deletedCount: 0, totalCount: 0 },
-							daAnalysis: { deletedCount: 0, totalCount: 0 }
+							daAnalysis: { deletedCount: 0, totalCount: 0 },
+							wsitiles: { deletedCount: 0, totalCount: 0 }
 						},
 						`should detect no cache files to delete`
 					)
