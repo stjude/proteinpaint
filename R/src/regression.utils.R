@@ -9,6 +9,7 @@
 # prepareDataTable
 # cubic_spline
 # buildFormulas
+# makeNonlinearityTable
 # linearRegression
 # logisticRegression
 # coxRegression
@@ -185,6 +186,32 @@ buildFormulas <- function(outcome, independent, includeUnivariate) {
   return(formulas)
 }
 
+# compute nonlinearity statistics table
+# the type III test of a spline variable drops the variable altogether, so it
+# tests whether the variable has any effect, not whether that effect is
+# nonlinear. for each spline variable, also compare the model against a model
+# that fits the same variable as a single linear term. the two models are
+# nested and are fitted on the same samples, so comparing the two is a test of
+# departure from linearity.
+# args: formula = formula object; vlst = variables of the fitted model;
+#       compare = function that fits the linear-form model from a formula and
+#       returns a one-row matrix of stats comparing it against the full model
+# returns NULL when the model has no spline variable, so that the table is
+# only reported for analyses where it is meaningful
+makeNonlinearityTable <- function(formula, vlst, compare) {
+  splineVars <- grep("^cubic_spline\\(", vlst, value = T)
+  if (length(splineVars) == 0) return(NULL)
+  nonlinearity_table <- NULL
+  for (v in splineVars) {
+    vid <- sub("cubic_spline\\(", "", sub(", c\\(.*", "", v)) # id of the spline variable
+    formula_linear <- update(formula$formula, paste0("~.-", v, "+", vid))
+    stats <- compare(formula_linear)
+    row.names(stats) <- v
+    nonlinearity_table <- rbind(nonlinearity_table, stats)
+  }
+  return(nonlinearity_table)
+}
+
 # linear regression
 linearRegression <- function(formula, dat) {
   res <- lm(formula$formula, data = dat)
@@ -215,7 +242,18 @@ linearRegression <- function(formula, dat) {
   type3_table[,c("Sum of Sq","RSS","AIC")] <- round(type3_table[,c("Sum of Sq","RSS","AIC")], 1)
   type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
   type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
-  
+
+  # nonlinearity statistics table
+  # use the F test, consistent with the type III statistics of this model type
+  nonlinearity_table <- makeNonlinearityTable(formula, attr(res$terms, "term.labels", exact = T), function(formula_linear) {
+    res_linear <- lm(formula_linear, data = dat)
+    stats <- as.matrix(anova(res, res_linear, test = "F"))[2, c("Df","F","Pr(>F)"), drop = F]
+    stats[,"Df"] <- stats[,"Df"] * -1 #convert Df diff to Df
+    stats[,"F"] <- round(stats[,"F"], 3)
+    stats[,"Pr(>F)"] <- signif(stats[,"Pr(>F)"], 4)
+    return(stats)
+  })
+
   # total SNP effect table
   # if a snplocus snp has an interaction, then compute
   # the total effect of the snp on the model
@@ -236,8 +274,10 @@ linearRegression <- function(formula, dat) {
   }
   
   # other summary stats table
+  # AIC allows models of the same outcome and samples to be compared
+  # (e.g. the same variable fitted as a linear term vs. as a cubic spline)
   other_table <- list(
-    "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
+    "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value", "AIC"),
     "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5))
   )
   # check for F-statistic
@@ -247,10 +287,12 @@ linearRegression <- function(formula, dat) {
   } else {
     other_table[["rows"]] <- c(other_table[["rows"]], NA, NA)
   }
-  
+  other_table[["rows"]] <- c(other_table[["rows"]], round(AIC(res), 1))
+
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
   if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
+  if (!is.null(nonlinearity_table)) out[["nonlinearity"]] <- nonlinearity_table
   return(out)
 }
 
@@ -299,7 +341,18 @@ logisticRegression <- function(formula, dat) {
   type3_table[,c("Deviance","AIC")] <- round(type3_table[,c("Deviance","AIC")], 1)
   type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
   type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
-  
+
+  # nonlinearity statistics table
+  # use the likelihood ratio test, consistent with the type III statistics of this model type
+  nonlinearity_table <- makeNonlinearityTable(formula, attr(res$terms, "term.labels", exact = T), function(formula_linear) {
+    res_linear <- glm(formula_linear, family = binomial(link='logit'), data = dat)
+    stats <- as.matrix(anova(res, res_linear, test = "LRT"))[2, c("Df","Deviance","Pr(>Chi)"), drop = F]
+    stats[,"Df"] <- stats[,"Df"] * -1 #convert Df diff to Df
+    stats[,"Deviance"] <- round(stats[,"Deviance"] * -1, 3) #convert deviance diff to deviance explained by the spline
+    stats[,"Pr(>Chi)"] <- signif(stats[,"Pr(>Chi)"], 4)
+    return(stats)
+  })
+
   # total SNP effect table
   # if a snplocus snp has an interaction, then compute
   # the total effect of the snp on the model
@@ -328,6 +381,7 @@ logisticRegression <- function(formula, dat) {
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
   if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
+  if (!is.null(nonlinearity_table)) out[["nonlinearity"]] <- nonlinearity_table
   return(out)
 }
 
@@ -382,7 +436,18 @@ coxRegression <- function(formula, dat) {
   # round values
   type3_table[,"Chisq"] <- round(type3_table[,"Chisq"], 3)
   type3_table[,"Pr(>Chisq)"] <- signif(type3_table[,"Pr(>Chisq)"], 4)
-  
+
+  # nonlinearity statistics table
+  # use the likelihood ratio test, consistent with the type III statistics of this model type
+  nonlinearity_table <- makeNonlinearityTable(formula, vlst, function(formula_linear) {
+    res_linear <- coxph(formula_linear, data = dat, model = T)
+    stats <- as.matrix(lrtest(res, res_linear))[2, c("Df","Chisq","Pr(>Chisq)"), drop = F]
+    stats[,"Df"] <- stats[,"Df"] * -1 #convert Df diff to Df
+    stats[,"Chisq"] <- round(stats[,"Chisq"], 3)
+    stats[,"Pr(>Chisq)"] <- signif(stats[,"Pr(>Chisq)"], 4)
+    return(stats)
+  })
+
   # total SNP effect table
   # if a snplocus snp has an interaction, then compute
   # the total effect of the snp on the model
@@ -412,14 +477,17 @@ coxRegression <- function(formula, dat) {
   tests_table <- list("header" = colnames(tests_table), "rows" = tests_table)
   
   # other summary stats table
+  # AIC allows models of the same outcome and samples to be compared
+  # (e.g. the same variable fitted as a linear term vs. as a cubic spline)
   other_table <- list(
-    "header" = c("Concordance", "Concordance standard error"),
-    "rows" = c(unname(round(res_summ$concordance["C"], 3)), unname(round(res_summ$concordance["se(C)"], 3)))
+    "header" = c("Concordance", "Concordance standard error", "AIC"),
+    "rows" = c(unname(round(res_summ$concordance["C"], 3)), unname(round(res_summ$concordance["se(C)"], 3)), round(AIC(res), 1))
   )
-  
+
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "eventCnt" = unbox(eventCnt),"coefficients" = coefficients_table, "type3" = type3_table, "tests" = tests_table, "other" = other_table)
   if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
+  if (!is.null(nonlinearity_table)) out[["nonlinearity"]] <- nonlinearity_table
   return(out)
 }
 
@@ -465,6 +533,8 @@ runRegression <- function(formula, regtype, dat, outcome, cachedir) {
   if (length(warns) > 0) results[["warnings"]] <- warns
   results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType, fdat)
   results$type3 <- formatType3(results$type3)
+  # nonlinearity table has the same shape as the type III table (variable column + stats)
+  if (!is.null(results$nonlinearity)) results$nonlinearity <- formatType3(results$nonlinearity)
   out <- list("id" = unbox(formula$id), "data" = results[names(results) != "res"])
   if (!is.null(formula$type)) out$type <- unbox(formula$type)
   return(out)
