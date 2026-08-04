@@ -13,14 +13,20 @@ export class LegendRender {
 
     render(viewData: AggMatrixViewData, div: any) {
         const settings = this.ag.state.config.settings.aggregateMatrix
-        const colorScaleSvg = div.append('svg').style('display', 'block')
-        const dotScaleSvg = div.append('svg').style('display', 'block')
+        const colorScaleSvg = div.append('svg').style('display', 'block').attr('height', 100)
+        const dotScaleSvg = div.append('svg').style('display', 'block').attr('height', settings.maxDotSize + 20 + 50) //20px for the title position, 50px for the title and padding around the rendering. 
         this.renderColorScale(viewData.colorScale, settings, colorScaleSvg)
         this.renderDotScaleRef(dotScaleSvg, settings)
     }
 
     renderColorScale(colorScale, settings, svg) {
-        svg.append('text').attr('x', 10).attr('y', 20).text(capitalizeFirstLetter(settings.gradientMethod))
+        svg.append('text')
+            .attr('x', 10)
+            .attr('y', 20)
+            .style('font-weight', 'bold')
+            .style('font-size', '0.8em')
+            .text(capitalizeFirstLetter(settings.gradientMethod))
+
         new ColorScale({
             holder: svg,
             domain: colorScale.scale.domain(),
@@ -77,23 +83,16 @@ export class LegendRender {
     }
 
     renderDotScaleRef(svg, settings) {
-        svg.append('text')
-            .attr('x', 10)
-            .attr('y', 20)
-            .style('display', 'block')
-            .text(capitalizeFirstLetter(settings.sizeMethod))
-
-        const g = svg.append('g')
         new LegendCircleReference({
-            g,
+            g: svg.append('g').attr('transform', 'translate(15, 15)'),
             inputMax: settings.dotInputMax,
             inputMin: settings.dotInputMin,
             maxRadius: settings.maxDotSize,
             minRadius: settings.minDotSize,
             isAscending: true,
-            x: 40 + settings.maxDotSize,
-            y: 40 + settings.maxDotSize,
+            title: capitalizeFirstLetter(settings.sizeMethod),
             menu: {
+                minMaxLabel: 'pixels',
 				callback: async (obj: { min: number; max: number }) => {
                     const { min, max } = obj
                     const isValid = validateMinMax(settings, min, max)
