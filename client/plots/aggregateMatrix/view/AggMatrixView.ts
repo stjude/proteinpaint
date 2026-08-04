@@ -1,5 +1,6 @@
 import { Menu, table2col } from '#dom'
 import type { AggregateMatrix } from '../AggregateMatrix.ts'
+import type { AggMatrixDotPosition, AggMatrixViewData } from '../viewModel/AggMatrixViewModel.ts'
 
 export class AggMatrixView {
     ag: AggregateMatrix
@@ -9,13 +10,22 @@ export class AggMatrixView {
         this.ag = ag
     }
 
-    render(viewData: any) {
+    render(viewData: AggMatrixViewData) {
         this.initDom(viewData.plotDim)
-        this.renderAxesLabels(viewData.colLabels, viewData.rowLabels)
+        this.renderAxesLabels(
+            viewData.colLabels,
+            viewData.rowLabels,
+            viewData.colSectionLabels,
+            viewData.rowSectionLabels,
+            viewData.colSectionGuides,
+            viewData.rowSectionGuides,
+            viewData.colSectionLines,
+            viewData.rowSectionLines
+        )
         this.renderDots(viewData.dotPositions)
     }
 
-    initDom(plotDim: any) {
+    initDom(plotDim: AggMatrixViewData['plotDim']) {
         const mainDiv = this.ag.dom.mainDiv
         mainDiv.selectAll('*').remove()
 
@@ -37,17 +47,26 @@ export class AggMatrixView {
         const colLabels = svg.append('g')
             .attr('class', 'sjpp-ag-matrix-col-labels')
             .attr('transform', `translate(${plotDim.colLabels.x}, ${plotDim.colLabels.y})`)
-  
+
         this.dom = {
             svg,
-            // title, 
-            rowLabels, 
+            // title,
+            rowLabels,
             colLabels,
             tip: new Menu({ padding: '' })
         }
     }
 
-    renderAxesLabels(colLabels: any, rowLabels: any) {
+    renderAxesLabels(
+        colLabels: AggMatrixViewData['colLabels'],
+        rowLabels: AggMatrixViewData['rowLabels'],
+        colSectionLabels: AggMatrixViewData['colSectionLabels'],
+        rowSectionLabels: AggMatrixViewData['rowSectionLabels'],
+        colSectionGuides: AggMatrixViewData['colSectionGuides'],
+        rowSectionGuides: AggMatrixViewData['rowSectionGuides'],
+        colSectionLines: AggMatrixViewData['colSectionLines'],
+        rowSectionLines: AggMatrixViewData['rowSectionLines']
+    ) {
         const { rowLabels: rowLabelsGroup, colLabels: colLabelsGroup } = this.dom
 
         rowLabelsGroup.selectAll('text')
@@ -56,8 +75,54 @@ export class AggMatrixView {
             .append('text')
             .attr('class', 'sjpp-ag-matrix-row-label')
             .attr('text-anchor', 'end')
-            .attr('transform', (d) => `translate(0, ${d.y})`)
+            .attr('fill', '#3f3f46')
+            .attr('font-size', 12)
+            .attr('font-weight', 400)
+            .attr('transform', (d) => `translate(${d.x}, ${d.y})`)
             .text(d => d.label)
+
+        rowLabelsGroup.selectAll('.sjpp-ag-matrix-row-section-label')
+            .data(rowSectionLabels)
+            .enter()
+            .append('text')
+            .attr('class', 'sjpp-ag-matrix-row-section-label')
+            .attr('text-anchor', d => d.rotate ? 'middle' : 'end')
+            .attr('fill', '#111827')
+            .attr('font-size', 12)
+            .attr('letter-spacing', '0.02em')
+            .attr('transform', (d) =>
+                d.rotate
+                    ? `translate(${d.x}, ${d.y}) rotate(-90)`
+                    : `translate(${d.x}, ${d.y})`
+            )
+            .text(d => d.label)
+
+        rowLabelsGroup.selectAll('.sjpp-ag-matrix-row-section-line')
+            .data(rowSectionLines)
+            .enter()
+            .append('line')
+            .attr('class', 'sjpp-ag-matrix-row-section-line')
+            .attr('stroke', '#6b7280')
+            .attr('stroke-width', 1)
+            .attr('opacity', 0.9)
+            .attr('x1', d => d.x)
+            .attr('x2', d => d.x)
+            .attr('y1', d => d.y1)
+            .attr('y2', d => d.y2)
+
+        rowLabelsGroup.selectAll('.sjpp-ag-matrix-row-section-guide')
+            .data(rowSectionGuides)
+            .enter()
+            .append('line')
+            .attr('class', 'sjpp-ag-matrix-section-guide sjpp-ag-matrix-row-section-guide')
+            .attr('stroke', '#9ca3af')
+            .attr('stroke-width', 1)
+            .attr('stroke-linecap', 'round')
+            .attr('opacity', 0.7)
+            .attr('x1', -6)
+            .attr('x2', 0)
+            .attr('y1', d => d.y)
+            .attr('y2', d => d.y)
 
         colLabelsGroup.selectAll('text')
             .data(colLabels)
@@ -65,11 +130,58 @@ export class AggMatrixView {
             .append('text')
             .attr('class', 'sjpp-ag-matrix-col-label')
             .attr('text-anchor', 'end')
-            .attr('transform', (d) => `translate(${d.x}, 0) rotate(-90)`)
+            .attr('fill', '#3f3f46')
+            .attr('font-size', 12)
+            .attr('font-weight', 400)
+            .attr('transform', (d) => `translate(${d.x}, ${d.y}) rotate(-90)`)
             .text(d => d.label)
+
+        colLabelsGroup.selectAll('.sjpp-ag-matrix-col-section-label')
+            .data(colSectionLabels)
+            .enter()
+            .append('text')
+            .attr('class', 'sjpp-ag-matrix-col-section-label')
+            .attr('text-anchor', d => d.rotate ? 'end' : 'middle')
+            .attr('dominant-baseline', d => d.rotate ? 'alphabetic' : 'middle')
+            .attr('fill', '#111827')
+            .attr('font-size', 12)
+            .attr('letter-spacing', '0.02em')
+            .attr('transform', (d) =>
+                d.rotate
+                    ? `translate(${d.x}, ${d.y}) rotate(-90)`
+                    : `translate(${d.x}, ${d.y})`
+            )
+            .text(d => d.label)
+
+        colLabelsGroup.selectAll('.sjpp-ag-matrix-col-section-line')
+            .data(colSectionLines)
+            .enter()
+            .append('line')
+            .attr('class', 'sjpp-ag-matrix-col-section-line')
+            .attr('stroke', '#6b7280')
+            .attr('stroke-width', 1)
+            .attr('opacity', 0.9)
+            .attr('x1', d => d.x1)
+            .attr('x2', d => d.x2)
+            .attr('y1', d => d.y)
+            .attr('y2', d => d.y)
+
+        colLabelsGroup.selectAll('.sjpp-ag-matrix-col-section-guide')
+            .data(colSectionGuides)
+            .enter()
+            .append('line')
+            .attr('class', 'sjpp-ag-matrix-section-guide sjpp-ag-matrix-col-section-guide')
+            .attr('stroke', '#9ca3af')
+            .attr('stroke-width', 1)
+            .attr('stroke-linecap', 'round')
+            .attr('opacity', 0.7)
+            .attr('x1', d => d.x)
+            .attr('x2', d => d.x)
+            .attr('y1', 0)
+            .attr('y2', 6)
     }
 
-    renderDots(dotPositions: any) {
+    renderDots(dotPositions: AggMatrixDotPosition[]) {
         for (const dot of dotPositions) {
             this.dom.svg.append('circle')
                 .attr('class', 'sjpp-ag-matrix-dot')
@@ -80,7 +192,7 @@ export class AggMatrixView {
                 .attr('fill', dot.color)
                 .on('mouseover', (event: MouseEvent) => {
                     this.dom.tip.clear().show(event.clientX, event.clientY)
-                   const table = table2col({holder: this.dom.tip.d})
+                    const table = table2col({ holder: this.dom.tip.d })
                     for (const v of dot.tipData) {
                         addTableRow(table, v.label, v.value)
                     }
