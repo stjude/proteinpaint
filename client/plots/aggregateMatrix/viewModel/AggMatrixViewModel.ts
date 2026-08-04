@@ -25,11 +25,11 @@ export class AggMatrixViewModel {
     readonly topPad = 20
     readonly hoziPad = 20
     readonly bottomPad = 20
-    readonly offset = 10
     readonly sectionGap = 8
     readonly colSectionGap = 4
     readonly minColSectionLineInset = 2
     readonly colSectionLabelLineGap = 3
+    readonly colSectionLabelGap = 8
     readonly labelFontPx = 12
 
     constructor(ag: AggregateMatrix) {
@@ -110,7 +110,7 @@ export class AggMatrixViewModel {
             },
             rowLabels: {
                 x: this.hoziPad + this.maxRowLabelLgth,
-                y: this.topPad + this.offset
+                y: this.topPad
             },
             colLabels: {
                 x: 0,
@@ -145,11 +145,12 @@ export class AggMatrixViewModel {
     getAxisLabelPositions(rowData: AxisLayoutRows, colData: AxisLayoutColumns, cellSize: number) {
         const rowSectionLineX = -(this.rowTermLabelLgth + this.sectionGap / 2)
         const rowSectionLabelGap = this.sectionGap / 2
-        // Rotated term labels use x-axis text width as vertical depth.
-        // Keeping y at 0 makes terms occupy the first label band directly under the plot.
-        const colTermY = 0
+        const rowSectionRotateExtraGap = this.labelFontPx / 2 + 1
+        // Rotated term labels are end-anchored so their last letter sits on one reference line.
+        const colTermY = this.labelFontPx
+        const colTermBandDepth = colTermY + this.colTermLabelLgth
         const colSectionBandStart =
-            this.colTermLabelLgth +
+            colTermBandDepth +
             (this.maxColSectionLabelHght ? this.colSectionGap : 0)
         const colSectionLineY = Math.max(0, colSectionBandStart - this.colSectionLabelLineGap)
         const colSectionLineInset = Math.max(this.minColSectionLineInset, cellSize * 0.06)
@@ -178,11 +179,12 @@ export class AggMatrixViewModel {
 
             const sectionCenterY = sectionStartY + (section.terms.length * cellSize) / 2
             const sectionEndY = sectionStartY + section.terms.length * cellSize
+            const rotate = this.rowSectionRotateFlags[rowSectionIndex]
             this.viewData.rowSectionLabels.push({
-                x: rowSectionLineX - rowSectionLabelGap,
+                x: rowSectionLineX - rowSectionLabelGap - (rotate ? rowSectionRotateExtraGap : 0),
                 y: sectionCenterY,
                 label: section.id,
-                rotate: this.rowSectionRotateFlags[rowSectionIndex]
+                rotate
             })
             this.viewData.rowSectionLines.push({
                 x: rowSectionLineX,
@@ -205,9 +207,10 @@ export class AggMatrixViewModel {
 
             const sectionCenterX = sectionStartX + (section.terms.length * cellSize) / 2
             const rotate = this.colSectionRotateFlags[colSectionIndex]
+            const colSectionLabelY = colSectionLineY + this.colSectionLabelGap + (rotate ? 0 : this.labelFontPx / 2)
             this.viewData.colSectionLabels.push({
                 x: sectionCenterX,
-                y: colSectionBandStart + (rotate ? 0 : 5),
+                y: colSectionLabelY,
                 label: section.id,
                 rotate
             })
