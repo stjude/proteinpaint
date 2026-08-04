@@ -494,7 +494,7 @@ function setRenderers(self) {
 		const table = div
 			.append('table')
 			.style('border-spacing', '0px')
-			.attr('data-testid', 'sjpp_regression_resultCoefficientTable')
+			.attr('data-testid', 'sjpp-regression-resultCoefficientTable')
 
 		// padding is set on every <td>. need a better solution
 
@@ -711,7 +711,7 @@ function setRenderers(self) {
 		const table = div
 			.append('table')
 			.style('border-spacing', '0px')
-			.attr('data-testid', 'sjpp_regression_resultCoefficientTable')
+			.attr('data-testid', 'sjpp-regression-resultCoefficientTable')
 
 		// padding is set on every <td>. need a better solution
 
