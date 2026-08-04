@@ -50,6 +50,14 @@ export type RegressionType3 = {
 	label: string
 }
 
+// nonlinearity statistics, only present when the model has cubic spline variables
+// same shape as the type III table, minus the intercept and interaction rows
+export type RegressionNonlinearity = {
+	header: string[]
+	terms: Record<string, RegressionRow[number][]>
+	label: string
+}
+
 export type RegressionTotalSnpEffect = {
 	header: string[]
 	snp: string
@@ -129,6 +137,7 @@ export type TermdbRegressionResultEntry = {
 		coefficients_uni?: RegressionCoefficients
 		coefficients_multi?: RegressionCoefficients
 		type3?: RegressionType3
+		nonlinearity?: RegressionNonlinearity
 		totalSnpEffect?: RegressionTotalSnpEffect
 		tests?: RegressionLabeledTable
 		other?: RegressionLabeledTable

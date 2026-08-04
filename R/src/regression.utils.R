@@ -247,8 +247,9 @@ linearRegression <- function(formula, dat) {
   # use the F test, consistent with the type III statistics of this model type
   nonlinearity_table <- makeNonlinearityTable(formula, attr(res$terms, "term.labels", exact = T), function(formula_linear) {
     res_linear <- lm(formula_linear, data = dat)
-    stats <- as.matrix(anova(res, res_linear, test = "F"))[2, c("Df","F","Pr(>F)"), drop = F]
-    stats[,"Df"] <- stats[,"Df"] * -1 #convert Df diff to Df
+    # pass the reduced (linear) model first and the full (spline) model second,
+    # so that the Df and Sum of Sq diffs come out positive
+    stats <- as.matrix(anova(res_linear, res, test = "F"))[2, c("Df","F","Pr(>F)"), drop = F]
     stats[,"F"] <- round(stats[,"F"], 3)
     stats[,"Pr(>F)"] <- signif(stats[,"Pr(>F)"], 4)
     return(stats)
@@ -264,9 +265,9 @@ linearRegression <- function(formula, dat) {
     snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
     formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- lm(formula_reduce, data = dat)
-    totalSnpEffect_table <- as.matrix(anova(res, res_reduce, test = "F"))[2, c("Df","F","Pr(>F)"), drop = F]
+    # reduced model first, full model second
+    totalSnpEffect_table <- as.matrix(anova(res_reduce, res, test = "F"))[2, c("Df","F","Pr(>F)"), drop = F]
     row.names(totalSnpEffect_table) <- "Total"
-    totalSnpEffect_table[,"Df"] <- totalSnpEffect_table[,"Df"] * -1
     totalSnpEffect_table[,"F"] <- round(totalSnpEffect_table[,"F"], 3)
     totalSnpEffect_table[,"Pr(>F)"] <- signif(totalSnpEffect_table[,"Pr(>F)"], 4)
     totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table, "VariableIDs" = paste(snp_vars, collapse = ";"))
@@ -346,9 +347,10 @@ logisticRegression <- function(formula, dat) {
   # use the likelihood ratio test, consistent with the type III statistics of this model type
   nonlinearity_table <- makeNonlinearityTable(formula, attr(res$terms, "term.labels", exact = T), function(formula_linear) {
     res_linear <- glm(formula_linear, family = binomial(link='logit'), data = dat)
-    stats <- as.matrix(anova(res, res_linear, test = "LRT"))[2, c("Df","Deviance","Pr(>Chi)"), drop = F]
-    stats[,"Df"] <- stats[,"Df"] * -1 #convert Df diff to Df
-    stats[,"Deviance"] <- round(stats[,"Deviance"] * -1, 3) #convert deviance diff to deviance explained by the spline
+    # pass the reduced (linear) model first and the full (spline) model second, so that
+    # the Df diff and the deviance explained by the spline come out positive
+    stats <- as.matrix(anova(res_linear, res, test = "LRT"))[2, c("Df","Deviance","Pr(>Chi)"), drop = F]
+    stats[,"Deviance"] <- round(stats[,"Deviance"], 3)
     stats[,"Pr(>Chi)"] <- signif(stats[,"Pr(>Chi)"], 4)
     return(stats)
   })
@@ -363,9 +365,9 @@ logisticRegression <- function(formula, dat) {
     snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
     formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- glm(formula_reduce, family = binomial(link='logit'), data = dat)
-    totalSnpEffect_table <- as.matrix(lrtest(res, res_reduce))[2, 3:5, drop = F]
+    # reduced model first, full model second
+    totalSnpEffect_table <- as.matrix(lrtest(res_reduce, res))[2, 3:5, drop = F]
     row.names(totalSnpEffect_table) <- "Total"
-    totalSnpEffect_table[,"Df"] <- totalSnpEffect_table[,"Df"] * -1
     totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
     totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)
     totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table, "VariableIDs" = paste(snp_vars, collapse = ";"))
@@ -421,12 +423,12 @@ coxRegression <- function(formula, dat) {
     v <- vlst[i]
     formula_reduce <- update(formula$formula, paste0("~.-", v))
     res_reduce <- coxph(formula_reduce, data = dat, model = T)
-    lt <- as.matrix(lrtest(res, res_reduce))
+    # reduced model first, full model second, so that the Df diff comes out positive
+    lt <- as.matrix(lrtest(res_reduce, res))
     type3_table[i,] <- lt[2,]
   }
   colnames(type3_table) <- colnames(lt)
   type3_table <- type3_table[,3:5,drop = F]
-  type3_table[,"Df"] <- type3_table[,"Df"] * -1 #convert Df diff to Df
   # if there are interactions, then set the results
   # of the main effects to "NA" because these type III
   # stats cannot be accurately estimated
@@ -441,8 +443,9 @@ coxRegression <- function(formula, dat) {
   # use the likelihood ratio test, consistent with the type III statistics of this model type
   nonlinearity_table <- makeNonlinearityTable(formula, vlst, function(formula_linear) {
     res_linear <- coxph(formula_linear, data = dat, model = T)
-    stats <- as.matrix(lrtest(res, res_linear))[2, c("Df","Chisq","Pr(>Chisq)"), drop = F]
-    stats[,"Df"] <- stats[,"Df"] * -1 #convert Df diff to Df
+    # pass the reduced (linear) model first and the full (spline) model second,
+    # so that the Df diff comes out positive
+    stats <- as.matrix(lrtest(res_linear, res))[2, c("Df","Chisq","Pr(>Chisq)"), drop = F]
     stats[,"Chisq"] <- round(stats[,"Chisq"], 3)
     stats[,"Pr(>Chisq)"] <- signif(stats[,"Pr(>Chisq)"], 4)
     return(stats)
@@ -458,9 +461,9 @@ coxRegression <- function(formula, dat) {
     snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
     formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- coxph(formula_reduce, data = dat, model = T)
-    totalSnpEffect_table <- as.matrix(lrtest(res, res_reduce))[2, 3:5, drop = F]
+    # reduced model first, full model second
+    totalSnpEffect_table <- as.matrix(lrtest(res_reduce, res))[2, 3:5, drop = F]
     row.names(totalSnpEffect_table) <- "Total"
-    totalSnpEffect_table[,"Df"] <- totalSnpEffect_table[,"Df"] * -1
     totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
     totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)
     totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table, "VariableIDs" = paste(snp_vars, collapse = ";"))

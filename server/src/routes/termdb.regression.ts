@@ -47,6 +47,7 @@ export type TermdbRegressionResultEntry = {
 		coefficients_uni?: any
 		coefficients_multi?: any
 		type3?: any
+		nonlinearity?: any
 		totalSnpEffect?: any
 		tests?: any
 		other?: any
@@ -148,9 +149,6 @@ function init({ genomes }: any) {
 		}
 	}
 }
-
-
-
 
 /*
 
