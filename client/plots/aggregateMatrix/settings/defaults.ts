@@ -1,7 +1,7 @@
 import type { AggregateMatrixSettings } from './Settings.ts'
 
-export function getDefaultAggregateMatrixSettings(): AggregateMatrixSettings {
-    return {
+export function getAggregateMatrixSettings(overrides = {}): AggregateMatrixSettings {
+    const defaults = {
         startColor: '#ff9400',
         stopColor: '#0080ff',
         gradientMethod: 'mean',
@@ -11,6 +11,14 @@ export function getDefaultAggregateMatrixSettings(): AggregateMatrixSettings {
         dotInputMin: 2,
         dotInputMax: 35
     }
+
+    const mergedSettings = Object.assign({}, defaults, overrides)
+    const isValidMinMax = validateMinMax(mergedSettings, mergedSettings.minDotSize, mergedSettings.maxDotSize)
+    if (isValidMinMax !== null) {
+        throw new Error(`Invalid min/max dot size settings: ${isValidMinMax}`)
+    }
+
+    return mergedSettings
 }
 
 export function validateMinMax(settings: AggregateMatrixSettings, min, max): string | null {

@@ -2,7 +2,7 @@ import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx
 import { PlotBase } from '#plots/PlotBase.ts'
 import { getCombinedTermFilter } from '#filter'
 import { AggMatrixModel } from './model/AggMatrixModel'
-import { getDefaultAggregateMatrixSettings } from './settings/defaults.ts'
+import { getAggregateMatrixSettings } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
 import { AggMatrixView } from './view/AggMatrixView.ts'
 import { setControls } from './view/setControls.ts'
@@ -98,7 +98,7 @@ export function getPlotConfig(opts: any) {
     const config = {
         hidePlotFilter: true,
         settings: {
-            aggregateMatrix: getDefaultAggregateMatrixSettings()
+            aggregateMatrix: getAggregateMatrixSettings(opts?.settings?.aggregateMatrix)
         }
     }
 
