@@ -127,7 +127,9 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 					settings: {
 						aggregateMatrix: {
 							gradientMethod: 'mean',
-							sizeMethod: 'percent'
+							sizeMethod: 'percent',
+							startColor: '#57ea57',
+							stopColor: '#6424f9'
 						}
 					}
 				}
