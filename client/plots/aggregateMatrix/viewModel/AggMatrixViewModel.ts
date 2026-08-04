@@ -40,9 +40,15 @@ export class AggMatrixViewModel {
         this.viewData = this.getDefaultViewData()
 
         const settings = this.ag.state.config.settings.aggregateMatrix
-        const cellSize = settings.maxDotSize + 40 //20px padding on either top/bottom or left/right of the dot
+        // padding for either top/bottom or left/right of the dot
+        const dotPadding = settings.maxDotSize * 1.5 
+        const cellSize = settings.maxDotSize + dotPadding
         const measureSvg = this.ag.dom.mainDiv.append('svg')
 
+        /** Must determine the maximum amount of space needed for the rows.
+         * If there isn't enough space to show the row section label above the 
+         * relevant terms, the section label is shown horizontally. This extra
+         * space is taken into account here. */
         const rowData = data.axesLayout.rows
         this.rowTermLabelLgth = getMaxLabelWidth(measureSvg, [rowData.longestLabel])
         const rowSectionLayout = this.getSectionLabelLayout(rowData.sections, cellSize, measureSvg, true)
@@ -53,6 +59,8 @@ export class AggMatrixViewModel {
             (this.maxRowSectionLabelWdth ? this.sectionGap + this.maxRowSectionLabelWdth : 0)
         this.totalRowHght = cellSize * rowData.rowCount
 
+        /** Same as the rows above. Takes into account the extra space needed if >=1 col
+         * labels is rotated to be shown. */
         const colData = data.axesLayout.columns
         this.colTermLabelLgth = getMaxLabelWidth(measureSvg, [colData.longestLabel])
         const colSectionLayout = this.getSectionLabelLayout(colData.sections, cellSize, measureSvg, false)
@@ -135,6 +143,8 @@ export class AggMatrixViewModel {
             colSectionLines: [],
             dotPositions: [],
             colorScale: {
+                //TODO: If the user cannot set the min and max for color values, 
+                // revert to colorScale = scale
                 scale: () => '',
                 absMin: 0,
                 absMax: 0
