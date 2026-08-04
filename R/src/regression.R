@@ -55,6 +55,7 @@
 #       "residuals": { "header": [], "rows": [] },
 #       "coefficients": { "header": [], "rows": [] },
 #       "type3": { "header": [], "rows": [] },
+#       "nonlinearity": { "header": [], "rows": [] } (only when spline variables are present),
 #       "totalSnpEffect": { "header": [], "rows": [] } (only for snplocus interactions),
 #       "tests": { "header": [], "rows": [] } (only for cox regression),
 #       "other": { "header": [], "rows": [] },

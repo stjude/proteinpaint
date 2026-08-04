@@ -22,6 +22,7 @@ result.data: {}
 	residuals: { header[], rows[], label:str }
 	coefficients: { header[], intercept[], terms{}, interactions[], label }
 	type3: {header[], intercept[], terms{}, interactions[], label }
+	nonlinearity: {header[], terms{}, label } // only when spline variables are in the model
 	totalSnpEffect: {header[], intercept[], snp, interactions[], lst, label }
 	other: {header[], rows[], label}
 
@@ -43,6 +44,7 @@ main
 			mayshow_coefficients
 			mayshow_totalSnpEffect
 			mayshow_type3
+			mayshow_nonlinearity
 			mayshow_other
 			mayshow_fisher
 			mayshow_wilcoxon
@@ -271,6 +273,7 @@ function setRenderers(self) {
 		self.mayshow_coxDisclaimer()
 		self.mayshow_totalSnpEffect(result)
 		self.mayshow_type3(result)
+		self.mayshow_nonlinearity(result)
 		self.mayshow_tests(result)
 		self.mayshow_other(result)
 		self.mayshow_fisher(result)
@@ -1299,6 +1302,43 @@ function setRenderers(self) {
 				tr.append('td').text(v).style('padding', '8px')
 			}
 		}
+	}
+
+	self.mayshow_nonlinearity = result => {
+		// only present when the model has cubic spline variables
+		if (!result.nonlinearity) return
+		const div = self.newDiv(result.nonlinearity.label)
+		const table = div.append('table').style('border-spacing', '0px')
+
+		// header row
+		{
+			const tr = table.append('tr').style('opacity', 0.4)
+			for (const v of result.nonlinearity.header) {
+				tr.append('td').text(v).style('padding', '8px')
+			}
+		}
+
+		// one row per spline variable
+		let rowcount = 0
+		for (const tid in result.nonlinearity.terms) {
+			const tw = self.getIndependentInput(tid).term
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? 'none' : '#eee')
+			// col 1: variable
+			fillTdName(tr.append('td').style('padding', '8px'), tw.term.name)
+			// rest of columns
+			for (const v of result.nonlinearity.terms[tid]) {
+				tr.append('td').text(v).style('padding', '8px')
+			}
+		}
+
+		div
+			.append('div')
+			.style('margin', '10px 0px 0px 0px')
+			.style('font-size', '.8em')
+			.style('color', '#999')
+			.text(
+				'Comparison of the cubic spline fit against a linear fit of the same variable. A small p-value indicates the effect of the variable departs from linearity.'
+			)
 	}
 
 	self.mayshow_tests = result => {

@@ -828,6 +828,22 @@ async function parseRoutput(
 			analysisResult.data.type3.label = 'Type III statistics'
 		}
 
+		// nonlinearity statistics
+		// only present when the model has cubic spline variables
+		if (data.nonlinearity) {
+			analysisResult.data.nonlinearity = {
+				header: data.nonlinearity.header,
+				terms: {} // spline variables, one row each
+			}
+			for (const row of data.nonlinearity.rows) {
+				const id = row.shift()
+				// row is now only data fields
+				const termid = id2originalId[id]
+				if (!analysisResult.data.nonlinearity.terms[termid]) analysisResult.data.nonlinearity.terms[termid] = row
+			}
+			analysisResult.data.nonlinearity.label = 'Nonlinearity statistics'
+		}
+
 		// total snp effect
 		if (data.totalSnpEffect) {
 			if (data.totalSnpEffect.rows.length != 1) throw 'total SNP effect table should have 1 row'

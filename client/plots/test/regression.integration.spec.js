@@ -14,6 +14,7 @@ Tests:
 	Logistic: categorical outcome = "diaggrp", continuous independent = "agedx"
     Cox: graded outcome = "Arrhythmias", continuous independent = "agedx"
 	Cox: survival outcome, continuous independent = "agedx"
+	Cox: survival outcome, cubic spline independent = "agedx"
 
 TODO:
 	Test (maybe in unit?) beta and PR functions
@@ -345,6 +346,16 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 		}
 
 		//TODO: necessary to check all other values?
+
+		//Nonlinearity stats, rendered for a cubic spline variable in any regression type
+		tableLabel = 'nonlinearity table'
+		table = regDom.results.selectAll('div[name^="Nonlinearity statistics"] table tr').nodes()
+		test.ok(table.length, `Should render ${tableLabel} for a cubic spline variable`)
+		results = checkTableRow(table, 0, data.nonlinearity.header)
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+
+		results = checkTableRow(table, 1, data.nonlinearity.terms[$id])
+		test.equal(results, true, `Should render all spline variable data in ${tableLabel}`)
 
 		if (test._ok) regression.Inner.app.destroy()
 		test.end()
@@ -876,6 +887,64 @@ tape('Cox: survival outcome, continuous independent = "agedx"', test => {
 		//Other stats
 		tableLabel = 'other summary statistics table'
 		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
+		for (const [i, header] of data.other.header.entries()) {
+			results = checkTableRow(table, i, [header, data.other.rows[i]])
+			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
+		}
+
+		if (test._ok) regression.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Cox: survival outcome, cubic spline independent = "agedx"', test => {
+	test.timeoutAfter(9000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'cox',
+					outcome: {
+						id: 'os'
+					},
+					independent: [{ id: 'agedx', q: { mode: 'spline', knots: [{ value: 3 }, { value: 8 }, { value: 13 }] } }]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
+		const $id = tid2$id('agedx', regression)
+		const testTerm = 'Age (years) at Cancer Diagnosis'
+
+		//**** Results ****
+		let tableLabel, table, results
+
+		//Nonlinearity stats, only rendered when a spline variable is in the model
+		tableLabel = 'nonlinearity table'
+		table = regDom.results.selectAll('div[name^="Nonlinearity statistics"] table tr').nodes()
+		test.ok(table.length, `Should render ${tableLabel} for a cubic spline variable`)
+		results = checkTableRow(table, 0, data.nonlinearity.header)
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+
+		const checkValues = [testTerm]
+		data.nonlinearity.terms[$id].forEach(d => checkValues.push(d))
+		results = checkTableRow(table, 1, checkValues)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Other stats, AIC allows the spline fit to be compared against a linear fit
+		tableLabel = 'other summary statistics table'
+		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
+		test.ok(data.other.header.includes('AIC'), `Should report AIC in ${tableLabel}`)
 		for (const [i, header] of data.other.header.entries()) {
 			results = checkTableRow(table, i, [header, data.other.rows[i]])
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
