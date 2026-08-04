@@ -267,7 +267,11 @@ function setRenderers(self) {
 	}
 
 	self.addSection = function (section, div) {
-		div.style('display', 'none').style('margin', '3px 5px').style('padding', '3px 5px')
+		div
+			.style('display', 'none')
+			.style('margin', '3px 5px')
+			.style('padding', '3px 5px')
+			.attr('data-testid', section.configKey)
 
 		section.dom = {
 			holder: div,
