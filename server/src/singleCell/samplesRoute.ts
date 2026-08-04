@@ -186,8 +186,14 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 				const text = await read_file(tsvfile)
 				const t1 = Date.now()
 				mayLog(ds.label, 'sc meta read file time:', t1 - t0)
-				const cellIdxCols = { cellIdx: plot.cellIdx ?? 0, sampleIdx: hasSample?.index ?? 1 }
-				metaCache.addMetaResult(sampleName, text, plot.coordsColumns, ds.cohort.termdb.q.sampleName2id, cellIdxCols)
+				const idxs = {
+					cell: plot.cellIdx ?? 0,
+					sample: hasSample?.index ?? 1,
+					x: plot.coordsColumns.x,
+					y: plot.coordsColumns.y,
+					cellType: plot.cellTypeColumn?.index
+				}
+				metaCache.addMetaResult(sampleName, text, idxs, plot, ds.cohort.termdb.q.sampleName2id)
 				mayLog(ds.label, 'sc meta caching time:', Date.now() - t0)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
@@ -215,6 +221,11 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	if (samples.size == 0) throw new Error('no scrna samples found')
 	S.sampleMappingCache = metaCache
 	if (metaCache.metaIdMap.size) D.metaIdMap = metaCache.metaIdMap
+	if (metaCache.cellTypeFractions) {
+		D.cellTypeFractions = metaCache.cellTypeFractions
+		if (!D.addCellTypeFractionTerms) throw new Error('missing addCellTypeFractionTerms() method')
+		D.addCellTypeFractionTerms(ds)
+	}
 
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
