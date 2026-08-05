@@ -595,7 +595,7 @@ export async function mayInitiateScatterplots(ds) {
 	}
 	// bySample: a folder holds one tsv file per sample. expand into plots[], one plot per file,
 	// so the rest of the scatter code (config route, loadFile, getSamples, client menu) works unchanged
-	if (ds.cohort.scatterplots.bySample) mayExpandBySamplePlots(ds.cohort.scatterplots)
+	if (ds.cohort.scatterplots.bySample) await mayExpandBySamplePlots(ds.cohort.scatterplots)
 	if (!Array.isArray(ds.cohort.scatterplots.plots)) throw new Error('cohort.scatterplots.plots is not array')
 	for (const p of ds.cohort.scatterplots.plots) {
 		if (!p.name) throw new Error('.name missing from one of scatterplots.plots[]')
@@ -610,15 +610,17 @@ export async function mayInitiateScatterplots(ds) {
 /* expand a bySample folder into scatterplots.plots[], one plot per file in the folder.
 each file is named by its sample (no extension) and is a tsv laid out like a regular scatter
 file: sample \t X \t Y \t ...extra columns. the file name is the plot name, used as q.plotName. */
-function mayExpandBySamplePlots(scatterplots: any) {
+async function mayExpandBySamplePlots(scatterplots: any) {
 	const bs = scatterplots.bySample
 	if (!bs.foldername) throw new Error('scatterplots.bySample.foldername is missing')
 	const dir = path.join(serverconfig.tpmasterdir, bs.foldername)
-	// each file is named by its sample; skip hidden/system files (e.g. .DS_Store) and any subdirectory
-	const files = fs
-		.readdirSync(dir, { withFileTypes: true })
+	// each file is named by its sample; skip hidden/system files (e.g. .DS_Store) and any subdirectory.
+	// async read to avoid blocking the event loop at init; sort for deterministic plot ordering
+	const entries = await fs.promises.readdir(dir, { withFileTypes: true })
+	const files = entries
 		.filter(d => d.isFile() && !d.name.startsWith('.'))
 		.map(d => d.name)
+		.sort()
 	if (!files.length) throw new Error('scatterplots.bySample folder is empty: ' + dir)
 	// the plot's own sample is the single cohort (db) sample; the rest are a reference cloud.
 	// enlarge that one dot, shrink the cloud, and label the dot with its sample name
