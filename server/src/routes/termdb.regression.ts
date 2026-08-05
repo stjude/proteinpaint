@@ -7,6 +7,7 @@ import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '../serverconfig.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
+import { getValueConversionFactor } from '#shared/helpers.js'
 import { runCumincR } from './termdb.cuminc.ts'
 import { isDictionaryType } from '#shared/terms.js'
 import { getData } from '../termdb.matrix.js'
@@ -400,13 +401,39 @@ Rinput {
 - snps from snplst and snplocus terms are added as elements into independent[] array
 - PCs from q.restrictAncestry.pcs are added as elements into independent[] array
 - further details of JSON structure described in server/utils/regression.R
+
+a numeric term may declare term.valueConversion{} to say that its stored values are in an
+unfriendly unit (e.g. gdc age at diagnosis is stored in days but shown to users in years).
+such a variable is analyzed in the converted unit, so that its estimate is per year rather than
+per day; the two units differ by orders of magnitude and a per-day estimate is unreadable.
+id2scaleFactor{} below collects the multiplier of every variable that needs converting, and
+scaleValue() applies it while filling per-sample data. this is a pure rescaling of a variable and
+does not change p-values or model fit, only the unit that estimates are expressed in
 */
 function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
+	// k: variable id, v: multiplier from term.valueConversion; only variables needing conversion are added
+	const id2scaleFactor = new Map<string, number>()
+	const scaleValue = (v: any, id: string) => {
+		const f = id2scaleFactor.get(id)
+		return f && Number.isFinite(v) ? v * f : v
+	}
+
 	// outcome variable
 	const outcome: ROutcome = {
 		id: q.outcome.$id,
 		name: q.outcome.term.name,
 		rtype: 'numeric' // always numeric because (1) linear regression: values are continuous, (2) logistic regression: values get converted to 0/1, (3) cox regression: time-to-event is continuous and event is 0/1
+	}
+	if (q.regressionType == 'linear') {
+		/* only linear regression uses the raw numeric value of the outcome term, so only it can
+		observe valueConversion; logistic converts the outcome to 0/1 and cox uses a condition or
+		survival term. converting the outcome rescales every estimate in the model, so that e.g.
+		"mean age at diagnosis is 2.4 units higher" is read in years instead of days */
+		const f = getValueConversionFactor(q.outcome.term)
+		if (f != 1) {
+			id2scaleFactor.set(outcome.id, f)
+			outcome.name = addUnitToName(outcome.name, q.outcome.term)
+		}
 	}
 	if (q.regressionType == 'logistic') {
 		// for logistic regression, if spline terms are present, the spline plot needs to have label for nonref category of outcome
@@ -434,7 +461,7 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			makeRvariable_snps(tw, independent, q)
 		} else {
-			makeRvariable_dictionaryTerm(tw, independent, q)
+			makeRvariable_dictionaryTerm(tw, independent, q, id2scaleFactor)
 		}
 	}
 
@@ -487,7 +514,7 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 		if (q.regressionType == 'linear') {
 			// linear regression, therefore continuous outcome
 			// use value
-			entry[outcome.id] = out.value
+			entry[outcome.id] = scaleValue(out.value, outcome.id)
 		}
 		if (q.regressionType == 'logistic') {
 			// logistic regression, therefore categorical outcome
@@ -523,11 +550,14 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 				// convert 'null' to 'NA' during json import
 				entry[t.id] = null
 			} else {
-				entry[t.id] = Object.hasOwn(v, t.id)
+				const value = Object.hasOwn(v, t.id)
 					? v[t.id] // for snps, object keys will be snp ids
 					: t.rtype == 'numeric'
 					? v.value
 					: v.key
+				// only numeric variables of terms with valueConversion are scaled;
+				// discrete/binary modes use v.key, a bin label that is already converted when the bin is computed
+				entry[t.id] = scaleValue(value, t.id)
 			}
 		}
 
@@ -546,7 +576,12 @@ function makeRinput(q: RegressionQuery, sampledata: SampleDataEntry[]): RInput {
 	return Rinput
 }
 
-function makeRvariable_dictionaryTerm(tw: TermWrapperLike, independent: RIndependentVariable[], q: RegressionQuery) {
+function makeRvariable_dictionaryTerm(
+	tw: TermWrapperLike,
+	independent: RIndependentVariable[],
+	q: RegressionQuery,
+	id2scaleFactor: Map<string, number>
+) {
 	// tw is a dictionary term
 	const thisTerm: RIndependentVariable = {
 		id: tw.$id || tw.id || '',
@@ -555,6 +590,16 @@ function makeRvariable_dictionaryTerm(tw: TermWrapperLike, independent: RIndepen
 		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor'
 	}
 	if (!thisTerm.id) throw 'independent term id missing'
+
+	/* continuous and spline modes analyze the term's numeric values, so they must observe
+	term.valueConversion{} to be analyzed in the user-facing unit. factor mode (discrete/binary)
+	uses bin labels, which are already converted where the bins are computed */
+	const scaleFactor = thisTerm.rtype == 'numeric' ? getValueConversionFactor(tw.term) : 1
+	if (scaleFactor != 1) {
+		id2scaleFactor.set(thisTerm.id, scaleFactor)
+		thisTerm.name = addUnitToName(thisTerm.name, tw.term)
+	}
+
 	// map tw.interactions into thisTerm.interactions
 	const interactions = tw.interactions || []
 	if (interactions.length) {
@@ -577,8 +622,9 @@ function makeRvariable_dictionaryTerm(tw: TermWrapperLike, independent: RIndepen
 	}
 	if (thisTerm.rtype === 'factor') thisTerm.refGrp = tw.refGrp
 	if (tw.q.mode == 'spline') {
+		// knots are entered by the user in the term's stored unit, so convert them alongside the values
 		thisTerm.spline = {
-			knots: tw.q.knots.map(x => Number(x.value))
+			knots: tw.q.knots.map(x => Number(x.value) * scaleFactor)
 		}
 		if (!q.independent.find(i => i.type == 'snplocus')) {
 			// when there isn't a snplocus variable, can make spline plot
@@ -586,6 +632,13 @@ function makeRvariable_dictionaryTerm(tw: TermWrapperLike, independent: RIndepen
 		}
 	}
 	independent.push(thisTerm)
+}
+
+/* variable name is only used by R to label the axes of the cubic spline plot.
+append the converted unit to it, so that a plot axis is not read in the term's stored unit */
+function addUnitToName(name: string, term: any) {
+	const u = term.valueConversion?.toUnit
+	return u ? `${name} (${u}s)` : name
 }
 
 function makeRvariable_snps(tw: TermWrapperLike, independent: RIndependentVariable[], _: RegressionQuery) {

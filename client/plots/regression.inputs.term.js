@@ -1,5 +1,5 @@
 import { termsettingInit, get$id } from '#termsetting'
-import { isDictionaryType, get_bin_label, isNumericTerm } from '#shared'
+import { isDictionaryType, get_bin_label, isNumericTerm, getValueConversionFactor, roundValue } from '#shared'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom'
 import { select } from 'd3-selection'
@@ -279,12 +279,22 @@ export class InputTerm {
 				if (tw.q.mode == 'discrete') {
 					this.termStatus.topInfoStatus.push(`Discrete variable with ${this.termStatus.sampleCounts.length} bins`)
 				}
+				/* continuous and spline modes are analyzed in the term's converted unit
+				(see makeRinput() in server/src/routes/termdb.regression.ts), so report the unit
+				and print the knots by it, rather than by the unit the values are stored in */
+				const vc = tw.term.valueConversion
+				const isConverted = vc && (tw.q.mode == 'continuous' || tw.q.mode == 'spline')
+				if (isConverted) {
+					this.termStatus.topInfoStatus.push(`Analyzed by the unit of ${vc.toUnit}, converted from ${vc.fromUnit}`)
+				}
 				if (tw.q.mode == 'spline') {
+					const f = getValueConversionFactor(tw.term)
 					this.termStatus.topInfoStatus.push(
 						`Cubic spline variable with ${tw.q.knots.length} knots: ${tw.q.knots
-							.map(x => Number(x.value))
+							.map(x => Number(x.value) * f)
 							.sort((a, b) => a - b)
-							.join(', ')}`
+							.map(v => (f == 1 ? v : roundValue(v, 2)))
+							.join(', ')}${isConverted ? ` ${vc.toUnit}s` : ''}`
 					)
 				}
 			} else if (tw.term.type == 'categorical' || tw.term.type == 'geneVariant' || tw.term.type == 'samplelst') {

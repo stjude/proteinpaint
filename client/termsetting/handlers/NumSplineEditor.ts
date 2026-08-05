@@ -85,6 +85,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 		await this.handler.density.showViolin(this.dom.density_div)
 		await this.handler.density.setBinLines(this.getBoundaryOpts())
 		this.dom.knots_div = div.append('div').style('padding', '5px')
+		this.mayShowValueconversionMsg(this.dom.knots_div)
 		this.renderCustomSplineInputs()
 		this.renderAutoSplineInputs()
 	}
@@ -258,6 +259,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 		this.q = await this.getDefaultQ()
 		this.dom.knots_div.selectAll('*').remove()
 		await this.handler.density.setBinLines(this.getBoundaryOpts())
+		this.mayShowValueconversionMsg(this.dom.knots_div)
 		this.renderCustomSplineInputs()
 		this.renderAutoSplineInputs()
 	}

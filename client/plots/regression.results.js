@@ -998,7 +998,7 @@ function setRenderers(self) {
 		let msg
 		if (regtype == 'linear') {
 			msg = tw2 ? getInteractionMsg() : `Mean ${styleVariable(outcomeTw)} is`
-			msg += ` ${Math.abs(est)} units`
+			msg += ` ${Math.abs(est)} ${unitsOf(outcomeTw)}`
 			if (isIntercept) {
 				const baselines = getBaselines(independentTws)
 				return `${msg} when ${joinVariables(baselines)}.`
@@ -1048,7 +1048,7 @@ function setRenderers(self) {
 			])}`
 		} else if (tw.q.mode == 'continuous') {
 			// continuous variable
-			msg += `for every one unit increase of ${styleVariable(tw)}`
+			msg += `for every ${oneUnitOf(tw)} increase of ${styleVariable(tw)}`
 			if (interactionsBaselines.length) msg += ` when ${joinVariables(interactionsBaselines)}`
 		} else if (tw.q.geneticModel === 0) {
 			// genetic variable, additive model
@@ -1093,6 +1093,19 @@ function setRenderers(self) {
 		return msg + `, adjusting for ${joinVariables(covariates)}.`
 
 		/** helper functions **/
+		/* a numeric term with valueConversion{} is analyzed by its converted unit
+		(see makeRinput() in server/src/routes/termdb.regression.ts), so the estimate is per that
+		unit, e.g. per year rather than per day. the two below name the unit of such a variable,
+		and fall back to the generic "unit" wording for terms without a declared unit */
+		function oneUnitOf(tw) {
+			const u = tw?.term?.valueConversion?.toUnit
+			return u ? `1 ${u}` : 'one unit'
+		}
+		function unitsOf(tw) {
+			const u = tw?.term?.valueConversion?.toUnit
+			return u ? `${u}s` : 'units'
+		}
+
 		// function to style a variable (and its category)
 		function styleVariable(tw, category) {
 			const spans = [
@@ -1122,7 +1135,7 @@ function setRenderers(self) {
 				msg += ` between ${styleVariable(tw2, category2)} and ${styleVariable(tw2, refGrp2)} is`
 			} else if (tw2.q.mode == 'continuous') {
 				// continuous variable
-				msg += ` for every one unit increase of ${styleVariable(tw2)} is`
+				msg += ` for every ${oneUnitOf(tw2)} increase of ${styleVariable(tw2)} is`
 			} else if (tw2.q.geneticModel === 0) {
 				// genetic variable, additive model
 				msg += ` for every additional ${tw2.effectAllele} allele of ${styleVariable(tw2)} is`
@@ -1616,6 +1629,14 @@ function fillCoefficientTermname(tw, td) {
 			.text(hasRefGrp ? 'REF' : 'EFFECT ALLELE')
 
 		bottomDiv.append('div').style('padding', '1px 3px').text(label)
+	}
+
+	/* a numeric variable of a term with valueConversion{} is analyzed by the converted unit
+	(see makeRinput() in server/src/routes/termdb.regression.ts). name that unit under the variable,
+	so the estimate is not misread as being per the unit the term's values are stored in */
+	const toUnit = tw.term.valueConversion?.toUnit
+	if (toUnit && (tw.q.mode == 'continuous' || tw.q.mode == 'spline')) {
+		td.append('div').style('margin-top', '2px').style('font-size', '.7em').style('opacity', 0.6).text(`per ${toUnit}`)
 	}
 }
 

@@ -127,18 +127,6 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 			.html(d => d.html)
 	}
 
-	mayShowValueconversionMsg(div) {
-		const term = this.tw.term
-		if ('valueConversion' in term) {
-			div
-				.append('div')
-				.style('margin-bottom', '5px')
-				.style('opacity', 0.6)
-				// TODO: remove forced property
-				.text(`Note: using values by the unit of ${term.valueConversion?.fromUnit}.`)
-		}
-	}
-
 	renderTypeInputs(_div) {
 		this.dom.binsDiv = _div.append('div')
 		//const handler = this.handler

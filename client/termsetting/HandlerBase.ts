@@ -40,6 +40,19 @@ export class HandlerBase implements Handler {
 		// ignore
 	}
 
+	/* a term with valueConversion{} stores its values in fromUnit (e.g. day) but shows them to
+	users in toUnit (e.g. year). the inputs of the numeric edit menus (bin boundaries, knots) are
+	in the stored unit, so tell the user which unit they are typing in */
+	mayShowValueconversionMsg(div: any) {
+		const vc = (this.termsetting.tw as any)?.term?.valueConversion
+		if (!vc) return
+		div
+			.append('div')
+			.style('margin-bottom', '5px')
+			.style('opacity', 0.6)
+			.text(`Note: using values by the unit of ${vc.fromUnit}.`)
+	}
+
 	showLoading(_div?: any) {
 		const self = this.termsetting
 		const div = _div || self.dom.tip.d

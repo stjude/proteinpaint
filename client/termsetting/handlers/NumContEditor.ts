@@ -43,6 +43,7 @@ export class NumContEditor extends HandlerBase implements Handler {
 		await this.handler.density.showViolin(this.dom.density_div)
 
 		this.dom.inputsDiv = div.append('div')
+		this.mayShowValueconversionMsg(this.dom.inputsDiv)
 		if (this.termsetting.opts.usecase?.target == 'matrix') {
 			this.dom.convert2ZCheckbox = await make_one_checkbox({
 				holder: this.dom.inputsDiv.append('div'),

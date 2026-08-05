@@ -40,6 +40,18 @@ export function convertUnits(v, fromUnit, toUnit, scaleFactor, compact?: boolean
 	return `${toUnitV} ${toUnitV > 1 ? toUnit + 's' : toUnit} ${fromUnitV} ${fromUnitV > 1 ? fromUnit + 's' : fromUnit}`
 }
 
+/*
+term.valueConversion{} declares that a term's values are stored in .fromUnit (e.g. day), while
+.toUnit (e.g. year) is the unit that is meaningful to a user. convertUnits() above formats a value
+for display; this instead returns the plain multiplier, for code that must compute on the converted
+value rather than print it (e.g. regression, so that a model estimate is per year and not per day).
+returns 1 when the term has no valueConversion, so that callers may multiply unconditionally
+*/
+export function getValueConversionFactor(term): number {
+	const f = Number(term?.valueConversion?.scaleFactor)
+	return Number.isFinite(f) && f > 0 ? f : 1
+}
+
 export function deepEqual(x, y) {
 	if (x === y) {
 		return true
