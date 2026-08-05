@@ -34,11 +34,11 @@ export async function setControls(controlsDiv, ag: AggregateMatrix) {
 			width: 55,
 			debounceInterval: 300,
 			processInput: (val: number) => {
-				const config = ag.state
-				const isValid = validateMinMax(settings, val, config.maxDotSize)
+				const currentSettings = ag.state.config.config.settings.aggregateMatrix
+				const isValid = validateMinMax(currentSettings, val, currentSettings.maxDotSize)
 				if (isValid !== null) {
 					alert(isValid)
-					return config.minDotSize
+					return currentSettings.minDotSize
 				}
 				return val
 			}
@@ -55,11 +55,11 @@ export async function setControls(controlsDiv, ag: AggregateMatrix) {
 			width: 55,
 			debounceInterval: 300,
 			processInput: (val: number) => {
-				const config = ag.state
-				const isValid = validateMinMax(settings, config.minDotSize, val)
+				const currentSettings = ag.state.config.config.settings.aggregateMatrix
+				const isValid = validateMinMax(currentSettings, currentSettings.minDotSize, val)
 				if (isValid !== null) {
 					alert(isValid)
-					return config.maxDotSize
+					return currentSettings.maxDotSize
 				}
 				return val
 			}
