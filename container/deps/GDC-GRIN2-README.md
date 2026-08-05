@@ -50,7 +50,7 @@ Before building the dependencies, you need to modify the Dockerfile to ensure pa
 **Modify `container/deps/Dockerfile`:**
 
 1. Locate the section where Ubuntu packages are being installed (look for the `apt-get install` command with multiple packages)
-2. Add `libdatrie1=0.2.13-3+b1` to the package list
+2. Add `libdatrie1=0.2.14-2` to the package list
 3. Add the `--allow-downgrades` flag immediately after `apt-get install`
 
 **Example modification:**
@@ -60,7 +60,7 @@ Before building the dependencies, you need to modify the Dockerfile to ensure pa
 RUN apt-get install package1 package2 package3 ...
 
 # After  
-RUN apt-get install --allow-downgrades package1 package2 libdatrie1=0.2.13-3+b1 package3 ...
+RUN apt-get install --allow-downgrades package1 package2 libdatrie1=0.2.14-2 package3 ...
 ```
 
 ### 6. Build Dependencies
