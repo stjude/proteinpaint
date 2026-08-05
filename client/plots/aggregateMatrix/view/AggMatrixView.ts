@@ -30,7 +30,7 @@ export class AggMatrixView {
     }
 
     initDom(plotDim: AggMatrixViewData['plotDim']) {
-        const mainDiv = this.ag.dom.mainDiv
+        const mainDiv = this.ag.dom.mainDiv as any
         mainDiv.selectAll('*').remove()
 
         const svg = mainDiv.append('svg')
@@ -58,7 +58,7 @@ export class AggMatrixView {
             rowLabels,
             colLabels,
             legendDiv,
-            tip: new Menu({ padding: '' })
+            tip: new Menu({ padding: '3px' })
         }
     }
 

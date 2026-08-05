@@ -47,7 +47,7 @@ tape('Simple aggregate matrix', async function (test) {
 				{
 					chartType: 'aggregateMatrix',
 					rows: {
-						genes: [
+						'Genes': [
 							{ name: 'TP53', id: 'TP53', type: 'geneExpression' },
 							{ name: 'KRAS', id: 'KRAS', type: 'geneExpression' },
 							{ name: 'EGFR', id: 'EGFR', type: 'geneExpression' },
@@ -96,15 +96,18 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 				{
 					chartType: 'aggregateMatrix',
 					rows: {
-						genesTest: [
+						'Genes': [
 							{ name: 'TP53', id: 'TP53', type: 'geneExpression' },
 							{ name: 'KRAS', id: 'KRAS', type: 'geneExpression' },
-							{ name: 'EGFR', id: 'EGFR', type: 'geneExpression' }
+							// { name: 'EFGR', id: 'EGFR', type: 'geneExpression' },
+							{ name: 'BRAF', id: 'BRAF', type: 'geneExpression' }
 						],
-						'Really long section row label for testing': [
+						'Really long row section label for testing': [
 							{ name: 'XBP1', id: 'XBP1', type: 'geneExpression' },
-							{ name: 'CD138', id: 'CD138', type: 'geneExpression' },
-							{ name: 'MZB1', id: 'MZB1', type: 'geneExpression' }
+							{ name: 'DIS3', id: 'DIS3', type: 'geneExpression' },
+							{ name: 'MZB1', id: 'MZB1', type: 'geneExpression' },
+							// { name: 'CD138', id: 'CD138', type: 'geneExpression' },
+							{ name: 'NRAS', id: 'NRAS', type: 'geneExpression' }
 						]
 					},
 					columns: {
@@ -117,7 +120,7 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 						'Really long column section label for testing': [
 							{ name: 'CD4', id: 'CD4', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' }
 						],
-						test: [
+						'Cell type 2': [
 							{ name: 'M', id: 'M', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
 							{ name: 'Nk', id: 'Nk', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
 							{ name: 'Other', id: 'Other', type: 'pseudobulk', assay: 'geneExpression', memberId: 'Cell Type' },
