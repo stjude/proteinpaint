@@ -28,6 +28,7 @@ import { SingleCellMetaCache } from './SingleCellMetaCache.ts'
 import { run_python } from '@sjcrh/proteinpaint-python'
 import { validatePseudobulk } from './validatePseudobulk.ts'
 import type { ReqQueryAddons } from '#routes/types.js'
+import initBinConfig from '#shared/termdb.initbinconfig.js'
 
 export const payload: RoutePayload = {
 	init,
@@ -193,7 +194,39 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					y: plot.coordsColumns.y,
 					cellType: plot.cellTypeColumn?.index
 				}
-				metaCache.addMetaResult(sampleName, text, idxs, plot, ds.cohort.termdb.q.sampleName2id)
+				metaCache.addMetaResult(sampleName, text, idxs, ds.cohort.termdb.q.sampleName2id)
+				if (metaCache.cellTypeFractions) {
+					// cell type fractions have been computed
+					// create cell type fraction terms
+					const cellType2sample2fraction = metaCache.cellTypeFractions
+					const cellTypeFractionTerms = []
+					for (const [cellType, sample2fraction] of cellType2sample2fraction) {
+						const id = cellType + '_' + plot.cellTypeColumn.name + '_frac'
+						const name = cellType + ' ' + plot.cellTypeColumn.name + ' ' + 'fraction'
+						const values = [...sample2fraction.values()]
+						const term = {
+							id,
+							name,
+							type: 'float',
+							cellType,
+							bins: {
+								default: initBinConfig(values),
+								min: Math.min(...values),
+								max: Math.max(...values)
+							}
+						}
+						cellTypeFractionTerms.push(term)
+					}
+					// inject terms into ds dictionary
+					if (!D.addCellTypeFractionTerms) throw new Error('missing addCellTypeFractionTerms() method')
+					D.addCellTypeFractionTerms(cellTypeFractionTerms, ds)
+					// cache term data
+					ds.termid2sample2value = new Map()
+					for (const term of cellTypeFractionTerms) {
+						const sample2fraction = cellType2sample2fraction.get(term.cellType)
+						ds.termid2sample2value.set(term.id, sample2fraction)
+					}
+				}
 				mayLog(ds.label, 'sc meta caching time:', Date.now() - t0)
 			} catch (e: any) {
 				throw new Error(`meta result data file missing or unreadable: ${sampleName} (${tsvfile}): ${e.message || e}`)
@@ -221,11 +254,6 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 	if (samples.size == 0) throw new Error('no scrna samples found')
 	S.sampleMappingCache = metaCache
 	if (metaCache.metaIdMap.size) D.metaIdMap = metaCache.metaIdMap
-	if (metaCache.cellTypeFractions) {
-		D.cellTypeFractions = metaCache.cellTypeFractions
-		if (!D.addCellTypeFractionTerms) throw new Error('missing addCellTypeFractionTerms() method')
-		D.addCellTypeFractionTerms(ds)
-	}
 
 	// samples map populated with samples with sc data
 	if (S.sampleColumns) {
