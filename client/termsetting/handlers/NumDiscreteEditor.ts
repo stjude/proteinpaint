@@ -73,6 +73,9 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 
 		this.dom.density_div = div.append('div')
 		await this.handler.density.showViolin(this.dom.density_div)
+		/* the note names the unit that the plot is labeled in and that the inputs below are typed in,
+		so it reads directly under the plot, above the rows it applies to */
+		this.mayShowValueconversionMsg(div)
 
 		const self = this.termsetting
 		// TODO: should make exceptions for survival or geneExpression terms???
@@ -90,7 +93,6 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		this.tw = this.termsetting.tw as NumRegularBin | NumCustomBins // TODO: do not force
 		this.setDefaultBoundaryInclusion()
 		this.renderBoundaryInclusionInput(div)
-		this.mayShowValueconversionMsg(div)
 		this.renderTypeInputs(div)
 	}
 

@@ -131,7 +131,8 @@ export class NumRegularBinEditor {
 			.style('margin-left', '15px')
 			.on('change', event => {
 				const newValue = this.toStored(Number(event.target.value))
-				if (newValue < min || newValue > max) {
+				// bounds are compared in the unit the value was typed in, see setLastBinStart()
+				if (Number(event.target.value) < this.toDisplay(min) || Number(event.target.value) > this.toDisplay(max)) {
 					window.alert('First bin stop value out of bound.')
 					event.target.value = origValue
 					return
@@ -222,13 +223,17 @@ export class NumRegularBinEditor {
 		if (strInput === '') return
 		const inputValue = this.toStored(Number(strInput))
 
+		/* the bounds are compared in the unit the value was typed in, which is also the unit this
+		input is filled in. converting a displayed value back is lossy, so the converted maximum is
+		not the maximum it came from: comparing there would reject the value filled in by the radio
+		callback above, which is the converted maximum */
 		// TODO first_bin should be required
-		if (q.first_bin && inputValue <= q.first_bin.stop) {
+		if (q.first_bin && Number(strInput) <= this.toDisplay(q.first_bin.stop)) {
 			window.alert('Last bin start cannot be smaller than first bin stop.')
 			this.dom.last_start_input.property('value', this.toDisplay(max))
 			return
 		}
-		if (inputValue > max) {
+		if (Number(strInput) > this.toDisplay(max)) {
 			window.alert('Last bin start value out of bound.')
 			this.dom.last_start_input.property('value', this.toDisplay(max))
 			return

@@ -509,6 +509,138 @@ tape('formatRangeBounds function', function (test) {
 	test.end()
 })
 
+/**
+ * Test Suite: opts.scaleFactor
+ *
+ * A term with valueConversion{} stores its values in one unit (e.g. day) and is read by users in
+ * another (e.g. year). The range handed to and returned by NumericRangeInput is always in the
+ * stored unit, so only the text in the <input> is converted. Getting this backwards would apply a
+ * filter 365x off, and the display rounds, so an unchanged range must survive an apply.
+ */
+const DAY_TO_YEAR = 1 / 365.25
+// half of the last shown digit, stated in days: what an apply may shift a bound by
+const MAX_LOSS = 0.5 * 0.01 * 365.25
+
+tape('formatRangeBounds() with a scaleFactor', function (test) {
+	test.timeoutAfter(100)
+
+	test.deepEqual(
+		formatRangeBounds({ start: 3652.5, startinclusive: true, stop: 25868, stopinclusive: false }, DAY_TO_YEAR),
+		['10 <=', '< 70.82'],
+		'Should state both bounds in the user-facing unit, keeping their inclusivity'
+	)
+	test.deepEqual(
+		formatRangeBounds({ start: 3652.5, startinclusive: true, stop: 25868, stopinclusive: false }),
+		['3652.5 <=', '< 25868'],
+		'Should leave the bounds in the stored unit when no scaleFactor is given'
+	)
+	test.deepEqual(
+		formatRangeBounds({ start: 0, stop: 365.25 }, DAY_TO_YEAR),
+		['0 <', '< 1'],
+		'Should convert a zero bound rather than drop it'
+	)
+	test.deepEqual(
+		formatRangeBounds({ start: -3652.5, startinclusive: true, stopunbounded: true }, DAY_TO_YEAR),
+		['-10 <=', ''],
+		'Should convert a negative bound and leave an unbounded stop empty'
+	)
+	// an unbounded bound has no value to convert, and must not display as NaN
+	test.deepEqual(
+		formatRangeBounds({ startunbounded: true, stop: 25868, stopinclusive: true }, DAY_TO_YEAR),
+		['', '<= 70.82'],
+		'Should leave an unbounded start empty'
+	)
+	test.deepEqual(formatRangeBounds({}, DAY_TO_YEAR), ['', ''], 'Should leave a range with no bounds empty')
+
+	test.end()
+})
+
+tape('NumericRangeInput with a scaleFactor', function (test) {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const callback = () => {
+		//So ts doesn't complain
+	}
+
+	// stored in days, read in years
+	const storedRange = {
+		index: 0,
+		start: 3652.5,
+		startinclusive: true,
+		startunbounded: false,
+		stop: 25868,
+		stopinclusive: false,
+		stopunbounded: false
+	}
+	const input = new NumericRangeInput(holder.append('div') as any, storedRange, callback, {
+		scaleFactor: DAY_TO_YEAR
+	})
+
+	test.equal(input.input.node()!.value, `10 <= x < 70.82`, 'Should display the range in the user-facing unit')
+	test.deepEqual(input.getRange(), storedRange, 'Should keep the range it was given in the stored unit')
+
+	// the displayed expression is the only source of the applied range, so applying an untouched
+	// input must not move a saved bound by more than the rounding of the displayed value
+	const applied = input.parseRange()
+	test.equal(applied.start, 3652.5, 'Should return a start in the stored unit')
+	test.true(
+		Math.abs(applied.stop - storedRange.stop) <= MAX_LOSS,
+		`Should return a stop in the stored unit, within the rounding loss (got ${applied.stop})`
+	)
+	test.equal(applied.startinclusive, true, 'Should preserve an inclusive start through apply')
+	test.equal(applied.stopinclusive, false, 'Should preserve an exclusive stop through apply')
+
+	// re-opening the menu re-renders from the stored range, which must not walk it further each time
+	input.setRange(applied as any)
+	const reapplied = input.parseRange()
+	test.equal(reapplied.start, applied.start, 'Should not drift the start over repeated applies')
+	test.equal(reapplied.stop, applied.stop, 'Should not drift the stop over repeated applies')
+
+	// a bound the user leaves out has nothing to convert
+	input.getInput().node()!.value = 'x < 20'
+	const unbounded = input.parseRange()
+	test.equal(unbounded.start, undefined, 'Should leave an unbounded start undefined, not NaN')
+	test.equal(unbounded.startunbounded, true, 'Should mark an unbounded start')
+	test.true(
+		Math.abs(unbounded.stop - 20 / DAY_TO_YEAR) <= 1e-9,
+		`Should convert a typed stop to the stored unit (got ${unbounded.stop})`
+	)
+
+	// x = value is a separate path from the two bounds
+	const valueInput = new NumericRangeInput(holder.append('div') as any, { value: 25868 } as any, callback, {
+		scaleFactor: DAY_TO_YEAR
+	})
+	test.equal(valueInput.input.node()!.value, ` x=70.82 `, 'Should display an exact value in the user-facing unit')
+	const appliedValue = valueInput.parseRange()
+	test.true(
+		Math.abs(appliedValue.value - 25868) <= MAX_LOSS,
+		`Should return an exact value in the stored unit (got ${appliedValue.value})`
+	)
+	// the label is read by the user, so unlike .value it stays in the user-facing unit
+	test.equal(appliedValue.label, 'x = 70.82', 'Should label an exact value in the user-facing unit')
+
+	// callers pass getValueConversionFactor(term), which is 1 for an unconverted term, but guard
+	// against a 0 or negative factor, which would divide a typed value into Infinity
+	for (const scaleFactor of [0, -1, undefined]) {
+		const noConversion = new NumericRangeInput(holder.append('div') as any, { ...storedRange }, callback, {
+			scaleFactor
+		} as any)
+		test.equal(
+			noConversion.scaleFactor,
+			1,
+			`Should fall back to a scaleFactor of 1 for opts.scaleFactor=${scaleFactor}`
+		)
+		test.equal(
+			noConversion.input.node()!.value,
+			`3652.5 <= x < 25868`,
+			`Should display the stored values for opts.scaleFactor=${scaleFactor}`
+		)
+	}
+
+	if (test['_ok']) holder.remove()
+	test.end()
+})
+
 tape('NumericRangeInput', function (test) {
 	test.timeoutAfter(100)
 	const holder = getHolder()

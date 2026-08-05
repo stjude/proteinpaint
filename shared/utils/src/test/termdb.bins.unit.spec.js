@@ -790,6 +790,186 @@ tape('validate_bins()', function (test) {
 	test.end()
 })
 
+/*
+a term with valueConversion{} stores its values in .fromUnit (e.g. day) and is read by users in
+.toUnit (e.g. year). the bins themselves stay in the stored unit, since that is what the server
+filters by, so only the label and the range equation are converted. get_bin_label() states a
+converted bound through convertUnits(compact), which carries the remainder in the stored unit,
+e.g. 21900 days as '59y351d'
+*/
+const dayToYear = { fromUnit: 'day', toUnit: 'year', scaleFactor: 1 / 365.25 }
+
+tape('get_bin_label(), valueConversion', function (test) {
+	const binconfig = {
+		type: 'regular-bin',
+		bin_size: 3652.5,
+		startinclusive: true,
+		first_bin: { startunbounded: true, stop: 3652.5 },
+		rounding: '.0f'
+	}
+
+	test.equal(
+		b.get_bin_label({ startunbounded: true, stop: 3652.5, startinclusive: true }, binconfig, dayToYear),
+		'<10y',
+		'Should convert the stop of a startunbounded bin'
+	)
+	test.equal(
+		b.get_bin_label({ start: 3652.5, stop: 7305, startinclusive: true }, binconfig, dayToYear),
+		'10y to <20y',
+		'Should convert both bounds of a fully bounded bin'
+	)
+	test.equal(
+		b.get_bin_label({ start: 21900, stopunbounded: true, startinclusive: true }, binconfig, dayToYear),
+		'≥59y351d',
+		'Should state the remainder in the stored unit when the bound is not a whole toUnit'
+	)
+
+	// the same bins, unconverted, to show that only the label crosses the unit boundary
+	test.equal(
+		b.get_bin_label({ startunbounded: true, stop: 3652.5, startinclusive: true }, binconfig, undefined),
+		'<3653',
+		'Should label the stored value when no valueConversion is given'
+	)
+	test.equal(
+		b.get_bin_label({ start: 3652.5, stop: 7305, startinclusive: true }, binconfig, undefined),
+		'3653 to <7305',
+		'Should label the stored values of a fully bounded bin when no valueConversion is given'
+	)
+
+	// custom bins, which are stopinclusive and take the label_offset=0 branch
+	const customConfig = { type: 'custom-bin', lst: [] }
+	test.equal(
+		b.get_bin_label({ startunbounded: true, stop: 10950, stopinclusive: true }, customConfig, dayToYear),
+		'≤29y358d',
+		'Should convert the stop of a stopinclusive first bin'
+	)
+	test.equal(
+		b.get_bin_label({ start: 10950, stop: 21900, stopinclusive: true }, customConfig, dayToYear),
+		'>29y358d to 59y351d',
+		'Should convert both bounds of a stopinclusive bin'
+	)
+	test.equal(
+		b.get_bin_label({ start: 21900, stopunbounded: true, startinclusive: false }, customConfig, dayToYear),
+		'>59y351d',
+		'Should convert the start of a stopunbounded bin'
+	)
+
+	// a bin that covers a single value must not be labeled as a range, converted or not
+	const degenerate = { start: 25868, stop: 25868, startinclusive: false, stopinclusive: true }
+	test.equal(
+		b.get_bin_label(degenerate, customConfig, undefined),
+		'>25868',
+		'Should collapse a bin whose start equals its stop'
+	)
+	test.equal(
+		b.get_bin_label(degenerate, customConfig, dayToYear),
+		'>70y301d',
+		'Should collapse a converted bin whose start equals its stop'
+	)
+
+	test.end()
+})
+
+tape('get_bin_range_equation()', function (test) {
+	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
+	const binconfig = {
+		type: 'regular-bin',
+		bin_size: 3652.5,
+		startinclusive: true,
+		first_bin: { startunbounded: true, stop: 3652.5 },
+		rounding: '.0f'
+	}
+
+	test.equal(
+		b.get_bin_range_equation({ startunbounded: true, stop: 3652.5, startinclusive: true }, binconfig),
+		`${x} <3653`,
+		'Should state a startunbounded bin as the label alone'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 3652.5, stop: 7305, startinclusive: true }, binconfig),
+		`3653 ≤ ${x} <7305`,
+		'Should put x between the bounds of a startinclusive bin'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 21900, stopunbounded: true, startinclusive: true }, binconfig),
+		`${x} ≥21900`,
+		'Should state a stopunbounded bin as the label alone'
+	)
+
+	const customConfig = { type: 'custom-bin', lst: [] }
+	test.equal(
+		b.get_bin_range_equation({ start: 10950, stop: 21900, stopinclusive: true }, customConfig),
+		`10950 < ${x} ≤ 21900`,
+		'Should put x between the bounds of a stopinclusive bin'
+	)
+
+	// a user-customized label must not change the equation, which describes the computed range
+	const labeled = { start: 3652.5, stop: 7305, startinclusive: true, label: '10 to <20 years' }
+	test.equal(
+		b.get_bin_range_equation(labeled, binconfig),
+		`3653 ≤ ${x} <7305`,
+		'Should ignore a user-assigned bin label'
+	)
+	test.equal(labeled.label, '10 to <20 years', 'Should not mutate the bin it was given')
+
+	// a bin that is neither unbounded nor marked inclusive on either side has no equation
+	test.equal(
+		b.get_bin_range_equation({ start: 3652.5, stop: 7305 }, customConfig),
+		undefined,
+		'Should return undefined for a bin with no inclusivity flags'
+	)
+
+	test.end()
+})
+
+tape('get_bin_range_equation(), valueConversion', function (test) {
+	/* the equation is built by replacing operators in the bin label, so a converted label -- which
+	carries a unit suffix and a remainder, e.g. '59y351d' -- must still land in the right places */
+	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
+	const binconfig = {
+		type: 'regular-bin',
+		bin_size: 3652.5,
+		startinclusive: true,
+		first_bin: { startunbounded: true, stop: 3652.5 },
+		rounding: '.0f'
+	}
+
+	test.equal(
+		b.get_bin_range_equation({ startunbounded: true, stop: 3652.5, startinclusive: true }, binconfig, dayToYear),
+		`${x} <10y`,
+		'Should convert a startunbounded bin'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 3652.5, stop: 7305, startinclusive: true }, binconfig, dayToYear),
+		`10y ≤ ${x} <20y`,
+		'Should convert both bounds of a startinclusive bin'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 21900, stopunbounded: true, startinclusive: true }, binconfig, dayToYear),
+		`${x} ≥59y351d`,
+		'Should convert a stopunbounded bin'
+	)
+
+	const customConfig = { type: 'custom-bin', lst: [] }
+	test.equal(
+		b.get_bin_range_equation({ startunbounded: true, stop: 10950, stopinclusive: true }, customConfig, dayToYear),
+		`${x} ≤29y358d`,
+		'Should convert a stopinclusive first bin'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 10950, stop: 21900, stopinclusive: true }, customConfig, dayToYear),
+		`29y358d < ${x} ≤ 59y351d`,
+		'Should convert both bounds of a stopinclusive bin, keeping the remainder in the stored unit'
+	)
+	test.equal(
+		b.get_bin_range_equation({ start: 21900, stopunbounded: true, startinclusive: false }, customConfig, dayToYear),
+		`${x} >59y351d`,
+		'Should convert a stopunbounded bin of a custom-bin config'
+	)
+
+	test.end()
+})
+
 /*************************
  reusable helper functions
 **************************/

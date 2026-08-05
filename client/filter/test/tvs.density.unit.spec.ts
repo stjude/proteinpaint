@@ -300,3 +300,60 @@ tape('setStartStopDisplays', test => {
 
 	test.end()
 })
+
+tape('setStartStopDisplays with a scaleFactor', test => {
+	test.timeoutAfter(100)
+
+	/* a term with valueConversion{} stores its values in one unit (e.g. day) and is read by users
+	in another (e.g. year). the brush drags over the stored values, so only the text written back
+	into the <input> is converted */
+	const dayToYear = 1 / 365.25
+	const range = {
+		index: 0,
+		start: 3652.5,
+		startunbounded: false,
+		stop: 25868,
+		stopunbounded: false
+	}
+	const inputRange = {
+		start: 3652.5,
+		startinclusive: true,
+		startunbounded: false,
+		stop: 25868,
+		stopinclusive: false,
+		stopunbounded: false,
+		value: undefined
+	}
+
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange, dayToYear),
+		['10 <=', '< 70.82'],
+		'Should display a brushed range in the user-facing unit'
+	)
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange),
+		['3652.5 <=', '< 25868'],
+		'Should display the stored values when no scaleFactor is given, as for an unconverted term'
+	)
+	test.deepEqual(
+		setStartStopDisplays(range, inputRange, 1),
+		['3652.5 <=', '< 25868'],
+		'Should display the stored values for a scaleFactor of 1'
+	)
+
+	// inclusivity comes from the input's range, not from the brushed range, with or without conversion
+	test.deepEqual(
+		setStartStopDisplays(range, { ...inputRange, startinclusive: false, stopinclusive: true }, dayToYear),
+		['10 <', '<= 70.82'],
+		'Should take the inclusivity from the input range while converting the brushed values'
+	)
+
+	// a brush dragged to an edge leaves the range unbounded on that side, with no value to convert
+	test.deepEqual(
+		setStartStopDisplays({ ...range, startunbounded: true }, inputRange, dayToYear),
+		['', '< 70.82'],
+		'Should leave an unbounded start empty rather than convert it'
+	)
+
+	test.end()
+})
