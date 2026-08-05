@@ -43,7 +43,7 @@ export class AggMatrixViewModel {
         // padding for either top/bottom or left/right of the dot
         const dotPadding = settings.maxDotSize * 1.5 
         const cellSize = settings.maxDotSize + dotPadding
-        const measureSvg = this.ag.dom.mainDiv.append('svg')
+        const measureSvg = this.ag.dom.mainDiv.append('svg') as any
 
         /** Must determine the maximum amount of space needed for the rows.
          * If there isn't enough space to show the row section label above the 
