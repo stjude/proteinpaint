@@ -2,7 +2,7 @@ import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { NumericRangeInput } from '#dom/numericRangeInput'
-import { convertUnits } from '#shared/helpers.js'
+import { convertUnits, getValueConversionFactor } from '#shared/helpers.js'
 import { violinRenderer } from '../dom/violinRenderer'
 import { niceNumLabels } from '../dom/niceNumLabels.ts'
 
@@ -170,7 +170,9 @@ async function fillMenu(self, div, tvs) {
 		rd: self.num_obj.density_data,
 		width: self.num_obj.plot_size.width,
 		radius: self.num_obj.plot_size.radius,
-		height: self.num_obj.plot_size.height
+		height: self.num_obj.plot_size.height,
+		// axis ticks are labeled in the term's user-facing unit, e.g. years and not days
+		scaleFactor: getValueConversionFactor(tvs.term)
 	})
 	self.vr.render()
 	self.num_obj.svg = self.vr.svg
@@ -241,7 +243,10 @@ function addRangeTableNoDensity(self, tvs) {
 		.style('column-gap', '5px')
 	const rangeLabel = rangeRow.append('span')
 	brush.equation_div = rangeRow.append('div')
-	brush.rangeInput = new NumericRangeInput(brush.equation_div, range, () => {}, { width: '125px' })
+	brush.rangeInput = new NumericRangeInput(brush.equation_div, range, () => {}, {
+		width: '125px',
+		scaleFactor: getValueConversionFactor(tvs.term)
+	})
 
 	// for maf filter tvs, the term's mode determines which metric is filtered
 	const mafFilterMode = self.opts.isMafFilter ? tvs.term.mafFilterMode || 'maf' : null
@@ -334,7 +339,10 @@ function enterRange(self, tr, brush, i) {
 		.text('Range ' + (i + 1) + ': ')
 
 	brush.equation_td = range_tr.append('td').style('width', '150px')
-	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, apply)
+	// brush.range stays in the unit the term's values are stored in; only the <input> text is converted
+	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, apply, {
+		scaleFactor: getValueConversionFactor(self.tvs.term)
+	})
 
 	makeRangeButtons(self, brush)
 	// note for empty range
@@ -366,7 +374,7 @@ function enterRange(self, tr, brush, i) {
 			.style('color', '#888')
 			.html(
 				`Option 2: Type in values to select a range.${
-					self.tvs.term.valueConversion ? ` Values are in the unit of ${self.tvs.term.valueConversion.fromUnit}.` : ''
+					self.tvs.term.valueConversion ? ` Values are in the unit of ${self.tvs.term.valueConversion.toUnit}.` : ''
 				}`
 			)
 	}

@@ -88,7 +88,8 @@ function applyBrush(self, elem, brush) {
 			//update temp_ranges
 			updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalue, self.tvs.term.type)
 
-			const [start, stop] = setStartStopDisplays(range, inputRange)
+			// the brush works in the unit the term's values are stored in, the <input> in the user-facing one
+			const [start, stop] = setStartStopDisplays(range, inputRange, brush.rangeInput.scaleFactor)
 			// update inputs from brush move
 			brush.rangeInput.getInput().node().value = `${start} x ${stop}`
 		})
@@ -154,13 +155,16 @@ export function updateTempRanges(xscale, s, range, inputRange, minvalue, maxvalu
  * inputRange: input range object
  */
 
-export function setStartStopDisplays(range, inputRange) {
+export function setStartStopDisplays(range, inputRange, scaleFactor = 1) {
 	// the brushed range supplies the values, the input's range supplies the inclusivity
-	return formatRangeBounds({
-		...range,
-		startinclusive: inputRange.startinclusive,
-		stopinclusive: inputRange.stopinclusive
-	})
+	return formatRangeBounds(
+		{
+			...range,
+			startinclusive: inputRange.startinclusive,
+			stopinclusive: inputRange.stopinclusive
+		},
+		scaleFactor
+	)
 }
 
 function convertRangeValue(xscale, sidx) {

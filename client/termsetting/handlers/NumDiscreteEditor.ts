@@ -58,9 +58,14 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		if (this.dom.boundaryInclusionDiv) {
 			if (div.node().contains(this.dom.boundaryInclusionDiv.node())) {
 				await this.handler.density.showViolin(this.dom.density_div)
-				if (this.tabs.tabs) {
+				if (this.tabs?.tabs) {
 					const tab = this.tabs.tabs[this.activeTab == 'regular-bin' ? 0 : 1]
 					await this.editorsByType[this.activeTab].render((tab as any).contentHolder)
+				} else if (this.dom.typeInputsDiv) {
+					/* a term whose default bin type is custom-bin gets no regular/custom switch, so
+					renderTypeInputs() never made tabs to take a holder from. still re-render, to redraw
+					the boundary lines over the violin that showViolin() just put back */
+					await this.editorsByType[this.activeTab].render(this.dom.typeInputsDiv)
 				}
 				return
 			} else delete this.dom.boundaryInclusionDiv
@@ -131,7 +136,8 @@ export class NumDiscreteEditor extends HandlerBase implements Handler {
 		this.dom.binsDiv = _div.append('div')
 		//const handler = this.handler
 		//const self = handler.termsetting
-		const div = this.dom.binsDiv.append('div').style('margin', '10px')
+		// held onto, so that showEditMenu() can re-render into it when there are no tabs to get a holder from
+		const div = (this.dom.typeInputsDiv = this.dom.binsDiv.append('div').style('margin', '10px'))
 
 		if (this.tw.term.bins?.default.type == 'custom-bin') {
 			/*

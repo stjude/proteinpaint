@@ -6,6 +6,7 @@ import type { BoundaryOpts, LineData } from './NumericDensity.ts'
 import type { BinaryNumericQ, StartUnboundedBin, StopUnboundedBin, Handler } from '#types'
 import { HandlerBase } from '../HandlerBase.ts'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
+import { toUserUnit, toStoredUnit } from '#shared/helpers.js'
 import { make_one_checkbox } from '#dom'
 
 export class NumBinaryEditor extends HandlerBase implements Handler {
@@ -28,11 +29,24 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		this.q = this.getDefaultQ()
 	}
 
+	/* the cutoff is stored in the term's own unit but entered and shown in its user-facing one.
+	both are identity functions unless the term declares valueConversion{} */
+	toDisplay(v) {
+		return toUserUnit(v, this.tw.term)
+	}
+
+	toStored(v) {
+		return toStoredUnit(v, this.tw.term)
+	}
+
 	async showEditMenu(div) {
 		this.tw = this.handler.tw as NumCustomBins
-		this.q = this.getDefaultQ()
+		// see the note in NumCustomBinEditor.render(): keep unapplied edits when returning to this tab
+		const isRemounting =
+			!!this.dom.density_div && this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())
+		if (!isRemounting) this.q = this.getDefaultQ()
 		if (this.dom.density_div) {
-			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) {
+			if (isRemounting) {
 				await this.handler.density.showViolin(this.dom.density_div, this.getBoundaryOpts())
 				return
 			} else {
@@ -58,7 +72,7 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 			const copy = JSON.parse(JSON.stringify(tw.q))
 			copy.lst.forEach(bin => {
 				if (!bin.label) bin.label = get_bin_label(bin, tw.q, tw.term.valueConversion)
-				bin.range = get_bin_range_equation(bin, this.tw.q)
+				bin.range = get_bin_range_equation(bin, this.tw.q, this.tw.term.valueConversion)
 			})
 			return copy
 		}
@@ -97,12 +111,12 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 				{
 					...firstBin,
 					label: get_bin_label(firstBin, this.tw.q, this.tw.term.valueConversion),
-					range: get_bin_range_equation(firstBin, this.tw.q)
+					range: get_bin_range_equation(firstBin, this.tw.q, this.tw.term.valueConversion)
 				},
 				{
 					...lastBin,
 					label: get_bin_label(lastBin, this.tw.q, this.tw.term.valueConversion),
-					range: get_bin_range_equation(lastBin, this.tw.q)
+					range: get_bin_range_equation(lastBin, this.tw.q, this.tw.term.valueConversion)
 				} //satisfies StopUnboundedBin
 			],
 			cutoffType: 'normal'
@@ -114,13 +128,14 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 			values: [
 				{
 					//this.q.lst[0].map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true })),
-					x: this.q.lst[0].stop,
+					x: this.toDisplay(this.q.lst[0].stop),
 					isDraggable: true
 				}
 			],
+			// the dragged value arrives in display units, matching what the cutoff <input> shows
 			callback: (d: LineData, value) => {
-				this.q.lst[0].stop = value
-				this.q.lst[1].start = value
+				this.q.lst[0].stop = this.toStored(value)
+				this.q.lst[1].start = this.toStored(value)
 				this.dom.cutoffInput.property('value', value)
 				this.q.lst = this.processBinaryBinInputs()
 				this.dom.customBinRanges.data(this.q.lst).html(d => d.range)
@@ -175,7 +190,7 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 			.style('width', '100px')
 			.attr('type', 'number')
 			.style('margin-right', '10px')
-			.attr('value', q.lst[0].stop)
+			.attr('value', this.toDisplay(q.lst[0].stop))
 			.on('change', () => this.renderBoundaryInputDivs())
 
 		this.dom.cutoffPercentileCheckbox = make_one_checkbox({
@@ -209,7 +224,8 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 				[cutoffPercentile],
 				this.termsetting.vocabApi.state?.termfilter
 			)
-			this.dom.cutoffInput.property('value', data.values[0])
+			// the percentile is returned in the term's stored unit
+			this.dom.cutoffInput.property('value', this.toDisplay(data.values[0]))
 			this.renderBoundaryInputDivs()
 		} catch (e) {
 			console.error(e)
@@ -217,7 +233,8 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 	}
 
 	renderBoundaryInputDivs() {
-		const cutoff = this.dom.cutoffInput.property('value')
+		// a blank input is passed through, so that processBinaryBinInputs() still rejects it
+		const cutoff = this.toStored(this.dom.cutoffInput.property('value'))
 		this.q.lst[0].stop = cutoff
 		this.q.lst[1].start = cutoff
 		this.q.lst = this.processBinaryBinInputs()
@@ -281,13 +298,13 @@ export class NumBinaryEditor extends HandlerBase implements Handler {
 		const bins: [StartUnboundedBin, StopUnboundedBin] = [
 			{
 				...firstBin,
-				label: get_bin_label(firstBin, this.q),
-				range: get_bin_range_equation(firstBin, this.tw.q)
+				label: get_bin_label(firstBin, this.q, this.tw.term.valueConversion),
+				range: get_bin_range_equation(firstBin, this.tw.q, this.tw.term.valueConversion)
 			},
 			{
 				...lastBin,
-				label: get_bin_label(lastBin, this.q),
-				range: get_bin_range_equation(lastBin, this.tw.q)
+				label: get_bin_label(lastBin, this.q, this.tw.term.valueConversion),
+				range: get_bin_range_equation(lastBin, this.tw.q, this.tw.term.valueConversion)
 			}
 		]
 

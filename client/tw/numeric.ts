@@ -19,7 +19,7 @@ import type {
 	CustomNumericBinConfig
 } from '#types'
 import { TwBase, type TwOpts } from './TwBase.ts'
-import { isNumeric } from '#shared/helpers.js'
+import { isNumeric, toUserUnit } from '#shared/helpers.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { copyMerge } from '#rx'
 import { GeneExpBase } from './geneExpression.ts'
@@ -232,6 +232,9 @@ export class NumRegularBin extends NumericBase {
 	}
 
 	getStatus() {
+		// bin size is stored in the term's own unit; the pill states it in the user-facing one
+		const vc = this.term.valueConversion
+		if (vc) return { text: `bin size=${toUserUnit(this.q.bin_size, this.term)} ${vc.toUnit}s` }
 		return { text: 'bin size=' + this.q.bin_size }
 	}
 

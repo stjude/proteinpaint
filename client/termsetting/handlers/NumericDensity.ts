@@ -4,6 +4,7 @@ import type { NumericBin } from '#types'
 import { violinRenderer } from '#dom'
 import { select, pointer, type BaseType } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
+import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
 //import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 
 export type BoundaryOpts = {
@@ -66,6 +67,21 @@ export class NumericDensity {
 		this.tw = opts.termsetting.tw
 	}
 
+	/* the boundary values exchanged with the bin/knot editors, and the domain of this.xscale, are in
+	the term's user-facing unit; density_data is in the unit the values are stored in. only the two
+	getters below cross that line, so that an editor can validate a typed value against the plot range */
+	get scaleFactor() {
+		return getValueConversionFactor(this.tw.term)
+	}
+
+	get displayMin() {
+		return toUserUnit(this.density_data.min, this.tw.term)
+	}
+
+	get displayMax() {
+		return toUserUnit(this.density_data.max, this.tw.term)
+	}
+
 	async setData() {
 		//if (this.density_data) return this.density_data
 		const self = this.termsetting
@@ -102,7 +118,9 @@ export class NumericDensity {
 				rd: this.density_data,
 				width: this.plot_size.width,
 				height: this.plot_size.height,
-				radius: this.plot_size.radius
+				radius: this.plot_size.radius,
+				// axis ticks are labeled in the term's user-facing unit, e.g. years and not days
+				scaleFactor: this.scaleFactor
 			})
 			this.vrByDiv.set(div, vr)
 		}
@@ -130,8 +148,9 @@ export class NumericDensity {
 				.attr('transform', `translate(${this.plot_size.xpad}, ${this.plot_size.ypad})`)
 				.attr('class', 'binsize_g')
 
-			const maxvalue = this.density_data.max
-			const minvalue = this.density_data.min
+			// boundary values come from the editors in the user-facing unit, so the domain is too
+			const maxvalue = this.displayMax
+			const minvalue = this.displayMin
 
 			this.xscale = scaleLinear()
 				.domain([minvalue, maxvalue])
@@ -151,10 +170,10 @@ export class NumericDensity {
 
 	renderBinLines(boundaryOpts: BoundaryOpts) {
 		//this.boundaryOpts = boundaryOpts
-		const { density_data, plot_size, tw, xscale } = this
+		const { plot_size, tw, xscale, scaleFactor } = this
 		if (!this.density_data) throw `Missing .density_data [density.ts, renderBinLines()]`
-		const scaledMinX = Math.round(this.xscale(density_data.min))
-		const scaledMaxX = Math.round(this.xscale(density_data.max))
+		const scaledMinX = Math.round(this.xscale(this.displayMin))
+		const scaledMaxX = Math.round(this.xscale(this.displayMax))
 		const lines: DraggedLineData[] = []
 		for (const [index, v] of boundaryOpts.values.entries()) {
 			lines.push({ ...v, index, scaledX: Math.round(this.xscale(v.x)) })
@@ -211,7 +230,15 @@ export class NumericDensity {
 						.style('display', c.draggedX >= lastVisibleScaledX ? 'none' : '')
 				}
 				const inverted = xscale.invert(d.draggedX)
-				const value = tw.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
+				/* a converted value is on a much smaller scale than what it was converted from
+				(e.g. 70 years vs 25868 days), so rounding an integer term to a whole number would
+				make the line jump by a year at a time. round to 2 decimals in that case instead */
+				const value =
+					scaleFactor != 1
+						? inverted.toFixed(2)
+						: tw.term.type == 'integer'
+						? Math.round(inverted)
+						: inverted.toFixed(3)
 				boundaryOpts.callback(d, Number(value))
 			}
 		}

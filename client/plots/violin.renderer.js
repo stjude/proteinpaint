@@ -6,8 +6,17 @@ import { renderTable, getMaxLabelWidth, table2col } from '#dom'
 import { rgb } from 'd3'
 import { format as d3format } from 'd3-format'
 import { SINGLECELL_GENE_EXPRESSION } from '#types'
+import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
 
 const minSampleSize = 5 // a group below cutoff will not render a violin plot
+
+/* the term whose values the numeric axis is of. a term with valueConversion{} stores its values in
+one unit (e.g. day) and is read by users in another (e.g. year), so everything a user reads off this
+axis is converted. the scale that maps a value to a pixel is not: the violin marks, the median line
+and the range a brush turns into a filter all stay in the stored unit */
+function getNumericTerm(t1, t2) {
+	return t2?.q?.mode === 'continuous' ? t2.term : t1?.term
+}
 
 export default function setViolinRenderer(self) {
 	self.render = function () {
@@ -136,7 +145,12 @@ export default function setViolinRenderer(self) {
 		if (!d.summaryStats) return
 		self.dom.hovertip.clear().show(event.clientX, event.clientY)
 		const table = table2col({ holder: self.dom.hovertip.d.append('div') })
-		for (const { label, value } of Object.values(d.summaryStats)) table.addRow(label, value)
+		/* stats are computed on the stored values, so read them in the term's user-facing unit.
+		every stat getDescrStats() reports scales with the unit (min, quartiles, median, max, mean,
+		standard deviation) except the sample count, which is not a value of the term at all */
+		const term = getNumericTerm(self.config.term, self.config.term2)
+		for (const { key, label, value } of Object.values(d.summaryStats))
+			table.addRow(label, key == 'total' ? value : toUserUnit(value, term))
 	}
 	self.getAutoThickness = function () {
 		let maxPlotCount = 0
@@ -280,14 +294,19 @@ export default function setViolinRenderer(self) {
 			.style('font-size', '12')
 			.classed(settings.isLogScale ? 'sjpp-logscale' : 'sjpp-linearscale', true)
 
+		/* tick labels are read by the user, so they are in the term's user-facing unit. the scale is a
+		copy with a converted domain over the same pixel range, so a tick still lands where its value does */
+		const f = getValueConversionFactor(getNumericTerm(t1, t2))
+		const uiScale = f == 1 ? svg.axisScale : svg.axisScale.copy().domain(svg.axisScale.domain().map(v => v * f))
+
 		const ticks = settings.isLogScale
-			? svg.axisScale.ticks(15)
+			? uiScale.ticks(15)
 			: // svg.axisScale.ticks().filter(tick => tick > 0 || tick < 0)
-			  svg.axisScale.ticks()
+			  uiScale.ticks()
 
 		g.call(
 			(isH ? axisTop : axisLeft)()
-				.scale(svg.axisScale)
+				.scale(uiScale)
 				.tickFormat((d, i) => {
 					if (settings.isLogScale) {
 						if (self.app.vocabApi.termdbConfig.logscaleBase2) {
@@ -308,7 +327,9 @@ export default function setViolinRenderer(self) {
 
 		if (self.opts.mode != 'minimal') {
 			// TODO need to add term2 label onto the svg
-			const n = t2?.q?.mode === 'continuous' ? t2.term.name : t1.term.name
+			const numTerm = getNumericTerm(t1, t2)
+			// name the unit the ticks are in, when it is not the one the values are stored in
+			const n = numTerm.valueConversion ? `${numTerm.name} (${numTerm.valueConversion.toUnit}s)` : numTerm.name
 			const lab = svg.svgG
 				.append('text')
 				.text(n)
