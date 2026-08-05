@@ -369,7 +369,8 @@ function makeBySampleScatterMenu(menuDiv, chartsInstance) {
 	// message div shows hit count / no-match feedback
 	const msg = menuDiv.append('div').style('padding', '2px 5px').style('font-size', '.8em').style('color', '#888')
 
-	addOptions(plots.map(p => p.name))
+	// cap the rendered options to avoid very large <datalist> DOMs for big cohorts
+	addOptions(plots.map(p => p.name).slice(0, 500))
 
 	input.on('keyup', () => {
 		const str = input.node().value.toLowerCase()
@@ -380,7 +381,7 @@ function makeBySampleScatterMenu(menuDiv, chartsInstance) {
 			if (name.startsWith(str)) startsWith.push(p.name)
 			else if (name.includes(str)) includes.push(p.name)
 		}
-		const options = [...startsWith, ...includes]
+		const options = [...startsWith, ...includes].slice(0, 500)
 		addOptions(options)
 	})
 
