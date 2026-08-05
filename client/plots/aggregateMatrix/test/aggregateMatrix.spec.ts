@@ -48,12 +48,13 @@ tape('Simple aggregate matrix', async function (test) {
 					chartType: 'aggregateMatrix',
 					rows: {
 						'Genes': [
-							{ name: 'TP53', id: 'TP53', type: 'geneExpression' },
-							{ name: 'KRAS', id: 'KRAS', type: 'geneExpression' },
-							{ name: 'EGFR', id: 'EGFR', type: 'geneExpression' },
+							{ name: 'TP53', gene: 'TP53', type: 'geneExpression' },
+							{ name: 'KRAS', gene: 'KRAS', type: 'geneExpression' },
+							{ name: 'EGFR', gene: 'EGFR', type: 'geneExpression' },
+							//Getter should work for 'gene' or 'id' property
 							{ name: 'XBP1', id: 'XBP1', type: 'geneExpression' },
 							{ name: 'CD138', id: 'CD138', type: 'geneExpression' },
-							{ name: 'MZB1', id: 'MZB1', type: 'geneExpression' },
+							{ name: 'MZB1', gene: 'MZB1', type: 'geneExpression' },
 						]
 					},
 					columns: {
@@ -97,17 +98,17 @@ tape('Multiple sections and categories aggregate matrix', async function (test) 
 					chartType: 'aggregateMatrix',
 					rows: {
 						'Genes': [
-							{ name: 'TP53', id: 'TP53', type: 'geneExpression' },
-							{ name: 'KRAS', id: 'KRAS', type: 'geneExpression' },
-							// { name: 'EFGR', id: 'EGFR', type: 'geneExpression' },
-							{ name: 'BRAF', id: 'BRAF', type: 'geneExpression' }
+							{ name: 'TP53', gene: 'TP53', type: 'geneExpression' },
+							{ name: 'KRAS', gene: 'KRAS', type: 'geneExpression' },
+							{ name: 'EFGR', gene: 'EGFR', type: 'geneExpression' },
+							{ name: 'BRAF', gene: 'BRAF', type: 'geneExpression' }
 						],
 						'Really long row section label for testing': [
-							{ name: 'XBP1', id: 'XBP1', type: 'geneExpression' },
-							{ name: 'DIS3', id: 'DIS3', type: 'geneExpression' },
-							{ name: 'MZB1', id: 'MZB1', type: 'geneExpression' },
-							// { name: 'CD138', id: 'CD138', type: 'geneExpression' },
-							{ name: 'NRAS', id: 'NRAS', type: 'geneExpression' }
+							{ name: 'XBP1', gene: 'XBP1', type: 'geneExpression' },
+							{ name: 'DIS3', gene: 'DIS3', type: 'geneExpression' },
+							{ name: 'MZB1', gene: 'MZB1', type: 'geneExpression' },
+							{ name: 'CD138', gene: 'CD138', type: 'geneExpression' },
+							{ name: 'NRAS', gene: 'NRAS', type: 'geneExpression' }
 						]
 					},
 					columns: {

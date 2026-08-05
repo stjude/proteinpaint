@@ -18,11 +18,13 @@ export async function getAggMatrixData(q: TermdbAggregateMatrixRequest, ds: any)
 
     for (const section in q.rows) {
         const terms = q.rows[section].map(tw => {
-            const label = tw.term.name || tw.term.id
-            if (tw.term.type == GENE_EXPRESSION) queries.add(label.trim())
+            const rowId = tw.term?.['gene'] || tw.term.id
+            if (tw.term.type == GENE_EXPRESSION) queries.add(rowId)
+            //TODO: Add logic for other term types here
+            const label = tw.term.name || rowId
             if (label.length > rowLongest.length) rowLongest = label
             rowCount++
-            return { id: tw.term.id, label }
+            return { id: rowId, label }
         })
         rowSections.push({ id: section, terms })
     }
@@ -102,7 +104,9 @@ async function processMemberTerm(term, q: TermdbAggregateMatrixRequest, ds: any,
         const { tmp: sizeTmp, min: sizeMin, max: sizeMax } = processHDF5Data(sizeData)
 
         return { colorTmp, sizeTmp, colorMin, colorMax, sizeMin, sizeMax }
-    } else throw new Error(`Term type: ${term.type} not supported in aggregate matrix route.`)
+    } 
+    //TODO: Add logic for other term types here
+    else throw new Error(`Term type: ${term.type} not supported in aggregate matrix route.`)
 }
 
 /** 
@@ -141,6 +145,8 @@ function processHDF5Data(data) {
         }
         tmp[gene] = aggregate
     }
+    if (min === Infinity || max === -Infinity) throw new Error(`No valid aggregate values found in HDF5 data`)
+    if (min === max) throw new Error(`All aggregate values are the same: ${min}. Cannot use idenitical data for scaling.`)
     return { tmp, min, max }
 }
 
