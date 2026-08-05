@@ -157,7 +157,16 @@ export class ScatterTooltip {
 		const tableDiv = div.append('div').style('max-height', '500px').style('overflow-y', 'scroll')
 		if (samples.length > 4) tableDiv.attr('class', 'sjpp_show_scrollbar')
 		this.tableDiv = tableDiv
-		const nodes = this.tree.filter(node => (showCoords ? node.level == 1 : node.level == 2))
+		// a bySample plot carries no color/shape/scale term, so only level-1 (coordinate) nodes exist;
+		// fall back to those so the sample name + info still show on hover. term-driven plots (and any
+		// other plot) keep using level-2 category nodes.
+		const hasCategoryNodes =
+			this.scatter.config.colorTW || this.scatter.config.shapeTW || this.scatter.config.scaleDotTW
+		const nodes = this.tree.filter(node => {
+			if (showCoords) return node.level == 1
+			if (hasCategoryNodes || !this.scatter.config.bySample) return node.level == 2
+			return node.level == 1
+		})
 		if (showCoords)
 			for (const node of nodes) {
 				if (samples.length > 1) tableDiv.append('div').style('padding', '2px')
@@ -201,7 +210,9 @@ export class ScatterTooltip {
 		const div = this.tableDiv.append('div')
 		if (!table) table = table2col({ holder: div, disableScroll: true, cellPadding: '5px' })
 		const sample = node.samples[0]
-		if (sample.category != 'Ref') {
+		// node.category is null for a level-1 (coordinate-only) node, which has no term value to show;
+		// skip the category row and fall through to render the sample name + info below
+		if (sample.category != 'Ref' && node.category != null) {
 			const [tdlabel, td] = table.addRow()
 			const showIcon = tw != null && (tw == this.scatter.config.colorTW || tw == this.scatter.config.shapeTW)
 			let label = tw ? tw.term.name : node.category

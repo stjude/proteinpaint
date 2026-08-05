@@ -78,7 +78,9 @@ export class ScatterViewModel extends ScatterViewModelBase {
 
 	setTools() {
 		super.setTools()
-		if (this.scatter.config.singleCellPlot) return
+		// the search + lasso group tools operate on termdb (cohort) samples. a bySample plot has a
+		// single cohort sample, so these don't apply — keep only the zoom/reset tools from super
+		if (this.scatter.config.singleCellPlot || this.scatter.config.bySample) return
 		const toolsDiv = this.view.dom.toolsDiv
 		const display = 'block'
 		const searchDiv = toolsDiv.insert('div').style('display', display).style('margin', '15px 10px')
