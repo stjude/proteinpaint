@@ -180,10 +180,12 @@ export class AggMatrixView {
                 })
                 .on('click', () => {
                     const config = this.ag.state.config
-                    const colTerm = config.columns[dot.colSection].find(term => term.id === dot.column)
+                    const colTerms = config.columns?.[dot.colSection] || []
+                    const colTerm = colTerms.find(term => term.id === dot.column)
+                    if (!colTerm) return
+                    if (colTerm.type !== PSEUDOBULK) return
                     const tmp = structuredClone(colTerm)
-                    if (tmp.type !== PSEUDOBULK) return
-
+                    
                     //TODO: Move this to interactions
                     const idName = `geneExpression ${dot.row} ${dot.column}`
                     tmp.gene = dot.row
