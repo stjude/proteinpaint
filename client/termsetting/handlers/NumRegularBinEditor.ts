@@ -2,6 +2,7 @@ import { format } from 'd3-format'
 //import { setDensityPlot } from './density'
 import { make_radios } from '#dom'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
+import { toUserUnit, toStoredUnit } from '#shared/helpers.js'
 import type { NumRegularBin } from '#tw'
 import type { NumDiscreteEditor } from './NumDiscreteEditor.ts'
 import type { BoundaryOpts, BoundaryValue, DraggedLineData } from './NumericDensity.ts'
@@ -27,16 +28,28 @@ export class NumRegularBinEditor {
 		this.termsetting = editHandler.termsetting
 	}
 
+	/* q holds bin boundaries in the unit the term's values are stored in, while the <input>s and the
+	density plot show them in the term's user-facing unit. toDisplay()/toStored() cross that boundary;
+	both are identity functions unless the term declares valueConversion{} */
+	toDisplay(v) {
+		return toUserUnit(v, this.tw.term)
+	}
+
+	toStored(v) {
+		return toStoredUnit(v, this.tw.term)
+	}
+
 	render(div) {
 		this.tw = this.editHandler.tw as NumRegularBin
-		this.q = this.getDefaultQ()
+		// see the note in NumCustomBinEditor.render(): keep unapplied edits when returning to this tab
+		const isRemounting =
+			!!this.dom.binsTable && this.editHandler.dom.binsDiv?.node().contains(this.dom.binsTable.node())
+		if (!isRemounting) this.q = this.getDefaultQ()
 		this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
+		if (isRemounting) return
 		if (this.dom.binsTable) {
-			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.binsTable.node())) return
-			else {
-				this.dom.binsTable.remove()
-				delete this.dom.binsTable
-			}
+			this.dom.binsTable.remove()
+			delete this.dom.binsTable
 		}
 		const binsTable = div.append('table')
 		this.dom.binsTable = binsTable
@@ -60,19 +73,23 @@ export class NumRegularBinEditor {
 
 		const { min, max } = handler.density_data
 		const q = this.q
-		const origBinSize = q.bin_size
+		// bin size is a span rather than a point, but converts the same way as one
+		const origBinSize = this.toDisplay(q.bin_size)
 
 		this.dom.bin_size_input = tr
 			.append('td')
 			.append('input')
 			.attr('type', 'number')
-			.attr('value', 'rounding' in q ? format(q.rounding || '.0f')(q.bin_size) : q.bin_size)
+			.attr(
+				'value',
+				handler.density.scaleFactor == 1 && 'rounding' in q ? format(q.rounding || '.0f')(q.bin_size) : origBinSize
+			)
 			.attr('data-testid', 'sjpp-num-reg-bin-editor-size')
 			.style('margin-left', '15px')
 			.style('width', '100px')
 			.style('color', () => (q.bin_size > Math.abs(max - min) ? 'red' : ''))
 			.on('change', event => {
-				const newValue = Number(event.target.value)
+				const newValue = this.toStored(Number(event.target.value))
 				// must validate input value
 				if (newValue <= 0) {
 					window.alert('Please enter non-negative bin size.')
@@ -87,7 +104,10 @@ export class NumRegularBinEditor {
 					return
 				}
 				q.bin_size = newValue
-				this.dom.bin_size_input.style('color', q.bin_size > max - min ? 'red' : newValue != origBinSize ? 'green' : '')
+				this.dom.bin_size_input.style(
+					'color',
+					q.bin_size > max - min ? 'red' : this.toDisplay(newValue) != origBinSize ? 'green' : ''
+				)
 				handler.density.setBinLines(this.getBoundaryOpts())
 			})
 	}
@@ -100,7 +120,7 @@ export class NumRegularBinEditor {
 		tr.append('td').style('margin', '5px').style('opacity', 0.5).text('First Bin Stop')
 
 		const { min, max } = handler.density_data
-		const origValue = q.first_bin.stop
+		const origValue = this.toDisplay(q.first_bin.stop)
 
 		this.dom.first_stop_input = tr
 			.append('td')
@@ -110,7 +130,7 @@ export class NumRegularBinEditor {
 			.style('width', '100px')
 			.style('margin-left', '15px')
 			.on('change', event => {
-				const newValue = Number(event.target.value)
+				const newValue = this.toStored(Number(event.target.value))
 				if (newValue < min || newValue > max) {
 					window.alert('First bin stop value out of bound.')
 					event.target.value = origValue
@@ -163,7 +183,10 @@ export class NumRegularBinEditor {
 				edit_div.style('display', 'inline-block')
 				if (this.dom.last_start_input.property('value') == '') {
 					// blank input, fill max
-					this.dom.last_start_input.property('value', this.tw.q.last_bin?.start || handler.density_data.max)
+					this.dom.last_start_input.property(
+						'value',
+						this.toDisplay(this.tw.q.last_bin?.start || handler.density_data.max)
+					)
 				}
 				this.setLastBinStart()
 			}
@@ -179,7 +202,7 @@ export class NumRegularBinEditor {
 		this.dom.last_start_input = edit_div
 			.append('input')
 			.attr('type', 'number')
-			.property('value', q.last_bin?.start || '')
+			.property('value', Number.isFinite(q.last_bin?.start) ? this.toDisplay(q.last_bin!.start) : '')
 			.style('width', '100px')
 			.on('change', () => this.setLastBinStart())
 
@@ -197,17 +220,17 @@ export class NumRegularBinEditor {
 		// only get value from <input>
 		const strInput = this.dom.last_start_input.property('value')
 		if (strInput === '') return
-		const inputValue = Number(strInput)
+		const inputValue = this.toStored(Number(strInput))
 
 		// TODO first_bin should be required
 		if (q.first_bin && inputValue <= q.first_bin.stop) {
 			window.alert('Last bin start cannot be smaller than first bin stop.')
-			this.dom.last_start_input.property('value', max)
+			this.dom.last_start_input.property('value', this.toDisplay(max))
 			return
 		}
 		if (inputValue > max) {
 			window.alert('Last bin start value out of bound.')
-			this.dom.last_start_input.property('value', max)
+			this.dom.last_start_input.property('value', this.toDisplay(max))
 			return
 		}
 		if (q.last_bin) q.last_bin.start = inputValue
@@ -230,11 +253,12 @@ export class NumRegularBinEditor {
 			if (i > binLinesStop) boundaryValues[boundaryValues.length - 1].isLastVisibleLine = true
 			const isDraggable = i === this.q.first_bin.stop || i === this.q.bin_size - 1
 			// non-draggable lines should move with the first bin boundary line
-			boundaryValues.push({ x: i, isDraggable, movesWithLineIndex: !isDraggable ? 0 : -1 })
+			// the loop runs in stored units; the plot is drawn in display units
+			boundaryValues.push({ x: this.toDisplay(i), isDraggable, movesWithLineIndex: !isDraggable ? 0 : -1 })
 		}
 		if (this.q.last_bin) {
 			boundaryValues.push({
-				x: this.q.last_bin.start,
+				x: this.toDisplay(this.q.last_bin.start),
 				isDraggable: true,
 				isLastVisibleLine: true,
 				movesWithLineIndex: -1
@@ -243,15 +267,17 @@ export class NumRegularBinEditor {
 
 		return {
 			values: boundaryValues,
+			// the dragged value arrives in display units, matching what the <input>s show
 			callback: (d: DraggedLineData, value) => {
 				//d.scaledX = Math.round(xscale(value))
 				if (d.index === 0) {
 					this.dom.first_stop_input.property('value', value)
-					this.q.first_bin.stop = value as number
+					this.q.first_bin.stop = this.toStored(value)
 				} else {
-					this.editHandler.handler.dom.last_start_input.property('value', value)
+					// the input belongs to this bin editor; NumericHandler.dom never holds it
+					this.dom.last_start_input.property('value', value)
 					//if (!this.q.last_bin) this.q.last_bin = {}
-					if (this.q.last_bin) this.q.last_bin.start = value
+					if (this.q.last_bin) this.q.last_bin.start = this.toStored(value)
 					//middleLines.style('display', (c: any) => (d.draggedX && c.scaledX >= d.draggedX ? 'none' : ''))
 				}
 			}
@@ -265,17 +291,24 @@ export class NumRegularBinEditor {
 			type: 'regular-bin',
 			startinclusive: this.editHandler.boundaryInclusion == 'startinclusive',
 			stopinclusive: this.editHandler.boundaryInclusion == 'stopinclusive',
-			bin_size: Number(bin_size),
+			bin_size: this.toStored(Number(bin_size)),
 			first_bin: {
 				startunbounded: true,
-				stop: Number(this.dom.first_stop_input.property('value'))
+				stop: this.toStored(Number(this.dom.first_stop_input.property('value')))
 			},
-			rounding: bin_size.includes('.') && !bin_size.endsWith('.') ? `.${bin_size.split('.')[1].length}f` : '.0f'
+			/* rounding formats the stored bin size, so it cannot be derived from the decimals of a
+			converted input. a converted term labels its bins through valueConversion instead */
+			rounding:
+				this.editHandler.handler.density.scaleFactor != 1
+					? '.0f'
+					: bin_size.includes('.') && !bin_size.endsWith('.')
+					? `.${bin_size.split('.')[1].length}f`
+					: '.0f'
 		}
 
 		if (this.dom.fixed_radio.property('checked')) {
 			config.last_bin = {
-				start: Number(this.dom.last_start_input.property('value')),
+				start: this.toStored(Number(this.dom.last_start_input.property('value'))),
 				stopunbounded: true
 			}
 		}

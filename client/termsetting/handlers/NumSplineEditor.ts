@@ -4,6 +4,7 @@ import type { NumericHandler } from './NumericHandler.ts'
 import type { BoundaryOpts, LineData } from './NumericDensity.ts'
 import type { SplineNumericQ, Handler } from '#types'
 import { HandlerBase } from '../HandlerBase.ts'
+import { toUserUnit, toStoredUnit } from '#shared/helpers.js'
 
 export class NumSplineEditor extends HandlerBase implements Handler {
 	tw: NumSpline
@@ -22,6 +23,18 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 		this.opts = opts
 		this.handler = handler
 		this.tw = handler.tw
+	}
+
+	/* q.knots are stored in the term's own unit, matching the values they are knots of, but are
+	entered and shown in its user-facing one. see makeRinput() in server/src/routes/termdb.regression.ts,
+	which converts them alongside the values before fitting.
+	both are identity functions unless the term declares valueConversion{} */
+	toDisplay(v) {
+		return toUserUnit(v, this.tw.term)
+	}
+
+	toStored(v) {
+		return toStoredUnit(v, this.tw.term)
 	}
 
 	async getDefaultQ() {
@@ -71,9 +84,12 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 
 	async showEditMenu(div) {
 		this.tw = this.handler.tw as NumSpline
-		this.q = await this.getDefaultQ()
+		// see the note in NumCustomBinEditor.render(): keep unapplied edits when returning to this tab
+		const isRemounting =
+			!!this.dom.density_div && this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())
+		if (!isRemounting) this.q = await this.getDefaultQ()
 		if (this.dom.density_div) {
-			if (this.handler.dom.editDiv?.node().contains(this.dom.density_div.node())) {
+			if (isRemounting) {
 				await this.handler.density.showViolin(this.dom.density_div, this.getBoundaryOpts())
 				return
 			} else {
@@ -95,13 +111,14 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 			values: this.q.knots.map(k => {
 				return {
 					//this.q.lst[0].map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true })),
-					x: k.value,
+					x: this.toDisplay(k.value),
 					isDraggable: true
 				}
 			}),
+			// the dragged value arrives in display units, matching what the textarea holds
 			callback: (d: LineData, value) => {
-				this.q.knots[d.index].value = value
-				this.dom.customKnotsInput.property('value', this.q.knots.map(k => k.value).join('\n'))
+				this.q.knots[d.index].value = this.toStored(value)
+				this.dom.customKnotsInput.property('value', this.q.knots.map(k => this.toDisplay(k.value)).join('\n'))
 				//this.renderCustomSplineInputs()
 				//this.renderAutoSplineInputs()
 			}
@@ -129,7 +146,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 			.append('textarea')
 			.style('height', '100px')
 			.style('width', '100px')
-			.text(this.q.knots.map((d: any) => d.value).join('\n'))
+			.text(this.q.knots.map((d: any) => this.toDisplay(d.value)).join('\n'))
 			.on('change', () => {
 				this.q.knots = this.processKnotsInputs()
 				this.handler.density.setBinLines(this.getBoundaryOpts())
@@ -156,11 +173,12 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 
 	// apply custom knots if changed from density plot to textarea
 	updateCustomSplineInputs() {
-		this.dom.customKnotsInput.property('value', this.q.knots.map((d: any) => d.value).join('\n'))
+		this.dom.customKnotsInput.property('value', this.q.knots.map((d: any) => this.toDisplay(d.value)).join('\n'))
 	}
 
 	// apply custom knots to this.q.knots
 	processKnotsInputs() {
+		// the textarea holds knots in the term's user-facing unit; q.knots stores them in its own
 		const data = this.dom.customKnotsInput
 			.property('value')
 			.split('\n')
@@ -169,7 +187,7 @@ export class NumSplineEditor extends HandlerBase implements Handler {
 			.sort((a: any, b: any) => a - b)
 			.map((d: any) => {
 				const knot = {
-					value: +d
+					value: this.toStored(+d)
 				}
 				return knot
 			})

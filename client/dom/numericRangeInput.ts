@@ -4,14 +4,20 @@ import type { FullyBoundedBin } from '#types'
 type TvsRange = FullyBoundedBin & { value?: number }
 type Opts = {
 	width?: string // width of input
+	/** multiplier from the unit a term's values are stored in to the unit shown to users, from
+	 * term.valueConversion (see getValueConversionFactor()). the range handed in and given back is
+	 * always in the stored unit; only the text in the <input> is in the user-facing one */
+	scaleFactor?: number
 }
 
 export class NumericRangeInput {
 	callback: (f: any) => void
 	input: Input
 	range: any
+	scaleFactor: number
 
 	constructor(holder: Elem, range: any, callback: () => void, opts?: Opts) {
+		this.scaleFactor = opts?.scaleFactor && opts.scaleFactor > 0 ? opts.scaleFactor : 1
 		this.input = holder
 			.append('input')
 			.attr('name', 'rangeInput')
@@ -37,7 +43,7 @@ export class NumericRangeInput {
 
 	parseRange() {
 		const str = this.input.node()!.value
-		const new_range = parseRange(str)
+		const new_range = toStoredUnits(parseRange(str), this.scaleFactor)
 		if (this.range?.min != undefined) {
 			if (!new_range.startunbounded && this.range?.min > new_range.start) throw 'Invalid start value < minimum allowed'
 			if (!new_range.stopunbounded && this.range?.min >= new_range.stop) throw 'Invalid stop value >= minimum allowed'
@@ -65,9 +71,27 @@ export class NumericRangeInput {
 
 		//So ts doesn't complain
 		if (!range) return
-		const [start, stop] = formatRangeBounds(range)
-		this.input.node()!.value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
+		const [start, stop] = formatRangeBounds(range, this.scaleFactor)
+		this.input.node()!.value =
+			range.value != undefined ? ` x=${toDisplayValue(range.value, this.scaleFactor)} ` : `${start} x ${stop}`
 	}
+}
+
+/** convert a range parsed from the <input> text back to the unit its values are stored in */
+function toStoredUnits(range: any, scaleFactor: number) {
+	if (scaleFactor == 1) return range
+	for (const k of ['start', 'stop', 'value']) {
+		if (Number.isFinite(range[k])) range[k] = range[k] / scaleFactor
+	}
+	return range
+}
+
+/** a converted value is rounded, so that an input does not read 70.81451060916.
+ * this makes the round trip through parseRange() lossy by up to half of the last shown digit,
+ * which is immaterial for a filter range */
+function toDisplayValue(v: any, scaleFactor: number) {
+	if (scaleFactor == 1 || !Number.isFinite(Number(v))) return v
+	return Number((Number(v) * scaleFactor).toFixed(2))
 }
 
 /** Format the start and stop of a range as displayed to the user, e.g. ['10 <', '<= 20'].
@@ -78,10 +102,11 @@ export class NumericRangeInput {
  * of the applied range: rendering an exclusive bound as inclusive would silently widen a
  * saved range on apply.
  */
-export function formatRangeBounds(range: any): [string, string] {
-	const start =
-		range.startunbounded || range.start == undefined ? '' : `${range.start} ${range.startinclusive ? '<=' : '<'}`
-	const stop = range.stopunbounded || range.stop == undefined ? '' : `${range.stopinclusive ? '<=' : '<'} ${range.stop}`
+export function formatRangeBounds(range: any, scaleFactor = 1): [string, string] {
+	const startV = toDisplayValue(range.start, scaleFactor)
+	const stopV = toDisplayValue(range.stop, scaleFactor)
+	const start = range.startunbounded || range.start == undefined ? '' : `${startV} ${range.startinclusive ? '<=' : '<'}`
+	const stop = range.stopunbounded || range.stop == undefined ? '' : `${range.stopinclusive ? '<=' : '<'} ${stopV}`
 	return [start, stop]
 }
 

@@ -5,6 +5,7 @@ import type { BoundaryOpts, LineData } from './NumericDensity.ts'
 import type { TermSetting } from '../TermSetting.ts'
 import type { CustomNumericBinConfig, CustomNumericBinConfigLst, StartUnboundedBin, StopUnboundedBin } from '#types'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
+import { toUserUnit, toStoredUnit } from '#shared/helpers.js'
 
 // This is a bin editor for NumDiscreteEditor
 // NumericHandler (handler) -> NumDiscreteEditor (editor) -> NumCustomBinEditor (bin editor)
@@ -25,16 +26,30 @@ export class NumCustomBinEditor {
 		this.termsetting = editHandler.termsetting
 	}
 
+	/* bin boundaries are stored in the term's own unit but entered and shown in its user-facing one.
+	both are identity functions unless the term declares valueConversion{} */
+	toDisplay(v) {
+		return toUserUnit(v, this.tw.term)
+	}
+
+	toStored(v) {
+		return toStoredUnit(v, this.tw.term)
+	}
+
 	async render(div) {
 		this.tw = this.editHandler.tw as NumCustomBins
-		this.q = this.getDefaultQ()
+		/* the inputs are still mounted when the user is returning to this tab, in which case they may
+		hold boundary edits that have not been applied yet. q must be kept then: it is what the edits
+		were parsed into, and resetting it to tw.q would redraw the boundary lines from the saved bins
+		while the textarea, left alone by the early return below, still shows the edits */
+		const isRemounting =
+			!!this.dom.inputsDiv && this.editHandler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())
+		if (!isRemounting) this.q = this.getDefaultQ()
 		await this.editHandler.handler.density.setBinLines(this.getBoundaryOpts())
+		if (isRemounting) return
 		if (this.dom.inputsDiv) {
-			if (this.editHandler.dom.binsDiv?.node().contains(this.dom.inputsDiv.node())) return
-			else {
-				this.dom.inputsDiv.remove()
-				delete this.dom.inputsDiv
-			}
+			this.dom.inputsDiv.remove()
+			delete this.dom.inputsDiv
 		}
 		this.dom.inputsDiv = div.append('div').style('display', 'flex').style('width', '100%')
 		this.renderCustomBinInputs()
@@ -42,11 +57,17 @@ export class NumCustomBinEditor {
 
 	getBoundaryOpts(): BoundaryOpts {
 		return {
-			values: this.q.lst.slice(1).map(bin => ({ x: bin.startunbounded ? bin.stop : bin.start, isDraggable: true })),
+			values: this.q.lst
+				.slice(1)
+				.map(bin => ({ x: this.toDisplay(bin.startunbounded ? bin.stop : bin.start), isDraggable: true })),
+			// the dragged value arrives in display units, matching what the textarea holds
 			callback: (d: LineData, value) => {
-				const boundaryValues = this.q.lst.slice(1).map(d => ('start' in d ? d.start : ''))
+				const boundaryValues = this.q.lst.slice(1).map(d => ('start' in d ? this.toDisplay(d.start) : ''))
 				boundaryValues[d.index] = value
-				this.dom.customBinBoundaryInput.text(boundaryValues.join(',\n'))
+				/* one boundary per line, no separator: processCustomBinInputs() splits on newline and
+				drops any line that is not a number, so a trailing comma would discard the boundary.
+				set .value and not the child text, which stops reflecting into it once the user types */
+				this.dom.customBinBoundaryInput.property('value', boundaryValues.join('\n'))
 				this.handleInputChange('drag')
 				return 0
 			}
@@ -58,7 +79,7 @@ export class NumCustomBinEditor {
 			const copy = JSON.parse(JSON.stringify(this.tw.q))
 			copy.lst.forEach(bin => {
 				if (!bin.label) bin.label = get_bin_label(bin, this.tw.q, this.tw.term.valueConversion)
-				bin.range = get_bin_range_equation(bin, this.tw.q)
+				bin.range = get_bin_range_equation(bin, this.tw.q, this.tw.term.valueConversion)
 			})
 			return copy
 		}
@@ -99,12 +120,12 @@ export class NumCustomBinEditor {
 				{
 					...firstBin,
 					label: get_bin_label(firstBin, this.tw.q, this.tw.term.valueConversion),
-					range: get_bin_range_equation(firstBin, this.tw.q)
+					range: get_bin_range_equation(firstBin, this.tw.q, this.tw.term.valueConversion)
 				},
 				{
 					...lastBin,
 					label: get_bin_label(lastBin, this.tw.q, this.tw.term.valueConversion),
-					range: get_bin_range_equation(lastBin, this.tw.q)
+					range: get_bin_range_equation(lastBin, this.tw.q, this.tw.term.valueConversion)
 				} //satisfies StopUnboundedBin
 			]
 		}
@@ -127,7 +148,7 @@ export class NumCustomBinEditor {
 			.text(
 				q.lst
 					.slice(1)
-					.map(d => ('start' in d ? d.start : ''))
+					.map(d => ('start' in d ? this.toDisplay(d.start) : ''))
 					.join('\n')
 			)
 			.on('change', () => this.handleInputChange())
@@ -236,8 +257,9 @@ export class NumCustomBinEditor {
 		const trackBins = new Set(inputData)
 		if (!trackBins.size) return this.tw.q.lst
 
+		// the textarea holds boundaries in the term's user-facing unit; q.lst stores them in its own
 		const sortedBins = Array.from(trackBins)
-			.map(Number)
+			.map(v => this.toStored(Number(v)))
 			.sort((a, b) => a - b)
 
 		const data: CustomNumericBinConfigLst = [
@@ -252,7 +274,7 @@ export class NumCustomBinEditor {
 		]
 		// first bin
 		if (!data[0].label) data[0].label = get_bin_label(data[0], self.q, self.term.valueConversion)
-		if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
+		if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q, self.term.valueConversion)
 		for (const [i, d] of sortedBins.entries()) {
 			let bin
 			const label = inputs[i + 1]?.value || ''
@@ -279,7 +301,8 @@ export class NumCustomBinEditor {
 			}
 
 			if (bin.label === '' || bin.label === undefined) bin.label = get_bin_label(bin, self.q, self.term.valueConversion)
-			if (bin.range === '' || bin.range === undefined) bin.range = get_bin_range_equation(bin, self.q)
+			if (bin.range === '' || bin.range === undefined)
+				bin.range = get_bin_range_equation(bin, self.q, self.term.valueConversion)
 			data.push(bin)
 		}
 		return data

@@ -3,6 +3,7 @@ import { NumericHandler } from '../NumericHandler.ts'
 import type { NumDiscreteEditor } from '../NumDiscreteEditor.ts'
 import { termjson } from '../../../test/testdata/termjson'
 import { agedx as agedxViolinData } from '../../../test/testdata/violinPlotData.js'
+import { sleep } from '../../../test/test.helpers'
 import { TwRouter } from '#tw'
 import * as d3s from 'd3-selection'
 
@@ -11,7 +12,7 @@ import * as d3s from 'd3-selection'
 **************************/
 
 async function getNumericHandler(opts: any = {}) {
-	const term = JSON.parse(JSON.stringify(termjson.agedx))
+	const term = opts.term || JSON.parse(JSON.stringify(termjson.agedx))
 	if (term.bins.default.type == 'regular-bin') term.bins.default.bin_size = 500
 
 	const rawTw = {
@@ -180,6 +181,46 @@ tape('initial rendered UI', async test => {
 			rounding: '.0f'
 		},
 		`should give the expected edited tw.q object`
+	)
+
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
+tape('re-showing the menu for a term whose default bin type is custom-bin', async test => {
+	// as gdc "age at diagnosis" is configured. such a term gets no regular/custom bin switch,
+	// so the editor never builds the tabs that the re-entry path reads a content holder from
+	const term = JSON.parse(JSON.stringify(termjson.agedx))
+	term.bins = {
+		default: {
+			mode: 'discrete',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stop: 10950, stopinclusive: true, label: '<=30 years' },
+				{ start: 10950, stop: 21900, stopinclusive: true, label: '30-60 years' },
+				{ start: 21900, stopunbounded: true, startinclusive: false, label: '>60 years' }
+			]
+		}
+	}
+
+	const { editHandler, holder, destroy } = await getNumericHandler({ term })
+	await editHandler.showEditMenu(holder)
+	await sleep(0)
+	test.equal(editHandler.tabs, undefined, `should not render a regular/custom bin switch`)
+
+	// toggling to Continuous and back calls showEditMenu() again with the same content holder
+	let err
+	try {
+		await editHandler.showEditMenu(holder)
+		await sleep(0)
+	} catch (e: any) {
+		err = e
+	}
+	test.equal(err, undefined, `should not throw when the menu is shown again on the same holder`)
+	test.equal(
+		holder.node()!.querySelectorAll('textarea').length,
+		1,
+		`should keep the custom bin boundary input rendered`
 	)
 
 	if ((test as any)._ok) destroy()

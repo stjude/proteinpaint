@@ -276,3 +276,61 @@ tape('edit interactivity', async test => {
 	if ((test as any)._ok) destroy()
 	test.end()
 })
+
+tape('dragging a boundary line with more than one boundary', async test => {
+	const { editHandler, binsEditor, holder, destroy } = await getNumericHandler()
+	await editHandler.showEditMenu(holder)
+
+	// two boundaries, so that the dragged one and the untouched one must both survive
+	binsEditor.dom.customBinBoundaryInput.property('value', [10, 200].join('\n'))
+	binsEditor.dom.customBinBoundaryInput.node().dispatchEvent(new Event('change', { bubbles: true }))
+
+	// drag the second line, as NumericDensity does on each drag and again on drag end
+	const drag = value => (binsEditor.getBoundaryOpts().callback as any)({ index: 1 }, value)
+	drag(500)
+	drag(500)
+
+	test.equal(
+		binsEditor.dom.customBinBoundaryInput.property('value'),
+		'10\n500',
+		`should list one boundary per line, keeping the boundary that was not dragged`
+	)
+	test.deepEqual(
+		binsEditor.q.lst.map(bin => ('start' in bin ? bin.start : null)),
+		[null, 10, 500],
+		`should keep every bin, moving only the dragged boundary`
+	)
+
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
+tape('returning to the tab with unapplied bin boundary edits', async test => {
+	const { editHandler, binsEditor, holder, destroy } = await getNumericHandler()
+	await editHandler.showEditMenu(holder)
+
+	// edit the boundaries, without clicking Apply
+	binsEditor.dom.customBinBoundaryInput.property('value', [10, 200].join('\n'))
+	binsEditor.dom.customBinBoundaryInput.node().dispatchEvent(new Event('change', { bubbles: true }))
+	const getLineXs = () =>
+		[...editHandler.handler.density.dom.binsize_g.node().querySelectorAll('line')].map(l => l.getAttribute('x1'))
+	const editedLineXs = getLineXs()
+
+	// toggling to Continuous and back re-renders this editor into the holder it is already in
+	await binsEditor.render(editHandler.dom.binsDiv.node().firstChild)
+
+	test.deepEqual(getLineXs(), editedLineXs, `should leave the boundary lines at the edited positions`)
+	test.equal(
+		binsEditor.dom.customBinBoundaryInput.property('value'),
+		'10\n200',
+		`should leave the edited bin boundaries in the textarea`
+	)
+	test.deepEqual(
+		binsEditor.q.lst.map(bin => ('start' in bin ? bin.start : null)),
+		[null, 10, 200],
+		`should leave the bins parsed from the edits in q`
+	)
+
+	if ((test as any)._ok) destroy()
+	test.end()
+})

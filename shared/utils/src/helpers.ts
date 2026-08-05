@@ -52,6 +52,35 @@ export function getValueConversionFactor(term): number {
 	return Number.isFinite(f) && f > 0 ? f : 1
 }
 
+/*
+the pair below moves a numeric value across the boundary between what is stored and what is shown.
+a term's values, and everything derived from them that is persisted (bin boundaries, tvs ranges,
+spline knots), stay in .fromUnit, because that is what the server filters and bins by. only what a
+user reads or types is in .toUnit. so a ui that shows an editable number calls toUserUnit() to fill
+the input and toStoredUnit() to read it back
+
+toUserUnit() rounds, since an unrounded 70.81451060916 is no more readable than the raw value it
+replaced. that makes the round trip lossy by up to half of the last shown digit, which is immaterial
+for a bin boundary or filter range but is why toStoredUnit() does not round again
+*/
+export function toUserUnit(v, term, digits = 2): number {
+	if (!isConvertible(v, term)) return v
+	return Number((Number(v) * getValueConversionFactor(term)).toFixed(digits))
+}
+
+export function toStoredUnit(v, term): number {
+	if (!isConvertible(v, term)) return v
+	return Number(v) / getValueConversionFactor(term)
+}
+
+/* a blank or non-numeric input is handed back untouched rather than coerced, so that a caller's
+own handling of it (an empty <input>, an unbounded bin edge) is not silently turned into a 0 */
+function isConvertible(v, term) {
+	if (getValueConversionFactor(term) == 1) return false
+	if (v === '' || v === null || v === undefined) return false
+	return Number.isFinite(Number(v))
+}
+
 export function deepEqual(x, y) {
 	if (x === y) {
 		return true
