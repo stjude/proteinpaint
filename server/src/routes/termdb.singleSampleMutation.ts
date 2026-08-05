@@ -17,9 +17,13 @@ export const payload: RoutePayload = {
 	response: { typeId: 'TermdbSingleSampleMutationResponse' }
 }
 
-/* q.skipDt and (for gdc) q.cnvType are server-internal, set only by callers that invoke the getter
-directly (GRIN2); they never arrive over http, and the middleware merges this return onto req.query
-rather than replacing it, so not listing them here does not drop them. */
+/* q.skipDt and (for gdc) q.cnvType are server-internal, set by callers that invoke the getter
+directly (GRIN2), and are deliberately not listed here. That does NOT mean a request cannot carry
+them: POST bodies merge into req.query, and the middleware Object.assign()s this return onto
+req.query rather than replacing it, so any key not named here survives onto q. Treat both as
+untrusted on the http path -- each getter validates them by type/shape before use (the instanceof
+Set guard below, and the equivalents in ppgdc's singleSampleMutation.ts) rather than assuming
+they are absent. */
 function validTermdbSingleSampleMutationRequest(input): TermdbSingleSampleMutationRequest {
 	// sample is typed string|number -- termdbtest and possibly other ds use integer sample names.
 	// normalize to string, which is what every getter and path.join() actually needs. rejects a
