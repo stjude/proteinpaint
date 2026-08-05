@@ -4,7 +4,7 @@ import type { NumericBin } from '#types'
 import { violinRenderer } from '#dom'
 import { select, pointer, type BaseType } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
-import { getValueConversionFactor, toUserUnit } from '#shared/helpers.js'
+import { getValueConversionFactor } from '#shared/helpers.js'
 //import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins.js'
 
 export type BoundaryOpts = {
@@ -69,17 +69,23 @@ export class NumericDensity {
 
 	/* the boundary values exchanged with the bin/knot editors, and the domain of this.xscale, are in
 	the term's user-facing unit; density_data is in the unit the values are stored in. only the two
-	getters below cross that line, so that an editor can validate a typed value against the plot range */
+	getters below cross that line, to put the plot's endpoints in the same unit as those values.
+
+	they multiply instead of calling toUserUnit(), which rounds: rounding is right for a number shown
+	in an input, but a rounded domain endpoint distorts every scaled x by up to half of the last shown
+	digit, and collapses the domain outright when the converted range is smaller than that (a stored
+	range of under 2 days at scaleFactor=1/365.25). it would also disagree with violinRenderer, whose
+	axis this plot's lines overlay and which scales its own domain unrounded */
 	get scaleFactor() {
 		return getValueConversionFactor(this.tw.term)
 	}
 
 	get displayMin() {
-		return toUserUnit(this.density_data.min, this.tw.term)
+		return this.density_data.min * this.scaleFactor
 	}
 
 	get displayMax() {
-		return toUserUnit(this.density_data.max, this.tw.term)
+		return this.density_data.max * this.scaleFactor
 	}
 
 	async setData() {
@@ -208,11 +214,57 @@ export class NumericDensity {
 
 		const lineElems = this.dom.binsize_g.node().querySelectorAll('line')
 
-		function onDrag(this: any, event: PointerEvent, _d: any) {
-			const draggedX: number = pointer(event, this)[0]
-			if (draggedX <= scaledMinX || draggedX >= scaledMaxX) return
+		/* the boundary value that a line at this x reports. a converted value is on a much smaller
+		scale than what it was converted from (e.g. 70 years vs 25868 days), so rounding an integer
+		term to a whole number would make the line jump by a year at a time. round to 2 decimals in
+		that case instead */
+		function toBoundaryValue(x: number): number {
+			const inverted = xscale.invert(x)
+			return Number(
+				scaleFactor != 1 ? inverted.toFixed(2) : tw.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
+			)
+		}
 
+		// the boundary a line currently stands for, which is its dragged position once it has been moved
+		function toLineValue(line: DraggedLineData): number {
+			return line.draggedX === undefined ? line.x : toBoundaryValue(line.draggedX)
+		}
+
+		/* the nearest draggable line on either side, if there is one. a boundary may not be dragged
+		onto or past one of them: an editor addresses a boundary by the index its line had when the
+		lines were rendered, so two boundaries that swap order make the next drag event overwrite the
+		wrong one, and two boundaries of the same value are merged into a single one, leaving the
+		editor with fewer boundaries than the plot has lines */
+		function getNeighbors(d: DraggedLineData): [DraggedLineData | undefined, DraggedLineData | undefined] {
+			const x = d.draggedX ?? d.scaledX
+			let lower, upper
+			for (const line of lines) {
+				if (line.index === d.index || !line.isDraggable) continue
+				const lineX = line.draggedX ?? line.scaledX
+				if (lineX <= x) {
+					if (!lower || lineX > (lower.draggedX ?? lower.scaledX)) lower = line
+				} else if (!upper || lineX < (upper.draggedX ?? upper.scaledX)) upper = line
+			}
+			return [lower, upper]
+		}
+
+		function onDrag(this: any, event: PointerEvent, _d: any) {
 			const d = _d as DraggedLineData
+			const [lower, upper] = getNeighbors(d)
+			/* a line follows the pointer but stops at the edge of the plot and at its neighboring
+			lines. clamping rather than ignoring an out of bounds drag keeps a line draggable when it
+			starts outside those limits, as a boundary kept from a wider cohort does: its line is
+			drawn past the edge of the plot, where every pointer position is out of bounds */
+			const lowerX = Math.max(scaledMinX, lower ? lower.draggedX ?? lower.scaledX : scaledMinX)
+			const upperX = Math.min(scaledMaxX, upper ? upper.draggedX ?? upper.scaledX : scaledMaxX)
+			if (upperX - lowerX < 2) return // no room to drag between the limits
+			const draggedX = Math.min(Math.max(pointer(event, this)[0], lowerX + 1), upperX - 1)
+			const value = toBoundaryValue(draggedX)
+			/* the rounded value may still land on a neighboring boundary a pixel or two away. the
+			edges of the plot are not boundaries, so only a neighboring line is compared */
+			if (lower && value === toLineValue(lower)) return
+			if (upper && value === toLineValue(upper)) return
+
 			d.draggedX = draggedX
 			select(this).attr('x1', d.draggedX).attr('y1', 0).attr('x2', d.draggedX).attr('y2', plot_size.height)
 
@@ -229,17 +281,7 @@ export class NumericDensity {
 						.attr('x2', c.draggedX)
 						.style('display', c.draggedX >= lastVisibleScaledX ? 'none' : '')
 				}
-				const inverted = xscale.invert(d.draggedX)
-				/* a converted value is on a much smaller scale than what it was converted from
-				(e.g. 70 years vs 25868 days), so rounding an integer term to a whole number would
-				make the line jump by a year at a time. round to 2 decimals in that case instead */
-				const value =
-					scaleFactor != 1
-						? inverted.toFixed(2)
-						: tw.term.type == 'integer'
-						? Math.round(inverted)
-						: inverted.toFixed(3)
-				boundaryOpts.callback(d, Number(value))
+				boundaryOpts.callback(d, value)
 			}
 		}
 	}

@@ -14,8 +14,19 @@ import * as d3s from 'd3-selection'
 const pct50 = 6.3475409836
 const pct70 = 1000.36986301355
 
-async function getNumericHandler(opts: any = {}) {
+/* a term with valueConversion{} stores its values in one unit (e.g. day) and is read by users in
+another (e.g. year). q.lst keeps the stored unit, while the textarea and the density plot show the
+user-facing one. 365.25 days is 1 year */
+const DAY_TO_YEAR = 1 / 365.25
+
+function getConvertedTerm() {
 	const term = JSON.parse(JSON.stringify(termjson.agedx))
+	term.valueConversion = { fromUnit: 'day', toUnit: 'year', scaleFactor: DAY_TO_YEAR }
+	return term
+}
+
+async function getNumericHandler(opts: any = {}) {
+	const term = opts.term || JSON.parse(JSON.stringify(termjson.agedx))
 	const rawTw = {
 		term,
 		q: {
@@ -91,6 +102,19 @@ async function getNumericHandler(opts: any = {}) {
 			if (typeof handler.destroy == 'function') handler.destroy()
 			holder.remove()
 		}
+	}
+}
+
+/* drag a rendered boundary line, as a user does: d3 emits a drag event for the move and another
+for the release, so the boundary callback is called twice with the same x */
+function simulateDrag(elem, xOffset) {
+	const box = elem.getBoundingClientRect()
+	for (const [type, clientX] of [
+		['mousedown', box.x],
+		['mousemove', box.x + xOffset],
+		['mouseup', box.x + xOffset]
+	] as [string, number][]) {
+		elem.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, clientX, clientY: box.y, view: window }))
 	}
 }
 
@@ -305,6 +329,42 @@ tape('dragging a boundary line with more than one boundary', async test => {
 	test.end()
 })
 
+tape('dragging a bin boundary line towards its neighboring line', async test => {
+	const { editHandler, binsEditor, holder, destroy } = await getNumericHandler()
+	await editHandler.showEditMenu(holder)
+
+	binsEditor.dom.customBinBoundaryInput.property('value', [10, 200].join('\n'))
+	binsEditor.dom.customBinBoundaryInput.node().dispatchEvent(new Event('change', { bubbles: true }))
+	const getLines = () => [...editHandler.handler.density.dom.binsize_g.node().querySelectorAll('line')]
+	const getBoundaries = () => binsEditor.dom.customBinBoundaryInput.property('value').split('\n')
+	test.equal(getLines().length, 2, `should render one line per boundary`)
+
+	/* q.lst is kept sorted and the callback addresses a boundary by the index of its line, so a
+	boundary dragged past its neighbor would be written back as the neighbor by the next drag event,
+	and a boundary dragged onto its neighbor would be merged with it. either leaves the textarea
+	holding fewer boundaries than the plot is showing lines */
+	simulateDrag(getLines()[0], 400)
+	test.deepEqual(getBoundaries(), ['188.4', '200'], `should stop the dragged boundary below the neighboring one`)
+	test.deepEqual(
+		binsEditor.q.lst.map(bin => ('start' in bin ? bin.start : null)),
+		[null, 188.4, 200],
+		`should keep every bin when a drag is stopped at the neighboring line`
+	)
+	test.equal(getLines().length, 2, `should keep one line per boundary when a drag is stopped at the neighboring line`)
+
+	// a drag that stays on its own side of the neighbor moves only the boundary it was started on
+	simulateDrag(getLines()[0], -10)
+	test.deepEqual(getBoundaries(), ['94.2', '200'], `should move only the dragged boundary`)
+	test.deepEqual(
+		binsEditor.q.lst.map(bin => ('start' in bin ? bin.start : null)),
+		[null, 94.2, 200],
+		`should keep every bin, moving only the dragged boundary`
+	)
+
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
 tape('returning to the tab with unapplied bin boundary edits', async test => {
 	const { editHandler, binsEditor, holder, destroy } = await getNumericHandler()
 	await editHandler.showEditMenu(holder)
@@ -329,6 +389,46 @@ tape('returning to the tab with unapplied bin boundary edits', async test => {
 		binsEditor.q.lst.map(bin => ('start' in bin ? bin.start : null)),
 		[null, 10, 200],
 		`should leave the bins parsed from the edits in q`
+	)
+
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
+tape('converted term', async test => {
+	const { editHandler, binsEditor, holder, destroy } = await getNumericHandler({ term: getConvertedTerm() })
+	await editHandler.showEditMenu(holder)
+
+	// the default boundary comes from the median of the stored values, and reads in years
+	test.equal(
+		binsEditor.dom.customBinBoundaryInput.property('value'),
+		String(Number((pct50 * DAY_TO_YEAR).toFixed(2))),
+		`should fill the boundary textarea in years`
+	)
+
+	// enter boundaries in years
+	binsEditor.dom.customBinBoundaryInput.property('value', [5, 10].join('\n'))
+	binsEditor.dom.customBinBoundaryInput.node().dispatchEvent(new Event('change', { bubbles: true }))
+	test.deepEqual(
+		binsEditor.q.lst.map(bin => ('start' in bin ? bin.start : null)),
+		[null, 1826.25, 3652.5],
+		`should store boundaries typed in years as days`
+	)
+
+	const editedQ = binsEditor.getEditedQ(false)
+	test.deepEqual(
+		editedQ.lst.map(bin => ({ start: 'start' in bin ? bin.start : null, stop: 'stop' in bin ? bin.stop : null })),
+		[
+			{ start: null, stop: 1826.25 },
+			{ start: 1826.25, stop: 3652.5 },
+			{ start: 3652.5, stop: null }
+		],
+		`should give an edited q whose bins are in days`
+	)
+	test.deepEqual(
+		editedQ.lst.map(bin => bin.label),
+		['≤5y', '>5y to 10y', '>10y'],
+		`should label the bins in years`
 	)
 
 	if ((test as any)._ok) destroy()

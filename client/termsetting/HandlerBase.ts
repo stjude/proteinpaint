@@ -48,9 +48,10 @@ export class HandlerBase implements Handler {
 		if (!vc) return
 		div
 			.append('div')
-			.style('margin-bottom', '5px')
+			.style('margin', '0px 0px 10px 10px')
 			.style('opacity', 0.6)
-			.text(`Note: using values by the unit of ${vc.fromUnit}.`)
+			// the editors show and read values in the user-facing unit, so that is the unit to name
+			.text(`Note: using values by the unit of ${vc.toUnit}.`)
 	}
 
 	showLoading(_div?: any) {

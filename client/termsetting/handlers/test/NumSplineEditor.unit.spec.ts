@@ -10,11 +10,22 @@ import * as d3s from 'd3-selection'
  reusable helper functions
 **************************/
 
-async function getNumericHandler(opts: any = {}) {
+/* a term with valueConversion{} stores its values in one unit (e.g. day) and is read by users in
+another (e.g. year). q.knots keep the stored unit, while the textarea and the density plot show the
+user-facing one. 365.25 days is 1 year */
+const DAY_TO_YEAR = 1 / 365.25
+
+function getConvertedTerm() {
 	const term = JSON.parse(JSON.stringify(termjson.agedx))
+	term.valueConversion = { fromUnit: 'day', toUnit: 'year', scaleFactor: DAY_TO_YEAR }
+	return term
+}
+
+async function getNumericHandler(opts: any = {}) {
+	const term = opts.term || JSON.parse(JSON.stringify(termjson.agedx))
 	const rawTw = {
 		term,
-		q: {
+		q: opts.q || {
 			mode: 'spline',
 			//[{value: 0.04}, {value: 3.13}, {value: 8.16}, {value: 17.87}]
 			knots: [{ value: 10 }, { value: 100 }, { value: 500 }, { value: 1000 }]
@@ -175,6 +186,37 @@ tape('knots interactivity', async test => {
 			`should render the draggable lines in the expected x-positions`
 		)
 	}
+
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
+tape('converted term', async test => {
+	// knots of 1, 5, 8 and 10 years, stored as days
+	const q = { mode: 'spline', knots: [365.25, 1826.25, 2922, 3652.5].map(value => ({ value })) }
+	const { editHandler, holder, destroy } = await getNumericHandler({ term: getConvertedTerm(), q })
+	await editHandler.showEditMenu(holder)
+
+	test.equal(
+		editHandler.dom.customKnotsInput.property('value'),
+		'1\n5\n8\n10',
+		`should fill the knots textarea in years`
+	)
+	// the note applies to the plot and to the knot inputs below it, so it reads directly under the plot
+	test.equal(
+		editHandler.dom.density_div.node().nextSibling.firstChild.innerText.includes('unit of year'),
+		true,
+		`should note the unit immediately under the density plot`
+	)
+
+	// enter knots in years
+	editHandler.dom.customKnotsInput.property('value', [2, 6].join('\n'))
+	editHandler.dom.customKnotsInput.node().dispatchEvent(new Event('change', { bubbles: true }))
+	test.deepEqual(
+		editHandler.getEditedQ(false),
+		{ mode: 'spline', knots: [{ value: 730.5 }, { value: 2191.5 }] },
+		`should give an edited q whose knots are in days`
+	)
 
 	if ((test as any)._ok) destroy()
 	test.end()

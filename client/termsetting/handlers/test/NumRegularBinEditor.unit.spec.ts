@@ -11,9 +11,26 @@ import * as d3s from 'd3-selection'
  reusable helper functions
 **************************/
 
-async function getNumericHandler(opts: any = {}) {
+/* a term with valueConversion{} stores its values in one unit (e.g. day) and is read by users in
+another (e.g. year). q keeps the stored unit, while every <input> and the density plot show the
+user-facing one, so a mix-up silently rewrites a saved q. 365.25 days is 1 year */
+const DAY_TO_YEAR = 1 / 365.25
+
+function getConvertedTerm() {
 	const term = JSON.parse(JSON.stringify(termjson.agedx))
-	if (term.bins.default.type == 'regular-bin') term.bins.default.bin_size = 500
+	term.valueConversion = { fromUnit: 'day', toUnit: 'year', scaleFactor: DAY_TO_YEAR }
+	term.bins.default = {
+		type: 'regular-bin',
+		label_offset: 1,
+		bin_size: 365.25,
+		first_bin: { startunbounded: true, stop: 365.25 }
+	}
+	return term
+}
+
+async function getNumericHandler(opts: any = {}) {
+	const term = opts.term || JSON.parse(JSON.stringify(termjson.agedx))
+	if (term.bins.default.type == 'regular-bin' && !opts.term) term.bins.default.bin_size = 500
 
 	const rawTw = {
 		term,
@@ -213,6 +230,67 @@ tape('edit interactivity', async test => {
 		)
 	}
 
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
+tape('converted term', async test => {
+	// an out of bound input alerts, which would otherwise block the headless browser
+	const alerts: string[] = []
+	const origAlert = window.alert
+	window.alert = (msg: any) => alerts.push(msg)
+
+	const { editHandler, binsEditor, holder, destroy } = await getNumericHandler({ term: getConvertedTerm() })
+	await editHandler.showEditMenu(holder)
+
+	// the inputs are filled from q, which is in the stored unit, and must read in the user-facing one
+	test.equal(binsEditor.dom.bin_size_input.property('value'), '1', `should fill the bin size input in years`)
+	test.equal(binsEditor.dom.first_stop_input.property('value'), '1', `should fill the first bin stop input in years`)
+	test.equal(binsEditor.q.bin_size, 365.25, `should keep the bin size of q in days`)
+	/* the note applies to the plot and to every input below it, so it reads directly under the plot
+	rather than between the rows it applies to */
+	const note = editHandler.dom.density_div.node().nextSibling
+	test.equal(note?.innerText.includes('unit of year'), true, `should note the unit immediately under the density plot`)
+	test.equal(
+		editHandler.dom.boundaryInclusionDiv.node().previousSibling,
+		note,
+		`should note the unit above the boundary inclusion row`
+	)
+
+	/* edit in years. 2.5 is not a whole number of days, so it also covers that q.rounding cannot be
+	derived from the decimals of a converted input: it formats the stored bin size, not the typed one */
+	binsEditor.dom.bin_size_input.property('value', 2.5)
+	binsEditor.dom.bin_size_input.node().dispatchEvent(new Event('change', { bubbles: true }))
+	test.equal(binsEditor.q.bin_size, 913.125, `should store a bin size typed in years as days`)
+
+	binsEditor.dom.first_stop_input.property('value', 3)
+	binsEditor.dom.first_stop_input.node().dispatchEvent(new Event('change', { bubbles: true }))
+	binsEditor.dom.fixed_radio.property('checked', true)
+	binsEditor.dom.fixed_radio.node().dispatchEvent(new Event('input', { bubbles: true }))
+	binsEditor.dom.last_start_input.property('value', 10)
+	binsEditor.dom.last_start_input.node().dispatchEvent(new Event('change', { bubbles: true }))
+
+	test.deepEqual(
+		editHandler.getEditedQ(false),
+		{
+			mode: 'discrete',
+			type: 'regular-bin',
+			startinclusive: false,
+			stopinclusive: true,
+			bin_size: 913.125,
+			first_bin: { startunbounded: true, stop: 1095.75 },
+			rounding: '.0f',
+			last_bin: { start: 3652.5, stopunbounded: true }
+		},
+		`should give an edited q in the stored unit, rounding the bin labels as whole days`
+	)
+
+	/* the bounds are checked against the values the user sees. converting the plot maximum for the
+	input rounds it, and 12.9 years is more days than the 4710 that were converted to it, so checking
+	the converted value back against the stored maximum would reject the very number just filled in */
+	test.deepEqual(alerts, [], `should not alert for a value that the editor filled in itself`)
+
+	window.alert = origAlert
 	if ((test as any)._ok) destroy()
 	test.end()
 })

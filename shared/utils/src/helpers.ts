@@ -63,7 +63,7 @@ toUserUnit() rounds, since an unrounded 70.81451060916 is no more readable than 
 replaced. that makes the round trip lossy by up to half of the last shown digit, which is immaterial
 for a bin boundary or filter range but is why toStoredUnit() does not round again
 */
-export function toUserUnit(v, term, digits = 2): number {
+export function toUserUnit(v, term, digits = 2) {
 	if (!isConvertible(v, term)) return v
 	return Number((Number(v) * getValueConversionFactor(term)).toFixed(digits))
 }

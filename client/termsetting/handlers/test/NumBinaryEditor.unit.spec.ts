@@ -14,8 +14,19 @@ import * as d3s from 'd3-selection'
 const pct50 = 6.3475409836
 const pct70 = 1000.36986301355
 
-async function getNumericHandler(opts: any = {}) {
+/* a term with valueConversion{} stores its values in one unit (e.g. day) and is read by users in
+another (e.g. year). q.lst keeps the stored unit, while the cutoff <input> and the density plot show
+the user-facing one. 365.25 days is 1 year */
+const DAY_TO_YEAR = 1 / 365.25
+
+function getConvertedTerm() {
 	const term = JSON.parse(JSON.stringify(termjson.agedx))
+	term.valueConversion = { fromUnit: 'day', toUnit: 'year', scaleFactor: DAY_TO_YEAR }
+	return term
+}
+
+async function getNumericHandler(opts: any = {}) {
+	const term = opts.term || JSON.parse(JSON.stringify(termjson.agedx))
 	const rawTw = {
 		term,
 		q: {
@@ -273,6 +284,38 @@ tape('cutoff interactivity', async test => {
 			`should render a draggable line in the expected x-position`
 		)
 	}
+	if ((test as any)._ok) destroy()
+	test.end()
+})
+
+tape('converted term', async test => {
+	const { editHandler, holder, destroy } = await getNumericHandler({ term: getConvertedTerm() })
+	await editHandler.showEditMenu(holder)
+
+	// the default cutoff comes from the median of the stored values, and reads in years
+	test.equal(
+		editHandler.dom.cutoffInput.property('value'),
+		String(Number((pct50 * DAY_TO_YEAR).toFixed(2))),
+		`should fill the cutoff input in years`
+	)
+
+	// enter a cutoff in years
+	editHandler.dom.cutoffInput.property('value', 5)
+	editHandler.dom.cutoffInput.node().dispatchEvent(new Event('change', { bubbles: true }))
+
+	const editedQ = editHandler.getEditedQ(false)
+	test.deepEqual(
+		[editedQ.lst[0].stop, editedQ.lst[1].start],
+		[1826.25, 1826.25],
+		`should store a cutoff typed in years as days`
+	)
+	test.deepEqual(
+		editedQ.lst.map(bin => bin.label),
+		// the default boundary inclusion is stopinclusive
+		['≤5y', '>5y'],
+		`should label the two bins in years`
+	)
+
 	if ((test as any)._ok) destroy()
 	test.end()
 })
