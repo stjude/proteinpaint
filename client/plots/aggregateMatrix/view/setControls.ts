@@ -1,22 +1,23 @@
 import type { AggregateMatrix } from "../AggregateMatrix"
 import { controlsInit } from '#plots/controls.js'
 import { validateMinMax } from '../settings/defaults.ts'
-import { capitalizeFirstLetter } from '#dom'
+import { capitalizeFirstLetter, DownloadMenu } from '#dom'
+
 
 export async function setControls(controlsDiv, ag: AggregateMatrix) {
 	const settings = ag.state.config.settings.aggregateMatrix
 	const chartType = ag.type
-	const gradienLabel = capitalizeFirstLetter(settings.gradientMethod)
+	const gradientLabel = capitalizeFirstLetter(settings.gradientMethod)
 
 	const inputs: any = [
 		{
-				label: `${gradienLabel} start color`,
+				label: `${gradientLabel} start color`,
 				type: 'color',
 				chartType,
 				settingsKey: 'startColor'
 		},
 		{
-				label: `${gradienLabel} stop color`,
+				label: `${gradientLabel} stop color`,
 				type: 'color',
 				chartType,
 				settingsKey: 'stopColor'
@@ -70,5 +71,12 @@ export async function setControls(controlsDiv, ag: AggregateMatrix) {
 		id: ag.id,
 		holder: controlsDiv,
 		inputs: inputs
+	})
+
+	ag.components.controls.on('downloadClick.aggregateMatrix', async event => {
+		const name = ag.state.config.name || 'Aggregate matrix'
+		const svg = ag.dom.mainDiv.select('svg')
+		const chartImages = [{ name, svg }]
+		new DownloadMenu(chartImages, name).show(event.clientX, event.clientY)
 	})
 }
