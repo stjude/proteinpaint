@@ -728,6 +728,22 @@ output:
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (!termWrappers.length) return [{}, {}]
+	// distinguish between dictionary terms with cached or uncached data
+	const cachedTermWrappers = []
+	const uncachedTermWrappers = []
+	for (const tw of termWrappers) {
+		q.ds?.termid2sample2value?.has(tw.term.id) ? cachedTermWrappers.push(tw) : uncachedTermWrappers.push(tw)
+	}
+	// query uncached dictionary term data
+	const [samples, byTermId] = await getSampleData_dictionaryTerms_uncached(q, uncachedTermWrappers)
+	// query cached dictionary term data
+	await getSampleData_dictionaryTerms_cached(q, cachedTermWrappers, samples, byTermId)
+	// return all queried dictionary term data
+	return [samples, byTermId]
+}
+
+async function getSampleData_dictionaryTerms_uncached(q, termWrappers) {
+	if (!termWrappers.length) return [{}, {}]
 	if (q.ds?.cohort?.db) {
 		// dataset uses server-side sqlite db, must use this method for dictionary terms
 		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
@@ -741,6 +757,28 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 		return await q.ds.cohort.termdb.q?.getAdHocTermValues(q, termWrappers)
 	}
 	throw 'unknown method for dictionary terms'
+}
+
+async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, byTermId) {
+	for (const tw of termWrappers) {
+		const sample2value = q.ds.termid2sample2value.get(tw.term.id)
+		let lstOfBins // of this tw. only set when q.mode is discrete
+		if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
+			lstOfBins = await findListOfBins(q, tw, q.ds)
+			byTermId[tw.$id] = { bins: lstOfBins }
+		}
+		for (const [sample, value] of sample2value) {
+			if (!samples[sample]) samples[sample] = { sample }
+			if (samples[sample][tw.$id]) throw 'should not have multiple values for sample'
+			let key = value
+			if (lstOfBins) {
+				// term is in binning mode, key should be bin label
+				const bin = getBin(lstOfBins, value)
+				key = get_bin_label(lstOfBins[bin], tw.q)
+			}
+			samples[sample][tw.$id] = { key, value }
+		}
+	}
 }
 
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {

@@ -1,5 +1,3 @@
-import initBinConfig from '#shared/termdb.initbinconfig.js'
-
 type CellCache = {
 	cellIds: string[]
 	sampleIds: string[]
@@ -15,7 +13,7 @@ export class SingleCellMetaCache {
 	sampleName2IntId = new Map<string, any>()
 	metaIdMap = new Map<string, Map<string, string>>()
 	metaResultNames = new Set<string>()
-	cellTypeFractions?: { anno: any; terms: any }
+	cellTypeFractions?: Map<any, any>
 
 	registerCohortSample(sampleName: string, sampleIntId: any): void {
 		/** Sample INT ids correspond to the primary key in the termdb */
@@ -28,14 +26,13 @@ export class SingleCellMetaCache {
 		metaResultName: string,
 		text: string,
 		idxs: any, // TODO: update type
-		plot: any, // TODO: update type
 		sampleName2id: (sampleName: string) => any
 	): void {
 		const cellCache = this.initCellCacheFromText(text, idxs)
-		this.mapMetaResult(metaResultName, cellCache, plot, sampleName2id)
+		this.mapMetaResult(metaResultName, cellCache, sampleName2id)
 	}
 
-	// TODO: update type of idxs/plot
+	// TODO: update type of idxs
 	private initCellCacheFromText(text: string, idxs): CellCache {
 		const lines = text.trim().split('\n')
 		if (!lines[0]) throw new Error('meta result file is empty')
@@ -100,7 +97,6 @@ export class SingleCellMetaCache {
 	private mapMetaResult(
 		metaResultName: string,
 		cellCache: CellCache,
-		plot, // TODO: update type
 		sampleName2id: (sampleName: string) => any
 	): void {
 		const byCellId = new Map<string, string>()
@@ -116,20 +112,20 @@ export class SingleCellMetaCache {
 
 			byCellId.set(cellId, sampleName)
 
-			// determine cell type abundances in each sample
-			if (!sample2cellType2abundance.has(sampleName)) sample2cellType2abundance.set(sampleName, new Map())
-			const cellType2abundance = sample2cellType2abundance.get(sampleName)
-			if (!cellType2abundance.has(cellType)) cellType2abundance.set(cellType, 0)
-			const abundance = cellType2abundance.get(cellType)
-			cellType2abundance.set(cellType, abundance + 1)
-
 			const sampleIntId = sampleName2id(sampleName)
 			if (sampleIntId !== undefined) {
 				this.registerCohortSample(sampleName, sampleIntId)
 			}
+
+			// determine cell type abundances in each sample
+			if (!sample2cellType2abundance.has(sampleIntId)) sample2cellType2abundance.set(sampleIntId, new Map())
+			const cellType2abundance = sample2cellType2abundance.get(sampleIntId)
+			if (!cellType2abundance.has(cellType)) cellType2abundance.set(cellType, 0)
+			const abundance = cellType2abundance.get(cellType)
+			cellType2abundance.set(cellType, abundance + 1)
 		}
 
-		// determine cell-type fractions in each sample
+		// compute cell type fractions
 		const cellType2sample2fraction = new Map()
 		for (const [sample, cellType2abundance] of sample2cellType2abundance) {
 			const totalAbundance = [...cellType2abundance.values()].reduce((total, value) => total + value, 0)
@@ -141,23 +137,8 @@ export class SingleCellMetaCache {
 			}
 		}
 
-		// create cell type fraction terms
-		const cellTypeFractionTerms = []
-		for (const [cellType, sample2fraction] of cellType2sample2fraction) {
-			const id = cellType + '_' + plot.cellTypeColumn.name
-			const name = cellType + ' ' + plot.cellTypeColumn.name
-			const term = {
-				id,
-				name,
-				type: 'float',
-				cellType,
-				bins: { default: initBinConfig([...sample2fraction.values()]) }
-			}
-			cellTypeFractionTerms.push(term)
-		}
-
 		this.metaResultNames.add(metaResultName)
 		this.metaIdMap.set(metaResultName, byCellId)
-		this.cellTypeFractions = { anno: cellType2sample2fraction, terms: cellTypeFractionTerms }
+		this.cellTypeFractions = cellType2sample2fraction
 	}
 }
