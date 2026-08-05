@@ -221,7 +221,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					if (!D.addCellTypeFractionTerms) throw new Error('missing addCellTypeFractionTerms() method')
 					D.addCellTypeFractionTerms(cellTypeFractionTerms, ds)
 					// cache term data
-					ds.termid2sample2value = new Map()
+					if (!ds.termid2sample2value) ds.termid2sample2value = new Map()
 					for (const term of cellTypeFractionTerms) {
 						const sample2fraction = cellType2sample2fraction.get(term.cellType)
 						ds.termid2sample2value.set(term.id, sample2fraction)
