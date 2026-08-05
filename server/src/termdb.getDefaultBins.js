@@ -22,7 +22,16 @@ export async function trigger_getDefaultBins(q, ds, res) {
 	let max = -Infinity
 	let binsCache // fine to cache bins for scrna genes, but not for cohort level data that's subject to filtering
 	try {
-		if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
+		if (ds.termid2sample2value.has(tw.term.id)) {
+			// term data is cached
+			// use the cached data to compute bins
+			const sample2value = ds.termid2sample2value.get(tw.term.id)
+			for (const value of sample2value.values()) {
+				lst.push(value)
+				if (value < min) min = value
+				if (value > max) max = value
+			}
+		} else if (tw.term.type == SINGLECELL_GENE_EXPRESSION) {
 			if (!ds.queries?.singleCell?.geneExpression) throw 'term type not supported by this dataset'
 			binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample]
 			if (!binsCache) binsCache = ds.queries.singleCell.geneExpression.sample2gene2expressionBins[tw.term.sample] = {}
