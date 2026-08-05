@@ -345,6 +345,7 @@ The plot names are sample ids; typing filters matching samples in a dropdown pan
 and selecting one opens that sample's scatter plot. */
 function makeBySampleScatterMenu(menuDiv, chartsInstance) {
 	const plots = chartsInstance.state.termdbConfig.scatterplots
+	const datalistId = `bySampleScatterDatalist_${Math.random().toString(36).slice(2)}`
 
 	menuDiv
 		.append('div')
@@ -356,14 +357,14 @@ function makeBySampleScatterMenu(menuDiv, chartsInstance) {
 	const input = menuDiv
 		.append('input')
 		.attr('type', 'text')
-		.attr('list', 'bySampleScatterDatalist')
+		.attr('list', datalistId)
 		.property('autocomplete', 'off')
 		.attr('placeholder', plots[0]?.name || 'sample')
 		.style('margin', '5px')
 		.style('padding', '5px 8px')
 		.style('width', '250px')
 
-	const datalist = menuDiv.append('datalist').attr('id', 'bySampleScatterDatalist')
+	const datalist = menuDiv.append('datalist').attr('id', datalistId)
 
 	// message div shows hit count / no-match feedback
 	const msg = menuDiv.append('div').style('padding', '2px 5px').style('font-size', '.8em').style('color', '#888')
