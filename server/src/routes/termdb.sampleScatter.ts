@@ -16,6 +16,7 @@ import type {
 } from '#types'
 import type { ReqQueryAddons } from './types.js'
 import { getData } from '#src/termdb.matrix.js'
+import fs from 'fs'
 import path from 'path'
 import serverconfig from '#src/serverconfig.js'
 import { schemeCategory20, getColors, mclass, dt2label, morigin, isNumericTerm } from '#shared'
@@ -118,23 +119,25 @@ export function init({ genomes }) {
 				cohortSamples = tmp[1]
 
 				if (q.colorColumn) {
-					//Samples are marked as ref as they dont have a db mapping, but they are not necessarily ref samples
-					let categories: any = new Set(refSamples.map((s: any) => s.category))
-					categories = Array.from(categories)
+					// color dots by a file column. for a bySample plot also include the cohort (db)
+					// sample so the highlighted per-sample dot is not dropped; both carry a .category.
+					// other colorColumn plots keep their original reference-only behavior
+					const allSamples = plot?.bySample ? [...refSamples, ...cohortSamples] : refSamples
+					const categories: any = Array.from(new Set(allSamples.map((s: any) => s.category)))
 					const colorMap = {}
 					const k2c = getColors(categories.length)
 					for (const category of categories) {
 						const color = q.colorColumn.colorMap?.[category] || k2c(category)
 						colorMap[category] = {
-							sampleCount: refSamples.filter((s: any) => s.category == category).length,
+							sampleCount: allSamples.filter((s: any) => s.category == category).length,
 							color,
 							key: category
 						}
 					}
-					const shapeMap = { Ref: { shape: 0, sampleCount: refSamples.length, key: 'Ref' } }
+					const shapeMap = { Ref: { shape: 0, sampleCount: allSamples.length, key: 'Ref' } }
 					result = {
 						Default: {
-							samples: refSamples,
+							samples: allSamples,
 							colorLegend: Object.entries(colorMap),
 							shapeLegend: Object.entries(shapeMap)
 						}
@@ -521,6 +524,10 @@ async function loadFile(p: any, ds: any) {
 	const xColumn = p.coordsColumns?.x || 1
 	const yColumn = p.coordsColumns?.y || 2
 	const headerFields = lines[0].split('\t')
+	// column used to color dots. index may be given directly, else resolved from the column name
+	const colorIndex = p.colorColumn ? p.colorColumn.index ?? headerFields.indexOf(p.colorColumn.name) : -1
+	if (p.colorColumn && colorIndex < 0)
+		throw new Error(`colorColumn "${p.colorColumn.name}" not found in header of ${p.file}`)
 
 	p.filterableSamples = [] // array to keep filterable samples
 	p.referenceSamples = [] // optional array to keep reference samples
@@ -538,8 +545,11 @@ async function loadFile(p: any, ds: any) {
 		}
 		const sample: Partial<ScatterSample> = { sample: l[0], x, y }
 		if (p.colorColumn) {
-			sample['sampleId'] = l[0] //deleted later
-			sample.category = l[p.colorColumn.index]
+			// bySample plots keep the cloud as true reference dots (no sampleId), so they stay small
+			// and unlabeled while the single db sample is enlarged. Other colorColumn plots set sampleId
+			// on every dot so they all render at the regular size.
+			if (!p.bySample) sample['sampleId'] = l[0]
+			sample.category = l[colorIndex]
 			sample.shape = 'Ref'
 			sample.z = 0
 		}
@@ -583,6 +593,9 @@ export async function mayInitiateScatterplots(ds) {
 	if (typeof ds.cohort.scatterplots.get == 'function') {
 		// allowed but still requires plots[]
 	}
+	// bySample: a folder holds one tsv file per sample. expand into plots[], one plot per file,
+	// so the rest of the scatter code (config route, loadFile, getSamples, client menu) works unchanged
+	if (ds.cohort.scatterplots.bySample) mayExpandBySamplePlots(ds.cohort.scatterplots)
 	if (!Array.isArray(ds.cohort.scatterplots.plots)) throw new Error('cohort.scatterplots.plots is not array')
 	for (const p of ds.cohort.scatterplots.plots) {
 		if (!p.name) throw new Error('.name missing from one of scatterplots.plots[]')
@@ -592,6 +605,35 @@ export async function mayInitiateScatterplots(ds) {
 			throw new Error('unknown data source of one of scatterplots.plots[]')
 		}
 	}
+}
+
+/* expand a bySample folder into scatterplots.plots[], one plot per file in the folder.
+each file is named by its sample (no extension) and is a tsv laid out like a regular scatter
+file: sample \t X \t Y \t ...extra columns. the file name is the plot name, used as q.plotName. */
+function mayExpandBySamplePlots(scatterplots: any) {
+	const bs = scatterplots.bySample
+	if (!bs.foldername) throw new Error('scatterplots.bySample.foldername is missing')
+	const dir = path.join(serverconfig.tpmasterdir, bs.foldername)
+	// each file is named by its sample; skip hidden/system files (e.g. .DS_Store) and any subdirectory
+	const files = fs
+		.readdirSync(dir, { withFileTypes: true })
+		.filter(d => d.isFile() && !d.name.startsWith('.'))
+		.map(d => d.name)
+	if (!files.length) throw new Error('scatterplots.bySample folder is empty: ' + dir)
+	// the plot's own sample is the single cohort (db) sample; the rest are a reference cloud.
+	// enlarge that one dot, shrink the cloud, and label the dot with its sample name
+	const settings = Object.assign({ size: 4, refSize: 0.5 }, bs.settings)
+	scatterplots.plots = files.map(f => ({
+		name: f, // the file name is the sample name
+		file: path.join(bs.foldername, f),
+		dimensions: bs.dimension ?? 2,
+		// only set when the files use a non-standard layout; loadFile defaults to X=col1, Y=col2
+		coordsColumns: bs.coordsColumns,
+		// optional; color every dot (incl. the reference cloud) by a file column, e.g. subtype
+		colorColumn: bs.colorColumn,
+		bySample: true, // marks this as a per-sample plot for loadFile (keeps the cloud as reference)
+		settings
+	}))
 }
 
 export async function trigger_getLowessCurve(q, res) {

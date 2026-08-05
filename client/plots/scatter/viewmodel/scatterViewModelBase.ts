@@ -89,6 +89,9 @@ export class ScatterViewModelBase {
 		const labels: any = []
 
 		if (this.scatter.config.colorTW) labels.push(getTitle(this.scatter.config.colorTW.term.name, 40) + ' COLOR')
+		// a bySample plot colors dots by a file column (no colorTW); reserve legend width for it
+		else if (this.scatter.config.colorColumn && this.scatter.config.bySample)
+			labels.push(getTitle(this.scatter.config.colorColumn.name, 40) + ' COLOR')
 		if (this.scatter.config.scaleDotTW) labels.push(getTitle(this.scatter.config.scaleDotTW.term.name, 40) + ' SHAPE')
 		if (labels.length > 0) {
 			const labelsWidth = getMaxLabelWidth(svg, labels) + 40
@@ -276,7 +279,35 @@ export class ScatterViewModelBase {
 			.transition()
 			.duration(duration)
 
+		this.mayRenderSampleLabels(chart)
 		this.mayRenderRegression()
+	}
+
+	/** Draw the sample name as a text label next to each cohort (db) sample dot. Used by per-sample
+	 * (bySample) scatterplots, where a single highlighted dot sits among a reference cloud. */
+	mayRenderSampleLabels(chart) {
+		const g = chart.serie
+		const labelData =
+			this.scatter.config.bySample && chart.data?.samples
+				? chart.data.samples.filter(c => 'sampleId' in c && c.sample)
+				: []
+		const labels = g.selectAll('text[name="sampleLabel"]').data(labelData, (c: any) => c.sample)
+		labels.exit().remove()
+		labels
+			.enter()
+			.append('text')
+			.attr('name', 'sampleLabel')
+			.attr('pointer-events', 'none')
+			.attr('font-size', '12px')
+			.attr('font-weight', 'bold')
+			.attr('paint-order', 'stroke')
+			.attr('stroke', 'white')
+			.attr('stroke-width', '3px')
+			.attr('fill', 'black')
+			.merge(labels as any)
+			.attr('x', (c: any) => this.model.getCoordinates(chart, c).x + 8)
+			.attr('y', (c: any) => this.model.getCoordinates(chart, c).y + 4)
+			.text((c: any) => c.sample)
 	}
 
 	async mayRenderRegression() {

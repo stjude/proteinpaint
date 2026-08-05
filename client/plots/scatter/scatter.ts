@@ -113,7 +113,9 @@ export class Scatter extends PlotBase implements RxComponent {
 			// always show control inputs, even if there is an error,
 			// so that a user may edit an invalid plot config/settings
 			// to fix an error
-			if (!this.config.colorColumn) await this.setControls()
+			// colorColumn plots hide the termdb controls (color is driven by a data column); the one
+			// exception is a per-sample bySample plot, which keeps the settings menu and download button
+			if (!this.config.colorColumn || this.config.bySample) await this.setControls()
 		}
 		if (!this.model.charts?.length) {
 			this.toggleLoadingDiv('none')
@@ -250,6 +252,10 @@ export async function getPlotConfig(opts, app) {
 		}
 		copyMerge(plot, defaultConfig, opts)
 
+		// a per-sample (bySample) plot always shows its one cohort sample plus a fixed reference cloud,
+		// so the cohort filter doesn't apply — hide the plot's "+Add new filter" UI
+		if (plot.bySample) plot.hidePlotFilter = true
+
 		if (plot.colorTW) await fillTermWrapper(plot.colorTW, app.vocabApi)
 		if (plot.shapeTW) await fillTermWrapper(plot.shapeTW, app.vocabApi)
 		if (plot.term) {
@@ -285,14 +291,16 @@ export const componentInit = scatterInit
 export function makeChartBtnMenu(holder, chartsInstance) {
 	const menuDiv = holder.append('div')
 	if (chartsInstance.state.termdbConfig.scatterplots)
-		if (
+		if (chartsInstance.state.termdbConfig.scatterplotsBySample) {
+			makeBySampleScatterMenu(menuDiv, chartsInstance)
+		} else if (
 			chartsInstance.state.termdbConfig.scatterplots.length == 1 &&
 			!chartsInstance.state.currentCohortChartTypes.includes('dynamicScatter')
 		)
 			openScatterPlot(chartsInstance.app, chartsInstance.state.termdbConfig.scatterplots[0])
 		else {
 			for (const plot of chartsInstance.state.termdbConfig.scatterplots) {
-				/* plot: 
+				/* plot:
 				{
 					name=str,
 					dimensions=int,
@@ -332,6 +340,73 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 }
 
+/* Render a sample-search UI for per-sample (bySample) scatter plots.
+The plot names are sample ids; typing filters matching samples in a dropdown panel,
+and selecting one opens that sample's scatter plot. */
+function makeBySampleScatterMenu(menuDiv, chartsInstance) {
+	const plots = chartsInstance.state.termdbConfig.scatterplots
+
+	menuDiv
+		.append('div')
+		.style('padding', '3px 5px')
+		.style('font-size', '.85em')
+		.style('color', '#555')
+		.text('Search sample')
+
+	const input = menuDiv
+		.append('input')
+		.attr('type', 'text')
+		.attr('list', 'bySampleScatterDatalist')
+		.property('autocomplete', 'off')
+		.attr('placeholder', plots[0]?.name || 'sample')
+		.style('margin', '5px')
+		.style('padding', '5px 8px')
+		.style('width', '250px')
+
+	const datalist = menuDiv.append('datalist').attr('id', 'bySampleScatterDatalist')
+
+	// message div shows hit count / no-match feedback
+	const msg = menuDiv.append('div').style('padding', '2px 5px').style('font-size', '.8em').style('color', '#888')
+
+	addOptions(plots.map(p => p.name))
+
+	input.on('keyup', () => {
+		const str = input.node().value.toLowerCase()
+		const startsWith: string[] = []
+		const includes: string[] = []
+		for (const p of plots) {
+			const name = p.name.toLowerCase()
+			if (name.startsWith(str)) startsWith.push(p.name)
+			else if (name.includes(str)) includes.push(p.name)
+		}
+		const options = [...startsWith, ...includes]
+		addOptions(options)
+	})
+
+	// fires when a datalist option is chosen or the user presses Enter on an exact match
+	input.on('change', () => {
+		const val = input.node().value
+		const plot = plots.find(p => p.name == val)
+		if (plot) open(plot)
+	})
+
+	function open(plot) {
+		openScatterPlot(chartsInstance.app, plot)
+		chartsInstance.dom.tip.hide()
+	}
+
+	function addOptions(options) {
+		datalist.selectAll('option').remove()
+		datalist
+			.selectAll('option')
+			.data(options)
+			.enter()
+			.append('option')
+			.attr('value', d => d)
+		msg.text(options.length == 0 ? 'No matching sample' : `${options.length} sample${options.length > 1 ? 's' : ''}`)
+	}
+}
+
 export function openScatterPlot(app, plot, filter = null) {
 	const config: any = {
 		chartType: 'sampleScatter',
@@ -345,6 +420,8 @@ export function openScatterPlot(app, plot, filter = null) {
 			defaultValue: plot.sampleCategory.defaultValue
 		}
 	if (plot.sampleType) config.sampleType = plot.sampleType
+	// per-sample plot (one cohort sample + reference cloud); drives one-sample-specific UI
+	if (plot.bySample) config.bySample = true
 	if (plot.colorTW) config.colorTW = structuredClone(plot.colorTW)
 	else if (plot.colorColumn) config.colorColumn = structuredClone(plot.colorColumn)
 

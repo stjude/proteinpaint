@@ -430,7 +430,9 @@ export class ScatterView {
 
 		this.mayAddControlLabels(inputs)
 
-		return inputs
+		// a bySample plot shows a single cohort sample among a reference cloud, so the term-based
+		// controls (color/shape/scale/divide-by term) don't apply. Drop them, keeping size/opacity/etc.
+		return this.scatter.config.bySample ? inputs.filter(i => i.type != 'term') : inputs
 	}
 
 	getMinMaxInputs() {

@@ -1450,8 +1450,25 @@ type Scatterplots = {
 		entire plots[] is always send to client
 	*/
 	get?: (clientAuthResult: any) => ScatterPlotsEntry[]
-	/** hardcoded plots */
-	plots: ScatterPlotsEntry[]
+	/** hardcoded plots. optional when bySample is used, in which case plots[] is generated at init from the folder */
+	plots?: ScatterPlotsEntry[]
+	/** generate one plot per sample from a folder of tsv files (one file per sample).
+	each file is named by its sample and laid out like a regular scatter file: sample, X, Y,
+	then any extra columns. the file name is the plot name (the sample id). */
+	bySample?: {
+		/** folder (relative to tpmasterdir) holding one tsv file per sample */
+		foldername: string
+		/** number of plot dimensions, defaults to 2 */
+		dimension?: number
+		/** override which columns hold the coordinates. omit for the standard layout, where loadFile
+		 * defaults to { x: 1, y: 2 } (0-based: name in col 0, X in col 1, Y in col 2) */
+		coordsColumns?: { x: number; y: number; z?: number }
+		/** optional: color every dot (including the reference cloud) by a file column, e.g. subtype.
+		 * index is resolved from the header by name when omitted; colorMap optionally fixes category colors */
+		colorColumn?: { name: string; index?: number; colorMap?: { [index: string]: string } }
+		/** override the default per-plot settings, e.g. { size, refSize } (dot and reference-cloud size) */
+		settings?: { [index: string]: any }
+	}
 }
 
 /** this plot compares correlation of one feature against a bunch of variables across samples

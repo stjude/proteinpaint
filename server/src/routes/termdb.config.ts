@@ -191,9 +191,14 @@ function addScatterplots(c, ds, info) {
 			sampleType: p.sampleType,
 			coordsColumns: p.coordsColumns,
 			settings: { sampleScatter: p.settings }, //the client settings are under sampleScatter so we add it here to avoid adding it in the dataset
-			sampleCategory: p.sampleCategory
+			sampleCategory: p.sampleCategory,
+			// per-sample plot: one cohort sample + a reference cloud
+			bySample: p.bySample
 		}
 	})
+	// when plots are generated per-sample from a folder, the plot names are sample ids.
+	// signal the client to render a sample-search UI instead of one button per plot
+	if (ds.cohort.scatterplots.bySample) c.scatterplotsBySample = true
 }
 
 function addMatrixplots(c, ds) {
