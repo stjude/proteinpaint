@@ -626,6 +626,8 @@ function mayExpandBySamplePlots(scatterplots: any) {
 	scatterplots.plots = files.map(f => ({
 		name: f, // the file name is the sample name
 		file: path.join(bs.foldername, f),
+		// shared dataset types use `dimension` (singular); keep `dimensions` for backward compatibility
+		dimension: bs.dimension ?? 2,
 		dimensions: bs.dimension ?? 2,
 		// only set when the files use a non-standard layout; loadFile defaults to X=col1, Y=col2
 		coordsColumns: bs.coordsColumns,
