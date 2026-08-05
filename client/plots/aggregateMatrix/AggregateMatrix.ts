@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
 import { PlotBase } from '#plots/PlotBase.ts'
 import { getCombinedTermFilter } from '#filter'
+import type { Dom } from '../../types/d3'
 import { AggMatrixModel } from './model/AggMatrixModel'
 import { getAggregateMatrixSettings } from './settings/defaults.ts'
 import { AggMatrixViewModel } from './viewModel/AggMatrixViewModel.ts'
@@ -15,7 +16,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
 
     type: string
     components: { controls: any }
-    dom: { [name: string]: any }
+    dom: Dom
     model!: AggMatrixModel
     viewModel!: AggMatrixViewModel
     view!: AggMatrixView
@@ -74,7 +75,7 @@ export class AggregateMatrix extends PlotBase implements RxComponent {
                 super.printError(data?.error || 'No data returned from server')
                 return
             }
-            this.dom.controls.selectAll('*').remove()
+            (this.dom.controls as any).selectAll('*').remove()
             await setControls(this.dom.controls, this)
             this.viewModel.processData(data)
         } catch (e: any) {

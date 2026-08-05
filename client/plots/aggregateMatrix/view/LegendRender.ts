@@ -6,6 +6,7 @@ import { validateMinMax } from '../settings/defaults.ts'
 
 export class LegendRender {
     ag: AggregateMatrix
+    readonly xStart = 15
 
     constructor(ag: AggregateMatrix) {
         this.ag = ag
@@ -21,7 +22,7 @@ export class LegendRender {
 
     renderColorScale(colorScale, settings, svg) {
         svg.append('text')
-            .attr('x', 10)
+            .attr('x', this.xStart)
             .attr('y', 20)
             .style('font-weight', 'bold')
             .style('font-size', '0.8em')
@@ -33,7 +34,7 @@ export class LegendRender {
             colors: [settings.startColor, settings.stopColor],
             barheight: 20,
             barwidth: 200,
-            position: '10, 30',
+            position: `${this.xStart + 10}, 35`,
             setColorsCallback: (val, idx) => {
                 const hexColor = rgb(val).formatHex()
                 const colorKey = idx == 0 ? 'startColor' : 'stopColor'
@@ -48,43 +49,13 @@ export class LegendRender {
                         }
                     }
                 })
-            },
-            //Disable for now. Need to know if this appropriate.
-        //     numericInputs: {
-        //         cutoffMode: settings.cutoffMode,
-        //         callback: (obj) => {
-        //             if (!obj) return
-        //             const { min, max, cutoffMode } = obj
-        //             let newMin, newMax
-        //             if (cutoffMode === 'auto') {
-        //                 newMin = colorScale.absMin
-        //                 newMax = colorScale.absMax
-        //             }
-        //             if (cutoffMode === 'fixed') {
-        //                 newMin = min
-        //                 newMax = max
-        //             }
-        //             this.ag.app.dispatch({
-        //                 type: 'plot_edit',
-        //                 id: this.ag.id,
-        //                 config: {
-        //                     settings: {
-        //                         aggregateMatrix: {
-        //                             cutoffMode,
-        //                             min: newMin,
-        //                             max: newMax
-        //                         }
-        //                     }
-        //                 }
-        //             })
-        //         }
-        //     }
+            }
         })
     }
 
     renderDotScaleRef(svg, settings) {
         new LegendCircleReference({
-            g: svg.append('g').attr('transform', 'translate(15, 15)'),
+            g: svg.append('g').attr('transform', `translate(${this.xStart}, 15)`),
             inputMax: settings.dotInputMax,
             inputMin: settings.dotInputMin,
             maxRadius: settings.maxDotSize,
