@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+General:
+- ds.queries.singleCell.geneExpression.get() now takes (q, sample, gene) instead of a single reconstructed object, so callers forward their own request and the getter can read auth and abort off it. The GDC dataset (ppgdc) supplies this getter, so its deployed image must be updated together with this server release — an older ppgdc image would come up with a getter of the wrong shape and single-cell gene expression would break. As a consequence GDC now sends sessionid/token on the scrna gene-expression request where it previously sent none; that endpoint is open-access today so behavior is unchanged, but this is the path that would carry credentials for controlled-access data
+
+Fixes:
+- Screen the sample id in the built-in single-cell getters before it is used to build a file path: /termdb/singlecellData accepted any non-empty string as q.sample.sID/.eID, which is not sufficient validation for a value that becomes part of a path under tpmasterdir. It is now screened with illegalpath(), matching how termdb.singleSampleMutation already screens its sample name, and the check sits at the getters so every caller is covered rather than only the HTTP route
+- Add the missing request validator for /termdb/singleSampleMutation: the declared string|number sample is normalized to a non-empty string at the route boundary, so a missing or repeated ?sample= returns a 400 instead of a TypeError 500, and per-getter input handling no longer diverges between the native and GDC getters
+
+DevOps:
+- A dataset entry may now be a folder holding an index.ts (dataset/<name>/index.ts) as well as the existing dataset/<name>.ts form; emitImports.js collects both, so a folder-form entry stays in the dev server's tsx watch restart graph
+
 
 ## 2.200.0
 
