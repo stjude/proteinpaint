@@ -431,64 +431,64 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 		*/
 		g.datasets = {}
 		for (const d of g.rawdslst) {
-			/*
-			for each raw dataset
-			*/
-			if (d.skip) continue
-			if (!d.name) throw 'a nameless dataset from ' + genomename
-			if (dslabelFilter && !dslabelFilter?.includes(d.name)) continue
-			if (g.datasets[d.name]) throw genomename + ' has duplicate dataset name: ' + d.name
-			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
-
-			/*
-				When using a Docker container, the mounted app directory
-				may have an optional dataset directory, which if present
-				will be symlinked to the app directory and potentially override any
-				similarly named dataset js file that are part of the standard
-				Proteinpaint packaged files[] 
-			*/
-			const overrideFile = path.join(process.cwd(), d.jsfile)
-			const dsFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, d.jsfile)
-			const _ds = (await import(dsFile)).default
-			const ds =
-				typeof _ds == 'function'
-					? await _ds(common, { serverconfig, clinsig, dsHelpers })
-					: typeof _ds?.default == 'function'
-					? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
-					: _ds.default || _ds
-
-			if (d.updateAttr) {
-				utils.doUpdateAttr(ds, d.updateAttr)
-				// do not re-update the attributes in case a dataset is reloaded, by itself without a full server restart
-				if (ds.label) delete d.updateAttr
-			}
-			ds.noHandleOnClient = d.noHandleOnClient
-			ds.label = d.name
-			ds.genomename = genomename
-			ds.genomeObj = g // this makes genome obj readily accessible to functions that already accepts ds obj as argument, avoid retrofit to add in additional genome obj argument
-			g.datasets[ds.label] = ds
-
-			// populate possibly missing ds.init option values
-			// retryMax or retryDelay override may be specified without the other
-			ds.init = {
-				...{ retryMax: 0, retryDelay: 1000 * 60 * 5 }, // default, 0 retry, every 5 minutes
-				...(ds.init || {}), // overrides from dataset js file
-				...(d.init || {}) // overrides from raw dataset entry in serverconfig, highest priority
-			}
-
-			trackedDatasets.push(ds)
-			// do this check after trackedDatasets.push so that datasets with auth requirement
-			// but no provided creds can still be tracked with fatalError status, to be emitted
-			// in app.ts processTrackedDs() and inform user about missing creds via log and optional slack notification
-			if (ds.requiresAuthCred && !opts.credDslabels?.includes(ds.label)) {
-				ds.init.status = 'fatalError'
-				ds.init.fatalError = `${ds.label} ds.requiresAuthCred is true but no credential provided`
-				delete g.datasets[ds.label] // do not keep reference to this dataset since it will not be loaded
-				continue
-			}
-
 			// wrap ds init execution in a try-catch, to not crash when at least 1 dataset loaded successfully
 			try {
+				/*
+				for each raw dataset
+				*/
+				if (d.skip) continue
+				if (!d.name) throw 'a nameless dataset from ' + genomename
+				if (dslabelFilter && !dslabelFilter?.includes(d.name)) continue
+				if (g.datasets[d.name]) throw genomename + ' has duplicate dataset name: ' + d.name
+				if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
+
+				/*
+					When using a Docker container, the mounted app directory
+					may have an optional dataset directory, which if present
+					will be symlinked to the app directory and potentially override any
+					similarly named dataset js file that are part of the standard
+					Proteinpaint packaged files[] 
+				*/
+				const overrideFile = path.join(process.cwd(), d.jsfile)
+				const dsFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, d.jsfile)
+				const _ds = (await import(dsFile)).default
+				const ds =
+					typeof _ds == 'function'
+						? await _ds(common, { serverconfig, clinsig, dsHelpers })
+						: typeof _ds?.default == 'function'
+						? await _ds.default(common, { serverconfig, clinsig, dsHelpers })
+						: _ds.default || _ds
+
+				if (d.updateAttr) {
+					utils.doUpdateAttr(ds, d.updateAttr)
+					// do not re-update the attributes in case a dataset is reloaded, by itself without a full server restart
+					if (ds.label) delete d.updateAttr
+				}
+				ds.noHandleOnClient = d.noHandleOnClient
+				ds.label = d.name
+				ds.genomename = genomename
+				ds.genomeObj = g // this makes genome obj readily accessible to functions that already accepts ds obj as argument, avoid retrofit to add in additional genome obj argument
+				g.datasets[ds.label] = ds
+
+				// populate possibly missing ds.init option values
+				// retryMax or retryDelay override may be specified without the other
+				ds.init = {
+					...{ retryMax: 0, retryDelay: 1000 * 60 * 5 }, // default, 0 retry, every 5 minutes
+					...(ds.init || {}), // overrides from dataset js file
+					...(d.init || {}) // overrides from raw dataset entry in serverconfig, highest priority
+				}
+
+				trackedDatasets.push(ds)
+				// do this check after trackedDatasets.push so that datasets with auth requirement
+				// but no provided creds can still be tracked with fatalError status, to be emitted
+				// in app.ts processTrackedDs() and inform user about missing creds via log and optional slack notification
+				if (ds.requiresAuthCred && !opts.credDslabels?.includes(ds.label)) {
+					ds.init.status = 'fatalError'
+					ds.init.fatalError = `${ds.label} ds.requiresAuthCred is true but no credential provided`
+					delete g.datasets[ds.label] // do not keep reference to this dataset since it will not be loaded
+					continue
+				}
+
 				ds.init.status = 'started'
 				// initial attempt is awaited, so that the server startup logs/CI can summarize status
 				if (ds.isMds3) await mds3_init.init(ds, g, totalRawDsLst)
