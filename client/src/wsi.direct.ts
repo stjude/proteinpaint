@@ -1,9 +1,9 @@
 /*
  Direct whole-slide viewer for a single file, launched via runpp URL param:
-   http://localhost:3000/?SVS=/abs/path/to/slide.svs
+   http://localhost:3000/?SVS=SVS/slide.svs
 
- Bypasses datasets/samples: hits the wsitiles route with the absolute path
- directly (server-side gated by features.wsi.allowDirectSlidePath). Minimal
+ Bypasses datasets/samples: hits the wsitiles route with a direct slide path
+ (resolved relative to serverconfig.tpmasterdir; gated by features.wsi.allowDirectSlidePath). Minimal
  pan/zoom viewer — the same OpenLayers Zoomify setup the full viewer uses.
 */
 import 'ol/ol.css'
@@ -48,7 +48,7 @@ export async function init(opts: { slide: string }, holder: any) {
 			.append('div')
 			.style('font', '12px system-ui')
 			.style('padding', '4px 8px')
-			.text(`${opts.slide} — ${w}×${h}px${meta.mpp ? `, ${meta.mpp.toFixed(3)} µm/px` : ''}, ${meta.levels} levels`)
+			.text(`${opts.slide} — ${w}×${h}px${Array.isArray(meta.mpp) && meta.mpp.length === 2 ? `, ${meta.mpp[0].toFixed(3)}×${meta.mpp[1].toFixed(3)} µm/px` : ''}, ${meta.levels} levels`)
 	} catch (e: any) {
 		loading.remove()
 		sayerror(holder, `WSI error: ${e.message || e}`)

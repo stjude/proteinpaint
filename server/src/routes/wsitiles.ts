@@ -29,7 +29,7 @@ import serverconfig from '#src/serverconfig.js'
 export const payload: RoutePayload = {
 	init,
 	request: { typeId: 'WSImagesRequest' },
-	response: { typeId: 'WSImagesResponse' }
+	response: { typeId: 'any' }
 }
 
 export const api: RouteApi = {
@@ -46,7 +46,7 @@ const exists = (p: string) =>
 // Flat .jpg files under the CacheManager-registered 'wsitiles' subdir of
 // serverconfig.cachedir, so the existing TTL sweep evicts them (it is
 // non-recursive, hence a flat name rather than nested z/x/y dirs).
-// ponytail: keyed by slide path only — replacing a slide file in place would
+// potential pitfall: keyed by slide path only — replacing a slide file in place would
 // serve stale tiles until the tiles age out; clear the subdir if that happens.
 function tileCachePath(slide: string, z: string, x: string, y: string): string {
 	const key = createHash('sha1').update(slide).digest('hex')
@@ -68,15 +68,22 @@ function slidePath(genomes: any, q: any): string {
 	if (!g) throw new Error('Invalid genome name')
 	const ds = g.datasets[q.dslabel]
 	if (!ds) throw new Error('Invalid dataset name')
-	if (!q.wsimage) throw new Error('No wsimage param provided')
-	if (!q.sample_id && !q.ai_project_id) throw new Error('sample_id or ai_project_id required')
-	const mount = serverconfig.features?.tileserver?.mount
-	if (!mount) throw new Error('No mount configured (serverconfig.features.tileserver.mount)')
-	const w = ds.queries.WSImages
-	const sub = q.sample_id
-		? path.join(`${w.imageBySampleFolder}/${q.sample_id}`, q.wsimage)
-		: path.join(`${w.aiToolImageFolder}/`, q.wsimage)
-	return path.join(mount, sub)
+	const wsimage = q.wsimage
+	if (!wsimage) throw new Error('No wsimage param provided')
+
+	const sampleId = q.sample_id ?? q.sampleId
+	const aiProjectId = q.ai_project_id ?? q.aiProjectId
+	if (!sampleId && !aiProjectId) throw new Error('sample_id/sampleId or ai_project_id/aiProjectId required')
+		const mount = serverconfig.features?.tileserver?.mount
+		if (!mount) throw new Error('No mount configured (serverconfig.features.tileserver.mount)')
+		const w = ds.queries.WSImages
+		const sub = sampleId
+			? path.join(`${w.imageBySampleFolder}/${sampleId}`, wsimage)
+			: path.join(`${w.aiToolImageFolder}/`, wsimage)
+		const base = path.resolve(mount)
+		const full = path.resolve(base, sub)
+		if (full !== base && !full.startsWith(base + path.sep)) throw new Error('slide path escapes mount')
+		return full
 }
 
 function init({ genomes }) {
