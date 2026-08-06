@@ -33,7 +33,7 @@ upon error, throw err message as a string
 	const features = JSON.parse(sessionStorage.getItem('optionalFeatures'))
 
 	if (urlp.has('svs')) {
-		// ?SVS=/abs/slide.svs — direct whole-slide viewer, no dataset/genome
+		// ?SVS=SVS/slide.svs — direct whole-slide viewer, no dataset/genome
 		// (urlmap lowercases keys, so the URL's SVS is read here as 'svs')
 		const _ = await import('./wsi.direct')
 		await _.init({ slide: urlp.get('svs') }, arg.holder)
