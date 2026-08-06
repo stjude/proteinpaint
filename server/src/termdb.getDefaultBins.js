@@ -1,6 +1,7 @@
 import { SINGLECELL_GENE_EXPRESSION, PROTEOME_ABUNDANCE, PSEUDOBULK } from '#types'
 import initBinConfig from '#shared/termdb.initbinconfig.js'
 import { maySetMapParent2Children } from './termdb.matrix.js'
+import { mayLimitSamples } from './mds3.filter.js'
 
 // TODO convert to route
 
@@ -26,7 +27,9 @@ export async function trigger_getDefaultBins(q, ds, res) {
 			// term data is cached
 			// use the cached data to compute bins
 			const sample2value = ds.termid2sample2value.get(tw.term.id)
-			for (const value of sample2value.values()) {
+			const limitSamples = await mayLimitSamples(q, [...sample2value.keys()], ds)
+			for (const [sample, value] of sample2value) {
+				if (limitSamples && !limitSamples.has(sample)) continue
 				lst.push(value)
 				if (value < min) min = value
 				if (value > max) max = value
