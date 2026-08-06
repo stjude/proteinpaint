@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.201.0
 
 General:
 - ds.queries.singleCell.geneExpression.get() now takes (q, sample, gene) instead of a single reconstructed object, so callers forward their own request and the getter can read auth and abort off it. The GDC dataset (ppgdc) supplies this getter, so its deployed image must be updated together with this server release — an older ppgdc image would come up with a getter of the wrong shape and single-cell gene expression would break. As a consequence GDC now sends sessionid/token on the scrna gene-expression request where it previously sent none; that endpoint is open-access today so behavior is unchanged, but this is the path that would carry credentials for controlled-access data
