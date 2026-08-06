@@ -1,2 +1,1 @@
-Features
-- New aggregate matrix plot and route. The aggregate matrix is a data- and term-type-agnostic visualization that renders aggregate values for term × term combinations, encoding each value by either color or dot size. The current prototype is suited for pseudobulk data with the architecture to support more data sources. Additional features will be added later.
+
