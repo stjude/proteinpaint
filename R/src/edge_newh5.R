@@ -286,7 +286,12 @@ DE_method <- input$DE_method
 if (DE_method == "edgeR") {
 
   # extract common dispersion and BCV(Biological coefficient of variation)
-  y <- estimateDisp(y,design)
+  # timed: this is the dominant edgeR cost on large cohorts (measured ~40s of a 64s run at 1370
+  # samples) and was the only major step not reported in timings, which made the numbers not add up
+  estimate_disp_time <- system.time({
+    y <- estimateDisp(y,design)
+  })
+  estimate_disp_mem <- mem_probe()
   common_disp <- y$common.dispersion
   bcv <- sqrt(common_disp)
 
@@ -414,6 +419,7 @@ timings <- list(
 )
 if (exists("mds_plot_time")) timings$mds_plot <- elapsed(mds_plot_time)
 if (exists("model_gen_time")) timings$model_gen <- elapsed(model_gen_time)
+if (exists("estimate_disp_time")) timings$estimate_disp <- elapsed(estimate_disp_time)
 if (exists("fit_time")) timings$fit <- elapsed(fit_time)
 if (exists("test_time")) timings$test <- elapsed(test_time)
 if (exists("ql_plot_time")) timings$ql_plot <- elapsed(ql_plot_time)
