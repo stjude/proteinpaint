@@ -758,6 +758,9 @@ type RnaseqGeneCount = {
 	/** max samples one DE run may build a matrix for. reported during preAnalysis so the client can
 	 * warn before the user submits, and enforced by buildCountsFile itself */
 	maxSamples?: number
+	/** DE method preselected in the client's method radio. only reorders the options — every method
+	 * stays selectable. omit to keep the client's own ordering (edgeR first) */
+	defaultMethod?: 'wilcoxon' | 'edgeR' | 'limma'
 	/** sample names present in the counts matrix. may be a getter on api-backed datasets whose
 	 * sample list is populated asynchronously after launch */
 	allSampleSet?: Set<string>

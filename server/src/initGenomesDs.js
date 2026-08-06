@@ -19,7 +19,7 @@ import { mapConcurrent } from './utils/concurrencyLimiter.ts'
 import { renderVolcano } from './renderVolcano.ts'
 import { combineSamplesById } from './mds3.variant2samples.js'
 import { run_python } from '@sjcrh/proteinpaint-python'
-import { cacheOrRecompute } from './utils/cacheOrRecompute.ts'
+import { cacheOrRecompute, cacheFilePath, generateHash } from './utils/cacheOrRecompute.ts'
 
 const dsHelpers = {
 	isUsableTerm,
@@ -35,6 +35,8 @@ const dsHelpers = {
 	combineSamplesById,
 	run_python,
 	cacheOrRecompute,
+	cacheFilePath,
+	generateHash,
 	createSelectionID,
 	SelectionPrefixes,
 	FlagStatus

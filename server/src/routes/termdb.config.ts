@@ -422,7 +422,10 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 		}
 	}
 	if (q.rnaseqGeneCount) {
-		q2.rnaseqGeneCount = true
+		/* stays `true` unless the ds prefers a DE method, so datasets that don't set one are unchanged
+		on the wire. both client gates are truthy checks and read `?.defaultMethod`, which is undefined
+		for the boolean form. */
+		q2.rnaseqGeneCount = q.rnaseqGeneCount.defaultMethod ? { defaultMethod: q.rnaseqGeneCount.defaultMethod } : true
 	}
 	if (q.singleCell) {
 		// samples and data are required properties

@@ -645,6 +645,17 @@ export function renderPreAnalysisData(arg) {
 						{ label: 'Limma', value: 'limma' }
 				  ]
 
+		/* a ds may prefer one method: gdc sets wilcoxon because its cohorts are large enough that
+		edgeR's estimateDisp dominates (measured ~25x slower on a 1370-case cohort). this only moves
+		the preferred method to the front -- it is the preselected radio because make_radios checks
+		index 0 -- so every method stays available and nothing changes for other datasets. */
+		const preferredMethod = self?.app?.vocabApi?.termdbConfig?.queries?.rnaseqGeneCount?.defaultMethod
+		if (preferredMethod) {
+			const i = options.findIndex(o => o.value == preferredMethod)
+			// absent when the group sizes rule it out (wilcoxon is not offered for <=8 per group)
+			if (i > 0) options.unshift(options.splice(i, 1)[0])
+		}
+
 		const launchDEDiv = menuDiv.append('div').style('margin', '8px 5px').style('padding', '5px 10px')
 		const radioRow = launchDEDiv.append('tr')
 		let selectedMethod = options[0].value
