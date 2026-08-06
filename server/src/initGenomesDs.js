@@ -431,6 +431,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 		*/
 		g.datasets = {}
 		for (const d of g.rawdslst) {
+			let ds
 			// wrap ds init execution in a try-catch, to not crash when at least 1 dataset loaded successfully
 			try {
 				/*
@@ -452,7 +453,7 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				const overrideFile = path.join(process.cwd(), d.jsfile)
 				const dsFile = fs.existsSync(overrideFile) ? overrideFile : path.join(serverconfig.binpath, d.jsfile)
 				const _ds = (await import(dsFile)).default
-				const ds =
+				ds =
 					typeof _ds == 'function'
 						? await _ds(common, { serverconfig, clinsig, dsHelpers })
 						: typeof _ds?.default == 'function'
