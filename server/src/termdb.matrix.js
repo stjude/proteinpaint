@@ -34,6 +34,7 @@ import {
 	reconstituteCustomTermCollection,
 	resolveTermCollectionFractions
 } from './termdb.termCollection.ts'
+import { mayLimitSamples } from './mds3.filter.js'
 
 /* centralized resolution of a sample id -> display refs ({ label, ... }) for refs.bySampleId{}.
 each dataset implements ds.cohort.termdb.q.id2sampleRefs() (native/gdc/mmrf); it owns any id
@@ -762,12 +763,14 @@ async function getSampleData_dictionaryTerms_uncached(q, termWrappers) {
 async function getSampleData_dictionaryTerms_cached(q, termWrappers, samples, byTermId) {
 	for (const tw of termWrappers) {
 		const sample2value = q.ds.termid2sample2value.get(tw.term.id)
+		const limitSamples = await mayLimitSamples(q, [...sample2value.keys()], q.ds)
 		let lstOfBins // of this tw. only set when q.mode is discrete
 		if (tw.q?.mode == 'discrete' || tw.q?.mode == 'binary') {
 			lstOfBins = await findListOfBins(q, tw, q.ds)
 			byTermId[tw.$id] = { bins: lstOfBins }
 		}
 		for (const [sample, value] of sample2value) {
+			if (limitSamples && !limitSamples.has(sample)) continue
 			if (!samples[sample]) samples[sample] = { sample }
 			if (samples[sample][tw.$id]) throw 'should not have multiple values for sample'
 			let key = value
