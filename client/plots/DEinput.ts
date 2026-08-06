@@ -417,9 +417,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 		this.dom.loading.style('display', 'none')
 
-		// render sample counts
+		// render sample counts. renderPreAnalysisData writes its own header, using the ds vocabulary
 		this.dom.preAnalysis.style('display', 'block').selectAll('*').remove()
-		this.dom.preAnalysis.append('div').style('font-weight', 'bold').text('Samples with gene expression data:')
 
 		renderPreAnalysisData({
 			preAnalysisData,
