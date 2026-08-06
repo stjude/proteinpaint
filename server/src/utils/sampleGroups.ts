@@ -70,7 +70,7 @@ export async function resolveDaContext(
  * nested if/else cascade. Used by both DE and DM resolvers; the per-route
  * wrappers add their own validation + alert messages around this. */
 export async function buildGroupValues(
-	values: Array<{ sampleId: number }>,
+	values: Array<{ sampleId: number | string }>,
 	allSampleSet: Set<string>,
 	ds: any,
 	tw: any,
@@ -110,8 +110,15 @@ export async function buildGroupValues(
 		})
 	}
 	for (const s of sampleLst) {
-		if (!Number.isInteger(s.sampleId)) continue
-		const n = ds.cohort.termdb.q.id2sampleName(s.sampleId)
+		// a string sampleId IS the sample name: api-backed datasets without a sqlite termdb (gdc) key
+		// samples by case uuid, which is what getSampleList() hands back for them. an integer id is a
+		// termdb row id and still has to be resolved.
+		const n =
+			typeof s.sampleId == 'string'
+				? s.sampleId
+				: Number.isInteger(s.sampleId)
+				? ds.cohort.termdb.q.id2sampleName(s.sampleId)
+				: undefined
 		if (!n || !allSampleSet.has(n)) continue
 		// If a confounder is configured but missing for this sample, skip it.
 		if (tw && !term_results.samples?.[s.sampleId]) continue

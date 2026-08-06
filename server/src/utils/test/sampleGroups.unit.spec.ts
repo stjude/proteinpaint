@@ -128,7 +128,27 @@ tape('buildGroupValues skips non-integer sampleId', async t => {
 		[],
 		[]
 	)
+	// 1.5 is not a termdb row id; 'x' is a name, but not one this ds has data for
 	t.deepEqual(out.names, ['sampleA'], 'only the integer sampleId entry was kept')
+	t.end()
+})
+
+tape('buildGroupValues takes a string sampleId as the sample name itself', async t => {
+	// api-backed datasets without a sqlite termdb (gdc) key samples by case uuid, and have no
+	// id2sampleName to resolve through
+	const ds = { cohort: { termdb: {} } }
+	const caseUuid = 'ec82a00f-3909-4781-8ae2-e54cbc1ac7ac'
+	const allSampleSet = new Set<string>([caseUuid])
+	const out = await buildGroupValues(
+		[{ sampleId: caseUuid }, { sampleId: 'not-in-the-cohort' }],
+		allSampleSet,
+		ds,
+		null,
+		null,
+		[],
+		[]
+	)
+	t.deepEqual(out.names, [caseUuid], 'the known case uuid was kept, the unknown one dropped')
 	t.end()
 })
 

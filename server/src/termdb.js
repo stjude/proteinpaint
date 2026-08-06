@@ -44,7 +44,7 @@ export function handle_request_closure(genomes) {
 			}
 			//if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
 			//if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
-			if (q.getsamplecount) return res.send(await termdbsql.get_samplecount(q, ds))
+			if (q.getsamplecount) return res.send(await getSampleCount(q, ds))
 			if (q.getsamplelist) return res.send(await getSampleList(req, q, ds))
 
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
@@ -124,6 +124,26 @@ async function trigger_getsamples(q, res, ds) {
 	const lst = await termdbsql.get_samples(q.filter, ds)
 	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
 	res.send({ samples })
+}
+
+/* same dispatch as getSampleList() below: a ds without a sqlite db supplies its own sample
+resolution. without this branch, termdbsql.get_samplecount() reaches straight for ds.cohort.db
+and throws on gdc/mmrf. */
+async function getSampleCount(q, ds) {
+	if (ds.cohort?.db) {
+		// dataset is sqlite-based
+		return await termdbsql.get_samplecount(q, ds)
+	}
+	if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// dataset supplied method. returnAllSamples: with no filter the answer is the whole cohort,
+		// not "unknown" -- unlike getSampleList(), a count has no way to express undefined
+		const samples = await ds.cohort.termdb.filterSamples(q, ds, true)
+		const n = samples?.size || 0
+		// gdc calls them cases; ds.cohort.termdb.uiLabels maps the generic word to the ds vocabulary
+		const key = n == 1 ? 'sample' : 'samples'
+		return { count: `${n} ${ds.cohort.termdb.uiLabels?.[key] || key}` }
+	}
+	throw new Error('no method available to get sample count')
 }
 
 async function getSampleList(req, q, ds) {
