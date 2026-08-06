@@ -3724,6 +3724,9 @@ function mayInitTermid2totalsize2(tdb, ds) {
 async function validate_query_rnaseqGeneCount(ds) {
 	const q = ds.queries.rnaseqGeneCount
 	if (!q) return
+	// ds builds the counts matrix on demand (gdc, from open-access STAR-Counts files): there is no
+	// static h5 to stat, and its sample names are case uuids rather than termdb row ids
+	if (typeof q.buildCountsFile == 'function') return
 	await setFile(q, 'rnaseqGeneCount')
 	const samples = await getH5samples(q.file)
 

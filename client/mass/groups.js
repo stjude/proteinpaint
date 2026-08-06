@@ -86,8 +86,11 @@ class MassGroups {
 		const processedSamples = new Set(),
 			overlap = []
 		for (const g of groups) {
+			// filter0 must be passed: api-backed datasets (gdc) scope every query by the portal cohort
+			// filter, and without it this enumerates the entire dataset -- wrong numbers, and slow
 			const samples = await this.app.vocabApi.getFilteredSampleList(
-				filterJoin([g.filter, this.state.termfilter.filter])
+				filterJoin([g.filter, this.state.termfilter.filter]),
+				this.state.termfilter.filter0
 			)
 
 			const items = []
@@ -122,7 +125,8 @@ class MassGroups {
 			/* request rest of samples not in this single group, to form group2
 			 */
 			const samples = await this.app.vocabApi.getFilteredSampleList(
-				filterJoin([negateFilter(groups[0].filter), this.state.termfilter.filter])
+				filterJoin([negateFilter(groups[0].filter), this.state.termfilter.filter]),
+				this.state.termfilter.filter0
 			)
 			if (!samples.length) throw '0 samples for the other group'
 			const items = []
@@ -224,7 +228,9 @@ class MassGroups {
 				: `<span style="display:inline-block; width:11px; height:11px; background-color:${'#fff'}; border: 0.1px solid black" ></span>`
 			const [c1, c2] = table.addRow()
 			c1.html(`${colorSquare} ${grp.label}`)
-			c2.html(`${grp.othersGroupSampleNum || grp.list.length} samples`)
+			// gdc etc. call them cases, not samples
+			const sampleLabel = this.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
+			c2.html(`${grp.othersGroupSampleNum || grp.list.length} ${sampleLabel}`)
 		}
 
 		if (this.state.currentCohortChartTypes.includes('DA') && samplelstTW.q.groups.length == 2)
@@ -488,6 +494,8 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 				}
 
 				tip.clear().showunderoffset(itemDiv.node())
+				// gdc etc. call them cases, not samples
+				const sampleLabel = self.app.vocabApi.termdbConfig?.uiLabels?.samples || 'samples'
 				const menuDiv = tip.d.append('div')
 				const table = table2col({ holder: menuDiv })
 				table.table.style('margin-left', '5px').style('padding', '5px 10px')
@@ -500,7 +508,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					c1.html(
 						`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
 					)
-					c2.html(`${numControl} samples`)
+					c2.html(`${numControl} ${sampleLabel}`)
 				}
 				{
 					const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
@@ -511,7 +519,7 @@ function addDiffAnalysisPlotMenuItem(div, self, samplelstTW) {
 					c1.html(
 						`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
 					)
-					c2.html(`${numCase} samples`)
+					c2.html(`${numCase} ${sampleLabel}`)
 				}
 
 				const alertDiv = menuDiv.append('div')
@@ -586,6 +594,8 @@ export function renderPreAnalysisData(arg) {
 	}
 
 	// display actual numbers of samples with rnaseq count
+	// gdc etc. call them cases, not samples
+	const sampleLabel = self?.app?.vocabApi?.termdbConfig?.uiLabels?.samples || 'samples'
 	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
 	const table = table2col({ holder: menuDiv })
 	table.table.style('margin-left', '5px').style('padding', '5px 10px')
@@ -598,7 +608,7 @@ export function renderPreAnalysisData(arg) {
 		c1.html(
 			`<span style="font-size:.8em;font-weight:bold">CONTROL</span> ${colorSquareCtrl} ${samplelstTW.q.groups[0].name}`
 		)
-		c2.html(`${numControl} samples`)
+		c2.html(`${numControl} ${sampleLabel}`)
 	}
 	{
 		const caseGColor = samplelstTW.term.values[samplelstTW.q.groups[1].name].color
@@ -609,7 +619,7 @@ export function renderPreAnalysisData(arg) {
 		c1.html(
 			`<span style="font-size:.8em;font-weight:bold">CASE</span> ${colorSquareCase} ${samplelstTW.q.groups[1].name}`
 		)
-		c2.html(`${numCase} samples`)
+		c2.html(`${numCase} ${sampleLabel}`)
 	}
 
 	// display errors
@@ -861,7 +871,10 @@ async function updateUI(self) {
 			}
 		}).main(group.filter)
 
-		self.app.vocabApi.getFilteredSampleCount(groups[i].filter).then(n => row[3].__td.text(n))
+		self.app.vocabApi
+			.getFilteredSampleCount(groups[i].filter, self.state.termfilter.filter0)
+			.then(n => row[3].__td.text(n))
+			.catch(e => row[3].__td.text('n/a').attr('title', e?.message || e))
 	}
 
 	self.updateLaunchButton()

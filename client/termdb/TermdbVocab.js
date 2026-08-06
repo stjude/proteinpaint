@@ -446,12 +446,15 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	async getFilteredSampleCount(filterJSON) {
+	async getFilteredSampleCount(filterJSON, filter0) {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			getsamplecount: 1,
-			filter: getNormalRoot(filterJSON)
+			filter: getNormalRoot(filterJSON),
+			// api-backed datasets (gdc) scope every query by the portal cohort filter; without it the
+			// count is over all of GDC rather than the cohort the user is looking at
+			filter0
 		}
 		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
