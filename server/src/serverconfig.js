@@ -118,6 +118,16 @@ if (!serverconfig.binpath) {
 	}
 }
 
+if (!serverconfig.features) {
+	/*
+	default to having an empty object value for end-user-accessible features
+	necessary to ensure features{} object is set, as later when bootstraping a dataset, ds.serverconfigFeatures{} will be copied over
+	NOTE  serverconfig.json settings takes highest priority!! these are instance-level setting, e.g. on your dev computer
+	and overwrites default values from ds.serverconfigFeatures{} to assist e.g. dev work
+	*/
+	serverconfig.features = {}
+}
+
 if (serverconfig.debugmode && !serverconfig.binpath.includes('sjcrh/')) {
 	// only apply optional routeSetters in debugmode and when the binpath
 	// indicates the server code is not installed as a node_module
@@ -176,6 +186,51 @@ if (serverconfig.debugmode) {
 	const hg38test = serverconfig.genomes.find(g => g.name == 'hg38-test')
 	// this internal function must be trusted to only modify test-related serverconfig entries
 	if (hg38test?.datasets) mayUpdateTestDatasets(hg38test.datasets, serverconfig)
+
+	if (serverconfig.features.altGenomeByDslabel) {
+		/* features.altGenomeByDslabel = {dslabel: genomeName} makes the app middleware serve a dataset with an
+		alternate genome, e.g. {"GDC":"hg38-gdc"} to test against a dev-only genome file. When the named genome is
+		not declared in serverconfig.genomes[], every request to that dataset silently fails with "invalid genome",
+		which is very confusing since the genome supplied by the client (e.g. hg38) is in fact valid.
+		Fail at launch instead. */
+		const alt = serverconfig.features.altGenomeByDslabel
+		if (typeof alt != 'object' || Array.isArray(alt))
+			throw 'serverconfig.features.altGenomeByDslabel must be an object of {dslabel: genomeName}'
+		for (const dslabel in alt) {
+			const genomeName = alt[dslabel]
+			if (!serverconfig.genomes.find(g => g.name == genomeName))
+				throw `serverconfig.features.altGenomeByDslabel["${dslabel}"]="${genomeName}" is not a genome declared in serverconfig.genomes[]`
+			console.log(`dataset ${dslabel} now uses genome ${genomeName}`)
+		}
+	}
+} else {
+	/****************************
+	these serverconfig.features are only meaningful in a dev/test environment: either they weaken a
+	protection that prod relies on, or the code path they enable is gated on debugmode/dev-only files and
+	so silently does nothing in prod. Enabling any of them in prod is a config mistake, so fail at launch
+	rather than let it go unnoticed. Only a truthy value is rejected, so e.g. "sse": false is still allowed.
+	NOTE the whole serverconfig.features{} object is returned to the client by the /genomes route,
+	so a stray dev-only entry is also visible to every embedder. */
+	const devOnlyFeatures = {
+		// serves a dataset with an alternate genome, for testing against a dev-only genome file
+		altGenomeByDslabel: 'only for testing a dataset against an alternate genome file in local dev',
+		// bypasses the allowedEmbedders/dsCredentials check in app.middlewares.js setHeaders()
+		loosenCORS: 'would allow any origin to embed this server, bypassing serverconfig.allowedEmbedders[]',
+		// client rewrites the session embedder host/origin, defeating the cross-origin check in app.parseurl.js
+		overrideEmbedderHostInMassSession: 'would let a mass session file be opened from a mismatched embedder',
+		// skips the launch-time samtools/bcftools/R library validation
+		skip_checkDependenciesAndVersions: 'prod must verify its dependencies at launch',
+		// writes request/response fixtures under publicDir, and is already gated on debugmode at runtime
+		cacheTestData: 'only writes test fixtures for the local test runner',
+		// the sse route file is under src/test/routes/ and is not deployed to prod
+		sse: 'the sse route is a dev-only test route',
+		// only read by the debugmode-only coverage test route
+		coverageKey: 'only used by the dev-only code coverage route'
+	}
+	for (const key in devOnlyFeatures) {
+		if (serverconfig.features[key])
+			throw `serverconfig.features.${key} is only allowed when serverconfig.debugmode is true: ${devOnlyFeatures[key]}`
+	}
 }
 
 if (serverconfig.allow_env_overrides) {
@@ -234,16 +289,6 @@ if (process.env.PP_MODE?.startsWith('container')) {
 		// saved in the usual */bin/ paths so locating them
 		// is not needed when calling via Node child_process.spawn() or exec()
 	})
-}
-
-if (!serverconfig.features) {
-	/*
-	default to having an empty object value for end-user-accessible features
-	necessary to ensure features{} object is set, as later when bootstraping a dataset, ds.serverconfigFeatures{} will be copied over
-	NOTE  serverconfig.json settings takes highest priority!! these are instance-level setting, e.g. on your dev computer
-	and overwrites default values from ds.serverconfigFeatures{} to assist e.g. dev work
-	*/
-	serverconfig.features = {}
 }
 
 // when a mandatory setting is not defined in any ds, declare its default here
