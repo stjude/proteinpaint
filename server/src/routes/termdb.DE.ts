@@ -265,7 +265,7 @@ async function runDeFresh(
 
 	const time1 = new Date().valueOf()
 	const result: GeneDEEntry[] = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
-	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
+	mayLog('Time taken to run Wilcoxon DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 
 	const cacheResult: DeCacheResult = {

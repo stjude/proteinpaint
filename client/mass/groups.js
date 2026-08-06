@@ -595,8 +595,17 @@ export function renderPreAnalysisData(arg) {
 
 	// display actual numbers of samples with rnaseq count
 	// gdc etc. call them cases, not samples
-	const sampleLabel = self?.app?.vocabApi?.termdbConfig?.uiLabels?.samples || 'samples'
+	const uiLabels = self?.app?.vocabApi?.termdbConfig?.uiLabels
+	const sampleLabel = uiLabels?.samples || 'samples'
 	const menuDiv = tip ? tip.d.append('div') : holder.append('div')
+	/* these counts are a subset of the group sizes shown in the groups table: only the samples that
+	actually have expression data can be compared. without this header the two numbers look like a
+	bug (e.g. a GDC group of 1570 cases showing as 626 here). */
+	menuDiv
+		.append('div')
+		.style('font-weight', 'bold')
+		.style('margin', '5px 0 0 5px')
+		.text(`${uiLabels?.Samples || 'Samples'} with gene expression data:`)
 	const table = table2col({ holder: menuDiv })
 	table.table.style('margin-left', '5px').style('padding', '5px 10px')
 	{
