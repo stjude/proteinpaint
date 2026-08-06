@@ -63,10 +63,11 @@ def tile_region(w, h, z, x, y, tile=TILE_SIZE):
 def meta(slide):
     s = openslide.OpenSlide(slide)
     try:
-        mpp = s.properties.get("openslide.mpp-x")
+        mpp_x = s.properties.get("openslide.mpp-x")
+        mpp_y = s.properties.get("openslide.mpp-y")
         return {
             "slide_dimensions": list(s.dimensions),
-            "mpp": float(mpp) if mpp else None,
+            "mpp": [float(mpp_x), float(mpp_y)] if mpp_x and mpp_y else [],
             "levels": s.level_count,
             "tileSize": TILE_SIZE,
         }

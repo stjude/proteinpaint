@@ -68,14 +68,18 @@ function slidePath(genomes: any, q: any): string {
 	if (!g) throw new Error('Invalid genome name')
 	const ds = g.datasets[q.dslabel]
 	if (!ds) throw new Error('Invalid dataset name')
-	if (!q.wsimage) throw new Error('No wsimage param provided')
-	if (!q.sample_id && !q.ai_project_id) throw new Error('sample_id or ai_project_id required')
+	const wsimage = q.wsimage
+	if (!wsimage) throw new Error('No wsimage param provided')
+
+	const sampleId = q.sample_id ?? q.sampleId
+	const aiProjectId = q.ai_project_id ?? q.aiProjectId
+	if (!sampleId && !aiProjectId) throw new Error('sample_id/sampleId or ai_project_id/aiProjectId required')
 	const mount = serverconfig.features?.tileserver?.mount
 	if (!mount) throw new Error('No mount configured (serverconfig.features.tileserver.mount)')
 	const w = ds.queries.WSImages
-	const sub = q.sample_id
-		? path.join(`${w.imageBySampleFolder}/${q.sample_id}`, q.wsimage)
-		: path.join(`${w.aiToolImageFolder}/`, q.wsimage)
+	const sub = sampleId
+		? path.join(`${w.imageBySampleFolder}/${sampleId}`, wsimage)
+		: path.join(`${w.aiToolImageFolder}/`, wsimage)
 	return path.join(mount, sub)
 }
 
