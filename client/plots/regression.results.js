@@ -3,7 +3,7 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
-import { roundValue } from '#shared/roundValue.js'
+import { getEstimateMsg, refGrp_NA } from './regression/estimateMsg'
 
 /*************
 can dynamically add following attributes
@@ -51,7 +51,6 @@ main
 			mayshow_cuminc
 */
 
-const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08' // forest plot color
 const boxplotcolor = forestcolor
 
@@ -966,233 +965,19 @@ function setRenderers(self) {
 	}
 
 	// get tooltip message explaining the estimate value
-	self.getEstimateMsg = arg => {
-		const { est, tw, tw2, categoryKey, categoryKey2, isIntercept, isUnivariate } = arg
-		const independentTws = self.independentTws
-		const outcomeTw = self.config.outcome
-		const regtype = self.config.regressionType
-		const category = tw?.term?.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey
-		const category2 =
-			tw2?.term?.values && tw2.term.values[categoryKey2] ? tw2.term.values[categoryKey2].label : categoryKey2
-		const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
-		const refGrp2 = tw2?.term?.values && tw2.term.values[tw2.refGrp] ? tw2.term.values[tw2.refGrp].label : tw2?.refGrp
-
-		/** part 1: outcome variable **/
-		let msg
-		if (regtype == 'linear') {
-			msg = tw2 ? getInteractionMsg() : `Mean ${styleVariable(outcomeTw)} is`
-			msg += ` ${Math.abs(est)} ${unitsOf(outcomeTw)}`
-			if (isIntercept) {
-				const baselines = getBaselines(independentTws)
-				return `${msg} when ${joinVariables(baselines)}.`
-			}
-			msg += ` ${est < 0 ? 'lower' : 'higher'} `
-		} else if (regtype == 'logistic') {
-			msg = tw2 ? getInteractionMsg() : `Odds of ${styleVariable(outcomeTw, outcomeTw.nonRefGrp)} is`
-			if (isIntercept) {
-				const baselines = getBaselines(independentTws)
-				return `${msg} ${est} when ${joinVariables(baselines)}.`
-			}
-			msg += est > 1 ? ` ${est} times higher ` : ` ${roundValue(1 / est, 3)} times lower `
-		} else if (regtype == 'cox') {
-			msg = tw2
-				? getInteractionMsg()
-				: `Hazard (instantaneous rate) of ${styleVariable(outcomeTw, outcomeTw.eventLabel)} is`
-			msg += est > 1 ? ` ${est} times higher ` : ` ${roundValue(1 / est, 3)} times lower `
-		} else {
-			throw 'regression type not recognized'
-		}
-
-		/** part 2: independent variable **/
-		const interactions = []
-		const interactionsBaselines = []
-		if (tw.interactions?.length && !tw2) {
-			// variable is part of an interaction, but the current row
-			// is not an interaction row
-			for (const tid of tw.interactions) {
-				const t = self.getIndependentInput(tid).term
-				if (t.term.snps) {
-					// snplst or snplocus term
-					// need to get term ids of individuals snps
-					for (const snp of t.term.snps) interactions.push(snp.snpid)
-				} else {
-					interactions.push(tid)
-				}
-			}
-			if (!interactions.length) throw 'interactions[] is empty'
-			const interactingTws = independentTws.filter(t => interactions.includes(t.$id || t.id))
-			interactionsBaselines.push(...getBaselines(interactingTws))
-		}
-		if (category) {
-			// categorical variable
-			msg += `in ${joinVariables([styleVariable(tw, category), ...interactionsBaselines])} compared to ${joinVariables([
-				styleVariable(tw, refGrp),
-				...interactionsBaselines
-			])}`
-		} else if (tw.q.mode == 'continuous') {
-			// continuous variable
-			msg += `for every ${oneUnitOf(tw)} increase of ${styleVariable(tw)}`
-			if (interactionsBaselines.length) msg += ` when ${joinVariables(interactionsBaselines)}`
-		} else if (tw.q.geneticModel === 0) {
-			// genetic variable, additive model
-			msg += `for every additional ${tw.effectAllele} allele of ${styleVariable(tw)}`
-			if (interactionsBaselines.length) msg += ` when ${joinVariables(interactionsBaselines)}`
-		} else if (tw.q.geneticModel == 1 || tw.q.geneticModel == 2) {
-			// genetic variable, dominant or recessive model
-			const gts = Object.keys(tw.gt2count)
-			const testGts = gts.filter(gt => {
-				if (tw.q.geneticModel == 1) {
-					// dominant model
-					return gt.includes(tw.effectAllele)
-				} else {
-					// recessive model
-					return gt
-						.replace(/[^a-zA-Z]/g, '')
-						.split('')
-						.every(c => c == tw.effectAllele)
-				}
-			})
-			const refGts = gts.filter(gt => !testGts.includes(gt))
-			msg += `in ${joinVariables([
-				styleVariable(tw, testGts.join(', ')),
-				...interactionsBaselines
-			])} compared to ${joinVariables([styleVariable(tw, refGts.join(', ')), ...interactionsBaselines])}`
-		}
-
-		/** part 3: adjusting for covariates **/
-		// get term ids of current variable and any interacting variables
-		const tids = [tw.$id || tw.id]
-		if (tw.interactions?.length) {
-			if (tw2) tids.push(tw2.$id || tw2.id)
-			else tids.push(...interactions)
-		}
-		// get covariates (i.e., all other variables)
-		const covariates = independentTws.filter(t => !tids.includes(t.$id || t.id)).map(t => styleVariable(t))
-		if (regtype == 'cox') {
-			covariates.push(outcomeTw.q.timeScale == 'time' ? '"Years of follow-up"' : '"Attained age during follow-up"') // TODO: how to handle styling for this?
-		}
-		// build message for covariates
-		if (!covariates.length || isUnivariate) return msg + '.'
-		return msg + `, adjusting for ${joinVariables(covariates)}.`
-
-		/** helper functions **/
-		/* a numeric term with valueConversion{} is analyzed by its converted unit
-		(see makeRinput() in server/src/routes/termdb.regression.ts), so the estimate is per that
-		unit, e.g. per year rather than per day. the two below name the unit of such a variable,
-		and fall back to the generic "unit" wording for terms without a declared unit */
-		function oneUnitOf(tw) {
-			const u = tw?.term?.valueConversion?.toUnit
-			return u ? `1 ${u}` : 'one unit'
-		}
-		function unitsOf(tw) {
-			const u = tw?.term?.valueConversion?.toUnit
-			return u ? `${u}s` : 'units'
-		}
-
-		// function to style a variable (and its category)
-		function styleVariable(tw, category) {
-			const spans = [
-				`<span class="term_name_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2.5px 0px; border-radius: ${
-					category ? '6px 0px 0px 6px' : '6px'
-				};">${tw.term.name.length < 40 ? tw.term.name : tw.term.name.substring(0, 35) + ' ...'}</span>`
-			]
-			if (category) {
-				spans.push(
-					`<span class="ts_summary_btn sja_filter_tag_btn" style="padding: 3px 6px; margin: 2.5px 0px; border-radius: 0px 6px 6px 0px; font-style: italic;">${category}</span>`
-				)
-			}
-			return `<div style="display: inline; white-space: nowrap; font-size: 0.9em">${spans.join('')}</div>`
-		}
-
-		// function to get message for interaction term
-		function getInteractionMsg() {
-			let msg =
-				regtype == 'linear'
-					? `The difference in mean ${styleVariable(outcomeTw)}`
-					: regtype == 'logistic'
-					? `The difference in odds of ${styleVariable(outcomeTw, outcomeTw.nonRefGrp)}`
-					: `The difference in hazard (instantaneous rate) of ${styleVariable(outcomeTw, outcomeTw.eventLabel)}`
-
-			if (category2) {
-				// categorical variable
-				msg += ` between ${styleVariable(tw2, category2)} and ${styleVariable(tw2, refGrp2)} is`
-			} else if (tw2.q.mode == 'continuous') {
-				// continuous variable
-				msg += ` for every ${oneUnitOf(tw2)} increase of ${styleVariable(tw2)} is`
-			} else if (tw2.q.geneticModel === 0) {
-				// genetic variable, additive model
-				msg += ` for every additional ${tw2.effectAllele} allele of ${styleVariable(tw2)} is`
-			} else if (tw2.q.geneticModel == 1 || tw2.q.geneticModel == 2) {
-				// genetic variable, dominant or recessive model
-				const gts = Object.keys(tw2.gt2count)
-				const testGts = gts.filter(gt => {
-					if (tw2.q.geneticModel == 1) {
-						// dominant model
-						return gt.includes(tw2.effectAllele)
-					} else {
-						// recessive model
-						return gt
-							.replace(/[^a-zA-Z]/g, '')
-							.split('')
-							.every(c => c == tw2.effectAllele)
-					}
-				})
-				const refGts = gts.filter(gt => !testGts.includes(gt))
-				msg += ` between ${styleVariable(tw2, testGts.join(', '))} and ${styleVariable(tw2, refGts.join(', '))} is`
-			}
-
-			return msg
-		}
-
-		/* function to get the baseline level of each variable
-			- categorical variable: refGrp
-			- continuous variable: 0
-			- genetic variable:
-				- additive model: 0 effect alleles
-				- dominant model: homozygous for non-effect allele
-				- recessive model: homozygous for non-effect allele or heterozygous
-				- by genotype: same as categorical variable
-		*/
-		function getBaselines(tws) {
-			const baselines = tws.map(tw => {
-				if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
-					// has refGrp, must be categorical variable
-					const refGrp = tw?.term?.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw?.refGrp
-					return styleVariable(tw, refGrp)
-				} else if (tw.q.mode == 'continuous') {
-					// continuous variable
-					return styleVariable(tw, '0')
-				} else if (tw.q.geneticModel === 0) {
-					// genetic variable, additive model
-					return styleVariable(tw, `No ${tw.effectAllele} alleles`)
-				} else if (tw.q.geneticModel == 1 || tw.q.geneticModel == 2) {
-					// genetic variable, dominant or recessive model
-					const gts = Object.keys(tw.gt2count)
-					const refGts = gts.filter(gt => {
-						if (tw.q.geneticModel == 1) {
-							// dominant model
-							return !gt.includes(tw.effectAllele)
-						} else {
-							// recessive model
-							return !gt
-								.replace(/[^a-zA-Z]/g, '')
-								.split('')
-								.every(c => c == tw.effectAllele)
-						}
-					})
-					return styleVariable(tw, refGts.join(', '))
-				}
-			})
-			return baselines
-		}
-
-		function joinVariables(variables) {
-			if (!variables.length) return ''
-			else if (variables.length == 1) return variables[0]
-			else if (variables.length == 2) return variables.join(' and ')
-			else return `${variables.slice(0, -1).join(', ')}, and ${variables.slice(-1)}`
-		}
-	}
+	self.getEstimateMsg = arg =>
+		getEstimateMsg(
+			Object.assign(
+				{
+					regressionType: self.config.regressionType,
+					outcomeTw: self.config.outcome,
+					independentTws: self.independentTws,
+					termdbConfig: self.app.vocabApi.termdbConfig,
+					getIndependentInput: tid => self.getIndependentInput(tid)
+				},
+				arg
+			)
+		)
 
 	// show disclaimer message under the coefficient tables when
 	// regressionType == 'cox
