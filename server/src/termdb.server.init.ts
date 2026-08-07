@@ -305,6 +305,32 @@ export function server_init_db_queries(ds) {
 		}
 	}
 	{
+		/* return all terms of a given type in a cohort, as term objects
+		a ds that builds its own dictionary (gdc/mmrf) supplies its own version of this method */
+		const sql = cn.prepare(
+			`SELECT id, name, jsondata
+			FROM terms t
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
+			WHERE t.type=?
+			GROUP BY id
+			ORDER BY child_order ASC`
+		)
+		const cache = new Map()
+		q.getTermsByTermType = (termType, cohortStr = '') => {
+			const cacheId = termType + ';;' + cohortStr
+			if (cache.has(cacheId)) return cache.get(cacheId)
+			const re = sql.all(cohortStr, termType).map(i => {
+				const t = JSON.parse(i.jsondata)
+				t.id = i.id
+				t.name = i.name || t.name
+				return t
+			})
+			cache.set(cacheId, re)
+			return re
+		}
+	}
+
+	{
 		const s = cn.prepare('SELECT parent_id FROM terms WHERE id=?')
 		{
 			const cache = new Map()
@@ -638,6 +664,49 @@ export function setSupportedChartTypes(ds) {
 		}
 		return supportedChartTypes
 	}
+}
+
+/*
+	term types for which a "lone term" is worth precomputing; a plot can prefill its term selector
+	with the only possible choice instead of making the user open the tree to find it
+	(e.g. cox regression outcome for gdc, which has a single hardcoded "Overall survival" term)
+*/
+const loneTermTypes = ['survival', 'condition']
+
+/*
+	When a cohort has exactly one term of a type listed in loneTermTypes[], record that term in
+		ds.cohort.termdb.loneTermByType = { <cohort>: { survival: <term>, condition: <term> } }
+	keyed by cohort string, same as termtypeByCohort.nested and supportedChartTypes, since term
+	counts differ between subcohorts of the same ds. The whole term object is stored (not just its
+	id) so client code receiving it via termdbConfig can build a tw without a round trip.
+
+	Must run after mayComputeTermtypeByCohort(): its per-cohort counts decide which (cohort, type)
+	pairs to look up, so no lookup at all is done for a ds with no lone term.
+
+	Works for any ds that supplies q.getTermsByTermType(), which is set here for db-backed datasets
+	and by the ds itself for hook-based ones (gdc/mmrf).
+*/
+export function findLoneTermByType(ds) {
+	const tdb = ds.cohort?.termdb
+	if (!tdb) return
+	if (tdb.loneTermByType) return // ds supplied its own; don't clobber
+	const nested = tdb.termtypeByCohort?.nested
+	if (!nested) return // term types unknown for this ds
+	if (typeof tdb.q?.getTermsByTermType != 'function') return // no way to retrieve the term
+
+	const loneTermByType = {}
+	for (const [cohort, cohortTermTypes] of Object.entries(nested) as [string, any][]) {
+		for (const termType of loneTermTypes) {
+			if (cohortTermTypes[termType] !== 1) continue // not a lone term of this type
+			const terms = tdb.q.getTermsByTermType(termType, cohort)
+			// the count and the terms must agree, otherwise there is no single term to point at
+			if (terms?.length !== 1) continue
+			if (!loneTermByType[cohort]) loneTermByType[cohort] = {}
+			// copy, as getTermsByTermType() may return a cached term that must not be shared
+			loneTermByType[cohort][termType] = structuredClone(terms[0])
+		}
+	}
+	if (Object.keys(loneTermByType).length) tdb.loneTermByType = loneTermByType
 }
 
 // ds computes term visibility in dictionary based on client auth; returns list of visible terms

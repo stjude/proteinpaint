@@ -1798,6 +1798,18 @@ keep this setting here for reason of:
 	}
 
 	termtypeByCohort?: any // FIXME see below
+
+	/** computed at server launch by findLoneTermByType(). for a cohort with exactly one term of a
+	given type, maps that type to the term object, so a plot can prefill a term selector with the
+	only possible choice (e.g. cox outcome for a ds with a single survival term).
+	keyed by cohort string like termtypeByCohort.nested.
+	a ds may preset this to bypass the computation */
+	loneTermByType?: {
+		[cohort: string]: {
+			survival?: BaseTerm
+			condition?: BaseTerm
+		}
+	}
 	/** TODO not declared due to tsc err
 	ds-defined or dynamically created. the array has an extra "nested" property
 	only describes dictionary terms,
