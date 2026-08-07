@@ -3,8 +3,16 @@ type CellCache = {
 	sampleIds: string[]
 	x: Float32Array
 	y: Float32Array
-
 	byCellId: Map<string, number>
+	cellTypes?: string[]
+}
+
+type MetaResultIdxs = {
+	cell: number
+	sample: number
+	x: number
+	y: number
+	cellType?: number
 }
 
 export class SingleCellMetaCache {
@@ -25,15 +33,14 @@ export class SingleCellMetaCache {
 	addMetaResult(
 		metaResultName: string,
 		text: string,
-		idxs: any, // TODO: update type
+		idxs: MetaResultIdxs,
 		sampleName2id: (sampleName: string) => any
 	): void {
 		const cellCache = this.initCellCacheFromText(text, idxs)
 		this.mapMetaResult(metaResultName, cellCache, sampleName2id)
 	}
 
-	// TODO: update type of idxs
-	private initCellCacheFromText(text: string, idxs): CellCache {
+	private initCellCacheFromText(text: string, idxs: MetaResultIdxs): CellCache {
 		const lines = text.trim().split('\n')
 		if (!lines[0]) throw new Error('meta result file is empty')
 		const headerColumnCount = lines[0].split('\t').length
@@ -82,13 +89,14 @@ export class SingleCellMetaCache {
 			byCellId.set(cellId, rowIdx)
 
 			if (hasCellTypeIdx) {
-				const cellType = row[cellTypeIdx]
+				const cti = cellTypeIdx as number
+				const cellType = row[cti]
 				if (!cellType) throw new Error(`meta result row missing cell type at row index ${rowIdx + 1}`)
 				cellTypes[rowIdx] = cellType
 			}
 		}
 
-		const cellCache = {
+		const cellCache: CellCache = {
 			cellIds,
 			sampleIds,
 			x,
