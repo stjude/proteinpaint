@@ -1,5 +1,5 @@
 import type { MassAppApi } from '#mass/types/mass'
-import { downloadTable, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
+import { downloadTable, fileDateStamp, GeneSetEditUI, MultiTermWrapperEditUI } from '#dom'
 import { to_svg } from '#src/client'
 import type { VolcanoDom, VolcanoPlotConfig } from '../VolcanoTypes'
 import { PROTEOME_DAP, DNA_METHYLATION, GENE_EXPRESSION } from '#types'
@@ -11,6 +11,9 @@ export class VolcanoInteractions {
 	id: string
 	pValueTableData: any
 	data: any
+	/** Significant rows before maxInteractiveDots capped them. Only the capped subset is
+	 * downloadable, so the download says so when the two differ. */
+	totalSignificantRows: number
 
 	constructor(app: MassAppApi, id: string, dom: VolcanoDom) {
 		this.app = app
@@ -18,6 +21,7 @@ export class VolcanoInteractions {
 		this.id = id
 		this.pValueTableData = []
 		this.data = []
+		this.totalSignificantRows = 0
 	}
 
 	/** Launches a multi-term select tree
@@ -76,9 +80,21 @@ export class VolcanoInteractions {
 			},
 			{
 				// DAP volcanoes report a single FDR rather than a p-value.
-				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p value table',
+				text: termType === PROTEOME_DAP ? 'Download FDR table' : 'Download p-value table',
 				callback: () => {
-					downloadTable(this.pValueTableData.rows, this.pValueTableData.columns)
+					// name the file after what is in it and when it was run -- these downloads pile up in
+					// one folder across cohorts and reruns
+					const date = fileDateStamp()
+					const label = termType === PROTEOME_DAP ? 'fdr' : 'p-value'
+					const rows = this.pValueTableData.rows
+					/* The server returns only the most-significant maxInteractiveDots rows, so a big result
+					silently downloads as a subset. The on-screen table prints that; without this the file
+					did not, and nothing in it revealed that "how many were significant" is unanswerable. */
+					const note =
+						this.totalSignificantRows > rows.length
+							? `Top ${rows.length.toLocaleString()} of ${this.totalSignificantRows.toLocaleString()} significant results, selected by adjusted p-value and sorted by fold-change. This file is not the complete result set.`
+							: undefined
+					downloadTable(rows, this.pValueTableData.columns, `${label}-table-${date}.tsv`, note)
 				}
 			}
 		]

@@ -145,7 +145,8 @@ export function renderTable({
 			height: 15,
 			title: 'Download table',
 			handler: () => {
-				downloadTable(rows, columns, download.fileName || 'table.tsv')
+				// no fileName supplied -> let downloadTable's date-stamped default apply
+				downloadTable(rows, columns, download.fileName)
 			}
 		})
 	}
@@ -685,6 +686,21 @@ export function renderTable({
 	return api
 }
 
+/** utf-8 byte order mark, written as an escape rather than the literal character so it is visible
+ * to anyone reading this file. See its use in downloadTable(). */
+const BOM = '\ufeff'
+
+/** YYYY-MM-DD in the viewer's own timezone, for stamping downloaded filenames.
+ *
+ * Deliberately not `toISOString().split('T')[0]`, which is UTC: anyone west of Greenwich
+ * downloading in the evening gets tomorrow's date on the file, and the stamp then disagrees with
+ * the date their own filesystem puts on it. Built from the local getters rather than
+ * toLocaleDateString('en-CA') so the format cannot shift with ICU locale data. */
+export function fileDateStamp(d = new Date()): string {
+	const pad = (n: number) => String(n).padStart(2, '0')
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 /**
  * Downloads table data as a TSV (Tab-Separated Values) file.
  *
@@ -696,7 +712,11 @@ export function renderTable({
  * @param {Array<TableColumn>} cols - Array of column definition objects.
  *        Each column object must have:
  *        - label: string - The header text for the column
- * @param {string} [filename='table.tsv'] - Optional custom filename for the downloaded file
+ * @param {string} [filename] - Optional custom filename. Defaults to table-YYYY-MM-DD.tsv; callers
+ *        with a more specific name should pass one, since a folder of "table.tsv (3)" is useless.
+ * @param {string} [note] - Optional one-line caveat, written above the header as a '#' comment.
+ *        For what a reader must know to interpret the file (e.g. that the rows are a truncated
+ *        subset), not for provenance trivia.
  *
  * @example
  * // Basic usage
@@ -725,30 +745,43 @@ export function renderTable({
  *
  * @returns {Promise<void>} - The function creates and triggers a download in the browser
  */
-export async function downloadTable(rows, cols, filename = 'table.tsv') {
-	let lines = ''
-
-	// Add header row with column labels
-	for (const column of cols) {
-		lines += `${column.label}\t`
-	}
-	lines += '\n'
-
-	// Add data rows
-	for (const row of rows) {
-		for (const cell of row) {
-			let value = ''
-			// Check for cell.value existence to properly handle zero values
-			if ('value' in cell) value = cell.value
-			else if (cell.url) value = cell.url
-			else if (cell.color) value = cell.color
-			lines += `${value}\t`
-		}
-		lines += '\n'
+export async function downloadTable(rows, cols, filename = `table-${fileDateStamp()}.tsv`, note?: string) {
+	const cellValue = cell => {
+		// Check for cell.value existence to properly handle zero values
+		if ('value' in cell) return cell.value
+		if (cell.url) return cell.url
+		if (cell.color) return cell.color
+		return ''
 	}
 
-	// Create and trigger download
-	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(lines)
+	/* RFC 4180 quoting, with tab as the delimiter: a value carrying a tab or newline would
+	otherwise split its row into extra columns or extra rows, silently shifting every field after
+	it. Quote when the value holds a tab, newline or double quote, and double any inner quotes.
+	Excel, pandas (read_csv sep='\t') and R (read.delim) all read this back correctly. A value
+	merely containing a quote is quoted too -- parsers treat a field opening with " as quoted. */
+	const escapeCell = (v: any) => {
+		const s = String(v ?? '')
+		return /[\t\r\n"]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+	}
+
+	/* A caller-supplied note goes above the header as a '#' comment -- the convention vcf, gtf and bed
+	all use, and what R's read.delim skips by default. Only pass one for something a reader must know
+	to interpret the file correctly (that it is truncated, say); it does cost a `comment='#'` in
+	pandas, so a file that says nothing important should say nothing at all. Newlines are stripped so
+	the note cannot become a second line and shift the header. */
+	const header = cols.map(column => escapeCell(column.label)).join('\t')
+	const noteLine = note ? `# ${note.replace(/[\r\n]+/g, ' ')}\n` : ''
+
+	// join rather than append: a trailing tab on every line reads as an extra empty column in
+	// excel and pandas alike
+	const lines =
+		noteLine + [header, ...rows.map(row => row.map(cell => escapeCell(cellValue(cell))).join('\t'))].join('\n') + '\n'
+
+	/* Create and trigger download. The leading BOM is required: without it excel on windows decodes
+	the file with the system codepage, and utf-8 in the content -- column labels like
+	"log₂(fold-change)", non-ascii sample names -- arrives as mojibake. Every other reader either
+	honors the BOM or skips it. */
+	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(BOM + lines)
 	const link = document.createElement('a')
 	link.setAttribute('href', dataStr)
 	// If you don't know the name or want to use
