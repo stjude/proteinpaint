@@ -447,13 +447,17 @@ export class TermdbVocab extends Vocab {
 	}
 
 	async getFilteredSampleCount(filterJSON, filter0) {
+		/* api-backed datasets (gdc) scope every query by the portal cohort filter; without it the
+		count is over all of GDC rather than the cohort the user is looking at. fall back to state so
+		a call site that predates this argument still gets a scoped count. the test is for undefined
+		rather than ?? on purpose: passing null is how a caller intentionally disables the cohort
+		filter, which DEinput does when the group filter already carries a cohort term. */
+		if (filter0 === undefined) filter0 = this.state?.termfilter?.filter0
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			getsamplecount: 1,
 			filter: getNormalRoot(filterJSON),
-			// api-backed datasets (gdc) scope every query by the portal cohort filter; without it the
-			// count is over all of GDC rather than the cohort the user is looking at
 			filter0
 		}
 		const data = await this.dofetch3('termdb', { body }, this.opts.fetchOpts)
@@ -794,9 +798,9 @@ export class TermdbVocab extends Vocab {
 			opts.isHierCluster || opts.isSummary
 				? null
 				: opts.terms
-					.filter(tw => tw.term.type === 'geneVariant')
-					.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
-					.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
+						.filter(tw => tw.term.type === 'geneVariant')
+						.map(tw => (tw.term.chr ? `${tw.term.chr}:${tw.term.start}-${tw.term.stop}` : tw.term.name))
+						.sort() // sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		const allTerms2update = opts.terms.slice().sort((a, b) => (a.term.name < b.term.name ? -1 : 1)) // make copy of array as it will be truncated to empty. do not modify original
 		const maxNumTerms = this.opts.app.vocabApi.termdbConfig?.maxAnnoTermsPerClientRequest || opts.terms.length
 		let numResponses = 0
@@ -1473,7 +1477,7 @@ export class TermdbVocab extends Vocab {
 		return await this.dofetch3('aiProjectAdmin', { body })
 	}
 
-	async getAggregateMatrixData(opts){
+	async getAggregateMatrixData(opts) {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
@@ -1488,7 +1492,7 @@ export class TermdbVocab extends Vocab {
 		}
 		const formatTw = term => {
 			if (isSingleCellTerm(term)) return term
-			else return this.getTwMinCopy({term: term, q: {}})
+			else return this.getTwMinCopy({ term: term, q: {} })
 		}
 		Object.keys(body.rows).forEach(section => {
 			body.rows[section] = body.rows[section].map(term => formatTw(term))
