@@ -135,7 +135,7 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	// { <cohort>: { survival: <term>, condition: <term> } }, only for a term type with a single
 	// term in that cohort; lets a plot prefill a term selector (see findLoneTermByType())
 	const loneTermByType = getLoneTermByType(req, ds, tdb.loneTermByType)
-	if (loneTermByType) c.loneTermByType = loneTermByType
+	if (loneTermByType) c.loneTermByType = structuredClone(loneTermByType)
 	if (tdb.regression) c.regression = tdb.regression
 	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
 	// termCollections (with type: 'numeric' | 'categorical') replace legacy numericTermCollections
