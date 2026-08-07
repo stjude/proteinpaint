@@ -12,6 +12,7 @@ export function getTermOrder(data) {
 		numClusterTerms = 0
 
 	this.mclassSorter = getMclassSorter(this)
+	this.samplesByAncestorId = new Map()
 	for (const [grpIndex, grp] of this.termGroups.entries()) {
 		const lst = [] // will derive a mutable copy of grp.lst
 		for (const [index, tw] of grp.lst.entries()) {
@@ -49,9 +50,19 @@ export function getTermOrder(data) {
 						}
 					}
 				}
+
+				const id = sd._ref_?.ancestors?.[0]?.ancestor_id
+				if (id) {
+					if (!this.samplesByAncestorId.has(id)) this.samplesByAncestorId.set(id, new Set())
+					this.samplesByAncestorId.get(id).add(sd)
+				}
 			}
 			if (grp.type != 'hierCluster' || counts.samples) lst.push({ tw, counts, index })
 			if (grp.type == 'hierCluster') numClusterTerms++
+		}
+
+		for (const [ancestor_id, samples] of this.samplesByAncestorId.entries()) {
+			if (samples.size < 2) this.samplesByAncestorId.delete(ancestor_id)
 		}
 
 		// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -170,11 +181,35 @@ export function getSampleGroups(data) {
 	const hitsPerSample = (t, c) => t + (typeof c == 'object' && c.countedValues?.length ? 1 : 0)
 	const countHits = (total, d) => total + (Object.values(d).reduce(hitsPerSample, 0) ? 1 : 0)
 	// this second sorter will be applied within each group of samples
-	const grpLstSampleSorter = getSampleSorter(this, s, data.lst)
+	const grpLstSampleSorter = getSampleSorter(this, s, data.lst) //console.log(172, s)
 	for (const grp of sampleGrpsArr) {
 		grp.lst = grp.lst.filter(dataFilter)
 		grp.totalCountedValues = grp.lst.reduce(countHits, 0)
 		grp.lst.sort(grpLstSampleSorter)
+
+		if (this.config.chartType != 'matrix' || !s.sortBySampleAncestry) continue
+		grp.relatedSamples = {}
+		// at this point, samples have already been sorted by grpLstSampleSorter (mutation, CNV, values, etc),
+		// only now pull ancestor-related samples to be grouped with the left-most related sample
+		const reorderedByAncestor = new Set()
+		const lstCopy = new Set(grp.lst)
+		let currentRelated = [grp.lst[0]]
+		for (const s of grp.lst) {
+			if (reorderedByAncestor.has(s)) continue
+			reorderedByAncestor.add(s)
+			lstCopy.delete(s)
+			currentRelated = [s]
+			const id = s._ref_?.ancestors?.[0]?.ancestor_id
+			for (const c of lstCopy) {
+				if (c._ref_?.ancestors?.[0]?.ancestor_id === id) {
+					reorderedByAncestor.add(c)
+					lstCopy.delete(c)
+					currentRelated.push(c)
+				}
+			}
+			if (currentRelated.length > 1) grp.relatedSamples[id] = currentRelated
+			grp.lst = [...reorderedByAncestor]
+		}
 	}
 	const sampleGrpSorter = getSampleGroupSorter(this)
 	return sampleGrpsArr.sort(sampleGrpSorter)
@@ -191,6 +226,7 @@ export function getSampleOrder(data) {
 		if (grp.isExcluded) numHiddenGrps++
 		let processedLst = grp.lst
 		for (const [index, row] of processedLst.entries()) {
+			// track ancestors with #descendants > 1 to render rects around related samples
 			sampleOrder.push({
 				grp,
 				grpIndex: grpIndex - numHiddenGrps, // : this.sampleGroups.length,

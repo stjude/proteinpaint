@@ -163,6 +163,44 @@ export function setSamplesBtn(self: MatrixControls, s: any) {
 				})
 
 			const basicDiv = input.dom.inputTd.append('div').style('display', controls.activeTab == 'basic' ? '' : 'none')
+
+			if (self.parent.config.chartType == 'matrix' && parent.app.vocabApi.termdbConfig.hasSampleAncestry) {
+				const ancestryDiv = basicDiv
+					.append('div')
+					.attr('title', 'sort by ancestry')
+					.style('display', m.showMatrixCNV != 'none' && !m.allMatrixCNVHidden ? 'block' : 'none')
+
+				ancestryDiv.append('span').html('Ancestry')
+
+				make_radios({
+					// holder, options, callback, styles
+					holder: ancestryDiv.append('span'),
+					options: [
+						{ label: 'sort first', value: 'first', checked: m.sortBySampleAncestry === 'first' },
+						{ label: 'sort last', value: 'last', checked: m.sortBySampleAncestry === 'last' },
+						{ label: 'disable', value: false, checked: m.sortBySampleAncestry === false }
+					],
+					styles: {
+						display: 'inline-block'
+					},
+					callback: (selectedValue: 'first' | 'last' | false) => {
+						parent.app.dispatch({
+							type: 'plot_edit',
+							id: parent.id,
+							config: {
+								settings: {
+									matrix: {
+										sortBySampleAncestry: selectedValue
+										//sortByCNV, // needed to show the correct status for checkbox, but actual sorting behavior
+										//sortOptions // is based on sortOptions.a[*].tiebreaker[*][disabled, isOrdered]
+									}
+								}
+							}
+						})
+					}
+				})
+			}
+
 			const ssmDiv = basicDiv.append('div')
 			ssmDiv.append('span').html('SSM')
 			const { inputs } = make_radios({
