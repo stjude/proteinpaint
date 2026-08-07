@@ -4,7 +4,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 	switch (chartType) {
 		case 'aggregateMatrix':
 			return await import('./aggregateMatrix/AggregateMatrix.ts')
-			
+
 		case 'AIProjectAdmin':
 			return await import('./aiProjectAdmin/AIProjectAdmin.ts')
 
@@ -149,6 +149,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'volcano':
 			return await import(`./volcano/Volcano.ts`)
+
+		case 'wsi':
+			return await import('./w2/Wsi.ts')
 
 		case 'WSISamplesPlot':
 			return await import('./wsisamples/WsiSamplesPlot.ts')

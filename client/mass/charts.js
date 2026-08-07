@@ -234,6 +234,14 @@ function getChartTypeList(self, state) {
 			}
 		},
 		{
+			label: 'Whole Slide Images',
+			clickTo: self.prepPlot,
+			chartType: 'wsi',
+			config: {
+				chartType: 'wsi'
+			}
+		},
+		{
 			label: self.getBtnLabel_sampleScatter(state),
 			chartType: 'sampleScatter',
 			clickTo: self.loadChartSpecificMenu
