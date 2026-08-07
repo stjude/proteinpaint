@@ -1036,6 +1036,10 @@ export type SingleCellPlot = {
 	 * If .isMetaResult is true, array must include a sample column.
 	 */
 	colorColumns: ColorColumn[]
+	/** Indicates column index in text file containing cell type annotations */
+	cellTypeColumn?: { index: number }
+	/** Map between cell type and cell type label */
+	cellType2label?: Map<string, string>
 	/** if true the plot is shown by default. otherwise hidden.
 	 * Old implementation. Maybe deleted when singleCellPlot is deprecated.*/
 	selected?: boolean
@@ -1070,6 +1074,8 @@ export type SingleCellData = {
 	twLst?: object[]
 	/** available tsne type of plots for each sample */
 	plots: SingleCellPlot[]
+	/** function for adding cell type fraction terms to dictionary */
+	addCellTypeFractionTerms?: (terms: any[], ds: any) => void
 	/** created on init for meta analysis plots
 	 * <plotName(i.e metaResultID), <cellId, sampleId >> */
 	metaIdMap?: Map<string, Map<string, string>>

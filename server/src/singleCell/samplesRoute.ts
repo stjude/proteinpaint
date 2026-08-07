@@ -199,8 +199,9 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					// cell type fractions have been computed
 					// create cell type fraction terms
 					const cellType2sample2fraction = metaCache.cellTypeFractions
-					const cellTypeFractionTerms = []
+					const cellTypeFractionTerms: any[] = []
 					// iterating over plot.cellType2label to preserve order of cell types
+					if (!plot.cellType2label) throw new Error('plot.cellType2label is undefined')
 					for (const [cellType, label] of plot.cellType2label) {
 						const sample2fraction = cellType2sample2fraction.get(cellType)
 						const values = [...sample2fraction.values()]
