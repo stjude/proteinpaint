@@ -2,6 +2,7 @@ import type { RouteApi, RoutePayload } from '#types'
 import serverconfig from '#src/serverconfig.js'
 import { authApi } from '#src/auth.js'
 import { get_ds_tdb } from '#src/termdb.js'
+import { filterTerms } from '#src/termdb.server.init.ts'
 import { typeGroup } from '#shared/terms.js'
 import {
 	SINGLECELL_CELLTYPE,
@@ -131,6 +132,10 @@ function make(q, req, res, ds: Mds3WithCohort, genome) {
 	if (tdb.useCasesExcluded) c.useCasesExcluded = tdb.useCasesExcluded
 	if (tdb.excludedTermtypeByTarget) c.excludedTermtypeByTarget = tdb.excludedTermtypeByTarget
 	if (tdb.survival) c.survival = tdb.survival
+	// { <cohort>: { survival: <term>, condition: <term> } }, only for a term type with a single
+	// term in that cohort; lets a plot prefill a term selector (see findLoneTermByType())
+	const loneTermByType = getLoneTermByType(req, ds, tdb.loneTermByType)
+	if (loneTermByType) c.loneTermByType = loneTermByType
 	if (tdb.regression) c.regression = tdb.regression
 	if (tdb.uiLabels) c.uiLabels = tdb.uiLabels
 	// termCollections (with type: 'numeric' | 'categorical') replace legacy numericTermCollections
@@ -493,6 +498,25 @@ export function getDsAllowedTermTypes(ds) {
 	}
 	if (ds.cohort.termdb.termCollections?.length) typeSet.add(TERM_COLLECTION)
 	return [...typeSet]
+}
+
+/*
+loneTermByType{} is computed once at server launch, but a ds may hide terms based on the user's
+role, so drop any lone term this request cannot see; a plot must never prefill a hidden term.
+returns undefined when nothing is left to send.
+*/
+export function getLoneTermByType(req, ds, loneTermByType) {
+	if (!loneTermByType) return
+	if (!ds.cohort.termdb.isTermVisible) return loneTermByType // ds hides no term, same for every request
+	const visibleByCohort = {}
+	for (const [cohort, byType] of Object.entries(loneTermByType) as [string, any][]) {
+		const visible = {}
+		for (const [termType, term] of Object.entries(byType)) {
+			if (filterTerms(req, ds, [term]).length) visible[termType] = term
+		}
+		if (Object.keys(visible).length) visibleByCohort[cohort] = visible
+	}
+	return Object.keys(visibleByCohort).length ? visibleByCohort : undefined
 }
 
 function getSelectCohort(ds, req) {

@@ -6,6 +6,7 @@ import { fillTermWrapper } from '#termsetting'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase } from '#plots/PlotBase.js'
 import { numericTypes, dictionaryNumericTypes } from '#shared'
+import { getActiveCohortStr } from '#mass/charts'
 
 /*
 Code architecture:
@@ -147,15 +148,18 @@ export const componentInit = regressionInit
 
 let _ID_ = 1
 
-export async function getPlotConfig(opts, app) {
+export async function getPlotConfig(opts, app, activeCohort) {
 	// TODO need to supply term filter of app to fillTermWrapper
-	if (!opts.outcome) opts.outcome = {}
-
-	await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(opts.regressionType, 'outcome'))
+	if (!opts.outcome) opts.outcome = mayGetLoneOutcome(opts.regressionType, app, activeCohort)
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
-	config.outcome = opts.outcome
+	// without an outcome, config.outcome is left unset rather than "outcome:undefined",
+	// so that the input ui shows a blank outcome pill for user to fill in
+	if (opts.outcome) {
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(opts.regressionType, 'outcome'))
+		config.outcome = opts.outcome
+	}
 
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
@@ -172,6 +176,32 @@ export async function getPlotConfig(opts, app) {
 	}
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
+}
+
+/*
+returns a tw-shaped {term} when the dataset offers just one term usable as this method's outcome,
+so the outcome pill is prefilled rather than making user open the tree to pick the only choice
+(e.g. gdc, with its single hardcoded "Overall Survival" term); otherwise returns undefined
+
+only applies to cox, whose outcome is a survival or condition term. linear and logistic accept
+numeric/categorical terms too, so they always have more than one candidate.
+
+termdbConfig.loneTermByType{} is computed at server launch, keyed by cohort; see findLoneTermByType()
+*/
+function mayGetLoneOutcome(regressionType, app, activeCohort) {
+	if (regressionType != 'cox') return
+	const termdbConfig = app.vocabApi.termdbConfig
+	if (!termdbConfig?.loneTermByType) return // no lone term in this dataset
+	// a caller may not know the active cohort (e.g. getPlotConfig() when restoring a session),
+	// in which case the cohort key cannot be determined for a ds with subcohorts
+	if (termdbConfig.selectCohort && !Number.isInteger(activeCohort)) return
+	const byType = termdbConfig.loneTermByType[getActiveCohortStr({ termdbConfig, activeCohort })]
+	const t1 = byType?.survival
+	const t2 = byType?.condition
+	if (t1 && t2) return // has both. no preference thus do not auto select one
+	if (t1) return { term: structuredClone(t1) }
+	if (t2) return { term: structuredClone(t2) }
+	return
 }
 
 export function get_defaultQ4fillTW(regressionType, useCase = '') {
@@ -212,7 +242,7 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 	return defaultQ
 }
 
-export function makeChartBtnMenu(holder, chartsInstance) {
+export async function makeChartBtnMenu(holder, chartsInstance) {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance
@@ -227,13 +257,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	if (useMethods.length == 1) {
 		// only 1 method supported. directly show ui for this method but not menu
 		chartsInstance.dom.tip.hide()
-		chartsInstance.prepPlot({
-			config: {
-				chartType: 'regression',
-				regressionType: useMethods[0].type,
-				independent: []
-			}
-		})
+		chartsInstance.prepPlot({ config: await getPrepConfig(useMethods[0].type, chartsInstance) })
 		return
 	}
 	// multiple methods. show menu to list them
@@ -242,15 +266,30 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(label)
-			.on('click', () => {
+			.on('click', async () => {
 				chartsInstance.dom.tip.hide()
-				chartsInstance.prepPlot({
-					config: {
-						chartType: 'regression',
-						regressionType: type,
-						independent: []
-					}
-				})
+				chartsInstance.prepPlot({ config: await getPrepConfig(type, chartsInstance) })
 			})
 	}
+}
+
+/*
+config for the input ui of a regression method, launched by the "plot_prep" action
+
+the outcome is filled in here rather than in getPlotConfig(), as "plot_prep" only calls
+getPlotConfig() for a config holding nothing but the chart type (see plot_prep in mass/store.ts)
+*/
+async function getPrepConfig(regressionType, chartsInstance) {
+	const config = { chartType: 'regression', regressionType, independent: [] }
+	const { app, state } = chartsInstance
+	const outcome = mayGetLoneOutcome(regressionType, app, state.activeCohort)
+	if (!outcome) return config
+	try {
+		await fillTermWrapper(outcome, app.vocabApi, get_defaultQ4fillTW(regressionType, 'outcome'))
+		config.outcome = outcome
+	} catch (e) {
+		// prefilling is a convenience; on failure launch the ui with a blank outcome pill
+		console.error(`cannot prefill ${regressionType} outcome with "${outcome.term.id}": ${e}`)
+	}
+	return config
 }

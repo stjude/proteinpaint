@@ -30,7 +30,7 @@ import {
 	getColors
 } from '#shared/common.js'
 import { get_samples, get_active_groupset } from './termdb.sql.js'
-import { server_init_db_queries, setSupportedChartTypes } from './termdb.server.init.ts'
+import { server_init_db_queries, setSupportedChartTypes, findLoneTermByType } from './termdb.server.init.ts'
 import { barchart_data } from './termdb.barchart.js'
 import { mayInitiateScatterplots } from '#routes/termdb.sampleScatter.ts'
 import { mayInitiateMatrixplots, mayInitiateNumericDictionaryTermplots } from './termdb.matrix.js'
@@ -318,6 +318,7 @@ export async function validate_termdb(ds) {
 	}
 	// ds.cohort.termdb.q={} ready
 	setSupportedChartTypes(ds) // centralized: runs for every dataset regardless of the init path above
+	findLoneTermByType(ds) // requires termtypeByCohort.nested, computed by the call above
 
 	// blocking launch-time case-sample caching, for datasets whose preInit.cacheSamples must
 	// run before queries (e.g. mmrf: it sets q.id2sampleName/convertSampleId, needed by the

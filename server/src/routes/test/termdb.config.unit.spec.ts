@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { getDsAllowedTermTypes } from '../termdb.config.ts'
+import { getDsAllowedTermTypes, getLoneTermByType } from '../termdb.config.ts'
 import {
 	GENE_EXPRESSION,
 	ISOFORM_EXPRESSION,
@@ -337,5 +337,44 @@ tape('getDsAllowedTermTypes() - singleCell without geneExpression', function (te
 		result.includes(SINGLECELL_GENE_EXPRESSION),
 		'Should not include SINGLECELL_GENE_EXPRESSION without geneExpression'
 	)
+	test.end()
+})
+
+/**************
+ getLoneTermByType()
+***************/
+tape('\n', function (test) {
+	test.comment('-***- #routes/termdb.config getLoneTermByType -***-')
+	test.end()
+})
+
+const loneTermByType = {
+	ABC: { survival: { id: 'os', type: 'survival' }, condition: { id: 'grade', type: 'condition' } },
+	XYZ: { survival: { id: 'os', type: 'survival' } }
+}
+
+tape('getLoneTermByType() - returns the launch-time object when the ds hides no term', function (test) {
+	const ds: any = { cohort: { termdb: {} } }
+	test.equal(getLoneTermByType({}, ds, loneTermByType), loneTermByType, 'Should return the same object without copying')
+	test.equal(getLoneTermByType({}, ds, undefined), undefined, 'Should return undefined when nothing was computed')
+	test.end()
+})
+
+tape('getLoneTermByType() - drops a lone term hidden from the requesting user', function (test) {
+	const ds: any = {
+		cohort: { termdb: { isTermVisible: (_protected: any, term: any) => term.id != 'os' } }
+	}
+	const result = getLoneTermByType({ query: {} }, ds, loneTermByType)
+	test.deepEqual(
+		result,
+		{ ABC: { condition: { id: 'grade', type: 'condition' } } },
+		'Should keep only the visible term, and drop a cohort left with none'
+	)
+	test.end()
+})
+
+tape('getLoneTermByType() - returns undefined when every lone term is hidden', function (test) {
+	const ds: any = { cohort: { termdb: { isTermVisible: () => false } } }
+	test.equal(getLoneTermByType({ query: {} }, ds, loneTermByType), undefined, 'Should not send an empty loneTermByType')
 	test.end()
 })
