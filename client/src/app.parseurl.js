@@ -35,7 +35,7 @@ upon error, throw err message as a string
 	if (urlp.has('svs')) {
 		// ?SVS=SVS/slide.svs — direct whole-slide viewer, no dataset/genome
 		// (urlmap lowercases keys, so the URL's SVS is read here as 'svs')
-		const _ = await import('./wsi.direct')
+		const _ = await import('../plots/w2/wsi.direct')
 		await _.init({ slide: urlp.get('svs') }, arg.holder)
 		return
 	}
