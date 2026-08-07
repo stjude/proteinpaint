@@ -36,7 +36,13 @@ function init({ genomes }) {
 			if (q.filter?.lst?.length) {
 				const samples = await get_samples(q, ds)
 				count = samples.length
-			} else count = ds.cohort.termdb.q?.getCohortSampleCount?.(q.cohort) || 1
+			} else {
+				// getter is absent on non-db based ds (gdc, mmrf), and returns '' on a db ds when no
+				// cohort row matches q.cohort. return a placeholder rather than a fabricated number,
+				// as this is rendered as-is in the mass nav ABOUT tab. same treatment at
+				// get_samplecount() of termdb.sql.js
+				count = ds.cohort.termdb.q?.getCohortSampleCount?.(q.cohort) || 'n/a'
+			}
 			res.send({ count } satisfies TermdbCohortSummaryResponse)
 		} catch (e: any) {
 			res.send({ error: e.message || e })
