@@ -207,9 +207,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				holder: this.dom.addGroup,
 				vocabApi: this.app.vocabApi,
 				emptyLabel: 'Add group',
-				/** 'hide_search' by default expands all terms. Passing the
-				 * header_mode in opts gives the caller the flexibility to choose. */
-				header_mode: this.opts?.header_mode || 'hide_search',
+				header_mode: this.opts?.header_mode,
 				callback: async f => {
 					const filter = getNormalRoot(f)
 					this.addNewGroup(filter, this.groups)
