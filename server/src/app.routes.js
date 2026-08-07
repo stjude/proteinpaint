@@ -48,6 +48,7 @@ export const routeFiles = [
 	import('./routes/saveWSIAnnotation.ts'),
 	import('./routes/snp.ts'),
 	import('./routes/termdb.animatedBubbleChart.ts'),
+	import('./routes/termdb.wsiBySample.ts'),
 	import('./routes/termdb.brainRegions.ts'),
 	import('./routes/termdb.bubbleHeatmap.ts'),
 	import('./routes/termdb.cellTypeBubbleHeatmap.ts'),

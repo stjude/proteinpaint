@@ -833,6 +833,7 @@ const defaultCommonCharts: isSupportedChartCallbacks = {
 	brainImaging: ({ ds }) => ds.queries?.NIdata,
 	DziViewer: ({ ds }) => ds.queries?.DZImages, // replaced by WSIViewer, but keep it here just in case
 	WSIViewer: ({ ds }) => ds.queries?.WSImages,
+	wsi: ({ ds }) => ds.queries?.w2,
 	imagePlot: ({ ds }) => ds.queries?.images,
 	dataDownload: ({ forbiddenRoutes }) => {
 		// ---  sample-level charts  ---
