@@ -200,13 +200,13 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					// create cell type fraction terms
 					const cellType2sample2fraction = metaCache.cellTypeFractions
 					const cellTypeFractionTerms = []
-					for (const [cellType, sample2fraction] of cellType2sample2fraction) {
-						const id = cellType + '_' + plot.cellTypeColumn.name + '_frac'
-						const name = cellType + ' ' + plot.cellTypeColumn.name + ' ' + 'fraction'
+					// iterating over plot.cellType2label to preserve order of cell types
+					for (const [cellType, label] of plot.cellType2label) {
+						const sample2fraction = cellType2sample2fraction.get(cellType)
 						const values = [...sample2fraction.values()]
 						const term = {
-							id,
-							name,
+							id: cellType,
+							name: label,
 							type: 'float',
 							cellType,
 							bins: {
