@@ -1,5 +1,5 @@
 import { scaleLinear, scaleLog } from 'd3-scale'
-import { axisBottom } from 'd3-axis'
+import { axisBottom, axisTop } from 'd3-axis'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 import { sayerror, axisstyle, drawBoxplot, makeSsmLink, ColorScale, Menu } from '#dom'
@@ -498,11 +498,15 @@ function setRenderers(self) {
 
 		// padding is set on every <td>. need a better solution
 
+		/* forest plot, shown for both interacting and non-interacting rows
+		a plot is added to 3rd column of each row, and the axis to the header row
+		plotter can be a blank function if there's no valid value for plotting */
+		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
+
 		// header row
-		let header
 		{
-			const tr = table.append('tr').style('opacity', 0.4)
-			header = result.coefficients.header
+			const tr = table.append('tr')
+			const header = result.coefficients.header
 			// header for variable column
 			tr.append('td').text(header.shift()).style('padding', '8px')
 			// header for category column
@@ -514,8 +518,8 @@ function setRenderers(self) {
 			}
 			// combine headers for 95% CI columns
 			header.splice(1, 2, '95% CI')
-			// display remaining headers
-			self.fillDataHeaders(header, tr)
+			// display remaining headers, along with the forest plot axis
+			self.fillDataHeaders(header, tr, undefined, undefined, forestPlotter)
 		}
 
 		// get tws of all independent variables
@@ -540,13 +544,7 @@ function setRenderers(self) {
 		/* term rows:
 		for each independent terms, show 1 or multiple rows
 		these rows do not cover interactions, which are rendered afterwards
-
-		* forest plot *
-		shown for both interacting and non-interacting rows
-		a plot is added to 3rd column of each row
-		plotter can be a blank function if there's no valid value for plotting
 		*/
-		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
 		let rowcolor
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
@@ -692,13 +690,6 @@ function setRenderers(self) {
 				isfirst = false
 			}
 		}
-
-		// last row to show forest plot axis (call function without data)
-		const tr = table.append('tr')
-		tr.append('td') // col 1
-		tr.append('td') // col 2
-		forestPlotter(tr.append('td')) // forest plot axis
-		for (const v of header) tr.append('td')
 	}
 
 	self.mayshow_coefficients_uniMulti = result => {
@@ -715,14 +706,21 @@ function setRenderers(self) {
 
 		// padding is set on every <td>. need a better solution
 
+		/* forest plot: a plot for univariate data and a plot for multivariate data
+		are shown as separate columns in each row, with their axis on the header row */
+		const forestPlotter_uni = self.getForestPlotter(result.coefficients_uni.terms, result.coefficients_uni.interactions)
+		const forestPlotter_multi = self.getForestPlotter(
+			result.coefficients_multi.terms,
+			result.coefficients_multi.interactions
+		)
+
 		// header row
-		let header_uni, header_multi
 		{
 			const tr_label = table.append('tr').style('opacity', 0.4) // labels displayed above header row
-			const tr = table.append('tr').style('opacity', 0.4) // header row
+			const tr = table.append('tr') // header row
 
-			header_uni = result.coefficients_uni.header
-			header_multi = result.coefficients_multi.header
+			const header_uni = result.coefficients_uni.header
+			const header_multi = result.coefficients_multi.header
 
 			// header for variable column
 			tr.append('td').text(header_uni.shift()).style('padding', '8px')
@@ -746,26 +744,16 @@ function setRenderers(self) {
 			header_uni.splice(1, 2, '95% CI')
 			header_multi.splice(1, 2, '95% CI')
 
-			// fill headers for data columns
-			self.fillDataHeaders(header_uni, tr, tr_label, 'Univariate')
+			// fill headers for data columns, along with the forest plot axes
+			self.fillDataHeaders(header_uni, tr, tr_label, 'Univariate', forestPlotter_uni)
 			tr.append('td').style('width', '2px') //separation between univariate/multivariate
 			tr_label.append('td').style('width', '2px')
-			self.fillDataHeaders(header_multi, tr, tr_label, 'Multivariable-adjusted')
+			self.fillDataHeaders(header_multi, tr, tr_label, 'Multivariable-adjusted', forestPlotter_multi)
 		}
 
 		/* term rows:
 		for each independent terms, show 1 or multiple rows
-
-		* forest plot *
-		a plot for univariate data and a plot for multivariate data
-		are shown as separate columns in each row
 		*/
-
-		const forestPlotter_uni = self.getForestPlotter(result.coefficients_uni.terms, result.coefficients_uni.interactions)
-		const forestPlotter_multi = self.getForestPlotter(
-			result.coefficients_multi.terms,
-			result.coefficients_multi.interactions
-		)
 
 		// get tws of all independent variables
 		// will be used for tooltip message of estimate value
@@ -904,23 +892,18 @@ function setRenderers(self) {
 				tr.append('td').text('ERROR: no .fields[] or .categories{}')
 			}
 		}
-
-		// last row to show forest plot axis (call function without data)
-		const tr = table.append('tr')
-		tr.append('td') // col 1
-		tr.append('td') // col 2
-		forestPlotter_uni(tr.append('td')) // forest plot axis
-		for (const v of header_uni) tr.append('td')
-		tr.append('td').style('width', '2px') // separation between univariate/multivariate
-		forestPlotter_multi(tr.append('td')) // forest plot axis
-		for (const v of header_multi) tr.append('td')
 	}
 
 	// fill headers of data columns of coefficients table
-	self.fillDataHeaders = (header, tr, tr_label, label) => {
+	self.fillDataHeaders = (header, tr, tr_label, label, forestPlotter) => {
 		const startColN = tr.selectAll('td').size()
-		// header for forest plot column
-		tr.append('td')
+		// header for forest plot column, showing the forest plot axis
+		const forestTd = tr.append('td')
+		if (forestPlotter) {
+			// call plotter without data to render the axis
+			forestTd.style('vertical-align', 'bottom')
+			forestPlotter(forestTd)
+		}
 		// headers for data columns
 		header.forEach((h, i, arr) => {
 			if (i === 0) {
@@ -1484,11 +1467,17 @@ function setRenderers(self) {
 
 			// lst is data from a row from either terms or interactions
 
+			const fontsize = 12 // of the axis label
+			/* the axis is rendered on the header row, using axisTop so that ticks and
+			axis label are drawn above the axis line and next to the plots below it.
+			thus for the axis, the svg is made taller and the axis line is pushed to
+			the bottom, to reserve space above it for the ticks and the axis label.
+			1 pixel is spared at the bottom, otherwise the axis line is clipped */
 			const svg = td
 				.append('svg')
 				.attr('width', width + xleftpad + xrightpad)
-				.attr('height', height)
-			const g = svg.append('g').attr('transform', 'translate(' + xleftpad + ',0)')
+				.attr('height', lst ? height : height + fontsize)
+			const g = svg.append('g').attr('transform', `translate(${xleftpad},${lst ? 0 : height + fontsize - 1})`)
 
 			if (!lst) {
 				//////////////////////////////
@@ -1498,19 +1487,17 @@ function setRenderers(self) {
 				// had encountered a bug that '.1r' will print "20" at the tick of "15"
 				const tickFormat = self.config.regressionType == 'logistic' ? '.1r' : undefined
 
-				const axis = axisBottom().ticks(4, tickFormat).scale(scale)
+				const axis = axisTop().ticks(4, tickFormat).scale(scale)
 				axisstyle({
 					axis: g.call(axis),
 					color: forestcolor,
 					showline: true
 				})
-				const fontsize = 12
 				g.append('text')
 					.attr('fill', forestcolor)
 					.text(axislab)
 					.attr('x', width / 2)
-					.attr('y', height + fontsize)
-				svg.attr('height', height + fontsize)
+					.attr('y', -height) // above the ticks, at the top of the svg
 				return
 			}
 
