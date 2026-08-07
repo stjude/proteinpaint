@@ -71,8 +71,8 @@ export class VolcanoViewModel {
 							{ label: 'Adjusted p-value', sortable: true }
 					  ])
 			],
-			/** Arr set in setPointData() if settings.showPValueTable is true to
-			 * prevent unnecessary data processing when the table is not shown */
+			/** Filled in setPointData(), one row per threshold-passing dot. Populated even when the
+			 * table is hidden — the download reads it. */
 			rows: [],
 			height: settings.height + this.topPad
 		}
@@ -86,11 +86,9 @@ export class VolcanoViewModel {
 		this.setPTableColumns()
 		const pointData = this.setPointData(plotDim, controlColor, caseColor)
 
-		if (this.settings.showPValueTable) {
-			//Get all rows data for the pValueTable in setPointsData, then sort by fold change
-			const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log₂(fold-change)'))
-			this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
-		}
+		// sort by fold change, for the rendered table and the downloaded one alike
+		const foldChangeIdx = this.pValueTable.columns.findIndex(c => c.label.includes('log₂(fold-change)'))
+		this.pValueTable.rows.sort((a: any, b: any) => b[foldChangeIdx].value - a[foldChangeIdx].value)
 
 		this.viewData = {
 			images: response.images || [],
@@ -275,6 +273,9 @@ export class VolcanoViewModel {
 		// of the PNG rings. The view's renderDataPoints draws them at stroke-width
 		// 1 to match the rust PNG's stroke geometry.
 		const radius = this.dotRadiusPx
+		// rebuilt from scratch on every call, like pointData below -- appending would double the rows
+		// if this ever ran twice on one view model
+		this.pValueTable.rows = []
 		const dataCopy: any = structuredClone(this.dataRows)
 		for (const d of dataCopy) {
 			const highlightKey = this.termType === tt.DNA_METHYLATION ? d.promoter_id : d.gene_name
@@ -301,8 +302,10 @@ export class VolcanoViewModel {
 				} else {
 					row.splice(0, 0, { value: d.gene_name || '' })
 				}
-				//Do not create p-value table data unless user opts to show the table
-				if (this.settings.showPValueTable) this.pValueTable.rows.push(row)
+				/* Always collected, whether or not the table is displayed: "Download p-value table"
+				reads these rows, and gating them on showPValueTable made that download emit a
+				header with no rows. `row` above is built either way, so this only adds the push. */
+				this.pValueTable.rows.push(row)
 			} else {
 				this.numNonSignificant++
 			}

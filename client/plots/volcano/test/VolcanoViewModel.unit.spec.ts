@@ -201,6 +201,14 @@ tape('setPointData', function (test) {
 	)
 	test.equal(pointData.filter((d: any) => d.radius === 2).length, 1, 'Should properly set radius for each data point')
 
+	// mockSettings has showPValueTable: false. The rows must be collected anyway — "Download p value
+	// table" reads them, and gating them on the display toggle shipped a header-only tsv.
+	test.equal(
+		viewModel.pValueTable.rows.length,
+		1,
+		'Should collect p value table rows even when the table is not displayed'
+	)
+
 	test.end()
 })
 

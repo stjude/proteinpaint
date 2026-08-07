@@ -14,6 +14,17 @@ import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
 
+/* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
+rust/src/stats_functions.rs only runs the exact test when both groups are under 50 AND no value is
+tied; rna-seq counts always tie on zero, so every run takes the normal approximation. Its tie
+correction shrinks sigma as the tied block grows, and for a gene that is zero in nearly every sample
+-- a Y gene in a 99% female cohort, say -- that inflates z far past what the group sizes can
+actually support (observed: p = 1e-81 from 14 vs 1356, where the exact test floor is 1e-33).
+20 is the conventional floor for the normal approximation; the tie inflation is worse.
+ponytail: gated on group size alone, which catches the case that motivated it. Catching a
+tie-dominated gene in an otherwise well-sized cohort needs per-gene tie counts back from rust. */
+const MIN_WILCOXON_GROUP_SIZE = 20
+
 export class Volcano extends PlotBase implements RxComponent {
 	static type = 'volcano'
 	type: string
@@ -140,13 +151,26 @@ export class Volcano extends PlotBase implements RxComponent {
 			//Pass table data for downloading
 			this.interactions.pValueTableData = viewModel.viewData.pValueTableData
 			this.interactions.data = response.data.dots
+			//pre-cap count, so the download can disclose that its rows are a subset
+			this.interactions.totalSignificantRows = response.data.totalSignificantRows
 
 			/** Render formatted data */
 			this.view.render(settings, viewModel.viewData)
 
-			if (!response.data.dots.length) {
-				this.dom.error.text('No points passed the significance thresholds').style('color', '#555')
+			/* Non-fatal notes on how to read the result. Both can apply at once, so they are collected
+			and shown together rather than one overwriting the other. */
+			const notes: string[] = []
+			if (!response.data.dots.length) notes.push('No points passed the significance thresholds.')
+			const smallestGroup = Math.min(response.sample_size1, response.sample_size2)
+			if (settings.method == 'wilcoxon' && smallestGroup < MIN_WILCOXON_GROUP_SIZE) {
+				notes.push(
+					`The smaller group has ${smallestGroup.toLocaleString()} samples. Wilcoxon p-values are ` +
+						`approximated here, and a gene that is zero in most samples can be assigned a p-value far ` +
+						`smaller than its group sizes can support. Rank these results by fold change rather than by ` +
+						`p-value magnitude, and do not compare the p-values against another analysis.`
+				)
 			}
+			if (notes.length) this.dom.error.text(notes.join(' ')).style('color', '#555')
 
 			clearTimeout(showWait)
 			this.dom.wait.style('display', 'none')

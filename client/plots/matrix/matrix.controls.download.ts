@@ -1,5 +1,5 @@
 import { to_svg } from '#src/client'
-import { Menu } from '#dom'
+import { fileDateStamp, Menu } from '#dom'
 import { mclass, dt2label, dtsnvindel, dtcnv, dtfusionrna, dtsv } from '#shared/common.js'
 import { TermTypes } from '#types'
 import type { MatrixControls } from './matrix.controls'
@@ -121,7 +121,7 @@ export function setDownloadBtn(self: MatrixControls) {
 					a.addEventListener(
 						'click',
 						function () {
-							const currentDate = new Date().toISOString().split('T')[0]
+							const currentDate = fileDateStamp()
 							a.download = p.config.settings?.hierCluster?.termGroupName?.startsWith('Gene Expression')
 								? `GeneExpression.${currentDate}.tsv`
 								: p.chartType == 'hierCluster'

@@ -1,5 +1,5 @@
 import { dofetch3 } from '#common/dofetch'
-import { make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
+import { fileDateStamp, make_radios, renderTable, sayerror, Menu, table2col } from '#dom'
 import { fileSize } from '#shared/fileSize.js'
 import { select } from 'd3-selection'
 
@@ -437,7 +437,7 @@ async function getFilesAndShowTable(obj) {
 			const href = URL.createObjectURL(data.gzfile.body)
 			const a = document.createElement('a')
 			a.href = href
-			a.download = `cohortMAF.${new Date().toISOString().split('T')[0]}.maf.gz`
+			a.download = `cohortMAF.${fileDateStamp()}.maf.gz`
 			a.style.display = 'none'
 			document.body.appendChild(a)
 			a.click()
