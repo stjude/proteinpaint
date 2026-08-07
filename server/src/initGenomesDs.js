@@ -38,6 +38,17 @@ const dsHelpers = {
 
 export const genomes = {} // { hg19: {...}, ... }
 
+/*
+	tracks the init status of every dataset entry from serverconfig genomes[].datasets[],
+	including entries that failed to load and are therefore deleted from genomes[].datasets{}.
+
+	This is the single source of truth for dataset init status:
+	- app.ts processTrackedDs() summarizes it in the startup log and optional slack notification
+	- health.ts reports it in the /healthcheck response, so that a failed dataset is visible
+	  as a failure, instead of being indistinguishable from a dataset that was never configured
+*/
+export const trackedDatasets = []
+
 const features = serverconfig.features
 
 export async function initGenomesDs(serverconfig, opts = {}) {
@@ -54,7 +65,10 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 			// allow the server process to boot
 			// we want the node server to keep running so it can inform user with some meaningful msg rather than http error
 			console.log('\n!!! ' + message + '\n')
-			return
+			// must return the empty tracked list, not undefined, otherwise app.ts processTrackedDs()
+			// throws on it and exits the process, which defeats the intent above
+			trackedDatasets.length = 0
+			return trackedDatasets
 		}
 	}
 
@@ -189,8 +203,8 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 		}
 	}
 
-	// will be used to track dataset loading status
-	const trackedDatasets = []
+	// reset the tracked status, in case this is called more than once in the same process
+	trackedDatasets.length = 0
 
 	for (const genomename in genomes) {
 		/*
@@ -498,12 +512,53 @@ export async function initGenomesDs(serverconfig, opts = {}) {
 				// no error bubbled up to be caught, and there are no nonblocking step being performed, init is done
 				if (ds.init.status == 'started') ds.init.status = 'done'
 			} catch (e) {
+				/*
+					ds is undefined or only partially constructed when the error is thrown before or while
+					the dataset js file is imported and evaluated, such as when its exported function throws.
+					An untracked ds must therefore be replaced with a stub, so that
+					- mayRetryInit() below does not crash on an undefined ds/ds.init, which would defeat this try-catch
+					- the failure is still tracked and reported in the startup log, optional slack notification,
+					  and the /healthcheck response, instead of the dataset silently disappearing
+				*/
+				if (!trackedDatasets.includes(ds)) {
+					// the error happened before the ds object was ready to be init'ed, so retrying init() against
+					// it would not be meaningful; use a stub that fails without retries, and reuse the same label
+					// so that mayRetryInit() also deletes any reference under g.datasets{}
+					ds = {
+						label: ds?.label || d.name,
+						genomename,
+						init: {
+							retryMax: 0,
+							retryDelay: 1000 * 60 * 5,
+							fatalError: `did not load ${d.jsfile || d.name}: ${stringifyInitError(e)}`
+						}
+					}
+					trackedDatasets.push(ds)
+				}
 				mayRetryInit(g, ds, d, e, totalRawDsLst)
 			}
 		}
 		delete g.rawdslst
 	}
 	return trackedDatasets
+}
+
+/*
+	serialize an init error for the startup log, optional slack notification, and /healthcheck response.
+	JSON.stringify() alone emits '{}' for an Error instance, which would report a failed dataset
+	without its cause; note that ds init code may also throw a string or a {error} object
+*/
+function stringifyInitError(e) {
+	if (typeof e == 'string') return e
+	if (typeof e?.error == 'string') return e.error
+	if (typeof e?.message == 'string') return e.message
+	try {
+		// JSON.stringify() returns undefined for an undefined value, fallback to String()
+		return JSON.stringify(e) ?? String(e)
+	} catch {
+		// e may have a circular reference
+		return String(e)
+	}
 }
 
 function mayRetryInit(g, ds, d, e, totalRawDsLst) {
@@ -539,21 +594,20 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 	}
 
 	if (ds.init.fatalError) {
-		// will not be able to recover even with retries
+		// will not be able to recover even with retries.
+		// NOTE: a failed dataset must not crash the server, even when it is the only configured
+		// dataset; the failure is reported in the startup log, optional slack notification, and
+		// the /healthcheck response. app.ts processTrackedDs() still exits the process when NO
+		// dataset loaded successfully, in order to trigger a deployment rollback.
 		ds.init.status = `fatalError`
-		if (!ds.init.error) ds.init.error = JSON.stringify(e)
-		if (totalRawDsLst === 1)
-			setImmediate(() => {
-				const msg = ds.init.fatalError === e ? e : ds.init.fatalError + ': ' + e
-				throw new Error(gdlabel + ' fatal error: ' + msg)
-			})
+		if (!ds.init.error) ds.init.error = stringifyInitError(e)
 		return
 	}
 	if (!ds.init.retryMax) {
 		// default ds.init.retryMax is 0, assumes that
 		// most dataset init errors are not recoverable, unless overriden
 		ds.init.status = `zeroRetries`
-		if (!ds.init.error) ds.init.error = JSON.stringify(e)
+		if (!ds.init.error) ds.init.error = stringifyInitError(e)
 		return
 	}
 	console.log(`${gdlabel} recoverableError:`, ds.init.recoverableError)
@@ -581,18 +635,17 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 				console.log(msg)
 				clearInterval(interval) // cancel since retrying will not change the outcome
 				ds.init.status = 'fatalError'
+				if (!ds.init.error) ds.init.error = msg // to be reported by health.ts getStat()
 				if (serverconfig.slackWebhookUrl) {
+					// must catch, an unhandled rejection from a failed slack post would crash the server
 					sendMessageToSlack(
 						serverconfig.slackWebhookUrl,
 						`\n${serverconfig.URL}: ${msg}`,
 						path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
-					)
+					).catch(console.log)
 				}
-				// this will crash the server with a fatal error message, the server will not respond to HTTP requests
-				if (totalRawDsLst === 1)
-					setImmediate(() => {
-						throw new Error(msg)
-					})
+				// NOTE: the server is not crashed here, even when this is the only configured dataset,
+				// the failed status is reported in the /healthcheck response instead
 			} else {
 				console.warn(
 					`${gdlabel} init() failed. Retrying in ${Math.round(ds.init.retryDelay / 1000)} second(s) ... (${
@@ -603,18 +656,24 @@ function mayRetryInit(g, ds, d, e, totalRawDsLst) {
 					clearInterval(interval) // cancel retries
 					const msg = `Max retry attempts for ${gdlabel} reached. Failing with error:`
 					console.error(msg)
-					if (ds.init.errorCallback) ds.init.errorCallback(response)
+					if (ds.init.errorCallback) ds.init.errorCallback(e)
 					else {
 						// allow to fail silently to not affect other loaded datasets
 						console.log(e)
 					}
 					if (serverconfig.slackWebhookUrl) {
+						// must catch, an unhandled rejection from a failed slack post would crash the server
 						sendMessageToSlack(
 							serverconfig.slackWebhookUrl,
 							`\n${serverconfig.URL}: ${msg}`,
 							path.join(serverconfig.cachedir, '/slack/last_message_hash.txt')
-						)
+						).catch(console.log)
 					}
+					// retries are exhausted and cancelled, so this must not be reported as an active
+					// retry by app.ts processTrackedDs() and the /healthcheck response
+					ds.init.status = `fatalError`
+					if (!ds.init.error) ds.init.error = `${msg} ${stringifyInitError(e)}`
+					return
 				}
 
 				ds.init.status = `recoverableError`

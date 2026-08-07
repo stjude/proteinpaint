@@ -2,8 +2,9 @@ import serverconfig from './serverconfig.js'
 import fs from 'fs'
 import path from 'path'
 //import pkg from '../package.json' with {type: "json"}
-import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse } from '#types'
+import type { VersionInfo, GenomeBuildInfo, HealthCheckResponse, DsInitStatus, DsSummary } from '#types'
 import { authApi } from './auth.js'
+import { trackedDatasets } from './initGenomesDs.js'
 
 const pkg = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../package.json'), { encoding: 'utf8' }))
 
@@ -11,15 +12,56 @@ export async function getStat(genomes) {
 	if (!versionInfo.deps) setVersionInfoDeps() // set only once
 	const auth = (await authApi.getHealth()) as undefined | { errors?: string[] }
 	const health = {
+		// NOTE: status describes the server process, not its datasets: a failed dataset must not
+		// make an otherwise working server look down, since the k8s liveness and readiness probes
+		// both request this route. Dataset failures are reported in dsSummary and dsInitStatus.
 		status: auth?.errors?.length ? 'error' : 'ok',
 		genomes: {},
 		versionInfo,
 		auth,
-		dsInitStatus: []
+		...getDsInitStatus()
 	} satisfies HealthCheckResponse
 
 	setGenomeDbInfo(genomes, health)
 	return health
+}
+
+/*
+	report the init status of every configured dataset, using the tracked datasets from
+	initGenomesDs() as the source of truth: a dataset that failed to load is deleted from
+	genomes[].datasets{}, so it would otherwise be missing from this response and be
+	indistinguishable from a dataset that was never configured
+*/
+export function getDsInitStatus(): { dsSummary: DsSummary; dsInitStatus: DsInitStatus[] } {
+	const dsSummary: DsSummary = { total: 0, done: 0, nonblocking: 0, retrying: 0, failed: 0 }
+	const dsInitStatus: DsInitStatus[] = []
+	for (const ds of trackedDatasets) {
+		dsSummary.total++
+		if (ds.init?.status == 'done') dsSummary.done++
+		else if (ds.init?.status == 'nonblocking') dsSummary.nonblocking++
+		else if (ds.init?.status == 'recoverableError') dsSummary.retrying++
+		else dsSummary.failed++
+
+		dsInitStatus.push({
+			genome: ds.genomename,
+			label: ds.label,
+			url: `/healthcheck?dslabel=${ds.label}`,
+			// deep copy to not expose the mutable ds.init object, and to drop any function value
+			// such as init.notReadyMessage(); tolerate a non-serializable value to not fail the route
+			init: copyInit(ds)
+		})
+	}
+	return { dsSummary, dsInitStatus }
+}
+
+function copyInit(ds) {
+	try {
+		const init = JSON.parse(JSON.stringify(ds.init || {}))
+		init.ignoredErrors = ds._ignoredErrors || []
+		return init
+	} catch (e: any) {
+		return { status: ds.init?.status, error: `cannot serialize ds.init: ${e.message || e}` }
+	}
 }
 
 function setGenomeDbInfo(genomes, health) {
@@ -47,18 +89,7 @@ function setGenomeDbInfo(genomes, health) {
 			}
 			genome.dbInfo = Object.keys(dbInfo).length ? dbInfo : undefined
 		}
-		if (typeof genome.datasets == 'object') {
-			for (const [label, ds] of Object.entries(genome.datasets as any[])) {
-				const init = JSON.parse(JSON.stringify(ds.init))
-				init.ignoredErrors = ds._ignoredErrors || []
-				health.dsInitStatus.push({
-					genome: gn,
-					label,
-					url: `/healthcheck?dslabel=${label}`,
-					init
-				})
-			}
-		}
+		// NOTE: dataset init status is reported from the tracked datasets, see getDsInitStatus()
 		health.genomes[gn] = genome.dbInfo
 	}
 }
