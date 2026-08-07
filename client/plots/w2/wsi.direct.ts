@@ -48,7 +48,13 @@ export async function init(opts: { slide: string }, holder: any) {
 			.append('div')
 			.style('font', '12px system-ui')
 			.style('padding', '4px 8px')
-			.text(`${opts.slide} — ${w}×${h}px${Array.isArray(meta.mpp) && meta.mpp.length === 2 ? `, ${meta.mpp[0].toFixed(3)}×${meta.mpp[1].toFixed(3)} µm/px` : ''}, ${meta.levels} levels`)
+			.text(
+				`${opts.slide} — ${w}×${h}px${
+					Array.isArray(meta.mpp) && meta.mpp.length === 2
+						? `, ${meta.mpp[0].toFixed(3)}×${meta.mpp[1].toFixed(3)} µm/px`
+						: ''
+				}, ${meta.levels} levels`
+			)
 	} catch (e: any) {
 		loading.remove()
 		sayerror(holder, `WSI error: ${e.message || e}`)
