@@ -392,6 +392,15 @@ export class InputTerm {
 		const sc = this.termStatus.sampleCounts
 		if (!('refGrp' in tw) || !sc.find(i => i.key == tw.refGrp)) {
 			// refGrp not defined or no longer exists according to sampleCounts[]
+			if (tw.term.type == 'geneVariant') {
+				// for a gene variant term, the wildtype group is the natural reference,
+				// use it when available rather than falling back to the biggest group
+				const wtGrp = getGeneVariantWildtypeGrp(tw, sc)
+				if (wtGrp) {
+					tw.refGrp = wtGrp
+					return
+				}
+			}
 			const o = this.orderedLabels
 			if (o && o.length) sc.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
 			else sc.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
@@ -716,6 +725,30 @@ function groupsetNoEmptyGroup(gs, c2s) {
 		}
 	}
 	return true
+}
+
+export function getGeneVariantWildtypeGrp(tw, sampleCounts) {
+	/* for a gene variant term, find the wildtype group of the groupset in use
+	returns the group name, which is also the sample count key
+	returns undefined when the groupset has no wildtype group (e.g. bi-/mono-allelic),
+	or when the wildtype group has no samples
+	*/
+	const groupset =
+		tw.q.type == 'predefined-groupset'
+			? tw.term.groupsetting?.lst?.[tw.q.predefined_groupset_idx]
+			: tw.q.type == 'custom-groupset'
+			? tw.q.customset
+			: null
+	if (!groupset?.groups) return
+	for (const g of groupset.groups) {
+		if (g.type != 'filter') continue
+		/* a wildtype group matches samples without alteration, indicated by
+		tvs.genotype='wt' for mutation data and tvs.cnvWT for continuous cnv data
+		(see getPredefinedGroupsets() in client/tw/geneVariant.ts) */
+		const isWt = g.filter?.lst?.some(i => i.tvs && (i.tvs.genotype == 'wt' || i.tvs.cnvWT))
+		if (!isWt) continue
+		if (sampleCounts.find(i => i.key == g.name)) return g.name
+	}
 }
 
 function getLogisticOutcomeNonref(outcome) {
