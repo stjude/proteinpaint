@@ -256,7 +256,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 						this.main()
 					}
 				},
-				{ label: '#SAMPLE' },
+				// dataset may rename what a row counts (GDC: cases, not samples)
+				{ label: `#${(this.app.vocabApi.termdbConfig?.uiLabels?.Sample || 'Sample').toUpperCase()}` },
 				{ label: 'FILTER' }
 			],
 			rows: [],

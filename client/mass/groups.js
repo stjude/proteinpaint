@@ -815,7 +815,9 @@ async function updateUI(self) {
 					})
 				}
 			},
-			{ label: '#SAMPLE' },
+			// dataset may rename what a row counts (GDC: cases, not samples). singular, like the count
+			// cells below that already use uiLabels
+			{ label: `#${(self.app.vocabApi.termdbConfig?.uiLabels?.Sample || 'Sample').toUpperCase()}` },
 			{ label: 'FILTER' }
 		],
 		rows: [],
