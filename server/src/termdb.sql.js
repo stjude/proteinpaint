@@ -98,6 +98,15 @@ return an array of sample names passing through the filter
 
 // we need to pass a type and count by type to differentiate root samples from samples
 export async function get_samplecount(q, ds) {
+	if (!ds.cohort.db) {
+		/* non-db based ds (gdc, mmrf). a filtered count is obtainable via
+		ds.cohort.termdb.filterSamples(), as done by getSampleList() in termdb.js, but it
+		ignores geneVariant/geneExpression terms and costs an extra api round trip, thus
+		would be silently wrong for such filters. return a placeholder to avoid breaking
+		mass nav and the mass groups table, until this can be properly supported.
+		same treatment at routes/termdb.cohort.summary.ts */
+		return { count: 'n/a' }
+	}
 	// !!! CRITICAL !!!
 	// must always call authApi.mayAdjustFilter(), dataset-specific logic exceptions
 	// must be coded inside a ds.cohort.termdb.getAdditionalFilter() option;
