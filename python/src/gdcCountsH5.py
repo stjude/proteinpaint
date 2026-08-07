@@ -79,8 +79,12 @@ def _selftest() -> dict[str, Any]:
 				raise AssertionError(f"matrix shape is {shape}, expected (3, 2) i.e. genes x samples")
 			if f[MATRIX_NAME].dtype != np.dtype("<f4"):
 				raise AssertionError(f"matrix dtype is {f[MATRIX_NAME].dtype}, expected float32")
-			read_genes = [v.decode("utf-8") for v in f[ROW_NAME][...]]
-			read_samples = [v.decode("utf-8") for v in f[COL_NAME][...]]
+			# .asstr() rather than a .decode() comprehension: h5py only hands back bytes for
+			# variable-length string datasets by default, and .decode() would raise AttributeError
+			# wherever it yields str instead. list() keeps the != below a list comparison -- .asstr()
+			# slices to an ndarray, which would compare elementwise and make the if ambiguous.
+			read_genes = list(f[ROW_NAME].asstr()[:])
+			read_samples = list(f[COL_NAME].asstr()[:])
 			if read_genes != genes:
 				raise AssertionError(f"item is {read_genes}, expected {genes}")
 			if read_samples != samples:

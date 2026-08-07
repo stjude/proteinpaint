@@ -163,7 +163,8 @@ function resolveDE(req, ds) {
 	}
 	const c = ds.queries?.rnaseqGeneCount
 	if (!c) throw 'no rnaseqGeneCount for DE'
-	if (!c.file && !c.buildCountsFile) throw 'rnaseqGeneCount.file missing'
+	// either a static counts file or a ds-supplied builder will do; gdc has only the latter
+	if (!c.file && !c.buildCountsFile) throw 'rnaseqGeneCount has neither .file nor .buildCountsFile'
 	// allSampleSet may be a getter on api-backed datasets, so read it here rather than earlier
 	return {
 		countsFile: c.file,
