@@ -40,7 +40,7 @@ class TdbStatTable {
 			this.config = structuredClone(this.state.config)
 			if (this.state.isVisible) {
 				const reqOpts = this.getDataRequestOpts()
-				const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+				const data = await this.vocabApi.getNestedChartSeriesData(reqOpts)
 				this.app.vocabApi.syncTermData(this.state.config, data)
 			}
 			if (!this.state.isVisible || !this.data || !this.data.boxplot) {

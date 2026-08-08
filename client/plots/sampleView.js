@@ -116,7 +116,7 @@ class SampleView {
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { samples } })
 			})
 		} else {
-			this.samplesData = await this.app.vocabApi.getSamplesByName({
+			this.samplesData = await this.vocabApi.getSamplesByName({
 				filter: appState.termfilter?.filter
 			})
 			if (Object.keys(this.samplesData).length == 0) throw 'No accessible samples found'
@@ -389,7 +389,7 @@ class SampleView {
 		NOTE: !!!! sortVisibleTerms() assumes that the child terms in the response.lst[]
 					are returned in order. If not, a term.order can be used to sort the child terms array
 		*/
-		const data = await this.app.vocabApi.getTermChildren(
+		const data = await this.vocabApi.getTermChildren(
 			term,
 			this.state.toSelectCohort ? this.state.cohortValuelst : null,
 			this.state.termfilter.filter
@@ -470,7 +470,7 @@ class SampleView {
 		const term_ids = []
 		for (const term of terms) term_ids.push(term.id)
 		for (const sample of this.state.samples) {
-			const data = await this.app.vocabApi.getSingleSampleData({
+			const data = await this.vocabApi.getSingleSampleData({
 				sampleId: sample.sampleId,
 				term_ids,
 				filter: this.state.termfilter.filter
@@ -488,7 +488,7 @@ class SampleView {
 		const sampleData = {}
 		let lines = 'Sample'
 		for (const sample of this.state.samples) {
-			sampleData[sample.sampleId] = await this.app.vocabApi.getSingleSampleData({
+			sampleData[sample.sampleId] = await this.vocabApi.getSingleSampleData({
 				sampleId: sample.sampleId,
 				/** term_ids is required for getSingleSampleData but not
 				 * available in this instance. Pass empty array.*/

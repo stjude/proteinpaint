@@ -1,6 +1,7 @@
 import { AppApi, type StoreApi, type ComponentApi, type RxApp } from '#rx'
 import { AppBase } from '#plots/AppBase.ts'
 import { storeInit } from './store'
+import { skipPrevActionAbort as skipAbortPolicy } from './skipPrevActionAbort.ts'
 import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
@@ -228,19 +229,7 @@ class MassApp extends AppBase implements RxApp {
 	}
 
 	skipPrevActionAbort(action) {
-		// may skip aborting previously dispatched actions in AppApi.dispatch()
-		// if the new dispatched action doesn't affect all components; this will
-		// allow plots and control menus to continue rendering while creating,
-		// editing, or deleting another plot
-		if (!action) return false
-		if (action.type.startsWith('filter')) return false
-		if (action.type.startsWith('cohort')) return false
-		if (action.type == 'app_refresh') {
-			if (action.subactions) {
-				return action.subactions.find(a => a.type.startsWith('filter') || a.type.startsWith('cohort')) ? false : true
-			}
-		}
-		return true
+		return skipAbortPolicy(action)
 	}
 
 	async downloadPlots() {

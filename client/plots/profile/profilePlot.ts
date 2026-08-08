@@ -268,7 +268,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 			this.filter = this.config.filter || this.getFilter()
 
 			if (this.type == 'profileForms')
-				this.data = await this.app.vocabApi.getProfileFormScores({
+				this.data = await this.vocabApi!.getProfileFormScores({
 					scoreTerms: this.scoreTerms,
 					scScoreTerms: this.scScoreTerms,
 					filter: this.filter,

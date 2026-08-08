@@ -421,7 +421,7 @@ class MassCumInc {
 			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
-			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			const results = await this.vocabApi.getNestedChartSeriesData(reqOpts)
 			if (results.error) throw results.error
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, results)

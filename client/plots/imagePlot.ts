@@ -60,7 +60,7 @@ class ImagePlot extends PlotBase implements RxComponent {
 			if (!img || img?.error) throw new Error(img?.error || 'Error fetching image')
 			images = [img]
 		} else {
-			const result = await this.app.vocabApi.getSampleImages(sampleId)
+			const result = await this.vocabApi!.getSampleImages(sampleId)
 			if (result.error) throw new Error(result.error)
 			images = result.images
 		}

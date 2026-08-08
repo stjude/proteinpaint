@@ -60,6 +60,10 @@ export class RegressionResults {
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
+		// use the parent plot's vocabApi so that requests are signaled by the plot-level abort
+		// controller, instead of the app-level one. Otherwise, an unrelated app dispatch, such as
+		// closing another plot's sandbox, would cancel a pending analysis in this sandbox.
+		this.vocabApi = this.parent.vocabApi || this.app.vocabApi
 		this.type = 'regression'
 		setInteractivity(this)
 		setRenderers(this)
@@ -111,7 +115,7 @@ export class RegressionResults {
 			this.parent.dom.inputs.style('opacity', 0.5).style('pointer-events', 'none') // disables all interactivities on input ui; if ref category is switched while loading, it will abort current request
 
 			// submit server request to run analysis
-			const data = await this.app.vocabApi.getRegressionData(this.getDataRequestOpts())
+			const data = await this.vocabApi.getRegressionData(this.getDataRequestOpts())
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
 			this.dom.oneSetResultDiv.selectAll('*').remove()
@@ -1559,7 +1563,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			overrideTw.q.stop = stop
 			// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
 			const _ = await import('../termsetting/handlers/snplocus')
-			await _.fillTW(overrideTw, self.app.vocabApi)
+			await _.fillTW(overrideTw, self.vocabApi)
 			/*
 			updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
 			call pill.runCallback() with this override
@@ -1670,7 +1674,7 @@ async function mayCheckLD(m, input, self) {
 	const wait = self.dom.LDresultDiv.append('span').text('Loading LD data...')
 
 	try {
-		const data = await self.app.vocabApi.getLDdata(input.term.q.restrictAncestry.name, m)
+		const data = await self.vocabApi.getLDdata(input.term.q.restrictAncestry.name, m)
 		if (data.error) throw data.error
 
 		if (data.nodata || !data.lst || data.lst.length == 0) {

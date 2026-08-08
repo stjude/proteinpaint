@@ -73,7 +73,7 @@ class DataDownload {
 			this.mayUpdateSandboxHeader()
 			if (this.mayRequireToken()) return
 			const reqOpts = await this.getDataRequestOpts()
-			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+			this.data = await this.vocabApi.getAnnotatedSampleData(reqOpts)
 			this.processData()
 			const n = this.activeSamples.length
 

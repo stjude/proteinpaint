@@ -57,6 +57,9 @@ class TestApp extends AppBase implements RxApp {
 
 	async init() {
 		this.store = await storeInit({ app: this.api, state: this.opts.state })
+		// must be set before the components are created, since ComponentApi uses it
+		// to create a component-scoped vocabApi
+		if (this.opts.vocabApi) this.api.vocabApi = this.opts.vocabApi
 		this.components = {
 			part: await partInit({ app: this.api }),
 			partAbort: await partAbort({ app: this.api })
@@ -64,6 +67,12 @@ class TestApp extends AppBase implements RxApp {
 	}
 
 	async main() {}
+
+	// a test may supply its own policy; the default of aborting on every dispatch
+	// is what an app that does not implement this method gets
+	skipPrevActionAbort(action) {
+		return this.opts.skipPrevActionAbort?.(action) ?? false
+	}
 }
 
 export const appInit = AppApi.getInitFxn(TestApp)
@@ -98,7 +107,13 @@ class TestStore extends StoreBase implements RxStore {
 TestStore.prototype.actions = {
 	app_refresh(this: TestStore, action) {
 		this.copyMerge(this.state, action.state)
-	}
+	},
+	// stands in for an action that changes one component's state, such as plot_edit
+	part_edit(this: TestStore, action) {
+		this.copyMerge(this.state, action.state)
+	},
+	// stands in for an action that does not change any other component's state, such as plot_delete
+	unrelated_action() {}
 }
 
 export const storeInit = StoreApi.getInitFxn(TestStore)
@@ -124,6 +139,7 @@ class TestPart implements RxComponent {
 	// expected class-specific props
 	numStale: number = 0
 	currWait?: number
+	vocabApi?: any
 
 	constructor(opts, api) {
 		this.opts = opts
@@ -131,6 +147,8 @@ class TestPart implements RxComponent {
 		this.id = opts.id
 		this.api = api
 		this.type = 'part'
+		// mimics PlotBase, which assigns its own vocabApi before ComponentApi would create one
+		if (opts.vocabApi) this.vocabApi = opts.vocabApi
 	}
 	getState(appState) {
 		return { wait: appState.partWait || 0 }

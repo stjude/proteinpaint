@@ -185,7 +185,8 @@ export class VolcanoModel {
 		const samplesGroup = samplelst.groups.find(g => g.in)
 		othersSamplesGroup.values = []
 		// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group
-		for (const s of await this.app.vocabApi.getFilteredSampleList(state.termfilter.filter)) {
+		const vocabApi = this.plot.vocabApi || this.app.vocabApi
+		for (const s of await vocabApi.getFilteredSampleList(state.termfilter.filter)) {
 			// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
 			if (samplesGroup.values.indexOf(i => i.sampleId == s.id) == -1) {
 				othersSamplesGroup.values.push({ sampleId: s.id, sample: s.name })
