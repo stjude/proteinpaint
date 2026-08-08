@@ -188,7 +188,9 @@ export class VolcanoModel {
 		const vocabApi = this.plot.vocabApi || this.app.vocabApi
 		for (const s of await vocabApi.getFilteredSampleList(state.termfilter.filter)) {
 			// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
-			if (samplesGroup.values.indexOf(i => i.sampleId == s.id) == -1) {
+			// NOTE: must not use indexOf() here, it compares by strict equality and not by predicate,
+			// which would never match and would put every sample in the "others" group
+			if (!samplesGroup.values.some(i => i.sampleId == s.id)) {
 				othersSamplesGroup.values.push({ sampleId: s.id, sample: s.name })
 			}
 		}
