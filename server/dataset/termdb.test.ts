@@ -477,6 +477,11 @@ export default function (): Mds3 {
 				type: 'H&E',
 				imageBySampleFolder: 'files/hg38/TermdbTest/wsimages'
 			},
+			// w2 plot: each sample with images is a subfolder of this directory,
+			// holding that sample's .svs files (folder/<sample>/<fileName>)
+			w2: {
+				folder: 'files/hg38/TermdbTest/wsimages'
+			},
 			trackLst: {
 				jsonFile: 'files/hg38/TermdbTest/trackLst/facet.json',
 				facetTwLst: [{ id: 'diaggrp' }, { id: 'agedx' }],

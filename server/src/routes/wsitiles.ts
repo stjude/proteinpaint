@@ -71,19 +71,31 @@ function slidePath(genomes: any, q: any): string {
 	const wsimage = q.wsimage
 	if (!wsimage) throw new Error('No wsimage param provided')
 
+	// w2 plot: ds.queries.w2.folder (relative to tpmasterdir) holds one subfolder
+	// per sample, containing that sample's slide files: folder/<sample>/<fileName>
+	if (ds.queries?.w2?.folder) {
+		const w2sample = q.sample_id ?? q.sampleId
+		if (!w2sample) throw new Error('sample_id required with ds.queries.w2')
+		const base = path.resolve(serverconfig.tpmasterdir, ds.queries.w2.folder)
+		// String(): numeric-looking sample names arrive as numbers from query parsing
+		const full = path.resolve(base, String(w2sample), wsimage)
+		if (!full.startsWith(base + path.sep)) throw new Error('slide path escapes w2 folder')
+		return full
+	}
+
 	const sampleId = q.sample_id ?? q.sampleId
 	const aiProjectId = q.ai_project_id ?? q.aiProjectId
 	if (!sampleId && !aiProjectId) throw new Error('sample_id/sampleId or ai_project_id/aiProjectId required')
-		const mount = serverconfig.features?.tileserver?.mount
-		if (!mount) throw new Error('No mount configured (serverconfig.features.tileserver.mount)')
-		const w = ds.queries.WSImages
-		const sub = sampleId
-			? path.join(`${w.imageBySampleFolder}/${sampleId}`, wsimage)
-			: path.join(`${w.aiToolImageFolder}/`, wsimage)
-		const base = path.resolve(mount)
-		const full = path.resolve(base, sub)
-		if (full !== base && !full.startsWith(base + path.sep)) throw new Error('slide path escapes mount')
-		return full
+	const mount = serverconfig.features?.tileserver?.mount
+	if (!mount) throw new Error('No mount configured (serverconfig.features.tileserver.mount)')
+	const w = ds.queries.WSImages
+	const sub = sampleId
+		? path.join(`${w.imageBySampleFolder}/${sampleId}`, wsimage)
+		: path.join(`${w.aiToolImageFolder}/`, wsimage)
+	const base = path.resolve(mount)
+	const full = path.resolve(base, sub)
+	if (full !== base && !full.startsWith(base + path.sep)) throw new Error('slide path escapes mount')
+	return full
 }
 
 function init({ genomes }) {
