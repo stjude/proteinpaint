@@ -18,6 +18,8 @@ import { mapConcurrent } from './utils/concurrencyLimiter.ts'
 // the ppgdc dataset repo, which cannot import from the server package
 import { renderVolcano } from './renderVolcano.ts'
 import { combineSamplesById } from './mds3.variant2samples.js'
+import { run_python } from '@sjcrh/proteinpaint-python'
+import { cacheOrRecompute, cacheFilePath, generateHash } from './utils/cacheOrRecompute.ts'
 
 const dsHelpers = {
 	isUsableTerm,
@@ -31,6 +33,10 @@ const dsHelpers = {
 	mapConcurrent,
 	renderVolcano,
 	combineSamplesById,
+	run_python,
+	cacheOrRecompute,
+	cacheFilePath,
+	generateHash,
 	createSelectionID,
 	SelectionPrefixes,
 	FlagStatus

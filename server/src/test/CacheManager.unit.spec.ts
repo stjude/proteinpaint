@@ -80,6 +80,15 @@ tape('defaults', function (test) {
 							absPath: `${m.cachedir}/topve`,
 							skipUntil: 0
 						},
+						gdcCounts: {
+							maxAge: 5184000000,
+							maxSize: 5000000000,
+							skipMs: 43200000,
+							// many small per-case fetches rather than a few heavy computes
+							maxPending: 100,
+							absPath: `${m.cachedir}/gdcCounts`,
+							skipUntil: 0
+						},
 						massSession: {
 							maxAge: 2592000000,
 							maxSize: 5000000000,
@@ -126,6 +135,7 @@ tape('defaults', function (test) {
 							de: { deletedCount: 0, totalCount: 0 },
 							dm: { deletedCount: 0, totalCount: 0 },
 							topve: { deletedCount: 0, totalCount: 0 },
+							gdcCounts: { deletedCount: 0, totalCount: 0 },
 							daAnalysis: { deletedCount: 0, totalCount: 0 },
 							wsitiles: { deletedCount: 0, totalCount: 0 }
 						},

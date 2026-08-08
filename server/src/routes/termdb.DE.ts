@@ -47,15 +47,25 @@ export function init({ genomes }) {
 			// preAnalysis short-circuit: just sample counts, no cache touch.
 			if ((q as any).preAnalysis) {
 				const { ds, term_results, term_results2 } = await resolveDaContext(q, genomes)
-				const { allSampleSet } = resolveDE(q, ds)
+				const { allSampleSet, maxSamples } = resolveDE(q, ds)
 				const groups = await resolveSampleGroups(q, allSampleSet, ds, term_results, term_results2)
 				const group1Name = q.samplelst.groups[0].name
 				const group2Name = q.samplelst.groups[1].name
+				const alerts = [...groups.alerts]
+				/* a ds that builds its counts matrix on demand caps how many samples one run may pull.
+				report it here, not just at build time: the client hides the "Run" button whenever an
+				alert is present, so the user learns the cohort is too big before submitting rather
+				than after waiting on a failed request. */
+				const total = groups.group1names.length + groups.group2names.length
+				if (maxSamples && total > maxSamples) {
+					const noun = ds.cohort?.termdb?.uiLabels?.samples || 'samples'
+					alerts.push(`${total} ${noun} selected exceeds the limit of ${maxSamples} per run. Please narrow the cohort.`)
+				}
 				res.send({
 					data: {
 						[group1Name]: groups.group1names.length,
 						[group2Name]: groups.group2names.length,
-						...(groups.alerts.length ? { alert: groups.alerts.join(' | ') } : {})
+						...(alerts.length ? { alert: alerts.join(' | ') } : {})
 					}
 				})
 				return
@@ -134,8 +144,8 @@ export async function getDeCacheResult(
 		cacheSubdir: 'de',
 		computeFresh: async () => {
 			const { ds, term_results, term_results2 } = await resolveDaContext(req, genomes)
-			const { countsFile, allSampleSet } = resolveDE(req, ds)
-			return runDeFresh(req, countsFile, allSampleSet, ds, term_results, term_results2)
+			const { countsFile, allSampleSet, buildCountsFile } = resolveDE(req, ds)
+			return runDeFresh(req, countsFile, allSampleSet, ds, term_results, term_results2, buildCountsFile)
 		}
 	})
 	return { result, cacheId }
@@ -153,8 +163,15 @@ function resolveDE(req, ds) {
 	}
 	const c = ds.queries?.rnaseqGeneCount
 	if (!c) throw 'no rnaseqGeneCount for DE'
-	if (!c.file) throw 'rnaseqGeneCount.file missing'
-	return { countsFile: c.file, allSampleSet: c.allSampleSet }
+	// either a static counts file or a ds-supplied builder will do; gdc has only the latter
+	if (!c.file && !c.buildCountsFile) throw 'rnaseqGeneCount has neither .file nor .buildCountsFile'
+	// allSampleSet may be a getter on api-backed datasets, so read it here rather than earlier
+	return {
+		countsFile: c.file,
+		allSampleSet: c.allSampleSet,
+		buildCountsFile: c.buildCountsFile,
+		maxSamples: c.maxSamples
+	}
 }
 
 /** Run DE fresh and return the cache result; `cacheOrRecompute` persists
@@ -164,20 +181,42 @@ function resolveDE(req, ds) {
  * intermediate files touch disk. */
 async function runDeFresh(
 	param: DERequest,
-	countsFile: string,
+	countsFile: string | undefined,
 	allSampleSet: Set<string>,
 	ds: any,
 	term_results: any,
-	term_results2: any
+	term_results2: any,
+	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
 ): Promise<DeCacheResult> {
 	const groups = await resolveSampleGroups(param, allSampleSet, ds, term_results, term_results2)
 	if (groups.alerts.length) throw new Error(groups.alerts.join(' | '))
+
+	let input_file = countsFile
+	if (!input_file) {
+		/* the ds has no static counts file and assembles one for exactly the samples being compared,
+		so this has to run after resolveSampleGroups -- and after the alerts throw above, so a request
+		that is about to fail doesn't first download hundreds of files.
+
+		ponytail: no confounder support here. conf1/conf2 are index-aligned with the group name arrays,
+		so they would need the same drop-filtering applied below; add a dropMissing() helper in
+		sampleGroups.ts when a build-on-demand ds needs tw. */
+		if (param.tw || param.tw2) throw new Error('confounding variables are not supported for this dataset')
+		const built = await buildCountsFile!([...groups.group1names, ...groups.group2names], param)
+		input_file = built.file
+		// edge_newh5.R fails hard when a requested case/control is absent from the h5 'samples', so
+		// drop the samples whose counts file could not be fetched
+		const have = new Set(built.samples)
+		groups.group1names = groups.group1names.filter(n => have.has(n))
+		groups.group2names = groups.group2names.filter(n => have.has(n))
+		if (!groups.group1names.length || !groups.group2names.length)
+			throw new Error('no gene count data available for one of the groups')
+	}
 
 	const expression_input = {
 		case: groups.group2names.join(','),
 		control: groups.group1names.join(','),
 		data_type: 'do_DE',
-		input_file: countsFile,
+		input_file,
 		cachedir: serverconfig.cachedir,
 		DE_method: param.method,
 		mds_cutoff: 10000,
@@ -227,7 +266,7 @@ async function runDeFresh(
 
 	const time1 = new Date().valueOf()
 	const result: GeneDEEntry[] = JSON.parse(await run_rust('DEanalysis', JSON.stringify(expression_input)))
-	mayLog('Time taken to run rust DE pipeline:', formatElapsedTime(Date.now() - time1))
+	mayLog('Time taken to run Wilcoxon DE pipeline:', formatElapsedTime(Date.now() - time1))
 	param.method = 'wilcoxon'
 
 	const cacheResult: DeCacheResult = {

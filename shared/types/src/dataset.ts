@@ -748,8 +748,22 @@ type JunctionQuery = {
 }
 
 type RnaseqGeneCount = {
-	/** HDF5 file */
-	file: string
+	/** HDF5 file. absent when the ds builds the matrix on demand */
+	file?: string
+	/** ds-supplied on-demand builder, for datasets with no static counts file (gdc assembles one
+	 * from open-access STAR-Counts files). called by the DE route only after the sample groups are
+	 * resolved, since the matrix is built for exactly the samples in the two groups. returns the
+	 * h5 path plus the samples that actually landed in it, which may be fewer than requested. */
+	buildCountsFile?: (samples: string[], q: any) => Promise<{ file: string; samples: string[] }>
+	/** max samples one DE run may build a matrix for. reported during preAnalysis so the client can
+	 * warn before the user submits, and enforced by buildCountsFile itself */
+	maxSamples?: number
+	/** DE method preselected in the client's method radio. only reorders the options — every method
+	 * stays selectable. omit to keep the client's own ordering (edgeR first) */
+	defaultMethod?: 'wilcoxon' | 'edgeR' | 'limma'
+	/** sample names present in the counts matrix. may be a getter on api-backed datasets whose
+	 * sample list is populated asynchronously after launch */
+	allSampleSet?: Set<string>
 }
 
 /** the metabolite query */

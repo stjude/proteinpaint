@@ -256,7 +256,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 						this.main()
 					}
 				},
-				//{ label: '#SAMPLE' }, // will re-enable when filtered sample count can be supported for gdc
+				// dataset may rename what a row counts (GDC: cases, not samples)
+				{ label: `#${(this.app.vocabApi.termdbConfig?.uiLabels?.Sample || 'Sample').toUpperCase()}` },
 				{ label: 'FILTER' }
 			],
 			rows: [],
@@ -269,7 +270,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 				{}, // blank cell to add delete button
 				{ value: g.name }, // to allow click to show <input>
 				{ color: g.color },
-				// { value: 'n=' + (await self.vocabApi.getFilteredSampleCount(g.filter)) }, // will re-enable when filtered sample count can be supported for gdc
+				{ value: '' }, // filled in asynchronously below, so one slow count does not hold up the table
 				{} // blank cell to show filter ui
 			])
 		}
@@ -289,10 +290,17 @@ class DEinputPlot extends PlotBase implements RxComponent {
 					this.main()
 				})
 
+			// fill the #SAMPLE cell. not awaited: the table is already rendered, and on gdc each count
+			// is a /cases round trip
+			this.app.vocabApi
+				.getFilteredSampleCount(this.groups[i].filter, this.hasCohort0 ? null : this.state.termfilter.filter0)
+				.then(n => row[3].__td.text(n))
+				.catch(e => row[3].__td.text('n/a').attr('title', e?.message || e))
+
 			// create filter ui in its cell
 			const group = this.groups[i]
 			filterInit({
-				holder: row[3].__td,
+				holder: row[4].__td,
 				vocabApi: this.app.vocabApi,
 				header_mode: 'hide_search',
 				callback: f => {
@@ -410,9 +418,8 @@ class DEinputPlot extends PlotBase implements RxComponent {
 
 		this.dom.loading.style('display', 'none')
 
-		// render sample counts
+		// render sample counts. renderPreAnalysisData writes its own header, using the ds vocabulary
 		this.dom.preAnalysis.style('display', 'block').selectAll('*').remove()
-		this.dom.preAnalysis.append('div').style('font-weight', 'bold').text('Samples with gene expression data:')
 
 		renderPreAnalysisData({
 			preAnalysisData,
