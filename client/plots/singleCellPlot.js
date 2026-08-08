@@ -377,9 +377,8 @@ class singleCellPlot {
 
 		if (state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel) {
 			// value is a term id. get the term name
-			const termname = (
-				await this.app.vocabApi.getterm(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel)
-			).name
+			const termname = (await this.vocabApi.getterm(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel))
+				.name
 			// get the term value from current sample
 			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
 			extraText.push(`<span style="margin-left:15px;font-size:.7em">${termname.toUpperCase()}</span> ${sampleValue}`)
@@ -410,9 +409,8 @@ class singleCellPlot {
 
 		if (state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel) {
 			// value is a term id. get the term name
-			const termname = (
-				await this.app.vocabApi.getterm(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel)
-			).name
+			const termname = (await this.vocabApi.getterm(state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel))
+				.name
 			// get the term value from current sample
 			const sampleValue = this.samples[sampleIdx][state.termdbConfig.queries.singleCell.samples.extraSampleTabLabel]
 			extraText.push(`${termname.toUpperCase()}_${sampleValue}`)
@@ -1476,7 +1474,7 @@ class singleCellPlot {
 		for (const c of s.sampleColumns || []) {
 			let label = c.termid
 			try {
-				label = (await this.app.vocabApi.getterm(c.termid)).name
+				label = (await this.vocabApi.getterm(c.termid)).name
 			} catch (e) {
 				/* term not found by c.termid, in such case ignore and just show termid as column header
 				this is due to practical constrain that gdc needs to supply analysis.workflow_type as 'Library',

@@ -78,7 +78,7 @@ export class profileForms extends profilePlot {
 			const cohortValuelst = appState.termdbConfig?.selectCohort
 				? appState.termdbConfig.selectCohort.values[appState.activeCohort]?.keys
 				: null
-			const childData = await this.app.vocabApi.getTermChildren({ id: parentId }, cohortValuelst)
+			const childData = await this.vocabApi!.getTermChildren({ id: parentId }, cohortValuelst)
 			const children: any[] = childData?.lst || []
 			const scChild = children.find(t => t.type === 'integer') || children[0]
 			// pocChild may be absent — Patients & Outcomes is SC-only by design.
@@ -102,7 +102,7 @@ export class profileForms extends profilePlot {
 				this.impressionPocColor = this.pocTW.term.color
 			}
 		} else {
-			this.twLst = await this.app.vocabApi.getMultivalueTWs({ parent_id: parentId })
+			this.twLst = await this.vocabApi!.getMultivalueTWs({ parent_id: parentId })
 			for (const plot of config.options) {
 				const tws = this.twLst.filter(tw => tw.term.subtype == plot.subtype)
 				if (!tws.length) continue //no terms for this plot

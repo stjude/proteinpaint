@@ -209,7 +209,7 @@ class CorrelationVolcano extends PlotBase implements RxComponent {
 
 		const settings = config.settings.correlationVolcano
 		/** Request data from the server*/
-		const model = new Model(config, this.state, this.app, settings, this.variableTwLst)
+		const model = new Model(config, this.state, this.app, settings, this.variableTwLst, this.vocabApi)
 		const data = await model.getData()
 		if (!data || data.error || !data.variableItems.length) {
 			this.interactions.clearDom()

@@ -345,7 +345,7 @@ class Facet extends PlotBase {
 	}
 
 	async getSampleTableData(config) {
-		const result = await this.app.vocabApi.getAnnotatedSampleData({
+		const result = await this.vocabApi.getAnnotatedSampleData({
 			filter: this.state.termfilter.filter,
 			terms: [config.columnTw, config.rowTw]
 		})
@@ -473,7 +473,7 @@ class Facet extends PlotBase {
 		await this.getDescrStats(opts.term)
 		await this.getDescrStats(opts.term2)
 
-		const result = await this.app.vocabApi.getNestedChartSeriesData(opts)
+		const result = await this.vocabApi.getNestedChartSeriesData(opts)
 		const rows = new Map()
 
 		//These columns and rows are in the correct ascending order
@@ -495,7 +495,7 @@ class Facet extends PlotBase {
 
 	async getDescrStats(tw) {
 		if (isNumericTerm(tw.term)) {
-			const data = await this.app.vocabApi.getDescrStats(tw, this.state.termfilter)
+			const data = await this.vocabApi.getDescrStats(tw, this.state.termfilter)
 			if (data.error) throw data.error
 			tw.q.descrStats = data.values
 		}

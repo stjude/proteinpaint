@@ -103,13 +103,18 @@ export class AppApi {
 
 	async dispatch(action?: any) {
 		const self = this.#App
-		self.bus.emit('preDispatch') //; console.log(106, 'AppApi.dispatch() signal', this.#abortController?.signal)
+		self.bus.emit('preDispatch')
 		// any active but stale async operation, like fetch, should be canceled
 		// if a new dispatch supercedes previous dispatches.
 		// NOTE: this cancellation should not affect synchronous steps
-		if (this.#abortController /*&& !self.skipPrevActionAbort?.(action)*/)
-			this.#abortController.abort('stale sequenceId')
-		this.#abortController = new AbortController()
+		//
+		// NOTE: the controller is replaced only when it is actually aborted. Otherwise a skipped
+		// action would orphan the previous controller, and the requests that it signaled could no
+		// longer be canceled by a subsequent filter or cohort change.
+		if (!self.skipPrevActionAbort?.(action)) {
+			this.#abortController?.abort('stale sequenceId')
+			this.#abortController = new AbortController()
+		}
 
 		try {
 			if (this.#middlewares.length) {

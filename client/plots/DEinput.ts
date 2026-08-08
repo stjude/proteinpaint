@@ -385,7 +385,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 		// ignore filter0 when cohort0 is used
 		const filter0 = this.hasCohort0 ? null : this.state.termfilter.filter0
 		for (const g of groups) {
-			const samples = await this.app.vocabApi.getFilteredSampleList(
+			const samples = await this.vocabApi!.getFilteredSampleList(
 				filterJoin([g.filter, this.state.termfilter.filter]),
 				filter0
 			)

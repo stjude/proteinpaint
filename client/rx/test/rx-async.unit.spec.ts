@@ -199,3 +199,103 @@ tape('abort previous action on update()', async function (test) {
 	}
 	test.end()
 })
+
+// stands in for the Vocab class, whose create() returns a component-scoped instance
+// by prototypal inheritance, see client/termdb/Vocab.js
+function getTestVocabApi() {
+	return {
+		appSignal: new AbortController().signal,
+		getAbortSignal() {
+			return this.appSignal
+		},
+		create(getComponentAbortSignal) {
+			return Object.create(this, { getAbortSignal: { value: () => getComponentAbortSignal() } })
+		}
+	}
+}
+
+tape('skipPrevActionAbort() in dispatch()', async function (test) {
+	const app = await appInit({
+		debug: 1,
+		state: { appWait: 0 },
+		// only an app_refresh is assumed to affect all components in this test app
+		skipPrevActionAbort: action => action?.type !== 'app_refresh'
+	})
+	try {
+		const signal = app.getAbortSignal()
+		test.equal(signal.aborted, false, `should start with a signal that is not aborted`)
+
+		await app.dispatch({ type: 'unrelated_action' })
+		test.equal(signal.aborted, false, `should not abort the app signal for a skipped action`)
+		test.equal(
+			app.getAbortSignal(),
+			signal,
+			`should keep the same controller for a skipped action, so that the requests it signaled remain cancelable`
+		)
+
+		await app.dispatch({ type: 'app_refresh', state: { partWait: 0 } })
+		test.equal(signal.aborted, true, `should abort the requests that were signaled while actions were being skipped`)
+		test.notEqual(app.getAbortSignal(), signal, `should replace the controller after aborting it`)
+	} catch (e) {
+		test.fail('error: ' + e)
+	}
+	test.end()
+})
+
+tape('component-scoped vocabApi', async function (test) {
+	const vocabApi = getTestVocabApi()
+	try {
+		const part = await partInit({ app: { opts: { state: {}, debug: 1 }, vocabApi } })
+		const scoped = part.Inner?.vocabApi
+		test.equal(typeof scoped, 'object', `should assign a vocabApi to the component`)
+		test.equal(Object.getPrototypeOf(scoped), vocabApi, `should inherit from the app-level vocabApi`)
+		test.equal(scoped.getAbortSignal(), part.getAbortSignal(), `should return the component's abort signal`)
+		test.notEqual(scoped.getAbortSignal(), vocabApi.appSignal, `should not return the app-level abort signal`)
+
+		const preset = { isPreset: true }
+		const part1 = await partInit({ app: { opts: { state: {}, debug: 1 }, vocabApi }, vocabApi: preset })
+		test.equal(
+			part1.Inner?.vocabApi,
+			preset,
+			`should not overwrite a vocabApi that the component assigned itself, as PlotBase does`
+		)
+	} catch (e) {
+		test.fail('error: ' + e)
+	}
+	test.end()
+})
+
+tape('component abort signal versus skipped app action', async function (test) {
+	const app = await appInit({
+		debug: 1,
+		state: { appWait: 0 },
+		vocabApi: getTestVocabApi(),
+		// no action affects all components in this test app
+		skipPrevActionAbort: () => true
+	})
+	try {
+		const part: any = app.getComponents('part')
+		// the first update always computes a new state for the component, so prime it before
+		// capturing the signals that the assertions below are about
+		await app.dispatch({ type: 'part_edit', state: { partWait: 0 } })
+		const appSignal = app.getAbortSignal()
+		const compSignal = part.Inner.vocabApi.getAbortSignal()
+
+		// an action that does not change this component's state, such as deleting another plot
+		await app.dispatch({ type: 'unrelated_action' })
+		test.equal(appSignal.aborted, false, `should not abort the app signal for a skipped action`)
+		test.equal(
+			compSignal.aborted,
+			false,
+			`should not abort a pending component request when an unrelated action is dispatched`
+		)
+
+		// an action that does change this component's state, such as editing its own config
+		await app.dispatch({ type: 'part_edit', state: { partWait: 5 } })
+		test.equal(appSignal.aborted, false, `should still not abort the app signal for a skipped action`)
+		test.equal(compSignal.aborted, true, `should abort a pending component request when its own state changes`)
+	} catch (e) {
+		test.fail('error: ' + e)
+	}
+	test.end()
+})

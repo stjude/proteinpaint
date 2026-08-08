@@ -77,7 +77,7 @@ class TdbTable {
 			const c = this.state.config
 			if (this.dom.header) this.dom.header.html(c.term.term.name + ' vs ' + c.term2.term.name)
 			const reqOpts = this.getDataRequestOpts()
-			this.data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.data = await this.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, this.data)
 			const [columns, rows] = this.processData(this.data)
 			this.render(columns, rows)

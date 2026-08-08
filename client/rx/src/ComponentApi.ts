@@ -26,6 +26,8 @@ export interface RxComponent {
 	printError?: null | ((any) => void)
 	destroy?: () => void
 	getChartImages?: () => any
+	/** a vocabApi that is scoped to this component's abort signal, see the ComponentApi constructor */
+	vocabApi?: any
 
 	bus?: any
 	eventTypes?: string[]
@@ -43,7 +45,7 @@ export class ComponentApi {
 	#abortControllers: Set<AbortController>
 	// TODO: may use #incompleteUpdate property, if the shared app abortController signal is used
 	// #incompleteUpdate: boolean = true
-	#bus?: Bus
+	//#bus?: Bus
 	#errdiv: any
 
 	static getInitFxn(__Class__) {
@@ -64,6 +66,15 @@ export class ComponentApi {
 		if (!self.type) self.type = __Class__.type
 		self.app = opts.app
 		self.api = this
+		// Give every component a vocabApi whose requests are signaled by this component's abort
+		// controller, instead of the app-level one that AppApi.dispatch() may abort on behalf of
+		// all components. A component that uses it will have its pending requests canceled when
+		// its own state changes, but not when an unrelated action, such as closing another plot's
+		// sandbox, is dispatched. PlotBase assigns its own in its constructor, which runs above,
+		// so do not overwrite it.
+		if (!self.vocabApi && typeof opts.app?.vocabApi?.create == 'function') {
+			self.vocabApi = opts.app.vocabApi.create(() => this.getAbortSignal())
+		}
 
 		this.#Component = self
 		this.id = self.id
