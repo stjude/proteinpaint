@@ -32,6 +32,8 @@ export class Cuminc extends PlotBase {
 	static type = 'cuminc'
 
 	constructor(opts) {
+		// this class is instantiated directly, not as an rx component, so there is no plot api
+		super(opts)
 		this.type = Cuminc.type
 		this.pj = getPj(this)
 		this.state = {
@@ -187,12 +189,16 @@ class MassCumInc
 - for general cumulative incidence analysis
 - input data is for one or more charts
 */
-class MassCumInc {
+class MassCumInc extends PlotBase {
 	static type = 'cuminc'
 
-	constructor(opts) {
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = MassCumInc.type
 		this.chartIncrement = 0
+		// do not transition the loading div on the initial chart load,
+		// toggleLoadingDiv() below resets this to the PlotBase default
+		this.loadingWait = 0
 	}
 
 	async init(appState) {
@@ -657,19 +663,21 @@ class MassCumInc {
 		}
 	}
 
-	// helper so that 'Loading...' does not flash when not needed
+	// helper so that 'Loading...' does not flash when not needed;
+	// overrides PlotBase.toggleLoadingDiv(), which also toggles dom.renderedData
+	// that this plot does not have
 	toggleLoadingDiv(display = '') {
 		if (display != 'none') {
 			this.dom.loadingDiv
 				.style('opacity', 0)
 				.style('display', display)
 				.transition()
-				.duration('loadingWait' in this ? this.loadingWait : 0)
+				.duration(this.loadingWait)
 				.style('opacity', 1)
 		} else {
 			this.dom.loadingDiv.style('display', display)
 		}
-		// do not transition on initial chart load
+		// only the initial chart load is not transitioned
 		this.loadingWait = 1000
 	}
 }

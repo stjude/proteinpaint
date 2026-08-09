@@ -184,9 +184,9 @@ export class VolcanoModel {
 		const state = this.app.getState()
 		const samplesGroup = samplelst.groups.find(g => g.in)
 		othersSamplesGroup.values = []
-		// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group
-		const vocabApi = this.plot.vocabApi || this.app.vocabApi
-		for (const s of await vocabApi.getFilteredSampleList(state.termfilter.filter)) {
+		// retrieve full list of samples based on current filter. put samples not in samplesGroup in "others" group.
+		// the plot-scoped vocabApi from PlotBase is used, so that an unrelated app dispatch does not cancel this request
+		for (const s of await this.plot.vocabApi.getFilteredSampleList(state.termfilter.filter)) {
 			// s={id,name}, samplelst.groups[].values[]={sampleId,sample}
 			// NOTE: must not use indexOf() here, it compares by strict equality and not by predicate,
 			// which would never match and would put every sample in the "others" group

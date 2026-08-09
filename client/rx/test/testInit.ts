@@ -57,8 +57,8 @@ class TestApp extends AppBase implements RxApp {
 
 	async init() {
 		this.store = await storeInit({ app: this.api, state: this.opts.state })
-		// must be set before the components are created, since ComponentApi uses it
-		// to create a component-scoped vocabApi
+		// must be set before the components are created, since a component creates its own
+		// component-scoped vocabApi from this app-level one, as PlotBase does
 		if (this.opts.vocabApi) this.api.vocabApi = this.opts.vocabApi
 		this.components = {
 			part: await partInit({ app: this.api }),
@@ -147,8 +147,9 @@ class TestPart implements RxComponent {
 		this.id = opts.id
 		this.api = api
 		this.type = 'part'
-		// mimics PlotBase, which assigns its own vocabApi before ComponentApi would create one
-		if (opts.vocabApi) this.vocabApi = opts.vocabApi
+		// mimics PlotBase, which creates a component-scoped vocabApi in its constructor;
+		// rx itself must not create one
+		if (this.app?.vocabApi) this.vocabApi = this.app.vocabApi.create(() => this.api.getAbortSignal())
 	}
 	getState(appState) {
 		return { wait: appState.partWait || 0 }

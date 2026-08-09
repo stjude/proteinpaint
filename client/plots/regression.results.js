@@ -60,10 +60,10 @@ export class RegressionResults {
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
-		// use the parent plot's vocabApi so that requests are signaled by the plot-level abort
-		// controller, instead of the app-level one. Otherwise, an unrelated app dispatch, such as
-		// closing another plot's sandbox, would cancel a pending analysis in this sandbox.
-		this.vocabApi = this.parent.vocabApi || this.app.vocabApi
+		// use the parent plot's vocabApi, from PlotBase, so that requests are signaled by the
+		// plot-level abort controller, instead of the app-level one. Otherwise, an unrelated app
+		// dispatch, such as closing another plot's sandbox, would cancel a pending analysis here.
+		this.vocabApi = this.parent.vocabApi
 		this.type = 'regression'
 		setInteractivity(this)
 		setRenderers(this)

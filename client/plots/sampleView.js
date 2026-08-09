@@ -1,4 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
+import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '#filter'
@@ -9,11 +10,11 @@ import { sayerror } from '#dom'
 const root_ID = 'root'
 const samplesLimit = 15
 
-class SampleView {
+class SampleView extends PlotBase {
 	static type = 'sampleView'
 
-	constructor(opts) {
-		this.opts = opts
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = SampleView.type
 		this.setDom(opts)
 		setInteractivity(this)
