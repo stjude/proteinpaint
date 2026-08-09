@@ -23,6 +23,7 @@ Fixes:
 - Restore the #SAMPLE column in the differential expression group builder, disabled behind a TODO pending sample counts for non-sqlite datasets. It is filled asynchronously so one slow count does not hold up the table
 - A dataset-level failure while assembling an on-demand counts matrix was absorbed by the per-case skip path, which is meant for the occasional unavailable file: a cache directory problem silently produced a one-column matrix from a 36-case request and wrote a perfectly valid HDF5 that the engines would have analyzed. The run now fails once more than 10% of cases cannot be loaded, and reports the underlying errors rather than only the sample ids. A full cache compute pool is likewise treated as a reason to fail the run rather than to drop cases, since dropping them quietly changes which samples the comparison ran on
 - edge_newh5.R reported per-step timings that did not sum to the wall time, because estimateDisp — the dominant cost, 39.7s of a 64s run at 1370 samples — was the one major step without a timer. Instrumentation only; results are unchanged
+- stopping unrelated mass actions (like closing a sandbox) from aborting in-flight plot requests
 
 
 ## 2.201.0

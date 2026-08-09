@@ -1,2 +1,1 @@
-Fixes:
-- stopping unrelated mass actions (like closing a sandbox) from aborting in-flight plot requests
+
