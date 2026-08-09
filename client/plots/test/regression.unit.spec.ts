@@ -1,5 +1,6 @@
 import tape from 'tape'
 import { getGeneVariantWildtypeGrp } from '../regression.inputs.term.js'
+import { isLoneOutcome } from '../regression.js'
 
 /*
 Tests:
@@ -10,6 +11,13 @@ Tests:
 	getGeneVariantWildtypeGrp() - wildtype group without samples
 	getGeneVariantWildtypeGrp() - q.type='values', no groupset in use
 	getGeneVariantWildtypeGrp() - missing groupset of q.predefined_groupset_idx
+	isLoneOutcome() - lone survival term and no condition term in the ds
+	isLoneOutcome() - lone survival term but the ds also has condition terms
+	isLoneOutcome() - a lone term of each type
+	isLoneOutcome() - ds without loneTermByType
+	isLoneOutcome() - regression type other than cox
+	isLoneOutcome() - per cohort of a ds with subcohorts
+	isLoneOutcome() - unknown active cohort of a ds with subcohorts
 */
 
 /*************************
@@ -186,4 +194,73 @@ tape('getGeneVariantWildtypeGrp() - missing groupset of q.predefined_groupset_id
 	const tw = predefinedTw(snvindelGroups, 5)
 	const sampleCounts = sampleCountsOf(snvindelGroups, [500, 20])
 	test.equal(getGeneVariantWildtypeGrp(tw, sampleCounts), undefined, 'should return undefined and not throw')
+})
+
+/*************************
+ isLoneOutcome()
+**************************/
+
+const survivalTerm = { id: 'os', name: 'Overall survival', type: 'survival' }
+const conditionTerm = { id: 'grade', name: 'Max grade', type: 'condition' }
+
+// termdbConfig of a ds without subcohorts, thus loneTermByType is keyed by the empty cohort string
+function tdbConfig(byType, allowedTermTypes) {
+	return { loneTermByType: { '': byType }, allowedTermTypes }
+}
+
+tape('isLoneOutcome() - lone survival term and no condition term in the ds', test => {
+	test.plan(1)
+	const termdbConfig = tdbConfig({ survival: survivalTerm }, ['survival', 'categorical', 'float'])
+	test.equal(isLoneOutcome('cox', termdbConfig), true, 'should be true, there is nothing to replace the term with')
+})
+
+tape('isLoneOutcome() - lone survival term but the ds also has condition terms', test => {
+	test.plan(1)
+	// condition is absent from loneTermByType while listed in allowedTermTypes,
+	// so the ds has 2+ condition terms that can serve as the outcome
+	const termdbConfig = tdbConfig({ survival: survivalTerm }, ['survival', 'condition'])
+	test.equal(isLoneOutcome('cox', termdbConfig), false, 'should be false, condition terms are replacements')
+})
+
+tape('isLoneOutcome() - a lone term of each type', test => {
+	test.plan(1)
+	const termdbConfig = tdbConfig({ survival: survivalTerm, condition: conditionTerm }, ['survival', 'condition'])
+	test.equal(isLoneOutcome('cox', termdbConfig), false, 'should be false, the two lone terms replace each other')
+})
+
+tape('isLoneOutcome() - ds without loneTermByType', test => {
+	test.plan(2)
+	test.equal(isLoneOutcome('cox', { allowedTermTypes: ['survival'] }), false, 'should be false without loneTermByType')
+	test.equal(isLoneOutcome('cox', undefined), false, 'should be false and not throw without termdbConfig')
+})
+
+tape('isLoneOutcome() - regression type other than cox', test => {
+	test.plan(2)
+	const termdbConfig = tdbConfig({ survival: survivalTerm }, ['survival'])
+	// linear/logistic outcomes also accept numeric and categorical terms, thus never lone
+	test.equal(isLoneOutcome('linear', termdbConfig), false, 'should be false for linear')
+	test.equal(isLoneOutcome('logistic', termdbConfig), false, 'should be false for logistic')
+})
+
+tape('isLoneOutcome() - per cohort of a ds with subcohorts', test => {
+	test.plan(2)
+	const termdbConfig = {
+		selectCohort: { values: [{ keys: ['ABC'] }, { keys: ['XYZ', 'ABC'] }] },
+		// only the first cohort has a lone survival term
+		loneTermByType: { ABC: { survival: survivalTerm } },
+		allowedTermTypes: ['survival']
+	}
+	test.equal(isLoneOutcome('cox', termdbConfig, 0), true, 'should be true for the cohort with a lone term')
+	test.equal(isLoneOutcome('cox', termdbConfig, 1), false, 'should be false for the cohort without a lone term')
+})
+
+tape('isLoneOutcome() - unknown active cohort of a ds with subcohorts', test => {
+	test.plan(1)
+	const termdbConfig = {
+		selectCohort: { values: [{ keys: ['ABC'] }] },
+		loneTermByType: { ABC: { survival: survivalTerm } },
+		allowedTermTypes: ['survival']
+	}
+	// e.g. when restoring a session, before the active cohort is known
+	test.equal(isLoneOutcome('cox', termdbConfig), false, 'should be false when the cohort key cannot be determined')
 })

@@ -279,6 +279,14 @@ export class TermSettingApi {
 
 		if (self.opts.customMenuOptions) options.push(...self.opts.customMenuOptions)
 
+		if (!options.length) {
+			// nothing is applicable to this term, do not show an empty menu
+			// (e.g. a cox outcome that is the only survival term of the dataset: survival terms have
+			// no edit menu, and "Replace" is withheld as there is no other term to replace it with)
+			tip.hide()
+			return
+		}
+
 		const activeMenu = menuHolder || tip.d
 		activeMenu
 			.selectAll('div')
