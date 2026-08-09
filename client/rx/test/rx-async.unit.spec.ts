@@ -242,29 +242,9 @@ tape('skipPrevActionAbort() in dispatch()', async function (test) {
 	test.end()
 })
 
-tape('component-scoped vocabApi', async function (test) {
-	const vocabApi = getTestVocabApi()
-	try {
-		const part = await partInit({ app: { opts: { state: {}, debug: 1 }, vocabApi } })
-		const scoped = part.Inner?.vocabApi
-		test.equal(typeof scoped, 'object', `should assign a vocabApi to the component`)
-		test.equal(Object.getPrototypeOf(scoped), vocabApi, `should inherit from the app-level vocabApi`)
-		test.equal(scoped.getAbortSignal(), part.getAbortSignal(), `should return the component's abort signal`)
-		test.notEqual(scoped.getAbortSignal(), vocabApi.appSignal, `should not return the app-level abort signal`)
-
-		const preset = { isPreset: true }
-		const part1 = await partInit({ app: { opts: { state: {}, debug: 1 }, vocabApi }, vocabApi: preset })
-		test.equal(
-			part1.Inner?.vocabApi,
-			preset,
-			`should not overwrite a vocabApi that the component assigned itself, as PlotBase does`
-		)
-	} catch (e) {
-		test.fail('error: ' + e)
-	}
-	test.end()
-})
-
+// NOTE: rx does not create a component-scoped vocabApi, a component gets one by extending
+// PlotBase, see client/plots/test/PlotBase.unit.spec.ts. TestPart mimics PlotBase, so that
+// the interaction between a component-scoped signal and a skipped app action is covered here.
 tape('component abort signal versus skipped app action', async function (test) {
 	const app = await appInit({
 		debug: 1,

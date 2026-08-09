@@ -1,9 +1,11 @@
 import { getCompInit } from '../rx'
+import { PlotBase } from '#plots/PlotBase.js'
 
-class TdbStatTable {
+class TdbStatTable extends PlotBase {
 	static type = 'stattable'
 
-	constructor(opts) {
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = TdbStatTable.type
 	}
 

@@ -17,7 +17,8 @@ export class InputTerm {
 		this.section = opts.section
 		this.term = opts.term // term wrapper {id, term, q}; will be missing for a blank input
 		this.parent = opts.parent // the inputs instance
-		this.vocabApi = this.parent.parent.vocabApi || this.parent.app.vocabApi
+		// the plot-scoped vocabApi from PlotBase, this.parent.parent is the regression plot
+		this.vocabApi = this.parent.parent.vocabApi
 	}
 
 	async init(holder) {

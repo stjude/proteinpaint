@@ -17,10 +17,11 @@ const filteredSamples = [
 function getModel() {
 	const plot = {
 		app: {
-			getState: () => ({ termfilter: { filter: {} } }),
-			vocabApi: {
-				getFilteredSampleList: async () => filteredSamples
-			}
+			getState: () => ({ termfilter: { filter: {} } })
+		},
+		// mimics the plot-scoped vocabApi that PlotBase assigns
+		vocabApi: {
+			getFilteredSampleList: async () => filteredSamples
 		}
 	}
 	return new VolcanoModel(plot, tt.GENE_EXPRESSION)

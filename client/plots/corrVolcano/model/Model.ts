@@ -8,7 +8,7 @@ export class Model {
 	app: MassAppApi
 	settings: CorrVolcanoSettings
 	variableTwLst: TermWrapper[]
-	/** the plot-scoped vocabApi, so that an unrelated app dispatch does not cancel this request */
+	/** the plot-scoped vocabApi from PlotBase, so that an unrelated app dispatch does not cancel this request */
 	vocabApi: any
 	constructor(
 		config: CorrVolcanoPlotConfig,
@@ -16,14 +16,14 @@ export class Model {
 		app: MassAppApi,
 		settings: CorrVolcanoSettings,
 		variableTwLst: TermWrapper[],
-		vocabApi?: any
+		vocabApi: any
 	) {
 		this.config = config
 		this.state = state
 		this.app = app
 		this.settings = settings
 		this.variableTwLst = variableTwLst
-		this.vocabApi = vocabApi || app.vocabApi
+		this.vocabApi = vocabApi
 	}
 
 	async getData() {

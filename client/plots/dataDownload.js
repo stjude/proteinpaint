@@ -1,4 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
+import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/sayerror.ts'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
@@ -18,10 +19,11 @@ this {}
 	termdbConfig{}
 */
 
-class DataDownload {
+class DataDownload extends PlotBase {
 	static type = 'dataDownload'
 
-	constructor(opts) {
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = DataDownload.type
 		this.genomeObj = opts.app.opts.genome
 		this.pillBy$id = {}

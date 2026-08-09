@@ -1,11 +1,13 @@
 import { controlsInit } from './controls'
 import { getCompInit } from '../rx'
+import { PlotBase } from '#plots/PlotBase.js'
 import { select } from 'd3-selection'
 
-class TdbTable {
+class TdbTable extends PlotBase {
 	static type = 'table'
 
-	constructor(opts) {
+	constructor(opts, api) {
+		super(opts, api)
 		this.type = TdbTable.type
 	}
 

@@ -47,8 +47,13 @@ export class PlotBase {
 		this.parentId = opts?.parentId
 		// plot child class should use config.controlLabels, app.vocabApi.termdbConfig.uiLabels, or this default
 		this.uiLabels = defaultUiLabels
-		// Below creates a vocabApi instance that is unique to the plot instance,
-		// so that there'd be a plot-level request cancellation using plotApi.getAbortSignal()
+		// Below creates a vocabApi instance that is unique to the plot instance, so that its requests
+		// are signaled by the plot-level abort controller instead of the app-level one that
+		// AppApi.dispatch() may abort on behalf of all components. A plot that uses this.vocabApi
+		// will have its pending requests canceled when its own state changes, but not when an
+		// unrelated action, such as closing another plot's sandbox, is dispatched.
+		// NOTE: this.api may still be undefined here, rx assigns it right after this constructor
+		// runs, so the abort signal must be looked up lazily on each request.
 		if (this.app?.vocabApi) this.vocabApi = this.app.vocabApi.create(() => this.api?.getAbortSignal())
 	}
 
