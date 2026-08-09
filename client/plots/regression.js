@@ -190,18 +190,45 @@ termdbConfig.loneTermByType{} is computed at server launch, keyed by cohort; see
 */
 function mayGetLoneOutcome(regressionType, app, activeCohort) {
 	if (regressionType != 'cox') return
-	const termdbConfig = app.vocabApi.termdbConfig
-	if (!termdbConfig?.loneTermByType) return // no lone term in this dataset
-	// a caller may not know the active cohort (e.g. getPlotConfig() when restoring a session),
-	// in which case the cohort key cannot be determined for a ds with subcohorts
-	if (termdbConfig.selectCohort && !Number.isInteger(activeCohort)) return
-	const byType = termdbConfig.loneTermByType[getActiveCohortStr({ termdbConfig, activeCohort })]
+	const byType = getLoneTermByType(app.vocabApi.termdbConfig, activeCohort)
 	const t1 = byType?.survival
 	const t2 = byType?.condition
 	if (t1 && t2) return // has both. no preference thus do not auto select one
 	if (t1) return { term: structuredClone(t1) }
 	if (t2) return { term: structuredClone(t2) }
 	return
+}
+
+// term types accepted as cox outcome, per getUsecaseSupportedTerms() of termdb.usecase.ts
+const coxOutcomeTypes = ['survival', 'condition']
+
+// returns termdbConfig.loneTermByType{} entry for the active cohort, or undefined when the ds has
+// no lone term or the cohort key cannot be determined
+function getLoneTermByType(termdbConfig, activeCohort) {
+	if (!termdbConfig?.loneTermByType) return // no lone term in this dataset
+	// a caller may not know the active cohort (e.g. getPlotConfig() when restoring a session),
+	// in which case the cohort key cannot be determined for a ds with subcohorts
+	if (termdbConfig.selectCohort && !Number.isInteger(activeCohort)) return
+	return termdbConfig.loneTermByType[getActiveCohortStr({ termdbConfig, activeCohort })]
+}
+
+/*
+returns true when the dataset has only one term usable as this method's outcome, so the input ui
+must not offer "Replace" on the outcome pill: the term tree would have nothing else to show
+
+a term type is absent from loneTermByType{} when the cohort has either 0 or 2+ terms of it, so a
+lone term of one type only proves there is no alternative if the ds has no term of the other type
+at all; that is what allowedTermTypes[] reports. when in doubt "Replace" is kept, as offering it
+needlessly is much less confusing than withholding it while other outcome terms exist
+*/
+export function isLoneOutcome(regressionType, termdbConfig, activeCohort) {
+	if (regressionType != 'cox') return false // other methods also accept numeric/categorical terms
+	const byType = getLoneTermByType(termdbConfig, activeCohort)
+	if (!byType) return false
+	const loneTypes = coxOutcomeTypes.filter(type => byType[type])
+	if (loneTypes.length != 1) return false // no lone term, or one of each type thus replaceable
+	const otherType = coxOutcomeTypes.find(type => type != loneTypes[0])
+	return !termdbConfig.allowedTermTypes?.includes(otherType)
 }
 
 export function get_defaultQ4fillTW(regressionType, useCase = '') {

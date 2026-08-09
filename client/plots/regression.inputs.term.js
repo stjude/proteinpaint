@@ -4,7 +4,7 @@ import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '#dom'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/handlers/snplst.sampleSum.ts'
-import { get_defaultQ4fillTW } from './regression'
+import { get_defaultQ4fillTW, isLoneOutcome } from './regression'
 
 /*
 class instance is an input
@@ -54,7 +54,7 @@ export class InputTerm {
 				noTermPromptOptions: this.opts.noTermPromptOptions,
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
-				menuOptions: this.section.configKey == 'outcome' ? '{edit,reuse,replace}' : '{edit,reuse,remove}',
+				menuOptions: this.getMenuOptions(),
 				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
@@ -408,6 +408,20 @@ export class InputTerm {
 		}
 	}
 
+	/*
+	recomputed on every main() and not just at init(), since switching cohort can change whether the
+	outcome term is the only one this dataset offers
+	*/
+	getMenuOptions() {
+		const { config, state } = this.parent
+		if (this.section.configKey != 'outcome') return '{edit,reuse,remove}'
+		// an outcome cannot be removed, only replaced; and when there is nothing to replace it with,
+		// hide the option rather than opening a term tree with a single, already selected term
+		return isLoneOutcome(config.regressionType, this.vocabApi.termdbConfig, state.activeCohort)
+			? '{edit,reuse}'
+			: '{edit,reuse,replace}'
+	}
+
 	getPillArgs() {
 		const section = this.section
 		const { config, state, disable_terms } = this.parent
@@ -415,6 +429,7 @@ export class InputTerm {
 			{
 				activeCohort: state.activeCohort,
 				disable_terms,
+				menuOptions: this.getMenuOptions(),
 				usecase: {
 					target: 'regression',
 					detail: section.configKey,
