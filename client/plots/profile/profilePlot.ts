@@ -227,7 +227,7 @@ export abstract class profilePlot extends PlotBase implements RxComponent {
 				filters[tw.term.id] = getCategoricalTermFilter(this.config.filterTWs, this.settings, tw)
 			}
 
-			this.filteredTermValues = await this.app.vocabApi.filterTermValues({
+			this.filteredTermValues = await this.vocabApi!.filterTermValues({
 				terms: this.config.filterTWs,
 				filter: this.state.termfilter.filter,
 				filters,
