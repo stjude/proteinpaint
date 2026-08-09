@@ -382,7 +382,7 @@ export abstract class ScatterModelBase {
 					X.push(sample.x)
 					Y.push(sample.y)
 				}
-				regressionCurve = await this.scatter.app.vocabApi.getLowessCurve({ coords: { X, Y } })
+				regressionCurve = await this.scatter.vocabApi!.getLowessCurve({ coords: { X, Y } })
 			} else {
 				throw `unsupported regression type='${regressionType}'`
 			}

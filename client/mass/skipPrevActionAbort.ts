@@ -19,13 +19,16 @@ export function skipPrevActionAbort(action?: { type: string; [key: string]: any 
 	if (!action) return false
 	if (isGlobalActionType(action.type)) return false
 	if (action.type == 'app_refresh') {
-		if (action.subactions) return !action.subactions.find(a => isGlobalActionType(a.type))
-		// an app_refresh without subactions may replace the app state wholesale, such as when
-		// recovering a saved session or refreshing after a login. Like a filter or cohort change,
-		// that affects every component, so pending requests must not be allowed to render.
-		// A partial state patch, such as {groups}, does not.
-		if (!action.state) return false
-		return !globalStateKeys.find(key => key in action.state)
+		// an app_refresh may carry subactions, a state patch, or both, and either one may affect
+		// all components, so they must be checked independently. For example
+		// regression.inputs.values.table.js dispatches a termfilter patch alongside a plot_edit.
+		if (action.subactions?.find(a => isGlobalActionType(a.type))) return false
+		// a state patch may replace the app state wholesale, such as when recovering a saved
+		// session. Like a filter or cohort change, that affects every component, so pending
+		// requests must not be allowed to render. A partial patch, such as {groups}, does not.
+		if (action.state) return !globalStateKeys.find(key => key in action.state)
+		// an app_refresh with neither is dispatched to re-render everything, such as after a login
+		return Boolean(action.subactions)
 	}
 	return true
 }

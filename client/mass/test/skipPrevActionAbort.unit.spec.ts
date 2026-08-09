@@ -57,6 +57,39 @@ tape('app_refresh with subactions', async function (test) {
 	test.end()
 })
 
+tape('app_refresh with both subactions and state', async function (test) {
+	// as dispatched by regression.inputs.values.table.js to refresh the violin plot of a
+	// regression input, where the state patch is the only sign that the filter changed
+	test.equal(
+		skipPrevActionAbort({
+			type: 'app_refresh',
+			state: { termfilter: {} },
+			subactions: [{ type: 'plot_edit', id: 'a' }]
+		}),
+		false,
+		'should abort on a global state patch even when no subaction affects all components'
+	)
+	test.equal(
+		skipPrevActionAbort({
+			type: 'app_refresh',
+			state: { groups: [] },
+			subactions: [{ type: 'plot_edit', id: 'a' }]
+		}),
+		true,
+		'should not abort when neither the subactions nor the state patch affects all components'
+	)
+	test.equal(
+		skipPrevActionAbort({
+			type: 'app_refresh',
+			state: { groups: [] },
+			subactions: [{ type: 'filter_replace' }]
+		}),
+		false,
+		'should abort on a global subaction even when the state patch is partial'
+	)
+	test.end()
+})
+
 tape('app_refresh without subactions', async function (test) {
 	test.equal(
 		skipPrevActionAbort({ type: 'app_refresh' }),
