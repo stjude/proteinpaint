@@ -11,6 +11,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'animatedBubbleChart':
 			return await import(`./animatedBubbleChart.ts`)
 
+		case 'brainImaging':
+			return await import('./brainImaging.ts')
+
 		case 'brainRegions':
 			return await import('./brainRegions.ts')
 

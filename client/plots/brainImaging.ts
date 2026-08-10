@@ -1,19 +1,33 @@
-import { getCompInit, copyMerge } from '#rx'
+import { getCompInit, copyMerge, type RxComponent, type ComponentApi } from '#rx'
+import { PlotBase } from '#plots/PlotBase.ts'
 import { controlsInit } from './controls'
 import { getT0T2defaultQ } from './summaryQ.ts'
 import { dofetch3 } from '#common/dofetch'
-import { renderTable } from '../dom/table.ts'
+import { Menu, renderTable, type TableRow, type TableColumn } from '#dom'
 import svgLegend from '#dom/svg.legend'
 import { scaleLinear } from 'd3-scale'
-import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 
-class BrainImaging {
+type ImgData ={ data: any; td: any; dataUrls: any }
+
+class BrainImaging extends PlotBase implements RxComponent{
 	static type = 'brainImaging'
 
-	constructor(opts) {
-		this.opts = opts
+	type: string
+	components: { controls: any }
+	legendLabelMouseup!: any
+	imagesData!: {[index: string]: ImgData }
+	legendRenderer!: any
+	legendItems!: any
+	legendValues!: { [index: string]: { color: string; maxLength: number; crossedOut: boolean } }
+	config!: any
+	settings!: any
+	dom!: any
+
+	constructor(opts: any, api: ComponentApi) {
+        super(opts, api)
 		this.type = BrainImaging.type
+		this.components = { controls: {} }
 		setInteractivity(this)
 	}
 
@@ -65,7 +79,7 @@ class BrainImaging {
 			})
 		}
 		this.components.controls.on('downloadClick.brainImaging', () => {
-			const urls = []
+			const urls: unknown[] = []
 			for (const key in this.imagesData)
 				for (const category in this.imagesData[key].dataUrls) {
 					const dataUrl = this.imagesData[key].dataUrls[category].url
@@ -258,7 +272,7 @@ class BrainImaging {
 		return await dofetch3('brainImaging', { body })
 	}
 
-	renderImages({ data, td, dataUrls }) {
+	renderImages({ data, td, dataUrls }: ImgData) {
 		this.legendValues = data.legend
 		if (data.error) throw data.error
 		for (const [termV, result] of Object.entries(data.brainImage)) {
@@ -267,25 +281,26 @@ class BrainImaging {
 
 		td.selectAll('*').remove()
 		for (const [termV, result] of Object.entries(dataUrls)) {
+			const imgResult = result as { catNum: number; url: string }
 			if (this.state.config.divideByTW)
 				td.append('div')
 					.attr('class', 'pp-chart-title')
 					.style('text-align', 'center')
-					.text(`${termV} (n=${result.catNum})`)
+					.text(`${termV} (n=${imgResult.catNum})`)
 					.style('font-weight', '600')
 					.style('color', 'white')
 					.style('font-size', '24px')
 					.style('margin-bottom', '5px')
 					.style('margin-top', '5px')
 					.style('display', 'block')
-			td.append('div').append('img').attr('src', result.url)
+			td.append('div').append('img').attr('src', imgResult.url)
 		}
 	}
 
 	renderLegend() {
-		const legendItems = []
+		const legendItems: any[] = []
 		for (const [label, v] of Object.entries(this.legendValues)) {
-			const scale = scaleLinear(['white', v.color], [0, v.maxLength]).clamp(true)
+			const scale = scaleLinear([0, v.maxLength], [rgb('white').formatHex(), v.color]).clamp(true)
 			legendItems.push({
 				text: label == 'default' ? 'Combined Intensity' : label,
 				width: 100,
@@ -316,7 +331,7 @@ class BrainImaging {
 	}
 }
 
-export function makeChartBtnMenu(holder, chartsInstance) {
+export function makeChartBtnMenu(holder, chartsInstance: any) {
 	chartsInstance.dom.tip.clear()
 	const menuDiv = holder.append('div')
 	if (chartsInstance.state.termdbConfig.queries.NIdata) {
@@ -352,9 +367,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 								queryKey: refKey,
 								settings: {
 									brainImaging: {
-										brainImageL: ref.parameters.l,
-										brainImageF: ref.parameters.f,
-										brainImageT: ref.parameters.t
+										brainImageL: (ref as any).parameters.l,
+										brainImageF: (ref as any).parameters.f,
+										brainImageT: (ref as any).parameters.t
 									}
 								},
 								selectedSampleFileNames
@@ -391,8 +406,8 @@ export async function getPlotConfig(opts) {
 	return copyMerge(config, opts)
 }
 
-async function getTableData(self, samples, state, refKey) {
-	const rows = []
+async function getTableData(self, samples, state, refKey): Promise<[TableRow[], TableColumn[]]> {
+	const rows: TableRow[] = []
 	for (const sample of samples) {
 		// first cell is sample name
 		const row = [{ value: sample.sample }]
@@ -405,7 +420,7 @@ async function getTableData(self, samples, state, refKey) {
 	}
 
 	// first column is sample and is hardcoded
-	const columns = [{ label: 'Sample' }]
+	const columns: TableColumn[] = [{ label: 'Sample' }]
 
 	// add in optional sample columns
 	for (const c of state.termdbConfig.queries.NIdata[refKey].sampleColumns || []) {
@@ -452,7 +467,7 @@ function setInteractivity(self) {
 			.text('Show only')
 			.on('click', () => {
 				legendMenu.hide()
-				const legendFilter = []
+				const legendFilter: unknown[] = []
 				for (const legendCat of self.legendItems) {
 					if (legendCat.key !== targetData.key) legendFilter.push(legendCat.key)
 				}
