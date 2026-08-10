@@ -15,6 +15,7 @@ use nalgebra::base::dimension::Dyn;
 //use ndarray::Array1;
 use ndarray::Array2;
 use ndarray::Dim;
+use ndarray::s;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use statrs::statistics::Data;
@@ -101,23 +102,38 @@ fn input_data_from_HDF5(
         // Skip sample if not found
     }
 
-    /* Read the matrix in a single bulk call.
+    /* Read the matrix in one bounded call, spanning only the columns actually selected.
     It is stored (genes x samples) and contiguous, so the previous one-hyperslab-per-sample approach
     made each read stride across the whole dataset -- ~59k scattered reads per sample. Measured on a
     1370-sample GDC cohort: 28.8s of system time for the per-column reads vs 0.03s to read it whole.
-    Read as f32 to match the on-disk type; widening to f64 happens per cell below, so no full-size
-    f64 copy of the source ever exists. */
-    let matrix: Array2<f32> = ds_matrix.read_2d::<f32>().unwrap();
+    But reading it whole is unbounded: the GDC counts file contains exactly the compared samples,
+    while every other ds routes this engine through a full static h5, where a 10-vs-10 comparison
+    against 3000 samples x 60660 genes would pull ~730MB to use 5MB of it. Clamping to
+    min..=max selected column keeps the single-hyperslab win with an allocation the selection bounds.
+    ponytail: the span, not the exact columns. Two samples at opposite ends of a wide file still read
+    everything between them; switch to a chunked scan if a real cohort turns out to be that sparse.
+    Read as f32 to match the on-disk type -- an f64-stored counts file is silently narrowed by HDF5's
+    soft conversion, which is exact for counts below 2^24 and is what the writer emits anyway.
+    Widening to f64 happens per cell below, so no full-size f64 copy of the source ever exists. */
+    let num_selected = selected_columns.len();
+    let mut dm = DMatrix::<f64>::zeros(num_genes, num_selected);
+    if num_selected == 0 {
+        // no requested sample matched a column; main() reports the empty matrix
+        return (dm, case_indexes, control_indexes, gene_names);
+    }
+    let first_column = *selected_columns.iter().min().unwrap();
+    let last_column = *selected_columns.iter().max().unwrap();
+    let matrix: Array2<f32> = ds_matrix
+        .read_slice_2d(s![0..num_genes, first_column..last_column + 1])
+        .unwrap();
 
     /* Build the (genes x selected samples) matrix directly, in the orientation the caller wants.
     The old code assembled the transpose and then called .transpose(), which copied the whole thing a
     second time. DMatrix is column-major, so the inner loop below writes down a column while reading
     along a source row. */
-    let num_selected = selected_columns.len();
-    let mut dm = DMatrix::<f64>::zeros(num_genes, num_selected);
     for gene in 0..num_genes {
         for (out_column, &src_column) in selected_columns.iter().enumerate() {
-            dm[(gene, out_column)] = matrix[[gene, src_column]] as f64;
+            dm[(gene, out_column)] = matrix[[gene, src_column - first_column]] as f64;
         }
     }
 

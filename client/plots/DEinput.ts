@@ -14,6 +14,7 @@ import { make_radios, renderTable, Tabs } from '#dom'
 import { dofetch3 } from '#common/dofetch'
 import { renderPreAnalysisData } from '#mass/groups'
 import { TermTypeGroups, termType2label } from '#shared/terms.js'
+import { uiLabel } from '#shared'
 
 const colorScale = getColors(5)
 
@@ -255,7 +256,7 @@ class DEinputPlot extends PlotBase implements RxComponent {
 					}
 				},
 				// dataset may rename what a row counts (GDC: cases, not samples)
-				{ label: `#${(this.app.vocabApi.termdbConfig?.uiLabels?.Sample || 'Sample').toUpperCase()}` },
+				{ label: `#${uiLabel(this.app.vocabApi.termdbConfig?.uiLabels, 'Sample', 'Sample').toUpperCase()}` },
 				{ label: 'FILTER' }
 			],
 			rows: [],

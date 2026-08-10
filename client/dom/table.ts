@@ -145,8 +145,10 @@ export function renderTable({
 			height: 15,
 			title: 'Download table',
 			handler: () => {
-				// no fileName supplied -> let downloadTable's date-stamped default apply
-				downloadTable(rows, columns, download.fileName)
+				// no fileName supplied -> let downloadTable's date-stamped default apply. '' has to
+				// become undefined for the default parameter to fire; otherwise link.download is empty
+				// and the browser names the file after the data: url
+				downloadTable(rows, columns, download.fileName || undefined)
 			}
 		})
 	}
@@ -779,8 +781,10 @@ export async function downloadTable(rows, cols, filename = `table-${fileDateStam
 
 	/* Create and trigger download. The leading BOM is required: without it excel on windows decodes
 	the file with the system codepage, and utf-8 in the content -- column labels like
-	"log₂(fold-change)", non-ascii sample names -- arrives as mojibake. Every other reader either
-	honors the BOM or skips it. */
+	"log₂(fold-change)", non-ascii sample names -- arrives as mojibake. R's read.delim strips it and
+	pandas' C parser strips it, but python's own csv module does not: open(p, encoding='utf-8') makes
+	the first header '\ufeffGene'. Read these with encoding='utf-8-sig', which is a no-op on a file
+	without a BOM. */
 	const dataStr = 'data:text/tsv;charset=utf-8,' + encodeURIComponent(BOM + lines)
 	const link = document.createElement('a')
 	link.setAttribute('href', dataStr)

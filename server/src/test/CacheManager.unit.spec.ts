@@ -85,7 +85,7 @@ tape('defaults', function (test) {
 							maxSize: 5000000000,
 							skipMs: 43200000,
 							// many small per-case fetches rather than a few heavy computes
-							maxPending: 100,
+							maxPending: 200,
 							absPath: `${m.cachedir}/gdcCounts`,
 							skipUntil: 0
 						},

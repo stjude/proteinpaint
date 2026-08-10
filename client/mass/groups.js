@@ -14,6 +14,7 @@ import { getCurrentCohortChartTypes } from './charts'
 import { getColors } from '#shared/common.js'
 import { rgb } from 'd3-color'
 import { isNumericTerm, termType2label } from '#shared/terms.js'
+import { uiLabel } from '#shared'
 import { TermTypes } from '#types'
 import { dofetch3 } from '#common/dofetch'
 import { maxSampleCutoff, maxGESampleCutoff } from '../plots/volcano/settings/defaults.ts'
@@ -817,7 +818,7 @@ async function updateUI(self) {
 			},
 			// dataset may rename what a row counts (GDC: cases, not samples). singular, like the count
 			// cells below that already use uiLabels
-			{ label: `#${(self.app.vocabApi.termdbConfig?.uiLabels?.Sample || 'Sample').toUpperCase()}` },
+			{ label: `#${uiLabel(self.app.vocabApi.termdbConfig?.uiLabels, 'Sample', 'Sample').toUpperCase()}` },
 			{ label: 'FILTER' }
 		],
 		rows: [],
