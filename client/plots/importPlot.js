@@ -8,11 +8,23 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'AIProjectAdmin':
 			return await import('./aiProjectAdmin/AIProjectAdmin.ts')
 
+		case 'animatedBubbleChart':
+			return await import(`./animatedBubbleChart.ts`)
+
+		case 'brainRegions':
+			return await import('./brainRegions.ts')
+
 		case 'barchart':
 			return await import(`./barchart.js`)
 
 		case 'boxplot':
 			return await import(`./boxplot/BoxPlot.ts`)
+
+		case 'bubbleHeatmap':
+			return await import('./bubbleHeatmap.ts')
+		
+		case 'cellTypeBubbleHeatmap':
+			return await import('./cellTypeBubbleHeatmap.ts')
 
 		case 'correlationVolcano':
 			return await import(`./corrVolcano/CorrelationVolcano.ts`)
@@ -38,6 +50,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'GeneExpInput':
 			return await import(`./GeneExpInput.ts`)
 
+		case 'geneRanking':
+			return await import(`./geneRanking.ts`)
+
 		case 'genomeBrowser':
 			return await import('./gb/GB.ts')
 
@@ -52,6 +67,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'imagePlot':
 			return await import('./imagePlot.ts')
+
+		case 'numericDictTermCluster':
+			return await import(`./numericDictTermCluster.ts`)
 
 		case 'report':
 			return await import(`./report/report.ts`)
@@ -81,32 +99,11 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'proteinView':
 			return await import(`./proteinView.ts`)
 
-		case 'numericDictTermCluster':
-			return await import(`./numericDictTermCluster.ts`)
-
 		case 'proteomeAbundance':
 			return await import(`./proteomeAbundance.ts`)
 
-		case 'animatedBubbleChart':
-			return await import(`./animatedBubbleChart.ts`)
-
-		case 'bubbleHeatmap':
-			return await import('./bubbleHeatmap.ts')
-
-		case 'cellTypeBubbleHeatmap':
-			return await import('./cellTypeBubbleHeatmap.ts')
-
-		case 'brainRegions':
-			return await import('./brainRegions.ts')
-
-		case 'studyCatalog':
-			return await import('./studyCatalog.ts')
-
 		case 'proteomeCohortCompare':
 			return await import('./proteomeCohortCompare.ts')
-
-		case 'geneRanking':
-			return await import(`./geneRanking.ts`)
 
 		case 'ProteomeInput':
 			return await import('./ProteomeInput.ts')
@@ -116,6 +113,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 
 		case 'sc':
 			return await import('./sc/SC.ts')
+
+		case 'studyCatalog':
+			return await import('./studyCatalog.ts')
 
 		case 'summarizeCnvGeneexp':
 			return await import(`./summarizeCnvGeneexp.ts`)
