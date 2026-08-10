@@ -653,15 +653,16 @@ function setRenderers(self) {
 				.style('display', 'none')
 
 			// p-values legend
+			let pvalueHolder
 			if (self.tests && chart.rawChartId in self.tests) {
-				const holder = div
+				pvalueHolder = div
 					.select('.pp-survival-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin-bottom', '30px')
 				renderPvalues({
 					title: 'Group comparisons (log-rank test)',
-					holder,
+					holder: pvalueHolder,
 					plot: 'survival',
 					tests: self.tests[chart.rawChartId],
 					s,
@@ -676,7 +677,12 @@ function setRenderers(self) {
 			if (self.msg) {
 				const fontSize = s.axisTitleFontSize ? s.axisTitleFontSize - 2 : 15
 				const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
+				const pvalueWidth = pvalueHolder?.node()?.getBoundingClientRect?.().width
+				if (pvalueWidth) holder.style('max-width', `${Math.ceil(pvalueWidth)}px`)
+				else holder.style('max-width', null)
 				holder
+					.style('white-space', 'normal')
+					.style('overflow-wrap', 'break-word')
 					.style('font-size', fontSize + 'px')
 					.style('font-style', 'italic')
 					.text(self.msg)
@@ -734,15 +740,16 @@ function setRenderers(self) {
 		div.select('.pp-survival-chartLegends').style('display', 'none').selectAll('*').remove()
 
 		// p-values legend
+		let pvalueHolder
 		if (self.tests && chart.rawChartId in self.tests) {
-			const holder = div
+			pvalueHolder = div
 				.select('.pp-survival-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
 				.style('margin-bottom', '30px')
 			renderPvalues({
 				title: 'Group comparisons (log-rank test)',
-				holder,
+				holder: pvalueHolder,
 				plot: 'survival',
 				tests: self.tests[chart.rawChartId],
 				s,
@@ -757,7 +764,12 @@ function setRenderers(self) {
 		if (self.msg) {
 			const fontSize = s.axisTitleFontSize ? s.axisTitleFontSize - 2 : 15
 			const holder = div.select('.pp-survival-chartLegends').style('display', 'inline-block').append('div')
+			const pvalueWidth = pvalueHolder?.node()?.getBoundingClientRect?.().width
+			if (pvalueWidth) holder.style('max-width', `${Math.ceil(pvalueWidth)}px`)
+			else holder.style('max-width', null)
 			holder
+				.style('white-space', 'normal')
+				.style('overflow-wrap', 'break-word')
 				.style('font-size', fontSize + 'px')
 				.style('font-style', 'italic')
 				.text(self.msg)
