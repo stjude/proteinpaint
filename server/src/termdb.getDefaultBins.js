@@ -23,7 +23,7 @@ export async function trigger_getDefaultBins(q, ds, res) {
 	let max = -Infinity
 	let binsCache // fine to cache bins for scrna genes, but not for cohort level data that's subject to filtering
 	try {
-		if (ds.termid2sample2value.has(tw.term.id)) {
+		if (ds.termid2sample2value?.has(tw.term.id)) {
 			// term data is cached
 			// use the cached data to compute bins
 			const sample2value = ds.termid2sample2value.get(tw.term.id)

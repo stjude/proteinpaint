@@ -195,7 +195,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					cellType: plot.cellTypeColumn?.index
 				}
 				metaCache.addMetaResult(sampleName, text, idxs, ds.cohort.termdb.q.sampleName2id)
-				if (metaCache.cellTypeFractions) {
+				if (metaCache.cellTypeFractions.size) {
 					// cell type fractions have been computed
 					// create cell type fraction terms
 					const cellType2sample2fraction = metaCache.cellTypeFractions
@@ -204,6 +204,7 @@ async function validateSamples(q: SingleCellQuery, ds: any): Promise<void> {
 					if (!plot.cellType2label) throw new Error('plot.cellType2label is undefined')
 					for (const [cellType, label] of plot.cellType2label) {
 						const sample2fraction = cellType2sample2fraction.get(cellType)
+						if (!sample2fraction) throw new Error('cell type not found')
 						const values = [...sample2fraction.values()]
 						const term = {
 							id: cellType,
