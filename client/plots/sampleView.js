@@ -235,12 +235,7 @@ class SampleView extends PlotBase {
 	async setControls(state) {
 		const q = state.termdbConfig.queries
 		const hasPlots =
-			q?.singleSampleMutation ||
-			q?.singleSampleGenomeQuantification ||
-			q?.NIdata ||
-			q?.images ||
-			q?.DZImages ||
-			q?.WSImages
+			q?.singleSampleMutation || q?.singleSampleGenomeQuantification || q?.NIdata || q?.images || q?.WSImages
 		if (hasPlots) {
 			this.dom.showPlotsDiv
 				.append('input')
@@ -255,22 +250,6 @@ class SampleView extends PlotBase {
 					})
 				})
 			this.dom.showPlotsDiv.append('label').text('Show Dictionary').attr('for', 'showDictionary')
-		}
-
-		if (q?.DZImages) {
-			this.dom.showPlotsDiv
-				.append('input')
-				.attr('id', 'showDzi')
-				.attr('type', 'checkbox')
-				.property('checked', true)
-				.on('change', e => {
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { settings: { sampleView: { showDzi: e.target.checked } } }
-					})
-				})
-			this.dom.showPlotsDiv.append('label').attr('for', 'showDzi').text('Show DZI images')
 		}
 
 		if (q?.WSImages) {
@@ -555,7 +534,6 @@ class SampleView extends PlotBase {
 			this.showPlotsFromCategory(this.singleSamplePlots[ssgqKey], ssgqKey)
 		this.showPlotsFromCategory(this.brainPlots, 'showBrain')
 		this.showPlotsFromCategory(this.imagePlots, 'showImages')
-		this.showPlotsFromCategory(this.dziPlots, 'showDzi')
 		this.showPlotsFromCategory(this.wsiPlots, 'showWsi')
 		if (this.state.samples.length == 1 && this.visiblePlots)
 			this.dom.tableDiv.style('max-width', '48vw').style('max-height', '40vw').attr('class', 'sjpp_show_scrollbar')
@@ -577,29 +555,8 @@ class SampleView extends PlotBase {
 		this.singleSamplePlots = {}
 		this.brainPlots = []
 		this.imagePlots = []
-		this.dziPlots = []
 		this.wsiPlots = []
 		const q = state.termdbConfig.queries
-		if (state.termdbConfig.queries?.DZImages) {
-			let div = plotsDiv.append('div')
-			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
-			for (const sample of samples) {
-				const data = await dofetch3('sampledzimages', {
-					body: {
-						genome: this.app.opts.genome.name,
-						dslabel: state.vocab.dslabel,
-						sample_id: sample.sampleName
-					}
-				})
-				if (data.sampleDZImages?.length > 0) {
-					const cellDiv = div.append('div').style('display', 'inline-block')
-					this.dziPlots.push({ sample, cellDiv })
-					const dziviewer = await import('./dziviewer/plot.dzi.js')
-					dziviewer.default(state.vocab.dslabel, cellDiv, this.app.opts.genome, sample.sampleName, data.sampleDZImages)
-				}
-			}
-		}
-
 		if (state.termdbConfig.queries?.WSImages) {
 			let div = plotsDiv.append('div')
 			if (state.samples.length == 1) div.style('display', 'inline-block').style('width', '50vw')
@@ -869,7 +826,6 @@ export async function getPlotConfig(opts, app) {
 			showDisco: true,
 			showBrain: true,
 			showImages: true,
-			showDzi: true,
 			showWsi: true
 		}
 	}

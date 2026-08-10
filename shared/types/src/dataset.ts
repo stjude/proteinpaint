@@ -1305,8 +1305,6 @@ type Mds3Queries = {
 	singleCell?: SingleCellQuery
 	singleSampleGenomeQuantification?: SingleSampleGenomeQuantification
 	singleSampleGbtk?: SingleSampleGbtk
-	/** deprecated. replaced by WSImages */
-	DZImages?: DZImages
 	WSImages?: WSImages
 	/** w2 whole-slide image plot: ds.queries.w2.folder (relative to tpmasterdir) contains
 	 * one subfolder per sample holding slide files: folder/<sample_id>/<fileName> */
@@ -1330,16 +1328,7 @@ type Images = {
 	folder: string
 }
 
-/** Deprecated. deep zoom image shown via openseadragon, with precomputed tiles.
- * this is replaced by WSImages and should not be used anymore */
-export type DZImages = {
-	// type of the image, e.g. H&E
-	type: string
-	// path to the folder where sample images are stored
-	imageBySampleFolder: string
-}
-
-/** deep zoom image shown via tiatoolbox, covers any big image files including whole-slide image. 
+/** deep zoom image shown via tiatoolbox, covers any big image files including whole-slide image.
 image file to sample mapping is stored in wsimages table
 */
 export type WSImages = {
