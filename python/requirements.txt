@@ -17,5 +17,6 @@ pillow==12.3.0
 psutil==7.2.1
 pyBigWig==0.3.25 --no-binary=pyBigWig
 pydantic==2.12.3
+statsmodels==0.14.4
 typing_extensions==4.15.0
 xlsxwriter==3.2.5

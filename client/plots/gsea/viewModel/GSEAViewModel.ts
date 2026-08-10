@@ -3,14 +3,30 @@ import { roundValueAuto } from '#shared/roundValue.js'
 
 type PathwayOpt = { label: string; value: string; selected?: boolean }
 
+/* field names are the engines' own, passed through unchanged: blitzgsea's dataframe columns
+(python/src/gsea.py) and cerno's output_struct (rust/src/cerno.rs). Both spell it `pval`.
+nes may be the string 'Infinity'/'-Infinity' -- see formatStat() below. */
 type GseaResultEntry = {
 	geneset_size: number
 	leading_edge: string
 	fdr?: number
-	pvalue?: number
-	nes?: number
+	pval?: number
+	nes?: number | string
 	auc?: number
 	es?: number
+}
+
+/* a stat as the table should show it. Three cases the engines actually produce:
+  - a number -> rounded
+  - 'Infinity'/'-Infinity' -> blitzgsea's nes when the permutation p-value underflowed its gamma
+    fit, i.e. more extreme than the null model can score. Real information, and the accompanying
+    pval is exactly 0 for the same reason; both used to render as an empty cell
+  - null/undefined -> genuinely not computed (NaN upstream), left blank */
+function formatStat(v: number | string | null | undefined) {
+	if (v == null) return v
+	if (v === 'Infinity') return '∞'
+	if (v === '-Infinity') return '−∞' // minus sign, not hyphen, to match the axis labels
+	return typeof v == 'number' ? roundValueAuto(v) : v
 }
 
 type RankedDE = {
@@ -194,13 +210,18 @@ export class GSEAViewModel {
 	}
 
 	makeRowItem(item: { genesetName: string; result: GseaResultEntry }, method: string) {
-		const pvalue = item.result.pvalue != null ? roundValueAuto(item.result.pvalue) : item.result.pvalue
-		const fdr = item.result.fdr != null ? roundValueAuto(item.result.fdr) : item.result.fdr
+		const pvalue = formatStat(item.result.pval)
+		const fdr = formatStat(item.result.fdr)
 		const leadingEdge = item.result.leading_edge
-		const genes = leadingEdge ? leadingEdge.split(',').map(gene => gene.trim()).filter(Boolean) : []
+		const genes = leadingEdge
+			? leadingEdge
+					.split(',')
+					.map(gene => gene.trim())
+					.filter(Boolean)
+			: []
 
 		if (method == 'blitzgsea') {
-			const nes = item.result.nes != null ? roundValueAuto(item.result.nes) : item.result.nes
+			const nes = formatStat(item.result.nes)
 			return {
 				genesetName: item.genesetName,
 				genes,
@@ -215,8 +236,8 @@ export class GSEAViewModel {
 			}
 		}
 
-		const auc = item.result.auc != null ? roundValueAuto(item.result.auc) : item.result.auc
-		const es = item.result.es != null ? roundValueAuto(item.result.es) : item.result.es
+		const auc = formatStat(item.result.auc)
+		const es = formatStat(item.result.es)
 		return {
 			genesetName: item.genesetName,
 			genes,
@@ -236,7 +257,13 @@ export class GSEAViewModel {
 		if (method == 'blitzgsea') {
 			return [
 				{ label: 'Gene Set', sortable: true },
-				{ label: 'Normalized Enrichment Score', barplot: { axisWidth: 200 }, sortable: true },
+				{
+					label: 'Normalized Enrichment Score',
+					barplot: { axisWidth: 200 },
+					sortable: true,
+					tooltip:
+						'Normal quantile of the permutation p-value. ±∞ means the p-value underflowed the permutation model, so the enrichment is beyond what the null distribution can score — the P value column reads 0 for the same reason. Rank these by enrichment score, not by how far off the scale they are.'
+				},
 				{ label: 'Gene Set Size', sortable: true },
 				{ label: 'P value', sortable: true },
 				{ label: 'FDR', sortable: true },
@@ -285,7 +312,10 @@ export class GSEAViewModel {
 		return {
 			auc: selected.auc,
 			genesetName,
-			leadingEdgeGenes: selected.leading_edge.split(',').map(gene => gene.trim()).filter(Boolean),
+			leadingEdgeGenes: selected.leading_edge
+				.split(',')
+				.map(gene => gene.trim())
+				.filter(Boolean),
 			rankedGenes
 		}
 	}
@@ -313,9 +343,9 @@ export class GSEAViewModel {
 			method: 'cerno',
 			...(this.gsea.gsea_params.cacheId
 				? {
-					cacheId: this.gsea.gsea_params.cacheId,
-					daRequest: this.gsea.gsea_params.daRequest
-				}
+						cacheId: this.gsea.gsea_params.cacheId,
+						daRequest: this.gsea.gsea_params.daRequest
+				  }
 				: { dapParams: this.gsea.gsea_params.dapParams })
 		})
 		if (response?.error) throw Object.assign(new Error(response.error), { code: response.code })
