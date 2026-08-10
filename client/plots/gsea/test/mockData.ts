@@ -84,21 +84,21 @@ export function getMockBlitzOutputMap() {
 			geneset_size: 10,
 			leading_edge: 'G1,G2',
 			fdr: 0.0023,
-			pvalue: 0.0008,
+			pval: 0.0008,
 			nes: 1.8
 		},
 		SET_B: {
 			geneset_size: 30,
 			leading_edge: 'G2,G3',
 			fdr: 0.021,
-			pvalue: 0.008,
+			pval: 0.008,
 			nes: -1.4
 		},
 		SET_C: {
 			geneset_size: 5,
 			leading_edge: 'G4',
 			fdr: 0.11,
-			pvalue: 0.07,
+			pval: 0.07,
 			nes: 0.9
 		}
 	}
@@ -110,7 +110,7 @@ export function getMockCernoOutputMap() {
 			geneset_size: 10,
 			leading_edge: 'G1,G2',
 			fdr: 0.004,
-			pvalue: 0.0012,
+			pval: 0.0012,
 			auc: 0.83,
 			es: 1.21
 		},
@@ -118,7 +118,7 @@ export function getMockCernoOutputMap() {
 			geneset_size: 30,
 			leading_edge: 'G2,G3',
 			fdr: 0.03,
-			pvalue: 0.01,
+			pval: 0.01,
 			auc: 0.66,
 			es: -0.54
 		},
@@ -126,7 +126,7 @@ export function getMockCernoOutputMap() {
 			geneset_size: 20001,
 			leading_edge: 'G4',
 			fdr: 0.001,
-			pvalue: 0.0005,
+			pval: 0.0005,
 			auc: 0.9,
 			es: 1.8
 		}

@@ -388,8 +388,13 @@ export function renderTable({
 				const column = columns[colIdx]
 
 				if (column.barplot) {
-					if (typeof cell.value === 'number') {
+					if (typeof cell.value === 'number' && Number.isFinite(cell.value)) {
 						drawBarplotInCell(cell.value, td, column.barplot)
+					} else if (cell.value != null && cell.value !== '') {
+						/* a value no bar can express: ±Infinity, or a label like '∞' or 'NA' that the
+						caller substituted for one. Falling through to text keeps it visible -- drawing
+						nothing left a blank cell indistinguishable from a missing value. */
+						td.text(cell.value)
 					}
 					continue
 				}

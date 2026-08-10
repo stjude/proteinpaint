@@ -42,17 +42,23 @@ export type GenesetEnrichmentRequest = {
 	dapParams?: { organism: string; assay: string; cohort: string }
 }
 
+/** blitzgsea's own column names, passed straight through by python/src/gsea.py (result.to_json()),
+so this must keep spelling them the way blitzgsea does -- notably `pval`, not `pvalue`.
+`nes` may arrive as the string 'Infinity'/'-Infinity': blitzgsea computes it as the normal quantile
+of the permutation p-value, so a p-value that underflows its gamma fit puts the score off the scale.
+JSON has no Infinity literal and pandas' to_json() writes null for inf and NaN alike, which would
+make "off the scale" indistinguishable from "not computed", so gsea.py sends those two as strings. */
 type blitzgsea_geneset_attributes = {
 	/** Absolute enrichment score */
 	es: number
-	/** Normalized enrichment score */
-	nes: number
+	/** Normalized enrichment score. 'Infinity'/'-Infinity' when the p-value underflowed */
+	nes: number | 'Infinity' | '-Infinity'
 	/** Size of gene set */
 	geneset_size: number
 	/** Leading edge genes */
 	leading_edge: string
 	/** pvalue */
-	pvalue: number
+	pval: number
 	/** sidak (multiple testing correction) */
 	sidak: number
 	/** false discovery rate */
@@ -64,6 +70,7 @@ type blitzgsea_map = {
 	[geneset_name: string]: blitzgsea_geneset_attributes
 }
 
+/** field names come from rust/src/cerno.rs output_struct, which also spells it `pval` */
 type cerno_geneset_attributes = {
 	/** Absolute enrichment score */
 	es: number
@@ -74,7 +81,7 @@ type cerno_geneset_attributes = {
 	/** Leading edge genes */
 	leading_edge: string
 	/** pvalue */
-	pvalue: number
+	pval: number
 	/** false discovery rate */
 	fdr: number
 }

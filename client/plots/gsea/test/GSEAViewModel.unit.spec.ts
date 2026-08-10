@@ -1,4 +1,5 @@
 import tape from 'tape'
+import { roundValueAuto } from '#shared/roundValue.js'
 import { GSEAViewModel } from '../viewModel/GSEAViewModel'
 import {
 	getMockBlitzOutputMap,
@@ -16,6 +17,10 @@ Tests:
 	- getRequestBody should include cache params and blitz permutations
 	- getOutputMap should parse blitz and cerno responses and reject invalid cerno response
 	- getTableData should keep top rows sorted by FDR and honor size cutoffs
+	- getTableData should populate the P value column in both modes
+	- getTableData should render a non-finite NES as a signed infinity symbol
+	- formatStat should cover every value shape the engines emit
+	- an infinite FDR should sort last and fail the FDR cutoff
 	- getTableData should filter by FDR for cerno mode
 	- getSelectedRows should resolve the selected gene set index
 	- getCernoPlotData should return descending ranked genes and parsed leading edge genes
@@ -23,7 +28,6 @@ Tests:
 	- getRankedDE should fetch once for cacheId mode and reuse cache on repeat calls
 	- processData should populate cerno table/stats/selection/plot data
  */
-
 
 /**************
  test sections
@@ -58,7 +62,11 @@ tape('getPathwayOpts should append blitz options in test mode and mark selected 
 	const pathwayOpts = viewModel.getPathwayOpts(settings)
 	const selectedOpt = pathwayOpts.find((opt: any) => opt.value == 'H: hallmark gene sets')
 
-	test.equal(pathwayOpts[0].value, 'H: hallmark gene sets', 'The placeholder option should be removed when pathway is set')
+	test.equal(
+		pathwayOpts[0].value,
+		'H: hallmark gene sets',
+		'The placeholder option should be removed when pathway is set'
+	)
 	test.equal(selectedOpt?.selected, true, 'The selected pathway should be marked')
 	test.ok(
 		pathwayOpts.some((opt: any) => opt.value == 'REACTOME--blitzgsea'),
@@ -145,6 +153,135 @@ tape('getTableData should keep top rows sorted by FDR and honor size cutoffs', f
 	test.end()
 })
 
+/* the engines' field is `pval` -- blitzgsea's dataframe column and cerno's output_struct both spell
+it that way. Reading `pvalue` here left the P value column silently empty for every gsea run in
+either mode, so assert the cell is actually populated. */
+tape('getTableData should populate the P value column in both modes', function (test) {
+	const viewModel = new GSEAViewModel(getMockGSEA() as any)
+	const blitzSettings = getMockGseaSettings({
+		gsea_method: 'blitzgsea',
+		fdr_or_top: 'top',
+		top_genesets: 3,
+		min_gene_set_size_cutoff: 0,
+		max_gene_set_size_cutoff: 20000
+	})
+	const blitz = viewModel.getTableData(getMockBlitzOutputMap(), blitzSettings)
+	// blitz row: [genesetName, nes, geneset_size, pvalue, fdr, leadingEdge]
+	test.equal(blitz.rows[0][3].value, 0.0008, 'Blitz P value cell should carry the pval from the engine')
+
+	const cernoSettings = getMockGseaSettings({
+		gsea_method: 'cerno',
+		fdr_or_top: 'top',
+		top_genesets: 3,
+		min_gene_set_size_cutoff: 0,
+		max_gene_set_size_cutoff: 20000
+	})
+	const cerno = viewModel.getTableData(getMockCernoOutputMap(), cernoSettings)
+	// cerno row: [genesetName, auc, es, geneset_size, pvalue, fdr, leadingEdge].
+	// SET_C is over the size cutoff, so SET_A leads on fdr
+	test.equal(cerno.rows[0][0].value, 'SET_A', 'Cerno top row should be SET_A')
+	test.equal(cerno.rows[0][4].value, 0.0012, 'Cerno P value cell should carry the pval from the engine')
+	test.end()
+})
+
+/* blitzgsea sends nes as a string when the permutation p-value underflowed, because json has no
+Infinity literal and pandas would otherwise write null -- the same as a genuine NaN. */
+tape('getTableData should render a non-finite NES as a signed infinity symbol', function (test) {
+	const viewModel = new GSEAViewModel(getMockGSEA() as any)
+	const settings = getMockGseaSettings({
+		gsea_method: 'blitzgsea',
+		fdr_or_top: 'top',
+		top_genesets: 3,
+		min_gene_set_size_cutoff: 0,
+		max_gene_set_size_cutoff: 20000
+	})
+	const outputMap: any = getMockBlitzOutputMap()
+	outputMap.SET_A.nes = '-Infinity'
+	outputMap.SET_A.pval = 0
+	outputMap.SET_B.nes = 'Infinity'
+	outputMap.SET_C.nes = null // NaN upstream, genuinely not computed
+
+	const table = viewModel.getTableData(outputMap, settings)
+	const byName = Object.fromEntries(table.rowItems.map(item => [item.genesetName, item.row]))
+	test.equal(byName.SET_A[1].value, '−∞', 'A negative infinite NES should show as −∞ rather than a blank cell')
+	test.equal(byName.SET_A[3].value, 0, 'The underflowed p-value should still be shown as 0')
+	test.equal(byName.SET_B[1].value, '∞', 'A positive infinite NES should show as ∞')
+	test.equal(byName.SET_C[1].value, null, 'A missing NES should stay blank')
+	test.notEqual(byName.SET_A[1].value, byName.SET_B[1].value, 'The two signs must not collapse to one symbol')
+	test.end()
+})
+
+/* the reading half of a cross-language contract: python/src/gsea.py writes these exact strings
+(pinned by its own selftest, python/test/gsea.unit.spec.js). Any stat can be infinite -- gsea.py
+maps the whole frame -- so every column that formatStat touches is covered here, not just nes. */
+tape('formatStat should cover every value shape the engines emit', function (test) {
+	const viewModel = new GSEAViewModel(getMockGSEA() as any)
+	const settings = getMockGseaSettings({
+		gsea_method: 'cerno',
+		fdr_or_top: 'top',
+		top_genesets: 1,
+		min_gene_set_size_cutoff: 0,
+		max_gene_set_size_cutoff: 20000
+	})
+	// cerno row: [genesetName, auc, es, geneset_size, pvalue, fdr, leadingEdge]
+	const cell = (result: any, index: number) =>
+		viewModel.getTableData({ ONLY: { geneset_size: 10, leading_edge: 'G1', ...result } } as any, settings).rows[0][
+			index
+		].value
+
+	test.equal(cell({ auc: 'Infinity' }, 1), '∞', 'An infinite AUC should render, not just NES')
+	test.equal(cell({ es: '-Infinity' }, 2), '−∞', 'An infinite ES should render')
+	test.equal(cell({ pval: 'Infinity' }, 4), '∞', 'An infinite p-value should render')
+	test.equal(cell({ fdr: '-Infinity' }, 5), '−∞', 'An infinite FDR should render')
+
+	test.equal(cell({ es: 0 }, 2), 0, 'Zero must survive: it is not the same as missing')
+	test.equal(cell({ es: -1.23456789 }, 2), roundValueAuto(-1.23456789), 'A negative float goes through roundValueAuto')
+	test.equal(cell({ es: null }, 2), null, 'null (NaN upstream) stays blank')
+	test.equal(cell({}, 2), undefined, 'an absent field stays blank')
+	test.end()
+})
+
+/* the table sorts and filters on the raw fdr, not the formatted one. Number() coerces JS's own
+spelling of infinity, which is why gsea.py sends exactly that and not 'Inf' -- Number('Inf') is NaN,
+and NaN fails every comparison silently, so an uncomputable gene set would slip past the cutoff. */
+tape('an infinite FDR should sort last and fail the FDR cutoff', function (test) {
+	const viewModel = new GSEAViewModel(getMockGSEA() as any)
+	const outputMap: any = getMockBlitzOutputMap()
+	outputMap.SET_A.fdr = 'Infinity'
+
+	const sorted = viewModel.getTableData(
+		outputMap,
+		getMockGseaSettings({
+			gsea_method: 'blitzgsea',
+			fdr_or_top: 'top',
+			top_genesets: 3,
+			min_gene_set_size_cutoff: 0,
+			max_gene_set_size_cutoff: 20000
+		})
+	)
+	test.equal(
+		sorted.rows[sorted.rows.length - 1][0].value,
+		'SET_A',
+		'A gene set with an infinite FDR should sort last, not first'
+	)
+
+	const filtered = viewModel.getTableData(
+		outputMap,
+		getMockGseaSettings({
+			gsea_method: 'blitzgsea',
+			fdr_or_top: 'fdr',
+			fdr_cutoff: 0.5,
+			min_gene_set_size_cutoff: 0,
+			max_gene_set_size_cutoff: 20000
+		})
+	)
+	test.ok(
+		!filtered.rowItems.some(item => item.genesetName == 'SET_A'),
+		'A gene set with an infinite FDR should not pass an FDR cutoff'
+	)
+	test.end()
+})
+
 tape('getTableData should filter by FDR for cerno mode', function (test) {
 	const viewModel = new GSEAViewModel(getMockGSEA() as any)
 	const settings = getMockGseaSettings({
@@ -166,13 +303,13 @@ tape('getTableData should filter by FDR for cerno mode', function (test) {
 tape('getSelectedRows should resolve the selected gene set index', function (test) {
 	const mockGsea = getMockGSEA({ stateGenesetName: 'SET_B' })
 	const viewModel = new GSEAViewModel(mockGsea as any)
-	const rowItems = [
-		{ genesetName: 'SET_A' },
-		{ genesetName: 'SET_B' },
-		{ genesetName: 'SET_C' }
-	]
+	const rowItems = [{ genesetName: 'SET_A' }, { genesetName: 'SET_B' }, { genesetName: 'SET_C' }]
 
-	test.deepEqual(viewModel.getSelectedRows(rowItems as any[]), [1], 'Should resolve the index of the selected gene set based on stateGenesetName')
+	test.deepEqual(
+		viewModel.getSelectedRows(rowItems as any[]),
+		[1],
+		'Should resolve the index of the selected gene set based on stateGenesetName'
+	)
 	test.end()
 })
 
@@ -186,7 +323,11 @@ tape('getCernoPlotData should return descending ranked genes and parsed leading 
 			test.equal(plotData.genesetName, 'SET_A', 'Geneset name should match the input')
 			test.deepEqual(plotData.leadingEdgeGenes, ['G1', 'G2'], 'Leading edge genes should be parsed from the output map')
 			test.equal(plotData.rankedGenes[0].gene, 'G3', 'Largest fold-change should be first')
-			test.equal(plotData.rankedGenes[plotData.rankedGenes.length - 1].gene, 'G2', 'Smallest fold-change should be last')
+			test.equal(
+				plotData.rankedGenes[plotData.rankedGenes.length - 1].gene,
+				'G2',
+				'Smallest fold-change should be last'
+			)
 			test.end()
 		})
 		.catch(e => {
@@ -272,12 +413,24 @@ tape('processData should populate cerno table/stats/selection/plot data', functi
 
 	viewModel
 		.processData()
-		.then(() => { 
+		.then(() => {
 			test.equal(viewModel.viewData.statsData[0].value, 3, 'Stats should report all analyzed gene sets')
-			test.equal(viewModel.viewData.tableData.rows.length, 2, 'Table should include rows under the configured FDR cutoff')
+			test.equal(
+				viewModel.viewData.tableData.rows.length,
+				2,
+				'Table should include rows under the configured FDR cutoff'
+			)
 			test.deepEqual(viewModel.viewData.selectedRows, [0], 'Selected row should match selected geneset')
-			test.equal(viewModel.viewData.cernoPlotData.genesetName, 'SET_A', 'Selected geneset should match configured geneset')
-			test.equal(viewModel.viewData.showHighlightButton, true, 'Highlight button should be shown when leading edge genes are present')
+			test.equal(
+				viewModel.viewData.cernoPlotData.genesetName,
+				'SET_A',
+				'Selected geneset should match configured geneset'
+			)
+			test.equal(
+				viewModel.viewData.showHighlightButton,
+				true,
+				'Highlight button should be shown when leading edge genes are present'
+			)
 			test.end()
 		})
 		.catch(e => {
@@ -285,4 +438,3 @@ tape('processData should populate cerno table/stats/selection/plot data', functi
 			test.end()
 		})
 })
-
