@@ -50,18 +50,17 @@ function init({ genomes }) {
 			const base = path.resolve(serverconfig.tpmasterdir, folder)
 
 			if (!q.sample_id) {
-				// no sample given: list samples supposed to have images (wsimages db
-				// table) plus any sample folder on disk; the count is always what is
-				// actually on disk, so a sample with a db record but no files shows 0
-				const names = new Set<string>()
+				// no sample given: the wsimages db table says which samples are supposed
+				// to have images; the sample's folder on disk says how many .svs files
+				// actually exist, so a sample with a db record but no files shows 0
 				const sql = `SELECT DISTINCT sampleidmap.name AS name
-					 FROM wsimages INNER JOIN sampleidmap ON wsimages.sample = sampleidmap.id`
-				for (const r of ds.cohort.db.connection.prepare(sql).all()) names.add(String((r as any).name))
-				const entries = await readdir(base, { withFileTypes: true }).catch(() => [])
-				for (const e of entries) if (e.isDirectory()) names.add(e.name)
+					 FROM wsimages INNER JOIN sampleidmap ON wsimages.sample = sampleidmap.id
+					 ORDER BY sampleidmap.name`
+				const rows = ds.cohort.db.connection.prepare(sql).all()
 
 				const samples: WsiSampleSummary[] = []
-				for (const name of [...names].sort()) {
+				for (const r of rows) {
+					const name = String((r as any).name)
 					const files = await readdir(path.join(base, name)).catch(() => [] as string[])
 					samples.push({ sampleId: name, count: files.filter(f => /\.svs$/i.test(f)).length })
 				}
