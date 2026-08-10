@@ -13,6 +13,7 @@ import { VolcanoPlotView } from './view/VolcanoPlotView'
 import { VolcanoControlInputs } from './VolcanoControlInputs'
 import { getCombinedTermFilter } from '#filter'
 import { GENE_EXPRESSION, SINGLECELL_CELLTYPE } from '#types'
+import { uiLabel } from '#shared'
 
 /* Below this many samples in the smaller group, the wilcoxon p-values are worth a caveat.
 rust/src/stats_functions.rs only runs the exact test when both groups are under 50 AND no value is
@@ -163,9 +164,11 @@ export class Volcano extends PlotBase implements RxComponent {
 			if (!response.data.dots.length) notes.push('No points passed the significance thresholds.')
 			const smallestGroup = Math.min(response.sample_size1, response.sample_size2)
 			if (settings.method == 'wilcoxon' && smallestGroup < MIN_WILCOXON_GROUP_SIZE) {
+				// gdc users are the most likely readers of this sentence, and gdc calls them cases
+				const samplesLabel = uiLabel(this.app.vocabApi.termdbConfig?.uiLabels, 'samples', 'samples')
 				notes.push(
-					`The smaller group has ${smallestGroup.toLocaleString()} samples. Wilcoxon p-values are ` +
-						`approximated here, and a gene that is zero in most samples can be assigned a p-value far ` +
+					`The smaller group has ${smallestGroup.toLocaleString()} ${samplesLabel}. Wilcoxon p-values are ` +
+						`approximated here, and a gene that is zero in most ${samplesLabel} can be assigned a p-value far ` +
 						`smaller than its group sizes can support. Rank these results by fold change rather than by ` +
 						`p-value magnitude, and do not compare the p-values against another analysis.`
 				)

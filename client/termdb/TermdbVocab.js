@@ -421,6 +421,12 @@ export class TermdbVocab extends Vocab {
 		returns sample list in array of [{id, name}....]
 	 */
 	async getFilteredSampleList(filterJSON, filter0) {
+		// same default as getFilteredSampleCount() below, and for the same reason: without filter0 an
+		// api-backed ds (gdc) enumerates all of GDC instead of the portal cohort. the two must agree,
+		// or a count and the list behind it describe different populations -- which is what sent the
+		// volcano "others" group the whole of GDC. undefined means "not specified"; null is a caller
+		// deliberately disabling the cohort filter
+		if (filter0 === undefined) filter0 = this.state?.termfilter?.filter0
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,

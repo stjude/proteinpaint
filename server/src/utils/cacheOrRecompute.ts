@@ -21,11 +21,14 @@ export const cacheJobPolicies = {
 	topve: { maxPending: 5 },
 	/* per-case gene counts downloaded from GDC. unlike the analysis subdirs above, these are many
 	small fetches rather than a few heavy computes: one entry per STAR-Counts file, written from
-	inside a mapConcurrent fan-out. maxPending is therefore sized above the download concurrency
-	(gdcDEconcurrency, default 20) times a few simultaneous runs -- the real throttle is
-	mapConcurrent, not this pool. exceeding it throws 429, which the caller surfaces rather than
-	treating as a failed download. */
-	gdcCounts: { maxPending: 100 }
+	inside a mapConcurrent fan-out. the real throttle is mapConcurrent, not this pool, so size this
+	above the download concurrency (gdcDEconcurrency, default 60) times the simultaneous DE runs to
+	tolerate: one run holds up to `concurrency` distinct cacheIds at once, so at 200 the third
+	overlapping run is the first that can hit the cap. exceeding it throws 429, which the caller
+	surfaces rather than treating as a failed download -- and buildGdcCountsFile fails the whole run
+	on it, so a cap set below real concurrency would kill a legitimate second user's analysis rather
+	than queue it. raise this in step with gdcDEconcurrency. */
+	gdcCounts: { maxPending: 200 }
 } as const satisfies Record<string, { maxPending: number }>
 
 export type CacheSubdir = keyof typeof cacheJobPolicies

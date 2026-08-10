@@ -1,1 +1,14 @@
+Fixes:
+- GDC differential expression: a full cache pool (CACHE_BUSY) now actually fails the run. mapConcurrent has allSettled semantics, so the throw only ended its own chunk and the affected cases were written to the counts matrix as all-zero columns, then cached under the cohort hash.
+- GDC differential expression: raised the gdcCounts cache pool from 100 to 200 pending entries, so a second concurrent DE run cannot exhaust it against a download concurrency of 60.
+- GDC differential expression: a counts-matrix cache hit now reports the cases actually in the h5, read from the build report, instead of the pre-drop list. A run that dropped a case previously made every later run of that cohort fail in edgeR, or overstate its group sizes in wilcoxon.
+- GDC differential expression: the bulk-download tar reader handles ustar prefix-split paths and skips pax/gnu metadata entries, and logs when a tarball yields fewer files than requested instead of silently falling back to one GET per file.
+- Differential expression (wilcoxon): the counts matrix is read over only the selected sample columns rather than whole, so a small comparison against a large static counts file no longer allocates the entire genes x samples matrix.
+- Volcano: the "others" sample group is scoped by the GDC portal cohort filter. vocabApi.getFilteredSampleList() now defaults filter0 from state, matching getFilteredSampleCount().
+- termdb getsamplecount/getsamplelist call authApi.mayAdjustFilter() on the dataset-supplied filterSamples path, so a ds getAdditionalFilter() applies there too.
+- Dataset uiLabels entries may be either a string or {label}; a shared uiLabel() accessor replaces direct lookups that would render [object Object] or throw.
+- Volcano: the wilcoxon small-group caveat uses the dataset's own word for samples (GDC: cases).
+- Table download: an empty download.fileName falls back to the date-stamped default name again.
 
+DevOps:
+- ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.

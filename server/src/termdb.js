@@ -10,6 +10,7 @@ import { authApi } from './auth.js'
 import { searchSNP } from '#routes/snp.ts'
 import { get_samples_ancestry, get_samples } from './termdb.sql.js'
 import { TermTypeGroups } from '#shared/terms.js'
+import { uiLabel } from '#shared'
 import { trigger_getDefaultBins } from './termdb.getDefaultBins.js'
 import serverconfig from './serverconfig.js'
 import { filterTerms } from './termdb.server.init.ts'
@@ -135,13 +136,20 @@ async function getSampleCount(q, ds) {
 		return await termdbsql.get_samplecount(q, ds)
 	}
 	if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
+		// !!! CRITICAL !!!
+		// same rule as termdbsql.get_samplecount(): a ds's getAdditionalFilter() must get its chance to
+		// restrict q.filter before anything counts samples, and filterSamples() below reads q.filter.
+		// no-op for a ds without getAdditionalFilter, which is every current filterSamples ds -- called
+		// anyway so the next one does not inherit the gap. empty routeTwLst: the response is an
+		// aggregate count, so no term is protected
+		authApi.mayAdjustFilter(q, ds, [])
 		// dataset supplied method. returnAllSamples: with no filter the answer is the whole cohort,
 		// not "unknown" -- unlike getSampleList(), a count has no way to express undefined
 		const samples = await ds.cohort.termdb.filterSamples(q, ds, true)
 		const n = samples?.size || 0
 		// gdc calls them cases; ds.cohort.termdb.uiLabels maps the generic word to the ds vocabulary
 		const key = n == 1 ? 'sample' : 'samples'
-		return { count: `${n} ${ds.cohort.termdb.uiLabels?.[key] || key}` }
+		return { count: `${n} ${uiLabel(ds.cohort.termdb.uiLabels, key, key)}` }
 	}
 	throw new Error('no method available to get sample count')
 }
@@ -153,7 +161,8 @@ async function getSampleList(req, q, ds) {
 		// dataset is sqlite-based
 		samples = await termdbsql.get_samples(q, ds, canDisplay)
 	} else if (typeof ds.cohort?.termdb?.filterSamples === 'function') {
-		// dataset supplied method
+		// dataset supplied method. mayAdjustFilter for the same reason as getSampleCount() above
+		authApi.mayAdjustFilter(q, ds, [])
 		const temp = await ds.cohort.termdb.filterSamples(q, ds)
 		if (temp) {
 			samples = [...temp].map(sid => {

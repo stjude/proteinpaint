@@ -100,6 +100,18 @@ export function deepEqual(x, y) {
 	} else return false
 }
 
+/* one entry out of a ds's uiLabels{}, which lets a dataset rename what the ui calls things (gdc
+counts cases, not samples). an entry is `string | {label, ...}` -- the object form is what term2/term0
+use to carry a tooltip -- so a caller reaching for uiLabels[key] directly gets '[object Object]' where
+it interpolates, or a throw where it calls a string method. one accessor rather than the same
+narrowing at every call site. */
+export function uiLabel(uiLabels: any, key: string, fallback: string): string {
+	const v = uiLabels?.[key]
+	if (typeof v == 'string') return v
+	if (v && typeof v.label == 'string') return v.label
+	return fallback
+}
+
 export function deepFreeze(obj) {
 	Object.freeze(obj)
 	// not using for..in loop, in order to not descend into inherited props/methods
