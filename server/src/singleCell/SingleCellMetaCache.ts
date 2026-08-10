@@ -21,7 +21,7 @@ export class SingleCellMetaCache {
 	sampleName2IntId = new Map<string, any>()
 	metaIdMap = new Map<string, Map<string, string>>()
 	metaResultNames = new Set<string>()
-	cellTypeFractions?: Map<any, any>
+	cellTypeFractions = new Map<string, Map<string, number>>()
 
 	registerCohortSample(sampleName: string, sampleIntId: any): void {
 		/** Sample INT ids correspond to the primary key in the termdb */
@@ -127,23 +127,21 @@ export class SingleCellMetaCache {
 			const sampleIntId = sampleName2id(sampleName)
 			if (sampleIntId !== undefined) {
 				this.registerCohortSample(sampleName, sampleIntId)
-			}
-
-			if (cellCache.cellTypes) {
-				// cell types are cached, determine abundances in each sample
-				const cellType = cellCache.cellTypes[i]
-				if (!cellType) throw new Error(`meta result row missing cell type at row index ${i + 1}`)
-				if (!sample2cellType2abundance.has(sampleIntId)) sample2cellType2abundance.set(sampleIntId, new Map())
-				const cellType2abundance = sample2cellType2abundance.get(sampleIntId)
-				if (!cellType2abundance.has(cellType)) cellType2abundance.set(cellType, 0)
-				const abundance = cellType2abundance.get(cellType)
-				cellType2abundance.set(cellType, abundance + 1)
+				if (cellCache.cellTypes) {
+					// cell types are cached, determine abundances in each sample
+					const cellType = cellCache.cellTypes[i]
+					if (!cellType) throw new Error(`meta result row missing cell type at row index ${i + 1}`)
+					if (!sample2cellType2abundance.has(sampleIntId)) sample2cellType2abundance.set(sampleIntId, new Map())
+					const cellType2abundance = sample2cellType2abundance.get(sampleIntId)
+					if (!cellType2abundance.has(cellType)) cellType2abundance.set(cellType, 0)
+					const abundance = cellType2abundance.get(cellType)
+					cellType2abundance.set(cellType, abundance + 1)
+				}
 			}
 		}
 
 		this.metaResultNames.add(metaResultName)
 		this.metaIdMap.set(metaResultName, byCellId)
-
 		if (cellCache.cellTypes) {
 			// cell types are cached, determine cell type fractions in each sample
 			const cellType2sample2fraction = new Map()
