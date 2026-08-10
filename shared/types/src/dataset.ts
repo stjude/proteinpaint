@@ -1308,8 +1308,8 @@ type Mds3Queries = {
 	/** deprecated. replaced by WSImages */
 	DZImages?: DZImages
 	WSImages?: WSImages
-	/** w2 whole-slide image plot: fileName from the wsimages sql table is joined
-	 with folder (relative to tpmasterdir) to get the slide file path */
+	/** w2 whole-slide image plot: ds.queries.w2.folder (relative to tpmasterdir) contains
+	 * one subfolder per sample holding slide files: folder/<sample_id>/<fileName> */
 	w2?: {
 		folder: string
 	}
