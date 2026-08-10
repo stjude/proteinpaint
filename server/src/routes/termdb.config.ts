@@ -404,11 +404,6 @@ function addNonDictionaryQueries(c, ds: Mds3WithCohort, genome): void {
 			q2.NIdata[k] = JSON.parse(JSON.stringify(q.NIdata[k]))
 		}
 	}
-	if (q.DZImages && serverconfig.features.showDZImages) {
-		q2.DZImages = {
-			type: q.DZImages.type
-		}
-	}
 	if (q.WSImages && serverconfig.features.showWSImages) {
 		q2.WSImages = {
 			type: q.WSImages.type

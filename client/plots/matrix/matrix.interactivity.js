@@ -310,7 +310,7 @@ export function setInteractivity(self) {
 		const q = self.state.termdbConfig.queries
 		if (!q) return // no genomic queries
 
-		if (!(q.singleSampleGenomeQuantification || q.singleSampleMutation || q.NIdata || q.DZImages)) return // only works for these queries
+		if (!(q.singleSampleGenomeQuantification || q.singleSampleMutation || q.NIdata)) return // only works for these queries
 
 		self.dom.mainG.on('mouseout', null)
 		delete self.imgBox
@@ -377,43 +377,6 @@ export function setInteractivity(self) {
 					menuDiv.remove()
 					self.dom.clickMenu.d.selectAll('*').remove()
 				})
-		}
-
-		if (q.DZImages) {
-			// no longer used. replaced by wsimages
-			const menuDiv = self.dom.clickMenu.d
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.attr('data-testid', 'oncoMatrix_termLabel_dzi_button')
-				.style('display', 'none')
-				.text(`${q.DZImages.type} Images (0)`)
-
-			const data = await dofetch3('sampledzimages', {
-				body: {
-					genome: self.app.opts.genome.name,
-					dslabel: self.state.vocab.dslabel,
-					sample_id: sample.sample_id
-				}
-			})
-
-			if (data.sampleDZImages?.length > 0) {
-				menuDiv.style('display', 'block')
-				menuDiv.text(`${q.DZImages.type} Images (${data.sampleDZImages.length})`)
-				menuDiv.on('click', async _ => {
-					const sandbox = newSandboxDiv(self.opts.plotDiv || select(self.opts.holder.node().parentNode))
-					sandbox.header.text(sample.sample_id)
-					;(await import('#plots/dziviewer/plot.dzi.js')).default(
-						self.state.vocab.dslabel,
-						sandbox.body,
-						self.app.opts.genome,
-						sample.sample_id,
-						data.sampleDZImages
-					)
-
-					menuDiv.remove()
-					self.dom.clickMenu.d.selectAll('*').remove()
-				})
-			}
 		}
 
 		if (q.NIdata) {
