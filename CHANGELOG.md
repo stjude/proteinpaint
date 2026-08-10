@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 2.202.0
 
 General:
 - the GDC dataset (ppgdc) must be deployed together with this server release: the DE counts module in ppgdc depends on four new server helpers injected through refs.dsHelpers (run_python, cacheOrRecompute, cacheFilePath, generateHash), so a newer ppgdc image on an older server would come up unable to build its counts matrix. In the other direction an older ppgdc image is harmless — it simply does not declare rnaseqGeneCount, and the differential expression UI does not appear
