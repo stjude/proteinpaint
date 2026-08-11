@@ -541,10 +541,12 @@ class MassCumInc extends PlotBase {
 					if (!series.filter(timepoint => timepoint.nrisk >= s.minAtRisk && timepoint.est > 0).length) {
 						// discard series with no events after applying
 						// the at-risk count filter
-						chartId in noEvents ? noEvents[chartId].push(seriesId) : (noEvents[chartId] = [seriesId])
+						if (chartId in noEvents) noEvents[chartId].push(seriesId)
+						else noEvents[chartId] = [seriesId]
 						continue
 					}
-					chartId in estimates ? (estimates[chartId][seriesId] = series) : (estimates[chartId] = { [seriesId]: series })
+					if (chartId in estimates) estimates[chartId][seriesId] = series
+					else estimates[chartId] = { [seriesId]: series }
 				}
 				if (!(chartId in estimates)) this.noData.push(chartId)
 			} else {
@@ -606,7 +608,8 @@ class MassCumInc extends PlotBase {
 					series2: { id: test.series2 },
 					permutation: test.permutation
 				}
-				chartId in this.tests ? this.tests[chartId].push(d) : (this.tests[chartId] = [d])
+				if (chartId in this.tests) this.tests[chartId].push(d)
+				else this.tests[chartId] = [d]
 			}
 		}
 
@@ -783,7 +786,7 @@ function setRenderers(self: any) {
 			.style('left', 0)
 			.style('text-align', 'center')
 			.style('vertical-align', 'top')
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
+			.style('background', s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
 			.append('div')
@@ -881,7 +884,7 @@ function setRenderers(self: any) {
 
 		const div = select(this)
 
-		div.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
+		div.style('background', s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
 			.select('.sjpcb-cuminc-title')
@@ -965,9 +968,9 @@ function setRenderers(self: any) {
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
 
-		const [clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(
+		const [clipRect, /*clipG,*/ mainG, seriesesG, /*axisG,*/ xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(
 			svg,
-			chart
+			/*chart*/
 		)
 
 		// set dimensions of clipRect
@@ -1068,7 +1071,7 @@ function setRenderers(self: any) {
 			.text(d => d)
 	}
 
-	function getSvgSubElems(svg, chart) {
+	function getSvgSubElems(svg, /*chart*/) {
 		let clipRect, clipG, mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			const clipId = `${self.id}-${self.chartIncrement++}`
@@ -1161,7 +1164,7 @@ function setRenderers(self: any) {
 		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(yTicks)
 
 		xTitle.select('text, title').remove()
-		const xText = xTitle
+		/*const xText =*/ xTitle
 			.attr(
 				'transform',
 				'translate(' +
@@ -1178,7 +1181,8 @@ function setRenderers(self: any) {
 
 		const yTitleLabel = 'Cumulative Incidence (%)'
 		yTitle.select('text, title').remove()
-		const yText = yTitle
+
+		/*const yText = */yTitle
 			.attr(
 				'transform',
 				'translate(' +
@@ -1196,35 +1200,36 @@ function setRenderers(self: any) {
 }
 
 function setInteractivity(self: any) {
-	const labels = {
-		cuminc: 'Cumulative incidence',
-		low: 'Lower 95% CI',
-		high: 'Upper 95% CI'
-	}
+	// const labels = {
+	// 	cuminc: 'Cumulative incidence',
+	// 	low: 'Lower 95% CI',
+	// 	high: 'Upper 95% CI'
+	// }
 
-	self.mouseover = function (event) {
-		const d = event.target.__data__
-		/*if (event.target.tagName == 'circle') {
-			const label = labels[d.seriesName]
-			const x = d.x.toFixed(1)
-			const y = d.y.toPrecision(2)
-			const rows = [
-				`<tr><td colspan=2 style='text-align: center'>${
-					d.seriesLabel ? d.seriesLabel : self.config.term.term.name
-				}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
-			]
-			// may also indicate the confidence interval (low%-high%) in a new row
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		} else if (event.target.tagName == 'path' && d && d.seriesId) {
-			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
-		} else {
-			self.app.tip.hide()
-		}*/
-	}
+	/*** Unused */
+	// self.mouseover = function (event) {
+	// 	// const d = event.target.__data__
+	// 	/*if (event.target.tagName == 'circle') {
+	// 		const label = labels[d.seriesName]
+	// 		const x = d.x.toFixed(1)
+	// 		const y = d.y.toPrecision(2)
+	// 		const rows = [
+	// 			`<tr><td colspan=2 style='text-align: center'>${
+	// 				d.seriesLabel ? d.seriesLabel : self.config.term.term.name
+	// 			}</td></tr>`,
+	// 			`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
+	// 			`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
+	// 		]
+	// 		// may also indicate the confidence interval (low%-high%) in a new row
+	// 		self.app.tip
+	// 			.show(event.clientX, event.clientY)
+	// 			.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+	// 	} else if (event.target.tagName == 'path' && d && d.seriesId) {
+	// 		self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
+	// 	} else {
+	// 		self.app.tip.hide()
+	// 	}*/
+	// }
 
 	self.mouseout = function () {
 		self.app.tip.hide()
@@ -1262,7 +1267,7 @@ function setInteractivity(self: any) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Hide`)
-			.on('click', async e => {
+			.on('click', async () => {
 				menu.hide()
 				self.hideLegendItem(d)
 			})
@@ -1300,7 +1305,8 @@ function setInteractivity(self: any) {
 	self.hideLegendItem = function (d) {
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
-		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
+		if (i == -1) hidden.push(d.seriesId)
+		else hidden.splice(i, 1)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -1422,7 +1428,7 @@ function getPj(self: any) {
 		'=': {
 			chartTitle(row) {
 				if (!self.state?.config?.term) return row.chartId
-				const s = self.settings
+				// const s = self.settings
 				const cutoff = self.config.term.q.breaks[0]
 				if (!row.chartId || row.chartId == '-') {
 					return cutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${cutoff}-5`
