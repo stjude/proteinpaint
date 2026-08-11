@@ -105,7 +105,12 @@ function jpgSize(buffer: Buffer): ImageSize {
 			// are transposed relative to how the image is meant to be displayed
 			return orientation >= 5 ? { width: height, height: width, type: 'jpg' } : { width, height, type: 'jpg' }
 		}
-		if (marker == 0xe1) orientation = exifOrientation(buffer.subarray(payload, offset + segmentLength))
+		if (marker == 0xe1) {
+			// a later non-EXIF APP1 (eg. XMP) returns 0 and must not clear an
+			// orientation already found in an earlier EXIF segment
+			const foundOrientation = exifOrientation(buffer.subarray(payload, offset + segmentLength))
+			if (foundOrientation) orientation = foundOrientation
+		}
 		offset += segmentLength
 	}
 	throw new Error('invalid JPEG, no frame header found')
