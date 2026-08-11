@@ -164,7 +164,10 @@ function gifSize(buffer: Buffer): ImageSize {
 /** Only the root tag matters, and it is preceded at most by an xml
  * declaration, a doctype, and comments -- so a prefix is enough to find it. */
 const svgHeadLength = 8192
-const svgAttribute = (name: string) => new RegExp(`\\b${name}\\s*=\\s*(['"])\\s*([^'"]+?)\\s*\\1`, 'i')
+// \b would also match inside hyphenated attributes like stroke-width or
+// data-width, since a hyphen is a non-word character; require real whitespace
+// (or the start of the tag) before the attribute name instead
+const svgAttribute = (name: string) => new RegExp(`(?:^|\\s)${name}\\s*=\\s*(['"])\\s*([^'"]+?)\\s*\\1`, 'i')
 
 /** The `<svg …>` root tag, or undefined when the text does not open with one.
  * Requiring it to be the document's first element keeps, say, an html page
