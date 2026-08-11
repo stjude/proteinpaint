@@ -47,6 +47,7 @@ export class Barchart extends PlotBase implements RxComponent{
 	overlaySorter!: any
 	totalsByDataId!: any
 	visibleCharts!: any
+	render!: () => void
 
 
 	constructor(opts: any, api: ComponentApi) {
@@ -445,7 +446,7 @@ export class Barchart extends PlotBase implements RxComponent{
 			}
 			this.chartsData = this.processData(this.currServerData)
 			this.toggleLoadingDiv('none')
-			// this.render() 
+			this.render() 
 			this.dom.renderedData.style('display', '')
 		} catch (e) {
 			if (this.app.isAbortError(e)) return
