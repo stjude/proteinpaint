@@ -53,6 +53,9 @@ export async function importPlot(chartType, notFoundMessage = '') {
 		case 'dmr':
 			return await import('./dmr/DmrPlot.ts')
 
+		case 'facet':
+			return await import('./facet.ts')
+
 		case 'GeneExpInput':
 			return await import(`./GeneExpInput.ts`)
 
