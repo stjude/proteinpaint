@@ -19,6 +19,7 @@ Fixes:
 - GSEA: the FDR column is populated again. blitzgsea's gamma fit does not converge for every gene-set size, and it hands the resulting NaN p-values to multipletests(..., 'fdr_bh') along with the rest; Benjamini-Hochberg sorts and takes a running minimum, so a single NaN makes every FDR NaN. On a 7309-set GO BP run over a GDC cohort, 185 NaN p-values blanked the FDR for all 7309 — and FDR is what the results table sorts and filters on, so the ordering was arbitrary too. gsea.py now recomputes the correction over the finite p-values only (354 gene sets in that run are below FDR 0.05); gene sets with no p-value were not tests, so they stay blank and stay out of the denominator.
 - GSEA: a normalized enrichment score that is off the scale now reads ±∞ instead of an empty cell. blitzgsea computes nes as the normal quantile of the permutation p-value, so a p-value that underflows its gamma fit returns ±inf; pandas' to_json() writes null for inf and NaN alike, which made "beyond the null distribution" indistinguishable from "not computed". gsea.py now sends those two as strings, and the column header explains what the symbol means.
 - dom/table: a barplot column renders the cell text when a value cannot be drawn as a bar (±Infinity, or a label such as 'NA'), instead of leaving the cell blank.
+- geneVariant tw and tvs allows selecting aachange as refinement of class
 
 DevOps:
 - ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.
