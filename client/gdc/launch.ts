@@ -45,6 +45,10 @@ export async function mayLaunchGdcPlotFromRunpp(arg, app) {
 		const _ = await import('./correlation.ts')
 		return await _.init(arg, app.holder0, app.genomes)
 	}
+	if (arg.launchGdcScatter) {
+		const _ = await import('./scatter.ts')
+		return await _.init(arg, app.holder0, app.genomes)
+	}
 	if (arg.launchGdcDE) {
 		const _ = await import('./DE.ts')
 		return await _.init(arg, app.holder0, app.genomes)
