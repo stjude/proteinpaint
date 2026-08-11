@@ -9,6 +9,12 @@ import serverconfig from '../serverconfig.js'
 Tests:
 	filterByItem: mutated sample matches filter
 	filterByItem: tested sample, but no match
+	filterByItem: mname (amino acid change) matching
+	filterByItem: mixed class and mname values
+	filterByItem: mname matched mutations flow into values[]
+	filterByItem: mname with maf filter
+	filterByItem: mname with origin
+	filterByItem: mname mcount single/multiple
 	filterByItem: sample not tested
 	filterByItem: wildtype sample matches wildtype filter
 	filterByItem: mutated sample does not match wildtype filter
@@ -139,6 +145,212 @@ test('filterByItem: tested sample, but no match', t => {
 		const [pass, tested] = filterByItem(filter, mlst)
 		t.equal(pass, false, 'Sample does not pass filter')
 		t.equal(tested, true, 'Sample is tested')
+	}
+})
+
+test('filterByItem: mname (amino acid change) matching', t => {
+	t.plan(6)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	{
+		// sample with the G12D missense mutation
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Sample with matching mname passes filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		// sample with a different missense mutation
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12V' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample with different mname does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		// mname match is class-scoped, same mname of a different class does not match
+		const mlst = [{ dt: 1, class: 'F', mname: 'G12D' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Sample with same mname of different class does not pass filter')
+		t.equal(tested, true, 'Sample is tested')
+	}
+})
+
+test('filterByItem: mixed class and mname values', t => {
+	t.plan(6)
+	// class-only entry matches any FRAMESHIFT; mname entry matches only M G12D
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [
+				{ key: 'F', label: 'FRAMESHIFT', value: 'F' },
+				{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }
+			],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	{
+		const mlst = [{ dt: 1, class: 'F', mname: 'K100fs' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'Any frameshift passes via class-only entry')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'G12D missense passes via mname entry')
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12V' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'Non-G12D missense does not pass')
+	}
+	{
+		// mcount=all: every tested mutation must match a value entry
+		const filter2 = structuredClone(filter)
+		filter2.tvs.mcount = 'all'
+		const mlst1 = [
+			{ dt: 1, class: 'M', mname: 'G12D' },
+			{ dt: 1, class: 'F', mname: 'K100fs' }
+		]
+		const [pass1] = filterByItem(filter2, mlst1)
+		t.equal(pass1, true, 'mcount=all passes when all mutations match')
+		const mlst2 = [
+			{ dt: 1, class: 'M', mname: 'G12D' },
+			{ dt: 1, class: 'M', mname: 'G12V' }
+		]
+		const [pass2] = filterByItem(filter2, mlst2)
+		t.equal(pass2, false, 'mcount=all fails when a mutation does not match')
+	}
+	{
+		// isnot inverts the mname match
+		const filter3 = structuredClone(filter)
+		filter3.tvs.isnot = true
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D' }]
+		const [pass] = filterByItem(filter3, mlst)
+		t.equal(pass, false, 'isnot=true inverts mname match')
+	}
+})
+
+test('filterByItem: mname matched mutations flow into values[]', t => {
+	// the values[] output param collects matched mutations, used by
+	// mayGetGeneVariantData() to attach mutations to groupset groups
+	t.plan(3)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	const g12d = { dt: 1, class: 'M', mname: 'G12D' }
+	const mlst = [g12d, { dt: 1, class: 'M', mname: 'G12V' }, { dt: 1, class: 'F', mname: 'K100fs' }]
+	const values = []
+	const [pass] = filterByItem(filter, mlst, values)
+	t.equal(pass, true, 'Sample passes filter')
+	t.equal(values.length, 1, 'values[] contains only the matching mutation')
+	t.equal(values[0], g12d, 'values[] contains the G12D mutation object')
+})
+
+test('filterByItem: mname with maf filter', t => {
+	t.plan(2)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'any',
+			mafFilter // shared fixture: maf > 0.1 on tumor_DNA_WGS
+		}
+	}
+	{
+		// G12D mutation passing maf cutoff
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', tumor_DNA_WGS: '70,30' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'mname-matching mutation passing maf cutoff passes filter')
+	}
+	{
+		// G12D mutation failing maf cutoff
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', tumor_DNA_WGS: '70,5' }]
+		const [pass] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'mname-matching mutation failing maf cutoff does not pass filter')
+	}
+})
+
+test('filterByItem: mname with origin', t => {
+	t.plan(4)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel', origin: 'somatic' },
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'any'
+		}
+	}
+	{
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', origin: 'somatic' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, true, 'somatic G12D matches somatic tvs')
+		t.equal(tested, true, 'Sample is tested')
+	}
+	{
+		// same mname, but only in germline; sample has no somatic data
+		const mlst = [{ dt: 1, class: 'M', mname: 'G12D', origin: 'germline' }]
+		const [pass, tested] = filterByItem(filter, mlst)
+		t.equal(pass, false, 'germline G12D does not match somatic tvs')
+		t.equal(tested, false, 'Sample is not tested for somatic')
+	}
+})
+
+test('filterByItem: mname mcount single/multiple', t => {
+	t.plan(4)
+	const filter = {
+		type: 'tvs',
+		tvs: {
+			term: { dt: 1, type: 'dtsnvindel' },
+			values: [{ key: 'M', label: 'G12D', value: 'G12D', mname: 'G12D' }],
+			genotype: 'variant',
+			mcount: 'single'
+		}
+	}
+	// one G12D; the G12V does not count toward the matching mutations
+	const mlstOne = [
+		{ dt: 1, class: 'M', mname: 'G12D' },
+		{ dt: 1, class: 'M', mname: 'G12V' }
+	]
+	// two G12D
+	const mlstTwo = [
+		{ dt: 1, class: 'M', mname: 'G12D' },
+		{ dt: 1, class: 'M', mname: 'G12D' }
+	]
+	{
+		const [pass] = filterByItem(filter, mlstOne)
+		t.equal(pass, true, 'mcount=single passes with one matching mutation')
+	}
+	{
+		const [pass] = filterByItem(filter, mlstTwo)
+		t.equal(pass, false, 'mcount=single fails with two matching mutations')
+	}
+	const filterMultiple = structuredClone(filter)
+	filterMultiple.tvs.mcount = 'multiple'
+	{
+		const [pass] = filterByItem(filterMultiple, mlstTwo)
+		t.equal(pass, true, 'mcount=multiple passes with two matching mutations')
+	}
+	{
+		const [pass] = filterByItem(filterMultiple, mlstOne)
+		t.equal(pass, false, 'mcount=multiple fails with one matching mutation')
 	}
 })
 

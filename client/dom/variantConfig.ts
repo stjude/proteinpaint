@@ -3,9 +3,16 @@ import type { TermValues, BaseValue } from '#types'
 import { filterInit } from '#filter'
 import { dt2label, dtsnvindel } from '#shared/common.js'
 
+// a selectable value: either a mutation class (no .mname) or a
+// specific variant, i.e. amino acid change (.mname set, .key is its class)
+type VariantValue = BaseValue & { value?: string; mname?: string }
+
+// an amino acid change of the term, from /termdb/categories
+type MnameItem = { mname: string; class: string; samplecount: number }
+
 type Config = {
 	genotype: 'variant' | 'wt' | 'nt'
-	values: BaseValue[]
+	values: VariantValue[]
 	mcount?: 'any' | 'single' | 'multiple' | 'all'
 	mafFilter?: any
 }
@@ -14,7 +21,8 @@ type Arg = {
 	holder: any // D3 holder where UI is rendered
 	header?: string // UI header
 	values: TermValues // mutation classes of term
-	selectedValues?: BaseValue[] // selected mutation classes, when missing will default to all classes of term
+	mnames?: MnameItem[] // amino acid changes of term, sorted by descending sample count
+	selectedValues?: VariantValue[] // selected mutation classes/variants, when missing will default to all classes of term
 	genotype?: 'variant' | 'wt' | 'nt' // genotype (variant, wildtype, not tested)
 	dt: number // dt value, rendering of some elements are based on this value
 	mcount?: 'any' | 'single' | 'multiple' | 'all' // mutation count, when missing will default to 'any'
@@ -26,9 +34,14 @@ export function renderVariantConfig(arg: Arg) {
 	const { holder, dt, mafFilter } = arg
 	const genotype = arg.genotype || 'variant'
 	if (!['variant', 'wt', 'nt'].includes(genotype)) throw 'invalid genotype'
-	const values: BaseValue[] = Object.entries(arg.values).map(([k, v]) => {
+	const values: VariantValue[] = Object.entries(arg.values).map(([k, v]) => {
 		return { key: k, label: v.label, value: k }
 	})
+	// selected specific variants (amino acid changes)
+	const selectedMnames = (arg.selectedValues || []).filter(v => v.mname)
+	// a class is selected when it appears in any selected value, either
+	// class-wide (no .mname) or narrowed to specific variants (.mname set);
+	// when nothing is selected at all, default to all classes selected
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
@@ -74,10 +87,20 @@ export function renderVariantConfig(arg: Arg) {
 		.style('margin-top', '10px')
 
 	let countRadio
+	let classTableDiv // holds the class checklist table
+	// filters the specific variants list by checked classes, assigned when
+	// the list is rendered and invoked on class checkbox changes
+	let updateMnameRowDisplay = () => {}
+	// returns the specific variants (amino acid changes) checked in the list
+	let getCheckedMnames = (): MnameItem[] => []
 	if (values.length) {
-		// variant data present, display as table
-		variantsDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
-		const tableDiv = variantsDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
+		// variant data present, display class checklist and specific
+		// variants list (when available) side by side
+		const flexDiv = variantsDiv.append('div').style('display', 'flex').style('gap', '25px')
+		const classDiv = flexDiv.append('div').attr('data-testid', 'sjpp-variantConfig-class')
+		classDiv.append('div').style('opacity', 0.7).style('margin-bottom', '5px').text(dt2label[dt])
+		const tableDiv = classDiv.append('div').style('margin-left', '5px').style('font-size', '0.8rem')
+		classTableDiv = tableDiv
 		const rows: any[] = []
 		const selectedIdxs: number[] = []
 		for (const [i, m] of values.entries()) {
@@ -92,12 +115,101 @@ export function renderVariantConfig(arg: Arg) {
 			div: tableDiv,
 			maxWidth: '40vw',
 			maxHeight: '40vh',
-			buttons: [],
+			noButtonCallback: () => updateMnameRowDisplay(),
 			showHeader: false,
 			striped: false,
 			showLines: false,
 			selectedRows: selectedIdxs
 		})
+		if (arg.mnames?.length) {
+			// specific variants (amino acid changes, e.g. KRAS G12D) are
+			// available for this term, render as a collapsible checkbox list
+			const mnames = arg.mnames
+			const section = flexDiv.append('div').attr('data-testid', 'sjpp-variantConfig-mname')
+			// folded by default, expand when the tvs already has specific variants selected
+			let expanded = selectedMnames.length > 0
+			const toggle = section
+				.append('div')
+				.style('cursor', 'pointer')
+				.style('opacity', 0.7)
+				.style('margin-bottom', '5px')
+			const listWrapper = section.append('div').style('margin-left', '5px')
+			// number of variants displayed in the list, quoted in the toggle label
+			let visibleMnameCount = mnames.length
+			const updateToggle = () => {
+				toggle.html(`${expanded ? '&#9660;' : '&#9658;'} Specific variants (${visibleMnameCount})`)
+				listWrapper.style('display', expanded ? 'block' : 'none')
+			}
+			toggle.on('click', () => {
+				expanded = !expanded
+				updateToggle()
+			})
+			updateToggle()
+			listWrapper
+				.append('div')
+				.style('font-size', '.75em')
+				.style('opacity', 0.6)
+				.style('margin', '3px 0')
+				.text('Checked variants replace the class selection; classes apply when no variant is checked.')
+			const mnameListDiv = listWrapper.append('div').style('font-size', '0.8rem')
+			const mnameRows: any[] = []
+			const selectedMnameIdxs: number[] = []
+			for (const [i, m] of mnames.entries()) {
+				mnameRows.push([{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, { value: m.samplecount }])
+				if (selectedMnames.some(s => s.mname == m.mname && s.key == m.class)) selectedMnameIdxs.push(i)
+			}
+			renderTable({
+				rows: mnameRows,
+				columns: [{ label: 'Variant' }, { label: 'Class' }, { label: 'Samples', align: 'right' }],
+				div: mnameListDiv,
+				maxWidth: '40vw',
+				maxHeight: '30vh',
+				noButtonCallback: () => updateMnameRowDisplay(),
+				showHeader: false,
+				striped: false,
+				showLines: false,
+				selectedRows: selectedMnameIdxs
+			})
+			updateMnameRowDisplay = () => {
+				// classes currently checked in the class table
+				const classCheckboxes = tableDiv.select('tbody').selectAll('input').nodes()
+				const checkedClasses = new Set()
+				for (const [i, c] of classCheckboxes.entries()) {
+					if ((c as any).checked) checkedClasses.add(values[i].key)
+				}
+				// show only variants of checked classes; unchecking a class also
+				// clears its checked variants so a hidden selection cannot be applied
+				// NOTE: the checkbox value attribute is the original row index (see renderTable)
+				let visibleCount = 0
+				mnameListDiv
+					.select('tbody')
+					.selectAll('tr')
+					.style('display', function (this: any) {
+						const checkbox = this.querySelector('input[type=checkbox]')
+						const m = mnames[Number(checkbox.value)]
+						if (checkedClasses.has(m.class)) {
+							visibleCount++
+							return ''
+						}
+						checkbox.checked = false
+						return 'none'
+					})
+				visibleMnameCount = visibleCount
+				updateToggle()
+			}
+			getCheckedMnames = () => {
+				const checked: MnameItem[] = []
+				mnameListDiv
+					.select('tbody')
+					.selectAll('input[type=checkbox]')
+					.each(function (this: any) {
+						if (this.checked) checked.push(mnames[Number(this.value)])
+					})
+				return checked
+			}
+			// apply initial class filter to the list
+			updateMnameRowDisplay()
+		}
 		if (dt == dtsnvindel) {
 			// snvindel
 			// render mutation count radios
@@ -174,13 +286,23 @@ export function renderVariantConfig(arg: Arg) {
 			const config: Config = { values: [], genotype: selectedGenotype.value }
 			if (config.genotype == 'variant') {
 				// variant genotype
-				// get selected mutation classes
-				const checkboxes = variantsDiv.select('tbody').selectAll('input').nodes()
-				const checkedIdxs: number[] = []
-				for (const [i, c] of checkboxes.entries()) {
-					if (c.checked) checkedIdxs.push(i)
+				// get selected specific variants (amino acid changes)
+				const checkedMnames = getCheckedMnames()
+				if (checkedMnames.length) {
+					// specific variants are selected, they refine the selection and
+					// override the checked classes: each selected variant becomes a
+					// class-scoped value entry with .mname
+					for (const m of checkedMnames) {
+						config.values.push({ key: m.class, label: m.mname, value: m.mname, mname: m.mname })
+					}
+				} else {
+					// no specific variant selected, use the checked mutation classes
+					// NOTE: the checkbox value attribute is the original row index (see renderTable)
+					const checkboxes = classTableDiv ? classTableDiv.select('tbody').selectAll('input').nodes() : []
+					for (const c of checkboxes) {
+						if (c.checked) config.values.push(values[Number(c.value)])
+					}
 				}
-				config.values = values.filter((v, i) => checkedIdxs.includes(i))
 				if (dt == dtsnvindel) {
 					// get mutation count
 					const selectedCount: any = countRadio.inputs.nodes().find(r => r.checked)

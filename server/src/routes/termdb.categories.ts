@@ -73,6 +73,9 @@ export function getCategories(data, q, ds, $id) {
 		// groupsetting is not in use
 		const samples = data.samples as { [sampleId: string]: any }
 		const dtClassMap = new Map()
+		// tally of amino acid changes (m.mname, e.g. "G12D") per dt/origin/class
+		// k: `${dt}|${origin}|${class}|${mname}`, v: { dt, origin, class, mname, samplecount }
+		const mnameCountMap = new Map()
 		if (ds.assayAvailability?.byDt) {
 			for (const [dtType, _dtValue] of Object.entries(ds.assayAvailability.byDt)) {
 				const dtValue: any = _dtValue
@@ -119,13 +122,45 @@ export function getCategories(data, q, ds, $id) {
 						dtClasses[value.class] += 1
 					}
 				}
+				if (value.mname != undefined) {
+					// synthetic WT/Blank rows lack mname, so are naturally skipped
+					const origin = dtClasses.byOrigin ? value.origin : ''
+					const mnameKey = `mname:${value.dt}|${origin}|${value.class}|${value.mname}`
+					if (!sampleCountedFor.has(mnameKey)) {
+						// count each sample once per dt/origin/class/mname
+						sampleCountedFor.add(mnameKey)
+						const entry = mnameCountMap.get(mnameKey)
+						if (entry) entry.samplecount += 1
+						else
+							mnameCountMap.set(mnameKey, {
+								dt: value.dt,
+								origin,
+								class: value.class,
+								mname: value.mname,
+								samplecount: 1
+							})
+					}
+				}
 			}
 		}
 		for (const [dt, classes] of dtClassMap) {
-			lst.push({
-				dt,
-				classes
-			})
+			const entry: any = { dt, classes }
+			const mnameEntries = [...mnameCountMap.values()]
+				.filter(e => e.dt == dt)
+				.sort((a, b) => b.samplecount - a.samplecount)
+			if (mnameEntries.length) {
+				if (classes.byOrigin) {
+					const byOrigin: { [origin: string]: any[] } = {}
+					for (const origin of Object.keys(classes.byOrigin)) byOrigin[origin] = []
+					for (const e of mnameEntries) {
+						byOrigin[e.origin]?.push({ mname: e.mname, class: e.class, samplecount: e.samplecount })
+					}
+					entry.mnames = { byOrigin }
+				} else {
+					entry.mnames = mnameEntries.map(e => ({ mname: e.mname, class: e.class, samplecount: e.samplecount }))
+				}
+			}
+			lst.push(entry)
 		}
 	} else {
 		const key2count = new Map()

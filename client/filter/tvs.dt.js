@@ -20,6 +20,7 @@ async function fillMenu(self, div, tvs) {
 		holder: div,
 		header: term.parentTerm.name + ' ' + term.name,
 		values: term.values,
+		mnames: term.mnames,
 		selectedValues: tvs.values,
 		genotype: tvs.genotype,
 		dt: term.dt,
@@ -69,11 +70,12 @@ function get_pill_label(tvs) {
 }
 
 // get mutation classes of dt term
-// will store these classes in term.values
+// will store these classes in term.values,
+// and amino acid changes (when present) in term.mnames
 export async function getDtTermValues(dtTerm, filter, vocabApi) {
 	if (vocabApi instanceof FrontendVocab) {
 		// geneVariant frontend vocab, cannot get values from db
-		// use values already present on dt term
+		// use values/mnames already present on dt term
 		return
 	}
 
@@ -96,4 +98,8 @@ export async function getDtTermValues(dtTerm, filter, vocabApi) {
 				return [k, { key: k, label: vocabApi.termdbConfig.mclass?.[k]?.label || mclass[k].label }]
 			})
 	)
+	// store amino acid changes (e.g. "G12D") in term.mnames
+	// entries are { mname, class, samplecount }, sorted by descending sample count
+	const mnames = byOrigin ? data.mnames?.byOrigin?.[dtTerm.origin] : data.mnames
+	dtTerm.mnames = mnames?.length ? mnames : undefined
 }
