@@ -1,7 +1,7 @@
 import { make_radios, renderTable } from '#dom'
 import type { TermValues, BaseValue } from '#types'
 import { filterInit } from '#filter'
-import { dt2label, dtsnvindel } from '#shared/common.js'
+import { dt2label, dtsnvindel, mclass } from '#shared/common.js'
 
 // a selectable value: either a mutation class (no .mname) or a
 // specific variant, i.e. amino acid change (.mname set, .key is its class)
@@ -44,6 +44,24 @@ export function renderVariantConfig(arg: Arg) {
 	// class-wide (no .mname) or narrowed to specific variants (.mname set);
 	// when nothing is selected at all, default to all classes selected
 	const selectedValues = arg.selectedValues?.length ? arg.selectedValues : values
+	// a selected variant may be absent from the current data, e.g. when another
+	// filter term excludes all of its samples. such a selection is preserved as a
+	// zero-count entry so that it stays checked and is not silently widened to
+	// its class on apply
+	const preservedMnames: MnameItem[] = selectedMnames
+		.filter(s => !arg.mnames?.some(m => m.mname == s.mname && m.class == s.key && (!s.gene || s.gene == m.gene)))
+		.map(s => {
+			const m: MnameItem = { mname: s.mname as string, class: s.key as string, samplecount: 0 }
+			if (s.gene) m.gene = s.gene
+			return m
+		})
+	const mnames: MnameItem[] = [...(arg.mnames || []), ...preservedMnames]
+	// a preserved variant is only displayable when its class is listed, so
+	// preserve the class as well when the current data has no mutation of it
+	for (const m of preservedMnames) {
+		if (!values.some(v => v.key == m.class))
+			values.push({ key: m.class, label: mclass[m.class]?.label || m.class, value: m.class })
+	}
 	if (!Number.isInteger(dt)) throw 'unexpected dt value'
 	const mcount = arg.mcount || 'any'
 	if (!['any', 'single', 'multiple', 'all'].includes(mcount)) throw 'invalid mcount'
@@ -124,10 +142,9 @@ export function renderVariantConfig(arg: Arg) {
 			showLines: false,
 			selectedRows: selectedIdxs
 		})
-		if (arg.mnames?.length) {
+		if (mnames.length) {
 			// specific variants (amino acid changes, e.g. KRAS G12D) are
 			// available for this term, render as a collapsible checkbox list
-			const mnames = arg.mnames
 			const section = flexDiv.append('div').attr('data-testid', 'sjpp-variantConfig-mname')
 			// folded by default, expand when the tvs already has specific variants selected
 			let expanded = selectedMnames.length > 0
@@ -162,7 +179,11 @@ export function renderVariantConfig(arg: Arg) {
 			const mnameRows: any[] = []
 			const selectedMnameIdxs: number[] = []
 			for (const [i, m] of mnames.entries()) {
-				const row = [{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, { value: m.samplecount }]
+				// a preserved entry is not in the current data, flag its count cell
+				// so it reads as absent rather than as a variant with no samples
+				const countCell: any = { value: m.samplecount }
+				if (!m.samplecount) countCell.dataTestId = 'sjpp-variantConfig-mname-absent'
+				const row = [{ value: m.mname }, { value: arg.values[m.class]?.label || m.class }, countCell]
 				if (showGene) row.unshift({ value: m.gene || '' })
 				mnameRows.push(row)
 				// a selected value without .gene matches regardless of gene, so that
