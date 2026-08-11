@@ -20,6 +20,7 @@ Fixes:
 - GSEA: a normalized enrichment score that is off the scale now reads ±∞ instead of an empty cell. blitzgsea computes nes as the normal quantile of the permutation p-value, so a p-value that underflows its gamma fit returns ±inf; pandas' to_json() writes null for inf and NaN alike, which made "beyond the null distribution" indistinguishable from "not computed". gsea.py now sends those two as strings, and the column header explains what the symbol means.
 - dom/table: a barplot column renders the cell text when a value cannot be drawn as a bar (±Infinity, or a label such as 'NA'), instead of leaving the cell blank.
 - geneVariant tw and tvs allows selecting aachange as refinement of class
+- server getCategories apply opts.withMnames to gate mname returning to cutdown matrix payload
 
 DevOps:
 - ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.
