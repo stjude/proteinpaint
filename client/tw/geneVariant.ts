@@ -160,7 +160,6 @@ export class GvValues extends GvBase {
 	// term, type, isAtomic, $id are set in ancestor base classes
 	q: GvValuesQ
 	#tw: GvValuesTW
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: GvValuesTW, opts: TwOpts = {}) {
@@ -168,7 +167,6 @@ export class GvValues extends GvBase {
 		//this.term = tw.term // already set in base class
 		this.q = tw.q
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -183,6 +181,13 @@ export class GvValues extends GvBase {
 		const { term, q } = tw
 		if (!q.type) q.type = 'values'
 		else if (q.type != 'values') throw `expecting tw.q.type='values', got ${tw.q.type}`
+		// dtLst is only meaningful for a groupset, where it limits the dts queried
+		// for the term. it must not survive on a values q, otherwise the term is
+		// silently limited to the dts of a groupset that is no longer in use (see
+		// getDtsToQuery() in server/src/mds3.init.js). deleted here rather than
+		// only where a groupset is cleared, so that a tw of a session saved with
+		// the stale property is also corrected
+		delete (q as any).dtLst
 		set_hiddenvalues(q, term)
 		return tw as GvValuesTW
 	}
@@ -193,7 +198,6 @@ export class GvPredefinedGS extends GvBase {
 	q: GvPredefinedGsQ
 	groupset!: BaseGroupSet
 	#tw: GvPredefinedGsTW
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: GvPredefinedGsTW, opts: TwOpts = {}) {
@@ -202,7 +206,6 @@ export class GvPredefinedGS extends GvBase {
 		this.q = tw.q
 		this.#tw = tw
 		Object.defineProperty(this, 'groupset', { value: this.#tw.term.groupsetting[this.#tw.q.predefined_groupset_idx] })
-		this.#opts = opts
 	}
 
 	getTw() {
@@ -260,7 +263,6 @@ export class GvCustomGS extends GvBase {
 	q: GvCustomGsQ
 	groupset!: BaseGroupSet
 	#tw: GvCustomGsTW
-	#opts: TwOpts
 
 	// declare a constructor, to narrow the tw type
 	constructor(tw: GvCustomGsTW, opts: TwOpts = {}) {
@@ -269,7 +271,6 @@ export class GvCustomGS extends GvBase {
 		this.q = tw.q
 		Object.defineProperty(this, 'groupset', { value: this.q.customset })
 		this.#tw = tw
-		this.#opts = opts
 	}
 
 	getTw() {

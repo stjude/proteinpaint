@@ -26,6 +26,7 @@ Tests:
 	noTermPromptOptions
 	samplelst term
 	geneVariant term
+	geneVariant term: turning off grouping clears q.dtLst
 
  */
 
@@ -1366,6 +1367,51 @@ tape('geneVariant term', async test => {
 	await sleep(300)
 	pillSummary = pill.select('.ts_summary_btn')
 	test.equal(pillSummary.text(), 'CNV', 'Pill should display CNV predefined groupset')
+	if (test._ok) opts.pill.destroy()
+	test.end()
+})
+
+tape('geneVariant term: turning off grouping clears q.dtLst', async test => {
+	// a groupset sets q.dtLst to limit the dts queried for the term; clearing the
+	// groupset must clear it too, otherwise the ungrouped term stays limited to
+	// the dts of the groupset that is no longer in use
+	const tsData = structuredClone(geneVariantTw)
+	tsData.q.dtLst = [1]
+	const opts = await getOpts({ tsData })
+
+	await opts.pill.main(opts.tsData)
+	const pill = opts.holder.select('.ts_pill')
+	pill.node().click()
+	const tip = opts.pill.Inner.dom.tip
+	const menuOptions = tip.d.selectAll('.sja_menuoption.sja_sharp_border')
+	// open the edit UI
+	await detectOne({
+		elem: tip.d.node(),
+		selector: 'table',
+		async trigger() {
+			menuOptions._groups[0][0].click()
+		}
+	})
+
+	// turn off sample grouping and apply
+	const noGroupRadio = tip.d
+		.selectAll('input[type="radio"]')
+		.nodes()
+		.find(r => r.value == 'noGroup')
+	test.ok(noGroupRadio, 'Should have a "No sample grouping" radio button')
+	noGroupRadio.click()
+	const applyBtn = tip.d
+		.selectAll('button')
+		.nodes()
+		.find(b => b.textContent == 'Apply')
+	test.ok(applyBtn, 'Should have an "Apply" button')
+	applyBtn.click()
+	await sleep(300)
+
+	test.equal(opts.tsData.q.type, 'values', 'q.type should be values')
+	test.equal('dtLst' in opts.tsData.q, false, 'q.dtLst should be deleted')
+	test.equal('predefined_groupset_idx' in opts.tsData.q, false, 'q.predefined_groupset_idx should be deleted')
+
 	if (test._ok) opts.pill.destroy()
 	test.end()
 })

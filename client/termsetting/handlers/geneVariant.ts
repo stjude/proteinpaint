@@ -327,4 +327,13 @@ function clearGroupset(self) {
 	self.q.type = 'values'
 	delete self.q.predefined_groupset_idx
 	delete self.q.customset
+	// dtLst limits the dts queried for the term and is only meaningful for a
+	// groupset; leaving it behind would silently restrict an ungrouped term to
+	// the dts of the groupset that was just cleared (see getDtsToQuery() in
+	// server/src/mds3.init.js)
+	delete self.q.dtLst
+	// hiddenValues of a groupset are keyed by group name, which is meaningless
+	// once the term is back to mutation classes. reset rather than delete, as
+	// consumers may read it without a guard
+	self.q.hiddenValues = {}
 }

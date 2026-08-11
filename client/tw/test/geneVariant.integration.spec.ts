@@ -148,6 +148,30 @@ tape('fill(): q.type=values', async test => {
 	test.end()
 })
 
+tape('fill(): q.type=values, stale q.dtLst', async test => {
+	// dtLst is left behind when a groupset is cleared, and would otherwise limit
+	// the term to the dts of the groupset that is no longer in use
+	const tw: any = {
+		term: {
+			kind: 'gene',
+			id: 'TP53',
+			gene: 'TP53',
+			name: 'TP53',
+			type: 'geneVariant'
+		},
+		isAtomic: true,
+		q: { isAtomic: true, type: 'values', dtLst: [4] }
+	}
+	const fullTw = await GvBase.fill(tw, { vocabApi })
+	test.equal(fullTw.type, 'GvValuesTW', 'should fill in tw.type')
+	test.deepEqual(
+		fullTw.q,
+		{ isAtomic: true, type: 'values', hiddenValues: {} },
+		'should delete stale q.dtLst of a values q'
+	)
+	test.end()
+})
+
 tape('fill(): q.type=predefined-groupset', async test => {
 	const tw: any = {
 		term: {

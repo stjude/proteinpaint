@@ -2,7 +2,7 @@ import type { RouteApi, RoutePayload } from '#types'
 import { get_ds_tdb } from '#src/termdb.js'
 import path from 'path'
 import fs from 'fs'
-import { imageSize } from 'image-size'
+import { imageSize } from '#src/utils/imageSize.ts'
 import { run_rust } from '@sjcrh/proteinpaint-rust'
 import { run_R } from '@sjcrh/proteinpaint-r'
 import serverconfig from '../serverconfig.js'
@@ -934,7 +934,7 @@ async function parseRoutput(
 			if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
 			for (const file of data.splinePlotFiles) {
 				const plot = await fs.promises.readFile(file)
-				const { width, height } = imageSize(file)
+				const { width, height } = imageSize(plot)
 				const obj = {
 					src: 'data:image/png;base64,' + Buffer.from(plot).toString('base64'),
 					size: `${width}x${height}`
