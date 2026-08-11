@@ -1,19 +1,1 @@
-Fixes:
-- GDC differential expression: a full cache pool (CACHE_BUSY) now actually fails the run. mapConcurrent has allSettled semantics, so the throw only ended its own chunk and the affected cases were written to the counts matrix as all-zero columns, then cached under the cohort hash.
-- GDC differential expression: raised the gdcCounts cache pool from 100 to 200 pending entries, so a second concurrent DE run cannot exhaust it against a download concurrency of 60.
-- GDC differential expression: a counts-matrix cache hit now reports the cases actually in the h5, read from the build report, instead of the pre-drop list. A run that dropped a case previously made every later run of that cohort fail in edgeR, or overstate its group sizes in wilcoxon.
-- GDC differential expression: the bulk-download tar reader handles ustar prefix-split paths and skips pax/gnu metadata entries, and logs when a tarball yields fewer files than requested instead of silently falling back to one GET per file.
-- Differential expression (wilcoxon): the counts matrix is read over only the selected sample columns rather than whole, so a small comparison against a large static counts file no longer allocates the entire genes x samples matrix.
-- Volcano: the "others" sample group is scoped by the GDC portal cohort filter. vocabApi.getFilteredSampleList() now defaults filter0 from state, matching getFilteredSampleCount().
-- termdb getsamplecount/getsamplelist call authApi.mayAdjustFilter() on the dataset-supplied filterSamples path, so a ds getAdditionalFilter() applies there too.
-- Dataset uiLabels entries may be either a string or {label}; a shared uiLabel() accessor replaces direct lookups that would render [object Object] or throw.
-- Volcano: the wilcoxon small-group caveat uses the dataset's own word for samples (GDC: cases).
-- Table download: an empty download.fileName falls back to the date-stamped default name again.
-- GSEA: the P value column is populated again. Both engines name the field `pval` — blitzgsea's dataframe column and cerno's output_struct — while the client and the response type read `pvalue`, so every gene set showed an empty P value cell in both blitzgsea and cerno mode.
-- GSEA: the FDR column is populated again. blitzgsea's gamma fit does not converge for every gene-set size, and it hands the resulting NaN p-values to multipletests(..., 'fdr_bh') along with the rest; Benjamini-Hochberg sorts and takes a running minimum, so a single NaN makes every FDR NaN. On a 7309-set GO BP run over a GDC cohort, 185 NaN p-values blanked the FDR for all 7309 — and FDR is what the results table sorts and filters on, so the ordering was arbitrary too. gsea.py now recomputes the correction over the finite p-values only (354 gene sets in that run are below FDR 0.05); gene sets with no p-value were not tests, so they stay blank and stay out of the denominator.
-- GSEA: a normalized enrichment score that is off the scale now reads ±∞ instead of an empty cell. blitzgsea computes nes as the normal quantile of the permutation p-value, so a p-value that underflows its gamma fit returns ±inf; pandas' to_json() writes null for inf and NaN alike, which made "beyond the null distribution" indistinguishable from "not computed". gsea.py now sends those two as strings, and the column header explains what the symbol means.
-- dom/table: a barplot column renders the cell text when a value cannot be drawn as a bar (±Infinity, or a label such as 'NA'), instead of leaving the cell blank.
 
-DevOps:
-- ppgdc unit tests cover the STAR-Counts tsv parser and the tar reader in dataset/gdc/geneCounts.ts.
-- gsea.py gains an offline selftest (python/test/gsea.unit.spec.js) pinning the infinity wire spelling and the FDR recomputation, and the client GSEAViewModel spec covers the reading half. The two are a cross-language contract whose failure mode is a silently blank column, not an error.
