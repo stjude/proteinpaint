@@ -1,26 +1,45 @@
 import { format } from 'd3-format'
 import { getColors } from './common.js'
 import { isNumeric, isStrictNumeric, convertUnits } from './helpers.js'
+import type { RegularNumericBinConfig, CustomNumericBinConfig } from '#types'
 
-type BinConfig = {
-	type: 'custom-bin' | 'regular-bin'
-	lst?: any[]
-	bin_size?: number
-	startinclusive?: boolean | number
-	stopinclusive?: boolean | number
-	first_bin?: any
-	last_bin?: any
-	label_offset?: number
-	termtype?: string
+type BinRuntimeExtras = {
+	results?: { summary: any }
+	binLabelFormatter?: (d: any) => any
+	label_offset_ignored?: boolean
 	use_as?: string
-	binLabelFormatter?: (d: number) => string
-	results?: any
+	termtype?: string
 }
+
+type BinWithRuntimeExtras = {
+	start_percentile?: number
+	stop_percentile?: number
+	color?: string
+}
+
+type RegularBinConfig = Omit<RegularNumericBinConfig, 'first_bin' | 'last_bin'> &
+	BinRuntimeExtras & {
+		type: 'regular-bin'
+		first_bin: RegularNumericBinConfig['first_bin'] & BinWithRuntimeExtras
+		last_bin?: NonNullable<RegularNumericBinConfig['last_bin']> & BinWithRuntimeExtras
+	}
+
+type CustomBinConfig = Omit<CustomNumericBinConfig, 'lst'> &
+	BinRuntimeExtras & {
+		type: 'custom-bin'
+		lst: [
+			CustomNumericBinConfig['lst'][number] & BinWithRuntimeExtras,
+			...(CustomNumericBinConfig['lst'][number] & BinWithRuntimeExtras)[]
+		]
+	}
+
+type BinConfig = RegularBinConfig | CustomBinConfig
+
 
 export default function validate_bins(binconfig: BinConfig) {
 	// Number.isFinite('1') returns false, which is desired
 
-	const bc = binconfig
+	const bc: any = binconfig
 	if (!bc || typeof bc !== 'object') throw 'bin schema must be an object'
 	// assign default type
 	if (!('type' in bc)) (bc as BinConfig).type = 'regular-bin'
@@ -81,8 +100,8 @@ export default function validate_bins(binconfig: BinConfig) {
 		if (!bc.bin_size || bc.bin_size <= 0) throw 'bin_size must be greater than 0'
 
 		if (!bc.startinclusive && !bc.stopinclusive) {
-			bc.startinclusive = 1
-			bc.stopinclusive = 0
+			bc.startinclusive = true
+			bc.stopinclusive = false
 		}
 
 		if (!bc.first_bin) throw 'first_bin{} missing'
@@ -136,13 +155,13 @@ export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any,
 	  - must accept an array of desired percentile values
 	  and returns an object of computed properties
 	  {
-	    min: minimum value
-	    max: maximum value
-	    pX: percentile at X value, so p10 will be 10th percentile value
-	    pY: .. corresponding to the desired percentile values 
+		min: minimum value
+		max: maximum value
+		pX: percentile at X value, so p10 will be 10th percentile value
+		pY: .. corresponding to the desired percentile values 
 	  }
 	*/
-	const bc = binconfig
+	const bc: any = binconfig
 
 	validate_bins(bc)
 	if (bc.lst) {
@@ -166,8 +185,8 @@ export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any,
 	const min = bc.first_bin.startunbounded
 		? minFloor
 		: bc.first_bin.start_percentile
-		? summary['p' + bc.first_bin.start_percentile]
-		: bc.first_bin.start
+			? summary['p' + bc.first_bin.start_percentile]
+			: bc.first_bin.start
 	let max = maxCeil, // in order to include the max value in the last bin
 		last_start,
 		last_stop
@@ -176,22 +195,22 @@ export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any,
 		max = bc.last_bin.stopunbounded
 			? maxCeil // in order to include the max value in the last bin
 			: bc.last_bin.stop_percentile
-			? summary['p' + bc.last_bin.stop_percentile]
-			: isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max // '0.0088' < 0.0088
-			? bc.last_bin.stop
-			: maxCeil // in order to include the max value in the last bin
+				? summary['p' + bc.last_bin.stop_percentile]
+				: isNumeric(bc.last_bin.stop) && bc.last_bin.stop <= summary.max // '0.0088' < 0.0088
+					? bc.last_bin.stop
+					: maxCeil // in order to include the max value in the last bin
 		last_start = isStrictNumeric(bc.last_bin.start_percentile)
 			? summary['p' + bc.last_bin.start_percentile]
 			: isStrictNumeric(bc.last_bin.start)
-			? bc.last_bin.start
-			: undefined
+				? bc.last_bin.start
+				: undefined
 		last_stop = bc.last_bin.stopunbounded
 			? null
 			: bc.last_bin.stop_percentile
-			? summary['p' + bc.last_bin.stop_percentile]
-			: isStrictNumeric(bc.last_bin.stop)
-			? bc.last_bin.stop
-			: null
+				? summary['p' + bc.last_bin.stop_percentile]
+				: isStrictNumeric(bc.last_bin.stop)
+					? bc.last_bin.stop
+					: null
 	} else if (bc.lst) {
 		const last_bin = bc.lst[bc.lst.length - 1]
 		last_start = last_bin.start
@@ -215,8 +234,8 @@ export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any,
 		stop: isStrictNumeric(bc.first_bin.stop_percentile)
 			? +summary['p' + bc.first_bin.stop_percentile]
 			: isStrictNumeric(bc.first_bin.stop)
-			? +bc.first_bin.stop
-			: min + bc.bin_size,
+				? +bc.first_bin.stop
+				: min + bc.bin_size,
 		startinclusive: bc.startinclusive,
 		stopinclusive: bc.stopinclusive
 	}
@@ -245,8 +264,8 @@ export function compute_bins(binconfig: BinConfig, summaryfxn: (f?: any) => any,
 				numericLastStop && (previousStop == last_start || upper > last_stop)
 					? last_stop
 					: numericLastStart && upper > last_start && previousStop != last_start
-					? last_start
-					: upper
+						? last_start
+						: upper
 		}
 
 		if (currBin.stop >= max) {
@@ -349,12 +368,12 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 				: bc.binLabelFormatter(start)
 			const v1 = valueConversion
 				? convertUnits(
-						stop - label_offset,
-						valueConversion.fromUnit,
-						valueConversion.toUnit,
-						valueConversion.scaleFactor,
-						true
-				  )
+					stop - label_offset,
+					valueConversion.fromUnit,
+					valueConversion.toUnit,
+					valueConversion.scaleFactor,
+					true
+				)
 				: bc.binLabelFormatter(stop - label_offset)
 			// ensure that last two bin labels make sense (the last is stopunbounded)
 			return +v0 >= +v1 ? v0.toString() : v0 + ' to ' + v1
@@ -366,13 +385,13 @@ export function get_bin_label(bin: any, binconfig: any, valueConversion?: any) {
 		const v0 = valueConversion
 			? convertUnits(start, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
 			: Number.isInteger(start)
-			? start
-			: bc.binLabelFormatter(start)
+				? start
+				: bc.binLabelFormatter(start)
 		const v1 = valueConversion
 			? convertUnits(stop, valueConversion.fromUnit, valueConversion.toUnit, valueConversion.scaleFactor, true)
 			: Number.isInteger(stop)
-			? stop
-			: bc.binLabelFormatter(stop)
+				? stop
+				: bc.binLabelFormatter(stop)
 		// after rounding the bin labels, the bin start may equal the last bin stop as derived from actual data
 		if (+v0 >= +v1) {
 			const oper = bin.startinclusive ? '≥' : '>' // \u2265
@@ -405,7 +424,7 @@ export function get_bin_range_equation(bin: any, binconfig: any, valueConversion
 	return range_eq
 }
 
-export function target_percentiles(binconfig: BinConfig) {
+export function target_percentiles(binconfig: RegularBinConfig) {
 	const percentiles: any[] = []
 	const f = binconfig.first_bin
 	if (f && isStrictNumeric(f.start_percentile)) percentiles.push(f.start_percentile)
