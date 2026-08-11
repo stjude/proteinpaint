@@ -44,7 +44,7 @@ const runpp = helpers.getRunPp('mass', {
  ***************/
 
 tape('\n', function (test) {
-	test.comment('-***- plots/cuminc -***-')
+	test.comment('-***- plots/cuminc/Cuminc -***-')
 	test.end()
 })
 
