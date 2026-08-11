@@ -37,7 +37,7 @@ class SummaryPlot extends PlotBase implements RxComponent {
 	violinContTerm?: 'term' | 'term2'
 	boxContTerm?: 'term' | 'term2'
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = SummaryPlot.type
 		this.dom = this.getDom(opts)

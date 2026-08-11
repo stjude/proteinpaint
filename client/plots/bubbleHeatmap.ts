@@ -31,7 +31,7 @@ class BubbleHeatmap extends PlotBase implements RxComponent {
 	useAdjusted = false
 	gridHolder: any
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = BubbleHeatmap.type
 		this.components = {}

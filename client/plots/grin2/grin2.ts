@@ -14,7 +14,7 @@ import { controlsInit } from '#plots/controls.js'
 
 class GRIN2 extends PlotBase implements RxComponent {
 	static type = 'grin2'
-	
+
 	type: string
 	dom: GRIN2Dom
 	components: { controls: ComponentApi }

@@ -18,7 +18,7 @@ import { isErrorResponse, type TermWrapper } from '#types'
 
 export class TdbBoxplot extends PlotBase implements RxComponent {
 	static type = 'boxplot'
-	
+
 	type: string
 	components: { controls: any }
 	dom: BoxPlotDom

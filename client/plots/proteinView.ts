@@ -37,7 +37,7 @@ class ProteinView extends PlotBase implements RxComponent {
 	}
 	components: any
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = ProteinView.type
 		this.components = {}

@@ -22,7 +22,7 @@ type WsiDom = {
 
 class Wsi extends PlotBase implements RxComponent {
 	static type = 'wsi'
-	
+
 	type: string
 	dom: WsiDom
 	interactions?: WsiInteractions

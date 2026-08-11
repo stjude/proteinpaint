@@ -27,7 +27,7 @@ class CorrelationVolcano extends PlotBase implements RxComponent {
 	dom: CorrVolcanoDom
 	variableTwLst: any
 	interactions?: CorrVolcanoInteractions
-	
+
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = CorrelationVolcano.type

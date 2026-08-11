@@ -1,6 +1,6 @@
 import { renderTable, sayerror, icons } from '#dom'
 import { dofetch3 } from '#common/dofetch'
-import { getCompInit, copyMerge, type ComponentApi, type RxComponent  } from '#rx'
+import { getCompInit, copyMerge, type ComponentApi, type RxComponent } from '#rx'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { PlotBase } from '#plots/PlotBase.js'
 import { scaleLinear } from 'd3-scale'

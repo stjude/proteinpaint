@@ -14,7 +14,7 @@ import { sayerror } from '#dom'
 class AIProjectAdmin extends PlotBase implements RxComponent {
 	static type = 'AIProjectAdmin'
 
-	type: string	
+	type: string
 	prjtRepo: ProjectReposity
 	projects?: any[]
 	prjtAdminUI?: ProjectAdminRender

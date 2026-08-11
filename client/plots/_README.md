@@ -11,11 +11,11 @@ import { getCompInit, type RxComponent, type ComponentApi } from '#rx'
 export class MyPlot extends PlotBase implements RxComponent {
 	static type = 'myPlot'
 
-    type: string
+	type: string
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
-        this.type = MyPlot.type
+		this.type = MyPlot.type
 		// set up dom, components, etc.
 	}
 

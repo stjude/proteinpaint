@@ -12,7 +12,7 @@ import { RunChart2View } from './view/View.ts'
 
 export class RunChart2 extends PlotBase implements RxComponent {
 	static type = 'runChart2'
-	
+
 	type: string
 	components: { controls: ComponentApi }
 	dom: any
@@ -23,8 +23,6 @@ export class RunChart2 extends PlotBase implements RxComponent {
 
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
-		this.opts = opts
-		this.api = api
 		this.type = RunChart2.type
 		if (this.opts.parentId) this.parentId = this.opts.parentId
 

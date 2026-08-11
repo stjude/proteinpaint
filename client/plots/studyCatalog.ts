@@ -74,7 +74,7 @@ class StudyCatalog extends PlotBase implements RxComponent {
 	/** number of cohorts currently passing the filters (shown when nothing is selected) */
 	filteredCount = 0
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = StudyCatalog.type
 	}

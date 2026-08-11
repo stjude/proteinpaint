@@ -38,10 +38,9 @@ class DEinputPlot extends PlotBase implements RxComponent {
 	pseudobulk?: { assay: string; memberId: string; category: string }
 	hasCohort0?: boolean
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = DEinputPlot.type
-		this.opts = opts
 		this.dom = this.getDom()
 		this.groups = []
 	}

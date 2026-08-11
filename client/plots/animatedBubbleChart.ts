@@ -108,7 +108,7 @@ class AnimatedBubbleChart extends PlotBase implements RxComponent {
 		return Math.max(50, this.contentBbox.maxY - this.contentBbox.minY + 2 * this.BBOX_PAD)
 	}
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = AnimatedBubbleChart.type
 		this.components = {}

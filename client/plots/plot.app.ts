@@ -73,7 +73,7 @@ class PlotApp extends AppBase implements RxApp {
 	store: any
 	bus!: any
 
-	constructor(opts, api) {
+	constructor(opts: any, api: AppApi) {
 		super(opts)
 		this.api = api
 		this.type = PlotApp.type

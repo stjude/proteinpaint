@@ -43,6 +43,11 @@ export default class Disco extends PlotBase implements RxComponent {
 	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = Disco.type
+		// PlotBase.printError() renders into this.dom.errdiv; without it, errors would fall through
+		// to app.printError() with a confusing '(also missing Disco.dom.holder)' suffix appended.
+		// Kept separate from this.errorDiv, which main() reuses for the InvalidDataUI message,
+		// since rx empties this.dom.errdiv at the start of every update.
+		this.dom.errdiv = opts.holder.append('div').attr('class', 'sja_errorbar').style('display', 'none')
 		this.isOpen = false
 		this.discoInteractions = new DiscoInteractions(this)
 	}

@@ -33,7 +33,7 @@ class CellTypeBubbleHeatmap extends PlotBase implements RxComponent {
 	currentIsoform = ''
 	gridHolder: any
 
-	constructor(opts: any, api: ComponentApi ) {
+	constructor(opts: any, api: ComponentApi) {
 		super(opts, api)
 		this.type = CellTypeBubbleHeatmap.type
 	}
