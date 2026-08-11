@@ -1410,7 +1410,7 @@ function getPj(self: any): Partjson {
 				const value = self.config.term0.term.values[row.chartId]
 				return value && value.label ? value.label : row.chartId
 			},
-			seriesLabel(/*row,*/ context) {
+			seriesLabel(_, context) {
 				const t2 = self.config?.term2
 				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
@@ -1430,7 +1430,7 @@ function getPj(self: any): Partjson {
 				if (self.settings.hidden?.includes(row.seriesId)) return
 				return self.settings.ciVisible ? row.high : row.cuminc
 			},
-			xTickValues(/*row,*/ context) {
+			xTickValues(_, context) {
 				const s = self.settings
 				if (s.xTickValues?.length) {
 					// custom x-tick values
@@ -1443,7 +1443,7 @@ function getPj(self: any): Partjson {
 					return computeTickValues(xMin, xMax)
 				}
 			},
-			xScale(/*row,*/ context) {
+			xScale(_, context) {
 				// scale axis according to tick values
 				const s = self.settings
 				const min = Math.min(...context.self.xTickValues)
@@ -1452,11 +1452,11 @@ function getPj(self: any): Partjson {
 					.domain([min, max])
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
-			scaledX(/*row,*/ context) {
+			scaledX(_, context) {
 				const xScale = context.context.context.context.parent.xScale.clamp(false)
 				return xScale(context.self.x)
 			},
-			yTickValues(/*row,*/ context) {
+			yTickValues(_, context) {
 				const s = self.settings
 				if (s.yTickValues?.length) {
 					// custom y-tick values
@@ -1469,7 +1469,7 @@ function getPj(self: any): Partjson {
 					return computeTickValues(yMin, yMax)
 				}
 			},
-			yScale(/*row,*/ context) {
+			yScale(_, context) {
 				// scale axis according to tick values
 				const s = self.settings
 				const min = Math.min(...context.self.yTickValues)
@@ -1478,7 +1478,7 @@ function getPj(self: any): Partjson {
 					.domain([max, min])
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
-			scaledY(/*row,*/ context) {
+			scaledY(_, context) {
 				const yScale = context.context.context.context.parent.yScale.clamp(false)
 				const s = context.self
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
