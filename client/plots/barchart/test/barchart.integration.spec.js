@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { termjson } from '../../test/testdata/termjson'
+import { termjson } from '../../../test/testdata/termjson'
 import {
 	getSamplelstTw,
 	getCategoryGroupsetting,
@@ -9,11 +9,11 @@ import {
 	getScctTw,
 	getAgeCollectionFractionTw,
 	getIsoformExpCollectionFractionTw
-} from '../../test/testdata/data.ts'
-import * as helpers from '../../test/front.helpers.js'
-import { sleep, detectLst, detectGte, detectOne, Locator } from '../../test/test.helpers.js'
-import { getFilterItemByTag } from '../../filter/filter'
-import * as vocabData from '../../termdb/test/vocabData'
+} from '../../../test/testdata/data.ts'
+import * as helpers from '../../../test/front.helpers.js'
+import { sleep, detectLst, detectGte, detectOne, Locator } from '../../../test/test.helpers.js'
+import { getFilterItemByTag } from '#filter/filter'
+import * as vocabData from '../../../termdb/test/vocabData'
 import { hideCategory } from '../barchart.events.js'
 
 /*

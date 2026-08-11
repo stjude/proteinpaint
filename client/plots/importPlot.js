@@ -18,7 +18,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import('./brainRegions.ts')
 
 		case 'barchart':
-			return await import(`./barchart.js`)
+			return await import(`./barchart/barchart.ts`)
 
 		case 'boxplot':
 			return await import(`./boxplot/BoxPlot.ts`)
@@ -63,7 +63,7 @@ export async function importPlot(chartType, notFoundMessage = '') {
 			return await import('./geomap/Geomap.ts')
 
 		case 'grin2':
-			return await import('./grin2/grin2')
+			return await import('./grin2/grin2.ts')
 
 		case 'gsea':
 			return await import(`./gsea/GSEA.ts`)

@@ -1,12 +1,12 @@
-import { getCompInit, copyMerge, deepEqual } from '../rx'
+import { getCompInit, copyMerge, deepEqual, type RxComponent, type ComponentApi } from '#rx'
 import getHandlers from './barchart.events'
 import barsRenderer from './bars.renderer'
 import { rendererSettings, plotLength } from './bars.settings'
-import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu } from '#dom'
+import { htmlLegend, /** svgLegend, */ renderTable, DownloadMenu, type TableRow } from '#dom'
 import { select } from 'd3-selection'
 import { rgb } from 'd3-color'
-import { controlsInit, renderTerm1Label } from './controls'
-import { getT0T2defaultQ } from './summaryQ.ts'
+import { controlsInit, renderTerm1Label } from '#plots/controls.js'
+import { getT0T2defaultQ } from '#plots/summaryQ.ts'
 // import { to_svg } from '../src/client'
 import { fillTermWrapper } from '#termsetting'
 import { getColors, mclass, plotColor } from '#shared/common.js'
@@ -14,17 +14,44 @@ import { isNumericTw } from '#shared/terms.js'
 import { roundValueAuto } from '#shared/roundValue.js'
 import { getCombinedTermFilter } from '#filter'
 import { PlotBase, defaultUiLabels } from '#plots/PlotBase.js'
-import { rebaseGroupFilter } from '../mass/groups.js'
+import { rebaseGroupFilter } from '../../mass/groups.js'
 import { getSingleCellSpecialCase } from '#plots/sc/utils/specialCase.ts'
 
-export class Barchart extends PlotBase {
+export class Barchart extends PlotBase implements RxComponent{
 	static type = 'barchart'
 
+	type: string
 	configTermKeys = ['term', 'term0', 'term2']
+	download!: any
+	getChartImages!: any
+	settings!: any
+	renderers!: any
+	legendRenderer!: any
+	handlers!: any
+	controls!: any
+	term1toColor!: any
+	term2toColor!: any
+	config!: any
+	chartsData!: any
+	components!: { controls: ComponentApi }
+	currServerData!: any
+	prevConfig!: any
+	sampleType!: any
+	charts!: any
+	bins!: any
+	chartid2dtterm!: any
+	hasMultiCategoryKeys!: any
+	currCombinedTermIds!: any
+	seriesOrder!: any
+	barSorter!: any
+	overlaySorter!: any
+	totalsByDataId!: any
+	visibleCharts!: any
 
-	constructor(opts) {
+
+	constructor(opts: any, api: ComponentApi) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
-		super(opts)
+		super(opts, api)
 		this.type = Barchart.type
 	}
 	//freeze the api of this class. don't want embedder functions to modify it.
@@ -33,7 +60,7 @@ export class Barchart extends PlotBase {
 		api.getChartImages = () => this.getChartImages()
 	}
 
-	async init(appState) {
+	async init() {
 		const opts = this.opts
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		const { controls, errdiv, loadingDiv, banner, renderedData, charts, legendDiv } = this.getStandardDomLayout(
@@ -98,7 +125,7 @@ export class Barchart extends PlotBase {
 
 			const specialCase = getSingleCellSpecialCase(this.state.config)
 
-			const inputs = [
+			const inputs: any[] = [
 				{
 					type: 'term',
 					configKey: 'term',
@@ -217,7 +244,7 @@ export class Barchart extends PlotBase {
 					chartType: 'barchart',
 					settingsKey: 'dedup',
 					boxLabel: 'Yes',
-					getDisplayStyle: plot =>
+					getDisplayStyle: /*plot*/ () =>
 						this.chartsData?.charts.find(
 							c =>
 								c.dedupedSerieses?.length &&
@@ -379,7 +406,7 @@ export class Barchart extends PlotBase {
 		if (c.chartType != this.type && c.childType != this.type) return
 		if (this.state.parentError) throw this.state.parentError
 		try {
-			this.config = await this.getMutableConfig(c)
+			this.config = await this.getMutableConfig()
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
@@ -391,7 +418,7 @@ export class Barchart extends PlotBase {
 			await this.setControls() // render controls early so users can fix config/settings even if a data request errors
 			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
-			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api.getAbortSignal())
+			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts, this.api?.getAbortSignal())
 			if (results.error) throw results
 			const data = results.data
 			this.charts = data.charts
@@ -418,7 +445,7 @@ export class Barchart extends PlotBase {
 			}
 			this.chartsData = this.processData(this.currServerData)
 			this.toggleLoadingDiv('none')
-			this.render()
+			// this.render() 
 			this.dom.renderedData.style('display', '')
 		} catch (e) {
 			if (this.app.isAbortError(e)) return
@@ -430,7 +457,7 @@ export class Barchart extends PlotBase {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = { term: c.term, filter: this.state.termfilter.filter }
+		const opts: any = { term: c.term, filter: this.state.termfilter.filter }
 		if (this.state.termfilter.filter0) opts.filter0 = this.state.termfilter.filter0
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -445,7 +472,7 @@ export class Barchart extends PlotBase {
 
 		for (const t of terms) {
 			if (isNumericTw(t)) {
-				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter, null, this.api.getAbortSignal())
+				const data = await this.app.vocabApi.getDescrStats(t, this.state.termfilter, null, this.api?.getAbortSignal())
 				if (data.error) throw data.error
 				t.q.descrStats = data
 			}
@@ -455,7 +482,7 @@ export class Barchart extends PlotBase {
 	updateSettings(config) {
 		if (!config) return
 		// translate relevant config keys to barchart settings keys
-		const obj = this.state
+		// const obj = this.state
 		const settings = {
 			term0: config.term0 ? config.term0.term.id : '', // convenient reference to the term id
 			term1: config.term.term.id, // convenient reference to the term2 id
@@ -767,9 +794,10 @@ export class Barchart extends PlotBase {
 		// Assigning colors to bars uses a better color scale as the scale considers the categories present, not in all the categories
 		if (t.term.values && this.settings.colorUsing == 'all') {
 			for (const [key, v] of Object.entries(t.term.values)) {
-				if (!v.color) continue
-				if (key === label) return v.color
-				if (v.label === label) return v.color
+				const val = v as { label: string; color?: string }
+				if (!val.color) continue
+				if (key === label) return val.color
+				if (val.label === label) return val.color
 			}
 		}
 		const bin = bins?.find(bin => bin.label == label)
@@ -813,7 +841,7 @@ export class Barchart extends PlotBase {
 			(t1.term.type == 'geneVariant' && t1.q.type == 'values') ||
 			(t2?.term.type == 'geneVariant' && t2?.q.type == 'values')
 		) {
-			const legendGrps = []
+			const legendGrps: unknown[] = []
 			for (const chart of this.chartsData.charts) {
 				legendGrps.push(this.getOneLegendGrps(chart))
 			}
@@ -823,8 +851,8 @@ export class Barchart extends PlotBase {
 	}
 
 	//Used by getLegendGrps to get one legendGrps
-	getOneLegendGrps(chart) {
-		const legendGrps = []
+	getOneLegendGrps(chart?: any) {
+		const legendGrps: unknown[] = []
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
@@ -834,7 +862,7 @@ export class Barchart extends PlotBase {
 		// descriptive statistics
 		if (t1.q.descrStats && s.showStats) {
 			// term1 has descriptive stats
-			const items = Object.values(t1.q.descrStats).map(stat => {
+			const items = Object.values(t1.q.descrStats).map((stat: any) => {
 				return {
 					text: `${stat.label}: ${stat.value}`,
 					noIcon: true
@@ -847,7 +875,7 @@ export class Barchart extends PlotBase {
 		}
 		if (t2?.q.descrStats && s.showAssociationTests) {
 			// term2 has descriptive stats
-			const items = Object.values(t2.q.descrStats).map(stat => {
+			const items = Object.values(t2.q.descrStats).map((stat: any) => {
 				return {
 					text: `${stat.label}: ${stat.value}`,
 					noIcon: true
@@ -1030,7 +1058,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.addChart = function (chart, i) {
+	self.addChart = function (chart, /*i*/) {
 		const div = select(this)
 			.attr('class', 'pp-sbar-div')
 			.style('display', 'inline-block')
@@ -1095,7 +1123,7 @@ function setRenderers(self) {
 		const noSkipped = self.chartsData.tests[chart.chartId].every(term1 =>
 			term1.term2tests.every(term2 => !term2.skipped)
 		)
-		const rows = []
+		const rows: TableRow[] = []
 
 		const visibleTests = self.chartsData.tests[chart.chartId].filter(term1Data =>
 			chart.visibleSerieses.some(visibleTerm1 => visibleTerm1.seriesId === term1Data.term1comparison)
@@ -1148,7 +1176,7 @@ function setRenderers(self) {
 		}
 		//adding a title for the pvalue table
 		//title is "Group comparisons (Fisher's exact test)" if all tests are Fisher's exact test, otherwise title is 'Group comparisons (Chi-square test)'
-		const title = holder
+		/*const title = */holder
 			.append('div')
 			.style('font-weight', 'bold')
 			.style('padding-bottom', '0.5em')
@@ -1182,7 +1210,7 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.getChartImages = function () {
-		const charts = []
+		const charts: unknown[] = []
 
 		for (const chart of self.charts) {
 			const name = `${this.config.term.term.name}  ${chart.name ? chart.name : ''}`

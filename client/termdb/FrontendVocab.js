@@ -1,4 +1,4 @@
-import { getBarchartData, getCategoryData } from '../plots/barchart.data'
+import { getBarchartData, getCategoryData } from '#plots/barchart/barchart.data.js'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '#common/termutils'
 import { isUsableTerm } from '#shared/termdb.usecase.js'

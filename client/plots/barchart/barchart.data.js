@@ -1,6 +1,6 @@
 import Partjson from 'partjson'
 import { compute_bins } from '#shared/termdb.bins.js'
-import { sample_match_termvaluesetting } from '../common/termutils'
+import { sample_match_termvaluesetting } from '#common/termutils'
 import { isNumeric } from '#shared/helpers.js'
 import { boxplot_getvalue } from '#shared/boxplot.js'
 

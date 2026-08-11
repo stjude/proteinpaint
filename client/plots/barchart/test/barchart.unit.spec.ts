@@ -1,7 +1,7 @@
 import tape from 'tape'
 // import * as d3s from 'd3-selection'
 // import * as helpers from '../../test/front.helpers.js'
-import { Barchart } from '#plots/barchart.js'
+import { Barchart } from '#plots/barchart/barchart.ts'
 // import { detectGte } from '../../test/test.helpers.js'
 
 /* 
@@ -47,7 +47,8 @@ tape('\n', test => {
 tape('Default barchart component', test => {
 	test.timeoutAfter(100)
 
-	const testBarchart = new Barchart()
+	const api = {} as any
+	const testBarchart = new Barchart({}, api)
 
 	test.equal(testBarchart.type, 'barchart', 'Should set type to barchart')
 	test.equal(typeof testBarchart.setControls, 'function', 'Should have a .setControls() function')
